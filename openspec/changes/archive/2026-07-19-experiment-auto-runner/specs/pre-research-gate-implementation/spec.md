@@ -2,6 +2,14 @@
 
 > req: PRG-007, PRG-008
 
+## RENAMED Requirements
+
+- FROM: `### Requirement: Gate CLIs return JSON feedback while experiments own trace verdict writing`
+- TO: `### Requirement: Gate CLIs return JSON feedback while playbooks record verdict checks in the root trace`
+
+- FROM: `### Requirement: Runtime audit trace and experiment verdict trace remain distinct`
+- TO: `### Requirement: Runtime audit events and experiment verdict checks share one trace without sharing authority`
+
 ## MODIFIED Requirements
 
 ### Requirement: Gate CLIs return JSON feedback while playbooks record verdict checks in the root trace
@@ -17,6 +25,13 @@ A command-experiment Playbook Agent/thin driver SHALL invoke the real gate CLI, 
 - **AND** the Playbook Agent/thin driver SHALL derive its separate strict verdict-check row from that real result in the same root trace
 - **AND** native completion SHALL bind the root-trace prefix without treating gate side effects or console prose as required case checks
 
+#### Scenario: CLI feedback and trace verdict stay separate
+
+- **WHEN** a command experiment invokes a pre-research gate
+- **THEN** gate stdout provides machine-readable JSON and `rb_trace.jsonl` receives the corresponding runtime audit row
+- **AND** the Playbook Agent/thin driver writes the strict verdict `check` from that real result in the same root trace
+- **AND** gate CLI side effects and console prose do not become verdict authority
+
 ### Requirement: Runtime audit events and experiment verdict checks share one trace without sharing authority
 
 Bundle-root `rb_trace.jsonl` SHALL be the sole trace sink. Gate-owned `gate_attempt` rows remain runtime audit facts; strict playbook-owned `check` rows remain command-experiment verdict inputs. Event ownership and schema, not a second file, SHALL keep these authorities distinct.
@@ -26,3 +41,9 @@ Bundle-root `rb_trace.jsonl` SHALL be the sole trace sink. Gate-owned `gate_atte
 - **WHEN** an Agent invokes a pre-research gate directly on a production run bundle
 - **THEN** `rb_trace.jsonl` SHALL receive the gate-attempt audit row
 - **AND** no experiment verdict check, `_trace.jsonl`, finalizer or native completion SHALL be required merely to retain that production audit fact
+
+#### Scenario: Production gate writes runtime audit trace without experiment wrapper
+
+- **WHEN** an Agent invokes a pre-research gate directly on a production run bundle
+- **THEN** `rb_trace.jsonl` receives the real gate-attempt audit row
+- **AND** retaining that audit fact does not require an experiment verdict `check`, finalizer, or native completion

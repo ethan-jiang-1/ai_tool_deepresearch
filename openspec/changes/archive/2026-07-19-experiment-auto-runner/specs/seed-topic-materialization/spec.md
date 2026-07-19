@@ -17,3 +17,11 @@ Every verdict-affecting boundary SHALL be recorded as a stable strict playbook-o
 - **AND WHEN** the directory is empty or slugs are missing/extra
 - **THEN** the real gate SHALL fail with the applicable inspect
 - **AND** native completion SHALL require the case-owned pass and three negative-boundary check IDs
+
+#### Scenario: Seed topics pass and fail both trace-backed
+
+- **WHEN** registry entries and `seed_topics/` files are bidirectionally slug-consistent
+- **THEN** the real seed-topics gate passes
+- **AND WHEN** the directory is empty or a slug is missing or extra
+- **THEN** the real gate fails with applicable inspect
+- **AND** native completion derives the verdict from the required one pass and three negative-boundary root-trace checks

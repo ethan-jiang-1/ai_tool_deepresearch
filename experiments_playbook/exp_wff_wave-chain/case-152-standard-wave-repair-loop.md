@@ -48,7 +48,7 @@ Fixture-backed Engine repair case. The initial failure is deliberate: Wave2 writ
 5. Open a Wave2 repair/refill batch with `--reason gate_failure_refill`.
 6. Enqueue, claim, and submit the targeted evidence in `b001`.
 7. Probe Wave2 drain again; only then rerun Wave2 gate.
-8. Record trace checks and clean up only on PASS.
+8. Record trace checks, invoke native completion, and stop; the Autorun Supervisor owns health, preservation, and any requested clean-PASS cleanup.
 
 ## Step 1: [MAIN/SHELL] Create Wave2-Ready Bundle With Direct Targeted Evidence
 

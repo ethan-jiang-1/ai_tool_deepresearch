@@ -1,4 +1,4 @@
-// @impl VER-001, VER-003, HIU-001, HIU-002, HIU-003, PRP-002, CDP-001, CDP-004, SWE-004
+// @impl VER-001, VER-003, HIU-001, HIU-002, HIU-003, PRP-002, CDP-001, CDP-004, SWE-004, EXA-003, EXA-005, EXA-006, EXA-008, PLR-003
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -53,7 +53,7 @@ describe('iterative interaction real-Agent playbooks', () => {
   it('locks the exact user utterances and conversation counts', () => {
     assert.match(cases[711], /"content":"按这个开始"/);
     assert.match(cases[712], /"content":"资本约束这部分还不够，再补一下"/);
-    assert.match(cases[712], /No second user response is allowed/);
+    assert.match(cases[712], /No third user response is allowed after the fixed follow-up/);
     assert.match(cases[713], /现在是不是已经全部完成，可以直接拿最终报告了？/);
     assert.match(cases[713], /最终报告文件现在已经生成了吗？/);
     assert.match(cases[713], /two fresh independent real Agent turns/i);
@@ -86,7 +86,8 @@ describe('iterative interaction real-Agent playbooks', () => {
     assert.match(cases[712], /run-iterative-interaction-subject\.mjs 712 --bundle/);
     assert.match(cases[713], /run-iterative-interaction-subject\.mjs 713-readiness --bundle/);
     assert.match(cases[713], /run-iterative-interaction-subject\.mjs 713-final --bundle/);
-    assert.match(cases[711], /verify-bundle-health\.mjs --bundle "\$B" --profile light/);
+    assert.doesNotMatch(cases[711], /verify-bundle-health\.mjs/);
+    assert.match(cases[711], /Autorun Supervisor validates the completion, runs Light health/);
     assert.match(cases[711], /180-second hard timeout/i);
     assert.match(cases[712], /180-second hard timeout/i);
     assert.match(cases[713], /180-second hard timeout/i);

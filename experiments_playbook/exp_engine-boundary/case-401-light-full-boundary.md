@@ -56,7 +56,7 @@ Verdict sources are the runner verdict JSON, `rb_trace.jsonl`, `rb_output_declar
 6. Submit through `operate-work-unit submit`; the Engine appends the submitted ledger row.
 7. Run `validate-bundle`, `operate-work-unit inspect`, and the Wave0 gate.
 8. Record verdict-affecting runtime facts as trace `check` events.
-9. Print PASS/FAIL and clean up only on PASS.
+9. Record the native trace facts, invoke native completion, and stop; the Autorun Supervisor owns health, preservation, and any requested clean-PASS cleanup.
 
 ## Step 1: [MAIN/SHELL] Create Runtime Context
 

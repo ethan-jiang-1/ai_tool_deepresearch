@@ -28,3 +28,15 @@ Updated trace readers and summaries SHALL count only accepted verdict check even
 - **WHEN** a playbook writes native completion
 - **THEN** completion includes the validated root-trace byte length/digest, parse/event summary and native verdict summary
 - **AND** runtime verdict facts remain auditable from the declared bundle trace
+
+#### Scenario: Accepted specs no longer require separate experiment verdict trace
+
+- **WHEN** accepted specs describe command-experiment verdict evidence
+- **THEN** they point to bundle-root `rb_trace.jsonl`
+- **AND** they do not require another trace JSONL
+
+#### Scenario: Playbook tests validate unified trace path
+
+- **WHEN** playbook schema or tests validate trace-path references
+- **THEN** they expect `rb_trace.jsonl`
+- **AND** they reject another trace JSONL in current playbooks

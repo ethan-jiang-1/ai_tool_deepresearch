@@ -2,6 +2,11 @@
 
 > req: RWG-007
 
+## RENAMED Requirements
+
+- FROM: `### Requirement: Wave gate CLIs follow established double trace convention`
+- TO: `### Requirement: Wave gate CLIs and playbook verdict checks use one root trace with distinct ownership`
+
 ## MODIFIED Requirements
 
 ### Requirement: Wave gate CLIs and playbook verdict checks use one root trace with distinct ownership
@@ -14,3 +19,9 @@ Wave gate CLIs SHALL return standard machine-readable `check / routing / inspect
 - **THEN** gate stdout SHALL expose machine-readable JSON and bundle-root `rb_trace.jsonl` SHALL retain the gate attempt
 - **AND** the Playbook Agent/thin driver SHALL derive any case verdict check from that result as a separately owned strict row in the same root trace
 - **AND** native completion SHALL bind and evaluate the accepted root-trace prefix without a second trace sink
+
+#### Scenario: Wave gate CLI output and trace verdict stay separate
+
+- **WHEN** a command experiment executes a Wave gate
+- **THEN** gate stdout exposes machine-readable JSON and bundle-root `rb_trace.jsonl` retains the gate attempt
+- **AND** the Playbook Agent/thin driver derives the strict case verdict check from that real result in the same trace

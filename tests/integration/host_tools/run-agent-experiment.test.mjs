@@ -2,6 +2,7 @@
 // Deterministic Supervisor mechanics only; this fixture is not real Playbook-Agent evidence.
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -25,6 +26,18 @@ describe('run-agent-experiment deterministic host lifecycle', () => {
     assert.equal(result.selected_count, 1);
     assert.equal(result.selected[0].case, 'case-1-light-fixture');
     assert.equal(existsSync(path.join(fixture.root, '.exp-bundles')), false);
+  });
+
+  it('rejects missing total budget and a per-case cap without total before launch', () => {
+    const cli = path.join(REAL_REPO, 'DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs');
+    for (const args of [
+      ['--case', 'case-41-light-minimal-path', '--json'],
+      ['--dry-run', '--max-case-budget-usd', '0.1', '--json'],
+    ]) {
+      const result = spawnSync(process.execPath, [cli, ...args], { cwd: REAL_REPO, encoding: 'utf8' });
+      assert.equal(result.status, 2, args.join(' '));
+      assert.match(result.stderr, /max-total-budget-usd|Headless execution requires/);
+    }
   });
 
   it('uses exact repo cwd, rendered stdin, effective Headless flags, isolated env and native completion', async () => {
@@ -89,6 +102,118 @@ describe('run-agent-experiment deterministic host lifecycle', () => {
     assert.ok(existsSync(result.run_root));
   });
 
+  it('preserves native FAIL, NOT_RUN, and health ERROR roots without cleanup', async () => {
+    for (const { mode, healthStatus, native, effective, health, exitCode } of [
+      { mode: 'native-fail', healthStatus: 'clean', native: 'FAIL', effective: 'FAIL', health: 'CLEAN', exitCode: 1 },
+      { mode: 'not-run', healthStatus: 'clean', native: 'NOT_RUN', effective: 'NOT_RUN', health: 'CLEAN', exitCode: 2 },
+      { mode: 'success', healthStatus: 'invalid', native: 'PASS', effective: 'ERROR', health: 'ERROR', exitCode: 2 },
+    ]) {
+      const fixture = makeProject({ fixtureMode: mode, healthStatus });
+      const report = await runSupervisor(baseOptions({ cleanupPass: true }), { repoRoot: fixture.root, executable: fixture.executable });
+      const result = report.results[0];
+      assert.equal(report.exit_code, exitCode, mode);
+      assert.equal(result.native_outcome, native, mode);
+      assert.equal(result.effective_outcome, effective, mode);
+      assert.equal(result.health, health, mode);
+      assert.equal(result.cleanup_status, 'not_attempted', mode);
+      assert.equal(result.run_root_available, true, mode);
+    }
+  });
+
+  it('exports all declared multi-bundle trace prefixes before CLEAN PASS cleanup', async () => {
+    const fixture = makeProject({ fixtureMode: 'multi-traces' });
+    configureFixturePlaybook(fixture, {
+      caseId: 'case-153-standard-multi-traces',
+      replacements: [
+        ['bundle_roles: [verdict]', 'bundle_roles: [verdict, required-aux, invalid-aux, missing-aux]'],
+        ['health_roles: [verdict]', 'health_roles: [verdict, required-aux]'],
+      ],
+    });
+    const report = await runSupervisor(baseOptions({ caseId: 'case-153-standard-multi-traces', cleanupPass: true }), { repoRoot: fixture.root, executable: fixture.executable });
+    const result = report.results[0];
+    assert.equal(result.effective_outcome, 'PASS');
+    assert.equal(result.health, 'CLEAN');
+    assert.equal(result.cleanup_status, 'removed');
+    assert.equal(result.run_root_available, false);
+    assert.deepEqual(result.evidence.traces.map((entry) => entry.role), ['verdict', 'required-aux', 'invalid-aux', 'missing-aux']);
+    const invalid = result.evidence.traces.find((entry) => entry.role === 'invalid-aux');
+    const missing = result.evidence.traces.find((entry) => entry.role === 'missing-aux');
+    assert.equal(readFileSync(invalid.path, 'utf8'), '{not-json}\n');
+    assert.equal(invalid.parse_status, 'invalid');
+    assert.equal(missing.path, null);
+    assert.equal(missing.parse_status, 'missing');
+  });
+
+  it('exports exact Agent-behavior Subject evidence before deleting a Heavy-cost Light-health root', async () => {
+    const fixture = makeProject({ fixtureMode: 'agent-evidence' });
+    configureFixturePlaybook(fixture, {
+      caseId: 'case-406-heavy-agent-evidence',
+      replacements: [
+        ['durable_evidence_roles: []', 'durable_evidence_roles: [subject_task, subject_result, subject_receipt, subject_output]'],
+        ['proof_subject: deterministic_contract', 'proof_subject: agent_behavior'],
+        ['subject_execution: none', 'subject_execution: real_subagent'],
+        ['fixture: fixture_backed', 'fixture: setup_only'],
+      ],
+    });
+    const report = await runSupervisor(baseOptions({ caseId: 'case-406-heavy-agent-evidence', cleanupPass: true }), { repoRoot: fixture.root, executable: fixture.executable });
+    const result = report.results[0];
+    assert.equal(result.effective_outcome, 'PASS');
+    assert.equal(result.health, 'CLEAN');
+    assert.equal(result.cleanup_status, 'removed');
+    assert.equal(result.completion.proof.subject, 'agent_behavior');
+    assert.equal(result.completion.bundles[0].health.profile, 'light');
+    assert.deepEqual(result.evidence.subject.map((entry) => entry.role), ['subject_task', 'subject_result', 'subject_receipt', 'subject_output']);
+    for (const ref of result.evidence.subject) {
+      assert.ok(existsSync(ref.path));
+      assert.equal(JSON.parse(readFileSync(ref.path, 'utf8')).role, ref.role);
+    }
+  });
+
+  it('rejects secret-bearing cleanup evidence and retains the case root', async () => {
+    const fixture = makeProject({ fixtureMode: 'secret-trace' });
+    const report = await runSupervisor(baseOptions({ cleanupPass: true }), { repoRoot: fixture.root, executable: fixture.executable });
+    const result = report.results[0];
+    assert.equal(report.exit_code, 2);
+    assert.equal(result.native_outcome, 'PASS');
+    assert.equal(result.effective_outcome, 'ERROR');
+    assert.match(result.reason, /^evidence_export_failed: known credential found in trace verdict/);
+    assert.equal(result.run_root_available, true);
+    assert.equal(result.cleanup_status, 'not_attempted');
+  });
+
+  it('rejects missing or extra declared run-root bundles without outside cleanup', async () => {
+    const extra = makeProject({ fixtureMode: 'extra-bundle' });
+    const extraReport = await runSupervisor(baseOptions(), { repoRoot: extra.root, executable: extra.executable });
+    assert.equal(extraReport.results[0].effective_outcome, 'ERROR');
+    assert.equal(extraReport.results[0].agent_process, 'nonzero');
+    assert.equal(extraReport.results[0].run_root_available, true);
+
+    const missing = makeProject();
+    configureFixturePlaybook(missing, {
+      caseId: 'case-51-standard-missing-required-bundle',
+      replacements: [
+        ['bundle_roles: [verdict]', 'bundle_roles: [verdict, required-aux]'],
+        ['health_roles: [verdict]', 'health_roles: [verdict, required-aux]'],
+      ],
+    });
+    const missingReport = await runSupervisor(baseOptions({ caseId: 'case-51-standard-missing-required-bundle' }), { repoRoot: missing.root, executable: missing.executable });
+    assert.equal(missingReport.results[0].effective_outcome, 'ERROR');
+    assert.equal(missingReport.results[0].agent_process, 'nonzero');
+    assert.equal(missingReport.results[0].run_root_available, true);
+  });
+
+  it('retires thin legacy result logs and leaves source surfaces untouched', async () => {
+    const fixture = makeProject();
+    const sourceSentinel = path.join(fixture.root, 'source-sentinel.txt');
+    writeFileSync(sourceSentinel, 'unchanged\n');
+    const report = await runSupervisor(baseOptions(), { repoRoot: fixture.root, executable: fixture.executable });
+    const result = report.results[0];
+    assert.equal(readFileSync(sourceSentinel, 'utf8'), 'unchanged\n');
+    assert.equal(existsSync(path.join(fixture.root, '.exp-bundles/_run_log.jsonl')), false);
+    assert.equal(existsSync(path.join(fixture.root, '.exp-bundles/_temp/exp_verdicts.jsonl')), false);
+    assert.equal(existsSync(path.join(result.run_root, 'dpt_disp_fixture_verdict/exp_result.json')), false);
+  });
+
   it('retains valid native completion but stops the batch when final cost is missing', async () => {
     const fixture = makeProject({ fixtureMode: 'missing-cost' });
     const report = await runSupervisor(baseOptions(), { repoRoot: fixture.root, executable: fixture.executable });
@@ -99,6 +224,124 @@ describe('run-agent-experiment deterministic host lifecycle', () => {
     assert.equal(result.effective_outcome, 'ERROR');
     assert.equal(result.reason, 'cost_unknown');
     assert.equal(result.run_root_available, true);
+  });
+
+  it('passes the bounded per-case cap to the Headless child', async () => {
+    const fixture = makeProject();
+    const report = await runSupervisor(baseOptions({ maxTotalBudgetUsd: 1, maxCaseBudgetUsd: 0.3 }), { repoRoot: fixture.root, executable: fixture.executable });
+    assert.equal(report.exit_code, 0);
+    const capture = JSON.parse(readFileSync(path.join(report.results[0].run_root, '_diagnostics/fixture-invocation.json'), 'utf8'));
+    assert.equal(capture.argv[capture.argv.indexOf('--max-budget-usd') + 1], '0.3');
+  });
+
+  it('uses the terminal Headless result cost when native Sub-agent activity emits an earlier result', async () => {
+    const fixture = makeProject({ fixtureMode: 'nested-result' });
+    const report = await runSupervisor(baseOptions(), { repoRoot: fixture.root, executable: fixture.executable });
+    const result = report.results[0];
+    assert.equal(report.exit_code, 0);
+    assert.equal(result.effective_outcome, 'PASS');
+    assert.equal(result.cost_usd, 0.25);
+    assert.equal(report.accumulated_cost_usd, 0.25);
+  });
+
+  it('spawns the test-owned Agent executable without a shell', async () => {
+    const fixture = makeProject();
+    const shellSensitiveExecutable = path.join(fixture.root, 'fixture; agent executable.mjs');
+    writeFileSync(shellSensitiveExecutable, readFileSync(fixture.executable, 'utf8'));
+    chmodSync(shellSensitiveExecutable, 0o755);
+    const report = await runSupervisor(baseOptions(), { repoRoot: fixture.root, executable: shellSensitiveExecutable });
+    assert.equal(report.exit_code, 0);
+    assert.equal(report.results[0].effective_outcome, 'PASS');
+  });
+
+  it('fails closed for malformed, exhausted, or over-cap final cost', async () => {
+    for (const { mode, options, reason } of [
+      { mode: 'malformed-cost', options: {}, reason: 'cost_unknown' },
+      { mode: 'budget-exhausted', options: {}, reason: 'case_budget_exhausted' },
+      { mode: 'over-budget', options: { maxCaseBudgetUsd: 0.1 }, reason: 'case_budget_exhausted' },
+    ]) {
+      const fixture = makeProject({ fixtureMode: mode });
+      const report = await runSupervisor(baseOptions(options), { repoRoot: fixture.root, executable: fixture.executable });
+      const result = report.results[0];
+      assert.equal(report.exit_code, 2, mode);
+      assert.equal(result.lifecycle_outcome, 'ERROR', mode);
+      assert.equal(result.reason, reason, mode);
+      assert.equal(result.run_root_available, true, mode);
+    }
+  });
+
+  it('stops the unstarted remainder after an over-cap started case', async () => {
+    const fixture = makeProject({ fixtureMode: 'over-budget' });
+    const firstPath = 'exp_fixture/case-1-light-fixture.md';
+    const secondPath = 'exp_fixture/case-2-light-fixture.md';
+    writeFileSync(
+      path.join(fixture.root, 'experiments_playbook', secondPath),
+      readFileSync(path.join(fixture.root, 'experiments_playbook', firstPath), 'utf8').replaceAll('case-1-light-fixture', 'case-2-light-fixture'),
+    );
+    writeFileSync(path.join(fixture.root, 'experiments_playbook/PLAYBOOK_MANIFEST.md'), formatPlaybookManifest([firstPath, secondPath]));
+    const report = await runSupervisor(baseOptions({ caseId: null, all: true, maxCaseBudgetUsd: 0.1 }), { repoRoot: fixture.root, executable: fixture.executable });
+    assert.equal(report.exit_code, 2);
+    assert.equal(report.results.length, 2);
+    assert.equal(report.results[0].reason, 'case_budget_exhausted');
+    assert.equal(report.results[1].agent_process, 'not_started');
+    assert.equal(report.results[1].reason, 'case_budget_exhausted');
+  });
+
+  it('keeps a specific lifecycle reason for Agent process and stream failures', async () => {
+    for (const { mode, reason } of [
+      { mode: 'nonzero', reason: 'agent_nonzero_17' },
+      { mode: 'signal', reason: 'agent_signal_SIGTERM' },
+      { mode: 'timeout', reason: 'agent_timeout' },
+      { mode: 'approval', reason: 'approval_required' },
+      { mode: 'malformed-stream', reason: 'malformed_agent_stream' },
+    ]) {
+      const fixture = makeProject({ fixtureMode: mode });
+      const report = await runSupervisor(baseOptions({ timeoutMs: mode === 'timeout' ? 50 : 10000 }), { repoRoot: fixture.root, executable: fixture.executable });
+      const result = report.results[0];
+      assert.equal(report.exit_code, 2, mode);
+      assert.equal(result.lifecycle_outcome, 'ERROR', mode);
+      assert.equal(result.effective_outcome, 'ERROR', mode);
+      assert.equal(result.reason, reason, mode);
+      assert.equal(result.run_root_available, true, mode);
+    }
+  });
+
+  it('fails closed when the native completion is missing or malformed', async () => {
+    for (const mode of ['missing-completion', 'malformed-completion']) {
+      const fixture = makeProject({ fixtureMode: mode });
+      const report = await runSupervisor(baseOptions(), { repoRoot: fixture.root, executable: fixture.executable });
+      const result = report.results[0];
+      assert.equal(report.exit_code, 2, mode);
+      assert.equal(result.native_outcome, null, mode);
+      assert.equal(result.lifecycle_outcome, 'ERROR', mode);
+      assert.match(result.reason, /^native_completion_invalid:/, mode);
+      assert.equal(result.run_root_available, true, mode);
+    }
+  });
+
+  it('cannot turn successful generic enqueue/save checks into a Heavy PASS without completion', async () => {
+    const fixture = makeProject({ fixtureMode: 'heavy-generic-no-completion' });
+    const originalPath = 'exp_fixture/case-1-light-fixture.md';
+    const heavyPath = 'exp_fixture/case-406-heavy-generic.md';
+    const original = readFileSync(path.join(fixture.root, 'experiments_playbook', originalPath), 'utf8');
+    const heavy = original
+      .replaceAll('case-1-light-fixture', 'case-406-heavy-generic')
+      .replace('required_checks: [fixture-pass]', 'required_checks: [subject-work]')
+      .replace('durable_evidence_roles: []', 'durable_evidence_roles: [subject_task]')
+      .replace('proof_subject: deterministic_contract', 'proof_subject: agent_behavior')
+      .replace('subject_execution: none', 'subject_execution: real_subagent')
+      .replace('fixture: fixture_backed', 'fixture: setup_only');
+    writeFileSync(path.join(fixture.root, 'experiments_playbook', heavyPath), heavy);
+    rmSync(path.join(fixture.root, 'experiments_playbook', originalPath));
+    writeFileSync(path.join(fixture.root, 'experiments_playbook/PLAYBOOK_MANIFEST.md'), formatPlaybookManifest([heavyPath]));
+    const report = await runSupervisor(baseOptions({ caseId: 'case-406-heavy-generic' }), { repoRoot: fixture.root, executable: fixture.executable });
+    const result = report.results[0];
+    const trace = readFileSync(path.join(result.run_root, 'dpt_disp_fixture_verdict/rb_trace.jsonl'), 'utf8');
+    assert.match(trace, /"gate":"enqueue"/);
+    assert.match(trace, /"gate":"save"/);
+    assert.equal(result.native_outcome, null);
+    assert.equal(result.effective_outcome, 'ERROR');
+    assert.match(result.reason, /^native_completion_invalid:/);
   });
 
   it('rejects source mutation after native finalization and preserves the run root', async () => {
@@ -124,7 +367,23 @@ describe('run-agent-experiment deterministic host lifecycle', () => {
     assert.equal(capture.argv.length, 3);
     assert.deepEqual(capture.argv.slice(0, 2), ['--setting-sources', 'project,local']);
     assert.match(capture.argv[2], /Complete rendered selected playbook/);
+    assert.equal(capture.stdin_is_tty, Boolean(process.stdin.isTTY));
+    assert.equal(capture.stdout_is_tty, Boolean(process.stdout.isTTY));
+    assert.equal(capture.stderr_is_tty, Boolean(process.stderr.isTTY));
     for (const forbidden of ['-p', '--output-format', '--no-session-persistence', '--permission-mode', '--max-budget-usd']) assert.equal(capture.argv.includes(forbidden), false);
+  });
+
+  it('fails closed when the complete Interactive positional prompt exceeds 128 KiB', async () => {
+    const fixture = makeProject();
+    const instruction = path.join(fixture.root, 'experiments_playbook/RUN_INTERACTIVE_EXPS.md');
+    writeFileSync(instruction, `${readFileSync(instruction, 'utf8')}\n${'x'.repeat(128 * 1024)}`);
+    const report = await runSupervisor(baseOptions({
+      interactive: true, maxTotalBudgetUsd: null, maxCaseBudgetUsd: null, cleanupPass: false,
+    }), { repoRoot: fixture.root, executable: fixture.executable });
+    assert.equal(report.exit_code, 2);
+    assert.equal(report.results[0].agent_process, 'not_started');
+    assert.equal(report.results[0].lifecycle_outcome, 'ERROR');
+    assert.match(report.results[0].reason, /interactive prompt exceeds/);
   });
 });
 
@@ -193,35 +452,95 @@ console.log(JSON.stringify({schema_version:'experiment_health.v1',bundle_path:bu
   return { root, executable };
 }
 
+function configureFixturePlaybook(fixture, { caseId, replacements = [] }) {
+  const originalPath = 'exp_fixture/case-1-light-fixture.md';
+  const cost = caseId.match(/^case-\d+-(light|standard|heavy)-/)?.[1];
+  assert.ok(cost, `case id must carry a filename cost: ${caseId}`);
+  const nextPath = `exp_fixture/${caseId}.md`;
+  let content = readFileSync(path.join(fixture.root, 'experiments_playbook', originalPath), 'utf8')
+    .replaceAll('case-1-light-fixture', caseId);
+  for (const [from, to] of replacements) content = content.replace(from, to);
+  writeFileSync(path.join(fixture.root, 'experiments_playbook', nextPath), content);
+  rmSync(path.join(fixture.root, 'experiments_playbook', originalPath));
+  writeFileSync(path.join(fixture.root, 'experiments_playbook/PLAYBOOK_MANIFEST.md'), formatPlaybookManifest([nextPath]));
+  return nextPath;
+}
+
 function agentFixtureSource(mode) {
   return `#!/usr/bin/env node
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
+const mode = ${JSON.stringify(mode)};
 let prompt = '';
 const positionalPrompt = process.argv.at(-1)?.includes('## Injected execution identity') ? process.argv.at(-1) : null;
 function execute() {
   const match = prompt.match(/## Injected execution identity[\\s\\S]*?\\x60\\x60\\x60json\\n([\\s\\S]*?)\\n\\x60\\x60\\x60/);
   if (!match) process.exit(7);
+  if (mode === 'nonzero') process.exit(17);
+  if (mode === 'signal') process.kill(process.pid, 'SIGTERM');
+  if (mode === 'timeout') { setInterval(() => {}, 1000); return; }
   const identity = JSON.parse(match[1]);
   const context = JSON.parse(readFileSync(identity.run_context_path, 'utf8'));
-  const bundle = join(context.case_run_root, 'dpt_disp_fixture_verdict');
-  mkdirSync(bundle);
-  writeFileSync(join(bundle, 'rb_trace.jsonl'), JSON.stringify({event:'check',source:'playbook',gate:'fixture-pass',passed:true,expected:true}) + '\\n');
-  const state = spawnSync(process.execPath, [join(process.cwd(), 'DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs'), 'register-bundle', '--context', identity.run_context_path, '--role', 'verdict', '--path', bundle], {encoding:'utf8'});
-  if (state.status !== 0) { process.stderr.write(state.stderr); process.exit(8); }
-  const final = spawnSync(process.execPath, [join(process.cwd(), 'DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs'), '--context', identity.run_context_path, '--bundle', 'verdict=' + bundle], {encoding:'utf8'});
-  if (final.status !== 0) { process.stderr.write(final.stderr); process.exit(9); }
+  const checks = mode === 'heavy-generic-no-completion'
+    ? ['enqueue', 'save'].map((gate) => ({event:'check',source:'playbook',gate,passed:true,expected:true}))
+    : mode === 'native-fail'
+      ? [{event:'check',source:'playbook',gate:'fixture-pass',passed:false,expected:true}]
+    : [{event:'check',source:'playbook',gate:'fixture-pass',passed:true,expected:true}];
+  if (mode === 'secret-trace') checks[0].detail = 'fixture-secret';
+  const validTrace = checks.map((entry) => JSON.stringify(entry)).join('\\n') + '\\n';
+  const bundleSpecs = mode === 'multi-traces'
+    ? [
+      {role:'verdict',name:'dpt_disp_fixture_verdict',trace:validTrace},
+      {role:'required-aux',name:'dpt_disp_fixture_required_aux',trace:validTrace},
+      {role:'invalid-aux',name:'dpt_disp_fixture_invalid_aux',trace:'{not-json}\\n'},
+      {role:'missing-aux',name:'dpt_disp_fixture_missing_aux',trace:null},
+    ]
+    : [{role:'verdict',name:'dpt_disp_fixture_verdict',trace:validTrace}];
+  const bundles = bundleSpecs.map((spec) => ({...spec,path:join(context.case_run_root,spec.name)}));
+  for (const spec of bundles) {
+    mkdirSync(spec.path);
+    if (spec.trace !== null) writeFileSync(join(spec.path, 'rb_trace.jsonl'), spec.trace);
+    const state = spawnSync(process.execPath, [join(process.cwd(), 'DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs'), 'register-bundle', '--context', identity.run_context_path, '--role', spec.role, '--path', spec.path], {encoding:'utf8'});
+    if (state.status !== 0) { process.stderr.write(state.stderr); process.exit(8); }
+  }
+  const bundle = bundles.find((spec) => spec.role === 'verdict').path;
+  if (mode === 'extra-bundle') mkdirSync(join(context.case_run_root, 'dpt_disp_fixture_extra'));
+  if (mode === 'malformed-completion') {
+    writeFileSync(join(context.case_run_root, 'agent-experiment-completion.json'), '{not-json');
+  } else if (!['missing-completion', 'heavy-generic-no-completion'].includes(mode)) {
+    const finalArgs = [join(process.cwd(), 'DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs'), '--context', identity.run_context_path];
+    for (const spec of bundles) finalArgs.push('--bundle', spec.role + '=' + spec.path);
+    if (mode === 'not-run') finalArgs.push('--not-run-reason', 'required Subject actor unavailable');
+    if (mode === 'agent-evidence') {
+      for (const role of ['subject_task', 'subject_result', 'subject_receipt', 'subject_output']) {
+        const evidencePath = join(bundle, role + '.json');
+        writeFileSync(evidencePath, JSON.stringify({role,actual_runtime_evidence:true}) + '\\n');
+        finalArgs.push('--evidence', role + '=' + evidencePath);
+      }
+    }
+    const final = spawnSync(process.execPath, finalArgs, {encoding:'utf8'});
+    if (final.status !== 0) { process.stderr.write(final.stderr); process.exit(9); }
+  }
   writeFileSync(join(context.case_run_root, '_diagnostics/fixture-invocation.json'), JSON.stringify({
     cwd: process.cwd(), argv: process.argv.slice(2), prompt_has_full_playbook: prompt.includes('Complete rendered selected playbook'),
-    provider_env_isolated: !process.env.DEEPSEEK_API_KEY && process.env.ANTHROPIC_AUTH_TOKEN === 'fixture-secret' && process.env.ANTHROPIC_MODEL === 'fixture-model'
+    provider_env_isolated: !process.env.DEEPSEEK_API_KEY && process.env.ANTHROPIC_AUTH_TOKEN === 'fixture-secret' && process.env.ANTHROPIC_MODEL === 'fixture-model',
+    stdin_is_tty: Boolean(process.stdin.isTTY), stdout_is_tty: Boolean(process.stdout.isTTY), stderr_is_tty: Boolean(process.stderr.isTTY)
   }, null, 2));
   if (!positionalPrompt) process.stderr.write('credential=' + process.env.ANTHROPIC_AUTH_TOKEN + '\\n');
   process.stdout.write(JSON.stringify({type:'system',subtype:'init',cwd:process.cwd()}) + '\\n');
-  ${mode === 'mutate-source' ? "writeFileSync(context.source_playbook_path, readFileSync(context.source_playbook_path, 'utf8') + '\\nmutated');" : ''}
-  ${mode === 'missing-cost'
-    ? "process.stdout.write(JSON.stringify({type:'result',subtype:'success'}) + '\\n');"
-    : "process.stdout.write(JSON.stringify({type:'result',subtype:'success',total_cost_usd:0.25}) + '\\n');"}
+  if (mode === 'mutate-source') writeFileSync(context.source_playbook_path, readFileSync(context.source_playbook_path, 'utf8') + '\\nmutated');
+  if (mode === 'approval') process.stdout.write(JSON.stringify({type:'approval_request'}) + '\\n');
+  if (mode === 'malformed-stream') process.stdout.write('not-json\\n');
+  if (mode === 'missing-cost') process.stdout.write(JSON.stringify({type:'result',subtype:'success'}) + '\\n');
+  else if (mode === 'malformed-cost') process.stdout.write(JSON.stringify({type:'result',subtype:'success',total_cost_usd:'invalid'}) + '\\n');
+  else if (mode === 'budget-exhausted') process.stdout.write(JSON.stringify({type:'result',subtype:'success',total_cost_usd:0.25,message:'max_budget exhausted'}) + '\\n');
+  else if (mode === 'over-budget') process.stdout.write(JSON.stringify({type:'result',subtype:'success',total_cost_usd:0.5}) + '\\n');
+  else if (mode === 'nested-result') {
+    process.stdout.write(JSON.stringify({type:'result',subtype:'success',total_cost_usd:0.1}) + '\\n');
+    process.stdout.write(JSON.stringify({type:'result',subtype:'success',origin:{kind:'task-notification'},total_cost_usd:0.25}) + '\\n');
+  }
+  else process.stdout.write(JSON.stringify({type:'result',subtype:'success',total_cost_usd:0.25}) + '\\n');
 }
 if (positionalPrompt) {
   prompt = positionalPrompt;

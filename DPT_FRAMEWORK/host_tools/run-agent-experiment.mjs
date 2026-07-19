@@ -261,6 +261,7 @@ export async function runSupervisor(opts, { executable = 'claude', repoRoot = RE
       let evidence = null;
       let cleanupStatus = 'not_attempted';
       let caseAudit = null;
+      let currentCap = null;
       try {
         prepared = prepareCaseRun({
           repoRoot: projectRoot, expBundlesRoot: expBundles, batchId, ordinal, entry,
@@ -274,7 +275,7 @@ export async function runSupervisor(opts, { executable = 'claude', repoRoot = RE
         } else {
           const remaining = opts.maxTotalBudgetUsd - accumulatedCostUsd;
           if (!(remaining > 0)) throw new Error('batch_budget_exhausted');
-          const currentCap = Math.min(opts.maxCaseBudgetUsd ?? remaining, remaining);
+          currentCap = Math.min(opts.maxCaseBudgetUsd ?? remaining, remaining);
           const plan = buildHeadlessAgentCliPlan({ repoRoot: projectRoot, maxBudgetUsd: currentCap, executable });
           const logBase = join(expBundles, '_logs', batchId, `${String(ordinal).padStart(3, '0')}-${entry.frontmatter.case}`);
           processResult = await runHeadlessAgent({
@@ -294,8 +295,14 @@ export async function runSupervisor(opts, { executable = 'claude', repoRoot = RE
         catch (error) {
           if (!lifecycleOutcome) { lifecycleOutcome = 'ERROR'; reason = `native_completion_invalid: ${error.message}`; }
         }
-        if (!opts.interactive && processResult.budgetExhausted) { lifecycleOutcome = 'ERROR'; reason = 'case_budget_exhausted'; }
-        else if (!opts.interactive && processResult.totalCostUsd === null) { lifecycleOutcome = 'ERROR'; reason = 'cost_unknown'; }
+        if (!opts.interactive && (processResult.budgetExhausted
+          || (currentCap !== null && processResult.totalCostUsd !== null && processResult.totalCostUsd > currentCap + 1e-9))) {
+          lifecycleOutcome = 'ERROR';
+          reason = 'case_budget_exhausted';
+        } else if (!opts.interactive && processResult.totalCostUsd === null && !lifecycleOutcome) {
+          lifecycleOutcome = 'ERROR';
+          reason = 'cost_unknown';
+        }
         if (!lifecycleOutcome && completion) {
           assertCaseRunRootIdentity(prepared, 'health');
           health = await runHealthChecks({ completion, healthCli, cwd: projectRoot, timeoutMs: opts.healthTimeoutMs });

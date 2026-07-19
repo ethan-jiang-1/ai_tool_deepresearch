@@ -47,7 +47,7 @@ Fixture-backed Engine path. No Agent actor and no external calls. Fixture files 
 4. Verify the submitted ledger row contains the verified cache trail.
 5. Claim three more work units and prove incomplete, escaped, and parent cache paths reject non-terminally with no extra ledger rows.
 6. Verify `cache_coverage` passes for the valid submitted row.
-7. Record trace-backed verdict and clean up only on PASS.
+7. Record strict trace checks, invoke native completion, and stop; the Autorun Supervisor owns health, preservation, and any requested clean-PASS cleanup.
 
 ## Step 1: [MAIN/SHELL] Create Bundle
 

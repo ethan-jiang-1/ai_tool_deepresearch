@@ -34,7 +34,7 @@ claims:
     proof_subject: deterministic_contract
     asset:
       kind: node_test
-      path: tests/integration/host-tools/agent-experiment-autorun.test.mjs
+      path: tests/integration/host_tools/run-agent-experiment.test.mjs
     execution_profile:
       fixture: fixture_backed
       subject_execution: none

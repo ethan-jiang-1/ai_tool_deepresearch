@@ -38,6 +38,24 @@ Every current manifest-registered Wave0/Wave1/Wave2 case that invokes `check-gat
 - **THEN** the Playbook Agent SHALL execute the phase-role `log-event.mjs` action from Markdown
 - **AND** the gate CLI or Engine SHALL NOT emit the event automatically
 
+#### Scenario: wave playbook passes gate after writing completion event
+
+- **WHEN** a Wave playbook writes the qualifying Wave artifact and `wave{N}_completion` before the gate
+- **THEN** the gate's `trace_event_present` rule passes
+- **AND** the gate passes when its other rules pass
+
+#### Scenario: omitted completion event fails trace_event_present regardless of artifacts
+
+- **WHEN** qualifying Wave artifacts exist but `wave{N}_completion` is absent before the gate
+- **THEN** the gate fails `trace_event_present` and inspect identifies the missing event in `rb_trace.jsonl`
+- **AND** no finalizer or Supervisor fallback manufactures it
+
+#### Scenario: completion event is phase-agent obligation, not gate-emitted
+
+- **WHEN** event ownership is evaluated
+- **THEN** the phase Playbook Agent writes `wave{N}_completion` with `log-event.mjs` from Markdown
+- **AND** the gate CLI and Engine only validate it
+
 ### Requirement: Wave1 placeholder not mistaken for full subagent research (RWE-008, 横切约束)
 
 Every current Wave1-related playbook SHALL state its foundation placeholder boundary directly in Markdown so a reviewer can distinguish deterministic foundation structure from full Subject Agent/Sub-agent research. A placeholder such as `subagent: true` SHALL be labeled as a future marker unless the V2 profile and durable runtime evidence prove an independent real Subject actor.
@@ -92,3 +110,52 @@ Verdict-affecting facts SHALL be strict playbook-owned root-trace checks with st
 - **WHEN** timeout preflight evaluates a candidate result
 - **THEN** dry-submit-compatible candidates SHALL route to formal submit, repairable candidates to same-work repair, and invalid/ambiguous authority to inspect/block
 - **AND** the case SHALL verify the recommendation through CLI JSON plus required runtime trace checks
+
+#### Scenario: no-progress timeout retry remains valid
+
+- **WHEN** a controlled Wave case has a claimed work unit with no result, progress receipt, output/cache progress, and an expired effective idle lease
+- **THEN** timeout-preflight reports eligibility
+- **AND** default timeout requeues through the accepted REDO path
+
+#### Scenario: progress-positive timeout is refused
+
+- **WHEN** a controlled Wave case has recent Engine-observed work-unit progress
+- **THEN** timeout-preflight reports `timeout_eligible: false`
+- **AND** default timeout leaves queue, index, status, ledger, and retry surfaces unchanged
+
+#### Scenario: submit-ready candidate routes to submit
+
+- **WHEN** a controlled Wave case provides a candidate result that dry-submit accepts
+- **THEN** timeout-preflight recommends formal submit
+- **AND** the required CLI and root-trace checks show timeout is not the terminal route
+
+#### Scenario: caller-provided candidate path follows dry-submit semantics
+
+- **WHEN** a controlled Wave case supplies `timeout-preflight --result <candidate-result>`
+- **AND** the candidate is valid or invalid under dry-submit rules
+- **THEN** timeout-preflight classifies it consistently with dry-submit
+- **AND** an external candidate mtime alone does not extend the idle lease
+
+#### Scenario: repairable candidate routes to repair
+
+- **WHEN** a controlled Wave case has a candidate that dry-submit rejects with repair diagnostics
+- **THEN** timeout-preflight recommends repair for the same `work_id`
+- **AND** the attempt remains claimed
+
+#### Scenario: invalid candidate authority routes to inspect or block
+
+- **WHEN** a controlled Wave case has a wrong identity, terminal status, invalid binding, or ambiguous-authority candidate
+- **THEN** timeout-preflight recommends `inspect` or `block`
+- **AND** it is not treated as same-`work_id` repair or default-timeout terminalization
+
+#### Scenario: forced timeout records audit evidence
+
+- **WHEN** a controlled Wave case uses `operate-work-unit timeout --force` on a progress-positive attempt
+- **THEN** the diagnostics record forced-timeout evidence including structured `progress_sources[]`
+- **AND** root-trace checks confirm the terminal attempt remains fail-closed and non-covering
+
+#### Scenario: late submit remains fail closed
+
+- **WHEN** a work unit has already been terminalized as `timed_out`
+- **THEN** ordinary `operate-work-unit submit` rejects it
+- **AND** the playbook does not claim audited late accept is available

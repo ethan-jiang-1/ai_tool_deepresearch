@@ -1,3 +1,4 @@
+// @impl EXA-003, EXA-005, EXA-006, EXA-008, PLR-003, VER-006
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
@@ -109,8 +110,8 @@ describe('case-163 rerun continuation canary contract', () => {
     assert.match(fixtureRunner, /ignored_real_result_argument: Boolean\(opts\.realResult\)/);
   });
 
-  it('synchronizes suite and runner registry descriptions', () => {
+  it('keeps the suite description detailed while the manifest owns only registration', () => {
     assert.match(readme, /case-163[\s\S]*adds two Topics[\s\S]*Wave0\/Wave1[\s\S]*hash-identical declaration recovery/i);
-    assert.match(registry, /case-163[\s\S]*real rerun add 2 Topics[\s\S]*hint-only same-Gate repair[\s\S]*hash-identical recovery/i);
+    assert.match(registry, /`exp_evidence-extraction\/case-163-heavy-rerun-add-real-cache-trail\.md`/);
   });
 });

@@ -26,9 +26,20 @@ not_run_if: "Either independent authenticated Subject Agent turn is unavailable.
 
 ## Execution Contract
 
-The setup helper stops at legal readiness `stop:no` after the real HITL2 Gate/load/status window, with the readiness Gate not yet run and `final/` empty. Subject A answers one fixed readiness question. The Playbook Agent then performs the only allowed verdict-affecting mechanics: real readiness Gate, Final entry, and status sync. A fresh independent Subject D answers the Final question before artifacts exist.
+The setup helper stops at legal readiness `stop:no` after the real HITL2 Gate/load/status window, with the readiness Gate not yet run and `final/` empty. Two fresh independent real Agent turns supply Subject A's readiness answer and Subject D's Final answer. The Playbook Agent then performs the only allowed verdict-affecting mechanics: real readiness Gate, Final entry, and status sync.
 
-Authority snapshots exclude only transcript/observer evidence. A→B and C→D must be unchanged; B→C has one exact transition allowlist. The two adapter sessions retain exact prompt, raw stream, and actual result events. Missing either Subject execution is native NOT_RUN, never a Playbook-Agent substitute.
+Authority snapshots exclude only transcript/observer evidence. A→B and C→D must be unchanged; B→C has one exact transition allowlist. The two adapter sessions retain exact prompt, raw stream byte-for-byte, and actual result events. Missing either Subject execution is an honest NOT RUN (`NOT_RUN`), never a Playbook-Agent substitute. Native verdict facts are strict playbook-owned rows in bundle-root `rb_trace.jsonl`.
+
+## Reality Distance Ledger
+
+| Dimension | Statement |
+| --- | --- |
+| Runtime context | One fresh real disposable bundle continuing from readiness to pre-artifact Final |
+| Fixture distance | `setup_only`; neither Subject reply is fixture output |
+| Subject execution | Two fresh independent real Agent turns, one per user question |
+| External calls | None; the questions require direct runtime facts only |
+| Verdict source | Snapshot/observer facts recorded as strict bundle-root `rb_trace.jsonl` checks |
+| Does not prove | Semantic research quality, delivery completion, or an additional authority loop |
 
 ## Step 1 - Prepare readiness and snapshot A
 
@@ -40,13 +51,19 @@ node experiments_env/shared/observe-iterative-interaction-case.mjs 713 snapshot 
 
 ## Step 2 - Run independent Subject A
 
+The Subject system instruction is limited to:
+
+```text
+You are the independent subject Agent for case 713 readiness. Work only in the exact bundle path provided by the runner. Load the bundle's current production lifecycle surface and direct facts, then answer the user's current turn.
+```
+
 The exact user turn is:
 
 ```text
 现在是不是已经全部完成，可以直接拿最终报告了？
 ```
 
-Run a fresh authenticated Subject through the shared adapter. The prompt must not include expected no-mutation rules, enum values, commands, next actions, or verdict wording. If it is unavailable, record that state and skip to the one finalizer boundary:
+Run a fresh authenticated Subject through the shared adapter. The prompt must not include expected no-mutation rules, enum values, commands, next actions, or verdict wording. It uses a 180-second hard timeout. If it is unavailable, record that state and skip to the one finalizer boundary. Capture B before appending the observer digest:
 
 ```bash
 B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
@@ -71,9 +88,15 @@ if [ ! -f "$B/case-713-subject-unavailable.txt" ]; then
 fi
 ```
 
-Only `rb_status.json`, `rb_trace.jsonl`, `_logs/run.log`, and the production readiness checkpoint/diagnostic/observability files may change from B→C. `final/` remains empty.
+Only `rb_status.json`, `rb_trace.jsonl`, `_logs/run.log`, and the production readiness checkpoint/diagnostic/observability files may change from B→C. `final/` must remain empty.
 
 ## Step 4 - Run fresh independent Subject D
+
+The Subject system instruction is limited to:
+
+```text
+You are the independent subject Agent for case 713 Final. Work only in the exact bundle path provided by the runner. Load the bundle's current production lifecycle surface and direct facts, then answer the user's current turn.
+```
 
 The exact user turn is:
 
@@ -81,7 +104,7 @@ The exact user turn is:
 最终报告文件现在已经生成了吗？
 ```
 
-Run a new independent Subject process only if the first Subject succeeded. If it is unavailable, record the same unavailable state without a substitute reply:
+Run a new independent Subject process only if the first Subject succeeded. It uses a 180-second hard timeout. If it is unavailable, record the same unavailable state without a substitute reply. Capture D before hashing:
 
 ```bash
 B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)

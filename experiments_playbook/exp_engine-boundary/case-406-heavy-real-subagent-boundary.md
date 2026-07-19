@@ -45,7 +45,7 @@ Read `$STATE/case406-prepared.json`. Its `prepared` object contains the exact ab
 
 ## Step 2 - Run the independent native Subject Sub-agent
 
-Use the native Task/Sub-agent tool to start exactly one `dpt-source-intake` Subject Sub-agent. Give it the exact `spawn_prompt` and absolute paths from the prepared object. Require it to read the generated task, immutable beacon, and result schema; perform only that bounded work; and write the assigned result, runtime receipt, declared output, and cache bytes before returning. Preserve the returned Task result as diagnostic evidence, but do not substitute parent-authored bytes for any missing assigned file.
+Use the native Task/Sub-agent tool to start exactly one `dpt-source-intake` Subject Sub-agent. Give it the exact `spawn_prompt` and absolute paths from the prepared object. Require it to read the generated task, immutable beacon, and result schema; perform only that bounded work; and write the assigned result, runtime receipt, declared output, and cache bytes before returning. This case is no-network: the generated task supplies one local fixture input, so neither the Playbook Agent nor Subject Sub-agent may invoke WebSearch, WebFetch, curl, wget, or another network client. Preserve the returned Task result as diagnostic evidence, but do not substitute parent-authored bytes for any missing assigned file.
 
 After the Task returns, verify that `result_path`, `runtime_receipt_path`, and at least one result-declared output file exist. If the native Task tool cannot launch the named Sub-agent, or it returns without those assigned files and cannot repair its own work, record the unavailable boundary:
 

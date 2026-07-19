@@ -51,7 +51,7 @@ Fixture-backed Engine case, no Agent actor, no external calls. Fixture outputs m
 6. Run invalid submit checkpoints: missing receipt and invalid result.
 7. Run no-progress expired timeout retry checkpoint and confirm retry uses a new same-batch `work_id`.
 8. In a separate disposable bundle, stage orphan output without submit and confirm Wave0 gate rejects it.
-9. Record all runtime facts as trace checks and clean up only on PASS.
+9. Record all runtime facts as trace checks, invoke native completion, and stop; the Autorun Supervisor owns health, preservation, and any requested clean-PASS cleanup.
 
 ## Step 1: [MAIN/SHELL] Create Runtime Context
 

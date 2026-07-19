@@ -82,75 +82,6 @@ Fixture-backed or old delegated evidence SHALL NOT satisfy real-agent proof unle
 - **WHEN** a claimed work unit lacks matching runtime evidence for its receipt nonce
 - **THEN** the real subagent playbook SHALL NOT claim proof of real sub-agent execution
 
-### Requirement: Playbook frontmatter weight field (AGT-005)
-
-Each command experiment playbook SHALL carry runner-facing cost metadata that matches the current command-experiment convention. Until the accepted frontmatter schema grows a dedicated `standard` value, filename cost labels SHALL map as follows: `light` and `standard` files use `weight: light`, while `heavy` files use `weight: heavy`.
-
-Current specs SHALL NOT describe old simple/medium/complex filenames as the way to infer execution cost. Runner-facing docs MAY explain legacy mappings only as cleanup-control or migration context, not as current authoring guidance.
-
-#### Scenario: cost label and weight remain aligned
-
-- **WHEN** a current playbook is named `case-<id>-standard-<role>.md`
-- **THEN** its frontmatter MAY use `weight: light` until a `standard` weight is accepted
-- **AND** runner guidance SHALL treat the filename cost and frontmatter weight as distinct routing facts
-
-#### Scenario: old filename taxonomy is not current cost metadata
-
-- **WHEN** current specs or runner docs explain experiment cost
-- **THEN** they SHALL use light/standard/heavy cost labels and the accepted `weight` frontmatter convention
-- **AND** they SHALL NOT instruct agents to infer current cost from obsolete simple/medium/complex test filenames
-
-### Requirement: Disposable bundle names include random suffix (AGT-006)
-
-`experiments_env/shared/new-disposable-bundle.mjs` 在生成 disposable bundle 目录名时 SHALL 在 case 名后追加一位随机 hex 字符（`0-9a-f`）。例如 `dpt_disp_agq_simple` → `dpt_disp_agq_simple_a`。以此防止同 case 在同一 session 内重复跑或并发跑时的目录冲突。
-
-所有 playbook 的 cleanup step SHALL 使用确定性清除方式，不依赖重新调用 `new-disposable-bundle.mjs` 获取目录名：
-- 优先使用 `$B` 变量（playbook Step 1 保存的 bundle 路径）
-- 或使用 glob 模式 `rm -rf dpt_disp_<short>_*` 清除所有匹配目录
-
-#### Scenario: Bundle name has random hex suffix
-
-- **WHEN** 调用 `new-disposable-bundle.mjs agq_simple --force`
-- **THEN** 创建的目录名为 `dpt_disp_agq_simple_x`，其中 `x` 为 `[0-9a-f]` 之一
-- **AND** 每次调用生成不同的随机后缀
-
-#### Scenario: Cleanup uses glob to avoid stale bundles
-
-- **WHEN** playbook 的 cleanup step 执行 `rm -rf dpt_disp_agq_simple_*`
-- **THEN** 所有之前跑过的 `dpt_disp_agq_simple_*` 目录（无论随机后缀）均被清除
-- **AND** 不依赖记住具体的随机后缀
-
-#### Scenario: Race-safe re-run
-
-- **WHEN** 同 case 的 playbook 在同一 session 内被跑两次
-- **THEN** 两次创建的 bundle 目录不同（随机后缀不同），不冲突
-
-### Requirement: Unified trace file naming (AGT-007)
-
-所有 command experiment playbook SHALL 使用统一的 trace 文件名 `rb_trace.jsonl`（位于 bundle 目录根），不再使用实验族差异化命名。
-
-Bundle 目录已提供物理隔离（且本 change 引入随机后缀），trace 文件不需再靠文件名区分实验族来源。
-
-所有 playbook 的以下位置 SHALL 使用统一 `rb_trace.jsonl`：
-- inline `.mjs` 中 `createTrace()` 调用的路径参数
-- verdict 步骤中读取 trace JSONL 的路径
-- frontmatter `trace:` 字段（从精确路径更新为 `dpt_disp_<short>_<case>_*/rb_trace.jsonl` 前缀模式）
-
-#### Scenario: All playbooks write to rb_trace.jsonl
-
-- **WHEN** 任意 playbook 执行 inline `.mjs` 中的 `createTrace(...)`
-- **THEN** trace 文件写入路径为 `<bundle>/rb_trace.jsonl`
-
-#### Scenario: Verdict reads from rb_trace.jsonl
-
-- **WHEN** playbook 执行 verdict 步骤
-- **THEN** 代码从 `<bundle>/rb_trace.jsonl` 读取 trace events 并裁决
-
-#### Scenario: Frontmatter trace field uses unified name
-
-- **WHEN** 人打开任意 playbook 查看 frontmatter
-- **THEN** `trace:` 字段指向 `rb_trace.jsonl`（含 bundle 目录前缀），不再包含实验族特定命名
-
 ### Requirement: Verdict output uses ANSI color (AGT-008)
 
 所有 command experiment playbook 的 verdict `console.log` SHALL 使用 ANSI 颜色码区分 PASS/FAIL 结果：
@@ -332,3 +263,67 @@ The heavy canary SHALL NOT be required for archive, and `NOT RUN` SHALL NOT be c
 - **THEN** it SHALL record `NOT RUN` with diagnostic context
 - **AND** the change MAY still archive if the standard E2E and regression tests pass
 - **AND** the archive notes SHALL NOT claim real Agent high-friction replay passed
+
+### Requirement: Disposable experiment bundles are collision-resistant and host-cleaned
+
+Disposable bundle creation SHALL continue to assign collision-resistant names for repeated same-case runs. During Agent Experiment execution, the approved disposable, production-instantiate and fixture-case creators SHALL place every bundle as a direct child of the validated Supervisor-owned case run root. Outside a valid Agent Experiment context, their accepted ordinary repo/test target behavior SHALL remain available.
+
+Current playbooks SHALL NOT own PASS cleanup, delete by glob, or remove individual bundle paths. For Headless Autorun, the Supervisor SHALL delete only the complete containment-valid case run root after effective PASS, required health CLEAN, explicit cleanup policy, durable transcript and full audit. Interactive replay SHALL use the same host-created run context and post-completion validation/health/audit contract but SHALL preserve its run root in v1.
+
+#### Scenario: Bundle name has random hex suffix
+
+- **WHEN** a Supervisor prepares a repeatable case execution
+- **THEN** it creates a collision-resistant case run root and any created disposable bundle has a collision-resistant identity beneath it
+- **AND** that identity is recorded through the explicit run context rather than inferred from a filename suffix
+
+#### Scenario: Cleanup uses glob to avoid stale bundles
+
+- **WHEN** a Headless case reaches native completion
+- **THEN** neither the playbook nor the Subject Agent uses a cleanup glob
+- **AND** only the Supervisor may remove the complete current run root after durable audit and CLEAN effective PASS
+
+#### Scenario: Race-safe re-run
+
+- **WHEN** the same registered case is run twice
+- **THEN** each execution receives a different Supervisor-owned run root and contained bundle path
+- **AND** neither execution can delete or reuse the other's runtime state
+
+#### Scenario: Same case reruns do not collide inside run roots
+
+- **WHEN** the same registered case runs more than once
+- **THEN** each execution has a unique Supervisor-owned run root and collision-resistant bundle name
+- **AND** neither execution reuses or deletes the other's path
+
+#### Scenario: Glob cleanup is retired
+
+- **WHEN** an autorun-compatible playbook reaches native completion
+- **THEN** it stops before `rm -rf` or a playbook cleanup helper
+- **AND** only the Supervisor may later remove the complete current run root
+
+### Requirement: Command experiment bundles use one runtime trace
+
+Every current command experiment bundle SHALL continue to use bundle-root `rb_trace.jsonl` as the only verdict trace sink. V2 playbook frontmatter SHALL NOT repeat a static `trace:` glob or `bundle:` glob: runtime bundle and trace paths SHALL be declared and byte-bound by native completion under the current run root.
+
+#### Scenario: All playbooks write to rb_trace.jsonl
+
+- **WHEN** a registered playbook writes runtime trace events
+- **THEN** it writes to the created bundle's root `rb_trace.jsonl`
+- **AND** completion binds the exact verdict-boundary bytes for the declared bundle role
+
+#### Scenario: Verdict reads from rb_trace.jsonl
+
+- **WHEN** the native finalizer evaluates a completed playbook
+- **THEN** it reads accepted playbook-owned checks from the declared verdict bundle's root `rb_trace.jsonl`
+- **AND** arbitrary trace events do not become a Supervisor verdict fallback
+
+#### Scenario: Frontmatter trace field uses unified name
+
+- **WHEN** an operator reads a registered V2 playbook frontmatter
+- **THEN** it contains no static `trace:` field
+- **AND** dynamic trace coordinates come only from native completion
+
+#### Scenario: Runtime trace path comes from completion
+
+- **WHEN** a registered playbook completes with one or more bundles
+- **THEN** each declared bundle uses its root `rb_trace.jsonl` surface or explicitly records an auxiliary invalid/missing trace fault
+- **AND** no stale frontmatter glob becomes runtime or cleanup authority

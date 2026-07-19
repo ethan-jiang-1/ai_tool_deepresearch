@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.34
+
+- Added Agent Experiment Autorun: the Autorun Supervisor now starts one real Headless Playbook Agent per manifest-selected case, validates the playbook-owned native completion, runs declared health checks, and durably audits or cleans only eligible run roots.
+- Added strict run-context, bundle-role, native-completion, prompt/transcript, trace-prefix, and Subject-evidence contracts so PASS, health, lifecycle, cost, and cleanup remain independently auditable.
+
 ## v0.33
 
 - Added pre-trigger DeepSeek Claude Code launcher at `DPT_FRAMEWORK/host_tools/claude-deepseek.mjs` that reads three required values from repo-root `.env`, isolates inherited provider environment, validates endpoint URL format, and launches `claude` with transparent argument/stdio/exit-code passthrough.

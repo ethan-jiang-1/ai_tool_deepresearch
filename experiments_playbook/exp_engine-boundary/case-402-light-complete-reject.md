@@ -48,7 +48,7 @@ Fixture-backed, no Agent actor, no external calls. Each negative scenario must a
 4. Call `operate-work-unit submit` and read its JSON/exit result.
 5. Confirm the attempt remains non-terminal and no submitted ledger row is appended.
 6. Record each rejection and the empty-ledger invariant as trace `check` events.
-7. Print PASS/FAIL and clean up only on PASS.
+7. Record the native trace facts, invoke native completion, and stop; the Autorun Supervisor owns health, preservation, and any requested clean-PASS cleanup.
 
 ## Step 1: [MAIN/SHELL] Create Runtime Context
 

@@ -4,7 +4,7 @@
 
 ## REMOVED Requirements
 
-### Requirement: Playbook frontmatter weight field
+### Requirement: Playbook frontmatter weight field (AGT-005)
 
 **Reason**: `weight` duplicates the cost already encoded by the required filename grammar, has drifted between `light` and `standard`, and has no remaining consumer after Agent Autorun selects registered paths from `PLAYBOOK_MANIFEST.md` and filters cost from filenames. Keeping it would create a third cost truth. The constant `runner: coding-agent` frontmatter field is retired in the same migration because it has no independent consumer and conflicts with the precise Headless/Interactive Playbook Agent vocabulary.
 
@@ -38,6 +38,24 @@ Disposable bundle creation SHALL continue to assign collision-resistant names fo
 
 Current playbooks SHALL NOT own PASS cleanup, delete by glob, or remove individual bundle paths. For Headless Autorun, the Supervisor SHALL delete only the complete containment-valid case run root after effective PASS, required health CLEAN, explicit cleanup policy, durable transcript and full audit. Interactive replay SHALL use the same host-created run context and post-completion validation/health/audit contract but SHALL preserve its run root in v1.
 
+#### Scenario: Bundle name has random hex suffix
+
+- **WHEN** a Supervisor prepares a repeatable case execution
+- **THEN** it creates a collision-resistant case run root and any created disposable bundle has a collision-resistant identity beneath it
+- **AND** that identity is recorded through the explicit run context rather than inferred from a filename suffix
+
+#### Scenario: Cleanup uses glob to avoid stale bundles
+
+- **WHEN** a Headless case reaches native completion
+- **THEN** neither the playbook nor the Subject Agent uses a cleanup glob
+- **AND** only the Supervisor may remove the complete current run root after durable audit and CLEAN effective PASS
+
+#### Scenario: Race-safe re-run
+
+- **WHEN** the same registered case is run twice
+- **THEN** each execution receives a different Supervisor-owned run root and contained bundle path
+- **AND** neither execution can delete or reuse the other's runtime state
+
 #### Scenario: Same case reruns do not collide inside run roots
 
 - **WHEN** the same registered case runs more than once
@@ -53,6 +71,24 @@ Current playbooks SHALL NOT own PASS cleanup, delete by glob, or remove individu
 ### Requirement: Command experiment bundles use one runtime trace
 
 Every current command experiment bundle SHALL continue to use bundle-root `rb_trace.jsonl` as the only verdict trace sink. V2 playbook frontmatter SHALL NOT repeat a static `trace:` glob or `bundle:` glob: runtime bundle and trace paths SHALL be declared and byte-bound by native completion under the current run root.
+
+#### Scenario: All playbooks write to rb_trace.jsonl
+
+- **WHEN** a registered playbook writes runtime trace events
+- **THEN** it writes to the created bundle's root `rb_trace.jsonl`
+- **AND** completion binds the exact verdict-boundary bytes for the declared bundle role
+
+#### Scenario: Verdict reads from rb_trace.jsonl
+
+- **WHEN** the native finalizer evaluates a completed playbook
+- **THEN** it reads accepted playbook-owned checks from the declared verdict bundle's root `rb_trace.jsonl`
+- **AND** arbitrary trace events do not become a Supervisor verdict fallback
+
+#### Scenario: Frontmatter trace field uses unified name
+
+- **WHEN** an operator reads a registered V2 playbook frontmatter
+- **THEN** it contains no static `trace:` field
+- **AND** dynamic trace coordinates come only from native completion
 
 #### Scenario: Runtime trace path comes from completion
 

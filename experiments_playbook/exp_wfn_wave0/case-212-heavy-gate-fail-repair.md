@@ -50,7 +50,7 @@ Fixture-backed Engine case, no Agent actor, no external calls. The fixtures stan
 5. Enqueue and claim `topic-b` repair work unit from the new batch.
 6. Submit fixture-backed repair result through `operate-work-unit submit`.
 7. Rerun Wave0 gate and read JSON pass.
-8. Record fail/pass/repair checks into trace and clean up only on PASS.
+8. Record fail/pass/repair checks into trace, invoke native completion, and stop; the Autorun Supervisor owns health, preservation, and any requested clean-PASS cleanup.
 
 ## Step 1: [MAIN/SHELL] Create Runtime Context
 

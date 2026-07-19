@@ -28,14 +28,14 @@ Heavy real-Agent continuation canary. The fixture boundary ends with two histori
 
 After that boundary, PASS requires the production path. The coding Agent must use the real HITL2 Gate/route witness and `operate-topic-state apply` to add exactly two Topics, then execute their real Wave0 and Wave1 work units through claim, dry-submit, formal submit, reference/depth materialization, Gate feedback, and declaration recovery. No fixture may prewrite either new Topic's result, receipt, cache leaf, evidence/reference output, `source.yaml`, depth review, ledger row, or recovery row.
 
-If real Agent/sub-agent plus search/fetch capability is unavailable, record `NOT_RUN`, preserve the bundle, and exit `2`. `NOT_RUN` is not PASS. Never replace an unavailable actor with parent-written semantic output, hand-written receipt/result/provenance, or a fixture smoke.
+If real Agent/sub-agent plus search/fetch capability is unavailable, pass a non-empty reason to the one native finalizer boundary and stop. It records `NOT_RUN`; the Autorun Supervisor preserves the bundle. `NOT_RUN` is not PASS. Never replace an unavailable actor with parent-written semantic output, hand-written receipt/result/provenance, or a fixture smoke.
 
 ## Reality Distance Ledger
 
 | Dimension | Statement |
 | --- | --- |
 | Runtime context | One clean disposable bundle from shared experiment setup; the same bundle continues through Wave0, Wave1, fault, and recovery |
-| Historical fixture | Two old Topics and their normal-run submitted substrate only; excluded from real-Agent proof checks |
+| Historical fixture | Two old Topics and their normal-run submitted substrate only; excluded from real-Agent proof checks. Historical fixture rows are excluded from real-Agent checks. |
 | Rerun mutation | Real `hitl2-recorded` Gate handoff, `enter-phase`, status sync, and `operate-topic-state apply` for two new Topics |
 | Framework path | Normal queue enqueue, role-bound work-unit claim, dry-submit, formal submit, Wave inspect/Gate, and existing-owner `recover-declaration` |
 | Agent actor | Required for both new Topics in Wave0/Wave1 and one supplementary Wave1 attempt |
@@ -56,7 +56,7 @@ If real Agent/sub-agent plus search/fetch capability is unavailable, record `NOT
 6. The Phase Agent materializes tolerant complete references, the accepted index table, and minimal depth reviews derived from reviewed submitted rows.
 7. Pass the read-only Wave1 inspect, record `wave1_completion`, then delete one real Wave1 declaration row before the first formal Wave1 Gate attempt.
 8. Observe the single declaration parent hint, restore only through `recover-declaration`, and rerun the same formal Wave1 Gate to its first PASS.
-9. Clean up only on PASS; preserve FAIL/NOT_RUN.
+9. Invoke native completion and stop; the Autorun Supervisor owns health, preservation, and any requested clean-PASS cleanup. FAIL and NOT_RUN preserve the bundle.
 
 ## Step 1: [MAIN/SHELL] Stage Historical Normal-Run Prerequisite
 
@@ -386,7 +386,7 @@ Dispatch a real Agent/sub-agent for each generated Wave0 task. Each actor must:
 - verify every declared output and cache leaf before return; and
 - return only the actual result path.
 
-The main controller must not prewrite, repair after the fact, or copy these semantic/provenance surfaces. If either actor/result is unavailable, record `NOT_RUN`, preserve the bundle, and exit `2`.
+The main controller must not prewrite, repair after the fact, or copy these semantic/provenance surfaces. Do not hardcode `passed: true`. If either actor/result is unavailable, record the non-empty reason for native finalization, produce `NOT_RUN`, and stop; the Supervisor preserves the bundle. There is intentionally no fixture-backed automation command that can turn this heavy canary green.
 
 After the first successful new-Topic native Sub-agent returns, write `case-163-subagent-evidence.json` as a path-only index with exact absolute `task`, `result`, `receipt`, and one Subject-written declared `output` path. These paths must come from that work unit's generated prompt refs and returned result, not from a fixture or parent-authored substitute. If a required native actor/search/fetch capability is unavailable, instead write `case-163-subject-unavailable.txt` with a non-empty reason and skip directly to native completion.
 

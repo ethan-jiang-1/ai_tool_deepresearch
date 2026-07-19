@@ -5,9 +5,7 @@
 ## Purpose
 
 定义 `instantiation-complete`、`hitl1-recorded`、`setup-ready` 三个 gate 的真实 deterministic rule set 和 CLI 实现要求。所有规则都必须基于当前 accepted executable surface：现有 bundle files、现有 profile/status schema、现有 transition / gate helper contract。Gate 不做研究质量判断。
-
 ## Requirements
-
 ### Requirement: Instantiation complete gate rule set
 
 `gate-instantiation-complete.definition.json` SHALL 定义当前 contract 下的 instantiation rules。
@@ -232,36 +230,6 @@ Gate SHALL NOT 判断研究质量、evidence coverage 或 synthesis adequacy。
 - **THEN** CLI SHALL return `passed: false`
 - **AND** `inspect` SHALL 指向 basename inconsistency
 
-### Requirement: Gate CLIs return JSON feedback while experiments own trace verdict writing
-
-pre-research gate CLIs SHALL 继续通过 stdout 返回标准 JSON gate result（`check / routing / inspect / advice`），并以 exit code 表达 pass/fail/config error。它们 SHALL 把真实 gate attempt 追加到 active bundle 的 `rb_trace.jsonl`，但 SHALL NOT 直接承担 experiment verdict trace 写入责任。
-
-受 `guidelines/command-experiments.md` 约束的 playbook thin driver SHALL：
-- 调用真实 gate CLI
-- 解析 CLI JSON result
-- 通过 `DPT_FRAMEWORK/engine/trace.mjs` 向 bundle 根 `_trace.jsonl` 追加 `event: "check"` trace entry
-- 用 trace 中的 `check` events 形成最终 verdict
-
-#### Scenario: CLI feedback and trace verdict stay separate
-
-- **WHEN** experiment 执行某个 pre-research gate
-- **THEN** gate CLI stdout SHALL 提供 machine-readable JSON result
-- **AND** active bundle `rb_trace.jsonl` SHALL 记录对应 runtime audit entry
-- **AND** `_trace.jsonl` 中对应的 `check` event SHALL 由 playbook driver 基于该真实 result 追加
-- **AND** CLI SHALL NOT 通过 hand-written trace side effect 冒充 verdict authority
-
-### Requirement: Runtime audit trace and experiment verdict trace remain distinct
-
-`rb_trace.jsonl` SHALL remain the runtime audit surface；`_trace.jsonl` SHALL remain the command experiment verdict surface。两者都必须来自真实执行，但 authority 不同：
-- `rb_trace.jsonl` 记录真实 gate attempt / runtime audit
-- `_trace.jsonl` 记录 experiment verdict 所需的 `check` events
-
-#### Scenario: Production gate writes runtime audit trace without experiment wrapper
-
-- **WHEN** 用户在 production run bundle 上直接调用 pre-research gate CLI
-- **THEN** `rb_trace.jsonl` SHALL 获得新的 runtime audit entry
-- **AND** system SHALL NOT 要求存在 `_trace.jsonl` 才能留下 gate audit trail
-
 ### Requirement: HITL1 recorded gate status rules
 
 `gate-hitl1-recorded.definition.json` SHALL include `status_current_gate` and `status_next_gate` rules, consistent with every other gate definition in the system.
@@ -280,3 +248,39 @@ The `status_next_gate` rule SHALL check `rb_status.json#/next_gate` equals `"set
 - **WHEN** `rb_status.json` has `next_gate: "wave0_complete"` (old chain value, before advance-status was called)
 - **THEN** gate SHALL return `passed: false`
 - **AND** `inspect` SHALL indicate `next_gate` mismatch with expected value `"setup_ready"`
+
+### Requirement: Gate CLIs return JSON feedback while playbooks record verdict checks in the root trace
+
+Pre-research gate CLIs SHALL continue to return standard machine-readable `check / routing / inspect / advice` JSON on stdout, use exit codes for pass/fail/config error, and append the real gate attempt to the active bundle's `rb_trace.jsonl`. They SHALL NOT manufacture the command-experiment verdict check.
+
+A command-experiment Playbook Agent/thin driver SHALL invoke the real gate CLI, parse its JSON result, and use the accepted trace writer/helper to append a strict `event: check`, `source: playbook` row with stable case-owned gate ID and explicit boolean `passed`/`expected` to the same bundle-root `rb_trace.jsonl`. Native completion SHALL apply the V2 required-check and verdict-mode policy. No `_trace.jsonl`, console summary or hand-written alternate sink SHALL become verdict authority.
+
+#### Scenario: CLI feedback and playbook verdict ownership stay distinct in one trace
+
+- **WHEN** a command experiment invokes a pre-research gate
+- **THEN** gate stdout SHALL provide machine-readable JSON and `rb_trace.jsonl` SHALL receive the real gate-attempt audit row
+- **AND** the Playbook Agent/thin driver SHALL derive its separate strict verdict-check row from that real result in the same root trace
+- **AND** native completion SHALL bind the root-trace prefix without treating gate side effects or console prose as required case checks
+
+#### Scenario: CLI feedback and trace verdict stay separate
+
+- **WHEN** a command experiment invokes a pre-research gate
+- **THEN** gate stdout provides machine-readable JSON and `rb_trace.jsonl` receives the corresponding runtime audit row
+- **AND** the Playbook Agent/thin driver writes the strict verdict `check` from that real result in the same root trace
+- **AND** gate CLI side effects and console prose do not become verdict authority
+
+### Requirement: Runtime audit events and experiment verdict checks share one trace without sharing authority
+
+Bundle-root `rb_trace.jsonl` SHALL be the sole trace sink. Gate-owned `gate_attempt` rows remain runtime audit facts; strict playbook-owned `check` rows remain command-experiment verdict inputs. Event ownership and schema, not a second file, SHALL keep these authorities distinct.
+
+#### Scenario: Production gate writes audit without an experiment wrapper
+
+- **WHEN** an Agent invokes a pre-research gate directly on a production run bundle
+- **THEN** `rb_trace.jsonl` SHALL receive the gate-attempt audit row
+- **AND** no experiment verdict check, `_trace.jsonl`, finalizer or native completion SHALL be required merely to retain that production audit fact
+
+#### Scenario: Production gate writes runtime audit trace without experiment wrapper
+
+- **WHEN** an Agent invokes a pre-research gate directly on a production run bundle
+- **THEN** `rb_trace.jsonl` receives the real gate-attempt audit row
+- **AND** retaining that audit fact does not require an experiment verdict `check`, finalizer, or native completion

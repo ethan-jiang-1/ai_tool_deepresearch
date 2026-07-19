@@ -48,7 +48,7 @@ Fixture-backed, no Agent actor, no external calls. The case must trigger current
 4. Trigger work-unit claim and submit trace events.
 5. Walk the disposable bundle and fail if any non-root trace JSONL sink exists.
 6. Record API/queue/work-unit/single-sink checks in root `rb_trace.jsonl`.
-7. Print PASS/FAIL and clean up only on PASS.
+7. Record the native trace facts, invoke native completion, and stop; the Autorun Supervisor owns health, preservation, and any requested clean-PASS cleanup.
 
 ## Step 1: [MAIN/SHELL] Create Runtime Context
 

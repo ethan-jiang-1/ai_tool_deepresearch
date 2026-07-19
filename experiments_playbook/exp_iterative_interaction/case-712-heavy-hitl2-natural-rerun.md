@@ -30,6 +30,19 @@ The setup-only predecessor uses production Gates, route-bound loads, status sync
 
 Only the independent Subject Agent may generate the review/recommendation, receive the fixed natural-language request, write the existing HITL2 decision/rationale owner, run the real Gate, and consume its handoff. The Playbook Agent may prepare the boundary, run the shared Subject adapter, retain exact prompt/transcript/result bytes, and invoke deterministic observation/finalization. It must not produce the Subject-owned decision or substitute fixture output.
 
+The independent real Subject Agent is required evidence. If its runtime is unavailable, the case records an honest NOT RUN (`NOT_RUN`) through the single native finalizer boundary; it never becomes fixture PASS. The native verdict uses strict playbook-owned checks in bundle-root `rb_trace.jsonl`.
+
+## Reality Distance Ledger
+
+| Dimension | Statement |
+| --- | --- |
+| Runtime context | One fresh real disposable bundle at the legal HITL2 boundary |
+| Fixture distance | `setup_only`; no Subject decision, Gate pass, or rerun handoff is prewritten |
+| Subject execution | One independent real Subject Agent conversation with two fixed user events |
+| External calls | No external call is needed for this HITL2 conversation boundary |
+| Verdict source | Strict playbook-owned bundle-root `rb_trace.jsonl` checks plus native completion |
+| Does not prove | General research quality or a fixture substitute for Subject judgment |
+
 ## Step 1 - Prepare and register the legal HITL2 boundary
 
 ```bash
@@ -54,17 +67,23 @@ JS
 
 ## Step 2 - Run the independent Subject Agent conversation
 
-The Subject system instruction is limited to working in the exact bundle, loading the current production lifecycle surface/direct facts, responding to the current user turn, and following that production surface in the same session. Its two exact user turns are:
+The Subject system instruction is limited to:
 
 ```text
-请简要审阅当前研究，只告诉我一个最值得做的下一步。
+You are the independent subject Agent for case 712. Work only in the exact bundle path provided by the runner. Load the bundle's current production lifecycle surface and direct facts. Respond to the user's current turn, then follow that production surface for subsequent turns in this same session.
+```
+
+Its two exact user turns are:
+
+```text
+{"role":"user","event":"message","content":"请简要审阅当前研究，只告诉我一个最值得做的下一步。"}
 ```
 
 ```text
-资本约束这部分还不够，再补一下
+{"role":"user","event":"message","content":"资本约束这部分还不够，再补一下"}
 ```
 
-The shared adapter sends the second event only after the first successful Subject result. It preserves the raw stream byte-for-byte and retains the exact injected prompt plus actual result events. It does not add expected enums, commands, no-confirmation rules, next actions, or verdict hints.
+The shared adapter sends the second event only after the first successful Subject result. It preserves the raw stream byte-for-byte and retains the exact injected prompt plus actual result events. It uses a 180-second hard timeout and does not add expected enums, commands, no-confirmation rules, next actions, or verdict hints. No third user response is allowed after the fixed follow-up.
 
 If the adapter cannot start or complete the independent authenticated session, record the unavailable state and continue only to the one finalizer boundary:
 

@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { linkSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, linkSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
@@ -13,10 +13,12 @@ import {
   AgentExperimentRunContextSchema,
   caseRootIdentity,
   evaluateVerdictTrace,
+  loadRunContext,
   parsePlaybookManifest,
   renderRuntimeTokens,
   readAndValidateManifest,
   sha256Bytes,
+  traceBinding,
   validateCaseCompatibilityLedger,
 } from '../../DPT_FRAMEWORK/host_tools/lib/agent-experiment-contract.mjs';
 import {
@@ -32,6 +34,17 @@ import {
 const REPO_ROOT = resolve(new URL('../..', import.meta.url).pathname);
 const STATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs');
 const FINALIZER = join(REPO_ROOT, 'DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs');
+const CHANGE_NAME = 'experiment-auto-runner';
+
+function changeArtifactPath(name) {
+  const activePath = join(REPO_ROOT, 'openspec/changes', CHANGE_NAME, name);
+  if (existsSync(activePath)) return activePath;
+  const archiveRoot = join(REPO_ROOT, 'openspec/changes/archive');
+  const archives = readdirSync(archiveRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name.endsWith(`-${CHANGE_NAME}`));
+  if (archives.length !== 1) throw new Error(`Expected one archived ${CHANGE_NAME} change, found ${archives.length}`);
+  return join(archiveRoot, archives[0].name, name);
+}
 
 const VALID_FRONTMATTER = `---
 schema: command-experiment/v2
@@ -101,7 +114,7 @@ describe('Agent Experiment manifest contract', () => {
 
 describe('case compatibility ledger contract', () => {
   it('locks the checked 97-case baseline', () => {
-    const ledger = parseYaml(readFileSync(new URL('../../openspec/changes/experiment-auto-runner/case-compatibility-ledger.yaml', import.meta.url), 'utf8'));
+    const ledger = parseYaml(readFileSync(changeArtifactPath('case-compatibility-ledger.yaml'), 'utf8'));
     assert.deepEqual(validateCaseCompatibilityLedger(ledger), { cases: 97, requiredChecks: 502, agentBehaviorCases: 16 });
   });
 });
@@ -126,6 +139,7 @@ describe('runtime token rendering and verdict evaluation', () => {
       '```bash\necho "{{RUN_CONTEXT_SH}}" {{CASE_RUN_ROOT_SH}}\n```',
       '```bash\necho {{RUN_CONTEXT_SH}}/x {{CASE_RUN_ROOT_SH}}\n```',
       "```bash\ncat <<'EOF'\n{{RUN_CONTEXT_SH}}\nEOF\necho {{CASE_RUN_ROOT_SH}}\n```",
+      '```json\n{"context":"{{RUN_CONTEXT_SH}}","root":"{{CASE_RUN_ROOT_SH}}"}\n```',
       '```bash\necho {{UNKNOWN_SH}} {{RUN_CONTEXT_SH}} {{CASE_RUN_ROOT_SH}}\n```',
       '```bash\necho {{unknown_token}} {{RUN_CONTEXT_SH}} {{CASE_RUN_ROOT_SH}}\n```',
     ]) assert.throws(() => renderRuntimeTokens(source, values));
@@ -145,6 +159,38 @@ describe('runtime token rendering and verdict evaluation', () => {
     const all = evaluateVerdictTrace(bytes, { verdict_mode: 'all', required_checks: ['required'], verdict_judge: 'deterministic' });
     assert.equal(all.outcome, 'FAIL');
     assert.throws(() => evaluateVerdictTrace(bytes, { verdict_mode: 'last', required_checks: ['missing'], verdict_judge: 'deterministic' }), /missing/);
+  });
+
+  it('rejects malformed expected values and requires structured non-deterministic judge provenance', () => {
+    const malformed = Buffer.from(`${JSON.stringify({ event: 'check', source: 'playbook', gate: 'sample', passed: true })}\n`);
+    assert.throws(() => evaluateVerdictTrace(malformed, { verdict_mode: 'all', required_checks: ['sample'], verdict_judge: 'deterministic' }), /malformed/);
+
+    const noJudge = Buffer.from(`${JSON.stringify({ event: 'check', source: 'playbook', gate: 'judged', passed: true, expected: true })}\n`);
+    assert.throws(() => evaluateVerdictTrace(noJudge, { verdict_mode: 'all', required_checks: ['judged'], verdict_judge: 'ai_judge' }), /judge provenance missing/);
+
+    const withJudge = Buffer.from(`${JSON.stringify({ event: 'check', source: 'playbook', gate: 'judged', passed: true, expected: true, verdict_judge: 'ai_judge' })}\n`);
+    const evaluated = evaluateVerdictTrace(withJudge, { verdict_mode: 'all', required_checks: ['judged'], verdict_judge: 'ai_judge' });
+    assert.equal(evaluated.outcome, 'PASS');
+    assert.deepEqual(evaluated.consideredChecks, [{ gate: 'judged', passed: true, expected: true, verdict_judge: 'ai_judge' }]);
+  });
+
+  it('binds exact raw trace bytes while distinguishing invalid auxiliary data from a required valid trace', () => {
+    const root = mkdtempSync(join(tmpdir(), 'agent-experiment-trace-binding-'));
+    const trace = join(root, 'rb_trace.jsonl');
+    try {
+      const bytes = Buffer.from(`${JSON.stringify({ event: 'check', source: 'playbook', gate: 'sample', passed: true, expected: true })}\n`);
+      writeFileSync(trace, bytes);
+      const bound = traceBinding(trace, { requireValid: true });
+      assert.equal(bound.trace_parse_status, 'valid');
+      assert.equal(bound.trace_prefix_bytes, bytes.length);
+      assert.equal(bound.trace_prefix_sha256, sha256Bytes(bytes));
+      assert.deepEqual(bound.bytes, bytes);
+
+      writeFileSync(trace, Buffer.from('{not-json}\n'));
+      const auxiliary = traceBinding(trace);
+      assert.equal(auxiliary.trace_parse_status, 'invalid');
+      assert.throws(() => traceBinding(trace, { requireValid: true }), /invalid JSON/);
+    } finally { rmSync(root, { recursive: true, force: true }); }
   });
 });
 
@@ -172,16 +218,23 @@ describe('bundle registry and native finalizer CLI', () => {
     } finally { rmSync(run.root, { recursive: true, force: true }); }
   });
 
-  it('does not allow generic checks to satisfy required policy', () => {
-    const run = makeRun();
+  it('does not allow generic enqueue/save checks to satisfy a Heavy Subject policy', () => {
+    const run = makeRun({
+      required_checks: ['subject-work'], durable_evidence_roles: ['subject_task'], proof_subject: 'agent_behavior',
+      subject_execution: 'real_subagent', fixture: 'setup_only', external_calls: 'none',
+    }, { caseId: 'case-406-heavy-generic', cost: 'heavy' });
     try {
       const bundle = join(run.root, 'dpt_disp_case-1_generic');
       mkdirSync(bundle);
-      writeFileSync(join(bundle, 'rb_trace.jsonl'), `${JSON.stringify({ event: 'check', source: 'playbook', gate: 'enqueue', passed: true, expected: true })}\n`);
+      writeFileSync(join(bundle, 'rb_trace.jsonl'), [
+        JSON.stringify({ event: 'check', source: 'playbook', gate: 'enqueue', passed: true, expected: true }),
+        JSON.stringify({ event: 'check', source: 'playbook', gate: 'save', passed: true, expected: true }),
+        '',
+      ].join('\n'));
       assert.equal(spawnSync('node', [STATE_CLI, 'register-bundle', '--context', run.contextPath, '--role', 'verdict', '--path', bundle]).status, 0);
       const result = spawnSync('node', [FINALIZER, '--context', run.contextPath, '--bundle', `verdict=${bundle}`], { encoding: 'utf8' });
       assert.equal(result.status, 1);
-      assert.match(result.stderr, /required verdict checks missing/);
+      assert.match(result.stderr, /required verdict checks missing: subject-work/);
     } finally { rmSync(run.root, { recursive: true, force: true }); }
   });
 
@@ -485,6 +538,7 @@ describe('Supervisor selection, launcher and source-isolation policy', () => {
     assert.deepEqual(selectManifestEntries(entries, { caseId: 'case-901-heavy-human' }).map((item) => item.frontmatter.case), ['case-901-heavy-human']);
     assert.throws(() => selectManifestEntries(entries, { caseId: 'case-1-light-first', tier: 'light' }), /exclusive/);
     assert.throws(() => selectManifestEntries(entries, { group: 'missing' }), /empty|unknown/);
+    assert.throws(() => selectManifestEntries(entries, { tier: 'heavy' }), /empty|unknown/);
     assert.throws(() => selectManifestEntries(entries, { interactive: true, group: 'alpha' }), /exactly one/);
   });
 
@@ -519,6 +573,155 @@ describe('Supervisor selection, launcher and source-isolation policy', () => {
       linkSync(join(root, 'DPT_FRAMEWORK/source.mjs'), join(root, '.exp-bundles/source-hardlink.mjs'));
       assert.throws(() => assertExpBundlesSourceIsolation(root, join(root, '.exp-bundles')), /hardlinked/);
     } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it('rejects DPT_FRAMEWORK/experiments_env/tests copies under .exp-bundles', () => {
+    const root = mkdtempSync(join(tmpdir(), 'agent-source-copy-'));
+    try {
+      mkdirSync(join(root, 'DPT_FRAMEWORK'), { recursive: true });
+      mkdirSync(join(root, 'experiments_env'), { recursive: true });
+      mkdirSync(join(root, 'tests'), { recursive: true });
+      writeFileSync(join(root, 'DPT_FRAMEWORK/source.mjs'), 'source');
+      writeFileSync(join(root, 'experiments_env/helper.mjs'), 'helper');
+      writeFileSync(join(root, 'tests/test.mjs'), 'test');
+      mkdirSync(join(root, '.exp-bundles/runs/batch-1/01-case-1-light-abc'), { recursive: true });
+      for (const copyDir of ['DPT_FRAMEWORK', 'experiments_env', 'tests']) {
+        const dest = join(root, '.exp-bundles/runs/batch-1/01-case-1-light-abc', copyDir);
+        mkdirSync(dest, { recursive: true });
+        writeFileSync(join(dest, 'copied.mjs'), 'copy');
+        assert.throws(() => assertExpBundlesSourceIsolation(root, join(root, '.exp-bundles')), new RegExp(copyDir));
+        rmSync(dest, { recursive: true, force: true });
+      }
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it('selects only Light by default, excludes real-human from batch, and filters by cost from filename', () => {
+    const mixed = [
+      { path: 'exp_sample/case-1-light-first.md', cost: 'light', frontmatter: { case: 'case-1-light-first', experiment: 'sample', verdict_judge: 'deterministic' } },
+      { path: 'exp_sample/case-2-standard-second.md', cost: 'standard', frontmatter: { case: 'case-2-standard-second', experiment: 'sample', verdict_judge: 'deterministic' } },
+      { path: 'exp_sample/case-3-heavy-third.md', cost: 'heavy', frontmatter: { case: 'case-3-heavy-third', experiment: 'sample', verdict_judge: 'deterministic' } },
+    ];
+    assert.deepEqual(selectManifestEntries(mixed, {}).map((item) => item.frontmatter.case), ['case-1-light-first']);
+    assert.deepEqual(selectManifestEntries(mixed, { tier: 'standard' }).map((item) => item.frontmatter.case), ['case-2-standard-second']);
+    assert.deepEqual(selectManifestEntries(mixed, { tier: 'heavy' }).map((item) => item.frontmatter.case), ['case-3-heavy-third']);
+    assert.deepEqual(selectManifestEntries(mixed, { all: true }).map((item) => item.frontmatter.case), ['case-1-light-first', 'case-2-standard-second', 'case-3-heavy-third']);
+  });
+});
+
+describe('path containment, FAIL mapping and digest cross-fields', () => {
+  it('rejects bundle registration that escapes the case run root via parent traversal', () => {
+    const run = makeRun();
+    const outside = join(run.root, '..', 'escaped_bundle');
+    try {
+      mkdirSync(outside);
+      const result = spawnSync('node', [STATE_CLI, 'register-bundle', '--context', run.contextPath, '--role', 'verdict', '--path', outside], { encoding: 'utf8' });
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /direct child/);
+    } finally {
+      rmSync(run.root, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects finalizer bundle path that points outside the case run root', () => {
+    const run = makeRun();
+    const outside = join(run.root, '..', 'outside_bundle');
+    try {
+      mkdirSync(outside);
+      writeFileSync(join(outside, 'rb_trace.jsonl'), `${JSON.stringify({ event: 'check', source: 'playbook', gate: 'sample', passed: true, expected: true })}\n`);
+      const result = spawnSync('node', [FINALIZER, '--context', run.contextPath, '--bundle', `verdict=${outside}`], { encoding: 'utf8' });
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /path containment|direct child|outside/);
+    } finally {
+      rmSync(run.root, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it('maps FAIL from a required check that fails', () => {
+    const run = makeRun();
+    try {
+      const bundle = join(run.root, 'dpt_disp_case-1_fail');
+      mkdirSync(bundle);
+      const trace = [
+        JSON.stringify({ event: 'check', source: 'playbook', gate: 'sample', passed: false, expected: true }),
+        '',
+      ].join('\n');
+      writeFileSync(join(bundle, 'rb_trace.jsonl'), trace);
+      assert.equal(spawnSync('node', [STATE_CLI, 'register-bundle', '--context', run.contextPath, '--role', 'verdict', '--path', bundle]).status, 0);
+      const result = spawnSync('node', [FINALIZER, '--context', run.contextPath, '--bundle', `verdict=${bundle}`], { encoding: 'utf8' });
+      assert.equal(result.status, 0, result.stderr);
+      const completion = JSON.parse(readFileSync(join(run.root, 'agent-experiment-completion.json'), 'utf8'));
+      assert.equal(completion.outcome, 'FAIL');
+      assert.equal(completion.checks_total, 1);
+      assert.equal(completion.checks_considered, 1);
+      assert.equal(completion.considered_checks[0].passed, false);
+    } finally { rmSync(run.root, { recursive: true, force: true }); }
+  });
+
+  it('maps FAIL when one of multiple required checks fails in all mode', () => {
+    const run = makeRun({ required_checks: ['first', 'second'] });
+    try {
+      const bundle = join(run.root, 'dpt_disp_case-1_multi');
+      mkdirSync(bundle);
+      const trace = [
+        JSON.stringify({ event: 'check', source: 'playbook', gate: 'first', passed: true, expected: true }),
+        JSON.stringify({ event: 'check', source: 'playbook', gate: 'second', passed: false, expected: true }),
+        '',
+      ].join('\n');
+      writeFileSync(join(bundle, 'rb_trace.jsonl'), trace);
+      assert.equal(spawnSync('node', [STATE_CLI, 'register-bundle', '--context', run.contextPath, '--role', 'verdict', '--path', bundle]).status, 0);
+      const result = spawnSync('node', [FINALIZER, '--context', run.contextPath, '--bundle', `verdict=${bundle}`], { encoding: 'utf8' });
+      assert.equal(result.status, 0, result.stderr);
+      const completion = JSON.parse(readFileSync(join(run.root, 'agent-experiment-completion.json'), 'utf8'));
+      assert.equal(completion.outcome, 'FAIL');
+      assert.equal(completion.checks_total, 2);
+      assert.equal(completion.checks_considered, 2);
+    } finally { rmSync(run.root, { recursive: true, force: true }); }
+  });
+
+  it('rejects a malformed source-playbook digest in the run-context schema', () => {
+    const run = makeRun();
+    try {
+      const context = JSON.parse(readFileSync(run.contextPath, 'utf8'));
+      const mutatedSource = { ...context, source_playbook_sha256: 'not-a-sha256' };
+      assert.throws(() => AgentExperimentRunContextSchema.parse(mutatedSource), /source_playbook_sha256/);
+    } finally { rmSync(run.root, { recursive: true, force: true }); }
+  });
+
+  it('rejects a malformed rendered-playbook digest in the run-context schema', () => {
+    const run = makeRun();
+    try {
+      const context = JSON.parse(readFileSync(run.contextPath, 'utf8'));
+      const mutated = { ...context, rendered_playbook_sha256: 'not-a-sha256' };
+      assert.throws(() => AgentExperimentRunContextSchema.parse(mutated), /rendered_playbook_sha256/);
+    } finally { rmSync(run.root, { recursive: true, force: true }); }
+  });
+
+  it('detects case-root identity mismatch when root is replaced by a symlink', () => {
+    const original = realpathSync(mkdtempSync(join(tmpdir(), 'agent-experiment-original-')));
+    const replacement = realpathSync(mkdtempSync(join(tmpdir(), 'agent-experiment-swap-')));
+    try {
+      const originalIdentity = caseRootIdentity(original);
+      rmSync(original, { recursive: true, force: true });
+      symlinkSync(replacement, original, 'dir');
+      assert.throws(() => caseRootIdentity(original), /non-symlink directory/);
+      assert.ok(originalIdentity.dev);
+    } finally {
+      try { rmSync(original, { recursive: true, force: true }); } catch {}
+      rmSync(replacement, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a bundle path that refers to a different device than the case root', () => {
+    const run = makeRun();
+    try {
+      const identity = caseRootIdentity(run.root);
+      const otherDevice = { ...identity, dev: (BigInt(identity.dev) + 999n).toString() };
+      const context = { ...JSON.parse(readFileSync(run.contextPath, 'utf8')), case_root_identity: otherDevice };
+      writeFileSync(run.contextPath, `${JSON.stringify(context, null, 2)}\n`);
+      assert.throws(() => loadRunContext(run.contextPath), /case root identity changed/);
+    } finally { rmSync(run.root, { recursive: true, force: true }); }
   });
 });
 

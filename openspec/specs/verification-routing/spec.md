@@ -1,13 +1,11 @@
 # Verification Routing
 
-> req: VER-001, VER-002, VER-003, VER-004, VER-005
+> req: VER-001, VER-002, VER-003, VER-004, VER-005, VER-006
 
 ## Purpose
 
 Define the canonical verification taxonomy, claim routing contract, execution-profile semantics, asset checks, and native verdict boundaries for repository changes.
-
 ## Requirements
-
 ### Requirement: Verification claims SHALL route through one of four test classes
 
 The project SHALL use exactly four canonical test classes. `test_class` is the only normative routing taxonomy:
@@ -17,28 +15,29 @@ The project SHALL use exactly four canonical test classes. `test_class` is the o
 | `unit` | JS-led focused test | focused `tests/` assets outside integration and E2E subtrees | `node_test_exit` |
 | `integration` | JS-led component-boundary test | `tests/integration/` | `node_test_exit` |
 | `deterministic_e2e` | JS-led full-chain state test | `tests/e2e/` | `node_test_exit` |
-| `agent_flow_e2e` | coding-Agent-executed Markdown playbook | `experiments_playbook/` over a real disposable bundle | `trace_jsonl` |
+| `agent_flow_e2e` | Playbook-Agent-executed Markdown playbook | `experiments_playbook/` over one Supervisor-owned disposable case root | `trace_jsonl` through native completion |
 
-This capability uses three distinct actor terms:
+This capability uses four distinct roles:
 
-- **coding Agent**: the runner that reads and executes an `agent_flow_e2e` Markdown playbook; runner participation alone proves no subject-Agent behavior;
-- **subject Agent/sub-agent**: the system actor whose semantic search, judgment, writing, repair, synthesis, or routing behavior a claim may prove;
-- **JS driver**: the `deterministic_e2e` test process that may simulate labeled Agent-owned actions but cannot become a real subject Agent.
+- **Playbook Agent**: the Coding Agent that reads and executes an `agent_flow_e2e` Markdown playbook, Headless under Agent Experiment Autorun or Interactive in bounded manual replay; its participation alone proves no Subject Agent behavior;
+- **Subject Agent/Sub-agent**: the system actor whose semantic search, judgment, writing, repair, synthesis, or routing behavior a claim may prove;
+- **Autorun Supervisor / Agent CLI Launcher**: deterministic host lifecycle and Agent-runtime launch surfaces, not proof subjects or verdict judges; and
+- **JS driver**: the `deterministic_e2e` test process that may simulate labeled Agent-owned actions but cannot become a real Subject Agent.
 
-`regression` is a non-normative grouping term for `unit`, `integration`, and `deterministic_e2e`; it is not a second field to select. Existing accepted prose such as "controlled E2E", "Agent-driven E2E", "Agent-assisted command experiment", or "standard/heavy E2E" refers to `agent_flow_e2e` when the asset is a coding-Agent-executed Markdown playbook under `experiments_playbook/`; cost and proof subject do not create additional test classes. This paragraph is the compatibility mapping for those legacy/descriptive terms; new route declarations SHALL use only `test_class` identifiers.
+`regression` is a non-normative grouping term for `unit`, `integration`, and `deterministic_e2e`; it is not a second field to select. Existing accepted prose such as "controlled E2E", "Agent-driven E2E", "Agent-assisted command experiment", or "standard/heavy E2E" refers to `agent_flow_e2e` when the asset is a Playbook-Agent-executed Markdown playbook under `experiments_playbook/`; cost and proof subject do not create additional test classes. New route declarations SHALL use only `test_class` identifiers.
 
 An Agent SHALL choose `test_class` by the first matching rule in this precedence order:
 
-1. If a coding Agent executes a Markdown playbook step by step, choose `agent_flow_e2e`, regardless of fixture distance, cost, or proof subject.
+1. If a Playbook Agent executes a Markdown playbook step by step, choose `agent_flow_e2e`, regardless of fixture distance, cost, proof subject, or Headless/Interactive launch path.
 2. Otherwise, if a JS driver proves a workflow-scale state chain across multiple production checkpoints or lifecycle transitions, choose `deterministic_e2e`.
 3. Otherwise, if the proof invokes a production CLI/subprocess, verifies interaction across separately owned production surfaces such as JS and Markdown, or exercises a bounded runtime-bundle/component boundary, choose `integration`.
 4. Otherwise, choose `unit` for a focused in-process module/schema/helper contract. A unit test MAY use test-owned temporary fixture files as inputs or outputs of that one contract; incidental fixture I/O alone does not make it integration.
 
-The declared asset path SHALL follow the chosen class. A preferred directory SHALL NOT override the behavioral rule: split a mixed proof into separate claims/assets when one file would otherwise satisfy multiple class definitions.
+The declared asset path SHALL follow the chosen class. A preferred directory SHALL NOT override the behavioral rule: split a mixed proof into separate claims/assets when one file would otherwise satisfy multiple class definitions. `tests/e2e/` and `experiments_playbook/` are peers only as E2E test surfaces, not equivalent drivers. A deterministic fixture or JS driver SHALL NOT claim real human participation, Agent search, judgment, writing quality, repair reasoning, or synthesis.
 
-`tests/e2e/` and `experiments_playbook/` are therefore peers only as E2E test surfaces, not as equivalent drivers. A `deterministic_e2e` driver MAY simulate non-Engine inputs assigned by the Markdown flow to the Agent or human decision boundary, plus actor-produced candidate output/result/receipt files, when each is explicitly labeled as a controlled fixture. Candidate work-unit files SHALL remain non-authoritative until the real submit CLI validates their schema, identity, nonce, output, cache, and receipt bindings. The driver SHALL invoke real production schema, CLI, gate, transition, work-unit, submit, status, ledger, and trace paths for every deterministic consequence it claims. It SHALL NOT hand-write accepted/submitted state, declaration ledger rows, gate attempts, transition witnesses, trace verdicts, or other Engine-owned success authority, and SHALL NOT claim real human participation, Agent search, judgment, writing quality, repair reasoning, or synthesis.
+An `agent_flow_e2e` SHALL use a real Playbook Agent to execute the registered Markdown playbook against newly created bundle roots inside one disposable case root and canonical repo-root framework paths. The test class identifies the control surface, not automatically the proof subject. A fixture-backed case MAY prove a `deterministic_contract`; only verdict-affecting independent Subject Agent/Sub-agent actions after the fixture boundary MAY prove `agent_behavior`. Native verdict authority remains strict playbook-owned bundle-root trace checks, exposed through the trace-bound native completion; the Supervisor SHALL not reinterpret arbitrary checks. A normal case uses a fresh `dpt_disp_*` verdict bundle; the narrow production-instantiator exception MAY additionally use a declared fresh case-owned `dpt_rb_*` auxiliary without becoming live-production evidence.
 
-An `agent_flow_e2e` SHALL use a coding Agent to execute a Markdown playbook step by step against a newly created real disposable `dpt_disp_*` run bundle and canonical framework paths. The term identifies the control surface and runner, not automatically the proof subject. A fixture-backed standard playbook MAY prove a `deterministic_contract`; only a case whose verdict-affecting subject-Agent/sub-agent actions occur after the fixture boundary MAY prove `agent_behavior`. The disposable bundle is runtime context, not a test class. Verdict SHALL come from bundle-root trace facts. A clean PASS SHALL delete the bundle; FAIL or health issues SHALL preserve it for diagnosis. A claim about a separately selected live/production `dpt_rb_*` run is outside the v1 plan; neither fixture-backed JS proof nor a disposable-bundle result SHALL be relabeled as live-production evidence.
+Cleanup is host policy, not test-class or verdict authority. The Playbook Agent SHALL stop after native completion. A clean native PASS SHALL be deleted only when the operator explicitly enables Supervisor PASS cleanup, all V2-required health targets are CLEAN, and durable outside-root audit/evidence succeeds. Otherwise the run root is preserved. FAIL, NOT_RUN, lifecycle ERROR/CANCELLED/HUMAN, health ISSUES/ERROR, and Interactive v1 SHALL not be deleted.
 
 #### Scenario: Cross-phase deterministic claim routes by chain breadth
 
@@ -56,14 +55,14 @@ An `agent_flow_e2e` SHALL use a coding Agent to execute a Markdown playbook step
 
 #### Scenario: Agent recovery claim routes to agent_flow_e2e
 
-- **WHEN** a change claims that an Agent follows phase instructions to write a rerun direction and recover a controlled interruption
-- **THEN** it SHALL use `test_class: agent_flow_e2e` and provide a runnable `experiments_playbook/` case over a fresh `dpt_disp_*` bundle
-- **AND** the case verdict SHALL come from trace checks produced by the actual execution
-- **AND** PASS SHALL clean the disposable bundle while FAIL or health issues preserve it for diagnosis
+- **WHEN** a real Playbook Agent follows Markdown instructions to write a rerun direction and recover a controlled interruption
+- **THEN** the claim SHALL use `test_class: agent_flow_e2e` and a registered `experiments_playbook/` case inside a fresh disposable case root
+- **AND** native verdict SHALL come from required strict trace checks through completion
+- **AND** only explicit Supervisor cleanup after CLEAN health MAY delete the run root
 
 #### Scenario: Runtime context does not become a test class
 
-- **WHEN** an `agent_flow_e2e` creates and executes against a real disposable run bundle
+- **WHEN** an `agent_flow_e2e` creates and executes against one or more case-owned bundle roots
 - **THEN** the test class SHALL remain `agent_flow_e2e`
 - **AND** the plan SHALL record `real_disposable_bundle` as an execution-profile fact rather than declaring another class
 
@@ -233,3 +232,36 @@ A narrow static `integration` contract SHALL guard the high-frequency knowledge 
 - **THEN** the selected static `integration` contract SHALL fail on the competing identifier, missing canonical pointer, or contradictory cost definition
 - **AND** the contract SHALL direct repair to that owned document rather than becoming a second routing authority
 
+### Requirement: Agent-flow routing distinguishes host supervision from Agent actors
+
+For `agent_flow_e2e`, **Playbook Agent** SHALL be the precise execution-role term for the Coding Agent that reads and executes the Markdown playbook. A Playbook Agent MAY be **Headless** when launched through Agent Experiment Autorun or **Interactive** during manual debug/replay; both remain coding-Agent execution under the existing `agent_flow_e2e` test class.
+
+The deterministic **Autorun Supervisor** and **Agent CLI Launcher** are host/lifecycle surfaces, not coding Agents, Subject Agents, verdict judges, or new test classes. A **Subject Agent/Sub-agent** remains the separate actor whose semantic behavior a claim may prove. Launching a Playbook Agent does not by itself prove Subject Agent behavior.
+
+Ordinary CI/node:test without a real Agent runtime SHALL NOT satisfy an `agent_flow_e2e` execution claim. A CI host MAY invoke the Autorun Supervisor only when it supplies a real Agent CLI, model credentials, and required tool capabilities; the test class, proof subject, execution profile, and native verdict authority remain those of the executed Markdown playbook. A deterministic fixture executable MAY prove only unit/integration Supervisor mechanics.
+
+An `agent_flow_e2e` deterministic-contract case MAY exercise the real production instantiator only when its active verdict authority remains a fresh `dpt_disp_*` bundle and the newly created `dpt_rb_*` is an explicitly declared case-owned subject/auxiliary under the same disposable case root. That auxiliary SHALL NOT be a pre-existing or separately selected live run, SHALL be health-checked, and SHALL NOT authorize a live-production evidence claim.
+
+#### Scenario: Headless launch remains agent_flow_e2e
+
+- **WHEN** an Autorun Supervisor launches a real Headless Playbook Agent that executes a Markdown case over a fresh disposable bundle
+- **THEN** the case remains `test_class: agent_flow_e2e`
+- **AND** the Supervisor does not create a fifth test class or become the proof subject
+
+#### Scenario: CI fixture cannot prove Playbook Agent execution
+
+- **WHEN** an integration test uses a test-owned Claude executable fixture to inspect Supervisor argv, env, timeout, paths, reports, or cleanup
+- **THEN** the claim remains a deterministic integration contract
+- **AND** it does not prove that a real Headless Playbook Agent followed Markdown or that a Subject Agent performed semantic work
+
+#### Scenario: Playbook Agent and Subject Agent remain distinct
+
+- **WHEN** a Heavy playbook requires a Subject Agent/Sub-agent after setup
+- **THEN** Headless Playbook Agent participation alone does not satisfy that subject execution
+- **AND** PASS requires the case's declared real subject evidence and native verdict authority
+
+#### Scenario: Production-shaped auxiliary remains disposable experiment evidence
+
+- **WHEN** a deterministic Agent-flow case invokes the real production instantiator under its Supervisor-owned case root
+- **THEN** its fresh disposable verdict bundle remains native authority and the fresh production-shaped auxiliary is declared separately
+- **AND** neither the runtime profile nor report relabels that bounded experiment as live-production proof

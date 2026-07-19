@@ -18,6 +18,18 @@ The health verifier SHALL continue to expose explicit `light`, `standard`, and `
 
 For Agent Experiment Autorun, each selected playbook SHALL declare one explicit frontmatter `health_profile: light|standard|heavy`, independent of filename execution cost. Each native completion SHALL declare which created bundles are required health targets, and every declared target SHALL use that selected case health profile. Auxiliary bundles MAY be declared without becoming health targets. The Autorun Supervisor SHALL run health only from those validated declarations. Health scope/profile SHALL NOT be derived from a stale `RUN_EXPS` table, retired frontmatter `weight`, filename cost, or a scan-selected bundle.
 
+#### Scenario: Light profile skips Heavy-only checks
+
+- **WHEN** the health verifier runs a completion-declared target with `health_profile: light`
+- **THEN** it does not require Heavy ledger, receipt, cache-trail, or dedup checks
+- **AND** it still reports applicable observed diagnostics without changing native outcome
+
+#### Scenario: Heavy profile requires provenance checks
+
+- **WHEN** the health verifier runs a completion-declared target with `health_profile: heavy`
+- **THEN** it requires ledger-driven declarations, receipts, output files, cache trails, and dedup evidence
+- **AND** incomplete provenance is reported as health ISSUES or ERROR without rewriting native outcome
+
 #### Scenario: Heavy Agent cost does not overstate bundle health scope
 
 - **WHEN** a Heavy real-Agent playbook stops at an early lifecycle boundary whose explicit `health_profile` is light
@@ -35,6 +47,12 @@ For Agent Experiment Autorun, each selected playbook SHALL declare one explicit 
 Agent Experiment Autorun reports SHALL present the Headless Playbook Agent process outcome, native playbook outcome `PASS|FAIL|NOT_RUN|null`, lifecycle outcome `HUMAN|ERROR|CANCELLED|null`, effective outcome, health `CLEAN|ISSUES|ERROR|null`, duration, reason, run-root preservation/cleanup, and durable prompt/transcript/trace/Subject-evidence references as separate fields. The durable per-case record SHALL retain full native completion and full validated health JSON outside a deletable case root. Every cleanup-eligible PASS SHALL additionally retain each declared bundle's exact verdict-boundary trace-prefix bytes by role, or an explicit null for a declared missing auxiliary; cleanup-eligible Agent-behavior PASS SHALL also retain exact exported Subject evidence bytes by required role. The health verifier SHALL NOT rerun gates, manufacture native completion, or change playbook outcome.
 
 The Autorun Supervisor MAY aggregate these facts, but its report is a projection. It SHALL NOT reinterpret arbitrary trace checks or health status as native PASS/FAIL. PASS plus health ISSUES SHALL remain distinguishable and preserved.
+
+#### Scenario: unresolved in-flight appears in health
+
+- **WHEN** a completion-declared bundle retains an unresolved claimed work unit
+- **THEN** the health report exposes that lifecycle blocker independently of native completion
+- **AND** the Supervisor preserves the run root rather than treating health as a replacement verdict
 
 #### Scenario: Health issues do not rewrite native PASS
 

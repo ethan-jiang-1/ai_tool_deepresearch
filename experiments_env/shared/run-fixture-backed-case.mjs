@@ -26,6 +26,7 @@ import { checkCacheCoverage } from '../../DPT_FRAMEWORK/engine/helpers/gate-help
 import { readOutputDeclarations, readSubmittedWorkUnitDeclarations } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers-readers.mjs';
 import { countReferences } from '../../DPT_FRAMEWORK/engine/helpers/ref-count.mjs';
 import { createTrace } from '../../DPT_FRAMEWORK/engine/trace.mjs';
+import { logToRun } from '../../DPT_FRAMEWORK/engine/logger.mjs';
 import { loadWorkUnitIndex } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
 import {
   claimAndSubmitFixtureWorkUnit,
@@ -66,6 +67,7 @@ const GATE_SEED = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-seed-
 const GATE_WAVE0 = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs');
 const GATE_WAVE1 = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs');
 const GATE_WAVE2 = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs');
+const GATE_MONITOR = path.join(REPO_ROOT, 'experiments_env/shared/run-gate-with-monitor.mjs');
 const INSPECT_BUNDLE = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-bundle.mjs');
 
 function parseArgs(argv) {
@@ -175,6 +177,13 @@ function writeWave0Handoff(bundleDir) {
   appendTrace(bundleDir, {
     ts: sourceTs,
     event: 'gate_attempt',
+    gate: 'seed-topics-ready',
+    phase: 'seed-topics',
+    passed: true,
+    currentNodeRef: 'phases/phase-seed-topics.md',
+    next: 'phases/phase-wave0.md',
+  });
+  logToRun(bundleDir, 'info', 'gate_attempt', {
     gate: 'seed-topics-ready',
     phase: 'seed-topics',
     passed: true,
@@ -424,8 +433,11 @@ function wave1CoreContent(topicSlug, title) {
   return `${title} controlled content is fixture-backed Engine evidence. It is intentionally scoped to ${topicSlug}, with distinct wording and declared limitations so the playbook proves work-unit provenance rather than semantic research quality.`;
 }
 
-function runWave0Gate(bundleDir, outputName = 'gate-wave0.json') {
-  const result = runNodeLoose([GATE_WAVE0, '--bundle', bundleDir, '--current-node', 'phases/phase-wave0.md']);
+function runWave0Gate(bundleDir, outputName = 'gate-wave0.json', { monitored = false } = {}) {
+  const command = [GATE_WAVE0, '--bundle', bundleDir, '--current-node', 'phases/phase-wave0.md'];
+  const result = runNodeLoose(monitored
+    ? [GATE_MONITOR, '--bundle', bundleDir, '--gate', 'wave0-complete', '--', process.execPath, ...command]
+    : command);
   const outputPath = path.join(bundleDir, outputName);
   writeFileSync(outputPath, result.stdout || result.stderr || '');
   if (!result.json) {
@@ -1272,6 +1284,7 @@ function realSubagentCase(opts, spec) {
   let claim;
   let workId;
   if (!opts.bundle) {
+    const localFixtureRef = spec.localFixture ? spec.localFixture(bundleDir) : null;
     writeWave0Scaffold(bundleDir, {
       planBasename: spec.suffix,
       topics: [{ id: 't1', slug: spec.topicSlug, title: spec.topicTitle }],
@@ -1283,7 +1296,11 @@ function realSubagentCase(opts, spec) {
       topic_slug: spec.topicSlug,
       title: spec.taskTitle,
       action: spec.action,
-      writes_to: [`reference/00-shared-${spec.topicSlug}.md`],
+      writes_to: [
+        `reference/00-shared-${spec.topicSlug}.md`,
+        `artifacts/wave0/${spec.topicSlug}/source.yaml`,
+      ],
+      task_brief: spec.taskBrief?.({ localFixtureRef }),
     });
     enqueueWorkUnitTask(bundleDir, task, { fileName: `${spec.caseId}-real-task.json` });
     claim = claimWorkUnitsViaCli(bundleDir, { phase: 'wave0' });
@@ -1323,7 +1340,7 @@ function realSubagentCase(opts, spec) {
     ? readFileSync(receiptPath, 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse)
     : [];
   const submit = submitWorkUnitViaCli(bundleDir, { work_id: workId, resultPath });
-  const gate = runWave0Gate(bundleDir);
+  const gate = runWave0Gate(bundleDir, 'gate-wave0.json', { monitored: true });
   const events = readTrace(bundleDir);
   const baseChecks = {
     task: beacon.work_id === workId && existsSync(path.resolve(prompt.task_path)),
@@ -1355,10 +1372,53 @@ function realSubagentCase(opts, spec) {
   return { bundleDir, verdict, evidence: { task: path.resolve(prompt.task_path), result: resultPath, receipt: receiptPath, output: outputPath } };
 }
 
+function case406LocalSourceFixture(bundleDir) {
+  const fixtureRef = '_fixtures/case-406-local-source.md';
+  const fixturePath = path.join(bundleDir, fixtureRef);
+  mkdirSync(path.dirname(fixturePath), { recursive: true });
+  writeFileSync(fixturePath, [
+    '# Case 406 Local Source Input',
+    '',
+    'This is setup input for the no-network Subject-actor boundary canary. It is not a Subject output, receipt, cache leaf, result, or submitted ledger fact.',
+    '',
+    '- fixture_source_url: https://fixtures.example.invalid/case-406/agentic-coding-tools',
+    '- Agentic coding tools delegate bounded repository tasks to specialized actors.',
+    '- The actor must preserve its assigned nonce in its runtime receipt and result.',
+    '- The actor must write one reference output, one source-YAML output, one cache trail, and one result before returning.',
+    '- No external search or fetch is authorized for this fixture input.',
+    '',
+  ].join('\n'));
+  return fixtureRef;
+}
+
 const REAL_SUBAGENT_CASES = {
   'case-406': {
     caseId: 'case-406', suffix: 'eb_real_work_unit', topicSlug: 'agentic-coding-tools', topicTitle: 'Agentic coding tools',
     taskTitle: 'Real Sub-agent source intake', action: 'Use only the assigned local task context to produce the declared source-intake output and cache contract without external calls.',
+    localFixture: case406LocalSourceFixture,
+    taskBrief: ({ localFixtureRef }) => [
+      'Perform this bounded Subject-owned source-intake task using only the local fixture input.',
+      `Read \`${localFixtureRef}\` before writing any output. It is setup input, not a Subject-authored output.`,
+      'Do not invoke WebSearch, WebFetch, curl, wget, or any other network client. Do not fetch the fixture source URL.',
+      'Write exactly `reference/00-shared-agentic-coding-tools.md` as the reference output and `artifacts/wave0/agentic-coding-tools/source.yaml` as the source-YAML output; declare both exact paths in result.json rather than using an internal _work_units/outputs path.',
+      [
+        'For this case, the following parser-facing metadata block overrides any generic rich-reference template formatting. Copy its plain bullet/colon form before the semantic sections; do not use `**`, heading-style labels, or YAML frontmatter:',
+        '```text',
+        '- source_url: https://fixtures.example.invalid/case-406/agentic-coding-tools',
+        '- acceptance_status: accepted',
+        '- source_type: primary',
+        '- tier: Tier 2',
+        '- trust_level: expert',
+        '- related_topic: agentic-coding-tools',
+        '- evidence_role: deepening_reference',
+        '- why_it_matters: Local no-network fixture evidence for the delegated source-intake boundary.',
+        '- accessed_at: YYYY-MM-DD',
+        '```',
+        'Include these exact headings after that block: `## Key Facts`, `## Core Content Capture`, `## Relevance To This Research`, `## Quotable Terms / Concepts`, and `## Risks And Limitations`.',
+      ].join('\n'),
+      'The source-YAML output must be a top-level YAML array, not an object wrapper: its first record starts with `- url:` and contains the fixture URL, a non-empty title, retrieved_date in YYYY-MM-DD form, and `topic_tag: agentic-coding-tools`. Do not write `schema_version:`, `sources:`, `wave:`, or `topic:` as a top-level wrapper.',
+      'Use the fixture source URL and local facts in those independently authored outputs plus one cache trail, receipt, and result. Cache files must record that the capture is local fixture input and that no external fetch occurred.',
+    ].join(' '),
     notRunReason: 'Native dpt-source-intake Sub-agent or required local actor capability is unavailable.',
     requiredChecks: ['real-subagent-task-bound', 'real-subagent-result-written', 'real-subagent-receipt-nonce-preserved', 'real-subagent-output-written', 'real-subagent-submit-succeeded', 'wave0-gate-pass', 'work-unit-submit-traced'],
   },

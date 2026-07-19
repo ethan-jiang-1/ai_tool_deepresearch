@@ -44,7 +44,7 @@ recordCheck(`${process.argv[2]}/rb_trace.jsonl`, { gate: 'hitl1-recorded', passe
 JS
 ```
 
-Read the returned `inspect` and `advice`. Confirm that the direct blockers are the unselected profile, empty must-answer set, unrecorded HITL1 decision, and unprobed research access.
+Read the returned `inspect` and `advice`. Confirm the direct profile blockers (unselected profile, empty must-answer set, unrecorded HITL1 decision, and unprobed research access) together with the canonical Topic and status-window blockers; Step 3 uses each owning surface rather than treating a partial profile edit as a repair.
 
 ## Step 3: Apply the smallest declared fixture repair
 
@@ -72,7 +72,24 @@ human_decision_checkpoints:
 YAML
 ```
 
-This setup-only observation proves gate repair mechanics; it does not claim real external research access.
+The fixture-backed HITL1 decision also needs one canonical Topic and the
+Engine-owned HITL1 status window. Use the real lifecycle and topic-state
+owners; do not hand-edit `rb_plan.md`, `seed_topics/`, or `rb_status.json`.
+
+```bash
+STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
+node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle "$B" --current-node phases/phase-instantiation.md > "$STATE/case111-instantiation.json"
+NEXT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.check.next)' "$STATE/case111-instantiation.json")
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$STATE/case111-enter-hitl1.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl1_recorded > "$STATE/case111-status.json"
+cat > "$STATE/case111-topic-input.json" <<'JSON'
+{"context":"hitl1","actions":[{"action":"add_topic","title":"AI development risks","slug_stem":"ai-development-risks","must_answer":["What are the key risks in AI development?"],"scope_role":"primary","depends_on_topic_uids":[]}]}
+JSON
+node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle "$B" --input "$STATE/case111-topic-input.json" > "$STATE/case111-topic-apply.json"
+node DPT_FRAMEWORK/cli/operate-topic-state.mjs inspect --bundle "$B" > "$STATE/case111-topic-inspect.json"
+```
+
+This setup-only observation proves gate repair mechanics; it does not claim real external research access. The repair is complete only when the real gate's profile, canonical-topic, and status blockers have all been addressed.
 
 ## Step 4: Rerun the same gate and record the real attempt pair
 

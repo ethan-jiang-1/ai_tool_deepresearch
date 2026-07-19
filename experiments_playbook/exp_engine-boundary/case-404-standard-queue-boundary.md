@@ -51,7 +51,7 @@ The filename cost is `standard`, but frontmatter `weight` is `light` because the
 5. Claim that delegated demand as a work unit and prove `operate-queue complete` still rejects in-flight delegated success.
 6. Check target schema boundaries for `controller: "sub-agent"` versus main-agent delegation to sub-agent.
 7. Record each runtime fact as trace `check` events.
-8. Print PASS/FAIL and clean up only on PASS.
+8. Record the native trace facts, invoke native completion, and stop; the Autorun Supervisor owns health, preservation, and any requested clean-PASS cleanup.
 
 ## Step 1: [MAIN/SHELL] Create Runtime Context
 

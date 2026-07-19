@@ -333,6 +333,14 @@ Interactive 不是让一个既有 TUI session 在 repo cwd 临场模拟 run cont
 
 Main specs 不在 explore 阶段直接编辑。Apply 实现 delta；archive/sync 将 delta 合并到 main specs。若 apply 的全量 `rg` 审计发现另一个 accepted requirement 的旧术语会改变责任边界，必须先把对应 delta 加入本 change，再编辑 main spec/consumer，不能只用文档替换掩盖。
 
+### Decision 11: Apply and archive have separate completion authorities
+
+This change's deltas are the accepted-behavior proposal during apply; `openspec/specs/` remains the accepted source only after archive/sync. Apply SHALL complete target implementation, current-surface documentation, deterministic verification, and real Agent-flow evidence without directly merging delta requirement bodies into main specs. Archive SHALL then merge every declared delta, including every rename/removal, and rerun the main-spec governance checks.
+
+The terminology knowledge-surface guard SHALL use one phase-aware source selector: while `openspec/changes/experiment-auto-runner/specs/<capability>/spec.md` is active it validates those delta spec surfaces; after archive removes that active path it validates `openspec/specs/<capability>/spec.md`. The guard therefore does not require a pre-archive main-spec mutation, but it still detects a missing or stale post-sync accepted surface without duplicating the route matrix.
+
+This separation is intentional: an archive-only sync action MUST NOT remain as an unchecked apply task, otherwise apply cannot finish and archive cannot lawfully start.
+
 ## Source Of Record Map
 
 | Fact | Source of Record |

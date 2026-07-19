@@ -48,7 +48,7 @@ Fixture-backed standard case. The Markdown controller drives real disposable bun
 5. Wave0 gate passes with submitted ledger coverage.
 6. Delete one submitted cache `meta.json` to simulate gate-time drift.
 7. `cache_coverage`, file observability, `check-reentry`, and heavy health report the cache gap.
-8. Record trace-backed verdict and clean up only on PASS.
+8. Record strict trace checks, invoke native completion, and stop; the Autorun Supervisor owns health, preservation, and any requested clean-PASS cleanup.
 
 ## Step 1: [MAIN/SHELL] Create Bundle And Submit Topic-A Work Units
 

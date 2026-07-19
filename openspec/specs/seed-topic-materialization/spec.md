@@ -160,23 +160,25 @@ Workflow registration surface SHALL 同步插入 seed-topics 阶段，保持 tra
 
 ### Requirement: Seed topics boundary enforcement playbook
 
-`experiments_playbook/exp_workflow-foundation/test-simple-seed-topics-boundary.md` SHALL 提供 light playbook，验证 seed-topics gate 的物化路径和 boundary enforcement。
+The current manifest-registered `case-124-standard-seed-topics-boundary` role SHALL verify the seed-topics gate materialization path and boundary enforcement in a fresh contained disposable bundle. It SHALL pre-seed post-setup topic registry state, materialize all seed topics for a real pass, and exercise empty-directory, missing-slug and extra-file failures with inspect identifying the applicable `dir_non_empty` or bidirectional `slug_consistency` boundary. Its Markdown body SHALL expose slug-consistency DO/DON'T guidance.
 
-该 playbook SHALL：
-- Pre-seed post-setup bundle（含 topic_registry）
-- 物化全部 seed_topics → 验证 gate pass
-- 清空 seed_topics → 验证 gate fail（`dir_non_empty` rule，inspect 指向空目录）
-- 物化部分 topic（slug 缺失）→ 验证 gate fail（`cross_field(slug_consistency)` 报缺失）
-- 多余文件 → 验证 gate fail（`cross_field(slug_consistency)` 报多余）
-- Body 显式列出 slug 一致性 DO/DON'T
+Every verdict-affecting boundary SHALL be recorded as a stable strict playbook-owned check in bundle-root `rb_trace.jsonl`; V2 required checks and native completion SHALL replace the removed legacy `test-simple-*` path and any console-only verdict. The Playbook Agent SHALL stop before Supervisor health/cleanup.
+
+#### Scenario: Seed topics pass and fail are trace-backed
+
+- **WHEN** registry and seed files are complete and bidirectionally slug-consistent
+- **THEN** the real seed-topics gate SHALL pass
+- **AND WHEN** the directory is empty or slugs are missing/extra
+- **THEN** the real gate SHALL fail with the applicable inspect
+- **AND** native completion SHALL require the case-owned pass and three negative-boundary check IDs
 
 #### Scenario: Seed topics pass and fail both trace-backed
 
-- **WHEN** registry 含 N 个 topic，`seed_topics/` 下有 N 个对应 `.md` 文件，slug 双向一致
-- **THEN** seed-topics gate SHALL pass
-- **AND WHEN** `seed_topics/` 为空时 gate SHALL fail with inspect
-- **AND WHEN** slug 不一致时 gate SHALL fail with inspect
-- **AND** verdict SHALL 基于 trace 中 4 条 `check` event（1 pass + 3 fail）
+- **WHEN** registry entries and `seed_topics/` files are bidirectionally slug-consistent
+- **THEN** the real seed-topics gate passes
+- **AND WHEN** the directory is empty or a slug is missing or extra
+- **THEN** the real gate fails with applicable inspect
+- **AND** native completion derives the verdict from the required one pass and three negative-boundary root-trace checks
 
 ### Requirement: Topic slug SHALL include zero-padded numeric prefix
 

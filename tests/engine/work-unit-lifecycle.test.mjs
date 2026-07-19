@@ -156,6 +156,23 @@ describe('work-unit index and envelope', () => {
     }
   });
 
+  it('carries a queue-owned local-only task brief into the immutable envelope', () => {
+    const dir = tempBundle();
+    try {
+      const localOnlyBrief = 'Use only _fixtures/case-406-local-source.md. Do not invoke WebSearch or WebFetch.';
+      const { manifest } = createWorkUnit(dir, {
+        queueItem: queueItem({ payload: { topic_slug: 'topic-a', wave: 0, task_brief: localOnlyBrief } }),
+        wave: 0,
+      });
+      const task = readFileSync(path.join(dir, manifest.paths.task_ref), 'utf-8');
+      assert.equal(manifest.task_brief, localOnlyBrief);
+      assert.match(task, /Use only _fixtures\/case-406-local-source\.md/);
+      assert.match(task, /Do not invoke WebSearch or WebFetch/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('generates truthful result schemas for wave0, wave1, and wave2 kind contracts', () => {
     const cases = [
       {

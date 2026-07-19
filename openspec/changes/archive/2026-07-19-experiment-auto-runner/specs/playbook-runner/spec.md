@@ -40,6 +40,36 @@ Historical `RUN.md`, `RUN_EXPS.md`, `RUN_CLI_EXPS.md`, and `RUN_TUI_EXPS.md` ref
 - **THEN** the manifest validator fails before either Agent execution path starts
 - **AND** no Agent is instructed to repair the manifest ad hoc during a run
 
+#### Scenario: AI opens RUN.md and has everything
+
+- **WHEN** a coding agent opens the active `RUN_AGENT_AUTORUN_EXPS.md` runner instruction and selected case playbook
+- **THEN** it has the one-case execution instruction, selected manifest entry, and complete Markdown flow needed to execute the case rather than merely read it
+- **AND** case profile selection remains explicit in the Autorun invocation rather than inferred from a retired `RUN.md` default
+
+#### Scenario: User asks to run all playbooks including heavy
+
+- **WHEN** a user requests all manifest playbooks including heavy cases
+- **THEN** Autorun selects all eligible light, standard, and heavy manifest entries under its explicit all-profile policy
+- **AND** one fresh Headless Playbook Agent executes each selected complete playbook
+
+#### Scenario: AI encounters a playbook failure during run
+
+- **WHEN** a selected playbook produces native FAIL
+- **THEN** the Supervisor records the case and trace-bound failure reason
+- **AND** it continues the remaining selected manifest entries
+
+#### Scenario: RUN.md manifest is out of sync with directory
+
+- **WHEN** the active manifest and runnable playbook directory are inconsistent
+- **THEN** deterministic manifest validation reports the mismatch before execution
+- **AND** the Agent does not modify the manifest while running a selected case
+
+#### Scenario: Agent is unsure whether to run heavy
+
+- **WHEN** the user request leaves the profile selection ambiguous
+- **THEN** the Agent requires an explicit Autorun profile/selection rather than silently running heavy cases
+- **AND** Interactive replay remains restricted to one selected diagnostic case
+
 ### Requirement: Agent-driven execution ends in native completion and separate health reporting
 
 Runner execution SHALL preserve the Coding Agent as the Markdown executor. For every selected autorun case, the Headless Playbook Agent SHALL execute each verdict-affecting step, consume Engine feedback, perform required real Subject Agent/Sub-agent work, and run the playbook-owned native verdict step. The Autorun Supervisor SHALL validate and aggregate that native completion; it SHALL NOT reinterpret arbitrary trace checks as the playbook verdict.
@@ -69,3 +99,38 @@ The report SHALL include selected count and separate effective PASS, FAIL, NOT_R
 - **WHEN** a native PASS case has CLEAN health and cleanup was explicitly requested
 - **THEN** the Supervisor appends the durable audit record before containment-safe cleanup
 - **AND** the full case result plus exact prompt and Agent transcript remain auditable after the run root is removed
+
+#### Scenario: Full selected suite passes with clean health
+
+- **WHEN** all selected manifest cases produce native PASS and CLEAN health
+- **THEN** the report shows the selected count, matching effective PASS count, zero FAIL, and zero health ISSUES
+
+#### Scenario: Mixed verdict and health status
+
+- **WHEN** selected playbooks produce FAIL or health ISSUES
+- **THEN** the report lists each failed case with a concise trace-bound reason
+- **AND** it lists each health-issues case with a concise health summary and separate native/effective and health totals
+
+#### Scenario: Passing verdict with health issues remains distinguishable
+
+- **WHEN** a playbook native verdict is PASS but health is ISSUES
+- **THEN** the report shows PASS and ISSUES as separate fields
+- **AND** cleanup preserves the run root by default for analysis
+
+#### Scenario: Active runner surface drift is explicit
+
+- **WHEN** implementation updates runner execution, health, or cleanup instructions
+- **THEN** it updates the active Autorun/Interactive instruction surfaces and their manifest contract consistently
+- **AND** retired `RUN.md` and legacy runner documents do not remain conflicting active instructions
+
+#### Scenario: old relay or queue-slot playbook is migrated or removed
+
+- **WHEN** a historical runner surface names a playbook dependent on retired relay/slot mechanisms, old delegated ledger rows, or old queue slot shape
+- **THEN** the playbook is migrated to current work-unit or queue-v2 proof, or removed from the active manifest and instructions
+- **AND** it does not remain visible as current production proof
+
+#### Scenario: obsolete runnable files are not left as hidden current examples
+
+- **WHEN** an obsolete relay/slot playbook or JS helper has no current proof value and is removed from active runner surfaces
+- **THEN** its runnable-looking current file is deleted or moved to an excluded historical path
+- **AND** it does not remain under `experiments_playbook/` as a current example

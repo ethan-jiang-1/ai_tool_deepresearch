@@ -486,8 +486,10 @@ export async function runHeadlessAgent({ plan, prompt, cwd, timeoutMs, logPaths,
   }
   const stdoutRef = stdoutWriter.close();
   const stderrRef = stderrWriter.close();
-  const finalResults = events.filter((event) => event?.type === 'result');
-  const costs = finalResults.filter((event) => typeof event.total_cost_usd === 'number' && Number.isFinite(event.total_cost_usd));
+  const resultEvents = events.filter((event) => event?.type === 'result');
+  // Task/Sub-agent activity can emit earlier result events. Only the terminal stream
+  // result belongs to this Headless Playbook Agent invocation and its budget.
+  const terminalResult = resultEvents.at(-1) ?? null;
   const approval = events.some(approvalRequested);
   const budgetExhausted = events.some(budgetFailure);
   let processOutcome = 'completed';
@@ -503,8 +505,10 @@ export async function runHeadlessAgent({ plan, prompt, cwd, timeoutMs, logPaths,
     parseError: parseError?.message ?? null,
     approval,
     budgetExhausted,
-    totalCostUsd: costs.length === 1 && finalResults.length === 1 ? costs[0].total_cost_usd : null,
-    finalResultCount: finalResults.length,
+    totalCostUsd: typeof terminalResult?.total_cost_usd === 'number' && Number.isFinite(terminalResult.total_cost_usd)
+      ? terminalResult.total_cost_usd
+      : null,
+    resultEventCount: resultEvents.length,
     logs: { prompt: promptRef, stdout: stdoutRef, stderr: stderrRef },
   };
 }

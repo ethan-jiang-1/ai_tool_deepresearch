@@ -371,7 +371,12 @@ export function queueItemForWorkUnit({
   priority_class = 'P5_new_reference_intake',
   action = `Fixture-backed controlled work-unit task for ${queue_item_id}.`,
   writes_to = ['reference/work-unit-fixture.md'],
+  task_brief,
 } = {}) {
+  const payload = finding_id
+    ? { finding_id, wave: Number(phase.replace('wave', '')) }
+    : { topic_slug, wave: Number(phase.replace('wave', '')) };
+  if (task_brief) payload.task_brief = task_brief;
   return {
     queue_item_id,
     title,
@@ -390,7 +395,7 @@ export function queueItemForWorkUnit({
     required_receipts: ['none'],
     done_condition: 'submit succeeds through operate-work-unit',
     verification: { engine: ['work_unit_submit'], agent: [] },
-    payload: finding_id ? { finding_id, wave: Number(phase.replace('wave', '')) } : { topic_slug, wave: Number(phase.replace('wave', '')) },
+    payload,
     lineage: finding_id ? { finding_id, phase } : { topic_slug, phase },
   };
 }

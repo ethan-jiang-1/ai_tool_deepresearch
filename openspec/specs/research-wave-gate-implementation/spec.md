@@ -203,22 +203,6 @@ Wave2 phase-internal feedback checks SHALL remain distinct from the phase bounda
 - **THEN** the Engine SHALL enqueue delegated queue demand
 - **AND** the gap SHALL be resolved through a new work-unit claim/submit before gate pass
 
-### Requirement: Wave gate CLIs follow established double trace convention
-
-Wave gate CLIs SHALL 延续 `wff-pre-research` 中建立的双 trace 约定：
-
-- Gate CLI SHALL 通过 stdout 返回标准 JSON gate result（`check / routing / inspect / advice`）
-- Gate CLI SHALL 把真实 gate attempt 追加到 active bundle 的 `rb_trace.jsonl`
-- Playbook thin driver SHALL 负责调用 gate CLI、解析 result、向 `_trace.jsonl` 追加 `event: "check"` trace entry
-- Experiment verdict SHALL 只读 `_trace.jsonl`
-
-#### Scenario: Wave gate CLI output and trace verdict stay separate
-
-- **WHEN** experiment 执行某个 wave gate
-- **THEN** gate CLI stdout SHALL 提供 machine-readable JSON result
-- **AND** active bundle `rb_trace.jsonl` SHALL 记录对应 runtime audit entry
-- **AND** `_trace.jsonl` 中对应的 `check` event SHALL 由 playbook driver 基于该真实 result 追加
-
 ### Requirement: Wave2 gate cross_field verifies Markdown link artifact references
 
 `check-gate-wave2-complete.mjs` 的 `cross_field` check（`mode: "markdown_link_resolution"`）SHALL 解析 `artifacts/wave2/synthesis.md` 中所有 Markdown link `[text](path)`，对每条 link 提取 path 并解析为 bundle-relative 路径，然后验证目标文件存在。至少 1 条引用目标存在时该 rule pass；所有引用目标均不存在时该 rule fail。
@@ -629,3 +613,20 @@ Accepted slugs SHALL be alternatives for one UID, not separate mandatory targets
 - **WHEN** a sanctioned rerun adds a topic with no historical Wave1 coverage
 - **THEN** the topic SHALL use current layout coordinates and the normal Wave1 delegated/materialization contract
 - **AND** rerun classification SHALL NOT create a second reference, gate or provenance path
+
+### Requirement: Wave gate CLIs and playbook verdict checks use one root trace with distinct ownership
+
+Wave gate CLIs SHALL return standard machine-readable `check / routing / inspect / advice` JSON on stdout and append real gate-attempt audit rows to the active bundle's `rb_trace.jsonl`. A command-experiment Playbook Agent/thin driver SHALL parse the real result and append its strict case-owned `event: check`, `source: playbook`, explicit boolean `passed`/`expected` verdict row through the accepted trace writer/helper to the same root trace. Native completion SHALL evaluate only accepted playbook-owned checks under V2 policy. `_trace.jsonl`, console verdict text and gate-authored substitute checks SHALL NOT be current authority.
+
+#### Scenario: Wave gate output and verdict-check ownership stay distinct in one trace
+
+- **WHEN** a command experiment executes a Wave gate
+- **THEN** gate stdout SHALL expose machine-readable JSON and bundle-root `rb_trace.jsonl` SHALL retain the gate attempt
+- **AND** the Playbook Agent/thin driver SHALL derive any case verdict check from that result as a separately owned strict row in the same root trace
+- **AND** native completion SHALL bind and evaluate the accepted root-trace prefix without a second trace sink
+
+#### Scenario: Wave gate CLI output and trace verdict stay separate
+
+- **WHEN** a command experiment executes a Wave gate
+- **THEN** gate stdout exposes machine-readable JSON and bundle-root `rb_trace.jsonl` retains the gate attempt
+- **AND** the Playbook Agent/thin driver derives the strict case verdict check from that real result in the same trace
