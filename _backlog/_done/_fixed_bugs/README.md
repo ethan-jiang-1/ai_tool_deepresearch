@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-07-15 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-07-20 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -101,8 +101,9 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-089 | 2026-07-15 | submit 拒 prior submitted source_ref — same topic/wave/kind authorized prior role |
 | BUG-090 | 2026-07-16 | Rerun 新增 topic 未物化 reference/*.md — **结案: cross-version skew，当前版本不复现，不修**（症状层→`bundle-version-skew-advisory` CMI-007/RRD-011；根因 audit→CLS-026） |
 | BUG-091 | 2026-07-16 | Legacy rerun artifact 旧格式过当前 gate — **结案: cross-version skew，不修**（`source_novelty_floor` 规则已删；不建迁移机器） |
+| BUG-092 | 2026-07-20 | `add_topic` seed projection 跨 section masking — `restore-section-scoped-seed-projection-contract` v0.35 按目标 section 逐 row/finding 执法 |
 
-**Next available bug ID: BUG-092**
+**Next available bug ID: BUG-096**
 
 ---
 

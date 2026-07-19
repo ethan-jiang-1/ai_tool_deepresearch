@@ -1,0 +1,72 @@
+schema_version: verification-routing/v1
+change: centralize-seed-topic-authoring-contracts
+test_classes:
+  unit:
+    status: selected
+    rationale: Canonical seed appendix parity and rerun-direction parsing/structural evaluation are focused deterministic contracts over Markdown strings and renderer output.
+  integration:
+    status: selected
+    rationale: The shipped workflow package must load the shared authoring surface through real requires chains, avoid duplicate complete templates, and return root-first rerun-ready feedback through the production CLI.
+  deterministic_e2e:
+    status: selected
+    rationale: Direction write, crash-window recovery, profile-count increment and downstream add/supplement classification cross multiple production checkpoints and require one workflow-scale deterministic chain.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change claims that the shared contract is loaded/reachable and that deterministic writer/parser/checkpoint contracts agree; it does not claim that a real Agent will always notice, interpret or semantically follow the template. If apply adds that behavioral claim, this plan must be revised before implementation evidence is accepted.
+claims:
+  - id: seed-authoring-parity
+    statement: The canonical add-topic renderer and the single shared seed authoring contract expose the same ordered research-appendix headings and one-time token set while treating YAML order and presentation whitespace as non-authoritative.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/canonical-topic-state.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: direction-structure-compatibility
+    statement: One focused rerun-direction parser/evaluator preserves matching/stale/future/legacy-unbound/invalid classification, accepts legacy heading/list/bold presentation, validates canonical action and required non-empty fields for current/future directions, tolerates non-conflicting extensions, rejects duplicates, and never judges guidance semantics.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/wave-contract-evaluators-direction.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: shared-contract-reachability-and-rerun-feedback
+    statement: The shipped phase package loads one shared seed authoring contract at seed/rerun/Wave decision points, removes independently maintained complete generic templates, and the existing rerun-ready CLI blocks malformed current/future direction structure once with exact seed/field repair coordinates and same-check rerun while preserving its gate/routing ownership.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/seed-topic-authoring-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rerun-direction-continuity
+    statement: The production deterministic rerun chain writes one complete canonical add/supplement direction from labeled Agent input, binds it to target count before profile increment, repairs an incomplete future direction through the same rerun-ready checkpoint, preserves layout-only guidance behavior, and lets downstream Wave classification consume only the completed current direction.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/rerun-round-continuity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

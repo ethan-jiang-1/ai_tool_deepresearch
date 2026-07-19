@@ -1,8 +1,8 @@
 # Seed Topic Projection Contract Repair — Analysis and Execution Plan
 
-> 状态：分析完成，待按顺序创建 OpenSpec changes  
+> 状态：执行中；Change A 已 archive，Change B 待 propose
 > 创建：2026-07-19  
-> 更新：2026-07-19  
+> 更新：2026-07-20
 > 触发来源：`_backlog/bugs/BUG-092`、`BUG-093`、`BUG-094`
 
 ---
@@ -443,23 +443,23 @@ Change B propose 阶段只在以下任一情况成立时再拆出 `formalize-rer
 
 ### Stage 1 — Propose Change A
 
-- [ ] 运行 `/opsx:propose restore-section-scoped-seed-projection-contract`。
-- [ ] Proposal 引用三个 bug 中与 Change A 直接相关的原始段落和本计划。
-- [ ] 读取并 paired-review 两条 Evolution Directions。
-- [ ] 明确 direct authority、最短闭环、net simplification 和不新增 parallel validator。
-- [ ] 审计 `RRM-007` registry/spec/archive/task/implementation/test traceability。
-- [ ] 创建 change-root `verification-plan.yaml`。
-- [ ] Tasks 中列出 apply 前/后 governance 与 verification routing checks。
-- [ ] 声明 framework version bump 决策。
+- [x] 运行 `/opsx:propose restore-section-scoped-seed-projection-contract`。
+- [x] Proposal 引用三个 bug 中与 Change A 直接相关的原始段落和本计划。
+- [x] 读取并 paired-review 两条 Evolution Directions。
+- [x] 明确 direct authority、最短闭环、net simplification 和不新增 parallel validator。
+- [x] 审计 `RRM-007` registry/spec/archive/task/implementation/test traceability。
+- [x] 创建 change-root `verification-plan.yaml`。
+- [x] Tasks 中列出 apply 前/后 governance 与 verification routing checks。
+- [x] 声明 framework version bump 决策。
 
 ### Stage 2 — Apply and Archive Change A
 
-- [ ] `/opsx:apply` 前运行 verification plan mode check。
-- [ ] 先写 failing focused tests，再实现 section-scoped/per-row contract。
-- [ ] 跑 unit、integration、selected deterministic e2e 和全量适用 regression。
-- [ ] 运行 governance req/spec checks 和 verification assets check。
-- [ ] Archive 并同步 accepted specs。
-- [ ] 关闭 BUG-092；BUG-093 保持 open，注明 Change A 只关闭 enforcement 子问题。
+- [x] `/opsx:apply` 前运行 verification plan mode check。
+- [x] 先写 failing focused tests，再实现 section-scoped/per-row contract。
+- [x] 跑 unit、integration、selected deterministic e2e 和全量适用 regression。
+- [x] 运行 governance req/spec checks 和 verification assets check。
+- [x] Archive 并同步 accepted specs：`2026-07-19-restore-section-scoped-seed-projection-contract`，v0.35，commit `af5e6018c`。
+- [x] 关闭 BUG-092；BUG-093 保持 open，Change A 只关闭 enforcement 子问题。
 
 ### Stage 3 — Propose Change B
 

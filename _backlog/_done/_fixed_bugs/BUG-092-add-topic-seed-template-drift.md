@@ -1,8 +1,18 @@
 # BUG-092 — `add_topic` seed 结构与 canonical 模板不一致
 
 **报告日期**: 2026-07-18
+**关闭日期**: 2026-07-20
+**状态**: FIXED — `restore-section-scoped-seed-projection-contract`（v0.35，commit `af5e6018c`）
 **发现环境**: `dpt_rb_ai-era-bpm-process-disruption` rerun_count=3
 **严重度**: MEDIUM（gate 不检查 body 格式，但 wave2 synthesis 和人类读者严重依赖回填质量）
+
+## 关闭依据
+
+原报告把问题归因为“gate 不检查 appendix body”，后续审计确认更精确的根因是 accepted `RRM-007` 未完整落地：Wave inspect 按整个 seed body 校验，导致其他 wave 的合法字段可掩盖目标 section 的自由叙述、count summary 或缺失 current-round projection。
+
+归档 change `openspec/changes/archive/2026-07-19-restore-section-scoped-seed-projection-contract/` 已完成 section-scoped validation、逐 row/finding projection binding 和 exact repair feedback。`apply-evidence.md` 记录了同一复现从 pre-change `passed: true` 变为 post-fix blocking failure，并由 focused unit、CLI integration 和 deterministic E2E 覆盖。
+
+共享 seed authoring template、canonical writer shape 和 rerun direction fragment 不属于本 bug 的 deterministic false-pass closure；这些仍由 BUG-093/094 与 active plan `seed-topic-projection-contract-repair.md` 的 Change B 跟踪。
 
 ## 复现
 

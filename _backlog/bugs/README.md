@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-07-16 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-07-20 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -18,12 +18,17 @@
 | Bug | 简述 | 状态 |
 |-----|------|------|
 
-| BUG-092 | `add_topic` seed 结构与 canonical 模板不一致 | open |
 | BUG-093 | seed topic 研究轮次追加区定义分散在 8+ 位置、section 名不携带 wave 标识 | open |
 | BUG-094 | `## 本轮重跑方向` section 格式无模板，supplement 方向写入不规范 | open |
 | BUG-095 | `new-disposable-bundle.mjs` 把 `--help` 当作 bundle 名，创建垃圾 `dpt_disp_--help_*` | open |
 
 **Next available bug ID: BUG-096**
+
+## 最近关闭 (2026-07-20)
+
+| Bug | Change | 简述 |
+|-----|--------|------|
+| BUG-092 | `restore-section-scoped-seed-projection-contract` (v0.35, `af5e6018c`) | Wave inspect 改为目标 section 隔离校验，并逐条绑定 current-round row/finding；原跨 section false pass 已有 unit、CLI integration 与 deterministic E2E 证据 |
 
 ---
 
