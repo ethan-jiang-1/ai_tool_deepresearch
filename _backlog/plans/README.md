@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-07-17 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-07-19 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -16,6 +16,7 @@
 ## 活跃列表
 
 - [agent-output-linter](agent-output-linter.md) — **实现计划**：Agent 手写结构化内容不可靠，MD controller 在离产出最近的地方让 Agent 自检——JS 做两层确定性检查（语法 + 当时需要的 schema），Agent 根据报告修复，通过后才允许退出。含 format contract registry、CLI 设计、task.md 集成、hint-quality 测试覆盖审计。
+- [seed-topic-projection-contract-repair](seed-topic-projection-contract-repair.md) — **两阶段修复路线**：先用 `restore-section-scoped-seed-projection-contract` 补完 accepted `RRM-007`、关闭跨 section false pass，再用 `centralize-seed-topic-authoring-contracts` 收敛 seed skeleton 与 rerun direction 的 Agent-facing template；明确 BUG-092/093/094 映射、与 output-linter 的边界、验证路由及关闭条件。
 
 ---
 
