@@ -17,7 +17,7 @@ The canonical writer SHALL render the exact `## 本轮重跑方向` heading and 
 
 Layout-only mutation SHALL preserve existing seed guidance and SHALL NOT create or replace direction. Unknown non-conflicting extension fields MAY be retained and SHALL NOT block readiness. Engine validation SHALL cover presence, uniqueness, enum/integer shape, target-count/action mapping, and non-empty canonical values. It SHALL NOT judge whether search dimensions, depth, guardrails or rationale wording are semantically good and SHALL NOT compare `rationale_excerpt` for semantic equivalence.
 
-Stage 1 crash recovery SHALL inspect existing topic-state workspace first. An accepted workspace SHALL return the existing exact `recover` operation. After no workspace remains, a structurally complete future direction at `profile.rerun_count + 1` SHALL prove only that the seed-direction transaction committed before the existing profile-count step; it SHALL resume at that count owner. A malformed future direction SHALL expose its nearest seed structure root before count synchronization. An old matching/stale direction from a completed round SHALL NOT be mistaken for a new request or proof that all semantics for another rerun have been materialized.
+Stage 1 crash recovery SHALL inspect existing topic-state workspace first. An accepted workspace SHALL return the existing exact `recover` operation. After no workspace remains, a structurally complete future direction at `profile.rerun_count + 1` SHALL prove only that the seed-direction transaction committed before the existing profile-count step; it SHALL resume at that count owner. A malformed future direction SHALL expose its nearest seed structure root before count synchronization. An old matching/stale direction from a completed round SHALL NOT be mistaken for a new request or proof that all semantics for another rerun have been materialized. Without an accepted workspace, `phase-rerun` SHALL form and retain a fresh sanctioned topic-state input from the current recorded rationale; it SHALL NOT scan every seed to authorize a skip, directly append/replace a direction section, or increment the profile before that input is accepted.
 
 A shared direction resolver/evaluator SHALL return one of the existing five states while also exposing normalized fields, occurrences, extensions, and structural roots:
 
@@ -35,13 +35,17 @@ Wave phase classification and `checkRerunAddFullSynthesis` SHALL consume this on
 
 The existing rerun-ready Gate SHALL reuse the same evaluator. It SHALL:
 
+- derive the current Topic/seed scope from the canonical plan and reuse focused canonical seed binding rather than infer authority from directory entries or full topic-state health;
+- inspect direction structure only for plan-bound seeds with a present current/future occurrence; absence alone, stale content, legacy-unbound content, and orphan seed files SHALL NOT identify an affected Topic or create a migration blocker;
 - evaluate matching direction structure without creating a second parser;
 - for a seed with any current/future occurrence or ambiguous duplicate involving one, return only the smallest cardinality/field root before dependent symptoms;
 - after a future direction is structurally complete and targets exactly `profile + 1`, remain failed with one count-synchronization root pointing to the existing phase-rerun profile-count owner;
 - reject any other future count as invalid rather than increment across multiple rounds; and
 - pass direction readiness only when no structural/count-sync root remains.
 
-Direction findings SHALL include exact seed/section/field or profile coordinate, the nearest legal owner, and the same rerun-ready command. An authorized seed correction is `repair_kind: agent_action`; a complete future direction routes to the existing profile count step without asking the user. Parent profile/rationale/lifecycle failures SHALL mask dependent direction findings. The Gate SHALL NOT infer affected Topics from chat, add persistent affected-topic state, generate direction semantics, or create another CLI/Gate family.
+Direction findings SHALL include exact seed/section/field or profile coordinate, the nearest legal owner, and the same rerun-ready command. An authorized seed correction is `repair_kind: agent_action`; a complete future direction routes to the existing profile count step without asking the user. Parent profile/rationale/lifecycle/plan/seed-binding failures SHALL mask dependent direction findings. The Gate SHALL NOT infer affected Topics from chat, directory membership, or rationale prose; add persistent affected-topic state; generate direction semantics; or create another CLI/Gate family.
+
+This structural Gate does not prove that a new recorded rationale was mapped into a sanctioned topic-state input when no new operation was attempted. Atomic publication guarantees only that once an accepted action targets a Topic, its required direction cannot be omitted from that transaction. A durable operation-intent receipt is outside this requirement.
 
 #### Scenario: Direction written with target before profile increment
 
@@ -69,6 +73,12 @@ Direction findings SHALL include exact seed/section/field or profile coordinate,
 - **AND** the user triggers round 3 rerun
 - **THEN** the old matching direction SHALL NOT prove round 3 materialization
 - **AND** the Agent SHALL derive a new sanctioned topic-state input from recorded round-3 rationale with target count 3
+
+#### Scenario: Old matching direction cannot bypass a fresh topic-state operation
+
+- **WHEN** a new recorded rerun rationale exists, no accepted topic-state workspace remains, and one or more seeds still contain matching directions from the completed round
+- **THEN** phase-rerun SHALL retain a fresh add/update/direction-only input and invoke the existing topic-state apply owner before profile increment
+- **AND** it SHALL NOT treat the old matching sections as a transaction receipt or directly edit those seed sections
 
 #### Scenario: Direction resolver returns stale for old action
 

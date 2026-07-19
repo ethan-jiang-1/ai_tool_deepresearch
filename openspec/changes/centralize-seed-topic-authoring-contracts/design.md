@@ -38,17 +38,19 @@
 新增：
 
 - `shared/shared-seed-topic-authoring.md`：完整initialization skeleton、appendix heading/token skeleton、canonical rerun-direction fragment、Source-of-Record boundary；由`phase-seed-topics`和`phase-rerun`加载。
-- `shared/shared-return-map-authoring.md`：Wave-to-section ownership、token lifecycle、canonical five-field entry、ref hierarchy和same-inspect repair；由`phase-seed-topics`、`phase-wave0/1/2`及实际产出return-map的role nodes加载。
+- `shared/shared-return-map-authoring.md`：Wave-to-section ownership、token lifecycle、canonical five-field entry、ref hierarchy和same-inspect repair；由`phase-seed-topics`、`phase-wave0/1/2`通过`requires`加载，`subagent-dpt-source-intake`、`subagent-dpt-evidence-extractor`、`subagent-dpt-topic-scout`只保留静态引用/最短 cue，generated work-unit prompt继续自包含。
 
 Phase body只保留decision-point-specific authority、命令顺序和简短引用。`shared-schemas.md`保留路径/schema摘要并指向authoring contract，不再维护完整generic entry示例。
 
 Generated work-unit `task.md`与spawn prompt不走workflow `requires` loader，必须保持自包含。它们可以保留最短五字段cue与authority disclaimer；static parity test将字段集/边界与shared return-map contract对齐，但不让runtime JS解析Markdown。
 
+Static duplicate-template proof only guards the named authoring surfaces, not arbitrary Markdown semantics: a complete generic return-map definition is the shared contract's ordered multi-line five-label example plus section/token/ref-boundary explanation. The focused MD integration test SHALL count that complete block/signature only in `shared-return-map-authoring`, while allowing one-line five-field cues and authority disclaimers in generated task/spawn or role guidance. This makes the regression check precise without creating a Markdown linter, runtime parser, or template registry.
+
 选择两个nodes而非一个，是因为Wave不需要反复加载完整initialization/direction模板，rerun也不需要加载Wave evidence示例。两者仍各自只有一个complete definition。
 
 ### 2. Renderer保持纯函数，parity只比较稳定manifest
 
-`renderNewSeedBody()`继续由topic-state helper纯确定性渲染，不runtime读取shared Markdown。Focused test从shared seed authoring与renderer output抽取：
+`renderNewSeedBody()`继续由topic-state helper纯确定性渲染，不runtime读取shared Markdown。其现有 ordered appendix arrays/markers 作为唯一 runtime structural manifest；不再另建第三份 template registry。Focused test从shared seed authoring与renderer output抽取：
 
 - ordered canonical appendix H2 headings；
 - accepted one-time token set及owning heading；
@@ -86,11 +88,11 @@ Topic-state renderer在staged seed中replace exactly one canonical `## 本轮重
 
 Prepared manifest仍只拥有`rb_plan.md`和explicitly touched current seeds。Direction candidate bytes、input hash和affected UID随existing manifest/workspace进入durable recovery。Plan byte-identical时仍可作为expected/unchanged replacement contract；只有plan和touched seed including direction都相同才返回`unchanged`。
 
-这关闭了“topic mutation committed，direction尚未直写”的窗口。它不新增derived state，也不让seed direction成为topic authority。Workspace accepted后只允许existing exact recover；publication前失败由retained input fresh apply。
+这关闭了“topic mutation committed，direction尚未直写”的窗口。它不新增derived state，也不让seed direction成为topic authority。Workspace accepted后只允许existing exact recover；publication前失败由retained input fresh apply。`phase-rerun`不得通过扫描所有seed或看到旧matching direction来跳过新的retained input/apply；没有accepted workspace时，旧direction只是历史/现状事实，不是本轮事务收据。
 
-### 5. 一个parser result服务topic-state validation、Wave classification与Gate复核
+### 5. 一个focused pure helper服务topic-state validation、Wave classification与Gate复核
 
-在现有Wave contract helper ownership附近建立focused pure parser/evaluator，输出：
+从现有`wave-contract-evaluators.mjs`抽出`engine/helpers/rerun-direction.mjs`作为focused pure parser/evaluator，输出：
 
 ```text
 sections[]
@@ -104,7 +106,7 @@ structural_roots[]
 
 Parsing容忍heading suffix、optional bullet、balanced asterisk-bold label；收集全部section/field occurrences，不按file order选赢家；unknown non-conflicting extensions保留。No section与compatibility section without count都可分类`legacy_unbound`，但no section不提供action；present malformed/ambiguous为`invalid`。
 
-Topic-state input可直接对structured candidate schema验证，再使用同一canonical render/parse result做round-trip assertion。Wave classification和`checkRerunAddFullSynthesis()`消费normalized fields，删除本地`action:add` regex：matching可激活；stale/future/invalid不激活；legacy section without count保留pre-v0.29 action compatibility；no section无action。
+Topic-state input可直接对structured candidate schema验证，再使用该focused helper对canonical render做round-trip assertion；topic-state不反向依赖庞大的Wave evaluator。Wave classification和`checkRerunAddFullSynthesis()`也消费normalized fields，删除本地`action:add` regex：matching可激活；stale/future/invalid不激活；legacy section without count保留pre-v0.29 action compatibility；no section无action。
 
 ### 6. Rerun-ready只检查plan-bound current seeds并保持prerequisite masking
 
@@ -131,7 +133,7 @@ profile = N+1, direction = N+1 complete
   -> matching; direction subcheck may pass
 ```
 
-Malformed future先修seed candidate，再increment。Accepted topic-state workspace先exact recover。旧matching/stale direction不能证明新rationale已materialize；phase必须重新形成retained input。这是明确的honesty boundary，不用旧direction猜本轮完成。
+Malformed future先修seed candidate，再increment。Accepted topic-state workspace先exact recover。旧matching/stale direction不能证明新rationale已materialize；没有accepted workspace时，phase必须重新形成retained input。这是明确的honesty boundary，不用旧direction猜本轮完成。
 
 ### 8. Apply target manifest and net simplification
 
@@ -139,9 +141,10 @@ Malformed future先修seed candidate，再increment。Accepted topic-state works
 
 - two focused shared authoring nodes；
 - `set_rerun_direction` action及direction candidate schema/renderer integration in existing topic-state owner；
-- one shared direction parse/evaluate result；
+- one focused `rerun-direction.mjs` parse/evaluate result；
 - one existing rerun-ready definition rule/dispatch branch；
-- focused unit/integration/E2E assertions。
+- focused unit/integration/E2E assertions；
+- case-318's existing real Subject Agent direction/recovery canary and its narrow Subject-turn adapter contract.
 
 预计删除/收敛：
 
@@ -169,6 +172,7 @@ Helper direction：用户决定rationale；Agent形成candidate/执行apply/reco
 - [Gate无法证明Agent完整映射本轮rationale] ->如实不claim；atomic action保证一旦sanctioned input accepted，affected direction不会漏写。Generic intent receipt另change处理。
 - [Profile count仍由现有Agent-owned step写入] -> complete future明确block并返回该owner；本change不扩成profile mutation CLI。
 - [Legacy-unbound action compatibility] -> preserve section-without-count behavior；no section no longer scanswhole seed foraccidental action text。
+- [Phase-rerun is Agent-flow behavior, not only deterministic bytes] -> retain and update the existing case-318 real Subject Agent canary; its narrow claim is transaction use plus recovery ordering from a supplied rationale, never semantic quality or universal affected-Topic inference.
 
 ## Migration Plan
 
@@ -177,10 +181,11 @@ Helper direction：用户决定rationale；Agent形成candidate/执行apply/reco
 3. 扩展topic-state input/render/workspace，验证HITL1 compatibility与rerun atomic add/update/direction-only/recovery。
 4. 扩展shared parser，迁移Wave consumers并删除local regex。
 5. 接入rerun-ready rule，验证canonical prerequisite masking、future count-sync和legacy tolerance。
-6. 更新v0.36 docs，运行focused/full regression、governance、strict validation后archive；不改写真实/历史bundle。
+6. 更新case-318 Subject prompts/snapshot and its real-Agent playbook evidence so first turn uses retained topic-state apply rather than direct seed editing; run the canary through native trace completion.
+7. 更新v0.36 docs，运行focused/full regression、governance、strict validation后archive；不改写真实/历史bundle。
 
 Rollback可恢复phase prose，移除new requires/action/rule/parser fields。无runtime migration或new persistent state；已产生canonical direction仍被旧reader接受。已通过new action提交的plan/seed本身仍是existing legal bytes，不需data reversal。
 
 ## Open Questions
 
-无阻塞问题。Apply若需要new persistent affected-topic/intent receipt、new profile mutation CLI或真实Agent compliance claim，必须返回explore/proposal修订。现有workflow validator若不能表达shared reachability/duplicate-template proof，优先扩展tests下的MD integration coverage，不新增production validator CLI。
+无阻塞问题。case-318 的窄 real-Agent claim 是本 change 的既有能力回归证据：它需要真实 Subject Agent 的 native trace PASS；runtime 不可用时必须诚实 NOT_RUN，不能用 JS fixture 代替。Apply若需要new persistent affected-topic/intent receipt、new profile mutation CLI或超出该 narrow canary 的真实Agent compliance claim，必须返回explore/proposal修订。现有workflow validator若不能表达shared reachability/duplicate-template proof，优先扩展tests下的MD integration coverage，不新增production validator CLI。

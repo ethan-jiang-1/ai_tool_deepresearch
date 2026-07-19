@@ -3,19 +3,19 @@ change: centralize-seed-topic-authoring-contracts
 test_classes:
   unit:
     status: selected
-    rationale: Canonical seed appendix parity and rerun-direction parsing/structural evaluation are focused deterministic contracts over Markdown strings and renderer output.
+    rationale: Seed renderer parity and rerun-direction parsing are focused deterministic contracts over structured input and Markdown bytes.
   integration:
     status: selected
-    rationale: The shipped workflow package must load the shared authoring surface through real requires chains, avoid duplicate complete templates, and return root-first rerun-ready feedback through the production CLI.
+    rationale: The shipped workflow package must resolve two focused shared contracts through real requires chains, preserve generated-cue parity, and return root-first rerun-ready feedback over real temporary bundle structure.
   deterministic_e2e:
     status: selected
-    rationale: Direction write, crash-window recovery, profile-count increment and downstream add/supplement classification cross multiple production checkpoints and require one workflow-scale deterministic chain.
+    rationale: Atomic direction publication, crash recovery, profile-count synchronization, and downstream action classification cross multiple production deterministic owners.
   agent_flow_e2e:
-    status: not_applicable
-    rationale: The change claims that the shared contract is loaded/reachable and that deterministic writer/parser/checkpoint contracts agree; it does not claim that a real Agent will always notice, interpret or semantically follow the template. If apply adds that behavioral claim, this plan must be revised before implementation evidence is accepted.
+    status: selected
+    rationale: Phase-rerun's changed required order is Agent-flow behavior. The existing case-318 real Subject Agent canary narrowly proves retained direction-only candidate/application and crash-window recovery from a supplied rationale; it does not claim universal affected-Topic inference or semantic direction quality.
 claims:
   - id: seed-authoring-parity
-    statement: The canonical add-topic renderer and the single shared seed authoring contract expose the same ordered research-appendix headings and one-time token set while treating YAML order and presentation whitespace as non-authoritative.
+    statement: The canonical new-seed renderer and focused shared seed authoring contract expose the same ordered research-appendix headings, owning headings, and one-time token set while presentation prose, YAML order, and whitespace remain non-authoritative.
     test_class: unit
     proof_subject: deterministic_contract
     asset:
@@ -28,13 +28,27 @@ claims:
       external_calls: none
       verdict_judge: deterministic
     verdict_authority: node_test_exit
+  - id: topic-state-atomic-direction-publication
+    statement: Sanctioned rerun add, update, and direction-only actions validate target count and action mapping before prepared publication, atomically stage every touched seed direction in the existing workspace, recover exact bytes after accepted publication, preserve layout-only guidance, and keep HITL1 direction-free.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-direction.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
   - id: direction-structure-compatibility
-    statement: One focused rerun-direction parser/evaluator preserves matching/stale/future/legacy-unbound/invalid classification, accepts legacy heading/list/bold presentation, validates canonical action and required non-empty fields for current/future directions, tolerates non-conflicting extensions, rejects duplicates, and never judges guidance semantics.
+    statement: One focused rerun-direction parser/evaluator preserves matching, stale, future, legacy-unbound, and invalid classification; accepts tolerated heading/list/bold presentation; validates canonical action and non-empty current/future fields; tolerates non-conflicting extensions; rejects ambiguity; and never judges guidance semantics.
     test_class: unit
     proof_subject: deterministic_contract
     asset:
       kind: node_test
-      path: tests/engine/helpers/wave-contract-evaluators-direction.test.mjs
+      path: tests/engine/helpers/rerun-direction.test.mjs
     execution_profile:
       fixture: fixture_backed
       subject_execution: none
@@ -42,8 +56,8 @@ claims:
       external_calls: none
       verdict_judge: deterministic
     verdict_authority: node_test_exit
-  - id: shared-contract-reachability-and-rerun-feedback
-    statement: The shipped phase package loads one shared seed authoring contract at seed/rerun/Wave decision points, removes independently maintained complete generic templates, and the existing rerun-ready CLI blocks malformed current/future direction structure once with exact seed/field repair coordinates and same-check rerun while preserving its gate/routing ownership.
+  - id: focused-shared-contract-reachability
+    statement: The shipped workflow loads the seed authoring contract only at seed/rerun decision points and the return-map authoring contract through the seed/Wave phase requires chains, while applicable role guidance keeps only static cues; it retains one complete definition per concern and keeps generated work-unit cues self-contained with static five-field and authority parity.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -52,12 +66,26 @@ claims:
     execution_profile:
       fixture: fixture_backed
       subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: plan-bound-rerun-ready-feedback
+    statement: The existing rerun-ready CLI derives current seed scope from the canonical plan, reuses focused seed binding, masks dependent direction symptoms behind prerequisite roots, blocks malformed current/future structure at exact coordinates, and keeps a complete future candidate failed at the existing profile-count owner while ignoring orphan seed files.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-rerun-ready.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
       runtime: temporary_bundle
       external_calls: none
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: rerun-direction-continuity
-    statement: The production deterministic rerun chain writes one complete canonical add/supplement direction from labeled Agent input, binds it to target count before profile increment, repairs an incomplete future direction through the same rerun-ready checkpoint, preserves layout-only guidance behavior, and lets downstream Wave classification consume only the completed current direction.
+    statement: Given fixture-labeled simulated Agent action input, the production deterministic rerun chain atomically publishes complete add, update, or direction-only candidates; recovers accepted bytes; refuses to treat old matching direction sections as a new transaction receipt; synchronizes profile count through its existing owner; preserves layout-only guidance; and lets downstream consumers activate only the completed matching direction.
     test_class: deterministic_e2e
     proof_subject: deterministic_contract
     asset:
@@ -70,3 +98,17 @@ claims:
       external_calls: none
       verdict_judge: deterministic
     verdict_authority: node_test_exit
+  - id: real-agent-rerun-transaction-recovery
+    statement: Given a legal setup-only rerun boundary and recorded rationale, a real Subject Agent retains one direction-only candidate, invokes the existing topic-state apply owner, leaves a complete future direction before profile increment, then preserves its bytes while using the existing profile-count, rerun-ready, and Seed Topics handoff path. This proves only the named Agent-flow procedure, not universal Topic inference or semantic quality.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wfn_rerun/case-318-heavy-rerun-direction-recovery.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
