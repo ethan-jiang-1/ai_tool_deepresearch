@@ -1,0 +1,72 @@
+schema_version: verification-routing/v1
+change: restore-section-scoped-seed-projection-contract
+test_classes:
+  unit:
+    status: selected
+    rationale: Section extraction, section-local field/reference validation, disposition predicates, current/legacy classification and prerequisite masking are focused deterministic contracts.
+  integration:
+    status: selected
+    rationale: Real Wave inspect CLIs must aggregate the shared findings into consistent exit codes, classifications, failed rule ids and exact repair coordinates over temporary bundles.
+  deterministic_e2e:
+    status: selected
+    rationale: RRM-007 specifically binds current-round submitted authority during rerun, so the production multi-phase deterministic rerun chain must prove prior-round or other-section content cannot satisfy current projection.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change adds no Agent judgment, search, writing-quality or continuation behavior claim and does not modify Markdown Agent Flow; all proof subjects are deterministic contracts.
+claims:
+  - id: target-section-isolation
+    statement: Each Wave seed projection check extracts only its accepted target sections, validates each section independently, tolerates harmless presentation, and rejects Wave0-valid content masking prose-only, incomplete or count-summary Wave1 content.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/return-map.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-authority-projection-predicate
+    statement: The shared fail-closed eligible-row authority result uses current rerun count and canonical topic layout once, requires every current row to be referenced or explicitly dispositioned in the target-section union, preserves legacy exclusions, and masks dependent symptoms after an authority or section prerequisite failure.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/return-map.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave-inspect-projection-feedback
+    statement: Wave0, Wave1 and Wave2 inspect CLIs expose section-scoped current-row/current-finding omissions as blocking with exact seed, section, identity and same-check rerun coordinates, keep legacy Wave2 omissions advisory, and preserve no-write non-routing output semantics.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/inspect-wave-return-map.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rerun-current-round-projection-continuity
+    statement: The production deterministic rerun chain accepts complete current-round section projections, rejects a current-round submitted row omitted from its target seed section even when prior or other-wave content is valid, and returns to pass after the Agent-labeled seed projection repair without changing authority lineage.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/rerun-round-continuity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
