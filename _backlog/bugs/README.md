@@ -21,8 +21,9 @@
 | BUG-092 | `add_topic` seed 结构与 canonical 模板不一致 | open |
 | BUG-093 | seed topic 研究轮次追加区定义分散在 8+ 位置、section 名不携带 wave 标识 | open |
 | BUG-094 | `## 本轮重跑方向` section 格式无模板，supplement 方向写入不规范 | open |
+| BUG-095 | `new-disposable-bundle.mjs` 把 `--help` 当作 bundle 名，创建垃圾 `dpt_disp_--help_*` | open |
 
-**Next available bug ID: BUG-095**
+**Next available bug ID: BUG-096**
 
 ---
 
