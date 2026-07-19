@@ -8,7 +8,6 @@ import {
   statSync,
 } from 'node:fs';
 import path from 'node:path';
-import { parse as parseYaml } from 'yaml';
 
 import {
   WORK_UNIT_REQUIRED_RECEIPT_FIELDS,
@@ -306,80 +305,4 @@ export function inspectWorkUnits(bundleDir, {
   }
   if (emitDiagnostics) emitWorkUnitInspectDiagnostics(bundleDir, { issues, source: diagnosticSource });
   return { passed: false, check: false, inspect: issues, projection, actor_projection, advice: 'Resolve work-unit index/envelope drift before running delegated gates.' };
-}
-
-// @impl WPG-015
-/**
- * Collects current-round eligible submitted rows for Agent consumption.
- * Requires work-unit authority to be consistent before filtering.
- * @param {string} bundleDir - canonical absolute bundle path
- * @param {string} phase - wave0|wave1|wave2
- * @param {string|null} topic - optional topic slug filter
- * @returns {{ rows: Array<{work_id, result_path, rerun_count, topic_uid, topic_slug, kind, status}>, warnings: string[] }}
- */
-export function collectEligibleRows(bundleDir, phase, topic = null) {
-  const warnings = [];
-  const wave = { wave0: 0, wave1: 1, wave2: 2 }[phase];
-  if (wave === undefined) throw new Error('--phase must be wave0|wave1|wave2');
-
-  let profileRerunCount = 0;
-  try {
-    const profilePath = path.join(bundleDir, 'rb_profile.yaml');
-    if (existsSync(profilePath)) {
-      const raw = readFileSync(profilePath, 'utf8');
-      const profile = parseYaml(raw);
-      profileRerunCount = profile?.human_decision_checkpoints?.hitl2?.rerun_count ?? 0;
-    }
-  } catch {
-    warnings.push('profile unreadable, using rerun_count=0');
-  }
-
-  const indexPath = path.join(bundleDir, '_work_units', '_index.json');
-  if (!existsSync(indexPath)) return { rows: [], warnings: [...warnings, 'no work-unit index found'] };
-
-  let index;
-  try {
-    index = JSON.parse(readFileSync(indexPath, 'utf8'));
-  } catch {
-    return { rows: [], warnings: [...warnings, 'work-unit index invalid'] };
-  }
-
-  const rows = [];
-  let legacyCount = 0;
-  for (const record of Object.values(index.work_units || {})) {
-    if (record.status !== 'submitted') continue;
-    if (record.wave !== wave) continue;
-    if (record.rerun_count === undefined || record.rerun_count === null) {
-      legacyCount += 1;
-      continue; // legacy rows excluded from eligible rows
-    }
-    if (record.rerun_count !== profileRerunCount) continue;
-
-    if (topic) {
-      try {
-        const manifestPath = path.join(bundleDir, record.paths?.manifest_ref || '');
-        if (!existsSync(manifestPath)) continue;
-        const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-        const topicSlug = manifest?.queue_item?.payload?.topic_slug
-          || manifest?.queue_item?.lineage?.topic_slug
-          || '';
-        if (topicSlug !== topic) continue;
-      } catch { continue; }
-    }
-
-    rows.push({
-      work_id: record.work_id,
-      result_path: record.paths?.result_ref || null,
-      rerun_count: record.rerun_count,
-      topic_slug: null, // resolved below if manifest available
-      kind: record.kind,
-      status: record.status,
-    });
-  }
-
-  if (legacyCount > 0) {
-    warnings.push(`eligible_rows: ${legacyCount} legacy submitted row(s) without rerun_count excluded (not current-round authority)`);
-  }
-
-  return { rows, warnings };
 }

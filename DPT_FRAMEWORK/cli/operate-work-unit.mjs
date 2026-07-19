@@ -123,13 +123,14 @@ try {
       if (!values.phase) throw new Error('--phase is required with --eligible-rows');
       const eligible = collectEligibleRows(bundleDir, values.phase, values.topic || null);
       result.eligible_rows = eligible.rows;
+      if (!eligible.passed) {
+        result.passed = false;
+        result.check = false;
+        result.inspect = [...(result.inspect || []), ...eligible.root_findings.map((finding) => finding.missing_fact)];
+        result.warnings = [...(result.warnings || []), 'eligible_rows: work-unit authority is inconsistent; rows may be incomplete'];
+      }
       if (eligible.warnings?.length) {
         result.warnings = [...(result.warnings || []), ...eligible.warnings];
-      }
-      // Authority must be consistent first; if not, eligible_rows can't be trusted
-      if (!result.passed) {
-        result.eligible_rows = [];
-        result.warnings = [...(result.warnings || []), 'eligible_rows: work-unit authority is inconsistent; rows may be incomplete'];
       }
     }
     emit(result);

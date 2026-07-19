@@ -9,7 +9,6 @@ import { join, resolve as resolvePath } from 'node:path';
 import {
   checkReferenceFormatFiles,
   tryLoadGateDefinition,
-  readBundlePlan,
 } from '../engine/helpers/gate-helpers.mjs';
 import {
   buildContractEvaluation,
@@ -19,6 +18,7 @@ import {
 } from '../engine/helpers/wave-contract-findings.mjs';
 import { evaluateWave0Contract } from '../engine/helpers/wave-contract-evaluators.mjs';
 import { inspectReferenceReturnMaps, inspectSeedTopicReturnMaps } from '../engine/helpers/return-map.mjs';
+import { buildCanonicalTopicRegistryFact } from '../engine/helpers/topic-registry-fact.mjs';
 import { validateIndexMD } from '../schema/contracts/reference.mjs';
 
 const bundleFlag = process.argv.indexOf('--bundle');
@@ -59,7 +59,9 @@ if (error) {
   }), 2);
 }
 
-const evaluation = evaluateWave0Contract(resolvedBundlePath, definition);
+let topicRegistryFact = null;
+try { topicRegistryFact = buildCanonicalTopicRegistryFact(resolvedBundlePath); } catch { /* evaluator owns plan prerequisite */ }
+const evaluation = evaluateWave0Contract(resolvedBundlePath, definition, { topicRegistryFact });
 const additionalFindings = [];
 let additionalChecksRun = 0;
 const referencePath = join(resolvedBundlePath, 'reference');
@@ -122,9 +124,7 @@ if (existsSync(readmePath) && readFileSync(readmePath, 'utf8').trim().length ===
   additionalFindings.push(makeContractFinding({ id: 'reference_readme_non_empty', classification: 'advisory', surface: 'reference/README.md', detail: 'reference/README.md: file is empty', repair: 'Describe the flat reference directory convention.' }));
 }
 
-let topicSlugs = [];
-try { topicSlugs = (readBundlePlan(resolvedBundlePath)?.topic_registry || []).map((topic) => topic.slug); } catch { /* evaluator reports plan failure */ }
-const seedMap = inspectSeedTopicReturnMaps(resolvedBundlePath, { wave: 'wave0', topicSlugs });
+const seedMap = inspectSeedTopicReturnMaps(resolvedBundlePath, { wave: 'wave0', topicRegistryFact });
 const referenceMap = inspectReferenceReturnMaps(resolvedBundlePath, '00-shared-');
 additionalChecksRun += 1;
 additionalFindings.push(...(seedMap.findings || []));

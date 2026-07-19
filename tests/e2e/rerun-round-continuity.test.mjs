@@ -92,10 +92,11 @@ function stageWave0(bundle, suffix = 'r1') {
 
 function stageWave1(bundle, suffix = 'r1') {
   mkdirSync(join(bundle, 'artifacts/wave1/topic-a'), { recursive: true });
-  const summary = `# Evidence Summary: Topic A\n\n## Source URLs\n- [Continuity](https://research.example.org/${suffix}-deep)\n\n## Key Findings\n1. **Continuity**: Real checkpoints preserve rerun authority.\n\n## Open Questions\n1. [开放] Which direction is current?\n`;
-  const questions = `# Question List - Topic A\n\n## Topic Investigation Targets\n| target_id | target_question | origin | status | backing_refs | next_action |\n| --- | --- | --- | --- | --- | --- |\n| T01 | Which direction is current? | rerun | 开放 | https://research.example.org/${suffix}-deep | 移交 wave2 |\n\n## Question Reconciliation\n- [部分进展] Count binding is deterministic.\n\n## Emergent Question Protocol\n- result: no_new_questions_after_protocol\n\n## Exploration / Exploitation Decision\n- decision: continue\n`;
   const refPath = `reference/topic-a-${suffix}-deepening.md`;
-  const ref = `- source_url: https://research.example.org/${suffix}-deep\n- acceptance_status: accepted\n- source_type: secondary\n- tier: Tier 2\n- evidence_role: deepening_reference\n- trust_level: practitioner\n- why_it_matters: Deepening fixture.\n- accessed_at: 2026-07-15\n- related_topic: topic-a\n\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nThis deterministic fixture provides sufficient backing for the real Wave1 gate and submitted work-unit contract.\n\n## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- binding\n## Risks And Limitations\n- Fixture.\n`;
+  const returnMap = `- evidence_meaning: Real checkpoints preserve rerun authority.\n  relationship: supports\n  refs:\n    - artifacts/wave1/topic-a/evidence-summary.md\n    - ${refPath}\n  status: supported\n  next_hop: Read the submitted Wave1 projection.\n`;
+  const summary = `# Evidence Summary: Topic A\n\n## Source URLs\n- [Continuity](https://research.example.org/${suffix}-deep)\n\n## Key Findings\n1. **Continuity**: Real checkpoints preserve rerun authority.\n\n${returnMap}\n## Open Questions\n1. [开放] Which direction is current?\n`;
+  const questions = `# Question List - Topic A\n\n## Topic Investigation Targets\n| target_id | target_question | origin | status | backing_refs | next_action |\n| --- | --- | --- | --- | --- | --- |\n| T01 | Which direction is current? | rerun | 开放 | https://research.example.org/${suffix}-deep | 移交 wave2 |\n\n## Question Reconciliation\n- [部分进展] Count binding is deterministic.\n\n${returnMap}\n## Emergent Question Protocol\n- result: no_new_questions_after_protocol\n\n## Exploration / Exploitation Decision\n- decision: continue\n`;
+  const ref = `- source_url: https://research.example.org/${suffix}-deep\n- acceptance_status: accepted\n- source_type: secondary\n- tier: Tier 2\n- evidence_role: deepening_reference\n- trust_level: practitioner\n- why_it_matters: Deepening fixture.\n- accessed_at: 2026-07-15\n- related_topic: topic-a\n\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nThis deterministic fixture provides sufficient backing for the real Wave1 gate and submitted work-unit contract.\n\n## Relevance To This Research\n${returnMap}\n## Quotable Terms / Concepts\n- binding\n## Risks And Limitations\n- Fixture.\n`;
   writeFileSync(join(bundle, 'artifacts/wave1/topic-a/evidence-summary.md'), summary);
   writeFileSync(join(bundle, 'artifacts/wave1/topic-a/question-list.md'), questions);
   writeFileSync(join(bundle, refPath), ref);
@@ -104,7 +105,7 @@ function stageWave1(bundle, suffix = 'r1') {
     { path: 'artifacts/wave1/topic-a/evidence-summary.md', role: 'evidence_summary', content: summary },
     { path: 'artifacts/wave1/topic-a/question-list.md', role: 'question_list', content: questions },
   ]);
-  writeFileSync(join(bundle, 'seed_topics/topic-a.md'), readFileSync(join(bundle, 'seed_topics/topic-a.md'), 'utf8') + '\n## 本轮新增机制理解\n- Real checkpoints bind rerun state.\n\n## 本轮新增趋势与难点\n- Direction freshness matters.\n\n## 待验证问题\n- [部分解答] Which direction is current?\n');
+  writeFileSync(join(bundle, 'seed_topics/topic-a.md'), readFileSync(join(bundle, 'seed_topics/topic-a.md'), 'utf8') + `\n## 本轮新增机制理解\n${returnMap}\n## 本轮新增趋势与难点\n\n## 待验证问题\n`);
   logCompletion(bundle, 'wave1_completion');
   return submitted;
 }
@@ -367,6 +368,35 @@ describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
     assert.match(inspected.inspect.join('\n'), /manifest\/index mismatch.*receipt_nonce/);
     assert.match(inspected.warnings.join('\n'), /authority is inconsistent/);
     assertOnlyTraceDiagnosticsChanged(before, authoritySnapshot(bundle));
+  });
+
+  it('blocks omitted current-row seed projection and passes after an identity-bound Agent repair', () => {
+    const bundle = restoreBundle(snapshot, baseline);
+    const submitted = reachWave1(bundle, { rerunCount: 2, suffix: 'rrm-current-row' });
+    const manifestPath = join(bundle, submitted.record.paths.manifest_ref);
+    const authorityBefore = {
+      index: readFileSync(join(bundle, '_work_units/_index.json')),
+      ledger: readFileSync(join(bundle, 'rb_output_declarations.jsonl')),
+      manifest: readFileSync(manifestPath),
+    };
+    const inspectCli = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-wave1-output.mjs');
+    const failedProcess = runNode([inspectCli, '--bundle', bundle], { expectedStatus: 1 });
+    const failed = parseJsonOutput(failedProcess);
+    assert.match(failed.inspect.join('\n'), new RegExp(`return_map_current_row_omission.*${submitted.record.work_id}`));
+
+    const seedPath = join(bundle, 'seed_topics/topic-a.md');
+    const seed = readFileSync(seedPath, 'utf8');
+    writeFileSync(seedPath, seed.replace(
+      '## 本轮新增机制理解\n- evidence_meaning:',
+      `## 本轮新增机制理解\n- entry_id: ${submitted.record.work_id}/1\n  evidence_meaning:`,
+    ));
+    const repairedProcess = runNode([inspectCli, '--bundle', bundle], { expectedStatus: 0 });
+    const repaired = parseJsonOutput(repairedProcess);
+    assert.doesNotMatch(repaired.inspect.join('\n'), /return_map_current_row_omission/);
+    assert.equal(repaired.check.return_map_classification, 'diagnostic-only', repaired.inspect.join('\n'));
+    assert.deepEqual(readFileSync(join(bundle, '_work_units/_index.json')), authorityBefore.index);
+    assert.deepEqual(readFileSync(join(bundle, 'rb_output_declarations.jsonl')), authorityBefore.ledger);
+    assert.deepEqual(readFileSync(manifestPath), authorityBefore.manifest);
   });
 
   it('fails a partial Wave2 artifact, repairs it, and reruns the same gate once', () => {

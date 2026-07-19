@@ -1,3 +1,4 @@
+// @impl RRM-007
 // gate-helpers-readers.test.mjs
 // Tests for gate-helpers-readers.mjs: Bundle file readers — plan, profile, frontmatter,
 // declarations, validation helpers.
@@ -12,6 +13,7 @@ import {
   validateRules,
   zodErrors,
   readOutputDeclarations,
+  readNormalizedSubmittedWorkUnitDeclarations,
   readSubmittedWorkUnitDeclarations,
 } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 import {
@@ -252,11 +254,15 @@ describe('readOutputDeclarations', () => {
     try {
       const { record } = claimAndSubmitWorkUnit(dir);
       const rows = readSubmittedWorkUnitDeclarations(dir);
+      const normalized = readNormalizedSubmittedWorkUnitDeclarations(dir);
       assert.equal(rows.length, 1);
       assert.equal(rows[0].work_id, record.work_id);
       assert.equal(rows[0].queue_item_id, record.queue_item_id);
       assert.equal(rows[0].result_ref, record.paths.result_ref);
       assert.equal(rows[0].runtime_receipt_ref, record.paths.runtime_receipt_ref);
+      assert.deepEqual(normalized.facts.map(({ ledger_row: row }) => row), rows);
+      assert.equal(normalized.facts[0].index_record.work_id, record.work_id);
+      assert.ok(normalized.kind_registry);
     } finally {
       cleanupWorkUnitBundle(dir);
     }
@@ -272,6 +278,9 @@ describe('readOutputDeclarations', () => {
     })}\n`);
     try {
       assert.deepEqual(readSubmittedWorkUnitDeclarations(dir), []);
+      const normalized = readNormalizedSubmittedWorkUnitDeclarations(dir);
+      assert.equal(normalized.facts.length, 0);
+      assert.equal(normalized.legacy_non_work_unit_rows.length, 1);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

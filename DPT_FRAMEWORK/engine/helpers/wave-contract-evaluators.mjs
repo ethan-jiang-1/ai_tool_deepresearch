@@ -437,14 +437,14 @@ function evaluateStatusRule(bundlePath, rule) {
   return { passed: true };
 }
 
-export function evaluateWave0Contract(bundlePath, definition) {
+export function evaluateWave0Contract(bundlePath, definition, { topicRegistryFact = null } = {}) {
   const findings = [];
   const maskedRuleIds = [];
   const sourceStates = new Map();
   const sourceData = new Map();
   let layouts;
   try {
-    layouts = topicLayouts(bundlePath);
+    layouts = topicRegistryFact?.wave_layouts || topicLayouts(bundlePath);
   } catch (error) {
     return buildContractEvaluation({
       findings: [topicRegistryPrerequisiteFinding(bundlePath, 'wave0', `Wave0 cannot read canonical topic_registry: ${safeMessage(error)}`, safeMessage(error))],
@@ -595,13 +595,13 @@ export function evaluateWave0Contract(bundlePath, definition) {
   return buildContractEvaluation({ checksRun, findings, maskedRuleIds, bypassSuspicion });
 }
 
-export function evaluateWave1Contract(bundlePath, definition) {
+export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFact = null } = {}) {
   const findings = [];
   const maskedRuleIds = [];
   const missingFiles = new Set();
   let layouts;
   try {
-    layouts = topicLayouts(bundlePath);
+    layouts = topicRegistryFact?.wave_layouts || topicLayouts(bundlePath);
   } catch (error) {
     return buildContractEvaluation({
       findings: [topicRegistryPrerequisiteFinding(bundlePath, 'wave1', `Wave1 cannot read canonical topic_registry: ${safeMessage(error)}`, safeMessage(error))],
@@ -737,14 +737,14 @@ export function evaluateWave1Contract(bundlePath, definition) {
   return buildContractEvaluation({ checksRun, findings, maskedRuleIds, bypassSuspicion });
 }
 
-export function evaluateWave2Contract(bundlePath, definition) {
+export function evaluateWave2Contract(bundlePath, definition, { topicRegistryFact = null, findingIndexFact = null } = {}) {
   const findings = [];
   const maskedRuleIds = [];
   const missingFiles = new Set();
   const invalidYaml = new Set();
   let layouts;
   try {
-    layouts = topicLayouts(bundlePath);
+    layouts = topicRegistryFact?.wave_layouts || topicLayouts(bundlePath);
   } catch (error) {
     return buildContractEvaluation({
       findings: [topicRegistryPrerequisiteFinding(bundlePath, 'wave2', `Wave2 cannot read canonical topic_registry: ${safeMessage(error)}`, safeMessage(error))],
@@ -766,7 +766,7 @@ export function evaluateWave2Contract(bundlePath, definition) {
   let checksRun = 0;
   let findingIndexCheck = null;
   const getFindingIndexCheck = (rule) => {
-    if (!findingIndexCheck) findingIndexCheck = checkWave2FindingIndexContract(bundlePath, { rule });
+    if (!findingIndexCheck) findingIndexCheck = checkWave2FindingIndexContract(bundlePath, { rule, loadedFact: findingIndexFact });
     return findingIndexCheck;
   };
 

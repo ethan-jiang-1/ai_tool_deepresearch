@@ -40,6 +40,7 @@ export {
   readBundleProfile,
   resolveThreshold,
   readOutputDeclarations,
+  readNormalizedSubmittedWorkUnitDeclarations,
   readSubmittedWorkUnitDeclarations,
   listMatchingBundleFiles,
   getDeclaredReferencePaths,

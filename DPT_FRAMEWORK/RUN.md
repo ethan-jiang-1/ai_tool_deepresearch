@@ -1,19 +1,17 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.34**
+> **DPT_FRAMEWORK v0.35**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.34
+## Current Release: v0.35
 
-- Added Agent Experiment Autorun: a real Headless Playbook Agent executes the selected Markdown case while the Autorun Supervisor validates native completion, health, durable evidence, audit, and eligible cleanup.
-- Added pre-trigger DeepSeek Claude Code launcher at `DPT_FRAMEWORK/host_tools/claude-deepseek.mjs` (see `DPT_FRAMEWORK/host_tools/README.md`).
-- HITL1 and HITL2 now begin with one grounded Agent recommendation and accept clear natural-language decisions without blanket reconfirmation; the phases between them remain silently autonomous.
-- A current user-initiated turn receives a factual reply without creating lifecycle, permission, route, mutation, pause, or durable-intent authority. Final remains terminal delivery.
-- Lifecycle cues now say `do_not_initiate` for non-terminal autonomous work, successful claims keep an action-only polling cue, and rerun availability/style projection share deterministic owners across normal and post-Final paths.
+- Wave seed return-map inspection is now section-scoped and entry-local, preventing fields, lineage, refs, or projection identity from being borrowed across Waves or sibling entries.
+- Wave0/Wave1 require exact current-round per-row projection or identity-bound disposition; Wave2 requires per-finding/per-topic projection with current omissions blocking and legacy omissions advisory.
+- Wave inspect shares canonical topic, submitted authority, and finding-index facts through narrow fail-closed prerequisites while formal Gate ownership and full work-unit/topic-state health remain unchanged.
 
 ## 0. 禁用内置捷径（最高优先）
 

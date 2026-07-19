@@ -321,7 +321,8 @@ function safeRemoveBlocker(bundle, plan, removedTopicUids) {
   }
   return null;
 }
-function canonicalBinding(bundle, plan) {
+// @impl CTS-001, RRM-007
+export function evaluateCanonicalSeedBindings(bundle, plan) {
   const rows = [];
   for (const topic of plan.topic_registry) {
     const seed = readSeed(bundle, topic.slug);
@@ -452,7 +453,7 @@ export function inspectCanonicalTopicState({ bundlePath }) {
     const legacy = LegacyPlanSchema.safeParse(plan);
     return withTopicStateFindings({ schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'inspect', passed: legacy.success, mode: legacy.success ? 'legacy' : 'invalid', blockers: legacy.success ? [{ reason_code: 'legacy_migration_required', recommended_action: 'Enter sanctioned rerun and prepare explicit migrate_legacy input.' }] : [{ reason_code: 'plan_invalid', reason: canonical.error.message }], topics: [] }, bundlePath);
   }
-  const bindings = canonicalBinding(bundle, canonical.data);
+  const bindings = evaluateCanonicalSeedBindings(bundle, canonical.data);
   const progress = progressRows(bundle, canonical.data, bindings);
   const blockers = [...bindings.filter((item) => !item.ok), ...(progress.blocker ? [progress.blocker] : [])];
   const layoutBaseline = canonical.data.topic_registry.map((topic) => {

@@ -269,9 +269,10 @@ function isWorkUnitLikeLedgerRow(row) {
 function collectWorkUnitLedgerRowIssues(row, index) {
   const parsed = WorkUnitLedgerRecordSchema.safeParse(row);
   if (!parsed.success) {
-    if (!isWorkUnitLikeLedgerRow(row)) return { row: null, issues: [] };
+    if (!isWorkUnitLikeLedgerRow(row)) return { row: null, indexRecord: null, issues: [] };
     return {
       row: null,
+      indexRecord: null,
       issues: [`work-unit declaration schema invalid for ${row.work_id}: ${zodErrors(parsed.error).map((i) => `${i.field || '<root>'} ${i.message}`).join(', ')}`],
     };
   }
@@ -307,7 +308,7 @@ function collectWorkUnitLedgerRowIssues(row, index) {
     }
   }
 
-  return { row: ledgerRow, issues };
+  return { row: ledgerRow, indexRecord: indexRecord || null, issues };
 }
 
 /**
@@ -317,9 +318,10 @@ function collectWorkUnitLedgerRowIssues(row, index) {
  * need submitted work-unit coverage. The plain readOutputDeclarations() helper
  * remains a raw JSONL reader while old gate surfaces are being replaced.
  */
-export function readSubmittedWorkUnitDeclarations(bundlePath) {
+// @impl RRM-007
+export function readNormalizedSubmittedWorkUnitDeclarations(bundlePath) {
   const rawRows = readOutputDeclarations(bundlePath);
-  if (rawRows.length === 0) return [];
+  if (rawRows.length === 0) return { facts: [], legacy_non_work_unit_rows: [], kind_registry: null };
 
   let index = null;
   try {
@@ -328,14 +330,18 @@ export function readSubmittedWorkUnitDeclarations(bundlePath) {
     throw new Error(`work-unit index invalid while reading declarations: ${error.message}`);
   }
 
-  const submittedRows = [];
+  const facts = [];
+  const legacyRows = [];
   const validRows = [];
   const issues = [];
   for (const row of rawRows) {
     const checked = collectWorkUnitLedgerRowIssues(row, index);
     issues.push(...checked.issues);
+    if (!checked.row && !isWorkUnitLikeLedgerRow(row)) legacyRows.push(row);
     if (checked.row) validRows.push(checked.row);
-    if (checked.row && checked.issues.length === 0) submittedRows.push(checked.row);
+    if (checked.row && checked.indexRecord && checked.issues.length === 0) {
+      facts.push({ ledger_row: checked.row, index_record: checked.indexRecord });
+    }
   }
 
   const rowsByQueueItem = new Map();
@@ -353,5 +359,13 @@ export function readSubmittedWorkUnitDeclarations(bundlePath) {
   if (issues.length > 0) {
     throw new Error(`invalid submitted work-unit declaration ledger: ${issues.join('; ')}`);
   }
-  return submittedRows;
+  return {
+    facts,
+    legacy_non_work_unit_rows: legacyRows,
+    kind_registry: index?.kind_registry || null,
+  };
+}
+
+export function readSubmittedWorkUnitDeclarations(bundlePath) {
+  return readNormalizedSubmittedWorkUnitDeclarations(bundlePath).facts.map(({ ledger_row: ledgerRow }) => ledgerRow);
 }

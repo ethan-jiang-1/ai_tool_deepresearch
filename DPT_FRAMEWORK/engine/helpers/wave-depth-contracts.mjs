@@ -588,7 +588,8 @@ export function checkWave1DepthReviewContract(bundlePath, { topic, rule = null }
   return { ...issueResult(inspect, advice, findings), diagnostics, masked_rule_ids: [...new Set(maskedRuleIds)] };
 }
 
-function readFindingIndex(bundlePath) {
+// @impl RRM-007
+export function loadWave2FindingIndexFact(bundlePath) {
   const relPath = 'artifacts/wave2/finding-index.yaml';
   const filePath = join(bundlePath, relPath);
   if (!existsSync(filePath)) return { ok: false, kind: 'missing', relPath, inspect: [`[finding_index_contract] FAIL: missing ${relPath}`] };
@@ -771,8 +772,8 @@ function consumerFacingBackedFindingNeedsCrossRef(finding, backingRefs) {
   return true;
 }
 
-export function checkWave2FindingIndexContract(bundlePath, { rule = null } = {}) {
-  const loaded = readFindingIndex(bundlePath);
+export function checkWave2FindingIndexContract(bundlePath, { rule = null, loadedFact = null } = {}) {
+  const loaded = loadedFact || loadWave2FindingIndexFact(bundlePath);
   if (!loaded.ok) {
     const filePath = resolvePath(bundlePath, loaded.relPath);
     const missing = loaded.kind === 'missing';

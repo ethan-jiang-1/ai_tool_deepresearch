@@ -645,9 +645,10 @@ describe('check-gate-wave1-complete', () => {
     writeWave1Trace(dir);
 
     const inspectOutput = JSON.parse(runInspect(dir).stdout);
-    assert.equal(inspectOutput.check.passed, false);
+    assert.equal(inspectOutput.check.passed, true, inspectOutput.inspect.join('\n'));
     assert.equal(Object.hasOwn(inspectOutput, 'routing'), false);
     assert.notEqual(inspectOutput.check.degraded, true);
+    assert.equal(inspectOutput.check.failed_rule_ids.some((id) => id.startsWith('return_map_missing_fields')), false);
     assert.equal(inspectOutput.check.failed_rule_ids.some((id) => id.startsWith('key_facts_min_lines')), false);
 
     const gateOutput = JSON.parse(runGate(dir, { attempt: 3 }).stdout);

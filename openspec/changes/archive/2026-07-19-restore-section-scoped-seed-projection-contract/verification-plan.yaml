@@ -1,0 +1,86 @@
+schema_version: verification-routing/v1
+change: restore-section-scoped-seed-projection-contract
+test_classes:
+  unit:
+    status: selected
+    rationale: Section-family extraction, entry-local fields/metadata/refs/lineage, normalized submitted facts, acyclic eligible projection, exact row identity, canonical seed/topic resolution, demand-sensitive current/legacy classification and prerequisite masking are focused deterministic contracts.
+  integration:
+    status: selected
+    rationale: Real Wave inspect CLIs must aggregate the shared findings into consistent exit codes, classifications, failed rule ids and exact repair coordinates over temporary bundles.
+  deterministic_e2e:
+    status: selected
+    rationale: RRM-007 specifically binds current-round submitted authority during rerun, so the production multi-phase deterministic rerun chain must prove prior-round or other-section content cannot satisfy current projection.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change adds no Agent judgment, search, writing-quality or continuation behavior claim and does not modify Markdown Agent Flow; all proof subjects are deterministic contracts.
+claims:
+  - id: target-section-isolation
+    statement: Each Wave projection check parses fields, refs and optional entry_id metadata within one entry/H2 boundary, validates five-field/enum/concrete navigation and accepted Wave1 statement lineage per entry, retains Wave2 ledger/index family lineage and W2F finding-topic coverage, splits shared pending by exact W2F refs, accepts only exact bare/path work-id refs or entry-local identity for row coverage/disposition, rejects prose/prefix/anonymous-none matches, preserves Wave1 token ownership, tolerates heading suffixes, and imposes neither empty-sibling, no-demand minimum-entry, nor general-Wave2-entry quotas.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/return-map.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: normalized-submitted-reader-parity
+    statement: One submitted-reader owner pairs ledger rows with index records in a single index load while preserving the legacy declaration-reader row API and throw behavior across valid, invalid, mixed legacy, and late-accept ledgers.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/gate-helpers-readers.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-authority-projection-predicate
+    statement: One work-unit-owned shared eligible projection imports normalized reader facts and existing manifest/queue/topic validators without a reader-validation cycle, normalizes only an absent profile round to 0, treats no declarations as valid empty without suppressing independent declaration-gap roots, fails closed on malformed existing authority, validates only direct profile/manifest/recomputed-snapshot/regular-result/topic facts, groups accepted rows by canonical topic and current round, and does not import unrelated full work-unit health.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-projection.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave-inspect-projection-feedback
+    statement: All mandatory pre-gate Wave inspect CLIs share one complete canonical topic-registry fact with a backward-compatible Wave layout view, derive a narrow missing/mismatched seed prerequisite from canonical topic-state binding semantics without importing full topic-state health, preserve current-token skip, block unavailable families only for current demand, advise legacy-only pairs, ignore inactive missing families, expose entry/row/finding defects with exact cardinality/coordinates and same-check rerun, preserve submitted-authority repair ownership, resolve Wave2 affected topics through existing canonical topic resolvers without changing pair facts, reject malformed/future rounds at inspect-only exact-field roots, remain no-write/non-routing, and do not claim formal Gate ownership of projection rule ids.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/inspect-wave-return-map.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rerun-current-round-projection-continuity
+    statement: The production deterministic rerun chain accepts complete current-round target-family projections, rejects a current-round submitted row omitted or anonymously dispositioned in its target seed family even when prior or other-wave content is valid, and returns to pass after an Agent-labeled identity-bound seed projection repair without changing authority lineage.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/rerun-round-continuity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

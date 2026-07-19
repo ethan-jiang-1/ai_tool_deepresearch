@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.35
+
+- Made Wave seed return-map inspection section-scoped and entry-local, so fields, lineage, refs, and optional projection identity cannot be borrowed across Waves, headings, or sibling entries.
+- Enforced exact current-round per-row Wave0/Wave1 projection or identity-bound disposition, plus per-finding/per-topic Wave2 projection with current blocking and legacy advisory behavior.
+- Unified Wave inspect inputs around one canonical topic-registry fact, one normalized submitted ledger/index reader, and narrow fail-closed projection prerequisites without expanding formal Gate ownership or full work-unit/topic-state health checks.
+
 ## v0.34
 
 - Added Agent Experiment Autorun: the Autorun Supervisor now starts one real Headless Playbook Agent per manifest-selected case, validates the playbook-owned native completion, runs declared health checks, and durably audits or cleans only eligible run roots.

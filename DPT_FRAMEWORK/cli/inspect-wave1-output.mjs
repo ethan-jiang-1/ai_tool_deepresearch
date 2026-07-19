@@ -2,7 +2,7 @@
 // inspect-wave1-output.mjs — side-effect-free Wave1 contract inspect
 // @impl IOC-002, IOC-005, REF-001, REF-008, WPG-012, RWG-017, RWG-018
 
-import { tryLoadGateDefinition, readBundlePlan } from '../engine/helpers/gate-helpers.mjs';
+import { tryLoadGateDefinition } from '../engine/helpers/gate-helpers.mjs';
 import { resolve as resolvePath } from 'node:path';
 import {
   buildContractEvaluation,
@@ -16,6 +16,7 @@ import {
   inspectSeedTopicReturnMaps,
   inspectWaveArtifactReturnMaps,
 } from '../engine/helpers/return-map.mjs';
+import { buildCanonicalTopicRegistryFact } from '../engine/helpers/topic-registry-fact.mjs';
 
 const bundleFlag = process.argv.indexOf('--bundle');
 const bundlePath = bundleFlag >= 0 ? process.argv[bundleFlag + 1] : process.argv[2];
@@ -55,10 +56,11 @@ if (error) {
   }), 2);
 }
 
-const evaluation = evaluateWave1Contract(resolvedBundlePath, definition);
-let topicSlugs = [];
-try { topicSlugs = (readBundlePlan(resolvedBundlePath)?.topic_registry || []).map((topic) => topic.slug); } catch { /* evaluator reports plan failure */ }
-const seedMap = inspectSeedTopicReturnMaps(resolvedBundlePath, { wave: 'wave1', topicSlugs });
+let topicRegistryFact = null;
+try { topicRegistryFact = buildCanonicalTopicRegistryFact(resolvedBundlePath); } catch { /* evaluator owns plan prerequisite */ }
+const evaluation = evaluateWave1Contract(resolvedBundlePath, definition, { topicRegistryFact });
+const topicSlugs = topicRegistryFact?.topic_registry.map((topic) => topic.slug) || [];
+const seedMap = inspectSeedTopicReturnMaps(resolvedBundlePath, { wave: 'wave1', topicRegistryFact });
 const artifactMap = inspectWaveArtifactReturnMaps(resolvedBundlePath, 'wave1', topicSlugs);
 const referenceMap = { passed: true, inspect: [], advice: [], findings: [], classification: 'diagnostic-only' };
 for (const topic of topicSlugs) {

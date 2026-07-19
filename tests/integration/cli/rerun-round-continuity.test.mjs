@@ -13,12 +13,29 @@ import {
 } from '../../engine/work-unit-test-helpers.mjs';
 
 const CLI = path.resolve('DPT_FRAMEWORK/cli/operate-work-unit.mjs');
+const TOPIC_UID = 'tp_123e4567-e89b-42d3-a456-426614174010';
 const bundles = [];
 
 function bundle(rerunCount = 2) {
   const dir = tempWorkUnitBundle('rerun-round-cli-');
   bundles.push(dir);
   writeFileSync(path.join(dir, 'rb_profile.yaml'), `human_decision_checkpoints:\n  hitl2:\n    rerun_count: ${rerunCount}\n`);
+  writeFileSync(path.join(dir, 'rb_plan.md'), `---
+plan_basename: eligible-projection
+derived_topic_count: 1
+topic_registry_version: "2"
+topic_registry:
+  - topic_uid: ${TOPIC_UID}
+    id: "01"
+    slug: topic-a
+    title: Topic A
+    must_answer: ["What matters?"]
+    scope_role: primary
+    depends_on_topic_uids: []
+    previous_layouts: []
+---
+# Plan
+`);
   return dir;
 }
 
@@ -31,6 +48,10 @@ function submit(dir, queueItemId) {
     phase: 'wave1',
     queueItemId,
     preserveQueue: true,
+    queueItemOverrides: {
+      payload: { topic_uid: TOPIC_UID, topic_slug: 'topic-a' },
+      lineage: { topic_uid: TOPIC_UID, topic_slug: 'topic-a', phase: 'wave1' },
+    },
   });
 }
 

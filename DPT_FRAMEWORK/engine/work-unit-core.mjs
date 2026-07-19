@@ -64,5 +64,7 @@ export {
 // Inspect (1)
 export {
   inspectWorkUnits,
-  collectEligibleRows,
 } from './work-unit-inspect.mjs';
+
+// Narrow eligible projection (1)
+export { collectEligibleRows } from './work-unit-projection.mjs';

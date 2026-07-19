@@ -1,9 +1,11 @@
+// @impl CTS-001, RRM-007
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { parse as parseYaml } from 'yaml';
 import { createTempDir } from '../../helpers/temp-dirs.mjs';
-import { applyCanonicalTopicState, inspectCanonicalTopicState, recoverCanonicalTopicState } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
+import { applyCanonicalTopicState, evaluateCanonicalSeedBindings, inspectCanonicalTopicState, recoverCanonicalTopicState } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
 import { diffSnapshots, snapshotTree } from '../../helpers/authority-snapshot.mjs';
 import { claimAndSubmitWorkUnit } from '../work-unit-test-helpers.mjs';
 
@@ -75,6 +77,17 @@ function assertCompleteSeedSkeleton(raw) {
 }
 
 describe('canonical topic state', () => {
+  it('exposes focused seed bindings without progress or workspace evaluation', () => {
+    const dir = bundle('topic-seed-binding');
+    applyCanonicalTopicState({ bundlePath: dir, input });
+    const inspected = inspectCanonicalTopicState({ bundlePath: dir });
+    const plan = parseYaml(readFileSync(join(dir, 'rb_plan.md'), 'utf8').match(/^---\n([\s\S]*?)\n---/)[1]);
+    const focused = evaluateCanonicalSeedBindings(dir, plan);
+    assert.equal(focused[0].ok, true);
+    rmSync(join(dir, `seed_topics/${focused[0].slug}.md`));
+    assert.equal(evaluateCanonicalSeedBindings(dir, plan)[0].reason_code, 'seed_missing');
+    assert.equal(inspected.topics[0].topic_uid, focused[0].topic_uid);
+  });
   it('atomically adds registry and UID-bound seed', () => {
     const dir = bundle(); const result = applyCanonicalTopicState({ bundlePath: dir, input });
     assert.equal(result.verdict, 'committed'); const inspected = inspectCanonicalTopicState({ bundlePath: dir });

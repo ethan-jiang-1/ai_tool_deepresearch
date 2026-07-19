@@ -13,6 +13,8 @@ import {
   projectInspectContract,
 } from '../engine/helpers/wave-contract-findings.mjs';
 import { evaluateWave2Contract } from '../engine/helpers/wave-contract-evaluators.mjs';
+import { loadWave2FindingIndexFact } from '../engine/helpers/wave-depth-contracts.mjs';
+import { buildCanonicalTopicRegistryFact } from '../engine/helpers/topic-registry-fact.mjs';
 import {
   inspectReferenceReturnMaps,
   inspectSeedTopicReturnMaps,
@@ -57,7 +59,10 @@ if (error) {
   }), 2);
 }
 
-const evaluation = evaluateWave2Contract(resolvedBundlePath, definition);
+let topicRegistryFact = null;
+try { topicRegistryFact = buildCanonicalTopicRegistryFact(resolvedBundlePath); } catch { /* evaluator owns plan prerequisite */ }
+const findingIndexFact = loadWave2FindingIndexFact(resolvedBundlePath);
+const evaluation = evaluateWave2Contract(resolvedBundlePath, definition, { topicRegistryFact, findingIndexFact });
 const additionalFindings = [];
 let additionalChecksRun = 1;
 const referencePath = join(resolvedBundlePath, 'reference');
@@ -83,7 +88,7 @@ additionalFindings.push(...crossPresentation.findings.map((finding) => makeContr
   classification: 'advisory',
 })));
 
-const seedMap = inspectSeedTopicReturnMaps(resolvedBundlePath, { wave: 'wave2' });
+const seedMap = inspectSeedTopicReturnMaps(resolvedBundlePath, { wave: 'wave2', topicRegistryFact, findingIndexFact });
 const artifactMap = inspectWaveArtifactReturnMaps(resolvedBundlePath, 'wave2');
 const referenceMap = inspectReferenceReturnMaps(resolvedBundlePath, '00-cross-');
 additionalChecksRun += 1;

@@ -1,3 +1,4 @@
+// @impl RRM-007, IOC-005
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -5,6 +6,10 @@ import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   extractConcreteReferenceRefs,
+  extractExactProjectionIdentities,
+  extractReturnMapEntries,
+  extractSeedFamilyEntries,
+  extractSeedSectionFamily,
   isEvidenceBearingReturnMapEntry,
   isLimitationReturnMapEntry,
   validateReturnMapContent,
@@ -77,6 +82,19 @@ describe('return-map diagnostics', () => {
     assert.equal(result.passed, true, result.inspect.join('\n'));
     assert.equal(result.diagnosticOnly, true);
     assert.equal(result.classification, 'diagnostic-only');
+  });
+
+  it('requires exact canonical enum values rather than substring matches', () => {
+    for (const invalid of [
+      entry({ relationship: 'supports with caveat' }),
+      entry({ status: 'unsupported' }),
+      entry({ status: 'openly' }),
+      entry({ status: 'partially' }),
+    ]) {
+      const result = validateReturnMapContent(invalid, 'seed_topics/topic-a.md');
+      assert.equal(result.passed, false);
+      assert.ok(result.findings.some((finding) => ['return_map_relationship', 'return_map_status'].includes(finding.rule_id)));
+    }
   });
 
   it('accepts balanced bold field labels without weakening canonical validation', () => {
@@ -168,5 +186,120 @@ describe('return-map diagnostics', () => {
 
     assert.deepEqual(extracted.refs, ['reference/topic-a-source.md']);
     assert.deepEqual(extracted.rejectedRefs.map((ref) => ref.reason), ['glob_or_count_summary', 'not_concrete_reference_md']);
+  });
+
+  it('isolates canonical target section families with suffixes and repeated bounded headings', () => {
+    const content = [
+      '## 本轮新增证据', entry(),
+      '## 本轮新增机制理解（rerun_count=2）', entry({ refs: ['reference/mechanism.md'] }),
+      '## 本轮新增趋势与难点 - 更新', entry({ refs: ['reference/trend.md'] }),
+      '## 其他', entry({ refs: ['reference/outside.md'] }),
+      '## 本轮新增趋势与难点', entry({ refs: ['reference/trend-2.md'] }),
+    ].join('\n');
+    const family = extractSeedSectionFamily(content, 'wave1');
+    assert.equal(family.sections.length, 3);
+    assert.doesNotMatch(family.sections.map((section) => section.content).join('\n'), /outside\.md/);
+    assert.match(family.sections.map((section) => section.content).join('\n'), /trend-2\.md/);
+    assert.equal(extractSeedSectionFamily(content, 'wave0').sections.length, 1);
+  });
+
+  it('blocks prose-only Wave1 content instead of borrowing complete Wave0 fields', () => {
+    const content = [
+      '## 本轮新增证据',
+      entry(),
+      '## 本轮新增机制理解',
+      'This Wave1 section is only free-form prose and is intentionally long enough to be material, but it has no local return-map fields.',
+    ].join('\n');
+    const family = extractSeedFamilyEntries(content, 'wave1');
+    assert.equal(family.entries.length, 0);
+    const result = validateReturnMapContent(family.sections[0].content, 'seed_topics/topic-a.md');
+    assert.equal(result.passed, false);
+    assert.ok(result.findings.some((finding) => finding.rule_id === 'return_map_unsupported_prose'));
+  });
+
+  it('keeps optional entry_id and exact identities entry-local', () => {
+    const workId = 'wu-w1-b000-deep-i0001';
+    const content = `## 本轮新增机制理解
+- entry_id: ${workId}/1
+  evidence_meaning: Bound mechanism.
+  relationship: defers
+  refs: none
+  status: deferred
+  next_hop: limitation: defer to HITL2.
+
+## 本轮新增趋势与难点
+
+## 待验证问题`;
+    const selected = extractSeedFamilyEntries(content, 'wave1');
+    assert.equal(selected.entries.length, 1);
+    assert.equal(selected.entries[0].metadata.entry_id, `${workId}/1`);
+    assert.deepEqual([...extractExactProjectionIdentities(selected.entries[0]).workIds], [workId]);
+
+    const peer = extractReturnMapEntries(`- entry_id: ${workId}/1
+- evidence_meaning: Peer item must not inherit identity.
+  relationship: defers
+  refs: none
+  status: deferred
+  next_hop: limitation: defer to HITL2.`);
+    assert.equal(peer.length, 2);
+    assert.deepEqual(peer[0].metadataIssues, ['dangling_entry_id']);
+    assert.deepEqual([...extractExactProjectionIdentities(peer[0]).rawMetadataWorkIds], [workId]);
+    assert.equal(peer[1].metadata.entry_id, undefined);
+    assert.deepEqual([...extractExactProjectionIdentities(peer[1]).workIds], []);
+
+    const duplicate = extractReturnMapEntries(`${entry({ refs: ['none'] })}
+  entry_id: ${workId}/1
+  entry_id: ${workId}/2`);
+    assert.deepEqual(duplicate[0].metadataIssues, ['duplicate_entry_id']);
+    assert.deepEqual([...extractExactProjectionIdentities(duplicate[0]).rawMetadataWorkIds], [workId]);
+    assert.deepEqual([...extractExactProjectionIdentities(duplicate[0]).workIds], []);
+  });
+
+  it('selects shared pending ownership only from exact parsed W2F refs', () => {
+    const content = `## 当前判断
+
+## 待验证问题
+${entry({ refs: ['reference/a.md'], nextHop: 'Consider W2F-015 later.' })}
+${entry({ refs: ['W2F-015', 'reference/b.md'] })}`;
+    const wave1 = extractSeedFamilyEntries(content, 'wave1').entries;
+    const wave2 = extractSeedFamilyEntries(content, 'wave2').entries;
+    assert.equal(wave1.length, 1);
+    assert.equal(wave2.length, 1);
+    assert.deepEqual([...extractExactProjectionIdentities(wave2[0]).findingIds], ['W2F-015']);
+
+    const refsProse = `## 待验证问题\n${entry({ refs: ['Discuss W2F-015 later.'] })}`;
+    assert.equal(extractSeedFamilyEntries(refsProse, 'wave1').entries.length, 1);
+    assert.equal(extractSeedFamilyEntries(refsProse, 'wave2').entries.length, 0);
+  });
+
+  it('rejects prefix and prose work ids while accepting exact refs tokens', () => {
+    const workId = 'wu-w1-b000-deep-i0001';
+    const exact = extractReturnMapEntries(entry({ refs: [workId] }))[0];
+    const path = extractReturnMapEntries(entry({ refs: [`_work_units/wave1/${workId}/result.json`] }))[0];
+    const prefix = extractReturnMapEntries(entry({ refs: [`${workId}0`] }))[0];
+    const refsProse = extractReturnMapEntries(entry({ refs: [`Discuss ${workId} later.`] }))[0];
+    const prose = extractReturnMapEntries(entry({ refs: ['none'], nextHop: `Discuss ${workId} later.` }))[0];
+    assert.deepEqual([...extractExactProjectionIdentities(exact).workIds], [workId]);
+    assert.deepEqual([...extractExactProjectionIdentities(path).workIds], [workId]);
+    assert.deepEqual([...extractExactProjectionIdentities(prefix).workIds], []);
+    assert.deepEqual([...extractExactProjectionIdentities(refsProse).workIds], []);
+    assert.deepEqual([...extractExactProjectionIdentities(prose).workIds], []);
+
+    const findingProse = extractReturnMapEntries(entry({ refs: ['Discuss W2F-015 later.'] }))[0];
+    assert.deepEqual([...extractExactProjectionIdentities(findingProse).findingIds], []);
+  });
+
+  it('requires Wave1 artifact lineage independently for every evidence entry', () => {
+    const dir = tempBundle();
+    writeRef(dir);
+    const valid = entry({ refs: ['artifacts/wave1/topic-a/evidence-summary.md', 'reference/topic-a-source.md'] });
+    const invalid = entry({ refs: ['reference/topic-a-source.md'] });
+    const result = validateReturnMapContent(`${valid}\n${invalid}`, 'seed_topics/topic-a.md', {
+      bundlePath: dir,
+      requireWave1Refs: true,
+      requireConcreteReferenceNavigation: true,
+    });
+    assert.equal(result.passed, false);
+    assert.equal(result.findings.filter((finding) => finding.rule_id === 'return_map_missing_wave1_refs').length, 1);
   });
 });
