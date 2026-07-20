@@ -1,0 +1,142 @@
+schema_version: verification-routing/v1
+change: reuse-delegated-output-contracts-at-submit
+test_classes:
+  unit:
+    status: selected
+    rationale: Closed assignment resolution, strict contract schemas, bounded byte snapshots, tolerant direct parsing, root short-circuiting, repair classification, and legacy-marker selection are focused deterministic contracts.
+  integration:
+    status: selected
+    rationale: Claim projections, CLI candidate checkpoints, formal acceptance/replay paths, current Wave adapters, and Agent-facing Markdown cross real production module and temporary-bundle boundaries.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The change adds no new workflow transition or multi-phase state chain; focused integration tests cover the affected claim, submit, timeout, replay, Wave, and compatibility boundaries with less harness complexity.
+  agent_flow_e2e:
+    status: selected
+    rationale: Preserving authorship after a real actor returns semantically incomplete required output is Agent-flow behavior; a registered real-Sub-agent canary must prove explicit terminalization and replacement without Phase-Agent semantic substitution.
+claims:
+  - id: assignment-contract-resolution
+    statement: The current closed resolver derives only supported Wave0 exact source YAML, primary paired Wave1, supplementary empty-output Wave1, and empty-output Wave2 contracts from kind plus snapshot-bound canonical Topic and file receipts; it rejects overrides, unsafe or conflicting assignments, and unknown marker values without writes_to or queue-ID inference.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/direct-output-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: bounded-direct-output-evaluation
+    statement: One direct-output interface reads at most 4 MiB from one opened regular-file handle, rejects unsafe, escaping, stable-symlink, special-file, oversize, read, and invalid-UTF8 targets, strips one BOM, and returns the same tolerant Wave0 schema and Wave1 semantic-section roots with prerequisite short-circuiting.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/direct-output-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: strict-work-unit-contract-schema
+    statement: Work-unit index, manifest, beacon, output contract, and generated result schema accept the current assignment marker and unique closed path-role-direct-contract tuples, preserve genuine marker-absent legacy records, and reject partial markers, unknown contracts, projection drift, duplicate paths, wrong roles, and actor-selectable contract fields.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/contracts/work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: candidate-checkpoint-lifetime
+    statement: Current-version dry-submit, claimed timeout-preflight, first normal submit, and eligible first late-submit each reconstruct the exact contract and read fresh bounded snapshots; formal acceptance rejects changed invalid bytes after dry-submit, while duplicate submit, accepted late-submit replay, and recover-declaration preserve historical postconditions without reaccepting current artifact bytes.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: assignment-projection-and-supplementary-compatibility
+    statement: Real claim/envelope/submit paths project exact current required path-role-direct-contract entries and one assignment marker through index, manifest, beacon, task, checklist, and result schema; primary Wave1 requires its pair, supplementary Wave1 reuses eligible prior evidence lineage without rewriting the pair, and only truly marker-absent attempts retain bounded legacy role normalization.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-direct-evaluator-parity
+    statement: Wave0 inspect and formal Gate adapt the shared direct evaluator for current source YAML bytes, preserve top-level-array and ReferenceMetadataArraySchema roots plus tolerant BOM policy, and retain count, coverage, provenance, cache, queue, and phase-wide rules outside candidate submit.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave0-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-direct-evaluator-parity
+    statement: Wave1 inspect and formal Gate adapt the shared direct evaluator for tolerant non-empty Key Findings and four non-empty question-list sections, keep source_url_present and all provenance, return-map, depth, queue, coverage, and phase-wide facts at Wave, and project the same neutral root coordinates as candidate validation.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave1-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: direct-output-guidance-boundary
+    statement: Generated task plus the three approved production Markdown owners expose exact Engine-resolved candidate contracts and the Phase-Agent dry-submit loop while preserving formal submit as the only delegated success owner, Wave as phase-wide authority, and role specs and phase docs without duplicated blocker inventories.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/work-unit-direct-output-guidance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: real-subagent-semantic-replacement
+    statement: Given a setup-only current Wave1 assignment, a real Sub-agent first returns a required artifact with a deterministic empty semantic section; the Phase Agent reads dry-submit repair_scope, does not author missing research meaning under the first actor provenance, explicitly terminalizes and enqueues replacement demand, claims a new work ID, and submits only after a second real actor produces the missing semantics. This proves only the named recovery procedure, not research quality or universal Agent compliance.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_evidence-extraction/case-164-heavy-direct-output-candidate-contract.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_subagent
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
