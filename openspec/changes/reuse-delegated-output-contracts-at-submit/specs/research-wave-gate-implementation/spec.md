@@ -22,13 +22,15 @@ Blocking rules SHALL protect required structure, deterministic authority, proven
 If a prerequisite authority surface is absent or unparseable, the checker SHALL report that prerequisite as the primary root cause and SHALL short-circuit dependent checks whose results would only be downstream symptoms. For reference inventory, an invalid or missing eight-column `_INDEX.md` table SHALL mask per-reference row and source-layer symptoms until the table parses. The implementation SHALL use local guards rather than a generalized dependency engine.
 
 
-The Wave0 source-metadata array fact, Wave1 Key Findings availability fact, and Wave1 four-question-section availability fact SHALL be owned by one neutral direct-output evaluator selected only by a closed direct_contract ID. Its interface SHALL accept that ID plus one already-bounded decoded artifact snapshot and SHALL return contract-local structured roots without reading queue, manifest, ledger, profile, phase state, or gate definition. It SHALL not mutate runtime state.
+The Wave0 source-metadata array fact, Wave1 Key Findings availability fact, and Wave1 four-question-section availability fact SHALL be owned by one neutral target-level direct-output module selected only by a closed direct_contract ID. Its interface SHALL accept the active bundle root, one Engine-resolved concrete bundle-relative target, and that ID; it SHALL own bounded open/read, fatal UTF-8 plus single-BOM handling, tolerant parsing, and contract-local structured roots without reading queue, manifest, result, receipt, ledger, profile, phase state, or gate definition. Neutral roots SHALL use only `root_class: semantic_content|contract_integrity`: target missing and parse/schema/required-section failure SHALL be semantic_content, while unsafe/non-regular/escaping target, bounded-read/oversize failure and invalid UTF-8 SHALL be contract_integrity. Submit-specific mechanical classification, repair_scope and recommended_action belong to the candidate adapter. The interface SHALL return only bounded snapshot metadata and roots, not raw/decoded bytes that an adapter could independently reinterpret. It SHALL not select targets/contracts or mutate runtime state. Reader/decoder/parser helpers MAY exist only as private implementation seams and SHALL NOT become a second interface composed independently by adapters.
 
 The work-unit candidate adapter and Wave evaluator adapter SHALL be the two concrete adapters at this seam. Candidate validation SHALL map neutral roots to submit violations and repair_scope. Wave0/Wave1 inspect and formal Gate SHALL map the same neutral roots to their existing rule IDs, findings, hints, and checkpoint-specific rerun values. Existing Wave rule IDs including per_topic_reference_schema_valid, key_findings_non_empty, and question_list_has_four_sections SHALL remain stable. Source URL presence SHALL remain a separate Wave-only rule and SHALL not enter the neutral candidate contract.
 
-The shared bounded snapshot reader and tolerant parsers SHALL serve both adapters. Candidate and Wave evaluations of identical bytes under the same direct contract SHALL agree on pass/fail, missing semantic sections, schema issues, BOM treatment, and invalid-UTF-8/read prerequisites. The Wave adapter MAY then add direct authorities that are outside the neutral contract, including file existence expansion, count floors, source URL presentation, submitted provenance, profile/depth, reference/index/backing, cross-artifact, return-map, phase completeness and formal lifecycle checks.
+Candidate and Wave adapters SHALL call the same target-level operation. Evaluations of identical target bytes under the same direct contract SHALL agree on pass/fail, missing semantic sections, schema issues, BOM treatment, and invalid-UTF-8/read prerequisites. The Wave adapter MAY then add direct authorities that are outside the neutral contract, including file existence expansion, count floors, source URL presentation, submitted provenance, profile/depth, reference/index/backing, cross-artifact, return-map, phase completeness and formal lifecycle checks.
 
-Implementation SHALL remove the inlined Wave-only copies of ReferenceMetadataArraySchema evaluation, Key Findings parsing, and question-list section parsing after both adapters use the neutral evaluator. It SHALL not retain a submit-specific clone, add a generic linter CLI, introduce a plugin registry, or dispatch from user-authored IDs or path regexes.
+For each admitted Wave target, a missing, unsafe, or unreadable target root SHALL project through the existing earliest file-existence/authority rule ID and mask the dependent schema/semantic rule. After a successful read, parse/schema/semantic roots SHALL project through the existing direct rule ID. The Wave adapter SHALL NOT perform a second independent existence/read path that emits a duplicate root or rereads the same target for the admitted direct fact.
+
+Implementation SHALL remove the inlined Wave-only copies of ReferenceMetadataArraySchema evaluation, Key Findings parsing, and question-list section parsing after both adapters use the target-level operation. It SHALL not retain a submit-specific clone, add a generic linter CLI, introduce a plugin registry, or dispatch from user-authored IDs or path regexes.
 
 A parent snapshot/read/parse failure SHALL produce one neutral prerequisite root and mask dependent direct facts. Candidate and Wave projections SHALL preserve the same missing_fact and mutable surface; each adapter SHALL provide its own exact rerun checkpoint. Formal Gate durability/routing remains formal-only and candidate validation remains non-routing.
 
@@ -106,11 +108,17 @@ A parent snapshot/read/parse failure SHALL produce one neutral prerequisite root
 - **THEN** the neutral evidence-summary direct contract SHALL pass
 - **AND** the existing Wave source_url_present rule MAY still fail at its owning Wave checkpoint
 
-#### Scenario: parent read root masks direct symptoms
+#### Scenario: unavailable snapshot masks direct symptoms without changing ownership
 
-- **WHEN** the shared reader cannot obtain a safe bounded UTF-8 snapshot
-- **THEN** both adapters SHALL project one authority-integrity prerequisite root
+- **WHEN** the target-level operation cannot obtain a safe bounded UTF-8 snapshot
+- **THEN** it SHALL emit one prerequisite root: semantic_content for a missing target, or contract_integrity for unsafe/unreadable/oversized/invalid-UTF8 input
 - **AND** they SHALL not additionally claim missing YAML entries, Key Findings, or question sections from unavailable bytes
+
+#### Scenario: Wave missing file keeps one existing rule identity
+
+- **WHEN** an admitted Wave0 or Wave1 target is missing or unreadable
+- **THEN** the target-level read root SHALL map to the existing earliest file/authority rule and mask the dependent direct rule
+- **AND** Wave inspect/Gate SHALL not emit both an independent file-exists failure and a second reader failure for that target
 
 #### Scenario: phase-wide Wave facts do not move into submit
 
@@ -121,7 +129,7 @@ A parent snapshot/read/parse failure SHALL produce one neutral prerequisite root
 #### Scenario: direct fact implementation is not duplicated
 
 - **WHEN** apply completes the candidate and Wave adapters
-- **THEN** one neutral evaluator SHALL own the three admitted direct contracts
+- **THEN** one neutral target-level module SHALL own the three admitted direct contracts
 - **AND** focused static or behavioral coverage SHALL fail if an adapter retains an independent equivalent parser/checker
 
 #### Scenario: adapter reruns preserve checkpoint ownership
@@ -129,4 +137,3 @@ A parent snapshot/read/parse failure SHALL produce one neutral prerequisite root
 - **WHEN** one neutral root appears during dry-submit, Wave inspect, and formal Gate
 - **THEN** missing_fact and write_to SHALL describe the same direct fact and artifact
 - **AND** each projection SHALL name its own exact dry-submit, inspect, or Gate rerun without creating a competing acceptance authority
-

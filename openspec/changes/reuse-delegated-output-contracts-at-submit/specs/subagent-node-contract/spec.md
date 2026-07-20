@@ -22,13 +22,13 @@ Generated task/checklist guidance SHALL expose both legal source-ref forms and t
 Submit/dry-submit diagnostics for a source-ref failure SHALL return a stable code, the candidate `source_ref`, whether it was searched in current outputs and prior submitted outputs, any conflicting declaring `work_id`/topic, and contract-lineage repair coordinates: `repair_kind: agent_action`, `missing_fact`, `write_to` naming the exact `result.json#/source_claims/<index>/source_ref`, and `rerun` naming the same dry-submit command. When the prior path is valid, submit SHALL accept it without requiring duplicate `output_files[]` declaration.
 
 
-For a current-version claim, the assigned output contract SHALL be one strict Zod-validated object containing assignment_contract_version and required_outputs[] in addition to existing result/cache/source-claim rules. Each required output SHALL contain one concrete bundle-relative path, one canonical role, and one closed direct_contract identity. Cross-field validation SHALL reject unknown IDs, duplicate normalized paths, conflicting roles, unsafe or pattern paths, kind-incompatible direct contracts, and any queue/payload override before generation.
+For a current-version claim, `assignment_contract_version` SHALL be the top-level Engine-owned literal `work-unit.assignment.v1` on index, manifest and beacon, while the assigned output contract SHALL be one strict Zod-validated object containing `required_outputs[]` in addition to existing result/cache/source-claim rules. Each required output SHALL contain one concrete bundle-relative path, one canonical role, and one closed direct_contract identity. Cross-field validation SHALL reject unknown IDs, duplicate normalized paths, conflicting roles, unsafe or pattern paths, kind-incompatible direct contracts, and any queue/payload direct selector before generation. Existing strictly valid non-selector kind customization MAY remain as the base contract and SHALL be reconstructed from the hash-bound queue snapshot.
 
-Manifest and beacon SHALL carry the same validated output contract. Generated task/checklist SHALL show each required path, absolute path, role and contract ID. Generated result.schema.json SHALL const-bind or conditionally require the corresponding output_files[] path-role declarations closely enough that it cannot advertise role other or omission as schema-valid for a current required output; formal dry-submit/submit SHALL remain the authoritative exact set validator. The projection SHALL not expose a contract selector to the actor.
+Manifest and beacon SHALL carry the same top-level marker and validated output contract. Generated task/checklist SHALL show the marker plus each required path, absolute path, role and contract ID. For every current required output, generated `result.schema.json` SHALL add an `output_files` `contains` constraint with the exact path and canonical role and `minContains: 1`, `maxContains: 1`; it SHALL also constrain any item declaring that required path to the canonical role. Thus omission, duplication, or `other`/wrong-role declaration for a required path SHALL not be advertised as schema-valid. Optional contract-authorized outputs MAY still be declared under the existing item schema. The `output_files` schema default and generated Result JSON Starter SHALL contain each exact required path/role pair once for a current non-empty contract, so structural projection tests and the candidate-result Zod shape accept those declarations before the actor adds submit-required receipt/cache/source facts; an empty required_outputs contract SHALL default/start with `[]`. The starter SHALL NOT be described as submit-ready until those actor-owned facts pass dry-submit. The schema MAY carry non-fillable annotations for assignment context, but SHALL NOT add assignment_contract_version or direct_contract as actor result properties. Formal dry-submit/submit SHALL remain the authoritative normalized-path exact-set validator and SHALL reject duplicate/conflicting declarations even if a consumer ignores unsupported JSON Schema keywords. The projection SHALL not expose a contract selector to the actor.
 
-A supplementary Wave1 contract with empty required_outputs SHALL continue to expose eligible prior submitted evidence_summary lineage and SHALL not require current declarations for the paired artifacts. Wave2 targeted evidence remains on its existing result/cache/source contract with no v1 direct content blocker when required_outputs is empty.
+A supplementary Wave1 contract with snapshot-bound `payload.assignment_mode: supplementary` and empty required_outputs SHALL continue to expose eligible prior submitted evidence_summary lineage and SHALL not require current declarations for the paired artifacts. Empty required_outputs alone SHALL NOT select supplementary behavior. Wave2 targeted evidence remains on its existing result/cache/source contract with no v1 direct content blocker when required_outputs is empty.
 
-Generated guidance SHALL require the actor to author and verify assigned outputs before work_done and SHALL tell the Phase Agent to run dry-submit after return. V1 SHALL not require native actors to execute the Engine CLI. After work_done, guidance SHALL allow the Phase Agent to repair only meaning-preserving mechanical roots; a semantic_content root SHALL direct existing terminalization and replacement-attempt execution, not Phase Agent authorship or a user-operated pipeline.
+Generated guidance SHALL require the actor to author and verify assigned outputs before work_done and SHALL tell the Phase Agent to run dry-submit after return. V1 SHALL not require native actors to execute the Engine CLI. Guidance SHALL consume the Engine-derived recommended_action rather than infer from prose: repair_same_candidate changes only an unambiguous envelope-derived candidate declaration or required path/role after the assigned target passes; return_to_actor preserves pre-work_done actor ownership for receipt/source/cache/output meaning; fail_and_replace preserves assignment mode/receipts after work_done; inspect_contract stays at the Engine-owned surface. It SHALL not direct Phase Agent receipt/source/cache fabrication, semantic authorship, weakened supplementary work, abandon as a competing normal route, or a user-operated pipeline.
 
 #### Scenario: Current output remains a valid source ref
 
@@ -133,8 +133,9 @@ Generated guidance SHALL require the actor to author and verify assigned outputs
 #### Scenario: result schema projects exact required path-role pairs
 
 - **WHEN** a current primary Wave1 envelope is generated
-- **THEN** manifest, beacon, task, checklist and result schema SHALL expose the same two required path-role-direct-contract entries and assignment version
-- **AND** the result schema SHALL not advertise role other for either required path
+- **THEN** manifest, beacon, task and checklist SHALL expose the same top-level assignment version and two required path-role-direct-contract entries, while result schema requires each exact path-role pair once through `contains` plus path-to-role constraints and may annotate the read-only version
+- **AND** `output_files.default` and the Result JSON Starter SHALL prepopulate those two exact path-role pairs once
+- **AND** the result schema SHALL not advertise omission, duplication, or role other for either required path
 
 #### Scenario: generated projections cannot select contracts
 
@@ -144,9 +145,10 @@ Generated guidance SHALL require the actor to author and verify assigned outputs
 
 #### Scenario: supplementary result schema preserves prior lineage
 
-- **WHEN** a supplementary Wave1 attempt has empty required_outputs and an eligible prior submitted evidence_summary
+- **WHEN** a supplementary Wave1 attempt has assignment_mode supplementary, empty required_outputs, and an eligible prior submitted evidence_summary
 - **THEN** generated task/result guidance SHALL allow source_claims[].source_ref to name that exact prior path
 - **AND** output_files[] SHALL not be required to redeclare the prior paired artifacts
+- **AND** its empty required-output schema default and Result JSON Starter SHALL use `output_files: []`
 
 #### Scenario: empty Wave2 direct-output set adds no content blocker
 
@@ -163,6 +165,5 @@ Generated guidance SHALL require the actor to author and verify assigned outputs
 #### Scenario: semantic rejection does not transfer authorship
 
 - **WHEN** Phase Agent dry-submit observes repair_scope semantic_content after work_done
-- **THEN** generated/shared guidance SHALL direct terminalization and a replacement work unit
+- **THEN** recommended_action SHALL be fail_and_replace and generated/shared guidance SHALL direct fail plus a same-obligation replacement under a fresh queue ID and new work ID
 - **AND** it SHALL not tell the Phase Agent or user to fill missing research meaning under the original actor provenance
-

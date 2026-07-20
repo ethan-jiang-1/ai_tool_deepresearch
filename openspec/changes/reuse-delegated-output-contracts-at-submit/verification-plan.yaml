@@ -3,7 +3,7 @@ change: reuse-delegated-output-contracts-at-submit
 test_classes:
   unit:
     status: selected
-    rationale: Closed assignment resolution, strict contract schemas, bounded byte snapshots, tolerant direct parsing, root short-circuiting, repair classification, and legacy-marker selection are focused deterministic contracts.
+    rationale: Closed assignment resolution, strict contract schemas, target-level bounded snapshots, tolerant direct parsing, root short-circuiting, repair classification, and legacy-marker selection are focused deterministic contracts.
   integration:
     status: selected
     rationale: Claim projections, CLI candidate checkpoints, formal acceptance/replay paths, current Wave adapters, and Agent-facing Markdown cross real production module and temporary-bundle boundaries.
@@ -12,10 +12,10 @@ test_classes:
     rationale: The change adds no new workflow transition or multi-phase state chain; focused integration tests cover the affected claim, submit, timeout, replay, Wave, and compatibility boundaries with less harness complexity.
   agent_flow_e2e:
     status: selected
-    rationale: Preserving authorship after a real actor returns semantically incomplete required output is Agent-flow behavior; a registered real-Sub-agent canary must prove explicit terminalization and replacement without Phase-Agent semantic substitution.
+    rationale: Preserving authorship after work_done semantic rejection is Phase-Agent behavior; a registered independent real Subject Agent must consume the rejection, avoid semantic substitution, and execute explicit same-obligation replacement with a real child actor or report native NOT_RUN.
 claims:
   - id: assignment-contract-resolution
-    statement: The current closed resolver derives only supported Wave0 exact source YAML, primary paired Wave1, supplementary empty-output Wave1, and empty-output Wave2 contracts from kind plus snapshot-bound canonical Topic and file receipts; it rejects overrides, unsafe or conflicting assignments, and unknown marker values without writes_to or queue-ID inference.
+    statement: The current closed resolver derives only supported Wave0 exact source YAML, assignment_mode primary plus paired Wave1, assignment_mode supplementary plus empty-output Wave1, and empty-output Wave2 contracts from kind plus snapshot-bound canonical Topic and file receipts; it rejects missing/mismatched mode, direct selectors, unsafe or conflicting assignments, and unknown marker values without writes_to or queue-ID inference.
     test_class: unit
     proof_subject: deterministic_contract
     asset:
@@ -29,7 +29,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: bounded-direct-output-evaluation
-    statement: One direct-output interface reads at most 4 MiB from one opened regular-file handle, rejects unsafe, escaping, stable-symlink, special-file, oversize, read, and invalid-UTF8 targets, strips one BOM, and returns the same tolerant Wave0 schema and Wave1 semantic-section roots with prerequisite short-circuiting.
+    statement: One target-level direct-output interface uses one opened regular-file handle and a 4 MiB plus one byte bounded read, accepts shorter EOF after fstat, rejects unsafe, escaping, stable-symlink, special-file, observed-oversize, read, and invalid-UTF8 targets, strips one BOM, and returns the same tolerant Wave0 schema and Wave1 semantic-section roots with prerequisite short-circuiting.
     test_class: unit
     proof_subject: deterministic_contract
     asset:
@@ -43,7 +43,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: strict-work-unit-contract-schema
-    statement: Work-unit index, manifest, beacon, output contract, and generated result schema accept the current assignment marker and unique closed path-role-direct-contract tuples, preserve genuine marker-absent legacy records, and reject partial markers, unknown contracts, projection drift, duplicate paths, wrong roles, and actor-selectable contract fields.
+    statement: Work-unit index, manifest, and beacon carry one top-level current assignment marker; manifest/beacon output contracts carry unique closed path-role-direct-contract tuples; generated result schema requires each current exact path-role pair once through contains and path-to-role constraints without actor-fillable marker/contract fields, and its default/Result Starter prepopulate the same pairs or an empty set so structural parity and the candidate-result Zod shape accept those declarations without claiming submit readiness; genuine marker-absent claimed records remain legacy while partial markers, unknown contracts, projection drift, duplicate paths, wrong roles, and direct selectors fail.
     test_class: unit
     proof_subject: deterministic_contract
     asset:
@@ -57,7 +57,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: candidate-checkpoint-lifetime
-    statement: Current-version dry-submit, claimed timeout-preflight, first normal submit, and eligible first late-submit each reconstruct the exact contract and read fresh bounded snapshots; formal acceptance rejects changed invalid bytes after dry-submit, while duplicate submit, accepted late-submit replay, and recover-declaration preserve historical postconditions without reaccepting current artifact bytes.
+    statement: Current-version dry-submit, claimed timeout-preflight, first normal submit, and eligible first late-submit each reconstruct the exact contract and read fresh bounded snapshots; every candidate, receipt, output, source/cache and Engine-binding root receives one provenance-based scope, and dry/formal projection derives one closed non-persistent action plus null-or-stable primary_root_code from scope precedence and work_done state; formal acceptance rejects changed invalid bytes after dry-submit, while duplicate submit, accepted late-submit replay, and recover-declaration preserve historical postconditions without reaccepting current artifact bytes.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -71,7 +71,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: assignment-projection-and-supplementary-compatibility
-    statement: Real claim/envelope/submit paths project exact current required path-role-direct-contract entries and one assignment marker through index, manifest, beacon, task, checklist, and result schema; primary Wave1 requires its pair, supplementary Wave1 reuses eligible prior evidence lineage without rewriting the pair, and only truly marker-absent attempts retain bounded legacy role normalization.
+    statement: Real claim/envelope/submit paths bind assignment_mode plus receipt shape, project exact current required path-role-direct-contract entries and one top-level marker through index, manifest, beacon, task/checklist and constrained result schema, preserve strictly valid non-selector kind customization, require primary pairs, allow explicit supplementary prior lineage, and reserve legacy role normalization for truly marker-absent claimed attempts.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -85,7 +85,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: wave0-direct-evaluator-parity
-    statement: Wave0 inspect and formal Gate adapt the shared direct evaluator for current source YAML bytes, preserve top-level-array and ReferenceMetadataArraySchema roots plus tolerant BOM policy, and retain count, coverage, provenance, cache, queue, and phase-wide rules outside candidate submit.
+    statement: Wave0 inspect and formal Gate adapt the shared target-level operation for current source YAML bytes, preserve top-level-array and ReferenceMetadataArraySchema roots plus tolerant BOM policy, and retain count, coverage, provenance, cache, queue, and phase-wide rules outside candidate submit.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -98,8 +98,22 @@ claims:
       external_calls: none
       verdict_judge: deterministic
     verdict_authority: node_test_exit
+  - id: wave1-assignment-mode-enqueue
+    statement: Under AGQ-013 and WAI-007, real queue enqueue accepts only topic_deepening primary plus the exact paired receipts or supplementary plus empty receipts and preserves strictly valid non-selector kind customization; AGQ-owned explicit mode repair targets exactly one genuinely mode-absent unclaimed queued topic_deepening item, derives only mode-owned receipts/primary write permissions, preserves identity, Topic, producer/kind, delegation, lineage, created_at, position, and non-selector customization, and emits one non-authoritative audit event; already-classified, unknown-mode, wrong-producer, invalid, in-flight, or terminal targets leave queue state unchanged and emit no success event; enqueue, repair, and claim never infer intent or accept a direct selector.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-queue-validation.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
   - id: wave1-direct-evaluator-parity
-    statement: Wave1 inspect and formal Gate adapt the shared direct evaluator for tolerant non-empty Key Findings and four non-empty question-list sections, keep source_url_present and all provenance, return-map, depth, queue, coverage, and phase-wide facts at Wave, and project the same neutral root coordinates as candidate validation.
+    statement: Wave1 inspect and formal Gate adapt the shared target-level operation for tolerant non-empty Key Findings and four non-empty question-list sections, keep source_url_present and all provenance, return-map, depth, queue, coverage, and phase-wide facts at Wave, and project the same neutral root coordinates as candidate validation.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -113,7 +127,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: direct-output-guidance-boundary
-    statement: Generated task plus the three approved production Markdown owners expose exact Engine-resolved candidate contracts and the Phase-Agent dry-submit loop while preserving formal submit as the only delegated success owner, Wave as phase-wide authority, and role specs and phase docs without duplicated blocker inventories.
+    statement: Generated task plus the four approved production Markdown owners expose AGQ-013/WAI-007 assignment-mode authoring, the exact narrow repair command for genuinely mode-absent unclaimed cards, exact Engine-resolved candidate contracts, the Phase-Agent dry-submit loop, and fail then explicit fresh-ID same-obligation replacement while preserving formal submit as the only delegated success owner, Wave as phase-wide authority, and role specs/other phase docs without duplicated blocker inventories.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -126,8 +140,8 @@ claims:
       external_calls: none
       verdict_judge: deterministic
     verdict_authority: node_test_exit
-  - id: real-subagent-semantic-replacement
-    statement: Given a setup-only current Wave1 assignment, a real Sub-agent first returns a required artifact with a deterministic empty semantic section; the Phase Agent reads dry-submit repair_scope, does not author missing research meaning under the first actor provenance, explicitly terminalizes and enqueues replacement demand, claims a new work ID, and submits only after a second real actor produces the missing semantics. This proves only the named recovery procedure, not research quality or universal Agent compliance.
+  - id: real-agent-semantic-replacement
+    statement: Given setup-only Topic and queue prerequisites, one independent real Subject Agent acts as Phase Agent across three bounded turns. Turn 1 claims a current primary Wave1 attempt, invokes a first real child that performs bounded search/fetch and owns its source/cache/candidate/work_done with one controlled empty semantic section, saves native dry-submit repair_scope/recommended_action/primary_root_code JSON, and pauses for first-output hashing. Turn 2 consumes that rejection, does not change first-output hashes, runs non-retry fail with the Engine-derived semantic_contract reason, enqueues the same primary paired obligation under a fresh queue_item_id absent from every durable location, claims a new work ID, and pauses before overwrite. Turn 3 invokes a second real child that independently owns valid search/fetch/source/cache/output and submits only that replacement. Case-owned deterministic checks derive trace verdicts from retained native CLI JSON, Subject/child evidence and pause hashes without fabricating production events. PASS proves only this recovery procedure, not research quality or universal compliance.
     test_class: agent_flow_e2e
     proof_subject: agent_behavior
     asset:
@@ -135,8 +149,8 @@ claims:
       path: experiments_playbook/exp_evidence-extraction/case-164-heavy-direct-output-candidate-contract.md
     execution_profile:
       fixture: setup_only
-      subject_execution: real_subagent
+      subject_execution: real_agent
       runtime: real_disposable_bundle
-      external_calls: none
+      external_calls: real
       verdict_judge: deterministic
     verdict_authority: trace_jsonl
