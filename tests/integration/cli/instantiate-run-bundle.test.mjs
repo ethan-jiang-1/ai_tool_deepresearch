@@ -1,8 +1,9 @@
-// @impl CMI-004: instantiate-run-bundle.mjs integration test
+// @impl CMI-004, CMI-008: instantiate-run-bundle.mjs integration test
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 
@@ -116,10 +117,72 @@ describe('instantiate-run-bundle.mjs integration', () => {
     assert.ok(match, 'CHANGELOG must have a version heading');
     assert.equal(fm.framework_version, match[1]);
   });
+
+  it('returns standalone help before argv validation without creating a target', () => {
+    const root = mkdtempSync(join(tmpdir(), 'instantiate-help-'));
+    const target = join(root, 'must-not-exist');
+    try {
+      const result = runRaw('--help', '--unknown', `--target-dir=${target}`);
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stderr, /Usage:/);
+      assert.equal(existsSync(target), false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects malformed production argv before creating a supplied target', () => {
+    const root = mkdtempSync(join(tmpdir(), 'instantiate-invalid-'));
+    const cases = [
+      ['delimiter-help', ['--', '--help']],
+      ['unsafe-name', ['bad_name']],
+      ['path-name', ['../escape']],
+      ['unknown-option', ['valid-name', '--unknown']],
+      ['repeated-target', ['valid-name', '--target-dir', 'one', '--target-dir=two']],
+      ['missing-target-value', ['valid-name', '--target-dir']],
+      ['extra-positional', ['valid-name', 'extra']],
+      ['force', ['valid-name', '--force']],
+    ];
+    try {
+      for (const [label, args] of cases) {
+        const target = join(root, label);
+        const result = runRaw(...args, `--target-dir=${target}`);
+        assert.notEqual(result.status, 0, `${label}: ${result.stdout}\n${result.stderr}`);
+        assert.equal(existsSync(target), false, `${label} created its target`);
+      }
+      assert.deepEqual(readdirSync(root), []);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('creates a production bundle through literal argument-vector validation', () => {
+    const root = mkdtempSync(join(tmpdir(), 'instantiate-literal-'));
+    const target = join(root, 'target with " quote');
+    const name = uniqueName('literal');
+    try {
+      const result = runRaw(name, `--target-dir=${target}`);
+      const bundle = join(target, `dpt_rb_${name}`);
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(result.stdout.trim(), bundle);
+      assert.equal(existsSync(join(bundle, 'rb_status.json')), true);
+      assert.doesNotMatch(result.stderr, /validate-bundle failed|inspect-bundle failed/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
 
 function runInstantiate(...args) {
   return spawnSync('node', [INSTANTIATE, ...args, '--target-dir', BUNDLES_DIR], {
+    cwd: REPO_ROOT,
+    encoding: 'utf-8',
+    timeout: 10000,
+  });
+}
+
+function runRaw(...args) {
+  return spawnSync('node', [INSTANTIATE, ...args], {
     cwd: REPO_ROOT,
     encoding: 'utf-8',
     timeout: 10000,

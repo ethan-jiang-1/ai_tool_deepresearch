@@ -1,16 +1,16 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.36**
+> **DPT_FRAMEWORK v0.37**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.36
+## Current Release: v0.37
 
-- Shared seed-topic authoring owns the readable initialization/appendix/direction shape, and shared return-map authoring owns Wave entry shape; deterministic renderer and existing Wave inspect authority are unchanged.
-- Sanctioned rerun add/update/direction-only candidates publish through existing atomic topic-state apply/recover, while rerun-ready checks only plan-bound direction structure and profile-count synchronization—not direction semantics or Agent judgment.
+- Bundle creators now reject malformed argv before target creation: standalone `--help` is zero-write, invalid names/options fail early, and production/disposable target paths are passed literally to validation and inspection.
+- This is CLI input safety only: it adds no Gate, cleanup routine, runtime state, or recovery flow.
 
 ## 0. 禁用内置捷径（最高优先）
 

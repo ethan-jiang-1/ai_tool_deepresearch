@@ -1,5 +1,5 @@
 // @impl CMI-004, BUM-003: new-bundle.mjs — Create a disposable DPT run bundle at repo root
-// @impl EXS-002: Canonical location experiments_env/shared/new-disposable-bundle.mjs
+// @impl EXS-002, EXS-003: Canonical location experiments_env/shared/new-disposable-bundle.mjs
 // Usage: node new-bundle.mjs <bundleName> [--nodes <dir>] [--force]
 // Always creates the bundle at $REPO_ROOT/dpt_disp_<name>/
 // Prints absolute bundle path to stdout for shell consumption.
@@ -8,10 +8,11 @@
 // If schemas change, this tool breaks at generation time — no stale bundles.
 // Exit: 0 = created/reused, 1 = FAIL
 
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, readFileSync, existsSync, cpSync, rmSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomInt } from 'node:crypto';
+import { parseArgs } from 'node:util';
 import {
   StatusSchema,
   QueueSchema,
@@ -24,26 +25,79 @@ import { logToRun } from '../../DPT_FRAMEWORK/engine/logger.mjs';
 
 const G = '\x1b[32m', R = '\x1b[31m', B = '\x1b[0m';
 
-// Parse args: supports --case <id>, --nodes <dir>, --nodes=<dir>, --target-dir <dir>
 const args = process.argv.slice(2);
-const bundleName = args[0];
-let nodesDir = null;
-let caseId = null;
-let targetDir = null;
-for (const a of args) {
-  if (a === '--nodes') { nodesDir = args[args.indexOf(a) + 1]; }
-  if (a.startsWith('--nodes=')) { nodesDir = a.slice('--nodes='.length); }
-  if (a === '--case') { caseId = args[args.indexOf(a) + 1]; }
-  if (a.startsWith('--case=')) { caseId = a.slice('--case='.length); }
-  if (a === '--target-dir') { targetDir = args[args.indexOf(a) + 1]; }
-  if (a.startsWith('--target-dir=')) { targetDir = a.slice('--target-dir='.length); }
+if (hasStandaloneHelp(args)) {
+  printUsage(0);
 }
-const force = args.includes('--force');
 
-if (!bundleName) {
+const parsedArgs = parseCreatorArgs(args);
+const bundleName = parsedArgs.positionals[0];
+const nodesDir = parsedArgs.values.nodes ?? null;
+const caseId = parsedArgs.values.case ?? null;
+const targetDir = parsedArgs.values['target-dir'] ?? null;
+const force = parsedArgs.values.force === true;
+
+if (parsedArgs.positionals.length !== 1 || !/^[a-z0-9][a-z0-9_-]*$/.test(bundleName)) {
+  failUsage('name must match ^[a-z0-9][a-z0-9_-]*$');
+}
+
+if (caseId !== null && !/^case-[0-9]+$/.test(caseId)) {
+  failUsage('--case must match ^case-[0-9]+$');
+}
+
+if ([nodesDir, targetDir].some((value) => value === '')) {
+  failUsage('value-taking options require a non-empty value');
+}
+
+function printUsage(exitCode) {
   console.error('Usage: node new-bundle.mjs <bundleName> [--case <id>] [--nodes <dir>] [--target-dir <dir>] [--force]');
   console.error('  Example: node new-bundle.mjs wc_simple --case case-31 --nodes=experiments_env/prototype-workflow-chain/nodes-workflow-chain --force');
-  process.exit(1);
+  process.exit(exitCode);
+}
+
+function failUsage(message) {
+  console.error(`${R}Error: ${message}.${B}`);
+  printUsage(1);
+}
+
+function hasStandaloneHelp(argv) {
+  for (const arg of argv) {
+    if (arg === '--') return false;
+    if (arg === '--help') return true;
+  }
+  return false;
+}
+
+function parseCreatorArgs(argv) {
+  rejectRepeatedOptions(argv, new Set(['case', 'nodes', 'target-dir', 'force']));
+  try {
+    return parseArgs({
+      args: argv,
+      options: {
+        case: { type: 'string' },
+        nodes: { type: 'string' },
+        'target-dir': { type: 'string' },
+        force: { type: 'boolean' },
+      },
+      strict: true,
+      allowPositionals: true,
+    });
+  } catch (error) {
+    failUsage(error.message);
+  }
+}
+
+function rejectRepeatedOptions(argv, supportedOptions) {
+  const seen = new Set();
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === '--') break;
+    const match = arg.match(/^--([a-z-]+)(?:=.*)?$/);
+    if (!match || !supportedOptions.has(match[1])) continue;
+    if (seen.has(match[1])) failUsage(`option --${match[1]} may be supplied only once`);
+    seen.add(match[1]);
+    if (['case', 'nodes', 'target-dir'].includes(match[1]) && arg === `--${match[1]}`) index += 1;
+  }
 }
 
 // Always resolve repo root — never depend on CWD
@@ -200,14 +254,14 @@ logToRun(bundleDir, 'info', 'run_start', { source: 'new-disposable-bundle' });
 const validatePath = join(repoRoot, 'DPT_FRAMEWORK', 'cli', 'validate-bundle.mjs');
 const inspectPath = join(repoRoot, 'DPT_FRAMEWORK', 'cli', 'inspect-bundle.mjs');
 try {
-  execSync(`node "${validatePath}" "${bundleDir}"`, { stdio: 'pipe' });
+  execFileSync(process.execPath, [validatePath, bundleDir], { stdio: 'pipe' });
   process.stderr.write(`${G}✓ validate-bundle passed${B}\n`);
 } catch (e) {
   process.stderr.write(`${R}⚠ validate-bundle failed (bundle may be incomplete)${B}\n`);
 }
 // inspect-bundle is informational only — don't fail on warnings
 try {
-  execSync(`node "${inspectPath}" "${bundleDir}"`, { stdio: 'pipe' });
+  execFileSync(process.execPath, [inspectPath, bundleDir], { stdio: 'pipe' });
 } catch {
   // inspect-bundle exits 1 on warnings (missing optional files) — that's fine for a fresh disposable
 }

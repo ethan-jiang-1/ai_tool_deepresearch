@@ -197,6 +197,7 @@ CMI-004: cmd-bundle-instantiation — Template files (rb_templates/)
 CMI-005: cmd-bundle-instantiation — Bundle naming is Agent-derived or already-supplied, not a mid-pipeline user dependency
 CMI-006: cmd-bundle-instantiation — rb_status.json template includes current_node reentry coordinate
 CMI-007: cmd-bundle-instantiation — rb_plan.md template stamps framework_version at creation (CHANGELOG/VEM-001 authority)
+CMI-008: cmd-bundle-instantiation — Production creator rejects malformed argv before filesystem side effects
 
 # check-inspect-feedback
 CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop
@@ -505,6 +506,7 @@ TRW-004: trace-writer — Run start trace marker (run_start at bundle creation; 
 TRW-005: trace-writer — Agent Autorun surfaces use one rb_trace.jsonl sink with trace-bound native completion
 EXS-001: experiment-shared-infra — experiments_env/shared/ directory for experiment-scoped shared infrastructure
 EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_FRAMEWORK/command_experiments_env/scripts/ to experiments_env/shared/"
+EXS-003: experiment-shared-infra — Disposable creator rejects malformed argv before filesystem side effects
 EXR-001: experiment-ref-integrity — case-401 verifies positive Agent-Engine boundary path
 EXR-002: experiment-ref-integrity — case-402 verifies delegated complete rejection matrix
 EXR-003: experiment-ref-integrity — case-403 verifies content_dedup via Engine-generated ledger [DEPRECATED]

@@ -15,7 +15,7 @@ test_classes:
     rationale: The change proves deterministic CLI safety only and makes no claim about Playbook or Subject Agent behavior.
 claims:
   - id: disposable-creator-prewrite-argument-boundary
-    statement: The actual disposable creator returns safe help or a clear nonzero rejection for flag, malformed option, unsafe name, unsafe case, and extra positional inputs before creating a supplied target root or any dpt_disp bundle; legal case-target creation and legal disposable force behavior remain compatible.
+    statement: The actual disposable creator gives a standalone pre-delimiter --help option precedence with zero writes while delimiter-protected --help remains an invalid positional; otherwise it clearly rejects unknown, repeated, missing-valued, unsafe name/non-canonical case, and extra positional input before creating a supplied target root or any dpt_disp bundle. A target path containing spaces and a double quote reaches validation/inspection as a literal argument, while legal case-target and nodes-copy behavior plus all-hex-slot disposable force overwrite behavior remain compatible.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -29,7 +29,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: production-creator-prewrite-argument-boundary
-    statement: The actual production creator returns safe help or a clear nonzero rejection for flag, malformed option, unsafe name, and extra positional inputs before creating a supplied target root or any dpt_rb bundle; legal explicit-target creation and the existing force prohibition remain compatible.
+    statement: The actual production creator gives a standalone pre-delimiter --help option precedence with zero writes while delimiter-protected --help remains an invalid positional; otherwise it clearly rejects unknown, repeated, missing-valued, unsafe name, and extra positional input before creating a supplied target root or any dpt_rb bundle. A target path containing spaces and a double quote reaches validation/inspection as a literal argument, while legal explicit-target creation and the existing force prohibition remain compatible.
     test_class: integration
     proof_subject: deterministic_contract
     asset:

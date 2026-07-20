@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.37
+
+- Hardened production and disposable bundle creators with strict pre-write argv parsing: standalone help is zero-write, malformed names/options are rejected before target creation, and duplicate options cannot silently select a later value.
+- Preserved literal `--target-dir` paths by passing derived bundle paths to validation and inspection as child-process arguments, while retaining production no-overwrite and disposable collision/force behavior.
+
 ## v0.36
 
 - Centralized the Agent-facing seed-topic skeleton/rerun direction and return-map authoring contracts, while keeping the deterministic renderer, submitted facts, and existing Wave inspect as their respective authorities.

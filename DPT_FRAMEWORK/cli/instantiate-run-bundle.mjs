@@ -1,14 +1,15 @@
 #!/usr/bin/env node
-// @impl CMI-004, CMI-007, FRE-003: instantiate-run-bundle.mjs — Create a production DPT run bundle at repo root
+// @impl CMI-004, CMI-007, CMI-008, FRE-003: instantiate-run-bundle.mjs — Create a production DPT run bundle at repo root
 // Usage: node instantiate-run-bundle.mjs <name>
 // Creates dpt_rb_<name>/ from DPT_FRAMEWORK/rb_templates/.
 // Prints absolute bundle path to stdout for shell consumption.
 // Exit: 0 = created, 1 = FAIL
 
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, existsSync, readFileSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
 import {
   StatusSchema,
   QueueSchema,
@@ -25,23 +26,75 @@ const TEMPLATES_DIR = join(__dirname, '..', 'rb_templates');
 const G = '\x1b[32m', R = '\x1b[31m', B = '\x1b[0m';
 
 const args = process.argv.slice(2);
-const bundleName = args[0];
-const forceRequested = args.includes('--force');
-let targetDir = null;
-for (const a of args) {
-  if (a === '--target-dir') { targetDir = args[args.indexOf(a) + 1]; }
-  if (a.startsWith('--target-dir=')) { targetDir = a.slice('--target-dir='.length); }
+if (hasStandaloneHelp(args)) {
+  printUsage(0);
 }
 
-if (!bundleName) {
-  console.error('Usage: node instantiate-run-bundle.mjs <name> [--target-dir <dir>]');
-  console.error('  Creates dpt_rb_<name>/ at <dir> (default: repo root) from DPT_FRAMEWORK/rb_templates/');
-  process.exit(1);
+const parsedArgs = parseCreatorArgs(args);
+const bundleName = parsedArgs.positionals[0];
+const targetDir = parsedArgs.values['target-dir'] ?? null;
+const forceRequested = parsedArgs.values.force === true;
+
+if (parsedArgs.positionals.length !== 1 || !/^[a-z0-9][a-z0-9-]*$/.test(bundleName)) {
+  failUsage('name must match ^[a-z0-9][a-z0-9-]*$');
+}
+
+if (targetDir === '') {
+  failUsage('--target-dir requires a non-empty value');
 }
 
 if (forceRequested) {
   console.error(`${R}Error: production bundle overwrite is not allowed. Choose a new bundle name.${B}`);
   process.exit(1);
+}
+
+function printUsage(exitCode) {
+  console.error('Usage: node instantiate-run-bundle.mjs <name> [--target-dir <dir>]');
+  console.error('  Creates dpt_rb_<name>/ at <dir> (default: repo root) from DPT_FRAMEWORK/rb_templates/');
+  process.exit(exitCode);
+}
+
+function failUsage(message) {
+  console.error(`${R}Error: ${message}.${B}`);
+  printUsage(1);
+}
+
+function hasStandaloneHelp(argv) {
+  for (const arg of argv) {
+    if (arg === '--') return false;
+    if (arg === '--help') return true;
+  }
+  return false;
+}
+
+function parseCreatorArgs(argv) {
+  rejectRepeatedOptions(argv, new Set(['target-dir', 'force']));
+  try {
+    return parseArgs({
+      args: argv,
+      options: {
+        'target-dir': { type: 'string' },
+        force: { type: 'boolean' },
+      },
+      strict: true,
+      allowPositionals: true,
+    });
+  } catch (error) {
+    failUsage(error.message);
+  }
+}
+
+function rejectRepeatedOptions(argv, supportedOptions) {
+  const seen = new Set();
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === '--') break;
+    const match = arg.match(/^--([a-z-]+)(?:=.*)?$/);
+    if (!match || !supportedOptions.has(match[1])) continue;
+    if (seen.has(match[1])) failUsage(`option --${match[1]} may be supplied only once`);
+    seen.add(match[1]);
+    if (match[1] === 'target-dir' && arg === '--target-dir') index += 1;
+  }
 }
 
 // Resolve repo root
@@ -140,7 +193,7 @@ const validatePath = join(__dirname, 'validate-bundle.mjs');
 const inspectPath = join(__dirname, 'inspect-bundle.mjs');
 
 try {
-  execSync(`node "${validatePath}" "${bundleDir}"`, { stdio: 'pipe' });
+  execFileSync(process.execPath, [validatePath, bundleDir], { stdio: 'pipe' });
 } catch {
   console.error(`${R}Error: validate-bundle failed${B}`);
   rmSync(bundleDir, { recursive: true, force: true });
@@ -148,7 +201,7 @@ try {
 }
 
 try {
-  execSync(`node "${inspectPath}" "${bundleDir}"`, { stdio: 'pipe' });
+  execFileSync(process.execPath, [inspectPath, bundleDir], { stdio: 'pipe' });
 } catch {
   console.error(`${R}Error: inspect-bundle failed${B}`);
   rmSync(bundleDir, { recursive: true, force: true });

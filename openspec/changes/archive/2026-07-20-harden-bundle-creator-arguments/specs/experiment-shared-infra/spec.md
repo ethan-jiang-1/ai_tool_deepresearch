@@ -1,50 +1,6 @@
-# Experiment Shared Infrastructure
+> req: EXS-003
 
-> req: EXS-001, EXS-002, EXS-003
-
-## Purpose
-
-Define the shared experiment infrastructure directory `experiments_env/shared/` for tools that support experiment setup and execution but are NOT needed by production run bundles. This directory is the canonical location for experiment-scoped utilities shared across multiple experiment families.
-## Requirements
-### Requirement: Experiment shared infrastructure directory
-
-The system SHALL provide a directory `experiments_env/shared/` for experiment-scoped shared infrastructure. Tools in this directory SHALL be importable by command experiment playbooks and experiment prototype code. Production run bundle code SHALL NOT import from this directory.
-
-#### Scenario: Directory exists and is importable
-
-- **WHEN** an experiment playbook inline script needs shared infrastructure
-- **THEN** it SHALL import from `../experiments_env/shared/<tool>.mjs`
-
-#### Scenario: Production code does not depend on experiment shared
-
-- **WHEN** a production run bundle or `DPT_FRAMEWORK/` module runs
-- **THEN** it SHALL NOT import from `experiments_env/shared/`
-
-### Requirement: Disposable bundle creation tool
-
-The disposable bundle creation script SHALL reside at `experiments_env/shared/new-disposable-bundle.mjs`. It SHALL create `dpt_disp_*` directories with Zod-validated control files using the same schemas as production bundles. Its generated basename SHALL be `dpt_disp_<name>_<hex>` without `--case`, or `dpt_disp_case-<digits>_<name>_<hex>` with `--case`; `<hex>` is the creator's random collision suffix. It SHALL accept:
-
-- Required positional argument: bundle name suffix
-- `--nodes=<dir>`: copy node MD files from a prototype's nodes directory into the bundle
-- `--force`: overwrite the generated bundle directory selected for this invocation
-
-#### Scenario: Create disposable bundle with nodes
-
-- **WHEN** `node experiments_env/shared/new-disposable-bundle.mjs agq_simple --nodes=experiments_env/prototype-agentic-queue/nodes-agentic-queue --force` is executed
-- **THEN** a directory matching `dpt_disp_agq_simple_<hex>/` SHALL be created at repo root
-- **AND** it SHALL contain all standard bundle control files (`rb_status.json`, `rb_queue.json`, `rb_profile.yaml`, `rb_plan.md`, `rb_trace.jsonl`, `BUNDLE_MAP.md`)
-- **AND** the control files SHALL pass `validate-bundle.mjs` and `inspect-bundle.mjs`
-- **AND** node MD files from the `--nodes` source SHALL be copied into the bundle
-
-#### Scenario: Overwrite existing bundle with --force
-
-- **WHEN** the generated disposable bundle directory selected for an invocation already exists and `--force` is passed
-- **THEN** that existing directory SHALL be removed and recreated without error
-
-#### Scenario: Playbook Step 1 uses new path
-
-- **WHEN** any command experiment playbook runs Step 1 (bundle creation)
-- **THEN** it SHALL invoke `experiments_env/shared/new-disposable-bundle.mjs` (not `DPT_FRAMEWORK/command_experiments_env/scripts/new-disposable-bundle.mjs`)
+## ADDED Requirements
 
 ### Requirement: Disposable bundle creator SHALL reject invalid invocation before filesystem side effects
 
@@ -82,3 +38,31 @@ After successful parsing and validation, existing case composition, node-copy, e
 
 - **WHEN** a legal disposable invocation targets an existing generated bundle and supplies `--force`
 - **THEN** the creator SHALL preserve its existing disposable overwrite behavior after argv/name validation succeeds
+
+## MODIFIED Requirements
+
+### Requirement: Disposable bundle creation tool
+
+The disposable bundle creation script SHALL reside at `experiments_env/shared/new-disposable-bundle.mjs`. It SHALL create `dpt_disp_*` directories with Zod-validated control files using the same schemas as production bundles. Its generated basename SHALL be `dpt_disp_<name>_<hex>` without `--case`, or `dpt_disp_case-<digits>_<name>_<hex>` with `--case`; `<hex>` is the creator's random collision suffix. It SHALL accept:
+
+- Required positional argument: bundle name suffix
+- `--nodes=<dir>`: copy node MD files from a prototype's nodes directory into the bundle
+- `--force`: overwrite the generated bundle directory selected for this invocation
+
+#### Scenario: Create disposable bundle with nodes
+
+- **WHEN** `node experiments_env/shared/new-disposable-bundle.mjs agq_simple --nodes=experiments_env/prototype-agentic-queue/nodes-agentic-queue --force` is executed
+- **THEN** a directory matching `dpt_disp_agq_simple_<hex>/` SHALL be created at repo root
+- **AND** it SHALL contain all standard bundle control files (`rb_status.json`, `rb_queue.json`, `rb_profile.yaml`, `rb_plan.md`, `rb_trace.jsonl`, `BUNDLE_MAP.md`)
+- **AND** the control files SHALL pass `validate-bundle.mjs` and `inspect-bundle.mjs`
+- **AND** node MD files from the `--nodes` source SHALL be copied into the bundle
+
+#### Scenario: Overwrite existing bundle with --force
+
+- **WHEN** the generated disposable bundle directory selected for an invocation already exists and `--force` is passed
+- **THEN** that existing directory SHALL be removed and recreated without error
+
+#### Scenario: Playbook Step 1 uses new path
+
+- **WHEN** any command experiment playbook runs Step 1 (bundle creation)
+- **THEN** it SHALL invoke `experiments_env/shared/new-disposable-bundle.mjs` (not `DPT_FRAMEWORK/command_experiments_env/scripts/new-disposable-bundle.mjs`)
