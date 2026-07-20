@@ -67,3 +67,7 @@ Topics 01-07 没有加，Topics 10-13 也没有（我用的是记叙段落而非
 4. **Gate 或者不 Gate**：当前 gate 不检查 appendix 格式。要么让 gate 检查（强制 format compliance），要么明确文档化"gate 不检查但 wave2 synthesis 质量取决于此"（保持现状但让警告更显眼）
 
 5. **迁移已有 bundle**：对旧 seed topic 的 section 名做批量 rename（只改名，不动内容）
+
+## Closure (2026-07-20)
+
+Closed by archived change `2026-07-20-centralize-seed-topic-authoring-contracts` (v0.36, implementation/archive commit `29c90d0c1`). The shared seed-topic and return-map authoring contracts now provide the complete Agent-facing skeleton, and executable parity holds them to the existing deterministic renderer. Existing headers remain unchanged, no historical bundle is mutated, and the absence of a one-time backfill token after valid replacement is treated as its normal consumed state rather than proof of skipped work.

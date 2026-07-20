@@ -102,6 +102,8 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-090 | 2026-07-16 | Rerun 新增 topic 未物化 reference/*.md — **结案: cross-version skew，当前版本不复现，不修**（症状层→`bundle-version-skew-advisory` CMI-007/RRD-011；根因 audit→CLS-026） |
 | BUG-091 | 2026-07-16 | Legacy rerun artifact 旧格式过当前 gate — **结案: cross-version skew，不修**（`source_novelty_floor` 规则已删；不建迁移机器） |
 | BUG-092 | 2026-07-20 | `add_topic` seed projection 跨 section masking — `restore-section-scoped-seed-projection-contract` v0.35 按目标 section 逐 row/finding 执法 |
+| BUG-093 | 2026-07-20 | Seed-topic appendix/return-map authoring drift — shared authoring contracts + renderer parity；不改 header、不迁移历史 bundle |
+| BUG-094 | 2026-07-20 | Rerun direction section has no canonical template — atomic topic-state publication + structural readiness；legacy read remains tolerant |
 
 **Next available bug ID: BUG-096**
 

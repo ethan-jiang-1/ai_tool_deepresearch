@@ -1,6 +1,6 @@
 # Seed Topic Projection Contract Repair — Analysis and Execution Plan
 
-> 状态：执行中；Change A 已 archive，Change B 待 propose
+> 状态：已完成；Change A 与 Change B 均已 archive
 > 创建：2026-07-19  
 > 更新：2026-07-20
 > 触发来源：`_backlog/bugs/BUG-092`、`BUG-093`、`BUG-094`
@@ -463,28 +463,37 @@ Change B propose 阶段只在以下任一情况成立时再拆出 `formalize-rer
 
 ### Stage 3 — Propose Change B
 
-- [ ] Change A archive 后重新读取 current specs/code，不复制旧假设。
-- [ ] 运行 `/opsx:propose centralize-seed-topic-authoring-contracts`。
-- [ ] Design 比较 template parity 两个方案，选择净复杂度更低者。
-- [ ] 明确 direction action mapping、conditional fields、unknown field policy。
-- [ ] 明确是否保持一个 Change B 或按 6.11 的条件拆第三个 change。
-- [ ] 创建独立 verification plan，声明 agent_flow proof 是否必要。
-- [ ] 声明 framework version bump 决策。
+- [x] Change A archive 后重新读取 current specs/code，不复制旧假设。
+- [x] 运行 `/opsx:propose centralize-seed-topic-authoring-contracts`。
+- [x] Design 比较 template parity 两个方案，选择净复杂度更低者。
+- [x] 明确 direction action mapping、conditional fields、unknown field policy。
+- [x] 明确是否保持一个 Change B 或按 6.11 的条件拆第三个 change。
+- [x] 创建独立 verification plan，声明 agent_flow proof 是否必要。
+- [x] 声明 framework version bump 决策。
 
 ### Stage 4 — Apply and Archive Change B
 
-- [ ] `/opsx:apply` 后才修改 shared workflow/template、renderer、resolver/check 和 tests。
-- [ ] 删除被 shared surface 替代的重复模板 prose；不是只新增一份第九个定义。
-- [ ] 运行 template validation、unit、integration、selected deterministic e2e。
-- [ ] 若行为依赖真实 Agent 能否发现 shared template，运行最小 `agent_flow_e2e`，不得用 MD grep 冒充 Agent 行为 proof。
-- [ ] 运行 governance req/spec checks 和 verification assets check。
-- [ ] Archive，关闭 BUG-093/094。
+- [x] `/opsx:apply` 后才修改 shared workflow/template、renderer、resolver/check 和 tests。
+- [x] 删除被 shared surface 替代的重复模板 prose；不是只新增一份第九个定义。
+- [x] 运行 template validation、unit、integration、selected deterministic e2e。
+- [x] 若行为依赖真实 Agent 能否发现 shared template，运行最小 `agent_flow_e2e`，不得用 MD grep 冒充 Agent 行为 proof。
+- [x] 运行 governance req/spec checks 和 verification assets check。
+- [x] Archive，关闭 BUG-093/094。
 
 ### Stage 5 — Close umbrella plan
 
-- [ ] 在本文件补充两个 archive change 名、commit、version 和验证证据。
-- [ ] 移入 `_backlog/_done/_closed_plans/`。
-- [ ] 更新 `_backlog/plans/README.md`、closed plans README 和 `_backlog/_done/README.md`。
+- [x] 在本文件补充两个 archive change 名、commit、version 和验证证据。
+- [x] 移入 `_backlog/_done/_closed_plans/`。
+- [x] 更新 `_backlog/plans/README.md`、closed plans README 和 `_backlog/_done/README.md`。
+
+### Stage 5 closure evidence (2026-07-20)
+
+| Change | Archive | Version / implementation commit | Verification evidence |
+|---|---|---|---|
+| Change A — `restore-section-scoped-seed-projection-contract` | `2026-07-19-restore-section-scoped-seed-projection-contract` | v0.35 / `af5e6018c` | target-section unit, CLI integration, deterministic E2E, governance checks |
+| Change B — `centralize-seed-topic-authoring-contracts` | `2026-07-20-centralize-seed-topic-authoring-contracts` | v0.36 / `29c90d0c1` | focused unit/integration/deterministic E2E, workflow validation, governance checks, and the narrow real-Subject case-318 Agent-flow proof |
+
+BUG-093 is closed for its real drift: the shared seed/return-map authoring surfaces and executable renderer parity now provide one readable canonical shape. The requested header rename, historical-bundle mutation, and inference that a consumed token means skipped work were correctly rejected as non-fixes. BUG-094 is closed because the canonical rerun direction is atomically authored through topic-state, structurally checked at rerun readiness, and legacy tolerant reading remains supported; no claim is made that Engine judges the guidance semantics.
 
 ---
 

@@ -50,3 +50,7 @@
 1. 在 `phase-seed-topics.md` §3.1 的模板中明确包含 `## 本轮重跑方向` section 的占位和格式说明
 2. 或在 `canonical-topic-state.mjs` 中让 engine 生成该 section 的 placeholder token（如 `__BACKFILL_RERUN_DIRECTION__`）
 3. 格式统一：是 `**key**: value` 还是 `- **key**: value`，定一个并写入模板
+
+## Closure (2026-07-20)
+
+Closed by archived change `2026-07-20-centralize-seed-topic-authoring-contracts` (v0.36, implementation/archive commit `29c90d0c1`). The shared seed-topic authoring contract owns the canonical rerun-direction fragment; sanctioned rerun add/update/direction-only candidates publish it atomically through topic-state, and rerun-ready checks its structural binding and profile-count synchronization. Legacy presentation remains tolerantly readable, while Engine continues to avoid semantic scoring of the Agent-authored guidance.

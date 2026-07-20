@@ -16,7 +16,6 @@
 ## 活跃列表
 
 - [agent-output-linter](agent-output-linter.md) — **实现计划**：Agent 手写结构化内容不可靠，MD controller 在离产出最近的地方让 Agent 自检——JS 做两层确定性检查（语法 + 当时需要的 schema），Agent 根据报告修复，通过后才允许退出。含 format contract registry、CLI 设计、task.md 集成、hint-quality 测试覆盖审计。
-- [seed-topic-projection-contract-repair](seed-topic-projection-contract-repair.md) — **执行中（Change A 已完成）**：`restore-section-scoped-seed-projection-contract` 已 archive 并关闭 BUG-092；下一步用 `centralize-seed-topic-authoring-contracts` 收敛 seed skeleton 与 rerun direction 的 Agent-facing template，关闭 BUG-093/094 后才能归档本计划。
 
 ---
 
