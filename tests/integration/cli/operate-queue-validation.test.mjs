@@ -64,9 +64,56 @@ function writeTaskFile(filePath, overrides = {}) {
     status: overrides.status || 'queued',
     restore_priority: 'normal',
     payload: overrides.payload || {},
+    ...(overrides.kind ? { kind: overrides.kind } : {}),
+    ...(overrides.output_contract ? { output_contract: overrides.output_contract } : {}),
   };
   writeFileSync(filePath, JSON.stringify(task));
   return filePath;
+}
+
+function seedMissingModeWave1Card(dir, overrides = {}) {
+  const queuePath = join(dir, 'rb_queue.json');
+  const queue = JSON.parse(readFileSync(queuePath, 'utf8'));
+  const now = '2026-07-20T00:00:00.000Z';
+  const item = {
+    queue_item_id: overrides.queue_item_id || 'wave1-deepen-topic-a-legacy',
+    title: 'Historical mode-absent Wave1 demand',
+    targets: {
+      controller: 'main-agent',
+      delegates: { to: 'sub-agent', role_key: 'dpt-evidence-extractor', timeout_ms: 600000 },
+    },
+    kind: 'wave1_topic_deepening',
+    action: 'Deepen topic A.',
+    producer_rule: overrides.producer_rule || 'topic_deepening',
+    lineage: {},
+    priority_class: 'P4_progressive_artifact_or_seed_backfill',
+    required_receipts: overrides.required_receipts || [],
+    done_condition: 'Submit the assigned work unit.',
+    verification: { engine: ['work_unit_submit'], agent: [] },
+    writes_to: overrides.writes_to || ['artifacts/wave1/topic-a/optional-notes.md'],
+    status_sync: [],
+    completion_receipt: overrides.completion_receipt ?? null,
+    failure_route: 'queue repair work',
+    status: 'queued',
+    restore_priority: 'normal',
+    created_at: now,
+    updated_at: now,
+    payload: {
+      topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+      topic_slug: 'topic-a',
+      wave: 1,
+      ...(overrides.payload || {}),
+    },
+  };
+  queue.active_window.push(item);
+  writeFileSync(queuePath, `${JSON.stringify(queue, null, 2)}\n`);
+  return item;
+}
+
+function readTrace(dir) {
+  const tracePath = join(dir, 'rb_trace.jsonl');
+  if (!existsSync(tracePath)) return [];
+  return readFileSync(tracePath, 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
 }
 
 // Helper to corrupt bundle_name in queue
@@ -366,5 +413,231 @@ describe('AGQ-001/004 completion_receipt null', () => {
     writeFileSync(taskFile, JSON.stringify(raw));
     const r = runOq(dir, 'enqueue', '--task', taskFile);
     assert.ok(r.status !== 0 || r.stderr.length > 0, 'Expected rejection for missing completion_receipt');
+  });
+});
+
+describe('AGQ-013 Wave1 assignment-mode admission and repair', () => {
+  after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+
+  it('keeps historical missing-mode rows loadable but rejects missing, unknown, and mismatched new enqueue', async (t) => {
+    const historicalDir = createBundle(unique('mode-history'));
+    seedMissingModeWave1Card(historicalDir);
+    const checked = runOq(historicalDir, 'check');
+    assert.equal(checked.status, 0, checked.stderr);
+
+    const invalid = [
+      { label: 'missing', payload: { topic_slug: 'topic-a' }, required_receipts: [] },
+      { label: 'unknown', payload: { topic_slug: 'topic-a', assignment_mode: 'unknown' }, required_receipts: [] },
+      { label: 'primary-empty', payload: { topic_slug: 'topic-a', assignment_mode: 'primary' }, required_receipts: [] },
+      {
+        label: 'supplementary-pair',
+        payload: { topic_slug: 'topic-a', assignment_mode: 'supplementary' },
+        required_receipts: [
+          'file:artifacts/wave1/topic-a/evidence-summary.md',
+          'file:artifacts/wave1/topic-a/question-list.md',
+        ],
+      },
+    ];
+    for (const testCase of invalid) {
+      await t.test(testCase.label, () => {
+        const dir = createBundle(unique(`mode-${testCase.label}`));
+        const taskPath = join(dir, 'task.json');
+        writeTaskFile(taskPath, {
+          queue_item_id: `wave1-deepen-topic-a-${testCase.label}`,
+          kind: 'wave1_topic_deepening',
+          producer_rule: 'topic_deepening',
+          targets: {
+            controller: 'main-agent',
+            delegates: { to: 'sub-agent', role_key: 'dpt-evidence-extractor', timeout_ms: 600000 },
+          },
+          payload: testCase.payload,
+          required_receipts: testCase.required_receipts,
+          completion_receipt: testCase.required_receipts.length > 0 ? testCase.required_receipts[0] : null,
+        });
+        const before = readFileSync(join(dir, 'rb_queue.json'), 'utf8');
+        const result = runOq(dir, 'enqueue', '--task', taskPath);
+        assert.equal(result.status, 1, testCase.label);
+        assert.match(`${result.stdout}\n${result.stderr}`, /assignment_mode|primary|supplementary|receipt/i, testCase.label);
+        assert.equal(readFileSync(join(dir, 'rb_queue.json'), 'utf8'), before, testCase.label);
+      });
+    }
+  });
+
+  it('rejects every direct selector on enqueue without queue mutation', async (t) => {
+    const selectors = [
+      'required_outputs',
+      'direct_contract',
+      'direct_contract_id',
+      'assignment_contract_version',
+      'resolver_version',
+      'contract_id',
+    ];
+    for (const selector of selectors) {
+      await t.test(selector, () => {
+        const dir = createBundle(unique(`selector-${selector}`));
+        const taskPath = join(dir, 'task.json');
+        writeTaskFile(taskPath, {
+          queue_item_id: `wave1-deepen-topic-a-${selector.replaceAll('_', '-')}`,
+          kind: 'wave1_topic_deepening',
+          producer_rule: 'topic_deepening',
+          targets: {
+            controller: 'main-agent',
+            delegates: { to: 'sub-agent', role_key: 'dpt-evidence-extractor', timeout_ms: 600000 },
+          },
+          payload: {
+            topic_slug: 'topic-a',
+            assignment_mode: 'supplementary',
+            nested: { [selector]: 'forbidden' },
+          },
+          required_receipts: [],
+          completion_receipt: null,
+        });
+        const before = readFileSync(join(dir, 'rb_queue.json'), 'utf8');
+        const result = runOq(dir, 'enqueue', '--task', taskPath);
+        assert.equal(result.status, 1, selector);
+        assert.match(`${result.stdout}\n${result.stderr}`, new RegExp(selector));
+        assert.equal(readFileSync(join(dir, 'rb_queue.json'), 'utf8'), before, selector);
+      });
+    }
+  });
+
+  it('repairs one unclaimed mode-absent card with one save-before-event sequence', async (t) => {
+    for (const mode of ['primary', 'supplementary']) {
+      await t.test(mode, () => {
+        const dir = createBundle(unique(`repair-${mode}`));
+        const original = seedMissingModeWave1Card(dir, {
+          queue_item_id: `wave1-deepen-topic-a-repair-${mode}`,
+          writes_to: ['artifacts/wave1/topic-a/optional-notes.md'],
+        });
+        const result = runOq(
+          dir,
+          'repair',
+          '--queue-item-id', original.queue_item_id,
+          '--set-assignment-mode', mode,
+        );
+        assert.equal(result.status, 0, result.stderr);
+        const output = JSON.parse(result.stdout);
+        assert.equal(output.ok, true);
+        const queue = JSON.parse(readFileSync(join(dir, 'rb_queue.json'), 'utf8'));
+        const repaired = queue.active_window.find((item) => item.queue_item_id === original.queue_item_id);
+        assert.equal(repaired.payload.assignment_mode, mode);
+        assert.equal(repaired.queue_item_id, original.queue_item_id);
+        assert.equal(repaired.created_at, original.created_at);
+        assert.equal(repaired.payload.topic_uid, original.payload.topic_uid);
+        if (mode === 'primary') {
+          assert.deepEqual(repaired.required_receipts, [
+            'file:artifacts/wave1/topic-a/evidence-summary.md',
+            'file:artifacts/wave1/topic-a/question-list.md',
+          ]);
+          assert.ok(repaired.writes_to.includes('artifacts/wave1/topic-a/evidence-summary.md'));
+          assert.ok(repaired.writes_to.includes('artifacts/wave1/topic-a/question-list.md'));
+        } else {
+          assert.deepEqual(repaired.required_receipts, []);
+          assert.deepEqual(repaired.writes_to, original.writes_to);
+        }
+        const trace = readTrace(dir);
+        const savedAt = trace.findIndex((event) => event.source === 'agq-save' && event.step === 'save');
+        const repairedAt = trace.findIndex((event) => event.event === 'queue_assignment_mode_repaired');
+        assert.ok(savedAt >= 0 && repairedAt > savedAt);
+        assert.equal(trace.filter((event) => event.event === 'queue_assignment_mode_repaired').length, 1);
+      });
+    }
+  });
+
+  it('leaves queue and success-event authority unchanged for invalid repair targets', () => {
+    const cases = [
+      { label: 'missing-id', seed: false, id: 'not-present', mode: 'primary' },
+      {
+        label: 'already-classified',
+        seed: true,
+        id: 'wave1-already-classified',
+        mode: 'supplementary',
+        payload: { assignment_mode: 'primary' },
+      },
+      {
+        label: 'wrong-producer',
+        seed: true,
+        id: 'wave1-wrong-producer',
+        mode: 'primary',
+        producer_rule: 'manual',
+      },
+      {
+        label: 'unknown-mode',
+        seed: true,
+        id: 'wave1-unknown-mode',
+        mode: 'unknown',
+      },
+      {
+        label: 'delegated-in-flight',
+        seed: true,
+        id: 'wave1-in-flight',
+        mode: 'primary',
+        location: 'delegated_in_flight',
+      },
+      {
+        label: 'terminal',
+        seed: true,
+        id: 'wave1-terminal',
+        mode: 'supplementary',
+        location: 'terminal_history',
+      },
+      {
+        label: 'duplicate-location',
+        seed: true,
+        id: 'wave1-duplicate-location',
+        mode: 'primary',
+        location: 'duplicate',
+      },
+    ];
+    for (const testCase of cases) {
+      const dir = createBundle(unique(`repair-invalid-${testCase.label}`));
+      if (testCase.seed) {
+        const item = seedMissingModeWave1Card(dir, {
+          queue_item_id: testCase.id,
+          producer_rule: testCase.producer_rule,
+          payload: testCase.payload,
+        });
+        if (testCase.location) {
+          const queuePath = join(dir, 'rb_queue.json');
+          const queue = JSON.parse(readFileSync(queuePath, 'utf8'));
+          if (testCase.location !== 'duplicate') queue.active_window = [];
+          if (testCase.location === 'delegated_in_flight' || testCase.location === 'duplicate') {
+            queue.delegated_in_flight[item.queue_item_id] = {
+              queue_item_id: item.queue_item_id,
+              work_id: 'wu-w1-b000-deep-i0001',
+              wave: 1,
+              kind: 'wave1_topic_deepening',
+              batch_id: 'b000',
+              attempt_index: 1,
+              queue_item_snapshot_hash: 'snapshot-hash',
+              claimed_at: '2026-07-20T00:00:00.000Z',
+              timeout_ms: 600000,
+              deadline_at: '2026-07-20T00:10:00.000Z',
+            };
+          } else if (testCase.location === 'terminal_history') {
+            queue.terminal_history.push({
+              queue_item_id: item.queue_item_id,
+              terminal_status: 'failed',
+              completed_at: '2026-07-20T00:10:00.000Z',
+              work_id: 'wu-w1-b000-deep-i0001',
+              reason: 'historical terminal attempt',
+              item,
+            });
+          }
+          writeFileSync(queuePath, `${JSON.stringify(queue, null, 2)}\n`);
+        }
+      }
+      const queueBefore = readFileSync(join(dir, 'rb_queue.json'), 'utf8');
+      const traceBefore = readTrace(dir);
+      const result = runOq(dir, 'repair', '--queue-item-id', testCase.id, '--set-assignment-mode', testCase.mode);
+      assert.equal(result.status, 1, testCase.label);
+      assert.equal(readFileSync(join(dir, 'rb_queue.json'), 'utf8'), queueBefore, testCase.label);
+      const traceAfter = readTrace(dir);
+      assert.equal(
+        traceAfter.filter((event) => event.event === 'queue_assignment_mode_repaired').length,
+        traceBefore.filter((event) => event.event === 'queue_assignment_mode_repaired').length,
+        testCase.label,
+      );
+    }
   });
 });

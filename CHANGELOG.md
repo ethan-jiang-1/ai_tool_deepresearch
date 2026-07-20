@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.38
+
+- Bound current delegated assignments to an Engine-derived, versioned exact-output contract and validate fresh bounded Wave0/Wave1 direct facts at dry-submit, timeout preflight, and first acceptance with exact canonical roles.
+- Added explicit primary/supplementary Wave1 assignment intent, a narrow repair for genuinely mode-absent unclaimed cards, and root-first same-attempt or fresh-ID replacement guidance without automatic retry.
+- Reused one neutral direct-output evaluator across candidate and Wave adapters while preserving replay history and phase-wide provenance, count, depth, return-map, and completeness authority at Wave Gates.
+
 ## v0.37
 
 - Hardened production and disposable bundle creators with strict pre-write argv parsing: standalone help is zero-write, malformed names/options are rejected before target creation, and duplicate options cannot silently select a later value.

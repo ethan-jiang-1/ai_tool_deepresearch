@@ -23,12 +23,14 @@ export {
   QUEUE,
   canonicalQueueItemSnapshot,
   queueItemSnapshotHash,
+  validateQueue,
 } from './queue-manager-core.mjs';
 export { OutputDeclarationLedgerRecord } from './queue-manager-ledger.mjs';
 export {
   checkReceipts,
   createQueue,
   loadQueue,
+  loadQueueReadOnly,
   saveQueue,
   enqueue,
   claim,
@@ -37,6 +39,7 @@ export {
   inspect,
   pendingCount,
   makeItem,
+  recordQueueAssignmentModeRepaired,
 } from './queue-manager-lifecycle.mjs';
 export { preempt } from './queue-manager-window.mjs';
 export { render } from './queue-manager-render.mjs';

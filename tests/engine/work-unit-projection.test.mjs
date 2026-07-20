@@ -15,11 +15,10 @@ import {
 const TOPIC_UID = 'tp_123e4567-e89b-42d3-a456-426614174010';
 const bundles = [];
 
-function bundle({ rerunCount = 2, includeRound = true } = {}) {
-  const dir = tempWorkUnitBundle('work-unit-projection-');
-  bundles.push(dir);
-  const round = includeRound ? `\n    rerun_count: ${rerunCount}` : ' {}';
-  writeFileSync(path.join(dir, 'rb_profile.yaml'), `human_decision_checkpoints:\n  hitl2:${round}\n`);
+function writeProjectionPlan(dir, {
+  slug = 'current-topic',
+  previousLayouts = [{ id: '00', slug: 'old-topic' }],
+} = {}) {
   writeFileSync(path.join(dir, 'rb_plan.md'), `---
 plan_basename: projection
 derived_topic_count: 1
@@ -27,17 +26,25 @@ topic_registry_version: "2"
 topic_registry:
   - topic_uid: ${TOPIC_UID}
     id: "01"
-    slug: current-topic
+    slug: ${slug}
     title: Current Topic
     must_answer: ["What matters?"]
     scope_role: primary
     depends_on_topic_uids: []
-    previous_layouts:
-      - id: "00"
-        slug: old-topic
+    previous_layouts:${previousLayouts.length > 0 ? `
+${previousLayouts.map((layout) => `      - id: "${layout.id}"
+        slug: ${layout.slug}`).join('\n')}` : ' []'}
 ---
 # Plan
 `);
+}
+
+function bundle({ rerunCount = 2, includeRound = true, slug, previousLayouts } = {}) {
+  const dir = tempWorkUnitBundle('work-unit-projection-');
+  bundles.push(dir);
+  const round = includeRound ? `\n    rerun_count: ${rerunCount}` : ' {}';
+  writeFileSync(path.join(dir, 'rb_profile.yaml'), `human_decision_checkpoints:\n  hitl2:${round}\n`);
+  writeProjectionPlan(dir, { slug, previousLayouts });
   return dir;
 }
 
@@ -73,8 +80,9 @@ describe('eligible work-unit projection', () => {
   });
 
   it('projects current rows through UID and previous-layout binding', () => {
-    const dir = bundle();
+    const dir = bundle({ slug: 'old-topic', previousLayouts: [] });
     const submitted = submit(dir, { slug: 'old-topic' });
+    writeProjectionPlan(dir);
     const result = collectEligibleRows(dir, 'wave1', 'current-topic');
     assert.equal(result.passed, true, JSON.stringify(result.root_findings));
     assert.equal(result.rows[0].work_id, submitted.record.work_id);

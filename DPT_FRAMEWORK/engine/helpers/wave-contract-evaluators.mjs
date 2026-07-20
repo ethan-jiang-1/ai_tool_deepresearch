@@ -4,8 +4,8 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join, resolve as resolvePath } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 
-import { ReferenceMetadataArraySchema } from '../../schema/index.mjs';
 import { countReferences } from './ref-count.mjs';
+import { evaluateDirectOutputTarget } from './direct-output-contract.mjs';
 import {
   checkCacheCoverage,
   checkReferenceFormatFiles,
@@ -156,6 +156,31 @@ function localCheckerFinding(bundlePath, rule, {
   });
 }
 
+function directRootFinding(bundlePath, rule, target, directRoot, suffix = 'direct_root') {
+  return makeContractFinding({
+    id: `${rule.id}${target.topic ? `:${target.topic}` : ''}:${suffix}`,
+    ruleId: rule.id,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: directRoot.root_class === 'contract_integrity' ? 'authority_integrity' : 'required_structure',
+    surface: target.resolved,
+    expected: directRoot.expected,
+    observed: directRoot.observed,
+    missingFact: `${directRoot.coordinate}: ${directRoot.observed}`,
+    repairKind: directRoot.root_class === 'contract_integrity' ? 'missing_contract' : 'agent_action',
+    writeTo: resolvePath(bundlePath, target.resolved),
+    repair: `Repair ${target.resolved}, then rerun this Wave checkpoint.`,
+    detail: `[${rule.id}] ${directRoot.code}: ${directRoot.observed}`,
+    checkpointContext: { direct_root: directRoot },
+  });
+}
+
+function directContractForWave1Target(target) {
+  if (String(target).endsWith('/evidence-summary.md')) return 'wave1.evidence-summary.v1';
+  if (String(target).endsWith('/question-list.md')) return 'wave1.question-list.v1';
+  return null;
+}
+
 function advisoryFinding(rule, detail, index = 0) {
   return makeContractFinding({
     id: `${rule.id}:advisory:${index + 1}`,
@@ -269,20 +294,6 @@ function evaluateCountFloor(bundlePath, rule, resolvedTarget, topic, alternative
   return { passed: false, detail: `Count floor not met for ${resolvedTarget}: ${count} entries (threshold: ${threshold})${topic ? ` (topic: ${topic})` : ''}`, yaml };
 }
 
-function checkQuestionListSections(content) {
-  const sections = parseMarkdownSemanticSections(content);
-  const required = [
-    'topic investigation targets',
-    'question reconciliation',
-    'emergent question protocol',
-    'exploration / exploitation decision',
-  ];
-  const missing = required.filter((section) => !(sections.get(section) || '').trim());
-  return missing.length === 0
-    ? { passed: true }
-    : { passed: false, detail: `Missing or empty semantic question-list section(s): ${missing.join(', ')}` };
-}
-
 function checkSourceUrlMarker(content) {
   const candidates = String(content || '').match(/https?:\/\/[^\s<>\]"']+/gi) || [];
   const hasParseableUrl = candidates.some((candidate) => {
@@ -297,13 +308,6 @@ function checkSourceUrlMarker(content) {
   return hasParseableUrl
     ? { passed: true }
     : { passed: false, detail: 'No parseable http(s) source URL found in evidence-summary.md' };
-}
-
-function checkKeyFindingsContent(content) {
-  const section = parseMarkdownSemanticSections(content).get('key findings') || '';
-  return section.split(/\r?\n/).some((line) => line.trim() && !/^<!--/.test(line.trim()))
-    ? { passed: true }
-    : { passed: false, detail: 'Key Findings section is missing or empty' };
 }
 
 function checkLedgerSections(content) {
@@ -412,6 +416,7 @@ export function evaluateWave0Contract(bundlePath, definition, { topicRegistryFac
   const maskedRuleIds = [];
   const sourceStates = new Map();
   const sourceData = new Map();
+  const directResults = new Map();
   let layouts;
   try {
     layouts = topicRegistryFact?.wave_layouts || topicLayouts(bundlePath);
@@ -455,63 +460,40 @@ export function evaluateWave0Contract(bundlePath, definition, { topicRegistryFac
       let result = { passed: true };
       try {
         if (rule.check === 'file_exists') {
-          result.passed = existsSync(join(bundlePath, target.resolved));
-          if (!result.passed) result.detail = `Missing file: ${target.resolved}${target.topic ? ` (topic: ${target.topic})` : ''}`;
-          if (rule.id === 'per_topic_source_yaml_exists') sourceStates.set(target.topic, result.passed ? 'present' : 'missing');
+          if (rule.id === 'per_topic_source_yaml_exists') {
+            const direct = evaluateDirectOutputTarget({
+              bundleDir: bundlePath,
+              target: target.resolved,
+              contractId: 'wave0.source-metadata-array.v1',
+            });
+            directResults.set(target.resolved, direct);
+            const prerequisiteRoot = direct.roots.find((root) => root.code.startsWith('direct_target_') || root.code === 'direct_bundle_root_unreadable');
+            result = prerequisiteRoot
+              ? { passed: false, findings: [directRootFinding(bundlePath, rule, target, prerequisiteRoot, 'direct_read')] }
+              : { passed: true };
+            sourceStates.set(target.topic, prerequisiteRoot ? 'missing' : 'present');
+          } else {
+            result.passed = existsSync(join(bundlePath, target.resolved));
+            if (!result.passed) result.detail = `Missing file: ${target.resolved}${target.topic ? ` (topic: ${target.topic})` : ''}`;
+          }
         } else if (rule.check === 'dir_exists') {
           const path = join(bundlePath, target.resolved);
           result.passed = existsSync(path) && statSync(path).isDirectory();
           if (!result.passed) result.detail = `Missing directory: ${target.resolved}`;
         } else if (rule.check === 'schema_valid') {
-          const yaml = readYamlArraySafe(join(bundlePath, target.resolved));
-          if (!yaml.ok || !Array.isArray(yaml.data)) {
-            const keys = yaml.data && typeof yaml.data === 'object' ? Object.keys(yaml.data) : [];
-            const detail = yaml.ok
-              ? `source.yaml must be a top-level YAML array at ${target.resolved}.${keys.length > 0 ? ` Found object keys: ${keys.join(', ')}` : ''}`
-              : `[parse_error] ${yaml.error}`;
-            result = {
-              passed: false,
-              detail,
-              findings: [localCheckerFinding(bundlePath, rule, {
-                topic: target.topic,
-                suffix: 'yaml_array',
-                blockingBasis: yaml.ok ? 'required_structure' : 'authority_integrity',
-                surface: target.resolved,
-                expected: 'A top-level YAML array accepted by ReferenceMetadataArraySchema.',
-                observed: yaml.ok ? { type: Array.isArray(yaml.data) ? 'array' : typeof yaml.data, object_keys: keys } : yaml.error,
-                missingFact: yaml.ok
-                  ? `${target.resolved} must be a top-level YAML array, but the observed value is not an array.`
-                  : `${target.resolved} cannot be parsed as YAML: ${yaml.error}`,
-                repair: `Repair ${target.resolved} as a top-level YAML array with the required source fields.`,
-                detail,
-              })],
-            };
+          const direct = directResults.get(target.resolved) || evaluateDirectOutputTarget({
+            bundleDir: bundlePath,
+            target: target.resolved,
+            contractId: 'wave0.source-metadata-array.v1',
+          });
+          directResults.set(target.resolved, direct);
+          if (!direct.passed) {
+            result = { passed: false, findings: [directRootFinding(bundlePath, rule, target, direct.roots[0])] };
             sourceStates.set(target.topic, 'invalid');
           } else {
-            const parsed = ReferenceMetadataArraySchema.safeParse(yaml.data);
-            if (!parsed.success) {
-              const issues = parsed.error.issues.map((issue) => `[${issue.path.join('.') || '<root>'}] ${issue.message}`);
-              const detail = `Schema validation failed for ${target.resolved}: ${issues.join('; ')}`;
-              result = {
-                passed: false,
-                detail,
-                findings: issues.map((issue, index) => localCheckerFinding(bundlePath, rule, {
-                  topic: target.topic,
-                  suffix: `schema:${index + 1}`,
-                  blockingBasis: 'authority_integrity',
-                  surface: target.resolved,
-                  expected: 'ReferenceMetadataArraySchema accepts every source entry.',
-                  observed: issue,
-                  missingFact: `${target.resolved} violates ReferenceMetadataArraySchema: ${issue}`,
-                  repair: `Repair the named source entry field in ${target.resolved}.`,
-                  detail: `Schema validation failed for ${target.resolved}: ${issue}`,
-                })),
-              };
-              sourceStates.set(target.topic, 'invalid');
-            } else {
-              sourceStates.set(target.topic, 'valid');
-              sourceData.set(target.topic, yaml.data);
-            }
+            sourceStates.set(target.topic, 'valid');
+            const yaml = readYamlArraySafe(join(bundlePath, target.resolved));
+            if (yaml.ok && Array.isArray(yaml.data)) sourceData.set(target.topic, yaml.data);
           }
         } else if (rule.check === 'count_floor' && rule.id === 'per_topic_count_floor' && sourceData.has(target.topic)) {
           const threshold = resolveThreshold(rule, readBundleProfile(bundlePath));
@@ -569,6 +551,7 @@ export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFac
   const findings = [];
   const maskedRuleIds = [];
   const missingFiles = new Set();
+  const directResults = new Map();
   let layouts;
   try {
     layouts = topicRegistryFact?.wave_layouts || topicLayouts(bundlePath);
@@ -608,10 +591,21 @@ export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFac
       let result = { passed: true };
       try {
         if (rule.check === 'file_exists') {
-          result.passed = existsSync(join(bundlePath, target.resolved));
-          if (!result.passed) {
-            missingFiles.add(target.resolved);
-            result.detail = `Missing file: ${target.resolved}${target.topic ? ` (topic: ${target.topic})` : ''}`;
+          const contractId = directContractForWave1Target(target.resolved);
+          if (contractId) {
+            const direct = evaluateDirectOutputTarget({ bundleDir: bundlePath, target: target.resolved, contractId });
+            directResults.set(target.resolved, direct);
+            const prerequisiteRoot = direct.roots.find((root) => root.code.startsWith('direct_target_') || root.code === 'direct_bundle_root_unreadable');
+            if (prerequisiteRoot) {
+              missingFiles.add(target.resolved);
+              result = { passed: false, findings: [directRootFinding(bundlePath, rule, target, prerequisiteRoot, 'direct_read')] };
+            }
+          } else {
+            result.passed = existsSync(join(bundlePath, target.resolved));
+            if (!result.passed) {
+              missingFiles.add(target.resolved);
+              result.detail = `Missing file: ${target.resolved}${target.topic ? ` (topic: ${target.topic})` : ''}`;
+            }
           }
         } else if (rule.check === 'dir_exists') {
           const path = join(bundlePath, target.resolved);
@@ -621,12 +615,23 @@ export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFac
           result = evaluateStatusRule(bundlePath, rule);
         } else if (rule.check === 'pattern_match') {
           if (['question_list_has_four_sections', 'source_url_present', 'key_findings_non_empty'].includes(rule.id)) {
-            const content = readFileSync(join(bundlePath, target.resolved), 'utf8');
-            if (rule.id === 'question_list_has_four_sections') result = checkQuestionListSections(content);
-            else if (rule.id === 'source_url_present') result = checkSourceUrlMarker(content);
-            else result = checkKeyFindingsContent(content);
+            if (rule.id === 'source_url_present') {
+              const content = readFileSync(join(bundlePath, target.resolved), 'utf8');
+              result = checkSourceUrlMarker(content);
+            } else {
+              const contractId = directContractForWave1Target(target.resolved);
+              const direct = directResults.get(target.resolved) || evaluateDirectOutputTarget({
+                bundleDir: bundlePath,
+                target: target.resolved,
+                contractId,
+              });
+              directResults.set(target.resolved, direct);
+              result = direct.passed
+                ? { passed: true }
+                : { passed: false, findings: [directRootFinding(bundlePath, rule, target, direct.roots[0])] };
+            }
             if (!result.passed) {
-              result.findings = [localCheckerFinding(bundlePath, rule, {
+              if (!result.findings) result.findings = [localCheckerFinding(bundlePath, rule, {
                 topic: target.topic,
                 suffix: 'semantic_structure',
                 blockingBasis: 'required_structure',

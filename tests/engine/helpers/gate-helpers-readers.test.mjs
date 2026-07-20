@@ -55,11 +55,29 @@ function readerQueueItem(id = 'queue-a') {
     targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
     kind: 'wave0_source_intake',
     producer_rule: 'source_intake_fan_in',
-    payload: { topic_slug: id },
+    payload: { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000', topic_slug: 'topic-a', wave: 0 },
+    required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+    writes_to: ['artifacts/wave0/topic-a/source.yaml'],
   });
 }
 
 function seedReaderQueue(dir, id = 'queue-a') {
+  writeFileSync(join(dir, 'rb_plan.md'), `---
+plan_basename: gate-reader
+derived_topic_count: 1
+topic_registry_version: "2"
+topic_registry:
+  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
+    id: "01"
+    slug: topic-a
+    title: Topic A
+    must_answer: ["What matters?"]
+    scope_role: primary
+    depends_on_topic_uids: []
+    previous_layouts: []
+---
+# Plan
+`);
   let queue = createQueue('gate-reader');
   queue = enqueue(queue, readerQueueItem(id));
   saveQueue(dir, queue);
@@ -73,6 +91,9 @@ function writeReaderSubmitFiles(dir, record) {
   const outputPath = `reference/${record.work_id}.md`;
   mkdirSync(join(dir, 'reference'), { recursive: true });
   writeFileSync(join(dir, outputPath), '# Source\n\nGate reader fixture source.\n');
+  const sourcePath = 'artifacts/wave0/topic-a/source.yaml';
+  mkdirSync(join(dir, 'artifacts/wave0/topic-a'), { recursive: true });
+  writeFileSync(join(dir, sourcePath), '- url: https://example.com/source\n  title: Source\n  retrieved_date: 2026-07-20\n  topic_tag: topic-a\n');
 
   const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
   mkdirSync(join(dir, cacheTrail), { recursive: true });
@@ -101,7 +122,10 @@ function writeReaderSubmitFiles(dir, record) {
     actor_contract_version: record.actor_contract_version,
     execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'done',
-    output_files: [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }],
+    output_files: [
+      { path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' },
+      { path: sourcePath, role: 'source_yaml' },
+    ],
     cache_trails: [cacheTrail],
   }, null, 2)}\n`);
   return resultPath;

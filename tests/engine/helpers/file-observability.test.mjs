@@ -187,8 +187,8 @@ describe('file observability', () => {
       phase: 'wave1',
       queueItemId: 'topic-a',
       outputs: [
-        { path: evidencePath, role: 'evidence_summary', content: `# Evidence\n\n[Source](${sourceUrl})\n` },
-        { path: questionPath, role: 'question_list', content: '# Questions\n' },
+        { path: evidencePath, role: 'evidence_summary', content: `# Evidence\n\n[Source](${sourceUrl})\n\n## Key Findings\n\n- Supported finding.\n` },
+        { path: questionPath, role: 'question_list', content: '## Topic Investigation Targets\n\nTargets.\n\n## Question Reconciliation\n\nReconciled.\n\n## Emergent Question Protocol\n\nChecked.\n\n## Exploration / Exploitation Decision\n\nContinue.\n' },
       ],
       cacheTrails: [{ path: cacheTrail, url: sourceUrl }],
       resultOverrides: {
@@ -356,11 +356,11 @@ describe('file observability', () => {
       outputs: [{
         path: 'artifacts/wave1/topic-a/evidence-summary.md',
         role: 'evidence_summary',
-        content: '# Evidence\n',
+        content: '# Evidence\n\n## Key Findings\n\n- Supported finding.\n',
       }, {
         path: 'artifacts/wave1/topic-a/question-list.md',
         role: 'question_list',
-        content: '# Questions\n',
+        content: '## Topic Investigation Targets\n\nTargets.\n\n## Question Reconciliation\n\nReconciled.\n\n## Emergent Question Protocol\n\nChecked.\n\n## Exploration / Exploitation Decision\n\nContinue.\n',
       }],
       cacheTrails: [{
         path: '_cache/wave1/primary/topic-a/source',

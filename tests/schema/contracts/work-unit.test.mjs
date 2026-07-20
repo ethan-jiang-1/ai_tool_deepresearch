@@ -220,3 +220,112 @@ describe('WorkUnitLedgerRecordSchema', () => {
     );
   });
 });
+
+async function currentAssignmentSchemas() {
+  const module = await import('../../../DPT_FRAMEWORK/schema/contracts/work-unit.mjs');
+  return {
+    WorkUnitRequiredOutputSchema: module.WorkUnitRequiredOutputSchema,
+    WorkUnitOutputContractSchema: module.WorkUnitOutputContractSchema,
+    WorkUnitCandidateProjectionSchema: module.WorkUnitCandidateProjectionSchema,
+  };
+}
+
+describe('current assignment contract schemas', () => {
+  it('accepts the current marker on index records while retaining genuine legacy absence', () => {
+    assert.ok(WorkUnitIndexRecordSchema.safeParse(baseIndexRecord()).success, 'marker absence remains legacy');
+    assert.ok(WorkUnitIndexRecordSchema.safeParse(baseIndexRecord({
+      assignment_contract_version: 'work-unit.assignment.v1',
+    })).success, 'current marker is accepted');
+    assert.equal(WorkUnitIndexRecordSchema.safeParse(baseIndexRecord({
+      assignment_contract_version: 'work-unit.assignment.v999',
+    })).success, false, 'unknown marker fails closed');
+  });
+
+  it('owns closed direct IDs, canonical roles, safe paths, and unique required-output tuples', async () => {
+    const { WorkUnitRequiredOutputSchema, WorkUnitOutputContractSchema } = await currentAssignmentSchemas();
+    const source = {
+      path: 'artifacts/wave0/topic-a/source.yaml',
+      role: 'source_yaml',
+      direct_contract: 'wave0.source-metadata-array.v1',
+    };
+    const evidence = {
+      path: 'artifacts/wave1/topic-a/evidence-summary.md',
+      role: 'evidence_summary',
+      direct_contract: 'wave1.evidence-summary.v1',
+    };
+    const questions = {
+      path: 'artifacts/wave1/topic-a/question-list.md',
+      role: 'question_list',
+      direct_contract: 'wave1.question-list.v1',
+    };
+    for (const required of [source, evidence, questions]) {
+      assert.deepEqual(WorkUnitRequiredOutputSchema.parse(required), required);
+    }
+    for (const required of [
+      { ...source, path: '../source.yaml' },
+      { ...source, path: '/absolute/source.yaml' },
+      { ...source, path: 'artifacts\\wave0\\topic-a\\source.yaml' },
+      { ...source, role: 'other' },
+      { ...source, direct_contract: 'unknown.contract.v1' },
+      { ...source, extra: true },
+    ]) {
+      assert.equal(WorkUnitRequiredOutputSchema.safeParse(required).success, false);
+    }
+
+    const base = {
+      required_result_fields: ['work_id', 'queue_item_id', 'kind', 'receipt_nonce', 'output_files', 'cache_trails'],
+      output_files: {
+        required: true,
+        allowed_roles: ['reference', 'source_yaml', 'evidence_summary', 'question_list', 'other'],
+        reference_requires_source_url: true,
+      },
+    };
+    assert.ok(WorkUnitOutputContractSchema.safeParse({ ...base, required_outputs: [evidence, questions] }).success);
+    assert.equal(WorkUnitOutputContractSchema.safeParse({ ...base, required_outputs: [source, source] }).success, false);
+    assert.equal(WorkUnitOutputContractSchema.safeParse({
+      ...base,
+      required_outputs: [source, { ...source, role: 'evidence_summary' }],
+    }).success, false);
+    assert.equal(WorkUnitOutputContractSchema.safeParse({
+      ...base,
+      output_files: { ...base.output_files, allowed_roles: ['reference'] },
+      required_outputs: [source],
+    }).success, false);
+  });
+
+  it('defines one strict closed candidate projection shared by dry, formal, and timeout paths', async () => {
+    const { WorkUnitCandidateProjectionSchema } = await currentAssignmentSchemas();
+    const actions = [
+      'repair_same_candidate',
+      'return_to_actor',
+      'fail_and_replace',
+      'inspect_contract',
+    ];
+    assert.deepEqual(WorkUnitCandidateProjectionSchema.parse({
+      recommended_action: 'submit',
+      primary_root_code: null,
+    }), {
+      recommended_action: 'submit',
+      primary_root_code: null,
+    });
+    for (const recommended_action of actions) {
+      assert.ok(WorkUnitCandidateProjectionSchema.safeParse({
+        recommended_action,
+        primary_root_code: 'root_code',
+      }).success);
+    }
+    assert.equal(WorkUnitCandidateProjectionSchema.safeParse({
+      recommended_action: 'submit',
+      primary_root_code: 'must_be_null',
+    }).success, false);
+    assert.equal(WorkUnitCandidateProjectionSchema.safeParse({
+      recommended_action: 'abandon',
+      primary_root_code: 'root_code',
+    }).success, false);
+    assert.equal(WorkUnitCandidateProjectionSchema.safeParse({
+      recommended_action: 'inspect_contract',
+      primary_root_code: null,
+      repair_scope: 'contract_integrity',
+    }).success, false);
+  });
+});

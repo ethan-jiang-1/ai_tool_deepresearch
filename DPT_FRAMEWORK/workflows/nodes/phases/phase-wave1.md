@@ -106,8 +106,10 @@ Task card template:
   "completion_receipt": "work_unit:submitted-ledger",
   "failure_route": "work_unit_repair",
   "payload": {
+    "topic_uid": "{topic.topic_uid}",
     "topic_slug": "{topic.slug}",
     "topic_title": "{topic.title}",
+    "assignment_mode": "primary",
     "wave": 1
   },
   "lineage": {
@@ -244,9 +246,11 @@ Before gate, the Phase Agent checks:
 
 These are Agent discipline checks. The gate enforces structural and provenance checks, plus configured count floors; it does not replace semantic judgment.
 
-If the depth review records `decision: supplement_required`, enqueue a supplementary `wave1_topic_deepening` queue item with explicit `payload.topic_slug` and a queue id such as `wave1-deepen-{topic.slug}-v2` or `wave1-deepen-{topic.slug}-suppl-r1`. Topic identity comes from `payload.topic_slug`; queue id parsing is fallback only.
+If the depth review records `decision: supplement_required`, enqueue a supplementary `wave1_topic_deepening` queue item with a fresh globally unused `queue_item_id`, explicit canonical `payload.topic_uid` / `payload.topic_slug`, `payload.assignment_mode: supplementary`, and `required_receipts: []`. A primary card uses `payload.assignment_mode: primary` plus the exact evidence-summary.md/question-list.md file receipt pair. Assignment intent is never inferred from an ID suffix, prose, `writes_to`, or receipt emptiness.
 
 The supplementary item follows the same claim/task/dry-submit/formal-submit loop. Use only exact prior paths listed in the claimed task's `Authorized Source-Ref Lineage`; if none is listed, produce a genuinely current assigned output rather than guessing from a filename. Repair `/source_claims/<index>/source_ref` on the same candidate when dry-submit rejects lineage, and never copy an old evidence file into `output_files[]` or overwrite it solely to make validation pass.
+
+For a mode-absent unclaimed Wave1 card, run `operate-queue.mjs repair <bundle> --queue-item-id <id> --set-assignment-mode <primary|supplementary>`; do not infer its mode. After `work_done`, a semantic `fail_and_replace` uses `operate-work-unit fail --reason semantic_contract:<primary_root_code>`, then explicitly enqueues the same Topic, assignment mode, and receipt obligation under a fresh queue ID before a new claim. It does not weaken primary into supplementary or auto-retry.
 
 ## 4. Expected Artifacts
 

@@ -7,7 +7,11 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { makeItem } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
-import { WorkUnitResultSchema } from '../../DPT_FRAMEWORK/schema/contracts/work-unit.mjs';
+import {
+  WorkUnitBeaconSchema,
+  WorkUnitManifestSchema,
+  WorkUnitResultSchema,
+} from '../../DPT_FRAMEWORK/schema/contracts/work-unit.mjs';
 import {
   createWorkUnit,
   loadWorkUnitIndex,
@@ -77,6 +81,126 @@ const retiredAuthorityPattern = new RegExp([
 ].join('|'));
 
 describe('work-unit index and envelope', () => {
+  it('projects one current assignment binding and one starter default across every envelope surface', () => {
+    const currentCases = [
+      {
+        wave: 0,
+        item: queueItem({
+          required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+          writes_to: ['artifacts/wave0/topic-a/source.yaml'],
+          payload: {
+            wave: 0,
+            topic_uid: 'tp_00000001-0000-4000-8000-000000000000',
+            topic_slug: 'topic-a',
+          },
+        }),
+        expected: [{
+          path: 'artifacts/wave0/topic-a/source.yaml',
+          role: 'source_yaml',
+          direct_contract: 'wave0.source-metadata-array.v1',
+        }],
+      },
+      {
+        wave: 2,
+        item: queueItemForKind('wave2_targeted_evidence', { required_receipts: [] }),
+        expected: [],
+      },
+    ];
+
+    for (const testCase of currentCases) {
+      const dir = tempBundle();
+      try {
+        const { record, manifest } = createWorkUnit(dir, { queueItem: testCase.item, wave: testCase.wave });
+        const beacon = readJson(path.join(dir, manifest.paths.beacon_ref));
+        const schema = readJson(path.join(dir, manifest.paths.result_schema_ref));
+        const task = readFileSync(path.join(dir, manifest.paths.task_ref), 'utf8');
+        const starter = resultStarterFromTask(task);
+
+        assert.equal(record.assignment_contract_version, 'work-unit.assignment.v1');
+        assert.equal(manifest.assignment_contract_version, 'work-unit.assignment.v1');
+        assert.equal(beacon.assignment_contract_version, 'work-unit.assignment.v1');
+        assert.deepEqual(manifest.output_contract.required_outputs, testCase.expected);
+        assert.deepEqual(beacon.output_contract, manifest.output_contract);
+        assert.deepEqual(schema.properties.output_files.default, testCase.expected.map(({ path: outputPath, role }) => ({ path: outputPath, role })));
+        assert.deepEqual(starter.output_files, schema.properties.output_files.default);
+        assert.doesNotThrow(() => WorkUnitResultSchema.parse(starter));
+
+        const branches = schema.properties.output_files.allOf || [];
+        const itemBranches = schema.properties.output_files.items.allOf || [];
+        assert.equal(branches.length, testCase.expected.length);
+        assert.equal(itemBranches.length, testCase.expected.length);
+        testCase.expected.forEach((required, index) => {
+          assert.deepEqual(branches[index], {
+            contains: {
+              type: 'object',
+              properties: {
+                path: { const: required.path },
+                role: { const: required.role },
+              },
+              required: ['path', 'role'],
+            },
+            minContains: 1,
+            maxContains: 1,
+          });
+          assert.deepEqual(itemBranches[index], {
+            if: {
+              properties: { path: { const: required.path } },
+              required: ['path'],
+            },
+            then: {
+              properties: { role: { const: required.role } },
+            },
+          });
+        });
+      } finally {
+        cleanup(dir);
+      }
+    }
+  });
+
+  it('accepts genuine legacy marker absence but rejects partial or unknown current bindings', () => {
+    const dir = tempBundle();
+    try {
+      const { manifest } = createWorkUnit(dir, {
+        queueItem: queueItem({
+          required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+          payload: {
+            wave: 0,
+            topic_uid: 'tp_00000001-0000-4000-8000-000000000000',
+            topic_slug: 'topic-a',
+          },
+        }),
+        wave: 0,
+      });
+      const beacon = readJson(path.join(dir, manifest.paths.beacon_ref));
+
+      const legacyManifest = structuredClone(manifest);
+      delete legacyManifest.assignment_contract_version;
+      delete legacyManifest.output_contract.required_outputs;
+      assert.ok(WorkUnitManifestSchema.safeParse(legacyManifest).success);
+
+      const legacyBeacon = structuredClone(beacon);
+      delete legacyBeacon.assignment_contract_version;
+      delete legacyBeacon.output_contract.required_outputs;
+      assert.ok(WorkUnitBeaconSchema.safeParse(legacyBeacon).success);
+
+      const markerOnly = structuredClone(manifest);
+      delete markerOnly.output_contract.required_outputs;
+      assert.equal(WorkUnitManifestSchema.safeParse(markerOnly).success, false);
+
+      const contractOnly = structuredClone(manifest);
+      delete contractOnly.assignment_contract_version;
+      assert.equal(WorkUnitManifestSchema.safeParse(contractOnly).success, false);
+
+      assert.equal(WorkUnitBeaconSchema.safeParse({
+        ...beacon,
+        assignment_contract_version: 'work-unit.assignment.v999',
+      }).success, false);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('allocates index record and writes envelope surfaces', () => {
     const dir = tempBundle();
     try {

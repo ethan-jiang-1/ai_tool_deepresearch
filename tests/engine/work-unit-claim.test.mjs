@@ -1,6 +1,6 @@
 // @impl DEW-003, AGQ-014, SUD-001, SUD-002, LOG-006
 
-import { existsSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { mkdtempSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -38,7 +38,13 @@ function delegated(id, overrides = {}) {
     targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
     kind: 'wave0_source_intake',
     producer_rule: 'source_intake_fan_in',
-    payload: { topic_slug: id },
+    payload: {
+      topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+      topic_slug: 'topic-a',
+      wave: 0,
+    },
+    required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+    writes_to: ['artifacts/wave0/topic-a/source.yaml'],
     ...overrides,
   });
 }
@@ -54,6 +60,24 @@ function direct(id) {
 }
 
 function saveSeedQueue(dir, items) {
+  if (!existsSync(path.join(dir, 'rb_plan.md'))) {
+    writeFileSync(path.join(dir, 'rb_plan.md'), `---
+plan_basename: claim-test
+derived_topic_count: 1
+topic_registry_version: "2"
+topic_registry:
+  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
+    id: "01"
+    slug: topic-a
+    title: Topic A
+    must_answer: ["What matters?"]
+    scope_role: primary
+    depends_on_topic_uids: []
+    previous_layouts: []
+---
+# Plan
+`);
+  }
   let queue = createQueue(path.basename(dir));
   for (const item of items) queue = enqueue(queue, item);
   saveQueue(dir, queue);

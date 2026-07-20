@@ -9,8 +9,14 @@ import { createHash } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
 import {
   claim, complete, enqueue, fail, inspect,
-  loadQueue, pendingCount, preempt, render, saveQueue, QUEUE,
+  loadQueue, pendingCount, preempt, render, saveQueue, validateQueue, QUEUE,
+  recordQueueAssignmentModeRepaired,
 } from '../engine/queue-manager.mjs';
+import {
+  WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+} from '../schema/contracts/work-unit.mjs';
+import { kindContractForQueueItem } from '../engine/work-unit-utils.mjs';
+import { resolveWorkUnitAssignmentContract } from '../engine/work-unit-assignment-contract.mjs';
 import { inspectCanonicalTopicState } from '../engine/helpers/canonical-topic-state.mjs';
 import { evaluateTopicLayouts, resolveTopicLayout } from '../engine/helpers/topic-layout.mjs';
 import { CanonicalPlanSchema } from '../schema/contracts/plan.mjs';
@@ -26,7 +32,8 @@ function usage() {
   node DPT_FRAMEWORK/cli/operate-queue.mjs count <bundle>
   node DPT_FRAMEWORK/cli/operate-queue.mjs render <bundle>
   node DPT_FRAMEWORK/cli/operate-queue.mjs project <bundle>
-  node DPT_FRAMEWORK/cli/operate-queue.mjs repair <bundle> --remove-stale`);
+  node DPT_FRAMEWORK/cli/operate-queue.mjs repair <bundle> --remove-stale
+  node DPT_FRAMEWORK/cli/operate-queue.mjs repair <bundle> --queue-item-id <id> --set-assignment-mode <primary|supplementary>`);
 }
 
 function readJson(file) {
@@ -83,6 +90,8 @@ const { values } = parseArgs({
     reason: { type: 'string', default: 'urgent_preemption' },
     'unsafe-current': { type: 'boolean', default: false },
     'remove-stale': { type: 'boolean', default: false },
+    'queue-item-id': { type: 'string' },
+    'set-assignment-mode': { type: 'string' },
   },
   allowPositionals: false,
 });
@@ -482,6 +491,99 @@ function repairRemoveStale(queue, bundleDir) {
   return { queue, removed };
 }
 
+function validateCurrentAssignmentCard(taskCard) {
+  if (taskCard.kind !== 'wave1_topic_deepening') return null;
+  if (taskCard.producer_rule !== 'topic_deepening') {
+    throw new Error('wave1_topic_deepening assignment requires producer_rule topic_deepening');
+  }
+  return resolveWorkUnitAssignmentContract({
+    assignmentContractVersion: WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+    kind: taskCard.kind,
+    queueItem: taskCard,
+    topicBinding: {
+      topic_uid: taskCard.payload?.topic_uid,
+      topic_slug: taskCard.payload?.topic_slug,
+    },
+    baseOutputContract: kindContractForQueueItem(taskCard, taskCard.kind).output_contract,
+  });
+}
+
+function findQueueItemLocations(queue, queueItemId) {
+  const locations = [];
+  for (const [index, item] of queue.active_window.entries()) {
+    if (item.queue_item_id === queueItemId) locations.push({ location: 'active_window', index, item });
+  }
+  for (const [index, item] of queue.refill_pool.entries()) {
+    if (item.queue_item_id === queueItemId) locations.push({ location: 'refill_pool', index, item });
+  }
+  if (queue.delegated_in_flight?.[queueItemId]) {
+    locations.push({ location: 'delegated_in_flight', item: queue.delegated_in_flight[queueItemId] });
+  }
+  for (const [index, record] of queue.terminal_history.entries()) {
+    if (record.queue_item_id === queueItemId) locations.push({ location: 'terminal_history', index, item: record.item || record });
+  }
+  return locations;
+}
+
+function repairAssignmentMode(queue, bundleDir, { queueItemId, mode }) {
+  if (!queueItemId) throw new Error('--queue-item-id is required with --set-assignment-mode');
+  if (mode !== 'primary' && mode !== 'supplementary') {
+    throw new Error('--set-assignment-mode must be primary or supplementary');
+  }
+
+  const nextQueue = JSON.parse(JSON.stringify(queue));
+  const locations = findQueueItemLocations(nextQueue, queueItemId);
+  if (locations.length !== 1) throw new Error(`queue_item_id ${queueItemId} must identify exactly one durable queue location`);
+  const target = locations[0];
+  if (target.location !== 'active_window' && target.location !== 'refill_pool') {
+    throw new Error(`queue_item_id ${queueItemId} is not an unclaimed queued card`);
+  }
+  const item = target.item;
+  if (item.status !== 'queued') throw new Error(`queue_item_id ${queueItemId} is not queued`);
+  if (item.kind !== 'wave1_topic_deepening' || item.producer_rule !== 'topic_deepening') {
+    throw new Error(`queue_item_id ${queueItemId} is not a topic_deepening Wave1 work-unit demand`);
+  }
+  if (Object.hasOwn(item.payload || {}, 'assignment_mode')) {
+    throw new Error(`queue_item_id ${queueItemId} already has assignment_mode and cannot be reclassified`);
+  }
+  if (!item.payload?.topic_uid || !item.payload?.topic_slug) {
+    throw new Error(`queue_item_id ${queueItemId} lacks explicit canonical Topic coordinates`);
+  }
+
+  const topicValidation = validateTopicSlug(item, bundleDir);
+  if (!topicValidation.valid) throw new Error(topicValidation.error);
+  const canonical = topicValidation.taskCard || item;
+  const evidencePath = `artifacts/wave1/${canonical.payload.topic_slug}/evidence-summary.md`;
+  const questionPath = `artifacts/wave1/${canonical.payload.topic_slug}/question-list.md`;
+  const priorReceipts = [...item.required_receipts];
+  const derivedReceipts = mode === 'primary'
+    ? [`file:${evidencePath}`, `file:${questionPath}`]
+    : [];
+  const repaired = {
+    ...item,
+    payload: { ...item.payload, assignment_mode: mode },
+    required_receipts: derivedReceipts,
+    completion_receipt: 'work_unit:submitted-ledger',
+    writes_to: mode === 'primary'
+      ? [...new Set([...item.writes_to, evidencePath, questionPath])]
+      : [...item.writes_to],
+    updated_at: new Date().toISOString(),
+  };
+  target.location === 'active_window'
+    ? nextQueue.active_window.splice(target.index, 1, repaired)
+    : nextQueue.refill_pool.splice(target.index, 1, repaired);
+
+  validateCurrentAssignmentCard(repaired);
+  validateQueue(nextQueue);
+  return {
+    queue: nextQueue,
+    item: repaired,
+    location: target.location,
+    priorReceipts,
+    derivedReceipts,
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Main command dispatch
 // ═══════════════════════════════════════════════════════════════════════════
@@ -532,7 +634,9 @@ try {
       process.exit(1);
     }
 
-    queue = enqueue(queue, validation.taskCard || taskCard);
+    const admittedTask = validation.taskCard || taskCard;
+    validateCurrentAssignmentCard(admittedTask);
+    queue = enqueue(queue, admittedTask);
     saveQueue(bundleDir, queue);
     emit({ ok: true, queue });
   } else if (command === 'claim') {
@@ -570,8 +674,7 @@ try {
     saveQueue(bundleDir, queue);
     emit({ ok: true, projection });
   } else if (command === 'repair') {
-    // QIV-004: repair --remove-stale
-    validateBundleName(queue, bundleDir);
+    validateBundleName(queue, bundleDir, { persist: false });
     if (values['remove-stale']) {
       const result = repairRemoveStale(queue, bundleDir);
       saveQueue(bundleDir, result.queue);
@@ -581,8 +684,24 @@ try {
         removed_count: result.removed.length,
         removed: result.removed,
       });
+    } else if (values['set-assignment-mode']) {
+      const result = repairAssignmentMode(queue, bundleDir, {
+        queueItemId: values['queue-item-id'],
+        mode: values['set-assignment-mode'],
+      });
+      const savedQueue = saveQueue(bundleDir, result.queue);
+      recordQueueAssignmentModeRepaired({
+        queue_item_id: result.item.queue_item_id,
+        topic_uid: result.item.payload.topic_uid,
+        topic_slug: result.item.payload.topic_slug,
+        queue_location: result.location,
+        prior_required_receipts: result.priorReceipts,
+        assignment_mode: result.item.payload.assignment_mode,
+        derived_required_receipts: result.derivedReceipts,
+      });
+      emit({ ok: true, action: 'set-assignment-mode', queue_item_id: result.item.queue_item_id, queue: savedQueue });
     } else {
-      throw new Error('repair requires --remove-stale flag');
+      throw new Error('repair requires --remove-stale or --queue-item-id plus --set-assignment-mode');
     }
   } else {
     usage();

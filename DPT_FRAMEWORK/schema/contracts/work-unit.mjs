@@ -1,5 +1,6 @@
 // @impl DEW-002, DEW-004, DEW-014, FRE-005, SDC-001, SDC-002, SDC-003
 import { z } from 'zod';
+import path from 'node:path';
 
 export const WORK_UNIT_INDEX_SCHEMA_VERSION = 'work-unit.index.v1';
 export const WORK_UNIT_MANIFEST_SCHEMA_VERSION = 'work-unit.manifest.v1';
@@ -8,6 +9,7 @@ export const WORK_UNIT_STATUS_SCHEMA_VERSION = 'work-unit.status.v1';
 export const WORK_UNIT_AGENT_SCHEMA_VERSION = 'work-unit.agent.v1';
 export const WORK_UNIT_RECEIPT_EVENT_SCHEMA_VERSION = 'work-unit.receipt-event.v1';
 export const WORK_UNIT_ACTOR_CONTRACT_VERSION = 'work-unit.actor.v1';
+export const WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION = 'work-unit.assignment.v1';
 
 export const WORK_UNIT_ID_PATTERN = /^wu-w(?<wave>[0-9]+)-b(?<batch>[0-9]{3})-(?<kind_code>[a-z][a-z0-9]{1,7})-i(?<claim>[0-9]{4})$/;
 
@@ -15,6 +17,109 @@ export const WorkUnitStatus = z.enum(['claimed', 'submitted', 'failed', 'timed_o
 export const WorkUnitTerminalStatus = z.enum(['submitted', 'failed', 'timed_out', 'abandoned']);
 
 const JsonObject = z.record(z.string(), z.unknown());
+
+export const DirectOutputContractIdSchema = z.enum([
+  'wave0.source-metadata-array.v1',
+  'wave1.evidence-summary.v1',
+  'wave1.question-list.v1',
+]);
+export const RequiredOutputRoleSchema = z.enum(['source_yaml', 'evidence_summary', 'question_list']);
+
+function isCanonicalBundleRelativePath(value) {
+  if (typeof value !== 'string' || value.length === 0 || value === '.' || path.posix.isAbsolute(value)) return false;
+  if (value.includes('\\') || value.includes('//') || value.includes('{') || value.includes('}') || value.includes('*')) return false;
+  if (value.split('/').includes('..') || value.split('/').includes('.')) return false;
+  return path.posix.normalize(value) === value;
+}
+
+const DIRECT_ROLE_BY_CONTRACT = Object.freeze({
+  'wave0.source-metadata-array.v1': 'source_yaml',
+  'wave1.evidence-summary.v1': 'evidence_summary',
+  'wave1.question-list.v1': 'question_list',
+});
+
+export const WorkUnitRequiredOutputSchema = z.object({
+  path: z.string().min(1).refine(isCanonicalBundleRelativePath, 'required output path must be canonical bundle-relative'),
+  role: RequiredOutputRoleSchema,
+  direct_contract: DirectOutputContractIdSchema,
+}).strict().superRefine((data, ctx) => {
+  if (DIRECT_ROLE_BY_CONTRACT[data.direct_contract] !== data.role) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['role'],
+      message: `role ${data.role} conflicts with direct contract ${data.direct_contract}`,
+    });
+  }
+});
+
+const OutputFilesContractSchema = z.object({
+  required: z.boolean(),
+  allowed_roles: z.array(z.string().min(1)).min(1),
+  reference_requires_source_url: z.boolean().optional(),
+}).strict();
+
+const SourceClaimsContractSchema = z.object({
+  allowed: z.boolean(),
+  accepted_requires_cache_or_degraded: z.boolean().optional(),
+  prior_submitted_output_roles: z.array(z.string().min(1)).optional(),
+}).strict();
+
+export const WorkUnitOutputContractSchema = z.object({
+  required_result_fields: z.array(z.string().min(1)).min(1),
+  output_files: OutputFilesContractSchema,
+  source_claims: SourceClaimsContractSchema.optional(),
+  required_outputs: z.array(WorkUnitRequiredOutputSchema),
+}).strict().superRefine((data, ctx) => {
+  const requiredFieldSet = new Set(data.required_result_fields);
+  if (requiredFieldSet.size !== data.required_result_fields.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['required_result_fields'], message: 'required_result_fields must be unique' });
+  }
+  for (const field of ['work_id', 'queue_item_id', 'kind', 'receipt_nonce']) {
+    if (!requiredFieldSet.has(field)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['required_result_fields'], message: `required_result_fields must include ${field}` });
+  }
+  const allowedRoles = new Set(data.output_files.allowed_roles);
+  if (allowedRoles.size !== data.output_files.allowed_roles.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['output_files', 'allowed_roles'], message: 'allowed_roles must be unique' });
+  }
+  const seenPaths = new Map();
+  data.required_outputs.forEach((required, index) => {
+    if (!allowedRoles.has(required.role)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['required_outputs', index, 'role'], message: `required role ${required.role} is not allowed by output_files` });
+    }
+    const prior = seenPaths.get(required.path);
+    if (prior) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['required_outputs', index, 'path'],
+        message: prior.role === required.role && prior.direct_contract === required.direct_contract
+          ? `duplicate required output path ${required.path}`
+          : `conflicting required output tuple for ${required.path}`,
+      });
+    } else {
+      seenPaths.set(required.path, required);
+    }
+  });
+  const priorRoles = data.source_claims?.prior_submitted_output_roles;
+  if (priorRoles) {
+    if (data.source_claims.allowed !== true) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['source_claims'], message: 'prior submitted roles require source claims to be allowed' });
+    if (new Set(priorRoles).size !== priorRoles.length) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['source_claims', 'prior_submitted_output_roles'], message: 'prior submitted roles must be unique' });
+    priorRoles.forEach((role, index) => {
+      if (!allowedRoles.has(role)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['source_claims', 'prior_submitted_output_roles', index], message: `prior submitted role ${role} is not an allowed output role` });
+    });
+  }
+});
+
+export const WorkUnitCandidateProjectionSchema = z.object({
+  recommended_action: z.enum(['submit', 'repair_same_candidate', 'return_to_actor', 'fail_and_replace', 'inspect_contract']),
+  primary_root_code: z.string().min(1).nullable(),
+}).strict().superRefine((data, ctx) => {
+  if (data.recommended_action === 'submit' && data.primary_root_code !== null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['primary_root_code'], message: 'submit requires null primary_root_code' });
+  }
+  if (data.recommended_action !== 'submit' && data.primary_root_code === null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['primary_root_code'], message: 'rejection requires primary_root_code' });
+  }
+});
 
 export const ExecutionActorClassSchema = z.enum(['delegated_subagent', 'phase_agent_fallback']);
 export const ActorObservationOutcomeSchema = z.enum(['available', 'unavailable', 'unknown']);
@@ -142,6 +247,7 @@ export const WorkUnitManifestSchema = z.object({
   claimed_at: z.string().datetime(),
   timeout_ms: z.number().int().positive(),
   deadline_at: z.string().datetime(),
+  assignment_contract_version: z.literal(WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION).optional(),
   output_contract: JsonObject,
   cache_policy: JsonObject,
   runtime_refs: RuntimeRefsSchema,
@@ -151,6 +257,13 @@ export const WorkUnitManifestSchema = z.object({
   queue_item: z.record(z.string(), z.unknown()),
 }).strict().superRefine((data, ctx) => {
   if (Boolean(data.actor_contract_version) !== Boolean(data.actor_execution)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'manifest actor contract fields must appear together' });
+  const hasRequiredOutputs = Object.hasOwn(data.output_contract, 'required_outputs');
+  if (Boolean(data.assignment_contract_version) !== hasRequiredOutputs) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['output_contract', 'required_outputs'], message: 'manifest assignment marker and required_outputs must appear together' });
+  } else if (data.assignment_contract_version) {
+    const parsed = WorkUnitOutputContractSchema.safeParse(data.output_contract);
+    if (!parsed.success) parsed.error.issues.forEach((issue) => ctx.addIssue({ ...issue, path: ['output_contract', ...issue.path] }));
+  }
 });
 
 export const WorkUnitBeaconSchema = z.object({
@@ -162,6 +275,7 @@ export const WorkUnitBeaconSchema = z.object({
   bundle_dir: z.string().min(1),
   receipt_nonce: z.string().min(16),
   deadline_at: z.string().datetime(),
+  assignment_contract_version: z.literal(WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION).optional(),
   work_unit_dir: z.string().min(1),
   manifest_ref: z.string().min(1),
   task_ref: z.string().min(1),
@@ -178,6 +292,13 @@ export const WorkUnitBeaconSchema = z.object({
   actor_execution: ActorExecutionSchema.optional(),
 }).strict().superRefine((data, ctx) => {
   if (Boolean(data.actor_contract_version) !== Boolean(data.actor_execution)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'beacon actor contract fields must appear together' });
+  const hasRequiredOutputs = Object.hasOwn(data.output_contract, 'required_outputs');
+  if (Boolean(data.assignment_contract_version) !== hasRequiredOutputs) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['output_contract', 'required_outputs'], message: 'beacon assignment marker and required_outputs must appear together' });
+  } else if (data.assignment_contract_version) {
+    const parsed = WorkUnitOutputContractSchema.safeParse(data.output_contract);
+    if (!parsed.success) parsed.error.issues.forEach((issue) => ctx.addIssue({ ...issue, path: ['output_contract', ...issue.path] }));
+  }
 });
 
 export const WorkUnitLateAcceptContextSchema = z.object({
@@ -217,6 +338,7 @@ export const WorkUnitIndexRecordSchema = z.object({
   claimed_at: z.string().datetime(),
   timeout_ms: z.number().int().positive(),
   deadline_at: z.string().datetime(),
+  assignment_contract_version: z.literal(WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION).optional(),
   last_observed_at: z.string().datetime().optional(),
   runtime_refs: RuntimeRefsSchema,
   actor_contract_version: z.literal(WORK_UNIT_ACTOR_CONTRACT_VERSION).optional(),
@@ -456,6 +578,7 @@ export const WorkUnitTimeoutPreflightSchema = z.object({
   idle_timeout_ms: z.number().int().positive().nullable().default(null),
   effective_timeout_at: z.string().datetime().nullable().default(null),
   progress: WorkUnitTimeoutProgressSchema,
+  candidate_projection: WorkUnitCandidateProjectionSchema.nullable().default(null),
   inspect: z.array(z.string()).default([]),
   advice: z.array(z.string()).default([]),
 }).strict().superRefine((data, ctx) => {

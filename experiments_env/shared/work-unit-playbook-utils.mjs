@@ -8,6 +8,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parse as parseYaml } from 'yaml';
 
 import {
   WORK_UNIT_OUTPUT_LEDGER,
@@ -363,6 +364,8 @@ export function queueItemForWorkUnit({
   queue_item_id = `wave0-source-topic-a`,
   title = `Delegated ${queue_item_id}`,
   topic_slug = 'topic-a',
+  topic_uid = 'tp_00000001-0000-4000-8000-000000000000',
+  assignment_mode = 'primary',
   finding_id,
   kind = kindForPhase(phase),
   producer_rule = producerRuleForKind(kind),
@@ -375,8 +378,21 @@ export function queueItemForWorkUnit({
 } = {}) {
   const payload = finding_id
     ? { finding_id, wave: Number(phase.replace('wave', '')) }
-    : { topic_slug, wave: Number(phase.replace('wave', '')) };
+    : {
+        topic_uid,
+        topic_slug,
+        wave: Number(phase.replace('wave', '')),
+        ...(kind === 'wave1_topic_deepening' ? { assignment_mode } : {}),
+      };
   if (task_brief) payload.task_brief = task_brief;
+  const requiredOutputs = kind === 'wave0_source_intake'
+    ? [`artifacts/wave0/${topic_slug}/source.yaml`]
+    : kind === 'wave1_topic_deepening' && assignment_mode === 'primary'
+      ? [
+          `artifacts/wave1/${topic_slug}/evidence-summary.md`,
+          `artifacts/wave1/${topic_slug}/question-list.md`,
+        ]
+      : [];
   return {
     queue_item_id,
     title,
@@ -388,11 +404,11 @@ export function queueItemForWorkUnit({
     producer_rule,
     priority_class,
     action,
-    writes_to,
+    writes_to: [...new Set([...writes_to, ...requiredOutputs])],
     status_sync: [],
     completion_receipt: 'none',
     failure_route: 'queue repair work',
-    required_receipts: ['none'],
+    required_receipts: requiredOutputs.map((target) => `file:${target}`),
     done_condition: 'submit succeeds through operate-work-unit',
     verification: { engine: ['work_unit_submit'], agent: [] },
     payload,
@@ -762,6 +778,19 @@ export function writeFixtureResultForWorkUnit(bundleDir, {
     const { content: _content, ...declaration } = extra;
     outputFiles.push(declaration);
   }
+  const manifest = JSON.parse(readFileSync(path.join(bundleDir, record.paths.manifest_ref), 'utf8'));
+  for (const required of manifest.output_contract?.required_outputs || []) {
+    if (outputFiles.some((entry) => entry.path === required.path)) continue;
+    const requiredPath = path.join(bundleDir, required.path);
+    mkdirSync(path.dirname(requiredPath), { recursive: true });
+    const content = required.direct_contract === 'wave0.source-metadata-array.v1'
+      ? sourceYamlContent({ source_url, topic_slug: manifest.queue_item.payload.topic_slug })
+      : required.direct_contract === 'wave1.evidence-summary.v1'
+        ? '## Key Findings\n\n- Fixture-backed supported finding.\n'
+        : '## Topic Investigation Targets\n\nOne target.\n\n## Question Reconciliation\n\nOne reconciliation.\n\n## Emergent Question Protocol\n\nChecked.\n\n## Exploration / Exploitation Decision\n\nContinue.\n';
+    writeFileSync(requiredPath, content);
+    outputFiles.push({ path: required.path, role: required.role });
+  }
 
   const trailPaths = cache_trails || [`_cache/wave${record.wave}/primary/${record.queue_item_id}/${source_slug}`];
   for (const trailPath of trailPaths) {
@@ -835,7 +864,12 @@ export function submitWorkUnitViaCli(bundleDir, { work_id, resultPath } = {}) {
 
 export function claimAndSubmitFixtureWorkUnit(bundleDir, opts = {}) {
   const phase = opts.phase || 'wave0';
-  const task = opts.task || queueItemForWorkUnit(opts);
+  const planText = readFileSync(path.join(bundleDir, 'rb_plan.md'), 'utf8');
+  const frontmatter = planText.match(/^---\n([\s\S]*?)\n---/)?.[1];
+  const plan = frontmatter ? parseYaml(frontmatter) : null;
+  const topicSlug = opts.topic_slug || 'topic-a';
+  const topicUid = plan?.topic_registry?.find((topic) => topic.slug === topicSlug)?.topic_uid;
+  const task = opts.task || queueItemForWorkUnit({ ...opts, topic_uid: opts.topic_uid || topicUid });
   enqueueWorkUnitTask(bundleDir, task);
   const claim = claimWorkUnitsViaCli(bundleDir, { phase, count: opts.count || 1 });
   const workId = claim.claimed_work_ids?.at(-1);

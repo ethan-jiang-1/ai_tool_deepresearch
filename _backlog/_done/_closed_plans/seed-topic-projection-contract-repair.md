@@ -399,7 +399,7 @@ Change B propose 阶段只在以下任一情况成立时再拆出 `formalize-rer
 
 ## 7. 与 `agent-output-linter` plan 的关系
 
-当前 active `_backlog/plans/agent-output-linter.md` 也提到 `seed_topic_md`，但本计划**不依赖**它，原因如下：
+当前已关闭的 `_backlog/_done/_closed_plans/agent-output-linter.md` 也提到 `seed_topic_md`，但本计划**不依赖**它，原因如下：
 
 | Concern | 本计划 owner | output-linter 是否 owner |
 |---|---|---|

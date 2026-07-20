@@ -327,12 +327,12 @@ describe('countReferences', () => {
           {
             path: evidencePath,
             role: 'evidence_summary',
-            content: `# Evidence\n\n[Source](${sourceUrl})\n`,
+            content: `# Evidence\n\n[Source](${sourceUrl})\n\n## Key Findings\n\n- Supported finding.\n`,
           },
           {
             path: 'artifacts/wave1/topic-a/question-list.md',
             role: 'question_list',
-            content: '# Questions\n',
+            content: '## Topic Investigation Targets\n\nTargets.\n\n## Question Reconciliation\n\nReconciled.\n\n## Emergent Question Protocol\n\nChecked.\n\n## Exploration / Exploitation Decision\n\nContinue.\n',
           },
         ],
         cacheTrails: [{ path: cacheTrail, url: sourceUrl }],

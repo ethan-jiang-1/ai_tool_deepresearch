@@ -67,6 +67,7 @@ function outputFileItemSchema(outputContract) {
   const roleSchema = roles.length > 0
     ? { type: 'string', enum: roles }
     : { not: {} };
+  const requiredOutputs = Array.isArray(outputContract?.required_outputs) ? outputContract.required_outputs : [];
   return {
     type: 'object',
     required: ['path', 'role'],
@@ -76,7 +77,42 @@ function outputFileItemSchema(outputContract) {
       source_url: { type: 'string', format: 'uri' },
       source_slug: { type: 'string', minLength: 1 },
     },
+    ...(requiredOutputs.length > 0 ? {
+      allOf: requiredOutputs.map((required) => ({
+        if: {
+          properties: { path: { const: required.path } },
+          required: ['path'],
+        },
+        then: {
+          properties: { role: { const: required.role } },
+        },
+      })),
+    } : {}),
     additionalProperties: false,
+  };
+}
+
+function outputFilesSchema(outputContract) {
+  const requiredOutputs = Array.isArray(outputContract?.required_outputs) ? outputContract.required_outputs : [];
+  const defaultOutputs = requiredOutputs.map(({ path: outputPath, role }) => ({ path: outputPath, role }));
+  return {
+    type: 'array',
+    items: outputFileItemSchema(outputContract),
+    default: defaultOutputs,
+    ...(requiredOutputs.length > 0 ? {
+      allOf: requiredOutputs.map((required) => ({
+        contains: {
+          type: 'object',
+          properties: {
+            path: { const: required.path },
+            role: { const: required.role },
+          },
+          required: ['path', 'role'],
+        },
+        minContains: 1,
+        maxContains: 1,
+      })),
+    } : {}),
   };
 }
 
@@ -167,7 +203,7 @@ function resultSchemaDocument(manifest) {
       execution_actor_class: { const: manifest.actor_execution.execution_actor_class },
     } : {}),
     summary: { type: 'string', default: '' },
-    output_files: { type: 'array', items: outputFileItemSchema(outputContract), default: [] },
+    output_files: outputFilesSchema(outputContract),
     cache_trails: { type: 'array', items: { type: 'string', minLength: 1 }, default: [] },
   };
   if (outputContract?.source_claims?.allowed === true) {
@@ -268,6 +304,10 @@ function taskMarkdown(manifest, bundleDir, resultSchema) {
   const allowedResultFields = Object.keys(resultSchema.properties).join(', ');
   const allowedOutputRoles = manifest.output_contract.output_files.allowed_roles.join(', ');
   const requiredCacheLeafFiles = (manifest.cache_policy.leaf_files || []).join(', ');
+  const requiredOutputs = manifest.output_contract.required_outputs || [];
+  const requiredOutputLines = requiredOutputs.map((required) => (
+    `- Required output: bundle-relative \`${required.path}\`; absolute \`${path.join(path.resolve(bundleDir), required.path)}\`; role \`${required.role}\`; direct contract \`${required.direct_contract}\`.`
+  ));
   return [
     `# Work Unit ${manifest.work_id}`,
     '',
@@ -279,6 +319,9 @@ function taskMarkdown(manifest, bundleDir, resultSchema) {
     `- queue_item_id: \`${manifest.queue_item_id}\``,
     `- kind: \`${manifest.kind}\``,
     `- receipt_nonce: \`${manifest.receipt_nonce}\``,
+    ...(manifest.assignment_contract_version
+      ? [`- assignment_contract_version: \`${manifest.assignment_contract_version}\``]
+      : []),
     ...(manifest.actor_contract_version ? [
       `- execution_actor_class: \`${manifest.actor_execution.execution_actor_class}\``,
       `- delegated_role_key: \`${manifest.actor_execution.delegated_role_key}\``,
@@ -313,6 +356,12 @@ function taskMarkdown(manifest, bundleDir, resultSchema) {
     `- Allowed result fields: ${allowedResultFields}`,
     `- Allowed output roles: ${allowedOutputRoles}`,
     `- Required cache leaf files: ${requiredCacheLeafFiles || '<none>'}`,
+    ...(manifest.assignment_contract_version
+      ? [`- Assignment contract: \`${manifest.assignment_contract_version}\`.`]
+      : []),
+    ...(requiredOutputLines.length > 0
+      ? requiredOutputLines
+      : manifest.assignment_contract_version ? ['- Required direct outputs: none for this assignment.'] : []),
     ...(manifest.output_contract.output_files.reference_requires_source_url === true
       ? ['- Every output with role `reference` must declare its parseable `source_url`.']
       : []),
@@ -324,6 +373,9 @@ function taskMarkdown(manifest, bundleDir, resultSchema) {
       : []),
     '- Verify `_beacon.json`, `task.md`, and `result.schema.json` were read from the active `bundle_dir`.',
     '- Write every declared output file under `bundle_dir` only.',
+    ...(requiredOutputs.length > 0
+      ? ['- The actor must verify every assigned required output above at its exact path and canonical role before recording `work_done`.']
+      : []),
     '- Write required cache leaves under `bundle_dir`; cache `page.md` must contain fetched page content or an explicit degraded/fetch-failure record, not an empty or placeholder header.',
     '- In `result.json`, declare `cache_trails` as bundle-relative cache leaf directory paths only, for example `_cache/wave0/primary/<queue_item_id>/<source_slug>`; do not list `websearch.json`, `page.md`, or `meta.json` file paths.',
     '- In written research outputs, include return-map cues for important evidence: `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`. These cues are diagnostic navigation only; submitted ledger rows and gate outputs remain authority.',
@@ -406,6 +458,7 @@ function taskMarkdown(manifest, bundleDir, resultSchema) {
     '## Work-Unit CLI Checkpoints',
     '',
     'Use the canonical absolute bundle root in every work-unit command, independent of the current working directory.',
+    'The Phase Agent runs predictive `dry-submit` after the actor returns. Formal submit is the only normal first-acceptance and delegated success owner.',
     '',
     '```bash',
     `node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit "${path.resolve(bundleDir)}" --work-id "${manifest.work_id}" --result "${abs.result_ref}"`,
@@ -473,6 +526,7 @@ export function writeWorkUnitEnvelope(bundleDir, manifest) {
     bundle_dir: path.resolve(bundleDir),
     receipt_nonce: parsed.receipt_nonce,
     deadline_at: parsed.deadline_at,
+    ...(parsed.assignment_contract_version ? { assignment_contract_version: parsed.assignment_contract_version } : {}),
     work_unit_dir: parsed.paths.work_unit_dir,
     manifest_ref: parsed.paths.manifest_ref,
     task_ref: parsed.paths.task_ref,

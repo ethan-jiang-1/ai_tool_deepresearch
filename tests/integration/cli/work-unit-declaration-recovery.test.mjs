@@ -42,10 +42,16 @@ function createBundle(label) {
   writeFileSync(path.join(dir, 'rb_plan.md'), `---
 plan_basename: ${name}
 derived_topic_count: 1
+topic_registry_version: "2"
 topic_registry:
-  - id: t1
+  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
+    id: "01"
     slug: topic-a
     title: Topic A
+    must_answer: ["What matters?"]
+    scope_role: primary
+    depends_on_topic_uids: []
+    previous_layouts: []
 ---
 # Plan
 `);
@@ -87,7 +93,9 @@ topic_registry:
     targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
     kind: 'wave0_source_intake',
     producer_rule: 'source_intake_fan_in',
-    payload: { topic_slug: 'topic-a' },
+    payload: { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000', topic_slug: 'topic-a', wave: 0 },
+    required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+    writes_to: ['artifacts/wave0/topic-a/source.yaml'],
   }));
   saveQueue(dir, queue);
   return { dir, sourceUrl };

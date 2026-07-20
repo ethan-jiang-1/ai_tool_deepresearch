@@ -148,6 +148,12 @@ export function loadQueue(bundleDir) {
   }
 }
 
+export function loadQueueReadOnly(bundleDir) {
+  const file = queuePath(bundleDir);
+  if (!existsSync(file)) return createQueue(path.basename(bundleDir));
+  return queueStateFromFile(JSON.parse(readFileSync(file, 'utf-8')), { queueId: path.basename(bundleDir) });
+}
+
 /**
  * Persist queue state to disk. Validates before writing.
  *
@@ -171,6 +177,13 @@ export function saveQueue(bundleDir, queue) {
     logEvent('error', 'queue_save_exception', { kind: 'queue_enqueue', reason: safeMsg });
     throw err;
   }
+}
+
+export function recordQueueAssignmentModeRepaired(detail) {
+  traceEntry('queue_assignment_mode_repaired', {
+    source: 'agq-repair',
+    ...detail,
+  });
 }
 
 /**

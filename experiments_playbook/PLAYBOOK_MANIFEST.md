@@ -55,6 +55,7 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 | `exp_evidence-extraction/case-161-light-complete-cache-trails.md` |
 | `exp_evidence-extraction/case-162-standard-gate-reentry-cache-coverage.md` |
 | `exp_evidence-extraction/case-163-heavy-rerun-add-real-cache-trail.md` |
+| `exp_evidence-extraction/case-164-heavy-direct-output-candidate-contract.md` |
 | `exp_wff_topic-rewrite/case-181-light-hitl1-topic-rewrite-vague.md` |
 | `exp_wff_topic-rewrite/case-182-light-hitl1-topic-rewrite-detailed.md` |
 | `exp_wfn_seedtopic/case-201-standard-seedtopics-queue-loop.md` |

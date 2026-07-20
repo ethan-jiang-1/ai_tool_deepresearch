@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
 
 import {
+  WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
   WORK_UNIT_MANIFEST_SCHEMA_VERSION,
   WorkUnitManifestSchema,
   WorkUnitStatusFileSchema,
@@ -18,17 +19,20 @@ import {
   writeJson,
   traceWorkUnitEvent,
   kindContractForQueueItem,
+  hashValue,
 } from './work-unit-utils.mjs';
 import {
   allocateWorkId,
   validateWorkIdBinding,
   computeStatusCounts,
   loadWorkUnitIndex,
+  createEmptyWorkUnitIndex,
   saveWorkUnitIndex,
   requireWorkUnitRecord,
   withWorkUnitTransaction,
   waveKey,
   batchId,
+  workUnitIndexPath,
 } from './work-unit-index.mjs';
 import {
   refsForWorkUnit,
@@ -44,9 +48,11 @@ import {
 import { continuationForClaimedWork } from './helpers/continuation-cue.mjs';
 
 import { queueItemSnapshotHash } from './queue-manager-core.mjs';
-import { loadQueue, saveQueue } from './queue-manager-lifecycle.mjs';
+import { loadQueue, loadQueueReadOnly, saveQueue } from './queue-manager-lifecycle.mjs';
 import { preempt, refill } from './queue-manager-window.mjs';
 import { logToRun } from './logger.mjs';
+import { CanonicalPlanSchema } from '../schema/contracts/plan.mjs';
+import { resolveWorkUnitAssignmentContract } from './work-unit-assignment-contract.mjs';
 
 function readProfileRerunCount(bundleDir) {
   try {
@@ -67,6 +73,7 @@ function createWorkUnitInIndex(bundleDir, index, {
   batchReason = 'initial_phase_drain',
   runtime_refs = {},
   actor_execution,
+  assignment_contract,
 } = {}) {
   if (!queueItem?.queue_item_id) throw new Error('queueItem.queue_item_id is required');
   if (!kind) throw new Error('work-unit kind is required');
@@ -82,6 +89,8 @@ function createWorkUnitInIndex(bundleDir, index, {
   const { refs } = refsForWorkUnit(bundleDir, allocation);
   const receiptNonce = `wu-${randomUUID()}`;
   const kindContract = kindContractForQueueItem(queueItem, kind);
+  const outputContract = assignment_contract?.output_contract || kindContract.output_contract;
+  const assignmentContractVersion = assignment_contract?.assignment_contract_version;
   const manifest = WorkUnitManifestSchema.parse({
     schema_version: WORK_UNIT_MANIFEST_SCHEMA_VERSION,
     ...allocation,
@@ -94,7 +103,8 @@ function createWorkUnitInIndex(bundleDir, index, {
     claimed_at: claimedAt,
     timeout_ms: timeoutMs,
     deadline_at: deadlineAt,
-    output_contract: kindContract.output_contract,
+    ...(assignmentContractVersion ? { assignment_contract_version: assignmentContractVersion } : {}),
+    output_contract: outputContract,
     cache_policy: kindContract.cache_policy,
     runtime_refs,
     ...(actor_execution ? {
@@ -125,6 +135,7 @@ function createWorkUnitInIndex(bundleDir, index, {
     claimed_at: manifest.claimed_at,
     timeout_ms: manifest.timeout_ms,
     deadline_at: manifest.deadline_at,
+    ...(manifest.assignment_contract_version ? { assignment_contract_version: manifest.assignment_contract_version } : {}),
     runtime_refs: manifest.runtime_refs,
     actor_contract_version: manifest.actor_contract_version,
     actor_execution: manifest.actor_execution,
@@ -195,9 +206,36 @@ function actorClaimRepair({ bundleDir, phase, requestedCount, decision, actorPol
 }
 
 export function createWorkUnit(bundleDir, options = {}) {
+  let assignmentContract = options.assignment_contract;
+  if (!assignmentContract && options.queueItem) {
+    const kind = options.kind || options.queueItem.kind;
+    const receipts = options.queueItem.required_receipts;
+    const hasCurrentAssignmentFacts = (kind === 'wave0_source_intake' && receipts?.some((receipt) => receipt.startsWith('file:')))
+      || (kind === 'wave1_topic_deepening' && Object.hasOwn(options.queueItem.payload || {}, 'assignment_mode'))
+      || (kind === 'wave2_targeted_evidence' && Array.isArray(receipts) && receipts.length === 0);
+    if (hasCurrentAssignmentFacts) {
+      const kindContract = kindContractForQueueItem(options.queueItem, kind);
+      assignmentContract = {
+        assignment_contract_version: WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+        output_contract: resolveWorkUnitAssignmentContract({
+          assignmentContractVersion: WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+          kind,
+          queueItem: options.queueItem,
+          topicBinding: {
+            topic_uid: options.queueItem.payload?.topic_uid,
+            topic_slug: options.queueItem.payload?.topic_slug,
+          },
+          baseOutputContract: kindContract.output_contract,
+        }),
+      };
+    }
+  }
   return withWorkUnitTransaction(bundleDir, 'create_work_unit', () => {
     const index = loadWorkUnitIndex(bundleDir, { createIfMissing: true });
-    const { record, manifest } = createWorkUnitInIndex(bundleDir, index, options);
+    const { record, manifest } = createWorkUnitInIndex(bundleDir, index, {
+      ...options,
+      assignment_contract: assignmentContract,
+    });
     const saved = saveWorkUnitIndex(bundleDir, index);
     return { index: saved, record: saved.work_units[record.work_id], manifest, spawn_prompt: spawnPromptForWorkUnit(manifest, bundleDir) };
   });
@@ -313,6 +351,96 @@ function previewClaimCandidates(queue, wave, requestedCount, executionActorClass
   return { candidates, planned_role_key: plannedRoleKey, blocked_by_queue_item_id: blockedBy };
 }
 
+function topicBindingForClaim(bundleDir, queueItem, kind) {
+  if (kind === 'wave2_targeted_evidence') {
+    return {
+      topic_uid: queueItem.payload?.topic_uid,
+      topic_slug: queueItem.payload?.topic_slug,
+    };
+  }
+  const topicUid = queueItem.payload?.topic_uid;
+  const topicSlug = queueItem.payload?.topic_slug;
+  if (!topicUid || !topicSlug) throw new Error('current assignment requires explicit payload topic_uid and topic_slug');
+
+  const planPath = path.join(bundleDir, 'rb_plan.md');
+  if (existsSync(planPath)) {
+    const raw = readFileSync(planPath, 'utf8');
+    const match = raw.match(/^---\n([\s\S]*?)\n---/);
+    if (!match) throw new Error('canonical Topic binding cannot be read from rb_plan.md');
+    const plan = CanonicalPlanSchema.parse(parseYaml(match[1]));
+    const topic = plan.topic_registry.find((entry) => entry.topic_uid === topicUid);
+    if (!topic || topic.slug !== topicSlug) {
+      throw new Error(`queue item Topic ${topicUid}/${topicSlug} is not the current canonical UID/slug binding`);
+    }
+  }
+  return { topic_uid: topicUid, topic_slug: topicSlug };
+}
+
+function preflightClaimAssignments(bundleDir, candidates) {
+  return candidates.map((candidate) => {
+    const queueItem = candidate.item;
+    try {
+      const kindContract = kindContractForQueueItem(queueItem, candidate.kind);
+      const outputContract = resolveWorkUnitAssignmentContract({
+        assignmentContractVersion: WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+        kind: candidate.kind,
+        queueItem,
+        topicBinding: topicBindingForClaim(bundleDir, queueItem, candidate.kind),
+        baseOutputContract: kindContract.output_contract,
+      });
+      return {
+        ...candidate,
+        queue_item_id: queueItem.queue_item_id,
+        queue_item_snapshot_hash: queueItemSnapshotHash(queueItem),
+        queue_item_full_hash: hashValue(queueItem),
+        assignment_contract: {
+          assignment_contract_version: WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+          output_contract: outputContract,
+        },
+      };
+    } catch (error) {
+      throw new Error(`assignment preflight failed for queue item ${queueItem.queue_item_id}: ${error.message}`);
+    }
+  });
+}
+
+function loadIndexView(bundleDir) {
+  return existsSync(workUnitIndexPath(bundleDir))
+    ? loadWorkUnitIndex(bundleDir)
+    : createEmptyWorkUnitIndex();
+}
+
+function recheckClaimPlan(bundleDir, plans, { existed: expectedIndexExisted, hash: expectedIndexHash }) {
+  const assignmentView = loadQueueReadOnly(bundleDir);
+  const assignmentCandidates = plans.map((plan, index) => ({
+    ...plan,
+    item: assignmentView.active_window[index],
+  }));
+  preflightClaimAssignments(bundleDir, assignmentCandidates);
+
+  const queue = loadQueueReadOnly(bundleDir);
+  for (let index = 0; index < plans.length; index += 1) {
+    const current = queue.active_window[index];
+    const plan = plans[index];
+    if (!current || current.queue_item_id !== plan.queue_item_id) {
+      throw new Error(`planned queue prefix identity drift at ${plan.queue_item_id}`);
+    }
+    if (queueItemSnapshotHash(current) !== plan.queue_item_snapshot_hash) {
+      throw new Error(`planned queue snapshot drift at ${plan.queue_item_id}`);
+    }
+    if (hashValue(current) !== plan.queue_item_full_hash) {
+      throw new Error(`planned queue prefix drift at ${plan.queue_item_id}`);
+    }
+  }
+  const indexExists = existsSync(workUnitIndexPath(bundleDir));
+  if (indexExists !== expectedIndexExisted) throw new Error('planned work-unit index presence drift before claim mutation');
+  const index = loadIndexView(bundleDir);
+  if (indexExists && hashValue(index) !== expectedIndexHash) {
+    throw new Error('planned work-unit index snapshot drift before claim mutation');
+  }
+  return { queue, index };
+}
+
 export function claimWorkUnits(bundleDir, {
   phase,
   count = 1,
@@ -324,7 +452,7 @@ export function claimWorkUnits(bundleDir, {
   const requestedCount = Number.parseInt(String(count), 10);
   if (!Number.isInteger(requestedCount) || requestedCount < 1) throw new Error('--count must be a positive integer');
 
-  const previewQueue = loadQueue(bundleDir);
+  const previewQueue = loadQueueReadOnly(bundleDir);
   const preview = previewClaimCandidates(previewQueue, wave, requestedCount, executionActorClass);
   const previewFront = previewQueue.active_window[0];
   if (preview.candidates.length === 0) {
@@ -343,11 +471,19 @@ export function claimWorkUnits(bundleDir, {
     };
   }
 
+  const assignmentPlans = preflightClaimAssignments(bundleDir, preview.candidates);
+  const previewIndexExisted = existsSync(workUnitIndexPath(bundleDir));
+  const previewIndex = loadIndexView(bundleDir);
+  const previewIndexPlan = {
+    existed: previewIndexExisted,
+    hash: previewIndexExisted ? hashValue(previewIndex) : null,
+  };
+
   const decision = evaluateActorDecision({
     observation: actorObservation,
     executionActorClass,
     plannedRoleKey: preview.planned_role_key,
-    actorPolicy: preview.candidates[0].actor_policy,
+    actorPolicy: assignmentPlans[0].actor_policy,
   });
   const actorPreflight = {
     verdict: decision.verdict,
@@ -378,7 +514,7 @@ export function claimWorkUnits(bundleDir, {
       phase,
       requestedCount,
       decision,
-      actorPolicy: preview.candidates[0].actor_policy,
+      actorPolicy: assignmentPlans[0].actor_policy,
     });
     return {
       ok: false,
@@ -403,11 +539,11 @@ export function claimWorkUnits(bundleDir, {
     policy_decision: decision.policy_decision,
     fallback_from: decision.fallback_from,
   };
-  const effectiveCount = decision.execution_actor_class === 'phase_agent_fallback' ? 1 : preview.candidates.length;
+  const effectiveCount = decision.execution_actor_class === 'phase_agent_fallback' ? 1 : assignmentPlans.length;
+  const effectivePlans = assignmentPlans.slice(0, effectiveCount);
 
   return withWorkUnitTransaction(bundleDir, 'claim_work_units', ({ tx_id }) => {
-    let queue = previewQueue;
-    const index = loadWorkUnitIndex(bundleDir, { createIfMissing: true });
+    let { queue, index } = recheckClaimPlan(bundleDir, effectivePlans, previewIndexPlan);
     const claimed = [];
     let blockedBy = preview.blocked_by_queue_item_id;
 
@@ -418,6 +554,7 @@ export function claimWorkUnits(bundleDir, {
         blockedBy = front.queue_item_id;
         break;
       }
+      const plan = effectivePlans[i];
       const kind = front.kind || defaultKindForWave(wave);
       if (!kind) {
         blockedBy = front.queue_item_id;
@@ -435,6 +572,7 @@ export function claimWorkUnits(bundleDir, {
         creation_reason: 'claim',
         batchReason,
         actor_execution: actorExecution,
+        assignment_contract: plan.assignment_contract,
       });
       queue.delegated_in_flight[front.queue_item_id] = {
         queue_item_id: front.queue_item_id,

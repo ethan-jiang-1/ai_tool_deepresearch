@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { parse as parseYaml } from 'yaml';
 
 import {
   createQueue,
@@ -12,6 +13,7 @@ import {
 import {
   claimWorkUnits,
   loadWorkUnitIndex,
+  saveWorkUnitIndex,
   submitWorkUnit,
 } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
 
@@ -121,20 +123,94 @@ export function delegatedQueueItem(id = 'queue-a', overrides = {}) {
   const phase = overrides.phase || 'wave0';
   const kind = overrides.kind || kindForPhase(phase);
   const producer_rule = overrides.producer_rule || producerRuleForKind(kind);
+  const topicSlug = overrides.payload?.topic_slug || 'topic-a';
+  const topicUid = overrides.payload?.topic_uid || 'tp_123e4567-e89b-12d3-a456-426614174000';
+  const payload = kind === 'wave2_targeted_evidence'
+    ? { finding_id: 'W2F-001', wave: 2, ...overrides.payload }
+    : {
+        topic_uid: topicUid,
+        topic_slug: topicSlug,
+        wave: phase === 'wave1' ? 1 : 0,
+        ...(kind === 'wave1_topic_deepening' ? { assignment_mode: 'primary' } : {}),
+        ...overrides.payload,
+      };
+  const assignmentDefaults = kind === 'wave0_source_intake'
+    ? {
+        required_receipts: [`file:artifacts/wave0/${topicSlug}/source.yaml`],
+        writes_to: [`artifacts/wave0/${topicSlug}/source.yaml`],
+      }
+    : kind === 'wave1_topic_deepening'
+      ? payload.assignment_mode === 'supplementary'
+        ? { required_receipts: [], writes_to: [] }
+        : {
+            required_receipts: [
+              `file:artifacts/wave1/${topicSlug}/evidence-summary.md`,
+              `file:artifacts/wave1/${topicSlug}/question-list.md`,
+            ],
+            writes_to: [
+              `artifacts/wave1/${topicSlug}/evidence-summary.md`,
+              `artifacts/wave1/${topicSlug}/question-list.md`,
+            ],
+          }
+      : { required_receipts: [], writes_to: [] };
   return makeItem({
     queue_item_id: id,
     title: `Delegated ${id}`,
     targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: delegatedRoleForKind(kind), timeout_ms: 600000 } },
     kind,
     producer_rule,
-    payload: { topic_slug: id },
+    payload,
+    ...assignmentDefaults,
     ...overrides,
+    payload,
     kind,
     producer_rule,
   });
 }
 
 export function seedDelegatedQueue(dir, items = [delegatedQueueItem('queue-a')]) {
+  const planPath = path.join(dir, 'rb_plan.md');
+  const planText = existsSync(planPath) ? readFileSync(planPath, 'utf8') : '';
+  const frontmatter = planText.match(/^---\n([\s\S]*?)\n---/)?.[1];
+  let plan = null;
+  try {
+    plan = frontmatter ? parseYaml(frontmatter) : null;
+  } catch {
+    plan = null;
+  }
+  const canonicalPlan = typeof plan?.plan_basename === 'string'
+    && Number.isInteger(plan?.derived_topic_count)
+    && plan?.topic_registry_version === '2'
+    && Array.isArray(plan?.topic_registry)
+    && plan.topic_registry.every((topic) => (
+      typeof topic?.topic_uid === 'string'
+      && typeof topic?.slug === 'string'
+      && Array.isArray(topic?.must_answer)
+      && typeof topic?.scope_role === 'string'
+      && Array.isArray(topic?.depends_on_topic_uids)
+    ));
+  if (!canonicalPlan) {
+    const topics = [...new Map(items
+      .filter((item) => item.payload?.topic_uid && item.payload?.topic_slug)
+      .map((item) => [item.payload.topic_uid, {
+        topic_uid: item.payload.topic_uid,
+        id: String(item.payload.topic_slug === 'topic-a' ? '01' : '02'),
+        slug: item.payload.topic_slug,
+        title: item.payload.topic_slug === 'topic-a' ? 'Topic A' : item.payload.topic_slug,
+        must_answer: [`What must be established for ${item.payload.topic_slug}?`],
+        scope_role: 'primary',
+        depends_on_topic_uids: [],
+        previous_layouts: [],
+      }])).values()];
+    if (topics.length > 0) {
+      writeFileSync(planPath, `---\n${JSON.stringify({
+        plan_basename: path.basename(dir),
+        derived_topic_count: topics.length,
+        topic_registry_version: '2',
+        topic_registry: topics,
+      }, null, 2)}\n---\n# Plan\n`);
+    }
+  }
   let queue = createQueue(path.basename(dir));
   for (const item of items) queue = enqueue(queue, item);
   saveQueue(dir, queue);
@@ -161,6 +237,7 @@ export function claimAndSubmitWorkUnit(dir, {
   receiptOverrides = {},
   actorDecision = availableActorDecision(kind),
   preserveQueue = false,
+  legacyAssignment = false,
 } = {}) {
   const queueItem = delegatedQueueItem(queueItemId, {
     phase,
@@ -168,14 +245,81 @@ export function claimAndSubmitWorkUnit(dir, {
     producer_rule,
     ...queueItemOverrides,
   });
+  const planPath = path.join(dir, 'rb_plan.md');
+  const planText = existsSync(planPath) ? readFileSync(planPath, 'utf8') : '';
+  const frontmatter = planText.match(/^---\n([\s\S]*?)\n---/)?.[1];
+  let parsedPlan = null;
+  try {
+    parsedPlan = frontmatter ? parseYaml(frontmatter) : null;
+  } catch {
+    parsedPlan = null;
+  }
+  const canonicalPlan = typeof parsedPlan?.plan_basename === 'string'
+    && Number.isInteger(parsedPlan?.derived_topic_count)
+    && parsedPlan?.topic_registry_version === '2'
+    && Array.isArray(parsedPlan?.topic_registry)
+    && parsedPlan.topic_registry.every((topic) => (
+      typeof topic?.topic_uid === 'string'
+      && typeof topic?.slug === 'string'
+      && Array.isArray(topic?.must_answer)
+      && typeof topic?.scope_role === 'string'
+      && Array.isArray(topic?.depends_on_topic_uids)
+    ));
+  if (!canonicalPlan && queueItem.payload?.topic_uid && queueItem.payload?.topic_slug) {
+    const topic = {
+      topic_uid: queueItem.payload.topic_uid,
+      id: '01',
+      slug: queueItem.payload.topic_slug,
+      title: 'Topic A',
+      must_answer: ['What must be established for Topic A?'],
+      scope_role: 'primary',
+      depends_on_topic_uids: [],
+      previous_layouts: [],
+    };
+    writeFileSync(planPath, `---\n${JSON.stringify({
+      plan_basename: path.basename(dir),
+      derived_topic_count: 1,
+      topic_registry_version: '2',
+      topic_registry: [topic],
+    }, null, 2)}\n---\n# Plan\n`);
+  }
   if (preserveQueue) saveQueue(dir, enqueue(loadQueue(dir), queueItem));
   else seedDelegatedQueue(dir, [queueItem]);
   const claim = claimWorkUnits(dir, { phase, count: 1, ...actorDecision });
   const workId = claim.claimed_work_ids?.[0];
   if (!workId) throw new Error(`test helper failed to claim a work unit for ${phase}`);
-  const record = loadWorkUnitIndex(dir).work_units[workId];
+  let record = loadWorkUnitIndex(dir).work_units[workId];
 
-  for (const output of outputs) {
+  const manifestPath = path.join(dir, record.paths.manifest_ref);
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  if (legacyAssignment) {
+    const index = loadWorkUnitIndex(dir);
+    delete index.work_units[workId].assignment_contract_version;
+    delete manifest.assignment_contract_version;
+    delete manifest.output_contract.required_outputs;
+    const beaconPath = path.join(dir, record.paths.beacon_ref);
+    const beacon = JSON.parse(readFileSync(beaconPath, 'utf8'));
+    delete beacon.assignment_contract_version;
+    delete beacon.output_contract.required_outputs;
+    saveWorkUnitIndex(dir, index);
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    writeFileSync(beaconPath, `${JSON.stringify(beacon, null, 2)}\n`);
+    record = loadWorkUnitIndex(dir).work_units[workId];
+  }
+
+  const requiredOutputs = legacyAssignment ? [] : (manifest.output_contract.required_outputs || []);
+  const effectiveOutputs = [...outputs];
+  for (const required of requiredOutputs) {
+    if (effectiveOutputs.some((output) => output.path === required.path)) continue;
+    const content = required.direct_contract === 'wave0.source-metadata-array.v1'
+      ? `- url: https://example.com/research/article\n  title: Example source\n  retrieved_date: 2026-07-20\n  topic_tag: ${queueItem.payload.topic_slug}\n`
+      : required.direct_contract === 'wave1.evidence-summary.v1'
+        ? '## Key Findings\n\n- One supported finding.\n'
+        : '## Topic Investigation Targets\n\nOne target.\n\n## Question Reconciliation\n\nOne reconciliation.\n\n## Emergent Question Protocol\n\nOne protocol.\n\n## Exploration / Exploitation Decision\n\nExplore.\n';
+    effectiveOutputs.push({ path: required.path, role: required.role, content });
+  }
+
+  for (const output of effectiveOutputs) {
     const outputPath = path.join(dir, output.path);
     mkdirSync(path.dirname(outputPath), { recursive: true });
     if (Object.prototype.hasOwnProperty.call(output, 'content') || !existsSync(outputPath)) {
@@ -216,7 +360,7 @@ export function claimAndSubmitWorkUnit(dir, {
     actor_contract_version: record.actor_contract_version,
     execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'done',
-    output_files: outputs.map(({ content: _content, ...entry }) => entry),
+    output_files: effectiveOutputs.map(({ content: _content, ...entry }) => entry),
     cache_trails: cacheTrails.map((trail) => trail.path),
     ...resultOverrides,
   }, null, 2)}\n`);

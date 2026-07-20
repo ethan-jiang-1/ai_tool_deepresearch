@@ -45,6 +45,20 @@ const SUBJECTS = {
     tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
     boundary: 'Perform one bounded dynamic search and at most one fetch of the first usable result. Do not turn probe bytes into research evidence. Stop after the HITL1 Gate and its immediate legal handoff or honest unavailable failure.',
   },
+  '164': {
+    bundlePrefix: 'dpt_disp_case-164_',
+    transcript: 'case-164-subject-transcript.jsonl',
+    system: 'You are the independent Subject Agent for case 164, distinct from the Playbook Agent. Act as the Phase Agent only inside the exact bundle path provided by the runner and follow the injected current Wave1/shared work-unit surfaces.',
+    messages: [
+      'Act as the Phase Agent for the single queued Wave1 primary demand. Perform the required role-bound availability observation, claim exactly that demand through the production work-unit CLI, and invoke one real dpt-evidence-extractor child actor with the exact generated task/beacon/schema. The child must independently do one bounded real WebSearch and WebFetch, write its own source/cache/result/receipt and both assigned outputs, record work_done, and deliberately leave only the Key Findings section semantically empty as this controlled canary fault. After the child returns, write case-164-first-child-evidence.json as a path-only index with work_id, queue_item_id, result_ref, runtime_receipt_ref, required_output_refs, cache_trail_refs, source_urls, and child evidence ref; run native dry-submit once and save its complete JSON as case-164-turn1-dry-submit.json. Stop. Do not repair, fail, enqueue, claim a replacement, submit, append verdict checks, or fabricate any child surface.',
+      'Consume case-164-turn1-dry-submit.json and case-164-output-hashes.json. Use the exact Engine-derived primary_root_code to run non-retry operate-work-unit fail --reason semantic_contract:<primary_root_code> for the first attempt. Explicitly enqueue a new primary Wave1 demand for the same canonical Topic and exact paired receipts under a fresh globally unused queue_item_id; do not reuse the failed ID, weaken it to supplementary, use actor_spawn_unavailable, or rely on automatic retry. Save the complete native outputs at bundle-root case-164-turn2-fail.json, case-164-turn2-enqueue.json, and case-164-turn2-claim.json respectively. Claim exactly that replacement and write case-164-replacement-evidence.json as a path-only index with the new work_id, queue_item_id, generated task/beacon/schema/result/receipt refs, required output refs, and those three native JSON refs. Stop before invoking another child or writing, repairing, or submitting replacement output.',
+      'Read case-164-replacement-evidence.json and the replacement generated task/beacon/schema. Invoke a second distinct real dpt-evidence-extractor child actor. It must independently perform its own bounded real WebSearch and WebFetch, own new source/cache/result/receipt facts, write both canonical required outputs with every direct semantic section non-empty, and verify writes before work_done. Do not return this Subject turn while the child is merely running in the background: wait for the native child task completion notification and inspect its assigned files only after that completion. Write case-164-second-child-evidence.json as a path-only index with work_id, queue_item_id, result_ref, runtime_receipt_ref, required_output_refs, cache_trail_refs, source_urls, and child evidence ref. Run native dry-submit for the replacement and save complete JSON as case-164-turn3-dry-submit.json, then formal submit only if that fresh dry-submit predicts pass and save complete JSON as case-164-turn3-submit.json. Stop. Do not submit or rewrite the failed first attempt, append playbook verdict checks, materialize Wave-wide completion, or claim research quality.',
+    ],
+    tools: 'Task,Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
+    boundary: 'Use exactly three bounded turns in this same session. Invoke one real child in turn 1 and a distinct real child in turn 3. Do not write playbook verdict checks, native completion, health output, or cleanup. If a required child/search/fetch surface is unavailable, fail honestly rather than fabricating evidence.',
+    afterTurn: observeCase164Boundary,
+    timeoutMs: 12 * 60 * 1000,
+  },
   '232': {
     bundlePrefix: 'dpt_disp_case-232_',
     transcript: 'case-232-subject-transcript.jsonl',
@@ -124,7 +138,7 @@ const SUBJECTS = {
 };
 
 function usage() {
-  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <115|232|318|711|712|713-readiness|713-final|901|951|951-judge> --bundle <path>');
+  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <115|164|232|318|711|712|713-readiness|713-final|901|951|951-judge> --bundle <path>');
   process.exit(2);
 }
 
@@ -157,6 +171,48 @@ function observeCase318CrashWindow({ bundle, completedTurns }) {
     && observation.next_gate === 'rerun_ready';
   if (!valid) throw new Error(`case-318 first Subject turn did not establish the required crash window: ${JSON.stringify(observation)}`);
   writeFileSync(join(bundle, 'case-318-crash-window.json'), `${JSON.stringify(observation, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+}
+
+function observeCase164Boundary({ bundle, completedTurns }) {
+  if (![1, 2].includes(completedTurns)) return;
+  const evidencePath = join(bundle, 'case-164-output-hashes.json');
+  const sha256File = (ref) => createHash('sha256').update(readFileSync(resolve(bundle, ref))).digest('hex');
+
+  if (completedTurns === 1) {
+    const evidence = JSON.parse(readFileSync(join(bundle, 'case-164-first-child-evidence.json'), 'utf8'));
+    const dry = JSON.parse(readFileSync(join(bundle, 'case-164-turn1-dry-submit.json'), 'utf8'));
+    const receipts = readFileSync(resolve(bundle, evidence.runtime_receipt_ref), 'utf8')
+      .split(/\r?\n/).filter(Boolean).map(JSON.parse);
+    const semantic = dry.violations?.some((item) => item.repair_scope === 'semantic_content');
+    if (dry.recommended_action !== 'fail_and_replace' || !dry.primary_root_code || !semantic
+      || !receipts.some((item) => item.event === 'work_done')
+      || !Array.isArray(evidence.required_output_refs) || evidence.required_output_refs.length !== 2) {
+      throw new Error('case-164 turn 1 lacks the required native semantic rejection/work_done boundary');
+    }
+    const beforeTurn2 = Object.fromEntries(evidence.required_output_refs.map((ref) => [ref, sha256File(ref)]));
+    writeFileSync(evidencePath, `${JSON.stringify({
+      first_work_id: evidence.work_id,
+      first_queue_item_id: evidence.queue_item_id,
+      primary_root_code: dry.primary_root_code,
+      before_turn2: beforeTurn2,
+    }, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+    return;
+  }
+
+  const evidence = JSON.parse(readFileSync(evidencePath, 'utf8'));
+  const afterTurn2 = Object.fromEntries(Object.keys(evidence.before_turn2).map((ref) => [ref, sha256File(ref)]));
+  if (JSON.stringify(afterTurn2) !== JSON.stringify(evidence.before_turn2)) {
+    throw new Error('case-164 turn 2 changed first-child canonical output bytes');
+  }
+  const claim = JSON.parse(readFileSync(join(bundle, 'case-164-turn2-claim.json'), 'utf8'));
+  const replacement = claim.prompt_refs?.[0];
+  if (claim.claimed_work_ids?.length !== 1 || !replacement?.work_id || !replacement?.queue_item_id
+    || replacement.work_id !== claim.claimed_work_ids[0]
+    || replacement.work_id === evidence.first_work_id
+    || replacement.queue_item_id === evidence.first_queue_item_id) {
+    throw new Error('case-164 turn 2 did not retain a fresh replacement identity');
+  }
+  writeFileSync(evidencePath, `${JSON.stringify({ ...evidence, after_turn2: afterTurn2 }, null, 2)}\n`);
 }
 
 function parseEnv(path) {
@@ -422,7 +478,7 @@ const timeout = setTimeout(() => {
   timedOut = true;
   signalChild('SIGTERM');
   setTimeout(() => signalChild('SIGKILL'), 1000).unref();
-}, SUBJECT_TIMEOUT_MS);
+}, subject.timeoutMs || SUBJECT_TIMEOUT_MS);
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.once(signal, () => signalChild(signal));

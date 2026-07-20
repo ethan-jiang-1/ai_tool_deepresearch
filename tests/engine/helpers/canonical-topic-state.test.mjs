@@ -354,10 +354,17 @@ describe('canonical topic state', () => {
   });
   it('resolves submitted legacy slug snapshots through previous layout without serialized inference', () => {
     const dir = bundle('topic-history-progress'); applyCanonicalTopicState({ bundlePath: dir, input });
-    const rawPlan = readFileSync(join(dir, 'rb_plan.md'), 'utf8').replace('depends_on_topic_uids: []', 'depends_on_topic_uids: []\n    previous_layouts:\n      - id: "00"\n        slug: 00_old-topic-a');
-    writeFileSync(join(dir, 'rb_plan.md'), rawPlan);
+    const currentPlan = readFileSync(join(dir, 'rb_plan.md'), 'utf8');
     const topic = inspectCanonicalTopicState({ bundlePath: dir }).topics[0];
-    claimAndSubmitWorkUnit(dir, { queueItemId: 'q-legacy', queueItemOverrides: { payload: { topic_slug: '00_old-topic-a' } } });
+    const frontmatter = parseYaml(currentPlan.match(/^---\n([\s\S]*?)\n---/)?.[1]);
+    const body = currentPlan.replace(/^---\n[\s\S]*?\n---\n?/, '');
+    frontmatter.topic_registry[0].slug = '00_old-topic-a';
+    frontmatter.topic_registry[0].previous_layouts = [];
+    writeFileSync(join(dir, 'rb_plan.md'), `---\n${JSON.stringify(frontmatter, null, 2)}\n---\n${body}`);
+    claimAndSubmitWorkUnit(dir, { queueItemId: 'q-legacy', queueItemOverrides: { payload: { topic_uid: topic.topic_uid, topic_slug: '00_old-topic-a' } } });
+    frontmatter.topic_registry[0].slug = topic.slug;
+    frontmatter.topic_registry[0].previous_layouts = [{ id: '00', slug: '00_old-topic-a' }];
+    writeFileSync(join(dir, 'rb_plan.md'), `---\n${JSON.stringify(frontmatter, null, 2)}\n---\n${body}`);
     mkdirSync(join(dir, 'artifacts/wave0/00_old-topic-a'), { recursive: true });
     const inspected = inspectCanonicalTopicState({ bundlePath: dir });
     assert.equal(inspected.passed, true);
@@ -367,7 +374,7 @@ describe('canonical topic state', () => {
   it('fails closed once when a submitted manifest has only free-text topic prose', () => {
     const dir = bundle('topic-unresolved-progress'); applyCanonicalTopicState({ bundlePath: dir, input });
     const topic = inspectCanonicalTopicState({ bundlePath: dir }).topics[0];
-    const { record } = claimAndSubmitWorkUnit(dir, { queueItemId: 'q-unresolved', queueItemOverrides: { payload: { note: `about ${topic.slug}` } } });
+    const { record } = claimAndSubmitWorkUnit(dir, { queueItemId: 'q-unresolved', queueItemOverrides: { payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug, note: `about ${topic.slug}` } } });
     const manifestPath = join(dir, record.paths.work_unit_dir, 'manifest.json');
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
     manifest.queue_item.payload = { note: `about ${topic.slug}` };

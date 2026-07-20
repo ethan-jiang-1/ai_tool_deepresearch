@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-07-20 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-07-21 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -53,5 +53,6 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-029 | 2026-07-17 | deep-research-iterative-refinement-positioning.md | HITL1/silent/HITL2 协作节奏落地：`simplify-iterative-research-interaction` change 完成 propose→apply→archive 全周期（commit `a081e4bc6`）；silent contract 从"忽略用户消息"收敛为"不主动打扰"；HITL 两端接受自然语言由 Agent 映射到现有 enum |
 | CLS-030 | 2026-07-17 | codex-playbook-runner.md | coding-Agent runner 与 subject Agent 进程分离：`codex`/`claude` CLI 已原生支持独立 `codex exec` 式 spawn，plan 的核心机制诉求已由平台满足 |
 | CLS-031 | 2026-07-20 | seed-topic-projection-contract-repair.md | Change A (`restore-section-scoped-seed-projection-contract`, v0.35, `af5e6018c`) and Change B (`centralize-seed-topic-authoring-contracts`, v0.36, `29c90d0c1`) both archived; BUG-092/093/094 now have factual closure evidence |
+| CLS-032 | 2026-07-21 | agent-output-linter.md | Broad linter/registry 方案经 review 收窄为 Engine-resolved direct-contract reuse；`reuse-delegated-output-contracts-at-submit` 完成 propose→apply→archive（v0.38，52/52 tasks，case-164 native PASS） |
 
-**Next available plan ID: CLS-032**
+**Next available plan ID: CLS-033**

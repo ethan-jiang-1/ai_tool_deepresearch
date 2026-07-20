@@ -27,13 +27,13 @@ The compatibility branch SHALL be narrow: it applies only to the two required Wa
 - **THEN** submit SHALL NOT silently normalize the role
 - **AND** no submitted row or queue completion SHALL be written until the candidate declares `question_list`
 
-#### Scenario: legacy evidence summary role is normalized before ledger append
+#### Scenario: evidence summary role is normalized before ledger append
 
 - **WHEN** a genuinely pre-contract `wave1_topic_deepening` attempt declares its assigned evidence-summary with role `other`
 - **THEN** successful legacy submit SHALL append a ledger row whose declaration uses role `evidence_summary`
 - **AND** submit diagnostics SHALL report the path, original role `other`, normalized role, and legacy compatibility reason
 
-#### Scenario: legacy question list role is normalized before ledger append
+#### Scenario: question list role is normalized before ledger append
 
 - **WHEN** a genuinely pre-contract `wave1_topic_deepening` attempt declares its assigned question-list with role `other`
 - **THEN** successful legacy submit SHALL append a ledger row whose declaration uses role `question_list`

@@ -31,6 +31,7 @@ import {
   validateWorkIdBinding,
 } from './work-unit-index.mjs';
 import {
+  WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
   WORK_UNIT_RECEIPT_EVENT_SCHEMA_VERSION,
   WorkUnitBeaconSchema,
   WorkUnitManifestSchema,
@@ -42,6 +43,8 @@ import { parse as parseYaml } from 'yaml';
 
 import { queueItemSnapshotHash, queuePath, queueStateFromFile } from './queue-manager-core.mjs';
 import { createQueue, loadQueue } from './queue-manager-lifecycle.mjs';
+import { kindContractForQueueItem } from './work-unit-utils.mjs';
+import { resolveWorkUnitAssignmentContract } from './work-unit-assignment-contract.mjs';
 import {
   cacheLeafMapping,
   resolveCacheLeafContract,
@@ -61,6 +64,34 @@ export function readAndValidateManifest(bundleDir, index, record) {
   validateWorkIdBinding({ ...manifest, kindRegistry: index.kind_registry });
   for (const field of ['work_id', 'queue_item_id', 'wave', 'kind', 'kind_code', 'receipt_nonce', 'queue_item_snapshot_hash']) {
     if (manifest[field] !== record[field]) throw new Error(`manifest/index mismatch for ${record.work_id}: ${field}`);
+  }
+  const recordAssignmentVersion = record.assignment_contract_version;
+  const manifestAssignmentVersion = manifest.assignment_contract_version;
+  if (recordAssignmentVersion || manifestAssignmentVersion) {
+    if (recordAssignmentVersion !== WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION
+      || manifestAssignmentVersion !== recordAssignmentVersion) {
+      throw new Error(`manifest/index mismatch for ${record.work_id}: assignment_contract_version`);
+    }
+    const observedSnapshotHash = queueItemSnapshotHash(manifest.queue_item);
+    if (observedSnapshotHash !== record.queue_item_snapshot_hash) {
+      throw new Error(`embedded queue snapshot hash mismatch for ${record.work_id}`);
+    }
+    const baseOutputContract = kindContractForQueueItem(manifest.queue_item, record.kind).output_contract;
+    const expectedOutputContract = resolveWorkUnitAssignmentContract({
+      assignmentContractVersion: recordAssignmentVersion,
+      kind: record.kind,
+      queueItem: manifest.queue_item,
+      topicBinding: {
+        topic_uid: manifest.queue_item.payload?.topic_uid,
+        topic_slug: manifest.queue_item.payload?.topic_slug,
+      },
+      baseOutputContract,
+    });
+    if (hashValue(manifest.output_contract) !== hashValue(expectedOutputContract)) {
+      throw new Error(`manifest assignment output_contract drift for ${record.work_id}`);
+    }
+  } else if (Object.hasOwn(manifest.output_contract, 'required_outputs')) {
+    throw new Error(`legacy manifest unexpectedly carries required_outputs for ${record.work_id}`);
   }
   if (record.actor_contract_version || manifest.actor_contract_version) {
     if (record.actor_contract_version !== 'work-unit.actor.v1' || manifest.actor_contract_version !== record.actor_contract_version) throw new Error(`manifest/index mismatch for ${record.work_id}: actor_contract_version`);
@@ -100,6 +131,13 @@ export function readAndValidateBeacon(bundleDir, record, manifest) {
   for (const field of ['work_id', 'queue_item_id', 'kind', 'receipt_nonce']) {
     if (beacon[field] !== record[field]) throw new Error(`beacon/index mismatch for ${record.work_id}: ${field}`);
     if (beacon[field] !== manifest[field]) throw new Error(`beacon/manifest mismatch for ${record.work_id}: ${field}`);
+  }
+  if (beacon.assignment_contract_version !== record.assignment_contract_version
+    || beacon.assignment_contract_version !== manifest.assignment_contract_version) {
+    throw new Error(`beacon assignment_contract_version drift for ${record.work_id}`);
+  }
+  if (hashValue(beacon.output_contract) !== hashValue(manifest.output_contract)) {
+    throw new Error(`beacon output_contract drift for ${record.work_id}`);
   }
   if (beacon.result_schema_ref !== manifest.paths.result_schema_ref) throw new Error(`beacon/manifest mismatch for ${record.work_id}: result_schema_ref`);
   if (beacon.runtime_receipt_ref !== manifest.paths.runtime_receipt_ref) throw new Error(`beacon/manifest mismatch for ${record.work_id}: runtime_receipt_ref`);
@@ -352,6 +390,7 @@ export function validateOutputFiles(bundleDir, result, outputContract) {
   if (outputFiles.length > 0 && (!allowedRoles || allowedRoles.size === 0)) {
     throw new Error('output_files[].role cannot be accepted because this work-unit output contract has no allowed_roles');
   }
+  const outputIndexesByPath = new Map();
   for (const [index, entry] of outputFiles.entries()) {
     if (allowedRoles && !allowedRoles.has(entry.role)) {
       throw validationRepairError(`output_files role '${entry.role}' is not allowed by this work-unit output contract; allowed roles: ${[...allowedRoles].join(', ')}`, {
@@ -363,6 +402,10 @@ export function validateOutputFiles(bundleDir, result, outputContract) {
       repair_kind: 'agent_action',
       json_pointer: `/output_files/${index}/path`,
     });
+    const normalizedPath = path.posix.normalize(entry.path);
+    const priorIndexes = outputIndexesByPath.get(normalizedPath) || [];
+    priorIndexes.push(index);
+    outputIndexesByPath.set(normalizedPath, priorIndexes);
     if (!existsSync(path.join(bundleDir, entry.path))) throw validationRepairError(`declared output file missing: ${entry.path}`, {
       repair_kind: 'agent_action',
       write_to: path.join(path.resolve(bundleDir), entry.path),
@@ -372,6 +415,30 @@ export function validateOutputFiles(bundleDir, result, outputContract) {
       throw validationRepairError(`reference output missing source_url: ${entry.path}`, {
         repair_kind: 'agent_action',
         json_pointer: `/output_files/${index}/source_url`,
+      });
+    }
+  }
+  for (const [outputPath, indexes] of outputIndexesByPath) {
+    if (indexes.length > 1) {
+      throw validationRepairError(`output_files contains duplicate normalized path ${outputPath}`, {
+        repair_kind: 'agent_action',
+        json_pointer: `/output_files/${indexes[1]}/path`,
+      });
+    }
+  }
+  for (const required of outputContract?.required_outputs || []) {
+    const indexes = outputIndexesByPath.get(required.path) || [];
+    if (indexes.length === 0) {
+      throw validationRepairError(`output_files missing required output path ${required.path} with role ${required.role}`, {
+        repair_kind: 'agent_action',
+        write_to: 'result.json#/output_files',
+      });
+    }
+    const index = indexes[0];
+    if (outputFiles[index].role !== required.role) {
+      throw validationRepairError(`required output ${required.path} must use canonical role ${required.role}; got ${outputFiles[index].role}`, {
+        repair_kind: 'agent_action',
+        json_pointer: `/output_files/${index}/role`,
       });
     }
   }

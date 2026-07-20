@@ -42,11 +42,15 @@ function setupBundle({ profile = true, topicCount = 2 } = {}) {
   }
   const topics = Array.from({ length: topicCount }, (_, idx) => {
     const slug = `topic-${String.fromCharCode(97 + idx)}`;
-    return `  - slug: ${slug}\n    title: Topic ${String.fromCharCode(65 + idx)}`;
+    const uid = idx === 0
+      ? 'tp_123e4567-e89b-12d3-a456-426614174000'
+      : `tp_123e4567-e89b-12d3-a456-42661417400${idx}`;
+    return `  - topic_uid: ${uid}\n    id: "0${idx + 1}"\n    slug: ${slug}\n    title: Topic ${String.fromCharCode(65 + idx)}\n    must_answer: ["What matters for ${slug}?"]\n    scope_role: primary\n    depends_on_topic_uids: []\n    previous_layouts: []`;
   }).join('\n');
   writeFileSync(path.join(dir, 'rb_plan.md'), `---
 plan_basename: wave-depth-test
 derived_topic_count: ${topicCount}
+topic_registry_version: "2"
 topic_registry:
 ${topics}
 ---
@@ -84,7 +88,7 @@ function submitWave1Source(dir, {
         content: referenceContent({ source_url: sourceUrl, related_topic: topic }),
       },
       { path: evidencePath, role: 'evidence_summary', content: `[Source](${sourceUrl})\n\n## Key Findings\n1. Mechanism.\n` },
-      { path: questionPath, role: 'question_list', content: '## Topic Investigation Targets\n\n## Question Reconciliation\n\n## Emergent Question Protocol\n\n## Exploration / Exploitation Decision\n' },
+      { path: questionPath, role: 'question_list', content: '## Topic Investigation Targets\n\nTargets.\n\n## Question Reconciliation\n\nReconciled.\n\n## Emergent Question Protocol\n\nChecked.\n\n## Exploration / Exploitation Decision\n\nContinue.\n' },
     ],
     cacheTrails: [{
       path: cacheTrail,

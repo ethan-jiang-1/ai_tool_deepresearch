@@ -74,6 +74,15 @@ Existing active bundle reload uses `<bundle>/BUNDLE_MAP.md` plus `rb_status.json
 | work-unit-actor-decision | command_playbook/work-unit-actor-decision.md | queue-front role inspect → 一次真实 native probe → 同一 claim checkpoint；normal batch、单项 Phase Agent fallback 或 no-claim |
 | provenance-forensics-guide | command_playbook/provenance-forensics-guide.md | 事后判定 delegated 证据 provenance 真伪；submitted work-unit ledger 是 gate authority |
 
+Mode-absent unclaimed Wave1 demand uses only the narrow queue repair; it does not infer mode or edit claimed attempts:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-queue.mjs repair <bundle> --queue-item-id <id> --set-assignment-mode <primary|supplementary>
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit <bundle> --work-id <id> --result <result.json>
+```
+
+Dry-submit is predictive and read-only. Formal submit remains the delegated acceptance and success owner.
+
 Already-submitted declaration fault 的唯一 existing-owner operation：
 
 ```bash

@@ -51,6 +51,8 @@ import {
   validateQueueBindingForSubmit,
   validateManifestTopicBinding,
 } from './work-unit-validation.mjs';
+import { evaluateDirectOutputTarget } from './helpers/direct-output-contract.mjs';
+import { deriveWorkUnitCandidateProjection } from './work-unit-candidate-projection.mjs';
 
 import { WorkUnitLedgerRecordSchema, WorkUnitStatusFileSchema } from '../schema/contracts/work-unit.mjs';
 import { loadQueue, saveQueue } from './queue-manager-lifecycle.mjs';
@@ -624,7 +626,7 @@ function prepareCurrentDeclarationRecovery(bundleDir, workId) {
     normalizations,
     outputContract: manifest.output_contract,
   });
-  const result = normalizeWave1RequiredOutputRoles(parsedResult, record, normalizations, assignedResultPath);
+  const result = normalizeWave1RequiredOutputRoles(parsedResult, record, manifest, normalizations, assignedResultPath);
   const resultHash = hashValue(result);
   if (resultHash !== record.result_hash) {
     throw new Error(`submitted result hash mismatch for ${record.work_id}`);
@@ -732,18 +734,19 @@ function prepareCurrentDeclarationRecovery(bundleDir, workId) {
   };
 }
 
-function canonicalWave1RequiredOutputRole(outputPath) {
-  if (/^artifacts\/wave1\/[^/]+\/evidence-summary\.md$/.test(outputPath || '')) return 'evidence_summary';
-  if (/^artifacts\/wave1\/[^/]+\/question-list\.md$/.test(outputPath || '')) return 'question_list';
-  return null;
-}
-
-function normalizeWave1RequiredOutputRoles(result, record, normalizations, resultPath) {
+function normalizeWave1RequiredOutputRoles(result, record, manifest, normalizations, resultPath) {
   if (record.kind !== 'wave1_topic_deepening' && record.wave !== 1) return result;
+  if (record.assignment_contract_version) return result;
+  const assignedTopicSlug = manifest?.queue_item?.payload?.topic_slug;
+  if (!assignedTopicSlug) return result;
+  const legacyRoleByPath = new Map([
+    [`artifacts/wave1/${assignedTopicSlug}/evidence-summary.md`, 'evidence_summary'],
+    [`artifacts/wave1/${assignedTopicSlug}/question-list.md`, 'question_list'],
+  ]);
   const outputFiles = Array.isArray(result.output_files) ? result.output_files : [];
   let changed = false;
   const normalizedOutputFiles = outputFiles.map((entry) => {
-    const canonicalRole = canonicalWave1RequiredOutputRole(entry?.path);
+    const canonicalRole = legacyRoleByPath.get(entry?.path) || null;
     if (!canonicalRole || entry.role !== 'other') return entry;
     changed = true;
     recordSubmitNormalization(normalizations, {
@@ -760,6 +763,27 @@ function normalizeWave1RequiredOutputRoles(result, record, normalizations, resul
     return { ...entry, role: canonicalRole };
   });
   return changed ? { ...result, output_files: normalizedOutputFiles } : result;
+}
+
+function requireDirectOutputs(bundleDir, manifest) {
+  for (const required of manifest.output_contract.required_outputs || []) {
+    const evaluated = evaluateDirectOutputTarget({
+      bundleDir,
+      target: required.path,
+      contractId: required.direct_contract,
+    });
+    if (!evaluated.passed) {
+      const directRoot = evaluated.roots[0];
+      const error = new Error(`${directRoot.coordinate}: ${directRoot.expected} ${directRoot.observed}`);
+      error.repair_contract = {
+        code: directRoot.code,
+        repair_kind: directRoot.root_class === 'semantic_content' ? 'agent_action' : 'missing_contract',
+        write_to: path.join(path.resolve(bundleDir), directRoot.coordinate),
+        details: directRoot,
+      };
+      throw error;
+    }
+  }
 }
 
 export function reasonCodeForSubmit(message) {
@@ -799,8 +823,12 @@ function rejectionGuidance(violations = []) {
   };
 }
 
-function recordSubmitRejection(bundleDir, { work_id, resultPath, reason, violations = [] }) {
+function recordSubmitRejection(bundleDir, { work_id, resultPath, reason, violations = [], candidateProjection = null }) {
   const guidance = rejectionGuidance(violations);
+  const projection = candidateProjection ? {
+    recommended_action: candidateProjection.recommended_action,
+    primary_root_code: candidateProjection.primary_root_code,
+  } : {};
   let index;
   let record;
   try {
@@ -816,6 +844,7 @@ function recordSubmitRejection(bundleDir, { work_id, resultPath, reason, violati
       inspect: [reason],
       advice: 'Use the reported work-unit owner boundary, then rerun dry-submit for the same candidate.',
       ...guidance,
+      ...projection,
     };
   }
 
@@ -845,6 +874,7 @@ function recordSubmitRejection(bundleDir, { work_id, resultPath, reason, violati
       inspect: [rejected.reason],
       advice: 'Terminal work-unit attempts cannot be submitted; follow the reported owner boundary rather than editing authority files.',
       ...guidance,
+      ...projection,
     };
   }
 
@@ -859,6 +889,7 @@ function recordSubmitRejection(bundleDir, { work_id, resultPath, reason, violati
       inspect: [reason],
       advice: 'Submit is only accepted for claimed attempts; use the reported owner boundary and re-run dry-submit when the attempt is claim-eligible.',
       ...guidance,
+      ...projection,
     };
   }
 
@@ -899,6 +930,7 @@ function recordSubmitRejection(bundleDir, { work_id, resultPath, reason, violati
       advice: 'Repair the same candidate through the reported coordinates and rerun the exact dry-submit checkpoint before formal submit.',
       index: savedIndex,
       ...guidance,
+      ...projection,
     };
   });
 }
@@ -982,6 +1014,7 @@ function violationForError(error, {
     rerun: drySubmitRerun(bundleDir, workId, resultPath),
     ...((repair.json_pointer || ownerPointer) ? { json_pointer: repair.json_pointer || ownerPointer } : {}),
     ...(repair.details ? { details: repair.details } : {}),
+    ...(error?.candidate_scope_hint ? { scope_hint: error.candidate_scope_hint } : {}),
   };
 }
 
@@ -1014,8 +1047,12 @@ function validateSubmitPlan(bundleDir, {
   const normalizations = [];
 
   if (record.status === 'submitted' && acceptedStatus === 'claimed') {
-    const parsedResult = readAndValidateResult(bundleDir, resultPath, record, { normalizations });
-    const result = normalizeWave1RequiredOutputRoles(parsedResult, record, normalizations, resultPath);
+    const replayManifest = readAndValidateManifest(bundleDir, index, record);
+    const parsedResult = readAndValidateResult(bundleDir, resultPath, record, {
+      normalizations,
+      outputContract: replayManifest.output_contract,
+    });
+    const result = normalizeWave1RequiredOutputRoles(parsedResult, record, replayManifest, normalizations, resultPath);
     const resultHash = hashValue(result);
     const ledgerRow = findSubmittedLedgerRow(bundleDir, record.work_id);
     if (record.result_hash === resultHash && ledgerRow?.ledger_record_hash === record.ledger_record_hash) {
@@ -1037,9 +1074,10 @@ function validateSubmitPlan(bundleDir, {
     normalizations,
     outputContract: manifest.output_contract,
   });
-  const normalizedResult = normalizeWave1RequiredOutputRoles(result, record, normalizations, resultPath);
+  const normalizedResult = normalizeWave1RequiredOutputRoles(result, record, manifest, normalizations, resultPath);
   const resultHash = hashValue(normalizedResult);
   readAndValidateBeacon(bundleDir, record, manifest);
+  requireDirectOutputs(bundleDir, manifest);
   const runtimeReceipt = validateSubmitRuntimeReceipt(bundleDir, record, {
     normalizations,
     allowNonceNormalization: resultPathInsideAssignedDir,
@@ -1138,7 +1176,7 @@ function prepareLateSubmitIdempotent(bundleDir, { index, record, ledgerRows, res
     normalizations,
     outputContract: manifest.output_contract,
   });
-  const result = normalizeWave1RequiredOutputRoles(parsedResult, record, normalizations, resultPath);
+  const result = normalizeWave1RequiredOutputRoles(parsedResult, record, manifest, normalizations, resultPath);
   const resultHash = hashValue(result);
   if (resultHash !== existingRow.result_hash || resultHash !== record.result_hash) {
     throw new Error(`audited late-submit replay result hash mismatch for ${record.work_id}`);
@@ -1319,6 +1357,39 @@ function prepareLateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
   }
 }
 
+function directOutputViolation(bundleDir, record, resultPath, directRoot) {
+  return {
+    code: directRoot.code,
+    message: `${directRoot.expected} ${directRoot.observed}`,
+    phase: 'direct_outputs',
+    repair_target: 'output_files',
+    repair_kind: directRoot.root_class === 'semantic_content' ? 'agent_action' : 'missing_contract',
+    missing_fact: `${directRoot.coordinate}: ${directRoot.observed}`,
+    write_to: path.join(path.resolve(bundleDir), directRoot.coordinate),
+    rerun: drySubmitRerun(bundleDir, record.work_id, resultPath),
+    root_class: directRoot.root_class,
+    contract_id: directRoot.contract_id,
+    coordinate: directRoot.coordinate,
+    expected: directRoot.expected,
+    observed: directRoot.observed,
+  };
+}
+
+function finalizeCandidatePlan(plan) {
+  const requiredOutputs = plan.manifest?.output_contract?.required_outputs || [];
+  const workDone = Boolean(plan.runtime_receipt?.events?.some((event) => event.event === 'work_done'));
+  const derived = deriveWorkUnitCandidateProjection({
+    violations: plan.violations || [],
+    workDone,
+    requiredOutputs,
+  });
+  return {
+    ...plan,
+    violations: derived.violations,
+    candidate_projection: derived.projection,
+  };
+}
+
 function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
   const violations = [];
   let index = null;
@@ -1332,19 +1403,21 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
   let resultHash = null;
   let cacheValidation = { virtualCachePages: new Map() };
   let cacheValid = false;
+  let beaconValid = false;
+  const directOutputPasses = new Set();
 
   try {
     index = loadWorkUnitIndex(bundleDir, { createIfMissing: false });
   } catch (error) {
     violations.push(...violationsForError(error, { phase: 'work_unit_index', bundleDir, workId: work_id, resultPath }));
-    return { index, record, violations, normalizations };
+    return finalizeCandidatePlan({ index, record, violations, normalizations });
   }
 
   try {
     record = requireWorkUnitRecord(index, work_id);
   } catch (error) {
     violations.push(...violationsForError(error, { phase: 'work_unit_record', bundleDir, workId: work_id, resultPath }));
-    return { index, record, violations, normalizations };
+    return finalizeCandidatePlan({ index, record, violations, normalizations });
   }
 
   if (record.status === 'submitted') {
@@ -1352,7 +1425,7 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
       new Error(`work_id ${record.work_id} is already submitted; dry-submit only preflights claimed attempts`),
       { phase: 'work_unit_status', bundleDir, record, resultPath },
     ));
-    return { index, record, violations, normalizations };
+    return finalizeCandidatePlan({ index, record, violations, normalizations });
   }
 
   if (record.status !== 'claimed') {
@@ -1360,7 +1433,7 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
       new Error(`work_id ${record.work_id} is ${record.status}; submit requires claimed`),
       { phase: 'work_unit_status', bundleDir, record, resultPath },
     ));
-    return { index, record, violations, normalizations };
+    return finalizeCandidatePlan({ index, record, violations, normalizations });
   }
 
   const resultPathInsideAssignedDir = resultPath
@@ -1379,7 +1452,7 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
       normalizations,
       outputContract: manifest?.output_contract || null,
     });
-    normalizedResult = normalizeWave1RequiredOutputRoles(result, record, normalizations, resultPath);
+    normalizedResult = normalizeWave1RequiredOutputRoles(result, record, manifest, normalizations, resultPath);
     resultHash = hashValue(normalizedResult);
   } catch (error) {
     violations.push(...violationsForError(error, { phase: 'result', bundleDir, record, resultPath }));
@@ -1388,6 +1461,7 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
   if (manifest) {
     try {
       readAndValidateBeacon(bundleDir, record, manifest);
+      beaconValid = true;
     } catch (error) {
       violations.push(...violationsForError(error, { phase: 'beacon', bundleDir, record, resultPath }));
     }
@@ -1396,6 +1470,21 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
       queue = validateQueueBindingForSubmit(bundleDir, record, manifest, { sideEffects: false });
     } catch (error) {
       violations.push(...violationsForError(error, { phase: 'queue_binding', bundleDir, record, resultPath }));
+    }
+  }
+
+  if (manifest && beaconValid) {
+    for (const required of manifest.output_contract.required_outputs || []) {
+      const evaluated = evaluateDirectOutputTarget({
+        bundleDir,
+        target: required.path,
+        contractId: required.direct_contract,
+      });
+      if (evaluated.passed) {
+        directOutputPasses.add(required.path);
+      } else {
+        violations.push(...evaluated.roots.map((directRoot) => directOutputViolation(bundleDir, record, resultPath, directRoot)));
+      }
     }
   }
 
@@ -1412,6 +1501,17 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
     try {
       validateOutputFiles(bundleDir, normalizedResult, manifest.output_contract);
     } catch (error) {
+      const requiredPath = (manifest.output_contract.required_outputs || [])
+        .find((required) => error.message.includes(required.path))?.path;
+      if (requiredPath && directOutputPasses.has(requiredPath)
+        && /missing required output path|must use canonical role|duplicate normalized path/i.test(error.message)) {
+        error.candidate_scope_hint = 'mechanical';
+      }
+      if (/output_files\[\] is required/i.test(error.message)
+        && (manifest.output_contract.required_outputs || []).length > 0
+        && directOutputPasses.size === manifest.output_contract.required_outputs.length) {
+        error.candidate_scope_hint = 'mechanical';
+      }
       violations.push(...violationsForError(error, { phase: 'output_files', bundleDir, record, resultPath }));
     }
 
@@ -1438,7 +1538,7 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
     }
   }
 
-  return {
+  return finalizeCandidatePlan({
     index,
     record,
     manifest,
@@ -1446,10 +1546,11 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
     result: normalizedResult,
     result_hash: resultHash,
     runtime_receipt_content: runtimeReceipt?.canonical_content || null,
+    runtime_receipt: runtimeReceipt,
     normalizations,
     virtual_cache_pages: cacheValidation.virtualCachePages,
     violations,
-  };
+  });
 }
 
 function publicNormalizations(normalizations) {
@@ -1469,6 +1570,8 @@ export function drySubmitWorkUnit(bundleDir, { work_id, resultPath } = {}) {
     expected_submit: (plan.violations || []).length === 0 ? 'pass' : 'fail',
     reason_codes: reasonCodes,
     violations: plan.violations || [],
+    recommended_action: plan.candidate_projection.recommended_action,
+    primary_root_code: plan.candidate_projection.primary_root_code,
     normalizations: publicNormalizations(plan.normalizations || []),
     candidate_result_path: resultPath ? path.resolve(resultPath) : null,
     advice: (plan.violations || []).length === 0
@@ -1820,6 +1923,7 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
       resultPath,
       reason: error.message || String(error),
       violations: preflight.violations || [],
+      candidateProjection: preflight.candidate_projection || null,
     });
   }
   if (prepared.duplicate) {

@@ -8,6 +8,8 @@ import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './han
 import {
   claimAndSubmitWorkUnit,
 } from '../../engine/work-unit-test-helpers.mjs';
+import { tryLoadGateDefinition } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { evaluateWave0Contract } from '../../../DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs');
@@ -29,6 +31,15 @@ function runInspect(bundlePath) {
   return spawnSync('node', [INSPECT_CLI, '--bundle', bundlePath], { encoding: 'utf-8', timeout: 10000 });
 }
 
+async function evaluateDirect(input) {
+  const { evaluateDirectOutputTarget } = await import('../../../DPT_FRAMEWORK/engine/helpers/direct-output-contract.mjs');
+  return evaluateDirectOutputTarget(input);
+}
+
+function directContext(finding) {
+  return finding?.checkpoint_context?.direct_root || null;
+}
+
 /** Create a bundle with topic_registry and setup. */
 function createBundle(name) {
   const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
@@ -39,7 +50,7 @@ function createBundle(name) {
   // Write topic_registry into rb_plan.md frontmatter
   const planPath = join(dir, 'rb_plan.md');
   const existing = readFileSync(planPath, 'utf-8');
-  const fm = `---\n{\n  "plan_basename": "${name}",\n  "derived_topic_count": 2,\n  "topic_registry": [\n    { "id": "t1", "slug": "topic-a", "title": "Topic A" },\n    { "id": "t2", "slug": "topic-b", "title": "Topic B" }\n  ]\n}\n---`;
+  const fm = `---\n{\n  "plan_basename": "${name}",\n  "derived_topic_count": 2,\n  "topic_registry_version": "2",\n  "topic_registry": [\n    { "topic_uid": "tp_123e4567-e89b-12d3-a456-426614174000", "id": "01", "slug": "topic-a", "title": "Topic A", "must_answer": ["A?"], "scope_role": "primary", "depends_on_topic_uids": [], "previous_layouts": [] },\n    { "topic_uid": "tp_123e4567-e89b-12d3-a456-426614174001", "id": "02", "slug": "topic-b", "title": "Topic B", "must_answer": ["B?"], "scope_role": "supporting", "depends_on_topic_uids": [], "previous_layouts": [] }\n  ]\n}\n---`;
   writeFileSync(planPath, fm + '\n' + existing.replace(/^---\n[\s\S]*?\n---\n?/, ''));
 
   return dir;
@@ -98,6 +109,15 @@ function setupHappyPath(dir) {
   ]);
   claimAndSubmitWorkUnit(dir, {
     queueItemId: 'topic-a',
+    queueItemOverrides: {
+      payload: {
+        wave: 0,
+        topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+        topic_slug: 'topic-a',
+      },
+      required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+      writes_to: ['artifacts/wave0/topic-a/source.yaml'],
+    },
     outputs: [
       {
         path: 'reference/00-shared-ai-safety.md',
@@ -376,7 +396,7 @@ describe('check-gate-wave0-complete', () => {
     assert.ok(hasSchemaFail, `Expected schema_valid fail in AND scenario: ${JSON.stringify(output.inspect)}`);
   });
 
-  it('6b. diagnoses source.yaml object wrappers with found keys', () => {
+  it('6b. diagnoses source.yaml object wrappers through the shared top-level root', () => {
     const dir = createBundle(unique('objectshape'));
     setupHappyPath(dir);
     writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `wave: 0
@@ -391,11 +411,11 @@ sources:
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
     const joined = output.inspect.join('\n');
-    assert.match(joined, /top-level YAML array/);
-    assert.match(joined, /Found object keys: wave, topic, sources/);
+    assert.match(joined, /source_metadata_top_level_array_missing/);
+    assert.match(joined, /top-level YAML value is object/);
   });
 
-  it('6c. names missing source.yaml fields by entry path', () => {
+  it('6c. names the earliest missing source.yaml field coordinate', () => {
     const dir = createBundle(unique('missingfields'));
     setupHappyPath(dir);
     writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `- url: "https://example.com/no-fields"
@@ -405,8 +425,8 @@ sources:
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
     const joined = output.inspect.join('\n');
-    assert.match(joined, /\[0\.retrieved_date\]/);
-    assert.match(joined, /\[0\.topic_tag\]/);
+    assert.match(joined, /source_metadata_schema_invalid/);
+    assert.match(joined, /0\.retrieved_date/);
   });
 
   it('6d. fails delegated coverage when submitted result.json drifts after ledger append', () => {
@@ -505,5 +525,49 @@ sources:
     assert.equal(output.check.passed, false, `Expected placeholder rejection, got pass. Inspect: ${JSON.stringify(output.inspect)}`);
     assert.ok(output.inspect.some(m => m.includes('placeholder') || m.includes('example.com')),
       `Expected inspect to mention placeholder/example.com, got: ${JSON.stringify(output.inspect)}`);
+  });
+});
+describe('RWG-018 Wave0 direct adapter parity', () => {
+  after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+
+  it('0a. projects the shared Wave0 direct root without duplicating YAML interpretation', async () => {
+    const dir = createBundle(unique('direct-root-parity'));
+    setupHappyPath(dir);
+    const target = 'artifacts/wave0/topic-a/source.yaml';
+    writeFileSync(join(dir, target), 'url: https://example.com/not-an-array\n');
+
+    const direct = await evaluateDirect({
+      bundleDir: dir,
+      target,
+      contractId: 'wave0.source-metadata-array.v1',
+    });
+    assert.equal(direct.passed, false);
+    assert.equal(direct.roots.length, 1);
+    const { definition } = tryLoadGateDefinition('wave0-complete', null);
+    const wave = evaluateWave0Contract(dir, definition);
+    const finding = wave.findings.find((entry) => (
+      entry.rule_id === 'per_topic_reference_schema_valid' && entry.surface === target
+    ));
+    assert.deepEqual(directContext(finding), direct.roots[0]);
+    assert.equal(wave.findings.filter((entry) => entry.surface === target && directContext(entry)).length, 1);
+  });
+
+  it('0b. keeps Wave0 count and submitted provenance outside the direct contract', async () => {
+    const dir = createBundle(unique('direct-wave-only'));
+    setupHappyPath(dir);
+    const target = 'artifacts/wave0/topic-a/source.yaml';
+    writeFileSync(join(dir, target), '[]\n');
+    const direct = await evaluateDirect({
+      bundleDir: dir,
+      target,
+      contractId: 'wave0.source-metadata-array.v1',
+    });
+    assert.equal(direct.passed, true);
+    assert.equal(JSON.stringify(direct).match(/count|provenance|coverage|ledger/gi), null);
+
+    const { definition } = tryLoadGateDefinition('wave0-complete', null);
+    const wave = evaluateWave0Contract(dir, definition);
+    assert.ok(wave.failed_rule_ids.includes('per_topic_count_floor'));
+    assert.equal(wave.failed_rule_ids.includes('per_topic_reference_schema_valid'), false);
   });
 });

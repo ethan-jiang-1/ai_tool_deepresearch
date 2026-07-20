@@ -1,8 +1,9 @@
 # Agent-Authored Output Contract Feedback — Exploration Plan
 
-> 状态：重新定性后的探索来源，**尚未 ready to propose**
+> 状态：**已完成并归档**；由 `reuse-delegated-output-contracts-at-submit`（v0.38）落地
 > 创建：2026-07-13
 > 重新校正：2026-07-20
+> 完成：2026-07-21
 > 历史名称：Agent Output Linter — Implementation Plan
 
 ---

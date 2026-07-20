@@ -23,6 +23,7 @@ import {
 import {
   drySubmitWorkUnit,
 } from './work-unit-submit.mjs';
+import { mapCandidateProjectionToTimeout } from './work-unit-candidate-projection.mjs';
 import {
   isPathInsideDir,
   isPlainObject,
@@ -420,9 +421,14 @@ export function timeoutPreflightWorkUnit(bundleDir, { work_id, resultPath = null
     progress,
     lease_anchor_at: iso(leaseAnchorMs),
     effective_timeout_at: iso(effectiveTimeoutMs),
+    candidate_projection: dry ? {
+      recommended_action: dry.recommended_action,
+      primary_root_code: dry.primary_root_code,
+    } : null,
   };
 
-  if (dry?.expected_submit === 'pass') {
+  const mappedCandidate = dry ? mapCandidateProjectionToTimeout(timeoutMetadata.candidate_projection) : null;
+  if (mappedCandidate?.recommended_action === 'submit') {
     return finalizePreflight({
       ...base,
       ...timeoutMetadata,
@@ -432,7 +438,7 @@ export function timeoutPreflightWorkUnit(bundleDir, { work_id, resultPath = null
     });
   }
 
-  if (drySubmitHasSameAttemptRepair(dry)) {
+  if (mappedCandidate?.recommended_action === 'repair') {
     return finalizePreflight({
       ...base,
       ...timeoutMetadata,
@@ -441,20 +447,24 @@ export function timeoutPreflightWorkUnit(bundleDir, { work_id, resultPath = null
         ...base.inspect,
         ...(dry.violations || []).map((violation) => violation.message),
       ],
-      advice: [`Repair the candidate result/receipt/output/cache for the same claimed work_id ${record.work_id}, then rerun dry-submit or submit.`],
+      advice: mappedCandidate.advice.length > 0
+        ? mappedCandidate.advice
+        : [`Repair the candidate declaration for the same claimed work_id ${record.work_id}, then rerun dry-submit or submit.`],
     });
   }
 
-  if (drySubmitIsNonRepairable(dry)) {
+  if (mappedCandidate?.recommended_action === 'block' || mappedCandidate?.recommended_action === 'inspect') {
     return finalizePreflight({
       ...base,
       ...timeoutMetadata,
-      recommended_action: 'inspect',
+      recommended_action: mappedCandidate.recommended_action,
       inspect: [
         ...base.inspect,
         ...(dry.violations || []).map((violation) => violation.message),
       ],
-      advice: ['Inspect candidate identity, queue binding, and terminal status; do not treat this as same-attempt repair.'],
+      advice: mappedCandidate.advice.length > 0
+        ? mappedCandidate.advice
+        : ['Inspect candidate identity, queue binding, and terminal status; do not treat this as same-attempt repair.'],
     });
   }
 

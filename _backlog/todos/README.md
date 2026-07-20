@@ -152,4 +152,4 @@ flowchart LR
 | `_backlog/plans/ux-user-facing-chinese-first-outside-waves.md` | prefer-Chinese 软提示 | 可并入 helper 极轻步或独立小 change；可不立项 |
 | `todo-user-knowledge-hang.md` | 用户「找/鉴/写」口味包挂载 | 活跃 todo；比 helper 记忆简单，可先于人格层 |
 | `_backlog/plans/seed-backfill-round-continuity.md` | backfill tokens 仅首轮消费，round 2+ 不重新注入 | **P0 设计缺陷**，非 todo；需单独 change |
-| `_backlog/plans/agent-output-linter.md` | Agent 输出 lint（Tier 1 语法 + Tier 2 schema） | 实施计划已有，未开工 |
+| `_backlog/_done/_closed_plans/agent-output-linter.md` | Agent 输出 direct-contract feedback | 已由 `reuse-delegated-output-contracts-at-submit` v0.38 落地并归档（CLS-032） |

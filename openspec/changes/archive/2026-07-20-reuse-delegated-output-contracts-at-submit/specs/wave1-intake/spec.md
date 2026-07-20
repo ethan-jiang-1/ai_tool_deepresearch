@@ -16,13 +16,13 @@ Persisted historical queue/terminal items MAY remain readable without assignment
 
 When post-work_done candidate validation rejects missing research semantics, replacement demand SHALL preserve the failed attempt's canonical Topic and assignment obligation. A failed primary pair SHALL be closed through `operate-work-unit fail` with normalized reason `semantic_contract:<primary_root_code>` using the Engine-derived field, followed by an explicitly enqueued new primary paired demand under a fresh globally unused queue ID, not weakened into supplementary empty-output work. The semantic reason SHALL NOT use `actor_spawn_unavailable:` or another accepted automatic-retry trigger. This requirement SHALL NOT create automatic requeue, contract IDs in queue payloads, or a second success path.
 
-#### Scenario: Wave1 primary claim binds paired assignment
+#### Scenario: Wave1 claim creates deepening work unit
 
 - **WHEN** a current Wave1 primary queue item is enqueued and claimed
 - **THEN** it SHALL carry assignment_mode primary and the exact Topic-bound paired receipts
 - **AND** the allocated work unit SHALL have kind `wave1_topic_deepening` with current assignment contract binding
 
-#### Scenario: Supplementary Wave1 task keeps identity and explicit intent
+#### Scenario: Supplementary Wave1 task keeps topic identity
 
 - **WHEN** shallow Wave1 output requires a second task for canonical topic A
 - **AND** the Agent enqueues a new queue item with topic A's UID/current slug, assignment_mode supplementary, and empty required receipts

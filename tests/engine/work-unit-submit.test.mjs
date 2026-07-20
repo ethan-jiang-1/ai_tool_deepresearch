@@ -11,6 +11,7 @@ import {
   enqueue,
   loadQueue,
   makeItem,
+  queueItemSnapshotHash,
   saveQueue,
 } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
 import {
@@ -24,6 +25,7 @@ import {
   loadWorkUnitIndex,
   readWorkUnitLedgerRows,
   recoverWorkUnitDeclaration,
+  saveWorkUnitIndex,
   submitWorkUnit,
   transactionDir,
   workUnitIndexPath,
@@ -69,19 +71,41 @@ function delegated(id, overrides = {}) {
     targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
     kind: 'wave0_source_intake',
     producer_rule: 'source_intake_fan_in',
-    payload: { topic_slug: id },
+    payload: {
+      topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+      topic_slug: 'topic-a',
+      wave: 0,
+    },
+    required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+    writes_to: ['artifacts/wave0/topic-a/source.yaml'],
     ...overrides,
   });
 }
 
 function delegatedWave1(id, topicSlug = 'topic-a', overrides = {}) {
+  const topicUid = topicSlug === 'topic-b'
+    ? 'tp_123e4567-e89b-12d3-a456-426614174001'
+    : 'tp_123e4567-e89b-12d3-a456-426614174000';
   return makeItem({
     queue_item_id: id,
     title: `Delegated ${id}`,
     targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-evidence-extractor', timeout_ms: 600000 } },
     kind: 'wave1_topic_deepening',
     producer_rule: 'wave1_topic_deepening_dispatch',
-    payload: { topic_slug: topicSlug },
+    payload: {
+      topic_uid: topicUid,
+      topic_slug: topicSlug,
+      wave: 1,
+      assignment_mode: 'primary',
+    },
+    required_receipts: [
+      `file:artifacts/wave1/${topicSlug}/evidence-summary.md`,
+      `file:artifacts/wave1/${topicSlug}/question-list.md`,
+    ],
+    writes_to: [
+      `artifacts/wave1/${topicSlug}/evidence-summary.md`,
+      `artifacts/wave1/${topicSlug}/question-list.md`,
+    ],
     ...overrides,
   });
 }
@@ -94,11 +118,17 @@ function delegatedWave2(id, findingId = 'W2F-001', overrides = {}) {
     kind: 'wave2_targeted_evidence',
     producer_rule: 'targeted_evidence_search',
     payload: { finding_id: findingId, wave: 2 },
+    required_receipts: [],
     ...overrides,
   });
 }
 
 function saveSeedQueue(dir, items) {
+  if (!existsSync(path.join(dir, 'rb_plan.md')) && items.some((item) => (
+    item.kind === 'wave0_source_intake' || item.kind === 'wave1_topic_deepening'
+  ))) {
+    writeCanonicalPlan(dir);
+  }
   let queue = createQueue(path.basename(dir));
   for (const item of items) queue = enqueue(queue, item);
   saveQueue(dir, queue);
@@ -150,6 +180,93 @@ function claimOneWave0(dir, queueItemId = 'queue-a') {
   return loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
 }
 
+function downgradeAssignmentToLegacy(dir, record, { stripTopicBinding = false } = {}) {
+  const index = loadWorkUnitIndex(dir);
+  const nextRecord = index.work_units[record.work_id];
+  const manifestPath = path.join(dir, nextRecord.paths.manifest_ref);
+  const beaconPath = path.join(dir, nextRecord.paths.beacon_ref);
+  const manifest = readResult(manifestPath);
+  const beacon = readResult(beaconPath);
+
+  delete nextRecord.assignment_contract_version;
+  delete manifest.assignment_contract_version;
+  delete manifest.output_contract.required_outputs;
+  delete beacon.assignment_contract_version;
+  delete beacon.output_contract.required_outputs;
+
+  if (stripTopicBinding) {
+    delete manifest.queue_item.payload.topic_uid;
+    delete manifest.queue_item.payload.topic_slug;
+    const snapshotHash = queueItemSnapshotHash(manifest.queue_item);
+    nextRecord.queue_item_snapshot_hash = snapshotHash;
+    manifest.queue_item_snapshot_hash = snapshotHash;
+    const queue = loadQueue(dir);
+    queue.delegated_in_flight[nextRecord.queue_item_id].queue_item_snapshot_hash = snapshotHash;
+    saveQueue(dir, queue);
+  }
+
+  saveWorkUnitIndex(dir, index);
+  writeResult(manifestPath, manifest);
+  writeResult(beaconPath, beacon);
+  return loadWorkUnitIndex(dir).work_units[record.work_id];
+}
+
+const CURRENT_TOPIC = {
+  topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+  topic_slug: 'topic-a',
+};
+
+const VALID_CURRENT_SOURCE_YAML = [
+  '- url: https://example.com/source',
+  '  title: Example source',
+  '  retrieved_date: 2026-07-20',
+  '  topic_tag: topic-a',
+  '',
+].join('\n');
+
+function claimCurrentWave0(dir, queueItemId = 'queue-current-wave0') {
+  writeCanonicalPlan(dir);
+  saveSeedQueue(dir, [delegated(queueItemId, {
+    payload: { ...CURRENT_TOPIC, wave: 0 },
+    required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+    writes_to: ['artifacts/wave0/topic-a/source.yaml'],
+  })]);
+  claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+  return loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+}
+
+function writeCurrentWave0SubmitFiles(dir, record, { workDone = true } = {}) {
+  const resultPath = writeValidSubmitFiles(dir, record);
+  const sourcePath = 'artifacts/wave0/topic-a/source.yaml';
+  mkdirSync(path.dirname(path.join(dir, sourcePath)), { recursive: true });
+  writeFileSync(path.join(dir, sourcePath), VALID_CURRENT_SOURCE_YAML);
+  const result = readResult(resultPath);
+  result.output_files = [{ path: sourcePath, role: 'source_yaml' }];
+  writeResult(resultPath, result);
+  if (!workDone) {
+    const [receipt] = receiptEvents(dir, record);
+    receipt.event = 'work_started';
+    writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify(receipt)}\n`);
+  }
+  return { resultPath, sourcePath };
+}
+
+function writeCurrentWave1DirectContent(dir, topicSlug = 'topic-a') {
+  writeFileSync(
+    path.join(dir, `artifacts/wave1/${topicSlug}/evidence-summary.md`),
+    '### Key Findings\n\n- One supported finding.\n',
+  );
+  writeFileSync(
+    path.join(dir, `artifacts/wave1/${topicSlug}/question-list.md`),
+    [
+      '## Topic Investigation Targets', '', 'One target.', '',
+      '## Question Reconciliation', '', 'One reconciliation.', '',
+      '## Emergent Question Protocol', '', 'One emergent question.', '',
+      '## Exploration / Exploitation Decision', '', 'Explore one branch.', '',
+    ].join('\n'),
+  );
+}
+
 function forceTimeout(dir, record, reason = 'deadline-expired') {
   const closed = closeWorkUnitAttempt(dir, {
     work_id: record.work_id,
@@ -186,6 +303,17 @@ function writeValidSubmitFiles(dir, record, { summary = 'done' } = {}) {
 
   const resultPath = path.join(dir, '_tmp', `${record.work_id}.result.json`);
   mkdirSync(path.dirname(resultPath), { recursive: true });
+  const manifest = JSON.parse(readFileSync(path.join(dir, record.paths.manifest_ref), 'utf8'));
+  const outputFiles = [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }];
+  for (const required of manifest.output_contract?.required_outputs ?? []) {
+    const requiredPath = path.join(dir, required.path);
+    mkdirSync(path.dirname(requiredPath), { recursive: true });
+    if (required.direct_contract === 'wave0.source-metadata-array.v1') {
+      writeFileSync(requiredPath, VALID_CURRENT_SOURCE_YAML);
+    }
+    outputFiles.push({ path: required.path, role: required.role });
+  }
+
   writeFileSync(resultPath, `${JSON.stringify({
     schema_version: 'work-unit.result.v1',
     work_id: record.work_id,
@@ -195,7 +323,7 @@ function writeValidSubmitFiles(dir, record, { summary = 'done' } = {}) {
     actor_contract_version: record.actor_contract_version,
     execution_actor_class: record.actor_execution.execution_actor_class,
     summary,
-    output_files: [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }],
+    output_files: outputFiles,
     cache_trails: [cacheTrail],
   }, null, 2)}\n`);
   return resultPath;
@@ -215,6 +343,7 @@ function writeValidWave1SubmitFiles(dir, record, {
     mkdirSync(path.dirname(path.join(dir, outputPath)), { recursive: true });
     writeFileSync(path.join(dir, outputPath), `# ${path.basename(outputPath)}\n\nEvidence for ${topicSlug}.\n`);
   }
+  writeCurrentWave1DirectContent(dir, topicSlug);
 
   const cacheTrail = `_cache/wave1/primary/${record.queue_item_id}/new-source`;
   mkdirSync(path.join(dir, cacheTrail), { recursive: true });
@@ -423,6 +552,198 @@ function assertSnapshotEqual(actual, expected, message) {
 }
 
 describe('submitWorkUnit', () => {
+  it('reads fresh direct bytes for every dry-submit and first formal acceptance', () => {
+    const dir = tempBundle();
+    try {
+      const record = claimCurrentWave0(dir);
+      const { resultPath, sourcePath } = writeCurrentWave0SubmitFiles(dir, record);
+      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v1');
+
+      const firstDry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(firstDry.ok, true, JSON.stringify(firstDry.violations));
+
+      writeFileSync(path.join(dir, sourcePath), 'url: https://example.com/not-an-array\n');
+      const secondDry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(secondDry.ok, false);
+      assert.ok(secondDry.violations.some((violation) => violation.repair_scope === 'semantic_content'));
+      assert.equal(secondDry.recommended_action, 'fail_and_replace');
+
+      writeFileSync(path.join(dir, sourcePath), VALID_CURRENT_SOURCE_YAML);
+      assert.equal(drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath }).ok, true);
+      writeFileSync(path.join(dir, sourcePath), 'url: https://example.com/drift-after-dry\n');
+      const formal = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(formal.ok, false);
+      assertNoLedger(dir);
+      assert.equal(loadWorkUnitIndex(dir).work_units[record.work_id].status, 'claimed');
+      assert.ok(loadQueue(dir).delegated_in_flight[record.queue_item_id]);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('maps candidate, receipt, output, cache, and Engine roots into closed scopes and actions', async (t) => {
+    const cases = [
+      {
+        label: 'mechanical required declaration',
+        mutate({ resultPath }) {
+          const result = readResult(resultPath);
+          result.output_files = [];
+          writeResult(resultPath, result);
+        },
+        scope: 'mechanical',
+        action: 'repair_same_candidate',
+      },
+      {
+        label: 'semantic actor output after work_done',
+        mutate({ dir, sourcePath }) {
+          writeFileSync(path.join(dir, sourcePath), 'not: [the, required, array]\n');
+        },
+        scope: 'semantic_content',
+        action: 'fail_and_replace',
+      },
+      {
+        label: 'semantic receipt before work_done',
+        workDone: false,
+        mutate({ dir, sourcePath }) {
+          writeFileSync(path.join(dir, sourcePath), 'not: [the, required, array]\n');
+        },
+        scope: 'semantic_content',
+        action: 'return_to_actor',
+      },
+      {
+        label: 'semantic cache fact',
+        mutate({ dir, record }) {
+          rmSync(path.join(dir, cacheTrailPath(record), 'websearch.json'));
+        },
+        scope: 'semantic_content',
+        action: 'fail_and_replace',
+      },
+      {
+        label: 'integrity candidate identity',
+        mutate({ resultPath }) {
+          const result = readResult(resultPath);
+          result.queue_item_id = 'conflicting-queue-id';
+          writeResult(resultPath, result);
+        },
+        scope: 'contract_integrity',
+        action: 'inspect_contract',
+      },
+      {
+        label: 'integrity Engine beacon drift',
+        mutate({ dir, record }) {
+          const beaconPath = path.join(dir, record.paths.beacon_ref);
+          const beacon = readResult(beaconPath);
+          beacon.output_contract.required_outputs[0].role = 'other';
+          writeResult(beaconPath, beacon);
+        },
+        scope: 'contract_integrity',
+        action: 'inspect_contract',
+      },
+    ];
+
+    for (const testCase of cases) {
+      await t.test(testCase.label, () => {
+        const dir = tempBundle();
+        try {
+          const record = claimCurrentWave0(dir, `queue-${testCase.label.replaceAll(' ', '-')}`);
+          const candidate = writeCurrentWave0SubmitFiles(dir, record, { workDone: testCase.workDone !== false });
+          testCase.mutate({ dir, record, ...candidate });
+          const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath: candidate.resultPath });
+          assert.equal(dry.ok, false, testCase.label);
+          assert.ok(dry.violations.some((violation) => violation.repair_scope === testCase.scope), testCase.label);
+          assert.equal(dry.recommended_action, testCase.action, testCase.label);
+          assert.equal(typeof dry.primary_root_code, 'string', testCase.label);
+        } finally {
+          cleanup(dir);
+        }
+      });
+    }
+  });
+
+  it('classifies a current Wave1 source-claim mismatch as semantic content', () => {
+    const dir = tempBundle();
+    try {
+      writeCanonicalPlan(dir);
+      saveSeedQueue(dir, [delegatedWave1('wave1-current-primary', 'topic-a', {
+        payload: { ...CURRENT_TOPIC, wave: 1, assignment_mode: 'primary' },
+        required_receipts: [
+          'file:artifacts/wave1/topic-a/evidence-summary.md',
+          'file:artifacts/wave1/topic-a/question-list.md',
+        ],
+      })]);
+      claimWorkUnits(dir, { phase: 'wave1', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
+      const resultPath = writeValidWave1SubmitFiles(dir, record);
+      writeCurrentWave1DirectContent(dir);
+      const result = readResult(resultPath);
+      result.source_claims[0].url = 'https://example.com/conflicting-source';
+      writeResult(resultPath, result);
+
+      const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      const sourceRoot = dry.violations.find((violation) => violation.phase === 'source_claims');
+      assert.equal(sourceRoot.repair_scope, 'semantic_content');
+      assert.equal(dry.recommended_action, 'fail_and_replace');
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('rejects current Wave1 required roles exactly while retaining marker-absent legacy normalization', () => {
+    const currentDir = tempBundle();
+    try {
+      writeCanonicalPlan(currentDir);
+      saveSeedQueue(currentDir, [delegatedWave1('wave1-current-primary', 'topic-a', {
+        payload: { ...CURRENT_TOPIC, wave: 1, assignment_mode: 'primary' },
+        required_receipts: [
+          'file:artifacts/wave1/topic-a/evidence-summary.md',
+          'file:artifacts/wave1/topic-a/question-list.md',
+        ],
+      })]);
+      claimWorkUnits(currentDir, { phase: 'wave1', count: 1 });
+      const record = loadWorkUnitIndex(currentDir).work_units['wu-w1-b000-deep-i0001'];
+      const resultPath = writeValidWave1SubmitFiles(currentDir, record);
+      writeCurrentWave1DirectContent(currentDir);
+      const result = readResult(resultPath);
+      result.output_files = result.output_files.map((entry) => (
+        /\/(?:evidence-summary|question-list)\.md$/.test(entry.path) ? { ...entry, role: 'other' } : entry
+      ));
+      writeResult(resultPath, result);
+
+      const dry = drySubmitWorkUnit(currentDir, { work_id: record.work_id, resultPath });
+      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v1');
+      assert.equal(dry.ok, false);
+      assert.ok(dry.violations.some((violation) => violation.repair_scope === 'mechanical'));
+      assert.equal(dry.normalizations.some((entry) => entry.kind === 'wave1_required_output_role_normalized'), false);
+    } finally {
+      cleanup(currentDir);
+    }
+  });
+
+  it('does not reaccept changed direct bytes during duplicate replay or declaration recovery', () => {
+    const dir = tempBundle();
+    try {
+      const record = claimCurrentWave0(dir);
+      const { resultPath, sourcePath } = writeCurrentWave0SubmitFiles(dir, record);
+      const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+      const [originalRow] = readWorkUnitLedgerRows(dir);
+
+      writeFileSync(path.join(dir, sourcePath), 'changed: after-acceptance\n');
+      const duplicate = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(duplicate.ok, true);
+      assert.equal(duplicate.duplicate, true);
+      assert.deepEqual(readWorkUnitLedgerRows(dir), [originalRow]);
+
+      rmSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER));
+      const recovered = recoverWorkUnitDeclaration(dir, { work_id: record.work_id });
+      assert.equal(recovered.ok, true);
+      assert.equal(recovered.recovered, true);
+      assert.deepEqual(readWorkUnitLedgerRows(dir), [originalRow]);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('accepts object/string receipt detail equally and preserves each representation', () => {
     for (const detail of [{ stage: 'complete', count: 2 }, 'work completed']) {
       const dir = tempBundle();
@@ -503,23 +824,34 @@ describe('submitWorkUnit', () => {
     }
   });
 
-  it('accepts a previous slug snapshot and rejects a mismatched UID snapshot before ledger write', () => {
+  it('rejects previous-slug and mismatched-UID snapshots before claim mutation', () => {
     const legacyDir = tempBundle();
     const mismatchDir = tempBundle();
     try {
       writeCanonicalPlan(legacyDir, { previous: ['old-topic-a'] });
-      saveSeedQueue(legacyDir, [delegated('queue-legacy', { payload: { topic_slug: 'old-topic-a' } })]);
-      claimWorkUnits(legacyDir, { phase: 'wave0', count: 1 });
-      let record = loadWorkUnitIndex(legacyDir).work_units['wu-w0-b000-src-i0001'];
-      assert.equal(submitWorkUnit(legacyDir, { work_id: record.work_id, resultPath: writeValidSubmitFiles(legacyDir, record) }).ok, true);
+      saveSeedQueue(legacyDir, [delegated('queue-legacy', {
+        payload: {
+          topic_uid: CURRENT_TOPIC.topic_uid,
+          topic_slug: 'old-topic-a',
+          wave: 0,
+        },
+        required_receipts: ['file:artifacts/wave0/old-topic-a/source.yaml'],
+        writes_to: ['artifacts/wave0/old-topic-a/source.yaml'],
+      })]);
+      assert.throws(
+        () => claimWorkUnits(legacyDir, { phase: 'wave0', count: 1 }),
+        /current canonical UID\/slug binding/,
+      );
+      assert.equal(existsSync(workUnitIndexPath(legacyDir)), false);
+      assertNoLedger(legacyDir);
 
       writeCanonicalPlan(mismatchDir);
       saveSeedQueue(mismatchDir, [delegated('queue-mismatch', { payload: { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174001', topic_slug: 'topic-a' } })]);
-      claimWorkUnits(mismatchDir, { phase: 'wave0', count: 1 });
-      record = loadWorkUnitIndex(mismatchDir).work_units['wu-w0-b000-src-i0001'];
-      const rejected = submitWorkUnit(mismatchDir, { work_id: record.work_id, resultPath: writeValidSubmitFiles(mismatchDir, record) });
-      assert.equal(rejected.ok, false);
-      assert.equal(rejected.last_submit_rejection.reason_code, 'topic_binding_invalid');
+      assert.throws(
+        () => claimWorkUnits(mismatchDir, { phase: 'wave0', count: 1 }),
+        /current canonical UID\/slug binding/,
+      );
+      assert.equal(existsSync(workUnitIndexPath(mismatchDir)), false);
       assertNoLedger(mismatchDir);
     } finally {
       cleanup(legacyDir);
@@ -1513,16 +1845,29 @@ describe('submitWorkUnit', () => {
     const dir = tempBundle();
     try {
       writeCanonicalPlan(dir);
-      saveSeedQueue(dir, [delegatedWave1('wave1-prior', 'topic-a')]);
+      saveSeedQueue(dir, [delegatedWave1('wave1-prior', 'topic-a', {
+        payload: { ...CURRENT_TOPIC, wave: 1, assignment_mode: 'primary' },
+        required_receipts: [
+          'file:artifacts/wave1/topic-a/evidence-summary.md',
+          'file:artifacts/wave1/topic-a/question-list.md',
+        ],
+      })]);
       claimWorkUnits(dir, { phase: 'wave1', count: 1 });
       const prior = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
       const priorResultPath = writeValidWave1SubmitFiles(dir, prior);
+      writeCurrentWave1DirectContent(dir);
       assert.equal(submitWorkUnit(dir, { work_id: prior.work_id, resultPath: priorResultPath }).ok, true);
       const priorEvidencePath = assignedResult(dir, prior).output_files.find((entry) => entry.role === 'evidence_summary').path;
 
-      enqueueExisting(dir, delegatedWave1('wave1-supplement', 'topic-a'));
+      enqueueExisting(dir, delegatedWave1('wave1-supplement', 'topic-a', {
+        payload: { ...CURRENT_TOPIC, wave: 1, assignment_mode: 'supplementary' },
+        required_receipts: [],
+      }));
       claimWorkUnits(dir, { phase: 'wave1', count: 1 });
       const supplementary = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0002'];
+      const supplementaryManifest = readResult(path.join(dir, supplementary.paths.manifest_ref));
+      assert.equal(supplementary.assignment_contract_version, 'work-unit.assignment.v1');
+      assert.deepEqual(supplementaryManifest.output_contract.required_outputs, []);
       const supplementaryTask = readFileSync(path.join(dir, supplementary.paths.task_ref), 'utf8');
       assert.match(supplementaryTask, /Authorized Source-Ref Lineage/);
       assert.match(supplementaryTask, new RegExp(prior.work_id));
@@ -1561,7 +1906,10 @@ describe('submitWorkUnit', () => {
       writeResult(priorBResultPath, priorBResult);
       assert.equal(submitWorkUnit(dir, { work_id: priorB.work_id, resultPath: priorBResultPath }).ok, true);
 
-      enqueueExisting(dir, delegatedWave1('wave1-current', 'topic-a'));
+      enqueueExisting(dir, delegatedWave1('wave1-current', 'topic-a', {
+        payload: { ...CURRENT_TOPIC, wave: 1, assignment_mode: 'supplementary' },
+        required_receipts: [],
+      }));
       claimWorkUnits(dir, { phase: 'wave1', count: 1 });
       const current = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0003'];
       const resultPath = writeSupplementaryWave1SubmitFiles(dir, current, { sourceRef: sharedEvidencePath });
@@ -1591,7 +1939,10 @@ describe('submitWorkUnit', () => {
       rows[0].ledger_record_hash = 'drifted-ledger-hash';
       writeLedgerRows(dir, rows);
 
-      enqueueExisting(dir, delegatedWave1('wave1-current', 'topic-a'));
+      enqueueExisting(dir, delegatedWave1('wave1-current', 'topic-a', {
+        payload: { ...CURRENT_TOPIC, wave: 1, assignment_mode: 'supplementary' },
+        required_receipts: [],
+      }));
       claimWorkUnits(dir, { phase: 'wave1', count: 1 });
       const current = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0002'];
       const resultPath = writeSupplementaryWave1SubmitFiles(dir, current, { sourceRef: priorEvidencePath });
@@ -1626,11 +1977,12 @@ describe('submitWorkUnit', () => {
         writeFileSync(path.join(dir, sourceRef), '# Existing evidence\n');
 
         if (testCase.prior?.wave === 1) {
-          saveSeedQueue(dir, [delegatedWave1('wave1-prior', testCase.prior.topic || 'unbound', {
-            ...(testCase.prior.topic ? {} : { payload: { note: 'filename only' } }),
-          })]);
+          saveSeedQueue(dir, [delegatedWave1('wave1-prior', testCase.prior.topic || 'topic-a')]);
           claimWorkUnits(dir, { phase: 'wave1', count: 1 });
-          const prior = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
+          let prior = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
+          if (!testCase.prior.topic || testCase.prior.role !== 'evidence_summary') {
+            prior = downgradeAssignmentToLegacy(dir, prior, { stripTopicBinding: !testCase.prior.topic });
+          }
           const priorResultPath = writeValidWave1SubmitFiles(dir, prior, { topicSlug: testCase.prior.topic || 'topic-a' });
           const priorResult = readResult(priorResultPath);
           const evidence = priorResult.output_files.find((entry) => entry.role === 'evidence_summary');
@@ -1650,7 +2002,15 @@ describe('submitWorkUnit', () => {
           saveSeedQueue(dir, []);
         }
 
-        enqueueExisting(dir, delegatedWave1('wave1-current', testCase.currentTopic));
+        enqueueExisting(dir, delegatedWave1('wave1-current', testCase.currentTopic, {
+          payload: {
+            topic_uid: CURRENT_TOPIC.topic_uid,
+            topic_slug: testCase.currentTopic,
+            wave: 1,
+            assignment_mode: 'supplementary',
+          },
+          required_receipts: [],
+        }));
         claimWorkUnits(dir, { phase: 'wave1', count: 1 });
         const current = Object.values(loadWorkUnitIndex(dir).work_units).find((record) => record.queue_item_id === 'wave1-current');
         const resultPath = writeSupplementaryWave1SubmitFiles(dir, current, { sourceRef });
@@ -1674,7 +2034,8 @@ describe('submitWorkUnit', () => {
     try {
       saveSeedQueue(dir, [delegatedWave1('wave1-topic-a')]);
       claimWorkUnits(dir, { phase: 'wave1', count: 1 });
-      const record = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
+      let record = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
+      record = downgradeAssignmentToLegacy(dir, record);
       const resultPath = writeValidWave1SubmitFiles(dir, record);
       const extraPath = 'artifacts/wave1/topic-a/notes.md';
       mkdirSync(path.dirname(path.join(dir, extraPath)), { recursive: true });

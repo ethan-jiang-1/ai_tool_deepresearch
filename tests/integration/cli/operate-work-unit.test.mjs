@@ -1,7 +1,11 @@
 // @impl DEW-002, DEW-013, FRE-005
 
-import { execFileSync as execFileSyncProduction, spawnSync as spawnSyncProduction } from 'node:child_process';
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  execFileSync as execFileSyncProduction,
+  spawn as spawnProduction,
+  spawnSync as spawnSyncProduction,
+} from 'node:child_process';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, watch, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
@@ -69,12 +73,54 @@ function queueItem(overrides = {}) {
     targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
     kind: 'wave0_source_intake',
     producer_rule: 'source_intake_fan_in',
-    payload: { topic_slug: 'topic-a' },
+    payload: {
+      wave: 0,
+      topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+      topic_slug: 'topic-a',
+    },
+    required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+    writes_to: ['artifacts/wave0/topic-a/source.yaml'],
+    ...overrides,
+  });
+}
+
+function writeCanonicalPlan(dir) {
+  writeFileSync(path.join(dir, 'rb_plan.md'), `---
+plan_basename: test
+derived_topic_count: 1
+topic_registry_version: "2"
+topic_registry:
+  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
+    id: "01"
+    slug: topic-a
+    title: Topic A
+    must_answer: ["A?"]
+    scope_role: primary
+    depends_on_topic_uids: []
+    previous_layouts: []
+---
+# Plan
+`);
+}
+
+function currentWave0QueueItem(id, overrides = {}) {
+  return queueItem({
+    queue_item_id: id,
+    payload: {
+      wave: 0,
+      topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+      topic_slug: 'topic-a',
+    },
+    required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+    writes_to: ['artifacts/wave0/topic-a/source.yaml'],
     ...overrides,
   });
 }
 
 function saveQueueWith(dir, items) {
+  if (!existsSync(path.join(dir, 'rb_plan.md')) && items.some((item) => item.kind === 'wave0_source_intake')) {
+    writeCanonicalPlan(dir);
+  }
   let queue = createQueue(path.basename(dir));
   for (const item of items) queue = enqueue(queue, item);
   saveQueue(dir, queue);
@@ -84,6 +130,15 @@ function writeValidSubmitFiles(dir, record) {
   const outputPath = `reference/${record.work_id}.md`;
   mkdirSync(path.join(dir, 'reference'), { recursive: true });
   writeFileSync(path.join(dir, outputPath), '# Source\n\nKey Facts\n');
+  const sourcePath = 'artifacts/wave0/topic-a/source.yaml';
+  mkdirSync(path.dirname(path.join(dir, sourcePath)), { recursive: true });
+  writeFileSync(path.join(dir, sourcePath), [
+    '- url: https://example.com/source',
+    '  title: Example source',
+    '  retrieved_date: 2026-07-20',
+    '  topic_tag: topic-a',
+    '',
+  ].join('\n'));
 
   const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
   mkdirSync(path.join(dir, cacheTrail), { recursive: true });
@@ -113,7 +168,10 @@ function writeValidSubmitFiles(dir, record) {
     actor_contract_version: record.actor_contract_version,
     execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'done',
-    output_files: [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }],
+    output_files: [
+      { path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' },
+      { path: sourcePath, role: 'source_yaml' },
+    ],
     cache_trails: [cacheTrail],
   }, null, 2)}\n`);
   return resultPath;
@@ -184,6 +242,143 @@ function writeAssignedRepairableResult(dir, record) {
 }
 
 describe('operate-work-unit inspect', () => {
+  it('preflights a mixed claim batch before every allocation or authority mutation', () => {
+    const dir = tempBundle();
+    try {
+      writeCanonicalPlan(dir);
+      saveQueueWith(dir, [
+        currentWave0QueueItem('queue-valid-first'),
+        currentWave0QueueItem('queue-invalid-second', {
+          payload: {
+            wave: 0,
+            topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+            topic_slug: 'topic-a',
+            nested: { direct_contract_id: 'forbidden-selector' },
+          },
+        }),
+      ]);
+      const before = recursiveSnapshot(dir);
+      const result = spawnSync('node', [CLI, 'claim', dir, '--phase', 'wave0', '--count', '2'], { encoding: 'utf8' });
+      assert.equal(result.status, 1);
+      assert.match(`${result.stdout}\n${result.stderr}`, /queue-invalid-second|direct_contract_id/);
+      assert.deepEqual(recursiveSnapshot(dir), before);
+      assert.equal(existsSync(workUnitIndexPath(dir)), false);
+      assert.equal(existsSync(transactionDir(dir)), false);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('preserves sanctioned non-selector output customization through claim projection', () => {
+    const dir = tempBundle();
+    try {
+      writeCanonicalPlan(dir);
+      saveQueueWith(dir, [currentWave0QueueItem('queue-customized', {
+        output_contract: {
+          required_result_fields: ['work_id', 'queue_item_id', 'kind', 'receipt_nonce', 'summary', 'output_files', 'cache_trails'],
+          output_files: {
+            required: true,
+            allowed_roles: ['reference', 'source_yaml', 'other'],
+            reference_requires_source_url: true,
+          },
+        },
+      })]);
+      const result = spawnSync('node', [CLI, 'claim', dir, '--phase', 'wave0', '--count', '1'], { encoding: 'utf8' });
+      assert.equal(result.status, 0, result.stderr);
+      const output = JSON.parse(result.stdout);
+      const record = loadWorkUnitIndex(dir).work_units[output.claimed_work_ids[0]];
+      const manifest = JSON.parse(readFileSync(path.join(dir, record.paths.manifest_ref), 'utf8'));
+      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v1');
+      assert.ok(manifest.output_contract.required_result_fields.includes('summary'));
+      assert.deepEqual(manifest.output_contract.required_outputs, [{
+        path: 'artifacts/wave0/topic-a/source.yaml',
+        role: 'source_yaml',
+        direct_contract: 'wave0.source-metadata-array.v1',
+      }]);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('rechecks planned prefix hashes inside the transaction before its first mutation', async () => {
+    const dir = tempBundle();
+    let child;
+    let watcher;
+    try {
+      writeCanonicalPlan(dir);
+      const padding = 'x'.repeat(512 * 1024);
+      const items = Array.from({ length: 10 }, (_, index) => currentWave0QueueItem(`queue-race-${index}`, {
+        payload: {
+          wave: 0,
+          topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+          topic_slug: 'topic-a',
+          non_selector_padding: padding,
+        },
+      }));
+      saveQueueWith(dir, items);
+      mkdirSync(path.join(dir, '_work_units', '_transactions'), { recursive: true });
+
+      let stdout = '';
+      let stderr = '';
+      let intercepted = false;
+      const interceptedPromise = new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('claim transaction lock was not observed')), 10000);
+        watcher = watch(path.join(dir, '_work_units'), { recursive: true }, (_event, filename) => {
+          if (intercepted || !String(filename || '').endsWith('.lock')) return;
+          intercepted = true;
+          process.kill(child.pid, 'SIGSTOP');
+          const queuePath = path.join(dir, 'rb_queue.json');
+          const queue = JSON.parse(readFileSync(queuePath, 'utf8'));
+          queue.active_window[0].updated_at = '2026-07-20T00:00:01.000Z';
+          writeFileSync(queuePath, `${JSON.stringify(queue, null, 2)}\n`);
+          process.kill(child.pid, 'SIGCONT');
+          clearTimeout(timeout);
+          resolve();
+        });
+      });
+
+      child = spawnProduction('node', withExplicitActor([
+        CLI,
+        'claim',
+        dir,
+        '--phase',
+        'wave0',
+        '--count',
+        '10',
+      ]), { stdio: ['ignore', 'pipe', 'pipe'] });
+      child.stdout.setEncoding('utf8');
+      child.stderr.setEncoding('utf8');
+      child.stdout.on('data', (chunk) => { stdout += chunk; });
+      child.stderr.on('data', (chunk) => { stderr += chunk; });
+      const exited = new Promise((resolve) => child.once('close', (status) => resolve(status)));
+
+      await interceptedPromise;
+      const status = await exited;
+      watcher.close();
+      watcher = null;
+
+      assert.equal(status, 1, `${stdout}\n${stderr}`);
+      assert.match(`${stdout}\n${stderr}`, /prefix|snapshot|drift|queue-race-0/i);
+      const queue = JSON.parse(readFileSync(path.join(dir, 'rb_queue.json'), 'utf8'));
+      assert.equal(queue.active_window.length, 10);
+      assert.deepEqual(queue.delegated_in_flight, {});
+      assert.equal(existsSync(workUnitIndexPath(dir)), false);
+      const transactions = readdirSync(transactionDir(dir)).map((name) => (
+        JSON.parse(readFileSync(path.join(transactionDir(dir), name), 'utf8'))
+      ));
+      assert.equal(transactions.length, 1);
+      assert.equal(transactions[0].status, 'failed');
+      assert.equal(readdirSync(path.join(dir, '_work_units')).some((name) => /^wave0$/.test(name)), false);
+      const tracePath = path.join(dir, 'rb_trace.jsonl');
+      const trace = existsSync(tracePath) ? readFileSync(tracePath, 'utf8') : '';
+      assert.doesNotMatch(trace, /work_unit_claimed|work_unit_batch_claimed/);
+    } finally {
+      watcher?.close();
+      if (child && child.exitCode === null) child.kill('SIGKILL');
+      cleanup(dir);
+    }
+  });
+
   it('rejects a same-name nested bundle root without directory, transaction, trace, log, rejection, or beacon side effects', () => {
     for (const command of ['inspect', 'dry-submit', 'submit']) {
       const dir = tempBundle();
@@ -486,9 +681,9 @@ describe('operate-work-unit inspect', () => {
     try {
       saveQueueWith(dir, [
         queueItem(),
-        queueItem({ queue_item_id: 'queue-source-topic-b', payload: { topic_slug: 'topic-b' } }),
-        queueItem({ queue_item_id: 'queue-source-topic-c', payload: { topic_slug: 'topic-c' } }),
-        queueItem({ queue_item_id: 'queue-source-topic-d', payload: { topic_slug: 'topic-d' } }),
+        queueItem({ queue_item_id: 'queue-source-topic-a-2' }),
+        queueItem({ queue_item_id: 'queue-source-topic-a-3' }),
+        queueItem({ queue_item_id: 'queue-source-topic-a-4' }),
       ]);
 
       for (let i = 0; i < 4; i += 1) {

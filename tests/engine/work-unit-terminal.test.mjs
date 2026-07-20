@@ -52,11 +52,29 @@ function delegated(id) {
     targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
     kind: 'wave0_source_intake',
     producer_rule: 'source_intake_fan_in',
-    payload: { topic_slug: id },
+    payload: { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000', topic_slug: 'topic-a', wave: 0 },
+    required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+    writes_to: ['artifacts/wave0/topic-a/source.yaml'],
   });
 }
 
 function saveSeedQueue(dir, items) {
+  writeFileSync(path.join(dir, 'rb_plan.md'), `---
+plan_basename: terminal-test
+derived_topic_count: 1
+topic_registry_version: "2"
+topic_registry:
+  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
+    id: "01"
+    slug: topic-a
+    title: Topic A
+    must_answer: ["What matters?"]
+    scope_role: primary
+    depends_on_topic_uids: []
+    previous_layouts: []
+---
+# Plan
+`);
   let queue = createQueue(path.basename(dir));
   for (const item of items) queue = enqueue(queue, item);
   saveQueue(dir, queue);
@@ -112,6 +130,9 @@ function writeSubmitReadyCandidate(dir, record, { resultPath = path.join(dir, re
   const outputPath = `reference/${record.work_id}.md`;
   mkdirSync(path.join(dir, 'reference'), { recursive: true });
   writeFileSync(path.join(dir, outputPath), '# Source\n\nKey facts from a real fetched page.\n');
+  const sourcePath = 'artifacts/wave0/topic-a/source.yaml';
+  mkdirSync(path.join(dir, 'artifacts/wave0/topic-a'), { recursive: true });
+  writeFileSync(path.join(dir, sourcePath), '- url: https://example.com/source\n  title: Source\n  retrieved_date: 2026-07-20\n  topic_tag: topic-a\n');
 
   const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
   mkdirSync(path.join(dir, cacheTrail), { recursive: true });
@@ -130,7 +151,10 @@ function writeSubmitReadyCandidate(dir, record, { resultPath = path.join(dir, re
     actor_contract_version: record.actor_contract_version,
     execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'ready',
-    output_files: [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }],
+    output_files: [
+      { path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' },
+      { path: sourcePath, role: 'source_yaml' },
+    ],
     cache_trails: [cacheTrail],
   }, null, 2)}\n`);
   setFileMtime(resultPath, observedMs);
@@ -139,6 +163,9 @@ function writeSubmitReadyCandidate(dir, record, { resultPath = path.join(dir, re
 
 function writeRepairableCandidate(dir, record) {
   const resultPath = path.join(dir, record.paths.result_ref);
+  const sourcePath = 'artifacts/wave0/topic-a/source.yaml';
+  mkdirSync(path.join(dir, 'artifacts/wave0/topic-a'), { recursive: true });
+  writeFileSync(path.join(dir, sourcePath), '- url: https://example.com/source\n  title: Source\n  retrieved_date: 2026-07-20\n  topic_tag: topic-a\n');
   mkdirSync(path.dirname(resultPath), { recursive: true });
   writeFileSync(resultPath, `${JSON.stringify({
     schema_version: 'work-unit.result.v1',
@@ -146,6 +173,8 @@ function writeRepairableCandidate(dir, record) {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'draft',
     output_files: [],
     cache_trails: [],
@@ -642,7 +671,7 @@ describe('work-unit terminal attempts', () => {
         nowMs: afterDeadline(repairRecord),
       });
       assert.equal(repairAdvice.timeout_eligible, false);
-      assert.equal(repairAdvice.recommended_action, 'repair');
+      assert.equal(repairAdvice.recommended_action, 'repair', JSON.stringify(repairAdvice));
       assert.equal(repairAdvice.progress.dry_submit_expected, 'fail');
       const repairBeforeTimeout = authoritySnapshot(repairDir);
       const repairRefused = closeWorkUnitAttempt(repairDir, {
@@ -664,7 +693,7 @@ describe('work-unit terminal attempts', () => {
         nowMs: afterDeadline(inspectRecord),
       });
       assert.equal(inspectAdvice.timeout_eligible, false);
-      assert.equal(inspectAdvice.recommended_action, 'repair');
+      assert.equal(inspectAdvice.recommended_action, 'inspect');
       const inspectBeforeTimeout = authoritySnapshot(inspectDir);
       const inspectRefused = closeWorkUnitAttempt(inspectDir, {
         work_id: inspectRecord.work_id,
@@ -673,7 +702,7 @@ describe('work-unit terminal attempts', () => {
         nowMs: afterDeadline(inspectRecord),
       });
       assert.equal(inspectRefused.ok, false);
-      assert.equal(inspectRefused.recommended_action, 'repair');
+      assert.equal(inspectRefused.recommended_action, 'inspect');
       assert.equal(authoritySnapshot(inspectDir), inspectBeforeTimeout);
 
       saveSeedQueue(externalDir, [delegated('queue-a')]);

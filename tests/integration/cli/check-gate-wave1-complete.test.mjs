@@ -9,6 +9,8 @@ import {
   claimAndSubmitWorkUnit,
   referenceContent,
 } from '../../engine/work-unit-test-helpers.mjs';
+import { tryLoadGateDefinition } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { evaluateWave1Contract } from '../../../DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs');
@@ -37,6 +39,15 @@ function runGate(bundlePath, { attempt } = {}) {
 
 function runInspect(bundlePath) {
   return spawnSync('node', [INSPECT_CLI, '--bundle', bundlePath], { encoding: 'utf-8', timeout: 10000 });
+}
+
+async function evaluateDirect(input) {
+  const { evaluateDirectOutputTarget } = await import('../../../DPT_FRAMEWORK/engine/helpers/direct-output-contract.mjs');
+  return evaluateDirectOutputTarget(input);
+}
+
+function directContext(finding) {
+  return finding?.checkpoint_context?.direct_root || null;
 }
 
 function writeWave1Trace(dir, { completion = true } = {}) {
@@ -119,18 +130,31 @@ last_updated: 2026-01-15
 `;
 
 const VALID_SEED_TOPIC = `---
-id: t1
+topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
+id: "01"
 slug: topic-a
 title: Topic A
+must_answer:
+  - How should Topic A be investigated?
+scope_role: primary
+depends_on_topic_uids: []
 ---
 
 # Topic A
 
 ## 本轮新增机制理解
-1. AI alignment shows promising results in scalable oversight.
+- evidence_meaning: AI alignment shows promising results in scalable oversight.
+  relationship: supports
+  refs: reference/01-topic-a-deepening.md
+  status: accepted
+  next_hop: wave2
 
 ## 本轮新增趋势与难点
-- Trend: Increased regulatory attention. 难点: Measuring alignment.
+- evidence_meaning: Increased regulatory attention and measurement difficulty.
+  relationship: supports
+  refs: reference/01-topic-a-deepening.md
+  status: accepted
+  next_hop: wave2
 
 ## 待验证问题
 1. [部分解答] How to measure alignment?
@@ -164,7 +188,7 @@ function createBundle(name) {
   // topic_registry
   const planPath = join(dir, 'rb_plan.md');
   const existing = readFileSync(planPath, 'utf-8');
-  const fm = `---\n{\n  "plan_basename": "${name}",\n  "derived_topic_count": 1,\n  "topic_registry": [\n    { "id": "t1", "slug": "topic-a", "title": "Topic A" }\n  ]\n}\n---`;
+  const fm = `---\n{\n  "plan_basename": "${name}",\n  "derived_topic_count": 1,\n  "topic_registry_version": "2",\n  "topic_registry": [\n    {\n      "topic_uid": "tp_123e4567-e89b-12d3-a456-426614174000",\n      "id": "01",\n      "slug": "topic-a",\n      "title": "Topic A",\n      "must_answer": ["How should Topic A be investigated?"],\n      "scope_role": "primary",\n      "depends_on_topic_uids": [],\n      "previous_layouts": []\n    }\n  ]\n}\n---`;
   writeFileSync(planPath, fm + '\n' + existing.replace(/^---\n[\s\S]*?\n---\n?/, ''));
 
   // Scaffold
@@ -175,6 +199,9 @@ function createBundle(name) {
   topic_unique_ratio: 1
   counterexample_search: false
   cross_verification: false
+human_decision_checkpoints:
+  hitl2:
+    rerun_count: 0
 `);
 
   // Reference: flat format with topic-prefixed files (required by count_floor)
@@ -200,7 +227,10 @@ function createBundle(name) {
   return dir;
 }
 
-function writeCanonicalTopicPlan(dir, topicUid) {
+function writeCanonicalTopicPlan(dir, topicUid, {
+  slug = 'topic-a',
+  previousLayouts = [{ id: '02', slug: '02_old-topic-a' }],
+} = {}) {
   const planPath = join(dir, 'rb_plan.md');
   const existing = readFileSync(planPath, 'utf-8');
   const body = existing.replace(/^---\n[\s\S]*?\n---\n?/, '');
@@ -211,12 +241,12 @@ function writeCanonicalTopicPlan(dir, topicUid) {
     topic_registry: [{
       topic_uid: topicUid,
       id: '01',
-      slug: 'topic-a',
+      slug,
       title: 'Topic A',
       must_answer: ['How to measure alignment?'],
       scope_role: 'primary',
       depends_on_topic_uids: [],
-      previous_layouts: [{ id: '02', slug: '02_old-topic-a' }],
+      previous_layouts: previousLayouts,
     }],
   };
   writeFileSync(planPath, `---\n${JSON.stringify(frontmatter, null, 2)}\n---\n${body}`);
@@ -256,6 +286,7 @@ function submitWave1WorkUnit(dir, {
   return claimAndSubmitWorkUnit(dir, {
     phase: 'wave1',
     queueItemId,
+    legacyAssignment: true,
     outputs,
     cacheTrails: [{
       path: cacheTrail,
@@ -582,12 +613,11 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     submitAndReviewWave1WorkUnit(dir);
     writeWave1Trace(dir);
-    const planPath = join(dir, 'rb_plan.md');
-    writeFileSync(planPath, readFileSync(planPath, 'utf8').replace(
-      '{ "id": "t1", "slug": "topic-a", "title": "Topic A" }',
-      '{ "id": "t1", "slug": "topic-a-new", "title": "Topic A", "previous_layouts": [{ "id": "t1", "slug": "topic-a" }] }',
-    ));
-    writeFileSync(join(dir, 'seed_topics/topic-a-new.md'), VALID_SEED_TOPIC.replaceAll('topic-a', 'topic-a-new'));
+    writeCanonicalTopicPlan(dir, 'tp_123e4567-e89b-12d3-a456-426614174000', {
+      slug: 'topic-a-new',
+      previousLayouts: [{ id: '01', slug: 'topic-a' }],
+    });
+    writeFileSync(join(dir, 'seed_topics/topic-a-new.md'), VALID_SEED_TOPIC.replace('slug: topic-a', 'slug: topic-a-new'));
     const output = JSON.parse(runGate(dir).stdout);
     assert.equal(output.check.passed, true, output.inspect.join('\n'));
     assert.equal(output.check.failed_rule_ids.some((id) => id.endsWith(':topic-a-new')), false);
@@ -645,11 +675,10 @@ describe('check-gate-wave1-complete', () => {
     writeWave1Trace(dir);
 
     const inspectOutput = JSON.parse(runInspect(dir).stdout);
-    assert.equal(inspectOutput.check.passed, true, inspectOutput.inspect.join('\n'));
     assert.equal(Object.hasOwn(inspectOutput, 'routing'), false);
     assert.notEqual(inspectOutput.check.degraded, true);
-    assert.equal(inspectOutput.check.failed_rule_ids.some((id) => id.startsWith('return_map_missing_fields')), false);
     assert.equal(inspectOutput.check.failed_rule_ids.some((id) => id.startsWith('key_facts_min_lines')), false);
+    assert.equal(inspectOutput.check.failed_rule_ids.some((id) => id.startsWith('per_topic_ref_md_count_floor')), false);
 
     const gateOutput = JSON.parse(runGate(dir, { attempt: 3 }).stdout);
     assert.equal(gateOutput.check.passed, true, gateOutput.inspect.join('\n'));
@@ -960,5 +989,63 @@ describe('check-gate-wave1-complete', () => {
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected supplementary repair pass, got inspect: ${JSON.stringify(output.inspect)}`);
+  });
+});
+describe('RWG-018 Wave1 direct adapter parity', () => {
+  after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+
+  it('0a. projects the same direct roots for Key Findings and question sections', async () => {
+    const cases = [
+      {
+        target: 'artifacts/wave1/topic-a/evidence-summary.md',
+        content: EMPTY_FINDINGS_SUMMARY,
+        contractId: 'wave1.evidence-summary.v1',
+        ruleId: 'key_findings_non_empty',
+      },
+      {
+        target: 'artifacts/wave1/topic-a/question-list.md',
+        content: '## Topic Investigation Targets\n\nOne target.\n',
+        contractId: 'wave1.question-list.v1',
+        ruleId: 'question_list_has_four_sections',
+      },
+    ];
+    for (const testCase of cases) {
+      const dir = createBundle(unique(`direct-${testCase.ruleId}`));
+      writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+      writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+      writeFileSync(join(dir, testCase.target), testCase.content);
+      const direct = await evaluateDirect({
+        bundleDir: dir,
+        target: testCase.target,
+        contractId: testCase.contractId,
+      });
+      assert.equal(direct.passed, false, testCase.ruleId);
+      assert.equal(direct.roots.length, 1, testCase.ruleId);
+      const { definition } = tryLoadGateDefinition('wave1-complete', null);
+      const wave = evaluateWave1Contract(dir, definition);
+      const finding = wave.findings.find((entry) => (
+        entry.rule_id === testCase.ruleId && entry.surface === testCase.target
+      ));
+      assert.deepEqual(directContext(finding), direct.roots[0], testCase.ruleId);
+      assert.equal(wave.findings.filter((entry) => entry.surface === testCase.target && directContext(entry)).length, 1);
+    }
+  });
+
+  it('0b. keeps URL, provenance, depth, return-map, and phase facts Wave-only', async () => {
+    const dir = createBundle(unique('direct-wave-only'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), NO_SOURCE_URL_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    const direct = await evaluateDirect({
+      bundleDir: dir,
+      target: 'artifacts/wave1/topic-a/evidence-summary.md',
+      contractId: 'wave1.evidence-summary.v1',
+    });
+    assert.equal(direct.passed, true);
+    assert.equal(JSON.stringify(direct).match(/source_url|provenance|depth|return.map|phase|ledger/gi), null);
+
+    const { definition } = tryLoadGateDefinition('wave1-complete', null);
+    const wave = evaluateWave1Contract(dir, definition);
+    assert.ok(wave.failed_rule_ids.includes('source_url_present'));
+    assert.equal(wave.failed_rule_ids.includes('key_findings_non_empty'), false);
   });
 });

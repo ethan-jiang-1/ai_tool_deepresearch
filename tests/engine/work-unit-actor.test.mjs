@@ -33,7 +33,7 @@ describe('work-unit actor decision', () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'wu-actor-no-claim-'));
     try {
       seedDelegatedQueue(dir, Array.from({ length: 5 }, (_, index) => delegatedQueueItem(`queue-${index}`)));
-      for (const ref of ['rb_status.json', 'rb_profile.yaml', 'rb_plan.md', 'artifact.txt', 'reference/ref.md', 'final/report.md']) {
+      for (const ref of ['rb_status.json', 'rb_profile.yaml', 'artifact.txt', 'reference/ref.md', 'final/report.md']) {
         const target = path.join(dir, ref);
         mkdirSync(path.dirname(target), { recursive: true });
         writeFileSync(target, `${ref}\n`);
