@@ -7,6 +7,7 @@ import { parse as parseYaml } from 'yaml';
 import { PostFinalRecoveryEventSchema } from './post-final-reentry-contract.mjs';
 import { computeResearchStyleParams } from './research-style-params.mjs';
 import { makeContractFinding, projectFindingCompatibility } from './wave-contract-findings.mjs';
+import { readGateDefinitionSnapshot } from '../../schema/contracts/gate-definition.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -419,7 +420,7 @@ export function inspectPostFinalHandoffStage(bundlePath) {
   const acceptedProfile = item.event.committed_after_profile_semantics;
   const guard = item.event.rerun_guard;
   const profileClass = classifyPostFinalProfile(bundlePath, profile, acceptedProfile, guard);
-  const definitionDigest = createHash('sha256').update(readFileSync(RERUN_DEFINITION_PATH)).digest('hex');
+  const definitionDigest = createHash('sha256').update(readGateDefinitionSnapshot(RERUN_DEFINITION_PATH).rawBytes).digest('hex');
   if (currentCountBeforeIncrement(profile, guard) && definitionDigest !== guard.definition_sha256) {
     return { ok: false, reason_code: 'rerun_rule_drift', reason: 'active rerun-limit definition drifted before the bound count increment' };
   }

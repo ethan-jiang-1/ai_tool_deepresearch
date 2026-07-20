@@ -53,6 +53,10 @@ function extractJsonBlock(text) {
 function setupBundle(name, overrides = {}) {
   const dir = join(TMP, name);
   mkdirSync(dir, { recursive: true });
+  const topic = {
+    topic_uid: 'tp_123e4567-e89b-42d3-a456-426614174000', id: '01', slug: '01_test-topic', title: 'Test Topic',
+    must_answer: ['test question'], scope_role: 'primary', depends_on_topic_uids: [],
+  };
 
   // Default: valid rerun state
   const profile = {
@@ -149,14 +153,19 @@ function setupBundle(name, overrides = {}) {
   // Required directories
   mkdirSync(join(dir, 'seed_topics'), { recursive: true });
   mkdirSync(join(dir, 'reference'), { recursive: true });
+  writeFileSync(join(dir, 'rb_plan.md'), `---\n${JSON.stringify({ plan_basename: name, derived_topic_count: 1, topic_registry_version: '2', topic_registry: [topic] }, null, 2)}\n---\n# Plan\n`);
 
   // Minimal seed topic
   if (!overrides.skip_seed_topics) {
     writeFileSync(join(dir, 'seed_topics', '01_test-topic.md'), [
       '---',
-      'id: "topic-01"',
+      `topic_uid: ${topic.topic_uid}`,
+      'id: "01"',
       'slug: "01_test-topic"',
       'title: "Test Topic"',
+      'must_answer: ["test question"]',
+      'scope_role: primary',
+      'depends_on_topic_uids: []',
       '---',
       '',
       '# Test Topic',
@@ -164,6 +173,20 @@ function setupBundle(name, overrides = {}) {
   }
 
   return dir;
+}
+
+function writeDirection(bundle, { count = 0, action = 'supplement', missing = null, duplicate = false } = {}) {
+  const seedPath = join(bundle, 'seed_topics', '01_test-topic.md');
+  const fields = [
+    `- rerun_count: ${count}`,
+    `- action: ${action}`,
+    '- new_search_dimensions: cost and failure modes',
+    '- adjusted_depth: compare operating models',
+    '- search_guardrails: retain primary sources',
+    '- rationale_excerpt: user requested comparison',
+  ].filter((line) => !missing || !line.includes(`${missing}:`));
+  if (duplicate) fields.push('- action: add');
+  writeFileSync(seedPath, `${readFileSync(seedPath, 'utf8')}\n## 本轮重跑方向\n${fields.join('\n')}\n`);
 }
 
 before(() => {
@@ -180,7 +203,7 @@ describe('gate-rerun-ready — happy path', () => {
   it('passes with valid rerun state (rerun_count=0, rationale present)', () => {
     const bundle = setupBundle('happy-rerun-count-0');
     const result = runGate(bundle);
-    assert.strictEqual(result.check.passed, true);
+    assert.strictEqual(result.check.passed, true, JSON.stringify(result));
     assert.strictEqual(result.check.gate, 'rerun-ready');
     assert.strictEqual(result.routing.kind, 'next');
     assert.strictEqual(result.routing.next, 'phases/phase-seed-topics.md');
@@ -207,6 +230,7 @@ describe('gate-rerun-ready — rerun_rationale_present', () => {
     assert.strictEqual(result.check.passed, false);
     assert.ok(result.inspect.some(m => m.includes('rationale')));
     const hint = result.hints.find((candidate) => candidate.rule_id === 'rerun_rationale_present');
+    assert.ok(hint, JSON.stringify(result));
     assertCompleteHint(hint);
     assert.strictEqual(hint.repair_kind, 'user_decision');
     assert.strictEqual(hint.write_to, 'phases/phase-hitl2.md');
@@ -325,5 +349,49 @@ describe('gate-rerun-ready — default count', () => {
     assert.deepStrictEqual(result.hints.map((candidate) => candidate.rule_id), ['rerun_profile_prerequisite']);
     assert.ok(result.check.masked_rule_ids.includes('rerun_rationale_present'));
     assert.ok(result.check.masked_rule_ids.includes('rerun_count_valid'));
+  });
+});
+
+describe('gate-rerun-ready — plan-bound rerun direction structure', () => {
+  it('blocks malformed matching direction at its exact seed field with one Agent repair', () => {
+    const bundle = setupBundle('direction-missing-field');
+    writeDirection(bundle, { missing: 'adjusted_depth' });
+    const result = runGate(bundle);
+    const hint = result.hints.find((candidate) => candidate.rule_id === 'rerun_direction_structure');
+    assert.strictEqual(result.check.passed, false);
+    assert.ok(hint, JSON.stringify(result));
+    assertCompleteHint(hint);
+    assert.strictEqual(hint.repair_kind, 'agent_action');
+    assert.match(hint.write_to, /adjusted_depth/);
+  });
+
+  it('keeps complete future direction failed at the existing profile-count owner', () => {
+    const bundle = setupBundle('direction-future-count');
+    writeDirection(bundle, { count: 1 });
+    const result = runGate(bundle);
+    const hint = result.hints.find((candidate) => candidate.rule_id === 'rerun_direction_structure');
+    assert.strictEqual(result.check.passed, false);
+    assertCompleteHint(hint);
+    assert.strictEqual(hint.repair_kind, 'agent_action');
+    assert.match(hint.write_to, /phase-rerun/);
+  });
+
+  it('ignores stale direction and orphan files but masks symptoms behind canonical binding failure', () => {
+    const bundle = setupBundle('direction-stale-orphan');
+    writeDirection(bundle, { count: 0 });
+    writeFileSync(join(bundle, 'seed_topics', 'orphan.md'), '## 本轮重跑方向\n- rerun_count: nope\n');
+    const stale = runGate(bundle);
+    assert.strictEqual(stale.check.passed, true);
+
+    const bindingBundle = setupBundle('direction-binding-mismatch');
+    writeDirection(bindingBundle, { count: 0 });
+    const seedPath = join(bindingBundle, 'seed_topics', '01_test-topic.md');
+    writeFileSync(seedPath, readFileSync(seedPath, 'utf8').replace('title: "Test Topic"', 'title: drifted'));
+    const blocked = runGate(bindingBundle);
+    assert.strictEqual(blocked.check.passed, false);
+    const hint = blocked.hints.find((candidate) => candidate.rule_id === 'rerun_direction_structure');
+    assert.ok(hint, JSON.stringify(blocked));
+    assertCompleteHint(hint);
+    assert.match(hint.write_to, /operate-topic-state/);
   });
 });

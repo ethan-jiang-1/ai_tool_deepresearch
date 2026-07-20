@@ -22,6 +22,9 @@ import {
   makeContractFinding,
   makeDefinitionRuleFinding,
 } from '../../engine/helpers/wave-contract-findings.mjs';
+import { buildCanonicalTopicRegistryFact } from '../../engine/helpers/topic-registry-fact.mjs';
+import { evaluateCanonicalSeedBindings } from '../../engine/helpers/canonical-topic-state.mjs';
+import { evaluateRerunDirection } from '../../engine/helpers/rerun-direction.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
@@ -176,6 +179,85 @@ function structureFinding(rule, failure) {
   });
 }
 
+function rerunDirectionFinding(rule, { surface, expected, observed, missingFact, writeTo, repair, idSuffix = 'structure', repairKind = 'agent_action' }) {
+  return makeContractFinding({
+    id: `${rule.id}:${idSuffix}`,
+    ruleId: rule.id,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'required_structure',
+    surface,
+    expected,
+    observed,
+    missingFact,
+    repairKind,
+    writeTo,
+    repair,
+    detail: `[${rule.id}] ${missingFact}`,
+  });
+}
+
+function evaluateRerunDirectionStructure(rule) {
+  if (profileParentRuleId || findings.some((finding) => finding.rule_id === 'rerun_rationale_present')) return { findings: [], masked: true };
+  let registry;
+  try {
+    registry = buildCanonicalTopicRegistryFact(bundlePath);
+  } catch (error) {
+    return {
+      findings: [rerunDirectionFinding(rule, {
+        idSuffix: 'plan_prerequisite', repairKind: 'missing_contract', surface: resolveFsPath(bundlePath, 'rb_plan.md'),
+        expected: 'A readable canonical plan-bound Topic registry.', observed: error.message || String(error),
+        missingFact: 'Rerun direction scope cannot be derived because canonical rb_plan.md is unavailable.',
+        writeTo: `node DPT_FRAMEWORK/cli/operate-topic-state.mjs inspect --bundle ${resolveFsPath(bundlePath)}`,
+        repair: 'Repair canonical Topic state through its existing owner, then rerun this same Gate.',
+      })],
+      masked: true,
+    };
+  }
+  const bindings = evaluateCanonicalSeedBindings(bundlePath, { topic_registry: registry.topic_registry });
+  const invalidBinding = bindings.find((binding) => !binding.ok);
+  if (invalidBinding) {
+    return {
+      findings: [rerunDirectionFinding(rule, {
+        idSuffix: 'seed_binding', repairKind: 'missing_contract', surface: resolveFsPath(bundlePath, invalidBinding.fact_refs[1]),
+        expected: 'A plan-bound UID/slug/id/title/must_answer/scope/dependency seed binding.', observed: invalidBinding.reason_code,
+        missingFact: `Canonical seed binding is ${invalidBinding.reason_code} for ${invalidBinding.slug}.`,
+        writeTo: `node DPT_FRAMEWORK/cli/operate-topic-state.mjs inspect --bundle ${resolveFsPath(bundlePath)}`,
+        repair: 'Repair canonical Topic state through its existing owner, then rerun this same Gate.',
+      })],
+      masked: true,
+    };
+  }
+  const profileCount = profile.value?.human_decision_checkpoints?.hitl2?.rerun_count ?? 0;
+  for (const binding of bindings) {
+    const seedPath = join(bundlePath, 'seed_topics', `${binding.slug}.md`);
+    const direction = evaluateRerunDirection(readFileSync(seedPath, 'utf8'), profileCount);
+    const currentOrFuture = direction.has_direction && (direction.rerun_count === null || direction.rerun_count >= profileCount);
+    if (!currentOrFuture || direction.state === 'stale' || direction.state === 'legacy_unbound') continue;
+    const root = direction.structural_roots[0];
+    if (root || direction.state === 'invalid') {
+      const field = root?.field || 'direction';
+      return { findings: [rerunDirectionFinding(rule, {
+        idSuffix: `${binding.slug}:${field}`, surface: `${resolveFsPath(seedPath)}#/${field}`,
+        expected: 'One complete, unambiguous canonical current/future rerun direction.',
+        observed: { state: direction.state, rerun_count: direction.rerun_count, structural_root: root || null },
+        missingFact: `Seed ${binding.slug} has an invalid rerun direction at ${field}.`, writeTo: `${resolveFsPath(seedPath)}#/${field}`,
+        repair: 'Repair this direction through a sanctioned retained topic-state input, then rerun this same Gate.',
+      })], masked: false };
+    }
+    if (direction.state === 'future') {
+      return { findings: [rerunDirectionFinding(rule, {
+        idSuffix: `${binding.slug}:count_sync`, surface: resolveFsPath(bundlePath, 'rb_profile.yaml') + '#/human_decision_checkpoints/hitl2/rerun_count',
+        expected: { rerun_count: direction.rerun_count }, observed: profileCount,
+        missingFact: `Seed ${binding.slug} has complete future direction round ${direction.rerun_count}; profile count must synchronize before this Gate can pass.`,
+        writeTo: 'phases/phase-rerun.md#/profile-count-owner',
+        repair: 'Increment the existing profile rerun_count owner, then rerun this same Gate.',
+      })], masked: false };
+    }
+  }
+  return { findings: [], masked: false };
+}
+
 for (const rule of definition.rules) {
   if (rule.check === 'placeholder') continue;
   checksRun += 1;
@@ -222,6 +304,10 @@ for (const rule of definition.rules) {
           detail: missing.map((target) => `Missing directory: ${target}/`).join('; '),
         };
       }
+    } else if (rule.check === 'rerun_direction_structure') {
+      const directionCheck = evaluateRerunDirectionStructure(rule);
+      if (directionCheck.masked) maskedRuleIds.add(rule.id);
+      findings.push(...directionCheck.findings);
     } else {
       findingOverride = configurationFinding(rule, `Unknown check type: ${rule.check} — must fail (check type not implemented)`);
     }

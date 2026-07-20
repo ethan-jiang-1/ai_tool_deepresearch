@@ -20,6 +20,13 @@
       "finding": { "source": "checker" }
     },
     {
+      "id": "rerun_direction_structure",
+      "check": "rerun_direction_structure",
+      "target": "rb_plan.md#/topic_registry",
+      "failure_message": "A current or future rerun direction is structurally incomplete or ambiguous. Repair through sanctioned topic-state input, then rerun this gate.",
+      "finding": { "source": "checker" }
+    },
+    {
       "id": "bundle_structure_valid",
       "check": "structural",
       "targets": [

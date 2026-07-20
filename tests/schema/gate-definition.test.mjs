@@ -260,14 +260,14 @@ describe('HITL1/seed-topics finding-source admission', () => {
 });
 
 describe('HITL2/readiness/rerun finding-source admission', () => {
-  it('schema-parses all 16 branch-sensitive rules', () => {
+  it('schema-parses all 17 branch-sensitive rules', () => {
     const hitl2 = parseGateDefinition(loadActiveDefinition('gate-hitl2-recorded.definition.json'));
     const readiness = parseGateDefinition(loadActiveDefinition('gate-readiness-passed.definition.json'));
     const rerun = parseGateDefinition(loadActiveDefinition('gate-rerun-ready.definition.json'));
     assert.equal(hitl2.rules.length, 6);
     assert.equal(readiness.rules.length, 7);
-    assert.equal(rerun.rules.length, 3);
-    assert.equal(hitl2.rules.length + readiness.rules.length + rerun.rules.length, 16);
+    assert.equal(rerun.rules.length, 4);
+    assert.equal(hitl2.rules.length + readiness.rules.length + rerun.rules.length, 17);
   });
 
   it('keeps HITL2 and rerun rationale at the recorded user-decision boundary', () => {

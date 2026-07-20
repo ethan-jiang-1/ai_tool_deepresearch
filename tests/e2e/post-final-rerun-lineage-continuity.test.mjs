@@ -47,12 +47,35 @@ function incrementCount(bundle) {
   writeFileSync(profilePath, stringifyYaml(profile));
 }
 
+function rerunAddDirection() {
+  return {
+    rerun_count: 1,
+    action: 'add',
+    new_search_dimensions: 'controlled post-final comparison',
+    adjusted_depth: 'compare the new topic with retained evidence',
+    search_guardrails: 'retain primary runtime facts',
+    rationale_excerpt: 'recorded post-final rerun decision',
+  };
+}
+
+function rerunSupplementDirection() {
+  return {
+    ...rerunAddDirection(),
+    action: 'supplement',
+    new_search_dimensions: 'preserve the existing topic while comparing post-final continuity',
+  };
+}
+
 function addTopic(bundle) {
+  const existingTopic = inspectCanonicalTopicState({ bundlePath: bundle }).topics[0];
   const result = applyCanonicalTopicState({
     bundlePath: bundle,
     input: {
       context: 'rerun',
-      actions: [{ action: 'add_topic', title: 'Additional Comparison', slug_stem: 'additional-comparison', must_answer: ['What differs?'], scope_role: 'comparison', depends_on_topic_uids: [] }],
+      actions: [
+        { action: 'add_topic', title: 'Additional Comparison', slug_stem: 'additional-comparison', must_answer: ['What differs?'], scope_role: 'comparison', depends_on_topic_uids: [], direction: rerunAddDirection() },
+        { action: 'set_rerun_direction', topic_uid: existingTopic.topic_uid, direction: rerunSupplementDirection() },
+      ],
     },
   });
   assert.equal(result.verdict, 'committed');

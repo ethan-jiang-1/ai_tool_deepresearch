@@ -2,7 +2,7 @@
 schema: command-experiment/v2
 experiment: wfn-rerun
 case: case-318-heavy-rerun-direction-recovery
-case_goal: "Prove an independent real Subject Agent writes a current rerun direction, crosses a direction/profile crash window, and recovers through the real rerun Gate without rewriting that direction."
+case_goal: "Prove an independent real Subject Agent submits a direction-only topic-state candidate, crosses a direction/profile crash window, and recovers through the real rerun Gate without rewriting that direction."
 verdict_mode: all
 required_checks: [case-318-current-direction-produced, case-318-direction-preserved-during-recovery, case-318-profile-recovered-to-direction, case-318-real-rerun-gate-pass, case-318-real-subject-executions, case-318-witnessed-seed-topics-handoff]
 bundle_roles: [verdict]
@@ -61,7 +61,7 @@ JS
 
 ## Step 2 - Run the independent two-turn Subject Agent
 
-The first turn writes only the current direction and stops before profile mutation. The adapter snapshots that crash window. The second turn must preserve the direction bytes, align the profile count, run the real `rerun-ready` Gate, consume its `check.next`, enter Seed Topics, and synchronize status.
+The first turn forms and applies only a retained `set_rerun_direction` candidate through the existing `operate-topic-state apply` CLI, then stops before profile mutation. The adapter snapshots that crash window from durable Subject transcript evidence plus the resulting future direction/profile facts. The second turn must preserve the direction bytes, align the profile count, run the real `rerun-ready` Gate, consume its `check.next`, enter Seed Topics, and synchronize status.
 
 ```bash
 B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
@@ -109,7 +109,7 @@ const subjectExecutions = prompt.subject === '318'
   && statSync(transcriptPath).size > 0;
 const checks = [
   ['case-318-real-subject-executions', subjectExecutions],
-  ['case-318-current-direction-produced', crash.direction_count === 1 && crash.profile_count === 0 && crash.action_is_supplement && crash.requested_dimensions_present],
+  ['case-318-current-direction-produced', crash.direction_count === 1 && crash.profile_count === 0 && crash.action_is_supplement && crash.requested_dimensions_present && crash.subject_apply_observed],
   ['case-318-direction-preserved-during-recovery', directionHash === crash.direction_sha256],
   ['case-318-profile-recovered-to-direction', profile.human_decision_checkpoints.hitl2.rerun_count === crash.direction_count],
   ['case-318-real-rerun-gate-pass', events.some((event) => event.event === 'gate_attempt' && event.gate === 'rerun-ready' && event.passed === true)],

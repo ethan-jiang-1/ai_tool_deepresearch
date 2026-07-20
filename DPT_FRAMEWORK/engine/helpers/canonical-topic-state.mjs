@@ -14,21 +14,35 @@ import { checkPhaseHandoffPreflight } from './handoff-helpers.mjs';
 import { readSubmittedWorkUnitDeclarations } from './gate-helpers-readers.mjs';
 import { acceptedTopicSlugs, buildTopicLayoutTarget, evaluateTopicLayouts, losslessTopicSlugStem, resolveStructuredTopicBinding } from './topic-layout.mjs';
 import { makeContractFinding } from './wave-contract-findings.mjs';
+import { evaluateRerunDirection } from './rerun-direction.mjs';
 
 export const TOPIC_STATE_SCHEMA_VERSION = '1.0.0';
 export const TOPIC_STATE_ROOT = '_diagnostics/topic-state';
 export const TOPIC_STATE_OPERATIONS = Object.freeze(['inspect', 'apply', 'recover']);
 
 const ScopeRoleSchema = z.enum(['primary', 'synthesis', 'comparison', 'supporting']);
+const RerunDirectionCandidateSchema = z.object({
+  rerun_count: z.number().int().nonnegative(),
+  action: z.enum(['add', 'supplement']),
+  new_search_dimensions: z.string().min(1),
+  adjusted_depth: z.string().min(1),
+  search_guardrails: z.string().min(1),
+  rationale_excerpt: z.string().min(1),
+}).strict();
 const AddActionSchema = z.object({
   action: z.literal('add_topic'), title: z.string().min(1), slug_stem: z.string().regex(/^[a-z0-9][a-z0-9-]*$/),
   must_answer: z.array(z.string().min(1)).min(1), scope_role: ScopeRoleSchema,
   depends_on_topic_uids: z.array(z.string()).default([]),
+  direction: RerunDirectionCandidateSchema.optional(),
 }).strict();
 const UpdateActionSchema = z.object({
   action: z.literal('update_intent'), topic_uid: z.string().min(1), title: z.string().min(1),
   must_answer: z.array(z.string().min(1)).min(1), scope_role: ScopeRoleSchema,
   depends_on_topic_uids: z.array(z.string()).default([]),
+  direction: RerunDirectionCandidateSchema.optional(),
+}).strict();
+const SetRerunDirectionActionSchema = z.object({
+  action: z.literal('set_rerun_direction'), topic_uid: z.string().min(1), direction: RerunDirectionCandidateSchema,
 }).strict();
 const MigrationEntrySchema = z.object({
   source: z.enum(['registry', 'adopt']), id: z.string(), slug: z.string(), title: z.string().min(1),
@@ -36,7 +50,26 @@ const MigrationEntrySchema = z.object({
   depends_on_slugs: z.array(z.string()).default([]), seed_binding: z.enum(['existing', 'new']),
 }).strict();
 const MigrationPlanSchema = z.object({ context: z.enum(['hitl1', 'rerun']), action: z.literal('migrate_legacy'), entries: z.array(MigrationEntrySchema).min(1) }).strict();
-const MutationPlanSchema = z.object({ context: z.enum(['hitl1', 'rerun']), actions: z.array(z.discriminatedUnion('action', [AddActionSchema, UpdateActionSchema])).min(1) }).strict();
+const MutationPlanSchema = z.object({
+  context: z.enum(['hitl1', 'rerun']),
+  actions: z.array(z.discriminatedUnion('action', [AddActionSchema, UpdateActionSchema, SetRerunDirectionActionSchema])).min(1),
+}).strict().superRefine((plan, issue) => {
+  const existingTargets = new Set();
+  for (const [index, action] of plan.actions.entries()) {
+    const carriesDirection = Object.hasOwn(action, 'direction');
+    if (plan.context === 'hitl1' && carriesDirection) issue.addIssue({ code: z.ZodIssueCode.custom, path: ['actions', index, 'direction'], message: 'HITL1 actions cannot carry rerun direction' });
+    if (plan.context === 'rerun' && action.action !== 'set_rerun_direction' && !carriesDirection) issue.addIssue({ code: z.ZodIssueCode.custom, path: ['actions', index, 'direction'], message: 'sanctioned rerun add/update requires direction' });
+    if (action.action === 'set_rerun_direction' && plan.context !== 'rerun') issue.addIssue({ code: z.ZodIssueCode.custom, path: ['actions', index], message: 'set_rerun_direction requires sanctioned rerun' });
+    if (carriesDirection) {
+      const expectedAction = action.action === 'add_topic' ? 'add' : 'supplement';
+      if (action.direction.action !== expectedAction) issue.addIssue({ code: z.ZodIssueCode.custom, path: ['actions', index, 'direction', 'action'], message: `${action.action} requires direction action ${expectedAction}` });
+    }
+    if (action.action !== 'add_topic') {
+      if (existingTargets.has(action.topic_uid)) issue.addIssue({ code: z.ZodIssueCode.custom, path: ['actions', index, 'topic_uid'], message: 'one existing UID may have only one ordered action' });
+      existingTargets.add(action.topic_uid);
+    }
+  }
+});
 const LayoutTargetEntrySchema = z.object({
   topic_uid: z.string().min(1),
   title: z.string().min(1),
@@ -170,7 +203,21 @@ __BACKFILL_PENDING_QUESTIONS__
 `;
 }
 
-function renderSeed(topic, existingSeed = null) {
+function renderRerunDirection(direction) {
+  return `## 本轮重跑方向\n\n- rerun_count: ${direction.rerun_count}\n- action: ${direction.action}\n- new_search_dimensions: ${direction.new_search_dimensions}\n- adjusted_depth: ${direction.adjusted_depth}\n- search_guardrails: ${direction.search_guardrails}\n- rationale_excerpt: ${direction.rationale_excerpt}\n`;
+}
+
+function replaceRerunDirection(body, direction) {
+  const withoutDirections = String(body || '').replace(/##\s*本轮重跑方向[^\n]*[\s\S]*?(?=\n##\s+|$)/g, '').trimEnd();
+  const rendered = `${withoutDirections}\n\n${renderRerunDirection(direction)}`;
+  const checked = evaluateRerunDirection(rendered, direction.rerun_count);
+  if (checked.state !== 'matching' || checked.structural_roots.length > 0 || checked.fields.action !== direction.action) {
+    throw new Error('canonical rerun direction render failed round-trip validation');
+  }
+  return rendered;
+}
+
+function renderSeed(topic, existingSeed = null, direction = null) {
   const canonicalFrontmatter = {
     topic_uid: topic.topic_uid, id: topic.id, slug: topic.slug, title: topic.title,
     must_answer: topic.must_answer, scope_role: topic.scope_role,
@@ -179,8 +226,27 @@ function renderSeed(topic, existingSeed = null) {
   const frontmatter = existingSeed?.exists
     ? { ...(existingSeed.frontmatter || {}), ...canonicalFrontmatter }
     : { ...canonicalFrontmatter, ...newSeedEnrichment() };
-  const body = existingSeed?.exists ? existingSeed.body : renderNewSeedBody(topic);
+  const body = direction
+    ? replaceRerunDirection(existingSeed?.exists ? existingSeed.body : renderNewSeedBody(topic), direction)
+    : (existingSeed?.exists ? existingSeed.body : renderNewSeedBody(topic));
   return `---\n${stringifyYaml(frontmatter).trimEnd()}\n---\n${body.startsWith('\n') ? body.slice(1) : body}`;
+}
+
+function currentProfileRerunCount(bundle) {
+  const profilePath = path.join(bundle, 'rb_profile.yaml');
+  const profile = parseYaml(readFileSync(profilePath, 'utf8'));
+  const count = profile?.human_decision_checkpoints?.hitl2?.rerun_count ?? 0;
+  if (!Number.isInteger(count) || count < 0) throw new Error('rb_profile.yaml human_decision_checkpoints.hitl2.rerun_count must be a non-negative integer');
+  return count;
+}
+
+function validateRerunDirectionCounts(input, profileRerunCount) {
+  if (input.context !== 'rerun' || !Array.isArray(input.actions)) return;
+  for (const action of input.actions) {
+    if (action.direction && action.direction.rerun_count !== profileRerunCount + 1) {
+      throw new Error(`rerun direction count must equal accepted profile count + 1 (${profileRerunCount + 1})`);
+    }
+  }
 }
 function readSeed(bundle, slug) {
   const seedPath = path.join(bundle, 'seed_topics', `${slug}.md`);
@@ -476,7 +542,7 @@ export function inspectCanonicalTopicState({ bundlePath }) {
   }, bundlePath);
 }
 
-function buildMutation(bundle, parsedPlan, input) {
+function buildMutation(bundle, parsedPlan, input, { profileRerunCount = null } = {}) {
   const current = structuredClone(parsedPlan);
   const touched = new Map();
   if (input.action === 'mutate_layout') {
@@ -523,7 +589,7 @@ function buildMutation(bundle, parsedPlan, input) {
   } else {
     const canonical = CanonicalPlanSchema.parse(current);
     const byUid = new Map(canonical.topic_registry.map((topic) => [topic.topic_uid, topic]));
-    const targetUids = input.actions.filter((action) => action.action === 'update_intent').map((action) => action.topic_uid);
+    const targetUids = input.actions.filter((action) => action.action !== 'add_topic').map((action) => action.topic_uid);
     if (new Set(targetUids).size !== targetUids.length) throw new Error('duplicate update target');
     let nextOrdinal = canonical.topic_registry.reduce((max, topic) => Math.max(max, Number(topic.id) || 0), 0);
     for (const action of input.actions) {
@@ -533,11 +599,15 @@ function buildMutation(bundle, parsedPlan, input) {
         const slug = `${id}_${action.slug_stem}`;
         if (canonical.topic_registry.some((topic) => topic.slug === slug)) throw new Error(`duplicate slug: ${slug}`);
         const topic = { topic_uid: `tp_${randomUUID()}`, id, slug, title: action.title, must_answer: action.must_answer, scope_role: action.scope_role, depends_on_topic_uids: action.depends_on_topic_uids };
-        canonical.topic_registry.push(topic); byUid.set(topic.topic_uid, topic); touched.set(slug, renderSeed(topic));
-      } else {
+        canonical.topic_registry.push(topic); byUid.set(topic.topic_uid, topic); touched.set(slug, renderSeed(topic, null, action.direction || null));
+      } else if (action.action === 'update_intent') {
         const topic = byUid.get(action.topic_uid); if (!topic) throw new Error(`unknown topic_uid: ${action.topic_uid}`);
         Object.assign(topic, { title: action.title, must_answer: action.must_answer, scope_role: action.scope_role, depends_on_topic_uids: action.depends_on_topic_uids });
-        const seed = readSeed(bundle, topic.slug); touched.set(topic.slug, renderSeed(topic, seed));
+        const seed = readSeed(bundle, topic.slug); touched.set(topic.slug, renderSeed(topic, seed, action.direction || null));
+      } else {
+        const topic = byUid.get(action.topic_uid); if (!topic) throw new Error(`unknown topic_uid: ${action.topic_uid}`);
+        const seed = readSeed(bundle, topic.slug); if (!seed.exists) throw new Error(`current seed missing for ${topic.slug}`);
+        touched.set(topic.slug, renderSeed(topic, seed, action.direction));
       }
     }
     current.topic_registry = canonical.topic_registry;
@@ -566,6 +636,10 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
   if (accepted.length) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'accepted_workspace', recommended_action: `recover --operation-id ${accepted[0].operation_id}` };
   const authorization = lifecycleAuthorization(bundle, parsedInput.context);
   if (!authorization.ok) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', ...authorization };
+  const profileRerunCount = parsedInput.context === 'rerun' && Array.isArray(parsedInput.actions)
+    ? currentProfileRerunCount(bundle)
+    : null;
+  validateRerunDirectionCounts(parsedInput, profileRerunCount);
   if ('action' in parsedInput && parsedInput.action === 'migrate_legacy' && parsedInput.context !== 'rerun') return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'migration_requires_rerun' };
   const planPath = path.join(bundle, 'rb_plan.md');
   const seedRoot = path.join(bundle, 'seed_topics');
@@ -578,7 +652,7 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
   const split = splitPlan(oldRaw);
   let mutation;
   try {
-    mutation = buildMutation(bundle, split.frontmatter, parsedInput);
+    mutation = buildMutation(bundle, split.frontmatter, parsedInput, { profileRerunCount });
   } catch (error) {
     const reason = error.message || String(error);
     if (reason.startsWith('remove_has_dependents')) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'remove_has_dependents', reason };

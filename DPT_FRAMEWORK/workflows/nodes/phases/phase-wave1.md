@@ -16,6 +16,7 @@ requires:
   - shared/shared-subagent-protocol
   - shared/shared-reference-template
   - shared/shared-anti-cheating-rules
+  - shared/shared-return-map-authoring
 suggested_context:
   - phases/subagent-dpt-evidence-extractor
 ---

@@ -58,6 +58,8 @@ Define what the Wave0 source-intake Sub-agent searches for, writes, and must nev
 
 The shared work-unit sub-agent contract (`shared-subagent-protocol.md`) defines the envelope and submit mechanics. This role spec defines what `dpt-source-intake` does within that contract.
 
+For backfill-ready research output, retain only the concise return-map cue `evidence_meaning`, `relationship`, `refs`, `status`, `next_hop`; the Phase Agent owns seed backfill and `shared-return-map-authoring.md` owns the complete definition.
+
 ## 2. Search Focus
 
 Wave0 does foundation reference collection. It does not do deep research, claim verification, or synthesis. Each delegated task should establish baseline sources that later waves can rely on.

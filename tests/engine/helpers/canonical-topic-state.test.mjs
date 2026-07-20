@@ -76,6 +76,21 @@ function assertCompleteSeedSkeleton(raw) {
   assert.doesNotMatch(body, /## 主题定位\s+primary\s/);
 }
 
+function writeRerunProfile(dir, rerunCount = 0) {
+  writeFileSync(join(dir, 'rb_profile.yaml'), `human_decision_checkpoints:\n  hitl2:\n    rerun_count: ${rerunCount}\n`);
+}
+
+function directionCandidate({ count = 1, action = 'supplement' } = {}) {
+  return {
+    rerun_count: count,
+    action,
+    new_search_dimensions: 'cost and failure modes',
+    adjusted_depth: 'compare operating models',
+    search_guardrails: 'retain primary sources',
+    rationale_excerpt: 'user requested an additional comparison',
+  };
+}
+
 describe('canonical topic state', () => {
   it('exposes focused seed bindings without progress or workspace evaluation', () => {
     const dir = bundle('topic-seed-binding');
@@ -102,10 +117,26 @@ describe('canonical topic state', () => {
     assertCompleteSeedSkeleton(hitl1Seed);
 
     const rerun = rerunBundle('topic-seed-rerun');
-    applyCanonicalTopicState({ bundlePath: rerun, input: { ...input, context: 'rerun' } });
+    writeRerunProfile(rerun);
+    applyCanonicalTopicState({ bundlePath: rerun, input: { context: 'rerun', actions: [{ ...input.actions[0], direction: directionCandidate({ action: 'add' }) }] } });
     const rerunSeed = readFileSync(join(rerun, 'seed_topics/01_topic-a.md'), 'utf8');
     assertCompleteSeedSkeleton(rerunSeed);
-    assert.equal(seedBody(rerunSeed), seedBody(hitl1Seed));
+    assert.match(seedBody(rerunSeed), /## 本轮重跑方向/);
+    assert.ok(seedBody(rerunSeed).startsWith(seedBody(hitl1Seed)));
+  });
+  it('keeps the renderer appendix structurally aligned with the shared seed authoring contract', () => {
+    const dir = bundle('topic-seed-shared-parity');
+    applyCanonicalTopicState({ bundlePath: dir, input });
+    const rendered = seedBody(readFileSync(join(dir, 'seed_topics/01_topic-a.md'), 'utf8'));
+    const contract = readFileSync('DPT_FRAMEWORK/workflows/nodes/shared/shared-seed-topic-authoring.md', 'utf8');
+    const appendix = contract.slice(contract.indexOf('## ═══ 研究轮次追加区 ═══'));
+    const headings = appendix.split(/\r?\n/)
+      .filter((line) => SEED_HEADINGS.includes(line));
+    const tokens = [...contract.matchAll(/__BACKFILL_[A-Z0-9_]+__/g)].map((match) => match[0]);
+    assert.deepEqual(headings, SEED_HEADINGS.slice(8));
+    assert.deepEqual(tokens, SEED_BACKFILL_TOKENS);
+    for (const heading of headings) assert.ok(rendered.includes(heading), heading);
+    for (const token of tokens) assert.equal(rendered.split(token).length - 1, 1, token);
   });
   it('renders the same complete skeleton for migrate_legacy seed_binding:new', () => {
     const dir = rerunBundle('topic-seed-migration', true);
@@ -172,8 +203,9 @@ describe('canonical topic state', () => {
     const inspected = inspectCanonicalTopicState({ bundlePath: dir }); assert.equal(inspected.mode, 'canonical'); assert.equal(inspected.topics.length, 2);
   });
   it('blocks missing rerun witness and post-final fresh apply', () => {
-    const rerun = rerunBundle('topic-no-witness'); writeFileSync(join(rerun, 'rb_trace.jsonl'), '');
-    assert.equal(applyCanonicalTopicState({ bundlePath: rerun, input: { ...input, context: 'rerun' } }).reason_code, 'rerun_not_authorized');
+    const rerun = rerunBundle('topic-no-witness'); writeFileSync(join(rerun, 'rb_trace.jsonl'), ''); writeRerunProfile(rerun);
+    const rerunInput = { context: 'rerun', actions: [{ ...input.actions[0], direction: directionCandidate({ action: 'add' }) }] };
+    assert.equal(applyCanonicalTopicState({ bundlePath: rerun, input: rerunInput }).reason_code, 'rerun_not_authorized');
     const final = bundle('topic-final'); const status = JSON.parse(readFileSync(join(final, 'rb_status.json'))); status.current_node = 'phases/phase-final.md'; writeFileSync(join(final, 'rb_status.json'), JSON.stringify(status));
     assert.equal(applyCanonicalTopicState({ bundlePath: final, input }).reason_code, 'hitl1_not_authorized');
   });
@@ -371,5 +403,31 @@ describe('canonical topic state', () => {
     const dir = bundle('topic-snapshot'); const before = snapshotTree(dir); applyCanonicalTopicState({ bundlePath: dir, input }); const changed = diffSnapshots(before, snapshotTree(dir));
     assert.ok(changed.every((name) => name === 'rb_plan.md' || name.startsWith('seed_topics/') || name.startsWith('_diagnostics/')), changed.join('\n'));
     for (const forbidden of ['rb_profile.yaml', 'rb_status.json', 'rb_trace.jsonl', 'rb_queue.json']) assert.ok(!changed.includes(forbidden));
+  });
+  it('accepts only sanctioned rerun direction actions and atomically replaces one canonical section', () => {
+    const dir = bundle('topic-direction-actions');
+    applyCanonicalTopicState({ bundlePath: dir, input });
+    const topic = inspectCanonicalTopicState({ bundlePath: dir }).topics[0];
+    authorizeRerun(dir);
+    writeRerunProfile(dir);
+
+    const update = {
+      context: 'rerun',
+      actions: [{
+        action: 'update_intent', topic_uid: topic.topic_uid, title: 'Topic A', must_answer: ['What?'],
+        scope_role: 'primary', depends_on_topic_uids: [], direction: directionCandidate(),
+      }],
+    };
+    assert.equal(applyCanonicalTopicState({ bundlePath: dir, input: update }).verdict, 'committed');
+    const seedPath = join(dir, `seed_topics/${topic.slug}.md`);
+    assert.equal((readFileSync(seedPath, 'utf8').match(/^## 本轮重跑方向$/gm) || []).length, 1);
+
+    const directionOnly = { context: 'rerun', actions: [{ action: 'set_rerun_direction', topic_uid: topic.topic_uid, direction: directionCandidate() }] };
+    assert.equal(applyCanonicalTopicState({ bundlePath: dir, input: directionOnly }).verdict, 'unchanged');
+    assert.throws(() => applyCanonicalTopicState({ bundlePath: dir, input: { ...directionOnly, context: 'hitl1' } }));
+    assert.throws(() => applyCanonicalTopicState({ bundlePath: dir, input: { context: 'rerun', actions: [...update.actions, ...directionOnly.actions] } }));
+    assert.throws(() => applyCanonicalTopicState({ bundlePath: dir, input: { context: 'rerun', actions: [{ ...input.actions[0], direction: directionCandidate() }] } }));
+    assert.throws(() => applyCanonicalTopicState({ bundlePath: dir, input: { ...directionOnly, actions: [{ ...directionOnly.actions[0], direction: directionCandidate({ count: 2 }) }] } }));
+    assert.throws(() => applyCanonicalTopicState({ bundlePath: dir, input: { context: 'hitl1', actions: [{ ...input.actions[0], direction: directionCandidate({ action: 'add' }) }] } }));
   });
 });

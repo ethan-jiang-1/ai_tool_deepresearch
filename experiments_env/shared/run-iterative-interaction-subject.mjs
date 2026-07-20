@@ -58,8 +58,8 @@ const SUBJECTS = {
     transcript: 'case-318-subject-transcript.jsonl',
     system: 'You are the independent Subject Agent for case 318, distinct from the Playbook Agent. Work only in the exact bundle path provided by the runner. Execute the injected current production rerun surface against direct bundle facts.',
     messages: [
-      'Execute the rerun phase only through direction production: read the accepted HITL2 rationale and current rerun_count, compute target_rerun_count, and write or replace the existing topic\'s single current rerun-direction section. Bind it to target 1 with action supplement and the requested cost and failure-mode dimensions. Then stop before changing rb_profile.yaml, running rerun-ready, entering another phase, advancing status, or editing Engine-owned authority.',
-      'Resume from the current bundle facts. Recognize the existing direction/profile mismatch as the documented crash window, preserve the current direction bytes, increment the profile to that existing target, and complete the sanctioned rerun-ready Gate plus immediate enter-phase and source-gate status synchronization. Consume structured feedback if the same Gate fails. Stop after the immediate seed-topics handoff.',
+      'Execute the rerun phase only through the sanctioned direction-only candidate: read the accepted HITL2 rationale, current rerun_count, canonical topic_uid, and loaded shared seed-authoring contract; compute target_rerun_count=1; write a retained JSON input for `set_rerun_direction` with that exact topic_uid, `action: supplement`, and non-empty cost/failure-mode dimensions, depth, guardrails, and rationale excerpt; then invoke `node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle <bundle> --input <retained-json>`. Verify the production apply result. Stop before changing rb_profile.yaml, running rerun-ready, entering another phase, advancing status, or direct-editing the seed direction/Engine-owned authority.',
+      'Resume from the current bundle facts. Recognize the existing direction/profile mismatch as the documented crash window. Preserve the accepted direction bytes; perform only the existing profile-count owner update to that existing target, then complete the sanctioned rerun-ready Gate plus immediate enter-phase and source-gate status synchronization. Consume structured feedback if the same Gate fails. Do not invoke topic-state apply again or directly edit the seed direction. Stop after the immediate seed-topics handoff.',
     ],
     tools: 'Bash,Edit,Glob,Grep,Read,Write',
     boundary: 'Do not search or call external services. Do not hand-edit status, trace, gate attempts, work-unit authority, or declarations. The adapter records a deterministic read-only crash-window snapshot between the two turns.',
@@ -133,6 +133,7 @@ function observeCase318CrashWindow({ bundle, completedTurns }) {
   const seed = readFileSync(join(bundle, 'seed_topics/topic-a.md'), 'utf8');
   const profile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'));
   const status = JSON.parse(readFileSync(join(bundle, 'rb_status.json'), 'utf8'));
+  const transcript = readFileSync(join(bundle, SUBJECTS['318'].transcript), 'utf8');
   const section = seed.match(/##\s*本轮重跑方向[\s\S]*?(?=\n##\s+|$)/)?.[0] || '';
   const directionCount = Number(section.match(/rerun_count\*{0,2}\s*:\s*(\d+)/i)?.[1]);
   const observation = {
@@ -141,6 +142,7 @@ function observeCase318CrashWindow({ bundle, completedTurns }) {
     profile_count: profile.human_decision_checkpoints?.hitl2?.rerun_count,
     action_is_supplement: /action\*{0,2}\s*:\s*supplement\b/i.test(section),
     requested_dimensions_present: /cost/i.test(section) && /failure[- ]?mode/i.test(section),
+    subject_apply_observed: /operate-topic-state\.mjs\s+apply/.test(transcript),
     current_node: status.current_node,
     current_gate: status.current_gate,
     next_gate: status.next_gate,
@@ -149,6 +151,7 @@ function observeCase318CrashWindow({ bundle, completedTurns }) {
     && observation.profile_count === 0
     && observation.action_is_supplement
     && observation.requested_dimensions_present
+    && observation.subject_apply_observed
     && observation.current_node === 'phases/phase-rerun.md'
     && observation.current_gate === 'hitl2_recorded'
     && observation.next_gate === 'rerun_ready';

@@ -6,6 +6,7 @@ import { appendFileSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } fr
 import { basename, join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { claimAndSubmitFixtureWorkUnit } from '../../experiments_env/shared/work-unit-playbook-utils.mjs';
+import { applyCanonicalTopicState } from '../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
 import {
   advanceStatus, authoritySnapshot, cleanupRoot, createTempRoot,
   enterPhase, instantiateBundle, parseJsonOutput, readStatus, readTrace, REPO_ROOT, restoreBundle, runGate, runNode, snapshotBundle,
@@ -33,7 +34,7 @@ function writePlanAndProfile(bundle, { decision = 'not_started', rerunCount = 1 
 
 function stageSeed(bundle, rerunCount, { action = 'supplement', directionCount = rerunCount } = {}) {
   mkdirSync(join(bundle, 'seed_topics'), { recursive: true });
-  writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `---\n${stringifyYaml(TOPIC).trim()}\n---\n# Topic A\n\n## Background\nFixture-labeled Agent input.\n\n## 本轮重跑方向\n- rerun_count: ${directionCount}\n- action: ${action}\n- new_search_dimensions: controlled continuity\n`);
+  writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `---\n${stringifyYaml(TOPIC).trim()}\n---\n# Topic A\n\n## Background\nFixture-labeled Agent input.\n\n## 本轮重跑方向\n- rerun_count: ${directionCount}\n- action: ${action}\n- new_search_dimensions: controlled continuity\n- adjusted_depth: compare operational checkpoints\n- search_guardrails: retain primary runtime facts\n- rationale_excerpt: fixture-labeled recorded HITL2 rationale\n`);
 }
 
 function logCompletion(bundle, event) {
@@ -134,6 +135,21 @@ function setProfileRerunCount(bundle, rerunCount) {
   const profile = parseYaml(readFileSync(profilePath, 'utf8'));
   profile.human_decision_checkpoints.hitl2.rerun_count = rerunCount;
   writeFileSync(profilePath, stringifyYaml(profile));
+}
+
+function directionCandidate({ action = 'supplement', count = 2 } = {}) {
+  return {
+    rerun_count: count,
+    action,
+    new_search_dimensions: 'fixture-labeled cost and resilience comparison',
+    adjusted_depth: 'compare the operational mechanisms',
+    search_guardrails: 'retain primary runtime facts',
+    rationale_excerpt: 'fixture-labeled recorded HITL2 rationale',
+  };
+}
+
+function directionSection(bytes) {
+  return bytes.slice(bytes.indexOf('## 本轮重跑方向'));
 }
 
 function inspectEligible(bundle, phase) {
@@ -240,6 +256,50 @@ describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
     }
   });
 
+  it('drives labeled add, update, and direction-only candidates through production apply/recovery before count synchronization', () => {
+    const bundle = restoreBundle(snapshot, baseline);
+    stageHitl2(bundle, 'rerun', 1);
+    passAndEnter(bundle, 'hitl2-recorded', 'phases/phase-hitl2.md', 'hitl2_recorded');
+    const initialTopic = parseYaml(readFileSync(join(bundle, 'rb_plan.md'), 'utf8').match(/^---\n([\s\S]*?)\n---/)[1]).topic_registry[0];
+    const candidatePath = join(bundle, 'fixture-agent-candidate.json');
+    writeFileSync(candidatePath, JSON.stringify({
+      context: 'rerun',
+      actions: [
+        { action: 'update_intent', topic_uid: initialTopic.topic_uid, title: 'Topic A refined', must_answer: ['How does atomic rerun direction publication preserve authority?'], scope_role: 'primary', depends_on_topic_uids: [], direction: directionCandidate() },
+        { action: 'add_topic', title: 'Topic B', slug_stem: 'topic-b', must_answer: ['What new comparison is required?'], scope_role: 'comparison', depends_on_topic_uids: [initialTopic.topic_uid], direction: directionCandidate({ action: 'add' }) },
+      ],
+    }, null, 2));
+    const applied = parseJsonOutput(runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs'), 'apply', '--bundle', bundle, '--input', candidatePath]));
+    assert.equal(applied.verdict, 'committed');
+    const registry = parseYaml(readFileSync(join(bundle, 'rb_plan.md'), 'utf8').match(/^---\n([\s\S]*?)\n---/)[1]).topic_registry;
+    const added = registry.find((topic) => topic.slug.endsWith('_topic-b'));
+    assert.ok(added, 'fixture candidate must add a canonical topic');
+
+    const directionOnly = { context: 'rerun', actions: [{ action: 'set_rerun_direction', topic_uid: initialTopic.topic_uid, direction: { ...directionCandidate(), adjusted_depth: 'compare the revised operational mechanisms' } }] };
+    const beforeDirection = directionSection(readFileSync(join(bundle, 'seed_topics', initialTopic.slug + '.md'), 'utf8'));
+    assert.throws(() => applyCanonicalTopicState({ bundlePath: bundle, input: directionOnly, crashAt: 'after_prepared' }), /simulated crash/);
+    const blocked = parseJsonOutput(runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs'), 'inspect', '--bundle', bundle], { expectedStatus: 1 }));
+    const recovered = parseJsonOutput(runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs'), 'recover', '--bundle', bundle, '--operation-id', blocked.blockers[0].operation_id]));
+    assert.equal(recovered.verdict, 'committed');
+    const recoveredDirection = directionSection(readFileSync(join(bundle, 'seed_topics', initialTopic.slug + '.md'), 'utf8'));
+    assert.notEqual(recoveredDirection, beforeDirection);
+
+    const layout = parseJsonOutput(runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs'), 'inspect', '--bundle', bundle])).layout_baseline;
+    layout.topics[0].title = 'Topic A layout-only label';
+    writeFileSync(candidatePath, JSON.stringify(layout, null, 2));
+    const laidOut = parseJsonOutput(runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs'), 'apply', '--bundle', bundle, '--input', candidatePath]));
+    assert.equal(laidOut.verdict, 'committed');
+    const laidOutTopic = parseYaml(readFileSync(join(bundle, 'rb_plan.md'), 'utf8').match(/^---\n([\s\S]*?)\n---/)[1]).topic_registry.find((topic) => topic.topic_uid === initialTopic.topic_uid);
+    assert.equal(directionSection(readFileSync(join(bundle, 'seed_topics', laidOutTopic.slug + '.md'), 'utf8')), recoveredDirection);
+
+    const future = runGate(bundle, 'rerun-ready', 'phases/phase-rerun.md', { expectedStatus: 1 });
+    assert.equal(future.output.check.passed, false);
+    assert.match(future.output.hints.find((hint) => hint.rule_id === 'rerun_direction_structure').write_to, /phase-rerun/);
+    setProfileRerunCount(bundle, 2);
+    const synchronized = runGate(bundle, 'rerun-ready', 'phases/phase-rerun.md');
+    assert.equal(synchronized.output.check.passed, true, JSON.stringify(synchronized.output.inspect));
+  });
+
   it('fails at rerun-ready on malformed profile without downstream transition', () => {
     const bundle = restoreBundle(snapshot, baseline);
     stageHitl2(bundle, 'rerun', 1);
@@ -309,21 +369,21 @@ describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
     });
   }
 
-  it('preserves future direction crash-window semantics and recovers by matching the profile', () => {
+  it('keeps a future add direction inactive until profile-count synchronization makes it current', () => {
     const bundle = restoreBundle(snapshot, baseline);
     reachWave2(bundle, { suffix: 'direction-future' });
     stageSeed(bundle, 1, { action: 'add', directionCount: 2 });
     const directionPath = join(bundle, 'seed_topics/topic-a.md');
     const directionBytes = readFileSync(directionPath);
     useDeltaSynthesis(bundle);
-    const future = runGate(bundle, 'wave2-complete', 'phases/phase-wave2.md', { expectedStatus: 1 });
-    assert.equal(future.output.check.passed, false);
-    assert.match(future.output.inspect.join('\n'), /action:add.*Delta Synthesis/i);
 
     // Fixture-labeled Markdown recovery: profile increment/reuse is simulated Agent behavior,
     // not an Engine recovery verdict. The existing future direction is not rewritten.
     setProfileRerunCount(bundle, 2);
     assert.deepEqual(readFileSync(directionPath), directionBytes);
+    const current = runGate(bundle, 'wave2-complete', 'phases/phase-wave2.md', { expectedStatus: 1 });
+    assert.equal(current.output.check.passed, false);
+    assert.match(current.output.inspect.join('\n'), /action:add.*Delta Synthesis/i);
     writeFileSync(join(bundle, 'artifacts/wave2/synthesis.md'), '# Cross-Topic Synthesis\n\nW2F-001 follows [Wave1 evidence](../wave1/topic-a/evidence-summary.md).\n');
     const matching = runGate(bundle, 'wave2-complete', 'phases/phase-wave2.md');
     assert.equal(matching.output.check.passed, true, JSON.stringify(matching.output.inspect));

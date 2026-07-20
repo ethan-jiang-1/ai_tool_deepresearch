@@ -58,6 +58,8 @@ Define what the topic-deepening Sub-agent searches for and writes. The Phase Age
 
 The shared work-unit sub-agent contract (`shared-subagent-protocol.md`) defines the envelope and submit mechanics. This role spec defines what `dpt-evidence-extractor` does within that contract.
 
+For backfill-ready research output, retain only the concise return-map cue `evidence_meaning`, `relationship`, `refs`, `status`, `next_hop`; the Phase Agent owns seed backfill and `shared-return-map-authoring.md` owns the complete definition.
+
 ## 2. Search Focus
 
 Wave1 does single-pass topic deepening. It is not comprehensive research, multi-round exploration, or cross-topic synthesis.

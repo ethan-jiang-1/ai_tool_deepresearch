@@ -36,6 +36,7 @@ import {
   topicSlugFromDepthReviewTarget,
 } from './wave-depth-contracts.mjs';
 import { checkPhaseQueueDrained } from './phase-queue-drain.mjs';
+import { evaluateRerunDirection } from './rerun-direction.mjs';
 import {
   buildContractEvaluation,
   makeContractFinding,
@@ -328,36 +329,6 @@ function readProfileRerunCount(bundlePath) {
   } catch { return 0; }
 }
 
-// @impl RTI-007
-/**
- * Resolves the current-round state of a seed topic's rerun direction section.
- * Returns one of five deterministic states shared by Wave classification and
- * checkRerunAddFullSynthesis.
- *
- * @param {string} content - seed topic file content
- * @param {number} profileRerunCount - current rerun_count from rb_profile.yaml
- * @returns {{ state: 'matching'|'stale'|'future'|'legacy_unbound'|'invalid', rerun_count: number|null, content: string|null }}
- */
-export function resolveRerunDirection(content, profileRerunCount) {
-  const match = content.match(/##\s*本轮重跑方向[\s\S]*?(?=\n##\s+|$)/);
-  if (!match) return { state: 'legacy_unbound', rerun_count: null, content: null };
-
-  const section = match[0];
-  // Check if rerun_count field exists at all (even if value is unparseable)
-  const hasField = /(?:^|\n)\s*-?\s*\*{0,2}rerun_count\*{0,2}\s*:/im.test(section);
-  if (!hasField) return { state: 'legacy_unbound', rerun_count: null, content: section };
-
-  const countMatch = section.match(/(?:^|\n)\s*-?\s*\*{0,2}rerun_count\*{0,2}\s*:\s*(\d+)/i);
-  if (!countMatch) return { state: 'invalid', rerun_count: null, content: section };
-
-  const rerunCount = parseInt(countMatch[1], 10);
-  if (!Number.isFinite(rerunCount) || rerunCount < 0) return { state: 'invalid', rerun_count: null, content: section };
-
-  if (rerunCount === profileRerunCount) return { state: 'matching', rerun_count: rerunCount, content: section };
-  if (rerunCount < profileRerunCount) return { state: 'stale', rerun_count: rerunCount, content: section };
-  return { state: 'future', rerun_count: rerunCount, content: section };
-}
-
 function checkRerunAddFullSynthesis(bundlePath, pairFacts) {
   const topics = topicSlugs(bundlePath);
   const profileRerunCount = readProfileRerunCount(bundlePath);
@@ -365,10 +336,9 @@ function checkRerunAddFullSynthesis(bundlePath, pairFacts) {
     const seedPath = join(bundlePath, 'seed_topics', `${topic}.md`);
     if (!existsSync(seedPath)) return false;
     const content = readFileSync(seedPath, 'utf8');
-    const direction = resolveRerunDirection(content, profileRerunCount);
-    if (direction.state === 'stale' || direction.state === 'invalid') return false;
-    // matching, future, legacy_unbound → apply action (legacy = pre-v0.29 behavior)
-    return /action\s*:\s*add\b/i.test(direction.content || content);
+    const direction = evaluateRerunDirection(content, profileRerunCount);
+    if (direction.state !== 'matching' && !(direction.state === 'legacy_unbound' && direction.has_direction)) return false;
+    return direction.fields.action === 'add';
   });
   if (addTopics.length === 0) return { passed: true, active: false };
 

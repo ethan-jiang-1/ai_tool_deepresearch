@@ -12,80 +12,108 @@ Gate 只做 deterministic 结构/数量/一致性检查；seed topic 的语义�
 ## Requirements
 ### Requirement: Seed topic materialization phase node
 
-`phase-seed-topics.md` SHALL 提供完整的 9-section body，位于 setup 与 wave0 之间。§3 Allowed Actions SHALL 采用 queue-driven 三阶段模式（灌料 → 执行循环 → 收尾+gate）。
+`phase-seed-topics.md` SHALL provide a complete 9-section body between setup and Wave0. Section 3 Allowed Actions SHALL retain the queue-driven three-stage mode: fill, execution loop, then finalize and gate.
 
-Phase SHALL 声明 `phase: seed-topics`、`gate: seed-topics-ready`、`stop: "no"`。
+The phase SHALL declare `phase: seed-topics`, `gate: seed-topics-ready`, and `stop: "no"`.
 
-Allowed Actions SHALL 覆盖三阶段：
+Allowed Actions SHALL retain these stages:
 
-**§3.1 灌料 (Filling)** — 首次进入，如果 queue 为空：
-- 读取 `rb_plan.md` frontmatter 的 `topic_registry`
-- 为每个 topic 创建 task card JSON（含 work_id, title, `targets: { controller: "main-agent" }`, producer_rule: seed_topic_materialize, priority_class: P3_current_gate_gap, required_receipts, done_condition 等完整 QueueItemSchema 字段；`main-agent` 是当前 queue schema wire value）
-- 使用 `operate-queue enqueue <bundle> --task <task.json>` 逐个灌入
-- 灌料完毕后跑 `operate-queue check <bundle>` 确认 active_window 已填充
+**Section 3.1 Filling** - On first entry when the queue is empty:
 
-**§3.2 Queue-driven 执行循环**：
-- `operate-queue claim <bundle> --actor main-agent` → 获取 task card → item 为 null 则跳到 §3.3（`main-agent` 是当前 CLI actor wire value）
-- 执行：Phase Agent 从 task.payload.topic_slug 定位 topic_registry 条目 + rb_profile.yaml → 按 Seed Topic 文件结构创建 `seed_topics/<slug>.md`
-- `operate-queue complete <bundle> --result <result.json>` → receipt check → promote/repair
-- 读投影 → 回到 claim
+- read `rb_plan.md` frontmatter `topic_registry`;
+- create one complete QueueItemSchema task card per Topic, including the accepted identity, title, `targets: { controller: "main-agent" }`, `producer_rule: seed_topic_materialize`, `priority_class: P3_current_gate_gap`, receipts, and done condition; `main-agent` remains the queue-schema wire value;
+- enqueue each task through `operate-queue enqueue <bundle> --task <task.json>`; and
+- run `operate-queue check <bundle>` after filling to confirm the active window.
 
-**§3.3 收尾与 gate**：
-- 跑 `check-gate-seed-topics-ready.mjs` → pass/fail 按 §6/§7 处理
+**Section 3.2 Queue-driven execution loop:**
 
-**Seed Topic 文件内容：**
+- run `operate-queue claim <bundle> --actor main-agent`; an item of `null` moves to Section 3.3;
+- resolve `task.payload.topic_slug` to `topic_registry` plus `rb_profile.yaml`, then materialize `seed_topics/<slug>.md` from the Seed Topic file contract;
+- run `operate-queue complete <bundle> --result <result.json>` through receipt validation and promotion/repair;
+- read the queue projection and return to claim.
 
-每个 `seed_topics/<slug>.md` SHALL 分两段结构：
+**Section 3.3 Finalize and gate:**
 
-**初始化区（seed-topics phase 写入）：**
-- **YAML frontmatter**（YAML 1.2 格式，gate 使用 `parseYaml()` 解析。JSON 是 YAML 1.2 的子集，JSON 格式的 frontmatter 亦可接受，但推荐使用多行 YAML 以提高可读性）：`id`, `slug`, `title`（三个均非空，slug 与文件名 stem 一致）+ `must_answer`（该 topic 需要回答的具体问题列表）、`hypothesis`（初始假设或 known gap）、`in_scope`、`out_of_scope`、`search_guardrails`（required_terms + forbidden_broadening）、`evidence_route`（preferred_sources + noise_to_avoid）
-- 正文 sections：主题定位（一段叙述该 topic 的研究价值）、must_answer（编号的 investigatable 问题列表）、初始假设缺口或张力（已知/缺口/张力三段）、why now（时间窗口和触发事件）、研究边界与不深挖范围（在范围内/不深挖两条列表）、证据锚点与优先来源（具体来源名 + 可信度标注）、为什么对最终交付物重要、下游位置（可选）
+- run `check-gate-seed-topics-ready.mjs` and follow the existing Sections 6/7 pass/fail behavior.
 
-**轮次追加区（预埋占位，seed-topics 不填充）：**
-- 用显式 `═══ 研究轮次追加区 ═══` 标题分隔
-- 含回填责任表（wave0→新增证据 / wave1→机制理解+趋势难点 / wave2→当前判断 / 每轮→更新待验证问题状态）
-- 以下 sections 预埋为空占位：历史摘要、本轮新增证据、本轮新增机制理解、本轮新增趋势与难点、当前判断、待验证问题
-- seed-topics-ready gate SHALL NOT 检查轮次追加区内容（留空是合法状态）
+The Phase Agent SHALL receive one framework-owned shared seed-topic authoring contract through the phase's actual loaded `requires` chain. That shared Markdown surface SHALL be the single complete human/Agent reading entry for:
 
-若上游（topic_registry / rb_profile.yaml）未提供足够信息填充初始化区字段，SHALL 标注为显式 gap（如 `hypothesis: "pending — HITL1 未提供足够约束"`），不得编造。
+- initialization frontmatter and the search-relevant body skeleton;
+- the research-appendix boundary, canonical headings, Wave responsibility table and accepted one-time backfill tokens;
+- the appendix section/token skeleton and a pointer to the separate shared return-map authoring contract; and
+- an optional rerun-direction fragment used only by sanctioned rerun from recorded rationale.
 
-**Enforcement boundary（强制执行边界）：** 当前 `seed-topics-ready` gate（STM-002）只检查文件存在、title 非空、slug 一致性、trace event、status——不校验 must_answer/hypothesis/search_guardrails/evidence_route 字段的存在性或内容。原因是 gap annotation 机制允许这些字段标为 "pending"（合法），gate 无法区分"未填"和"标 gap"。因此这些字段的验证分层如下：
+Each `seed_topics/<slug>.md` SHALL retain the accepted two-part structure.
 
-| 字段组 | 验证者 | 方式 |
-|--------|--------|------|
-| id, slug, title, 文件名一致性 | gate（STM-002） | deterministic: dir_non_empty, field_non_empty, cross_field(slug_consistency) |
-| must_answer, hypothesis, search_guardrails, evidence_route | experiment playbook（seed-topics queue-loop playbook §5a.4） | Agent actor 执行 playbook step 时检查文件内容 |
-| 字段语义质量（是否足够驱动定向搜索） | HITL1（stop: yes） | 人类审查 topic_registry 和 seed topic 产出 |
+**Initialization area:**
 
-这不是 gate 的缺陷——gap annotation 是 seed-topics 的核心机制（缺失信息标注比编造更有价值），而 gate 的定位是结构+数量+一致性检查。此不对称是**有意设计**，但必须在 spec 中显式声明。
+- YAML 1.2 frontmatter parsed by the existing YAML reader. JSON remains a valid YAML 1.2 subset, while multiline YAML is the canonical readable presentation. It SHALL include canonical UID/id/slug/title binding and the accepted `must_answer`, `hypothesis`, `in_scope`, `out_of_scope`, `search_guardrails` (`required_terms`, `forbidden_broadening`), and `evidence_route` (`preferred_sources`, `noise_to_avoid`) enrichment fields.
+- Body sections SHALL retain topic positioning, numbered investigatable must-answers, known/gap/tension framing, why-now trigger/window, in-scope/out-of-scope boundary, evidence anchors/preferred sources with trust cues, final-deliverable importance, and optional downstream position.
+
+**Research-round appendix, prepositioned but not filled by seed-topics:**
+
+- use the explicit `═══ 研究轮次追加区 ═══` boundary;
+- include the accepted responsibility mapping from Wave0 to new evidence, Wave1 to mechanisms/trends, Wave2 to current judgment, and each round to pending-question status;
+- retain the accepted History Summary, New Evidence, New Mechanism Understanding, New Trends And Difficulties, Current Judgment, and Pending Questions section family under the existing Chinese canonical headings;
+- retain exactly the accepted one-time token set in its owning sections; and
+- keep empty later-Wave sections legal for `seed-topics-ready`.
+
+If `topic_registry` or `rb_profile.yaml` lacks enough information for initialization enrichment, the Agent SHALL record an explicit gap such as `hypothesis: "pending - HITL1 did not provide enough constraints"` and SHALL NOT invent information.
+
+`phase-seed-topics.md` and rerun add-topic guidance SHALL reference the loaded shared seed-topic contract at their materialization decision points and SHALL NOT carry independently maintained complete seed skeletons. Wave phases SHALL instead load the focused shared return-map authoring contract; they SHALL NOT load the unrelated initialization/direction skeleton merely to obtain appendix producer rules. The deterministic new-seed renderer's existing ordered appendix arrays/markers SHALL remain the sole runtime structural manifest; the shared Markdown is its Agent-facing mirror, not a third registry. The renderer SHALL emit the same ordered appendix headings and token set as that shared canonical skeleton. Executable parity tests SHALL fail on a missing, extra, reordered, or renamed canonical appendix heading/token while ignoring prose bytes, YAML mapping order, and presentation-only whitespace.
+
+The shared authoring contract and renderer parity SHALL NOT create new identity, evidence, or gate authority. `rb_plan.md#/topic_registry` remains canonical Topic intent/identity, submitted work-unit/finding facts remain return-map projection authority, and `seed-topics-ready` retains its existing structure/quantity/identity boundary:
+
+| Field group | Validator | Method |
+|---|---|---|
+| UID/id/slug/title and filename consistency | existing deterministic topic-state/gate owners | canonical binding, non-empty field, and slug consistency |
+| `must_answer`, `hypothesis`, `search_guardrails`, `evidence_route` | Agent-flow/controlled authoring proof | inspect the materialized document without treating gap markers as failure |
+| semantic quality | Agent judgment from accepted HITL1 semantics | do not replace missing semantics with Engine-generated content |
 
 #### Scenario: Phase Agent executes seed-topics via queue-driven loop
 
-- **WHEN** Phase Agent 加载 `phase-seed-topics.md`
-- **THEN** §3 body SHALL 引导 Phase Agent 进入 queue-driven 三阶段：灌料 → 执行循环 → 收尾+gate
-- **AND** body SHALL NOT 使用自由文本 "Allowed Actions" 模式
+- **WHEN** the Phase Agent loads `phase-seed-topics.md`
+- **THEN** Section 3 SHALL direct fill, queue execution, and finalize-plus-gate
+- **AND** the body SHALL NOT regress to free-form Allowed Actions
+- **AND** the loaded required context SHALL include the shared seed-topic authoring contract
 
 #### Scenario: Seed topic file is a search-relevant decision document
 
-- **WHEN** Phase Agent 物化一个 seed topic
-- **THEN** 产出文件 SHALL 包含 frontmatter 的 must_answer, hypothesis, search_guardrails, evidence_route 字段
-- **AND** 正文 SHALL 包含原始语境约束 block
-- **AND** 文件 SHALL NOT 是仅有 id/slug/title + 笼统三段式正文的"chapter label"
+- **WHEN** the Phase Agent materializes a seed topic
+- **THEN** the output SHALL contain the accepted intent/enrichment frontmatter fields and search-relevant semantic body sections
+- **AND** SHALL preserve explicit gap markers when upstream semantics are absent
+- **AND** SHALL NOT be only UID/id/slug/title plus a generic chapter-label body
 
-#### Scenario: Seed topic 含轮次追加区预埋
+#### Scenario: Shared contract is the complete readable skeleton
 
-- **WHEN** seed-topics phase 完成
-- **THEN** 每个 seed_topics/{slug}.md SHALL 含 `═══ 研究轮次追加区 ═══` 分隔块
-- **AND** 分隔块 SHALL 含回填责任表（wave0→新增证据 / wave1→机制理解+趋势难点 / wave2→当前判断 / 每轮→更新待验证问题）
-- **AND** 各 section SHALL 有占位注释标注 `*(waveN 回填)*` 或等效指示
-- **AND** seed-topics-ready gate SHALL NOT 因轮次追加区为空而 fail
+- **WHEN** an Agent needs to materialize an initial or rerun-added seed topic
+- **THEN** one loaded shared Markdown surface SHALL expose the complete initialization and research-appendix skeleton
+- **AND** the Agent SHALL NOT need to reconstruct it from multiple independently complete phase examples
 
-#### Scenario: Missing upstream info recorded as gap
+#### Scenario: Seed topic contains the research-round appendix
 
-- **WHEN** topic_registry 或 rb_profile.yaml 未提供足够的 hypothesis 或 search_guardrails 信息
-- **THEN** Phase Agent SHALL 标注为显式 gap（如 `hypothesis: "pending — ..."`）
-- **AND** Phase Agent SHALL NOT 编造信息以通过 gate
-- **AND** gate SHALL still pass（gap 本身是有效信息——告诉 wave0 该 topic 搜索范围较宽）
+- **WHEN** seed-topics completes
+- **THEN** each seed SHALL contain the `═══ 研究轮次追加区 ═══` boundary, responsibility mapping, canonical section family, and accepted one-time tokens/placeholders
+- **AND** `seed-topics-ready` SHALL NOT fail solely because the owning later Wave has not filled a section
+
+#### Scenario: Renderer and shared appendix remain structurally aligned
+
+- **WHEN** the deterministic topic-state renderer materializes a new canonical seed
+- **THEN** its ordered research-appendix headings and accepted token set SHALL match the shared authoring contract
+- **AND** a parity test SHALL fail if either representation drifts independently
+
+#### Scenario: Missing upstream information is recorded as a gap
+
+- **WHEN** `topic_registry` or `rb_profile.yaml` lacks enough hypothesis or search-guardrail detail
+- **THEN** the Agent SHALL record an explicit gap
+- **AND** SHALL NOT invent information to satisfy presentation
+- **AND** the existing gate MAY still pass because semantic completeness is not its authority
+
+#### Scenario: Rerun direction is not prefilled without rationale
+
+- **WHEN** an initial seed or layout-only mutation is materialized without a sanctioned add/refine/supplement rerun rationale
+- **THEN** the skeleton SHALL NOT prefill a `## 本轮重跑方向` section or direction token
+- **AND** the shared direction fragment SHALL remain an authoring reference rather than runtime state
 
 ### Requirement: Seed topics ready gate rule set
 

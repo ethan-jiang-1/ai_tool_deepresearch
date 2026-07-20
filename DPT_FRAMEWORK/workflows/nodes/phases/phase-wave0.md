@@ -15,6 +15,7 @@ requires:
   - shared/shared-silent-execution
   - shared/shared-subagent-protocol
   - shared/shared-anti-cheating-rules
+  - shared/shared-return-map-authoring
 suggested_context:
   - phases/subagent-dpt-source-intake
 ---

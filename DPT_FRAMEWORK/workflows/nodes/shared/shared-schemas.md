@@ -94,35 +94,7 @@ Gate 通过 `pattern_match`（`negate: true`）验证 `__BACKFILL_WAVE*_*__` tok
 
 ## Research Return Map
 
-Wave return/backfill content is an Agent-readable navigation layer over existing evidence authority. It helps the next Agent reload what the evidence means and where to read it; it does not replace submitted work-unit ledger rows, reference files, cache leaves, gate attempts, handoff witnesses, readiness evidence, or final delivery evidence.
-
-Every important source, mechanism update, pending-question update, or finding projection should include the same minimum fields:
-
-```markdown
-- evidence_meaning: One or two sentences saying what this evidence/finding changes.
-  relationship: supports | refutes | partial | opens | defers | context
-  refs:
-    - reference/<file>.md
-    - artifacts/wave0/<topic>/source.yaml
-    - artifacts/wave1/<topic>/evidence-summary.md
-    - artifacts/wave1/<topic>/question-list.md
-    - artifacts/wave2/cross-topic-ledger.md
-    - artifacts/wave2/finding-index.yaml
-    - _cache/<wave>/<batch>/<scope>/<leaf>/
-    - _work_units/<phase>/<work_id>/result.json
-  status: supported | refuted | partial | open | emergent | deferred
-  next_hop: Read or repair the named path/action next.
-```
-
-Evidence-bearing `refs` must enumerate concrete existing bundle-relative `reference/*.md` files as the primary consumer navigation layer when those files are materialized. `artifacts/`, `_cache/`, `_work_units/`, finding ids, and index rows are secondary provenance/context. If no consumer reference can be materialized, record an explicit limitation with `refs: none`; do not use a glob or count summary.
-
-Wave-specific projection:
-
-- Wave0 backfill connects each important source/reference to the topic must-answer or initial hypothesis, leads with concrete existing `reference/00-shared-*.md` navigation, and says whether the source supports, refutes, partially answers, opens, defers, or provides context.
-- Wave1 backfill connects mechanisms, trends, limits, and pending-question status to concrete existing topic `reference/*.md` navigation, with `evidence-summary.md`, `question-list.md`, cache leaves, and work-unit surfaces as secondary provenance.
-- Wave2 backfill preserves `W2F-xxx` finding ids and leads with concrete existing `reference/00-cross-*.md` navigation for consumer-facing materialized findings, with `artifacts/wave2/cross-topic-ledger.md`, `artifacts/wave2/finding-index.yaml`, and source backing as secondary provenance.
-
-Return-map navigation is not evidence authority. A Wave inspect may still classify missing concrete consumer navigation as blocking for that inspect command; that does not turn the return map into delegated coverage, a formal gate rule, phase handoff, readiness, final delivery, or HITL authority.
+Wave return/backfill content is Agent-readable navigation, never evidence authority. Read `shared-return-map-authoring.md` for the one canonical entry example, Wave-to-section ownership, token lifecycle, concrete-first ref hierarchy, and same-inspect repair path. Submitted work-unit/finding facts and the existing Wave inspect remain the authority/verdict owners.
 
 ## Artifacts — Wave1 (Per-Topic Deepening)
 

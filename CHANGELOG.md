@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.36
+
+- Centralized the Agent-facing seed-topic skeleton/rerun direction and return-map authoring contracts, while keeping the deterministic renderer, submitted facts, and existing Wave inspect as their respective authorities.
+- Made sanctioned rerun add/update/direction-only candidates publish canonical direction through the existing atomic topic-state transaction; rerun-ready now checks plan-bound structural direction and profile-count synchronization without semantic scoring.
+
 ## v0.35
 
 - Made Wave seed return-map inspection section-scoped and entry-local, so fields, lineage, refs, and optional projection identity cannot be borrowed across Waves, headings, or sibling entries.

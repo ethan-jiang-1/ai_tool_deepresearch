@@ -77,7 +77,7 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
       bundlePath: bundle,
       input: {
         context: 'rerun',
-        actions: [{ action: 'add_topic', title: 'Additional comparison', slug_stem: 'comparison', must_answer: ['What differs?'], scope_role: 'comparison', depends_on_topic_uids: [] }],
+        actions: [{ action: 'add_topic', title: 'Additional comparison', slug_stem: 'comparison', must_answer: ['What differs?'], scope_role: 'comparison', depends_on_topic_uids: [], direction: { rerun_count: 1, action: 'add', new_search_dimensions: 'comparison', adjusted_depth: 'deeper comparison', search_guardrails: 'retain primary facts', rationale_excerpt: 'recorded rerun rationale' } }],
       },
     });
     assert.equal(result.verdict, 'committed');
@@ -96,7 +96,7 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     assert.throws(() => applyCanonicalTopicState({
       bundlePath: bundle,
       crashAt: 'after_prepared',
-      input: { context: 'rerun', actions: [{ action: 'add_topic', title: 'Recovered topic', slug_stem: 'recovered', must_answer: ['Recovered?'], scope_role: 'primary', depends_on_topic_uids: [] }] },
+      input: { context: 'rerun', actions: [{ action: 'add_topic', title: 'Recovered topic', slug_stem: 'recovered', must_answer: ['Recovered?'], scope_role: 'primary', depends_on_topic_uids: [], direction: { rerun_count: 1, action: 'add', new_search_dimensions: 'recovery', adjusted_depth: 'recover atomic state', search_guardrails: 'retain primary facts', rationale_excerpt: 'recorded rerun rationale' } }] },
     }), /simulated crash after_prepared/);
     const rootPath = join(bundle, '_diagnostics', 'topic-state');
     const operationId = readdirSync(rootPath)[0];

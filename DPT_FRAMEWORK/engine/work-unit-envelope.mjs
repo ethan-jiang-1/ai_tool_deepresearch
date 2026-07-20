@@ -449,7 +449,7 @@ export function spawnPromptForWorkUnit(manifest, bundleDir = null) {
     `Write the final result JSON to ${absResult}.`,
     'Before returning, verify every declared output file, required cache leaf, runtime receipt, and result JSON exists under the active bundle_dir.',
     'In result.json, cache_trails must list cache leaf directory paths only; do not list websearch.json, page.md, or meta.json file paths.',
-    'When writing evidence summaries, source notes, or backfill-ready content, include return-map fields: evidence_meaning, relationship, refs, status, next_hop.',
+    'When writing evidence summaries, source notes, or backfill-ready content, include return-map fields: evidence_meaning, relationship, refs, status, next_hop. These cues are diagnostic navigation only; submitted ledger rows and gate outputs remain authority.',
     'If you cannot write or verify the files, return a failure summary instead of research text.',
     `Keep any coding-agent runtime IDs only under optional runtime_refs diagnostic metadata; they are not authority.`,
     'Do not mutate queue, work-unit index, output ledger, or gate state. Return the result path to the main Agent for operate-work-unit submit.',

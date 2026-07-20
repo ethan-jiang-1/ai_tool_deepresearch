@@ -11,6 +11,8 @@ requires:
   - shared/shared-profile
   - shared/shared-schemas
   - shared/shared-silent-execution
+  - shared/shared-seed-topic-authoring
+  - shared/shared-return-map-authoring
 suggested_context:
   - shared/shared-anti-cheating-rules
 ---
@@ -89,115 +91,11 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue <bundle> --task /tmp/wfq-seed-{
 node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 ```
 
-**Seed Topic 文件结构（每个 `seed_topics/{slug}.md` 必须满足）：**
+**Seed Topic 文件结构：** 文件名必须是 canonical `topic.slug + .md`；gate 校验 `filename_stem == registry_slug == frontmatter_slug`。frontmatter 使用 YAML，且 canonical UID/id/slug/title/must_answer/scope-role binding 与文件名保持一致。
 
-文件名格式：`{slug}.md`，其中 `slug` 为 registry 中该 topic 的 `slug` 字段值（含 `NN_` 前缀的描述性短名，如 `01_official-stance`）。`NN` 取自该 topic 在 `topic_registry` 数组中的 1-based 位置（两位零填充）。`id` 字段 SHOULD 与 `NN` 一致（如 `"01"`）。gate 校验 `filename_stem == registry_slug == frontmatter_slug`（三重一致）。
+完整初始化 skeleton、appendix headings/tokens、Wave responsibility 与 optional rerun direction 均由已加载的 `shared-seed-topic-authoring` contract 定义。不要在本 phase 重写其模板。Seed Topics 只按该 contract materialize/enrich initialization area；research-round appendix 保持预埋，后续 Wave 仅替换其 owning token。完整 return-map entry、ref hierarchy 与 token lifecycle 由已加载的 `shared-return-map-authoring` contract 定义。
 
-**frontmatter 使用 YAML 格式**（gate 通过 `parseMdFrontmatter()` 内部调 `parseYaml()` 解析，YAML 1.2 是 JSON 的超集——JSON frontmatter 同样合法）。frontmatter `slug` 必须与文件名 stem 完全一致（byte-for-byte）。
-
-**文件分两段：上半段（初始化区）在 seed-topics phase 写入，下半段（轮次追加区）预埋为空占位，由 wave0/wave1/wave2 回填。** seed-topics-ready gate 不检查轮次追加区内容——留空是合法状态。
-
-```markdown
----
-id: "<topic-id>"
-slug: "{topic.slug}"
-title: "<topic 标题>"
-must_answer:
-  - "<该 topic 需要回答的具体问题 1>"
-  - "<该 topic 需要回答的具体问题 2>"
-hypothesis: "<初始假设或 known gap>"
-in_scope: "<搜索边界>"
-out_of_scope: "<排除边界>"
-search_guardrails:
-  required_terms:
-    - "<必含词>"
-  forbidden_broadening:
-    - "<禁止泛化的方向>"
-evidence_route:
-  preferred_sources:
-    - "<可信来源类型 1>"
-  noise_to_avoid:
-    - "<已知噪音方向>"
----
-
-# <topic 标题>
-
-## 主题定位
-<一段叙述：这个 topic 为什么值得研究，核心问题是什么，在本轮研究中的角色（上限参照 / 组织变革案例 / 信任锚点等）>
-
-## must_answer
-1. <该 topic 需要回答的具体 investigatable 问题 1>
-2. <该 topic 需要回答的具体 investigatable 问题 2>
-
-## 初始假设、缺口或张力
-**已知**：<从 topic_registry 和 rb_profile.yaml 中已有的确定信息>
-**缺口**：<上游未提供、需要 wave0 搜索才能填补的信息>
-**张力**：<已知信息之间的矛盾、需要独立验证的声称、需要警惕的叙事偏差>
-
-## why now
-- <触发事件和时间窗口——为什么这个 topic 现在需要研究，不是半年前也不是半年后>
-- <法规时钟、市场窗口、技术里程碑等>
-
-## 研究边界与不深挖范围
-**在范围内**：
-- <具体的研究边界>
-
-**不深挖**：
-- <明确排除的方向>
-
-## 证据锚点与优先来源
-- <具体来源名称 1> — 为什么优先，可信度评估
-- <具体来源名称 2> — 注意事项或已知 bias
-- **注意**：<需要额外警惕的来源类型>
-
-## 为什么对最终交付物重要
-<这个 topic 对 final deliverable 的价值——不是抽象的"很重要"，而是具体的：在最终方案中作为什么类型的证据/启发/案例？>
-
-## 下游位置（可选）
-- <流向哪个 section/breakout>
-
----
-
-## ═══ 研究轮次追加区 ═══
-
-> **预埋说明**: 以下 sections 在 seed-topics 阶段**不填充**。
-> 每个后续 wave 完成后**必须回到本文件追加对应内容**：
->
-> | 触发 Phase | 追加内容 | 写入 Section |
-> |-----------|---------|-------------|
-> | Wave0 inspect/formal gate 前 | source/reference return-map entries: evidence meaning, relationship, concrete `reference/*.md` refs, status, next hop | `## 本轮新增证据` |
-> | Wave1 inspect/formal gate 前 | mechanism/trend/question return-map entries with concrete `reference/*.md` refs as primary consumer navigation and artifacts/cache/work-unit refs only as secondary provenance | `## 本轮新增机制理解` `## 本轮新增趋势与难点` |
-> | Wave2 inspect/formal gate 前 | W2F finding return-map entries with concrete `reference/00-cross-*.md` refs when consumer-facing evidence is materialized, plus ledger/index refs | `## 当前判断` |
-> | 每轮 inspect/formal gate 前 | 更新问题状态标签 and next-hop return-map entries | `## 待验证问题` |
->
-> **不遵守此规则的后果**: gate 不检查正文完整性，但 wave2 synthesis 质量严重依赖回填。
->
-> **回填方式**: 每个 section 下的 `__BACKFILL_*__` 是唯一占位 token。Agent 回填时 grep 定位 token → **直接替换该行为 return-map entry**（不追加，不保留 token）。每条重要 entry 至少包含 `evidence_meaning`、`relationship`、`refs`、`status`、`next_hop`。
->
-> **refs 合同**: evidence-bearing entry 的 `refs` 必须至少枚举一个真实存在的 bundle-relative concrete `reference/*.md` 文件，禁止 `reference/topic-*.md` glob 或 `reference/topic-*.md (8 files)` / `reference/topic-*.md（8 个）` count summary。`artifacts/`、`_cache/`、`_work_units/` 可补充 provenance，但不能单独作为 consumer navigation。`reference/_INDEX.md` 和 `source_layer` 也只是导航/index metadata，不建立 evidence authority；authority 仍来自 prior accepted submitted backing 或 submitted `wave2_targeted_evidence`。若没有可 materialize 的 evidence，entry 必须显式写成 limitation/no-materializable-evidence 状态，例如 `relationship: defers`、`status: deferred`、`refs: none`、`next_hop: limitation: no materializable evidence; defer to HITL2`。
-
-## 历史摘要
-*(seed-topics: 本 topic 为新建，无历史轮次)*
-
-## 本轮新增证据
-__BACKFILL_WAVE0_EVIDENCE__
-
-## 本轮新增机制理解
-__BACKFILL_WAVE1_MECHANISMS__
-
-## 本轮新增趋势与难点
-__BACKFILL_WAVE1_TRENDS__
-
-## 当前判断
-__BACKFILL_WAVE2_JUDGMENT__
-
-## 待验证问题
-__BACKFILL_PENDING_QUESTIONS__
-```
-
-若 `rb_plan.md` 和 `rb_profile.yaml` 中不足以填充初始化区字段（如 hypothesis 或 evidence_route 缺失），**标注为显式 gap**（如 `hypothesis: "pending — HITL1 未提供足够约束"`），不要编造。gap 本身是有效的 seed topic 信息——它告诉 wave0 "这个 topic 目前搜索范围较宽，需要 source intake 过程中收敛"。
-
-正文中的 `## 原始语境约束` block 已合并到初始化区各对应 section（search_guardrails → `## 证据锚点与优先来源`，in_scope/out_of_scope → `## 研究边界与不深挖范围`），不再单独列出。
+若 `rb_plan.md` 和 `rb_profile.yaml` 中不足以填充初始化字段，记录 explicit `pending` gap，不要编造。gap 是有效输入，供 Wave0 收敛。
 
 ### 3.2 Queue-Driven 执行循环
 
@@ -327,11 +225,10 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
 
 ### 增量行为
 
-- **保留已有 topic**：`seed_topics/` 中已有的 topic 文件全部保留——不删除、不重建。已有 topic 若有 `## 本轮重跑方向` section，按其中的 `action` 调整后续 wave0 行为。
-- **新增 topic**：若 `## 本轮重跑方向` section 指示 `action: add` 的新 topic，Agent MUST 为其创建 seed topic 文件（格式同首次 seed-topics）。新 topic 的 `## 本轮重跑方向` section 已在 phase-rerun 中写入。
-- **移除 topic**：若 `action: remove`，topic_registry 已在 phase-rerun 中同步（条目已移除，seed_topic 文件已重命名为 `{slug}.md.deprecated`）。Agent MUST NOT 为其创建 wave0 task card。seed-topics 无需再操作 registry。
-- **补充 topic**：若 `action: supplement`，已有 topic 文件不变，但 wave0 灌料时需读其 `## 本轮重跑方向` section 中的 `new_search_dimensions` 作为追加搜索角度。
-- **无变更 topic**：若 topic 文件无 `## 本轮重跑方向` section 或 section 已处理完毕，按正常模式处理。
+- **保留已有 topic**：`seed_topics/` 中已有 canonical topic 文件全部保留；只按 canonical plan/current seed binding materialize queue work，不从 filename 或 orphan seed 推断 scope。
+- **新增 topic**：topic-state `add_topic` 已将 canonical skeleton 与 `action: add` direction 原子提交；Seed Topics 只按 binding/enrichment loop处理它，不重写其 direction。
+- **补充 topic**：matching `action: supplement` direction 为 Wave0 提供追加搜索角度；读取 shared parser-compatible fields，不直接替换 seed section。
+- **无当前 direction 或陈旧 direction**：按正常模式处理；不把旧 direction 当作本轮 operation receipt，也不迁移/删除它。
 
 ### 灌料时读方向 hints
 
@@ -343,6 +240,7 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
 - **禁止创建与 `topic_registry` slug 不一致的文件**：slug 以 registry 为 source of truth
 - **禁止编造 `must_answer_refs` 引用**：seed topic 正文只写研究骨架（维度/前提/open questions），不编造不存在的 reference
 - **禁止在 seed-topics 阶段做 research**：seed-topics 是物化已有的 topic 定义，不做搜索/阅读/evidence 工作
+- **禁止 direct-edit `## 本轮重跑方向`**：rerun direction 仅由 phase-rerun 形成 retained candidate 并通过 existing topic-state transaction 发布
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
 
 ## Log
