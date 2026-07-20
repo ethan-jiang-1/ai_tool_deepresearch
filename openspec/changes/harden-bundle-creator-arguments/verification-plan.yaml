@@ -1,0 +1,44 @@
+schema_version: verification-routing/v1
+change: harden-bundle-creator-arguments
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The behavior is only meaningful at the real creator child-process and filesystem boundary; extracting a parser-only proof would not prove absence of writes.
+  integration:
+    status: selected
+    rationale: Actual creator CLIs must parse argv and preserve explicit temporary target directories without writing invalid bundles, while legal invocations retain their existing creation behavior.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No multi-phase runtime workflow, state transition, or simulated Agent action changes; creator input validation ends before bundle creation on rejection.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change proves deterministic CLI safety only and makes no claim about Playbook or Subject Agent behavior.
+claims:
+  - id: disposable-creator-prewrite-argument-boundary
+    statement: The actual disposable creator returns safe help or a clear nonzero rejection for flag, malformed option, unsafe name, unsafe case, and extra positional inputs before creating a supplied target root or any dpt_disp bundle; legal case-target creation and legal disposable force behavior remain compatible.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/experiments_env/new-disposable-bundle.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: production-creator-prewrite-argument-boundary
+    statement: The actual production creator returns safe help or a clear nonzero rejection for flag, malformed option, unsafe name, and extra positional inputs before creating a supplied target root or any dpt_rb bundle; legal explicit-target creation and the existing force prohibition remain compatible.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/instantiate-run-bundle.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
