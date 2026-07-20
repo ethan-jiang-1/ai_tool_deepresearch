@@ -20,7 +20,7 @@ claims:
     proof_subject: deterministic_contract
     asset:
       kind: node_test
-      path: tests/engine/helpers/direct-output-contract.test.mjs
+      path: tests/engine/work-unit-assignment-contract.test.mjs
     execution_profile:
       fixture: fixture_backed
       subject_execution: none
@@ -43,7 +43,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: strict-work-unit-contract-schema
-    statement: Work-unit index, manifest, and beacon carry one top-level current assignment marker; manifest/beacon output contracts carry unique closed path-role-direct-contract tuples; generated result schema requires each current exact path-role pair once through contains and path-to-role constraints without actor-fillable marker/contract fields, and its default/Result Starter prepopulate the same pairs or an empty set so structural parity and the candidate-result Zod shape accept those declarations without claiming submit readiness; genuine marker-absent claimed records remain legacy while partial markers, unknown contracts, projection drift, duplicate paths, wrong roles, and direct selectors fail.
+    statement: Work-unit index, manifest, and beacon carry one top-level current assignment marker; manifest/beacon output contracts carry unique closed path-role-direct-contract tuples; generated result schema preserves the common optional-output item schema while requiring each current exact path-role pair once through output_files.allOf contains branches and items.allOf path-to-role constraints without actor-fillable marker/contract fields, and one ordered default feeds the Result Starter or an empty set so structural parity and the candidate-result Zod shape accept those declarations without claiming submit readiness; the shared candidate projection schema is closed; genuine marker-absent claimed records remain legacy while partial markers, unknown contracts, projection drift, duplicate paths, wrong roles, and direct selectors fail.
     test_class: unit
     proof_subject: deterministic_contract
     asset:
@@ -57,7 +57,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: candidate-checkpoint-lifetime
-    statement: Current-version dry-submit, claimed timeout-preflight, first normal submit, and eligible first late-submit each reconstruct the exact contract and read fresh bounded snapshots; every candidate, receipt, output, source/cache and Engine-binding root receives one provenance-based scope, and dry/formal projection derives one closed non-persistent action plus null-or-stable primary_root_code from scope precedence and work_done state; formal acceptance rejects changed invalid bytes after dry-submit, while duplicate submit, accepted late-submit replay, and recover-declaration preserve historical postconditions without reaccepting current artifact bytes.
+    statement: Current-version dry-submit, claimed timeout-preflight, first normal submit, and eligible first late-submit each reconstruct the exact contract and read fresh bounded snapshots; every candidate, receipt, output, source/cache and Engine-binding root receives one provenance-based scope, and one shared schema/helper derives dry/formal/timeout candidate projection plus null-or-deterministically-ordered primary_root_code from scope precedence, closed phase/coordinate order, and work_done state without persisting the projection; formal rejection preserves only its existing diagnostic state, formal acceptance rejects changed invalid bytes after dry-submit, and duplicate submit, accepted late-submit replay, and recover-declaration preserve historical postconditions without reaccepting current artifact bytes.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
