@@ -104,6 +104,7 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-092 | 2026-07-20 | `add_topic` seed projection 跨 section masking — `restore-section-scoped-seed-projection-contract` v0.35 按目标 section 逐 row/finding 执法 |
 | BUG-093 | 2026-07-20 | Seed-topic appendix/return-map authoring drift — shared authoring contracts + renderer parity；不改 header、不迁移历史 bundle |
 | BUG-094 | 2026-07-20 | Rerun direction section has no canonical template — atomic topic-state publication + structural readiness；legacy read remains tolerant |
+| BUG-095 | 2026-07-20 | `new-disposable-bundle.mjs` 把 `--help` 当 bundle 名并创建垃圾目录；v0.37 pre-write argv boundary 同时覆盖 production creator |
 
 **Next available bug ID: BUG-096**
 

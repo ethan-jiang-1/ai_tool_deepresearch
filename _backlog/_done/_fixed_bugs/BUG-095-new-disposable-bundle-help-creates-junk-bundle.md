@@ -89,3 +89,14 @@ plan_basename: --help
 research_profile: not_selected
 ...
 ```
+
+## 修复结论
+
+已由 OpenSpec change `harden-bundle-creator-arguments`（v0.37，commit `7ad92777b`）修复并归档。
+
+- `new-disposable-bundle.mjs` 现在在任何 repo/root/target/bundle 写入前严格解析完整 argv；standalone pre-delimiter `--help` 先打印 usage 并以 0 退出。
+- 非法 positional、未知/重复/缺值 option 和非 canonical `--case` 都在 target directory 创建前拒绝；`--` 后的 `--help` 保持 positional 并按 name grammar 拒绝。
+- 同类 production creator 已同时修复，且 validation/inspection 对 literal target path 使用 child-process argument vector。
+- 真实 child-process integration 覆盖 help 零写入、拒绝路径、含引号 target path、nodes copy 及 disposable `--force` collision replacement；focused suite 与完整 `npm test` 均通过。
+
+历史 `dpt_disp_--help_*` 目录未由该 change 自动删除；它们是明确 out-of-scope 的既有垃圾数据。

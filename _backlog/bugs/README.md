@@ -18,8 +18,6 @@
 | Bug | 简述 | 状态 |
 |-----|------|------|
 
-| BUG-095 | `new-disposable-bundle.mjs` 把 `--help` 当作 bundle 名，创建垃圾 `dpt_disp_--help_*` | open |
-
 **Next available bug ID: BUG-096**
 
 ## 最近关闭 (2026-07-20)
@@ -29,6 +27,7 @@
 | BUG-092 | `restore-section-scoped-seed-projection-contract` (v0.35, `af5e6018c`) | Wave inspect 改为目标 section 隔离校验，并逐条绑定 current-round row/finding；原跨 section false pass 已有 unit、CLI integration 与 deterministic E2E 证据 |
 | BUG-093 | `centralize-seed-topic-authoring-contracts` (v0.36, `29c90d0c1`) | Shared seed/return-map authoring contracts and renderer parity close the real definition-drift issue; headers and historical bundles remain unchanged, and consumed tokens are normal terminal state |
 | BUG-094 | `centralize-seed-topic-authoring-contracts` (v0.36, `29c90d0c1`) | Canonical rerun direction is atomically published and structurally checked; legacy presentation remains tolerated and guidance semantics stay Agent-owned |
+| BUG-095 | `harden-bundle-creator-arguments` (v0.37, `7ad92777b`) | disposable/production creator 在写入前严格解析 argv；`--help` 零写入，非法参数早期拒绝，literal target path 以 argument vector 验证 |
 
 ---
 
