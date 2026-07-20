@@ -66,3 +66,6 @@ tests/.test-bundles/
 _temp/
 _logs/
 _subagents/
+
+.agents/
+.claude/
