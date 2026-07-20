@@ -1,358 +1,436 @@
-# Agent Output Linter — Implementation Plan
+# Agent-Authored Output Contract Feedback — Exploration Plan
 
-> 状态：设计阶段 | 创建：2026-07-13 | 更新：2026-07-14
-
----
-
-## 一句话
-
-**Agent 手写结构化内容，JS 做确定性检查；有错由 Agent 根据报告修复，检查通过后 phase node 才能退出。**
+> 状态：重新定性后的探索来源，**尚未 ready to propose**
+> 创建：2026-07-13
+> 重新校正：2026-07-20
+> 历史名称：Agent Output Linter — Implementation Plan
 
 ---
 
-## 核心认识
+## 当前结论
 
-### 1. 没有统一写法，目的达到就行
+原计划提出的 broad `lint-agent-output` 产品形态已经不适合当前架构，**不得按旧设计直接实施**。
 
-每个 MD controller 产出 YAML/JSON 的时机、上下文、约束完全不同：
+项目后来形成了两条正式反馈链：
 
-| Controller | 产出时机 | 怎么让 Agent 自检 |
-|---|---|---|
-| Main Agent 跑 phase node | phase 工作完成后、gate 前 | `AUTONOMOUS_MODE_HEADER` 里加指令 + 传 `--schema` |
-| Sub-agent 跑 work unit | 产出文件后、写 `work_done` 前 | `task.md` 的 checklist 里加指令，output_contract 指定 schema |
-| phase-rerun 回填 | 写入 seed topic frontmatter 后 | phase 文档里加一步，传 `--schema seed_topic_md` |
-| Terminal delivery | 最终交付前 | `TERMINAL_DELIVERY_HEADER` 里加指令 |
-| 不确定该用哪个 schema | 任何时候 | 不传 `--schema`，只跑语法检查 |
+```text
+delegated work-unit
+  actor writes result / receipt / output / cache
+    -> operate-work-unit dry-submit
+    -> formal submit
+    -> submitted ledger authority
 
-**不建统一的调度层。** JS 侧只暴露一个幂等工具：`lintFile(filePath)` → `{ passed, issues }`。Agent 在哪个时刻调、读到的指引长什么样，是每个 controller 自己的事。如果你发现自己在设计一个"适用于所有 controller 的 lint 调度机制"——停下来，你走错了。
-
-### 2. "通过"意味着两层：语法 + 当时需要的 schema
-
-- **Tier 1 — 语法层**：YAML/JSON/JSONL 能 parse，frontmatter 的 `---` 闭合，fence block 完整。所有 controller 共用的基线——语法错误在任何阶段都是 error。**不需要传 schema，tool 默认就跑这一层。**
-- **Tier 2 — Schema 层**：parse 出来的内容符合指定 schema。**Controller 知道上下文就传 schema，tool 多跑一层语义校验；不传就只跑语法。**
-  - `--schema evidence_summary_md` → 检查 body 有没有 `## Key Findings`
-  - `--schema reference_md` → 检查 metadata block 的 `source_url` 能不能 parse
-  - 不传 `--schema` → 只跑 Tier 1，语法通过就算过
-
-Schema 规则从 gate definition 的 `blocking_basis` 字段投影——不是 linter 自己发明一套。Controller 知道自己当下在哪个阶段、期望什么格式，**它把 schema 名传给 tool，tool 不用猜。**
-
----
-
-## 为什么需要这个
-
-**Agent 手写结构化内容不可靠。** YAML 缩进、JSON 逗号、frontmatter 闭合——这些不是 Agent 的强项，它经常写错。而 MD controller（phase node、task.md、rerun 流程）是**离产出最近的地方**——Agent 刚写完文件，文件还在手边，controller 还没交出控制权。这个时候跑一遍检查，代价最小、修得最快。
-
-如果不在这个时机检查，格式问题要等到 gate 阶段才发现——距离 Agent 写出文件已经过了很久，Agent 只能靠试错修复，反馈循环太长。
-
-DPT 框架中，Agent 产出大量含结构化数据的 MD/YAML/JSON 文件：
-
-- **YAML frontmatter**（`---` 分隔）：`rb_plan.md`、seed topic `.md`、evidence-summary 等
-- **metadata block**（bullet `- key: value`，在第一个 `## ` 之前）：reference MD 文件
-- **fence block**（` ```json` / ` ```yaml` / ` ```jsonl`）：task card、source claim、depth review、finding index
-
-这些结构化内容目前**只在 gate 阶段才被检查**——距离 Agent 写出文件已经过了很久。更根本的问题：**Agent 写文件时没有格式 contract 可以参考，写完之后也没有 linter 可以自查。** Engine 有这些静态知识（gate definition 里定义了格式期望），但没有把它们投影到 Agent 写文件的那一刻。
-
-### 为什么 Main Agent 没问题，Sub-agent 有问题
-
-Main Agent 的输出走 `validate-bundle.mjs`，有明确的 Zod schema + 文件→schema 映射表。但 sub-agent 的输出文件（`artifacts/` 下的 MD/YAML）**没有一个对应的文件→schema 映射**。Sub-agent 收到的 `task.md` 告诉它"写 evidence-summary.md"，但没说这个文件的 frontmatter 该怎么写、body 该有哪些 section、字段类型是什么。
-
-### 已知问题（来自 memory/bug 记录）
-
-1. Sub-agent 产出 **YAML frontmatter 格式**的 reference 文件，但 gate 期望 **metadata block 格式**（bullet `- key: value`），两种格式互相不可见
-2. `log-event.mjs` 不等于 `runtime-receipt.jsonl`——sub-agent 调了前者但没写后者，submit 被拒
-3. Receipt 的 `detail` 字段必须是 JSON object 不能是 string，否则 Zod 校验失败
-4. 输出文件写到 `_work_units/<id>/` 而不是 `artifacts/wave0/<topic>/`，gate 找不到
-
----
-
-## DO——只做这些
-
-1. **只检查 Agent 手写的结构化内容**：YAML frontmatter、metadata block、fence block、纯 `.yaml`/`.json`/`.jsonl` 文件。Markdown 只是容器——不检查散文、标题层级、排版。
-2. **JS 只负责确定性检测**：返回 `{ passed, issues: [{ file, line, type, message, fix_hint }] }`，不自动修文件。
-3. **Agent 负责修复**：读 lint 报告 → 根据 `fix_hint` 修正 → 重跑 linter。"检查→修复→再检查"是 Agent 行为，不是 JS 控制流。
-4. **每个 controller 用自己的方式在退出前复验**：不建统一调度层。JS 只保证 `lintFile()` 是随时可调的幂等工具。
-5. **只区分两个阶段**：wave0 允许 L3 placeholder（warning），wave1+ 不允许（error）。语法错误在任何阶段都是 error。
-6. **只接到确实有 Agent 手写结构化内容的 node**：`seed-topics`、`wave0`、`wave1`、`wave2`、Sub-agent 各 role。`hitl1`、`hitl2`、`phase-final` 不需要强制 lint。
-
----
-
-## DON'T——实现时不要这样做
-
-1. **不要让 JS 自动修文件**——不补字段、不改缩进、不替换 placeholder。`fix_hint` 给建议，Agent 做修改。
-2. **不要在 JS 里实现修复循环**——不写 `for`/`while`/重试器。JS 只暴露 `lintFile(filePath)` → `{ passed, issues }`。
-3. **不要 lint Markdown 样式**——不检查标题层级、空行、措辞。只检查里面包裹的 YAML/JSON 块。
-4. **不要做通用 linter 平台**——不设计自动发现、插件机制、扩展层。Format contract registry 只覆盖 DPT 确实有的文件类型。
-5. **不要另造一套校验规则**——Zod schema 从 gate definition 的 `blocking_basis` 字段投影。parser、gate validator、linter 不能各有一套定义。
-6. **不要把 warning 当 error**——特别是 wave0 合法的 `__BACKFILL_*__` placeholder。
-7. **不要绕过已有的 validate 工具**：
-
-| 工具 | 运行时机 | 检查对象 | 谁跑 |
-|---|---|---|---|
-| `validate-bundle.mjs` | Gate 的一部分 | bundle control files | Gate CLI |
-| `validate-phase-templates.mjs` | CI / repo hygiene | phase .md 源文件 | 开发者 / CI |
-| **output linter** | **Agent 出口前（pre-gate）** | **bundle 内 Agent 产出的 MD/YAML/JSON** | **Main Agent / Sub-agent** |
-
----
-
-## 根本不做
-
-- `_generated/` 下的 JSON、图片和生成产物
-- `_state/` 下的状态文件（走 `validate-bundle.mjs`）
-- `rb_templates/` 中的框架模板、`workflows/` 下的 phase node 声明（走 `validate-phase-templates.mjs`）
-- pure evidence produces 或任何没有文件的 produces
-- 任意 JSON/YAML/Markdown 文件的通用 `lintFile`、统一验收机制、通用路由系统
-- strict/tolerant 通用模式体系、自动修复/重试/PDCA/失败升级流程
-- 为此单独扩张 CLI surface、命令体系或协议
-
-这些不是"以后顺便做"的候选项。若将来出现独立需求，必须重新提出并证明必要性，不能顺势扩张。
-
----
-
-## 设计
-
-### 两层校验模型
-
-```
-文件 → [Tier 1: 语法校验] → [Tier 2: 格式 Contract 校验] → { passed, issues }
+phase-owned artifacts
+  Phase Agent writes projections / judgments / backfill
+    -> inspect-waveN-output (side-effect-free)
+    -> formal Wave Gate (same evaluator)
 ```
 
-**Tier 1 — 语法校验（便宜，总是执行）：**
-- YAML：`yaml.parse()` 尝试解析，捕获 parse error
-- JSON：`JSON.parse()`
-- JSONL：逐行 `JSON.parse()`
-- MD：提取 YAML frontmatter（`/^---\n([\s\S]*?)\n---/`）并 parse；同时解析 metadata block 格式（bullet `- key: value`）
-- 语法错误直接报 `file + line + message`
+三个 `inspect-wave*-output` 已经是项目接受的 wave-specific structural lint。它们和正式 Gate 共用 evaluator，不是另一套近似规则。再新增一个基于 `PATH_FORMAT_MAP`、`--schema` 和独立 schema registry 的通用 linter，会制造第二个 validator universe。
 
-**Tier 2 — 格式 Contract 校验（有 contract 时才执行）：**
-- 根据文件路径 pattern 或 `--role` 参数查找对应的 Zod schema
-- 对解析后的内容做 `safeParse()`
-- 返回缺失字段、类型错误、section 缺失等诊断
+目前仍值得调查的真实缺口更窄：
 
-### Format Contract Registry
+> **work-unit `dry-submit` 已完整检查 result、receipt、output declaration、cache 和 source-claim binding，但对若干 delegated output 文件只检查路径、角色和存在性；文件自身的正式 direct-shape contract 要到 Wave inspect 才检查。**
 
-做两件事：Path → Format（判断文件类型），Format → Schema（找到 Zod schema 做校验）。
+这份 plan 的任务，是确认这个反馈时机缺口是否应被收口、收口应落在哪个 owner seam，以及应阻塞 formal submit 还是只提供 scoped preflight。它不再预设必须建设一个 linter CLI。
 
+---
+
+## 为什么原计划必须重写
+
+旧计划建立在 2026-07-13/14 的代码现实上，随后多个 change 改变了基础条件：
+
+- `operate-work-unit dry-submit` 现在复用正式 submit 的 candidate validation，并返回结构化、可修复、无副作用的 `violations[]`。
+- generated `task.md` 现在包含 Result JSON Starter、准确 identity、runtime receipt 说明、cache/output contract 和 copy-ready dry-submit 命令。
+- `WorkUnitRuntimeReceiptEventSchema.detail` 已接受 object 或 string；旧计划列出的该项故障已失效。
+- beacon/task guidance 已反复强调 canonical absolute `bundle_dir`，dry-submit 会检查 output path/existence；旧计划中的错误 bundle root 问题已有 owner。
+- `inspect-wave0-output.mjs`、`inspect-wave1-output.mjs`、`inspect-wave2-output.mjs` 已成为正式、side-effect-free 的 pre-Gate feedback surface，并与 Gate 共用 evaluator。
+- seed topic 已有 canonical topic-state owner、seed Gate 和 section-scoped Wave return-map inspect；它不是一个静态 `seed_topic_md` schema 能完整描述的文件。
+- Gate hint/finding 架构已明确禁止第二套 rule-granular audit catalog；旧计划的 `audit-gate-test-coverage.mjs` 与 `assertHintQuality` 全 Gate 映射方向冲突。
+
+旧设计内部也不自洽：
+
+1. 一边声明“不检查 Markdown 标题/结构”，一边把 `Key Findings` 和固定 question-list sections 当作 schema。
+2. 一边声明“不建统一调度层”，一边设计全局 path registry、schema registry、CLI、workflow header 和 terminal header 集成。
+3. `blocking_basis` 是粗粒度举证类别，不是可投影的文件 schema；大量精确规则由 checker/helper imperative 地拥有。
+4. dry-submit 中的“advisory violation”既不能保证 submit-equivalence，也不能支持“检查通过才退出”的完成语义。
+5. syntax-only 严格 parser 可能与现有 tolerant Gate reader 产生不同 verdict；“复用 parser”不能只意味着调用同一个 npm 包。
+
+---
+
+## 问题证据
+
+### 1. 代码层面：缺口仍然存在
+
+`DPT_FRAMEWORK/engine/work-unit-validation.mjs` 当前 owner 分布：
+
+- `readAndValidateResult()`：验证 result JSON schema、required fields 和 work-unit identity binding。
+- `validateSubmitRuntimeReceipt()`：逐行解析 JSONL，并验证 receipt schema/lifecycle identity。
+- `validateCacheTrails()`：验证 cache leaf 路径、base files、`meta.json` mapping、`page.md` 非空/非 placeholder 或 explicit degradation。
+- `validateSourceClaims()`：验证 source ref、cache/degraded refs、accepted URL 和 submitted lineage。
+- `validateOutputFiles()`：只验证 output role、bundle-relative path、文件存在和 reference declaration 的 `source_url`；**不读取 declared output 文件内容**。
+
+因此，下列状态目前在代码上可发生：
+
+```text
+malformed / structurally incomplete delegated artifact
+  -> result declaration valid
+  -> dry-submit passes output existence/role checks
+  -> formal submit creates ledger authority
+  -> later Wave inspect rejects artifact direct shape
 ```
-PATH_FORMAT_MAP = [
-  { pattern: /artifacts\/wave0\/[^/]+\/source\.yaml$/,  format: 'source_yaml_array' },
-  { pattern: /artifacts\/wave1\/[^/]+\/evidence-summary\.md$/, format: 'evidence_summary_md' },
-  { pattern: /artifacts\/wave1\/[^/]+\/question-list\.md$/, format: 'question_list_md' },
-  { pattern: /artifacts\/wave1\/[^/]+\/depth-review\.yaml$/, format: 'depth_review_yaml' },
-  { pattern: /artifacts\/wave2\/finding-index\.yaml$/, format: 'finding_index_yaml' },
-  { pattern: /artifacts\/wave2\/synthesis\.md$/,  format: 'synthesis_md' },
-  { pattern: /artifacts\/wave2\/cross-topic-ledger\.md$/, format: 'cross_topic_ledger_md' },
-  { pattern: /reference\/[^/]+\.md$/,              format: 'reference_md' },
-  { pattern: /_cache\/.+\/websearch\.json$/,       format: 'websearch_json' },
-  { pattern: /_cache\/.+\/meta\.json$/,            format: 'cache_meta_json' },
-  { pattern: /_cache\/.+\/page\.md$/,              format: 'cache_page_md' },
-  { pattern: /seed_topics\/[^/]+\.md$/,            format: 'seed_topic_md' },
-  { pattern: /result\.json$/,                      format: 'work_unit_result_json' },
-  { pattern: /runtime-receipt\.jsonl$/,            format: 'runtime_receipt_jsonl' },
-];
+
+这不是 Gate 缺少反馈；是反馈发生在 submitted attempt 之后，而不是 candidate decision point。
+
+### 2. 历史正式 run：曾重复造成 contract wall
+
+这不是纯理论风险：
+
+- `BUG-038`：`source.yaml` 格式不清楚，经历多轮 Gate 修正。
+- `BUG-075`：5 个 Wave1 work units 全部 submit 成功后，evidence-summary、question-list、depth-review 等在 Gate 首次暴露 19 条技术性失败；该 bug 明确指出 result schema/dry-submit 没覆盖 output 内容格式。
+- `BUG-077`：Agent 需要从 Engine 源码反推 `source.yaml`、cache、reference contract。
+- `BUG-091`：旧 artifact 与新 Gate contract 的 cross-version skew；它证明格式漂移的破坏性，但**不授权建设 legacy migration 或把 version skew 混入本问题**。
+
+当前 top-level runtime bundles 仍能找到缺少现行 Wave1 section/marker 的历史 artifacts，但这些 bundles 跨越多个 framework 版本，不能单独证明当前版本干净运行仍会复现。
+
+### 3. 当前证据边界
+
+截至 2026-07-20：
+
+- active bug registry 为空；没有一条当前版本 active bug 直接要求新 linter。
+- 代码能够证明 feedback timing gap。
+- 历史正式 runs 能证明该 gap 曾反复造成高成本修复。
+- 尚缺一个**当前版本、真实 disposable bundle、正常 generated task/role guidance** 下的复现或明确的 preventive contract decision。
+
+因此本计划有合理来源，但还不能从“有历史痛点”直接跳到“某个 implementation 已获批准”。
+
+---
+
+## 当前 artifact ownership map
+
+| Artifact | 主要 writer | 当前最早 checker | 最终 authority/checker | 当前判断 |
+|---|---|---|---|---|
+| `_work_units/*/result.json` | selected work-unit actor | dry-submit | formal submit/schema | 已收口，不进入新 scope |
+| `runtime-receipt.jsonl` | selected work-unit actor | dry-submit | formal submit/schema | 已收口，不进入新 scope |
+| cache `meta.json` / `page.md` | selected work-unit actor | dry-submit cache contract | submit + Wave provenance | 已收口；`websearch.json` 当前只有 presence contract |
+| `artifacts/wave0/{topic}/source.yaml` | delegated/fallback actor | dry-submit 只验 declaration/existence | Wave0 inspect/Gate 验 YAML array + `ReferenceMetadataArraySchema` | **candidate feedback gap** |
+| Wave1 `evidence-summary.md` | delegated/fallback actor | dry-submit 只验 declaration/existence | Wave1 inspect/Gate 验 URL、Key Findings、return map | **candidate feedback gap** |
+| Wave1 `question-list.md` | delegated/fallback actor | dry-submit 只验 declaration/existence | Wave1 inspect/Gate 验四个 semantic sections、return map | **candidate feedback gap** |
+| `reference/*.md` | Wave0 可 delegated；Wave1/2 多为 Phase-owned projection | owner-dependent；通常 Wave inspect | reference format/backing/index/provenance helpers | 不能用一个统一 `reference_md` verdict |
+| `depth-review.yaml` | Phase Agent after submit | Wave1 inspect | same checker in Gate | 已有正确 checkpoint；不是 work-unit candidate artifact |
+| Wave2 finding index / ledger / synthesis | Phase Agent | Wave2 inspect | same evaluator in Gate | 已有正确 checkpoint |
+| `seed_topics/*.md` | topic-state Engine + phase enrichment/backfill | topic-state inspect / seed Gate / Wave inspect | owner-specific checks | dynamic projection，不是单文件 schema 问题 |
+
+---
+
+## 更准确的问题陈述
+
+不要再问：
+
+> “项目是否需要一个可以 lint 任意 Agent 输出文件的工具？”
+
+应当问：
+
+> “当 work-unit output 已经有正式 direct-shape contract 时，candidate validation 是否应在 formal submit 前复用该 contract；如果应当，contract 如何进入 manifest、如何与 Wave evaluator single-own、如何避免把 Phase-owned/dynamic checks错误前移？”
+
+这里有三个相互独立的问题：
+
+1. **Fact ownership**：哪个现有 helper 是该 direct fact 的唯一实现？
+2. **Contract transport**：candidate 如何知道某个 exact assigned output 应使用哪个 contract？
+3. **Checkpoint semantics**：失败是否阻塞 formal submit，还是只作为不改变 submit authority 的 scoped inspect？
+
+只有三者都回答清楚，才适合创建 change。
+
+---
+
+## 最可能的正确 seam
+
+`codebase-design` 视角下，应该优先深化现有 work-unit validation module，而不是在旁边增加一个 shallow linter module。
+
+```text
+                         one direct-fact implementation
+                                     |
+                    +----------------+----------------+
+                    |                                 |
+                    v                                 v
+          work-unit candidate adapter         Wave inspect/Gate adapter
+          -> violations[]                     -> findings / hints
+          -> dry/formal submit                -> phase completeness
 ```
 
-**格式检测优先级：** 显式 `--schema` 参数（直接用，不猜）→ 文件路径匹配 PATH_FORMAT_MAP → 文件扩展名（只做 Tier 1）→ 自动检测格式。
+候选 external seam 是现有 `manifest.output_contract`：
 
-### CLI 接口
+- claim 时由 kind contract + queue-item assignment 决定 actor 必须交付什么；
+- generated task 把同一 contract 投影给 actor；
+- dry-submit/formal submit 解释同一 manifest snapshot；
+- Wave evaluator 复用同一个 direct-fact implementation，再叠加 phase completeness、profile、submitted lineage、cross-artifact 和 return-map 检查。
 
-```
-node DPT_FRAMEWORK/cli/lint-agent-output.mjs <file> [options]
+这个形状的 leverage 是：actor、dry-submit、formal submit、Wave inspect 不需要分别学习一套格式规则；复杂度集中在一个 owner implementation。
 
-Options:
-  --bundle <path>        bundle 根目录
-  --schema <name>        指定 schema（如 evidence_summary_md, reference_md, seed_topic_md）
-                         传了就做 Tier 1 + Tier 2，不传只做 Tier 1 语法检查
-  --json                 结构化 JSON 输出
-  --syntax-only          只做语法校验，跳过 schema 校验（即使用户传了 --schema 也跳过）
+### 尚未决定：contract 怎样绑定 exact output
 
-Exit codes: 0 = pass, 1 = fail, 2 = config error
-```
+#### 方案 A：manifest 显式携带 exact output content contracts
 
-**结构化输出（`--json`）：**
+概念形状：
+
 ```json
 {
-  "check": { "passed": true, "file": "artifacts/wave1/ai-governance/evidence-summary.md", "format": "evidence_summary_md", "tier": "schema" },
-  "syntax": { "passed": true, "parser": "yaml_frontmatter", "errors": [] },
-  "schema": { "passed": false, "schema": "EvidenceSummaryFormatSchema", "errors": [{"path": "frontmatter.topic_slug", "message": "Required"}] },
-  "inspect": ["frontmatter.topic_slug is required but missing"],
-  "advice": ["Add topic_slug to the YAML frontmatter between --- fences"]
+  "output_contract": {
+    "expected_outputs": [
+      {
+        "path": "artifacts/wave1/<topic>/evidence-summary.md",
+        "role": "evidence_summary",
+        "content_contract": "wave1.evidence-summary.direct-shape.v1"
+      }
+    ]
+  }
 }
 ```
 
-### Sub-Agent 集成
+优点：self-describing、Agent 可读、submit 不猜路径、role 不能用 `other` 逃逸。
+风险：queue producer/kind contract 必须可靠地产生 exact expectations；若 phase Markdown 各自手写 contract ID，会把漂移移动到 queue authoring 层。
 
-三个层面配合：
+#### 方案 B：submit 根据 `kind + assigned writes_to + canonical path/role` 推导
 
-**层面 1 — Work-Unit Output Contract 扩展**：在 `DEFAULT_KIND_CONTRACTS` 的 `output_contract.output_files` 中，为每个 role 增加可选的 `format_contract`（`schema_ref` + `frontmatter_required` + `body_sections_required`）。
+优点：改动较小，当前 `canonicalWave1RequiredOutputRole()` 已有先例。
+风险：容易重新长出隐藏的 `PATH_FORMAT_MAP`；manifest 对 actor 不自描述；新增 artifact 需要改 submit dispatch。
 
-**层面 2 — task.md 模板增强**：在 `taskMarkdown()` 的 "Write-Before-Return Checklist" 中增加 lint 自检步骤：
-```markdown
-## Before Declaring Done
-Run the output linter on every declared output file before writing result.json:
-  node DPT_FRAMEWORK/cli/lint-agent-output.mjs <bundle-relative-path> --bundle <bundle_dir> --json
-Fix any reported errors. Re-run until all files pass.
-```
+#### 方案 C：不改变 submit，只给现有 Wave inspect 增加 work-id/topic scoped mode
 
-**层面 3 — dry-submit 集成**：在 `collectDrySubmitPlan()` 中对每个 `output_files[]` 条目增加格式校验步骤。格式错误归类为 `phase: 'output_format'`, `repair_target: 'output_content'` 的 advisory violation——不会让原本能过的 submit 突然失败，但给 Agent 明确的修复导航。
+优点：不扩大 formal submit 的 acceptance contract；继续使用同一 Wave evaluator。
+风险：work-unit actor 必须理解 phase-level inspect；动态/缺失 sibling rules 需要正确 masking；如果只是把全量 inspect 过滤成另一套局部 verdict，也可能形成第二种完成语义。
 
-### Agent 自修复循环（预期行为）
-
-```
-1. Agent 完成工作，产出文件
-2. Agent 读 controller 指引 → "退出前跑 linter"
-3. Agent 运行 lint-agent-output.mjs --json
-4. exit 0 → 干净，继续
-5. exit 1 → 读 issues[] → 定位 file:line → 读 fix_hint → Edit 修复 → 重跑
-6. 循环直到 exit 0
-```
-
-Agent 不需要理解 YAML spec——`fix_hint` 给出了具体的修复建议。Engine 不需要知道这个循环——Agent 自主完成，不产生新的 state 或 receipt。
+当前倾向：**先验证 A 是否能由现有 kind/queue assignment 单点生成；若不能，再比较 B 与 C，而不是默认创建通用 linter。**
 
 ---
 
-## Hint-Quality 测试覆盖（保证 lint 工具本身不被写坏）
+## 可安全前移与不可前移的事实
 
-上面设计的是"Agent 出口前有工具可以自检"。但还需要确保**这个工具本身的输出质量**——如果 linter 的 `issues[]` 格式写坏了，Agent 拿到的是垃圾导航，修都不知道怎么修。
+### 第一候选：context-light direct-shape facts
 
-### 共享断言：`tests/helpers/assert-hint-quality.mjs`
+- Wave0 source YAML 是否能被现有 tolerant reader 接受、是否为顶层 array、是否满足现有 `ReferenceMetadataArraySchema`。
+- Wave1 evidence summary 是否满足当前共享 evaluator 的 parseable URL 和 non-empty Key Findings direct facts。
+- Wave1 question list 是否满足当前共享 evaluator 的四个 non-empty semantic section facts。
+- declared output 的 canonical path/role 是否与 assigned output expectation 一致。
 
-一个可复用断言函数，任何 gate/inspect CLI 测试都可以调用：
+这些检查只依赖 candidate file、manifest assignment 和稳定的 direct schema/semantic parser，适合在 candidate checkpoint 复用。
 
-```js
-export function assertHintQuality(jsonOutput, expectations) {
-  // 1. 失败时 hints[] 必须存在且为非空数组
-  // 2. 每个 hint 必须有 rule_id, missing_fact, write_to, rerun（全部非空字符串）
-  // 3. rerun 包含可执行命令（node ...）
-  // 4. write_to 指向合法 surface 或 Engine operation
-  // 5. 可选 expectations 精确断言具体值
-}
-```
+### 默认保留在 Wave inspect 的事实
 
-### 覆盖审计：`DPT_FRAMEWORK/cli/audit-gate-test-coverage.mjs`
+- topic/reference count floors；
+- queue drained / submitted ledger presence；
+- reference index、authority classification 和 backing；
+- depth-review 对 submitted rows、profile floor、cache/source novelty 的动态判断；
+- finding-index 的 cross-topic pair universe、receipt refs 和 synthesis eligibility；
+- seed backfill、return-map current-round lineage；
+- cross-artifact links、phase completeness、completion events。
 
-确定性静态分析脚本，CI 或 apply 前运行：
-1. 扫描 `DPT_FRAMEWORK/cli/gates/` → 活跃 gate CLI 列表
-2. 扫描 `tests/` 下所有 `.test.mjs` → grep `assertHintQuality` 调用
-3. 交叉比对 → 报告未覆盖的 gate/rule → exit 1
+这些事实需要 phase-wide 或 submitted authority context。把它们塞进单文件 linter 会让 candidate validator承担它无法拥有的语义。
 
-第一阶段只做 gate CLI → 测试文件的存在性映射。第二阶段解析 gate definition JSON 的 blocking rule 列表做逐 rule 覆盖比对。
+### 暂不纳入
 
-### OpenSpec 流程约束
-
-当 change 包含新增 gate CLI 或修改 gate definition JSON 的 blocking rule 时，task list 必须包含 "Write hint-quality negative tests" task。`audit-gate-test-coverage.mjs` 不通过则阻塞 apply。
-
----
-
-## 模块划分
-
-```
-DPT_FRAMEWORK/
-  schema/contracts/
-    output-format.mjs              # 新增：所有输出文件格式的 Zod schema
-  engine/
-    lint-agent-output.mjs          # 新增：核心 lint 逻辑
-  cli/
-    lint-agent-output.mjs          # 新增：CLI wrapper
-    audit-gate-test-coverage.mjs   # 新增：测试覆盖审计脚本
-  engine/
-    work-unit-constants.mjs        # 修改：DEFAULT_KIND_CONTRACTS 增加 format_contracts
-    work-unit-envelope.mjs         # 修改：task.md 模板增加 lint 自检段落
-    work-unit-submit.mjs           # 修改：dry-submit 增加 output format validation
-    workflow-chain.mjs             # 修改：AUTONOMOUS_MODE_HEADER 追加 pre-gate lint 指令
-
-tests/
-  helpers/
-    assert-hint-quality.mjs        # 新增：共享 hint-quality 断言
-  unit/
-    lint-agent-output.test.mjs     # 新增：格式检测、语法校验、schema 校验
-  integration/
-    cli/
-      lint-agent-output.test.mjs   # 新增：CLI 集成测试
-```
-
-### 复用清单
-
-| 资源 | 位置 | 用法 |
-|------|------|------|
-| `parseYaml` | `yaml` 包 | YAML 语法校验 |
-| `parseMdFrontmatter()` | `engine/helpers/gate-helpers-readers.mjs` | 提取 MD frontmatter |
-| `ReferenceMetadataSchema` | `schema/contracts/reference.mjs` | source.yaml 校验 |
-| `CacheLeafMetaSchema` | `engine/helpers/cache-leaf-contract.mjs` | meta.json 校验 |
-| `WorkUnitResultSchema` | `schema/contracts/work-unit.mjs` | result.json 校验 |
-| `WorkUnitRuntimeReceiptEventSchema` | `schema/contracts/work-unit.mjs` | receipt JSONL 逐行校验 |
-| `isSafeBundleRelative()` | `engine/work-unit-utils.mjs` | 路径安全检查 |
-| `DEFAULT_KIND_CONTRACTS` | `engine/work-unit-constants.mjs` | kind→output_contract 映射 |
-| `reasonCodeForSubmit()` | `engine/work-unit-submit.mjs` | violation code 分类模式 |
-| Check/Inspect/Advice 模式 | gate CLIs, inspect-wave CLIs | 输出结构约定 |
-| Exit code 约定 (0/1/2) | `COMMANDS.md` | CLI 退出码 |
+- generic JSON/YAML/JSONL syntax checker；
+- 任意 Markdown fence/frontmatter 自动检测；
+- `websearch.json` 新 schema：accepted contract 当前主要要求存在和保留 retrieval trail，尚无稳定 content schema；
+- Phase-owned `depth-review.yaml` / finding-index / ledger / synthesis 的独立 file linter；
+- legacy artifact migration、delta Gate scope、cross-version compatibility；
+- Gate hint-quality 全规则审计；
+- 自动修复、重试控制器、统一插件系统。
 
 ---
 
-## 完成标准
+## 进入 proposal 前必须回答的问题
 
-1. **Agent 写坏 YAML frontmatter 或 metadata block 时**，JS 能准确报告（file + line + type + fix_hint），Agent 修复后重检通过才进 gate。
-2. **wave0 的 `__BACKFILL_*__` placeholder 只产生 warning**；同一 placeholder 到 wave1+ 产生 error 并阻止退出。
-3. **Agent 修正内容后重新检查通过**，phase node 可以正常进入 gate。
-4. **每个 gate CLI 都有 hint-quality 测试覆盖**——`audit-gate-test-coverage.mjs` 审计不通过则阻塞 apply。
+### Q1. formal submit 应不应该阻塞 malformed delegated artifact？
 
-除此之外，没有本计划需要交付的东西。
+如果 declared output 是 work-unit 承诺的正式交付物，而且 Wave Gate 必然以 direct-shape rule 拒绝它，那么 submit 接受后再修通常只是延迟失败。阻塞 submit 具有一致性。
+
+但必须证明：
+
+- supplementary work unit 不允许合法地提交 partial artifact；
+- Phase Agent 不被授权在 submit 后才完成该 delegated artifact 的 direct shape；
+- existing tolerant parser/compatibility 行为不会被 stricter preflight 改写；
+- late-submit、duplicate replay、timeout-preflight 与 normal dry-submit 使用等价 verdict。
+
+### Q2. contract 的唯一 owner 在哪里？
+
+不能新写 `EvidenceSummaryFormatSchema` 去近似 `checkKeyFindingsContent()`。正确方向是把现有 evaluator 中的 direct check 提取为纯 helper，让 candidate adapter 和 Wave adapter调用同一实现。
+
+### Q3. actor 在什么时候运行 preflight？
+
+当前 generated task 暴露 dry-submit 命令，但指导主要描述 Phase Agent读取 violations。需要决定：
+
+- selected work-unit actor 在 `work_done` 前运行 read-only dry-submit；或
+- Phase Agent在 actor 返回后运行并机械修复；或
+- 两者都允许，但 formal submit 前只有同一个 authoritative candidate verdict。
+
+若修复需要重新理解研究内容，仅靠 Phase Agent事后改标题未必是正确闭环。
+
+### Q4. 如何防止 role/path 逃逸？
+
+只按 actor 自报 `output_files[].role` 选 checker，会允许错误 role 绕过内容 contract。只按全局 path regex 推断，又会回到旧计划的 path registry。必须从 assigned expectation、canonical normalization 或 manifest explicit binding 中找到单一解释。
+
+### Q5. 当前版本是否仍真实复现？
+
+历史证据足以说明风险，不足以证明当前 generated task/role guidance 仍高频失败。需要一次真实 disposable bundle 的 Agent-flow experiment，不能用手写 happy fixture冒充 Agent 行为证据。
 
 ---
 
-## 激活条件
+## 建议的验证顺序
 
-当前 `repair-rerun-added-topic-bootstrap` change 仍在 propose/explore 阶段，`DPT_FRAMEWORK/` 处于 OpenSpec 写保护。本计划涉及对 `DPT_FRAMEWORK/engine/`、`DPT_FRAMEWORK/cli/` 和 `DPT_FRAMEWORK/schema/` 的修改，必须在 `/opsx:apply` 阶段执行。
+在创建 OpenSpec change 前，先完成以下 read-only/throwaway investigation：
 
-**全部满足才启动实现：**
-1. `repair-rerun-added-topic-bootstrap` 进入 apply 阶段或已 archive
-2. 出现至少一个真实、重复发生的 Agent 结构化输出格式问题（不只是"可能会发生"）
-3. 不是因为"本文已经存在"就顺势实施
+1. **Candidate parity proof**：用当前 work-unit owner 建立三个 malformed candidate，证明 `source.yaml`、evidence summary、question list 是否呈现“dry-submit pass、Wave inspect direct-shape fail”。这证明代码缺口，不证明 Agent频率。
+2. **Current-version Agent-flow reproduction**：通过 `experiments_playbook/` 的真实 disposable bundle 和 generated task，让 selected actor正常执行；记录是否会产出上述 malformed shape、是否自行运行 dry-submit、Phase Agent何时发现。
+3. **Submit-semantics audit**：检查 normal submit、late-submit、duplicate submit、timeout-preflight 的共享 validation path，确认任何前移都不会出现 dry/formal/late verdict 分裂。
+4. **Contract-generation spike on paper**：从现有 queue `writes_to`、kind contract、queue override 和 manifest snapshot 推导一个 exact-output contract，列出所有 producer 改动点；不写 production code。
+5. **Verification routing**：
+   - pure helper/direct-shape：`tests/` unit；
+   - dry/formal parity 与无副作用：`tests/` integration；
+   - Agent是否正确消费 contract 和 preflight：`experiments_playbook/` agent_flow_e2e。
+
+只有第 1、3、4 项闭合，才足以设计 change；第 2 项决定它是修复当前真实故障还是 preventive contract hardening。
 
 ---
 
-## Scope Exploration Addendum — 2026-07-15
+## 可能形成的 change（尚非决定）
 
-### Summary
+如果调查支持前移，change 应围绕类似目标展开：
 
-本次扫描确认：问题确实集中在 Agent 手写 structured data，主要 surface 是 runtime bundle 里的 `seed_topics/`、`reference/`、`artifacts/wave*/`、`_work_units/*/result.json`、`runtime-receipt.jsonl`、`_cache/*/meta.json` / `websearch.json`。不应扩大成全 repo Markdown linter，也不应新建统一调度层。
+> **Reuse formal direct-shape artifact contracts at the work-unit candidate decision point, without creating a second validator or moving phase-wide authority into submit.**
 
-真实 bundle 规模显示 scope 不小：当前 top-level `dpt_rb_*` 中可见 `seed_topic` 44 个、`wave0 source.yaml` 44 个、`wave1 evidence-summary/question-list` 各 39 个、`depth-review.yaml` 31 个、`reference/*.md` 403 个、`_work_units/*/task.md` 112 个、`result.json` 107 个、`runtime-receipt.jsonl` 112 个、cache JSON/MD 数百个。另发现一个嵌套 bundle 路径 `dpt_rb_martin-fowler-ai-sdlc-retreats/dpt_rb_martin-fowler-ai-sdlc-retreats`，这是 runtime root 定位类问题，不应由 output linter 修。
+可能名称：
 
-### Easy Scope
+- `reuse-delegated-output-contracts-at-submit`
+- `harden-work-unit-output-content-preflight`
 
-- Syntax-only Tier 1：JSON、JSONL、YAML、MD frontmatter、fenced `json/yaml/jsonl` block。现有 `yaml`、`parseMdFrontmatter()`、`readYamlArraySafe()`、`JSON.parse()` 足够。
-- Existing schema reuse：`ReferenceMetadataArraySchema` for `artifacts/wave0/*/source.yaml`、`WorkUnitResultSchema` for result、`WorkUnitRuntimeReceiptEventSchema` for receipt JSONL、`CacheLeafMetaSchema` for `_cache/*/meta.json`。
-- Reference Markdown format precheck：已有 `parseReferenceMetadata()` / `checkReferenceFormatFiles()` 可复用，覆盖 YAML frontmatter forbidden、metadata block required fields、semantic sections。
-- Work-unit task integration：只需在 generated `task.md` 的 checklist 增加“写完 result/output/cache 后跑 lint”的 Agent-facing 指令；`task.md` 本身是 Engine 生成模板，不是 lint target。
+最小合理 scope 可能包括：
 
-### Medium Scope
+1. 提取 Wave0 source YAML、Wave1 evidence summary、Wave1 question list 的现有 direct-fact pure helpers。
+2. 明确 manifest/assignment 中 exact path、canonical role 与 content contract 的绑定方式。
+3. 让 dry-submit、normal submit、late/timeout candidate paths复用相同 artifact verdict。
+4. 将 direct failures 投影为现有 `violations[]` repair coordinates；Wave inspect继续投影为 shared findings/hints。
+5. 更新 generated task，使 selected actor知道 candidate output content 也属于 dry-submit contract。
+6. 保持 Phase-owned artifacts和 phase-wide facts在 Wave inspect/Gate。
 
-- `seed_topics/{slug}.md`：frontmatter 语法容易，schema 层需决定是否只检查 gate 当前字段 `id/slug/title/topic_uid/...`，还是检查计划里更丰富的 enrichment fields。建议先只检查 accepted/gate-owned fields，enrichment 缺口作为 advice。
-- `evidence-summary.md` / `question-list.md`：现有 wave evaluator 已有宽容 section 检查和 URL 检查，可复用为 schema-tier；不要重新写一套 stricter Markdown style rule。
-- `depth-review.yaml` 与 `finding-index.yaml`：已有 `wave-depth-contracts.mjs` 做深层 contract 检查，但它绑定 submitted ledger/profile/runtime。linter 可做 parse + direct field shape；完整 provenance 仍交给 inspect/gate。
-- `reference/_INDEX.md`：已有 `validateIndexMD()`，可作为 advisory 或 syntax/schema check；不要让 index presentation 替代 reference backing authority。
-- Cache leaf：`websearch.json` / `meta.json` 可做 parse/schema；`page.md` 多数是 fetched content，不应按 metadata block 误判，只检查存在性/非空应留给 submit/cache checker。
+这不是对 change 的预先批准。proposal 必须引用验证结果，并明确选择 A/B/C 中的 seam。
 
-### Hard / Risky Scope
+---
 
-- “从 gate definition 的 `blocking_basis` 自动投影 schema”目前不是直接可做：大量规则在 imperative evaluator/helper 中，不是 declarative schema registry。若强行做，会复制 gate 逻辑并违反 simple reliable control。
-- `cross-topic-ledger.md` 是动态 Markdown ledger，只有 section-level deterministic checks 适合 linter；finding/gap/provenance 的完整一致性必须留给 Wave2 inspect/gate。
-- Return-map/backfill 内容是 Agent-readable navigation layer，不是 authority。可以检查 placeholder 是否残留、refs 是否明显是 glob/count summary，但不要把它做成新的 provenance validator。
-- 自动发现所有 controller 并统一调度属于明确不建议方向。正确做法是：提供幂等 lint tool，各 phase/work-unit 在自己出口前调用。
+## Markdown 修改控制清单
 
-### Out Of Scope / Do Not Lint
+这部分是未来 proposal/tasks/apply 的**硬约束**，目的不是提醒模型“记得更新文档”，而是限制模型只能修改已经证明需要同步的 Markdown。
 
-- `rb_plan.md`、`rb_profile.yaml`、`rb_queue.json`、`rb_status.json`、`rb_output_declarations.jsonl`：这是 Engine/runtime authority，已有 validate/gate/submit owner。
-- `DPT_FRAMEWORK/workflows/**/*.md` frontmatter：这是 framework template hygiene，走 `validate-phase-templates.mjs` / workflow package validation。
-- OpenSpec specs、archived changes、backlog bug docs、experiment playbook prose examples：不是 runtime Agent output。
-- `_cache/agentic-queue/current-task.md`、generated `_work_units/*/task.md`：projection/generated guidance，不是 Agent-authored final output。
-- Raw fetched `page.md` content：不是 structured data；不要按 reference metadata block 误判。
+### 生效前提
 
-### Recommended Implementation Shape
+下面的 base whitelist 只在最终 change 选择以下语义时生效：
 
-- Build `lint-agent-output` as a thin adapter over existing parsers/evaluators, not a new rule universe.
-- Default behavior: Tier 1 syntax only. `--schema` opt-in enables known format contracts.
-- Path inference may exist as convenience, but explicit `--schema` wins.
-- Failures return helper-oriented hints: `missing_fact`, `write_to`, `rerun`, plus file/line/type where available.
-- First implementation should cover: `source.yaml`, `reference/*.md`, work-unit `result.json`, `runtime-receipt.jsonl`, cache `meta.json/websearch.json`, `seed_topics/*.md`, Wave1 pair artifacts, `depth-review.yaml`, Wave2 `finding-index.yaml`.
-- Keep `cross-topic-ledger.md`, `synthesis.md`, return-map/backfill checks narrow and advisory unless existing inspect/gate already treats the same direct fact as blocking.
+- existing `operate-work-unit dry-submit` / formal submit candidate validation 增加 delegated output direct-shape contract；
+- Wave inspect/Gate 继续拥有 phase-wide verdict；
+- 不新增通用 lint CLI。
+
+如果最终选择 scoped Wave inspect（方案 C），或 manifest contract transport 与这里假设不同，**不得在 apply 时临时扩张清单**。必须先回到 explore/design，重写本节，再批准 apply。
+
+### Base whitelist：有把握需要修改的 Markdown
+
+| # | 文件 | 为什么必须改 | 允许怎样改 | 明确禁止 |
+|---|---|---|---|---|
+| 1 | `DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md` | 这是 work-unit envelope、actor/Phase Agent职责、dry-submit/formal submit 顺序的共享 owner。若 submit 开始检查 delegated artifact direct shape，现有“validates result, receipt, output files...”描述不够精确。 | 只改四个现有位置：① §1 Authority Boundary 的 `operate-work-unit submit` 行，补充“manifest-assigned delegated output direct-shape”；② §2 `result.json` 行，说明 dry-submit verdict包含 manifest-declared candidate output content；③ §3 step 9，明确 direct-shape violation仍修同一 candidate/assigned output并重跑同一 dry-submit；④ §6 最后一段，把“declared outputs exist”改为“exist and satisfy only their assigned direct-shape contracts”。每处同时写明 phase-wide completeness/provenance仍由 Wave inspect/Gate拥有。 | 不复制 source/evidence/question 的字段或 heading 清单；不加入 retry loop、用户交互、Gate命令；不改变 actor authority、submit/ledger authority或 Phase-owned projection边界。 |
+| 2 | `DPT_FRAMEWORK/workflows/nodes/shared/shared-schemas.md` | 这是 active workflow 加载的 schema/artifact canonical summary。Wave0 source YAML 与 Wave1 paired artifact 已在此定义；checker timing改变后必须说明同一 direct-shape owner在 candidate和Wave checkpoint复用，避免读者误以为只有 Gate检查或存在两套 schema。 | 只改三个现有位置：① `contracts/reference.mjs -> source.yaml` 段增加一句 candidate direct-shape由 manifest-assigned work unit dry-submit复用同一 reader/schema；② Wave1 artifacts 导语增加一句 evidence-summary/question-list的 direct-shape可在 delegated candidate checkpoint验证，完整 provenance/phase completeness仍在 Wave inspect；③ `_work_units/` 描述补充 manifest output contract是 candidate内容契约的 transport。 | 不增加新 schema字段表；不改 accepted heading tolerance、reference authority、depth-review、Wave2、seed、final定义；不把 Markdown称为 Zod schema。 |
+| 3 | `DPT_FRAMEWORK/COMMANDS.md` | 这是 Agent-facing command inventory。当前 `operate-work-unit.mjs` 行没有列出 `dry-submit`，而未来 change若扩大 dry-submit的确定性职责，命令索引必须准确描述它的 read-only candidate checkpoint语义。 | 只改 `Subagent 环境` 表中 `operate-work-unit.mjs` 一行：把 `dry-submit` 纳入 subcommand清单，并用一句话区分“dry-submit预测 candidate acceptance、零 authority mutation”与“formal submit持久化 queue/ledger/result/receipt/cache authority”。若 direct-shape纳入，只写“manifest-assigned direct-shape”，不列 artifact-specific规则。 | 不新增独立 command章节，不描述 generic linter，不改 recovery/late-submit语义，不顺手重写整张命令表。 |
+
+这三个文件构成 base whitelist。**Apply 默认不得修改任何其他 production Markdown。**
+
+### 明确不改的 Markdown
+
+| 文件 | 不改理由 |
+|---|---|
+| `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md` | 已明确 queue -> claim -> dry-submit repair -> formal submit -> inspect -> Gate；也已明确 `source.yaml` writer和产物。只要 exact content contract由 manifest/generated task携带，再复制一次会增加 drift。 |
+| `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md` | 已明确 evidence-summary/question-list exact paths、roles、四个 question sections、dry-submit/formal-submit loop和 Phase-owned depth/reference边界；本 change不应重写这些语义。 |
+| `DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-source-intake.md` | 已给出 `source.yaml` 顶层数组、字段、序列化方式和执行步骤。缺口在 Engine何时验证，不在 role spec缺少格式说明。 |
+| `DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-evidence-extractor.md` | 已给出 evidence-summary/question-list canonical authoring contract、tolerant presentation边界、roles和 source backing。不得把 evaluator细节再抄进 role prose。 |
+| `DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-topic-scout.md` | 第一候选 scope不包含 Wave2 targeted artifact content contract。 |
+| `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md` | finding-index/ledger/synthesis仍为 Phase-owned，并由现有 Wave2 inspect检查。 |
+| `DPT_FRAMEWORK/workflows/nodes/phases/phase-seed-topics.md`、`phase-rerun.md`、shared seed/return-map authoring docs | seed/topic-state与return-map不是本 candidate contract scope。 |
+| `DPT_FRAMEWORK/RUN.md`、terminal/final/HITL docs | run入口、interaction placement和terminal delivery均不受影响。 |
+
+### Conditional Markdown：当前暂时放弃
+
+以下修改存在合理可能，但现在没有足够把握，**不得进入第一版 change/apply**：
+
+1. **让 native Sub-agent在 `work_done` 前亲自运行 dry-submit**：这会要求修改两个 role specs和 shared protocol actor rules。当前 owner guidance主要由 Phase Agent运行 dry-submit，尚未证明把 command execution交给并行 native actor不会产生职责/运行环境问题；暂不改。
+2. **在 phase-wave0/phase-wave1 queue task card中写 `output_contract.expected_outputs[]`**：只有方案 A 被证明能由单一 producer稳定生成后才可加入。当前直接编辑 task card会把 contract ID复制到 Markdown，存在新漂移源；暂不改。
+3. **为 reference Markdown增加 candidate content contract wording**：Wave0 delegated reference、Wave1/2 Phase-owned projection的正式性不同；没有单一安全语义，暂不改。
+
+若后续调查证明其中一项必要，必须先把它从 conditional 区移入 base whitelist，并逐文件写明 exact section/reason/edit/forbidden，才能进入 proposal。
+
+### Generated `task.md` 的特殊说明
+
+`_work_units/*/task.md` 是 runtime generated projection，不是直接编辑目标。若 change选择 manifest-assigned direct-shape contract，apply 可修改生成它的 JavaScript owner `DPT_FRAMEWORK/engine/work-unit-envelope.mjs`，但不得手改任何 bundle内 `task.md`，也不得把 runtime task加入上述 Markdown whitelist。
+
+生成文本只允许增加一个 contract-derived事实：
+
+> dry-submit会检查 manifest为本 attempt分配的 delegated output direct-shape；按每条 `violations[].write_to` 修同一 assigned output/candidate，并重跑同一命令。
+
+不得在 generator中维护 source/evidence/question的第二份字段或 heading inventory；这些内容必须来自 manifest contract或现有 role guidance。
+
+### Apply 阶段的文档 review gate
+
+Apply tasks必须逐项列出并执行：
+
+1. 修改前确认 `git diff -- <whitelisted-file>` 只包含本 change edits；不覆盖用户已有修改。
+2. 每个文件独立 review：实际 diff必须逐句映射到上表的“允许怎样改”，无法映射的句子删除。
+3. 运行现有 workflow Markdown structure/parity tests；若 contract projection新增 focused parity test，只覆盖这次新增的一条语义，不建全文件 prose catalog。
+4. `rg` 检查 production Markdown中没有新增 `lint-agent-output`、`--schema`、`PATH_FORMAT_MAP`、“all Agent outputs”或“all Markdown”措辞。
+5. 最终 `git diff --name-only`：production Markdown集合必须是 base whitelist的子集；出现额外 `.md` 即 apply未完成，必须回退额外修改或回到 design审批。
+6. Review必须确认每个新增 dry-submit表述同时保留两条边界：formal submit仍是唯一 delegated success/ledger owner；Wave inspect/Gate仍拥有 phase-wide verdict。
+
+---
+
+## 激活与停止条件
+
+### 可以进入 `/opsx:propose`
+
+必须同时满足：
+
+1. 当前代码下至少一个 direct-shape parity gap 已被可重复证明；
+2. 已确认该 artifact 是 delegated work-unit output，而不是 Phase-owned projection；
+3. 已决定 blocking submit 还是 scoped inspect，并解释 submit-equivalence；
+4. 已确定 single-owner helper 与 contract transport seam；
+5. scope 不包含 generic linter、全局 path registry 或第二套 Gate audit。
+
+### 应停止，不创建 change
+
+出现任一情况即停止或重新定性：
+
+- 当前版本 Agent-flow 不复现，且没有 preventive invariant 值得增加；
+- 失败只来自旧 bundle/version skew；
+- 合法 workflow 要求 Phase Agent在 submit 后完成 direct shape；
+- 唯一可行方案必须复制 Wave evaluator；
+- 所谓 contract 依赖 phase-wide authority，无法在 candidate decision point独立判断。
+
+---
+
+## 历史设计的处置
+
+以下旧方案视为明确撤回，不再是未来实现清单：
+
+- `DPT_FRAMEWORK/cli/lint-agent-output.mjs`
+- `DPT_FRAMEWORK/engine/lint-agent-output.mjs`
+- 全局 `PATH_FORMAT_MAP`
+- `output-format.mjs` 收纳所有 Agent 输出 schema
+- `--schema` / `--syntax-only` 通用 CLI
+- workflow/terminal global lint headers
+- `audit-gate-test-coverage.mjs`
+- per-Gate `assertHintQuality` inventory
+- 对 result/receipt/cache/seed/Wave2 全 surface 的一次性 linter rollout
+
+如果未来出现独立的 syntax-only 工具需求，必须以自己的问题证据和 owner contract重新提出，不能从本文恢复旧实现。
+
+---
+
+## 当前建议
+
+保留这项工作，但把它看成 **“delegated artifact contract 在 candidate decision point 的复用调查”**，不再看成“Agent Output Linter 项目”。
+
+下一步仍是 explore：先做 parity、submit-semantics 和 manifest contract transport 的调查，再决定是否以及如何生成 OpenSpec change。
