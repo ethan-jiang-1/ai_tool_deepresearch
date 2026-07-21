@@ -13,23 +13,25 @@
 5 个 dpt-evidence-extractor sub-agents 完成了实质性的 topic deepening 工作（每 topic 10-35 个 evidence particles，丰富的 mechanism/trend/limitation 分析），但 dry-submit 时 4/5 失败：
 
 - `key_findings_missing_or_empty` — evidence-summary.md 缺少 Engine 期望的 `## Key Findings` section header
-- `question_list_sections_missing_or_empty` — question-list.md 缺少 Engine 期望的 4 个 section（`## Answered Questions`, `## Partially Answered Questions`, `## Open Questions`, `## Emergent Questions`）
+- `question_list_sections_missing_or_empty` — question-list.md 缺少当前 Engine/role contract 共同要求的 4 个 semantic sections（`## Topic Investigation Targets`、`## Question Reconciliation`、`## Emergent Question Protocol`、`## Exploration / Exploitation Decision`）
 
 ## 根因
 
-Sub-agent role guidance (dpt-evidence-extractor) 和 Engine 的 dry-submit validator 对 output file format 的 contract 不一致：
+当前 v0.38 Engine 与 canonical `dpt-evidence-extractor` role guidance 已经对齐：
 
-- Sub-agent 被要求写 "structured evidence summary with source URLs" 和 "question list with 4 sections"
-- Engine 期望具体的 section header 名称（`## Key Findings`、`## Answered Questions` 等）
-- Sub-agent 写了 `## What was found`、`## Questions`、`## Answered` 等变体——内容正确但 header 不匹配
+- shared direct-output evaluator 要求 non-empty `Key Findings`，以及 `Topic Investigation Targets`、`Question Reconciliation`、`Emergent Question Protocol`、`Exploration / Exploitation Decision` 四个 question-list semantic sections；
+- canonical role Markdown 已给出相同 authoring template；
+- generated work-unit `task.md` / spawn prompt 只向真实 actor 显示 exact path、canonical role 和 opaque `direct_contract` ID，并要求读取 task/beacon/schema；actor 不直接加载 role Markdown，也没有拿到 minimum authoring projection；
+- production actor 因此首次写出另一套 headings，后续 Phase repair 追加 required sections。该 repair 不能证明首次 actor output 合格。
 
-这和 wave0 的 source_url/url、source.yaml schema 问题是同一类 bug：**Agent-facing sub-agent prompt 和 Engine-facing contract 之间的格式对齐是 manual/discipline-based，没有 automated enforcement。**
+因此根因是 **已有 authoritative role/direct contract 没有送到 actor decision point**，不是缺少 validator，也不是 Engine 与 role template 仍然不一致。Dry-submit 已经提供 deterministic enforcement；再加 fuzzy/semantic validator 会形成第二份 truth。
 
 ## 建议修复
 
-1. **Short-term**：在 dpt-evidence-extractor sub-agent prompt 中硬编码 required section headers（`## Key Findings`, `## Answered Questions`, `## Partially Answered Questions`, `## Open Questions`, `## Emergent Questions`）
-2. **Medium-term**：Engine dry-submit 应放宽 section header 匹配——做 fuzzy/semantic matching 而非 exact string match
-3. **Long-term**：Sub-agent role definition 应包含 output contract schema，Engine 在 claim 时自动注入到 sub-agent prompt 中
+1. 从 existing closed `delegated_role_key` 派生 canonical role guidance ref，并把该 ref 投影到 generated `task.md` / spawn prompt，要求 actor 在执行前读取。
+2. 从 existing direct-output contract owner 投影 minimum authoring requirements，避免 envelope generator 手写另一份 heading inventory；projection 不是 verdict authority。
+3. 保持 shared evaluator 为唯一 deterministic verdict owner，不新增 fuzzy/semantic validator、actor-selectable contract/role 或 persisted contract registry。
+4. 同一 delivery change 把 role guidance 中既有 fetch behavior 送到 actor，并清理被触碰 surface 上的 Python fallback；用户不承担已授权的 search/fetch/dry-submit/repair mechanics。
 
 ## 相关 bugs
 
