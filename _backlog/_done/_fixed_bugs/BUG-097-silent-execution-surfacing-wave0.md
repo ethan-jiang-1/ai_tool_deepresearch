@@ -7,6 +7,7 @@
 | **发现场景** | `dpt_rb_ai-agents-enterprise-bpm-productivity` — wave0 gate pass 后 |
 | **严重度** | P1 — 违反 silent execution contract（`stop: no`） |
 | **影响面** | main Phase Agent behavior |
+| **当前状态** | Closed — existing silent execution controls cover the decision point; no additional deterministic remediation |
 
 ## 结案决定（2026-07-21）
 

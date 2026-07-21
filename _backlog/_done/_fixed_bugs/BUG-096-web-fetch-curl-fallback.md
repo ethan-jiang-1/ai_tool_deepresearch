@@ -8,7 +8,7 @@
 | **严重度** | P1 — 阻断 evidence-backed wave 启动（research_access 判定为 unavailable） |
 | **影响面** | main agent + sub-agent（两者都可能触发；先用 `WebSearch` / `WebFetch` 或当前 runtime 的等价检索、页面读取能力，再在页面读取受阻时走有限 `curl` fallback） |
 | **是否固疾** | 是 — 历史上解决过多次（见 Related bugs），本次在 production run 中再次复发 |
-| **当前状态** | Active — HITL1/main-Agent path is separately fixed in archived `allow-bounded-hitl1-fetch-surface-fallback`; delegated actor fallback remains `UNOBSERVED` |
+| **当前状态** | Closed — archived implementation fixes both paths; delegated actor fallback observation remains `UNOBSERVED` |
 
 ## 结案决定（2026-07-21）
 

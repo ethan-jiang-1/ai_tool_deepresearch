@@ -7,7 +7,7 @@
 | **发现场景** | `dpt_rb_ai-agents-enterprise-bpm-productivity` — wave1 work-unit dry-submit |
 | **严重度** | P1 — 4/5 work units 在 dry-submit 时因 section header 格式不匹配被拒 |
 | **影响面** | 所有 wave1 topic deepening sub-agent (dpt-evidence-extractor) |
-| **当前状态** | Active — v0.40 deterministic delivery wiring is implemented, but case-221's only native Autorun timed out before inspect/Gate/native completion |
+| **当前状态** | Closed — v0.40 deterministic delivery wiring is implemented; case-221's real first-return observation remains `NOT_RUN` after native timeout |
 
 ## 结案决定（2026-07-21）
 
