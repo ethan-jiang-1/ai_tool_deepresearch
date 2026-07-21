@@ -18,6 +18,7 @@ execution_contract:
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas
+  - shared/shared-page-fetch-guidance
 suggested_context: []
 ---
 
@@ -54,7 +55,7 @@ Example:
 
 ## 1. Purpose
 
-Define what the Wave0 source-intake Sub-agent searches for, writes, and must never do. The Phase Agent reads this role spec to construct bounded work-unit task instructions. The Sub-agent actor does not directly load this Markdown node; it receives the generated `task.md`, `_beacon.json`, `result.schema.json`, runtime receipt file, and work-unit output/cache paths.
+Define what the Wave0 source-intake Sub-agent searches for, writes, and must never do. The Phase Agent reads this role spec to construct bounded work-unit task instructions. The generated task directs the selected Sub-agent actor to read this canonical role guidance together with its actor-delivered shared guidance before work begins.
 
 The shared work-unit sub-agent contract (`shared-subagent-protocol.md`) defines the envelope and submit mechanics. This role spec defines what `dpt-source-intake` does within that contract.
 
@@ -152,18 +153,7 @@ _cache/wave0/.../{topic.slug}/sNN_<source-slug>/
 
 ## 5. Page Content Fetching
 
-Use the full chain from `shared-subagent-protocol.md`.
-
-Apply fallback per URL. For one candidate URL, try each allowed tier in order until real page content is fetched or every allowed tier for that URL fails:
-
-- Built-in page-fetching tool if available
-- Browser fetch if available
-- Node.js `fetch`
-- Existing CLI fallback: `curl -L <url>`
-
-Across different candidate URLs, do not force the full fallback chain to run serially for all URLs. Fetch candidates in small batches when the task has several URLs to evaluate. Use bounded parallel fetching only when the native tool or runtime already supports it and site politeness, timeout, and context budget permit it.
-
-Only after all JS/Node-first tiers and the existing CLI fallback fail for that specific URL may the Sub-agent record an access failure. Small-batch or bounded-parallel fetching does not reduce cache trail, source claim, receipt, or accepted URL requirements. Do not use search snippets as page content, and do not fabricate titles, facts, or URLs.
+Read and follow `shared-page-fetch-guidance.md` for the one per-URL access sequence, bounded diagnostic receipt details, batching and exhausted-failure boundary. This role does not maintain another fetch chain. Cache trail, source metadata and accepted URL obligations remain those of the current work-unit assignment.
 
 ## 6. Anti-Cheating Rules
 

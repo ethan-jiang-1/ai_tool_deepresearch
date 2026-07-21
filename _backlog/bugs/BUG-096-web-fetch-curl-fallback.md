@@ -8,6 +8,13 @@
 | **严重度** | P1 — 阻断 evidence-backed wave 启动（research_access 判定为 unavailable） |
 | **影响面** | main agent + sub-agent（两者都可能触发；Claude Code 使用 `WebFetch`，Codex 使用原生 `web_search` 工具的 `open_page` action，两者都需要 curl fallback） |
 | **是否固疾** | 是 — 历史上解决过多次（见 Related bugs），本次在 production run 中再次复发 |
+| **当前状态** | Active — HITL1/main-Agent path is separately fixed in archived `allow-bounded-hitl1-fetch-surface-fallback`; delegated actor fallback remains `UNOBSERVED` |
+
+## 当前 delegated evidence
+
+`deliver-work-unit-role-contracts-to-actors` 的唯一 case-221 Autorun 于 2026-07-21 以 `ERROR: agent_timeout` 结束，未产生 native completion、inspect 或 Gate verdict，因此不能关闭 delegated residual。代表 actor 的 durable receipt 有两条成功的 `node_fetch` `fetch_attempt_done` records，且其 paired outputs 已 dry-submit/formal-submit；但没有同 URL native blocked/unavailable predecessors 与 bounded curl success 的完整事实链。
+
+结论：delegated native-to-curl fallback observation 是 `UNOBSERVED`，不是 claim-level `NOT_RUN`，也不是 `OBSERVED_PASS`。该结果只约束本次 Claude Autorun；不得外推到 Codex 或其他 runtime。BUG-096 保持 Active，直到 archived HITL1 closure 之外还有满足 delegated proof boundary 的 `OBSERVED_PASS` durable evidence。
 
 ## 现象
 

@@ -256,6 +256,118 @@ function absolutePathMap(manifest, bundleDir) {
   ]));
 }
 
+function isCanonicalRef(ref) {
+  if (typeof ref !== 'string' || ref.length === 0 || path.posix.isAbsolute(ref)) return false;
+  if (ref.includes('\\') || ref.includes('//')) return false;
+  const segments = ref.split('/');
+  return !segments.some((segment) => segment === '' || segment === '.' || segment === '..')
+    && path.posix.normalize(ref) === ref;
+}
+
+function normalizeActorDelivery(manifest, actorDelivery) {
+  if (actorDelivery === undefined || actorDelivery === null) return null;
+  if (!manifest.actor_execution) throw new Error('actor delivery requires an actor-bound work-unit manifest');
+  if (!actorDelivery || typeof actorDelivery !== 'object' || Array.isArray(actorDelivery)) {
+    throw new Error('actor delivery projection must be an object');
+  }
+  const guidance = actorDelivery.role_guidance;
+  if (!guidance || typeof guidance !== 'object' || Array.isArray(guidance)) {
+    throw new Error('actor delivery requires role guidance');
+  }
+  if (guidance.role_key !== manifest.actor_execution.delegated_role_key) {
+    throw new Error('actor delivery role guidance does not match the bound actor role');
+  }
+  if (!isCanonicalRef(guidance.role_ref) || typeof guidance.role_path !== 'string' || !path.isAbsolute(guidance.role_path)) {
+    throw new Error('actor delivery role guidance paths are invalid');
+  }
+  if (!Array.isArray(guidance.shared_guidance_refs)) throw new Error('actor delivery shared guidance refs are invalid');
+  const sharedGuidanceRefs = guidance.shared_guidance_refs.map((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)
+      || typeof entry.id !== 'string' || typeof entry.shared_scope !== 'string'
+      || !isCanonicalRef(entry.ref) || typeof entry.path !== 'string' || !path.isAbsolute(entry.path)) {
+      throw new Error('actor delivery shared guidance ref is invalid');
+    }
+    return Object.freeze({
+      id: entry.id,
+      shared_scope: entry.shared_scope,
+      ref: entry.ref,
+      path: entry.path,
+    });
+  });
+  const requiredOutputs = manifest.output_contract.required_outputs || [];
+  const suppliedDescriptors = actorDelivery.direct_output_descriptors;
+  if (!Array.isArray(suppliedDescriptors) || suppliedDescriptors.length !== requiredOutputs.length) {
+    throw new Error('actor delivery direct descriptors must match every required output');
+  }
+  const directOutputDescriptors = suppliedDescriptors.map((entry, index) => {
+    const required = requiredOutputs[index];
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)
+      || entry.path !== required.path || entry.role !== required.role || entry.direct_contract !== required.direct_contract
+      || !entry.descriptor || typeof entry.descriptor !== 'object' || Array.isArray(entry.descriptor)
+      || typeof entry.descriptor.purpose !== 'string' || !Array.isArray(entry.descriptor.minimum_structure)) {
+      throw new Error('actor delivery direct descriptor does not match the required output contract');
+    }
+    return Object.freeze({
+      path: entry.path,
+      role: entry.role,
+      direct_contract: entry.direct_contract,
+      descriptor: Object.freeze({
+        purpose: entry.descriptor.purpose,
+        minimum_structure: Object.freeze([...entry.descriptor.minimum_structure]),
+      }),
+    });
+  });
+  return Object.freeze({
+    role_guidance: Object.freeze({
+      role_key: guidance.role_key,
+      role_ref: guidance.role_ref,
+      role_path: guidance.role_path,
+      shared_guidance_refs: Object.freeze(sharedGuidanceRefs),
+    }),
+    direct_output_descriptors: Object.freeze(directOutputDescriptors),
+  });
+}
+
+function actorGuidanceTaskLines(actorDelivery) {
+  if (!actorDelivery) return [];
+  const guidance = actorDelivery.role_guidance;
+  return [
+    '## Actor Guidance',
+    '',
+    'Read these Engine-derived guidance files before search, fetch or output authoring. They explain the assigned role but do not expand this assignment, lifecycle authority, required output set or contract selection.',
+    `- Role guidance: bundle-independent ref \`${guidance.role_ref}\`; read path \`${guidance.role_path}\`.`,
+    ...guidance.shared_guidance_refs.map((entry) => (
+      `- Shared guidance: \`${entry.id}\` (${entry.shared_scope}); bundle-independent ref \`${entry.ref}\`; read path \`${entry.path}\`.`
+    )),
+    '',
+    ...(actorDelivery.direct_output_descriptors.length > 0 ? [
+      '## Required Output Authoring',
+      '',
+      'For each current required output, use these contract-owned minimum authoring requirements before returning `work_done`. The direct-output evaluator remains the only acceptance authority.',
+      ...actorDelivery.direct_output_descriptors.flatMap((entry) => [
+        `- \`${entry.path}\` (${entry.role}; \`${entry.direct_contract}\`): ${entry.descriptor.purpose}.`,
+        ...entry.descriptor.minimum_structure.map((requirement) => `  - ${requirement}`),
+      ]),
+      '',
+    ] : []),
+  ];
+}
+
+function actorGuidanceSpawnLines(actorDelivery) {
+  if (!actorDelivery) return [];
+  const guidance = actorDelivery.role_guidance;
+  return [
+    `Read canonical role guidance before search, fetch or output authoring: ${guidance.role_ref} (${guidance.role_path}).`,
+    ...guidance.shared_guidance_refs.map((entry) => (
+      `Read shared actor guidance before that work: ${entry.id} (${entry.ref}; ${entry.path}).`
+    )),
+    ...actorDelivery.direct_output_descriptors.flatMap((entry) => [
+      `Required output authoring for ${entry.path} (${entry.direct_contract}): ${entry.descriptor.purpose}.`,
+      ...entry.descriptor.minimum_structure.map((requirement) => `- ${requirement}`),
+    ]),
+  ];
+}
+
 function lifecycleReceiptExample(manifest, event) {
   return {
     schema_version: 'work-unit.receipt-event.v1',
@@ -282,7 +394,7 @@ function logDetailExample(manifest, lifecycleEvent) {
   };
 }
 
-function taskMarkdown(manifest, bundleDir, resultSchema) {
+function taskMarkdown(manifest, bundleDir, resultSchema, actorDelivery) {
   const logCli = logCliPath();
   const abs = absolutePathMap(manifest, bundleDir);
   const workStartedReceipt = lifecycleReceiptExample(manifest, 'work_started');
@@ -342,6 +454,7 @@ function taskMarkdown(manifest, bundleDir, resultSchema) {
     'Read `_beacon.json` before writing runtime files. Resolve every runtime write by joining the beacon `bundle_dir` with the bundle-relative path from this task.',
     'Returning research findings in chat without writing the required files is a work-unit failure, not completion.',
     '',
+    ...actorGuidanceTaskLines(actorDelivery),
     '## Absolute Runtime Paths',
     '',
     'Use these absolute paths for file I/O; keep bundle-relative refs in result JSON and ledger-facing fields.',
@@ -415,11 +528,15 @@ function taskMarkdown(manifest, bundleDir, resultSchema) {
           '',
         ]
       : []),
-    ...(manifest.kind === 'wave1_topic_deepening'
+    ...(manifest.kind === 'wave1_topic_deepening' && requiredOutputs.length > 0
       ? [
-          'For Wave1 topic deepening, include structured `source_claims[]`, `accepted_source_urls[]`, evidence-summary output, question-list output, and cache trails in `result.json`; prose links alone are not accepted source coverage.',
+          'For this primary Wave1 assignment, write every current required output together with structured `source_claims[]`, `accepted_source_urls[]`, and cache trails in `result.json`; prose links alone are not accepted source coverage.',
           'Do not treat canonical `reference/{topic}-<source>.md` Markdown as a required delegated receipt unless this task explicitly names that reference path in its output contract.',
         ]
+      : manifest.kind === 'wave1_topic_deepening' && manifest.assignment_contract_version
+        ? [
+            'This supplementary Wave1 assignment has no current required outputs. Do not recreate, redeclare or overwrite a prior evidence-summary or question-list; use only the authorized source-ref lineage and current contract-authorized output, cache, source, result and receipt facts.',
+          ]
       : []),
     ...(manifest.kind === 'wave2_targeted_evidence'
       ? [
@@ -477,8 +594,9 @@ function taskMarkdown(manifest, bundleDir, resultSchema) {
   ].join('\n');
 }
 
-export function spawnPromptForWorkUnit(manifest, bundleDir = null) {
+export function spawnPromptForWorkUnit(manifest, bundleDir = null, { actorDelivery } = {}) {
   const parsed = WorkUnitManifestSchema.parse(manifest);
+  const normalizedActorDelivery = normalizeActorDelivery(parsed, actorDelivery);
   const resolvedBundleDir = bundleDir ? path.resolve(bundleDir) : null;
   const absResult = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.result_ref) : parsed.paths.result_ref;
   const absReceipt = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.runtime_receipt_ref) : parsed.paths.runtime_receipt_ref;
@@ -495,6 +613,7 @@ export function spawnPromptForWorkUnit(manifest, bundleDir = null) {
     `Open task.md first: ${absTask}`,
     `Open _beacon.json first: ${absBeacon}`,
     `Open result schema: ${absSchema}`,
+    ...actorGuidanceSpawnLines(normalizedActorDelivery),
     `Use exactly these identity fields in lifecycle receipts and result.json: work_id=${parsed.work_id}, queue_item_id=${parsed.queue_item_id}, kind=${parsed.kind}, receipt_nonce=${parsed.receipt_nonce}${parsed.actor_contract_version ? `, actor_contract_version=${parsed.actor_contract_version}, execution_actor_class=${parsed.actor_execution.execution_actor_class}` : ''}. Do not generate a new nonce.`,
     `Append lifecycle evidence directly as JSONL to the assigned receipt: ${absReceipt}.`,
     '`log-event.mjs` is optional diagnostic mirroring only and never satisfies or replaces the assigned runtime receipt.',
@@ -509,13 +628,14 @@ export function spawnPromptForWorkUnit(manifest, bundleDir = null) {
   ].join('\n');
 }
 
-export function writeWorkUnitEnvelope(bundleDir, manifest) {
+export function writeWorkUnitEnvelope(bundleDir, manifest, { actorDelivery } = {}) {
   const parsed = WorkUnitManifestSchema.parse(manifest);
+  const normalizedActorDelivery = normalizeActorDelivery(parsed, actorDelivery);
   const resultSchema = resultSchemaDocument(parsed);
   const dir = path.join(bundleDir, parsed.paths.work_unit_dir);
   mkdirSync(dir, { recursive: true });
   writeJson(path.join(bundleDir, parsed.paths.manifest_ref), parsed);
-  writeFileSync(path.join(bundleDir, parsed.paths.task_ref), taskMarkdown(parsed, bundleDir, resultSchema));
+  writeFileSync(path.join(bundleDir, parsed.paths.task_ref), taskMarkdown(parsed, bundleDir, resultSchema, normalizedActorDelivery));
   writeJson(path.join(bundleDir, parsed.paths.result_schema_ref), resultSchema);
   writeJson(path.join(bundleDir, parsed.paths.beacon_ref), WorkUnitBeaconSchema.parse({
     schema_version: WORK_UNIT_BEACON_SCHEMA_VERSION,

@@ -18,6 +18,7 @@ execution_contract:
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas
+  - shared/shared-page-fetch-guidance
 suggested_context: []
 ---
 
@@ -54,7 +55,7 @@ Example:
 
 ## 1. Purpose
 
-Define what the topic-deepening Sub-agent searches for and writes. The Phase Agent reads this role spec to construct bounded work-unit task instructions. The Sub-agent actor does not directly load this Markdown node; it receives the generated `task.md`, `_beacon.json`, `result.schema.json`, runtime receipt file, and work-unit output/cache paths.
+Define what the topic-deepening Sub-agent searches for and writes. The Phase Agent reads this role spec to construct bounded work-unit task instructions. The generated task directs the selected Sub-agent actor to read this canonical role guidance together with its actor-delivered shared guidance before work begins.
 
 The shared work-unit sub-agent contract (`shared-subagent-protocol.md`) defines the envelope and submit mechanics. This role spec defines what `dpt-evidence-extractor` does within that contract.
 
@@ -82,7 +83,7 @@ Minimum output: at least one fetched source with real page content per delegated
 
 ## 3. Artifacts
 
-This role produces paired topic artifacts and submitted source backing. Canonical topic reference Markdown is Phase-owned: the Phase Agent materializes `reference/{topic.slug}-<source-slug>.md` after successful submit unless a future accepted work-unit task explicitly assigns rich reference output to the Sub-agent.
+For a primary assignment whose current `required_outputs[]` contains the pair, this role produces paired topic artifacts and submitted source backing. A supplementary assignment with empty `required_outputs[]` does not recreate, redeclare or overwrite a prior evidence-summary or question-list; it uses only authorized prior source-ref lineage plus its current contract-authorized output, cache, source, result and receipt facts. Canonical topic reference Markdown is Phase-owned: the Phase Agent materializes `reference/{topic.slug}-<source-slug>.md` after successful submit unless a future accepted work-unit task explicitly assigns rich reference output to the Sub-agent.
 
 ### 3.1 evidence-summary.md
 
@@ -261,18 +262,7 @@ _cache/wave1/.../{topic.slug}/sNN_<source-slug>/
 
 ## 5. Page Content Fetching
 
-Use the full chain from `shared-subagent-protocol.md`.
-
-Apply fallback per URL. For one candidate URL, try each allowed tier in order until real page content is fetched or every allowed tier for that URL fails:
-
-- Built-in page-fetching tool if available
-- Browser fetch if available
-- Node.js `fetch`
-- Existing CLI fallback: `curl -L <url>`
-
-Across different candidate URLs, do not force the full fallback chain to run serially for all URLs. Fetch candidates in small batches when the task has several URLs to evaluate. Use bounded parallel fetching only when the native tool or runtime already supports it and site politeness, timeout, and context budget permit it.
-
-Only after all JS/Node-first tiers and the existing CLI fallback fail for that specific URL may the Sub-agent record an access failure. Small-batch or bounded-parallel fetching does not reduce cache trail, structured source claim, accepted source URL, receipt, or lifecycle requirements. Do not use search snippets as page content, and do not fabricate titles, facts, or URLs.
+Read and follow `shared-page-fetch-guidance.md` for the one per-URL access sequence, bounded diagnostic receipt details, batching and exhausted-failure boundary. This role does not maintain another fetch chain. The current assignment still determines whether the paired outputs are required and what cache/source facts may be declared.
 
 ## 6. Anti-Cheating Rules
 

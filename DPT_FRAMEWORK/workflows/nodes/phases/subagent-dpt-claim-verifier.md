@@ -18,6 +18,7 @@ execution_contract:
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas
+  - shared/shared-page-fetch-guidance
 suggested_context: []
 ---
 
@@ -75,7 +76,7 @@ Execution steps:
 
 1. Write `agent_runtime_started` to `runtime-receipt.jsonl` before work begins.
 2. Read `task.md` for the claim list, provided evidence references, cache path, and output contract.
-3. Verify each claim against the provided evidence; when needed, search and fetch page content using the fetching chain from `shared-subagent-protocol.md` (built-in tool → `curl` → Node `fetch` → Python `urllib.request`).
+3. Verify each claim against the provided evidence; when needed, search and fetch page content by reading and following `shared-page-fetch-guidance.md`. This role does not maintain another fetch chain.
 4. Write verification cache leaves under the task's provided cache directory for each fetched source.
 5. Write `agent_result_ready` immediately before returning.
 6. Return JSON matching `result.schema.json`, including `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, per-claim statuses with evidence references, and `cache_trails[]` for any fetches performed.

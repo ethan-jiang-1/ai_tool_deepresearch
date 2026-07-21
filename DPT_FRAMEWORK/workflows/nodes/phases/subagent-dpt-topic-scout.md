@@ -18,6 +18,7 @@ execution_contract:
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas
+  - shared/shared-page-fetch-guidance
 suggested_context: []
 ---
 
@@ -142,13 +143,7 @@ _cache/wave2/.../{finding_id-or-topic}/sNN_<source-slug>/
 
 ## 5. Page Content Fetching
 
-Use the full chain from `shared-subagent-protocol.md`.
-
-- Built-in page-fetching tool or browser if available
-- `curl -L <url>`
-- Node `fetch`
-
-Only after all tiers fail may the Sub-agent record a source as inaccessible. Honest failure is allowed: return `fills_gap: false` with attempted keywords/URLs when search does not find useful evidence.
+Read and follow `shared-page-fetch-guidance.md` for the one per-URL access sequence, bounded diagnostic receipt details, batching and exhausted-failure boundary. This role does not maintain another fetch chain. Honest failure remains allowed only with the current task's bounded evidence facts.
 
 ## 6. Anti-Cheating Rules
 

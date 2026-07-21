@@ -46,6 +46,8 @@ import {
   timeoutPreflightWorkUnit,
 } from './work-unit-timeout-preflight.mjs';
 import { continuationForClaimedWork } from './helpers/continuation-cue.mjs';
+import { describeDirectOutputContract } from './helpers/direct-output-contract.mjs';
+import { resolveWorkUnitRoleGuidance } from './helpers/work-unit-role-guidance.mjs';
 
 import { queueItemSnapshotHash } from './queue-manager-core.mjs';
 import { loadQueue, loadQueueReadOnly, saveQueue } from './queue-manager-lifecycle.mjs';
@@ -73,6 +75,7 @@ function createWorkUnitInIndex(bundleDir, index, {
   batchReason = 'initial_phase_drain',
   runtime_refs = {},
   actor_execution,
+  actor_delivery,
   assignment_contract,
 } = {}) {
   if (!queueItem?.queue_item_id) throw new Error('queueItem.queue_item_id is required');
@@ -115,7 +118,7 @@ function createWorkUnitInIndex(bundleDir, index, {
     queue_item: clone(queueItem),
   });
   validateWorkIdBinding({ ...manifest, kindRegistry: index.kind_registry });
-  writeWorkUnitEnvelope(bundleDir, manifest);
+  writeWorkUnitEnvelope(bundleDir, manifest, { actorDelivery: actor_delivery });
   const record = {
     work_id: manifest.work_id,
     queue_item_id: manifest.queue_item_id,
@@ -404,6 +407,33 @@ function preflightClaimAssignments(bundleDir, candidates) {
   });
 }
 
+function preflightClaimDelivery(plans) {
+  return plans.map((plan) => {
+    try {
+      const roleGuidance = resolveWorkUnitRoleGuidance({
+        kind: plan.kind,
+        delegated_role_key: plan.role_key,
+        actor_policy: plan.actor_policy,
+      });
+      const directOutputDescriptors = Object.freeze((plan.assignment_contract.output_contract.required_outputs || []).map((required) => Object.freeze({
+        path: required.path,
+        role: required.role,
+        direct_contract: required.direct_contract,
+        descriptor: describeDirectOutputContract(required.direct_contract),
+      })));
+      return Object.freeze({
+        ...plan,
+        actor_delivery: Object.freeze({
+          role_guidance: roleGuidance,
+          direct_output_descriptors: directOutputDescriptors,
+        }),
+      });
+    } catch (error) {
+      throw new Error(`delivery preflight failed for queue item ${plan.queue_item_id}: ${error.message}`);
+    }
+  });
+}
+
 function loadIndexView(bundleDir) {
   return existsSync(workUnitIndexPath(bundleDir))
     ? loadWorkUnitIndex(bundleDir)
@@ -541,9 +571,10 @@ export function claimWorkUnits(bundleDir, {
   };
   const effectiveCount = decision.execution_actor_class === 'phase_agent_fallback' ? 1 : assignmentPlans.length;
   const effectivePlans = assignmentPlans.slice(0, effectiveCount);
+  const deliveryPlans = preflightClaimDelivery(effectivePlans);
 
   return withWorkUnitTransaction(bundleDir, 'claim_work_units', ({ tx_id }) => {
-    let { queue, index } = recheckClaimPlan(bundleDir, effectivePlans, previewIndexPlan);
+    let { queue, index } = recheckClaimPlan(bundleDir, deliveryPlans, previewIndexPlan);
     const claimed = [];
     let blockedBy = preview.blocked_by_queue_item_id;
 
@@ -554,7 +585,7 @@ export function claimWorkUnits(bundleDir, {
         blockedBy = front.queue_item_id;
         break;
       }
-      const plan = effectivePlans[i];
+      const plan = deliveryPlans[i];
       const kind = front.kind || defaultKindForWave(wave);
       if (!kind) {
         blockedBy = front.queue_item_id;
@@ -572,6 +603,7 @@ export function claimWorkUnits(bundleDir, {
         creation_reason: 'claim',
         batchReason,
         actor_execution: actorExecution,
+        actor_delivery: plan.actor_delivery,
         assignment_contract: plan.assignment_contract,
       });
       queue.delegated_in_flight[front.queue_item_id] = {
@@ -586,7 +618,7 @@ export function claimWorkUnits(bundleDir, {
         timeout_ms: record.timeout_ms,
         deadline_at: record.deadline_at,
       };
-      claimed.push({ record, manifest });
+      claimed.push({ record, manifest, actor_delivery: plan.actor_delivery });
       const claimEvent = record.attempt_index > 1 ? 'work_unit_retry_claimed' : 'work_unit_claimed';
       traceWorkUnitEvent(bundleDir, claimEvent, {
         tx_id,
@@ -625,7 +657,7 @@ export function claimWorkUnits(bundleDir, {
       unclaimed_delegated_count: unclaimedDelegated,
       blocked_by_queue_item_id: blockedBy,
       phase_drained: unclaimedDelegated === 0 && inFlight.length === 0,
-      prompt_refs: claimed.map(({ record, manifest }) => ({
+      prompt_refs: claimed.map(({ record, manifest, actor_delivery }) => ({
         work_id: record.work_id,
         queue_item_id: record.queue_item_id,
         bundle_dir: path.resolve(bundleDir),
@@ -638,7 +670,7 @@ export function claimWorkUnits(bundleDir, {
         runtime_receipt_ref: manifest.paths.runtime_receipt_ref,
         runtime_receipt_path: path.join(path.resolve(bundleDir), manifest.paths.runtime_receipt_ref),
         result_path: path.join(path.resolve(bundleDir), manifest.paths.result_ref),
-        spawn_prompt: spawnPromptForWorkUnit(manifest, bundleDir),
+        spawn_prompt: spawnPromptForWorkUnit(manifest, bundleDir, { actorDelivery: actor_delivery }),
         actor_contract_version: record.actor_contract_version,
         actor_execution: record.actor_execution,
       })),

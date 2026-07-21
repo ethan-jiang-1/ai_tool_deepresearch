@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.40
+
+- Delivered closed role guidance and direct-output authoring requirements to actor-bound work-unit task and spawn surfaces while preserving the existing claim, submit and Gate authorities.
+- Consolidated delegated page-fetch guidance into one shared Node-first, bounded same-URL curl contract for active research roles.
+
 ## v0.39
 
 - Added one bounded native-first, same-URL `curl` fallback to the HITL1 research-access probe when independently configured host permission already allows it, while keeping the Agent responsible for ordinary mechanics and preserving the existing observation and Gate authority.

@@ -103,6 +103,7 @@ execution_contract:
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas
+  - shared/shared-page-fetch-guidance
 suggested_context: []
 ---
 # ${h1}
@@ -188,6 +189,15 @@ Test relationship.
     for (const spec of specs) {
       writeFileSync(join(nd, 'phases', spec.file), roleMd(spec));
     }
+    writeFileSync(join(nd, 'shared/shared-page-fetch-guidance.md'), `---
+node_type: shared
+id: shared-page-fetch-guidance
+shared_scope: subagent-fetch
+authority: guidance-only
+actor_delivery: required
+---
+# Shared Page Fetch Guidance
+`);
   }
 
   before(() => {

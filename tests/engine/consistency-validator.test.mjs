@@ -97,7 +97,7 @@ function scaffold(opts = {}) {
         role: 'dpt-source-intake',
         authority: 'guidance-only',
         execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md', filesystem_write: 'required', required_write_tools: ['read_file', 'write_file', 'append_file', 'mkdir'] },
-        requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
+        requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas', 'shared/shared-page-fetch-guidance'],
         suggested_context: [],
       },
       h1: '# Work-Unit Role: dpt-source-intake - Foundation Reference Intake',
@@ -111,7 +111,7 @@ function scaffold(opts = {}) {
         role: 'dpt-evidence-extractor',
         authority: 'guidance-only',
         execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md', filesystem_write: 'required', required_write_tools: ['read_file', 'write_file', 'append_file', 'mkdir'] },
-        requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
+        requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas', 'shared/shared-page-fetch-guidance'],
         suggested_context: [],
       },
       h1: '# Work-Unit Role: dpt-evidence-extractor - Topic-Specific Deepening',
@@ -125,7 +125,7 @@ function scaffold(opts = {}) {
         role: 'dpt-topic-scout',
         authority: 'guidance-only',
         execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md', filesystem_write: 'required', required_write_tools: ['read_file', 'write_file', 'append_file', 'mkdir'] },
-        requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
+        requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas', 'shared/shared-page-fetch-guidance'],
         suggested_context: [],
       },
       h1: '# Work-Unit Role: dpt-topic-scout - Gap-Fill Search',
@@ -139,7 +139,7 @@ function scaffold(opts = {}) {
         role: 'dpt-claim-verifier',
         authority: 'guidance-only',
         execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md', filesystem_write: 'required', required_write_tools: ['read_file', 'write_file', 'append_file', 'mkdir'] },
-        requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
+        requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas', 'shared/shared-page-fetch-guidance'],
         suggested_context: [],
       },
       h1: '# Work-Unit Role: dpt-claim-verifier - Critical Claim Verification',
@@ -153,7 +153,7 @@ function scaffold(opts = {}) {
         role: 'dpt-source-diagnostic',
         authority: 'guidance-only',
         execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md', filesystem_write: 'required', required_write_tools: ['read_file', 'write_file', 'append_file', 'mkdir'] },
-        requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
+        requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas', 'shared/shared-page-fetch-guidance'],
         suggested_context: [],
       },
       h1: '# Work-Unit Role: dpt-source-diagnostic - Source Quality Diagnostic',
@@ -206,6 +206,19 @@ function scaffold(opts = {}) {
     '',
     'Test relationship.',
   ].join('\n');
+
+  writeFileSync(join(nd, 'shared/shared-page-fetch-guidance.md'), [
+    '---',
+    JSON.stringify({
+      node_type: 'shared',
+      id: 'shared-page-fetch-guidance',
+      shared_scope: 'subagent-fetch',
+      authority: 'guidance-only',
+      actor_delivery: 'required',
+    }),
+    '---',
+    '# Shared Page Fetch Guidance',
+  ].join('\n'));
 
   // node files (opts.nodes maps nodeRef → frontmatter object)
   const defaultFM = (gate) => ({ node_type: 'phase', id: 'test', phase: 'test', gate, stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: [], suggested_context: [] });

@@ -10,6 +10,7 @@ const REPO_ROOT = join(import.meta.dirname, '../../..');
 const DOCS = {
   sourceIntake: 'DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-source-intake.md',
   evidenceExtractor: 'DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-evidence-extractor.md',
+  sharedFetch: 'DPT_FRAMEWORK/workflows/nodes/shared/shared-page-fetch-guidance.md',
   wave0: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md',
   wave1: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md',
 };
@@ -35,23 +36,27 @@ function hardCodedFetchAimViolations(text) {
 }
 
 describe('Sub-agent fetch hygiene guidance', () => {
-  for (const [name, relPath] of Object.entries({
-    sourceIntake: DOCS.sourceIntake,
-    evidenceExtractor: DOCS.evidenceExtractor,
-  })) {
-    it(`${name} uses per-URL JS/Node-first fallback and multi-URL batching`, () => {
+  it('shared guidance owns the per-URL JS/Node-first fallback and multi-URL batching', () => {
+    const text = read(DOCS.sharedFetch);
+    assert.match(text, /For one exact candidate URL/i);
+    assert.match(text, /native or built-in/i);
+    assert.match(text, /available browser/i);
+    assert.match(text, /Node\.js `fetch`/i);
+    assert.match(text, /at most one bounded `curl`/i);
+    assert.match(text, /same URL/i);
+    assert.match(text, /small batches/i);
+    assert.match(text, /bounded parallel access/i);
+    assert.match(text, /site politeness/i);
+    assert.match(text, /search snippets are not fetched page content/i);
+    assert.doesNotMatch(text, /Python|urllib|\.py\b|one-liner/i);
+  });
+
+  for (const [name, relPath] of Object.entries({ sourceIntake: DOCS.sourceIntake, evidenceExtractor: DOCS.evidenceExtractor })) {
+    it(`${name} directly requires the shared fetch owner without a local chain`, () => {
       const text = read(relPath);
-      assert.match(text, /Apply fallback per URL/i);
-      assert.match(text, /For one candidate URL[\s\S]*try each allowed tier in order/i);
-      assert.match(text, /Built-in page-fetching tool/i);
-      assert.match(text, /Browser fetch/i);
-      assert.match(text, /Node\.js `fetch`/i);
-      assert.match(text, /Existing CLI fallback[\s\S]*curl -L <url>/i);
-      assert.match(text, /Across different candidate URLs[\s\S]*small batches/i);
-      assert.match(text, /bounded parallel fetching[\s\S]*native tool or runtime/i);
-      assert.match(text, /site politeness/i);
-      assert.match(text, /JS\/Node-first tiers/i);
-      assert.match(text, /Do not use search snippets as page content/i);
+      assert.match(text, /shared\/shared-page-fetch-guidance/);
+      assert.match(text, /shared-page-fetch-guidance\.md/);
+      assert.doesNotMatch(text, /Built-in page-fetching tool|Browser fetch|curl -L <url>|Node\.js `fetch`/i);
       assert.doesNotMatch(text, /Python|urllib|\.py\b|one-liner/i);
     });
   }

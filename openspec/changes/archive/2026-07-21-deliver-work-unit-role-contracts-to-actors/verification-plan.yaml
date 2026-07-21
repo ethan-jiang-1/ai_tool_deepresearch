@@ -1,0 +1,72 @@
+schema_version: verification-routing/v1
+change: deliver-work-unit-role-contracts-to-actors
+test_classes:
+  unit:
+    status: selected
+    rationale: Pure closed role-guidance derivation and direct-contract actor descriptors need focused fail-closed and parity proof without filesystem envelope orchestration.
+  integration:
+    status: selected
+    rationale: Real claim/envelope generation and shipped Markdown boundaries must prove task/spawn delivery, absolute refs, supplementary compatibility, shared fetch guidance and no duplicate validator or Python fallback.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The Change adds no persisted state, schema, Gate, transition or multi-phase deterministic chain; existing claim/dry-submit/submit integration remains the authority path.
+  agent_flow_e2e:
+    status: selected
+    rationale: Only real dpt-evidence-extractor actors using generated task guidance can prove first-return authoring compliance; the same retained receipt may support a separate conditional fallback observation without becoming a fifth routed claim.
+claims:
+  - id: work-unit-contract-projection-owner
+    statement: Closed registered delegated role keys derive one contained shipped role/shared-guidance projection, and every closed direct-output contract ID exposes a bounded actor descriptor from the same owner as its evaluator; unknown, mismatched, missing or escaping facts fail before actor work without a new registry, persisted work-unit marker or validator.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-contract-delivery.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: generated-envelope-delivers-role-and-authoring-contract
+    statement: Real current primary Wave1 production claim generation preserves existing actor-decision ownership, then projects the same canonical role, actor-delivery shared absolute refs and contract-owned minimum authoring semantics for allow-claim plans, keeps exact assignment/result/schema and supplementary behavior, rejects invalid delivery lineage before mutation, and does not force legacy unbound construction to invent an actor role.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/engine/work-unit-role-contract-delivery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: shared-delegated-fetch-guidance-contract
+    statement: Active search/fetch roles deliver one actor-marked shared per-URL built-in/browser/Node-first then bounded same-URL curl guidance with independent permission, batching, cache/source and exhausted-failure boundaries plus stable diagnostic fetch_attempt_done fields, while unrelated dependencies, role-local duplicate chains, Python, wget, automatic retry and user command handoff are absent.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/subagent-fetch-contract-delivery.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-actor-first-return-contract-compliance
+    statement: Existing case-221 launches two real dpt-evidence-extractor actors from generated task-directed surfaces and both reach formal submit, inspect and Gate; for one representative actor, both manifest-derived paired targets are hashed immediately after return, pass predictive dry-submit before any Phase or Playbook edit, remain hash-identical through submit, and are bound by the existing required trace check plus durable task/result/receipt/representative-output evidence.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wfn_wave1/case-221-heavy-batch-subagent.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_subagent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

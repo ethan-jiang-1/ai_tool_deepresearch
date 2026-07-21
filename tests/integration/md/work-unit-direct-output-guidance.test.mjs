@@ -15,6 +15,7 @@ const WHITELIST = [
   'DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md',
   'DPT_FRAMEWORK/workflows/nodes/shared/shared-schemas.md',
   'DPT_FRAMEWORK/COMMANDS.md',
+  'DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-evidence-extractor.md',
 ];
 
 function text(relativePath) {
@@ -99,7 +100,7 @@ describe('approved production Markdown owners', () => {
 });
 
 describe('direct-contract inventory whitelist', () => {
-  it('keeps every other phase, role, and shared node free of duplicated closed inventory', async () => {
+  it('keeps every other phase, role, and shared node free of duplicated closed inventory outside the canonical rich Wave1 role template', async () => {
     const { readdir } = await import('node:fs/promises');
     const nodeRoot = path.join(ROOT, 'DPT_FRAMEWORK/workflows/nodes');
     const files = await readdir(nodeRoot, { recursive: true });

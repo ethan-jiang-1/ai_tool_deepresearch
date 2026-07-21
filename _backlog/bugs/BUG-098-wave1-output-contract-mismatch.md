@@ -7,6 +7,11 @@
 | **发现场景** | `dpt_rb_ai-agents-enterprise-bpm-productivity` — wave1 work-unit dry-submit |
 | **严重度** | P1 — 4/5 work units 在 dry-submit 时因 section header 格式不匹配被拒 |
 | **影响面** | 所有 wave1 topic deepening sub-agent (dpt-evidence-extractor) |
+| **当前状态** | Active — v0.40 deterministic delivery wiring is implemented, but case-221's only native Autorun timed out before inspect/Gate/native completion |
+
+## 当前验证边界
+
+2026-07-21 case-221 的两个 real actor 都留下 `work_done`、predictive dry-submit PASS、formal submit PASS，以及代表 actor paired target 的 pre/post hash parity；但 Supervisor 在 native completion 前报告 `ERROR: agent_timeout`，没有 native inspect/Gate verdict。该 partial run 不能关闭 BUG-098，也不能替代 general real-actor first-return routed claim。BUG 保持 Active，直到该 claim 从其 selected native authority 得到 PASS。
 
 ## 现象
 

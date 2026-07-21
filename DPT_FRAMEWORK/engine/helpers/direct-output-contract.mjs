@@ -17,12 +17,6 @@ import { parseMarkdownSemanticSections } from './gate-helpers-checks.mjs';
 
 const MAX_BYTES = 4 * 1024 * 1024;
 const READ_BYTES = MAX_BYTES + 1;
-const CONTRACT_IDS = new Set([
-  'wave0.source-metadata-array.v1',
-  'wave1.evidence-summary.v1',
-  'wave1.question-list.v1',
-]);
-
 function root({ code, contractId, coordinate, expected, observed, rootClass }) {
   return {
     code,
@@ -271,9 +265,54 @@ function evaluateQuestionList(content, common, snapshotMeta) {
   return { passed: true, snapshot_meta: snapshotMeta, roots: [] };
 }
 
+const DIRECT_OUTPUT_CONTRACTS = Object.freeze({
+  'wave0.source-metadata-array.v1': Object.freeze({
+    evaluate: evaluateWave0,
+    descriptor: Object.freeze({
+      purpose: 'Source metadata array',
+      minimum_structure: Object.freeze([
+        'Write a parseable top-level YAML array.',
+        'Ensure every entry satisfies the assigned source metadata contract.',
+      ]),
+    }),
+  }),
+  'wave1.evidence-summary.v1': Object.freeze({
+    evaluate: evaluateEvidenceSummary,
+    descriptor: Object.freeze({
+      purpose: 'Wave1 evidence summary',
+      minimum_structure: Object.freeze([
+        'Write a non-empty Key Findings semantic section supported by the assigned research.',
+      ]),
+    }),
+  }),
+  'wave1.question-list.v1': Object.freeze({
+    evaluate: evaluateQuestionList,
+    descriptor: Object.freeze({
+      purpose: 'Wave1 question list',
+      minimum_structure: Object.freeze([
+        'Write non-empty Topic Investigation Targets and Question Reconciliation semantic sections.',
+        'Write non-empty Emergent Question Protocol and Exploration / Exploitation Decision semantic sections.',
+      ]),
+    }),
+  }),
+});
+
+const DIRECT_OUTPUT_CONTRACT_IDS = Object.freeze(Object.keys(DIRECT_OUTPUT_CONTRACTS));
+
+export function directOutputContractIds() {
+  return DIRECT_OUTPUT_CONTRACT_IDS;
+}
+
+export function describeDirectOutputContract(contractId) {
+  const descriptor = DIRECT_OUTPUT_CONTRACTS[contractId]?.descriptor;
+  if (!descriptor) throw new Error(`unknown direct contract ${String(contractId)}`);
+  return descriptor;
+}
+
 export function evaluateDirectOutputTarget({ bundleDir, target, contractId } = {}) {
   const common = { contractId, coordinate: typeof target === 'string' ? target : String(target ?? '') };
-  if (!CONTRACT_IDS.has(contractId)) {
+  const definition = DIRECT_OUTPUT_CONTRACTS[contractId];
+  if (!definition) {
     return failure(common, {
       code: 'direct_contract_unknown',
       expected: 'A supported closed direct-output contract ID.',
@@ -285,7 +324,5 @@ export function evaluateDirectOutputTarget({ bundleDir, target, contractId } = {
   if (snapshot.roots) return snapshot;
   const decoded = decodeSnapshot(snapshot.bytes, common, snapshot.snapshotMeta);
   if (decoded.roots) return decoded;
-  if (contractId === 'wave0.source-metadata-array.v1') return evaluateWave0(decoded.content, common, snapshot.snapshotMeta);
-  if (contractId === 'wave1.evidence-summary.v1') return evaluateEvidenceSummary(decoded.content, common, snapshot.snapshotMeta);
-  return evaluateQuestionList(decoded.content, common, snapshot.snapshotMeta);
+  return definition.evaluate(decoded.content, common, snapshot.snapshotMeta);
 }

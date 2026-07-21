@@ -4,11 +4,11 @@ production bundle `dpt_rb_ai-agents-enterprise-bpm-productivity` 中，Wave1 act
 
 ## What Changes
 
-- 从 existing closed work-unit kind / `actor_policy.delegated_role_key` 派生 canonical role guidance ref，并把该 ref 投影到 generated `task.md` 与 spawn prompt；actor 在 search、fetch、output authoring 前读取该 canonical guidance，queue payload、Phase Agent 和 actor 均不能选择任意 role file。
+- 从 existing closed work-unit kind / `actor_policy.delegated_role_key` 派生 canonical role guidance ref，并把该 ref 投影到 generated `task.md` 与 spawn prompt；actor 在 search、fetch、output authoring 前读取该 canonical guidance，queue payload、Phase Agent 和 actor 均不能选择任意 role file，且rich role template不得扩大current assignment或把supplementary变成implicit primary pair。
 - 由 existing direct-output contract owner 提供 bounded minimum authoring projection，使 task/spawn 在 exact required output 旁显示 contract-owned semantic requirements；shared evaluator 继续是唯一 deterministic verdict owner，projection 不复制 evaluator、不新增 fuzzy/semantic validator。
 - 将 Wave0/Wave1/Wave2 被触碰 role 的共同 page-fetch behavior 收敛到一个 canonical Agent-facing guidance surface，并通过 role ref/task delivery 到达 actor；保留 built-in/browser/Node-first 与 bounded `curl` fallback，删除 active role 中过期 Python fetch fallback 和重复 chain。
 - 保持 existing assignment contract、manifest/beacon/result schema、submit/receipt/ledger/Gate authority不变；不新增 actor-selectable role/contract ID、persisted role hash/snapshot、plugin registry、fetch controller、retry tree或第二 submit path。
-- 新增 focused unit/integration verification，证明 closed role mapping、unknown/mismatch fail-closed、authoring projection同源、generated envelope delivery与无重复 validator；复用一个 real Wave1 actor case 证明 actor 首次产出而非 Phase repair 满足 paired direct contract，并在可观察的真实 blocked-native/fallback 条件下单独裁决 fetch branch，条件不存在时诚实 `NOT_RUN`。
+- 新增 focused unit/integration verification，证明 closed role mapping、helper-level mismatch fail-closed、existing actor decision继续拥有production kind/role mismatch，以及allow-claim后的missing/invalid delivery asset在read-only preflight fail-closed；authoring projection同源且不新增validator。复用一个 real Wave1 actor case，证明两名actor均经existing submit/Gate，并由现有required check持久记录代表性actor两份paired targets的return后hash、repair前dry-submit和submit后hash parity；existing durable result/receipt/representative output与trace-prefix共同限定proof。真实 blocked-native/fallback branch复用actor-written durable receipt的structured attempt facts分类为`OBSERVED_PASS|OBSERVED_FAIL|UNOBSERVED`，不进入case verdict checks；未发生保持BUG-096 active，也不伪造claim-level `NOT_RUN`。
 - Apply 完成后，BUG-098 可关闭；结合已归档 `allow-bounded-hitl1-fetch-surface-fallback`，BUG-096 仅在 delegated actor evidence 达到各自 proof boundary 后整体关闭。BUG-097 不属于本 Change。
 - 本 Change 修改 `DPT_FRAMEWORK/` behavior，需要 version bump，目标版本为 `v0.40`；apply 时同步 root `CHANGELOG.md` 与 `DPT_FRAMEWORK/RUN.md` banner/current-release summary。
 
@@ -30,6 +30,6 @@ Direct Source of Record 保持分层且唯一：role identity 来自 registered 
 
 ## Impact
 
-- Apply 预计修改 `DPT_FRAMEWORK/engine/work-unit-envelope.mjs`、existing direct-output contract owner/closed work-unit role mapping、shared/role Markdown及 focused tests；若 shared fetch guidance提取成立，只替换被触碰 roles 的重复内容，不建设 generic fetch subsystem。
+- Apply 预计修改正式 claim-time preflight/`work-unit-envelope.mjs`、existing direct-output contract owner/closed work-unit role mapping、workflow package consistency validator、shared/role Markdown及 focused tests；internal/test `createWorkUnit`不成为新的production入口。Shared fetch guidance仅作为带`actor_delivery: required`的role dependency和generated actor projection，不加入workflow manifest的always-loaded `shared[]`，也不建设 generic fetch subsystem。
 - 不修改 queue payload选择权、assignment schema/version、manifest/beacon persisted shape、result schema、receipt、provenance、ledger、Gate、transition或lifecycle authority；不新增依赖、TypeScript或Python。
 - Verification 必须区分 deterministic projection/wiring proof 与真实 actor behavior；fixture、手写 output、Phase Agent补 headings、叙述性 PASS或 mock network不能证明首次 actor compliance/fallback。

@@ -105,11 +105,11 @@ Expected: two work-unit prompts are generated under `_work_units/wave1/{work_id}
 
 ## Step 3: [MAIN->SUBAGENT] Run Real Actors
 
-For each `work_id` in `case-221-claim.json`, hand the generated task prompt to a real `dpt-evidence-extractor` actor. The actor must read its beacon, preserve `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`, perform bounded topic deepening, and produce the declared result JSON plus runtime receipt.
+For each `work_id` in `case-221-claim.json`, hand only the generated task prompt to a real `dpt-evidence-extractor` actor. The actor must begin from the generated task-directed role/shared guidance, read its beacon, preserve `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`, perform bounded topic deepening, and produce the declared result JSON plus runtime receipt.
 
-After both actors return, write `case-221-subagent-evidence.json` as a path-only index with an exact absolute `result_dir` plus representative first-actor `task`, `result`, `receipt`, and Subject-written declared `output` paths. If either actor is unavailable or omits assigned files, write `case-221-subject-unavailable.txt` and skip directly to native completion. Missing actors are `NOT_RUN`; fixture or parent output cannot substitute.
+After both actors return, write `case-221-subagent-evidence.json` as a path-only index with an exact absolute `result_dir`, two actor entries keyed by `work_id`, and one representative first-actor `task`, `result`, `receipt`, and Subject-written declared `output` path. If either actor is unavailable or omits assigned files, write `case-221-subject-unavailable.txt` and skip directly to native completion. Missing actors are `NOT_RUN`; fixture or parent output cannot substitute. The Playbook and Phase Agent must not edit actor-owned output, receipt, cache or source facts after either return.
 
-## Step 4: [MAIN/SHELL] Submit Real Results
+## Step 4: [MAIN/SHELL] Predictive Dry-Submit Then Formal Submit
 
 After real actors return, place their result JSON files in a directory named by `REAL_RESULT_DIR`, with filenames:
 
@@ -124,19 +124,60 @@ B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --contex
 REAL_RESULT_DIR=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.result_dir)' "$B/case-221-subagent-evidence.json")
 node --input-type=module - "$B" "$REAL_RESULT_DIR" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { submitWorkUnitViaCli } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { spawnSync } from 'node:child_process';
+import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
 
 const [bundle, resultDir] = process.argv.slice(2);
 const claim = JSON.parse(readFileSync(`${bundle}/case-221-claim.json`, 'utf8'));
-const submits = [];
-for (const workId of claim.claimed_work_ids) {
+const evidence = JSON.parse(readFileSync(`${bundle}/case-221-subagent-evidence.json`, 'utf8'));
+const index = loadWorkUnitIndex(bundle);
+const actors = [];
+const hashFile = (file) => createHash('sha256').update(readFileSync(file)).digest('hex');
+const runWorkUnitCli = (command, workId, resultPath) => {
+  const result = spawnSync(process.execPath, [
+    'DPT_FRAMEWORK/cli/operate-work-unit.mjs', command, bundle,
+    '--work-id', workId, '--result', resultPath,
+  ], { encoding: 'utf8' });
+  return {
+    exit_code: result.status,
+    output: result.stdout.trim() ? JSON.parse(result.stdout) : null,
+    stderr: result.stderr.trim(),
+  };
+};
+
+for (const [indexInBatch, workId] of claim.claimed_work_ids.entries()) {
   const resultPath = path.join(resultDir, `${workId}.result.json`);
-  submits.push({ work_id: workId, submit: submitWorkUnitViaCli(bundle, { work_id: workId, resultPath }) });
+  const record = index.work_units[workId];
+  const manifest = JSON.parse(readFileSync(path.join(bundle, record.paths.manifest_ref), 'utf8'));
+  const receiptPath = indexInBatch === 0 ? evidence.receipt : (evidence.actors || []).find((entry) => entry.work_id === workId)?.receipt;
+  const targetRefs = manifest.output_contract.required_outputs || [];
+  const targetPaths = targetRefs.map((target) => path.join(bundle, target.path));
+  const workDone = receiptPath && readFileSync(receiptPath, 'utf8').split(/\r?\n/).filter(Boolean)
+    .map(JSON.parse).some((row) => row.event === 'work_done' && row.work_id === workId);
+  const preHashes = indexInBatch === 0 && workDone && targetPaths.length === 2
+    ? targetPaths.map((target) => ({ ref: path.relative(bundle, target), sha256: hashFile(target) }))
+    : [];
+  const dry = runWorkUnitCli('dry-submit', workId, resultPath);
+  actors.push({ work_id: workId, result_path: resultPath, target_refs: targetRefs, work_done: workDone, pre_hashes: preHashes, dry_submit: dry });
 }
+
+const dryPass = actors.length === 2 && actors.every((entry) => entry.dry_submit.exit_code === 0 && entry.dry_submit.output?.ok === true);
+const submits = dryPass
+  ? actors.map((entry) => ({ work_id: entry.work_id, submit: runWorkUnitCli('submit', entry.work_id, entry.result_path) }))
+  : [];
+const representative = actors[0];
+if (representative && dryPass) {
+  representative.post_hashes = representative.target_refs.map((target) => {
+    const targetPath = path.join(bundle, target.path);
+    return { ref: target.path, sha256: hashFile(targetPath) };
+  });
+}
+const firstReturn = { actors, dry_submit_all_pass: dryPass, submits };
+writeFileSync(`${bundle}/case-221-first-return.json`, `${JSON.stringify(firstReturn, null, 2)}\n`);
 writeFileSync(`${bundle}/case-221-submit.json`, `${JSON.stringify(submits, null, 2)}\n`);
-console.log(JSON.stringify(submits, null, 2));
-process.exit(submits.every((entry) => entry.submit.ok === true) ? 0 : 1);
+console.log(JSON.stringify(firstReturn, null, 2));
 JS
 ```
 
@@ -145,8 +186,13 @@ JS
 ```bash
 B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
+import { readFileSync } from 'node:fs';
 import { appendTrace } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-appendTrace(process.argv[2], { event: 'wave1_completion', source: 'case-221-real-agent' });
+const bundle = process.argv[2];
+const firstReturn = JSON.parse(readFileSync(`${bundle}/case-221-first-return.json`, 'utf8'));
+if (firstReturn.submits.length === 2 && firstReturn.submits.every((entry) => entry.submit.output?.ok === true)) {
+  appendTrace(bundle, { event: 'wave1_completion', source: 'case-221-real-agent' });
+}
 JS
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect "$B" > "$B/case-221-inspect.json"
 node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-221-gate.json"
@@ -160,14 +206,46 @@ const submit = JSON.parse(readFileSync(`${bundle}/case-221-submit.json`, 'utf8')
 const inspect = JSON.parse(readFileSync(`${bundle}/case-221-inspect.json`, 'utf8'));
 const gate = JSON.parse(readFileSync(`${bundle}/case-221-gate.json`, 'utf8'));
 const evidence = JSON.parse(readFileSync(`${bundle}/case-221-subagent-evidence.json`, 'utf8'));
+const firstReturn = JSON.parse(readFileSync(`${bundle}/case-221-first-return.json`, 'utf8'));
 const result = JSON.parse(readFileSync(evidence.result, 'utf8'));
 const receipts = readFileSync(evidence.receipt, 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse);
 const claimed = new Set(submit.map((entry) => entry.work_id));
+const representative = firstReturn.actors[0];
+const pairedTargets = representative?.target_refs || [];
+const hashesMatch = pairedTargets.length === 2
+  && representative.work_done === true
+  && representative.pre_hashes?.length === 2
+  && representative.post_hashes?.length === 2
+  && representative.pre_hashes.every((entry, index) => entry.ref === representative.post_hashes[index]?.ref && entry.sha256 === representative.post_hashes[index]?.sha256);
 const subjectBound = existsSync(evidence.task) && existsSync(evidence.output)
   && claimed.has(result.work_id)
   && receipts.some((row) => row.work_id === result.work_id)
   && (result.output_files || []).some((row) => resolve(bundle, row.path) === resolve(evidence.output));
-recordPlaybookCheck(bundle, { gate: 'real-wave1-batch-submit', passed: submit.every((entry) => entry.submit.ok === true) && subjectBound, detail: JSON.stringify(submit.map((entry) => entry.work_id)) });
+const passed = firstReturn.dry_submit_all_pass === true
+  && firstReturn.actors.length === 2
+  && firstReturn.actors.every((entry) => entry.dry_submit.output?.ok === true)
+  && submit.length === 2
+  && submit.every((entry) => entry.submit.output?.ok === true)
+  && hashesMatch
+  && subjectBound;
+recordPlaybookCheck(bundle, {
+  gate: 'real-wave1-batch-submit',
+  passed,
+  detail: JSON.stringify({
+    work_ids: firstReturn.actors.map((entry) => entry.work_id),
+    representative: representative && {
+      work_id: representative.work_id,
+      target_refs: pairedTargets.map((target) => target.path),
+      pre_hashes: representative.pre_hashes,
+      dry_submit: { exit_code: representative.dry_submit.exit_code, ok: representative.dry_submit.output?.ok === true },
+      formal_submit: {
+        exit_code: submit.find((entry) => entry.work_id === representative.work_id)?.submit?.exit_code,
+        ok: submit.find((entry) => entry.work_id === representative.work_id)?.submit?.output?.ok === true,
+      },
+      post_hashes: representative.post_hashes,
+    },
+  }),
+});
 recordPlaybookCheck(bundle, { gate: 'work-unit-inspect', passed: inspect.passed === true, detail: JSON.stringify(inspect.inspect || []) });
 recordPlaybookCheck(bundle, { gate: 'wave1-gate', passed: gate.check?.passed === true, detail: JSON.stringify(gate.inspect || []) });
 console.log('Recorded native checks; Supervisor finalizer is authoritative.');

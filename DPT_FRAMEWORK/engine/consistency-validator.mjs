@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { readGateDefinitionSnapshot } from '../schema/contracts/gate-definition.mjs';
 import { loadChain } from './transition-chain.mjs';
 import { parseFrontmatter } from './workflow-chain.mjs';
+import { DEFAULT_KIND_CONTRACTS } from './work-unit-constants.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -337,30 +338,35 @@ export function validateWorkflowPackage(opts = {}) {
       node: 'phases/subagent-dpt-source-intake.md',
       id: 'subagent-dpt-source-intake',
       roleKey: 'dpt-source-intake',
+      kindRegistered: true,
       h1: '# Work-Unit Role: dpt-source-intake - Foundation Reference Intake',
     },
     {
       node: 'phases/subagent-dpt-evidence-extractor.md',
       id: 'subagent-dpt-evidence-extractor',
       roleKey: 'dpt-evidence-extractor',
+      kindRegistered: true,
       h1: '# Work-Unit Role: dpt-evidence-extractor - Topic-Specific Deepening',
     },
     {
       node: 'phases/subagent-dpt-topic-scout.md',
       id: 'subagent-dpt-topic-scout',
       roleKey: 'dpt-topic-scout',
+      kindRegistered: true,
       h1: '# Work-Unit Role: dpt-topic-scout - Gap-Fill Search',
     },
     {
       node: 'phases/subagent-dpt-claim-verifier.md',
       id: 'subagent-dpt-claim-verifier',
       roleKey: 'dpt-claim-verifier',
+      kindRegistered: false,
       h1: '# Work-Unit Role: dpt-claim-verifier - Critical Claim Verification',
     },
     {
       node: 'phases/subagent-dpt-source-diagnostic.md',
       id: 'subagent-dpt-source-diagnostic',
       roleKey: 'dpt-source-diagnostic',
+      kindRegistered: false,
       h1: '# Work-Unit Role: dpt-source-diagnostic - Source Quality Diagnostic',
     },
   ];
@@ -370,6 +376,9 @@ export function validateWorkflowPackage(opts = {}) {
     'shared/shared-subagent-protocol.md',
     'shared/shared-anti-cheating-rules.md',
   ];
+  const ACTOR_FETCH_GUIDANCE_REF = 'shared/shared-page-fetch-guidance';
+  const ACTOR_FETCH_GUIDANCE_NODE = `${ACTOR_FETCH_GUIDANCE_REF}.md`;
+  const registeredRoleKeys = new Set(Object.values(DEFAULT_KIND_CONTRACTS).map((contract) => contract.actor_policy.delegated_role_key));
 
   const VALID_SURFACES = ['phase-agent', 'work-unit-subagent-role', 'shared-guidance', 'shared-work-unit-subagent-protocol'];
   const VALID_SEARCH_POLICIES = ['no_search', 'capability_probe_only', 'work_unit_required', 'work_unit_required_for_new_evidence', 'subagent_performs_search'];
@@ -594,6 +603,24 @@ export function validateWorkflowPackage(opts = {}) {
       }
     }
 
+    const actorFetchDependencyCount = Array.isArray(fm.requires)
+      ? fm.requires.filter((dependency) => dependency === ACTOR_FETCH_GUIDANCE_REF).length
+      : 0;
+    if (actorFetchDependencyCount !== 1) {
+      issues.push({
+        class: 'role_spec_actor_fetch_dependency_invalid',
+        detail: `Role spec "${entry.node}" must directly require exactly one "${ACTOR_FETCH_GUIDANCE_REF}" guidance node`,
+        file: nodePath,
+      });
+    }
+    if (entry.kindRegistered !== registeredRoleKeys.has(entry.roleKey)) {
+      issues.push({
+        class: 'role_spec_kind_registration_mismatch',
+        detail: `Role spec "${entry.node}" registered-kind classification disagrees with the closed work-unit role registry`,
+        file: nodePath,
+      });
+    }
+
     if (!Array.isArray(fm.suggested_context) || fm.suggested_context.length !== 0) {
       issues.push({
         class: 'role_spec_suggested_context_invalid',
@@ -745,6 +772,37 @@ export function validateWorkflowPackage(opts = {}) {
         });
       }
     }
+  }
+
+  const actorFetchGuidancePath = join(nodesDir, ACTOR_FETCH_GUIDANCE_NODE);
+  if (!existsSync(actorFetchGuidancePath)) {
+    issues.push({
+      class: 'missing_actor_fetch_guidance',
+      detail: `Actor-delivered shared guidance "${ACTOR_FETCH_GUIDANCE_NODE}" is missing`,
+      file: actorFetchGuidancePath,
+    });
+  } else {
+    const fm = readNodeFrontmatter(actorFetchGuidancePath);
+    if (fm && (
+      fm.node_type !== 'shared'
+      || fm.id !== 'shared-page-fetch-guidance'
+      || fm.shared_scope !== 'subagent-fetch'
+      || fm.authority !== 'guidance-only'
+      || fm.actor_delivery !== 'required'
+    )) {
+      issues.push({
+        class: 'actor_fetch_guidance_identity_invalid',
+        detail: 'Actor-delivered shared fetch guidance must retain its closed shared identity and guidance-only classification',
+        file: actorFetchGuidancePath,
+      });
+    }
+  }
+  if ((manifest.shared || []).includes(ACTOR_FETCH_GUIDANCE_NODE)) {
+    issues.push({
+      class: 'actor_fetch_guidance_in_manifest_shared',
+      detail: 'Actor-delivered shared fetch guidance must remain a direct role dependency, not an always-loaded manifest shared node',
+      file: join(workflowsDir, 'manifest.json'),
+    });
   }
 
   // Check shared guidance
