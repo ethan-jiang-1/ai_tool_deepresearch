@@ -9,6 +9,10 @@
 | **影响面** | 所有 wave1 topic deepening sub-agent (dpt-evidence-extractor) |
 | **当前状态** | Active — v0.40 deterministic delivery wiring is implemented, but case-221's only native Autorun timed out before inspect/Gate/native completion |
 
+## 结案决定（2026-07-21）
+
+根因的 deterministic remediation 已由 archived `deliver-work-unit-role-contracts-to-actors`（v0.40）交付：actor 获得同源 role guidance 与 direct authoring projection，shared evaluator 仍是唯一 verdict owner。case-221 的 selected native completion authority 缺席，因此真实 first-return claim 仍为 `NOT_RUN`；该事实保留为 runtime observation pending，不伪称为 PASS，也不再为追逐它创建嵌套 test/runner work。
+
 ## 当前验证边界
 
 2026-07-21 case-221 的两个 real actor 都留下 `work_done`、predictive dry-submit PASS、formal submit PASS，以及代表 actor paired target 的 pre/post hash parity；但 Supervisor 在 native completion 前报告 `ERROR: agent_timeout`，没有 native inspect/Gate verdict。该 partial run 不能关闭 BUG-098，也不能替代 general real-actor first-return routed claim。BUG 保持 Active，直到该 claim 从其 selected native authority 得到 PASS。

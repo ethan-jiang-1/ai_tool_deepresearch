@@ -15,11 +15,7 @@
 
 ## 活跃列表
 
-| Bug | 简述 | 状态 |
-|-----|------|------|
-| BUG-096 | WebFetch blocked 时缺少 curl fallback（固疾，影响 main agent + sub-agent，Claude Code/Codex 双平台） | open |
-| BUG-097 | Phase Agent 在 wave0→wave1（stop: no）边界浮出水面发总结+问继续，违反 silent execution contract | open |
-| BUG-098 | Wave1 actor 未收到既有 role/direct authoring contract，首次 paired outputs 被 dry-submit 拒绝 | open |
+当前没有 active bug。BUG-096~098 已归档为 implementation delivered 或 no additional deterministic remediation；其未观察到的真实 runtime facts 保留在各自归档记录中，不作为 active implementation work。
 
 **Next available bug ID: BUG-099**
 

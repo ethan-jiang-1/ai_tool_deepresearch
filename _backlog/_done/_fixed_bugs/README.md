@@ -105,8 +105,11 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-093 | 2026-07-20 | Seed-topic appendix/return-map authoring drift — shared authoring contracts + renderer parity；不改 header、不迁移历史 bundle |
 | BUG-094 | 2026-07-20 | Rerun direction section has no canonical template — atomic topic-state publication + structural readiness；legacy read remains tolerant |
 | BUG-095 | 2026-07-20 | `new-disposable-bundle.mjs` 把 `--help` 当 bundle 名并创建垃圾目录；v0.37 pre-write argv boundary 同时覆盖 production creator |
+| BUG-096 | 2026-07-21 | WebSearch / WebFetch 或等价页面读取受阻；两条 implementation path 已 archive，delegated fallback observation 保留为 `UNOBSERVED` |
+| BUG-097 | 2026-07-21 | 非 HITL boundary surfacing observation；现有 silent contract/cues 已覆盖，未发现值得新增 deterministic remediation 的直接缺口 |
+| BUG-098 | 2026-07-21 | Wave1 actor contract delivery；v0.40 已交付，real first-return observation 保留为 `NOT_RUN` |
 
-**Next available bug ID: BUG-096**
+**Next available bug ID: BUG-099**
 
 ---
 

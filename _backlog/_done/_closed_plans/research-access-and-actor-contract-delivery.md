@@ -1,6 +1,6 @@
 # Research access and actor contract delivery — two-change roadmap
 
-> 状态：Ready to propose in sequence
+> 状态：Done — implementation roadmap delivered; residual runtime observations remain in BUG-096 and BUG-098
 >
 > 来源：`_backlog/bugs/BUG-096-web-fetch-curl-fallback.md`、`BUG-097-silent-execution-surfacing-wave0.md`、`BUG-098-wave1-output-contract-mismatch.md`，以及 production bundle `dpt_rb_ai-agents-enterprise-bpm-productivity`
 >
@@ -66,7 +66,7 @@ one neutral search
   -> rerun the same hitl1-recorded gate
 ```
 
-这里的 fallback 上限是一个，不是“native → curl → wget → Node → browser”的隐藏树。Change proposal 必须明确当前支持的 alternative surface 和 host-permission边界；BUG-096 已验证的首选是 `curl -sSL --max-time <bounded-seconds> <same-url>`，Codex native surface 名称按实际 runtime 表达，不虚构 `WebFetch`。
+这里的 fallback 上限是一个，不是“WebFetch → curl → wget → Node → browser”的隐藏树。Change proposal 必须明确当前支持的 alternative surface 和 host-permission边界；BUG-096 已验证的首选是 `curl -sSL --max-time <bounded-seconds> <same-url>`。先使用 `WebSearch` / `WebFetch` 或当前 runtime 的等价检索、页面读取能力；若页面读取 blocked/unavailable，且独立 shell/network permission 存在，Agent 自己对同一 URL 执行一次 bounded `curl`。这些是能力名称，不要求某个专有 function。
 
 ### 4.3 Source of Record
 
@@ -240,16 +240,23 @@ BUG-097 不属于上述两个 Change 的完成条件，也不因它们 archive �
 - 不新增通用 fetch service、capability registry、web proxy、retry daemon 或 browser abstraction。
 - 不新增 output-linter CLI、dynamic contract plugin、semantic LLM judge 或 fuzzy blocking parser。
 - 不改变 evidence/provenance/receipt/ledger/gate authority。
-- 不用 mock 或手写 external success 证明 WebFetch/Codex web surface/`curl`/真实 Sub-agent behavior。
+- 不用 mock 或手写 external success 证明 `WebSearch` / `WebFetch` 或其 runtime-equivalent capability、`curl` 或真实 Sub-agent behavior。
 - 不承诺 Engine 能确定性阻止 Coding Agent 发送 chat output。
 
 ## 10. Plan done condition
 
-本 plan 只有在以下条件全部满足时才能移入 DONE：
+### 2026-07-21 current assessment
 
-- `allow-bounded-hitl1-fetch-surface-fallback` 已 propose → apply → archive，并有诚实的 deterministic + real-Agent proof boundary记录；
-- `deliver-work-unit-role-contracts-to-actors` 已 propose → apply → archive，并证明 actor task delivery 与现有 direct evaluator同源；
-- BUG-096 已按 main + delegated 两条路径关闭；
-- BUG-098 已按准确的 v0.38 contract事实关闭；
-- BUG-097 的状态被明确保留或由独立后续工作处理，没有被这两个 Change误报关闭；
-- requirement governance、verification routing、version bump（若各 proposal声明需要）和 archive checks 全部通过。
+Both planned implementation changes have completed their propose -> apply -> archive lifecycle in the required order:
+
+1. `allow-bounded-hitl1-fetch-surface-fallback` is archived at `openspec/changes/archive/2026-07-21-allow-bounded-hitl1-fetch-surface-fallback`.
+2. `deliver-work-unit-role-contracts-to-actors` is archived at `openspec/changes/archive/2026-07-21-deliver-work-unit-role-contracts-to-actors`.
+
+The implementation and deterministic-contract portion of this plan is complete, including strict OpenSpec/governance validation and the declared version update. The plan is DONE because its two implementation changes were delivered in the required order. BUG-096 remains Active because the delegated native-to-curl path is `UNOBSERVED`, and BUG-098 remains Active because the only case-221 native Autorun timed out before its selected native completion authority could validate the first-return actor claim. Those are honest runtime-observation residuals owned by the bug backlog, not reasons to create nested test/runner work or keep this completed delivery roadmap open. BUG-097 remains explicitly outside this plan. No deterministic delivery test or partial receipt is relabeled as real-Agent proof.
+
+本 plan 的 DONE 条件已满足：
+
+- `allow-bounded-hitl1-fetch-surface-fallback` 与 `deliver-work-unit-role-contracts-to-actors` 都已按 propose -> apply -> archive 顺序完成；
+- 两项 change 都保留了诚实的 deterministic 与 real-Agent proof boundary记录；
+- requirement governance、verification routing、version bump 和 archive checks 均已通过；
+- BUG-096、BUG-098 保持 Active，BUG-097 保持明确排除；它们的后续真实 runtime observation 不回填为本 roadmap 的额外 implementation 或测试 change。

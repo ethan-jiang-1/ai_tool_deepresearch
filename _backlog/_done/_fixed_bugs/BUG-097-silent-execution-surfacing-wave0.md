@@ -8,6 +8,10 @@
 | **严重度** | P1 — 违反 silent execution contract（`stop: no`） |
 | **影响面** | main Phase Agent behavior |
 
+## 结案决定（2026-07-21）
+
+已接受的 silent execution contract、Gate continuation cue、loaded-node cue 与 autonomous header 已在真实 observation 前覆盖这个决策点。没有发现值得新增 Engine chat authority、interaction state、`do_not_summarize` 字段或额外 test controller 的直接缺口。该次 Agent surfacing 作为行为观察保留，但不再扩张为新的 implementation work；归档为 no additional deterministic remediation.
+
 ## 现象
 
 1. Wave0 gate pass（`check.passed: true`, `check.next: phases/phase-wave1.md`）
