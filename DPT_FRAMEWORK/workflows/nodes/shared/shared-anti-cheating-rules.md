@@ -78,7 +78,7 @@ Sub-agent 返回给 work-unit submit 的 `result.json` MUST 包含 `work_id`、`
 
 ### 15. 禁止绕过 work-unit provenance
 
-Delegated task MUST be claimed as a work unit and accepted through `operate-work-unit submit`. Phase Agent 不直接执行 WebSearch/WebFetch 来冒充 delegated output；不直接写 `rb_output_declarations.jsonl`；不手写 ledger row 冒充 completion。Gate coverage comes from submitted work-unit ledger rows plus cross-checks.
+Delegated task MUST be claimed as a work unit and accepted through `operate-work-unit submit`. Phase Agent 不直接执行 search 和 page fetch 来冒充 delegated output——delegated search/fetch 必须走 work-unit claim → Sub-agent → `shared-page-fetch-guidance.md` 的 per-URL access sequence；不直接写 `rb_output_declarations.jsonl`；不手写 ledger row 冒充 completion。Gate coverage comes from submitted work-unit ledger rows plus cross-checks.
 
 ### 16. 禁止伪造 reference authority；允许有 submitted backing 的 Phase-owned projection
 

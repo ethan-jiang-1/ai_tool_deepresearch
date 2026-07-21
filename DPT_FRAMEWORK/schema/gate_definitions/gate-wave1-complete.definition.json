@@ -104,7 +104,7 @@
       "target": "artifacts/wave1/{topic}/evidence-summary.md",
       "pattern": "\\[.+\\]\\(https?://[^)]+\\)",
       "negate": false,
-      "failure_message": "evidence-summary.md for {topic} must contain at least 1 source URL in Markdown link format. The work-unit sub-agent must do real WebSearch+WebFetch.",
+      "failure_message": "evidence-summary.md for {topic} must contain at least 1 source URL in Markdown link format. The work-unit sub-agent must do real search and page fetch following the delegated access sequence in shared-page-fetch-guidance.md.",
       "finding": { "source": "checker" }
     },
     {

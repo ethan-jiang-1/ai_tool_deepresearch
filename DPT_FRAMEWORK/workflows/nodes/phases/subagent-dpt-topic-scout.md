@@ -153,7 +153,7 @@ Read and follow `shared-page-fetch-guidance.md` for the one per-URL access seque
 - Do not update `finding-index.yaml`, `cross-topic-ledger.md`, `synthesis.md`, queue state, status, profile, or plan unless the work-unit task explicitly declares a bounded output path and schema.
 - Do not write or decide `reference/00-cross-*.md` as canonical consumer projection unless the task explicitly assigns a fetched-source reference output.
 - Do not run gates or decide pass/fail.
-- Do not skip WebSearch and jump straight to unsupported claims.
+- Do not skip search and page fetch and jump straight to unsupported claims.
 - Do not mark a finding resolved, pure-synthesis-eligible, or HITL2-ready; return bounded evidence only.
 - Do not directly append `rb_output_declarations.jsonl`; `operate-work-unit submit` is the delegated ledger boundary.
 
