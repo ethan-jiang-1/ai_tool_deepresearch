@@ -17,8 +17,10 @@
 
 | Bug | 简述 | 状态 |
 |-----|------|------|
+| BUG-096 | WebFetch blocked 时缺少 curl fallback（固疾，影响 main agent + sub-agent，Claude Code/Codex 双平台） | open |
+| BUG-097 | Phase Agent 在 wave0→wave1（stop: no）边界浮出水面发总结+问继续，违反 silent execution contract | open |
 
-**Next available bug ID: BUG-096**
+**Next available bug ID: BUG-098**
 
 ## 最近关闭 (2026-07-20)
 

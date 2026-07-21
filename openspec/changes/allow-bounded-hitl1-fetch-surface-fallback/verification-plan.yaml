@@ -1,0 +1,72 @@
+schema_version: verification-routing/v1
+change: allow-bounded-hitl1-fetch-surface-fallback
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The change adds no pure JavaScript evaluator, schema, parser or state function; extracting one would move an Agent-owned fetch sequence into Engine code without improving the proof boundary.
+  integration:
+    status: selected
+    rationale: Focused Node tests must verify the production HITL1 Markdown and existing case-115 wiring expose one search, only its first actual HTTP(S) result when eligible, at most one native attempt, at most one hardened same-URL curl fallback, host permission/URL safety boundaries, existing observation ownership and no evidence leakage or user command handoff.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No deterministic multi-phase transition, Gate implementation, schema or persisted-state chain changes; a JS-led workflow cannot prove native fetch or curl behavior.
+  agent_flow_e2e:
+    status: selected
+    rationale: Only a real authenticated Subject Agent using actual native and shell surfaces can prove it performs the bounded same-URL fallback, writes the existing observation and reruns the real Gate without a user co-runner or fabricated page content.
+claims:
+  - id: hitl1-bounded-fetch-guidance-contract
+    statement: The production HITL1 node retains stop:yes and capability_probe_only, permits exactly one neutral search and only its first actual HTTP(S) result when eligible without skipping to a second result, rejects localhost/loopback/literal private or link-local targets, ends after native real-content success, otherwise permits at most one same-URL curl invocation with HTTP-error failure, a 15-second timeout and HTTP(S)-only request/redirect protocols when independent host shell/network permission already allows it, writes only the existing research_access available/unavailable shape, keeps optional fetch_surface schema/Gate-compatible while requiring the current writer to name the successful surface, keeps probe bytes out of evidence surfaces, and exposes only a missing permission or external-environment boundary to the user.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/phase-hitl1-research-access.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl1-fetch-fallback-case115-wiring
+    statement: The existing manifest-registered case-115 and Subject 115 runner visibly bind one legal HITL1 setup, one independent real Subject, actual native search/fetch plus Bash tools, the same-URL native-failure-to-curl-success optional witness, retained transcript/profile/Gate/evidence-boundary facts, and honest branch-specific NOT_RUN conditions without another Subject identity, runner-authored fallback, profile success, page bytes or native completion.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/hitl1-fetch-fallback-agent-flow.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl1-general-research-access-agent-flow
+    statement: From one legal setup-only HITL1 bundle, an independent authenticated Subject Agent follows the current production bounded probe, writes exactly one existing research_access observation, runs the real hitl1-recorded Gate and either consumes the available Setup handoff or remains honestly unavailable, while probe URL/content never enters evidence, cache, artifact, work-unit or output-ledger surfaces; the general case-115 PASS does not imply the fallback branch ran.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wff_pre-research-repair/case-115-heavy-hitl1-research-access-probe.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
+  - id: hitl1-native-to-curl-fallback-agent-flow
+    statement: From one legal setup-only HITL1 bundle in an authenticated runtime where the first actual HTTP(S) result is eligible and its native fetch is absent, policy-blocked, unavailable or fails without real content while independently authorized curl can fetch it, complete retained Subject/direct bundle facts produce the playbook-owned hitl1-native-to-curl-fallback trace check proving one search, the same URL, no more than one native attempt and one curl attempt in that order, real curl page content, research_access available with fetch_surface curl, a real hitl1-recorded Gate pass and Setup handoff, no user command handoff, no second URL/tier and no probe evidence leakage; absence of that exact branch leaves this claim NOT_RUN without failing case-115's general required checks or substituting a fixture/narrated PASS.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wff_pre-research-repair/case-115-heavy-hitl1-research-access-probe.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

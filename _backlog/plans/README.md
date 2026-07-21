@@ -15,7 +15,9 @@
 
 ## 活跃列表
 
-（无）
+| Plan | 简述 | 状态 |
+|------|------|------|
+| `research-access-and-actor-contract-delivery` | 两个顺序 Change：先修 HITL1 bounded fetch fallback，再把 role/direct-output/fetch contract 送到真实 work-unit actor；联合关闭 BUG-096/098，BUG-097 保持独立真实-Agent诊断 | ready to propose |
 
 ---
 
