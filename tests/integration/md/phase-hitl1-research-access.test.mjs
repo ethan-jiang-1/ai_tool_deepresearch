@@ -20,9 +20,27 @@ describe('phase-hitl1 research-access contract', () => {
     const probeIndex = markdown.indexOf('### 3d. Research Access Probe');
     assert.ok(styleIndex >= 0 && probeIndex > styleIndex);
     assert.match(markdown, /至多一次 neutral capability-only search/);
-    assert.match(markdown, /第一个 usable HTTP\(S\) result/);
-    assert.match(markdown, /至多一次 fetch/);
-    assert.match(markdown, /不跳到第二个站点/);
+    assert.match(markdown, /第一个实际 HTTP\(S\).*不合格.*不得.*第二/);
+    assert.match(markdown, /至多一次 native fetch/);
+    assert.match(markdown, /native.*真实 page content.*不得.*curl/);
+  });
+
+  it('exposes one exact standalone same-URL curl fallback', () => {
+    const command = "curl --fail --silent --show-error --location --max-time 15 --max-redirs 5 --proto '=http,https' --proto-redir '=http,https' --globoff -- '<same-url>'";
+    assert.ok(markdown.includes(command), 'missing exact bounded curl fallback');
+    assert.match(markdown, /同一 URL/);
+    assert.match(markdown, /single-quoted|单引号/);
+    assert.match(markdown, /prefix assignment|pipe|redirection|command substitution|shell chaining|前缀赋值|管道|重定向|命令替换|命令串联/);
+    assert.match(markdown, /raw single quote|ASCII whitespace\/control|URL credentials|原始单引号|ASCII 空白\/控制字符|URL 凭据/);
+    assert.match(markdown, /localhost.*loopback.*private.*link-local|localhost.*回环.*私有.*链路本地/);
+  });
+
+  it('keeps fallback permission and observation ownership explicit', () => {
+    assert.match(markdown, /native.*failure.*(?:does not|不).*authoriz|native.*失败.*不.*授权/i);
+    assert.match(markdown, /independently configured host shell\/network permission|独立配置.*host shell\/network permission/);
+    assert.match(markdown, /(?:must not|不得).*ask the user to run `curl`|不得.*用户.*运行 `curl`/i);
+    assert.match(markdown, /fallback.*fetch_surface: curl|curl.*fetch_surface: curl/i);
+    assert.match(markdown, /fetch_surface.*optional.*(?:Gate|gate).*not.*enforce|fetch_surface.*可选.*Gate.*不.*强制/i);
   });
 
   it('exposes exact available and unavailable payload branches', () => {

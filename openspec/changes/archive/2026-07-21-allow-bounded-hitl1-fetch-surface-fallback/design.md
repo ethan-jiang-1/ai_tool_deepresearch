@@ -45,14 +45,16 @@ The closed v1 fallback is one shell invocation:
 ```text
 curl --fail --silent --show-error --location \
   --max-time 15 \
+  --max-redirs 5 \
   --proto '=http,https' \
   --proto-redir '=http,https' \
-  -- "<same-url>"
+  --globoff \
+  -- '<same-url>'
 ```
 
-The URL must be passed as one quoted argument. `--fail` makes HTTP 4xx/5xx non-success, the fixed timeout bounds the external action, `--` closes option parsing, and both protocol flags keep the initial request and redirects on HTTP(S). A native success terminates the sequence, and the Agent never tries another URL or another tier.
+The URL is passed as one single-quoted argument. Double quotes are insufficient because command substitution remains active inside them. Eligibility therefore excludes a raw single quote, ASCII whitespace/control characters and URL credentials rather than adding a general shell escaper. `--fail` makes HTTP 4xx/5xx non-success, the fixed timeout and five-redirect ceiling bound the external action, `--` closes option parsing, `--globoff` prevents one URL string from expanding into multiple curl transfers, and both protocol flags keep the initial request and redirects on HTTP(S). The fallback is exactly this standalone command: no prefix assignment, pipe, redirection, command substitution, shell chaining or trailing command. A native success terminates the sequence, and the Agent never tries another URL or another tier.
 
-The URL must be the first actual HTTP(S) result returned by the one search, not a user/model-invented or substituted URL. If that first result is ineligible, the Agent records the no-eligible-result branch rather than selecting a later result. The Agent must not invoke the fallback for `localhost`, loopback, or literal private/link-local targets. Redirects remain HTTP(S)-only and the host's network policy remains authoritative; this Change does not claim Agent prose is an SSRF validator or add an Engine fetch client.
+The URL must be the first actual HTTP(S) result returned by the one search, not a user/model-invented or substituted URL. If that first result is ineligible, the Agent records the no-eligible-result branch rather than selecting a later result. The Agent must not invoke the fallback for URL credentials, `localhost`/`.localhost`, loopback, or literal private/link-local targets. Redirects remain HTTP(S)-only and the host's DNS/network policy remains authoritative for resolved and redirected destinations; this Change does not claim Agent prose is an SSRF validator or add an Engine fetch client.
 
 Alternatives rejected:
 
@@ -92,11 +94,21 @@ No `human-directed` flag, override, permission token or additional HITL state is
 
 ### D5. Verification preserves proof distance
 
-Focused integration tests inspect the production Markdown and its accepted owner for the closed sequence, same URL, attempt cap, observation shape, evidence exclusion and user/Agent responsibility. They do not invoke the network and cannot prove fallback works.
+Focused integration tests inspect the production Markdown and its accepted owner for the closed sequence, exact standalone curl grammar, same URL, attempt cap, observation shape, evidence exclusion and user/Agent responsibility. A second focused integration test invokes the existing transcript observer over synthetic public `tool_use`/`tool_result` events and direct bundle facts, covering deduplication, ordering, exact command matching, branch omission and fail-closed ambiguity. Neither test invokes the network or proves fallback works.
 
-Existing case-115 is updated from “at most one fetch” to the new bounded production contract and remains the only Subject identity and playbook. Its existing required checks continue to prove an honest available or unavailable real-Subject branch. An optional branch-specific witness derived from the same retained Subject transcript/tool events proves fallback only when it shows: the same URL, native absence/block/failure, one actual `curl` invocation returning real content, `fetch_surface: curl`, a real Gate pass and no probe evidence leakage. When all facts are present, the playbook appends a passed `hitl1-native-to-curl-fallback` check to the same bundle-root `rb_trace.jsonl`; that trace check is the fallback claim's native authority. If the selected authenticated runtime does not exhibit native-failure-plus-curl-success, the playbook does not fabricate that check and only the fallback verification claim remains `NOT_RUN` in `implementation-evidence.md`; case-115's general required-check result remains independently reportable.
+Existing case-115 is updated from “at most one fetch” to the new bounded production contract and remains the only Subject identity and playbook. It delegates deterministic observation to the existing `observe-iterative-interaction-case.mjs`, extended with a case-115 branch, instead of embedding a second parser in Markdown. Its existing required checks continue to prove an honest available or unavailable real-Subject branch and are strengthened to consume normalized public tool events rather than profile state alone.
 
-The deterministic verdict judge may parse bounded role/event-labeled facts from the retained case-115 transcript, but the runner/playbook may not execute fallback on the Subject's behalf, write the profile, fabricate page bytes, or mark fallback PASS from native success. The optional check is appended only from complete direct facts and is never listed as a universal required check; its absence means no fallback verdict, not failure of the general case. Reusing one observation avoids duplicate setup, runner configuration, manifest registration and verdict plumbing without weakening proof distance.
+The observer parses complete JSONL events, deduplicates tool calls by stable `tool_use.id`, binds results by `tool_use_id`, and fails closed on missing/conflicting identities. For the current Claude Subject runner it reads the structured `Links` array from the one `WebSearch` result, requires the first URL to equal the `WebFetch` input, then recognizes only the exact standalone curl grammar above on that same URL after a failed native result. It ignores assistant prose, streaming deltas and private reasoning. If required public facts are missing, malformed or conflicting, the observer reuses its existing exit-3 `NOT RUN` artifact protocol; case-115 catches that outcome and calls the native finalizer with the exact reason rather than crashing into Supervisor `ERROR` or guessing from profile prose.
+
+An optional branch-specific witness proves only the observed Claude runtime behavior. It requires one failed `WebFetch`, one exact curl `Bash` call in order, a non-error/non-empty curl tool result that the Subject records as requested page content, `fetch_surface: curl`, a real Gate pass and no probe evidence leakage. The deterministic observer does not use HTML/title heuristics to re-judge semantic page quality. When all facts are present, it appends a passed `hitl1-native-to-curl-fallback` check to the same bundle-root `rb_trace.jsonl`; that trace check is the fallback claim's native authority. If the runtime does not exhibit the branch, the observer omits the optional check and only the fallback verification claim remains `NOT_RUN` in `implementation-evidence.md`; case-115's general required-check result remains independently reportable.
+
+The observer may consume only bounded public event/profile/Gate/handoff/evidence facts; the runner/playbook/observer may not execute fallback on the Subject's behalf, write the profile, fabricate page bytes, or mark fallback PASS from native success. It uses three explicit outcomes for the optional witness:
+
+- no curl call, or one exact curl call with an error/empty result: omit the optional success check; the general unavailable branch may still PASS;
+- curl call with wrong order, URL, grammar or count: append the optional check failed because the observed behavior contradicts the bounded contract;
+- one correctly ordered exact curl call with a non-error/non-empty result: append the optional check passed only when profile/Gate/handoff/evidence facts also agree, otherwise append it failed.
+
+A case-level PASS without the optional check does not become a fallback PASS; `implementation-evidence.md` records the native case outcome and the claim-level `NOT_RUN` separately without relabeling either. Reusing one observation avoids duplicate setup, runner configuration, manifest registration and verdict plumbing without weakening proof distance.
 
 ### D6. Versioning and compatibility
 
@@ -105,18 +117,21 @@ The behavior changes from one fetch invocation to at most two same-URL invocatio
 ## Risks / Trade-offs
 
 - [Risk] `curl` can reach hosts that the native tool blocks for policy reasons -> Mitigation: native failure grants no permission; invoke only through independently configured host shell/network authority, reject localhost/loopback/literal private or link-local targets, constrain requests and redirects to HTTP(S), preserve the fixed timeout, and record honest unavailable when any boundary denies it.
+- [Risk] An external URL is interpolated into a shell command -> Mitigation: accept only a narrow URL grammar with no raw quote/whitespace/control/credentials, use one single-quoted argument, disable curl globbing and forbid all surrounding shell syntax.
 - [Risk] An HTTP error or challenge shell is mistaken for usable content -> Mitigation: preserve the existing requirement that only the requested real page content counts; command exit success, status text, empty output, search snippets and error/challenge bodies alone do not establish available.
 - [Risk] The fallback becomes a seed for more tiers -> Mitigation: spec closes v1 to exactly native plus one `curl` invocation on the same URL; any additional tier requires a later OpenSpec change and complexity proof.
 - [Risk] Failure reason becomes hidden attempt history -> Mitigation: allow one bounded human-readable reason only; no parser, array, retry owner or Gate behavior consumes it.
 - [Risk] The real fallback branch is environment-dependent -> Mitigation: derive an optional witness from case-115 and mark only that claim `NOT_RUN` when the exact condition is absent; keep production BUG-096 as historical motivation, not post-change proof.
+- [Risk] The current real Subject runner is Claude-specific -> Mitigation: scope its behavioral PASS to Claude `WebSearch`/`WebFetch` + Bash; deterministic production guidance remains runtime-neutral, while Codex `web_search.open_page` behavior stays an explicit unobserved residual rather than an inferred PASS.
+- [Risk] A deterministic observer cannot establish semantic page identity from arbitrary HTML -> Mitigation: preserve raw Subject tool output, require non-error/non-empty bytes plus the Subject's recorded judgment, forbid heuristic re-judging and state this proof boundary in implementation evidence.
 - [Trade-off] A site blocked by both surfaces leaves HITL1 unavailable even if another search result might work -> Accepted: one URL keeps this a capability probe rather than evidence search and prevents unbounded retries.
 
 ## Migration Plan
 
 1. Before target edits, run verification-routing plan validation and confirm the accepted one-fetch baseline fails the new focused assertions.
 2. Update `phase-hitl1.md` and the focused Markdown integration contract together; do not modify schema or Gate.
-3. Update case-115 production wording/runner boundary and focused assertions so its retained transcript can optionally witness the exact fallback branch; do not add another playbook, Subject identity or manifest entry.
-4. Run focused deterministic tests, then run case-115 in the authenticated runtime; report its general result independently and mark the fallback claim PASS only when the transcript observes native-block/curl-success, otherwise `NOT_RUN`.
+3. Extend the existing observer with a focused, tested case-115 branch; then update the case-115 playbook/Subject boundary to call it without adding another playbook, Subject identity or manifest entry.
+4. Run focused deterministic tests, then run case-115 in the authenticated Claude runtime; report its general native result independently and mark the fallback claim PASS only when the optional trace check passes, FAIL only when that check exists and fails, otherwise `NOT_RUN`.
 5. Update `CHANGELOG.md` and `DPT_FRAMEWORK/RUN.md` to v0.39, run governance/routing/OpenSpec validation, then archive.
 
 Rollback is a documentation/test/experiment revert to the one-fetch contract. No runtime migration or state rollback is required because persisted schemas and Gate semantics do not change.
@@ -127,13 +142,14 @@ Rollback is a documentation/test/experiment revert to the one-fetch contract. No
 |---|---|---|
 | `DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl1.md` | modify | Replace one-fetch prose with one native + one same-URL `curl` sequence; no new owner |
 | `tests/integration/md/phase-hitl1-research-access.test.mjs` | modify | Deterministic contract assertions only |
-| `experiments_playbook/exp_wff_pre-research-repair/case-115-heavy-hitl1-research-access-probe.md` | modify | Align general real probe case with production contract |
+| `experiments_playbook/exp_wff_pre-research-repair/case-115-heavy-hitl1-research-access-probe.md` | modify | Align general real probe case, route hash/verdict through the observer and translate observer exit 3 into native NOT_RUN |
 | `experiments_env/shared/run-iterative-interaction-subject.mjs` | modify | Update existing Subject 115 prompt/boundary only; no new identity, hidden fallback or verdict |
-| `tests/integration/md/hitl1-fetch-fallback-agent-flow.test.mjs` | add | Assert existing manifest registration, case/runner boundary and optional transcript-to-trace witness without re-judging external behavior |
+| `experiments_env/shared/observe-iterative-interaction-case.mjs` | modify | Add tested case-115 public-event normalization and trace-check projection; verification only, no runtime authority |
+| `tests/integration/experiments_env/hitl1-fetch-fallback-observer.test.mjs` | add | Exercise observer fail-closed behavior and assert existing case/runner/manifest wiring without external calls |
 | `CHANGELOG.md`, `DPT_FRAMEWORK/RUN.md` | modify | v0.39 release projection |
 
-Added control surfaces: none. Removed/avoided surfaces: implicit user `curl` co-runner, generic alternative-method guesswork, duplicate playbook/Subject/manifest/verdict plumbing, additional profile fields, retry state, fetch controller and second Gate.
+Added runtime control surfaces: none. The existing experiment observer gains one verification-only branch. Removed/avoided surfaces: unsafe double-quoted URL interpolation, embedded duplicate playbook parser, implicit user `curl` co-runner, generic alternative-method guesswork, duplicate playbook/Subject/manifest/verdict plumbing, additional profile fields, retry state, fetch controller and second Gate.
 
 ## Open Questions
 
-无。第一个 Change 有意只允许 shell `curl` 这一层 fallback；delegated actor delivery 仍由 `_backlog/plans/research-access-and-actor-contract-delivery.md` 中的第二个 Change 处理。
+无阻塞设计问题。第一个 Change 有意只允许 shell `curl` 这一层 fallback；delegated actor delivery 仍由 `_backlog/plans/research-access-and-actor-contract-delivery.md` 中的第二个 Change 处理。Codex native behavior 与 arbitrary response semantic identity 是明确 residual risk，不是本 Change 的伪造证明目标。

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @impl PRP-002, PRP-005
 
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
@@ -12,8 +13,8 @@ import { recordCheck } from './wff-playbook-utils.mjs';
 const [caseId, action, ...rest] = process.argv.slice(2);
 const bundleIndex = rest.indexOf('--bundle');
 const bundle = bundleIndex >= 0 ? rest[bundleIndex + 1] : null;
-if (!['711', '712', '713'].includes(caseId) || !action || !bundle) {
-  console.error('Usage: node experiments_env/shared/observe-iterative-interaction-case.mjs <711|712|713> <hash|snapshot|transition-final|verdict> --bundle <path> [--label A] [--transcript <path>]');
+if (!['115', '711', '712', '713'].includes(caseId) || !action || !bundle) {
+  console.error('Usage: node experiments_env/shared/observe-iterative-interaction-case.mjs <115|711|712|713> <hash|snapshot|transition-final|verdict> --bundle <path> [--label A] [--transcript <path>]');
   process.exit(2);
 }
 
@@ -83,6 +84,90 @@ function toolFacts(events) {
   }
   visit(events);
   return { names, serialized };
+}
+
+function publicToolExchanges(events) {
+  const uses = new Map();
+  const results = new Map();
+  for (const [eventIndex, event] of events.entries()) {
+    if (!['assistant', 'user'].includes(event?.type)) continue;
+    const blocks = event.message?.content;
+    if (!Array.isArray(blocks)) continue;
+    for (const [blockIndex, block] of blocks.entries()) {
+      const index = eventIndex + (blockIndex / 1000);
+      if (block?.type === 'tool_use') {
+        if (typeof block.id !== 'string' || !block.id || typeof block.name !== 'string' || !block.name || !block.input || typeof block.input !== 'object') {
+          notRun('malformed public tool_use identity or payload');
+        }
+        const normalized = { name: block.name, input: block.input };
+        const previous = uses.get(block.id);
+        if (previous && JSON.stringify(previous.value) !== JSON.stringify(normalized)) {
+          notRun(`conflicting public tool_use identity: ${block.id}`);
+        }
+        if (!previous) uses.set(block.id, { id: block.id, index, value: normalized });
+      }
+      if (block?.type === 'tool_result') {
+        if (typeof block.tool_use_id !== 'string' || !block.tool_use_id || typeof block.content !== 'string') {
+          notRun('malformed public tool_result identity or payload');
+        }
+        const normalized = { content: block.content, is_error: block.is_error === true };
+        const previous = results.get(block.tool_use_id);
+        if (previous && JSON.stringify(previous.value) !== JSON.stringify(normalized)) {
+          notRun(`conflicting public tool_result identity: ${block.tool_use_id}`);
+        }
+        if (!previous) results.set(block.tool_use_id, { id: block.tool_use_id, index, value: normalized });
+      }
+    }
+  }
+  for (const use of uses.values()) {
+    if (['WebSearch', 'WebFetch', 'Bash'].includes(use.value.name) && !results.has(use.id)) {
+      notRun(`missing public tool_result for ${use.value.name} identity ${use.id}`);
+    }
+  }
+  return {
+    uses: [...uses.values()].sort((a, b) => a.index - b.index),
+    resultFor: (use) => results.get(use.id),
+  };
+}
+
+function structuredSearchLinks(content) {
+  const marker = 'Links: ';
+  const start = content.indexOf(marker);
+  if (start < 0) notRun('WebSearch result is missing the public structured Links payload');
+  const row = content.slice(start + marker.length).split(/\r?\n/, 1)[0].trim();
+  let links;
+  try { links = JSON.parse(row); } catch { notRun('WebSearch public Links payload is malformed'); }
+  if (!Array.isArray(links) || links.some((entry) => !entry || typeof entry.url !== 'string')) {
+    notRun('WebSearch public Links payload has an unsupported shape');
+  }
+  return links;
+}
+
+function eligibleProbeUrl(value) {
+  if (typeof value !== 'string' || /['\u0000-\u0020\u007f]/.test(value)) return false;
+  let url;
+  try { url = new URL(value); } catch { return false; }
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return false;
+  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (host === 'localhost' || host.endsWith('.localhost') || host === '::1' || host === '0:0:0:0:0:0:0:1') return false;
+  if (host.includes(':') && /^(?:fc|fd|fe[89ab])/i.test(host)) return false;
+  const octets = host.split('.').map(Number);
+  if (octets.length === 4 && octets.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)) {
+    if (octets[0] === 0 || octets[0] === 10 || octets[0] === 127 || (octets[0] === 169 && octets[1] === 254)
+      || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) || (octets[0] === 192 && octets[1] === 168)) return false;
+  }
+  return true;
+}
+
+const CURL_PREFIX = "curl --fail --silent --show-error --location --max-time 15 --max-redirs 5 --proto '=http,https' --proto-redir '=http,https' --globoff -- '";
+function exactCurlUrl(command) {
+  if (typeof command !== 'string' || !command.startsWith(CURL_PREFIX) || !command.endsWith("'")) return null;
+  const url = command.slice(CURL_PREFIX.length, -1);
+  return eligibleProbeUrl(url) ? url : null;
+}
+
+function isCurlAttempt(command) {
+  return typeof command === 'string' && /(^|[\s;&|])curl\s+--/.test(command);
 }
 
 function traceEvents() {
@@ -199,6 +284,84 @@ function record711(events) {
   recordCheck(tracePath, { gate: 'case-711-real-probe-and-gate-branch', passed: available ? tools.names.includes('WebSearch') && tools.names.includes('WebFetch') && gatePass && setupLoad : unavailable && gateFail && !setupLoad && /(WebSearch|search|unavailable|blocked|missing)/i.test(tools.serialized + afterText), detail: `available=${available} unavailable=${unavailable} gatePass=${gatePass} gateFail=${gateFail} setupLoad=${setupLoad}` });
 }
 
+function record115(events) {
+  const tools = publicToolExchanges(events);
+  const searchUses = tools.uses.filter((use) => use.value.name === 'WebSearch');
+  const nativeUses = tools.uses.filter((use) => use.value.name === 'WebFetch');
+  const curlUses = tools.uses.filter((use) => use.value.name === 'Bash' && isCurlAttempt(use.value.input.command));
+  const search = searchUses[0];
+  if (!search) notRun('missing public WebSearch tool_use');
+  const searchResult = tools.resultFor(search);
+  if (!searchResult) notRun('missing public WebSearch tool_result');
+  const links = searchResult.value.is_error ? [] : structuredSearchLinks(searchResult.value.content);
+  const firstSearchUrl = links[0]?.url ?? null;
+  const firstUrl = eligibleProbeUrl(firstSearchUrl) ? firstSearchUrl : null;
+
+  const native = nativeUses[0];
+  const nativeResult = native ? tools.resultFor(native) : null;
+  if (native && !nativeResult) notRun('missing public WebFetch tool_result');
+  const curl = curlUses[0];
+  const curlResult = curl ? tools.resultFor(curl) : null;
+  if (curl && !curlResult) notRun('missing public curl Bash tool_result');
+
+  const profile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'));
+  const access = profile.research_access;
+  const trace = traceEvents();
+  const attempt = trace.filter((event) => event.event === 'gate_attempt' && event.gate === 'hitl1-recorded').at(-1);
+  const setupLoad = trace.some((event) => event.event === 'load_complete' && event.entry === 'phases/phase-setup.md' && event.handoff_source_gate === 'hitl1-recorded');
+  const walk = (path) => !existsSync(path) ? [] : statSync(path).isFile() ? [path] : readdirSync(path).flatMap((name) => walk(join(path, name)));
+  const surfaces = ['reference', '_cache', 'artifacts', '_work_units', 'rb_output_declarations.jsonl'];
+  const leaks = surfaces.flatMap((surface) => walk(join(bundle, surface)))
+    .filter((file) => access?.result_url && readFileSync(file, 'utf8').includes(access.result_url))
+    .map((file) => relative(bundle, file));
+
+  const oneSearch = searchUses.length === 1;
+  const oneNative = nativeUses.length === 1;
+  const searchBeforeNative = oneNative && search.index < native.index && searchResult.index < native.index;
+  const nativeUrl = native?.value.input.url;
+  const nativeSameUrl = firstUrl && nativeUrl === firstUrl;
+  const nativeSucceeded = Boolean(nativeResult && !nativeResult.value.is_error && nativeResult.value.content.trim());
+  const nativeFailed = Boolean(nativeResult && (nativeResult.value.is_error || !nativeResult.value.content.trim()));
+  const curlCommandUrl = curl ? exactCurlUrl(curl.value.input.command) : null;
+  const curlStructure = curlUses.length === 1 && nativeFailed && nativeSameUrl && searchBeforeNative
+    && nativeResult.index < curl.index && curlCommandUrl === firstUrl;
+  const curlSucceeded = Boolean(curlResult && !curlResult.value.is_error && curlResult.value.content.trim());
+  const curlFailed = Boolean(curlResult && (curlResult.value.is_error || !curlResult.value.content.trim()));
+
+  const availableNative = access?.status === 'available' && access.fetch_outcome === 'success' && access.result_url === firstUrl
+    && typeof access.fetch_surface === 'string' && access.fetch_surface !== 'curl'
+    && oneSearch && oneNative && searchBeforeNative && nativeSameUrl && nativeSucceeded && curlUses.length === 0
+    && attempt?.passed === true && setupLoad;
+  const availableCurl = access?.status === 'available' && access.fetch_outcome === 'success' && access.result_url === firstUrl
+    && access.fetch_surface === 'curl' && oneSearch && oneNative && curlStructure && curlSucceeded
+    && attempt?.passed === true && setupLoad;
+  const unavailableSearch = access?.status === 'unavailable' && access.reason && access.fetch_outcome === 'not_attempted'
+    && access.result_url === undefined && oneSearch && (searchResult.value.is_error || !firstUrl)
+    && nativeUses.length === 0 && curlUses.length === 0
+    && attempt?.passed === false && !setupLoad;
+  const unavailableCurl = access?.status === 'unavailable' && access.reason && access.fetch_outcome !== 'success'
+    && access.result_url === firstUrl && oneSearch && oneNative && curlStructure && curlFailed
+    && attempt?.passed === false && !setupLoad;
+  const unavailableNoCurl = access?.status === 'unavailable' && access.reason && access.fetch_outcome !== 'success'
+    && access.result_url === firstUrl && oneSearch && oneNative && searchBeforeNative && nativeSameUrl && nativeFailed && curlUses.length === 0
+    && attempt?.passed === false && !setupLoad;
+
+  recordCheck(tracePath, {
+    gate: 'hitl1-research-access-probe',
+    passed: Boolean(availableNative || availableCurl || unavailableSearch || unavailableCurl || unavailableNoCurl),
+    detail: JSON.stringify({ availableNative, availableCurl, unavailableSearch, unavailableCurl, unavailableNoCurl }),
+  });
+  recordCheck(tracePath, { gate: 'probe-evidence-boundary', passed: leaks.length === 0, detail: JSON.stringify(leaks) });
+
+  if (curlUses.length > 0) {
+    if (!curlStructure) {
+      recordCheck(tracePath, { gate: 'hitl1-native-to-curl-fallback', passed: false, detail: 'curl order, count, grammar, or same-URL contract mismatch' });
+    } else if (curlSucceeded) {
+      recordCheck(tracePath, { gate: 'hitl1-native-to-curl-fallback', passed: availableCurl && leaks.length === 0, detail: JSON.stringify({ availableCurl, leaks }) });
+    }
+  }
+}
+
 function record712(events) {
   const marker = userMarkerIndexes(events, '资本约束这部分还不够，再补一下');
   const split = marker[0] ?? events.length;
@@ -235,13 +398,14 @@ function record713() {
 }
 
 function verdict() {
-  if (caseId === '711' || caseId === '712') {
+  if (caseId === '115' || caseId === '711' || caseId === '712') {
     const path = option('--transcript') || join(bundle, `case-${caseId}-transcript.jsonl`);
     const events = transcriptEvents(path);
     if (!events) {
       notRun(`missing independent subject transcript: ${path}`);
     }
-    if (caseId === '711') record711(events);
+    if (caseId === '115') record115(events);
+    else if (caseId === '711') record711(events);
     else record712(events);
   } else {
     const readiness = join(bundle, 'case-713-readiness-transcript.jsonl');

@@ -41,9 +41,9 @@ const SUBJECTS = {
     bundlePrefix: 'dpt_disp_case-115_',
     transcript: 'case-115-subject-transcript.jsonl',
     system: 'You are the independent Subject Agent for case 115. Work only in the exact bundle path provided by the runner. Load the current production HITL1 surface and direct bundle facts, then execute only that current phase boundary.',
-    messages: ['请执行当前 HITL1 的最小真实 research-access probe，并按当前 production surface 记录直接观察、运行同一 Gate；完成 immediate handoff 或诚实的 unavailable 分支后停止。'],
+    messages: ['请执行当前 HITL1 的最小真实 research-access probe：一次 neutral search，只处理第一条满足当前 eligible contract 的实际 HTTP(S) 结果，先用 native WebFetch；只有 native 未返回真实 page content 且当前 host permission 已独立允许时，才对同一 URL 执行 production surface 指定的唯一 exact standalone curl fallback。按当前 production surface 写一条直接观察并运行同一 Gate；完成 immediate handoff 或诚实的 unavailable 分支后停止。'],
     tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
-    boundary: 'Perform one bounded dynamic search and at most one fetch of the first usable result. Do not turn probe bytes into research evidence. Stop after the HITL1 Gate and its immediate legal handoff or honest unavailable failure.',
+    boundary: 'Use one neutral search and only its first actual eligible HTTP(S) result: at most one native WebFetch, then only after no real content and with independently sufficient host permission at most one exact standalone same-URL curl fallback from the loaded production surface. Never select a second result or fallback tier, and do not hand an already authorized command to the user. Do not turn probe URL or bytes into research evidence. Stop after the same HITL1 Gate and its immediate legal handoff or honest unavailable failure.',
   },
   '164': {
     bundlePrefix: 'dpt_disp_case-164_',

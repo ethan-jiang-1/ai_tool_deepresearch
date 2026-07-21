@@ -2,7 +2,7 @@
 schema: command-experiment/v2
 experiment: wff-pre-research-repair
 case: case-115-heavy-hitl1-research-access-probe
-case_goal: "An independent real Subject Agent performs one bounded dynamic HITL1 search/fetch probe, records research_access, and reaches the honest available-pass or unavailable-fail-closed Gate branch."
+case_goal: "An independent real Subject Agent performs the bounded native-first, same-URL HITL1 fetch sequence, records one research_access observation, and reaches the honest available-pass or unavailable-fail-closed Gate branch."
 verdict_mode: all
 required_checks: [hitl1-research-access-probe, probe-evidence-boundary]
 bundle_roles: [verdict]
@@ -17,7 +17,7 @@ runtime: real_disposable_bundle
 external_calls: real
 verdict_judge: deterministic
 req: SCO-002, PRP-002, PRP-005, PRG-002
-not_run_if: "The independent authenticated Subject Agent runtime is unavailable."
+not_run_if: "The independent authenticated Subject Agent runtime or required stable-ID public tool-use/result facts are unavailable to the deterministic observer."
 ---
 
 <!-- @impl EXA-003, EXA-005, EXA-006, EXA-007, EXA-008, PLR-003 -->
@@ -28,7 +28,9 @@ not_run_if: "The independent authenticated Subject Agent runtime is unavailable.
 
 The Playbook Agent prepares fixed HITL1 choices at a legal HITL1 entry. Only the independent Subject Agent may perform the actual search/fetch probe, write `rb_profile.yaml#/research_access`, run the HITL1 Gate, and consume an available-branch handoff. The Playbook Agent must not run the probe itself or fabricate an available/unavailable observation.
 
-Both honest Subject branches satisfy the actor claim: available means one dynamic search, one fetch of the first usable HTTP(S) result, profile `available`, Gate pass and Setup handoff; unavailable means the attempted tool is missing/blocked/fails or returns no usable URL, profile `unavailable`, Gate fail and no Setup handoff. Probe bytes must not enter research evidence surfaces.
+Both honest Subject branches satisfy the general actor claim. The Subject performs one neutral search and processes only its first actual eligible HTTP(S) result: native `WebFetch` first, then only when native returns no real page content and existing host permission independently allows it, at most one exact standalone same-URL `curl` fallback from the production surface. Native success ends the sequence; no second result or fallback tier is allowed. Available means the successful surface is recorded in profile `available`, the same Gate passes and Setup handoff is consumed. Unavailable means the bounded sequence cannot legally return real content, profile `unavailable`, the same Gate fails and no Setup handoff occurs. Probe URL and bytes must not enter research evidence surfaces.
+
+The optional fallback witness is separate from that general claim and applies only when the retained public Subject events expose the complete native-failure-to-curl branch. This case observes the configured Claude Subject runtime; it does not prove Codex behavior, and the deterministic observer does not re-judge arbitrary page bytes for semantic identity.
 
 ## Step 1 - Prepare and register legal HITL1 setup
 
@@ -74,29 +76,24 @@ if [ "$SUBJECT_STATUS" -ne 0 ]; then
 fi
 ```
 
-## Step 3 - Observe the Subject-owned branch and evidence boundary
+## Step 3 - Hash and observe the Subject-owned branch
 
 ```bash
 B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 if [ ! -f "$B/case-115-subject-unavailable.txt" ]; then
-node --input-type=module - "$B" <<'JS'
-import { existsSync, readdirSync, readFileSync, statSync, appendFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
-import { parse as parseYaml } from 'yaml';
-const [bundle] = process.argv.slice(2);
-const profile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml')));
-const events = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse);
-const access = profile.research_access;
-const attempt = events.filter((e) => e.event === 'gate_attempt' && e.gate === 'hitl1-recorded').at(-1);
-const setupLoad = events.some((e) => e.event === 'load_complete' && e.entry === 'phases/phase-setup.md' && e.handoff_source_gate === 'hitl1-recorded');
-const available = access?.status === 'available' && access.fetch_outcome === 'success' && /^https?:\/\//.test(access.result_url || '') && attempt?.passed === true && setupLoad;
-const unavailable = access?.status === 'unavailable' && access.reason && access.fetch_outcome !== 'success' && attempt?.passed === false && !setupLoad;
-const walk = (path) => !existsSync(path) ? [] : statSync(path).isFile() ? [path] : readdirSync(path).flatMap((name) => walk(join(path, name)));
-const surfaces = ['reference', '_cache', 'artifacts', '_work_units', 'rb_output_declarations.jsonl'];
-const leaks = surfaces.flatMap((surface) => walk(join(bundle, surface))).filter((file) => access?.result_url && readFileSync(file, 'utf8').includes(access.result_url)).map((file) => relative(bundle, file));
-for (const [gate, passed] of [['hitl1-research-access-probe', Boolean(available || unavailable)], ['probe-evidence-boundary', leaks.length === 0]]) appendFileSync(join(bundle, 'rb_trace.jsonl'), `${JSON.stringify({ ts: new Date().toISOString(), event: 'check', source: 'playbook', gate, passed, expected: true })}\n`);
-if (!(available || unavailable) || leaks.length) process.exit(1);
-JS
+  set +e
+  node experiments_env/shared/observe-iterative-interaction-case.mjs 115 hash --bundle "$B" --transcript "$B/case-115-subject-transcript.jsonl"
+  OBSERVER_STATUS=$?
+  if [ "$OBSERVER_STATUS" -eq 0 ]; then
+    node experiments_env/shared/observe-iterative-interaction-case.mjs 115 verdict --bundle "$B" --transcript "$B/case-115-subject-transcript.jsonl"
+    OBSERVER_STATUS=$?
+  fi
+  set -e
+  if [ "$OBSERVER_STATUS" -eq 3 ]; then
+    test -f "$B/case-115-NOT-RUN.json"
+  elif [ "$OBSERVER_STATUS" -ne 0 ]; then
+    exit "$OBSERVER_STATUS"
+  fi
 fi
 ```
 
@@ -107,6 +104,10 @@ B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --contex
 EXTRA_ARGS=()
 if [ -f "$B/case-115-subject-unavailable.txt" ]; then
   EXTRA_ARGS+=(--not-run-reason "independent authenticated Subject Agent runtime unavailable")
+elif [ -f "$B/case-115-NOT-RUN.json" ]; then
+  NOT_RUN_REASON=$(node experiments_env/shared/extract-field.mjs reason < "$B/case-115-NOT-RUN.json")
+  test -n "$NOT_RUN_REASON"
+  EXTRA_ARGS+=(--not-run-reason "$NOT_RUN_REASON")
 else
   EXTRA_ARGS+=(--evidence "subject_prompt=$B/case-115-subject-prompt.json" --evidence "subject_transcript=$B/case-115-subject-transcript.jsonl" --evidence "subject_result=$B/case-115-subject-result.json")
 fi

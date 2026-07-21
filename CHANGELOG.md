@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.39
+
+- Added one bounded native-first, same-URL `curl` fallback to the HITL1 research-access probe when independently configured host permission already allows it, while keeping the Agent responsible for ordinary mechanics and preserving the existing observation and Gate authority.
+
 ## v0.38
 
 - Bound current delegated assignments to an Engine-derived, versioned exact-output contract and validate fresh bounded Wave0/Wave1 direct facts at dry-submit, timeout preflight, and first acceptance with exact canonical roles.

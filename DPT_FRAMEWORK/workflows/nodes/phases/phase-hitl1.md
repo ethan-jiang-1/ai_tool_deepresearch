@@ -125,13 +125,20 @@ Research style CLI 成功后，Agent MUST 使用当前环境的实际 search/fet
 **固定顺序：**
 
 1. 使用实际 search surface 发起**至多一次 neutral capability-only search**。Query 只用于确认工具可用，不用于当前 research topic 的证据收集。
-2. 按 search surface 返回顺序取**第一个 usable HTTP(S) result**。不评价来源质量，不跳到第二个站点，不建立候选 URL 列表。
-3. 若有 usable URL，使用实际 fetch surface 对该 URL 发起**至多一次 fetch**。只有返回真实 page content 才算 success；snippet、搜索摘要、mock response 或手写文本都不算。
-4. 将直接 observation 写入 `rb_profile.yaml#/research_access`，然后运行同一个 `hitl1-recorded` gate。
+2. 按 search surface 返回顺序只检查**第一个实际 HTTP(S) result**；第一条不合格时不得改选第二条，也不得使用用户/模型构造或替换的 URL。Eligible URL 不含 raw single quote、ASCII whitespace/control 或 URL credentials，且不指向 `localhost`/`.localhost`、loopback、literal private 或 link-local target。Resolved/redirected destination 的 DNS/network policy 仍由 host 强制。
+3. 若第一条 URL eligible，使用 runtime 的实际 native fetch surface 发起**至多一次 native fetch**。Native 返回真实 page content 时立即结束 probe，不得再调用 `curl` 作冗余确认。
+4. 仅当 native surface 在调用前不存在，或 native 没有返回真实 page content（blocked / unavailable / failed），且 independently configured host shell/network permission 已允许 exact command 和 target 时，Agent 执行下面**至多一次、同一 URL、standalone** fallback：
+
+   ```bash
+   curl --fail --silent --show-error --location --max-time 15 --max-redirs 5 --proto '=http,https' --proto-redir '=http,https' --globoff -- '<same-url>'
+   ```
+
+   URL 必须作为 single-quoted（单引号）单一 argument 传入。命令不得包含 prefix assignment、pipe、redirection、command substitution、shell chaining 或 trailing command；`--globoff` 禁止 `{}` / `[]` URL expansion，redirect 至多五次且只能使用 HTTP(S)。
+5. Agent 判断实际返回是否为 requested page content，写入一个最终 `rb_profile.yaml#/research_access` direct observation，然后运行同一个 `hitl1-recorded` Gate。Command exit success、空 body、search snippet、HTTP error/challenge shell 或手写文本都不能证明 access available。
 
 **Observation branches：**
 
-- Search surface 缺失、search 调用失败/被阻止、无 usable HTTP(S) result，或 fetch surface 在调用前缺失：
+- Search surface 缺失、search 调用失败/被阻止、没有 eligible first HTTP(S) result，且没有 fetch invocation：
   ```yaml
   research_access:
     status: unavailable
@@ -139,19 +146,23 @@ Research style CLI 成功后，Agent MUST 使用当前环境的实际 search/fet
     fetch_outcome: not_attempted
     reason: <direct non-empty reason>
   ```
-- Search 返回 usable URL，但实际 fetch 被阻止或失败：写 `status: unavailable`、该 `result_url`、`fetch_outcome: blocked | failed` 和直接 `reason`。
-- Search 返回 usable URL 且实际 fetch 返回 page content：
+- Native fetch 返回 requested real page content：
   ```yaml
   research_access:
     status: available
     probed_at: <ISO 8601 timestamp>
     result_url: <HTTP(S) URL from this search>
     fetch_outcome: success
+    fetch_surface: <actual native surface>
   ```
+- Native 无真实内容后，exact fallback 返回 requested real page content：写同一个 available shape，并写 `fetch_surface: curl`。Fallback success 必须记录 `fetch_surface: curl`。
+- Native 与唯一 fallback 都没有返回真实内容：写 `status: unavailable`、同一个 `result_url`、最终 non-success `fetch_outcome`、已知时的 final `fetch_surface`，以及一个 bounded direct `reason`，同时命名 native 与 fallback outcome；不得增加 attempt-history fields。
 
-`search_surface` / `fetch_surface` MAY 记录当前工具名称作 audit label，但不是 gate-required facts。不要记录 query history、response body、HTTP status matrix、retry list 或 derived gate verdict。
+`search_surface` / `fetch_surface` 在 `ProfileSchema` 中 remains optional，existing Gate does not independently enforce these audit labels；但 v0.39 HITL1 writer 对当前 successful probe 必须记录 actual successful `fetch_surface`。不要记录 query history、response body、HTTP status matrix、retry list 或 derived gate verdict。
 
-**Unavailable recovery：** 保留已记录的 `research_profile`、`root_must_answer_set`、style params 和 `hitl1.status: recorded`。明确告诉用户当前环境无法启动 evidence-backed waves；修复/切换环境或用户要求再次尝试后，重跑本节同一 bounded probe 和同一 gate，不要求用户重复回答 HITL1 choices。在 probe 与 gate 成功前不得进入 Setup。
+**权限边界：** Native failure does not authorize shell/network access，也不授权绕过 policy。已独立配置的 host permission 足够时，fallback/write/Gate 是 Agent-owned mechanics：不得要求用户运行 `curl`、确认继续或代跑 pipeline，也不得静默扩大 committed project config。若 `curl`/network permission 缺失、target 不合格、binary 不存在或 fallback 失败，先记录 honest unavailable，只暴露最小 permission/external-environment prerequisite；用户同意本身不能把失败或缺失的 page content 变成 success。
+
+**Unavailable recovery：** 保留已记录的 `research_profile`、`root_must_answer_set`、style params 和 `hitl1.status: recorded`。明确告诉用户当前环境无法启动 evidence-backed waves；最小外部前置条件解决后，由 Agent 重跑本节同一 bounded probe 和同一 gate，不要求用户重复回答 HITL1 choices。在 probe 与 gate 成功前不得进入 Setup。
 
 **Evidence boundary：** Probe URL、page content 和 tool output SHALL NOT 写入或计入 `reference/`、`_cache/`、`artifacts/`、work-unit output/result/receipt、`rb_work_unit_ledger.jsonl`、`rb_output_declarations.jsonl` 或任何 Wave coverage/count floor。
 
@@ -170,10 +181,11 @@ Research style CLI 成功后，Agent MUST 使用当前环境的实际 search/fet
 | `research_access.status` | `rb_profile.yaml#/research_access/status` | `available` 才能通过 HITL1 gate；`unprobed` / `unavailable` 留在 HITL1 |
 | available path | `rb_profile.yaml#/research_access/{probed_at,result_url,fetch_outcome}` | ISO timestamp + HTTP(S) URL + `fetch_outcome: success` |
 | unavailable path | `rb_profile.yaml#/research_access/{probed_at,fetch_outcome,reason}` | ISO timestamp + `failed | blocked | not_attempted` + 非空直接原因 |
+| current successful writer audit | `rb_profile.yaml#/research_access/fetch_surface` | v0.39 writer 记录 actual successful surface；schema optional，Gate 不独立 enforce |
 | `hitl1.status` | `rb_profile.yaml#/human_decision_checkpoints/hitl1/status` | = `recorded` |
 | `hitl1.recorded_at` | `rb_profile.yaml#/human_decision_checkpoints/hitl1/recorded_at` | 非空 ISO 8601 timestamp |
 
-Optional `research_access.search_surface` / `fetch_surface` 只作 audit label，不是 gate-required facts。该 checklist 是 review surface；`ProfileSchema` 和 gate definition 仍是 machine authority。
+`research_access.search_surface` / `fetch_surface` 在 schema 中保持 optional audit labels，不是 gate-required facts；v0.39 current successful writer 仍记录 actual `fetch_surface`。该 checklist 是 review surface；`ProfileSchema` 和 Gate definition 仍是 machine authority。
 
 ## 5. Gate Command
 
@@ -206,7 +218,7 @@ Hint 不创造 permission。用户决定或外部前置条件满足后，后续�
 
 `stop: yes` 只意味着等待用户输入，不意味着豁免 deterministic check。用户回答后，仍必须运行 `hitl1-recorded` gate。
 
-若 probe 记录 `unavailable`，Agent 保持 HITL1，只暴露 `external_action` 的最小 blocker；用户 choices 保留，后续由 Agent 重跑同一 bounded probe 和 gate。
+若 probe 记录 `unavailable`，Agent 保持 HITL1，只暴露 `external_action` 的最小 blocker；用户 choices 保留，前置条件解决后由 Agent 重跑同一 bounded probe 和 Gate。Native policy failure 不创造 shell permission；permission 已存在时 Agent 不得把 fallback command 交给用户。
 
 ## 9. Anti-Cheating Rules
 
@@ -217,7 +229,7 @@ Hint 不创造 permission。用户决定或外部前置条件满足后，后续�
 - **禁止写入不存在的字段路径**：HITL1 结果写入 `rb_profile.yaml` 的 `human_decision_checkpoints.hitl1.*`；不要写入不存在的 `rb_status.json#/phases/hitl1/*`
 - **禁止用 mock/fixed URL/搜索摘要/手写 page content 声称 `research_access.status: available`**：available 只能来自当次实际 search 返回的 URL 和实际 fetch page content
 - **禁止把 probe 当 research evidence**：Probe URL/content/tool output 不得进入 reference、cache、artifact、work-unit、ledger、output declaration 或 Wave coverage
-- **禁止自动 retry tree**：一次 attempt 至多一次 search 和一次 fetch；失败后只在环境修复或用户要求再次尝试时重跑同一 probe
+- **禁止自动 retry tree**：一次 attempt 至多一次 search、一次 native fetch 和一次 exact same-URL curl fallback；禁止第二 URL、重复 surface、额外 tier、pipe/redirect/chaining 或持久 attempt history
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
 
 ## Log

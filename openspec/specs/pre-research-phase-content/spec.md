@@ -60,15 +60,19 @@ Section requirements:
   - select the `research_profile` enum and write `root_must_answer_set` from the accepted recommendation/correction;
   - write `human_decision_checkpoints.hitl1.status` and `.recorded_at`;
   - run `apply-research-style.mjs` using committed registry count;
-  - execute at most one neutral capability-only search and at most one fetch of the first usable HTTP(S) result, then record direct `research_access` observation.
+  - execute at most one neutral capability-only search, inspect only its first actual HTTP(S) result and continue only when that result is eligible, then perform a bounded fetch sequence for only that URL: use the available native fetch surface first, then only when native fetch is absent before invocation or fails to return real page content because it is blocked, unavailable or failed, use at most one shell `curl` fallback already permitted by independently configured host shell/network policy. Record one final direct `research_access` observation.
 - **Expected Artifacts**: canonical `rb_plan.md` registry, matching UID-bound seeds, and `rb_profile.yaml` containing user choices, style parameters, HITL1 marker and research-access observation.
 - **Gate Command**: existing `check-gate-hitl1-recorded.mjs` under the current node.
 - **On Gate Pass**: read `check.next`.
-- **On Gate Fail**: read inspect/advice, repair the one direct blocker and rerun the same command/gate; if access is unavailable, preserve choices, repair/switch environment, and rerun the same bounded probe and gate.
-- **Stop Behavior**: wait for the user's research semantic decision at HITL1; a clear acceptance or correction satisfies that human decision boundary, after which Agent executes ordinary apply/style/probe/Gate commands without returning each mechanical step to the user.
+- **On Gate Fail**: read inspect/advice, repair the one direct blocker and rerun the same command/gate; if access remains unavailable after the bounded sequence, preserve choices, repair/switch environment, and rerun the same bounded probe and gate.
+- **Stop Behavior**: wait for the user's research semantic decision at HITL1; a clear acceptance or correction satisfies that human decision boundary, after which Agent executes ordinary apply/style/probe/fallback/Gate commands without returning each mechanical step to the user. Only a new host permission, unavailable legal surface or non-delegable external environment action returns the smallest boundary to the user.
 - **Anti-Cheating Rules**: no chat-only answers, fake probe, direct registry edit, seed-only identity, mock access, parallel status tree, automatic retry tree, invented user semantics, or treating non-HITL chat as HITL1 mutation authority.
 
-Probe SHALL remain bounded to one search invocation and one fetch invocation. It SHALL answer only whether the first usable HTTP(S) result from a neutral capability-only search can be fetched as page content. Search unavailable/failed/blocked/no usable result, or a missing fetch surface before invocation, SHALL record `unavailable` with `fetch_outcome: not_attempted`; an attempted blocked/failed fetch SHALL record the corresponding non-success outcome; only real fetched page content permits `available`.
+Probe SHALL remain bounded to one search invocation, only the first actual HTTP(S) result when eligible, and no more than two Agent fetch invocations for that same URL. Eligible means the URL came directly from that search rather than user/model invention or substitution; contains no raw single quote, ASCII whitespace/control character or URL credentials; and does not target `localhost`/`.localhost`, loopback, or a literal private/link-local address. If the first result is ineligible, the Agent SHALL record the no-eligible-result branch rather than select a later result. If a native fetch surface is available, the Agent SHALL try it first. The only v1 alternative SHALL be one standalone shell `curl --fail --silent --show-error --location --max-time 15 --max-redirs 5 --proto '=http,https' --proto-redir '=http,https' --globoff -- '<same-url>'` invocation, used only when native fetch is absent before invocation or the native attempt returns no real page content because it is blocked, unavailable or failed. It SHALL contain no prefix assignment, pipe, redirection, command substitution, shell chaining or trailing command. The initial request and at most five redirects SHALL remain HTTP(S)-only, curl URL globbing SHALL be disabled, and host DNS/network policy SHALL remain authoritative for resolved and redirected destinations. A successful native attempt SHALL end the sequence; the Agent SHALL NOT try `curl` as a redundant check. The Agent SHALL NOT select a second search result, repeat either surface, add another fallback tier, or persist an automatic retry tree.
+
+Search unavailable/failed/blocked/no eligible result, with no fetch invocation, SHALL record `unavailable` with `fetch_outcome: not_attempted`. A successful native or fallback fetch SHALL record `available`, the searched `result_url`, `fetch_outcome: success`, and the actual successful `fetch_surface`; a successful fallback SHALL record `fetch_surface: curl`. This is a v0.39 HITL1 writer requirement for current successful probes: `fetch_surface` SHALL remain optional for schema compatibility, and the existing Gate SHALL NOT independently enforce the audit label. If every permitted fetch attempt returns no real page content, the Agent SHALL record `unavailable`, the same `result_url`, a non-success `fetch_outcome`, the final attempted `fetch_surface` when known, and one bounded direct reason that names the native and fallback outcomes without adding attempt-history fields. Only real fetched page content permits `available`; command exit success, an empty body, a search snippet, or an HTTP error/challenge shell without the requested page content SHALL NOT suffice.
+
+Native fetch policy failure SHALL NOT itself authorize shell/network access or a policy bypass. When independently configured host shell/network permission already permits the exact alternative fetch invocation and target, fallback SHALL be Agent-owned mechanical execution. The Agent SHALL NOT silently widen project configuration, ask the user to run `curl`, acknowledge the failure, or confirm continuation before trying it. If `curl` is absent, blocked by host policy, requires permission the Agent does not have, targets an ineligible URL, or also fails, the Agent SHALL preserve accepted HITL1 semantic choices, record the honest unavailable observation, and expose only the smallest permission or external-environment prerequisite before rerunning this same probe and Gate. User approval alone SHALL NOT convert failed or missing page content into a successful observation.
 
 Probe URL/content SHALL NOT become research evidence, cache, submitted output, receipt or gate coverage. HITL1 SHALL NOT create offline research artifacts, fake probe receipts, evidence-free report skeletons, automatic retry trees or another interactive checkpoint. User choices and research access SHALL remain in the accepted profile surface, not a parallel status tree.
 
@@ -92,7 +96,7 @@ Initial topic-state apply SHALL run only after `enter-phase` has populated `rb_s
 
 #### Scenario: HITL1 keeps user responsibility semantic
 - **WHEN** topic intent is clear from the user's acceptance or correction
-- **THEN** the Agent SHALL run apply/style/probe/gate without asking the user to execute commands
+- **THEN** the Agent SHALL run apply/style/probe/fallback/gate without asking the user to execute commands
 - **AND** it SHALL not ask the user to confirm the same clear semantics again
 - **AND** it SHALL ask again only for genuinely unresolved semantics, real cost/permission expansion or irreversible risk
 
@@ -106,12 +110,43 @@ Initial topic-state apply SHALL run only after `enter-phase` has populated `rb_s
 - **THEN** HITL1 gate SHALL report the workspace/seed prerequisite and exact recover action
 - **AND** SHALL short-circuit derivative profile/count/seed-floor symptoms
 
+#### Scenario: Native fetch success ends the probe
+- **WHEN** actual search returns an eligible HTTP(S) URL and the available native fetch returns real page content
+- **THEN** HITL1 SHALL record the available observation with the native `fetch_surface`
+- **AND** it SHALL NOT invoke `curl` or count probe output as evidence
+
+#### Scenario: Native fetch block uses one same-URL fallback
+- **WHEN** actual search returns an eligible HTTP(S) URL and native fetch is absent, blocked, unavailable or fails without real page content
+- **AND** independently configured host permission permits the exact shell/network action
+- **THEN** the Agent SHALL invoke `curl` at most once for that same URL without asking the user to operate the pipeline
+- **AND** real page content SHALL produce the existing available observation with `fetch_surface: curl`
+
+#### Scenario: Exhausted bounded fetch remains at HITL1
+- **WHEN** actual search returns an eligible HTTP(S) URL but every permitted fetch attempt is absent, blocked, unavailable or failed
+- **THEN** HITL1 SHALL record one unavailable observation with the same URL and bounded direct reason, preserve user choices and remain in HITL1
+- **AND** it SHALL NOT select another URL, add a fetch tier, persist retry history or claim access is available
+
+#### Scenario: Missing permission exposes only the smallest boundary
+- **WHEN** native fetch cannot return page content and invoking the only fallback requires a host permission the Agent does not have
+- **THEN** the Agent SHALL record an honest unavailable observation and ask only for that permission or external action
+- **AND** after the boundary is resolved, the Agent SHALL resume the same bounded probe and Gate mechanics itself
+
+#### Scenario: Ineligible local target is not sent to shell fallback
+- **WHEN** the first HTTP(S) search result targets `localhost`, loopback, or a literal private/link-local address
+- **THEN** HITL1 SHALL treat it as no eligible result and record the existing unavailable/not-attempted observation
+- **AND** native rejection or user approval SHALL NOT authorize a `curl` attempt to that target
+
+#### Scenario: Shell-unsafe URL is not interpolated
+- **WHEN** the first HTTP(S) search result contains a raw single quote, ASCII whitespace/control character or URL credentials
+- **THEN** HITL1 SHALL treat it as no eligible result rather than escape, normalize or substitute the URL
+- **AND** it SHALL NOT construct a double-quoted, piped, redirected, chained or command-substituting fallback
+
 #### Scenario: Available access uses real probe only
-- **WHEN** actual search returns a usable HTTP(S) URL and actual fetch returns page content
+- **WHEN** actual search returns an eligible HTTP(S) URL and an allowed native or fallback fetch returns real page content
 - **THEN** HITL1 SHALL record the accepted available observation and SHALL NOT count probe output as evidence
 
 #### Scenario: Unavailable access remains at HITL1
-- **WHEN** search/fetch is absent, blocked, fails or returns no usable page
+- **WHEN** search or every permitted bounded fetch is absent, blocked, fails or returns no usable page content
 - **THEN** HITL1 SHALL record the unavailable observation, preserve user choices and remain in HITL1
 
 #### Scenario: HITL1 writes accepted surfaces not status tree
