@@ -39,6 +39,6 @@ claims:
     statement: A real subject Agent follows production HITL1 guidance to capture an optional natural-language control brief, including a hard exclusion, as one bounded host-file snapshot; it resolves only a real material conflict, does not invent controls or a live file path, and enters existing silent work only through the real HITL1 Gate/handoff. Ordered subject trace and host-file/profile snapshots bind the observable result.
     test_class: agent_flow_e2e
     proof_subject: agent_behavior
-    asset: { kind: markdown_playbook, path: experiments_playbook/exp_pre_research/case-xxx-user-research-controls.md }
+    asset: { kind: markdown_playbook, path: experiments_playbook/exp_iterative_interaction/case-714-heavy-user-research-controls.md }
     execution_profile: { fixture: setup_only, subject_execution: real_agent, runtime: real_disposable_bundle, external_calls: real, verdict_judge: deterministic }
     verdict_authority: trace_jsonl
