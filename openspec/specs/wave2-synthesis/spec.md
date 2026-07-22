@@ -1,6 +1,6 @@
 # Wave2 Synthesis
 
-> req: WTS-001, WTS-002, WTS-003, WTS-004, WTS-005, WTS-006, WTS-007, WTS-008, WTS-009, WTS-010
+> req: WTS-001, WTS-002, WTS-003, WTS-004, WTS-005, WTS-006, WTS-007, WTS-008, WTS-009, WTS-010, WTS-011
 
 ## Purpose
 
@@ -353,3 +353,19 @@ Wave2 SHALL NOT use synthesis prose alone as backing for `00-cross` references. 
 - **WHEN** Wave2 materializes one or more `reference/00-cross-*.md` files
 - **THEN** `reference/_INDEX.md` SHALL include corresponding `source_layer: wave2_cross` entries
 - **AND** Wave2 seed-topic backfill SHALL preserve `W2F-xxx` ids and refs to the cross reference plus ledger/index backing
+
+### Requirement: Finding index SHALL bind carried targets separately from artifact lineage
+
+`finding-index.yaml` MAY give a finding `wave1_target_bindings[]` only when the finding is offered as coverage for a receipt-declared Wave1 target. Every entry SHALL have exactly `{ receipt_sha256, topic_uid, intent_sha256, target_id, target_revision }` and SHALL equal one target in the selected routed receipt. It SHALL be distinct from `origin_refs[]`, `trigger_refs[]`, affected-topic presentation, and work-unit receipts.
+
+A target MAY have several bindings and a finding MAY bind several targets. Coverage requires at least one exact binding on a finding whose existing decision/gap-status contract is valid. Unrelated/emergent/legacy findings remain valid without this field but SHALL not satisfy a carried target merely through shared topic or lineage.
+
+#### Scenario: one finding covers multiple declared targets
+- **WHEN** one Wave2 finding legitimately disposes of two targets from the selected receipt
+- **THEN** it MAY carry two exact target bindings
+- **AND** each target is independently visible to the Wave2 closure evaluator
+
+#### Scenario: stale binding does not cover revised target
+- **WHEN** a target has the same local ID but a different receipt digest, intent binding, or target revision
+- **THEN** the old finding binding SHALL not satisfy the selected receipt target
+- **AND** the existing finding index receives the repair

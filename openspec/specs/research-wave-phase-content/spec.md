@@ -1,6 +1,6 @@
 # Research Wave Phase Content
 
-> req: RWP-001, RWP-002, RWP-003, RWP-004, RWP-005, RWP-006, RWP-007, RWP-008, RWP-009, RWP-010, RWP-011, RWP-012, RWP-013, RWP-014, RWP-015, RWP-016, RWP-017, RWP-018, RWP-019, RWP-020
+> req: RWP-001, RWP-002, RWP-003, RWP-004, RWP-005, RWP-006, RWP-007, RWP-008, RWP-009, RWP-010, RWP-011, RWP-012, RWP-013, RWP-014, RWP-015, RWP-016, RWP-017, RWP-018, RWP-019, RWP-020, RWP-021
 
 ## Purpose
 
@@ -604,3 +604,21 @@ When fallback is accepted by claim, the Phase Agent SHALL execute the single cla
 - **AND** Wave2 authority verification runs in round 2
 - **THEN** the finding SHALL be treated as legacy_unbound and included in verification
 - **AND** no blocking finding SHALL be produced solely due to the missing field
+
+### Requirement: Wave phases SHALL operate one receipt-bound carried-target loop
+
+Wave1 guidance SHALL direct the Phase Agent, after reading submitted evidence, question-list reasoning, current Topic/profile, and optional user controls, to make the semantic carry-forward decision in the Phase-owned depth review. The review SHALL contain an explicit `carried_targets` declaration, which MAY be empty; prose, a slug-looking target ID, or a question-list line outside that declaration SHALL not create carry-forward authority.
+
+The declaration SHALL NOT weaken the existing `decision: accept` requirement for Wave1 submitted evidence, source floors, cache mapping, depth dimensions, or profile checks. It records only what remains material for Wave2 after those existing direct facts are satisfied.
+
+Wave2 guidance SHALL direct the Agent to consume the receipt from the exact routed Wave1 Gate handoff, bind its selected targets only in the existing finding index, and use existing finding decision/gap-status routes for resolution, new targeted evidence, limitation, `defer_hitl2`, `requires_internal_data`, or `record_only`. It SHALL not reread a mutable depth review as a second parent, hand-edit trace, or ask the user to perform ordinary repair.
+
+#### Scenario: empty declaration keeps the normal Wave2 path
+- **WHEN** Wave1 explicitly declares `carried_targets: []`
+- **THEN** the Wave1 receipt contains an empty selected set
+- **AND** Wave2 has no added target-binding work while its existing synthesis contract remains active
+
+#### Scenario: missing target binding repairs the existing consumer
+- **WHEN** Wave2 inspect reports receipt targets without valid finding bindings
+- **THEN** the Phase Agent repairs `artifacts/wave2/finding-index.yaml` and reruns the same inspect/Gate
+- **AND** it SHALL not invent a new queue authority or user checkpoint
