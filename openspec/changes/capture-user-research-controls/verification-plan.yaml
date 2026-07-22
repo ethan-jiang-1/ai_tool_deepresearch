@@ -29,7 +29,7 @@ claims:
     execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: temporary_bundle, external_calls: none, verdict_judge: deterministic }
     verdict_authority: node_test_exit
   - id: setup-ready-final-plan-handoff-chain
-    statement: A production-instantiated temporary bundle reaches real setup-ready through its legal predecessor, and a real setup-ready pass writes bounded Progress before one route-bound checkpoint before one consumable trace/enter-phase handoff; checkpoint and trace share one Engine-generated gate_attempt_id and the same final plan hash. Simulated Agent actions only fill the existing sanctioned content surfaces; checkpoint failure, route-write failure, or post-checkpoint plan drift leaves no consumable entry and does not fabricate trace/checkpoint authority.
+    statement: A production-instantiated temporary bundle reaches real setup-ready through its legal predecessor, and a real setup-ready pass writes bounded Progress before one route-bound checkpoint before one consumable trace/enter-phase handoff; checkpoint and trace share one Engine-generated gate_attempt_id, exact route facts, and the same final plan hash. The trace's checkpoint_ref is a safe bundle-relative regular JSON file under _checkpoints/ and the consumer rejects an unsafe/mismatched ref, checkpoint facts, or hash. Simulated Agent actions only fill the existing sanctioned content surfaces; checkpoint failure, route-write failure, or post-checkpoint plan drift leaves no consumable entry and does not fabricate trace/checkpoint authority.
     test_class: deterministic_e2e
     proof_subject: deterministic_contract
     asset: { kind: node_test, path: tests/e2e/setup-ready-hostfile-handoff.test.mjs }
