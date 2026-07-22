@@ -1,8 +1,9 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 import {
   validateEnterPhaseTarget,
   validateSourceGateStatusSync,
@@ -67,12 +68,53 @@ describe('handoff helpers', () => {
     };
   }
 
+  function setupReadyAttempt(overrides = {}) {
+    const plan = '# Setup plan\n';
+    writeFileSync(join(dir, 'rb_plan.md'), plan);
+    const planHash = createHash('sha256').update(readFileSync(join(dir, 'rb_plan.md'))).digest('hex');
+    mkdirSync(join(dir, '_checkpoints'), { recursive: true });
+    writeFileSync(join(dir, '_checkpoints', 'setup.json'), JSON.stringify({
+      trigger: 'setup_route_pending',
+      route_state: 'pending',
+      gate_attempt_id: 'setup-attempt',
+      content_evaluation_ref: { gate: 'setup-ready', passed: true, currentNodeRef: 'phases/phase-setup.md', candidate_next: 'phases/phase-seed-topics.md' },
+      hashes: { 'rb_plan.md': { sha256: planHash } },
+    }));
+    return {
+      ts: '2026-01-01T00:00:00.000Z',
+      event: 'gate_attempt',
+      gate: 'setup-ready',
+      phase: 'setup',
+      passed: true,
+      currentNodeRef: 'phases/phase-setup.md',
+      next: 'phases/phase-seed-topics.md',
+      gate_attempt_id: 'setup-attempt',
+      checkpoint_ref: '_checkpoints/setup.json',
+      plan_sha256: planHash,
+      ...overrides,
+    };
+  }
+
   it('authorizes enter-phase from latest deterministic gate_attempt.next', () => {
     writeTrace([gateAttempt()]);
     const result = validateEnterPhaseTarget(dir, 'phases/phase-wave1.md');
     assert.equal(result.ok, true);
     assert.equal(result.handoff.sourceGate, 'wave0-complete');
     assert.equal(result.handoff.targetNode, 'phases/phase-wave1.md');
+  });
+
+  it('requires setup-ready trace, checkpoint, and current plan bytes to bind exactly', () => {
+    writeTrace([setupReadyAttempt()]);
+    assert.equal(validateEnterPhaseTarget(dir, 'phases/phase-seed-topics.md').ok, true);
+
+    writeTrace([setupReadyAttempt({ checkpoint_ref: '_checkpoints/nested/setup.json' })]);
+    assert.equal(validateEnterPhaseTarget(dir, 'phases/phase-seed-topics.md').ok, false);
+
+    writeTrace([setupReadyAttempt()]);
+    writeFileSync(join(dir, 'rb_plan.md'), '# Drifted plan\n');
+    const drifted = validateEnterPhaseTarget(dir, 'phases/phase-seed-topics.md');
+    assert.equal(drifted.ok, false);
+    assert.match(drifted.reason, /hashes do not agree/);
   });
 
   it('rejects stale enter-phase target after later deterministic handoff points elsewhere', () => {

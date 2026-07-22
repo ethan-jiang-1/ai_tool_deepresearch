@@ -22,7 +22,7 @@ suggested_context:
 ## 0. Execution Brief
 
 - **Objective**: Verify and enrich committed UID-bound seed projections into search-relevant decision documents.
-- **Start here**: Read canonical `rb_plan.md` `topic_registry`, existing UID-bound `seed_topics/`, `rb_profile.yaml`, and the queue CLI state.
+- **Start here**: Read canonical `rb_plan.md` `topic_registry` and, when present, `## Constraints > User Research Controls`; then read existing UID-bound `seed_topics/`, `rb_profile.yaml`, and the queue CLI state.
 - **Path to pass**: Verify exact UID/slug/intent binding, enqueue only required enrichment work, drain the queue, repair from the canonical owner, then run the seed-topics gate.
 - **Completion check**: `check-gate-seed-topics-ready.mjs` passes for `phases/phase-seed-topics.md`.
 - **Failure posture**: Treat empty/thin queue as work routing, then consume top-level Gate `hints[]`; execute legal mechanical repair and never invent missing Topic semantics.
@@ -40,6 +40,7 @@ Canonical new runs arrive with `topic_registry` and one UID-bound `seed_topics/{
 - 已通过 `setup-ready` gate 的 active bundle
 - `rb_plan.md` frontmatter 的 `topic_registry`（topic 集合的 source of truth）
 - `rb_profile.yaml` 的 `root_must_answer_set` 和 `research_profile`（topic 派生的上游约束）
+- controls present 时 `rb_plan.md## Constraints > User Research Controls`（唯一原文坐标，不是 machine authority）
 - `shared-schemas.md`（schema、trace、seed_topics/ 目录结构）
 - `DPT_FRAMEWORK/cli/operate-queue.mjs`（Agentic Queue CLI — 灌料、claim、complete 的入口）
 
@@ -95,7 +96,7 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 
 完整初始化 skeleton、appendix headings/tokens、Wave responsibility 与 optional rerun direction 均由已加载的 `shared-seed-topic-authoring` contract 定义。不要在本 phase 重写其模板。Seed Topics 只按该 contract materialize/enrich initialization area；research-round appendix 保持预埋，后续 Wave 仅替换其 owning token。完整 return-map entry、ref hierarchy 与 token lifecycle 由已加载的 `shared-return-map-authoring` contract 定义。
 
-若 `rb_plan.md` 和 `rb_profile.yaml` 中不足以填充初始化字段，记录 explicit `pending` gap，不要编造。gap 是有效输入，供 Wave0 收敛。
+controls present 时，Seed 可将与单一 topic 相关的解释投影为 `search_guardrails` / `evidence_route`，但不得替代原 snapshot 或把它伪装为新 authority。若 `rb_plan.md` 和 `rb_profile.yaml` 中不足以填充初始化字段，记录 explicit `pending` gap，不要编造。gap 是有效输入，供 Wave0 收敛。
 
 ### 3.2 Queue-Driven 执行循环
 

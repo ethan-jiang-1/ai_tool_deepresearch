@@ -1,16 +1,16 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.40**
+> **DPT_FRAMEWORK v0.41**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.40
+## Current Release: v0.41
 
-- Actor-bound work-unit task and spawn surfaces now deliver closed role/shared guidance plus direct-output authoring requirements at the actor decision point.
-- Delegated research roles share one bounded Node-first, same-URL curl guidance surface; assignment, submit, receipt and Gate authority remain unchanged.
+- HITL1 can retain one optional user-controls snapshot in `rb_plan.md`; later phases read the same bounded coordinate without creating a profile or work-unit authority.
+- Setup-ready now binds its actual final plan bytes through Progress, one pending checkpoint, and the authoritative handoff trace before Seed Topics entry.
 
 ## 0. 禁用内置捷径（最高优先）
 

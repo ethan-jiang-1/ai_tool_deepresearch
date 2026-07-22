@@ -56,7 +56,7 @@ An ordinary checkpoint SHALL represent runtime state at its gate-attempt audit t
 
 When multiple checkpoint manifests exist, reentry tooling SHALL select the latest non-pending checkpoint whose `gate_result_ref.gate` or `normalized_target.status_gate` matches the requested target. Any route-pending setup-ready checkpoint remains inspectable diagnostic evidence but SHALL NOT qualify as a passed handoff checkpoint or global fallback baseline, even when a later bound route trace exists. If no matching non-pending checkpoint exists, tooling MAY fall back to the latest non-pending checkpoint for global drift context, but SHALL report the absence of a target-matching checkpoint as inspect/advice.
 
-#### Scenario: ordinary gate attempt records checkpoint
+#### Scenario: Gate attempt records checkpoint
 - **WHEN** an ordinary gate CLI writes a `gate_attempt`
 - **THEN** `_checkpoints/` SHALL contain a new manifest for that gate
 - **AND** the manifest SHALL include status, queue summary, artifact inventory, ledger/trace/log cursors, schema version, trigger, gate result reference, and hashes
@@ -66,7 +66,7 @@ When multiple checkpoint manifests exist, reentry tooling SHALL select the lates
 - **THEN** the checkpoint SHALL identify `trigger: setup_route_pending`, `route_state: pending`, its `gate_attempt_id`, `content_evaluation_ref`, and actual plan hash
 - **AND** only a later matching route trace makes that checkpoint usable for the setup handoff
 
-#### Scenario: reentry selects latest matching checkpoint
+#### Scenario: Reentry selects latest matching checkpoint
 - **WHEN** `_checkpoints/` contains multiple checkpoint manifests
 - **AND** `check-reentry --at wave1_complete` is executed
 - **THEN** reentry tooling SHALL select the newest checkpoint matching `wave1_complete` / `wave1-complete`

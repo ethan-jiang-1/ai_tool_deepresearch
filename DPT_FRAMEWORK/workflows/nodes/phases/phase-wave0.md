@@ -25,7 +25,7 @@ suggested_context:
 ## 0. Execution Brief
 
 - **Objective**: collect foundation source metadata and shared reference evidence for every topic.
-- **Start here**: load `rb_queue.json`, `rb_plan.md` topic registry, seed topic files, profile thresholds, and `dpt-source-intake` role guidance.
+- **Start here**: load `rb_queue.json`, `rb_plan.md` topic registry and, when present, `## Constraints > User Research Controls`, seed topic files, profile thresholds, and `dpt-source-intake` role guidance.
 - **Delegated path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit dry-submit` repair loop -> formal `operate-work-unit submit` -> submitted ledger row -> gate.
 - **Completion check**: side-effect-free `inspect-wave0-output.mjs` passes first, then `check-gate-wave0-complete.mjs` passes for `phases/phase-wave0.md`.
 - **Failure posture**: do not direct-search from the Phase Agent as a substitute for delegated evidence. Use submit rejection, terminal attempt closure, refill, and gate feedback.
@@ -47,6 +47,8 @@ For each delegated source-intake task, derive the initial candidate URL/source t
 - `DPT_FRAMEWORK/cli/operate-queue.mjs` for enqueue/check/non-delegated maintenance.
 - `DPT_FRAMEWORK/cli/operate-work-unit.mjs` for delegated claim/submit/fail/timeout/abandon/inspect.
 - `shared-subagent-protocol.md` for work-unit envelope and Sub-agent rules.
+
+When a valid user-controls snapshot is present, read its original host-file coordinate as guidance alongside profile floors and seed-topic instructions. It may guide source selection, evidence treatment and presentation, but never lowers provenance/source floors or changes receipt, Gate, queue or lifecycle authority. Before claim, the Phase Agent MAY append one sentence to the existing `task_brief`: `Read rb_plan.md## Constraints > User Research Controls through your existing beacon-rooted bundle coordinate; it is read-only research guidance.` Only add it when controls are present; do not copy controls into queue payload machine fields, manifest/result/receipt, or an empty brief.
 
 ## 3. Allowed Actions
 

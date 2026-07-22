@@ -5,10 +5,10 @@
 // Re-exported by gate-helpers.mjs for backward compatibility.
 
 import { parseArgs } from 'node:util';
-import { existsSync, readFileSync, writeFileSync, appendFileSync, readdirSync, statSync, mkdirSync, openSync, closeSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, appendFileSync, readdirSync, statSync, mkdirSync, openSync, closeSync, renameSync, rmSync } from 'node:fs';
 import { join, dirname, basename, relative, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
 import { readGateDefinitionSnapshot } from '../../schema/contracts/gate-definition.mjs';
 import { resolveNodeTransitionDetailed } from '../ask-next.mjs';
@@ -19,6 +19,7 @@ import {
   makeContractFinding,
   projectFindingCompatibility,
 } from './wave-contract-findings.mjs';
+import { canonicalSectionContent } from './plan-hostfile-sections.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WORKFLOW_NODES_DIR = join(__dirname, '..', '..', 'workflows', 'nodes');
@@ -784,6 +785,7 @@ function traceDurabilityError(error, bundlePath, result) {
  * @impl GSK-005, LOC-001, LOC-002, TRW-001, TRW-002, TRW-003, TRW-004
  */
 export function writeGateAttempt(bundlePath, result, options = {}) {
+  if (options.setupReadyStaged === true) return writeSetupReadyStagedAttempt(bundlePath, result);
   const { strictTrace = false } = options;
   try {
     applyEngineAttemptDiagnostics(bundlePath, result);
@@ -877,6 +879,119 @@ export function writeGateAttempt(bundlePath, result, options = {}) {
   } catch (err) {
     if (strictTrace) throw traceDurabilityError(err, bundlePath, result);
     // Audit write failure must not affect gate output
+  }
+}
+
+function setupRoutePersistenceFinding(bundlePath, result, stage, error) {
+  const message = (error?.message || String(error)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+  return gateHelperFailure({
+    id: 'setup_ready_route_persistence_failed',
+    ruleId: 'setup_ready_route_persistence_failed',
+    blockingBasis: 'authority_integrity',
+    surface: `${bundlePath}/${stage}`,
+    expected: 'One route-pending checkpoint and its bound setup-ready gate_attempt trace are durably recorded before handoff.',
+    observed: message,
+    missingFact: `setup-ready content rules passed, but the legal route handoff could not persist ${stage}: ${message}`,
+    repairKind: 'missing_contract',
+    writeTo: `Setup-ready route persistence boundary (${stage})`,
+    repair: 'Restore the direct persistence boundary and rerun the same setup-ready Gate; do not hand-edit checkpoint, trace, status, or Progress authority.',
+    detail: `[authority_integrity] setup-ready route persistence failed at ${stage}: ${message}`,
+  });
+}
+
+function planHashRecord(bundlePath) {
+  const planPath = join(bundlePath, 'rb_plan.md');
+  const bytes = readFileSync(planPath);
+  const stat = statSync(planPath);
+  return { sha256: createHash('sha256').update(bytes).digest('hex'), size: stat.size, mtime: stat.mtime.toISOString() };
+}
+
+function writeSetupRoutePendingDiagnostic(bundlePath, result, gateAttemptId) {
+  const iso = new Date().toISOString();
+  const isoFile = iso.replace(/:/g, '-');
+  const diagnosticPath = `_diagnostics/gates/${isoFile}-setup-ready-route-pending.json`;
+  mkdirSync(join(bundlePath, '_diagnostics', 'gates'), { recursive: true });
+  const bundle = readBundleName(bundlePath);
+  writeFileSync(join(bundlePath, diagnosticPath), JSON.stringify({
+    schema_version: '1.0.0',
+    kind: 'setup_ready_route_pending',
+    created_at: iso,
+    bundle,
+    gate_attempt_id: gateAttemptId,
+    route_state: 'pending',
+    content_evaluation_ref: {
+      gate: result.check.gate,
+      passed: result.check.passed,
+      currentNodeRef: result.check.currentNodeRef,
+      candidate_next: result.check.next,
+    },
+    inspect: result.inspect,
+    advice: result.advice,
+  }, null, 2));
+  logToRun(bundlePath, 'info', 'route_pending', { gate: result.check.gate, gate_attempt_id: gateAttemptId, diagnostic_path: diagnosticPath });
+  return diagnosticPath;
+}
+
+function writeSetupRoutePendingCheckpoint(bundlePath, result, gateAttemptId) {
+  const iso = new Date().toISOString();
+  const isoFile = iso.replace(/:/g, '-');
+  const ckptDir = join(bundlePath, '_checkpoints');
+  mkdirSync(ckptDir, { recursive: true });
+  const plan = planHashRecord(bundlePath);
+  const manifest = {
+    schema_version: '1.0.0',
+    created_at: iso,
+    bundle: readBundleName(bundlePath),
+    trigger: 'setup_route_pending',
+    gate_attempt_id: gateAttemptId,
+    route_state: 'pending',
+    content_evaluation_ref: {
+      gate: result.check.gate,
+      passed: result.check.passed,
+      currentNodeRef: result.check.currentNodeRef,
+      candidate_next: result.check.next,
+    },
+    hashes: { 'rb_plan.md': plan },
+  };
+  const filename = `${isoFile}-setup-ready.json`;
+  writeFileSync(join(ckptDir, filename), JSON.stringify(manifest, null, 2), { flag: 'wx' });
+  return { checkpoint_ref: `_checkpoints/${filename}`, plan_sha256: plan.sha256 };
+}
+
+// Setup-ready alone needs final host-file bytes to be bound before exposing
+// check.next. It deliberately returns an outcome instead of throwing, so its
+// caller cannot accidentally create a second ordinary audit/checkpoint.
+function writeSetupReadyStagedAttempt(bundlePath, result) {
+  const { check } = result;
+  if (check?.gate !== 'setup-ready' || check.passed !== true || !check.next) {
+    return { ok: false, finding: setupRoutePersistenceFinding(bundlePath, result, 'staged-input', new Error('setupReadyStaged requires a passed setup-ready result with check.next')) };
+  }
+  const gateAttemptId = randomUUID();
+  try {
+    const diagnosticPath = writeSetupRoutePendingDiagnostic(bundlePath, result, gateAttemptId);
+    const progress = writePlanProgress(bundlePath, check.gate);
+    const binding = writeSetupRoutePendingCheckpoint(bundlePath, result, gateAttemptId);
+    const traceEntry = {
+      ts: new Date().toISOString(),
+      bundle: readBundleName(bundlePath),
+      event: 'gate_attempt',
+      kind: 'gate_attempt',
+      gate: check.gate,
+      phase: derivePhaseFromGate(check.gate),
+      passed: true,
+      currentNodeRef: check.currentNodeRef,
+      next: check.next,
+      inspect_count: result.inspect.length,
+      advice_count: result.advice.length,
+      diagnostic_path: diagnosticPath,
+      gate_attempt_id: gateAttemptId,
+      checkpoint_ref: binding.checkpoint_ref,
+      plan_sha256: binding.plan_sha256,
+    };
+    appendFileSync(join(bundlePath, 'rb_trace.jsonl'), `${JSON.stringify(traceEntry)}\n`);
+    return { ok: true, gate_attempt_id: gateAttemptId, checkpoint_ref: binding.checkpoint_ref, plan_sha256: binding.plan_sha256, progress };
+  } catch (error) {
+    return { ok: false, gate_attempt_id: gateAttemptId, finding: setupRoutePersistenceFinding(bundlePath, result, 'route_handoff', error) };
   }
 }
 
@@ -1216,18 +1331,17 @@ export function writeGatePassDiagnostic(bundlePath, result, precomputedPath = nu
 export function writePlanProgress(bundlePath, gateName) {
   try {
     const planPath = join(bundlePath, 'rb_plan.md');
-    if (!existsSync(planPath)) return;
+    if (!existsSync(planPath)) return { outcome: 'failed', reason: 'plan_missing' };
     const content = readFileSync(planPath, 'utf-8');
     const ts = new Date().toISOString();
     const checkedLine = `- [x] ${gateName} (${ts})`;
     const uncheckedPattern = `- [ ] ${gateName}`;
     const checkedPattern = `- [x] ${gateName}`;
 
-    // Find the Progress section
-    const progressMatch = content.match(/^## Progress\s*\n/m);
-    if (!progressMatch) return; // No Progress section — nothing to update
-
-    const lines = content.split('\n');
+    const section = canonicalSectionContent(content, 'Progress');
+    if (!section) return { outcome: 'failed', reason: 'canonical_progress_missing' };
+    const leadingBlank = section.content.startsWith('\n');
+    const lines = section.content.trim().split('\n');
     let found = false;
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].includes(uncheckedPattern)) {
@@ -1245,16 +1359,22 @@ export function writePlanProgress(bundlePath, gateName) {
 
     if (!found) {
       // Gate not in pre-populated list — append
-      const progressIdx = lines.findIndex(l => /^## Progress/.test(l));
-      if (progressIdx >= 0) {
-        // Insert after the Progress header
-        lines.splice(progressIdx + 1, 0, checkedLine);
-      }
+      lines.unshift(checkedLine);
     }
 
-    writeFileSync(planPath, lines.join('\n'));
-  } catch {
-    // Progress write failure must not affect gate output
+    const updatedSection = `${leadingBlank ? '\n' : ''}${lines.join('\n')}\n`;
+    const next = `${content.slice(0, section.contentStart)}${updatedSection}${content.slice(section.end)}`;
+    if (next === content) return { outcome: 'unchanged' };
+    const tempPath = `${planPath}.progress-${process.pid}-${Date.now()}.tmp`;
+    try {
+      writeFileSync(tempPath, next, { flag: 'wx' });
+      renameSync(tempPath, planPath);
+    } finally {
+      if (existsSync(tempPath)) rmSync(tempPath, { force: true });
+    }
+    return { outcome: 'committed' };
+  } catch (error) {
+    return { outcome: 'failed', reason: error.message || String(error) };
   }
 }
 

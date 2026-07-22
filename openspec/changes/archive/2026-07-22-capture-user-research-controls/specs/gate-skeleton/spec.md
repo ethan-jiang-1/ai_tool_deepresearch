@@ -16,11 +16,16 @@ For the setup-ready Gate only, `writeGateAttempt()` SHALL support the RRD-011 st
 - **THEN** the diagnostic SHALL contain the same `hints[]` entries as the emitted result
 - **AND** no additional trace writer, wrapper finalizer, or diagnostic-derived verdict SHALL be introduced
 
-#### Scenario: Ordinary gate pass writes to both destinations with bundle
+#### Scenario: Gate pass writes to both destinations with bundle
 
-- **WHEN** a gate CLI other than setup-ready calls `writeGateAttempt(bundlePath, result)` with a passed result
+- **WHEN** a gate CLI calls `writeGateAttempt(bundlePath, result)` with a passed result
 - **THEN** a `gate_attempt` JSONL event SHALL be appended to `rb_trace.jsonl` containing `bundle`
 - **AND** a logger INFO line SHALL be appended to `_logs/run.log` containing `bundle`
+
+#### Scenario: Gate fail writes diagnostic detail with bundle
+
+- **WHEN** a gate CLI calls `writeGateAttempt(bundlePath, result)` with a failed result
+- **THEN** a logger WARN line SHALL include inspect and advice summaries and `bundle`
 
 #### Scenario: Setup-ready route persistence fails closed
 
@@ -36,7 +41,7 @@ For the setup-ready Gate only, `writeGateAttempt()` SHALL support the RRD-011 st
 - **THEN** the CLI SHALL NOT contain `appendFileSync` calls targeting `rb_trace.jsonl`
 - **AND** SHALL use `writeGateAttempt(bundlePath, result)` as the sole trace/log write mechanism
 
-#### Scenario: Non-routing audit write failure remains tolerant
+#### Scenario: Audit write failure does not affect gate result
 
 - **WHEN** a failed attempt, non-routing diagnostic, or a Gate other than setup-ready cannot write an audit destination
 - **THEN** `writeGateAttempt()` SHALL retain its existing diagnostic tolerance

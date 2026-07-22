@@ -21,7 +21,7 @@ suggested_context:
 ## 0. Execution Brief
 
 - **Objective**: Deliver final report artifacts from verified bundle state.
-- **Start here**: Confirm readiness-passed state, then read verified wave artifacts, profile, status, and trace.
+- **Start here**: Confirm readiness-passed state, then read verified wave artifacts, profile, status, trace, and, when present, `rb_plan.md## Constraints > User Research Controls`.
 - **Path to pass**: Confirm terminal status from readiness (`current_gate: readiness_passed` / `next_gate: none`) and generate at least one report under `final/`; optional diagnostic logs do not prove delivery.
 - **Completion check**: At least one final artifact exists under `final/`; there is no gate command for this terminal node.
 - **Failure posture**: Do not ask the user or start a feedback loop; if delivery state is missing, repair from verified bundle state before reporting completion.
@@ -41,6 +41,8 @@ Delivery completion 的 evidence 是 legally entered Final node 中 `final/` 目
 - `rb_profile.yaml`（用户 profile、HITL1/HITL2 decision、final_report_view 偏好）
 - `rb_status.json`（确认 readiness passed）
 - `rb_trace.jsonl`（完整 trace 记录）
+
+User controls remain guidance only: apply them against verified evidence and existing delivery contracts, never as an override for provenance, source floors, Gate or lifecycle truth. If a material control could not be met, make the limitation visible in the lawful final/accepted limitation surface; do not silently claim satisfaction or invent evidence.
 
 ## 3. Allowed Actions
 

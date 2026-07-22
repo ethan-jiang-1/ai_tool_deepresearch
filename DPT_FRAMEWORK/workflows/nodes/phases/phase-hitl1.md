@@ -18,15 +18,15 @@ suggested_context:
 
 ## 0. Execution Brief
 
-- **Objective**: Collect the user's research profile, root must-answer set, and HITL1 constraints, then confirm current research access before silent execution.
+- **Objective**: Collect the user's research profile, root must-answer set, optional per-run research controls, and HITL1 constraints, then confirm current research access before silent execution.
 - **Start here**: Read `brief/hitl1.md`, the original question, `rb_plan.md`, and `rb_profile.yaml`.
-- **Path to pass**: Present the HITL1 prompt, wait for the user's answer, atomically apply approved canonical topics and UID-bound seeds, write profile/style decisions, run one bounded real research-access probe, then run the HITL1 gate.
+- **Path to pass**: Present the HITL1 prompt, wait for the user's answer, capture the optional controls snapshot before applying approved canonical topics and UID-bound seeds, write profile/style decisions, run one bounded real research-access probe, then run the HITL1 gate.
 - **Completion check**: User input and a schema-valid available research-access observation are recorded in `rb_profile.yaml`, and `check-gate-hitl1-recorded.mjs` passes.
 - **Failure posture**: Consume top-level `hints[]` first. Ask only for a genuine missing HITL decision; execute authorized mechanical repair yourself and rerun the exact same Gate.
 
 ## 1. Stage Goal
 
-向用户提出结构化问题，收集 research profile、root must-answer set 和用户约束，将回答持久化写入 active bundle 的 `rb_profile.yaml`，并在进入 silent waves 前确认当前 Agent 环境具备一次真实 search + fetch 能力。
+向用户提出结构化问题，收集 research profile、root must-answer set 和用户约束。结构化决定仍写入 active bundle 的 `rb_profile.yaml`；可选研究控制只写入 `rb_plan.md## Constraints > ### User Research Controls`，并在进入 silent waves 前确认当前 Agent 环境具备一次真实 search + fetch 能力。
 
 ## 2. Required Inputs
 
@@ -92,7 +92,15 @@ topic_registry:
    - 将用户接受或修正后的具体问题写入 `root_must_answer_set`
    - 将 `human_decision_checkpoints.hitl1.status` 设为 `recorded`
    - 将 `human_decision_checkpoints.hitl1.recorded_at` 设为当前 ISO 8601 timestamp
-   - 写 retained topic-state input 并运行 `operate-topic-state apply`；普通 apply/recover 命令由 Agent 执行，不要求用户共同运行
+   - 先写 controls snapshot，再写 retained topic-state input 并运行 `operate-topic-state apply`；普通 apply/recover 命令由 Agent 执行，不要求用户共同运行
+
+### 3b.1 Optional User Research Controls Snapshot
+
+用户可提供优先级、明确排除、来源/证据偏好、分析视角、交付要求或相关业务背景。它们是本轮研究指导，不是 profile、Gate、来源 floor、receipt、lifecycle 或 schema override。
+
+在用户决定和任何 material conflict 已澄清后，Agent 只做一次以下持久化写入，随后才创建 retained topic-state input：无额外控制时写入精确 no-controls sentence；有控制时用 `plan-hostfile-sections.mjs` 的 `renderSuppliedControls()` 在 `rb_plan.md## Constraints > ### User Research Controls` 写入精确 label 和 literal snapshot。不得手写较短 fence。
+
+用户明确授权读本地文件时，只读取一次并只摘取本 run 适用、可分享的控制到 snapshot；不得保留路径、以后重读、递归读取链接、复制无关内容或形成同步协议。若控制与 profile、must-answer 或 style 有 material conflict，先在本 HITL1 取得最小用户决定并更新既有 structured owner；不得让 silent phase 私自选择赢家。文件不可读、意图不清或控制过宽时，只问最小澄清或 host prerequisite，绝不虚构 snapshot。topic-state apply/recover 后继续读取已 durable 的 host-file snapshot，不从 chat 或外部路径重建。
 
 ### 3c. Research Style Parameters（研究风格参数应用）
 

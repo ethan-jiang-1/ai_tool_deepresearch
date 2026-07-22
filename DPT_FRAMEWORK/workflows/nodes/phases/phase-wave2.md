@@ -26,7 +26,7 @@ suggested_context:
 ## 0. Execution Brief
 
 - **Objective**: produce cross-topic synthesis artifacts and delegate only new search/evidence work through work units.
-- **Start here**: load Wave1 artifacts, `finding-index.yaml` expectations, queue state, profile thresholds, and Wave2 role guidance.
+- **Start here**: load Wave1 artifacts, `finding-index.yaml` expectations, queue state, profile thresholds, and, when present, `rb_plan.md## Constraints > User Research Controls`, then Wave2 role guidance.
 - **Pure synthesis path**: Phase Agent reads existing submitted evidence and writes synthesis artifacts.
 - **Delegated evidence path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit submit` -> submitted ledger row -> gate.
 - **Completion check**: side-effect-free `inspect-wave2-output.mjs` passes first, then `check-gate-wave2-complete.mjs` passes for `phases/phase-wave2.md`.
@@ -51,6 +51,8 @@ Accepted consumer-facing `W2F-xxx` findings with concrete existing Wave0/Wave1 s
 - `rb_profile.yaml` Wave2 params: `wave2_cross_topic_depth`, `wave2_emergent_search_rounds`, `p0p1_independent_backing`, `quality_min_tier`, `quality_min_substance`.
 - `shared-schemas.md` for Wave2 artifact paths and finding-index schema.
 - `operate-queue` and `operate-work-unit` CLIs.
+
+When controls are present, treat the original host-file coordinate as read-only research guidance. It may shape a legal targeted-evidence request or presentation judgment, but cannot change finding/index schemas, submitted backing, source floors or Gate authority. A Phase Agent may append the same one-sentence beacon-rooted coordinate to an existing delegated `task_brief` before claim; it must not duplicate controls into machine fields. A strict control that cannot be met follows the existing explicit limitation, `defer_hitl2`, `requires_internal_data`, or `record_only` contract rather than a hidden exception.
 
 ## 3. Allowed Actions
 

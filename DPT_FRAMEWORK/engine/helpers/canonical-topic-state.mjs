@@ -15,6 +15,7 @@ import { readSubmittedWorkUnitDeclarations } from './gate-helpers-readers.mjs';
 import { acceptedTopicSlugs, buildTopicLayoutTarget, evaluateTopicLayouts, losslessTopicSlugStem, resolveStructuredTopicBinding } from './topic-layout.mjs';
 import { makeContractFinding } from './wave-contract-findings.mjs';
 import { evaluateRerunDirection } from './rerun-direction.mjs';
+import { locateCanonicalSections } from './plan-hostfile-sections.mjs';
 
 export const TOPIC_STATE_SCHEMA_VERSION = '1.0.0';
 export const TOPIC_STATE_ROOT = '_diagnostics/topic-state';
@@ -99,12 +100,15 @@ function splitPlan(raw) {
 }
 function renderPlan(frontmatter, body) { return `---\n${stringifyYaml(frontmatter).trimEnd()}\n---\n${body}`; }
 function refreshTopicRegistryTable(body, oldRegistry, finalRegistry) {
-  const section = body.match(/(^|\n)(## Topic Registry\n\n)([\s\S]*?)(?=\n## |$)/);
-  if (!section) return { body, advisory: 'topic_registry_table_missing' };
-  const lines = section[3].trimEnd().split('\n');
-  if (lines[0] !== '| # | Slug | Title | Status |' || !/^\|[-: ]+\|[-: ]+\|[-: ]+\|[-: ]+\|$/.test(lines[1] || '')) {
-    return { body, advisory: 'topic_registry_table_nonstandard' };
-  }
+  const candidates = locateCanonicalSections(body, 'Topic Registry')
+    .map((section) => ({ ...section, content: body.slice(section.contentStart, section.end) }));
+  if (candidates.length === 0) return { body, advisory: 'topic_registry_table_missing' };
+  const section = candidates.find((candidate) => {
+    const [header, separator] = candidate.content.trim().split('\n');
+    return header === '| # | Slug | Title | Status |' && /^\|[-: ]+\|[-: ]+\|[-: ]+\|[-: ]+\|$/.test(separator || '');
+  });
+  if (!section) return { body, advisory: 'topic_registry_table_nonstandard' };
+  const lines = section.content.trimEnd().split('\n');
   const statusByUid = new Map();
   const uidByOldSlug = new Map(oldRegistry.map((topic) => [topic.slug, topic.topic_uid]));
   for (const line of lines.slice(2)) {
@@ -116,8 +120,10 @@ function refreshTopicRegistryTable(body, oldRegistry, finalRegistry) {
   }
   const escapeCell = (value) => String(value).replaceAll('|', '\\|');
   const rows = finalRegistry.map((topic) => `| ${escapeCell(topic.id)} | ${escapeCell(topic.slug)} | ${escapeCell(topic.title)} | ${escapeCell(statusByUid.get(topic.topic_uid) || 'pending')} |`);
-  const replacement = `${section[1]}${section[2]}| # | Slug | Title | Status |\n|---|------|-------|--------|\n${rows.join('\n')}\n`;
-  return { body: `${body.slice(0, section.index)}${replacement}${body.slice(section.index + section[0].length)}`, advisory: null };
+  const replacement = `| # | Slug | Title | Status |\n|---|------|-------|--------|\n${rows.join('\n')}`;
+  const normalized = replacement.replace(/^\n+|\n+$/g, '');
+  const rendered = `${body.slice(section.start, section.headerEnd)}\n\n${normalized}\n`;
+  return { body: `${body.slice(0, section.start)}${rendered}${body.slice(section.end)}`, advisory: null };
 }
 function newSeedEnrichment() {
   return {

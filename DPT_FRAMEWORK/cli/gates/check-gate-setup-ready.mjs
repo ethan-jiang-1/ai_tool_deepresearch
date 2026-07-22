@@ -19,6 +19,7 @@ import {
   stripMdFrontmatter,
   writePlanProgress,
 } from '../../engine/helpers/gate-helpers.mjs';
+import { stripSuppliedControlsForTemplateScan } from '../../engine/helpers/plan-hostfile-sections.mjs';
 import {
   buildContractEvaluation,
   makeContractFinding,
@@ -392,7 +393,7 @@ for (const rule of definition.rules) {
         };
       } else {
         const content = readFileSync(filePath, 'utf-8');
-        const bodyContent = stripMdFrontmatter(content);
+        const bodyContent = stripSuppliedControlsForTemplateScan(stripMdFrontmatter(content));
         const re = new RegExp(rule.pattern);
         const matched = re.test(bodyContent);
         if (rule.negate) {
@@ -548,37 +549,39 @@ const result = buildGateResult({
   attemptNumber: args.attempt ?? 0,
 });
 
-try {
-  writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
-} catch (error) {
-  const failedRouting = resolveRouting(args.transitions, args.currentNode, 'failed');
-  const failureEvaluation = buildContractEvaluation({
-    findings: [...(error.findings || []), ...(failedRouting.findings || [])],
-  });
-  const failedResult = buildGateResult({
-    passed: false,
-    gate: definition.gate,
-    currentNodeRef: args.currentNode,
-    routing: failedRouting,
-    inspect: [...(error.inspect || [error.message || String(error)]), ...(failedRouting.inspect || [])],
-    advice: [...(error.advice || []), ...(failedRouting.advice || [])],
-    findings: failureEvaluation.findings,
-    bundlePath,
-    extraCheck: {
-      failed_rule_ids: failureEvaluation.failed_rule_ids,
-      masked_rule_ids: failureEvaluation.masked_rule_ids,
-      trace_durable: false,
-      gate_attempt_write_failed: true,
-    },
-    attemptNumber: args.attempt ?? 0,
-  });
-  try { writeGateAttempt(bundlePath, failedResult); } catch { /* secondary diagnostic only */ }
-  emitGateResult(failedResult);
-}
-
-// Write Progress on gate pass (PHS-006)
 if (result.check.passed) {
-  writePlanProgress(bundlePath, definition.gate);
+  const staged = writeGateAttempt(bundlePath, result, { setupReadyStaged: true });
+  if (staged.ok) {
+    emitGateResult(result);
+  } else {
+    const failedRouting = resolveRouting(args.transitions, args.currentNode, 'failed');
+    const failureEvaluation = buildContractEvaluation({
+      findings: [...(staged.finding?.findings || []), ...(failedRouting.findings || [])],
+    });
+    const failedResult = buildGateResult({
+      passed: false,
+      gate: definition.gate,
+      currentNodeRef: args.currentNode,
+      routing: failedRouting,
+      inspect: [...(staged.finding?.inspect || ['setup-ready route persistence failed']), ...(failedRouting.inspect || [])],
+      advice: [...(staged.finding?.advice || []), ...(failedRouting.advice || [])],
+      findings: failureEvaluation.findings,
+      bundlePath,
+      extraCheck: {
+        failed_rule_ids: failureEvaluation.failed_rule_ids,
+        masked_rule_ids: failureEvaluation.masked_rule_ids,
+        trace_durable: false,
+        gate_attempt_write_failed: true,
+      },
+      attemptNumber: args.attempt ?? 0,
+    });
+    emitGateResult(failedResult);
+  }
+} else {
+  try {
+    writeGateAttempt(bundlePath, result, { strictTrace: false });
+  } catch {
+    // Failed/non-routing attempts retain the existing diagnostic tolerance.
+  }
+  emitGateResult(result);
 }
-
-emitGateResult(result);

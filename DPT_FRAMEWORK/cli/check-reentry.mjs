@@ -207,6 +207,15 @@ function selectCheckpoint(bundlePath, target) {
     return { checkpoint: null, warnings: ['_checkpoints/ directory is empty.'] };
   }
 
+  const pending = checkpoints.filter((checkpoint) => checkpoint.route_state === 'pending');
+  checkpoints = checkpoints.filter((checkpoint) => checkpoint.route_state !== 'pending');
+  if (pending.length > 0) {
+    warnings.push(`Ignored ${pending.length} route-pending checkpoint(s) as diagnostic evidence only${pending[0].gate_attempt_id ? ` (latest gate_attempt_id ${pending[0].gate_attempt_id})` : ''}.`);
+  }
+  if (checkpoints.length === 0) {
+    return { checkpoint: null, warnings: [...warnings, 'No passed checkpoint baseline is available; route-pending evidence cannot become a target or global baseline.'] };
+  }
+
   // Try to match the target
   const targetGate = target.gate_key;
   const targetStatusGate = target.status_gate;

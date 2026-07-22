@@ -139,7 +139,7 @@ export function findLatestLegalHandoff(bundlePath, { targetNode = null, sourceNo
     ctx.events,
     ctx.topology,
     (edge) => (!targetNode || edge.targetNode === targetNode) && (!sourceNode || edge.sourceNode === sourceNode),
-    { requireLoad },
+    { requireLoad, bundlePath },
   );
   return handoff ? { ok: true, handoff, events: ctx.events, topology: ctx.topology } : { ok: false, reason: 'no matching legal passed handoff was found', events: ctx.events, topology: ctx.topology };
 }
@@ -451,7 +451,41 @@ function currentCountBeforeIncrement(profile, guard) {
   return profile?.human_decision_checkpoints?.hitl2?.rerun_count !== guard?.next_count;
 }
 
-function makeHandoff(traceEvent, edge, events, { requireLoad = false } = {}) {
+function setupReadyRouteBinding(bundlePath, traceEvent) {
+  const event = traceEvent.event;
+  if (event.gate !== 'setup-ready') return { ok: true };
+  if (typeof event.gate_attempt_id !== 'string' || !event.gate_attempt_id || typeof event.plan_sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(event.plan_sha256)) {
+    return { ok: false, reason: 'setup-ready route is missing a valid gate_attempt_id or plan_sha256 binding' };
+  }
+  if (typeof event.checkpoint_ref !== 'string' || !/^_checkpoints\/[^/]+\.json$/.test(event.checkpoint_ref) || event.checkpoint_ref.includes('..')) {
+    return { ok: false, reason: 'setup-ready route checkpoint_ref must directly name one bundle-relative _checkpoints/*.json file' };
+  }
+  const checkpointPath = join(bundlePath, event.checkpoint_ref);
+  let checkpoint;
+  try {
+    const info = lstatSync(checkpointPath);
+    if (info.isSymbolicLink() || !info.isFile()) return { ok: false, reason: 'setup-ready route checkpoint_ref is not a regular non-symlink file' };
+    checkpoint = JSON.parse(readFileSync(checkpointPath, 'utf-8'));
+  } catch (error) {
+    return { ok: false, reason: `setup-ready route checkpoint is unreadable: ${error.message}` };
+  }
+  const evaluation = checkpoint.content_evaluation_ref;
+  if (checkpoint.trigger !== 'setup_route_pending' || checkpoint.route_state !== 'pending' || Object.hasOwn(checkpoint, 'gate_result_ref')) {
+    return { ok: false, reason: 'setup-ready route checkpoint does not have the required pending checkpoint shape' };
+  }
+  if (checkpoint.gate_attempt_id !== event.gate_attempt_id || !evaluation || evaluation.gate !== event.gate || evaluation.passed !== event.passed || evaluation.currentNodeRef !== event.currentNodeRef || evaluation.candidate_next !== event.next) {
+    return { ok: false, reason: 'setup-ready route checkpoint facts do not bind the gate_attempt trace' };
+  }
+  const checkpointHash = checkpoint.hashes?.['rb_plan.md']?.sha256;
+  let currentHash;
+  try { currentHash = createHash('sha256').update(readFileSync(join(bundlePath, 'rb_plan.md'))).digest('hex'); } catch (error) { return { ok: false, reason: `setup-ready route cannot read current rb_plan.md: ${error.message}` }; }
+  if (checkpointHash !== event.plan_sha256 || currentHash !== event.plan_sha256) {
+    return { ok: false, reason: 'setup-ready route checkpoint, trace, and current rb_plan.md hashes do not agree' };
+  }
+  return { ok: true, checkpoint };
+}
+
+function makeHandoff(traceEvent, edge, events, { requireLoad = false, bundlePath = null } = {}) {
   const superseder = supersededBy(events, traceEvent);
   if (superseder) {
     return {
@@ -459,6 +493,12 @@ function makeHandoff(traceEvent, edge, events, { requireLoad = false } = {}) {
       reason: `source gate "${traceEvent.event.gate}" pass at trace index ${traceEvent.index} is superseded by gate_attempt at trace index ${superseder.index}`,
       superseder,
     };
+  }
+
+  if (edge.sourceGate === 'setup-ready') {
+    if (!bundlePath) return { ok: false, reason: 'setup-ready route binding requires an explicit bundle path' };
+    const setupBinding = setupReadyRouteBinding(bundlePath, traceEvent);
+    if (!setupBinding.ok) return { ok: false, reason: setupBinding.reason };
   }
 
   const handoff = {
@@ -519,11 +559,25 @@ export function validateEnterPhaseTarget(bundlePath, targetNode) {
   const ctx = contextFor(bundlePath);
   if (!ctx.ok) return { ok: false, reason: ctx.reason, advice: [] };
 
-  const normal = latestLegalPassedHandoff(ctx.events, ctx.topology);
+  const normal = latestLegalPassedHandoff(ctx.events, ctx.topology, () => true, { bundlePath });
   const exceptionalStage = inspectPostFinalHandoffStage(bundlePath);
   const exceptional = exceptionalStage.ok && exceptionalStage.stage === 'pre_entry' ? exceptionalStage.handoff : null;
   const latest = exceptional && (!normal || exceptional.index > normal.index) ? exceptional : normal;
   if (!latest) {
+    const rejectedSetup = [...ctx.events].reverse().find((item) => {
+      const edge = edgeForAttempt(item, ctx.topology);
+      return edge?.sourceGate === 'setup-ready' && edge.targetNode === targetNode;
+    });
+    if (rejectedSetup) {
+      const binding = setupReadyRouteBinding(bundlePath, rejectedSetup);
+      if (!binding.ok) {
+        return {
+          ok: false,
+          reason: binding.reason,
+          advice: ['Repair the named setup-ready route persistence fact and rerun the same setup-ready Gate.'],
+        };
+      }
+    }
     if (exceptionalStage.reason_code === 'accepted_workspace') {
       const operationId = exceptionalStage.workspace?.operationId;
       return {
@@ -574,7 +628,7 @@ export function validateSourceGateStatusSync(bundlePath, sourceGateEnum) {
   if (!trace.ok) return { ok: false, reason: trace.reason, advice: [] };
   const ctx = { events: trace.events, topology };
 
-  const normal = latestLegalPassedHandoff(ctx.events, ctx.topology);
+  const normal = latestLegalPassedHandoff(ctx.events, ctx.topology, () => true, { bundlePath });
   const exceptionalStage = sourceGateEnum === 'hitl2_recorded' ? inspectPostFinalHandoffStage(bundlePath) : null;
   if (exceptionalStage?.reason_code === 'accepted_workspace') {
     const operationId = exceptionalStage.workspace?.operationId;
@@ -638,7 +692,7 @@ export function validateSourceGateStatusSync(bundlePath, sourceGateEnum) {
     degraded: latest.degraded === true,
     degradedReason: latest.degradedReason || null,
     degradedRules: latest.degradedRules || [],
-  }, ctx.events, { requireLoad: COVERED_ENTRY_TARGET_NODES.has(latest.targetNode) });
+  }, ctx.events, { requireLoad: COVERED_ENTRY_TARGET_NODES.has(latest.targetNode), bundlePath });
 
   if (!made.ok) {
     return {
@@ -677,7 +731,7 @@ export function checkPhaseHandoffPreflight(bundlePath, currentNodeRef) {
     });
   }
 
-  const normal = latestLegalPassedHandoff(ctx.events, ctx.topology);
+  const normal = latestLegalPassedHandoff(ctx.events, ctx.topology, () => true, { bundlePath });
   const exceptionalStage = currentNodeRef === 'phases/phase-rerun.md' ? inspectPostFinalHandoffStage(bundlePath) : null;
   if (exceptionalStage?.reason_code === 'accepted_workspace') {
     const operationId = exceptionalStage.workspace?.operationId;
@@ -795,7 +849,7 @@ export function checkPhaseHandoffPreflight(bundlePath, currentNodeRef) {
     degraded: latest.degraded === true,
     degradedReason: latest.degradedReason || null,
     degradedRules: latest.degradedRules || [],
-  }, ctx.events, { requireLoad: true });
+  }, ctx.events, { requireLoad: true, bundlePath });
 
   if (!made.ok) {
     return handoffFailure({

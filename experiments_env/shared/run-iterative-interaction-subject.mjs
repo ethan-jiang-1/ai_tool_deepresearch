@@ -87,6 +87,14 @@ const SUBJECTS = {
     tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
     boundary: 'Complete the minimum work owned by the current phase. After its Gate and immediate legal handoff, stop before executing the newly loaded phase.',
   },
+  '714': {
+    bundlePrefix: 'dpt_disp_case-714_',
+    transcript: 'case-714-transcript.jsonl',
+    system: `You are the independent subject Agent for case 714. Work only in the exact bundle path provided by the runner. Load the bundle's current production lifecycle surface and direct facts. Respond to the user's current turn, then follow that production surface for subsequent turns in this same session. Framework commands are executable from ${REPO_ROOT}; use that absolute root when a production instruction names a relative DPT_FRAMEWORK or experiments_env command, without inspecting unrelated framework source.`,
+    messages: ['请根据当前研究请求给出一个简洁的研究建议，只保留验证本次交互所需的最小范围。', '按建议开始。本轮只使用一手来源；不要把媒体转述当作证据。报告最后单列无法用一手来源验证的结论。'],
+    tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
+    boundary: 'Complete the minimum work owned by the current phase. Capture the supplied research controls only in the production host-file snapshot, then stop after its Gate and immediate legal handoff before executing the newly loaded phase.',
+  },
   '712': {
     bundlePrefix: 'dpt_disp_case-712_',
     transcript: 'case-712-transcript.jsonl',
@@ -138,7 +146,7 @@ const SUBJECTS = {
 };
 
 function usage() {
-  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <115|164|232|318|711|712|713-readiness|713-final|901|951|951-judge> --bundle <path>');
+  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <115|164|232|318|711|712|713-readiness|713-final|714|901|951|951-judge> --bundle <path>');
   process.exit(2);
 }
 

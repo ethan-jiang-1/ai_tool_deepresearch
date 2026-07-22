@@ -1,6 +1,6 @@
 # Runtime Reentry Debuggability
 
-> req: RRD-001, RRD-002, RRD-003, RRD-004, RRD-005, RRD-006, RRD-007, RRD-008, RRD-009, RRD-010
+> req: RRD-001, RRD-002, RRD-003, RRD-004, RRD-005, RRD-006, RRD-007, RRD-008, RRD-009, RRD-010, RRD-011, RRD-012
 
 ## Purpose
 
@@ -8,9 +8,9 @@ Define reentry checkpoint manifests, reentry checking, queue-state/lifecycle con
 ## Requirements
 ### Requirement: Phase boundary SHALL record a reentry checkpoint manifest
 
-After each gate attempt, the Engine SHALL write a lightweight checkpoint manifest under `_checkpoints/<iso>-<gate>.json`.
+After each ordinary gate attempt, the Engine SHALL write a lightweight checkpoint manifest under `_checkpoints/<iso>-<gate>.json`. For setup-ready only, RRD-011's staged route mode writes one route-pending checkpoint before its routable passed trace; that manifest is not a passed `gate_attempt` or handoff authority until the later bound trace exists.
 
-The manifest SHALL include:
+Every ordinary checkpoint manifest SHALL include:
 - `schema_version`
 - `created_at`
 - `bundle`
@@ -24,21 +24,23 @@ The manifest SHALL include:
 - `cursors`: line counts for `rb_output_declarations.jsonl`, `rb_trace.jsonl`, and `_logs/run.log`
 - `hashes`: size, mtime, and sha256 for control files and phase-owned artifacts
 
-The manifest SHALL NOT copy artifact contents.
+An RRD-011 setup-ready pending checkpoint SHALL instead use `trigger: setup_route_pending`, omit `gate_result_ref`, and include `gate_attempt_id`, `content_evaluation_ref` (`gate`, `passed`, `currentNodeRef`, `candidate_next`), `route_state: pending`, and its actual final `rb_plan.md` hash. The later routable trace SHALL bind that same identifier, checkpoint reference, and hash. The manifest SHALL NOT copy artifact contents.
 
-The checkpoint SHALL represent the runtime state at gate-attempt audit time. It SHALL NOT pretend to describe a later `advance-status` transition unless that transition has already occurred and is visible in bundle files.
+An ordinary checkpoint SHALL represent runtime state at its gate-attempt audit time. A setup-ready pending checkpoint SHALL truthfully represent content evaluation and route-pending state, not a later route/status transition. It SHALL NOT pretend to describe a later `advance-status` transition unless that transition has already occurred and is visible in bundle files.
 
-When multiple checkpoint manifests exist, reentry tooling SHALL select the latest checkpoint whose `gate_result_ref.gate` or `normalized_target.status_gate` matches the requested target. If no matching checkpoint exists, it MAY fall back to the latest checkpoint for global drift context, but SHALL report the absence of a target-matching checkpoint as inspect/advice.
+When multiple checkpoint manifests exist, reentry tooling SHALL select the latest non-pending checkpoint whose `gate_result_ref.gate` or `normalized_target.status_gate` matches the requested target. Any route-pending setup-ready checkpoint remains inspectable diagnostic evidence but SHALL NOT qualify as a passed handoff checkpoint or global fallback baseline, even when a later bound route trace exists. If no matching non-pending checkpoint exists, tooling MAY fall back to the latest non-pending checkpoint for global drift context, but SHALL report the absence of a target-matching checkpoint as inspect/advice.
 
 #### Scenario: Gate attempt records checkpoint
-
-- **WHEN** a gate CLI writes a `gate_attempt`
+- **WHEN** an ordinary gate CLI writes a `gate_attempt`
 - **THEN** `_checkpoints/` SHALL contain a new manifest for that gate
-- **AND** the manifest SHALL include status, queue summary, artifact inventory, and ledger/trace/log cursors
-- **AND** the manifest SHALL include `schema_version`, `trigger`, `gate_result_ref`, `status_snapshot`, `cursors`, and `hashes`
+- **AND** the manifest SHALL include status, queue summary, artifact inventory, ledger/trace/log cursors, schema version, trigger, gate result reference, and hashes
+
+#### Scenario: setup route-pending checkpoint becomes bound handoff evidence
+- **WHEN** setup-ready content evaluation passes and the staged route mode writes its checkpoint before its route trace
+- **THEN** the checkpoint SHALL identify `trigger: setup_route_pending`, `route_state: pending`, its `gate_attempt_id`, `content_evaluation_ref`, and actual plan hash
+- **AND** only a later matching route trace makes that checkpoint usable for the setup handoff
 
 #### Scenario: Reentry selects latest matching checkpoint
-
 - **WHEN** `_checkpoints/` contains multiple checkpoint manifests
 - **AND** `check-reentry --at wave1_complete` is executed
 - **THEN** reentry tooling SHALL select the newest checkpoint matching `wave1_complete` / `wave1-complete`
@@ -460,3 +462,15 @@ Post-final fresh layout requests SHALL consult the accepted C5 path. Before a va
 - **WHEN** C5 recovery has been route-bound into the existing rerun node and layout mutation is otherwise eligible
 - **THEN** reentry SHALL recommend the existing topic-state `mutate_layout` path
 - **AND** SHALL NOT introduce a post-final layout mover, history rewrite or second workspace
+
+### Requirement: Route-pending checkpoint is not a reentry baseline
+
+`check-reentry` SHALL exclude any checkpoint with `route_state: pending` from both target-matching checkpoint selection and global checkpoint fallback. It MAY expose such a checkpoint as diagnostic evidence, including its `gate_attempt_id`, content-evaluation status, and plan hash, and MAY separately report a matching bound `gate_attempt` trace as the setup-ready handoff fact; it SHALL still report that no passed checkpoint baseline exists. A later route trace never changes the pending checkpoint's baseline eligibility.
+
+The reentry checker SHALL NOT let pending evidence suppress, reclassify, or explain drift, status, or handoff facts. This adds no second reentry path: a passed route trace remains the only setup-ready handoff authority.
+
+#### Scenario: only pending setup checkpoint is not selected
+- **WHEN** `_checkpoints/` contains a route-pending setup-ready checkpoint but no bound setup-ready passed trace
+- **THEN** `check-reentry --at setup_ready` reports the missing passed checkpoint baseline, whether or not a matching route trace is present
+- **AND** it may list the pending checkpoint only as diagnostic evidence
+- **AND** it SHALL not return that checkpoint as the selected baseline or treat setup handoff as complete

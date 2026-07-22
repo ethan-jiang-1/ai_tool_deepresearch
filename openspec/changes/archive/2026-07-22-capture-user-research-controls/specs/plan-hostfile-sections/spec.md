@@ -29,7 +29,7 @@ The shared Progress writer SHALL operate only on the canonical `## Progress` sec
 
 ## MODIFIED Requirements
 
-### Requirement: Constraints and Decisions sections preserve bounded user controls
+### Requirement: Constraints and Decisions sections are reserved for future use
 
 The `## Constraints` and `## Decisions` sections SHALL be present in the template.
 
@@ -45,7 +45,7 @@ After these items, new templates SHALL contain `### User Research Controls` with
 
 `## Decisions` SHALL be marked as `(append-only — 关键决策记录，最新在上)`. No Gate SHALL check its content in this change.
 
-#### Scenario: no-controls template remains non-blocking
+#### Scenario: Empty or marker-only sections do not cause gate failure
 - **WHEN** a new bundle passes through gates with the template no-controls form and intentionally-allowed Constraints markers
 - **THEN** Constraints prose alone SHALL NOT cause a gate failure
 
@@ -61,13 +61,21 @@ Gate rules remain:
 - `plan_body_non_empty` (`field_non_empty` on `rb_plan.md` body, after stripping frontmatter) — catches "Agent wrote nothing." The control snapshot does not by itself establish Goal/section completeness beyond this existing minimum.
 - `plan_body_no_unfilled_marker` (`pattern_match` with negate, pattern `\((?:待填充|尚无话题)`) — catches a required-fill marker in template-owned content. Its implementation SHALL use PHS-007's canonical locator/opaque-region interpretation before applying the existing pattern.
 
-#### Scenario: non-empty body without template-owned required-fill marker passes
+#### Scenario: Non-empty body without required-fill markers passes gate
 - **WHEN** `rb_plan.md` body has content and no template-owned line matches the required-fill prefixes
 - **THEN** both plan-body rules SHALL pass even if a valid user snapshot contains those literal strings
 
-#### Scenario: required-fill marker in template-owned content fails
+#### Scenario: Required-fill markers cause gate failure
 - **WHEN** a template-owned Goal or other required position still contains `(待填充 — …)` or `(尚无话题 — …)`
 - **THEN** `plan_body_no_unfilled_marker` SHALL fail with inspect listing the detected marker prefix
+
+#### Scenario: Empty body fails gate
+- **WHEN** `rb_plan.md` body is empty or contains only whitespace after stripping frontmatter
+- **THEN** the `plan_body_non_empty` rule SHALL fail with inspect pointing to the empty body
+
+#### Scenario: Intentionally-allowed markers do NOT cause gate failure
+- **WHEN** template-owned `rb_plan.md` content contains `(待 HITL1 填充 — …)`, `(由 Engine — …)`, or `(待 HITL2 确认 — …)` but no required-fill marker
+- **THEN** `plan_body_no_unfilled_marker` SHALL pass
 
 #### Scenario: malformed controls form is not an escape hatch
 - **WHEN** a user-controls subsection uses an incomplete fence, wrong supplied-controls label, or other non-URC-001 form
@@ -82,7 +90,7 @@ The shared `writePlanProgress()` helper SHALL use the canonical host-file locato
 
 Gate list source: the template pre-populates gates from the known workflow manifest lifecycle. `check-gate-setup-ready.mjs` remains the first caller; other gate CLIs integrate in follow-up changes.
 
-#### Scenario: Gate pass flips canonical Progress checkbox
+#### Scenario: Gate pass flips Progress checkbox
 - **WHEN** `check-gate-setup-ready.mjs` evaluates all rules and the gate passes
 - **THEN** the Engine attempts to flip the canonical `- [ ] setup-ready` line to `- [x] setup-ready (<ISO8601 ts>)` in `rb_plan.md## Progress`
 - **AND** a successful write is reported as `committed` or `unchanged`
@@ -91,7 +99,7 @@ Gate list source: the template pre-populates gates from the known workflow manif
 - **WHEN** the setup-ready gate is evaluated and passes a second time on the same bundle
 - **THEN** the Engine updates the timestamp on the existing canonical `- [x] setup-ready` line without duplicating it
 
-#### Scenario: Progress write failure does not fabricate or reverse a verdict
+#### Scenario: Progress write failure does not affect gate output
 - **WHEN** `writePlanProgress()` cannot write (for example disk full or permission error)
 - **THEN** the plan retains its pre-write bytes and no checked Progress claim is emitted
 - **AND** the deterministic setup-ready content evaluation remains its actual result

@@ -2,7 +2,7 @@
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const REPO_ROOT = process.cwd();
@@ -198,26 +198,30 @@ describe('check-gate-setup-ready', () => {
     assert.equal(hint.write_to.includes('$checked_target'), false);
   });
 
-  it('turns strict Gate-attempt trace failure into a helper-owned hint without writing progress', () => {
+  it('turns setup route-trace failure into one authority-integrity outcome without a second audit', () => {
     const name = unique('tracefail');
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE.replace('plan_basename: test', `plan_basename: ${name}`));
     fillPlanBody(bundleDir);
     const planPath = join(bundleDir, 'rb_plan.md');
-    const planBefore = readFileSync(planPath, 'utf-8');
     rmSync(join(bundleDir, 'rb_trace.jsonl'));
     mkdirSync(join(bundleDir, 'rb_trace.jsonl'));
 
     const result = runGate(bundleDir);
     const output = JSON.parse(result.stdout);
-    const hint = output.hints.find((candidate) => candidate.rule_id === 'gate_attempt_trace_not_durable');
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'setup_ready_route_persistence_failed');
 
     assert.equal(output.check.passed, false);
     assert.equal(output.check.trace_durable, false);
     assertCompleteHint(hint);
     assert.equal(hint.repair_kind, 'missing_contract');
-    assert.equal(readFileSync(planPath, 'utf-8'), planBefore);
+    assert.match(readFileSync(planPath, 'utf-8'), /- \[x\] setup-ready \(/);
+    const checkpoints = readdirSync(join(bundleDir, '_checkpoints')).filter((name) => name.endsWith('.json'));
+    assert.equal(checkpoints.length, 1);
+    const checkpoint = JSON.parse(readFileSync(join(bundleDir, '_checkpoints', checkpoints[0]), 'utf-8'));
+    assert.equal(checkpoint.trigger, 'setup_route_pending');
+    assert.equal(checkpoint.route_state, 'pending');
   });
 
   it('appends runtime audit entry to rb_trace.jsonl', () => {

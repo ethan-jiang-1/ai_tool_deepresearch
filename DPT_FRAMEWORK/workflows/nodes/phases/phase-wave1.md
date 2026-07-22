@@ -26,7 +26,7 @@ suggested_context:
 ## 0. Execution Brief
 
 - **Objective**: produce submitted `evidence-summary.md`, `question-list.md`, source backing, Phase-owned topic reference projections, and Phase-owned `depth-review.yaml` for every topic.
-- **Start here**: load Wave0 outputs, seed topics, queue state, profile thresholds, and `dpt-evidence-extractor` role guidance.
+- **Start here**: load Wave0 outputs, seed topics, queue state, profile thresholds, and, when present, `rb_plan.md## Constraints > User Research Controls`, then `dpt-evidence-extractor` role guidance.
 - **Delegated path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit submit` -> submitted ledger row -> gate.
 - **Completion check**: side-effect-free `inspect-wave1-output.mjs` passes first, then `check-gate-wave1-complete.mjs` passes for `phases/phase-wave1.md`.
 - **Failure posture**: do not direct-search new Wave1 evidence from the Phase Agent. Repair rejected submits, produce a visible `blocked_contract`, or refill with supplementary work units.
@@ -54,6 +54,8 @@ For each delegated topic-deepening task, derive the initial candidate URL/source
 - `DPT_FRAMEWORK/cli/operate-queue.mjs`.
 - `DPT_FRAMEWORK/cli/operate-work-unit.mjs`.
 - `shared-subagent-protocol.md` for work-unit envelope and Sub-agent rules.
+
+When controls are present, use the original read-only `rb_plan.md## Constraints > User Research Controls` coordinate; do not replace it with a copied brief. Controls may guide sources, evidence treatment, analysis and presentation, but cannot weaken submitted-evidence, provenance, source-floor, receipt or Gate contracts. Before claim, the Phase Agent MAY append the same one-sentence beacon-rooted coordinate to an existing `task_brief`; it MUST NOT add queue/manifest/result/receipt fields or ask Engine to parse controls. Without controls, task briefs remain unchanged.
 
 ## 3. Allowed Actions
 

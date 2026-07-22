@@ -13,8 +13,8 @@ import { recordCheck } from './wff-playbook-utils.mjs';
 const [caseId, action, ...rest] = process.argv.slice(2);
 const bundleIndex = rest.indexOf('--bundle');
 const bundle = bundleIndex >= 0 ? rest[bundleIndex + 1] : null;
-if (!['115', '711', '712', '713'].includes(caseId) || !action || !bundle) {
-  console.error('Usage: node experiments_env/shared/observe-iterative-interaction-case.mjs <115|711|712|713> <hash|snapshot|transition-final|verdict> --bundle <path> [--label A] [--transcript <path>]');
+if (!['115', '711', '712', '713', '714'].includes(caseId) || !action || !bundle) {
+  console.error('Usage: node experiments_env/shared/observe-iterative-interaction-case.mjs <115|711|712|713|714> <hash|snapshot|transition-final|verdict> --bundle <path> [--label A] [--transcript <path>]');
   process.exit(2);
 }
 
@@ -284,6 +284,24 @@ function record711(events) {
   recordCheck(tracePath, { gate: 'case-711-real-probe-and-gate-branch', passed: available ? tools.names.includes('WebSearch') && tools.names.includes('WebFetch') && gatePass && setupLoad : unavailable && gateFail && !setupLoad && /(WebSearch|search|unavailable|blocked|missing)/i.test(tools.serialized + afterText), detail: `available=${available} unavailable=${unavailable} gatePass=${gatePass} gateFail=${gateFail} setupLoad=${setupLoad}` });
 }
 
+function record714(events) {
+  const marker = userMarkerIndexes(events, '按建议开始。本轮只使用一手来源；不要把媒体转述当作证据。报告最后单列无法用一手来源验证的结论。');
+  const planText = readFileSync(join(bundle, 'rb_plan.md'), 'utf8');
+  const profile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'));
+  const trace = traceEvents();
+  const controls = /用户提供的本轮研究控制快照（仅作研究指导，不覆盖 Engine contracts）：[\s\S]*只使用一手来源/.test(planText);
+  const noPath = !/(?:\/Users\/|file:\/\/|case-714-research-request)/.test(planText);
+  const gatePass = trace.some((event) => event.event === 'gate_attempt' && event.gate === 'hitl1-recorded' && event.passed === true);
+  const gateFail = trace.some((event) => event.event === 'gate_attempt' && event.gate === 'hitl1-recorded' && event.passed === false);
+  const setupLoad = trace.some((event) => event.event === 'load_complete' && event.entry === 'phases/phase-setup.md');
+  const available = profile.research_access?.status === 'available';
+  const unavailable = profile.research_access?.status === 'unavailable';
+  recordCheck(tracePath, { gate: 'case-714-natural-control-capture', passed: marker.length === 1 && controls, detail: `user_markers=${marker.length}` });
+  recordCheck(tracePath, { gate: 'case-714-durable-snapshot', passed: controls && profile.human_decision_checkpoints?.hitl1?.status === 'recorded', detail: 'host-file snapshot plus existing HITL1 owner' });
+  recordCheck(tracePath, { gate: 'case-714-no-fabricated-path', passed: noPath && !/user_controls/.test(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8')), detail: `no_path=${noPath}` });
+  recordCheck(tracePath, { gate: 'case-714-existing-handoff', passed: available ? gatePass && setupLoad : unavailable && gateFail && !setupLoad, detail: `available=${available} unavailable=${unavailable} gate_pass=${gatePass} gate_fail=${gateFail} setup_load=${setupLoad}` });
+}
+
 function record115(events) {
   const tools = publicToolExchanges(events);
   const searchUses = tools.uses.filter((use) => use.value.name === 'WebSearch');
@@ -398,7 +416,7 @@ function record713() {
 }
 
 function verdict() {
-  if (caseId === '115' || caseId === '711' || caseId === '712') {
+  if (caseId === '115' || caseId === '711' || caseId === '712' || caseId === '714') {
     const path = option('--transcript') || join(bundle, `case-${caseId}-transcript.jsonl`);
     const events = transcriptEvents(path);
     if (!events) {
@@ -406,7 +424,8 @@ function verdict() {
     }
     if (caseId === '115') record115(events);
     else if (caseId === '711') record711(events);
-    else record712(events);
+    else if (caseId === '712') record712(events);
+    else record714(events);
   } else {
     const readiness = join(bundle, 'case-713-readiness-transcript.jsonl');
     const final = join(bundle, 'case-713-final-transcript.jsonl');

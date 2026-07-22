@@ -347,6 +347,25 @@ describe('check-reentry CLI', () => {
     });
   });
 
+  describe('route-pending checkpoints', () => {
+    it('never selects a pending setup checkpoint as matching or global drift baseline', () => {
+      const dir = setupBundle('pending-setup', { current_gate: 'setup_ready', next_gate: 'seed_topics_ready' });
+      mkdirSync(join(dir, '_checkpoints'), { recursive: true });
+      writeFileSync(join(dir, '_checkpoints', 'pending.json'), JSON.stringify({
+        created_at: '2026-07-22T00:00:00.000Z',
+        trigger: 'setup_route_pending',
+        route_state: 'pending',
+        gate_attempt_id: 'pending-attempt',
+        hashes: { 'rb_plan.md': { sha256: createHash('sha256').update(readFileSync(join(dir, 'rb_plan.md'))).digest('hex') } },
+      }));
+      const result = runCliJson(dir, 'setup_ready');
+      const warningText = result.stdout.warnings.map((warning) => warning.message || String(warning));
+      assert.ok(warningText.some((warning) => warning.includes('route-pending checkpoint')));
+      assert.ok(warningText.some((warning) => warning.includes('No passed checkpoint baseline')));
+      assert.equal(result.stdout.checkpoint, null);
+    });
+  });
+
   describe('missing artifacts audit', () => {
     it('blocks when required wave1 artifacts are missing', () => {
       const dir = setupBundle('rt-missing-artifact');

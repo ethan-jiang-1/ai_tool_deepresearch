@@ -14,12 +14,12 @@ const REPO_ROOT = process.cwd();
 const CASE_ID = process.argv[2];
 const targetIndex = process.argv.indexOf('--target-dir');
 const TARGET_DIR = targetIndex >= 0 && process.argv[targetIndex + 1] ? resolve(process.argv[targetIndex + 1]) : REPO_ROOT;
-if (!['711', '712', '713'].includes(CASE_ID)) {
-  console.error('Usage: node experiments_env/shared/prepare-iterative-interaction-case.mjs <711|712|713> [--target-dir <dir>]');
+if (!['711', '712', '713', '714'].includes(CASE_ID)) {
+  console.error('Usage: node experiments_env/shared/prepare-iterative-interaction-case.mjs <711|712|713|714> [--target-dir <dir>]');
   process.exit(2);
 }
 if (process.argv.length !== (targetIndex >= 0 ? 5 : 3)) {
-  console.error('Usage: node experiments_env/shared/prepare-iterative-interaction-case.mjs <711|712|713> [--target-dir <dir>]');
+  console.error('Usage: node experiments_env/shared/prepare-iterative-interaction-case.mjs <711|712|713|714> [--target-dir <dir>]');
   process.exit(2);
 }
 
@@ -260,8 +260,8 @@ function readStatus(bundle) {
   return JSON.parse(readFileSync(join(bundle, 'rb_status.json'), 'utf8'));
 }
 
-function prepare711() {
-  const { bundle } = instantiateDisposable('711');
+function prepareHitl1(caseId) {
+  const { bundle } = instantiateDisposable(caseId);
   const predecessor = passAndEnter(bundle, 'instantiation-complete', 'phases/phase-instantiation.md', 'hitl1_recorded');
   const status = readStatus(bundle);
   const profile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'));
@@ -269,8 +269,8 @@ function prepare711() {
   assert.equal(profile.research_access.status, 'unprobed');
   assert.equal(profile.research_profile, 'not_selected');
   assert.equal(profile.human_decision_checkpoints.hitl1.status, 'not_started');
-  writeFileSync(join(bundle, 'case-711-research-request.txt'), 'Research whether a cash-constrained small company should buy one piece of equipment now or defer; keep the scope compact and decision-focused.\n');
-  writeFileSync(join(bundle, 'case-711-setup.json'), `${JSON.stringify({
+  writeFileSync(join(bundle, `case-${caseId}-research-request.txt`), 'Research whether a cash-constrained small company should buy one piece of equipment now or defer; keep the scope compact and decision-focused.\n');
+  writeFileSync(join(bundle, `case-${caseId}-setup.json`), `${JSON.stringify({
     fixture: 'setup_only',
     legal_boundary: { current_node: status.current_node, current_gate: status.current_gate, next_gate: status.next_gate },
     research_access_status: profile.research_access.status,
@@ -329,4 +329,4 @@ function prepare713() {
   return bundle;
 }
 
-console.log(CASE_ID === '711' ? prepare711() : CASE_ID === '712' ? prepare712() : prepare713());
+console.log(CASE_ID === '711' || CASE_ID === '714' ? prepareHitl1(CASE_ID) : CASE_ID === '712' ? prepare712() : prepare713());

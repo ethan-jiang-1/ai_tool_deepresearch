@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.41
+
+- Added one optional, durable HITL1 user-research-controls snapshot in the plan host file, with bounded literal handling for Topic Registry, Progress, and required-fill consumers.
+- Bound setup-ready Progress, pending checkpoint, and consumable route trace to the same final plan bytes before downstream phase entry.
+
 ## v0.40
 
 - Delivered closed role guidance and direct-output authoring requirements to actor-bound work-unit task and spawn surfaces while preserving the existing claim, submit and Gate authorities.
