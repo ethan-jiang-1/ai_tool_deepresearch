@@ -1,6 +1,6 @@
 # _backlog — 项目待办与决策记录
 
-> 最后更新: 2026-07-09 | 本目录追踪项目的工作项、设计决策、依赖分析。
+> 最后更新: 2026-07-22 | 本目录追踪项目的工作项、设计决策、依赖分析。
 > 活跃工作走 OpenSpec（`openspec/changes/`）；本目录是 **上游分析与决策记录**，不是运行时真相。
 >
 > **本文件是 `_backlog` 的规矩手册。** 搬迁流程在下面定死，今后大家都遵循这里头定的规矩。
@@ -16,12 +16,12 @@ _backlog/
 ├── _done/                             # ✅ 已完成/已归档
 │   ├── README.md                      #   状态总览、DONE 列表、快速查阅指南
 │   ├── _fixed_bugs/                   #   已修复 Bug（计数见 _done/README）
-│   ├── _done_todos/                   #   已完成 TODO（15，DONE-001~015）
+│   ├── _done_todos/                   #   已完成 TODO（16，DONE-001~016）+ 已吸收 standalone TODO（3）
 │   ├── _closed_plans/                 #   已完成 Plan（计数见 _done/README）
 │   └── _old_topics/                   #   历史归档（⚠️ 勿读）
 │
 ├── bugs/                              # 🐛 活跃 bug → 修完移入 _done/_fixed_bugs/
-├── todos/                             # 📋 活跃 todo（9）→ 做完移入 _done/_done_todos/
+├── todos/                             # 📋 活跃 todo（4）→ 做完或作为 absorbed input 归档至 _done/_done_todos/
 └── plans/                             # 📐 活跃 plan → 完成移入 _done/_closed_plans/
 ```
 
@@ -34,7 +34,7 @@ _backlog/
 | 类型 | 活跃（当前工作） | 归档（已完成） | 编号方式 |
 |------|-----------------|---------------|---------|
 | 🐛 **Bug** | [`bugs/`](bugs/) — 活跃 bug 列表 | [`_done/_fixed_bugs/`](_done/_fixed_bugs/) — 已修复（见 `_done/README`） | BUG-NNN 递增，权威在 `_fixed_bugs/` |
-| 📋 **Todo** | [`todos/`](todos/) — 活跃 todo + PENDING 表 + 依赖链 + 执行顺序 | [`_done/_done_todos/`](_done/_done_todos/) — 已完成（15 个，DONE-001~015） | DONE-NNN 递增，移入时分配 |
+| 📋 **Todo** | [`todos/`](todos/) — 活跃 todo + PENDING 表 + 依赖链 + 执行顺序 | [`_done/_done_todos/`](_done/_done_todos/) — 16 个已完成（DONE-001~016）+ 3 个已吸收设计输入 | 仅实施完成项分配 DONE-NNN |
 | 📐 **Plan** | [`plans/`](plans/) — 活跃 plan 列表 | [`_done/_closed_plans/`](_done/_closed_plans/) — 已完成（见 `_done/README`） | CLS-NNN 递增，移入时分配 |
 
 > 📖 **想看全局状态、历史决策、查阅指南** → [`_done/README.md`](_done/README.md)
@@ -66,6 +66,8 @@ git mv todos/todo-<name>.md _done/_done_todos/todo-<name>.md
 git mv plans/<name>.md _done/_closed_plans/<name>.md
 ```
 
+一个 standalone TODO 若被活跃 plan 吸收而非实现，也使用同一 `git mv` 保留原文；在 `_done/_done_todos/README.md` 的“已吸收”表登记，但**不**分配 `DONE-NNN`、不增加 DONE 计数。
+
 ### 搬完更新
 
 > ⚠️ **README 文件本身永不删除。** "移除"指的是从活跃列表中移除该条目的行，不是删文件。每个 README 永远留在目录里做索引。**文件内容原样保留，`git mv` 搬迁。**
@@ -83,6 +85,13 @@ git mv plans/<name>.md _done/_closed_plans/<name>.md
 | `todos/README.md` | 从活跃列表移除该 todo 的行 |
 | `_done/_done_todos/README.md` | 表格加一行 + 更新 Next available DONE ID |
 | `_done/README.md` | DONE 计数 +1 |
+
+**📋 Todo 被活跃 plan 吸收（非实现）：**
+| 操作 | 怎么改 |
+|------|--------|
+| `todos/README.md` | 从活跃列表移除，并写明 active replacement |
+| `_done/_done_todos/README.md` | “已吸收”表加一行；不分配 `DONE-NNN` |
+| `_done/README.md` | 更新已吸收输入数量；不增加 DONE 计数 |
 
 **📐 Plan 完成：**
 | 操作 | 怎么改 |

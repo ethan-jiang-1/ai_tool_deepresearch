@@ -1,8 +1,8 @@
 # TODO: 让系统成为"靠谱的同事"而非"工具"（北星 — 已收窄/延后实施）
 
-> 状态: 北星保留 / 实施延后 | 优先级: 低–中（人格层） | 更新: 2026-07-15  
+> 状态: 北星保留 / 实施延后 | 优先级: 低–中（人格层） | 更新: 2026-07-22（v0.40 同步）
 > 直接依赖: `DONE-hitl-ux` ✅（环机制已就位）  
-> **硬前置:** ~~BUG-069 有进展 + `todo-coding-agent-setup-ux`~~ ✅ 两者均已解决 — BUG-069 已修复移入 `_done/_fixed_bugs/`，setup-ux 已关闭移入 `_done/_closed_plans/`。延后理由变为：等 quality/recover 稳定后再抬人格层，避免在流动地基上做皮肤。
+> **硬前置:** ~~BUG-069 有进展 + `todo-coding-agent-setup-ux`~~ ✅ 两者均已解决；`todo-phase-recover` 也已完成。延后理由变为：质量层仍未证实需要新 persistent semantics，且当前 helper-oriented posture 已要求 Agent 执行已授权机械工作；不要把 persona/memory 当作补救机制。
 
 ## Why（北星仍成立）
 
@@ -33,7 +33,7 @@
 
 ## Next Step
 
-保持北星文档；**不要**现在 `/opsx:propose` 大人格 change。硬前置已满足（069 + setup-ux ✅）；等 quality/recover 稳定后再抬，避免在流动地基上做皮肤。
+保持北星文档；**不要**现在 `/opsx:propose` 大人格 change。只有活跃 `research-question-closure-and-evidence-judgment` plan 的单 run 用户控制或真实 run 暴露出不能由当前 HITL/recovery guidance 表达的用户价值时，才按最小独立 capability 逐项 explore；不从本 TODO 直接启动 persona、memory 或 generic helper subsystem。
 
 ## 记忆支柱细化：跨 run 双记忆（Preference + Experience）— 北星细化
 
@@ -82,7 +82,7 @@ Type B 才是「像同事」的关键：agentic workflow 应该记住栽过的�
 |--|--|--|
 | `preferences.yaml` | Type A，结构化、schema 校验，镜像 shape 面 | 机器读 + **确认后**写回 |
 | `experience.jsonl` | Type B，蒸馏 lesson，**append-only**（并发安全，参照 `run.log` 设计原则） | 自动追加、advisory 读、可裁剪 |
-| `taste.md` | 人写的「找/鉴/写」口味包 | **归 [[user-knowledge-hang]]**，此处只引用不重复 |
+| `taste.md` | 人写的「找/鉴/写」口味 | **归活跃 unified plan 的 per-run user controls**，此处只引用不重复 |
 
 ### 读写路径 + 学习姿态（split：auto-experience / confirm-preference）
 
@@ -110,14 +110,14 @@ Type B 才是「像同事」的关键：agentic workflow 应该记住栽过的�
 
 每期独立有价值、可独立 gate、可独立走一个 OpenSpec change。
 
-### 与 [[user-knowledge-hang]] 的边界
+### 与 Per-Run User Controls 的边界
 
-| | user-knowledge-hang | 本记忆支柱 |
+| | unified plan 的 per-run user controls | 本记忆支柱 |
 |--|--|--|
 | 形态 | 静态、人写、**单次挂载** | 自动、**跨 run**、结构化 |
 | 内容 | 找/鉴/写 口味 Markdown | shape 偏好 + 失败经验 |
 
-边界那份 todo 已声明（其 line 24/139/152：「自动跨 run 学习那是 helper-not-tool 记忆层」）；此处复述以防漂移。两者可共存：`taste.md` 是人写口味，本层是机器学的偏好 + 经验。
+活跃 unified plan 已把这条边界写清：单 run 的人写控制不自动跨 run 学习；此处复述以防漂移。两者可共存：`taste.md` 是人写口味，本层是机器学的偏好 + 经验。
 
 ### Non-Goals（本节补充）
 

@@ -1,6 +1,16 @@
 # TODO: phase-recover（失焦时从 bundle 真相重定位）
 
-> 状态: 部分实现（infra 已落地，Agent-facing 程序仍缺） | 优先级: 中–高 | 更新: 2026-07-15
+> 状态: DONE（2026-07-22） | 原优先级: 中–高 | 最后同步: v0.40
+
+## 结案依据
+
+本 TODO 的 Agent-facing recovery path 已由当前 framework 交付，而不是仍缺一套新程序：
+
+- `DPT_FRAMEWORK/RUN.md`、`command_playbook/start-research.md` 和 `shared-silent-execution.md` 已要求从 `BUNDLE_MAP.md`、`rb_status.json.current_node`、`rb_queue.json`、`rb_trace.jsonl` 重载，禁止用 chat memory 或 `current_gate` 猜 phase；
+- `check-reentry.mjs --bundle <path> --at <target>` 已读取 bundle/control facts 并输出 `recovery.root_findings[]`。每个 `reachable` root 最多给一个 sanctioned nearest action，`missing_contract` 明确停止；
+- post-Final 的唯一例外由 `operate-post-final-recovery inspect|apply|recover`、`check-reentry` 和既有 rerun path 承接；已提交 work-unit declaration 的窄恢复仍由 `recover-declaration` 承接。
+
+因此不新增 trace cursor、generic recovery router、recover retry limit 或第二套 phase ownership。未来若出现当前 recovery contract 无法解释的真实 bundle drift，应以该直接缺口单独提出 change。
 
 ## Why
 

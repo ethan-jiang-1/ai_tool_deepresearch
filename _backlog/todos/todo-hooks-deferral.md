@@ -1,6 +1,6 @@
 # TODO: workflow boundary hooks（延后）
 
-> 状态: 延后 / parked | 优先级: 低 | 更新: 2026-07-15
+> 状态: 延后 / parked | 优先级: 低 | 更新: 2026-07-22（v0.40 同步）
 
 ## Why
 
@@ -14,7 +14,7 @@ Boundary hooks 是可选的、phase 间确定性检查（如 setup→wave0、wav
 | `workflows/hooks/` | ❌ **目录仍不存在** — 正确未开工 |
 | README 链 `schema-core → prototype-start-from-here → …` | ❌ 过时 — 前驱已 DONE，hooks 从未创建 |
 
-**延后条件更新：** BUG-069 已修复（gate hints + contract lineage），phase-recover 方向更清楚（post-final-recovery、consistency-validator、recover-declaration 已落地）。两个解锁条件均显著改善。仍延后的理由：等 phase-recover Agent-facing 程序定稿后再加 hooks，避免 checkpoint 家族在不完整的恢复路径上叠床架屋。
+**延后条件更新：** BUG-069 已修复，`todo-phase-recover` 也已由 `check-reentry`、bundle-truth reload guidance 与 narrow recovery owners 完成。仍延后的理由不是等待基础设施，而是尚未发现现有 Gate / inspect / reentry contract 无法表达的直接 boundary gap。没有该 gap 时，新增 hooks 只会制造第二套 checkpoint。
 
 ## Current Direction
 
@@ -29,10 +29,10 @@ Boundary hooks 是可选的、phase 间确定性检查（如 setup→wave0、wav
 
 ## Non-Goals
 
-- 不在 recover / BUG-069 收口前加 hooks
+- 不为预防性需求新增 hooks family
 - 不把 hooks 做成隐藏 workflow runner
 - 不写 runtime 数据进 `DPT_FRAMEWORK/`
 
 ## Next Step
 
-保持延后。解锁条件已改善（BUG-069 已修复 + phase-recover infra 已落地）。等 phase-recover Agent-facing 程序定稿后可构思首 hook（候选：`wave0_closeout_to_wave1_start`）。
+保持延后。只有真实 bundle/Agent observation 显示 `wave0_closeout_to_wave1_start` 或其他边界缺少现有 Gate、inspect、continuation/reentry 的确定性 authority 时，才以该单一缺口 explore；不为“预防”新建 hooks family。

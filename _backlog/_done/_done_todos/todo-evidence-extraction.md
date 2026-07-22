@@ -2,7 +2,7 @@
 
 > 状态: ✅ DONE（核心） | 完成归档: 2026-07-09 | DONE-015  
 > 落地 change: `openspec/changes/archive/2026-07-02-implement-evidence-extraction/`  
-> 后续语义层: 见活跃 [`../../todos/todo-evidence-quality.md`](../../todos/todo-evidence-quality.md)
+> 后续研究闭环: 见活跃 [`../../plans/research-question-closure-and-evidence-judgment.md`](../../plans/research-question-closure-and-evidence-judgment.md)
 
 ## 已落地（不再作为活跃 todo）
 
@@ -16,10 +16,12 @@
 - **CandidateCard schema / cache→card→promote** — V12 路径；当前是 work-unit → reference materialization，不是 CandidateCard 流水线
 - **subagent-relay / mergeResults** — 已退役，由 work-unit 取代
 
-## 残余（并入 evidence-quality，不单独立项）
+## 后续研究闭环（并入统一 plan，不单独立项）
 
-- 语义质量字段（substance / tier / commercial / retention）— 结构可数 ≠ 语义够格
+- 证据是否足够支撑具体研究问题，以及 exploit / explore / limitation 的模型判断 — 结构可数 ≠ 问题层面的语义充分
 - 非 delegated 主 Agent reference 与 ledger 路径的完全对等（若仍有缺口）
+
+后续只在真实 run 证明某个不可重建的 question/finding-level fact 缺失时，才讨论最小结构化补充；见活跃 `research-question-closure-and-evidence-judgment` plan。不得默认回到 per-source semantic countability 或全局 source score。
 
 ---
 

@@ -1,7 +1,7 @@
 # TODO: context-reground（长上下文 head 重锚 — parked）
 
-> 状态: parked | 优先级: 低 | 更新: 2026-07-15  
-> 互补: `todo-phase-recover.md`（已晕时兜底）  
+> 状态: parked | 优先级: 低 | 更新: 2026-07-22（v0.40 同步）
+> 互补: `todo-phase-recover.md` ✅ DONE（失焦后的 bundle-truth recovery）
 > 相关: 各 phase §6 `check.next` tail anchoring — **增强不取代**
 
 ## Why
@@ -18,7 +18,7 @@ Tail anchoring（§6 → `check.next`）仍然正确且 load-bearing。本 todo 
 | 无 periodic reground 机制 | ✅ 仍成立 — 无 dedicated reground MD |
 | `plan-hostfile` sections | ✅ 已有，但未周期性注入上下文 |
 | Engine token 计数触发 | ❌ 仍无（正确 non-goal） |
-| repair-rerun 恢复 infra | ✅ post-final-recovery、consistency-validator、handoff-helpers 已落地 — 本 todo 的「我在哪」可复用这些模块的真相读取路径 |
+| Agent-facing bundle recovery | ✅ `RUN.md` / `start-research.md` / `shared-silent-execution.md` + `check-reentry` 已覆盖 BUNDLE_MAP/status/trace reload 与最近合法动作 |
 
 ## Current Direction（不变，仅换真相源）
 
@@ -35,4 +35,4 @@ Tail anchoring（§6 → `check.next`）仍然正确且 load-bearing。本 todo 
 
 ## Next Step
 
-保持 parked。phase-recover 程序草稿出来后再 explore，避免两套不一致的「我在哪」叙事。
+保持 parked。它不再等待 phase-recover：只有真实 case 证明现有 BUNDLE_MAP/status/trace reload 与 `check-reentry` 仍无法让 Agent 重获当前 phase 时，才 explore 一个不重复现有 recovery contract 的最小 head-reground 投影。

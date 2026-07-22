@@ -1,6 +1,6 @@
 # TODO: evidence-quality（语义层 discard — 结构计数已落地）
 
-> 状态: 待设计（已收窄） | 优先级: 高 | 更新: 2026-07-15  
+> 状态: 待设计（已收窄） | 优先级: 高 | 更新: 2026-07-22（v0.40 同步）
 > 上游: `todo-evidence-extraction` ✅ DONE（`ref-count.mjs` + ledger + CCC 结构门槛）  
 > 下游: `todo-explore-exploit` → `todo-final-output-eval`
 
@@ -21,6 +21,8 @@ Extraction 已回答「声明了什么、结构上能不能数」。Quality 回�
 | countability 用 content/presentation 启发式 | ✅ **repair-rerun 已收窄**（BUG-086）：仅 `accepted` status + parseable source URL；`key_facts_min_lines` 规则已删除 |
 | depth facts 需 Agent 手抄 ledger/cache 真相 | ✅ **repair-rerun 已修复**（BUG-087）：Engine 从 reviewed submitted rows 派生，Agent 只给 reviewed refs + 不可派生判断 |
 | BUG-069 契约不自洽阻塞 gate 消费面 | ✅ **已修复** — gate hints + contract lineage 落地，不再在漂移契约上叠语义规则 |
+| `quality_min_tier` / `quality_min_substance` | ✅ 已是 `research_style_params` 的显式 Agent guidance，Wave2 triage 必须读取；它们尚不是 submitted per-source semantic fact 或 Gate verdict |
+| Wave1 actor authoring / first-return contract | ✅ v0.38–v0.40 已交付 exact output contract、同源 evaluator 与 actor guidance；本 TODO 不重做 output linter 或 authoring validator |
 
 ## Current Direction（收窄后）
 
@@ -66,5 +68,4 @@ const EvidenceQuality = z.object({
 
 ## Next Step
 
-`/opsx:explore evidence-quality` — 只谈语义字段落点 + Engine 最少规则 + 与 `uncountable[]`/degraded 的关系。  
-countability 结构层已由 repair-rerun 收窄；本 todo 聚焦语义层，不再担心 gate 契约漂移。
+`/opsx:explore evidence-quality` — 先证明现有 `quality_min_*` guidance、Wave2 finding confidence/backing 与 submitted facts不足以表达哪个可审计语义缺口；只有该缺口成立，才讨论字段落点、最少 Engine 规则与 `uncountable[]`/degraded 的关系。不得重做 output linter、actor authoring contract 或结构 countability。

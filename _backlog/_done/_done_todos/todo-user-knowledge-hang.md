@@ -1,8 +1,8 @@
 # TODO: user-knowledge-hang（小白可挂的「找 / 鉴 / 写」知识包）
 
-> 状态: 待设计 | 优先级: 中 | 更新: 2026-07-15  
+> 状态: 待设计 | 优先级: 中 | 更新: 2026-07-22（v0.40 同步）
 > 目标: **机制越简单越好**；小白能挂上；高度可定制  
-> 相关但不等同: HITL1 `search_preference`（太薄）、`todo-helper-not-tool` 跨 run 记忆（太重）、`todo-evidence-quality`（Engine 语义规则）
+> 相关但不等同: HITL1 `search_preference`（太薄）、`todo-helper-not-tool` 跨 run 记忆（太重）、活跃 `research-question-closure-and-evidence-judgment` plan（模型的证据/策略判断）
 
 ---
 
@@ -47,8 +47,12 @@
    - 挂了 = HITL1 / wave / Final 读得到
 
 5. **和 Engine 硬门槛分家**  
-   - 「结构可数」仍归 `ref-count` / evidence-quality  
+   - 「结构可数」仍归 `ref-count`；研究问题的语义判断归模型，不由知识包或 Engine score 取代
    - 知识包回答的是「**我对这个领域的口味**」，不是替代 CCC 字数
+
+6. **先有 OpenSpec contract，再有 profile path / bundle copy**
+   - 当前 profile schema、HITL1 writer 与 phase guidance 都没有 `knowledge_pack_*` owner
+   - 任何新增 path、copy、frontmatter 或 reload behavior 都是 runtime contract change，必须先 propose；不得把外部 Markdown path 当作无授权的隐式 bundle truth
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -148,7 +152,7 @@ my-research-taste.md          # 或 knowledge/我的口味.md
 | 项 | 关系 |
 |----|------|
 | `search_preference` | 可被知识包「往哪里找」吸收或并存；知识包更完整 |
-| `todo-evidence-quality` | Engine 语义 discard；知识包是用户口味软约束，可作 Agent 输入，不替代 |
+| `research-question-closure-and-evidence-judgment` | 模型按问题判断证据/策略；知识包是用户口味软约束，可作 Agent 输入，不替代 provenance 或问题交接契约 |
 | `todo-helper-not-tool` | 人格/跨 run 记忆；本 todo 是 **单次挂载的静态包**，更简单、可先做 |
 | chinese-first plan | 第三节可写「用中文写」；不单独为语言开机制 |
 
@@ -165,8 +169,8 @@ my-research-taste.md          # 或 knowledge/我的口味.md
 
 ## Next Step
 
-1. `/opsx:explore user-knowledge-hang` — 钉死：三节模板 + 一种挂载方式 + Agent 读取时机（HITL1 / wave / Final）  
-2. 保持 **文档 + 一个 profile 字段 + 一句 shared 软提示** 体量；若 tasks 开始长出 schema 森林，说明 scope 漂了  
+1. `/opsx:explore user-knowledge-hang` — 先确认现有 `search_preference`、`research_style_params`、Wave2/HITL2 guidance 缺少的用户软约束事实，再钉死三节模板、一种受控挂载方式与读取时机
+2. 若确有缺口，再 propose 一个文档 + 单一受控 reference/copy contract + shared soft guidance 的小 change；不得绕过 OpenSpec 直接加 profile 字段，若 tasks 长出 schema 森林则停止
 
 ## 一句话
 
