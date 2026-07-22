@@ -516,6 +516,9 @@ depends_on_topic_uids: []
 }
 
 function stageWave2Pass(bundle) {
+  const receipt = traceEvents(bundle).filter((event) => event.event === 'gate_attempt' && event.gate === 'wave1-complete' && event.passed === true).at(-1)?.carried_target_receipt;
+  if (!receipt?.targets?.[0]) throw new Error('Wave2 fixture requires the routed Wave1 carried-target receipt');
+  const carried = receipt.targets[0];
   mkdirSync(join(bundle, 'artifacts/wave2'), { recursive: true });
   writeFileSync(join(bundle, 'artifacts/wave2/synthesis.md'), `# Cross-Topic Synthesis
 
@@ -574,6 +577,12 @@ findings:
     confidence: medium
     independent_backing_refs: []
     gap_status: no_gap
+    wave1_target_bindings:
+      - receipt_sha256: ${receipt.receipt_sha256}
+        topic_uid: ${carried.topic_uid}
+        intent_sha256: ${carried.intent_sha256}
+        target_id: ${carried.target_id}
+        target_revision: ${carried.target_revision}
 synthesis_eligibility:
   pure_synthesis_eligible: true
   scan_matrix_present: true

@@ -17,14 +17,14 @@
 ## 4. Verification Assets
 
 - [x] 4.1 为 CTS-008、RWG-020 编写 `tests/engine/wave-carried-target-receipts.test.mjs` unit tests，覆盖空/坏 declaration、重复 ID/receipt pair、layout-only reuse、intent drift、revision/digest stability、ambiguity 与非 prose/slug fuzzy matching。
-- [ ] 4.2 为 GSK-012、TRW-006、RWG-020 编写 `tests/integration/cli/wave1-target-receipt-gate.test.mjs`，经真实 Wave Gate/trace/handoff helper 验证 receipt projection、generic metadata exclusion、versioned missing receipt failure、legacy compatibility、直接 repair envelope，以及 strict receipt append failure 只输出一次 failed result。
-- [ ] 4.3 为 RWG-020、WTS-011 编写 `tests/e2e/wave1-target-receipt-wave2-closure.test.mjs`，在真实 temporary bundle Wave1->load->Wave2 chain 覆盖 valid/empty/missing/stale/same-origin-only binding、current-intent drift 在 coverage 前短路、layout-only reuse 与 mutable-review 不重开 parent。
-- [ ] 4.4 为 RWP-021 创建并登记 `experiments_playbook/exp_iterative_interaction/case-715-wave-target-receipt-closure.md`，用真实 Subject Agent 与真实 bundle/trace 证明显式 carried target、receipt-bound finding、existing limitation/HITL2 route 和无 fabricated controller/user command；不可用 host 能力必须如实记录而不能用 mock 替代。
-- [ ] 4.5 target edit 前运行 `node openspec/governance/check-verification-routing.mjs --change bind-wave1-target-receipts-to-wave2-findings --mode plan`，所有验证资产创建后运行 `--mode assets` 并修复发现。
+- [x] 4.2 为 GSK-012、TRW-006、RWG-020 编写 `tests/integration/cli/wave1-target-receipt-gate.test.mjs`，经真实 Wave Gate/trace/handoff helper 验证 receipt projection、generic metadata exclusion、versioned missing receipt failure、legacy compatibility、直接 repair envelope，以及 strict receipt append failure 只输出一次 failed result。
+- [x] 4.3 为 RWG-020、WTS-011 编写 `tests/e2e/wave1-target-receipt-wave2-closure.test.mjs`，在真实 temporary bundle Wave1->load->Wave2 chain 覆盖 valid/empty/missing/stale/same-origin-only binding、current-intent drift 在 coverage 前短路、layout-only reuse 与 mutable-review 不重开 parent。
+- [x] 4.4 为 RWP-021 创建并登记 `experiments_playbook/exp_iterative_interaction/case-715-wave-target-receipt-closure.md`，用真实 Subject Agent 与真实 bundle/trace 证明显式 carried target、receipt-bound finding、existing limitation/HITL2 route 和无 fabricated controller/user command；不可用 host 能力必须如实记录而不能用 mock 替代。
+- [x] 4.5 target edit 前运行 `node openspec/governance/check-verification-routing.mjs --change bind-wave1-target-receipts-to-wave2-findings --mode plan`，所有验证资产创建后运行 `--mode assets` 并修复发现。
 
 ## 5. Release And Governance
 
 - [x] 5.1 更新 `CHANGELOG.md` 与 `DPT_FRAMEWORK/RUN.md` 到 `v0.42`，说明 Wave1 target receipt 到 Wave2 finding closure，而不暗示 Engine 评价 evidence quality。
-- [ ] 5.2 运行本 change 的 unit、integration、deterministic_e2e 与已配置 agent_flow_e2e；记录真实 Agent proof 或其如实 unavailable branch，绝不伪造 Agent evidence。
+- [x] 5.2 运行本 change 的 unit、integration、deterministic_e2e 与已配置 agent_flow_e2e；记录真实 Agent proof 或其如实 unavailable branch，绝不伪造 Agent evidence。
 - [x] 5.3 运行 `node openspec/governance/check-project-reqs.mjs` 并确认 `0 duplicate / 0 orphan / 0 unregistered / 0 reusedRetired`。
 - [x] 5.4 运行 `node openspec/governance/check-project-specs.mjs` 并确认 `0 deltaHeaderInMain / 0 missingPurpose / 0 missingRequirements / 0 missingReqHeader`。
