@@ -15,21 +15,21 @@ test_classes:
     rationale: A real Agent must make an explicit material carry-forward decision and use the existing finding/limitation routes without inventing a controller or user checkpoint.
 claims:
   - id: carried-target-selector-and-normalizer
-    statement: One pure Wave1 selector resolves exactly one UID-bound depth review from accepted canonical topic-layout facts, recomputes current intent binding, accepts explicit empty carried-target declarations, and rejects missing, duplicate, malformed, stale-intent or ambiguous declarations without prose matching or a slug alias map.
+    statement: One pure Wave1 selector resolves exactly one UID-bound depth review from accepted canonical topic-layout facts, recomputes current intent binding, accepts explicit empty carried-target declarations, and rejects missing, duplicate, malformed, stale-intent or ambiguous declarations and duplicate receipt target pairs without prose matching or a slug alias map.
     test_class: unit
     proof_subject: deterministic_contract
     asset: { kind: node_test, path: tests/engine/wave-carried-target-receipts.test.mjs }
     execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: none, external_calls: none, verdict_judge: deterministic }
     verdict_authority: node_test_exit
   - id: routed-wave1-receipt-and-wave2-evaluator
-    statement: Real Wave1 and Wave2 Gate/evaluator paths write a contract-versioned receipt only through the shared trace writer, select only the route-bound Wave1 handoff receipt, reject current missing or malformed receipt projection, and report the smallest unbound target at the finding-index repair coordinate while preserving legacy no-receipt handoffs.
+    statement: Real Wave1 and Wave2 Gate/evaluator paths write a contract-versioned receipt only through the shared Gate trace writer, exclude generic metadata, select only the route-bound Wave1 handoff receipt, reject a versioned missing or malformed receipt projection, report the smallest unbound target at the finding-index repair coordinate while preserving historical no-receipt handoffs, and convert a strict receipt append failure into exactly one failed envelope without later emitting the original pass.
     test_class: integration
     proof_subject: deterministic_contract
     asset: { kind: node_test, path: tests/integration/cli/wave1-target-receipt-gate.test.mjs }
     execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: temporary_bundle, external_calls: none, verdict_judge: deterministic }
     verdict_authority: node_test_exit
   - id: wave1-to-wave2-receipt-closure-chain
-    statement: A production-instantiated temporary bundle reaches Wave2 through a real Wave1 Gate and route-bound entry; an exact finding binding satisfies every selected receipt target through existing disposition routes, whereas same-topic/origin-only, stale revision, changed intent, unsafe trace projection, missing binding and post-handoff mutable-review changes do not; layout-only UID/intent-preserving reuse and legacy handoff remain compatible.
+    statement: A production-instantiated temporary bundle reaches Wave2 through a real Wave1 Gate and route-bound entry; an exact finding binding satisfies every selected receipt target through existing disposition routes, whereas same-topic/origin-only, stale revision, changed current intent before coverage, unsafe trace projection, missing binding and post-handoff mutable-review changes do not; layout-only UID/intent-preserving reuse and legacy handoff remain compatible.
     test_class: deterministic_e2e
     proof_subject: deterministic_contract
     asset: { kind: node_test, path: tests/e2e/wave1-target-receipt-wave2-closure.test.mjs }

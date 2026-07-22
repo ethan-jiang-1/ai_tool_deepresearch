@@ -707,6 +707,7 @@ GSK-008: gate-skeleton — Engine-derived gate attempt delta and pass-side fatig
 GSK-009: gate-skeleton — Gate CLI exit-code behavior and high-friction continuation advice align with the framework convention
 GSK-010: gate-skeleton — Lifecycle gate and final-readiness preflight rejects status-only or artifact-only downstream authorization
 GSK-011: gate-skeleton — Active gate rule audit is executable and maps rules to current helper or CLI dispatch
+GSK-012: gate-skeleton — Shared Wave1 gate-attempt writer accepts only a validated carried-target receipt and strict persistence failure emits one failed envelope
 
 # wff-state-chain
 TRT-001: transition-table — File naming convention transitions.chain.json

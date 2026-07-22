@@ -4,7 +4,7 @@
 
 ### Requirement: Finding index SHALL bind carried targets separately from artifact lineage
 
-`finding-index.yaml` MAY give a finding `wave1_target_bindings[]` only when the finding is offered as coverage for a receipt-declared Wave1 target. Each binding SHALL name the selected receipt digest plus canonical topic UID, intent binding, local target ID, and target revision. It SHALL be distinct from `origin_refs[]`, `trigger_refs[]`, affected-topic presentation, and work-unit receipts.
+`finding-index.yaml` MAY give a finding `wave1_target_bindings[]` only when the finding is offered as coverage for a receipt-declared Wave1 target. Every entry SHALL have exactly `{ receipt_sha256, topic_uid, intent_sha256, target_id, target_revision }` and SHALL equal one target in the selected routed receipt. It SHALL be distinct from `origin_refs[]`, `trigger_refs[]`, affected-topic presentation, and work-unit receipts.
 
 A target MAY have several bindings and a finding MAY bind several targets. Coverage requires at least one exact binding on a finding whose existing decision/gap-status contract is valid. Unrelated/emergent/legacy findings remain valid without this field but SHALL not satisfy a carried target merely through shared topic or lineage.
 

@@ -10,6 +10,7 @@ Wave1 可以识别一个需要后续工作的材料性研究目标，但结构�
 - 从已接受的 topic-layout 事实推导 review 的 canonical Topic UID 与当前 intent binding，只正规化显式选中的目标，并让成功的 Wave1 Gate 将该集合投影为其 routed `gate_attempt` trace 中的窄 receipt。
 - 扩展既有 Wave2 finding-index 契约，增加与 artifact `origin_refs[]` 分离、可覆盖一个或多个 receipt target 的 binding。
 - 让既有 Wave2 evaluator/Gate 消费精确的 Wave1-to-Wave2 handoff lineage，并要求 receipt 中每个目标都通过既有 finding 的 decision/gap-status 路径获得有效处置。
+- 收敛 Wave1 strict trace persistence failure 的输出路径：receipt 写入失败只能产生一次 failed Gate envelope，不能在同一 invocation 后继续输出原始 passed result。
 - 更新 Wave1/Wave2 Agent guidance 与 focused verification，使修复停留在直接 owner：坏声明修 Wave1，缺 binding 修 `finding-index.yaml`，缺 routed receipt 修同一 Gate/handoff 边界。
 
 本 change 不创建 evidence-quality 分数、来源排名、策略 controller、第二 ledger、通用 artifact-version 系统、新 lifecycle/HITL 状态，也不要求枚举所有像问题的句子。它只保护 Agent 显式声明为 carry-forward 的目标。
@@ -25,6 +26,7 @@ None.
 - `canonical-topic-state`: 为既有 Phase-owned Wave1 depth review 推导一个 UID-bound、current-intent-bound selector。
 - `research-wave-phase-content`: 指导 Wave1 产出一个 carry-forward projection，Wave2 消费 routed receipt 而非可变 review prose。
 - `research-wave-gate-implementation`: 通过既有 gate path 校验有界 Wave1 声明和 receipt-bound Wave2 finding coverage。
+- `gate-skeleton`: 保持 `writeGateAttempt()` 是唯一 Gate audit owner，并为 Wave1 receipt 增加窄的专用输入与单一 strict-failure envelope。
 - `trace-writer`: 将正规化的 Wave1 carried-target receipt 投影到成功 routed gate-attempt event。
 - `wave2-synthesis`: 添加独立的 finding-index target-binding fact，并保持既有 finding disposition route 是唯一 closure outcome。
 

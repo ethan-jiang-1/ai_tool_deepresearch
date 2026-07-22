@@ -6,6 +6,8 @@
 
 Wave1 guidance SHALL direct the Phase Agent, after reading submitted evidence, question-list reasoning, current Topic/profile, and optional user controls, to make the semantic carry-forward decision in the Phase-owned depth review. The review SHALL contain an explicit `carried_targets` declaration, which MAY be empty; prose, a slug-looking target ID, or a question-list line outside that declaration SHALL not create carry-forward authority.
 
+The declaration SHALL NOT weaken the existing `decision: accept` requirement for Wave1 submitted evidence, source floors, cache mapping, depth dimensions, or profile checks. It records only what remains material for Wave2 after those existing direct facts are satisfied.
+
 Wave2 guidance SHALL direct the Agent to consume the receipt from the exact routed Wave1 Gate handoff, bind its selected targets only in the existing finding index, and use existing finding decision/gap-status routes for resolution, new targeted evidence, limitation, `defer_hitl2`, `requires_internal_data`, or `record_only`. It SHALL not reread a mutable depth review as a second parent, hand-edit trace, or ask the user to perform ordinary repair.
 
 #### Scenario: empty declaration keeps the normal Wave2 path
