@@ -1,34 +1,49 @@
+> req: RUE-006
+
 ## ADDED Requirements
 
-### Requirement: Entry guidance separates new-run trigger from bundle continuation
+### Requirement: Explicit existing bundle card routes before the new-run default
 
-Framework entry guidance SHALL distinguish the one-time `RUN.md` trigger for
-selecting DPT_FRAMEWORK and starting new research from a supplied
-`BUNDLE_MAP.md` continuation card that identifies a candidate existing bundle.
-`RUN.md` SHALL remain the new-run front door; card attachment SHALL route an
-Agent to the canonical existing-bundle continuation playbook and existing
-runtime diagnostics.
+Root and framework-local Agent routing surfaces SHALL distinguish an explicitly
+supplied, reachable existing `BUNDLE_MAP.md` from a new research request. When
+the user explicitly supplies or opens that map in the selected DPT workspace
+and asks to continue, inspect, supplement or question that bundle, the routing
+surface SHALL direct the Agent to the canonical existing-bundle continuation
+playbook before `RUN.md` / `start-research`.
 
-Both paths SHALL assign ordinary legal command execution to the Agent. Neither
-card attachment nor a natural-language continuation request SHALL silently
-create lifecycle entry, pause, route, rerun authority or a new framework
-interaction checkpoint.
+This condition SHALL require an explicit user-provided map/bundle and a
+reachable containing directory. It SHALL NOT be satisfied by filesystem
+scanning, a bare filename, a copied/unreachable map, or a card coordinate that
+selects an untrusted framework. In those cases, the Agent retains the direct
+framework-context boundary. When the condition is absent, existing `RUN.md`
+new-research routing remains unchanged.
 
-#### Scenario: Card does not start a second new run
+The distinction SHALL be synchronized across repo-root `AGENTS.md` and
+`CLAUDE.md`, framework `AGENTS.md` and `CLAUDE.md`, and the relevant framework
+entry/command guidance. It SHALL not add a lifecycle checkpoint, host trigger,
+permission, mutation or rerun authority.
 
-- **WHEN** an Agent receives an existing bundle's `BUNDLE_MAP.md` with a
-  request to continue or inspect it
-- **THEN** entry guidance SHALL direct the Agent to the existing-bundle
-  continuation playbook before `start-research`
-- **AND** it SHALL not create a second bundle merely because `RUN.md` is the
-  framework's new-run front door
+#### Scenario: Explicit existing map prevents second bundle creation
 
-#### Scenario: Continuation keeps Agent/Engine roles unchanged
+- **WHEN** a user explicitly provides a reachable existing bundle's
+  `BUNDLE_MAP.md` in a selected DPT workspace and asks to continue or inspect it
+- **THEN** Agent routing SHALL direct to the existing-bundle continuation
+  playbook before `start-research`
+- **AND** it SHALL not create a new bundle merely because the request has
+  research intent
 
-- **WHEN** entry guidance explains card-based continuation
-- **THEN** it SHALL assign direct command execution and mechanical repair to
-  the Agent under existing contracts
-- **AND** it SHALL retain current state, Gate, receipt, trace and reentry
-  verdict ownership with existing bundle/Engine surfaces
-- **AND** it SHALL not represent the user's wording as permission or a new
-  interactive lifecycle checkpoint
+#### Scenario: New research still uses the existing RUN entry
+
+- **WHEN** a user makes a research request without an explicitly supplied,
+  reachable existing bundle map
+- **THEN** root/framework routing SHALL retain the existing `RUN.md` and
+  `start-research` new-run path
+
+#### Scenario: Card is not an automatic host trigger
+
+- **WHEN** a map is discovered by scanning, named without being supplied, or
+  cannot establish its reachable bundle/framework context
+- **THEN** routing SHALL not select that bundle or execute its continuation
+  commands
+- **AND** it SHALL not treat attachment wording or map coordinates as host
+  trigger, framework authentication, permission or reentry authority

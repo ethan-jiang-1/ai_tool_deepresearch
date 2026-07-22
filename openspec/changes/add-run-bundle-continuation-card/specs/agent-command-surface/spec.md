@@ -1,3 +1,5 @@
+> req: ACS-005
+
 ## ADDED Requirements
 
 ### Requirement: Existing bundle continuation has one Agent-owned playbook
@@ -7,13 +9,25 @@ an already existing run bundle. `COMMANDS.md`, `BUNDLE_MAP.md` and relevant
 entry guidance SHALL point to that playbook instead of maintaining independent
 resume procedures.
 
-On a supplied map/bundle, the playbook SHALL direct the Agent to resolve the
-candidate bundle root and shared framework, read direct bundle controls, and
-use existing structural/reentry diagnostics. A non-null
-`rb_status.json.current_node` is the preferred lifecycle Markdown coordinate;
-the Agent SHALL consume existing diagnostic output before loading it. If it is
-null, absent, inconsistent or blocked, the playbook SHALL use the returned
+On a supplied, reachable map/bundle, the playbook SHALL first require an
+already-selected DPT source tree in the current workspace, then resolve the
+candidate bundle root and creator-rendered coordinates only within that source
+context. It SHALL read direct bundle controls. For a non-Final non-null
+`rb_status.json.current_node`, it SHALL consume existing target-specific
+structural/reentry diagnostics before loading that coordinate. If the node is
+null, absent, inconsistent or blocked, the playbook SHALL use returned
 trace/diagnostic advice and SHALL NOT infer the phase from `current_gate`.
+
+For `phases/phase-final.md`, the playbook SHALL not invoke
+`check-reentry --at phase-final`: Final has no gate while its legal terminal
+status remains the readiness-passed window. It SHALL read direct terminal
+facts; a material post-Final request uses only accepted post-final inspection/
+recovery.
+
+If `current_node` is null or absent, the playbook SHALL state that the card has
+no generic legal target-selection capability. It MAY direct the Agent to the
+existing diagnostic/start-entry surfaces, but SHALL NOT claim diagnostics can
+always resume the bundle or derive a target from `current_gate`.
 
 The playbook SHALL distinguish reload from mutation. It SHALL keep ordinary
 authorized diagnostics and repair with the Agent, retain existing HITL and
@@ -32,14 +46,29 @@ or create a missing reentry/mutation path.
 - **AND** it SHALL not start a new research bundle or synthesize a route from
   a static map value
 
-#### Scenario: Missing current node stays diagnostic
+#### Scenario: Final uses its terminal contract rather than an impossible gate target
+
+- **WHEN** a reachable bundle has `current_node: phases/phase-final.md`
+- **THEN** the playbook SHALL inspect the existing terminal status/final facts
+  without calling target-specific `check-reentry --at phase-final`
+- **AND** it SHALL route a material post-Final request only to accepted
+  post-final inspection/recovery
+
+#### Scenario: Missing current node stays an explicit boundary
 
 - **WHEN** the supplied bundle has no usable `current_node` or existing
   diagnostics return a blocker
 - **THEN** the playbook SHALL direct the Agent to the closest existing
-  check/inspect/advice or repair owner
+  diagnostic or start-entry surface while naming the missing legal coordinate
 - **AND** it SHALL not guess from `current_gate`, write state by hand or ask a
   human to run ordinary repair commands
+
+#### Scenario: Card coordinate does not choose a framework
+
+- **WHEN** a card coordinate lies outside the DPT source tree already selected
+  in the current workspace or no such source tree is available
+- **THEN** the playbook SHALL report the framework-context boundary
+- **AND** it SHALL not execute commands from the card-provided coordinate
 
 #### Scenario: Continuation request preserves existing decision boundaries
 
