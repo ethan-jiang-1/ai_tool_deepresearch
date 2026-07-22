@@ -1,0 +1,44 @@
+schema_version: verification-routing/v1
+change: add-run-bundle-continuation-card
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The change adds no new pure deterministic helper or schema; card semantics are exercised through the real instantiator and documented Agent flow.
+  integration:
+    status: selected
+    rationale: The production instantiator, generated bundle root, command index and framework documentation form the deterministic boundary for the static card contract.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No lifecycle transition, Gate rule or simulated-Agent workflow is changed; continuation delegates to existing runtime owners.
+  agent_flow_e2e:
+    status: selected
+    rationale: The practical claim is that a real Agent can use an attached card plus ordinary-language request to find and follow the existing continuation path without inventing authority.
+claims:
+  - id: generated-continuation-card-contract
+    statement: The real production bundle instantiator renders one root BUNDLE_MAP continuation card with its bundle name, creation framework version and one canonical framework continuation-playbook pointer; the map remains passive, does not duplicate lifecycle commands, and creation adds no run-local Agent bridge, second control file or legacy primary entry.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/run-bundle-continuation-card.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: attached-card-agent-continuation
+    statement: A real Playbook Agent receiving a fresh disposable bundle's BUNDLE_MAP card and an ordinary-language request to inspect/continue it resolves the exact reachable bundle, reads direct runtime controls, uses the existing diagnostic and current-node path, and records only native existing-owner evidence; it neither creates a new run nor writes card-derived lifecycle, permission, route or post-final authority.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_bundle_continuation/case-801-heavy-attached-card-continuation.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
