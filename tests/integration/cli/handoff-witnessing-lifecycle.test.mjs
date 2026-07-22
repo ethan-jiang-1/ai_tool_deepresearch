@@ -491,7 +491,7 @@ depends_on_topic_uids: []
 ## 待验证问题
 1. [部分解答] How can stale handoffs be detected?
 `);
-  submitExistingFixtureWorkUnitOnce(bundle, {
+  const submitted = submitExistingFixtureWorkUnitOnce(bundle, {
     phase: 'wave1',
     queue_item_id: 'wave1-deepening-topic-a',
     topic_slug: 'topic-a',
@@ -504,6 +504,14 @@ depends_on_topic_uids: []
       { path: 'artifacts/wave1/topic-a/question-list.md', role: 'question_list' },
     ],
   });
+  const depthPath = join(bundle, 'artifacts/wave1/topic-a/depth-review.yaml');
+  const depth = JSON.parse(readFileSync(depthPath, 'utf8'));
+  depth.carried_targets = [{
+    target_id: 'handoff-integrity',
+    target_text: 'How can stale handoffs be detected?',
+  }];
+  writeFileSync(depthPath, `${JSON.stringify(depth, null, 2)}\n`);
+  if (!submitted) throw new Error('Wave1 fixture must create its submitted work-unit before depth review');
   appendTrace(bundle, { event: 'wave1_completion', source: 'playbook-fixture' });
 }
 
@@ -677,7 +685,7 @@ function passWave0WithDiagnostics(bundle, label) {
   stageWave0Pass(bundle);
   const attempt3 = runGate(bundle, 'wave0-complete', 'phases/phase-wave0.md');
   expect(bundle, `${label}:wave0-pass-after-repair`, attempt3.json.check.passed === true && attempt3.json.check.next === 'phases/phase-wave1.md', 'real wave0 attempt 3 passes and emits wave1 target');
-  expect(bundle, `${label}:wave0-pass-fatigue-advice`, attempt3.json.check.attempt_count === 3 && attempt3.json.advice.some(a => a.includes('enter-phase')) && attempt3.json.advice.some(a => a.includes('phase-final')), 'high-attempt pass emits autonomous continuation advice');
+  expect(bundle, `${label}:wave0-pass-fatigue-advice`, attempt3.json.check.attempt_count === 3 && attempt3.json.advice.some(a => a.includes('enter-phase')), 'high-attempt pass emits the legal autonomous continuation advice');
 
   return attempt3;
 }

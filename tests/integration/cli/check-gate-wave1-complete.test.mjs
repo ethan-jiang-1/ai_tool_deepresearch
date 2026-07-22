@@ -335,6 +335,7 @@ function writeDepthReview(dir, {
     },
     decision,
     supplementary_queue_item_ids: supplementary,
+    carried_targets: [],
   }, null, 2)}\n`);
 }
 
@@ -511,6 +512,7 @@ function submitParityTopic(dir, topic, { preserveQueue = false } = {}) {
     },
     decision: 'accept',
     supplementary_queue_item_ids: [],
+    carried_targets: [],
   };
   writeFileSync(join(dir, 'artifacts/wave1', topic.slug, 'depth-review.yaml'), `${JSON.stringify(depth, null, 2)}\n`);
   return { submission, depth };
@@ -553,6 +555,29 @@ describe('check-gate-wave1-complete', () => {
     assert.equal(output.check.passed, true, `Expected pass, got inspect: ${JSON.stringify(output.inspect)}`);
     assert.deepEqual(output.check.failed_rule_ids, []);
     assert.deepEqual(output.check.masked_rule_ids, []);
+    const attempts = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    const attempt = attempts.find((event) => event.event === 'gate_attempt' && event.gate === 'wave1-complete');
+    assert.equal(attempt.carried_target_receipt.contract_version, 'wave1-carried-targets/v1');
+    assert.deepEqual(attempt.carried_target_receipt.targets, []);
+  });
+
+  it('1j. rejects a malformed carried target declaration at the existing depth-review coordinate', () => {
+    const dir = createBundle(unique('bad-carried-target'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitAndReviewWave1WorkUnit(dir);
+    writeWave1Trace(dir);
+    const depthPath = join(dir, 'artifacts/wave1/topic-a/depth-review.yaml');
+    const depth = JSON.parse(readFileSync(depthPath, 'utf8'));
+    depth.carried_targets = [{ target_id: 'bad id', target_text: '' }];
+    writeFileSync(depthPath, `${JSON.stringify(depth, null, 2)}\n`);
+
+    const output = JSON.parse(runGate(dir).stdout);
+    assert.equal(output.check.passed, false);
+    const hint = output.hints.find((entry) => entry.rule_id === 'per_topic_depth_review_contract');
+    assert.ok(hint, JSON.stringify(output.hints));
+    assert.match(hint.write_to, /depth-review\.yaml/);
   });
 
   it('1i. masks Wave1 declaration-dependent symptoms behind one recoverable parent', () => {

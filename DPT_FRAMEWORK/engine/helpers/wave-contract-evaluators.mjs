@@ -35,6 +35,7 @@ import {
   checkWave2FindingIndexContract,
   topicSlugFromDepthReviewTarget,
 } from './wave-depth-contracts.mjs';
+import { selectWave1CarriedTargetReceipt } from './wave-carried-target-receipts.mjs';
 import { checkPhaseQueueDrained } from './phase-queue-drain.mjs';
 import { evaluateRerunDirection } from './rerun-direction.mjs';
 import {
@@ -573,6 +574,8 @@ export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFac
   const bypassSuspicion = declarationGap
     ? { suspected: false, phase: 'wave1', artifactsFound: [], provenanceMissing: [] }
     : scanDelegatedBypassSuspicion(bundlePath, 'wave1');
+  const carriedTargetSelection = selectWave1CarriedTargetReceipt(bundlePath);
+  findings.push(...carriedTargetSelection.findings);
   let checksRun = 0;
 
   for (const rule of definition.rules) {
@@ -709,7 +712,10 @@ export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFac
     }
   }
 
-  return buildContractEvaluation({ checksRun, findings, maskedRuleIds, bypassSuspicion });
+  return {
+    ...buildContractEvaluation({ checksRun, findings, maskedRuleIds, bypassSuspicion }),
+    carried_target_receipt: carriedTargetSelection.ok ? carriedTargetSelection.receipt : null,
+  };
 }
 
 export function evaluateWave2Contract(bundlePath, definition, { topicRegistryFact = null, findingIndexFact = null } = {}) {

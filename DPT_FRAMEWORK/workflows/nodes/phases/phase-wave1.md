@@ -206,7 +206,10 @@ profile_checks:
   cross_verification: { required: false, status: "not_required", refs: [] }
 decision: "accept"
 supplementary_queue_item_ids: []
+carried_targets: []
 ```
+
+`carried_targets` is the bounded semantic handoff to Wave2. It is always explicit, may be `[]`, and each selected entry is exactly `{ target_id, target_text }`. Select only material questions that remain worth carrying after the existing depth review passes; do not turn every question-list line, prose mention, or slug-looking string into a target. This declaration does not relax `decision: accept`, submitted-evidence, source-floor, cache, depth-dimension, or profile requirements.
 
 The Engine computes `new_source_floor.required` only from explicit profile/runtime parameters: `ceil(wave1_per_topic_ref_floor * topic_unique_ratio)`, minimum 1 when both parameters exist, and computes `observed` from the reviewed rows. If either parameter is missing, record `decision: blocked_contract` with a `missing_profile_parameter` reason and do not invent a hidden default. Decision values are closed:
 
@@ -264,6 +267,7 @@ For a mode-absent unclaimed Wave1 card, run `operate-queue.mjs repair <bundle> -
 - Submitted structured source claims where every accepted source URL maps to a verified cache trail or explicit degraded-capture record.
 - Seed-topic Wave1 backfill entries that preserve mechanism/trend/question meaning and refs to concrete existing `reference/{topic.slug}-<source-slug>.md` files as primary consumer navigation, with evidence summaries, question lists, cache leaves, and work-unit surfaces as secondary provenance.
 - `rb_trace.jsonl` records the `wave1_completion` event/check surface required by the Wave1 gate definition.
+- A passing routed Wave1 Gate records the Engine-normalized carried-target receipt; Agents never hand-edit this receipt or trace event.
 
 ## 5. Gate Command
 

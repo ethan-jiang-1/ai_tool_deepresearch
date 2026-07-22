@@ -13,6 +13,7 @@ import { parse as parseYaml } from 'yaml';
 import { readGateDefinitionSnapshot } from '../../schema/contracts/gate-definition.mjs';
 import { resolveNodeTransitionDetailed } from '../ask-next.mjs';
 import { parseMdFrontmatter } from './gate-helpers-readers.mjs';
+import { isValidCarriedTargetReceipt } from './wave-carried-target-receipts.mjs';
 import { continuationForGateResult } from './continuation-cue.mjs';
 import {
   buildContractEvaluation,
@@ -779,19 +780,26 @@ function traceDurabilityError(error, bundlePath, result) {
  *
  * @param {string} bundlePath — path to the active runtime context
  * @param {object} result — gate result from buildGateResult()
- * @param {{ strictTrace?: boolean }} [options]
+ * @param {{ strictTrace?: boolean, carriedTargetReceipt?: object }} [options]
  * @returns {void}
  *
  * @impl GSK-005, LOC-001, LOC-002, TRW-001, TRW-002, TRW-003, TRW-004
  */
 export function writeGateAttempt(bundlePath, result, options = {}) {
   if (options.setupReadyStaged === true) return writeSetupReadyStagedAttempt(bundlePath, result);
-  const { strictTrace = false } = options;
+  const { strictTrace = false, carriedTargetReceipt = null } = options;
   try {
     applyEngineAttemptDiagnostics(bundlePath, result);
     const { check, routing, inspect, advice } = result;
     const bundle = readBundleName(bundlePath);
     const phase = derivePhaseFromGate(check.gate);
+    const routedWave1Pass = check.gate === 'wave1-complete' && check.passed === true && check.next != null;
+    if (carriedTargetReceipt !== null && !routedWave1Pass) {
+      throw new Error('carriedTargetReceipt is accepted only for a successful routed Wave1 Gate attempt');
+    }
+    if (routedWave1Pass && !isValidCarriedTargetReceipt(carriedTargetReceipt)) {
+      throw new Error('successful routed Wave1 Gate attempt requires a valid carriedTargetReceipt');
+    }
 
     // 1. Precompute diagnostic path and write diagnostic BEFORE logging
     //    so run.log can include the verified diagnostic_path pointer.
@@ -833,7 +841,6 @@ export function writeGateAttempt(bundlePath, result, options = {}) {
         logDetail.degraded_reason = check.degraded_reason || null;
         logDetail.degraded_rules = check.degraded_rules || [];
       }
-
       if (passDiagResult.ok) {
         logDetail.diagnostic_path = diagnosticPath;
       }
@@ -864,6 +871,7 @@ export function writeGateAttempt(bundlePath, result, options = {}) {
         traceEntry.degraded_reason = check.degraded_reason || null;
         traceEntry.degraded_rules = check.degraded_rules || [];
       }
+      if (routedWave1Pass) traceEntry.carried_target_receipt = carriedTargetReceipt;
       // TRW-001: Include diagnostic_path when available
       if (logDetail.diagnostic_path) {
         traceEntry.diagnostic_path = logDetail.diagnostic_path;

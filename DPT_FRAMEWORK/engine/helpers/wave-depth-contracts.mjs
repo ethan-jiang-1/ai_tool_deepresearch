@@ -13,6 +13,7 @@ import {
 import { inspectCacheLeaf } from './cache-leaf-contract.mjs';
 import { evaluateTopicLayouts } from './topic-layout.mjs';
 import { makeContractFinding } from './wave-contract-findings.mjs';
+import { selectWave1CarriedTargetReceiptForWave2 } from './wave-carried-target-receipts.mjs';
 
 const DEPTH_DECISIONS = new Set(['accept', 'supplement_required', 'blocked_contract']);
 const ACCEPTED_SOURCE_STATUSES = new Set(['accepted', 'countable', 'accepted_countable']);
@@ -24,6 +25,7 @@ const W2_DECISIONS = new Set(['use_existing_evidence', 'exploit_search', 'explor
 const W2_CONFIDENCE = new Set(['high', 'medium', 'low', 'uncertain']);
 const W2_GAP_STATUS = new Set(['no_gap', 'needs_search', 'search_submitted', 'deferred_hitl2', 'requires_internal_data', 'record_only']);
 const W2_CROSS_REF_OMISSION_RE = /(?:non[-_ ]?consumer|not[-_ ]?consumer[-_ ]?facing|process[-_ ]?only|internal|defer(?:red)?|limitation|not[-_ ]?source[-_ ]?backed)/i;
+const CARRIED_BINDING_KEYS = ['receipt_sha256', 'topic_uid', 'intent_sha256', 'target_id', 'target_revision'];
 
 function safeRel(ref) {
   return typeof ref === 'string' && ref.length > 0 && !ref.startsWith('/') && !ref.split(/[\\/]+/).includes('..');
@@ -772,6 +774,65 @@ function consumerFacingBackedFindingNeedsCrossRef(finding, backingRefs) {
   return true;
 }
 
+function carriedBindingFinding(rule, bundlePath, relPath, id, detail, observed = null) {
+  const filePath = resolvePath(bundlePath, relPath);
+  return depthFinding(rule, {
+    defaultRuleId: 'finding_index_contract',
+    id,
+    blockingBasis: 'binding_integrity',
+    surface: filePath,
+    expected: 'An exact Wave1 carried-target binding on a structurally valid finding.',
+    observed,
+    missingFact: detail,
+    repairKind: 'agent_action',
+    writeTo: filePath,
+    repair: `Repair ${relPath} wave1_target_bindings and rerun the same Wave2 checkpoint.`,
+    detail: `[wave1_target_binding] ${detail}`,
+  });
+}
+
+function inspectCarriedTargetClosure(bundlePath, { rule, relPath, findings }) {
+  const selected = selectWave1CarriedTargetReceiptForWave2(bundlePath);
+  if (selected.kind === 'legacy' || selected.kind === 'unavailable') return { inspect: [], findings: [] };
+  if (selected.kind !== 'current') return { inspect: selected.findings.map((finding) => finding.detail), findings: selected.findings };
+
+  const receiptTargets = new Map(selected.receipt.targets.map((target) => [
+    `${target.topic_uid}\u0000${target.target_id}`,
+    target,
+  ]));
+  const bindingFindings = [];
+  const covered = new Set();
+  for (const finding of findings) {
+    const bindings = finding?.wave1_target_bindings;
+    if (bindings === undefined) continue;
+    if (!Array.isArray(bindings)) {
+      bindingFindings.push(carriedBindingFinding(rule, bundlePath, relPath, `wave1_target_bindings:${finding?.id || 'unknown'}:shape`, `Finding ${finding?.id || '<unknown>'} wave1_target_bindings must be an array.`, bindings));
+      continue;
+    }
+    for (const binding of bindings) {
+      if (!binding || typeof binding !== 'object' || Array.isArray(binding) || Object.keys(binding).length !== CARRIED_BINDING_KEYS.length || !CARRIED_BINDING_KEYS.every((key) => Object.hasOwn(binding, key))) {
+        bindingFindings.push(carriedBindingFinding(rule, bundlePath, relPath, `wave1_target_bindings:${finding?.id || 'unknown'}:item_shape`, `Finding ${finding?.id || '<unknown>'} has a malformed wave1 target binding.`, binding));
+        continue;
+      }
+      const target = receiptTargets.get(`${binding.topic_uid}\u0000${binding.target_id}`);
+      const exact = target
+        && binding.receipt_sha256 === selected.receipt.receipt_sha256
+        && binding.intent_sha256 === target.intent_sha256
+        && binding.target_revision === target.target_revision;
+      if (!exact) {
+        bindingFindings.push(carriedBindingFinding(rule, bundlePath, relPath, `wave1_target_bindings:${finding?.id || 'unknown'}:stale`, `Finding ${finding?.id || '<unknown>'} binding does not equal a target in the selected Wave1 receipt.`, binding));
+        continue;
+      }
+      if (W2_DECISIONS.has(finding.decision) && W2_GAP_STATUS.has(finding.gap_status)) covered.add(`${target.topic_uid}\u0000${target.target_id}`);
+    }
+  }
+  const missing = [...receiptTargets.keys()].filter((key) => !covered.has(key));
+  if (missing.length > 0) {
+    bindingFindings.push(carriedBindingFinding(rule, bundlePath, relPath, 'wave1_target_bindings:coverage', `Selected Wave1 receipt targets lack an exact valid finding binding: ${missing.join(', ')}.`, { missing_targets: missing }));
+  }
+  return { inspect: bindingFindings.map((finding) => finding.detail), findings: bindingFindings };
+}
+
 export function checkWave2FindingIndexContract(bundlePath, { rule = null, loadedFact = null } = {}) {
   const loaded = loadedFact || loadWave2FindingIndexFact(bundlePath);
   if (!loaded.ok) {
@@ -992,6 +1053,10 @@ export function checkWave2FindingIndexContract(bundlePath, { rule = null, loaded
     inspect.push(`[synthesis_eligibility] FAIL: explicit_deferral_count=${eligibility.explicit_deferral_count} but observed explicit routing count is ${explicitDeferralCount}`);
     contentIssue = true;
   } else if (!canCountExplicitDeferral) maskedRuleIds.push('explicit_deferral_count');
+
+  const carriedClosure = inspectCarriedTargetClosure(bundlePath, { rule, relPath, findings });
+  inspect.push(...carriedClosure.inspect);
+  rootFindings.push(...carriedClosure.findings);
 
   if (inspect.length > 0) {
     advice.push('Complete Wave2 scan/triage/gap analysis, submit targeted evidence or route gaps explicitly, then update finding-index.yaml synthesis_eligibility.');

@@ -148,9 +148,13 @@ function maybeDegradedHandoff() {
   };
 }
 
-function emitAfterDurableAttempt(result) {
+function emitAfterDurableAttempt(result, carriedTargetReceipt) {
   try {
-    writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
+    writeGateAttempt(bundlePath, result, {
+      strictTrace: result.check?.passed === true && result.check?.next != null,
+      ...(result.check?.passed === true && result.check?.next != null ? { carriedTargetReceipt } : {}),
+    });
+    return true;
   } catch (error) {
     const failedRouting = resolveRouting(args.transitions, args.currentNode, 'failed');
     const failureEvaluation = buildContractEvaluation({ findings: [...(error.findings || []), ...(failedRouting.findings || [])] });
@@ -174,6 +178,7 @@ function emitAfterDurableAttempt(result) {
     });
     try { writeGateAttempt(bundlePath, failedResult); } catch { /* secondary diagnostic only */ }
     emitGateResult(failedResult);
+    return false;
   }
 }
 
@@ -206,5 +211,4 @@ const result = buildGateResult({
   attemptNumber: args.attempt ?? 0,
 });
 
-emitAfterDurableAttempt(result);
-emitGateResult(result);
+if (emitAfterDurableAttempt(result, sharedEvaluation.carried_target_receipt)) emitGateResult(result);

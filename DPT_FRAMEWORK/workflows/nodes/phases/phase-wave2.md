@@ -48,6 +48,7 @@ Accepted consumer-facing `W2F-xxx` findings with concrete existing Wave0/Wave1 s
 
 - Wave0 reference index and source metadata.
 - Wave1 `evidence-summary.md` and `question-list.md` for every topic.
+- The exact route-bound Wave1 Gate handoff receipt, when the selected handoff carries `wave1-carried-targets/v1`.
 - `rb_profile.yaml` Wave2 params: `wave2_cross_topic_depth`, `wave2_emergent_search_rounds`, `p0p1_independent_backing`, `quality_min_tier`, `quality_min_substance`.
 - `shared-schemas.md` for Wave2 artifact paths and finding-index schema.
 - `operate-queue` and `operate-work-unit` CLIs.
@@ -259,6 +260,8 @@ Before gate, ensure `cross-topic-ledger.md` contains these six required, non-emp
 The canonical names above are recommended presentation. The semantic parser tolerates heading case, heading level, spacing, and section order; those presentation differences are not blocking. Missing or empty semantic sections remain blocking.
 
 Use the single canonical finding contract in `shared/shared-schemas.md` under `finding-index.yaml — JS-Readable Shadow Index`. It defines all 15 required per-finding fields and their types. Canonical enums are: `type` = `wave1_legacy_question` / `cross_topic_resolution` / `cross_topic_emergent_question`; `priority` = `p0` / `p1` / `p2`; `status` = `resolved` / `partial` / `open` / `deferred`; `decision` = `use_existing_evidence` / `exploit_search` / `explore_search` / `defer_hitl2` / `requires_internal_data` / `record_only`; `confidence` = `high` / `medium` / `low` / `uncertain`; `gap_status` = `no_gap` / `needs_search` / `search_submitted` / `deferred_hitl2` / `requires_internal_data` / `record_only`. Do not maintain a shortened local field count or infer missing values from Engine source; run Wave2 inspect for exact deterministic feedback.
+
+When the exact routed Wave1 handoff contains `carried_target_receipt`, every receipt target must appear on at least one valid finding as a separate exact binding. Add optional `wave1_target_bindings` to that finding, with one or more entries shaped exactly as `{ receipt_sha256, topic_uid, intent_sha256, target_id, target_revision }`. Do not substitute shared topic, `origin_refs`, `trigger_refs`, question-list prose, or a reread depth review. If Wave2 reports missing bindings, repair `artifacts/wave2/finding-index.yaml` and rerun the same inspect/Gate. If it reports a receipt/current-intent mismatch, repair through the existing Wave1 handoff path instead; never hand-edit trace or bind the stale target.
 
 For a backed finding that appears in synthesis and is consumer-facing, ensure there is a matching `reference/00-cross-*.md` projection or a field such as `consumer_reference_omission_reason` explaining `process-only`, `internal`, `deferred`, `not sufficiently source-backed`, or intentionally not consumer-facing status.
 

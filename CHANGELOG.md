@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.42
+
+- Wave1 now records an Engine-normalized carried-target receipt from its explicit depth-review declaration, and Wave2 closes each selected target through an exact finding-index binding and existing disposition route.
+- The receipt follows the existing routed Gate/load lineage, preserves historical no-receipt handoffs, and rejects malformed receipt or current-intent drift without adding a queue, controller, or evidence-quality score.
+
 ## v0.41
 
 - Added one optional, durable HITL1 user-research-controls snapshot in the plan host file, with bounded literal handling for Topic Registry, Progress, and required-fill consumers.
