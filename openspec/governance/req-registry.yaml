@@ -372,6 +372,7 @@ RRD-008: runtime-reentry-debuggability — Reentry diagnostics summarize inciden
 RRD-009: runtime-reentry-debuggability — Reentry consumes canonical topic-state inspection without mutation authority
 RRD-010: runtime-reentry-debuggability — Reentry short-circuits accepted topic layout workspaces and layout drift
 RRD-011: runtime-reentry-debuggability — Setup-ready handoff commits durable audit, final plan checkpoint, and consumable route in one ordered boundary
+RRD-012: runtime-reentry-debuggability — Route-pending setup checkpoints are diagnostic evidence only and never selected as a passed reentry baseline
 
 # run-entry
 RUE-001: run-entry — RUN.md entry point announces the framework version banner
@@ -552,6 +553,7 @@ PRP-010: pre-research-phase-content — Invalid bundle name remains fail-stop (n
 PRP-011: pre-research-phase-content — HITL1 atomically materializes approved canonical topic registry and seeds
 PRP-012: pre-research-phase-content — HITL1 captures optional user research controls in one bounded host-file snapshot without creating profile or lifecycle authority
 PRP-013: pre-research-phase-content — Seed, Wave, and Final guidance consume the original user-controls host-file coordinate and preserve existing conflict/limitation paths
+PRP-014: pre-research-phase-content — HITL1 captures user controls before canonical topic-state apply so the committed host-file snapshot survives topic-state recovery
 
 # wff-research-waves / research-wave-phase-content
 RWP-001: research-wave-phase-content — Wave0 phase body completeness (9-section, foundation shared reference collection, ReferenceMetadata schema)

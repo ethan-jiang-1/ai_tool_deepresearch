@@ -32,45 +32,49 @@ setup-ready 还有一个独立的完整性问题：现有 `writeGateAttempt()` �
 2. 新 run 有控制：固定说明行和一个 literal snapshot；
 3. 旧 run 没有该 subsection：视为 no-controls，既不迁移也不阻塞。
 
-有控制时，Agent 把用户直接给出的内容，或用户明确授权在 HITL1 读取的本地文件中与本 run 有关的内容，写成一个 Markdown code fence 内的 literal snapshot。fence 长度由输入中最长的 backtick run 加一确定，因此输入内的任意 backtick run 都不能提前关闭该 region；原文字节保持可见，标题、checkbox 和 marker 不再成为 Markdown structure。实现的 host-section locator 只需识别这个确定的单一区域和 template 的固定 top-level order，不需要通用 Markdown parser。
+无额外控制的 template form 固定为 `未提供额外的本轮研究控制；按已确认的问题、范围和研究 profile 执行。`。有控制时，Agent 必须先写固定标签 `用户提供的本轮研究控制快照（仅作研究指导，不覆盖 Engine contracts）：`，再把用户直接给出的内容，或用户明确授权在 HITL1 读取的本地文件中与本 run 有关的内容，写成一个 Markdown code fence 内的 literal snapshot。fence 长度由输入中最长的 backtick run 加一确定，因此输入内的任意 backtick run 都不能提前关闭该 region；原文字节保持可见，标题、checkbox 和 marker 不再成为 Markdown structure。实现的 host-section locator 只需识别这个确定的单一区域和 template 的固定 top-level order，不需要通用 Markdown parser。
 
 该捕获并非文件导入协议：不保留外部路径、不递归读取链接、不复制文件、不在后续 phase 重读。不能读取、无法分辨意图，或 material conflict 时，Agent 在既有 HITL1 只问最小澄清；用户作出决定后由 Agent 继续执行合法机械工作。
+
+HITL1 在形成已解决的 user decision 后，先把 exact no-controls 或 supplied-controls form durably 写入 `rb_plan.md`，再生成 canonical topic-state input 并执行现有 `operate-topic-state apply`。Topic-state 的 existing staged replacement 从这份当前 plan bytes 计算，并在后续 registry/seed mutation 中保留 controls snapshot。若 apply 返回 workspace/recovery 或失败，snapshot 已是 active host-file 的 durable narrative input；Agent 恢复既有 operation，不重新从聊天或外部路径重建控制。该顺序不是跨文件 transaction，也不让 controls 变成 topic-state schema input。
 
 替代方案是把 brief 写到 `rb_profile.yaml`、新 `.md` 文件或 per-work-unit manifest。它们分别把语义文本伪装为 machine state、制造第二 authority，或扩大复制和隐私面，故不采用。
 
 ### 2. 共享的 bounded locator 收敛现有 host-file 写/查路径
 
-新增一个专用、纯 deterministic helper，负责在 frontmatter 之后定位 canonical `## Goal`、`## Topic Registry`、`## Constraints`、`## Progress`、`## Decisions`，并把 `User Research Controls` literal region 当作 opaque content。它只接受模板定义的顺序与固定 subsection 形状；若 canonical layout 无法可靠定位，writer 返回明确 advisory/no-change，checker 只对实际 template-owned required-fill positions 报错，不猜测用户文本。
+新增一个专用、纯 deterministic helper，只负责识别 URC-001 的 opaque literal region，并提供对某个消费者的 canonical target section 做 bounded locate/replace 的小函数。它不是解析或返回完整 Markdown section tree 的全局 layout parser：Topic Registry、Progress 和 required-fill scan 各自只请求其已有 target，并以模板顶层顺序排除 opaque region。保留现有“缺失或 non-standard Topic Registry presentation 仅 advisory”的兼容性；无法定位某个 writer 的 canonical target 时该 writer 返回明确 advisory/no-change，checker 只对实际 template-owned required-fill positions 报错，不猜测用户文本。
 
-`refreshTopicRegistryTable()`、`writePlanProgress()` 和 setup-ready required-fill scan 都复用该 locator/region interpretation。Progress 仅在 canonical Progress section 操作指定 gate line；Topic Registry 仅替换 canonical table；required-fill scan 跳过 opaque snapshot，但保留原有 whole-body minimum check。`## Decisions` 仍无 writer，locator 只保证 snapshot 中的同名 heading 不能在未来被误认。
+`refreshTopicRegistryTable()`、`writePlanProgress()` 和 setup-ready required-fill scan 都复用该 locator/region interpretation。Progress 仅在 canonical Progress section 操作指定 gate line；Topic Registry 仅替换 canonical table；required-fill scan 跳过 opaque snapshot，但保留原有 whole-body minimum check。`## Decisions` 仍无 writer，locator 只保证 snapshot 中的同名 heading不能在未来被误认。只有新 subsection 的固定 label 加计算得到的完整 literal fence 表示 controls present；legacy 中同名但不符合该形状的文字保持普通 Constraints presentation，不被 Engine 解释成新的 control state。
 
-该 helper 删除三份“扫描整篇文件、找到相似文字即操作”的隐含逻辑；不创建第二个 Markdown truth 或语义 validator。对于旧模板，helper 走已知旧 canonical layout，缺少新 subsection 不改变正常行为。
+该 helper 删除三份“扫描整篇文件、找到相似文字即操作”的隐含逻辑；不创建第二个 Markdown truth、完整文档 AST 或语义 validator。对于旧模板，opaque-region normalizer 返回空 region，消费者保留其已知的 canonical target behavior，缺少新 subsection 不改变正常行为。
 
 ### 3. Agent 解释控制，Engine 保护不可协商边界
 
 HITL1 把 controls 与 profile、must-answer、style 的 material conflict 在同一个既有用户决策点澄清。之后 Seed 将原控制投影为 topic-local `search_guardrails` / `evidence_route`，但这只是 Agent authored guidance，不能取代或改写原坐标。Wave/Final 阅读原坐标加上 topic-local 指引；Final 将未满足的控制或证据限制显式呈现。
 
-若有 work unit，Phase Agent 仅在 controls present 时在已有 `task_brief` 增加一条指向 `rb_plan.md## Constraints > User Research Controls` 的 beacon-rooted、bundle-relative、read-only coordinate。它不赋予 assignment、file write、route、Gate 或 lifecycle authority，也不会把 brief 拷贝到 manifest/result/queue。无 controls 不增加空 payload 或额外读要求。
+若有 work unit，Phase Agent 仅在 controls present 时在已有 queue-item `task_brief` 增加一条指向 `rb_plan.md## Constraints > User Research Controls` 的 beacon-rooted、bundle-relative、read-only coordinate；Engine 只原样传递该已有 brief，不解释或生成 controls。它不赋予 assignment、file write、route、Gate 或 lifecycle authority，也不会把 controls 拷贝到 manifest/result/queue。无 controls 不增加空 payload 或额外读要求。
 
 “only/不得使用”等强排除保留其强度；可行性、相关性和证据判断由 Agent 基于真实材料作出。Engine 继续只检查 schema、provenance、receipt、source floor、host policy 和 state transition。严格限制不可满足时遵循已被接受的 limitation/degraded/HITL2/held-checkpoint 路径，绝不加例外 pass path。
 
 ### 4. setup-ready 采用一个 ordered commit/consumption boundary
 
-`check-gate-setup-ready.mjs` 不再将普通 `writeGateAttempt()` 的可路由 trace 写在 Progress 之前。由同一既有 gate-attempt owner 的 setup-specific commit path 顺序完成：
+`check-gate-setup-ready.mjs` 不再在普通 `writeGateAttempt()` 已暴露 route 后再写 Progress。它仍只调用既有 shared `writeGateAttempt()`；该 helper 为 setup-ready 提供一个 staged route mode，而不是另建 writer/finalizer。该 mode 返回一个 structured `route_outcome`，不在 checkpoint/trace failure 后抛出并要求 caller 再调用普通 audit helper。`GSK-005` 原有的 audit-failure-tolerant behavior 保留给没有额外 route evidence 的失败诊断与其他既有 Gate；仅 setup-ready 的 non-null route 被要求持有 checkpoint evidence，故 checkpoint/route persistence 失败必须改为标准 failed envelope。此模式预生成一个仅用于 audit binding 的 `gate_attempt_id`，并按以下顺序完成：
 
-1. 持久化 pass/fail diagnostic 与 run log audit；这不是 route authority；
+1. 持久化 content-evaluation diagnostic 与 run log audit；对 content-passed candidate 它明确是 `route_pending`，不是 passed `gate_attempt` 或 route authority；
 2. 对通过的候选结果调用 bounded Progress writer。writer 返回 `committed`、`unchanged` 或 `failed` 的直接结果；失败保留完整旧文件并在输出/diagnostic 中声明没有 checked Progress claim；
-3. 严格写入唯一 checkpoint，hash 的是步骤 2 实际留下的 `rb_plan.md` bytes，并返回 checkpoint path；checkpoint 无法 durable 写入时不产生可消费 handoff；
-4. 仅在步骤 3 成功后追加唯一可路由 `gate_attempt` trace，带 checkpoint reference/binding；随后才输出带 `check.next` 的 pass。
+3. 严格写入唯一 route-pending checkpoint，hash 的是步骤 2 实际留下的 `rb_plan.md` bytes，并写入同一个 `gate_attempt_id`、`trigger: setup_route_pending`、`content_evaluation_ref` 和 `route_state: pending` 后返回 checkpoint path；它不伪装成已发生的 `gate_attempt` 或已通过的 `gate_result_ref`。checkpoint 无法 durable 写入时不产生可消费 handoff；
+4. 仅在步骤 3 成功后由同一 helper 追加唯一可路由 `gate_attempt` trace，写入相同 `gate_attempt_id`、checkpoint reference 和 plan-hash binding；随后才输出带 `check.next` 的 pass。
 
-`enter-phase` / handoff helper 对 setup-ready 的 route 除既有 gate/next/topology binding 外，必须验证 referenced checkpoint 存在、绑定该 trace attempt，且记录的 plan hash 与当前 bytes 一致。任何缺失、坏绑定或 drift 拒绝进入；正常的后续外部编辑仍由既有 reentry drift 诊断发现。其他 Gate 的既有 path 不被这个 change 重新定义。
+`enter-phase` / handoff helper 对 setup-ready 的 route 除既有 gate/next/topology binding 外，必须验证 referenced checkpoint 存在、checkpoint 与 trace 的 `gate_attempt_id` 相同，且两者记录的 plan hash 与当前 bytes 一致。任何缺失、坏绑定或 drift 拒绝进入；正常的后续外部编辑仍由既有 reentry drift 诊断发现。其他 Gate 的既有 path 不被这个 change 重新定义。
 
-这不是第二 checkpoint 或 rollback tree：route trace 是唯一 handoff authority，checkpoint 是它已存在的必须 evidence，audit diagnostic/log 是不可路由的前置事实。进度展示保持 tolerant presentation，失败不会改变实际 Gate contract evaluation；只有无法建立 required checkpoint/route evidence 才阻止 consumption，并给出重跑同一 setup-ready checkpoint 的最近动作。
+`check-reentry` 的 checkpoint selection 不得把 `route_state: pending` setup-ready checkpoint 作为 matching 或 global fallback baseline。它可在 durable diagnostics 中报告此 pending evidence 和其 `gate_attempt_id`，但在相同 gate 的 bound route trace 尚不存在时，reentry 只报告缺少 passed baseline；不能把 pending content evaluation 解释为已完成 setup handoff 或用它压制 drift。
+
+这不是第二 checkpoint 或 rollback tree：route trace 是唯一 handoff authority，checkpoint 是它已存在的 route-pending evidence，audit diagnostic/log 是不可路由的前置事实。Progress write failure 保留旧 plan 并不逆转既有 Gate content evaluation；若该旧 bytes 仍能被同一 `gate_attempt_id` 的 checkpoint 与 route 严格绑定，原 pass 仍可消费，只是没有 checked Progress claim。若 trace append 随后失败，该唯一 checkpoint 仍真实表达“content evaluation 已完成、route 未建立”，而非虚称已通过。checkpoint/route binding 失败时，helper 返回一次 `route_outcome`，CLI 据此输出标准 failed Gate envelope：`check.passed: false`、`check.next: null`，并以一个 authority-integrity persistence finding 保留“content rules 已通过但 legal handoff 未建立”的直接事实和同一 Gate rerun；CLI 不得再调用普通 `writeGateAttempt(failedResult)`，从而不产生第二个 checkpoint、第二条 audit route 或互相矛盾的 attempt record。只有无法建立 required checkpoint/route evidence 才这样阻止 consumption。
 
 ## Risks / Trade-offs
 
 - [literal snapshot 不渲染为富 Markdown] -> 输入仍逐字可读，且换来不会伪装 host structure 的确定边界；语义解释由 Agent 而非 renderer 承担。
-- [旧手工改坏的 host layout 无法定位] -> writer no-change、checker 只报告直接 layout/contract 事实；不猜测或做破坏性 rewrite。
+- [旧手工改坏的 host layout 无法定位] -> 相关 presentation writer no-change、checker 只报告直接 layout/contract 事实；不猜测或做破坏性 rewrite，既有 non-standard Topic Registry 的 advisory compatibility 保留。
 - [Progress 写入失败] -> 保留旧文件，记录 no checked claim，checkpoint/route 只证明实际 bytes；不虚报展示成功。
 - [checkpoint 写入失败] -> 不追加可消费 route，`enter-phase` 的唯一修复方向是重跑同一 Gate；不能手写 trace/checkpoint。
 - [严格用户控制使研究不足] -> 保留限制并走既有合法 limitation/degraded/HITL2/held-checkpoint；不静默采用禁用材料。

@@ -1,6 +1,6 @@
 ## ADDED Requirements
 
-> req: PRP-012, PRP-013
+> req: PRP-012, PRP-013, PRP-014
 
 ### Requirement: HITL1 captures controls without expanding lifecycle authority
 
@@ -18,3 +18,19 @@ Seed Topics, Wave0, Wave1, Wave2 and Final guidance SHALL tell the Agent to read
 #### Scenario: no-controls behavior remains current behavior
 - **WHEN** the explicit no-controls form or legacy absence applies
 - **THEN** Seed, Wave, and Final retain current guidance without a copied empty brief or added control-specific work
+
+### Requirement: HITL1 capture precedes canonical topic-state replacement
+
+After the user decision and any material-conflict resolution are complete, HITL1 SHALL write the exact URC-001 no-controls or supplied-controls form to `rb_plan.md` before it creates the retained input for `operate-topic-state apply`. The existing canonical topic-state transaction SHALL then preserve that current host-file body while refreshing its frontmatter and Topic Registry presentation. The controls snapshot SHALL NOT be copied into the topic-state input schema or seed identity fields.
+
+If topic-state apply returns an accepted workspace or recovery boundary, the Agent SHALL use its existing exact inspect/recover/apply operation. It SHALL retain and read the already-durable host-file snapshot; it SHALL NOT reconstruct controls from chat memory, reread an external source path, or ask the user to repeat a decision whose snapshot remains readable.
+
+#### Scenario: canonical topic-state apply preserves captured controls
+- **WHEN** HITL1 captures a valid supplied-controls snapshot and then applies approved canonical topics
+- **THEN** the committed `rb_plan.md` retains the exact controls form while its Topic Registry is refreshed
+- **AND** the snapshot does not appear in topic-state input, profile, seed identity, or Engine authority fields
+
+#### Scenario: topic-state recovery does not lose a snapshot
+- **WHEN** topic-state apply leaves an accepted recovery workspace after controls were captured
+- **THEN** recovery uses the existing workspace owner
+- **AND** the active or recovered host file retains the durable controls snapshot without an external-path reread or repeated user decision

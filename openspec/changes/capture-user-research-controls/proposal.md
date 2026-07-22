@@ -10,7 +10,7 @@
 - 明确用户、Agent 与 Engine 的边界：用户决定新的研究语义和风险取舍；Agent 忠实捕获、理解并在证据中应用；Engine 仍独占 schema、provenance、receipt、Gate、host policy 与生命周期 verdict。自由文本不得覆盖这些确定性契约。
 - 让 Seed、Wave 和 Final 使用同一 host-file 坐标；有委派工作时，只能通过既有 `task_brief` 传递 beacon-rooted、bundle-relative 的只读坐标，不能新建队列、manifest、result 或跨运行记忆字段。
 - 把嵌入的用户 Markdown 视为有边界的内容区域。Topic Registry、Progress 和 required-fill 检查只定位 template-owned 区域，消除用户文本伪装标题、checkbox 或模板标记时的误写、误判。
-- 收敛 setup-ready 的审计/Progress/checkpoint 交易边界：成功的可消费 handoff 只能对应已写入的最终 `rb_plan.md` 字节和所需 checkpoint；不能以 append-only trace 的后续记录“撤销”早先的成功路由，也不豁免 reentry drift 检查。
+- 收敛 setup-ready 的审计/Progress/checkpoint 交易边界：成功的可消费 handoff 只能对应已写入的最终 `rb_plan.md` 字节和所需 checkpoint；同一 shared gate-attempt owner 以一个 `gate_attempt_id` 绑定 audit、checkpoint 与最终 route，不能以 append-only trace 的后续记录“撤销”早先的成功路由，也不豁免 reentry drift 检查。
 
 本 change 不增加新的 lifecycle、HITL、Gate、控制器、通用 Markdown parser、外部文件同步、用户控制 schema、profile flag、工作单元字段或平行 checkpoint。HITL1 仅可读取用户明确提供的本地文件以形成快照；以后阶段不保留路径、不重读该文件。严格用户来源限制若使问题无法回答，仍遵守既有 limitation/degraded/HITL2/held-checkpoint 合法路径，绝不降低 source floor 或伪造通过。
 
@@ -27,6 +27,7 @@
 - `plan-hostfile-sections`: 在 Constraints 中建立有边界的用户内容区域，并使模板 owned 区段的更新和 marker 检查不受其内容干扰。
 - `pre-research-phase-content`: 让 HITL1 捕获和后续 Phase guidance 消费用户控制，并在冲突时停留在既有 HITL1 决策边界。
 - `delegated-work-units`: 允许现有 `task_brief` 携带唯一、只读的 bundle-relative host-file 坐标，而不改变 work-unit authority。
+- `gate-skeleton`: 保持 `writeGateAttempt()` 是唯一 Gate audit owner，同时为 setup-ready 的 route-bound checkpoint 写入定义狭窄 fail-closed 例外。
 - `runtime-reentry-debuggability`: 让 setup-ready 的可消费 handoff、Progress 与 checkpoint 对同一份最终控制文件达成可验证的一致性。
 
 ## Impact

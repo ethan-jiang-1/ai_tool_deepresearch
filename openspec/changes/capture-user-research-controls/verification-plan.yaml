@@ -15,28 +15,28 @@ test_classes:
     rationale: A real subject Agent must capture natural-language controls at HITL1, keep a strict exclusion visible through research guidance, and avoid inventing a control or external-file path.
 claims:
   - id: bounded-host-section-locator
-    statement: The pure canonical host-section helper preserves arbitrary snapshot literals, including headings, checkbox-like lines, template markers, and fence delimiters, while locating only fixed template-owned Topic Registry, Progress and required-fill regions.
+    statement: The pure canonical host-section helper recognizes only the exact no-controls and supplied-controls forms, preserves arbitrary supplied snapshot literals including headings, checkbox-like lines, template markers, and fence delimiters, treats incomplete/legacy lookalikes as ordinary narrative, and locates only fixed template-owned Topic Registry, Progress and required-fill regions.
     test_class: unit
     proof_subject: deterministic_contract
     asset: { kind: node_test, path: tests/engine/helpers/plan-hostfile-sections.test.mjs }
     execution_profile: { fixture: none, subject_execution: none, runtime: none, external_calls: none, verdict_judge: deterministic }
     verdict_authority: node_test_exit
   - id: host-file-consumer-and-task-brief-boundary
-    statement: Real topic-state, setup-ready and generated delegated task paths preserve a supplied literal controls snapshot; update only canonical presentation/marker surfaces; distinguish Progress committed, unchanged and failed; expose one beacon-rooted read coordinate only when controls exist; and leave queue, manifest, result and receipt schemas unchanged.
+    statement: Real topic-state, setup-ready and generated delegated task paths preserve a supplied literal controls snapshot; topic-state recovery resumes from that durable host-file input without a chat/path reconstruction; update only canonical presentation/marker surfaces; distinguish Progress committed, unchanged and failed; expose one beacon-rooted read coordinate only when controls exist; and leave queue, manifest, result and receipt schemas unchanged.
     test_class: integration
     proof_subject: deterministic_contract
     asset: { kind: node_test, path: tests/integration/cli/user-research-controls-contract.test.mjs }
     execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: temporary_bundle, external_calls: none, verdict_judge: deterministic }
     verdict_authority: node_test_exit
   - id: setup-ready-final-plan-handoff-chain
-    statement: A production-instantiated temporary bundle reaches real setup-ready through its legal predecessor, and a real setup-ready pass writes bounded Progress before one route-bound checkpoint before one consumable trace/enter-phase handoff. Simulated Agent actions only fill the existing sanctioned content surfaces; checkpoint failure or post-checkpoint plan drift leaves no consumable entry and does not fabricate trace/checkpoint authority.
+    statement: A production-instantiated temporary bundle reaches real setup-ready through its legal predecessor, and a real setup-ready pass writes bounded Progress before one route-bound checkpoint before one consumable trace/enter-phase handoff; checkpoint and trace share one Engine-generated gate_attempt_id and the same final plan hash. Simulated Agent actions only fill the existing sanctioned content surfaces; checkpoint failure, route-write failure, or post-checkpoint plan drift leaves no consumable entry and does not fabricate trace/checkpoint authority.
     test_class: deterministic_e2e
     proof_subject: deterministic_contract
     asset: { kind: node_test, path: tests/e2e/setup-ready-hostfile-handoff.test.mjs }
     execution_profile: { fixture: fixture_backed, subject_execution: simulated_agent_actions, runtime: temporary_bundle, external_calls: none, verdict_judge: deterministic }
     verdict_authority: node_test_exit
   - id: hitl1-user-controls-agent-flow
-    statement: A real subject Agent follows production HITL1 guidance to capture an optional natural-language control brief, including a hard exclusion, as one bounded host-file snapshot; it resolves only a real material conflict, does not invent controls or a live file path, and enters existing silent work only through the real HITL1 Gate/handoff. Ordered subject trace and host-file/profile snapshots bind the observable result.
+    statement: A real subject Agent follows production HITL1 guidance to capture an optional natural-language control brief, including a hard exclusion, as one bounded host-file snapshot before its existing topic-state apply; it resolves only a real material conflict, does not invent controls or a live file path, recovers ordinary mechanical topic-state work from the durable snapshot without repeating the user decision, and enters existing silent work only through the real HITL1 Gate/handoff. Ordered subject trace and host-file/profile snapshots bind the observable result.
     test_class: agent_flow_e2e
     proof_subject: agent_behavior
     asset: { kind: markdown_playbook, path: experiments_playbook/exp_iterative_interaction/case-714-heavy-user-research-controls.md }

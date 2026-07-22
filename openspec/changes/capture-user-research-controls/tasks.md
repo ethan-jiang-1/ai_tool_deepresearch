@@ -1,26 +1,27 @@
 ## 1. Host-File Boundary
 
-- [ ] 1.1 实现 PHS-007：在 `DPT_FRAMEWORK/engine/helpers/` 增加最小的 canonical plan-section locator 与 literal-snapshot fence renderer；它识别固定 host-file layout、把 controls region 作为 opaque content，并为 legacy 无 subsection 返回 no-controls 兼容解释。
-- [ ] 1.2 实现 PHS-007：将 `rb_plan.md.tmpl` 的 Constraints 扩展为固定 `### User Research Controls` no-controls form；迁移 `canonical-topic-state.mjs` 的 Topic Registry presentation refresh 和 setup-ready required-fill inspection 到同一 locator，保留 body non-empty 与实际 template marker 的现有严格性。
-- [ ] 1.3 实现 PHS-008：重写 `writePlanProgress()` 只操作 canonical Progress section，并返回 `committed` / `unchanged` / `failed` 直接结果；失败不得改写完整 plan，也不得被调用者误报成 checked 状态。
+- [ ] 1.1 实现 PHS-007：在 `DPT_FRAMEWORK/engine/helpers/` 增加最小的 opaque-region normalizer 与 literal-snapshot fence renderer，以及供各消费者定位自身 canonical target 的 bounded helper；它不构造通用 Markdown AST/完整 section tree，把符合新格式的 controls region 作为 opaque content，并为 legacy 无 subsection 或非新格式同名文本保留 no-controls/普通 Constraints 兼容解释，不把 non-standard Topic Registry presentation 变成 blocker。
+- [ ] 1.2 实现 PHS-004、PHS-005、PHS-007、URC-001：将 `rb_plan.md.tmpl` 的 Constraints 扩展为精确 no-controls sentence；规定 controls present 的精确 label + complete literal-fence form；迁移 `canonical-topic-state.mjs` 的 Topic Registry presentation refresh 和 setup-ready required-fill inspection 到同一 locator，保留 body non-empty 与实际 template marker 的现有严格性。
+- [ ] 1.3 实现 PHS-006、PHS-008：重写 `writePlanProgress()` 只操作 canonical Progress section，并返回 `committed` / `unchanged` / `failed` 直接结果；失败不得改写完整 plan，也不得被调用者误报成 checked 状态或新的 Gate verdict。
 
 ## 2. HITL And Research Guidance
 
-- [ ] 2.1 实现 URC-001、URC-003、PRP-012：更新 HITL1 brief/phase guidance，使 Agent 在既有 HITL1 决策点捕获 optional controls 或经明确授权读取的本地文件内容为一次性 literal snapshot；写清 no-controls、legacy、最小澄清、不可保留 path/不可同步及 material conflict 的现有 structured-owner 处理。
+- [ ] 2.1 实现 URC-001、URC-003、PRP-012、PRP-014：更新 HITL1 brief/phase guidance，使 Agent 在既有 HITL1 决策点捕获 optional controls 或经明确授权读取的本地文件内容为一次性 literal snapshot；在生成 retained topic-state input 前先写入 snapshot，并要求 existing topic-state apply/recover 保留该 current host-file body；写清 no-controls、legacy、最小澄清、不可保留 path/不可同步及 material conflict 的现有 structured-owner 处理。
 - [ ] 2.2 实现 URC-002、PRP-013：更新 Seed Topics、Wave0/Wave1/Wave2 与 Final guidance，要求 controls present 时读取原 host-file coordinate、允许 Agent 产生不替代原文的 topic-local projection，并把严格限制不可满足时路由到既有 limitation/degraded/HITL2/held-checkpoint 边界。
-- [ ] 2.3 实现 DEW-020：在生成 delegated work-unit 的既有 `task_brief` producer 中，仅 controls present 时添加 beacon-rooted、bundle-relative、只读 coordinate；确认没有 queue、manifest、result、receipt 或 schema 字段被增加或复用为用户控制 authority。
+- [ ] 2.3 实现 DEW-020：在 Wave/Phase guidance 中规定 Phase Agent 仅在 controls present 时向既有 queue-item `task_brief` 添加 beacon-rooted、bundle-relative、只读 coordinate；确认 Engine 只原样传递已有 brief，且没有 queue、manifest、result、receipt 或 schema 字段被增加、解析或复用为用户控制 authority。
 
 ## 3. Setup-Ready Durable Handoff
 
-- [ ] 3.1 实现 RRD-011：在既有 gate helper owner 中抽出 setup-ready 专用 ordered commit path，先写不可路由 audit，再应用 Progress outcome，再严格写入并返回唯一 checkpoint，最后才追加带 checkpoint binding 的可路由 passed trace；保留其他 Gate 的现有 attempt path，不创建第二 checkpoint 或 rollback tree。
-- [ ] 3.2 实现 RRD-011：让 `check-gate-setup-ready.mjs` 使用该 path；Progress 失败时保留旧 plan、记录无 checked Progress claim，并仅以实际 bytes 的成功 checkpoint/route 决定既有 Gate pass 是否可消费；checkpoint 或 route binding 失败时才输出未可消费的直接 persistence finding 与同一 Gate 的最近重跑动作。
-- [ ] 3.3 实现 RRD-011：扩展 checkpoint/trace binding 和 `handoff-helpers.mjs` / `enter-phase` 的 setup-ready consumption validation，使 route-bound checkpoint 存在、attempt binding 与当前 `rb_plan.md` hash 都成为进入下游的直接前提；不豁免合法 reentry drift。
+- [ ] 3.1 实现 GSK-005、RRD-001、RRD-011：为既有 `writeGateAttempt()` 增加 setup-ready staged route mode，而不是新 writer/finalizer；它预生成 `gate_attempt_id`，先写明确 `route_pending` 的不可路由 content audit，再应用 Progress outcome，再严格写入带该 ID、`trigger: setup_route_pending`、`content_evaluation_ref`、plan hash 与 `route_state: pending` 的唯一 checkpoint，最后才追加带相同 ID、checkpoint ref 与 plan-hash binding 的可路由 passed trace；该 invocation 返回一个 structured `route_outcome`，不抛错触发第二次普通 audit；保留其他 Gate 和 non-routing audit 的现有 tolerant attempt path，不创建第二 checkpoint 或 rollback tree。
+- [ ] 3.2 实现 RRD-011：让 `check-gate-setup-ready.mjs` 使用该 path；Progress 失败时保留旧 plan、记录无 checked Progress claim，并仅以实际 bytes 的成功 checkpoint/route 决定既有 Gate pass 是否可消费；checkpoint 或 route binding 失败时从同一次 `route_outcome` 输出标准 failed envelope（`check.passed: false`、`check.next: null`）和直接 authority-integrity persistence finding，附同一 Gate 的最近重跑动作，且不得再调用普通 `writeGateAttempt(failedResult)` 或产生第二 checkpoint。
+- [ ] 3.3 实现 RRD-011：扩展 checkpoint/trace binding 和 `handoff-helpers.mjs` / `enter-phase` 的 setup-ready consumption validation，使 route-bound checkpoint 存在、checkpoint path 与 `gate_attempt_id` 双向一致、两者及当前 `rb_plan.md` 的 hash 一致，才成为进入下游的直接前提；不豁免合法 reentry drift。
+- [ ] 3.4 实现 RRD-012：让 `check-reentry` 排除 `route_state: pending` checkpoint 的 matching/global baseline 选择，只将其作为带 `gate_attempt_id` 的 diagnostic evidence；没有 matching bound trace 时报告缺少 passed baseline，不得以 pending checkpoint 压制 drift 或声明 setup handoff 完成。
 
 ## 4. Focused Proof
 
-- [ ] 4.1 为 PHS-007、PHS-008 编写 `tests/engine/helpers/plan-hostfile-sections.test.mjs` unit tests：覆盖 fenced controls 内的 headings、registry-looking rows、checkbox、required-fill marker 和任意 backtick delimiter，及 Progress 三种直接 outcome。
-- [ ] 4.2 为 URC-001、URC-002、DEW-020、PHS-007、PHS-008 编写 `tests/integration/cli/user-research-controls-contract.test.mjs`：使用实际 temporary bundle 的 topic-state、setup-ready 和 task rendering，证明 legacy/no-controls/controls、canonical writer isolation、marker isolation 与 task-brief-only coordinate。
-- [ ] 4.3 为 RRD-011 编写 `tests/e2e/setup-ready-hostfile-handoff.test.mjs`：经真实 predecessor/Gate/enter-phase 路径验证 final plan hash、checkpoint binding 和可消费 setup route；覆盖 checkpoint failure 与 post-checkpoint drift 不可消费，且不手写 trace/checkpoint authority。
+- [ ] 4.1 为 URC-001、PHS-004、PHS-005、PHS-006、PHS-007、PHS-008 编写 `tests/engine/helpers/plan-hostfile-sections.test.mjs` unit tests：覆盖精确 no-controls/supplied label、incomplete/legacy lookalike、fenced controls 内的 headings、registry-looking rows、checkbox、required-fill marker 和任意 backtick delimiter，及 Progress 三种直接 outcome。
+- [ ] 4.2 为 URC-001、URC-002、DEW-020、PHS-007、PHS-008、PRP-014 编写 `tests/integration/cli/user-research-controls-contract.test.mjs`：使用实际 temporary bundle 的 topic-state、setup-ready 和 task rendering，证明 legacy/no-controls/controls、canonical writer isolation、marker isolation、topic-state/recovery 后 snapshot 保留与 task-brief-only coordinate。
+- [ ] 4.3 为 GSK-005、RRD-001、RRD-011、RRD-012 编写 `tests/e2e/setup-ready-hostfile-handoff.test.mjs`：经真实 predecessor/Gate/enter-phase/reentry 路径验证 `gate_attempt_id`、final plan hash、`trigger: setup_route_pending`/`content_evaluation_ref`/`route_state: pending` checkpoint、binding 与可消费 setup route；覆盖 checkpoint failure、route-write failure（保留 truthful pending checkpoint，且无第二 checkpoint/audit）、pending checkpoint 不能成为 reentry baseline 与 post-checkpoint drift 均不可消费，且不手写 trace/checkpoint authority。
 - [ ] 4.4 为 URC-001、URC-002、URC-003 增加 `experiments_playbook/exp_iterative_interaction/case-714-heavy-user-research-controls.md`，并在 `PLAYBOOK_MANIFEST.md` 登记；以真实 Subject Agent、真实 HITL1 guidance 和 trace/snapshot 证明自然语言 brief、hard exclusion、无 fabricated path/control 与既有 Gate/handoff。
 - [ ] 4.5 运行 `node openspec/governance/check-verification-routing.mjs --change capture-user-research-controls --mode plan` 后再开始 target edits，并在所有验证资产创建后运行同命令的 `--mode assets`；修复 routing/asset 发现直到通过。
 

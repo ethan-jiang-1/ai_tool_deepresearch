@@ -6,11 +6,13 @@
 
 HITL1 SHALL preserve optional user research controls in the active bundle's `rb_plan.md## Constraints > ### User Research Controls`; this host-file subsection is the sole durable narrative authority for the per-run control brief. The control brief MAY state priorities, exclusions, source/evidence policy, analytical lens, delivery needs, or user context. It SHALL have exactly these compatibility meanings:
 
-- a new bundle with no supplied controls records an explicit no-additional-controls statement;
-- a new bundle with controls records one faithful labeled literal snapshot;
+- a new bundle with no supplied controls records exactly `未提供额外的本轮研究控制；按已确认的问题、范围和研究 profile 执行。`;
+- a new bundle with controls records exactly the label `用户提供的本轮研究控制快照（仅作研究指导，不覆盖 Engine contracts）：` followed by one faithful literal snapshot;
 - a legacy bundle without the subsection remains valid and means no additional controls.
 
 The snapshot SHALL remain readable to Agent and user, SHALL NOT become a profile enum, Gate input, lifecycle field, external path, cross-run memory, or machine-scored semantic schema.
+
+Only the exact supplied-controls label followed by a complete deterministic literal snapshot region SHALL mean controls are present to Engine-facing host-file helpers. A legacy same-named subsection, an incomplete fence, or other Constraints prose SHALL remain ordinary narrative content rather than an inferred control state.
 
 #### Scenario: no additional controls use the normal path
 - **WHEN** the user supplies no extra research controls at HITL1
