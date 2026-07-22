@@ -448,6 +448,8 @@ WTS-008: wave2-synthesis — Finding taxonomy with explicit types, decisions, an
 WTS-009: wave2-synthesis — Cross-topic scan matrix as process evidence surface
 WTS-010: wave2-synthesis — Wave2 materializes existing-backed cross references without weakening targeted evidence provenance
 
+WTS-011: wave2-synthesis — Finding index binds declared Wave1 carried targets to the exact routed handoff receipt without overloading artifact origin refs
+
 # work-unit-provenance-gate
 WPG-001: work-unit-provenance-gate — Gates verify submitted work-unit ledger rows
 WPG-002: work-unit-provenance-gate — Gates verify work-unit submission presence across binding surfaces
@@ -510,6 +512,8 @@ TRW-004: trace-writer — Run start trace marker (run_start at bundle creation; 
 TRW-005: trace-writer — Agent Autorun surfaces use one rb_trace.jsonl sink with trace-bound native completion
 EXS-001: experiment-shared-infra — experiments_env/shared/ directory for experiment-scoped shared infrastructure
 EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_FRAMEWORK/command_experiments_env/scripts/ to experiments_env/shared/"
+TRW-006: trace-writer — Successful Wave1 gate attempt explicitly projects its normalized carried-target receipt into the routed trace handoff
+
 EXS-003: experiment-shared-infra — Disposable creator rejects malformed argv before filesystem side effects
 EXR-001: experiment-ref-integrity — case-401 verifies positive Agent-Engine boundary path
 EXR-002: experiment-ref-integrity — case-402 verifies delegated complete rejection matrix
@@ -577,6 +581,8 @@ RWP-018: research-wave-phase-content — Wave delegated drain loops route timeou
 RWP-019: research-wave-phase-content — Wave delegated execution uses one visible role-bound actor decision loop
 RWP-020: research-wave-phase-content — Wave2 targeted-evidence classification with round-awareness; finding-index per-finding carries created_in_rerun_count
 
+RWP-021: research-wave-phase-content — Wave1 declares carried material targets in the Phase-owned review and Wave2 consumes the routed receipt without reopening a mutable parent
+
 # wff-research-waves / research-wave-gate-implementation
 RWG-001: research-wave-gate-implementation — Wave0 complete gate rule set (file_exists, dir_exists, schema_valid ReferenceMetadata, count_floor, trace_event_present, status_value)
 RWG-002: "research-wave-gate-implementation — Wave1 complete gate rule set (file_exists, dir_exists, pattern_match placeholder marker + negate false-claim detection, trace_event_present, status_value)"
@@ -597,6 +603,8 @@ RET-003: requirement-traceability — Capability boundary test (4 conditions) pr
 RET-004: requirement-traceability — Alphabetical ordering of groups and numeric ordering within groups
 RET-005: requirement-traceability — Deprecation without deletion (IDs never reused)
 RET-006: requirement-traceability — Check script compliance as hard gate for archive
+
+RWG-020: research-wave-gate-implementation — Wave1 normalizes carried-target declarations and Wave2 verifies receipt-bound finding coverage through existing disposition routes
 
 # wff-research-waves / research-wave-experiments
 RWE-001: "research-wave-experiments — Wave0 happy-path + fail playbook (5 trace events: 1 pass + 4 fail, covers count_floor ⊕ schema_valid AND interaction, empty registry, {topic} expansion)"
@@ -822,6 +830,8 @@ CTS-004: canonical-topic-state — Topic operations preserve lifecycle and owner
 CTS-005: canonical-topic-state — Topic registry owns current and previous layout coordinates for stable UID resolution
 CTS-006: canonical-topic-state — Complete layout target commits through the existing explicit workspace and recovery path
 CTS-007: canonical-topic-state — One pure resolver maps current and historical slug bindings to canonical UID without moving provenance paths
+
+CTS-008: canonical-topic-state — Wave1 depth-review selection resolves one canonical topic UID and current intent binding before receipt projection
 
 # research-return-map
 RRM-001: research-return-map — Research wave returns include Agent-readable evidence-to-claim maps

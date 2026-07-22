@@ -1,0 +1,44 @@
+schema_version: verification-routing/v1
+change: bind-wave1-target-receipts-to-wave2-findings
+test_classes:
+  unit:
+    status: selected
+    rationale: The topic/review selector, target normalization, revision and receipt shape are pure deterministic facts that need direct malformed and drift coverage.
+  integration:
+    status: selected
+    rationale: Real Wave Gate and trace writer paths must prove that only a validated Wave1 receipt is routed and that the existing Wave2 evaluator selects it through legal lineage.
+  deterministic_e2e:
+    status: selected
+    rationale: One temporary bundle must cross real Wave1 Gate, route-bound Wave2 entry and Wave2 Gate with valid, stale, missing and legacy bindings.
+  agent_flow_e2e:
+    status: selected
+    rationale: A real Agent must make an explicit material carry-forward decision and use the existing finding/limitation routes without inventing a controller or user checkpoint.
+claims:
+  - id: carried-target-selector-and-normalizer
+    statement: One pure Wave1 selector resolves exactly one UID-bound depth review from accepted canonical topic-layout facts, recomputes current intent binding, accepts explicit empty carried-target declarations, and rejects missing, duplicate, malformed, stale-intent or ambiguous declarations without prose matching or a slug alias map.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/engine/wave-carried-target-receipts.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: none, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit
+  - id: routed-wave1-receipt-and-wave2-evaluator
+    statement: Real Wave1 and Wave2 Gate/evaluator paths write a contract-versioned receipt only through the shared trace writer, select only the route-bound Wave1 handoff receipt, reject current missing or malformed receipt projection, and report the smallest unbound target at the finding-index repair coordinate while preserving legacy no-receipt handoffs.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/integration/cli/wave1-target-receipt-gate.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: temporary_bundle, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit
+  - id: wave1-to-wave2-receipt-closure-chain
+    statement: A production-instantiated temporary bundle reaches Wave2 through a real Wave1 Gate and route-bound entry; an exact finding binding satisfies every selected receipt target through existing disposition routes, whereas same-topic/origin-only, stale revision, changed intent, unsafe trace projection, missing binding and post-handoff mutable-review changes do not; layout-only UID/intent-preserving reuse and legacy handoff remain compatible.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/e2e/wave1-target-receipt-wave2-closure.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: simulated_agent_actions, runtime: temporary_bundle, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit
+  - id: agent-carried-target-flow
+    statement: A real Agent follows Wave1/Wave2 guidance to declare a material carried target from the recorded question/profile and optionally supplied controls, then creates a receipt-bound finding with an existing evidence, limitation or HITL2 disposition; it neither manufactures a target from prose nor asks the user to run an ordinary repair command.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset: { kind: markdown_playbook, path: experiments_playbook/exp_iterative_interaction/case-715-wave-target-receipt-closure.md }
+    execution_profile: { fixture: setup_only, subject_execution: real_agent, runtime: real_disposable_bundle, external_calls: real, verdict_judge: deterministic }
+    verdict_authority: trace_jsonl
