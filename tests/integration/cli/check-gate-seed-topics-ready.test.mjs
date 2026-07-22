@@ -5,12 +5,12 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   setStatusWindow,
-  witnessedHandoffEvents,
-  writeTraceEvents,
 } from './handoff-fixtures.mjs';
+import { writeGateAttempt } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs');
+const ENTER_PHASE = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/enter-phase.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
@@ -29,12 +29,6 @@ function createBundle(prefix) {
   const bundlePath = created.stdout.trim();
   createdDirs.push(bundlePath);
   setStatusWindow(bundlePath, 'setup_ready', 'seed_topics_ready');
-  writeTraceEvents(bundlePath, witnessedHandoffEvents({
-    sourceGate: 'setup-ready',
-    sourceNode: 'phases/phase-setup.md',
-    targetNode: 'phases/phase-seed-topics.md',
-    phase: 'setup',
-  }));
   return bundlePath;
 }
 
@@ -53,6 +47,23 @@ function writeCanonicalPlan(bundlePath, topics) {
         '    depends_on_topic_uids: []',
       ].join('\n')).join('\n')}\n`;
   writeFileSync(planPath, `---\nplan_basename: test\nderived_topic_count: ${topics.length}\ntopic_registry_version: "2"\n${topicLines}---\n${body}`);
+  writeGateAttempt(bundlePath, {
+    check: {
+      passed: true,
+      gate: 'setup-ready',
+      currentNodeRef: 'phases/phase-setup.md',
+      next: 'phases/phase-seed-topics.md',
+      failed_rule_ids: [],
+    },
+    routing: { kind: 'next', next: 'phases/phase-seed-topics.md' },
+    inspect: [],
+    advice: [],
+  }, { setupReadyStaged: true });
+  const entry = spawnSync('node', [ENTER_PHASE, '--bundle', bundlePath, '--node', 'phases/phase-seed-topics.md'], {
+    encoding: 'utf-8',
+    timeout: 10000,
+  });
+  assert.equal(entry.status, 0, entry.stderr);
 }
 
 function writeSeed(bundlePath, topic, overrides = {}) {
@@ -79,7 +90,7 @@ function assertCompleteHint(hint) {
 }
 
 const TOPIC = {
-  topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+  topic_uid: 'tp_123e4567-e89b-42d3-a456-426614174000',
   id: '01',
   slug: '01_topic-a',
   title: 'Topic A',

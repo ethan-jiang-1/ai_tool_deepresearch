@@ -42,8 +42,9 @@ describe('framework version management', () => {
   });
 
   it('keeps accepted version semantics generic while retaining historical scenario names', () => {
-    const runEntryDelta = read('openspec/changes/simplify-iterative-research-interaction/specs/run-entry/spec.md');
-    const versionDelta = read('openspec/changes/simplify-iterative-research-interaction/specs/version-management/spec.md');
+    const archivedChange = 'openspec/changes/archive/2026-07-17-simplify-iterative-research-interaction/specs';
+    const runEntryDelta = read(`${archivedChange}/run-entry/spec.md`);
+    const versionDelta = read(`${archivedChange}/version-management/spec.md`);
     const normativeVersionDelta = versionDelta
       .split('\n')
       .filter((line) => !line.startsWith('#### Scenario:') && !line.includes('@deprecated name'))

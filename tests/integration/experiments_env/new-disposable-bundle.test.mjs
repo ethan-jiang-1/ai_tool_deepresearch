@@ -2,9 +2,9 @@
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -82,6 +82,26 @@ describe('new-disposable-bundle.mjs integration', () => {
     assert.equal(dirname(bundle), root);
     assert.equal(existsSync(join(bundle, 'marker.txt')), false, 'selected collision must be replaced');
     assert.equal(existsSync(join(bundle, 'rb_status.json')), true);
+  });
+
+  it('renders continuation navigation for a non-sibling target directory (BUM-005, EXS-004)', () => {
+    const root = trackRoot('disposable-continuation-');
+    const target = join(root, 'external-runs');
+    const result = runCreator('continuation_card', '--case=case-804', `--target-dir=${target}`);
+
+    assert.equal(result.status, 0, result.stderr);
+    const bundle = result.stdout.trim();
+    const map = readFileSync(join(bundle, 'BUNDLE_MAP.md'), 'utf-8');
+    const frameworkRelative = relative(bundle, join(REPO_ROOT, 'DPT_FRAMEWORK')) || '.';
+    const repoRelative = relative(bundle, REPO_ROOT) || '.';
+
+    assert.match(map, /## Continue This Bundle/);
+    assert.match(map, /continue-run-bundle\.md/);
+    assert.ok(map.includes(`framework_root: \`${frameworkRelative}\``));
+    assert.ok(map.includes(`repo_command_root: \`${repoRelative}\``));
+    assert.doesNotMatch(map, /\{\{[^}]+\}\}/);
+    assert.equal(existsSync(join(bundle, 'AGENTS.md')), false);
+    assert.equal(existsSync(join(bundle, 'CLAUDE.md')), false);
   });
 });
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.43
+
+- New run bundles now carry a passive continuation card with source-relative framework navigation, and explicitly supplied reachable bundle maps reload through one existing-bundle playbook rather than creating a second run.
+- Continuation remains bounded by current bundle facts, reentry diagnostics, Final terminal semantics, and the existing post-Final recovery path; no card gains runtime or mutation authority.
+
 ## v0.42
 
 - Wave1 now records an Engine-normalized carried-target receipt from its explicit depth-review declaration, and Wave2 closes each selected target through an exact finding-index binding and existing disposition route.

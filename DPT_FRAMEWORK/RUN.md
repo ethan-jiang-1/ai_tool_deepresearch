@@ -1,17 +1,16 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.42**
+> **DPT_FRAMEWORK v0.43**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.42
+## Current Release: v0.43
 
-- HITL1 can retain one optional user-controls snapshot in `rb_plan.md`; later phases read the same bounded coordinate without creating a profile or work-unit authority.
-- Setup-ready now binds its actual final plan bytes through Progress, one pending checkpoint, and the authoritative handoff trace before Seed Topics entry.
-- Wave1-to-Wave2 carries only Agent-declared material targets through a routed Gate receipt; Wave2 records their exact finding bindings while Engine keeps identity, handoff, and disposition closure deterministic.
+- Explicitly supplied, reachable existing `BUNDLE_MAP.md` now routes to `continue-run-bundle.md`; new research without that input still uses the RUN/start-research path.
+- New production and disposable bundles render passive source-relative framework navigation in their maps; current runtime truth remains in bundle controls and Engine outputs.
 
 ## 0. 禁用内置捷径（最高优先）
 
@@ -43,7 +42,7 @@ If status or terminal output looks suspicious, run `node DPT_FRAMEWORK/cli/audit
 
 For bundle recovery, run `node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle <path> --at <target>`. Read `recovery.root_findings[]` before acting: a `reachable` root carries at most one sanctioned nearest action; `missing_contract` is a direct stop boundary, not permission to retry a known-rejected predecessor, hand-edit status/trace, or create an addendum namespace; `not_applicable` leaves semantic reconciliation to the Agent without granting mutation authority.
 
-若已有 active bundle：别重建，打开该 bundle 的 `BUNDLE_MAP.md`（旧 bundle 只有 `START_FROM_HERE.md` 时，把它当作 deprecated fallback），读 `rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`。若 `rb_status.json.current_node` 非空，从该 phase Markdown node 续跑；不要只凭 `current_gate` 推断当前 phase。若 `current_node` 为 `null` 或缺失，先运行 reentry/trace 诊断。
+若用户明确提供当前 workspace 内可达 existing `BUNDLE_MAP.md`，别重建；改读 `command_playbook/continue-run-bundle.md`。它以 `current_node` 为 resume coordinate，不要只凭 `current_gate` 推断 phase；它区分 non-Final reentry、Final terminal facts 和 null-node boundary。扫描发现、只提文件名或不可达 map 不选择 run。旧 bundle 只有 `START_FROM_HERE.md` 时，它只作 deprecated fallback。
 
 ## 3. 规则与边界在哪
 - 触发规则、运行时边界：`README.md`

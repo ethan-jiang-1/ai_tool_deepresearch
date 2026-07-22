@@ -7,7 +7,7 @@
 
 import { execFileSync, execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, existsSync, readFileSync, rmSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import {
@@ -112,6 +112,9 @@ const frameworkVersion = readFrameworkVersion({ repoRoot });
 const baseDir = targetDir ?? repoRoot;
 mkdirSync(baseDir, { recursive: true });
 const bundleDir = join(baseDir, `dpt_rb_${bundleName}`);
+const frameworkRoot = join(__dirname, '..');
+const frameworkRootRelative = relative(bundleDir, frameworkRoot) || '.';
+const repoCommandRootRelative = relative(bundleDir, repoRoot) || '.';
 
 // Handle existing
 if (existsSync(bundleDir)) {
@@ -153,6 +156,8 @@ for (const t of templates) {
   let content = readFileSync(tmplPath, 'utf-8');
   content = content.replace(/\{\{name\}\}/g, bundleName);
   content = content.replace(/\{\{framework_version\}\}/g, frameworkVersion);
+  content = content.replace(/\{\{framework_root_relpath\}\}/g, frameworkRootRelative);
+  content = content.replace(/\{\{repo_command_root_relpath\}\}/g, repoCommandRootRelative);
 
   const destPath = join(bundleDir, t.dest);
   writeFileSync(destPath, content);

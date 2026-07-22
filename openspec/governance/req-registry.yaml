@@ -121,6 +121,7 @@ ACS-001: agent-command-surface — Agent-facing command responsibility distingui
 ACS-002: agent-command-surface — Entry docs distinguish one-time human trigger from Agent-run command execution
 ACS-003: agent-command-surface — Existing static documentation regression locks stable Agent-owned helper markers and known audience/HITL drift phrases without prose classification
 ACS-004: agent-command-surface — Phase-boundary terminology is discoverable and aligned with guidance terminology canon
+ACS-005: agent-command-surface — Existing bundle continuation has one Agent-owned playbook
 
 # agent-testing
 AGT-001: agent-testing — Agent-assisted test playbook for gate-loop
@@ -184,6 +185,7 @@ BUM-001: bundle-map — BUNDLE_MAP.md is the canonical passive bundle map
 BUM-002: bundle-map — Bundle map content is organized as maps
 BUM-003: bundle-map — BUNDLE_MAP.md replaces START_FROM_HERE.md for new bundles
 BUM-004: bundle-map — Legacy START_FROM_HERE.md is diagnostic compatibility only
+BUM-005: bundle-map — BUNDLE_MAP.md offers a portable continuation card
 
 # bundle-start-from-here
 BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry [DEPRECATED]
@@ -199,6 +201,7 @@ CMI-005: cmd-bundle-instantiation — Bundle naming is Agent-derived or already-
 CMI-006: cmd-bundle-instantiation — rb_status.json template includes current_node reentry coordinate
 CMI-007: cmd-bundle-instantiation — rb_plan.md template stamps framework_version at creation (CHANGELOG/VEM-001 authority)
 CMI-008: cmd-bundle-instantiation — Production creator rejects malformed argv before filesystem side effects
+CMI-009: cmd-bundle-instantiation — Bundle creators render actual framework navigation coordinates
 
 # check-inspect-feedback
 CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop
@@ -380,6 +383,7 @@ RUE-002: run-entry — RUN.md Section 0 instructs agents not to use built-in res
 RUE-003: run-entry — Project changelog records version history and known limitations [DEPRECATED]
 RUE-004: run-entry — Agent behavior files stay synchronized on the research shortcut override
 RUE-005: run-entry — RUN.md frames drag/paste trigger as one-time handoff into Agent-run framework execution
+RUE-006: run-entry — Explicit existing bundle card routes before the new-run default
 
 # schema-core
 SCO-001: schema-core — Six domain enums
@@ -515,6 +519,7 @@ EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_F
 TRW-006: trace-writer — Successful Wave1 gate attempt explicitly projects its normalized carried-target receipt into the routed trace handoff
 
 EXS-003: experiment-shared-infra — Disposable creator rejects malformed argv before filesystem side effects
+EXS-004: experiment-shared-infra — Disposable creator renders shared map navigation coordinates
 EXR-001: experiment-ref-integrity — case-401 verifies positive Agent-Engine boundary path
 EXR-002: experiment-ref-integrity — case-402 verifies delegated complete rejection matrix
 EXR-003: experiment-ref-integrity — case-403 verifies content_dedup via Engine-generated ledger [DEPRECATED]

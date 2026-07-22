@@ -4,7 +4,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, rmSync, writeFileSync, readFileSync, chmodSync } from 'node:fs';
+import { copyFileSync, cpSync, mkdirSync, rmSync, writeFileSync, readFileSync, chmodSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
@@ -27,6 +27,7 @@ function setupTemp(name) {
   const hostToolsDir = join(dir, 'DPT_FRAMEWORK', 'host_tools');
   mkdirSync(hostToolsDir, { recursive: true });
   copyFileSync(LAUNCHER_SRC, join(hostToolsDir, 'claude-deepseek.mjs'));
+  cpSync(join(REPO_ROOT, 'DPT_FRAMEWORK', 'host_tools', 'lib'), join(hostToolsDir, 'lib'), { recursive: true });
   const fakeBin = join(dir, 'fake_bin');
   mkdirSync(fakeBin, { recursive: true });
   copyFileSync(FAKE_CLAUDE, join(fakeBin, 'claude'));
@@ -207,7 +208,8 @@ describe('claude-deepseek.mjs', () => {
     const r = runLauncher(d, ['-p', 'hello', '--verbose'], { CLAUDE_FAKE_RECORD_FILE: recordFile });
     assert.equal(r.status, 0);
     const record = readRecord(d, recordFile);
-    assert.deepEqual(record.args, ['-p', 'hello', '--verbose']);
+    assert.deepEqual(record.args.slice(0, 2), ['--setting-sources', 'project,local']);
+    assert.deepEqual(record.args.slice(2), ['-p', 'hello', '--verbose']);
   });
 
   // 10

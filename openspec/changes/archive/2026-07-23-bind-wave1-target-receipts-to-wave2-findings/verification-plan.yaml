@@ -39,6 +39,6 @@ claims:
     statement: A real Agent follows Wave1/Wave2 guidance to declare a material carried target from the recorded question/profile and optionally supplied controls, then creates a receipt-bound finding with an existing evidence, limitation or HITL2 disposition; it neither manufactures a target from prose nor asks the user to run an ordinary repair command.
     test_class: agent_flow_e2e
     proof_subject: agent_behavior
-    asset: { kind: markdown_playbook, path: experiments_playbook/exp_iterative_interaction/case-715-wave-target-receipt-closure.md }
+    asset: { kind: markdown_playbook, path: experiments_playbook/exp_iterative_interaction/case-715-heavy-wave-target-receipt-closure.md }
     execution_profile: { fixture: setup_only, subject_execution: real_agent, runtime: real_disposable_bundle, external_calls: real, verdict_judge: deterministic }
     verdict_authority: trace_jsonl

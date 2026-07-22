@@ -172,12 +172,12 @@ describe('checkpoint manifest', () => {
   });
 
   it('is called from writeGateAttempt (integration)', () => {
-    const dir = setupMinimalBundle('ckpt-integration');
+    const dir = setupMinimalBundle('ckpt-integration', 'wave0-complete', 'wave0_complete');
     const result = buildGateResult({
       passed: true,
-      gate: 'wave1-complete',
-      currentNodeRef: 'phases/phase-wave1.md',
-      routing: { kind: 'next', next: 'phases/phase-wave2.md' },
+      gate: 'wave0-complete',
+      currentNodeRef: 'phases/phase-wave0.md',
+      routing: { kind: 'next', next: 'phases/phase-wave1.md' },
       inspect: [],
       advice: [],
     });

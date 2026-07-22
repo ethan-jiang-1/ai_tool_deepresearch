@@ -358,12 +358,12 @@ describe('Engine-derived attempt diagnostics (GSK-008)', () => {
     writeGateAttempt(dir, {
       check: {
         passed: true,
-        gate: 'wave1-complete',
-        currentNodeRef: 'phases/phase-wave1.md',
-        next: 'phases/phase-wave2.md',
+        gate: 'wave0-complete',
+        currentNodeRef: 'phases/phase-wave0.md',
+        next: 'phases/phase-wave1.md',
         failed_rule_ids: [],
       },
-      routing: { kind: 'next', next: 'phases/phase-wave2.md' },
+      routing: { kind: 'next', next: 'phases/phase-wave1.md' },
       inspect: [],
       advice: [],
     });
@@ -371,8 +371,8 @@ describe('Engine-derived attempt diagnostics (GSK-008)', () => {
     const regressed = {
       check: {
         passed: false,
-        gate: 'wave1-complete',
-        currentNodeRef: 'phases/phase-wave1.md',
+        gate: 'wave0-complete',
+        currentNodeRef: 'phases/phase-wave0.md',
         next: null,
         failed_rule_ids: ['rule-x'],
       },

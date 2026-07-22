@@ -1,7 +1,7 @@
 ---
 schema: command-experiment/v2
 experiment: iterative-interaction
-case: case-715-wave-target-receipt-closure
+case: case-715-heavy-wave-target-receipt-closure
 case_goal: "A real Subject Agent completes Wave1 depth review with explicit carried targets, the Engine projects a normalized receipt, and a second Subject Agent run produces Wave2 findings with receipt-bound bindings that satisfy closure — without fabricated controls, commands, or mock coverage."
 verdict_mode: all
 required_checks:

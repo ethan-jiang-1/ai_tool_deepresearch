@@ -16,7 +16,7 @@ Deep Research Framework (`DPT_FRAMEWORK/`) 的运行时入口说明。
 
 **本框架就是项目的 Deep Research 引擎。** 用户要研究就用它跑，**不要**调用任何内置 "deep research" skill 或通用 research workflow——那些是替代品，本框架才是主体。入口 `RUN.md` Section 0 有完整禁用指令。
 
-不要浏览文件结构。直接走 `command_playbook/start-research.md` 流程：Agent 派生或使用已提供的 bundle 名称 → 创建 bundle → 写入 research question → 加载第一个 phase node。
+用户明确提供当前 workspace 内可达 existing `BUNDLE_MAP.md` 并要求继续/检查时，先走 `command_playbook/continue-run-bundle.md`；扫描发现、只提文件名或不可达 map 不选择 run。否则不要浏览文件结构，直接走 `command_playbook/start-research.md`，由该 playbook 创建新 run 并加载第一个 phase node。
 
 ## 第一条
 

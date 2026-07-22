@@ -106,6 +106,23 @@ function stageWave1(bundle, suffix = 'r1') {
     { path: 'artifacts/wave1/topic-a/evidence-summary.md', role: 'evidence_summary', content: summary },
     { path: 'artifacts/wave1/topic-a/question-list.md', role: 'question_list', content: questions },
   ]);
+  writeFileSync(join(bundle, 'artifacts/wave1/topic-a/depth-review.yaml'), stringifyYaml({
+    version: 'depth-review.v1',
+    topic_slug: 'topic-a',
+    reviewed_work_unit_refs: [submitted.record.paths.work_unit_dir],
+    depth_dimensions: {
+      mechanism: { status: 'covered', refs: [submitted.record.paths.result_ref] },
+      trend_or_difficulty: { status: 'covered', refs: [submitted.record.paths.result_ref] },
+      limitation_or_dispute: { status: 'covered', refs: [submitted.record.paths.result_ref] },
+    },
+    profile_checks: {
+      counterexample_search: { status: 'not_required', refs: [] },
+      cross_verification: { status: 'not_required', refs: [] },
+    },
+    decision: 'accept',
+    supplementary_queue_item_ids: [],
+    carried_targets: [],
+  }));
   writeFileSync(join(bundle, 'seed_topics/topic-a.md'), readFileSync(join(bundle, 'seed_topics/topic-a.md'), 'utf8') + `\n## 本轮新增机制理解\n${returnMap}\n## 本轮新增趋势与难点\n\n## 待验证问题\n`);
   logCompletion(bundle, 'wave1_completion');
   return submitted;

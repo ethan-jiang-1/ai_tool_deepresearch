@@ -10,7 +10,7 @@
 
 import { execFileSync, execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, readFileSync, existsSync, cpSync, rmSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { randomInt } from 'node:crypto';
 import { parseArgs } from 'node:util';
 import {
@@ -120,6 +120,9 @@ const dirName = caseId
 const baseDir = targetDir ?? repoRoot;
 mkdirSync(baseDir, { recursive: true });
 const bundleDir = join(baseDir, dirName);
+const frameworkRoot = join(repoRoot, 'DPT_FRAMEWORK');
+const frameworkRootRelative = relative(bundleDir, frameworkRoot) || '.';
+const repoCommandRootRelative = relative(bundleDir, repoRoot) || '.';
 
 if (existsSync(bundleDir)) {
   if (force) {
@@ -241,6 +244,8 @@ for (const s of scaffoldTemplates) {
   if (existsSync(tmplPath)) {
     let content = readFileSync(tmplPath, 'utf-8');
     content = content.replace(/\{\{name\}\}/g, basename);
+    content = content.replace(/\{\{framework_root_relpath\}\}/g, frameworkRootRelative);
+    content = content.replace(/\{\{repo_command_root_relpath\}\}/g, repoCommandRootRelative);
     writeFileSync(join(bundleDir, s.dest), content);
   }
 }

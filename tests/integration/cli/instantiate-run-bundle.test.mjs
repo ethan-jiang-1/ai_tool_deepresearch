@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 
 const REPO_ROOT = process.cwd();
@@ -167,6 +167,31 @@ describe('instantiate-run-bundle.mjs integration', () => {
       assert.equal(result.stdout.trim(), bundle);
       assert.equal(existsSync(join(bundle, 'rb_status.json')), true);
       assert.doesNotMatch(result.stderr, /validate-bundle failed|inspect-bundle failed/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('renders continuation navigation for a non-sibling target directory (BUM-005, CMI-009)', () => {
+    const root = mkdtempSync(join(tmpdir(), 'instantiate-continuation-'));
+    const target = join(root, 'external-runs');
+    const name = uniqueName('continuation');
+    try {
+      const result = runRaw(name, `--target-dir=${target}`);
+      const bundle = join(target, `dpt_rb_${name}`);
+      const map = readFileSync(join(bundle, 'BUNDLE_MAP.md'), 'utf-8');
+      const frameworkRelative = relative(bundle, join(REPO_ROOT, 'DPT_FRAMEWORK')) || '.';
+      const repoRelative = relative(bundle, REPO_ROOT) || '.';
+
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(map, /## Continue This Bundle/);
+      assert.match(map, /continue-run-bundle\.md/);
+      assert.ok(map.includes(`framework_root: \`${frameworkRelative}\``));
+      assert.ok(map.includes(`repo_command_root: \`${repoRelative}\``));
+      assert.match(map, /not.*runtime authority|不.*运行时权威/i);
+      assert.doesNotMatch(map, /\{\{[^}]+\}\}/);
+      assert.equal(existsSync(join(bundle, 'AGENTS.md')), false);
+      assert.equal(existsSync(join(bundle, 'CLAUDE.md')), false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
