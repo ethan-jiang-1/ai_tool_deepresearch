@@ -3,20 +3,6 @@
 本文件是 passive bundle map：它帮助 human/Agent reload active bundle root 的内容布局。
 它不是 lifecycle phase node、command playbook、queue authority、gate authority、handoff authority 或 runtime state source。
 
-## Continue This Bundle
-
-本文件所在目录是一个 candidate active bundle root。若用户明确提供这个可达的 map 或整个
-bundle，并说明想继续、检查、补充、质疑或在交付后重跑什么，Agent 应读取共享 framework 的
-`command_playbook/continue-run-bundle.md`，先确认直接 runtime facts 再行动。
-
-- bundle_name: `{{name}}`
-- framework_root: `{{framework_root_relpath}}`
-- repo_command_root: `{{repo_command_root_relpath}}`
-
-这些相对坐标只是在创建时记录的导航提示，不是 framework authentication、not runtime authority、
-route、permission 或 host trigger。只有当前 workspace 已选定 DPT source tree 且坐标在该
-context 内可达时才可使用；否则保留该 framework-context boundary，不猜路径、不新建 bundle。
-
 ## Active Runtime Coordinates
 
 - repo_command_root: `{{repo_command_root_relpath}}`；从 active bundle root 到创建时 repo command root 的相对导航提示。

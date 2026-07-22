@@ -89,81 +89,46 @@ Legacy compatibility SHALL NOT make `START_FROM_HERE.md` the primary file for ne
 - **THEN** tooling SHALL treat `BUNDLE_MAP.md` as the current map
 - **AND** tooling SHALL report the legacy file as deprecated compatibility debris rather than as a second authority surface
 
-### Requirement: BUNDLE_MAP.md offers a portable continuation card
+### Requirement: RUN_BUNDLE.md serves as the minimal bundle entry point
 
-For a newly instantiated production or disposable runtime bundle,
-`BUNDLE_MAP.md` SHALL begin its navigation content with a concise continuation
-card. The card SHALL state that its containing directory is the candidate
-active bundle root, expose creator-rendered framework-root and repo-command-
-root paths, invite an ordinary-language continuation or inspection request,
-expose the static `bundle_name`, and point to the one framework-owned
-continuation playbook.
+For a newly instantiated production or disposable runtime bundle, the framework
+SHALL create a `RUN_BUNDLE.md` at the bundle root. This file SHALL contain only:
+the bundle name as a top-level heading; a creator-rendered relative path to the
+framework root used at creation; and a delegation statement directing the reader
+to bring the file (or its containing directory) to an Agent, and instructing the
+Agent to first read `BUNDLE_MAP.md` (in the same directory) for the full
+directory layout, then read `DPT_FRAMEWORK/COMMANDS.md` for available operations.
 
-The relative coordinates SHALL be creation-time navigation facts only. They
-SHALL NOT authenticate or select a framework source tree. An Agent MAY use
-them only after a DPT source tree is already selected in its current workspace;
-a stale, missing, inaccessible, or out-of-context coordinate SHALL be reported
-as a direct boundary rather than replaced with a guessed path.
+`RUN_BUNDLE.md` SHALL NOT contain lifecycle state, phase/gate values, CLI
+commands, route selectors, mutable fields, or copies of framework documentation.
+It is a static creation-time artifact whose sole purpose is to eliminate the
+"where do I start" friction for a user opening a bundle directory.
 
-The card SHALL remain a passive map. It SHALL NOT claim that its text,
-attachment, static identity values, coordinates, or a user request proves
-runtime identity, grants permission, selects a route, changes status, passes a
-Gate, drains a queue, records a decision, or authorizes post-final mutation.
-It SHALL direct the Agent to reachable bundle control files, trace, and
-existing Engine diagnostics for current truth. It SHALL NOT duplicate
-lifecycle commands, workflow prose, a framework copy, mutable status, or an
-`AGENTS.md`/`CLAUDE.md` bridge at bundle root.
+`BUNDLE_MAP.md` SHALL remain as a passive directory map for deep inspection and
+debugging. It SHALL NOT be extended with a continuation invitation section.
 
-#### Scenario: New bundle supplies an understandable continuation entry
+#### Scenario: New bundle has an immediately visible entry point
 
-- **WHEN** a production or disposable creator creates a bundle beneath an
-  explicit target directory that is not a framework sibling
-- **THEN** its root `BUNDLE_MAP.md` SHALL invite a user to attach the map or
-  bundle and express the requested next work in ordinary language
-- **AND** it SHALL identify the rendered bundle name and framework/repo
-  coordinates derived from the creator's actual source tree
-- **AND** it SHALL link to the canonical framework continuation playbook
+- **WHEN** a production or disposable creator creates a bundle
+- **THEN** its root SHALL contain `RUN_BUNDLE.md` with the bundle name, a
+  framework relative path, and a delegation statement pointing to
+  `BUNDLE_MAP.md` (layout) and `COMMANDS.md` (operations)
+- **AND** the file SHALL be immediately discoverable as the only `RUN_*` file
+  at the bundle root
 
-#### Scenario: Card attachment does not become runtime authority
+#### Scenario: RUN_BUNDLE.md does not duplicate authority
 
-- **WHEN** an Agent receives an opened reachable `BUNDLE_MAP.md`
-- **THEN** it SHALL resolve the containing directory and creation-time
-  framework relation before using the map as navigation
-- **AND** it SHALL obtain current phase, gate, queue, evidence, and decision
-  facts from active bundle controls, trace, and existing Engine feedback
-- **AND** it SHALL NOT infer those facts from card text or `bundle_name`
+- **WHEN** an Agent reads `RUN_BUNDLE.md`
+- **THEN** it SHALL resolve the framework path and read `COMMANDS.md` for
+  available operations
+- **AND** it SHALL obtain current phase, gate, queue, evidence and decision
+  facts from bundle control files, trace and Engine feedback
+- **AND** it SHALL NOT infer those facts from `RUN_BUNDLE.md` content
 
-#### Scenario: Coordinate does not select an untrusted framework
+#### Scenario: Old bundle without RUN_BUNDLE.md remains usable
 
-- **WHEN** a map coordinate resolves outside the DPT source tree already
-  selected in the Agent's current workspace
-- **THEN** the card/playbook SHALL report the missing framework-context
-  boundary
-- **AND** it SHALL NOT execute framework commands from that coordinate or
-  treat the map as framework authentication
-
-#### Scenario: Card remains a passive map
-
-- **WHEN** a reader follows the continuation card
-- **THEN** the card SHALL point to one framework-owned procedure rather than
-  copy lifecycle command sequences or write directions
-- **AND** it SHALL NOT create a run-local Agent bridge, mutable card field, or
-  duplicate framework control surface
-
-#### Scenario: Attachment without reachable coordinates remains a boundary
-
-- **WHEN** a map is copied, moved, or supplied without a reachable containing
-  bundle or creator-rendered framework coordinate
-- **THEN** the card/playbook SHALL report that the current workspace cannot
-  establish bundle/framework navigation
-- **AND** it SHALL NOT claim host attachment selected a run or substitute a
-  guessed framework path
-
-#### Scenario: Existing map remains readable without card wording
-
-- **WHEN** a historical bundle lacks the new continuation invitation or static
-  coordinate lines
-- **THEN** existing inspection, map reading, and reentry diagnostics SHALL
-  remain available
+- **WHEN** a historical bundle lacks `RUN_BUNDLE.md`
+- **THEN** the Agent SHALL fallback to reading `BUNDLE_MAP.md` for framework
+  coordinates and navigation
 - **AND** the framework SHALL NOT require a bulk rewrite, manifest migration,
   or a new card schema marker

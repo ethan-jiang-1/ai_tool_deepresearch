@@ -6,16 +6,16 @@ test_classes:
     rationale: The change adds no new pure helper or schema; creator output is exercised at real filesystem boundaries.
   integration:
     status: selected
-    rationale: Both real bundle creators/generated maps and one static routing/playbook contract form the deterministic boundary for this documentation-led behavior.
+    rationale: Both real bundle creators/generated RUN_BUNDLE.md files and one static routing/playbook contract form the deterministic boundary for this documentation-led behavior.
   deterministic_e2e:
     status: not_applicable
-    rationale: No lifecycle transition, Gate rule or simulated-Agent workflow is changed; continuation delegates to existing runtime owners.
+    rationale: No lifecycle transition, Gate rule or simulated-Agent workflow is changed; continuation delegates to existing COMMANDS.md and CLI tools.
   agent_flow_e2e:
     status: not_applicable
-    rationale: This change adds no Subject-Agent behavior or Engine action an Agent-flow case can prove; a Playbook Agent reading a card would not prove host attachment triggering or prose comprehension.
+    rationale: This change adds no Subject-Agent behavior or Engine action an Agent-flow case can prove; a Playbook Agent reading RUN_BUNDLE.md would not prove host attachment triggering or prose comprehension.
 claims:
-  - id: production-generated-continuation-card-contract
-    statement: The real production creator writes a bundle to a non-sibling temporary target and renders one passive BUNDLE_MAP continuation card with its name, canonical playbook pointer and actual framework/repo relative navigation coordinates, while adding no run-local bridge, second control file or legacy primary entry.
+  - id: production-generated-run-bundle-entry-contract
+    statement: The real production creator writes a bundle to a non-sibling temporary target and renders RUN_BUNDLE.md with the bundle name, actual framework relative navigation coordinates, and delegation statement pointing to BUNDLE_MAP.md and COMMANDS.md, while adding no run-local bridge, second control file, or legacy primary entry.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -28,8 +28,8 @@ claims:
       external_calls: none
       verdict_judge: deterministic
     verdict_authority: node_test_exit
-  - id: disposable-generated-continuation-card-contract
-    statement: The real disposable creator writes a case bundle to a non-sibling temporary target and replaces every BUNDLE_MAP continuation-card placeholder with actual framework/repo relative navigation text while retaining its schemas and no framework copy.
+  - id: disposable-generated-run-bundle-entry-contract
+    statement: The real disposable creator writes a case bundle to a non-sibling temporary target and replaces every RUN_BUNDLE.md template placeholder with actual framework relative navigation text while retaining its schemas and no framework copy.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -42,8 +42,8 @@ claims:
       external_calls: none
       verdict_judge: deterministic
     verdict_authority: node_test_exit
-  - id: continuation-playbook-branch-contract
-    statement: The synchronized root/framework routing surfaces select the canonical continuation playbook only for an explicitly supplied reachable existing map and otherwise retain RUN/start-research; the playbook requires selected source context before using coordinates, uses target-specific reentry only for non-Final populated nodes, retains an explicit null-node boundary, and keeps Final on terminal facts plus accepted post-final inspection/recovery rather than invoking an impossible phase-final target.
+  - id: continuation-playbook-simplified-contract
+    statement: The synchronized root/framework routing surfaces select the canonical continuation playbook only for an explicitly supplied reachable existing bundle and otherwise retain RUN/start-research; the playbook reads RUN_BUNDLE.md (fallback BUNDLE_MAP.md), resolves framework coordinates, reads BUNDLE_MAP.md for layout, then delegates all operations to COMMANDS.md without duplicating lifecycle branching, node selection, or reentry diagnostics.
     test_class: integration
     proof_subject: deterministic_contract
     asset:

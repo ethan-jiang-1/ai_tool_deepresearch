@@ -235,6 +235,7 @@ writeFileSync(join(bundleDir, 'rb_plan.md'), planMd);
 // These are expected by inspect-bundle and by gates that check for artifact existence.
 const scaffoldTemplates = [
   { tmpl: 'BUNDLE_MAP.md.tmpl', dest: 'BUNDLE_MAP.md' },
+  { tmpl: 'RUN_BUNDLE.md.tmpl', dest: 'RUN_BUNDLE.md' },
   { tmpl: 'reference/_INDEX.md.tmpl', dest: 'reference/_INDEX.md' },
   { tmpl: 'reference/README.md.tmpl', dest: 'reference/README.md' },
   { tmpl: 'artifacts/README.md.tmpl',    dest: 'artifacts/README.md' },

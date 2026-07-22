@@ -136,6 +136,7 @@ const templates = [
   { tmpl: 'rb_plan.md.tmpl',         dest: 'rb_plan.md',         parse: null,                      schema: PlanSchema },
   { tmpl: 'rb_trace.jsonl',          dest: 'rb_trace.jsonl',     parse: null,                      schema: null },
   { tmpl: 'BUNDLE_MAP.md.tmpl',      dest: 'BUNDLE_MAP.md',      parse: null,                      schema: null },
+  { tmpl: 'RUN_BUNDLE.md.tmpl',      dest: 'RUN_BUNDLE.md',      parse: null,                      schema: null },
   // Reference scaffolds — required by inspect-bundle; populated by the Agent across waves 0/1/2.
   { tmpl: 'reference/_INDEX.md.tmpl', dest: 'reference/_INDEX.md', parse: null,                     schema: null },
   { tmpl: 'reference/README.md.tmpl', dest: 'reference/README.md', parse: null,                     schema: null },
@@ -215,7 +216,7 @@ try {
 
 // ── Report ──
 console.error(`${G}Bundle ${bundleDir} created.${B}`);
-console.error('  ✓ 6 control files (plan, profile, status, queue, trace, BUNDLE_MAP)');
+console.error('  ✓ 7 control files (plan, profile, status, queue, trace, BUNDLE_MAP, RUN_BUNDLE)');
 console.error('  ✓ 9 data directories (seed_topics, reference, artifacts/wave0-2, _logs, _cache, final, _work_units)');
 console.error('  ✓ 5 scaffolds (reference/_INDEX.md, reference/README.md, artifacts/README.md, _cache/README.md, _logs/README.md)');
 console.error('  ✓ All files passed Zod validation');

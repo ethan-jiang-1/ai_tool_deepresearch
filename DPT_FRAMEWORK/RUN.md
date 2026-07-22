@@ -7,10 +7,10 @@
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.43
+## Current Release: v0.44
 
-- Explicitly supplied, reachable existing `BUNDLE_MAP.md` now routes to `continue-run-bundle.md`; new research without that input still uses the RUN/start-research path.
-- New production and disposable bundles render passive source-relative framework navigation in their maps; current runtime truth remains in bundle controls and Engine outputs.
+- Explicitly supplied, reachable existing bundle (via `RUN_BUNDLE.md` or `BUNDLE_MAP.md`) routes to `continue-run-bundle.md`; new research without that input still uses the RUN/start-research path.
+- New production and disposable bundles render `RUN_BUNDLE.md` as the minimal entry point plus creator-rendered framework navigation in their maps; current runtime truth remains in bundle controls and Engine outputs.
 
 ## 0. 禁用内置捷径（最高优先）
 
@@ -42,11 +42,11 @@ If status or terminal output looks suspicious, run `node DPT_FRAMEWORK/cli/audit
 
 For bundle recovery, run `node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle <path> --at <target>`. Read `recovery.root_findings[]` before acting: a `reachable` root carries at most one sanctioned nearest action; `missing_contract` is a direct stop boundary, not permission to retry a known-rejected predecessor, hand-edit status/trace, or create an addendum namespace; `not_applicable` leaves semantic reconciliation to the Agent without granting mutation authority.
 
-若用户明确提供当前 workspace 内可达 existing `BUNDLE_MAP.md`，别重建；改读 `command_playbook/continue-run-bundle.md`。它以 `current_node` 为 resume coordinate，不要只凭 `current_gate` 推断 phase；它区分 non-Final reentry、Final terminal facts 和 null-node boundary。扫描发现、只提文件名或不可达 map 不选择 run。旧 bundle 只有 `START_FROM_HERE.md` 时，它只作 deprecated fallback。
+若用户明确提供当前 workspace 内可达 existing bundle（或其 `RUN_BUNDLE.md`、`BUNDLE_MAP.md`），别重建；改读 `command_playbook/continue-run-bundle.md`。它优先读 `RUN_BUNDLE.md`（fallback `BUNDLE_MAP.md`），解析 framework 坐标后进入 `COMMANDS.md` 的命令体系。扫描发现、只提文件名或不可达路径不选择 run。旧 bundle 只有 `START_FROM_HERE.md` 时，它只作 deprecated fallback。
 
 ## 3. 规则与边界在哪
 - 触发规则、运行时边界：`README.md`
 - 命令索引：`COMMANDS.md`
 - 行为规则：`CLAUDE.md`（Claude Code）/ `AGENTS.md`（Codex、Cursor、Windsurf 等读 `AGENTS.md` 的 agent）
 
-跑某 bundle 时，以该 bundle 的 `BUNDLE_MAP.md` + `rb_status.json` + `rb_trace.jsonl` 为 reload context，旧 `START_FROM_HERE.md` 只作 deprecated fallback；别靠 chat memory。
+跑某 bundle 时，以该 bundle 的 `RUN_BUNDLE.md`（或 `BUNDLE_MAP.md`）+ `rb_status.json` + `rb_trace.jsonl` 为 reload context，旧 `START_FROM_HERE.md` 只作 deprecated fallback；别靠 chat memory。

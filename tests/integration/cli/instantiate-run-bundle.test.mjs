@@ -172,24 +172,35 @@ describe('instantiate-run-bundle.mjs integration', () => {
     }
   });
 
-  it('renders continuation navigation for a non-sibling target directory (BUM-005, CMI-009)', () => {
+  it('renders RUN_BUNDLE.md entry point for a non-sibling target directory (BUM-005, CMI-009)', () => {
     const root = mkdtempSync(join(tmpdir(), 'instantiate-continuation-'));
     const target = join(root, 'external-runs');
     const name = uniqueName('continuation');
     try {
       const result = runRaw(name, `--target-dir=${target}`);
       const bundle = join(target, `dpt_rb_${name}`);
-      const map = readFileSync(join(bundle, 'BUNDLE_MAP.md'), 'utf-8');
       const frameworkRelative = relative(bundle, join(REPO_ROOT, 'DPT_FRAMEWORK')) || '.';
       const repoRelative = relative(bundle, REPO_ROOT) || '.';
 
       assert.equal(result.status, 0, result.stderr);
-      assert.match(map, /## Continue This Bundle/);
-      assert.match(map, /continue-run-bundle\.md/);
+
+      // RUN_BUNDLE.md exists and has the right content
+      const runBundle = readFileSync(join(bundle, 'RUN_BUNDLE.md'), 'utf-8');
+      assert.match(runBundle, /^# /);                         // bundle name heading
+      assert.ok(runBundle.includes(`Framework: \`${frameworkRelative}\``));
+      assert.match(runBundle, /BUNDLE_MAP\.md/);              // points to BUNDLE_MAP.md
+      assert.match(runBundle, /COMMANDS\.md/);                // points to COMMANDS.md
+      assert.doesNotMatch(runBundle, /\{\{[^}]+\}\}/);        // no unreplaced placeholders
+
+      // BUNDLE_MAP.md is a pure passive map — no continuation section
+      const map = readFileSync(join(bundle, 'BUNDLE_MAP.md'), 'utf-8');
+      assert.doesNotMatch(map, /## Continue This Bundle/);
       assert.ok(map.includes(`framework_root: \`${frameworkRelative}\``));
       assert.ok(map.includes(`repo_command_root: \`${repoRelative}\``));
-      assert.match(map, /not.*runtime authority|不.*运行时权威/i);
+      assert.match(map, /not.*runtime authority|不.*运行时权威|不是.*lifecycle phase node/);
       assert.doesNotMatch(map, /\{\{[^}]+\}\}/);
+
+      // No run-local bridge files
       assert.equal(existsSync(join(bundle, 'AGENTS.md')), false);
       assert.equal(existsSync(join(bundle, 'CLAUDE.md')), false);
     } finally {

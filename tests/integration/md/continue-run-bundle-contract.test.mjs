@@ -14,11 +14,12 @@ const COMMANDS = 'DPT_FRAMEWORK/COMMANDS.md';
 const PLAYBOOK = 'DPT_FRAMEWORK/command_playbook/continue-run-bundle.md';
 
 describe('existing run-bundle continuation contract', () => {
-  it('routes only an explicit reachable existing map before the new-run default', () => {
+  it('routes only an explicit reachable existing bundle before the new-run default', () => {
     const surfaces = [ROOT_AGENTS, ROOT_CLAUDE, FRAMEWORK_AGENTS, FRAMEWORK_CLAUDE]
       .map(read)
       .join('\n');
 
+    assert.match(surfaces, /RUN_BUNDLE\.md/);
     assert.match(surfaces, /BUNDLE_MAP\.md/);
     assert.match(surfaces, /continue-run-bundle\.md/);
     assert.match(surfaces, /explicit|明确|显式/i);
@@ -28,19 +29,25 @@ describe('existing run-bundle continuation contract', () => {
     assert.match(surfaces, /scan|扫描|bare filename|仅.*文件名/i);
   });
 
-  it('keeps one continuation playbook and preserves the legal node branches', () => {
+  it('bridges RUN_BUNDLE.md through BUNDLE_MAP.md to COMMANDS.md without lifecycle branching', () => {
     const playbook = read(PLAYBOOK);
     const pointers = [read(RUN), read(README), read(COMMANDS)].join('\n');
 
+    // Simplified playbook: entry → layout → commands
+    assert.match(playbook, /RUN_BUNDLE\.md/);
+    assert.match(playbook, /BUNDLE_MAP\.md/);
+    assert.match(playbook, /COMMANDS\.md/);
     assert.match(playbook, /DPT source tree|DPT source/i);
     assert.match(playbook, /already selected|已选定/i);
-    assert.match(playbook, /current_node/);
-    assert.match(playbook, /check-reentry\.mjs/);
-    assert.match(playbook, /phase-final/);
-    assert.match(playbook, /readiness_passed/);
-    assert.match(playbook, /operate-post-final-recovery\.mjs/);
-    assert.match(playbook, /null|absent|缺失/i);
-    assert.doesNotMatch(playbook, /check-reentry\.mjs[^\n]*phase-final/);
+
+    // No lifecycle branching — these belong to COMMANDS.md and CLI tools
+    assert.doesNotMatch(playbook, /current_node/);
+    assert.doesNotMatch(playbook, /check-reentry\.mjs/);
+    assert.doesNotMatch(playbook, /phase-final/);
+    assert.doesNotMatch(playbook, /readiness_passed/);
+    assert.doesNotMatch(playbook, /operate-post-final-recovery\.mjs/);
+
+    // Routing surfaces point to the playbook
     assert.match(pointers, /continue-run-bundle\.md/);
     assert.doesNotMatch(pointers, /continue-run-bundle\.md.*AGENTS\.md/i);
   });

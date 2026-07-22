@@ -1,82 +1,51 @@
 > req: ACS-005
 
-## ADDED Requirements
+## MODIFIED Requirements
 
-### Requirement: Existing bundle continuation has one Agent-owned playbook
+### Requirement: Bundle continuation enters through RUN_BUNDLE.md, delegates to BUNDLE_MAP.md and COMMANDS.md
 
 The framework SHALL provide one canonical Agent-facing playbook for continuing
-an already existing run bundle. `COMMANDS.md`, `BUNDLE_MAP.md` and relevant
-entry guidance SHALL point to that playbook instead of maintaining independent
-resume procedures.
+an already existing run bundle: `command_playbook/continue-run-bundle.md`.
+`RUN_BUNDLE.md`, `COMMANDS.md`, and relevant entry guidance SHALL point to that
+playbook.
 
-On a supplied, reachable map/bundle, the playbook SHALL first require an
-already-selected DPT source tree in the current workspace, then resolve the
-candidate bundle root and creator-rendered coordinates only within that source
-context. It SHALL read direct bundle controls. For a non-Final non-null
-`rb_status.json.current_node`, it SHALL consume existing target-specific
-structural/reentry diagnostics before loading that coordinate. If the node is
-null, absent, inconsistent or blocked, the playbook SHALL use returned
-trace/diagnostic advice and SHALL NOT infer the phase from `current_gate`.
+The playbook's procedure SHALL be:
 
-For `phases/phase-final.md`, the playbook SHALL not invoke
-`check-reentry --at phase-final`: Final has no gate while its legal terminal
-status remains the readiness-passed window. It SHALL read direct terminal
-facts; a material post-Final request uses only accepted post-final inspection/
-recovery.
+1. Read `RUN_BUNDLE.md` from the supplied bundle root. If `RUN_BUNDLE.md` does
+   not exist, fallback to reading `BUNDLE_MAP.md`.
+2. Resolve the framework relative path from the file. If the framework is not
+   reachable in the current workspace, report the boundary and stop.
+3. Read `BUNDLE_MAP.md` in the same directory for the full directory layout.
+4. Read `DPT_FRAMEWORK/COMMANDS.md`.
+5. Select and execute the command matching the user's stated intent.
 
-If `current_node` is null or absent, the playbook SHALL state that the card has
-no generic legal target-selection capability. It MAY direct the Agent to the
-existing diagnostic/start-entry surfaces, but SHALL NOT claim diagnostics can
-always resume the bundle or derive a target from `current_gate`.
+The playbook SHALL NOT duplicate lifecycle branching logic, reentry diagnostic
+procedures, or per-node target selection. Those decisions belong to
+`COMMANDS.md` and the individual CLI tools it references. The playbook only
+bridges the user's entry point (`RUN_BUNDLE.md`) through the bundle layout
+(`BUNDLE_MAP.md`) to the command surface (`COMMANDS.md`).
 
-The playbook SHALL distinguish reload from mutation. It SHALL keep ordinary
-authorized diagnostics and repair with the Agent, retain existing HITL and
-`stop` placement, answer an already-current factual user turn from verified
-facts without creating authority, and route a material post-Final request only
-through accepted post-final recovery. A natural-language continuation request
-or card attachment SHALL NOT grant host permission, override an Engine verdict
-or create a missing reentry/mutation path.
+#### Scenario: Agent enters through RUN_BUNDLE.md
 
-#### Scenario: Agent reloads a reachable existing bundle through direct facts
+- **WHEN** a user provides a bundle with `RUN_BUNDLE.md` and states an intent
+- **THEN** the Agent SHALL read `RUN_BUNDLE.md`, resolve the framework path,
+  read `BUNDLE_MAP.md` for layout, read `COMMANDS.md` for operations,
+  and execute the matching command
+- **AND** it SHALL NOT start a new research bundle
 
-- **WHEN** a user supplies a reachable bundle map and the existing reentry
-  diagnostic confirms a non-null current node
-- **THEN** the playbook SHALL direct the Agent to load that existing lifecycle
-  Markdown coordinate and follow its current contract
-- **AND** it SHALL not start a new research bundle or synthesize a route from
-  a static map value
+#### Scenario: Old bundle without RUN_BUNDLE.md still works
 
-#### Scenario: Final uses its terminal contract rather than an impossible gate target
-
-- **WHEN** a reachable bundle has `current_node: phases/phase-final.md`
-- **THEN** the playbook SHALL inspect the existing terminal status/final facts
-  without calling target-specific `check-reentry --at phase-final`
-- **AND** it SHALL route a material post-Final request only to accepted
-  post-final inspection/recovery
-
-#### Scenario: Missing current node stays an explicit boundary
-
-- **WHEN** the supplied bundle has no usable `current_node` or existing
-  diagnostics return a blocker
-- **THEN** the playbook SHALL direct the Agent to the closest existing
-  diagnostic or start-entry surface while naming the missing legal coordinate
-- **AND** it SHALL not guess from `current_gate`, write state by hand or ask a
-  human to run ordinary repair commands
-
-#### Scenario: Card coordinate does not choose a framework
-
-- **WHEN** a card coordinate lies outside the DPT source tree already selected
-  in the current workspace or no such source tree is available
-- **THEN** the playbook SHALL report the framework-context boundary
-- **AND** it SHALL not execute commands from the card-provided coordinate
+- **WHEN** a user provides a bundle that has `BUNDLE_MAP.md` but no
+  `RUN_BUNDLE.md`
+- **THEN** the Agent SHALL fallback to reading `BUNDLE_MAP.md` for framework
+  coordinates, then proceed to `COMMANDS.md`
+- **AND** it SHALL NOT require the user to understand the difference
 
 #### Scenario: Continuation request preserves existing decision boundaries
 
-- **WHEN** a user asks in ordinary language to continue, question, supplement
-  or change an existing bundle
-- **THEN** the Agent SHALL first classify the request against current verified
-  lifecycle facts and existing legal routes
-- **AND** it SHALL not make the request a third HITL, generic permission token
-  or automatic rerun
-- **AND** a material Final-after request SHALL use only accepted post-final
-  recovery after the existing required semantic decision
+- **WHEN** a user asks in ordinary language to continue, inspect, supplement
+  or question an existing bundle
+- **THEN** the Agent SHALL classify the request against the current bundle's
+  verified lifecycle facts and existing legal routes from `COMMANDS.md`
+- **AND** the playbook SHALL NOT make the request a third HITL, permission
+  token, or automatic rerun

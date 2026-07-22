@@ -84,19 +84,26 @@ describe('new-disposable-bundle.mjs integration', () => {
     assert.equal(existsSync(join(bundle, 'rb_status.json')), true);
   });
 
-  it('renders continuation navigation for a non-sibling target directory (BUM-005, EXS-004)', () => {
+  it('renders RUN_BUNDLE.md entry point for a non-sibling target directory (BUM-005, EXS-004)', () => {
     const root = trackRoot('disposable-continuation-');
     const target = join(root, 'external-runs');
     const result = runCreator('continuation_card', '--case=case-804', `--target-dir=${target}`);
 
     assert.equal(result.status, 0, result.stderr);
     const bundle = result.stdout.trim();
-    const map = readFileSync(join(bundle, 'BUNDLE_MAP.md'), 'utf-8');
     const frameworkRelative = relative(bundle, join(REPO_ROOT, 'DPT_FRAMEWORK')) || '.';
     const repoRelative = relative(bundle, REPO_ROOT) || '.';
 
-    assert.match(map, /## Continue This Bundle/);
-    assert.match(map, /continue-run-bundle\.md/);
+    // RUN_BUNDLE.md exists and has no unreplaced placeholders
+    const runBundle = readFileSync(join(bundle, 'RUN_BUNDLE.md'), 'utf-8');
+    assert.match(runBundle, /^# /);
+    assert.match(runBundle, /BUNDLE_MAP\.md/);
+    assert.match(runBundle, /COMMANDS\.md/);
+    assert.doesNotMatch(runBundle, /\{\{[^}]+\}\}/);
+
+    // BUNDLE_MAP.md is a pure passive map — no continuation section
+    const map = readFileSync(join(bundle, 'BUNDLE_MAP.md'), 'utf-8');
+    assert.doesNotMatch(map, /## Continue This Bundle/);
     assert.ok(map.includes(`framework_root: \`${frameworkRelative}\``));
     assert.ok(map.includes(`repo_command_root: \`${repoRelative}\``));
     assert.doesNotMatch(map, /\{\{[^}]+\}\}/);

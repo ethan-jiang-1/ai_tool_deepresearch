@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.44
+
+- New run bundles now carry `RUN_BUNDLE.md` as a minimal entry point: bundle name, framework path, and a delegation statement pointing to `BUNDLE_MAP.md` (layout) and `COMMANDS.md` (operations).
+- `BUNDLE_MAP.md` reverts to a pure passive directory map; its v0.43 continuation section is removed. The continuation playbook is simplified to a 5-step bridge from `RUN_BUNDLE.md` through `BUNDLE_MAP.md` to `COMMANDS.md`.
+- Old bundles without `RUN_BUNDLE.md` remain fully compatible; `inspect-bundle.mjs` warns but does not fail.
+
 ## v0.43
 
 - New run bundles now carry a passive continuation card with source-relative framework navigation, and explicitly supplied reachable bundle maps reload through one existing-bundle playbook rather than creating a second run.

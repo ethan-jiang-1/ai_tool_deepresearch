@@ -308,6 +308,10 @@ if (activeLeakDiagnostics.length > 0) {
   console.log(`${R}Inspect bundle: repo-root runtime leak associated with active bundle${B}`);
   process.exit(1);
 }
+const hasRunBundle = existsSync(join(bundleDir, 'RUN_BUNDLE.md'));
+if (!hasRunBundle) {
+  console.log(`${Y}Inspect bundle: RUN_BUNDLE.md not found — this bundle lacks a continuation entry point. Use BUNDLE_MAP.md for navigation.${B}`);
+}
 if (hasBundleMap && hasLegacyStartHere) {
   console.log(`${Y}Inspect bundle: BUNDLE_MAP.md is current; START_FROM_HERE.md is deprecated compatibility debris.${B}`);
 } else if (!hasBundleMap && hasLegacyStartHere) {

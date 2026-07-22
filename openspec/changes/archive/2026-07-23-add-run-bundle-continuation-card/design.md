@@ -1,185 +1,157 @@
 ## Context
 
-`BUNDLE_MAP.md` already names the active runtime bundle root, the shared
-framework, direct runtime control files and reentry pointers. It is correctly
-passive, but its hard-coded `../DPT_FRAMEWORK/` relation is false when either
-creator uses `--target-dir`, and it does not explicitly serve a person with one
-reachable bundle in a new Agent conversation.
+v0.43 尝试把 `BUNDLE_MAP.md` 扩展为 continuation card + playbook 体系，但实际
+使用中暴露了根本问题：card 信息过载（research map / control map / diagnostics
+map / reentry pointers 全塞在一个文件里），playbook 假设 clean bundle 的 happy
+path，对老版本、中断过、有问题的 bundle 缺乏可操作的修复路径。
 
-The referenced simulation-framework proposal adds a portable card plus
-run-local Agent bridges. This framework has a stronger existing passive-map
-contract, canonical `RUN.md`/`COMMANDS.md` entry surfaces, and a deterministic
-`check-reentry` plus post-final recovery path. The design retains the portable
-card idea while routing every dynamic decision to those existing owners.
+用户（尤其是非专业用户）打开一个 run bundle 目录时的真实需求极其简单：
+"这是什么？怎么继续？找谁？"
 
-The paired Evolution Directions review finds no new state, validator, retry
-tree, controller or authority layer is warranted. The direct sources remain
-bundle control files and Engine outputs; a card only reduces the discovery
-step before the existing legal loop.
+本 redesign 把入口降到最简：一个 `RUN_BUNDLE.md`，两个事实加一句委托——
+Agent 先读同目录的 `BUNDLE_MAP.md`（布局），再读 `DPT_FRAMEWORK/COMMANDS.md`
+（命令）。`RUN_BUNDLE.md` 本身不取代任何一个。
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Let a user provide reachable `BUNDLE_MAP.md` or its containing bundle to an
-  Agent and describe the intended continuation in ordinary language.
-- Make the map identify the candidate root and creation-time framework/repo
-  relative navigation coordinates, then point to one canonical procedure.
-- Give the Agent a short, ordered reload path that uses current direct facts,
-  existing diagnostics and existing lifecycle/recovery owners.
-- Preserve bundle isolation and historical readability without production-run
-  migration.
+- 让任何人打开 bundle 目录第一眼就看到 `RUN_BUNDLE.md`，立刻知道 bundle 名和
+  framework 在哪。
+- `RUN_BUNDLE.md` 的内容不需要任何专业知识就能读懂。
+- Agent 打开 `RUN_BUNDLE.md` 后能机械地解析坐标、找到 framework、
+  读 `BUNDLE_MAP.md` 了解布局、进入 `COMMANDS.md` 的命令体系。
+- 与旧 bundle 兼容：没有 `RUN_BUNDLE.md` 时 agent fallback 到 `BUNDLE_MAP.md`。
 
 **Non-Goals:**
 
-- Do not create run-local `AGENTS.md` or `CLAUDE.md`, a copied framework,
-  a second command menu, a new lifecycle node, a status field, or a card
-  schema/version marker.
-- Do not make attachment, card text, `bundle_name`, or a
-  user phrase prove identity, authorize a mutation, or select a lifecycle
-  route.
-- Do not add a generic resume CLI, a card parser, automatic reentry/recovery,
-  or a validator that duplicates `validate-bundle`, `inspect-bundle` or
-  `check-reentry`.
-- Do not change Final semantics: a material post-final request remains subject
-  to the accepted post-final recovery contract.
+- 不在 `RUN_BUNDLE.md` 里写状态、gate、phase、route selector、命令副本。
+- 不取代 `BUNDLE_MAP.md`——它仍是 passive map，给深度 inspect/debug 用。
+- 不创建 run-local `AGENTS.md`/`CLAUDE.md` bridge。
+- 不新增 lifecycle phase、gate、CLI validator。
+- 不批量改写已有 production bundle。
 
 ## Decisions
 
-### 1. Extend the existing map with creator-rendered navigation coordinates
+### 1. 新文件 `RUN_BUNDLE.md` 作为极简入口
 
-Both creators will render a concise `## Continue This Bundle` section near the
-start of `BUNDLE_MAP.md`. It will state that the containing directory is the
-candidate active bundle root, invite a plain-language request, expose the
-static bundle name, and link to the playbook. It will render `framework_root`
-and `repo_command_root` as paths relative to the bundle directory, computed
-from the actual framework/repository source locations used at creation.
+`RUN_BUNDLE.md` 的内容结构：
 
-These are creation-time navigation facts, not current authority or framework
-authentication. The Agent may use them only after a DPT framework source tree
-is already selected in its current workspace, and must reject a coordinate
-outside that selected project context. If moved or unreachable, it reports the
-direct boundary; it does not use map text as a guessed path token.
+```markdown
+# <bundle-name>
 
-The remaining research/control/diagnostics maps stay in their present roles.
-The card must say that static identity is navigation only: the Agent must
-confirm a reachable directory and read current control files before treating
-it as selected runtime truth. This keeps `BUNDLE_MAP.md` one map with one
-authority boundary, instead of producing a README/card/map trio that can
-drift.
+Framework: `<relative-path-to-DPT_FRAMEWORK/>`
 
-Alternatives rejected:
+要操作这个 run bundle，请带我（本文件或所在目录）找 Agent。
+Agent 请先读本目录下的 `BUNDLE_MAP.md`（完整目录布局），
+再读 `DPT_FRAMEWORK/COMMANDS.md`（操作命令），然后根据用户意图执行。
+```
 
-- A new `RUN_BUNDLE.md` would duplicate bundle-root discovery and split the
-  human's first-read surface.
-- A run-local `AGENTS.md`/`CLAUDE.md` bridge would create auto-loaded
-  instruction copies whose lifecycle wording can drift from the framework.
-- Mutable card fields would become a second state projection requiring new
-  writers and validators.
+只有三样东西，指向两个权威来源：
+1. **Bundle 名**——`# <bundle-name>`，第一行，一眼识别
+2. **Framework 坐标**——creation-time 渲染的相对路径，Agent 用它定位 framework
+3. **委托语句**——Agent 先读 `BUNDLE_MAP.md`（户型图）了解布局，再读
+   `COMMANDS.md`（对讲机）找操作命令。`RUN_BUNDLE.md` 本身不复制任何信息
 
-### 2. One framework-owned continuation playbook owns procedure prose
+**为什么是独立文件而不是在 `BUNDLE_MAP.md` 里做减法？**
 
-`DPT_FRAMEWORK/command_playbook/continue-run-bundle.md` will be the only
-procedural surface. The card and command index point to it; they do not copy
-its commands. Its ordered Agent loop is:
+`BUNDLE_MAP.md` 已经是一个有明确语义的文件——passive map，记录 research content
+map / runtime control map / diagnostics map / reentry pointers。把这些信息删掉会让
+深度 inspect/debug 流程失去信息来源。`RUN_BUNDLE.md` 是**新增**入口，不取代
+`BUNDLE_MAP.md`，两者各司其职：
 
-1. Resolve the supplied map's containing directory as a candidate bundle and
-   resolve its creator-rendered framework/repo coordinates. If either cannot
-   be reached, report that direct boundary rather than treating attachment as
-   a trigger or path token.
-2. Read the map plus direct bundle controls. For a non-Final loaded node, run
-   existing structural and target-specific reentry diagnostics using that node.
-3. When a non-Final `rb_status.json.current_node` and clean existing reentry
-   result agree, load the existing lifecycle Markdown coordinate and follow its
-   current contract. It must not infer a phase from `current_gate` alone.
-4. When direct facts are missing, conflicted or blocked, consume the returned
-   check/inspect/advice and use the named existing repair/diagnostic owner.
-   Do not create state or retry by guesswork.
-5. A null/absent `current_node` has no generic card-owned reentry path. Expose
-   the existing diagnostic/start-entry boundary; never derive a target from
-   `current_gate`.
-6. For `phases/phase-final.md`, do not call target-specific `check-reentry`:
-   Final has no gate while terminal status correctly remains
-   `readiness_passed -> none`. Read its direct terminal facts; a material
-   post-Final request uses existing post-final inspection/recovery only.
-7. Classify a user message only at existing authority boundaries: factual
-   questions can be answered from verified facts; active non-HITL execution
-   retains its autonomous contract; a material Final-after request follows the
-   accepted post-final recovery playbook after its required semantic decision.
+| 文件 | 读者 | 角色 |
+|------|------|------|
+| `RUN_BUNDLE.md` | 用户（尤其小白）第一眼 | 门铃：我是谁、framework 在哪、Agent 先读 BUNDLE_MAP.md 再读 COMMANDS.md |
+| `BUNDLE_MAP.md` | Agent + 专业用户 | 户型图：完整目录布局、control files、diagnostics、reentry pointers |
+| `COMMANDS.md`（framework） | Agent | 对讲机：所有可执行操作 |
 
-This is Agent-flow prose, not an Engine state machine. Existing CLIs remain
-the only deterministic verdict/mutation owners and continue to return feedback
-to the Agent context.
+**文件名选择：**
 
-### 3. Compatibility is content-level and non-blocking
+- `RUN.md` → 和 framework 自身的 `DPT_FRAMEWORK/RUN.md` 重名，容易混淆
+- `README.md` → GitHub/文件管理器自动渲染，但语意太泛，不像操作入口
+- `START_HERE.md` → 语义对，但和已废弃的 legacy `START_FROM_HERE.md` 太像
+- **`RUN_BUNDLE.md`** → 明确：这是 run bundle 的操作入口，和 framework `RUN.md` 不重名
 
-New bundles receive the expanded template and creator-rendered coordinates.
-Existing bundles keep their existing `BUNDLE_MAP.md`; the continuation
-playbook can still use its current map/control/reentry pointers. There is no
-manifest migration, card schema field or production bundle rewrite. Framework
-docs will not claim that an old map lacks all continuation value merely
-because it predates the invitation text.
+### 2. `RUN_BUNDLE.md` 不保存状态、不复制命令
 
-### 4. Explicit existing-card routing wins before the new-run default
+`RUN_BUNDLE.md` 是纯静态 creation-time artifact。它不包含：
+- `rb_status.json` 的任何字段（phase/gate/state）
+- 任何 CLI 命令或参数
+- 任何 route selector 或 decision tree
+- 任何 mutable field
 
-The root and framework-local Agent instruction pairs already route research
-intent to `RUN.md` / `start-research`. That default would make the card
-unreachable and can create a second bundle. They must therefore recognize one
-narrow higher-precedence condition: the user explicitly supplies or opens a
-reachable existing `BUNDLE_MAP.md` in the selected DPT workspace and requests
-continuation/inspection of that bundle. That condition routes to
-`continue-run-bundle.md`.
+状态和命令的权威来源分别是 bundle control files 和 `DPT_FRAMEWORK/COMMANDS.md`。
+`RUN_BUNDLE.md` 只负责把读者送到正确的地方。
 
-This is not a host attachment protocol. A mere filename elsewhere, a map
-discovered by scanning, or an unreachable/copied map does not select a run.
-Without the explicit existing-card condition, `RUN.md` remains the entry for a
-new research request. The same narrow distinction is repeated in the synced
-`AGENTS.md` / `CLAUDE.md` pairs and framework README/command index rather than
-creating a run-local bridge.
+**核心洞察**：入口文件的价值在于"被发现"和"指向正确方向"，不在于"包含所有
+信息"。信息已经在 control files 和 `COMMANDS.md` 里了，入口文件的唯一职责是
+消除"从哪开始"的困惑。
 
-### 5. Verification proves deterministic creator/map contracts only
+### 3. `continue-run-bundle.md` playbook 大幅简化
 
-Focused integration tests will invoke both real creators in non-sibling target
-roots and assert rendered coordinates, card boundaries and absence of bridge/
-control files. They can prove creator output, not host attachment triggering
-or whether an Agent read prose, so this change makes no fabricated
-`agent_flow_e2e` behavior claim.
+v0.43 的 playbook 有 7 步 reload procedure（resolve coordinates → read controls →
+run validate/inspect → branch on current_node → target-specific reentry → ...）。
+
+新版本简化为：
+
+1. 读 `RUN_BUNDLE.md`（不存在时 fallback 到 `BUNDLE_MAP.md`）
+2. 解析 framework 相对路径，确认在当前 workspace 内可达
+3. 读本目录下的 `BUNDLE_MAP.md`，了解 bundle 完整目录布局
+4. 读 `DPT_FRAMEWORK/COMMANDS.md`
+5. 根据用户意图，从 `COMMANDS.md` 选择对应命令执行
+
+生命周期分支、reentry diagnostics、post-final recovery 这些逻辑本身就在
+`COMMANDS.md` 和各 CLI 工具里——playbook 不需要重复它们。Agent 只需要知道
+"RUN_BUNDLE.md → BUNDLE_MAP.md → COMMANDS.md" 这一个顺序。
+
+### 4. 旧 bundle 兼容
+
+没有 `RUN_BUNDLE.md` 的老 bundle：
+- Agent 检测到 `BUNDLE_MAP.md` 存在但 `RUN_BUNDLE.md` 不存在 → fallback 到读
+  `BUNDLE_MAP.md` 的既有路径
+- `BUNDLE_MAP.md` 里已有 framework_root 坐标（v0.43 加的），可直接用于导航
+- 不需要任何 migration、rewrite 或 schema marker
+
+### 5. `BUNDLE_MAP.md.tmpl` 回退
+
+v0.43 在 `BUNDLE_MAP.md.tmpl` 顶部加了 "Continue This Bundle" continuation
+section。这个段落移除，`BUNDLE_MAP.md` 回到纯 passive map 角色。
+
+保留 v0.43 的两个正确改进：
+- creator-rendered `framework_root` / `repo_command_root` 坐标（去掉硬编码
+  `../DPT_FRAMEWORK/`）
+- "本文件不是 lifecycle phase node / gate authority / queue authority"的边界声明
+
+### 6. Routing 保持 v0.43 逻辑，target 改为 `RUN_BUNDLE.md`
+
+v0.43 的 routing 逻辑方向是对的：用户明确提供可达 existing bundle → 走
+continuation playbook。只需把 target 从 `BUNDLE_MAP.md` 改为优先检测
+`RUN_BUNDLE.md`。
 
 ## Risks / Trade-offs
 
-- [Attachment loses its filesystem relationship] -> The playbook treats an
-  unreachable parent/framework path as a direct context boundary and never
-  trusts copied text as runtime identity.
-- [`--target-dir` breaks a fixed sibling relation] -> Both creators render
-  actual relative framework/repo coordinates and tests use non-sibling targets.
-- [Card path is treated as framework authentication] -> Coordinates are usable
-  only inside an already-selected workspace source tree; a stale/out-of-context
-  coordinate is a reported boundary, not a command target.
-- [Card drifts into a second operating manual] -> Requirements limit it to
-  static identity, invitation and pointer; the integration contract rejects
-  copied lifecycle command prose.
-- [“Continue” is read as authorization] -> Card and playbook retain current
-  lifecycle/Gate/recovery owners; no test overclaims that prose controls state.
-- [Old bundles lack the new section] -> Existing map/reentry compatibility
-  remains positive; no historical data is altered or rejected.
-- [Additional documentation feels redundant] -> The card replaces scattered
-  path handoff instructions with one discoverable root surface, while the
-  framework retains one procedure instead of per-bundle bridges. This is the
-  net simplification.
+- [两个 MD 文件会不会让用户困惑] → `RUN_BUNDLE.md` 文件名明显是入口；
+  `BUNDLE_MAP.md` 文件名明显是地图。小白用户只需读 `RUN_BUNDLE.md`。
+- [和 framework 自己的 RUN.md 会不会搞混] → framework 的是 `RUN.md`，bundle 的
+  是 `RUN_BUNDLE.md`，名字不同，Agent 不会混淆。
+- [旧 bundle 没有 RUN_BUNDLE.md] → Agent fallback 到 `BUNDLE_MAP.md`。
+- [信息太少了不够用] → 入口不需要信息多，入口需要指向对的地方。信息在
+  `COMMANDS.md` 和 control files 里，不缺失。
+- [v0.43 已 sync 的 main spec delta header 需要处理] → 重做后的 spec 会在 apply
+  时重新 sync，覆盖 v0.43 的残留。
 
 ## Migration Plan
 
-1. Before target edits, register pending `BUM-005`, `ACS-005`, `CMI-009` and
-   `EXS-004` / `RUE-006` in existing capability groups and pass verification-plan mode.
-2. Add focused integration assets, then render the card through both creators
-   and update the synchronized routing, command and playbook surfaces.
-3. Run selected native verification plus framework/package and governance
-   checks; update `CHANGELOG.md` and `RUN.md` to v0.43.
-4. Do not rewrite active or historical bundles. Rollback restores the
-   framework template/docs/playbook; old maps remain usable as the same
-   passive navigation surface.
+1. 新增 `rb_templates/RUN_BUNDLE.md.tmpl`
+2. 两个 creator 渲染 `RUN_BUNDLE.md`（复用已有的 framework 坐标计算逻辑，repo
+   command root 坐标只写进 `BUNDLE_MAP.md`）
+3. 回退 `BUNDLE_MAP.md.tmpl` 的 "Continue This Bundle" continuation section
+4. 简化 `continue-run-bundle.md` playbook
+5. 更新 `COMMANDS.md` / `README.md` / `AGENTS.md` / `CLAUDE.md` 的相关引用
+6. Framework version bump → v0.44
+7. 不批量改写任何 production bundle
 
 ## Open Questions
 
-None. The null-node boundary is intentional: no accepted generic diagnostic
-currently selects a legal target for it, and this change must not invent one.
+None.

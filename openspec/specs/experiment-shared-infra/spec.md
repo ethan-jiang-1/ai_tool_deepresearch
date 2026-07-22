@@ -83,21 +83,22 @@ After successful parsing and validation, existing case composition, node-copy, e
 - **WHEN** a legal disposable invocation targets an existing generated bundle and supplies `--force`
 - **THEN** the creator SHALL preserve its existing disposable overwrite behavior after argv/name validation succeeds
 
-### Requirement: Disposable creator renders shared map navigation coordinates
+### Requirement: Disposable creator renders RUN_BUNDLE.md with actual coordinates
 
-`experiments_env/shared/new-disposable-bundle.mjs` SHALL render the same
-`BUNDLE_MAP.md` framework-root and repo-command-root relative navigation
-coordinates as the production creator, calculated from each generated bundle
-directory to the actual repository framework source. It SHALL replace every
-continuation-card template placeholder used by the shared map.
+`experiments_env/shared/new-disposable-bundle.mjs` SHALL render `RUN_BUNDLE.md`
+with the same framework-root relative navigation coordinates as the production
+creator, calculated from each generated bundle directory to the actual
+repository framework source. It SHALL replace every template placeholder used
+by the shared `RUN_BUNDLE.md.tmpl`.
 
 These coordinates remain static navigation text; disposable bundle creation
 does not gain a framework copy, a runtime-state field, or a new verdict.
 
-#### Scenario: Non-sibling disposable target has no unresolved card placeholder
+#### Scenario: Non-sibling disposable target has no unresolved placeholder
 
 - **WHEN** the disposable creator writes a case bundle beneath an explicit
   non-sibling target directory
-- **THEN** its map SHALL contain resolving framework/repo relative coordinates
-- **AND** it SHALL contain no unresolved continuation-card placeholder or
-  fixed sibling-layout assumption
+- **THEN** its `RUN_BUNDLE.md` SHALL contain resolving framework relative
+  coordinates
+- **AND** it SHALL contain no unresolved template placeholder or fixed
+  sibling-layout assumption

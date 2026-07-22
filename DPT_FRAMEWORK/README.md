@@ -16,13 +16,13 @@ Deep Research Framework (`DPT_FRAMEWORK/`) 的运行时入口说明。
 
 **本框架就是项目的 Deep Research 引擎。** 用户要研究就用它跑，**不要**调用任何内置 "deep research" skill 或通用 research workflow——那些是替代品，本框架才是主体。入口 `RUN.md` Section 0 有完整禁用指令。
 
-用户明确提供当前 workspace 内可达 existing `BUNDLE_MAP.md` 并要求继续/检查时，先走 `command_playbook/continue-run-bundle.md`；扫描发现、只提文件名或不可达 map 不选择 run。否则不要浏览文件结构，直接走 `command_playbook/start-research.md`，由该 playbook 创建新 run 并加载第一个 phase node。
+用户明确提供当前 workspace 内可达 existing bundle（或其 `RUN_BUNDLE.md`、`BUNDLE_MAP.md`）并要求继续/检查时，先走 `command_playbook/continue-run-bundle.md`；扫描发现、只提文件名或不可达路径不选择 run。否则不要浏览文件结构，直接走 `command_playbook/start-research.md`，由该 playbook 创建新 run 并加载第一个 phase node。
 
 ## 第一条
 
 **想做什么事？打开 `COMMANDS.md` 找到对应的命令。** 不要凭记忆工作。
 
-运行具体 bundle 时，先打开 active bundle 里的 `BUNDLE_MAP.md` 和控制文件。旧 bundle 只有 `START_FROM_HERE.md` 时，把它当作 deprecated fallback。
+运行具体 bundle 时，先打开 active bundle 里的 `RUN_BUNDLE.md`（或 `BUNDLE_MAP.md`）和控制文件。旧 bundle 只有 `START_FROM_HERE.md` 时，把它当作 deprecated fallback。
 
 ## 目录性质
 
@@ -93,7 +93,8 @@ dpt_rb_<name>/
 
 ```text
 dpt_rb_<name>/
-  BUNDLE_MAP.md
+  RUN_BUNDLE.md        ← 极简入口：我是谁、framework 在哪
+  BUNDLE_MAP.md        ← 完整目录布局（户型图）
   rb_plan.md
   rb_profile.yaml
   rb_status.json
@@ -116,7 +117,7 @@ dpt_rb_<name>/
 
 `_cache/gate-results/` 和 `_cache/projections/` 是 workflow-foundation target/cache convention，不是当前 `inspect-bundle.mjs` required shape。
 
-运行时优先读取 active bundle 里的 `BUNDLE_MAP.md` 和控制文件；旧 `START_FROM_HERE.md` 只作 deprecated fallback。`BUNDLE_MAP.md` 是 passive map，不是 phase node、command playbook 或 gate authority。`rb_profile.yaml` 承载 HITL/user decisions；`rb_status.json` 承载 phase/gate 状态摘要；`rb_trace.jsonl` 是 append-only audit。
+运行时优先读取 active bundle 里的 `RUN_BUNDLE.md`（或 `BUNDLE_MAP.md`）和控制文件；旧 `START_FROM_HERE.md` 只作 deprecated fallback。`RUN_BUNDLE.md` 是极简入口，`BUNDLE_MAP.md` 是 passive map，都不是 phase node、command playbook 或 gate authority。`rb_profile.yaml` 承载 HITL/user decisions；`rb_status.json` 承载 phase/gate 状态摘要；`rb_trace.jsonl` 是 append-only audit。
 
 ## 执行模式
 
