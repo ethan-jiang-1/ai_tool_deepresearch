@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-07-21 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-07-23 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -15,9 +15,23 @@
 
 ## 活跃列表
 
-当前没有 active bug。BUG-096~098 已归档为 implementation delivered 或 no additional deterministic remediation；其未观察到的真实 runtime facts 保留在各自归档记录中，不作为 active implementation work。
+| Bug | Severity | Phase | 简述 |
+|-----|----------|-------|------|
+| [BUG-099](BUG-099-stop-no-agent-halted-at-wave0.md) | P1 | wave0 | `stop: no` phase agent 因 context exhaustion 在 wave0 主动停下，创建 de-facto HITL |
+| [BUG-100](BUG-100-research-access-probe-first-result-false-negative.md) | P2 | hitl1 | Research access probe "first result only" 规则在搜索面正常时造成假阴性 |
+| [BUG-101](BUG-101-topic-state-apply-sequencing-contradiction.md) | P2 | hitl1 | Phase instruction 与 Engine gate 对 topic-state apply 的时序要求矛盾 |
+| [BUG-102](BUG-102-seed-topic-yaml-validation-at-gate-not-authoring.md) | P3 | seed-topics | Seed topic YAML 校验只在 gate 执行，不在 authoring/enrichment 时反馈 |
+| [BUG-103](BUG-103-status-gate-drift-between-phases.md) | P3 | 跨 phase | rb_status.json gate 字段在 phase transition 后持续漂移，需手动 advance-status |
+| [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | enter-phase 每次渲染完整 shared context 造成累积 context 压力 |
+| [BUG-105](BUG-105-shared-ref-gate-yaml-in-code-fence-not-parsed.md) | P2 | wave0 | Shared ref gate 无法解析 Markdown code fence 内的 YAML，count=0 |
+| [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P1 | wave0→wave1 | stop: no violation 再现 — agent 输出总结但不执行下一 phase |
 
-**Next available bug ID: BUG-099**
+| [BUG-107](BUG-107-wave1-depth-review-phase-agent-responsibility-unclear.md) | P2 | wave1 | depth-review.yaml 创建责任不明确 — sub-agent 不创建，Phase Agent 遗漏 |
+| [BUG-108](BUG-108-seed-token-backfill-responsibility-gap.md) | P3 | wave1 | Seed topic __BACKFILL_*__ token 替换无明确 owner |
+| [BUG-109](BUG-109-wave1-gate-excessive-rule-coupling.md) | P3 | wave1 | Wave1 gate 规则过度耦合 — 35+ masked sub-rules 淹没 root cause |
+| [BUG-110](BUG-110-wave1-gate-no-fatigue-degradation.md) | P2 | wave1 | Wave1 gate 无 fatigue degradation — 6 attempts 无 pass/degrade 出口 |
+
+**Next available bug ID: BUG-111**
 
 ## 最近关闭 (2026-07-20)
 

@@ -57,6 +57,7 @@ prefixes:
   GAC: gate-content-dedup
   GAF: gate-fork-router
   GAS: gate-state-machine
+  GCO: guidance-constitution
   GSK: gate-skeleton
   HIU: hitl-ux
   INT: integration-tests
@@ -307,6 +308,14 @@ GAF-001: gate-fork-router — Gate branch classification and explicit resolver
 
 # gate-state-machine
 GAS-001: gate-state-machine — Gate checkpoint feedback and transition lookup
+
+# guidance-constitution
+GCO-001: guidance-constitution — Charter scope and guidance statement classification preserve accepted and executable authority
+GCO-002: guidance-constitution — Constitutional promotion is limited to implementation-neutral, falsifiable, cross-context invariants
+GCO-003: guidance-constitution — Accepted cross-boundary blocking obligations have an operationally complete legal path or an explicit missing-contract or terminal boundary
+GCO-004: guidance-constitution — Public Agent-facing operations support bounded reentry without hidden choreography or Engine workflow control
+GCO-005: guidance-constitution — Authority, capability, permission, responsibility, liveness, and evidence remain non-interchangeable concepts
+GCO-006: guidance-constitution — Closure claims are bounded by claim-specific provenance, scope, and proof distance
 
 # hitl-ux
 HIU-001: hitl-ux — HITL conversational loop model (entry → in-loop → exit → anti-infinite-loop)

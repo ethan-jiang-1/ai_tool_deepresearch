@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-07-22 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-07-23 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -19,6 +19,7 @@
 |------|------|------|
 | `research-access-and-actor-contract-delivery` | 两个顺序 Change：先修 HITL1 bounded fetch fallback，再把 role/direct-output/fetch contract 送到真实 work-unit actor；联合关闭 BUG-096/098，BUG-097 保持独立真实-Agent诊断 | ready to propose |
 | `research-question-closure-and-evidence-judgment` | 直接吸收 3 份未实现输入（user-knowledge-hang、evidence-quality、explore-exploit），并建立在 DONE-015 evidence-extraction 地基上：先以 HITL1 host-file snapshot 贯通 Seed/Wave/Final，再补 Wave1→Wave2 问题交接；不预设 external pack、source score、WaveStats 或策略 controller | ready for focused explore of Change 1 |
+| `wave-execution-and-gate-remediation` | BUG-099--113 的四个固定 Change：direct phase entry、pre-Wave readiness feedback、Wave producer/closeout chain、root-first Gate feedback and fail-closed degradation policy；不以扩权、自动补 receipt 或宽松结构校验换取通过 | correct backlog facts, then propose Change 1 |
 
 ---
 

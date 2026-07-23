@@ -1,0 +1,16 @@
+schema_version: verification-routing/v1
+change: strengthen-guidance-constitution
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The change adds no JavaScript helper, schema, or deterministic runtime contract.
+  integration:
+    status: not_applicable
+    rationale: The change modifies only guidance prose and deliberately adds no static phrase-lock test or runtime boundary test.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No lifecycle, Gate, state-transition, or simulated-Agent workflow behavior changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: A playbook reading guidance would not prove Agent behavior, host liveness, or compliance with future mechanism changes.
+claims: []
