@@ -21,10 +21,13 @@
 | [BUG-103](BUG-103-status-gate-drift-between-phases.md) | P3 | 跨 phase | rb_status.json gate 字段在 phase transition 后持续漂移，需手动 advance-status |
 | [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | enter-phase 每次渲染完整 shared context 造成累积 context 压力 |
 | [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P1 | wave0→wave1 | stop: no violation 再现 — agent 输出总结但不执行下一 phase |
+| [BUG-114](BUG-114-work-unit-claim-enum-combinatorics.md) | P2 | wave0 | work-unit claim enum combinatorics silently reject valid combinations |
+| [BUG-115](BUG-115-work-unit-result-schema-unconstructable.md) | P1 | wave0 | work-unit result schema practically unconstructable by Agent |
+| [BUG-116](BUG-116-operate-queue-stderr-pollution.md) | P3 | cross-phase | operate-queue.mjs output routing causes silent pipe failures |
 
 > BUG-099/103/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 计划承接，仍属活跃 bug。
 
-**Next available bug ID: BUG-114**
+**Next available bug ID: BUG-117**
 
 ## 最近关闭 (2026-07-24)
 
