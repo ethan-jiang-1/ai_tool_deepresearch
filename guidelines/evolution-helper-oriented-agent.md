@@ -4,16 +4,15 @@ suite: deep-research-guidelines
 title: "Evolution Direction: Helper-Oriented Agent"
 status: effective
 created: 2026-07-12
-revised: 2026-07-24
+revised: 2026-07-25
 role: charter-companion evolution direction for Agent/user action responsibility
 scope: openspec/changes/, DPT_FRAMEWORK/COMMANDS.md, DPT_FRAMEWORK/workflows/, DPT_FRAMEWORK/command_playbook/
 authority: guidance
 defers_to:
-  - AGENTS.md
-  - openspec/config.yaml
   - guidelines/project-charter.md
 siblings:
   - guidelines/project-charter.md
+  - guidelines/evolution-abstraction-semantic-precision.md
   - guidelines/evolution-simple-reliable-control.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/logging-conventions.md
@@ -26,7 +25,7 @@ siblings:
 
 # Evolution Direction: Helper-Oriented Agent
 
-> 状态: 生效 | 创建: 2026-07-12 | 修订: 2026-07-24 | 用途: 引导 Agent 从机械工具逐步成为可靠协作者
+> 状态: 生效 | 创建: 2026-07-12 | 修订: 2026-07-25 | 用途: 引导 Agent 从机械工具逐步成为可靠协作者
 
 ## Purpose
 
@@ -53,9 +52,9 @@ Agent inspects and acts within existing authority
 冲突处理顺序：
 
 ```text
-AGENTS.md / openspec/config.yaml
-  -> accepted specs + executable contracts + runtime truth
+authoritative behavior contract + executable contract + runtime truth
   -> project-charter.md 的 authority/layer boundary
+  -> evolution-abstraction-semantic-precision.md 的 semantic-level discipline
   -> evolution-simple-reliable-control.md 的 system-shape discipline
   -> evolution-helper-oriented-agent.md 的 action-responsibility direction
   -> mechanism guideline 的领域说明
@@ -118,7 +117,7 @@ AGENTS.md / openspec/config.yaml
 
 - Markdown/Agent Flow SHOULD 给 Agent direct facts、clear objective、smallest blocker 和一个最近动作，保留其理解、判断、修复与执行空间。Direct facts 包含 Engine 能从其静态 contract lineage 提供的信息：缺失事实属于哪个 schema；若 accepted legal repair path 存在，应写到哪个已授权 surface、修复后重跑哪个 checkpoint；否则 contract 已知的 owner 或 terminal/missing-contract boundary 是什么。Engine 保留这些静态知识即剥夺 Agent 在合法边界内执行机械修复的能力——这与 helper posture 矛盾。
 - Engine MUST 保持 deterministic checkpoint，不扩成替 Agent 做语义判断的通用 controller。
-- Helper-oriented design MUST 与 `evolution-simple-reliable-control.md` 一起审查，避免用更多状态、条件和 fallback 模拟协作能力。
+- Helper-oriented design MUST 在先完成 `evolution-abstraction-semantic-precision.md` 的语义层审视、再完成 `evolution-simple-reliable-control.md` 的控制形状审视后进行，避免用更多状态、条件和 fallback 模拟协作能力。
 
 ## Gradual Convergence
 
@@ -140,7 +139,7 @@ OpenSpec proposal/design/tasks 在进入 apply 前必须先回答：
 1. 哪个决定确实需要用户，而不是 Agent 可以在现有授权内完成的机械工作？
 2. 用户决定或完成不可代理动作后，哪些步骤应立即回到 Agent 执行？
 
-回答还必须通过 Project Charter 的 authority/layer checks 和 Simple Reliable Control 的 simplicity admission test。答不清时，先缩小 escalation boundary，不要新增 mode、flag、controller 或条件树。
+回答还必须在 Project Charter 的 authority/layer checks、Abstraction as Semantic Precision 的语义反思和 Simple Reliable Control 的 simplicity admission test 之后进行。答不清时，先缩小 escalation boundary，不要新增 mode、flag、controller 或条件树。
 
 ## Boundary
 
@@ -153,3 +152,10 @@ OpenSpec proposal/design/tasks 在进入 apply 前必须先回答：
 - 用 Agent 判断替代 deterministic Engine authority。
 
 Helper 不是越权。Helper 是在合法边界内多做执行，把真正需要人的决定缩小，并在边界不存在时诚实指出缺失 contract。
+
+## Related Guidance
+
+- [Project Charter](project-charter.md) — layer and authority boundary.
+- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — establish the justified semantic level before choosing control or action responsibility.
+- [Simple Reliable Control](evolution-simple-reliable-control.md) — choose the minimum correct control shape before assigning legal execution.
+- [Guidelines Index](README.md) — suite entrypoint and reading order.

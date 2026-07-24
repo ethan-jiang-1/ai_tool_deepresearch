@@ -4,15 +4,15 @@ suite: deep-research-guidelines
 title: Agentic Subagent Mechanism
 status: effective
 created: 2026-06-24
-revised: 2026-07-12
+revised: 2026-07-25
 role: mechanism guidance for work-unit-mediated sub-agent execution
 scope: Sub-agent actor behavior through Engine-allocated work units, noise isolation, and submit provenance
 authority: guidance
 defers_to:
-  - AGENTS.md
-  - openspec/config.yaml
+  - guidelines/project-charter.md
 siblings:
   - guidelines/project-charter.md
+  - guidelines/evolution-abstraction-semantic-precision.md
   - guidelines/evolution-simple-reliable-control.md
   - guidelines/evolution-helper-oriented-agent.md
   - guidelines/framework-runtime-boundary.md
@@ -24,7 +24,7 @@ siblings:
 
 # Agentic Subagent Mechanism
 
-> 状态: 生效 | 创建: 2026-06-24 | 修订: 2026-07-12 | 适用: 所有涉及 Sub-agent 派发、执行、提交、取证的设计与实现
+> 状态: 生效 | 创建: 2026-06-24 | 修订: 2026-07-25 | 适用: 所有涉及 Sub-agent 派发、执行、提交、取证的设计与实现
 
 Sub-agent 仍然存在。它是一个 bounded Agent actor，用来隔离高噪声 I/O 工作。正常生产机制已经统一为 work units:
 
@@ -247,8 +247,11 @@ General rule: accepted specs and executable contracts win over this guideline. I
 ## Related Guidance
 
 - [Guidelines Index](README.md) - guidance suite index and reading order.
+- [Project Charter](project-charter.md) - repo-wide charter and authority map.
+- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) - establish a precise bounded work-unit question before introducing a new delegated distinction.
 - [Agentic Execution Model](agentic-execution-model.md) - global execution model and terminology canon.
 - [Simple Reliable Control](evolution-simple-reliable-control.md) - short delegated paths, direct checks, and smallest actionable root-cause feedback.
+- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) - action responsibility and minimal escalation for delegated work.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) - queue demand and phase-local drain.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) - gate, chain, and phase handoff.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) - framework assets versus runtime bundles.

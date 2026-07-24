@@ -4,17 +4,16 @@ suite: deep-research-guidelines
 title: Project Charter
 status: effective
 created: 2026-06-17
-revised: 2026-07-24
+revised: 2026-07-25
 role: repo-wide charter and entrypoint
 scope: all work in this repository
 authority: guidance
-defers_to:
-  - AGENTS.md
-  - openspec/config.yaml
 siblings:
+  - guidelines/evolution-abstraction-semantic-precision.md
   - guidelines/evolution-simple-reliable-control.md
   - guidelines/evolution-helper-oriented-agent.md
   - guidelines/framework-runtime-boundary.md
+  - guidelines/logging-conventions.md
   - guidelines/command-experiments.md
   - guidelines/agentic-execution-model.md
   - guidelines/agentic-queue-mechanism.md
@@ -24,7 +23,7 @@ siblings:
 
 # Project Charter
 
-> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-24 | 用途: 项目入口指导
+> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-25 | 用途: 项目入口指导
 
 ---
 
@@ -49,6 +48,12 @@ JSON/YAML/JSONL  -> 持久化 runtime state、证据、receipt、trace，让上�
 
 ---
 
+## Before Introducing A New Thing
+
+Before adding a named state, status, projection, Module, command, or reader-facing view, first ask whether it creates a semantic level on which a reader can reason more precisely. Dijkstra's point was not that abstraction permits vagueness: finite reasoning can cover many cases only when it creates a new level at which the relevant distinctions are precise.
+
+Read [Evolution Direction: Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) before choosing the control mechanism. That companion retains the complete EWD 340 Argument Four source paragraph and a clearly separate project interpretation; this Charter retains only the entry-point context.
+
 ## File Position
 
 This file can decide:
@@ -70,8 +75,9 @@ This file cannot decide:
 ### MUST
 
 - MUST treat JS/CLI/schema/trace as the trust root for deterministic state.
-- MUST follow `openspec/config.yaml` and the OpenSpec change lifecycle for project evolution.
-- MUST use accepted OpenSpec specs for capability behavior.
+- MUST follow the project's spec-driven change lifecycle for project evolution.
+- MUST use accepted behavior contracts for capability behavior.
+- MUST, before introducing or materially changing a named state, projection, status, concept, Module, or reader-facing view, review whether it gives a defined reader a precise bounded question, preserves the distinctions that change that answer, and provides a normal reasoning stop point. Use `guidelines/evolution-abstraction-semantic-precision.md` for this review.
 - MUST keep Markdown as the primary LLM-facing operating/control surface, not as a machine verifier or authority for state transitions.
 - MUST keep multi-stage agentic flow in Markdown, playbooks, or task cards by default.
 - MUST read JS/CLI feedback back into the conversation context before the next Markdown-driven action.
@@ -84,10 +90,10 @@ This file cannot decide:
 - MUST treat quality-control complexity as safety-critical: a checker, gate, recovery path, or diagnostic chain must be easier to reason about and test than the work it validates.
 - MUST interpret mechanism-level goals such as recovery, stop authorization, context sustainability, or comprehensive validation as required outcomes, not as pre-approval for a particular controller, watcher, retry tree, or derived-state stack.
 - MUST make evidence, receipts, and trace entries come from real execution, and bound any completion, closure, causal, or behavioral claim to its identified object and evidence boundary, including applicable provenance, actor/host, and proof class. Evidence outside a claim's stated provenance or continuity boundary may remain diagnostic, but cannot close a stronger claim.
-- MUST keep runtime state in the active runtime bundle root, not in chat memory.
-- MUST treat `DPT_FRAMEWORK/` as reusable framework assets, not as a per-run workspace.
-- MUST keep per-run state, HITL answers, gate attempts, trace, artifacts, delegated work-unit attempts, and final output inside the active bundle root, currently an explicit `dpt_rb_*` or `dpt_disp_*` directory.
-- MUST pass the active bundle path explicitly to framework commands that operate on a run.
+- MUST keep runtime state in the selected active runtime bundle, not in chat memory.
+- MUST treat reusable framework assets as reusable assets, not as a per-run workspace.
+- MUST keep per-run state, HITL answers, gate attempts, trace, artifacts, delegated work-unit attempts, and final output inside the active bundle root.
+- MUST pass the selected active-bundle path explicitly to framework commands that operate on a run.
 - MUST, when proposing or changing an Agent-facing boundary explicitly declared for entry, handoff, or recovery, state its input/context boundary and enough authoritative facts for the bounded next legal action or an honest no-path result. It may be a documented protocol, but MUST NOT select semantic work, schedule turns, infer liveness, or advance undeclared transitions.
 - MUST keep `guidelines/` aligned with accepted specs and clearly separate stable principles from current repository conventions.
 
@@ -103,8 +109,8 @@ This file cannot decide:
 - MUST NOT turn a human-directed decision into a requirement that the human run ordinary pipeline commands, or treat user agreement as permission to fabricate state, trace, receipt, evidence, or a missing Engine capability.
 - MUST NOT fake trace, result files, receipts, subagent output, or runtime validation.
 - MUST NOT treat progress summaries, console output, or chat confidence as evidence.
-- MUST NOT write runtime state, gate results, HITL answers, repair attempts, artifacts, or final output into `DPT_FRAMEWORK/`.
-- MUST NOT treat `DPT_FRAMEWORK/schema/`, `DPT_FRAMEWORK/workflows/`, `DPT_FRAMEWORK/engine/`, or `DPT_FRAMEWORK/cli/` as active bundle storage.
+- MUST NOT write runtime state, gate results, HITL answers, repair attempts, artifacts, or final output into reusable framework assets.
+- MUST NOT treat implementation-asset directories as active bundle storage.
 - MUST NOT read `_original_*` archives unless the user explicitly asks for historical analysis.
 
 ---
@@ -115,13 +121,13 @@ This file cannot decide:
 
 | Truth Type | Source of Record | Role |
 |------------|------------------|------|
-| Project rules and constraints | `AGENTS.md`, `openspec/config.yaml` | 技术栈、OpenSpec 纪律、repo-wide hard rules |
-| Accepted capability behavior | `openspec/specs/`, `openspec/governance/` | 已接受需求、invariant、requirement registry |
-| Executable contracts | `DPT_FRAMEWORK/`, `tests/` | schema、CLI verdict、状态检查、回归验证、框架实现 |
-| Runtime/run state | active runtime bundle root, currently a selected `dpt_rb_*` or `dpt_disp_*` directory | 每个 run 或实验自己的当前控制文件和数据 |
-| Human/Agent guidance | `guidelines/` | 项目宪章、复杂度纪律、操作规范、机制指导、阅读路线 |
+| Project rules and constraints | the project's governing operating contract | 技术栈、spec-driven 纪律、repo-wide hard rules |
+| Accepted capability behavior | accepted behavior contract | 已接受需求、invariant、requirement registry |
+| Executable contracts | executable implementation and regression evidence | schema、CLI verdict、状态检查、回归验证、框架实现 |
+| Runtime/run state | the selected active runtime bundle | 每个 run 或实验自己的当前控制文件和数据 |
+| Human/Agent guidance | this Charter and its guidance suite | 项目宪章、复杂度纪律、操作规范、机制指导、阅读路线 |
 
-`guidelines/` 的作用是降低理解成本，不做新的 Source of Record。需要新增或改变系统行为时，走 OpenSpec change，再落到 accepted specs、`DPT_FRAMEWORK/`、实验基础设施或测试里。
+`guidelines/` 的作用是降低理解成本，不做新的 Source of Record。需要新增或改变系统行为时，离开宪章导航层，按项目变更生命周期进入相应的 authoritative surface；本文件不把那些下游位置编入阅读路线。
 
 Source of Record 只回答哪个 surface 裁决某类事实。Authority、capability、permission、responsibility、liveness 和 evidence 是不同问题；除非 accepted contract 明确规定，任何一个都不自动推出另一个。
 
@@ -129,11 +135,12 @@ Source of Record 只回答哪个 surface 裁决某类事实。Authority、capabi
 
 当 `guidelines/` 内部出现历史机制表述与新原则的张力时：
 
-1. accepted specs、可执行 contract 和 runtime truth 决定当前行为；不能用新 prose 越权修改。
+1. 适用于该事实的 accepted behavior contract、可执行 contract 和 runtime truth 决定当前行为；不能用新 prose 越权修改。
 2. 本 Charter 决定 Agent / Markdown / Engine / runtime state 的 ownership boundary。
-3. `evolution-simple-reliable-control.md` 决定控制复杂度上限：直接 authority、短路派生症状、一个最近动作、无隐藏恢复树。
-4. `evolution-helper-oriented-agent.md` 决定行动责任：用户只承担必要决定或不可代理动作，后续合法机械执行回到 Agent；helper posture 不创造权限。
-5. mechanism guideline 只在上述边界内解释领域结构；“问题必须解决”不等于“复杂机制已经定案”。
+3. `evolution-abstraction-semantic-precision.md` 决定新增概念是否形成一个让读者对有界问题精确推理的语义层；它要求保留决定性区别，不替代 authority 或 runtime contract。
+4. `evolution-simple-reliable-control.md` 决定控制复杂度上限：直接 authority、短路派生症状、一个最近动作、无隐藏恢复树。
+5. `evolution-helper-oriented-agent.md` 决定行动责任：用户只承担必要决定或不可代理动作，后续合法机械执行回到 Agent；helper posture 不创造权限。
+6. mechanism guideline 只在上述边界内解释领域结构；“问题必须解决”不等于“复杂机制已经定案”。
 
 既有实现与新原则存在差距时，把差距视为渐进 design debt：停止继续叠加，后续触碰该 surface 时局部收敛；不要为了形式一致性一次性重写整个系统。
 
@@ -145,40 +152,19 @@ When deciding where something belongs, route by authority:
 |-------------------------|-------------------|
 | User-facing task flow, stage instructions, handoff, or feedback context | Markdown playbooks / task cards |
 | Semantic judgment, evidence choice, synthesis, or repair reasoning | LLM Agent |
-| Schema, state transition, deterministic checkpoint, receipt, trace, or deterministic verdict | JS/CLI/Engine + accepted specs |
-| Current run state, queue contents, profile, evidence files, work-unit attempts, or trace history | The active runtime bundle root, currently a selected `dpt_rb_*` or `dpt_disp_*` bundle |
-| New or changed accepted behavior | OpenSpec change before implementation |
+| Schema, state transition, deterministic checkpoint, receipt, trace, or deterministic verdict | the applicable executable contract |
+| Current run state, queue contents, profile, evidence files, work-unit attempts, or trace history | the selected active runtime bundle |
+| A new or materially changed named state, projection, status, concept, Module, command, or reader-facing view | `guidelines/evolution-abstraction-semantic-precision.md`, then leave the constitutional route through the approved change lifecycle |
+| New or changed accepted behavior | the approved change lifecycle before implementation |
 | Future mechanism direction | `guidelines/` as design guidance only |
-| Control-loop or quality-check complexity | `guidelines/evolution-simple-reliable-control.md` plus the relevant accepted specs and executable Source of Record |
-| Agent/user action responsibility, escalation, or maintenance/debug posture | `guidelines/evolution-helper-oriented-agent.md` plus the relevant accepted specs and host permission boundary |
+| Control-loop or quality-check complexity | `guidelines/evolution-simple-reliable-control.md` |
+| Agent/user action responsibility, escalation, or maintenance/debug posture | `guidelines/evolution-helper-oriented-agent.md` |
 
 ---
 
 ## Framework Runtime Boundary
 
-`DPT_FRAMEWORK/` 是 framework，不是 run bundle。它可以包含 workflow nodes、schema contracts、gate definitions、engine code、CLI wrappers、bundle templates 和 command playbooks；它不保存某一次 run 的结果。
-
-同一套 `DPT_FRAMEWORK/` 必须能够服务多个 active runtime bundle root。当前约定中，production run 使用 `dpt_rb_*`，disposable experiment 使用 `dpt_disp_*`。被本次 run、CLI invocation 或 controlled experiment 明确选中的那个目录就是 active bundle root，承载当前 truth：profile、HITL answer、queue/status、gate attempt、trace、repair state、reference、artifact、delegated work-unit attempt 和 final output。
-
-裸 runtime path 都以 active bundle root 为根。`rb_queue.json`、`rb_trace.jsonl`、`rb_output_declarations.jsonl`、`reference/`、`artifacts/`、`_cache/`、`_logs/`、`final/`、`_work_units/...` 不是 repo-root path，也不是 `DPT_FRAMEWORK/` path，除非文本显式写出其他根。
-
-三个坐标必须分清：
-
-- `repo_command_root`：执行 `node DPT_FRAMEWORK/...` 的仓库根，只是命令位置，不是 runtime truth。
-- `framework_root`：`DPT_FRAMEWORK/` reusable framework assets 根，运行时只读。
-- `active_bundle_root`：当前选中的 `dpt_rb_*` / `dpt_disp_*` runtime bundle root，唯一 mutable runtime truth 根。
-
-当前 v1 只有一个 canonical Deep Research workflow package；这不限制 run bundle 数量。一套 framework 必须能服务多个互相隔离的 `dpt_rb_*`。
-
-关键边界：
-
-- 当 gate definitions 实现后，`DPT_FRAMEWORK/schema/gate_definitions/` 里的 JSON 是 read-only gate definition，不是 run data，也不是 pass/fail 结果。
-- `DPT_FRAMEWORK/schema/contracts/` 定义 executable contract，不保存当前 run 的状态。
-- `DPT_FRAMEWORK/engine/` 和 `DPT_FRAMEWORK/cli/` 执行 deterministic checkpoint，不拥有研究判断，也不把结果写回 framework。
-- `DPT_FRAMEWORK/rb_templates/` 只放会被实例化到 bundle 的初始模板，不放某个 run 的运行产物。
-- `rb_status.json`、`rb_profile.yaml`、`rb_trace.jsonl`、`rb_queue.json`、`rb_output_declarations.jsonl`、`_work_units/` 等 active bundle root 下的文件才是当前 run 的 runtime truth。
-
-如果不确定某个文件应该放在 framework 还是 bundle，先读 `guidelines/framework-runtime-boundary.md`。本 Charter 固定 authority boundary；具体目录路由由该 guideline、accepted specs 和 executable framework contracts 进一步细化。
+可复用的 framework assets 与某一次 run 的 mutable truth 必须分开：前者可以服务多个 run，后者只属于被明确选中的那个 runtime bundle。具体目录、命令和文件路由不属于本宪章；它们由同层的 [Framework Runtime Boundary](framework-runtime-boundary.md) 说明。本 Charter 只固定不可反转的原则：不能把当前运行事实写回可复用资产，也不能把 chat memory、console 或 projection 当作 active runtime truth。
 
 ---
 
@@ -296,31 +282,17 @@ If you are about to do one of these, stop and switch to the required path:
 
 ---
 
-## Current Project Surfaces
+## Stable Surface Boundaries
 
-The project charter should not become a directory manifest. Treat these paths as current project surfaces, not as eternal architecture:
+The project charter is not a directory manifest or an operational index. It fixes the ownership boundary, not the current tree snapshot:
 
-| Surface | Current location | Stable role |
-|---------|------------------|-------------|
-| OpenSpec governance | `openspec/` | proposal/spec/tasks lifecycle, accepted requirements, governance checks |
-| Framework implementation | `DPT_FRAMEWORK/` | reusable framework assets: workflow nodes, schemas, gate definitions, CLIs, deterministic engines, trace utilities, templates, command playbooks — no tests and no runtime state |
-| Agent-facing guidance | `guidelines/` | principles, reading routes, mechanism guidance, quality bars |
-| Experiments and fixtures | `experiments_env/` and `experiments_playbook/` | prototype fixtures, shared experiment setup, command experiment playbooks |
-| JS-led verification | `tests/` | `unit`, `integration`, and `deterministic_e2e` executable tests for accepted deterministic behavior |
-| Agent Flow verification | `experiments_playbook/` | coding-Agent-executed Markdown `agent_flow_e2e` over real disposable bundles |
-| Runtime bundle roots | currently `dpt_rb_*` and `dpt_disp_*` | active run/experiment state, evidence, receipts, trace, artifacts, work-unit attempts |
-
-The stable rule is ownership, not a specific tree snapshot:
-
-- OpenSpec owns accepted behavior.
-- Framework code owns deterministic implementation.
-- Runtime bundle roots own current run state.
+- The project change lifecycle owns accepted behavior.
+- Reusable implementation owns deterministic execution.
+- The selected runtime bundle owns current run state.
 - Markdown/guidance owns Agent-facing flow and explanation.
-- Experiments own evidence for mechanism viability before or during acceptance.
+- Controlled experiments own evidence for mechanism viability before or during acceptance.
 
-When the repository shape changes, update this section as a route map only. Do not encode detailed subdirectory layouts here unless they are needed to prevent a known class of mistakes. Concrete paths, helper names, bundle skeletons, and trace event contracts belong in accepted specs, active OpenSpec changes, or mechanism-specific guidance.
-
-Do not copy historical prototype paths or control rules into current work unless the document is explicitly doing historical comparison. Extract the principle first, then route the current behavior through OpenSpec and framework conventions.
+Concrete paths, helper names, bundle skeletons, and trace event contracts belong outside this constitutional reading route. If a future repository shape changes, preserve these ownership boundaries rather than carrying a stale path map forward.
 
 ---
 
@@ -363,8 +335,8 @@ Explore / design
 5. 修改 framework implementation 必须由 OpenSpec change、accepted spec 或明确任务覆盖。
 6. 裁决只从真实文件、schema 校验、receipt、trace JSONL 或 accepted verdict source 来。
 7. 不读 `_original_*` 归档，除非用户明确要求分析历史版本。
-8. `DPT_FRAMEWORK/` 是纯框架目录，可发行，运行时视为 read-only framework assets。不放测试文件、实验 fixture、实验 playbook，也不放 per-run runtime state。JS-led `unit`、`integration`、`deterministic_e2e` 在 root `tests/`；Markdown-led `agent_flow_e2e` 在 `experiments_playbook/`。分类语义见 accepted `verification-routing` spec。
-9. `dpt_rb_*` 和 `dpt_disp_*` 是 mutable runtime bundle root；HITL、gate attempt、trace、repair、artifact、delegated work-unit attempt、final output 等运行时事实必须写在 active bundle root。裸 runtime path 一律按 active bundle-root relative 解析。
+8. Reusable framework assets are read-only at runtime and never store per-run state, tests, or experiment fixtures; verification modes remain separated by their accepted routing contract.
+9. The selected active runtime bundle is the mutable run root; HITL, gate attempts, trace, repair, artifacts, delegated work-unit attempts, and final output belong there, and bare runtime paths resolve relative to it.
 
 ---
 
@@ -373,17 +345,16 @@ Explore / design
 新 Agent 或新维护者按这个顺序读：
 
 1. `guidelines/project-charter.md`：稳定原则和权威边界。
-2. `guidelines/evolution-simple-reliable-control.md`：短判断链、简单质量控制、最小根因反馈和复杂度刹车。
-3. `guidelines/evolution-helper-oriented-agent.md`：用户决定、Agent 执行、Engine 裁决的 helper-oriented 责任边界。
-4. `guidelines/framework-runtime-boundary.md`：framework 只读资产与 run bundle 可变状态的目录和权威边界。
-5. `openspec/config.yaml`：项目级 spec-driven 纪律。
-6. `guidelines/agentic-execution-model.md`：统一执行模型与术语正典——Chain、Queue、Work Unit 如何组成当前执行系统。
-7. `guidelines/agentic-workflow-mechanism.md`：Tier 1 (Chain) —— phase 间路由与三层权威架构。
-8. `guidelines/agentic-queue-mechanism.md`：Tier 2 (Queue) —— phase 内 task 编排，两层嵌套循环。
-9. `guidelines/agentic-subagent-mechanism.md`：Work-unit-mediated Sub-agent execution —— bounded sub-agent 任务、噪声隔离、submit provenance。
-10. `guidelines/command-experiments.md`：如何写和运行实验 playbook。
-11. 相关 `openspec/specs/<capability>/spec.md`：具体 capability 的需求。
-12. 对应 framework、experiment 或 active bundle root 文件。
+2. `guidelines/evolution-abstraction-semantic-precision.md`：Dijkstra 的原文语境、何种新概念形成可精确推理的语义层，以及引入新东西前的退后一步。
+3. `guidelines/evolution-simple-reliable-control.md`：短判断链、简单质量控制、最小根因反馈和复杂度刹车。
+4. `guidelines/evolution-helper-oriented-agent.md`：用户决定、Agent 执行、Engine 裁决的 helper-oriented 责任边界。
+5. `guidelines/framework-runtime-boundary.md`：framework 只读资产与 run bundle 可变状态的目录和权威边界。
+6. `guidelines/logging-conventions.md`：runtime continuity、trace/log 的 authority boundary 与诊断记录。
+7. `guidelines/agentic-execution-model.md`：统一执行模型与术语正典——Chain、Queue、Work Unit 如何组成当前执行系统。
+8. `guidelines/agentic-workflow-mechanism.md`：Tier 1 (Chain) —— phase 间路由与三层权威架构。
+9. `guidelines/agentic-queue-mechanism.md`：Tier 2 (Queue) —— phase 内 task 编排，两层嵌套循环。
+10. `guidelines/agentic-subagent-mechanism.md`：Work-unit-mediated Sub-agent execution —— bounded sub-agent 任务、噪声隔离、submit provenance。
+11. `guidelines/command-experiments.md`：如何写和运行实验 playbook。
 
 ---
 
@@ -391,8 +362,9 @@ Explore / design
 
 Before changing any file in `guidelines/`, check:
 
-- Does this conflict with `AGENTS.md` or `openspec/config.yaml`?
-- Does this conflict with accepted specs under `openspec/specs/`?
+- Does this stay within the Charter's ownership boundary rather than duplicating an authoritative behavioral contract?
+- Does this preserve the Charter-only `defers_to` hierarchy and same-layer constitutional navigation?
+- Before adding or materially changing a named concept, state, projection, status, Module, command, or reader-facing view, has it passed the “引入一个新东西之前，先退后一步” reflection: question, essential distinctions, and normal reasoning stop point?
 - Does this describe current project surfaces without turning this charter into a directory manifest?
 - Does this present future design as current runtime truth?
 - Does this reintroduce Agent self-governance for deterministic runtime authority?
@@ -401,6 +373,7 @@ Before changing any file in `guidelines/`, check:
 - Does this duplicate a definition that should instead live in `README.md` glossary or this project charter?
 - Does this add enough `MUST` / `MUST NOT` clarity for an Agent to act safely?
 - For a proposed durable constitutional invariant, does it remain valid without current incident or mechanism names and have a meaningful counterexample; and does any new or changed blocking or declared public boundary keep its legal/no-path, non-implication, and proof scope explicit without pre-approving a mechanism?
+- Has the change first applied `evolution-abstraction-semantic-precision.md`, so the semantic level is justified before choosing a control shape or allocating action responsibility?
 - Has the change passed the two-question `Simplicity Admission Test` in `evolution-simple-reliable-control.md`?
 - Has it passed the two-question `Helper Direction Review` in `evolution-helper-oriented-agent.md`, so only necessary decisions remain with the user and legal execution returns to the Agent?
 - If it names recovery, stop, context, or validation obligations, does it avoid pre-approving a complex mechanism?
@@ -412,9 +385,11 @@ Before changing any file in `guidelines/`, check:
 ## Related Guidance
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
+- [Evolution Direction: Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — Dijkstra's original context, precise bounded semantic levels, and the reflection to apply before introducing a new concept.
 - [Evolution Direction: Simple Reliable Control](evolution-simple-reliable-control.md) — short decision chains, direct Source-of-Record checks, root-cause short-circuiting, and quality-control complexity limits.
 - [Evolution Direction: Helper-Oriented Agent](evolution-helper-oriented-agent.md) — user decision, Agent execution, Engine authority, and minimal escalation boundaries.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for read-only framework assets versus mutable runtime bundles.
+- [Logging Conventions](logging-conventions.md) — runtime continuity, trace/log authority boundaries, and diagnostic log usage.
 - [Command Experiments](command-experiments.md) — target guidance for durable command experiment shape and boundaries.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; defines Chain, Queue, and Work Units.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — Tier 1 (Chain): phase-to-phase routing and Three-Authority Architecture.

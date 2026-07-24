@@ -4,17 +4,17 @@ suite: deep-research-guidelines
 title: Command Experiments Guideline
 status: effective
 created: 2026-06-17
-revised: 2026-07-19
+revised: 2026-07-25
 role: constitutional guidance for Agent-driven command experiments
 scope: experiments_playbook/*, experiments
 authority: guidance
 defers_to:
-  - AGENTS.md
-  - openspec/config.yaml
-  - openspec/specs/
+  - guidelines/project-charter.md
 siblings:
   - guidelines/project-charter.md
+  - guidelines/evolution-abstraction-semantic-precision.md
   - guidelines/evolution-simple-reliable-control.md
+  - guidelines/evolution-helper-oriented-agent.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/agentic-execution-model.md
   - guidelines/agentic-subagent-mechanism.md
@@ -31,9 +31,9 @@ This guideline fixes the experiment constitution. It does not define concrete fr
 | Question | Authority |
 |---|---|
 | Why the experiment exists, what evidence counts, and who owns each action | This guideline |
-| Accepted behavior and contracts | `openspec/specs/` and active delta specs |
-| Current schema, CLI, validation, and report behavior | `DPT_FRAMEWORK/`, `tests/` |
-| Current runnable registration and order | `experiments_playbook/PLAYBOOK_MANIFEST.md` |
+| Accepted behavior and contracts | the applicable accepted behavior contract and active change context |
+| Current schema, CLI, validation, and report behavior | the applicable executable contract and regression evidence |
+| Current runnable registration and order | the selected operational context |
 | One case's Agent Flow and proof claim | Its Markdown playbook |
 | One run's truth | Its explicit case run root and declared bundle roots |
 
@@ -161,13 +161,11 @@ Before accepting a command experiment, ask:
 
 If these answers are unclear, the case is not apply-ready.
 
-## Current Pointers
+## Related Guidance
 
-- Experiment entry and operational examples: `experiments_playbook/README.md`
-- Host launch and runtime layout: `DPT_FRAMEWORK/host_tools/README.md`
-- Headless Agent instruction: `experiments_playbook/RUN_AGENT_AUTORUN_EXPS.md`
-- Interactive instruction: `experiments_playbook/RUN_INTERACTIVE_EXPS.md`
-- Runtime/framework boundary: `guidelines/framework-runtime-boundary.md`
-- Verification taxonomy: accepted `verification-routing` spec
-
-These names are current surfaces, not additional constitutional rules.
+- [Project Charter](project-charter.md) — project-level authority boundary.
+- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — establish the bounded mechanism question before adding an experiment surface or verdict concept.
+- [Simple Reliable Control](evolution-simple-reliable-control.md) — keep the proof path shorter and simpler than the behavior it validates.
+- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) — keep ordinary legal execution with the Agent and escalate only true decisions.
+- [Framework Runtime Boundary](framework-runtime-boundary.md) — framework assets versus mutable run truth.
+- [Guidelines Index](README.md) — suite entrypoint and reading order.

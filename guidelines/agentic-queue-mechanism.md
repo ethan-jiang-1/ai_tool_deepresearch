@@ -4,15 +4,15 @@ suite: deep-research-guidelines
 title: Agentic Queue Mechanism
 status: effective
 created: 2026-06-17
-revised: 2026-07-12
+revised: 2026-07-25
 role: mechanism guidance for queue-driven phase execution
 scope: Agentic Queue (AGQ) — queue engine operations and loop-engineering architectural principles
 authority: guidance
 defers_to:
-  - AGENTS.md
-  - openspec/config.yaml
+  - guidelines/project-charter.md
 siblings:
   - guidelines/project-charter.md
+  - guidelines/evolution-abstraction-semantic-precision.md
   - guidelines/evolution-simple-reliable-control.md
   - guidelines/evolution-helper-oriented-agent.md
   - guidelines/framework-runtime-boundary.md
@@ -24,7 +24,7 @@ siblings:
 
 # Agentic Queue Mechanism
 
-> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-12 | 适用: 所有 queue-driven phase 执行的设计与实现
+> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-25 | 适用: 所有 queue-driven phase 执行的设计与实现
 
 Agentic Queue (AGQ) 是 Engine-side 的任务队列系统：Phase Agent 从队列领取任务、执行、完成、领下一个——在 phase 内部形成自主静默的执行循环。
 
@@ -313,7 +313,7 @@ These are deterministic checkpoint obligations where direct bundle facts exist. 
 - **`agentic-workflow-mechanism.md`** defines the outer loop (MD → execute → gate → chain → next). This guideline's inner loop nests inside that outer loop. The two are complementary, not competing.
 - **`agentic-subagent-mechanism.md`** defines work-unit-mediated Sub-agent execution. Queue demand becomes delegated work only when the Engine claims it into a work unit; fan-out happens through `claim --count N`, not through queue window shape.
 - **`evolution-simple-reliable-control.md`** governs the complexity posture of filling, stop visibility, recovery, repair, and queue diagnostics. This file defines Queue boundaries; it does not override that complexity brake.
-- **`openspec/specs/agentic-queue/spec.md`** defines accepted engine requirements (AGQ-001~006). This guideline describes architectural principles; the spec defines implementable behavior. When they conflict, the spec wins.
+- **The accepted queue contract** defines implementable engine requirements (AGQ-001~006). This guideline describes architectural principles; the accepted contract defines implementable behavior. When they conflict, the contract wins.
 General rule: when this guideline conflicts with an accepted spec or executable contract, the spec/contract wins. Fix the guideline.
 
 ---
@@ -322,11 +322,11 @@ General rule: when this guideline conflicts with an accepted spec or executable 
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
+- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — establish the semantic level before adding a queue state, view, or loop distinction.
 - [Simple Reliable Control](evolution-simple-reliable-control.md) — complexity brake for direct queue facts, explicit recovery, and minimal diagnostics.
+- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) — action responsibility after the semantic level and control shape are clear.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; this file's parent document.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — Tier 1 (Chain): the outer loop this inner loop nests inside.
 - [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — mechanism guidance for work-unit-mediated Sub-agent execution.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for framework assets versus runtime bundles.
 - [Command Experiments](command-experiments.md) — how to prove mechanisms with real runtime contexts.
-- [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
-- [Accepted specs](../openspec/specs/) — accepted capability requirements.

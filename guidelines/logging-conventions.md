@@ -4,15 +4,15 @@ suite: deep-research-guidelines
 title: Logging Conventions
 status: effective
 created: 2026-06-26
-revised: 2026-07-12
+revised: 2026-07-25
 role: system-level logging conventions for .mjs and .md diagnostic recording
 scope: DPT_FRAMEWORK/engine/logger.mjs, DPT_FRAMEWORK/engine/trace.mjs, DPT_FRAMEWORK/cli/log-event.mjs, DPT_FRAMEWORK/cli/inspect-bundle.mjs, DPT_FRAMEWORK/workflows/nodes/phases/*.md
 authority: guidance
 defers_to:
-  - AGENTS.md
-  - openspec/config.yaml
+  - guidelines/project-charter.md
 siblings:
   - guidelines/project-charter.md
+  - guidelines/evolution-abstraction-semantic-precision.md
   - guidelines/evolution-simple-reliable-control.md
   - guidelines/evolution-helper-oriented-agent.md
   - guidelines/framework-runtime-boundary.md
@@ -25,7 +25,7 @@ siblings:
 
 # Guideline: logging_conventions — Current Guidance
 
-> 状态: 生效 | 创建: 2026-06-26 | 修订: 2026-07-12 | 适用于: `DPT_FRAMEWORK/engine/`, `DPT_FRAMEWORK/cli/`, `DPT_FRAMEWORK/workflows/nodes/phases/`
+> 状态: 生效 | 创建: 2026-06-26 | 修订: 2026-07-25 | 适用于: `DPT_FRAMEWORK/engine/`, `DPT_FRAMEWORK/cli/`, `DPT_FRAMEWORK/workflows/nodes/phases/`
 
 ## Purpose
 
@@ -100,7 +100,7 @@ Agent 从 `## Log` 段复制命令，不需要知道文件路径或格式。
 
 Engine 模块的 log 输出遵循事故级诊断原则：**每个对外入口函数在成功/失败/拒绝/异常等关键出口记录原因，使事后能从 run.log 重建事故因果链。** 这不是全量 trace——trace 仍然记录所有内部事件作为判决权威，log 只记录事故现场需要的关键诊断点。
 
-具体哪些 engine 函数对外暴露、每个函数记录哪些事件，由 accepted spec（`openspec/specs/logger/spec.md`）给出权威清单。本条 guideline 的核心约束是：
+具体哪些 engine 函数对外暴露、每个函数记录哪些事件，由适用的 accepted logging contract 给出权威清单。本条 guideline 的核心约束是：
 
 - **闭集原则**：只有 engine 对外的 hot-path 函数双写 log + trace。内部辅助函数、纯计算、schema 校验等 trace 点 SHALL NOT 自动产生 log 行。
 - **事件粒度**：log 事件名应能区分"企图/成功/失败/拒绝/空/异常"——事故发生时单看 run.log 就能定位到具体函数的具体出口，不需要去 trace 交叉对照。
@@ -130,6 +130,8 @@ Engine 模块的 log 输出遵循事故级诊断原则：**每个对外入口函
 
 - [Guidelines Index](README.md)
 - [Project Charter](project-charter.md)
+- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — distinguish the reader-facing diagnostic question before adding a log or projection category.
 - [Simple Reliable Control](evolution-simple-reliable-control.md)
+- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) — preserve the boundary between a decision request and ordinary Agent execution.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — "Trace 是真相，Log 是解释"
 - [Command Experiments](command-experiments.md)

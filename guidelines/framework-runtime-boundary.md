@@ -4,15 +4,15 @@ suite: deep-research-guidelines
 title: Framework Runtime Boundary
 status: effective
 created: 2026-06-19
-revised: 2026-07-12
+revised: 2026-07-25
 role: directory and authority boundary for framework assets versus run bundle runtime state
 scope: DPT_FRAMEWORK/, dpt_rb_*/, dpt_disp_*/
 authority: guidance
 defers_to:
-  - AGENTS.md
-  - openspec/config.yaml
+  - guidelines/project-charter.md
 siblings:
   - guidelines/project-charter.md
+  - guidelines/evolution-abstraction-semantic-precision.md
   - guidelines/evolution-simple-reliable-control.md
   - guidelines/evolution-helper-oriented-agent.md
   - guidelines/logging-conventions.md
@@ -25,7 +25,7 @@ siblings:
 
 # Framework Runtime Boundary
 
-> 状态: 生效 | 创建: 2026-06-19 | 修订: 2026-07-12 | 用途: 固定 framework 只读资产与 run bundle 可变状态的边界
+> 状态: 生效 | 创建: 2026-06-19 | 修订: 2026-07-25 | 用途: 固定 framework 只读资产与 run bundle 可变状态的边界
 
 ---
 
@@ -358,7 +358,9 @@ Runtime continuity and logging details live in `guidelines/logging-conventions.m
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
+- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — establish the reader's bounded question before adding another directory, projection, or runtime distinction.
 - [Simple Reliable Control](evolution-simple-reliable-control.md) — direct authority paths and limits on projection/state complexity.
+- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) — action responsibility after the boundary and control shape are clear.
 - [Logging Conventions](logging-conventions.md) — runtime continuity, trace/log authority boundaries, and diagnostic log usage.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; defines the three-tier execution system.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — outer loop (Chain) that phase routing depends on.

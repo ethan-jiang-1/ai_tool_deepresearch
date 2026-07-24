@@ -4,16 +4,15 @@ suite: deep-research-guidelines
 title: "Evolution Direction: Simple Reliable Control"
 status: effective
 created: 2026-07-10
-revised: 2026-07-24
+revised: 2026-07-25
 role: charter-companion evolution direction for control-loop complexity and net simplification
 scope: openspec/changes/, DPT_FRAMEWORK/workflows/, DPT_FRAMEWORK/cli/, DPT_FRAMEWORK/engine/, tests/, experiments_playbook/
 authority: guidance
 defers_to:
-  - AGENTS.md
-  - openspec/config.yaml
   - guidelines/project-charter.md
 siblings:
   - guidelines/project-charter.md
+  - guidelines/evolution-abstraction-semantic-precision.md
   - guidelines/evolution-helper-oriented-agent.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/logging-conventions.md
@@ -26,7 +25,7 @@ siblings:
 
 # Evolution Direction: Simple Reliable Control
 
-> 状态: 生效 | 创建: 2026-07-10 | 修订: 2026-07-24 | 用途: 约束未来演进中的控制复杂度与净简化
+> 状态: 生效 | 创建: 2026-07-10 | 修订: 2026-07-25 | 用途: 约束未来演进中的控制复杂度与净简化
 
 ## Purpose
 
@@ -44,6 +43,8 @@ siblings:
 
 本文件是 `project-charter.md` 的宪章伴随原则：Project Charter 定义层级和权威边界，本文件定义这些边界内允许采用怎样的控制复杂度。它不是运行时 spec，但在 `guidelines/` 内部遇到“是否应该再加一层 check、状态、fallback、retry 或 recovery”时，应优先用本文件裁决设计姿态。
 
+它不先决定“要抽象什么”。在审查控制形状前，先读 [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md)，确认新的概念、状态或 view 已经让一个明确读者能就一个有界问题精确推理；本文件才问围绕这个语义层还需要多少确定性控制。
+
 ## Standing And Precedence
 
 本原则的地位必须同时满足两点：
@@ -54,9 +55,9 @@ siblings:
 冲突处理顺序：
 
 ```text
-AGENTS.md / openspec/config.yaml
-  -> accepted specs + executable contracts + runtime truth
+authoritative behavior contract + executable contract + runtime truth
   -> project-charter.md 的层级与权威边界
+  -> evolution-abstraction-semantic-precision.md 的语义层审视
   -> evolution-simple-reliable-control.md 的复杂度姿态
   -> 各 mechanism guideline 的领域说明
 ```
@@ -321,7 +322,7 @@ MD controller 不怕简单问题，怕的是长判断链和模糊反馈。Engine
 
 ## Simplicity Admission Test
 
-OpenSpec proposal/design/tasks 在进入 apply 前必须先用短句回答：
+OpenSpec proposal/design/tasks 在进入 apply 前，先留下 Abstraction as Semantic Precision 所要求的简短语义反思；随后必须用短句回答：
 
 1. 最短合法闭环和直接 Source of Record 是什么？
 2. 这个 change 删除、合并或避免了哪份复杂度；若只增加，为什么它是不可避免的确定性底线？
@@ -346,3 +347,10 @@ OpenSpec proposal/design/tasks 在进入 apply 前必须先用短句回答：
 - Engine 仍只控制确定性 checkpoint。
 
 本原则要求的是减少不必要的控制复杂度，不是把 authority 交回 Agent，也不是跳过真实验证。
+
+## Related Guidance
+
+- [Project Charter](project-charter.md) — layer and authority boundary.
+- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — establish the justified semantic level before choosing the control shape.
+- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) — allocate action responsibility after the semantic level and control shape are clear.
+- [Guidelines Index](README.md) — suite entrypoint and reading order.

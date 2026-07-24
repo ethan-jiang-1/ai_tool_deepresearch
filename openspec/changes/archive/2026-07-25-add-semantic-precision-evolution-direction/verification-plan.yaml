@@ -1,0 +1,30 @@
+schema_version: verification-routing/v1
+change: add-semantic-precision-evolution-direction
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The change adds no pure JavaScript helper, schema, or deterministic runtime contract.
+  integration:
+    status: selected
+    rationale: The canonical guidance paths, preserved EWD 340 source/context, explicitly separate project interpretation, complete Charter-root hierarchy, same-layer navigation, and OpenSpec routing are static cross-file contracts exercised by the existing Markdown integration test.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No lifecycle transition, Gate, state, receipt, trace, or deterministic workflow behavior changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: A playbook reading guidance cannot prove future Agent comprehension, model behavior, or compliance with a later mechanism design.
+claims:
+  - id: abstraction-semantic-precision-guidance-route
+    statement: The canonical Abstraction as Semantic Precision direction reproduces the complete original EWD 340 Argument Four paragraph containing the canonical sentence, links its primary source, immediately provides a clearly labelled project-context interpretation that distinguishes Dijkstra's intellectual-manageability argument from vague hiding, lossless compression, and Engine semantic judgment, and defers only to Project Charter. Project Charter carries no defers_to; every other effective guideline defers only to Charter and uses an applicable ordered semantic-precision, simple-control, helper-responsibility sibling route; constitutional navigation remains inside guidelines/; and Charter/Index/config route relevant future design through the current triad without requiring every mechanism guideline to repeat it in prose or claiming a permanently fixed number of directions.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/evolution-direction-governance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

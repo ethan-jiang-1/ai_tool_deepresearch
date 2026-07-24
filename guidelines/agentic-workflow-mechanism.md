@@ -4,15 +4,15 @@ suite: deep-research-guidelines
 title: Agentic Workflow Mechanism
 status: effective
 created: 2026-06-23
-revised: 2026-07-12
+revised: 2026-07-25
 role: normative mechanism description of the Agent-driven dynamic-loading workflow loop
 scope: all Agent-driven workflow execution across DPT_FRAMEWORK/, dpt_rb_*/, and dpt_disp_*/
 authority: guidance
 defers_to:
-  - AGENTS.md
-  - openspec/config.yaml
+  - guidelines/project-charter.md
 siblings:
   - guidelines/project-charter.md
+  - guidelines/evolution-abstraction-semantic-precision.md
   - guidelines/evolution-simple-reliable-control.md
   - guidelines/evolution-helper-oriented-agent.md
   - guidelines/framework-runtime-boundary.md
@@ -24,7 +24,7 @@ siblings:
 
 # Agentic Workflow Mechanism
 
-> 状态: 生效 | 创建: 2026-06-23 | 修订: 2026-07-12 | 适用: 所有 Agent 驱动的 workflow 执行
+> 状态: 生效 | 创建: 2026-06-23 | 修订: 2026-07-25 | 适用: 所有 Agent 驱动的 workflow 执行
 
 ---
 
@@ -171,7 +171,7 @@ Node 按需加载，不预加载。
 - MUST load nodes on demand, driven by `check.next` and the accepted handoff loader/check — never preload the whole graph.
 - MUST keep each phase boundary as a short explicit chain: direct gate facts -> one verdict -> one route lookup -> one target-node load.
 
-Concrete function and file names referenced above (e.g. the current `resolveNodeTransitionDetailed()` entry point and `assessNode()` node loader) are descriptive anchors for the current implementation, not part of this normative contract. They may be renamed, wrapped, or relocated by an accepted OpenSpec change; the principles above must hold either way. For the authoritative function contract, file naming, and backend dispatch rules, see `openspec/specs/transition-table/spec.md` and `openspec/specs/framework-engine/spec.md`.
+Concrete function and file names referenced above (e.g. the current `resolveNodeTransitionDetailed()` entry point and `assessNode()` node loader) are descriptive anchors for the current implementation, not part of this normative contract. They may be renamed, wrapped, or relocated by an accepted project change; the principles above must hold either way. The applicable accepted contract owns function, file-naming, and backend-dispatch details.
 
 ## MUST NOT
 
@@ -218,7 +218,9 @@ Every `fileRef` in `transitions.chain.json` must resolve to a readable Markdown 
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
+- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — establish the semantic level before adding a phase, route, or handoff distinction.
 - [Simple Reliable Control](evolution-simple-reliable-control.md) — short decision chains, root-cause short-circuiting, and quality-control complexity limits.
+- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) — action responsibility after the semantic level and control shape are clear.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; this file's parent document.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for framework assets versus runtime bundles.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Tier 2 (Queue) for within-phase task execution; defines the inner loop that nests inside this file's outer loop.
@@ -228,15 +230,11 @@ Every `fileRef` in `transitions.chain.json` must resolve to a readable Markdown 
 ## Relationship to Other Guidelines
 
 - **project-charter.md** 定义 Agent/Engine/Markdown 的 authority split。本文件描述这个 split 在 workflow 执行中的具体机制。
+- **evolution-abstraction-semantic-precision.md** 先审视新增 phase、route 或 reader-facing view 是否让一个明确读者对有界问题精确推理；本文件不把一个新名字本身当作足够理由。
 - **evolution-simple-reliable-control.md** 定义本机制的复杂度上限：一跳路由、直接 gate facts、最小根因反馈，不把 Chain 扩成隐藏 controller。
+- **evolution-helper-oriented-agent.md** 在语义层和控制形状已经明确后，定义用户、Agent 与 Engine 的行动责任边界。
 - **framework-runtime-boundary.md** 定义 framework assets vs runtime bundles 的目录边界。本文件假设这个边界已成立，在这个边界之上描述运行时循环。
 - **agentic-queue-mechanism.md** 定义 queue-driven phase execution 的机制边界：两层嵌套 loop、dispatch rule、结构约束和结果义务。queue engine 与 seed-topics/wave0/wave1/wave2 integrations 已进入 accepted runtime；未来 stop/context/recovery work 仍需 OpenSpec，并受 simple-reliable-control 的最小实现纪律约束。
 - **agentic-subagent-mechanism.md** 定义 work-unit-mediated Sub-agent execution 的机制指导：噪声隔离、bounded task、runtime receipt、submit provenance。本文件描述的 Chain 是 Sub-agent 执行的上层 phase 路由容器；Sub-agent work units 在单个 phase 内部被 claimed/submitted，不跨 phase。完整嵌套关系见 agentic-execution-model。
 
 ---
-
-## Related Specs
-
-- `openspec/specs/gate-state-machine/spec.md` — Gate checkpoint evaluation contract.
-- `openspec/specs/transition-table/spec.md` — Transition table file naming, structure, and routing contract.
-- `openspec/specs/framework-engine/spec.md` — Engine module canonical locations.

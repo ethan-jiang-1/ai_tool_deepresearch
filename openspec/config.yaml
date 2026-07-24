@@ -48,11 +48,14 @@ context: |
     该重构就重构，该清理就清理，让结构适应新要求同时兼顾老的东西。
     定期打扫卫生是好习惯，在设计和上下文里多琢磨。
 
-  Evolution Directions（proposal/design 必须 paired review）:
-    - guidelines/evolution-simple-reliable-control.md：优先 direct Source of Record 和最短合法闭环；
+  Evolution Directions（proposal/design 必须按当前顺序 review）:
+    - guidelines/evolution-abstraction-semantic-precision.md：在新增或实质改变具名 state、projection、status、concept、Module、command 或 reader-facing view 前，
+      留下一小段连贯的语义反思：它服务哪个明确读者的哪个有界问题、哪些区别必须保留、以及读者如何能在此层得出精确结论或明确 unknown，
+      而不必沿正常路径回到底层重建。不要把这变成固定表格或 Engine verdict。
+    - guidelines/evolution-simple-reliable-control.md：在语义层已说明后，优先 direct Source of Record 和最短合法闭环；
       新增 state/check/validator/fallback/retry/recovery 必须说明净简化（net simplification），以及删除、合并或避免了什么复杂度，
       不得仅以“更可靠”为由继续堆叠控制层。
-    - guidelines/evolution-helper-oriented-agent.md：用户负责新的语义、风险与权限决定；
+    - guidelines/evolution-helper-oriented-agent.md：在语义层与控制形状均已说明后，用户负责新的语义、风险与权限决定；
       Agent 负责已授权的机械执行与可逆修复；Engine 负责确定性 verdict。
       human-directed 只说明决定来源，不创造 permission、override 或缺失 runtime capability。
 
@@ -167,6 +170,7 @@ rules:
     - 引用原始需求时注明来源文件
     - 为新 capability 分配 3 字母缩写并提前登记到 openspec/governance/req-registry.yaml (先查历史，避免冲突，别随意发挥)
     - 说明 direct Source of Record、最短合法闭环与 net simplification impact，明确删除、合并或避免的 control complexity
+    - 对新增或实质改变的具名 state、projection、status、concept、Module、command 或 reader-facing view，先写简短的 semantic-precision reflection：明确读者/有界问题、必须保留的区别与正常推理停止点（或明确 unknown）
     - 说明 user decision / Agent execution / Engine verdict 的责任边界，不得用 human-directed 创造 permission 或 capability
     - |
       修改 `DPT_FRAMEWORK/` 行为的 change 必须在 proposal 中声明是否需要 version bump；
@@ -176,7 +180,7 @@ rules:
     - 状态机用显式转换表 (Map/object)，不允许隐藏在 prose 里
     - 跨文件引用必须明确 Source of Record
     - "只用批准的依赖: zod, yaml。其余一律 Node.js 标准库"
-    - architecture、recovery、mutation 或 Agent/user responsibility 变更必须 paired-read 两条 Evolution Directions，并在 apply target manifest 标出新增与删除的 control surface
+    - architecture、recovery、mutation、Agent/user responsibility 或具名概念/状态/view 变更必须按顺序阅读三条 Evolution Directions：semantic precision → simple reliable control → helper-oriented responsibility；并在 apply target manifest 标出新增与删除的 control surface
   tasks:
     - 每个 task 有明确 done condition，可独立验证
     - 按依赖排序，优先搭骨架再填功能
