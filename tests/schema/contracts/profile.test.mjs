@@ -164,4 +164,66 @@ describe('ProfileSchema', () => {
     });
     assert.equal(result.success, false);
   });
+
+  it('accepts current bounded candidate metadata without changing legacy readability', () => {
+    const noCandidate = ProfileSchema.safeParse({
+      ...valid,
+      research_access: {
+        status: 'unavailable',
+        probed_at: '2026-07-10T00:00:00.000Z',
+        fetch_outcome: 'not_attempted',
+        reason: 'Search returned no eligible HTTP(S) candidate',
+        eligible_candidate_count: 0,
+      },
+    });
+    const attempted = ProfileSchema.safeParse({
+      ...valid,
+      research_access: {
+        status: 'unavailable',
+        probed_at: '2026-07-10T00:00:00.000Z',
+        fetch_outcome: 'failed',
+        reason: 'Native fetch did not return requested page content',
+        result_url: 'https://example.com/',
+        eligible_candidate_count: 2,
+        final_candidate_ordinal: 2,
+      },
+    });
+    const available = ProfileSchema.safeParse({
+      ...valid,
+      research_access: {
+        status: 'available',
+        probed_at: '2026-07-10T00:00:00.000Z',
+        result_url: 'https://example.com/',
+        fetch_outcome: 'success',
+        eligible_candidate_count: 1,
+        final_candidate_ordinal: 1,
+      },
+    });
+    assert.equal(noCandidate.success, true);
+    assert.equal(attempted.success, true);
+    assert.equal(available.success, true);
+  });
+
+  it('rejects contradictory candidate metadata', () => {
+    const baseUnavailable = {
+      status: 'unavailable',
+      probed_at: '2026-07-10T00:00:00.000Z',
+      fetch_outcome: 'not_attempted',
+      reason: 'No legal fetch surface',
+    };
+    const invalid = [
+      { ...baseUnavailable, eligible_candidate_count: 0, final_candidate_ordinal: 1 },
+      { ...baseUnavailable, eligible_candidate_count: 1 },
+      { ...baseUnavailable, eligible_candidate_count: 4, final_candidate_ordinal: 1, result_url: 'https://example.com/' },
+      { ...baseUnavailable, eligible_candidate_count: 2, final_candidate_ordinal: 3, result_url: 'https://example.com/' },
+      { ...baseUnavailable, eligible_candidate_count: 1, final_candidate_ordinal: 1 },
+      {
+        status: 'available', probed_at: '2026-07-10T00:00:00.000Z', result_url: 'https://example.com/', fetch_outcome: 'success', eligible_candidate_count: 0,
+      },
+      { status: 'unprobed', eligible_candidate_count: 1, final_candidate_ordinal: 1 },
+    ];
+    for (const research_access of invalid) {
+      assert.equal(ProfileSchema.safeParse({ ...valid, research_access }).success, false, JSON.stringify(research_access));
+    }
+  });
 });

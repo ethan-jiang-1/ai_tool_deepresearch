@@ -111,12 +111,13 @@ function readBundleNameFromStatus(bundleDir) {
   } catch { return null; }
 }
 
-function validateBundleName(queue, bundleDir, { persist = true } = {}) {
+function validateBundleName(queue, bundleDir, { persist = true, normalize = true } = {}) {
   const statusBundle = readBundleNameFromStatus(bundleDir);
   if (!statusBundle) return; // No status file to validate against — skip
 
   // Legacy queue: inject bundle_name on first operation
   if (!queue.bundle_name) {
+    if (!normalize) return;
     queue.bundle_name = statusBundle;
     if (persist) saveQueue(bundleDir, queue);
     return;
@@ -646,10 +647,13 @@ try {
     emit(result);
     process.exit(result.item ? 0 : 1);
   } else if (command === 'complete') {
-    validateBundleName(queue, bundleDir);
+    validateBundleName(queue, bundleDir, { persist: false, normalize: false });
     if (!values.result) throw new Error('--result is required');
     const result = complete(queue, readJson(values.result), bundleDir);
-    saveQueue(bundleDir, result.queue);
+    if (result.persist_queue !== false) {
+      validateBundleName(result.queue, bundleDir, { persist: false });
+      saveQueue(bundleDir, result.queue);
+    }
     emit(result);
     process.exit(result.feedback.passed ? 0 : 1);
   } else if (command === 'fail') {

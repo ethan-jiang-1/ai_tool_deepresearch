@@ -27,6 +27,11 @@ import {
 } from './queue-manager-core.mjs';
 import { firstOpenPosition, promote, refill, preempt, sortPool } from './queue-manager-window.mjs';
 import { render } from './queue-manager-render.mjs';
+import { readBundlePlan } from './helpers/gate-helpers-readers.mjs';
+import {
+  admitSeedTopicMaterializeDeclaration,
+  evaluateSeedTopicAuthoring,
+} from './helpers/seed-topic-authoring-evaluator.mjs';
 
 // ============================================================
 // Internal: receipt checking
@@ -368,6 +373,57 @@ export function complete(queue, result, bundleDir = process.cwd()) {
     }
   } else {
     traceEntry('receipt_checked', { source: 'agq-complete', queue_item_id: current.queue_item_id, passed: true, receipt: null, note: 'null receipt — non-delegated no-op' });
+  }
+  if (current.producer_rule === 'seed_topic_materialize') {
+    const plan = readBundlePlan(bundleDir);
+    const declaration = admitSeedTopicMaterializeDeclaration({
+      item: current,
+      topicRegistry: plan?.topic_registry,
+    });
+    if (!declaration.passed) {
+      const feedback = {
+        passed: false,
+        check: false,
+        inspect: [declaration.missing_fact],
+        advice: 'Repair the queue-producer declaration through its owner, then rerun the same completion checkpoint.',
+      };
+      traceEntry('check', { source: 'agq-complete', step: 'seed_topic_declaration', passed: false, queue_item_id: current.queue_item_id });
+      logEvent('warn', 'queue_complete_seed_declaration_fail', { kind: 'seed_topic_declaration', queue_item_id: current.queue_item_id });
+      return {
+        queue: validateQueue(q),
+        feedback,
+        persist_queue: false,
+        repair_kind: declaration.repair_kind,
+        missing_fact: declaration.missing_fact,
+        write_to: declaration.write_to,
+        rerun: `node DPT_FRAMEWORK/cli/operate-queue.mjs complete ${path.resolve(bundleDir)} --result <result.json>`,
+      };
+    }
+    const raw = readFileSync(path.join(bundleDir, declaration.relative_path), 'utf8');
+    const authoring = evaluateSeedTopicAuthoring({
+      raw,
+      relativePath: declaration.relative_path,
+      topic: declaration.topic,
+    });
+    if (!authoring.passed) {
+      const feedback = {
+        passed: false,
+        check: false,
+        inspect: [authoring.missing_fact],
+        advice: 'Repair the declared seed file, then rerun the same completion checkpoint.',
+      };
+      traceEntry('check', { source: 'agq-complete', step: 'seed_topic_authoring', passed: false, queue_item_id: current.queue_item_id, reason_code: authoring.reason_code });
+      logEvent('warn', 'queue_complete_seed_authoring_fail', { kind: 'seed_topic_authoring', queue_item_id: current.queue_item_id, reason_code: authoring.reason_code });
+      return {
+        queue: validateQueue(q),
+        feedback,
+        persist_queue: false,
+        repair_kind: 'agent_action',
+        missing_fact: authoring.missing_fact,
+        write_to: authoring.write_to,
+        rerun: `node DPT_FRAMEWORK/cli/operate-queue.mjs complete ${path.resolve(bundleDir)} --result <result.json>`,
+      };
+    }
   }
   current.status = 'done';
   current.updated_at = now();

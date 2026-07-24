@@ -15,12 +15,24 @@ describe('phase-hitl1 research-access contract', () => {
     assert.equal(frontmatter.execution_contract?.search_policy, 'capability_probe_only');
   });
 
-  it('keeps the probe short and ordered after style apply', () => {
+  it('places status synchronization before canonical apply and the probe after style apply', () => {
+    const decisionSection = markdown.slice(
+      markdown.indexOf('### 3b. HITL1'),
+      markdown.indexOf('### 3b.1 Optional User Research Controls Snapshot'),
+    );
+    const statusIndex = decisionSection.indexOf('advance-status.mjs');
+    const applyIndex = decisionSection.indexOf('operate-topic-state apply');
     const styleIndex = markdown.indexOf('### 3c. Research Style Parameters');
     const probeIndex = markdown.indexOf('### 3d. Research Access Probe');
+    assert.ok(statusIndex >= 0 && applyIndex > statusIndex);
     assert.ok(styleIndex >= 0 && probeIndex > styleIndex);
+  });
+
+  it('keeps one bounded three-candidate serial probe', () => {
     assert.match(markdown, /至多一次 neutral capability-only search/);
-    assert.match(markdown, /第一个实际 HTTP\(S\).*不合格.*不得.*第二/);
+    assert.match(markdown, /returned order.*最多前三个.*eligible.*HTTP\(S\)|返回顺序.*最多前三个.*实际 HTTP\(S\)/i);
+    assert.match(markdown, /candidate 2.*只.*candidate 1.*不能返回|第二.*候选.*只有.*第一.*不能返回/i);
+    assert.match(markdown, /candidate 3.*只.*candidate 2.*不能返回|第三.*候选.*只有.*第二.*不能返回/i);
     assert.match(markdown, /至多一次 native fetch/);
     assert.match(markdown, /native.*真实 page content.*不得.*curl/);
   });
@@ -54,6 +66,10 @@ describe('phase-hitl1 research-access contract', () => {
       assert.ok(markdown.includes(token), `missing HITL1 payload token: ${token}`);
     }
     assert.match(markdown, /search_surface.*fetch_surface.*audit label/);
+    assert.match(markdown, /eligible_candidate_count/);
+    assert.match(markdown, /final_candidate_ordinal/);
+    assert.match(markdown, /not_attempted.*no legal|no legal.*not_attempted/i);
+    assert.match(markdown, /native.*(?:failed|blocked).*fallback|fallback.*native.*(?:failed|blocked)/i);
   });
 
   it('keeps unavailable repair on the same probe and gate', () => {

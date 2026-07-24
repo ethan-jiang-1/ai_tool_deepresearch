@@ -9,6 +9,11 @@ const HttpUrl = z.string().url().refine((value) => {
   return protocol === 'http:' || protocol === 'https:';
 }, 'Expected an HTTP(S) URL');
 
+const CandidateMetadata = {
+  eligible_candidate_count: z.number().int().min(0).max(3).optional(),
+  final_candidate_ordinal: z.number().int().min(1).max(3).optional(),
+};
+
 const ResearchAccessSchema = z.discriminatedUnion('status', [
   z.object({
     status: z.literal('unprobed'),
@@ -20,6 +25,7 @@ const ResearchAccessSchema = z.discriminatedUnion('status', [
     fetch_outcome: z.literal('success'),
     search_surface: TrimmedNonEmptyString.optional(),
     fetch_surface: TrimmedNonEmptyString.optional(),
+    ...CandidateMetadata,
   }).strict(),
   z.object({
     status: z.literal('unavailable'),
@@ -29,8 +35,29 @@ const ResearchAccessSchema = z.discriminatedUnion('status', [
     result_url: HttpUrl.optional(),
     search_surface: TrimmedNonEmptyString.optional(),
     fetch_surface: TrimmedNonEmptyString.optional(),
+    ...CandidateMetadata,
   }).strict(),
-]);
+]).superRefine((value, ctx) => {
+  if (value.status === 'unprobed') return;
+  const hasCount = value.eligible_candidate_count !== undefined;
+  const hasOrdinal = value.final_candidate_ordinal !== undefined;
+  if (!hasCount && !hasOrdinal) return;
+  if (!hasCount || (!hasOrdinal && value.eligible_candidate_count !== 0)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Candidate metadata requires an ordinal for a positive count.' });
+    return;
+  }
+  if (value.eligible_candidate_count === 0) {
+    if (hasOrdinal) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Zero candidate count cannot carry an ordinal.' });
+    if (value.status === 'available') ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Available observation requires a positive candidate count.' });
+    return;
+  }
+  if (value.final_candidate_ordinal > value.eligible_candidate_count) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Candidate ordinal cannot exceed candidate count.' });
+  }
+  if (!value.result_url) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Positive candidate count requires the final result URL.' });
+  }
+});
 
 // @impl RES-002: Research style params schema (13 fields)
 export const ResearchStyleParamsSchema = z.object({

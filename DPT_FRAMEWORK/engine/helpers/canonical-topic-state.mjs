@@ -16,6 +16,7 @@ import { acceptedTopicSlugs, buildTopicLayoutTarget, evaluateTopicLayouts, lossl
 import { makeContractFinding } from './wave-contract-findings.mjs';
 import { evaluateRerunDirection } from './rerun-direction.mjs';
 import { locateCanonicalSections } from './plan-hostfile-sections.mjs';
+import { evaluateSeedTopicAuthoring } from './seed-topic-authoring-evaluator.mjs';
 
 export const TOPIC_STATE_SCHEMA_VERSION = '1.0.0';
 export const TOPIC_STATE_ROOT = '_diagnostics/topic-state';
@@ -397,13 +398,25 @@ function safeRemoveBlocker(bundle, plan, removedTopicUids) {
 export function evaluateCanonicalSeedBindings(bundle, plan) {
   const rows = [];
   for (const topic of plan.topic_registry) {
-    const seed = readSeed(bundle, topic.slug);
-    const matches = seed.exists && seed.frontmatter?.topic_uid === topic.topic_uid && seed.frontmatter?.slug === topic.slug
-      && seed.frontmatter?.id === topic.id && seed.frontmatter?.title === topic.title
-      && JSON.stringify(seed.frontmatter?.must_answer) === JSON.stringify(topic.must_answer)
-      && seed.frontmatter?.scope_role === topic.scope_role
-      && JSON.stringify(seed.frontmatter?.depends_on_topic_uids || []) === JSON.stringify(topic.depends_on_topic_uids);
-    rows.push({ topic_uid: topic.topic_uid, slug: topic.slug, ok: matches, reason_code: matches ? 'bound' : (seed.exists ? 'seed_mismatch' : 'seed_missing'), fact_refs: [`rb_plan.md#/topic_registry/${topic.topic_uid}`, `seed_topics/${topic.slug}.md`] });
+    const relativePath = `seed_topics/${topic.slug}.md`;
+    const seedPath = path.join(bundle, relativePath);
+    if (!existsSync(seedPath)) {
+      rows.push({ topic_uid: topic.topic_uid, slug: topic.slug, ok: false, reason_code: 'seed_missing', fact_refs: [`rb_plan.md#/topic_registry/${topic.topic_uid}`, relativePath] });
+      continue;
+    }
+    const evaluation = evaluateSeedTopicAuthoring({
+      raw: readFileSync(seedPath, 'utf8'),
+      relativePath,
+      topic,
+    });
+    rows.push({
+      topic_uid: topic.topic_uid,
+      slug: topic.slug,
+      ok: evaluation.passed,
+      reason_code: evaluation.passed ? 'bound' : 'seed_mismatch',
+      authoring_reason_code: evaluation.passed ? null : evaluation.reason_code,
+      fact_refs: [`rb_plan.md#/topic_registry/${topic.topic_uid}`, relativePath],
+    });
   }
   return rows;
 }

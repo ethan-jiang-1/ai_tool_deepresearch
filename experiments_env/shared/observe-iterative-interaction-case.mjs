@@ -312,18 +312,27 @@ function record115(events) {
   const searchResult = tools.resultFor(search);
   if (!searchResult) notRun('missing public WebSearch tool_result');
   const links = searchResult.value.is_error ? [] : structuredSearchLinks(searchResult.value.content);
-  const firstSearchUrl = links[0]?.url ?? null;
-  const firstUrl = eligibleProbeUrl(firstSearchUrl) ? firstSearchUrl : null;
-
-  const native = nativeUses[0];
-  const nativeResult = native ? tools.resultFor(native) : null;
-  if (native && !nativeResult) notRun('missing public WebFetch tool_result');
-  const curl = curlUses[0];
-  const curlResult = curl ? tools.resultFor(curl) : null;
-  if (curl && !curlResult) notRun('missing public curl Bash tool_result');
+  const candidates = links.map((link) => link.url).filter(eligibleProbeUrl).slice(0, 3);
+  const nativeResults = nativeUses.map((use) => tools.resultFor(use));
+  const curlResults = curlUses.map((use) => tools.resultFor(use));
+  if (nativeResults.some((result) => !result)) notRun('missing public WebFetch tool_result');
+  if (curlResults.some((result) => !result)) notRun('missing public curl Bash tool_result');
 
   const profile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'));
   const access = profile.research_access;
+  if (!access || typeof access !== 'object') notRun('missing direct rb_profile.yaml research_access observation');
+  const count = access.eligible_candidate_count;
+  const ordinal = access.final_candidate_ordinal;
+  if (!Number.isInteger(count) || count < 0 || count > 3) {
+    notRun('research_access is missing current eligible_candidate_count metadata');
+  }
+  if (count === 0) {
+    if (ordinal !== undefined || access.result_url !== undefined || access.fetch_outcome !== 'not_attempted') {
+      notRun('no-candidate research_access metadata contradicts the current profile contract');
+    }
+  } else if (!Number.isInteger(ordinal) || ordinal !== count || ordinal > candidates.length || access.result_url !== candidates[ordinal - 1]) {
+    notRun('research_access final candidate metadata contradicts the public returned candidate order');
+  }
   const trace = traceEvents();
   const attempt = trace.filter((event) => event.event === 'gate_attempt' && event.gate === 'hitl1-recorded').at(-1);
   const setupLoad = trace.some((event) => event.event === 'load_complete' && event.entry === 'phases/phase-setup.md' && event.handoff_source_gate === 'hitl1-recorded');
@@ -334,47 +343,65 @@ function record115(events) {
     .map((file) => relative(bundle, file));
 
   const oneSearch = searchUses.length === 1;
-  const oneNative = nativeUses.length === 1;
-  const searchBeforeNative = oneNative && search.index < native.index && searchResult.index < native.index;
-  const nativeUrl = native?.value.input.url;
-  const nativeSameUrl = firstUrl && nativeUrl === firstUrl;
-  const nativeSucceeded = Boolean(nativeResult && !nativeResult.value.is_error && nativeResult.value.content.trim());
-  const nativeFailed = Boolean(nativeResult && (nativeResult.value.is_error || !nativeResult.value.content.trim()));
-  const curlCommandUrl = curl ? exactCurlUrl(curl.value.input.command) : null;
-  const curlStructure = curlUses.length === 1 && nativeFailed && nativeSameUrl && searchBeforeNative
-    && nativeResult.index < curl.index && curlCommandUrl === firstUrl;
-  const curlSucceeded = Boolean(curlResult && !curlResult.value.is_error && curlResult.value.content.trim());
-  const curlFailed = Boolean(curlResult && (curlResult.value.is_error || !curlResult.value.content.trim()));
+  const hasRealContent = (result) => Boolean(result && !result.value.is_error && result.value.content.trim());
+  const nativeToCurl = new Map();
+  let sequenceValid = oneSearch && nativeUses.length <= count && curlUses.length <= nativeUses.length;
+  if (count === 0) sequenceValid &&= nativeUses.length === 0 && curlUses.length === 0;
+  if (count > 0) sequenceValid &&= nativeUses.length === count || nativeUses.length === count - 1;
 
-  const availableNative = access?.status === 'available' && access.fetch_outcome === 'success' && access.result_url === firstUrl
-    && typeof access.fetch_surface === 'string' && access.fetch_surface !== 'curl'
-    && oneSearch && oneNative && searchBeforeNative && nativeSameUrl && nativeSucceeded && curlUses.length === 0
+  for (const [index, native] of nativeUses.entries()) {
+    const nativeResult = nativeResults[index];
+    const nextNative = nativeUses[index + 1];
+    const curlsForNative = curlUses.filter((curl) => curl.index > nativeResult.index && (!nextNative || curl.index < nextNative.index));
+    if (native.index <= searchResult.index || native.value.input.url !== candidates[index] || curlsForNative.length > 1) sequenceValid = false;
+    const curl = curlsForNative[0];
+    if (curl) {
+      const curlResult = tools.resultFor(curl);
+      const curlUrl = exactCurlUrl(curl.value.input.command);
+      if (!nativeResult || !curlResult || !nativeResult.value.is_error && nativeResult.value.content.trim()
+        || curlUrl !== candidates[index]) sequenceValid = false;
+      nativeToCurl.set(index, { use: curl, result: curlResult });
+    }
+    if (hasRealContent(nativeResult) && (index !== nativeUses.length - 1 || curl || index !== count - 1)) sequenceValid = false;
+    if (curl && hasRealContent(tools.resultFor(curl)) && (index !== nativeUses.length - 1 || index !== count - 1)) sequenceValid = false;
+  }
+  if (curlUses.some((curl) => ![...nativeToCurl.values()].some((value) => value.use.id === curl.id))) sequenceValid = false;
+
+  const noCandidate = count === 0;
+  const finalNativeIndex = count - 1;
+  const finalNative = nativeUses[finalNativeIndex];
+  const finalNativeResult = nativeResults[finalNativeIndex];
+  const finalCurl = nativeToCurl.get(finalNativeIndex);
+  const availableNative = !noCandidate && sequenceValid && nativeUses.length === count && hasRealContent(finalNativeResult)
+    && access.status === 'available' && access.fetch_outcome === 'success' && typeof access.fetch_surface === 'string' && access.fetch_surface !== 'curl'
     && attempt?.passed === true && setupLoad;
-  const availableCurl = access?.status === 'available' && access.fetch_outcome === 'success' && access.result_url === firstUrl
-    && access.fetch_surface === 'curl' && oneSearch && oneNative && curlStructure && curlSucceeded
-    && attempt?.passed === true && setupLoad;
-  const unavailableSearch = access?.status === 'unavailable' && access.reason && access.fetch_outcome === 'not_attempted'
-    && access.result_url === undefined && oneSearch && (searchResult.value.is_error || !firstUrl)
-    && nativeUses.length === 0 && curlUses.length === 0
+  const availableCurl = !noCandidate && sequenceValid && nativeUses.length === count && !hasRealContent(finalNativeResult)
+    && finalCurl && hasRealContent(finalCurl.result) && access.status === 'available' && access.fetch_outcome === 'success'
+    && access.fetch_surface === 'curl' && attempt?.passed === true && setupLoad;
+  const unavailableSearch = noCandidate && sequenceValid && access.status === 'unavailable' && access.reason
     && attempt?.passed === false && !setupLoad;
-  const unavailableCurl = access?.status === 'unavailable' && access.reason && access.fetch_outcome !== 'success'
-    && access.result_url === firstUrl && oneSearch && oneNative && curlStructure && curlFailed
+  const unavailableNoFetch = !noCandidate && sequenceValid && nativeUses.length === count - 1
+    && access.status === 'unavailable' && access.reason && access.fetch_outcome === 'not_attempted'
     && attempt?.passed === false && !setupLoad;
-  const unavailableNoCurl = access?.status === 'unavailable' && access.reason && access.fetch_outcome !== 'success'
-    && access.result_url === firstUrl && oneSearch && oneNative && searchBeforeNative && nativeSameUrl && nativeFailed && curlUses.length === 0
+  const unavailableCurl = !noCandidate && sequenceValid && nativeUses.length === count && !hasRealContent(finalNativeResult)
+    && finalCurl && !hasRealContent(finalCurl.result) && access.status === 'unavailable' && access.reason && access.fetch_outcome !== 'success'
+    && attempt?.passed === false && !setupLoad;
+  const unavailableNoCurl = !noCandidate && sequenceValid && nativeUses.length === count && !hasRealContent(finalNativeResult)
+    && !finalCurl && access.status === 'unavailable' && access.reason && access.fetch_outcome !== 'success'
     && attempt?.passed === false && !setupLoad;
 
   recordCheck(tracePath, {
     gate: 'hitl1-research-access-probe',
-    passed: Boolean(availableNative || availableCurl || unavailableSearch || unavailableCurl || unavailableNoCurl),
-    detail: JSON.stringify({ availableNative, availableCurl, unavailableSearch, unavailableCurl, unavailableNoCurl }),
+    passed: Boolean(availableNative || availableCurl || unavailableSearch || unavailableNoFetch || unavailableCurl || unavailableNoCurl),
+    detail: JSON.stringify({ availableNative, availableCurl, unavailableSearch, unavailableNoFetch, unavailableCurl, unavailableNoCurl }),
   });
   recordCheck(tracePath, { gate: 'probe-evidence-boundary', passed: leaks.length === 0, detail: JSON.stringify(leaks) });
 
   if (curlUses.length > 0) {
-    if (!curlStructure) {
+    const fallbackStructure = sequenceValid && curlUses.length === 1 && nativeToCurl.size === 1;
+    if (!fallbackStructure) {
       recordCheck(tracePath, { gate: 'hitl1-native-to-curl-fallback', passed: false, detail: 'curl order, count, grammar, or same-URL contract mismatch' });
-    } else if (curlSucceeded) {
+    } else if (hasRealContent(curlResults[0])) {
       recordCheck(tracePath, { gate: 'hitl1-native-to-curl-fallback', passed: availableCurl && leaks.length === 0, detail: JSON.stringify({ availableCurl, leaks }) });
     }
   }

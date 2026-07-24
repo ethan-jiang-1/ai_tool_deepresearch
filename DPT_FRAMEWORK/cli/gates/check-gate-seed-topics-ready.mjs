@@ -15,7 +15,6 @@ import {
   writeGateAttempt,
   checkPhaseHandoffPreflight,
   readBundlePlan,
-  parseMdFrontmatter,
 } from '../../engine/helpers/gate-helpers.mjs';
 import {
   buildContractEvaluation,
@@ -23,6 +22,7 @@ import {
   makeDefinitionRuleFinding,
 } from '../../engine/helpers/wave-contract-findings.mjs';
 import { inspectCanonicalTopicState } from '../../engine/helpers/canonical-topic-state.mjs';
+import { evaluateSeedTopicAuthoring } from '../../engine/helpers/seed-topic-authoring-evaluator.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
@@ -109,26 +109,7 @@ function getDiskSeeds() {
       const filePath = join(directory, file);
       const relativePath = join('seed_topics', file);
       const filenameStem = basename(file, '.md');
-      try {
-        const frontmatter = parseMdFrontmatter(readFileSync(filePath, 'utf-8'));
-        return {
-          filenameStem,
-          relativePath,
-          absolutePath: filePath,
-          slug: frontmatter.slug || null,
-          title: frontmatter.title || null,
-          parseError: null,
-        };
-      } catch (error) {
-        return {
-          filenameStem,
-          relativePath,
-          absolutePath: filePath,
-          slug: null,
-          title: null,
-          parseError: error.message || String(error),
-        };
-      }
+      return { filenameStem, relativePath, absolutePath: filePath, raw: readFileSync(filePath, 'utf-8') };
     });
   return diskSeedsCache;
 }
@@ -136,6 +117,18 @@ function getDiskSeeds() {
 function registrySlugs() {
   const plan = getPlan();
   return Array.isArray(plan?.topic_registry) ? plan.topic_registry.map((topic) => topic.slug) : [];
+}
+
+function canonicalTopicForSeed(seed) {
+  const plan = getPlan();
+  return Array.isArray(plan?.topic_registry)
+    ? plan.topic_registry.find((topic) => topic.slug === seed.filenameStem) || null
+    : null;
+}
+
+function evaluateCanonicalSeed(seed) {
+  const topic = canonicalTopicForSeed(seed);
+  return topic ? evaluateSeedTopicAuthoring({ raw: seed.raw, relativePath: seed.relativePath, topic }) : null;
 }
 
 function slugSetFinding(rule, failure) {
@@ -231,15 +224,16 @@ for (const rule of definition.rules) {
       const diskSeeds = getDiskSeeds();
       if (rule.scope === 'per_file') {
         for (const seed of diskSeeds) {
-          if (seed.slug === seed.filenameStem) continue;
+          const authoring = evaluateCanonicalSeed(seed);
+          if (!authoring || authoring.passed || authoring.reason_code !== 'canonical_binding_mismatch' || authoring.write_to !== `${seed.relativePath}#/slug`) continue;
           findings.push(slugSetFinding(rule, {
             id: `${rule.id}:${seed.filenameStem}`,
             surface: `${seed.relativePath}; ${seed.relativePath}#/slug`,
             expected: { filename_stem: seed.filenameStem, frontmatter_slug: seed.filenameStem },
-            observed: { filename_stem: seed.filenameStem, frontmatter_slug: seed.slug, parse_error: seed.parseError },
-            missingFact: `${seed.relativePath} frontmatter slug must equal filename stem '${seed.filenameStem}', but observed '${seed.slug}'.`,
+            observed: authoring.observed,
+            missingFact: authoring.missing_fact,
             writeTo: `${seed.relativePath}#/slug`,
-            detail: `${seed.relativePath}: frontmatter slug="${seed.slug}" != filename stem="${seed.filenameStem}"`,
+            detail: `${seed.relativePath}: canonical slug binding failed`,
             maskedByRuleId: canonicalParentRuleId || seedDirectoryRoot,
           }));
         }
@@ -282,16 +276,17 @@ for (const rule of definition.rules) {
         continue;
       }
       for (const seed of diskSeeds) {
-        if (typeof seed.title === 'string' && seed.title.trim()) continue;
+        const authoring = evaluateCanonicalSeed(seed);
+        if (!authoring || authoring.passed || authoring.reason_code !== 'canonical_binding_mismatch' || authoring.write_to !== `${seed.relativePath}#/title`) continue;
         findings.push(makeDefinitionRuleFinding({
           rule,
           bundlePath,
           slug: seed.filenameStem,
           surface: `seed_topics/<slug>.md#/title`,
           expected: 'Non-empty seed title.',
-          observed: seed.title ?? null,
-          missingFact: `${seed.relativePath} has an empty or missing frontmatter title.`,
-          detail: `[${rule.id}] ${seed.relativePath} has an empty or missing title`,
+          observed: authoring.observed,
+          missingFact: authoring.missing_fact,
+          detail: `[${rule.id}] ${seed.relativePath} canonical title binding failed`,
           maskedByRuleId: canonicalParentRuleId || seedDirectoryRoot,
         }));
       }

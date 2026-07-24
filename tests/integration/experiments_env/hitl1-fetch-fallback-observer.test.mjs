@@ -13,7 +13,7 @@ const PLAYBOOK = 'experiments_playbook/exp_wff_pre-research-repair/case-115-heav
 const RUNNER = 'experiments_env/shared/run-iterative-interaction-subject.mjs';
 const MANIFEST = 'experiments_playbook/PLAYBOOK_MANIFEST.md';
 const RESULT_URL = 'https://example.com/research-access';
-const OTHER_URL = 'https://example.net/not-the-first-result';
+const OTHER_URL = 'https://example.net/second-candidate';
 const CURL_COMMAND = `curl --fail --silent --show-error --location --max-time 15 --max-redirs 5 --proto '=http,https' --proto-redir '=http,https' --globoff -- '${RESULT_URL}'`;
 
 function message(role, content) {
@@ -28,10 +28,12 @@ function toolResult(id, content, isError = false) {
   return message('user', { type: 'tool_result', tool_use_id: id, content, is_error: isError });
 }
 
-function searchResult() {
+function searchResult(links = [
+  { title: 'Example', url: RESULT_URL },
+  { title: 'Other', url: OTHER_URL },
+]) {
   return `Web search results for query: "neutral capability probe"\n\nLinks: ${JSON.stringify([
-    { title: 'Example', url: RESULT_URL },
-    { title: 'Other', url: OTHER_URL },
+    ...links,
   ])}`;
 }
 
@@ -50,26 +52,30 @@ function transcript({ nativeSuccess = false, curlCommand = CURL_COMMAND, curlCon
   return rows;
 }
 
-function availableAccess(fetchSurface = 'curl') {
+function availableAccess(fetchSurface = 'curl', { resultUrl = RESULT_URL, count = 1 } = {}) {
   return {
     status: 'available',
     probed_at: '2026-07-21T00:00:00.000Z',
-    result_url: RESULT_URL,
+    result_url: resultUrl,
     fetch_outcome: 'success',
     search_surface: 'WebSearch',
     fetch_surface: fetchSurface,
+    eligible_candidate_count: count,
+    final_candidate_ordinal: count,
   };
 }
 
-function unavailableAccess() {
+function unavailableAccess({ resultUrl = RESULT_URL, count = 1 } = {}) {
   return {
     status: 'unavailable',
     probed_at: '2026-07-21T00:00:00.000Z',
-    result_url: RESULT_URL,
+    result_url: resultUrl,
     fetch_outcome: 'failed',
     reason: 'WebFetch was blocked and the exact curl fallback failed.',
     search_surface: 'WebSearch',
     fetch_surface: 'curl',
+    eligible_candidate_count: count,
+    final_candidate_ordinal: count,
   };
 }
 
@@ -80,6 +86,7 @@ function unavailableSearchAccess(reason = 'Search returned no eligible HTTP(S) r
     fetch_outcome: 'not_attempted',
     reason,
     search_surface: 'WebSearch',
+    eligible_candidate_count: 0,
   };
 }
 
@@ -129,6 +136,8 @@ describe('case-115 HITL1 fallback observer', () => {
     assert.match(playbook, /observe-iterative-interaction-case\.mjs 115 hash/);
     assert.match(playbook, /observe-iterative-interaction-case\.mjs 115 verdict/);
     assert.match(playbook, /case-115-NOT-RUN\.json/);
+    assert.match(playbook, /at most the first three syntactically eligible actual HTTP\(S\) results/);
+    assert.match(runner, /at most the first three actual eligible HTTP\(S\) results/);
     assert.match(observer, /'115'/);
   });
 
@@ -177,15 +186,19 @@ describe('case-115 HITL1 fallback observer', () => {
     } finally { remove(caseRoot); }
   });
 
-  it('treats a public ineligible first result as unavailable without selecting a later result', () => {
+  it('allows an observed second candidate after the first candidate cannot return real content', () => {
     const events = [
       toolUse('search-1', 'WebSearch', { query: 'neutral capability probe' }),
       toolResult('search-1', `Web search results\n\nLinks: ${JSON.stringify([
-        { title: 'Local', url: 'http://127.0.0.1/private' },
+        { title: 'First', url: RESULT_URL },
         { title: 'Other', url: OTHER_URL },
       ])}`),
+      toolUse('native-1', 'WebFetch', { url: RESULT_URL, prompt: 'Return the requested page content.' }),
+      toolResult('native-1', 'Unable to verify if domain is safe to fetch.', true),
+      toolUse('native-2', 'WebFetch', { url: OTHER_URL, prompt: 'Return the requested page content.' }),
+      toolResult('native-2', '<html><body>Second candidate page</body></html>'),
     ];
-    const caseRoot = createCase({ events, access: unavailableSearchAccess('The first search result was ineligible.'), gatePassed: false });
+    const caseRoot = createCase({ events, access: availableAccess('WebFetch', { resultUrl: OTHER_URL, count: 2 }), gatePassed: true });
     try {
       const result = runObserver(caseRoot);
       assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -202,7 +215,7 @@ describe('case-115 HITL1 fallback observer', () => {
       toolUse('native-1', 'WebFetch', { url, prompt: 'Return the requested page content.' }),
       toolResult('native-1', '<html><body>Public page</body></html>'),
     ];
-    const access = { ...availableAccess('WebFetch'), result_url: url };
+    const access = availableAccess('WebFetch', { resultUrl: url });
     const caseRoot = createCase({ events, access, gatePassed: true });
     try {
       const result = runObserver(caseRoot);
@@ -240,6 +253,22 @@ describe('case-115 HITL1 fallback observer', () => {
       const notRun = JSON.parse(readFileSync(join(caseRoot.bundle, 'case-115-NOT-RUN.json'), 'utf8'));
       assert.equal(notRun.status, 'NOT RUN');
       assert.match(notRun.reason, /conflict|ambiguous|identity/i);
+      assert.equal(checks(caseRoot.bundle).length, 0);
+    } finally { remove(caseRoot); }
+  });
+
+  it('uses the existing exit-3 NOT RUN artifact when current candidate metadata contradicts public candidates', () => {
+    const caseRoot = createCase({
+      events: transcript({ nativeSuccess: true }),
+      access: availableAccess('WebFetch', { resultUrl: OTHER_URL, count: 2 }),
+      gatePassed: true,
+    });
+    try {
+      const result = runObserver(caseRoot);
+      assert.equal(result.status, 3, result.stderr || result.stdout);
+      const notRun = JSON.parse(readFileSync(join(caseRoot.bundle, 'case-115-NOT-RUN.json'), 'utf8'));
+      assert.equal(notRun.status, 'NOT RUN');
+      assert.match(notRun.reason, /candidate metadata|candidate order/i);
       assert.equal(checks(caseRoot.bundle).length, 0);
     } finally { remove(caseRoot); }
   });

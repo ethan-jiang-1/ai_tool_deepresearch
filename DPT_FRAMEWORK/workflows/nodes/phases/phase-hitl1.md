@@ -69,7 +69,7 @@ topic_registry:
 
 `NN` 取自数组位置（第 1 个 topic → `01_`，第 2 个 → `02_`，以此类推），与 `id` 字段值无关。如果 `id` 字段写作 `t1`/`t2`，slug 仍用数组位置 `01_`/`02_`。
 
-用户确认后，Agent 把完整 approved topic set 写入 caller-owned retained JSON，并运行一次 `operate-topic-state.mjs apply`。Engine 在 legal HITL1 current-node/status window 中分配 immutable UID/ordinal/slug，并用一个 prepared manifest 提交最终 registry 与全部 UID-bound seed skeletons。若返回 accepted workspace，Agent 运行 exact recover command 后重试；不得直接编辑 registry/seed。
+用户确认后，Agent 先把完整 approved topic set 写入 caller-owned retained JSON。只有在 §3b 已通过既有 status synchronization 后，才运行一次 `operate-topic-state.mjs apply`。Engine 在 legal HITL1 current-node/status window 中分配 immutable UID/ordinal/slug，并用一个 prepared manifest 提交最终 registry 与全部 UID-bound seed skeletons。若返回 accepted workspace，Agent 运行 exact recover command 后重试；不得直接编辑 registry/seed。
 
 **Gate 不判断 rewrite 质量。** 人类审查 topic semantics；Engine 验证 canonical identity/intent、UID-bound seed projection、workspace completion 与既有 profile/access contract。
 
@@ -92,7 +92,11 @@ topic_registry:
    - 将用户接受或修正后的具体问题写入 `root_must_answer_set`
    - 将 `human_decision_checkpoints.hitl1.status` 设为 `recorded`
    - 将 `human_decision_checkpoints.hitl1.recorded_at` 设为当前 ISO 8601 timestamp
-   - 先写 controls snapshot，再写 retained topic-state input 并运行 `operate-topic-state apply`；普通 apply/recover 命令由 Agent 执行，不要求用户共同运行
+   - 先写 controls snapshot，再运行既有 status synchronization：
+     ```bash
+     node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl1_recorded
+     ```
+     读取并消费成功 stdout 后，才写 retained topic-state input 并运行 `operate-topic-state apply`。同步失败时 canonical topic state 不变；Agent 只遵循返回的既有 legal operation 或 no-path boundary，不手写 `rb_status.json`、不用 force/context bypass，也不先跑 HITL1 Gate 来发现顺序。普通 status/apply/recover 命令由 Agent 执行，不要求用户共同运行。
 
 ### 3b.1 Optional User Research Controls Snapshot
 
@@ -133,38 +137,43 @@ Research style CLI 成功后，Agent MUST 使用当前环境的实际 search/fet
 **固定顺序：**
 
 1. 使用实际 search surface 发起**至多一次 neutral capability-only search**。Query 只用于确认工具可用，不用于当前 research topic 的证据收集。
-2. 按 search surface 返回顺序只检查**第一个实际 HTTP(S) result**；第一条不合格时不得改选第二条，也不得使用用户/模型构造或替换的 URL。Eligible URL 不含 raw single quote、ASCII whitespace/control 或 URL credentials，且不指向 `localhost`/`.localhost`、loopback、literal private 或 link-local target。Resolved/redirected destination 的 DNS/network policy 仍由 host 强制。
-3. 若第一条 URL eligible，使用 runtime 的实际 native fetch surface 发起**至多一次 native fetch**。Native 返回真实 page content 时立即结束 probe，不得再调用 `curl` 作冗余确认。
-4. 仅当 native surface 在调用前不存在，或 native 没有返回真实 page content（blocked / unavailable / failed），且 independently configured host shell/network permission 已允许 exact command 和 target 时，Agent 执行下面**至多一次、同一 URL、standalone** fallback：
+2. 按 search surface returned order 取**最多前三个 syntactically eligible actual HTTP(S) candidates**。Eligible URL 不含 raw single quote、ASCII whitespace/control 或 URL credentials，且不指向 `localhost`/`.localhost`、loopback、literal private 或 link-local target。不得使用用户/模型构造或替换的 URL。Resolved/redirected destination 的 DNS/network policy 仍由 host 强制。
+3. 对 candidate 1 开始 serial probe。每个 candidate 使用 runtime 的实际 native fetch surface 发起**至多一次 native fetch**；native 返回真实 page content 时立即结束整个 probe，不得再调用 `curl` 或考察后续 candidate。
+4. 仅当当前 candidate 的 native surface 在调用前不存在，或 native 没有返回真实 page content（blocked / unavailable / failed），且 independently configured host shell/network permission 已允许 exact command 和 target 时，Agent 对当前 candidate 执行下面**至多一次、同一 URL、standalone** fallback：
 
    ```bash
    curl --fail --silent --show-error --location --max-time 15 --max-redirs 5 --proto '=http,https' --proto-redir '=http,https' --globoff -- '<same-url>'
    ```
 
    URL 必须作为 single-quoted（单引号）单一 argument 传入。命令不得包含 prefix assignment、pipe、redirection、command substitution、shell chaining 或 trailing command；`--globoff` 禁止 `{}` / `[]` URL expansion，redirect 至多五次且只能使用 HTTP(S)。
-5. Agent 判断实际返回是否为 requested page content，写入一个最终 `rb_profile.yaml#/research_access` direct observation，然后运行同一个 `hitl1-recorded` Gate。Command exit success、空 body、search snippet、HTTP error/challenge shell 或手写文本都不能证明 access available。
+5. 当前 candidate 的 native 或 permitted exact same-URL fallback 返回 requested real page content 时，立即写一个 final `available` observation 并结束整个 probe。仅在当前 candidate 已完成其合法 bounded sequence 且没有真实内容时，才考察下一 candidate：candidate 2 只在 candidate 1 不能返回真实内容后考察；candidate 3 只在 candidate 2 不能返回真实内容后考察。任何 permission/no-legal-path boundary 都在当前 candidate 停止，不得跳至后续 candidate。至多三个 candidates 都无真实内容时，写一个 final `unavailable` observation。随后运行同一个 `hitl1-recorded` Gate。Command exit success、空 body、search snippet、HTTP error/challenge shell 或手写文本都不能证明 access available。
 
 **Observation branches：**
 
-- Search surface 缺失、search 调用失败/被阻止、没有 eligible first HTTP(S) result，且没有 fetch invocation：
+- Search surface 缺失、search 调用失败/被阻止、没有 syntactically eligible actual HTTP(S) candidate，且没有 fetch invocation：
   ```yaml
   research_access:
     status: unavailable
     probed_at: <ISO 8601 timestamp>
     fetch_outcome: not_attempted
     reason: <direct non-empty reason>
+    eligible_candidate_count: 0
   ```
-- Native fetch 返回 requested real page content：
+- 当前 candidate 在 native fetch 返回 requested real page content：
   ```yaml
   research_access:
     status: available
     probed_at: <ISO 8601 timestamp>
-    result_url: <HTTP(S) URL from this search>
+    result_url: <final considered HTTP(S) URL from this search>
     fetch_outcome: success
     fetch_surface: <actual native surface>
+    eligible_candidate_count: <1..3>
+    final_candidate_ordinal: <1..eligible_candidate_count>
   ```
-- Native 无真实内容后，exact fallback 返回 requested real page content：写同一个 available shape，并写 `fetch_surface: curl`。Fallback success 必须记录 `fetch_surface: curl`。
-- Native 与唯一 fallback 都没有返回真实内容：写 `status: unavailable`、同一个 `result_url`、最终 non-success `fetch_outcome`、已知时的 final `fetch_surface`，以及一个 bounded direct `reason`，同时命名 native 与 fallback outcome；不得增加 attempt-history fields。
+- 当前 candidate 的 native 无真实内容后，exact fallback 返回 requested real page content：写同一个 available shape，并写 `fetch_surface: curl`。Fallback success 必须记录 `fetch_surface: curl`。
+- 当前 candidate 尚未调用 native，且没有 legal fetch surface 或 independently permitted fallback：写 `status: unavailable`、该 candidate `result_url`、`fetch_outcome: not_attempted`、positive `eligible_candidate_count` / `final_candidate_ordinal`，以及直接 no legal path reason；不得改选后续 candidate。
+- Native 已调用但唯一 fallback 没有 legal path：写 `status: unavailable`、该 candidate `result_url`、actual native `fetch_outcome: failed | blocked`、native `fetch_surface`、positive `eligible_candidate_count` / `final_candidate_ordinal`，以及直接 no legal path reason；不得将 attempted native outcome 改写为 `not_attempted` 或改选后续 candidate。
+- 至多三个 candidates 的 permitted sequences 都没有返回真实内容：写 `status: unavailable`、最终 considered `result_url`、final non-success `fetch_outcome`、已知时的 final `fetch_surface`、positive `eligible_candidate_count` / `final_candidate_ordinal`，以及一个 bounded direct `reason`；不得增加 query、URL、attempt-history fields。
 
 `search_surface` / `fetch_surface` 在 `ProfileSchema` 中 remains optional，existing Gate does not independently enforce these audit labels；但 v0.39 HITL1 writer 对当前 successful probe 必须记录 actual successful `fetch_surface`。不要记录 query history、response body、HTTP status matrix、retry list 或 derived gate verdict。
 
@@ -187,8 +196,10 @@ Research style CLI 成功后，Agent MUST 使用当前环境的实际 search/fet
 | `root_must_answer_set` | `rb_profile.yaml#/root_must_answer_set` | 非空字符串数组 |
 | `research_style_params` | `rb_profile.yaml#/research_style_params` | 由 `apply-research-style.mjs` CLI 写入（见 §3c 步骤 1-3），Agent 不手写参数。CLI 后验证 stdout 中的 `applied`、`topic_count`、`wave0_shared_ref_total` 值 |
 | `research_access.status` | `rb_profile.yaml#/research_access/status` | `available` 才能通过 HITL1 gate；`unprobed` / `unavailable` 留在 HITL1 |
+| candidate count | `rb_profile.yaml#/research_access/eligible_candidate_count` | current completed probe 写 `0..3`；仅 no-candidate unavailable 可为 `0` |
+| final candidate | `rb_profile.yaml#/research_access/final_candidate_ordinal` | 至少考虑一个 candidate 时写 `1..eligible_candidate_count`；零 count 时不写 |
 | available path | `rb_profile.yaml#/research_access/{probed_at,result_url,fetch_outcome}` | ISO timestamp + HTTP(S) URL + `fetch_outcome: success` |
-| unavailable path | `rb_profile.yaml#/research_access/{probed_at,fetch_outcome,reason}` | ISO timestamp + `failed | blocked | not_attempted` + 非空直接原因 |
+| unavailable path | `rb_profile.yaml#/research_access/{probed_at,fetch_outcome,reason}` | ISO timestamp + `failed | blocked | not_attempted` + 非空直接原因；positive count 保留 final `result_url` |
 | current successful writer audit | `rb_profile.yaml#/research_access/fetch_surface` | v0.39 writer 记录 actual successful surface；schema optional，Gate 不独立 enforce |
 | `hitl1.status` | `rb_profile.yaml#/human_decision_checkpoints/hitl1/status` | = `recorded` |
 | `hitl1.recorded_at` | `rb_profile.yaml#/human_decision_checkpoints/hitl1/recorded_at` | 非空 ISO 8601 timestamp |
@@ -237,7 +248,7 @@ Hint 不创造 permission。用户决定或外部前置条件满足后，后续�
 - **禁止写入不存在的字段路径**：HITL1 结果写入 `rb_profile.yaml` 的 `human_decision_checkpoints.hitl1.*`；不要写入不存在的 `rb_status.json#/phases/hitl1/*`
 - **禁止用 mock/fixed URL/搜索摘要/手写 page content 声称 `research_access.status: available`**：available 只能来自当次实际 search 返回的 URL 和实际 fetch page content
 - **禁止把 probe 当 research evidence**：Probe URL/content/tool output 不得进入 reference、cache、artifact、work-unit、ledger、output declaration 或 Wave coverage
-- **禁止自动 retry tree**：一次 attempt 至多一次 search、一次 native fetch 和一次 exact same-URL curl fallback；禁止第二 URL、重复 surface、额外 tier、pipe/redirect/chaining 或持久 attempt history
+- **禁止自动 retry tree**：整个 probe 至多一次 search、最多三个 returned-order eligible candidates；每个 candidate 至多一次 native fetch 和一次 exact same-URL curl fallback。禁止第四 candidate、重复 surface、额外 tier、pipe/redirect/chaining 或持久 query/URL/attempt history
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
 
 ## Log
