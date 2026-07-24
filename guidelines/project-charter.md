@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: Project Charter
 status: effective
 created: 2026-06-17
-revised: 2026-07-12
+revised: 2026-07-24
 role: repo-wide charter and entrypoint
 scope: all work in this repository
 authority: guidance
@@ -24,7 +24,7 @@ siblings:
 
 # Project Charter
 
-> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-12 | 用途: 项目入口指导
+> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-24 | 用途: 项目入口指导
 
 ---
 
@@ -77,16 +77,18 @@ This file cannot decide:
 - MUST read JS/CLI feedback back into the conversation context before the next Markdown-driven action.
 - MUST treat check / inspect / advice outputs as structured JS/CLI feedback, not as chat noise.
 - MUST prefer the shortest correct control loop: direct runtime fact -> deterministic check -> smallest actionable root cause -> one clear next action. Use `guidelines/evolution-simple-reliable-control.md` as the design-review complexity brake.
-- MUST treat the Agent as the executor of ordinary authorized commands and reversible mechanical repair; ask the user only for new semantics, risk/permission decisions, or a genuinely non-delegable action. Use `guidelines/evolution-helper-oriented-agent.md` for the action-responsibility review.
+- MUST, when proposing or changing a cross-boundary deterministic obligation used to block advancement or establish a deterministic closure condition, make its authoritative fact, owning boundary, legal establishment/change path, or honest owner/terminal/missing-contract boundary reviewable. This review does not itself require a witness, receipt, consumer, writer, retry, state, or controller unless an accepted contract independently requires one.
+- MUST treat the Agent as the executor of ordinary authorized commands and reversible mechanical repair when a live Agent turn has required permission, an accepted legal operation, and the facts that operation requires; ask the user only for new semantics, risk/permission decisions, or a genuinely non-delegable action. Use `guidelines/evolution-helper-oriented-agent.md` for the action-responsibility review.
 - MUST distinguish autonomous execution, human-directed decisions inside HITL1/HITL2, and out-of-band maintenance/debug without inventing a new lifecycle state or mutation authority.
-- MUST keep the iterative research posture simple: HITL1 aligns the work, silent autonomy executes it, HITL2 reviews it, and Final delivers it. A normal user-initiated turn may be answered without becoming another checkpoint or authority. Retaining prior decisions, artifacts, and trace as history does not make every historical value permanently current; accepted specs and current runtime truth define behavior.
+- MUST keep the iterative research posture simple: HITL1 aligns the work, silent autonomy executes ordinary legal work, HITL2 reviews it, and Final delivers it. This is responsibility allocation, not a promise that a host or model will continue, invoke a tool, retain context, or succeed externally. A normal user-initiated turn may be answered without becoming another checkpoint or authority. Retaining prior decisions, artifacts, and trace as history does not make every historical value permanently current; accepted specs and current runtime truth define behavior.
 - MUST treat quality-control complexity as safety-critical: a checker, gate, recovery path, or diagnostic chain must be easier to reason about and test than the work it validates.
 - MUST interpret mechanism-level goals such as recovery, stop authorization, context sustainability, or comprehensive validation as required outcomes, not as pre-approval for a particular controller, watcher, retry tree, or derived-state stack.
-- MUST make evidence, receipts, and trace entries come from real execution.
+- MUST make evidence, receipts, and trace entries come from real execution, and bound any completion, closure, causal, or behavioral claim to its identified object and evidence boundary, including applicable provenance, actor/host, and proof class. Evidence outside a claim's stated provenance or continuity boundary may remain diagnostic, but cannot close a stronger claim.
 - MUST keep runtime state in the active runtime bundle root, not in chat memory.
 - MUST treat `DPT_FRAMEWORK/` as reusable framework assets, not as a per-run workspace.
 - MUST keep per-run state, HITL answers, gate attempts, trace, artifacts, delegated work-unit attempts, and final output inside the active bundle root, currently an explicit `dpt_rb_*` or `dpt_disp_*` directory.
 - MUST pass the active bundle path explicitly to framework commands that operate on a run.
+- MUST, when proposing or changing an Agent-facing boundary explicitly declared for entry, handoff, or recovery, state its input/context boundary and enough authoritative facts for the bounded next legal action or an honest no-path result. It may be a documented protocol, but MUST NOT select semantic work, schedule turns, infer liveness, or advance undeclared transitions.
 - MUST keep `guidelines/` aligned with accepted specs and clearly separate stable principles from current repository conventions.
 
 ### MUST NOT
@@ -120,6 +122,8 @@ This file cannot decide:
 | Human/Agent guidance | `guidelines/` | 项目宪章、复杂度纪律、操作规范、机制指导、阅读路线 |
 
 `guidelines/` 的作用是降低理解成本，不做新的 Source of Record。需要新增或改变系统行为时，走 OpenSpec change，再落到 accepted specs、`DPT_FRAMEWORK/`、实验基础设施或测试里。
+
+Source of Record 只回答哪个 surface 裁决某类事实。Authority、capability、permission、responsibility、liveness 和 evidence 是不同问题；除非 accepted contract 明确规定，任何一个都不自动推出另一个。
 
 ### Guidance Conflict Resolution
 
@@ -396,6 +400,7 @@ Before changing any file in `guidelines/`, check:
 - Does this keep multi-stage LLM-facing flow visible in Markdown/playbooks/task cards?
 - Does this duplicate a definition that should instead live in `README.md` glossary or this project charter?
 - Does this add enough `MUST` / `MUST NOT` clarity for an Agent to act safely?
+- For a proposed durable constitutional invariant, does it remain valid without current incident or mechanism names and have a meaningful counterexample; and does any new or changed blocking or declared public boundary keep its legal/no-path, non-implication, and proof scope explicit without pre-approving a mechanism?
 - Has the change passed the two-question `Simplicity Admission Test` in `evolution-simple-reliable-control.md`?
 - Has it passed the two-question `Helper Direction Review` in `evolution-helper-oriented-agent.md`, so only necessary decisions remain with the user and legal execution returns to the Agent?
 - If it names recovery, stop, context, or validation obligations, does it avoid pre-approving a complex mechanism?
@@ -415,5 +420,3 @@ Before changing any file in `guidelines/`, check:
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — Tier 1 (Chain): phase-to-phase routing and Three-Authority Architecture.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Tier 2 (Queue): within-phase task execution; queue engine (AGQ-001~006) is implemented runtime, and seed-topics/wave0/wave1/wave2 queue integrations are accepted/current.
 - [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — mechanism guidance for work-unit-mediated Sub-agent execution and noise-isolation principles.
-- [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
-- [Accepted specs](../openspec/specs/) — accepted capability requirements.

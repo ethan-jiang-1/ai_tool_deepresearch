@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: "Evolution Direction: Helper-Oriented Agent"
 status: effective
 created: 2026-07-12
-revised: 2026-07-13
+revised: 2026-07-24
 role: charter-companion evolution direction for Agent/user action responsibility
 scope: openspec/changes/, DPT_FRAMEWORK/COMMANDS.md, DPT_FRAMEWORK/workflows/, DPT_FRAMEWORK/command_playbook/
 authority: guidance
@@ -26,7 +26,7 @@ siblings:
 
 # Evolution Direction: Helper-Oriented Agent
 
-> 状态: 生效 | 创建: 2026-07-12 | 修订: 2026-07-13 | 用途: 引导 Agent 从机械工具逐步成为可靠协作者
+> 状态: 生效 | 创建: 2026-07-12 | 修订: 2026-07-24 | 用途: 引导 Agent 从机械工具逐步成为可靠协作者
 
 ## Purpose
 
@@ -67,13 +67,15 @@ AGENTS.md / openspec/config.yaml
 
 **User owns new semantic/risk decisions. Agent owns authorized mechanical execution. Engine owns deterministic judgment.**
 
-当 recorded goal、current permission、accepted contract 与 direct facts 已经足以决定下一步时，Agent SHOULD 自己执行普通命令、可逆修复和同一 checkpoint 的重试。它不应只打印一串命令，让用户成为 pipeline co-runner。
+这里的 execution ownership 只在当前 Agent 有可执行 turn、required permission、accepted legal operation 和该 operation 所需 direct facts 时分配 action responsibility；它不创造 capability 或 permission，也不承诺 host 续 turn、模型 tool call 或外部 action 成功。
+
+当当前有可继续执行的 Agent turn，且 recorded goal、current permission、accepted contract 与 direct facts 已经足以决定下一步时，Agent SHOULD 自己执行普通命令、可逆修复和同一 checkpoint 的重试。它不应只打印一串命令，让用户成为 pipeline co-runner。
 
 当下一步涉及新语义、破坏性或不可逆选择、权限扩张，或 accepted contract 明确要求人类确认时，Agent MUST 把问题缩到最小 decision boundary。用户决定或完成不可代理动作后，后续合法机械步骤 MUST 回到 Agent。
 
 ## Definitions
 
-- **Autonomous**：Agent 在 recorded goal、accepted contracts 和 Engine feedback 下继续执行，没有新的用户指令。
+- **Autonomous**：在当前可继续执行的 Agent turn 中，Agent 在 recorded goal、accepted contracts 和 Engine feedback 下继续执行，不等待新的用户 decision。它描述 in-run action responsibility，不断言 host 会续 turn、模型会发 tool call 或外部 action 必然成功。
 - **Human-directed**：用户明确给出新的语义决定、修正目标、授权或 maintenance/debug instruction。
 - **In-run HITL**：accepted lifecycle 内承接 human-directed decision 的交互 checkpoint；当前为 HITL1/HITL2。
 - **Out-of-band maintenance/debug**：用户在 lifecycle 外明确进入诊断、恢复或修正协作；它不是新的 lifecycle checkpoint，也不自动创建 mutation/reentry capability。
@@ -90,7 +92,7 @@ AGENTS.md / openspec/config.yaml
 
 ### 2. Agent Executes Legal Mechanical Work
 
-- Existing legal path 已存在、permission 足够且决定已明确时，Agent MUST 执行剩余普通机械步骤。
+- 当前有可继续执行的 Agent turn、existing legal path 已存在、permission 足够且决定已明确时，Agent MUST 执行剩余普通机械步骤。
 - Repairable deterministic blocker 有 accepted reversible path 时，Agent MUST 说明直接 blocker、执行 repair，并 rerun same checkpoint。
 - Agent MUST NOT 把普通 pipeline command、可逆修复或剩余执行链整体推给用户。
 
@@ -102,7 +104,7 @@ AGENTS.md / openspec/config.yaml
 
 ### 4. Placement Does Not Create A New Lifecycle
 
-- HITL1/HITL2 是 human-directed decision 的 in-run placements；非 HITL `stop:no` phases 仍保持 autonomous and silent。
+- HITL1/HITL2 是 human-directed decision 的 in-run placements；非 HITL `stop:no` phases 保持不请求新的用户 decision 的 autonomous/silent posture。它不创建 host scheduler，也不保证后续 turn 或 tool call。
 - Out-of-band maintenance/debug MUST NOT 被描述为第三个 HITL、Final-owned repair loop 或新的 lifecycle state。
 - Final 仍是 terminal non-interactive delivery；post-final reentry 是否存在由 accepted content-delivery/runtime contract 决定。
 
@@ -114,7 +116,7 @@ AGENTS.md / openspec/config.yaml
 
 ### 6. Preserve Agent Intelligence
 
-- Markdown/Agent Flow SHOULD 给 Agent direct facts、clear objective、smallest blocker 和一个最近动作，保留其理解、判断、修复与执行空间。Direct facts 包含 Engine 能从其静态 contract lineage 提供的信息：缺失事实属于哪个 schema、应写到哪个已授权 surface、修复后重跑哪个 checkpoint。Engine 保留这些静态知识即剥夺 Agent 在合法边界内执行机械修复的能力——这与 helper posture 矛盾。
+- Markdown/Agent Flow SHOULD 给 Agent direct facts、clear objective、smallest blocker 和一个最近动作，保留其理解、判断、修复与执行空间。Direct facts 包含 Engine 能从其静态 contract lineage 提供的信息：缺失事实属于哪个 schema；若 accepted legal repair path 存在，应写到哪个已授权 surface、修复后重跑哪个 checkpoint；否则 contract 已知的 owner 或 terminal/missing-contract boundary 是什么。Engine 保留这些静态知识即剥夺 Agent 在合法边界内执行机械修复的能力——这与 helper posture 矛盾。
 - Engine MUST 保持 deterministic checkpoint，不扩成替 Agent 做语义判断的通用 controller。
 - Helper-oriented design MUST 与 `evolution-simple-reliable-control.md` 一起审查，避免用更多状态、条件和 fallback 模拟协作能力。
 

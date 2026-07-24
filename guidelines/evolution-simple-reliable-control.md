@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: "Evolution Direction: Simple Reliable Control"
 status: effective
 created: 2026-07-10
-revised: 2026-07-13
+revised: 2026-07-24
 role: charter-companion evolution direction for control-loop complexity and net simplification
 scope: openspec/changes/, DPT_FRAMEWORK/workflows/, DPT_FRAMEWORK/cli/, DPT_FRAMEWORK/engine/, tests/, experiments_playbook/
 authority: guidance
@@ -26,7 +26,7 @@ siblings:
 
 # Evolution Direction: Simple Reliable Control
 
-> 状态: 生效 | 创建: 2026-07-10 | 修订: 2026-07-13 | 用途: 约束未来演进中的控制复杂度与净简化
+> 状态: 生效 | 创建: 2026-07-10 | 修订: 2026-07-24 | 用途: 约束未来演进中的控制复杂度与净简化
 
 ## Purpose
 
@@ -101,8 +101,9 @@ AGENTS.md / openspec/config.yaml
 smallest direct fact set
   -> one deterministic checker path
   -> earliest actionable root cause
-  -> one visible next action
-  -> rerun the same checkpoint
+  -> one visible result
+       legal repair -> rerun the same checkpoint
+       no legal repair -> explicit owner/terminal/missing-contract boundary
 ```
 
 如果一个设计无法保持这个形状，proposal 必须说明为什么直接 authority 不足，以及新增复杂度替代或删除了什么旧复杂度。
@@ -120,7 +121,7 @@ Engine 的质量控制代码比普通业务代码更需要简单。质量检查�
 - **One rule source**：preflight、inspect 和 final gate 应复用同一确定性检查，避免维护多份近似逻辑。
 - **Fail clearly**：无法可靠判断时明确失败或标记 unknown，不用长链路猜测出一个看似完整的结论。
 - **Decision-point proximity**：反馈放在 Agent 正要决定下一动作的输出边界，不依赖它回忆几十段之前的规则。
-- **Same-check repair**：可修复失败默认回到同一个 inspect/gate/submit checkpoint；不要每失败一次就切换到另一套近似验证路径。
+- **Same-check repair**：有 accepted legal repair path 的可修复失败默认回到同一个 inspect/gate/submit checkpoint；不要每失败一次就切换到另一套近似验证路径。
 - **Control-path testability**：质量控制自身必须有 focused negative tests，证明 root cause、短路、副作用和 fail-closed 行为，而不只测试 happy path。
 
 每增加一条 blocking rule，都应回答：
@@ -176,11 +177,13 @@ explicitly terminalize it, then create one new legal attempt/path
 
 accepted spec 可以定义一个狭窄、显式、可审计的例外，但例外不能扩张成隐藏 fallback tree。Recovery SHALL NOT 依赖后台 watcher、无界 retry、推断 Agent intent、chat interception 或多层“先自动试试看”。
 
+一个 deterministic failure 并不当然有当前 caller 可执行的 repair。只有 accepted contract 已为该 boundary 定义合法 repair 或 transition 时，feedback 才可指向 `write_to` 与同一 checkpoint；current-caller permission 仍是独立的 host boundary。否则 feedback SHALL 返回最早直接事实和 contract 已知的 owner，或 terminal / missing-contract boundary。它不得把不存在的 writer、retry 或 parallel success path 伪装成可行动作。
+
 Durable intent、identity、progress 或正式结果没有 sanctioned canonical footprint 时 SHALL block and expose the missing contract。Scratch/cache 可以存在，但不得成为唯一 authority、平行 success path 或绕过 canonical registration。
 
 ### 6. One Next Action
 
-Primary feedback SHALL 给每个独立 root cause 一个最近动作。它可以附带 durable diagnostic detail，但不应同时给出互相竞争的五条恢复路线，让 Agent 自己猜哪条才是正式路径。
+Primary feedback SHALL 给每个独立 root cause 一个最近的合法动作，或显式 owner、terminal、missing-contract boundary。它可以附带 durable diagnostic detail，但不应同时给出互相竞争的五条恢复路线，让 Agent 自己猜哪条才是正式路径。
 
 ## Agent-Friendly Feedback
 
@@ -196,15 +199,17 @@ Agent 只有**动态知识**：它能看到自己产出的 MD 文件，收到 En
 
 ### Contract-Lineage-Aware Rejection
 
-每个 Inspect/gate rejection MUST 从 Engine 已有的静态 contract lineage 中推导并返回三件事：
+每个 Inspect/gate rejection MUST 返回 Engine 能从已有静态 contract lineage 确定的反馈形状；它 MUST NOT 假定每个 failed fact 都有当前 caller 可写的 surface。对 accepted contract 已定义 legal repair path 的 root，primary feedback 必须包含三件事：
 
 1. **缺哪个直接事实**——不是”字段 X 缺失”，而是”gate `wave1_content_dedup` 要求 `source_ref.captured_at` 为非空字符串，当前值为 `null`，该字段属于 schema `source_ref/v1`”
 2. **补到哪个已授权 surface**——“该事实应写入 `output_files[].declarations`，该 surface 已被 gate `wave0_structure` 授权通过，你有写入权限”
 3. **补完重跑哪个 checkpoint**——“补充后重跑 `inspect wave1 --gate=content_dedup`，该 gate 依赖你刚修改的 surface”
 
+对没有 legal repair path 的 root，primary feedback 改为：缺哪个 direct fact；contract 已知的 owner 或 terminal / missing-contract boundary；以及为何 direct hand edit 不是 sanctioned path。
+
 这三条都不是动态推理的结果。Engine 在写 schema 和 gate 时已经知道：哪个 gate 检查哪个字段、该字段属于哪个 schema、该 schema 由哪个上游 gate 授权、该 gate 在哪个 checkpoint。Engine 只需沿静态图从失败节点往回走一步，就能给出精确导航。
 
-基本反馈形状保持简单：
+有 accepted legal repair path 的 root，基本反馈形状保持简单：
 
 ```text
 check: failed
@@ -214,13 +219,13 @@ write_to: output_files[].declarations（surface 已被 wave0_structure 授权通
 rerun: inspect wave1 --gate=content_dedup
 ```
 
-反馈可以附带 durable diagnostic detail，但 primary feedback 必须包含上述三要素。
+反馈可以附带 durable diagnostic detail；有 accepted legal repair path 的 root，primary feedback 必须包含上述三要素。
 
 ### Short-Circuit Through Lineage
 
 上述 Prerequisites Before Implications 纪律在此直接适用：Engine 沿 contract lineage 追溯到最早失败节点即停止，不把级联派生 symptom 塞给 Agent。一条 `source_ref` 缺失不应展开为 55 条 failure。
 
-MD controller 不怕简单问题，怕的是长判断链和模糊反馈。Engine/CLI 输出应让 Agent 不读源码也能继续：知道缺什么、写在哪里、写完重跑什么。
+MD controller 不怕简单问题，怕的是长判断链和模糊反馈。Engine/CLI 输出应让 Agent 不读源码也能判断：有合法 repair 时缺什么、写在哪里、写完重跑什么；没有时当前 legal boundary 是什么。
 
 ## Complexity Budget
 

@@ -6,8 +6,8 @@ This change adds those clarifications without treating the existing Charter as s
 
 ## What Changes
 
-- Add a small constitutional clarification to the existing Project Charter: operational completeness of blocking obligations, bounded public reentry, the separation of authority/capability/permission/responsibility/liveness/evidence, and claim-to-proof proportionality.
-- Amend only the Charter sentences and checklist items whose existing wording can imply guaranteed silent execution or unscoped evidence; preserve every existing Charter section and its current routing role.
+- Add a small constitutional clarification for new or changed surfaces: honest legal boundaries for blocking obligations, declared Agent-facing entry/handoff/recovery boundaries, the separation of authority/capability/permission/responsibility/liveness/evidence, and claim-to-proof proportionality.
+- Amend only the Charter sentences and checklist items whose existing wording can imply guaranteed silent execution or unscoped evidence; this apply preserves every existing Charter section and its guidance-companion routing role, while removing the two `Related Guidance` entries that point to downstream OpenSpec/configuration surfaces.
 - Clarify `evolution-simple-reliable-control.md` only where repair feedback assumes a legal writer/retry path exists, and clarify `evolution-helper-oriented-agent.md` only where Agent responsibility could be misread as an liveness guarantee.
 - Add an explicit constitutional-admission check so incident-specific commands, byte thresholds, Gate policy, and workflow sequences remain in their owning specs or mechanism changes.
 
@@ -29,3 +29,4 @@ This change adds those clarifications without treating the existing Charter as s
 - Affected governance only: the `guidance-constitution` requirement registry entries, delta spec, task list, and verification plan.
 - Explicitly unaffected: `guidelines/README.md`, mechanism guidance, logging/experiment guidance, `DPT_FRAMEWORK/`, `tests/`, `experiments_playbook/`, accepted runtime specs, bundle schemas, and release/version surfaces.
 - The apply review must show an additive, local diff: no removed Charter headings, no relocated documentation, and no added controller, writer, retry, watcher, or proof mechanism.
+- Older wording on untouched mechanism surfaces remains incremental design debt; this change establishes a review law and does not claim suite-wide conformity.
