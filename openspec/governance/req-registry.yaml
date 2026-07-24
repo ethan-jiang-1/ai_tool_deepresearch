@@ -230,6 +230,7 @@ DEW-017: delegated-work-units — Explicit single Phase Agent fallback remains i
 DEW-018: delegated-work-units — Work-unit records preserve truthful execution actor provenance with legacy compatibility
 DEW-019: delegated-work-units — Work-unit provenance inherits UID-bound queue identity without duplicate result or ledger fields
 DEW-020: delegated-work-units — Existing task_brief may carry a beacon-rooted read-only user-controls coordinate without work-unit authority expansion
+DEW-021: delegated-work-units — Delegated work contract entry is constructible from one generated projection
 
 # conditional-nodes
 COS-001: conditional-nodes — Deterministic branch checkpoint transforms
