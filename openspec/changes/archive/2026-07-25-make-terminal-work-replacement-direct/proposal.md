@@ -8,11 +8,12 @@ This change introduces one narrow, audited transition from an eligible terminal 
 
 ## What Changes
 
-- Add an Engine-owned `operate-work-unit replace` operation for a failed or abandoned, unsubmitted delegated attempt.  It derives exactly one fresh replacement queue demand from the terminal attempt's recorded queue snapshot and reports the generated queue identity plus the normal next `claim` checkpoint.
-- Preserve the semantic distinctions that matter: `timed_out` continues to use its existing automatic retry-demand path; `failed` and `abandoned` remain terminal historical facts; submitted attempts, existing live successors, invalid snapshots, and unclear lineage fail closed without mutation.
-- Bind the replacement demand to its terminal parent through the queue item's audited lineage, retain the original kind/topic/assignment/output obligation/delegated-role facts, and allocate the new work ID only through the existing role-bound `claim` operation.
-- Make the existing candidate and phase guidance use this one replacement operation after an eligible terminalization, eliminating manual equivalent-card reconstruction and filesystem discovery from the normal recovery path.
-- Standardize the new operation's machine result with existing CLI conventions: one parseable stdout JSON result, non-zero exit on refusal, diagnostic stderr only, and an actionable reason or next command.
+- Add an Engine-owned `operate-work-unit replace` operation for a failed or abandoned, unsubmitted delegated attempt with matching terminal snapshot authority. It derives exactly one fresh replacement queue demand and reports the generated queue identity plus the correct existing Phase re-entry checkpoint.
+- Preserve the semantic distinctions that matter: `timed_out` and `failed` attempts already retried for `actor_spawn_unavailable:*` retain their existing retry-demand paths; ordinary `failed` and `abandoned` attempts remain terminal historical facts; submitted attempts, existing terminal successors, invalid snapshots, and unclear lineage fail closed without mutation.
+- Bind the replacement demand to its terminal parent through five required queue-item lineage fields, retain the original kind/topic/assignment/output obligation/delegated-role facts, and allocate a new work ID only through the existing role-bound `claim` operation.
+- Make the existing Wave0/Wave1 candidate and phase guidance use this one replacement operation after eligible terminalization. A new or still-queued successor returns to the normal probe/claim checkpoint; an already in-flight successor returns to reconstruction and polling of its disclosed existing work ID. It does not claim by returned `queue_item_id`, alter queue order, or discover a successor from the filesystem.
+- Standardize known logical results with existing CLI conventions: one parseable stdout JSON result, exit `0` for a new or idempotent legal successor, exit non-zero for a structured no-path result, diagnostic stderr only for invocation/runtime faults, and one actionable next checkpoint appropriate to the successor's actual location.
+- Record one durable work-unit replacement trace event when a new successor demand is created. Idempotent and no-path results create neither a sibling demand nor a duplicate replacement event.
 - Add focused deterministic regression coverage for terminal-to-replacement transitions and their rejection/no-mutation boundaries.  No real actor output, receipt, cache, or ledger artifact will be fabricated for that proof.
 - Update framework release metadata to `v0.49`.
 
@@ -32,4 +33,4 @@ None.
 
 - Expected implementation surfaces: `DPT_FRAMEWORK/cli/operate-work-unit.mjs`, the work-unit lifecycle/index/envelope helpers, queue admission/schema helpers, the relevant Phase Markdown, and `DPT_FRAMEWORK/COMMANDS.md`.
 - Expected tests live under `tests/engine/`, `tests/integration/cli/`, and `tests/integration/md/`; no test assets belong under `DPT_FRAMEWORK/`.
-- Existing `timeout` retry, audited `late-submit`, and framework CLI exit-code conventions remain intact.  This change adds no dependencies, no user checkpoint, no watcher/retry daemon, no raw `unblock`, no ledger amendment, and no Gate/provenance degradation or bypass.
+- Existing `timeout` retry, actor-spawn retry, audited `late-submit`, and framework CLI exit-code conventions remain intact. This change adds no dependencies, no user checkpoint, no watcher/retry daemon, no raw `unblock`, no ledger amendment, and no Gate/provenance degradation or bypass.

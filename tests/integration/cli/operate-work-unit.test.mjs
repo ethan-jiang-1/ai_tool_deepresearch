@@ -803,6 +803,65 @@ describe('operate-work-unit inspect', () => {
     }
   });
 
+  it('replaces a failed terminal attempt through one stdout JSON result and returns to normal claim', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const initialClaim = JSON.parse(execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' }));
+      const parentWorkId = initialClaim.claimed_work_ids[0];
+
+      const claimedBefore = recursiveSnapshot(dir);
+      const claimedRefusal = spawnSync(process.execPath, [CLI, 'replace', dir, '--work-id', parentWorkId], {
+        encoding: 'utf-8', timeout: 5000,
+      });
+      assert.equal(claimedRefusal.status, 1);
+      assert.equal(claimedRefusal.stderr, '');
+      assert.equal(JSON.parse(claimedRefusal.stdout).reason_code, 'parent_not_terminal');
+      assert.deepEqual(recursiveSnapshot(dir), claimedBefore);
+
+      const failed = spawnSync(process.execPath, [CLI, 'fail', dir, '--work-id', parentWorkId, '--reason', 'semantic_contract:source_gap'], {
+        encoding: 'utf-8', timeout: 5000,
+      });
+      assert.equal(failed.status, 0, failed.stderr || failed.stdout);
+
+      const replacement = spawnSync(process.execPath, [CLI, 'replace', dir, '--work-id', parentWorkId], {
+        encoding: 'utf-8', timeout: 5000,
+      });
+      assert.equal(replacement.status, 0, replacement.stderr || replacement.stdout);
+      assert.equal(replacement.stderr, '');
+      const replacementOut = JSON.parse(replacement.stdout);
+      assert.equal(replacementOut.created, true);
+      assert.equal(replacementOut.next_action.operation, 'claim');
+      assert.equal(Object.hasOwn(replacementOut, 'existing_work_id'), false);
+      assert.equal(existsSync(path.join(dir, 'rb_output_declarations.jsonl')), false);
+      assert.equal(loadWorkUnitIndex(dir).work_units[parentWorkId].status, 'failed');
+
+      const repeated = spawnSync(process.execPath, [CLI, 'replace', dir, '--work-id', parentWorkId], {
+        encoding: 'utf-8', timeout: 5000,
+      });
+      assert.equal(repeated.status, 0, repeated.stderr || repeated.stdout);
+      const repeatedOut = JSON.parse(repeated.stdout);
+      assert.equal(repeatedOut.idempotent, true);
+      assert.equal(repeatedOut.queue_item_id, replacementOut.queue_item_id);
+
+      const successorClaim = JSON.parse(execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' }));
+      const successorWorkId = successorClaim.claimed_work_ids[0];
+      assert.notEqual(successorWorkId, parentWorkId);
+      const inFlight = spawnSync(process.execPath, [CLI, 'replace', dir, '--work-id', parentWorkId], {
+        encoding: 'utf-8', timeout: 5000,
+      });
+      assert.equal(inFlight.status, 0, inFlight.stderr || inFlight.stdout);
+      const inFlightOut = JSON.parse(inFlight.stdout);
+      assert.equal(inFlightOut.existing_work_id, successorWorkId);
+      assert.equal(inFlightOut.next_action.operation, 'reconstruct_and_poll');
+
+      const trace = readFileSync(path.join(dir, 'rb_trace.jsonl'), 'utf-8');
+      assert.equal((trace.match(/work_unit_replacement_created/g) || []).length, 1);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('late-submits a timed-out work unit through the CLI', () => {
     const dir = tempBundle();
     try {

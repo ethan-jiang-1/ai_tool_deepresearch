@@ -4,7 +4,7 @@
 
 Wave0, Wave1, and Wave2 phase Markdown SHALL describe delegated work as a continuous Phase Agent loop: fill queue demand, reconstruct current in-flight work from bundle truth, claim eligible independent work units as bounded top-up batches where applicable, spawn bounded Sub-agents, actively poll runtime work-unit readiness, submit ready attempts, repair or terminalize rejected/expired attempts, materialize Phase-owned projections where the phase owns consumer presentation after successful submit, and run the phase gate only after queue demand and delegated in-flight work are drained.
 
-After the existing `fail_and_replace` disposition reaches its authorized terminal boundary, phase Markdown SHALL instruct the Agent to terminalize the current attempt through the existing terminal operation and invoke `operate-work-unit replace` for that terminal `work_id`. It SHALL then perform the existing exact-role native probe and `operate-work-unit claim` for the derived queue demand. It SHALL not hand-author an allegedly equivalent replacement task card, infer a successor queue ID, discover a work ID from the filesystem, rewrite terminal status, or bypass ordinary claim.
+After the existing `fail_and_replace` disposition reaches its authorized terminal boundary, phase Markdown SHALL instruct the Agent to terminalize the current attempt through the existing terminal operation and invoke `operate-work-unit replace` for that terminal `work_id`. For a newly created or queued successor, it SHALL then perform the existing exact-role native probe and `operate-work-unit claim`; for an already in-flight idempotent successor, it SHALL reconstruct and poll the disclosed existing work ID without a second claim. It SHALL not hand-author an allegedly equivalent replacement task card, infer a successor queue ID, discover a work ID from the filesystem, rewrite terminal status, or bypass ordinary claim.
 
 Wave0 and Wave1 phase bodies SHALL NOT present `claim --count 1` as the normal strategy for independent topics. Wave1 phase body SHALL state that topic references are Phase-owned consumer projections materialized after successful work-unit submit from submitted source/cache/degraded-capture/ledger backing. Wave2 phase body SHALL state that consumer-facing accepted pure-synthesis findings with concrete existing Wave0/Wave1 submitted backing SHALL be materialized as `reference/00-cross-*.md` or carry an explicit non-consumer/deferred/limitation reason, while new external evidence must use `wave2_targeted_evidence`.
 
@@ -32,10 +32,11 @@ Wave0 and Wave1 phase bodies SHALL NOT present `claim --count 1` as the normal s
 - **THEN** phase guidance SHALL instruct the Phase Agent to keep polling, submitting, repairing, terminalizing, or claiming bounded top-ups as appropriate
 - **AND** it SHALL NOT run the phase gate as if delegated work were complete
 
-#### Scenario: terminal replacement returns to the normal claim boundary
+#### Scenario: terminal replacement returns to the location-correct existing boundary
 
 - **WHEN** dry-submit reports `fail_and_replace` for completed actor-owned semantic work
-- **THEN** phase guidance SHALL terminalize that work ID, invoke the Engine-owned replacement operation, and use the returned queue demand only through an exact-role probe and normal claim
+- **THEN** phase guidance SHALL terminalize that work ID, invoke the Engine-owned replacement operation, and use a new or queued successor only through an exact-role probe and normal claim
+- **AND** it SHALL reconstruct and poll a disclosed already-in-flight successor rather than claim again
 - **AND** it SHALL not reconstruct a replacement task card, inspect `_work_units` for a successor, or change the parent's terminal status
 
 #### Scenario: Wave1 materializes references after submit

@@ -1,17 +1,17 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.48**
+> **DPT_FRAMEWORK v0.49**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.48
+## Current Release: v0.49
 
-- Delegated work-unit tasks now present one Engine-generated Completion Contract as their first authoring entry; it derives existing attempt facts without pre-creating result, receipt, cache, output, source, or ledger authority. Spawn points to that same task entry.
-- Supplied malformed actor observations return structured pre-mutation claim feedback; omitted observations retain their established audit/no-claim behavior.
-- Dry-submit and normal formal rejection now share one selected primary root. Timeout preflight forwards only that root's action and code into existing lease advice; queue, Gate, ledger, replacement, and late-submit authority remain unchanged.
+- `operate-work-unit replace` derives one ordinary replacement demand from matching terminal authority for an eligible failed or abandoned delegated attempt. The parent remains terminal and no work ID is allocated until normal claim.
+- A queued replacement returns to the existing exact-role probe/claim boundary. An already in-flight replacement reports only its existing work ID for reconstruction and polling, while timed-out, conflicting, or terminal successors fail closed.
+- Wave0 and Wave1 recovery guidance now uses terminalization followed by the Engine-owned replacement operation; it does not hand-author equivalent task cards or automatically claim successors.
 
 ## 0. 禁用内置捷径（最高优先）
 

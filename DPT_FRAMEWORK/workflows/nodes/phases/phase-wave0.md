@@ -176,6 +176,14 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <work_id
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs abandon <bundle> --work-id <work_id> --reason "<reason>"
 ```
 
+When dry-submit reports `fail_and_replace` after `work_done`, terminalize the current attempt with the supplied semantic-contract reason, then invoke:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs replace <bundle> --work-id <terminal_work_id>
+```
+
+Read the structured replacement result. For a newly created or queued successor, perform one exact-role native probe and run the normal `claim` command for the returned wave; do not hand-author an equivalent queue card or infer a queue ID. For an already in-flight idempotent successor, use its disclosed existing `work_id` to reconstruct and actively poll the attempt; do not claim again. The parent remains terminal, and neither branch discovers a successor from `_work_units`.
+
 `timeout --force --reason <reason>` is an exceptional audited operator choice after inspection, not the normal response to progress, repairable candidates, or invalid binding. Do not use queue completion commands for delegated success, and do not run the Wave0 gate while preflight recommends `submit`, `repair`, `wait`, `inspect`, or `block` for any in-flight attempt.
 
 ### 3.3 Seed Projection Update

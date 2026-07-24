@@ -71,7 +71,7 @@ Existing active bundle reload enters through `RUN_BUNDLE.md` (fallback `BUNDLE_M
 | 命令 | 文件 | 说明 |
 |------|------|------|
 | setup-real-subagents | command_playbook/setup-real-subagents.md | 设置 Codex/Claude Code 项目级 real subagent 定义 |
-| operate-work-unit.mjs | cli/operate-work-unit.mjs | delegated work-unit 生命周期（`claim`/`submit`/`late-submit`/`recover-declaration`/`fail`/`timeout`/`abandon`/`open-batch`/`inspect`），生产 delegated completion 与 declaration recovery 的唯一 existing-owner CLI；成功 `claim` 输出 poll/inspect continuation cue，普通 `submit` 只接受 claimed，`late-submit` 是 timed_out 的显式审计入口，`recover-declaration <bundle> --work-id <submitted_id>` 只恢复 hash-identical missing ledger row且不接收`--result` |
+| operate-work-unit.mjs | cli/operate-work-unit.mjs | delegated work-unit 生命周期（`claim`/`submit`/`late-submit`/`recover-declaration`/`replace`/`fail`/`timeout`/`abandon`/`open-batch`/`inspect`），生产 delegated completion 与 declaration recovery 的唯一 existing-owner CLI；成功 `claim` 输出 poll/inspect continuation cue，普通 `submit` 只接受 claimed，`replace` 从 failed/abandoned terminal authority 派生一次 queue demand 而不分配新 work ID，`late-submit` 是 timed_out 的显式审计入口，`recover-declaration <bundle> --work-id <submitted_id>` 只恢复 hash-identical missing ledger row且不接收`--result` |
 | work-unit-actor-decision | command_playbook/work-unit-actor-decision.md | queue-front role inspect → 一次真实 native probe → 同一 claim checkpoint；normal batch、单项 Phase Agent fallback 或 no-claim |
 | provenance-forensics-guide | command_playbook/provenance-forensics-guide.md | 事后判定 delegated 证据 provenance 真伪；submitted work-unit ledger 是 gate authority |
 
@@ -83,6 +83,14 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit <bundle> --work-id <id> 
 ```
 
 Dry-submit is predictive and read-only. Formal submit remains the delegated acceptance and success owner.
+
+Eligible terminal replacement uses the work-unit authority, not a hand-authored queue card:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs replace <bundle> --work-id <failed_or_abandoned_id>
+```
+
+`replace` exits `0` for a newly created demand or an idempotent live successor and emits exactly one JSON document on stdout. A new or queued successor names the ordinary exact-role `claim` checkpoint and has no newly allocated work ID. An already in-flight idempotent successor reports only its existing allocated work ID for reconstruction/polling; it does not authorize another claim. A timed-out, submitted, claimed, mismatched, conflicting, or terminal-successor request emits structured stdout with non-zero exit and does not mutate queue, work-unit, receipt, result, cache, ledger, or parent terminal authority. Invocation and runtime faults use stderr.
 
 Already-submitted declaration fault 的唯一 existing-owner operation：
 

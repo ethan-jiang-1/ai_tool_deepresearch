@@ -41,15 +41,15 @@ This preserves rather than launders history. `replace` creates a new demand afte
 
 ### D3. The successor is deterministic, queue-native, and lineage-bound
 
-The Engine derives a unique successor `queue_item_id` from the terminal parent work ID. Its copied queue item retains source kind, target/delegated role, priority, producer rule, payload, receipts, writes, done condition and verification. It receives only the permitted changes: `queue_item_id`, ordinary queue timestamps/status, and a lineage extension containing the parent work ID, parent queue ID, parent terminal reason/status, and the source snapshot hash.
+The Engine derives a unique successor `queue_item_id` from the terminal parent work ID. Its copied queue item retains source kind, target/delegated role, priority, producer rule, payload, receipts, writes, done condition and verification. It receives only the permitted changes: `queue_item_id`, ordinary queue timestamps/status, and five required lineage fields: `replacement_of_work_id`, `replacement_of_queue_item_id`, `replacement_terminal_status`, `replacement_terminal_reason`, and `replacement_queue_item_snapshot_hash`.
 
-The deterministic ID makes retrying `replace` safe. If the exact derived item is still queued or delegated in flight, the operation returns it idempotently and names the normal claim action. If it has completed or terminalized, callers must operate on that successor's terminal work ID; they cannot create a second child of the earlier parent. Any same-ID item with mismatched lineage or snapshot is a fail-closed conflict.
+The deterministic ID makes retrying `replace` safe. If the exact derived item is queued, the operation returns it idempotently and names the normal probe/claim action. If it is delegated in flight, it returns the existing work ID and tells the Phase to reconstruct and poll that work; it must not invite a second claim. If it has completed or terminalized, callers must operate on that successor's terminal work ID; they cannot create a second child of the earlier parent. Any same-ID item with mismatched lineage or snapshot is a fail-closed conflict.
 
 The queue's existing global uniqueness rule continues to prohibit an ID from appearing in multiple locations. The replacement demand is admitted through the normal enqueue path, which recomputes derived queue health instead of overriding it.
 
 ### D4. Feedback and responsibility remain narrow
 
-The successful result contains the terminal parent ID/status, replacement queue-item ID, queue location, parent lineage facts, and one next action: perform the normal role-specific native probe and invoke existing `claim` for the recorded wave. It deliberately contains no work ID.
+The successful result contains the terminal parent ID/status, replacement queue-item ID, queue location, parent lineage facts, and one location-correct next action. For a newly created or queued successor, that action is the normal role-specific native probe and existing `claim` for the recorded wave; the result contains no work ID. For an idempotent successor already in `delegated_in_flight`, it reports that existing work ID and directs the Phase to reconstruct and poll it. Reporting this existing ID is not allocation; only `claim` may allocate a new one.
 
 The Agent decides, from the existing dry-submit disposition, whether semantic content has reached the already-authorized terminal/replacement boundary and runs ordinary mechanical commands. The Engine validates eligibility, creates the queue demand, and reports its deterministic result. No user decision, HITL status, or external permission is created by the operation.
 

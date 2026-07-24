@@ -8,7 +8,7 @@ Current main spec Purpose SHALL describe queue v2 as an ordered active-window qu
 
 For audited late-submit success, the completed `queue_item_id` SHALL appear in exactly one durable queue location: the targeted work unit's `done` entry in `terminal_history`. Queued retry demand for that queue item SHALL be removed. Claimed retry attempts for that queue item SHALL be cleared from `delegated_in_flight` and terminalized through work-unit status, not through a second queue terminal-history row.
 
-An Engine-created terminal replacement demand SHALL use a fresh `queue_item_id` and retain its parent relation only in the ordinary queue item's `lineage`. That lineage SHALL name the parent `work_id`, parent `queue_item_id`, terminal status/reason, and immutable source queue-item snapshot hash. It SHALL not put a work ID on the queue-demand identity, alter the parent's terminal-history row, or create a queue location outside the existing active window, refill pool, delegated in-flight, and terminal history model.
+An Engine-created terminal replacement demand SHALL use a fresh `queue_item_id` and retain its parent relation only in the ordinary queue item's `lineage`. It SHALL preserve the source snapshot's `kind`, `targets`, `action`, `producer_rule`, `priority_class`, `required_receipts`, `done_condition`, `verification`, `writes_to`, `status_sync`, `completion_receipt`, `failure_route`, and `payload`. That lineage SHALL include `replacement_of_work_id`, `replacement_of_queue_item_id`, `replacement_terminal_status`, `replacement_terminal_reason`, and `replacement_queue_item_snapshot_hash`, populated from the parent terminal authority. It SHALL not put a work ID on the queue-demand identity, alter the parent's terminal-history row, or create a queue location outside the existing active window, refill pool, delegated in-flight, and terminal history model.
 
 #### Scenario: late-submit leaves one queue location
 
@@ -33,5 +33,7 @@ An Engine-created terminal replacement demand SHALL use a fresh `queue_item_id` 
 
 - **WHEN** the Engine creates a replacement demand from an eligible terminal work unit
 - **THEN** the new demand SHALL have a fresh queue-item identity and the required parent-attempt lineage
+- **AND** each listed queue-item contract field SHALL equal the source snapshot value
+- **AND** each required replacement lineage field SHALL equal the matching parent terminal authority fact
 - **AND** it SHALL appear in exactly one ordinary queue location before claim
 - **AND** no work ID, queue completion, or modification of the parent terminal-history record SHALL occur

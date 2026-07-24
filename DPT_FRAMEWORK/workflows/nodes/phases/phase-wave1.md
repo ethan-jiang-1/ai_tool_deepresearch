@@ -176,7 +176,7 @@ Consume the returned Engine disposition without inventing another repair route:
 
 - `repair_same_candidate`: repair only the authorized mechanical candidate coordinate on the same `work_id`, then rerun this dry-submit.
 - `return_to_actor`: return actor-owned semantic work before `work_done`; do not make the Phase Agent fabricate it.
-- `fail_and_replace`: after `work_done`, use the existing terminal/replacement path with a fresh work unit as described in §3.4; do not auto-retry or reuse the failed identity.
+- `fail_and_replace`: after `work_done`, use the terminal replacement procedure in §3.2.4; do not auto-retry or reuse the failed identity.
 - `inspect_contract`: keep contract-integrity or missing-contract facts at the named Engine owner, terminal, or no-path boundary.
 - `submit`: run formal submit only after dry-submit predicts acceptance:
 
@@ -283,7 +283,17 @@ If the depth review records `decision: supplement_required`, enqueue a supplemen
 
 The supplementary item follows the same claim/task/dry-submit/formal-submit loop. Use only exact prior paths listed in the claimed task's `Completion Contract -> Cache And Source Facts`; if none is listed, produce a genuinely current assigned output rather than guessing from a filename. Repair `/source_claims/<index>/source_ref` on the same candidate when dry-submit rejects lineage, and never copy an old evidence file into `output_files[]` or overwrite it solely to make validation pass.
 
-For a mode-absent unclaimed Wave1 card, run `operate-queue.mjs repair <bundle> --queue-item-id <id> --set-assignment-mode <primary|supplementary>`; do not infer its mode. After `work_done`, a semantic `fail_and_replace` uses `operate-work-unit fail --reason semantic_contract:<primary_root_code>`, then explicitly enqueues the same Topic, assignment mode, and receipt obligation under a fresh queue ID before a new claim. It does not weaken primary into supplementary or auto-retry.
+For a mode-absent unclaimed Wave1 card, run `operate-queue.mjs repair <bundle> --queue-item-id <id> --set-assignment-mode <primary|supplementary>`; do not infer its mode.
+
+### 3.2.4 Terminal Replacement
+
+After `work_done`, a semantic `fail_and_replace` first uses `operate-work-unit fail <bundle> --work-id <work_id> --reason semantic_contract:<primary_root_code>`, then invokes:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs replace <bundle> --work-id <terminal_work_id>
+```
+
+Read the replacement JSON rather than rebuilding a task card. For a newly created or queued successor, perform the exact-role native probe and the ordinary `claim` for the returned wave. For an already in-flight idempotent successor, reconstruct and actively poll its disclosed existing `work_id`; do not claim a second attempt. Do not alter the parent terminal status, weaken primary into supplementary, auto-retry, inspect `_work_units` to discover a successor, or enqueue an allegedly equivalent card.
 
 ## 4. Expected Artifacts
 

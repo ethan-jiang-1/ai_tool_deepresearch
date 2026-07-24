@@ -1,4 +1,4 @@
-// @impl DEW-002, DEW-003, DEW-004, DEW-014, EXO-001, SWE-006
+// @impl DEW-002, DEW-003, DEW-004, DEW-006, DEW-014, EXO-001, SWE-006
 // Work-unit lifecycle: create, parse phase, eligibility, claim, close, batch open.
 
 import path from 'node:path';
@@ -54,7 +54,7 @@ import { describeDirectOutputAuthoringProjection } from './helpers/direct-output
 import { resolveWorkUnitRoleGuidance } from './helpers/work-unit-role-guidance.mjs';
 
 import { queueItemSnapshotHash } from './queue-manager-core.mjs';
-import { loadQueue, loadQueueReadOnly, saveQueue } from './queue-manager-lifecycle.mjs';
+import { enqueue, loadQueue, loadQueueReadOnly, saveQueue } from './queue-manager-lifecycle.mjs';
 import { preempt, refill } from './queue-manager-window.mjs';
 import { logToRun } from './logger.mjs';
 import { CanonicalPlanSchema } from '../schema/contracts/plan.mjs';
@@ -769,6 +769,215 @@ function statusToQueueTerminal(status) {
   if (status === 'failed') return 'failed';
   if (status === 'abandoned') return 'cancelled';
   return 'blocked';
+}
+
+function replacementQueueItemId(workId) {
+  return `replacement-${workId}`;
+}
+
+function replacementNoPath(record, reasonCode, message, nextAction = null) {
+  return {
+    ok: false,
+    reason_code: reasonCode,
+    ...(record ? {
+      parent_work_id: record.work_id,
+      parent_queue_item_id: record.queue_item_id,
+      parent_status: record.status,
+    } : {}),
+    inspect: [message],
+    ...(nextAction ? { next_action: nextAction } : {}),
+  };
+}
+
+function queueItemLocation(queue, queueItemId) {
+  if (queue.active_window.some((item) => item.queue_item_id === queueItemId)) return 'active_window';
+  if (queue.refill_pool.some((item) => item.queue_item_id === queueItemId)) return 'refill_pool';
+  if (queue.delegated_in_flight?.[queueItemId]) return 'delegated_in_flight';
+  if (queue.terminal_history.some((entry) => entry.queue_item_id === queueItemId)) return 'terminal_history';
+  return null;
+}
+
+function replacementClaimAction(record, queueItem) {
+  return {
+    operation: 'claim',
+    phase: `wave${record.wave}`,
+    queue_item_id: queueItem.queue_item_id,
+    role_key: queueItem.targets?.delegates?.role_key || null,
+  };
+}
+
+function buildReplacementDemand(record, manifest, terminalRecord) {
+  const source = clone(manifest.queue_item);
+  const { created_at: _createdAt, updated_at: _updatedAt, status: _status, restore_priority: _restorePriority, ...copied } = source;
+  return {
+    ...copied,
+    queue_item_id: replacementQueueItemId(record.work_id),
+    status: 'queued',
+    lineage: {
+      ...(source.lineage || {}),
+      replacement_of_work_id: record.work_id,
+      replacement_of_queue_item_id: record.queue_item_id,
+      replacement_terminal_status: record.status,
+      replacement_terminal_reason: record.terminal_reason,
+      replacement_queue_item_snapshot_hash: record.queue_item_snapshot_hash,
+    },
+  };
+}
+
+function replacementAuthority(bundleDir, workId, { queue = null } = {}) {
+  const index = loadWorkUnitIndex(bundleDir, { createIfMissing: false });
+  const record = index.work_units[workId];
+  if (!record) return replacementNoPath(null, 'unknown_work_id', `No work-unit record exists for ${workId}.`);
+  if (record.status === 'timed_out') {
+    return replacementNoPath(record, 'timed_out_retry_exists', `Work unit ${record.work_id} is timed_out and retains its existing retry-demand path.`, {
+      operation: 'claim_existing_timeout_retry',
+    });
+  }
+  if (!['failed', 'abandoned'].includes(record.status)) {
+    return replacementNoPath(record, 'parent_not_terminal', `Work unit ${record.work_id} is ${record.status}; replacement requires failed or abandoned terminal authority.`);
+  }
+  if (!record.terminal_reason) {
+    return replacementNoPath(record, 'terminal_authority_missing', `Work unit ${record.work_id} has no terminal reason.`);
+  }
+
+  let manifest;
+  try {
+    manifest = readAndValidateManifest(bundleDir, index, record);
+  } catch (error) {
+    return replacementNoPath(record, 'manifest_authority_invalid', error.message || String(error));
+  }
+
+  const queueView = queue || loadQueueReadOnly(bundleDir);
+  const terminalRows = queueView.terminal_history.filter((entry) => entry.work_id === record.work_id && entry.queue_item_id === record.queue_item_id);
+  if (terminalRows.length !== 1) {
+    return replacementNoPath(record, 'terminal_authority_missing', `Expected exactly one terminal-history row for ${record.work_id}; found ${terminalRows.length}.`);
+  }
+  const terminalRecord = terminalRows[0];
+  if (terminalRecord.terminal_status !== statusToQueueTerminal(record.status) || terminalRecord.reason !== record.terminal_reason || !terminalRecord.item) {
+    return replacementNoPath(record, 'terminal_authority_mismatch', `Terminal-history authority does not match ${record.work_id}.`);
+  }
+  const manifestSnapshotHash = queueItemSnapshotHash(manifest.queue_item);
+  const terminalSnapshotHash = queueItemSnapshotHash(terminalRecord.item);
+  if (manifestSnapshotHash !== record.queue_item_snapshot_hash
+    || terminalSnapshotHash !== record.queue_item_snapshot_hash
+    || hashValue(manifest.queue_item) !== hashValue(terminalRecord.item)) {
+    return replacementNoPath(record, 'terminal_snapshot_mismatch', `Record, manifest, and terminal-history snapshots disagree for ${record.work_id}.`);
+  }
+
+  const replacement = buildReplacementDemand(record, manifest, terminalRecord);
+  const replacementHash = queueItemSnapshotHash(replacement);
+  const replacementId = replacement.queue_item_id;
+  const successorRecords = Object.values(index.work_units)
+    .filter((candidate) => candidate.work_id !== record.work_id && candidate.queue_item_id === replacementId);
+  if (successorRecords.some((candidate) => candidate.status === 'submitted')) {
+    return replacementNoPath(record, 'submitted_successor', `Replacement demand ${replacementId} already has a submitted successor.`);
+  }
+
+  const location = queueItemLocation(queueView, replacementId);
+  if (location === 'terminal_history') {
+    return replacementNoPath(record, 'successor_terminal', `Replacement demand ${replacementId} is already terminal; use its terminal work unit as the only possible next parent.`);
+  }
+  if (location === 'active_window' || location === 'refill_pool') {
+    const existing = [...queueView.active_window, ...queueView.refill_pool]
+      .find((item) => item.queue_item_id === replacementId);
+    if (queueItemSnapshotHash(existing) !== replacementHash) {
+      return replacementNoPath(record, 'successor_conflict', `Live replacement demand ${replacementId} has conflicting lineage or snapshot authority.`);
+    }
+    return {
+      ok: true,
+      created: false,
+      idempotent: true,
+      parent_work_id: record.work_id,
+      parent_queue_item_id: record.queue_item_id,
+      parent_status: record.status,
+      queue_item_id: replacementId,
+      queue_location: location,
+      lineage: replacement.lineage,
+      next_action: replacementClaimAction(record, replacement),
+    };
+  }
+  if (location === 'delegated_in_flight') {
+    const inFlight = queueView.delegated_in_flight[replacementId];
+    const successor = index.work_units[inFlight.work_id];
+    if (!successor
+      || successor.status !== 'claimed'
+      || successor.queue_item_id !== replacementId
+      || successor.queue_item_snapshot_hash !== replacementHash) {
+      return replacementNoPath(record, 'successor_conflict', `In-flight replacement demand ${replacementId} does not bind one matching claimed work unit.`);
+    }
+    return {
+      ok: true,
+      created: false,
+      idempotent: true,
+      parent_work_id: record.work_id,
+      parent_queue_item_id: record.queue_item_id,
+      parent_status: record.status,
+      queue_item_id: replacementId,
+      queue_location: location,
+      existing_work_id: successor.work_id,
+      lineage: replacement.lineage,
+      next_action: {
+        operation: 'reconstruct_and_poll',
+        work_id: successor.work_id,
+      },
+    };
+  }
+  if (successorRecords.length > 0) {
+    return replacementNoPath(record, 'successor_conflict', `Replacement demand ${replacementId} has a work-unit record outside a legal queue location.`);
+  }
+
+  return {
+    ok: true,
+    created: false,
+    idempotent: false,
+    record,
+    replacement,
+  };
+}
+
+export function replaceWorkUnitAttempt(bundleDir, { work_id } = {}) {
+  if (!work_id) throw new Error('--work-id is required');
+  const preview = replacementAuthority(bundleDir, work_id);
+  if (!preview.ok || preview.idempotent) return preview;
+
+  return withWorkUnitTransaction(bundleDir, 'work_unit_replace', ({ tx_id }) => {
+    const queue = loadQueue(bundleDir);
+    const current = replacementAuthority(bundleDir, work_id, { queue });
+    if (!current.ok || current.idempotent) return current;
+
+    const savedQueue = saveQueue(bundleDir, enqueue(queue, current.replacement));
+    const location = queueItemLocation(savedQueue, current.replacement.queue_item_id);
+    traceWorkUnitEvent(bundleDir, 'work_unit_replacement_created', {
+      tx_id,
+      parent_work_id: current.record.work_id,
+      parent_queue_item_id: current.record.queue_item_id,
+      parent_status: current.record.status,
+      parent_reason: current.record.terminal_reason,
+      queue_item_id: current.replacement.queue_item_id,
+      queue_location: location,
+      replacement_queue_item_snapshot_hash: current.record.queue_item_snapshot_hash,
+    });
+    logToRun(bundleDir, 'info', 'work_unit_replacement_created', {
+      kind: 'work_unit_replacement',
+      tx_id,
+      parent_work_id: current.record.work_id,
+      queue_item_id: current.replacement.queue_item_id,
+      queue_location: location,
+    });
+    return {
+      ok: true,
+      created: true,
+      idempotent: false,
+      parent_work_id: current.record.work_id,
+      parent_queue_item_id: current.record.queue_item_id,
+      parent_status: current.record.status,
+      queue_item_id: current.replacement.queue_item_id,
+      queue_location: location,
+      lineage: current.replacement.lineage,
+      next_action: replacementClaimAction(current.record, current.replacement),
+      queue: savedQueue,
+    };
+  });
 }
 
 export function closeWorkUnitAttempt(bundleDir, { work_id, status, reason, force = false, nowMs = Date.now() } = {}) {

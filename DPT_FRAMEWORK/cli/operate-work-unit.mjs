@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @impl FRE-005, DEW-002, DEW-013, DEW-014
+// @impl FRE-005, DEW-002, DEW-006, DEW-013, DEW-014
 // Work-unit CLI. Claim/inspect/submit are wired; terminal commands are added in later apply sections.
 
 import path from 'node:path';
@@ -15,6 +15,7 @@ import {
   lateSubmitWorkUnit,
   openWorkUnitBatch,
   recoverWorkUnitDeclaration,
+  replaceWorkUnitAttempt,
   submitWorkUnit,
   timeoutPreflightWorkUnit,
 } from '../engine/work-unit-core.mjs';
@@ -26,6 +27,7 @@ function usage() {
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight <bundle> --work-id <id> [--result <result.json>]
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <id> --result <result.json>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs late-submit <bundle> --work-id <timed_out_id> --result <result.json> --reason <reason>
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs replace <bundle> --work-id <failed_or_abandoned_id>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration <bundle> --work-id <submitted_id>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs fail <bundle> --work-id <id> --reason <reason>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --reason <reason> [--force]
@@ -172,6 +174,12 @@ try {
     if (!values['work-id']) throw new Error('--work-id is required');
     if (values.result) throw new Error('recover-declaration does not accept --result');
     const result = recoverWorkUnitDeclaration(bundleDir, { work_id: values['work-id'] });
+    emit(result);
+    process.exit(result.ok ? 0 : 1);
+  }
+  if (command === 'replace') {
+    if (!values['work-id']) throw new Error('--work-id is required');
+    const result = replaceWorkUnitAttempt(bundleDir, { work_id: values['work-id'] });
     emit(result);
     process.exit(result.ok ? 0 : 1);
   }

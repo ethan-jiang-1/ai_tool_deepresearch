@@ -93,6 +93,24 @@ describe('QueueDemandItemSchema', () => {
       completion_receipt: null,
     })).success, false);
   });
+
+  it('requires a complete terminal replacement lineage when any replacement field is present', () => {
+    const complete = demand({
+      lineage: {
+        replacement_of_work_id: 'wu-w0-b000-src-i0001',
+        replacement_of_queue_item_id: 'queue-parent',
+        replacement_terminal_status: 'failed',
+        replacement_terminal_reason: 'semantic_contract:source_gap',
+        replacement_queue_item_snapshot_hash: 'a'.repeat(64),
+      },
+    });
+    assert.equal(QueueDemandItemSchema.safeParse(complete).success, true);
+    const incomplete = QueueDemandItemSchema.safeParse(demand({
+      lineage: { replacement_of_work_id: 'wu-w0-b000-src-i0001' },
+    }));
+    assert.equal(incomplete.success, false);
+    assert.match(incomplete.error.issues.map((issue) => issue.message).join('\n'), /replacement lineage requires/);
+  });
 });
 
 describe('QueueSchema', () => {

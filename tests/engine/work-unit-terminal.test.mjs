@@ -20,8 +20,10 @@ import {
   loadWorkUnitIndex,
   openWorkUnitBatch,
   readWorkUnitLedgerRows,
+  replaceWorkUnitAttempt,
   submitWorkUnit,
   timeoutPreflightWorkUnit,
+  workUnitIndexPath,
 } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
 
 function tempBundle() {
@@ -291,6 +293,125 @@ describe('work-unit terminal attempts', () => {
       assert.match(trace, /work_unit_retry_claimed/);
     } finally {
       cleanup(dir);
+    }
+  });
+
+  it('derives one replacement demand from exact failed terminal authority and claims it normally', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const parent = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      closeWorkUnitAttempt(dir, { work_id: parent.work_id, status: 'failed', reason: 'semantic_contract:source_gap' });
+
+      const beforeIndex = readFileSync(workUnitIndexPath(dir), 'utf-8');
+      const replacement = replaceWorkUnitAttempt(dir, { work_id: parent.work_id });
+      assert.equal(replacement.ok, true);
+      assert.equal(replacement.created, true);
+      assert.equal(replacement.idempotent, false);
+      assert.equal(replacement.parent_work_id, parent.work_id);
+      assert.equal(replacement.next_action.operation, 'claim');
+      assert.equal(Object.hasOwn(replacement, 'existing_work_id'), false);
+      assert.equal(readFileSync(workUnitIndexPath(dir), 'utf-8'), beforeIndex);
+
+      const queue = loadQueue(dir);
+      const item = queue.active_window.find((entry) => entry.queue_item_id === replacement.queue_item_id);
+      assert.ok(item);
+      assert.equal(item.kind, 'wave0_source_intake');
+      assert.deepEqual(item.targets, delegated('queue-a').targets);
+      assert.deepEqual(item.payload, delegated('queue-a').payload);
+      assert.equal(item.lineage.replacement_of_work_id, parent.work_id);
+      assert.equal(item.lineage.replacement_of_queue_item_id, parent.queue_item_id);
+      assert.equal(item.lineage.replacement_terminal_status, 'failed');
+      assert.equal(item.lineage.replacement_terminal_reason, 'semantic_contract:source_gap');
+      assert.equal(item.lineage.replacement_queue_item_snapshot_hash, parent.queue_item_snapshot_hash);
+      assert.equal(queue.terminal_history.length, 1);
+      assert.equal(queue.terminal_history[0].work_id, parent.work_id);
+      const trace = readFileSync(path.join(dir, 'rb_trace.jsonl'), 'utf-8');
+      assert.equal((trace.match(/work_unit_replacement_created/g) || []).length, 1);
+
+      const claimed = claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      assert.equal(claimed.claimed_count, 1);
+      assert.notEqual(claimed.claimed_work_ids[0], parent.work_id);
+      assert.equal(loadWorkUnitIndex(dir).work_units[claimed.claimed_work_ids[0]].queue_item_id, replacement.queue_item_id);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('keeps replacement fail-closed and location-correct across terminal and successor states', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const parent = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const claimedBefore = authoritySnapshot(dir);
+      const claimed = replaceWorkUnitAttempt(dir, { work_id: parent.work_id });
+      assert.equal(claimed.ok, false);
+      assert.equal(claimed.reason_code, 'parent_not_terminal');
+      assert.equal(authoritySnapshot(dir), claimedBefore);
+
+      closeWorkUnitAttempt(dir, { work_id: parent.work_id, status: 'failed', reason: 'semantic_contract:source_gap' });
+      const created = replaceWorkUnitAttempt(dir, { work_id: parent.work_id });
+      const queuedAgain = replaceWorkUnitAttempt(dir, { work_id: parent.work_id });
+      assert.equal(queuedAgain.ok, true);
+      assert.equal(queuedAgain.idempotent, true);
+      assert.equal(queuedAgain.queue_item_id, created.queue_item_id);
+      assert.equal(queuedAgain.next_action.operation, 'claim');
+
+      const childClaim = claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const childWorkId = childClaim.claimed_work_ids[0];
+      const inFlightAgain = replaceWorkUnitAttempt(dir, { work_id: parent.work_id });
+      assert.equal(inFlightAgain.ok, true);
+      assert.equal(inFlightAgain.idempotent, true);
+      assert.equal(inFlightAgain.existing_work_id, childWorkId);
+      assert.equal(inFlightAgain.next_action.operation, 'reconstruct_and_poll');
+
+      closeWorkUnitAttempt(dir, { work_id: childWorkId, status: 'abandoned', reason: 'actor_returned_unusable' });
+      const terminalBefore = authoritySnapshot(dir);
+      const terminalAgain = replaceWorkUnitAttempt(dir, { work_id: parent.work_id });
+      assert.equal(terminalAgain.ok, false);
+      assert.equal(terminalAgain.reason_code, 'successor_terminal');
+      assert.equal(authoritySnapshot(dir), terminalBefore);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('rejects timeout and mismatched terminal snapshot replacement without authority mutation', () => {
+    const timeoutDir = tempBundle();
+    const mismatchDir = tempBundle();
+    try {
+      saveSeedQueue(timeoutDir, [delegated('queue-timeout')]);
+      claimWorkUnits(timeoutDir, { phase: 'wave0', count: 1 });
+      const timedOut = loadWorkUnitIndex(timeoutDir).work_units['wu-w0-b000-src-i0001'];
+      closeWorkUnitAttempt(timeoutDir, {
+        work_id: timedOut.work_id,
+        status: 'timed_out',
+        reason: 'deadline-expired',
+        nowMs: afterDeadline(timedOut),
+      });
+      const timeoutBefore = authoritySnapshot(timeoutDir);
+      const timeoutResult = replaceWorkUnitAttempt(timeoutDir, { work_id: timedOut.work_id });
+      assert.equal(timeoutResult.ok, false);
+      assert.equal(timeoutResult.reason_code, 'timed_out_retry_exists');
+      assert.equal(authoritySnapshot(timeoutDir), timeoutBefore);
+
+      saveSeedQueue(mismatchDir, [delegated('queue-mismatch')]);
+      claimWorkUnits(mismatchDir, { phase: 'wave0', count: 1 });
+      const failed = loadWorkUnitIndex(mismatchDir).work_units['wu-w0-b000-src-i0001'];
+      closeWorkUnitAttempt(mismatchDir, { work_id: failed.work_id, status: 'failed', reason: 'semantic_contract:source_gap' });
+      const queue = loadQueue(mismatchDir);
+      queue.terminal_history[0].item.payload.topic_slug = 'tampered-topic';
+      saveQueue(mismatchDir, queue);
+      const mismatchBefore = authoritySnapshot(mismatchDir);
+      const mismatchResult = replaceWorkUnitAttempt(mismatchDir, { work_id: failed.work_id });
+      assert.equal(mismatchResult.ok, false);
+      assert.equal(mismatchResult.reason_code, 'terminal_snapshot_mismatch');
+      assert.equal(authoritySnapshot(mismatchDir), mismatchBefore);
+    } finally {
+      cleanup(timeoutDir);
+      cleanup(mismatchDir);
     }
   });
 

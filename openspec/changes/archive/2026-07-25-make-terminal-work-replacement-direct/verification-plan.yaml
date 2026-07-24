@@ -15,7 +15,7 @@ test_classes:
     rationale: The claim retains its existing real-actor boundary, but this change neither changes actor task delivery nor claims actor behavior, research quality, or real external execution. Deterministic proof may not fabricate such evidence.
 claims:
   - id: terminal-snapshot-replacement-decision
-    statement: An eligible failed or abandoned terminal record with matching manifest and terminal-history snapshot deterministically derives one successor queue identity and lineage. Timed-out, submitted, claimed, corrupted, conflicting, or already-terminal successor cases return their own no-path reason without authority mutation.
+    statement: An eligible failed or abandoned terminal record with matching manifest and terminal-history snapshot deterministically derives one successor queue identity, exact copied queue-item contract fields, and all five replacement lineage fields. Timed-out, submitted, claimed, corrupted, conflicting, or already-terminal successor cases return their own no-path reason without authority mutation; queued and in-flight idempotent cases return their distinct existing checkpoints.
     test_class: unit
     proof_subject: deterministic_contract
     asset:
@@ -29,7 +29,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: replacement-cli-to-normal-claim
-    statement: In a fresh temporary bundle, `operate-work-unit replace` emits one parseable stdout JSON result and creates exactly one ordinary successor demand with parent lineage but no work ID, envelope, receipt, result, cache, ledger or completion. A subsequent exact-role native observation and normal claim allocate the fresh work ID; repeat/conflict paths have non-zero refusal or idempotent same-successor behavior and preserve authority bytes as specified.
+    statement: In a fresh temporary bundle, `operate-work-unit replace` emits one parseable stdout JSON result and creates exactly one ordinary successor demand with all required parent lineage fields and one replacement trace event, but no work ID, envelope, receipt, result, cache, ledger, or completion. A subsequent exact-role native observation and normal claim allocate the fresh work ID. Queued idempotence returns that same claim checkpoint; in-flight idempotence returns the existing work ID and reconstruction/poll checkpoint; conflict and terminal paths are non-zero and preserve authority bytes.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -43,7 +43,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: replacement-guidance-keeps-agent-at-existing-boundaries
-    statement: Wave phase guidance routes `fail_and_replace` through terminalization, one Engine replacement demand, exact-role probe and ordinary claim, while prohibiting task-card reconstruction, filesystem discovery, terminal-status rewrite, and automatic claim. This proves supplied guidance content only, not private Agent reading or execution.
+    statement: Wave phase guidance routes `fail_and_replace` through terminalization and one Engine replacement demand, then uses a newly created or queued successor for the exact-role probe and ordinary claim while reconstructing/polling an already-in-flight successor. It prohibits task-card reconstruction, filesystem discovery, terminal-status rewrite, and automatic claim. This proves supplied guidance content only, not private Agent reading or execution.
     test_class: integration
     proof_subject: deterministic_contract
     asset:

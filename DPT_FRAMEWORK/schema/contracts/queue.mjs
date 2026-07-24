@@ -6,6 +6,13 @@ export const QUEUE_ACTIVE_WINDOW_LIMIT = 20;
 export const QUEUE_SCHEMA_VERSION = 'queue.v2';
 
 const JsonObject = z.record(z.string(), z.unknown());
+const REPLACEMENT_LINEAGE_FIELDS = [
+  'replacement_of_work_id',
+  'replacement_of_queue_item_id',
+  'replacement_terminal_status',
+  'replacement_terminal_reason',
+  'replacement_queue_item_snapshot_hash',
+];
 
 export const TargetSpecSchema = z.object({
   controller: z.enum(['main-agent', 'engine']),
@@ -66,6 +73,26 @@ export const QueueDemandItemSchema = z.object({
       path: ['completion_receipt'],
       message: 'completion_receipt can only be null when required_receipts is empty. Non-empty required_receipts require a concrete completion_receipt.',
     });
+  }
+  const replacementFieldsPresent = REPLACEMENT_LINEAGE_FIELDS
+    .filter((field) => Object.hasOwn(data.lineage || {}, field));
+  if (replacementFieldsPresent.length > 0) {
+    for (const field of REPLACEMENT_LINEAGE_FIELDS) {
+      if (typeof data.lineage?.[field] !== 'string' || data.lineage[field].trim() === '') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['lineage', field],
+          message: `replacement lineage requires non-empty ${field}`,
+        });
+      }
+    }
+    if (!['failed', 'abandoned'].includes(data.lineage.replacement_terminal_status)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['lineage', 'replacement_terminal_status'],
+        message: 'replacement_terminal_status must be failed or abandoned',
+      });
+    }
   }
 });
 

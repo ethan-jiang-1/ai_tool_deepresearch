@@ -103,7 +103,7 @@ export function mapCandidateProjectionToTimeout(candidateProjection) {
   if (action === 'fail_and_replace') {
     return {
       recommended_action: 'block',
-      advice: [`Fail this attempt with semantic_contract:${projection.primary_root_code}, then explicitly enqueue the same assignment under a fresh queue ID.`],
+      advice: [`Terminalize this attempt with semantic_contract:${projection.primary_root_code}, then run operate-work-unit replace for the terminal work_id.`],
     };
   }
   return { recommended_action: 'inspect', advice: [] };

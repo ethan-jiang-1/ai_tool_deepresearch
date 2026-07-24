@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.49
+
+- Added `operate-work-unit replace` for an eligible failed or abandoned delegated attempt. It derives one lineage-bound ordinary queue demand from matching terminal authority, without reviving history or allocating a work ID.
+- Replacement calls are fail-closed and idempotent: queued successors return the existing probe/claim boundary, while in-flight successors return only their existing work ID for reconstruction and polling. Timed-out and terminal successors retain their established paths.
+- Wave0 and Wave1 recovery guidance now terminalizes `fail_and_replace` attempts before using the Engine-owned replacement operation; manual equivalent-card reconstruction and automatic claim remain prohibited.
+
 ## v0.48
 
 - Generated work-unit `task.md` now starts its authoring surface with one non-authoritative Completion Contract derived from existing manifest, result-schema, direct-output, cache, source, and receipt owners; spawn points only to that entry and creates no actor-produced authority.
