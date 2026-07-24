@@ -317,6 +317,8 @@ GCO-003: guidance-constitution — New or changed cross-boundary blocking obliga
 GCO-004: guidance-constitution — Explicitly declared Agent-facing entry/handoff/recovery boundaries support bounded reentry without hidden choreography or Engine workflow control
 GCO-005: guidance-constitution — Authority, capability, permission, responsibility, liveness, and evidence remain non-interchangeable concepts
 GCO-006: guidance-constitution — Closure claims are bounded by claim-specific provenance, scope, and proof distance
+GCO-007: guidance-constitution — Semantic-precision direction makes new abstractions reviewable as bounded decision-ready semantic levels without creating runtime authority
+GCO-008: guidance-constitution — Charter, guidance navigation, and OpenSpec route relevant future designs through semantic precision, simple control, and helper responsibility
 
 # hitl-ux
 HIU-001: hitl-ux — HITL conversational loop model (entry → in-loop → exit → anti-infinite-loop)

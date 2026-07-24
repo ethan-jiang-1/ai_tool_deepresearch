@@ -1,0 +1,30 @@
+schema_version: verification-routing/v1
+change: add-semantic-precision-evolution-direction
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The change adds no pure JavaScript helper, schema, or deterministic runtime contract.
+  integration:
+    status: selected
+    rationale: The canonical guidance paths, EWD 340 provenance/context, and OpenSpec routing are static cross-file contracts exercised by the existing Markdown integration test.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No lifecycle transition, Gate, state, receipt, trace, or deterministic workflow behavior changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: A playbook reading guidance cannot prove future Agent comprehension, model behavior, or compliance with a later mechanism design.
+claims:
+  - id: semantic-precision-triad-routing-contract
+    statement: The active guidance suite exposes exactly three canonical Evolution Directions; the semantic-precision companion retains its EWD 340 source/context and admission-test marker; OpenSpec config requires the ordered semantic-precision, simplicity, and helper reviews; and every declared active sibling/navigation surface includes the new canonical path without rewriting archived or closed records.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/evolution-direction-governance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
