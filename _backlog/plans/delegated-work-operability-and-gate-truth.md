@@ -1,6 +1,6 @@
 ---
 title: Delegated work operability and gate truth
-status: change_1_apply_complete_later_changes_evidence_gated
+status: change_1_archived_change_2_proposal_change_3_and_4_evidence_gated
 created: 2026-07-25
 reviewed: 2026-07-25
 scope: BUG-114--BUG-123
@@ -49,10 +49,10 @@ role-specific actor observation
 | 115 | returned-result contract 碎片化 | Real producer-entry gap | 从 existing direct contracts 生成一份本地可读 envelope/projection，并让 dry-submit 返回最小 independent roots；绝不生成假 receipt/cache/evidence |
 | 116 | stdout/stderr “随机”叙述 | Current code contradicts report; needs red repro | 固定 CLI stream/exit contract regression；不能用 `2>/dev/null` 掩盖 failure 后再把空 pipe 当成功 |
 | 117 | provenance Gate 无 degraded pass | Misdiagnosed | 保持 provenance/queue/receipt/ledger fail closed；先修合法 submit/replacement path |
-| 118 | abandoned attempt 后的 recovery 可达性 | Plausible lifecycle defect, unproven at HEAD | 复现一个 terminal attempt 到显式 fresh replacement 的完整路径；不能强行把 `abandoned` 改写成 `timed_out` |
+| 118 | abandoned attempt 后的 recovery 可达性 | 原报告的 lifecycle dead-end 未在 HEAD 复现；但 terminal snapshot 到 successor demand 仍是可收敛的 constructibility debt | 只允许从 immutable terminal snapshot 派生一次 fresh replacement demand；不能强行把 `abandoned` 改写成 `timed_out` |
 | 119 | wave1 enqueue 消失/assignment mode 缺失 | Mixed: old input defect, current guidance now covers it | 用 invalid-card non-mutation + valid-card state transition 证明；不以旧 shell pipeline 的观察推断 queue state |
 | 120 | Wave1 reference contract 未交付 | Static contract already covered at HEAD | `shared-reference-template.md`、Wave1 template and actor guidance 已列 exact metadata/binding/sections；补真实 loaded-guidance proof 后可关闭 |
-| 121 | fatigue 缓存旧 failed rules | Serious if reproducible, currently unproven | 用“同一 fresh bundle，修正 bytes 后高 attempt 重跑”的 red/green case 检验是否重算；不加 `--reset-fatigue` 逃生路径 |
+| 121 | fatigue 缓存旧 failed rules | Fresh current gate evidence did not reproduce the caching premise | 用“同一 fresh bundle，修正 bytes 后高 attempt 重跑”的 red/green case 检验是否重算；不加 `--reset-fatigue` 逃生路径 |
 | 122 | `blocked` 无 legal unblock | Misdiagnosed unless 119 red repro survives | `queue_health`/stop authorization 是 queue demand 的派生状态；successful enqueue 已应重算，不能 direct-edit 或独立 unblock |
 | 123 | 修改 submitted declaration 使 hash 失效 | Integrity property, not a ledger bug | 新 source 走新的 supplementary work-unit submit；不得 amend/re-hash historical row |
 
@@ -68,64 +68,91 @@ role-specific actor observation
 ## Systemic Boundary Map
 
 ```text
-M3: contract delivery                       M4: lifecycle reachability
-claim facts -> generated work envelope      terminal attempt -> explicit replacement
-             -> dry-submit roots             -> claim -> submit
-                    |                                |
-                    +-------------+------------------+
-                                  |
-                         submitted immutable ledger
-                                  |
-M5: truthful evaluation           v
+M3: contract delivery                 M4a: successor constructibility
+claim facts -> envelope -> roots      terminal snapshot -> one queue demand
+                                                  -> existing claim -> submit
+                                                            |
+M4b: queue admission / health          submitted immutable ledger
+stdout + valid card -> queue fact                |
+             -> derived health                  v
+M5: truthful evaluation
 fresh evaluator facts -> root-first Gate feedback -> normal/degraded only when eligible
 ```
 
-M3, M4 and M5 read different direct authorities. They must not become one "reliability controller" change. A remedy in one layer must not make another layer's authority mutable or optional.
+M3, M4a, M4b and M5 read different direct authorities. They must not become one "reliability controller" change. A remedy in one layer must not make another layer's authority mutable or optional.
 
 ## OpenSpec Change Map
 
 ## Current Status
 
-`make-delegated-work-contracts-constructible` has completed **Apply**: all 17 approved tasks and the selected deterministic verification passed. Its implementation boundary is `BUG-114` and `BUG-115`: one validator-owned contract lineage at claim and actor authoring entry, plus one selected primary root for existing candidate feedback. The final implementation distinguishes supplied versus omitted CLI input: a present empty `--actor-*` option is malformed pre-trace input, not the existing omitted-observation audit path.
+`make-delegated-work-contracts-constructible` has completed **Apply** and was archived on 2026-07-25 in commit `82996180e`. Its implementation boundary is `BUG-114` and `BUG-115`: one validator-owned contract lineage at claim and actor authoring entry, plus one selected primary root for existing candidate feedback. The final implementation distinguishes supplied versus omitted CLI input: a present empty `--actor-*` option is malformed pre-trace input, not the existing omitted-observation audit path.
 
 Apply completion establishes the approved code, tests, release metadata, strict OpenSpec/governance checks, and honest evidence record. The selected real-actor case is `NOT_RUN` at its explicit external budget boundary: local runtime/provider checks and dry selection passed, but no USD cap was authorized. No fixture or hand-authored actor artifact substitutes for that result.
 
-`make-terminal-work-replacement-direct` and `ensure-wave-gate-reevaluation-freshness` remain evidence-gated candidates. No status here authorizes them before their fresh reproductions and independent OpenSpec proposals exist. `BUG-120` remains outside Change 1's closure claim: the delegated actor task can prove supplied-task delivery and native-chain compatibility, but cannot prove the Phase Agent loaded its separate reference guidance.
+Fresh disposable-bundle evidence on 2026-07-25 falsified the **original** Change 2 premise: 92 focused tests proved an abandoned `b000` attempt can be followed by an explicitly enqueued and CLI-claimed `b001` rerun, timeout requeues a claimable fresh work ID, invalid Wave1 assignment mode rejects without queue mutation, and a valid enqueue returns parseable stdout JSON and persists demand. Therefore `BUG-116`, `BUG-119`, and `BUG-122` do not enter Change 2; neither `abandoned -> timed_out`, filesystem discovery, raw `unblock`, nor a second replacement controller is justified.
 
-**这个 plan 最多产生三个 sequential OpenSpec changes，不是一个大 change，也不是十个 bug 各开一个 change。**
+Change 2 is nevertheless now in **Proposal** as a narrower constructibility improvement, not as a liveness repair: `make-terminal-work-replacement-direct` makes the existing terminal attempt's immutable queue snapshot the sole Engine input for creating one auditable successor demand. The Phase Agent no longer has to manually rebuild an allegedly equivalent task card or invent the successor queue identity. `replace` creates demand only; the existing role-bound `claim` remains the sole allocator of a fresh work ID. This scope preserves the fresh-evidence result while eliminating an implicit reconstruction path that normal tests do not make safe for an Agent to reproduce.
 
-`0. Establish red-capable facts` 是 proposal 前的 evidence gate，不是第四个 change：它只用当前 CLI 在 fresh disposable bundle 上确认/否定假设，记录诊断；不改 `DPT_FRAMEWORK/`、`tests/` 或 `experiments_playbook/`。需要永久 regression 的 test 和实现，必须放进其所属 change 的 apply tasks。
+Fresh current-gate evidence on 2026-07-25 also does **not** authorize the future Gate candidate, `ensure-wave-gate-reevaluation-freshness`. The real lifecycle loop exercised failure, direct repair, and a third Engine-visible attempt at the fatigue threshold; that attempt passed and emitted the normal next-phase handoff. Wave1 depth-review tests retain Gate/inspect failed-rule parity, and the attempt diagnostic tests prove prior diagnostics are compared with, not substituted for, the current evaluation. `BUG-121` therefore has no reproduced current caching defect and no `--reset-fatigue`, force-re-evaluate, or stale-projection change is justified. A new proposal requires a fresh minimal repro in which a corrected direct fact remains in the current Gate's `failed_rule_ids`.
+
+`BUG-120` remains outside Change 1's closure claim: the delegated actor task can prove supplied-task delivery and native-chain compatibility, but cannot prove the Phase Agent loaded its separate reference guidance.
+
+### Change 2/3 Scope Split And Its Consequences
+
+The historical Change 2 candidate mixed two different questions: (a) whether a terminal attempt can mechanically yield one successor demand, and (b) whether queue CLI rendering, task admission, and derived queue health tell the truth about already-existing demand. Fresh evidence rejected the reported current failure for (b). It did not make it correct for the Phase Agent to reconstruct a successor task card from a terminal attempt's immutable snapshot.
+
+The split is therefore deliberate:
+
+- **Change 2, now in proposal, owns only M4a:** terminal record + matching immutable snapshot -> one lineage-bound queue demand -> existing role-bound claim. It makes no claim about existing `operate-queue` stdout, Wave1 card admission, or queue-health repair.
+- **Change 3, `make-queue-reentry-outcome-truthful`, owns M4b if and only if a fresh red enters it:** BUG-116, BUG-119, and BUG-122 remain tied to their distinct direct owners. This is a named evidence-gated candidate, not an approved omnibus repair. Its proposal must narrow to the first demonstrated direct owner; it may cover more than one report only when one reproducer proves one shared CLI/admission/mutation path.
+- **Change 4, `ensure-wave-gate-reevaluation-freshness`, stays downstream:** a stale Gate verdict cannot be diagnosed until the producer, replacement-demand, and any actually reproduced queue facts are all truthful.
+
+| Historical Change 2 item | Direct owner now | Current disposition | Re-entry proof and consequence |
+|---|---|---|---|
+| `BUG-116` stdout/stderr claim | `operate-queue` result rendering and the CLI's stdout/stderr/exit boundary | Current code and focused regression contradict the incident's random-stream premise. Change 2 does not touch this surface. | Fresh disposable bundle shows success JSON only on stderr or no parseable stdout JSON, with stdout/stderr/exit and queue bytes retained. Enter Change 3 only for that direct CLI-result owner, unless the same repro also proves one admission/health owner. |
+| `BUG-118` lifecycle dead-end | terminal work-unit record, manifest snapshot, terminal-history row, then normal queue claim | The old queue dead-end did not reproduce. The remaining deterministic reconstruction burden is Change 2's entire scope. | If a legal current or Change-2-derived demand is present but normal role-bound claim cannot allocate it, retain queue/index/trace snapshots and propose a new lifecycle claim change. Do not widen `replace` by assumption. |
+| `BUG-119` Wave1 assignment mode | queue admission validation, Wave1 task-card contract, and legal queue locations | Current valid/invalid admission tests contradict the incident's silent-loss premise. Change 2 copies a validated historic snapshot; it never repairs modes. | Valid current `primary`/`supplementary` card is accepted yet absent from every legal location or unclaimable while direct authority remains valid. Enter Change 3 only for that direct admission owner, unless the same repro shares a root with BUG-116/122. |
+| `BUG-122` queue health / stop label | `syncQueueHealth()` after successful queue mutation | Current enqueue recalculates derived health; no raw `unblock` is legal or needed. Change 2 uses the same normal admission path. | Valid enqueue leaves direct demand inconsistent with a health/stop projection that blocks its documented next action; retain command result and before/after queue bytes. Enter Change 3 only for that direct derived-health owner, unless the same repro shares a root with BUG-116/119. |
+| `BUG-123` immutable ledger concern | submitted-ledger contract plus Change 2's non-mutation invariant | Change 2 may create only a new demand and later a new work unit. It cannot amend a submitted declaration, result hash, or ledger row. | Any Change 2 implementation that needs historical mutation blocks Apply. The separate supplementary-new-source lifecycle remains the evidence needed to close BUG-123's broader novelty claim. |
+
+### Sequencing And Decision Gates
 
 ```text
-0. Evidence gate (no behavior change)
+0. evidence and scope lock                         [complete]
         |
         v
-1. make-delegated-work-contracts-constructible
+1. make-delegated-work-contracts-constructible     [archived]
         |
         v
-2. make-terminal-work-replacement-direct
+2. make-terminal-work-replacement-direct           [proposal -> explore -> apply]
         |
         v
-3. ensure-wave-gate-reevaluation-freshness
+3. make-queue-reentry-outcome-truthful             [candidate; fresh-red-gated]
+   ├── no fresh red -> no Change 3 proposal
+   └── fresh red    -> proposal narrows to the demonstrated direct owner
+        |
+        v
+4. ensure-wave-gate-reevaluation-freshness         [candidate; fresh-red-gated]
 ```
 
-只有 evidence gate 仍复现对应 current defect，才 proposal 该 change。也就是说最终可能是 1、2 或 3 个 change；不得为了凑 roadmap 预先创建全部三个。
+The numbers and names are stable handles for the planned concerns, not permission to create empty OpenSpec folders. Change 3 is the named home for a reproduced M4b defect, but its actual proposal may own only one direct root; its name must not be used to force three unrelated fixes into one change. Change 4 begins only after Change 3 has either produced no red or archived any required remedy.
 
-| Order | Candidate change | Owns | Bug ownership | Explicitly out of scope |
+| Step | Scope / owner | Entry criterion | Exit criterion | Explicitly not allowed |
 |---|---|---|---|---|
-| 1 | `make-delegated-work-contracts-constructible` | actor-observation input、claimed work-unit envelope、candidate result contract delivery、dry-submit 的 root-first feedback | **114, 115**；**120** 只作为 loaded-guidance acceptance check | queue health/recovery、Gate routing/degradation、ledger mutation；不把 general HITL1 probe 变成 role probe |
-| 2 | `make-terminal-work-replacement-direct` | queue demand、delegated-in-flight、terminal attempt、fresh replacement identity、CLI stdout/stderr/exit semantics | **116, 118, 119, 122**，但仅限 fresh repro 成立的部分；**123** 作为“不改旧 row、创建新 row”的 acceptance invariant | actor contract tuple、Gate evaluator、provenance hash algorithm；没有 `unblock`、手改 state 或 abandoned-to-timed_out 改写 |
-| 3 | `ensure-wave-gate-reevaluation-freshness` | current evaluator findings、`failed_rule_ids` projection、fatigue/degradation consumption of that fresh result | **121**；**117** 作为 fail-closed non-regression invariant | queue replacement、producer result construction、ledger/source-claim mutation；没有 reset/force bypass，不能让 provenance root degraded |
-
-`BUG-117`、`BUG-120` 和 `BUG-123` 不各自开启 change：前者是错误的 degraded 诉求，后两者的 current static contract/integrity boundary 应由 Change 1/2 的 acceptance proof 验证。若 evidence 与当前 source 相矛盾，先修正 bug disposition，而不是把错误 premise 变成需求。
+| 0 | Evidence and scope lock | Existing incidents and current contracts available | Each BUG-114--123 has disposition, direct owner, evidence class, and re-entry rule | Treating production edits, console confidence, or chat memory as proof |
+| 1 | Change 1 (archived) | BUG-114/115 constructibility gap | Archived implementation and honest real-actor boundary | Reopening its actor contract inside lifecycle work |
+| 2 | Change 2 / M4a | Terminal snapshot contains all successor-demand facts; C1 is accepted | One replacement demand can be derived without work-ID allocation, historical mutation, or manual equivalent-card authoring | Queue renderer/admission/health redesign, terminal-status rewrite, auto-claim, Gate or ledger changes |
+| 3 | `make-queue-reentry-outcome-truthful` / M4b | Change 2 deterministic tests are settled; capture the three named BUG-116/119/122 probes on fresh bundles. A proposal requires a fresh red. | No red: record evidence and create no Change 3 folder. Red: its proposal isolates the first direct owner; grouping is allowed only from shared evidence. | Bundling three reports by historical narrative, raw unblock, manual queue repair |
+| 4 | `ensure-wave-gate-reevaluation-freshness` / M5 | Change 2 is settled; Change 3 has no red or its required remedy is archived; a corrected direct Gate fact still appears in current `failed_rule_ids` | One current evaluation feeds Gate/inspect/hints/degradation with unchanged fail-closed roots | Reset/force bypass, stale diagnostic as verdict, degradation of provenance/queue/receipt/ledger roots |
 
 ### Why This Order
 
-1. **先 Change 1：** Agent 必须先能在 claim/dry-submit 的 decision point 看见完整合法 contract，才有可信的 returned-work evidence；否则后续 queue 或 Gate 失败仍可能只是盲猜输入的噪声。
-2. **再 Change 2：** 有可构造 candidate 后，terminal/replacement path 才能以真实 queue/index/ledger lifecycle 测试。它只解决“下一合法 attempt 怎样出现”，不改写已经 terminal 或 submitted 的事实。
-3. **最后 Change 3：** Gate 只能消费 truthful producer/queue facts。否则 “stale failure” 测试会混入未提交、不可见 replacement 或手工 authority edit，无法分辨 evaluator defect 与上游 lifecycle defect。
+1. **Change 1 first:** it gave the Agent a constructible candidate contract. Without it, replacement and Gate observations could still be artefacts of guessed producer input.
+2. **Change 2 next:** it removes only the mechanical re-authoring of a successor demand from a terminal snapshot. It depends on current queue admission but does not redefine it.
+3. **Change 3 after Change 2:** the new operation deliberately reuses normal admission. Its fresh evidence is the earliest honest basis for the named queue-reentry candidate. If no direct M4b defect is red, Change 3 does not exist as an OpenSpec proposal; if one is red, its scope follows that owner, not the old bug bundle.
+4. **Change 4 last:** only a Gate failure that survives truthful producer, successor, and queue facts can be called an evaluator-freshness defect.
 
-每个 proposal/design 必须列出本表的 **owns** 与 **out of scope**，并通过 `evolution-simple-reliable-control.md` 的 net-simplification review：新增 feedback/projection 或 replacement operation 必须删除一次 Agent 猜测、隐藏 identity 或重复 validator，而不能只加层。
+Every proposal/design must state its **owns**, **out of scope**, direct source of truth, one next action, deleted or avoided control complexity, and focused negative test. This is the required semantic-precision and net-simplification review; it prevents a new controller from being justified merely by the name “recovery.”
 
 ## Proposed Sequence
 
@@ -141,7 +168,7 @@ Create fresh disposable bundles and retain command output, trace/index hashes, a
 6. **Novelty without mutation:** submit a supplementary Wave1 attempt with a genuinely new source claim and cache backing. Prove the additional immutable ledger row satisfies the novelty consumer while every prior row's hash remains unchanged.
 7. **Real-flow check where authority requires it:** run the smallest available `agent_flow_e2e` with a real actor. If no authorized actor budget exists, mark it `NOT_RUN`; do not replace it with fabricated evidence.
 
-The output of step 0 is a short evidence matrix: **reproduced current defect / static defect already fixed / invalid premise / requires external real-actor evidence**. Only reproduced current defects receive a new behavior change.
+The output of step 0 is a short evidence matrix: **reproduced current defect / static defect already fixed / invalid premise / requires external real-actor evidence**. The scope lock for Change 2 and the current no-red results for the original queue/Gate reports have been recorded above. Repeat this protocol only when Change 3 or Change 4 needs a fresh entry decision. A new behavior change normally requires a reproduced current defect; Change 2 is the explicit, narrower exception because it does not repair the falsified liveness premise, but removes a separately identified deterministic reconstruction burden using the terminal snapshot that already owns every successor-demand fact.
 
 ### 1. `make-delegated-work-contracts-constructible`
 
@@ -164,28 +191,49 @@ Required proof: tuple diagnostic tests, generated-envelope consistency tests aga
 
 ### 2. `make-terminal-work-replacement-direct`
 
-This change is warranted only if steps 0.3--0.4 reproduce a current gap between terminalizing a work unit and allocating its legitimate successor.
+The original liveness hypothesis in steps 0.3--0.4 did not reproduce. This proposed scope is instead warranted because an eligible terminal attempt already contains the immutable queue snapshot required for a successor, but the legal path still asks the Phase Agent to manually re-author an equivalent card and choose a fresh queue identity. The Engine can make that mechanical derivation one auditable transition without choosing semantic work or allocation actor.
 
 Scope:
 
-- Use queue demand, delegated-in-flight records, work-unit index and terminal records as direct facts; normalize derived queue health after every successful legal mutation.
-- Give `inspect`/claim feedback exactly one legal recovery: repair the same unsubmitted candidate, or terminalize and create one new queue demand/attempt with a fresh identity. It must name the created/replacement work ID once it exists.
-- Ensure invalid Wave1 cards fail atomically and visibly, while valid cards with declared assignment mode are accepted and retained.
-- Standardize the existing CLI machine-result contract across tested paths: a normal result is parseable stdout JSON; failure exit is non-zero; human diagnostics may remain stderr but must not masquerade as success.
+- Use the terminal work-unit record and its immutable queue snapshot as the direct facts for an explicit replacement-demand operation. `failed` and `abandoned` retain their terminal meaning; `timed_out` keeps its existing retry-demand path.
+- Create at most one fresh successor demand with audited parent-attempt lineage, preserving the snapshot's kind, canonical Topic, delegated role, assignment mode and output obligation. Reject a submitted attempt, conflicting live/submitted successor, or invalid historical snapshot before mutation.
+- Return the generated replacement `queue_item_id` plus exactly one next operation: the existing role-bound `claim`. The operation does not allocate a work ID, because only claim may do so after a current actor observation.
+- Make the Phase use this operation after the eligible `fail_and_replace` boundary, deleting manual equivalent-card authoring and filesystem discovery from normal recovery guidance. Its machine result follows existing stdout JSON / non-zero refusal conventions.
 
 Non-goals:
 
 - No raw `unblock`, no direct `rb_queue.json` mutation, no queue-health override, and no watcher/retry daemon.
-- No `abandoned -> timed_out` rewrite merely to reach `late-submit`; these names have distinct audit meaning. A new attempt is the default recovery shape.
-- No hidden batch allocation that requires `ls _work_units` to discover its identity.
+- No `abandoned -> timed_out` rewrite merely to reach `late-submit`; these names have distinct audit meaning. The original work stays terminal and only its successor demand is new.
+- No automatic claim, no hidden batch allocation, and no filesystem discovery. A fresh work ID appears only in the normal claim result.
 
-Required proof: invalid-card no-mutation integration test; zero-demand -> valid enqueue -> claim -> submitted lifecycle; terminal -> fresh replacement lifecycle; stdout/stderr/exit contract test; and a clean-bundle regression proving no old terminal history is mistaken for current demand.
+Required proof: terminal failed/abandoned -> one derived replacement demand -> normal role-bound claim lifecycle; timed-out existing retry remains unchanged; submitted/live-successor/invalid-snapshot duplicate replacement rejects without mutation; replacement lineage and preserved snapshot contract are exact; CLI stdout/stderr/exit contract test; and a clean-bundle regression proving historical terminal state is not mistaken for current demand.
 
-### 3. `ensure-wave-gate-reevaluation-freshness`
+### 3. `make-queue-reentry-outcome-truthful`
 
-This is deliberately separate from queue and producer changes.
+This is the named home for the former queue portion of Change 2. It is deliberately **not proposed** today: current evidence says that the three historic reports are not red. Its bounded question is: after a legal queue-entry operation, do the command result and the authoritative queue state tell the Agent whether a demand was committed and which existing next operation is legal?
 
-Scope if reproduced:
+The name does not authorize a queue controller. It preserves the distinctions that change the answer to that question: malformed/refused input with no mutation; accepted durable demand in a legal location; ordinary role-bound claimability; and a derived health/stop projection that agrees with direct demand. `replace` from Change 2 must reuse those existing facts; it does not get a parallel health or result authority.
+
+Entry evidence:
+
+- After Change 2's deterministic tests, reproduce one of the three cases on a fresh disposable bundle and retain stdout, stderr, exit code, queue/index bytes, and the directly relevant health projection.
+- `BUG-116`: a successful queue command has no single parseable stdout JSON result, or a refusal reports a successful exit.
+- `BUG-119`: a schema-valid `primary` or `supplementary` Wave1 card is accepted but is absent from every legal location or cannot be normally claimed while its direct authority remains valid.
+- `BUG-122`: a valid native entry leaves direct demand inconsistent with a health/stop projection that blocks the documented next action.
+
+Scope if a red is reproduced:
+
+- The Change 3 proposal owns only the first direct failing boundary: CLI result rendering for BUG-116, admission atomicity for BUG-119, or post-mutation derived health for BUG-122.
+- It may group reports only when the retained reproducer proves one shared implementation owner. Otherwise the first proposal keeps this name and its narrow owner; the plan must be updated with separately named later work before any unrelated repair is added.
+- Its successful result must leave one direct queue truth path and one next existing operation, normally role-bound `claim`. It must not add a new queue status, a second health authority, a generic repair command, or a recovery daemon.
+
+Required proof: the captured red becomes green on a fresh bundle; invalid input remains non-mutating and non-zero; valid demand remains visible and normally claimable; direct queue state and any derived health projection agree; and the other two report axes remain unchanged unless the one shared root legitimately owns them.
+
+### 4. `ensure-wave-gate-reevaluation-freshness`
+
+This is deliberately separate from producer and queue-reentry changes. It is not proposed today because the fresh current evidence did not reproduce the caching premise.
+
+Scope if a fresh red is reproduced after Change 3 has no outstanding remedy:
 
 - Locate the single evaluator/result construction path that carries obsolete `failed_rule_ids` after the direct fact is corrected.
 - Remove or invalidate that stale projection at its owning boundary, then prove Gate, inspect, hints and degradation eligibility consume the same fresh evaluation.
@@ -199,13 +247,20 @@ Non-goals:
 
 Required proof: corrected direct artifact removes its own failed rule on a high-attempt rerun; an unchanged independent provenance root remains failed and ineligible; normal eligible quality-only degradation behavior remains covered.
 
+### Independent Closure Evidence (Not Changes)
+
+- `BUG-117` is an evidence-backed rejection of an unsafe degraded-pass request. Its closure is the documented provenance fail-closed contract and its upstream legal submit/replacement paths, not a new bypass change.
+- `BUG-120` remains `NOT_RUN` at the real-actor budget boundary. Only a real loaded-guidance observation can close that delivery claim; it does not expand Change 1, Change 2, Change 3, or Change 4.
+- `BUG-123` has two deliberately separate proofs: Change 2 must prove that replacement never mutates a historical ledger row, while the broader supplementary-new-source lifecycle must independently prove that a new immutable row supplies the novelty fact. Neither proof authorizes an amend API. A red in that independent lifecycle is a new direct-owner finding, not scope silently added to Change 2.
+
 ## Closure Rules
 
 - Close BUG-117 as a misdiagnosed request only after the plan records the accepted provenance fail-closed contract and its upstream operability dependencies.
+- Close BUG-118's original dead-end report by evidence-backed disposition, not by claiming that Change 2 repaired a non-reproduced queue failure. Change 2 closes only its separate manual-successor reconstruction burden once it is applied and verified.
 - Close BUG-120 when a loaded-guidance test proves the current Phase/actor `requires` chain delivers the complete template; static source inspection alone is not a real Agent-flow claim.
-- Close BUG-123 as an intentional integrity property after the supplementary-new-source lifecycle test passes; it is not closed by adding an amend API.
+- Change 2 proves only BUG-123's historical non-mutation invariant. Close BUG-123's broader novelty claim only after the supplementary-new-source lifecycle test passes; it is not closed by adding an amend API.
 - BUG-116, BUG-119, BUG-121 and BUG-122 may be reclassified only from captured fresh evidence, never from an incident command transcript that suppressed stderr or reused contaminated state.
-- No bug is "fixed" until its OpenSpec change is proposed, applied, tested at the correct verification layer, and archived. A static wording update, console output, or manual bundle repair is not closure evidence.
+- An evidence-backed invalid premise or misdiagnosed request is a disposition, not a fictitious implementation fix. A real defect is "fixed" only when its named OpenSpec change is proposed, applied, tested at the correct verification layer, and archived. A static wording update, console output, or manual bundle repair is not closure evidence.
 
 ## Design Guardrails
 

@@ -1,0 +1,58 @@
+schema_version: verification-routing/v1
+change: make-terminal-work-replacement-direct
+test_classes:
+  unit:
+    status: selected
+    rationale: Parent-bound queue-ID derivation, lineage construction, snapshot/conflict classification, and idempotent successor recognition are deterministic transformations that require focused negative coverage without actor runtime.
+  integration:
+    status: selected
+    rationale: The replacement CLI crosses the real index, manifest, queue terminal-history, transaction, enqueue, trace, CLI stdout/exit, and subsequent role-bound claim boundaries in a fresh disposable bundle.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: This change adds one bounded recovery transition and returns to an existing claim checkpoint; it changes no Gate, phase transition, complete research chain, or workflow-scale deterministic outcome.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The claim retains its existing real-actor boundary, but this change neither changes actor task delivery nor claims actor behavior, research quality, or real external execution. Deterministic proof may not fabricate such evidence.
+claims:
+  - id: terminal-snapshot-replacement-decision
+    statement: An eligible failed or abandoned terminal record with matching manifest and terminal-history snapshot deterministically derives one successor queue identity and lineage. Timed-out, submitted, claimed, corrupted, conflicting, or already-terminal successor cases return their own no-path reason without authority mutation.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-terminal.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: replacement-cli-to-normal-claim
+    statement: In a fresh temporary bundle, `operate-work-unit replace` emits one parseable stdout JSON result and creates exactly one ordinary successor demand with parent lineage but no work ID, envelope, receipt, result, cache, ledger or completion. A subsequent exact-role native observation and normal claim allocate the fresh work ID; repeat/conflict paths have non-zero refusal or idempotent same-successor behavior and preserve authority bytes as specified.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: replacement-guidance-keeps-agent-at-existing-boundaries
+    statement: Wave phase guidance routes `fail_and_replace` through terminalization, one Engine replacement demand, exact-role probe and ordinary claim, while prohibiting task-card reconstruction, filesystem discovery, terminal-status rewrite, and automatic claim. This proves supplied guidance content only, not private Agent reading or execution.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/phase-wave-replacement-guidance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
