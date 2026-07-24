@@ -1,6 +1,6 @@
 ---
 bug_id: BUG-111
-title: "Reference file metadata-block format contract is unparseable by agent — 40 files in correct format still fail gate"
+title: "Reference diagnosis conflated canonical naming, rich content, and submitted backing"
 severity: P2
 discovered: 2026-07-23
 bundle: dpt_rb_openspec-large-project-maintenance-patterns
@@ -8,24 +8,22 @@ phase: wave1
 gate: wave1-complete
 ---
 
-# BUG-111: Reference metadata-block format 对 agent 不可解析
+# BUG-111: Reference 的 canonical path/content/backing 被混淆
 
 ## 现象
 
-Agent 按照 `shared-reference-template.md` 的 metadata-block 格式创建了 40 个 reference 文件（每 topic 8 个），包含所有必填字段（source_url, acceptance_status, source_type, tier, evidence_role, trust_level, why_it_matters, accessed_at, related_topic_uid）和 5 个 semantic sections。Gate 仍然报告 `reference_format`、`reference_source_url_parseable`、`per_topic_ref_md_count_floor` 失败——count=0。
+Agent 创建了 40 个 rich per-source reference files，但它们使用如 `01-01_...` 的非 canonical names。Gate 选中的 canonical-prefix aggregate candidates 是 bare YAML arrays，因此未形成可计数的 parser-aligned rich-reference plus submitted-backing authority。
 
-## 根因假设
+## 校正后的事实
 
-`parseReferenceMetadata()` 对 metadata block 的解析有严格的格式要求（如 `- key: value` 中 `: ` 后的空格数、行首空格的精确格式、section heading 的识别方式），这些要求没有在 template 中以 machine-verifiable 的方式指定。Agent 按照人类可读的 template 生成的格式与 parser 期望的格式存在微妙偏差。
+`parseReferenceMetadata()` 在 first semantic section 前接受 bullet/colon metadata；production evidence 不支持“parser whitespace-strict”或“40 files 已处于正确 rich-reference contract”的结论。canonical filename、rich parser-aligned content 与 submitted backing 是三个独立 root，任何一个缺失都不能由另一个替代。
 
 ## 实际影响
 
-- BUG-105 的根源：不是 agent 不会写 reference，而是 parser 和 template 之间的格式契约 gap
-- BUG-110 的推手：即使 agent 按 template 写了 40 个文件，gate 也无法通过，导致 fatigue degradation 永远不触发
-- 40 个 well-formed reference 文件被 gate 视为 0 个 countable references
+- 不能用 bare YAML aggregate、filesystem presence 或非 canonical filename 声称 Gate 应计数。
+- 不能以所谓 whitespace mismatch 为由增加 exact-byte template 或第二 parser authority。
 
 ## 建议方向
 
-- 提供 `reference-example.md` 作为 golden example，agent 可以逐字符复制格式
-- 或：让 gate 在 `reference_format` 失败时输出 exact parse error with line number（类似 YAML parser 的错误信息）
-- 或：改用 structured format（JSON Schema）替代 metadata block，消除解析歧义
+- 在 authoring point 提供 canonical full-topic-slug path、parser-aligned rich content 与 backing 的直接反馈。
+- 让同一 parser/evaluator 分别报告 path、content 和 backing root；不新增 generic Markdown linter、fenced YAML authority 或 exact-format blocker。

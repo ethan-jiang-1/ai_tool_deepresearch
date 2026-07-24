@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-07-23 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-07-24 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -23,15 +23,18 @@
 | [BUG-102](BUG-102-seed-topic-yaml-validation-at-gate-not-authoring.md) | P3 | seed-topics | Seed topic YAML 校验只在 gate 执行，不在 authoring/enrichment 时反馈 |
 | [BUG-103](BUG-103-status-gate-drift-between-phases.md) | P3 | 跨 phase | rb_status.json gate 字段在 phase transition 后持续漂移，需手动 advance-status |
 | [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | enter-phase 每次渲染完整 shared context 造成累积 context 压力 |
-| [BUG-105](BUG-105-shared-ref-gate-yaml-in-code-fence-not-parsed.md) | P2 | wave0 | Shared ref gate 无法解析 Markdown code fence 内的 YAML，count=0 |
+| [BUG-105](BUG-105-shared-ref-gate-yaml-in-code-fence-not-parsed.md) | P2 | wave0 | raw `source.yaml`、rich-reference content、canonical path 与 backing 被混淆 |
 | [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P1 | wave0→wave1 | stop: no violation 再现 — agent 输出总结但不执行下一 phase |
 
 | [BUG-107](BUG-107-wave1-depth-review-phase-agent-responsibility-unclear.md) | P2 | wave1 | depth-review.yaml 创建责任不明确 — sub-agent 不创建，Phase Agent 遗漏 |
 | [BUG-108](BUG-108-seed-token-backfill-responsibility-gap.md) | P3 | wave1 | Seed topic __BACKFILL_*__ token 替换无明确 owner |
 | [BUG-109](BUG-109-wave1-gate-excessive-rule-coupling.md) | P3 | wave1 | Wave1 gate 规则过度耦合 — 35+ masked sub-rules 淹没 root cause |
-| [BUG-110](BUG-110-wave1-gate-no-fatigue-degradation.md) | P2 | wave1 | Wave1 gate 无 fatigue degradation — 6 attempts 无 pass/degrade 出口 |
+| [BUG-110](BUG-110-wave1-gate-no-fatigue-degradation.md) | P2 | wave1 | observed authority blockers 正确 fail closed；需回归锁定既有窄 degradation |
+| [BUG-111](BUG-111-reference-format-contract-unparseable-by-agent.md) | P2 | wave1 | canonical path、rich content 与 submitted backing 被混淆 |
+| [BUG-112](BUG-112-subagent-cache-trail-declaration-incomplete.md) | P2 | wave1 | Wave1 returned-work path 跳过 existing dry-submit |
+| [BUG-113](BUG-113-wave2-gate-no-fatigue-degradation.md) | P2 | wave2 | adapter 缺 shared policy；本次 authority roots 仍必须 fail closed |
 
-**Next available bug ID: BUG-111**
+**Next available bug ID: BUG-114**
 
 ## 最近关闭 (2026-07-20)
 

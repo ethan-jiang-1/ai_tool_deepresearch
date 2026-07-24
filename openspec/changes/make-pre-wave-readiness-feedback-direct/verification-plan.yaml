@@ -1,0 +1,114 @@
+schema_version: verification-routing/v1
+change: make-pre-wave-readiness-feedback-direct
+test_classes:
+  unit:
+    status: selected
+    rationale: The bounded profile metadata and extracted seed authoring evaluator are pure deterministic contracts; focused Node tests can prove their parsing and cross-field invariants without claiming Agent or external behavior.
+  integration:
+    status: selected
+    rationale: Temporary bundles and production CLIs must prove the explicit HITL1 status/apply order, no-mutation rejection, and queue completion/final-Gate reuse at their real deterministic boundaries.
+  deterministic_e2e:
+    status: selected
+    rationale: A pre-Wave lifecycle chain must prove the combined status, topic-state, seed queue, and Gate route using production deterministic owners and explicitly labeled simulated Agent input, without external search/fetch claims.
+  agent_flow_e2e:
+    status: selected
+    rationale: Only an independent real Subject Agent in a real disposable bundle can prove that the production HITL1 Markdown is followed for the bounded external capability probe; missing runtime or tool evidence remains NOT_RUN rather than fixture evidence.
+claims:
+  - id: research-access-candidate-metadata-schema
+    statement: ProfileSchema accepts a legacy observation without candidate metadata and a current internally consistent bounded count/ordinal shape, while rejecting unprobed metadata, out-of-range counts, zero-count ordinals, and ordinals outside the count; it does not authorize query, URL-history, response-body, retry, or Gate-verdict persistence.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/contracts/profile.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: seed-authoring-evaluator-contract
+    statement: The extracted pure seed authoring evaluator applies the existing frontmatter parser, canonical binding, and required structure to one declared seed path, returns deterministic local failures, and performs no queue or bundle mutation itself.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/seed-topic-authoring-evaluator.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl1-three-candidate-control-surface
+    statement: The production HITL1 Markdown exposes one neutral search, ordered consideration of at most three syntactically eligible actual HTTP(S) candidates, native-first same-URL permitted fallback, success/no-legal-path stop behavior, one final bounded observation, the existing pre-apply status order, and no evidence/history/retry/controller expansion.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/phase-hitl1-research-access.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl1-status-before-apply
+    statement: A real temporary bundle accepts canonical initial topic-state apply only after the existing HITL1 status synchronization, preserves plan/seed/status/trace bytes when synchronization or apply rejects, and reaches the existing style/Gate boundary without a hand-written status, force path, new state, or alternate route.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-hitl1-readiness.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: seed-queue-completion-reuses-authoring-evaluator
+    statement: For a declared non-delegated `seed_topic_materialize` card in a real temporary bundle, malformed or incorrectly bound frontmatter makes `operate-queue complete` fail before terminal history, promotion, refill, or `queue_completed` trace mutation; repair plus the same completion command succeeds, and the final seed-topics Gate imports the same evaluator for phase-wide checking.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-queue-seed-authoring.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: pre-wave-readiness-first-pass-chain
+    statement: With explicitly labeled simulated Agent/HITL input and production deterministic commands, a fresh temporary bundle follows recorded HITL1 decision -> existing status synchronization -> canonical topic apply -> style -> bounded profile observation -> existing HITL1 Gate -> seed queue authoring/evaluator -> seed-topics Gate, while invalid producer facts fail at their owning checkpoint and never fabricate external or Agent behavior.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/pre-wave-readiness.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl1-bounded-candidate-agent-flow
+    statement: From a legal setup-only HITL1 disposable bundle, an independent authenticated Subject Agent follows the current production bounded probe, performs one real search, records exactly one research_access observation with current candidate metadata, and reaches only the existing available-Gate/handoff or honest unavailable/no-advance branch. This proves only the observed Subject runtime and external call behavior; an unavailable runtime, missing tool facts, or an unobserved second/third candidate branch is NOT_RUN rather than a fixture or cross-runtime claim.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wff_pre-research-repair/case-115-heavy-hitl1-research-access-probe.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

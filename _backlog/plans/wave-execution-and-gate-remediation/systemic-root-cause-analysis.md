@@ -61,13 +61,13 @@ Bundle      runtime facts、artifacts、queue、work-unit、ledger state
 - 随后的真实 `enter-phase` 事件在文件中更早出现，却引用了未来的人工时间戳（`:343`、`:373`）。因此 trace 已不是按时间排序的合法 handoff 历史。
 - 当前 bundle 的 `rb_status.json` 仍是 `state: not_started`，却声称处于 Wave2 status window；`rb_queue.json` 中还保留四个 Wave1 `delegated_in_flight` 记录。
 
-所以，该 bundle 只能用于发现 failure pattern、字节级事实和候选复现，不能证明合法 pass、degraded eligibility、Agent-flow success 或未来修复。所有 closure evidence 都必须来自经正常 instantiator 创建的全新 `dpt_disp_*` bundle，且不得有人工作为的 authority edit。
+所以，该 bundle 只能用于发现 failure pattern、字节级事实和候选复现，不能证明合法 pass、degraded eligibility、Agent-flow success 或未来修复。对于这些受污染 continuity boundary 之外的 remediation claim，closure evidence 必须来自经正常 instantiator 创建的全新 `dpt_disp_*` bundle，且不得有人工作为的 authority edit；这不是对所有项目结论一律要求 fresh replay 的通用规则。
 
 ## 机制地图
 
 ### M1：生产者侧的 contract lineage 非本地化
 
-理想路径应当很短：
+当 accepted contract 需要这些环节时，理想路径应当很短：
 
 ```text
 direct authority
@@ -121,18 +121,18 @@ Accepted `gate-skeleton` contract 要求 primary hints 只包含独立 primary r
 
 这证明 handoff interface 过浅，不能证明某个 context size、token threshold 或某一句话导致了 Agent stop。Wave entry 的 current direct mandatory Markdown closure 在 [candidate phase-entry analysis](../silent-autonomous-execution/candidate-direct-phase-entry-root-cause.md) 中测得约 95--111 KB；它证明 repeated control surface 过大，不证明模型因果阈值。
 
-候选接口 `consume-phase-handoff --bundle <bundle>` 可能是一个 deep module，因为它将既有 deterministic bookkeeping 隐藏在一个 caller fact 之后。它必须在 partial recovery 与 fresh-session entry-core contract 有 focused proof 后才可成为 change；绝不能扩张成 workflow runner、chat observer、session registry、read cache、goal state、watcher 或 retry tree。
+候选接口 `consume-phase-handoff --bundle <bundle>` 可能是一个 deep module，因为它将既有 deterministic bookkeeping 隐藏在一个 caller fact 之后。它只有在 focused OpenSpec design 明确其输入/上下文、有限 legal result/no-path 与 proof boundary 后才可成为 change；partial recovery 或 fresh-session entry core 仅在该 design 确有需要时再分别证明。它绝不能扩张成 workflow runner、chat observer、session registry、read cache、goal state、watcher 或 retry tree。
 
 ## 每个 Bug 的处置结论
 
 | Bug | 校正后的事实 | 所属机制与 closure boundary |
 |---|---|---|
-| 099 | 观察到了 Agent pause/question。context pressure 合理但未证实；Engine 不能检查 chat 或推断 stopped turn。 | **H residual actor observation。** 只有在合法 handoff 后，重复独立的 `agent_flow_e2e` 证明 Agent 执行 first entry-core action 才能关闭。 |
+| 099 | 观察到了 Agent pause/question。context pressure 合理但未证实；Engine 不能检查 chat 或推断 stopped turn。 | **H residual actor observation。** 只有在合法 handoff 后，重复独立的 `agent_flow_e2e` 证明 Agent 执行 accepted H boundary 定义的第一合法动作才可关闭。 |
 | 100 | 当前 first-result-only probe semantics 确实存在。历史上“后续 result 可 fetch”的叙述没有被持久化为可归因的 run record。 | **M1 access observation。** 需新的 bounded real search/fetch evidence 区分 search availability、representative fetchability 与 unavailable environment。 |
 | 101 | `enter-phase`/status window 与 topic-state apply 各自严格，但正常 HITL1 producer path 暴露了 ordering problem。 | **M1 readiness。** disposable deterministic case 必须在 HITL1 Gate 前证明合法 producer checkpoint，且不得 direct-edit state。 |
 | 102 | Seed completion 验证的是 file receipt，YAML parsing 在更晚的 Gate 才发生。 | **M1 readiness。** 在 authoring 或 batch completion 复用 Gate parser/schema，并证明 invalid YAML 在 phase-end Gate 前被发现。 |
 | 103 | entry 后 status 并非天然“drift”：`load_complete` 后再同步 status 是合法的低层拆分。公共 two-command protocol 泄露了该 intermediate state。 | **H deterministic handoff defect。** 证明 normal public handoff 在 status witness 存在前绝不会宣称 target 可执行。 |
-| 104 | repeated complete dependency closure 客观上很大，但不能证明特定模型的 context-exhaustion 因果。 | **H control-surface defect。** 证明 entry core 对 fresh session 已足够，并测量缩小后的 normal closure；不得创造“already read” authority。 |
+| 104 | repeated complete dependency closure 客观上很大，但不能证明特定模型的 context-exhaustion 因果。 | **H control-surface defect。** 证明 accepted H boundary 的 fresh-session first action 已具备必要 control surface，并测量相关 normal closure；若 design 采用 entry core，再单独证明它。不得创造“already read” authority。 |
 | 105 | 历史 fenced-YAML 理论混淆了 raw `source.yaml`、aggregate shared file 与 rich reference Markdown。 | **M1 authoring contract。** 分别改变 canonical path、rich parser-compatible content 与 submitted backing；每个都必须只诊断自己的 root。 |
 | 106 | “先总结再等待”是 actor outcome，不证明 Engine marker 可以检测或强制 continuation。 | **H residual actor observation。** 同 BUG-099 的 closure boundary；不得增加 chat/tool-call detector。 |
 | 107 | Bug report 的“5/5 submitted”与 ledger evidence 矛盾：仅一项 Wave1 work unit formal submitted，四项被拒绝。最新 Phase contract 已将 depth review 指给 Phase Agent，但没有把它交付为同等直接的 main-loop action。 | **M1 closeout。** 一个真实 returned work unit 必须 dry-submit、formal submit、追加 ledger row，再触发 Phase-owned reference/depth work。 |

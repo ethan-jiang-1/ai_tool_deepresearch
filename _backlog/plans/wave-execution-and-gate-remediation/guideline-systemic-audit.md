@@ -2,6 +2,7 @@
 title: Guidelines systemic audit for Wave execution and Gate remediation
 status: analysis_complete_no_guideline_change_approved
 created: 2026-07-24
+revised: 2026-07-24
 scope: guidelines/ against M1, M2, and H in systemic-root-cause-analysis.md
 depends_on: systemic-root-cause-analysis.md
 ---
@@ -31,6 +32,12 @@ depends_on: systemic-root-cause-analysis.md
 | 证据污染 | 现有“真实执行”规则不足以区分可诊断字节和可用于 closure 的证据。 | 增加 evidence-admissibility 纪律，不增加防篡改系统。 |
 
 所以建议不是“重写 guidelines”，而是以少量明确的 review contract 让现有两条方向真正可执行。它们应在未来 OpenSpec proposal/design 中被逐项回答和验证，而不是变成又一层 Engine runtime controller。
+
+## Constitution Alignment (2026-07-24)
+
+本审计形成于 `guidance-constitution` 被接受之前。现以 accepted `GCO-003`--`GCO-006` 为准：对 blocking obligation，强制审查的是 direct authority、owner、已有 legal establish/change path，或诚实的 owner/terminal/missing-contract boundary；它本身不强制 receipt、writer、consumer、preflight、retry、state 或 controller。对明确声明的 entry/handoff/recovery boundary，只审查输入/上下文与有限的 next legal action 或 no-path，不预设 `ready` state、recovery seam 或新 public module。证据结论必须绑定其 provenance/continuity 与 proof class；本 production bundle 的污染只限制它所涉及的 claim，并不把 fresh disposable replay 变成所有项目结论的通用前提。
+
+下文的 G-01、G-03、G-04、G-07 和设计表只保留为发现问题的历史分析材料；其规范性解释由本节与主计划 §6 的 compact constitutional-admission record 取代。
 
 ## 审计方法与边界
 
@@ -71,37 +78,34 @@ one evaluator result
 
 ## 需要补强或修正的指导
 
-### G-01：缺少 producer-to-gate contract-lineage 完整性义务
+### G-01：blocking obligation 缺少可审查的 legal boundary
 
 **严重度：高。影响：M1 / BUG-100--102、105、107、108、111、112。**
 
 现有 simple-control 已经要求 direct facts、one rule source、decision-point proximity 和 same-check repair（`guidelines/evolution-simple-reliable-control.md:116-183`）。Project Charter 也在 `:345` 正确要求把 bug 当作 contract-class probe。
 
-但它们没有要求 proposal/design 明确一项 blocking fact 从生产到 Gate 的完整责任链。于是下面的东西可以分别“正确”，但整体对 Agent 不可执行：
+当时的文本没有稳定地要求 proposal/design 让一项 blocking fact 的 authority、owner 和 legal/no-path 边界可审查。于是下面的东西可以分别“正确”，但整体对 Agent 不可执行：
 
 - Gate 能解析并拒绝坏 YAML 或不完整 work-unit result；
 - submit 能正式写 ledger；
 - Phase 能做 reference/depth/backfill closeout；
 - Markdown 又只在 gate 失败后才提示其中某一个步骤。
 
-这正是 M1：合法 writer、最近可逆检查、formal commit、Phase-owned projection 和 Gate consumer 分散在不同表面。
+这正是 M1：一些 accepted contract 所需的 writer、local check、formal commit、Phase-owned projection 或 Gate consumer 分散在不同表面。
 
-**应补的原则：Contract-Lineage Completeness。** 每个新增或变更的 blocking fact，在 proposal/design 中必须回答：
+**宪章对齐后的审查：**每个新增或变更的 cross-boundary blocking fact 至少回答：
 
 ```text
 direct authority
 -> owner
--> legal producer operation
--> last reversible local check
--> authoritative commit / receipt
--> named projection or closeout owner
--> Gate reuse of the same evaluator/fact
--> Agent-visible feedback and same-check rerun
+-> existing legal establish/change operation, if one exists
+or
+-> owner / terminal / missing-contract boundary
 ```
 
-如果其中任一环没有合法 owner 或公开操作，结论应是 `missing contract`，不是让 Markdown 补一段猜测、让用户手工编辑 runtime state，或让 Gate 静默修复它。这只是一个设计审查表，不是新 controller。
+只在 accepted contract 已要求时，再审查 local check、receipt、submitted closeout、consumer reuse 或 same-check rerun。没有合法 owner 或公开操作时，结论应是 `missing contract`，不是让 Markdown 补一段猜测、让用户手工编辑 runtime state，或让 Gate 静默修复它。这不是新 controller，也不产生新的 runtime obligation。
 
-**建议落点：**在 Project Charter 的 bug/contract-class probe 纪律和 simple-control 的 admission test 之间建立交叉要求；具体 schema/CLI/closeout 行为仍留在 OpenSpec/specs。
+**建议落点：**这一最低要求已由 Guidance Constitution 固化；具体 schema/CLI/closeout 行为仍留在 OpenSpec/specs。
 
 ### G-02：高层 delegated canonical flow 遗漏 dry-submit 和 Phase-owned closeout
 
@@ -115,7 +119,7 @@ queue demand -> work unit -> sub-agent -> submit -> ledger -> gate
 
 `agentic-subagent-mechanism.md:81-94` 和 `:202-212` 也将 submit 后直接接 phase drain/gate。这个概括对 authority ownership 是正确的，却遗漏了两个对正常 Agent 路径至关重要的步骤：
 
-1. returned candidate 必须先 `dry-submit`，在同一 `work_id` 上修复，再 formal submit；
+1. returned candidate 必须先 `dry-submit`；只有 mechanical candidate-declaration root 可在同一 `work_id` 修复，再 formal submit，semantic post-`work_done` root 走 accepted fail-and-replace；
 2. formal submitted ledger row 之后，Phase Agent 必须按该 phase contract 做 submitted-backed reference/index/depth/backfill closeout，之后才 inspect/gate。
 
 现有 shared protocol 已有更完整的 `dry-submit -> repair -> submit` 指导，但高层 canonical model 把它抹掉，正好复制了 Wave1 main path 的缺口。结果是“formal submit 能跑”和“Gate 最终能拒绝”都成立，但 Agent 在最早可修点没有被交付唯一合法 loop。
@@ -126,7 +130,7 @@ queue demand -> work unit -> sub-agent -> submit -> ledger -> gate
 claim
 -> bounded actor return
 -> dry-submit
--> repair same candidate / same work_id
+-> mechanical repair same candidate / same work_id, or semantic fail-and-replace
 -> formal submit and Engine-written ledger row
 -> named Phase-owned submitted-backed closeout
 -> inspect / gate
@@ -136,7 +140,7 @@ claim
 
 **建议落点：**更新 execution model 的 canonical flow；queue/subagent guideline 只需引用这一完整链，避免三份文本再各自复制一份不一致的 protocol。
 
-### G-03：workflow 把“已 load”误写为“可执行 handoff”
+### G-03：workflow 把“已 load”误写为已完成 public handoff
 
 **严重度：高。影响：H / BUG-101、103。**
 
@@ -150,18 +154,13 @@ gate -> check.next -> target-node load
 
 因此问题不在低层两步各自是否合理，而在正常 caller 被迫知道内部顺序、source gate 和 bootstrap 特例。把它称为“一跳 load”会掩盖一个内部状态窗口，而不是简化它。
 
-**应补的原则：Public Action-Readiness Handoff。**
+**宪章对齐后的审查：**若未来 change 明确声明 Agent-facing entry/handoff/recovery boundary，它必须说明输入与上下文，以及该 boundary 完成后能给出的有限 legal next action 或 no-path。它可以是一个命令或已文档化的有限 protocol，但不得选择研究动作、推进 workflow loop、推断 Agent intent 或成为 chat/host controller。
 
-- 每个正常 handoff 对 Agent 暴露一个完整、可恢复的 public operation/protocol；
-- 在公开 `execute_loaded_node` 或目标第一动作前，必须已有 route-bound load witness、所需 status/gate synchronization 和明确的 `ready` 结果；
-- partial state 必须有一个 nearest recovery result，低层 `enter-phase`/`advance-status` 可以保留为 recovery seam；
-- 这个 deep-but-narrow deterministic module 不得选择研究动作、推进 workflow loop、推断 Agent intent 或成为 chat/host controller。
-
-这条原则澄清了“JS 不得当 workflow runner”和“JS 可以把一个 caller intent 下的确定性 bookkeeping 封装成一个可靠 public handoff”之间的边界。
+是否需要 `ready` result、partial recovery seam，或封装成一个新的 public operation，仍是 H track 的 OpenSpec design question；不得由本 audit 预先批准。
 
 **文档卫生：**workflow 文件在 `:35` 声称机制“当前已实现并验证”。在 public handoff 尚未收敛时，应该降格为可核查的 current snapshot，或链接 accepted spec/verification evidence；guideline prose 不应自己宣布完整性已被验证。
 
-### G-04：动态加载缺少 fresh-session、bounded entry-core 不变量
+### G-04：动态加载的 entry locality 是 H track 的待证 hypothesis
 
 **严重度：中高。影响：H / BUG-104 的确定性部分。**
 
@@ -172,9 +171,9 @@ gate -> check.next -> target-node load
 - **graph-level on demand**：不要预加载尚未被 Gate 授权的其他 phase；
 - **entry-level locality**：已经授权的 phase 也不能把所有罕见分支、修复协议和角色说明塞进首个 entry closure。
 
-**应补的原则：Fresh-Session Entry Core。** 每个 phase 应有一个 canonical、bounded entry core，让全新 Agent 不依赖“上次已经读过”或 session cache 即可执行第一合法动作；晚期/罕见分支通过 entry core 中明确的 canonical reference 在触发时加载。应验证所有首次动作所需事实都在 core 中、所有 later branch ref 可解析，并记录 render bytes 作为 regression signal，而不要把任意 token/byte 阈值做成 runtime authority。
+**候选设计，而非新 guideline invariant：**若 H track 的 evidence 证明 entry locality 是有效的 deterministic boundary，可探索一个 canonical、bounded entry core：新 Agent 无需依赖“上次已经读过”或 session cache 即可执行第一合法动作，晚期/罕见分支通过明确 ref 触发时加载。它应以 focused proof 验证 first action 与 ref resolution，并可把 render bytes 作为 diagnostic regression signal；任意 token/byte 阈值都不得成为 runtime authority。
 
-这不是 summary、memory mirror 或第二 Source of Record，而是把既有 canonical Markdown 按首动作边界分解。
+这不是 summary、memory mirror 或第二 Source of Record，但在 accepted OpenSpec 证明之前，也不是所有 phase 必须采用的结构。
 
 ### G-05：action-readiness 与 host/Agent liveness 的措辞需要分开
 
@@ -227,20 +226,22 @@ Charter 已正确禁止伪造和手写 authority（`project-charter.md:85, 254-2
 
 但这些规则还没有区分：文件字节确实来自一次历史 run，和这份 bundle 仍能证明完整因果/closure，是不同命题。当前 production bundle 在人工写入 `gate_attempt` / `load_complete` 后还保存着真实 trace 字节，但从污染点起不再能证明 legal pass、degradation、handoff 或 Agent flow。
 
-**应补的原则：Evidence Admissibility。**
+**宪章对齐后的证据纪律：**
 
-- direct authority、trace、receipt 或 status 一旦被手工编辑、绕过 normal writer 写入，或其时间/identity lineage 不再自洽，bundle 从该点起标为 `diagnostic-only`；
+- direct authority、trace、receipt 或 status 一旦被手工编辑、绕过 normal writer 写入，或其时间/identity lineage 不再自洽，受影响 claim 的 evidence boundary 从该点起只能作 `diagnostic-only`；
 - 它仍可用于发现症状、设计 red case 和保存历史；
-- closure 必须在新的 disposable bundle 中通过真实 command/actor path 重建，保存 command output、trace/index/diagnostic hash；
+- 对本 production bundle 无法支持的 remediation closure/causal/behavioral claim，必须在新的 disposable bundle 中通过真实 command/actor path 重建，保存 command output、trace/index/diagnostic hash；其他结论按各自声明的 evidence boundary 判断，不一律要求 fresh replay；
 - deterministic contract、real Agent behavior 和 host lifecycle evidence 必须分别命名，不能互相代替。
 
 这不要求在 runtime 增加签名、watchdog 或防篡改系统；它只是约束我们如何引用和归档已经存在的证据。
 
-### G-08：两处 wording 会反向鼓励错误实现
+### G-08：两处待验证的 wording 张力（非已批准的 guideline change）
 
 **严重度：中。影响：M1/M2 的设计评审。**
 
-1. Charter `:291` 要求新 CLI 的 demand-side wiring，方向正确，但“a validator must lock the wording”与 simple-control `:117-118` 的 tolerant presentation 和 `:304-315` 的反 regex/blocking-presentation 原则冲突。文字锁定也不能证明 main loop 真正使用了 canonical action。应验证 **canonical action 的可达性和语义角色**，不是 exact Markdown sentence；只有 machine-readable accepted contract 才锁定格式。
+这两项只保留为未来出现实证 drift 时的 wording review，不授权本计划修改 guidance：
+
+1. Charter `:295` 要求新 CLI 的 demand-side wiring，方向正确，但“a validator must lock the wording”可能与 simple-control 的 tolerant presentation 和反 regex/blocking-presentation 原则形成张力。文字锁定也不能证明 main loop 真正使用了 canonical action。若出现实际 drift，应验证 **canonical action 的可达性和语义角色**，不是 exact Markdown sentence；只有 machine-readable accepted contract 才锁定格式。
 2. Charter `:79` 的 “one clear next action”可能被理解为全局只能返回一个动作；simple-control `:181-183` 实际更精确：**最小独立 root set 中，每个独立 root 有一个最近动作，派生症状进入 durable diagnostic**。应将 Charter 的简写改成后一种表述，避免为了“短”而隐藏真实独立 authority blocker。
 
 此外，queue 的 `retry 3 times max`（`agentic-queue-mechanism.md:188-193`）应明确只是当前 repair guidance 的 diagnostic/escalation cue，绝不是次数到达后获得 degradation/pass 权利。eligibility 仍只由 accepted Gate contract 和 shared evaluator policy 决定，默认 fail closed。
@@ -261,43 +262,43 @@ Charter 已正确禁止伪造和手写 authority（`project-charter.md:85, 254-2
 
 | 主题 | 主文件 | 必须补的内容 | 不应加入的内容 |
 |---|---|---|---|
-| Producer lineage | `evolution-simple-reliable-control.md` + Charter | G-01 complete lineage table；G-06 两类反馈。 | 通用 repair controller、自动修复 authority。 |
+| Producer lineage | `evolution-simple-reliable-control.md` + Charter | GCO-003 legal/no-path review；accepted contract 要求时才写具体 lineage/closeout。 | 通用 repair controller、自动修复 authority。 |
 | Delegated normal path | `agentic-execution-model.md`，queue/subagent 交叉引用 | G-02 dry-submit/same-attempt repair/formal submit/Phase closeout。 | 让 Sub-agent 写 ledger/projection，或让 queue 当 Gate。 |
-| Public handoff | `agentic-workflow-mechanism.md` | G-03 ready/partial recovery；G-04 fresh-session entry core。 | JS phase runner、cursor、chat observer、session cache。 |
+| Public handoff | `agentic-workflow-mechanism.md` | 仅对明确声明的 boundary 写 input/context 与 bounded legal action/no-path；`ready`/entry-core 是单独 proof 后的设计选择。 | JS phase runner、cursor、chat observer、session cache。 |
 | Action vs liveness | helper + queue mechanism | G-05 三层保证/证明表。 | 把 `stop: no` 变 host scheduler。 |
-| Evidence admissibility | Charter + command experiments/logging cross-reference | G-07 diagnostic-only / fresh closure rule。 | 防篡改 daemon、第二 verdict。 |
+| Evidence admissibility | Charter + command experiments/logging cross-reference | GCO-006 claim-bound diagnostic/closure discipline。 | 防篡改 daemon、第二 verdict，或所有结论一律 fresh replay。 |
 | Demand-side verification | Charter | G-08 验证 action role/reachability，不锁 prose 字面。 | Markdown presentation blocker。 |
 
 这些文本应该成对审查：simple-control 决定最短控制形状，helper-oriented 决定 action responsibility；任何机制文件只定义它们之下的 domain-specific boundary。
 
-## 进入修复前的设计门槛
+## 可选发现工作表
 
-对接下来的三个 Wave/Gate changes 和独立 H research track，建议在 proposal 进入 apply 前统一填写下表。它把现有两份 evolution direction 变成可审计门槛，同时避免把 guideline 变成 runtime spec。
+对接下来的三个 Wave/Gate changes 和独立 H research track，proposal 必须使用主计划 §6 的 compact constitutional-admission record。下表只是在复杂 M1/H 设计中帮助发现遗漏的可选工作表：只填写适用项，任何一格都不自行要求 receipt、writer、closeout、retry、state 或 public module。
 
 | 必答项 | 需要给出的答案 |
 |---|---|
 | Direct authority | 哪个直接文件/transaction/evaluator 是唯一 truth？ |
-| Producer lineage | 谁写、用哪个合法 operation、最后一次可逆检查在哪里、什么 commit/receipt 使其权威化？ |
-| Closeout | formal commit 后谁基于哪份 submitted-backed fact 做什么 Phase-owned projection/judgment？ |
+| Producer lineage（如 accepted contract 适用） | 谁写、用哪个合法 operation；若无合法路径，owner/terminal/missing-contract 是什么？ |
+| Closeout（如 accepted contract 适用） | formal commit 后谁基于哪份 submitted-backed fact 做什么 Phase-owned projection/judgment？ |
 | Consumer reuse | inspect/gate/degradation 是否消费同一 evaluator/result；独立根如何与派生症状分开？ |
-| Public Agent action | Agent 在该决策点实际调用的一个完整可恢复 operation/protocol 是什么？ |
+| Public Agent action（仅明确声明 boundary 时） | 输入/上下文是什么；该 boundary 给出的 bounded legal action 或 no-path 是什么？ |
 | No legal path | 若 Agent 不能合法修复，owner、terminal boundary 或 missing contract 如何明确返回？ |
-| Entry locality | fresh session 的第一合法动作需要哪些 canonical bytes；哪些 later branches 延迟加载？ |
+| Entry locality（H hypothesis） | fresh session 的第一合法动作需要哪些 canonical bytes；哪些 later branches 延迟加载？ |
 | Evidence class | deterministic test、real Agent observation、external action、host lifecycle 各自证明什么，哪些不能证明？ |
 | Net simplification | 删除、合并或降级了什么现有复杂度？若没有，为什么是确定性底线？ |
 
 ## 建议顺序
 
 1. 将本审计视为对现有 guideline suite 的修订需求，而不是立即修改代码的授权。
-2. 在 `make-pre-wave-readiness-feedback-direct` 和 `make-wave-producer-contract-and-closeout-direct` proposal 中使用 G-01/G-02/G-06 的表格；先证明 producer local feedback 和 submitted-backed closeout，再动 Gate projection。
+2. 在 `make-pre-wave-readiness-feedback-direct` 和 `make-wave-producer-contract-and-closeout-direct` proposal 中使用主计划的 compact constitutional-admission record；仅在 accepted contract 适用时使用 G-01/G-02/G-06 工作表项。先证明 producer local feedback 和 submitted-backed closeout，再动 Gate projection。
 3. 在 `simplify-wave-gate-feedback-and-degradation-policy` 中把 M2 作为已有原则的实现收敛：shared evaluator、最小独立 roots、fail-closed eligibility，不新增“更多 degradation”原则。
-4. H 继续留在 `silent-autonomous-execution.md` 的独立证据轨；只在 public handoff、partial recovery、entry core 和 proof boundary 完整后考虑 focused proposal。
+4. H 继续留在 `silent-autonomous-execution.md` 的独立证据轨；只在明确的 public boundary 具备 input/context、bounded legal result/no-path 与 proof boundary 后考虑 focused proposal。partial recovery 或 entry core 只在该 proposal 确有需要时进入设计。
 5. 将 G-05/G-07/G-08 的澄清作为小型 guidance update 处理，并在同一 change 中链接到相应 accepted evidence；不要把它们混成一次全系统文档重写。
 
 ## 最终判断
 
 原有指导原则的**架构边界是对的**，尤其是“Markdown controls Agent Flow、Engine owns deterministic checkpoints”“fail closed”“不建设 generic controller”和“用户只承担必要决策”。
 
-不足在于它们还没有规定：一个正确的 deterministic checker 如何成为一个对 Agent 可完成的生产者闭环；一个正常 handoff 如何从 low-level load 升级为 action-ready public interface；以及什么证据才足以宣布一个真实 Agent/workflow 问题被关闭。
+不足在于它们当时还没有清楚规定：一个正确的 deterministic checker 如何成为一个对 Agent 可完成的生产者闭环；一个明确声明的 public boundary 如何保持有界而不升级为 workflow controller；以及什么证据才足以宣布一个真实 Agent/workflow 问题被关闭。
 
 这三项补齐后，未来修复会有明确约束：不再靠在 Gate 末端堆 validator，不再把 Agent 停顿归咎于 Engine 不够强，也不再让一份被人工接管过的历史 bundle 承担它无法承担的证明责任。

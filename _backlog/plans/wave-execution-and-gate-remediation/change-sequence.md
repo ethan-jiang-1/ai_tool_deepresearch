@@ -4,13 +4,13 @@ This appendix indexes the execution decision in the parent plan. Silent autonomo
 
 | Order | Change | Covers | Acceptance loop |
 |---|---|---|---|
-| 1 | `make-pre-wave-readiness-feedback-direct` | BUG-100, BUG-101, BUG-102 | HITL1/seed producer fact -> early verdict -> legal pre-Wave route |
-| 2 | `make-wave-producer-contract-and-closeout-direct` | BUG-105, BUG-107, BUG-108, BUG-111, BUG-112 | author -> dry-submit -> formal submit -> submitted-backed closeout -> inspect |
-| 3 | `simplify-wave-gate-feedback-and-degradation-policy` | BUG-109, BUG-110, BUG-113 | evaluator facts -> minimal roots + shared fail-closed degradation decision |
+| 1 | `make-pre-wave-readiness-feedback-direct` | BUG-100, BUG-101, BUG-102 | one bounded access sample + producer facts -> early verdict -> legal pre-Wave route or explicit no-advance |
+| 2 | `make-wave-producer-contract-and-closeout-direct` | BUG-105, BUG-107, BUG-108, BUG-111, BUG-112 | author -> dry-submit -> mechanical repair or semantic replacement -> formal submit -> submitted-backed closeout -> inspect |
+| 3 | `simplify-wave-gate-feedback-and-degradation-policy` | BUG-109, BUG-110, BUG-113 | evaluator facts -> minimal roots + shared fail-closed policy, including an inactive Wave2 positive fixture |
 
 ## 1. `make-pre-wave-readiness-feedback-direct`
 
-This change owns the readiness route spanning HITL1, setup and seed topics. It authorizes canonical topic-state application at its legal producer point, distinguishes bounded access observation from evidence collection, and reuses the Gate seed parser at authoring/completion. It does not create a second topic-state owner, retry controller or YAML parser.
+This change owns the readiness route spanning HITL1, setup and seed topics. It authorizes canonical topic-state application at its legal producer point, uses one search and at most the first three eligible returned candidates for bounded fetch observation, and reuses the Gate seed parser at authoring/completion. It does not create a second topic-state owner, retry controller or YAML parser; exhausted candidates return unavailable and do not authorize Setup/Wave work.
 
 ## 2. `make-wave-producer-contract-and-closeout-direct`
 
@@ -19,8 +19,9 @@ This change owns the producer-to-consumer chain:
 ```text
 canonical rich reference
   -> direct path/content/backing feedback
-  -> dry-submit same work_id and repair
-  -> formal submit
+  -> dry-submit
+      mechanical same-`work_id` repair, or semantic fail-and-replace
+  -> only PASS proceeds to formal submit
   -> submitted ledger
   -> reference/index/depth/return-map closeout
   -> inspect after full drain
@@ -30,7 +31,7 @@ It retains one parser/evaluator for rich references, never treats fenced YAML as
 
 ## 3. `simplify-wave-gate-feedback-and-degradation-policy`
 
-This change consumes trustworthy producer facts. It projects one structured evaluator result into minimal root-first hints and degradation eligibility; it does not alter underlying truth. Eligibility is parsed metadata, false by default, and remains fail closed for queue, provenance, structure, receipt and trace roots.
+This change consumes trustworthy producer facts. It projects one structured evaluator result into minimal root-first hints and degradation eligibility; it does not alter underlying truth. Eligibility is parsed metadata, false by default, and remains fail closed for queue, provenance, structure, receipt and trace roots. One delta-spec-authorized inactive Wave2 fixture proves the adapter's positive metadata path without adding a production eligible rule.
 
 ## Execution Checkpoints
 

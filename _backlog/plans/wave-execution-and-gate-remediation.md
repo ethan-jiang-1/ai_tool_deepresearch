@@ -3,7 +3,8 @@ title: Wave execution and gate remediation
 status: reviewed_ready_for_backlog_correction_then_proposal
 created: 2026-07-23
 revised: 2026-07-24
-source_bugs: BUG-100--BUG-113
+covered_bugs: BUG-100, BUG-101, BUG-102, BUG-105, BUG-107, BUG-108, BUG-109, BUG-110, BUG-111, BUG-112, BUG-113
+out_of_scope_bugs: BUG-099, BUG-103, BUG-104, BUG-106 (owned by silent-autonomous-execution.md)
 evidence_bundle: dpt_rb_openspec-large-project-maintenance-patterns
 ---
 
@@ -11,7 +12,7 @@ evidence_bundle: dpt_rb_openspec-large-project-maintenance-patterns
 
 ## 1. Decision
 
-本文件是 Wave producer、pre-Wave readiness 与 Gate remediation 的自包含 review context。静默自主、direct phase entry 与 host liveness 已移入独立的 [Silent Autonomous Execution](silent-autonomous-execution.md) 计划；它们不再是本计划的 change 或 completion dependency。
+本文件是 Wave producer、pre-Wave readiness 与 Gate remediation 的自包含 review context，覆盖 11 个 bug：`100--102、105、107--113`。`099、103、104、106` 的静默自主、direct phase entry 与 host liveness 已移入独立的 [Silent Autonomous Execution](silent-autonomous-execution.md) 计划；它们不再是本计划的 change 或 completion dependency。
 
 复核 accepted specs、当前实现、真实 bundle、上一份 closed plan 与全部 `guidelines/` 后，本计划维持 **恰好三个 sequential OpenSpec changes**：
 
@@ -102,11 +103,11 @@ Production evidence bundle `dpt_rb_openspec-large-project-maintenance-patterns` 
 
 **Direct authorities:** `rb_profile.yaml#/research_access`; retained topic intent plus Engine-owned topic-state workspace; seed Markdown bytes plus the existing Gate YAML/schema parser.
 
-**Required design:** topic state applies idempotently in the legal HITL1 pre-Gate window; access probe distinguishes search availability from representative fetchability within bounded, recorded observation semantics; seed authoring/batch completion runs one named owning validation checkpoint reusing the Gate parser.
+**Required design:** topic state applies idempotently in the legal HITL1 pre-Gate window. The access probe performs one neutral capability-only search, considers at most the first three syntactically eligible actual HTTP(S) results in returned order, and gives each candidate only the existing bounded native-fetch then permitted curl-fallback sequence. It records one final direct observation, including only the selected/final candidate information required by the accepted schema plus bounded candidate-count/ordinal facts, not query or URL history. A real page from any candidate establishes `available`; no successful candidate establishes `unavailable` with its bounded reason and no Setup/Wave route. Seed authoring/batch completion runs one named owning validation checkpoint reusing the Gate parser.
 
-**Proof:** focused parser/transition tests; integration coverage for unavailable access, invalid topic intent and invalid seed shape; one deterministic pre-Wave E2E proves a first-pass legal route. External access claims require a real call or honest `NOT_RUN`.
+**Proof:** focused parser/transition tests; integration coverage for no eligible candidate, first-two-blocked/third-fetchable, all-candidates-unavailable, invalid topic intent and invalid seed shape; one deterministic pre-Wave E2E proves a first-pass legal route. External access claims require a real call or honest `NOT_RUN`.
 
-**Done:** BUG-100--102 are first discovered at their producer decision point, without manual authority edits or a late phase-end first failure.
+**Done:** BUG-100--102 are first discovered at their producer decision point, without manual authority edits or a late phase-end first failure; bounded search/fetch failure returns an explicit unavailable/no-advance result rather than an unbounded retry or implicit second-route choice.
 
 ### Change 2: `make-wave-producer-contract-and-closeout-direct` (BUG-105, BUG-107, BUG-108, BUG-111, BUG-112)
 
@@ -114,8 +115,11 @@ Production evidence bundle `dpt_rb_openspec-large-project-maintenance-patterns` 
 
 ```text
 canonical path + rich-reference authoring
-  -> dry-submit same attempt -> repair
-  -> formal submit -> submitted ledger row
+  -> dry-submit
+      mechanical candidate root: repair same `work_id`, then rerun dry-submit
+      semantic post-`work_done` root: fail and replace under a new `work_id`
+      integrity/no-legal-path root: owner, terminal, or missing-contract boundary
+  -> only a PASS proceeds to formal submit -> submitted ledger row
   -> Phase-owned reference/depth/backfill closeout
   -> inspect
 ```
@@ -124,11 +128,11 @@ canonical path + rich-reference authoring
 
 **Direct authorities:** canonical bundle-relative path and rich file bytes; existing `parseReferenceMetadata()`/reference evaluator; work-unit index/result/receipt/cache; successful submitted-ledger row; Phase Agent's nondelegable depth judgment and consumer projections.
 
-**Required design:** Wave0 receives the canonical rich-reference template at authoring. Wave1 makes `dry-submit -> repair same work_id -> formal submit` direct. Only successful formal rows unlock reference/index, `depth-review.yaml` and seed return-map closeout; inspect runs after all dispositions and queue/in-flight drain.
+**Required design:** Wave0 receives the canonical rich-reference template at authoring. Wave1 makes `dry-submit -> eligible mechanical same-work_id repair -> dry-submit -> formal submit` direct. A semantic root after `work_done` follows the existing fail-and-replace path with a fresh same-obligation work unit; integrity or missing-contract roots return their existing Engine owner/terminal boundary and never invite authority edits. Only successful formal rows unlock reference/index, `depth-review.yaml` and seed return-map closeout; inspect runs after all dispositions and queue/in-flight drain.
 
 **Hard bounds:** no YAML fence/bare YAML rich-reference authority; no generic Markdown linter; no disk scan that amends declarations; no Sub-agent ownership of Phase depth/backfill; no Phase Agent fabrication of Sub-agent semantics/cache declaration.
 
-**Proof:** parser/path/backing unit and integration cases; rejected dry-submit prevents formal submit; same-attempt repair; semantic post-`work_done` failure follows fail-and-replace; one-topic and multi-topic real Agent flows reach closeout before Gate.
+**Proof:** parser/path/backing unit and integration cases; rejected dry-submit prevents formal submit; mechanical same-attempt repair; semantic post-`work_done` failure follows fail-and-replace; integrity/no-path diagnostics reject hand edits; one-topic and multi-topic real Agent flows reach closeout before Gate.
 
 **Done:** BUG-105/111 close only when canonical naming, rich content and backing are separately diagnosed at first authoring. BUG-107/108/112 close only when real Phase flow preflights, submits and materializes required projections before inspect.
 
@@ -138,13 +142,13 @@ canonical path + rich-reference authoring
 
 **Direct authorities:** existing evaluator findings, schema-parsed Gate definitions, lifecycle preflight/trace durability and current Gate attempt lineage.
 
-**Required design:** prerequisite roots short-circuit dependent content checks; same-topic/same-parent roots collapse to one nearest repair; independent roots remain separate; durable diagnostics retain dependent detail. A pure metadata-backed evaluator replaces Wave0/1 hard-coded eligibility sets and is consumed by all Wave adapters. Eligibility defaults false; current accepted soft floors remain the only true values and Wave2 has none.
+**Required design:** prerequisite roots short-circuit dependent content checks; same-topic/same-parent roots collapse to one nearest repair; independent roots remain separate; durable diagnostics retain dependent detail. A pure metadata-backed evaluator replaces Wave0/1 hard-coded eligibility sets and is consumed by all Wave adapters. Eligibility defaults false; current accepted soft floors remain the only true production values and Wave2 has none. The change delta spec SHALL authorize one schema-valid, inactive test-only Wave2 definition fixture carrying an eligible quality rule, so the shared production adapter can prove its positive metadata path without adding an active Wave2 eligible rule.
 
 **Hard bounds:** no general dependency graph engine, automatic downgrade, partial advance, reclassification of structure/provenance as presentation, or separate inspect/Gate grouping and eligibility implementation.
 
-**Proof:** parent-only versus independent root grouping; formal/inspect parity; Wave0/Wave1 quality-only eligible degraded pass; Wave1 queue/provenance/structure failure remains failed; current Wave2 structural roots remain failed. A synthetic metadata-eligible Wave2 rule proves adapter capability only if accepted specs authorize it.
+**Proof:** parent-only versus independent root grouping; formal/inspect parity; Wave0/Wave1 quality-only eligible degraded pass; Wave1 queue/provenance/structure failure remains failed; current Wave2 structural roots remain failed; the delta-spec-authorized inactive Wave2 fixture proves the positive metadata path through the same adapter.
 
-**Done:** BUG-109 closes when one parent root cannot expand into a primary repair wall. BUG-110 is reclassified once existing Wave1 policy is regression-proved. BUG-113 closes when Wave2 consumes common policy while rejecting all current ineligible failures.
+**Done:** BUG-109 closes when one parent root cannot expand into a primary repair wall. BUG-110 is reclassified once existing Wave1 policy is regression-proved. BUG-113 closes only when Wave2 consumes common policy in both the authorized inactive positive fixture and current ineligible-failure regression.
 
 ## 5. Pre-Proposal Fact Corrections
 
@@ -172,6 +176,8 @@ Each of the three changes follows exactly:
 
 No target code, test or experiment artifact is written during propose/explore. Every change creates a change-root `verification-plan.yaml`, runs plan mode before edits and assets mode before archive, reviews `req-registry.yaml`, makes an explicit version-bump decision, and runs `check-project-reqs.mjs` plus `check-project-specs.mjs` before archive.
 
+Before `/opsx:apply`, each proposal/design/tasks contains one compact constitutional-admission record: (1) direct authority, owning boundary, legal establishment/change path, or honest owner/terminal/missing-contract result; (2) for an explicitly declared Agent entry/handoff/recovery boundary, its input/context and bounded legal next action or no-path; (3) the shortest legal loop and the complexity removed, merged, or explicitly avoided; (4) the smallest human decision, if any, and the ordinary authorized work that returns to the Agent; and (5) the exact claim/proof boundary. This is a review record, not a mandate to add a receipt, writer, preflight, retry, state field, or controller.
+
 | Claim | Minimum proof |
 |---|---|
 | Parser/evaluator/pure grouping/eligibility | focused `unit` under root `tests/` |
@@ -190,7 +196,7 @@ Change 2 truthful producer facts
   -> Change 3 primary Gate projection and degradation policy
 ```
 
-The plan may move to `_backlog/_done/_closed_plans/` only after all three changes are archived, corrections are durable, every BUG-100--113 in scope has a recorded disposition and proof boundary, accepted specs are synced, governance passes, and a disposable path demonstrates pre-Wave readiness, dry-submit-before-submit, Phase-owned closeout, minimal independent repair roots and fail-closed authority/provenance/structure.
+The plan may move to `_backlog/_done/_closed_plans/` only after all three changes are archived, corrections are durable, every covered bug (`100--102、105、107--113`) has a recorded disposition and proof boundary, accepted specs are synced, governance passes, and a disposable path demonstrates pre-Wave readiness, dry-submit-before-submit, Phase-owned closeout, minimal independent repair roots and fail-closed authority/provenance/structure.
 
 Remaining traps:
 

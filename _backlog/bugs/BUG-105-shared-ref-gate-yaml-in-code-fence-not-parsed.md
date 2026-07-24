@@ -1,6 +1,6 @@
 ---
 bug_id: BUG-105
-title: "Shared reference gate cannot parse YAML inside Markdown code fences — format mismatch between agent output and gate parser"
+title: "Shared reference failure diagnosis conflated raw source YAML with the rich-reference contract"
 severity: P2
 discovered: 2026-07-23
 bundle: dpt_rb_openspec-large-project-maintenance-patterns
@@ -8,39 +8,25 @@ phase: wave0
 gate: wave0-complete
 ---
 
-# BUG-105: Shared reference gate 无法解析 Markdown code fence 中的 YAML
+# BUG-105: Shared reference 的 raw YAML 与 rich-reference contract 被混淆
 
 ## 现象
 
-Wave0 gate 要求 `reference/00-shared-*.md` 中包含至少 `wave0_shared_ref_total`（本 run=9）个 countable references。Agent 创建了 3 个 shared reference 文件，每个包含 4 个 source references（共 12 个），以 YAML code block 嵌入 Markdown：
+Wave0 gate 报告 `0 countable references (threshold: 9)`。production bundle 中同时存在两类不同 surface：40 个 rich per-source Markdown files 使用了如 `01-01_...` 的非 canonical 文件名；Gate 选中的五个 canonical-prefix aggregate candidates 则是 bare YAML arrays。
 
-```markdown
-# Shared Reference: ...
-
-```yaml
-- url: https://...
-  title: ...
-  retrieved_date: ...
-  notes: ...
-```
-```
-
-Gate 报告 `0 countable references (threshold: 9)`，所有 3 个文件标记为 `filesystem_only_not_backed: projection_backing_drift: lacks source_url metadata`。
+这些 bytes 证明 count/authority 没有闭合，但不证明 rich-reference Markdown parser 拒绝 YAML code fence。
 
 ## 根因
 
-Gate parser 期望 shared reference 文件中的 YAML 在文件顶层（raw YAML array），而不是嵌套在 Markdown code fence 中。Agent 自然地将 reference 文件写为 Markdown prose + YAML code block，因为这是"人类可读文档"的自然格式。但 gate 的 parser 只识别顶层 YAML 结构中的 `url` 字段。
-
-这是 **Agent 产出格式 vs. Engine 解析格式的 mismatch**——不是 Agent 写错了内容，而是内容放在了 Engine 看不到的地方。
+原始诊断混淆了 `source.yaml` 的 raw YAML output contract、rich-reference Markdown content contract、canonical filename，以及 submitted backing。这四项是独立 authority facts。当前证据不能支持“Gate 要求 rich metadata 是顶层 YAML”或“应把 fenced YAML 作为第二 rich-reference authority”的结论。
 
 ## 实际影响
 
-- Gate 在 shared_ref_count_floor 上连续失败 3 次
-- 第 3 次触发 fatigue degradation，gate 以 degraded 状态 pass（`degraded_reason: fatigue_threshold_reached_with_only_degradation_eligible_quality_rules`）
-- 12 个有效的 shared references 未被计数，wave0 的 shared reference 覆盖被低估
+- Gate 在 shared_ref_count_floor 上连续失败，随后只有 quality-only failure 时才合法 degraded。
+- 非 canonical paths、bare aggregate arrays 和缺少 submitted backing 不能作为 rich-reference coverage。
 
 ## 建议方向
 
-- Gate parser 应能解析 Markdown 文件中的 YAML code blocks（扫描 ````yaml`  fence）
-- 或：在 shared reference authoring contract 中明确规定格式要求（"raw YAML at file top level, no markdown wrapping"）
-- 或：提供 `00-shared-template.yaml` 作为格式参考
+- 在 canonical rich-reference authoring point 提供 parser-aligned template 与直接 path/content/backing feedback。
+- 分别诊断 canonical path、rich content 与 submitted backing；保留 `source.yaml` 的独立 raw YAML contract。
+- 不新增 fenced/bare YAML rich-reference authority、generic Markdown linter 或 filesystem scan 补 provenance。

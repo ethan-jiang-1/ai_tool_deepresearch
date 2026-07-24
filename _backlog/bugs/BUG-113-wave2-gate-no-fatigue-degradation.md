@@ -1,6 +1,6 @@
 ---
 bug_id: BUG-113
-title: "Wave2 gate also lacks fatigue degradation — same class as BUG-110"
+title: "Wave2 adapter lacks shared eligible-degradation projection; observed roots remain ineligible"
 severity: P2
 discovered: 2026-07-23
 bundle: dpt_rb_openspec-large-project-maintenance-patterns
@@ -8,16 +8,16 @@ phase: wave2
 gate: wave2-complete
 ---
 
-# BUG-113: Wave2 gate 同样无 fatigue degradation
+# BUG-113: Wave2 adapter policy 与 observed failure 必须分开
 
 ## 现象
 
-Wave2 gate 在 5 次 attempt 后（attempt 5-9，从手工 handoff 修复后计数）仍然不 pass、不 degrade。5 个 content format 规则持续失败（ledger_fixed_sections, finding_index_contract, cross_artifact_references, wave1_evidence_ref, phase_queue_drained）。与 BUG-110（wave1）同类。
+Wave2 gate 在多次 attempt 后仍然不 pass、不 degrade。observed failures 包含 queue、finding-index、cross-artifact 和 reference-binding roots；它们不是 quality-only degradation counterexample。之后的 pass 由手工 handoff 写入，不能当作 runtime proof。
 
-## 根因
+## 校正后的事实
 
-与 BUG-110 相同：wave2 gate 未实现 fatigue degradation 机制。Quality rules（format/schema/contract）不被视为 degradation-eligible。
+Wave2 adapter 尚未消费 generic eligible-degradation policy；这是一致性 defect。当前 active Wave2 definitions 没有 accepted eligible rule，且这次 failures 有 ineligible authority roots，所以 Gate 必须继续 fail closed。它不是 Wave2 本次应 degraded handoff 的理由。
 
 ## 建议
 
-统一所有 gate 的 fatigue degradation 策略。Wave0 gate 有工作模型（attempt 3 → degraded pass），wave1/wave2 gate 缺失。
+Change 3 应让三条 Wave adapters 消费同一个 metadata-backed evaluator，default false。delta spec 可授权一个 inactive test-only Wave2 eligible quality fixture 证明正向 adapter path；不得新增 production Wave2 eligible rule、automatic downgrade 或 partial advance。

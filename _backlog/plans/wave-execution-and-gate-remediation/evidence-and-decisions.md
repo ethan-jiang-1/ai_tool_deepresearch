@@ -13,23 +13,23 @@ This appendix records evidence behind the three-change Wave/Gate plan. Silent ph
 
 | Bugs | Evidence | Fixed decision |
 |---|---|---|
-| 100 | Search succeeded while earlier first-result fetches were policy-blocked; a later result was fetchable. | Change 1 uses bounded access observation that distinguishes search availability from representative fetchability without query/URL history. |
+| 100 | Search succeeded while earlier first-result fetches were policy-blocked; a later result was fetchable. | Change 1 uses one search and at most the first three eligible returned candidates in order; it records one final direct observation with bounded ordinal/count facts, not query or URL history. |
 | 101 | Topic state is required by HITL1 Gate, while current apply window starts only after the Gate. | Change 1 authorizes idempotent canonical topic-state apply at the legal HITL1 producer point; Gate continues to require canonical state. |
 | 102 | Invalid seed YAML was first found at phase-end Gate. | Change 1 adds one owning seed-validation checkpoint immediately after authoring/batch completion, reusing the Gate parser/schema. |
 | 105, 111 | Rich refs used fenced/bare YAML or noncanonical names; parser contract is bullet/colon metadata plus semantic sections, while selected canonical-prefix files were bare YAML. | Change 2 uses one canonical rich-reference contract: full topic-slug path, parser-aligned content and submitted backing as separately diagnosed roots. |
-| 107, 108, 112 | Dry-submit already detects cache/receipt roots; Wave1 direct flow skipped it, formal rejects repeated and Phase closeout was omitted. | Change 2 makes dry-submit/repair/formal-submit/closeout one visible Phase Agent loop. |
+| 107, 108, 112 | Dry-submit already detects cache/receipt roots; Wave1 direct flow skipped it, formal rejects repeated and Phase closeout was omitted. | Change 2 makes dry-submit, mechanical same-attempt repair, semantic fail-and-replace, formal submit and closeout one visible Phase Agent loop. |
 | 109 | 11 base failures produced 35 masked ids and 43--113 primary hints. | Change 3 projects independent prerequisite roots only in primary hints and retains full dependent detail durably. |
 | 110 | Wave1 already has a narrow eligible path; observed failure set contains structural/provenance/queue roots. | Reclassify as misdiagnosed. Change 3 regression-proves existing fail-closed semantics. |
-| 113 | Wave2 adapter has no degradation path although generic accepted Gate contract requires eligible repeated-failure support; current failure set is ineligible and Wave2 definitions name no eligible rule. | Change 3 adds common adapter support, default-ineligible metadata and no new Wave2 eligible rule. |
+| 113 | Wave2 adapter has no degradation path although generic accepted Gate contract requires eligible repeated-failure support; current failure set is ineligible and Wave2 definitions name no eligible rule. | Change 3 adds common adapter support, default-ineligible metadata, no new production Wave2 eligible rule, and one delta-spec-authorized inactive positive fixture. |
 
 ## Fixed Design Decisions
 
-1. The access sample is bounded and records only the final observation; its content never becomes research evidence.
+1. The access sample performs one search and considers at most the first three eligible returned candidates in order. It records one final observation plus bounded candidate count/ordinal facts; its content never becomes research evidence or a query/URL history.
 2. Topic-state application occurs through its existing transaction/workspace owner at the legal producer point, not through a manual state edit.
 3. Seed validation invokes the existing parser/schema at authoring/completion; it is not a generic watcher or second YAML interpretation.
 4. Rich reference path, content and submitted backing remain separate direct roots.
-5. A returned Wave1 work item runs dry-submit before formal submit and retains its `work_id` through repair; only a successful ledger row permits Phase closeout.
-6. Degradation eligibility is explicit parsed metadata and false by default. Existing Wave0/1 accepted soft floors remain the only true values; Wave2 has none until accepted specs add one.
+5. A returned Wave1 work item runs dry-submit before formal submit. Only mechanical candidate-declaration repair retains its `work_id`; a semantic post-`work_done` root follows accepted fail-and-replace, while integrity/no-path roots remain owner/terminal boundaries. Only a successful ledger row permits Phase closeout.
+6. Degradation eligibility is explicit parsed metadata and false by default. Existing Wave0/1 accepted soft floors remain the only true production values; Wave2 has none until accepted specs add one. The Change 3 delta spec may authorize one inactive test fixture solely to prove adapter capability.
 
 ## Proof Boundaries
 
