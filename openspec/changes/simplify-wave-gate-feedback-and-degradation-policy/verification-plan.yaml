@@ -1,13 +1,72 @@
+schema_version: verification-routing/v1
 change: simplify-wave-gate-feedback-and-degradation-policy
+test_classes:
+  unit:
+    status: selected
+    rationale: The rule-schema default, exact unmasked-rule eligibility, and evaluator masking are pure deterministic contracts.
+  integration:
+    status: selected
+    rationale: Formal Gate and inspect adapters must project the same evaluator roots while retaining formal-only handoff authority.
+  deterministic_e2e:
+    status: selected
+    rationale: Disposable bundles prove that eligible quality-only failure may use the existing handoff while authority roots remain failed.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: This change does not alter Agent semantic work or Markdown flow; deterministic Gate projection is the changed behavior.
 claims:
-  - requirement_ids: [GSK-013, RWG-021]
+  - id: gate-rule-metadata-defaults
+    statement: "Gate rule degradation_eligible is parsed with a false default and does not require non-Wave Gate definition migration."
     test_class: unit
-    proof: shared evaluator metadata, root masking, and fail-closed eligibility
-  - requirement_ids: [GSK-013, RWG-021]
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/gate-definition-degradation-eligibility.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave-eligibility-exact-id-and-fails-closed
+    statement: "The shared Wave helper accepts only exact unmasked definition-owned required_floor rule_id matches and rejects checker, formal, structural, and suffix-derived roots."
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/wave-degradation-eligibility.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave-adapters-share-root-projection
+    statement: "Wave formal Gate and inspect project one source-level prerequisite root, retain independent roots and masked rule-id context, and do not reconstruct children or eligibility from prose."
     test_class: integration
-    proof: formal Gate and inspect adapters project identical shared roots
-  - requirement_ids: [GSK-013, RWG-021]
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/wave-gate-degradation-policy.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave-degradation-handoff-remains-authority-safe
+    statement: "Disposable Wave bundles preserve the existing quality-only degraded handoff and reject Wave1 queue/provenance/structure and Wave2 active ineligible roots; an inactive Wave2 fixture proves adapter capability only."
     test_class: deterministic_e2e
-    proof: disposable Wave bundles preserve eligible-quality handoff and authority-root refusal
-not_applicable:
-  - agent_flow_e2e: no Agent semantic behavior changes; deterministic Gate projection is the changed contract
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/wave-gate-degradation-policy.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
