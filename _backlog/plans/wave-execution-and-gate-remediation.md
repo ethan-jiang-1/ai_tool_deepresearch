@@ -1,6 +1,6 @@
 ---
 title: Wave execution and gate remediation
-status: change_1_archived_change_2_proposed_ready_for_explore
+status: changes_1_and_2_archived_change_3_ready_to_propose
 created: 2026-07-23
 revised: 2026-07-24
 covered_bugs: BUG-100, BUG-101, BUG-102, BUG-105, BUG-107, BUG-108, BUG-109, BUG-110, BUG-111, BUG-112, BUG-113
@@ -27,8 +27,8 @@ evidence_bundle: dpt_rb_openspec-large-project-maintenance-patterns
 ### Execution Progress
 
 - [x] **Change 1 archived**: `make-pre-wave-readiness-feedback-direct` was archived at `openspec/changes/archive/2026-07-24-make-pre-wave-readiness-feedback-direct/` and finalized in commits `0dfa52cad` / `542f7833a`. BUG-100--102 now have deterministic pre-Wave contract, CLI/bundle, and simulated lifecycle proof; the provider-scoped real Agent/search/fetch claim is honestly `NOT_RUN` because this host lacks the configured independent Subject launcher.
-- [x] **Change 2 proposed**: `make-wave-producer-contract-and-closeout-direct` now contains proposal, design, four focused delta specs, tasks, and a four-class verification plan for BUG-105, BUG-107, BUG-108, BUG-111, and BUG-112. It is ready for deliberate `/opsx:explore` polishing; no Wave/Gate target surface changes are authorized before its `/opsx:apply`.
-- [ ] **Change 3 remains blocked by order**: begin only after Change 2 has archived truthful producer and submitted-backing facts.
+- [x] **Change 2 archived**: `make-wave-producer-contract-and-closeout-direct` was archived at `openspec/changes/archive/2026-07-24-make-wave-producer-contract-and-closeout-direct/` and finalized in commit `d65fe538a`. It delivered Wave0 producer-template loading, the Wave1 dry-submit/formal-submit/closeout path, accepted-spec synchronization, static contract proof, and the Case 225 real-Agent evidence asset. Case 225 runtime behavior remains honestly `NOT_RUN`: no explicit Headless execution budget authorized the real Agent/child/search/fetch run.
+- [ ] **Change 3 is ready to propose**: `simplify-wave-gate-feedback-and-degradation-policy` now owns BUG-109, BUG-110, and BUG-113; it may begin `/opsx:propose` but must retain Change 2's submitted-backing boundary and fail-closed authority roots.
 
 已经作出的决定：
 
