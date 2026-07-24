@@ -810,10 +810,11 @@ function submitRejectionPayload(record, reason, resultPath) {
   };
 }
 
-function rejectionGuidance(violations = []) {
-  const primary = violations[0] || null;
+function rejectionGuidance(violations = [], selectedPrimary = null) {
+  const primary = selectedPrimary || null;
   return {
     violations,
+    selected_primary: primary,
     ...(primary ? {
       repair_kind: primary.repair_kind,
       missing_fact: primary.missing_fact,
@@ -823,8 +824,15 @@ function rejectionGuidance(violations = []) {
   };
 }
 
-function recordSubmitRejection(bundleDir, { work_id, resultPath, reason, violations = [], candidateProjection = null }) {
-  const guidance = rejectionGuidance(violations);
+function recordSubmitRejection(bundleDir, {
+  work_id,
+  resultPath,
+  reason,
+  violations = [],
+  candidateProjection = null,
+  selectedPrimary = null,
+}) {
+  const guidance = rejectionGuidance(violations, selectedPrimary);
   const projection = candidateProjection ? {
     recommended_action: candidateProjection.recommended_action,
     primary_root_code: candidateProjection.primary_root_code,
@@ -1386,6 +1394,7 @@ function finalizeCandidatePlan(plan) {
   return {
     ...plan,
     violations: derived.violations,
+    selected_primary: derived.selected_primary,
     candidate_projection: derived.projection,
   };
 }
@@ -1570,6 +1579,7 @@ export function drySubmitWorkUnit(bundleDir, { work_id, resultPath } = {}) {
     expected_submit: (plan.violations || []).length === 0 ? 'pass' : 'fail',
     reason_codes: reasonCodes,
     violations: plan.violations || [],
+    selected_primary: plan.selected_primary || null,
     recommended_action: plan.candidate_projection.recommended_action,
     primary_root_code: plan.candidate_projection.primary_root_code,
     normalizations: publicNormalizations(plan.normalizations || []),
@@ -1924,6 +1934,7 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
       reason: error.message || String(error),
       violations: preflight.violations || [],
       candidateProjection: preflight.candidate_projection || null,
+      selectedPrimary: preflight.selected_primary || null,
     });
   }
   if (prepared.duplicate) {

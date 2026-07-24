@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.48
+
+- Generated work-unit `task.md` now starts its authoring surface with one non-authoritative Completion Contract derived from existing manifest, result-schema, direct-output, cache, source, and receipt owners; spawn points only to that entry and creates no actor-produced authority.
+- Claim input now reports supplied malformed actor observations structurally before allocation or trace mutation, while omitted observation keeps its existing audit path. Normal dry-submit and formal rejection expose one selected primary root; timeout advice forwards only its action and code.
+
 ## v0.47
 
 - Wave Gates now read degradation eligibility from parsed, default-false rule metadata through one exact-rule-ID helper. The existing Wave0/Wave1 quality-floor policy is preserved; queue, provenance, structure, trace, lifecycle, and checker roots remain fail-closed.

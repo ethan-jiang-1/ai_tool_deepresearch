@@ -503,9 +503,10 @@ describe('operate-work-unit inspect', () => {
       assert.match(JSON.stringify(out.prompt_refs), /_work_units\/wave0\/wu-w0-b000-src-i0001\/task\.md/);
       assert.equal(out.prompt_refs[0].bundle_dir, path.resolve(dir));
       assert.equal(out.prompt_refs[0].task_path, path.join(path.resolve(dir), out.prompt_refs[0].task_ref));
-      assert.match(out.prompt_refs[0].spawn_prompt, /runtime-receipt\.jsonl/);
-      assert.match(out.prompt_refs[0].spawn_prompt, /result\.schema\.json/);
-      assert.match(out.prompt_refs[0].spawn_prompt, /runtime_refs diagnostic metadata/);
+      assert.match(out.prompt_refs[0].spawn_prompt, /Completion Contract/);
+      assert.doesNotMatch(out.prompt_refs[0].spawn_prompt, /runtime-receipt\.jsonl/);
+      assert.doesNotMatch(out.prompt_refs[0].spawn_prompt, /result\.schema\.json/);
+      assert.doesNotMatch(out.prompt_refs[0].spawn_prompt, /runtime_refs diagnostic metadata/);
     } finally {
       cleanup(dir);
     }
@@ -531,6 +532,35 @@ describe('operate-work-unit inspect', () => {
       assert.deepEqual(readFileSync(queuePath), before);
     } finally {
       cleanup(dir);
+    }
+  });
+
+  it('rejects supplied empty or contradictory actor observations before trace or allocation mutation', () => {
+    for (const actorArgs of [
+      ['--actor-outcome='],
+      ['--actor-outcome', 'available', '--actor-source', 'not_observed', '--actor-role-key', 'dpt-source-intake', '--actor-reason', 'probe_succeeded'],
+    ]) {
+      const dir = tempBundle();
+      try {
+        saveQueueWith(dir, [queueItem()]);
+        const before = recursiveSnapshot(dir);
+        const result = spawnSyncProduction(process.execPath, [
+          CLI, 'claim', dir, '--phase', 'wave0', '--count', '1', ...actorArgs,
+        ], { encoding: 'utf-8', timeout: 5000 });
+        assert.equal(result.status, 1, result.stderr || result.stdout);
+        const out = JSON.parse(result.stdout);
+        assert.equal(out.reason_code, 'actor_observation_input_invalid');
+        assert.equal(out.actor_preflight.verdict, 'invalid_input');
+        assert.equal(out.actor_observation_contract.planned_role_key, 'dpt-source-intake');
+        assert.equal(out.actor_observation_contract.legal_tuples.length, 7);
+        assert.ok(out.actor_preflight.input_issues.length > 0);
+        assert.equal(out.claimed_count, 0);
+        assert.deepEqual(recursiveSnapshot(dir), before);
+        assert.equal(existsSync(workUnitIndexPath(dir)), false);
+        assert.equal(existsSync(path.join(dir, 'rb_trace.jsonl')), false);
+      } finally {
+        cleanup(dir);
+      }
     }
   });
 
@@ -671,6 +701,56 @@ describe('operate-work-unit inspect', () => {
       assert.ok(out.violations.some((item) => item.phase === 'output_files' && /role 'question_list'.*allowed roles/i.test(item.message)));
       assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
       assert.equal(loadWorkUnitIndex(dir).work_units[workId].last_submit_rejection, undefined);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('uses the selected dry-submit root for every normal formal-rejection repair field', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const claim = JSON.parse(execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' }));
+      const workId = claim.claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+      const resultPath = writeAssignedRepairableResult(dir, record);
+
+      const dry = spawnSync(process.execPath, [CLI, 'dry-submit', dir, '--work-id', workId, '--result', resultPath], {
+        encoding: 'utf-8', timeout: 5000,
+      });
+      assert.equal(dry.status, 1, dry.stderr || dry.stdout);
+      const dryOut = JSON.parse(dry.stdout);
+      assert.ok(dryOut.selected_primary);
+
+      const formal = spawnSync(process.execPath, [CLI, 'submit', dir, '--work-id', workId, '--result', resultPath], {
+        encoding: 'utf-8', timeout: 5000,
+      });
+      assert.equal(formal.status, 1, formal.stderr || formal.stdout);
+      const formalOut = JSON.parse(formal.stdout);
+      assert.equal(formalOut.recommended_action, dryOut.recommended_action);
+      assert.equal(formalOut.primary_root_code, dryOut.primary_root_code);
+      for (const field of ['repair_kind', 'missing_fact', 'write_to', 'rerun']) {
+        assert.equal(formalOut[field], dryOut.selected_primary[field], field);
+      }
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('masks dependent output, cache, source, and direct-output repairs when the candidate result is absent', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const claim = JSON.parse(execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' }));
+      const workId = claim.claimed_work_ids[0];
+      const missingResult = path.join(dir, '_tmp', 'missing-result.json');
+      const result = spawnSync(process.execPath, [CLI, 'dry-submit', dir, '--work-id', workId, '--result', missingResult], {
+        encoding: 'utf-8', timeout: 5000,
+      });
+      assert.equal(result.status, 1, result.stderr || result.stdout);
+      const out = JSON.parse(result.stdout);
+      assert.ok(out.violations.some((violation) => violation.phase === 'result'));
+      assert.ok(out.violations.every((violation) => !['output_files', 'cache_trails', 'source_claims', 'direct_output'].includes(violation.phase)));
     } finally {
       cleanup(dir);
     }
@@ -841,6 +921,31 @@ describe('operate-work-unit inspect', () => {
     } finally {
       cleanup(eligibleDir);
       cleanup(refusedDir);
+    }
+  });
+
+  it('forwards only the dry-submit action and primary code into timeout-preflight candidate advice', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const claim = JSON.parse(execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' }));
+      const workId = claim.claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+      const resultPath = writeAssignedRepairableResult(dir, record);
+      const dry = JSON.parse(spawnSync(process.execPath, [CLI, 'dry-submit', dir, '--work-id', workId, '--result', resultPath], {
+        encoding: 'utf-8', timeout: 5000,
+      }).stdout);
+      const preflight = spawnSync(process.execPath, [CLI, 'timeout-preflight', dir, '--work-id', workId, '--result', resultPath], {
+        encoding: 'utf-8', timeout: 5000,
+      });
+      const out = JSON.parse(preflight.stdout);
+      assert.deepEqual(out.candidate_projection, {
+        recommended_action: dry.recommended_action,
+        primary_root_code: dry.primary_root_code,
+      });
+      assert.deepEqual(Object.keys(out.candidate_projection).sort(), ['primary_root_code', 'recommended_action']);
+    } finally {
+      cleanup(dir);
     }
   });
 

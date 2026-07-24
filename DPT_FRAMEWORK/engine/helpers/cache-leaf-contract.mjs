@@ -17,6 +17,14 @@ const optionalMappingFields = Object.fromEntries(
   CACHE_SOURCE_MAPPING_FIELDS.map((field) => [field, z.string().trim().min(1).optional()]),
 );
 
+// @impl DEW-021
+export const CacheLeafAuthoringProjectionSchema = z.object({
+  required_leaves: z.array(z.string().min(1)).min(1),
+  page_rule: z.string().min(1),
+  allowed_meta_mapping_fields: z.array(z.string().min(1)).min(1),
+  cache_trail_declaration: z.string().min(1),
+}).strict();
+
 export const CacheLeafMetaSchema = z.object(optionalMappingFields)
   .passthrough()
   .refine(
@@ -27,6 +35,15 @@ export const CacheLeafMetaSchema = z.object(optionalMappingFields)
 export function resolveCacheLeafContract(cachePolicy = null) {
   const additions = Array.isArray(cachePolicy?.leaf_files) ? cachePolicy.leaf_files : [];
   return [...new Set([...CACHE_BASE_LEAF_FILES, ...additions.filter((entry) => typeof entry === 'string' && entry.length > 0)])];
+}
+
+export function describeCacheLeafAuthoringProjection(cachePolicy = null) {
+  return CacheLeafAuthoringProjectionSchema.parse({
+    required_leaves: resolveCacheLeafContract(cachePolicy),
+    page_rule: 'page.md must contain fetched page content or an explicit degraded/fetch-failure record; it must not be empty or placeholder-only.',
+    allowed_meta_mapping_fields: CACHE_SOURCE_MAPPING_FIELDS,
+    cache_trail_declaration: 'Declare cache_trails as bundle-relative cache leaf directory paths, never individual leaf file paths.',
+  });
 }
 
 export function normalizeCacheMappingUrl(value) {

@@ -133,6 +133,87 @@ export const ActorObservationReasonSchema = z.enum([
   'observation_required',
   'probe_inconclusive',
 ]);
+export const ACTOR_OBSERVATION_CASES = Object.freeze([
+  Object.freeze({
+    outcome: 'available',
+    source: 'native_probe',
+    reason_codes: Object.freeze(['probe_succeeded']),
+    observation_case: 'normal_available',
+  }),
+  Object.freeze({
+    outcome: 'unavailable',
+    source: 'native_probe',
+    reason_codes: Object.freeze([
+      'probe_access_denied',
+      'probe_model_unavailable',
+      'probe_host_policy_blocked',
+      'probe_capacity_unavailable',
+    ]),
+    observation_case: 'unavailable',
+  }),
+  Object.freeze({
+    outcome: 'unknown',
+    source: 'not_observed',
+    reason_codes: Object.freeze(['observation_required']),
+    observation_case: 'observation_required',
+  }),
+  Object.freeze({
+    outcome: 'unknown',
+    source: 'native_probe',
+    reason_codes: Object.freeze(['probe_inconclusive']),
+    observation_case: 'probe_inconclusive',
+  }),
+]);
+
+export const ActorObservationLegalTupleSchema = z.object({
+  outcome: ActorObservationOutcomeSchema,
+  source: ActorObservationSourceSchema,
+  reason_code: ActorObservationReasonSchema,
+  observation_case: z.enum(['normal_available', 'unavailable', 'observation_required', 'probe_inconclusive']),
+}).strict();
+export const ActorObservationContractProjectionSchema = z.object({
+  planned_role_key: z.string().min(1),
+  legal_tuples: z.array(ActorObservationLegalTupleSchema).length(7),
+}).strict();
+const JsonSafeValueSchema = z.lazy(() => z.union([
+  z.string(),
+  z.number().finite(),
+  z.boolean(),
+  z.null(),
+  z.array(JsonSafeValueSchema),
+  z.record(z.string(), JsonSafeValueSchema),
+]));
+export const ActorObservationInputIssueSchema = z.object({
+  field: z.string().min(1),
+  supplied_value: JsonSafeValueSchema.nullable(),
+  message: z.string().min(1),
+}).strict();
+export const ActorObservationProvidedObservationSchema = z.object({
+  outcome: JsonSafeValueSchema.nullable(),
+  source: JsonSafeValueSchema.nullable(),
+  role_key: JsonSafeValueSchema.nullable(),
+  reason_code: JsonSafeValueSchema.nullable(),
+}).strict();
+
+export function actorObservationLegalTuples() {
+  return ACTOR_OBSERVATION_CASES.flatMap((entry) => entry.reason_codes.map((reason_code) => (
+    ActorObservationLegalTupleSchema.parse({
+      outcome: entry.outcome,
+      source: entry.source,
+      reason_code,
+      observation_case: entry.observation_case,
+    })
+  )));
+}
+
+function isLegalActorObservationTuple({ outcome, source, reason_code }) {
+  return ACTOR_OBSERVATION_CASES.some((entry) => (
+    entry.outcome === outcome
+    && entry.source === source
+    && entry.reason_codes.includes(reason_code)
+  ));
+}
+
 const ActorObservationInputObjectSchema = z.object({
   outcome: ActorObservationOutcomeSchema,
   source: ActorObservationSourceSchema,
@@ -140,16 +221,9 @@ const ActorObservationInputObjectSchema = z.object({
   reason_code: ActorObservationReasonSchema,
 }).strict();
 export const ActorObservationInputSchema = ActorObservationInputObjectSchema.superRefine((data, ctx) => {
-  const valid = (data.outcome === 'available' && data.source === 'native_probe' && data.reason_code === 'probe_succeeded')
-    || (data.outcome === 'unavailable' && data.source === 'native_probe' && [
-      'probe_access_denied',
-      'probe_model_unavailable',
-      'probe_host_policy_blocked',
-      'probe_capacity_unavailable',
-    ].includes(data.reason_code))
-    || (data.outcome === 'unknown' && data.source === 'not_observed' && data.reason_code === 'observation_required')
-    || (data.outcome === 'unknown' && data.source === 'native_probe' && data.reason_code === 'probe_inconclusive');
-  if (!valid) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'invalid actor observation outcome/source/reason combination' });
+  if (!isLegalActorObservationTuple(data)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'invalid actor observation outcome/source/reason combination' });
+  }
 });
 export const ActorObservationSchema = ActorObservationInputObjectSchema.extend({
   recorded_at: z.string().datetime(),

@@ -2,9 +2,63 @@
 // Pure actor observation normalization and claim decision evaluation.
 
 import {
+  ACTOR_OBSERVATION_CASES,
+  ActorObservationContractProjectionSchema,
+  ActorObservationInputIssueSchema,
   ActorObservationInputSchema,
+  ActorObservationProvidedObservationSchema,
+  actorObservationLegalTuples,
   ExecutionActorClassSchema,
 } from '../schema/contracts/work-unit.mjs';
+
+export { ACTOR_OBSERVATION_CASES, ActorObservationContractProjectionSchema };
+
+function jsonSafeValue(value) {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : String(value);
+  if (Array.isArray(value)) return value.map(jsonSafeValue);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, jsonSafeValue(entry)]));
+  }
+  return value === undefined ? null : String(value);
+}
+
+function suppliedObservationValue(observation, field) {
+  if (!observation || typeof observation !== 'object' || Array.isArray(observation)) return null;
+  return Object.hasOwn(observation, field) ? jsonSafeValue(observation[field]) : null;
+}
+
+export function actorObservationContractProjection(plannedRoleKey) {
+  return ActorObservationContractProjectionSchema.parse({
+    planned_role_key: plannedRoleKey,
+    legal_tuples: actorObservationLegalTuples(),
+  });
+}
+
+export function describeActorObservationInputIssues(observation) {
+  const provided_observation = ActorObservationProvidedObservationSchema.parse({
+    outcome: suppliedObservationValue(observation, 'outcome'),
+    source: suppliedObservationValue(observation, 'source'),
+    role_key: suppliedObservationValue(observation, 'role_key'),
+    reason_code: suppliedObservationValue(observation, 'reason_code'),
+  });
+  const parsed = ActorObservationInputSchema.safeParse(observation);
+  if (parsed.success) return { valid: true, provided_observation, input_issues: [] };
+  const input_issues = parsed.error.issues.map((issue) => {
+    const field = issue.path.length > 0
+      ? issue.path.join('.')
+      : issue.code === 'custom'
+        ? 'outcome/source/reason_code'
+        : 'observation';
+    const supplied_value = issue.path.length > 0
+      ? suppliedObservationValue(observation, issue.path[0])
+      : field === 'outcome/source/reason_code'
+        ? jsonSafeValue(provided_observation)
+        : null;
+    return ActorObservationInputIssueSchema.parse({ field, supplied_value, message: issue.message });
+  });
+  return { valid: false, provided_observation, input_issues };
+}
 
 export function normalizeActorObservation(observation, plannedRoleKey) {
   return ActorObservationInputSchema.parse(observation || {

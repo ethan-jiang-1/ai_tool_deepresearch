@@ -30,6 +30,7 @@ import {
   WorkUnitManifestSchema,
   WorkUnitStatusFileSchema,
 } from '../schema/contracts/work-unit.mjs';
+import { describeCacheLeafAuthoringProjection } from './helpers/cache-leaf-contract.mjs';
 
 export function refsForWorkUnit(bundleDir, { wave, work_id }) {
   const dir = path.join(workUnitsRoot(bundleDir), `wave${wave}`, work_id);
@@ -304,7 +305,11 @@ function normalizeActorDelivery(manifest, actorDelivery) {
     if (!entry || typeof entry !== 'object' || Array.isArray(entry)
       || entry.path !== required.path || entry.role !== required.role || entry.direct_contract !== required.direct_contract
       || !entry.descriptor || typeof entry.descriptor !== 'object' || Array.isArray(entry.descriptor)
-      || typeof entry.descriptor.purpose !== 'string' || !Array.isArray(entry.descriptor.minimum_structure)) {
+      || entry.descriptor.contract_id !== required.direct_contract
+      || typeof entry.descriptor.purpose !== 'string'
+      || !Array.isArray(entry.descriptor.bounded_requirements)
+      || !Array.isArray(entry.descriptor.required_fields)
+      || !Array.isArray(entry.descriptor.optional_fields)) {
       throw new Error('actor delivery direct descriptor does not match the required output contract');
     }
     return Object.freeze({
@@ -312,8 +317,12 @@ function normalizeActorDelivery(manifest, actorDelivery) {
       role: entry.role,
       direct_contract: entry.direct_contract,
       descriptor: Object.freeze({
+        contract_id: entry.descriptor.contract_id,
         purpose: entry.descriptor.purpose,
-        minimum_structure: Object.freeze([...entry.descriptor.minimum_structure]),
+        root_shape: entry.descriptor.root_shape,
+        required_fields: Object.freeze([...entry.descriptor.required_fields]),
+        optional_fields: Object.freeze([...entry.descriptor.optional_fields]),
+        bounded_requirements: Object.freeze([...entry.descriptor.bounded_requirements]),
       }),
     });
   });
@@ -340,16 +349,6 @@ function actorGuidanceTaskLines(actorDelivery) {
       `- Shared guidance: \`${entry.id}\` (${entry.shared_scope}); bundle-independent ref \`${entry.ref}\`; read path \`${entry.path}\`.`
     )),
     '',
-    ...(actorDelivery.direct_output_descriptors.length > 0 ? [
-      '## Required Output Authoring',
-      '',
-      'For each current required output, use these contract-owned minimum authoring requirements before returning `work_done`. The direct-output evaluator remains the only acceptance authority.',
-      ...actorDelivery.direct_output_descriptors.flatMap((entry) => [
-        `- \`${entry.path}\` (${entry.role}; \`${entry.direct_contract}\`): ${entry.descriptor.purpose}.`,
-        ...entry.descriptor.minimum_structure.map((requirement) => `  - ${requirement}`),
-      ]),
-      '',
-    ] : []),
   ];
 }
 
@@ -361,10 +360,6 @@ function actorGuidanceSpawnLines(actorDelivery) {
     ...guidance.shared_guidance_refs.map((entry) => (
       `Read shared actor guidance before that work: ${entry.id} (${entry.ref}; ${entry.path}).`
     )),
-    ...actorDelivery.direct_output_descriptors.flatMap((entry) => [
-      `Required output authoring for ${entry.path} (${entry.direct_contract}): ${entry.descriptor.purpose}.`,
-      ...entry.descriptor.minimum_structure.map((requirement) => `- ${requirement}`),
-    ]),
   ];
 }
 
@@ -384,212 +379,106 @@ function lifecycleReceiptExample(manifest, event) {
   };
 }
 
-function logDetailExample(manifest, lifecycleEvent) {
-  return {
-    lifecycle_event: lifecycleEvent,
-    work_id: manifest.work_id,
-    queue_item_id: manifest.queue_item_id,
-    kind: manifest.kind,
-    receipt_nonce: manifest.receipt_nonce,
-  };
-}
-
+// @impl DEW-021
 function taskMarkdown(manifest, bundleDir, resultSchema, actorDelivery) {
-  const logCli = logCliPath();
   const abs = absolutePathMap(manifest, bundleDir);
-  const workStartedReceipt = lifecycleReceiptExample(manifest, 'work_started');
-  const fileWrittenReceipt = lifecycleReceiptExample(manifest, 'file_written');
-  const workDoneReceipt = lifecycleReceiptExample(manifest, 'work_done');
-  const searchLog = logDetailExample(manifest, 'search_started');
-  const fileLog = { ...logDetailExample(manifest, 'file_written'), path: '<bundle-relative-output-path>' };
-  const errorLog = { ...logDetailExample(manifest, 'error'), reason: '<short-reason>' };
   const resultStarter = resultStarterFromSchema(resultSchema);
+  const requiredOutputs = manifest.output_contract.required_outputs || [];
+  const authoringOutputs = actorDelivery?.direct_output_descriptors || [];
+  const cache = describeCacheLeafAuthoringProjection(manifest.cache_policy);
   let sourceRefLineage = { current_assigned_paths: [], eligible_prior_outputs: [] };
   if (manifest.output_contract.source_claims?.allowed === true) {
     try {
       sourceRefLineage = buildSourceRefLineage(bundleDir, manifest);
     } catch {
-      // Claim guidance remains available; submit will report the exact authority conflict.
+      // Claim delivery stays a projection; submit owns any current authority conflict.
     }
   }
-  const requiredResultFields = resultSchema.required.join(', ');
-  const allowedResultFields = Object.keys(resultSchema.properties).join(', ');
-  const allowedOutputRoles = manifest.output_contract.output_files.allowed_roles.join(', ');
-  const requiredCacheLeafFiles = (manifest.cache_policy.leaf_files || []).join(', ');
-  const requiredOutputs = manifest.output_contract.required_outputs || [];
-  const requiredOutputLines = requiredOutputs.map((required) => (
-    `- Required output: bundle-relative \`${required.path}\`; absolute \`${path.join(path.resolve(bundleDir), required.path)}\`; role \`${required.role}\`; direct contract \`${required.direct_contract}\`.`
-  ));
+  const receiptSkeleton = ['work_started', 'file_written', 'work_done']
+    .map((event) => JSON.stringify(lifecycleReceiptExample(manifest, event)));
   return [
     `# Work Unit ${manifest.work_id}`,
     '',
     manifest.task_brief,
     '',
-    '## Binding',
+    '## Completion Contract',
     '',
-    `- work_id: \`${manifest.work_id}\``,
-    `- queue_item_id: \`${manifest.queue_item_id}\``,
-    `- kind: \`${manifest.kind}\``,
-    `- receipt_nonce: \`${manifest.receipt_nonce}\``,
-    ...(manifest.assignment_contract_version
-      ? [`- assignment_contract_version: \`${manifest.assignment_contract_version}\``]
-      : []),
-    ...(manifest.actor_contract_version ? [
-      `- execution_actor_class: \`${manifest.actor_execution.execution_actor_class}\``,
-      `- delegated_role_key: \`${manifest.actor_execution.delegated_role_key}\``,
-    ] : []),
-    `- bundle_dir: \`${path.resolve(bundleDir)}\``,
-    `- deadline_at: \`${manifest.deadline_at}\``,
-    `- work_unit_dir: \`${manifest.paths.work_unit_dir}\``,
-    `- beacon: \`${manifest.paths.beacon_ref}\``,
-    `- result_schema: \`${manifest.paths.result_schema_ref}\``,
-    `- result_path: \`${manifest.paths.result_ref}\``,
-    `- runtime_receipt: \`${manifest.paths.runtime_receipt_ref}\``,
+    'This is an Engine-generated authoring view of existing attempt authority. It guides the next legal work only; manifest, beacon, result schema, receipt, validators, and submit remain authoritative.',
     '',
-    'Preserve these identity fields exactly in every lifecycle receipt event and in `result.json`.',
-    ...(manifest.actor_execution?.execution_actor_class === 'phase_agent_fallback' ? [
-      'This single work unit is assigned to the Phase Agent fallback actor. Execute it mechanically inside the same envelope, then submit or terminalize it before claiming another fallback.',
-    ] : []),
-    'This generated task returns files, receipts, result facts, and any failure boundary to the calling Phase Agent. It does not contact the user, wait for acknowledgement, or create interaction, checkpoint, permission, route, or lifecycle authority.',
-    'Read `_beacon.json` before writing runtime files. Resolve every runtime write by joining the beacon `bundle_dir` with the bundle-relative path from this task.',
-    'Returning research findings in chat without writing the required files is a work-unit failure, not completion.',
+    '### Binding And Result',
     '',
-    ...actorGuidanceTaskLines(actorDelivery),
-    '## Absolute Runtime Paths',
+    `- work_id: \`${manifest.work_id}\`; queue_item_id: \`${manifest.queue_item_id}\`; kind: \`${manifest.kind}\`; receipt_nonce: \`${manifest.receipt_nonce}\`.`,
+    ...(manifest.assignment_contract_version ? [`- assignment_contract_version: \`${manifest.assignment_contract_version}\`.`] : []),
+    ...(manifest.actor_contract_version ? [`- execution_actor_class: \`${manifest.actor_execution.execution_actor_class}\`; delegated_role_key: \`${manifest.actor_execution.delegated_role_key}\`.`] : []),
+    `- bundle_dir: \`${path.resolve(bundleDir)}\`; work_unit_dir: \`${manifest.paths.work_unit_dir}\`.`,
+    `- Authority refs: manifest \`${manifest.paths.manifest_ref}\`; beacon \`${manifest.paths.beacon_ref}\`; result schema \`${manifest.paths.result_schema_ref}\`; result \`${manifest.paths.result_ref}\`; runtime receipt \`${manifest.paths.runtime_receipt_ref}\`.`,
+    `- Result schema requires: ${resultSchema.required.join(', ')}. Allowed fields: ${Object.keys(resultSchema.properties).join(', ')}.`,
     '',
-    'Use these absolute paths for file I/O; keep bundle-relative refs in result JSON and ledger-facing fields.',
+    '### Result JSON Starter',
     '',
-    '```json',
-    jsonBlock(abs),
-    '```',
-    '',
-    '## Write-Before-Return Checklist',
-    '',
-    `- Required result fields: ${requiredResultFields}`,
-    `- Allowed result fields: ${allowedResultFields}`,
-    `- Allowed output roles: ${allowedOutputRoles}`,
-    `- Required cache leaf files: ${requiredCacheLeafFiles || '<none>'}`,
-    ...(manifest.assignment_contract_version
-      ? [`- Assignment contract: \`${manifest.assignment_contract_version}\`.`]
-      : []),
-    ...(requiredOutputLines.length > 0
-      ? requiredOutputLines
-      : manifest.assignment_contract_version ? ['- Required direct outputs: none for this assignment.'] : []),
-    ...(manifest.output_contract.output_files.reference_requires_source_url === true
-      ? ['- Every output with role `reference` must declare its parseable `source_url`.']
-      : []),
-    ...(manifest.output_contract.source_claims?.allowed === true
-      ? [
-          '- `source_claims[]` must use the generated item fields and bind accepted URLs to declared cache trails or an explicit degraded capture.',
-          '- `source_claims[].source_ref` may name a genuinely current path declared in this candidate `output_files[]`, or one exact prior submitted output listed below whose role is authorized by this kind contract. Do not redeclare or overwrite a prior file merely to cite it.',
-        ]
-      : []),
-    '- Verify `_beacon.json`, `task.md`, and `result.schema.json` were read from the active `bundle_dir`.',
-    '- Write every declared output file under `bundle_dir` only.',
-    ...(requiredOutputs.length > 0
-      ? ['- The actor must verify every assigned required output above at its exact path and canonical role before recording `work_done`.']
-      : []),
-    '- Write required cache leaves under `bundle_dir`; cache `page.md` must contain fetched page content or an explicit degraded/fetch-failure record, not an empty or placeholder header.',
-    '- In `result.json`, declare `cache_trails` as bundle-relative cache leaf directory paths only, for example `_cache/wave0/primary/<queue_item_id>/<source_slug>`; do not list `websearch.json`, `page.md`, or `meta.json` file paths.',
-    '- In written research outputs, include return-map cues for important evidence: `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`. These cues are diagnostic navigation only; submitted ledger rows and gate outputs remain authority.',
-    '- Append lifecycle evidence directly as JSONL to the assigned `runtime-receipt.jsonl`, carrying the exact `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.',
-    '- `log-event.mjs` is optional diagnostic mirroring only; it never satisfies or replaces the assigned runtime receipt.',
-    '- Before and after every slow bounded search, fetch, cache-write, output-write, or result-draft batch, append a concise progress event with those exact identity fields. Progress is diagnostic only and never replaces formal submit.',
-    '- Write `result.json` at the declared result path and verify it preserves the exact identity fields.',
-    '- If any required write or verification fails, return a failure summary and do not claim success.',
-    '',
-    '## Result JSON Starter',
-    '',
-    'Copy this JSON object to the assigned result path, replace semantic/output/cache values, and keep the binding fields exact. This block is guidance only; the Engine has not created `result.json`.',
+    'Copy this object to the assigned result path and replace only actor-produced content. The Engine has not created `result.json`.',
     '',
     '```json',
     jsonBlock(resultStarter),
     '```',
     '',
-    '## Output Contract',
+    '### Required Outputs',
     '',
-    '```json',
-    jsonBlock(manifest.output_contract),
-    '```',
+    ...(requiredOutputs.length === 0
+      ? ['- Required direct outputs: none for this assignment.']
+      : requiredOutputs.flatMap((required, index) => {
+        const authoring = authoringOutputs[index]?.descriptor;
+        const lines = [
+          `- \`${required.path}\` (role \`${required.role}\`; direct contract \`${required.direct_contract}\`; absolute \`${path.join(path.resolve(bundleDir), required.path)}\`).`,
+        ];
+        if (authoring) {
+          lines.push(`  - Root shape: \`${authoring.root_shape}\`. ${authoring.purpose}.`);
+          if (authoring.required_fields.length > 0) lines.push(`  - Required metadata fields: ${authoring.required_fields.map((field) => `\`${field}\``).join(', ')}.`);
+          if (authoring.optional_fields.length > 0) lines.push(`  - Optional metadata fields: ${authoring.optional_fields.map((field) => `\`${field}\``).join(', ')}.`);
+          lines.push(...authoring.bounded_requirements.map((requirement) => `  - ${requirement}`));
+        }
+        return lines;
+      })),
+    ...(manifest.output_contract.output_files.reference_requires_source_url === true
+      ? ['- Every `reference` output requires its parseable `source_url`.']
+      : []),
     '',
+    '### Cache And Source Facts',
+    '',
+    `- Required cache leaves: ${cache.required_leaves.map((leaf) => `\`${leaf}\``).join(', ')}.`,
+    `- ${cache.page_rule}`,
+    `- Allowed meta.json source-mapping fields: ${cache.allowed_meta_mapping_fields.map((field) => `\`${field}\``).join(', ')}.`,
+    `- ${cache.cache_trail_declaration}`,
     ...(manifest.output_contract.source_claims?.allowed === true
       ? [
-          '## Authorized Source-Ref Lineage',
-          '',
-          'These are bounded claim-time candidates, not a new authority. Formal submit reloads the current submitted ledger, index, manifest, queue, and canonical Topic binding before acceptance.',
-          '',
-          '```json',
-          jsonBlock({
-            current_assigned_paths: sourceRefLineage.current_assigned_paths,
-            prior_submitted_output_roles: manifest.output_contract.source_claims.prior_submitted_output_roles || [],
-            eligible_prior_outputs: sourceRefLineage.eligible_prior_outputs,
-          }),
-          '```',
-          '',
-        ]
-      : []),
-    ...(manifest.kind === 'wave1_topic_deepening' && requiredOutputs.length > 0
-      ? [
-          'For this primary Wave1 assignment, write every current required output together with structured `source_claims[]`, `accepted_source_urls[]`, and cache trails in `result.json`; prose links alone are not accepted source coverage.',
-          'Do not treat canonical `reference/{topic}-<source>.md` Markdown as a required delegated receipt unless this task explicitly names that reference path in its output contract.',
-        ]
-      : manifest.kind === 'wave1_topic_deepening' && manifest.assignment_contract_version
-        ? [
-            'This supplementary Wave1 assignment has no current required outputs. Do not recreate, redeclare or overwrite a prior evidence-summary or question-list; use only the authorized source-ref lineage and current contract-authorized output, cache, source, result and receipt facts.',
-          ]
-      : []),
-    ...(manifest.kind === 'wave2_targeted_evidence'
-      ? [
-          'For Wave2 targeted evidence, return bounded evidence/source URLs/cache trails and confidence/fills_gap payloads for the assigned finding. The Phase Agent updates finding-index.yaml, cross-topic-ledger.md, synthesis/backfill, and any `reference/00-cross-*.md` projection after submit.',
+          '- `source_claims[]` binds accepted URLs to declared cache trails or an explicit degraded capture; `source_ref` may name only a current declared output or an authorized prior submitted output.',
+          `- Claim-time source lineage: current assigned paths ${sourceRefLineage.current_assigned_paths.map((entry) => `\`${entry}\``).join(', ') || '<none>'}; eligible prior outputs ${sourceRefLineage.eligible_prior_outputs.map((entry) => `\`${entry.path}\``).join(', ') || '<none>'}.`,
         ]
       : []),
     '',
-    '## Cache Policy',
+    '### Lifecycle Receipt And Handoff',
     '',
-    '```json',
-    jsonBlock(manifest.cache_policy),
-    '```',
-    '',
-    '## Lifecycle Receipt',
-    '',
-    `Append JSONL events to \`${manifest.paths.runtime_receipt_ref}\`. Every event must carry \`work_id\`, \`queue_item_id\`, \`kind\`, and \`receipt_nonce\`.`,
-    'For slow work, emit paired batch-level progress such as `search_batch_started` / `search_batch_done`, `fetch_batch_started` / `fetch_batch_done`, `cache_write_started` / `cache_written`, and `result_draft_started` / `result_draft_written`. Keep batches bounded if the receipt surface is temporarily unavailable.',
-    'These progress events are timeout-preflight diagnostics only; they do not satisfy output, cache, source-claim, ledger, or gate authority.',
+    `- Append JSONL to \`${manifest.paths.runtime_receipt_ref}\`; every event carries work_id, queue_item_id, kind, and receipt_nonce. \`log-event.mjs\` is diagnostic only.`,
+    '- Progress events are diagnostics only; they do not satisfy output, cache, source-claim, ledger, or gate authority.',
     '',
     '```jsonl',
-    JSON.stringify(workStartedReceipt),
-    JSON.stringify(fileWrittenReceipt),
-    JSON.stringify(workDoneReceipt),
+    ...receiptSkeleton,
     '```',
     '',
+    '### Verify Before Return',
+    '',
+    '- Write every output, cache leaf, receipt event, and result under the active bundle root. Do not mutate queue, index, ledger, beacon, or Gate state.',
+    `- Run the existing same-candidate check: \`node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit "${path.resolve(bundleDir)}" --work-id "${manifest.work_id}" --result "${abs.result_ref}"\`.`,
+    '- Return the result path to the Phase Agent. Formal submit is the only normal first-acceptance owner.',
+    '',
+    ...actorGuidanceTaskLines(actorDelivery),
     '## Diagnostic Logging',
     '',
-    'Copy these examples only when useful. `log-event.mjs` is optional diagnostic mirroring; it never satisfies or replaces lifecycle JSONL in the assigned runtime receipt. Submit and gate authority come from Engine validation and the submitted ledger row.',
-    '',
-    '```bash',
-    `node ${logCli} --bundle "${path.resolve(bundleDir)}" --level info --msg "work_unit_search_started" --detail '${JSON.stringify(searchLog)}'`,
-    `node ${logCli} --bundle "${path.resolve(bundleDir)}" --level info --msg "work_unit_file_written" --detail '${JSON.stringify(fileLog)}'`,
-    `node ${logCli} --bundle "${path.resolve(bundleDir)}" --level error --msg "work_unit_error" --detail '${JSON.stringify(errorLog)}'`,
-    '```',
-    '',
-    '## Work-Unit CLI Checkpoints',
-    '',
-    'Use the canonical absolute bundle root in every work-unit command, independent of the current working directory.',
-    'The Phase Agent runs predictive `dry-submit` after the actor returns. Formal submit is the only normal first-acceptance and delegated success owner.',
-    '',
-    '```bash',
-    `node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit "${path.resolve(bundleDir)}" --work-id "${manifest.work_id}" --result "${abs.result_ref}"`,
-    `node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "${path.resolve(bundleDir)}" --work-id "${manifest.work_id}" --result "${abs.result_ref}"`,
-    '```',
-    '',
-    'The Phase Agent reads every dry-submit violation, repairs the same candidate or assigned receipt at the exact `write_to` coordinate, and reruns the same dry-submit checkpoint before formal submit. Ordinary candidate/receipt repair stays with the Agent; a separate semantic, risk, permission, external-action, or missing-contract boundary returns to the Phase Agent, while the loaded lifecycle node remains the interaction-placement owner.',
+    'Use optional diagnostic logging only when useful. It never substitutes for the runtime receipt or formal submit.',
     '',
     '## Runtime Refs',
     '',
-    'Coding-agent runtime IDs, thread IDs, session IDs, spawn request IDs, and cancel refs are optional diagnostic `runtime_refs` only. They are not queue, submit, ledger, or gate authority.',
-    '',
-    'Write the assigned result to the declared result path, verify all declared files exist under the active bundle root, and preserve the identity fields exactly.',
-    'Completion is accepted only when the main Agent submits this work unit through `operate-work-unit submit`.',
+    'Coding-agent runtime IDs, thread IDs, session IDs, spawn request IDs, and cancel refs are optional diagnostic `runtime_refs`; they are not queue, submit, ledger, or Gate authority.',
     '',
   ].join('\n');
 }
@@ -598,11 +487,7 @@ export function spawnPromptForWorkUnit(manifest, bundleDir = null, { actorDelive
   const parsed = WorkUnitManifestSchema.parse(manifest);
   const normalizedActorDelivery = normalizeActorDelivery(parsed, actorDelivery);
   const resolvedBundleDir = bundleDir ? path.resolve(bundleDir) : null;
-  const absResult = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.result_ref) : parsed.paths.result_ref;
-  const absReceipt = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.runtime_receipt_ref) : parsed.paths.runtime_receipt_ref;
-  const absBeacon = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.beacon_ref) : parsed.paths.beacon_ref;
   const absTask = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.task_ref) : parsed.paths.task_ref;
-  const absSchema = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.result_schema_ref) : parsed.paths.result_schema_ref;
   const actorInstruction = parsed.actor_execution?.execution_actor_class === 'phase_agent_fallback'
     ? `You are the Phase Agent executing explicit fallback work unit ${parsed.work_id}.`
     : `You are executing delegated work unit ${parsed.work_id} as role ${parsed.actor_execution?.delegated_role_key || '<legacy-unrecorded>'}.`;
@@ -610,21 +495,10 @@ export function spawnPromptForWorkUnit(manifest, bundleDir = null, { actorDelive
     actorInstruction,
     '',
     resolvedBundleDir ? `Active bundle_dir: ${resolvedBundleDir}` : 'Read bundle_dir from the assigned _beacon.json before writing files.',
-    `Open task.md first: ${absTask}`,
-    `Open _beacon.json first: ${absBeacon}`,
-    `Open result schema: ${absSchema}`,
+    `Open task.md and begin at ## Completion Contract: ${absTask}`,
+    'The task Completion Contract is the sole attempt-bound authoring entry. Do not infer, duplicate, or replace it with a separate result, receipt, cache, or identity instruction set.',
     ...actorGuidanceSpawnLines(normalizedActorDelivery),
-    `Use exactly these identity fields in lifecycle receipts and result.json: work_id=${parsed.work_id}, queue_item_id=${parsed.queue_item_id}, kind=${parsed.kind}, receipt_nonce=${parsed.receipt_nonce}${parsed.actor_contract_version ? `, actor_contract_version=${parsed.actor_contract_version}, execution_actor_class=${parsed.actor_execution.execution_actor_class}` : ''}. Do not generate a new nonce.`,
-    `Append lifecycle evidence directly as JSONL to the assigned receipt: ${absReceipt}.`,
-    '`log-event.mjs` is optional diagnostic mirroring only and never satisfies or replaces the assigned runtime receipt.',
-    'Before and after slow bounded search, fetch, cache, output, or result-draft batches, write concise progress events with the exact assigned identity fields. These events are diagnostic only; completion still requires formal submit.',
-    `Write the final result JSON to ${absResult}.`,
-    'Before returning, verify every declared output file, required cache leaf, runtime receipt, and result JSON exists under the active bundle_dir.',
-    'In result.json, cache_trails must list cache leaf directory paths only; do not list websearch.json, page.md, or meta.json file paths.',
-    'When writing evidence summaries, source notes, or backfill-ready content, include return-map fields: evidence_meaning, relationship, refs, status, next_hop. These cues are diagnostic navigation only; submitted ledger rows and gate outputs remain authority.',
-    'If you cannot write or verify the files, return a failure summary instead of research text.',
-    `Keep any coding-agent runtime IDs only under optional runtime_refs diagnostic metadata; they are not authority.`,
-    'Do not mutate queue, work-unit index, output ledger, or gate state. Return the result path to the main Agent for operate-work-unit submit.',
+    'Use no authority outside the task Completion Contract. Return the result path to the Phase Agent after the task-directed verification.',
   ].join('\n');
 }
 

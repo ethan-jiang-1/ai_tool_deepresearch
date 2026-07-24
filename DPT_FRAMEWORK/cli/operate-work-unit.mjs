@@ -97,7 +97,8 @@ const { values } = parseArgs({
 try {
   if (command === 'claim') {
     if (!values.phase) throw new Error('--phase is required');
-    const hasObservation = values['actor-outcome'] || values['actor-source'] || values['actor-role-key'] || values['actor-reason'];
+    const hasObservation = ['actor-outcome', 'actor-source', 'actor-role-key', 'actor-reason']
+      .some((option) => Object.hasOwn(values, option));
     const actorObservation = hasObservation ? {
       outcome: values['actor-outcome'],
       source: values['actor-source'],

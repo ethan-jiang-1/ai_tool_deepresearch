@@ -41,8 +41,10 @@ describe('current actor-bound work-unit delivery', () => {
       assert.match(task, /## Actor Guidance/);
       assert.match(task, /workflows\/nodes\/phases\/subagent-dpt-evidence-extractor\.md/);
       assert.match(task, /shared-page-fetch-guidance/);
-      assert.match(task, /## Required Output Authoring/);
-      assert.match(task, /contract-owned minimum authoring requirements/i);
+      assert.match(task, /## Completion Contract/);
+      assert.match(task, /### Required Outputs/);
+      assert.match(task, /Wave1 evidence summary/);
+      assert.match(task, /Wave1 question list/);
       assert.match(prompt.spawn_prompt, /subagent-dpt-evidence-extractor\.md/);
       assert.match(prompt.spawn_prompt, /shared-page-fetch-guidance/);
     } finally {

@@ -11,12 +11,26 @@ import {
 } from 'node:fs';
 import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
+import { z } from 'zod';
 
-import { ReferenceMetadataArraySchema } from '../../schema/contracts/reference.mjs';
+import {
+  ReferenceMetadataArraySchema,
+  referenceMetadataAuthoringFields,
+} from '../../schema/contracts/reference.mjs';
 import { parseMarkdownSemanticSections } from './gate-helpers-checks.mjs';
 
 const MAX_BYTES = 4 * 1024 * 1024;
 const READ_BYTES = MAX_BYTES + 1;
+
+// @impl DEW-021
+export const DirectOutputAuthoringProjectionSchema = z.object({
+  contract_id: z.string().min(1),
+  purpose: z.string().min(1),
+  root_shape: z.enum(['yaml_top_level_array', 'markdown_semantic_sections']),
+  required_fields: z.array(z.string().min(1)),
+  optional_fields: z.array(z.string().min(1)),
+  bounded_requirements: z.array(z.string().min(1)).min(1),
+}).strict();
 function root({ code, contractId, coordinate, expected, observed, rootClass }) {
   return {
     code,
@@ -268,6 +282,7 @@ function evaluateQuestionList(content, common, snapshotMeta) {
 const DIRECT_OUTPUT_CONTRACTS = Object.freeze({
   'wave0.source-metadata-array.v1': Object.freeze({
     evaluate: evaluateWave0,
+    root_shape: 'yaml_top_level_array',
     descriptor: Object.freeze({
       purpose: 'Source metadata array',
       minimum_structure: Object.freeze([
@@ -278,6 +293,7 @@ const DIRECT_OUTPUT_CONTRACTS = Object.freeze({
   }),
   'wave1.evidence-summary.v1': Object.freeze({
     evaluate: evaluateEvidenceSummary,
+    root_shape: 'markdown_semantic_sections',
     descriptor: Object.freeze({
       purpose: 'Wave1 evidence summary',
       minimum_structure: Object.freeze([
@@ -287,6 +303,7 @@ const DIRECT_OUTPUT_CONTRACTS = Object.freeze({
   }),
   'wave1.question-list.v1': Object.freeze({
     evaluate: evaluateQuestionList,
+    root_shape: 'markdown_semantic_sections',
     descriptor: Object.freeze({
       purpose: 'Wave1 question list',
       minimum_structure: Object.freeze([
@@ -307,6 +324,22 @@ export function describeDirectOutputContract(contractId) {
   const descriptor = DIRECT_OUTPUT_CONTRACTS[contractId]?.descriptor;
   if (!descriptor) throw new Error(`unknown direct contract ${String(contractId)}`);
   return descriptor;
+}
+
+export function describeDirectOutputAuthoringProjection(contractId) {
+  const definition = DIRECT_OUTPUT_CONTRACTS[contractId];
+  if (!definition) throw new Error(`unknown direct contract ${String(contractId)}`);
+  const metadataFields = contractId === 'wave0.source-metadata-array.v1'
+    ? referenceMetadataAuthoringFields()
+    : { required_fields: [], optional_fields: [] };
+  return DirectOutputAuthoringProjectionSchema.parse({
+    contract_id: contractId,
+    purpose: definition.descriptor.purpose,
+    root_shape: definition.root_shape,
+    required_fields: metadataFields.required_fields,
+    optional_fields: metadataFields.optional_fields,
+    bounded_requirements: definition.descriptor.minimum_structure,
+  });
 }
 
 export function evaluateDirectOutputTarget({ bundleDir, target, contractId } = {}) {

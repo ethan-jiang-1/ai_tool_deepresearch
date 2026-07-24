@@ -12,7 +12,11 @@ import {
   WorkUnitManifestSchema,
   WorkUnitStatusFileSchema,
 } from '../schema/contracts/work-unit.mjs';
-import { evaluateActorDecision } from './work-unit-actor.mjs';
+import {
+  actorObservationContractProjection,
+  describeActorObservationInputIssues,
+  evaluateActorDecision,
+} from './work-unit-actor.mjs';
 import {
   now,
   clone,
@@ -46,7 +50,7 @@ import {
   timeoutPreflightWorkUnit,
 } from './work-unit-timeout-preflight.mjs';
 import { continuationForClaimedWork } from './helpers/continuation-cue.mjs';
-import { describeDirectOutputContract } from './helpers/direct-output-contract.mjs';
+import { describeDirectOutputAuthoringProjection } from './helpers/direct-output-contract.mjs';
 import { resolveWorkUnitRoleGuidance } from './helpers/work-unit-role-guidance.mjs';
 
 import { queueItemSnapshotHash } from './queue-manager-core.mjs';
@@ -204,6 +208,27 @@ function actorClaimRepair({ bundleDir, phase, requestedCount, decision, actorPol
     repair_kind: repairKind,
     missing_fact: missingFact,
     write_to: `operate-work-unit claim arguments for role '${observation.role_key}': actor observation and execution actor class`,
+    rerun,
+  };
+}
+
+function malformedActorObservationRepair({ bundleDir, phase, requestedCount, plannedRoleKey }) {
+  const rerun = [
+    'node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim',
+    claimCommandArg(path.resolve(bundleDir)),
+    '--phase', claimCommandArg(phase),
+    '--count', claimCommandArg(requestedCount),
+    '--actor-outcome', '<available|unavailable>',
+    '--actor-source', 'native_probe',
+    '--actor-role-key', claimCommandArg(plannedRoleKey),
+    '--actor-reason', '<probe-reason>',
+    '--execution-actor', 'delegated_subagent',
+  ].join(' ');
+  return {
+    reason_code: 'actor_observation_input_invalid',
+    repair_kind: 'agent_action',
+    missing_fact: `The supplied actor observation is incomplete or conflicts with the native-probe contract for '${plannedRoleKey}'.`,
+    write_to: `operate-work-unit claim arguments for role '${plannedRoleKey}': actor observation and execution actor class`,
     rerun,
   };
 }
@@ -419,7 +444,7 @@ function preflightClaimDelivery(plans) {
         path: required.path,
         role: required.role,
         direct_contract: required.direct_contract,
-        descriptor: describeDirectOutputContract(required.direct_contract),
+        descriptor: describeDirectOutputAuthoringProjection(required.direct_contract),
       })));
       return Object.freeze({
         ...plan,
@@ -509,6 +534,46 @@ export function claimWorkUnits(bundleDir, {
     hash: previewIndexExisted ? hashValue(previewIndex) : null,
   };
 
+  const actorObservationContract = actorObservationContractProjection(preview.planned_role_key);
+  if (actorObservation !== null) {
+    const malformed = describeActorObservationInputIssues(actorObservation);
+    if (!malformed.valid) {
+      const recommendedAction = `Perform one bounded native probe for ${preview.planned_role_key}, then rerun the same claim.`;
+      const actorPreflight = {
+        verdict: 'invalid_input',
+        reason: 'actor_observation_input_invalid',
+        planned_role_key: preview.planned_role_key,
+        requested_execution_actor_class: executionActorClass,
+        observation: null,
+        actor_observation_contract: actorObservationContract,
+        provided_observation: malformed.provided_observation,
+        input_issues: malformed.input_issues,
+        recommended_action: recommendedAction,
+      };
+      return {
+        ok: false,
+        requested_count: requestedCount,
+        claimed_count: 0,
+        claimed_work_ids: [],
+        in_flight_count: phaseInFlight(previewQueue, wave).length,
+        unclaimed_delegated_count: countUnclaimedDelegated(previewQueue, wave),
+        blocked_by_queue_item_id: preview.blocked_by_queue_item_id,
+        phase_drained: false,
+        prompt_refs: [],
+        actor_preflight: actorPreflight,
+        actor_observation_contract: actorObservationContract,
+        recommended_action: recommendedAction,
+        ...malformedActorObservationRepair({
+          bundleDir,
+          phase,
+          requestedCount,
+          plannedRoleKey: preview.planned_role_key,
+        }),
+        queue: previewQueue,
+      };
+    }
+  }
+
   const decision = evaluateActorDecision({
     observation: actorObservation,
     executionActorClass,
@@ -521,6 +586,7 @@ export function claimWorkUnits(bundleDir, {
     planned_role_key: preview.planned_role_key,
     requested_execution_actor_class: decision.execution_actor_class,
     observation: decision.observation,
+    actor_observation_contract: actorObservationContract,
     recommended_action: decision.recommended_action,
   };
   if (decision.verdict !== 'allow_claim') {
@@ -557,6 +623,7 @@ export function claimWorkUnits(bundleDir, {
       phase_drained: false,
       prompt_refs: [],
       actor_preflight: actorPreflight,
+      actor_observation_contract: actorObservationContract,
       recommended_action: decision.recommended_action,
       ...repair,
       queue: previewQueue,

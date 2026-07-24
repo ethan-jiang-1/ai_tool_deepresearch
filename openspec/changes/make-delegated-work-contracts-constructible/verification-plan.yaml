@@ -3,7 +3,7 @@ change: make-delegated-work-contracts-constructible
 test_classes:
   unit:
     status: selected
-    rationale: Closed observation vocabulary and candidate-root selection are pure deterministic transformations; they need direct negative and parity coverage without a bundle or actor runtime.
+    rationale: Closed observation vocabulary, validator-owned authoring facts, and candidate-root selection are pure deterministic transformations; they need direct negative and parity coverage without a bundle or actor runtime.
   integration:
     status: selected
     rationale: Claim CLI, generated envelope, dry-submit/formal rejection, timeout-preflight, and historical envelope compatibility cross real bundle authority surfaces and must prove no-mutation/no-precreation behavior.
@@ -12,10 +12,10 @@ test_classes:
     rationale: This Change adds no persistent state, Gate, transition, or workflow-scale deterministic chain; existing claim-to-submit integration remains the deterministic authority path.
   agent_flow_e2e:
     status: selected
-    rationale: Only a real dpt-evidence-extractor using the generated completion entry can establish that the new decision-point delivery is actually read before first returned work; deterministic tests cannot claim that behavior.
+    rationale: Only a real dpt-evidence-extractor supplied a claimed task can establish native-chain compatibility after the new entry is delivered; deterministic tests establish task/spawn delivery but cannot substitute for that actor behavior or claim private reading.
 claims:
   - id: closed-observation-and-primary-root-owner
-    statement: One closed observation-case definition drives schema validity and the structured claim vocabulary, while one candidate-root selection drives recommended action and every public primary repair detail; contradictory tuples and mismatched primary fields have no alternate success interpretation.
+    statement: One closed observation-case definition expands four case shapes to seven exact legal tuples and drives schema validity plus structured malformed-input vocabulary; validator-owned direct-output/cache authoring facts have one definition; one candidate-root selection drives recommended action and every public primary repair detail. Contradictory tuples, incomplete authoring projection, and mismatched primary fields have no alternate success interpretation.
     test_class: unit
     proof_subject: deterministic_contract
     asset:
@@ -29,7 +29,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: claim-and-envelope-constructibility-boundary
-    statement: A real current Wave0/primary-or-supplementary-Wave1 claim returns a role-bound invalid/no-claim vocabulary without mutation, and every new successful claim produces task, spawn and one completion-contract projection whose attempt facts equal the existing manifest/beacon/result-schema/output/cache/receipt owners without pre-creating actor or ledger authority files; historical attempts remain readable without backfill.
+    statement: A freshly instantiated current Wave0/primary-or-supplementary-Wave1 claim distinguishes malformed supplied observation, including a present empty CLI actor option, (structured pre-trace/no-mutation rejection) from omitted-observation compatibility, and every new successful claim presents one first `Completion Contract` section in task.md while spawn points only to that task. Its facts equal the existing manifest/beacon/result-schema/direct-output/cache/source/receipt owners without pre-populating actor-produced result content, receipt events, cache leaves, output, source claim, or ledger content; historical attempts remain readable without backfill.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -43,7 +43,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: root-first-submit-feedback-boundary
-    statement: Real dry-submit, formal-submit rejection and timeout-preflight retain every independently evaluable diagnostic, suppress dependent symptoms after direct prerequisite failure, and expose primary action/code/repair details from one selected root without ledger, queue, result, receipt, cache or trace mutation by dry-submit.
+    statement: Real claimed dry-submit and normal formal-submit rejection retain every independently evaluable diagnostic, suppress dependent symptoms after direct prerequisite failure, and expose primary action/code/repair details from one selected root. Timeout-preflight forwards only that same action/code into its existing lease advice without a second selector or copied repair-detail surface; dry-submit makes no ledger, queue, result, receipt, cache or trace mutation.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -56,8 +56,8 @@ claims:
       external_calls: none
       verdict_judge: deterministic
     verdict_authority: node_test_exit
-  - id: actor-uses-generated-completion-entry
-    statement: The existing registered Wave1 case launches real dpt-evidence-extractor actors from a claimed task, retains durable evidence that the generated completion contract was the actor's supplied authoring entry before first returned work, and evaluates submit/inspect/Gate from native runtime facts. PASS does not claim research quality; unavailable runtime is recorded as native NOT_RUN rather than replaced by a fixture or parent-authored output.
+  - id: real-actor-compatible-with-supplied-completion-entry
+    statement: The existing registered Wave1 case launches real dpt-evidence-extractor actors with a retained supplied claimed task containing the first `Completion Contract` section, then evaluates their first returned work through native submit/inspect/Gate facts. PASS proves supplied-task delivery and native-chain compatibility, not that an actor privately read a section, that the section caused the result, that BUG-120 Phase-Agent guidance was loaded, or that research quality is proven; unavailable runtime is recorded as native NOT_RUN rather than replaced by a fixture or parent-authored output.
     test_class: agent_flow_e2e
     proof_subject: agent_behavior
     asset:

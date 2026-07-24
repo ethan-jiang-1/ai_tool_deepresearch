@@ -1,7 +1,8 @@
 ---
 title: Delegated work operability and gate truth
-status: analysis_complete_no_remediation_approved
+status: change_1_apply_complete_later_changes_evidence_gated
 created: 2026-07-25
+reviewed: 2026-07-25
 scope: BUG-114--BUG-123
 evidence_bundle: dpt_rb_openspec-adoption-landscape
 ---
@@ -82,6 +83,14 @@ fresh evaluator facts -> root-first Gate feedback -> normal/degraded only when e
 M3, M4 and M5 read different direct authorities. They must not become one "reliability controller" change. A remedy in one layer must not make another layer's authority mutable or optional.
 
 ## OpenSpec Change Map
+
+## Current Status
+
+`make-delegated-work-contracts-constructible` has completed **Apply**: all 17 approved tasks and the selected deterministic verification passed. Its implementation boundary is `BUG-114` and `BUG-115`: one validator-owned contract lineage at claim and actor authoring entry, plus one selected primary root for existing candidate feedback. The final implementation distinguishes supplied versus omitted CLI input: a present empty `--actor-*` option is malformed pre-trace input, not the existing omitted-observation audit path.
+
+Apply completion establishes the approved code, tests, release metadata, strict OpenSpec/governance checks, and honest evidence record. The selected real-actor case is `NOT_RUN` at its explicit external budget boundary: local runtime/provider checks and dry selection passed, but no USD cap was authorized. No fixture or hand-authored actor artifact substitutes for that result.
+
+`make-terminal-work-replacement-direct` and `ensure-wave-gate-reevaluation-freshness` remain evidence-gated candidates. No status here authorizes them before their fresh reproductions and independent OpenSpec proposals exist. `BUG-120` remains outside Change 1's closure claim: the delegated actor task can prove supplied-task delivery and native-chain compatibility, but cannot prove the Phase Agent loaded its separate reference guidance.
 
 **这个 plan 最多产生三个 sequential OpenSpec changes，不是一个大 change，也不是十个 bug 各开一个 change。**
 

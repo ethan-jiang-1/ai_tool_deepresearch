@@ -16,7 +16,7 @@ fixture: setup_only
 runtime: real_disposable_bundle
 external_calls: real
 verdict_judge: deterministic
-req: RWE-001, RWE-003, WAI-006
+req: RWE-001, RWE-003, WAI-006, DEW-021
 not_run_if: "Either native dpt-evidence-extractor Sub-agent or required real search/fetch capability is unavailable."
 ---
 
@@ -25,6 +25,8 @@ not_run_if: "Either native dpt-evidence-extractor Sub-agent or required real sea
 ## Execution Contract
 
 Heavy real-Agent canary. This case cannot PASS from fixture data. The Main Agent may use fixture scaffolding for bundle/topic setup, but each Wave1 delegated result must be produced by a real `dpt-evidence-extractor` actor from the claimed work-unit task and accepted only through `operate-work-unit submit`.
+
+For DEW-021, retained `subject_task` evidence proves only that the real actor was supplied the generated claimed task whose first authoring section is `## Completion Contract` before its first returned work is evaluated through the native chain. It does not prove the actor privately read that section, reasoned from it, produced any parent-authored bytes, caused a particular result, received BUG-120 Phase-Agent reference guidance, or achieved research quality.
 
 ## Reality Distance Ledger
 
@@ -45,7 +47,7 @@ Heavy real-Agent canary. This case cannot PASS from fixture data. The Main Agent
 1. Create a Wave1-ready disposable bundle with two topics.
 2. Enqueue two `wave1_topic_deepening` queue demands.
 3. Claim both through one `operate-work-unit claim --count 2`.
-4. Spawn two real `dpt-evidence-extractor` actors using the generated work-unit task prompts.
+4. Supply each real `dpt-evidence-extractor` actor its generated claimed work-unit task, whose first authoring section is `## Completion Contract`.
 5. Each actor writes result/receipt/output/cache according to its work-unit contract.
 6. Main Agent submits each result by `work_id`, in any return order.
 7. Main Agent reads submit JSON, work-unit inspect JSON, and Wave1 gate JSON before recording trace checks.
@@ -105,9 +107,9 @@ Expected: two work-unit prompts are generated under `_work_units/wave1/{work_id}
 
 ## Step 3: [MAIN->SUBAGENT] Run Real Actors
 
-For each `work_id` in `case-221-claim.json`, hand only the generated task prompt to a real `dpt-evidence-extractor` actor. The actor must begin from the generated task-directed role/shared guidance, read its beacon, preserve `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`, perform bounded topic deepening, and produce the declared result JSON plus runtime receipt.
+For each `work_id` in `case-221-claim.json`, supply only its generated task prompt to a real `dpt-evidence-extractor` actor. Retain the exact claimed `task.md` path before recording that actor's first returned work; the supplied task must have `## Completion Contract` as its first `##` section. The actor's native work may then produce the declared result JSON, runtime receipt, outputs, and cache facts.
 
-After both actors return, write `case-221-subagent-evidence.json` as a path-only index with an exact absolute `result_dir`, two actor entries keyed by `work_id`, and one representative first-actor `task`, `result`, `receipt`, and Subject-written declared `output` path. If either actor is unavailable or omits assigned files, write `case-221-subject-unavailable.txt` and skip directly to native completion. Missing actors are `NOT_RUN`; fixture or parent output cannot substitute. The Playbook and Phase Agent must not edit actor-owned output, receipt, cache or source facts after either return.
+After both actors return, write `case-221-subagent-evidence.json` as a path-only index with an exact absolute `result_dir`, two actor entries keyed by `work_id`, and one representative first-actor `task`, `result`, `receipt`, and Subject-written declared `output` path. The `task` field is the exact supplied claimed task path, not a reconstructed prompt or a claim about private reading. If either actor is unavailable or omits assigned files, write `case-221-subject-unavailable.txt` and skip directly to native completion. Missing actors are `NOT_RUN`; fixture or parent output cannot substitute. The Playbook and Phase Agent must not edit actor-owned output, receipt, cache or source facts after either return.
 
 ## Step 4: [MAIN/SHELL] Predictive Dry-Submit Then Formal Submit
 
@@ -200,6 +202,7 @@ node --input-type=module - "$B" <<'JS'
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
 
 const bundle = process.argv[2];
 const submit = JSON.parse(readFileSync(`${bundle}/case-221-submit.json`, 'utf8'));
@@ -209,6 +212,11 @@ const evidence = JSON.parse(readFileSync(`${bundle}/case-221-subagent-evidence.j
 const firstReturn = JSON.parse(readFileSync(`${bundle}/case-221-first-return.json`, 'utf8'));
 const result = JSON.parse(readFileSync(evidence.result, 'utf8'));
 const receipts = readFileSync(evidence.receipt, 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse);
+const taskText = readFileSync(evidence.task, 'utf8');
+const index = loadWorkUnitIndex(bundle);
+const taskRecord = index.work_units[result.work_id];
+const completionContractFirst = taskText.indexOf('## Completion Contract') === taskText.indexOf('##');
+const taskBoundToClaim = taskRecord && resolve(bundle, taskRecord.paths.task_ref) === resolve(evidence.task);
 const claimed = new Set(submit.map((entry) => entry.work_id));
 const representative = firstReturn.actors[0];
 const pairedTargets = representative?.target_refs || [];
@@ -218,6 +226,8 @@ const hashesMatch = pairedTargets.length === 2
   && representative.post_hashes?.length === 2
   && representative.pre_hashes.every((entry, index) => entry.ref === representative.post_hashes[index]?.ref && entry.sha256 === representative.post_hashes[index]?.sha256);
 const subjectBound = existsSync(evidence.task) && existsSync(evidence.output)
+  && completionContractFirst
+  && taskBoundToClaim
   && claimed.has(result.work_id)
   && receipts.some((row) => row.work_id === result.work_id)
   && (result.output_files || []).some((row) => resolve(bundle, row.path) === resolve(evidence.output));
@@ -235,6 +245,8 @@ recordPlaybookCheck(bundle, {
     work_ids: firstReturn.actors.map((entry) => entry.work_id),
     representative: representative && {
       work_id: representative.work_id,
+      supplied_task_completion_contract_first: completionContractFirst,
+      supplied_task_bound_to_claim: taskBoundToClaim,
       target_refs: pairedTargets.map((target) => target.path),
       pre_hashes: representative.pre_hashes,
       dry_submit: { exit_code: representative.dry_submit.exit_code, ok: representative.dry_submit.output?.ok === true },

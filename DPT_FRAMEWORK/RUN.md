@@ -1,17 +1,17 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.47**
+> **DPT_FRAMEWORK v0.48**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.47
+## Current Release: v0.48
 
-- Wave0 source intake receives its existing rich-reference template at the actual authoring boundary; its Sub-agent remains the direct declared reference producer and formal submit remains the backing transition.
-- Wave1 returned work now presents the existing dry-submit disposition before formal submit, followed by the existing submitted-backed reference/index, depth review, return-map, and inspect closeout sequence.
-- Wave Gate feedback retains one root-first evaluator projection. Existing Wave0/Wave1 quality-floor degraded handoff policy is now schema-backed; Wave2 consumes the same fail-closed path but has no active eligible rule.
+- Delegated work-unit tasks now present one Engine-generated Completion Contract as their first authoring entry; it derives existing attempt facts without pre-creating result, receipt, cache, output, source, or ledger authority. Spawn points to that same task entry.
+- Supplied malformed actor observations return structured pre-mutation claim feedback; omitted observations retain their established audit/no-claim behavior.
+- Dry-submit and normal formal rejection now share one selected primary root. Timeout preflight forwards only that root's action and code into existing lease advice; queue, Gate, ledger, replacement, and late-submit authority remain unchanged.
 
 ## 0. 禁用内置捷径（最高优先）
 

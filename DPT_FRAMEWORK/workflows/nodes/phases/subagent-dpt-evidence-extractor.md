@@ -232,7 +232,7 @@ Execution steps:
 8. Write `agent_result_ready` immediately before returning.
 9. Return JSON matching `result.schema.json`, including `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, `output_files[]`, `source_claims[]`, `accepted_source_urls[]`, and `cache_trails[]`.
 
-For a supplementary assignment, read the task's `Authorized Source-Ref Lineage` section before choosing `source_ref`. You may cite one exact listed prior submitted `evidence_summary` path; the list contains only contract-authorized outputs for the same canonical Topic, wave, and kind. Cite it without redeclaring or overwriting that file. Otherwise `source_ref` must be a genuinely current path declared in this candidate's `output_files[]`. New cache trails or degraded-capture refs created by this attempt remain current-attempt facts: declare every one in this result's `cache_trails[]` and in the matching claim; do not infer eligibility from filesystem presence.
+For a supplementary assignment, read the task's `Completion Contract -> Cache And Source Facts` before choosing `source_ref`. You may cite one exact listed prior submitted `evidence_summary` path; the list contains only contract-authorized outputs for the same canonical Topic, wave, and kind. Cite it without redeclaring or overwriting that file. Otherwise `source_ref` must be a genuinely current path declared in this candidate's `output_files[]`. New cache trails or degraded-capture refs created by this attempt remain current-attempt facts: declare every one in this result's `cache_trails[]` and in the matching claim; do not infer eligibility from filesystem presence.
 
 For every accepted source, include a structured claim:
 

@@ -1869,10 +1869,9 @@ describe('submitWorkUnit', () => {
       assert.equal(supplementary.assignment_contract_version, 'work-unit.assignment.v1');
       assert.deepEqual(supplementaryManifest.output_contract.required_outputs, []);
       const supplementaryTask = readFileSync(path.join(dir, supplementary.paths.task_ref), 'utf8');
-      assert.match(supplementaryTask, /Authorized Source-Ref Lineage/);
-      assert.match(supplementaryTask, new RegExp(prior.work_id));
+      assert.match(supplementaryTask, /### Cache And Source Facts/);
+      assert.match(supplementaryTask, /Claim-time source lineage/);
       assert.match(supplementaryTask, new RegExp(priorEvidencePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-      assert.match(supplementaryTask, /evidence_summary/);
       const supplementaryResultPath = writeSupplementaryWave1SubmitFiles(dir, supplementary, { sourceRef: priorEvidencePath });
 
       const dry = drySubmitWorkUnit(dir, { work_id: supplementary.work_id, resultPath: supplementaryResultPath });

@@ -43,7 +43,7 @@ function readJson(file) {
 }
 
 function resultStarterFromTask(task) {
-  const match = task.match(/## Result JSON Starter[\s\S]*?```json\s+([\s\S]*?)\s+```/);
+  const match = task.match(/### Result JSON Starter[\s\S]*?```json\s+([\s\S]*?)\s+```/);
   assert.ok(match, 'task must contain one Result JSON Starter block');
   return JSON.parse(match[1]);
 }
@@ -226,20 +226,18 @@ describe('work-unit index and envelope', () => {
       assert.equal(index.inspect_projection.total, 1);
 
       const task = readFileSync(path.join(dir, manifest.paths.task_ref), 'utf-8');
-      assert.match(task, /## Output Contract/);
-      assert.match(task, /## Cache Policy/);
-      assert.match(task, /## Absolute Runtime Paths/);
-      assert.match(task, /## Write-Before-Return Checklist/);
+      assert.match(task, /## Completion Contract/);
+      assert.match(task, /### Binding And Result/);
+      assert.match(task, /### Required Outputs/);
+      assert.match(task, /### Cache And Source Facts/);
+      assert.match(task, /### Lifecycle Receipt And Handoff/);
+      assert.match(task, /### Verify Before Return/);
       assert.match(task, new RegExp(path.join(dir, manifest.paths.result_ref).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-      assert.match(task, /Read `_beacon\.json` before writing runtime files/);
-      assert.match(task, /Returning research findings in chat without writing the required files is a work-unit failure/);
-      assert.match(task, /cache `page\.md` must contain fetched page content or an explicit degraded\/fetch-failure record/);
-      assert.match(task, /declare `cache_trails` as bundle-relative cache leaf directory paths only/);
-      assert.match(task, /do not list `websearch\.json`, `page\.md`, or `meta\.json` file paths/);
-      assert.match(task, /work_unit_search_started/);
+      assert.match(task, /page\.md must contain fetched page content or an explicit degraded\/fetch-failure record/);
+      assert.match(task, /Declare cache_trails as bundle-relative cache leaf directory paths/);
+      assert.match(task, /work_started/);
       assert.ok(task.includes(`bundle_dir: \`${canonicalBundleDir}\``));
       assert.ok(task.includes(`operate-work-unit.mjs dry-submit "${canonicalBundleDir}"`));
-      assert.ok(task.includes(`operate-work-unit.mjs submit "${canonicalBundleDir}"`));
       assert.match(task, new RegExp(record.work_id));
       assert.match(task, new RegExp(record.queue_item_id));
       assert.doesNotMatch(task, retiredAuthorityPattern);
@@ -267,13 +265,11 @@ describe('work-unit index and envelope', () => {
       assert.match(spawn_prompt, new RegExp(record.work_id));
       assert.match(spawn_prompt, new RegExp(dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
       assert.match(spawn_prompt, new RegExp(manifest.paths.task_ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-      assert.match(spawn_prompt, /Do not generate a new nonce/);
-      assert.match(spawn_prompt, /verify every declared output file/);
-      assert.match(spawn_prompt, /cache_trails must list cache leaf directory paths only/);
-      assert.match(spawn_prompt, /do not list websearch\.json, page\.md, or meta\.json file paths/);
-      assert.match(spawn_prompt, /runtime-receipt\.jsonl/);
-      assert.match(spawn_prompt, /result\.schema\.json/);
-      assert.match(spawn_prompt, /runtime_refs diagnostic metadata/);
+      assert.match(spawn_prompt, /begin at ## Completion Contract/);
+      assert.match(spawn_prompt, /sole attempt-bound authoring entry/);
+      assert.doesNotMatch(spawn_prompt, /runtime-receipt\.jsonl/);
+      assert.doesNotMatch(spawn_prompt, /result\.schema\.json/);
+      assert.doesNotMatch(spawn_prompt, /runtime_refs diagnostic metadata/);
       assert.doesNotMatch(spawn_prompt, retiredAuthorityPattern);
     } finally {
       cleanup(dir);
@@ -350,7 +346,7 @@ describe('work-unit index and envelope', () => {
         assert.match(task, new RegExp(record.queue_item_id), testCase.kind);
         assert.match(task, new RegExp(record.receipt_nonce.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), testCase.kind);
         assert.match(spawn_prompt, new RegExp(record.work_id), testCase.kind);
-        assert.match(spawn_prompt, new RegExp(record.queue_item_id), testCase.kind);
+        assert.match(spawn_prompt, /Completion Contract/, testCase.kind);
 
         if (testCase.sourceClaimsAllowed) {
           assert.ok(schema.properties.source_claims, testCase.kind);
@@ -421,10 +417,10 @@ describe('work-unit index and envelope', () => {
         assert.doesNotThrow(() => WorkUnitResultSchema.parse(starter), testCase.kind);
         assert.equal(existsSync(path.join(dir, manifest.paths.result_ref)), false, testCase.kind);
 
-        assert.ok(task.includes(`Required result fields: ${schema.required.join(', ')}`), testCase.kind);
-        assert.ok(task.includes(`Allowed output roles: ${manifest.output_contract.output_files.allowed_roles.join(', ')}`), testCase.kind);
-        assert.ok(task.includes(`Required cache leaf files: ${manifest.cache_policy.leaf_files.join(', ')}`), testCase.kind);
-        assert.match(task, /loaded lifecycle node remains the interaction-placement owner/, testCase.kind);
+        assert.ok(task.includes(`Result schema requires: ${schema.required.join(', ')}`), testCase.kind);
+        assert.ok(task.includes(`Allowed fields: ${Object.keys(schema.properties).join(', ')}`), testCase.kind);
+        assert.match(task, /Required cache leaves: `websearch\.json`, `page\.md`, `meta\.json`/, testCase.kind);
+        assert.match(task, /Formal submit is the only normal first-acceptance owner/, testCase.kind);
       } finally {
         cleanup(dir);
       }

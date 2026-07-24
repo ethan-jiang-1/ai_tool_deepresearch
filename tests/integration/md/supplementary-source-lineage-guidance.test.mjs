@@ -17,7 +17,7 @@ describe('supplementary Wave1 source-ref lineage guidance', () => {
       ['evidence_summary'],
     );
     for (const content of [phase, actor]) {
-      assert.match(content, /Authorized Source-Ref Lineage/);
+      assert.match(content, /Completion Contract.*Cache And Source Facts|Cache And Source Facts.*Completion Contract/s);
       assert.match(content, /exact.*prior submitted `?evidence_summary`?/i);
       assert.match(content, /same canonical Topic.*wave.*kind/i);
     }

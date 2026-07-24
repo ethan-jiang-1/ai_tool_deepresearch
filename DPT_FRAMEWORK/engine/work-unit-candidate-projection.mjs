@@ -72,6 +72,7 @@ export function deriveWorkUnitCandidateProjection({ violations = [], workDone = 
   if (publicViolations.length === 0) {
     return {
       violations: publicViolations,
+      selected_primary: null,
       projection: WorkUnitCandidateProjectionSchema.parse({ recommended_action: 'submit', primary_root_code: null }),
     };
   }
@@ -85,6 +86,7 @@ export function deriveWorkUnitCandidateProjection({ violations = [], workDone = 
       : 'repair_same_candidate';
   return {
     violations: publicViolations,
+    selected_primary: primary,
     projection: WorkUnitCandidateProjectionSchema.parse({
       recommended_action: recommendedAction,
       primary_root_code: primary.code,

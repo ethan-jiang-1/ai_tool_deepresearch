@@ -3,13 +3,26 @@
 // Each YAML file is an array of these objects.
 import { z } from 'zod';
 
-export const ReferenceMetadataSchema = z.object({
-  url: z.string().min(1, 'url is required'),
-  title: z.string().min(1, 'title is required'),
-  retrieved_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'retrieved_date must be YYYY-MM-DD'),
-  topic_tag: z.string().min(1, 'topic_tag is required'),
-  notes: z.string().optional(),
-});
+// @impl DEW-021
+// The schema and authoring projection both derive from this closed field table.
+export const REFERENCE_METADATA_FIELDS = Object.freeze([
+  Object.freeze({ name: 'url', required: true, schema: z.string().min(1, 'url is required') }),
+  Object.freeze({ name: 'title', required: true, schema: z.string().min(1, 'title is required') }),
+  Object.freeze({ name: 'retrieved_date', required: true, schema: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'retrieved_date must be YYYY-MM-DD') }),
+  Object.freeze({ name: 'topic_tag', required: true, schema: z.string().min(1, 'topic_tag is required') }),
+  Object.freeze({ name: 'notes', required: false, schema: z.string().optional() }),
+]);
+
+export const ReferenceMetadataSchema = z.object(Object.fromEntries(
+  REFERENCE_METADATA_FIELDS.map((field) => [field.name, field.schema]),
+));
+
+export function referenceMetadataAuthoringFields() {
+  return Object.freeze({
+    required_fields: Object.freeze(REFERENCE_METADATA_FIELDS.filter((field) => field.required).map((field) => field.name)),
+    optional_fields: Object.freeze(REFERENCE_METADATA_FIELDS.filter((field) => !field.required).map((field) => field.name)),
+  });
+}
 
 /** Array of reference metadata entries — what artifacts/wave0/<topic>/source.yaml contains. */
 export const ReferenceMetadataArraySchema = z.array(ReferenceMetadataSchema);

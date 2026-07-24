@@ -71,7 +71,7 @@ function readJson(filePath) {
 }
 
 function starterFromTask(task) {
-  const match = task.match(/## Result JSON Starter[\s\S]*?```json\s+([\s\S]*?)\s+```/);
+  const match = task.match(/### Result JSON Starter[\s\S]*?```json\s+([\s\S]*?)\s+```/);
   assert.ok(match, 'generated task must expose one Result JSON Starter');
   return JSON.parse(match[1]);
 }

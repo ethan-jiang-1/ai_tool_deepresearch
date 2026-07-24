@@ -45,7 +45,7 @@ describe('case-163 rerun continuation canary contract', () => {
     assert.match(playbook, /wave1_topic_deepening/);
     assert.match(playbook, /open-batch "\$B" --phase wave0 --reason rerun_added_topics/);
     assert.match(playbook, /open-batch "\$B" --phase wave1 --reason rerun_added_topics/);
-    assert.match(playbook, /Authorized Source-Ref Lineage/);
+    assert.match(playbook, /Completion Contract.*Cache And Source Facts|Cache And Source Facts.*Completion Contract/s);
     assert.match(playbook, /prior submitted `evidence_summary`/i);
     assert.match(playbook, /minimal depth reviews/i);
     assert.match(playbook, /override the fixture defaults/i);
