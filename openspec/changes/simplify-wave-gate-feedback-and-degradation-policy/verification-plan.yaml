@@ -1,0 +1,13 @@
+change: simplify-wave-gate-feedback-and-degradation-policy
+claims:
+  - requirement_ids: [GSK-013, RWG-021]
+    test_class: unit
+    proof: shared evaluator metadata, root masking, and fail-closed eligibility
+  - requirement_ids: [GSK-013, RWG-021]
+    test_class: integration
+    proof: formal Gate and inspect adapters project identical shared roots
+  - requirement_ids: [GSK-013, RWG-021]
+    test_class: deterministic_e2e
+    proof: disposable Wave bundles preserve eligible-quality handoff and authority-root refusal
+not_applicable:
+  - agent_flow_e2e: no Agent semantic behavior changes; deterministic Gate projection is the changed contract

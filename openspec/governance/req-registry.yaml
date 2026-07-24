@@ -619,6 +619,7 @@ RET-005: requirement-traceability — Deprecation without deletion (IDs never re
 RET-006: requirement-traceability — Check script compliance as hard gate for archive
 
 RWG-020: research-wave-gate-implementation — Wave1 normalizes carried-target declarations and Wave2 verifies receipt-bound finding coverage through existing disposition routes
+RWG-021: research-wave-gate-implementation — Wave adapters project minimal independent evaluator roots and consume shared fail-closed degradation eligibility
 
 # wff-research-waves / research-wave-experiments
 RWE-001: "research-wave-experiments — Wave0 happy-path + fail playbook (5 trace events: 1 pass + 4 fail, covers count_floor ⊕ schema_valid AND interaction, empty registry, {topic} expansion)"
@@ -722,6 +723,7 @@ GSK-009: gate-skeleton — Gate CLI exit-code behavior and high-friction continu
 GSK-010: gate-skeleton — Lifecycle gate and final-readiness preflight rejects status-only or artifact-only downstream authorization
 GSK-011: gate-skeleton — Active gate rule audit is executable and maps rules to current helper or CLI dispatch
 GSK-012: gate-skeleton — Shared Wave1 gate-attempt writer accepts only a validated carried-target receipt and strict persistence failure emits one failed envelope
+GSK-013: gate-skeleton — Gate degradation eligibility is schema-parsed metadata, defaults fail-closed, and remains separate from hints and attempt diagnostics
 
 # wff-state-chain
 TRT-001: transition-table — File naming convention transitions.chain.json
