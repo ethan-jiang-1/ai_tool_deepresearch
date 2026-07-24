@@ -1,6 +1,6 @@
 ---
 title: Wave execution and gate remediation
-status: reviewed_ready_for_backlog_correction_then_proposal
+status: change_1_archived_change_2_proposed_ready_for_explore
 created: 2026-07-23
 revised: 2026-07-24
 covered_bugs: BUG-100, BUG-101, BUG-102, BUG-105, BUG-107, BUG-108, BUG-109, BUG-110, BUG-111, BUG-112, BUG-113
@@ -23,6 +23,12 @@ evidence_bundle: dpt_rb_openspec-large-project-maintenance-patterns
 | 3 | `simplify-wave-gate-feedback-and-degradation-policy` | 109, 110, 113 | evaluator findings -> smallest independent repair set -> fail-closed eligible degradation decision |
 
 三个 change 的内部任务可触及多个较小 seam，但每组只拥有一条可验收的 Agent-visible loop。拆开会使同一条正常路径跨多个 active change；合并则不得扩大为 generic controller。
+
+### Execution Progress
+
+- [x] **Change 1 archived**: `make-pre-wave-readiness-feedback-direct` was archived at `openspec/changes/archive/2026-07-24-make-pre-wave-readiness-feedback-direct/` and finalized in commits `0dfa52cad` / `542f7833a`. BUG-100--102 now have deterministic pre-Wave contract, CLI/bundle, and simulated lifecycle proof; the provider-scoped real Agent/search/fetch claim is honestly `NOT_RUN` because this host lacks the configured independent Subject launcher.
+- [x] **Change 2 proposed**: `make-wave-producer-contract-and-closeout-direct` now contains proposal, design, four focused delta specs, tasks, and a four-class verification plan for BUG-105, BUG-107, BUG-108, BUG-111, and BUG-112. It is ready for deliberate `/opsx:explore` polishing; no Wave/Gate target surface changes are authorized before its `/opsx:apply`.
+- [ ] **Change 3 remains blocked by order**: begin only after Change 2 has archived truthful producer and submitted-backing facts.
 
 已经作出的决定：
 
