@@ -1,16 +1,17 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.43**
+> **DPT_FRAMEWORK v0.45**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.44
+## Current Release: v0.45
 
-- Explicitly supplied, reachable existing bundle (via `RUN_BUNDLE.md` or `BUNDLE_MAP.md`) routes to `continue-run-bundle.md`; new research without that input still uses the RUN/start-research path.
-- New production and disposable bundles render `RUN_BUNDLE.md` as the minimal entry point plus creator-rendered framework navigation in their maps; current runtime truth remains in bundle controls and Engine outputs.
+- HITL1 exposes the existing recorded-status-to-canonical-topic apply order before its unchanged Gate, so the Agent can follow the legal producer path directly.
+- The capability probe remains Agent-owned and bounded to one neutral search, up to three returned-order eligible candidates, and one final observation; an unavailable result still blocks Setup.
+- Non-delegated seed-topic completion performs the same deterministic local authoring check used by the final seed Gate before it terminalizes queue work.
 
 ## 0. 禁用内置捷径（最高优先）
 

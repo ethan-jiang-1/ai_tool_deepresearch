@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.45
+
+- HITL1 now makes the existing recorded-status-to-canonical-topic apply order explicit, and keeps its real capability observation to one neutral search with at most three returned-order eligible candidates and one final profile observation.
+- Non-delegated seed-topic completion now reuses the final Gate's deterministic frontmatter and canonical-binding evaluation before terminal queue mutation, returning a direct declared-file repair when that local authoring contract fails.
+- The release adds deterministic pre-Wave readiness coverage; real Agent/search/fetch behavior remains separately provider- and runtime-scoped.
+
 ## v0.44
 
 - New run bundles now carry `RUN_BUNDLE.md` as a minimal entry point: bundle name, framework path, and a delegation statement pointing to `BUNDLE_MAP.md` (layout) and `COMMANDS.md` (operations).

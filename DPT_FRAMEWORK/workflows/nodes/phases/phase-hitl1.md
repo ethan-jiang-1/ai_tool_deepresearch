@@ -96,7 +96,7 @@ topic_registry:
      ```bash
      node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl1_recorded
      ```
-     读取并消费成功 stdout 后，才写 retained topic-state input 并运行 `operate-topic-state apply`。同步失败时 canonical topic state 不变；Agent 只遵循返回的既有 legal operation 或 no-path boundary，不手写 `rb_status.json`、不用 force/context bypass，也不先跑 HITL1 Gate 来发现顺序。普通 status/apply/recover 命令由 Agent 执行，不要求用户共同运行。
+     读取并消费成功 stdout 后，才写 retained topic-state input 并运行 `operate-topic-state apply`。同步失败时 canonical topic state 不变；Agent 只遵循返回的既有 legal operation 或 no-path boundary，不手写 `rb_status.json`、不用 force/context bypass，也不先跑 HITL1 Gate 来发现顺序。普通 apply/recover 命令由 Agent 执行，不要求用户共同运行；普通 status 命令同样由 Agent 执行。
 
 ### 3b.1 Optional User Research Controls Snapshot
 

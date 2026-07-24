@@ -260,7 +260,7 @@ describe('case-115 HITL1 fallback observer', () => {
   it('uses the existing exit-3 NOT RUN artifact when current candidate metadata contradicts public candidates', () => {
     const caseRoot = createCase({
       events: transcript({ nativeSuccess: true }),
-      access: availableAccess('WebFetch', { resultUrl: OTHER_URL, count: 2 }),
+      access: availableAccess('WebFetch', { resultUrl: OTHER_URL, count: 3 }),
       gatePassed: true,
     });
     try {

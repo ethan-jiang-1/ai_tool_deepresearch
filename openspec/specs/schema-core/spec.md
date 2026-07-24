@@ -59,11 +59,20 @@ The system SHALL provide Zod contracts for bundle control file validation. The Q
 
 The Profile contract SHALL support an optional legacy-compatible `research_access` observation. New bundle templates SHALL initialize it with `status: unprobed`. The observation SHALL use strict status-discriminated branches and validate only direct recorded facts:
 
-- `unprobed` SHALL contain only `status: unprobed` and SHALL NOT carry URL, fetch success, timestamp, reason, or tool-surface claims;
+- `unprobed` SHALL contain only `status: unprobed` and SHALL NOT carry URL, fetch success, timestamp, reason, tool-surface, candidate-count, or candidate-ordinal claims;
 - `available` SHALL require an ISO 8601 `probed_at`, an HTTP(S) `result_url`, and `fetch_outcome: success`; optional trim-non-empty `search_surface` and `fetch_surface` strings MAY record audit labels;
 - `unavailable` SHALL require an ISO 8601 `probed_at`, `fetch_outcome: failed | blocked | not_attempted`, and a trim-non-empty `reason`; optional `result_url` SHALL be HTTP(S) when present, and optional `search_surface` / `fetch_surface` SHALL be trim-non-empty when present.
 
-Missing `research_access` in a legacy profile SHALL remain schema-readable and SHALL be treated by HITL1 checks as unprobed, not as available. The Profile contract SHALL NOT store a derived gate verdict, response body, query history, retry list, or HTTP status matrix for this observation.
+The `available` and `unavailable` branches MAY carry the legacy-compatible bounded candidate metadata pair:
+
+- `eligible_candidate_count` SHALL be an integer from `0` through `3`, representing the number of syntactically eligible search candidates actually considered by the completed probe;
+- when `eligible_candidate_count` is greater than zero, `final_candidate_ordinal` SHALL be an integer from `1` through `eligible_candidate_count` and identify the final considered candidate, including a branch that stops before fetch because no legal surface is available;
+- when `eligible_candidate_count` is zero, `final_candidate_ordinal` SHALL be absent; and
+- both fields MAY be absent together for legacy profiles, but the current HITL1 writer SHALL record the internally consistent count/ordinal shape for every completed probe.
+
+When candidate metadata is present on `available`, its count SHALL be at least `1` and its ordinal SHALL be present. A current observation with positive candidate count SHALL retain the final considered HTTP(S) `result_url`; `unavailable` MAY record count `0` with no ordinal and no URL for a search that produced no considered candidate, or a positive count with its final ordinal and URL for an attempted or no-legal-path branch. Legacy observations without the metadata pair remain readable under the preceding compatibility rule.
+
+Missing `research_access` in a legacy profile SHALL remain schema-readable and SHALL be treated by HITL1 checks as unprobed, not as available. The Profile contract SHALL NOT store a derived gate verdict, response body, query text or history, candidate URL list, retry list, or HTTP status matrix for this observation.
 
 #### Scenario: Queue contract validates queue v2
 
@@ -89,9 +98,21 @@ Missing `research_access` in a legacy profile SHALL remain schema-readable and S
 - **THEN** ProfileSchema SHALL require an ISO probe timestamp, non-success fetch outcome, and non-empty reason
 - **AND** a success claim in the unavailable branch SHALL fail validation
 
-#### Scenario: unprobed cannot claim success
+#### Scenario: bounded candidate metadata is internally consistent
 
-- **WHEN** `research_access.status` is `unprobed` with timestamp, URL, outcome, reason, or tool-surface fields
+- **WHEN** an available observation records `eligible_candidate_count: 3` and `final_candidate_ordinal: 3`, or an unavailable no-candidate observation records `eligible_candidate_count: 0` without an ordinal
+- **THEN** ProfileSchema SHALL accept the observation when its status-specific facts are otherwise valid
+- **AND** it SHALL reject an ordinal without a positive count, an ordinal greater than the count, a count outside `0..3`, an ordinal on a zero-count observation, an available observation with zero candidate count, or a metadata-bearing positive-count observation without its final `result_url`
+
+#### Scenario: legacy observation remains readable without candidate metadata
+
+- **WHEN** a legacy available or unavailable `research_access` observation has no candidate metadata fields
+- **THEN** ProfileSchema SHALL remain readable for compatibility
+- **AND** the current writer requirement SHALL NOT turn old bundle bytes into a migration prerequisite
+
+#### Scenario: unprobed cannot claim success or probe metadata
+
+- **WHEN** `research_access.status` is `unprobed` with timestamp, URL, outcome, reason, tool-surface, candidate-count, or candidate-ordinal fields
 - **THEN** ProfileSchema SHALL fail validation rather than silently accepting contradictory fields
 
 #### Scenario: legacy profile is unprobed rather than available
