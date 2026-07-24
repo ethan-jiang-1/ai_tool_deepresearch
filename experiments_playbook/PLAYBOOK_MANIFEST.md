@@ -69,6 +69,7 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 | `exp_wfn_wave1/case-222-heavy-gate-fail-repair.md` |
 | `exp_wfn_wave1/case-223-heavy-subagent-failure.md` |
 | `exp_wfn_wave1/case-224-light-happy-and-fail.md` |
+| `exp_wfn_wave1/case-225-heavy-returned-work-closeout.md` |
 | `exp_wfn_wave2/case-231-heavy-synthesis-happy-path.md` |
 | `exp_wfn_wave2/case-232-heavy-finding-triage.md` |
 | `exp_wfn_wave2/case-233-heavy-gate-fail-repair.md` |

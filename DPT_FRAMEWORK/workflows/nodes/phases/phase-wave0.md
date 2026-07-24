@@ -14,6 +14,7 @@ requires:
   - shared/shared-schemas
   - shared/shared-silent-execution
   - shared/shared-subagent-protocol
+  - shared/shared-reference-template
   - shared/shared-anti-cheating-rules
   - shared/shared-return-map-authoring
 suggested_context:
@@ -43,7 +44,7 @@ For each delegated source-intake task, derive the initial candidate URL/source t
 - Active bundle that passed `seed-topics-ready`.
 - `rb_plan.md` frontmatter `topic_registry`.
 - `rb_profile.yaml` research style params.
-- `shared-reference-template.md` through shared schema/context.
+- `shared-reference-template.md` through this phase's `requires` chain and the source-intake actor's delivered role guidance.
 - `DPT_FRAMEWORK/cli/operate-queue.mjs` for enqueue/check/non-delegated maintenance.
 - `DPT_FRAMEWORK/cli/operate-work-unit.mjs` for delegated claim/submit/fail/timeout/abandon/inspect.
 - `shared-subagent-protocol.md` for work-unit envelope and Sub-agent rules.

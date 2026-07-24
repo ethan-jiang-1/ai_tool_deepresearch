@@ -18,6 +18,7 @@ execution_contract:
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas
+  - shared/shared-reference-template
   - shared/shared-page-fetch-guidance
 suggested_context: []
 ---
@@ -123,7 +124,7 @@ When the task discovers a cross-topic foundation source, it may also write:
 reference/00-shared-<slug>.md
 ```
 
-Rich reference files must follow `shared-reference-template.md` and declare their `output_files[]` entry with role `reference` and `source_url`.
+Rich reference files use the actor-delivered `shared-reference-template.md` and declare their `output_files[]` entry with role `reference` and `source_url`. The Sub-agent writes this direct `reference` output; the Phase Agent does not reconstruct it as an alternate Wave0 projection.
 
 ## 4. Execution Within Work Unit
 

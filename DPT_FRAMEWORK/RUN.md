@@ -1,17 +1,16 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.45**
+> **DPT_FRAMEWORK v0.46**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.45
+## Current Release: v0.46
 
-- HITL1 exposes the existing recorded-status-to-canonical-topic apply order before its unchanged Gate, so the Agent can follow the legal producer path directly.
-- The capability probe remains Agent-owned and bounded to one neutral search, up to three returned-order eligible candidates, and one final observation; an unavailable result still blocks Setup.
-- Non-delegated seed-topic completion performs the same deterministic local authoring check used by the final seed Gate before it terminalizes queue work.
+- Wave0 source intake receives its existing rich-reference template at the actual authoring boundary; its Sub-agent remains the direct declared reference producer and formal submit remains the backing transition.
+- Wave1 returned work now presents the existing dry-submit disposition before formal submit, followed by the existing submitted-backed reference/index, depth review, return-map, and inspect closeout sequence.
 
 ## 0. 禁用内置捷径（最高优先）
 

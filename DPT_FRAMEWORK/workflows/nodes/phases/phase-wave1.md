@@ -139,7 +139,6 @@ First inspect the queue-front planned role and perform one bounded real `dpt-evi
 
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase wave1 --count <claim-count> --actor-outcome <available|unavailable|unknown> --actor-source <native_probe|not_observed> --actor-role-key dpt-evidence-extractor --actor-reason <normalized-reason> --execution-actor <delegated_subagent|phase_agent_fallback>
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
 ```
 
 Sub-agent execution requirements:
@@ -165,7 +164,36 @@ Parse structured stdout even when timeout preflight exits non-zero. Follow all a
 
 Do not run depth review, supplementary-demand convergence, Phase-owned reference materialization, or the Wave1 gate as though the attempt were drained while preflight recommends `submit`, `repair`, `wait`, `inspect`, or `block`. After accepted submit, preserve the existing depth-review and reference-materialization boundaries; when depth remains insufficient, enqueue supplementary `wave1_topic_deepening` demand instead of bypassing the work-unit path.
 
-### 3.2.1 Topic Reference Materialization
+### 3.2.1 Returned Work Decision
+
+When a returned candidate has its result, receipt, declared outputs, and cache trails ready, run the existing dry-submit before formal submit:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit <bundle> --work-id <work_id> --result <result.json>
+```
+
+Consume the returned Engine disposition without inventing another repair route:
+
+- `repair_same_candidate`: repair only the authorized mechanical candidate coordinate on the same `work_id`, then rerun this dry-submit.
+- `return_to_actor`: return actor-owned semantic work before `work_done`; do not make the Phase Agent fabricate it.
+- `fail_and_replace`: after `work_done`, use the existing terminal/replacement path with a fresh work unit as described in §3.4; do not auto-retry or reuse the failed identity.
+- `inspect_contract`: keep contract-integrity or missing-contract facts at the named Engine owner, terminal, or no-path boundary.
+- `submit`: run formal submit only after dry-submit predicts acceptance:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
+```
+
+Immediately after a successful formal submit, complete this visible Phase checklist before treating the returned topic as closed:
+
+1. Run the existing reference/index materialization in §3.2.2 from the submitted backing.
+2. Run the existing depth review in §3.2.3 for that submitted work unit.
+3. Run the existing seed return-map backfill in §3.3 from the same submitted authority.
+4. After the full queue drain and all returned-topic checklists, run the full-drain Wave inspect in §5.
+
+The Sub-agent does not write reference/index materialization, depth review, or seed return-map backfill. Do not hand-write result semantics, cache declarations, receipts, ledger rows, trace, or provenance to bypass an Engine disposition.
+
+### 3.2.2 Topic Reference Materialization
 
 After each successful Wave1 submit, the Phase Agent materializes `reference/{topic.slug}-<source-slug>.md` for every accepted submitted source suitable for consumer navigation, then updates `reference/_INDEX.md`.
 
@@ -182,7 +210,7 @@ Diagnostics should be able to scan the phrase submitted source_claims[] and acce
 
 If no submitted source is materializable, record an explicit limitation or repair diagnostic in Wave1 artifacts before gate.
 
-### 3.2.2 Depth Review
+### 3.2.3 Depth Review
 
 After each successful Wave1 submit, the Phase Agent writes or updates `artifacts/wave1/{topic}/depth-review.yaml`. This review is Phase-owned process evidence; it does not create delegated coverage. `reviewed_work_unit_refs[]` uses canonical `_work_units/wave1/<work_id>` refs without a trailing slash and every ref must resolve to a submitted work-unit row.
 

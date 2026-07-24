@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @impl EXA-003, EXA-005, EXA-006, EXA-008, VER-006
+// @impl EXA-003, EXA-005, EXA-006, EXA-008, RWP-002, VER-006
 
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
@@ -57,6 +57,15 @@ const SUBJECTS = {
     tools: 'Task,Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
     boundary: 'Use exactly three bounded turns in this same session. Invoke one real child in turn 1 and a distinct real child in turn 3. Do not write playbook verdict checks, native completion, health output, or cleanup. If a required child/search/fetch surface is unavailable, fail honestly rather than fabricating evidence.',
     afterTurn: observeCase164Boundary,
+    timeoutMs: 12 * 60 * 1000,
+  },
+  '225': {
+    bundlePrefix: 'dpt_disp_case-225_',
+    transcript: 'case-225-subject-transcript.jsonl',
+    system: 'You are the independent Subject Agent for case 225, distinct from the Playbook Agent. Act as the Phase Agent only inside the exact bundle path provided by the runner and follow the injected current Wave1/shared work-unit surfaces.',
+    messages: ['Act as the Phase Agent for the one queued Wave1 primary demand. Perform the role-bound availability observation, claim exactly that demand through the production work-unit CLI, and invoke one real dpt-evidence-extractor child actor with the exact generated task/beacon/schema. The child must independently perform bounded real WebSearch and WebFetch, write its own result, runtime receipt, required outputs, source claims, and cache trails, then record work_done. After the child returns, write case-225-child-evidence.json as a path-only index of the claimed work_id, queue_item_id, generated task/beacon/result/receipt refs, required output refs, cache-trail refs, source URLs, and child evidence ref. Run native dry-submit and save complete JSON as case-225-dry-submit.json. Only when the Engine recommends submit, run formal submit and save complete JSON as case-225-formal-submit.json. From the submitted backing, complete the existing Wave1 Phase closeout: materialize consumer reference/index, write depth-review.yaml, replace the applicable seed return-map tokens with meaning and concrete refs, then run inspect-wave1-output.mjs and save complete JSON as case-225-inspect.json. Write case-225-phase-closeout.json as a path-only index of the submitted work_id, materialized reference refs, depth-review ref, seed ref, and inspect ref. Stop. Do not append playbook verdict checks, native completion, health output, cleanup, or hand-write actor-owned result/receipt/cache/provenance facts.'],
+    tools: 'Task,Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
+    boundary: 'Use one bounded Subject turn and one real child actor. Preserve the child and Engine-produced surfaces before Phase closeout. Do not write playbook verdict checks, native completion, health output, or cleanup. If a required child, search/fetch, or Engine path is unavailable, fail honestly rather than fabricating evidence.',
     timeoutMs: 12 * 60 * 1000,
   },
   '232': {
@@ -146,7 +155,7 @@ const SUBJECTS = {
 };
 
 function usage() {
-  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <115|164|232|318|711|712|713-readiness|713-final|714|901|951|951-judge> --bundle <path>');
+  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <115|164|225|232|318|711|712|713-readiness|713-final|714|901|951|951-judge> --bundle <path>');
   process.exit(2);
 }
 

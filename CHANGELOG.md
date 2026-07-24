@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.46
+
+- Wave0 source-intake guidance now delivers the existing shared rich-reference template through the actual producer `requires` chain, while retained direct Sub-agent `reference` output and formal submitted backing remain authoritative.
+- Wave1 returned-work guidance now makes the existing dry-submit disposition explicit before formal submit, then points the Phase Agent to its existing submitted-backed reference/index, depth-review, return-map, and inspect closeout sequence.
+
 ## v0.45
 
 - HITL1 now makes the existing recorded-status-to-canonical-topic apply order explicit, and keeps its real capability observation to one neutral search with at most three returned-order eligible candidates and one final profile observation.
