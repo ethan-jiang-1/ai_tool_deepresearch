@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-07-20 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-07-24 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -108,8 +108,19 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-096 | 2026-07-21 | WebSearch / WebFetch 或等价页面读取受阻；两条 implementation path 已 archive，delegated fallback observation 保留为 `UNOBSERVED` |
 | BUG-097 | 2026-07-21 | 非 HITL boundary surfacing observation；现有 silent contract/cues 已覆盖，未发现值得新增 deterministic remediation 的直接缺口 |
 | BUG-098 | 2026-07-21 | Wave1 actor contract delivery；v0.40 已交付，real first-return observation 保留为 `NOT_RUN` |
+| BUG-100 | 2026-07-24 | Research access probe "first result only" 假阴性 — `make-pre-wave-readiness-feedback-direct`（`542f7833a`）把 access probe 收敛为 bounded neutral observation |
+| BUG-101 | 2026-07-24 | Phase instruction 与 Engine gate 对 topic-state apply 时序矛盾 — `make-pre-wave-readiness-feedback-direct` 幂等的合法 pre-Wave route |
+| BUG-102 | 2026-07-24 | Seed topic YAML 校验只在 gate 执行 — `make-pre-wave-readiness-feedback-direct` 前移到 authoring owning checkpoint |
+| BUG-105 | 2026-07-24 | raw `source.yaml`、rich-reference content、canonical path、backing 被混淆 — `make-wave-producer-contract-and-closeout-direct`（`d65fe538a`）分离诊断 |
+| BUG-107 | 2026-07-24 | depth-review.yaml 创建责任不明 — `make-wave-producer-contract-and-closeout-direct` Phase-owned reference/depth closeout |
+| BUG-108 | 2026-07-24 | Seed topic `__BACKFILL_*__` token 替换无 owner — `make-wave-producer-contract-and-closeout-direct` Phase-owned return-map closeout |
+| BUG-109 | 2026-07-24 | Wave1 gate 规则过度耦合（35+ masked sub-rules 淹没 root cause）— `simplify-wave-gate-feedback-and-degradation-policy`（`6e47de3ea`）最小独立根因投影 |
+| BUG-110 | 2026-07-24 | Wave1 fatigue degradation — 既有窄 fail-closed 正确；`simplify-...` 回归锁定并迁入共享 policy（不放宽 Wave1） |
+| BUG-111 | 2026-07-24 | canonical path、rich content 与 submitted backing 被混淆 — `make-wave-producer-contract-and-closeout-direct` 分离诊断 |
+| BUG-112 | 2026-07-24 | Wave1 returned-work path 跳过 existing dry-submit — `make-wave-producer-contract-and-closeout-direct` 直接 dry-submit→submit 链 |
+| BUG-113 | 2026-07-24 | Wave2 adapter 缺 shared degradation policy — `simplify-...` 三 Wave adapter 共用 metadata-backed evaluator；本次 ineligible roots 仍 fail closed |
 
-**Next available bug ID: BUG-099**
+**Next available bug ID: BUG-114**
 
 ---
 

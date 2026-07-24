@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-07-23 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-07-24 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,11 +17,19 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `research-access-and-actor-contract-delivery` | 两个顺序 Change：先修 HITL1 bounded fetch fallback，再把 role/direct-output/fetch contract 送到真实 work-unit actor；联合关闭 BUG-096/098，BUG-097 保持独立真实-Agent诊断 | ready to propose |
-| `research-question-closure-and-evidence-judgment` | 直接吸收 3 份未实现输入（user-knowledge-hang、evidence-quality、explore-exploit），并建立在 DONE-015 evidence-extraction 地基上：先以 HITL1 host-file snapshot 贯通 Seed/Wave/Final，再补 Wave1→Wave2 问题交接；不预设 external pack、source score、WaveStats 或策略 controller | ready for focused explore of Change 1 |
-| `wave-execution-and-gate-remediation` | BUG-099--113 的四个固定 Change：direct phase entry、pre-Wave readiness feedback、Wave producer/closeout chain、root-first Gate feedback and fail-closed degradation policy；不以扩权、自动补 receipt 或宽松结构校验换取通过 | correct backlog facts, then propose Change 1 |
+| `silent-autonomous-execution` | 承接 `source_bugs: BUG-099/103/104/106`（stop-no halt、status drift、context pollution、stop-no-violation-repeats）。独立 research backlog：把「静默自主」拆成 DPT 可确定性修复的 phase-entry correctness 与一般 coding-agent/host 是否发起下一 turn 的 actor liveness 两层，分开研究与证明；不阻塞 wave-remediation 三个已收敛 change | research / scoping（无固定 OpenSpec change） |
 
 ---
+
+## 最近关闭 (2026-07-24)
+
+下列三个 plan 的 OpenSpec change 均已 archive，已移出 `plans/`：
+
+| Plan | 关闭依据 |
+|------|----------|
+| `wave-execution-and-gate-remediation` | 三个 change 全 archive：`make-pre-wave-readiness-feedback-direct`（`542f7833a`）、`make-wave-producer-contract-and-closeout-direct`（`d65fe538a`）、`simplify-wave-gate-feedback-and-degradation-policy`（`6e47de3ea`）；覆盖 BUG-100–102、105、107–113。review context 留在 [`../_done/_closed_plans/wave-execution-and-gate-remediation.md`](../_done/_closed_plans/wave-execution-and-gate-remediation.md) |
+| `research-access-and-actor-contract-delivery` | 两个 change archive：`allow-bounded-hitl1-fetch-surface-fallback`、`deliver-work-unit-role-contracts-to-actors`；已移入 `../_done/_closed_plans/`（CLS-033） |
+| `research-question-closure-and-evidence-judgment` | 两个 change archive：`capture-user-research-controls`、`bind-wave1-target-receipts-to-wave2-findings`；吸收 user-knowledge-hang / evidence-quality / explore-exploit 三份输入；已移入 `../_done/_closed_plans/`（CLS-034） |
 
 ## 最近关闭 (2026-07-21)
 

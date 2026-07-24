@@ -18,23 +18,25 @@
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
 | [BUG-099](BUG-099-stop-no-agent-halted-at-wave0.md) | P1 | wave0 | `stop: no` phase agent 因 context exhaustion 在 wave0 主动停下，创建 de-facto HITL |
-| [BUG-100](BUG-100-research-access-probe-first-result-false-negative.md) | P2 | hitl1 | Research access probe "first result only" 规则在搜索面正常时造成假阴性 |
-| [BUG-101](BUG-101-topic-state-apply-sequencing-contradiction.md) | P2 | hitl1 | Phase instruction 与 Engine gate 对 topic-state apply 的时序要求矛盾 |
-| [BUG-102](BUG-102-seed-topic-yaml-validation-at-gate-not-authoring.md) | P3 | seed-topics | Seed topic YAML 校验只在 gate 执行，不在 authoring/enrichment 时反馈 |
 | [BUG-103](BUG-103-status-gate-drift-between-phases.md) | P3 | 跨 phase | rb_status.json gate 字段在 phase transition 后持续漂移，需手动 advance-status |
 | [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | enter-phase 每次渲染完整 shared context 造成累积 context 压力 |
-| [BUG-105](BUG-105-shared-ref-gate-yaml-in-code-fence-not-parsed.md) | P2 | wave0 | raw `source.yaml`、rich-reference content、canonical path 与 backing 被混淆 |
 | [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P1 | wave0→wave1 | stop: no violation 再现 — agent 输出总结但不执行下一 phase |
 
-| [BUG-107](BUG-107-wave1-depth-review-phase-agent-responsibility-unclear.md) | P2 | wave1 | depth-review.yaml 创建责任不明确 — sub-agent 不创建，Phase Agent 遗漏 |
-| [BUG-108](BUG-108-seed-token-backfill-responsibility-gap.md) | P3 | wave1 | Seed topic __BACKFILL_*__ token 替换无明确 owner |
-| [BUG-109](BUG-109-wave1-gate-excessive-rule-coupling.md) | P3 | wave1 | Wave1 gate 规则过度耦合 — 35+ masked sub-rules 淹没 root cause |
-| [BUG-110](BUG-110-wave1-gate-no-fatigue-degradation.md) | P2 | wave1 | observed authority blockers 正确 fail closed；需回归锁定既有窄 degradation |
-| [BUG-111](BUG-111-reference-format-contract-unparseable-by-agent.md) | P2 | wave1 | canonical path、rich content 与 submitted backing 被混淆 |
-| [BUG-112](BUG-112-subagent-cache-trail-declaration-incomplete.md) | P2 | wave1 | Wave1 returned-work path 跳过 existing dry-submit |
-| [BUG-113](BUG-113-wave2-gate-no-fatigue-degradation.md) | P2 | wave2 | adapter 缺 shared policy；本次 authority roots 仍必须 fail closed |
+> BUG-099/103/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 计划承接，仍属活跃 bug。
 
 **Next available bug ID: BUG-114**
+
+## 最近关闭 (2026-07-24)
+
+BUG-100–102、105、107–113（共 11 个）随 Wave execution and gate remediation 三个 OpenSpec change 全部 archive 关闭，已移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)：
+
+| Bug | Change | Commit | 收口 |
+|-----|--------|--------|------|
+| BUG-100 / 101 / 102 | `make-pre-wave-readiness-feedback-direct` | `542f7833a` | pre-Wave readiness（access probe / topic-state apply / seed YAML）前移到唯一合法 producer 路径 |
+| BUG-105 / 107 / 108 / 111 / 112 | `make-wave-producer-contract-and-closeout-direct` | `d65fe538a` | producer 契约 + dry-submit→formal submit + Phase-owned closeout；canonical/rich/backing 分离诊断 |
+| BUG-109 / 110 / 113 | `simplify-wave-gate-feedback-and-degradation-policy` | `6e47de3ea` | 最小独立根因投影 + 共享 metadata-backed degradation policy；BUG-110 既有 fail-closed 正确，仅回归锁定 |
+
+完整 review context：[`../_done/_closed_plans/wave-execution-and-gate-remediation.md`](../_done/_closed_plans/wave-execution-and-gate-remediation.md)。
 
 ## 最近关闭 (2026-07-20)
 

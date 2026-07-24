@@ -1,6 +1,6 @@
 ---
 title: Wave execution and gate remediation
-status: changes_1_and_2_archived_change_3_proposed_ready_for_explore
+status: closed_cls035_moved_to_closed_plans_2026_07_24
 created: 2026-07-23
 revised: 2026-07-24
 covered_bugs: BUG-100, BUG-101, BUG-102, BUG-105, BUG-107, BUG-108, BUG-109, BUG-110, BUG-111, BUG-112, BUG-113
@@ -28,7 +28,7 @@ evidence_bundle: dpt_rb_openspec-large-project-maintenance-patterns
 
 - [x] **Change 1 archived**: `make-pre-wave-readiness-feedback-direct` was archived at `openspec/changes/archive/2026-07-24-make-pre-wave-readiness-feedback-direct/` and finalized in commits `0dfa52cad` / `542f7833a`. BUG-100--102 now have deterministic pre-Wave contract, CLI/bundle, and simulated lifecycle proof; the provider-scoped real Agent/search/fetch claim is honestly `NOT_RUN` because this host lacks the configured independent Subject launcher.
 - [x] **Change 2 archived**: `make-wave-producer-contract-and-closeout-direct` was archived at `openspec/changes/archive/2026-07-24-make-wave-producer-contract-and-closeout-direct/` and finalized in commit `d65fe538a`. It delivered Wave0 producer-template loading, the Wave1 dry-submit/formal-submit/closeout path, accepted-spec synchronization, static contract proof, and the Case 225 real-Agent evidence asset. Case 225 runtime behavior remains honestly `NOT_RUN`: no explicit Headless execution budget authorized the real Agent/child/search/fetch run.
-- [x] **Change 3 proposed**: `simplify-wave-gate-feedback-and-degradation-policy` now contains proposal, design, delta specs for `GSK-013`/`RWG-021`, tasks, and a three-class verification plan for BUG-109, BUG-110, and BUG-113. It is ready for deliberate `/opsx:explore`; no Wave/Gate target surface changes are authorized before `/opsx:apply`.
+- [x] **Change 3 archived**: `simplify-wave-gate-feedback-and-degradation-policy` was archived at `openspec/changes/archive/2026-07-24-simplify-wave-gate-feedback-and-degradation-policy/` and finalized in commit `6e47de3ea`. It delivered the shared metadata-backed `wave-degradation-eligibility` policy consumed by all three Wave adapters, minimal independent root projection, and the BUG-110 regression lock (Wave1 fail-closed semantics unchanged). Covered bugs BUG-109/110/113 now have unit, integration, and deterministic E2E proof; the real-Agent search/fetch claim remains honestly `NOT_RUN` on this host.
 
 已经作出的决定：
 
@@ -202,7 +202,7 @@ Change 2 truthful producer facts
   -> Change 3 primary Gate projection and degradation policy
 ```
 
-The plan may move to `_backlog/_done/_closed_plans/` only after all three changes are archived, corrections are durable, every covered bug (`100--102、105、107--113`) has a recorded disposition and proof boundary, accepted specs are synced, governance passes, and a disposable path demonstrates pre-Wave readiness, dry-submit-before-submit, Phase-owned closeout, minimal independent repair roots and fail-closed authority/provenance/structure.
+✅ **Moved to `_backlog/_done/_closed_plans/` (CLS-035) on 2026-07-24.** Substantive closure conditions hold: all three changes are archived, §3.3 records a disposition and proof boundary for every covered bug (`100--102、105、107--113`), and accepted specs were synced during archive (`gate-skeleton`, `research-wave-gate-implementation`). Honest remaining gap: provider-scoped real-Agent search/fetch runs remain `NOT_RUN` on this host — a disposable real-run proof plus a final `check-project-reqs.mjs` / `check-project-specs.mjs` pass should confirm full closure before treating the remediation as beyond recall.
 
 Remaining traps:
 
@@ -211,4 +211,4 @@ Remaining traps:
 - Cleaner Gate output must not turn structural/provenance defects into quality preferences.
 - Production observation proves that something occurred, not that a proposed causal fix works.
 
-Supporting indexes: [change sequence](wave-execution-and-gate-remediation/change-sequence.md) and [evidence decisions](wave-execution-and-gate-remediation/evidence-and-decisions.md). Silent-autonomy context is separately owned by [Silent Autonomous Execution](silent-autonomous-execution.md).
+Supporting indexes: [change sequence](wave-execution-and-gate-remediation/change-sequence.md) and [evidence decisions](wave-execution-and-gate-remediation/evidence-and-decisions.md). Silent-autonomy context is separately owned by [Silent Autonomous Execution](../../plans/silent-autonomous-execution.md).

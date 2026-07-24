@@ -1,6 +1,6 @@
 # _backlog — 项目待办与决策记录
 
-> 最后更新: 2026-07-22 | 本目录追踪项目的工作项、设计决策、依赖分析。
+> 最后更新: 2026-07-24 | 本目录追踪项目的工作项、设计决策、依赖分析。
 > 活跃工作走 OpenSpec（`openspec/changes/`）；本目录是 **上游分析与决策记录**，不是运行时真相。
 >
 > **本文件是 `_backlog` 的规矩手册。** 搬迁流程在下面定死，今后大家都遵循这里头定的规矩。
@@ -22,7 +22,8 @@ _backlog/
 │
 ├── bugs/                              # 🐛 活跃 bug → 修完移入 _done/_fixed_bugs/
 ├── todos/                             # 📋 活跃 todo（4）→ 做完或作为 absorbed input 归档至 _done/_done_todos/
-└── plans/                             # 📐 活跃 plan → 完成移入 _done/_closed_plans/
+├── plans/                             # 📐 活跃 plan → 完成移入 _done/_closed_plans/
+└── learning/                          # 📝 复盘/学习笔记（辅助目录，非三套生命周期，如 handoff-witnessing retro）
 ```
 
 ---
