@@ -2,39 +2,25 @@ schema_version: verification-routing/v1
 change: make-wave-producer-contract-and-closeout-direct
 test_classes:
   unit:
-    status: selected
-    rationale: Existing reference parsing and work-unit disposition are pure deterministic contracts; focused Node tests can prove parser/evaluator reuse and no new YAML authority without claiming Agent behavior.
+    status: not_applicable
+    rationale: This change does not alter a pure JavaScript or schema contract; it delivers existing guidance and leaves the reference parser and work-unit Engine behavior unchanged.
   integration:
     status: selected
-    rationale: Active Wave guidance and production CLI/bundle boundaries must prove returned-work ordering, no-closeout-before-submit, and Phase/Sub-agent ownership using real deterministic surfaces.
+    rationale: Static loading of the actual Markdown guidance can prove template delivery, ownership boundaries, and required command/checklist order without claiming that an Agent followed the prose.
   deterministic_e2e:
-    status: selected
-    rationale: A temporary bundle can prove the multi-topic deterministic chain from dry-submit result through formal submit, submitted backing, Phase closeout, and inspect, while labeling Agent actions as simulated.
+    status: not_applicable
+    rationale: No deterministic workflow contract changes. A simulated bundle chain would duplicate existing submit/inspect coverage while being unable to establish the guidance-following behavior this change addresses.
   agent_flow_e2e:
     status: selected
-    rationale: Only independent real Subject/Sub-agent evidence in a real disposable bundle can establish that live actors and the Phase Agent follow the returned-work and closeout loop; unavailable runtime remains NOT_RUN.
+    rationale: Only a real independent Phase Agent in a real disposable bundle can prove that it reads the revised guidance, acts after a real child return, and completes the returned-work/closeout loop. Unavailable capability remains NOT_RUN.
 claims:
-  - id: reference-authoring-root-separation
-    statement: The existing reference parser/evaluator accepts its supported metadata presentation while separately reporting canonical-path, parser-aligned-content, and submitted-backing failures; it does not accept YAML frontmatter, fenced YAML, bare YAML, or a byte-exact template as another rich-reference authority.
-    test_class: unit
-    proof_subject: deterministic_contract
-    asset:
-      kind: node_test
-      path: tests/schema/contracts/reference.test.mjs
-    execution_profile:
-      fixture: fixture_backed
-      subject_execution: none
-      runtime: none
-      external_calls: none
-      verdict_judge: deterministic
-    verdict_authority: node_test_exit
-  - id: returned-work-guidance-preserves-existing-dispositions
-    statement: Phase guidance consumes existing dry-submit dispositions before formal submit, permits same-work repair only for authorized mechanical roots, preserves actor/fail-and-replace/owner boundaries for all other roots, and never presents a hand-written receipt/cache/ledger/provenance route.
+  - id: wave-producer-guidance-delivers-existing-contract
+    statement: "The actual Wave0 source-intake delivery chain loads the existing rich-reference template while preserving direct Sub-agent output ownership, and Wave1 guidance requires dry-submit before formal submit plus one submitted-backed Phase closeout checklist before full-drain inspect."
     test_class: integration
     proof_subject: deterministic_contract
     asset:
       kind: node_test
-      path: tests/integration/md/case-221-first-return-contract.test.mjs
+      path: tests/integration/md/wave-producer-contract-guidance.test.mjs
     execution_profile:
       fixture: none
       subject_execution: none
@@ -42,44 +28,16 @@ claims:
       external_calls: none
       verdict_judge: deterministic
     verdict_authority: node_test_exit
-  - id: wave-closeout-guidance-is-submitted-backed
-    statement: Wave0 and Wave1 guidance require Phase-owned reference/index, depth-review, and seed return-map closeout only after formal submit, identify their backing and inspect order, and do not assign those projections to a Sub-agent.
-    test_class: integration
-    proof_subject: deterministic_contract
-    asset:
-      kind: node_test
-      path: tests/integration/md/wave-producer-closeout-guidance.test.mjs
-    execution_profile:
-      fixture: none
-      subject_execution: none
-      runtime: none
-      external_calls: none
-      verdict_judge: deterministic
-    verdict_authority: node_test_exit
-  - id: multi-topic-producer-closeout-chain
-    statement: With explicitly labeled simulated Agent/Sub-agent outputs in a temporary bundle, invalid dry-submit candidates cannot submit or unlock closeout; passing formal submits create ledger coverage; Phase-owned reference/depth/backfill then reaches the same Wave inspect without fabricating actor-owned semantics, cache declarations, receipts, or provenance.
-    test_class: deterministic_e2e
-    proof_subject: deterministic_contract
-    asset:
-      kind: node_test
-      path: tests/e2e/wave-producer-closeout.test.mjs
-    execution_profile:
-      fixture: fixture_backed
-      subject_execution: simulated_agent_actions
-      runtime: temporary_bundle
-      external_calls: none
-      verdict_judge: deterministic
-    verdict_authority: node_test_exit
-  - id: real-wave1-returned-work-and-closeout
-    statement: In a real disposable Wave1 bundle, independent native dpt-evidence-extractor Sub-agents produce their own returned results/receipts/outputs/cache, the Phase Agent runs dry-submit before formal submit, and submitted-backed Phase closeout occurs before Wave inspect/Gate. PASS requires retained native Subject evidence and deterministic bundle verdicts; unavailable actor, tool, or external capability is NOT_RUN.
+  - id: real-wave1-phase-returned-work-closeout
+    statement: "In a real disposable Wave1 bundle, an independent Phase Agent follows the returned-work boundary after a real dpt-evidence-extractor child return: it preserves native child evidence, runs dry-submit before formal submit, performs the existing submitted-backed Phase closeout, then runs inspect. PASS requires retained native Subject and deterministic bundle evidence; unavailable Agent, child, tool, or external capability is NOT_RUN."
     test_class: agent_flow_e2e
     proof_subject: agent_behavior
     asset:
       kind: markdown_playbook
-      path: experiments_playbook/exp_wfn_wave1/case-221-heavy-batch-subagent.md
+      path: experiments_playbook/exp_wfn_wave1/case-225-heavy-returned-work-closeout.md
     execution_profile:
       fixture: setup_only
-      subject_execution: real_subagent
+      subject_execution: real_agent
       runtime: real_disposable_bundle
       external_calls: real
       verdict_judge: deterministic

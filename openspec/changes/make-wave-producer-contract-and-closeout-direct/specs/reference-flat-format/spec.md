@@ -6,7 +6,7 @@ Agent-facing phase docs, shared schema docs, work-unit tasks, and repair diagnos
 
 Reference Markdown metadata SHALL be documented as bullet or colon-separated metadata in the accepted project format, not YAML frontmatter. Guidance SHALL describe the eight common required fields plus one topic-binding form, explain that `related_topic_uid` and legacy `related_topic` feed the same canonical resolver, and state that conflicting dual declarations fail. Normal first-run guidance MAY retain its current legacy producer form; rerun/history guidance SHALL NOT require mass rewriting of already covered references merely to change identity spelling.
 
-At the authoring decision point, guidance and parser/evaluator diagnostics SHALL distinguish exactly three independent facts: the canonical bundle-relative reference filename, parser-aligned rich Markdown metadata/semantic sections, and submitted backing. A bare YAML document, a YAML fence, filesystem presence, a noncanonical filename, or an otherwise parseable reference with no submitted backing SHALL NOT substitute for either other fact. This requirement SHALL NOT create a byte-exact formatting rule, a second parser, a generic Markdown linter, or a new reference metadata authority.
+At the Wave0 source-intake authoring decision point, the actual delegated actor guidance SHALL load `shared/shared-reference-template` through its `requires` chain. The template SHALL expose the canonical `reference/00-shared-<slug>.md` filename, parser-aligned rich Markdown metadata/semantic sections, and the required `output_files[]` `reference` declaration with `source_url`. A Phase document merely mentioning the template, indirect discovery by the actor, a bare YAML document, a YAML fence, filesystem presence, a noncanonical filename, or an otherwise parseable reference with no formal submitted backing SHALL NOT substitute for that producer contract. This requirement SHALL NOT create a byte-exact formatting rule, a second parser, a generic Markdown linter, a new reference metadata authority, or Phase-owned Wave0 reference creation.
 
 Guidance SHALL keep `reference/_INDEX.md` separate from topic identity authority: it is the accepted eight-column navigation table and must be updated by the normal Wave materialization step. Repair diagnostics SHALL distinguish an invalid/missing table parent from missing rows and SHALL give one nearest same-inspect action without asking the user to run ordinary repair commands.
 
@@ -22,11 +22,11 @@ Guidance SHALL keep `reference/_INDEX.md` separate from topic identity authority
 - **THEN** guidance SHALL identify the accepted metadata format parsed by `parseReferenceMetadata()`
 - **AND** it SHALL warn that YAML frontmatter fences are not the current reference metadata contract
 
-#### Scenario: Reference roots are not conflated
+#### Scenario: Source intake receives the reference template it must use
 
-- **WHEN** reference authoring or inspection finds a noncanonical filename, unparseable rich content, or missing submitted backing
-- **THEN** its feedback SHALL identify the failed fact without claiming either of the other two facts failed
-- **AND** it SHALL not direct the Agent to convert a YAML fence or bare YAML file into a second rich-reference authority
+- **WHEN** a Wave0 source-intake actor receives a generated task
+- **THEN** its role guidance SHALL load the existing shared-reference template through the actual delivery chain
+- **AND** it SHALL author any shared reference as its declared `reference` output rather than ask the Phase Agent to create an alternate projection
 
 #### Scenario: Wave1 rerun repair uses normal materialization contract
 

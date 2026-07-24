@@ -1,15 +1,15 @@
 ## Why
 
-`BUG-105`、`BUG-107`、`BUG-108`、`BUG-111`、`BUG-112` 指向同一条 Wave producer 链的交付断裂：canonical rich reference 的路径、可解析内容和 submitted backing 被混为一个问题；returned work 没有先走既有 `dry-submit`；而成功 submit 后本应由 Phase Agent 完成的 reference、depth review 与 seed return-map closeout 没有成为明确的下一步。因此 Agent 容易把未提交的文件、裸 YAML 或 filesystem presence 误当作可消费 evidence，直到 Wave inspect/Gate 才发现一整串下游症状。
+`BUG-105`、`BUG-111`、`BUG-112` 是 producer guidance 没有在实际 authoring/returned-work 边界交付既有 contract 的问题；`BUG-107`、`BUG-108` 则是 Wave1 已有的 Phase closeout 被长文分散后不够可见的问题。它们不是同一种缺失，更不是缺少新的 Engine evaluator：Wave0 shared reference 本来就是合法的 Sub-agent output，Wave1 的 backing、depth review 与 seed backfill 也已有 accepted owner。当前缺口是把这些既有事实放回 Agent 作出下一步行动的位置。
 
 本 change 只让现有的一条合法路径在最早可行动的位置闭合，不放宽 provenance、receipt、cache、queue 或 Gate 的既有权威。
 
 ## What Changes
 
-- 在 Wave0/Wave1 的 producer guidance 中交付 canonical 路径、现有 `parseReferenceMetadata()` 可解析的 rich Markdown 模板，以及 submitted backing 的分离诊断。rich reference 仍不是 YAML frontmatter、fenced YAML 或 bare YAML；`source.yaml` 的原始 YAML contract 也保持独立。
-- 将 returned-work 的既有 `dry-submit` 放到 formal submit 前：仅 `mechanical` candidate/declaration root 可以修复同一 `work_id` 后重跑 dry-submit；`work_done` 后的 `semantic_content` root 走既有 fail-and-replace 并分配新的同义务 work unit；`contract_integrity` 或无合法 repair path 返回 Engine owner、terminal 或 `missing_contract` 边界。只有 PASS 能进入 formal submit 并产生 submitted ledger row。
-- 将成功 submit 后的 Phase-owned closeout 变成 Wave0/Wave1 的明确 drain/post-submit loop：从 submitted backing 物化 consumer references/index，Wave1 产出绑定 submitted rows 的 `depth-review.yaml`，并在 Phase Agent 处将真实 evidence meaning 回填 seed return map；随后才运行同一 Wave inspect。Sub-agent 不获得 reference presentation、depth judgment、seed backfill、ledger 或 cache declaration authority。
-- 为上述 local loop 增加 parser/path/backing、dry-submit disposition、submit-before-closeout 与 Phase closeout 的分层验证；真实 Subject Agent/Sub-agent/external execution 只由 `agent_flow_e2e` disposable bundle evidence 证明，无法运行时明确记录 `NOT_RUN`。
+- 让 Wave0 source-intake actor 和它的 Phase 都通过真实 `requires` 链加载既有 shared-reference template。模板继续定义 canonical `00-shared-<slug>.md`、parser-aligned rich Markdown 和 `reference` output declaration；Sub-agent 仍直接写该 output，formal submit 仍建立唯一 delegated backing。不会把 Wave0 reference creation 移给 Phase Agent。
+- 在 Wave1 returned-work 的既有 formal submit 前直接加入 `dry-submit`。Phase 只消费既有 Engine disposition：同一 candidate 的 authorized mechanical repair 才可回到同一 dry-submit；其余结果回到 actor、既有 fail-and-replace 或 Engine owner/no-path 边界。
+- 在 Wave1 的成功 submit 决策点加入一条短的 Phase closeout checklist，指向既有的 reference/index materialization、depth review、seed return-map backfill 和 full-drain inspect 顺序。它不重定义这些 artifact 的 authority，也不把它们交给 Sub-agent。
+- 增加一项 static integration proof 和一项独立 real Phase-Agent evidence case。后者只在真实 disposable bundle、真实 Phase Agent 及其 native child evidence 下证明行为；无法运行时结果是 `NOT_RUN`。
 - `DPT_FRAMEWORK/` 的 Agent-facing Wave behavior 会变化，目标 framework version 为 `v0.46`；apply 时更新 `CHANGELOG.md` 与 `DPT_FRAMEWORK/RUN.md` 的 release projection。
 
 ## Capabilities
@@ -20,23 +20,21 @@
 
 ### Modified Capabilities
 
-- `reference-flat-format`: 修改 `REF-007`、`REF-008`，使 canonical naming、parser-aligned rich content 与 submitted backing 成为三个明确、可分别诊断的 producer facts，并在当前 authoring/materialization surface 暴露它们；不增加第二 metadata parser 或 metadata authority。
-- `wave1-intake`: 修改 `WAI-004`，使 submitted row 成为 inline backfill、depth-review 和 topic-reference materialization 的唯一前置条件，并将这些动作保留给 Phase Agent。
-- `research-return-map`: 修改 `RRM-002`，使 Wave1 seed backfill 在 submitted-backed Phase closeout 中由 Phase Agent 以 meaning-plus-concrete-reference 方式完成；不把 token replacement 交给 Sub-agent 或把 return map 变成 delegated coverage authority。
-- `research-wave-phase-content`: 修改 `RWP-001`、`RWP-002`，让 active Wave phase Markdown 在 canonical authoring、returned-work dry-submit、submitted-row closeout 和 same inspect 间给出一条直接、有限的 Agent flow。
+- `reference-flat-format`: 修改 `REF-007`，规定 source-intake 的实际 guidance delivery 必须加载既有 rich-reference template，而不是仅在 Phase prose 中提及它。
+- `research-wave-phase-content`: 修改 `RWP-001`、`RWP-002`，分别交付 Wave0 source-intake template 和 Wave1 returned-work/closeout 的最短直接行动路径。
 
 ## Impact
 
-- 预计修改 Wave0/Wave1 phase/shared authoring guidance、reference parser/evaluator diagnostics 或其 CLI adapter、既有 work-unit dry-submit/formal-submit guidance的消费位置、对应 root `tests/`、已有 disposable playbooks，以及 v0.46 release projection；不增加 dependency，不创建新 lifecycle state、user checkpoint、generic Markdown linter、disk scan auto-amend、manual authority route、retry tree 或 Agent controller。`delegated-work-units` 的 `DEW-013` 已完整拥有 dry-submit 的 deterministic disposition，本 change 复用它而不修改该 capability。
-- Direct Source of Record 保持不变：canonical bundle-relative reference path 与 current rich bytes 由既有 reference parser/evaluator 解读；work-unit index/result/receipt/cache 与 formal submitted ledger row 决定 delegated provenance；Phase Agent 只在 submitted backing 后拥有 consumer projection、depth judgment 与 return-map writing；Wave inspect/Gate 仍决定 phase verdict。
-- 最短合法闭环为：`canonical authoring -> dry-submit -> same-work mechanical repair | fail-and-replace | owner/no-path -> formal submit -> submitted ledger -> Phase-owned closeout -> same inspect`。它复用已有 parser/evaluator 和 dry-submit，删除晚期才发现 producer mismatch 的路径，避免另一套 validation、scanner、state、controller 或 recovery tree。
-- 用户只决定新的语义、风险、permission 或不可代理外部动作；当前 Agent 在既有 legal operation 和 direct facts 充分时执行 dry-submit、合法机械修复、formal submit、Phase closeout 与 same-check rerun。Engine 裁决 schema、receipt、binding、submit、ledger 和 inspect；没有 legal path 的结果必须诚实返回 owner、terminal 或 `missing_contract`，不能提示手改 authority。
-- Proof boundary：unit/integration/deterministic E2E 仅证明 deterministic parser/CLI/bundle contracts；`agent_flow_e2e` 才能证明 Phase Agent 或 Sub-agent 在真实 disposable bundle 中执行本 loop；外部 search/fetch 仍需要真实调用。fixture、聊天记录、console output 或手写 bundle state 不能替代后两类 evidence。
+- 预计修改 source-intake 与 Wave0/Wave1 phase guidance、一个 root `tests/integration/` static contract、一个 new disposable playbook/subject adapter，以及 v0.46 release projection。不会改 reference parser/evaluator、work-unit command、ledger、cache validator、Gate 或 accepted closeout capability；不增加 dependency、lifecycle state、generic Markdown linter、disk scan、manual authority route、retry tree 或 Agent controller。
+- Direct Source of Record 保持不变：既有 reference parser 解释 rich bytes；formal submitted ledger row 决定 delegated provenance；Phase Agent 仅在 submitted backing 后执行既有 consumer projection、depth judgment 和 return-map writing；Wave inspect/Gate 仍决定 phase verdict。
+- 两条最短路径分别为：Wave0 `template-delivered actor authoring -> formal submit -> existing inspect`，Wave1 `returned candidate -> dry-submit -> existing disposition | formal submit -> existing Phase closeout checklist -> inspect`。这消除了隐式发现和错误所有权，不增加第二 validator 或 recovery tree。
+- 用户只决定新的语义、风险、permission 或不可代理外部动作；当前 Agent 在既有 legal operation 和 direct facts 充分时执行 Wave1 dry-submit、合法机械修复、formal submit、Phase closeout 与 same-check rerun。Engine 裁决 schema、receipt、binding、submit、ledger 和 inspect；没有 legal path 的结果必须诚实返回 owner、terminal 或 `missing_contract`，不能提示手改 authority。
+- Proof boundary：本 change 的 static integration 只证明实际 guidance delivery 和文字顺序；只有 `agent_flow_e2e` 才能证明真实 Phase Agent 在 disposable bundle 中执行该 loop；外部 search/fetch 仍需要真实调用。fixture、聊天记录、console output 或手写 bundle state 不能替代后者。
 
 ## Constitutional Admission
 
-- **Authority and owner:** reference parser/evaluator owns path/content interpretation; submit owns delegated completion and ledger; Phase Agent owns only non-delegable consumer presentation and semantic depth/backfill after a submitted row; inspect/Gate owns phase verdict.
+- **Authority and owner:** existing reference parser owns rich-content interpretation; Wave0 Sub-agent owns its declared reference output; submit owns delegated completion and ledger; Wave1 Phase Agent owns only its existing consumer presentation and semantic depth/backfill after a submitted row; inspect/Gate owns phase verdict.
 - **Declared entry/recovery boundary:** returned work enters through its existing candidate/result/receipt surfaces and returns exactly one Engine-derived action: same-candidate mechanical repair and dry-submit, actor return, fail-and-replace, or owner/no-path. This does not schedule actors, infer liveness, or create a recovery controller.
-- **Net simplification:** one existing parser/evaluator and one existing dry-submit checkpoint replace conflated rich-reference advice, formal-submit guessing, and implicit post-submit work. No durable state is added.
+- **Net simplification:** actual template delivery, one existing dry-submit checkpoint, and one visible Wave1 checklist replace indirect template discovery, formal-submit guessing, and implicit post-submit work. No durable state is added.
 - **Human boundary:** none for the normal loop. Only a new semantic/risk/permission decision or an explicitly non-delegable action may leave the Agent loop.
 - **Version decision:** the framework's active producer and closeout guidance/behavior changes, so this is a minor framework release projection from `v0.45` to `v0.46`, with compatibility decided per affected existing bundle contract during apply.
