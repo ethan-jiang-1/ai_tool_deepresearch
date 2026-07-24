@@ -48,9 +48,9 @@ Eligibility and the already accepted native-first/same-URL curl safety constrain
 The durable profile observation stays a single direct fact. New current-writer fields are:
 
 - `eligible_candidate_count`: an integer from `0` through `3` for candidates actually considered;
-- `final_candidate_ordinal`: an integer from `1` through `eligible_candidate_count` when a candidate was selected for the final attempted or successful branch.
+- `final_candidate_ordinal`: an integer from `1` through `eligible_candidate_count` identifying the final considered candidate, whether its branch fetches, succeeds, fails, or stops at a no-legal-path boundary.
 
-They are an optional, internally consistent pair in `ProfileSchema` for legacy compatibility, but the current HITL1 writer records them. `result_url` remains the final selected/successful candidate when the branch has one. The schema never accepts candidate fields on `unprobed`, a positive ordinal without a positive count, an ordinal beyond the count, query text, URL list, response body, HTTP matrix, or retry history.
+They are an optional, internally consistent pair in `ProfileSchema` for legacy compatibility, but the current HITL1 writer records them. `available` metadata must have a positive count and ordinal; only an unavailable no-candidate branch may record count zero without an ordinal. A positive-count current observation retains its one final considered `result_url`, including a no-legal-path branch where no fetch can run. The schema never accepts candidate fields on `unprobed`, an available zero count, a positive ordinal without a positive count, an ordinal beyond the count, a positive count without its final URL, query text, URL list, response body, HTTP matrix, or retry history.
 
 Alternatives rejected:
 
@@ -80,7 +80,7 @@ No status is hand-written. No topic-state `force` path, new context flag, fallba
 
 ### D3. Extract one seed authoring evaluator and invoke it before queue terminalization
 
-The implementation extracts a pure evaluator from the existing seed-topics Gate logic. It receives only the declared seed file, its expected canonical topic binding, and the existing parser/required-structure contract. It returns deterministic pass/fail facts without writing bundle state.
+The implementation extracts a pure evaluator from the existing seed-topics Gate logic. Its inputs are the already-read declared seed bytes, declared relative path, expected canonical Topic binding, and existing frontmatter parser. A thin queue/Gate adapter owns file reading and current registry enumeration; the pure core performs no I/O or mutation and returns deterministic pass/fail facts.
 
 ```text
 seed_topic_materialize card
@@ -92,9 +92,9 @@ seed_topic_materialize card
   -> final seed-topics Gate reuses evaluator for every current seed
 ```
 
-The per-card evaluator checks the file declared by the current queue card, not a directory scan or a reconstructed task. It parses frontmatter with the same accepted parser, validates the current card's identity/binding and required structure, and returns one local repair surface. On failure, `operate-queue complete` leaves the queue item non-terminal and does not append `queue_completed`; the Agent repairs the declared file and reruns the same completion command. The final Gate retains phase-wide registry set comparison, queue drain, trace event, routing and verdict ownership.
+The per-card adapter first admits one unambiguous declaration: exactly one card `writes_to` path, exactly one matching `file:` entry in `required_receipts` and `completion_receipt`, and one current canonical Topic resolved from `payload.topic_slug`; the path must be that Topic's expected `seed_topics/<slug>.md`. It neither scans nor guesses a declaration. An invalid declaration is a `missing_contract` queue-producer boundary, not an invitation to edit queue authority or an authoring-file repair. For a valid declaration, the pure core parses frontmatter with the same accepted parser and validates only the current canonical UID/id/slug/title/must-answer/scope/dependency binding plus filename/path consistency. It does not judge body/semantic quality or reinterpret a generic card `done_condition`. On authoring failure, `operate-queue complete` returns the normal structured feedback plus `repair_kind: agent_action`, the direct `missing_fact`, a `write_to` coordinate within that declared file, and a `rerun` for the same completion checkpoint. Both failure branches leave the queue item non-terminal, keep queue authority bytes unchanged (including by deferring legacy `bundle_name` normalization), and do not append `queue_completed`; ordinary attempt/receipt diagnostics are not terminal queue evidence. The Agent repairs the declared file and reruns the same completion command only for the valid-declaration authoring branch. The final Gate retains phase-wide registry set comparison, queue drain, trace event, routing and verdict ownership.
 
-This is a local convergence, not a new validator family: one parser/evaluator replaces the current "queue receipt says exists, Gate later says parse failed" split. It does not make every non-delegated queue task subject to seed checks.
+This is a local convergence, not a new validator family: one parser/evaluator replaces the current "queue receipt says exists, Gate later says parse failed" split. It applies only to the named seed producer rule; it does not make every non-delegated queue task subject to seed checks.
 
 ### D4. Proof tracks match their claim boundary
 
@@ -110,11 +110,11 @@ The existing case-115 remains one real Subject surface. It gains the production 
 
 ### D5. Constitutional admission and control-surface budget
 
-- **Direct authority / legal path:** profile/schema for access, existing status/apply operation for topic intent, current seed bytes plus the existing parser for authoring, queue JSON for terminalization, and final Gate/trace for phase verdict.
+- **Direct authority / legal path:** profile/schema for access, existing status/apply operation for topic intent, declared current seed bytes plus existing canonical binding/parser for authoring, queue JSON for terminalization, and final Gate/trace for phase verdict.
 - **Declared public boundary:** this change adds none. HITL1 remains its existing entry and no recovery/public module is introduced.
 - **Shortest legal loop:** D1 removes first-host false negatives without adding a second search; D2 makes an existing operation visible at the producer decision; D3 reuses the final parser at the earlier same-card checkpoint.
 - **Human/Agent split:** only semantics and genuinely unavailable host permission stay with the user. Search/fetch within permission, status synchronization, apply/recover, repair and rerun remain Agent work during a live turn.
-- **Proof scope:** deterministic tests do not establish external behavior; a real trace/transcript does not establish another host/runtime; production diagnostic bundle bytes do not establish post-change closure.
+- **Proof scope:** deterministic tests do not establish external behavior; a real trace/transcript does not establish another host/runtime; case-115's general Agent claim does not prove an unobserved second/third-candidate branch; production diagnostic bundle bytes do not establish post-change closure.
 
 Added persistent control surfaces: none. Added public CLI/state/Gate/controller: none. Extracted pure evaluator: one, solely to replace duplicate parsing. Avoided surfaces: URL history, status workaround, late-only YAML diagnosis, generic lint command, retry controller, manual authority edits and second parser.
 
@@ -125,7 +125,7 @@ Added persistent control surfaces: none. Added public CLI/state/Gate/controller:
 - [Risk] Status synchronization before the Gate could be mistaken for a hand edit or pass claim. -> Mitigation: only the existing `advance-status` CLI is invoked; the Gate remains the independent pass authority and applies the existing status rule.
 - [Risk] Extracted evaluator drifts from the final Gate. -> Mitigation: Gate and queue completion import the same pure evaluator, with parity-focused tests.
 - [Risk] A queue-complete failure might mutate queue state. -> Mitigation: evaluate before terminal history/promotion/refill/write, and assert byte-stable queue state on failure.
-- [Risk] Real external access does not exercise candidate two/three. -> Mitigation: deterministic contract tests cover the bounded shape; external claim is explicit `NOT_RUN` unless a real transcript provides it.
+- [Risk] Real external access does not exercise candidate two/three. -> Mitigation: deterministic contract tests cover the bounded shape; case-115's general Agent claim permits a first-candidate outcome and does not report an unobserved branch as proof. Any branch-specific observation is `NOT_RUN` unless its real transcript provides it.
 
 ## Migration Plan
 

@@ -10,7 +10,7 @@
 
 - 将 HITL1 capability probe 保持为一次 neutral search，但按返回顺序考察最多前三个 syntactically eligible actual HTTP(S) candidates；每个 candidate 只走现有 native-first、同 URL、至多一次 permitted `curl` fallback。持久化的仍是一条 final `research_access` observation，只增加有界 candidate count/final ordinal，不保存 query、URL history、page bytes 或 retry state。
 - 将 HITL1 已有的 bootstrap-compatible status synchronization 变成显式 producer step：记录用户决定后先执行既有 `advance-status --to hitl1_recorded`，再运行现有 `operate-topic-state apply`、style/probe 和同一个 Gate。它不修改 topic-state authorization、Gate rule 或状态机，只移除 Agent 必须先碰一次失败才能发现的隐藏顺序。
-- 让 `seed_topic_materialize` 的 non-delegated queue completion 在 terminal queue mutation 前调用从 seed-topics Gate 抽出的同一 deterministic authoring evaluator。它只检查当前 queue card 所声明的 seed path、frontmatter parse/binding 与现有 required structure；最终 Gate 继续拥有全集合、queue drain、trace 与 phase-boundary verdict。
+- 让 `seed_topic_materialize` 的 non-delegated queue completion 在 terminal queue mutation 前调用从 seed-topics Gate 抽出的同一 deterministic authoring evaluator。它只检查当前 queue card 所声明的 seed bytes/path、frontmatter parse 和既有 canonical identity/binding；失败返回该声明文件的直接 repair coordinates，不把 body/semantic quality 或一般 `done_condition` 变成新的 Engine linter。最终 Gate 继续拥有全集合、queue drain、trace 与 phase-boundary verdict。
 - 为上述三段添加 focused unit/integration/deterministic-E2E coverage，并更新一个真实 Subject Agent HITL1 playbook。外部 search/fetch 行为仅由真实调用证明；没有可用真实 runtime 时，该 claim 必须为 `NOT_RUN`。
 - `DPT_FRAMEWORK/` 行为会改变，目标 framework version 为 `v0.45`；apply 时更新 `CHANGELOG.md` 和 `DPT_FRAMEWORK/RUN.md` 的 release projection。
 
@@ -24,7 +24,8 @@
 
 - `schema-core`: 修改 SCO-002 的 `research_access` discriminated observation，使其能承载有界 candidate count/final ordinal，同时保持单一 final direct observation 与 legacy compatibility。
 - `pre-research-phase-content`: 修改 PRP-002、PRP-005，使 HITL1 明确 pre-Gate topic-state sequence、前三个 eligible candidate probe、诚实 unavailable/no-advance branch 与 payload checklist。
-`pre-research-gate-implementation` 的 PRG-002/PRG-009 与 `canonical-topic-state` 的 CTS-003/CTS-004 已经定义上述 status window、Gate 和唯一 topic-state writer；本 change 只把既有 legal sequence 交付到 HITL1 control surface，不额外创建 delta spec 或 requirement ID。`agentic-queue` 的 AGQ-002/AGQ-004/AGQ-009 与 `seed-topic-materialization` 的 STM-001/STM-002/STM-003 也已要求 seed materialization 的 frontmatter/receipt contract；apply 只修复 current implementation drift，使 queue completion 在既有 contract 要求的时点复用 Gate parser/evaluator。
+- `agentic-queue`: 修改 AGQ-002、AGQ-009，让仅有 `seed_topic_materialize` 在 existing receipt 后、terminal queue mutation 前运行一个共享 deterministic seed evaluator；失败保持 queue authority bytes，最终 Gate 复用同一 pure core。它不把一般 card `done_condition`、body skeleton 或 semantic quality 变成 Queue Manager contract。
+`pre-research-gate-implementation` 的 PRG-002/PRG-009 与 `canonical-topic-state` 的 CTS-003/CTS-004 已经定义上述 status window、Gate 和唯一 topic-state writer；本 change 只把既有 legal sequence 交付到 HITL1 control surface，不额外创建 delta spec 或 requirement ID。`seed-topic-materialization` 的 STM-001/STM-002/STM-003 已经定义 seed authoring 与最终 Gate 的 existing deterministic boundary；本 change 通过 AGQ delta 将这一个 boundary 前移到 card completion，而不新增 requirement ID、second parser 或 generic validator。
 
 ## Impact
 

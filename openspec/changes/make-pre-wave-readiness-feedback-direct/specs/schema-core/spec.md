@@ -15,9 +15,11 @@ The Profile contract SHALL support an optional legacy-compatible `research_acces
 The `available` and `unavailable` branches MAY carry the legacy-compatible bounded candidate metadata pair:
 
 - `eligible_candidate_count` SHALL be an integer from `0` through `3`, representing the number of syntactically eligible search candidates actually considered by the completed probe;
-- when `eligible_candidate_count` is greater than zero, `final_candidate_ordinal` SHALL be an integer from `1` through `eligible_candidate_count` and identify the final attempted or successful candidate;
+- when `eligible_candidate_count` is greater than zero, `final_candidate_ordinal` SHALL be an integer from `1` through `eligible_candidate_count` and identify the final considered candidate, including a branch that stops before fetch because no legal surface is available;
 - when `eligible_candidate_count` is zero, `final_candidate_ordinal` SHALL be absent; and
 - both fields MAY be absent together for legacy profiles, but the current HITL1 writer SHALL record the internally consistent count/ordinal shape for every completed probe.
+
+When candidate metadata is present on `available`, its count SHALL be at least `1` and its ordinal SHALL be present. A current observation with positive candidate count SHALL retain the final considered HTTP(S) `result_url`; `unavailable` MAY record count `0` with no ordinal and no URL for a search that produced no considered candidate, or a positive count with its final ordinal and URL for an attempted or no-legal-path branch. Legacy observations without the metadata pair remain readable under the preceding compatibility rule.
 
 Missing `research_access` in a legacy profile SHALL remain schema-readable and SHALL be treated by HITL1 checks as unprobed, not as available. The Profile contract SHALL NOT store a derived gate verdict, response body, query text or history, candidate URL list, retry list, or HTTP status matrix for this observation.
 
@@ -49,7 +51,7 @@ Missing `research_access` in a legacy profile SHALL remain schema-readable and S
 
 - **WHEN** an available observation records `eligible_candidate_count: 3` and `final_candidate_ordinal: 3`, or an unavailable no-candidate observation records `eligible_candidate_count: 0` without an ordinal
 - **THEN** ProfileSchema SHALL accept the observation when its status-specific facts are otherwise valid
-- **AND** it SHALL reject an ordinal without a positive count, an ordinal greater than the count, a count outside `0..3`, or an ordinal on a zero-count observation
+- **AND** it SHALL reject an ordinal without a positive count, an ordinal greater than the count, a count outside `0..3`, an ordinal on a zero-count observation, an available observation with zero candidate count, or a metadata-bearing positive-count observation without its final `result_url`
 
 #### Scenario: legacy observation remains readable without candidate metadata
 
