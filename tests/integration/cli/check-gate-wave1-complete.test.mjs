@@ -958,12 +958,22 @@ describe('check-gate-wave1-complete', () => {
     const submission = submitWave1WorkUnit(dir);
     assert.equal(submission.submitted.ok, true);
     writeWave1Trace(dir);
-    const result = runGate(dir);
-    const output = JSON.parse(result.stdout);
-    assert.equal(output.check.passed, false);
-    assert.ok(output.inspect.some(m => m.includes('depth-review.yaml')), `Expected missing depth review fail: ${JSON.stringify(output.inspect)}`);
-    assert.equal(output.inspect.some((line) => /source_novelty_floor|source_claim_cache_mapping|profile check/.test(line)), false);
-    assert.ok(output.check.masked_rule_ids.some((id) => id.includes('source_novelty_floor')));
+    const gateResult = runGate(dir);
+    const gateOutput = JSON.parse(gateResult.stdout);
+    const inspectResult = runInspect(dir);
+    const inspectOutput = JSON.parse(inspectResult.stdout);
+    for (const output of [gateOutput, inspectOutput]) {
+      assert.equal(output.check.passed, false);
+      assert.ok(output.check.failed_rule_ids.includes('per_topic_depth_review_contract'));
+      assert.ok(output.inspect.some((line) => line.includes('depth-review.yaml')), `Expected missing depth review fail: ${JSON.stringify(output.inspect)}`);
+      assert.equal(output.inspect.some((line) => /source_novelty_floor|source_claim_cache_mapping|profile check/.test(line)), false);
+      assert.ok(output.check.masked_rule_ids.some((id) => id.includes('source_novelty_floor')));
+      assert.equal(output.hints.some((hint) => /source_novelty_floor|source_claim_cache_mapping/.test(hint.rule_id)), false);
+    }
+    assert.deepEqual(
+      inspectOutput.check.failed_rule_ids.filter((id) => gateOutput.check.failed_rule_ids.includes(id)).sort(),
+      gateOutput.check.failed_rule_ids.filter((id) => inspectOutput.check.failed_rule_ids.includes(id)).sort(),
+    );
   });
 
   it('12. fails when depth review has too few exact-new source URLs', () => {

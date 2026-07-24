@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-gate-wave0-complete.mjs — evaluates gate-wave0-complete rules
-// @impl GSK-001, GSK-002, GSK-004, RWG-004, RWG-007, RWG-018, FRE-003
+// @impl GSK-001, GSK-002, GSK-004, GSK-013, RWG-004, RWG-007, RWG-018, RWG-021, FRE-003
 // Usage: node check-gate-wave0-complete.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import {
@@ -17,6 +17,7 @@ import {
   writeGateAttempt,
 } from '../../engine/helpers/gate-helpers.mjs';
 import { evaluateWave0Contract } from '../../engine/helpers/wave-contract-evaluators.mjs';
+import { evaluateWaveDegradationEligibility } from '../../engine/helpers/wave-degradation-eligibility.mjs';
 import {
   buildContractEvaluation,
   makeContractFinding,
@@ -110,11 +111,6 @@ advice.push(...ruleEvaluation.advice);
 const failedRuleIds = new Set(ruleEvaluation.failed_rule_ids);
 
 const DEGRADATION_FATIGUE_THRESHOLD = 3;
-const DEGRADATION_ELIGIBLE_RULE_IDS = new Set(['shared_ref_count_floor', 'per_topic_count_floor']);
-
-function baseRuleId(ruleId) {
-  return String(ruleId || '').split(':')[0];
-}
 
 function engineVisibleAttemptCount() {
   const events = readTraceEvents(bundlePath);
@@ -135,9 +131,9 @@ function maybeDegradedHandoff() {
   const effectiveAttemptCount = Math.max(args.attempt ?? 0, engineVisibleAttemptCount());
   if (effectiveAttemptCount < DEGRADATION_FATIGUE_THRESHOLD) return null;
 
-  const failed = [...failedRuleIds].sort();
-  const ineligible = failed.filter((ruleId) => !DEGRADATION_ELIGIBLE_RULE_IDS.has(baseRuleId(ruleId)));
-  if (ineligible.length > 0) {
+  const eligibility = evaluateWaveDegradationEligibility({ definition, ruleEvaluation });
+  if (!eligibility.eligible) {
+    const ineligible = eligibility.ineligible_rule_ids;
     inspect.push(`[degraded_not_eligible] Fatigue threshold reached, but runtime-truth or structural blocker(s) remain: ${ineligible.join(', ')}`);
     return null;
   }
@@ -146,14 +142,14 @@ function maybeDegradedHandoff() {
     inspect.push(`[degraded_not_eligible] Normal pass route is unavailable for ${args.currentNode}; cannot emit degraded handoff.`);
     return null;
   }
-  inspect.push(`[degraded] Fatigue threshold reached; carrying forward degradation-eligible quality rule(s): ${failed.join(', ')}`);
+  inspect.push(`[degraded] Fatigue threshold reached; carrying forward degradation-eligible quality rule(s): ${eligibility.eligible_rule_ids.join(', ')}`);
   advice.push('[degraded] Consume check.next through enter-phase and advance-status. This is a legal handoff witness only, not a clean quality pass or target-phase completion proof.');
   return {
     routing,
     extraCheck: {
       degraded: true,
       degraded_reason: 'fatigue_threshold_reached_with_only_degradation_eligible_quality_rules',
-      degraded_rules: failed,
+      degraded_rules: eligibility.eligible_rule_ids,
       degradation_attempt_count: effectiveAttemptCount,
     },
   };

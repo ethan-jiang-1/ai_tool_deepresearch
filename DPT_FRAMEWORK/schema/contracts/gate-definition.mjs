@@ -65,6 +65,7 @@ const GateDefinitionRuleBaseSchema = z.object({
   sources: z.array(DescriptorEntrySchema).min(1).optional(),
   finding: GateFindingSourceSchema,
   repair: GateDefinitionRepairSchema.optional(),
+  degradation_eligible: z.boolean().default(false),
 }).passthrough();
 
 const DESCRIPTOR_KEYS = ['target', 'targets', 'fields', 'sources'];

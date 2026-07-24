@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.47
+
+- Wave Gates now read degradation eligibility from parsed, default-false rule metadata through one exact-rule-ID helper. The existing Wave0/Wave1 quality-floor policy is preserved; queue, provenance, structure, trace, lifecycle, and checker roots remain fail-closed.
+- Wave0/Wave1/Wave2 formal Gate paths retain one evaluator root projection and source-level mask context. Wave2 now consumes the common policy path, while its active definition intentionally declares no eligible rule.
+
 ## v0.46
 
 - Wave0 source-intake guidance now delivers the existing shared rich-reference template through the actual producer `requires` chain, while retained direct Sub-agent `reference` output and formal submitted backing remain authoritative.

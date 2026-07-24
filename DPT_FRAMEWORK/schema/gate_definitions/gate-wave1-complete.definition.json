@@ -46,6 +46,7 @@
       "target": "reference/*{topic}*.md",
       "threshold": 1,
       "threshold_source": "rb_profile.yaml#/research_style_params/wave1_per_topic_ref_floor",
+      "degradation_eligible": true,
       "failure_message": "Topic {topic} has fewer than 1 reference/*{topic}*.md rich MD file. Create at least one topic-slug-prefixed reference file per shared-reference-template.md.",
       "finding": { "source": "definition", "blocking_basis": "required_floor" },
       "repair": { "kind": "agent_action", "write_to": "reference/" }

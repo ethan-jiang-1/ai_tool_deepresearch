@@ -1,16 +1,17 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.46**
+> **DPT_FRAMEWORK v0.47**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.46
+## Current Release: v0.47
 
 - Wave0 source intake receives its existing rich-reference template at the actual authoring boundary; its Sub-agent remains the direct declared reference producer and formal submit remains the backing transition.
 - Wave1 returned work now presents the existing dry-submit disposition before formal submit, followed by the existing submitted-backed reference/index, depth review, return-map, and inspect closeout sequence.
+- Wave Gate feedback retains one root-first evaluator projection. Existing Wave0/Wave1 quality-floor degraded handoff policy is now schema-backed; Wave2 consumes the same fail-closed path but has no active eligible rule.
 
 ## 0. 禁用内置捷径（最高优先）
 

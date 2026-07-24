@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-gate-wave2-complete.mjs — evaluates gate-wave2-complete rules
-// @impl GSK-001, GSK-002, GSK-004, RWG-006, RWG-007, RWG-008, RWG-017, RWG-018
+// @impl GSK-001, GSK-002, GSK-004, GSK-013, RWG-006, RWG-007, RWG-008, RWG-017, RWG-018, RWG-021
 // Usage: node check-gate-wave2-complete.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import {
@@ -17,6 +17,7 @@ import {
   writeGateAttempt,
 } from '../../engine/helpers/gate-helpers.mjs';
 import { evaluateWave2Contract } from '../../engine/helpers/wave-contract-evaluators.mjs';
+import { evaluateWaveDegradationEligibility } from '../../engine/helpers/wave-degradation-eligibility.mjs';
 import {
   buildContractEvaluation,
   makeContractFinding,
@@ -94,7 +95,56 @@ const ruleEvaluation = buildContractEvaluation({
   maskedRuleIds: sharedEvaluation.masked_rule_ids,
   bypassSuspicion: sharedEvaluation.bypass_suspicion,
 });
-const routing = resolveRouting(args.transitions, args.currentNode, ruleEvaluation.passed ? 'passed' : 'failed');
+const inspect = [...templateInspect, ...ruleEvaluation.inspect];
+const advice = [...ruleEvaluation.advice];
+const failedRuleIds = new Set(ruleEvaluation.failed_rule_ids);
+const DEGRADATION_FATIGUE_THRESHOLD = 3;
+
+function engineVisibleAttemptCount() {
+  const events = readTraceEvents(bundlePath);
+  let startIndex = -1;
+  for (let index = events.length - 1; index >= 0; index--) {
+    if (events[index].event === 'load_complete' && events[index].entry === args.currentNode) {
+      startIndex = index;
+      break;
+    }
+  }
+  return events.slice(startIndex + 1)
+    .filter((event) => event.event === 'gate_attempt' && event.gate === definition.gate && event.currentNodeRef === args.currentNode)
+    .length + 1;
+}
+
+function maybeDegradedHandoff() {
+  if (failedRuleIds.size === 0 || !['phases/phase-wave0.md', 'phases/phase-wave1.md', 'phases/phase-wave2.md'].includes(args.currentNode)) return null;
+  const effectiveAttemptCount = Math.max(args.attempt ?? 0, engineVisibleAttemptCount());
+  if (effectiveAttemptCount < DEGRADATION_FATIGUE_THRESHOLD) return null;
+
+  const eligibility = evaluateWaveDegradationEligibility({ definition, ruleEvaluation });
+  if (!eligibility.eligible) {
+    inspect.push(`[degraded_not_eligible] Fatigue threshold reached, but runtime-truth or structural blocker(s) remain: ${eligibility.ineligible_rule_ids.join(', ')}`);
+    return null;
+  }
+  const routing = resolveRouting(args.transitions, args.currentNode, 'passed');
+  if (routing.kind !== 'next' || !routing.next) {
+    inspect.push(`[degraded_not_eligible] Normal pass route is unavailable for ${args.currentNode}; cannot emit degraded handoff.`);
+    return null;
+  }
+  inspect.push(`[degraded] Fatigue threshold reached; carrying forward degradation-eligible quality rule(s): ${eligibility.eligible_rule_ids.join(', ')}`);
+  advice.push('[degraded] Consume check.next through enter-phase and advance-status. This is a legal handoff witness only, not a clean quality pass or target-phase completion proof.');
+  return {
+    routing,
+    extraCheck: {
+      degraded: true,
+      degraded_reason: 'fatigue_threshold_reached_with_only_degradation_eligible_quality_rules',
+      degraded_rules: eligibility.eligible_rule_ids,
+      degradation_attempt_count: effectiveAttemptCount,
+    },
+  };
+}
+
+const degradedHandoff = maybeDegradedHandoff();
+const passedForHandoff = failedRuleIds.size === 0 || Boolean(degradedHandoff);
+const routing = degradedHandoff?.routing || resolveRouting(args.transitions, args.currentNode, passedForHandoff ? 'passed' : 'failed');
 const routingFailed = ['invalid_input', 'config_error'].includes(routing.kind);
 const finalEvaluation = buildContractEvaluation({
   checksRun: ruleEvaluation.checks_run,
@@ -104,17 +154,18 @@ const finalEvaluation = buildContractEvaluation({
 });
 emitDelegatedBypassDiagnostic(bundlePath, definition.gate, sharedEvaluation.bypass_suspicion);
 const result = buildGateResult({
-  passed: ruleEvaluation.passed && !routingFailed,
+  passed: passedForHandoff && !routingFailed,
   gate: definition.gate,
   currentNodeRef: args.currentNode,
   routing,
-  inspect: [...templateInspect, ...ruleEvaluation.inspect, ...(routing.inspect || [])],
-  advice: [...ruleEvaluation.advice, ...(routing.advice || [])],
+  inspect: [...inspect, ...(routing.inspect || [])],
+  advice: [...advice, ...(routing.advice || [])],
   findings: finalEvaluation.findings,
   bundlePath,
   extraCheck: {
     failed_rule_ids: finalEvaluation.failed_rule_ids,
     masked_rule_ids: finalEvaluation.masked_rule_ids,
+    ...(degradedHandoff?.extraCheck || {}),
   },
   attemptNumber: args.attempt ?? 0,
 });
@@ -137,6 +188,7 @@ try {
       masked_rule_ids: failureEvaluation.masked_rule_ids,
       trace_durable: false,
       gate_attempt_write_failed: true,
+      suppressed_pass_degraded: result.check?.degraded === true,
     },
     attemptNumber: args.attempt ?? 0,
   });

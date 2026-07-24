@@ -48,7 +48,7 @@ claims:
     proof_subject: deterministic_contract
     asset:
       kind: node_test
-      path: tests/integration/cli/wave-gate-degradation-policy.test.mjs
+      path: tests/integration/cli/check-gate-wave1-complete.test.mjs
     execution_profile:
       fixture: fixture_backed
       subject_execution: none

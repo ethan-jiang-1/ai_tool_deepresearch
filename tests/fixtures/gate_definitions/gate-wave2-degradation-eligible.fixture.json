@@ -1,0 +1,23 @@
+{
+  "gate": "wave2-complete",
+  "description": "Inactive test-only Wave2 degradation eligibility fixture.",
+  "rules": [
+    {
+      "id": "fixture_wave2_quality_floor",
+      "check": "count_floor",
+      "target": "reference/00-cross-*.md",
+      "threshold": 1,
+      "threshold_source": "rb_profile.yaml#/research_style_params/wave2_cross_topic_depth",
+      "degradation_eligible": true,
+      "failure_message": "Fixture Wave2 quality floor is not met.",
+      "finding": {
+        "source": "definition",
+        "blocking_basis": "required_floor"
+      },
+      "repair": {
+        "kind": "agent_action",
+        "write_to": "reference/"
+      }
+    }
+  ]
+}
