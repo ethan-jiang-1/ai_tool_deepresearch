@@ -97,6 +97,14 @@ Fresh current-gate evidence on 2026-07-25 also does **not** authorize the future
 
 `BUG-120` remains outside Change 1's closure claim: the delegated actor task can prove supplied-task delivery and native-chain compatibility, but cannot prove the Phase Agent loaded its separate reference guidance.
 
+### Post-Change-2 M4b Entry Decision
+
+On 2026-07-25, the three Change-3 entry axes were rerun against current framework assets. `tests/integration/cli/operate-queue.test.mjs` and `tests/integration/cli/operate-queue-validation.test.mjs` passed 44/44 on their fresh disposable-bundle fixtures. They cover parseable queue command output and exit status, valid/invalid topic and Wave1 assignment-mode admission with non-mutation refusals, and the queue location/repair invariants.
+
+A separate normal-path capture used `new-disposable-bundle.mjs` and only `operate-queue enqueue` as the authority mutation. The command returned exit `0`, one stdout JSON result with `ok: true`, an empty stderr stream, `m4b-entry-probe` in `active_window`, `queue_health: "thin"`, and `stop_authorization_state: "unauthorized_continue_required"`. The retained capture hashes were `rb_queue.json` before `619a33e1453bcbef1e2577e44a906f490c262f4fa0a9393f1ef0dd0b91e6d129`, after `87882025ce29e692797981df06d2d24627c11bfe691a8a67c4260fb33b772409`, and trace `c83d31c85b3de5526459f7438b0396af4841630a9a3a7af233d45da36d6424b1`. The temporary bundle was removed after capture; this is deterministic CLI evidence, not real-actor-flow closure evidence.
+
+No M4b entry red exists. Therefore `make-queue-reentry-outcome-truthful` remains a candidate name only, and no Change 3 proposal or implementation folder is created. The next possible behavior proposal remains gated by a newly captured direct owner failure.
+
 ### Change 2/3 Scope Split And Its Consequences
 
 The historical Change 2 candidate mixed two different questions: (a) whether a terminal attempt can mechanically yield one successor demand, and (b) whether queue CLI rendering, task admission, and derived queue health tell the truth about already-existing demand. Fresh evidence rejected the reported current failure for (b). It did not make it correct for the Phase Agent to reconstruct a successor task card from a terminal attempt's immutable snapshot.
