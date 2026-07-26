@@ -1,5 +1,7 @@
 # BUG-120: Wave1 reference metadata fields undocumented — Agent discovers via gate failures
 
+> **Disposition (2026-07-26): Closed.** The original guidance-delivery defect was fixed by `d65fe538a` (`make-wave-producer-contract-and-closeout-direct`): the shared reference template now reaches the Wave1 `requires` chain and the current static guidance regressions pass. A real `case-225` observation remains a separate content-validation opportunity; it is not evidence that this documented-contract defect is still present.
+
 | Field | Value |
 |-------|-------|
 | **Bug ID** | BUG-120 |

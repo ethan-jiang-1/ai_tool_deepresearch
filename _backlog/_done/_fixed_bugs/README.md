@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-07-25 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-07-26 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -125,11 +125,12 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-117 | 2026-07-25 | 结案：provenance/receipt/ledger roots 正确 fail-closed；不提供 unsafe degraded bypass |
 | BUG-118 | 2026-07-25 | Terminal snapshot 到一次 successor demand 的合法路径 — `make-terminal-work-replacement-direct` |
 | BUG-119 | 2026-07-25 | 结案：Wave1 assignment-mode admission 的拒绝不变更与有效入队均有当前回归证明 |
+| BUG-120 | 2026-07-26 | Wave1 reference guidance delivery 已由 `make-wave-producer-contract-and-closeout-direct`（`d65fe538a`）修复；12 项静态 guidance/case-225 contract 回归通过。真实 `case-225` 仍可作为独立内容验证，不作为本缺陷未修依据 |
 | BUG-121 | 2026-07-25 | 结案：修正 direct fact 后的高 attempt Gate 重跑未复现 stale `failed_rule_ids` |
 | BUG-122 | 2026-07-25 | 结案：有效 enqueue 后 queue health/stop projection 重新计算；不需要 raw unblock |
 | BUG-123 | 2026-07-25 | 结案：supplementary Wave1 `claim -> submit -> Gate` 建立新 immutable ledger row；不提供 amend/re-hash API |
 
-**Next available bug ID: BUG-125**
+**Next available bug ID: BUG-124**
 
 ---
 

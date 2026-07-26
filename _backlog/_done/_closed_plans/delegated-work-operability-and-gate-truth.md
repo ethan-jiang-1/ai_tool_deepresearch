@@ -96,7 +96,7 @@ Change 2, `make-terminal-work-replacement-direct`, completed Apply and was archi
 
 Fresh current-gate evidence on 2026-07-25 also does **not** authorize the future Gate candidate, `ensure-wave-gate-reevaluation-freshness`. The real lifecycle loop exercised failure, direct repair, and a third Engine-visible attempt at the fatigue threshold; that attempt passed and emitted the normal next-phase handoff. Wave1 depth-review tests retain Gate/inspect failed-rule parity, and the attempt diagnostic tests prove prior diagnostics are compared with, not substituted for, the current evaluation. `BUG-121` therefore has no reproduced current caching defect and no `--reset-fatigue`, force-re-evaluate, or stale-projection change is justified. A new proposal requires a fresh minimal repro in which a corrected direct fact remains in the current Gate's `failed_rule_ids`.
 
-`BUG-120` remains outside Change 1's closure claim: the delegated actor task can prove supplied-task delivery and native-chain compatibility, but cannot prove the Phase Agent loaded its separate reference guidance. Its real content-evidence question remains active independently; it does not block this plan's closure.
+`BUG-120`'s original guidance-delivery defect is closed: the delegated actor task and Phase now receive the existing template through their real guidance paths. A real `case-225` observation can still provide separate content-validation evidence, but its absence does not keep the documented-contract defect open or block this plan's closure.
 
 ### Post-Change-2 M4b Entry Decision
 
@@ -259,14 +259,14 @@ Required proof: corrected direct artifact removes its own failed rule on a high-
 ### Independent Closure Evidence (Not Plan Dependencies)
 
 - `BUG-117` is an evidence-backed rejection of an unsafe degraded-pass request. Its closure is the documented provenance fail-closed contract and its upstream legal submit/replacement paths, not a new bypass change.
-- `BUG-120` remains `NOT_RUN`: only a real loaded-guidance observation can close that delivery claim. It remains a separate active content-evidence question; it does not expand Change 1, Change 2, Change 3, or Change 4.
+- `BUG-120` is closed for the guidance-delivery defect. A real `case-225` observation remains separate content-validation evidence; it does not expand Change 1, Change 2, Change 3, or Change 4.
 - `BUG-123` is closed by two deliberately separate proofs: Change 2 proves that replacement never mutates a historical ledger row, while current `claim -> submit -> Gate` coverage proves a supplementary Wave1 work unit can establish a new immutable row with the novelty fact. Neither proof authorizes an amend API.
 
 ## Recorded Closure Boundaries
 
 - Close BUG-117 as a misdiagnosed request only after the plan records the accepted provenance fail-closed contract and its upstream operability dependencies.
 - Close BUG-118's original dead-end report by evidence-backed disposition, not by claiming that Change 2 repaired a non-reproduced queue failure. Change 2 closed only its separate manual-successor reconstruction burden through the archived and verified `edc3c614f` implementation.
-- Close BUG-120 only after a real `case-225` run proves that the current Phase/actor `requires` chain delivered the complete template and the resulting reference passes the official inspect. Static source inspection alone is not a real Agent-flow claim.
+- A real `case-225` run may independently prove that a Phase Agent followed the delivered guidance and reached official inspect. Static guidance and contract evidence already close BUG-120's documented-contract defect; the real run is not a closure prerequisite.
 - BUG-123's historical non-mutation invariant and its supplementary-new-source lifecycle are both covered by current deterministic Engine evidence; it is closed without adding an amend API.
 - BUG-116, BUG-119, BUG-121 and BUG-122 may be reclassified only from captured fresh evidence, never from an incident command transcript that suppressed stderr or reused contaminated state.
 - An evidence-backed invalid premise or misdiagnosed request is a disposition, not a fictitious implementation fix. A real defect is "fixed" only when its named OpenSpec change is proposed, applied, tested at the correct verification layer, and archived. A static wording update, console output, or manual bundle repair is not closure evidence.
@@ -298,4 +298,4 @@ Required proof: corrected direct artifact removes its own failed rule on a high-
 - `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md`
 - `DPT_FRAMEWORK/workflows/nodes/shared/shared-reference-template.md`
 - `openspec/changes/archive/2026-07-25-make-terminal-work-replacement-direct/`
-- `_backlog/_done/_fixed_bugs/BUG-114-*.md` through `BUG-123-*.md`, plus active `_backlog/bugs/BUG-120-*.md`
+- `_backlog/_done/_fixed_bugs/BUG-114-*.md` through `BUG-123-*.md`

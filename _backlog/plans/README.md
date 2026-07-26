@@ -17,7 +17,9 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
+| `conversation-capture-host-capabilities` | 核查 Codex 与 Claude Code 是否能保留每次用户/Agent 交流；结论是只有 framework-owned app-server / Agent SDK / stream-json integration 才能给完整 ledger，独立客户端会话仅可 best-effort 观察 | research / scoping（无固定 OpenSpec change） |
 | `silent-autonomous-execution` | 承接 `source_bugs: BUG-099/103/104/106`（stop-no halt、status drift、context pollution、stop-no-violation-repeats）。独立 research backlog：把「静默自主」拆成 DPT 可确定性修复的 phase-entry correctness 与一般 coding-agent/host 是否发起下一 turn 的 actor liveness 两层，分开研究与证明；不阻塞 wave-remediation 三个已收敛 change | research / scoping（无固定 OpenSpec change） |
+| `evidence-production-and-phase-projection-boundaries` | 承接 BUG-124--131。先做一次 falsification（现有 `wave0_source_intake` 是否已能合法产出并计入 shared reference；BUG-129 的 0/80 是否为 `submitted_source_backing_missing`），再以三项 OpenSpec change 按 source of record 拆分：Seed canonical authoring、queue demand admission、跨 Wave evidence ownership/projection。另有一项无人认领的 policy 决定：shared-ref floor 公式（`base 6 + per_topic 2` → 22）。详尽系统审查置于同名子目录 | research / scoping（无固定 OpenSpec change） |
 
 ---
 
@@ -35,7 +37,7 @@
 
 | Plan | 关闭依据 |
 |------|----------|
-| `delegated-work-operability-and-gate-truth` | Change 1/2 已 archive；Change 3/4 无 fresh red，BUG-120 的真实内容证据保留为独立 active `NOT_RUN`，不阻塞计划关闭（CLS-036） |
+| `delegated-work-operability-and-gate-truth` | Change 1/2 已 archive；Change 3/4 无 fresh red，BUG-120 的 guidance-delivery 缺陷已结案；真实 `case-225` 保留为独立内容验证（CLS-036） |
 
 ## 最近关闭 (2026-07-21)
 

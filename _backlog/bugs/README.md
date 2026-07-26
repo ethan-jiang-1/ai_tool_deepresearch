@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-07-25 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-07-26 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -21,11 +21,19 @@
 | [BUG-103](BUG-103-status-gate-drift-between-phases.md) | P3 | 跨 phase | rb_status.json gate 字段在 phase transition 后持续漂移，需手动 advance-status |
 | [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | enter-phase 每次渲染完整 shared context 造成累积 context 压力 |
 | [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P1 | wave0→wave1 | stop: no violation 再现 — agent 输出总结但不执行下一 phase |
-| [BUG-120](BUG-120-wave1-ref-metadata-fields-undocumented.md) | P2 | wave1 | Wave1 reference guidance 的真实 loaded-guidance 证据仍缺失 |
+| [BUG-124](BUG-124-shared-ref-agent-action-hint-misleading.md) | P2 | wave0 | shared_ref_count_floor 的 repair hint 误导 Phase Agent 做无法通过的 agent_action 修复 |
+| [BUG-125](BUG-125-queue-payload-validation-at-claim-not-enqueue.md) | P2 | wave0 | queue item payload 在 claim 时才校验，enqueue 不校验，unclaimable items 需手动编辑 rb_queue.json |
+| [BUG-126](BUG-126-seed-topic-yaml-roundtrip-fragility.md) | P2 | seed-topics | seed topic YAML frontmatter hand-author 与 Engine parse 之间的 round-trip 断裂，错误只在 complete 时暴露 |
+| [BUG-127](BUG-127-must-answer-exact-match-not-signaled.md) | P3 | seed-topics | must_answer 精确匹配 contract 未在 task brief 和 authoring template 中明确告知 Agent |
+| [BUG-128](BUG-128-wave0-shared-ref-threshold-impractical.md) | P3 | wave0 | wave0_shared_ref_total 公式计算与实际 sub-agent 执行模型不匹配，22 shared refs 无法达成 |
 
 > BUG-099/103/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 计划承接，仍属活跃 bug。
 
-**Next available bug ID: BUG-124**
+| [BUG-129](BUG-129-wave1-ref-materialization-same-bypass.md) | P2 | wave1 | Wave1 per-topic reference 物化与 BUG-124 相同的 delegated_bypass 问题 |
+| [BUG-130](BUG-130-wave2-pure-synthesis-vs-gate-contradiction.md) | P1 | wave2 | Wave2 pure synthesis path 与 gate contract 矛盾，Phase Agent 物化被标记为 delegated_bypass |
+| [BUG-131](BUG-131-degraded-pass-inconsistency-wave2-vs-wave0-wave1.md) | P1 | wave2 | Degraded pass 策略在 wave0/wave1 和 wave2 之间不一致，导致 HITL2 无法进入 |
+
+**Next available bug ID: BUG-132**
 
 ## 最近关闭 (2026-07-25)
 
@@ -37,6 +45,7 @@
 | BUG-116 / BUG-119 / BUG-122 | 新鲜 disposable-bundle queue evidence 与 current focused regressions 未复现历史 defect |
 | BUG-117 | provenance Gate 的 fail-closed 是正确的 integrity boundary，不建立 degraded bypass |
 | BUG-118 | `make-terminal-work-replacement-direct` 已归档，提供 terminal snapshot -> successor demand -> normal claim 路径 |
+| BUG-120 | `make-wave-producer-contract-and-closeout-direct` 已交付 Wave1 reference guidance；真实 `case-225` 保留为独立内容验证，不作为未修 bug |
 | BUG-121 | 高 attempt 下修正 direct fact 后，当前 Gate evaluation 未复现 stale verdict |
 | BUG-123 | supplementary Wave1 `claim -> submit -> Gate` 已通过，新增 immutable row 满足新 source，而非修改历史 declaration |
 
