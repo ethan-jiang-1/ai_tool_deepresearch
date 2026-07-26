@@ -1,0 +1,44 @@
+schema_version: verification-routing/v1
+change: align-wave0-shared-reference-guidance
+test_classes:
+  unit:
+    status: selected
+    rationale: Submitted-output ledger counting and canonical-seed fixture setup are focused deterministic helper contracts.
+  integration:
+    status: selected
+    rationale: The Wave0 production gate CLI must expose the definition-owned legal repair coordinate against a temporary bundle.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: This change adds no lifecycle route or workflow-scale state chain; a long chain would duplicate the selected focused proof.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change corrects deterministic guidance/feedback coordinates and does not claim proof of Subject Agent behavior.
+claims:
+  - id: submitted-shared-reference-counts-through-current-admission
+    statement: A canonical-seed-bound Wave0 source-intake submission may declare a real reference/00-shared output with source_url, the submitted-ledger count includes it under the shared glob, and a direct Phase-created orphan remains uncountable.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/ref-count.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-shared-floor-feedback-names-delegated-producer
+    statement: The production Wave0 gate rejects an unmet shared-reference floor and returns repair coordinates that direct the Agent to the existing delegated wave0 source-intake submission path, not a direct write under reference/.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-wave0-shared-reference-guidance.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

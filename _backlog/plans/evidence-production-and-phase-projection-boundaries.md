@@ -30,7 +30,7 @@ producer — so the plan now opens with a falsification step and marks the
 affected designs as contingent. Facts carry `file:line` anchors; where prose
 and an anchored fact disagree, the anchored fact wins.
 
-**Execution update (2026-07-26):** Change 1 is complete and archived as
+**Execution update (2026-07-27):** Change 1 is complete and archived as
 [`2026-07-26-canonical-seed-authoring`](../../openspec/changes/archive/2026-07-26-canonical-seed-authoring/).
 It established the single structured `enrich_seed` writer, parsed-value
 canonical binding, frontmatter/body ownership boundary, in-window repair
@@ -39,8 +39,15 @@ or a seed migration. The intervening validation maintenance change,
 [`2026-07-26-repair-retired-spec-validation`](../../openspec/changes/archive/2026-07-26-repair-retired-spec-validation/),
 is also complete and archived: it repaired the two retired-spec tombstones
 without restoring their legacy runtime behavior. Change 2,
-`converge-queue-demand-admission`, is now the selected next change; it remains
-unimplemented and requires its own OpenSpec proposal before target-code work.
+`converge-queue-demand-admission`, is complete and archived as
+[`2026-07-27-converge-queue-demand-admission`](../../openspec/changes/archive/2026-07-27-converge-queue-demand-admission/).
+It introduced one current-facts delegated admission path across enqueue, check,
+claim and existing stale repair, without a stored verdict or in-flight rewrite.
+Step 0 has now established the existing Wave0 producer path by static contract
+evidence; the next selected change is the narrow Wave0 guidance/repair-hint
+alignment below. The remaining Wave1/Wave2 questions stay sequenced behind
+their own proof or source-of-record decision rather than being bundled into one
+unbounded evidence change.
 
 The project is an agentic research framework. The Agent searches, reads,
 writes research and synthesis; Markdown carries Agent Flow; the JavaScript
@@ -160,10 +167,14 @@ record.
 
 | Order | Candidate change | System interface it establishes | Bugs | Status |
 | --- | --- | --- | --- | --- |
-| 0 | `shared-reference-producer-falsification` (investigation, not a change) | Whether a legal shared-reference producer already exists, and what the floor should be | 124, 128 | pending |
+| 0 | `shared-reference-producer-falsification` (investigation, not a change) | Whether a legal shared-reference producer already exists, and what the floor should be | 124, 128 | static contract confirmed; focused fixture requires repair; live proof NOT_RUN |
 | 1 | `canonical-seed-authoring` | How a canonical Topic identity and Agent-authored enrichment become one valid seed file | 126, 127 | complete, archived 2026-07-26 |
-| 2 | `converge-queue-demand-admission` | When a queue demand is proved claimable, and what terminates one that is not | 125 | selected next |
-| 3 | `unify-evidence-ownership-and-projections` | How every Wave artifact is classified as delegated acquisition, Phase projection, or unbacked output | 124, 128, 129, 130, 131 | pending, contingent on Step 0 |
+| 2 | `converge-queue-demand-admission` | When a queue demand is proved claimable, and what terminates one that is not | 125 | complete, archived 2026-07-27 |
+| 3 | `align-wave0-shared-reference-guidance` | Make the existing submitted Wave0 shared-reference producer and gate repair feedback agree | 124 | selected next |
+| 4 | `decide-wave0-shared-reference-floor` | Record the policy decision and owner for the profile-computed shared-reference floor | 128 | pending human/product decision |
+| 5 | `repair-wave1-projection-source-backing` | Align Wave1 producer facts with the existing backed-projection classifier | 129 | pending repaired deterministic proof or selected failing bundle |
+| 6 | `reconcile-wave2-existing-backed-synthesis` | Reconcile existing-backed Wave2 synthesis with finding-contract receipt demands | 130 | pending source-of-record review |
+| 7 | `preserve-existing-wave-degradation-policy` | Retain the accepted eligibility split while upstream roots are fixed | 131 | no implementation change planned |
 
 Changes 1, 2 and 3 are separate because each answers a bounded question against
 a *different source of record*: canonical Topic identity lives in
@@ -174,30 +185,52 @@ but not to queue admission, and so folded a third source of record into
 Change 3. Change 2 is also a *prerequisite* for any new demand kind, which is a
 sequencing reason, not a reason to merge.
 
-Splitting the evidence work by Wave would recreate the same ownership rule three
-times, so Change 3 stays cross-Wave.
+The former cross-Wave Change 3 is retired as a single implementation unit. It
+mixed a confirmed Wave0 guidance defect, a still-unowned floor decision, and
+unproven Wave1/Wave2 roots. The order above keeps each next change bounded by
+one authority question and gives the reader one normal reasoning stop point.
 
 ### Step 0: falsify before designing
 
-Two Change-3 sub-goals are now blocked on evidence, because the code says the
-gap may not exist:
+**Quick investigation update (2026-07-27):** the static contract evidence
+supports the falsification premise, but this is not a completed live
+`agent_flow_e2e` proof. `validateOutputFiles()` accepts any safe declared
+output with an allowed role and requires a `source_url` for a `reference`
+(`engine/work-unit-validation.mjs:382-445`); `wave0_source_intake` permits
+that role, and `countReferences()` consumes submitted `reference` outputs by
+path before applying the shared-reference glob
+(`engine/helpers/ref-count.mjs:230-255`). The existing focused ref-count cases
+are intended to exercise both a submitted `00-shared-*` reference and a backed
+Wave1 Phase projection. On 2026-07-27 they stopped earlier at claim because
+their fixture lacks the canonical seed binding now required by queue-demand
+admission, so they are recorded as **NOT_RUN at the reference boundary**, not
+as evidence of a reference-contract rejection. The Wave1 classifier directly
+names `submitted_source_backing_missing` when the reference URL is absent from
+submitted source/cache backing, and otherwise accepts the Phase projection
+(`engine/helpers/gate-helpers-checks.mjs:592-619`). No real Agent/sub-agent run
+or failing BUG bundle ledger was supplied for this investigation.
 
-1. **Does a shared reference already have a legal producer?** Run one
-   disposable `agent_flow_e2e` in which a `wave0_source_intake` unit submits a
-   `reference/00-shared-<slug>.md` as an extra `output_files` entry with role
-   `reference` and a real `source_url`. Per
-   `work-unit-validation.mjs:382-445`, `work-unit-constants.mjs:35` and
-   `ref-count.mjs:231-239` this should submit cleanly, classify as
-   `delegated_fetched_evidence`, and count toward `shared_ref_count_floor`.
-   - If it passes, then `wave0_shared_foundation` and the `operate-queue`
-     shared-foundation demand operation are **not** required. BUG-124 reduces to
-     a wrong `repair` block in
-     `gate-wave0-complete.definition.json:45` plus the `"optionally write"`
-     wording in `phase-wave0.md:88-91` and
-     `subagent-dpt-source-intake.md:139`. Both are data/prose fixes.
-   - Only if it fails does a new acquisition kind become justified, and the
-     failing root must be named before proposing one.
-2. **Why did 80 backed-looking Wave1 references count as 0?**
+**Planning consequence:** do not propose a new `wave0_shared_foundation` kind
+from the old report. Select `align-wave0-shared-reference-guidance` next: it
+will correct the Wave0 repair feedback and make the existing delegated producer
+expectation explicit, while repairing the focused deterministic proof fixture.
+The floor remains a later explicit decision, and Wave1/Wave2 retain their own
+evidence gates before proposal.
+
+### Evidence conditions for later changes
+
+The static Wave0 contract is sufficient to make the selected guidance and
+repair-hint correction: `wave0_shared_foundation` and a new queue operation are
+not justified. The selected change repairs the current focused deterministic
+fixture instead of adding an Agent-flow E2E. A real disposable Agent run is
+optional diagnostic evidence only if a future implementation claim needs to
+establish Agent behavior; it is not a planning or apply prerequisite here.
+
+Wave1 and Wave2 remain separate because their suspected roots are not Wave0
+producer defects. Before proposing the Wave1 successor, select a real failing
+bundle or repair its focused fixture to reach the reference-authority boundary:
+
+1. **Why did backed-looking Wave1 references count as 0?**
    `classifyReferenceAuthority()` already passes a Wave1 topic reference whose
    `source_url` is bound to submitted accepted URLs and whose body cites
    submitted backing (`gate-helpers-checks.mjs:592-620`), and `ref-count`
@@ -205,12 +238,16 @@ gap may not exist:
    in BUG-129 most likely lands at `submitted_source_backing_missing`
    (`:593-603`) because the Wave1 producer contract makes `source_claims`
    optional (`work-unit-constants.mjs:56-60`) and the URLs were never submitted.
-   If so, the root cause is the **Wave1 producer contract**, not classification,
-   and Change 3's Wave1 work changes shape entirely.
+   If so, the root cause is the **Wave1 producer contract**, not classification.
+2. **Does existing-backed Wave2 synthesis meet the finding receipt contract?**
+   Select the accepted finding-contract source and a failing receipt example
+   before proposing a Wave2 delta. Do not infer a Wave2 repair from a Wave1
+   projection result.
 
-Read the failing bundle's `rb_output_declarations.jsonl` and one rejected
-reference before writing either delta spec. A proposal that assumes the gap
-without this evidence will implement machinery the engine does not need.
+Each later proposal must read the selected bundle's
+`rb_output_declarations.jsonl` and one affected artifact before writing a delta
+spec. A proposal that assumes either gap without that evidence would implement
+machinery the Engine may not need.
 
 ### The unowned decision: the shared-reference floor
 
@@ -304,7 +341,15 @@ is rejected before seed completion; a `must_answer` rewrite is reported when it
 happens rather than at completion; no normal seed authoring flow requires an
 Agent to escape YAML or duplicate a registry field.
 
-## Change 2: `converge-queue-demand-admission` (selected next)
+## Change 2: `converge-queue-demand-admission` (complete)
+
+**Archived OpenSpec:** `2026-07-27-converge-queue-demand-admission`.
+
+**Delivered boundary:** a shared current-facts evaluator now admits only
+unclaimed delegated demand with an explicit registered kind, current canonical
+Topic/finding facts and a resolvable closed assignment contract. Enqueue,
+check, claim and `repair --remove-stale` use it; non-delegated completion and
+claimed in-flight terminal ownership remain separate.
 
 **Goal:** make the enqueue-time and claim-time answer to "is this demand
 claimable?" come from one evaluator, so a card cannot be accepted and reported
@@ -337,11 +382,35 @@ claim; every work-unit kind is covered at both boundaries; both boundaries
 resolve the topic binding against the canonical registry; a legacy unclaimable
 card has one legal terminal path that is not direct queue-file editing.
 
-## Change 3: `unify-evidence-ownership-and-projections`
+## Former Change 3: `unify-evidence-ownership-and-projections` (split)
 
-**Goal:** make every Wave producer, projection and gate consume one ownership
-model, so a legal Phase output never looks like a delegated bypass and a new
-source can never masquerade as a projection.
+This former umbrella is not proposed as one change. Its goal remains useful,
+but implementation proceeds through the ordered successors above so one Wave's
+unproven source facts cannot broaden another Wave's repair.
+
+### Change 3: `align-wave0-shared-reference-guidance` (selected next)
+
+**Goal:** make the existing Wave0 submitted shared-reference producer visible
+and make `shared_ref_count_floor` feedback name that legal delegated path,
+instead of directing the Phase Agent to create an unbacked file.
+
+**Scope:** correct the definition-owned repair feedback and Wave0 producer
+guidance; make the shared-reference output expectation non-discretionary for
+the existing producer; repair the focused deterministic fixture so it reaches
+the submitted-reference/count boundary under current canonical-topic admission.
+It SHALL NOT add a work-unit kind, queue operation, terminal path, floor value,
+derived health state, or Agent-flow E2E.
+
+**Done when:** a focused production-path proof submits an existing
+`wave0_source_intake` shared reference and the count accepts it; the missing
+shared-reference hint names the existing legal delegated path; direct Phase
+file creation remains unbacked; and the profile floor is unchanged pending
+Change 4's explicit decision.
+
+### Deferred Successors
+
+The remaining bullets are retained as discovery context for Changes 5-7, not
+as implementation permission for the selected Wave0 change.
 
 Scope is contingent on Step 0. The bullets below are written as conditionals on
 purpose; converting one into an unconditional task without its falsification
