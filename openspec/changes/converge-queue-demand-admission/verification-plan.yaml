@@ -1,0 +1,44 @@
+schema_version: verification-routing/v1
+change: converge-queue-demand-admission
+test_classes:
+  unit:
+    status: selected
+    rationale: One pure evaluator must preserve current kind, canonical binding and assignment-contract distinctions without queue or work-unit mutation.
+  integration:
+    status: selected
+    rationale: Existing enqueue, check, claim and repair CLIs cross the queue, canonical-plan and work-unit transaction boundaries over temporary bundles.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: This change adds no lifecycle route or workflow-scale deterministic chain; a long chain would not add proof beyond the selected CLI boundaries.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: Admission is an Engine-only deterministic contract and does not alter Agent judgment or Agent-facing workflow procedure.
+claims:
+  - id: shared-admission-is-pure-and-complete
+    statement: The queue-demand evaluator covers registered kinds, resolves current canonical Topic binding and closed assignment facts, returns one direct rejection without queue/index/envelope mutation, and rejects caller-authored or stale contract inputs.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/queue-demand-admission.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: cli-boundaries-share-admission-and-terminal-ownership
+    statement: Production queue CLI rejects invalid enqueue, reports an existing invalid demand without mutation, keeps claim batch allocation atomic, removes only rejected unclaimed legacy demand through existing repair, and fails closed for rejected in-flight work.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-queue-demand-admission.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
