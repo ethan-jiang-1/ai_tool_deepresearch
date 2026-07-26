@@ -2,12 +2,14 @@
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { createTempDir } from '../../helpers/temp-dirs.mjs';
 import { applyCanonicalTopicState, evaluateCanonicalSeedBindings, inspectCanonicalTopicState, recoverCanonicalTopicState } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
 import { diffSnapshots, snapshotTree } from '../../helpers/authority-snapshot.mjs';
 import { claimAndSubmitWorkUnit } from '../work-unit-test-helpers.mjs';
+import { writeGateAttempt } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 
 const dirs = [];
 after(() => dirs.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
@@ -35,14 +37,21 @@ function authorizeRerun(dir) {
     { event: 'load_complete', entry: 'phases/phase-rerun.md', handoff_source_gate: 'hitl2-recorded', handoff_source_node: 'phases/phase-hitl2.md', handoff_target_node: 'phases/phase-rerun.md', handoff_source_attempt_index: 0 },
   ].map(JSON.stringify).join('\n') + '\n');
 }
+function authorizeSeedTopics(dir) {
+  writeFileSync(join(dir, 'rb_status.json'), JSON.stringify({ current_mode: 'execution', state: 'in_progress', current_gate: 'setup_ready', next_gate: 'seed_topics_ready', current_node: 'phases/phase-setup.md' }));
+  writeGateAttempt(dir, {
+    check: { passed: true, gate: 'setup-ready', currentNodeRef: 'phases/phase-setup.md', next: 'phases/phase-seed-topics.md', failed_rule_ids: [] },
+    routing: { kind: 'next', next: 'phases/phase-seed-topics.md' },
+    inspect: [], advice: [],
+  }, { setupReadyStaged: true });
+  const entered = spawnSync('node', ['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', dir, '--node', 'phases/phase-seed-topics.md'], { encoding: 'utf8' });
+  assert.equal(entered.status, 0, entered.stderr);
+}
 const input = { context: 'hitl1', actions: [{ action: 'add_topic', title: 'Topic A', slug_stem: 'topic-a', must_answer: ['What?'], scope_role: 'primary', depends_on_topic_uids: [] }] };
 const SEED_HEADINGS = [
   '## 主题定位',
-  '## must_answer',
   '## 初始假设、缺口或张力',
   '## why now',
-  '## 研究边界与不深挖范围',
-  '## 证据锚点与优先来源',
   '## 为什么对最终交付物重要',
   '## 下游位置（可选）',
   '## ═══ 研究轮次追加区 ═══',
@@ -133,7 +142,7 @@ describe('canonical topic state', () => {
     const headings = appendix.split(/\r?\n/)
       .filter((line) => SEED_HEADINGS.includes(line));
     const tokens = [...contract.matchAll(/__BACKFILL_[A-Z0-9_]+__/g)].map((match) => match[0]);
-    assert.deepEqual(headings, SEED_HEADINGS.slice(8));
+    assert.deepEqual(headings, SEED_HEADINGS.slice(5));
     assert.deepEqual(tokens, SEED_BACKFILL_TOKENS);
     for (const heading of headings) assert.ok(rendered.includes(heading), heading);
     for (const token of tokens) assert.equal(rendered.split(token).length - 1, 1, token);
@@ -167,10 +176,61 @@ describe('canonical topic state', () => {
     assert.match(updated, /title: Topic A revised/);
     assert.match(updated, /scope_role: comparison/);
   });
+  it('round-trips parsed canonical values and preserves the exact enrichment body suffix', () => {
+    const dir = bundle('topic-seed-enrichment-suffix');
+    const specialInput = {
+      context: 'hitl1',
+      actions: [{
+        ...input.actions[0],
+        must_answer: ['quoted: "value"', 'first line\nsecond line', 'CJK Unicode: 研究 cafe\u0301'],
+      }],
+    };
+    applyCanonicalTopicState({ bundlePath: dir, input: specialInput });
+    const topic = inspectCanonicalTopicState({ bundlePath: dir }).topics[0];
+    const seedPath = join(dir, `seed_topics/${topic.slug}.md`);
+    const initial = readFileSync(seedPath, 'utf8');
+    const initialFrontmatter = parseYaml(initial.match(/^---\n([\s\S]*?)\n---/)[1]);
+    assert.deepEqual(initialFrontmatter.must_answer, specialInput.actions[0].must_answer);
+    const header = initial.match(/^---\n[\s\S]*?\n---\n/)[0];
+    const suffix = '\n# Agent-authored positioning\n\n## must_answer\n\nlegacy duplicate prose\n\n## ═══ 研究轮次追加区 ═══\n__BACKFILL_WAVE0_EVIDENCE__\n\n## 本轮重跑方向\n\n- retained direction\n';
+    writeFileSync(seedPath, `${header}${suffix}`);
+    const planBefore = readFileSync(join(dir, 'rb_plan.md'), 'utf8');
+    authorizeSeedTopics(dir);
+    const result = applyCanonicalTopicState({
+      bundlePath: dir,
+      input: {
+        context: 'seed_topics', action: 'enrich_seed', topic_uid: topic.topic_uid,
+        enrichment: {
+          hypothesis: 'quoted: hypothesis', in_scope: 'scope: narrow', out_of_scope: 'exclude: broad',
+          search_guardrails: { required_terms: ['CJK', 'multi\nline'], forbidden_broadening: ['summary'] },
+          evidence_route: { preferred_sources: ['primary: record'], noise_to_avoid: ['aggregator'] },
+        },
+      },
+    });
+    assert.equal(result.verdict, 'committed');
+    assert.equal(result.binding_repair, null);
+    const enriched = readFileSync(seedPath, 'utf8');
+    const enrichedHeader = enriched.match(/^---\n[\s\S]*?\n---\n/)[0];
+    assert.equal(enriched.slice(enrichedHeader.length), suffix);
+    assert.equal(readFileSync(join(dir, 'rb_plan.md'), 'utf8'), planBefore);
+    const frontmatter = parseYaml(enriched.match(/^---\n([\s\S]*?)\n---/)[1]);
+    assert.deepEqual(frontmatter.must_answer, specialInput.actions[0].must_answer);
+    assert.deepEqual(frontmatter.search_guardrails.required_terms, ['CJK', 'multi\nline']);
+  });
   it('rejects forged lifecycle context without writes', () => {
     const dir = bundle(); const before = readFileSync(join(dir, 'rb_plan.md'), 'utf8');
     const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'))); status.current_node = 'phases/phase-final.md'; writeFileSync(join(dir, 'rb_status.json'), JSON.stringify(status));
     const result = applyCanonicalTopicState({ bundlePath: dir, input }); assert.equal(result.verdict, 'blocked'); assert.equal(readFileSync(join(dir, 'rb_plan.md'), 'utf8'), before);
+  });
+  it('keeps generic inspect diagnostic-only when a seed binding drifts', () => {
+    const dir = bundle('topic-inspect-no-writer');
+    applyCanonicalTopicState({ bundlePath: dir, input });
+    const seedPath = join(dir, 'seed_topics/01_topic-a.md');
+    writeFileSync(seedPath, readFileSync(seedPath, 'utf8').replace('title: Topic A', 'title: drifted'));
+    const inspected = inspectCanonicalTopicState({ bundlePath: dir });
+    assert.equal(inspected.passed, false);
+    assert.equal(inspected.blockers[0].finding.repair_kind, 'missing_contract');
+    assert.doesNotMatch(JSON.stringify(inspected), /enrich_seed|operate-topic-state\.mjs apply/);
   });
   it('redirects imperative layout actions to the complete sanctioned target without writes', () => {
     const dir = bundle('topic-imperative-layout');
@@ -431,10 +491,14 @@ describe('canonical topic state', () => {
 
     const directionOnly = { context: 'rerun', actions: [{ action: 'set_rerun_direction', topic_uid: topic.topic_uid, direction: directionCandidate() }] };
     assert.equal(applyCanonicalTopicState({ bundlePath: dir, input: directionOnly }).verdict, 'unchanged');
-    assert.throws(() => applyCanonicalTopicState({ bundlePath: dir, input: { ...directionOnly, context: 'hitl1' } }));
-    assert.throws(() => applyCanonicalTopicState({ bundlePath: dir, input: { context: 'rerun', actions: [...update.actions, ...directionOnly.actions] } }));
-    assert.throws(() => applyCanonicalTopicState({ bundlePath: dir, input: { context: 'rerun', actions: [{ ...input.actions[0], direction: directionCandidate() }] } }));
-    assert.throws(() => applyCanonicalTopicState({ bundlePath: dir, input: { ...directionOnly, actions: [{ ...directionOnly.actions[0], direction: directionCandidate({ count: 2 }) }] } }));
-    assert.throws(() => applyCanonicalTopicState({ bundlePath: dir, input: { context: 'hitl1', actions: [{ ...input.actions[0], direction: directionCandidate({ action: 'add' }) }] } }));
+    for (const invalid of [
+      { ...directionOnly, context: 'hitl1' },
+      { context: 'rerun', actions: [...update.actions, ...directionOnly.actions] },
+      { context: 'rerun', actions: [{ ...input.actions[0], direction: directionCandidate() }] },
+      { context: 'hitl1', actions: [{ ...input.actions[0], direction: directionCandidate({ action: 'add' }) }] },
+    ]) {
+      assert.equal(applyCanonicalTopicState({ bundlePath: dir, input: invalid }).reason_code, 'input_invalid');
+    }
+    assert.throws(() => applyCanonicalTopicState({ bundlePath: dir, input: { ...directionOnly, actions: [{ ...directionOnly.actions[0], direction: directionCandidate({ count: 2 }) }] } }), /rerun direction count/);
   });
 });

@@ -32,6 +32,7 @@ import {
   admitSeedTopicMaterializeDeclaration,
   evaluateSeedTopicAuthoring,
 } from './helpers/seed-topic-authoring-evaluator.mjs';
+import { inspectSeedTopicsAuthoringAuthorization } from './helpers/canonical-topic-state.mjs';
 
 // ============================================================
 // Internal: receipt checking
@@ -406,11 +407,30 @@ export function complete(queue, result, bundleDir = process.cwd()) {
       topic: declaration.topic,
     });
     if (!authoring.passed) {
+      const authorization = inspectSeedTopicsAuthoringAuthorization({ bundlePath: bundleDir });
+      const queueRerun = `node DPT_FRAMEWORK/cli/operate-queue.mjs complete ${path.resolve(bundleDir)} --result <result.json>`;
+      const enrichApply = `node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle ${path.resolve(bundleDir)} --input <retained-enrich-seed-${declaration.topic.topic_uid}.json>`;
+      const repair = !authorization.ok ? {
+        repair_kind: 'missing_contract',
+        missing_fact: `${authoring.missing_fact} No validated Seed Topics authoring window is currently available.`,
+        write_to: 'Seed Topics lifecycle authorization boundary',
+        advice: 'Keep the queue item nonterminal; return through the current lifecycle owner before retrying completion.',
+      } : authoring.reason_code === 'canonical_binding_mismatch' ? {
+        repair_kind: 'engine_operation',
+        missing_fact: authoring.missing_fact,
+        write_to: enrichApply,
+        advice: 'Submit the retained complete enrich_seed input through canonical topic-state, then rerun this same completion checkpoint.',
+      } : {
+        repair_kind: 'agent_action',
+        missing_fact: authoring.missing_fact,
+        write_to: authoring.write_to,
+        advice: 'Repair only the reported frontmatter syntax coordinate, run canonical topic-state enrich_seed, then rerun this same completion checkpoint.',
+      };
       const feedback = {
         passed: false,
         check: false,
-        inspect: [authoring.missing_fact],
-        advice: 'Repair the declared seed file, then rerun the same completion checkpoint.',
+        inspect: [repair.missing_fact],
+        advice: repair.advice,
       };
       traceEntry('check', { source: 'agq-complete', step: 'seed_topic_authoring', passed: false, queue_item_id: current.queue_item_id, reason_code: authoring.reason_code });
       logEvent('warn', 'queue_complete_seed_authoring_fail', { kind: 'seed_topic_authoring', queue_item_id: current.queue_item_id, reason_code: authoring.reason_code });
@@ -418,10 +438,10 @@ export function complete(queue, result, bundleDir = process.cwd()) {
         queue: validateQueue(q),
         feedback,
         persist_queue: false,
-        repair_kind: 'agent_action',
-        missing_fact: authoring.missing_fact,
-        write_to: authoring.write_to,
-        rerun: `node DPT_FRAMEWORK/cli/operate-queue.mjs complete ${path.resolve(bundleDir)} --result <result.json>`,
+        repair_kind: repair.repair_kind,
+        missing_fact: repair.missing_fact,
+        write_to: repair.write_to,
+        rerun: queueRerun,
       };
     }
   }

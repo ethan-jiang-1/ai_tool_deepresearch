@@ -136,6 +136,7 @@ describe('operate-queue seed authoring completion', () => {
 
   it('returns a direct repair for malformed declared seed bytes without changing legacy queue authority', () => {
     const bundle = createBundle('malformed');
+    enterSeedTopics(bundle);
     writeSeed(bundle, '---\ntitle: [\n---\n');
     const queuePath = writeQueue(bundle, seedCard());
     const before = readFileSync(queuePath, 'utf8');
@@ -154,6 +155,7 @@ describe('operate-queue seed authoring completion', () => {
 
   it('rejects ambiguous producer declarations at their owner boundary without guessing a seed repair path', () => {
     const bundle = createBundle('ambiguous');
+    enterSeedTopics(bundle);
     writeSeed(bundle, '---\ntopic_uid: wrong\n---\n');
     const queuePath = writeQueue(bundle, seedCard({
       writes_to: [`seed_topics/${TOPIC.slug}.md`, 'seed_topics/other.md'],
@@ -175,6 +177,7 @@ describe('operate-queue seed authoring completion', () => {
 
   it('accepts the same completion command after declared-file repair and leaves final Gate evaluation to the shared evaluator', () => {
     const bundle = createBundle('repair');
+    enterSeedTopics(bundle);
     writeSeed(bundle, canonicalSeed().replace('title: Topic A', 'title: Wrong title'));
     const queuePath = writeQueue(bundle, seedCard());
     const resultPath = writeResult(bundle);
@@ -182,8 +185,9 @@ describe('operate-queue seed authoring completion', () => {
     const rejected = runQueue(bundle, resultPath);
     const rejectedOutput = JSON.parse(rejected.stdout);
     assert.equal(rejected.status, 1, rejected.stderr);
-    assert.equal(rejectedOutput.repair_kind, 'agent_action');
-    assert.equal(rejectedOutput.write_to, `seed_topics/${TOPIC.slug}.md#/title`);
+    assert.equal(rejectedOutput.repair_kind, 'engine_operation');
+    assert.match(rejectedOutput.write_to, /operate-topic-state\.mjs apply/);
+    assert.match(rejectedOutput.write_to, new RegExp(TOPIC.topic_uid));
 
     writeSeed(bundle, canonicalSeed() + 'This body is intentionally not evaluated here.\n');
     const completed = runQueue(bundle, resultPath);
@@ -195,7 +199,6 @@ describe('operate-queue seed authoring completion', () => {
     assert.equal(queue.terminal_history.length, 1);
     assert.ok(queue.bundle_name, 'legacy bundle_name is normalized only with successful completion');
 
-    enterSeedTopics(bundle);
     const gate = spawnSync('node', [SEED_GATE, '--bundle', bundle, '--current-node', 'phases/phase-seed-topics.md'], {
       encoding: 'utf-8',
       timeout: 10000,

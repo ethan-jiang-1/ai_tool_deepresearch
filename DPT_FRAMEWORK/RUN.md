@@ -1,17 +1,17 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.49**
+> **DPT_FRAMEWORK v0.50**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.49
+## Current Release: v0.50
 
-- `operate-work-unit replace` derives one ordinary replacement demand from matching terminal authority for an eligible failed or abandoned delegated attempt. The parent remains terminal and no work ID is allocated until normal claim.
-- A queued replacement returns to the existing exact-role probe/claim boundary. An already in-flight replacement reports only its existing work ID for reconstruction and polling, while timed-out, conflicting, or terminal successors fail closed.
-- Wave0 and Wave1 recovery guidance now uses terminalization followed by the Engine-owned replacement operation; it does not hand-author equivalent task cards or automatically claim successors.
+- Seed Topics materializes Agent judgment through one retained structured `enrich_seed` input and the canonical topic-state writer.
+- Canonical binding repair is lifecycle-bound and single-writer; generic inspect stays diagnostic-only, while legacy duplicate body prose remains readable.
+- New seed skeletons no longer duplicate canonical must-answer, scope, or evidence-route authoring in Markdown body sections.
 
 ## 0. 禁用内置捷径（最高优先）
 

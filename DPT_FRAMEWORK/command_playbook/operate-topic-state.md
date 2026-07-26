@@ -1,6 +1,6 @@
 # Operate Canonical Topic State
 
-Use this playbook only inside the existing legal HITL1 or route-bound HITL2→rerun lifecycle position. It does not create reentry, override, maintenance, or post-final mutation authority.
+Use this playbook only inside the existing legal HITL1, route-bound HITL2→rerun, or witnessed Seed Topics lifecycle position. It does not create reentry, override, maintenance, or post-final mutation authority.
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-topic-state.mjs inspect --bundle <bundle>
@@ -14,6 +14,25 @@ node DPT_FRAMEWORK/cli/operate-topic-state.mjs inspect --bundle <bundle>
 ```
 
 For add/intent refinement, retain the approved semantic input outside `_diagnostics/topic-state/`, then apply. For rename/reorder/renumber/safe-remove during sanctioned rerun, edit the complete `layout_baseline` returned by inspect: keep every current UID exactly once in ordered `topics[]` or explicit `remove_topic_uids[]`; the user owns title/order/remove semantics, while the Agent owns mechanical drain/apply/recover.
+
+During a witnessed Seed Topics window only, retain a complete closed enrichment input and use the same apply command. The Engine derives the path and all canonical fields from `topic_uid`; the Agent supplies no canonical keys.
+
+```json
+{
+  "context": "seed_topics",
+  "action": "enrich_seed",
+  "topic_uid": "tp_<current_uid>",
+  "enrichment": {
+    "hypothesis": "explicit gap or Agent judgment",
+    "in_scope": "explicit boundary",
+    "out_of_scope": "explicit exclusion",
+    "search_guardrails": { "required_terms": ["term"], "forbidden_broadening": ["broadening"] },
+    "evidence_route": { "preferred_sources": ["source type"], "noise_to_avoid": ["noise"] }
+  }
+}
+```
+
+`input_invalid` means correct the retained input and rerun apply. `frontmatter_invalid` permits only its exact syntax repair, followed by this same writer. Existing legacy body copies are preserved; generic `inspect` never authorizes direct YAML repair or this writer outside the legal window.
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle <bundle> --input <retained-input.json>

@@ -55,9 +55,24 @@ describe('shared seed-topic authoring contracts', () => {
   });
 
   it('keeps generated task and spawn cues self-contained but below the shared contract', () => {
-    for (const field of returnFields) assert.match(workUnitEnvelope, new RegExp(`\\b${field}\\b`));
-    assert.match(workUnitEnvelope, /submitted ledger rows and gate outputs remain authority/);
-    assert.doesNotMatch(workUnitEnvelope, /One-time tokens are expected before their owning first materialization/);
-    assert.doesNotMatch(workUnitEnvelope, /Evidence-bearing entries lead with a concrete existing/);
+    assert.match(workUnitEnvelope, /Completion Contract/);
+    assert.match(workUnitEnvelope, /Result schema requires/);
+    assert.match(workUnitEnvelope, /manifest, beacon, result schema, receipt, validators, and submit remain authoritative/);
+  });
+
+  it('keeps one Seed Topics writer loop and removes duplicate canonical authoring instructions', () => {
+    const seedPhase = phase('phase-seed-topics');
+    const playbook = read('DPT_FRAMEWORK/command_playbook/operate-topic-state.md');
+    for (const surface of [seedAuthoring, seedPhase, playbook]) {
+      assert.match(surface, /enrich_seed/);
+      assert.match(surface, /operate-topic-state(?:\.mjs)? apply/);
+    }
+    for (const surface of [seedAuthoring, seedPhase]) {
+      assert.doesNotMatch(surface, /## must_answer\n1\. <investigatable question>/);
+      assert.doesNotMatch(surface, /## 研究边界与不深挖范围/);
+      assert.doesNotMatch(surface, /## 证据锚点与优先来源/);
+    }
+    assert.match(seedAuthoring, /frontmatter_invalid/);
+    assert.match(seedAuthoring, /legacy body copies remain readable/i);
   });
 });

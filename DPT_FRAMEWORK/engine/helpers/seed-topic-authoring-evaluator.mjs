@@ -14,7 +14,17 @@ const BINDING_FIELDS = Object.freeze([
 ]);
 
 function equal(value, expected) {
-  return JSON.stringify(value) === JSON.stringify(expected);
+  if (Object.is(value, expected)) return true;
+  if (typeof value !== typeof expected || value === null || expected === null) return false;
+  if (Array.isArray(value) || Array.isArray(expected)) {
+    if (!Array.isArray(value) || !Array.isArray(expected) || value.length !== expected.length) return false;
+    return value.every((entry, index) => equal(entry, expected[index]));
+  }
+  if (typeof value !== 'object') return false;
+  const actualKeys = Object.keys(value).sort();
+  const expectedKeys = Object.keys(expected).sort();
+  if (actualKeys.length !== expectedKeys.length || actualKeys.some((key, index) => key !== expectedKeys[index])) return false;
+  return actualKeys.every((key) => equal(value[key], expected[key]));
 }
 
 function failure({ relativePath, reasonCode, coordinate, missingFact, expected, observed }) {

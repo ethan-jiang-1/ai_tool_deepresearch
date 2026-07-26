@@ -47,9 +47,17 @@ The Engine SHALL derive per-topic/per-wave `not_started|in_progress|complete|blo
 
 The framework SHALL expose one helper, one `operate-topic-state.mjs` CLI and one `_diagnostics/topic-state/<operation-id>/` workspace for `inspect|apply|recover`. `apply` action `migrate_legacy` SHALL require explicit semantics for every legacy registry entry and SHALL allow an explicit `adopt` entry for a registry-external slug detected by C1; adoption MAY bind one exact existing seed or stage one seed skeleton but SHALL NOT move or authorize historical content files. Apply SHALL prepare complete hash-bound replacements only for `rb_plan.md` and explicitly touched `seed_topics/*.md`, durably publish a prepared manifest, recheck expected hashes/path safety, atomically replace listed files, fsync parent directories and clean the workspace after commit.
 
-When an accepted `add_topic` or `migrate_legacy` entry with `seed_binding: new` creates a seed without an existing projection, that staged seed SHALL contain a complete canonical skeleton before registry publication. Its frontmatter SHALL contain the exact UID-bound registry intent plus explicit gap-valued Agent-facing enrichment fields; its body SHALL contain the seed-topics initialization headings, a research-round append area, and exactly the accepted wave-specific placeholders `__BACKFILL_WAVE0_EVIDENCE__`, `__BACKFILL_WAVE1_MECHANISMS__`, `__BACKFILL_WAVE1_TRENDS__`, `__BACKFILL_WAVE2_JUDGMENT__`, and `__BACKFILL_PENDING_QUESTIONS__`. The Engine SHALL NOT use the closed `scope_role` enum value as topic-positioning prose and SHALL NOT introduce a second generic fill/backfill token family.
+When an accepted `add_topic` or `migrate_legacy` entry with `seed_binding: new` creates a seed without an existing projection, that staged seed SHALL contain a complete canonical skeleton before registry publication. Its frontmatter SHALL contain the exact UID-bound registry intent plus explicit gap-valued Agent-facing enrichment fields; its body SHALL contain the non-duplicating seed-topics initialization headings, a research-round append area, and exactly the accepted wave-specific placeholders `__BACKFILL_WAVE0_EVIDENCE__`, `__BACKFILL_WAVE1_MECHANISMS__`, `__BACKFILL_WAVE1_TRENDS__`, `__BACKFILL_WAVE2_JUDGMENT__`, and `__BACKFILL_PENDING_QUESTIONS__`. A new body SHALL NOT copy canonical `must_answer` or repeat structured `in_scope`, `out_of_scope`, or `evidence_route`; the Engine SHALL NOT use the closed `scope_role` enum value as topic-positioning prose and SHALL NOT introduce a second generic fill/backfill token family.
 
 When an existing UID-bound seed is re-rendered for intent or current-layout mutation, canonical registry fields SHALL overwrite their matching frontmatter keys while non-canonical enrichment fields and the existing body SHALL be preserved. Topic-state mutation SHALL remain the atomic plan+seed writer; it SHALL NOT enqueue future wave work, allocate work units, or write submitted provenance.
+
+`apply` SHALL additionally accept one mutually exclusive `enrich_seed` form with `context: seed_topics`, one non-empty `topic_uid` selector and one complete strict `enrichment` object. That object SHALL contain exactly `hypothesis`, `in_scope`, `out_of_scope`, `search_guardrails`, and `evidence_route`; the first three SHALL be non-empty strings, `search_guardrails` SHALL contain exactly non-empty-string arrays `required_terms` and `forbidden_broadening`, and `evidence_route` SHALL contain exactly non-empty-string arrays `preferred_sources` and `noise_to_avoid`. Each array SHALL contain at least one item. Explicit non-empty gap values SHALL be structurally legal and SHALL remain Agent judgment. Canonical fields, path/slug snapshots, unknown keys, partial patches and caller-provided defaults SHALL reject before workspace publication.
+
+For `enrich_seed`, the Engine SHALL resolve `topic_uid` through the current canonical registry and derive the current seed path itself. It SHALL read the existing seed, preserve every non-canonical frontmatter key not replaced by the five accepted enrichment fields, overwrite those five fields from the complete validated input, overwrite the seven canonical binding fields from the resolved registry Topic, serialize frontmatter once through the existing YAML renderer, and preserve the exact lexical body suffix. That suffix begins immediately after the closing frontmatter delimiter's terminating LF (`---\n`); the renderer SHALL emit that delimiter LF followed by the captured suffix verbatim, without trimming, normalization or removal of an initial LF. An EOF closing delimiter has an empty suffix. It SHALL NOT infer identity from filename/body, rewrite a rerun direction or research appendix, generate enrichment semantics, or accept an arbitrary body/path patch.
+
+Canonical binding equality SHALL mean recursive equality of parsed JSON-compatible values, not byte equality of YAML serialization. Value type, exact string code-point sequence and array order SHALL be significant; mapping key order, quoting style, scalar style and presentation whitespace SHALL not be significant. In particular, quoted, colon-bearing, multiline, CJK and other Unicode `must_answer` strings SHALL retain the exact parsed string values and array order after rendering; normalization, trimming, summarization or equivalent prose SHALL fail binding.
+
+Before rendering `enrich_seed`, the existing shared seed authoring evaluator SHALL examine the current parseable seed against the resolved Topic. If it reports canonical drift, apply SHALL retain only its first fixed-order direct failure as a `binding_repair` result, use the existing canonical merge to repair all canonical fields in the same write, and SHALL NOT require or authorize a raw YAML identity edit. After rendering and before prepared publication, apply SHALL run the same evaluator over the staged path/bytes and SHALL publish no workspace if the writer postcondition fails. An invalid input, unknown UID, missing/unsafe seed, unparseable frontmatter or postcondition defect SHALL fail before authority mutation with one direct coordinate/owner and the same apply checkpoint when a legal repair exists. The Engine SHALL NOT add a second evaluator or silently discard a detected pre-render binding root.
 
 For sanctioned rerun only, every `add_topic` or `update_intent` action SHALL carry one Agent-authored rerun-direction candidate with `rerun_count`, `action`, `new_search_dimensions`, `adjusted_depth`, `search_guardrails`, and `rationale_excerpt`. An existing Topic that needs only supplemental search/depth guidance without a canonical intent change SHALL use `set_rerun_direction` in the same ordered action list; that action SHALL carry `topic_uid` plus the same direction candidate and SHALL NOT change registry intent fields. HITL1 add/update inputs SHALL NOT carry rerun direction.
 
@@ -63,19 +71,23 @@ Recovery SHALL be explicit: inspect or apply encountering an accepted workspace 
 
 The caller SHALL retain the explicit apply-input file until commit. Durable prepared publication SHALL be the accepted recovery boundary. A crash before that boundary SHALL NOT be reported as an accepted operation; the retained input SHALL remain available for a fresh apply.
 
-One apply plan SHALL contain exactly one of: one complete `migrate_legacy` reconciliation; a non-empty ordered list of `add_topic`/`update_intent`/`set_rerun_direction` actions; or one complete `mutate_layout` target. These forms SHALL NOT be mixed. `set_rerun_direction` SHALL be available only in a sanctioned rerun context. A layout target SHALL carry `expected_plan_sha256`, enumerate every current UID exactly once across ordered retained topics and explicit remove UIDs, and SHALL let Engine derive continuous current ids/slugs. The Engine SHALL validate the complete target, dependencies, duplicate targets, safe-remove facts and staged replacements before prepared publication. Topic UID SHALL remain immutable; existing id/slug MAY change only through `mutate_layout`.
+One apply input SHALL contain exactly one of: one complete `migrate_legacy` reconciliation; a non-empty ordered list of `add_topic`/`update_intent`/`set_rerun_direction` actions; one complete `mutate_layout` target; or one complete `enrich_seed` target. These forms SHALL NOT be mixed. `set_rerun_direction` SHALL be available only in a sanctioned rerun context; `enrich_seed` SHALL be available only in a legal Seed Topics context. A layout target SHALL carry `expected_plan_sha256`, enumerate every current UID exactly once across ordered retained topics and explicit remove UIDs, and SHALL let Engine derive continuous current ids/slugs. The Engine SHALL validate the complete target, dependencies, duplicate targets, safe-remove facts and staged replacements before prepared publication. Topic UID SHALL remain immutable; existing id/slug MAY change only through `mutate_layout`.
 
-For layout mutation, `affected_topic_uids` SHALL mean only removed UIDs and retained UIDs whose current id, slug or title differs in the final target. For an add/update/direction action plan it SHALL include every topic whose seed bytes are staged, including direction-only targets. Quiescence and seed mutation checks SHALL not block unrelated unchanged topics merely because a complete target lists them. If the rendered plan/current-seed bytes already match and no seed cleanup remains, apply SHALL return `unchanged` without workspace or follow-up.
+For layout mutation, `affected_topic_uids` SHALL mean only removed UIDs and retained UIDs whose current id, slug or title differs in the final target. For an add/update/direction action plan it SHALL include every topic whose seed bytes are staged, including direction-only targets. For `enrich_seed` it SHALL contain exactly the selected current UID. Quiescence and seed mutation checks SHALL not block unrelated unchanged topics merely because a complete target lists them. If the rendered plan/current-seed bytes already match and no seed cleanup remains, apply SHALL return `unchanged` without workspace or follow-up. An unchanged `enrich_seed` result SHALL still return the selected UID/path and any observed-and-already-canonicalized binding repair shall be null.
 
-Before workspace creation, `apply` SHALL authorize mutation from existing lifecycle facts rather than a caller-declared context flag. HITL1 apply SHALL require `rb_status.json#/current_node: phases/phase-hitl1.md` with the existing `current_gate: hitl1_recorded` / `next_gate: setup_ready` pre-gate window. Normal rerun apply SHALL require `current_node: phases/phase-rerun.md`, the latest valid non-superseded route-bound HITL2 gate-to-rerun load witness, and the incoming `current_gate: hitl2_recorded` / `next_gate: rerun_ready` window.
+Before workspace creation, `apply` SHALL authorize mutation from existing lifecycle facts rather than a caller-declared context flag. HITL1 apply SHALL require `rb_status.json#/current_node: phases/phase-hitl1.md` with the existing `current_gate: hitl1_recorded` / `next_gate: setup_ready` pre-gate window. Normal rerun apply SHALL require `current_node: phases/phase-rerun.md`, the latest valid non-superseded route-bound HITL2 gate-to-rerun load witness, and the incoming `current_gate: hitl2_recorded` / `next_gate: rerun_ready` window. Seed enrichment apply SHALL require `current_node: phases/phase-seed-topics.md`, the latest valid non-superseded route-bound setup-to-seed-topics or rerun-to-seed-topics load witness, and respectively the incoming `setup_ready -> seed_topics_ready` or `rerun_ready -> seed_topics_ready` status window.
 
-Post-final rerun apply SHALL be authorized only after the accepted C5 operation has committed a valid non-superseded `post_final_reentry` event, current HITL2 profile semantics/hash still equal the event-bound after-profile, `enter-phase` has written a route-bound rerun `load_complete` referencing that exact recovery event, existing `advance-status --to hitl2_recorded` has written the matching exceptional `phase_transition`, `current_node` is `phases/phase-rerun.md`, and the incoming `hitl2_recorded -> rerun_ready` status window remains intact. A caller-declared `human-directed`, rerun or recovery context SHALL NOT substitute for either witness class, the accepted profile, or the existing status-sync step.
+Post-final rerun apply SHALL be authorized only after the accepted C5 operation has committed a valid non-superseded `post_final_reentry` event, current HITL2 profile semantics/hash still equal the event-bound after-profile, `enter-phase` has written a route-bound rerun `load_complete` referencing that exact recovery event, existing `advance-status --to hitl2_recorded` has written the matching exceptional `phase_transition`, `current_node` is `phases/phase-rerun.md`, and the incoming `hitl2_recorded -> rerun_ready` status window remains intact. A caller-declared `human-directed`, rerun, seed-topics or recovery context SHALL NOT substitute for any required witness class, the accepted profile, or the existing status-sync step.
 
-`migrate_legacy`, `set_rerun_direction`, and `mutate_layout` SHALL be authorized only in a sanctioned normal or post-final rerun context. Other post-final, stale/missing-witness and arbitrary maintenance invocation SHALL reject without workspace or authority mutation.
+`migrate_legacy`, `set_rerun_direction`, and `mutate_layout` SHALL be authorized only in a sanctioned normal or post-final rerun context. `enrich_seed` SHALL be authorized only after one accepted setup/rerun source route has entered Seed Topics. Other post-final, stale/missing-witness and arbitrary maintenance invocation SHALL reject without workspace or authority mutation. Only a current `seed_topic_materialize` queue completion and a final `seed-topics-ready` Gate that each establish that same legal Seed Topics window MAY project `enrich_seed` as an executable `engine_operation`; their bounded parse-repair feedback is likewise legal only in that window. Generic topic-state inspect SHALL remain read-only, report a direct mismatch with `repair_kind: missing_contract` that identifies its no-write inspection boundary and the current lifecycle owner (plus an absent authoring window when applicable), and SHALL NOT mint either an `enrich_seed` or raw-YAML repair route.
 
-The prepared manifest SHALL record the complete originally proven authorization facts. For normal rerun this means the gate handoff and bound load identity. For post-final rerun it means recovery event id/index/exact-line SHA256, event-bound after-profile hash, bound rerun load index, exact exceptional `phase_transition` index/binding, and the incoming current-node/status window. `recover` MAY finish that exact accepted operation after lifecycle position changes, but SHALL NOT accept new semantics, re-evaluate a new apply request or widen the staged file set.
+The prepared manifest SHALL record the complete originally proven authorization facts. For normal rerun this means the gate handoff and bound load identity. For post-final rerun it means recovery event id/index/exact-line SHA256, event-bound after-profile hash, bound rerun load index, exact exceptional `phase_transition` index/binding, and the incoming current-node/status window. For seed enrichment it means the setup/rerun source gate attempt, bound Seed Topics load identity and incoming current-node/status window. `recover` MAY finish that exact accepted operation after lifecycle position changes, but SHALL NOT accept new semantics, re-evaluate a new apply request or widen the staged file set.
 
-`migrate_legacy`, `update_intent`, `set_rerun_direction` and `mutate_layout` SHALL reject before workspace creation when a touched existing topic has queued, delegated-in-flight or nonterminal work. The blocker SHALL identify the existing queue/work-unit owner and one nearest Agent action. Submitted historical work MAY remain and SHALL NOT be rewritten. `mutate_layout` removal SHALL additionally reject any UID with queue/work-unit/ledger/artifact/reference history or an inbound dependency.
+`migrate_legacy`, `update_intent`, `set_rerun_direction` and `mutate_layout` SHALL reject before workspace creation when a touched existing topic has queued, delegated-in-flight or nonterminal work. The blocker SHALL identify the existing queue/work-unit owner and one nearest Agent action. Submitted historical work MAY remain and SHALL NOT be rewritten. `mutate_layout` removal SHALL additionally reject any UID with queue/work-unit/ledger/artifact/reference history or an inbound dependency. `enrich_seed` SHALL not apply this canonical-intent quiescence blocker because the current non-delegated `seed_topic_materialize` card is its legal caller work; it SHALL remain bounded by Seed Topics lifecycle authorization and SHALL NOT read, claim, complete or mutate queue/work-unit authority.
+
+Existing pre-v0.50 seeds and in-flight queue cards SHALL remain read-compatible. Parseable legacy seeds MAY retain unknown non-canonical frontmatter keys and duplicate body `must_answer`/scope/evidence prose; `enrich_seed` SHALL preserve those body bytes, and deterministic binding/completion SHALL ignore that prose as authority. A legacy frontmatter parse error MAY require only a bounded Agent syntax repair to make the current seed parseable, after which the same `enrich_seed` apply SHALL restore canonical/structured ownership. No bulk seed or queue migration SHALL be required.
+
+The topic-state input/result contract SHALL use schema version `1.1.0` for this additive apply form. A successful or unchanged `enrich_seed` result SHALL include `action: enrich_seed`, selected `topic_uid`, current `slug`, derived seed path, `verdict: committed|unchanged`, and nullable `binding_repair`. Existing `inspect|apply|recover` operations, pre-existing apply input forms and their established result fields SHALL remain compatible; the minor version SHALL NOT create a second CLI route or require runtime data migration.
 
 #### Scenario: Crash after a partial accepted commit resumes exact bytes
 
@@ -195,7 +207,7 @@ The prepared manifest SHALL record the complete originally proven authorization 
 
 - **WHEN** a sanctioned normal or post-final rerun applies `add_topic` for a new canonical Topic
 - **THEN** the prepared change set SHALL contain the registry entry, matching complete UID-bound seed skeleton, and structurally valid target-round add direction
-- **AND** the seed SHALL contain all initialization headings and accepted Wave0/Wave1/Wave2 placeholder set before seed-topics or Wave0 work begins
+- **AND** the seed SHALL contain all accepted non-duplicating initialization headings and Wave0/Wave1/Wave2 placeholder set before seed-topics or Wave0 work begins
 - **AND** queue, work-unit and submitted-ledger authority SHALL remain unchanged by topic-state apply
 
 #### Scenario: New seed uses accepted wave-specific placeholders only
@@ -221,6 +233,78 @@ The prepared manifest SHALL record the complete originally proven authorization 
 - **WHEN** an add action carries `supplement`, an update/direction-only action carries `add`, or direction count differs from accepted current profile count plus one
 - **THEN** apply SHALL reject before creating an accepted workspace
 - **AND** plan, seed, profile, queue and work-unit authority SHALL remain unchanged
+
+#### Scenario: Structured enrichment accepts only Agent-owned fields
+
+- **WHEN** `enrich_seed` carries one complete valid five-field enrichment object for a current UID in a legal Seed Topics window
+- **THEN** apply SHALL derive all canonical values/path from the registry, stage exactly that current seed plus the unchanged plan contract, and preserve queue/work-unit authority
+- **AND** explicit gap strings SHALL remain legal without Engine semantic scoring
+
+#### Scenario: Canonical or unknown input key fails before write
+
+- **WHEN** `enrich_seed` input contains `must_answer`, another canonical key, an unknown key, a partial nested object or an empty required value
+- **THEN** apply SHALL return one `input_invalid` coordinate and same apply rerun before workspace publication
+- **AND** plan, seed, queue, status and trace bytes SHALL remain unchanged
+
+#### Scenario: Lexical body suffix survives enrichment
+
+- **WHEN** a current seed contains a deliberate blank line immediately after its closing frontmatter delimiter, Agent-authored Markdown, appendix tokens, a rerun direction or legacy duplicate sections and valid structured enrichment is applied
+- **THEN** the exact suffix after that delimiter's terminating LF, including its first blank-line LF, SHALL remain identical
+- **AND** only the accepted frontmatter fields and YAML presentation MAY change
+
+#### Scenario: Parsed canonical values survive YAML round trip
+
+- **WHEN** registry canonical fields contain quoted, colon-bearing, multiline, CJK or other Unicode strings and ordered arrays
+- **THEN** the first new-seed render and every `enrich_seed` render SHALL parse back to exactly the same typed values and array order
+- **AND** equivalent YAML quoting or mapping key order SHALL NOT be treated as drift while normalized, trimmed, reordered or summarized strings SHALL be drift
+
+#### Scenario: Must-answer drift is reported and repaired before completion
+
+- **WHEN** the parseable current seed's `must_answer` differs from the current canonical Topic when `enrich_seed` starts
+- **THEN** apply SHALL return the evaluator's `must_answer` mismatch as its one `binding_repair`, restore the registry value through the same canonical merge and pass the post-render evaluator before commit
+- **AND** the Agent SHALL NOT hand-edit the canonical field or wait for queue completion to first learn of the drift
+
+#### Scenario: Unparseable frontmatter does not trigger guessed salvage
+
+- **WHEN** the current seed frontmatter cannot be parsed before enrichment rendering
+- **THEN** apply SHALL fail before workspace publication with the exact parse root and same apply checkpoint
+- **AND** it SHALL NOT guess body boundaries, overwrite the seed or reconstruct canonical YAML through a second writer
+
+#### Scenario: Writer postcondition fails closed
+
+- **WHEN** the staged enrichment render does not pass the same canonical authoring evaluator before prepared publication
+- **THEN** apply SHALL return a writer-owner missing-contract root without publishing or mutating authority
+- **AND** queue completion or Gate SHALL NOT be used as a fallback writer
+
+#### Scenario: Setup and rerun entries authorize seed enrichment
+
+- **WHEN** a valid setup-to-seed-topics or rerun-to-seed-topics source attempt has a bound non-superseded load witness, current node is Seed Topics and its incoming status window is intact
+- **THEN** `enrich_seed` MAY update one selected current seed subject to its strict schema and binding checks
+- **AND** a caller-declared `context: seed_topics` without those facts SHALL reject without writes
+
+#### Scenario: Current seed task does not block its enrichment writer
+
+- **WHEN** the selected UID has the current non-delegated `seed_topic_materialize` queue demand during a legal Seed Topics window
+- **THEN** `enrich_seed` SHALL remain available and SHALL NOT fail solely on the canonical-intent active-work quiescence rule
+- **AND** it SHALL neither terminalize nor otherwise mutate that queue demand
+
+#### Scenario: Generic inspect does not mint a Seed Topics writer
+
+- **WHEN** generic topic-state inspect detects a canonical binding mismatch, including after the Seed Topics lifecycle window has closed
+- **THEN** it SHALL retain the evaluator's direct diagnostic but SHALL NOT expose `enrich_seed` as an executable `engine_operation` or name a raw YAML coordinate as a repair surface
+- **AND** it SHALL report `missing_contract` with the current lifecycle owner or the absent legal Seed Topics authoring window rather than implying a callable repair
+
+#### Scenario: Legacy duplicate body remains non-authoritative
+
+- **WHEN** a parseable pre-v0.50 seed retains body copies of must-answer, scope or evidence-route prose
+- **THEN** enrichment SHALL preserve those bytes while registry/frontmatter remain the only canonical/structured comparison surfaces
+- **AND** no body-to-frontmatter inference or bulk migration SHALL be required
+
+#### Scenario: Topic-state minor contract remains additive
+
+- **WHEN** a caller uses an existing inspect, apply or recover form after the topic-state schema version becomes `1.1.0`
+- **THEN** its established input semantics and result fields SHALL remain compatible
+- **AND** only `enrich_seed` SHALL require the new action-specific UID/path/binding-repair result shape
 
 ### Requirement: Topic-state operations SHALL preserve scope and authority boundaries
 

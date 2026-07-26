@@ -22,8 +22,8 @@ Allowed Actions SHALL retain these stages:
 
 - run `operate-queue claim <bundle> --actor main-agent`; an item of `null` moves to Section 3.3;
 - resolve `task.payload.topic_slug` to exactly one current `topic_registry` UID plus `rb_profile.yaml` and the existing UID-bound seed;
-- edit only the Agent-owned Markdown body sections, preserving canonical frontmatter, the research appendix and any sanctioned rerun direction;
-- write one retained complete `enrich_seed` input containing only the selected `topic_uid` and the five allowed enrichment fields, then invoke `operate-topic-state apply`; malformed input or frontmatter SHALL be repaired at that same apply checkpoint;
+- edit only the Agent-owned Markdown body sections, preserving canonical frontmatter, the research appendix and any sanctioned rerun direction, except for an `enrich_seed` apply result that names one exact frontmatter syntax coordinate;
+- write one retained complete `enrich_seed` input containing only the selected `topic_uid` and the five allowed enrichment fields, then invoke `operate-topic-state apply`; malformed input fails at that checkpoint, while an unparseable frontmatter exception permits only the named syntax repair, never canonical-value authoring, followed immediately by the same writer;
 - run `operate-queue complete <bundle> --result <result.json>` through receipt validation, the shared authoring evaluator and promotion/repair;
 - read the queue projection and return to claim.
 
@@ -66,7 +66,7 @@ The shared authoring contract and renderer parity SHALL NOT create new identity,
 | `hypothesis`, `in_scope`, `out_of_scope`, `search_guardrails`, `evidence_route` | topic-state `enrich_seed` input | closed structural validation; explicit non-empty gaps remain legal |
 | semantic quality and Markdown body judgment | Agent judgment from accepted HITL1 semantics | no Engine generation/scoring and no duplicate-prose equality rule |
 
-Existing seeds MAY retain legacy `## must_answer`, scope or evidence-route body sections. The enrichment writer SHALL preserve those bytes, but those sections SHALL NOT own canonical/structured values, satisfy a missing frontmatter field, or be compared by queue completion or Gate. No bulk migration SHALL be required.
+Existing seeds MAY retain legacy `## must_answer`, scope or evidence-route body sections. The enrichment writer SHALL preserve the exact lexical body suffix after the closing frontmatter delimiter's terminating LF, including any leading blank line and those legacy bytes, but those sections SHALL NOT own canonical/structured values, satisfy a missing frontmatter field, or be compared by queue completion or Gate. No bulk migration SHALL be required.
 
 #### Scenario: Phase Agent executes seed-topics via queue-driven loop
 

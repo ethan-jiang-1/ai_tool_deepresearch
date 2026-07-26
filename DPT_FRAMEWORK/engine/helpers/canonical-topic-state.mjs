@@ -18,7 +18,7 @@ import { evaluateRerunDirection } from './rerun-direction.mjs';
 import { locateCanonicalSections } from './plan-hostfile-sections.mjs';
 import { evaluateSeedTopicAuthoring } from './seed-topic-authoring-evaluator.mjs';
 
-export const TOPIC_STATE_SCHEMA_VERSION = '1.0.0';
+export const TOPIC_STATE_SCHEMA_VERSION = '1.1.0';
 export const TOPIC_STATE_ROOT = '_diagnostics/topic-state';
 export const TOPIC_STATE_OPERATIONS = Object.freeze(['inspect', 'apply', 'recover']);
 
@@ -84,7 +84,27 @@ const LayoutPlanSchema = z.object({
   topics: z.array(LayoutTargetEntrySchema),
   remove_topic_uids: z.array(z.string().min(1)).default([]),
 }).strict();
-export const TopicApplyPlanSchema = z.union([MigrationPlanSchema, MutationPlanSchema, LayoutPlanSchema]);
+const NonEmptyStringArraySchema = z.array(z.string().min(1)).min(1);
+const SeedEnrichmentSchema = z.object({
+  hypothesis: z.string().min(1),
+  in_scope: z.string().min(1),
+  out_of_scope: z.string().min(1),
+  search_guardrails: z.object({
+    required_terms: NonEmptyStringArraySchema,
+    forbidden_broadening: NonEmptyStringArraySchema,
+  }).strict(),
+  evidence_route: z.object({
+    preferred_sources: NonEmptyStringArraySchema,
+    noise_to_avoid: NonEmptyStringArraySchema,
+  }).strict(),
+}).strict();
+const SeedEnrichmentPlanSchema = z.object({
+  context: z.literal('seed_topics'),
+  action: z.literal('enrich_seed'),
+  topic_uid: z.string().min(1),
+  enrichment: SeedEnrichmentSchema,
+}).strict();
+export const TopicApplyPlanSchema = z.union([MigrationPlanSchema, MutationPlanSchema, LayoutPlanSchema, SeedEnrichmentPlanSchema]);
 
 function hashBytes(value) { return createHash('sha256').update(value).digest('hex'); }
 function fsyncPath(filePath) { const fd = openSync(filePath, constants.O_RDONLY); try { fsyncSync(fd); } finally { closeSync(fd); } }
@@ -149,10 +169,6 @@ function renderNewSeedBody(topic) {
 
 pending — seed-topics Agent must enrich this section.
 
-## must_answer
-
-${topic.must_answer.map((item, index) => `${index + 1}. ${item}`).join('\n')}
-
 ## 初始假设、缺口或张力
 
 **已知**：pending — derive only from recorded Topic/profile facts.
@@ -162,18 +178,6 @@ ${topic.must_answer.map((item, index) => `${index + 1}. ${item}`).join('\n')}
 ## why now
 
 - pending — identify the current trigger, time window, or milestone.
-
-## 研究边界与不深挖范围
-
-**在范围内**：
-- pending — define the concrete research boundary.
-
-**不深挖**：
-- pending — define excluded directions.
-
-## 证据锚点与优先来源
-
-- pending — identify preferred primary/secondary sources and known noise.
 
 ## 为什么对最终交付物重要
 
@@ -236,7 +240,7 @@ function renderSeed(topic, existingSeed = null, direction = null) {
   const body = direction
     ? replaceRerunDirection(existingSeed?.exists ? existingSeed.body : renderNewSeedBody(topic), direction)
     : (existingSeed?.exists ? existingSeed.body : renderNewSeedBody(topic));
-  return `---\n${stringifyYaml(frontmatter).trimEnd()}\n---\n${body.startsWith('\n') ? body.slice(1) : body}`;
+  return `---\n${stringifyYaml(frontmatter).trimEnd()}\n---\n${body}`;
 }
 
 function currentProfileRerunCount(bundle) {
@@ -258,6 +262,7 @@ function validateRerunDirectionCounts(input, profileRerunCount) {
 function readSeed(bundle, slug) {
   const seedPath = path.join(bundle, 'seed_topics', `${slug}.md`);
   if (!existsSync(seedPath)) return { exists: false, path: seedPath, raw: null, frontmatter: null, body: '' };
+  if (lstatSync(seedPath).isSymbolicLink() || !lstatSync(seedPath).isFile()) throw new Error(`seed_topics/${slug}.md must be a non-symlink regular file`);
   const raw = readFileSync(seedPath, 'utf8');
   const split = splitPlan(raw);
   return { exists: true, path: seedPath, raw, frontmatter: split.frontmatter, body: split.body };
@@ -287,6 +292,24 @@ function lifecycleAuthorization(bundle, context) {
     return ok ? { ok: true, context, current_node: status.current_node, current_gate: status.current_gate, next_gate: status.next_gate }
       : { ok: false, reason_code: 'hitl1_not_authorized', reason: 'HITL1 apply requires current_node phase-hitl1 and hitl1_recorded→setup_ready window' };
   }
+  if (context === 'seed_topics') {
+    const handoff = checkPhaseHandoffPreflight(bundle, 'phases/phase-seed-topics.md');
+    const incoming = ['setup_ready', 'rerun_ready'].includes(status.current_gate) && status.next_gate === 'seed_topics_ready';
+    const ok = handoff.ok && status.current_node === 'phases/phase-seed-topics.md' && incoming;
+    return ok ? {
+      ok: true,
+      context,
+      current_node: status.current_node,
+      current_gate: status.current_gate,
+      next_gate: status.next_gate,
+      source_attempt_index: handoff.handoff?.index ?? null,
+      load_witness_index: handoff.handoff?.loadComplete?.index ?? null,
+    } : {
+      ok: false,
+      reason_code: 'seed_topics_not_authorized',
+      reason: handoff.inspect?.[0] || 'seed enrichment requires a route-bound Seed Topics handoff and setup_ready|rerun_ready→seed_topics_ready window',
+    };
+  }
   const handoff = checkPhaseHandoffPreflight(bundle, 'phases/phase-rerun.md');
   const ok = handoff.ok && status.current_node === 'phases/phase-rerun.md' && status.current_gate === 'hitl2_recorded' && status.next_gate === 'rerun_ready';
   return ok ? {
@@ -314,6 +337,10 @@ function lifecycleAuthorization(bundle, context) {
     } : {}),
   }
     : { ok: false, reason_code: 'rerun_not_authorized', reason: handoff.inspect?.[0] || 'rerun apply requires route-bound HITL2 witness and hitl2_recorded→rerun_ready window' };
+}
+
+export function inspectSeedTopicsAuthoringAuthorization({ bundlePath }) {
+  return lifecycleAuthorization(safeBundle(bundlePath), 'seed_topics');
 }
 function activeTopicWork(bundle, plan, affectedTopicUids) {
   const affected = new Set(affectedTopicUids);
@@ -564,6 +591,35 @@ export function inspectCanonicalTopicState({ bundlePath }) {
 function buildMutation(bundle, parsedPlan, input, { profileRerunCount = null } = {}) {
   const current = structuredClone(parsedPlan);
   const touched = new Map();
+  if (input.action === 'enrich_seed') {
+    const canonical = CanonicalPlanSchema.parse(current);
+    const topic = canonical.topic_registry.find((entry) => entry.topic_uid === input.topic_uid);
+    if (!topic) throw Object.assign(new Error(`unknown topic_uid: ${input.topic_uid}`), { reason_code: 'unknown_topic_uid' });
+    let seed;
+    try { seed = readSeed(bundle, topic.slug); } catch (error) {
+      throw Object.assign(new Error(error.message), { reason_code: /frontmatter/.test(error.message) ? 'frontmatter_invalid' : 'seed_target_unsafe' });
+    }
+    if (!seed.exists) throw Object.assign(new Error(`current seed missing for ${topic.slug}`), { reason_code: 'seed_missing' });
+    const before = evaluateSeedTopicAuthoring({ raw: seed.raw, relativePath: `seed_topics/${topic.slug}.md`, topic });
+    if (!before.passed && before.reason_code === 'frontmatter_invalid') {
+      throw Object.assign(new Error(before.missing_fact), { reason_code: 'frontmatter_invalid', coordinate: before.write_to });
+    }
+    const frontmatter = { ...seed.frontmatter, ...input.enrichment };
+    touched.set(topic.slug, renderSeed(topic, { ...seed, frontmatter }));
+    return {
+      plan: current,
+      touched,
+      cleanup_files: [],
+      affected_topic_uids: [topic.topic_uid],
+      selected_topic: topic,
+      binding_repair: before.passed ? null : {
+        field: before.write_to?.split('#/')[1] || null,
+        expected: before.expected,
+        observed: before.observed,
+        coordinate: before.write_to || null,
+      },
+    };
+  }
   if (input.action === 'mutate_layout') {
     CanonicalPlanSchema.parse(current);
     const target = buildTopicLayoutTarget(current.topic_registry, input);
@@ -650,7 +706,21 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
   };
   const unsupported = requestedActions.find((action) => ['retire', 'delete', 'move', 'path_move', 'set_progress', 'set_status', 'override'].includes(action));
   if (unsupported) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'layout_mutation_not_supported', reason: `${unsupported} is not supported by canonical topic-state apply`, recommended_action: 'Use the existing owner or propose the missing C5 capability; do not direct-edit multiple surfaces.' };
-  const parsedInput = TopicApplyPlanSchema.parse(input);
+  const parsed = TopicApplyPlanSchema.safeParse(input);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return {
+      schema_version: TOPIC_STATE_SCHEMA_VERSION,
+      operation: 'apply',
+      verdict: 'blocked',
+      reason_code: 'input_invalid',
+      repair_kind: 'agent_action',
+      coordinate: issue?.path?.join('.') || null,
+      reason: issue?.message || 'invalid topic-state input',
+      recommended_action: 'Correct the retained complete input and rerun this same apply checkpoint.',
+    };
+  }
+  const parsedInput = parsed.data;
   const accepted = acceptedWorkspaces(bundle);
   if (accepted.length) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'accepted_workspace', recommended_action: `recover --operation-id ${accepted[0].operation_id}` };
   const authorization = lifecycleAuthorization(bundle, parsedInput.context);
@@ -676,6 +746,18 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
     const reason = error.message || String(error);
     if (reason.startsWith('remove_has_dependents')) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'remove_has_dependents', reason };
     if (reason.startsWith('layout_slug_collision')) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'layout_slug_collision', reason };
+    if (error.reason_code) return {
+      schema_version: TOPIC_STATE_SCHEMA_VERSION,
+      operation: 'apply',
+      verdict: 'blocked',
+      reason_code: error.reason_code,
+      repair_kind: error.reason_code === 'seed_target_unsafe' ? 'missing_contract' : 'agent_action',
+      coordinate: error.coordinate || null,
+      reason,
+      recommended_action: error.reason_code === 'frontmatter_invalid'
+        ? 'Repair only the reported frontmatter syntax coordinate, then rerun this same apply checkpoint.'
+        : 'Correct the direct root through its owning boundary, then rerun this same apply checkpoint.',
+    };
     throw error;
   }
   const oldCanonical = CanonicalPlanSchema.safeParse(split.frontmatter);
@@ -683,7 +765,7 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
     const removeBlocker = safeRemoveBlocker(bundle, oldCanonical.data, parsedInput.remove_topic_uids);
     if (removeBlocker) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', ...removeBlocker, recommended_action: 'Preserve the topic and its history; only an unstarted dependency-free topic can be removed.' };
   }
-  const active = oldCanonical.success ? activeTopicWork(bundle, oldCanonical.data, mutation.affected_topic_uids) : [];
+  const active = parsedInput.action === 'enrich_seed' ? [] : (oldCanonical.success ? activeTopicWork(bundle, oldCanonical.data, mutation.affected_topic_uids) : []);
   if (active.length) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'active_topic_work', fact_refs: active, recommended_action: 'Resolve through existing queue/work-unit owner, then rerun apply.' };
   if (parsedInput.action === 'mutate_layout') {
     const finalBySlug = new Map(mutation.plan.topic_registry.map((topic) => [topic.slug, topic]));
@@ -700,12 +782,45 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
       }
     }
   }
-  const presentation = refreshTopicRegistryTable(split.body, split.frontmatter.topic_registry || [], mutation.plan.topic_registry);
-  const newPlanRaw = renderPlan(mutation.plan, presentation.body);
+  const presentation = parsedInput.action === 'enrich_seed'
+    ? { body: split.body, advisory: null }
+    : refreshTopicRegistryTable(split.body, split.frontmatter.topic_registry || [], mutation.plan.topic_registry);
+  const newPlanRaw = parsedInput.action === 'enrich_seed'
+    ? oldRaw
+    : renderPlan(mutation.plan, presentation.body);
+  if (parsedInput.action === 'enrich_seed') {
+    const staged = mutation.touched.get(mutation.selected_topic.slug);
+    const post = evaluateSeedTopicAuthoring({
+      raw: staged,
+      relativePath: `seed_topics/${mutation.selected_topic.slug}.md`,
+      topic: mutation.selected_topic,
+    });
+    if (!post.passed) return {
+      schema_version: TOPIC_STATE_SCHEMA_VERSION,
+      operation: 'apply',
+      verdict: 'blocked',
+      reason_code: 'writer_postcondition_failed',
+      repair_kind: 'missing_contract',
+      coordinate: post.write_to,
+      reason: post.missing_fact,
+      recommended_action: 'Repair the canonical topic-state writer contract, then rerun this same apply checkpoint.',
+    };
+  }
   const replacementsUnchanged = hashBytes(newPlanRaw) === hashBytes(oldRaw)
     && [...mutation.touched.entries()].every(([slug, bytes]) => existsSync(path.join(seedRoot, `${slug}.md`)) && hashBytes(readFileSync(path.join(seedRoot, `${slug}.md`))) === hashBytes(bytes));
   if (replacementsUnchanged && mutation.cleanup_files.length === 0) {
-    return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'unchanged', affected_topic_uids: mutation.affected_topic_uids, follow_up: null, advisory: presentation.advisory };
+    return {
+      schema_version: TOPIC_STATE_SCHEMA_VERSION,
+      operation: 'apply',
+      verdict: 'unchanged',
+      affected_topic_uids: mutation.affected_topic_uids,
+      follow_up: null,
+      advisory: presentation.advisory,
+      ...(parsedInput.action === 'enrich_seed' ? {
+        action: 'enrich_seed', topic_uid: mutation.selected_topic.topic_uid,
+        slug: mutation.selected_topic.slug, path: `seed_topics/${mutation.selected_topic.slug}.md`, binding_repair: null,
+      } : {}),
+    };
   }
   const operationId = randomUUID();
   const root = workspaceRoot(bundle, true);
@@ -722,10 +837,18 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
     for (const [slug, bytes] of mutation.touched) stage(`seed_topics/${slug}.md`, bytes);
     stage('rb_plan.md', newPlanRaw);
     if (crashAt === 'before_prepared') throw Object.assign(new Error('simulated crash before_prepared'), { preserveWorkspace: false });
-    const manifest = { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation_id: operationId, state: 'prepared', authorization, input_sha256: hashBytes(JSON.stringify(parsedInput)), registry_length_changed: split.frontmatter.topic_registry.length !== mutation.plan.topic_registry.length, affected_topic_uids: mutation.affected_topic_uids, presentation_advisory: presentation.advisory, files, cleanup_files: mutation.cleanup_files };
+    const manifest = { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation_id: operationId, state: 'prepared', authorization, input_sha256: hashBytes(JSON.stringify(parsedInput)), registry_length_changed: split.frontmatter.topic_registry.length !== mutation.plan.topic_registry.length, affected_topic_uids: mutation.affected_topic_uids, presentation_advisory: presentation.advisory, files, cleanup_files: mutation.cleanup_files, ...(parsedInput.action === 'enrich_seed' ? { action: 'enrich_seed', topic_uid: mutation.selected_topic.topic_uid, slug: mutation.selected_topic.slug, path: `seed_topics/${mutation.selected_topic.slug}.md`, binding_repair: mutation.binding_repair } : {}) };
     writeDurable(path.join(workspace, 'prepared.json'), `${JSON.stringify(manifest, null, 2)}\n`); fsyncPath(workspace);
     if (crashAt === 'after_prepared') throw Object.assign(new Error('simulated crash after_prepared'), { preserveWorkspace: true });
-    return recoverCanonicalTopicState({ bundlePath, operationId, crashAt });
+    const result = recoverCanonicalTopicState({ bundlePath, operationId, crashAt });
+    return parsedInput.action === 'enrich_seed' ? {
+      ...result,
+      action: 'enrich_seed',
+      topic_uid: mutation.selected_topic.topic_uid,
+      slug: mutation.selected_topic.slug,
+      path: `seed_topics/${mutation.selected_topic.slug}.md`,
+      binding_repair: mutation.binding_repair,
+    } : result;
   } catch (error) {
     if (!error.preserveWorkspace) { rmSync(workspace, { recursive: true, force: true }); fsyncPath(root); }
     throw error;
@@ -764,5 +887,13 @@ export function recoverCanonicalTopicState({ bundlePath, operationId, crashAt = 
     if (crashAt === 'after_first_cleanup' && cleanupCommitted === 1) throw Object.assign(new Error('simulated crash after_first_cleanup'), { preserveWorkspace: true });
   }
   rmSync(workspace, { recursive: true }); fsyncPath(root);
-  return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'recover', verdict: 'committed', operation_id: operationId, follow_up: manifest.registry_length_changed ? 'recompute_research_style' : null, advisory: manifest.presentation_advisory || null };
+  return {
+    schema_version: TOPIC_STATE_SCHEMA_VERSION,
+    operation: 'recover',
+    verdict: 'committed',
+    operation_id: operationId,
+    follow_up: manifest.registry_length_changed ? 'recompute_research_style' : null,
+    advisory: manifest.presentation_advisory || null,
+    ...(manifest.action === 'enrich_seed' ? { action: manifest.action, topic_uid: manifest.topic_uid, slug: manifest.slug, path: manifest.path, binding_repair: manifest.binding_repair ?? null } : {}),
+  };
 }

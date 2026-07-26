@@ -12,7 +12,7 @@ When an existing UID-bound seed is re-rendered for intent or current-layout muta
 
 `apply` SHALL additionally accept one mutually exclusive `enrich_seed` form with `context: seed_topics`, one non-empty `topic_uid` selector and one complete strict `enrichment` object. That object SHALL contain exactly `hypothesis`, `in_scope`, `out_of_scope`, `search_guardrails`, and `evidence_route`; the first three SHALL be non-empty strings, `search_guardrails` SHALL contain exactly non-empty-string arrays `required_terms` and `forbidden_broadening`, and `evidence_route` SHALL contain exactly non-empty-string arrays `preferred_sources` and `noise_to_avoid`. Each array SHALL contain at least one item. Explicit non-empty gap values SHALL be structurally legal and SHALL remain Agent judgment. Canonical fields, path/slug snapshots, unknown keys, partial patches and caller-provided defaults SHALL reject before workspace publication.
 
-For `enrich_seed`, the Engine SHALL resolve `topic_uid` through the current canonical registry and derive the current seed path itself. It SHALL read the existing seed, preserve every non-canonical frontmatter key not replaced by the five accepted enrichment fields, overwrite those five fields from the complete validated input, overwrite the seven canonical binding fields from the resolved registry Topic, serialize frontmatter once through the existing YAML renderer, and preserve exactly every body byte after the closing frontmatter delimiter. It SHALL NOT infer identity from filename/body, rewrite a rerun direction or research appendix, generate enrichment semantics, or accept an arbitrary body/path patch.
+For `enrich_seed`, the Engine SHALL resolve `topic_uid` through the current canonical registry and derive the current seed path itself. It SHALL read the existing seed, preserve every non-canonical frontmatter key not replaced by the five accepted enrichment fields, overwrite those five fields from the complete validated input, overwrite the seven canonical binding fields from the resolved registry Topic, serialize frontmatter once through the existing YAML renderer, and preserve the exact lexical body suffix. That suffix begins immediately after the closing frontmatter delimiter's terminating LF (`---\n`); the renderer SHALL emit that delimiter LF followed by the captured suffix verbatim, without trimming, normalization or removal of an initial LF. An EOF closing delimiter has an empty suffix. It SHALL NOT infer identity from filename/body, rewrite a rerun direction or research appendix, generate enrichment semantics, or accept an arbitrary body/path patch.
 
 Canonical binding equality SHALL mean recursive equality of parsed JSON-compatible values, not byte equality of YAML serialization. Value type, exact string code-point sequence and array order SHALL be significant; mapping key order, quoting style, scalar style and presentation whitespace SHALL not be significant. In particular, quoted, colon-bearing, multiline, CJK and other Unicode `must_answer` strings SHALL retain the exact parsed string values and array order after rendering; normalization, trimming, summarization or equivalent prose SHALL fail binding.
 
@@ -38,7 +38,7 @@ Before workspace creation, `apply` SHALL authorize mutation from existing lifecy
 
 Post-final rerun apply SHALL be authorized only after the accepted C5 operation has committed a valid non-superseded `post_final_reentry` event, current HITL2 profile semantics/hash still equal the event-bound after-profile, `enter-phase` has written a route-bound rerun `load_complete` referencing that exact recovery event, existing `advance-status --to hitl2_recorded` has written the matching exceptional `phase_transition`, `current_node` is `phases/phase-rerun.md`, and the incoming `hitl2_recorded -> rerun_ready` status window remains intact. A caller-declared `human-directed`, rerun, seed-topics or recovery context SHALL NOT substitute for any required witness class, the accepted profile, or the existing status-sync step.
 
-`migrate_legacy`, `set_rerun_direction`, and `mutate_layout` SHALL be authorized only in a sanctioned normal or post-final rerun context. `enrich_seed` SHALL be authorized only after one accepted setup/rerun source route has entered Seed Topics. Other post-final, stale/missing-witness and arbitrary maintenance invocation SHALL reject without workspace or authority mutation.
+`migrate_legacy`, `set_rerun_direction`, and `mutate_layout` SHALL be authorized only in a sanctioned normal or post-final rerun context. `enrich_seed` SHALL be authorized only after one accepted setup/rerun source route has entered Seed Topics. Other post-final, stale/missing-witness and arbitrary maintenance invocation SHALL reject without workspace or authority mutation. Only a current `seed_topic_materialize` queue completion and a final `seed-topics-ready` Gate that each establish that same legal Seed Topics window MAY project `enrich_seed` as an executable `engine_operation`; their bounded parse-repair feedback is likewise legal only in that window. Generic topic-state inspect SHALL remain read-only, report a direct mismatch with `repair_kind: missing_contract` that identifies its no-write inspection boundary and the current lifecycle owner (plus an absent authoring window when applicable), and SHALL NOT mint either an `enrich_seed` or raw-YAML repair route.
 
 The prepared manifest SHALL record the complete originally proven authorization facts. For normal rerun this means the gate handoff and bound load identity. For post-final rerun it means recovery event id/index/exact-line SHA256, event-bound after-profile hash, bound rerun load index, exact exceptional `phase_transition` index/binding, and the incoming current-node/status window. For seed enrichment it means the setup/rerun source gate attempt, bound Seed Topics load identity and incoming current-node/status window. `recover` MAY finish that exact accepted operation after lifecycle position changes, but SHALL NOT accept new semantics, re-evaluate a new apply request or widen the staged file set.
 
@@ -205,10 +205,10 @@ The topic-state input/result contract SHALL use schema version `1.1.0` for this 
 - **THEN** apply SHALL return one `input_invalid` coordinate and same apply rerun before workspace publication
 - **AND** plan, seed, queue, status and trace bytes SHALL remain unchanged
 
-#### Scenario: Body bytes survive enrichment
+#### Scenario: Lexical body suffix survives enrichment
 
-- **WHEN** a current seed contains Agent-authored Markdown, appendix tokens, a rerun direction or legacy duplicate sections and valid structured enrichment is applied
-- **THEN** every byte after the closing frontmatter delimiter SHALL remain identical
+- **WHEN** a current seed contains a deliberate blank line immediately after its closing frontmatter delimiter, Agent-authored Markdown, appendix tokens, a rerun direction or legacy duplicate sections and valid structured enrichment is applied
+- **THEN** the exact suffix after that delimiter's terminating LF, including its first blank-line LF, SHALL remain identical
 - **AND** only the accepted frontmatter fields and YAML presentation MAY change
 
 #### Scenario: Parsed canonical values survive YAML round trip
@@ -246,6 +246,12 @@ The topic-state input/result contract SHALL use schema version `1.1.0` for this 
 - **WHEN** the selected UID has the current non-delegated `seed_topic_materialize` queue demand during a legal Seed Topics window
 - **THEN** `enrich_seed` SHALL remain available and SHALL NOT fail solely on the canonical-intent active-work quiescence rule
 - **AND** it SHALL neither terminalize nor otherwise mutate that queue demand
+
+#### Scenario: Generic inspect does not mint a Seed Topics writer
+
+- **WHEN** generic topic-state inspect detects a canonical binding mismatch, including after the Seed Topics lifecycle window has closed
+- **THEN** it SHALL retain the evaluator's direct diagnostic but SHALL NOT expose `enrich_seed` as an executable `engine_operation` or name a raw YAML coordinate as a repair surface
+- **AND** it SHALL report `missing_contract` with the current lifecycle owner or the absent legal Seed Topics authoring window rather than implying a callable repair
 
 #### Scenario: Legacy duplicate body remains non-authoritative
 

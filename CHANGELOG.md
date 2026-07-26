@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.50
+
+- Seed Topics now uses one structured `enrich_seed` canonical writer. It derives identity and must-answer fields from the registry, preserves existing seed body bytes, and records bounded repair feedback without mutating queue authority.
+- Queue completion and the Seed Topics Gate expose the writer only during a validated lifecycle window; generic inspect remains diagnostic-only and legacy duplicate body prose remains compatible.
+- New seed skeletons retire duplicate body authoring for must-answer, scope, and evidence route.
+
 ## v0.49
 
 - Added `operate-work-unit replace` for an eligible failed or abandoned delegated attempt. It derives one lineage-bound ordinary queue demand from matching terminal authority, without reviving history or allocating a work ID.

@@ -67,12 +67,12 @@ Seed-topics 使用 Agentic Queue 驱动 topic 物化。每个 topic 一个 task�
   "queue_item_id": "seed-topic-{topic.slug}",
   "title": "Materialize seed topic: {topic.title}",
   "targets": { "controller": "main-agent" },
-  "action": "将 topic_registry 中的 [{topic.slug}]（标题：{topic.title}）物化为 seed_topics/{topic.slug}.md。该文件必须是 search-relevant decision document——能告诉后续 wave0 source intake 搜索什么、怎么搜、避免什么。具体要求见本 phase body §3.1 的 Seed Topic 文件结构。从 rb_plan.md topic_registry 和 rb_profile.yaml 中提取该 topic 的 must_answer、hypothesis、scope、search_guardrails、evidence_route 等信息填入。",
+  "action": "编辑 seed_topics/{topic.slug}.md 的 Agent-owned Markdown body，并保留一个 complete enrich_seed input。该 input 只含 exact topic_uid 和 hypothesis/in_scope/out_of_scope/search_guardrails/evidence_route；通过 operate-topic-state apply 写入 frontmatter，再完成此 queue card。不得手写 canonical YAML 或在 body 重复 must_answer、scope、evidence route。",
   "producer_rule": "seed_topic_materialize",
   "lineage": {"topic_slug": "{topic.slug}", "phase": "seed-topics"},
   "priority_class": "P3_current_gate_gap",
   "required_receipts": ["file:seed_topics/{topic.slug}.md"],
-  "done_condition": "seed_topics/{topic.slug}.md 存在，YAML frontmatter 含 id/slug/title（均非空），slug 与文件名 stem 一致，正文初始化区含 §3.1 文件结构规定的全部 sections（主题定位/must_answer/初始假设/why now/研究边界/证据锚点/交付价值/下游位置），轮次追加区为空占位（含分隔标记和回填责任表）",
+  "done_condition": "topic-state apply 已为 exact UID 写入 complete structured enrichment；seed body 含非重复初始化 sections（主题定位/初始假设/why now/交付价值/下游位置）和轮次追加区占位；随后同一 queue completion 通过 shared evaluator。",
   "verification": {"engine": ["receipt_check"], "agent": ["frontmatter_completeness", "slug_consistency", "content_has_all_sections"]},
   "writes_to": ["seed_topics/{topic.slug}.md"],
   "status_sync": ["seed_topics_materialized"],
@@ -92,7 +92,7 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue <bundle> --task /tmp/wfq-seed-{
 node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 ```
 
-**Seed Topic 文件结构：** 文件名必须是 canonical `topic.slug + .md`；gate 校验 `filename_stem == registry_slug == frontmatter_slug`。frontmatter 使用 YAML，且 canonical UID/id/slug/title/must_answer/scope-role binding 与文件名保持一致。
+**Seed Topic 文件结构：** 文件名必须是 canonical `topic.slug + .md`；gate 校验 `filename_stem == registry_slug == frontmatter_slug`。Engine 是 canonical frontmatter 的唯一 writer；Agent 正常只编辑 body 并提交完整 structured enrichment input。
 
 完整初始化 skeleton、appendix headings/tokens、Wave responsibility 与 optional rerun direction 均由已加载的 `shared-seed-topic-authoring` contract 定义。不要在本 phase 重写其模板。Seed Topics 只按该 contract materialize/enrich initialization area；research-round appendix 保持预埋，后续 Wave 仅替换其 owning token。完整 return-map entry、ref hierarchy 与 token lifecycle 由已加载的 `shared-return-map-authoring` contract 定义。
 
@@ -113,12 +113,12 @@ controls present 时，Seed 可将与单一 topic 相关的解释投影为 `sear
 │                              ▼                                       │
 │  ┌─ 2. execute ────────────────────────────────────────────────────┐│
 │  │   targets.controller = main-agent（当前 wire value；seed topic     ││
-│  │   物化不涉及搜索，Phase Agent 直接从 topic_registry + profile 写入）││
+│  │   物化不涉及搜索，Phase Agent 只编辑 Agent-owned body）            ││
 │  │   a. 读取 task.payload.topic_slug                                 ││
-│  │   b. 从 rb_plan.md topic_registry 获取该 topic 的完整定义        ││
-│  │   c. 从 rb_profile.yaml 获取 root_must_answer_set,               ││
-│  │      research_profile 等上游约束                                 ││
-│  │   d. 按 §3.1 Seed Topic 文件结构创建 seed_topics/{topic.slug}.md ││
+│  │   b. 编辑 body 并形成 complete retained enrich_seed input        ││
+│  │   c. node operate-topic-state.mjs apply --bundle <bundle>        ││
+│  │      --input <retained-enrich-seed.json>                         ││
+│  │   d. apply 的 exact syntax root 才可修 frontmatter，随后重跑 apply││
 │  │   e. 缺失信息标注为 gap（不编造）                                ││
 │  └─────────────────────────────────────────────────────────────────┘│
 │                              │                                       │
@@ -145,7 +145,7 @@ controls present 时，Seed 可将与单一 topic 相关的解释投影为 `sear
 
 **执行约束：**
 - **不跳过 task**：只要 claim 返回了 task card，就执行+complete
-- **不编造信息**：`must_answer`、`hypothesis`、`search_guardrails`、`evidence_route` 如果上游（topic_registry / profile）未提供，标注为显式 gap，不编造
+- **不编造信息**：enrichment 如果上游（topic_registry / profile）未提供，标注为显式 gap；`must_answer` 永远由 Engine 从 registry copy，不编造
 - **complete 阻塞**：receipt check 失败 → engine 生成 repair → 修复 → re-claim
 - **seed topic 不是 chapter label**：每个 seed topic 必须包含足够的 search-relevant 约束（search_guardrails + evidence_route），否则 wave0 sub-agent 无法做定向搜索
 
@@ -196,7 +196,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to seed_topics_ready
 
 先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority，也不得用其 prose、filename 或 rule target 猜 repair kind/permission。`repair_kind` 只分配责任，当前 loaded node 的 `stop` 才决定 interaction placement；本 phase 为 `stop: no`，任何分类都不得主动发起提问、状态/进度、approval、acknowledgement 或等待。用户主动的 current turn 可从 direct facts 得到直接回答，但回答不创建 checkpoint、state、permission、route、mutation 或 reentry authority。按每个 independent primary hint 执行：
 
-1. `repair_kind: agent_action`：由 Agent 只修改 `write_to` 指出的 authorized seed projection/field，例如 exact missing seed、title 或 slug binding；不得扩大到 registry、queue、ledger 或未授权 Topic 语义。
+1. `repair_kind: agent_action`：正常仅可编辑 body；唯一 frontmatter 例外是 apply 报告的 exact `frontmatter_invalid` syntax coordinate，修复后必须立即运行同一 `enrich_seed` writer。不得扩大到 registry、queue、ledger 或 canonical Topic 语义。
 2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal operation，例如 topic-state inspect/recover/apply、completion-event operation 或合法 status/handoff owner；不得直接编辑 status、trace、canonical registry 或 provenance。
 3. `repair_kind: user_decision`：识别 `missing_fact` 指出的真实 Topic/HITL 语义，例如 canonical registry 为空且没有已记录 Topic intent；不得从 seed filename、旧 prose 或 chat 猜 Topic。只有 existing HITL owner 可发起并记录，本 phase 暂无 legal path 时保持 failed checkpoint。
 4. `repair_kind: external_action`：识别不可代理的权限/环境前置条件；不主动请求 acknowledgement，满足后由 Agent 继续。

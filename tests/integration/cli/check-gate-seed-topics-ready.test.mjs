@@ -126,6 +126,9 @@ describe('check-gate-seed-topics-ready', () => {
     assert.equal(result.status, 1, result.stderr);
     assert.equal(output.check.passed, false);
     assertCompleteHint(parent);
+    assert.equal(parent.repair_kind, 'engine_operation');
+    assert.match(parent.write_to, /operate-topic-state\.mjs apply/);
+    assert.match(parent.write_to, new RegExp(TOPIC.topic_uid));
     assert.deepEqual(output.hints.map((hint) => hint.rule_id), ['canonical_topic_state_prerequisite']);
     assert.ok(output.check.masked_rule_ids.includes('per_file_slug_stem_consistency'));
     assert.ok(output.check.masked_rule_ids.includes('per_file_title_non_empty'));

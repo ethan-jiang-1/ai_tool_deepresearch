@@ -21,7 +21,7 @@ import {
   makeContractFinding,
   makeDefinitionRuleFinding,
 } from '../../engine/helpers/wave-contract-findings.mjs';
-import { inspectCanonicalTopicState } from '../../engine/helpers/canonical-topic-state.mjs';
+import { inspectCanonicalTopicState, inspectSeedTopicsAuthoringAuthorization } from '../../engine/helpers/canonical-topic-state.mjs';
 import { evaluateSeedTopicAuthoring } from '../../engine/helpers/seed-topic-authoring-evaluator.mjs';
 
 const args = parseGateCliArgs();
@@ -153,11 +153,37 @@ function slugSetFinding(rule, failure) {
 }
 
 const topicState = inspectCanonicalTopicState({ bundlePath });
+const seedAuthoringAuthorization = inspectSeedTopicsAuthoringAuthorization({ bundlePath });
 let canonicalParentRuleId = null;
 if (topicState.mode !== 'canonical' || topicState.passed !== true) {
   canonicalParentRuleId = 'canonical_topic_state_prerequisite';
   const blocker = topicState.blockers?.[0];
-  findings.push(blocker?.finding || makeContractFinding({
+  const authoringEntry = getDiskSeeds()
+    .map((seed) => ({ seed, topic: canonicalTopicForSeed(seed), evaluation: evaluateCanonicalSeed(seed) }))
+    .find(({ evaluation }) => evaluation && !evaluation.passed);
+  const authoring = authoringEntry?.evaluation;
+  const writerFinding = seedAuthoringAuthorization.ok && authoring && ['canonical_binding_mismatch', 'frontmatter_invalid'].includes(authoring.reason_code)
+    ? makeContractFinding({
+      id: `canonical_topic_state:${authoring.reason_code}`,
+      ruleId: canonicalParentRuleId,
+      findingSource: 'checker',
+      classification: 'blocking',
+      blockingBasis: 'binding_integrity',
+      surface: authoring.relative_path,
+      expected: authoring.expected,
+      observed: authoring.observed,
+      missingFact: authoring.missing_fact,
+      repairKind: authoring.reason_code === 'canonical_binding_mismatch' ? 'engine_operation' : 'agent_action',
+      writeTo: authoring.reason_code === 'canonical_binding_mismatch'
+        ? `node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle ${resolveFsPath(bundlePath, '.')} --input <retained-enrich-seed-${authoringEntry.topic.topic_uid}.json>`
+        : authoring.write_to,
+      repair: authoring.reason_code === 'canonical_binding_mismatch'
+        ? 'Submit the retained complete enrich_seed input through canonical topic-state, then rerun this same Gate.'
+        : 'Repair only the reported frontmatter syntax coordinate, run canonical topic-state enrich_seed, then rerun this same Gate.',
+      detail: `Canonical seed authoring failed: ${authoring.reason_code}`,
+    })
+    : null;
+  findings.push(writerFinding || blocker?.finding || makeContractFinding({
     id: canonicalParentRuleId,
     ruleId: canonicalParentRuleId,
     findingSource: 'checker',

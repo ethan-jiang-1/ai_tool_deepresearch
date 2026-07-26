@@ -20,7 +20,7 @@ Topic-state is the only atomic plan/current-seed writer. Initial skeletons and l
 
 ## Initialization Frontmatter
 
-Use readable YAML with canonical `topic_uid`, `id`, `slug`, `title`, `must_answer`, `scope_role`, and `depends_on_topic_uids`, followed by Agent-facing enrichment:
+The Engine copies canonical `topic_uid`, `id`, `slug`, `title`, `must_answer`, `scope_role`, and `depends_on_topic_uids` from the registry. The Agent retains and submits only this complete closed enrichment object:
 
 ```yaml
 hypothesis: "pending — record an explicit gap when upstream facts are insufficient"
@@ -36,6 +36,12 @@ evidence_route:
 
 Never invent missing semantic facts merely to make the presentation complete. Record an explicit `pending` gap instead.
 
+## Authoring Loop
+
+For one claimed Seed Topics queue card, edit only the Agent-owned Markdown body, retain one complete `enrich_seed` input, run `operate-topic-state apply`, then run the same `operate-queue complete` command. The input contains `context: "seed_topics"`, `action: "enrich_seed"`, the exact current `topic_uid`, and exactly the five fields above. The legal writer exists only in the route-bound `setup_ready|rerun_ready -> seed_topics_ready` window; generic inspect does not create it.
+
+If apply reports `frontmatter_invalid`, repair only its exact syntax coordinate and immediately rerun the same writer. Do not author canonical values in YAML by hand. Parseable legacy body copies remain readable and are preserved as bytes, but are not structured authority.
+
 ## Initialization Body Skeleton
 
 ```markdown
@@ -44,9 +50,6 @@ Never invent missing semantic facts merely to make the presentation complete. Re
 ## 主题定位
 <why this Topic matters and its research role>
 
-## must_answer
-1. <investigatable question>
-
 ## 初始假设、缺口或张力
 **已知**：<recorded fact>
 **缺口**：<what Wave0 must establish>
@@ -54,13 +57,6 @@ Never invent missing semantic facts merely to make the presentation complete. Re
 
 ## why now
 - <trigger, window, or milestone>
-
-## 研究边界与不深挖范围
-**在范围内**：<concrete boundary>
-**不深挖**：<excluded direction>
-
-## 证据锚点与优先来源
-- <source type or trust cue>
 
 ## 为什么对最终交付物重要
 <concrete final-deliverable contribution>

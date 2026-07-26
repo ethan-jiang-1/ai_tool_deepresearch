@@ -97,22 +97,22 @@ Strict input error使用structured `input_invalid` output，至少包含first re
 
 ### 5. Reuse existing workspace，body bytes与queue authority不变
 
-Enrichment mutation通过现有topic-state workspace staging exactly one current seed和byte-identical `rb_plan.md` contract；prepared manifest记录existing authorization、input hash和affected UID，recover仍只roll forward staged bytes。Seed正文定义为closing frontmatter delimiter之后的exact bytes，render前后必须byte-equal，包括appendix、legacy duplicate sections与rerun direction。
+Enrichment mutation通过现有topic-state workspace staging exactly one current seed和byte-identical `rb_plan.md` contract；prepared manifest记录existing authorization、input hash和affected UID，recover仍只roll forward staged bytes。正文 preservation 是 lexical 的：existing parseable seed 的 body suffix 是 closing frontmatter delimiter 的 terminating LF（`---\n`）之后的原始 bytes；renderer 重新发出该 delimiter LF 后必须逐字节接回这个 captured suffix，不得 trim、normalize 或删除其首个 LF。因而 frontmatter 后故意保留的 blank line、appendix、legacy duplicate sections 与rerun direction 都在 render 前后 byte-equal；EOF closing delimiter 的 suffix 为空。
 
 `enrich_seed`只在Seed Topics lifecycle可用，因此不套用用于canonical intent/layout mutation的generic active-topic quiescence blocker；当前`seed_topic_materialize` queue item正是operation的caller work。它不读取、claim、complete或修改queue，也不借此允许later-Wave enrichment。Accepted workspace继续优先返回exact recover；late drift继续fail closed。
 
 备选将operation绑到一个特定queue item会让topic-state writer取得queue admission/claim责任，并妨碍Gate repair；lifecycle authorization加single-topic selector已经是更窄且完整的owner boundary。
 
-### 6. Queue completion与Gate保留同一evaluator，但修复owner改变
+### 6. Queue completion与已验证的Gate保留同一evaluator，但修复owner改变
 
-`operate-queue complete`仍先admit exact `seed_topic_materialize` declaration，再调用相同evaluator，只有pass才能terminalize。若fallback发现`canonical_binding_mismatch`，feedback改为：
+`operate-queue complete`仍先admit exact `seed_topic_materialize` declaration，再调用相同evaluator，只有pass才能terminalize。仅当它已验证 Seed Topics lifecycle window 时，若fallback发现`canonical_binding_mismatch`，feedback改为：
 
 - `repair_kind: engine_operation`；
 - `missing_fact`保留exact canonical field/expected/observed；
 - `write_to`命名该UID的`operate-topic-state apply` `enrich_seed` owner/input contract，不授权direct YAML edit；
 - `rerun`仍是同一个queue completion command。
 
-`frontmatter_invalid`是唯一需要Agent对exact syntax coordinate做bounded parse repair的legacy/accidental exception；修到可解析后必须立即走`enrich_seed`，不能手填canonical values。Ambiguous card declaration仍是`missing_contract`。Final seed-topics Gate和topic-state inspect对canonical mismatch采用同一个writer owner；Gate不校验enrichment语义或body duplicate prose。
+在同一个已验证 window 中，`frontmatter_invalid`是唯一需要Agent对exact syntax coordinate做bounded parse repair的legacy/accidental exception；修到可解析后必须立即走`enrich_seed`，不能手填canonical values。窗口外的 canonical 或 parse root 都只报 direct diagnostic 加 `missing_contract`/current owner，不得暗示 syntax repair 后可调用 writer。Ambiguous card declaration仍是`missing_contract`。只有 queue completion 和已验证 setup/rerun incoming witness 加 status window 的 final `seed-topics-ready` Gate 可以把 canonical mismatch 投影为这个 writer owner；Gate不校验enrichment语义或body duplicate prose。Generic topic-state inspect 始终是只读诊断：它仍复用 evaluator 报告 direct mismatch，但绝不把 `enrich_seed` 标为可执行 `engine_operation`、也不指向 raw YAML；它以 `missing_contract` 标出 no-write inspection boundary 与 current lifecycle owner，并在没有合法 Seed Topics window 时额外标出缺失 window。
 
 ### 7. Legacy与in-flight bundle采用read-compatible、write-canonical策略
 
@@ -132,9 +132,9 @@ Rollback可恢复v0.49 workflow/code，因为writer没有新增persistent state�
 
 - topic-state input schema/lifecycle authorization/build/render/result与CLI error projection；
 - seed authoring evaluator的explicit parsed-value equality contract（仍一个helper）；
-- queue completion/inspect/Gate canonical-repair owner adapters；
+- queue completion 与in-window Gate canonical-repair owner adapters，以及generic inspect 的diagnostic/no-writer projection；
 - `renderNewSeedBody()`、shared authoring contract、Seed Topics phase/task card、topic-state playbook/command index；
-- focused unit/integration/deterministic E2E与一个real Subject Agent playbook；
+- focused unit/integration/deterministic E2E、setup-only Seed Topics canary helper、registered `204` real Subject runner与对应playbook；
 - `CHANGELOG.md`和`DPT_FRAMEWORK/RUN.md` v0.50 release surfaces。
 
 预计删除或收敛：raw canonical YAML authoring guidance、new-body `must_answer` copy、body scope/evidence-route duplicate obligations、queue/Gate direct canonical-file repair wording，以及“等到completion才知道identity drift”的隐含流程。明确避免：new CLI、writer、workspace、state、hash identity、body parser/synchronizer、lint Gate、retry/recovery branch或queue coupling。
@@ -149,6 +149,7 @@ Rollback可恢复v0.49 workflow/code，因为writer没有新增persistent state�
 - [Malformed YAML无法由structured writer自动恢复] -> fail在最早parse root，只授权bounded syntax repair；不写第二salvage parser或猜body boundary。
 - [Seed Topics lifecycle authorization需兼容setup与rerun两个incoming edge] -> 复用existing handoff preflight与status windows，并用focused initial/rerun/post-final negative tests证明不扩权。
 - [Skippingcanonical-mutation quiescence可能被误用] -> closed `context/action`只在Seed Topics node生效且只改five enrichment fields；later phases和arbitrary maintenance全部fail closed。
+- [Generic inspect可能把诊断误说成跨阶段可执行writer] -> 只有完成中的seed card和已验证的Seed Topics Gate可发布 `enrich_seed` engine operation；inspect一律只报direct diagnostic与missing-contract/current-owner，不创造权限。
 - [Topic-state schema minor bump影响exact-version consumers] -> v1.1保持existing fields/forms additive compatibility，同步docs/tests/version banner；没有runtime data migration。
 - [Real Agent canary可能受runtime availability影响] -> 它只证明给定legal setup boundary后Agent使用structured writer并完成queue/Gate，不评价enrichment质量；不可运行时诚实NOT_RUN，不能由JS fixture替代。
 
@@ -156,13 +157,13 @@ Rollback可恢复v0.49 workflow/code，因为writer没有新增persistent state�
 
 1. Apply开始先运行verification plan-mode；添加failing unit/integration/E2E tests，锁定parsed equality、strict input、body preservation、authorization、atomic recovery和fallback owner。
 2. 扩展topic-state schema/apply path与CLI output；复用existing renderer/workspace/evaluator，不先改Markdown flow。
-3. 更新queue/inspect/Gate feedback adapter，使canonical mismatch只指向new writer；验证所有failure无queue/plan/seed意外副作用。
+3. 更新queue与in-window Gate feedback adapter，使canonical mismatch只指向new writer；generic inspect 保持diagnostic/no-writer，验证所有failure无queue/plan/seed意外副作用。
 4. 删除new-body duplicate sections，更新shared/phase/task/command guidance与static regression，确保normal flow是body edit + structured apply + completion。
-5. 更新deterministic full chain和new real-Agent case，运行native verification；同步v0.50 release notes。
+5. 更新deterministic full chain，并新增setup-only Seed Topics canary helper、`204` Subject-runner registration和new real-Agent case，运行native verification；同步v0.50 release notes。
 6. 运行focused/full tests、verification assets-mode、requirement/spec governance与strict OpenSpec validation后归档。
 
 Rollback恢复旧code/guidance和v0.49 banner即可；无新persistent state、queue migration或seed format migration。已由v0.50 writer产出的YAML仍符合v0.49 reader，body删减只影响非Gate-requiredpresentation，新/旧canonical frontmatter保持兼容。
 
 ## Open Questions
 
-无阻塞问题。若apply发现downstream production consumer实际读取legacy body `## must_answer`、scope或evidence section而非frontmatter，必须返回explore并修订capability scope；不得在本change内临时加入body synchronizer或第二authority。若real-Agent proof需要新增host permission、generic Subject runner或semantic judge，也必须缩窄claim或另提change。
+无阻塞问题。若apply发现downstream production consumer实际读取legacy body `## must_answer`、scope或evidence section而非frontmatter，必须返回explore并修订capability scope；不得在本change内临时加入body synchronizer或第二authority。若real-Agent proof需要超出既有 Subject-runner registration 和 setup-only bundle 的新 host permission 或 semantic judge，也必须缩窄claim或另提change。

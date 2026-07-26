@@ -92,6 +92,7 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 | `exp_reentry-debuggability/case-315-light-canonical-topic-state-recovery.md` |
 | `exp_reentry-debuggability/case-317-light-post-final-recovery.md` |
 | `exp_wfn_rerun/case-318-heavy-rerun-direction-recovery.md` |
+| `exp_wfn_seedtopic/case-204-heavy-canonical-seed-authoring.md` |
 | `exp_engine-boundary/case-401-light-full-boundary.md` |
 | `exp_engine-boundary/case-402-light-complete-reject.md` |
 | `exp_engine-boundary/case-403-light-work-unit-authority.md` |

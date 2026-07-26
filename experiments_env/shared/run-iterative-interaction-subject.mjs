@@ -37,6 +37,16 @@ const SETTINGS_PATH = join(
 );
 
 const SUBJECTS = {
+  '204': {
+    bundlePrefix: 'dpt_disp_case-204_',
+    transcript: 'case-204-subject-transcript.jsonl',
+    system: 'You are the independent Subject Agent for case 204, distinct from the Playbook Agent. Work only in the exact supplied bundle and follow the injected minimal Seed Topics runbook.',
+    messages: ['Execute the injected six-step Seed Topics runbook. Write one short, non-duplicate body update and choose concrete non-empty enrichment values. Stop after the real Gate result.'],
+    tools: 'Bash,Edit,Glob,Grep,Read,Write',
+    boundary: 'Use no external services. Produce the procedure through the existing writer and queue/Gate commands only. Do not write playbook verdict checks, native completion, health output, or cleanup. Fail honestly if a required production command is unavailable.',
+    surface: 'minimal_seed_authoring',
+    timeoutMs: 60 * 1000,
+  },
   '115': {
     bundlePrefix: 'dpt_disp_case-115_',
     transcript: 'case-115-subject-transcript.jsonl',
@@ -155,7 +165,7 @@ const SUBJECTS = {
 };
 
 function usage() {
-  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <115|164|225|232|318|711|712|713-readiness|713-final|714|901|951|951-judge> --bundle <path>');
+  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <204|115|164|225|232|318|711|712|713-readiness|713-final|714|901|951|951-judge> --bundle <path>');
   process.exit(2);
 }
 
@@ -347,6 +357,34 @@ function loadProductionSurface(bundle) {
   };
 }
 
+function loadMinimalSeedAuthoringSurface(bundle) {
+  const status = JSON.parse(readFileSync(join(bundle, 'rb_status.json'), 'utf8'));
+  const plan = readFileSync(join(bundle, 'rb_plan.md'), 'utf8');
+  const uid = plan.match(/^\s*-\s+topic_uid:\s*(\S+)\s*$/m)?.[1];
+  if (status.current_node !== 'phases/phase-seed-topics.md' || !uid) {
+    throw new Error('case 204 requires a legal Seed Topics node and one canonical topic UID');
+  }
+
+  const resultPath = join(bundle, 'case-204-queue-result.json');
+  const inputPath = join(bundle, 'case-204-enrich-seed.json');
+  const seedPath = join(bundle, 'seed_topics', '01_canonical-seed.md');
+  return {
+    nodeRef: status.current_node,
+    text: [
+      '<!-- DPT_SUBJECT_MINIMAL_RUNBOOK case=204 -->',
+      'This is a legal Seed Topics lifecycle window with exactly one queued main-agent card. Use these production commands in order.',
+      `1. Claim: node DPT_FRAMEWORK/cli/operate-queue.mjs claim ${bundle} --actor main-agent`,
+      `2. Edit only ${seedPath} after its frontmatter. Do not edit its canonical frontmatter fields.`,
+      `3. Write ${inputPath} with exactly this shape and non-empty values you choose: {"context":"seed_topics","action":"enrich_seed","topic_uid":"${uid}","enrichment":{"hypothesis":"...","in_scope":"...","out_of_scope":"...","search_guardrails":{"required_terms":["..."],"forbidden_broadening":["..."]},"evidence_route":{"preferred_sources":["..."],"noise_to_avoid":["..."]}}}.`,
+      `4. Apply: node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle ${bundle} --input ${inputPath}`,
+      `5. Write ${resultPath} with queue_item_id "case-204-seed", receipt "file:seed_topics/01_canonical-seed.md", summary, and writes ["seed_topics/01_canonical-seed.md"]; then run node DPT_FRAMEWORK/cli/operate-queue.mjs complete ${bundle} --result ${resultPath}.`,
+      `6. Gate: node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle ${bundle} --current-node phases/phase-seed-topics.md`,
+      'If any command fails, stop and report its exact output. Do not hand-edit queue, trace, status, or canonical YAML.',
+      '<!-- DPT_SUBJECT_MINIMAL_RUNBOOK_END -->',
+    ].join('\n\n'),
+  };
+}
+
 const [subjectId, ...args] = process.argv.slice(2);
 const bundleIndex = args.indexOf('--bundle');
 const subject = SUBJECTS[subjectId];
@@ -360,7 +398,9 @@ if (!existsSync(LAUNCHER)) throw new Error(`launcher is missing: ${LAUNCHER}`);
 
 const settingsStatus = ensureUniqueSettings();
 const transcriptPath = join(bundle, subject.transcript);
-const productionSurface = loadProductionSurface(bundle);
+const productionSurface = subject.surface === 'minimal_seed_authoring'
+  ? loadMinimalSeedAuthoringSurface(bundle)
+  : loadProductionSurface(bundle);
 const systemPrompt = [
   subject.system,
   `The exact bundle path provided by the runner is: ${bundle}`,

@@ -1,6 +1,6 @@
 ---
 title: Evidence ownership and canonical seed authoring
-status: research_backlog_with_no_fixed_openspec_change
+status: partially_completed_research_backlog
 created: 2026-07-26
 source_bugs: BUG-124, BUG-125, BUG-126, BUG-127, BUG-128, BUG-129, BUG-130, BUG-131
 ---
@@ -29,6 +29,15 @@ exists, and the engine already appears to permit a legal shared-reference
 producer — so the plan now opens with a falsification step and marks the
 affected designs as contingent. Facts carry `file:line` anchors; where prose
 and an anchored fact disagree, the anchored fact wins.
+
+**Execution update (2026-07-26):** Change 1 is complete and archived as
+[`2026-07-26-canonical-seed-authoring`](../../openspec/changes/archive/2026-07-26-canonical-seed-authoring/).
+It established the single structured `enrich_seed` writer, parsed-value
+canonical binding, frontmatter/body ownership boundary, in-window repair
+feedback, and the v0.50 compatibility boundary without adding a second writer
+or a seed migration. Change 2, `converge-queue-demand-admission`, is now the
+selected next change; it remains unimplemented and requires its own OpenSpec
+proposal before target-code work.
 
 The project is an agentic research framework. The Agent searches, reads,
 writes research and synthesis; Markdown carries Agent Flow; the JavaScript
@@ -146,12 +155,12 @@ falsify two gaps this plan previously assumed, so the plan now opens with a
 falsification step and separates the one question that has its own source of
 record.
 
-| Order | Candidate change | System interface it establishes | Bugs |
-| --- | --- | --- | --- |
-| 0 | `shared-reference-producer-falsification` (investigation, not a change) | Whether a legal shared-reference producer already exists, and what the floor should be | 124, 128 |
-| 1 | `canonical-seed-authoring` | How a canonical Topic identity and Agent-authored enrichment become one valid seed file | 126, 127 |
-| 2 | `converge-queue-demand-admission` | When a queue demand is proved claimable, and what terminates one that is not | 125 |
-| 3 | `unify-evidence-ownership-and-projections` | How every Wave artifact is classified as delegated acquisition, Phase projection, or unbacked output | 124, 128, 129, 130, 131 |
+| Order | Candidate change | System interface it establishes | Bugs | Status |
+| --- | --- | --- | --- | --- |
+| 0 | `shared-reference-producer-falsification` (investigation, not a change) | Whether a legal shared-reference producer already exists, and what the floor should be | 124, 128 | pending |
+| 1 | `canonical-seed-authoring` | How a canonical Topic identity and Agent-authored enrichment become one valid seed file | 126, 127 | complete, archived 2026-07-26 |
+| 2 | `converge-queue-demand-admission` | When a queue demand is proved claimable, and what terminates one that is not | 125 | selected next |
+| 3 | `unify-evidence-ownership-and-projections` | How every Wave artifact is classified as delegated acquisition, Phase projection, or unbacked output | 124, 128, 129, 130, 131 | pending, contingent on Step 0 |
 
 Changes 1, 2 and 3 are separate because each answers a bounded question against
 a *different source of record*: canonical Topic identity lives in
@@ -240,7 +249,15 @@ classification. The Agent owns enrichment, evidence selection, reference
 materialization, synthesis, and the normal legal command loop. The user is not
 asked to run ordinary repair commands or to approve a failed authority fact.
 
-## Change 1: `canonical-seed-authoring`
+## Change 1: `canonical-seed-authoring` (complete)
+
+**Archived OpenSpec:** `2026-07-26-canonical-seed-authoring`.
+
+**Delivered boundary:** one strict `enrich_seed` apply form writes only the
+five Agent-owned enrichment fields while the Engine derives the canonical
+seven-field envelope from `rb_plan.md#/topic_registry`. The same evaluator
+uses parsed-value equality before publish, queue completion and the Seed Topics
+Gate; legacy body prose remains readable but non-authoritative.
 
 **Goal:** eliminate the impossible contract where an Agent must hand-author
 YAML identity fields that must remain byte-for-byte equal to the canonical
@@ -284,7 +301,7 @@ is rejected before seed completion; a `must_answer` rewrite is reported when it
 happens rather than at completion; no normal seed authoring flow requires an
 Agent to escape YAML or duplicate a registry field.
 
-## Change 2: `converge-queue-demand-admission`
+## Change 2: `converge-queue-demand-admission` (selected next)
 
 **Goal:** make the enqueue-time and claim-time answer to "is this demand
 claimable?" come from one evaluator, so a card cannot be accepted and reported
