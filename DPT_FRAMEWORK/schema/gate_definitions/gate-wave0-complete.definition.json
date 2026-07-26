@@ -40,9 +40,9 @@
       "threshold": 1,
       "threshold_source": "rb_profile.yaml#/research_style_params/wave0_shared_ref_total",
       "degradation_eligible": true,
-      "failure_message": "Fewer than 1 00-shared-*.md reference file in reference/. Create at least one shared foundation reference file per shared-reference-template.md.",
+      "failure_message": "Fewer than 1 submitted 00-shared-*.md reference output. Use the existing wave0_source_intake delegated work unit to research and fetch a real source, declare reference/00-shared-<slug>.md with role reference and source_url in output_files[], then dry-submit and formally submit it. Do not create an unsubmitted file directly under reference/.",
       "finding": { "source": "definition", "blocking_basis": "required_floor" },
-      "repair": { "kind": "agent_action", "write_to": "reference/" }
+      "repair": { "kind": "agent_action", "write_to": "wave0_source_intake delegated work-unit output_files[] with role reference and source_url; then operate-work-unit dry-submit and submit" }
     },
     {
       "id": "no_example_com_shared_ref_url",

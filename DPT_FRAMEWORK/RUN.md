@@ -1,16 +1,16 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.51**
+> **DPT_FRAMEWORK v0.52**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.51
+## Current Release: v0.52
 
-- Delegated queue demand is admitted from current canonical Topic/finding and assignment-contract facts at enqueue, check, claim, and existing repair boundaries.
-- Queue check is diagnostic-only; `repair --remove-stale` removes only rejected unclaimed delegated demand, while existing in-flight terminal handling remains authoritative.
+- Wave0 shared-reference-floor feedback now points to the existing `wave0_source_intake` submitted-output path, not a direct orphan reference write.
+- A Wave0 source-intake actor must declare a real shared reference with `source_url` when that work unit repairs the shared floor; ordinary source intake keeps its existing required `source.yaml` contract.
 
 ## 0. 禁用内置捷径（最高优先）
 

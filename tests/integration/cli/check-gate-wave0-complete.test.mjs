@@ -252,6 +252,22 @@ describe('check-gate-wave0-complete', () => {
     assert.deepEqual(lastAttempt.degraded_rules, ['shared_ref_count_floor']);
   });
 
+  it('1b. shared-reference floor feedback names the existing delegated producer', () => {
+    const dir = createBundle(unique('shared-reference-feedback'));
+    setupWave0WithoutSharedReference(dir);
+    const result = runGate(dir);
+    assert.equal(result.status, 1, result.stderr || result.stdout);
+    const output = JSON.parse(result.stdout);
+    const hint = output.hints.find((entry) => entry.rule_id === 'shared_ref_count_floor');
+    assert.ok(hint, JSON.stringify(output.hints));
+    assert.equal(hint.repair_kind, 'agent_action');
+    assert.match(hint.write_to, /wave0_source_intake/);
+    assert.match(hint.write_to, /output_files\[\]/);
+    assert.match(hint.write_to, /source_url/);
+    assert.match(hint.write_to, /dry-submit and submit/);
+    assert.doesNotMatch(hint.write_to, /^reference\/?$/);
+  });
+
   it('1c. refuses degraded pass when runtime-truth blockers remain', () => {
     const dir = createBundle(unique('nodegrade'));
     setupWave0WithoutSharedReference(dir, { submitWorkUnit: false });

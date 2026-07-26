@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.52
+
+- Wave0 shared-reference-floor feedback now directs the Agent to the existing `wave0_source_intake` declared-output and formal-submit path, rather than an unsubmitted direct `reference/` write.
+- Wave0 source-intake guidance makes that shared reference mandatory only when repairing the shared floor; submitted-ledger counting and direct-orphan rejection retain focused regression coverage.
+
 ## v0.51
 
 - Delegated queue demand now has one current-facts admission verdict across enqueue, queue check, work-unit claim, and existing stale repair. Explicit registered kind, canonical Topic/finding binding, and closed assignment-contract inputs are checked before admission.

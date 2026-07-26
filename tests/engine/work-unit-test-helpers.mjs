@@ -95,7 +95,7 @@ function kindForPhase(phase) {
 
 function producerRuleForKind(kind) {
   if (kind === 'wave0_source_intake') return 'source_intake_fan_in';
-  if (kind === 'wave1_topic_deepening') return 'deepening_intake';
+  if (kind === 'wave1_topic_deepening') return 'topic_deepening';
   if (kind === 'wave2_targeted_evidence') return 'targeted_evidence_search';
   return 'delegated_work';
 }
@@ -216,6 +216,25 @@ export function seedDelegatedQueue(dir, items = [delegatedQueueItem('queue-a')])
   saveQueue(dir, queue);
 }
 
+function ensureCanonicalSeedBindings(dir, topics) {
+  const seedRoot = path.join(dir, 'seed_topics');
+  mkdirSync(seedRoot, { recursive: true });
+  for (const topic of topics) {
+    const seedPath = path.join(seedRoot, `${topic.slug}.md`);
+    if (existsSync(seedPath)) continue;
+    const binding = {
+      topic_uid: topic.topic_uid,
+      id: topic.id,
+      slug: topic.slug,
+      title: topic.title,
+      must_answer: topic.must_answer,
+      scope_role: topic.scope_role,
+      depends_on_topic_uids: topic.depends_on_topic_uids,
+    };
+    writeFileSync(seedPath, `---\n${JSON.stringify(binding, null, 2)}\n---\n# ${topic.title}\n`);
+  }
+}
+
 export function claimAndSubmitWorkUnit(dir, {
   phase = 'wave0',
   queueItemId = 'queue-a',
@@ -265,6 +284,7 @@ export function claimAndSubmitWorkUnit(dir, {
       && typeof topic?.scope_role === 'string'
       && Array.isArray(topic?.depends_on_topic_uids)
     ));
+  let canonicalTopics = canonicalPlan ? parsedPlan.topic_registry : null;
   if (!canonicalPlan && queueItem.payload?.topic_uid && queueItem.payload?.topic_slug) {
     const topic = {
       topic_uid: queueItem.payload.topic_uid,
@@ -282,7 +302,9 @@ export function claimAndSubmitWorkUnit(dir, {
       topic_registry_version: '2',
       topic_registry: [topic],
     }, null, 2)}\n---\n# Plan\n`);
+    canonicalTopics = [topic];
   }
+  if (canonicalTopics) ensureCanonicalSeedBindings(dir, canonicalTopics);
   if (preserveQueue) saveQueue(dir, enqueue(loadQueue(dir), queueItem));
   else seedDelegatedQueue(dir, [queueItem]);
   const claim = claimWorkUnits(dir, { phase, count: 1, ...actorDecision });

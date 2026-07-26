@@ -85,7 +85,7 @@ Task card template:
   "kind": "wave0_source_intake",
   "producer_rule": "source_intake_fan_in",
   "priority_class": "P5_new_reference_intake",
-  "action": "Search foundation references for {topic.title}; fetch page content; write artifacts/wave0/{topic.slug}/source.yaml; optionally write reference/00-shared-<slug>.md; write leaf cache trails under _cache/wave0/primary/{topic.slug}/; return output_files[] and cache_trails[] for work-unit submit.",
+  "action": "Search foundation references for {topic.title}; fetch page content; write artifacts/wave0/{topic.slug}/source.yaml. When this work unit is used to repair missing shared_ref_count_floor coverage, the actor MUST also write reference/00-shared-<slug>.md as a declared reference output with a real source_url; do not create it directly as the Phase Agent. Write leaf cache trails under _cache/wave0/primary/{topic.slug}/; return output_files[] and cache_trails[] for work-unit submit.",
   "writes_to": [
     "artifacts/wave0/{topic.slug}/source.yaml",
     "reference/00-shared-<slug>.md"

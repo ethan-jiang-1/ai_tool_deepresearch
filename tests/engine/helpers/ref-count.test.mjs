@@ -289,12 +289,12 @@ describe('countReferences', () => {
     }
   });
 
-  it('orphan reference does not affect ledger-mode count', () => {
+  it('direct shared-reference orphan does not affect ledger-mode count', () => {
     const dir = tempWorkUnitBundle('cr-orphan-');
     try {
       claimAndSubmitWorkUnit(dir, {
         outputs: [{
-          path: 'reference/declared.md',
+          path: 'reference/00-shared-declared.md',
           role: 'reference',
           source_url: 'https://example.com/research/declared',
           source_slug: 's01_source',
@@ -302,12 +302,12 @@ describe('countReferences', () => {
         }],
       });
       writeFileSync(
-        join(dir, 'reference/orphan.md'),
+        join(dir, 'reference/00-shared-direct-orphan.md'),
         referenceContent({ source_url: 'https://example.com/research/orphan' }),
       );
-      const result = countReferences(dir);
+      const result = countReferences(dir, { targetGlob: 'reference/00-shared-*.md' });
       assert.strictEqual(result.count, 1, 'Orphan ref should not be counted in ledger mode');
-      assert.ok(result.uncountable.some((entry) => entry.path === 'reference/orphan.md'));
+      assert.ok(result.uncountable.some((entry) => entry.path === 'reference/00-shared-direct-orphan.md'));
       assert.ok(result.uncountable.some((entry) => entry.reason.includes('filesystem_only_not_backed')));
     } finally {
       cleanupWorkUnitBundle(dir);
@@ -394,6 +394,7 @@ describe('countReferences', () => {
       });
       const result = countReferences(dir, { targetGlob: 'reference/00-shared-*.md' });
       assert.strictEqual(result.count, 1, `Expected 1 with 00-shared glob, got ${result.count}`);
+      assert.deepEqual(result.uncountable, []);
     } finally {
       cleanupWorkUnitBundle(dir);
     }

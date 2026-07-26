@@ -34,7 +34,7 @@ claims:
     proof_subject: deterministic_contract
     asset:
       kind: node_test
-      path: tests/integration/cli/check-wave0-shared-reference-guidance.test.mjs
+      path: tests/integration/cli/check-gate-wave0-complete.test.mjs
     execution_profile:
       fixture: fixture_backed
       subject_execution: none
