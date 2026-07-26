@@ -1,0 +1,100 @@
+schema_version: verification-routing/v1
+change: canonical-seed-authoring
+test_classes:
+  unit:
+    status: selected
+    rationale: Parsed canonical equality, renderer-owned frontmatter merge, exact body preservation and the non-duplicating new-seed skeleton are focused deterministic helper contracts.
+  integration:
+    status: selected
+    rationale: The production topic-state CLI, queue completion adapter, final Gate and shipped Markdown guidance cross separately owned JS/Markdown and temporary-bundle boundaries.
+  deterministic_e2e:
+    status: selected
+    rationale: The legal Seed Topics chain must carry simulated Agent body/enrichment inputs through the production writer, queue terminalization and real Gate without direct canonical YAML authority.
+  agent_flow_e2e:
+    status: selected
+    rationale: The changed normal authoring procedure is Agent-flow behavior; a narrow real Subject Agent canary must prove structured writer use from a supplied legal boundary without claiming enrichment quality.
+claims:
+  - id: parsed-binding-and-seed-renderer
+    statement: The shared evaluator compares canonical fields by exact parsed value, including type, string code points and array order, while tolerated YAML presentation remains equal; the renderer preserves quoted/multiline/CJK/Unicode values, omits duplicate body authoring sections for new seeds, and preserves existing body bytes during enrichment.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/canonical-topic-state.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: structured-enrichment-apply
+    statement: The production topic-state CLI admits one strict complete enrich_seed input only in a witnessed Seed Topics window, rejects canonical/unknown/malformed input without writes, resolves one current UID itself, reports and repairs the first parseable binding drift, stages one seed plus an unchanged plan contract, preserves body bytes, and exactly recovers an accepted interruption.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-seed-enrichment.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: queue-and-gate-canonical-repair-owner
+    statement: Seed-topic queue completion and the final Gate reuse the shared evaluator; a canonical mismatch remains non-terminal and points to enrich_seed rather than direct YAML editing, a parse root remains bounded, and successful writer repair returns through the same completion checkpoint without queue-side mutation before pass.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-queue-seed-authoring.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: authoring-guidance-wires-one-legal-loop
+    statement: The shipped Seed Topics phase, task card, shared authoring contract and topic-state playbook direct body-only prose editing followed by one complete enrich_seed apply and queue completion; they do not instruct raw canonical YAML editing or duplicate must-answer, scope or evidence-route authoring in the body.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/seed-topic-authoring-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: canonical-seed-authoring-chain
+    statement: A JS driver starting from a legal production Seed Topics boundary can simulate separate Agent body and structured-enrichment inputs for multiple current Topics, use real topic-state apply and queue operations, drain the queue and pass the real seed-topics Gate while registry values, body bytes, appendices and authority boundaries remain intact; injected input, binding and recovery faults fail at one direct owner before the same checkpoint is rerun.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/canonical-seed-authoring.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: real-agent-uses-structured-seed-writer
+    statement: Given a fresh disposable bundle at a legal Seed Topics entry with recorded Topic/profile semantics and queued seed work, a real Subject Agent writes only the non-authoritative body plus a complete enrichment input, invokes enrich_seed, preserves exact canonical must-answer values, completes the existing queue card and reaches a real seed-topics-ready pass. This proves only the named procedure, not semantic enrichment quality or universal compliance.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wfn_seedtopic/case-204-heavy-canonical-seed-authoring.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
