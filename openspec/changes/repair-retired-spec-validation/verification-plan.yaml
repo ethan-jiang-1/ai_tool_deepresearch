@@ -1,0 +1,15 @@
+schema_version: verification-plan/v1
+change: repair-retired-spec-validation
+claims:
+  - id: BUS-001
+    test_class: unit
+    proof: openspec_validate
+    command: openspec validate bundle-start-from-here --type spec
+  - id: GAC-001
+    test_class: unit
+    proof: openspec_validate
+    command: openspec validate gate-content-dedup --type spec
+  - id: project-specs
+    test_class: unit
+    proof: openspec_validate
+    command: openspec validate --specs
