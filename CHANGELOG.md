@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.51
+
+- Delegated queue demand now has one current-facts admission verdict across enqueue, queue check, work-unit claim, and existing stale repair. Explicit registered kind, canonical Topic/finding binding, and closed assignment-contract inputs are checked before admission.
+- Queue check reports rejected unclaimed delegated cards without persisting derived health. `repair --remove-stale` can remove only those rejected unclaimed cards; in-flight attempts retain their existing work-unit terminal owner.
+
 ## v0.50
 
 - Seed Topics now uses one structured `enrich_seed` canonical writer. It derives identity and must-answer fields from the registry, preserves existing seed body bytes, and records bounded repair feedback without mutating queue authority.

@@ -22,6 +22,10 @@ Topic slug resolution SHALL be deterministic:
 
 If the topic slug is not found in `topic_registry`, enqueue SHALL reject the task card with a structured error message identifying the unknown slug and the valid slugs in the registry. The error SHALL be returned as JSON on stdout with exit code 1. The task card SHALL NOT be written to `rb_queue.json`.
 
+Before writing a delegated card to the existing work-unit claim path, enqueue SHALL use one shared side-effect-free delegated queue-demand admission path: a thin current-facts adapter plus one pure evaluator. The evaluator SHALL use the current canonical Topic/finding and committed-topic facts, a supported explicit kind (`wave0_source_intake`, `wave1_topic_deepening`, or `wave2_targeted_evidence`), and the closed assignment-contract inputs. It SHALL apply only to delegated work-unit demand; non-delegated cards retain their existing validation and completion contract. Admission is recomputed at each consuming boundary and SHALL not persist or trust an enqueue verdict.
+
+`operate-queue check` SHALL apply the same evaluator to delegated unclaimed demand in `active_window` and `refill_pool`, return each rejected identity with its direct reason, and fail its verdict without admission-specific health persistence or repair. Existing bundle-name normalization remains unchanged.
+
 #### Scenario: Valid topic slug passes validation
 
 - **WHEN** a task card has `queue_item_id: "wave0-source-01_chinese-professional-league"`
@@ -74,6 +78,17 @@ If the topic slug is not found in `topic_registry`, enqueue SHALL reject the tas
 - **THEN** enqueue SHALL skip topic_registry validation
 - **AND** the task card SHALL still pass queue schema validation
 
+#### Scenario: delegated kind is never phase-inferred
+
+- **WHEN** a delegated card omits or declares an unsupported `kind`
+- **THEN** enqueue and claim SHALL reject it before queue or work-unit mutation
+
+#### Scenario: check does not become a queue mutation owner
+
+- **WHEN** queue check finds an unclaimable unclaimed delegated demand and bundle identity is current
+- **THEN** it SHALL return the item identity and direct admission reason
+- **AND** it SHALL leave queue authority bytes unchanged
+
 ### Requirement: Queue schema SHALL include bundle identity
 
 `rb_queue.json` SHALL include a top-level `bundle_name` field. In normal persisted runtime state this field SHALL be a non-empty string equal to `rb_status.json`'s `bundle` field.
@@ -122,6 +137,8 @@ All `operate-queue` operations SHALL validate that `bundle_name` in the queue fi
 
 `operate-queue repair --remove-stale` SHALL read `rb_plan.md` topic_registry and inspect queue v2 locations: `active_window`, `refill_pool`, and eligible non-terminal queue demand references. It SHALL resolve each queue item's topic slug using the same deterministic resolver as enqueue and remove task cards whose resolved topic slug is not in the registry. Delegated attempts already claimed into `delegated_in_flight` SHALL require work-unit terminal handling before queue repair mutates their demand binding.
 
+For unclaimed delegated cards in `active_window` and `refill_pool`, repair SHALL additionally use the shared delegated admission evaluator. It SHALL remove a rejected card with its location and direct reason, without adding terminal history, replacement demand, drop permission, or a terminal operation. Non-delegated cards retain only the preceding stale checks. `delegated_in_flight` remains outside current admission evaluation and SHALL not be removed, rewritten, or terminalized by this repair.
+
 #### Scenario: stale active-window task card removed
 
 - **WHEN** `active_window` contains a queue item whose topic slug is absent from `topic_registry`
@@ -132,6 +149,12 @@ All `operate-queue` operations SHALL validate that `bundle_name` in the queue fi
 
 - **WHEN** a stale topic is bound to a non-terminal work unit in `delegated_in_flight`
 - **THEN** repair SHALL fail closed with advice to resolve the work-unit attempt first
+
+#### Scenario: legacy unclaimable demand has one existing cleanup path
+
+- **WHEN** a legacy unclaimed delegated card is rejected by current admission
+- **THEN** `repair --remove-stale` SHALL remove it and report its direct reason
+- **AND** in-flight demand remains owned by existing work-unit terminal handling
 
 ### Requirement: Queue and work-unit runtime CLIs SHALL reject help and suspicious bundle arguments before side effects
 

@@ -422,6 +422,7 @@ function checkProjectionStaleness(bundleDir) {
 // QIV-004: Repair — remove stale task cards
 // ═══════════════════════════════════════════════════════════════════════════
 
+// @impl QIV-004: only unclaimed delegated demand may be removed by this existing repair owner.
 function repairRemoveStale(queue, bundleDir) {
   const registry = (readCanonicalTopicRegistry(bundleDir) || []).map((topic) => topic.slug);
   const findingIndex = readFindingIndex(bundleDir);
@@ -596,6 +597,7 @@ try {
       console.error(`WARNING: ${staleness.reason}`);
     }
 
+    // @impl QIV-001: project current delegated admission without persisting health or repair state.
     const feedback = inspect(queue, bundleDir);
     const admissionIssues = [];
     for (const [location, items] of [['active_window', queue.active_window], ['refill_pool', queue.refill_pool]]) {

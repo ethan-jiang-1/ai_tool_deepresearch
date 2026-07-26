@@ -63,6 +63,8 @@ The Engine SHALL allocate every `work_id` and record it in bundle-root `_work_un
 
 Claim SHALL bind one `queue_item_id` to one non-terminal work-unit attempt, move queue demand into `delegated_in_flight`, write effective lease fields, and store the queue item snapshot hash. Claim MAY allocate a contiguous queue-front batch with `--count N`, but Sub-agents SHALL NOT allocate IDs or mutate queue/index authority.
 
+Before allocating a work ID, opening or incrementing a batch, moving queue demand, creating an envelope, or emitting claim success, claim SHALL invoke the shared current delegated queue-demand admission evaluator for every candidate in its planned contiguous prefix. Each candidate SHALL declare one supported work-unit kind; claim SHALL NOT infer it from requested phase. Claim SHALL use the evaluator's current canonical binding and resolved assignment facts. A rejected candidate SHALL reject the complete planned batch with no queue, index, batch-counter, envelope, delegated-in-flight, or success-trace mutation.
+
 Successful claim stdout SHALL include a static Agent-facing top-level `continuation` object for the immediate post-claim decision point with `next_action: inspect_and_poll_claimed_work`. Because claim validates queue/work-unit phase demand but does not read or establish the current lifecycle node's `stop` authority, its continuation SHALL omit `interaction` rather than hardcode a second interaction-placement truth. The already-loaded lifecycle phase/header/cue continues to control whether the framework may initiate user-facing output.
 
 The cue SHALL include `work_ids` equal to the already returned `claimed_work_ids`, SHALL NOT be nested inside queue/index authority objects, SHALL NOT infer readiness, SHALL NOT complete work, and SHALL NOT add persistent work-unit, interaction, message, or pause state. Empty or failed claims SHALL NOT emit a successful continuation cue.
@@ -85,6 +87,16 @@ The cue SHALL include `work_ids` equal to the already returned `claimed_work_ids
 - **WHEN** claim returns `claimed_count: 0`
 - **THEN** stdout SHALL NOT include a continuation cue that says claimed work should be inspected or polled
 - **AND** queue/index authority SHALL remain the source of truth for why no work was claimed
+
+#### Scenario: claim rechecks current delegated authority
+
+- **WHEN** a previously enqueued delegated card no longer admits under current canonical binding, explicit kind, or assignment contract
+- **THEN** claim SHALL reject it before allocation or queue mutation
+
+#### Scenario: one rejected candidate preserves batch atomicity
+
+- **WHEN** a later candidate in a planned contiguous claim batch is rejected by shared admission
+- **THEN** claim SHALL allocate zero work IDs and leave every candidate unclaimed
 
 ### Requirement: Sub-agents SHALL NOT own workflow authority
 
