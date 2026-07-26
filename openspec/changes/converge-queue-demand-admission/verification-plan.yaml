@@ -3,7 +3,7 @@ change: converge-queue-demand-admission
 test_classes:
   unit:
     status: selected
-    rationale: One pure evaluator must preserve current kind, canonical binding and assignment-contract distinctions without queue or work-unit mutation.
+    rationale: One pure evaluator must preserve explicit delegated-kind, canonical Topic/finding binding, assignment-contract and non-delegated-exclusion distinctions without queue or work-unit mutation.
   integration:
     status: selected
     rationale: Existing enqueue, check, claim and repair CLIs cross the queue, canonical-plan and work-unit transaction boundaries over temporary bundles.
@@ -15,7 +15,7 @@ test_classes:
     rationale: Admission is an Engine-only deterministic contract and does not alter Agent judgment or Agent-facing workflow procedure.
 claims:
   - id: shared-admission-is-pure-and-complete
-    statement: The queue-demand evaluator covers registered kinds, resolves current canonical Topic binding and closed assignment facts, returns one direct rejection without queue/index/envelope mutation, and rejects caller-authored or stale contract inputs.
+    statement: The pure delegated queue-demand evaluator accepts only the three explicit registered work-unit kinds, evaluates supplied current Topic/finding binding and closed assignment facts, rejects absent/unsupported kind and non-delegated cards, returns one direct rejection without queue/index/envelope mutation, and rejects caller-authored or stale contract inputs.
     test_class: unit
     proof_subject: deterministic_contract
     asset:
@@ -29,7 +29,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: cli-boundaries-share-admission-and-terminal-ownership
-    statement: Production queue CLI rejects invalid enqueue, reports an existing invalid demand without mutation, keeps claim batch allocation atomic, removes only rejected unclaimed legacy demand through existing repair, and fails closed for rejected in-flight work.
+    statement: Production queue CLI loads current bundle facts through the shared admission adapter, rejects invalid delegated enqueue, reports an existing invalid delegated demand without admission-specific mutation, keeps claim batch allocation atomic, removes only rejected unclaimed legacy delegated demand through existing repair, and preserves non-delegated/in-flight ownership.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
