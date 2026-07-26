@@ -35,9 +35,12 @@ and an anchored fact disagree, the anchored fact wins.
 It established the single structured `enrich_seed` writer, parsed-value
 canonical binding, frontmatter/body ownership boundary, in-window repair
 feedback, and the v0.50 compatibility boundary without adding a second writer
-or a seed migration. Change 2, `converge-queue-demand-admission`, is now the
-selected next change; it remains unimplemented and requires its own OpenSpec
-proposal before target-code work.
+or a seed migration. The intervening validation maintenance change,
+[`2026-07-26-repair-retired-spec-validation`](../../openspec/changes/archive/2026-07-26-repair-retired-spec-validation/),
+is also complete and archived: it repaired the two retired-spec tombstones
+without restoring their legacy runtime behavior. Change 2,
+`converge-queue-demand-admission`, is now the selected next change; it remains
+unimplemented and requires its own OpenSpec proposal before target-code work.
 
 The project is an agentic research framework. The Agent searches, reads,
 writes research and synthesis; Markdown carries Agent Flow; the JavaScript
