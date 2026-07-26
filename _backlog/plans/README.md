@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-07-25 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-07-26 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,7 +17,6 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `delegated-work-operability-and-gate-truth` | 承接 `BUG-114--123`：先以 fresh evidence 区分真实 current defect、已静态修复和错误 premise；若复现，再分别收敛 delegated-work contract delivery、queue terminal/replacement 以及 Gate re-evaluation。明确不以 `unblock`、可变 ledger 或 provenance degradation 作为逃生补丁 | analysis / scoping（无固定 OpenSpec change） |
 | `silent-autonomous-execution` | 承接 `source_bugs: BUG-099/103/104/106`（stop-no halt、status drift、context pollution、stop-no-violation-repeats）。独立 research backlog：把「静默自主」拆成 DPT 可确定性修复的 phase-entry correctness 与一般 coding-agent/host 是否发起下一 turn 的 actor liveness 两层，分开研究与证明；不阻塞 wave-remediation 三个已收敛 change | research / scoping（无固定 OpenSpec change） |
 
 ---
@@ -31,6 +30,12 @@
 | `wave-execution-and-gate-remediation` | 三个 change 全 archive：`make-pre-wave-readiness-feedback-direct`（`542f7833a`）、`make-wave-producer-contract-and-closeout-direct`（`d65fe538a`）、`simplify-wave-gate-feedback-and-degradation-policy`（`6e47de3ea`）；覆盖 BUG-100–102、105、107–113。review context 留在 [`../_done/_closed_plans/wave-execution-and-gate-remediation.md`](../_done/_closed_plans/wave-execution-and-gate-remediation.md) |
 | `research-access-and-actor-contract-delivery` | 两个 change archive：`allow-bounded-hitl1-fetch-surface-fallback`、`deliver-work-unit-role-contracts-to-actors`；已移入 `../_done/_closed_plans/`（CLS-033） |
 | `research-question-closure-and-evidence-judgment` | 两个 change archive：`capture-user-research-controls`、`bind-wave1-target-receipts-to-wave2-findings`；吸收 user-knowledge-hang / evidence-quality / explore-exploit 三份输入；已移入 `../_done/_closed_plans/`（CLS-034） |
+
+## 最近关闭 (2026-07-26)
+
+| Plan | 关闭依据 |
+|------|----------|
+| `delegated-work-operability-and-gate-truth` | Change 1/2 已 archive；Change 3/4 无 fresh red，BUG-120 的真实内容证据保留为独立 active `NOT_RUN`，不阻塞计划关闭（CLS-036） |
 
 ## 最近关闭 (2026-07-21)
 

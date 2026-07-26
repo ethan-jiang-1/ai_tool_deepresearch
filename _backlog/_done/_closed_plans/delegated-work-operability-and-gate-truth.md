@@ -1,8 +1,9 @@
 ---
 title: Delegated work operability and gate truth
-status: change_1_and_2_archived_change_3_and_4_evidence_gated
+status: closed_cls036_moved_to_closed_plans_2026_07_26
 created: 2026-07-25
 reviewed: 2026-07-25
+closed: 2026-07-26
 scope: BUG-114--BUG-123
 evidence_bundle: dpt_rb_openspec-adoption-landscape
 ---
@@ -11,7 +12,7 @@ evidence_bundle: dpt_rb_openspec-adoption-landscape
 
 ## 结论
 
-`BUG-114`--`BUG-123` 不是十个应逐个堆补丁的缺口。它们横跨三个不同的 authority boundary：
+原始 `BUG-114`--`BUG-123` 不是十个应逐个堆补丁的缺口。它们横跨三个不同的 authority boundary：
 
 ```text
 role-specific actor observation
@@ -54,7 +55,7 @@ role-specific actor observation
 | 120 | Wave1 reference contract 未交付 | Static contract already covered at HEAD | `shared-reference-template.md`、Wave1 template and actor guidance 已列 exact metadata/binding/sections；补真实 loaded-guidance proof 后可关闭 |
 | 121 | fatigue 缓存旧 failed rules | Fresh current gate evidence did not reproduce the caching premise | 用“同一 fresh bundle，修正 bytes 后高 attempt 重跑”的 red/green case 检验是否重算；不加 `--reset-fatigue` 逃生路径 |
 | 122 | `blocked` 无 legal unblock | Misdiagnosed unless 119 red repro survives | `queue_health`/stop authorization 是 queue demand 的派生状态；successful enqueue 已应重算，不能 direct-edit 或独立 unblock |
-| 123 | 修改 submitted declaration 使 hash 失效 | Integrity property, not a ledger bug | 新 source 走新的 supplementary work-unit submit；不得 amend/re-hash historical row |
+| 123 | 修改 submitted declaration 使 hash 失效 | Closed: existing supplementary lifecycle establishes a new immutable row | 新 source 走新的 supplementary work-unit submit；不得 amend/re-hash historical row |
 
 ## Current Facts That Bound The Design
 
@@ -95,7 +96,7 @@ Change 2, `make-terminal-work-replacement-direct`, completed Apply and was archi
 
 Fresh current-gate evidence on 2026-07-25 also does **not** authorize the future Gate candidate, `ensure-wave-gate-reevaluation-freshness`. The real lifecycle loop exercised failure, direct repair, and a third Engine-visible attempt at the fatigue threshold; that attempt passed and emitted the normal next-phase handoff. Wave1 depth-review tests retain Gate/inspect failed-rule parity, and the attempt diagnostic tests prove prior diagnostics are compared with, not substituted for, the current evaluation. `BUG-121` therefore has no reproduced current caching defect and no `--reset-fatigue`, force-re-evaluate, or stale-projection change is justified. A new proposal requires a fresh minimal repro in which a corrected direct fact remains in the current Gate's `failed_rule_ids`.
 
-`BUG-120` remains outside Change 1's closure claim: the delegated actor task can prove supplied-task delivery and native-chain compatibility, but cannot prove the Phase Agent loaded its separate reference guidance.
+`BUG-120` remains outside Change 1's closure claim: the delegated actor task can prove supplied-task delivery and native-chain compatibility, but cannot prove the Phase Agent loaded its separate reference guidance. Its real content-evidence question remains active independently; it does not block this plan's closure.
 
 ### Post-Change-2 M4b Entry Decision
 
@@ -121,7 +122,7 @@ The split is therefore deliberate:
 | `BUG-118` lifecycle dead-end | terminal work-unit record, manifest snapshot, terminal-history row, then normal queue claim | The old queue dead-end did not reproduce. The remaining deterministic reconstruction burden is Change 2's entire scope. | If a legal current or Change-2-derived demand is present but normal role-bound claim cannot allocate it, retain queue/index/trace snapshots and propose a new lifecycle claim change. Do not widen `replace` by assumption. |
 | `BUG-119` Wave1 assignment mode | queue admission validation, Wave1 task-card contract, and legal queue locations | Current valid/invalid admission tests contradict the incident's silent-loss premise. Change 2 copies a validated historic snapshot; it never repairs modes. | Valid current `primary`/`supplementary` card is accepted yet absent from every legal location or unclaimable while direct authority remains valid. Enter Change 3 only for that direct admission owner, unless the same repro shares a root with BUG-116/122. |
 | `BUG-122` queue health / stop label | `syncQueueHealth()` after successful queue mutation | Current enqueue recalculates derived health; no raw `unblock` is legal or needed. Change 2 uses the same normal admission path. | Valid enqueue leaves direct demand inconsistent with a health/stop projection that blocks its documented next action; retain command result and before/after queue bytes. Enter Change 3 only for that direct derived-health owner, unless the same repro shares a root with BUG-116/119. |
-| `BUG-123` immutable ledger concern | submitted-ledger contract plus Change 2's non-mutation invariant | Change 2 may create only a new demand and later a new work unit. It cannot amend a submitted declaration, result hash, or ledger row. | Any Change 2 implementation that needs historical mutation blocks Apply. The separate supplementary-new-source lifecycle remains the evidence needed to close BUG-123's broader novelty claim. |
+| `BUG-123` immutable ledger concern | submitted-ledger contract plus Change 2's non-mutation invariant | Change 2 may create only a new demand and later a new work unit. It cannot amend a submitted declaration, result hash, or ledger row. | Current supplementary-new-source coverage independently establishes the new immutable row; any historical mutation would have blocked Apply. |
 
 ### Sequencing And Decision Gates
 
@@ -255,18 +256,18 @@ Non-goals:
 
 Required proof: corrected direct artifact removes its own failed rule on a high-attempt rerun; an unchanged independent provenance root remains failed and ineligible; normal eligible quality-only degradation behavior remains covered.
 
-### Independent Closure Evidence (Not Changes)
+### Independent Closure Evidence (Not Plan Dependencies)
 
 - `BUG-117` is an evidence-backed rejection of an unsafe degraded-pass request. Its closure is the documented provenance fail-closed contract and its upstream legal submit/replacement paths, not a new bypass change.
-- `BUG-120` remains `NOT_RUN` at the real-actor budget boundary. Only a real loaded-guidance observation can close that delivery claim; it does not expand Change 1, Change 2, Change 3, or Change 4.
-- `BUG-123` has two deliberately separate proofs: Change 2 must prove that replacement never mutates a historical ledger row, while the broader supplementary-new-source lifecycle must independently prove that a new immutable row supplies the novelty fact. Neither proof authorizes an amend API. A red in that independent lifecycle is a new direct-owner finding, not scope silently added to Change 2.
+- `BUG-120` remains `NOT_RUN`: only a real loaded-guidance observation can close that delivery claim. It remains a separate active content-evidence question; it does not expand Change 1, Change 2, Change 3, or Change 4.
+- `BUG-123` is closed by two deliberately separate proofs: Change 2 proves that replacement never mutates a historical ledger row, while current `claim -> submit -> Gate` coverage proves a supplementary Wave1 work unit can establish a new immutable row with the novelty fact. Neither proof authorizes an amend API.
 
-## Closure Rules
+## Recorded Closure Boundaries
 
 - Close BUG-117 as a misdiagnosed request only after the plan records the accepted provenance fail-closed contract and its upstream operability dependencies.
 - Close BUG-118's original dead-end report by evidence-backed disposition, not by claiming that Change 2 repaired a non-reproduced queue failure. Change 2 closed only its separate manual-successor reconstruction burden through the archived and verified `edc3c614f` implementation.
-- Close BUG-120 when a loaded-guidance test proves the current Phase/actor `requires` chain delivers the complete template; static source inspection alone is not a real Agent-flow claim.
-- Change 2 proves only BUG-123's historical non-mutation invariant. Close BUG-123's broader novelty claim only after the supplementary-new-source lifecycle test passes; it is not closed by adding an amend API.
+- Close BUG-120 only after a real `case-225` run proves that the current Phase/actor `requires` chain delivered the complete template and the resulting reference passes the official inspect. Static source inspection alone is not a real Agent-flow claim.
+- BUG-123's historical non-mutation invariant and its supplementary-new-source lifecycle are both covered by current deterministic Engine evidence; it is closed without adding an amend API.
 - BUG-116, BUG-119, BUG-121 and BUG-122 may be reclassified only from captured fresh evidence, never from an incident command transcript that suppressed stderr or reused contaminated state.
 - An evidence-backed invalid premise or misdiagnosed request is a disposition, not a fictitious implementation fix. A real defect is "fixed" only when its named OpenSpec change is proposed, applied, tested at the correct verification layer, and archived. A static wording update, console output, or manual bundle repair is not closure evidence.
 
@@ -297,4 +298,4 @@ Required proof: corrected direct artifact removes its own failed rule on a high-
 - `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md`
 - `DPT_FRAMEWORK/workflows/nodes/shared/shared-reference-template.md`
 - `openspec/changes/archive/2026-07-25-make-terminal-work-replacement-direct/`
-- `_backlog/bugs/BUG-114-*.md` through `BUG-123-*.md`
+- `_backlog/_done/_fixed_bugs/BUG-114-*.md` through `BUG-123-*.md`, plus active `_backlog/bugs/BUG-120-*.md`

@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-07-24 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-07-25 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -21,13 +21,24 @@
 | [BUG-103](BUG-103-status-gate-drift-between-phases.md) | P3 | 跨 phase | rb_status.json gate 字段在 phase transition 后持续漂移，需手动 advance-status |
 | [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | enter-phase 每次渲染完整 shared context 造成累积 context 压力 |
 | [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P1 | wave0→wave1 | stop: no violation 再现 — agent 输出总结但不执行下一 phase |
-| [BUG-114](BUG-114-work-unit-claim-enum-combinatorics.md) | P2 | wave0 | work-unit claim enum combinatorics silently reject valid combinations |
-| [BUG-115](BUG-115-work-unit-result-schema-unconstructable.md) | P1 | wave0 | work-unit result schema practically unconstructable by Agent |
-| [BUG-116](BUG-116-operate-queue-stderr-pollution.md) | P3 | cross-phase | operate-queue.mjs output routing causes silent pipe failures |
+| [BUG-120](BUG-120-wave1-ref-metadata-fields-undocumented.md) | P2 | wave1 | Wave1 reference guidance 的真实 loaded-guidance 证据仍缺失 |
 
 > BUG-099/103/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 计划承接，仍属活跃 bug。
 
-**Next available bug ID: BUG-117**
+**Next available bug ID: BUG-124**
+
+## 最近关闭 (2026-07-25)
+
+以下记录已移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)；完整的 authority/disposition 边界见 [`../_done/_closed_plans/delegated-work-operability-and-gate-truth.md`](../_done/_closed_plans/delegated-work-operability-and-gate-truth.md)：
+
+| Bug | 结案依据 |
+|-----|----------|
+| BUG-114 / BUG-115 | `make-delegated-work-contracts-constructible` 已归档；真实 actor 行为保留为 `NOT_RUN`，不作伪造证明 |
+| BUG-116 / BUG-119 / BUG-122 | 新鲜 disposable-bundle queue evidence 与 current focused regressions 未复现历史 defect |
+| BUG-117 | provenance Gate 的 fail-closed 是正确的 integrity boundary，不建立 degraded bypass |
+| BUG-118 | `make-terminal-work-replacement-direct` 已归档，提供 terminal snapshot -> successor demand -> normal claim 路径 |
+| BUG-121 | 高 attempt 下修正 direct fact 后，当前 Gate evaluation 未复现 stale verdict |
+| BUG-123 | supplementary Wave1 `claim -> submit -> Gate` 已通过，新增 immutable row 满足新 source，而非修改历史 declaration |
 
 ## 最近关闭 (2026-07-24)
 
