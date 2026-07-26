@@ -419,11 +419,16 @@ describe('AGQ-001/004 completion_receipt null', () => {
 describe('AGQ-013 Wave1 assignment-mode admission and repair', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
 
-  it('keeps historical missing-mode rows loadable but rejects missing, unknown, and mismatched new enqueue', async (t) => {
+  it('keeps historical missing-mode rows loadable but diagnoses them for repair, then rejects invalid new enqueue', async (t) => {
     const historicalDir = createBundle(unique('mode-history'));
     seedMissingModeWave1Card(historicalDir);
+    const normalized = runOq(historicalDir, 'count');
+    assert.equal(normalized.status, 0, normalized.stderr);
+    const before = readFileSync(join(historicalDir, 'rb_queue.json'), 'utf8');
     const checked = runOq(historicalDir, 'check');
-    assert.equal(checked.status, 0, checked.stderr);
+    assert.equal(checked.status, 1, checked.stderr);
+    assert.match(checked.stdout, /assignment_mode|not admissible/i);
+    assert.equal(readFileSync(join(historicalDir, 'rb_queue.json'), 'utf8'), before);
 
     const invalid = [
       { label: 'missing', payload: { topic_slug: 'topic-a' }, required_receipts: [] },

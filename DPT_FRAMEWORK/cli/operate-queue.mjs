@@ -12,13 +12,9 @@ import {
   loadQueue, pendingCount, preempt, render, saveQueue, validateQueue, QUEUE,
   recordQueueAssignmentModeRepaired,
 } from '../engine/queue-manager.mjs';
-import {
-  WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
-} from '../schema/contracts/work-unit.mjs';
-import { kindContractForQueueItem } from '../engine/work-unit-utils.mjs';
-import { resolveWorkUnitAssignmentContract } from '../engine/work-unit-assignment-contract.mjs';
 import { inspectCanonicalTopicState } from '../engine/helpers/canonical-topic-state.mjs';
 import { evaluateTopicLayouts, resolveTopicLayout } from '../engine/helpers/topic-layout.mjs';
+import { admitQueueDemand, isDelegatedWorkUnitDemand } from '../engine/helpers/queue-demand-admission.mjs';
 import { CanonicalPlanSchema } from '../schema/contracts/plan.mjs';
 
 function usage() {
@@ -471,8 +467,16 @@ function repairRemoveStale(queue, bundleDir) {
     }
   }
 
+  function removalReason(item) {
+    const stale = staleReason(item);
+    if (stale) return stale;
+    if (!isDelegatedWorkUnitDemand(item)) return null;
+    const admission = admitQueueDemand({ bundleDir, queueItem: item });
+    return admission.ok ? null : admission.reason;
+  }
+
   queue.active_window = queue.active_window.filter((item, index) => {
-    const reason = staleReason(item);
+    const reason = removalReason(item);
     if (reason) {
       removed.push({ location: 'active_window', index, queue_item_id: item.queue_item_id, reason });
       return false;
@@ -481,7 +485,7 @@ function repairRemoveStale(queue, bundleDir) {
   });
 
   queue.refill_pool = queue.refill_pool.filter((item, index) => {
-    const reason = staleReason(item);
+    const reason = removalReason(item);
     if (reason) {
       removed.push({ location: 'refill_pool', index, queue_item_id: item.queue_item_id, reason });
       return false;
@@ -492,21 +496,11 @@ function repairRemoveStale(queue, bundleDir) {
   return { queue, removed };
 }
 
-function validateCurrentAssignmentCard(taskCard) {
-  if (taskCard.kind !== 'wave1_topic_deepening') return null;
-  if (taskCard.producer_rule !== 'topic_deepening') {
-    throw new Error('wave1_topic_deepening assignment requires producer_rule topic_deepening');
-  }
-  return resolveWorkUnitAssignmentContract({
-    assignmentContractVersion: WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
-    kind: taskCard.kind,
-    queueItem: taskCard,
-    topicBinding: {
-      topic_uid: taskCard.payload?.topic_uid,
-      topic_slug: taskCard.payload?.topic_slug,
-    },
-    baseOutputContract: kindContractForQueueItem(taskCard, taskCard.kind).output_contract,
-  });
+function admitDelegatedTaskCard(taskCard, bundleDir) {
+  if (!isDelegatedWorkUnitDemand(taskCard)) return taskCard;
+  const admission = admitQueueDemand({ bundleDir, queueItem: taskCard });
+  if (!admission.ok) throw new Error(admission.reason);
+  return admission.queue_item;
 }
 
 function findQueueItemLocations(queue, queueItemId) {
@@ -574,7 +568,7 @@ function repairAssignmentMode(queue, bundleDir, { queueItemId, mode }) {
     ? nextQueue.active_window.splice(target.index, 1, repaired)
     : nextQueue.refill_pool.splice(target.index, 1, repaired);
 
-  validateCurrentAssignmentCard(repaired);
+  admitDelegatedTaskCard(repaired, bundleDir);
   validateQueue(nextQueue);
   return {
     queue: nextQueue,
@@ -603,8 +597,22 @@ try {
     }
 
     const feedback = inspect(queue, bundleDir);
-    emit(feedback);
-    process.exit(feedback.passed ? 0 : 1);
+    const admissionIssues = [];
+    for (const [location, items] of [['active_window', queue.active_window], ['refill_pool', queue.refill_pool]]) {
+      for (const item of items) {
+        if (!isDelegatedWorkUnitDemand(item)) continue;
+        const admission = admitQueueDemand({ bundleDir, queueItem: item });
+        if (!admission.ok) admissionIssues.push(`${location} delegated queue_item_id '${item.queue_item_id}' is not admissible: ${admission.reason}`);
+      }
+    }
+    const checked = admissionIssues.length === 0 ? feedback : {
+      passed: false,
+      check: false,
+      inspect: [...(feedback.inspect || []), ...admissionIssues],
+      advice: feedback.advice || 'Repair rejected unclaimed delegated demand with operate-queue repair --remove-stale.',
+    };
+    emit(checked);
+    process.exit(checked.passed ? 0 : 1);
   }
 
   if (command === 'count') {
@@ -635,8 +643,7 @@ try {
       process.exit(1);
     }
 
-    const admittedTask = validation.taskCard || taskCard;
-    validateCurrentAssignmentCard(admittedTask);
+    const admittedTask = admitDelegatedTaskCard(validation.taskCard || taskCard, bundleDir);
     queue = enqueue(queue, admittedTask);
     saveQueue(bundleDir, queue);
     emit({ ok: true, queue });

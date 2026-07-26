@@ -57,8 +57,8 @@ import { queueItemSnapshotHash } from './queue-manager-core.mjs';
 import { enqueue, loadQueue, loadQueueReadOnly, saveQueue } from './queue-manager-lifecycle.mjs';
 import { preempt, refill } from './queue-manager-window.mjs';
 import { logToRun } from './logger.mjs';
-import { CanonicalPlanSchema } from '../schema/contracts/plan.mjs';
 import { resolveWorkUnitAssignmentContract } from './work-unit-assignment-contract.mjs';
+import { admitQueueDemand } from './helpers/queue-demand-admission.mjs';
 
 function readProfileRerunCount(bundleDir) {
   try {
@@ -371,7 +371,7 @@ function previewClaimCandidates(queue, wave, requestedCount, executionActorClass
       blockedBy = item.queue_item_id;
       break;
     }
-    const kind = item.kind || defaultKindForWave(wave);
+    const kind = item.kind;
     const actorPolicy = kindContractForQueueItem(item, kind).actor_policy;
     candidates.push({ item, kind, role_key: roleKey, actor_policy: actorPolicy });
     if (!kind || !actorPolicy || actorPolicy.delegated_role_key !== roleKey) break;
@@ -379,57 +379,31 @@ function previewClaimCandidates(queue, wave, requestedCount, executionActorClass
   return { candidates, planned_role_key: plannedRoleKey, blocked_by_queue_item_id: blockedBy };
 }
 
-function topicBindingForClaim(bundleDir, queueItem, kind) {
-  if (kind === 'wave2_targeted_evidence') {
-    return {
-      topic_uid: queueItem.payload?.topic_uid,
-      topic_slug: queueItem.payload?.topic_slug,
-    };
-  }
-  const topicUid = queueItem.payload?.topic_uid;
-  const topicSlug = queueItem.payload?.topic_slug;
-  if (!topicUid || !topicSlug) throw new Error('current assignment requires explicit payload topic_uid and topic_slug');
-
-  const planPath = path.join(bundleDir, 'rb_plan.md');
-  if (existsSync(planPath)) {
-    const raw = readFileSync(planPath, 'utf8');
-    const match = raw.match(/^---\n([\s\S]*?)\n---/);
-    if (!match) throw new Error('canonical Topic binding cannot be read from rb_plan.md');
-    const plan = CanonicalPlanSchema.parse(parseYaml(match[1]));
-    const topic = plan.topic_registry.find((entry) => entry.topic_uid === topicUid);
-    if (!topic || topic.slug !== topicSlug) {
-      throw new Error(`queue item Topic ${topicUid}/${topicSlug} is not the current canonical UID/slug binding`);
-    }
-  }
-  return { topic_uid: topicUid, topic_slug: topicSlug };
-}
-
 function preflightClaimAssignments(bundleDir, candidates) {
-  return candidates.map((candidate) => {
+  const plans = [];
+  for (const candidate of candidates) {
     const queueItem = candidate.item;
-    try {
-      const kindContract = kindContractForQueueItem(queueItem, candidate.kind);
-      const outputContract = resolveWorkUnitAssignmentContract({
-        assignmentContractVersion: WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
-        kind: candidate.kind,
-        queueItem,
-        topicBinding: topicBindingForClaim(bundleDir, queueItem, candidate.kind),
-        baseOutputContract: kindContract.output_contract,
-      });
+    const admission = admitQueueDemand({ bundleDir, queueItem });
+    if (!admission.ok) {
       return {
-        ...candidate,
-        queue_item_id: queueItem.queue_item_id,
-        queue_item_snapshot_hash: queueItemSnapshotHash(queueItem),
-        queue_item_full_hash: hashValue(queueItem),
-        assignment_contract: {
-          assignment_contract_version: WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
-          output_contract: outputContract,
+        ok: false,
+        rejected: {
+          queue_item_id: queueItem.queue_item_id,
+          reason: admission.reason,
+          reason_code: admission.reason_code,
         },
       };
-    } catch (error) {
-      throw new Error(`assignment preflight failed for queue item ${queueItem.queue_item_id}: ${error.message}`);
     }
-  });
+    plans.push({
+      ...candidate,
+      kind: admission.kind,
+      queue_item_id: queueItem.queue_item_id,
+      queue_item_snapshot_hash: queueItemSnapshotHash(queueItem),
+      queue_item_full_hash: hashValue(queueItem),
+      assignment_contract: admission.assignment_contract,
+    });
+  }
+  return { ok: true, plans };
 }
 
 function preflightClaimDelivery(plans) {
@@ -471,7 +445,8 @@ function recheckClaimPlan(bundleDir, plans, { existed: expectedIndexExisted, has
     ...plan,
     item: assignmentView.active_window[index],
   }));
-  preflightClaimAssignments(bundleDir, assignmentCandidates);
+  const admission = preflightClaimAssignments(bundleDir, assignmentCandidates);
+  if (!admission.ok) throw new Error(`delegated admission rejected for queue item ${admission.rejected.queue_item_id}: ${admission.rejected.reason}`);
 
   const queue = loadQueueReadOnly(bundleDir);
   for (let index = 0; index < plans.length; index += 1) {
@@ -526,7 +501,23 @@ export function claimWorkUnits(bundleDir, {
     };
   }
 
-  const assignmentPlans = preflightClaimAssignments(bundleDir, preview.candidates);
+  const preflight = preflightClaimAssignments(bundleDir, preview.candidates);
+  if (!preflight.ok) {
+    return {
+      ok: false,
+      requested_count: requestedCount,
+      claimed_count: 0,
+      claimed_work_ids: [],
+      in_flight_count: phaseInFlight(previewQueue, wave).length,
+      unclaimed_delegated_count: countUnclaimedDelegated(previewQueue, wave),
+      blocked_by_queue_item_id: preflight.rejected.queue_item_id,
+      phase_drained: false,
+      prompt_refs: [],
+      admission: preflight.rejected,
+      queue: previewQueue,
+    };
+  }
+  const assignmentPlans = preflight.plans;
   const previewIndexExisted = existsSync(workUnitIndexPath(bundleDir));
   const previewIndex = loadIndexView(bundleDir);
   const previewIndexPlan = {
@@ -653,7 +644,7 @@ export function claimWorkUnits(bundleDir, {
         break;
       }
       const plan = deliveryPlans[i];
-      const kind = front.kind || defaultKindForWave(wave);
+      const kind = plan.kind;
       if (!kind) {
         blockedBy = front.queue_item_id;
         break;

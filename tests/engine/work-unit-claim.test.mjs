@@ -1,6 +1,6 @@
 // @impl DEW-003, AGQ-014, SUD-001, SUD-002, LOG-006
 
-import { existsSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { mkdtempSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -76,6 +76,18 @@ topic_registry:
     previous_layouts: []
 ---
 # Plan
+`);
+    mkdirSync(path.join(dir, 'seed_topics'), { recursive: true });
+    writeFileSync(path.join(dir, 'seed_topics', 'topic-a.md'), `---
+topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
+id: "01"
+slug: topic-a
+title: Topic A
+must_answer: ["What matters?"]
+scope_role: primary
+depends_on_topic_uids: []
+---
+# Topic A
 `);
   }
   let queue = createQueue(path.basename(dir));
