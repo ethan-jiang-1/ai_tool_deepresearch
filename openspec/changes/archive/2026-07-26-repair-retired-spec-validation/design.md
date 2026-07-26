@@ -24,7 +24,9 @@ requirement at all. Both failures are specification hygiene, not runtime facts.
 2. Amend the existing BUS requirement rather than adding a new one. Add one
    GAC tombstone requirement covering the already-registered retired IDs. This
    is the smallest valid shape and avoids a validator exception or a second
-   retired-capability registry.
+   retired-capability registry. The active delta SHALL reference BUS/GAC IDs
+   in prose but omit a `> req:` declaration, because the requirement-governance
+   checker reserves declared retired IDs against reuse.
 3. Prove the result through targeted and full OpenSpec spec validation. No
    test fixture or automation chain is justified for static Markdown grammar.
 

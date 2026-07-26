@@ -36,7 +36,9 @@ The old boot-entry behavior is retained here only to preserve the retired BUS re
 
 ### Requirement: Legacy boot-entry stop authorization behavior is retired
 
-Detailed stop authorization belongs in lifecycle phase/shared Markdown and accepted Agent command guidance, not in a passive bundle map or deprecated legacy file.
+Detailed stop authorization SHALL remain owned by lifecycle phase/shared
+Markdown and accepted Agent command guidance; a passive bundle map or
+deprecated legacy file SHALL NOT establish, grant, or override stop authority.
 
 #### Scenario: Current docs do not source stop authority from legacy boot entry
 - **WHEN** an Agent needs stop authorization guidance

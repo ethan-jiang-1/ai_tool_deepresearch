@@ -1,0 +1,16 @@
+schema_version: verification-routing/v1
+change: repair-retired-spec-validation
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: This change has no JavaScript deterministic contract; OpenSpec CLI validation directly checks the edited Markdown grammar.
+  integration:
+    status: not_applicable
+    rationale: No CLI, filesystem-runtime, or cross-module behavior changes.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No workflow-scale state transition or Engine behavior changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: No Agent-facing workflow or real runtime behavior changes.
+claims: []

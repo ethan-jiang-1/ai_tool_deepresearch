@@ -10,4 +10,17 @@ Current quality authority belongs to work-unit submit, declaration ledger covera
 
 ## Requirements
 
-_All requirements (GAC-001 through GAC-009) have been removed. This capability directory is retained as a tombstone for traceability only. No active production code or gate definitions depend on `content_dedup`._
+### Requirement: Content deduplication capability remains retired
+
+The `content_dedup` capability SHALL remain a traceability tombstone for
+retired GAC-001 through GAC-009; it SHALL NOT require, restore, or authorize
+duplicate URL, homepage/shallow URL, Jaccard, self-reference, or standalone
+content-dedup gate behavior. Current quality authority remains in the accepted
+work-unit, ledger, cache, provenance, source/reference schema, and handoff
+contracts.
+
+#### Scenario: Retired content dedup does not regain authority
+
+- **WHEN** a reader inspects the `gate-content-dedup` specification
+- **THEN** it SHALL identify the capability as retired and its IDs as traceability-only
+- **AND** it SHALL NOT present `content_dedup` as an active production or gate requirement

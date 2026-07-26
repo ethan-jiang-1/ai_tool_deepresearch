@@ -1,4 +1,5 @@
-> req: BUS-001, BUS-002, BUS-003
+Retired BUS-001 through BUS-003 remain registry/main-spec traceability records;
+this active delta intentionally does not redeclare them.
 
 ## MODIFIED Requirements
 

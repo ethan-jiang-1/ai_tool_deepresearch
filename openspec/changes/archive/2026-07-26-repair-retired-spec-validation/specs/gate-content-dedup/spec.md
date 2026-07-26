@@ -1,4 +1,5 @@
-> req: GAC-001, GAC-002, GAC-003, GAC-004, GAC-005, GAC-006, GAC-007, GAC-008, GAC-009
+Retired GAC-001 through GAC-009 remain registry/main-spec traceability records;
+this active delta intentionally does not redeclare them.
 
 ## ADDED Requirements
 
