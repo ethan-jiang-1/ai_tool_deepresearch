@@ -10,7 +10,6 @@ execution_contract:
 requires:
   - shared/shared-profile
   - shared/shared-silent-execution
-  - shared/shared-seed-topic-authoring
 suggested_context:
   - shared/shared-anti-cheating-rules
 ---
@@ -84,7 +83,7 @@ HITL2 `user_decision: rerun` 后，Agent 用正常 HITL2 gate handoff或唯一ac
 
 ### Stage 3: Candidate Publication & Gate
 
-1. **Apply canonical topic change set**：先运行 `operate-topic-state inspect`，再把 HITL2 rationale 转成 retained JSON. Every sanctioned rerun `add_topic` / `update_intent` carries a direction candidate; a direction-only change uses `set_rerun_direction`. Follow the loaded `shared-seed-topic-authoring` contract for its exact six direction fields and action mapping. Submit it through the existing CLI:
+1. **Apply canonical topic change set**：先运行 `operate-topic-state inspect`，再把 HITL2 rationale 转成 retained JSON. Every sanctioned rerun `add_topic` / `update_intent` carries a direction candidate; a direction-only change uses `set_rerun_direction`. Read `command_playbook/operate-topic-state.md#Rerun Direction Input` for the exact six direction fields and action mapping. Submit it through the existing CLI:
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle <bundle> --input <retained-candidate.json>

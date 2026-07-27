@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-gate-wave2-complete.mjs — evaluates gate-wave2-complete rules
-// @impl GSK-001, GSK-002, GSK-004, GSK-013, RWG-006, RWG-007, RWG-008, RWG-017, RWG-018, RWG-021
+// @impl GSK-001, GSK-002, GSK-004, GSK-013, RWG-006, RWG-007, RWG-008, RWG-017, RWG-018, RWG-021, RRM-007
 // Usage: node check-gate-wave2-complete.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import {
@@ -18,6 +18,9 @@ import {
 } from '../../engine/helpers/gate-helpers.mjs';
 import { evaluateWave2Contract } from '../../engine/helpers/wave-contract-evaluators.mjs';
 import { evaluateWaveDegradationEligibility } from '../../engine/helpers/wave-degradation-eligibility.mjs';
+import { evaluateSeedTopicProjectionReadiness } from '../../engine/helpers/return-map.mjs';
+import { buildCanonicalTopicRegistryFact } from '../../engine/helpers/topic-registry-fact.mjs';
+import { loadWave2FindingIndexFact } from '../../engine/helpers/wave-depth-contracts.mjs';
 import {
   buildContractEvaluation,
   makeContractFinding,
@@ -65,8 +68,12 @@ if (!handoffPreflight.ok) {
 const bundlePath = args.bundle;
 const templateInspect = scanTemplateNotExpanded(bundlePath).findings
   .map((finding) => `[template_not_expanded] ${finding.file}: ${finding.field} contains unexpanded template variable: ${finding.value}`);
-const sharedEvaluation = evaluateWave2Contract(bundlePath, definition);
-const formalFindings = [...sharedEvaluation.findings];
+let topicRegistryFact = null;
+try { topicRegistryFact = buildCanonicalTopicRegistryFact(bundlePath); } catch { /* both consumers report their own direct prerequisite */ }
+const findingIndexFact = loadWave2FindingIndexFact(bundlePath);
+const sharedEvaluation = evaluateWave2Contract(bundlePath, definition, { topicRegistryFact, findingIndexFact });
+const projectionEvaluation = evaluateSeedTopicProjectionReadiness(bundlePath, { wave: 'wave2', topicRegistryFact, findingIndexFact });
+const formalFindings = [...sharedEvaluation.findings, ...projectionEvaluation.findings];
 
 for (const rule of definition.rules.filter((candidate) => candidate.check === 'trace_event_present')) {
   if (readTraceEvents(bundlePath, rule.target).length === 0) {

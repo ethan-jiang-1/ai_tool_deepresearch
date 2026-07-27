@@ -165,7 +165,7 @@ const SUBJECTS = {
 };
 
 function usage() {
-  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <204|115|164|225|232|318|711|712|713-readiness|713-final|714|901|951|951-judge> --bundle <path>');
+  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <204|115|164|225|227|232|318|711|712|713-readiness|713-final|714|901|951|951-judge> --bundle <path>');
   process.exit(2);
 }
 

@@ -15,7 +15,7 @@ requires:
   - shared/shared-subagent-protocol
   - shared/shared-silent-execution
   - shared/shared-anti-cheating-rules
-  - shared/shared-return-map-authoring
+  - templates/seed-topic-template
 suggested_context:
   - phases/subagent-dpt-topic-scout
   - phases/subagent-dpt-evidence-extractor
@@ -103,29 +103,7 @@ If queue is empty, enqueue:
 }
 ```
 
-2. One non-delegated backfill queue item per topic:
-
-```json
-{
-  "queue_item_id": "wave2-backfill-{topic.slug}",
-  "title": "Wave2 seed backfill: {topic.title}",
-  "targets": { "controller": "main-agent" },
-  "producer_rule": "seed_topic_backfill_wave2",
-  "priority_class": "P4_progressive_artifact_or_seed_backfill",
-  "required_receipts": ["file:seed_topics/{topic.slug}.md"],
-  "action": "Backfill seed topic tokens from cross-topic-ledger.md and finding-index.yaml projections, not from narrative prose alone.",
-  "done_condition": "seed_topics/{topic.slug}.md has Wave2 return-map backfill replacing the pending Wave2 placeholder when evidence exists or records an explicit limitation",
-  "verification": {"engine": ["receipt_check"], "agent": ["backfill_refs_present", "placeholder_handled"]},
-  "writes_to": ["seed_topics/{topic.slug}.md"],
-  "status_sync": ["wave2_seed_topic_backfilled"],
-  "completion_receipt": "file:seed_topics/{topic.slug}.md",
-  "failure_route": "queue_repair",
-  "lineage": {"topic_slug": "{topic.slug}", "phase": "wave2"},
-  "payload": {"topic_slug": "{topic.slug}", "wave": 2}
-}
-```
-
-3. Targeted delegated evidence queue items only when findings require new search:
+2. Targeted delegated evidence queue items only when findings require new search:
 
 ```json
 {
@@ -229,22 +207,9 @@ Wave2 gate fails if targeted evidence/reference outputs exist without submitted 
 
 #### 3.2.3 Backfill
 
-Update seed topic Wave2 sections from current-round cross-topic authority:
+Never edit a seed, heading, card, or token. `templates/seed-topic-template` gives the Wave2 slot/card and rendered-entry shape. Read current-round usable W2F findings from `finding-index.yaml`, resolve each `affected_topics` token to its current canonical topic, and use the complete packet, authorization and repair protocol in `command_playbook/operate-topic-state.md` to retain one `wave_projection/apply_seed_projection` packet per affected topic. Each entry has `entry_id` equal to its exact current-round `W2F-*` source identity. The packet always updates `wave2_judgment` and may append/upsert only that W2F entry in `pending_questions`; it never overwrites a Wave1 question entry.
 
-**First materialization**（`__BACKFILL_*__` token 存在）：Replace token with return-map entries.
-
-**Rerun**（token 不存在）：Read `cross-topic-ledger.md` and `finding-index.yaml`. Identify current-round findings (`created_in_rerun_count == profile.rerun_count`) plus legacy findings (no `created_in_rerun_count` field → always included). For each finding's `affected_topics`, extract W2F-xxx entries. Append entries whose W2F-xxx id is not already in the section refs.
-
-**Legacy bundle migration**：On first v0.29 rerun, legacy findings without `created_in_rerun_count` SHALL be included in projection scope. Agent SHALL read all legacy findings from `finding-index.yaml` and either append their W2F-xxx entries to the seed projection or record an explicit no-projection disposition. Legacy findings missing from projection produce advisory (non-blocking) inspect feedback.
-
-Each Wave2 backfill replacement must preserve finding lineage as return-map entries:
-
-- `evidence_meaning`: what the finding changed for this seed topic.
-- `relationship`: `supports`, `refutes`, `partial`, `opens`, `defers`, or `context`.
-- `refs`: include relevant `W2F-xxx` ids plus concrete existing `reference/00-cross-*.md` refs for consumer-facing materialized findings. Also include `artifacts/wave2/cross-topic-ledger.md`, `artifacts/wave2/finding-index.yaml`, Wave1/Wave0 source artifacts, cache leaves, and work-unit surfaces as secondary provenance where available.
-- If a finding has no materializable consumer reference, write an explicit limitation/no-materializable-evidence entry instead of a glob or internal-only refs.
-- `status`: `supported`, `refuted`, `partial`, `open`, `emergent`, or `deferred`.
-- `next_hop`: the next read/repair/handoff path for a future Agent.
+Use concrete existing `reference/00-cross-*.md` consumer navigation for evidence-bearing findings, with ledger/index and prior source surfaces only as secondary provenance. An identity-bound `defers` / `deferred` entry may keep `refs: [none]` only with an explicit limitation in `next_hop`. Historical W2F refs remain read-compatible but never authorize a new packet. Missing current finding authority, topic binding, or writer window is a direct owner boundary, not permission to patch a legacy seed.
 
 ### 3.3 Closeout + Gate Readiness
 
@@ -288,7 +253,7 @@ For an ordinary first run or `action:supplement`, non-empty reduced coverage may
 
 `gap_status` values are closed: `no_gap`, `needs_search`, `search_submitted`, `deferred_hitl2`, `requires_internal_data`, `record_only`.
 
-Backfill placeholders expected to be replaced before gate include `__BACKFILL_WAVE2_JUDGMENT__` and `__BACKFILL_PENDING_QUESTIONS__`.
+Before gate, current W2F projection demand must have passed the same Wave2 inspect; `pending_questions` remains optional for Wave2 and is not a token-consumption obligation by itself.
 
 #### 3.3.1 Quality Self-Check
 
@@ -311,7 +276,7 @@ These checks are Agent discipline. The gate verifies structural artifacts, refer
 - `artifacts/wave2/finding-index.yaml`
 - Existing-backed `reference/00-cross-*.md` projections for accepted consumer-facing backed `W2F-xxx` findings, plus targeted-evidence `00-cross` references only when submitted `wave2_targeted_evidence` backs new fetched evidence
 - Submitted work-unit rows for delegated targeted evidence outputs and cache trails
-- Seed-topic Wave2 backfill entries preserving `W2F-xxx` finding ids and concrete `reference/00-cross-*.md` refs for consumer-facing materialized findings, with `cross-topic-ledger.md`, `finding-index.yaml`, and source artifacts as secondary provenance.
+- Seed-topic Wave2 projections written only through the packet writer, preserving exact `W2F-xxx` identities and concrete `reference/00-cross-*.md` refs for consumer-facing materialized findings, with `cross-topic-ledger.md`, `finding-index.yaml`, and source artifacts as secondary provenance.
 - `rb_trace.jsonl` records the `wave2_completion` event/check surface required by the Wave2 gate definition.
 
 ## 5. Gate Command
@@ -377,8 +342,8 @@ Do not stop for progress, idle/no-work, or partial-completion reporting. Phase c
 - 禁止把 unresolved P0/P1 findings silently dropped from `finding-index.yaml`.
 - 禁止把 under-backed `priority: p0` / `priority: p1` finding declared pure-synthesis-eligible without submitted evidence or explicit routing.
 - 禁止让 `gap_status: needs_search` coexist with `synthesis_eligibility.pure_synthesis_eligible: true`.
-- 禁止保留 `__BACKFILL_WAVE2_JUDGMENT__` or `__BACKFILL_PENDING_QUESTIONS__` after completed backfill.
-- 禁止从 synthesis prose alone 回填 Wave2; backfill must preserve W2F ids, return-map fields, and ledger/index/source refs.
+- 禁止以 token replacement、raw Markdown patch、heading/path/line number 或手改 seed 完成 Wave2 projection。
+- 禁止从 synthesis prose alone 形成 Wave2 projection; retained packet must preserve exact W2F identity, return-map fields, and ledger/index/source refs.
 - 禁止 inventing references when targeted search fails; record limitation or route to HITL2.
 - 禁止 treating the same submitted reference/cache trail as independent backing for P0/P1 findings.
 - 禁止 bypassing gate JSON `inspect`/`advice`; repair, refill, defer, or record limitation from real feedback.

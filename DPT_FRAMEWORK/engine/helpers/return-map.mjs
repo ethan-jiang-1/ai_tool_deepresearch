@@ -1,7 +1,12 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, join, resolve as resolvePath } from 'node:path';
 
-import { evaluateCanonicalSeedBindings } from './canonical-topic-state.mjs';
+import {
+  evaluateCanonicalSeedBindings,
+  locateSeedProjectionSlots,
+  projectionSlotsForWave,
+  splitSeedProjectionCard,
+} from './canonical-topic-state.mjs';
 import { makeContractFinding } from './wave-contract-findings.mjs';
 import { collectEligibleWorkUnitProjection, readProjectionProfileRound } from '../work-unit-projection.mjs';
 
@@ -27,11 +32,10 @@ function readText(absPath) {
 }
 
 // @impl RRM-006
-const WAVE_TOKEN_MAP = {
-  wave0: ['__BACKFILL_WAVE0_EVIDENCE__'],
-  wave1: ['__BACKFILL_WAVE1_MECHANISMS__', '__BACKFILL_WAVE1_TRENDS__', '__BACKFILL_PENDING_QUESTIONS__'],
-  wave2: ['__BACKFILL_WAVE2_JUDGMENT__'],
-};
+const WAVE_TOKEN_MAP = Object.freeze(Object.fromEntries(['wave0', 'wave1', 'wave2'].map((wave) => [
+  wave,
+  projectionSlotsForWave(wave).map((slot) => slot.initialToken),
+])));
 
 function hasBackfillToken(content, wave = null) {
   if (!content) return false;
@@ -191,41 +195,31 @@ export function extractReturnMapEntries(content) {
   return entries;
 }
 
-const SEED_SECTION_FAMILIES = Object.freeze({
-  wave0: ['本轮新增证据'],
-  wave1: ['本轮新增机制理解', '本轮新增趋势与难点', '待验证问题'],
-  wave2: ['当前判断', '待验证问题'],
-});
-
-function headingMatches(rawHeading, base) {
-  const value = rawHeading.trim();
-  if (value === base) return true;
-  if (!value.startsWith(base)) return false;
-  const suffix = value.slice(base.length);
-  return /^(?:\s|\(|（|:|：|-|—)/.test(suffix);
-}
+const SEED_SECTION_FAMILIES = Object.freeze(Object.fromEntries(['wave0', 'wave1', 'wave2'].map((wave) => [
+  wave,
+  projectionSlotsForWave(wave).map((slot) => slot.canonicalHeading),
+])));
 
 // @impl RRM-007
 export function extractSeedSectionFamily(content, wave) {
-  const bases = SEED_SECTION_FAMILIES[wave] || [];
-  const lines = String(content || '').split(/\r?\n/);
-  const headings = [];
-  lines.forEach((line, index) => {
-    const match = line.match(/^\s*##\s+(.+?)\s*$/);
-    if (match) headings.push({ index, title: match[1] });
-  });
-  const sections = [];
-  headings.forEach((heading, index) => {
-    const base = bases.find((candidate) => headingMatches(heading.title, candidate));
-    if (!base) return;
-    const end = headings[index + 1]?.index ?? lines.length;
-    sections.push({
-      heading: base,
-      startLine: heading.index + 1,
-      contentStartLine: heading.index + 2,
-      endLine: end,
-      content: lines.slice(heading.index + 1, end).join('\n'),
-    });
+  const slots = projectionSlotsForWave(wave);
+  const sections = locateSeedProjectionSlots(content, { slotIds: slots.map((slot) => slot.slotId) }).map((occurrence) => {
+    const card = occurrence.headingKind === 'canonical' ? splitSeedProjectionCard(occurrence.content, occurrence.slot) : null;
+    const lineCount = occurrence.content.split(/\r?\n/).length;
+    return {
+      slotId: occurrence.slotId,
+      heading: occurrence.slotId,
+      headingKind: occurrence.headingKind,
+      headingBase: occurrence.headingBase,
+      canonicalHeading: occurrence.slot.canonicalHeading,
+      startLine: occurrence.startLine,
+      contentStartLine: occurrence.contentStartLine,
+      entryContentStartLine: occurrence.contentStartLine + (card ? card.prefix.split(/\r?\n/).length - 1 : 0),
+      endLine: occurrence.contentStartLine + lineCount - 1,
+      content: occurrence.content,
+      entryContent: card ? card.entryArea : occurrence.content,
+      cardPresent: Boolean(card),
+    };
   });
   return { usable: sections.length > 0, sections };
 }
@@ -516,14 +510,14 @@ export function validateReturnMapContent(content, relPath, {
 
 export function extractExactProjectionIdentities(entry) {
   const refWorkIds = new Set();
-  const findingIds = new Set();
+  const refFindingIds = new Set();
   for (const rawRef of String(entry?.fields?.refs || '').split(/\r?\n/)) {
     const ref = rawRef.trim().replace(/^['"`]|['"`]$/g, '').replace(/[.,;:]$/g, '');
     if (/^wu-w[0-9]+-b[0-9]{3}-[a-z][a-z0-9]{1,7}-i[0-9]{4}$/.test(ref)) refWorkIds.add(ref);
-    if (/^W2F-[0-9]{3,}$/.test(ref)) findingIds.add(ref);
+    if (/^W2F-[0-9]{3,}$/.test(ref)) refFindingIds.add(ref);
     for (const segment of ref.split(/[\\/]+/)) {
       if (/^wu-w[0-9]+-b[0-9]{3}-[a-z][a-z0-9]{1,7}-i[0-9]{4}$/.test(segment)) refWorkIds.add(segment);
-      if (/^W2F-[0-9]{3,}$/.test(segment)) findingIds.add(segment);
+      if (/^W2F-[0-9]{3,}$/.test(segment)) refFindingIds.add(segment);
     }
   }
   const metadata = entry?.metadataIssues?.length === 0 && entry?.fields?.evidence_meaning
@@ -534,29 +528,46 @@ export function extractExactProjectionIdentities(entry) {
     const match = String(value).match(/^(wu-w[0-9]+-b[0-9]{3}-[a-z][a-z0-9]{1,7}-i[0-9]{4})\/[1-9][0-9]*$/);
     return match ? [match[1]] : [];
   }));
-  return { workIds: new Set([...refWorkIds, ...(metadataWorkId ? [metadataWorkId] : [])]), refWorkIds, metadataWorkId, rawMetadataWorkIds, findingIds };
+  const metadataFindingId = entry?.metadataIssues?.length === 0 && entry?.fields?.evidence_meaning
+    ? String(entry?.metadata?.entry_id || '').match(/^W2F-[0-9]{3,}$/)?.[0] || null
+    : null;
+  const rawMetadataFindingIds = new Set((entry?.metadataIds || []).filter((value) => /^W2F-[0-9]{3,}$/.test(String(value))));
+  return {
+    workIds: new Set([...refWorkIds, ...(metadataWorkId ? [metadataWorkId] : [])]),
+    refWorkIds,
+    metadataWorkId,
+    rawMetadataWorkIds,
+    findingIds: new Set([...refFindingIds, ...(metadataFindingId ? [metadataFindingId] : [])]),
+    refFindingIds,
+    metadataFindingId,
+    rawMetadataFindingIds,
+  };
 }
 
 function metadataIdentityCanCoverRow(entry) {
   const refs = fieldValue(entry, 'refs');
   if (!EMPTY_REFS_RE.test(refs)) return true;
+  return isExplicitDeferredProjectionDisposition(entry);
+}
+
+function isExplicitDeferredProjectionDisposition(entry) {
   const relationship = fieldValue(entry, 'relationship').replace(/[`"'.,;]+$/g, '');
   const status = fieldValue(entry, 'status').replace(/[`"'.,;]+$/g, '');
   const nextHop = fieldValue(entry, 'next_hop');
-  return (relationship === 'defers' || status === 'deferred') && LIMITATION_NEXT_HOP_RE.test(nextHop);
+  return relationship === 'defers' && status === 'deferred' && LIMITATION_NEXT_HOP_RE.test(nextHop);
 }
 
 export function extractSeedFamilyEntries(content, wave) {
   const family = extractSeedSectionFamily(content, wave);
   const entries = [];
   for (const section of family.sections) {
-    for (const entry of extractReturnMapEntries(section.content)) {
-      entry.startLine += section.contentStartLine - 1;
-      entry.endLine += section.contentStartLine - 1;
-      entry.section = section.heading;
+    for (const entry of extractReturnMapEntries(section.entryContent)) {
+      entry.startLine += section.entryContentStartLine - 1;
+      entry.endLine += section.entryContentStartLine - 1;
+      entry.section = section.slotId;
       entry.sectionStartLine = section.startLine;
       const ids = extractExactProjectionIdentities(entry);
-      if (section.heading === '待验证问题') {
+      if (section.slotId === 'pending_questions') {
         if (wave === 'wave1' && ids.findingIds.size > 0) continue;
         if (wave === 'wave2' && ids.findingIds.size === 0) continue;
       }
@@ -586,8 +597,11 @@ function seedBindingFinding(bundlePath, binding) {
   });
 }
 
-function familyUnavailableFinding(bundlePath, relPath, wave, topicUid) {
+function familyUnavailableFinding(bundlePath, relPath, wave, topicUid, missingSlotIds = []) {
   const surface = resolvePath(bundlePath, relPath);
+  const missingDescription = missingSlotIds.length > 0
+    ? `missing required ${wave} slot(s): ${missingSlotIds.join(', ')}`
+    : `no usable ${wave} target section family`;
   return makeContractFinding({
     id: `return_map_target_family_unavailable:${wave}:${topicUid}`,
     ruleId: 'return_map_target_family_unavailable',
@@ -595,13 +609,44 @@ function familyUnavailableFinding(bundlePath, relPath, wave, topicUid) {
     classification: 'blocking',
     blockingBasis: 'required_structure',
     surface,
-    expected: { section_family: SEED_SECTION_FAMILIES[wave] },
-    observed: { located_sections: [] },
-    missingFact: `${relPath} has no usable ${wave} target section family for current projection demand.`,
+    expected: { section_family: SEED_SECTION_FAMILIES[wave], required_slot_ids: projectionSlotsForWave(wave).map((slot) => slot.slotId) },
+    observed: { located_sections: [], missing_slot_ids: missingSlotIds },
+    missingFact: `${relPath} has ${missingDescription} for current projection demand.`,
+    repairKind: 'missing_contract',
+    writeTo: 'Canonical Seed Topic layout migration boundary',
+    repair: 'Do not hand-edit or infer a seed layout. Keep the direct layout boundary for an explicit sanctioned migration design.',
+    detail: `[return_map_target_family_unavailable] ${relPath}: ${wave} current demand has ${missingDescription}.`,
+  });
+}
+
+function projectionReadinessFinding(bundlePath, {
+  ruleId,
+  topicUid,
+  slotId = null,
+  relPath,
+  line = null,
+  blockingBasis = 'binding_integrity',
+  expected,
+  observed,
+  missingFact,
+  detail,
+}) {
+  const surface = resolvePath(bundlePath, relPath);
+  const suffix = line ? `#L${line}` : '';
+  return makeContractFinding({
+    id: `${ruleId}:${topicUid}${slotId ? `:${slotId}` : ''}${line ? `:${line}` : ''}`,
+    ruleId,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis,
+    surface: `${surface}${suffix}`,
+    expected,
+    observed,
+    missingFact,
     repairKind: 'agent_action',
-    writeTo: surface,
-    repair: `Add the demanded ${wave} return-map projection under one canonical target section in ${relPath}.`,
-    detail: `[return_map_target_family_unavailable] ${relPath}: ${wave} current demand has no target section.`,
+    writeTo: 'Projection Packet -> operate-topic-state apply -> same Wave inspect',
+    repair: 'Read the current direct authority, repair the retained Projection Packet through operate-topic-state apply, then rerun this same Wave inspect.',
+    detail,
   });
 }
 
@@ -665,6 +710,41 @@ function profileRoundAuthorityFinding(bundlePath, reason) {
   });
 }
 
+function findingIndexAuthorityFinding(bundlePath, findingIndexFact) {
+  const relPath = findingIndexFact?.relPath || 'artifacts/wave2/finding-index.yaml';
+  return makeContractFinding({
+    id: 'return_map_finding_index_authority',
+    ruleId: 'return_map_finding_index_authority',
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'authority_integrity',
+    surface: resolvePath(bundlePath, relPath),
+    expected: 'A readable Wave2 finding-index object with a findings array for current-round projection authority.',
+    observed: { kind: findingIndexFact?.kind || 'unavailable' },
+    missingFact: `Wave2 finding-index authority is unavailable: ${findingIndexFact?.inspect?.[0] || relPath}.`,
+    repairKind: 'missing_contract',
+    writeTo: 'Wave2 finding-index authority recovery boundary',
+    detail: `[return_map_finding_index_authority] ${findingIndexFact?.inspect?.[0] || `missing ${relPath}`}`,
+  });
+}
+
+function topicRegistryAuthorityFinding(bundlePath) {
+  return makeContractFinding({
+    id: 'return_map_topic_registry_authority',
+    ruleId: 'return_map_topic_registry_authority',
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'authority_integrity',
+    surface: resolvePath(bundlePath, 'rb_plan.md'),
+    expected: 'One normalized canonical topic-registry fact for projection readiness.',
+    observed: 'topicRegistryFact is unavailable or invalid',
+    missingFact: 'Seed projection readiness cannot read canonical topic-registry authority.',
+    repairKind: 'missing_contract',
+    writeTo: 'Canonical topic registry authority recovery boundary',
+    detail: '[return_map_topic_registry_authority] canonical topic-registry fact is unavailable.',
+  });
+}
+
 function resolveFindingTopicTokens(layouts, tokens) {
   const resolved = new Map();
   for (const token of tokens) {
@@ -688,6 +768,7 @@ function wave2FindingDemands(bundlePath, topicRegistryFact, findingIndexFact) {
   const current = new Map();
   const legacy = new Map();
   if (!findingIndexFact?.ok || !Array.isArray(findingIndexFact.data?.findings)) {
+    blockers.push(findingIndexAuthorityFinding(bundlePath, findingIndexFact));
     return { parentUsable: false, blockers, current, legacy };
   }
   let round;
@@ -724,123 +805,221 @@ function wave2FindingDemands(bundlePath, topicRegistryFact, findingIndexFact) {
 }
 
 // @impl RRM-007, IOC-005
-export function inspectSeedTopicReturnMaps(bundlePath, {
+// Read-only and deterministic: it interprets direct authority facts plus seed
+// bytes, but never receives a packet target or performs a mutation decision.
+export function evaluateSeedTopicProjectionReadiness(bundlePath, {
   wave,
   topicRegistryFact = null,
   findingIndexFact = null,
 } = {}) {
-  const inspect = [];
-  const advice = [];
   const findings = [];
   if (!topicRegistryFact?.topic_registry || !topicRegistryFact?.layouts) {
-    return { passed: true, inspect, advice, findings, diagnosticOnly: true, classification: 'diagnostic-only' };
+    // A pre-canonical bundle has no current packet target or legal projection
+    // writer. Keep its established read-only return-map behavior intact; the
+    // canonical lifecycle owns migration before projection readiness applies.
+    return projectionReadinessResult(findings);
   }
 
-  const bindingByUid = new Map(evaluateCanonicalSeedBindings(bundlePath, { topic_registry: topicRegistryFact.topic_registry }).map((binding) => [binding.topic_uid, binding]));
-  let eligible = { passed: true, rows: [], root_findings: [], warnings: [] };
+  let eligible = { passed: true, rows: [], root_findings: [] };
   if (wave === 'wave0' || wave === 'wave1') {
     eligible = collectEligibleWorkUnitProjection(bundlePath, { phase: wave, topicRegistryFact });
-    if (!eligible.passed) findings.push(...eligible.root_findings);
+    if (!eligible.passed) return projectionReadinessResult(eligible.root_findings || []);
   }
   const findingDemands = wave === 'wave2'
     ? wave2FindingDemands(bundlePath, topicRegistryFact, findingIndexFact)
     : { parentUsable: true, blockers: [], current: new Map(), legacy: new Map() };
-  findings.push(...findingDemands.blockers);
+  if (!findingDemands.parentUsable) return projectionReadinessResult(findingDemands.blockers);
+  if (findingDemands.blockers.length > 0) return projectionReadinessResult(findingDemands.blockers);
 
+  const bindingByUid = new Map(evaluateCanonicalSeedBindings(bundlePath, { topic_registry: topicRegistryFact.topic_registry })
+    .map((binding) => [binding.topic_uid, binding]));
   for (const topic of topicRegistryFact.topic_registry) {
     const binding = bindingByUid.get(topic.topic_uid);
     if (!binding?.ok) {
       findings.push(seedBindingFinding(bundlePath, binding || { topic_uid: topic.topic_uid, slug: topic.slug, reason_code: 'binding_missing', fact_refs: [] }));
       continue;
     }
+
     const relPath = `seed_topics/${topic.slug}.md`;
     const content = readText(join(bundlePath, relPath));
-    if (content === null || hasBackfillToken(content, wave)) continue;
-    const family = extractSeedFamilyEntries(content, wave);
-    const currentRows = eligible.passed ? eligible.rows.filter((row) => row.topic_uid === topic.topic_uid) : [];
+    if (content === null) {
+      findings.push(seedBindingFinding(bundlePath, { topic_uid: topic.topic_uid, slug: topic.slug, reason_code: 'seed_missing', fact_refs: [] }));
+      continue;
+    }
+    const currentRows = eligible.rows.filter((row) => row.topic_uid === topic.topic_uid);
     const currentFindingIds = findingDemands.current.get(topic.topic_uid) || [];
     const legacyFindingIds = findingDemands.legacy.get(topic.topic_uid) || [];
     const hasCurrentDemand = currentRows.length > 0 || currentFindingIds.length > 0;
+    const family = extractSeedFamilyEntries(content, wave);
 
-    if (!family.usable) {
-      if (hasCurrentDemand && eligible.passed && findingDemands.parentUsable) findings.push(familyUnavailableFinding(bundlePath, relPath, wave, topic.topic_uid));
-      if (!hasCurrentDemand) {
-        for (const findingId of legacyFindingIds) findings.push(projectionOmissionFinding(bundlePath, relPath, wave, topic.topic_uid, findingId, { legacy: true }));
+    const missingCards = family.sections.filter((section) => section.headingKind === 'canonical' && !section.cardPresent);
+    if (missingCards.length > 0) {
+      for (const section of missingCards) findings.push(projectionReadinessFinding(bundlePath, {
+        ruleId: 'seed_projection_card_missing', topicUid: topic.topic_uid, slotId: section.slotId, relPath, line: section.startLine,
+        blockingBasis: 'required_structure', expected: 'A canonical projection heading is immediately followed by its fixed read-only card.',
+        observed: { heading_kind: section.headingKind, card_present: false },
+        missingFact: `${relPath}:${section.startLine} canonical ${section.slotId} heading is missing its ${'回填卡（只读操作约束，不是 Projection Entry）'} card.`,
+        detail: `[seed_projection_card_missing] ${relPath}:${section.startLine} lacks the required card for ${section.slotId}.`,
+      }));
+      continue;
+    }
+    const demandedSlotIds = wave === 'wave2'
+      ? new Set(currentFindingIds.length > 0 ? ['wave2_judgment'] : [])
+      : new Set(hasCurrentDemand ? projectionSlotsForWave(wave).map((slot) => slot.slotId) : []);
+    const presentSlotIds = new Set(family.sections.map((section) => section.slotId));
+    const missingSlotIds = [...demandedSlotIds].filter((slotId) => !presentSlotIds.has(slotId));
+    if (!family.usable || missingSlotIds.length > 0) {
+      if (hasCurrentDemand) findings.push(familyUnavailableFinding(bundlePath, relPath, wave, topic.topic_uid, missingSlotIds));
+      continue;
+    }
+
+    const tokenFailures = [];
+    for (const section of family.sections) {
+      const slot = projectionSlotsForWave(wave).find((candidate) => candidate.slotId === section.slotId);
+      if (slot && demandedSlotIds.has(slot.slotId) && section.entryContent.includes(slot.initialToken)) {
+        tokenFailures.push(projectionReadinessFinding(bundlePath, {
+          ruleId: 'seed_projection_token', topicUid: topic.topic_uid, slotId: slot.slotId, relPath, line: section.startLine,
+          blockingBasis: 'required_structure', expected: `Current ${wave} authority demand has a materialized identity-bound entry instead of ${slot.initialToken}.`,
+          observed: { token: slot.initialToken, current_demand: true },
+          missingFact: `${relPath}:${section.startLine} retains demanded ${slot.initialToken}.`,
+          detail: `[seed_projection_token] ${relPath}:${section.startLine} retains ${slot.initialToken} while current ${wave} authority demand exists.`,
+        }));
       }
+    }
+    if (tokenFailures.length > 0) {
+      findings.push(...tokenFailures);
       continue;
     }
 
     const entries = family.entries;
-    for (const section of family.sections.filter((candidate) => candidate.content.trim())) {
-      if (wave === 'wave2' && section.heading === '待验证问题') continue;
-      if (!entries.some((entry) => entry.sectionStartLine === section.startLine)) {
-        const local = validateReturnMapContent(section.content, relPath, {
-          requireConcreteReferenceNavigation: true,
-          bundlePath,
-        });
-        findings.push(...local.findings);
-      }
-    }
-    const validWorkIds = new Set();
-    const validFindingIds = new Set();
-    const invalidWorkIds = new Set();
-    const invalidFindingIds = new Set();
-    for (const entry of entries) {
-      const validation = validateReturnMapContent(entry.text, relPath, {
-        requireWave1Refs: wave === 'wave1',
-        requireConcreteReferenceNavigation: true,
-        bundlePath,
-      });
-      if (entry.metadataIssues.length > 0 || (entry.metadata.entry_id && !/^(?:wu-w[0-9]+-b[0-9]{3}-[a-z][a-z0-9]{1,7}-i[0-9]{4})\/[1-9][0-9]*$/.test(entry.metadata.entry_id))) {
-        const detail = `[return_map_entry_identity] ${relPath}:${entry.startLine}: invalid or duplicate entry_id metadata.`;
-        validation.findings.push(returnMapFinding({
-          ruleId: 'return_map_entry_identity', relPath, bundlePath, line: entry.startLine,
-          blockingBasis: 'binding_integrity', expected: 'At most one entry-local <work_id>/<positive integer> entry_id.',
-          observed: { entry_id: entry.metadata.entry_id || null, issues: entry.metadataIssues },
-          missingFact: `${relPath}:${entry.startLine} has invalid entry-local identity metadata.`, detail,
-          repair: `Repair or remove the invalid entry_id at ${relPath}:${entry.startLine}.`,
+    let structuralFailure = false;
+    for (const section of family.sections) {
+      const sectionEntries = entries.filter((entry) => entry.sectionStartLine === section.startLine);
+      const slot = projectionSlotsForWave(wave).find((candidate) => candidate.slotId === section.slotId);
+      const body = (slot ? section.entryContent.replace(slot.initialToken, '') : section.entryContent).trim();
+      if (!body || sectionEntries.length > 0) continue;
+      const generic = /\bWave[012]\s+submitted\b/i.test(body);
+      if (generic || demandedSlotIds.has(section.slotId)) {
+        findings.push(projectionReadinessFinding(bundlePath, {
+          ruleId: generic ? 'seed_projection_generic_prose' : 'seed_projection_entry_missing',
+          topicUid: topic.topic_uid, slotId: section.slotId, relPath, line: section.startLine,
+          blockingBasis: 'required_structure', expected: 'A complete identity-bound Projection Entry or explicit deferred disposition.',
+          observed: generic ? 'generic WaveN submitted prose' : 'unparseable slot content',
+          missingFact: `${relPath}:${section.startLine} has ${generic ? 'generic submitted prose' : 'no parseable Projection Entry'}${hasCurrentDemand ? ' for current demand' : ''}.`,
+          detail: `[${generic ? 'seed_projection_generic_prose' : 'seed_projection_entry_missing'}] ${relPath}:${section.startLine} needs an identity-bound Projection Entry.`,
         }));
-        validation.passed = false;
+        structuralFailure = true;
+      } else {
+        const local = validateReturnMapContent(body, relPath, { requireConcreteReferenceNavigation: true, bundlePath });
+        findings.push(...local.findings);
+        if (!local.passed) structuralFailure = true;
       }
-      for (const finding of validation.findings) {
-        finding.surface = `${resolvePath(bundlePath, relPath)}#L${entry.startLine}`;
-        finding.write_to = `${resolvePath(bundlePath, relPath)}#L${entry.startLine}`;
-      }
-      findings.push(...validation.findings);
-      const identities = extractExactProjectionIdentities(entry);
-      const targetWork = validation.passed ? validWorkIds : invalidWorkIds;
-      const targetFindings = validation.passed ? validFindingIds : invalidFindingIds;
-      identities.refWorkIds.forEach((id) => targetWork.add(id));
-      if (identities.metadataWorkId && metadataIdentityCanCoverRow(entry)) targetWork.add(identities.metadataWorkId);
-      if (!validation.passed) identities.rawMetadataWorkIds.forEach((id) => invalidWorkIds.add(id));
-      identities.findingIds.forEach((id) => targetFindings.add(id));
-    }
-    if (wave === 'wave2' && entries.some(isEvidenceBearingReturnMapEntry)) {
-      const familyValidation = validateReturnMapContent(entries.map((entry) => entry.text).join('\n'), relPath, { requireFields: [], requireWave2Refs: true, bundlePath });
-      findings.push(...familyValidation.findings.filter((finding) => finding.rule_id === 'return_map_missing_wave2_refs'));
     }
 
-    if (eligible.passed) {
-      for (const row of currentRows) {
-        if (!validWorkIds.has(row.work_id) && !invalidWorkIds.has(row.work_id)) {
-          findings.push(projectionOmissionFinding(bundlePath, relPath, wave, topic.topic_uid, row.work_id));
+    const validWorkIds = new Set();
+    const validFindingIds = new Set();
+    const currentWorkIds = new Set(currentRows.map((row) => row.work_id));
+    const currentFindingSet = new Set(currentFindingIds);
+    const knownFindingIds = new Set([...currentFindingIds, ...legacyFindingIds]);
+    for (const entry of entries) {
+      const emptyRefs = EMPTY_REFS_RE.test(fieldValue(entry, 'refs'));
+      const validation = validateReturnMapContent(entry.text, relPath, {
+        requireConcreteReferenceNavigation: !emptyRefs,
+        bundlePath,
+      });
+      for (const finding of validation.findings) {
+        finding.surface = `${resolvePath(bundlePath, relPath)}#L${entry.startLine}`;
+        finding.write_to = 'Projection Packet -> operate-topic-state apply -> same Wave inspect';
+      }
+      findings.push(...validation.findings);
+      if (!validation.passed) structuralFailure = true;
+      if (validation.passed && emptyRefs && !isExplicitDeferredProjectionDisposition(entry)) {
+        findings.push(projectionReadinessFinding(bundlePath, {
+          ruleId: 'seed_projection_deferred_disposition_invalid', topicUid: topic.topic_uid, slotId: entry.section, relPath, line: entry.startLine,
+          expected: 'refs: none is allowed only for an explicit relationship: defers, status: deferred disposition with a limitation in next_hop.',
+          observed: {
+            relationship: fieldValue(entry, 'relationship'),
+            status: fieldValue(entry, 'status'),
+            next_hop: fieldValue(entry, 'next_hop'),
+          },
+          missingFact: `${relPath}:${entry.startLine} uses refs: none without the accepted explicit deferred disposition.`,
+          detail: `[seed_projection_deferred_disposition_invalid] ${relPath}:${entry.startLine} must use defers/deferred with a limitation when refs: none.`,
+        }));
+        structuralFailure = true;
+        continue;
+      }
+      const identities = extractExactProjectionIdentities(entry);
+      if (wave === 'wave2') {
+        const ids = identities.metadataFindingId ? new Set([identities.metadataFindingId]) : identities.refFindingIds;
+        const conflictingRef = identities.metadataFindingId && [...identities.refFindingIds].some((id) => id !== identities.metadataFindingId);
+        if (entry.metadataIssues.length > 0 || ids.size !== 1 || conflictingRef || [...ids].some((id) => !knownFindingIds.has(id))) {
+          findings.push(projectionReadinessFinding(bundlePath, {
+            ruleId: 'seed_projection_entry_identity', topicUid: topic.topic_uid, slotId: entry.section, relPath, line: entry.startLine,
+            expected: 'One exact current or accepted historical W2F identity; packet-created entries use matching entry_id and historical entries use an exact refs token.',
+            observed: { entry_id: entry.metadata.entry_id || null, finding_ids: [...ids], metadata_issues: entry.metadataIssues, conflicting_ref: conflictingRef },
+            missingFact: `${relPath}:${entry.startLine} lacks one valid Wave2 projection identity.`,
+            detail: `[seed_projection_entry_identity] ${relPath}:${entry.startLine} has invalid Wave2 identity binding.`,
+          }));
+          structuralFailure = true;
+        } else if (validation.passed) {
+          validFindingIds.add([...ids][0]);
+        }
+      } else {
+        const ids = identities.metadataWorkId && metadataIdentityCanCoverRow(entry)
+          ? new Set([identities.metadataWorkId])
+          : identities.workIds;
+        const metadataInvalid = entry.metadata.entry_id && !/^(?:wu-w[0-9]+-b[0-9]{3}-[a-z][a-z0-9]{1,7}-i[0-9]{4})\/[1-9][0-9]*$/.test(entry.metadata.entry_id);
+        const currentIds = new Set([...ids].filter((id) => currentWorkIds.has(id)));
+        // A retained entry may be valid history from an earlier round. Current
+        // direct authority selects which identities are required now; it does
+        // not retroactively make historical identities malformed.
+        const currentIdentityInvalid = currentIds.size > 0 && (ids.size !== 1 || currentIds.size !== 1);
+        const historicalIdentityInvalid = !hasCurrentDemand && (ids.size > 1 || (ids.size === 0 && entry.metadata.entry_id));
+        if (entry.metadataIssues.length > 0 || (currentIds.size > 0 && metadataInvalid) || currentIdentityInvalid || historicalIdentityInvalid) {
+          findings.push(projectionReadinessFinding(bundlePath, {
+            ruleId: 'seed_projection_entry_identity', topicUid: topic.topic_uid, slotId: entry.section, relPath, line: entry.startLine,
+            expected: 'One exact current submitted work identity in entry_id or accepted refs form.',
+            observed: { entry_id: entry.metadata.entry_id || null, work_ids: [...ids], metadata_issues: entry.metadataIssues },
+            missingFact: `${relPath}:${entry.startLine} lacks one valid current ${wave} submitted-work identity.`,
+            detail: `[seed_projection_entry_identity] ${relPath}:${entry.startLine} has invalid ${wave} identity binding.`,
+          }));
+          structuralFailure = true;
+        } else if (validation.passed && currentIds.size === 1) {
+          validWorkIds.add([...currentIds][0]);
         }
       }
     }
-    if (findingDemands.parentUsable) {
-      for (const findingId of currentFindingIds) {
-        if (!validFindingIds.has(findingId) && !invalidFindingIds.has(findingId)) findings.push(projectionOmissionFinding(bundlePath, relPath, wave, topic.topic_uid, findingId));
-      }
-      for (const findingId of legacyFindingIds) {
-        if (!validFindingIds.has(findingId) && !invalidFindingIds.has(findingId)) findings.push(projectionOmissionFinding(bundlePath, relPath, wave, topic.topic_uid, findingId, { legacy: true }));
-      }
+    if (structuralFailure) continue;
+
+    for (const row of currentRows) {
+      if (!validWorkIds.has(row.work_id)) findings.push(projectionOmissionFinding(bundlePath, relPath, wave, topic.topic_uid, row.work_id));
+    }
+    for (const findingId of currentFindingIds) {
+      if (!validFindingIds.has(findingId)) findings.push(projectionOmissionFinding(bundlePath, relPath, wave, topic.topic_uid, findingId));
+    }
+    for (const findingId of legacyFindingIds) {
+      if (!validFindingIds.has(findingId)) findings.push(projectionOmissionFinding(bundlePath, relPath, wave, topic.topic_uid, findingId, { legacy: true }));
     }
   }
+  return projectionReadinessResult(findings);
+}
 
+function projectionReadinessResult(findings) {
   const blocking = findings.filter((finding) => finding.classification === 'blocking');
-  inspect.push(...blocking.map((finding) => finding.detail));
-  advice.push(...findings.filter((finding) => finding.classification === 'advisory').map((finding) => finding.detail));
-  return { passed: blocking.length === 0, inspect, advice, findings, diagnosticOnly: blocking.length === 0, classification: blocking.length === 0 ? 'diagnostic-only' : 'blocking' };
+  const inspect = blocking.map((finding) => finding.detail);
+  const advice = findings.filter((finding) => finding.classification === 'advisory').map((finding) => finding.detail);
+  return {
+    passed: blocking.length === 0,
+    inspect,
+    advice,
+    findings,
+    diagnosticOnly: blocking.length === 0,
+    classification: blocking.length === 0 ? 'diagnostic-only' : 'blocking',
+  };
+}
+
+export function inspectSeedTopicReturnMaps(bundlePath, options = {}) {
+  return evaluateSeedTopicProjectionReadiness(bundlePath, options);
 }
 
 export function inspectWaveArtifactReturnMaps(bundlePath, wave, topicSlugs = []) {

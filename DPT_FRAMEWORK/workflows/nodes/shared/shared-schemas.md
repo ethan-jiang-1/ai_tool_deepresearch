@@ -78,23 +78,23 @@ Reference rich MD metadata is the project metadata block format: lines such as `
 
 ## Seed Topics
 
-`seed_topics/` 位于 bundle root，与 `reference/`、`artifacts/` 同级。每个 topic 一个 `{slug}.md` 文件，`slug` 含 `NN_` 编号前缀（如 `01_meal-timing-...`），`NN` 取自 `topic_registry` 数组 1-based 位置（两位零填充）。文件内含 `__BACKFILL_*__` token，由各 wave 在完成时替换。
+`seed_topics/` 位于 bundle root，与 `reference/`、`artifacts/` 同级。每个 topic 一个 `{slug}.md` 文件，`slug` 含 `NN_` 编号前缀（如 `01_meal-timing-...`），`NN` 取自 `topic_registry` 数组 1-based 位置（两位零填充）。新 canonical seed 的 Appendix Slot 由 Engine renderer 生成：每个 slot 有固定 heading、永久只读 `回填卡（只读操作约束，不是 Projection Entry）` 与初始 `__BACKFILL_*__` token。
 
 **分隔符有意区分：** seed topic 文件用 `_`（underscore，如 `01_meal-timing-....md`），reference 文件用 `-`（hyphen，如 `00-shared-...`、`01_meal-timing-...-author.md`）。两者是不同的命名空间——seed topic slug 把 `NN_` 作为 slug 的一部分编入，reference 前缀是文件命名约定而非 slug 的一部分。
 
-| Token | 替换阶段 | 替换内容 |
+| Token | Slot owner | Materialization condition |
 |-------|---------|---------|
-| `__BACKFILL_WAVE0_EVIDENCE__` | Wave0 inspect/formal gate 前 | source/reference return-map entries with meaning, relationship, refs, status, and next hop |
-| `__BACKFILL_WAVE1_MECHANISMS__` | Wave1 complete 前 | mechanism return-map entries from `evidence-summary.md` |
-| `__BACKFILL_WAVE1_TRENDS__` | Wave1 complete 前 | trend/limitation return-map entries from `evidence-summary.md` |
-| `__BACKFILL_WAVE2_JUDGMENT__` | Wave2 complete 前 | W2F finding return-map entries projected from ledger/index |
-| `__BACKFILL_PENDING_QUESTIONS__` | Wave1→Wave2 两阶段 | question-status return-map entries updated from question-list then ledger/index |
+| `__BACKFILL_WAVE0_EVIDENCE__` | Wave0 / `wave0_evidence` | a current eligible submitted Wave0 identity is packet-materialized |
+| `__BACKFILL_WAVE1_MECHANISMS__` | Wave1 / `wave1_mechanisms` | Wave1 atomically materializes all three owned slots |
+| `__BACKFILL_WAVE1_TRENDS__` | Wave1 / `wave1_trends` | Wave1 atomically materializes all three owned slots |
+| `__BACKFILL_WAVE2_JUDGMENT__` | Wave2 / `wave2_judgment` | a current-round W2F finding resolved to the topic is packet-materialized |
+| `__BACKFILL_PENDING_QUESTIONS__` | Wave1 first, Wave2 W2F append only | Wave1's atomic packet, or an optional Wave2 W2F entry; a Wave2 token alone creates no demand |
 
-Gate 通过 `pattern_match`（`negate: true`）验证 `__BACKFILL_WAVE*_*__` token 已被替换。`__BACKFILL_PENDING_QUESTIONS__` 的检查在 wave1-complete gate 和 wave2-complete gate 中均执行。
+Tokens are never manually replaced. The Phase Agent forms a retained projection packet, calls existing `operate-topic-state apply`, then runs the same Wave inspect. The shared projection-readiness evaluator decides when a current direct-authority demand makes a token blocking; Wave inspect and formal gate consume that same result. A no-demand token does not authorize a fabricated entry.
 
 ## Research Return Map
 
-Wave return/backfill content is Agent-readable navigation, never evidence authority. Read `shared-return-map-authoring.md` for the one canonical entry example, Wave-to-section ownership, token lifecycle, concrete-first ref hierarchy, and same-inspect repair path. Submitted work-unit/finding facts and the existing Wave inspect remain the authority/verdict owners.
+Wave return/projection content is Agent-readable navigation, never evidence authority. Read `templates/seed-topic-template.md` for the instantiated heading/card/entry shape, Wave-to-slot ownership, token lifecycle and concrete-first ref presentation. Read `command_playbook/operate-topic-state.md` for packet fields, authorization and same-inspect repair. Submitted work-unit/finding facts and the existing Wave inspect remain the authority/verdict owners.
 
 ## Artifacts — Wave1 (Per-Topic Deepening)
 

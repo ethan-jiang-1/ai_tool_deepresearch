@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.53
+
+- Seed Topic backfill is now an identity-bound `wave_projection` packet through the existing atomic topic-state writer: it preserves immutable read-only backfill cards, materializes only owned current-Wave slots, and never makes the navigation projection into evidence authority.
+- Wave inspect and formal gates share one direct-fact projection-readiness evaluator, so a required missing, generic, or wrongly bound entry blocks the same legal closeout loop without duplicate token rules or degraded handoff.
+- `workflows/nodes/templates/seed-topic-template.md` now owns only the instantiable Seed Topic structure, slot cards, timing, and rendered entry format. The existing `command_playbook/operate-topic-state.md` owns packet, authorization, repair, and rerun-input mechanics; Phase guidance uses both surfaces in the same `authority -> packet -> writer -> same inspect -> completion -> formal gate` loop. Legacy headings remain read-compatible and are upgraded only when a valid selected packet targets them.
+
 ## v0.52
 
 - Wave0 shared-reference-floor feedback now directs the Agent to the existing `wave0_source_intake` declared-output and formal-submit path, rather than an unsubmitted direct `reference/` write.

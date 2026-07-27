@@ -8,6 +8,10 @@ import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './han
 import {
   claimAndSubmitWorkUnit,
 } from '../../engine/work-unit-test-helpers.mjs';
+import {
+  applyCanonicalTopicState,
+  renderSeedProjectionAppendix,
+} from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
 import { tryLoadGateDefinition } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 import { evaluateWave0Contract } from '../../../DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs';
 
@@ -53,7 +57,66 @@ function createBundle(name) {
   const fm = `---\n{\n  "plan_basename": "${name}",\n  "derived_topic_count": 2,\n  "topic_registry_version": "2",\n  "topic_registry": [\n    { "topic_uid": "tp_123e4567-e89b-12d3-a456-426614174000", "id": "01", "slug": "topic-a", "title": "Topic A", "must_answer": ["A?"], "scope_role": "primary", "depends_on_topic_uids": [], "previous_layouts": [] },\n    { "topic_uid": "tp_123e4567-e89b-12d3-a456-426614174001", "id": "02", "slug": "topic-b", "title": "Topic B", "must_answer": ["B?"], "scope_role": "supporting", "depends_on_topic_uids": [], "previous_layouts": [] }\n  ]\n}\n---`;
   writeFileSync(planPath, fm + '\n' + existing.replace(/^---\n[\s\S]*?\n---\n?/, ''));
 
+  const statusPath = join(dir, 'rb_status.json');
+  const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
+  status.current_node = 'phases/phase-wave0.md';
+  writeFileSync(statusPath, JSON.stringify(status));
+
   return dir;
+}
+
+function renderCanonicalSeed(topic) {
+  const binding = {
+    topic_uid: topic.topic_uid,
+    id: topic.id,
+    slug: topic.slug,
+    title: topic.title,
+    must_answer: topic.must_answer,
+    scope_role: topic.scope_role,
+    depends_on_topic_uids: topic.depends_on_topic_uids,
+  };
+  return `---\n${JSON.stringify(binding, null, 2)}\n---\n# ${topic.title}\n\n${renderSeedProjectionAppendix()}\n`;
+}
+
+function materializeWave0Projection(dir, submission, {
+  deferred = false,
+} = {}) {
+  const planFrontmatter = readFileSync(join(dir, 'rb_plan.md'), 'utf8').match(/^---\n([\s\S]*?)\n---/);
+  const plan = JSON.parse(planFrontmatter[1]);
+  const topic = plan.topic_registry.find((entry) => entry.slug === 'topic-a');
+  assert.ok(topic, 'Wave0 fixture requires canonical topic-a');
+  writeFileSync(join(dir, 'seed_topics', `${topic.slug}.md`), renderCanonicalSeed(topic));
+
+  const entry = deferred
+    ? {
+      source_identity: { kind: 'submitted_work', work_id: submission.record.work_id },
+      entry_id: `${submission.record.work_id}/1`,
+      evidence_meaning: 'The submitted Wave0 authority has no materializable consumer reference.',
+      relationship: 'defers',
+      refs: ['none'],
+      status: 'deferred',
+      next_hop: 'limitation: no materializable consumer reference is available.',
+    }
+    : {
+      source_identity: { kind: 'submitted_work', work_id: submission.record.work_id },
+      entry_id: `${submission.record.work_id}/1`,
+      evidence_meaning: 'The submitted Wave0 source establishes the topic evidence route.',
+      relationship: 'supports',
+      refs: ['reference/00-shared-ai-safety.md'],
+      status: 'supported',
+      next_hop: 'Read the shared reference before Wave1 deepening.',
+    };
+  const result = applyCanonicalTopicState({
+    bundlePath: dir,
+    input: {
+      context: 'wave_projection',
+      action: 'apply_seed_projection',
+      topic_uid: topic.topic_uid,
+      wave: 'wave0',
+      updates: [{ slot_id: 'wave0_evidence', entries: [entry] }],
+    },
+  });
+  assert.ok(['committed', 'unchanged'].includes(result.verdict), JSON.stringify(result));
 }
 
 /** Write a valid ReferenceMetadata array YAML for a topic. */
@@ -107,7 +170,7 @@ function setupHappyPath(dir) {
     }),
     { event: 'wave0_completion', ts: new Date().toISOString() },
   ]);
-  claimAndSubmitWorkUnit(dir, {
+  const submission = claimAndSubmitWorkUnit(dir, {
     queueItemId: 'topic-a',
     queueItemOverrides: {
       payload: {
@@ -139,6 +202,7 @@ function setupHappyPath(dir) {
       url: 'https://example.com/research/ai-safety',
     }],
   });
+  materializeWave0Projection(dir, submission);
 }
 
 function setupWave0WithoutSharedReference(dir, { submitWorkUnit = true } = {}) {
@@ -163,7 +227,7 @@ function setupWave0WithoutSharedReference(dir, { submitWorkUnit = true } = {}) {
   ]);
 
   if (submitWorkUnit) {
-    claimAndSubmitWorkUnit(dir, {
+    const submission = claimAndSubmitWorkUnit(dir, {
       queueItemId: 'topic-a',
       outputs: [
         {
@@ -180,6 +244,7 @@ function setupWave0WithoutSharedReference(dir, { submitWorkUnit = true } = {}) {
         url: 'https://example.com/research/source-yaml',
       }],
     });
+    materializeWave0Projection(dir, submission, { deferred: true });
   }
 }
 

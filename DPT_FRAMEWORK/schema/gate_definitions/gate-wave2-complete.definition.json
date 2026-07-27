@@ -1,6 +1,6 @@
 {
   "gate": "wave2-complete",
-  "description": "Verify Wave2 produced the three-artifact group: synthesis.md (narrative projection with W2F-xxx references), cross-topic-ledger.md (6 required non-empty semantic sections with tolerant Markdown presentation), finding-index.yaml (parseable YAML with required fields). Also verify Markdown link cross-references exist and resolve, backfill tokens are replaced, and trace evidence is present. Source-gate status-window and handoff witness are enforced by shared gate preflight.",
+  "description": "Verify Wave2 produced the three-artifact group: synthesis.md (narrative projection with W2F-xxx references), cross-topic-ledger.md (6 required non-empty semantic sections with tolerant Markdown presentation), finding-index.yaml (parseable YAML with required fields), identity-bound Seed Topic projections through the shared readiness evaluator, and trace evidence. Source-gate status-window and handoff witness are enforced by shared gate preflight.",
   "rules": [
     {
       "id": "phase_queue_drained",
@@ -106,26 +106,6 @@
       "target": "artifacts/wave2",
       "failure_message": "Rerun action:add requires full Wave2 re-synthesis: no Delta Synthesis as the main path, and finding-index structured pair coverage must equal the exact canonical pair universe.",
       "finding": { "source": "checker" }
-    },
-    {
-      "id": "backfill_judgment_token_absent",
-      "check": "pattern_match",
-      "target": "seed_topics/{topic}.md",
-      "pattern": "__BACKFILL_WAVE2_JUDGMENT__",
-      "negate": true,
-      "failure_message": "Unreplaced __BACKFILL_WAVE2_JUDGMENT__ token found in seed topic file. Execute backfill task: project cross-topic judgments from ledger/index.",
-      "finding": { "source": "definition", "blocking_basis": "required_structure" },
-      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
-    },
-    {
-      "id": "backfill_questions_token_absent",
-      "check": "pattern_match",
-      "target": "seed_topics/{topic}.md",
-      "pattern": "__BACKFILL_PENDING_QUESTIONS__",
-      "negate": true,
-      "failure_message": "Unreplaced __BACKFILL_PENDING_QUESTIONS__ token found in seed topic file. Execute backfill task: update question status labels from ledger/index.",
-      "finding": { "source": "definition", "blocking_basis": "required_structure" },
-      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "trace_event_wave2_completion",

@@ -2,11 +2,14 @@
 // JS simulates labeled Agent-owned inputs; production CLIs own deterministic authority.
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
-import { appendFileSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { claimAndSubmitFixtureWorkUnit } from '../../experiments_env/shared/work-unit-playbook-utils.mjs';
-import { applyCanonicalTopicState } from '../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
+import {
+  applyCanonicalTopicState,
+  renderSeedProjectionAppendix,
+} from '../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
 import {
   advanceStatus, authoritySnapshot, cleanupRoot, createTempRoot,
   enterPhase, instantiateBundle, parseJsonOutput, readStatus, readTrace, REPO_ROOT, restoreBundle, runGate, runNode, snapshotBundle,
@@ -17,7 +20,7 @@ let baseline;
 let snapshot;
 const TOPIC = { topic_uid: 'tp_11111111-1111-4111-8111-111111111111', id: 't1', slug: 'topic-a', title: 'Topic A', must_answer: ['How does rerun continuity preserve authority?'], scope_role: 'primary', depends_on_topic_uids: [] };
 
-function writePlanAndProfile(bundle, { decision = 'not_started', rerunCount = 1 } = {}) {
+function writePlanAndProfile(bundle, { decision = 'not_started', rerunCount = 0 } = {}) {
   const planBasename = basename(bundle).replace(/^dpt_rb_/, '');
   writeFileSync(join(bundle, 'rb_plan.md'), `---\n${JSON.stringify({ plan_basename: planBasename, topic_registry_version: '2', derived_topic_count: 1, topic_registry: [TOPIC] }, null, 2)}\n---\n# Deterministic rerun plan\n`);
   writeFileSync(join(bundle, 'rb_profile.yaml'), stringifyYaml({
@@ -34,7 +37,20 @@ function writePlanAndProfile(bundle, { decision = 'not_started', rerunCount = 1 
 
 function stageSeed(bundle, rerunCount, { action = 'supplement', directionCount = rerunCount } = {}) {
   mkdirSync(join(bundle, 'seed_topics'), { recursive: true });
-  writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `---\n${stringifyYaml(TOPIC).trim()}\n---\n# Topic A\n\n## Background\nFixture-labeled Agent input.\n\n## 本轮重跑方向\n- rerun_count: ${directionCount}\n- action: ${action}\n- new_search_dimensions: controlled continuity\n- adjusted_depth: compare operational checkpoints\n- search_guardrails: retain primary runtime facts\n- rationale_excerpt: fixture-labeled recorded HITL2 rationale\n`);
+  const direction = `## 本轮重跑方向\n- rerun_count: ${directionCount}\n- action: ${action}\n- new_search_dimensions: controlled continuity\n- adjusted_depth: compare operational checkpoints\n- search_guardrails: retain primary runtime facts\n- rationale_excerpt: fixture-labeled recorded HITL2 rationale`;
+  const seedPath = join(bundle, 'seed_topics/topic-a.md');
+  if (!existsSync(seedPath)) {
+    writeFileSync(seedPath, `---\n${stringifyYaml(TOPIC).trim()}\n---\n# Topic A\n\n## Background\nFixture-labeled Agent input.\n\n${direction}\n\n${renderSeedProjectionAppendix()}\n`);
+    return;
+  }
+
+  const existing = readFileSync(seedPath, 'utf8');
+  const match = existing.match(/^##[ \t]+本轮重跑方向[^\n]*$/m);
+  assert.ok(match?.index !== undefined, 'fixture seed must retain a rerun-direction heading');
+  const afterHeading = match.index + match[0].length;
+  const nextHeadingOffset = existing.slice(afterHeading).search(/^##(?!#)[ \t]+/m);
+  const end = nextHeadingOffset === -1 ? existing.length : afterHeading + nextHeadingOffset;
+  writeFileSync(seedPath, `${existing.slice(0, match.index)}${direction}\n\n${existing.slice(end).replace(/^\s*/, '')}`);
 }
 
 function logCompletion(bundle, event) {
@@ -87,11 +103,25 @@ function stageWave0(bundle, suffix = 'r1') {
   writeFileSync(join(bundle, 'reference/README.md'), '# Reference Evidence\n');
   ensureIndexRow(bundle, `| ${refPath} | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-15 |`);
   const submitted = submitFixture(bundle, 'wave0', `wave0-${suffix}`, refPath, ref, [{ path: 'artifacts/wave0/topic-a/source.yaml', role: 'source_yaml', content: source }]);
+  assert.equal(applyCanonicalTopicState({
+    bundlePath: bundle,
+    input: {
+      context: 'wave_projection', action: 'apply_seed_projection', topic_uid: TOPIC.topic_uid, wave: 'wave0',
+      updates: [{
+        slot_id: 'wave0_evidence',
+        entries: [{
+          source_identity: { kind: 'submitted_work', work_id: submitted.record.work_id }, entry_id: `${submitted.record.work_id}/1`,
+          evidence_meaning: 'Submitted Wave0 evidence provides the shared continuity foundation.', relationship: 'supports',
+          refs: [refPath], status: 'supported', next_hop: 'Read the shared continuity reference first.',
+        }],
+      }],
+    },
+  }).verdict, 'committed');
   logCompletion(bundle, 'wave0_completion');
   return submitted;
 }
 
-function stageWave1(bundle, suffix = 'r1') {
+function stageWave1(bundle, suffix = 'r1', { project = true } = {}) {
   mkdirSync(join(bundle, 'artifacts/wave1/topic-a'), { recursive: true });
   const refPath = `reference/topic-a-${suffix}-deepening.md`;
   const returnMap = `- evidence_meaning: Real checkpoints preserve rerun authority.\n  relationship: supports\n  refs:\n    - artifacts/wave1/topic-a/evidence-summary.md\n    - ${refPath}\n  status: supported\n  next_hop: Read the submitted Wave1 projection.\n`;
@@ -123,7 +153,24 @@ function stageWave1(bundle, suffix = 'r1') {
     supplementary_queue_item_ids: [],
     carried_targets: [],
   }));
-  writeFileSync(join(bundle, 'seed_topics/topic-a.md'), readFileSync(join(bundle, 'seed_topics/topic-a.md'), 'utf8') + `\n## 本轮新增机制理解\n${returnMap}\n## 本轮新增趋势与难点\n\n## 待验证问题\n`);
+  const packetEntry = (ordinal, evidenceMeaning) => ({
+    source_identity: { kind: 'submitted_work', work_id: submitted.record.work_id }, entry_id: `${submitted.record.work_id}/${ordinal}`,
+    evidence_meaning: evidenceMeaning, relationship: 'supports', refs: [refPath], status: 'supported',
+    next_hop: 'Read the submitted Wave1 reference before Wave2 synthesis.',
+  });
+  if (project) {
+    assert.equal(applyCanonicalTopicState({
+      bundlePath: bundle,
+      input: {
+        context: 'wave_projection', action: 'apply_seed_projection', topic_uid: TOPIC.topic_uid, wave: 'wave1',
+        updates: [
+          { slot_id: 'wave1_mechanisms', entries: [packetEntry(1, 'Submitted Wave1 evidence explains the continuity mechanism.')] },
+          { slot_id: 'wave1_trends', entries: [packetEntry(2, 'Submitted Wave1 evidence records the continuity limitation.')] },
+          { slot_id: 'pending_questions', entries: [packetEntry(3, 'Submitted Wave1 evidence preserves the unresolved direction question.')] },
+        ],
+      },
+    }).verdict, 'committed');
+  }
   logCompletion(bundle, 'wave1_completion');
   return submitted;
 }
@@ -132,8 +179,24 @@ function stageWave2(bundle) {
   mkdirSync(join(bundle, 'artifacts/wave2'), { recursive: true });
   writeFileSync(join(bundle, 'artifacts/wave2/synthesis.md'), '# Cross-Topic Synthesis\n\nW2F-001 follows [Wave1 evidence](../wave1/topic-a/evidence-summary.md).\n');
   writeFileSync(join(bundle, 'artifacts/wave2/cross-topic-ledger.md'), '# Cross-Topic Ledger\n\n## Cross-Topic Scan Matrix\nSingle topic scanned.\n\n## Wave1 Legacy Questions\nDirection freshness.\n\n## Cross-Topic Resolutions\nW2F-001 resolved.\n\n## Emergent Cross-Topic Questions\nNone.\n\n## Exploration Decisions\nUse existing evidence.\n\n## HITL2 Handoff\nReview rerun output.\n');
-  writeFileSync(join(bundle, 'artifacts/wave2/finding-index.yaml'), stringifyYaml({ version: '0.1', source_layer: 'wave2_cross_topic', ledger: 'artifacts/wave2/cross-topic-ledger.md', synthesis: 'artifacts/wave2/synthesis.md', scan: { topic_count: 1, pair_count_expected: 0, pair_count_checked: 0 }, findings: [{ id: 'W2F-001', type: 'cross_topic_resolution', priority: 'p2', status: 'resolved', decision: 'use_existing_evidence', affected_topics: ['topic-a'], origin_refs: ['artifacts/wave1/topic-a/evidence-summary.md'], trigger_refs: ['artifacts/wave1/topic-a/question-list.md'], search_required: false, subagent_receipt_refs: [], appears_in_synthesis: true, hitl2_handoff: false, confidence: 'medium', independent_backing_refs: [], gap_status: 'no_gap' }], synthesis_eligibility: { pure_synthesis_eligible: true, scan_matrix_present: true, scan_topic_pair_coverage: [], unresolved_search_required_count: 0, targeted_search_required_count: 0, targeted_search_submitted_count: 0, explicit_deferral_count: 0, profile_params_read: ['p0p1_independent_backing'], ineligibility_reasons: [] } }));
-  writeFileSync(join(bundle, 'seed_topics/topic-a.md'), readFileSync(join(bundle, 'seed_topics/topic-a.md'), 'utf8') + '\n## Wave2 Judgment\nW2F-001 confirms deterministic continuity.\n\n## Pending Questions\n- [部分解答] Direction freshness.\n');
+  const profile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'));
+  const rerunCount = profile.human_decision_checkpoints?.hitl2?.rerun_count ?? 0;
+  writeFileSync(join(bundle, 'artifacts/wave2/finding-index.yaml'), stringifyYaml({ version: '0.1', source_layer: 'wave2_cross_topic', ledger: 'artifacts/wave2/cross-topic-ledger.md', synthesis: 'artifacts/wave2/synthesis.md', scan: { topic_count: 1, pair_count_expected: 0, pair_count_checked: 0 }, findings: [{ id: 'W2F-001', type: 'cross_topic_resolution', priority: 'p2', status: 'resolved', decision: 'use_existing_evidence', affected_topics: ['topic-a'], created_in_rerun_count: rerunCount, origin_refs: ['artifacts/wave1/topic-a/evidence-summary.md'], trigger_refs: ['artifacts/wave1/topic-a/question-list.md'], search_required: false, subagent_receipt_refs: [], appears_in_synthesis: true, hitl2_handoff: false, confidence: 'medium', independent_backing_refs: [], gap_status: 'no_gap' }], synthesis_eligibility: { pure_synthesis_eligible: true, scan_matrix_present: true, scan_topic_pair_coverage: [], unresolved_search_required_count: 0, targeted_search_required_count: 0, targeted_search_submitted_count: 0, explicit_deferral_count: 0, profile_params_read: ['p0p1_independent_backing'], ineligibility_reasons: [] } }));
+  assert.ok(['committed', 'unchanged'].includes(applyCanonicalTopicState({
+    bundlePath: bundle,
+    input: {
+      context: 'wave_projection', action: 'apply_seed_projection', topic_uid: TOPIC.topic_uid, wave: 'wave2',
+      updates: [{
+        slot_id: 'wave2_judgment',
+        entries: [{
+          source_identity: { kind: 'finding', finding_id: 'W2F-001' }, entry_id: 'W2F-001',
+          evidence_meaning: 'W2F-001 confirms deterministic continuity across the current research round.', relationship: 'supports',
+          refs: [`reference/topic-a-${rerunCount === 0 ? 'r1' : `r${rerunCount}`}-deepening.md`], status: 'supported',
+          next_hop: 'Use the current Wave1 reference to review the synthesis lineage.',
+        }],
+      }],
+    },
+  }).verdict));
   logCompletion(bundle, 'wave2_completion');
 }
 
@@ -235,14 +298,14 @@ function runRerunCycle(bundle) {
   passAndEnter(bundle, 'wave2-complete', 'phases/phase-wave2.md', 'wave2_complete');
 }
 
-function reachWave1(bundle, { rerunCount = 1, suffix = 'scenario' } = {}) {
+function reachWave1(bundle, { rerunCount = 1, suffix = 'scenario', projectWave1 = true } = {}) {
   stageHitl2(bundle, 'rerun', rerunCount);
   passAndEnter(bundle, 'hitl2-recorded', 'phases/phase-hitl2.md', 'hitl2_recorded');
   passAndEnter(bundle, 'rerun-ready', 'phases/phase-rerun.md', 'rerun_ready');
   stageSeed(bundle, rerunCount);
   passAndEnter(bundle, 'seed-topics-ready', 'phases/phase-seed-topics.md', 'seed_topics_ready', () => stageWave0(bundle, suffix));
   let submitted;
-  passAndEnter(bundle, 'wave0-complete', 'phases/phase-wave0.md', 'wave0_complete', () => { submitted = stageWave1(bundle, suffix); });
+  passAndEnter(bundle, 'wave0-complete', 'phases/phase-wave0.md', 'wave0_complete', () => { submitted = stageWave1(bundle, suffix, { project: projectWave1 }); });
   return submitted;
 }
 
@@ -449,7 +512,7 @@ describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
 
   it('blocks omitted current-row seed projection and passes after an identity-bound Agent repair', () => {
     const bundle = restoreBundle(snapshot, baseline);
-    const submitted = reachWave1(bundle, { rerunCount: 2, suffix: 'rrm-current-row' });
+    const submitted = reachWave1(bundle, { rerunCount: 2, suffix: 'rrm-current-row', projectWave1: false });
     const manifestPath = join(bundle, submitted.record.paths.manifest_ref);
     const authorityBefore = {
       index: readFileSync(join(bundle, '_work_units/_index.json')),
@@ -461,12 +524,26 @@ describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
     const failed = parseJsonOutput(failedProcess);
     assert.match(failed.inspect.join('\n'), new RegExp(`return_map_current_row_omission.*${submitted.record.work_id}`));
 
-    const seedPath = join(bundle, 'seed_topics/topic-a.md');
-    const seed = readFileSync(seedPath, 'utf8');
-    writeFileSync(seedPath, seed.replace(
-      '## 本轮新增机制理解\n- evidence_meaning:',
-      `## 本轮新增机制理解\n- entry_id: ${submitted.record.work_id}/1\n  evidence_meaning:`,
-    ));
+    const packetEntry = (ordinal, evidenceMeaning) => ({
+      source_identity: { kind: 'submitted_work', work_id: submitted.record.work_id },
+      entry_id: `${submitted.record.work_id}/${ordinal}`,
+      evidence_meaning: evidenceMeaning,
+      relationship: 'supports',
+      refs: ['reference/topic-a-rrm-current-row-deepening.md'],
+      status: 'supported',
+      next_hop: 'Read the submitted Wave1 reference before Wave2 synthesis.',
+    });
+    assert.equal(applyCanonicalTopicState({
+      bundlePath: bundle,
+      input: {
+        context: 'wave_projection', action: 'apply_seed_projection', topic_uid: TOPIC.topic_uid, wave: 'wave1',
+        updates: [
+          { slot_id: 'wave1_mechanisms', entries: [packetEntry(1, 'Submitted Wave1 evidence explains the continuity mechanism.')] },
+          { slot_id: 'wave1_trends', entries: [packetEntry(2, 'Submitted Wave1 evidence records the continuity limitation.')] },
+          { slot_id: 'pending_questions', entries: [packetEntry(3, 'Submitted Wave1 evidence preserves the unresolved direction question.')] },
+        ],
+      },
+    }).verdict, 'committed');
     const repairedProcess = runNode([inspectCli, '--bundle', bundle], { expectedStatus: 0 });
     const repaired = parseJsonOutput(repairedProcess);
     assert.doesNotMatch(repaired.inspect.join('\n'), /return_map_current_row_omission/);

@@ -10,21 +10,25 @@ topic 精确判断本轮发现去了哪里。原始设计与验收边界见
 
 ## What Changes
 
-- 建立一个完整、可发现的 `shared-seed-topic-template.md`，取代两份分别承载 skeleton/
-  rerun 与 return-map 内容的完整 authoring contract。它是 Agent/human 面向 Seed Topic
-  Document 的唯一完整 template；旧 shared 文件最多保留短 compatibility pointer，不能保留
-  第二份完整模板。新 canonical layout 的五个标题固定为
+- 在 `DPT_FRAMEWORK/workflows/nodes/templates/` 建立可扩展的模板命名空间，并在其中建立
+  `seed-topic-template.md`。它是 Agent/human 面向 Seed Topic Document 的唯一纯 template：
+  只定义实例化后的 frontmatter/body 骨架、Appendix Slot、entry presentation shape、以及何人何时
+  按何种格式回填。新 canonical layout 的五个标题固定为
   `Wave0：本主题的新增来源证据`、`Wave1：本主题的机制理解`、
   `Wave1：本主题的趋势、难点与限制`、`Wave2：本主题的当前跨主题判断` 与
   `本主题的待验证问题与后续验证路径`。每个标题正下方 SHALL 有永久、只读的
-  `回填卡`：它明确写入者、直接 authority、`entry_id`/五字段 entry 格式、唯一合法
-  packet 动作和禁止事项。卡片位于标题与 token/entries 之间，writer SHALL 保留它，parser
-  SHALL 不把它当作 Projection Entry。
+  `回填卡（只读操作约束，不是 Projection Entry）`：它明确写入者、直接 authority、
+  回填时机、`entry_id`/五字段 entry 格式、简短的 writer/playbook 指向和禁止事项。卡片位于
+  标题与 token/entries 之间，writer SHALL 保留它，parser SHALL 不把它当作 Projection Entry。
+- 将 Projection Packet grammar、Wave authorization window、same-inspect repair loop 和
+  rerun-direction input 收敛到既有 `command_playbook/operate-topic-state.md`。这是现有
+  `operate-topic-state apply` 的执行协议，不是 Seed Topic 的文档结构；template 只作精确的
+  操作指引，不复制或定义 packet schema、生命周期或 repair contract。
 - 在既有 `operate-topic-state { inspect, apply, recover }` seam 上增加 route-bound
   `wave_projection` apply input。Agent 提交一个 topic + Wave 的结构化 Projection Packet；
   Engine 根据一个小型 executable Appendix Slot Map 原子定位、消费 token、upsert entry 并
   持久化，绝不接受 raw Markdown patch、heading、path 或 line-number 指令。
-- 让 slot map、renderer、writer、reader/locator 和 shared template 的 stable headings、tokens、
+- 让 slot map、renderer、writer、reader/locator 和 `templates/seed-topic-template.md` 的 stable headings、tokens、
   owner、identity/merge rule 以及 `回填卡` descriptor 以 static parity 保持一致。Appendix
   Slot Map 是这些可调整 structural facts 的唯一 executable adjustment surface；template 是
   人可读 mirror，任何改标题或卡片约束的变更都必须同时经过该 map 和 parity，而不能散落在
@@ -69,17 +73,22 @@ current topic 的哪些 authoritative Wave 结果已经进入哪个可导航 slo
 source identity、first-write vs idempotent rerun、deferred vs absent 的区别，让 reader 在
 document + inspect 处正常停止，而不必从分散 surface 重建答案。
 
-最短合法闭环是 direct authority -> Agent packet -> existing atomic writer -> same inspect
--> existing formal gate。该 change 删除/合并两份完整 template、phase-local manual token
-replacement 和重复 projection interpretation；不引入 CLI、generic engine、second receipt、
-controller、watcher、hidden retry 或 runtime Markdown parser。用户只决定新的研究语义、
-risk 或 permission；Agent 在已有 legal window 内形成/修复 packet 并重跑 same check；
-Engine 只裁决 route、identity、slot、serialization 与 deterministic readiness。用户决定
-不能创造 mutation authority。
+`Seed Topic template` 和 `Wave Projection Packet` 回答不同问题。前者回答“实例化后的
+Seed Topic 必须长什么样、各 slot 由谁在何时按何种 entry 格式回填”；后者回答“当前 Agent 如何
+合法把已判断的内容交给既有 writer”。两者各自提供独立的正常停止点：需要文档结构时读 template，
+需要受控 mutation/repair 时读 `operate-topic-state` playbook。最短合法闭环仍是 direct authority
+-> Agent packet -> existing atomic writer -> same inspect -> existing formal gate；该 change 删除
+phase-local manual token replacement 和重复 projection interpretation，而非把两个 reader 问题
+混成一个 Markdown contract。它不引入 CLI、generic engine、second receipt、controller、watcher、
+hidden retry 或 runtime Markdown parser。用户只决定新的研究语义、risk 或 permission；Agent 在
+已有 legal window 内形成/修复 packet 并重跑 same check；Engine 只裁决 route、identity、slot、
+serialization 与 deterministic readiness。用户决定不能创造 mutation authority。
 
-`Appendix Slot Map` 也是本 change 的明确维护反馈点：当标题、回填格式或 ownership
-确有问题时，反馈应落到该 map/template pairing 的下一次 OpenSpec change，而不是由某个
-bundle、Phase Agent 或手工 Markdown edit 临时改出另一套格式。
+`Appendix Slot Map` 与 `templates/seed-topic-template.md` 是 Seed Topic 结构的明确维护反馈点；
+`operate-topic-state` playbook 是 packet 执行/repair 的明确维护反馈点。当标题、回填格式或
+ownership 有问题时，反馈落到前一对；当 packet、授权窗口或 apply feedback 有问题时，反馈落到
+后者。两者都通过下一次 OpenSpec change 调整，而不是由某个 bundle、Phase Agent 或手工 Markdown
+edit 临时改出另一套格式。
 
 ## Capabilities
 
@@ -94,29 +103,31 @@ bundle、Phase Agent 或手工 Markdown edit 临时改出另一套格式。
   the applicable current seed slots through the existing workspace/recover
   path.
 - `seed-topic-materialization`: canonical Seed Topic Documents SHALL expose
-  one stable Appendix Slot layout whose readable template and executable
+  one stable Appendix Slot layout whose `templates/` document template and executable
   renderer/locator cannot drift.
 - `research-return-map`: seed backfill SHALL be a stable identity-bound
   projection with one direct readiness interpretation reused by inspect and
   formal Wave gates; structural projection failure SHALL not become a degraded
   completion fact.
 - `research-wave-phase-content`: Wave0/1/2 Agent flow SHALL use the packet ->
-  writer -> same-inspect closeout loop and SHALL load the one complete template
-  at their actual decision point.
+  writer -> same-inspect closeout loop, load the document template for document
+  shape, and use the existing command playbook for packet execution.
 
 ## Impact
 
 - Framework code: `canonical-topic-state.mjs`, `return-map.mjs`, relevant
   authority readers/evaluators, `operate-topic-state.mjs`, Wave inspect CLIs,
   Wave gate definitions/CLIs and degradation eligibility.
-- Framework guidance: shared template, Wave/seed/rerun phase nodes,
-  `operate-topic-state` playbook and schema guidance; static package/parity
-  tests prevent complete-template duplication and slot drift.
-- Verification: focused unit tests, CLI integration tests, a deterministic
-  Wave0 -> Wave1 -> Wave2 disposable-bundle chain, and a real
-  `agent_flow_e2e` proving a Phase Agent can consume the single template and
-  legal feedback loop. Fixtures prove Engine behavior only; native runtime
-  evidence is required for Agent-flow claims.
+- Framework guidance: `templates/seed-topic-template.md`, Wave/seed/rerun phase
+  nodes, `operate-topic-state` playbook and schema guidance; static package/parity
+  tests prevent template/slot drift and packet-protocol duplication.
+- Verification: focused unit and static Markdown contracts prove template /
+  command-playbook separation and direct phase loading; CLI integration tests
+  plus a deterministic Wave0 -> Wave1 -> Wave2 disposable-bundle chain prove
+  authority, submit, packet, writer, inspect and completion behavior through
+  production CLIs. This change makes no claim that an independent Agent will
+  discover or execute prose; a nested-Agent canary would add variable runtime
+  cost without proving a deterministic product contract.
 - Governance/release: delta specs for the four existing capabilities,
   requirement-registry review, change-root `verification-plan.yaml`, version
   v0.53 changelog/RUN updates. No dependency is added.

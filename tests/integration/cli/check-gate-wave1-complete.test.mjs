@@ -2,13 +2,19 @@
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
 import {
   claimAndSubmitWorkUnit,
   referenceContent,
 } from '../../engine/work-unit-test-helpers.mjs';
+import {
+  applyCanonicalTopicState,
+  renderSeedProjectionAppendix,
+} from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
+import { buildCanonicalTopicRegistryFact } from '../../../DPT_FRAMEWORK/engine/helpers/topic-registry-fact.mjs';
+import { collectEligibleWorkUnitProjection } from '../../../DPT_FRAMEWORK/engine/work-unit-projection.mjs';
 import { tryLoadGateDefinition } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 import { evaluateWave1Contract } from '../../../DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs';
 
@@ -50,7 +56,7 @@ function directContext(finding) {
   return finding?.checkpoint_context?.direct_root || null;
 }
 
-function writeWave1Trace(dir, { completion = true } = {}) {
+function writeWave1Trace(dir, { completion = true, materialize = true } = {}) {
   const events = witnessedHandoffEvents({
     sourceGate: 'wave0-complete',
     phase: 'wave0',
@@ -59,6 +65,79 @@ function writeWave1Trace(dir, { completion = true } = {}) {
   });
   if (completion) events.push({ event: 'wave1_completion', ts: new Date().toISOString() });
   writeTraceEvents(dir, events);
+  if (materialize) materializeWave1Projections(dir);
+}
+
+function renderCanonicalSeed(topic) {
+  const binding = {
+    topic_uid: topic.topic_uid,
+    id: topic.id,
+    slug: topic.slug,
+    title: topic.title,
+    must_answer: topic.must_answer,
+    scope_role: topic.scope_role,
+    depends_on_topic_uids: topic.depends_on_topic_uids,
+  };
+  return `---\n${JSON.stringify(binding, null, 2)}\n---\n# ${topic.title}\n\n${renderSeedProjectionAppendix()}\n`;
+}
+
+function ensureCanonicalSeeds(dir) {
+  const topicRegistryFact = buildCanonicalTopicRegistryFact(dir);
+  for (const topic of topicRegistryFact.topic_registry) {
+    writeFileSync(join(dir, 'seed_topics', `${topic.slug}.md`), renderCanonicalSeed(topic));
+  }
+}
+
+function projectionReferenceForTopic(dir, topic) {
+  const acceptedSlugs = [topic.slug, ...(topic.previous_layouts || []).map((layout) => layout.slug)];
+  const candidates = acceptedSlugs.flatMap((slug) => [
+    `reference/${slug}-deepening.md`,
+    `reference/01-${slug}-deepening.md`,
+  ]);
+  const ref = candidates.find((candidate) => existsSync(join(dir, candidate)));
+  assert.ok(ref, `Wave1 fixture needs a concrete reference for ${topic.slug}`);
+  return ref;
+}
+
+function materializeWave1Projections(dir) {
+  const topicRegistryFact = buildCanonicalTopicRegistryFact(dir);
+  const eligible = collectEligibleWorkUnitProjection(dir, {
+    phase: 'wave1',
+    topicRegistryFact,
+  });
+  assert.equal(eligible.passed, true, JSON.stringify(eligible.root_findings));
+
+  for (const topic of topicRegistryFact.topic_registry) {
+    const rows = eligible.rows.filter((row) => row.topic_uid === topic.topic_uid);
+    if (rows.length === 0) continue;
+    writeFileSync(join(dir, 'seed_topics', `${topic.slug}.md`), renderCanonicalSeed(topic));
+    const ref = projectionReferenceForTopic(dir, topic);
+    const entries = rows.map((row, index) => ({
+      source_identity: { kind: 'submitted_work', work_id: row.work_id },
+      entry_id: `${row.work_id}/${index + 1}`,
+      evidence_meaning: `Submitted Wave1 authority supplies ${topic.title} navigation.`,
+      relationship: 'supports',
+      refs: [ref],
+      status: 'supported',
+      next_hop: 'Read the concrete reference before Wave2 synthesis.',
+    }));
+    const updates = [
+      'wave1_mechanisms',
+      'wave1_trends',
+      'pending_questions',
+    ].map((slot_id) => ({ slot_id, entries }));
+    const result = applyCanonicalTopicState({
+      bundlePath: dir,
+      input: {
+        context: 'wave_projection',
+        action: 'apply_seed_projection',
+        topic_uid: topic.topic_uid,
+        wave: 'wave1',
+        updates,
+      },
+    });
+    assert.ok(['committed', 'unchanged'].includes(result.verdict), JSON.stringify(result));
+  }
 }
 
 const VALID_EVIDENCE_SUMMARY = `# Evidence Summary: Topic A
@@ -191,6 +270,11 @@ function createBundle(name) {
   const fm = `---\n{\n  "plan_basename": "${name}",\n  "derived_topic_count": 1,\n  "topic_registry_version": "2",\n  "topic_registry": [\n    {\n      "topic_uid": "tp_123e4567-e89b-12d3-a456-426614174000",\n      "id": "01",\n      "slug": "topic-a",\n      "title": "Topic A",\n      "must_answer": ["How should Topic A be investigated?"],\n      "scope_role": "primary",\n      "depends_on_topic_uids": [],\n      "previous_layouts": []\n    }\n  ]\n}\n---`;
   writeFileSync(planPath, fm + '\n' + existing.replace(/^---\n[\s\S]*?\n---\n?/, ''));
 
+  const statusPath = join(dir, 'rb_status.json');
+  const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
+  status.current_node = 'phases/phase-wave1.md';
+  writeFileSync(statusPath, JSON.stringify(status));
+
   // Scaffold
   mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-a'), { recursive: true });
   mkdirSync(join(dir, 'seed_topics'), { recursive: true });
@@ -262,6 +346,7 @@ function submitWave1WorkUnit(dir, {
   includeEvidenceOutput = true,
   includeQuestionOutput = true,
 } = {}) {
+  ensureCanonicalSeeds(dir);
   const outputs = [
     {
       path: 'reference/01-topic-a-deepening.md',
@@ -384,6 +469,10 @@ human_decision_checkpoints:
     rerun_count: ${rerunCount}
 `);
   writeParityReferenceIndex(dir, topics);
+  const statusPath = join(dir, 'rb_status.json');
+  const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
+  status.current_node = 'phases/phase-wave1.md';
+  writeFileSync(statusPath, JSON.stringify(status));
   return dir;
 }
 
@@ -464,7 +553,7 @@ function submitParityTopic(dir, topic, { preserveQueue = false } = {}) {
   }).replace(/^- related_topic: undefined\n/m, `- related_topic_uid: ${topic.topic_uid}\n`)}\n`);
   writeFileSync(join(dir, evidencePath), parityEvidenceSummary(topic, sourceUrl));
   writeFileSync(join(dir, questionPath), parityQuestionList(topic, sourceUrl));
-  writeFileSync(join(dir, 'seed_topics', `${topic.slug}.md`), paritySeed(topic));
+  writeFileSync(join(dir, 'seed_topics', `${topic.slug}.md`), renderCanonicalSeed(topic));
   writeFileSync(join(dir, 'artifacts/wave0', topic.slug, 'source.yaml'), `- url: https://docs.example.org/${topic.slug}/wave0-source
   title: Wave0 foundation
   retrieved_date: 2026-07-14
@@ -531,7 +620,7 @@ function wave1ParityProjection(entry) {
     depth_fields: Object.keys(entry.target.depth).sort(),
     depth_dimension_fields: Object.keys(entry.target.depth.depth_dimensions).sort(),
     has_copied_ledger_truth: ['source_claims', 'accepted_source_urls', 'cache_trail_refs', 'new_source_urls', 'new_source_floor'].some((field) => Object.hasOwn(entry.target.depth, field)),
-    shared_template_required: readFileSync(join(REPO_ROOT, 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md'), 'utf8').includes('shared/shared-reference-template'),
+    template_required: readFileSync(join(REPO_ROOT, 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md'), 'utf8').includes('templates/seed-topic-template'),
     gate: {
       passed: entry.gate.check.passed,
       failed_rule_ids: entry.gate.check.failed_rule_ids,
@@ -643,6 +732,7 @@ describe('check-gate-wave1-complete', () => {
       previousLayouts: [{ id: '01', slug: 'topic-a' }],
     });
     writeFileSync(join(dir, 'seed_topics/topic-a-new.md'), VALID_SEED_TOPIC.replace('slug: topic-a', 'slug: topic-a-new'));
+    materializeWave1Projections(dir);
     const output = JSON.parse(runGate(dir).stdout);
     assert.equal(output.check.passed, true, output.inspect.join('\n'));
     assert.equal(output.check.failed_rule_ids.some((id) => id.endsWith(':topic-a-new')), false);
@@ -842,9 +932,8 @@ describe('check-gate-wave1-complete', () => {
     const dir = createBundle(unique('staletok'));
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
-    writeFileSync(join(dir, 'seed_topics/topic-a.md'), STALE_TOKEN_SEED_TOPIC);
     submitAndReviewWave1WorkUnit(dir);
-    writeWave1Trace(dir);
+    writeWave1Trace(dir, { materialize: false });
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);

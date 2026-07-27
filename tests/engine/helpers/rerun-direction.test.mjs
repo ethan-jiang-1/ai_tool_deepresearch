@@ -28,6 +28,14 @@ describe('rerun direction evaluator', () => {
     assert.deepEqual(result.structural_roots, []);
   });
 
+  it('stops at the next level-two heading so later projection cards are not rerun fields', () => {
+    const content = `${complete()}\n## Wave0：本主题的新增来源证据\n\n> **回填卡（只读操作约束，不是 Projection Entry）**\n> - 写入者：Wave0 Phase Agent\n\n- **entry_id**: wu-w0-b001-source-i0001/1\n  - **evidence_meaning**: Later projection entry\n`;
+    const result = evaluateRerunDirection(content, 2);
+    assert.equal(result.state, 'matching');
+    assert.equal(result.fields.entry_id, undefined);
+    assert.deepEqual(result.extensions, {});
+  });
+
   it('preserves non-conflicting extensions while rejecting current/future ambiguity and missing fields', () => {
     const extended = evaluateRerunDirection(complete({ extra: '- target_dimension: procurement\n' }), 2);
     assert.equal(extended.extensions.target_dimension, 'procurement');

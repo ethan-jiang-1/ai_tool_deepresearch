@@ -16,7 +16,7 @@ requires:
   - shared/shared-subagent-protocol
   - shared/shared-reference-template
   - shared/shared-anti-cheating-rules
-  - shared/shared-return-map-authoring
+  - templates/seed-topic-template
 suggested_context:
   - phases/subagent-dpt-evidence-extractor
 ---
@@ -39,7 +39,7 @@ For each topic:
 - Write `artifacts/wave1/{topic}/question-list.md`.
 - Phase Agent materializes rich reference files at `reference/{topic.slug}-<source-slug>.md` after successful submit.
 - Review submitted source/depth evidence into `artifacts/wave1/{topic}/depth-review.yaml`.
-- Immediately backfill seed topic tokens from the submitted outputs.
+- Materialize each affected Seed Topic projection through the loaded packet/writer loop after submitted authority exists.
 
 Wave1 output is real topic-specific deepening, not placeholder skeletons or a Wave0 recap. Wave0 URLs are allowed as context but never count toward the Wave1 new-source floor.
 
@@ -247,21 +247,9 @@ The Engine computes `new_source_floor.required` only from explicit profile/runti
 
 ### 3.3 Seed Projection Update
 
-After each successful submit, update the seed topic's Wave1 sections from current-round submitted authority:
+After each successful submit, never edit a seed, heading, card, or token. `templates/seed-topic-template` gives the Wave1 slot/card and rendered-entry shape. For each affected current canonical topic, read the current eligible submitted Wave1 row and use the complete packet, authorization and repair protocol in `command_playbook/operate-topic-state.md` to retain one atomic `wave_projection/apply_seed_projection` packet containing all three owned slots: `wave1_mechanisms`, `wave1_trends`, and `pending_questions`. Every entry uses `<work_id>/<positive ordinal>` plus the five return-map fields. Evidence-bearing entries lead with a concrete existing `reference/{topic.slug}-<source-slug>.md`; evidence summaries, question lists, submitted source claims, `accepted_source_urls[]`, `_cache/`, and `_work_units/` are secondary provenance.
 
-**First materialization**（token 存在）：Grep `__BACKFILL_*__` → replace token line with return-map entries extracted from submitted outputs.
-
-**Rerun**（token 不存在）：Run `operate-work-unit inspect <bundle> --eligible-rows --phase wave1 [--topic <slug>]` to get current-round submitted rows. Read submitted outputs at returned `result_path` locations. Derive return-map entries (evidence_meaning, relationship, refs, status, next_hop) from outputs. Assign each entry an `entry_id` in format `<work_id>/<n>`. Append entries whose `entry_id` is not already present in the section.
-
-**No-projection disposition**: For entries that should not appear in projection, write an explicit entry with `relationship: defers`, `status: deferred`, and `next_hop` containing a limitation reason (e.g., `"limitation: process-only output"`). This satisfies the authority reference check without polluting the projection.
-
-1. `## 本轮新增机制理解` section: mechanism return-map entries from submitted `evidence-summary.md`.
-2. `## 本轮新增趋势与难点` section: trend/limitation return-map entries.
-3. `## 待验证问题` section: canonical status labels `[开放]`/`[部分解答]`/`[涌现]` plus return-map entries. When token present → replace. When token absent → append new entries with work_id dedup (Wave2 will append W2F-xxx entries after).
-4. Each Wave1 return-map entry includes `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`. Evidence-bearing entries must list concrete existing `reference/{topic.slug}-<source-slug>.md` files as primary consumer navigation; `artifacts/wave1/{topic}/evidence-summary.md`, `artifacts/wave1/{topic}/question-list.md`, submitted source claims, `accepted_source_urls[]`, `_cache/`, and `_work_units/` surfaces are secondary provenance.
-5. Do not use `reference/{topic.slug}-*.md` globs or count summaries. If no consumer reference can be materialized, write an explicit limitation entry with `relationship: defers`, `status: deferred`, `refs: none`, and a `next_hop` limitation reason.
-
-Do not append below the token; replace the token line.
+Use an identity-bound `defers` / `deferred` entry with `refs: [none]` and an explicit `next_hop` limitation when no consumer reference can be materialized. Do not use globs or count summaries. The existing writer makes the three-slot update all-or-nothing and preserves later Wave2 W2F entries; a missing writer/authority path is its direct owner boundary, never a manual backfill route.
 
 ### 3.4 Quality Self-Check
 
@@ -309,7 +297,7 @@ Read the replacement JSON rather than rebuilding a task card. For a newly create
 
 ## 5. Gate Command
 
-After `rb_queue.json#/active_window`, `#/refill_pool`, and `#/delegated_in_flight` are all empty and Phase-owned references/depth reviews/backfill have been materialized from submitted backing, run the Wave1 inspect before recording completion evidence or invoking the formal gate. Do not infer away future-looking residual demand. If `phase_queue_drained` fails, the Agent follows its returned queue/work-unit owner and reruns this same checkpoint; a refill-only `missing_contract` does not authorize queue hand edits.
+After `rb_queue.json#/active_window`, `#/refill_pool`, and `#/delegated_in_flight` are all empty and Phase-owned references/depth reviews plus Wave1 projection packets have been materialized from submitted backing, run the Wave1 inspect before recording completion evidence or invoking the formal gate. Do not infer away future-looking residual demand. If `phase_queue_drained` fails, the Agent follows its returned queue/work-unit owner and reruns this same checkpoint; a refill-only `missing_contract` does not authorize queue hand edits.
 
 ```bash
 node DPT_FRAMEWORK/cli/inspect-wave1-output.mjs --bundle <path>
@@ -371,8 +359,8 @@ Do not stop for progress, idle/no-work, or partial-completion reporting. Phase c
 - 禁止让 Phase-owned `reference/{topic}-*.md` 扩展 delegated coverage beyond submitted `source_claims[]`, `accepted_source_urls[]`, cache trails, degraded-capture records, or work-unit refs.
 - 禁止让 `depth-review.yaml` create delegated coverage that is not backed by submitted work-unit rows.
 - 禁止 inventing a hidden default when `wave1_per_topic_ref_floor` or `topic_unique_ratio` is missing.
-- 禁止保留 `__BACKFILL_WAVE1_MECHANISMS__`, `__BACKFILL_WAVE1_TRENDS__`, or `__BACKFILL_PENDING_QUESTIONS__` after submitted-output backfill.
-- 禁止把 Wave1 backfill 写成裸 evidence list, unsupported prose, or count summary; include return-map fields and refs.
+- 禁止以 token replacement、raw Markdown patch、heading/path/line number 或手改 seed 完成 Wave1 projection。
+- 禁止把 Wave1 projection 写成裸 evidence list、unsupported prose、count summary 或 generic `Wave1 submitted`; retain its atomic identity-bound packet.
 - 禁止把 Agent numeric claims about ref counts used as gate evidence.
 - 禁止修改 `_work_units/_index.json` or queue state by hand to repair submit rejection.
 - 禁止跳过 gate JSON `inspect`/`advice` when a rule fails.

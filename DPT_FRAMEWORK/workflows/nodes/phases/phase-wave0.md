@@ -16,7 +16,7 @@ requires:
   - shared/shared-subagent-protocol
   - shared/shared-reference-template
   - shared/shared-anti-cheating-rules
-  - shared/shared-return-map-authoring
+  - templates/seed-topic-template
 suggested_context:
   - phases/subagent-dpt-source-intake
 ---
@@ -188,11 +188,9 @@ Read the structured replacement result. For a newly created or queued successor,
 
 ### 3.3 Seed Projection Update
 
-After each successful submit, update the seed topic's `## 本轮新增证据` section from current-round submitted authority:
+After each successful submit, never edit a seed, heading, card, or token. `templates/seed-topic-template` gives the Wave0 slot/card and rendered-entry shape. For each affected current canonical topic, read the current eligible submitted Wave0 row, then use the complete packet, authorization and repair protocol in `command_playbook/operate-topic-state.md` to retain one `wave_projection/apply_seed_projection` packet for `wave0_evidence` and invoke existing `operate-topic-state apply` in this loaded Wave0 window. Its entry identity is `<work_id>/<positive ordinal>`; evidence-bearing entries lead with a concrete existing `reference/00-shared-*.md` ref, while `source.yaml`, `_cache/`, and `_work_units/` remain secondary provenance.
 
-**First materialization**（`__BACKFILL_WAVE0_EVIDENCE__` token 存在）：Replace token line with return-map entries extracted from submitted outputs. Each entry includes `evidence_meaning`, `relationship`, `refs`, `status`, `next_hop`. For evidence-bearing entries, `refs` point first to concrete existing `reference/00-shared-*.md` files; `artifacts/wave0/{topic}/source.yaml`, `_cache/`, and `_work_units/` refs are secondary provenance.
-
-**Rerun**（token 不存在）：Run `operate-work-unit inspect <bundle> --eligible-rows --phase wave0 [--topic <slug>]` to get current-round submitted rows. Read submitted outputs at returned `result_path` locations. Derive return-map entries from outputs. Assign each entry an `entry_id` in format `<work_id>/<n>`. Append entries whose `entry_id` is not already present in the section. For entries that should not appear in projection, write an explicit no-projection disposition with `relationship: defers`, `status: deferred`, and `next_hop` containing a limitation reason.
+When no consumer reference is materializable, retain an identity-bound `defers` / `deferred` entry with `refs: [none]` and an explicit limitation in `next_hop`. The writer consumes a first token or upserts the matching identity atomically; Phase prose never decides which path applies. A missing writer window, canonical binding, or submitted authority is its direct lifecycle/owner boundary, not permission for a user or Agent to hand-edit bytes.
 
 ## 4. Expected Artifacts
 
@@ -200,18 +198,18 @@ After each successful submit, update the seed topic's `## 本轮新增证据` se
 - `reference/00-shared-*.md` when shared foundation references exist.
 - `reference/_INDEX.md` summarizing available references.
 - Submitted work-unit rows in `rb_output_declarations.jsonl` covering delegated outputs and cache trails.
-- Seed-topic Wave0 backfill entries with return-map fields and concrete existing `reference/00-shared-*.md` refs as primary consumer navigation; `source.yaml`, `_cache/`, and `_work_units/` refs may appear only as secondary provenance.
+- Seed-topic Wave0 projections materialized through the existing packet writer, with concrete existing `reference/00-shared-*.md` refs as primary consumer navigation; `source.yaml`, `_cache/`, and `_work_units/` refs may appear only as secondary provenance.
 - `rb_trace.jsonl` records the `wave0_completion` event/check surface required by the Wave0 gate definition.
 
 ## 5. Gate Command
 
-After `rb_queue.json#/active_window`, `#/refill_pool`, and `#/delegated_in_flight` are all empty and Wave0 artifacts/backfill are materialized, run the Wave0 inspect before recording completion evidence or invoking the formal gate. Do not infer away future-looking residual demand. If `phase_queue_drained` fails, the Agent follows its returned queue/work-unit owner and reruns this same checkpoint; a refill-only `missing_contract` does not authorize queue hand edits.
+After `rb_queue.json#/active_window`, `#/refill_pool`, and `#/delegated_in_flight` are all empty and each affected current Topic has its Wave0 packet applied, run the Wave0 inspect before recording completion evidence or invoking the formal gate. Do not infer away future-looking residual demand. If `phase_queue_drained` fails, the Agent follows its returned queue/work-unit owner and reruns this same checkpoint; a refill-only `missing_contract` does not authorize queue hand edits.
 
 ```bash
 node DPT_FRAMEWORK/cli/inspect-wave0-output.mjs --bundle <path>
 ```
 
-This inspect is side-effect-free and non-routing. If it fails, repair the smallest named bundle-relative surface and rerun this same inspect; do not create a second local validator or treat an internal artifact/cache ref as a substitute for concrete consumer navigation.
+This inspect is side-effect-free and non-routing. If it names a projection packet/entry root, repair the retained packet through the existing writer and rerun this same inspect; if it names unavailable authority or layout, follow that direct owner boundary. Do not create a second local validator, hand-edit a seed, or treat an internal artifact/cache ref as a substitute for concrete consumer navigation.
 
 Only after inspect passes, record or refresh the existing `wave0_completion` evidence through the normal phase logging path, then run the formal gate and read its JSON output before deciding the next action:
 
@@ -263,8 +261,8 @@ Do not stop for progress, idle/no-work, or partial-completion reporting. Phase c
 - 禁止手写 `rb_output_declarations.jsonl` rows, work-unit result files, receipts, or trace events.
 - 禁止把 search snippets 当作 fetched source evidence.
 - 禁止 claim 后跳过 Sub-agent task instructions and submit a fabricated result.
-- 禁止保留 `__BACKFILL_WAVE0_EVIDENCE__` after successful submit-backed backfill.
-- 禁止把 Wave0 backfill 写成 naked URL/evidence list or unsupported prose; include return-map fields and refs.
+- 禁止以 token replacement、raw Markdown patch、heading/path/line number 或手改 seed 完成 Wave0 projection。
+- 禁止把 Wave0 projection 写成 naked URL/evidence list or generic `Wave0 submitted` prose; retain a packet entry with identity, fields, and refs.
 - 禁止让 orphan `reference/00-shared-*.md` satisfy gate coverage.
 - 禁止修改 `_work_units/_index.json` to repair submit or inspect failures.
 - 禁止覆盖、编辑或“修复” immutable `_beacon.json`; use the canonical absolute `bundle_dir` and Engine checkpoint named by the failure.

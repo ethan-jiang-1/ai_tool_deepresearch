@@ -366,24 +366,29 @@ describe('Wave0 finding-source admission', () => {
 
   it('does not use checked-target authorization for Wave0 glob rules', () => {
     const wave0 = parseGateDefinition(loadActiveDefinition('gate-wave0-complete.definition.json'));
-    for (const id of ['shared_ref_count_floor', 'no_example_com_shared_ref_url']) {
-      const rule = wave0.rules.find((candidate) => candidate.id === id);
-      assert.match(rule.target, /[*?\[\]]/);
-      assert.notEqual(rule.repair.write_to, '$checked_target');
-      assert.equal(rule.repair.write_to, 'reference/');
-    }
+    const floor = wave0.rules.find((candidate) => candidate.id === 'shared_ref_count_floor');
+    assert.match(floor.target, /[*?\[\]]/);
+    assert.notEqual(floor.repair.write_to, '$checked_target');
+    assert.match(floor.repair.write_to, /wave0_source_intake/);
+    const placeholder = wave0.rules.find((candidate) => candidate.id === 'no_example_com_shared_ref_url');
+    assert.match(placeholder.target, /[*?\[\]]/);
+    assert.equal(placeholder.repair.write_to, 'reference/');
+    assert.notEqual(placeholder.repair.write_to, '$checked_target');
   });
 });
 
 describe('Wave1 finding-source admission', () => {
-  it('schema-parses all 23 remaining rules after retiring Key Facts quantity', () => {
+  it('schema-parses all 20 remaining rules after retiring Key Facts quantity and duplicate token rules', () => {
     const wave1 = parseGateDefinition(loadActiveDefinition('gate-wave1-complete.definition.json'));
-    assert.equal(wave1.rules.length, 23);
+    assert.equal(wave1.rules.length, 20);
     assert.equal(wave1.rules.some((rule) => rule.id === 'key_facts_min_lines'), false);
     assert.equal(wave1.rules.some((rule) => rule.check === 'reference_key_facts_min_lines'), false);
+    for (const id of ['no_stale_mechanisms_token', 'no_stale_trends_token', 'no_stale_pending_questions_token']) {
+      assert.equal(wave1.rules.some((rule) => rule.id === id), false);
+    }
   });
 
-  it('keeps single-root artifacts, floors, and stale tokens definition-owned', () => {
+  it('keeps single-root artifacts and floors definition-owned', () => {
     const wave1 = parseGateDefinition(loadActiveDefinition('gate-wave1-complete.definition.json'));
     const expected = new Map([
       ['wave1_dir_exists', 'required_structure'],
@@ -391,9 +396,6 @@ describe('Wave1 finding-source admission', () => {
       ['per_topic_question_list_exists', 'required_structure'],
       ['per_topic_ref_md_count_floor', 'required_floor'],
       ['no_example_com_ref_url', 'authority_integrity'],
-      ['no_stale_mechanisms_token', 'required_structure'],
-      ['no_stale_trends_token', 'required_structure'],
-      ['no_stale_pending_questions_token', 'required_structure'],
     ]);
     for (const [id, blockingBasis] of expected) {
       const rule = wave1.rules.find((candidate) => candidate.id === id);
@@ -449,12 +451,15 @@ describe('Wave1 finding-source admission', () => {
 });
 
 describe('Wave2 finding-source admission', () => {
-  it('schema-parses all 20 Wave2 rules', () => {
+  it('schema-parses all 18 Wave2 rules after retiring duplicate token rules', () => {
     const wave2 = parseGateDefinition(loadActiveDefinition('gate-wave2-complete.definition.json'));
-    assert.equal(wave2.rules.length, 20);
+    assert.equal(wave2.rules.length, 18);
+    for (const id of ['backfill_judgment_token_absent', 'backfill_questions_token_absent']) {
+      assert.equal(wave2.rules.some((rule) => rule.id === id), false);
+    }
   });
 
-  it('keeps single-root artifact, binding, and backfill rules definition-owned', () => {
+  it('keeps single-root artifact and binding rules definition-owned', () => {
     const wave2 = parseGateDefinition(loadActiveDefinition('gate-wave2-complete.definition.json'));
     const expected = new Map([
       ['synthesis_exists', 'required_structure'],
@@ -463,8 +468,6 @@ describe('Wave2 finding-source admission', () => {
       ['ledger_non_empty', 'required_structure'],
       ['index_exists', 'required_structure'],
       ['synthesis_finding_id_ref', 'binding_integrity'],
-      ['backfill_judgment_token_absent', 'required_structure'],
-      ['backfill_questions_token_absent', 'required_structure'],
     ]);
     for (const [id, blockingBasis] of expected) {
       const rule = wave2.rules.find((candidate) => candidate.id === id);

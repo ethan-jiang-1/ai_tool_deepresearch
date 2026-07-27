@@ -17,7 +17,7 @@ import {
   projectInspectContract,
 } from '../engine/helpers/wave-contract-findings.mjs';
 import { evaluateWave0Contract } from '../engine/helpers/wave-contract-evaluators.mjs';
-import { inspectReferenceReturnMaps, inspectSeedTopicReturnMaps } from '../engine/helpers/return-map.mjs';
+import { evaluateSeedTopicProjectionReadiness, inspectReferenceReturnMaps } from '../engine/helpers/return-map.mjs';
 import { buildCanonicalTopicRegistryFact } from '../engine/helpers/topic-registry-fact.mjs';
 import { validateIndexMD } from '../schema/contracts/reference.mjs';
 
@@ -124,7 +124,7 @@ if (existsSync(readmePath) && readFileSync(readmePath, 'utf8').trim().length ===
   additionalFindings.push(makeContractFinding({ id: 'reference_readme_non_empty', classification: 'advisory', surface: 'reference/README.md', detail: 'reference/README.md: file is empty', repair: 'Describe the flat reference directory convention.' }));
 }
 
-const seedMap = inspectSeedTopicReturnMaps(resolvedBundlePath, { wave: 'wave0', topicRegistryFact });
+const seedMap = evaluateSeedTopicProjectionReadiness(resolvedBundlePath, { wave: 'wave0', topicRegistryFact });
 const referenceMap = inspectReferenceReturnMaps(resolvedBundlePath, '00-shared-');
 additionalChecksRun += 1;
 additionalFindings.push(...(seedMap.findings || []));

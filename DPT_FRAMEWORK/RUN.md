@@ -1,16 +1,17 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.52**
+> **DPT_FRAMEWORK v0.53**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.52
+## Current Release: v0.53
 
-- Wave0 shared-reference-floor feedback now points to the existing `wave0_source_intake` submitted-output path, not a direct orphan reference write.
-- A Wave0 source-intake actor must declare a real shared reference with `source_url` when that work unit repairs the shared floor; ordinary source intake keeps its existing required `source.yaml` contract.
+- Seed Topic backfill is an identity-bound Wave packet through the existing atomic topic-state writer. It preserves the read-only cards, writes only the current Wave's owned slots, and remains a reader-facing navigation projection rather than evidence authority.
+- `workflows/nodes/templates/seed-topic-template.md` defines the instantiable Seed Topic document shape; `command_playbook/operate-topic-state.md` defines packet, authorization, repair, and rerun-input mechanics. They are separate Agent-facing questions, not two competing writer contracts.
+- The closeout loop is direct authority -> packet -> writer -> same Wave inspect -> completion -> formal gate. Missing, generic, or wrongly bound projections cannot be masked by degraded handoff.
 
 ## 0. 禁用内置捷径（最高优先）
 
@@ -50,3 +51,5 @@ For bundle recovery, run `node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle <pat
 - 行为规则：`CLAUDE.md`（Claude Code）/ `AGENTS.md`（Codex、Cursor、Windsurf 等读 `AGENTS.md` 的 agent）
 
 跑某 bundle 时，以该 bundle 的 `RUN_BUNDLE.md`（或 `BUNDLE_MAP.md`）+ `rb_status.json` + `rb_trace.jsonl` 为 reload context，旧 `START_FROM_HERE.md` 只作 deprecated fallback；别靠 chat memory。
+
+恢复时，`rb_status.current_node` 是已加载的 phase coordinate；`current_gate` 只记录最近 gate/status 事实。不要只凭 `current_gate` 推断当前应加载哪个 phase，按 `current_node` 和已有 route-bound witness 进入对应 control surface。

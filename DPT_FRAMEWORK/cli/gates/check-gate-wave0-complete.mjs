@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-gate-wave0-complete.mjs — evaluates gate-wave0-complete rules
-// @impl GSK-001, GSK-002, GSK-004, GSK-013, RWG-004, RWG-007, RWG-018, RWG-021, FRE-003
+// @impl GSK-001, GSK-002, GSK-004, GSK-013, RWG-004, RWG-007, RWG-018, RWG-021, RRM-007, FRE-003
 // Usage: node check-gate-wave0-complete.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import {
@@ -18,6 +18,8 @@ import {
 } from '../../engine/helpers/gate-helpers.mjs';
 import { evaluateWave0Contract } from '../../engine/helpers/wave-contract-evaluators.mjs';
 import { evaluateWaveDegradationEligibility } from '../../engine/helpers/wave-degradation-eligibility.mjs';
+import { evaluateSeedTopicProjectionReadiness } from '../../engine/helpers/return-map.mjs';
+import { buildCanonicalTopicRegistryFact } from '../../engine/helpers/topic-registry-fact.mjs';
 import {
   buildContractEvaluation,
   makeContractFinding,
@@ -69,12 +71,16 @@ const inspect = [];
 const advice = [];
 const formalFindings = [];
 const templateInspect = [];
-const sharedEvaluation = evaluateWave0Contract(bundlePath, definition);
+let topicRegistryFact = null;
+try { topicRegistryFact = buildCanonicalTopicRegistryFact(bundlePath); } catch { /* both consumers report their own direct prerequisite */ }
+const sharedEvaluation = evaluateWave0Contract(bundlePath, definition, { topicRegistryFact });
+const projectionEvaluation = evaluateSeedTopicProjectionReadiness(bundlePath, { wave: 'wave0', topicRegistryFact });
 
 for (const finding of scanTemplateNotExpanded(bundlePath).findings) {
   templateInspect.push(`[template_not_expanded] ${finding.file}: ${finding.field} contains unexpanded template variable: ${finding.value}`);
 }
 formalFindings.push(...sharedEvaluation.findings);
+formalFindings.push(...projectionEvaluation.findings);
 
 for (const rule of definition.rules.filter((candidate) => candidate.check === 'trace_event_present')) {
   const events = readTraceEvents(bundlePath, rule.target);

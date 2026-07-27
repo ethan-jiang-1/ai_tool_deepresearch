@@ -17,10 +17,222 @@ import { makeContractFinding } from './wave-contract-findings.mjs';
 import { evaluateRerunDirection } from './rerun-direction.mjs';
 import { locateCanonicalSections } from './plan-hostfile-sections.mjs';
 import { evaluateSeedTopicAuthoring } from './seed-topic-authoring-evaluator.mjs';
+import { collectEligibleWorkUnitProjection, readProjectionProfileRound } from '../work-unit-projection.mjs';
+import { loadWave2FindingIndexFact } from './wave-depth-contracts.mjs';
 
 export const TOPIC_STATE_SCHEMA_VERSION = '1.1.0';
 export const TOPIC_STATE_ROOT = '_diagnostics/topic-state';
 export const TOPIC_STATE_OPERATIONS = Object.freeze(['inspect', 'apply', 'recover']);
+
+// @impl STM-001, RRM-002, RRM-003
+// The executable structural source for a Seed Topic's research-round appendix.
+// Guidance mirrors this map; runtime behavior never discovers slots from Markdown.
+export const SEED_TOPIC_PROJECTION_ENTRY_FIELDS = Object.freeze([
+  'evidence_meaning', 'relationship', 'refs', 'status', 'next_hop',
+]);
+export const SEED_TOPIC_PROJECTION_CARD_LABEL = '回填卡（只读操作约束，不是 Projection Entry）';
+const HEADING_SUFFIX_RE = /^(?:\s|\(|（|:|：|-|—)/;
+
+function freezeProjectionSlot(slot) {
+  return Object.freeze({
+    ...slot,
+    legacyHeadingBases: Object.freeze([...slot.legacyHeadingBases]),
+    ownerWaves: Object.freeze([...slot.ownerWaves]),
+    card: Object.freeze({
+      ...slot.card,
+      requiredEntryFields: Object.freeze([...slot.card.requiredEntryFields]),
+      prohibitions: Object.freeze([...slot.card.prohibitions]),
+    }),
+  });
+}
+
+export const SEED_TOPIC_PROJECTION_SLOTS = Object.freeze([
+  freezeProjectionSlot({
+    slotId: 'wave0_evidence',
+    canonicalHeading: 'Wave0：本主题的新增来源证据',
+    legacyHeadingBases: ['本轮新增证据'],
+    headingSuffixPolicy: 'bounded',
+    initialToken: '__BACKFILL_WAVE0_EVIDENCE__',
+    ownerWaves: ['wave0'],
+    sourceIdentityKind: 'submitted_work',
+    mergeMode: 'upsert_by_entry_id',
+    card: {
+      label: SEED_TOPIC_PROJECTION_CARD_LABEL,
+      writer: 'Wave0 Phase Agent',
+      authority: '当前轮已 submitted 的 Wave0 work-unit',
+      timing: '当前轮 Wave0 work-unit 已 submitted 后',
+      entryIdentity: '<work_id>/<positive ordinal>',
+      requiredEntryFields: ['entry_id', ...SEED_TOPIC_PROJECTION_ENTRY_FIELDS],
+      materializationPointer: '由 Wave0 closeout 经 operate-topic-state materialize；详见 command_playbook/operate-topic-state.md#Wave Projection Packet',
+      prohibitions: ['手改本节', '只写 “Wave0 submitted”', '把 artifact/cache 当唯一 consumer ref'],
+    },
+  }),
+  freezeProjectionSlot({
+    slotId: 'wave1_mechanisms',
+    canonicalHeading: 'Wave1：本主题的机制理解',
+    legacyHeadingBases: ['本轮新增机制理解'],
+    headingSuffixPolicy: 'bounded',
+    initialToken: '__BACKFILL_WAVE1_MECHANISMS__',
+    ownerWaves: ['wave1'],
+    sourceIdentityKind: 'submitted_work',
+    mergeMode: 'upsert_by_entry_id',
+    card: {
+      label: SEED_TOPIC_PROJECTION_CARD_LABEL,
+      writer: 'Wave1 Phase Agent',
+      authority: '当前轮已 submitted 的 Wave1 work-unit',
+      timing: '当前轮 Wave1 work-unit 已 submitted 后',
+      entryIdentity: '<work_id>/<positive ordinal>',
+      requiredEntryFields: ['entry_id', ...SEED_TOPIC_PROJECTION_ENTRY_FIELDS],
+      materializationPointer: '由 Wave1 closeout 经 operate-topic-state materialize；详见 command_playbook/operate-topic-state.md#Wave Projection Packet',
+      prohibitions: ['手改本节', '只写 “Wave1 submitted”', '把 evidence-summary provenance 当唯一 consumer ref'],
+    },
+  }),
+  freezeProjectionSlot({
+    slotId: 'wave1_trends',
+    canonicalHeading: 'Wave1：本主题的趋势、难点与限制',
+    legacyHeadingBases: ['本轮新增趋势与难点'],
+    headingSuffixPolicy: 'bounded',
+    initialToken: '__BACKFILL_WAVE1_TRENDS__',
+    ownerWaves: ['wave1'],
+    sourceIdentityKind: 'submitted_work',
+    mergeMode: 'upsert_by_entry_id',
+    card: {
+      label: SEED_TOPIC_PROJECTION_CARD_LABEL,
+      writer: 'Wave1 Phase Agent',
+      authority: '当前轮已 submitted 的 Wave1 work-unit',
+      timing: '当前轮 Wave1 work-unit 已 submitted 后',
+      entryIdentity: '<work_id>/<positive ordinal>',
+      requiredEntryFields: ['entry_id', ...SEED_TOPIC_PROJECTION_ENTRY_FIELDS],
+      materializationPointer: '由 Wave1 closeout 经 operate-topic-state materialize；详见 command_playbook/operate-topic-state.md#Wave Projection Packet',
+      prohibitions: ['手改本节', '只写 “Wave1 submitted”', '用泛化 submitted prose 替代限制'],
+    },
+  }),
+  freezeProjectionSlot({
+    slotId: 'wave2_judgment',
+    canonicalHeading: 'Wave2：本主题的当前跨主题判断',
+    legacyHeadingBases: ['当前判断'],
+    headingSuffixPolicy: 'bounded',
+    initialToken: '__BACKFILL_WAVE2_JUDGMENT__',
+    ownerWaves: ['wave2'],
+    sourceIdentityKind: 'finding',
+    mergeMode: 'upsert_by_entry_id',
+    card: {
+      label: SEED_TOPIC_PROJECTION_CARD_LABEL,
+      writer: 'Wave2 Phase Agent',
+      authority: '解析到本 topic 的当前轮 W2F finding',
+      timing: '当前轮 W2F finding 已解析到本 topic 后',
+      entryIdentity: 'exact current-round W2F-* finding id',
+      requiredEntryFields: ['entry_id', ...SEED_TOPIC_PROJECTION_ENTRY_FIELDS],
+      materializationPointer: '由 Wave2 closeout 经 operate-topic-state materialize；详见 command_playbook/operate-topic-state.md#Wave Projection Packet',
+      prohibitions: ['手改本节', '只写 “Wave2 submitted”', '无 exact W2F binding 的泛化 synthesis line'],
+    },
+  }),
+  freezeProjectionSlot({
+    slotId: 'pending_questions',
+    canonicalHeading: '本主题的待验证问题与后续验证路径',
+    legacyHeadingBases: ['待验证问题'],
+    headingSuffixPolicy: 'bounded',
+    initialToken: '__BACKFILL_PENDING_QUESTIONS__',
+    ownerWaves: ['wave1', 'wave2'],
+    sourceIdentityKind: 'submitted_work_or_finding',
+    mergeMode: 'append_or_upsert_by_entry_id',
+    card: {
+      label: SEED_TOPIC_PROJECTION_CARD_LABEL,
+      writer: 'Wave1 Phase Agent（首写）或 Wave2 Phase Agent（仅追加其 W2F 条目）',
+      authority: '当前轮 Wave1 submitted work-unit，或解析到本 topic 的当前轮 W2F finding',
+      timing: 'Wave1 submitted 后首写；Wave2 仅在其当前 W2F finding 解析到本 topic 后追加',
+      entryIdentity: 'Wave1: <work_id>/<positive ordinal>; Wave2: exact current-round W2F-* finding id',
+      requiredEntryFields: ['entry_id', ...SEED_TOPIC_PROJECTION_ENTRY_FIELDS],
+      materializationPointer: '由对应 Wave closeout 经 operate-topic-state materialize；详见 command_playbook/operate-topic-state.md#Wave Projection Packet',
+      prohibitions: ['手改本节', '只写泛化 submitted prose', 'Wave2 覆盖或删除 Wave1 question entry'],
+    },
+  }),
+]);
+
+const PROJECTION_SLOT_BY_ID = new Map(SEED_TOPIC_PROJECTION_SLOTS.map((slot) => [slot.slotId, slot]));
+
+export function projectionSlotForId(slotId) {
+  return PROJECTION_SLOT_BY_ID.get(slotId) || null;
+}
+
+export function projectionSlotsForWave(wave) {
+  return SEED_TOPIC_PROJECTION_SLOTS.filter((slot) => slot.ownerWaves.includes(wave));
+}
+
+export function projectionSlotHeadingMatches(slot, heading) {
+  const value = String(heading || '').trim();
+  for (const [kind, bases] of [
+    ['canonical', [slot.canonicalHeading]],
+    ['legacy', slot.legacyHeadingBases],
+  ]) {
+    for (const base of bases) {
+      if (value === base || (value.startsWith(base) && HEADING_SUFFIX_RE.test(value.slice(base.length)))) {
+        return { matches: true, kind, base, suffix: value.slice(base.length) };
+      }
+    }
+  }
+  return { matches: false, kind: null, base: null, suffix: null };
+}
+
+export function locateSeedProjectionSlots(content, { slotIds = null } = {}) {
+  const selected = slotIds ? new Set(slotIds) : null;
+  const source = String(content || '');
+  const lines = source.split(/(?<=\n)/);
+  const headings = [];
+  let offset = 0;
+  for (let index = 0; index < lines.length; index += 1) {
+    const raw = lines[index];
+    const line = raw.replace(/\r?\n$/, '');
+    const match = line.match(/^\s*##\s+(.+?)\s*$/);
+    if (match) headings.push({ index, startOffset: offset, headingEndOffset: offset + raw.length, title: match[1] });
+    offset += raw.length;
+  }
+  const occurrences = [];
+  for (let index = 0; index < headings.length; index += 1) {
+    const heading = headings[index];
+    const endOffset = headings[index + 1]?.startOffset ?? source.length;
+    for (const slot of SEED_TOPIC_PROJECTION_SLOTS) {
+      if (selected && !selected.has(slot.slotId)) continue;
+      const match = projectionSlotHeadingMatches(slot, heading.title);
+      if (!match.matches) continue;
+      occurrences.push({
+        slotId: slot.slotId,
+        slot,
+        headingKind: match.kind,
+        headingBase: match.base,
+        headingSuffix: match.suffix,
+        heading: heading.title,
+        startLine: heading.index + 1,
+        contentStartLine: heading.index + 2,
+        startOffset: heading.startOffset,
+        contentStartOffset: heading.headingEndOffset,
+        endOffset,
+        content: source.slice(heading.headingEndOffset, endOffset),
+      });
+    }
+  }
+  return occurrences;
+}
+
+export function renderSeedProjectionCard(slot) {
+  return [
+    `> **${slot.card.label}**`,
+    `> - 写入者：${slot.card.writer}`,
+    `> - 依据：${slot.card.authority}`,
+    `> - 回填时机：${slot.card.timing}`,
+    `> - 写法：${slot.card.entryIdentity}；必须含 ${slot.card.requiredEntryFields.join('、')}`,
+    `> - 操作：${slot.card.materializationPointer}`,
+    `> - 禁止：${slot.card.prohibitions.join('；')}`,
+  ].join('\n');
+}
+
+export function renderSeedProjectionSlot(slot) {
+  return `## ${slot.canonicalHeading}\n\n${renderSeedProjectionCard(slot)}\n\n${slot.initialToken}`;
+}
+
+export function renderSeedProjectionAppendix() {
+  return SEED_TOPIC_PROJECTION_SLOTS.map(renderSeedProjectionSlot).join('\n\n');
+}
 
 const ScopeRoleSchema = z.enum(['primary', 'synthesis', 'comparison', 'supporting']);
 const RerunDirectionCandidateSchema = z.object({
@@ -104,7 +316,76 @@ const SeedEnrichmentPlanSchema = z.object({
   topic_uid: z.string().min(1),
   enrichment: SeedEnrichmentSchema,
 }).strict();
-export const TopicApplyPlanSchema = z.union([MigrationPlanSchema, MutationPlanSchema, LayoutPlanSchema, SeedEnrichmentPlanSchema]);
+const ProjectionTextSchema = z.string().trim().min(1).regex(/^[^\r\n]+$/);
+const ProjectionSourceIdentitySchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('submitted_work'), work_id: z.string().regex(/^wu-w[0-9]+-b[0-9]{3}-[a-z][a-z0-9]{1,7}-i[0-9]{4}$/) }).strict(),
+  z.object({ kind: z.literal('finding'), finding_id: z.string().regex(/^W2F-[0-9]{3,}$/) }).strict(),
+]);
+const ProjectionEntrySchema = z.object({
+  source_identity: ProjectionSourceIdentitySchema,
+  entry_id: ProjectionTextSchema,
+  evidence_meaning: ProjectionTextSchema,
+  relationship: z.enum(['supports', 'refutes', 'partial', 'opens', 'defers', 'context']),
+  refs: z.array(ProjectionTextSchema).min(1),
+  status: z.enum(['supported', 'refuted', 'partial', 'open', 'emergent', 'deferred']),
+  next_hop: ProjectionTextSchema,
+}).strict();
+const ProjectionUpdateSchema = z.object({
+  slot_id: z.enum(SEED_TOPIC_PROJECTION_SLOTS.map((slot) => slot.slotId)),
+  entries: z.array(ProjectionEntrySchema).min(1),
+}).strict();
+const ProjectionPacketSchema = z.object({
+  context: z.literal('wave_projection'),
+  action: z.literal('apply_seed_projection'),
+  topic_uid: z.string().min(1),
+  wave: z.enum(['wave0', 'wave1', 'wave2']),
+  updates: z.array(ProjectionUpdateSchema).min(1),
+}).strict().superRefine((packet, issue) => {
+  const seenSlots = new Set();
+  for (const [updateIndex, update] of packet.updates.entries()) {
+    if (seenSlots.has(update.slot_id)) {
+      issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates', updateIndex, 'slot_id'], message: 'each slot_id may appear only once in a Projection Packet' });
+    }
+    seenSlots.add(update.slot_id);
+    const slot = projectionSlotForId(update.slot_id);
+    if (!slot?.ownerWaves.includes(packet.wave)) {
+      issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates', updateIndex, 'slot_id'], message: `${update.slot_id} is not owned by ${packet.wave}` });
+    }
+    const seenEntries = new Set();
+    for (const [entryIndex, entry] of update.entries.entries()) {
+      if (seenEntries.has(entry.entry_id)) {
+        issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates', updateIndex, 'entries', entryIndex, 'entry_id'], message: 'entry_id must be unique within one slot update' });
+      }
+      seenEntries.add(entry.entry_id);
+      if (packet.wave === 'wave2') {
+        if (entry.source_identity.kind !== 'finding') {
+          issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates', updateIndex, 'entries', entryIndex, 'source_identity'], message: 'Wave2 projection entries require a finding source_identity' });
+        } else if (entry.entry_id !== entry.source_identity.finding_id) {
+          issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates', updateIndex, 'entries', entryIndex, 'entry_id'], message: 'Wave2 entry_id must equal its source W2F finding_id' });
+        }
+      } else if (entry.source_identity.kind !== 'submitted_work') {
+        issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates', updateIndex, 'entries', entryIndex, 'source_identity'], message: 'Wave0/Wave1 projection entries require a submitted_work source_identity' });
+      } else if (!new RegExp(`^${entry.source_identity.work_id}/[1-9][0-9]*$`).test(entry.entry_id)) {
+        issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates', updateIndex, 'entries', entryIndex, 'entry_id'], message: 'Wave0/Wave1 entry_id must equal <source work_id>/<positive ordinal>' });
+      }
+    }
+  }
+  const selectedSlots = new Set(packet.updates.map((update) => update.slot_id));
+  const requireExactSlots = (slotIds, message) => {
+    const expected = new Set(slotIds);
+    if (expected.size !== selectedSlots.size || [...expected].some((slotId) => !selectedSlots.has(slotId))) {
+      issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates'], message });
+    }
+  };
+  if (packet.wave === 'wave0') {
+    requireExactSlots(['wave0_evidence'], 'Wave0 Projection Packet must update only wave0_evidence');
+  } else if (packet.wave === 'wave1') {
+    requireExactSlots(['wave1_mechanisms', 'wave1_trends', 'pending_questions'], 'Wave1 Projection Packet must atomically update mechanisms, trends, and pending_questions');
+  } else if (!selectedSlots.has('wave2_judgment')) {
+    issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates'], message: 'Wave2 Projection Packet must update wave2_judgment and may additionally update pending_questions' });
+  }
+});
+export const TopicApplyPlanSchema = z.union([MigrationPlanSchema, MutationPlanSchema, LayoutPlanSchema, SeedEnrichmentPlanSchema, ProjectionPacketSchema]);
 
 function hashBytes(value) { return createHash('sha256').update(value).digest('hex'); }
 function fsyncPath(filePath) { const fd = openSync(filePath, constants.O_RDONLY); try { fsyncSync(fd); } finally { closeSync(fd); } }
@@ -197,20 +478,7 @@ pending — state the concrete contribution this Topic should make to the final 
 
 *(seed-topics: 本 topic 为新建，无历史轮次)*
 
-## 本轮新增证据
-__BACKFILL_WAVE0_EVIDENCE__
-
-## 本轮新增机制理解
-__BACKFILL_WAVE1_MECHANISMS__
-
-## 本轮新增趋势与难点
-__BACKFILL_WAVE1_TRENDS__
-
-## 当前判断
-__BACKFILL_WAVE2_JUDGMENT__
-
-## 待验证问题
-__BACKFILL_PENDING_QUESTIONS__
+${renderSeedProjectionAppendix()}
 `;
 }
 
@@ -267,6 +535,292 @@ function readSeed(bundle, slug) {
   const split = splitPlan(raw);
   return { exists: true, path: seedPath, raw, frontmatter: split.frontmatter, body: split.body };
 }
+
+function projectionError(reasonCode, message, extras = {}) {
+  return Object.assign(new Error(message), { reason_code: reasonCode, ...extras });
+}
+
+function safeProjectionRef(ref) {
+  return typeof ref === 'string' && ref.length > 0 && !ref.startsWith('/') && !/^[A-Za-z]:[\\/]/.test(ref) && !ref.split(/[\\/]+/).includes('..');
+}
+
+function isDeferredProjectionEntry(entry) {
+  return entry.relationship === 'defers' && entry.status === 'deferred';
+}
+
+function hasDeferredLimitation(entry) {
+  return /(?:limitation|defer(?:red)?|hitl2|no materializable evidence|not materializable|record[-_ ]?only|requires[-_ ]?internal[-_ ]?data|blocked|not source[-_ ]?backed)/i.test(entry.next_hop);
+}
+
+function validateProjectionEntryNavigation(bundle, entry) {
+  if (/\bwave[012]\s+submitted\b/i.test(entry.evidence_meaning.trim())) {
+    throw projectionError('projection_entry_generic_prose', 'Projection entry evidence_meaning cannot be generic WaveN submitted prose.');
+  }
+  const emptyRefs = entry.refs.every((ref) => /^(?:none|n\/a|no materializable evidence|not materialized|no concrete reference|无|暂无|none yet)$/i.test(ref));
+  if (isDeferredProjectionEntry(entry) && emptyRefs) {
+    if (!hasDeferredLimitation(entry)) {
+      throw projectionError('projection_entry_deferred_limitation_missing', 'A deferred Projection Entry with refs: none requires an explicit limitation in next_hop.');
+    }
+    return;
+  }
+  const concreteRefs = entry.refs.filter((ref) => ref.startsWith('reference/'));
+  if (concreteRefs.length === 0) {
+    throw projectionError('projection_entry_concrete_ref_missing', 'An evidence-bearing Projection Entry requires a concrete reference/*.md consumer ref or an explicit deferred disposition.');
+  }
+  for (const ref of entry.refs) {
+    if (!safeProjectionRef(ref)) throw projectionError('projection_entry_ref_invalid', `Projection Entry ref is unsafe: ${ref}`);
+  }
+  for (const ref of concreteRefs) {
+    if (!/^reference\/[^/]+\.md$/.test(ref)) throw projectionError('projection_entry_ref_invalid', `Projection Entry ref must be a flat concrete reference/*.md path: ${ref}`);
+    const target = path.join(bundle, ref);
+    if (!existsSync(target) || lstatSync(target).isSymbolicLink() || !lstatSync(target).isFile()) {
+      throw projectionError('projection_entry_ref_missing', `Projection Entry concrete reference is unavailable: ${ref}`);
+    }
+  }
+}
+
+function renderProjectionEntry(entry) {
+  return [
+    `- **entry_id**: ${entry.entry_id}`,
+    `  - **evidence_meaning**: ${entry.evidence_meaning}`,
+    `  - **relationship**: ${entry.relationship}`,
+    '  - **refs**:',
+    ...entry.refs.map((ref) => `    - ${ref}`),
+    `  - **status**: ${entry.status}`,
+    `  - **next_hop**: ${entry.next_hop}`,
+  ].join('\n');
+}
+
+export function splitSeedProjectionCard(content, slot) {
+  const leading = String(content || '').match(/^(?:[ \t]*\r?\n)*/)?.[0] || '';
+  const expected = renderSeedProjectionCard(slot);
+  if (!String(content || '').slice(leading.length).startsWith(expected)) return null;
+  return {
+    prefix: String(content || '').slice(0, leading.length + expected.length),
+    entryArea: String(content || '').slice(leading.length + expected.length),
+  };
+}
+
+function stripProjectionToken(entryArea, slot) {
+  const occurrences = String(entryArea || '').split(slot.initialToken).length - 1;
+  if (occurrences > 1) throw projectionError('seed_projection_token_ambiguous', `${slot.slotId} contains its initial token more than once.`);
+  return occurrences === 1 ? String(entryArea).replace(slot.initialToken, '') : String(entryArea || '');
+}
+
+function extractProjectionEntryBlocks(entryArea) {
+  const source = String(entryArea || '');
+  const lines = source.split(/(?<=\n)/);
+  const blocks = [];
+  let offset = 0;
+  let current = null;
+  const finish = (endOffset) => {
+    if (!current) return;
+    blocks.push({ ...current, endOffset, text: source.slice(current.startOffset, endOffset) });
+    current = null;
+  };
+  for (const raw of lines) {
+    const line = raw.replace(/\r?\n$/, '');
+    const entryId = line.match(/^(\s*)-\s+(?:\*\*entry_id\*\*|entry_id)\s*:\s*(\S+)\s*$/i);
+    const evidence = line.match(/^(\s*)-\s+(?:\*\*evidence_meaning\*\*|evidence_meaning)\s*:/i);
+    const marker = entryId || evidence;
+    if (marker) {
+      const indent = marker[1].length;
+      if (!current || indent <= current.indent) {
+        finish(offset);
+        current = { startOffset: offset, indent, entryId: entryId?.[2] || null };
+      }
+      if (entryId && current) current.entryId = entryId[2];
+    }
+    offset += raw.length;
+  }
+  finish(source.length);
+  return blocks;
+}
+
+function upsertProjectionEntries(entryArea, slot, entries) {
+  let updated = stripProjectionToken(entryArea, slot).trim();
+  for (const entry of entries) {
+    const blocks = extractProjectionEntryBlocks(updated);
+    const matches = blocks.filter((block) => block.entryId === entry.entry_id);
+    if (matches.length > 1) {
+      throw projectionError('seed_projection_duplicate_entry_id', `${slot.slotId} has multiple existing entries with entry_id ${entry.entry_id}.`);
+    }
+    const rendered = renderProjectionEntry(entry);
+    if (matches.length === 1) {
+      const match = matches[0];
+      updated = `${updated.slice(0, match.startOffset)}${rendered}${updated.slice(match.endOffset)}`.trim();
+    } else {
+      updated = updated ? `${updated}\n\n${rendered}` : rendered;
+    }
+  }
+  return updated;
+}
+
+function hasRenderedProjectionFields(block) {
+  return SEED_TOPIC_PROJECTION_ENTRY_FIELDS.every((field) => (
+    new RegExp(`^\\s*-\\s+\\*\\*${field}\\*\\*\\s*:`, 'mi').test(block.text)
+  ));
+}
+
+function assertProjectionPostcondition(body, input) {
+  const postOccurrences = locateSeedProjectionSlots(body, { slotIds: input.updates.map((update) => update.slot_id) });
+  for (const update of input.updates) {
+    const slot = projectionSlotForId(update.slot_id);
+    const targets = postOccurrences.filter((occurrence) => (
+      occurrence.slotId === slot.slotId
+      && occurrence.headingKind === 'canonical'
+      && splitSeedProjectionCard(occurrence.content, slot)
+    ));
+    if (targets.length !== 1) {
+      throw projectionError('writer_postcondition_failed', `Projection writer failed post-write parser/readiness assertion for ${slot.slotId}.`);
+    }
+    const card = splitSeedProjectionCard(targets[0].content, slot);
+    if (card.entryArea.includes(slot.initialToken)) {
+      throw projectionError('writer_postcondition_failed', `Projection writer failed to consume ${slot.initialToken} for ${slot.slotId}.`);
+    }
+    const blocks = extractProjectionEntryBlocks(card.entryArea);
+    for (const entry of update.entries) {
+      const matching = blocks.filter((block) => block.entryId === entry.entry_id);
+      if (matching.length !== 1 || !hasRenderedProjectionFields(matching[0])) {
+        throw projectionError('writer_postcondition_failed', `Projection writer failed post-write parser/readiness assertion for ${slot.slotId}.`);
+      }
+    }
+  }
+}
+
+function upgradedProjectionHeading(body, occurrence, slot) {
+  const headingLine = body.slice(occurrence.startOffset, occurrence.contentStartOffset);
+  return occurrence.headingKind === 'legacy'
+    ? headingLine.replace(occurrence.headingBase, slot.canonicalHeading)
+    : headingLine;
+}
+
+function materializeProjectionSlot(body, occurrence, slot, entries) {
+  const card = occurrence.headingKind === 'canonical' ? splitSeedProjectionCard(occurrence.content, slot) : null;
+  if (occurrence.headingKind === 'canonical' && !card) {
+    throw projectionError('seed_projection_layout_missing', `${slot.slotId} has a canonical heading without its required ${SEED_TOPIC_PROJECTION_CARD_LABEL}.`);
+  }
+  const updatedEntries = upsertProjectionEntries(card ? card.entryArea : occurrence.content, slot, entries);
+  const heading = upgradedProjectionHeading(body, occurrence, slot);
+  const replacement = card
+    ? `${heading}${card.prefix}\n\n${updatedEntries}\n`
+    : `${heading}\n${renderSeedProjectionCard(slot)}\n\n${updatedEntries}\n`;
+  return { startOffset: occurrence.startOffset, endOffset: occurrence.endOffset, replacement };
+}
+
+function resolveWave2AffectedTopics(layouts, affectedTopics) {
+  const resolved = new Set();
+  for (const token of affectedTopics || []) {
+    const candidates = new Map();
+    const add = (layout) => {
+      if (layout) candidates.set(layout.topic_uid || `legacy:${layout.current.id}:${layout.current.slug}`, layout);
+    };
+    add(layouts.currentByUid.get(token));
+    for (const layout of layouts.referenceByAnySlug.get(token) || []) add(layout);
+    for (const layout of layouts.referenceByAnyId.get(token) || []) add(layout);
+    if (candidates.size !== 1) {
+      throw projectionError('wave2_finding_topic_invalid', candidates.size === 0
+        ? `Wave2 finding affected_topics contains unknown token ${JSON.stringify(token)}.`
+        : `Wave2 finding affected_topics contains ambiguous token ${JSON.stringify(token)}.`);
+    }
+    resolved.add([...candidates.values()][0].topic_uid);
+  }
+  return resolved;
+}
+
+function validateWave2ProjectionAuthority(bundle, topicRegistryFact, topicUid, entries) {
+  const findingIndexFact = loadWave2FindingIndexFact(bundle);
+  if (!findingIndexFact.ok || !Array.isArray(findingIndexFact.data?.findings)) {
+    throw projectionError('wave2_finding_index_unavailable', findingIndexFact.inspect?.[0] || 'Wave2 finding-index authority is unavailable.');
+  }
+  let round;
+  try { round = readProjectionProfileRound(bundle); } catch (error) {
+    throw projectionError('wave2_profile_round_invalid', error.message);
+  }
+  const findingById = new Map(findingIndexFact.data.findings.map((finding) => [finding?.id, finding]));
+  for (const entry of entries) {
+    const findingId = entry.source_identity.finding_id;
+    const finding = findingById.get(findingId);
+    if (!finding) throw projectionError('wave2_finding_not_found', `Wave2 finding ${findingId} is absent from the current finding index.`);
+    if (!Array.isArray(finding.affected_topics) || finding.affected_topics.length === 0) {
+      throw projectionError('wave2_finding_affected_topics_invalid', `Wave2 finding ${findingId} has no usable affected_topics authority.`);
+    }
+    if (!Object.hasOwn(finding, 'created_in_rerun_count') || finding.created_in_rerun_count !== round) {
+      throw projectionError('wave2_finding_not_current', `Wave2 finding ${findingId} is not current for rerun_count ${round}.`);
+    }
+    const affected = resolveWave2AffectedTopics(topicRegistryFact.layouts, finding.affected_topics);
+    if (!affected.has(topicUid)) {
+      throw projectionError('wave2_finding_topic_mismatch', `Wave2 finding ${findingId} does not resolve to packet topic ${topicUid}.`);
+    }
+  }
+  return findingIndexFact;
+}
+
+function validateProjectionAuthority(bundle, canonical, input, topic) {
+  const topicRegistryFact = {
+    topic_registry: canonical.topic_registry,
+    layouts: evaluateTopicLayouts(canonical.topic_registry),
+  };
+  const entries = input.updates.flatMap((update) => update.entries);
+  if (input.wave === 'wave2') {
+    validateWave2ProjectionAuthority(bundle, topicRegistryFact, topic.topic_uid, entries);
+    return { topicRegistryFact };
+  }
+  const eligible = collectEligibleWorkUnitProjection(bundle, { phase: input.wave, topicRegistryFact });
+  if (!eligible.passed) {
+    const root = eligible.root_findings?.[0];
+    throw projectionError(root?.rule_id || 'submitted_projection_authority', root?.missing_fact || 'Current submitted work-unit authority is unavailable.');
+  }
+  const eligibleIds = new Set(eligible.rows.filter((row) => row.topic_uid === topic.topic_uid).map((row) => row.work_id));
+  for (const entry of entries) {
+    if (!eligibleIds.has(entry.source_identity.work_id)) {
+      throw projectionError('projection_source_identity_not_current', `${entry.source_identity.work_id} is not a current eligible ${input.wave} submitted work identity for ${topic.topic_uid}.`);
+    }
+  }
+  return { topicRegistryFact, eligible };
+}
+
+function buildWaveProjectionMutation(bundle, current, input) {
+  const canonical = CanonicalPlanSchema.parse(current);
+  const topic = canonical.topic_registry.find((candidate) => candidate.topic_uid === input.topic_uid);
+  if (!topic) throw projectionError('projection_topic_not_current', `Projection packet topic_uid is not current: ${input.topic_uid}`);
+  const binding = evaluateCanonicalSeedBindings(bundle, canonical).find((candidate) => candidate.topic_uid === topic.topic_uid);
+  if (!binding?.ok) throw projectionError('projection_seed_binding_invalid', `Current seed binding is unavailable for ${topic.topic_uid}: ${binding?.reason_code || 'missing'}.`);
+  const seed = readSeed(bundle, topic.slug);
+  if (!seed.exists) throw projectionError('projection_seed_missing', `Current seed is missing for ${topic.slug}.`);
+  validateProjectionAuthority(bundle, canonical, input, topic);
+  for (const update of input.updates) for (const entry of update.entries) validateProjectionEntryNavigation(bundle, entry);
+
+  const occurrences = locateSeedProjectionSlots(seed.body, { slotIds: input.updates.map((update) => update.slot_id) });
+  const replacements = [];
+  for (const update of input.updates) {
+    const slot = projectionSlotForId(update.slot_id);
+    if (!slot?.ownerWaves.includes(input.wave)) {
+      throw projectionError('projection_slot_not_owned', `${update.slot_id} is not owned by ${input.wave}.`);
+    }
+    const candidates = occurrences.filter((occurrence) => occurrence.slotId === slot.slotId && (
+      occurrence.headingKind === 'legacy' || splitSeedProjectionCard(occurrence.content, slot)
+    ));
+    if (candidates.length === 0) throw projectionError('seed_projection_layout_missing', `${slot.slotId} has no unique recognized canonical/card or declared legacy write target.`);
+    if (candidates.length > 1) throw projectionError('seed_projection_layout_ambiguous', `${slot.slotId} has multiple recognized write targets.`);
+    replacements.push(materializeProjectionSlot(seed.body, candidates[0], slot, update.entries));
+  }
+  let body = seed.body;
+  for (const replacement of replacements.sort((left, right) => right.startOffset - left.startOffset)) {
+    body = `${body.slice(0, replacement.startOffset)}${replacement.replacement}${body.slice(replacement.endOffset)}`;
+  }
+  assertProjectionPostcondition(body, input);
+  const header = seed.raw.slice(0, seed.raw.length - seed.body.length);
+  return {
+    plan: current,
+    touched: new Map([[topic.slug, `${header}${body}`]]),
+    cleanup_files: [],
+    affected_topic_uids: [topic.topic_uid],
+    selected_topic: topic,
+    projection: { wave: input.wave, topic_uid: topic.topic_uid, slots: input.updates.map((update) => update.slot_id) },
+  };
+}
+
 function workspaceRoot(bundle, create = false) {
   const diagnostics = path.join(bundle, '_diagnostics');
   const root = path.join(bundle, TOPIC_STATE_ROOT);
@@ -285,7 +839,7 @@ function acceptedWorkspaces(bundle) {
     try { return [{ operation_id: name, workspace: path.relative(bundle, path.join(root, name)).replaceAll('\\', '/'), manifest: JSON.parse(readFileSync(manifestPath, 'utf8')) }]; } catch { return [{ operation_id: name, workspace: path.relative(bundle, path.join(root, name)).replaceAll('\\', '/'), manifest: null }]; }
   });
 }
-function lifecycleAuthorization(bundle, context) {
+function lifecycleAuthorization(bundle, context, projectionWave = null) {
   const status = JSON.parse(readFileSync(path.join(bundle, 'rb_status.json'), 'utf8'));
   if (context === 'hitl1') {
     const ok = status.current_node === 'phases/phase-hitl1.md' && status.current_gate === 'hitl1_recorded' && status.next_gate === 'setup_ready';
@@ -310,6 +864,34 @@ function lifecycleAuthorization(bundle, context) {
       reason: handoff.inspect?.[0] || 'seed enrichment requires a route-bound Seed Topics handoff and setup_ready|rerun_ready→seed_topics_ready window',
     };
   }
+  if (context === 'wave_projection') {
+    const window = {
+      wave0: { node: 'phases/phase-wave0.md', currentGate: 'seed_topics_ready', nextGate: 'wave0_complete' },
+      wave1: { node: 'phases/phase-wave1.md', currentGate: 'wave0_complete', nextGate: 'wave1_complete' },
+      wave2: { node: 'phases/phase-wave2.md', currentGate: 'wave1_complete', nextGate: 'wave2_complete' },
+    }[projectionWave];
+    if (!window) return { ok: false, reason_code: 'wave_projection_not_authorized', reason: 'Projection apply requires wave0, wave1, or wave2.' };
+    const handoff = checkPhaseHandoffPreflight(bundle, window.node);
+    const ok = handoff.ok
+      && status.current_node === window.node
+      && status.current_gate === window.currentGate
+      && status.next_gate === window.nextGate;
+    return ok ? {
+      ok: true,
+      context,
+      wave: projectionWave,
+      current_node: status.current_node,
+      current_gate: status.current_gate,
+      next_gate: status.next_gate,
+      source_attempt_index: handoff.handoff?.index ?? null,
+      load_witness_index: handoff.handoff?.loadComplete?.index ?? null,
+    } : {
+      ok: false,
+      reason_code: 'wave_projection_not_authorized',
+      reason: handoff.inspect?.[0] || `Projection apply requires ${window.node} and ${window.currentGate}->${window.nextGate}.`,
+    };
+  }
+  if (context !== 'rerun') return { ok: false, reason_code: 'context_not_authorized', reason: `Unsupported topic-state context: ${context}` };
   const handoff = checkPhaseHandoffPreflight(bundle, 'phases/phase-rerun.md');
   const ok = handoff.ok && status.current_node === 'phases/phase-rerun.md' && status.current_gate === 'hitl2_recorded' && status.next_gate === 'rerun_ready';
   return ok ? {
@@ -591,6 +1173,9 @@ export function inspectCanonicalTopicState({ bundlePath }) {
 function buildMutation(bundle, parsedPlan, input, { profileRerunCount = null } = {}) {
   const current = structuredClone(parsedPlan);
   const touched = new Map();
+  if (input.action === 'apply_seed_projection') {
+    return buildWaveProjectionMutation(bundle, current, input);
+  }
   if (input.action === 'enrich_seed') {
     const canonical = CanonicalPlanSchema.parse(current);
     const topic = canonical.topic_registry.find((entry) => entry.topic_uid === input.topic_uid);
@@ -723,7 +1308,7 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
   const parsedInput = parsed.data;
   const accepted = acceptedWorkspaces(bundle);
   if (accepted.length) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'accepted_workspace', recommended_action: `recover --operation-id ${accepted[0].operation_id}` };
-  const authorization = lifecycleAuthorization(bundle, parsedInput.context);
+  const authorization = lifecycleAuthorization(bundle, parsedInput.context, parsedInput.wave || null);
   if (!authorization.ok) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', ...authorization };
   const profileRerunCount = parsedInput.context === 'rerun' && Array.isArray(parsedInput.actions)
     ? currentProfileRerunCount(bundle)
@@ -765,7 +1350,9 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
     const removeBlocker = safeRemoveBlocker(bundle, oldCanonical.data, parsedInput.remove_topic_uids);
     if (removeBlocker) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', ...removeBlocker, recommended_action: 'Preserve the topic and its history; only an unstarted dependency-free topic can be removed.' };
   }
-  const active = parsedInput.action === 'enrich_seed' ? [] : (oldCanonical.success ? activeTopicWork(bundle, oldCanonical.data, mutation.affected_topic_uids) : []);
+  const active = ['enrich_seed', 'apply_seed_projection'].includes(parsedInput.action)
+    ? []
+    : (oldCanonical.success ? activeTopicWork(bundle, oldCanonical.data, mutation.affected_topic_uids) : []);
   if (active.length) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'active_topic_work', fact_refs: active, recommended_action: 'Resolve through existing queue/work-unit owner, then rerun apply.' };
   if (parsedInput.action === 'mutate_layout') {
     const finalBySlug = new Map(mutation.plan.topic_registry.map((topic) => [topic.slug, topic]));
@@ -782,10 +1369,10 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
       }
     }
   }
-  const presentation = parsedInput.action === 'enrich_seed'
+  const presentation = ['enrich_seed', 'apply_seed_projection'].includes(parsedInput.action)
     ? { body: split.body, advisory: null }
     : refreshTopicRegistryTable(split.body, split.frontmatter.topic_registry || [], mutation.plan.topic_registry);
-  const newPlanRaw = parsedInput.action === 'enrich_seed'
+  const newPlanRaw = ['enrich_seed', 'apply_seed_projection'].includes(parsedInput.action)
     ? oldRaw
     : renderPlan(mutation.plan, presentation.body);
   if (parsedInput.action === 'enrich_seed') {
@@ -819,6 +1406,10 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
       ...(parsedInput.action === 'enrich_seed' ? {
         action: 'enrich_seed', topic_uid: mutation.selected_topic.topic_uid,
         slug: mutation.selected_topic.slug, path: `seed_topics/${mutation.selected_topic.slug}.md`, binding_repair: null,
+      } : parsedInput.action === 'apply_seed_projection' ? {
+        action: 'apply_seed_projection', wave: mutation.projection.wave,
+        topic_uid: mutation.projection.topic_uid, slots: mutation.projection.slots,
+        path: `seed_topics/${mutation.selected_topic.slug}.md`,
       } : {}),
     };
   }
@@ -835,9 +1426,9 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
       files.push({ relative, expected_sha256: existsSync(target) ? hashBytes(readFileSync(target)) : null, staged_sha256: hashBytes(bytes), staged_name: stagedName });
     };
     for (const [slug, bytes] of mutation.touched) stage(`seed_topics/${slug}.md`, bytes);
-    stage('rb_plan.md', newPlanRaw);
+    if (parsedInput.action !== 'apply_seed_projection') stage('rb_plan.md', newPlanRaw);
     if (crashAt === 'before_prepared') throw Object.assign(new Error('simulated crash before_prepared'), { preserveWorkspace: false });
-    const manifest = { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation_id: operationId, state: 'prepared', authorization, input_sha256: hashBytes(JSON.stringify(parsedInput)), registry_length_changed: split.frontmatter.topic_registry.length !== mutation.plan.topic_registry.length, affected_topic_uids: mutation.affected_topic_uids, presentation_advisory: presentation.advisory, files, cleanup_files: mutation.cleanup_files, ...(parsedInput.action === 'enrich_seed' ? { action: 'enrich_seed', topic_uid: mutation.selected_topic.topic_uid, slug: mutation.selected_topic.slug, path: `seed_topics/${mutation.selected_topic.slug}.md`, binding_repair: mutation.binding_repair } : {}) };
+    const manifest = { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation_id: operationId, state: 'prepared', authorization, input_sha256: hashBytes(JSON.stringify(parsedInput)), registry_length_changed: split.frontmatter.topic_registry.length !== mutation.plan.topic_registry.length, affected_topic_uids: mutation.affected_topic_uids, presentation_advisory: presentation.advisory, files, cleanup_files: mutation.cleanup_files, ...(parsedInput.action === 'enrich_seed' ? { action: 'enrich_seed', topic_uid: mutation.selected_topic.topic_uid, slug: mutation.selected_topic.slug, path: `seed_topics/${mutation.selected_topic.slug}.md`, binding_repair: mutation.binding_repair } : parsedInput.action === 'apply_seed_projection' ? { action: 'apply_seed_projection', wave: mutation.projection.wave, topic_uid: mutation.projection.topic_uid, slots: mutation.projection.slots, path: `seed_topics/${mutation.selected_topic.slug}.md` } : {}) };
     writeDurable(path.join(workspace, 'prepared.json'), `${JSON.stringify(manifest, null, 2)}\n`); fsyncPath(workspace);
     if (crashAt === 'after_prepared') throw Object.assign(new Error('simulated crash after_prepared'), { preserveWorkspace: true });
     const result = recoverCanonicalTopicState({ bundlePath, operationId, crashAt });
@@ -848,6 +1439,13 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
       slug: mutation.selected_topic.slug,
       path: `seed_topics/${mutation.selected_topic.slug}.md`,
       binding_repair: mutation.binding_repair,
+    } : parsedInput.action === 'apply_seed_projection' ? {
+      ...result,
+      action: 'apply_seed_projection',
+      wave: mutation.projection.wave,
+      topic_uid: mutation.projection.topic_uid,
+      slots: mutation.projection.slots,
+      path: `seed_topics/${mutation.selected_topic.slug}.md`,
     } : result;
   } catch (error) {
     if (!error.preserveWorkspace) { rmSync(workspace, { recursive: true, force: true }); fsyncPath(root); }

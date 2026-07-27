@@ -646,7 +646,7 @@ None imported.
     assert.ok(output.inspect.some(m => m.includes('YAML') || m.includes('parse')), `Expected YAML parse fail: ${JSON.stringify(output.inspect)}`);
   });
 
-  it('10. fails when backfill token is residual', () => {
+  it('10. does not invent a Wave2 projection obligation from a no-demand token', () => {
     const dir = createBundle(unique('token'));
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
@@ -655,8 +655,8 @@ None imported.
     writeWave2Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
-    assert.equal(output.check.passed, false);
-    assert.ok(output.inspect.some(m => m.includes('BACKFILL') || m.includes('Forbidden')), `Expected backfill token fail: ${JSON.stringify(output.inspect)}`);
+    assert.equal(output.check.passed, true, output.inspect.join('\n'));
+    assert.equal(output.check.failed_rule_ids.some((id) => /backfill|seed_projection_token/i.test(id)), false);
   });
 
   it('11. fails action:add rerun when synthesis uses delta-only mode', () => {
@@ -798,9 +798,9 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
     const dir = createBundle(unique('crosswu'));
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
+    submitWave2CrossReference(dir);
     createMinIndex(dir);
     createMinBackfill(dir);
-    submitWave2CrossReference(dir);
     writeWave2Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -811,9 +811,9 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
     const dir = createBundle(unique('declaration-gap'));
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
+    const submission = submitWave2CrossReference(dir);
     createMinIndex(dir);
     createMinBackfill(dir);
-    const submission = submitWave2CrossReference(dir);
     writeWave2Trace(dir);
     rmSync(join(dir, 'rb_output_declarations.jsonl'));
 

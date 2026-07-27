@@ -9,18 +9,21 @@ None is the single legal materializer, so completion trace and navigation truth
 can diverge.
 
 The selected design keeps the project boundary intact. The Agent judges the
-meaning of research. Markdown gives it one complete interface and an operating
-loop. JavaScript admits a narrow structured packet, atomically writes only the
-legal seed slots, and reports deterministic facts. Submitted rows, source
-claims, references, artifacts, finding-index and ledger remain their existing
-authorities.
+meaning of research. A document template shows the instantiated Seed Topic
+shape; the existing command playbook gives the operating loop. JavaScript admits
+a narrow structured packet, atomically writes only the legal seed slots, and
+reports deterministic facts. Submitted rows, source claims, references,
+artifacts, finding-index and ledger remain their existing authorities.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Give humans and Phase Agents exactly one complete Seed Topic Document
-  template, including the feedback map required to locate the right owner.
+- Give humans and Phase Agents one pure, discoverable Seed Topic Document
+  template, with a stable home for future document templates.
+- Keep the packet, lifecycle and repair protocol with the existing
+  `operate-topic-state` command it operates, while preserving a short precise
+  pointer from every template slot.
 - Give each current Wave authority identity one legal, route-bound projection
   path through existing `operate-topic-state apply` and its existing
   workspace/recover durability boundary.
@@ -45,16 +48,29 @@ authorities.
 
 ## Decisions
 
-### 1. One Seed Topic Document template, with one executable slot-map mirror
+### 1. A pure Seed Topic Document template in an extensible template namespace
 
-`shared-seed-topic-template.md` becomes the sole complete human/Agent-facing
-contract. It combines the useful content of `shared-seed-topic-authoring.md`
-and `shared-return-map-authoring.md`: initial structure, appendices, slot
-ownership, packet grammar, exact entry shape, rerun direction, ref hierarchy,
-and repair map. Each of `phase-seed-topics`, `phase-rerun`, and
-`phase-wave0/1/2` loads this file directly. The old filenames either become
-short compatibility pointers or are removed after package references are
-migrated; neither retains a complete second template.
+`DPT_FRAMEWORK/workflows/nodes/templates/seed-topic-template.md` becomes the
+sole canonical Seed Topic Document template. `templates/` is an explicit
+workflow-node category for reusable, instantiable document structures; it is
+intentionally able to hold future report and other templates without mixing
+them into shared guidance. A template answers only: what document is produced
+when instantiated, which portions are fixed skeleton versus later backfill, and
+who may supply each later portion, when, and in what document format.
+
+The Seed Topic template therefore contains registry-projected frontmatter and
+Agent-owned initialization skeleton, ordered Appendix Slots, the read-only
+per-slot `回填卡`, initial tokens, and the canonical rendered Projection Entry
+shape. The cards state writer, direct authority, backfill timing, `entry_id` and
+the five document fields, prohibited direct edits/generic prose, and a concise
+pointer to the Wave phase / `operate-topic-state` command. They do not define
+packet fields, lifecycle authorization, an apply/recover loop, repair map, or
+rerun-direction input. Those questions concern execution rather than the shape
+of an instantiated Seed Topic.
+
+`shared-seed-topic-authoring.md` and `shared-return-map-authoring.md` remain
+short compatibility pointers only if package compatibility requires them; they
+define no template or operation contract.
 
 The runtime does not parse this Markdown. `canonical-topic-state.mjs` exports a
 frozen slot map as the one executable adjustment point for per-slot structural
@@ -63,13 +79,13 @@ facts:
 ```text
 slot_id, canonical_heading, legacy_heading_aliases, heading_suffix_policy,
 initial_token, owner_wave(s), source_identity_kind, merge_mode,
-card { writer, authority, entry_identity, required_entry_fields,
-       legal_action, prohibitions }
+card { writer, authority, timing, entry_identity, required_entry_fields,
+       materialization_pointer, prohibitions, label }
 ```
 
 Renderer, locator, writer and readiness evaluator import the same map. Static
 tests compare its ordered headings, tokens, owners and card descriptor facts
-with named template facts. This preserves an Agent-readable single entry
+with named template facts. This preserves an Agent-readable document schema
 without elevating guidance to authority or inventing a third JSON schema.
 
 | slot_id | canonical heading | declared legacy heading base | card writer / direct authority |
@@ -80,18 +96,18 @@ without elevating guidance to authority or inventing a third JSON schema.
 | `wave2_judgment` | `## Wave2：本主题的当前跨主题判断` | `## 当前判断` | Wave2 Phase Agent / exact current-round `W2F-*` finding affecting this topic |
 | `pending_questions` | `## 本主题的待验证问题与后续验证路径` | `## 待验证问题` | Wave1 first, then Wave2 W2F append / their corresponding current authority |
 
-The per-slot card descriptor also fixes the new writer's entry identity and
-slot action; every new entry includes that `entry_id` plus the five canonical
+The per-slot card descriptor also fixes the writer/timing cue and new entry
+identity; every new entry includes that `entry_id` plus the five canonical
 fields. Historical valid entries keep their accepted ref-based identity parsing
 and are not rewritten merely to add metadata.
 
-| slot_id | card `entry_id` rule | legal packet target | card-specific prohibition |
+| slot_id | card `entry_id` rule | backfill timing | card-specific prohibition |
 | --- | --- | --- | --- |
-| `wave0_evidence` | `<work_id>/<positive ordinal>` | Wave0 -> `wave0_evidence` | never use `Wave0 submitted` or artifact/cache as the sole consumer ref |
-| `wave1_mechanisms` | `<work_id>/<positive ordinal>` | Wave1 -> `wave1_mechanisms` | do not turn evidence-summary provenance into the only consumer ref |
-| `wave1_trends` | `<work_id>/<positive ordinal>` | Wave1 -> `wave1_trends` | do not replace a limitation with generic submit prose |
-| `wave2_judgment` | exact current-round source `W2F-*` finding id affecting this topic | Wave2 -> `wave2_judgment` | do not use a general synthesis line without the exact finding binding |
-| `pending_questions` | Wave1 `<work_id>/<positive ordinal>`; Wave2 exact current-round `W2F-*` finding id affecting this topic | Wave1 -> `pending_questions`; Wave2 append/upsert only its W2F entry | Wave2 never replaces a Wave1 question entry |
+| `wave0_evidence` | `<work_id>/<positive ordinal>` | after current Wave0 authority is submitted | never use `Wave0 submitted` or artifact/cache as the sole consumer ref |
+| `wave1_mechanisms` | `<work_id>/<positive ordinal>` | after current Wave1 authority is submitted | do not turn evidence-summary provenance into the only consumer ref |
+| `wave1_trends` | `<work_id>/<positive ordinal>` | after current Wave1 authority is submitted | do not replace a limitation with generic submit prose |
+| `wave2_judgment` | exact current-round source `W2F-*` finding id affecting this topic | after a current W2F finding resolves to this topic | do not use a general synthesis line without the exact finding binding |
+| `pending_questions` | Wave1 `<work_id>/<positive ordinal>`; Wave2 exact current-round `W2F-*` finding id affecting this topic | Wave1 first; Wave2 may add only its resolved W2F entry | Wave2 never replaces a Wave1 question entry |
 
 New rendering uses the exact canonical headings above. For compatibility, the
 read locator retains the accepted bounded heading-suffix grammar for the
@@ -107,8 +123,9 @@ implicitly migrated. Only this packet admission step rejects an ambiguous
 target with `seed_projection_layout_ambiguous` before workspace creation rather
 than guessing which historical occurrence to change.
 
-Each canonical heading permanently renders its `回填卡` directly before its
-token or entries. The complete template shows the exact same descriptor facts;
+Each canonical heading permanently renders the exact
+`回填卡（只读操作约束，不是 Projection Entry）` label directly before its token
+or entries. The complete template shows the exact same descriptor facts;
 for example, the Wave0 card has this stable shape (the other cards vary only by
 their slot descriptor):
 
@@ -120,8 +137,8 @@ their slot descriptor):
 > - 依据：当前轮已 submitted 的 Wave0 work-unit
 > - 写法：每个 `<work_id>/<ordinal>` 一条；必须含 `entry_id`、
 >   `evidence_meaning`、`relationship`、`refs`、`status`、`next_hop`
-> - 动作：形成 `context: wave_projection` / `action: apply_seed_projection`
->   packet，经 `operate-topic-state apply` 写入 `wave0_evidence`
+> - 回填时机：当前轮 Wave0 authority 已 submitted 后；由 Wave0 closeout 经
+>   `command_playbook/operate-topic-state.md#Wave Projection Packet` materialize
 > - 禁止：手改本节、只写 “Wave0 submitted”、或把 artifact/cache 当唯一 consumer ref
 
 __BACKFILL_WAVE0_EVIDENCE__
@@ -132,10 +149,13 @@ consumes, replaces or parses the card as an entry. A heading/card rule changes
 through the slot map plus the paired template update in a future OpenSpec
 change, with static parity making an incomplete adjustment fail visibly.
 
-Rejected alternative: retain two focused full docs. It optimizes local context
-size but fails the reader's document-level question and repeats the source-of-
-reference ambiguity that produced BUG-138. An index page is also rejected: it
-adds navigation without eliminating split ownership.
+Rejected alternative: make one file both template and packet protocol. It gives
+the false appearance of one entry point while forcing a reader who only needs
+document shape to absorb mutation schema, lifecycle and repair details. It
+therefore merges distinctions that change the reader's question. A second full
+template is also rejected: it recreates BUG-138's format ambiguity. A template
+directory plus the existing command playbook preserves one discoverable home for
+each distinct concern without adding a controller or a new protocol surface.
 
 ### 2. Extend the existing topic-state seam, do not add a backfill CLI
 
@@ -328,6 +348,23 @@ not a license to guess a
 heading, hand-edit content, or create a parallel success path. Any broader
 migration would need its own source-of-record and recovery design.
 
+### 8. Keep verification at the deterministic interface boundary
+
+This change does not add a native Agent-flow canary. A real independent Subject
+would require a Playbook Agent plus Subject Agent launch, two variable model
+turns before the packet/writer checkpoint, and a second runtime that cannot
+prove a deterministic product contract more strongly than the existing direct
+tests. That is test liability, not a useful regression asset.
+
+Static Markdown/package tests instead assert the precise readable boundary:
+the template is loaded for document shape and contains no packet protocol, while
+the existing command playbook is the one complete packet/repair home. The
+disposable Wave chain establishes submitted authority through production CLIs,
+then proves packet binding, writer mutation and same inspect through those same
+CLIs. This has the short feedback loop needed for repeated regression use and
+does not pretend that scripted or nested model output proves a general Agent
+behavior claim.
+
 ## Risks / Trade-offs
 
 - **A strict packet might reject a real but presentation-variant entry** ->
@@ -347,6 +384,9 @@ migration would need its own source-of-record and recovery design.
 - **Template migration could leave hidden duplicate examples** -> static tests
   name the full-template signature and phase requires; short actor cues remain
   permitted but cannot become a second complete contract.
+- **Static guidance checks could drift from runtime behavior** -> package/static
+  contracts assert only document and protocol ownership, while the deterministic
+  production-CLI chain remains the authority, writer and inspect proof.
 
 ## Migration Plan
 

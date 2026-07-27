@@ -17,7 +17,7 @@ import { loadWave2FindingIndexFact } from '../engine/helpers/wave-depth-contract
 import { buildCanonicalTopicRegistryFact } from '../engine/helpers/topic-registry-fact.mjs';
 import {
   inspectReferenceReturnMaps,
-  inspectSeedTopicReturnMaps,
+  evaluateSeedTopicProjectionReadiness,
   inspectWaveArtifactReturnMaps,
 } from '../engine/helpers/return-map.mjs';
 
@@ -88,7 +88,7 @@ additionalFindings.push(...crossPresentation.findings.map((finding) => makeContr
   classification: 'advisory',
 })));
 
-const seedMap = inspectSeedTopicReturnMaps(resolvedBundlePath, { wave: 'wave2', topicRegistryFact, findingIndexFact });
+const seedMap = evaluateSeedTopicProjectionReadiness(resolvedBundlePath, { wave: 'wave2', topicRegistryFact, findingIndexFact });
 const artifactMap = inspectWaveArtifactReturnMaps(resolvedBundlePath, 'wave2');
 const referenceMap = inspectReferenceReturnMaps(resolvedBundlePath, '00-cross-');
 additionalChecksRun += 1;

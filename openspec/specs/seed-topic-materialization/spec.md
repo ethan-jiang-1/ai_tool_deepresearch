@@ -12,69 +12,104 @@ Gate 只做 deterministic 结构/数量/一致性检查；seed topic 的语义�
 ## Requirements
 ### Requirement: Seed topic materialization phase node
 
-`phase-seed-topics.md` SHALL provide a complete 9-section body between setup and Wave0. Section 3 Allowed Actions SHALL retain the queue-driven three-stage mode: fill, execution loop, then finalize and gate.
+`phase-seed-topics.md` SHALL provide a complete 9-section body between setup
+and Wave0. It SHALL declare `phase: seed-topics`, `gate: seed-topics-ready`,
+and `stop: "no"`; its queue-driven stages remain fill, execution loop, then
+finalize and gate.
 
-The phase SHALL declare `phase: seed-topics`, `gate: seed-topics-ready`, and `stop: "no"`.
+On an empty queue, the phase SHALL read `rb_plan.md#/topic_registry`, create
+one complete `seed_topic_materialize` QueueItemSchema card per current topic,
+and enqueue it through the existing queue path. During execution it SHALL
+resolve the claimed slug to one current UID, edit only Agent-owned body content,
+retain a complete `enrich_seed` input, invoke existing `operate-topic-state
+apply`, complete the card through existing receipt validation, and return to
+claim. It SHALL not hand-author registry-owned YAML fields or use direct seed
+frontmatter mutation except for the exact existing syntax-repair boundary.
 
-Allowed Actions SHALL retain these stages:
+`phase-seed-topics.md` SHALL load `templates/seed-topic-template` through its
+actual `requires` chain. `DPT_FRAMEWORK/workflows/nodes/templates/` is the
+namespace for reusable, instantiable document templates. This Seed Topic
+template defines only initialization body/frontmatter, appendix slot map,
+canonical five-field Projection Entry presentation shape, token lifecycle, and
+per-slot writer/timing cues. Projection Packet grammar, lifecycle authorization,
+repair and rerun-direction operations belong to the existing
+`command_playbook/operate-topic-state.md`; they SHALL NOT be duplicated in a
+template.
 
-**Section 3.1 Filling** - On first entry when the queue is empty:
+Every new canonical seed SHALL retain its accepted two-part form: registry-
+projected canonical frontmatter plus Agent-owned enrichment/body, followed by
+the research-round appendix. The appendix SHALL contain, in slot-map order,
+`## Wave0：本主题的新增来源证据`,
+`## Wave1：本主题的机制理解`,
+`## Wave1：本主题的趋势、难点与限制`,
+`## Wave2：本主题的当前跨主题判断`, and
+`## 本主题的待验证问题与后续验证路径`, with their respective one-time
+tokens. Each canonical heading SHALL be immediately followed by its permanent,
+read-only `回填卡（只读操作约束，不是 Projection Entry）`, then that slot's token
+or entries. The card SHALL state its writer, direct authority, `entry_id` plus
+five-field entry shape, backfill timing, a concise `operate-topic-state`
+materialization pointer and prohibitions; it SHALL not be a Projection Entry.
+The renderer's small executable slot map is the
+structural source; the shared template is its readable mirror. Static parity
+SHALL fail on a missing, extra, reordered or renamed canonical heading/token/
+owner/card descriptor, while ignoring prose bytes, YAML field order and
+presentation-only whitespace.
 
-- read `rb_plan.md` frontmatter `topic_registry`;
-- create one complete QueueItemSchema task card per Topic, including the accepted identity, title, `targets: { controller: "main-agent" }`, `producer_rule: seed_topic_materialize`, `priority_class: P3_current_gate_gap`, receipts, and done condition; `main-agent` remains the queue-schema wire value;
-- make the task action/done condition require the existing seed body plus one complete `enrich_seed` structured input, and SHALL NOT instruct the Agent to hand-author canonical YAML fields or duplicate registry/enrichment values in body prose;
-- enqueue each task through `operate-queue enqueue <bundle> --task <task.json>`; and
-- run `operate-queue check <bundle>` after filling to confirm the active window.
+`rb_plan.md#/topic_registry` remains Topic identity/intent authority;
+frontmatter remains the structured enrichment surface; submitted work-unit and
+finding facts remain projection authority. The template, renderer and initial
+seed phase SHALL not create a new evidence, identity, gate or receipt authority.
+Empty later-Wave slots remain legal for `seed-topics-ready`; no semantic quality
+judgment is introduced.
 
-**Section 3.2 Queue-driven execution loop:**
+#### Scenario: Seed phase loads the pure document template
 
-- run `operate-queue claim <bundle> --actor main-agent`; an item of `null` moves to Section 3.3;
-- resolve `task.payload.topic_slug` to exactly one current `topic_registry` UID plus `rb_profile.yaml` and the existing UID-bound seed;
-- edit only the Agent-owned Markdown body sections, preserving canonical frontmatter, the research appendix and any sanctioned rerun direction, except for an `enrich_seed` apply result that names one exact frontmatter syntax coordinate;
-- write one retained complete `enrich_seed` input containing only the selected `topic_uid` and the five allowed enrichment fields, then invoke `operate-topic-state apply`; malformed input fails at that checkpoint, while an unparseable frontmatter exception permits only the named syntax repair, never canonical-value authoring, followed immediately by the same writer;
-- run `operate-queue complete <bundle> --result <result.json>` through receipt validation, the shared authoring evaluator and promotion/repair;
-- read the queue projection and return to claim.
+- **WHEN** the Phase Agent enters `phase-seed-topics.md`
+- **THEN** its loaded requires chain SHALL include
+  `templates/seed-topic-template`
+- **AND** the template SHALL answer the instantiated document-shape question
+  without defining packet execution or repair semantics
 
-**Section 3.3 Finalize and gate:**
+#### Scenario: New seed has an aligned empty appendix
 
-- run `check-gate-seed-topics-ready.mjs` and follow the existing Sections 6/7 pass/fail behavior.
+- **WHEN** topic-state materializes a new canonical seed before later Waves
+  produce research facts
+- **THEN** the seed SHALL contain every canonical ordered slot and its accepted
+  token exactly once
+- **AND** seed-topics-ready SHALL not fail merely because a later Wave has not
+  projected an entry
 
-The Phase Agent SHALL receive one framework-owned shared seed-topic authoring contract through the phase's actual loaded `requires` chain. That shared Markdown surface SHALL be the single complete human/Agent reading entry for:
+#### Scenario: New seed renders fixed backfill cards
 
-- the canonical frontmatter envelope, the closed structured enrichment input and the non-duplicating search-relevant body skeleton;
-- the research-appendix boundary, canonical headings, Wave responsibility table and accepted one-time backfill tokens;
-- the appendix section/token skeleton and a pointer to the separate shared return-map authoring contract;
-- the body-edit -> `enrich_seed` apply -> queue-complete legal loop and direct-root repair ownership; and
-- an optional rerun-direction fragment used only by sanctioned rerun from recorded rationale.
+- **WHEN** topic-state materializes a new canonical seed
+- **THEN** every canonical Appendix Slot SHALL place its exact `回填卡` directly
+  below its heading and before its token
+- **AND** the card SHALL survive later writer materialization without becoming
+  an entry or a second source of authority
 
-Each `seed_topics/<slug>.md` SHALL retain the accepted two-part structure.
+#### Scenario: Template and renderer drift fail deterministically
 
-**Initialization area:**
+- **WHEN** a template edit changes a slot heading, token, owner or order without
+  the corresponding executable slot-map change, or vice versa
+- **THEN** static parity validation SHALL fail
+- **AND** runtime code SHALL not parse guidance Markdown to discover the change
 
-- YAML 1.2 frontmatter parsed by the existing YAML reader. JSON remains a valid YAML 1.2 subset, while multiline YAML is the canonical readable presentation. It SHALL include registry-projected canonical `topic_uid`, `id`, `slug`, `title`, `must_answer`, `scope_role`, and `depends_on_topic_uids`, followed by Agent-owned `hypothesis`, `in_scope`, `out_of_scope`, `search_guardrails` (`required_terms`, `forbidden_broadening`), and `evidence_route` (`preferred_sources`, `noise_to_avoid`). The Agent SHALL submit only the latter five fields through the strict `enrich_seed` input; the Engine SHALL copy the canonical fields from the registry and serialize the complete frontmatter once.
-- Body sections SHALL retain topic positioning, known/gap/tension framing, why-now trigger/window, final-deliverable importance, optional downstream position and the research-round appendix. New skeletons SHALL NOT contain or require a body copy of canonical `must_answer`, `in_scope`/`out_of_scope`, or `evidence_route`; downstream consumers SHALL read those structured values from registry/frontmatter rather than compare duplicate body prose.
+#### Scenario: Initialization remains a structured authoring loop
 
-**Research-round appendix, prepositioned but not filled by seed-topics:**
+- **WHEN** a claimed seed-topic materialization card has insufficient upstream
+  semantic detail
+- **THEN** the Agent SHALL retain an explicit nonempty gap in the existing
+  `enrich_seed` input and run the existing apply/queue-complete loop
+- **AND** it SHALL not invent semantic facts, duplicate registry values in body
+  prose, or use an appendix token as initialization authority
 
-- use the explicit `═══ 研究轮次追加区 ═══` boundary;
-- include the accepted responsibility mapping from Wave0 to new evidence, Wave1 to mechanisms/trends, Wave2 to current judgment, and each round to pending-question status;
-- retain the accepted History Summary, New Evidence, New Mechanism Understanding, New Trends And Difficulties, Current Judgment, and Pending Questions section family under the existing Chinese canonical headings;
-- retain exactly the accepted one-time token set in its owning sections; and
-- keep empty later-Wave sections legal for `seed-topics-ready`.
+#### Scenario: Legacy body remains readable
 
-If `topic_registry` or `rb_profile.yaml` lacks enough information for initialization enrichment, the Agent SHALL submit an explicit non-empty gap such as `hypothesis: "pending - HITL1 did not provide enough constraints"` and SHALL NOT invent information. A gap value SHALL satisfy structural authoring without becoming a semantic-quality verdict.
-
-`phase-seed-topics.md` and rerun add-topic guidance SHALL reference the loaded shared seed-topic contract at their materialization decision points and SHALL NOT carry independently maintained complete seed skeletons or raw-canonical-YAML instructions. Wave phases SHALL instead load the focused shared return-map authoring contract; they SHALL NOT load the unrelated initialization/direction skeleton merely to obtain appendix producer rules. The deterministic new-seed renderer's existing ordered appendix arrays/markers SHALL remain the sole runtime structural manifest; the shared Markdown is its Agent-facing mirror, not a third registry. The renderer SHALL emit the same ordered appendix headings and token set as that shared canonical skeleton. Executable parity tests SHALL fail on a missing, extra, reordered, or renamed canonical appendix heading/token while ignoring prose bytes, YAML mapping order, quoting style and presentation-only whitespace. A focused Markdown regression SHALL additionally fail if the normal phase/task/shared guidance again asks the Agent to hand-author a canonical key or author `must_answer`, scope or evidence route on both frontmatter and body surfaces.
-
-The shared authoring contract and renderer parity SHALL NOT create new identity, evidence, or gate authority. `rb_plan.md#/topic_registry` remains canonical Topic intent/identity, the seed frontmatter remains the structured enrichment surface, submitted work-unit/finding facts remain return-map projection authority, and `seed-topics-ready` retains its existing structure/quantity/identity boundary:
-
-| Field group | Validator | Method |
-|---|---|---|
-| UID/id/slug/title/must-answer/scope-role/dependencies and filename consistency | existing deterministic topic-state/evaluator/Gate owners | parsed-value canonical binding, non-empty field, and slug consistency |
-| `hypothesis`, `in_scope`, `out_of_scope`, `search_guardrails`, `evidence_route` | topic-state `enrich_seed` input | closed structural validation; explicit non-empty gaps remain legal |
-| semantic quality and Markdown body judgment | Agent judgment from accepted HITL1 semantics | no Engine generation/scoring and no duplicate-prose equality rule |
-
-Existing seeds MAY retain legacy `## must_answer`, scope or evidence-route body sections. The enrichment writer SHALL preserve the exact lexical body suffix after the closing frontmatter delimiter's terminating LF, including any leading blank line and those legacy bytes, but those sections SHALL NOT own canonical/structured values, satisfy a missing frontmatter field, or be compared by queue completion or Gate. No bulk migration SHALL be required.
+- **WHEN** a pre-existing seed contains compatible legacy body prose outside
+  canonical structured fields
+- **THEN** the initial enrichment path SHALL preserve it as body history
+- **AND** it SHALL not infer canonical identity, evidence authority or a
+  projection writer path from that prose
 
 #### Scenario: Phase Agent executes seed-topics via queue-driven loop
 

@@ -177,3 +177,33 @@ C5 or inferred from files.
 - **THEN** topic-state mutation SHALL remain unavailable without changing
   topic/status/trace state
 - **AND** `human-directed` SHALL NOT create permission or handoff authority
+
+#### Scenario: Post-final apply requires committed C5 reentry
+
+- **WHEN** topic-state apply is invoked after terminal Final without an
+  accepted C5 event plus route-bound rerun load witness
+- **THEN** it SHALL reject before workspace creation and identify the exact
+  post-final recovery boundary
+- **AND** it SHALL NOT treat user insistence, declared context or existing
+  legacy data as permission
+
+#### Scenario: Post-final apply remains unavailable
+
+> **@deprecated** - The pre-C5 wording is retained for archive compatibility.
+> Fresh topic apply remains unavailable from terminal Final alone; only a
+> committed C5 event plus route-bound rerun load opens the existing C3 window.
+
+- **WHEN** apply is invoked after terminal Final without an accepted topic-state
+  workspace and without the complete C5 rerun witness
+- **THEN** it SHALL reject before workspace creation and identify the exact C5
+  reentry boundary
+- **AND** it SHALL NOT treat user insistence, declared context or existing
+  legacy data as permission
+
+#### Scenario: Post-final reentry does not adopt topics by itself
+
+- **WHEN** C5 establishes the sanctioned rerun window for a bundle with
+  registry-external historical content
+- **THEN** topic identity SHALL remain unchanged until an explicit existing
+  `migrate_legacy` apply succeeds
+- **AND** no addendum file SHALL gain authority from reentry alone

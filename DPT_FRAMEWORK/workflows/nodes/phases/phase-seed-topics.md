@@ -11,8 +11,7 @@ requires:
   - shared/shared-profile
   - shared/shared-schemas
   - shared/shared-silent-execution
-  - shared/shared-seed-topic-authoring
-  - shared/shared-return-map-authoring
+  - templates/seed-topic-template
 suggested_context:
   - shared/shared-anti-cheating-rules
 ---
@@ -94,7 +93,7 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 
 **Seed Topic 文件结构：** 文件名必须是 canonical `topic.slug + .md`；gate 校验 `filename_stem == registry_slug == frontmatter_slug`。Engine 是 canonical frontmatter 的唯一 writer；Agent 正常只编辑 body 并提交完整 structured enrichment input。
 
-完整初始化 skeleton、appendix headings/tokens、Wave responsibility 与 optional rerun direction 均由已加载的 `shared-seed-topic-authoring` contract 定义。不要在本 phase 重写其模板。Seed Topics 只按该 contract materialize/enrich initialization area；research-round appendix 保持预埋，后续 Wave 仅替换其 owning token。完整 return-map entry、ref hierarchy 与 token lifecycle 由已加载的 `shared-return-map-authoring` contract 定义。
+已加载的 `templates/seed-topic-template` 定义完整初始化 skeleton、Appendix Slot、只读回填卡和 rendered entry shape。不要在本 phase 重写该模板。Projection Packet、repair map 与 rerun direction 是 `command_playbook/operate-topic-state.md` 的操作协议。Seed Topics 只按 template materialize/enrich initialization area；research-round appendix 保持预埋，后续 Wave 只能按 command playbook 通过 retained packet 和 `operate-topic-state apply` materialize 其 owned slot，绝不手改 token、heading 或 seed body。
 
 controls present 时，Seed 可将与单一 topic 相关的解释投影为 `search_guardrails` / `evidence_route`，但不得替代原 snapshot 或把它伪装为新 authority。若 `rb_plan.md` 和 `rb_profile.yaml` 中不足以填充初始化字段，记录 explicit `pending` gap，不要编造。gap 是有效输入，供 Wave0 收敛。
 

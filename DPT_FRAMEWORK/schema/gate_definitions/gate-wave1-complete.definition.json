@@ -1,6 +1,6 @@
 {
   "gate": "wave1-complete",
-  "description": "Verify Wave1 produced deepening artifacts per topic: evidence-summary.md, question-list.md, reference/{topic_slug}*.md rich MD reference files per topic, backfill token replacement, and trace evidence. Source-gate status-window and handoff witness are enforced by shared gate preflight.",
+  "description": "Verify Wave1 produced deepening artifacts per topic: evidence-summary.md, question-list.md, reference/{topic_slug}*.md rich MD reference files per topic, identity-bound Seed Topic projections through the shared readiness evaluator, and trace evidence. Source-gate status-window and handoff witness are enforced by shared gate preflight.",
   "rules": [
     {
       "id": "phase_queue_drained",
@@ -116,36 +116,6 @@
       "negate": false,
       "failure_message": "evidence-summary.md for {topic} must have a non-empty ## Key Findings section with at least 1 numbered finding.",
       "finding": { "source": "checker" }
-    },
-    {
-      "id": "no_stale_mechanisms_token",
-      "check": "pattern_match",
-      "target": "seed_topics/{topic}.md",
-      "pattern": "__BACKFILL_WAVE1_MECHANISMS__",
-      "negate": true,
-      "failure_message": "Stale backfill token __BACKFILL_WAVE1_MECHANISMS__ found in seed_topics/{topic}.md. Replace the token with actual mechanism findings.",
-      "finding": { "source": "definition", "blocking_basis": "required_structure" },
-      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
-    },
-    {
-      "id": "no_stale_trends_token",
-      "check": "pattern_match",
-      "target": "seed_topics/{topic}.md",
-      "pattern": "__BACKFILL_WAVE1_TRENDS__",
-      "negate": true,
-      "failure_message": "Stale backfill token __BACKFILL_WAVE1_TRENDS__ found in seed_topics/{topic}.md. Replace the token with actual trends.",
-      "finding": { "source": "definition", "blocking_basis": "required_structure" },
-      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
-    },
-    {
-      "id": "no_stale_pending_questions_token",
-      "check": "pattern_match",
-      "target": "seed_topics/{topic}.md",
-      "pattern": "__BACKFILL_PENDING_QUESTIONS__",
-      "negate": true,
-      "failure_message": "Stale backfill token __BACKFILL_PENDING_QUESTIONS__ found in seed_topics/{topic}.md. Replace with updated question status tags.",
-      "finding": { "source": "definition", "blocking_basis": "required_structure" },
-      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "trace_event_wave1_completion",

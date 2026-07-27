@@ -1,214 +1,187 @@
-# Research Return Map
+> req: RRM-002, RRM-003, RRM-007
 
-> req: RRM-001, RRM-002, RRM-003, RRM-004, RRM-005, RRM-006, RRM-007
-
-## Purpose
-
-Define the Agent-readable evidence-to-claim return map that wave returns and seed-topic backfill surfaces SHALL include. The return map is a navigation and interpretation layer over existing authority surfaces, helping future Agents understand what evidence says, which must-answer/hypothesis/pending question/finding it affects, where to read supporting material, what status changed, and what next hop is recommended.
-## Requirements
-### Requirement: Research wave returns SHALL include Agent-readable evidence-to-claim maps
-
-Wave0, Wave1, and Wave2 return/backfill surfaces SHALL include an Agent-readable map from evidence to meaning. The map SHALL help a future Agent answer: what this evidence says, which must-answer, hypothesis, pending question, or finding it affects, where to read the supporting material, what status changed, and what next hop is recommended.
-
-The return map is a navigation and interpretation layer over existing authority surfaces. It SHALL NOT replace submitted work-unit ledger rows, `reference/*.md`, `artifacts/waveN/...`, `_cache/...`, or `finding-index.yaml`, and it SHALL NOT make filesystem-only or undeclared evidence count for gate coverage.
-
-Return-map shape checks SHALL be implemented as Agent-facing guidance, task/backfill validation, inspect output, or advice. Missing or malformed return-map fields SHALL NOT by themselves establish or revoke delegated gate coverage, phase handoff evidence, readiness evidence, final delivery evidence, or submitted work-unit authority.
-
-Each important return-map entry SHALL include at least:
-
-- a short evidence meaning or claim summary;
-- a relationship to the topic question, hypothesis, pending question, or finding (`supports`, `refutes`, `partial`, `opens`, `defers`, or `context`);
-- bundle-relative refs to available evidence surfaces such as `reference/*.md`, `artifacts/wave0/<topic>/source.yaml`, `artifacts/wave1/<topic>/evidence-summary.md`, `artifacts/wave1/<topic>/question-list.md`, `artifacts/wave2/cross-topic-ledger.md`, `artifacts/wave2/finding-index.yaml`, `_cache/...`, and `_work_units/...`;
-- a status label such as supported, refuted, partial, open, emergent, or deferred;
-- a next-hop reading or repair pointer for future Agent re-entry.
-
-#### Scenario: Wave0 origin backfill explains hypothesis impact
-
-- **WHEN** Wave0 finds that AIDLC originated from AWS/Raja SP rather than bottom-up community emergence
-- **THEN** the topic return/backfill SHALL say that the original hypothesis was refuted
-- **AND** it SHALL link to the relevant `source.yaml`, reference file, cache leaf, and work-unit/ledger refs when available
-- **AND** it SHALL tell a future Agent whether to continue with provenance confirmation, ecosystem spread, or branding-risk analysis
-
-#### Scenario: Return map does not create evidence authority
-
-- **WHEN** a return-map entry links to a filesystem-only reference that lacks submitted work-unit ledger coverage
-- **THEN** the map MAY describe it as cleanup or forensic context
-- **AND** it SHALL NOT make that reference count as delegated gate coverage
-
-#### Scenario: Return-map validation is diagnostic only
-
-- **WHEN** an inspect/advice command reports missing `evidence_meaning`, `relationship`, `refs`, `status`, or `next_hop`
-- **THEN** the diagnostic SHALL direct the Agent to repair the map or backfill shape
-- **AND** it SHALL NOT treat the map shape as a substitute for submitted work-unit rows, gate attempts, phase handoff witnesses, or final delivery evidence
+## MODIFIED Requirements
 
 ### Requirement: Seed-topic backfill SHALL preserve traceable meaning, not only evidence lists or conclusions
 
-Seed-topic backfill for Wave0, Wave1, and Wave2 SHALL replace backfill tokens with concise map entries that combine evidence meaning with traceable refs. Backfill SHALL NOT be only a naked list of URLs, only a prose conclusion, or only a count summary.
+Seed-topic backfill for Wave0, Wave1 and Wave2 SHALL be a readable projection
+of existing authority, not a direct Markdown edit. The Agent SHALL form an
+identity-bound Projection Packet and submit it through the existing sanctioned
+topic-state writer. The writer SHALL map a stable `slot_id` to its canonical
+heading/card section, consume the applicable one-time token on first
+materialization, and upsert subsequent entries by their stable identity. The
+permanent `回填卡` immediately below a canonical heading is immutable layout
+context, not a Projection Entry and not a token replacement target.
 
-Wave0 backfill SHALL connect sources/references to must-answers and initial hypotheses. Wave1 backfill SHALL connect mechanism/trend/open-question updates to evidence-summary, question-list, reference, cache, and work-unit refs. Wave2 backfill SHALL preserve finding IDs and link to `cross-topic-ledger.md` and `finding-index.yaml` entries used for projection.
+Every projected entry SHALL combine evidence meaning with traceable refs and
+the accepted five fields: `evidence_meaning`, `relationship`, `refs`, `status`
+and `next_hop`. Wave0/1 entries bind one submitted work identity in their
+owned slots. New Wave2 entries bind an exact current-round W2F identity whose
+accepted `affected_topics` resolution includes the seed's current UID; Wave2
+may append/upsert only its own W2F entries in pending questions and SHALL not
+overwrite Wave1 questions. An explicit `defers/deferred` entry with a limitation is the only
+accepted no-consumer-reference disposition. A token, naked URL list, generic
+`WaveN submitted` prose, count summary, or anonymous `none` text is not a
+projection entry.
+
+Every entry newly materialized from a Projection Packet SHALL also render the
+slot descriptor's stable `entry_id`: Wave0/1 use `<work_id>/<positive ordinal>`
+and Wave2 uses its exact source `W2F-*` finding id. Historical entries remain
+read-compatible through their accepted exact-ref or existing metadata identity
+forms and SHALL NOT be rewritten merely to add an `entry_id`.
+
+For a new Wave2 packet entry, the exact `W2F-*` `entry_id` SHALL equal its
+validated current-round source identity, which SHALL resolve to the packet
+topic, and be its primary deterministic finding selector. `refs` remains the
+navigation field and MAY be `none` in an accepted deferred disposition; the
+writer SHALL NOT require the W2F ID to be copied into it. Historical entries
+without a packet-created Wave2 `entry_id` retain the accepted
+exact-W2F-token-in-`refs` identity path. That read path SHALL NOT authorize a
+new packet with a legacy-round or wrong-topic finding. A W2F mention in ordinary
+prose, `next_hop`, or invalid/dangling metadata SHALL never establish selection.
+
+The projection SHALL NOT replace submitted work-unit rows, source claims,
+reference backing, cache trails, finding index or ledger as evidence authority.
+It SHALL not create a reference, receipt or submitted coverage. The Agent owns
+meaning, relationship, status and next-hop judgment; the Engine owns only
+binding, slot placement, serialization and deterministic structure.
+
+#### Scenario: Wave0 projection enters its owned slot
+
+- **WHEN** an eligible current Wave0 submitted work identity has an
+  Agent-authored packet entry
+- **THEN** the writer SHALL materialize one parseable entry in
+  `## Wave0：本主题的新增来源证据`, after its retained `回填卡`
+- **AND** it SHALL not use the entry to establish submitted evidence coverage
+
+#### Scenario: Wave1 packet atomically projects its three owned concerns
+
+- **WHEN** a valid Wave1 packet contains mechanisms, trends and pending-
+  question entries for one current topic
+- **THEN** the writer SHALL commit them together or reject all of them
+- **AND** no partial token consumption or generic completion prose SHALL remain
 
 #### Scenario: Wave1 backfill explains what was learned
 
-- **WHEN** a Wave1 deepening task updates `__BACKFILL_WAVE1_MECHANISMS__`
-- **THEN** the replacement content SHALL include one or more mechanism/trend statements
-- **AND** each statement SHALL include refs to the evidence-summary or question-list and supporting reference/cache/work-unit surfaces where available
+- **WHEN** a Wave1 deepening task materializes an entry in its owned mechanisms,
+  trends, or pending-question slot
+- **THEN** that entry SHALL include one or more mechanism/trend statements
+- **AND** each statement SHALL include navigation to the evidence-summary or
+  question-list and supporting reference/cache/work-unit surfaces where available
+
+#### Scenario: Wave2 preserves finding lineage and Wave1 questions
+
+- **WHEN** a Wave2 packet projects an exact current-round W2F finding that
+  resolves to its target topic into current judgment and/or pending questions
+- **THEN** each resulting entry SHALL preserve the W2F identity and relevant
+  finding-index/ledger/source navigation
+- **AND** it SHALL not remove or overwrite a Wave1-owned pending-question entry
 
 #### Scenario: Wave2 backfill preserves finding lineage
 
-- **WHEN** a Wave2 backfill task updates `__BACKFILL_WAVE2_JUDGMENT__`
-- **THEN** the replacement content SHALL cite relevant finding IDs
-- **AND** it SHALL link those findings back to `finding-index.yaml`, `cross-topic-ledger.md`, and source artifacts used by the finding
+- **WHEN** a Wave2 packet materializes an entry in its owned current-judgment or
+  pending-question slot
+- **THEN** the entry SHALL cite its relevant exact finding ID
+- **AND** it SHALL link that finding to `finding-index.yaml`,
+  `cross-topic-ledger.md`, and the source artifacts used by the finding
 
-### Requirement: Shared guidance SHALL teach the same return-map shape across waves
+#### Scenario: Deferred disposition is explicit
 
-One focused `shared-return-map-authoring` Markdown contract SHALL own the canonical Agent-facing return-map entry example, Wave-to-section ownership, and one-time token lifecycle. It SHALL state that evidence collection, extraction, synthesis, and seed-topic backfill all carry short meaning statements plus refs so later Agents can navigate the map without rereading the whole bundle blindly. It SHALL expose the same minimum entry-local fields for Wave0, Wave1, and Wave2: `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`, plus optional entry-local identity/metadata defined by the accepted return-map contract. It SHALL state that refs are bundle-relative, concrete consumer navigation comes first when materialized, and internal artifact/cache/work-unit refs remain secondary provenance.
+- **WHEN** an admitted authority identity has no materializable consumer
+  reference
+- **THEN** the Agent SHALL submit an identity-bound deferred entry with an
+  explicit limitation in `next_hop`
+- **AND** the writer SHALL not fabricate `reference/*.md`, source claims or a
+  successful evidence-bearing entry
 
-Wave0, Wave1, Wave2, and seed-topic materialization phase nodes SHALL load that shared contract through their actual `requires` chain at the backfill/content-production decision point. The applicable role nodes (`subagent-dpt-source-intake`, `subagent-dpt-evidence-extractor`, and `subagent-dpt-topic-scout`) SHALL retain only a static reference or concise cue; generated work-unit task/spawn guidance SHALL remain self-contained. None of these consumers SHALL reproduce a second complete generic entry template or redefine the five common fields, section ownership, evidence-bearing predicate, or ref hierarchy.
+## ADDED Requirements
 
-Generated work-unit `task.md` and spawn prompts SHALL remain self-contained and MAY repeat the shortest five-field cue rather than runtime-parse a framework Markdown template. Their field set and authority disclaimer SHALL be statically parity-checked against the shared contract. They SHALL NOT reproduce the complete section/token/example contract or instruct a delegated actor to discover a phase-only context indirectly.
+### Requirement: Template and command guidance SHALL preserve separate Seed Topic questions
 
-The shared authoring surface SHALL distinguish one-time token lifecycle from terminal content: a token is expected before its owning first materialization and absent after replacement. Token absence in a completed section SHALL NOT be described as evidence that backfill was skipped. The change SHALL retain existing section headings, token families and `RRM-007` inspect authority; it SHALL NOT rename sections, re-inject consumed tokens, or create another return-map validator.
+`DPT_FRAMEWORK/workflows/nodes/templates/seed-topic-template.md` SHALL be the
+sole canonical, instantiable Seed Topic Document template. `templates/` SHALL
+be a discoverable namespace for current and future document templates, rather
+than a shared-guidance catch-all. This template SHALL own initialization
+skeleton, appendix slot map, exact canonical headings, per-heading `回填卡`,
+Wave-to-section ownership, one-time token lifecycle, canonical `entry_id` plus
+five-field entry example, and concrete-first ref presentation hierarchy. It
+answers only what an instantiated Seed Topic looks like, which parts are fixed
+or later backfilled, and who supplies a later entry, when, and in what document
+format.
 
-When return-map inspect reports an invalid entry or missing current-round projection, guidance SHALL direct the Agent to the exact named seed section/entry and rerun the same Wave inspect. It SHALL NOT ask the Agent to reconstruct validator logic locally or surface an ordinary mechanical repair to the user.
+Each card SHALL visibly state its writer, direct authority, backfill timing,
+entry identity/field shape, concise `operate-topic-state` materialization
+pointer, and prohibited direct-edit/generic-prose behavior, and SHALL use the
+exact label `回填卡（只读操作约束，不是 Projection Entry）`. It SHALL state that
+return maps are Agent-readable navigation projections, not evidence authority.
+The cards and template SHALL NOT define Projection Packet fields, lifecycle
+authorization, apply/recover mechanics, repair map, or rerun-direction input.
+Those execution questions SHALL have one authoritative Agent-readable guidance
+home in `command_playbook/operate-topic-state.md`, alongside the existing
+command that consumes the packet.
 
-#### Scenario: Wave guidance resolves one canonical entry shape
+For new canonical rendering, these exact canonical headings replace the prior
+fresh-render no-rename constraint. The five former heading bases remain declared
+legacy aliases solely for bounded read compatibility and a legal targeted packet
+upgrade; they are not a second template or Agent-selectable heading vocabulary.
 
-- **WHEN** a Phase Agent reaches Wave0, Wave1, or Wave2 seed backfill
-- **THEN** the loaded shared return-map contract SHALL expose the five common entry fields and wave-to-section mapping
-- **AND** phase-local guidance SHALL add only its wave-specific authority and execution details
+`phase-seed-topics`, `phase-wave0`, `phase-wave1` and `phase-wave2` SHALL load
+this template through their actual `requires` chain at the relevant document
+decision point. `phase-rerun` SHALL use `operate-topic-state` guidance for its
+rerun-direction operation and SHALL not load a document template merely to find
+an operation schema. Phase bodies SHALL add only their local authority, command
+sequence and checkpoint. Role guidance and generated work-unit task/spawn text
+SHALL remain self-contained with at most a concise five-field cue and authority
+disclaimer; they SHALL not reproduce the complete slot/table/token/example
+contract or packet protocol.
 
-#### Scenario: Generated work-unit cue remains self-contained and aligned
+The old focused authoring files SHALL not remain a second complete template.
+They MAY be short compatibility pointers during migration but SHALL not define
+their own entry grammar, slot ownership, token lifecycle or full skeleton. A
+static parity/duplicate-template check SHALL compare named slot and card
+descriptor facts between the template and executable slot map, reject a second
+complete Seed Topic template, and reject duplicated packet grammar outside the
+command playbook. No runtime code SHALL parse the Markdown template to derive
+behavior.
 
-- **WHEN** Engine generates task/spawn guidance for a work unit that writes research output
-- **THEN** the guidance MAY include the concise five-field return-map cue without loading the complete shared Markdown
-- **AND** static parity SHALL fail if its canonical field set or authority disclaimer drifts from the shared contract
+When a deterministic result names a legal packet/entry/slot repair, guidance
+SHALL expose the direct fact, named owner surface and same Wave inspect to
+rerun. When no legal path exists, it SHALL expose the owner or missing-contract
+boundary; it SHALL not tell users to hand-edit a seed or ask Agents to rebuild
+validator logic.
 
-#### Scenario: Duplicate complete templates are rejected
+#### Scenario: Template answers the document-level question without owning mutation
 
-- **WHEN** workflow package/static validation inspects seed and Wave phase guidance
-- **THEN** it SHALL find one complete generic return-map template in the shared authoring contract
-- **AND** phase files SHALL not retain independently maintained complete copies of that generic template
+- **WHEN** a human or Phase Agent needs to understand a current Seed Topic
+  Document's skeleton, slots, backfill timing and entry format
+- **THEN** one loaded `templates/seed-topic-template` SHALL provide those facts
+- **AND** packet schema, authorization and repair SHALL remain in the existing
+  `operate-topic-state` command guidance
 
-#### Scenario: Consumed token absence is normal terminal state
+#### Scenario: A visible card constrains a backfill without becoming content
 
-- **WHEN** a Wave has replaced its accepted one-time token with valid return-map entries
-- **THEN** shared guidance SHALL describe the token as consumed
-- **AND** later Agents SHALL NOT be instructed to reinsert it or infer missing work solely from its absence
+- **WHEN** a canonical seed renders one of its Appendix Slots
+- **THEN** its canonical heading SHALL be immediately followed by that slot's
+  permanent `回填卡`, then its token or entries
+- **AND** the renderer, writer and parser SHALL preserve the card and SHALL not
+  classify it as a Projection Entry
 
-#### Scenario: Existing projection verdict remains single-owner
+#### Scenario: Concise actor cue remains permitted
 
-- **WHEN** a seed backfill contains unsupported prose, a malformed entry, or misses current-round projection
-- **THEN** the existing Wave return-map inspect SHALL remain the deterministic verdict owner
-- **AND** shared authoring guidance SHALL direct repair to the named seed coordinate and rerun that same inspect
+- **WHEN** a generated work-unit task or role guidance needs to mention a
+  return-map result
+- **THEN** it MAY include the five fields and authority disclaimer needed for
+  its self-contained actor contract
+- **AND** it SHALL not become a second complete template or runtime authority
 
-### Requirement: Evidence-bearing return-map refs SHALL include concrete existing reference files
+#### Scenario: Command guidance preserves the legal repair boundary
 
-Evidence-bearing seed-topic return-map entries SHALL include at least one concrete, bundle-relative, existing `reference/*.md` file ref unless the entry explicitly records that no consumer-facing reference is materializable and gives a limitation / deferral reason.
+- **WHEN** inspect reports an invalid packet entry or missing projection
+- **THEN** `operate-topic-state` guidance SHALL direct the Agent to the named
+  slot/authority owner and the same inspect
+- **AND** it SHALL not represent a user decision as writer permission
 
-`reference/` is the primary consumer navigation layer. `artifacts/`, `_cache/`, and `_work_units/` MAY appear as secondary provenance refs, but they SHALL NOT be the only refs for an evidence-bearing return-map entry that claims support, refutation, partial support, emergent evidence, or context from existing evidence.
-
-Glob refs and count summaries SHALL be invalid as consumer navigation refs. This includes patterns such as `reference/topic-*.md`, `reference/topic-*.md (8 files)`, and `reference/topic-*.md（8 个）`. The map must enumerate concrete files.
-
-This requirement does not make return maps evidence authority. Submitted work-unit ledgers, reference backing checks, cache trails, and accepted gate surfaces remain the authority for whether evidence counts. The return map only tells a future Agent or reader where to navigate.
-
-Implementation SHALL use a deterministic evidence-bearing predicate instead of broad prose interpretation. At minimum, entries with relationship/status values that claim support, refutation, partial support, emergent evidence, or contextual evidence SHALL be treated as evidence-bearing. Entries may be treated as limitation/non-materialized only when their return-map fields explicitly mark deferral/open/no materializable evidence and do not claim existing evidence support through refs or status.
-
-Concrete reference validation for evidence-bearing seed-topic return-map entries SHALL be blocking for `inspect-wave0-output`, `inspect-wave1-output`, `inspect-wave2-output`, and any active gate/check that declares return-map navigation readiness. It SHALL NOT be described as diagnostic-only when the command includes the finding in `check.passed: false`.
-
-#### Scenario: concrete existing reference ref passes
-
-- **WHEN** an evidence-bearing return-map entry contains `refs: reference/01_topic-source.md`
-- **AND** `reference/01_topic-source.md` exists under the active bundle root
-- **THEN** return-map concrete reference validation SHALL pass for that entry
-
-#### Scenario: internal-only refs fail
-
-- **WHEN** an evidence-bearing return-map entry contains refs only to `artifacts/wave1/01_topic/evidence-summary.md`, `_cache/wave1/...`, or `_work_units/wave1/...`
-- **THEN** return-map concrete reference validation SHALL fail
-- **AND** advice SHALL ask the Agent to add concrete `reference/*.md` navigation or record an explicit limitation
-- **AND** wave inspect output SHALL classify the finding as blocking when it contributes to command failure
-
-#### Scenario: globbed reference ref fails
-
-- **WHEN** a return-map entry contains `reference/01_topic-*.md`
-- **THEN** validation SHALL fail
-- **AND** diagnostics SHALL require enumerated concrete reference files
-
-#### Scenario: count-summary reference ref fails
-
-- **WHEN** a return-map entry contains `reference/01_topic-*.md (8 files)` or `reference/01_topic-*.md（8 个）`
-- **THEN** validation SHALL fail
-- **AND** diagnostics SHALL identify the glob/count summary as non-navigable
-
-#### Scenario: missing concrete reference ref fails
-
-- **WHEN** a return-map entry contains `reference/01_topic-source.md`
-- **AND** that file does not exist under the active bundle root
-- **THEN** validation SHALL fail
-- **AND** diagnostics SHALL name the missing reference file
-
-#### Scenario: explicit limitation may omit concrete reference
-
-- **WHEN** a return-map entry records an explicit limitation, deferral, no materializable source, or non-consumer-facing status
-- **THEN** the entry MAY omit concrete `reference/*.md`
-- **AND** it SHALL still include refs to the relevant artifacts or process surfaces when available
-
-#### Scenario: deterministic evidence-bearing predicate does not rely on prose judgment
-
-- **WHEN** a return-map entry uses `relationship: supports`, `relationship: refutes`, `relationship: partial`, `relationship: context`, `status: supported`, `status: refuted`, `status: partial`, or `status: emergent`
-- **THEN** concrete reference validation SHALL treat the entry as evidence-bearing
-- **AND** the validator SHALL NOT require semantic interpretation of the surrounding prose to decide whether the entry needs concrete `reference/*.md` refs
-
-### Requirement: Return-map parsing SHALL tolerate balanced field presentation wrappers
-
-Return-map parsing SHALL map a balanced asterisk bold wrapper around an existing canonical field label, such as `**evidence_meaning**:`, to the same field as `evidence_meaning:`. Presentation normalization SHALL occur before existing entry, required-field, enum, reference, and concrete-navigation validation. Underscore emphasis, inline-code wrappers, or other Markdown presentation SHALL remain outside this requirement.
-
-The accepted canonical fields SHALL remain `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`. Presentation tolerance SHALL NOT accept misspelled fields, missing colons, invalid enum values, fabricated refs, or arbitrary Markdown structures. The implementation SHALL use a narrow line-level normalization and SHALL NOT add a Markdown parser dependency.
-
-#### Scenario: Bold-wrapped canonical fields are accepted
-
-- **WHEN** a return-map entry uses balanced bold wrappers around all five canonical field labels
-- **THEN** the parser SHALL extract the same canonical fields and values as the unwrapped form
-- **AND** downstream enum and reference validation SHALL still run
-
-#### Scenario: Misspelled wrapped field remains invalid
-
-- **WHEN** a return-map entry contains `**evidence_meanng**:`
-- **THEN** presentation normalization SHALL not map it to `evidence_meaning`
-- **AND** required-field validation SHALL report the missing canonical field
-
-#### Scenario: Presentation tolerance does not weaken refs
-
-- **WHEN** a bold-wrapped return-map entry has no concrete reference for an evidence-bearing claim
-- **THEN** existing concrete-reference navigation validation SHALL still fail according to its accepted classification
-
-### Requirement: Return-map inspection SHALL filter backfill tokens by target wave
-
-`hasBackfillToken()` SHALL accept a `wave` parameter and match only tokens belonging to that wave:
-
-| Wave | Tokens checked |
-|---|---|
-| Wave0 | `__BACKFILL_WAVE0_EVIDENCE__` |
-| Wave1 | `__BACKFILL_WAVE1_MECHANISMS__`, `__BACKFILL_WAVE1_TRENDS__`, `__BACKFILL_PENDING_QUESTIONS__` |
-| Wave2 | `__BACKFILL_WAVE2_JUDGMENT__` |
-
-When `hasBackfillToken()` returns true for the target wave, return-map validation for that wave SHALL be skipped. Tokens belonging to other waves SHALL NOT cause a skip.
-
-Call sites in `inspectSeedTopicReturnMaps()` SHALL pass the current target wave. The `__BACKFILL_PENDING_QUESTIONS__` token is assigned to Wave1 (Wave1 is its primary consumer; Wave2 appends W2F-xxx entries when no token is present).
-
-#### Scenario: Wave0 inspect not short-circuited by Wave1 token
-
-- **WHEN** a seed topic file has `__BACKFILL_WAVE1_MECHANISMS__` present
-- **AND** Wave0 inspect runs with `wave: 'wave0'`
-- **THEN** `hasBackfillToken(content, 'wave0')` SHALL return false
-- **AND** Wave0 return-map validation SHALL proceed
-
-#### Scenario: Wave2 inspect not short-circuited by Wave1 shared token
-
-- **WHEN** a seed topic file has `__BACKFILL_PENDING_QUESTIONS__` present (Wave1's token, not yet consumed)
-- **AND** Wave2 inspect runs with `wave: 'wave2'`
-- **THEN** `hasBackfillToken(content, 'wave2')` SHALL return false (token belongs to Wave1)
-- **AND** Wave2 return-map validation SHALL proceed
+## MODIFIED Requirements
 
 ### Requirement: Return-map inspection SHALL verify per-row current-round authority references
 
@@ -344,6 +317,7 @@ reloaded independently by the second evaluator.
 - **THEN** Wave1 inspect SHALL fail with a blocking finding scoped to the Wave1 family
 - **AND** the complete Wave0 entry SHALL NOT satisfy any Wave1 field or reference check
 
+
 #### Scenario: Wave1 family uses union without forcing duplicate entries
 
 - **WHEN** a complete current-round Wave1 entry is present in `## 本轮新增机制理解`
@@ -352,12 +326,14 @@ reloaded independently by the second evaluator.
 - **THEN** Wave1 entry shape and row coverage SHALL pass
 - **AND** inspect SHALL NOT require the complete entry to be copied into the two empty sibling sections
 
+
 #### Scenario: Incomplete sibling entry cannot borrow fields
 
 - **WHEN** one Wave1 section has a complete valid entry
 - **AND** another Wave1 section contains an entry missing `refs` and `next_hop`
 - **THEN** the incomplete entry SHALL retain its blocking shape finding
 - **AND** fields from the complete sibling entry SHALL NOT complete it
+
 
 #### Scenario: Sibling Wave1 lineage cannot satisfy an entry
 
@@ -366,12 +342,14 @@ reloaded independently by the second evaluator.
 - **THEN** the second entry SHALL retain its local blocking finding
 - **AND** the first entry SHALL NOT satisfy the second entry's lineage or navigation
 
+
 #### Scenario: Entry identity metadata stays inside one entry
 
 - **WHEN** `- entry_id: wu-w1-b000-deep-i0001/1` is followed by that list item's indented canonical fields, or the same `entry_id` occurs among the continuation fields after `- evidence_meaning:`
 - **THEN** it SHALL bind as that entry's optional metadata without becoming a sixth required field
 - **AND** a dangling or duplicate entry_id, peer list item, intervening prose block, next `evidence_meaning`, or next H2 SHALL NOT bind across the boundary
 - **AND** a deeper-indented refs bullet SHALL remain in the same entry
+
 
 #### Scenario: Heading suffix preserves canonical boundary
 
@@ -380,11 +358,13 @@ reloaded independently by the second evaluator.
 - **THEN** the extractor SHALL bind it to the canonical `## 当前判断` section
 - **AND** the suffix SHALL NOT create a missing-section finding
 
+
 #### Scenario: Repeated canonical heading occurrences stay in one family
 
 - **WHEN** a historical seed contains two `## 本轮新增趋势与难点` occurrences
 - **THEN** Wave1 inspect SHALL parse each occurrence only to its next H2 and include both in the Wave1 family union
 - **AND** `RRM-007` SHALL NOT create a duplicate-heading blocker or allow an invalid entry in one occurrence to borrow fields from the other
+
 
 #### Scenario: Shared pending section preserves logical wave ownership
 
@@ -394,6 +374,7 @@ reloaded independently by the second evaluator.
 - **AND** Wave2 shape/navigation/finding coverage SHALL evaluate only the W2F-015 entry
 - **AND** neither entry SHALL satisfy the other wave's identity coverage
 
+
 #### Scenario: Wave1 pending token does not skip Wave2 finding coverage
 
 - **WHEN** `## 待验证问题` still contains `__BACKFILL_PENDING_QUESTIONS__`
@@ -402,11 +383,13 @@ reloaded independently by the second evaluator.
 - **THEN** Wave2 inspect SHALL NOT skip because the token is Wave1-owned
 - **AND** it SHALL emit the blocking per-topic W2F-015 omission
 
+
 #### Scenario: All eligible rows referenced across family passes
 
 - **WHEN** a topic has two eligible Wave1 rows from round 2
 - **AND** one row is bound in the mechanism section and the other in the trend section
 - **THEN** family-union authority coverage SHALL pass
+
 
 #### Scenario: Bare exact work_id in refs satisfies coverage
 
@@ -414,6 +397,7 @@ reloaded independently by the second evaluator.
 - **AND** the eligible row has that exact work_id
 - **THEN** row coverage SHALL pass without requiring an `_work_units/` path or `entry_id`
 - **AND** `wu-w1-b000-deep-i00010` SHALL NOT satisfy `wu-w1-b000-deep-i0001`
+
 
 #### Scenario: Anonymous disposition cannot cover a row
 
@@ -423,11 +407,13 @@ reloaded independently by the second evaluator.
 - **THEN** the disposition SHALL NOT satisfy `wv1_xyz`
 - **AND** Wave1 inspect SHALL emit a blocking omission naming `wv1_xyz`
 
+
 #### Scenario: Identity-bound no-projection disposition passes
 
 - **WHEN** a topic has an eligible Wave1 row `wv1_xyz`
 - **AND** a Wave1 entry has `entry_id: wv1_xyz/1`, `relationship: defers`, `status: deferred`, a limitation reason, and `refs: none`
 - **THEN** the disposition SHALL satisfy coverage for `wv1_xyz`
+
 
 #### Scenario: Invalid authority is not an empty-success result
 
@@ -437,12 +423,14 @@ reloaded independently by the second evaluator.
 - **AND** dependent missing-row symptoms SHALL be masked
 - **AND** repair classification SHALL preserve the submitted-authority owner rather than point to the seed file
 
+
 #### Scenario: Normalized reader preserves legacy API and paired round
 
 - **WHEN** a valid submitted declaration row is paired with an index record carrying `rerun_count: 2`
 - **THEN** the normalized reader SHALL expose that ledger/index pair from one index load
 - **AND** the legacy declaration reader SHALL return the same ledger row bytes/shape as before
 - **AND** eligible projection SHALL obtain round 2 from the paired index record without rereading the index
+
 
 #### Scenario: No submitted declarations form a valid empty projection set
 
@@ -452,12 +440,14 @@ reloaded independently by the second evaluator.
 - **AND** this subcheck SHALL NOT invent a missing-index projection root
 - **AND** independent work-unit or Wave contract evaluators SHALL still fail on their own direct requirements, including a submitted index record missing its declaration row
 
+
 #### Scenario: No eligible rows skips only the authority subcheck
 
 - **WHEN** a topic has submitted Wave1 rows only from round 1
 - **AND** profile `rerun_count` is 2
 - **THEN** no current-round eligible rows exist
 - **AND** per-row coverage SHALL pass without suppressing independent structural findings
+
 
 #### Scenario: Wave2 finding is isolated to every affected topic
 
@@ -466,17 +456,20 @@ reloaded independently by the second evaluator.
 - **THEN** topic A projection SHALL satisfy W2F-015
 - **AND** Wave2 inspect SHALL emit one blocking omission for topic B
 
+
 #### Scenario: Unaffected topic does not need the finding
 
 - **WHEN** current finding W2F-015 affects only topic A
 - **AND** topic B does not reference W2F-015
 - **THEN** no W2F-015 projection finding SHALL be produced for topic B
 
+
 #### Scenario: Unknown affected topic masks projection symptom
 
 - **WHEN** W2F-015 contains an `affected_topics` token that is unknown or ambiguous in canonical topic layout
 - **THEN** the inspect-only affected-topic projection prerequisite SHALL be reported at W2F-015's `affected_topics` field
 - **AND** inspect SHALL NOT guess a seed or emit a dependent missing-W2F projection repair
+
 
 #### Scenario: Future finding round is an invalid prerequisite
 
@@ -486,11 +479,13 @@ reloaded independently by the second evaluator.
 - **AND** it SHALL NOT classify W2F-015 as current or legacy
 - **AND** it SHALL mask dependent per-topic projection omissions for W2F-015
 
+
 #### Scenario: Malformed finding round is not legacy
 
 - **WHEN** W2F-015 has `created_in_rerun_count: "2"` or a negative/fractional value
 - **THEN** inspect SHALL report the inspect-only round-binding prerequisite at that field
 - **AND** it SHALL NOT silently treat W2F-015 as legacy
+
 
 #### Scenario: Legacy affected-topic omission remains advisory
 
@@ -500,11 +495,13 @@ reloaded independently by the second evaluator.
 - **AND** the finding SHALL have `repair_kind: agent_action` and `blocking_basis: advisory`
 - **AND** the advisory SHALL NOT fail the Wave2 inspect
 
+
 #### Scenario: Prerequisite failure masks dependent projection symptoms
 
 - **WHEN** the required target family or finding-index parent cannot be parsed
 - **THEN** inspect SHALL report the earliest direct prerequisite root
 - **AND** it SHALL NOT emit dependent per-row/per-finding missing-reference symptoms
+
 
 #### Scenario: Invalid identity-bearing entry masks its dependent omission
 
@@ -512,6 +509,7 @@ reloaded independently by the second evaluator.
 - **THEN** Wave1 inspect SHALL emit the entry-local missing-field root
 - **AND** it SHALL NOT also emit a missing-row projection finding for `wv1_xyz` in that invocation
 - **AND** a prose-only `wv1_other` mention or anonymous `refs: none` SHALL NOT receive that masking treatment
+
 
 #### Scenario: Missing seed uses narrow canonical binding prerequisite
 
@@ -521,12 +519,14 @@ reloaded independently by the second evaluator.
 - **AND** it SHALL NOT run or inherit unrelated submitted-progress or accepted-workspace blockers from the full topic-state inspect
 - **AND** it SHALL mask missing-family and per-row/per-finding symptoms rather than direct an ad hoc seed edit
 
+
 #### Scenario: Current demand makes an unavailable family blocking
 
 - **WHEN** a plan-bound seed has no usable Wave1 family member and no Wave1 token
 - **AND** that seed has two current-round eligible Wave1 rows
 - **THEN** Wave1 inspect SHALL emit one blocking family prerequisite for that seed
 - **AND** it SHALL mask the two dependent row-omission findings until a target family member is available
+
 
 #### Scenario: Legacy-only demand does not become a section blocker
 
@@ -535,12 +535,14 @@ reloaded independently by the second evaluator.
 - **THEN** Wave2 inspect SHALL emit one advisory for each missing finding/topic pair
 - **AND** it SHALL NOT emit a blocking missing-family prerequisite
 
+
 #### Scenario: Inactive historical seed is not migrated by projection inspect
 
 - **WHEN** a plan-bound historical seed lacks a canonical target H2
 - **AND** the current Wave has no current eligible row or current/legacy affected finding for that seed
 - **THEN** `RRM-007` SHALL NOT emit a missing-section migration blocker for that seed
 - **AND** independent plan/seed/workflow contracts remain unaffected
+
 
 #### Scenario: Wave2 uses plan-derived current seed set
 
@@ -549,12 +551,14 @@ reloaded independently by the second evaluator.
 - **AND** Wave2 SHALL NOT discover projection scope by directory scan
 - **AND** the invoking inspect SHALL pass one normalized registry fact to both the Wave evaluator and seed checker without a second raw plan read
 
+
 #### Scenario: Other-wave token does not short-circuit target validation
 
 - **WHEN** a seed topic contains `__BACKFILL_WAVE1_MECHANISMS__`
 - **AND** Wave0 inspect runs
 - **THEN** Wave0 target-family validation SHALL proceed
 - **AND** the Wave1 token SHALL NOT make Wave0 pass or skip
+
 
 #### Scenario: Current-wave token preserves first materialization behavior
 
@@ -563,11 +567,13 @@ reloaded independently by the second evaluator.
 - **AND** the existing Wave evaluator's stale-token finding SHALL remain independent and MAY still fail the aggregate inspect command
 - **AND** no second generic token family SHALL be introduced
 
+
 #### Scenario: All eligible rows referenced passes check
 
 - **WHEN** a topic has two eligible Wave1 rows from round 2
 - **AND** both work_ids appear in the section's parsed refs fields
 - **THEN** the authority reference check SHALL pass
+
 
 #### Scenario: Missing work_id produces blocking finding
 
@@ -576,12 +582,14 @@ reloaded independently by the second evaluator.
 - **AND** no no-projection disposition entry exists for `wv0_abc`
 - **THEN** inspect SHALL produce a blocking finding naming `wv0_abc`
 
+
 #### Scenario: No-projection disposition satisfies check
 
 - **WHEN** a topic has one eligible Wave1 row (work_id `wv1_xyz`)
 - **AND** `wv1_xyz` does not appear in refs fields
 - **AND** the section contains a valid disposition entry: `relationship: defers`, `next_hop: "limitation: not materializable; process-only output"`, `refs: _work_units/wave1/wv1_xyz`
 - **THEN** the authority reference check SHALL pass
+
 
 #### Scenario: No eligible rows skips check
 
@@ -590,12 +598,14 @@ reloaded independently by the second evaluator.
 - **THEN** no eligible rows exist
 - **AND** the check SHALL pass
 
+
 #### Scenario: Wave2 pure synthesis finding checked
 
 - **WHEN** `finding-index.yaml` has finding W2F-015 with `created_in_rerun_count: 2` affecting this topic
 - **AND** no delegated work-unit row exists for W2F-015 (valid pure synthesis)
 - **AND** W2F-015 appears in the section's refs fields
 - **THEN** the Wave2 authority reference check SHALL pass
+
 
 #### Scenario: Legacy findings produce advisory, not blocking
 
@@ -606,94 +616,10 @@ reloaded independently by the second evaluator.
 - **AND** inspect SHALL NOT block on this finding
 - **AND** the advisory SHALL name W2F-003 and suggest including it in projection or recording a disposition
 
+
 #### Scenario: Legacy finding with W2F ref present passes
 
 - **WHEN** `finding-index.yaml` has a legacy finding W2F-003 without `created_in_rerun_count`
 - **AND** profile `rerun_count` is 2
 - **AND** W2F-003 appears in the section refs
 - **THEN** no finding SHALL be produced (present in projection, no action needed)
-
-### Requirement: Template and command guidance SHALL preserve separate Seed Topic questions
-
-`DPT_FRAMEWORK/workflows/nodes/templates/seed-topic-template.md` SHALL be the
-sole canonical, instantiable Seed Topic Document template. `templates/` SHALL
-be a discoverable namespace for current and future document templates, rather
-than a shared-guidance catch-all. This template SHALL own initialization
-skeleton, appendix slot map, exact canonical headings, per-heading `回填卡`,
-Wave-to-section ownership, one-time token lifecycle, canonical `entry_id` plus
-five-field entry example, and concrete-first ref presentation hierarchy. It
-answers only what an instantiated Seed Topic looks like, which parts are fixed
-or later backfilled, and who supplies a later entry, when, and in what document
-format.
-
-Each card SHALL visibly state its writer, direct authority, backfill timing,
-entry identity/field shape, concise `operate-topic-state` materialization
-pointer, and prohibited direct-edit/generic-prose behavior, and SHALL use the
-exact label `回填卡（只读操作约束，不是 Projection Entry）`. It SHALL state that
-return maps are Agent-readable navigation projections, not evidence authority.
-The cards and template SHALL NOT define Projection Packet fields, lifecycle
-authorization, apply/recover mechanics, repair map, or rerun-direction input.
-Those execution questions SHALL have one authoritative Agent-readable guidance
-home in `command_playbook/operate-topic-state.md`, alongside the existing
-command that consumes the packet.
-
-For new canonical rendering, these exact canonical headings replace the prior
-fresh-render no-rename constraint. The five former heading bases remain declared
-legacy aliases solely for bounded read compatibility and a legal targeted packet
-upgrade; they are not a second template or Agent-selectable heading vocabulary.
-
-`phase-seed-topics`, `phase-wave0`, `phase-wave1` and `phase-wave2` SHALL load
-this template through their actual `requires` chain at the relevant document
-decision point. `phase-rerun` SHALL use `operate-topic-state` guidance for its
-rerun-direction operation and SHALL not load a document template merely to find
-an operation schema. Phase bodies SHALL add only their local authority, command
-sequence and checkpoint. Role guidance and generated work-unit task/spawn text
-SHALL remain self-contained with at most a concise five-field cue and authority
-disclaimer; they SHALL not reproduce the complete slot/table/token/example
-contract or packet protocol.
-
-The old focused authoring files SHALL not remain a second complete template.
-They MAY be short compatibility pointers during migration but SHALL not define
-their own entry grammar, slot ownership, token lifecycle or full skeleton. A
-static parity/duplicate-template check SHALL compare named slot and card
-descriptor facts between the template and executable slot map, reject a second
-complete Seed Topic template, and reject duplicated packet grammar outside the
-command playbook. No runtime code SHALL parse the Markdown template to derive
-behavior.
-
-When a deterministic result names a legal packet/entry/slot repair, guidance
-SHALL expose the direct fact, named owner surface and same Wave inspect to
-rerun. When no legal path exists, it SHALL expose the owner or missing-contract
-boundary; it SHALL not tell users to hand-edit a seed or ask Agents to rebuild
-validator logic.
-
-#### Scenario: Template answers the document-level question without owning mutation
-
-- **WHEN** a human or Phase Agent needs to understand a current Seed Topic
-  Document's skeleton, slots, backfill timing and entry format
-- **THEN** one loaded `templates/seed-topic-template` SHALL provide those facts
-- **AND** packet schema, authorization and repair SHALL remain in the existing
-  `operate-topic-state` command guidance
-
-#### Scenario: A visible card constrains a backfill without becoming content
-
-- **WHEN** a canonical seed renders one of its Appendix Slots
-- **THEN** its canonical heading SHALL be immediately followed by that slot's
-  permanent `回填卡`, then its token or entries
-- **AND** the renderer, writer and parser SHALL preserve the card and SHALL not
-  classify it as a Projection Entry
-
-#### Scenario: Concise actor cue remains permitted
-
-- **WHEN** a generated work-unit task or role guidance needs to mention a
-  return-map result
-- **THEN** it MAY include the five fields and authority disclaimer needed for
-  its self-contained actor contract
-- **AND** it SHALL not become a second complete template or runtime authority
-
-#### Scenario: Command guidance preserves the legal repair boundary
-
-- **WHEN** inspect reports an invalid packet entry or missing projection
-- **THEN** `operate-topic-state` guidance SHALL direct the Agent to the named
-  slot/authority owner and the same inspect
-- **AND** it SHALL not represent a user decision as writer permission

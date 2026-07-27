@@ -423,29 +423,96 @@ Wave0 and Wave1 phase bodies SHALL NOT present `claim --count 1` as the normal s
 
 ### Requirement: Wave phase docs SHALL teach canonical gate-consumable refs and roles
 
-Wave phase docs SHALL teach the same direct artifact shapes that gate/inspect helpers consume. Agent-facing examples SHALL NOT encode harmless-looking spelling, field, enum, path, or role drift that causes deterministic failure, and SHALL NOT reproduce large validator implementations in prose.
+Wave phase docs SHALL teach the same direct artifact shapes that gate/inspect
+helpers consume. Agent-facing examples SHALL not encode harmless-looking
+spelling, field, enum, path or role drift that causes deterministic failure,
+and SHALL not reproduce large validator implementations in prose.
 
-For deterministic gate-consumed surfaces, phase docs SHALL be self-sufficient producer instructions: they SHALL name the canonical path, role, ref spelling, required structured fields/enums, and return-map navigation layer needed to produce the artifact. They SHALL NOT require the Phase Agent or Sub-agent to inspect Engine helper source to discover the required output shape.
+Wave0, Wave1 and Wave2 SHALL load `templates/seed-topic-template` through their
+actual `requires` chain. It is their pure Seed Topic Document-shape contract;
+the existing `command_playbook/operate-topic-state.md` is the sole complete
+Projection Packet execution contract. Phase bodies shall retain only Wave-local
+authority, queue/submit sequence, concrete artifact guidance and the command
+checkpoint. They SHALL not instruct Phase Agents to discover section headings,
+replace tokens by hand, edit a seed directly, or build a local return-map
+validator. Each canonical slot's visible `回填卡` is the compact per-heading
+instruction at the exact decision point: it names the writer, direct authority,
+backfill timing, `entry_id` plus five required entry fields, materialization
+pointer and prohibitions. The Phase Agent SHALL retain that card and write only
+through the packet/writer path; it SHALL not reinterpret the card as an entry or
+locally paraphrase it into a competing contract.
 
-Wave phase docs SHALL direct the Phase Agent to run the corresponding side-effect-free Wave inspect after phase-owned artifacts are materialized and before writing completion evidence or invoking the formal gate. On failure, guidance SHALL direct the Agent to repair the smallest named root cause and rerun the same inspect; it SHALL NOT instruct construction of a second local validator.
+After successful submitted work or accepted finding materialization, each
+Wave phase SHALL teach this closeout loop:
 
-Wave1 phase docs SHALL state that:
+1. read its existing direct submitted-row or finding authority;
+2. use Agent judgment to form a retained Projection Packet for each affected
+   current topic, including an explicit deferred disposition where applicable;
+3. invoke existing `operate-topic-state apply` in its route-bound Wave window;
+4. run the corresponding side-effect-free, non-routing Wave inspect; and
+5. repair the smallest named packet/authority root and rerun that same inspect
+   before writing completion evidence or invoking the formal gate.
 
-- `artifacts/wave1/{topic}/evidence-summary.md` is the required evidence summary output and maps to ledger role `evidence_summary`;
-- `artifacts/wave1/{topic}/question-list.md` is the required question list output and maps to ledger role `question_list`;
-- `other` is reserved for extra non-blocking outputs;
-- `reviewed_work_unit_refs[]` uses canonical `_work_units/wave1/<work_id>` without a trailing slash;
-- depth-review novelty compares submitted source claims against Wave0 source URLs and binds accepted claims to submitted cache/degraded/source authority; and
-- inspect failure is repaired at the named canonical surface before formal gate.
+The phase SHALL not ask the user to perform ordinary packet/apply/inspect work,
+hand-write a ledger/receipt/trace/reference, or turn a generic submitted line
+into a success substitute. A missing legal writer or authority path SHALL be
+shown as the direct owner/missing-contract boundary, not silently repaired by
+prose. Formal gate invocation remains after the inspect loop and retains its
+existing routing ownership.
 
-Wave0/Wave1/Wave2 and seed-topic docs SHALL state that evidence-bearing return-map `refs` use concrete existing `reference/*.md` files as the primary consumer navigation layer when materialized. Internal refs under `artifacts/`, `_cache/`, and `_work_units/` are secondary provenance and cannot replace concrete reference navigation unless the entry explicitly records a deterministic limitation or non-consumer-facing status.
+For deterministic gate-consumed surfaces, Wave docs SHALL name canonical paths,
+roles, refs, required structured fields/enums and return-map navigation facts
+needed to produce the artifact. Wave1 SHALL retain its existing required
+evidence-summary/question-list role guidance and Wave2 SHALL retain its
+finding-index/cross-reference authority split. Evidence-bearing projection refs
+continue to use concrete existing `reference/*.md` navigation first, with
+artifact/cache/work-unit paths as secondary provenance only.
 
-Wave2 phase docs SHALL expose the complete current finding-index required field set and canonical enum values through one canonical Agent-facing surface. They SHALL state that:
+#### Scenario: Wave closeout uses the one legal writer
 
-- newly fetched `reference/00-cross-*.md` evidence requires submitted `wave2_targeted_evidence` backing;
-- existing-backed `reference/00-cross-*.md` projections are Phase-owned only when prior accepted evidence plus `W2F-xxx`, `finding-index.yaml`, `cross-topic-ledger.md`, and concrete prior backing refs make the projection auditable;
-- `source_layer: wave2_cross` and `reference/_INDEX.md` rows are navigation/index metadata, not evidence authority by themselves; and
-- exact deterministic finding/ledger feedback comes from Wave2 inspect rather than Engine helper source.
+- **WHEN** a Phase Agent has successful Wave0, Wave1 or Wave2 authority ready
+  for a current topic
+- **THEN** its phase guidance SHALL direct packet -> `operate-topic-state apply`
+  -> same Wave inspect -> formal gate
+- **AND** it SHALL not direct manual token replacement or direct seed editing
+
+#### Scenario: Heading card gives the backfiller one constrained action
+
+- **WHEN** a Phase Agent reaches a canonical Seed Topic slot during closeout
+- **THEN** its visible `回填卡` SHALL name the slot's authority, backfill timing,
+  entry shape and `operate-topic-state` materialization pointer
+- **AND** the Agent SHALL leave the card intact and submit entries only through
+  the existing writer
+
+#### Scenario: Wave1 atomically handles its multiple owned slots
+
+- **WHEN** Wave1 has mechanisms, trends and pending-question projection
+  material for one topic
+- **THEN** phase guidance SHALL direct one Wave1 packet through the existing
+  writer
+- **AND** it SHALL not allow partial manual backfill before completion
+
+#### Scenario: Inspect precedes completion evidence
+
+- **WHEN** phase-owned artifacts and seed projection packets have been applied
+- **THEN** guidance SHALL put the corresponding Wave inspect before completion
+  trace/evidence and formal gate invocation
+- **AND** an inspect failure SHALL return to the named owner and same inspect
+
+#### Scenario: Missing writer is an honest boundary
+
+- **WHEN** a Phase Agent cannot form a packet because a direct submitted/finding
+  authority or legal writer window is unavailable
+- **THEN** guidance/feedback SHALL identify that direct owner or
+  missing-contract boundary
+- **AND** it SHALL not ask the user to hand-edit a seed or fabricate a receipt
+
+#### Scenario: Phase docs keep artifact authority separate from projection
+
+- **WHEN** a Phase Agent reads Wave1 or Wave2 artifact/reference guidance
+- **THEN** it SHALL see that submitted work/finding/index/ledger remain
+  authority and Seed Topic entries are navigation
+- **AND** it SHALL not treat a packet or entry as evidence coverage
 
 #### Scenario: Wave1 docs bind required paths to roles
 

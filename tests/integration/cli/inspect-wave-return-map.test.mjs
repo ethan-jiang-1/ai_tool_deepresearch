@@ -130,6 +130,18 @@ function limitationReturnMap() {
   ].join('\n');
 }
 
+function identityBoundLimitation(workId, ordinal) {
+  return [
+    `- entry_id: ${workId}/${ordinal}`,
+    '  evidence_meaning: Current row has no materializable projection.',
+    '  relationship: defers',
+    '  refs:',
+    '    - none',
+    '  status: deferred',
+    '  next_hop: limitation: no materializable evidence; defer to HITL2.',
+  ].join('\n');
+}
+
 function submitWave1(bundle, queueItemId = 'queue-current') {
   return claimAndSubmitWorkUnit(bundle, {
     phase: 'wave1', queueItemId, preserveQueue: true,
@@ -225,7 +237,7 @@ describe('wave inspect return-map diagnostics', () => {
     assert.equal(output.inspect.some((line) => line.includes('return_map_missing_concrete_reference')), false, output.inspect.join('\n'));
   });
 
-  it('wave2 flags backfill that omits finding ids and ledger/index refs', () => {
+  it('Wave2 reports an exact structural identity root before a dependent finding omission', () => {
     const bundle = createTempDir('inspect-w2-rmap');
     writeCommon(bundle);
     writeFileSync(join(bundle, 'artifacts/wave2/synthesis.md'), '# Synthesis\n\nA prose conclusion without lineage.\n');
@@ -242,32 +254,33 @@ findings:
     assert.equal(status, 1);
     assert.equal(output.check.return_map_classification, 'blocking');
     const joined = output.inspect.join('\n');
-    assert.match(joined, /return_map_current_finding_omission.*W2F-015/);
-    assert.match(joined, /return_map_missing_wave2_refs/);
+    assert.match(joined, /seed_projection_entry_identity/);
     assert.match(joined, /return_map_missing_concrete_reference/);
+    assert.doesNotMatch(joined, /return_map_current_finding_omission/);
   });
 
-  it('blocks an omitted current row and accepts an identity-bound disposition', () => {
+  it('reports a missing demanded Wave1 family before omission and accepts a complete identity-bound disposition', () => {
     const bundle = createTempDir('inspect-w1-row-projection');
     writeCommon(bundle);
     const submitted = submitWave1(bundle);
-    writeSeed(bundle, '## 本轮新增机制理解\n\n## 本轮新增趋势与难点\n\n## 待验证问题');
+    writeSeed(bundle, '## 本轮新增机制理解\n\n## 本轮新增趋势与难点');
     const omitted = runInspect('inspect-wave1-output.mjs', bundle).output;
-    assert.match(omitted.inspect.join('\n'), new RegExp(`return_map_current_row_omission.*${submitted.record.work_id}`));
+    assert.match(omitted.inspect.join('\n'), /return_map_target_family_unavailable/);
+    assert.doesNotMatch(omitted.inspect.join('\n'), /return_map_current_row_omission/);
 
     writeSeed(bundle, `## 本轮新增机制理解
-- entry_id: ${submitted.record.work_id}/1
-  evidence_meaning: Current row has no materializable projection.
-  relationship: defers
-  refs: none
-  status: deferred
-  next_hop: limitation: defer to HITL2.
+
+${identityBoundLimitation(submitted.record.work_id, 1)}
 
 ## 本轮新增趋势与难点
 
-## 待验证问题`);
+${identityBoundLimitation(submitted.record.work_id, 2)}
+
+## 待验证问题
+
+${identityBoundLimitation(submitted.record.work_id, 3)}`);
     const repaired = runInspect('inspect-wave1-output.mjs', bundle).output;
-    assert.doesNotMatch(repaired.inspect.join('\n'), /return_map_current_row_omission/);
+    assert.doesNotMatch(repaired.inspect.join('\n'), /return_map_target_family_unavailable|return_map_current_row_omission|seed_projection_entry_identity/);
 
     writeSeed(bundle, `## 本轮新增机制理解
 - entry_id: ${submitted.record.work_id}/1
@@ -279,9 +292,14 @@ findings:
 
 ## 本轮新增趋势与难点
 
-## 待验证问题`);
+${identityBoundLimitation(submitted.record.work_id, 2)}
+
+## 待验证问题
+
+${identityBoundLimitation(submitted.record.work_id, 3)}`);
     const invalidDisposition = runInspect('inspect-wave1-output.mjs', bundle).output;
-    assert.match(invalidDisposition.inspect.join('\n'), new RegExp(`return_map_current_row_omission.*${submitted.record.work_id}`));
+    assert.match(invalidDisposition.inspect.join('\n'), /seed_projection_deferred_disposition_invalid/);
+    assert.doesNotMatch(invalidDisposition.inspect.join('\n'), /return_map_current_row_omission/);
 
     writeSeed(bundle, `## 本轮新增机制理解
 - entry_id: ${submitted.record.work_id}/1
@@ -292,7 +310,11 @@ findings:
 
 ## 本轮新增趋势与难点
 
-## 待验证问题`);
+${identityBoundLimitation(submitted.record.work_id, 2)}
+
+## 待验证问题
+
+${identityBoundLimitation(submitted.record.work_id, 3)}`);
     const invalidEntry = runInspect('inspect-wave1-output.mjs', bundle).output;
     assert.match(invalidEntry.inspect.join('\n'), /return_map_missing_fields/);
     assert.doesNotMatch(invalidEntry.inspect.join('\n'), /return_map_current_row_omission/);
@@ -334,7 +356,7 @@ findings:
     assert.match(output.advice.join('\n'), /operate-topic-state\.mjs inspect/);
   });
 
-  it('blocks a missing family only for current demand and preserves current token skip', () => {
+  it('blocks a missing family only for current demand and does not fabricate a no-demand token obligation', () => {
     const demanded = createTempDir('inspect-w1-family-demand');
     writeCommon(demanded);
     submitWave1(demanded);
@@ -345,12 +367,14 @@ findings:
 
     writeSeed(demanded, '__BACKFILL_WAVE1_MECHANISMS__\n\n## 当前判断\n\nHistorical only.');
     const skipped = runInspect('inspect-wave1-output.mjs', demanded).output;
-    assert.doesNotMatch(skipped.inspect.join('\n'), /return_map_target_family_unavailable|return_map_current_row_omission/);
+    assert.match(skipped.inspect.join('\n'), /return_map_target_family_unavailable/);
+    assert.doesNotMatch(skipped.inspect.join('\n'), /return_map_current_row_omission/);
 
     const inactive = createTempDir('inspect-w1-family-inactive');
     writeCommon(inactive);
-    writeSeed(inactive, '## 当前判断\n\nHistorical only.');
-    assert.doesNotMatch(runInspect('inspect-wave1-output.mjs', inactive).output.inspect.join('\n'), /return_map_target_family_unavailable/);
+    writeSeed(inactive, '## 本轮新增机制理解\n\n__BACKFILL_WAVE1_MECHANISMS__\n\n## 当前判断\n\nHistorical only.');
+    const noDemand = runInspect('inspect-wave1-output.mjs', inactive).output;
+    assert.doesNotMatch(noDemand.inspect.join('\n'), /return_map_target_family_unavailable|seed_projection_token|return_map_current_row_omission/);
   });
 
   it('isolates Wave2 current and legacy finding demand and rejects invalid round fields', () => {

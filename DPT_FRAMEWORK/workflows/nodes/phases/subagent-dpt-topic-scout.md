@@ -59,7 +59,7 @@ Define the Wave2 gap-fill/search role. The Phase Agent reads this role spec to c
 
 `dpt-topic-scout` is used only for targeted search prompted by Wave2 finding decisions or quality refill gaps. It does not replace the Phase Agent's cross-topic synthesis judgment.
 
-For backfill-ready research output, retain only the concise return-map cue `evidence_meaning`, `relationship`, `refs`, `status`, `next_hop`; the Phase Agent owns seed backfill and `shared-return-map-authoring.md` owns the complete definition.
+For backfill-ready research output, retain only the concise return-map cue `evidence_meaning`, `relationship`, `refs`, `status`, `next_hop`; the Phase Agent owns seed projection, `templates/seed-topic-template.md` owns the rendered entry shape, and the command playbook owns packet execution.
 
 ## 2. Search Focus
 

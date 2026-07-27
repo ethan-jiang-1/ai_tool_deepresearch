@@ -13,7 +13,7 @@ import {
 import { evaluateWave1Contract } from '../engine/helpers/wave-contract-evaluators.mjs';
 import {
   inspectReferenceReturnMaps,
-  inspectSeedTopicReturnMaps,
+  evaluateSeedTopicProjectionReadiness,
   inspectWaveArtifactReturnMaps,
 } from '../engine/helpers/return-map.mjs';
 import { buildCanonicalTopicRegistryFact } from '../engine/helpers/topic-registry-fact.mjs';
@@ -60,7 +60,7 @@ let topicRegistryFact = null;
 try { topicRegistryFact = buildCanonicalTopicRegistryFact(resolvedBundlePath); } catch { /* evaluator owns plan prerequisite */ }
 const evaluation = evaluateWave1Contract(resolvedBundlePath, definition, { topicRegistryFact });
 const topicSlugs = topicRegistryFact?.topic_registry.map((topic) => topic.slug) || [];
-const seedMap = inspectSeedTopicReturnMaps(resolvedBundlePath, { wave: 'wave1', topicRegistryFact });
+const seedMap = evaluateSeedTopicProjectionReadiness(resolvedBundlePath, { wave: 'wave1', topicRegistryFact });
 const artifactMap = inspectWaveArtifactReturnMaps(resolvedBundlePath, 'wave1', topicSlugs);
 const referenceMap = { passed: true, inspect: [], advice: [], findings: [], classification: 'diagnostic-only' };
 for (const topic of topicSlugs) {

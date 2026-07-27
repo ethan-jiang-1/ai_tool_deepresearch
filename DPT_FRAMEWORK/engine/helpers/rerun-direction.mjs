@@ -12,20 +12,20 @@ export const RERUN_DIRECTION_FIELDS = Object.freeze([
 
 const REQUIRED_GUIDANCE_FIELDS = Object.freeze(RERUN_DIRECTION_FIELDS.slice(2));
 const FIELD_LINE = /^\s*(?:[-*]\s+)?(?:\*\*(rerun_count|action|new_search_dimensions|adjusted_depth|search_guardrails|rationale_excerpt|[a-z][a-z0-9_]*)\*\*|([a-z][a-z0-9_]*))\s*:\s*(.*)$/i;
-const HEADING = /^##[ \t]*本轮重跑方向[^\n]*$/gim;
+const RERUN_DIRECTION_HEADING = /^##[ \t]+本轮重跑方向[^\n]*$/gim;
+const LEVEL_TWO_HEADING = /^##(?!#)[ \t]+[^\n]*$/gim;
 
 function root(kind, { section = null, field = null, detail = null, observed = null } = {}) {
   return { kind, section, field, detail, observed };
 }
 
 function sectionEntries(content) {
-  const headings = [...content.matchAll(HEADING)];
+  const headings = [...content.matchAll(RERUN_DIRECTION_HEADING)];
+  const levelTwoHeadings = [...content.matchAll(LEVEL_TWO_HEADING)];
   return headings.map((match, index) => {
     const start = match.index;
     const headingEnd = start + match[0].length;
-    const end = index + 1 < headings.length
-      ? headings[index + 1].index
-      : content.length;
+    const end = levelTwoHeadings.find((heading) => heading.index > start)?.index ?? content.length;
     const body = content.slice(headingEnd, end);
     const fields = {};
     const occurrences = [];

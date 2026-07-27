@@ -6,7 +6,14 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { createTempDir } from '../../helpers/temp-dirs.mjs';
-import { applyCanonicalTopicState, evaluateCanonicalSeedBindings, inspectCanonicalTopicState, recoverCanonicalTopicState } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
+import {
+  applyCanonicalTopicState,
+  evaluateCanonicalSeedBindings,
+  inspectCanonicalTopicState,
+  recoverCanonicalTopicState,
+  SEED_TOPIC_PROJECTION_CARD_LABEL,
+  SEED_TOPIC_PROJECTION_SLOTS,
+} from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
 import { diffSnapshots, snapshotTree } from '../../helpers/authority-snapshot.mjs';
 import { claimAndSubmitWorkUnit } from '../work-unit-test-helpers.mjs';
 import { writeGateAttempt } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
@@ -56,11 +63,7 @@ const SEED_HEADINGS = [
   '## 下游位置（可选）',
   '## ═══ 研究轮次追加区 ═══',
   '## 历史摘要',
-  '## 本轮新增证据',
-  '## 本轮新增机制理解',
-  '## 本轮新增趋势与难点',
-  '## 当前判断',
-  '## 待验证问题',
+  ...SEED_TOPIC_PROJECTION_SLOTS.map((slot) => `## ${slot.canonicalHeading}`),
 ];
 const SEED_BACKFILL_TOKENS = [
   '__BACKFILL_WAVE0_EVIDENCE__',
@@ -83,6 +86,14 @@ function assertCompleteSeedSkeleton(raw) {
   assert.doesNotMatch(body, /__BACKFILL_(?:EVIDENCE|MECHANISM|TRENDS|JUDGMENT|QUESTIONS|PREVIOUS_SUMMARY)__/);
   assert.doesNotMatch(body, /__FILL_[A-Z0-9_]+__/);
   assert.doesNotMatch(body, /## 主题定位\s+primary\s/);
+  for (const slot of SEED_TOPIC_PROJECTION_SLOTS) {
+    const heading = `## ${slot.canonicalHeading}`;
+    const headingIndex = body.indexOf(heading);
+    const cardIndex = body.indexOf(SEED_TOPIC_PROJECTION_CARD_LABEL, headingIndex);
+    const tokenIndex = body.indexOf(slot.initialToken, headingIndex);
+    assert.ok(cardIndex > headingIndex, `${slot.slotId} card must follow its heading`);
+    assert.ok(tokenIndex > cardIndex, `${slot.slotId} token must follow its card`);
+  }
 }
 
 function writeRerunProfile(dir, rerunCount = 0) {
@@ -133,19 +144,20 @@ describe('canonical topic state', () => {
     assert.match(seedBody(rerunSeed), /## 本轮重跑方向/);
     assert.ok(seedBody(rerunSeed).startsWith(seedBody(hitl1Seed)));
   });
-  it('keeps the renderer appendix structurally aligned with the shared seed authoring contract', () => {
+  it('keeps the renderer appendix structurally aligned with the Seed Topic template', () => {
     const dir = bundle('topic-seed-shared-parity');
     applyCanonicalTopicState({ bundlePath: dir, input });
     const rendered = seedBody(readFileSync(join(dir, 'seed_topics/01_topic-a.md'), 'utf8'));
-    const contract = readFileSync('DPT_FRAMEWORK/workflows/nodes/shared/shared-seed-topic-authoring.md', 'utf8');
-    const appendix = contract.slice(contract.indexOf('## ═══ 研究轮次追加区 ═══'));
+    const contract = readFileSync('DPT_FRAMEWORK/workflows/nodes/templates/seed-topic-template.md', 'utf8');
+    const appendix = contract.slice(contract.indexOf('## Appendix Slot Map'));
     const headings = appendix.split(/\r?\n/)
-      .filter((line) => SEED_HEADINGS.includes(line));
+      .filter((line) => SEED_TOPIC_PROJECTION_SLOTS.some((slot) => line === `## ${slot.canonicalHeading}`));
     const tokens = [...contract.matchAll(/__BACKFILL_[A-Z0-9_]+__/g)].map((match) => match[0]);
-    assert.deepEqual(headings, SEED_HEADINGS.slice(5));
+    assert.deepEqual(headings, SEED_TOPIC_PROJECTION_SLOTS.map((slot) => `## ${slot.canonicalHeading}`));
     assert.deepEqual(tokens, SEED_BACKFILL_TOKENS);
     for (const heading of headings) assert.ok(rendered.includes(heading), heading);
     for (const token of tokens) assert.equal(rendered.split(token).length - 1, 1, token);
+    assert.equal((contract.match(new RegExp(SEED_TOPIC_PROJECTION_CARD_LABEL, 'g')) || []).length, SEED_TOPIC_PROJECTION_SLOTS.length);
   });
   it('renders the same complete skeleton for migrate_legacy seed_binding:new', () => {
     const dir = rerunBundle('topic-seed-migration', true);
