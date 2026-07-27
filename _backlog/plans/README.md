@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-07-26 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-07-27 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,9 +17,17 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
+| `seed-topic-projection-materialization` | 承接 BUG-138：将 split guidance 与手工 backfill 收敛为单一 Seed Topic template、带可见回填卡的 slot map、既有 topic-state writer 上的结构化 Projection Packet，以及 inspect/gate 共用的 direct readiness fact；不创建第二 authority、CLI 或模板引擎 | OpenSpec 已 propose，规划完成，尚未 apply |
 | `conversation-capture-host-capabilities` | 核查 Codex 与 Claude Code 是否能保留每次用户/Agent 交流；结论是只有 framework-owned app-server / Agent SDK / stream-json integration 才能给完整 ledger，独立客户端会话仅可 best-effort 观察 | research / scoping（无固定 OpenSpec change） |
-| `silent-autonomous-execution` | 承接 `source_bugs: BUG-099/103/104/106`（stop-no halt、status drift、context pollution、stop-no-violation-repeats）。独立 research backlog：把「静默自主」拆成 DPT 可确定性修复的 phase-entry correctness 与一般 coding-agent/host 是否发起下一 turn 的 actor liveness 两层，分开研究与证明；不阻塞 wave-remediation 三个已收敛 change | research / scoping（无固定 OpenSpec change） |
-| `evidence-production-and-phase-projection-boundaries` | 承接 BUG-124--131。先做一次 falsification（现有 `wave0_source_intake` 是否已能合法产出并计入 shared reference；BUG-129 的 0/80 是否为 `submitted_source_backing_missing`），再以三项 OpenSpec change 按 source of record 拆分：Seed canonical authoring、queue demand admission、跨 Wave evidence ownership/projection。另有一项无人认领的 policy 决定：shared-ref floor 公式（`base 6 + per_topic 2` → 22）。详尽系统审查置于同名子目录 | research / scoping（无固定 OpenSpec change） |
+| `silent-autonomous-execution` | 承接 `source_bugs: BUG-099/103/104/106`（stop-no halt、status drift、context pollution、stop-no-violation-repeats）。独立 research backlog：把「静默自主」拆成 DPT 可确定性修复的 phase-entry correctness 与一般 coding-agent/host 是否发起下一 turn 的 actor liveness 两层，分开研究与证明。当前 deferred 于 work-unit、evidence-production 与 Gate 路径稳定可跑之后；不阻塞其他 runtime correctness 工作。 | deferred research / scoping（无固定 OpenSpec change） |
+
+---
+
+## 最近关闭 (2026-07-27)
+
+| Plan | 关闭依据 |
+|------|----------|
+| `evidence-production-and-phase-projection-boundaries` | CLS-037：三个 bounded OpenSpec change 已 archive；D1 已决定保留 `claim_verification` shared-ref floor 并接受 eligible-degradation 成本。BUG-124--128 结案；I1/I2 作为 BUG-129/130 的独立 dormant current-counterexample trigger 留在活跃 bug，P1 是 accepted residual risk，不是后续 change。详尽交接卡已移至 [`../_done/_closed_plans/evidence-production-and-phase-projection-boundaries.md`](../_done/_closed_plans/evidence-production-and-phase-projection-boundaries.md)。 |
 
 ---
 

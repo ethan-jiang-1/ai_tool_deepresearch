@@ -3,12 +3,24 @@ bug_id: BUG-125
 title: "Queue item payload validation at claim time — stuck items require manual rb_queue.json editing"
 severity: P2
 discovered: 2026-07-26
+status: fixed_archived_change
+resolved: 2026-07-27
+fixed_by: 2026-07-27-converge-queue-demand-admission
 bundle: dpt_rb_openspec-influence-landscape
 phase: wave0
 node: phases/phase-wave0.md
 ---
 
 # BUG-125: Queue item 的 payload schema 在 claim 时才校验，enqueue 时不校验
+
+## Resolution (2026-07-27)
+
+Archived Change 2, `converge-queue-demand-admission`, introduced one
+current-facts admission evaluator across enqueue, queue health, claim, and the
+existing stale-card repair path. It validates canonical binding and every
+registered delegated kind before persistence, then revalidates at claim; an
+unclaimable unclaimed card has a legal terminal path without editing
+`rb_queue.json`.
 
 ## 现象
 

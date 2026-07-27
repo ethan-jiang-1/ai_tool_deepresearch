@@ -1,7 +1,8 @@
 ---
 title: Evidence ownership and canonical seed authoring
-status: partially_completed_research_backlog
+status: closed_cls037_moved_to_closed_plans_2026_07_27
 created: 2026-07-26
+closed: 2026-07-27
 source_bugs: BUG-124, BUG-125, BUG-126, BUG-127, BUG-128, BUG-129, BUG-130, BUG-131
 ---
 
@@ -14,7 +15,7 @@ implementation permission. It is intended to be understandable without prior
 participation in the failing run:
 
 1. Read this file for the observed contradictions, verified code facts, the
-   falsification step, three candidate changes, the unowned policy decision,
+   falsification result, D1 policy record, dormant evidence gates,
    residual risk, and review questions.
 2. Read [the architecture review](evidence-production-and-phase-projection-boundaries/architecture-review.md)
    for the proposed interfaces, current reusable seams, rejected designs, and
@@ -31,23 +32,21 @@ affected designs as contingent. Facts carry `file:line` anchors; where prose
 and an anchored fact disagree, the anchored fact wins.
 
 **Execution update (2026-07-27):** Change 1 is complete and archived as
-[`2026-07-26-canonical-seed-authoring`](../../openspec/changes/archive/2026-07-26-canonical-seed-authoring/).
+[`2026-07-26-canonical-seed-authoring`](../../../openspec/changes/archive/2026-07-26-canonical-seed-authoring/).
 It established the single structured `enrich_seed` writer, parsed-value
 canonical binding, frontmatter/body ownership boundary, in-window repair
 feedback, and the v0.50 compatibility boundary without adding a second writer
 or a seed migration. The intervening validation maintenance change,
-[`2026-07-26-repair-retired-spec-validation`](../../openspec/changes/archive/2026-07-26-repair-retired-spec-validation/),
+[`2026-07-26-repair-retired-spec-validation`](../../../openspec/changes/archive/2026-07-26-repair-retired-spec-validation/),
 is also complete and archived: it repaired the two retired-spec tombstones
 without restoring their legacy runtime behavior. Change 2,
 `converge-queue-demand-admission`, is complete and archived as
-[`2026-07-27-converge-queue-demand-admission`](../../openspec/changes/archive/2026-07-27-converge-queue-demand-admission/).
+[`2026-07-27-converge-queue-demand-admission`](../../../openspec/changes/archive/2026-07-27-converge-queue-demand-admission/).
 It introduced one current-facts delegated admission path across enqueue, check,
 claim and existing stale repair, without a stored verdict or in-flight rewrite.
-Step 0 has now established the existing Wave0 producer path by static contract
-evidence; the next selected change is the narrow Wave0 guidance/repair-hint
-alignment below. The remaining Wave1/Wave2 questions stay sequenced behind
-their own proof or source-of-record decision rather than being bundled into one
-unbounded evidence change.
+Step 0's focused deterministic proof now passes under current canonical-topic
+admission. Change 3 is complete and archived as
+[`2026-07-27-align-wave0-shared-reference-guidance`](../../../openspec/changes/archive/2026-07-27-align-wave0-shared-reference-guidance/): it corrected the Wave0 guidance and repair feedback, added the focused regression coverage, and released as v0.52. D1 is now complete: the maintainer retained the existing `claim_verification` shared-reference formula and accepted its eligible-degradation cost. The remaining Wave1/Wave2 questions stay dormant behind their own runtime evidence rather than being bundled into one unbounded evidence change.
 
 The project is an agentic research framework. The Agent searches, reads,
 writes research and synthesis; Markdown carries Agent Flow; the JavaScript
@@ -61,12 +60,12 @@ a lawful projection of already submitted evidence.
 
 | Bug records | Observed contradiction | System-level implication |
 | --- | --- | --- |
-| [BUG-126](../bugs/BUG-126-seed-topic-yaml-roundtrip-fragility.md), [BUG-127](../bugs/BUG-127-must-answer-exact-match-not-signaled.md) | The Agent hand-authors YAML whose identity fields must exactly equal `rb_plan.md#/topic_registry`; quoting/Unicode causes parse failures and a semantically equivalent `must_answer` rewrite fails only at completion. | Canonical identity must not be an Agent-maintained duplicate; mutable seed enrichment still needs an explicit legal writer. |
-| [BUG-124](../bugs/BUG-124-shared-ref-agent-action-hint-misleading.md), [BUG-128](../bugs/BUG-128-wave0-shared-ref-threshold-impractical.md) | Wave0 demands cross-topic `reference/00-shared-*.md` evidence; the gate's own repair hint sent the Phase Agent to write the file directly, which then failed as a bypass, and the profile floor asked for 22 such files that no sub-agent produced. | Two separable problems: a repair hint that names an illegal action, and a floor whose formula assumes shared references are a free by-product. Whether a *new* producer contract is also needed is open — see Step 0. |
-| [BUG-125](../bugs/BUG-125-queue-payload-validation-at-claim-not-enqueue.md) | Queue cards can be accepted and reported healthy at enqueue, then fail the same assignment contract at claim and block the active window; recovery required direct queue-file editing. | Queue admission must answer the claimability question before persistence, while claim rechecks current facts through the same evaluator. |
-| [BUG-129](../bugs/BUG-129-wave1-ref-materialization-same-bypass.md) | Wave1 instructions permit the Phase Agent to materialize topic references from submitted sources, and the classifier already has that projection branch — yet all 80 materialized files counted 0. | The Wave1 projection rule exists; what is missing is the submitted source backing it must bind to. Confirm the failing root before treating this as a classification defect. |
-| [BUG-130](../bugs/BUG-130-wave2-pure-synthesis-vs-gate-contradiction.md) | Wave2 declares a pure-synthesis path from submitted prior evidence, while gate/finding checks demand Wave2 receipts to establish that prior evidence. | Pure synthesis must verify its prior-input/process backing without forging a Wave2 receipt; only actual targeted new evidence needs a Wave2 submission. |
-| [BUG-131](../bugs/BUG-131-degraded-pass-inconsistency-wave2-vs-wave0-wave1.md) | The observed Wave0/Wave1/Wave2 results appear inconsistent, but Wave0/Wave1 declare `degradation_eligible` floors and Wave2 declares none, so the split is the accepted policy working as designed. | Do not add an override. Fix the upstream classification that produced the false failures, keep the degradation policy, and record the remaining pre-HITL2 deadlock as residual risk rather than treating it as solved. |
+| [BUG-126](../_fixed_bugs/BUG-126-seed-topic-yaml-roundtrip-fragility.md), [BUG-127](../_fixed_bugs/BUG-127-must-answer-exact-match-not-signaled.md) | The Agent hand-authors YAML whose identity fields must exactly equal `rb_plan.md#/topic_registry`; quoting/Unicode causes parse failures and a semantically equivalent `must_answer` rewrite fails only at completion. | Canonical identity must not be an Agent-maintained duplicate; mutable seed enrichment still needs an explicit legal writer. |
+| [BUG-124](../_fixed_bugs/BUG-124-shared-ref-agent-action-hint-misleading.md), [BUG-128](../_fixed_bugs/BUG-128-wave0-shared-ref-threshold-impractical.md) | Wave0 demanded cross-topic `reference/00-shared-*.md` evidence; the gate's old repair hint sent the Phase Agent to write the file directly, which failed as a bypass, and the profile floor asked for 22 such files that no sub-agent produced. | BUG-124 is fixed by the legal submitted producer path. BUG-128 is closed as an explicit product-policy decision: retain the current formula and accept its eligible-degradation cost; no new producer or threshold change is authorized. |
+| [BUG-125](../_fixed_bugs/BUG-125-queue-payload-validation-at-claim-not-enqueue.md) | Queue cards can be accepted and reported healthy at enqueue, then fail the same assignment contract at claim and block the active window; recovery required direct queue-file editing. | Queue admission must answer the claimability question before persistence, while claim rechecks current facts through the same evaluator. |
+| [BUG-129](../../bugs/BUG-129-wave1-ref-materialization-same-bypass.md) | Wave1 instructions permit the Phase Agent to materialize topic references from submitted sources, and the classifier already has that projection branch — yet all 80 materialized files counted 0. | The Wave1 projection rule exists; what is missing is the submitted source backing it must bind to. Confirm the failing root before treating this as a classification defect. |
+| [BUG-130](../../bugs/BUG-130-wave2-pure-synthesis-vs-gate-contradiction.md) | Wave2 declares a pure-synthesis path from submitted prior evidence, while gate/finding checks demand Wave2 receipts to establish that prior evidence. | Pure synthesis must verify its prior-input/process backing without forging a Wave2 receipt; only actual targeted new evidence needs a Wave2 submission. |
+| [BUG-131](../../bugs/BUG-131-degraded-pass-inconsistency-wave2-vs-wave0-wave1.md) | The observed Wave0/Wave1/Wave2 results appear inconsistent, but Wave0/Wave1 declare `degradation_eligible` floors and Wave2 declares none, so the split is the accepted policy working as designed. | Do not add an override. Fix the upstream classification that produced the false failures, keep the degradation policy, and record the remaining pre-HITL2 deadlock as residual risk rather than treating it as solved. |
 
 `silent-autonomous-execution` remains a separate plan for BUG-099/103/104/106:
 host turn liveness and silent-autonomy questions are not a remedy for a false
@@ -151,9 +150,8 @@ this plan and constrain what the changes may assume.
   registry (`:420-458`), so a structurally unclaimable card is not "stale" and
   survives. The fix is to extend that predicate, not to invent a terminal op.
 
-These facts constrain the candidate changes: preserve the existing sources of
-record and deep helpers, and converge callers. Two changes must now begin with
-a falsification step rather than an assumed gap — see Decision below. Do not
+These facts constrained the completed changes and the remaining gates: preserve
+the existing sources of record and deep helpers, and converge callers. Do not
 solve the incident by adding a generic controller, a second ledger, a broad
 queue-drop permission, a new degraded lifecycle, or a human override.
 
@@ -165,18 +163,18 @@ falsify two gaps this plan previously assumed, so the plan now opens with a
 falsification step and separates the one question that has its own source of
 record.
 
-| Order | Candidate change | System interface it establishes | Bugs | Status |
+| Order | Queue item | Kind | Bugs | Status |
 | --- | --- | --- | --- | --- |
-| 0 | `shared-reference-producer-falsification` (investigation, not a change) | Whether a legal shared-reference producer already exists, and what the floor should be | 124, 128 | static contract confirmed; focused fixture requires repair; live proof NOT_RUN |
-| 1 | `canonical-seed-authoring` | How a canonical Topic identity and Agent-authored enrichment become one valid seed file | 126, 127 | complete, archived 2026-07-26 |
-| 2 | `converge-queue-demand-admission` | When a queue demand is proved claimable, and what terminates one that is not | 125 | complete, archived 2026-07-27 |
-| 3 | `align-wave0-shared-reference-guidance` | Make the existing submitted Wave0 shared-reference producer and gate repair feedback agree | 124 | selected next |
-| 4 | `decide-wave0-shared-reference-floor` | Record the policy decision and owner for the profile-computed shared-reference floor | 128 | pending human/product decision |
-| 5 | `repair-wave1-projection-source-backing` | Align Wave1 producer facts with the existing backed-projection classifier | 129 | pending repaired deterministic proof or selected failing bundle |
-| 6 | `reconcile-wave2-existing-backed-synthesis` | Reconcile existing-backed Wave2 synthesis with finding-contract receipt demands | 130 | pending source-of-record review |
-| 7 | `preserve-existing-wave-degradation-policy` | Retain the accepted eligibility split while upstream roots are fixed | 131 | no implementation change planned |
+| 0 | `shared-reference-producer-falsification` | completed investigation | 124, 128 | static contract confirmed; repaired focused deterministic proof passes; no Agent-flow proof required |
+| 1 | `canonical-seed-authoring` | completed OpenSpec change | 126, 127 | archived 2026-07-26 |
+| 2 | `converge-queue-demand-admission` | completed OpenSpec change | 125 | archived 2026-07-27 |
+| 3 | `align-wave0-shared-reference-guidance` | completed OpenSpec change | 124 | archived 2026-07-27 (v0.52) |
+| D1 | `decide-wave0-shared-reference-floor` | completed product-policy decision | 128 | retained `6 + 2 × topics`; BUG-128 closed by accepted policy |
+| I1 | `falsify-wave1-projection-source-backing` | dormant runtime-evidence investigation | 129 | no current defect: backed focused proof passes |
+| I2 | `falsify-wave2-existing-backed-synthesis` | dormant runtime-evidence investigation | 130 | no current contradiction established |
+| P1 | `preserve-existing-wave-degradation-policy` | accepted policy and residual-risk record | 131 | no implementation change planned |
 
-Changes 1, 2 and 3 are separate because each answers a bounded question against
+The completed OpenSpec Changes 1, 2 and 3 are separate because each answered a bounded question against
 a *different source of record*: canonical Topic identity lives in
 `rb_plan.md#/topic_registry`; demand claimability lives in the work-unit
 assignment-contract registry; evidence authority lives in the submitted output
@@ -187,78 +185,129 @@ sequencing reason, not a reason to merge.
 
 The former cross-Wave Change 3 is retired as a single implementation unit. It
 mixed a confirmed Wave0 guidance defect, a still-unowned floor decision, and
-unproven Wave1/Wave2 roots. The order above keeps each next change bounded by
-one authority question and gives the reader one normal reasoning stop point.
+unproven Wave1/Wave2 roots. **There is no active OpenSpec change after Change
+3.** D1 retained the existing formula and created no change. I1 or I2 may create
+a repair change only after their stated runtime evidence contradicts the current
+accepted contract. P1 is not a change.
 
 ### Step 0: falsify before designing
 
-**Quick investigation update (2026-07-27):** the static contract evidence
-supports the falsification premise, but this is not a completed live
-`agent_flow_e2e` proof. `validateOutputFiles()` accepts any safe declared
-output with an allowed role and requires a `source_url` for a `reference`
+**Quick investigation update (2026-07-27):** the static contract evidence and
+the repaired focused deterministic proof support the falsification premise.
+`validateOutputFiles()` accepts any safe declared output with an allowed role
+and requires a `source_url` for a `reference`
 (`engine/work-unit-validation.mjs:382-445`); `wave0_source_intake` permits
 that role, and `countReferences()` consumes submitted `reference` outputs by
 path before applying the shared-reference glob
-(`engine/helpers/ref-count.mjs:230-255`). The existing focused ref-count cases
-are intended to exercise both a submitted `00-shared-*` reference and a backed
-Wave1 Phase projection. On 2026-07-27 they stopped earlier at claim because
-their fixture lacks the canonical seed binding now required by queue-demand
-admission, so they are recorded as **NOT_RUN at the reference boundary**, not
-as evidence of a reference-contract rejection. The Wave1 classifier directly
+(`engine/helpers/ref-count.mjs:230-255`). After the fixture helper received the
+canonical seed binding required by queue-demand admission, the focused tests
+passed: a submitted `00-shared-*` reference counts, a direct Phase-created
+orphan does not, and a backed Wave1 Phase projection counts. The selected unit
+and integration commands pass 44 tests in total. The Wave1 classifier still
 names `submitted_source_backing_missing` when the reference URL is absent from
 submitted source/cache backing, and otherwise accepts the Phase projection
-(`engine/helpers/gate-helpers-checks.mjs:592-619`). No real Agent/sub-agent run
-or failing BUG bundle ledger was supplied for this investigation.
+(`engine/helpers/gate-helpers-checks.mjs:592-619`). No selected real failing
+BUG bundle ledger exists; that absence prevents a new Wave1 implementation
+proposal, not the completed Wave0 guidance change.
 
 **Planning consequence:** do not propose a new `wave0_shared_foundation` kind
-from the old report. Select `align-wave0-shared-reference-guidance` next: it
-will correct the Wave0 repair feedback and make the existing delegated producer
-expectation explicit, while repairing the focused deterministic proof fixture.
-The floor remains a later explicit decision, and Wave1/Wave2 retain their own
-evidence gates before proposal.
+from the old report. `align-wave0-shared-reference-guidance` completed the
+Wave0 repair-feedback and producer-guidance correction with focused regression
+proof. D1 retained the profile floor and accepted its eligible-degradation cost.
+Wave1 requires a selected real failing bundle before any implementation proposal,
+and Wave2 retains its separate receipt-evidence prerequisite.
 
 ### Evidence conditions for later changes
 
-The static Wave0 contract is sufficient to make the selected guidance and
-repair-hint correction: `wave0_shared_foundation` and a new queue operation are
-not justified. The selected change repairs the current focused deterministic
-fixture instead of adding an Agent-flow E2E. A real disposable Agent run is
-optional diagnostic evidence only if a future implementation claim needs to
-establish Agent behavior; it is not a planning or apply prerequisite here.
+The static Wave0 contract and focused deterministic proof were sufficient for
+the completed guidance and repair-hint correction: `wave0_shared_foundation`
+and a new queue operation are not justified. The completed change used focused
+unit and integration proof; it did not need deterministic E2E or Agent-flow
+E2E. A real disposable Agent run remains optional diagnostic evidence only if a
+future claim must establish Agent behavior.
 
-Wave1 and Wave2 remain separate because their suspected roots are not Wave0
-producer defects. Before proposing the Wave1 successor, select a real failing
-bundle or repair its focused fixture to reach the reference-authority boundary:
+### Execution Handoff Cards
 
-1. **Why did backed-looking Wave1 references count as 0?**
-   `classifyReferenceAuthority()` already passes a Wave1 topic reference whose
-   `source_url` is bound to submitted accepted URLs and whose body cites
-   submitted backing (`gate-helpers-checks.mjs:592-620`), and `ref-count`
-   already counts such projections (`ref-count.mjs:238-244`). So the 0/80 result
-   in BUG-129 most likely lands at `submitted_source_backing_missing`
-   (`:593-603`) because the Wave1 producer contract makes `source_claims`
-   optional (`work-unit-constants.mjs:56-60`) and the URLs were never submitted.
-   If so, the root cause is the **Wave1 producer contract**, not classification.
-2. **Does existing-backed Wave2 synthesis meet the finding receipt contract?**
-   Select the accepted finding-contract source and a failing receipt example
-   before proposing a Wave2 delta. Do not infer a Wave2 repair from a Wave1
-   projection result.
+The remaining items are gates, not pre-authorized changes. An Agent shall
+complete the named bounded action, record its result here, and stop at the
+listed boundary. It SHALL NOT propose a repair merely because an old bug report
+contains a failing result.
 
-Each later proposal must read the selected bundle's
-`rb_output_declarations.jsonl` and one affected artifact before writing a delta
-spec. A proposal that assumes either gap without that evidence would implement
-machinery the Engine may not need.
+#### D1: Wave0 shared-reference floor decision (complete)
 
-### The unowned decision: the shared-reference floor
+**Decision owner:** the repository maintainer/product owner, not a per-bundle
+HITL1 run.
 
-BUG-128's primary root cause is the threshold formula, and no candidate change
-above owns it. `claim_verification` computes `6 + 2 × 8 = 22` shared references
-(`schema/research-styles/claim_verification.json:4`) on top of `8 × 12` topic
-sources, from a formula that assumes shared references are a free by-product of
-topic-bound intake. Making the producer path legal makes 22 *reachable*; it does
-not make it *reasonable*. Either the formula is adjusted with a stated
-rationale, or the plan records an explicit decision to keep it and accept
-routine degraded Wave0 passes. Silence here re-opens BUG-128 under a new number.
+**Decision (2026-07-27):** retain `claim_verification`'s existing
+`wave0_shared_ref` formula, `6 + 2 × topics`. No replacement formula was
+selected, so no OpenSpec implementation change is opened.
+
+**Recorded rationale and consequence:** changing a repository style threshold
+requires a positive replacement policy, not dissatisfaction with one historical
+run. The decision preserves current profile behavior and explicitly accepts that
+the Wave0 shared-reference floor may reach eligible degradation even though the
+existing delegated producer path is legal. It does not claim that 22 references
+are cheap, automatic, or normally achieved.
+
+**Boundary:** runtime bundles may select the named profile but may not hand-edit
+or choose a new formula; `apply-research-style.mjs` remains the deterministic
+writer. A future reconsideration requires a new maintainer product decision
+before any `adjust-wave0-shared-reference-floor` proposal.
+
+#### I1: Falsify a Wave1 source-backing defect
+
+**Question:** does a current real bundle that follows the accepted backed
+projection contract nevertheless fail with
+`submitted_source_backing_missing`?
+
+**Required evidence package:** select one reachable bundle created or rerun on
+the current accepted framework line; record its stamped framework version,
+exact gate/inspect command and output, submitted work-unit row and
+`rb_output_declarations.jsonl` entry, the affected reference artifact, and its
+`source_url` plus cited submitted source/cache backing. An older bundle is
+version-skew diagnostic evidence only, not a repair trigger.
+
+**Allowed outcomes and stop conditions:**
+
+1. If the classifier reports another root, or the artifact/ledger fails the
+   accepted backing preconditions, record it as data/authoring or version-skew;
+   stop and do not propose a framework change.
+2. Only if the package satisfies the current backed-projection contract and the
+   classifier still returns `submitted_source_backing_missing`, propose one
+   narrow Wave1 producer-contract repair. It must preserve the existing
+   classifier and Phase-owned projection rule.
+
+#### I2: Falsify a Wave2 pure-synthesis receipt contradiction
+
+**Question:** does a current real bundle that satisfies the accepted pure
+synthesis branch get required to supply a Wave2 targeted-evidence receipt?
+
+**Required evidence package:** select one reachable current-line bundle and
+record its framework version, exact gate/inspect output, `finding-index.yaml`,
+the relevant `W2F-xxx` and `00-cross-*` artifact, concrete submitted
+Wave0/Wave1 backing references, and any Wave2 receipt row. Classify the finding
+first: pure synthesis is a prior-evidence projection; a newly fetched source or
+`gap_status: search_submitted` is targeted evidence and legitimately needs a
+submitted Wave2 receipt.
+
+**Allowed outcomes and stop conditions:**
+
+1. If the failure is a missing/invalid required finding field, unbacked prior
+   evidence, a newly fetched source, or targeted search without its Wave2
+   receipt, it is an expected direct root. Record it and stop; do not weaken the
+   receipt contract or substitute a Wave1 receipt.
+2. Only if the complete pure-synthesis branch is satisfied yet the gate demands
+   a Wave2 receipt or reports delegated bypass solely because the Phase wrote
+   the projection, propose one narrow reconciliation change. Its proposal must
+   cite the accepted pure-synthesis requirement and the selected counterexample.
+
+#### P1: Preserve degradation policy and record residual risk
+
+Wave0/Wave1's eligible quality floors and Wave2's fail-closed authority roots
+remain accepted policy. No change is authorized. The pre-HITL2 deadlock remains
+an accepted residual risk with an out-of-band handling boundary; reconsidering
+it requires a separately scoped product question, not automatic escalation from
+D1, I1, or I2.
 
 Detailed system model, current seams, rejected alternatives, and acceptance
 reasoning are in [the architecture review](evidence-production-and-phase-projection-boundaries/architecture-review.md).
@@ -388,113 +437,60 @@ This former umbrella is not proposed as one change. Its goal remains useful,
 but implementation proceeds through the ordered successors above so one Wave's
 unproven source facts cannot broaden another Wave's repair.
 
-### Change 3: `align-wave0-shared-reference-guidance` (selected next)
+### Change 3: `align-wave0-shared-reference-guidance` (complete)
+
+**Archived OpenSpec:** [`2026-07-27-align-wave0-shared-reference-guidance`](../../../openspec/changes/archive/2026-07-27-align-wave0-shared-reference-guidance/) (v0.52).
 
 **Goal:** make the existing Wave0 submitted shared-reference producer visible
 and make `shared_ref_count_floor` feedback name that legal delegated path,
 instead of directing the Phase Agent to create an unbacked file.
 
-**Scope:** correct the definition-owned repair feedback and Wave0 producer
-guidance; make the shared-reference output expectation non-discretionary for
-the existing producer; repair the focused deterministic fixture so it reaches
-the submitted-reference/count boundary under current canonical-topic admission.
-It SHALL NOT add a work-unit kind, queue operation, terminal path, floor value,
-derived health state, or Agent-flow E2E.
+**Delivered boundary:** the definition-owned repair feedback and Wave0 producer
+guidance now name the existing formal `wave0_source_intake` path; the shared
+reference is non-discretionary when repairing that floor. The canonical-binding
+fixture repair proves submitted counting and direct-orphan rejection, while the
+Wave0 CLI proof checks the returned repair coordinate. It added no work-unit
+kind, queue operation, terminal path, floor value, derived health state, or
+long-form E2E.
 
-**Done when:** a focused production-path proof submits an existing
+**Result:** a focused production-path proof submits an existing
 `wave0_source_intake` shared reference and the count accepts it; the missing
 shared-reference hint names the existing legal delegated path; direct Phase
-file creation remains unbacked; and the profile floor is unchanged pending
-Change 4's explicit decision.
+file creation remains unbacked; and D1 retained the profile floor as accepted
+policy.
 
-### Deferred Successors
+### Closed And Deferred Scope
 
-The remaining bullets are retained as discovery context for Changes 5-7, not
-as implementation permission for the selected Wave0 change.
+Change 3 closed the bounded Wave0 guidance defect. The existing
+`wave0_source_intake` path backs and counts a shared reference; no evidence
+supports `wave0_shared_foundation` or a new `operate-queue` demand operation.
+D1 is complete; there is no remaining Wave0 implementation follow-up.
 
-Scope is contingent on Step 0. The bullets below are written as conditionals on
-purpose; converting one into an unconditional task without its falsification
-evidence is how this change becomes a mega-change.
-
-- Keep `classifyReferenceAuthority()` as the one ownership seam. Its
-  caller-visible result stays: submitted delegated acquisition, valid Phase
-  projection, or a concrete unbacked root with one legal next action. Its Wave1
-  and Wave2 adapters already hold materially different backing facts
-  (`gate-helpers-checks.mjs:592-668`) and must keep them.
-- **Wave0 shared references — conditional.** If Step 0 shows the existing
-  `wave0_source_intake` path already backs and counts a shared reference, the
-  work is: correct the `repair` block on `shared_ref_count_floor`
-  (`gate-wave0-complete.definition.json:45`) to name the legal submit path, and
-  remove `"optionally"` from the producer guidance so the shared reference is a
-  declared output rather than a discretionary extra. Only if Step 0 shows a
-  hard engine rejection should a `wave0_shared_foundation` kind and an
-  `operate-queue` demand operation be proposed — and then as their own change,
-  because a new acquisition kind is a new source of record.
-- **Wave0 shared references — the classification question is still open.** A
-  shared reference derived entirely from already-submitted topic-bound sources
-  is a projection; one requiring a new cross-domain fetch is an acquisition.
-  These are two authority classes, and nothing today verifies the ≥2-topic
-  coverage that the concept rests on. Decide explicitly whether cross-topic
-  coverage is a deterministic obligation. If it is not checkable, do not build a
-  producer kind whose only justification is expressing it.
-- **Wave1 topic references — conditional.** The projection branch and its
-  counting already exist. If Step 0 confirms the failure is
-  `submitted_source_backing_missing`, the fix is in the Wave1 producer contract
-  (make the source URLs a projection must bind to a submitted obligation,
-  `work-unit-constants.mjs:56-60`) and in reconciling `phase-wave1.md`'s
-  post-submit materialization instruction with what the gate can verify. Do not
-  re-route what is already routed.
-- **Wave2 pure synthesis.** Route through the existing existing-backed branch.
-  Synthesis, finding index, ledger and `00-cross-*` references are Phase outputs
-  backed by submitted prior-wave inputs and their required process facts. Only a
-  finding that records targeted new evidence requires a submitted
-  `wave2_targeted_evidence` receipt; Wave1 backing is never represented as a
-  forged Wave2 receipt. BUG-130's `finding_index_contract` demand that
-  `subagent_receipt_refs` be Wave2-only is the concrete contradiction to resolve.
-- **BUG-131 is already correct policy.** Wave0 and Wave1 declare
-  `degradation_eligible: true` floors and Wave2 declares none
-  (`gate-wave{0,1}-complete.definition.json:42,79,49`); the helper only degrades
-  such rules (`wave-degradation-eligibility.mjs:8-14`). No override, no new
-  degraded mode, no extra HITL transition. Fixing upstream classification is the
-  whole remedy — but see Residual Risk.
-- Make all bypass scans and formal gates consume this ownership classification
-  before reporting a bypass, and confirm by test which consumers currently do
-  not. Provenance, binding, finding-contract, queue, trace and lifecycle roots
-  remain fail-closed.
-
-**Legal loops:**
+`classifyReferenceAuthority()` remains the one ownership seam: its Wave1 and
+Wave2 adapters deliberately use different backing facts. I1 and I2, not a
+general convergence change, decide whether either adapter has a current defect.
+Any future proposal must name the affected consumer and preserve fail-closed
+provenance, binding, finding-contract, queue, trace and lifecycle roots.
 
 ```text
-submitted Wave0/1/2 inputs -> Phase projection -> ownership classification -> same inspect/gate
-new Wave2 evidence need   -> targeted demand -> admission -> claim/submit -> same inspect/gate
+submitted prior evidence -> Phase projection -> ownership classification -> same inspect/gate
+new Wave2 evidence need -> targeted demand -> admission -> claim/submit -> same inspect/gate
 ```
-
-**Done when:**
-
-- a backed Wave1 reference and backed pure Wave2 synthesis pass without a new
-  work-unit; an unbacked projection fails its exact backing root;
-- a missing Wave0 shared reference has one named legal producer path and a
-  repair hint that points at it, whether that path turns out to be the existing
-  `wave0_source_intake` declaration or a newly justified kind;
-- a genuine new Wave2 source still requires targeted submitted evidence;
-- Wave0, Wave1 and Wave2 expose the same ownership/root classification before
-  the existing degradation helper makes its allowed eligibility decision.
 
 ## Verification And Scope Discipline
 
-- Unit tests cover canonical seed merge rules, queue admission parity,
-  ownership classification and root selection.
-- Integration tests cover each CLI/checkpoint boundary and gate/inspect parity.
-- Deterministic E2E covers the Wave0 shared-reference path, the Wave1
-  projection path and the Wave2 pure-synthesis/targeted-search split.
-- A disposable `agent_flow_e2e` is the only proof of real Agent/sub-agent
-  behavior, and is also the instrument for Step 0. Missing live evidence remains
-  `NOT_RUN`.
+- Each change selects the smallest proof class that establishes its accepted
+  deterministic claim. Change 3 used focused unit and integration tests; it did
+  not need deterministic E2E or Agent-flow E2E.
+- A long E2E or Agent-flow run is not presumed. It is selected only when the
+  claimed behavior needs workflow-scale or real Agent-execution evidence that a
+  focused deterministic proof cannot establish.
 - Each change requires a verification plan, requirement registration, an
   explicit version decision, and the project requirement/spec checks before
   archive.
-- Map each bug to the specific proof that closes it. A change that lands without
-  a named regression per bug cannot close that bug.
+- Map each bug to the specific proof or product decision that closes it. A
+  passing unrelated test, manual runtime edit, or console report cannot close a
+  bug.
 
 Non-goals: a generic provenance ledger, a universal artifact schema, a
 workflow controller, automatic gate repair, human override, pre-HITL approval
@@ -518,37 +514,30 @@ again in a later run:
    decision must say what happens to an in-flight bundle rather than leaving it
    to be re-diagnosed as a fresh bug.
 
-## Exit Criteria
+## Closure Accounting
 
-BUG-124--131 close only when their legal path is implemented and regression
-proved. A degraded result, manual runtime edit, console report or resumed host
-turn is not closure evidence.
+BUG-124--127 are represented by the three archived changes and their named
+regressions. BUG-128 is closed by D1's explicit retain-the-formula policy
+record. BUG-129 and BUG-130 are not implementation debt
+unless I1 or I2 supplies its specified current-bundle counterexample. BUG-131's
+eligibility split is accepted policy; its pre-HITL2 deadlock is an acknowledged
+residual risk, not a falsely closed bug or an authorized override change.
+
+A degraded result, manual runtime edit, console report or resumed host turn is
+not evidence that a different deterministic defect has closed.
 
 ## Questions For Independent Review
 
-The requested review is architectural, not a request to restate individual bug
-fixes. A useful review should explicitly challenge or confirm these decisions:
+The completed changes and D1 should not be reopened through this backlog. The
+remaining review questions are only the evidence thresholds that determine
+whether another bounded change exists:
 
-1. Is the four-way split correct, now that queue admission has been separated
-   out on the same source-of-record criterion that separated seed authoring? Is
-   any remaining change still carrying two sources of record?
-2. Step 0 asserts that a `wave0_source_intake` unit can already declare and back
-   a `reference/00-shared-*.md`. If the falsification run confirms this, is
-   there any *remaining* argument for `wave0_shared_foundation` beyond
-   expressing cross-topic coverage — and is that coverage a deterministic
-   obligation anyone checks?
-3. Are shared references genuinely one authority class? A reference derived from
-   submitted topic-bound sources and one requiring a new cross-domain fetch have
-   different backing facts; forcing both into one producer may repeat the
-   mistake this plan is trying to fix.
-4. If BUG-129's 0/80 result is `submitted_source_backing_missing`, does Change 3
-   retain any Wave1 work at all, or does that bug move wholly into the Wave1
-   producer contract?
-5. Does the seed enrichment operation preserve Agent-owned research judgment
-   without permitting canonical identity drift — and should enrichment live in
-   frontmatter at all, given the body already carries the same sections?
-6. Who owns the shared-reference floor formula, and what is the stated rationale
-   for whichever value survives?
-7. Are the proposed negative proofs sufficient to show that a direct file,
-   forged receipt, stale queue card, or unbacked projection cannot regain
-   authority through a new success path?
+1. Is the Wave1 admission rule correct: do not propose a repair until a selected
+   real failing bundle, its declaration ledger and affected projection reproduce
+   one backing root despite the passing focused projection proof?
+2. Is the Wave2 admission rule correct: do not infer a receipt repair until a
+   current pure-synthesis counterexample follows the accepted branch yet is
+   rejected for lacking a Wave2 targeted-evidence receipt?
+3. Does the retained degradation policy and residual pre-HITL2 risk remain an
+   accepted consequence, rather than hidden implementation scope for either
+   later candidate?

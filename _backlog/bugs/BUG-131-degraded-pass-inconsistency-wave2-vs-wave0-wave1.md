@@ -1,8 +1,9 @@
 ---
 bug_id: BUG-131
 title: "Degraded pass inconsistency — wave0/wave1 gate passed with failed rules, wave2 hard-failed with same pattern"
-severity: P1
+severity: P2
 discovered: 2026-07-26
+status: accepted_policy_residual_risk
 bundle: dpt_rb_openspec-influence-landscape
 phase: wave2
 node: phases/phase-wave2.md
@@ -11,6 +12,23 @@ related: [BUG-130, BUG-124, BUG-129]
 ---
 
 # BUG-131: Degraded pass 策略在 wave0/wave1 和 wave2 之间不一致
+
+## Current Disposition (2026-07-27)
+
+Wave0/Wave1 eligible quality floors and Wave2 fail-closed authority roots are
+the accepted policy, not an inconsistency to normalize. No override or degraded
+mode change is authorized. The pre-HITL2 deadlock remains an acknowledged
+residual risk and this bug stays active as its record; reconsideration requires
+a separately scoped product question rather than automatic escalation from a
+Wave1/Wave2 repair. The policy boundary is recorded in
+[`evidence-production-and-phase-projection-boundaries`](../_done/_closed_plans/evidence-production-and-phase-projection-boundaries.md).
+
+## Current Priority (2026-07-27)
+
+The historical P1 severity is superseded by the accepted policy disposition.
+This remains a P2 residual-risk record, not an authorized implementation
+change. Reopen its priority only when a maintainer rejects the fail-closed
+policy cost through a separately scoped product decision.
 
 ## 现象
 

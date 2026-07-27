@@ -6,17 +6,21 @@ This note is the detailed reasoning behind the plan. It is not an accepted
 contract and does not authorize code edits. Its job is to prevent the same bug
 family from being rediscovered under a different Wave filename.
 
-It was revised on 2026-07-26 after the parent plan's premises were checked
-against current code. Two premises were falsified and one design question was
-re-opened; the affected subsections are marked. Where this note and the parent
-plan's verified code-fact list disagree, the code-fact list wins.
+It was revised through 2026-07-27 after the parent plan's premises were checked
+against current code. Three bounded OpenSpec changes are now archived. This
+note preserves the reusable seams and rejected designs behind that work; the
+parent plan's execution queue and handoff cards are authoritative for remaining
+work. Where this note and the parent plan's verified code-fact list disagree,
+the parent plan wins.
 
 ## Design Review Before Change Splitting
 
-The plan is deliberately split by source of record, not by filename or by
-individual gate failure. It now has three changes plus one investigation step,
-because the same criterion that separated seed authoring from evidence
-ownership also separates queue admission from both.
+The completed work was deliberately split by source of record, not by filename
+or individual gate failure. It produced three archived changes: canonical seed
+authoring, queue demand admission, and narrow Wave0 shared-reference guidance.
+The remaining queue is not a fourth cross-Wave change: it is one floor-policy
+decision, two dormant runtime-evidence investigations, and an accepted
+degradation-policy record.
 
 | Direction | Canonical seed authoring | Queue demand admission | Evidence ownership and projections |
 | --- | --- | --- | --- |
@@ -25,11 +29,10 @@ ownership also separates queue admission from both.
 | Simple reliable control | Registry -> existing topic-state merge -> existing evaluator -> same completion checkpoint. No second linter, hash, writer, or repair controller. | One admission evaluator -> enqueue, health, claim. No duplicate validator, no new terminal op. | Direct submitted facts -> one ownership classification -> existing inspect/gate and degradation helper. No second ledger or Wave-specific bypass policy. |
 | Helper-oriented responsibility | The Agent performs content work and supplies structured enrichment; the Engine preserves identity and reports the binding root. | The Engine answers claimability once; the Agent is not made a queue-file editor. | The Agent executes legal queue/submit and projection work; the Engine classifies backing and returns the nearest legal repair. |
 
-Combining any two would create a shallow module whose callers must learn two
-unrelated contracts to repair either. Conversely, splitting evidence ownership
-into Wave0, Wave1, and Wave2 changes would duplicate the same ownership
-question while hiding necessary Wave-specific backing facts inside three
-parallel checks.
+Combining any two completed changes would have created a shallow module whose
+callers must learn two unrelated contracts to repair either. A later Wave1 or
+Wave2 repair must be proved from its own current runtime counterexample; it
+shall not be opened merely because the two paths share an ownership helper.
 
 BUG-131 is not a further semantic level. The accepted degradation helper already
 answers its bounded question after a root has been classified, and Wave0/Wave1
@@ -142,32 +145,19 @@ signals by `throw`, so a verdict-shaped return is a real refactor rather than a
 rename; and `staleReason()` should consult the same verdict so the existing
 `repair --remove-stale` terminates unclaimable cards.
 
-### Shared Foundation Demand (Change 3, contingent)
+### Resolved Shared-Reference Producer Question
 
-**Contingent on Step 0 in the parent plan.** The engine appears to already
-permit a `wave0_source_intake` unit to declare and back a
-`reference/00-shared-*.md`, in which case nothing in this subsection is needed.
-It is retained only as the design that applies if a falsification run shows a
-hard engine rejection.
+Step 0 confirmed that `wave0_source_intake` may declare and back a
+`reference/00-shared-*.md`. Change 3 aligned the repair feedback and producer
+guidance with that existing path. A `wave0_shared_foundation` work-unit kind or
+an `operate-queue` shared-demand operation is therefore rejected: it would add
+an authority surface that the current Engine does not need.
 
-If it is needed, the `operate-queue` shared-foundation demand operation is
-intentionally narrow: it reads the configured floor and submitted coverage,
-creates exact missing cards, and reports what it created. It cannot select
-sources, declare success, advance a phase, repair a work unit, or schedule a
-turn. Those remain Agent Flow and existing work-unit responsibilities.
-
-One reference per demand keeps the submitted output, cache trails, source URL,
-Topic binding and count-floor contribution in one inspectable unit. The active
-queue window controls concurrency.
-
-The floor itself is a separate, currently unowned decision. It is not an
-incidental number: `claim_verification` declares `base 6 + per_topic 2`
-(`schema/research-styles/claim_verification.json:4`), which is where the
-observed 22-for-8-topics demand comes from, read through
-`threshold_source: rb_profile.yaml#/research_style_params/wave0_shared_ref_total`.
-BUG-128 names that formula as its primary root cause. A legal producer path
-makes 22 reachable; it does not make it reasonable, and no change in this plan
-currently owns adjusting or explicitly keeping it.
+D1 is complete. The maintainer retained `claim_verification`'s
+`base 6 + per_topic 2` formula, producing 22 for eight topics, and accepted its
+eligible-degradation cost. There is no Wave0 implementation change. A future
+formula change requires a new product decision and then a floor-only OpenSpec
+change.
 
 ### Ownership Classification
 
@@ -179,10 +169,10 @@ already a mature seam with Wave-specific adapters because the facts differ:
   process references and submitted prior-wave locators.
 - New Wave2 evidence requires targeted submission.
 
-The change makes all reference coverage and bypass scans consume this existing
-classification before emitting a root. Synthesis/finding-index evaluation keeps
-its separate structured contract, but must use the same distinction when it
-decides whether a receipt belongs to prior evidence or a targeted attempt.
+The completed work preserved this classification. Synthesis/finding-index
+evaluation keeps its separate structured contract and distinguishes prior
+evidence from targeted attempts. I1/I2 are the only routes for demonstrating a
+current implementation drift in either branch.
 
 ## Degradation Is Downstream Of Ownership
 
@@ -212,67 +202,34 @@ Wave outcomes explainable without weakening their different direct contracts.
 | Human override or earlier HITL for hard failures | Replaces deterministic authority with consent and creates another lifecycle/control path. |
 | A standalone seed YAML linter | Finds syntax sooner but retains the impossible identity-copy obligation and duplicates the existing evaluator. |
 
-### Two designs this review previously failed to consider
+### Resolved Alternatives
 
-Both were proposed in the bug records and dismissed by assertion rather than
-argument. Neither can be rejected until Step 0 runs.
+The completed falsification rejected both a new shared-reference work-unit kind
+and a queue demand operation. A `00-shared-*` file may conceptually be a
+projection of submitted topic evidence or a new acquisition, but the accepted
+Wave0 path does not introduce a separate deterministic cross-topic coverage
+contract. No later Agent may revive either design without a new selected runtime
+fact and a separately scoped OpenSpec proposal.
 
-**Shared reference as a Wave0 Phase projection** (BUG-124, 中期建议 2). If a
-`00-shared-*` file is derived entirely from already-submitted topic-bound
-`source.yaml` evidence, it makes no new acquisition claim, and by this plan's own
-model that is the definition of a projection. Extending the projection branch to
-`00-shared-` — which `isWave1TopicReference` explicitly excludes today
-(`gate-helpers-checks.mjs:225`) — is strictly cheaper than a new work-unit kind
-and a new CLI operation. The counter-argument is that a shared reference may
-require genuinely new cross-domain sources. Both cases are real, which suggests
-shared references are **two authority classes, not one**, and that forcing them
-into a single producer repeats the error this plan diagnoses elsewhere.
+## Completion And Remaining Gates
 
-**Shared reference as an ordinary extra output of `wave0_source_intake`.** The
-engine already permits this (see the parent plan's falsified-premise list). If
-Step 0 confirms it, the entire `wave0_shared_foundation` design is answering a
-question the engine does not ask, and BUG-124 collapses to a wrong `repair`
-block in a gate definition plus a `"optionally"` in producer guidance.
+Step 0 completed: the existing Wave0 producer is legal, the repaired focused
+proof passes, and no new producer subsystem is justified. Changes 1, 2 and 3
+are archived. There is no active cross-Wave ownership change.
 
-## Change Order And Proof
+The parent plan now governs the remaining order:
 
-Step 0 comes first and is an investigation, not a change: it decides whether
-Change 3 contains a new Wave0 producer at all, and whether BUG-129 belongs to
-classification or to the Wave1 producer contract. Running it costs one
-disposable bundle and can delete an entire subsystem from the plan.
+1. D1 is complete: the maintainer retained the style formula, so it created no
+   OpenSpec change.
+2. I1 and I2 are bounded current-bundle counterexample investigations. They may
+   create a Wave1 or Wave2 repair only if the selected bundle contradicts the
+   accepted backed-projection or pure-synthesis contract.
+3. P1 retains the accepted degradation policy and records the pre-HITL2
+   deadlock as residual risk; it is not an implementation change.
 
-Change 1 is independent and reduces authoring fragility before the first Wave.
-Change 2 is independent of both and is a prerequisite for any new demand kind.
-Change 3 is one cross-Wave ownership change because its caller-facing question
-is the same at every Wave: "what authority establishes this artifact, and what
-is the next legal action if it does not?"
-
-Every change should prove direct negative cases, not only successful output.
-Each bullet below must be traceable to the bug it closes:
-
-- identity input containing `must_answer` is rejected without mutating a seed
-  (BUG-126/127);
-- a malformed enrichment input is rejected before a queue completion attempt
-  (BUG-126);
-- a `must_answer` rewrite is reported when it is written, not only at completion
-  (BUG-127);
-- a card that fails admission cannot be persisted at enqueue, for every kind,
-  and the same root appears at claim (BUG-125);
-- an unclaimable unclaimed card is terminated by a legal operation rather than
-  by editing the queue file (BUG-125);
-- a manually written `00-shared-*` file remains uncountable (BUG-124);
-- a submitted-and-declared `00-shared-*` file counts, and the gate hint names
-  that path rather than a direct write (BUG-124/128);
-- a valid Wave1/Wave2 Phase projection passes without a fake work unit
-  (BUG-129/130);
-- the same file without its required submitted backing fails the named root
-  (BUG-129);
-- a finding that needs new Wave2 search cannot pass with only Wave1 refs, and
-  Wave1 backing is never accepted as a forged Wave2 receipt (BUG-130); and
-- the same ineligible authority root remains fail-closed across Waves
-  (BUG-131).
-
-Note what is deliberately absent: there is no proof obligation for "a shared
-card missing cross-topic binding is rejected", because no checker verifies
-cross-topic coverage today and this plan does not yet decide whether one should.
-Do not add that proof without first answering the classification question above.
+The completed proof set establishes that a direct Wave0 shared-reference orphan
+does not count, a submitted declared one does, and a backed Wave1 Phase
+projection counts. It does not establish a Wave1 or Wave2 runtime defect. Any
+future proof obligation must be the specific counterexample defined in the
+parent handoff card; do not add a broad E2E or a new cross-topic contract by
+analogy.

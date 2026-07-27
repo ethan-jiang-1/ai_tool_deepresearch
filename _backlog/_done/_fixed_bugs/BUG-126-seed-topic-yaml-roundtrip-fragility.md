@@ -3,12 +3,23 @@ bug_id: BUG-126
 title: "Seed topic YAML frontmatter round-trip fragility — parse errors only surface at queue complete time"
 severity: P2
 discovered: 2026-07-26
+status: fixed_archived_change
+resolved: 2026-07-26
+fixed_by: 2026-07-26-canonical-seed-authoring
 bundle: dpt_rb_openspec-influence-landscape
 phase: seed-topics
 node: phases/phase-seed-topics.md
 ---
 
 # BUG-126: Seed topic 的 YAML frontmatter 在 hand-author 和 Engine parse 之间存在 round-trip 断裂
+
+## Resolution (2026-07-26)
+
+Archived Change 1, `canonical-seed-authoring` (v0.50), made topic-state the
+single structured `enrich_seed` writer for Agent-owned enrichment while the
+Engine derives the canonical frontmatter envelope from the registry. Parsed
+input validation and the existing canonical evaluator now provide a legal repair
+loop without raw YAML identity authoring.
 
 ## 现象
 

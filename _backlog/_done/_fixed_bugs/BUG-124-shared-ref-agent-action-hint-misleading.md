@@ -3,6 +3,9 @@ bug_id: BUG-124
 title: "Shared reference Phase Agent bypass — repair_kind: agent_action hint is misleading when fix requires delegated sub-agent"
 severity: P2
 discovered: 2026-07-26
+status: fixed_archived_change
+resolved: 2026-07-27
+fixed_by: 2026-07-27-align-wave0-shared-reference-guidance
 bundle: dpt_rb_openspec-influence-landscape
 phase: wave0
 node: phases/phase-wave0.md
@@ -10,6 +13,15 @@ gate: wave0-complete
 ---
 
 # BUG-124: Shared reference 的 repair hint 指向 Phase Agent，但修复只能由 delegated sub-agent 完成
+
+## Resolution (2026-07-27)
+
+Archived Change 3, `align-wave0-shared-reference-guidance` (v0.52), corrected
+the Wave0 gate repair coordinates and producer guidance to name the existing
+`wave0_source_intake` declared-output/formal-submit path. Focused unit and CLI
+integration regressions prove that a submitted shared reference counts while a
+direct Phase-created orphan remains unbacked. No new work-unit kind or queue
+operation was introduced.
 
 ## 现象
 

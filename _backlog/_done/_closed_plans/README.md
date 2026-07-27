@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-07-26 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-07-27 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -58,5 +58,6 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-034 | 2026-07-23 | research-question-closure-and-evidence-judgment/ | 直接吸收 user-knowledge-hang / evidence-quality / explore-exploit 三份输入；HITL1 host-file snapshot 贯通 Seed/Wave/Final + Wave1→Wave2 问题交接；两个 change archive：`capture-user-research-controls`、`bind-wave1-target-receipts-to-wave2-findings` |
 | CLS-035 | 2026-07-24 | wave-execution-and-gate-remediation.md | Wave producer/closeout + pre-Wave readiness + root-first Gate feedback 与 fail-closed degradation policy；三个 change archive：`make-pre-wave-readiness-feedback-direct`（`542f7833a`）、`make-wave-producer-contract-and-closeout-direct`（`d65fe538a`）、`simplify-wave-gate-feedback-and-degradation-policy`（`6e47de3ea`）；覆盖 BUG-100–102、105、107–113。supporting indexes 同目录 `wave-execution-and-gate-remediation/`；real-Agent search/fetch 仍 `NOT_RUN` |
 | CLS-036 | 2026-07-26 | delegated-work-operability-and-gate-truth.md | BUG-114–123 的归因与收敛完成：两个 OpenSpec change archive，queue/Gate 候选均无 fresh red；BUG-120 的 guidance-delivery 缺陷已结案，真实 `case-225` 保留为独立内容验证 |
+| CLS-037 | 2026-07-27 | evidence-production-and-phase-projection-boundaries.md | 三个 bounded changes 已 archive：canonical seed authoring、queue demand admission、Wave0 shared-reference guidance。D1 保留 `claim_verification` 的 `6 + 2 x topics` floor 并接受 eligible-degradation 成本；BUG-124--128 结案。BUG-129/130 保留为分别由当前真实反例触发的 I1/I2，BUG-131 为 accepted residual risk。 |
 
-**Next available plan ID: CLS-037**
+**Next available plan ID: CLS-038**

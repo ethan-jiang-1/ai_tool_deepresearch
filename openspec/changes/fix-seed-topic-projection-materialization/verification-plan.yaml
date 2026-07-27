@@ -1,0 +1,72 @@
+schema_version: verification-routing/v1
+change: fix-seed-topic-projection-materialization
+test_classes:
+  unit:
+    status: selected
+    rationale: Slot-map parity, packet validation, entry merge, authority binding, and root-short-circuit behavior are pure deterministic contracts requiring focused negative coverage.
+  integration:
+    status: selected
+    rationale: Existing topic-state apply, Wave inspect, formal gate, and lifecycle authorization must cross real bundle state without a competing test-local implementation.
+  deterministic_e2e:
+    status: selected
+    rationale: A disposable Wave0-to-Wave2 chain is needed to prove ordered projection materialization, completion ordering, and degradation-ineligible structural failure across real production CLIs.
+  agent_flow_e2e:
+    status: selected
+    rationale: Only a real Phase Agent can prove that the one complete template and root-first feedback are usable to form a semantic packet and complete the existing legal writer/inspect loop.
+claims:
+  - id: slot-map-packet-and-merge-contract
+    statement: The executable Appendix Slot Map, canonical renderer, locator and one complete shared template keep headings, card descriptors and entry-id rules structurally aligned; cards never parse as entries; strict packets accept only an owned Wave/source identity, including exact current-round Wave2 `entry_id`/W2F binding mapped to the packet topic with a historical W2F-ref read fallback, and atomically consume/upsert entries without raw Markdown authority, duplicate entries, Wave-crossing writes, token reinjection, partial Wave1 mutation, or an unsafe legacy-heading guess.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/seed-topic-projection.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: projection-apply-and-shared-readiness-boundary
+    statement: Real topic-state apply admits a packet only in the corresponding loaded Wave window and against current submitted/finding authority, rejects a legacy-round or wrong-topic Wave2 finding before workspace creation, stages only the selected seed, preserves legacy-layout read compatibility including repeated-heading family union for inspect/gate, upgrades only a uniquely targeted declared legacy heading/card in the legal transaction, rejects a packet-selected missing or repeated target without guessing a write, and produces the same root-first projection-readiness interpretation from the same per-invocation direct facts for Wave inspect and formal gate, including a degradation-ineligible demanded-token/generic-prose failure with no retained definition-level token duplicate and no synthetic entry requirement when no current demand exists.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-projection.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave-chain-projection-completion-truth
+    statement: A temporary disposable bundle progresses Wave0, Wave1 and Wave2 through submitted/finding authority, legal packets, card-preserving topic-state writes, same Wave inspect and formal gates; it rejects demanded untouched tokens, generic submitted prose, absent/wrong-topic current identities and a structural degraded-pass attempt, while leaving a no-demand token free of synthetic-entry pressure, without fabricating trace, receipt, ledger or evidence authority.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/seed-topic-projection-materialization.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: phase-agent-uses-template-packet-and-same-inspect-loop
+    statement: A real Phase Agent in a fresh disposable bundle reads the one complete Seed Topic template, derives a semantically authored packet from actual submitted/finding authority, invokes the existing topic-state writer, consumes exact inspect feedback, and leaves native trace/inspect evidence. PASS proves interface and legal-loop usability only; it does not prove research quality, private reading causality, or create authority from the projection.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_seed-topic-projection/case-227-heavy-seed-topic-projection-materialization.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

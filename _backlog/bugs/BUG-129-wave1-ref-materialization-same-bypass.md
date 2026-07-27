@@ -3,6 +3,7 @@ bug_id: BUG-129
 title: "Wave1 per-topic reference materialization has same delegated_bypass as Wave0 shared refs — Phase Agent cannot create countable reference files"
 severity: P2
 discovered: 2026-07-26
+status: dormant_current_counterexample_required
 bundle: dpt_rb_openspec-influence-landscape
 phase: wave1
 node: phases/phase-wave1.md
@@ -11,6 +12,19 @@ related: [BUG-124, BUG-128]
 ---
 
 # BUG-129: Wave1 的 per-topic reference 物化与 Wave0 shared ref 有相同的 delegated_bypass 问题
+
+## Current Disposition (2026-07-27)
+
+The historical bundle does not establish a current framework defect. The focused
+backed Wave1 projection proof passes under the current classifier and
+reference-count contract. This bug remains active only as a bounded runtime
+counterexample gate: select a reachable current-line bundle and show its gate
+output, submitted declaration/work-unit evidence, affected reference, and
+source/cache binding. Only a fully backed projection that still reports
+`submitted_source_backing_missing` may open a narrow producer-contract repair.
+Any other root is data/authoring or version-skew evidence, not implementation
+authorization. The complete evidence package and stop conditions are recorded
+in [`evidence-production-and-phase-projection-boundaries`](../_done/_closed_plans/evidence-production-and-phase-projection-boundaries.md).
 
 ## 现象
 

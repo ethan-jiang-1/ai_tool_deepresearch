@@ -1,7 +1,7 @@
 ---
 bug_id: BUG-099
 title: "stop: no phase agent halted at wave0 — de-facto HITL created"
-severity: P1
+severity: P2
 discovered: 2026-07-23
 bundle: dpt_rb_openspec-large-project-maintenance-patterns
 phase: wave0
@@ -9,6 +9,15 @@ node: phases/phase-wave0.md
 ---
 
 # BUG-099: `stop: no` phase agent halted at wave0
+
+## Current Priority (2026-07-27)
+
+This is a deferred operability issue, not the current delivery blocker. A
+premature stop costs an extra user continuation turn but does not itself make
+the bundle's work-unit, evidence-production, or Gate contracts unreachable.
+Prioritize making real bundles run those contracts reliably first; revisit the
+bounded DPT handoff defect only after that path is routinely successful. Do not
+attempt to solve host/Agent turn liveness by adding a DPT watcher or controller.
 
 ## 现象
 

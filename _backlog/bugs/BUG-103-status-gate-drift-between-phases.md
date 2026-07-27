@@ -4,7 +4,8 @@ title: "rb_status.json gate fields drift between phases, requiring manual advanc
 severity: P3
 discovered: 2026-07-23
 bundle: dpt_rb_openspec-large-project-maintenance-patterns
-phases: hitl1, setup
+phases: hitl1, setup, wave2, hitl2
+last_reproduced: 2026-07-27
 ---
 
 # BUG-103: rb_status.json gate 字段在 phase 之间持续漂移
@@ -32,6 +33,28 @@ enter-phase --node phases/phase-seed-topics.md (after setup gate pass)
 ```
 
 实际上 seed-topics gate check 没有报 status drift（它直接 pass 了），因为 seed-topics gate 在进入 phase 之前已经通过 advance-status 同步过了。但 HITL1→Setup 的 transition 确实每次都触发 status drift。
+
+### Fresh reproduction: Wave2 → HITL2
+
+在 `dpt_rb_openspec-derivative-frameworks` 本次 run 中，Wave2 Gate 已通过并返回
+`phases/phase-hitl2.md`。随后 `enter-phase` 成功加载 HITL2，但直接运行 HITL2
+Gate 时，`rb_status.json` 仍停留在 Wave1 窗口，得到：
+
+```text
+rb_status.json#/current_gate expected "wave2_complete", got "wave1_complete"
+rb_status.json#/next_gate expected "hitl2_recorded", got "wave2_complete"
+```
+
+按 Gate advice 执行：
+
+```bash
+node DPT_FRAMEWORK/cli/advance-status.mjs \\
+  --bundle dpt_rb_openspec-derivative-frameworks \\
+  --to wave2_complete
+```
+
+之后 HITL2 Gate 通过。该记录是 BUG-103 的又一次 fresh reproduction，
+不是新 bug 编号；它说明问题跨越的不只是早期 phase transition。
 
 ## 根因假设
 

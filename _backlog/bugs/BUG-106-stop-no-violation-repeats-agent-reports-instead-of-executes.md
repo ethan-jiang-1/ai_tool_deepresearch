@@ -1,13 +1,21 @@
 ---
 bug_id: BUG-106
 title: "stop: no violation pattern repeats — agent reports status summary instead of loading and executing next phase"
-severity: P1
+severity: P2
 discovered: 2026-07-23
 bundle: dpt_rb_openspec-large-project-maintenance-patterns
 phase: wave0→wave1 transition
 ---
 
 # BUG-106: `stop: no` violation repeats — agent says "continuing" but doesn't execute
+
+## Current Priority (2026-07-27)
+
+This is the same deferred operability class as BUG-099. It consumes an
+additional user continuation turn, but it is not currently a proof that the
+underlying work-unit, evidence-production, or Gate path is unreachable. Defer
+the silent-autonomy improvement until those core runtime paths have first been
+made routinely runnable; do not create a host-liveness controller as a shortcut.
 
 ## 现象
 

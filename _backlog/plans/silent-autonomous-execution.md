@@ -2,7 +2,7 @@
 title: Silent autonomous execution
 status: research_backlog_with_no_fixed_openspec_change
 created: 2026-07-24
-revised: 2026-07-24
+revised: 2026-07-27
 source_bugs: BUG-099, BUG-103, BUG-104, BUG-106
 evidence_bundle: dpt_rb_openspec-large-project-maintenance-patterns
 ---
@@ -14,6 +14,12 @@ evidence_bundle: dpt_rb_openspec-large-project-maintenance-patterns
 `stop: no` 的“静默自主”不能再被表述为一个已收敛、单一的 OpenSpec change。它横跨两个不同的事实层：DPT 可确定性修复的 phase-entry correctness，以及一般 coding-agent/host 是否发起下一 turn 的 actor liveness。两者必须分开研究、分开证明。
 
 本计划是独立的 research backlog，不预先承诺 Change 数量、proposal 名称或 `/opsx:apply` 顺序。它不阻塞 [Wave execution and gate remediation](../_done/_closed_plans/wave-execution-and-gate-remediation.md) 的三个已收敛 producer/Gate changes。
+
+**Priority update (2026-07-27):** this plan is deferred behind reliable
+end-to-end execution of the work-unit, evidence-production, and Gate paths.
+The observed stops are recoverable with an extra user continuation turn; they
+do not currently establish that those core paths are unreachable. Do not open
+this plan's candidate change until real bundles can otherwise run routinely.
 
 ```text
 DPT deterministic means
@@ -68,7 +74,7 @@ Codex 的 plan update 和 Claude Code 的 task list 都是 tracking surface，�
 3. real-Agent verification 的断言与 deterministic test 的断言明确分层；
 4. scope 未吸收 host controller、平台 adapter、chat observation 或其他 Wave/Gate remediation。
 
-若实验只表明 host liveness 不可移植，则保留 BUG-099/106 为 residual actor observations，而不是用 DPT code 制造假的 closure。
+若实验只表明 host liveness 不可移植，则保留 BUG-099/106 为 residual actor observations，而不是用 DPT code 制造假的 closure。它们在当前排序为 P2 deferred operability，不能抢占核心运行正确性工作。
 
 ## 5. Evidence Index
 

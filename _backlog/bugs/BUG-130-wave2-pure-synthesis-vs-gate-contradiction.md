@@ -1,8 +1,9 @@
 ---
 bug_id: BUG-130
 title: "Wave2 pure synthesis path contradicts gate contract — Phase Agent materialization flagged as delegated_bypass"
-severity: P1
+severity: P2
 discovered: 2026-07-26
+status: dormant_current_counterexample_required
 bundle: dpt_rb_openspec-influence-landscape
 phase: wave2
 node: phases/phase-wave2.md
@@ -11,6 +12,27 @@ related: [BUG-124, BUG-129]
 ---
 
 # BUG-130: Wave2 的 "pure synthesis path" 与 gate contract 矛盾
+
+## Current Disposition (2026-07-27)
+
+The accepted contract allows a complete existing-backed pure-synthesis branch;
+a Wave2 receipt is required only for targeted new evidence. This bug remains
+active only as a bounded runtime counterexample gate. A repair may be proposed
+only when a reachable current-line bundle supplies its gate output,
+`finding-index.yaml`, `W2F-xxx`/`00-cross-*` artifacts, concrete prior backing,
+and shows that the complete pure-synthesis branch was rejected solely for
+lacking a Wave2 receipt or because the Phase wrote the projection. Missing
+finding fields, unbacked prior evidence, or `search_submitted` without a Wave2
+receipt are expected direct roots, not a contradiction. The complete evidence
+package and stop conditions are recorded in
+[`evidence-production-and-phase-projection-boundaries`](../_done/_closed_plans/evidence-production-and-phase-projection-boundaries.md).
+
+## Current Priority (2026-07-27)
+
+The historical P1 severity is superseded by the current focused proof: this is
+P2 dormant until a current reachable bundle produces the named counterexample.
+Do not schedule a speculative Wave2 repair ahead of making core real-bundle
+execution routinely runnable.
 
 ## 现象
 

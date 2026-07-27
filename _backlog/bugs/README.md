@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-07-26 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-07-27 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -15,25 +15,64 @@
 
 ## 活跃列表
 
+> **当前优先级：没有已验证的活跃 P1 implementation defect。** 先通过真实 bundle 让 work-unit、evidence-production 与 Gate 路径稳定、可重复运行；只对由该运行产生的 fresh direct root 提出下一个 change。下表的 P2/P3 卡不能替代这项运行证据。
+
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
-| [BUG-099](BUG-099-stop-no-agent-halted-at-wave0.md) | P1 | wave0 | `stop: no` phase agent 因 context exhaustion 在 wave0 主动停下，创建 de-facto HITL |
+| [BUG-099](BUG-099-stop-no-agent-halted-at-wave0.md) | P2 | wave0 | deferred operability：`stop: no` phase agent 在 wave0 主动停下，当前可由一次用户续跑恢复，不阻塞核心 bundle contract 可达性 |
 | [BUG-103](BUG-103-status-gate-drift-between-phases.md) | P3 | 跨 phase | rb_status.json gate 字段在 phase transition 后持续漂移，需手动 advance-status |
 | [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | enter-phase 每次渲染完整 shared context 造成累积 context 压力 |
-| [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P1 | wave0→wave1 | stop: no violation 再现 — agent 输出总结但不执行下一 phase |
-| [BUG-124](BUG-124-shared-ref-agent-action-hint-misleading.md) | P2 | wave0 | shared_ref_count_floor 的 repair hint 误导 Phase Agent 做无法通过的 agent_action 修复 |
-| [BUG-125](BUG-125-queue-payload-validation-at-claim-not-enqueue.md) | P2 | wave0 | queue item payload 在 claim 时才校验，enqueue 不校验，unclaimable items 需手动编辑 rb_queue.json |
-| [BUG-126](BUG-126-seed-topic-yaml-roundtrip-fragility.md) | P2 | seed-topics | seed topic YAML frontmatter hand-author 与 Engine parse 之间的 round-trip 断裂，错误只在 complete 时暴露 |
-| [BUG-127](BUG-127-must-answer-exact-match-not-signaled.md) | P3 | seed-topics | must_answer 精确匹配 contract 未在 task brief 和 authoring template 中明确告知 Agent |
-| [BUG-128](BUG-128-wave0-shared-ref-threshold-impractical.md) | P3 | wave0 | wave0_shared_ref_total 公式计算与实际 sub-agent 执行模型不匹配，22 shared refs 无法达成 |
+| [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P2 | wave0→wave1 | deferred operability：agent 输出总结而未执行下一 phase，当前可由一次用户续跑恢复 |
+| [BUG-129](BUG-129-wave1-ref-materialization-same-bypass.md) | P2 | wave1 | I1 dormant：仅当前真实 bundle 证明 Wave1 submitted-backed projection 仍被错误拒绝时，才开启有界 repair change |
+| [BUG-130](BUG-130-wave2-pure-synthesis-vs-gate-contradiction.md) | P2 | wave2 | I2 dormant：仅当前真实 bundle 证明 Wave2 pure-synthesis 的既有证据链仍被错误拒绝时，才开启有界 repair change |
+| [BUG-131](BUG-131-degraded-pass-inconsistency-wave2-vs-wave0-wave1.md) | P2 | wave2 | accepted residual risk：Wave2 无 eligible degradation 的 pre-HITL2 deadlock 仍按既有 policy fail-closed；非当前 authorized change |
+| [BUG-132](BUG-132-wave0-seed-backfill-thin-candidate-projection.md) | P2 | wave0 | seed topic 只得到薄的聚合回填，source.yaml/cache 中的候选发现无法逐项导航；Gate 未检查 projection completeness |
+| [BUG-133](BUG-133-wave1-reference-floor-deficit-not-turned-into-repair-demand.md) | P2 | wave1 | Wave1 每 topic reference floor 不足时只在 inspect 暴露，未自动形成各 topic 的补充工作需求；当前实际为 6/5/5/6 |
+| [BUG-134](BUG-134-wave2-inspect-misclassifies-synthesis-ledger-as-return-map.md) | P2 | wave2 | inspect 把 synthesis/ledger 当成 seed return-map，迫使合法 artifact 增加非契约 Return Map workaround |
+| [BUG-135](BUG-135-terminal-readiness-does-not-set-run-state-completed.md) | P2 | final | readiness 已通过且 next_gate 为 none，但 rb_status.json 的 state 仍为 not_started |
+| [BUG-136](BUG-136-reference-index-not-refreshed-after-wave-materialization.md) | P2 | wave1 | reference 已有 96 个文件，但 reference/_INDEX.md 仍是空模板，未更新计数和数据行 |
+| [BUG-137](BUG-137-reference-topic-filenames-omit-full-topic-slug.md) | P2 | wave1 | topic reference 使用 `NN-wave1-*` 而非完整 topic slug，Wave1 count evaluator 将 8 个 topic 都计为 0 |
+| [BUG-138](BUG-138-seed-topic-wave-backfill-not-materialized-single-writer-missing.md) | P2 | wave0/1/2 | Wave completion 后 seed-topic 仍是 token/通用 submitted prose，缺少正确 return-map；当前没有单一可见 writer，回填缺失可与 completion/degraded gate 脱钩 |
 
-> BUG-099/103/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 计划承接，仍属活跃 bug。
+> BUG-099/103/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 计划承接，均 deferred 于核心 work-unit / evidence / Gate 运行路径稳定之后。
 
-| [BUG-129](BUG-129-wave1-ref-materialization-same-bypass.md) | P2 | wave1 | Wave1 per-topic reference 物化与 BUG-124 相同的 delegated_bypass 问题 |
-| [BUG-130](BUG-130-wave2-pure-synthesis-vs-gate-contradiction.md) | P1 | wave2 | Wave2 pure synthesis path 与 gate contract 矛盾，Phase Agent 物化被标记为 delegated_bypass |
-| [BUG-131](BUG-131-degraded-pass-inconsistency-wave2-vs-wave0-wave1.md) | P1 | wave2 | Degraded pass 策略在 wave0/wave1 和 wave2 之间不一致，导致 HITL2 无法进入 |
+**Next available bug ID: BUG-139**
 
-**Next available bug ID: BUG-132**
+## BUG-132–138 接手地图
+
+这些卡来自两次真实 bundle run，不是一个可用“补几个 Markdown”关闭的单一问题。
+所有 framework 修复都必须先走 OpenSpec propose/explore，再按批准 task apply；当前
+bundle 的 evidence、ledger、receipt、trace 不能为方便修复而手改。
+
+| Workstream | Bugs | 建议入口 | 不能误关的边界 |
+| --- | --- | --- | --- |
+| Seed projection baseline | BUG-138 → BUG-132 | `shared-*authoring.md`、`canonical-topic-state.mjs`、`return-map.mjs` | 138 解决“有没有正确写入”；132 解决“已写入后是否逐 candidate 可导航” |
+| Wave1 reference materialization | BUG-137 → BUG-136；BUG-133 并行 | `phase-wave1.md`、reference evaluator/index checker、queue demand | 137 是 canonical filename identity，136 是 index rows，133 是真实 floor deficit 进入 repair demand；三者不能用复制 reference 解决 |
+| Wave2 return-map scope | BUG-134 | `inspect-wave2-output.mjs`、`inspectWaveArtifactReturnMaps` | 缩小 phase-artifact validator 的输入，不能删除 seed Wave2 projection 检查或掩盖 BUG-138 |
+| Terminal lifecycle | BUG-135 | `advance-status.mjs`、RunState schema | 只修 terminal state atomicity，不重定义所有中间 `state` 或破坏 post-final recovery |
+
+每张卡末尾的“接手信息”列出已运行的 red loop（或明确记录当前是缺失的 false-pass
+seam）、owner、non-goal 与 regression completion criteria。下一位 Agent 应先读相关
+卡的这一节，再决定是否将相邻卡放进同一个有界 change。
+
+### 活态重验约定
+
+卡片中的 bundle 证据是发现时的 runtime snapshot；bundle 本身可以在不改 framework
+的情况下继续被合法 materialize、repair 或加入 workaround。接手时先重跑卡中命令，
+并把当前结果与卡片快照区分开：一个已变绿的 mutable bundle 不能单独关闭“缺少
+deterministic repair path / evaluator scope”的 framework bug；相反，不能复现时应先
+把历史最小情形做成 disposable fixture，再决定 proposal 的边界。
+
+## 最近关闭 (2026-07-27)
+
+以下记录已移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)；总收口、D1 policy 与 I1/I2 的未来触发条件见 [CLS-037](../_done/_closed_plans/evidence-production-and-phase-projection-boundaries.md)：
+
+| Bug | 结案依据 |
+|-----|----------|
+| BUG-124 | `align-wave0-shared-reference-guidance`（v0.52）修正 Phase Agent guidance/repair feedback，并覆盖合法 submitted shared-reference producer 路径 |
+| BUG-125 | `converge-queue-demand-admission` 统一 enqueue/check/claim 的 current-facts admission，并扩展现有 stale repair |
+| BUG-126 / BUG-127 | `canonical-seed-authoring` 建立唯一 structured `enrich_seed` writer、canonical binding 与 authoring feedback |
+| BUG-128 | D1 明确保留 `claim_verification` 的 `6 + 2 x topics` floor，接受其 eligible-degradation 成本；这是产品 policy 结案，不新增 producer/threshold change |
 
 ## 最近关闭 (2026-07-25)
 

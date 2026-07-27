@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-07-26 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-07-27 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -129,8 +129,13 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-121 | 2026-07-25 | 结案：修正 direct fact 后的高 attempt Gate 重跑未复现 stale `failed_rule_ids` |
 | BUG-122 | 2026-07-25 | 结案：有效 enqueue 后 queue health/stop projection 重新计算；不需要 raw unblock |
 | BUG-123 | 2026-07-25 | 结案：supplementary Wave1 `claim -> submit -> Gate` 建立新 immutable ledger row；不提供 amend/re-hash API |
+| BUG-124 | 2026-07-27 | Wave0 shared-reference repair hint misdirected the Phase Agent; v0.52 aligns guidance with the legal submitted producer |
+| BUG-125 | 2026-07-27 | Queue payload validation occurred only at claim; current-facts admission now converges enqueue/check/claim |
+| BUG-126 | 2026-07-27 | Seed-topic YAML hand-authoring and Engine parsing could diverge; canonical structured enrichment owns the mutable fields |
+| BUG-127 | 2026-07-27 | Exact `must_answer` canonical-binding contract was not signaled during seed authoring |
+| BUG-128 | 2026-07-27 | Wave0 shared-reference floor is retained as an explicit `claim_verification` product policy with eligible degradation |
 
-**Next available bug ID: BUG-124**
+**Next available bug ID: BUG-132**
 
 ---
 

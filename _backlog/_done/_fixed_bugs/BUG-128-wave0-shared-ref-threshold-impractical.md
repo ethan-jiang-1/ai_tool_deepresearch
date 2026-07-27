@@ -3,12 +3,28 @@ bug_id: BUG-128
 title: "wave0_shared_ref_total threshold impractical for single-agent execution — 22 shared refs for 8 topics cannot be met by topic-bound sub-agents"
 severity: P3
 discovered: 2026-07-26
+status: closed_accepted_policy
+resolved: 2026-07-27
 bundle: dpt_rb_openspec-influence-landscape
 phase: wave0
 node: phases/phase-wave0.md
 ---
 
 # BUG-128: `wave0_shared_ref_total` 阈值由公式计算但与实际执行模型不匹配
+
+## Resolution (2026-07-27)
+
+The maintainer decided to retain `claim_verification`'s existing
+`wave0_shared_ref = 6 + 2 × topics` formula. This closes BUG-128 as an accepted
+product-policy tradeoff: Wave0 may reach its already eligible degraded result
+when the shared-reference floor is unmet.
+
+This decision does not claim that 22 references for eight topics are cheap,
+automatic, or ordinarily achieved. It preserves the current profile behavior
+without a threshold change. The legal `wave0_source_intake` submission path and
+repair feedback were separately corrected by archived Change 3. A future
+formula change requires a new maintainer decision and a focused OpenSpec change;
+it is not authorized by this closed bug record.
 
 ## 现象
 

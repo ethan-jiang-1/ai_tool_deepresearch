@@ -3,12 +3,22 @@ bug_id: BUG-127
 title: "must_answer exact-match contract not signaled in seed topic task brief or authoring template"
 severity: P3
 discovered: 2026-07-26
+status: fixed_archived_change
+resolved: 2026-07-26
+fixed_by: 2026-07-26-canonical-seed-authoring
 bundle: dpt_rb_openspec-influence-landscape
 phase: seed-topics
 node: phases/phase-seed-topics.md
 ---
 
 # BUG-127: Seed topic 的 `must_answer` 要求与 canonical registry 精确匹配，但 task brief 和 authoring contract 未明确告知
+
+## Resolution (2026-07-26)
+
+Archived Change 1, `canonical-seed-authoring` (v0.50), makes canonical identity
+Engine-derived and surfaces binding feedback in the normal seed loop. Guidance
+states that `must_answer` is copied rather than summarized, while the same
+evaluator reports the named binding mismatch before normal completion repair.
 
 ## 现象
 
