@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-07-27 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-07-28 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -32,13 +32,12 @@
 | [BUG-135](BUG-135-terminal-readiness-does-not-set-run-state-completed.md) | P2 | final | readiness 已通过且 next_gate 为 none，但 rb_status.json 的 state 仍为 not_started |
 | [BUG-136](BUG-136-reference-index-not-refreshed-after-wave-materialization.md) | P2 | wave1 | reference 已有 96 个文件，但 reference/_INDEX.md 仍是空模板，未更新计数和数据行 |
 | [BUG-137](BUG-137-reference-topic-filenames-omit-full-topic-slug.md) | P2 | wave1 | topic reference 使用 `NN-wave1-*` 而非完整 topic slug，Wave1 count evaluator 将 8 个 topic 都计为 0 |
-| [BUG-138](BUG-138-seed-topic-wave-backfill-not-materialized-single-writer-missing.md) | P2 | wave0/1/2 | Wave completion 后 seed-topic 仍是 token/通用 submitted prose，缺少正确 return-map；当前没有单一可见 writer，回填缺失可与 completion/degraded gate 脱钩 |
 
 > BUG-099/103/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 计划承接，均 deferred 于核心 work-unit / evidence / Gate 运行路径稳定之后。
 
 **Next available bug ID: BUG-139**
 
-## BUG-132–138 接手地图
+## BUG-132–137 接手地图
 
 这些卡来自两次真实 bundle run，不是一个可用“补几个 Markdown”关闭的单一问题。
 所有 framework 修复都必须先走 OpenSpec propose/explore，再按批准 task apply；当前
@@ -46,9 +45,9 @@ bundle 的 evidence、ledger、receipt、trace 不能为方便修复而手改。
 
 | Workstream | Bugs | 建议入口 | 不能误关的边界 |
 | --- | --- | --- | --- |
-| Seed projection baseline | BUG-138 → BUG-132 | `shared-*authoring.md`、`canonical-topic-state.mjs`、`return-map.mjs` | 138 解决“有没有正确写入”；132 解决“已写入后是否逐 candidate 可导航” |
+| Seed projection completeness | BUG-132 | `canonical-topic-state.mjs`、`return-map.mjs` | BUG-138 已解决“有没有正确写入”；132 只解决“已写入后是否逐 candidate 可导航” |
 | Wave1 reference materialization | BUG-137 → BUG-136；BUG-133 并行 | `phase-wave1.md`、reference evaluator/index checker、queue demand | 137 是 canonical filename identity，136 是 index rows，133 是真实 floor deficit 进入 repair demand；三者不能用复制 reference 解决 |
-| Wave2 return-map scope | BUG-134 | `inspect-wave2-output.mjs`、`inspectWaveArtifactReturnMaps` | 缩小 phase-artifact validator 的输入，不能删除 seed Wave2 projection 检查或掩盖 BUG-138 |
+| Wave2 return-map scope | BUG-134 | `inspect-wave2-output.mjs`、`inspectWaveArtifactReturnMaps` | 缩小 phase-artifact validator 的输入，不能删除 seed Wave2 projection 检查或以 phase-artifact workaround 掩盖该检查 |
 | Terminal lifecycle | BUG-135 | `advance-status.mjs`、RunState schema | 只修 terminal state atomicity，不重定义所有中间 `state` 或破坏 post-final recovery |
 
 每张卡末尾的“接手信息”列出已运行的 red loop（或明确记录当前是缺失的 false-pass
@@ -62,6 +61,14 @@ seam）、owner、non-goal 与 regression completion criteria。下一位 Agent 
 并把当前结果与卡片快照区分开：一个已变绿的 mutable bundle 不能单独关闭“缺少
 deterministic repair path / evaluator scope”的 framework bug；相反，不能复现时应先
 把历史最小情形做成 disposable fixture，再决定 proposal 的边界。
+
+## 最近关闭 (2026-07-27)
+
+## 最近关闭 (2026-07-28)
+
+| Bug | 结案依据 |
+|-----|----------|
+| BUG-138 | `fix-seed-topic-projection-materialization` 已 archive（commit `9953435a3`）：route-bound packet writer 原子 materialize owned Seed Topic slots，template 与 command protocol 分离，inspect/gate 共用 direct readiness；验收为静态契约和确定性 production-CLI Wave 链，不保留嵌套 Agent-flow 测试负债。 |
 
 ## 最近关闭 (2026-07-27)
 

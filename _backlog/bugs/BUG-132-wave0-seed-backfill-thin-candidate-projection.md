@@ -100,7 +100,7 @@ candidate coordinate。
 
 ### 与相邻 bug 的边界
 
-- [BUG-138](BUG-138-seed-topic-wave-backfill-not-materialized-single-writer-missing.md)
+- [BUG-138](../_done/_fixed_bugs/BUG-138-seed-topic-wave-backfill-not-materialized-single-writer-missing.md)
   处理“整段没有正确回填”的基线闭环；BUG-132 只在基线已经有合法 Wave0
   return-map entry 后，继续要求 candidate-level completeness。不能以修复 BUG-138
   的一条聚合 entry 关闭本 bug。

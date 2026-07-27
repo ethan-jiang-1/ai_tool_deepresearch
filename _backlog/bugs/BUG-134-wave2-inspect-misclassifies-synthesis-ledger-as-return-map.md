@@ -118,7 +118,7 @@ synthesis/ledger 内容，再验证该路径由红转绿。
 
 - 不要粗暴关闭 Wave2 return-map validation。`inspectSeedTopicReturnMaps()` 对
   `## 当前判断` 与带 W2F refs 的 `## 待验证问题` 的检查仍是必需的。
-- [BUG-138](BUG-138-seed-topic-wave-backfill-not-materialized-single-writer-missing.md)
+- [BUG-138](../_done/_fixed_bugs/BUG-138-seed-topic-wave-backfill-not-materialized-single-writer-missing.md)
   要求缺失的 seed projection 继续 blocking；修复 BUG-134 只能缩小
   phase-artifact evaluator 的输入范围，不能把 seed projection 一并静默跳过。
 - six-section ledger、finding-index binding、synthesis W2F/link requirements 仍由

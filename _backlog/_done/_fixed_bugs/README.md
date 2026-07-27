@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-07-27 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-07-28 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -134,8 +134,9 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-126 | 2026-07-27 | Seed-topic YAML hand-authoring and Engine parsing could diverge; canonical structured enrichment owns the mutable fields |
 | BUG-127 | 2026-07-27 | Exact `must_answer` canonical-binding contract was not signaled during seed authoring |
 | BUG-128 | 2026-07-27 | Wave0 shared-reference floor is retained as an explicit `claim_verification` product policy with eligible degradation |
+| BUG-138 | 2026-07-28 | Wave completion did not materialize correct seed-topic backfill; `fix-seed-topic-projection-materialization` introduced the authority-bound projection writer, template/protocol boundary, shared readiness evaluator, and deterministic Wave-chain regression |
 
-**Next available bug ID: BUG-132**
+**Next available bug ID: BUG-139**
 
 ---
 
