@@ -221,7 +221,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --cur
 
 ## 6. On Gate Pass
 
-Read the gate CLI JSON output and confirm `check.passed === true`. Then consume `check.next` before synchronizing the just-passed source gate:
+Read the gate CLI JSON output and confirm `check.passed === true`. Read `check.degraded` first: when it is `true`, retain the declared `check.degraded_rules` as carried quality debt rather than treating this as a clean quality pass. Then consume the existing `check.next` before synchronizing the just-passed source gate:
 
 ```bash
 node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>

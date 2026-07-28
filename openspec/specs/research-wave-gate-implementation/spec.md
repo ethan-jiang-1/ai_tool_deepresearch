@@ -1158,3 +1158,23 @@ Each Wave0, Wave1, and Wave2 formal/inspect adapter SHALL invoke the same pure e
 - **WHEN** a schema-valid inactive Wave2 definition fixture declares an eligible quality rule
 - **THEN** the production schema and shared Wave formal-helper path SHALL exercise the same metadata path used by Wave0/Wave1
 - **AND** the fixture SHALL not enter active inventory, change production Wave2 policy, or make an authority-root failure eligible
+
+### Requirement: Wave Gate adapters and handoff consumers SHALL preserve the verdict partition
+
+Wave0, Wave1, and Wave2 formal adapters SHALL use one shared, side-effect-free public-summary projection when it removes duplicated post-preflight classification. It consumes existing evaluator findings, degradation eligibility, and routing/durability facts only; it SHALL not decide eligibility, read runtime files, resolve transitions, write trace, or modify findings.
+
+Adapters SHALL preserve complete unresolved quality findings in diagnostics while exposing only routing blockers through `check.failed_rule_ids`. Existing eligibility remains unchanged: only an eligible quality-only route may degrade; structural, provenance, queue, receipt, lifecycle, configuration, routing, checker-owned, and other ineligible roots remain blocking.
+
+`gate_attempt`, `enter-phase`, `advance-status`, and existing readers SHALL retain `degraded`, `degraded_reason`, and `degraded_rules` for a legal route without treating it as clean completion. Wave guidance SHALL require checking degradation before consuming the existing `check.next`, without interaction, direct authority edits, or a new repair controller.
+
+#### Scenario: Wave0 carried shared-reference floor is not reported as a blocker
+
+- **WHEN** Wave0 reaches fatigue with only `shared_ref_count_floor` eligible
+- **THEN** its Gate response and `gate_attempt` SHALL be a degraded handoff
+- **AND** the floor SHALL remain diagnostic and in `degraded_rules`, but not `failed_rule_ids`
+
+#### Scenario: Wave1 and Wave2 ineligible roots fail closed
+
+- **WHEN** a Wave1 or Wave2 Gate has an ineligible root
+- **THEN** it SHALL return blocking failure with no legal `next`
+- **AND** it SHALL not emit `degraded: true` or move that root into `degraded_rules`

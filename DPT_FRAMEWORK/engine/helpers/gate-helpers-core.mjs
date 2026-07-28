@@ -546,6 +546,9 @@ export function buildGateResult({
       findings,
     }),
   };
+  // Preserve checker-owned structured detail for the durable diagnostic without
+  // expanding the public Gate envelope beyond its existing summary surface.
+  Object.defineProperty(result, 'findings', { value: findings, enumerable: false });
 
   const gateContinuation = projectGateContinuation({
     passed,
@@ -662,13 +665,28 @@ function classifyAttemptTrend({ passed, newlyPassing, stillFailing, regressed, p
 
 function comparableFailuresFromDiagnostic(diagnostic) {
   if (!diagnostic) return null;
-  if (Array.isArray(diagnostic.check?.failed_rule_ids)) return diagnostic.check.failed_rule_ids;
-  if (Array.isArray(diagnostic.failed_rule_ids)) return diagnostic.failed_rule_ids;
+  if (Array.isArray(diagnostic.check?.failed_rule_ids)) {
+    return [...new Set([
+      ...diagnostic.check.failed_rule_ids,
+      ...(Array.isArray(diagnostic.check?.degraded_rules) ? diagnostic.check.degraded_rules : []),
+    ])].sort();
+  }
+  if (Array.isArray(diagnostic.failed_rule_ids)) {
+    return [...new Set([
+      ...diagnostic.failed_rule_ids,
+      ...(Array.isArray(diagnostic.degraded_rules) ? diagnostic.degraded_rules : []),
+    ])].sort();
+  }
   return null;
 }
 
 function comparableFailuresFromResult(result) {
-  if (Array.isArray(result.check?.failed_rule_ids)) return result.check.failed_rule_ids;
+  if (Array.isArray(result.check?.failed_rule_ids)) {
+    return [...new Set([
+      ...result.check.failed_rule_ids,
+      ...(Array.isArray(result.check?.degraded_rules) ? result.check.degraded_rules : []),
+    ])].sort();
+  }
   return null;
 }
 
@@ -1276,7 +1294,7 @@ export function writeGateFailureDiagnostic(bundlePath, result, precomputedPath =
  */
 export function writeGatePassDiagnostic(bundlePath, result, precomputedPath = null) {
   try {
-    const { check, routing, inspect = [], advice = [], hints = [] } = result;
+    const { check, routing, inspect = [], advice = [], hints = [], findings = [] } = result;
     if (!check.passed) return { ok: true }; // Only write on pass
 
     const iso = new Date().toISOString();
@@ -1299,6 +1317,7 @@ export function writeGatePassDiagnostic(bundlePath, result, precomputedPath = nu
       phase: derivePhaseFromGate(check.gate),
       degraded: check.degraded === true,
       check,
+      findings,
       inspect,
       advice,
       hints,

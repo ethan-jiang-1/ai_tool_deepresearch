@@ -347,6 +347,7 @@ describe('check-gate-wave0-complete', () => {
     assert.equal(output.check.passed, true, `Expected degraded pass, got inspect: ${JSON.stringify(output.inspect)}`);
     assert.equal(output.check.degraded, true);
     assert.equal(output.check.next, 'phases/phase-wave1.md');
+    assert.deepEqual(output.check.failed_rule_ids, []);
     assert.deepEqual(output.check.degraded_rules, ['shared_ref_count_floor']);
     assert.ok(output.inspect.some((line) => line.includes('[degraded]')));
 
@@ -357,6 +358,9 @@ describe('check-gate-wave0-complete', () => {
     const lastAttempt = traceEvents.filter((event) => event.event === 'gate_attempt' && event.gate === 'wave0-complete').at(-1);
     assert.equal(lastAttempt.degraded, true);
     assert.deepEqual(lastAttempt.degraded_rules, ['shared_ref_count_floor']);
+    const diagnostic = JSON.parse(readFileSync(join(dir, lastAttempt.diagnostic_path), 'utf-8'));
+    assert.deepEqual(diagnostic.check.failed_rule_ids, []);
+    assert.ok(diagnostic.findings.some((finding) => finding.rule_id === 'shared_ref_count_floor'));
   });
 
   it('1b. shared-reference floor feedback names the existing delegated producer', () => {

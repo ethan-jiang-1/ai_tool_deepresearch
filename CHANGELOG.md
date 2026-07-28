@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.59
+
+- Wave Gate public summaries now distinguish clean routing passes, blocking failures, and legal degraded handoffs. Carried eligible quality debt is exposed through `degraded_rules`, while only current routing blockers remain in `failed_rule_ids`; durable diagnostics and handoff traces retain the structured debt context.
+
 ## v0.58
 
 - Selected DPT research now chooses and reads its continuation or `RUN.md` entry before generic shortcuts, direct request-specific search/fetch, or manual evidence synthesis. Later phase-authorized research remains unchanged; repository guidance does not claim host-level skill suppression.

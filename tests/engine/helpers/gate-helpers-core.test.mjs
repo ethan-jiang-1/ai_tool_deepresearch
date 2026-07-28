@@ -467,6 +467,42 @@ describe('Engine-derived attempt diagnostics (GSK-008)', () => {
     assert.equal(second.check.attempt_trend, 'converging');
   });
 
+  it('retains carried degraded debt as still failing for attempt comparison', () => {
+    const dir = setupBundle('test-attempt-carried-debt');
+    writeGateAttempt(dir, {
+      check: {
+        passed: false,
+        gate: 'wave0-complete',
+        currentNodeRef: 'phases/phase-wave0.md',
+        next: null,
+        failed_rule_ids: ['shared_ref_count_floor'],
+      },
+      routing: { kind: 'retry', next: null },
+      inspect: ['Shared reference floor remains short'],
+      advice: [],
+    });
+
+    const degraded = {
+      check: {
+        passed: true,
+        gate: 'wave0-complete',
+        currentNodeRef: 'phases/phase-wave0.md',
+        next: 'phases/phase-wave1.md',
+        failed_rule_ids: [],
+        degraded: true,
+        degraded_rules: ['shared_ref_count_floor'],
+      },
+      routing: { kind: 'next', next: 'phases/phase-wave1.md' },
+      inspect: ['The floor is carried as declared quality debt'],
+      advice: [],
+    };
+    writeGateAttempt(dir, degraded);
+
+    assert.deepEqual(degraded.check.newly_passing, []);
+    assert.deepEqual(degraded.check.still_failing, ['shared_ref_count_floor']);
+    assert.deepEqual(degraded.check.regressed, []);
+  });
+
   it('treats a legacy diagnostic without stable rule ids as non-comparable', () => {
     const dir = setupBundle('test-attempt-legacy-no-ids');
 

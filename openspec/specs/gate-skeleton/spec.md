@@ -861,3 +861,23 @@ The common Gate rule schema SHALL expose parsed `degradation_eligible: boolean`,
 - **WHEN** a finding produces a root-first hint or fatigue diagnostic
 - **THEN** the output SHALL retain the finding's repair coordinate and current verdict
 - **AND** it SHALL NOT create a handoff, partial pass, mutation, or new retry path
+
+### Requirement: Wave Gate public summary SHALL partition routing blockers from carried quality debt
+
+After invocation, definition, node-binding, and handoff-preflight checks succeed, Wave0/Wave1/Wave2 formal `check` summaries SHALL be exactly one of: clean pass (`passed: true`, empty `failed_rule_ids`, no degraded marker, legal `next`); blocking failure (`passed: false`, nonempty `failed_rule_ids`, no degraded marker, `next: null`); or degraded handoff (`passed: true`, empty `failed_rule_ids`, `degraded: true`, nonempty `degraded_rules`, legal `next`).
+
+`failed_rule_ids` SHALL contain only current routing blockers. Existing eligible carried quality debt SHALL appear exactly once in `degraded_rules`, while its structured finding, inspect/advice detail, and durable pass diagnostic remain available. Routing, configuration, lifecycle, receipt, or trace-durability failure suppresses a candidate degraded handoff. Existing early envelopes retain their shared contract.
+
+Attempt trends SHALL compare the stable union of `failed_rule_ids` and `degraded_rules` when debt is present. The union is internal comparison input, not a public `check` field, and shall not make carried debt appear newly passing.
+
+#### Scenario: quality-only fatigue handoff remains explicit
+
+- **WHEN** only existing degradation-eligible required-floor findings remain and a normal route is durable
+- **THEN** `check.passed` SHALL be `true`, `failed_rule_ids` empty, and `degraded_rules` the exact carried IDs
+- **AND** durable pass evidence SHALL distinguish this from a clean quality pass
+
+#### Scenario: strict trace failure suppresses a candidate degraded pass
+
+- **WHEN** a candidate degraded handoff cannot durably write `gate_attempt`
+- **THEN** the wrapper SHALL emit one blocking failed envelope with `next: null` and nonempty `failed_rule_ids`
+- **AND** it SHALL not emit the candidate pass or consumable degraded routing fields

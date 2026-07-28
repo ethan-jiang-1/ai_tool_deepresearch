@@ -1,0 +1,136 @@
+schema_version: verification-routing/v1
+change: make-wave-gate-verdict-unambiguous
+test_classes:
+  unit:
+    status: selected
+    rationale: The public verdict partition is a pure classification over existing evaluator, eligibility, routing, and durability facts.
+  integration:
+    status: selected
+    rationale: The three formal Gate CLIs and existing trace/handoff consumers cross the production summary, trace, and temporary-bundle boundaries.
+  deterministic_e2e:
+    status: selected
+    rationale: A disposable bundle is needed to prove a legal degraded Wave handoff retains debt through actual Gate, enter-phase, and status synchronization.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: This changes deterministic verdict projection and existing handoff feedback, not Agent semantic work or a Markdown procedure requiring a real Subject Agent proof.
+claims:
+  - id: wave-gate-public-verdict-partition
+    statement: >-
+      Clean, blocking, and degraded Wave Gate summaries are mutually exclusive: only unresolved routing blockers appear in failed_rule_ids; declared carried quality debt appears only in degraded_rules while its complete finding remains diagnostic.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/wave-gate-verdict.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave-gate-cli-and-consumer-partition
+    statement: >-
+      Wave0 eligible degradation moves carried quality debt from failed_rule_ids to degraded_rules while retaining raw diagnostic detail and stable attempt-trend comparison input; a strict trace-write failure instead emits one blocking envelope with no consumable route.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave0-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-ineligible-verdict-partition
+    statement: >-
+      Wave1 ineligible structural, authority, or routing roots retain the blocking public form and cannot become degraded handoffs.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave1-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave2-ineligible-verdict-partition
+    statement: >-
+      Wave2 retains the shared verdict partition implementation while its active production roots remain degradation-ineligible and fail closed.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave2-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: enter-phase-retains-carried-debt
+    statement: >-
+      enter-phase preserves the exact degraded marker and carried rules from a legal passed Wave gate_attempt without treating them as a blocking route.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/enter-phase.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: advance-status-retains-carried-debt
+    statement: >-
+      advance-status preserves the exact degraded marker and carried rules from a witnessed legal Wave handoff without treating them as a blocking route.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/advance-status.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave-gate-guidance-consumes-degraded-context
+    statement: >-
+      The three Wave phase handoff sections require checking degraded context before the existing check.next handoff and add no user-interaction or authority-mutation branch.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/wave-gate-verdict-guidance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave-gate-degraded-handoff-continuity
+    statement: >-
+      A temporary production-style Wave bundle reaches the existing quality-only degraded branch, writes a legal trace witness, enters the routed phase, synchronizes status, and retains the carried debt without any blocking failed_rule_ids or fabricated evidence authority.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/wave-gate-degradation-policy.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

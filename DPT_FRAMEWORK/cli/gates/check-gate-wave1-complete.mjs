@@ -18,6 +18,7 @@ import {
 } from '../../engine/helpers/gate-helpers.mjs';
 import { evaluateWave1Contract } from '../../engine/helpers/wave-contract-evaluators.mjs';
 import { evaluateWaveDegradationEligibility } from '../../engine/helpers/wave-degradation-eligibility.mjs';
+import { projectWaveGatePublicVerdict } from '../../engine/helpers/wave-gate-verdict.mjs';
 import { evaluateSeedTopicProjectionReadiness } from '../../engine/helpers/return-map.mjs';
 import { buildCanonicalTopicRegistryFact } from '../../engine/helpers/topic-registry-fact.mjs';
 import {
@@ -187,17 +188,21 @@ function emitAfterDurableAttempt(result, carriedTargetReceipt) {
 const degradedHandoff = maybeDegradedHandoff();
 const passedForHandoff = failedRuleIds.size === 0 || Boolean(degradedHandoff);
 const routing = degradedHandoff?.routing || resolveRouting(args.transitions, args.currentNode, passedForHandoff ? 'passed' : 'failed');
-const routingFailed = ['invalid_input', 'config_error'].includes(routing.kind);
 const finalEvaluation = buildContractEvaluation({
   checksRun: ruleEvaluation.checks_run,
   findings: [...ruleEvaluation.findings, ...(routing.findings || [])],
   maskedRuleIds: ruleEvaluation.masked_rule_ids,
   bypassSuspicion: ruleEvaluation.bypass_suspicion,
 });
+const verdict = projectWaveGatePublicVerdict({
+  failedRuleIds: finalEvaluation.failed_rule_ids,
+  degradedRuleIds: degradedHandoff?.extraCheck.degraded_rules,
+  routeAvailable: routing.kind === 'next' && Boolean(routing.next),
+});
 emitDelegatedBypassDiagnostic(bundlePath, definition.gate, sharedEvaluation.bypass_suspicion);
 
 const result = buildGateResult({
-  passed: passedForHandoff && !routingFailed,
+  passed: verdict.passed,
   gate: definition.gate,
   currentNodeRef: args.currentNode,
   routing,
@@ -206,9 +211,9 @@ const result = buildGateResult({
   findings: finalEvaluation.findings,
   bundlePath,
   extraCheck: {
-    failed_rule_ids: finalEvaluation.failed_rule_ids,
+    failed_rule_ids: verdict.failed_rule_ids,
     masked_rule_ids: finalEvaluation.masked_rule_ids,
-    ...(degradedHandoff?.extraCheck || {}),
+    ...(verdict.degraded ? degradedHandoff.extraCheck : {}),
   },
   attemptNumber: args.attempt ?? 0,
 });
