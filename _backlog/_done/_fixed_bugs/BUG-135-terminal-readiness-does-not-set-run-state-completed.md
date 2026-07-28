@@ -7,7 +7,7 @@ bundle: dpt_rb_openspec-derivative-frameworks
 phase: final
 node: phases/phase-final.md
 gate: readiness-passed
-status: active
+status: fixed
 ---
 
 # BUG-135: terminal readiness pass 后 run state 仍为 not_started
@@ -97,3 +97,11 @@ const nextStatus = {
 2. trace append 失败时 status rollback 仍保留原 state。
 3. existing post-final recovery test 继续区分 recovery handoff 与首次 terminal
    completion，不产生第二套 lifecycle state。
+
+## 结案依据
+
+`complete-terminal-readiness-status` 已归档（v0.57）。正常 witnessed
+`readiness_passed -> none` transaction 现在同一原子 status/trace write 中写入
+`state: completed`；trace append 失败仍恢复完整旧 status bytes。focused proof 为
+21 tests / 2 suites，routing assets、requirements/spec governance 与 strict
+OpenSpec validation 均通过；accepted post-final rerun recovery 保持既有路径。

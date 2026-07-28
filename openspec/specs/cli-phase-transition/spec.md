@@ -8,7 +8,7 @@ Agent-facing CLI tools for phase transition: `advance-status` (advance `current_
 ## Requirements
 ### Requirement: Advance status CLI advances current_gate and next_gate based on chain.json
 
-`advance-status.mjs` SHALL synchronize `rb_status.json` after a lifecycle gate pass using the existing trace-backed source-gate handoff rules and transition table.
+`advance-status.mjs` SHALL synchronize `rb_status.json` after a lifecycle gate pass using the existing trace-backed source-gate handoff rules and transition table. When the normal witnessed readiness handoff targets terminal Final and therefore derives `current_gate: readiness_passed` and `next_gate: none`, the same status-write/trace-append transaction SHALL set `state: completed`. Non-terminal status synchronization and the accepted post-final `hitl2_recorded -> rerun_ready` exception SHALL preserve their existing state semantics.
 
 For covered trace-backed handoffs, before mutating `rb_status.json` or appending `phase_transition`, the CLI SHALL verify that the route-bound handoff target matches the already loaded `rb_status.json#/current_node` and that the loaded node frontmatter is readable. On success, in addition to `status`, `current_gate`, and `next_gate`, the CLI SHALL return a small `continuation` object derived directly from that loaded current-node frontmatter:
 
@@ -52,11 +52,23 @@ For explicit bootstrap compatibility source sync where existing rules do not req
 - **THEN** status MAY synchronize according to the existing compatibility path
 - **AND** stdout SHALL NOT claim that the target node is loaded or executable
 
-#### Scenario: Readiness status sync returns terminal delivery cue
+#### Scenario: Readiness status sync commits the terminal triple and returns delivery cue
 
 - **WHEN** readiness handoff to `phases/phase-final.md` is witnessed, Final has been loaded, and `advance-status --to readiness_passed` succeeds
-- **THEN** status SHALL synchronize with `next_gate: "none"`
+- **THEN** status SHALL synchronize with `current_gate: readiness_passed`, `next_gate: none`, and `state: completed`
 - **AND** continuation SHALL state `interaction: terminal_delivery` and `next_action: deliver_final_artifacts`
+
+#### Scenario: Terminal trace failure restores the previous lifecycle state
+
+- **WHEN** the witnessed readiness handoff reaches the status write but `phase_transition` trace append fails
+- **THEN** `rb_status.json` SHALL equal its pre-command bytes, including its prior `state`, `current_gate`, and `next_gate`
+- **AND** no `phase_transition` event SHALL be appended
+
+#### Scenario: Post-final recovery does not rewrite terminal completion semantics
+
+- **WHEN** an accepted post-final recovery uses the existing `advance-status --to hitl2_recorded` exception after its route-bound rerun load
+- **THEN** it SHALL retain the existing derived `hitl2_recorded -> rerun_ready` window and its existing lifecycle state semantics
+- **AND** it SHALL NOT be treated as another normal readiness-to-Final completion transition
 
 #### Scenario: Unknown gate still fails without mutation
 

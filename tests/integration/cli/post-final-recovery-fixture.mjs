@@ -7,7 +7,7 @@ export function createTerminalFinalBundle(root, name, { rerunCount = 0, topicReg
   writeFileSync(join(bundle, 'rb_status.json'), `${JSON.stringify({
     bundle: name,
     current_mode: 'execution',
-    state: 'in_progress',
+    state: 'completed',
     current_gate: 'readiness_passed',
     next_gate: 'none',
     current_node: 'phases/phase-final.md',

@@ -1,6 +1,6 @@
 ---
 title: Wave projection and lifecycle convergence
-status: execution_in_progress
+status: archived
 created: 2026-07-28
 source_bugs: BUG-129, BUG-130, BUG-131, BUG-132, BUG-133, BUG-134, BUG-135, BUG-136, BUG-137
 related_changes:
@@ -16,15 +16,15 @@ initial analysis. Keep the board and the matching detailed checklist below in
 sync whenever work starts, pauses, passes a phase gate, or is archived.
 
 **Last progress update:** 2026-07-28\
-**Current position:** Change 3 is archived; Change 4 is ready to re-read its
-current terminal-transition seams and propose.
+**Current position:** All four bounded changes are archived; this plan is
+closed with BUG-129/130/131 retaining their explicit non-fix dispositions.
 
 | Order | Proposal name | Bugs | State now | Next checkpoint | Advance only when |
 | --- | --- | --- | --- | --- | --- |
 | 1 | `make-wave0-candidate-projection-complete` | BUG-132 | `archived` | Completed at `openspec/changes/archive/2026-07-28-make-wave0-candidate-projection-complete/`. | Focused direct and temporary-bundle evidence passed; BUG-132 is closed. |
 | 2 | `converge-wave1-reference-projections` | BUG-133, BUG-136, BUG-137 | `archived` | Completed at `openspec/changes/archive/2026-07-28-converge-wave1-reference-projections/`. | Canonical convergence, index CAS sync, and bounded supplementary objective passed focused proof; BUG-133/136/137 are closed. |
 | 3 | `scope-wave2-return-map-inspection` | BUG-134 | `archived` | Completed at `openspec/changes/archive/2026-07-28-scope-wave2-return-map-inspection/`. | v0.56 scoped artifact parser removal passed focused proof; BUG-134 is closed. |
-| 4 | `complete-terminal-readiness-status` | BUG-135 | `ready_to_propose` | Re-read terminal transition and rollback seams, then propose. | Change 3 is archived and the terminal state invariant remains current. |
+| 4 | `complete-terminal-readiness-status` | BUG-135 | `archived` | Completed at `openspec/changes/archive/2026-07-28-complete-terminal-readiness-status/`. | v0.57 terminal triple passed focused proof; BUG-135 is closed. |
 
 ### Progress Update Rules
 
@@ -48,6 +48,7 @@ current terminal-transition seams and propose.
 | 2026-07-28 | `make-wave0-candidate-projection-complete` | `archived` | Candidate-granular Wave0 projection landed with 65/65 focused checks, 7/7 version checks, package/governance validation, and strict OpenSpec validation. BUG-132 moved to fixed; next action is Change 2 seam re-read before proposal. |
 | 2026-07-28 | `converge-wave1-reference-projections` | `archived` | v0.55 landed canonical Wave1 backing convergence, all-family index CAS sync, and bounded supplementary objective; 56 focused checks plus routing/requirements/spec governance passed. BUG-133/136/137 moved to fixed; next action is Change 3 seam re-read before proposal. |
 | 2026-07-28 | `scope-wave2-return-map-inspection` | `archived` | v0.56 removed the false Wave2 artifact return-map parser route; 67 tests across 4 suites plus routing/requirements/spec governance and strict OpenSpec validation passed. BUG-134 moved to fixed; next action is Change 4 terminal-transition seam re-read before proposal. |
+| 2026-07-28 | `complete-terminal-readiness-status` | `archived` | v0.57 commits the terminal readiness triple in the existing status/trace transaction; 21 tests across 2 suites plus routing/requirements/spec governance and strict OpenSpec validation passed. BUG-135 moved to fixed; umbrella plan complete. |
 
 ## 1. Decision
 
@@ -96,7 +97,7 @@ large, shallow change with an unclear stopping point.
 | BUG-132 | fixed_archived_change | `make-wave0-candidate-projection-complete` archived with focused deterministic proof. |
 | BUG-133 | fixed_archived_change | `converge-wave1-reference-projections` archived with focused deterministic proof. |
 | BUG-134 | fixed_archived_change | `scope-wave2-return-map-inspection` archived with focused deterministic proof. |
-| BUG-135 | active | Change 4. |
+| BUG-135 | fixed_archived_change | `complete-terminal-readiness-status` archived with focused deterministic proof. |
 | BUG-136 | fixed_archived_change | `converge-wave1-reference-projections` archived with focused deterministic proof. |
 | BUG-137 | fixed_archived_change | `converge-wave1-reference-projections` archived with focused deterministic proof. |
 
@@ -672,42 +673,41 @@ before `/opsx:propose complete-terminal-readiness-status`.
 
 ### 11.4 Change 4 -- `complete-terminal-readiness-status`
 
-**State:** `ready_to_propose`\
-**Current evidence:** the terminal invariant, rollback boundary, and proof
-direction are recorded in sections 3, 9, 10, and 12.\
-**Next action:** re-read `advance-status` transition and recovery seams, then
-run `/opsx:propose complete-terminal-readiness-status`.
+**State:** `archived`\
+**Current evidence:** `openspec/changes/archive/2026-07-28-complete-terminal-readiness-status/`
+contains the accepted proposal/design/specs/tasks and implementation evidence.\
+**Next action:** none; all four bounded changes are complete.
 
 - [x] Establish the BUG-135 root cause: the terminal status write retains its
   old `state` although the transition has reached `readiness_passed / none`.
-- [ ] After Change 3 archives, re-read the status transition, trace append
+- [x] After Change 3 archives, re-read the status transition, trace append
   rollback, and post-final recovery behavior; confirm the narrow three-field
   invariant still describes current code.
-- [ ] Create the proposal, delta specs, design, task list, and
+- [x] Create the proposal, delta specs, design, task list, and
   `verification-plan.yaml`; it must make the terminal state write atomic with
   the existing transaction and must not introduce a new lifecycle state or
   completion checker.
-- [ ] Admit the proposal to apply only after its tasks preserve rollback and
+- [x] Admit the proposal to apply only after its tasks preserve rollback and
   completed-run recovery semantics explicitly.
-- [ ] Apply only the approved tasks: set `rb_status.state` to `completed` in
+- [x] Apply only the approved tasks: set `rb_status.state` to `completed` in
   the existing terminal transition object and retain the status-write/
   trace-append rollback behavior.
-- [ ] Run and record focused `advance-status` integration proof for the full
+- [x] Run and record focused `advance-status` integration proof for the full
   terminal triple, trace-append rollback restoration, and post-final recovery;
   record all four verification routing classifications.
-- [ ] Archive the completed change, update BUG-135's disposition, record the
+- [x] Archive the completed change, update BUG-135's disposition, record the
   archive/commit/proof below, and complete the umbrella-plan closure checklist.
 
-**Archive / proof evidence:** `TBD`
+**Archive / proof evidence:** `openspec/changes/archive/2026-07-28-complete-terminal-readiness-status/`; v0.57 focused proof: 21 tests across 2 suites, routing assets valid, and requirements/spec governance plus strict OpenSpec validation passed. Commit: `fix(lifecycle): complete terminal readiness status`.
 
 ### 11.5 Close The Umbrella Plan
 
-- [ ] Confirm all four rows above are `archived`, each has its actual archive,
+- [x] Confirm all four rows above are `archived`, each has its actual archive,
   commit, and verification evidence, and no active OpenSpec change remains.
-- [ ] Update BUG-132--137 with their final dispositions; retain BUG-129/130
+- [x] Update BUG-132--137 with their final dispositions; retain BUG-129/130
   as explicit current-counterexample triggers and BUG-131 as accepted policy
   residual risk unless new evidence warrants a separate decision.
-- [ ] Move this plan to `_backlog/_done/_closed_plans/` and update the active,
+- [x] Move this plan to `_backlog/_done/_closed_plans/` and update the active,
   closed, and done README indexes according to `_backlog/plans/README.md`.
 
 ## 12. Shared Verification Discipline

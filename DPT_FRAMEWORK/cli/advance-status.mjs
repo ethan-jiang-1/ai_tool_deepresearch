@@ -203,6 +203,7 @@ const nextStatus = {
   ...status,
   current_gate: targetGateEnum,
   next_gate: nextGateEnum,
+  ...(targetGateEnum === 'readiness_passed' && nextGateEnum === 'none' ? { state: 'completed' } : {}),
 };
 
 // Write phase_transition trace event

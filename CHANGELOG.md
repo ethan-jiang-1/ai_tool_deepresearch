@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.57
+
+- Normal witnessed readiness-to-Final status synchronization now commits the authoritative `readiness_passed / none / completed` terminal triple in its existing rollback-protected status/trace transaction. Post-final rerun recovery retains its existing derived status path.
+
 ## v0.56
 
 - Wave2 inspect now limits return-map validation to Seed Topic projection entries. `synthesis.md`, `cross-topic-ledger.md`, and `finding-index.yaml` retain their independent narrative, ledger, and structured-index checks without an unsupported `## Return Map` workaround.

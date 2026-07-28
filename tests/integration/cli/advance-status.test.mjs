@@ -318,10 +318,45 @@ describe('advance-status CLI', { concurrency: false }, () => {
     const result = runAdvance(dir, 'readiness_passed');
     assert.equal(result.status, 'ok');
     assert.equal(result.next_gate, 'none');
+    const status = JSON.parse(readFileSync(statusPath, 'utf8'));
+    assert.equal(status.current_gate, 'readiness_passed');
+    assert.equal(status.next_gate, 'none');
+    assert.equal(status.state, 'completed');
     assert.deepEqual(result.continuation, {
       interaction: 'terminal_delivery',
       next_action: 'deliver_final_artifacts',
       node_ref: 'phases/phase-final.md',
     });
+  });
+
+  it('restores the complete previous status when terminal trace append fails', () => {
+    writeCurrentNode('phases/phase-final.md');
+    writeTrace([
+      gateAttempt({
+        gate: 'readiness-passed',
+        phase: 'readiness',
+        currentNodeRef: 'phases/phase-readiness.md',
+        next: 'phases/phase-final.md',
+      }),
+      loadComplete(0, {
+        entry: 'phases/phase-final.md',
+        handoff_source_gate: 'readiness-passed',
+        handoff_source_node: 'phases/phase-readiness.md',
+        handoff_target_node: 'phases/phase-final.md',
+      }),
+    ]);
+    const before = readFileSync(statusPath, 'utf8');
+    chmodSync(tracePath, 0o444);
+    try {
+      const result = runAdvance(dir, 'readiness_passed');
+      assert.equal(result.status, 'error');
+      assert.match(result.reason, /Failed to append phase_transition/);
+      assert.equal(readFileSync(statusPath, 'utf8'), before);
+    } finally {
+      chmodSync(tracePath, 0o644);
+    }
+
+    const events = readFileSync(tracePath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    assert.equal(events.some((event) => event.event === 'phase_transition'), false);
   });
 });

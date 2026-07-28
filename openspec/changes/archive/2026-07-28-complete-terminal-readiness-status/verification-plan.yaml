@@ -1,0 +1,61 @@
+schema_version: verification-routing/v1
+change: complete-terminal-readiness-status
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The behavior is owned by the production CLI's status/trace file transaction; a pure helper would duplicate that transaction boundary.
+  integration:
+    status: selected
+    rationale: Temporary bundles invoking the production CLI directly prove terminal status commit, byte-for-byte rollback, and accepted post-final recovery compatibility.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The focused CLI transaction plus its existing recovery consumer is the complete deterministic seam; a full research chain adds unrelated phase work.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The claim concerns deterministic runtime state and trace persistence, not autonomous Agent execution or research judgment.
+claims:
+  - id: terminal-readiness-commits-completed-state
+    statement: >-
+      CPT-001: a production advance-status call over a witnessed readiness-to-Final temporary bundle writes the authoritative terminal triple readiness_passed / none / completed and retains the existing Final delivery continuation.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/advance-status.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: terminal-trace-rollback-restores-state
+    statement: >-
+      CPT-001: when the same production transaction cannot append phase_transition, rb_status.json is restored byte-for-byte and no partial terminal lifecycle state survives.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/advance-status.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: completed-terminal-recovery-remains-existing-path
+    statement: >-
+      CPT-004: an already completed terminal bundle still follows the accepted post-final event -> load -> hitl2_recorded status synchronization path without a synthetic gate attempt or a second lifecycle state.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/post-final-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

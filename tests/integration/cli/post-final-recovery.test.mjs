@@ -43,6 +43,7 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
 
   it('drives event to enter-phase to idempotent advance-status without a synthetic gate attempt', () => {
     const bundle = createTerminalFinalBundle(root, 'entry');
+    assert.equal(JSON.parse(readFileSync(join(bundle, 'rb_status.json'), 'utf8')).state, 'completed');
     const inspection = inspectPostFinalRecovery({ bundlePath: bundle });
     const inputPath = join(root, 'entry-request.json');
     writeFileSync(inputPath, JSON.stringify(requestFromInspection(inspection)));
@@ -52,6 +53,7 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     assert.equal(auditPhaseStatus(bundle).outcome, 'post_final_reentry_pending_status_sync');
     const first = runJson(['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
     assert.equal(first.source_handoff_kind, 'post_final_reentry');
+    assert.equal(JSON.parse(readFileSync(join(bundle, 'rb_status.json'), 'utf8')).state, 'completed');
     assert.equal(auditPhaseStatus(bundle).outcome, 'passed');
     const before = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8');
     const second = runJson(['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);

@@ -140,6 +140,7 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-136 | 2026-07-28 | Reference inventory now has deterministic all-family CAS synchronization |
 | BUG-137 | 2026-07-28 | Wave1 current coverage now uses a canonical full-topic-slug submitted-backing locator |
 | BUG-134 | 2026-07-28 | Wave2 synthesis and ledger artifacts no longer enter the Seed Topic return-map parser; their independent contracts retain ownership |
+| BUG-135 | 2026-07-28 | Normal readiness-to-Final status transaction now commits the authoritative completed lifecycle state while preserving rollback and post-final recovery |
 
 **Next available bug ID: BUG-139**
 
