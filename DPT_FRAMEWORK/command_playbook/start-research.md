@@ -66,7 +66,7 @@ research_profile: <profile>
 1. 读 phase node（`phases/phase-<name>.md`）
 2. 按 "Allowed Actions" section 执行
 3. 运行 "Gate Command" section 中指定的 gate CLI
-4. Gate pass → 读 JSON output 中的 `check.next` → 运行 `enter-phase --bundle <path> --node <check.next>` 获取下一 Markdown control surface
+4. Gate pass → 读 JSON output 中的 `check.next` → 先运行 `enter-phase --bundle <path> --node <check.next>` 获取下一 Markdown control surface，再立即按刚通过的 source gate 运行 `advance-status --bundle <path> --to <source_gate_enum>` 同步 gate window；例如 `wave0-complete` pass 后使用 `--to wave0_complete`。只有两步都成功后，才执行已加载的 target phase。`enter-phase` / `load_complete` 只见证 entry；`advance-status` 只同步 source-gate status；两者都不证明 target phase work completion。
 5. Gate fail → 读 `inspect` / `advice` → repair → rerun same gate
 6. 回到步骤 1，直到 `phase-final`（terminal，无 gate）
 

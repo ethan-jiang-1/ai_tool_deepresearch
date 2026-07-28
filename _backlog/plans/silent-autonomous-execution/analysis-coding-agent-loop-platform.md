@@ -1,6 +1,6 @@
 ---
 title: Silent autonomy coding-agent loop analysis
-status: research_boundary_for_future_proposal
+status: research_boundary_with_superseded_handoff_candidate
 parent_plan: ../silent-autonomous-execution.md
 candidate_change_name: make-phase-handoff-entry-direct
 bugs: BUG-099, BUG-103, BUG-104, BUG-106
@@ -11,6 +11,14 @@ revised: 2026-07-23
 ---
 
 # Silent Autonomy: Coding-Agent Loop Analysis
+
+## Superseded DPT Handoff Candidate (2026-07-28)
+
+Archived `align-phase-handoff-status-sync-guidance` closed BUG-103's narrow
+entry-guidance omission by preserving the existing two-command handoff order.
+The proposed one-command DPT handoff interface and entry-core reduction
+described below were not adopted. This analysis remains relevant only to the
+host-liveness boundary and deferred BUG-099/104/106 research.
 
 ## 1. Decision
 

@@ -344,6 +344,13 @@ The exceptional terminology SHALL NOT imply that a post-Final HITL2 gate ran or 
 
 `advance-status` SHALL NOT be described as entering, loading, or executing the next phase. `enter-phase` / `load_complete` SHALL NOT be described as completing the target phase's work. Machine-level names such as `phase_transition`, `advance-status`, `enter-phase`, `load_complete`, `current_gate`, and `next_gate` SHALL remain stable unless a separate migration changes them.
 
+For a normal passed gate, Agent-facing entry guidance SHALL present the complete
+accepted sequence: consume `check.next` with `enter-phase`, synchronize the
+just-passed source gate with `advance-status --to <source_gate_enum>`, then
+execute the loaded target phase. Guidance SHALL NOT omit the source-gate status
+synchronization, reverse the two lifecycle operations, or present entry alone
+as authorization to claim target work completion.
+
 #### Scenario: Advance status is state transition only
 
 - **WHEN** `advance-status.mjs` succeeds after a witnessed deterministic route
@@ -355,6 +362,12 @@ The exceptional terminology SHALL NOT imply that a post-Final HITL2 gate ran or 
 - **WHEN** `enter-phase.mjs --node <check.next>` succeeds
 - **THEN** its docs and diagnostics SHALL describe `load_complete` as a route-bound entry witness for the target Markdown control surface
 - **AND** they SHALL NOT claim the target phase's work is complete
+
+#### Scenario: Normal entry guidance completes source-gate synchronization before target execution
+
+- **WHEN** a generic Agent-facing playbook instructs a passed normal lifecycle gate handoff
+- **THEN** it SHALL order `enter-phase --node <check.next>` before `advance-status --to <source_gate_enum>`
+- **AND** it SHALL direct execution of the loaded target phase only after that source-gate synchronization
 
 #### Scenario: Post-final witnessing does not impersonate gate completion
 

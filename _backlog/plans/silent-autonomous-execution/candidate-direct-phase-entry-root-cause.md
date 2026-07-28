@@ -1,13 +1,24 @@
 ---
 title: Candidate root-cause design - direct phase entry
-status: candidate_design_pending_silent-autonomy_scope
+status: historical_candidate_superseded_by_guidance_change
 parent_plan: ../silent-autonomous-execution.md
 candidate_change_name: make-phase-handoff-entry-direct
 bugs: BUG-099, BUG-103, BUG-104, BUG-106
-revised: 2026-07-23
+revised: 2026-07-28
 ---
 
 # Candidate: Direct Phase Entry Root-Cause Design
+
+## Superseded Scope (2026-07-28)
+
+The specific BUG-103 guidance omission is closed by archived
+`align-phase-handoff-status-sync-guidance`: the generic entry playbook now
+requires `enter-phase -> advance-status --to <source gate> -> execute loaded
+phase`. The proposed `consume-phase-handoff` command, bounded entry-core
+projection, and lifecycle-writer consolidation in this document were not
+adopted. They remain historical alternatives, not a pending implementation
+direction. BUG-104 and the real-Agent observations in BUG-099/106 retain their
+separate evidence boundaries.
 
 ## 1. Decision
 

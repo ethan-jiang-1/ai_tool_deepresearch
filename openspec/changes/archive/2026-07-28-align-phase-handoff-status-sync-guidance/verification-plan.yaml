@@ -1,0 +1,34 @@
+schema_version: verification-routing/v1
+change: align-phase-handoff-status-sync-guidance
+test_classes:
+  unit:
+    status: selected
+    rationale: The changed surface is an Agent-facing Markdown contract with no runtime composition or external actor claim; focused static node:test coverage is the direct proof.
+  integration:
+    status: not_applicable
+    rationale: No CLI, runtime-bundle, or cross-module behavior changes; a temporary-bundle test would only repeat existing lifecycle contracts.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The change does not alter a workflow-scale deterministic chain.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: Static documentation coverage cannot prove host or real-Agent liveness, which remains outside this change.
+claims:
+  - id: generic-handoff-guidance-is-complete-and-ordered
+    statement: >-
+      CPT-008: the generic start-research playbook presents a normal passed-gate
+      handoff as check.next -> enter-phase -> source-gate advance-status ->
+      loaded-phase execution, preserving the distinct entry, status, and work
+      completion meanings without a new lifecycle control surface.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/command-contract-docs.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

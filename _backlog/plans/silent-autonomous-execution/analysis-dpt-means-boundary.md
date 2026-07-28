@@ -1,6 +1,6 @@
 ---
 title: Silent autonomy DPT-means boundary - what is and is not a DPT capability
-status: review_conclusion_for_future_silent-autonomy_pickup
+status: historical_boundary_partially_superseded
 parent_plan: ../silent-autonomous-execution.md
 related:
   - candidate-direct-phase-entry-root-cause.md
@@ -11,6 +11,15 @@ created: 2026-07-23
 ---
 
 # Silent Autonomy: DPT-Means Boundary
+
+## Superseded DPT Handoff Scope (2026-07-28)
+
+The deterministic BUG-103 part of the former proposed Change 1 is closed by
+archived `align-phase-handoff-status-sync-guidance`, which corrects the generic
+handoff order without a new command, writer, bounded entry core, or lifecycle
+controller. The host/Agent liveness boundary and BUG-099/104/106 observations
+remain research material; references below to `consume-phase-handoff` are
+historical alternatives and not current scope.
 
 ## 1. Conclusion (the part to pick up later)
 

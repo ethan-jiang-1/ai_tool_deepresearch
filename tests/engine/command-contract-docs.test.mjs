@@ -222,6 +222,22 @@ describe('Agent-facing command contract docs', () => {
     }
   });
 
+  it('generic gate-pass guidance enters, synchronizes the source gate, then executes the loaded phase', () => {
+    const start = read('DPT_FRAMEWORK/command_playbook/start-research.md');
+    const enter = 'enter-phase --bundle <path> --node <check.next>';
+    const sync = 'advance-status --bundle <path> --to <source_gate_enum>';
+    const execute = '只有两步都成功后，才执行已加载的 target phase';
+
+    assert.ok(start.includes(enter), 'start-research must consume check.next through enter-phase');
+    assert.ok(start.includes(sync), 'start-research must synchronize the just-passed source gate');
+    assert.ok(start.includes(execute), 'start-research must defer target execution until entry and status sync succeed');
+    assert.ok(start.indexOf(enter) < start.indexOf(sync), 'enter-phase must precede source-gate status synchronization');
+    assert.ok(start.indexOf(sync) < start.indexOf(execute), 'source-gate status synchronization must precede target execution');
+    assert.match(start, /enter-phase[^\n]*只见证 entry/);
+    assert.match(start, /advance-status[^\n]*只同步 source-gate status/);
+    assert.match(start, /两者都不证明 target phase work completion/);
+  });
+
   it('new bundle map docs treat BUNDLE_MAP.md as passive navigation', () => {
     const template = read('DPT_FRAMEWORK/rb_templates/BUNDLE_MAP.md.tmpl');
     const instantiate = read('DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md');

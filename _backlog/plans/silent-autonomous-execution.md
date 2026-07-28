@@ -3,7 +3,7 @@ title: Silent autonomous execution
 status: research_backlog_with_no_fixed_openspec_change
 created: 2026-07-24
 revised: 2026-07-28
-source_bugs: BUG-099, BUG-103, BUG-104, BUG-106
+source_bugs: BUG-099, BUG-104, BUG-106
 evidence_bundle: dpt_rb_openspec-large-project-maintenance-patterns
 ---
 
@@ -35,7 +35,7 @@ host / Agent liveness
 
 ### Proven DPT defects
 
-1. `enter-phase` and `advance-status` have deliberately separate durable responsibilities: the former writes route-bound entry and `current_node`; the latter synchronizes the source-gate window. The direct active root is instead that `command_playbook/start-research.md` omits the required `advance-status --to <source_gate>` between them.
+1. `enter-phase` and `advance-status` have deliberately separate durable responsibilities: the former writes route-bound entry and `current_node`; the latter synchronizes the source-gate window. BUG-103's direct entry-guidance omission was closed by the archived `align-phase-handoff-status-sync-guidance` change; this plan does not reopen it.
 2. 正常 phase entry 反复渲染完整 `requires` closure；被重复注入的控制面过大是可测事实，但不是特定 Agent 停止的充分因果证明。
 3. The final `enter-phase` continuation cue still precedes status synchronization. The public handoff interface must therefore present the complete order without implying that entry alone is ready for target-phase work.
 

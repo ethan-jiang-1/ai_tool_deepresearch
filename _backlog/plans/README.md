@@ -17,7 +17,7 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `silent-autonomous-execution` | 承接 `source_bugs: BUG-099/103/104/106`（stop-no halt、status drift、context pollution、stop-no-violation-repeats）。独立 research backlog：把「静默自主」拆成 DPT 可确定性修复的 phase-entry correctness 与一般 coding-agent/host 是否发起下一 turn 的 actor liveness 两层，分开研究与证明。当前 deferred 于 work-unit、evidence-production 与 Gate 路径稳定可跑之后；不阻塞其他 runtime correctness 工作。 | deferred research / scoping（无固定 OpenSpec change） |
+| `silent-autonomous-execution` | 承接 `source_bugs: BUG-099/104/106`（stop-no halt、context pollution、stop-no-violation-repeats）。独立 research backlog：把「静默自主」拆成 DPT 可确定性修复的 phase-entry correctness 与一般 coding-agent/host 是否发起下一 turn 的 actor liveness 两层，分开研究与证明。BUG-103 的入口 handoff guidance 已由 archived change 修复；其余仍 deferred 于核心 work-unit、evidence-production 与 Gate 路径稳定可跑之后。 | deferred research / scoping（无固定 OpenSpec change） |
 
 ---
 
