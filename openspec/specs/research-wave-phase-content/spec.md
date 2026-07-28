@@ -453,6 +453,17 @@ Wave phase SHALL teach this closeout loop:
 5. repair the smallest named packet/authority root and rerun that same inspect
    before writing completion evidence or invoking the formal gate.
 
+For Wave0, direct authority means each candidate in each current eligible
+submitted work unit's result-declared, schema-valid `source.yaml` array at the
+same inspection boundary. The Phase Agent SHALL form one exact
+`<work_id>/<1-based source.yaml ordinal>` entry or explicit identity-bound
+deferred disposition for every candidate in the affected topic's retained
+packet. The ordinal is a current projection coordinate, not a permanent
+`result_hash` snapshot. One packet MAY carry multiple entries for one work ID
+and SHALL be applied through the existing writer before the same Wave0 inspect.
+A bare work ID, generic completion prose, or one arbitrary ordinal SHALL not be
+taught as coverage for the whole source intake.
+
 The phase SHALL not ask the user to perform ordinary packet/apply/inspect work,
 hand-write a ledger/receipt/trace/reference, or turn a generic submitted line
 into a success substitute. A missing legal writer or authority path SHALL be
@@ -475,6 +486,32 @@ artifact/cache/work-unit paths as secondary provenance only.
 - **THEN** its phase guidance SHALL direct packet -> `operate-topic-state apply`
   -> same Wave inspect -> formal gate
 - **AND** it SHALL not direct manual token replacement or direct seed editing
+
+#### Scenario: Wave0 closeout enumerates one result-declared source array
+
+- **WHEN** a Wave0 source-intake work unit has formally submitted a result that
+  declares a current schema-valid `source.yaml` array with three candidates for
+  one current topic
+- **THEN** phase guidance SHALL direct a retained packet with three exact
+  candidate entries or dispositions for that work ID
+- **AND** it SHALL direct `operate-topic-state apply` followed by the same
+  `inspect-wave0-output` before completion evidence
+
+#### Scenario: Wave0 closeout preserves the one legal writer
+
+- **WHEN** a Wave0 candidate needs a navigation entry or deferred disposition
+- **THEN** guidance SHALL direct the Phase Agent through the existing packet
+  writer and same inspect
+- **AND** it SHALL not direct a raw Seed Topic edit, a source-authority edit,
+  or a new user interaction
+
+#### Scenario: Later Waves do not inherit Wave0 candidate rules
+
+- **WHEN** Wave1 or Wave2 closeout runs after this change
+- **THEN** their existing submitted-row or W2F identity rules SHALL remain
+  authoritative
+- **AND** Wave0 source-array ordinal language SHALL not be presented as their
+  coverage contract
 
 #### Scenario: Heading card gives the backfiller one constrained action
 

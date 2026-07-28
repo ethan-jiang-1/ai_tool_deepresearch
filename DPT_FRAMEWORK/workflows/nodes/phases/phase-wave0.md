@@ -14,6 +14,7 @@ requires:
   - shared/shared-schemas
   - shared/shared-silent-execution
   - shared/shared-subagent-protocol
+  - shared/shared-return-map-authoring
   - shared/shared-reference-template
   - shared/shared-anti-cheating-rules
   - templates/seed-topic-template
@@ -48,6 +49,7 @@ For each delegated source-intake task, derive the initial candidate URL/source t
 - `DPT_FRAMEWORK/cli/operate-queue.mjs` for enqueue/check/non-delegated maintenance.
 - `DPT_FRAMEWORK/cli/operate-work-unit.mjs` for delegated claim/submit/fail/timeout/abandon/inspect.
 - `shared-subagent-protocol.md` for work-unit envelope and Sub-agent rules.
+- `shared-return-map-authoring.md` and `templates/seed-topic-template.md` through this phase's `requires` chain; `command_playbook/operate-topic-state.md` remains the sole complete packet/apply/repair protocol.
 
 When a valid user-controls snapshot is present, read its original host-file coordinate as guidance alongside profile floors and seed-topic instructions. It may guide source selection, evidence treatment and presentation, but never lowers provenance/source floors or changes receipt, Gate, queue or lifecycle authority. Before claim, the Phase Agent MAY append one sentence to the existing `task_brief`: `Read rb_plan.md## Constraints > User Research Controls through your existing beacon-rooted bundle coordinate; it is read-only research guidance.` Only add it when controls are present; do not copy controls into queue payload machine fields, manifest/result/receipt, or an empty brief.
 
@@ -188,9 +190,9 @@ Read the structured replacement result. For a newly created or queued successor,
 
 ### 3.3 Seed Projection Update
 
-After each successful submit, never edit a seed, heading, card, or token. `templates/seed-topic-template` gives the Wave0 slot/card and rendered-entry shape. For each affected current canonical topic, read the current eligible submitted Wave0 row, then use the complete packet, authorization and repair protocol in `command_playbook/operate-topic-state.md` to retain one `wave_projection/apply_seed_projection` packet for `wave0_evidence` and invoke existing `operate-topic-state apply` in this loaded Wave0 window. Its entry identity is `<work_id>/<positive ordinal>`; evidence-bearing entries lead with a concrete existing `reference/00-shared-*.md` ref, while `source.yaml`, `_cache/`, and `_work_units/` remain secondary provenance.
+After each successful submit, never edit a seed, heading, card, or token. `templates/seed-topic-template` gives the Wave0 slot/card and rendered-entry shape. For each affected current canonical topic, use the current result-declared, schema-valid `artifacts/wave0/<topic>/source.yaml` array to retain one exact `<work_id>/N` entry or identity-bound deferred disposition for every candidate. `N` is that array's 1-based ordinal at this inspection boundary: it is a current projection coordinate, not a permanent `result_hash` snapshot. One work ID may therefore contribute multiple entries or dispositions in one `wave0_evidence` update; a bare work ID or one arbitrary ordinal never covers the full source intake. Use the complete `wave_projection/apply_seed_projection` packet, authorization and repair protocol in `command_playbook/operate-topic-state.md` and invoke existing `operate-topic-state apply` in this loaded Wave0 window. Evidence-bearing entries lead with a concrete existing `reference/00-shared-*.md` ref, while `source.yaml`, `_cache/`, and `_work_units/` remain secondary provenance.
 
-When no consumer reference is materializable, retain an identity-bound `defers` / `deferred` entry with `refs: [none]` and an explicit limitation in `next_hop`. The writer consumes a first token or upserts the matching identity atomically; Phase prose never decides which path applies. A missing writer window, canonical binding, or submitted authority is its direct lifecycle/owner boundary, not permission for a user or Agent to hand-edit bytes.
+When no consumer reference is materializable, retain an identity-bound `defers` / `deferred` entry with `refs: [none]` and an explicit limitation in `next_hop`. The writer consumes a first token or upserts the matching identity atomically; Phase prose never decides which path applies. After every packet apply, run the same `inspect-wave0-output.mjs`; when it names a candidate coordinate, repair the retained packet -> writer -> same inspect loop. A missing writer window, canonical binding, or submitted authority is its direct lifecycle/owner boundary, not permission for a user or Agent to hand-edit seed, source, ledger, receipt, or trace bytes.
 
 ## 4. Expected Artifacts
 

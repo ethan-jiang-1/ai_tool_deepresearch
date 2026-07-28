@@ -53,15 +53,26 @@ line number, raw Markdown, append instruction, or patch.
   "wave": "wave0",
   "updates": [{
     "slot_id": "wave0_evidence",
-    "entries": [{
-      "source_identity": { "kind": "submitted_work", "work_id": "wu-w0-b001-<kind>-i0001" },
-      "entry_id": "wu-w0-b001-<kind>-i0001/1",
-      "evidence_meaning": "Agent-authored navigation meaning",
-      "relationship": "supports",
-      "refs": ["reference/<existing-file>.md"],
-      "status": "supported",
-      "next_hop": "Read the concrete reference first"
-    }]
+    "entries": [
+      {
+        "source_identity": { "kind": "submitted_work", "work_id": "wu-w0-b001-<kind>-i0001" },
+        "entry_id": "wu-w0-b001-<kind>-i0001/1",
+        "evidence_meaning": "Agent-authored navigation meaning for the first current candidate",
+        "relationship": "supports",
+        "refs": ["reference/<existing-file>.md"],
+        "status": "supported",
+        "next_hop": "Read the concrete reference first"
+      },
+      {
+        "source_identity": { "kind": "submitted_work", "work_id": "wu-w0-b001-<kind>-i0001" },
+        "entry_id": "wu-w0-b001-<kind>-i0001/2",
+        "evidence_meaning": "The second current candidate has no materializable consumer reference.",
+        "relationship": "defers",
+        "refs": ["none"],
+        "status": "deferred",
+        "next_hop": "limitation: no materializable consumer reference is available."
+      }
+    ]
   }]
 }
 ```
@@ -72,13 +83,20 @@ Wave0 is authorized only in `seed_topics_ready -> wave0_complete` and owns
 `wave1_mechanisms`, `wave1_trends`, and `pending_questions`. Wave2 is
 authorized only in `wave1_complete -> wave2_complete`, always includes
 `wave2_judgment`, and may additionally upsert its exact current-round W2F
-entry in `pending_questions`. Wave0/1 entries use
-`<work_id>/<positive ordinal>`; Wave2 `entry_id` equals its exact source
-`W2F-*` finding resolved to this topic.
+entry in `pending_questions`. For Wave0, `<work_id>/N` uses the 1-based `N`
+from that work unit's current result-declared, schema-valid
+`artifacts/wave0/<topic>/source.yaml` array. This is a current projection
+coordinate, not a permanent `result_hash` snapshot: one work ID may contribute
+multiple entries or exact deferred dispositions in one `wave0_evidence` update,
+and neither a bare work ID nor one arbitrary ordinal covers the whole source
+intake. Wave1 entries use `<work_id>/<positive ordinal>`; Wave2 `entry_id`
+equals its exact source `W2F-*` finding resolved to this topic.
 
 The writer preserves every read-only card, consumes a first token or upserts a
 stable identity, and stages only the selected seed in its existing workspace.
-After a successful apply, run the corresponding same Wave inspect. For an
+After a successful apply, run the corresponding same Wave inspect. If inspect
+names a Wave0 candidate coordinate, repair only that retained packet entry or
+disposition, apply through this writer, and rerun the same inspect. For an
 explicit no-consumer-reference outcome, use `relationship: "defers"`,
 `status: "deferred"`, `refs: ["none"]`, and a concrete limitation in
 `next_hop`. A missing writer window, current authority, canonical binding, or

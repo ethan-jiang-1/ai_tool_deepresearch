@@ -61,7 +61,7 @@ export const SEED_TOPIC_PROJECTION_SLOTS = Object.freeze([
       writer: 'Wave0 Phase Agent',
       authority: '当前轮已 submitted 的 Wave0 work-unit',
       timing: '当前轮 Wave0 work-unit 已 submitted 后',
-      entryIdentity: '<work_id>/<positive ordinal>',
+      entryIdentity: '<work_id>/<N>；N 是当前 result-declared、schema-valid `artifacts/wave0/<topic>/source.yaml` array 的 1-based ordinal（current projection coordinate，不是 result_hash 的永久 snapshot）',
       requiredEntryFields: ['entry_id', ...SEED_TOPIC_PROJECTION_ENTRY_FIELDS],
       materializationPointer: '由 Wave0 closeout 经 operate-topic-state materialize；详见 command_playbook/operate-topic-state.md#Wave Projection Packet',
       prohibitions: ['手改本节', '只写 “Wave0 submitted”', '把 artifact/cache 当唯一 consumer ref'],

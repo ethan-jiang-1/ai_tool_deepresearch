@@ -134,6 +134,7 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-126 | 2026-07-27 | Seed-topic YAML hand-authoring and Engine parsing could diverge; canonical structured enrichment owns the mutable fields |
 | BUG-127 | 2026-07-27 | Exact `must_answer` canonical-binding contract was not signaled during seed authoring |
 | BUG-128 | 2026-07-27 | Wave0 shared-reference floor is retained as an explicit `claim_verification` product policy with eligible degradation |
+| BUG-132 | 2026-07-28 | Wave0 source-array candidates were covered only at parent work-id granularity; current exact `<work_id>/<ordinal>` projection coverage now shares one direct-output and readiness path with inspect/gate |
 | BUG-138 | 2026-07-28 | Wave completion did not materialize correct seed-topic backfill; `fix-seed-topic-projection-materialization` introduced the authority-bound projection writer, template/protocol boundary, shared readiness evaluator, and deterministic Wave-chain regression |
 
 **Next available bug ID: BUG-139**

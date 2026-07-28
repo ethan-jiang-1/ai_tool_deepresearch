@@ -1,5 +1,5 @@
 // @impl RRM-007, IOC-005
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { after, describe, it } from 'node:test';
@@ -10,10 +10,14 @@ import {
   extractReturnMapEntries,
   extractSeedFamilyEntries,
   extractSeedSectionFamily,
+  evaluateSeedTopicProjectionReadiness,
   isEvidenceBearingReturnMapEntry,
   isLimitationReturnMapEntry,
   validateReturnMapContent,
 } from '../../../DPT_FRAMEWORK/engine/helpers/return-map.mjs';
+import { applyCanonicalTopicState } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
+import { buildCanonicalTopicRegistryFact } from '../../../DPT_FRAMEWORK/engine/helpers/topic-registry-fact.mjs';
+import { claimAndSubmitWorkUnit } from '../work-unit-test-helpers.mjs';
 
 const createdDirs = [];
 
@@ -30,15 +34,82 @@ function writeRef(dir, ref = 'reference/topic-a-source.md') {
   return ref;
 }
 
-function entry({ refs = ['reference/topic-a-source.md'], relationship = 'supports', status = 'supported', nextHop = 'Read the reference file.' } = {}) {
+function entry({ entryId = null, refs = ['reference/topic-a-source.md'], relationship = 'supports', status = 'supported', nextHop = 'Read the reference file.' } = {}) {
   return [
-    '- evidence_meaning: Source explains a concrete mechanism.',
+    ...(entryId ? [`- entry_id: ${entryId}`, '  evidence_meaning: Source explains a concrete mechanism.'] : ['- evidence_meaning: Source explains a concrete mechanism.']),
     `  relationship: ${relationship}`,
     '  refs:',
     ...refs.map((ref) => `    - ${ref}`),
     `  status: ${status}`,
     `  next_hop: ${nextHop}`,
   ].join('\n');
+}
+
+function canonicalWave0Bundle() {
+  const dir = tempBundle();
+  mkdirSync(path.join(dir, 'seed_topics'), { recursive: true });
+  mkdirSync(path.join(dir, '_work_units'), { recursive: true });
+  writeFileSync(path.join(dir, 'rb_plan.md'), '---\nplan_basename: return-map-wave0\nderived_topic_count: 0\ntopic_registry_version: "2"\ntopic_registry: []\n---\n# Plan\n');
+  writeFileSync(path.join(dir, 'rb_profile.yaml'), 'human_decision_checkpoints:\n  hitl2:\n    rerun_count: 0\n');
+  writeFileSync(path.join(dir, 'rb_status.json'), JSON.stringify({ current_mode: 'execution', state: 'not_started', current_gate: 'hitl1_recorded', next_gate: 'setup_ready', current_node: 'phases/phase-hitl1.md' }));
+  writeFileSync(path.join(dir, 'rb_trace.jsonl'), '');
+  const applied = applyCanonicalTopicState({
+    bundlePath: dir,
+    input: {
+      context: 'hitl1',
+      actions: [{ action: 'add_topic', title: 'Topic A', slug_stem: 'topic-a', must_answer: ['What matters?'], scope_role: 'primary', depends_on_topic_uids: [] }],
+    },
+  });
+  assert.equal(applied.verdict, 'committed');
+  const fact = buildCanonicalTopicRegistryFact(dir);
+  return { dir, topic: fact.topic_registry[0] };
+}
+
+function sourceArrayYaml(topicSlug) {
+  return [
+    '- url: https://example.com/duplicate',
+    '  title: Duplicate one',
+    '  retrieved_date: 2026-07-20',
+    `  topic_tag: ${topicSlug}`,
+    '- url: https://example.com/duplicate',
+    '  title: Duplicate two',
+    '  retrieved_date: 2026-07-20',
+    `  topic_tag: ${topicSlug}`,
+    '',
+  ].join('\n');
+}
+
+function submitWave0(dir, topic) {
+  const submitted = claimAndSubmitWorkUnit(dir, {
+    phase: 'wave0',
+    queueItemId: 'return-map-wave0',
+    preserveQueue: true,
+    queueItemOverrides: {
+      payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug },
+      lineage: { topic_uid: topic.topic_uid, topic_slug: topic.slug, phase: 'wave0' },
+    },
+    outputs: [{
+      path: `artifacts/wave0/${topic.slug}/source.yaml`,
+      role: 'source_yaml',
+      content: sourceArrayYaml(topic.slug),
+    }],
+  });
+  assert.equal(submitted.submitted.ok, true, JSON.stringify(submitted.submitted));
+  return submitted.record;
+}
+
+function replaceWave0Token(dir, topic, content) {
+  const seedPath = path.join(dir, 'seed_topics', `${topic.slug}.md`);
+  const seed = readFileSync(seedPath, 'utf8');
+  assert.match(seed, /__BACKFILL_WAVE0_EVIDENCE__/);
+  writeFileSync(seedPath, seed.replace('__BACKFILL_WAVE0_EVIDENCE__', content));
+}
+
+function evaluateWave0Readiness(dir) {
+  return evaluateSeedTopicProjectionReadiness(dir, {
+    wave: 'wave0',
+    topicRegistryFact: buildCanonicalTopicRegistryFact(dir),
+  });
 }
 
 describe('return-map diagnostics', () => {
@@ -253,6 +324,67 @@ describe('return-map diagnostics', () => {
     assert.deepEqual(duplicate[0].metadataIssues, ['duplicate_entry_id']);
     assert.deepEqual([...extractExactProjectionIdentities(duplicate[0]).rawMetadataWorkIds], [workId]);
     assert.deepEqual([...extractExactProjectionIdentities(duplicate[0]).workIds], []);
+  });
+
+  it('requires one exact Wave0 candidate entry per current declared source position', () => {
+    const partial = canonicalWave0Bundle();
+    const partialRecord = submitWave0(partial.dir, partial.topic);
+    writeRef(partial.dir);
+    replaceWave0Token(partial.dir, partial.topic, entry({ entryId: `${partialRecord.work_id}/1` }));
+    const omission = evaluateWave0Readiness(partial.dir);
+    assert.equal(omission.passed, false);
+    const missing = omission.findings.filter((finding) => finding.rule_id === 'return_map_current_candidate_omission');
+    assert.equal(missing.length, 1);
+    assert.match(missing[0].detail, new RegExp(`${partialRecord.work_id}/2`));
+    assert.doesNotMatch(missing[0].detail, new RegExp(`${partialRecord.work_id}/1`));
+
+    const complete = canonicalWave0Bundle();
+    const completeRecord = submitWave0(complete.dir, complete.topic);
+    writeRef(complete.dir);
+    replaceWave0Token(complete.dir, complete.topic, [
+      entry({ entryId: `${completeRecord.work_id}/1` }),
+      entry({
+        entryId: `${completeRecord.work_id}/2`,
+        refs: ['none'],
+        relationship: 'defers',
+        status: 'deferred',
+        nextHop: 'limitation: no materializable evidence; defer to HITL2.',
+      }),
+    ].join('\n\n'));
+    const resolved = evaluateWave0Readiness(complete.dir);
+    assert.equal(resolved.passed, true, resolved.inspect.join('\n'));
+  });
+
+  it('does not let bare, malformed, or out-of-range Wave0 identities hide candidate omissions', () => {
+    const bare = canonicalWave0Bundle();
+    const bareRecord = submitWave0(bare.dir, bare.topic);
+    writeRef(bare.dir);
+    replaceWave0Token(bare.dir, bare.topic, entry({ refs: [bareRecord.work_id, 'reference/topic-a-source.md'] }));
+    const bareResult = evaluateWave0Readiness(bare.dir);
+    assert.equal(bareResult.passed, false);
+    assert.equal(bareResult.findings.filter((finding) => finding.rule_id === 'return_map_current_candidate_omission').length, 2);
+    assert.equal(bareResult.findings.some((finding) => finding.rule_id === 'seed_projection_entry_identity'), false);
+
+    const invalid = canonicalWave0Bundle();
+    const invalidRecord = submitWave0(invalid.dir, invalid.topic);
+    writeRef(invalid.dir);
+    replaceWave0Token(invalid.dir, invalid.topic, entry({ entryId: `${invalidRecord.work_id}/3` }));
+    const invalidResult = evaluateWave0Readiness(invalid.dir);
+    assert.equal(invalidResult.passed, false);
+    assert.equal(invalidResult.findings.filter((finding) => finding.rule_id === 'seed_projection_entry_identity').length, 1);
+    assert.equal(invalidResult.findings.some((finding) => finding.rule_id === 'return_map_current_candidate_omission'), false);
+  });
+
+  it('returns a Wave0 candidate parent root before inspecting dependent Seed Topic omissions', () => {
+    const broken = canonicalWave0Bundle();
+    submitWave0(broken.dir, broken.topic);
+    writeFileSync(path.join(broken.dir, 'artifacts/wave0', broken.topic.slug, 'source.yaml'), 'not: an array\n');
+    const result = evaluateWave0Readiness(broken.dir);
+    assert.equal(result.passed, false);
+    assert.equal(result.findings.length, 1);
+    assert.equal(result.findings[0].rule_id, 'wave0_candidate_direct_output');
+    assert.equal(result.findings[0].checkpoint_context.direct_root.code, 'source_metadata_top_level_array_missing');
+    assert.equal(result.findings.some((finding) => /candidate_omission|seed_projection_token/.test(finding.rule_id)), false);
   });
 
   it('selects shared pending ownership only from exact parsed W2F refs', () => {

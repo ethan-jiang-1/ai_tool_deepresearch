@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.54
+
+- Wave0 Seed Topic projection now closes at each current result-declared, schema-valid `source.yaml` array coordinate: every `<work_id>/N` has an exact navigation entry or explicit deferred disposition, while duplicate source positions remain distinct.
+- `result_hash` continues to authenticate the submitted result declaration rather than freezing source bytes. The shared direct-output cardinality feeds the existing candidate reader, inspect, and formal gate; this adds no source authority, writer, lifecycle state, or control plane.
+
 ## v0.53
 
 - Seed Topic backfill is now an identity-bound `wave_projection` packet through the existing atomic topic-state writer: it preserves immutable read-only backfill cards, materializes only owned current-Wave slots, and never makes the navigation projection into evidence authority.

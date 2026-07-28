@@ -5,7 +5,11 @@ import { after, describe, it } from 'node:test';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { collectEligibleRows } from '../../DPT_FRAMEWORK/engine/work-unit-projection.mjs';
+import {
+  collectEligibleRows,
+  collectEligibleWave0CandidateProjection,
+} from '../../DPT_FRAMEWORK/engine/work-unit-projection.mjs';
+import { buildCanonicalTopicRegistryFact } from '../../DPT_FRAMEWORK/engine/helpers/topic-registry-fact.mjs';
 import {
   claimAndSubmitWorkUnit,
   cleanupWorkUnitBundle,
@@ -14,6 +18,17 @@ import {
 
 const TOPIC_UID = 'tp_123e4567-e89b-42d3-a456-426614174010';
 const bundles = [];
+const DUPLICATE_SOURCE_YAML = [
+  '- url: https://example.com/duplicate',
+  '  title: Duplicate source one',
+  '  retrieved_date: 2026-07-20',
+  '  topic_tag: current-topic',
+  '- url: https://example.com/duplicate',
+  '  title: Duplicate source two',
+  '  retrieved_date: 2026-07-20',
+  '  topic_tag: current-topic',
+  '',
+].join('\n');
 
 function writeProjectionPlan(dir, {
   slug = 'current-topic',
@@ -57,6 +72,36 @@ function submit(dir, { slug = 'current-topic', queueItemId = 'queue-current' } =
       payload: { topic_uid: TOPIC_UID, topic_slug: slug },
       lineage: { topic_uid: TOPIC_UID, topic_slug: slug, phase: 'wave1' },
     },
+  });
+}
+
+function submitWave0(dir, {
+  slug = 'current-topic',
+  queueItemId = 'queue-wave0',
+  sourceContent = DUPLICATE_SOURCE_YAML,
+  legacyAssignment = false,
+} = {}) {
+  return claimAndSubmitWorkUnit(dir, {
+    phase: 'wave0',
+    queueItemId,
+    preserveQueue: true,
+    legacyAssignment,
+    queueItemOverrides: {
+      payload: { topic_uid: TOPIC_UID, topic_slug: slug },
+      lineage: { topic_uid: TOPIC_UID, topic_slug: slug, phase: 'wave0' },
+    },
+    outputs: [{
+      path: `artifacts/wave0/${slug}/source.yaml`,
+      role: 'source_yaml',
+      content: sourceContent,
+    }],
+  });
+}
+
+function collectWave0Candidates(dir, options = {}) {
+  return collectEligibleWave0CandidateProjection(dir, {
+    topicRegistryFact: buildCanonicalTopicRegistryFact(dir),
+    ...options,
   });
 }
 
@@ -115,6 +160,81 @@ describe('eligible work-unit projection', () => {
     const result = collectEligibleRows(dir, 'wave1');
     assert.equal(result.passed, true, JSON.stringify(result.root_findings));
     assert.equal(result.rows.length, 1);
+  });
+
+  it('derives ordered current result-declared candidate coordinates and preserves duplicate URLs by position', () => {
+    const dir = bundle({ slug: 'old-topic', previousLayouts: [] });
+    const submitted = submitWave0(dir, { slug: 'old-topic' });
+    writeProjectionPlan(dir);
+
+    const candidates = collectWave0Candidates(dir, { topic: 'current-topic' });
+    assert.equal(candidates.passed, true, JSON.stringify(candidates.root_findings));
+    assert.deepEqual(candidates.candidates.map((candidate) => ({
+      work_id: candidate.work_id,
+      topic_uid: candidate.topic_uid,
+      topic_slug: candidate.topic_slug,
+      source_ordinal: candidate.source_ordinal,
+      entry_id: candidate.entry_id,
+    })), [
+      {
+        work_id: submitted.record.work_id,
+        topic_uid: TOPIC_UID,
+        topic_slug: 'current-topic',
+        source_ordinal: 1,
+        entry_id: `${submitted.record.work_id}/1`,
+      },
+      {
+        work_id: submitted.record.work_id,
+        topic_uid: TOPIC_UID,
+        topic_slug: 'current-topic',
+        source_ordinal: 2,
+        entry_id: `${submitted.record.work_id}/2`,
+      },
+    ]);
+
+    writeFileSync(path.join(dir, 'rb_profile.yaml'), 'human_decision_checkpoints:\n  hitl2:\n    rerun_count: 3\n');
+    assert.deepEqual(collectWave0Candidates(dir), {
+      passed: true, candidates: [], root_findings: [], warnings: [],
+    });
+  });
+
+  it('returns an empty valid candidate set for a declared empty source array', () => {
+    const dir = bundle();
+    submitWave0(dir, { sourceContent: '[]\n' });
+    assert.deepEqual(collectWave0Candidates(dir), {
+      passed: true, candidates: [], root_findings: [], warnings: [],
+    });
+  });
+
+  it('short-circuits candidates on result-hash, tuple, and direct-output parent roots', () => {
+    const hashDir = bundle();
+    const hashSubmitted = submitWave0(hashDir);
+    const resultPath = path.join(hashDir, hashSubmitted.record.paths.result_ref);
+    const result = JSON.parse(readFileSync(resultPath, 'utf8'));
+    result.summary = 'changed after submit';
+    writeFileSync(resultPath, `${JSON.stringify(result, null, 2)}\n`);
+    const hashFailure = collectWave0Candidates(hashDir);
+    assert.equal(hashFailure.passed, false);
+    assert.deepEqual(hashFailure.candidates, []);
+    assert.equal(hashFailure.root_findings.length, 1);
+    assert.match(hashFailure.root_findings[0].missing_fact, /result hash mismatch/);
+
+    const tupleDir = bundle();
+    submitWave0(tupleDir, { legacyAssignment: true });
+    const tupleFailure = collectWave0Candidates(tupleDir);
+    assert.equal(tupleFailure.passed, false);
+    assert.deepEqual(tupleFailure.candidates, []);
+    assert.equal(tupleFailure.root_findings.length, 1);
+    assert.match(tupleFailure.root_findings[0].missing_fact, /exactly one source_yaml direct-output tuple/);
+
+    const directDir = bundle();
+    submitWave0(directDir);
+    writeFileSync(path.join(directDir, 'artifacts/wave0/current-topic/source.yaml'), 'not: an array\n');
+    const directFailure = collectWave0Candidates(directDir);
+    assert.equal(directFailure.passed, false);
+    assert.deepEqual(directFailure.candidates, []);
+    assert.equal(directFailure.root_findings.length, 1);
+    assert.equal(directFailure.root_findings[0].checkpoint_context.direct_root.code, 'source_metadata_top_level_array_missing');
   });
 
   it('keeps the reader/projection import direction acyclic', () => {

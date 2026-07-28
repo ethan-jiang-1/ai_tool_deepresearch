@@ -242,7 +242,14 @@ function evaluateWave0(content, common, snapshotMeta) {
       rootClass: 'semantic_content',
     }, snapshotMeta);
   }
-  return { passed: true, snapshot_meta: snapshotMeta, roots: [] };
+  return {
+    passed: true,
+    snapshot_meta: {
+      ...snapshotMeta,
+      validated_array_length: result.data.length,
+    },
+    roots: [],
+  };
 }
 
 function evaluateEvidenceSummary(content, common, snapshotMeta) {

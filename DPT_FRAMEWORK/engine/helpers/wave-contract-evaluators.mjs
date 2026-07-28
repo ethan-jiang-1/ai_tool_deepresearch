@@ -416,7 +416,6 @@ export function evaluateWave0Contract(bundlePath, definition, { topicRegistryFac
   const findings = [];
   const maskedRuleIds = [];
   const sourceStates = new Map();
-  const sourceData = new Map();
   const directResults = new Map();
   let layouts;
   try {
@@ -493,12 +492,13 @@ export function evaluateWave0Contract(bundlePath, definition, { topicRegistryFac
             sourceStates.set(target.topic, 'invalid');
           } else {
             sourceStates.set(target.topic, 'valid');
-            const yaml = readYamlArraySafe(join(bundlePath, target.resolved));
-            if (yaml.ok && Array.isArray(yaml.data)) sourceData.set(target.topic, yaml.data);
           }
-        } else if (rule.check === 'count_floor' && rule.id === 'per_topic_count_floor' && sourceData.has(target.topic)) {
+        } else if (rule.check === 'count_floor' && rule.id === 'per_topic_count_floor') {
           const threshold = resolveThreshold(rule, readBundleProfile(bundlePath));
-          const count = sourceData.get(target.topic).length;
+          const direct = directResults.get(target.resolved);
+          const count = Number.isInteger(direct?.snapshot_meta?.validated_array_length)
+            ? direct.snapshot_meta.validated_array_length
+            : 0;
           result = count >= threshold ? { passed: true } : { passed: false, detail: `Count floor not met for ${target.resolved}: ${count} entries (threshold: ${threshold}) (topic: ${target.topic})` };
         } else if (rule.check === 'count_floor') {
           result = evaluateCountFloor(bundlePath, rule, target.resolved, target.topic, target.alternatives);

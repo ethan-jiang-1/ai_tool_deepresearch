@@ -65,6 +65,12 @@ function assertSingleRoot(result, { rootClass, contractId, coordinate }) {
   assert.equal(Object.hasOwn(result.roots[0], 'recommended_action'), false);
 }
 
+function assertNoSourceExposure(result) {
+  for (const key of ['bytes', 'content', 'decoded', 'parsed', 'entries', 'array']) {
+    assert.equal(Object.hasOwn(result, key), false, `direct result must not expose ${key}`);
+  }
+}
+
 describe('evaluateDirectOutputTarget path and reader policy', () => {
   it('rejects absolute, empty, dot, traversal, backslash, redundant, and placeholder targets lexically', async () => {
     const bundleDir = tempBundle();
@@ -217,14 +223,18 @@ describe('evaluateDirectOutputTarget path and reader policy', () => {
 });
 
 describe('evaluateDirectOutputTarget direct facts', () => {
-  it('accepts valid and empty Wave0 arrays but rejects parse, top-level, and entry-schema failures', async () => {
+  it('exposes only validated Wave0 array cardinality and withholds it for invalid direct output', async () => {
     const bundleDir = tempBundle();
     const target = 'artifacts/wave0/topic-a/source.yaml';
     try {
-      for (const content of [VALID_SOURCE_YAML, '[]\n']) {
+      for (const [content, expectedLength] of [[VALID_SOURCE_YAML, 1], ['[]\n', 0]]) {
         writeTarget(bundleDir, target, content);
         const valid = await evaluate({ bundleDir, target, contractId: 'wave0.source-metadata-array.v1' });
         assert.equal(valid.passed, true);
+        assert.equal(valid.snapshot_meta.validated_array_length, expectedLength);
+        assert.equal(Number.isInteger(valid.snapshot_meta.validated_array_length), true);
+        assert.ok(valid.snapshot_meta.validated_array_length >= 0);
+        assertNoSourceExposure(valid);
       }
       for (const content of ['[unterminated\n', 'url: https://example.com\n', '- url: https://example.com\n']) {
         writeTarget(bundleDir, target, content);
@@ -234,6 +244,8 @@ describe('evaluateDirectOutputTarget direct facts', () => {
           contractId: 'wave0.source-metadata-array.v1',
           coordinate: target,
         });
+        assert.equal(Object.hasOwn(invalid.snapshot_meta || {}, 'validated_array_length'), false);
+        assertNoSourceExposure(invalid);
       }
     } finally {
       rmSync(bundleDir, { recursive: true, force: true });

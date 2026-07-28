@@ -1,4 +1,4 @@
-// @impl RRM-007
+// @impl RRM-007, RWG-018
 // Narrow submitted-work projection for return-map and eligible-row consumers.
 
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
@@ -6,12 +6,17 @@ import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
 
 import { readNormalizedSubmittedWorkUnitDeclarations } from './helpers/gate-helpers-readers.mjs';
+import { evaluateDirectOutputTarget } from './helpers/direct-output-contract.mjs';
 import { buildCanonicalTopicRegistryFact } from './helpers/topic-registry-fact.mjs';
 import { acceptedTopicSlugs, resolveStructuredTopicBinding } from './helpers/topic-layout.mjs';
 import { makeContractFinding } from './helpers/wave-contract-findings.mjs';
 import { queueItemSnapshotHash } from './queue-manager-core.mjs';
-import { isSafeBundleRelative } from './work-unit-utils.mjs';
-import { readAndValidateManifest } from './work-unit-validation.mjs';
+import { hashValue, isSafeBundleRelative } from './work-unit-utils.mjs';
+import {
+  readAndValidateManifest,
+  readAndValidateResult,
+  validateOutputFiles,
+} from './work-unit-validation.mjs';
 
 const PHASE_WAVES = Object.freeze({ wave0: 0, wave1: 1, wave2: 2 });
 
@@ -34,6 +39,30 @@ function authorityRoot(message) {
 
 function projectionFailure(message, warnings = []) {
   return { passed: false, rows: [], root_findings: [authorityRoot(message)], warnings };
+}
+
+function candidateProjectionFailure(message, warnings = []) {
+  return { passed: false, candidates: [], root_findings: [authorityRoot(message)], warnings };
+}
+
+function directOutputRoot(bundleDir, directRoot) {
+  const integrity = directRoot.root_class === 'contract_integrity';
+  return makeContractFinding({
+    id: `wave0_candidate_direct_output:${directRoot.code}`,
+    ruleId: 'wave0_candidate_direct_output',
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: integrity ? 'authority_integrity' : 'required_structure',
+    surface: path.resolve(bundleDir, directRoot.coordinate),
+    expected: directRoot.expected,
+    observed: directRoot.observed,
+    missingFact: `${directRoot.coordinate}: ${directRoot.observed}`,
+    repairKind: integrity ? 'missing_contract' : 'agent_action',
+    writeTo: path.resolve(bundleDir, directRoot.coordinate),
+    repair: `Repair ${directRoot.coordinate}, then rerun the same Wave0 inspect.`,
+    detail: `[wave0_candidate_direct_output] ${directRoot.code}: ${directRoot.observed}`,
+    checkpointContext: { direct_root: directRoot },
+  });
 }
 
 export function readProjectionProfileRound(bundleDir) {
@@ -66,10 +95,11 @@ function requireRegularResult(bundleDir, resultRef) {
   if (!stats.isFile() || stats.isSymbolicLink()) throw new Error(`submitted result path is not a regular file: ${resultRef}`);
 }
 
-export function collectEligibleWorkUnitProjection(bundleDir, {
+function collectEligibleWorkUnitProjectionFacts(bundleDir, {
   phase,
   topic = null,
   topicRegistryFact,
+  kind = null,
 } = {}) {
   const wave = PHASE_WAVES[phase];
   if (wave === undefined) throw new Error('--phase must be wave0|wave1|wave2');
@@ -91,12 +121,13 @@ export function collectEligibleWorkUnitProjection(bundleDir, {
   } catch (error) {
     return projectionFailure(`Submitted declaration authority invalid: ${error.message}`);
   }
-  if (normalized.facts.length === 0) return { passed: true, rows: [], root_findings: [], warnings: [] };
+  if (normalized.facts.length === 0) return { passed: true, facts: [], root_findings: [], warnings: [] };
 
-  const rows = [];
+  const facts = [];
   let legacyCount = 0;
   for (const { ledger_row: ledgerRow, index_record: record } of normalized.facts) {
     if (record.status !== 'submitted' || record.wave !== wave) continue;
+    if (kind && record.kind !== kind) continue;
     if (record.rerun_count === undefined || record.rerun_count === null) {
       legacyCount += 1;
       continue;
@@ -114,15 +145,20 @@ export function collectEligibleWorkUnitProjection(bundleDir, {
       const binding = resolveStructuredTopicBinding(topicRegistryFact.layouts, manifest);
       if (!binding.ok) throw new Error(`work-unit topic binding invalid for ${record.work_id}: ${binding.reason_code}`);
       if (topic && !acceptedTopicSlugs(topicRegistryFact.layouts, binding.topic_uid).includes(topic)) continue;
-      rows.push({
-        work_id: record.work_id,
-        result_path: record.paths.result_ref,
-        rerun_count: record.rerun_count,
-        topic_uid: binding.topic_uid,
-        topic_slug: binding.current_slug,
-        accepted_slugs: acceptedTopicSlugs(topicRegistryFact.layouts, binding.topic_uid),
-        kind: record.kind,
-        status: record.status,
+      facts.push({
+        ledger_row: ledgerRow,
+        index_record: record,
+        manifest,
+        row: {
+          work_id: record.work_id,
+          result_path: record.paths.result_ref,
+          rerun_count: record.rerun_count,
+          topic_uid: binding.topic_uid,
+          topic_slug: binding.current_slug,
+          accepted_slugs: acceptedTopicSlugs(topicRegistryFact.layouts, binding.topic_uid),
+          kind: record.kind,
+          status: record.status,
+        },
       });
     } catch (error) {
       return projectionFailure(`Submitted projection authority invalid: ${error.message}`);
@@ -132,7 +168,104 @@ export function collectEligibleWorkUnitProjection(bundleDir, {
   const warnings = legacyCount > 0
     ? [`eligible_rows: ${legacyCount} legacy submitted row(s) without rerun_count excluded (not current-round authority)`]
     : [];
-  return { passed: true, rows, root_findings: [], warnings };
+  return { passed: true, facts, root_findings: [], warnings };
+}
+
+export function collectEligibleWorkUnitProjection(bundleDir, options = {}) {
+  const projection = collectEligibleWorkUnitProjectionFacts(bundleDir, options);
+  if (!projection.passed) {
+    return {
+      passed: false,
+      rows: [],
+      root_findings: projection.root_findings,
+      warnings: projection.warnings,
+    };
+  }
+  return {
+    passed: true,
+    rows: projection.facts.map(({ row }) => row),
+    root_findings: [],
+    warnings: projection.warnings,
+  };
+}
+
+export function collectEligibleWave0CandidateProjection(bundleDir, {
+  topic = null,
+  topicRegistryFact,
+} = {}) {
+  const eligible = collectEligibleWorkUnitProjectionFacts(bundleDir, {
+    phase: 'wave0',
+    topic,
+    topicRegistryFact,
+    kind: 'wave0_source_intake',
+  });
+  if (!eligible.passed) {
+    return {
+      passed: false,
+      candidates: [],
+      root_findings: eligible.root_findings,
+      warnings: eligible.warnings,
+    };
+  }
+
+  const candidates = [];
+  for (const { row, index_record: record, manifest } of eligible.facts) {
+    try {
+      const sourceTuples = (manifest.output_contract?.required_outputs || []).filter((output) => (
+        output.role === 'source_yaml' && output.direct_contract === 'wave0.source-metadata-array.v1'
+      ));
+      if (sourceTuples.length !== 1) {
+        throw new Error(`Wave0 candidate projection requires exactly one source_yaml direct-output tuple for ${row.work_id}`);
+      }
+      const [sourceTuple] = sourceTuples;
+      const result = readAndValidateResult(
+        bundleDir,
+        path.resolve(bundleDir, row.result_path),
+        record,
+        { outputContract: manifest.output_contract },
+      );
+      if (hashValue(result) !== record.result_hash) {
+        throw new Error(`submitted result hash mismatch for ${row.work_id}`);
+      }
+      validateOutputFiles(bundleDir, result, manifest.output_contract);
+      const declaredSourceOutputs = result.output_files.filter((output) => (
+        output.path === sourceTuple.path && output.role === sourceTuple.role
+      ));
+      if (declaredSourceOutputs.length !== 1) {
+        throw new Error(`submitted result lacks the declared source_yaml output tuple for ${row.work_id}`);
+      }
+
+      const direct = evaluateDirectOutputTarget({
+        bundleDir,
+        target: sourceTuple.path,
+        contractId: sourceTuple.direct_contract,
+      });
+      if (!direct.passed) {
+        return {
+          passed: false,
+          candidates: [],
+          root_findings: [directOutputRoot(bundleDir, direct.roots[0])],
+          warnings: eligible.warnings,
+        };
+      }
+      const length = direct.snapshot_meta?.validated_array_length;
+      if (!Number.isInteger(length) || length < 0) {
+        throw new Error(`Wave0 direct output lacks validated array cardinality for ${row.work_id}`);
+      }
+      for (let sourceOrdinal = 1; sourceOrdinal <= length; sourceOrdinal += 1) {
+        candidates.push({
+          work_id: row.work_id,
+          topic_uid: row.topic_uid,
+          topic_slug: row.topic_slug,
+          source_ordinal: sourceOrdinal,
+          entry_id: `${row.work_id}/${sourceOrdinal}`,
+        });
+      }
+    } catch (error) {
+      return candidateProjectionFailure(`Wave0 candidate projection authority invalid: ${error.message}`, eligible.warnings);
+    }
+  }
+  return { passed: true, candidates, root_findings: [], warnings: eligible.warnings };
 }
 
 export function collectEligibleRows(bundleDir, phase, topic = null, topicRegistryFact = null) {

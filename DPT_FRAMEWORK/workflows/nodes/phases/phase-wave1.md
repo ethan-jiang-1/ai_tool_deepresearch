@@ -14,6 +14,7 @@ requires:
   - shared/shared-schemas
   - shared/shared-silent-execution
   - shared/shared-subagent-protocol
+  - shared/shared-return-map-authoring
   - shared/shared-reference-template
   - shared/shared-anti-cheating-rules
   - templates/seed-topic-template

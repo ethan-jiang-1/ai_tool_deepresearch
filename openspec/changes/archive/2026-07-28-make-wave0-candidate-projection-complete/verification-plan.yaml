@@ -1,0 +1,106 @@
+schema_version: verification-routing/v1
+change: make-wave0-candidate-projection-complete
+test_classes:
+  unit:
+    status: selected
+    rationale: Direct-output cardinality, authenticated candidate coordinate extraction, duplicate preservation, exact entry-id matching, parent short-circuit, and Wave1 non-regression are focused deterministic module contracts.
+  integration:
+    status: selected
+    rationale: Real work-unit submit, public topic-state packet apply, Wave0 inspect, formal gate, and rendered guidance must agree without a test-local source authority interpretation.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The bounded Wave0 submit -> packet -> inspect/gate seam is fully exercised by short temporary-bundle integration tests; a full multi-wave chain would add unrelated lifecycle surface.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: This change proves deterministic candidate navigation coverage, not a claim that a real Agent independently discovers source-array semantics; a nested Agent canary would add cost without strengthening the contract.
+claims:
+  - id: wave0-candidate-projection-reader
+    statement: >-
+      RRM-007 and RWG-018: the Wave0 candidate projection reader authenticates only current eligible submitted wave0_source_intake work, its exact manifest source_yaml/direct-contract tuple, and a hash-bound result declaration; it consumes only successful direct-output validated_array_length, exposes one exact work-id/1-based-array-ordinal coordinate per current source entry, preserves duplicate URLs, and returns a direct parent root rather than derived coordinates when authority is unusable.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-projection.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-direct-output-cardinality
+    statement: >-
+      RWG-018: a successful Wave0 direct-output contract exposes only a non-negative validated_array_length after ReferenceMetadataArraySchema succeeds; parse/schema failure exposes no usable cardinality, raw bytes, decoded content, or array entries.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/direct-output-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-return-map-candidate-evaluator
+    statement: >-
+      RRM-007: Wave0 exact candidate entries and exact deferred dispositions cover one current coordinate each, parent roots mask dependent omissions, and the shared evaluator preserves Wave1 work-id identity behavior.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/return-map.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-candidate-readiness-and-packet-loop
+    statement: >-
+      RRM-007: production Wave0 work-unit submit followed by public topic-state packet apply accepts multiple exact entries or exact deferred dispositions for every current declared source-array candidate, and rejects one-entry-for-many-candidates plus invalid/out-of-range identity forms.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-projection.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-inspect-and-gate-convergence
+    statement: >-
+      RRM-007 and RWG-018: the real Wave0 inspect and formal gate consume the same root-first candidate result, including a direct-output parent root or exact current-coordinate omission, after real submit.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave0-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-candidate-guidance-contract
+    statement: >-
+      RRM-003, STM-001, and RWP-016: the executable Wave0 card descriptor, readable template, command playbook, and Wave0 Phase guidance present the same current result-declared source-array ordinal while retaining template/protocol separation and one legal writer.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/seed-topic-projection-document-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

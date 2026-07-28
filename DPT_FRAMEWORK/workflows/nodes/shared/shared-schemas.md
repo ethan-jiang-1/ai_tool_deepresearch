@@ -84,7 +84,7 @@ Reference rich MD metadata is the project metadata block format: lines such as `
 
 | Token | Slot owner | Materialization condition |
 |-------|---------|---------|
-| `__BACKFILL_WAVE0_EVIDENCE__` | Wave0 / `wave0_evidence` | a current eligible submitted Wave0 identity is packet-materialized |
+| `__BACKFILL_WAVE0_EVIDENCE__` | Wave0 / `wave0_evidence` | each current result-declared `source.yaml` array candidate is packet-materialized |
 | `__BACKFILL_WAVE1_MECHANISMS__` | Wave1 / `wave1_mechanisms` | Wave1 atomically materializes all three owned slots |
 | `__BACKFILL_WAVE1_TRENDS__` | Wave1 / `wave1_trends` | Wave1 atomically materializes all three owned slots |
 | `__BACKFILL_WAVE2_JUDGMENT__` | Wave2 / `wave2_judgment` | a current-round W2F finding resolved to the topic is packet-materialized |

@@ -386,17 +386,17 @@ Blocking rules SHALL protect required structure, deterministic authority, proven
 
 If a prerequisite authority surface is absent or unparseable, the checker SHALL report that prerequisite as the primary root cause and SHALL short-circuit dependent checks whose results would only be downstream symptoms. For reference inventory, an invalid or missing eight-column `_INDEX.md` table SHALL mask per-reference row and source-layer symptoms until the table parses. The implementation SHALL use local guards rather than a generalized dependency engine.
 
-The Wave0 source-metadata array fact, Wave1 Key Findings availability fact, and Wave1 four-question-section availability fact SHALL be owned by one neutral target-level direct-output module selected only by a closed direct_contract ID. Its interface SHALL accept the active bundle root, one Engine-resolved concrete bundle-relative target, and that ID; it SHALL own bounded open/read, fatal UTF-8 plus single-BOM handling, tolerant parsing, and contract-local structured roots without reading queue, manifest, result, receipt, ledger, profile, phase state, or gate definition. Neutral roots SHALL use only `root_class: semantic_content|contract_integrity`: target missing and parse/schema/required-section failure SHALL be semantic_content, while unsafe/non-regular/escaping target, bounded-read/oversize failure and invalid UTF-8 SHALL be contract_integrity. Submit-specific mechanical classification, repair_scope and recommended_action belong to the candidate adapter. The interface SHALL return only bounded snapshot metadata and roots, not raw/decoded bytes that an adapter could independently reinterpret. It SHALL not select targets/contracts or mutate runtime state. Reader/decoder/parser helpers MAY exist only as private implementation seams and SHALL NOT become a second interface composed independently by adapters.
+The Wave0 source-metadata array fact, Wave1 Key Findings availability fact, and Wave1 four-question-section availability fact SHALL be owned by one neutral target-level direct-output module selected only by a closed direct_contract ID. Its interface SHALL accept the active bundle root, one Engine-resolved concrete bundle-relative target, and that ID; it SHALL own bounded open/read, fatal UTF-8 plus single-BOM handling, tolerant parsing, and contract-local structured roots without reading queue, manifest, result, receipt, ledger, profile, phase state, or gate definition. Neutral roots SHALL use only `root_class: semantic_content|contract_integrity`: target missing and parse/schema/required-section failure SHALL be semantic_content, while unsafe/non-regular/escaping target, bounded-read/oversize failure and invalid UTF-8 SHALL be contract_integrity. Submit-specific mechanical classification, repair_scope and recommended_action belong to the candidate adapter. The interface SHALL return only bounded snapshot metadata and roots, not raw/decoded bytes or parsed entries that an adapter could independently reinterpret. For `wave0.source-metadata-array.v1` only, after a top-level YAML array and every element successfully pass `ReferenceMetadataArraySchema`, the successful `snapshot_meta` SHALL also expose `validated_array_length: <non-negative integer>`. No failed result SHALL expose a usable validated length. This scalar describes the current evaluation of the resolved target; it neither hashes nor freezes target bytes, and it does not make the direct-output module select a target or work unit. It SHALL not select targets/contracts or mutate runtime state. Reader/decoder/parser helpers MAY exist only as private implementation seams and SHALL NOT become a second interface composed independently by adapters.
 
-The work-unit candidate adapter and Wave evaluator adapter SHALL be the two concrete adapters at this seam. Candidate validation SHALL map neutral roots to submit violations and repair_scope. Wave0/Wave1 inspect and formal Gate SHALL map the same neutral roots to their existing rule IDs, findings, hints, and checkpoint-specific rerun values. Existing Wave rule IDs including per_topic_reference_schema_valid, key_findings_non_empty, and question_list_has_four_sections SHALL remain stable. Source URL presence SHALL remain a separate Wave-only rule and SHALL not enter the neutral candidate contract.
+The work-unit candidate adapter, Wave evaluator adapter, and Wave0 submitted-candidate projection reader SHALL be the concrete consumers at this seam. Candidate validation SHALL map neutral roots to submit violations and repair_scope. Wave0/Wave1 inspect and formal Gate SHALL map the same neutral roots to their existing rule IDs, findings, hints, and checkpoint-specific rerun values. The Wave0 candidate projection reader SHALL authenticate the current submitted declaration, exact required output tuple, and hash-bound result before calling the neutral operation; after success it may consume only `validated_array_length`, never parser output. Existing Wave rule IDs including per_topic_reference_schema_valid, key_findings_non_empty, and question_list_has_four_sections SHALL remain stable. Source URL presence SHALL remain a separate Wave-only rule and SHALL not enter the neutral candidate contract.
 
-Candidate and Wave adapters SHALL call the same target-level operation. Evaluations of identical target bytes under the same direct contract SHALL agree on pass/fail, missing semantic sections, schema issues, BOM treatment, and invalid-UTF-8/read prerequisites. The Wave adapter MAY then add direct authorities that are outside the neutral contract, including file existence expansion, count floors, source URL presentation, submitted provenance, profile/depth, reference/index/backing, cross-artifact, return-map, phase completeness and formal lifecycle checks.
+All adapters SHALL call the same target-level operation. Evaluations of identical target bytes under the same direct contract SHALL agree on pass/fail, missing semantic sections, schema issues, BOM treatment, invalid-UTF-8/read prerequisites, and for successful Wave0 arrays, `validated_array_length`. The Wave adapter MAY then add direct authorities that are outside the neutral contract, including file existence expansion, count floors, source URL presentation, submitted provenance, profile/depth, reference/index/backing, cross-artifact, return-map, phase completeness and formal lifecycle checks.
 
-For each admitted Wave target, a missing, unsafe, or unreadable target root SHALL project through the existing earliest file-existence/authority rule ID and mask the dependent schema/semantic rule. After a successful read, parse/schema/semantic roots SHALL project through the existing direct rule ID. The Wave adapter SHALL NOT perform a second independent existence/read path that emits a duplicate root or rereads the same target for the admitted direct fact.
+For each admitted Wave target, a missing, unsafe, or unreadable target root SHALL project through the existing earliest file-existence/authority rule ID and mask the dependent schema/semantic rule. After a successful read, parse/schema/semantic roots SHALL project through the existing direct rule ID. The Wave adapter SHALL NOT perform a second independent existence/read path that emits a duplicate root or rereads the same target for the admitted direct fact. Its Wave0 count-floor route SHALL consume the same successful direct-result `validated_array_length`; it SHALL NOT call a separate YAML reader or retain a second parsed source-array map.
 
-Implementation SHALL remove the inlined Wave-only copies of ReferenceMetadataArraySchema evaluation, Key Findings parsing, and question-list section parsing after both adapters use the target-level operation. It SHALL not retain a submit-specific clone, add a generic linter CLI, introduce a plugin registry, or dispatch from user-authored IDs or path regexes.
+Implementation SHALL remove the inlined Wave-only copies of ReferenceMetadataArraySchema evaluation, Key Findings parsing, question-list section parsing, and the Wave0 count-floor YAML read after the adapters use the target-level operation. It SHALL not retain a submit-specific clone, add a generic linter CLI, introduce a plugin registry, or dispatch from user-authored IDs or path regexes.
 
-A parent snapshot/read/parse failure SHALL produce one neutral prerequisite root and mask dependent direct facts. Candidate and Wave projections SHALL preserve the same missing_fact and mutable surface; each adapter SHALL provide its own exact rerun checkpoint. Formal Gate durability/routing remains formal-only and candidate validation remains non-routing.
+A parent snapshot/read/parse failure SHALL produce one neutral prerequisite root and mask dependent direct facts. Candidate, Wave, and candidate-projection projections SHALL preserve the same missing_fact and mutable surface; each adapter SHALL provide its own exact rerun checkpoint. Formal Gate durability/routing remains formal-only and candidate validation remains non-routing.
 
 #### Scenario: blocking rule has a closed contract chain
 
@@ -454,9 +454,34 @@ A parent snapshot/read/parse failure SHALL produce one neutral prerequisite root
 - **THEN** the shared evaluator SHALL return one `reference_index_table_invalid` or equivalent root and the index path as the nearest repair target
 - **AND** it SHALL NOT return one primary `missing_index_row` failure for every reference file in the same evaluation
 
-#### Scenario: candidate and Wave adapters agree on Wave0 schema fact
+#### Scenario: Wave0 direct output exposes bounded cardinality only after validation
 
-- **WHEN** both adapters evaluate identical source.yaml bytes through wave0.source-metadata-array.v1
+- **WHEN** `wave0.source-metadata-array.v1` reads a schema-valid YAML array
+  containing two entries
+- **THEN** its successful result SHALL expose `validated_array_length: 2`
+- **AND** it SHALL expose neither parsed entries nor raw/decoded target bytes
+
+#### Scenario: Wave0 count floor consumes the successful direct result
+
+- **WHEN** the Wave0 schema route has a successful direct result for a topic's
+  declared source output
+- **THEN** the corresponding count-floor route SHALL use that result's
+  `validated_array_length`
+- **AND** it SHALL not independently parse or reread the YAML file
+
+#### Scenario: Candidate projection does not reinterpret direct output
+
+- **WHEN** an authenticated current Wave0 submitted declaration reaches its
+  declared `source_yaml` output
+- **THEN** the candidate projection reader SHALL derive only ordinals from a
+  passed `validated_array_length`
+- **AND** it SHALL not receive or reconstruct source array entries or decoded
+  YAML content
+
+#### Scenario: candidate, candidate-projection, and Wave adapters agree on Wave0 schema fact
+
+- **WHEN** all three consumers evaluate identical source.yaml bytes through
+  wave0.source-metadata-array.v1
 - **THEN** they SHALL agree on top-level-array and ReferenceMetadataArraySchema pass/fail plus the earliest issue
 - **AND** only the Wave adapter SHALL add count-floor or phase-wide findings
 
@@ -492,7 +517,7 @@ A parent snapshot/read/parse failure SHALL produce one neutral prerequisite root
 
 #### Scenario: direct fact implementation is not duplicated
 
-- **WHEN** apply completes the candidate and Wave adapters
+- **WHEN** apply completes the candidate, candidate-projection, and Wave adapters
 - **THEN** one neutral target-level module SHALL own the three admitted direct contracts
 - **AND** focused static or behavioral coverage SHALL fail if an adapter retains an independent equivalent parser/checker
 

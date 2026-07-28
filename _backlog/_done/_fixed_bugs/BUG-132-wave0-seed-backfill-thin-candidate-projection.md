@@ -7,10 +7,31 @@ bundle: dpt_rb_openspec-derivative-frameworks
 phase: wave0
 node: phases/phase-wave0.md
 gate: wave0-complete
-status: active
+status: fixed_archived_change
+resolved: 2026-07-28
+fixed_by: 2026-07-28-make-wave0-candidate-projection-complete
 ---
 
 # BUG-132: Wave0 seed 回填过薄，候选发现无法从 seed topic 导航
+
+## Resolution (2026-07-28)
+
+Archived change `make-wave0-candidate-projection-complete` makes the current
+result-declared Wave0 source array the precise projection demand. Every
+schema-valid element is now an exact `<work_id>/<1-based ordinal>` coordinate;
+one current entry or exact identity-bound deferred disposition covers one
+coordinate only. The reader authenticates the current submitted row, required
+manifest tuple, hash-bound result declaration, and declared safe direct output
+before consuming only validated array cardinality. `result_hash` continues to
+bind result JSON rather than freezing source bytes.
+
+The implementation reuses the existing direct-output parser, shared readiness
+evaluator, and public topic-state packet writer. It adds no candidate ID,
+source catalog, writer, controller, receipt, or persistent candidate state.
+Focused verification passed 65/65 selected checks and 7/7 version checks, with
+workflow package, routing, requirement/spec governance, strict OpenSpec, and
+diff validation also passing. The archived verification record is
+`openspec/changes/archive/2026-07-28-make-wave0-candidate-projection-complete/verification-results.md`.
 
 ## 现象
 
@@ -100,7 +121,7 @@ candidate coordinate。
 
 ### 与相邻 bug 的边界
 
-- [BUG-138](../_done/_fixed_bugs/BUG-138-seed-topic-wave-backfill-not-materialized-single-writer-missing.md)
+- [BUG-138](BUG-138-seed-topic-wave-backfill-not-materialized-single-writer-missing.md)
   处理“整段没有正确回填”的基线闭环；BUG-132 只在基线已经有合法 Wave0
   return-map entry 后，继续要求 candidate-level completeness。不能以修复 BUG-138
   的一条聚合 entry 关闭本 bug。

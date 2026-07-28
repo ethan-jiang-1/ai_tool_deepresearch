@@ -11,6 +11,7 @@ requires:
   - shared/shared-profile
   - shared/shared-schemas
   - shared/shared-silent-execution
+  - shared/shared-return-map-authoring
   - templates/seed-topic-template
 suggested_context:
   - shared/shared-anti-cheating-rules

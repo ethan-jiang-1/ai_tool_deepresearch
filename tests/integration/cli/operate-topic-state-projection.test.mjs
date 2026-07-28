@@ -12,6 +12,7 @@ import { claimAndSubmitWorkUnit, referenceContent } from '../../engine/work-unit
 
 const REPO_ROOT = process.cwd();
 const CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs');
+const INSPECT_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-wave0-output.mjs');
 const dirs = [];
 
 after(() => dirs.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
@@ -47,7 +48,46 @@ function makeBundle(label) {
   return { bundle, topic: readPlan(bundle).topic_registry[0] };
 }
 
-function submitWave0Authority(bundle, topic) {
+function sourceArray(topicSlug) {
+  return [
+    '- url: https://example.com/wave0/topic-a/duplicate',
+    '  title: Candidate one',
+    '  retrieved_date: 2026-07-27',
+    `  topic_tag: ${topicSlug}`,
+    '- url: https://example.com/wave0/topic-a/duplicate',
+    '  title: Candidate two',
+    '  retrieved_date: 2026-07-27',
+    `  topic_tag: ${topicSlug}`,
+    '',
+  ].join('\n');
+}
+
+function inspectableReferenceContent(topic, refPath) {
+  return [
+    referenceContent({ related_topic: topic.slug }),
+    '',
+    '## Projection Navigation',
+    '',
+    '- evidence_meaning: The submitted Wave0 source remains available for later reader navigation.',
+    '  relationship: supports',
+    '  refs:',
+    `    - ${refPath}`,
+    '  status: supported',
+    '  next_hop: Read the concrete reference before Wave1 deepening.',
+  ].join('\n');
+}
+
+function prepareInspectableWave0Reference(bundle, refPath) {
+  writeFileSync(join(bundle, 'reference/_INDEX.md'), [
+    '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- |',
+    `| ${refPath.slice('reference/'.length)} | primary | expert | Tier 2 | topic-a | wave0_foundation | accepted | 2026-07-27 |`,
+    '',
+  ].join('\n'));
+  writeFileSync(join(bundle, 'reference/README.md'), '# Reference Evidence\nFlat reference directory.\n');
+}
+
+function submitWave0Authority(bundle, topic, { sourceContent = null } = {}) {
   const refPath = 'reference/00-shared-topic-a.md';
   const submission = claimAndSubmitWorkUnit(bundle, {
     phase: 'wave0',
@@ -56,16 +96,26 @@ function submitWave0Authority(bundle, topic) {
       payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug, wave: 0 },
       lineage: { topic_uid: topic.topic_uid, topic_slug: topic.slug, phase: 'wave0' },
     },
-    outputs: [{
-      path: refPath,
-      role: 'reference',
-      source_url: 'https://example.com/wave0/topic-a',
-      source_slug: 'wave0-topic-a',
-      content: referenceContent({ related_topic: topic.slug }),
-    }],
+    outputs: [
+      {
+        path: refPath,
+        role: 'reference',
+        source_url: 'https://example.com/wave0/topic-a',
+        source_slug: 'wave0-topic-a',
+        content: sourceContent
+          ? inspectableReferenceContent(topic, refPath)
+          : referenceContent({ related_topic: topic.slug }),
+      },
+      ...(sourceContent ? [{
+        path: `artifacts/wave0/${topic.slug}/source.yaml`,
+        role: 'source_yaml',
+        content: sourceContent,
+      }] : []),
+    ],
     cacheTrails: [{ path: '_cache/wave0/primary/topic-a/source', url: 'https://example.com/wave0/topic-a' }],
   });
   assert.equal(submission.submitted.ok, true, JSON.stringify(submission.submitted));
+  if (sourceContent) prepareInspectableWave0Reference(bundle, refPath);
   return { workId: submission.record.work_id, refPath };
 }
 
@@ -82,7 +132,23 @@ function authorizeWave0(bundle) {
   })}\n`);
 }
 
-function packet(topic, authority, extra = {}) {
+function packetEntry(authority, ordinal, { deferred = false } = {}) {
+  return {
+    source_identity: { kind: 'submitted_work', work_id: authority.workId },
+    entry_id: `${authority.workId}/${ordinal}`,
+    evidence_meaning: deferred
+      ? 'The current source candidate has no materializable consumer reference.'
+      : 'The submitted source establishes the Wave0 navigation route.',
+    relationship: deferred ? 'defers' : 'supports',
+    refs: deferred ? ['none'] : [authority.refPath],
+    status: deferred ? 'deferred' : 'supported',
+    next_hop: deferred
+      ? 'limitation: no materializable consumer reference is available.'
+      : 'Read the concrete reference before Wave1 deepening.',
+  };
+}
+
+function packet(topic, authority, { entries = [packetEntry(authority, 1)], ...extra } = {}) {
   return {
     context: 'wave_projection',
     action: 'apply_seed_projection',
@@ -90,15 +156,7 @@ function packet(topic, authority, extra = {}) {
     wave: 'wave0',
     updates: [{
       slot_id: 'wave0_evidence',
-      entries: [{
-        source_identity: { kind: 'submitted_work', work_id: authority.workId },
-        entry_id: `${authority.workId}/1`,
-        evidence_meaning: 'The submitted source establishes the Wave0 navigation route.',
-        relationship: 'supports',
-        refs: [authority.refPath],
-        status: 'supported',
-        next_hop: 'Read the concrete reference before Wave1 deepening.',
-      }],
+      entries,
     }],
     ...extra,
   };
@@ -108,6 +166,15 @@ function runApply(bundle, input) {
   const inputPath = join(bundle, 'wave-projection-packet.json');
   writeFileSync(inputPath, `${JSON.stringify(input, null, 2)}\n`);
   const result = spawnSync('node', [CLI, 'apply', '--bundle', bundle, '--input', inputPath], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    timeout: 10000,
+  });
+  return { ...result, output: JSON.parse(result.stdout) };
+}
+
+function runInspect(bundle) {
+  const result = spawnSync('node', [INSPECT_CLI, '--bundle', bundle], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     timeout: 10000,
@@ -160,5 +227,26 @@ describe('operate-topic-state projection packets', () => {
     assert.equal(result.output.verdict, 'blocked');
     assert.equal(result.output.reason_code, 'input_invalid');
     assert.equal(preparedWorkspaceCount(bundle), 0);
+  });
+
+  it('repairs each current source-array candidate through packet apply and the same Wave0 inspect', () => {
+    const { bundle, topic } = makeBundle('operate-projection-candidates');
+    const authority = submitWave0Authority(bundle, topic, { sourceContent: sourceArray(topic.slug) });
+    authorizeWave0(bundle);
+
+    const first = runApply(bundle, packet(topic, authority));
+    assert.equal(first.status, 0, first.stderr || first.stdout);
+    const incomplete = runInspect(bundle);
+    assert.equal(incomplete.status, 1);
+    assert.match(incomplete.output.inspect.join('\n'), new RegExp(`return_map_current_candidate_omission.*${authority.workId}/2`));
+    assert.doesNotMatch(incomplete.output.inspect.join('\n'), new RegExp(`return_map_current_candidate_omission.*${authority.workId}/1`));
+
+    const repaired = runApply(bundle, packet(topic, authority, {
+      entries: [packetEntry(authority, 2, { deferred: true })],
+    }));
+    assert.equal(repaired.status, 0, repaired.stderr || repaired.stdout);
+    const converged = runInspect(bundle);
+    assert.doesNotMatch(converged.output.inspect.join('\n'), /return_map_current_candidate_omission/);
+    assert.equal(converged.output.check.return_map_classification, 'diagnostic-only', JSON.stringify(converged.output, null, 2));
   });
 });

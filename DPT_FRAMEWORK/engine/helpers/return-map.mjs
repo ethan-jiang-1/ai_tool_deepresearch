@@ -8,7 +8,11 @@ import {
   splitSeedProjectionCard,
 } from './canonical-topic-state.mjs';
 import { makeContractFinding } from './wave-contract-findings.mjs';
-import { collectEligibleWorkUnitProjection, readProjectionProfileRound } from '../work-unit-projection.mjs';
+import {
+  collectEligibleWorkUnitProjection,
+  collectEligibleWave0CandidateProjection,
+  readProjectionProfileRound,
+} from '../work-unit-projection.mjs';
 
 // @impl RRM-005
 
@@ -523,6 +527,7 @@ export function extractExactProjectionIdentities(entry) {
   const metadata = entry?.metadataIssues?.length === 0 && entry?.fields?.evidence_meaning
     ? String(entry?.metadata?.entry_id || '').match(/^(wu-w[0-9]+-b[0-9]{3}-[a-z][a-z0-9]{1,7}-i[0-9]{4})\/[1-9][0-9]*$/)
     : null;
+  const metadataCandidateId = metadata?.[0] || null;
   const metadataWorkId = metadata?.[1] || null;
   const rawMetadataWorkIds = new Set((entry?.metadataIds || []).flatMap((value) => {
     const match = String(value).match(/^(wu-w[0-9]+-b[0-9]{3}-[a-z][a-z0-9]{1,7}-i[0-9]{4})\/[1-9][0-9]*$/);
@@ -535,6 +540,7 @@ export function extractExactProjectionIdentities(entry) {
   return {
     workIds: new Set([...refWorkIds, ...(metadataWorkId ? [metadataWorkId] : [])]),
     refWorkIds,
+    metadataCandidateId,
     metadataWorkId,
     rawMetadataWorkIds,
     findingIds: new Set([...refFindingIds, ...(metadataFindingId ? [metadataFindingId] : [])]),
@@ -650,8 +656,10 @@ function projectionReadinessFinding(bundlePath, {
   });
 }
 
-function projectionOmissionFinding(bundlePath, relPath, wave, topicUid, identity, { legacy = false } = {}) {
-  const ruleId = identity.startsWith('W2F-')
+function projectionOmissionFinding(bundlePath, relPath, wave, topicUid, identity, { legacy = false, candidate = false } = {}) {
+  const ruleId = candidate
+    ? 'return_map_current_candidate_omission'
+    : identity.startsWith('W2F-')
     ? (legacy ? 'return_map_legacy_finding_omission' : 'return_map_current_finding_omission')
     : 'return_map_current_row_omission';
   const classification = legacy ? 'advisory' : 'blocking';
@@ -663,8 +671,10 @@ function projectionOmissionFinding(bundlePath, relPath, wave, topicUid, identity
     classification,
     blockingBasis: legacy ? 'advisory' : 'binding_integrity',
     surface,
-    expected: `${identity} is referenced or identity-bound in the ${wave} target section family.`,
-    observed: { topic_uid: topicUid, identity, projected: false },
+    expected: candidate
+      ? `${identity} is an exact entry_id in the ${wave} target section family.`
+      : `${identity} is referenced or identity-bound in the ${wave} target section family.`,
+    observed: { topic_uid: topicUid, identity, projected: false, candidate },
     missingFact: `${relPath} omits ${identity} from the ${wave} target section family.`,
     repairKind: 'agent_action',
     writeTo: surface,
@@ -821,7 +831,11 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
   }
 
   let eligible = { passed: true, rows: [], root_findings: [] };
-  if (wave === 'wave0' || wave === 'wave1') {
+  let candidateProjection = { passed: true, candidates: [], root_findings: [] };
+  if (wave === 'wave0') {
+    candidateProjection = collectEligibleWave0CandidateProjection(bundlePath, { topicRegistryFact });
+    if (!candidateProjection.passed) return projectionReadinessResult(candidateProjection.root_findings || []);
+  } else if (wave === 'wave1') {
     eligible = collectEligibleWorkUnitProjection(bundlePath, { phase: wave, topicRegistryFact });
     if (!eligible.passed) return projectionReadinessResult(eligible.root_findings || []);
   }
@@ -847,9 +861,12 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
       continue;
     }
     const currentRows = eligible.rows.filter((row) => row.topic_uid === topic.topic_uid);
+    const currentCandidates = candidateProjection.candidates.filter((candidate) => candidate.topic_uid === topic.topic_uid);
     const currentFindingIds = findingDemands.current.get(topic.topic_uid) || [];
     const legacyFindingIds = findingDemands.legacy.get(topic.topic_uid) || [];
-    const hasCurrentDemand = currentRows.length > 0 || currentFindingIds.length > 0;
+    const hasCurrentDemand = wave === 'wave0'
+      ? currentCandidates.length > 0
+      : currentRows.length > 0 || currentFindingIds.length > 0;
     const family = extractSeedFamilyEntries(content, wave);
 
     const missingCards = family.sections.filter((section) => section.headingKind === 'canonical' && !section.cardPresent);
@@ -917,8 +934,11 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
     }
 
     const validWorkIds = new Set();
+    const validCandidateIds = new Set();
     const validFindingIds = new Set();
     const currentWorkIds = new Set(currentRows.map((row) => row.work_id));
+    const currentCandidateIds = new Set(currentCandidates.map((candidate) => candidate.entry_id));
+    const currentCandidateWorkIds = new Set(currentCandidates.map((candidate) => candidate.work_id));
     const currentFindingSet = new Set(currentFindingIds);
     const knownFindingIds = new Set([...currentFindingIds, ...legacyFindingIds]);
     for (const entry of entries) {
@@ -949,7 +969,39 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
         continue;
       }
       const identities = extractExactProjectionIdentities(entry);
-      if (wave === 'wave2') {
+      if (wave === 'wave0') {
+        const candidateId = identities.metadataCandidateId;
+        const candidateWorkId = candidateId?.split('/')[0] || null;
+        const rawEntryId = String(entry.metadata.entry_id || '');
+        const rawEntryWorkId = rawEntryId.match(/^(wu-w[0-9]+-b[0-9]{3}-[a-z][a-z0-9]{1,7}-i[0-9]{4})/)?.[1] || null;
+        const currentRefWorkIds = new Set([...identities.refWorkIds].filter((id) => currentCandidateWorkIds.has(id)));
+        const malformedCurrentIdentity = Boolean(rawEntryId)
+          && !candidateId
+          && (currentCandidateWorkIds.has(rawEntryWorkId) || currentRefWorkIds.size > 0);
+        const outOfRangeCurrentCandidate = candidateId
+          && currentCandidateWorkIds.has(candidateWorkId)
+          && !currentCandidateIds.has(candidateId);
+        const conflictingCurrentRef = candidateId
+          && [...currentRefWorkIds].some((id) => id !== candidateWorkId);
+        if (entry.metadataIssues.length > 0 || malformedCurrentIdentity || outOfRangeCurrentCandidate || conflictingCurrentRef) {
+          findings.push(projectionReadinessFinding(bundlePath, {
+            ruleId: 'seed_projection_entry_identity', topicUid: topic.topic_uid, slotId: entry.section, relPath, line: entry.startLine,
+            expected: 'One exact current <work_id>/<positive source.yaml ordinal> entry_id; bare work IDs in refs are secondary provenance only.',
+            observed: {
+              entry_id: entry.metadata.entry_id || null,
+              candidate_id: candidateId,
+              current_candidate_ids: [...currentCandidateIds],
+              current_ref_work_ids: [...currentRefWorkIds],
+              metadata_issues: entry.metadataIssues,
+            },
+            missingFact: `${relPath}:${entry.startLine} lacks one valid current Wave0 candidate identity.`,
+            detail: `[seed_projection_entry_identity] ${relPath}:${entry.startLine} has invalid Wave0 candidate identity binding.`,
+          }));
+          structuralFailure = true;
+        } else if (validation.passed && candidateId && currentCandidateIds.has(candidateId)) {
+          validCandidateIds.add(candidateId);
+        }
+      } else if (wave === 'wave2') {
         const ids = identities.metadataFindingId ? new Set([identities.metadataFindingId]) : identities.refFindingIds;
         const conflictingRef = identities.metadataFindingId && [...identities.refFindingIds].some((id) => id !== identities.metadataFindingId);
         if (entry.metadataIssues.length > 0 || ids.size !== 1 || conflictingRef || [...ids].some((id) => !knownFindingIds.has(id))) {
@@ -991,6 +1043,11 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
     }
     if (structuralFailure) continue;
 
+    for (const candidate of currentCandidates) {
+      if (!validCandidateIds.has(candidate.entry_id)) {
+        findings.push(projectionOmissionFinding(bundlePath, relPath, wave, topic.topic_uid, candidate.entry_id, { candidate: true }));
+      }
+    }
     for (const row of currentRows) {
       if (!validWorkIds.has(row.work_id)) findings.push(projectionOmissionFinding(bundlePath, relPath, wave, topic.topic_uid, row.work_id));
     }

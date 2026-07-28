@@ -25,7 +25,7 @@ _done/
 
 | 归档目录 | 数量 | Next ID |
 |---------|------|---------|
-| `_fixed_bugs/` | 120 个已修复/结案 bug（含间隔） | BUG-139 |
+| `_fixed_bugs/` | 121 个已修复/结案 bug（含间隔） | BUG-139 |
 | `_suspened_bugs/` | 3 个悬挂 bug（BUG-026, 028, 030） | — |
 | `_done_todos/` | 16 个已完成 todo（DONE-001~016）+ 3 个已吸收设计输入（非实现） | DONE-017 |
 | `_closed_plans/` | 38 个已完成 plan | — |

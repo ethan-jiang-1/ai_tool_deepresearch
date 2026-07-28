@@ -2,7 +2,7 @@
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
 import {
@@ -13,6 +13,8 @@ import {
   renderSeedProjectionAppendix,
 } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
 import { tryLoadGateDefinition } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { evaluateSeedTopicProjectionReadiness } from '../../../DPT_FRAMEWORK/engine/helpers/return-map.mjs';
+import { buildCanonicalTopicRegistryFact } from '../../../DPT_FRAMEWORK/engine/helpers/topic-registry-fact.mjs';
 import { evaluateWave0Contract } from '../../../DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs';
 
 const REPO_ROOT = process.cwd();
@@ -80,17 +82,20 @@ function renderCanonicalSeed(topic) {
 
 function materializeWave0Projection(dir, submission, {
   deferred = false,
+  ordinal = 1,
+  preserveExistingSeed = false,
 } = {}) {
   const planFrontmatter = readFileSync(join(dir, 'rb_plan.md'), 'utf8').match(/^---\n([\s\S]*?)\n---/);
   const plan = JSON.parse(planFrontmatter[1]);
   const topic = plan.topic_registry.find((entry) => entry.slug === 'topic-a');
   assert.ok(topic, 'Wave0 fixture requires canonical topic-a');
-  writeFileSync(join(dir, 'seed_topics', `${topic.slug}.md`), renderCanonicalSeed(topic));
+  const seedPath = join(dir, 'seed_topics', `${topic.slug}.md`);
+  if (!preserveExistingSeed || !existsSync(seedPath)) writeFileSync(seedPath, renderCanonicalSeed(topic));
 
   const entry = deferred
     ? {
       source_identity: { kind: 'submitted_work', work_id: submission.record.work_id },
-      entry_id: `${submission.record.work_id}/1`,
+      entry_id: `${submission.record.work_id}/${ordinal}`,
       evidence_meaning: 'The submitted Wave0 authority has no materializable consumer reference.',
       relationship: 'defers',
       refs: ['none'],
@@ -99,7 +104,7 @@ function materializeWave0Projection(dir, submission, {
     }
     : {
       source_identity: { kind: 'submitted_work', work_id: submission.record.work_id },
-      entry_id: `${submission.record.work_id}/1`,
+      entry_id: `${submission.record.work_id}/${ordinal}`,
       evidence_meaning: 'The submitted Wave0 source establishes the topic evidence route.',
       relationship: 'supports',
       refs: ['reference/00-shared-ai-safety.md'],
@@ -130,6 +135,11 @@ const VALID_REF_B = `- url: "https://example.com/article-2"
   title: "AI Alignment Basics"
   retrieved_date: "2026-06-16"
   topic_tag: "topic-b"
+`;
+const VALID_REF_SECOND = `- url: "https://example.com/article-3"
+  title: "AI Safety Follow-up"
+  retrieved_date: "2026-06-17"
+  topic_tag: "topic-a"
 `;
 const SCHEMA_INVALID_REF = `- url: ""
   title: "Missing URL"
@@ -203,6 +213,7 @@ function setupHappyPath(dir) {
     }],
   });
   materializeWave0Projection(dir, submission);
+  return submission;
 }
 
 function setupWave0WithoutSharedReference(dir, { submitWorkUnit = true } = {}) {
@@ -280,6 +291,37 @@ describe('check-gate-wave0-complete', () => {
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, output.inspect.join('\n'));
     assert.equal(output.check.failed_rule_ids.some((id) => id.includes('topic-a-new')), false);
+  });
+
+  it('requires every current Wave0 source-array candidate through the shared readiness evaluator', () => {
+    const dir = createBundle(unique('candidate-projection'));
+    const submission = setupHappyPath(dir);
+    writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `${VALID_REF}${VALID_REF_SECOND}`);
+
+    const gateSource = readFileSync(GATE_CLI, 'utf8');
+    assert.match(gateSource, /evaluateSeedTopicProjectionReadiness/);
+    assert.doesNotMatch(gateSource, /inspect-wave0-output|readYamlArraySafe|parseYaml/);
+
+    const readiness = evaluateSeedTopicProjectionReadiness(dir, {
+      wave: 'wave0',
+      topicRegistryFact: buildCanonicalTopicRegistryFact(dir),
+    });
+    const omissions = readiness.findings.filter((finding) => finding.rule_id === 'return_map_current_candidate_omission');
+    assert.equal(omissions.length, 1);
+    assert.match(omissions[0].detail, new RegExp(`${submission.record.work_id}/2`));
+
+    const incomplete = runGate(dir);
+    assert.equal(incomplete.status, 1, incomplete.stderr || incomplete.stdout);
+    const incompleteOutput = JSON.parse(incomplete.stdout);
+    assert.ok(incompleteOutput.check.failed_rule_ids.includes('return_map_current_candidate_omission'));
+    assert.ok(incompleteOutput.inspect.some((line) => new RegExp(`return_map_current_candidate_omission.*${submission.record.work_id}/2`).test(line)));
+
+    materializeWave0Projection(dir, submission, { deferred: true, ordinal: 2, preserveExistingSeed: true });
+    const repaired = runGate(dir);
+    assert.equal(repaired.status, 0, repaired.stderr || repaired.stdout);
+    const repairedOutput = JSON.parse(repaired.stdout);
+    assert.equal(repairedOutput.check.passed, true, repairedOutput.inspect.join('\n'));
+    assert.equal(repairedOutput.check.failed_rule_ids.includes('return_map_current_candidate_omission'), false);
   });
 
   it('1b. inspect reads bullet metadata after an optional H1 title', () => {

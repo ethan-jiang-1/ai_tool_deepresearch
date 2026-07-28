@@ -1,17 +1,17 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.53**
+> **DPT_FRAMEWORK v0.54**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.53
+## Current Release: v0.54
 
-- Seed Topic backfill is an identity-bound Wave packet through the existing atomic topic-state writer. It preserves the read-only cards, writes only the current Wave's owned slots, and remains a reader-facing navigation projection rather than evidence authority.
-- `workflows/nodes/templates/seed-topic-template.md` defines the instantiable Seed Topic document shape; `command_playbook/operate-topic-state.md` defines packet, authorization, repair, and rerun-input mechanics. They are separate Agent-facing questions, not two competing writer contracts.
-- The closeout loop is direct authority -> packet -> writer -> same Wave inspect -> completion -> formal gate. Missing, generic, or wrongly bound projections cannot be masked by degraded handoff.
+- Wave0 now treats each current result-declared, schema-valid `source.yaml` array position as one `<work_id>/N` Seed Topic navigation coordinate. A coordinate has one exact entry or deferred disposition; duplicate source positions remain distinct.
+- `result_hash` authenticates the submitted result declaration, not a permanent source-byte snapshot. The existing direct-output reader, inspect, and formal gate consume this current candidate fact without adding a source authority, writer, lifecycle state, or control plane.
+- The existing packet -> writer -> same Wave inspect loop remains the only closeout path. The template/card explains current ordinal shape; the command playbook owns packet, authorization, and repair mechanics.
 
 ## 0. 禁用内置捷径（最高优先）
 
