@@ -1,6 +1,6 @@
 ---
 title: DPT routing and Wave contract integrity
-status: complete_via_archived_narrow_repair_bug_142_agent_flow_classification_pending
+status: complete_via_archived_narrow_repair_bug_142_suspended_pending_observation
 created: 2026-07-29
 source_bugs: BUG-139, BUG-140, BUG-141, BUG-142
 evidence_bundle: dpt_rb_openspec-spec-bloat-context-management
@@ -144,7 +144,7 @@ submitted backing -> existing Wave1 inspect -> canonical projection + index sync
 - [x] Identify that Wave1 reference convergence landed after the observed run; do not infer current behavior from the old bundle alone.
 - [x] Capture a read-only baseline for the future proposals: current commit, bundle trace/diagnostic paths, current accepted-spec requirement IDs, and the exact change that introduced Wave1 convergence. Attach it to the proposal evidence rather than copying raw diagnostics into specs.
   - Captured 2026-07-29 at `d2bf0e5a7b5112aa3ee99ad736fb2d4628a679e8`.
-  - Historical observation coordinate: `/Users/bowhead/ai_tool_deepresearch/dpt_rb_openspec-spec-bloat-context-management`, especially its `rb_trace.jsonl` and the Wave0/Wave1 Gate/inspect outputs invoked by [BUG-141](../_fixed_bugs/BUG-141-wave0-gate-contradictory-passed.md) and [BUG-142](../../bugs/BUG-142-reference-ledger-circular-dependency.md). The bundle is not present in the current workspace, so no raw trace is copied or treated as current-head evidence.
+  - Historical observation coordinate: `/Users/bowhead/ai_tool_deepresearch/dpt_rb_openspec-spec-bloat-context-management`, especially its `rb_trace.jsonl` and the Wave0/Wave1 Gate/inspect outputs invoked by [BUG-141](../_fixed_bugs/BUG-141-wave0-gate-contradictory-passed.md) and [BUG-142](../_suspened_bugs/BUG-142-reference-ledger-circular-dependency.md). The bundle is not present in the current workspace, so no raw trace is copied or treated as current-head evidence.
   - Current accepted boundaries: `GSK-004` (Gate public summary projection), `RWG-017` (Wave Gate Phase-owned projection/delegated evidence split), and `WPG-012` (provenance distinction).
   - Wave1 convergence landed in `3679b7136a4a52c1387b7b3e9bc8831910e123bb` (`feat(wave1): converge reference projections`, 2026-07-28T16:57:45+08:00), with its archived change at `openspec/changes/archive/2026-07-28-converge-wave1-reference-projections/`.
 - [x] Launch one disposable **real Agent-flow** current-head Wave1 closeout observation with submitted HTTP(S) source/cache backing. The required proof remains: inspect emits exact materialization candidates; Agent creates canonical backed Phase-owned references; index/packet loop completes; same inspect and Gate no longer ask for an impossible work-unit claim. A fixture remains only deterministic Engine evidence, not Agent-behavior proof.
@@ -211,9 +211,9 @@ submitted backing -> existing Wave1 inspect -> canonical projection + index sync
 - [x] Update each bug record with: reproduced/current status, exact contract boundary, evidence path, accepted residual risk, and archive/change link. Do not mark a host-level tool matcher fixed by a Markdown-only test.
   - BUG-139 and BUG-140 are resolved only for the repository-owned `run-entry` document contract; host-level matcher/tool suppression remains explicitly residual.
   - BUG-141 is resolved by archived `make-wave-gate-verdict-unambiguous` (`GSK-004`, `RWG-021`, commit `e2c281133`).
-  - BUG-142 is explicitly `current_head_disposition_pending`; the cancelled case-225 attempt is linked as non-evidence and cannot classify a functional closeout defect. The proposed Stage 4C feedback refinement makes no contrary claim.
+  - BUG-142 is suspended pending a valid current-head observation; the cancelled case-225 attempt is linked as non-evidence and cannot classify a functional closeout defect. The proposed Stage 4C feedback refinement makes no contrary claim.
 - [x] Move this plan after both mandatory changes are archived and the conditional change is independently completed.
-  - Stage 4C was archived and committed as `b68c24357`; BUG-142's valid real-Agent observation remains separately pending and is not represented as a functional bug fix.
+  - Stage 4C was archived and committed as `b68c24357`; BUG-142 is suspended pending a valid real-Agent observation and is not represented as a functional bug fix.
 
 ### Stage 4C - Archived `make-wave1-reference-closeout-feedback-direct`
 
@@ -255,4 +255,4 @@ Each proposal must answer these before `/opsx:apply`:
 
 ## 7. Completion Signal
 
-The plan is complete: the archived DPT-selected entry contract remains synchronized without claiming host enforcement, a degraded Gate handoff cannot be mistaken for a clean pass, and Wave1 Phase-owned reference closeout received its narrowly justified repair change. BUG-142's separate real-Agent-flow classification remains pending; its cancelled observation is not closure evidence.
+The plan is complete: the archived DPT-selected entry contract remains synchronized without claiming host enforcement, a degraded Gate handoff cannot be mistaken for a clean pass, and Wave1 Phase-owned reference closeout received its narrowly justified repair change. BUG-142 is suspended pending a separate real-Agent-flow classification; its cancelled observation is not closure evidence.

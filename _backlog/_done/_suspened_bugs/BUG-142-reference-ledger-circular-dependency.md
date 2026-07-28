@@ -7,18 +7,18 @@ bundle: dpt_rb_openspec-spec-bloat-context-management
 phase: wave1
 affected: DPT_FRAMEWORK/engine/helpers/wave-depth-contracts.mjs, ledger coverage check
 related: [BUG-141]
-status: current_head_disposition_pending
+status: suspended_pending_valid_current_head_observation
 current_contracts: [RWG-017, WPG-012]
 current_head_change: openspec/changes/archive/2026-07-28-converge-wave1-reference-projections
 ---
 
 # BUG-142: Phase Agent reference ledger circular dependency
 
-## Current Disposition (2026-07-29)
+## Suspended Disposition (2026-07-29)
 
-**Not yet classified on current head.** The observed bundle predates the
+**Suspended pending a valid current-head observation.** The observed bundle predates the
 accepted submitted-backing -> Phase-owned reference projection convergence in
-[`converge-wave1-reference-projections`](../../openspec/changes/archive/2026-07-28-converge-wave1-reference-projections/).
+[`converge-wave1-reference-projections`](../../../openspec/changes/archive/2026-07-28-converge-wave1-reference-projections/).
 Current contracts keep `rb_output_declarations.jsonl` as Engine-written
 delegated coverage authority (`WPG-012`), while `RWG-017` gives the Phase Agent
 the separate consumer-navigation projection/index/depth/seed closeout from
@@ -28,7 +28,7 @@ into the delegated ledger.
 The first current-head real-Agent attempt was externally cancelled before
 native completion. It produced no child result, dry/formal submit, closeout,
 inspect, case checks, or completion record; see
-[`6649b6c9-94da-4cc2-aef2-b2ab3e0ecccb.json`](../../.exp-bundles/_reports/6649b6c9-94da-4cc2-aef2-b2ab3e0ecccb.json).
+[`6649b6c9-94da-4cc2-aef2-b2ab3e0ecccb.json`](../../../.exp-bundles/_reports/6649b6c9-94da-4cc2-aef2-b2ab3e0ecccb.json).
 It proves neither a current closeout failure nor a fix. The next valid
 observation must retain a real child return, submitted backing, canonical
 closeout, inspect, and native completion before this bug is closed or a new
@@ -36,9 +36,10 @@ change is admitted.
 
 Consequently, the historical repair proposals below are not current action
 authority: no ledger mutation, submitted-output supplement, receipt rewrite,
-or filesystem-only reference may be used to bypass submitted evidence. A new
-change remains conditional on a real current-head failure that exposes a
-directly missing closeout writer/coordinate or competing primary feedback.
+or filesystem-only reference may be used to bypass submitted evidence. Reopen
+only when a valid current-head Agent-flow completion has materialized a
+canonical submitted-backed projection and the same inspect/Gate still directs
+the Phase Agent to an exhausted `operate-work-unit claim/submit` path.
 
 ## 现象
 

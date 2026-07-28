@@ -146,7 +146,7 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-140 | 2026-07-29 | DPT-selected research entry contract now prohibits pre-entry ad-hoc search/fetch/synthesis; host tool availability remains residual |
 | BUG-141 | 2026-07-29 | Wave Gate public verdict is mutually exclusive across blocking failure, clean pass, and degraded handoff |
 
-**Next available bug ID: BUG-142**
+**Next available bug ID: BUG-143**
 
 ---
 
@@ -162,3 +162,4 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-129 | 2026-07-28 | Wave1 projection counterexample gate; reopen only when a current fully backed projection still reports `submitted_source_backing_missing` |
 | BUG-130 | 2026-07-28 | Wave2 pure-synthesis counterexample gate; reopen only when a complete existing-backed branch is rejected solely for lacking a Wave2 receipt or for Phase projection ownership |
 | BUG-131 | 2026-07-28 | Accepted Wave2 fail-closed policy residual risk; reopen only after a separate product decision rejects that policy cost |
+| BUG-142 | 2026-07-29 | Wave1 legacy ledger observation predates submitted-backed Phase-owned closeout; suspended pending a valid current-head Agent-flow result that still emits an exhausted work-unit path |
