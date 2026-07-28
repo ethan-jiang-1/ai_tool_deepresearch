@@ -6,9 +6,31 @@ discovered: 2026-07-28
 bundle: dpt_rb_openspec-spec-bloat-context-management
 phase: wave0
 affected: DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs
+status: resolved
+resolved: 2026-07-29
+resolved_by: openspec/changes/archive/2026-07-29-make-wave-gate-verdict-unambiguous
+contracts: [GSK-004, RWG-021]
+commit: e2c281133
 ---
 
 # BUG-141: Wave0 gate 报告 passed=true 但 failed_rule_ids 非空
+
+## Current Disposition (2026-07-29)
+
+**Resolved.** Archived OpenSpec change
+[`make-wave-gate-verdict-unambiguous`](../../openspec/changes/archive/2026-07-29-make-wave-gate-verdict-unambiguous/)
+and commit `e2c281133` make the public verdict mutually exclusive:
+
+- blocking failure: `passed: false`, nonempty `failed_rule_ids`, no legal `next`;
+- clean pass: `passed: true`, with neither failed nor degraded rules;
+- degraded handoff: `passed: true`, `degraded: true`, empty `failed_rule_ids`,
+  nonempty `degraded_rules`, and legal `next`.
+
+`shared_ref_count_floor` may remain unresolved only as explicit carried quality
+debt in a degraded handoff. It is no longer represented as a blocking failed
+rule while routing is legal. `GSK-004` owns this public summary contract and
+`RWG-021` owns its shared adapter/consumer interpretation. The historical
+output below remains a regression fact, not current behavior.
 
 ## 现象
 

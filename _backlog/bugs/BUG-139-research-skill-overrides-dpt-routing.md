@@ -6,9 +6,33 @@ discovered: 2026-07-28
 bundle: (interactive session, no bundle — user invoked research intent inline)
 affected: CLAUDE.md Deep Research Routing rule
 related: [BUG-045]
+status: resolved_for_repository_owned_routing_docs
+resolved: 2026-07-29
+resolved_by: openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing
 ---
 
 # BUG-139: `research` skill 劫持 DPT_FRAMEWORK 路由，同 BUG-045 根因
+
+## Current Disposition (2026-07-29)
+
+**Resolved at the repository-owned routing boundary.** Archived OpenSpec change
+[`harden-dpt-research-entry-routing`](../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/)
+made the selected-DPT next action explicit: a reachable selected bundle with
+continue/inspect intent reads `continue-run-bundle.md`; otherwise selected DPT
+research reads `RUN.md`. Before that entry routing completes, generic
+research/deep-research shortcuts, request-scoped direct search/fetch, and
+manual evidence synthesis are not legal substitutes.
+
+The accepted contract is the `run-entry` document contract, with focused
+repository-owned document coverage retained in the archive. It deliberately
+does **not** claim host-level conditional skill suppression or a proven tool
+matcher ordering. A host can still inject or preselect a skill before these
+documents are consumed; that residual boundary is outside this Markdown-only
+change and requires separate host capability evidence.
+
+The report below remains the historical interactive-session observation. Its
+claim that a skill "overrides" routing is not reclassified as a verified
+harness-ordering fact.
 
 ## 现象
 

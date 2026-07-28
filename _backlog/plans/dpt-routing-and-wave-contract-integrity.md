@@ -1,6 +1,6 @@
 ---
 title: DPT routing and Wave contract integrity
-status: stage_1_archived_stage_0_and_stage_2_pending
+status: mandatory_changes_archived_bug_142_valid_current_head_observation_pending
 created: 2026-07-29
 source_bugs: BUG-139, BUG-140, BUG-141, BUG-142
 evidence_bundle: dpt_rb_openspec-spec-bloat-context-management
@@ -29,7 +29,7 @@ submitted evidence + Phase-owned navigation projection
 | Change | 覆盖 | 有界问题 | 原因 | 状态 |
 | --- | --- | --- | --- | --- |
 | `harden-dpt-research-entry-routing` | BUG-139, BUG-140 | DPT 已被用户选择时，Agent 在任何研究动作前必须进入正确的 DPT entry。 | 这是入口与 Agent Flow 路由语义，不触碰 runtime Gate/ledger。 | 已于 2026-07-29 [archive](../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/)；accepted `run-entry` 与 document contract 已同步。 |
-| `make-wave-gate-verdict-unambiguous` | BUG-141 | 一个 Gate 输出必须能让 reader 精确区分 clean pass、degraded handoff 和 failed，且 `passed` 与 blocking failures 始终一致。 | 这是 runtime verdict/transition API 语义；与入口路由独立。 | 下一个 mandatory proposal。 |
+| `make-wave-gate-verdict-unambiguous` | BUG-141 | 一个 Gate 输出必须能让 reader 精确区分 clean pass、degraded handoff 和 failed，且 `passed` 与 blocking failures 始终一致。 | 这是 runtime verdict/transition API 语义；与入口路由独立。 | 已于 2026-07-29 [archive](../../openspec/changes/archive/2026-07-29-make-wave-gate-verdict-unambiguous/)；accepted `GSK-004` / `RWG-021` 已同步，commit `e2c281133`。 |
 
 **BUG-142 暂不单独开 change。** 当前 head 已有 Wave1 `Phase-owned reference projection` 合同和 convergence 关闭路径；它在该 bundle 运行结束后的 2026-07-28 16:57 合入。先做一次真实受控验证。只有 current head 仍让 Phase Agent 获得“没有合法下一步”的 materialization feedback，才开一个第三个、只修 closeout feedback/materialization handoff 的 change。
 
@@ -142,8 +142,19 @@ submitted backing -> existing Wave1 inspect -> canonical projection + index sync
 - [x] Confirm there are no active OpenSpec changes; a new proposal need not reconcile an in-flight change.
 - [x] Read the reported bundle without mutating it. Confirm BUG-141's degraded Wave0 attempts and BUG-142's legacy `file:` reference shape / repeated failed Wave1 diagnostics.
 - [x] Identify that Wave1 reference convergence landed after the observed run; do not infer current behavior from the old bundle alone.
-- [ ] Capture a read-only baseline for the future proposals: current commit, bundle trace/diagnostic paths, current accepted-spec requirement IDs, and the exact change that introduced Wave1 convergence. Attach it to the proposal evidence rather than copying raw diagnostics into specs.
-- [ ] Run one disposable **real Agent-flow** current-head Wave1 closeout observation with submitted HTTP(S) source/cache backing. The proof is: inspect emits exact materialization candidates; Agent creates canonical backed Phase-owned references; index/packet loop completes; same inspect and Gate no longer ask for an impossible work-unit claim. A fixture remains only deterministic Engine evidence, not Agent-behavior proof.
+- [x] Capture a read-only baseline for the future proposals: current commit, bundle trace/diagnostic paths, current accepted-spec requirement IDs, and the exact change that introduced Wave1 convergence. Attach it to the proposal evidence rather than copying raw diagnostics into specs.
+  - Captured 2026-07-29 at `d2bf0e5a7b5112aa3ee99ad736fb2d4628a679e8`.
+  - Historical observation coordinate: `/Users/bowhead/ai_tool_deepresearch/dpt_rb_openspec-spec-bloat-context-management`, especially its `rb_trace.jsonl` and the Wave0/Wave1 Gate/inspect outputs invoked by [BUG-141](../bugs/BUG-141-wave0-gate-contradictory-passed.md) and [BUG-142](../bugs/BUG-142-reference-ledger-circular-dependency.md). The bundle is not present in the current workspace, so no raw trace is copied or treated as current-head evidence.
+  - Current accepted boundaries: `GSK-004` (Gate public summary projection), `RWG-017` (Wave Gate Phase-owned projection/delegated evidence split), and `WPG-012` (provenance distinction).
+  - Wave1 convergence landed in `3679b7136a4a52c1387b7b3e9bc8831910e123bb` (`feat(wave1): converge reference projections`, 2026-07-28T16:57:45+08:00), with its archived change at `openspec/changes/archive/2026-07-28-converge-wave1-reference-projections/`.
+- [x] Launch one disposable **real Agent-flow** current-head Wave1 closeout observation with submitted HTTP(S) source/cache backing. The required proof remains: inspect emits exact materialization candidates; Agent creates canonical backed Phase-owned references; index/packet loop completes; same inspect and Gate no longer ask for an impossible work-unit claim. A fixture remains only deterministic Engine evidence, not Agent-behavior proof.
+  - Preflight completed 2026-07-29: `node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --case case-225-heavy-returned-work-closeout --dry-run --json` selected exactly `case-225-heavy-returned-work-closeout` (`agent_behavior`, `real_agent`, real child search/fetch, heavy health profile). The selected case is the existing submitted-backing -> Phase-owned closeout -> inspect proof; its runner requires an explicit `--max-total-budget-usd` before it may launch.
+- [x] Preserve the first launch as a non-evidentiary cancelled attempt, not as a BUG-142 result.
+  - Command: `node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --case case-225-heavy-returned-work-closeout --max-total-budget-usd 5`.
+  - The setup script initially generated a queue payload with the helper default `topic_uid` instead of the case's canonical `tp_225...` UID. The disposable payload was aligned before enqueue; no framework source, ledger, submitted result, receipt, or closeout authority was changed.
+  - The Subject claimed `wu-w1-b000-deep-i0001`, but native child result, dry/formal submit, Phase closeout, inspect, case checks, and native completion were never produced. The supervisor was externally cancelled before its configured timeout. Its retained report is [`6649b6c9-94da-4cc2-aef2-b2ab3e0ecccb.json`](../../.exp-bundles/_reports/6649b6c9-94da-4cc2-aef2-b2ab3e0ecccb.json); it records `CANCELLED`, `native_outcome: null`, `completion: null`, and `cost_usd: null`.
+  - This establishes neither a current-head closeout failure nor an Agent/child availability failure. It must not be used to open Stage 4C or to mark BUG-142 fixed.
+- [ ] Complete one valid real-Agent observation from the same declared proof boundary. It must finish natively with a real child return, submitted backing, closeout, inspect, and the four deterministic case checks; a cancellation, missing completion, or a hand-authored child result is `NOT_RUN` for BUG-142.
 - [ ] Decide BUG-142 disposition from that observation:
   - PASS: mark it fixed-by-current-head / close it with the observation and retain no third change.
   - FAIL with a direct missing writer/coordinate: open the conditional change in Stage 4C.
@@ -164,31 +175,39 @@ submitted backing -> existing Wave1 inspect -> canonical projection + index sync
 
 **Done condition:** satisfied by [the archived change](../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/). A selected DPT request now has one repository-documented first action, verified by the document contract; no new lifecycle state or runtime bundle field exists. This is not a claim that a host cannot preempt repository guidance.
 
-### Stage 2 - Propose `make-wave-gate-verdict-unambiguous`
+### Stage 2 - Archived `make-wave-gate-verdict-unambiguous`
 
-- [ ] Create one OpenSpec change that modifies the existing Gate skeleton / wave-gate requirements and no evidence or queue ownership contract.
-- [ ] Specify the output invariants, including `check.passed === true` iff the routing verdict is legal and `check.failed_rule_ids.length === 0`. A clean pass has neither failed nor degraded rules; a failed Gate has blocking failed rules and no `next`; a degraded handoff has `passed: true`, `degraded: true`, nonempty `degraded_rules`, empty `failed_rule_ids`, and a legal `next`.
-- [ ] Preserve full unresolved quality findings in diagnostics and trace. `degraded_rules` remains the one explicit carrier of quality debt; it must not be silently dropped or reclassified as clean evidence.
-- [ ] Use a narrow shared projection/helper only if it removes the same summary-classification duplication across Wave0/Wave1/Wave2. Do not add a new persisted verdict state, controller, retry path, or duplicate validator.
-- [ ] Audit every consumer of `failed_rule_ids`, `degraded`, `degraded_rules`, `passed`, `next`, Gate trace and continuation. Publish a compatibility rule so a consumer cannot treat a degraded handoff as a clean quality pass.
-- [ ] Update phase/readme guidance to have the Agent consume `check.next` only after confirming whether the handoff is clean or degraded, without creating a user interaction at `stop: no` nodes.
-- [ ] Add focused unit/integration tests:
+- [x] Create one OpenSpec change that modifies the existing Gate skeleton / wave-gate requirements and no evidence or queue ownership contract.
+  - `make-wave-gate-verdict-unambiguous` proposal created on 2026-07-29. It preserves degraded routing and narrows the public summary classification; it does not open a ledger, queue, receipt, or runtime-state change.
+- [x] Specify the output invariants, including `check.passed === true` iff the routing verdict is legal and `check.failed_rule_ids.length === 0`. A clean pass has neither failed nor degraded rules; a failed Gate has blocking failed rules and no `next`; a degraded handoff has `passed: true`, `degraded: true`, nonempty `degraded_rules`, empty `failed_rule_ids`, and a legal `next`.
+  - Accepted `GSK-004` now defines the three mutually exclusive public verdicts; accepted `RWG-021` binds the shared adapter projection and handoff consumer contract.
+- [x] Preserve full unresolved quality findings in diagnostics and trace. `degraded_rules` remains the one explicit carrier of quality debt; it must not be silently dropped or reclassified as clean evidence.
+- [x] Use a narrow shared projection/helper only if it removes the same summary-classification duplication across Wave0/Wave1/Wave2. Do not add a new persisted verdict state, controller, retry path, or duplicate validator.
+- [x] Audit every consumer of `failed_rule_ids`, `degraded`, `degraded_rules`, `passed`, `next`, Gate trace and continuation. Publish a compatibility rule so a consumer cannot treat a degraded handoff as a clean quality pass.
+- [x] Update phase/readme guidance to have the Agent consume `check.next` only after confirming whether the handoff is clean or degraded, without creating a user interaction at `stop: no` nodes.
+- [x] Add focused unit/integration tests:
   - normal clean pass;
   - ordinary blocking failure;
   - Wave0 degradation from `shared_ref_count_floor` after threshold;
   - Wave1/Wave2 degraded eligibility and ineligible structural/authority blocker;
   - trace-write/routing failure cannot manufacture `passed: true`;
   - all public Gate output invariants and exit codes.
-- [ ] Run one real disposable bundle through the degradation branch to confirm the CLI/trace/enter-phase/advance-status consumers still preserve the carried debt correctly.
+- [x] Run one real disposable bundle through the degradation branch to confirm the CLI/trace/enter-phase/advance-status consumers still preserve the carried debt correctly.
+  - Current-head deterministic evidence: `tests/e2e/wave-gate-degradation-policy.test.mjs`; the archive retains its verification-plan coordinate.
 
 **Done condition:** no public Gate response says both “passed” and “blocking rule failed”; degraded handoff remains routeable and explicitly non-clean; existing direct evidence rules and ledger authority are unchanged.
 
 ### Stage 3 - Apply and archive in dependency order
 
 - [x] Apply and archive Stage 1 first. [`harden-dpt-research-entry-routing`](../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/) now gives the next simulation a trustworthy documented entry boundary; host matcher behavior remains out of scope.
-- [ ] Run the Stage 0 current-head BUG-142 observation from the new entry behavior; update its disposition before any conditional code proposal.
-- [ ] Apply and archive Stage 2 second. Use the historical Wave0 degraded trace as a regression case and retain a current real observation for Agent-facing interpretation.
-- [ ] Update each bug record with: reproduced/current status, exact contract boundary, evidence path, accepted residual risk, and archive/change link. Do not mark a host-level tool matcher fixed by a Markdown-only test.
+- [x] Launch the Stage 0 current-head BUG-142 observation from the new entry behavior and preserve its cancelled evidence without classifying BUG-142.
+- [ ] Complete the Stage 0 current-head BUG-142 observation with native completion, then update its disposition before any conditional code proposal.
+- [x] Apply and archive Stage 2 second. Use the historical Wave0 degraded trace as a regression case and retain a current real observation for Agent-facing interpretation.
+  - Archived at [2026-07-29-make-wave-gate-verdict-unambiguous](../../openspec/changes/archive/2026-07-29-make-wave-gate-verdict-unambiguous/); sync and implementation committed as `e2c281133`.
+- [x] Update each bug record with: reproduced/current status, exact contract boundary, evidence path, accepted residual risk, and archive/change link. Do not mark a host-level tool matcher fixed by a Markdown-only test.
+  - BUG-139 and BUG-140 are resolved only for the repository-owned `run-entry` document contract; host-level matcher/tool suppression remains explicitly residual.
+  - BUG-141 is resolved by archived `make-wave-gate-verdict-unambiguous` (`GSK-004`, `RWG-021`, commit `e2c281133`).
+  - BUG-142 is explicitly `current_head_disposition_pending`; the cancelled case-225 attempt is linked as non-evidence and cannot admit Stage 4C.
 - [ ] Move this plan only after both mandatory changes are archived and BUG-142 has PASS closure or its conditional change is independently completed.
 
 ### Stage 4C - Conditional only: `make-wave1-reference-closeout-feedback-direct`

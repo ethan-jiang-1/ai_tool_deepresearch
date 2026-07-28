@@ -6,9 +6,27 @@ discovered: 2026-07-28
 bundle: (interactive session, no bundle — agent skipped framework)
 affected: CLAUDE.md Deep Research Routing rule, DPT_FRAMEWORK/RUN.md
 related: [BUG-045, BUG-139]
+status: resolved_for_repository_owned_entry_contract
+resolved: 2026-07-29
+resolved_by: openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing
 ---
 
 # BUG-140: Agent 绕过 DPT_FRAMEWORK 工作流，直接做 ad-hoc 搜索 + 手工合成
+
+## Current Disposition (2026-07-29)
+
+**Resolved at the repository-owned entry contract.** Archived OpenSpec change
+[`harden-dpt-research-entry-routing`](../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/)
+defines entry-first routing for selected DPT work. Until the selected entry is
+read, direct WebSearch/WebFetch for that request and manual evidence
+collection/synthesis are expressly outside the legal route; after entry, only
+the phase-authorized research surfaces apply.
+
+This is deliberately a documented behavioral contract, not a claim that the
+repository can remove atomic tools from every host. Host-level tool
+availability and pre-instruction matching remain residual risk; no synthetic
+trace is presented as proof that a host cannot bypass the contract. The report
+below is retained as the historical bypass that motivated the change.
 
 ## 现象
 
