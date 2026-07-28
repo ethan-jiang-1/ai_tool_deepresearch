@@ -26,7 +26,6 @@
 | [BUG-129](BUG-129-wave1-ref-materialization-same-bypass.md) | P2 | wave1 | I1 dormant：仅当前真实 bundle 证明 Wave1 submitted-backed projection 仍被错误拒绝时，才开启有界 repair change |
 | [BUG-130](BUG-130-wave2-pure-synthesis-vs-gate-contradiction.md) | P2 | wave2 | I2 dormant：仅当前真实 bundle 证明 Wave2 pure-synthesis 的既有证据链仍被错误拒绝时，才开启有界 repair change |
 | [BUG-131](BUG-131-degraded-pass-inconsistency-wave2-vs-wave0-wave1.md) | P2 | wave2 | accepted residual risk：Wave2 无 eligible degradation 的 pre-HITL2 deadlock 仍按既有 policy fail-closed；非当前 authorized change |
-| [BUG-134](BUG-134-wave2-inspect-misclassifies-synthesis-ledger-as-return-map.md) | P2 | wave2 | inspect 把 synthesis/ledger 当成 seed return-map，迫使合法 artifact 增加非契约 Return Map workaround |
 | [BUG-135](BUG-135-terminal-readiness-does-not-set-run-state-completed.md) | P2 | final | readiness 已通过且 next_gate 为 none，但 rb_status.json 的 state 仍为 not_started |
 
 > BUG-099/103/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 计划承接，均 deferred 于核心 work-unit / evidence / Gate 运行路径稳定之后。
@@ -43,7 +42,7 @@ bundle 的 evidence、ledger、receipt、trace 不能为方便修复而手改。
 | --- | --- | --- | --- |
 | Seed projection completeness | BUG-132 (closed) | `work-unit-projection.mjs`、`return-map.mjs` | `make-wave0-candidate-projection-complete` 已归档：一个当前 source-array position 对应一个 exact candidate coordinate，不新增 evidence authority。 |
 | Wave1 reference materialization | BUG-133 / BUG-136 / BUG-137 (fixed) | `phase-wave1.md`、reference convergence/index sync、existing queue demand | v0.55 closes canonical identity, index synchronization, and true-deficit objective without a new controller or evidence authority. |
-| Wave2 return-map scope | BUG-134 | `inspect-wave2-output.mjs`、`inspectWaveArtifactReturnMaps` | 缩小 phase-artifact validator 的输入，不能删除 seed Wave2 projection 检查或以 phase-artifact workaround 掩盖该检查 |
+| Wave2 return-map scope | BUG-134 (fixed) | `inspect-wave2-output.mjs`、`inspectWaveArtifactReturnMaps` | v0.56 移除错误 phase-artifact parser branch；Seed Topic Wave2 projection 检查与 artifact contracts 保持独立 |
 | Terminal lifecycle | BUG-135 | `advance-status.mjs`、RunState schema | 只修 terminal state atomicity，不重定义所有中间 `state` 或破坏 post-final recovery |
 
 每张卡末尾的“接手信息”列出已运行的 red loop（或明确记录当前是缺失的 false-pass
@@ -67,6 +66,7 @@ deterministic repair path / evaluator scope”的 framework bug；相反，不�
 | BUG-138 | `fix-seed-topic-projection-materialization` 已 archive（commit `9953435a3`）：route-bound packet writer 原子 materialize owned Seed Topic slots，template 与 command protocol 分离，inspect/gate 共用 direct readiness；验收为静态契约和确定性 production-CLI Wave 链，不保留嵌套 Agent-flow 测试负债。 |
 | BUG-132 | `make-wave0-candidate-projection-complete` 已 archive：Wave0 当前 `source.yaml` 的每个已验证数组位置都须有 exact `<work_id>/<ordinal>` entry 或 deferred disposition；65/65 focused checks、7/7 version checks 与 package/governance/strict validation 通过。 |
 | BUG-133 / BUG-136 / BUG-137 | `converge-wave1-reference-projections` 已 archive（v0.55）：canonical submitted-backing Wave1 projection convergence、all-family CAS index sync、以及 true-deficit supplementary objective；56 focused unit/integration checks 和 routing/requirements/spec governance 均通过。 |
+| BUG-134 | `scope-wave2-return-map-inspection` 已 archive（v0.56）：Wave2 artifact 不再进入 Seed Topic return-map parser；67 focused unit/integration checks、routing assets、requirements/spec governance 与 strict OpenSpec validation 均通过。 |
 
 ## 最近关闭 (2026-07-27)
 

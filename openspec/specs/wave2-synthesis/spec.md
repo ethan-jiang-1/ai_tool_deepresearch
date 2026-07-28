@@ -53,8 +53,8 @@ The triage loop SHALL read `rb_profile.yaml` values including `wave2_cross_topic
 
 Wave2 SHALL produce three artifacts as a group, not a single synthesis.md:
 
-- **`artifacts/wave2/synthesis.md`** — narrative projection for human reading. SHALL contain: cross-topic patterns and themes, contradictions/tensions between topic findings, confidence assessment per major claim, explicit Markdown links to Wave0/Wave1 artifacts, references to finding ids (W2F-xxx), and Unresolved Cross-Topic Questions section. SHALL NOT serve as dynamic finding source of truth, carry full scan matrix, or solely decide seed topic backfill.
-- **`artifacts/wave2/cross-topic-ledger.md`** — Agent-readable dynamic ledger. SHALL contain 6 fixed sections: Cross-Topic Scan Matrix, Wave1 Legacy Questions, Cross-Topic Resolutions, Emergent Cross-Topic Questions, Exploration Decisions, HITL2 Handoff. SHALL be dynamically grown (appended/updated per round), not written once at the end.
+- **`artifacts/wave2/synthesis.md`** — narrative projection for human reading. SHALL contain: cross-topic patterns and themes, contradictions/tensions between topic findings, confidence assessment per major claim, explicit Markdown links to Wave0/Wave1 artifacts, references to finding ids (W2F-xxx), and Unresolved Cross-Topic Questions section. SHALL NOT serve as dynamic finding source of truth, carry full scan matrix, solely decide seed topic backfill, or be parsed as a Seed Topic return-map entry.
+- **`artifacts/wave2/cross-topic-ledger.md`** — Agent-readable dynamic ledger. SHALL contain 6 fixed sections: Cross-Topic Scan Matrix, Wave1 Legacy Questions, Cross-Topic Resolutions, Emergent Cross-Topic Questions, Exploration Decisions, HITL2 Handoff. SHALL be dynamically grown (appended/updated per round), not written once at the end, and SHALL NOT be parsed as a Seed Topic return-map entry.
 - **`artifacts/wave2/finding-index.yaml`** — JS-readable structured shadow index. Each finding SHALL have: `id` (W2F-xxx), `type` (enum), `priority` (enum), `status` (enum), `decision` (enum), `affected_topics` (array, min 2 for emergent), `origin_refs`, `trigger_refs`, `search_required` (boolean), `subagent_receipt_refs`, `appears_in_synthesis` (boolean), `hitl2_handoff` (boolean), `confidence` (enum), `independent_backing_refs` (array), and `gap_status` (enum). SHALL be parseable YAML.
 
 Synthesis narrative SHALL reference finding ids (W2F-xxx) to maintain traceability from narrative back to ledger/index. At least 1 reference to a wave1 `evidence-summary.md` or `question-list.md` SHALL exist.
@@ -107,6 +107,12 @@ The minimum `synthesis_eligibility` shape SHALL include:
 - **THEN** `finding-index.yaml` SHALL record scan coverage and `unresolved_search_required_count: 0`
 - **AND** if unresolved search-required findings remain, pure synthesis SHALL not be eligible to pass without explicit deferral fields
 
+#### Scenario: Artifact contracts do not require a Seed Topic return-map section
+
+- **WHEN** an otherwise valid `synthesis.md` and six-section `cross-topic-ledger.md` omit `## Return Map`
+- **THEN** their Wave2 artifact evaluation SHALL use only their respective artifact contracts
+- **AND** return-map five-field findings SHALL not be emitted for either artifact
+
 ### Requirement: Per-topic backfill via queue task cards
 
 After synthesis completes, the Phase Agent SHALL execute per-topic backfill task cards to replace backfill tokens in seed topic files.
@@ -147,12 +153,18 @@ Wave2 sub-agent behavior SHALL be specified through work-unit task/result/receip
 
 ### Requirement: Three-artifact Wave2 output with JS feedback integration
 
-Three-artifact Wave2 synthesis output SHALL continue to use JS feedback for structural/reference checks. Delegated evidence supporting those artifacts SHALL be work-unit ledger covered when it was produced by sub-agent search.
+Three-artifact Wave2 synthesis output SHALL continue to use JS feedback for their independent structural/reference checks. Delegated evidence supporting those artifacts SHALL be work-unit ledger covered when it was produced by sub-agent search. Wave2 return-map feedback SHALL remain limited to the existing Seed Topic projection evaluator and SHALL not be a second artifact validator.
 
 #### Scenario: artifact reference uses delegated evidence row
 
 - **WHEN** a Wave2 artifact references newly delegated evidence
 - **THEN** the evidence SHALL be covered by a submitted work-unit ledger row
+
+#### Scenario: artifact and Seed Topic failures retain distinct owners
+
+- **WHEN** a Wave2 artifact violates its own structural contract and a Seed Topic Wave2 entry violates its return-map fields or W2F binding
+- **THEN** inspect SHALL preserve the artifact's existing rule ID and the Seed Topic's exact projection coordinate
+- **AND** neither failure SHALL satisfy, mask, or be recast as the other's contract
 
 ### Requirement: Finding taxonomy with explicit types, decisions, and consistency rules
 

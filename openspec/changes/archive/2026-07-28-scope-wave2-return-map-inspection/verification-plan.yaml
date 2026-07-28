@@ -1,0 +1,76 @@
+schema_version: verification-routing/v1
+change: scope-wave2-return-map-inspection
+test_classes:
+  unit:
+    status: selected
+    rationale: The return-map helper's Wave2 input selection is a focused deterministic boundary that must retain strict Seed Topic parsing while excluding phase-owned artifacts.
+  integration:
+    status: selected
+    rationale: A disposable bundle invoking production inspect is needed to prove the composed artifact, Seed Topic, and cross-reference evaluators retain their separate owners and rule IDs.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The production Wave2 inspect command is the complete deterministic seam; a multi-wave chain adds unrelated lifecycle behavior.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: This change makes no claim that an Agent autonomously follows Wave2 guidance; deterministic input scope is the proof subject.
+claims:
+  - id: wave2-artifacts-are-not-return-map-inputs
+    statement: >-
+      WTS-004 and WTS-007: Wave2 return-map helper selection excludes synthesis.md and cross-topic-ledger.md while the existing Seed Topic Wave2 projection evaluator remains strict for required fields, concrete navigation, and current W2F identity.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/return-map.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave2-production-inspect-owner-separation
+    statement: >-
+      WTS-004 and WTS-007: a real Wave2 inspect over a temporary bundle accepts valid narrative and ledger artifacts without a Return Map workaround, still reports an invalid Seed Topic entry at its exact coordinate, and preserves independent synthesis, ledger, and finding-index rule IDs.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/inspect-wave-return-map.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave2-inspect-contract-purity
+    statement: >-
+      WTS-007: inspect-wave2-output remains side-effect-free and preserves its public structured inspect/check/hint contract after the artifact return-map path is removed.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/inspect-wave-contract-output.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave2-artifact-contract-roots
+    statement: >-
+      WTS-004 and WTS-007: a temporary bundle with a valid Wave2 artifact triple needs no Return Map workaround, while empty synthesis, a missing ledger semantic section, and invalid finding-index YAML retain their existing inspect rule IDs without return-map findings.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave2-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

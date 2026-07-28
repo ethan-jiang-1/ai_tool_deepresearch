@@ -1,4 +1,4 @@
-// @impl RRM-007, IOC-005
+// @impl RRM-007, IOC-005, WTS-004, WTS-007
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -11,6 +11,7 @@ import {
   extractSeedFamilyEntries,
   extractSeedSectionFamily,
   evaluateSeedTopicProjectionReadiness,
+  inspectWaveArtifactReturnMaps,
   isEvidenceBearingReturnMapEntry,
   isLimitationReturnMapEntry,
   validateReturnMapContent,
@@ -286,6 +287,18 @@ describe('return-map diagnostics', () => {
     const result = validateReturnMapContent(family.sections[0].content, 'seed_topics/topic-a.md');
     assert.equal(result.passed, false);
     assert.ok(result.findings.some((finding) => finding.rule_id === 'return_map_unsupported_prose'));
+  });
+
+  it('does not parse Wave2 phase artifacts as Seed Topic return-map entries', () => {
+    const dir = tempBundle();
+    mkdirSync(path.join(dir, 'artifacts', 'wave2'), { recursive: true });
+    writeFileSync(path.join(dir, 'artifacts/wave2/synthesis.md'), '# Synthesis\n\nNarrative prose without return-map fields.\n');
+    writeFileSync(path.join(dir, 'artifacts/wave2/cross-topic-ledger.md'), '## Cross-Topic Scan Matrix\n\nLedger prose without return-map fields.\n');
+    writeFileSync(path.join(dir, 'artifacts/wave2/finding-index.yaml'), 'findings: []\n');
+
+    const result = inspectWaveArtifactReturnMaps(dir, 'wave2');
+    assert.equal(result.passed, true, result.inspect.join('\n'));
+    assert.deepEqual(result.findings, []);
   });
 
   it('keeps optional entry_id and exact identities entry-local', () => {

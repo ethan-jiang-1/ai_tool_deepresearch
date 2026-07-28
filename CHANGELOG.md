@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.56
+
+- Wave2 inspect now limits return-map validation to Seed Topic projection entries. `synthesis.md`, `cross-topic-ledger.md`, and `finding-index.yaml` retain their independent narrative, ledger, and structured-index checks without an unsupported `## Return Map` workaround.
+
 ## v0.55
 
 - Wave1 reference closeout now converges through one canonical submitted-backing locator and root-first evaluator shared by inspect and the formal gate. Canonical current projections, legacy navigation files, and misnamed current files remain distinct; only a candidate-exact backed canonical projection contributes to the current floor.

@@ -1,4 +1,4 @@
-// @impl RRM-007, IOC-005
+// @impl RRM-007, IOC-005, WTS-004, WTS-007
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -256,6 +256,7 @@ findings:
     const joined = output.inspect.join('\n');
     assert.match(joined, /seed_projection_entry_identity/);
     assert.match(joined, /return_map_missing_concrete_reference/);
+    assert.doesNotMatch(joined, /artifacts\/wave2\/(?:synthesis|cross-topic-ledger)\.md:.*return_map_(?:missing_fields|unsupported_prose)/);
     assert.doesNotMatch(joined, /return_map_current_finding_omission/);
   });
 

@@ -139,6 +139,7 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-133 | 2026-07-28 | Wave1 reference floor deficit now converges through the existing supplementary demand only after projection/index repair |
 | BUG-136 | 2026-07-28 | Reference inventory now has deterministic all-family CAS synchronization |
 | BUG-137 | 2026-07-28 | Wave1 current coverage now uses a canonical full-topic-slug submitted-backing locator |
+| BUG-134 | 2026-07-28 | Wave2 synthesis and ledger artifacts no longer enter the Seed Topic return-map parser; their independent contracts retain ownership |
 
 **Next available bug ID: BUG-139**
 

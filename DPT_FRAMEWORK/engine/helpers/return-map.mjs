@@ -14,7 +14,7 @@ import {
   readProjectionProfileRound,
 } from '../work-unit-projection.mjs';
 
-// @impl RRM-005
+// @impl RRM-005, WTS-004, WTS-007
 
 export const RETURN_MAP_FIELDS = ['evidence_meaning', 'relationship', 'refs', 'status', 'next_hop'];
 export const RETURN_MAP_RELATIONSHIPS = ['supports', 'refutes', 'partial', 'opens', 'defers', 'context'];
@@ -1095,40 +1095,6 @@ export function inspectWaveArtifactReturnMaps(bundlePath, wave, topicSlugs = [])
         advice.push(...validation.advice);
         findings.push(...validation.findings);
       }
-    }
-  }
-
-  if (wave === 'wave2') {
-    for (const file of ['cross-topic-ledger.md', 'synthesis.md']) {
-      const relPath = `artifacts/wave2/${file}`;
-      const content = readText(join(bundlePath, relPath));
-      if (content === null) continue;
-      const validation = validateReturnMapContent(content, relPath, {
-        requireFindingId: true,
-        requireWave2Refs: file === 'synthesis.md',
-        bundlePath,
-      });
-      inspect.push(...validation.inspect);
-      advice.push(...validation.advice);
-      findings.push(...validation.findings);
-    }
-    const indexRel = 'artifacts/wave2/finding-index.yaml';
-    const indexContent = readText(join(bundlePath, indexRel));
-    if (indexContent !== null && !/\b(?:id|origin_refs|trigger_refs|synthesis_refs|handoff_refs)\s*:/.test(indexContent)) {
-      const detail = `[return_map_missing_finding_lineage] ${indexRel}: finding index lacks id/origin_refs/trigger_refs lineage fields.`;
-      inspect.push(detail);
-      advice.push(`Add finding ids and lineage refs to ${indexRel}; this is diagnostic guidance and does not replace gate or handoff evidence.`);
-      findings.push(returnMapFinding({
-        ruleId: 'return_map_missing_finding_lineage',
-        relPath: indexRel,
-        bundlePath,
-        blockingBasis: 'binding_integrity',
-        expected: 'finding-index.yaml exposes finding ids and origin/trigger/synthesis/handoff refs.',
-        observed: 'lineage fields absent',
-        missingFact: `${indexRel} lacks finding id and lineage ref fields required by this inspect contract.`,
-        detail,
-        repair: `Add the missing finding lineage fields to ${indexRel}.`,
-      }));
     }
   }
 

@@ -446,6 +446,51 @@ describe('check-gate-wave2-complete', () => {
     assert.deepEqual(output.check.masked_rule_ids, []);
   });
 
+  it('inspect accepts a valid Wave2 artifact triple without a Return Map workaround', () => {
+    const dir = createBundle(unique('inspect-no-return-map'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    createMinIndex(dir);
+    createMinBackfill(dir);
+
+    const output = JSON.parse(runInspect(dir).stdout);
+    assert.equal(output.check.passed, true, output.inspect.join('\n'));
+    assert.doesNotMatch(output.inspect.join('\n'), /return_map_(?:missing_fields|unsupported_prose|missing_finding_lineage)/);
+  });
+
+  it('inspect retains artifact-specific roots after return-map scope correction', () => {
+    const createValidInspectBundle = (name) => {
+      const dir = createBundle(unique(name));
+      writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+      createMinLedger(dir);
+      createMinIndex(dir);
+      createMinBackfill(dir);
+      return dir;
+    };
+
+    const emptySynthesis = createValidInspectBundle('inspect-empty-synthesis');
+    writeFileSync(join(emptySynthesis, 'artifacts/wave2/synthesis.md'), '---\n---\n');
+    const synthesisOutput = JSON.parse(runInspect(emptySynthesis).stdout);
+    assert.ok(synthesisOutput.check.failed_rule_ids.includes('synthesis_non_empty'), JSON.stringify(synthesisOutput));
+
+    const brokenLedger = createValidInspectBundle('inspect-broken-ledger');
+    writeFileSync(join(brokenLedger, 'artifacts/wave2/cross-topic-ledger.md'), readFileSync(join(brokenLedger, 'artifacts/wave2/cross-topic-ledger.md'), 'utf8').replace(
+      /## Cross-Topic Resolutions\n\nNone found\.\n/,
+      '## Cross-Topic Resolutions\n\n',
+    ));
+    const ledgerOutput = JSON.parse(runInspect(brokenLedger).stdout);
+    assert.ok(ledgerOutput.check.failed_rule_ids.includes('ledger_fixed_sections'), JSON.stringify(ledgerOutput));
+
+    const invalidIndex = createValidInspectBundle('inspect-invalid-index');
+    writeFileSync(join(invalidIndex, 'artifacts/wave2/finding-index.yaml'), '{ not valid YAML: [[[\n');
+    const indexOutput = JSON.parse(runInspect(invalidIndex).stdout);
+    assert.ok(indexOutput.check.failed_rule_ids.includes('index_yaml_parse'), JSON.stringify(indexOutput));
+
+    for (const output of [synthesisOutput, ledgerOutput, indexOutput]) {
+      assert.doesNotMatch(output.inspect.join('\n'), /return_map_(?:missing_fields|unsupported_prose|missing_finding_lineage)/);
+    }
+  });
+
   it('1b. accepts harmless ledger heading marker, case, and spacing differences', () => {
     const dir = createBundle(unique('ledger-tolerant'));
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);

@@ -7,7 +7,7 @@ bundle: dpt_rb_openspec-derivative-frameworks
 phase: wave2
 node: phases/phase-wave2.md
 gate: wave2-complete
-status: active
+status: fixed
 ---
 
 # BUG-134: Wave2 inspect 把 synthesis/ledger 误当成 return-map
@@ -131,3 +131,10 @@ synthesis/ledger 内容，再验证该路径由红转绿。
    仍只报精确 seed coordinate。
 3. 现有 synthesis、ledger 和 finding-index 的独立失败仍保持原有 rule ID/owner，
    不被新的 scope filter 掩盖。
+
+## 结案依据
+
+`scope-wave2-return-map-inspection` 已归档（v0.56）。移除了仅针对
+Wave2 phase artifact 的错误 return-map parser branch，保留 Seed Topic
+Wave2 projection 与独立 artifact evaluator。focused proof 为 67 tests / 4 suites；
+routing assets、requirements/spec governance 与 strict OpenSpec validation 均通过。
