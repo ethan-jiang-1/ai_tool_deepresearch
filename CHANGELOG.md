@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.60
+
+- Wave1 `materialize_projection` feedback now names each existing canonical target together with its exact submitted source URL, work IDs, work-unit refs, source refs, and cache-trail refs. Inspect and formal Gate project that same closeout hint and retain separately evaluated legacy, index, ledger, queue, receipt, provenance, and format roots.
+
 ## v0.59
 
 - Wave Gate public summaries now distinguish clean routing passes, blocking failures, and legal degraded handoffs. Carried eligible quality debt is exposed through `degraded_rules`, while only current routing blockers remain in `failed_rule_ids`; durable diagnostics and handoff traces retain the structured debt context.

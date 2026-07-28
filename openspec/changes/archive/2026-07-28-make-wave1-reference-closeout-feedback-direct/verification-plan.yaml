@@ -1,0 +1,93 @@
+schema_version: verification-routing/v1
+change: make-wave1-reference-closeout-feedback-direct
+test_classes:
+  unit:
+    status: selected
+    rationale: The Wave1 convergence finding and preservation of independent roots are bounded deterministic projections over existing evaluator facts.
+  integration:
+    status: selected
+    rationale: Temporary bundles must prove inspect and formal Gate expose the same direct materialization action and preserve submitted-ledger authority through existing closeout operations.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: This change does not alter the workflow-scale lifecycle; focused production CLI integration covers the changed deterministic feedback boundary without unrelated phases.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The proof subject is deterministic feedback projection and guidance contract, not real Agent research judgment, child execution, or host behavior.
+claims:
+  - id: wave1-direct-materialization-hint
+    statement: >-
+      RWG-017 and RWG-021: a materializable current Topic yields one stable candidate-exact primary materialization hint, while the convergence evaluator defers only its own later index/floor outcomes.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/wave-contract-evaluators.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-independent-roots-remain-visible
+    statement: >-
+      RWG-017 and RWG-021: separately evaluated legacy/index/ledger, missing/invalid submitted backing, independent queue/receipt/provenance roots, and a true post-closeout floor deficit remain primary and do not become materialization-masked success paths.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/wave-contract-evaluators.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-inspect-gate-direct-closeout-agreement
+    statement: >-
+      RWG-017 and RWG-021: a temporary production bundle makes inspect and formal Gate project the same direct materialization root, then accepts only existing canonical backed projection plus index synchronization without ledger mutation.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave1-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-direct-closeout-guidance
+    statement: >-
+      RWP-015: Wave1 guidance consumes an exact direct materialization action through existing persistence, index sync, topic-state packet, and same inspect, without ledger/output/receipt mutation or a new controller.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/wave1-reference-closeout-document-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-materialization-same-inspect-convergence
+    statement: >-
+      RWG-017 and RWG-021: after the existing canonical materialization and
+      index-sync operations, the same Wave1 inspect no longer emits the direct
+      materialization hint, without mutating submitted-ledger authority.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/wave1-reference-convergence.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

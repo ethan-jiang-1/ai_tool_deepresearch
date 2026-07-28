@@ -523,11 +523,22 @@ projection, and a narrow index-sync root when canonical projections lack a
 valid inventory. Only the remaining actual shortfall becomes the existing
 supplementary evidence path.
 
-The materialization root SHALL carry the stable ordered list of exact canonical
-target/backing coordinates returned by the shared submitted-backing reader. It
-is one bounded Phase closeout action, not a queue selector or an instruction to
-search; the Phase Agent may author only those consumer projections from their
-authenticated submitted backing, then reruns the same convergence checkpoint.
+The materialization root SHALL carry the stable ordered submitted-backing
+candidate coordinates returned by the shared submitted-backing reader and the
+exact canonical target derived for each candidate by the existing canonical
+locator. It is one bounded Phase closeout action, not a queue selector or an
+instruction to search; the Phase Agent may author only those consumer
+projections from their authenticated submitted backing, then reruns the same
+convergence checkpoint.
+When that root exists, it SHALL be the only primary closeout hint for its
+own ordered convergence branch: `sync_reference_index` and
+`reference_floor_deficit` SHALL not be emitted until materialization and the
+same convergence checkpoint rerun. A legacy/misnamed path, missing index row,
+count-floor result, or unbacked-reference/ledger symptom produced by a
+separate checker SHALL remain an independent primary finding unless that
+checker itself sets `masked_by_rule_id`. The Wave1 adapter SHALL NOT create
+such a dependency by Topic text, filename shape, source URL, rule order, or
+filesystem proximity.
 
 Wave2 gates SHALL retain their accepted pure-synthesis and targeted-evidence
 authority split. Delegated bypass diagnostics SHALL remain precise: unbacked
@@ -545,6 +556,25 @@ cannot bind it to accepted backing.
   reference path in delegated `output_files[]`
 - **AND** delegated evidence coverage SHALL still require submitted
   evidence-summary/question-list/source/cache backing
+
+#### Scenario: materialization root short-circuits its own downstream outcomes
+
+- **WHEN** exact reviewed submitted backing can materialize a current Topic's
+  missing canonical projection
+- **THEN** inspect and formal Gate SHALL project one candidate-exact
+  materialization hint with exact canonical target/backing coordinates and the
+  existing same-check rerun
+- **AND** the convergence evaluator SHALL not emit its index-sync or floor
+  outcome until that materialization completes and the same checkpoint reruns
+
+#### Scenario: a concrete checker root remains visible during materialization
+
+- **WHEN** a materialization root coexists with a separately evaluated legacy,
+  index, ledger, queue, receipt, provenance, or format finding
+- **THEN** that finding SHALL remain a primary hint unless its own evaluator
+  already declares it dependent
+- **AND** the adapter SHALL NOT mask it from Topic text, filename shape, source
+  URL, rule order, or filesystem proximity
 
 #### Scenario: Wave1 gate rejects unbacked topic reference
 
@@ -1147,11 +1177,30 @@ The Wave2 evaluator SHALL select only the receipt on the successful Wave1 `gate_
 
 Each Wave0, Wave1, and Wave2 formal/inspect adapter SHALL invoke the same pure evaluator once for its core primary-root projection. An evaluator prerequisite guard SHALL record only explicitly downstream skipped rule IDs in `masked_rule_ids`; it SHALL NOT manufacture a blocking finding for each skipped child. If an evaluator emits a dependent finding, it SHALL set that finding's `masked_by_rule_id`, and the standard projector SHALL omit it from `hints[]`. Independent roots SHALL remain distinct primary findings and mask context SHALL remain durable diagnostic context. The formal adapters SHALL use the shared Wave-only parsed eligibility helper, not local allowlists or `id` heuristics. Only definition-owned `required_floor` roots with an exact eligible parsed `rule_id` may be candidates; queue, receipt, provenance, binding, required structure, trace, lifecycle, checker-owned, and other authority roots SHALL remain ineligible. Format-specific additions SHALL not rebuild masking or eligibility. Current Wave0/Wave1 eligible quality policy remains unchanged; active Wave2 definitions remain ineligible.
 
+For a Wave1 convergence materialization root, the adapter SHALL preserve the
+existing ordered evaluator result: it SHALL project the candidate-exact
+materialization root and defer only the evaluator's own later index-sync/floor
+outcomes until the same checkpoint reruns. It SHALL NOT set
+`masked_by_rule_id` on a separately evaluated reference/index/ledger/floor
+finding by prose, filename glob, source URL, rule order, Topic text, or another
+Topic. An invalid/missing submitted backing, legacy or misnamed concrete file
+failure, unrelated queue/receipt/provenance root, or true post-closeout floor
+deficit SHALL remain an independent primary root.
+
 #### Scenario: prerequisite does not become a repair wall
 
 - **WHEN** one missing parent artifact causes multiple dependent content checks to be unavailable
 - **THEN** the adapter SHALL emit the parent as one primary root and retain only dependent rule IDs as masked detail
 - **AND** an unrelated queue, provenance, or structure root SHALL remain independently visible
+
+#### Scenario: materialization does not hide independent authority failure
+
+- **WHEN** one Topic has a materialization root and another root lacks valid
+  submitted backing, queue authority, receipt binding, or a concrete legacy
+  reference defect
+- **THEN** the materialization root SHALL defer only its own later convergence
+  outcomes
+- **AND** the independent authority root SHALL remain a primary blocking hint
 
 #### Scenario: inactive Wave2 fixture proves adapter capability only
 

@@ -35,7 +35,10 @@ import {
   checkWave2FindingIndexContract,
   topicSlugFromDepthReviewTarget,
 } from './wave-depth-contracts.mjs';
-import { evaluateWave1ReferenceTopic } from './wave1-reference-convergence.mjs';
+import {
+  canonicalWave1ReferencePath,
+  evaluateWave1ReferenceTopic,
+} from './wave1-reference-convergence.mjs';
 import { selectWave1CarriedTargetReceipt } from './wave-carried-target-receipts.mjs';
 import { checkPhaseQueueDrained } from './phase-queue-drain.mjs';
 import { evaluateRerunDirection } from './rerun-direction.mjs';
@@ -158,6 +161,21 @@ function localCheckerFinding(bundlePath, rule, {
   });
 }
 
+function coordinateList(values) {
+  return Array.isArray(values) && values.length > 0 ? values.join(', ') : 'none';
+}
+
+function materializationWriteTo(topic, candidates) {
+  return candidates.map((candidate) => {
+    const locator = canonicalWave1ReferencePath({
+      topicSlug: topic,
+      sourceUrl: candidate.normalized_url,
+    });
+    if (!locator.ok) throw new Error(`materialization candidate lacks canonical target: ${locator.reason_code}`);
+    return `${locator.path}; submitted backing: source_url=${candidate.normalized_url}; work_ids=[${coordinateList(candidate.work_ids)}]; work_unit_refs=[${coordinateList(candidate.work_unit_refs)}]; source_refs=[${coordinateList(candidate.source_refs)}]; cache_trail_refs=[${coordinateList(candidate.cache_trail_refs)}]`;
+  }).join('\n');
+}
+
 function wave1ReferenceConvergenceFinding(bundlePath, rule, topic, outcome) {
   const root = outcome.root?.code || outcome.outcome;
   const detail = outcome.root?.detail
@@ -193,7 +211,9 @@ function wave1ReferenceConvergenceFinding(bundlePath, rule, topic, outcome) {
       ? 'node DPT_FRAMEWORK/cli/sync-reference-index.mjs --bundle <bundle-path>'
       : isFloor || isExistingSupplementary
         ? (isExistingSupplementary ? `existing supplementary demand ${outcome.demand.queue_item_id}` : 'enqueue one supplementary wave1_topic_deepening demand with the returned payload')
-        : 'reference/',
+        : isMaterialize
+          ? materializationWriteTo(topic, outcome.candidates)
+          : 'reference/',
     repair: isIndex
       ? 'Synchronize reference/_INDEX.md, then rerun the same Wave1 checkpoint.'
       : isFloor || isExistingSupplementary

@@ -664,6 +664,40 @@ function wave1ParityProjection(entry) {
 describe('check-gate-wave1-complete', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
 
+  it('projects the same candidate-exact materialization hint through inspect and formal Gate', () => {
+    const dir = createBundle(unique('direct-closeout-hint'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    const submission = submitAndReviewWave1WorkUnit(dir);
+    writeWave1Trace(dir, { materialize: false });
+
+    const canonical = canonicalWave1ReferencePath({
+      topicSlug: 'topic-a',
+      sourceUrl: 'https://example.com/news/deepening-topic-a',
+    });
+    assert.equal(canonical.ok, true);
+    rmSync(join(dir, canonical.path));
+
+    const outputs = [
+      JSON.parse(runInspect(dir).stdout),
+      JSON.parse(runGate(dir).stdout),
+    ];
+    const hints = outputs.map((output) => output.hints.find((hint) => (
+      hint.rule_id === 'per_topic_ref_md_count_floor'
+      && hint.repair_kind === 'agent_action'
+    )));
+
+    for (const hint of hints) {
+      assert.ok(hint, JSON.stringify(outputs));
+      assert.match(hint.write_to, new RegExp(canonical.path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      assert.match(hint.write_to, new RegExp(submission.record.work_id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      assert.match(hint.write_to, /source_refs=\[/);
+      assert.match(hint.write_to, /cache_trail_refs=\[/);
+    }
+    assert.equal(hints[0].write_to, hints[1].write_to);
+  });
+
   it('1. happy path: evidence-summary with source URL + key findings passes', () => {
     const dir = createBundle(unique('happy'));
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);

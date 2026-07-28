@@ -14,6 +14,8 @@ describe('Wave1 reference closeout guidance', () => {
     assert.match(template, /current-topic\.slug}-{deterministic-source-qualifier}/);
     assert.match(template, /sync-reference-index/);
     assert.match(phase, /persist.*sync-reference-index.*packet writer.*rerun/s);
+    assert.match(phase, /work_ids.*work_unit_refs.*source_refs.*cache_trail_refs/s);
+    assert.match(phase, /legacy\/index\/ledger\/queue\/receipt\/provenance\/format hint remains its own root/);
     assert.match(phase, /reference_floor_deficit/);
     assert.match(index, /sync-reference-index/);
     assert.doesNotMatch(index, /appends one row/);

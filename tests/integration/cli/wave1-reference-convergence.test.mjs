@@ -60,6 +60,12 @@ function sync(dir) {
   return JSON.parse(result.stdout);
 }
 
+function inspect(dir) {
+  const result = spawnSync('node', [join(root, 'DPT_FRAMEWORK/cli/inspect-wave1-output.mjs'), '--bundle', dir], { encoding: 'utf8' });
+  assert.ok([0, 1].includes(result.status), result.stderr || result.stdout);
+  return JSON.parse(result.stdout);
+}
+
 describe('Wave1 reference convergence commands', () => {
   it('closes a real submitted candidate only after canonical projection and index sync', () => {
     const { dir, topic } = bundle();
@@ -77,6 +83,7 @@ describe('Wave1 reference convergence commands', () => {
     assert.equal(sync(dir).verdict, 'committed');
     const result = evaluateWave1ReferenceTopic(dir, { topic: topic.slug, topicRegistryFact: registry, requiredFloor: 1 });
     assert.equal(result.result.outcome, 'satisfied');
+    assert.equal(inspect(dir).hints.some((hint) => hint.rule_id === 'per_topic_ref_md_count_floor'), false);
     assert.match(readFileSync(join(dir, 'reference/_INDEX.md'), 'utf8'), new RegExp(`\\| ${canonical.path.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')} \\|`));
   });
 

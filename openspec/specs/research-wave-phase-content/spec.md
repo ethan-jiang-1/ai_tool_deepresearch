@@ -482,22 +482,28 @@ terminal status, or bypass ordinary claim.
 Wave0 and Wave1 phase bodies SHALL not present `claim --count 1` as the normal
 strategy for independent Topics. Wave1's post-submit loop SHALL teach one
 ordered closeout decision, supplied by convergence rather than a second
-controller: canonical materialize/persist from submitted backing; then sync the
-flat index; then update only affected Seed Topic navigation through the existing
-packet writer; then rerun Wave1 inspect. If no projection/index repair exists,
-the loop either continues a disclosed existing supplementary demand or forms
-one ordinary supplementary demand for a true floor deficit before returning to
-claim/poll/submit. Wave2 retains its existing backed-pure-synthesis versus
-targeted-evidence materialization split.
+controller: canonical materialize/persist only from the primary hint's exact
+submitted backing; then sync the flat index; then update only affected Seed
+Topic navigation through the existing packet writer; then rerun Wave1 inspect.
+It SHALL defer only the closeout evaluator's un-emitted later index/floor
+outcomes until that rerun, and SHALL keep separately evaluated primary findings
+visible rather than using them to claim, supplement, or edit delegated
+authority. If no projection/index repair exists, the loop either continues a
+disclosed existing supplementary demand or forms one ordinary supplementary
+demand for a true floor deficit before returning to claim/poll/submit. Wave2
+retains its existing backed-pure-synthesis versus targeted-evidence
+materialization split.
 
 #### Scenario: Wave1 post-submit loop follows ordered closeout
 
 - **WHEN** a Wave1 Phase Agent completes a successful submit and receives a
-  convergence materialization root
-- **THEN** the phase body SHALL show materialize/persist -> index sync ->
-  packet ref refresh when needed -> same inspect
+  convergence materialization root with exact canonical target/backing
+  coordinates
+- **THEN** the phase body SHALL show the exact candidate-bound
+  materialize/persist -> index sync -> packet ref refresh when needed -> same
+  inspect loop
 - **AND** it SHALL not ask the Agent to infer filename/count/index order from
-  source code or separate checkers
+  source code, secondary diagnostics, or separate checkers
 
 #### Scenario: phase gate waits for queue and in-flight drain
 

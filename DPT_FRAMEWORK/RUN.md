@@ -1,13 +1,15 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.59**
+> **DPT_FRAMEWORK v0.60**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.59
+## Current Release: v0.60
+
+- Wave1 materialization feedback now gives the canonical target and exact submitted-backing coordinates in the existing inspect/Gate hint. Materialization still defers only its own index/floor convergence outcomes; separately evaluated authority roots remain visible.
 
 - Wave Gate summaries distinguish clean passes, blockers, and legal degraded handoffs. A passed degraded route carries its declared quality debt in `check.degraded_rules`; read `check.degraded` before consuming the existing `check.next`.
 
