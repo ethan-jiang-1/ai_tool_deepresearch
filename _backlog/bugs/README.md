@@ -23,11 +23,8 @@
 | [BUG-103](BUG-103-status-gate-drift-between-phases.md) | P3 | 跨 phase | guidance handoff-order defect：`start-research` 漏掉 `enter-phase` 后必须紧随的 `advance-status` |
 | [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | enter-phase 每次渲染完整 shared context 造成累积 context 压力 |
 | [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P2 | wave0→wave1 | deferred operability：agent 输出总结而未执行下一 phase，当前可由一次用户续跑恢复 |
-| [BUG-129](BUG-129-wave1-ref-materialization-same-bypass.md) | P2 | wave1 | I1 dormant：仅当前真实 bundle 证明 Wave1 submitted-backed projection 仍被错误拒绝时，才开启有界 repair change |
-| [BUG-130](BUG-130-wave2-pure-synthesis-vs-gate-contradiction.md) | P2 | wave2 | I2 dormant：仅当前真实 bundle 证明 Wave2 pure-synthesis 的既有证据链仍被错误拒绝时，才开启有界 repair change |
-| [BUG-131](BUG-131-degraded-pass-inconsistency-wave2-vs-wave0-wave1.md) | P2 | wave2 | accepted residual risk：Wave2 无 eligible degradation 的 pre-HITL2 deadlock 仍按既有 policy fail-closed；非当前 authorized change |
 
-> BUG-099/103/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 计划承接，均 deferred 于核心 work-unit / evidence / Gate 运行路径稳定之后。
+> BUG-099/103/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 计划承接，均 deferred 于核心 work-unit / evidence / Gate 运行路径稳定之后。BUG-129/130/131 已移至 `../_done/_suspened_bugs/`：它们分别等待当前真实反例或新的产品策略决定，不是活跃 implementation defect。
 
 **Next available bug ID: BUG-139**
 

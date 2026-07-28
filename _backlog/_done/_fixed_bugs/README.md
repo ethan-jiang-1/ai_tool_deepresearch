@@ -148,10 +148,13 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 
 ## Suspended (未修复，仍在排查)
 
-这些 bug 仍在 `../_suspened_bugs/`，尚未确认修复：
+这些 bug 仍在 `../_suspened_bugs/`，当前无获批 implementation change：
 
 | ID | Date | Title |
 |----|------|-------|
 | BUG-026 | 2026-07-05 | run.log severely under-records Agent actions (P0) |
 | BUG-028 | 2026-07-05 | Seed topic backfill perfunctory — bare pointer, zero substance (P1) |
 | BUG-030 | 2026-07-06 | No sub-agent timeout — Phase Agent blocks indefinitely (P0) |
+| BUG-129 | 2026-07-28 | Wave1 projection counterexample gate; reopen only when a current fully backed projection still reports `submitted_source_backing_missing` |
+| BUG-130 | 2026-07-28 | Wave2 pure-synthesis counterexample gate; reopen only when a complete existing-backed branch is rejected solely for lacking a Wave2 receipt or for Phase projection ownership |
+| BUG-131 | 2026-07-28 | Accepted Wave2 fail-closed policy residual risk; reopen only after a separate product decision rejects that policy cost |
