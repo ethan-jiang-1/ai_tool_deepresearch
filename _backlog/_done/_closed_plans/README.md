@@ -61,5 +61,6 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-037 | 2026-07-27 | evidence-production-and-phase-projection-boundaries.md | 三个 bounded changes 已 archive：canonical seed authoring、queue demand admission、Wave0 shared-reference guidance。D1 保留 `claim_verification` 的 `6 + 2 x topics` floor 并接受 eligible-degradation 成本；BUG-124--128 结案。BUG-129/130 保留为分别由当前真实反例触发的 I1/I2，BUG-131 为 accepted residual risk。 |
 | CLS-038 | 2026-07-28 | seed-topic-projection-materialization.md | BUG-138 的单一 writer / Seed Topic template-protocol boundary / shared readiness 收敛已由 `fix-seed-topic-projection-materialization` archive（commit `9953435a3`）完成；嵌套 Agent-flow canary 被移除，验收保留静态契约与确定性生产 CLI Wave 链。 |
 | CLS-039 | 2026-07-28 | wave-projection-and-lifecycle-convergence.md | Four bounded changes archived (v0.54--v0.57): Wave0 candidate projection, Wave1 reference convergence, Wave2 return-map scope, and terminal lifecycle truth. BUG-129/130 remain counterexample-gated; BUG-131 remains accepted policy risk. |
+| CLS-040 | 2026-07-28 | deferred_conversation-capture-host-capabilities.md | Completed host-capability research: framework-owned Codex app-server, Claude Agent SDK, and stream-json integrations can own a ledger; externally launched native-client sessions remain best-effort observation only. No framework implementation task remains. |
 
-**Next available plan ID: CLS-040**
+**Next available plan ID: CLS-041**

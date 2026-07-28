@@ -20,7 +20,7 @@
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
 | [BUG-099](BUG-099-stop-no-agent-halted-at-wave0.md) | P2 | wave0 | deferred operability：`stop: no` phase agent 在 wave0 主动停下，当前可由一次用户续跑恢复，不阻塞核心 bundle contract 可达性 |
-| [BUG-103](BUG-103-status-gate-drift-between-phases.md) | P3 | 跨 phase | rb_status.json gate 字段在 phase transition 后持续漂移，需手动 advance-status |
+| [BUG-103](BUG-103-status-gate-drift-between-phases.md) | P3 | 跨 phase | guidance handoff-order defect：`start-research` 漏掉 `enter-phase` 后必须紧随的 `advance-status` |
 | [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | enter-phase 每次渲染完整 shared context 造成累积 context 压力 |
 | [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P2 | wave0→wave1 | deferred operability：agent 输出总结而未执行下一 phase，当前可由一次用户续跑恢复 |
 | [BUG-129](BUG-129-wave1-ref-materialization-same-bypass.md) | P2 | wave1 | I1 dormant：仅当前真实 bundle 证明 Wave1 submitted-backed projection 仍被错误拒绝时，才开启有界 repair change |

@@ -9,6 +9,17 @@ affected: all phase transitions
 
 # BUG-104: enter-phase 每次渲染完整 shared context 导致累积上下文压力
 
+## Current Base Recheck (2026-07-28)
+
+This behavior remains objectively present: `enter-phase.mjs` renders every
+file in the loaded `result.plan` in full for every invocation. The current
+Base does not maintain a session-level loaded-file cache, and that is not
+asserted to be an Agent-correctness contract. Repeated full rendering is thus
+a bounded operability concern, but its claimed causal link to a particular
+Agent stop remains unproven. Keep this card deferred/research-only until a
+real-Agent observation isolates the effect; do not add session memory or a
+host controller from deterministic fixture evidence.
+
 ## 现象
 
 每次 `enter-phase --node <next>` 调用都会渲染该 phase 所需的 shared context 文件。例如 enter-phase 到 hitl1 时：

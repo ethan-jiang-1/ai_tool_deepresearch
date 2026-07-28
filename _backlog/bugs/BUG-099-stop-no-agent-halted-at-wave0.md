@@ -19,6 +19,17 @@ Prioritize making real bundles run those contracts reliably first; revisit the
 bounded DPT handoff defect only after that path is routinely successful. Do not
 attempt to solve host/Agent turn liveness by adding a DPT watcher or controller.
 
+## Current Base Recheck (2026-07-28)
+
+The Base now emits an explicit final continuation cue after successful
+`enter-phase`, and normal handoff guidance requires source-gate status
+synchronization before target-phase execution. These deterministic entry facts
+make a bounded next action available, but they do not prove that a real Agent
+will execute it. Keep this card deferred until repeated independent
+`agent_flow_e2e` observations show whether an Agent executes the first legal
+action after a completed handoff. A fixture, static Markdown assertion, or a
+host-resumed user turn is not closure evidence.
+
 ## 现象
 
 Agent 在 wave0 phase（`stop: no`）主动停下来，向用户提问"要继续让框架 spawn sub-agent 跑完吗？"，创建了一个框架合约之外的 de-facto HITL checkpoint。

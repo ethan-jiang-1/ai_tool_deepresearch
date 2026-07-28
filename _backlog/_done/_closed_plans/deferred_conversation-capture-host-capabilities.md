@@ -1,6 +1,6 @@
 ---
 title: Host capabilities for conversation capture
-status: research_note
+status: research_complete_no_implementation
 scope: Codex and Claude Code native capture, persistence, resume, export, events, hooks, and plugins
 retrieved: 2026-07-26
 sources: primary_official_docs_and_source_only

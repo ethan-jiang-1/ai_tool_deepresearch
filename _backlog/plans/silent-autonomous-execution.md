@@ -2,7 +2,7 @@
 title: Silent autonomous execution
 status: research_backlog_with_no_fixed_openspec_change
 created: 2026-07-24
-revised: 2026-07-27
+revised: 2026-07-28
 source_bugs: BUG-099, BUG-103, BUG-104, BUG-106
 evidence_bundle: dpt_rb_openspec-large-project-maintenance-patterns
 ---
@@ -35,9 +35,9 @@ host / Agent liveness
 
 ### Proven DPT defects
 
-1. `enter-phase` 的 final continuation 曾在 source-gate status synchronization 前宣称 `execute_loaded_node`；正常 Agent-facing interface 因此暴露了错误的动作顺序。
+1. `enter-phase` and `advance-status` have deliberately separate durable responsibilities: the former writes route-bound entry and `current_node`; the latter synchronizes the source-gate window. The direct active root is instead that `command_playbook/start-research.md` omits the required `advance-status --to <source_gate>` between them.
 2. 正常 phase entry 反复渲染完整 `requires` closure；被重复注入的控制面过大是可测事实，但不是特定 Agent 停止的充分因果证明。
-3. `enter-phase` 的 route-bound `load_complete` 与 `advance-status` 的 `phase_transition` 各有合理的 durable responsibility；问题在 public handoff interface，不是中间 gate window 自身。
+3. The final `enter-phase` continuation cue still precedes status synchronization. The public handoff interface must therefore present the complete order without implying that entry alone is ready for target-phase work.
 
 ### Proven platform boundary
 
@@ -67,7 +67,9 @@ Codex 的 plan update 和 Claude Code 的 task list 都是 tracking surface，�
 
 ## 4. Decision Gates Before A Proposal
 
-只有同时满足以下条件，才为 Track A 创建 OpenSpec proposal：
+The bounded guidance defect above may proceed independently through a minimal
+OpenSpec change. The broader Track A candidate may proceed only when all of
+the following are true:
 
 1. public interface 的 deterministic contract、partial recovery 和 fresh-session entry-core contract 已明确；
 2. proposal 的 Done 不承诺 host 发起下一 turn；

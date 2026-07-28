@@ -17,7 +17,6 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `conversation-capture-host-capabilities` | 核查 Codex 与 Claude Code 是否能保留每次用户/Agent 交流；结论是只有 framework-owned app-server / Agent SDK / stream-json integration 才能给完整 ledger，独立客户端会话仅可 best-effort 观察 | research / scoping（无固定 OpenSpec change） |
 | `silent-autonomous-execution` | 承接 `source_bugs: BUG-099/103/104/106`（stop-no halt、status drift、context pollution、stop-no-violation-repeats）。独立 research backlog：把「静默自主」拆成 DPT 可确定性修复的 phase-entry correctness 与一般 coding-agent/host 是否发起下一 turn 的 actor liveness 两层，分开研究与证明。当前 deferred 于 work-unit、evidence-production 与 Gate 路径稳定可跑之后；不阻塞其他 runtime correctness 工作。 | deferred research / scoping（无固定 OpenSpec change） |
 
 ---
@@ -30,6 +29,7 @@
 |------|----------|
 | `seed-topic-projection-materialization` | CLS-038：`fix-seed-topic-projection-materialization` 已 archive（commit `9953435a3`）；BUG-138 的 authority-bound writer、template/protocol 分离和 shared readiness 已交付，确定性 CLI Wave chain 为验收资产，嵌套 Agent-flow canary 已移除。 |
 | `wave-projection-and-lifecycle-convergence` | CLS-039：四个 bounded OpenSpec change 已 archive（v0.54--v0.57）；BUG-132--137 均有 archived/fixed disposition，BUG-129/130 保持 current-counterexample trigger，BUG-131 保持 accepted policy residual risk。 |
+| `deferred_conversation-capture-host-capabilities` | CLS-040：research note 已给出完成决策：仅 framework-owned Codex app-server、Claude Agent SDK 或 stream-json integration 可建立完整 exchange ledger；独立 native client 只能 best-effort 观察，无剩余 DPT implementation task。 |
 
 ## 最近关闭 (2026-07-27)
 

@@ -17,6 +17,16 @@ underlying work-unit, evidence-production, or Gate path is unreachable. Defer
 the silent-autonomy improvement until those core runtime paths have first been
 made routinely runnable; do not create a host-liveness controller as a shortcut.
 
+## Current Base Recheck (2026-07-28)
+
+The completed handoff now has a direct continuation cue and a specified
+source-gate status synchronization step. Those conditions narrow the DPT-side
+entry interface, but do not demonstrate same-turn Agent compliance. Retain
+this as a deferred actor-operability observation. Closure requires repeated
+independent `agent_flow_e2e` evidence that a real Agent executes the loaded
+phase's first legal action after the complete handoff, rather than a
+deterministic fixture or a user-provided continuation turn.
+
 ## 现象
 
 在 wave0 gate pass（degraded）后，agent 执行了 `enter-phase` 和 `advance-status`，成功进入 wave1。然后 agent 输出了一段 wave0 总结表格，说"继续 wave1 → wave2 → HITL2，静默自主"——但 **没有实际加载和执行 phase-wave1.md 的 instruction**。
