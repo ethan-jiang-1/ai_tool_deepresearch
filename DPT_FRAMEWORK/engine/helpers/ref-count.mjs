@@ -197,6 +197,9 @@ function listReferenceFiles(bundleDir) {
  * @param {string} [options.targetGlob] — gate target pattern
  *        (e.g. "reference/00-shared-*.md", "reference/*{topic}*.md")
  * @param {string} [options.topic] — topic slug for gate expansion context
+ * @param {string[]} [options.selectedPaths] — exact already-authorized
+ *        reference paths. This bypasses discovery only; each selected path
+ *        still passes the shared numeric-eligibility predicate.
  * @returns {{ count: number, uncountable: Array<{path: string, reason: string}> }}
  *
  * @impl EEX-002
@@ -206,13 +209,20 @@ export function countReferences(bundleDir, {
   targetGlob = null,
   targetGlobs = null,
   topic = null,
+  selectedPaths = null,
 } = {}) {
   const uncountable = [];
 
   // ── Collect candidate paths ──
   let candidatePaths = [];
 
-  if (source === 'ledger') {
+  if (Array.isArray(selectedPaths)) {
+    candidatePaths = [...new Set(selectedPaths.filter((path) => (
+      typeof path === 'string'
+      && path.startsWith('reference/')
+      && !path.includes('..')
+    )))].sort();
+  } else if (source === 'ledger') {
     // Authority mode: read submitted Engine-written work-unit rows and backed
     // Phase-owned projections.
     let declarations;
@@ -266,7 +276,7 @@ export function countReferences(bundleDir, {
     }
   }
 
-  if (source === 'ledger') {
+  if (source === 'ledger' && !Array.isArray(selectedPaths)) {
     const declared = new Set(candidatePaths);
     for (const fsPath of listReferenceFiles(bundleDir)) {
       if (declared.has(fsPath)) continue;

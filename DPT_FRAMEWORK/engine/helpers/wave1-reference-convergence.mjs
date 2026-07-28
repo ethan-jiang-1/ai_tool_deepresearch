@@ -8,8 +8,17 @@ import { parse as parseYaml } from 'yaml';
 
 import { readNormalizedSubmittedWorkUnitDeclarations } from './gate-helpers-readers.mjs';
 import { inspectCacheLeaf } from './cache-leaf-contract.mjs';
+import { normalizeWave1ReferenceUrl as normalizeUrl } from './reference-url.mjs';
+import {
+  checkReferenceFormatFiles,
+  checkReferenceIndexCoverage,
+  checkReferenceSourceUrls,
+  parseReferenceMetadata,
+} from './gate-helpers-checks.mjs';
+import { countReferences, isCountable } from './ref-count.mjs';
 import { resolveStructuredTopicBinding, resolveTopicLayout } from './topic-layout.mjs';
 import { queueItemSnapshotHash } from '../queue-manager-core.mjs';
+import { loadQueueReadOnly } from '../queue-manager-lifecycle.mjs';
 import { readAndValidateManifest } from '../work-unit-validation.mjs';
 
 function safeTopicSlug(value) {
@@ -25,22 +34,13 @@ function safeUrlToken(value) {
   return token || 'source';
 }
 
-export function normalizeWave1ReferenceUrl(value) {
-  try {
-    const parsed = new URL(String(value || '').trim());
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
-    parsed.hash = '';
-    return parsed.toString();
-  } catch {
-    return null;
-  }
-}
+export { normalizeUrl as normalizeWave1ReferenceUrl };
 
 export function canonicalWave1ReferencePath({ topicSlug, sourceUrl } = {}) {
   if (!safeTopicSlug(topicSlug)) {
     return { ok: false, reason_code: 'topic_slug_invalid', reason: 'Current Topic slug is required for a canonical Wave1 reference path.' };
   }
-  const normalizedUrl = normalizeWave1ReferenceUrl(sourceUrl);
+  const normalizedUrl = normalizeUrl(sourceUrl);
   if (!normalizedUrl) {
     return { ok: false, reason_code: 'source_url_invalid', reason: 'A parseable http(s) submitted backing URL is required for a canonical Wave1 reference path.' };
   }
@@ -185,9 +185,9 @@ export function resolveReviewedWave1SubmittedBacking(bundlePath, { topic, topicR
 
     for (const claim of row.source_claims || []) {
       if (!acceptedSourceClaim(claim)) continue;
-      const normalizedUrl = normalizeWave1ReferenceUrl(claim.url);
+      const normalizedUrl = normalizeUrl(claim.url);
       if (!normalizedUrl) return backingRoot('submitted_backing_url_invalid', `Accepted source claim URL is not parseable for ${record.work_id}.`);
-      const acceptedUrls = new Set((row.accepted_source_urls || []).map(normalizeWave1ReferenceUrl).filter(Boolean));
+      const acceptedUrls = new Set((row.accepted_source_urls || []).map(normalizeUrl).filter(Boolean));
       if (!acceptedUrls.has(normalizedUrl)) {
         return backingRoot('submitted_backing_url_unaccepted', `Accepted source claim URL is absent from accepted_source_urls for ${record.work_id}.`);
       }
@@ -195,21 +195,30 @@ export function resolveReviewedWave1SubmittedBacking(bundlePath, { topic, topicR
       if (!checkedBacking.ok) {
         return backingRoot('submitted_backing_cache_mapping_invalid', `Accepted source claim backing is invalid for ${record.work_id}: ${checkedBacking.reason}.`);
       }
+      const cacheTrailRefs = [
+        ...(Array.isArray(claim.cache_trail_refs) ? claim.cache_trail_refs.filter(Boolean) : []),
+        ...(claim.degraded_capture_ref ? [claim.degraded_capture_ref] : []),
+      ];
       const sourceRefs = [
         row.work_id,
         row.work_unit_ref,
         row.result_ref,
         claim.source_ref,
-        ...(claim.cache_trail_refs || []),
-        claim.degraded_capture_ref,
+        ...cacheTrailRefs,
       ].filter((value) => typeof value === 'string' && value);
       const prior = candidatesByUrl.get(normalizedUrl) || {
         normalized_url: normalizedUrl,
         source_url: claim.url,
         work_ids: [],
+        work_unit_refs: [],
+        source_refs: [],
+        cache_trail_refs: [],
         backing_refs: [],
       };
       prior.work_ids.push(record.work_id);
+      prior.work_unit_refs.push(row.work_id, row.work_unit_ref, row.result_ref);
+      prior.source_refs.push(claim.source_ref);
+      prior.cache_trail_refs.push(...cacheTrailRefs);
       prior.backing_refs.push(...sourceRefs);
       candidatesByUrl.set(normalizedUrl, prior);
     }
@@ -219,6 +228,9 @@ export function resolveReviewedWave1SubmittedBacking(bundlePath, { topic, topicR
     .map((candidate) => ({
       ...candidate,
       work_ids: [...new Set(candidate.work_ids)].sort(),
+      work_unit_refs: [...new Set(candidate.work_unit_refs)].sort(),
+      source_refs: [...new Set(candidate.source_refs)].sort(),
+      cache_trail_refs: [...new Set(candidate.cache_trail_refs)].sort(),
       backing_refs: [...new Set(candidate.backing_refs)].sort(),
     }))
     .sort((left, right) => left.normalized_url.localeCompare(right.normalized_url)
@@ -226,10 +238,137 @@ export function resolveReviewedWave1SubmittedBacking(bundlePath, { topic, topicR
   return { ok: true, topic: { topic_uid: topicBinding.topic_uid, topic_slug: topicBinding.current_slug }, candidates };
 }
 
-export function evaluateWave1ReferenceConvergence({ topic, requiredFloor, submittedBacking, projections = [], index = { valid: true, stale: false }, liveSupplementaryDemand = null } = {}) {
+function bodyCitesOne(body, refs) {
+  return refs.some((ref) => typeof ref === 'string' && ref.length > 0 && body.includes(ref));
+}
+
+/**
+ * Evaluate one exact canonical consumer projection against one authenticated
+ * submitted-backing candidate. It deliberately does not discover files: the
+ * locator is the entire path-selection policy for current Wave1 coverage.
+ */
+export function inspectWave1CandidateProjection(bundlePath, { topicSlug, candidate } = {}) {
+  const locator = canonicalWave1ReferencePath({ topicSlug, sourceUrl: candidate?.normalized_url });
+  if (!locator.ok) return { ...locator, candidate_binding: false, format_valid: false, url_valid: false, countable: false };
+  const relPath = locator.path;
+  const absPath = join(bundlePath, relPath);
+  if (!existsSync(absPath)) {
+    return {
+      rel_path: relPath,
+      normalized_url: candidate.normalized_url,
+      path_class: 'other',
+      candidate_binding: false,
+      format_valid: false,
+      url_valid: false,
+      countable: false,
+      issue: 'canonical_projection_missing',
+    };
+  }
+  const file = { relPath, absPath };
+  const body = readFileSync(absPath, 'utf8');
+  const metadata = parseReferenceMetadata(body);
+  const metadataUrl = normalizeUrl(metadata.get('source_url'));
+  const format = checkReferenceFormatFiles([file], { bundlePath });
+  const url = checkReferenceSourceUrls([file]);
+  const numeric = isCountable(relPath, bundlePath);
+  const sourceBound = bodyCitesOne(body, candidate.source_refs || []);
+  const cacheBound = bodyCitesOne(body, candidate.cache_trail_refs || []);
+  const workUnitBound = bodyCitesOne(body, candidate.work_unit_refs || []);
+  return {
+    rel_path: relPath,
+    normalized_url: candidate.normalized_url,
+    path_class: 'canonical_current',
+    candidate_binding: metadataUrl === candidate.normalized_url && sourceBound && cacheBound && workUnitBound,
+    format_valid: format.passed,
+    url_valid: url.passed && metadataUrl === candidate.normalized_url,
+    countable: numeric.countable,
+    issue: metadataUrl !== candidate.normalized_url
+      ? 'canonical_projection_url_unbound'
+      : !(sourceBound && cacheBound && workUnitBound)
+        ? 'canonical_projection_body_unbound'
+        : !format.passed
+          ? 'canonical_projection_format_invalid'
+          : !url.passed
+            ? 'canonical_projection_url_invalid'
+            : !numeric.countable
+              ? `canonical_projection_not_countable:${numeric.reason}`
+              : null,
+  };
+}
+
+/** Build one Topic's exact projection facts and count from its reviewed backing. */
+export function evaluateWave1ReferenceTopic(bundlePath, {
+  topic,
+  topicRegistryFact,
+  requiredFloor,
+  index = null,
+  liveSupplementaryDemand = null,
+} = {}) {
+  const submittedBacking = resolveReviewedWave1SubmittedBacking(bundlePath, { topic, topicRegistryFact });
+  const resolvedDemand = liveSupplementaryDemand || findLiveSupplementaryDemand(bundlePath, submittedBacking.topic);
+  const projections = submittedBacking.ok
+    ? submittedBacking.candidates.map((candidate) => inspectWave1CandidateProjection(bundlePath, {
+      topicSlug: submittedBacking.topic.topic_slug,
+      candidate,
+    }))
+    : [];
+  const selectedPaths = projections
+    .filter((projection) => projection.path_class === 'canonical_current'
+      && projection.candidate_binding
+      && projection.format_valid
+      && projection.url_valid
+      && projection.countable)
+    .map((projection) => projection.rel_path);
+  const numeric = countReferences(bundlePath, { selectedPaths });
+  const projectionFiles = projections
+    .filter((projection) => projection.path_class === 'canonical_current')
+    .map((projection) => ({
+      relPath: projection.rel_path,
+      absPath: join(bundlePath, projection.rel_path),
+    }));
+  const indexCheck = index || checkReferenceIndexCoverage(bundlePath, projectionFiles, { sourceLayer: 'wave1_topic' });
+  const resolvedIndex = index
+    ? index
+    : { valid: indexCheck.passed, stale: !indexCheck.passed, check: indexCheck };
+  return {
+    submitted_backing: submittedBacking,
+    projections,
+    numeric,
+    index: resolvedIndex,
+    result: evaluateWave1ReferenceConvergence({
+      topic: submittedBacking.ok ? submittedBacking.topic : null,
+      requiredFloor,
+      submittedBacking,
+      projections,
+      index: resolvedIndex,
+      liveSupplementaryDemand: resolvedDemand,
+      observedCount: numeric.count,
+    }),
+  };
+}
+
+function findLiveSupplementaryDemand(bundlePath, topic) {
+  if (!topic?.topic_uid || !topic?.topic_slug) return null;
+  let queue;
+  try {
+    queue = loadQueueReadOnly(bundlePath);
+  } catch (error) {
+    return { root: { code: 'wave1_reference_queue_invalid', detail: `Queue authority is invalid: ${error.message}` } };
+  }
+  return [...queue.active_window, ...queue.refill_pool].find((item) => (
+    item.kind === 'wave1_topic_deepening'
+    && item.producer_rule === 'topic_deepening'
+    && item.payload?.assignment_mode === 'supplementary'
+    && item.payload?.topic_uid === topic.topic_uid
+    && item.payload?.topic_slug === topic.topic_slug
+  )) || null;
+}
+
+export function evaluateWave1ReferenceConvergence({ topic, requiredFloor, submittedBacking, projections = [], index = { valid: true, stale: false }, liveSupplementaryDemand = null, observedCount = null } = {}) {
   if (!topic?.topic_uid || !topic?.topic_slug) return { outcome: 'parent_root', root: { code: 'wave1_reference_topic_invalid', detail: 'Current canonical Topic fact is unavailable.' } };
   if (!Number.isInteger(requiredFloor) || requiredFloor < 1) return { outcome: 'parent_root', root: { code: 'missing_profile_parameter', detail: 'Wave1 reference floor must be a positive integer.' } };
   if (!submittedBacking?.ok) return { outcome: 'parent_root', root: submittedBacking?.root || { code: 'submitted_backing_invalid', detail: 'Submitted backing authority is unavailable.' } };
+  if (liveSupplementaryDemand?.root) return { outcome: 'parent_root', root: liveSupplementaryDemand.root };
 
   const byCandidate = new Map(projections.map((projection) => [projection.normalized_url, projection]));
   const incomplete = submittedBacking.candidates.filter((candidate) => {
@@ -244,12 +383,22 @@ export function evaluateWave1ReferenceConvergence({ topic, requiredFloor, submit
   if (incomplete.length > 0) return { outcome: 'materialize_projection', candidates: incomplete };
   if (!index.valid || index.stale) return { outcome: 'sync_reference_index', index };
 
-  const observed = submittedBacking.candidates.length;
+  const observed = Number.isInteger(observedCount) && observedCount >= 0
+    ? observedCount
+    : submittedBacking.candidates.length;
   if (observed < requiredFloor) {
     const deficit = requiredFloor - observed;
     return liveSupplementaryDemand
       ? { outcome: 'existing_supplementary', demand: liveSupplementaryDemand, observed, required: requiredFloor, deficit }
-      : { outcome: 'reference_floor_deficit', observed, required: requiredFloor, deficit };
+      : {
+          outcome: 'reference_floor_deficit', observed, required: requiredFloor, deficit,
+          enqueue_payload: {
+            topic_uid: topic.topic_uid,
+            topic_slug: topic.topic_slug,
+            assignment_mode: 'supplementary',
+            reference_floor_deficit: deficit,
+          },
+        };
   }
   return { outcome: 'satisfied', observed, required: requiredFloor };
 }

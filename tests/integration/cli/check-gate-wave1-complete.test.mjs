@@ -2,7 +2,7 @@
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
 import {
@@ -17,6 +17,7 @@ import { buildCanonicalTopicRegistryFact } from '../../../DPT_FRAMEWORK/engine/h
 import { collectEligibleWorkUnitProjection } from '../../../DPT_FRAMEWORK/engine/work-unit-projection.mjs';
 import { tryLoadGateDefinition } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 import { evaluateWave1Contract } from '../../../DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs';
+import { canonicalWave1ReferencePath } from '../../../DPT_FRAMEWORK/engine/helpers/wave1-reference-convergence.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs');
@@ -95,8 +96,12 @@ function projectionReferenceForTopic(dir, topic) {
     `reference/01-${slug}-deepening.md`,
   ]);
   const ref = candidates.find((candidate) => existsSync(join(dir, candidate)));
-  assert.ok(ref, `Wave1 fixture needs a concrete reference for ${topic.slug}`);
-  return ref;
+  if (ref) return ref;
+  const canonical = readdirSync(join(dir, 'reference'))
+    .filter((name) => name.startsWith(`${topic.slug}-`) && name.endsWith('.md'))
+    .sort()[0];
+  if (canonical) return `reference/${canonical}`;
+  assert.fail(`Wave1 fixture needs a concrete reference for ${topic.slug}`);
 }
 
 function materializeWave1Projections(dir) {
@@ -432,7 +437,24 @@ function submitAndReviewWave1WorkUnit(dir, options = {}) {
     ...options,
     cacheTrail: options.cacheTrail || `_cache/wave1/primary/${options.queueItemId || 'topic-a'}/deepening-topic-a`,
   });
+  materializeCanonicalFixtureProjection(dir, submission, {
+    sourceUrl: options.sourceUrl || 'https://example.com/news/deepening-topic-a',
+    cacheTrail: options.cacheTrail || `_cache/wave1/primary/${options.queueItemId || 'topic-a'}/deepening-topic-a`,
+  });
   return submission;
+}
+
+function materializeCanonicalFixtureProjection(dir, submission, { sourceUrl, cacheTrail }) {
+  const locator = canonicalWave1ReferencePath({ topicSlug: 'topic-a', sourceUrl });
+  assert.equal(locator.ok, true);
+  const submittedRef = 'reference/01-topic-a-deepening.md';
+  const content = readFileSync(join(dir, submittedRef), 'utf8');
+  writeFileSync(join(dir, locator.path), `${content}\n\n## Submitted Backing\n- ${submittedRef}\n- ${cacheTrail}\n- ${submission.record.work_id}\n`);
+  const indexPath = join(dir, 'reference/_INDEX.md');
+  const row = `| ${locator.path} | secondary | practitioner | Tier 2 | topic-a | wave1_topic | accepted | 2026-06-15 |`;
+  const index = readFileSync(indexPath, 'utf8');
+  if (!index.includes(`| ${locator.path} |`)) writeFileSync(indexPath, `${index}${row}\n`);
+  return locator.path;
 }
 
 function writeParityPlan(dir, name, topics) {
@@ -448,7 +470,14 @@ function writeParityReferenceIndex(dir, topics) {
   writeFileSync(join(dir, 'reference/_INDEX.md'), [
     '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
     '| --- | --- | --- | --- | --- | --- | --- | --- |',
-    ...topics.map((topic) => `| reference/${topic.slug}-deepening.md | primary | expert | Tier 2 | ${topic.slug} | wave1_topic | accepted | 2026-07-14 |`),
+    ...topics.flatMap((topic) => {
+      const sourceUrl = `https://docs.example.org/${topic.slug}/wave1-source`;
+      const canonical = canonicalWave1ReferencePath({ topicSlug: topic.slug, sourceUrl });
+      return [
+        `| reference/${topic.slug}-deepening.md | primary | expert | Tier 2 | ${topic.slug} | wave1_topic | accepted | 2026-07-14 |`,
+        `| ${canonical.path} | primary | expert | Tier 2 | ${topic.slug} | wave1_topic | accepted | 2026-07-14 |`,
+      ];
+    }),
     '',
   ].join('\n'));
 }
@@ -586,6 +615,9 @@ function submitParityTopic(dir, topic, { preserveQueue = false } = {}) {
     },
   });
   assert.equal(submission.submitted.ok, true, JSON.stringify(submission.submitted));
+  const canonical = canonicalWave1ReferencePath({ topicSlug: topic.slug, sourceUrl });
+  const original = readFileSync(join(dir, referencePath), 'utf8');
+  writeFileSync(join(dir, canonical.path), `${original}\n\n## Submitted Backing\n- ${referencePath}\n- ${cacheTrail}\n- ${submission.record.work_id}\n`);
   const depth = {
     version: 'depth-review.v1',
     topic_slug: topic.slug,
@@ -721,7 +753,7 @@ describe('check-gate-wave1-complete', () => {
     );
   });
 
-  it('1a. aggregates historical Wave1 artifact/reference coverage while checking only the current seed', () => {
+  it('1a. does not let a historical Wave1 binding satisfy the current Topic canonical projection', () => {
     const dir = createBundle(unique('historical-layout'));
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
@@ -734,8 +766,14 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'seed_topics/topic-a-new.md'), VALID_SEED_TOPIC.replace('slug: topic-a', 'slug: topic-a-new'));
     materializeWave1Projections(dir);
     const output = JSON.parse(runGate(dir).stdout);
-    assert.equal(output.check.passed, true, output.inspect.join('\n'));
-    assert.equal(output.check.failed_rule_ids.some((id) => id.endsWith(':topic-a-new')), false);
+    const inspected = JSON.parse(runInspect(dir).stdout);
+    assert.equal(output.check.passed, false);
+    assert.equal(output.check.failed_rule_ids.some((id) => id.startsWith('per_topic_ref_md_count_floor')), true);
+    assert.ok(output.inspect.some((line) => /wave1_reference_topic_invalid/.test(line)), output.inspect.join('\n'));
+    const gateHint = output.hints.find((hint) => hint.rule_id === 'per_topic_ref_md_count_floor');
+    const inspectHint = inspected.hints.find((hint) => hint.rule_id === 'per_topic_ref_md_count_floor');
+    assert.ok(gateHint && inspectHint);
+    assert.deepEqual({ ...gateHint, rerun: null }, { ...inspectHint, rerun: null });
   });
 
   it('1d. tolerates equivalent headings, bare URLs, paragraph findings, and numbered Key Facts', () => {
@@ -862,6 +900,10 @@ describe('check-gate-wave1-complete', () => {
     writeDepthReview(dir, {
       submission,
       reviewedRefs: [`${submission.record.paths.work_unit_dir}/`],
+    });
+    materializeCanonicalFixtureProjection(dir, submission, {
+      sourceUrl: 'https://example.com/news/deepening-topic-a',
+      cacheTrail: '_cache/wave1/primary/topic-a/deepening-topic-a',
     });
     writeWave1Trace(dir);
     const result = runGate(dir);

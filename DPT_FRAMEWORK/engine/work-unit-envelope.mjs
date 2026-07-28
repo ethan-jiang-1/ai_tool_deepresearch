@@ -396,6 +396,12 @@ function taskMarkdown(manifest, bundleDir, resultSchema, actorDelivery) {
   }
   const receiptSkeleton = ['work_started', 'file_written', 'work_done']
     .map((event) => JSON.stringify(lifecycleReceiptExample(manifest, event)));
+  const floorDeficit = manifest.kind === 'wave1_topic_deepening'
+    && manifest.queue_item?.payload?.assignment_mode === 'supplementary'
+    && Number.isInteger(manifest.queue_item.payload.reference_floor_deficit)
+    && manifest.queue_item.payload.reference_floor_deficit > 0
+    ? manifest.queue_item.payload.reference_floor_deficit
+    : null;
   return [
     `# Work Unit ${manifest.work_id}`,
     '',
@@ -413,6 +419,9 @@ function taskMarkdown(manifest, bundleDir, resultSchema, actorDelivery) {
     `- bundle_dir: \`${path.resolve(bundleDir)}\`; work_unit_dir: \`${manifest.paths.work_unit_dir}\`.`,
     `- Authority refs: manifest \`${manifest.paths.manifest_ref}\`; beacon \`${manifest.paths.beacon_ref}\`; result schema \`${manifest.paths.result_schema_ref}\`; result \`${manifest.paths.result_ref}\`; runtime receipt \`${manifest.paths.runtime_receipt_ref}\`.`,
     `- Result schema requires: ${resultSchema.required.join(', ')}. Allowed fields: ${Object.keys(resultSchema.properties).join(', ')}.`,
+    ...(floorDeficit === null ? [] : [
+      `- Read-only acquisition objective: the bound queue snapshot recorded a remaining gap of ${floorDeficit} countable current-canonical references for this Topic. This is not a required output, result field, receipt condition, source-acceptance claim, or Wave1 Gate pass assertion; the Phase reruns convergence from current direct facts after submit.`,
+    ]),
     '',
     '### Result JSON Starter',
     '',

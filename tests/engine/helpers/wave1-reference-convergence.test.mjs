@@ -7,6 +7,8 @@ import {
   canonicalWave1ReferencePath,
   classifyWave1ReferencePath,
   evaluateWave1ReferenceConvergence,
+  evaluateWave1ReferenceTopic,
+  inspectWave1CandidateProjection,
   normalizeWave1ReferenceUrl,
   resolveReviewedWave1SubmittedBacking,
 } from '../../../DPT_FRAMEWORK/engine/helpers/wave1-reference-convergence.mjs';
@@ -159,6 +161,54 @@ describe('reviewed Wave1 submitted backing', () => {
     assert.deepEqual(resolved.candidates[0].work_ids, [first.work_id, second.work_id].sort());
   });
 
+  it('closes only a canonical projection with the candidate-exact URL and backing coordinates', () => {
+    const dir = tempWorkUnitBundle('wave1-convergence-');
+    createdBundles.push(dir);
+    const topicA = topic('tp_123e4567-e89b-12d3-a456-426614174000', '01', 'topic-a');
+    writePlan(dir, [topicA]);
+    const record = submitWave1Candidate(dir, {
+      queueItemId: 'topic-a-one',
+      topicUid: topicA.topic_uid,
+      topicSlug: topicA.slug,
+      sourceUrl: 'https://example.com/paper',
+    });
+    writeDepthReview(dir, topicA.slug, [record.paths.work_unit_dir]);
+    const backing = resolveReviewedWave1SubmittedBacking(dir, { topic: topicA.slug, topicRegistryFact: topicRegistryFact(dir) });
+    const candidate = backing.candidates[0];
+    const locator = canonicalWave1ReferencePath({ topicSlug: topicA.slug, sourceUrl: candidate.normalized_url });
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    writeFileSync(join(dir, locator.path), referenceContent({
+      source_url: candidate.normalized_url,
+      related_topic: topicA.slug,
+      coreContent: `Projection backing: ${candidate.source_refs[0]} ${candidate.cache_trail_refs[0]} ${candidate.work_unit_refs[0]}.`,
+    }));
+
+    const closed = inspectWave1CandidateProjection(dir, { topicSlug: topicA.slug, candidate });
+    assert.equal(closed.path_class, 'canonical_current');
+    assert.equal(closed.candidate_binding, true);
+    assert.equal(closed.format_valid, true);
+    assert.equal(closed.url_valid, true);
+    assert.equal(closed.countable, true);
+
+    const exactTopic = evaluateWave1ReferenceTopic(dir, {
+      topic: topicA.slug,
+      topicRegistryFact: topicRegistryFact(dir),
+      requiredFloor: 1,
+      index: { valid: true, stale: false },
+    });
+    assert.equal(exactTopic.numeric.count, 1);
+    assert.equal(exactTopic.result.outcome, 'satisfied');
+
+    writeFileSync(join(dir, locator.path), referenceContent({
+      source_url: candidate.normalized_url,
+      related_topic: topicA.slug,
+      coreContent: `Projection backing: ${candidate.source_refs[0]}.`,
+    }));
+    const unbound = inspectWave1CandidateProjection(dir, { topicSlug: topicA.slug, candidate });
+    assert.equal(unbound.candidate_binding, false);
+    assert.equal(unbound.issue, 'canonical_projection_body_unbound');
+  });
+
   it('fails closed when a reviewed submitted row is bound to another current Topic', () => {
     const dir = tempWorkUnitBundle('wave1-convergence-');
     createdBundles.push(dir);
@@ -220,6 +270,25 @@ describe('Wave1 reference convergence priority', () => {
     assert.deepEqual(result.candidates.map((candidate) => candidate.normalized_url), ['https://example.com/b']);
   });
 
+  it('does not let legacy or misnamed current paths count as closed coverage', () => {
+    for (const path_class of ['legacy', 'misnamed_current']) {
+      const result = evaluateWave1ReferenceConvergence({
+        topic: topicFact,
+        requiredFloor: 1,
+        submittedBacking: { ok: true, candidates: [backing.candidates[0]] },
+        projections: [{
+          ...backing.candidates[0],
+          path_class,
+          candidate_binding: true,
+          format_valid: true,
+          url_valid: true,
+          countable: true,
+        }],
+      });
+      assert.equal(result.outcome, 'materialize_projection');
+    }
+  });
+
   it('requires index synchronization before an otherwise true floor deficit', () => {
     const result = evaluateWave1ReferenceConvergence({
       topic: topicFact,
@@ -244,16 +313,24 @@ describe('Wave1 reference convergence priority', () => {
 
     const cases = [[6, 2], [5, 3], [5, 3], [6, 2]];
     for (const [observed, deficit] of cases) {
+      const candidates = Array.from({ length: observed }, (_, index) => ({ normalized_url: `https://example.com/${index}` }));
+      const projections = candidates.map((candidate) => ({
+        ...candidate,
+        path_class: 'canonical_current',
+        candidate_binding: true,
+        format_valid: true,
+        url_valid: true,
+        countable: true,
+      }));
       const result = evaluateWave1ReferenceConvergence({
         topic: topicFact,
         requiredFloor: 8,
-        submittedBacking: { ok: true, candidates: closedProjections.slice(0, observed) },
-        projections: closedProjections.slice(0, observed),
+        submittedBacking: { ok: true, candidates },
+        projections,
       });
       assert.equal(result.outcome, 'reference_floor_deficit');
-      assert.equal(result.observed, Math.min(observed, closedProjections.length));
-      assert.equal(result.deficit, 8 - Math.min(observed, closedProjections.length));
-      assert.ok(deficit >= 2);
+      assert.equal(result.observed, observed);
+      assert.equal(result.deficit, deficit);
     }
   });
 });

@@ -21,7 +21,7 @@ import {
   inspectCacheLeaf,
 } from './cache-leaf-contract.mjs';
 import { makeContractFinding } from './wave-contract-findings.mjs';
-import { normalizeWave1ReferenceUrl } from './wave1-reference-convergence.mjs';
+import { normalizeWave1ReferenceUrl } from './reference-url.mjs';
 
 function checkerFinding(rule, {
   defaultRuleId,

@@ -66,6 +66,18 @@ function exactReceiptSet(actual, expected, label) {
   }
 }
 
+function validateReferenceFloorDeficit(kind, queueItem) {
+  const payload = queueItem?.payload || {};
+  if (!Object.hasOwn(payload, 'reference_floor_deficit')) return;
+  const value = payload.reference_floor_deficit;
+  if (kind !== 'wave1_topic_deepening' || payload.assignment_mode !== 'supplementary') {
+    throw new Error('reference_floor_deficit is legal only on supplementary Wave1 assignments');
+  }
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error('reference_floor_deficit must be a positive integer');
+  }
+}
+
 function requiredOutputsFor({ kind, queueItem, topicBinding }) {
   const receipts = queueItem?.required_receipts;
 
@@ -130,6 +142,7 @@ export function resolveWorkUnitAssignmentContract({
   if (!baseOutputContract || typeof baseOutputContract !== 'object') throw new Error('baseOutputContract is required for assignment resolution');
 
   rejectReservedSelectors(queueItem, baseOutputContract);
+  validateReferenceFloorDeficit(kind, queueItem);
   const requiredOutputs = requiredOutputsFor({ kind, queueItem, topicBinding });
   return WorkUnitOutputContractSchema.parse({
     ...clone(baseOutputContract),

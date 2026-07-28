@@ -2,6 +2,11 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+import { queueItemSnapshotHash } from '../../DPT_FRAMEWORK/engine/queue-manager-core.mjs';
+import { claimAndSubmitWorkUnit, cleanupWorkUnitBundle, delegatedQueueItem, tempWorkUnitBundle } from './work-unit-test-helpers.mjs';
 
 const VERSION = 'work-unit.assignment.v1';
 
@@ -114,6 +119,52 @@ describe('resolveWorkUnitAssignmentContract', () => {
     });
     assert.deepEqual(requiredOutputs(supplementary), []);
     assert.deepEqual(requiredOutputs(wave2), []);
+  });
+
+  it('accepts only a positive supplementary Wave1 reference-floor objective', async () => {
+    const accepted = await resolve({
+      kind: 'wave1_topic_deepening',
+      queueItem: queueItem('wave1_topic_deepening', {
+        payload: { ...topic, wave: 1, assignment_mode: 'supplementary', reference_floor_deficit: 3 },
+        required_receipts: [],
+      }),
+    });
+    assert.deepEqual(requiredOutputs(accepted), []);
+    for (const payload of [
+      { ...topic, wave: 1, assignment_mode: 'primary', reference_floor_deficit: 1 },
+      { ...topic, wave: 1, assignment_mode: 'supplementary', reference_floor_deficit: 0 },
+      { ...topic, wave: 1, assignment_mode: 'supplementary', reference_floor_deficit: 1.5 },
+      { ...topic, wave: 1, assignment_mode: 'supplementary', reference_floor_deficit: '3' },
+    ]) {
+      await assert.rejects(() => resolve({
+        kind: 'wave1_topic_deepening',
+        queueItem: queueItem('wave1_topic_deepening', { payload, required_receipts: [] }),
+      }), /reference_floor_deficit/);
+    }
+  });
+
+  it('binds the objective into the snapshot and projects it only as read-only task context', async () => {
+    const withObjective = delegatedQueueItem('supplementary-floor-hash', {
+      phase: 'wave1',
+      payload: { assignment_mode: 'supplementary', reference_floor_deficit: 2 },
+    });
+    const withoutObjective = { ...withObjective, payload: { ...withObjective.payload } };
+    delete withoutObjective.payload.reference_floor_deficit;
+    assert.notEqual(queueItemSnapshotHash(withObjective), queueItemSnapshotHash(withoutObjective));
+
+    const dir = tempWorkUnitBundle('wave1-floor-objective-');
+    try {
+      const { record } = claimAndSubmitWorkUnit(dir, {
+        phase: 'wave1',
+        queueItemId: 'supplementary-floor-objective',
+        queueItemOverrides: { payload: { ...topic, wave: 1, assignment_mode: 'supplementary', reference_floor_deficit: 2 } },
+      });
+      const task = readFileSync(join(dir, record.paths.task_ref), 'utf8');
+      assert.match(task, /Read-only acquisition objective:.*gap of 2 countable current-canonical references/s);
+      assert.doesNotMatch(task, /"reference_floor_deficit"/);
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
   });
 
   it('rejects missing, unknown, mismatched, partial, and cross-topic Wave1 assignment facts', async () => {

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.55
+
+- Wave1 reference closeout now converges through one canonical submitted-backing locator and root-first evaluator shared by inspect and the formal gate. Canonical current projections, legacy navigation files, and misnamed current files remain distinct; only a candidate-exact backed canonical projection contributes to the current floor.
+- `sync-reference-index` renders the all-family eight-column inventory through the existing artifact-persistence CAS boundary. It preserves valid landed dates, returns `unchanged` for identical bytes, and does not create evidence, queue, or lifecycle authority.
+- A true post-repair Wave1 reference-floor deficit can travel on the existing supplementary queue item as a snapshot-bound, read-only task objective. This adds neither a queue controller nor a new evidence authority; closure is always recomputed from current direct facts.
+
 ## v0.54
 
 - Wave0 Seed Topic projection now closes at each current result-declared, schema-valid `source.yaml` array coordinate: every `<work_id>/N` has an exact navigation entry or explicit deferred disposition, while duplicate source positions remain distinct.

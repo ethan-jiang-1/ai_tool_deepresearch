@@ -1,17 +1,17 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.54**
+> **DPT_FRAMEWORK v0.55**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.54
+## Current Release: v0.55
 
-- Wave0 now treats each current result-declared, schema-valid `source.yaml` array position as one `<work_id>/N` Seed Topic navigation coordinate. A coordinate has one exact entry or deferred disposition; duplicate source positions remain distinct.
-- `result_hash` authenticates the submitted result declaration, not a permanent source-byte snapshot. The existing direct-output reader, inspect, and formal gate consume this current candidate fact without adding a source authority, writer, lifecycle state, or control plane.
-- The existing packet -> writer -> same Wave inspect loop remains the only closeout path. The template/card explains current ordinal shape; the command playbook owns packet, authorization, and repair mechanics.
+- Wave1 closeout now uses one canonical current Topic reference locator plus submitted-backing convergence shared by inspect and formal gate. A legacy or misnamed path remains navigation history, not current floor coverage.
+- After canonical projection persistence, `sync-reference-index` refreshes the all-family navigation table through its existing CAS boundary; then the existing Seed Topic packet writer refreshes affected refs and the same inspect reruns.
+- Only a true post-repair Wave1 floor deficit uses the existing supplementary demand with a snapshot-bound read-only objective. This adds no controller, queue authority, or evidence authority.
 
 ## 0. 禁用内置捷径（最高优先）
 

@@ -83,6 +83,20 @@ describe('evaluateQueueDemandAdmission', () => {
     assert.match(result.reason, /reserved assignment selector required_outputs/);
   });
 
+  it('rejects an invalid floor objective before delegated admission', () => {
+    const accepted = evaluateQueueDemandAdmission({
+      queueItem: delegated('wave1_topic_deepening', { payload: { reference_floor_deficit: 2 } }),
+      currentFacts,
+    });
+    assert.equal(accepted.ok, true);
+    const rejected = evaluateQueueDemandAdmission({
+      queueItem: delegated('wave1_topic_deepening', { payload: { assignment_mode: 'primary', reference_floor_deficit: 2 } }),
+      currentFacts,
+    });
+    assert.equal(rejected.ok, false);
+    assert.equal(rejected.reason_code, 'assignment_contract_rejected');
+  });
+
   it('excludes non-delegated cards and mutates neither input nor facts', () => {
     const card = delegated('wave1_topic_deepening', { targets: { controller: 'main-agent' }, payload: { assignment_mode: 'invalid' } });
     const beforeCard = JSON.stringify(card);

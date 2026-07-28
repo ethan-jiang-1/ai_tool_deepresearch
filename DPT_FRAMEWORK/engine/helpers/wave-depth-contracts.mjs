@@ -14,7 +14,7 @@ import { inspectCacheLeaf } from './cache-leaf-contract.mjs';
 import { evaluateTopicLayouts } from './topic-layout.mjs';
 import { makeContractFinding } from './wave-contract-findings.mjs';
 import { selectWave1CarriedTargetReceiptForWave2 } from './wave-carried-target-receipts.mjs';
-import { normalizeWave1ReferenceUrl } from './wave1-reference-convergence.mjs';
+import { normalizeWave1ReferenceUrl } from './reference-url.mjs';
 
 const DEPTH_DECISIONS = new Set(['accept', 'supplement_required', 'blocked_contract']);
 const ACCEPTED_SOURCE_STATUSES = new Set(['accepted', 'countable', 'accepted_countable']);

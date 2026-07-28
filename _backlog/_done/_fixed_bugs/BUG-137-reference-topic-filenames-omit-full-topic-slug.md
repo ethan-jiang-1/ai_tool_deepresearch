@@ -7,7 +7,7 @@ bundle: dpt_rb_openspec-influence-landscape
 phase: wave1
 node: phases/phase-wave1.md
 gate: wave1-complete
-status: active
+status: fixed
 ---
 
 # BUG-137: topic reference 文件名没有使用完整 topic slug
@@ -130,3 +130,14 @@ topic 都给出 `0 countable references`，而不是仅报告 presentation advis
    一致识别；legacy layout 只有在有明确 compatibility/migration rule 时才可读取。
 3. regression 覆盖完整 slug 正常计数、`NN-wave1-*` 不被静默计入、以及迁移后
    backing/declaration hashes 不变。
+
+## Resolution
+
+Fixed by `converge-wave1-reference-projections` (v0.55), archived at
+`openspec/changes/archive/2026-07-28-converge-wave1-reference-projections/`.
+Wave1 now derives one collision-safe full-current-slug canonical locator from
+normalized manifest-bound submitted backing. The shared evaluator recognizes
+legacy and misnamed paths as explicit repair/navigation classes while allowing
+only a candidate-exact canonical projection to satisfy current coverage.
+Focused temporary-bundle integration proves canonical closure and legacy
+non-counting without fabricating ledger, receipt, or gate authority.

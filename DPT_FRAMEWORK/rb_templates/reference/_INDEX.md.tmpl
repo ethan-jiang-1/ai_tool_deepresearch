@@ -1,7 +1,7 @@
 # Reference Index — {{name}}
 
 > Canonical machine-readable inventory of `reference/` sources for this run.
-> The Phase Agent appends one row per source at the end of each wave (wave0 → wave1 → wave2) and refreshes the metadata below.
+> The narrow `sync-reference-index` operation renders every row from committed flat reference metadata and path classification after each wave. Do not hand-append rows.
 
 - **Run:** {{name}}
 - **Last updated:** _(populated on first wave update)_
@@ -10,4 +10,4 @@
 | ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |
 |----------|-------------|-------------|------|---------------|--------------|-------------------|-------------|
 
-_No reference files yet. Rows are appended as waves 0 / 1 / 2 produce `00-shared-*`, `0N-*`, and `00-cross-*` files._
+_No reference files yet. Synchronization preserves the `00-shared-*`, canonical/current-or-legacy Wave1, and `00-cross-*` flat families._

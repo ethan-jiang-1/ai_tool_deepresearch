@@ -16,14 +16,14 @@ initial analysis. Keep the board and the matching detailed checklist below in
 sync whenever work starts, pauses, passes a phase gate, or is archived.
 
 **Last progress update:** 2026-07-28\
-**Current position:** Change 1 is archived; Change 2 is ready to re-read its
+**Current position:** Change 2 is archived; Change 3 is ready to re-read its
 current seams and propose.
 
 | Order | Proposal name | Bugs | State now | Next checkpoint | Advance only when |
 | --- | --- | --- | --- | --- | --- |
 | 1 | `make-wave0-candidate-projection-complete` | BUG-132 | `archived` | Completed at `openspec/changes/archive/2026-07-28-make-wave0-candidate-projection-complete/`. | Focused direct and temporary-bundle evidence passed; BUG-132 is closed. |
-| 2 | `converge-wave1-reference-projections` | BUG-133, BUG-136, BUG-137 | `ready_to_propose` | Re-read current reference schema, closeout, count/index, and queue seams; then propose. | Change 1 is archived and the re-read confirms this plan's direct facts still hold. |
-| 3 | `scope-wave2-return-map-inspection` | BUG-134 | `queued_after_change_2` | Re-read the Wave2 inspect/artifact seams after Change 2 is archived, then propose. | Change 2 is archived and the parser-scope defect remains current. |
+| 2 | `converge-wave1-reference-projections` | BUG-133, BUG-136, BUG-137 | `archived` | Completed at `openspec/changes/archive/2026-07-28-converge-wave1-reference-projections/`. | Canonical convergence, index CAS sync, and bounded supplementary objective passed focused proof; BUG-133/136/137 are closed. |
+| 3 | `scope-wave2-return-map-inspection` | BUG-134 | `ready_to_propose` | Re-read the Wave2 inspect/artifact seams, then propose. | Change 2 is archived and the parser-scope defect remains current. |
 | 4 | `complete-terminal-readiness-status` | BUG-135 | `queued_after_change_3` | Re-read terminal transition and rollback seams after Change 3 is archived, then propose. | Change 3 is archived and the terminal state invariant remains current. |
 
 ### Progress Update Rules
@@ -46,6 +46,7 @@ current seams and propose.
 | --- | --- | --- | --- |
 | 2026-07-28 | Group plan | `research_complete_pre_proposal` | Four-change boundary and verification direction recorded; next action is `/opsx:propose make-wave0-candidate-projection-complete`. |
 | 2026-07-28 | `make-wave0-candidate-projection-complete` | `archived` | Candidate-granular Wave0 projection landed with 65/65 focused checks, 7/7 version checks, package/governance validation, and strict OpenSpec validation. BUG-132 moved to fixed; next action is Change 2 seam re-read before proposal. |
+| 2026-07-28 | `converge-wave1-reference-projections` | `archived` | v0.55 landed canonical Wave1 backing convergence, all-family index CAS sync, and bounded supplementary objective; 56 focused checks plus routing/requirements/spec governance passed. BUG-133/136/137 moved to fixed; next action is Change 3 seam re-read before proposal. |
 
 ## 1. Decision
 
@@ -92,11 +93,11 @@ large, shallow change with an unclear stopping point.
 | BUG-130 | `dormant_current_counterexample_required` | No implementation. Reopen only when a complete existing-backed pure-synthesis branch is rejected solely for a missing Wave2 receipt or Phase-owned projection. |
 | BUG-131 | `accepted_policy_residual_risk` | No implementation. Wave0/Wave1 eligible quality floors and Wave2 fail-closed authority roots are accepted policy. A different policy needs a separate product decision. |
 | BUG-132 | fixed_archived_change | `make-wave0-candidate-projection-complete` archived with focused deterministic proof. |
-| BUG-133 | active | Change 2. |
+| BUG-133 | fixed_archived_change | `converge-wave1-reference-projections` archived with focused deterministic proof. |
 | BUG-134 | active | Change 3. |
 | BUG-135 | active | Change 4. |
-| BUG-136 | active | Change 2. |
-| BUG-137 | active | Change 2. |
+| BUG-136 | fixed_archived_change | `converge-wave1-reference-projections` archived with focused deterministic proof. |
+| BUG-137 | fixed_archived_change | `converge-wave1-reference-projections` archived with focused deterministic proof. |
 
 "Systematically fix all bugs" here means preserving this distinction. A prior
 historical report is not authorization to weaken a currently accepted contract,
@@ -605,46 +606,45 @@ reader, one readiness evaluator, and the existing packet writer.\
 
 ### 11.2 Change 2 -- `converge-wave1-reference-projections`
 
-**State:** `ready_to_propose`\
-**Current evidence:** the direct facts, required convergence order, and proof
-shape are recorded in sections 3, 7, 10, and 12.\
-**Next action:** after Change 1 archives, re-read current seams, then run
-`/opsx:propose converge-wave1-reference-projections`.
+**State:** `archived`\
+**Current evidence:** v0.55 convergence, index-sync, queue-objective, and
+temporary-bundle proof are recorded in the archive and the verification run.\
+**Next action:** Change 3 re-reads its Wave2 seams before proposal.
 
 - [x] Establish that BUG-133/136/137 share one consumer-projection convergence
   problem while preserving submitted source/cache backing as authority.
-- [ ] After Change 1 archives, re-read the current reference schema, Phase
+- [x] After Change 1 archives, re-read the current reference schema, Phase
   Wave1 closeout, count helper, index validator, queue/depth helper, and
   accepted specs; revise this checklist if current facts invalidate any
   assumption.
-- [ ] Create the proposal, delta specs, design, task list, and
+- [x] Create the proposal, delta specs, design, task list, and
   `verification-plan.yaml`; its bounded result must distinguish canonical
   layout, legacy layout, materializable backing, index repair, and true source
   deficit.
-- [ ] Admit the proposal to apply only after it names one canonical full-topic
+- [x] Admit the proposal to apply only after it names one canonical full-topic
   locator, one shared convergence evaluator, and one narrow `_INDEX.md` sync
   seam, with no generic controller or parallel count authority.
-- [ ] Apply only the approved tasks: converge current reference identity,
+- [x] Apply only the approved tasks: converge current reference identity,
   backing-aware floor evaluation, root-first index repair, and the legal
   materialize-before-supplementary-work order; update all stale naming
   guidance that the proposal owns.
-- [ ] Run and record focused unit and temporary-bundle integration proof,
+- [x] Run and record focused unit and temporary-bundle integration proof,
   including canonical full-slug count, legacy non-counting, one invalid-index
   parent root, sync behavior, and both sides of the controlled `6/5/5/6`
   case; record all four verification routing classifications.
-- [ ] Archive the completed change, update BUG-133/136/137 dispositions,
+- [x] Archive the completed change, update BUG-133/136/137 dispositions,
   record the archive/commit/proof below, and promote Change 3 in the progress
   board.
 
-**Archive / proof evidence:** `TBD`
+**Archive / proof evidence:** `openspec/changes/archive/2026-07-28-converge-wave1-reference-projections/`; v0.55 focused proof: 56 tests across 9 suites, routing assets valid, and requirements/spec governance zero violations. Commit is not yet created.
 
 ### 11.3 Change 3 -- `scope-wave2-return-map-inspection`
 
-**State:** `queued_after_change_2`\
+**State:** `ready_to_propose`\
 **Current evidence:** the artifact-family boundary and test direction are
 recorded in sections 3, 8, 10, and 12.\
-**Next action:** after Change 2 archives, re-read the current Wave2 inspect
-and artifact contracts, then run `/opsx:propose scope-wave2-return-map-inspection`.
+**Next action:** re-read the current Wave2 inspect and artifact contracts,
+then run `/opsx:propose scope-wave2-return-map-inspection`.
 
 - [x] Establish that the false failure is a parser-scope error: Seed Topic
   Wave2 entries are return maps, while synthesis, ledger, and index artifacts

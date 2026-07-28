@@ -7,7 +7,7 @@ bundle: dpt_rb_openspec-derivative-frameworks
 phase: wave1
 node: phases/phase-wave1.md
 gate: wave1-complete
-status: active
+status: fixed
 ---
 
 # BUG-133: Wave1 reference floor 不足没有转成补充需求
@@ -122,3 +122,14 @@ topic 的 flat reference 文件数是 `9/8/8/9`，上述 inspect 命令也已通
   验证产生 projection repair 而非新搜索。
 - Gate/inspect advice 必须暴露 topic、缺口、repair class 和合法路径，不能只指向
   泛化的 `reference/` 目录。
+
+## Resolution
+
+Fixed by `converge-wave1-reference-projections` (v0.55), archived at
+`openspec/changes/archive/2026-07-28-converge-wave1-reference-projections/`.
+The shared convergence evaluator now distinguishes materializable submitted
+backing and index repair from a true post-repair deficit. Only the latter
+returns the existing supplementary Wave1 payload with a positive,
+snapshot-bound `reference_floor_deficit`; later closure is recomputed from
+current direct facts. Focused unit and temporary-bundle proof include the
+controlled floor-8 `6/5/5/6` deficits and existing-demand reuse.

@@ -7,7 +7,7 @@ bundle: dpt_rb_openspec-influence-landscape
 phase: wave1
 node: phases/phase-wave1.md
 gate: wave1-complete
-status: active
+status: fixed
 ---
 
 # BUG-136: reference/_INDEX.md 在 reference 产出后没有更新
@@ -101,3 +101,14 @@ reference 文件的 evidence authority。
    精确 row coordinate。
 3. Wave0/Wave1/Wave2 materialization 都走同一 index append/refresh contract，
    并覆盖 rerun append/idempotency。
+
+## Resolution
+
+Fixed by `converge-wave1-reference-projections` (v0.55), archived at
+`openspec/changes/archive/2026-07-28-converge-wave1-reference-projections/`.
+`sync-reference-index` deterministically renders all committed flat reference
+families into the accepted eight-column inventory and persists only
+`reference/_INDEX.md` through the established CAS boundary. It retains valid
+landed dates, returns `unchanged` for identical bytes, and blocks invalid
+table/path/CAS roots without creating evidence or queue authority. Focused
+tests cover all-family retention, invalid parent diagnostics, and CAS drift.

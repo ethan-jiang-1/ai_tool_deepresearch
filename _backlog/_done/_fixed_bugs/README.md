@@ -136,6 +136,9 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-128 | 2026-07-27 | Wave0 shared-reference floor is retained as an explicit `claim_verification` product policy with eligible degradation |
 | BUG-132 | 2026-07-28 | Wave0 source-array candidates were covered only at parent work-id granularity; current exact `<work_id>/<ordinal>` projection coverage now shares one direct-output and readiness path with inspect/gate |
 | BUG-138 | 2026-07-28 | Wave completion did not materialize correct seed-topic backfill; `fix-seed-topic-projection-materialization` introduced the authority-bound projection writer, template/protocol boundary, shared readiness evaluator, and deterministic Wave-chain regression |
+| BUG-133 | 2026-07-28 | Wave1 reference floor deficit now converges through the existing supplementary demand only after projection/index repair |
+| BUG-136 | 2026-07-28 | Reference inventory now has deterministic all-family CAS synchronization |
+| BUG-137 | 2026-07-28 | Wave1 current coverage now uses a canonical full-topic-slug submitted-backing locator |
 
 **Next available bug ID: BUG-139**
 

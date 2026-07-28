@@ -57,72 +57,159 @@ For returned work, phase guidance SHALL direct the Agent to consume the existing
 
 ### Requirement: Wave1 phase body completeness with subagent boundary
 
-Wave1 phase body SHALL keep topic deepening in the normal `wave1_topic_deepening` work-unit path and SHALL load `shared/shared-reference-template` through its actual `requires` chain before the Phase Agent materializes consumer references. Merely mentioning the template filename in prose or asking the Agent to discover it indirectly SHALL NOT satisfy this producer contract.
+`phase-wave1.md` SHALL remain the Agent-facing controller for Wave1's
+queue-driven deepening flow. It SHALL load the shared reference template through
+its actual `requires` chain at the Phase-owned reference materialization
+decision point. The Sub-agent owns bounded search/fetch, candidate result,
+source/cache facts, runtime receipt, and its actor result. The Phase Agent owns
+ordinary queue/claim/dry-submit/submit operation, Phase-owned consumer
+projection, depth review, Seed Topic packet formation, and same-check repair.
+The Phase Agent SHALL not fabricate Sub-agent source/cache/result/receipt
+semantics or ask the user to run ordinary pipeline commands.
 
-The returned-work path SHALL run existing dry-submit before formal submit and consume its one Engine-derived disposition: authorized mechanical candidate repair returns to the same dry-submit for the same `work_id`; actor-owned semantic content returns to the actor before `work_done` or uses the existing fail-and-replace path after `work_done`; contract integrity or missing-contract results remain with the named Engine owner/terminal boundary. The Phase Agent SHALL not fabricate Sub-agent output semantics, cache declarations, receipts, submitted rows, or provenance. Only a passed formal submit unlocks the topic's Phase-owned closeout.
+After a successful formal Wave1 submit with accepted backing, the Phase Agent
+SHALL obtain the current Topic's one Wave1 reference-convergence result and
+follow its returned legal action. For an authenticated materialization root, it
+shall use the shared template and canonical locator to author a consumer
+reference only from submitted backing; stage/persist that reference through the
+existing artifact-persistence boundary; run `sync-reference-index`; refresh the
+affected Seed Topic's concrete reference navigation only through the existing
+Projection Packet / `operate-topic-state apply` writer when it changed; and
+rerun the same Wave1 inspect. It SHALL not hand-edit a seed, index, ledger,
+receipt, cache trail, declaration, or trace. A successful submit alone does not
+authorize a broad filename choice, direct Seed mutation, or an invented source.
 
-Immediately after successful submit, the Phase Agent SHALL follow one visible checklist in this order: materialize the existing consumer reference/index from that submitted backing, perform the existing `depth-review.yaml` judgment, backfill the applicable seed return-map tokens with evidence meaning and concrete navigation refs, then proceed to the existing full-drain Wave inspect. This checklist SHALL point to the existing closeout sections and SHALL NOT redefine their field shape, deterministic validator, or authority. It SHALL NOT require the Agent to copy submitted `source_claims[]`, accepted URLs, cache refs, Wave0 URL arrays, new-source URL arrays, or derived floors into a second blocking authority.
+For an index-sync root, the Phase Agent SHALL run the narrow synchronizer and
+rerun the same inspect. For an existing supplementary demand, it SHALL return
+to the existing queue/work-unit loop rather than add a duplicate. For a true
+positive reference-floor deficit with no live supplementary demand, it SHALL
+form one existing `topic_deepening` supplementary card through the normal queue
+operation, with the evaluator-returned snapshot-bound
+`payload.reference_floor_deficit`; then claim, dry-submit, submit, run normal
+Phase closeout, and rerun the same inspect. The field is an acquisition
+objective, not a delegated output or a pass claim. The Phase Agent SHALL not
+direct-search Wave1 evidence, create a new queue kind, run a background loop,
+or turn a projection/index defect into a research demand.
 
-After successful submit, the Phase Agent SHALL write `depth-review.yaml` from facts that are not already owned by submitted authority. The blocking review shape SHALL contain `version`, canonical topic binding, `reviewed_work_unit_refs[]`, depth-dimension judgments, profile-check judgments, `decision`, and `supplementary_queue_item_ids[]`. It SHALL NOT require the Agent to copy submitted `source_claims[]`, accepted URLs, cache refs, Wave0 URL arrays, new-source URL arrays, or derived floors into a second blocking authority. The Engine SHALL derive those facts from the reviewed submitted rows, Wave0 source authority, and profile.
+After successful submit, `depth-review.yaml` SHALL continue to contain only
+facts not already owned by submitted authority: version, canonical Topic
+binding, reviewed work-unit refs, depth-dimension judgments, profile-check
+judgments, decision, and supplementary queue IDs. It SHALL not copy submitted
+source/cache arrays, Wave0 URL arrays, derived floor facts, or a second
+reference-count authority. The reference-floor deficit may be cited as a
+read-only queue objective when the existing supplementary decision records that
+queue ID, but depth review shall not create, certify, or recompute it.
 
-At each affected inspect/gate/submit failure, phase guidance SHALL consume the Engine-provided direct repair coordinates: `repair_kind`, `missing_fact`, `write_to`, and `rerun`. When `repair_kind` is `agent_action|engine_operation`, `write_to` is an already authorized mutable surface or legal operation, and no new semantic/risk decision is needed, the Agent SHALL perform the mechanical repair and rerun the named checkpoint without asking the user to execute ordinary commands. `user_decision|external_action|missing_contract` SHALL identify only the smallest Agent-facing boundary. Because Wave1 is `stop: no`, those classifications SHALL NOT by themselves authorize the Phase Agent to initiate user-facing interaction or wait for acknowledgement. If a relevant user-initiated normal conversation turn is already current, the Agent SHALL answer from direct facts and, if the requested action reaches an unavailable path, state only the smallest boundary without persisting a decision or changing lifecycle authority. Guidance SHALL NOT infer repair kind from a path or invite hand-written ledger, receipt, trace, hash, or provenance repair.
+At each affected inspect/gate/submit failure, Phase guidance SHALL consume the
+Engine-provided `repair_kind`, `missing_fact`, `write_to`, and `rerun` fields.
+When `repair_kind` is `agent_action|engine_operation`, `write_to` is an already
+authorized mutable surface/legal operation, and no new semantic/risk decision
+is needed, the Agent SHALL perform the mechanical repair and rerun the named
+checkpoint. `user_decision|external_action|missing_contract` identifies only
+the smallest Agent-facing boundary. Because Wave1 is `stop: no`, those
+classifications shall not themselves authorize a user-facing wait or escalation.
 
-When a valid `research_profile` decision is already recorded but `research_style_params` or one of its derived Wave floors is missing, the existing `apply-research-style.mjs` operation SHALL be the mechanical owner. Wave1/Wave2 findings SHALL use `repair_kind: engine_operation`, name the exact existing operation, and return to the same inspect/Gate checkpoint. Only absence or invalidity of the underlying recorded profile semantics MAY remain a `user_decision` boundary. This correction SHALL NOT add a style resolver, copy style values into Wave code, or change Wave verdict/routing.
+#### Scenario: Wave1 materializes canonical closeout after submitted backing
+
+- **WHEN** a Wave1 work unit formally submits accepted backing that lacks its
+  current canonical consumer projection
+- **THEN** phase guidance SHALL direct the Phase Agent to materialize the
+  canonical reference, synchronize the index, refresh an affected Seed Topic
+  ref through the existing packet writer, and rerun Wave1 inspect
+- **AND** it SHALL not require the Sub-agent to write a consumer reference or
+  the user to run a persistence/index/packet command
+
+#### Scenario: stale index takes the narrow repair path
+
+- **WHEN** current canonical backed references exist but the index table or row
+  coverage is stale
+- **THEN** phase guidance SHALL direct `sync-reference-index` and the same
+  Wave1 inspect
+- **AND** it SHALL not direct manual row edits, new source research, or a new
+  controller
+
+#### Scenario: true deficit uses the existing supplementary path
+
+- **WHEN** convergence has exhausted materialization and index repair, reports
+  a positive deficit, and no same-Topic supplementary demand is live
+- **THEN** phase guidance SHALL direct one ordinary supplementary
+  `wave1_topic_deepening` card with the returned positive floor objective
+- **AND** claim/submit and later closure SHALL remain the existing work-unit
+  transaction and same Wave1 inspect loop
+
+#### Scenario: materialization root does not become a research demand
+
+- **WHEN** a legacy/misnamed reference or submitted backing can be repaired by
+  canonical Phase-owned materialization
+- **THEN** the Phase Agent SHALL perform that legal projection repair first
+- **AND** it SHALL not enqueue supplementary search work merely because the
+  count is presently low
 
 #### Scenario: Wave1 loads the shared reference template
 
-- **WHEN** `phase-wave1` is entered for normal or rerun-added topics
-- **THEN** its loaded required context SHALL include `shared/shared-reference-template`
-- **AND** the Phase Agent SHALL materialize references from that loaded contract after successful submit
+- **WHEN** the Phase Agent reaches a Wave1 materialization decision
+- **THEN** `phase-wave1.md` SHALL load the shared reference template through
+  its actual requires chain
+- **AND** it SHALL not require the Agent to discover that template indirectly
 
 #### Scenario: Wave1 uses dry-submit before formal submit
 
-- **WHEN** a Wave1 Sub-agent returns candidate result, receipt, output and cache surfaces
-- **THEN** the Phase Agent SHALL run dry-submit before formal submit
-- **AND** a dry-submit failure SHALL not create submitted coverage, reference materialization, depth review, or seed backfill
+- **WHEN** a Wave1 actor returns a candidate result
+- **THEN** the Phase Agent SHALL run the existing same-candidate dry-submit
+  check before formal submit and after mechanical candidate repair
+- **AND** it SHALL not treat chat confirmation or a template as submit authority
 
 #### Scenario: Wave1 materializes closeout after submitted backing
 
-- **WHEN** a Wave1 work unit formally submits `evidence-summary.md`, `question-list.md`, and accepted backing
-- **THEN** the Phase Agent SHALL materialize the topic reference/index, depth review and seed return-map closeout before Wave inspect
-- **AND** the phase SHALL not require the Sub-agent to write any of those Phase-owned projections
+- **WHEN** submitted Wave1 backing is accepted and a consumer projection is
+  required
+- **THEN** Phase guidance SHALL materialize only through the convergence-guided
+  Phase-owned closeout path
+- **AND** it SHALL not make reference authoring a Sub-agent required output
 
 #### Scenario: Depth review records judgment instead of ledger copies
 
-- **WHEN** the Phase Agent reviews submitted Wave1 work units
-- **THEN** `depth-review.yaml` SHALL identify the reviewed work-unit refs and record non-derivable depth/profile/decision judgments
-- **AND** it SHALL NOT be required to reproduce submitted source/cache arrays or profile-derived numeric facts
+- **WHEN** the Phase Agent records `depth-review.yaml` after successful submit
+- **THEN** it SHALL record reviewed work-unit refs and Phase-owned judgments
+- **AND** it SHALL not make copied source/cache/URL or derived-floor arrays a
+  second deterministic authority
 
 #### Scenario: Agent performs authorized same-check repair
 
-- **WHEN** an affected checkpoint returns `repair_kind: agent_action|engine_operation`, `missing_fact`, the corresponding authorized `write_to` coordinate, and `rerun`
-- **THEN** the Phase Agent SHALL perform that action and rerun the named checkpoint
-- **AND** it SHALL treat `user_decision`, `external_action`, or `missing_contract` only as the smallest Agent-facing boundary and obey the current node interaction contract rather than automatically escalating
+- **WHEN** Engine feedback names an authorized same-check repair coordinate
+- **THEN** the Phase Agent SHALL perform the ordinary mechanical repair and
+  rerun that named checkpoint
+- **AND** it SHALL not ask the user to run ordinary pipeline commands
 
 #### Scenario: Recorded profile makes missing style parameters mechanical
 
-- **WHEN** Wave1 or Wave2 cannot derive a required floor because `research_style_params` is missing but a valid `research_profile` is already recorded
-- **THEN** the finding SHALL identify the existing `apply-research-style.mjs` operation with `repair_kind: engine_operation`
-- **AND** the Agent SHALL execute it and rerun the same Wave inspect/Gate checkpoint without contacting the user
-- **AND** a true missing profile decision SHALL remain a distinct `user_decision` boundary
+- **WHEN** Wave1 requires an explicit profile-derived floor or style parameter
+- **THEN** Phase guidance SHALL read the recorded profile fact and report a
+  missing parameter as a direct mechanical blocker
+- **AND** it SHALL not invent a hidden default
 
 #### Scenario: Wave1 deepening uses work-unit kind
 
-- **WHEN** Wave1 deepening is delegated
-- **THEN** the phase doc SHALL identify `wave1_topic_deepening` work units
+- **WHEN** Wave1 needs delegated topic-specific source acquisition
+- **THEN** phase guidance SHALL use `wave1_topic_deepening` through the
+  existing queue/work-unit path
+- **AND** it SHALL not substitute a direct-search or ad hoc task path
 
 #### Scenario: Wave1 requires depth review before topic completion
 
-- **WHEN** a Wave1 work unit submits `evidence-summary.md` and `question-list.md`
-- **THEN** the Phase Agent SHALL produce `artifacts/wave1/{topic}/depth-review.yaml`
-- **AND** the topic SHALL NOT be considered complete until the depth review records `decision: accept`
-- **AND** `supplement_required` or `blocked_contract` SHALL keep the topic incomplete for normal Wave1 pass
+- **WHEN** a Topic's Wave1 outputs have submitted evidence but no valid depth
+  review
+- **THEN** Phase guidance SHALL repair or complete the existing depth-review
+  projection before Wave1 completion
+- **AND** it SHALL not treat reference/index navigation as a substitute
 
 #### Scenario: Shallow Wave1 output routes to supplementary work unit
 
-- **WHEN** Wave1 depth review finds too few genuinely new source URLs, missing depth dimensions, or unmet profile-required checks
-- **THEN** the phase doc SHALL instruct the Agent to enqueue a supplementary `wave1_topic_deepening` queue item with explicit `payload.topic_slug`
-- **AND** the Agent SHALL drain that supplementary item through `operate-work-unit claim`, dry-submit, and `operate-work-unit submit`
+- **WHEN** direct submitted source/cache/new-source checks remain below their
+  accepted floor
+- **THEN** Phase guidance SHALL use the existing supplementary
+  `wave1_topic_deepening` loop
+- **AND** it SHALL not lower the floor or fabricate depth closure
 
 ### Requirement: Wave2 phase body completeness
 
@@ -372,272 +459,356 @@ Active phase docs SHALL not instruct the Phase Agent to load non-work-unit role 
 
 ### Requirement: Wave phase bodies SHALL teach batch-poll-submit loops and Phase-owned reference materialization
 
-Wave0, Wave1, and Wave2 phase Markdown SHALL describe delegated work as a continuous Phase Agent loop: fill queue demand, reconstruct current in-flight work from bundle truth, claim eligible independent work units as bounded top-up batches where applicable, spawn bounded Sub-agents, actively poll runtime work-unit readiness, submit ready attempts, repair or terminalize rejected/expired attempts, materialize Phase-owned projections where the phase owns consumer presentation after successful submit, and run the phase gate only after queue demand and delegated in-flight work are drained.
+Wave0, Wave1, and Wave2 phase Markdown SHALL describe delegated work as a
+continuous Phase Agent loop: fill queue demand, reconstruct current in-flight
+work from bundle truth, claim eligible independent work units as bounded
+top-up batches where applicable, spawn bounded Sub-agents, actively poll
+runtime work-unit readiness, submit ready attempts, repair or terminalize
+rejected/expired attempts, materialize Phase-owned projections where the Phase
+owns consumer presentation after successful submit, and run the phase gate only
+after queue demand and delegated in-flight work are drained.
 
-After the existing `fail_and_replace` disposition reaches its authorized terminal boundary, phase Markdown SHALL instruct the Agent to terminalize the current attempt through the existing terminal operation and invoke `operate-work-unit replace` for that terminal `work_id`. For a newly created or queued successor, it SHALL then perform the existing exact-role native probe and `operate-work-unit claim`; for an already in-flight idempotent successor, it SHALL reconstruct and poll the disclosed existing work ID without a second claim. It SHALL not hand-author an allegedly equivalent replacement task card, infer a successor queue ID, discover a work ID from the filesystem, rewrite terminal status, or bypass ordinary claim.
+After the existing `fail_and_replace` disposition reaches its authorized
+terminal boundary, phase Markdown SHALL instruct the Agent to terminalize the
+current attempt through the existing terminal operation and invoke
+`operate-work-unit replace` for that terminal work ID. For a newly created or
+queued successor, it SHALL then perform the existing exact-role native probe
+and `operate-work-unit claim`; for an already in-flight idempotent successor,
+it SHALL reconstruct and poll the disclosed existing work ID without a second
+claim. It SHALL not hand-author an allegedly equivalent replacement task card,
+infer a successor queue ID, discover a work ID from the filesystem, rewrite
+terminal status, or bypass ordinary claim.
 
-Wave0 and Wave1 phase bodies SHALL NOT present `claim --count 1` as the normal strategy for independent topics. Wave1 phase body SHALL state that topic references are Phase-owned consumer projections materialized after successful work-unit submit from submitted source/cache/degraded-capture/ledger backing. Wave2 phase body SHALL state that consumer-facing accepted pure-synthesis findings with concrete existing Wave0/Wave1 submitted backing SHALL be materialized as `reference/00-cross-*.md` or carry an explicit non-consumer/deferred/limitation reason, while new external evidence must use `wave2_targeted_evidence`.
+Wave0 and Wave1 phase bodies SHALL not present `claim --count 1` as the normal
+strategy for independent Topics. Wave1's post-submit loop SHALL teach one
+ordered closeout decision, supplied by convergence rather than a second
+controller: canonical materialize/persist from submitted backing; then sync the
+flat index; then update only affected Seed Topic navigation through the existing
+packet writer; then rerun Wave1 inspect. If no projection/index repair exists,
+the loop either continues a disclosed existing supplementary demand or forms
+one ordinary supplementary demand for a true floor deficit before returning to
+claim/poll/submit. Wave2 retains its existing backed-pure-synthesis versus
+targeted-evidence materialization split.
 
-#### Scenario: Wave0 and Wave1 phase docs teach batched delegated claim
+#### Scenario: Wave1 post-submit loop follows ordered closeout
 
-- **WHEN** the Phase Agent reads Wave0 or Wave1 delegated drain guidance
-- **THEN** it SHALL see instructions to compute a bounded batch count for independent eligible work
-- **AND** it SHALL not see serial `--count 1` presented as the default drain loop
-
-#### Scenario: phase docs teach active polling after spawn
-
-- **WHEN** a phase doc instructs the Phase Agent to spawn background Sub-agents
-- **THEN** it SHALL also instruct the Phase Agent to poll work-unit files or inspect output for readiness
-- **AND** ready attempts SHALL be submitted through `operate-work-unit submit` without waiting for user or notification triggers
-
-#### Scenario: phase docs reconstruct in-flight work before claiming
-
-- **WHEN** the Phase Agent resumes a wave phase after background work has been spawned
-- **THEN** phase guidance SHALL instruct it to reconstruct delegated in-flight attempts from bundle truth before claiming additional work
-- **AND** it SHALL only claim a bounded top-up batch when reconstructed in-flight count is below cap
+- **WHEN** a Wave1 Phase Agent completes a successful submit and receives a
+  convergence materialization root
+- **THEN** the phase body SHALL show materialize/persist -> index sync ->
+  packet ref refresh when needed -> same inspect
+- **AND** it SHALL not ask the Agent to infer filename/count/index order from
+  source code or separate checkers
 
 #### Scenario: phase gate waits for queue and in-flight drain
 
-- **WHEN** a phase has unclaimed delegated queue demand or reconstructed delegated attempts still in flight
-- **THEN** phase guidance SHALL instruct the Phase Agent to keep polling, submitting, repairing, terminalizing, or claiming bounded top-ups as appropriate
-- **AND** it SHALL NOT run the phase gate as if delegated work were complete
-
-#### Scenario: terminal replacement returns to the location-correct existing boundary
-
-- **WHEN** dry-submit reports `fail_and_replace` for completed actor-owned semantic work
-- **THEN** phase guidance SHALL terminalize that work ID, invoke the Engine-owned replacement operation, and use a new or queued successor only through an exact-role probe and normal claim
-- **AND** it SHALL reconstruct and poll a disclosed already-in-flight successor rather than claim again
-- **AND** it SHALL not reconstruct a replacement task card, inspect `_work_units` for a successor, or change the parent's terminal status
+- **WHEN** a phase has unclaimed delegated queue demand or reconstructed
+  delegated attempts still in flight
+- **THEN** phase guidance SHALL instruct the Agent to keep polling, submitting,
+  repairing, terminalizing, or claiming bounded top-ups as appropriate
+- **AND** it SHALL not run the phase gate as if delegated work were complete
 
 #### Scenario: Wave1 materializes references after submit
 
-- **WHEN** a Wave1 work unit submits evidence summary, question list, and accepted source/cache/degraded-capture backing successfully
-- **THEN** the Wave1 phase body SHALL instruct the Phase Agent to materialize topic reference files from that submitted backing before gate
-- **AND** the phase SHALL NOT require Sub-agents to be the canonical producer of those consumer reference files
+- **WHEN** a Wave1 work unit submits evidence summary, question list, and
+  accepted source/cache/degraded-capture backing successfully
+- **THEN** the Wave1 phase body SHALL instruct the Phase Agent to invoke the
+  convergence-guided Phase-owned reference closeout before gate
+- **AND** it SHALL not require a Sub-agent to be the canonical producer of
+  consumer reference files
+
+#### Scenario: Wave0 and Wave1 phase docs teach batched delegated claim
+
+- **WHEN** independent Wave0 or Wave1 demand is eligible to claim
+- **THEN** phase guidance SHALL use bounded top-up batch claims as the normal
+  posture
+- **AND** it SHALL not present `claim --count 1` as the default independent
+  Topic strategy
+
+#### Scenario: phase docs teach active polling after spawn
+
+- **WHEN** delegated work has been spawned
+- **THEN** phase guidance SHALL actively poll the disclosed runtime/work-unit
+  state and submit ready results
+- **AND** it SHALL not assume chat completion is an accepted attempt
+
+#### Scenario: phase docs reconstruct in-flight work before claiming
+
+- **WHEN** a Phase resumes with delegated attempts already in flight
+- **THEN** it SHALL reconstruct those attempts from bundle truth before a new
+  claim
+- **AND** it SHALL not create a duplicate claim for the same demand
+
+#### Scenario: terminal replacement returns to the location-correct existing boundary
+
+- **WHEN** an authorized `fail_and_replace` path reaches a terminal attempt
+- **THEN** phase guidance SHALL terminalize it through the existing operation,
+  use `operate-work-unit replace`, and then claim or reconstruct the disclosed
+  successor as its location requires
+- **AND** it SHALL not hand-author a replacement card or infer a work ID
 
 #### Scenario: Wave2 pure synthesis materializes existing-backed cross references
 
-- **WHEN** Wave2 pure synthesis identifies a cross-topic finding with concrete existing Wave0/Wave1 submitted backing
-- **THEN** the Wave2 phase body SHALL instruct the Phase Agent to materialize `reference/00-cross-*.md` as a source-backed projection when the finding is accepted and consumer-facing
-- **AND** the phase SHALL still route new public evidence gaps through `wave2_targeted_evidence`
+- **WHEN** accepted prior evidence supports a Wave2 pure-synthesis reference
+- **THEN** Wave2 guidance SHALL preserve its existing Phase-owned
+  existing-backed `00-cross-*` materialization path
+- **AND** newly fetched evidence SHALL still use targeted-evidence submission
 
 ### Requirement: Wave phase docs SHALL teach canonical gate-consumable refs and roles
 
 Wave phase docs SHALL teach the same direct artifact shapes that gate/inspect
-helpers consume. Agent-facing examples SHALL not encode harmless-looking
-spelling, field, enum, path or role drift that causes deterministic failure,
-and SHALL not reproduce large validator implementations in prose.
-
-Wave0, Wave1 and Wave2 SHALL load `templates/seed-topic-template` through their
-actual `requires` chain. It is their pure Seed Topic Document-shape contract;
-the existing `command_playbook/operate-topic-state.md` is the sole complete
-Projection Packet execution contract. Phase bodies shall retain only Wave-local
-authority, queue/submit sequence, concrete artifact guidance and the command
-checkpoint. They SHALL not instruct Phase Agents to discover section headings,
+helpers consume without reproducing large validator implementations. Wave0,
+Wave1, and Wave2 SHALL load `templates/seed-topic-template` through their
+actual requires chain as the pure Seed Topic document-shape contract; the
+existing `command_playbook/operate-topic-state.md` remains the sole complete
+Projection Packet execution contract. Phase bodies shall retain only
+Wave-local authority, queue/submit sequence, concrete artifact guidance, and
+the command checkpoint. They SHALL not instruct Agents to discover headings,
 replace tokens by hand, edit a seed directly, or build a local return-map
-validator. Each canonical slot's visible `回填卡` is the compact per-heading
-instruction at the exact decision point: it names the writer, direct authority,
-backfill timing, `entry_id` plus five required entry fields, materialization
-pointer and prohibitions. The Phase Agent SHALL retain that card and write only
-through the packet/writer path; it SHALL not reinterpret the card as an entry or
-locally paraphrase it into a competing contract.
+validator.
 
-After successful submitted work or accepted finding materialization, each
-Wave phase SHALL teach this closeout loop:
+Wave1 docs SHALL separately load `shared/shared-reference-template` as the
+pure reference document-shape contract. That template shall teach the accepted
+metadata/body shape, canonical locator input/output, current versus legacy
+path distinction, candidate-exact metadata/body submitted-backing boundary, and
+materialization timing. It SHALL not become a Projection Packet, index writer, evidence authority,
+counting algorithm, queue controller, or gate parser. The Wave1 phase body
+shall point to the one `sync-reference-index` operation and existing
+`operate-topic-state` packet writer at their respective legal decision points.
 
-1. read its existing direct submitted-row or finding authority;
-2. use Agent judgment to form a retained Projection Packet for each affected
-   current topic, including an explicit deferred disposition where applicable;
-3. invoke existing `operate-topic-state apply` in its route-bound Wave window;
-4. run the corresponding side-effect-free, non-routing Wave inspect; and
-5. repair the smallest named packet/authority root and rerun that same inspect
-   before writing completion evidence or invoking the formal gate.
+After successful submitted work or accepted finding materialization, each Wave
+phase SHALL teach its existing closeout loop: read direct authority; form a
+retained Projection Packet where the Wave owns Seed Topic navigation; invoke
+the legal writer in its route-bound window; run the corresponding
+side-effect-free non-routing inspect; and repair the smallest named
+packet/authority root before completion evidence or formal gate. For Wave1,
+the reference convergence result provides the root-first materialize/index/
+supplementary distinction. Evidence-bearing refs continue to use concrete
+existing `reference/*.md` navigation first, with artifact/cache/work-unit paths
+as secondary provenance only.
 
-For Wave0, direct authority means each candidate in each current eligible
-submitted work unit's result-declared, schema-valid `source.yaml` array at the
-same inspection boundary. The Phase Agent SHALL form one exact
-`<work_id>/<1-based source.yaml ordinal>` entry or explicit identity-bound
-deferred disposition for every candidate in the affected topic's retained
-packet. The ordinal is a current projection coordinate, not a permanent
-`result_hash` snapshot. One packet MAY carry multiple entries for one work ID
-and SHALL be applied through the existing writer before the same Wave0 inspect.
-A bare work ID, generic completion prose, or one arbitrary ordinal SHALL not be
-taught as coverage for the whole source intake.
+#### Scenario: Wave1 docs expose one locator and one index operation
 
-The phase SHALL not ask the user to perform ordinary packet/apply/inspect work,
-hand-write a ledger/receipt/trace/reference, or turn a generic submitted line
-into a success substitute. A missing legal writer or authority path SHALL be
-shown as the direct owner/missing-contract boundary, not silently repaired by
-prose. Formal gate invocation remains after the inspect loop and retains its
-existing routing ownership.
+- **WHEN** a Phase Agent reads Wave1 reference closeout guidance
+- **THEN** it SHALL see the current canonical locator, submitted-backing
+  boundary, index synchronization operation, Seed packet writer, and same
+  inspect rerun
+- **AND** it SHALL not see a competing `0N-*`/`NN-wave1-*` naming rule, a
+  manual index-edit protocol, or an instruction to derive a glob count
 
-For deterministic gate-consumed surfaces, Wave docs SHALL name canonical paths,
-roles, refs, required structured fields/enums and return-map navigation facts
-needed to produce the artifact. Wave1 SHALL retain its existing required
-evidence-summary/question-list role guidance and Wave2 SHALL retain its
-finding-index/cross-reference authority split. Evidence-bearing projection refs
-continue to use concrete existing `reference/*.md` navigation first, with
-artifact/cache/work-unit paths as secondary provenance only.
+#### Scenario: reference template remains a document-shape owner
+
+- **WHEN** an Agent reads the shared reference template
+- **THEN** it SHALL learn which reference parts are fixed structure and which
+  fields/body content the Phase Agent fills from submitted backing
+- **AND** it SHALL not be told that template completion creates submitted
+  evidence, queue demand, gate pass, or a Seed Topic packet
+
+#### Scenario: phase docs keep artifact authority separate from projection
+
+- **WHEN** a Phase Agent reads Wave1 artifact/reference guidance
+- **THEN** it SHALL see that submitted work, index, and ledger remain authority
+  while references and Seed entries are navigation projections
+- **AND** it SHALL not treat a packet, reference file, or index row as evidence
+  coverage by itself
 
 #### Scenario: Wave closeout uses the one legal writer
 
-- **WHEN** a Phase Agent has successful Wave0, Wave1 or Wave2 authority ready
-  for a current topic
-- **THEN** its phase guidance SHALL direct packet -> `operate-topic-state apply`
-  -> same Wave inspect -> formal gate
-- **AND** it SHALL not direct manual token replacement or direct seed editing
+- **WHEN** a Wave-owned Seed Topic navigation projection must change
+- **THEN** phase guidance SHALL form the accepted Projection Packet and invoke
+  the route-bound `operate-topic-state` writer
+- **AND** it SHALL not direct raw seed edits or invent another writer
 
 #### Scenario: Wave0 closeout enumerates one result-declared source array
 
-- **WHEN** a Wave0 source-intake work unit has formally submitted a result that
-  declares a current schema-valid `source.yaml` array with three candidates for
-  one current topic
-- **THEN** phase guidance SHALL direct a retained packet with three exact
-  candidate entries or dispositions for that work ID
-- **AND** it SHALL direct `operate-topic-state apply` followed by the same
-  `inspect-wave0-output` before completion evidence
+- **WHEN** Wave0 closes a submitted source-intake result
+- **THEN** Phase guidance SHALL enumerate its one submitted declared source
+  array through the existing authority path
+- **AND** it SHALL not reconstruct an alternate candidate source list
 
 #### Scenario: Wave0 closeout preserves the one legal writer
 
-- **WHEN** a Wave0 candidate needs a navigation entry or deferred disposition
-- **THEN** guidance SHALL direct the Phase Agent through the existing packet
-  writer and same inspect
-- **AND** it SHALL not direct a raw Seed Topic edit, a source-authority edit,
-  or a new user interaction
+- **WHEN** Wave0 needs to refresh a Seed Topic projection
+- **THEN** it SHALL retain the existing packet/writer sequence
+- **AND** it SHALL not write Seed Topic state directly from a reference/index
+  surface
 
 #### Scenario: Later Waves do not inherit Wave0 candidate rules
 
-- **WHEN** Wave1 or Wave2 closeout runs after this change
-- **THEN** their existing submitted-row or W2F identity rules SHALL remain
-  authoritative
-- **AND** Wave0 source-array ordinal language SHALL not be presented as their
-  coverage contract
+- **WHEN** Wave1 or Wave2 guidance consumes a prior Wave0 projection
+- **THEN** it SHALL use the relevant submitted/projection authority for that
+  Wave
+- **AND** it SHALL not treat Wave0 candidate authoring rules as a general
+  evidence-acceptance path
 
 #### Scenario: Heading card gives the backfiller one constrained action
 
-- **WHEN** a Phase Agent reaches a canonical Seed Topic slot during closeout
-- **THEN** its visible `回填卡` SHALL name the slot's authority, backfill timing,
-  entry shape and `operate-topic-state` materialization pointer
-- **AND** the Agent SHALL leave the card intact and submit entries only through
-  the existing writer
+- **WHEN** a phase handoff/backfill card is shown to an Agent
+- **THEN** it SHALL name one bounded legal action and its authoritative input
+- **AND** it SHALL not make the Agent discover headings, tokens, or a writer
+  from unrelated prose
 
 #### Scenario: Wave1 atomically handles its multiple owned slots
 
-- **WHEN** Wave1 has mechanisms, trends and pending-question projection
-  material for one topic
-- **THEN** phase guidance SHALL direct one Wave1 packet through the existing
-  writer
-- **AND** it SHALL not allow partial manual backfill before completion
+- **WHEN** Wave1 changes multiple Phase-owned navigation slots for one Topic
+- **THEN** it SHALL use the existing packet/writer transaction for those slots
+- **AND** it SHALL not leave direct partial Seed Topic edits as an alternate
+  success path
 
 #### Scenario: Inspect precedes completion evidence
 
-- **WHEN** phase-owned artifacts and seed projection packets have been applied
-- **THEN** guidance SHALL put the corresponding Wave inspect before completion
-  trace/evidence and formal gate invocation
-- **AND** an inspect failure SHALL return to the named owner and same inspect
+- **WHEN** a Wave Phase believes its materialization/backfill work is complete
+- **THEN** it SHALL run the side-effect-free corresponding inspect before
+  recording completion evidence or invoking the formal gate
+- **AND** it SHALL repair the named root through the same loop first
 
 #### Scenario: Missing writer is an honest boundary
 
-- **WHEN** a Phase Agent cannot form a packet because a direct submitted/finding
-  authority or legal writer window is unavailable
-- **THEN** guidance/feedback SHALL identify that direct owner or
-  missing-contract boundary
-- **AND** it SHALL not ask the user to hand-edit a seed or fabricate a receipt
+- **WHEN** feedback identifies a surface with no accepted legal writer
+- **THEN** phase guidance SHALL expose the owner or missing-contract boundary
+- **AND** it SHALL not instruct a raw edit, fake receipt, or user-operated
+  workaround
 
 #### Scenario: Phase docs keep artifact authority separate from projection
 
-- **WHEN** a Phase Agent reads Wave1 or Wave2 artifact/reference guidance
-- **THEN** it SHALL see that submitted work/finding/index/ledger remain
-  authority and Seed Topic entries are navigation
-- **AND** it SHALL not treat a packet or entry as evidence coverage
+- **WHEN** Phase guidance describes an artifact alongside its reader-facing
+  projection
+- **THEN** it SHALL identify the submitted/runtime authority separately from
+  the navigation/document view
+- **AND** it SHALL not make the projection a competing acceptance authority
 
 #### Scenario: Wave1 docs bind required paths to roles
 
-- **WHEN** the Phase Agent reads Wave1 delegated output guidance
-- **THEN** it SHALL see that `evidence-summary.md` maps to `evidence_summary`
-- **AND** `question-list.md` maps to `question_list`
-- **AND** `other` is not the role for those required outputs
+- **WHEN** Wave1 guidance describes delegated outputs
+- **THEN** it SHALL use the Engine-projected path/role contract and result
+  schema
+- **AND** it SHALL not infer required outputs from reference filenames or prose
 
 #### Scenario: Depth-review example uses canonical ref spelling
 
-- **WHEN** the Phase Agent reads the Wave1 depth-review example
-- **THEN** `reviewed_work_unit_refs[]` SHALL show `_work_units/wave1/<work_id>` without a trailing slash
+- **WHEN** Wave1 docs show a concrete reference in depth-review/closeout
+  context
+- **THEN** it SHALL use the current canonical full-slug locator spelling
+- **AND** it SHALL not teach a legacy `NN-wave1-*` file as current coverage
 
 #### Scenario: Return-map docs prioritize reference navigation
 
-- **WHEN** the Phase Agent reads seed-topic or Wave backfill guidance
-- **THEN** evidence-bearing return-map examples SHALL include concrete `reference/*.md` refs when reference files are materialized
-- **AND** `artifacts/`, `_cache/`, and `_work_units/` refs SHALL be described as secondary provenance
+- **WHEN** Phase guidance names return-map or navigation references
+- **THEN** it SHALL use concrete existing `reference/*.md` navigation first
+- **AND** artifact/cache/work-unit refs SHALL remain secondary provenance
 
 #### Scenario: Wave2 docs preserve cross-reference authority split
 
-- **WHEN** the Phase Agent reads Wave2 reference projection guidance
-- **THEN** it SHALL see that newly fetched `00-cross` evidence needs submitted `wave2_targeted_evidence`
-- **AND** existing-backed `00-cross` projections need prior accepted backing plus W2F/finding-index/cross-topic-ledger refs
-- **AND** `source_layer: wave2_cross` SHALL NOT be described as sufficient evidence authority
+- **WHEN** Wave2 guidance describes a `00-cross-*` reference
+- **THEN** it SHALL distinguish existing-backed Phase projection from newly
+  fetched targeted evidence
+- **AND** it SHALL not make an index/source-layer label sufficient backing
 
 #### Scenario: Phase docs expose deterministic repair shape
 
-- **WHEN** a stop:no Phase Agent reads the active Wave guidance
-- **THEN** required gate-consumed roles, refs, paths, fields, enums, and return-map navigation expectations SHALL be visible in phase docs or generated task instructions
-- **AND** the Agent SHALL NOT need Engine helper source to know the deterministic producer shape
+- **WHEN** a Phase document presents a deterministic inspect/gate failure
+- **THEN** it SHALL consume the Engine-provided missing fact, write coordinate,
+  repair kind, and rerun checkpoint
+- **AND** it SHALL not duplicate evaluator logic in Markdown
 
 #### Scenario: Phase Agent runs inspect before completion evidence
 
-- **WHEN** phase-owned Wave artifacts have been materialized
-- **THEN** guidance SHALL place the corresponding inspect command before completion evidence and formal gate invocation
-- **AND** it SHALL describe inspect as side-effect-free and non-routing
+- **WHEN** the Phase Agent completes a Wave-local repair
+- **THEN** it SHALL rerun the same inspect before adding completion evidence
+- **AND** it SHALL not use a prior green result after changed direct facts
 
 #### Scenario: Phase Agent repairs from one inspect root cause
 
-- **WHEN** Wave inspect reports a required structured field or provenance binding failure
-- **THEN** phase guidance SHALL direct the Agent to repair that named surface and rerun the same inspect
-- **AND** it SHALL NOT require a second validator or manual authority bypass
+- **WHEN** inspect returns one nearest direct root with an existing legal
+  repair path
+- **THEN** the Phase Agent SHALL repair that root and rerun the same checkpoint
+- **AND** it SHALL not begin competing speculative repair branches
 
 #### Scenario: Wave2 docs expose current finding contract
 
-- **WHEN** the Phase Agent reads Wave2 finding-index guidance
-- **THEN** the complete current required field set and canonical enum values SHALL be visible through the canonical guidance surface
-- **AND** contradictory field-count or enum wording SHALL NOT remain
+- **WHEN** Wave2 guidance describes a finding/index repair
+- **THEN** it SHALL point to the current accepted finding contract and its
+  authoritative evidence boundary
+- **AND** it SHALL not treat stale prose/return-map text as a second contract
 
 ### Requirement: Wave0 and Wave1 fetch targets SHALL follow profile floors plus conservative margin
 
-Wave0 and Wave1 phase guidance SHALL derive delegated fetch/source candidate targets from explicit profile/runtime floors plus a conservative small margin. The margin exists to absorb duplicates, inaccessible pages, and non-countable sources; it SHALL NOT change gate thresholds, reduce required coverage, or become a hidden quality override.
+Wave0 and Wave1 phase guidance SHALL derive delegated fetch/source candidate
+targets from explicit profile/runtime floors plus a conservative small margin.
+The margin absorbs duplicates, inaccessible pages, and non-countable sources;
+it SHALL not change gate thresholds, reduce required coverage, or become a
+hidden quality override.
 
-Wave0 guidance SHALL bind source-intake target planning to explicit `rb_profile.yaml#/research_style_params` Wave0 floors, including per-topic source floor and shared-reference target surfaces where relevant. Wave1 guidance SHALL bind topic-deepening target planning to explicit Wave1 floors and new-source floor semantics, including `wave1_per_topic_ref_floor` and `topic_unique_ratio` where the depth-review contract uses them.
+Wave0 guidance SHALL bind source-intake target planning to explicit
+`rb_profile.yaml#/research_style_params` Wave0 floors. Wave1 guidance SHALL
+bind initial Topic-deepening target planning to explicit Wave1 floors and
+new-source floor semantics, including `wave1_per_topic_ref_floor` and
+`topic_unique_ratio` where the depth-review contract uses them. A plan target
+is not proof that the reference floor lacks an already submitted backing
+projection: after submit, convergence must first distinguish canonical
+materialization and index repair from a true need for more evidence.
 
-Active Wave0/Wave1 phase docs SHALL NOT instruct Agents to use fixed hard-coded fetch aims unless the number is explicitly derived from the active profile/runtime floor plus a named margin. The margin SHALL remain a planning heuristic, not a new profile field, gate parameter, quality threshold, or hidden over-fetch policy. If later gate/inspect feedback shows a gap, repair SHALL use supplementary work units rather than relying on hidden over-fetching.
+Active Wave0/Wave1 phase docs SHALL not instruct Agents to use fixed hard-coded
+fetch aims unless the number is explicitly derived from active profile/runtime
+floor plus a named margin. The margin SHALL remain a planning heuristic, not a
+new profile field, gate parameter, quality threshold, or hidden over-fetch
+policy. When feedback reaches a true post-projection Wave1 floor deficit,
+repair SHALL use the existing supplementary work-unit path with its optional
+snapshot-bound objective rather than relying on hidden over-fetching.
 
-#### Scenario: Wave0 target reads profile floor
+#### Scenario: Wave1 target reads profile and convergence preserves repair order
 
-- **WHEN** the Phase Agent prepares Wave0 source intake
-- **THEN** phase guidance SHALL tell it to read the explicit Wave0 profile floors
-- **AND** initial candidate targets SHALL be described as floor plus conservative margin, not as a fixed unbound aim
-
-#### Scenario: Wave1 target reads profile and novelty floor semantics
-
-- **WHEN** the Phase Agent prepares Wave1 topic deepening
-- **THEN** phase guidance SHALL tell it to read `wave1_per_topic_ref_floor`, `topic_unique_ratio`, and depth-review new-source floor semantics
-- **AND** initial candidate targets SHALL be described as floor plus conservative margin
+- **WHEN** the Phase Agent prepares Wave1 topic deepening or receives a low
+  current reference count after submit
+- **THEN** guidance SHALL use profile-bound floor-plus-margin planning for
+  initial acquisition and convergence for post-submit repair classification
+- **AND** it SHALL not turn a materializable reference/index defect directly
+  into another search target
 
 #### Scenario: hard-coded over-fetch aim is rejected
 
-- **WHEN** active Wave0/Wave1 phase or Sub-agent guidance says to fetch a fixed number of URLs
-- **AND** that number is not tied to explicit profile/runtime floor plus margin derivation
+- **WHEN** active Wave0/Wave1 phase or Sub-agent guidance says to fetch a fixed
+  number of URLs not tied to an explicit profile/runtime floor plus margin
 - **THEN** static tests or hygiene SHALL fail
-- **AND** diagnostics SHALL require profile-bound floor+margin wording
+- **AND** diagnostics SHALL require profile-bound floor-plus-margin wording
+
+#### Scenario: true gate repair still uses supplementary work units
+
+- **WHEN** formal gate or inspect reports a true reference-floor shortfall
+  after current projection and index repair are exhausted
+- **THEN** phase guidance SHALL route repair through supplementary work-unit
+  queue demand
+- **AND** it SHALL not silently lower floors or treat the margin as pass
+  authority
+
+#### Scenario: Wave0 target reads profile floor
+
+- **WHEN** the Phase Agent plans Wave0 source intake
+- **THEN** guidance SHALL derive its target from explicit active Wave0
+  profile/runtime floor plus a named conservative margin
+- **AND** it SHALL not use a fixed hidden fetch count
+
+#### Scenario: Wave1 target reads profile and novelty floor semantics
+
+- **WHEN** the Phase Agent plans initial Wave1 topic deepening
+- **THEN** guidance SHALL read explicit Wave1 reference and new-source floor
+  semantics from the active profile/runtime facts plus margin
+- **AND** it SHALL keep planning targets distinct from post-submit convergence
+  verdicts
 
 #### Scenario: margin is not promoted into a new threshold
 
-- **WHEN** phase guidance explains the conservative small margin
-- **THEN** it SHALL describe the margin as a default planning buffer for duplicates, inaccessible pages, and non-countable sources
-- **AND** it SHALL NOT define a new numeric gate threshold or profile parameter
+- **WHEN** a conservative acquisition margin is used for Wave0 or Wave1
+- **THEN** it SHALL remain planning guidance only
+- **AND** it SHALL not become a profile field, gate threshold, hidden override,
+  or pass condition
 
 #### Scenario: gate repair still uses supplementary work units
 
-- **WHEN** formal gate or inspect feedback reports that floor coverage is still short after initial delegated work
-- **THEN** phase guidance SHALL route repair through supplementary work-unit queue demand
-- **AND** it SHALL NOT silently lower floors or treat the margin as pass authority
+- **WHEN** a direct Wave0/Wave1 floor or submitted-backing repair remains after
+  the relevant direct checks
+- **THEN** phase guidance SHALL use the accepted supplementary work-unit path
+  where that contract requires additional evidence
+- **AND** it SHALL not silently reduce an accepted floor
 
 ### Requirement: Wave delegated drain loops SHALL route timeout through progress-aware preflight
 

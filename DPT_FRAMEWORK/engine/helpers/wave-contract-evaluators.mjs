@@ -35,6 +35,7 @@ import {
   checkWave2FindingIndexContract,
   topicSlugFromDepthReviewTarget,
 } from './wave-depth-contracts.mjs';
+import { evaluateWave1ReferenceTopic } from './wave1-reference-convergence.mjs';
 import { selectWave1CarriedTargetReceipt } from './wave-carried-target-receipts.mjs';
 import { checkPhaseQueueDrained } from './phase-queue-drain.mjs';
 import { evaluateRerunDirection } from './rerun-direction.mjs';
@@ -154,6 +155,51 @@ function localCheckerFinding(bundlePath, rule, {
     writeTo: writeTo || resolvedSurface,
     repair,
     detail,
+  });
+}
+
+function wave1ReferenceConvergenceFinding(bundlePath, rule, topic, outcome) {
+  const root = outcome.root?.code || outcome.outcome;
+  const detail = outcome.root?.detail
+    || (outcome.outcome === 'materialize_projection'
+      ? `Current Topic ${topic} has ${outcome.candidates.length} submitted backing candidate(s) without a closed canonical projection.`
+      : outcome.outcome === 'sync_reference_index'
+        ? 'Canonical Wave1 projections are complete but reference navigation is stale or invalid.'
+        : outcome.outcome === 'reference_floor_deficit'
+          ? `Current canonical reference floor is ${outcome.observed}/${outcome.required}; deficit ${outcome.deficit}.`
+          : `Wave1 reference convergence requires ${root}.`);
+  const isFloor = outcome.outcome === 'reference_floor_deficit';
+  const isExistingSupplementary = outcome.outcome === 'existing_supplementary';
+  const isIndex = outcome.outcome === 'sync_reference_index';
+  const isMaterialize = outcome.outcome === 'materialize_projection';
+  return makeContractFinding({
+    id: isFloor ? scopedRuleId(rule.id, topic) : `${rule.id}:${topic}:${root}`,
+    ruleId: rule.id,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: isFloor || isExistingSupplementary ? 'required_floor' : isIndex ? 'required_structure' : 'binding_integrity',
+    surface: isIndex ? resolvePath(bundlePath, 'reference/_INDEX.md') : 'reference/',
+    expected: isFloor || isExistingSupplementary
+      ? `At least ${outcome.required} countable canonical-current reference projections.`
+      : isIndex
+        ? 'A synchronized accepted reference index for current canonical projections.'
+        : 'A canonical-current projection bound to the exact reviewed submitted backing candidate.',
+    observed: isFloor || isExistingSupplementary
+      ? { observed: outcome.observed, required: outcome.required, deficit: outcome.deficit }
+      : { outcome: outcome.outcome, root },
+    missingFact: detail,
+    repairKind: isIndex ? 'engine_operation' : 'agent_action',
+    writeTo: isIndex
+      ? 'node DPT_FRAMEWORK/cli/sync-reference-index.mjs --bundle <bundle-path>'
+      : isFloor || isExistingSupplementary
+        ? (isExistingSupplementary ? `existing supplementary demand ${outcome.demand.queue_item_id}` : 'enqueue one supplementary wave1_topic_deepening demand with the returned payload')
+        : 'reference/',
+    repair: isIndex
+      ? 'Synchronize reference/_INDEX.md, then rerun the same Wave1 checkpoint.'
+      : isFloor || isExistingSupplementary
+        ? (isExistingSupplementary ? 'Execute the existing supplementary Wave1 demand, then rerun this checkpoint.' : 'Enqueue one bounded supplementary Wave1 demand with the returned payload, then rerun this checkpoint.')
+        : 'Materialize the indicated canonical reference projection from its submitted backing, then rerun this checkpoint.',
+    detail: `[${root}] ${detail}`,
   });
 }
 
@@ -654,7 +700,25 @@ export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFac
             result = evaluatePattern(bundlePath, rule, target.resolved, target.topic);
           }
         } else if (rule.check === 'count_floor') {
-          result = evaluateCountFloor(bundlePath, rule, target.resolved, target.topic, target.alternatives);
+          if (rule.id === 'per_topic_ref_md_count_floor' && target.topic) {
+            const convergence = evaluateWave1ReferenceTopic(bundlePath, {
+              topic: target.topic,
+              topicRegistryFact,
+              requiredFloor: resolveThreshold(rule, readBundleProfile(bundlePath)),
+            });
+            const outcome = convergence.result;
+            if (outcome.outcome === 'satisfied') {
+              result = { passed: true };
+            } else {
+              result = {
+                passed: false,
+                detail: outcome.root?.detail || `Wave1 reference convergence requires ${outcome.outcome} before count-floor evaluation (topic: ${target.topic}).`,
+                findings: [wave1ReferenceConvergenceFinding(bundlePath, rule, target.topic, outcome)],
+              };
+            }
+          } else {
+            result = evaluateCountFloor(bundlePath, rule, target.resolved, target.topic, target.alternatives);
+          }
         } else if (rule.check === 'phase_queue_drained') {
           const check = checkPhaseQueueDrained(bundlePath, { phase: 'wave1' });
           result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings };
