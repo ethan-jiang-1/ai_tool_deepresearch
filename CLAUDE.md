@@ -16,7 +16,7 @@ Use `guidelines/` when the right direction, layer boundary, or experiment path i
 
 ## Deep Research Routing
 
-If the user explicitly supplies a reachable existing bundle (or its `RUN_BUNDLE.md` / `BUNDLE_MAP.md`) in this selected DPT workspace and asks to continue or inspect it, use `DPT_FRAMEWORK/command_playbook/continue-run-bundle.md` before `RUN.md`. A discovered/bare/unreachable map does not select a run. Otherwise, research, deep-research, investigation, or report intent with `DPT_FRAMEWORK/` selected uses `DPT_FRAMEWORK/RUN.md` and the framework workflow; do not invoke a built-in `deep-research` or equivalent one-shot shortcut.
+For selected DPT research, choose and read exactly one entry before request-specific research work: an explicitly supplied reachable existing bundle (or its `RUN_BUNDLE.md` / `BUNDLE_MAP.md`) with continuation or inspection intent uses `DPT_FRAMEWORK/command_playbook/continue-run-bundle.md`; otherwise research, deep-research, investigation, or report intent with `DPT_FRAMEWORK/` selected uses `DPT_FRAMEWORK/RUN.md`. A discovered, bare, or unreachable map does not select a run. Before the selected entry is read, do not invoke `research`, `deep-research`, or an equivalent one-shot shortcut, perform request-specific WebSearch/WebFetch, or collect/synthesize evidence manually. The selected entry and its later phase instructions authorize subsequent legal research work.
 
 ## Where To Look
 

@@ -180,7 +180,15 @@ rules:
     - 状态机用显式转换表 (Map/object)，不允许隐藏在 prose 里
     - 跨文件引用必须明确 Source of Record
     - "只用批准的依赖: zod, yaml。其余一律 Node.js 标准库"
-    - architecture、recovery、mutation、Agent/user responsibility 或具名概念/状态/view 变更必须按顺序阅读三条 Evolution Directions：semantic precision → simple reliable control → helper-oriented responsibility；并在 apply target manifest 标出新增与删除的 control surface
+    - >
+      architecture、recovery、mutation、Agent/user responsibility 或具名概念/状态/view 变更，
+      必须按顺序考虑 semantic precision → simple reliable control → helper-oriented responsibility。
+      对实际新增或实质改变的层，阅读并应用
+      guidelines/evolution-abstraction-semantic-precision.md、
+      guidelines/evolution-simple-reliable-control.md、
+      guidelines/evolution-helper-oriented-agent.md；在 design.md 的相应设计论证中简短记录
+      语义边界、direct Source of Record / 最短合法闭环 / net simplification，以及
+      user decision / authorized Agent execution / Engine verdict 的边界。未改变的层可说明不适用。
   tasks:
     - 每个 task 有明确 done condition，可独立验证
     - 按依赖排序，优先搭骨架再填功能

@@ -1,5 +1,7 @@
 # start-research
 
+`RUN.md` 是 selected DPT new-research 的 entry。只有在已读 `RUN.md`、且没有 explicit reachable existing-bundle continuation route 后，才进入本下游 playbook；不要把本文件作为 entry 前的 direct research 或 shortcut 路径。
+
 Agent 命令：从零开始一次完整的 Deep Research。
 
 ## 前置条件

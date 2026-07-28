@@ -1,13 +1,15 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.57**
+> **DPT_FRAMEWORK v0.58**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.57
+## Current Release: v0.58
+
+- Selected DPT research now reads the existing-bundle continuation playbook or `RUN.md` before generic shortcuts, request-specific direct search/fetch, or manual evidence synthesis. This guidance preserves the existing post-entry HITL1 and phase-authorized research boundary; it does not claim host-level skill suppression.
 
 - Normal readiness-to-Final status synchronization now writes the authoritative terminal triple: `readiness_passed`, `none`, and `completed`. The existing trace rollback and post-final recovery path remain unchanged.
 
@@ -19,13 +21,13 @@
 
 ## 0. 禁用内置捷径（最高优先）
 
-如果你在当前 agent 的工具列表中看到 `deep-research` skill 或等价的 research shortcut：**不要调用它**。本文件（DPT_FRAMEWORK）已接管 Deep Research 的全部职责——读到本文件即已选定 DPT_FRAMEWORK 入口，内置捷径与本入口互斥。直接执行下方 Section 2 的 DPT_FRAMEWORK 流程。
+如果你在当前 agent 的工具列表中看到 `research`、`deep-research` skill、等价 one-shot research shortcut，或直接 WebSearch/WebFetch 能力：**不要把它们用于本 request 的 entry 前或作为 DPT flow 的替代品**。本文件（DPT_FRAMEWORK）已接管本 request 的 Deep Research 入口；读到本文件即已选定 `RUN.md`，先执行下方 Section 2 的 DPT_FRAMEWORK flow，而不是直接搜索、抓取、收集 evidence 或手工综合。
 
 ## 1. Entry Selection Is Already Done
 
-当前 agent 可能有内置的"快速研究/搜索"捷径（Claude Code：`deep-research` skill；Codex / Cursor / Windsurf 等：各自的内置搜索/research）——它们通用、一次性、无 gate、无证据包。`DPT_FRAMEWORK` 是本项目的 Deep Research 引擎：证据可追溯、多轮、gate 门控、产出可校验的 bundle。
+当前 agent 可能有内置的"快速研究/搜索"捷径（Claude Code：`deep-research` skill；Codex / Cursor / Windsurf 等：各自的内置搜索/research）——它们通用、一次性、无 gate、无证据包。`DPT_FRAMEWORK` 是本项目的 Deep Research 引擎：证据可追溯、多轮、gate 门控、产出可校验的 bundle。此 guidance 不声称能阻止宿主预先匹配 skill 或注入工具；它只规定 Agent 在本 entry 已选定后的下一步。
 
-读到本文件时不要再问用户是否改用内置捷径或是否使用 DPT_FRAMEWORK。一次性 trigger 已选择本入口；继续执行 Section 2 的 Agent-run framework flow。若 bundle 尚未创建，唯一允许的前置澄清是 pre-pipeline routing exception，必须发生在 autonomous lifecycle 开始前，且不得削弱 HITL1/HITL2-only interactive in-run boundary。
+读到本文件时不要再问用户是否改用内置捷径或是否使用 DPT_FRAMEWORK。一次性 trigger 已选择本入口；继续执行 Section 2 的 Agent-run framework flow。Section 2 及其进入的 HITL1/phase instructions 才单独授权 capability probe 和后续研究工作。若 bundle 尚未创建，唯一允许的前置澄清是 pre-pipeline routing exception，必须发生在 autonomous lifecycle 开始前，且不得削弱 HITL1/HITL2-only interactive in-run boundary。
 
 ## 2. 开跑（框架）
 完整步骤见 `command_playbook/start-research.md`，一句话版：

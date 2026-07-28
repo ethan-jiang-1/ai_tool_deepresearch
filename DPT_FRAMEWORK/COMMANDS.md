@@ -62,7 +62,7 @@ Exit codes SHALL NOT encode morale, reassurance, retry strategy, progress pressu
 |------|------|------|
 | run（drag-trigger） | RUN.md | 把本文件拖进对话即触发框架的前门入口 |
 | instantiate-run-bundle | command_playbook/instantiate-run-bundle.md | 生产新的 Runtime Bundle |
-| start-research | command_playbook/start-research.md | 从零开始一次完整的 Deep Research（创建 bundle → 写问题 → 加载第一个 phase） |
+| start-research | command_playbook/start-research.md | `RUN.md` 选定新研究 entry 后的下游 playbook：创建 bundle → 写问题 → 加载第一个 phase |
 | continue-run-bundle | command_playbook/continue-run-bundle.md | 用户明确提供可达 existing bundle（或其 `RUN_BUNDLE.md`、`BUNDLE_MAP.md`）时 reload；不从扫描/裸文件名选择 run |
 
 Existing active bundle reload enters through `RUN_BUNDLE.md` (fallback `BUNDLE_MAP.md` for older bundles), resolves framework coordinates, then delegates to `COMMANDS.md` for all operations. Legacy `START_FROM_HERE.md` is deprecated fallback only.

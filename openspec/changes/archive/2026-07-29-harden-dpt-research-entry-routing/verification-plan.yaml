@@ -1,0 +1,31 @@
+schema_version: verification-routing/v1
+change: harden-dpt-research-entry-routing
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The change adds no in-process helper, schema, or deterministic computation; its static document relation is an integration boundary.
+  integration:
+    status: selected
+    rationale: One Node test must read the root and framework entry surfaces together and prove their selected-entry order, pre-entry prohibition, and phase-authorized exception remain synchronized.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No JS-led lifecycle chain or Engine state transition changes; a simulated chain would not prove an Agent selected the entry before tools.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change has no authoritative host observation surface for a normal request before repository guidance is selected. Extending the Subject-agent adapter or Playbook runner would test a synthetic injected prompt, add a new evidence/control path, and still could not prove host skill matching or tool injection. The selected integration claim therefore proves only the document contract; host behavior remains an explicitly bounded non-guarantee.
+claims:
+  - id: dpt-entry-guidance-contract
+    statement: >-
+      RUE-002, RUE-004, and RUE-006: root and framework entry surfaces consistently select continuation before RUN.md for an explicit reachable existing bundle, RUN.md for selected new research, prohibit generic/atomic pre-entry research substitutes, and retain the later phase-authorized exception.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/dpt-research-entry-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

@@ -14,9 +14,9 @@ Deep Research Framework (`DPT_FRAMEWORK/`) 的运行时入口说明。
 - 用户说"研究/调研/deep research/research report/帮我查…/…是什么"等研究意图；
 - 任何"我要就某个话题得到一份有来源、可核查的研究报告"的需求。
 
-**本框架就是项目的 Deep Research 引擎。** 用户要研究就用它跑，**不要**调用任何内置 "deep research" skill 或通用 research workflow——那些是替代品，本框架才是主体。入口 `RUN.md` Section 0 有完整禁用指令。
+**本框架就是项目的 Deep Research 引擎。** 已选择 DPT research 时，先选择并读一个 entry：用户明确提供当前 workspace 内可达 existing bundle（或其 `RUN_BUNDLE.md`、`BUNDLE_MAP.md`）并要求继续/检查时，先走 `command_playbook/continue-run-bundle.md`；扫描发现、只提文件名或不可达路径不选择 run。否则先读 `RUN.md`。
 
-用户明确提供当前 workspace 内可达 existing bundle（或其 `RUN_BUNDLE.md`、`BUNDLE_MAP.md`）并要求继续/检查时，先走 `command_playbook/continue-run-bundle.md`；扫描发现、只提文件名或不可达路径不选择 run。否则不要浏览文件结构，直接走 `command_playbook/start-research.md`，由该 playbook 创建新 run 并加载第一个 phase node。
+在 selected entry 读完前，**不要**调用 `research`、`deep-research` 或等价 one-shot shortcut，不对该 request 直接 WebSearch/WebFetch，也不手工收集或综合 evidence。`RUN.md` 的 Section 2 随后进入 `command_playbook/start-research.md` 创建新 run 并加载第一个 phase node；HITL1 probe 和后续 phase research 仍由各自进入后的既有 contract 授权。本 guidance 不保证宿主不会预先匹配 skill 或注入工具。
 
 ## 第一条
 

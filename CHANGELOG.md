@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.58
+
+- Selected DPT research now chooses and reads its continuation or `RUN.md` entry before generic shortcuts, direct request-specific search/fetch, or manual evidence synthesis. Later phase-authorized research remains unchanged; repository guidance does not claim host-level skill suppression.
+
 ## v0.57
 
 - Normal witnessed readiness-to-Final status synchronization now commits the authoritative `readiness_passed / none / completed` terminal triple in its existing rollback-protected status/trace transaction. Post-final rerun recovery retains its existing derived status path.

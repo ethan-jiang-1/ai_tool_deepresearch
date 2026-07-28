@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-07-28 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-07-29 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,6 +17,7 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
+| `dpt-routing-and-wave-contract-integrity` | 承接 BUG-139--142：用两个候选 OpenSpec change 分别收敛 DPT-selected research 的 entry-first routing 与 Wave Gate degraded verdict 的语义；BUG-142 先以 current-head 真实 Wave1 closeout observation 裁决，只有仍无合法路径才开第三个条件化小 change。 | progressive plan / ready for proposal after Stage 0 evidence |
 | `silent-autonomous-execution` | 承接 `source_bugs: BUG-099/104/106`（stop-no halt、context pollution、stop-no-violation-repeats）。独立 research backlog：把「静默自主」拆成 DPT 可确定性修复的 phase-entry correctness 与一般 coding-agent/host 是否发起下一 turn 的 actor liveness 两层，分开研究与证明。BUG-103 的入口 handoff guidance 已由 archived change 修复；其余仍 deferred 于核心 work-unit、evidence-production 与 Gate 路径稳定可跑之后。 | deferred research / scoping（无固定 OpenSpec change） |
 
 ---

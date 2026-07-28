@@ -22,10 +22,13 @@
 | [BUG-099](BUG-099-stop-no-agent-halted-at-wave0.md) | P2 | wave0 | deferred operability：`stop: no` phase agent 在 wave0 主动停下，当前可由一次用户续跑恢复，不阻塞核心 bundle contract 可达性 |
 | [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | enter-phase 每次渲染完整 shared context 造成累积 context 压力 |
 | [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P2 | wave0→wave1 | deferred operability：agent 输出总结而未执行下一 phase，当前可由一次用户续跑恢复 |
+| [BUG-139](BUG-139-research-skill-overrides-dpt-routing.md) | P2 | 路由 | `research` skill（generic）劫持 DPT_FRAMEWORK 路由，同 BUG-045 根因但不同 skill；root CLAUDE.md 仍缺显式 skill 抑制 |
+| [BUG-141](BUG-141-wave0-gate-contradictory-passed.md) | P1 | wave0 | gate 报告 passed=true + failed_rule_ids 矛盾；gate verdict 不可靠 |
+| [BUG-142](BUG-142-reference-ledger-circular-dependency.md) | P1 | wave1 | Phase Agent 无法将 reference 文件写入 ledger；circular dependency 阻止 gate pass |
 
 > BUG-099/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 计划承接，均 deferred 于核心 work-unit / evidence / Gate 运行路径稳定之后。BUG-129/130/131 已移至 `../_done/_suspened_bugs/`：它们分别等待当前真实反例或新的产品策略决定，不是活跃 implementation defect。
 
-**Next available bug ID: BUG-139**
+**Next available bug ID: BUG-142**
 
 ## BUG-132–137 接手地图
 
