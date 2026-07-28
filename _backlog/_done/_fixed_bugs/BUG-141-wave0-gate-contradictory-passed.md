@@ -18,7 +18,7 @@ commit: e2c281133
 ## Current Disposition (2026-07-29)
 
 **Resolved.** Archived OpenSpec change
-[`make-wave-gate-verdict-unambiguous`](../../openspec/changes/archive/2026-07-29-make-wave-gate-verdict-unambiguous/)
+[`make-wave-gate-verdict-unambiguous`](../../../openspec/changes/archive/2026-07-29-make-wave-gate-verdict-unambiguous/)
 and commit `e2c281133` make the public verdict mutually exclusive:
 
 - blocking failure: `passed: false`, nonempty `failed_rule_ids`, no legal `next`;

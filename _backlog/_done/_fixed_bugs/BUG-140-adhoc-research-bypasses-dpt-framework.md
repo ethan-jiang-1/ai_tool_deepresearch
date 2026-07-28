@@ -16,7 +16,7 @@ resolved_by: openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routi
 ## Current Disposition (2026-07-29)
 
 **Resolved at the repository-owned entry contract.** Archived OpenSpec change
-[`harden-dpt-research-entry-routing`](../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/)
+[`harden-dpt-research-entry-routing`](../../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/)
 defines entry-first routing for selected DPT work. Until the selected entry is
 read, direct WebSearch/WebFetch for that request and manual evidence
 collection/synthesis are expressly outside the legal route; after entry, only

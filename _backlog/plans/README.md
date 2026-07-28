@@ -17,12 +17,17 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `dpt-routing-and-wave-contract-integrity` | 承接 BUG-139--142：用两个候选 OpenSpec change 分别收敛 DPT-selected research 的 entry-first routing 与 Wave Gate degraded verdict 的语义；BUG-142 先以 current-head 真实 Wave1 closeout observation 裁决，只有仍无合法路径才开第三个条件化小 change。 | progressive plan / ready for proposal after Stage 0 evidence |
 | `silent-autonomous-execution` | 承接 `source_bugs: BUG-099/104/106`（stop-no halt、context pollution、stop-no-violation-repeats）。独立 research backlog：把「静默自主」拆成 DPT 可确定性修复的 phase-entry correctness 与一般 coding-agent/host 是否发起下一 turn 的 actor liveness 两层，分开研究与证明。BUG-103 的入口 handoff guidance 已由 archived change 修复；其余仍 deferred 于核心 work-unit、evidence-production 与 Gate 路径稳定可跑之后。 | deferred research / scoping（无固定 OpenSpec change） |
 
 ---
 
 ## 最近关闭 (2026-07-27)
+
+## 最近关闭 (2026-07-29)
+
+| Plan | 关闭依据 |
+|------|----------|
+| `dpt-routing-and-wave-contract-integrity` | CLS-041：三个有界 change 均已 archive；BUG-139/140 的 repository-owned entry contract、BUG-141 的 Wave verdict，以及 Wave1 direct closeout feedback 已完成。BUG-142 的 real Agent-flow classification 仍单独 pending。 |
 
 ## 最近关闭 (2026-07-28)
 

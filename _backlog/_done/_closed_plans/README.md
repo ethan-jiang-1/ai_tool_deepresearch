@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-07-28 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-07-29 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -62,5 +62,6 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-038 | 2026-07-28 | seed-topic-projection-materialization.md | BUG-138 的单一 writer / Seed Topic template-protocol boundary / shared readiness 收敛已由 `fix-seed-topic-projection-materialization` archive（commit `9953435a3`）完成；嵌套 Agent-flow canary 被移除，验收保留静态契约与确定性生产 CLI Wave 链。 |
 | CLS-039 | 2026-07-28 | wave-projection-and-lifecycle-convergence.md | Four bounded changes archived (v0.54--v0.57): Wave0 candidate projection, Wave1 reference convergence, Wave2 return-map scope, and terminal lifecycle truth. BUG-129/130 remain counterexample-gated; BUG-131 remains accepted policy risk. |
 | CLS-040 | 2026-07-28 | deferred_conversation-capture-host-capabilities.md | Completed host-capability research: framework-owned Codex app-server, Claude Agent SDK, and stream-json integrations can own a ledger; externally launched native-client sessions remain best-effort observation only. No framework implementation task remains. |
+| CLS-041 | 2026-07-29 | dpt-routing-and-wave-contract-integrity.md | Archived routing entry hardening, Wave0 verdict disambiguation, and Wave1 direct closeout feedback. BUG-142's real Agent-flow classification remains separately pending. |
 
-**Next available plan ID: CLS-041**
+**Next available plan ID: CLS-042**

@@ -16,7 +16,7 @@ resolved_by: openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routi
 ## Current Disposition (2026-07-29)
 
 **Resolved at the repository-owned routing boundary.** Archived OpenSpec change
-[`harden-dpt-research-entry-routing`](../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/)
+[`harden-dpt-research-entry-routing`](../../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/)
 made the selected-DPT next action explicit: a reachable selected bundle with
 continue/inspect intent reads `continue-run-bundle.md`; otherwise selected DPT
 research reads `RUN.md`. Before that entry routing completes, generic

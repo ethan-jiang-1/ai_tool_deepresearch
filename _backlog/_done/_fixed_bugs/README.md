@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-07-28 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-07-29 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -142,8 +142,11 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-134 | 2026-07-28 | Wave2 synthesis and ledger artifacts no longer enter the Seed Topic return-map parser; their independent contracts retain ownership |
 | BUG-135 | 2026-07-28 | Normal readiness-to-Final status transaction now commits the authoritative completed lifecycle state while preserving rollback and post-final recovery |
 | BUG-103 | 2026-07-28 | `start-research` now delivers the accepted `enter-phase -> source-gate advance-status -> execute` handoff order; lifecycle writers remain intentionally separate |
+| BUG-139 | 2026-07-29 | DPT-selected research entry contract now explicitly routes before generic research shortcuts; host-level matcher suppression remains residual |
+| BUG-140 | 2026-07-29 | DPT-selected research entry contract now prohibits pre-entry ad-hoc search/fetch/synthesis; host tool availability remains residual |
+| BUG-141 | 2026-07-29 | Wave Gate public verdict is mutually exclusive across blocking failure, clean pass, and degraded handoff |
 
-**Next available bug ID: BUG-139**
+**Next available bug ID: BUG-142**
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: DPT routing and Wave contract integrity
-status: mandatory_changes_archived_bug_142_valid_current_head_observation_pending
+status: complete_via_archived_narrow_repair_bug_142_agent_flow_classification_pending
 created: 2026-07-29
 source_bugs: BUG-139, BUG-140, BUG-141, BUG-142
 evidence_bundle: dpt_rb_openspec-spec-bloat-context-management
@@ -28,8 +28,8 @@ submitted evidence + Phase-owned navigation projection
 
 | Change | 覆盖 | 有界问题 | 原因 | 状态 |
 | --- | --- | --- | --- | --- |
-| `harden-dpt-research-entry-routing` | BUG-139, BUG-140 | DPT 已被用户选择时，Agent 在任何研究动作前必须进入正确的 DPT entry。 | 这是入口与 Agent Flow 路由语义，不触碰 runtime Gate/ledger。 | 已于 2026-07-29 [archive](../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/)；accepted `run-entry` 与 document contract 已同步。 |
-| `make-wave-gate-verdict-unambiguous` | BUG-141 | 一个 Gate 输出必须能让 reader 精确区分 clean pass、degraded handoff 和 failed，且 `passed` 与 blocking failures 始终一致。 | 这是 runtime verdict/transition API 语义；与入口路由独立。 | 已于 2026-07-29 [archive](../../openspec/changes/archive/2026-07-29-make-wave-gate-verdict-unambiguous/)；accepted `GSK-004` / `RWG-021` 已同步，commit `e2c281133`。 |
+| `harden-dpt-research-entry-routing` | BUG-139, BUG-140 | DPT 已被用户选择时，Agent 在任何研究动作前必须进入正确的 DPT entry。 | 这是入口与 Agent Flow 路由语义，不触碰 runtime Gate/ledger。 | 已于 2026-07-29 [archive](../../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/)；accepted `run-entry` 与 document contract 已同步。 |
+| `make-wave-gate-verdict-unambiguous` | BUG-141 | 一个 Gate 输出必须能让 reader 精确区分 clean pass、degraded handoff 和 failed，且 `passed` 与 blocking failures 始终一致。 | 这是 runtime verdict/transition API 语义；与入口路由独立。 | 已于 2026-07-29 [archive](../../../openspec/changes/archive/2026-07-29-make-wave-gate-verdict-unambiguous/)；accepted `GSK-004` / `RWG-021` 已同步，commit `e2c281133`。 |
 
 **BUG-142 暂不单独开 change。** 当前 head 已有 Wave1 `Phase-owned reference projection` 合同和 convergence 关闭路径；它在该 bundle 运行结束后的 2026-07-28 16:57 合入。先做一次真实受控验证。只有 current head 仍让 Phase Agent 获得“没有合法下一步”的 materialization feedback，才开一个第三个、只修 closeout feedback/materialization handoff 的 change。
 
@@ -144,7 +144,7 @@ submitted backing -> existing Wave1 inspect -> canonical projection + index sync
 - [x] Identify that Wave1 reference convergence landed after the observed run; do not infer current behavior from the old bundle alone.
 - [x] Capture a read-only baseline for the future proposals: current commit, bundle trace/diagnostic paths, current accepted-spec requirement IDs, and the exact change that introduced Wave1 convergence. Attach it to the proposal evidence rather than copying raw diagnostics into specs.
   - Captured 2026-07-29 at `d2bf0e5a7b5112aa3ee99ad736fb2d4628a679e8`.
-  - Historical observation coordinate: `/Users/bowhead/ai_tool_deepresearch/dpt_rb_openspec-spec-bloat-context-management`, especially its `rb_trace.jsonl` and the Wave0/Wave1 Gate/inspect outputs invoked by [BUG-141](../bugs/BUG-141-wave0-gate-contradictory-passed.md) and [BUG-142](../bugs/BUG-142-reference-ledger-circular-dependency.md). The bundle is not present in the current workspace, so no raw trace is copied or treated as current-head evidence.
+  - Historical observation coordinate: `/Users/bowhead/ai_tool_deepresearch/dpt_rb_openspec-spec-bloat-context-management`, especially its `rb_trace.jsonl` and the Wave0/Wave1 Gate/inspect outputs invoked by [BUG-141](../_fixed_bugs/BUG-141-wave0-gate-contradictory-passed.md) and [BUG-142](../../bugs/BUG-142-reference-ledger-circular-dependency.md). The bundle is not present in the current workspace, so no raw trace is copied or treated as current-head evidence.
   - Current accepted boundaries: `GSK-004` (Gate public summary projection), `RWG-017` (Wave Gate Phase-owned projection/delegated evidence split), and `WPG-012` (provenance distinction).
   - Wave1 convergence landed in `3679b7136a4a52c1387b7b3e9bc8831910e123bb` (`feat(wave1): converge reference projections`, 2026-07-28T16:57:45+08:00), with its archived change at `openspec/changes/archive/2026-07-28-converge-wave1-reference-projections/`.
 - [x] Launch one disposable **real Agent-flow** current-head Wave1 closeout observation with submitted HTTP(S) source/cache backing. The required proof remains: inspect emits exact materialization candidates; Agent creates canonical backed Phase-owned references; index/packet loop completes; same inspect and Gate no longer ask for an impossible work-unit claim. A fixture remains only deterministic Engine evidence, not Agent-behavior proof.
@@ -152,15 +152,16 @@ submitted backing -> existing Wave1 inspect -> canonical projection + index sync
 - [x] Preserve the first launch as a non-evidentiary cancelled attempt, not as a BUG-142 result.
   - Command: `node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --case case-225-heavy-returned-work-closeout --max-total-budget-usd 5`.
   - The setup script initially generated a queue payload with the helper default `topic_uid` instead of the case's canonical `tp_225...` UID. The disposable payload was aligned before enqueue; no framework source, ledger, submitted result, receipt, or closeout authority was changed.
-  - The Subject claimed `wu-w1-b000-deep-i0001`, but native child result, dry/formal submit, Phase closeout, inspect, case checks, and native completion were never produced. The supervisor was externally cancelled before its configured timeout. Its retained report is [`6649b6c9-94da-4cc2-aef2-b2ab3e0ecccb.json`](../../.exp-bundles/_reports/6649b6c9-94da-4cc2-aef2-b2ab3e0ecccb.json); it records `CANCELLED`, `native_outcome: null`, `completion: null`, and `cost_usd: null`.
-  - This establishes neither a current-head closeout failure nor an Agent/child availability failure. It must not be used to open Stage 4C or to mark BUG-142 fixed.
+  - The Subject claimed `wu-w1-b000-deep-i0001`, but native child result, dry/formal submit, Phase closeout, inspect, case checks, and native completion were never produced. The supervisor was externally cancelled before its configured timeout. Its retained report is [`6649b6c9-94da-4cc2-aef2-b2ab3e0ecccb.json`](../../../.exp-bundles/_reports/6649b6c9-94da-4cc2-aef2-b2ab3e0ecccb.json); it records `CANCELLED`, `native_outcome: null`, `completion: null`, and `cost_usd: null`.
+  - This establishes neither a current-head closeout failure nor an Agent/child availability failure. It must not be used to classify BUG-142 fixed or failed, or to claim a missing closeout writer.
 - [x] Run focused current-head deterministic coverage for the existing closeout contract.
   - `node --test tests/engine/helpers/wave1-reference-convergence.test.mjs tests/integration/cli/wave1-reference-convergence.test.mjs tests/integration/md/parallel-delegated-reference-materialization.test.mjs` passed 26/26 on 2026-07-29.
   - The coverage proves candidate-exact submitted backing, canonical projection before index synchronization/floor deficit, and Phase-owned materialization guidance. It is not a real-Agent observation and does not classify BUG-142.
 - [ ] Complete one valid real-Agent observation from the same declared proof boundary. It must finish natively with a real child return, submitted backing, closeout, inspect, and the four deterministic case checks; a cancellation, missing completion, or a hand-authored child result is `NOT_RUN` for BUG-142.
 - [ ] Decide BUG-142 disposition from that observation:
   - PASS: mark it fixed-by-current-head / close it with the observation and retain no third change.
-  - FAIL with a direct missing writer/coordinate: open the conditional change in Stage 4C.
+  - FAIL with a direct missing writer/coordinate: refine the proposed Stage 4C feedback change only when that failure identifies a necessary writer/coordinate boundary.
+  - User-directed feedback-only proposal: Stage 4C may proceed without this classification, but it SHALL not represent itself as a functional BUG-142 fix.
   - FAIL because Phase Agent ignored explicit legal guidance: treat as entry/role-guidance delivery evidence and amend the narrowest existing guidance surface, not ledger architecture.
 
 **Exit criterion:** both candidate changes have a stable source-of-record map, and BUG-142 is classified by current behavior rather than the historical run.
@@ -176,7 +177,7 @@ submitted backing -> existing Wave1 inspect -> canonical projection + index sync
 - [x] Reassess `agent_flow_e2e` rather than adding a synthetic observation: existing Playbook/Subject traces begin after injected instructions, so extending them would add an acceptance-critical adapter and still not prove host skill matching before repository routing. The archived change marks this class not applicable and records the residual boundary instead of manufacturing trace evidence.
 - [x] Record residual risk: no verified host-level conditional suppression is promised. A settings/hook remains a separate future decision only if it demonstrates exact host scope without disabling later framework work.
 
-**Done condition:** satisfied by [the archived change](../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/). A selected DPT request now has one repository-documented first action, verified by the document contract; no new lifecycle state or runtime bundle field exists. This is not a claim that a host cannot preempt repository guidance.
+**Done condition:** satisfied by [the archived change](../../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/). A selected DPT request now has one repository-documented first action, verified by the document contract; no new lifecycle state or runtime bundle field exists. This is not a claim that a host cannot preempt repository guidance.
 
 ### Stage 2 - Archived `make-wave-gate-verdict-unambiguous`
 
@@ -202,25 +203,33 @@ submitted backing -> existing Wave1 inspect -> canonical projection + index sync
 
 ### Stage 3 - Apply and archive in dependency order
 
-- [x] Apply and archive Stage 1 first. [`harden-dpt-research-entry-routing`](../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/) now gives the next simulation a trustworthy documented entry boundary; host matcher behavior remains out of scope.
+- [x] Apply and archive Stage 1 first. [`harden-dpt-research-entry-routing`](../../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/) now gives the next simulation a trustworthy documented entry boundary; host matcher behavior remains out of scope.
 - [x] Launch the Stage 0 current-head BUG-142 observation from the new entry behavior and preserve its cancelled evidence without classifying BUG-142.
-- [ ] Complete the Stage 0 current-head BUG-142 observation with native completion, then update its disposition before any conditional code proposal.
+- [ ] Complete the Stage 0 current-head BUG-142 observation with native completion before classifying BUG-142 fixed or failed. This is no longer an apply gate for the feedback-only change below; it remains the required proof for an Agent-flow claim.
 - [x] Apply and archive Stage 2 second. Use the historical Wave0 degraded trace as a regression case and retain a current real observation for Agent-facing interpretation.
-  - Archived at [2026-07-29-make-wave-gate-verdict-unambiguous](../../openspec/changes/archive/2026-07-29-make-wave-gate-verdict-unambiguous/); sync and implementation committed as `e2c281133`.
+  - Archived at [2026-07-29-make-wave-gate-verdict-unambiguous](../../../openspec/changes/archive/2026-07-29-make-wave-gate-verdict-unambiguous/); sync and implementation committed as `e2c281133`.
 - [x] Update each bug record with: reproduced/current status, exact contract boundary, evidence path, accepted residual risk, and archive/change link. Do not mark a host-level tool matcher fixed by a Markdown-only test.
   - BUG-139 and BUG-140 are resolved only for the repository-owned `run-entry` document contract; host-level matcher/tool suppression remains explicitly residual.
   - BUG-141 is resolved by archived `make-wave-gate-verdict-unambiguous` (`GSK-004`, `RWG-021`, commit `e2c281133`).
-  - BUG-142 is explicitly `current_head_disposition_pending`; the cancelled case-225 attempt is linked as non-evidence and cannot admit Stage 4C.
-- [ ] Move this plan only after both mandatory changes are archived and BUG-142 has PASS closure or its conditional change is independently completed.
+  - BUG-142 is explicitly `current_head_disposition_pending`; the cancelled case-225 attempt is linked as non-evidence and cannot classify a functional closeout defect. The proposed Stage 4C feedback refinement makes no contrary claim.
+- [x] Move this plan after both mandatory changes are archived and the conditional change is independently completed.
+  - Stage 4C was archived and committed as `b68c24357`; BUG-142's valid real-Agent observation remains separately pending and is not represented as a functional bug fix.
 
-### Stage 4C - Conditional only: `make-wave1-reference-closeout-feedback-direct`
+### Stage 4C - Archived `make-wave1-reference-closeout-feedback-direct`
 
-Open this only if Stage 0 reproduces a current-head failure after the Agent follows the current accepted materialization route.
+The user directed this proposal after current-head deterministic convergence
+coverage passed. It narrows only the closeout feedback projection; it does not
+claim that current head lacks a writer or that BUG-142 has reproduced in a real
+Agent flow. The unresolved Agent-flow observation remains its own evidence
+boundary.
 
-- [ ] State the precise missing boundary: e.g. inspect returns an exact submitted candidate but no canonical rendering/write coordinate, or it reports `ledger_coverage` before/mixed with the available materialization root.
-- [ ] Reuse `resolveReviewedWave1SubmittedBacking()` and existing canonical path/format/index mechanisms. The change may make the materialization root the unique primary hint and mask dependent legacy/unbacked-reference spam until materialization is tried.
-- [ ] If a small writer is genuinely missing, make it an Engine-owned bounded operation accepting only exact returned candidate coordinates and producing only a Phase-owned projection. It must not append ledger rows, modify submitted results, choose sources, perform web search, or become an alternate evidence authority.
-- [ ] Test direct candidate -> canonical reference -> index sync -> same inspect, plus absent/invalid submitted backing -> one root failure. Include an Agent-flow observation; do not use a hand-authored reference fixture as evidence that the Agent can execute the handoff.
+- [x] State the precise bounded boundary: when an exact submitted candidate can materialize a canonical projection, it is the one primary closeout hint within the existing convergence branch; its index/floor outcomes stay deferred until same-check rerun, while separately evaluated legacy/index/ledger and authority roots remain visible.
+- [x] Reuse `resolveReviewedWave1SubmittedBacking()` and existing canonical path/format/index mechanisms. The proposed change does not add a writer; it makes the materialization root direct before dependent feedback can compete.
+- [x] Preserve authority limits: no ledger mutation, submitted-output change, receipt rewrite, supplementary path before a true post-closeout deficit, source choice, web search, or alternate evidence authority.
+- [x] Create [the OpenSpec proposal](../../../openspec/changes/archive/2026-07-28-make-wave1-reference-closeout-feedback-direct/) with `proposal.md`, `design.md`, `specs/`, `tasks.md`, and `verification-plan.yaml`.
+  - Proposal status: strict OpenSpec validation passed and `check-verification-routing --mode plan` accepted its 4 unit/integration claims.
+- [x] Apply and archive the narrow feedback projection, guidance, tests, and `v0.60` release tasks.
+  - Archived at [2026-07-28-make-wave1-reference-closeout-feedback-direct](../../../openspec/changes/archive/2026-07-28-make-wave1-reference-closeout-feedback-direct/) and committed as `b68c24357`. A real-Agent observation may be added as supplemental evidence, but is not a substitute for the deterministic feedback contract.
 
 **Non-goal:** no supplemental work-unit path, ledger mutator, retroactive receipt, artifact-persistence exception, or generic reference recovery subsystem.
 
@@ -246,4 +255,4 @@ Each proposal must answer these before `/opsx:apply`:
 
 ## 7. Completion Signal
 
-The plan is complete only when the archived DPT-selected entry contract remains synchronized without claiming host enforcement, a degraded Gate handoff cannot be mistaken for a clean pass, and Wave1 Phase-owned reference closeout has either passed a real current-head observation or received its own narrowly justified repair change.
+The plan is complete: the archived DPT-selected entry contract remains synchronized without claiming host enforcement, a degraded Gate handoff cannot be mistaken for a clean pass, and Wave1 Phase-owned reference closeout received its narrowly justified repair change. BUG-142's separate real-Agent-flow classification remains pending; its cancelled observation is not closure evidence.

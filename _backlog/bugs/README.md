@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-07-28 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-07-29 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -22,8 +22,6 @@
 | [BUG-099](BUG-099-stop-no-agent-halted-at-wave0.md) | P2 | wave0 | deferred operability：`stop: no` phase agent 在 wave0 主动停下，当前可由一次用户续跑恢复，不阻塞核心 bundle contract 可达性 |
 | [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | enter-phase 每次渲染完整 shared context 造成累积 context 压力 |
 | [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P2 | wave0→wave1 | deferred operability：agent 输出总结而未执行下一 phase，当前可由一次用户续跑恢复 |
-| [BUG-139](BUG-139-research-skill-overrides-dpt-routing.md) | P2 | 路由 | `research` skill（generic）劫持 DPT_FRAMEWORK 路由，同 BUG-045 根因但不同 skill；root CLAUDE.md 仍缺显式 skill 抑制 |
-| [BUG-141](BUG-141-wave0-gate-contradictory-passed.md) | P1 | wave0 | gate 报告 passed=true + failed_rule_ids 矛盾；gate verdict 不可靠 |
 | [BUG-142](BUG-142-reference-ledger-circular-dependency.md) | P1 | wave1 | Phase Agent 无法将 reference 文件写入 ledger；circular dependency 阻止 gate pass |
 
 > BUG-099/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 计划承接，均 deferred 于核心 work-unit / evidence / Gate 运行路径稳定之后。BUG-129/130/131 已移至 `../_done/_suspened_bugs/`：它们分别等待当前真实反例或新的产品策略决定，不是活跃 implementation defect。
@@ -56,6 +54,13 @@ deterministic repair path / evaluator scope”的 framework bug；相反，不�
 把历史最小情形做成 disposable fixture，再决定 proposal 的边界。
 
 ## 最近关闭 (2026-07-27)
+
+## 最近关闭 (2026-07-29)
+
+| Bug | 结案依据 |
+|-----|----------|
+| BUG-139 / BUG-140 | `harden-dpt-research-entry-routing` 已 archive：repository-owned DPT entry-first routing 禁止 entry 前 generic shortcut、direct search/fetch 和手工 synthesis；不声称 host matcher/tool suppression。 |
+| BUG-141 | `make-wave-gate-verdict-unambiguous` 已 archive（commit `e2c281133`）：blocking failure、clean pass 和 degraded handoff 的 public verdict 互斥。 |
 
 ## 最近关闭 (2026-07-28)
 
