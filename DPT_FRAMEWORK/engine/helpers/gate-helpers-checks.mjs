@@ -21,6 +21,7 @@ import {
   inspectCacheLeaf,
 } from './cache-leaf-contract.mjs';
 import { makeContractFinding } from './wave-contract-findings.mjs';
+import { normalizeWave1ReferenceUrl } from './wave1-reference-convergence.mjs';
 
 function checkerFinding(rule, {
   defaultRuleId,
@@ -54,13 +55,7 @@ function checkerFinding(rule, {
 }
 
 function normalizeUrl(url) {
-  try {
-    const parsed = new URL(String(url || '').trim());
-    parsed.hash = '';
-    return parsed.toString();
-  } catch {
-    return String(url || '').trim();
-  }
+  return normalizeWave1ReferenceUrl(url) || String(url || '').trim();
 }
 
 const ACCEPTED_SOURCE_STATUSES = new Set(['accepted', 'countable', 'accepted_countable']);

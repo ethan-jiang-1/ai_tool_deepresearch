@@ -1,0 +1,259 @@
+import { after, describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+import {
+  canonicalWave1ReferencePath,
+  classifyWave1ReferencePath,
+  evaluateWave1ReferenceConvergence,
+  normalizeWave1ReferenceUrl,
+  resolveReviewedWave1SubmittedBacking,
+} from '../../../DPT_FRAMEWORK/engine/helpers/wave1-reference-convergence.mjs';
+import { readBundlePlan } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers-readers.mjs';
+import { evaluateTopicLayouts } from '../../../DPT_FRAMEWORK/engine/helpers/topic-layout.mjs';
+import {
+  claimAndSubmitWorkUnit,
+  cleanupWorkUnitBundle,
+  referenceContent,
+  tempWorkUnitBundle,
+} from '../work-unit-test-helpers.mjs';
+
+const createdBundles = [];
+
+function writePlan(dir, topics) {
+  writeFileSync(join(dir, 'rb_plan.md'), `---\n${JSON.stringify({
+    plan_basename: 'wave1-reference-convergence-test',
+    derived_topic_count: topics.length,
+    topic_registry_version: '2',
+    topic_registry: topics,
+  }, null, 2)}\n---\n# Plan\n`);
+}
+
+function topic(uid, id, slug) {
+  return {
+    topic_uid: uid,
+    id,
+    slug,
+    title: slug,
+    must_answer: [`What matters for ${slug}?`],
+    scope_role: 'primary',
+    depends_on_topic_uids: [],
+    previous_layouts: [],
+  };
+}
+
+function submitWave1Candidate(dir, { queueItemId, topicUid, topicSlug, sourceUrl }) {
+  const sourceRef = `reference/${queueItemId}-submitted-source.md`;
+  const cacheTrail = `_cache/wave1/primary/${queueItemId}/source`;
+  const claim = {
+    url: sourceUrl,
+    source_ref: sourceRef,
+    acceptance_status: 'accepted',
+    is_new_vs_wave0: true,
+    cache_trail_refs: [cacheTrail],
+  };
+  const submitted = claimAndSubmitWorkUnit(dir, {
+    phase: 'wave1',
+    queueItemId,
+    queueItemOverrides: {
+      payload: { topic_uid: topicUid, topic_slug: topicSlug, wave: 1, assignment_mode: 'primary' },
+    },
+    outputs: [{
+      path: sourceRef,
+      role: 'reference',
+      source_url: sourceUrl,
+      source_slug: 'submitted-source',
+      content: referenceContent({ source_url: sourceUrl, related_topic: topicSlug }),
+    }],
+    cacheTrails: [{ path: cacheTrail, url: sourceUrl }],
+    resultOverrides: { source_claims: [claim], accepted_source_urls: [sourceUrl] },
+    preserveQueue: true,
+  });
+  assert.equal(submitted.submitted.ok, true, JSON.stringify(submitted.submitted));
+  return submitted.record;
+}
+
+function writeDepthReview(dir, topicSlug, refs) {
+  const reviewPath = join(dir, 'artifacts', 'wave1', topicSlug, 'depth-review.yaml');
+  mkdirSync(join(dir, 'artifacts', 'wave1', topicSlug), { recursive: true });
+  writeFileSync(reviewPath, `${JSON.stringify({
+    version: 'depth-review.v1',
+    topic_slug: topicSlug,
+    reviewed_work_unit_refs: refs,
+  }, null, 2)}\n`);
+}
+
+function topicRegistryFact(dir) {
+  return { layouts: evaluateTopicLayouts(readBundlePlan(dir).topic_registry) };
+}
+
+after(() => createdBundles.splice(0).forEach(cleanupWorkUnitBundle));
+
+describe('Wave1 reference identity', () => {
+  it('normalizes fragments without changing canonical identity', () => {
+    assert.equal(
+      normalizeWave1ReferenceUrl('https://example.com/paper#section'),
+      normalizeWave1ReferenceUrl('https://example.com/paper'),
+    );
+  });
+
+  it('derives a repeatable full-current-slug path with a collision-safe qualifier', () => {
+    const input = {
+      topicSlug: '01_meal-timing-blood-glucose-insulin',
+      sourceUrl: 'https://example.com/research/paper',
+    };
+    const first = canonicalWave1ReferencePath(input);
+    const second = canonicalWave1ReferencePath(input);
+    const different = canonicalWave1ReferencePath({ ...input, sourceUrl: 'https://example.com/research/other-paper' });
+
+    assert.equal(first.ok, true);
+    assert.equal(first.path, second.path);
+    assert.match(first.path, /^reference\/01_meal-timing-blood-glucose-insulin-/);
+    assert.notEqual(first.path, different.path);
+  });
+
+  it('keeps canonical, legacy, and current misnamed paths distinct', () => {
+    const input = {
+      topicSlug: '01_meal-timing-blood-glucose-insulin',
+      sourceUrl: 'https://example.com/research/paper',
+    };
+    const canonical = canonicalWave1ReferencePath(input);
+
+    assert.equal(classifyWave1ReferencePath({ ...input, relPath: canonical.path }).path_class, 'canonical_current');
+    assert.equal(classifyWave1ReferencePath({ ...input, relPath: 'reference/01-wave1-deepening.md', metadataBindsCurrentTopic: true }).path_class, 'legacy');
+    assert.equal(classifyWave1ReferencePath({ ...input, relPath: 'reference/01_meal-timing-blood-glucose-insulin-not-canonical.md', metadataBindsCurrentTopic: true }).path_class, 'misnamed_current');
+  });
+
+  it('rejects a non-http submitted backing URL', () => {
+    assert.equal(canonicalWave1ReferencePath({ topicSlug: '01_topic', sourceUrl: 'mailto:team@example.com' }).ok, false);
+  });
+});
+
+describe('reviewed Wave1 submitted backing', () => {
+  it('selects only current-Topic submitted backing and deduplicates fragment variants', () => {
+    const dir = tempWorkUnitBundle('wave1-convergence-');
+    createdBundles.push(dir);
+    const topicA = topic('tp_123e4567-e89b-12d3-a456-426614174000', '01', 'topic-a');
+    writePlan(dir, [topicA]);
+    const first = submitWave1Candidate(dir, {
+      queueItemId: 'topic-a-one',
+      topicUid: topicA.topic_uid,
+      topicSlug: topicA.slug,
+      sourceUrl: 'https://example.com/paper#overview',
+    });
+    const second = submitWave1Candidate(dir, {
+      queueItemId: 'topic-a-two',
+      topicUid: topicA.topic_uid,
+      topicSlug: topicA.slug,
+      sourceUrl: 'https://example.com/paper',
+    });
+    writeDepthReview(dir, topicA.slug, [first.paths.work_unit_dir, second.paths.work_unit_dir]);
+
+    const resolved = resolveReviewedWave1SubmittedBacking(dir, { topic: topicA.slug, topicRegistryFact: topicRegistryFact(dir) });
+
+    assert.equal(resolved.ok, true);
+    assert.deepEqual(resolved.topic, { topic_uid: topicA.topic_uid, topic_slug: topicA.slug });
+    assert.equal(resolved.candidates.length, 1);
+    assert.equal(resolved.candidates[0].normalized_url, 'https://example.com/paper');
+    assert.deepEqual(resolved.candidates[0].work_ids, [first.work_id, second.work_id].sort());
+  });
+
+  it('fails closed when a reviewed submitted row is bound to another current Topic', () => {
+    const dir = tempWorkUnitBundle('wave1-convergence-');
+    createdBundles.push(dir);
+    const topicA = topic('tp_123e4567-e89b-12d3-a456-426614174000', '01', 'topic-a');
+    const topicB = topic('tp_123e4567-e89b-12d3-a456-426614174001', '02', 'topic-b');
+    writePlan(dir, [topicA, topicB]);
+    const otherTopic = submitWave1Candidate(dir, {
+      queueItemId: 'topic-b-one',
+      topicUid: topicB.topic_uid,
+      topicSlug: topicB.slug,
+      sourceUrl: 'https://example.com/topic-b/paper',
+    });
+    writeDepthReview(dir, topicA.slug, [otherTopic.paths.work_unit_dir]);
+
+    const resolved = resolveReviewedWave1SubmittedBacking(dir, { topic: topicA.slug, topicRegistryFact: topicRegistryFact(dir) });
+
+    assert.equal(resolved.ok, false);
+    assert.equal(resolved.root.code, 'manifest_topic_binding_invalid');
+  });
+
+  it('fails closed before candidate selection for an invalid reviewed reference', () => {
+    const dir = tempWorkUnitBundle('wave1-convergence-');
+    createdBundles.push(dir);
+    const topicA = topic('tp_123e4567-e89b-12d3-a456-426614174000', '01', 'topic-a');
+    writePlan(dir, [topicA]);
+    writeDepthReview(dir, topicA.slug, ['../not-a-work-unit']);
+
+    const resolved = resolveReviewedWave1SubmittedBacking(dir, { topic: topicA.slug, topicRegistryFact: topicRegistryFact(dir) });
+
+    assert.equal(resolved.ok, false);
+    assert.equal(resolved.root.code, 'reviewed_work_unit_ref_unsafe');
+  });
+});
+
+describe('Wave1 reference convergence priority', () => {
+  const topicFact = { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000', topic_slug: 'topic-a' };
+  const backing = {
+    ok: true,
+    candidates: [{ normalized_url: 'https://example.com/a' }, { normalized_url: 'https://example.com/b' }],
+  };
+  const closedProjections = backing.candidates.map((candidate) => ({
+    ...candidate,
+    path_class: 'canonical_current',
+    candidate_binding: true,
+    format_valid: true,
+    url_valid: true,
+    countable: true,
+  }));
+
+  it('requires projection materialization before index synchronization or a floor deficit', () => {
+    const result = evaluateWave1ReferenceConvergence({
+      topic: topicFact,
+      requiredFloor: 8,
+      submittedBacking: backing,
+      projections: [closedProjections[0]],
+      index: { valid: false, stale: true },
+    });
+    assert.equal(result.outcome, 'materialize_projection');
+    assert.deepEqual(result.candidates.map((candidate) => candidate.normalized_url), ['https://example.com/b']);
+  });
+
+  it('requires index synchronization before an otherwise true floor deficit', () => {
+    const result = evaluateWave1ReferenceConvergence({
+      topic: topicFact,
+      requiredFloor: 8,
+      submittedBacking: backing,
+      projections: closedProjections,
+      index: { valid: false, stale: true },
+    });
+    assert.equal(result.outcome, 'sync_reference_index');
+  });
+
+  it('reuses existing supplementary demand and computes controlled floor deficits', () => {
+    const existing = evaluateWave1ReferenceConvergence({
+      topic: topicFact,
+      requiredFloor: 8,
+      submittedBacking: backing,
+      projections: closedProjections,
+      liveSupplementaryDemand: { queue_item_id: 'supplement-topic-a' },
+    });
+    assert.equal(existing.outcome, 'existing_supplementary');
+    assert.equal(existing.deficit, 6);
+
+    const cases = [[6, 2], [5, 3], [5, 3], [6, 2]];
+    for (const [observed, deficit] of cases) {
+      const result = evaluateWave1ReferenceConvergence({
+        topic: topicFact,
+        requiredFloor: 8,
+        submittedBacking: { ok: true, candidates: closedProjections.slice(0, observed) },
+        projections: closedProjections.slice(0, observed),
+      });
+      assert.equal(result.outcome, 'reference_floor_deficit');
+      assert.equal(result.observed, Math.min(observed, closedProjections.length));
+      assert.equal(result.deficit, 8 - Math.min(observed, closedProjections.length));
+      assert.ok(deficit >= 2);
+    }
+  });
+});

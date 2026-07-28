@@ -1,0 +1,121 @@
+schema_version: verification-routing/v1
+change: converge-wave1-reference-projections
+test_classes:
+  unit:
+    status: selected
+    rationale: The canonical locator, manifest-bound submitted-backing selection, legacy/misnamed classification, root-first convergence precedence, index renderer/CAS result, and supplementary task-objective projection are bounded deterministic contracts with direct module seams.
+  integration:
+    status: selected
+    rationale: Temporary bundles must prove that production submit backing, artifact persistence, index sync, Wave1 inspect, formal gate, queue admission, and generated task guidance agree without hand-authored ledger or gate state.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The bounded Wave1 closeout contract is fully covered by short real-command temporary-bundle integrations; a full multi-wave lifecycle chain would add unrelated Wave0/Wave2/status behavior without strengthening this claim.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: This change proves deterministic closeout classification and bounded guidance delivery, not that a real Agent independently judges research quality or discovers sources; an Agent-flow run would add cost without becoming the authority for the Engine contract.
+claims:
+  - id: wave1-canonical-locator-and-path-classification
+    statement: >-
+      REF-001, REF-008, and RWG-012: one Wave1 locator derives a repeatable collision-safe canonical path from a current full Topic slug and normalized authenticated submitted backing; it distinguishes canonical_current, legacy NN-wave1, and misnamed_current without treating a broad glob, filename, or index row as backing authority.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/wave1-reference-convergence.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-convergence-precedence-and-floor-objective
+    statement: >-
+      RWG-005, RWG-012, RWG-018, WAI-005, and WAI-008: the pure evaluator accepts only reviewed hash-valid submitted Wave1 backing whose manifest queue snapshot binds the current Topic, requires each closed projection's normalized metadata URL and body backing refs to bind that exact candidate, root-short-circuits unbound/invalid parent authority, requires canonical materialization before index synchronization, reports one invalid-index parent before rows, returns a live same-Topic supplementary demand before new work, and emits only a true post-repair positive per_topic_ref_md_count_floor deficit; controlled floor-8 counts of 6/5/5/6 produce only deficits 2/3/3/2 after materializable backing is exhausted.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/wave1-reference-convergence.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: reference-index-sync-cas-contract
+    statement: >-
+      REF-003 and RWG-018: index synchronization renders all committed flat reference families with the accepted eight-column shape and stable ref-file order, retains valid date_landed values, labels legacy Wave1 rows as wave1_topic without counting them, blocks an unclassifiable non-special path rather than trusting an old index layer, precompares equal bytes as unchanged without persistence, and otherwise returns committed or blocked through the existing CAS without modifying references, queue, ledger, receipt, cache, or gate state.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/reference-index-sync.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: supplementary-objective-remains-non-selector
+    statement: >-
+      AGQ-013 and DEW-004: a positive reference_floor_deficit is admitted only on a snapshot-bound supplementary Wave1 Topic card, participates in the existing queue snapshot hash, survives the queue-to-work-unit handoff as read-only task context, cannot select required outputs or alter result/receipt/submit contracts, and rejects invalid or primary-mode use before mutation.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-assignment-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-submit-inspect-gate-convergence
+    statement: >-
+      RWG-005, RWG-012, RWG-017, RWG-018, WAI-005, and WAI-008: a temporary bundle using real production Wave1 submit backing, manifest Topic binding, reference persistence, index synchronization, and the existing Seed Topic packet writer makes inspect and the formal gate expose the same materialization/index/floor root and later pass only from canonical current backed references; legacy NN-wave1 files and unbound submitted rows do not satisfy the floor.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/wave1-reference-convergence.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-index-parent-and-true-deficit-integration
+    statement: >-
+      REF-003, RWG-012, and RWG-018: a real Wave1 inspect/gate reports exactly one reference_index_table_invalid parent for an empty or invalid index, does not enumerate derived row symptoms, preserves Wave0/Wave2 index rows after sync, and offers a supplementary reference-floor objective only after manifest-bound materializable backing and index repair are exhausted.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave1-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-closeout-guidance-contract
+    statement: >-
+      REF-005, RWP-010, RWP-015, RWP-016, RWP-017, and WAI-008: shipped Wave1 reference template and Phase guidance present one current canonical locator, candidate-exact metadata/body submitted-backing instructions, and ordered materialize/persist -> index sync -> existing packet writer -> same inspect loop, then the existing supplementary queue path only for a true deficit; they preserve template/protocol separation and do not direct raw seed/index edits, source invention, a legacy naming rule, or user-operated mechanical repair.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/wave1-reference-closeout-document-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

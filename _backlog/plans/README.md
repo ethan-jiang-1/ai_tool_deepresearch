@@ -19,6 +19,7 @@
 |------|------|------|
 | `conversation-capture-host-capabilities` | 核查 Codex 与 Claude Code 是否能保留每次用户/Agent 交流；结论是只有 framework-owned app-server / Agent SDK / stream-json integration 才能给完整 ledger，独立客户端会话仅可 best-effort 观察 | research / scoping（无固定 OpenSpec change） |
 | `silent-autonomous-execution` | 承接 `source_bugs: BUG-099/103/104/106`（stop-no halt、status drift、context pollution、stop-no-violation-repeats）。独立 research backlog：把「静默自主」拆成 DPT 可确定性修复的 phase-entry correctness 与一般 coding-agent/host 是否发起下一 turn 的 actor liveness 两层，分开研究与证明。当前 deferred 于 work-unit、evidence-production 与 Gate 路径稳定可跑之后；不阻塞其他 runtime correctness 工作。 | deferred research / scoping（无固定 OpenSpec change） |
+| `wave-projection-and-lifecycle-convergence` | 承接 BUG-129--137：将活跃问题收敛为 Wave0 candidate projection、Wave1 reference projection/index/floor convergence、Wave2 return-map scope、terminal status 四个最小 OpenSpec change；文件内有按顺序推进的状态面板、checklist、证据栏和下一步。BUG-129/130 为 current-counterexample gate，BUG-131 为接受的 policy residual risk。 | active progress tracking / Change 1 ready to propose |
 
 ---
 
