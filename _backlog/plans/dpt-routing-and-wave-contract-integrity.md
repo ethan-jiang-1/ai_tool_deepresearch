@@ -1,6 +1,6 @@
 ---
 title: DPT routing and Wave contract integrity
-status: progressive_plan_ready_for_openspec_proposals
+status: stage_1_archived_stage_0_and_stage_2_pending
 created: 2026-07-29
 source_bugs: BUG-139, BUG-140, BUG-141, BUG-142
 evidence_bundle: dpt_rb_openspec-spec-bloat-context-management
@@ -26,10 +26,10 @@ submitted evidence + Phase-owned navigation projection
 
 建议只开 **两个** OpenSpec change：
 
-| Change | 覆盖 | 有界问题 | 原因 |
-| --- | --- | --- | --- |
-| `harden-dpt-research-entry-routing` | BUG-139, BUG-140 | DPT 已被用户选择时，Agent 在任何研究动作前必须进入正确的 DPT entry。 | 这是入口与 Agent Flow 路由语义，不触碰 runtime Gate/ledger。 |
-| `make-wave-gate-verdict-unambiguous` | BUG-141 | 一个 Gate 输出必须能让 reader 精确区分 clean pass、degraded handoff 和 failed，且 `passed` 与 blocking failures 始终一致。 | 这是 runtime verdict/transition API 语义；与入口路由独立。 |
+| Change | 覆盖 | 有界问题 | 原因 | 状态 |
+| --- | --- | --- | --- | --- |
+| `harden-dpt-research-entry-routing` | BUG-139, BUG-140 | DPT 已被用户选择时，Agent 在任何研究动作前必须进入正确的 DPT entry。 | 这是入口与 Agent Flow 路由语义，不触碰 runtime Gate/ledger。 | 已于 2026-07-29 [archive](../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/)；accepted `run-entry` 与 document contract 已同步。 |
+| `make-wave-gate-verdict-unambiguous` | BUG-141 | 一个 Gate 输出必须能让 reader 精确区分 clean pass、degraded handoff 和 failed，且 `passed` 与 blocking failures 始终一致。 | 这是 runtime verdict/transition API 语义；与入口路由独立。 | 下一个 mandatory proposal。 |
 
 **BUG-142 暂不单独开 change。** 当前 head 已有 Wave1 `Phase-owned reference projection` 合同和 convergence 关闭路径；它在该 bundle 运行结束后的 2026-07-28 16:57 合入。先做一次真实受控验证。只有 current head 仍让 Phase Agent 获得“没有合法下一步”的 materialization feedback，才开一个第三个、只修 closeout feedback/materialization handoff 的 change。
 
@@ -54,7 +54,7 @@ not selected             -> normal non-DPT routing remains available
 
 在这个分流完成前，generic research skill、one-shot research workflow、WebSearch/WebFetch 用于本研究，以及手工 evidence synthesis 都不是合法替代路径。HITL1 的 bounded capability probe 仍是 `RUN.md` 进入后由 phase 合同授权的例外，不能被误写成 entry 前的 research permission。
 
-这里不能诚实承诺“永不被 harness 绕过”：项目文本无法重配所有宿主的 tool injection 或 skill matcher。DPT 可以把自己的 entry contract 和 Agent guidance 做到清晰、同步、可进行真实 Agent observation；平台级条件禁用只有在已验证该宿主支持、且不阻断 framework 所需能力时才是后续独立决定。
+这里不能诚实承诺“永不被 harness 绕过”：项目文本无法重配所有宿主的 tool injection 或 skill matcher。已归档的 Stage 1 因此只以静态 document contract 验证 repository-owned guidance；没有把 synthetic prompt 或 Playbook trace 报告为 host 行为证据。平台级条件禁用只有在已验证该宿主支持、且不阻断 framework 所需能力时才是后续独立决定。
 
 ### BUG-141: not a boolean arithmetic defect, but an overloaded verdict
 
@@ -151,18 +151,18 @@ submitted backing -> existing Wave1 inspect -> canonical projection + index sync
 
 **Exit criterion:** both candidate changes have a stable source-of-record map, and BUG-142 is classified by current behavior rather than the historical run.
 
-### Stage 1 - Propose `harden-dpt-research-entry-routing`
+### Stage 1 - Archived `harden-dpt-research-entry-routing`
 
-- [ ] Create one OpenSpec change with delta only for `run-entry` and the narrow behavioral-doc contract it already owns.
-- [ ] Define the selector precisely: a reachable named existing bundle/map plus continue/inspect intent selects `continue-run-bundle.md`; otherwise explicit DPT selection plus research/deep-research/investigation/report intent selects `RUN.md`. A bare/discovered/unreachable map does not select a run.
-- [ ] Define the entry invariant: before completing that selected entry routing, Agent SHALL not invoke `research`/`deep-research` or another generic one-shot research shortcut, direct WebSearch/WebFetch for the request, or manual evidence collection/synthesis for the request.
-- [ ] State the positive next action in every relevant root/framework behavior surface, not merely a list of forbidden tools. The wording must distinguish pre-entry prohibition from the phase-authorized HITL1 probe and later delegated research work.
-- [ ] Synchronize only the already-contract-owned surfaces: root `AGENTS.md` / `CLAUDE.md`, `RUN.md`, framework behavior files, and README reference. Prefer one short identical policy anchor plus local routing context; do not create a second policy registry or provider-specific plugin.
-- [ ] Add focused document-contract coverage for all required surfaces and both entry choices. It must catch an accidental reintroduction of “skill only” language or an omission of atomic-tool fallback.
-- [ ] Add `agent_flow_e2e` controlled observations for new-run and existing-bundle entry. Assert the first research action follows the selected entry; record host/version/available skills. Do not claim this deterministic test proves a platform harness cannot override instructions.
-- [ ] Before `/opsx:apply`, record residual risk: no verified host-level conditional suppression is being promised. Investigate a settings/hook only if it demonstrably supports this exact host and can be scoped to DPT-selected research without disabling later framework work; otherwise leave it out.
+- [x] Create one OpenSpec change with delta only for `run-entry` and the narrow behavioral-doc contract it already owns.
+- [x] Define the selector precisely: a reachable named existing bundle/map plus continue/inspect intent selects `continue-run-bundle.md`; otherwise explicit DPT selection plus research/deep-research/investigation/report intent selects `RUN.md`. A bare/discovered/unreachable map does not select a run.
+- [x] Define the entry invariant: before completing that selected entry routing, Agent SHALL not invoke `research`/`deep-research` or another generic one-shot research shortcut, direct WebSearch/WebFetch for the request, or manual evidence collection/synthesis for the request.
+- [x] State the positive next action in every relevant root/framework behavior surface, not merely a list of forbidden tools. The wording distinguishes pre-entry prohibition from the phase-authorized HITL1 probe and later delegated research work.
+- [x] Synchronize only the already-contract-owned surfaces: root `AGENTS.md` / `CLAUDE.md`, `RUN.md`, framework behavior files, README reference, and the existing downstream `start-research` pointer. No second policy registry or provider-specific plugin was added.
+- [x] Add focused document-contract coverage for all required surfaces and both entry choices. It catches a return to skill-only wording, an atomic-tool omission, a pre-entry `start-research` bypass, or a host-enforcement overclaim.
+- [x] Reassess `agent_flow_e2e` rather than adding a synthetic observation: existing Playbook/Subject traces begin after injected instructions, so extending them would add an acceptance-critical adapter and still not prove host skill matching before repository routing. The archived change marks this class not applicable and records the residual boundary instead of manufacturing trace evidence.
+- [x] Record residual risk: no verified host-level conditional suppression is promised. A settings/hook remains a separate future decision only if it demonstrates exact host scope without disabling later framework work.
 
-**Done condition:** a selected DPT request has one documented first action and the controlled observations show no generic skill or atomic-search bypass before the entry flow. No new lifecycle state or runtime bundle field exists.
+**Done condition:** satisfied by [the archived change](../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/). A selected DPT request now has one repository-documented first action, verified by the document contract; no new lifecycle state or runtime bundle field exists. This is not a claim that a host cannot preempt repository guidance.
 
 ### Stage 2 - Propose `make-wave-gate-verdict-unambiguous`
 
@@ -185,7 +185,7 @@ submitted backing -> existing Wave1 inspect -> canonical projection + index sync
 
 ### Stage 3 - Apply and archive in dependency order
 
-- [ ] Apply and archive Stage 1 first. It only changes how a research request enters the framework and gives the next simulation a trustworthy start.
+- [x] Apply and archive Stage 1 first. [`harden-dpt-research-entry-routing`](../../openspec/changes/archive/2026-07-29-harden-dpt-research-entry-routing/) now gives the next simulation a trustworthy documented entry boundary; host matcher behavior remains out of scope.
 - [ ] Run the Stage 0 current-head BUG-142 observation from the new entry behavior; update its disposition before any conditional code proposal.
 - [ ] Apply and archive Stage 2 second. Use the historical Wave0 degraded trace as a regression case and retain a current real observation for Agent-facing interpretation.
 - [ ] Update each bug record with: reproduced/current status, exact contract boundary, evidence path, accepted residual risk, and archive/change link. Do not mark a host-level tool matcher fixed by a Markdown-only test.
@@ -224,4 +224,4 @@ Each proposal must answer these before `/opsx:apply`:
 
 ## 7. Completion Signal
 
-The plan is complete only when a new DPT-selected research request demonstrably enters the framework before research work, a degraded Gate handoff cannot be mistaken for a clean pass, and Wave1 Phase-owned reference closeout has either passed a real current-head observation or received its own narrowly justified repair change.
+The plan is complete only when the archived DPT-selected entry contract remains synchronized without claiming host enforcement, a degraded Gate handoff cannot be mistaken for a clean pass, and Wave1 Phase-owned reference closeout has either passed a real current-head observation or received its own narrowly justified repair change.
