@@ -17,6 +17,8 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
+| `framework-contract-feedback-and-control-structure-analysis` | 承接 BUG-143、146、148、150--160、162、170--186 的系统性架构诊断。将确定性 contract/evaluator 缺陷、Agent 可反馈的概率性产物错误、宿主/actor 观察和未决 recovery/quality 语义分开；不预设实现解法。 | analysis complete / awaiting bounded design decision |
+| `framework-contract-remediation-openspec-sequence` | 基于前一份架构诊断的逐步 OpenSpec 执行计划：4 个核心顺序 change（artifact、topic-state、Agent-facing interface、work-unit attempt/recovery）加一个有真实 provider 前提的 HITL1 capability change；BUG-170/175/184 保持明确的观察或政策门。 | proposed sequence / no active change |
 | `silent-autonomous-execution` | 承接 `source_bugs: BUG-099/104/106`（stop-no halt、context pollution、stop-no-violation-repeats）。独立 research backlog：把「静默自主」拆成 DPT 可确定性修复的 phase-entry correctness 与一般 coding-agent/host 是否发起下一 turn 的 actor liveness 两层，分开研究与证明。BUG-103 的入口 handoff guidance 已由 archived change 修复；其余仍 deferred 于核心 work-unit、evidence-production 与 Gate 路径稳定可跑之后。 | deferred research / scoping（无固定 OpenSpec change） |
 
 ---
