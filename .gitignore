@@ -67,7 +67,9 @@ _temp/
 _logs/
 _subagents/
 
+.agents
 .agents/
+.claude
 .claude/
 .codex
-.claude
+.codex/
