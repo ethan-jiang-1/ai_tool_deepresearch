@@ -1,20 +1,26 @@
 ---
 title: Progressive OpenSpec Sequence for Framework Contract Remediation
-status: c3_archived__c4_proposal_polished__review_required
+status: c4_archived__c5_external_provider_gate_pending
 created: 2026-07-29
 predecessor: framework-contract-feedback-and-control-structure-analysis
-last_completed_change: make-agent-operation-contracts-direct
-last_completed_archive: openspec/changes/archive/2026-07-30-make-agent-operation-contracts-direct
-active_change: make-work-unit-attempt-recovery-explicit
-active_change_status: proposal_polished__review_required__c3_archived__archive_commit_177275226
+last_completed_change: make-work-unit-attempt-recovery-explicit
+last_completed_archive: openspec/changes/archive/2026-07-31-make-work-unit-attempt-recovery-explicit
+active_change: none
+active_change_status: no_active_change__c4_archived__archive_commit_9d87b5b52
 c2_task_progress: 26/26
 c2_selected_node_test: 277_passed_0_failed
 c2_archive_status: archived_2026-07-30__14_modified_requirements_synced__committed_177275226
 c3_task_progress: 30/30__selected_verification_and_governance_passed
 c3_selected_node_test: 225_passed_0_failed
 c3_archive_status: archived_2026-07-30__14_modified_requirements_synced__committed_177275226
-next_change: make-work-unit-attempt-recovery-explicit
-next_change_status: proposal_polished__review_required__unblocked_by_c3_archive
+c4_task_progress: 44/44__all_done
+c4_selected_node_test: 88_passed_0_failed
+c4_broader_regression: engine_229/229__cli_49/49__engine_integration_9/9__markdown_18/18
+c4_archive_status: archived_2026-07-31__four_specs_synced__six_new_ids__two_existing_wpg_requirements_modified__committed_9d87b5b52
+next_change: connect-hitl1-research-access-by-semantic-capability
+next_change_status: conditional__real_search_same_url_fetch_evidence_required__not_proposed
+next_unblocked_change: establish-openspec-change-feedback-loop
+next_unblocked_change_status: recommended_for_opsx_propose__independent_lifecycle_governance_change
 c3_proposal_artifacts: proposal_done__specs_done__design_done__tasks_done__verification_plan_done__strict_governance_routing_plan_passed
 source_bugs:
   - BUG-143
@@ -70,10 +76,10 @@ C1 artifact contract / evaluator convergence [archived 2026-07-30]
 C2 canonical topic-state and projection integrity [archived 2026-07-30]
           |
           v
-C3 Agent-facing control and feedback contract
+C3 Agent-facing control and feedback contract [archived 2026-07-30]
           |
           v
-C4 work-unit attempt ownership and legal recovery
+C4 work-unit attempt ownership and legal recovery [archived 2026-07-31]
 
 C5 semantic research-access adapter  (only after a real host/provider is selected)
 ```
@@ -104,7 +110,17 @@ plan；strict OpenSpec、verification-routing plan 与 `git diff --check` 已通
 polish：attempt disposition 收敛为既有 binding 的派生 view，不新增 fence 或 `superseded` status；
 submitted ledger 仍是 current hash/coverage authority，index 只保留 immutable acceptance/supersession
 relation；active transaction、timeout 与 proof-limited recovery 共享同一 direct fact。该 change 现停在
-review 门，仍保持 `propose -> explore -> apply -> archive` 的顺序，不得提前修改 target code。
+review 门。随后已完成 `propose -> explore -> apply -> archive` 的完整顺序和 44/44 项任务；selected suites 为
+88 passed / 0 failed，broader Engine/CLI/integration/Markdown regressions 为 229/229、49/49、9/9、18/18。
+strict OpenSpec、verification-routing assets、requirement/spec governance 与 `git diff --check` 均通过；2026-07-31
+已将四份 delta specs 同步到主规格（六个新 requirement ID、两个既有 WPG requirement 修改），native archive 至
+`openspec/changes/archive/2026-07-31-make-work-unit-attempt-recovery-explicit`，并由提交 `9d87b5b52` 固化。
+
+**2026-07-31 路由说明：** C5 仍缺少当前 Agent 实际可调用、可授权、能返回 candidate URL 且可同 URL fetch
+的 search provider，因此保持 conditional，不把 fetch/curl 或 launcher preflight 误记为满足。为继续处理已有
+本地、独立的 lifecycle evidence，下一个 unblocked change 是
+`establish-openspec-change-feedback-loop`（见 `session-drift-guardrail-analysis/08-final-recommendation-openspec-feedback-loop.md`）；
+它只收敛 OpenSpec change 的 review/closeout/finalizer，不替代或提前实现 C5。
 
 ## 2. 为什么是这个数量
 
@@ -132,7 +148,7 @@ recovery path。
 | C1 | `converge-artifact-contract-evaluators` | archived 2026-07-30 | 每种 artifact 的 grammar、authority classification 和 evaluator scope 是什么？ | 146, 162, 172, 178 | topic writer、count-floor policy、work-unit recovery |
 | C2 | `make-canonical-topic-state-projections-coherent` | archived 2026-07-30 | canonical topic state 如何在合法写入后保持 whole-document parseability、时间语义与 derived freshness？ | 151, 152, 154, 157, 176 | CLI help framework、queue/work-unit rework |
 | C3 | `make-agent-operation-contracts-direct` | archived 2026-07-30 (30/30 tasks, 225 selected tests passed, 14 requirements synced) | Agent 在每个决定点如何发现 protocol、看到最早 direct root，并得到一个合法下一动作？ | 150, 153, 155, 156, 158, 159, 160, 171, 177, 184；173/183 已由 DEW-021 覆盖，159 已由 WNC-010/CPT handoff contract 覆盖，均已记录处置 | 自动 repair controller、改变 evidence authority、host adapter |
-| C4 | `make-work-unit-attempt-recovery-explicit` | proposal polished; review required | active/submitted attempt 的 owner、contention、finality、correction 与 transaction recovery 的 legal semantics 是什么？ | 148, 174, 179--186 | mutable ledger workaround、full-phase Gate prediction、generic retry service |
+| C4 | `make-work-unit-attempt-recovery-explicit` | archived 2026-07-31 (44/44 tasks, 88 selected tests passed, four specs synced, commit `9d87b5b52`) | active/submitted attempt 的 owner、contention、finality、correction 与 transaction recovery 的 legal semantics 是什么？ | 148, 174, 179--186 | mutable ledger workaround、full-phase Gate prediction、generic retry service |
 | C5 | `connect-hitl1-research-access-by-semantic-capability` | conditional; not proposed | 当前 host 如何以真实 search + same-URL fetch 能力接入 HITL1，而不是用工具名或配置猜测？ | 143 | 通用 capability registry、虚假 search 成功、host liveness promise |
 
 ## 4. 逐项执行清单
@@ -166,10 +182,10 @@ C4 的语义尚未决定时为 BUG-179--186 单独加 sync/recompute/retry 命�
   non-current coverage；missing/corrupt ledger 仅在 durable acceptance evidence 存在时可 supersede。active
   `started` journal 产生 busy/wait 并禁止 timeout terminalization，其他 lock/journal 异常为
   `suspect_transaction`，且仅有 proof-limited `recover-transaction`。strict OpenSpec、verification-routing
-  plan 与 `git diff --check` 均已再次通过，现等待 review 后再进入 C4 explore。
-- [ ] **14. C4 explore。** 在设计中先选择且只选择一个 audited correction model：例如 terminalize-and-successor 或有明确 identity/receipt rules 的 audited supersession；不得同时保留两条静默 success path。明确定义 Phase Agent、delegated actor、lock owner、result path 和 lease 的 ownership transfer/fencing；区分 submit-integrity preflight 与 phase-Gate verdict；确定 stale transaction 的 truth/recovery 归属及 index/ledger hash 的唯一 interpretation direction。
-- [ ] **15. C4 apply。** 依照选定模型实现 structured contention、attempt ownership、合法 correction/rework、queue relation、transaction cleanup/recovery 和只检查 submit-owned direct facts的 preflight。保留 ledger/hash fail-closed，不允许任意 recompute/sync、直接 queue reactivation 或已提交 row 就地覆盖；任何新 legal path 必须产生审计可读的 attempt lineage。
-- [ ] **16. C4 archive。** 使用真实 filesystem/interleaving fault-injection 或等价 deterministic transaction evidence，覆盖 concurrent submit、late delegate completion、hash mismatch、failed transaction、terminal correction 和 index/ledger consistency。验证 Phase Gate 不被 dry-submit 承诺预测，且无合法 recovery 时 Engine 明确返回 missing-contract/terminal，而非 raw exception。
+  plan 与 `git diff --check` 均已再次通过；后续 explore、apply 与 archive 均已完成并见第 14--16 项。
+- [x] **14. C4 explore。** 已选择唯一的 audited supersession -> fresh successor correction model，并明确 Phase Agent、delegated actor、global transaction holder 与 attempt-bound result path 的不同逻辑 ownership。submit-owned integrity preflight 与 formal Phase Gate verdict 保持分离；v2 transaction 的 direct fact、proof-limited recovery 和 ledger-first hash interpretation 已收敛为一个 authority path。
+- [x] **15. C4 apply。** 已完成 44/44 approved tasks：structured contention、attempt ownership、bounded transaction recovery、audited supersession、fresh queue successor、ledger-first current coverage 和仅检查 submit-owned direct facts的 preflight 均已实现。没有新增 generic retry/controller、任意 recompute/sync、parent queue reactivation 或 submitted row 就地覆盖。
+- [x] **16. C4 archive。** 已以 deterministic filesystem/interleaving evidence 覆盖 concurrent submit、late completion、hash mismatch、failed/suspect transaction、terminal correction 与 index/ledger consistency。strict OpenSpec、routing assets、requirement/spec governance 与 `git diff --check` 通过；2026-07-31 已同步四份主规格、archive 并提交 `9d87b5b52`。
 
 - [ ] **17. C5 的外部决策门。** 在启动 C5 前，记录一个当前 Agent 实际可调用、可授权、能返回真实 candidate URL 的 search provider/surface。只有 fetch/curl、launcher 配置成功、或模型声称“可搜索”都不满足此门；若没有这样的 surface，保持 HITL1 honest unavailable，C5 不创建。
 - [ ] **18. 创建并 explore C5（仅在第 17 项满足后）。** 运行 `/opsx:propose connect-hitl1-research-access-by-semantic-capability`，明确 search 与 fetch 是两个 capability、同一 URL binding 是什么、host adapter 的可信 observation 是什么、不可用时哪个 owner/用户边界可处理。不得扩张为 host scheduler、tool matrix、background retry 或通用 provider registry。
@@ -270,12 +286,16 @@ boundary 与真实 semantic decision。
 **精确的 reader question：** “这个 queue item 的当前 attempt 由谁拥有；当前 bytes 与 submitted
 authority 的关系是什么；若 attempt 损坏，唯一合法的纠正/重做路径是什么？”
 
+**完成状态：** C4 于 2026-07-31 archive 至
+`openspec/changes/archive/2026-07-31-make-work-unit-attempt-recovery-explicit`，同步四份 main specs，并由
+提交 `9d87b5b52` 固化。
+
 **合并的理由：** BUG-148、174、179--186 不只是七个操作按钮缺失。它们围绕一个事实：系统
 同时有 delegate、Phase Agent、lease、result path、queue terminal history、index、ledger、hash 和
 transaction，但没有把 submitted correction/rework 表达为一个审计清晰的 attempt model。
 
-**应修改的 accepted capability 范围：** `delegated-work-units`、`agentic-queue`、
-`work-unit-provenance-gate`，以及必要的 `check-inspect-feedback`。C4 应优先复用已 archive 的
+**已修改的 accepted capability 范围：** `delegated-work-units`、`agentic-queue`、
+`work-unit-provenance-gate`，以及必要的 `check-inspect-feedback`。C4 已复用已 archive 的
 terminal replacement/late-submit contracts，清楚说明为什么新语义没有制造与之并列的 success path。
 
 **核心设计约束：**

@@ -1,0 +1,82 @@
+schema_version: verification-routing/v1
+change: establish-openspec-change-feedback-loop
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The marker grammar, closed result schema, root mapping, and command-order decision are
+      focused deterministic contracts that can be checked without an OpenSpec planning root or a
+      native archive move.
+  integration:
+    status: selected
+    rationale: >-
+      Operation guidance, finalizer prerequisite checks, child-process boundaries, and supported
+      entry conformance cross the real repository/OpenSpec filesystem surface but do not prove an
+      Agent's semantic review behavior.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      The successful lifecycle claim spans a temporary planning root, completed change artifacts,
+      final validation/governance, native OpenSpec archive, and active-to-archive path
+      confirmation; it needs one isolated deterministic chain.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change delivers guidance and a deterministic mechanical closeout interface, but it
+      does not claim that a real Agent performs a semantically sufficient review or that a host
+      invokes an entry surface.
+claims:
+  - id: feedback-marker-and-result-contract
+    statement: >-
+      CHF-001 and CHF-003: the finalizer accepts exactly one completed plan-review and one
+      completed closeout-review task marker, rejects missing/duplicate/pending/prose-only marker
+      forms and other incomplete tasks, and produces only schema-valid root-first results with
+      the same finalizer rerun coordinate.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/change-feedback-finalizer.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: finalizer-preconditions-and-entry-conformance
+    statement: >-
+      CHF-002, CHF-003, and CHF-004: supported apply/archive entry documents require current
+      operation-guidance lookup and route archive completion to the single finalizer; on temporary
+      planning roots the finalizer stops at the earliest missing artifact/task/marker/validation/
+      governance fact before native archive and never substitutes a raw move or spec merge.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/change-feedback-finalizer.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: native-archive-finalization-chain
+    statement: >-
+      CHF-003 and CHF-004: after a fixture explicitly supplies complete planning/task evidence
+      and already-synchronized main specs, the production finalizer calls native OpenSpec archive
+      in no-spec-write mode and reports success only for the observed selected-change move from
+      the active location to the native archive path with specsUpdated false.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/change-feedback-loop-archive.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

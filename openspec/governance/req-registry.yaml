@@ -36,6 +36,7 @@ prefixes:
   CDE: content-delivery-experiments
   CDG: content-delivery-gate-implementation
   CDP: content-delivery-phase-content
+  CHF: change-feedback-loop
   CHI: check-inspect-feedback
   CLE: cli-exit-code-conventions
   CMI: cmd-bundle-instantiation
@@ -193,6 +194,12 @@ BUM-005: bundle-map — BUNDLE_MAP.md offers a portable continuation card
 BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry [DEPRECATED]
 BUS-002: bundle-start-from-here — START_FROM_HERE.md documents flat reference/ and artifacts/wave0/ [DEPRECATED]
 BUS-003: bundle-start-from-here — START_FROM_HERE.md documents rb_status current_node as the resume phase coordinate [DEPRECATED]
+
+# change-feedback-loop
+CHF-001: change-feedback-loop — Change review obligations are durable, scoped task markers rather than chat-only completion
+CHF-002: change-feedback-loop — Apply and archive operations deliver current feedback guidance without creating archive authority
+CHF-003: change-feedback-loop — One governed finalizer verifies mechanical closeout before native no-spec-write archive
+CHF-004: change-feedback-loop — Supported archive entry surfaces converge on the governed finalizer
 
 # cmd-bundle-instantiation
 CMI-001: cmd-bundle-instantiation — Command playbook for bundle production
