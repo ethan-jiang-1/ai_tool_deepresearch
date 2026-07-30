@@ -1,12 +1,12 @@
 ---
 title: Progressive OpenSpec Sequence for Framework Contract Remediation
-status: c4_archived__c5_external_provider_gate_pending
+status: c4_archived__change_feedback_loop_archived__c5_external_provider_gate_pending
 created: 2026-07-29
 predecessor: framework-contract-feedback-and-control-structure-analysis
-last_completed_change: make-work-unit-attempt-recovery-explicit
-last_completed_archive: openspec/changes/archive/2026-07-31-make-work-unit-attempt-recovery-explicit
+last_completed_change: establish-openspec-change-feedback-loop
+last_completed_archive: openspec/changes/archive/2026-07-31-establish-openspec-change-feedback-loop
 active_change: none
-active_change_status: no_active_change__c4_archived__archive_commit_9d87b5b52
+active_change_status: no_active_change__change_feedback_loop_archived__archive_commit_c57b27eff
 c2_task_progress: 26/26
 c2_selected_node_test: 277_passed_0_failed
 c2_archive_status: archived_2026-07-30__14_modified_requirements_synced__committed_177275226
@@ -19,8 +19,8 @@ c4_broader_regression: engine_229/229__cli_49/49__engine_integration_9/9__markdo
 c4_archive_status: archived_2026-07-31__four_specs_synced__six_new_ids__two_existing_wpg_requirements_modified__committed_9d87b5b52
 next_change: connect-hitl1-research-access-by-semantic-capability
 next_change_status: conditional__real_search_same_url_fetch_evidence_required__not_proposed
-next_unblocked_change: establish-openspec-change-feedback-loop
-next_unblocked_change_status: recommended_for_opsx_propose__independent_lifecycle_governance_change
+next_unblocked_change: none
+next_unblocked_change_status: blocked__c5_requires_a_user_selected_authorized_semantic_search_provider__no_new_change_proposed
 c3_proposal_artifacts: proposal_done__specs_done__design_done__tasks_done__verification_plan_done__strict_governance_routing_plan_passed
 source_bugs:
   - BUG-143
@@ -118,9 +118,12 @@ strict OpenSpec、verification-routing assets、requirement/spec governance 与 
 
 **2026-07-31 路由说明：** C5 仍缺少当前 Agent 实际可调用、可授权、能返回 candidate URL 且可同 URL fetch
 的 search provider，因此保持 conditional，不把 fetch/curl 或 launcher preflight 误记为满足。为继续处理已有
-本地、独立的 lifecycle evidence，下一个 unblocked change 是
-`establish-openspec-change-feedback-loop`（见 `session-drift-guardrail-analysis/08-final-recommendation-openspec-feedback-loop.md`）；
-它只收敛 OpenSpec change 的 review/closeout/finalizer，不替代或提前实现 C5。
+本地、独立的 lifecycle evidence，`establish-openspec-change-feedback-loop`
+（见 `session-drift-guardrail-analysis/08-final-recommendation-openspec-feedback-loop.md`）已完成
+`propose -> apply -> archive`：它新增 durable review task、operation guidance 和唯一 archive finalizer，主规格
+已同步，native archive 位于 `openspec/changes/archive/2026-07-31-establish-openspec-change-feedback-loop`，并由
+提交 `c57b27eff` 固化。该 change 只收敛 OpenSpec lifecycle governance，不替代或提前实现 C5；当前没有另一个
+已证实 unblocked 的 implementation change。
 
 ## 2. 为什么是这个数量
 
@@ -150,6 +153,10 @@ recovery path。
 | C3 | `make-agent-operation-contracts-direct` | archived 2026-07-30 (30/30 tasks, 225 selected tests passed, 14 requirements synced) | Agent 在每个决定点如何发现 protocol、看到最早 direct root，并得到一个合法下一动作？ | 150, 153, 155, 156, 158, 159, 160, 171, 177, 184；173/183 已由 DEW-021 覆盖，159 已由 WNC-010/CPT handoff contract 覆盖，均已记录处置 | 自动 repair controller、改变 evidence authority、host adapter |
 | C4 | `make-work-unit-attempt-recovery-explicit` | archived 2026-07-31 (44/44 tasks, 88 selected tests passed, four specs synced, commit `9d87b5b52`) | active/submitted attempt 的 owner、contention、finality、correction 与 transaction recovery 的 legal semantics 是什么？ | 148, 174, 179--186 | mutable ledger workaround、full-phase Gate prediction、generic retry service |
 | C5 | `connect-hitl1-research-access-by-semantic-capability` | conditional; not proposed | 当前 host 如何以真实 search + same-URL fetch 能力接入 HITL1，而不是用工具名或配置猜测？ | 143 | 通用 capability registry、虚假 search 成功、host liveness promise |
+
+独立于 C1--C5 的 lifecycle governance change
+`establish-openspec-change-feedback-loop` 已于 2026-07-31 archive（commit `c57b27eff`）；它处理跨 session 的
+OpenSpec review/closeout drift，不改变 C5 的 external-provider gate。
 
 ## 4. 逐项执行清单
 
@@ -186,6 +193,12 @@ C4 的语义尚未决定时为 BUG-179--186 单独加 sync/recompute/retry 命�
 - [x] **14. C4 explore。** 已选择唯一的 audited supersession -> fresh successor correction model，并明确 Phase Agent、delegated actor、global transaction holder 与 attempt-bound result path 的不同逻辑 ownership。submit-owned integrity preflight 与 formal Phase Gate verdict 保持分离；v2 transaction 的 direct fact、proof-limited recovery 和 ledger-first hash interpretation 已收敛为一个 authority path。
 - [x] **15. C4 apply。** 已完成 44/44 approved tasks：structured contention、attempt ownership、bounded transaction recovery、audited supersession、fresh queue successor、ledger-first current coverage 和仅检查 submit-owned direct facts的 preflight 均已实现。没有新增 generic retry/controller、任意 recompute/sync、parent queue reactivation 或 submitted row 就地覆盖。
 - [x] **16. C4 archive。** 已以 deterministic filesystem/interleaving evidence 覆盖 concurrent submit、late completion、hash mismatch、failed/suspect transaction、terminal correction 与 index/ledger consistency。strict OpenSpec、routing assets、requirement/spec governance 与 `git diff --check` 通过；2026-07-31 已同步四份主规格、archive 并提交 `9d87b5b52`。
+
+- [x] **16a. Independent OpenSpec lifecycle governance。** `establish-openspec-change-feedback-loop` 已完成 durable
+  plan/closeout review marker、apply/archive operation guidance、single governed native archive finalizer，以及 unit /
+  integration / deterministic E2E proof；其 CHF main spec 已同步，native archive 位于
+  `openspec/changes/archive/2026-07-31-establish-openspec-change-feedback-loop`，提交为 `c57b27eff`。该收敛不提供
+  C5 search capability，也不改变 BUG-170/175/184 的 observation/policy gates。
 
 - [ ] **17. C5 的外部决策门。** 在启动 C5 前，记录一个当前 Agent 实际可调用、可授权、能返回真实 candidate URL 的 search provider/surface。只有 fetch/curl、launcher 配置成功、或模型声称“可搜索”都不满足此门；若没有这样的 surface，保持 HITL1 honest unavailable，C5 不创建。
 - [ ] **18. 创建并 explore C5（仅在第 17 项满足后）。** 运行 `/opsx:propose connect-hitl1-research-access-by-semantic-capability`，明确 search 与 fetch 是两个 capability、同一 URL binding 是什么、host adapter 的可信 observation 是什么、不可用时哪个 owner/用户边界可处理。不得扩张为 host scheduler、tool matrix、background retry 或通用 provider registry。
@@ -324,6 +337,10 @@ writer, receipt/hash lineage, queue relation, failure mode 和 same-check action
 fail closed；BUG-143 不是要取消这一点，而是当前 Codex/host 没有一个已选择并可验证的 search
 adapter。没有 provider choice 时，任何 DPT code 都无法合法把 shell、`curl` 或 launcher config
 升级为 search success。
+
+**Current gate state (2026-07-31):** this Agent has no callable authorized semantic-search surface, and the
+repository has no selected provider adapter. C5 therefore remains unproposed; selecting an external provider is
+a user/host permission and risk decision, not an implementation detail for this plan to infer.
 
 **应修改的 accepted capability 范围：** `pre-research-phase-content`、
 `pre-research-gate-implementation`、`research-styles`/profile observation，以及需要时新的窄
