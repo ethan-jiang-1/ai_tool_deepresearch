@@ -40,6 +40,7 @@ For selected DPT research, choose and read exactly one entry before request-spec
 - **Tests always under `tests/` at repo root, never inside `DPT_FRAMEWORK/`.** `DPT_FRAMEWORK/` is the distributable framework — framework code only, no test files, no experiment fixtures. Test dirs mirror framework dirs: `tests/engine/`, `tests/engine/`, `tests/schema/`, etc.
 - Test placement: `unit`, `integration`, and `deterministic_e2e` live under `tests/`; `agent_flow_e2e` lives under `experiments_playbook/`. Use the accepted `verification-routing` spec for classification.
 - **OpenSpec phase gate: `DPT_FRAMEWORK/` is read-only until `/opsx:apply`.** During propose/explore, work in `openspec/changes/` only. You may read anything for context; you may write only change artifacts (specs, design, tasks). Target code (`DPT_FRAMEWORK/`, `tests/`, `experiments_playbook/`) is modified only during apply, per the approved task list. Deliberation fatigue does not grant an exception.
+- For a change whose `tasks.md` declares an `openspec-feedback:*` marker, supported apply/archive entries MUST obtain the matching current OpenSpec operation guidance before target edits or finalization. Record actionable findings as ordinary pending tasks. After Agent-owned semantic closeout and spec sync, use `node openspec/governance/finalize-change-archive.mjs --change <name>` as the only supported final archive transition.
 
 ## OpenSpec Workflow
 

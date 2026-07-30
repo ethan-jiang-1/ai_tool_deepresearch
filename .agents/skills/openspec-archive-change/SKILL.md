@@ -1,114 +1,41 @@
 ---
 name: openspec-archive-change
-description: Archive a completed change in the experimental workflow. Use when the user wants to finalize and archive a change after implementation is complete.
+description: Archive a completed OpenSpec feedback-lifecycle change.
 license: MIT
-compatibility: Requires openspec CLI.
+compatibility: Requires OpenSpec CLI and the project governance finalizer.
 metadata:
   author: openspec
   version: "1.0"
-  generatedBy: "1.3.1"
+  generatedBy: "1.7.0"
 ---
 
-Archive a completed change in the experimental workflow.
+# Archive an OpenSpec Change
 
-**Input**: Optionally specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
-
-**Steps**
-
-1. **If no change name provided, prompt for selection**
-
-   Run `openspec list --json` to get available changes. Use the **AskUserQuestion tool** to let the user select.
-
-   Show only active changes (not already archived).
-   Include the schema used for each change if available.
-
-   **IMPORTANT**: Do NOT guess or auto-select a change. Always let the user choose.
-
-2. **Check artifact completion status**
-
-   Run `openspec status --change "<name>" --json` to check artifact completion.
-
-   Parse the JSON to understand:
-   - `schemaName`: The workflow being used
-   - `artifacts`: List of artifacts with their status (`done` or other)
-
-   **If any artifacts are not `done`:**
-   - Display warning listing incomplete artifacts
-   - Use **AskUserQuestion tool** to confirm user wants to proceed
-   - Proceed if user confirms
-
-3. **Check task completion status**
-
-   Read the tasks file (typically `tasks.md`) to check for incomplete tasks.
-
-   Count tasks marked with `- [ ]` (incomplete) vs `- [x]` (complete).
-
-   **If incomplete tasks found:**
-   - Display warning showing count of incomplete tasks
-   - Use **AskUserQuestion tool** to confirm user wants to proceed
-   - Proceed if user confirms
-
-   **If no tasks file exists:** Proceed without task-related warning.
-
-4. **Assess delta spec sync state**
-
-   Check for delta specs at `openspec/changes/<name>/specs/`. If none exist, proceed without sync prompt.
-
-   **If delta specs exist:**
-   - Compare each delta spec with its corresponding main spec at `openspec/specs/<capability>/spec.md`
-   - Determine what changes would be applied (adds, modifications, removals, renames)
-   - Show a combined summary before prompting
-
-   **Prompt options:**
-   - If changes needed: "Sync now (recommended)", "Archive without syncing"
-   - If already synced: "Archive now", "Sync anyway", "Cancel"
-
-   If user chooses sync, use Task tool (subagent_type: "general-purpose", prompt: "Use Skill tool to invoke openspec-sync-specs for change '<name>'. Delta spec analysis: <include the analyzed delta spec summary>"). Proceed to archive regardless of choice.
-
-5. **Perform the archive**
-
-   Create the archive directory if it doesn't exist:
-   ```bash
-   mkdir -p openspec/changes/archive
-   ```
-
-   Generate target name using current date: `YYYY-MM-DD-<change-name>`
-
-   **Check if target already exists:**
-   - If yes: Fail with error, suggest renaming existing archive or using different date
-   - If no: Move the change directory to archive
+1. Select an active change from explicit input, current context, or the sole active change. If
+   selection remains ambiguous, run `openspec list --json` and ask the user. Announce the selected
+   change and keep its identity unchanged through every step.
+2. Run `openspec status --change "<name>" --json`, then run
+   `openspec instructions archive --change "<name>" --json` with the same root selection. Read
+   current context, artifact paths, task path, and all returned guidance.
+3. When the resolved task list contains `openspec-feedback:`, require valid JSON with an
+   `operationGuidance` array containing an entry beginning `change-feedback-loop/archive:`. If
+   lookup fails, JSON is invalid, or that entry is absent, stop before finalization, report the
+   instruction-lookup boundary, and rerun
+   `openspec instructions archive --change "<name>" --json` after the existing configuration or
+   instruction surface is repaired. An unmarked change is outside this feedback-lifecycle entry.
+4. Read `guidelines/change-feedback-loop.md` and perform the Agent-owned closeout review of the
+   selected change-scoped actual diff, artifacts, and selected verification evidence. When a
+   finding exists, add an ordinary unchecked task, leave the closeout marker open, and return to
+   apply. Do not treat the marker or guidance as semantic proof.
+5. For every delta spec, perform the Agent-owned sync and re-comparison before finalization. If
+   the change cannot be scoped against unrelated local work or a delta/main comparison remains
+   unresolved, stop at that boundary.
+6. Only after all tasks are complete, make this final mechanical call:
 
    ```bash
-   mv openspec/changes/<name> openspec/changes/archive/YYYY-MM-DD-<name>
+   node openspec/governance/finalize-change-archive.mjs --change "<name>"
    ```
 
-6. **Display summary**
-
-   Show archive completion summary including:
-   - Change name
-   - Schema that was used
-   - Archive location
-   - Whether specs were synced (if applicable)
-   - Note about any warnings (incomplete artifacts/tasks)
-
-**Output On Success**
-
-```
-## Archive Complete
-
-**Change:** <change-name>
-**Schema:** <schema-name>
-**Archived to:** openspec/changes/archive/YYYY-MM-DD-<name>/
-**Specs:** ✓ Synced to main specs (or "No delta specs" or "Sync skipped")
-
-All artifacts complete. All tasks complete.
-```
-
-**Guardrails**
-- Always prompt for change selection if not provided
-- Use artifact graph (openspec status --json) for completion checking
-- Don't block archive on warnings - just inform and confirm
-- Preserve .openspec.yaml when moving to archive (it moves with the directory)
-- Show clear summary of what happened
-- If sync is requested, use openspec-sync-specs approach (agent-driven)
-- If delta specs exist, always run the sync assessment and show the combined summary before prompting
+   Read its structured result. On `blocked`, repair only the named legal root and rerun the same
+   command. Do not perform a raw move, invoke a separate native success path, or add a retry or
+   rollback procedure.

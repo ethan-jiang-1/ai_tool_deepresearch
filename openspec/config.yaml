@@ -164,6 +164,25 @@ context: |
         final/                    — 最终报告
         _cache/                   — 可重建缓存/projection，不是 authority
 
+operations:
+  apply:
+    guidance:
+      - >-
+        change-feedback-loop/apply: For a feedback-lifecycle change, complete the durable
+        openspec-feedback:plan-review before the first target edit. Read
+        guidelines/change-feedback-loop.md, preserve any pending feedback task, and convert an
+        actionable finding into an ordinary unchecked task. This guidance is not proof of review
+        completion or a deterministic verdict.
+  archive:
+    guidance:
+      - >-
+        change-feedback-loop/archive: For a feedback-lifecycle change, review the selected
+        change-scoped actual diff, artifacts, and selected verification evidence; leave a
+        finding as an ordinary unchecked task and keep openspec-feedback:closeout-review open.
+        After Agent-owned delta/main sync and re-comparison when applicable, complete all tasks
+        and use node openspec/governance/finalize-change-archive.mjs --change <name> as the only
+        supported final mechanical transition. Guidance is not archive permission.
+
 rules:
   proposal:
     - 用中文写 proposal，明确这个 change 产出什么、不产出什么
@@ -206,6 +225,14 @@ rules:
       修改 `DPT_FRAMEWORK/` 行为且 proposal 声明了 version bump 的 change，
       其 tasks 必须包含两步：(a) 更新 `CHANGELOG.md`（简洁格式：版本号 + 一两句说清改了什么）；
       (b) 同步 `DPT_FRAMEWORK/RUN.md` 版本横幅与 CHANGELOG 最新条目一致。
+    - |
+      使用 feedback lifecycle 的 change 必须在 tasks.md 中生成两个 first-class checkbox task：
+      一个先于首次 target edit 的 plan review，任务行恰含 `openspec-feedback:plan-review`；
+      一个 archive-precondition closeout review，任务行恰含 `openspec-feedback:closeout-review`。
+      每个 marker 恰好一次，初始为 `- [ ]`，并且只在相应 review 完成时勾选。review finding 不能只留在
+      chat 或 marker：它必须成为普通未完成 task，列出受影响 requirement/reader question、authoritative
+      owner、smallest repair 与 independently observable done condition。marker 不证明 semantic quality、
+      test success、delta/main equivalence 或 archive completion。
   specs:
     - Capability 用 kebab-case 命名，目录名即分类
     - Spec 文件是 Zod schema 的人类可读投影

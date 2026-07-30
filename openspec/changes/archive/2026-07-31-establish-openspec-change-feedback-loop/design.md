@@ -16,8 +16,8 @@ OpenSpec 1.7 supplies the two native seams this change needs:
 - `openspec instructions apply|archive --change <name> --json` returns a non-empty
   `operationGuidance` array when `operations.<operation>.guidance` contains non-empty strings.
 - `openspec archive <name> --json --skip-specs` preserves OpenSpec ownership of task checking,
-  collision handling, archive naming, and the canonical move. Its successful JSON result names
-  `change`, `archivedAs`, `path`, and `specsUpdated`.
+  collision handling, archive naming, and the canonical move. Its successful JSON envelope has
+  an `archive` record naming `change`, `archivedAs`, `path`, and `specsUpdated`.
 
 The change adds a repository governance Module, not a runtime-bundle capability. It uses only
 Node.js built-ins and the already-approved `zod` dependency. No `DPT_FRAMEWORK/` behavior,
