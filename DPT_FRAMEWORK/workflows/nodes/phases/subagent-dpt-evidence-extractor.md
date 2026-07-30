@@ -18,6 +18,7 @@ execution_contract:
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas
+  - shared/shared-reference-template
   - shared/shared-page-fetch-guidance
 suggested_context: []
 ---
@@ -163,17 +164,19 @@ For each accepted fetched source, return enough source substrate for the Phase A
 If and only if the task explicitly assigns rich reference Markdown as a delegated output, the file uses the same format below and must be declared in `output_files[]`. Otherwise do not treat omission of a rich reference file as Sub-agent failure.
 
 ```markdown
-# <Source-specific title>
+---
+source_url: "<specific article/source URL>"
+acceptance_status: accepted
+source_type: "<primary|secondary|mixed|meta>"
+tier: "<Tier 1|Tier 2|Tier 3|Tier 4>"
+evidence_role: deepening_reference
+trust_level: "<academic|practitioner|official|caution|analyst|community>"
+why_it_matters: "<one sentence tied to this topic>"
+accessed_at: "YYYY-MM-DD"
+related_topic: "{topic.slug}"
+---
 
-- source_url: <specific article/source URL>
-- acceptance_status: accepted
-- source_type: <primary|secondary|mixed|meta>
-- tier: <Tier 1|Tier 2|Tier 3|Tier 4>
-- evidence_role: deepening_reference
-- trust_level: <academic|practitioner|official|caution|analyst|community>
-- why_it_matters: <one sentence tied to this topic>
-- accessed_at: YYYY-MM-DD
-- related_topic: {topic.slug}
+# <Source-specific title>
 
 ## Key Facts
 
@@ -202,17 +205,18 @@ If and only if the task explicitly assigns rich reference Markdown as a delegate
 
 Rules:
 
-- Metadata lines use `- key: value`; `---` frontmatter is forbidden.
+- New rich-reference metadata is one opening YAML-frontmatter mapping; serialize its metadata object with `yaml.stringify(...)` and place that mapping between the opening `---` fences. Legacy `- key: value` metadata is read-compatible only and is not a new-output option.
 - Provide the eight common metadata fields plus one resolvable Topic binding: exact registered `related_topic_uid` (or `all`), or compatible `related_topic` using exact current/previous id or slug values. If both are present, they must resolve identically.
 - All five semantic sections are required and non-empty. Use the canonical headings when convenient; heading case, level, spacing, order, and list presentation may vary without changing the contract.
 - `source_url` must be present, URL-parseable, and recoverable through submitted cache/source trails.
 - `Key Facts` must contain concrete facts from the fetched page, while `Core Content Capture` must separately preserve a non-empty narrative capture; no fixed fact count is required.
+- If a check reports `reference_metadata_frontmatter_invalid`, repair the opening YAML mapping; if it names a required metadata field, repair that field in the valid mapping and rerun the same checkpoint.
 
 **Output serialization:** All structured output files MUST be written via standard library serialization, never hand-concatenated:
 
 - JSON files (e.g. `meta.json`, `websearch.json`) → `JSON.stringify(data, null, 2)`
 - YAML content (e.g. `source.yaml` when produced) → `yaml.stringify(data)` from the `yaml` npm package
-- Markdown with structured metadata blocks → construct the metadata lines from a data object, then assemble with section text — do NOT inline raw values into template literals without escaping
+- Markdown with rich-reference metadata → serialize a metadata object with `yaml.stringify(data)`, put the result in the opening YAML-frontmatter mapping, then assemble Markdown sections after it — do NOT inline raw values into template literals without escaping
 
 Construct a plain JavaScript object, serialize it, then write the result. NEVER hand-concatenate structured formats with template literals, string interpolation, or shell heredocs. Values containing double quotes, colons, newlines, emoji, or CJK characters will produce malformed output when hand-concatenated.
 
@@ -268,7 +272,7 @@ Read and follow `shared-page-fetch-guidance.md` for the one per-URL access seque
 
 - Do not fabricate evidence, source URLs, key findings, reference metadata, cache trails, or receipt events.
 - Do not write placeholder `question-list.md` content.
-- Do not use YAML frontmatter in rich reference files.
+- Do not use legacy bullet metadata as a new rich-reference form; use the loaded template's one opening YAML-frontmatter mapping.
 - Do not use non-canonical question labels.
 - Do not claim comprehensive coverage; Wave1 is single-pass deepening.
 - Do not count Wave0 URLs as new Wave1 source evidence.

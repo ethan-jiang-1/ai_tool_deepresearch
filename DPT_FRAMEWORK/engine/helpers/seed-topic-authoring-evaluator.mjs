@@ -13,6 +13,159 @@ const BINDING_FIELDS = Object.freeze([
   'depends_on_topic_uids',
 ]);
 
+// @impl STM-001, STM-002
+// This is the executable structure shared by new-seed rendering and the
+// current-format Gate check. Legacy documents have no markers and remain
+// readable without being migrated.
+export const SEED_TOPIC_INITIALIZATION = Object.freeze({
+  startMarker: '<!-- seed-initialization:start -->',
+  endMarker: '<!-- seed-initialization:end -->',
+  appendixHeading: '═══ 研究轮次追加区 ═══',
+  sections: Object.freeze([
+    Object.freeze({
+      heading: '主题定位',
+      content: 'pending — seed-topics Agent must enrich this section.',
+    }),
+    Object.freeze({
+      heading: '初始假设、缺口或张力',
+      content: [
+        '**已知**：pending — derive only from recorded Topic/profile facts.',
+        '**缺口**：pending — identify what Wave0 evidence intake must establish.',
+        '**张力**：pending — identify claims, conflicts, or narrative bias requiring independent verification.',
+      ].join('\n'),
+    }),
+    Object.freeze({
+      heading: 'why now',
+      content: '- pending — identify the current trigger, time window, or milestone.',
+    }),
+    Object.freeze({
+      heading: '为什么对最终交付物重要',
+      content: 'pending — state the concrete contribution this Topic should make to the final deliverable.',
+    }),
+    Object.freeze({
+      heading: '下游位置（可选）',
+      content: '- pending — identify downstream report sections or leave explicitly unassigned.',
+    }),
+  ]),
+});
+
+function seedBody(raw) {
+  const source = String(raw || '');
+  const frontmatter = source.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
+  return frontmatter ? source.slice(frontmatter[0].length) : source;
+}
+
+function offsetsOf(source, needle) {
+  const offsets = [];
+  let offset = source.indexOf(needle);
+  while (offset !== -1) {
+    offsets.push(offset);
+    offset = source.indexOf(needle, offset + needle.length);
+  }
+  return offsets;
+}
+
+function headingOffsets(source, heading) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const expression = new RegExp(`^##[\\t ]+${escaped}[\\t ]*$`, 'gmu');
+  return [...source.matchAll(expression)].map((match) => match.index);
+}
+
+function initializationFailure({ relativePath, missingFact, expected, observed }) {
+  return failure({
+    relativePath,
+    reasonCode: 'seed_initialization_structure',
+    coordinate: 'seed-initialization',
+    missingFact,
+    expected,
+    observed,
+  });
+}
+
+export function renderSeedInitializationRegion() {
+  const sections = SEED_TOPIC_INITIALIZATION.sections
+    .map((section) => `## ${section.heading}\n\n${section.content}`)
+    .join('\n\n');
+  return [
+    SEED_TOPIC_INITIALIZATION.startMarker,
+    '',
+    sections,
+    '',
+    SEED_TOPIC_INITIALIZATION.endMarker,
+  ].join('\n');
+}
+
+/**
+ * Validate only the current marked initialization layout. This does not judge
+ * research prose or infer any authority from an unmarked legacy body.
+ */
+export function evaluateSeedInitializationStructure({ raw, relativePath }) {
+  const body = seedBody(raw);
+  const startOffsets = offsetsOf(body, SEED_TOPIC_INITIALIZATION.startMarker);
+  const endOffsets = offsetsOf(body, SEED_TOPIC_INITIALIZATION.endMarker);
+  const hasCurrentMarkers = startOffsets.length > 0 || endOffsets.length > 0;
+  if (!hasCurrentMarkers) return { passed: true, mode: 'legacy', relative_path: relativePath };
+
+  const appendix = `## ${SEED_TOPIC_INITIALIZATION.appendixHeading}`;
+  const appendixOffsets = headingOffsets(body, SEED_TOPIC_INITIALIZATION.appendixHeading);
+  if (startOffsets.length !== 1 || endOffsets.length !== 1 || appendixOffsets.length !== 1) {
+    return initializationFailure({
+      relativePath,
+      missingFact: 'A current Seed Topic must contain exactly one seed-initialization start marker, one end marker, and one Engine-owned appendix boundary.',
+      expected: { start_markers: 1, end_markers: 1, appendix_boundaries: 1 },
+      observed: { start_markers: startOffsets.length, end_markers: endOffsets.length, appendix_boundaries: appendixOffsets.length, appendix },
+    });
+  }
+
+  const [start] = startOffsets;
+  const [end] = endOffsets;
+  const [appendixStart] = appendixOffsets;
+  if (!(start < end && end < appendixStart)) {
+    return initializationFailure({
+      relativePath,
+      missingFact: 'The seed-initialization region must occur once before the Engine-owned research appendix.',
+      expected: 'seed-initialization:start < seed-initialization:end < 研究轮次追加区',
+      observed: { start, end, appendix_start: appendixStart },
+    });
+  }
+
+  const belowInitialization = body.slice(end + SEED_TOPIC_INITIALIZATION.endMarker.length);
+  for (const section of SEED_TOPIC_INITIALIZATION.sections) {
+    if (headingOffsets(belowInitialization, section.heading).length === 0) continue;
+    return initializationFailure({
+      relativePath,
+      missingFact: `Renderer-owned initialization heading '## ${section.heading}' appears below the initialization boundary.`,
+      expected: `## ${section.heading} only inside the seed-initialization region`,
+      observed: `## ${section.heading} below ${SEED_TOPIC_INITIALIZATION.endMarker}`,
+    });
+  }
+  if (/(?:^|\n)[^\n]*\bpending\s*[—-]/iu.test(belowInitialization)) {
+    return initializationFailure({
+      relativePath,
+      missingFact: 'A template pending marker remains below the initialization boundary in the Engine-owned appendix.',
+      expected: 'no template pending marker below seed-initialization:end',
+      observed: 'pending marker below initialization boundary',
+    });
+  }
+
+  const initialization = body.slice(start + SEED_TOPIC_INITIALIZATION.startMarker.length, end);
+  let previousOffset = -1;
+  for (const section of SEED_TOPIC_INITIALIZATION.sections) {
+    const offsets = headingOffsets(initialization, section.heading);
+    if (offsets.length !== 1 || offsets[0] <= previousOffset) {
+      return initializationFailure({
+        relativePath,
+        missingFact: `The initialization region must retain one ordered '## ${section.heading}' heading.`,
+        expected: `one ordered ## ${section.heading} heading inside seed-initialization`,
+        observed: { heading: section.heading, count: offsets.length, offsets },
+      });
+    }
+    previousOffset = offsets[0];
+  }
+
+  return { passed: true, mode: 'current', relative_path: relativePath };
+}
+
 function equal(value, expected) {
   if (Object.is(value, expected)) return true;
   if (typeof value !== typeof expected || value === null || expected === null) return false;

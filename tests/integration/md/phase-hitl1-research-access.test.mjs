@@ -15,17 +15,19 @@ describe('phase-hitl1 research-access contract', () => {
     assert.equal(frontmatter.execution_contract?.search_policy, 'capability_probe_only');
   });
 
-  it('places status synchronization before canonical apply and the probe after style apply', () => {
+  it('places status synchronization before canonical apply and the probe after the returned style handoff', () => {
     const decisionSection = markdown.slice(
       markdown.indexOf('### 3b. HITL1'),
       markdown.indexOf('### 3b.1 Optional User Research Controls Snapshot'),
     );
     const statusIndex = decisionSection.indexOf('advance-status.mjs');
     const applyIndex = decisionSection.indexOf('operate-topic-state apply');
-    const styleIndex = markdown.indexOf('### 3c. Research Style Parameters');
+    const styleIndex = markdown.indexOf('### 3c. Research Style Projection Handoff');
     const probeIndex = markdown.indexOf('### 3d. Research Access Probe');
     assert.ok(statusIndex >= 0 && applyIndex > statusIndex);
     assert.ok(styleIndex >= 0 && probeIndex > styleIndex);
+    assert.match(markdown, /style_projection\.status: refresh_required/);
+    assert.match(markdown, /style_projection\.command/);
   });
 
   it('keeps one bounded three-candidate serial probe', () => {

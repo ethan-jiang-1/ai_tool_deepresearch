@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-gate-rerun-ready.mjs — evaluates gate-rerun-ready rules
-// @impl GSK-002, GSK-004, GSK-008, REI-003
+// @impl GSK-002, GSK-004, GSK-008, REI-003, RES-002
 // Usage: node check-gate-rerun-ready.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -25,6 +25,13 @@ import {
 import { buildCanonicalTopicRegistryFact } from '../../engine/helpers/topic-registry-fact.mjs';
 import { evaluateCanonicalSeedBindings } from '../../engine/helpers/canonical-topic-state.mjs';
 import { evaluateRerunDirection } from '../../engine/helpers/rerun-direction.mjs';
+import { ProfileSchema } from '../../schema/index.mjs';
+import {
+  buildResearchStyleApplyCommand,
+  evaluateResearchStyleProjectionFreshness,
+  hasOnlyResearchStyleProjectionIssues,
+  readResearchStyleDefinition,
+} from '../../engine/helpers/research-style-projection.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
@@ -111,12 +118,22 @@ function readProfile() {
 }
 
 const profile = readProfile();
+const profileSchema = profile.value ? ProfileSchema.safeParse(profile.value) : null;
+const profileHasNonStyleSchemaIssue = Boolean(
+  profileSchema && !profileSchema.success && !hasOnlyResearchStyleProjectionIssues(profileSchema.error.issues),
+);
 const rerunAvailability = profile.value
   ? evaluateRerunAvailability({ definition, profile: profile.value, includeNextIncrement: false })
   : null;
 let profileParentRuleId = null;
-if (!profile.value || (rerunAvailability?.supported === false && /profile|HITL2 parent/.test(rerunAvailability.reason))) {
+if (!profile.value
+  || profileHasNonStyleSchemaIssue
+  || profile.value?.research_profile === 'not_selected'
+  || (rerunAvailability?.supported === false && /profile|HITL2 parent/.test(rerunAvailability.reason))) {
   profileParentRuleId = 'rerun_profile_prerequisite';
+  const schemaIssues = profileHasNonStyleSchemaIssue
+    ? profileSchema.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')
+    : null;
   findings.push(makeContractFinding({
     id: profileParentRuleId,
     ruleId: profileParentRuleId,
@@ -125,9 +142,13 @@ if (!profile.value || (rerunAvailability?.supported === false && /profile|HITL2 
     blockingBasis: profile.exists ? 'authority_integrity' : 'required_structure',
     surface: resolveFsPath(bundlePath, 'rb_profile.yaml'),
     expected: 'The accepted HITL2 rerun decision profile exists, parses as YAML, and has object-shaped checkpoint/HITL2 parents.',
-    observed: { file_exists: profile.exists, parsed: Boolean(profile.value), error: profile.error, evaluator_reason: rerunAvailability?.reason || null },
+    observed: { file_exists: profile.exists, parsed: Boolean(profile.value), error: profile.error, schema_issues: schemaIssues, evaluator_reason: rerunAvailability?.reason || null },
     missingFact: !profile.value
       ? `Rerun cannot read its accepted HITL2 decision profile because rb_profile.yaml is ${profile.exists ? 'unparseable' : 'absent'}${profile.error ? `: ${profile.error}` : '.'}`
+      : profileHasNonStyleSchemaIssue
+        ? `Rerun cannot use its profile because rb_profile.yaml violates ProfileSchema outside research_style_params: ${schemaIssues}.`
+        : profile.value?.research_profile === 'not_selected'
+          ? 'Rerun cannot refresh style projection because no selected research_profile is recorded.'
       : `Rerun cannot interpret its accepted HITL2 decision profile: ${rerunAvailability.reason}.`,
     repairKind: 'missing_contract',
     writeTo: 'Accepted HITL2 profile recovery boundary for rerun',
@@ -197,11 +218,70 @@ function rerunDirectionFinding(rule, { surface, expected, observed, missingFact,
   });
 }
 
+function styleProjectionFinding(freshness) {
+  const profilePath = resolveFsPath(bundlePath, 'rb_profile.yaml');
+  const command = buildResearchStyleApplyCommand({
+    bundlePath,
+    selectedProfile: freshness.selected_profile,
+  });
+  const stateDetail = freshness.state === 'absent'
+    ? 'is absent'
+    : freshness.state === 'partial'
+      ? 'is partial or structurally invalid'
+      : 'does not match the current selected-profile projection';
+  return makeContractFinding({
+    id: 'style_projection_freshness',
+    ruleId: 'style_projection_freshness',
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'required_structure',
+    surface: `${profilePath}#/research_style_params`,
+    expected: {
+      selected_profile: freshness.selected_profile,
+      committed_topic_count: freshness.topic_count,
+      research_style_params: freshness.expected_params,
+    },
+    observed: {
+      state: freshness.state,
+      research_style_params: freshness.observed_params,
+      differing_fields: freshness.differing_fields || [],
+      missing_fields: freshness.missing_fields || [],
+      unexpected_fields: freshness.unexpected_fields || [],
+    },
+    missingFact: `research_style_params ${stateDetail} for selected profile '${freshness.selected_profile}' at committed topic count ${freshness.topic_count}.`,
+    repairKind: 'engine_operation',
+    writeTo: command,
+    repair: `Run the existing style projection command before rerun_count increment, then rerun this same Gate: ${command}`,
+    detail: `[style_projection_freshness] research_style_params ${stateDetail} for '${freshness.selected_profile}' and committed topic count ${freshness.topic_count}.`,
+  });
+}
+
+function styleProjectionConfigurationFinding(detail, observed = null) {
+  return makeContractFinding({
+    id: 'style_projection_freshness',
+    ruleId: 'style_projection_freshness',
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'configuration_integrity',
+    surface: 'Research style definition / freshness evaluator contract',
+    expected: 'The selected profile resolves to a valid static research style definition.',
+    observed,
+    missingFact: detail,
+    repairKind: 'missing_contract',
+    writeTo: 'Research style definition and freshness evaluator implementation boundary',
+    repair: 'Repair the static style-definition contract before rerunning this Gate.',
+    detail: `[style_projection_freshness] ${detail}`,
+  });
+}
+
+let canonicalTopicRegistryFact = null;
+
 function evaluateRerunDirectionStructure(rule) {
   if (profileParentRuleId || findings.some((finding) => finding.rule_id === 'rerun_rationale_present')) return { findings: [], masked: true };
   let registry;
   try {
     registry = buildCanonicalTopicRegistryFact(bundlePath);
+    canonicalTopicRegistryFact = registry;
   } catch (error) {
     return {
       findings: [rerunDirectionFinding(rule, {
@@ -330,6 +410,41 @@ for (const rule of definition.rules) {
       detail: `[${rule.id}] ${failure.detail}`,
       maskedByRuleId: failure.maskedByRuleId || null,
     }));
+  }
+}
+
+if (findings.length > 0) {
+  maskedRuleIds.add('style_projection_freshness');
+} else if (!canonicalTopicRegistryFact) {
+  maskedRuleIds.add('style_projection_freshness');
+  findings.push(styleProjectionConfigurationFinding(
+    'Rerun readiness completed without its existing canonical topic-state fact.',
+  ));
+} else {
+  checksRun += 1;
+  const selectedProfile = profile.value?.research_profile;
+  try {
+    const freshness = evaluateResearchStyleProjectionFreshness({
+      selectedProfile,
+      styleDefinition: readResearchStyleDefinition(selectedProfile),
+      topicCount: canonicalTopicRegistryFact.topic_registry.length,
+      researchStyleParams: profile.value?.research_style_params,
+    });
+    if (!freshness.passed) {
+      if (freshness.state === 'style_definition_invalid' || freshness.state === 'selected_profile_unusable') {
+        findings.push(styleProjectionConfigurationFinding(
+          freshness.error || `Selected profile '${selectedProfile ?? 'null'}' is unavailable to the style freshness evaluator.`,
+          freshness,
+        ));
+      } else {
+        findings.push(styleProjectionFinding(freshness));
+      }
+    }
+  } catch (error) {
+    findings.push(styleProjectionConfigurationFinding(
+      `Cannot load the selected research style definition: ${error.message || String(error)}`,
+      { selected_profile: selectedProfile ?? null },
+    ));
   }
 }
 

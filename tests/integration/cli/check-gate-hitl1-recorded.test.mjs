@@ -7,6 +7,7 @@ import { join } from 'node:path';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs');
+const STYLE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/apply-research-style.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
@@ -24,6 +25,12 @@ function writeProfileYaml(bundleDir, yaml) {
 
 function advanceHitl1(bundleDir) {
   return spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli/advance-status.mjs'), '--bundle', bundleDir, '--to', 'hitl1_recorded'], { encoding: 'utf-8', timeout: 10000 });
+}
+
+function applyStyle(bundleDir, style = 'quick_factual') {
+  const result = spawnSync('node', [STYLE_CLI, '--bundle', bundleDir, '--style', style], { encoding: 'utf-8', timeout: 10000 });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  return JSON.parse(result.stdout);
 }
 
 function assertCompleteHint(hint) {
@@ -73,6 +80,7 @@ describe('check-gate-hitl1-recorded', () => {
     const bundleDir = track(r.stdout.trim());
     writeProfileYaml(bundleDir, VALID_PROFILE);
     materializeCanonicalTopic(bundleDir);
+    assert.equal(applyStyle(bundleDir).topic_count, 1);
 
     // Advance status to hitl1_recorded (gate now checks current_gate/next_gate per PRG-009)
     advanceHitl1(bundleDir);
@@ -82,6 +90,52 @@ describe('check-gate-hitl1-recorded', () => {
 
     assert.equal(output.check.passed, true, `Expected pass, got: ${JSON.stringify(output.inspect)}`);
     assert.deepEqual(output.hints, []);
+  });
+
+  it('rejects a valid but stale style projection through the existing style writer', () => {
+    const name = unique('stale-style');
+    const created = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+    const bundleDir = track(created.stdout.trim());
+    writeProfileYaml(bundleDir, VALID_PROFILE);
+
+    applyStyle(bundleDir);
+    materializeCanonicalTopic(bundleDir);
+    advanceHitl1(bundleDir);
+
+    const output = JSON.parse(runGate(bundleDir).stdout);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'style_projection_freshness');
+
+    assert.equal(output.check.passed, false);
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'engine_operation');
+    assert.match(hint.write_to, /apply-research-style\.mjs/);
+    assert.match(hint.rerun, /check-gate-hitl1-recorded/);
+
+    assert.equal(applyStyle(bundleDir).topic_count, 1);
+    assert.equal(JSON.parse(runGate(bundleDir).stdout).check.passed, true);
+  });
+
+  it('returns one existing-writer root when style parameters are absent or partial', () => {
+    for (const [label, profileYaml] of [
+      ['absent', VALID_PROFILE],
+      ['partial', `${VALID_PROFILE}research_style_params:\n  wave0_shared_ref_total: 1\n`],
+    ]) {
+      const name = unique(`style-${label}`);
+      const created = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+      const bundleDir = track(created.stdout.trim());
+      writeProfileYaml(bundleDir, profileYaml);
+      materializeCanonicalTopic(bundleDir);
+      advanceHitl1(bundleDir);
+
+      const output = JSON.parse(runGate(bundleDir).stdout);
+      const hint = output.hints.find((candidate) => candidate.rule_id === 'style_projection_freshness');
+
+      assert.equal(output.check.passed, false, label);
+      assertCompleteHint(hint);
+      assert.equal(hint.repair_kind, 'engine_operation');
+      assert.equal(output.hints.some((candidate) => candidate.rule_id === 'profile_schema_valid'), false, label);
+      assert.match(hint.rerun, /check-gate-hitl1-recorded/);
+    }
   });
 
   it('fails when rb_profile.yaml is missing', () => {
@@ -295,6 +349,8 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     assertCompleteHint(hint);
     assert.equal(hint.repair_kind, 'external_action');
     assert.match(hint.write_to, /research_access.*reason/);
+    assert.equal(output.hints.some((candidate) => candidate.rule_id === 'style_projection_freshness'), false);
+    assert.ok(output.check.masked_rule_ids.includes('style_projection_freshness'));
   });
 
   it('fails fake available research_access through ProfileSchema', () => {

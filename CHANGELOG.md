@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.62
+
+- Canonical topic-state projection now preserves independently parseable selected-slot entries across identity upsert, and packet admission plus Wave readiness share one concrete-navigation interpretation.
+- Current Wave0 source-array ordinals now belong to hash-bound, submission-derived contribution intervals. A legal append owns only its appended ordinals; prefix drift, unsubmitted suffixes, and ambiguous legacy groups return one direct root instead of reassigning mutable history.
+- New Seed Topics expose one bounded Agent-editable initialization region above an Engine-owned research appendix. Current marker ghosts fail at the seed Gate, while legacy body history remains read-compatible.
+- Registry-length changes return the existing research-style writer as a structured handoff, and HITL1/rerun Gates return one same-check freshness repair when the selected profile projection is absent or stale.
+- This release adds no controller, repair service, retry tree, second ledger, or evidence authority; existing Agent work, Engine checkpoints, and Markdown flow ownership remain unchanged.
+
+## v0.61
+
+- Wave inspect now applies return-map validation only to declared Seed Topic projection slots. Rich references and Wave1 evidence/question artifacts retain their own format, submitted-backing, and artifact evaluators.
+- Rich references now use canonical YAML frontmatter for new output, with legacy bullet metadata remaining readable through one shared metadata reader and malformed frontmatter reported as a root repair target.
+- `check-reentry` now reuses the normal reference-authority classifier: submitted-backed Phase-owned projections are accepted, while unbacked files remain fail-closed with their direct backing fact.
+
 ## v0.60
 
 - Wave1 `materialize_projection` feedback now names each existing canonical target together with its exact submitted source URL, work IDs, work-unit refs, source refs, and cache-trail refs. Inspect and formal Gate project that same closeout hint and retain separately evaluated legacy, index, ledger, queue, receipt, provenance, and format roots.

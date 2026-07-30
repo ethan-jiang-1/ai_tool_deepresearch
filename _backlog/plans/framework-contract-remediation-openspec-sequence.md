@@ -1,12 +1,14 @@
 ---
 title: Progressive OpenSpec Sequence for Framework Contract Remediation
-status: c2_proposed_polished_ready_for_apply
+status: c2_applied_verified_pending_archive
 created: 2026-07-29
 predecessor: framework-contract-feedback-and-control-structure-analysis
 last_completed_change: converge-artifact-contract-evaluators
 last_completed_archive: openspec/changes/archive/2026-07-30-converge-artifact-contract-evaluators
 active_change: make-canonical-topic-state-projections-coherent
-active_change_status: proposed_polished_ready_for_apply
+active_change_status: applied_verified_pending_archive
+next_change: make-agent-operation-contracts-direct
+next_change_status: pending_proposal
 source_bugs:
   - BUG-143
   - BUG-146
@@ -75,11 +77,14 @@ observation 才能判定 DPT 可拥有的故障；后者是研究质量政策，
 
 C1 已于 2026-07-30 归档至
 `openspec/changes/archive/2026-07-30-converge-artifact-contract-evaluators`。C2 已完成 proposal、
-explore 与 polish，active change 为
+explore、polish 与 `/opsx:apply` 的全部 26 项任务，active change 为
 `openspec/changes/make-canonical-topic-state-projections-coherent`，当前状态为
-`ready for apply`；尚未进入 `/opsx:apply`，所有执行项保持未勾选。每一个后续编号 change 仍须在
-前一个 archive、回归结果和真实 bundle 观察都成立后才创建，保持 OpenSpec 的
-`propose -> explore -> apply -> archive` 顺序。
+`applied; verified; pending archive`。其 selected `node:test` assets 为 277 passed / 0 failed；真实
+disposable-bundle replay 记录了合法 append 的 `i0001/1..2`、`i0002/3` ownership，以及 controlled
+prefix drift 的单一 `submitted_source_contribution_prefix_drift` root（零 candidates）。routing、strict
+OpenSpec、requirement/spec governance 与 `git diff --check` 均已通过。C3 可以在此时仅创建 proposal
+供审阅，但不得在 C2 archive 前进入 `/opsx:apply`；其后续实现仍保持
+`propose -> explore -> apply -> archive` 的顺序。
 
 ## 2. 为什么是这个数量
 
@@ -105,7 +110,7 @@ recovery path。
 | 顺序 | 暂定 change id | 状态 | 精确问题 | 主要票据 | 明确不包含 |
 |---:|---|---|---|---|---|
 | C1 | `converge-artifact-contract-evaluators` | archived 2026-07-30 | 每种 artifact 的 grammar、authority classification 和 evaluator scope 是什么？ | 146, 162, 172, 178 | topic writer、count-floor policy、work-unit recovery |
-| C2 | `make-canonical-topic-state-projections-coherent` | proposed; polished; ready for apply | canonical topic state 如何在合法写入后保持 whole-document parseability、时间语义与 derived freshness？ | 151, 152, 154, 157, 176 | CLI help framework、queue/work-unit rework |
+| C2 | `make-canonical-topic-state-projections-coherent` | applied; verified; pending archive | canonical topic state 如何在合法写入后保持 whole-document parseability、时间语义与 derived freshness？ | 151, 152, 154, 157, 176 | CLI help framework、queue/work-unit rework |
 | C3 | `make-agent-operation-contracts-direct` | planned | Agent 在每个决定点如何发现 protocol、看到最早 direct root，并得到一个合法下一动作？ | 150, 153, 155, 156, 158, 159, 160, 171, 173, 177, 183, 184 | 自动 repair controller、改变 evidence authority、host adapter |
 | C4 | `make-work-unit-attempt-recovery-explicit` | planned | active/submitted attempt 的 owner、contention、finality、correction 与 transaction recovery 的 legal semantics 是什么？ | 148, 174, 179--186 | mutable ledger workaround、full-phase Gate prediction、generic retry service |
 | C5 | `connect-hitl1-research-access-by-semantic-capability` | conditional; not proposed | 当前 host 如何以真实 search + same-URL fetch 能力接入 HITL1，而不是用工具名或配置猜测？ | 143 | 通用 capability registry、虚假 search 成功、host liveness promise |
@@ -123,9 +128,9 @@ C4 的语义尚未决定时为 BUG-179--186 单独加 sync/recompute/retry 命�
 - [x] **4. C1 archive。** 已完成 C1 verification plan、requirement/spec governance 与真实 bundle inspect/reentry counterexample，并于 2026-07-30 归档至 `openspec/changes/archive/2026-07-30-converge-artifact-contract-evaluators`。
 
 - [x] **5. 创建 C2 proposal。** 已创建 `make-canonical-topic-state-projections-coherent`，其 proposal 的中心是 canonical topic-state 这个 module 的 interface，而不是“给 `apply` 多加几个 if”。
-- [x] **6. C2 explore 与 polish。** 已决定并记录三件不能混合的语义：Wave0 candidate identity 是 submission-bound contribution 之上的 current projection coordinate；supplement/append 不重写历史 authority；Seed template 的 editable body、appendix slot 与 projection slot 有明确 writer。writer postcondition 与 reader/evaluator 同源，style recomputation 保留唯一 owner 与可见顺序；严格 Change、routing、requirement/spec checks 均通过，现等待 `/opsx:apply`。
-- [ ] **7. C2 apply。** 让合法 `apply` 的 committed postcondition 覆盖整个受影响 slot/document 的可解析性，而非仅覆盖本 packet；使 topic registry/style projection 的 freshness 由一个明确的 lifecycle contract 维持；使 ref-existence/forward-reference 的判断只在其确定的 owner checkpoint 出现一次。不得让 topic-state 偷写 profile、ledger、queue 或手工 Markdown fallback。
-- [ ] **8. C2 archive。** 以多-entry replay、supplement/provenance、body-template edit、style/topic ordering、missing/near-match ref 和 complete-current-candidate negative cases 验证。必须证明写入成功后同一 reader 能读回所有相邻历史 entry，且不会把新增 source 伪装成旧 submitted result。
+- [x] **6. C2 explore 与 polish。** 已决定并记录三件不能混合的语义：Wave0 candidate identity 是 submission-bound contribution 之上的 current projection coordinate；supplement/append 不重写历史 authority；Seed template 的 editable body、appendix slot 与 projection slot 有明确 writer。writer postcondition 与 reader/evaluator 同源，style recomputation 保留唯一 owner 与可见顺序；严格 Change、routing、requirement/spec checks 均通过，并已作为 `/opsx:apply` 的约束实施。
+- [x] **7. C2 apply。** 已完成全部 26 项 accepted tasks：committed postcondition 覆盖整个受影响 slot/document 的可解析性；topic registry/style projection freshness 有唯一 writer 与同一 Gate repair loop；ref-existence/forward-reference 只由共享 owner checkpoint 裁决。topic-state 未获得 profile、ledger、queue 或手工 Markdown fallback 写入权。
+- [ ] **8. C2 archive。** 所需 multi-entry replay、supplement/provenance、body-template edit、style/topic ordering、missing/near-match ref 和 complete-current-candidate negative cases 已完成并记录；remaining action 是在最终审阅后执行 native archive。replay 已证明写入成功后同一 reader 可读回相邻历史 entry，且不会把新增 source 伪装成旧 submitted result。
 
 - [ ] **9. 创建 C3 proposal。** 运行 `/opsx:propose make-agent-operation-contracts-direct`。此 change 的 reader 是当前执行中的 Agent，不是 shell 熟练用户；它必须复用 C1/C2 已经稳定的 contract facts。
 - [ ] **10. C3 explore。** 列出所有 public Engine operation 的共同最小 interface：invocation/help、schema/context discovery、validation root、owner/writable surface、same-check rerun、以及“无合法路径”的 honest boundary。把 phase-entry action core 与 full reference closure 分开；确认 task checklist、role guidance、timeout diagnosis 和 phase ordering分别只是同一 contract 的不同呈现，不再复制 validator。

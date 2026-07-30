@@ -41,3 +41,25 @@ Option A: Projection apply should validate ref paths and give a clear error like
 Option B: Allow projection entries with forward references (refs that will be created before gate check). The inspect already cross-validates projections against references; the apply step doesn't need to also enforce file existence.
 
 **Why:** The apply step is the writer, not the validator. Enforcing file existence at write time couples two independently validated concerns and creates cascading failures from trivial naming issues.
+
+## C2 disposition (2026-07-30)
+
+Fixed by choosing the actionable writer-owned path rather than allowing a
+forward-reference success path. The shared
+`DPT_FRAMEWORK/engine/helpers/projection-entry-contract.mjs` concrete-navigation
+evaluator is used by packet admission and passive return-map readiness. A
+missing flat `reference/*.md` target now returns the exact path plus bounded
+basename near matches before publication; accepted explicit deferred
+dispositions remain legal.
+
+Verification coordinates:
+
+- `tests/engine/helpers/canonical-topic-state.test.mjs`
+- `tests/engine/helpers/return-map.test.mjs`
+- `tests/integration/cli/operate-topic-state-projection.test.mjs`
+- `tests/integration/cli/check-gate-wave0-complete.test.mjs`
+
+Forward references remain intentionally rejected for evidence-bearing entries:
+the Agent must materialize or select an existing reference through its current
+owner, then rerun the same packet apply. Near matches are diagnostic hints only
+and never select a reference automatically.

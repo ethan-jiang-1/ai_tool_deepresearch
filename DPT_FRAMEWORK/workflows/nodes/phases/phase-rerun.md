@@ -20,13 +20,13 @@ suggested_context:
 
 - **Objective**: Translate HITL2 rerun intent into incremental topic changes before re-entering seed-topics.
 - **Start here**: Read HITL2 rationale, current `rerun_count`, existing seed topic files, and `topic_registry`.
-- **Path to pass**: Inspect canonical topic state, submit retained add/refine/direction-only candidates through the existing topic-state transaction, update style params if the registry changed, increment `rerun_count`, then run the rerun gate.
+- **Path to pass**: Inspect canonical topic state, submit retained add/refine/direction-only candidates through the existing topic-state transaction, consume its returned style-projection handoff only when registry length changed, increment `rerun_count`, then run the rerun gate.
 - **Completion check**: `check-gate-rerun-ready.mjs` passes for `phases/phase-rerun.md`.
 - **Failure posture**: Do not search or rewrite research artifacts here; if rerun is structurally impossible, record the accepted silent degradation/unpassable event and obey gate routing.
 
 ## 1. Stage Goal
 
-HITL2 `user_decision: rerun` 后，Agent 用正常 HITL2 gate handoff或唯一accepted `post_final_reentry` exceptional handoff进入本 phase。后者已经记录同一HITL2 rerun decision，不重复询问用户，也不代表post-Final HITL2 gate曾运行。核心工作仍是将 HITL2 rationale（用户意图）与 canonical plan/current seed 现状做**对比推断**，形成 retained topic-state candidate（保留、新增、补充 intent 或补充 direction），由既有 transaction 原子提交，再递增 rerun_count，运行同一个 gate。
+HITL2 `user_decision: rerun` 后，Agent 用正常 HITL2 gate handoff或唯一accepted `post_final_reentry` exceptional handoff进入本 phase。后者已经记录同一HITL2 rerun decision，不重复询问用户，也不代表post-Final HITL2 gate曾运行。核心工作仍是将 HITL2 rationale（用户意图）与 canonical plan/current seed 现状做**对比推断**，形成 retained topic-state candidate（保留、新增、补充 intent 或补充 direction），由既有 transaction 原子提交；若提交改变 registry length，则先消费其 returned style handoff，随后才递增 rerun_count 并运行同一个 gate。
 
 本 phase 是分析层——不做搜索、不写 reference、不动 artifacts。只做对比分析和方向标记。
 
@@ -89,16 +89,16 @@ HITL2 `user_decision: rerun` 后，Agent 用正常 HITL2 gate handoff或唯一ac
 node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle <bundle> --input <retained-candidate.json>
 ```
 
-The Engine validates the route-bound HITL2 witness plus count/action/required fields and atomically stages only the plan plus explicitly touched current seed bytes. Legacy bundle使用完整显式 `migrate_legacy` reconciliation；rename/reorder/renumber/safe-remove使用inspect返回的一个完整`mutate_layout` target。用户决定title/order/remove语义；Agent自行处理queued/claimed blocker、重跑同一input、exact recover、named style follow-up与inspect/audit。历史artifact/reference/output path保持原位。不得用direct multi-file edit或`human-directed`绕过；也不得 direct-edit seed direction 或 registry。
+The Engine validates the route-bound HITL2 witness plus count/action/required fields and atomically stages only the plan plus explicitly touched current seed bytes. Legacy bundle使用完整显式 `migrate_legacy` reconciliation；rename/reorder/renumber/safe-remove使用inspect返回的一个完整`mutate_layout` target。用户决定title/order/remove语义；Agent自行处理queued/claimed blocker、重跑同一input、exact recover、returned style handoff与inspect/audit。历史artifact/reference/output path保持原位。不得用direct multi-file edit或`human-directed`绕过；也不得 direct-edit seed direction 或 registry。
 
-1c. **重算 research_style_params**：topic_registry 变更后 topic_count 可能变化，必须重算 `wave0_shared_ref_total`（`base + per_topic × topic_count`）。读取当前 `research_profile`，重新运行 apply CLI：
+1c. **只消费 returned style handoff**：读取 committed apply/recover JSON。
 
-   ```bash
-   RESEARCH_PROFILE=$(node -e "const{parse}=require('yaml');const p=parse(require('fs').readFileSync('<bundle>/rb_profile.yaml','utf-8'));console.log(p.research_profile)")
-   node DPT_FRAMEWORK/cli/apply-research-style.mjs --bundle <path> --style $RESEARCH_PROFILE
-   ```
-   
-   验证 stdout JSON：`applied` 匹配 `research_profile`，`topic_count` 匹配更新后的 `topic_registry.length`，`wave0_shared_ref_total` 为 `base + per_topic × topic_count`。所有参数写入 `rb_profile.yaml#/research_style_params`（覆盖旧值）。
+   - 仅当结果含 `style_projection.status: refresh_required` 时，在递增 `rerun_count` 前原样执行它的 `command`。该 exact `apply-research-style.mjs` command 已绑定 selected profile 与 committed topic count；Agent 不得重新解析 `rb_profile.yaml`、计算参数或拼出第二个命令。
+   - 读 style CLI stdout，确认 `applied` 与 handoff 的 `selected_profile` 一致，`topic_count` 与 `committed_topic_count` 一致。CLI 是 `research_style_params` 唯一 writer。
+   - 没有 `style_projection` 的 no-length-change commit 不启动 style CLI，也不读取 profile 来决定是否启动。`profile_unavailable` 不是 direct-edit profile 的理由；保留给既有 profile prerequisite/Gate feedback。
+   - 若此前一个合法 handoff 未完成，`rerun-ready` 的单一 `style_projection_freshness` root 会返回同一个 writer 与同一 Gate rerun；不得以无条件 style apply 绕开它。
+
+   对 C5 的 accepted event-bound style/count 行为保持不变：在 count increment 前已经写出的 exact current projection 是可恢复的既有形状，不增加新的 stage、writer 或 event mutation。
 
 2. **递增 rerun_count**：
    - 当前值为 N，递增到 target_rerun_count（即 N+1）。
@@ -120,7 +120,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle <path> --curren
 - 受影响 seed_topic 文件中的 `## 本轮重跑方向` section 已随 topic-state apply/recover 原子写入/更新
 - `rb_plan.md` canonical registry 与 touched UID-bound current seeds 已由 topic-state apply/recover完整提交；历史 artifact/reference/output path 未移动
 - **新增 topic（`action: add`）必须在后续 phase（wave0/wave1/wave2）中遵循完整 `_cache/` 写入约定**：每个 source 写入 `websearch.json` + `page.md` + `meta.json`（11 字段），在 submitted work-unit result 的 `cache_trails[]` 中声明 leaf 路径，确保 gate `cache_coverage` 可溯源。此约定与首次运行的 topic 完全一致。
-- `rb_profile.yaml#/research_style_params` 已更新——`wave0_shared_ref_total` 反映当前 `topic_count`（通过 `apply-research-style.mjs` 重算）
+- 仅当 committed result 返回 `style_projection.status: refresh_required` 时，`rb_profile.yaml#/research_style_params` 已由 handoff 的既有 CLI 更新到当前 `topic_count`；无 length change 时该字段不因本 phase 重写
 - `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count` 已递增
 - Gate 前 status window 为 `current_gate: hitl2_recorded` / `next_gate: rerun_ready`。Rerun gate pass 后，§6 的 `advance-status --to rerun_ready` 才会写入 `current_gate: rerun_ready` / `next_gate: seed_topics_ready`。
 - `rb_trace.jsonl` 中有 `gate_attempt` event（由 gate CLI 写入）和 `rerun_ready` event：
@@ -174,6 +174,7 @@ Gate fail 时按 structured hint 处理并保持当前 checkpoint failed。`user
 - **MUST 读当前 rerun_count 后再递增**：若字段缺失则初始化为 1，若已有值则 +1。MUST NOT 直接覆盖为固定值
 - **MUST NOT 在无 rationale 或 rationale 为空时写 ## 本轮重跑方向**：方向 hints 必须来自用户明确的意图
 - **MUST NOT direct-edit seed direction，或以 all-seed scan / old matching section 跳过 retained candidate 与 apply**：只允许 existing accepted workspace 的 exact recover
+- **MUST NOT 重新解析 profile 或无条件启动 style CLI**：只在 committed result 的 `style_projection.command` 存在且要求 refresh 时、并且在 count increment 前执行它
 - **MUST NOT 绕过 handoff 直接加载 seed-topics**：所有路由必须来自 gate CLI `check.next`，并通过 `enter-phase --node <check.next>` 消费
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
 

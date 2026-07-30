@@ -6,6 +6,11 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { ResearchStyleParamsSchema } from '../../../DPT_FRAMEWORK/schema/index.mjs';
+import {
+  buildResearchStyleApplyCommand,
+  evaluateResearchStyleProjectionFreshness,
+  readResearchStyleDefinition,
+} from '../../../DPT_FRAMEWORK/engine/helpers/research-style-projection.mjs';
 
 const STYLE_ROOT = resolve('DPT_FRAMEWORK/schema/research-styles');
 const STYLE_NAMES = ['debug', 'quick_factual', 'exploratory_map', 'claim_verification'];
@@ -51,5 +56,73 @@ describe('computeResearchStyleParams', () => {
     for (const styleDefinition of [null, [], {}, { ...style, wave0_shared_ref: null }, { ...style, wave0_per_topic_source_floor: 0 }]) {
       assert.throws(() => compute({ styleDefinition, topicCount: 2 }));
     }
+  });
+});
+
+describe('evaluateResearchStyleProjectionFreshness', () => {
+  it('reuses the complete pure style computation for a fresh projection without mutating inputs', async () => {
+    const compute = await computation();
+    const styleDefinition = readResearchStyleDefinition('quick_factual');
+    const params = compute({ styleDefinition, topicCount: 2 });
+    const styleBefore = structuredClone(styleDefinition);
+    const paramsBefore = structuredClone(params);
+
+    const freshness = evaluateResearchStyleProjectionFreshness({
+      selectedProfile: 'quick_factual',
+      styleDefinition,
+      topicCount: 2,
+      researchStyleParams: params,
+    });
+
+    assert.equal(freshness.passed, true);
+    assert.equal(freshness.state, 'fresh');
+    assert.equal(freshness.topic_count, 2);
+    assert.deepEqual(freshness.expected_params, params);
+    assert.deepEqual(styleDefinition, styleBefore);
+    assert.deepEqual(params, paramsBefore);
+  });
+
+  it('classifies absent and partial parameters without reading or writing a bundle', () => {
+    const styleDefinition = readResearchStyleDefinition('quick_factual');
+    const absent = evaluateResearchStyleProjectionFreshness({
+      selectedProfile: 'quick_factual',
+      styleDefinition,
+      topicCount: 1,
+      researchStyleParams: undefined,
+    });
+    const partial = evaluateResearchStyleProjectionFreshness({
+      selectedProfile: 'quick_factual',
+      styleDefinition,
+      topicCount: 1,
+      researchStyleParams: { wave0_shared_ref_total: 1 },
+    });
+
+    assert.deepEqual({ passed: absent.passed, state: absent.state }, { passed: false, state: 'absent' });
+    assert.ok(absent.missing_fields.includes('wave0_shared_ref_total'));
+    assert.deepEqual({ passed: partial.passed, state: partial.state }, { passed: false, state: 'partial' });
+    assert.ok(partial.missing_fields.includes('wave0_per_topic_source_floor'));
+  });
+
+  it('classifies stale or wrong-profile complete parameters and returns the one existing writer command', async () => {
+    const compute = await computation();
+    const wrongProfileParams = compute({
+      styleDefinition: readResearchStyleDefinition('claim_verification'),
+      topicCount: 3,
+    });
+    const freshness = evaluateResearchStyleProjectionFreshness({
+      selectedProfile: 'quick_factual',
+      styleDefinition: readResearchStyleDefinition('quick_factual'),
+      topicCount: 3,
+      researchStyleParams: wrongProfileParams,
+    });
+    const command = buildResearchStyleApplyCommand({
+      bundlePath: '/tmp/style projection bundle',
+      selectedProfile: 'quick_factual',
+    });
+
+    assert.deepEqual({ passed: freshness.passed, state: freshness.state }, { passed: false, state: 'stale_or_wrong_profile' });
+    assert.ok(freshness.differing_fields.length > 0);
+    assert.match(command, /^node DPT_FRAMEWORK\/cli\/apply-research-style\.mjs --bundle /);
+    assert.match(command, /--style quick_factual$/);
   });
 });

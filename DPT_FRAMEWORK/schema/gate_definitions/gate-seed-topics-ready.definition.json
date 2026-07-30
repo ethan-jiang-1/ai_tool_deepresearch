@@ -55,6 +55,14 @@
       "comparison": "byte_for_byte",
       "failure_message": "A seed topic file's frontmatter 'slug' does not match its filename stem. They must be byte-for-byte equal.",
       "finding": { "source": "checker" }
+    },
+    {
+      "id": "seed_initialization_structure",
+      "check": "seed_initialization_structure",
+      "scope": "per_file",
+      "target": "seed_topics/<slug>.md#seed-initialization",
+      "failure_message": "A current Seed Topic has an invalid initialization boundary or a renderer-owned ghost below it. Edit only the declared initialization region and preserve the Engine-owned appendix.",
+      "finding": { "source": "checker" }
     }
   ]
 }

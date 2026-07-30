@@ -16,9 +16,20 @@ import { acceptedTopicSlugs, buildTopicLayoutTarget, evaluateTopicLayouts, lossl
 import { makeContractFinding } from './wave-contract-findings.mjs';
 import { evaluateRerunDirection } from './rerun-direction.mjs';
 import { locateCanonicalSections } from './plan-hostfile-sections.mjs';
-import { evaluateSeedTopicAuthoring } from './seed-topic-authoring-evaluator.mjs';
-import { collectEligibleWorkUnitProjection, readProjectionProfileRound } from '../work-unit-projection.mjs';
+import { evaluateSeedTopicAuthoring, renderSeedInitializationRegion } from './seed-topic-authoring-evaluator.mjs';
+import { buildResearchStyleApplyCommand, RESEARCH_STYLE_WRITER_PATH } from './research-style-projection.mjs';
+import {
+  collectEligibleWorkUnitProjection,
+  collectEligibleWave0CandidateProjection,
+  readProjectionProfileRound,
+} from '../work-unit-projection.mjs';
 import { loadWave2FindingIndexFact } from './wave-depth-contracts.mjs';
+import {
+  PROJECTION_ENTRY_FIELDS,
+  evaluateProjectionEntryNavigation,
+  parseProjectionEntryArea,
+  upsertProjectionEntryArea,
+} from './projection-entry-contract.mjs';
 
 export const TOPIC_STATE_SCHEMA_VERSION = '1.1.0';
 export const TOPIC_STATE_ROOT = '_diagnostics/topic-state';
@@ -27,9 +38,7 @@ export const TOPIC_STATE_OPERATIONS = Object.freeze(['inspect', 'apply', 'recove
 // @impl STM-001, RRM-002, RRM-003
 // The executable structural source for a Seed Topic's research-round appendix.
 // Guidance mirrors this map; runtime behavior never discovers slots from Markdown.
-export const SEED_TOPIC_PROJECTION_ENTRY_FIELDS = Object.freeze([
-  'evidence_meaning', 'relationship', 'refs', 'status', 'next_hop',
-]);
+export const SEED_TOPIC_PROJECTION_ENTRY_FIELDS = PROJECTION_ENTRY_FIELDS;
 export const SEED_TOPIC_PROJECTION_CARD_LABEL = '回填卡（只读操作约束，不是 Projection Entry）';
 const HEADING_SUFFIX_RE = /^(?:\s|\(|（|:|：|-|—)/;
 
@@ -61,7 +70,7 @@ export const SEED_TOPIC_PROJECTION_SLOTS = Object.freeze([
       writer: 'Wave0 Phase Agent',
       authority: '当前轮已 submitted 的 Wave0 work-unit',
       timing: '当前轮 Wave0 work-unit 已 submitted 后',
-      entryIdentity: '<work_id>/<N>；N 是当前 result-declared、schema-valid `artifacts/wave0/<topic>/source.yaml` array 的 1-based ordinal（current projection coordinate，不是 result_hash 的永久 snapshot）',
+      entryIdentity: '<work_id>/<N>；N 是该 submitted source contribution 在当前 validated `artifacts/wave0/<topic>/source.yaml` array 中拥有的 exact global ordinal；后续合法 append 使用自己的 contribution/work_id（不是 result_hash 的 source-byte snapshot）',
       requiredEntryFields: ['entry_id', ...SEED_TOPIC_PROJECTION_ENTRY_FIELDS],
       materializationPointer: '由 Wave0 closeout 经 operate-topic-state materialize；详见 command_playbook/operate-topic-state.md#Wave Projection Packet',
       prohibitions: ['手改本节', '只写 “Wave0 submitted”', '把 artifact/cache 当唯一 consumer ref'],
@@ -446,29 +455,7 @@ function newSeedEnrichment() {
 function renderNewSeedBody(topic) {
   return `# ${topic.title}
 
-## 主题定位
-
-pending — seed-topics Agent must enrich this section.
-
-## 初始假设、缺口或张力
-
-**已知**：pending — derive only from recorded Topic/profile facts.
-**缺口**：pending — identify what Wave0 evidence intake must establish.
-**张力**：pending — identify claims, conflicts, or narrative bias requiring independent verification.
-
-## why now
-
-- pending — identify the current trigger, time window, or milestone.
-
-## 为什么对最终交付物重要
-
-pending — state the concrete contribution this Topic should make to the final deliverable.
-
-## 下游位置（可选）
-
-- pending — identify downstream report sections or leave explicitly unassigned.
-
----
+${renderSeedInitializationRegion()}
 
 ## ═══ 研究轮次追加区 ═══
 
@@ -519,6 +506,58 @@ function currentProfileRerunCount(bundle) {
   return count;
 }
 
+function readSelectedResearchProfile(bundle) {
+  const profilePath = path.join(bundle, 'rb_profile.yaml');
+  if (!existsSync(profilePath) || lstatSync(profilePath).isSymbolicLink() || !lstatSync(profilePath).isFile()) {
+    return null;
+  }
+  try {
+    const profile = parseYaml(readFileSync(profilePath, 'utf8'));
+    return typeof profile?.research_profile === 'string' ? profile.research_profile : null;
+  } catch {
+    return null;
+  }
+}
+
+function styleProjectionCheckpoint(context) {
+  return context === 'rerun'
+    ? { gate: 'rerun-ready', current_node: 'phases/phase-rerun.md' }
+    : { gate: 'hitl1-recorded', current_node: 'phases/phase-hitl1.md' };
+}
+
+function buildStyleProjectionHandoff(bundle, { committedTopicCount, context }) {
+  const selectedProfile = readSelectedResearchProfile(bundle);
+  const checkpoint = styleProjectionCheckpoint(context);
+  const base = {
+    owner: RESEARCH_STYLE_WRITER_PATH,
+    selected_profile: selectedProfile,
+    committed_topic_count: committedTopicCount,
+    checkpoint,
+  };
+  if (!selectedProfile || selectedProfile === 'not_selected') {
+    return {
+      status: 'profile_unavailable',
+      command: null,
+      reason_code: 'selected_profile_unavailable',
+      ...base,
+    };
+  }
+  try {
+    return {
+      status: 'refresh_required',
+      command: buildResearchStyleApplyCommand({ bundlePath: bundle, selectedProfile }),
+      ...base,
+    };
+  } catch {
+    return {
+      status: 'profile_unavailable',
+      command: null,
+      reason_code: 'selected_profile_unavailable',
+      ...base,
+    };
+  }
+}
+
 function validateRerunDirectionCounts(input, profileRerunCount) {
   if (input.context !== 'rerun' || !Array.isArray(input.actions)) return;
   for (const action of input.actions) {
@@ -540,55 +579,25 @@ function projectionError(reasonCode, message, extras = {}) {
   return Object.assign(new Error(message), { reason_code: reasonCode, ...extras });
 }
 
-function safeProjectionRef(ref) {
-  return typeof ref === 'string' && ref.length > 0 && !ref.startsWith('/') && !/^[A-Za-z]:[\\/]/.test(ref) && !ref.split(/[\\/]+/).includes('..');
+function readProjectionReferenceFact(bundle) {
+  const root = path.join(bundle, 'reference');
+  if (!existsSync(root) || lstatSync(root).isSymbolicLink() || !lstatSync(root).isDirectory()) return { referencePaths: [], requireExisting: true };
+  const referencePaths = readdirSync(root).sort().flatMap((name) => {
+    const target = path.join(root, name);
+    if (!name.endsWith('.md') || lstatSync(target).isSymbolicLink() || !lstatSync(target).isFile()) return [];
+    return [`reference/${name}`];
+  });
+  return { referencePaths, requireExisting: true };
 }
 
-function isDeferredProjectionEntry(entry) {
-  return entry.relationship === 'defers' && entry.status === 'deferred';
-}
-
-function hasDeferredLimitation(entry) {
-  return /(?:limitation|defer(?:red)?|hitl2|no materializable evidence|not materializable|record[-_ ]?only|requires[-_ ]?internal[-_ ]?data|blocked|not source[-_ ]?backed)/i.test(entry.next_hop);
-}
-
-function validateProjectionEntryNavigation(bundle, entry) {
-  if (/\bwave[012]\s+submitted\b/i.test(entry.evidence_meaning.trim())) {
-    throw projectionError('projection_entry_generic_prose', 'Projection entry evidence_meaning cannot be generic WaveN submitted prose.');
-  }
-  const emptyRefs = entry.refs.every((ref) => /^(?:none|n\/a|no materializable evidence|not materialized|no concrete reference|无|暂无|none yet)$/i.test(ref));
-  if (isDeferredProjectionEntry(entry) && emptyRefs) {
-    if (!hasDeferredLimitation(entry)) {
-      throw projectionError('projection_entry_deferred_limitation_missing', 'A deferred Projection Entry with refs: none requires an explicit limitation in next_hop.');
-    }
-    return;
-  }
-  const concreteRefs = entry.refs.filter((ref) => ref.startsWith('reference/'));
-  if (concreteRefs.length === 0) {
-    throw projectionError('projection_entry_concrete_ref_missing', 'An evidence-bearing Projection Entry requires a concrete reference/*.md consumer ref or an explicit deferred disposition.');
-  }
-  for (const ref of entry.refs) {
-    if (!safeProjectionRef(ref)) throw projectionError('projection_entry_ref_invalid', `Projection Entry ref is unsafe: ${ref}`);
-  }
-  for (const ref of concreteRefs) {
-    if (!/^reference\/[^/]+\.md$/.test(ref)) throw projectionError('projection_entry_ref_invalid', `Projection Entry ref must be a flat concrete reference/*.md path: ${ref}`);
-    const target = path.join(bundle, ref);
-    if (!existsSync(target) || lstatSync(target).isSymbolicLink() || !lstatSync(target).isFile()) {
-      throw projectionError('projection_entry_ref_missing', `Projection Entry concrete reference is unavailable: ${ref}`);
-    }
-  }
-}
-
-function renderProjectionEntry(entry) {
-  return [
-    `- **entry_id**: ${entry.entry_id}`,
-    `  - **evidence_meaning**: ${entry.evidence_meaning}`,
-    `  - **relationship**: ${entry.relationship}`,
-    '  - **refs**:',
-    ...entry.refs.map((ref) => `    - ${ref}`),
-    `  - **status**: ${entry.status}`,
-    `  - **next_hop**: ${entry.next_hop}`,
-  ].join('\n');
+function validateProjectionEntryNavigation(entry, referenceFact) {
+  const navigation = evaluateProjectionEntryNavigation(entry, referenceFact);
+  if (navigation.passed) return navigation;
+  throw projectionError(navigation.reason_code, navigation.message, {
+    near_matches: navigation.near_matches,
+    missing_refs: navigation.missing_refs,
+    invalid_refs: navigation.invalid_refs,
+  });
 }
 
 export function splitSeedProjectionCard(content, slot) {
@@ -601,68 +610,7 @@ export function splitSeedProjectionCard(content, slot) {
   };
 }
 
-function stripProjectionToken(entryArea, slot) {
-  const occurrences = String(entryArea || '').split(slot.initialToken).length - 1;
-  if (occurrences > 1) throw projectionError('seed_projection_token_ambiguous', `${slot.slotId} contains its initial token more than once.`);
-  return occurrences === 1 ? String(entryArea).replace(slot.initialToken, '') : String(entryArea || '');
-}
-
-function extractProjectionEntryBlocks(entryArea) {
-  const source = String(entryArea || '');
-  const lines = source.split(/(?<=\n)/);
-  const blocks = [];
-  let offset = 0;
-  let current = null;
-  const finish = (endOffset) => {
-    if (!current) return;
-    blocks.push({ ...current, endOffset, text: source.slice(current.startOffset, endOffset) });
-    current = null;
-  };
-  for (const raw of lines) {
-    const line = raw.replace(/\r?\n$/, '');
-    const entryId = line.match(/^(\s*)-\s+(?:\*\*entry_id\*\*|entry_id)\s*:\s*(\S+)\s*$/i);
-    const evidence = line.match(/^(\s*)-\s+(?:\*\*evidence_meaning\*\*|evidence_meaning)\s*:/i);
-    const marker = entryId || evidence;
-    if (marker) {
-      const indent = marker[1].length;
-      if (!current || indent <= current.indent) {
-        finish(offset);
-        current = { startOffset: offset, indent, entryId: entryId?.[2] || null };
-      }
-      if (entryId && current) current.entryId = entryId[2];
-    }
-    offset += raw.length;
-  }
-  finish(source.length);
-  return blocks;
-}
-
-function upsertProjectionEntries(entryArea, slot, entries) {
-  let updated = stripProjectionToken(entryArea, slot).trim();
-  for (const entry of entries) {
-    const blocks = extractProjectionEntryBlocks(updated);
-    const matches = blocks.filter((block) => block.entryId === entry.entry_id);
-    if (matches.length > 1) {
-      throw projectionError('seed_projection_duplicate_entry_id', `${slot.slotId} has multiple existing entries with entry_id ${entry.entry_id}.`);
-    }
-    const rendered = renderProjectionEntry(entry);
-    if (matches.length === 1) {
-      const match = matches[0];
-      updated = `${updated.slice(0, match.startOffset)}${rendered}${updated.slice(match.endOffset)}`.trim();
-    } else {
-      updated = updated ? `${updated}\n\n${rendered}` : rendered;
-    }
-  }
-  return updated;
-}
-
-function hasRenderedProjectionFields(block) {
-  return SEED_TOPIC_PROJECTION_ENTRY_FIELDS.every((field) => (
-    new RegExp(`^\\s*-\\s+\\*\\*${field}\\*\\*\\s*:`, 'mi').test(block.text)
-  ));
-}
-
-function assertProjectionPostcondition(body, input) {
+function assertProjectionPostcondition(body, input, referenceFact) {
   const postOccurrences = locateSeedProjectionSlots(body, { slotIds: input.updates.map((update) => update.slot_id) });
   for (const update of input.updates) {
     const slot = projectionSlotForId(update.slot_id);
@@ -678,11 +626,20 @@ function assertProjectionPostcondition(body, input) {
     if (card.entryArea.includes(slot.initialToken)) {
       throw projectionError('writer_postcondition_failed', `Projection writer failed to consume ${slot.initialToken} for ${slot.slotId}.`);
     }
-    const blocks = extractProjectionEntryBlocks(card.entryArea);
+    const parsed = parseProjectionEntryArea(card.entryArea, { requiredFields: SEED_TOPIC_PROJECTION_ENTRY_FIELDS });
+    if (!parsed.passed) {
+      throw projectionError('writer_postcondition_failed', `Projection writer failed post-write parser/readiness assertion for ${slot.slotId}.`);
+    }
     for (const entry of update.entries) {
-      const matching = blocks.filter((block) => block.entryId === entry.entry_id);
-      if (matching.length !== 1 || !hasRenderedProjectionFields(matching[0])) {
+      const matching = parsed.entries.filter((candidate) => candidate.metadata.entry_id === entry.entry_id);
+      if (matching.length !== 1) {
         throw projectionError('writer_postcondition_failed', `Projection writer failed post-write parser/readiness assertion for ${slot.slotId}.`);
+      }
+    }
+    for (const entry of parsed.entries) {
+      const navigation = evaluateProjectionEntryNavigation(entry, referenceFact);
+      if (!navigation.passed) {
+        throw projectionError('writer_postcondition_failed', `Projection writer failed post-write navigation assertion for ${slot.slotId}.`);
       }
     }
   }
@@ -700,7 +657,10 @@ function materializeProjectionSlot(body, occurrence, slot, entries) {
   if (occurrence.headingKind === 'canonical' && !card) {
     throw projectionError('seed_projection_layout_missing', `${slot.slotId} has a canonical heading without its required ${SEED_TOPIC_PROJECTION_CARD_LABEL}.`);
   }
-  const updatedEntries = upsertProjectionEntries(card ? card.entryArea : occurrence.content, slot, entries);
+  const updatedEntries = upsertProjectionEntryArea(card ? card.entryArea : occurrence.content, {
+    initialToken: slot.initialToken,
+    entries,
+  });
   const heading = upgradedProjectionHeading(body, occurrence, slot);
   const replacement = card
     ? `${heading}${card.prefix}\n\n${updatedEntries}\n`
@@ -766,6 +726,22 @@ function validateProjectionAuthority(bundle, canonical, input, topic) {
     validateWave2ProjectionAuthority(bundle, topicRegistryFact, topic.topic_uid, entries);
     return { topicRegistryFact };
   }
+  if (input.wave === 'wave0') {
+    const candidateProjection = collectEligibleWave0CandidateProjection(bundle, { topicRegistryFact });
+    if (!candidateProjection.passed) {
+      const root = candidateProjection.root_findings?.[0];
+      throw projectionError(root?.rule_id || 'submitted_source_contribution', root?.missing_fact || 'Current submitted Wave0 source contribution authority is unavailable.');
+    }
+    const eligibleCandidateIds = new Set(candidateProjection.candidates
+      .filter((candidate) => candidate.topic_uid === topic.topic_uid)
+      .map((candidate) => candidate.entry_id));
+    for (const entry of entries) {
+      if (!eligibleCandidateIds.has(entry.entry_id)) {
+        throw projectionError('projection_source_identity_not_current', `${entry.entry_id} is not a current contribution-owned Wave0 source identity for ${topic.topic_uid}.`);
+      }
+    }
+    return { topicRegistryFact, candidateProjection };
+  }
   const eligible = collectEligibleWorkUnitProjection(bundle, { phase: input.wave, topicRegistryFact });
   if (!eligible.passed) {
     const root = eligible.root_findings?.[0];
@@ -789,7 +765,8 @@ function buildWaveProjectionMutation(bundle, current, input) {
   const seed = readSeed(bundle, topic.slug);
   if (!seed.exists) throw projectionError('projection_seed_missing', `Current seed is missing for ${topic.slug}.`);
   validateProjectionAuthority(bundle, canonical, input, topic);
-  for (const update of input.updates) for (const entry of update.entries) validateProjectionEntryNavigation(bundle, entry);
+  const referenceFact = readProjectionReferenceFact(bundle);
+  for (const update of input.updates) for (const entry of update.entries) validateProjectionEntryNavigation(entry, referenceFact);
 
   const occurrences = locateSeedProjectionSlots(seed.body, { slotIds: input.updates.map((update) => update.slot_id) });
   const replacements = [];
@@ -809,7 +786,7 @@ function buildWaveProjectionMutation(bundle, current, input) {
   for (const replacement of replacements.sort((left, right) => right.startOffset - left.startOffset)) {
     body = `${body.slice(0, replacement.startOffset)}${replacement.replacement}${body.slice(replacement.endOffset)}`;
   }
-  assertProjectionPostcondition(body, input);
+  assertProjectionPostcondition(body, input, referenceFact);
   const header = seed.raw.slice(0, seed.raw.length - seed.body.length);
   return {
     plan: current,
@@ -1339,8 +1316,12 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
       repair_kind: error.reason_code === 'seed_target_unsafe' ? 'missing_contract' : 'agent_action',
       coordinate: error.coordinate || null,
       reason,
+      ...(Array.isArray(error.near_matches) && error.near_matches.length > 0 ? { near_matches: error.near_matches } : {}),
+      ...(Array.isArray(error.missing_refs) && error.missing_refs.length > 0 ? { missing_refs: error.missing_refs } : {}),
       recommended_action: error.reason_code === 'frontmatter_invalid'
         ? 'Repair only the reported frontmatter syntax coordinate, then rerun this same apply checkpoint.'
+        : error.reason_code.startsWith('projection_entry_ref')
+          ? 'Materialize or select an existing safe reference/*.md target through the existing reference owner, then rerun this same apply checkpoint.'
         : 'Correct the direct root through its owning boundary, then rerun this same apply checkpoint.',
     };
     throw error;
@@ -1401,7 +1382,6 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
       operation: 'apply',
       verdict: 'unchanged',
       affected_topic_uids: mutation.affected_topic_uids,
-      follow_up: null,
       advisory: presentation.advisory,
       ...(parsedInput.action === 'enrich_seed' ? {
         action: 'enrich_seed', topic_uid: mutation.selected_topic.topic_uid,
@@ -1428,7 +1408,7 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
     for (const [slug, bytes] of mutation.touched) stage(`seed_topics/${slug}.md`, bytes);
     if (parsedInput.action !== 'apply_seed_projection') stage('rb_plan.md', newPlanRaw);
     if (crashAt === 'before_prepared') throw Object.assign(new Error('simulated crash before_prepared'), { preserveWorkspace: false });
-    const manifest = { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation_id: operationId, state: 'prepared', authorization, input_sha256: hashBytes(JSON.stringify(parsedInput)), registry_length_changed: split.frontmatter.topic_registry.length !== mutation.plan.topic_registry.length, affected_topic_uids: mutation.affected_topic_uids, presentation_advisory: presentation.advisory, files, cleanup_files: mutation.cleanup_files, ...(parsedInput.action === 'enrich_seed' ? { action: 'enrich_seed', topic_uid: mutation.selected_topic.topic_uid, slug: mutation.selected_topic.slug, path: `seed_topics/${mutation.selected_topic.slug}.md`, binding_repair: mutation.binding_repair } : parsedInput.action === 'apply_seed_projection' ? { action: 'apply_seed_projection', wave: mutation.projection.wave, topic_uid: mutation.projection.topic_uid, slots: mutation.projection.slots, path: `seed_topics/${mutation.selected_topic.slug}.md` } : {}) };
+    const manifest = { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation_id: operationId, state: 'prepared', authorization, input_sha256: hashBytes(JSON.stringify(parsedInput)), registry_length_changed: split.frontmatter.topic_registry.length !== mutation.plan.topic_registry.length, committed_topic_count: mutation.plan.topic_registry.length, affected_topic_uids: mutation.affected_topic_uids, presentation_advisory: presentation.advisory, files, cleanup_files: mutation.cleanup_files, ...(parsedInput.action === 'enrich_seed' ? { action: 'enrich_seed', topic_uid: mutation.selected_topic.topic_uid, slug: mutation.selected_topic.slug, path: `seed_topics/${mutation.selected_topic.slug}.md`, binding_repair: mutation.binding_repair } : parsedInput.action === 'apply_seed_projection' ? { action: 'apply_seed_projection', wave: mutation.projection.wave, topic_uid: mutation.projection.topic_uid, slots: mutation.projection.slots, path: `seed_topics/${mutation.selected_topic.slug}.md` } : {}) };
     writeDurable(path.join(workspace, 'prepared.json'), `${JSON.stringify(manifest, null, 2)}\n`); fsyncPath(workspace);
     if (crashAt === 'after_prepared') throw Object.assign(new Error('simulated crash after_prepared'), { preserveWorkspace: true });
     const result = recoverCanonicalTopicState({ bundlePath, operationId, crashAt });
@@ -1490,7 +1470,14 @@ export function recoverCanonicalTopicState({ bundlePath, operationId, crashAt = 
     operation: 'recover',
     verdict: 'committed',
     operation_id: operationId,
-    follow_up: manifest.registry_length_changed ? 'recompute_research_style' : null,
+    ...(manifest.registry_length_changed ? {
+      style_projection: buildStyleProjectionHandoff(bundle, {
+        committedTopicCount: Number.isInteger(manifest.committed_topic_count)
+          ? manifest.committed_topic_count
+          : null,
+        context: manifest.authorization?.context,
+      }),
+    } : {}),
     advisory: manifest.presentation_advisory || null,
     ...(manifest.action === 'enrich_seed' ? { action: manifest.action, topic_uid: manifest.topic_uid, slug: manifest.slug, path: manifest.path, binding_repair: manifest.binding_repair ?? null } : {}),
   };

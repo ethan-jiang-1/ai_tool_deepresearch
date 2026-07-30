@@ -23,7 +23,7 @@ import { z } from 'zod';
  * @impl FRE-003
  */
 export function parseMdFrontmatter(rawString) {
-  const m = rawString.match(/^---\n([\s\S]*?)\n---/);
+  const m = rawString.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
   if (!m) return {};
   return parseYaml(m[1]);
 }

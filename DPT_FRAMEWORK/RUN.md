@@ -1,13 +1,29 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.60**
+> **DPT_FRAMEWORK v0.62**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.60
+## Current Release: v0.62
+
+- Canonical topic-state packets now use one shared selected-slot parser and concrete-navigation evaluation with Wave readiness. A successful packet preserves independently parseable neighboring entries; a missing concrete reference or malformed selected neighbor returns direct feedback before publication.
+
+- Wave0 source arrays now expose submission-bound contribution ownership: an earlier accepted prefix keeps its ordinals and a legal later append owns only its new range. Prefix drift, an unsubmitted suffix, or an ambiguous legacy shared target returns one direct root rather than asking the Agent to infer history or edit ledger provenance.
+
+- New Seed Topics separate the one Agent-editable initialization region from the Engine-owned research appendix. A current template ghost is a deterministic seed-Gate root; legacy body prose remains readable history.
+
+- A committed topic-count change returns the existing style CLI as a structured handoff. HITL1 and rerun-ready use one freshness check that points to that writer and reruns the same Gate; neither the Gate nor topic-state writes the profile.
+
+- These feedback loops add no controller, repair service, retry tree, second ledger, or evidence authority. Markdown remains the Agent-facing flow surface and existing Engine commands remain the deterministic owners.
+
+- Wave inspect reads Return Map shape only from the declared Seed Topic projection. Rich references and Wave1 artifacts keep their own deterministic contracts and do not need a Return Map workaround.
+
+- New rich references use an opening YAML-frontmatter metadata mapping. Legacy bullet metadata remains readable, and a malformed mapping returns one root-first repair cue through the shared reader.
+
+- Reentry now uses the same submitted-reference authority classification as normal Wave evaluation. A valid Phase-owned projection is accepted from its existing backing; an unbacked file remains blocking.
 
 - Wave1 materialization feedback now gives the canonical target and exact submitted-backing coordinates in the existing inspect/Gate hint. Materialization still defers only its own index/floor convergence outcomes; separately evaluated authority roots remain visible.
 

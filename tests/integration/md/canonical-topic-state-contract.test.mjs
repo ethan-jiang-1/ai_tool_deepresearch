@@ -23,6 +23,17 @@ describe('canonical topic-state scope', () => {
     assert.match(rerun, /route-bound HITL2 witness/); assert.match(rerun, /用户决定title\/order\/remove语义/);
     assert.match(rerun, /不得用direct multi-file edit或`human-directed`绕过/);
   });
+  it('uses the returned style handoff as the one refresh command and preserves the same-check loop', () => {
+    assert.match(hitl1, /style_projection\.status:\s*refresh_required/);
+    assert.match(hitl1, /style_projection\.command/);
+    assert.match(hitl1, /不要解析 profile 或启动无条件 style CLI/);
+    assert.match(hitl1, /同一个 CLI 与同一个 Gate rerun/);
+    assert.match(rerun, /在递增 `rerun_count` 前原样执行它的 `command`/);
+    assert.match(rerun, /不得重新解析 `rb_profile\.yaml`、计算参数或拼出第二个命令/);
+    assert.match(rerun, /没有 `style_projection` 的 no-length-change commit 不启动 style CLI/);
+    assert.doesNotMatch(rerun, /RESEARCH_PROFILE=\$\(node -e/);
+    assert.doesNotMatch(rerun, /--style \$RESEARCH_PROFILE/);
+  });
   it('keeps historical paths immutable and workspace recovery primary', () => {
     assert.match(commands, /Historical artifact\/reference\/output paths remain in place/);
     assert.match(seedGate, /topicState\.mode !== 'canonical' \|\| topicState\.passed !== true/);

@@ -101,6 +101,18 @@ topic_registry:
 ---
 # Plan
 `);
+  mkdirSync(path.join(dir, 'seed_topics'), { recursive: true });
+  writeFileSync(path.join(dir, 'seed_topics', 'topic-a.md'), `---
+topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
+id: "01"
+slug: topic-a
+title: Topic A
+must_answer: ["A?"]
+scope_role: primary
+depends_on_topic_uids: []
+---
+# Topic A
+`);
 }
 
 function currentWave0QueueItem(id, overrides = {}) {
@@ -900,7 +912,7 @@ describe('operate-work-unit inspect', () => {
     }
   });
 
-  it('recovers a missing submitted declaration through the existing CLI without --result', () => {
+  it('keeps an existing contribution declaration idempotent and fails closed when its missing row cannot be recovered', () => {
     const dir = tempBundle();
     try {
       saveQueueWith(dir, [queueItem()]);
@@ -911,25 +923,35 @@ describe('operate-work-unit inspect', () => {
       const submitStdout = execFileSync(process.execPath, [CLI, 'submit', dir, '--work-id', workId, '--result', resultPath], { encoding: 'utf-8' });
       const submitted = JSON.parse(submitStdout);
       const originalLedger = readFileSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER));
+      const originalRow = JSON.parse(originalLedger.toString('utf-8').trim());
+      assert.ok(originalRow.source_contribution);
+
+      const alreadyPresent = spawnSync(process.execPath, [CLI, 'recover-declaration', dir, '--work-id', workId], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(alreadyPresent.status, 0, alreadyPresent.stderr || alreadyPresent.stdout);
+      assert.equal(JSON.parse(alreadyPresent.stdout).changed, false);
+
+      const indexBeforeLoss = readFileSync(workUnitIndexPath(dir), 'utf-8');
+      const queueBeforeLoss = readFileSync(path.join(dir, 'rb_queue.json'), 'utf-8');
       rmSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER));
 
       const recovered = spawnSync(process.execPath, [CLI, 'recover-declaration', dir, '--work-id', workId], {
         encoding: 'utf-8',
         timeout: 5000,
       });
-      assert.equal(recovered.status, 0, recovered.stderr || recovered.stdout);
+      assert.equal(recovered.status, 1, recovered.stderr || recovered.stdout);
       const out = JSON.parse(recovered.stdout);
-      assert.equal(out.ok, true);
-      assert.equal(out.recovered, true);
-      assert.equal(out.ledger_record_hash, submitted.ledger_record_hash);
-      assert.deepEqual(readFileSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), originalLedger);
-
-      const repeated = spawnSync(process.execPath, [CLI, 'recover-declaration', dir, '--work-id', workId], {
-        encoding: 'utf-8',
-        timeout: 5000,
-      });
-      assert.equal(repeated.status, 0, repeated.stderr || repeated.stdout);
-      assert.equal(JSON.parse(repeated.stdout).changed, false);
+      assert.equal(out.ok, false);
+      assert.equal(out.recovered, false);
+      assert.equal(out.reason_code, 'missing_source_contribution_no_legal_recovery');
+      assert.equal(out.repair_kind, 'missing_contract');
+      assert.match(out.missing_fact, /do not reread source\.yaml or append provenance/);
+      assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
+      assert.equal(readFileSync(workUnitIndexPath(dir), 'utf-8'), indexBeforeLoss);
+      assert.equal(readFileSync(path.join(dir, 'rb_queue.json'), 'utf-8'), queueBeforeLoss);
+      assert.equal(submitted.ledger_record_hash, originalRow.ledger_record_hash);
 
       const rejectedResultArg = spawnSync(process.execPath, [CLI, 'recover-declaration', dir, '--work-id', workId, '--result', resultPath], {
         encoding: 'utf-8',

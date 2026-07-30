@@ -7,6 +7,10 @@ import {
   setStatusWindow,
 } from './handoff-fixtures.mjs';
 import { writeGateAttempt } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import {
+  renderSeedInitializationRegion,
+  SEED_TOPIC_INITIALIZATION,
+} from '../../../DPT_FRAMEWORK/engine/helpers/seed-topic-authoring-evaluator.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs');
@@ -70,7 +74,8 @@ function writeSeed(bundlePath, topic, overrides = {}) {
   mkdirSync(join(bundlePath, 'seed_topics'), { recursive: true });
   const slug = overrides.slug ?? topic.slug;
   const title = overrides.title ?? topic.title;
-  writeFileSync(join(bundlePath, 'seed_topics', `${topic.slug}.md`), `---\ntopic_uid: ${topic.topic_uid}\nid: "${topic.id}"\nslug: ${slug}\ntitle: ${title}\nmust_answer: ["What must be answered?"]\nscope_role: primary\ndepends_on_topic_uids: []\n---\n# ${title}\n`);
+  const body = overrides.body ?? `# ${title}\n`;
+  writeFileSync(join(bundlePath, 'seed_topics', `${topic.slug}.md`), `---\ntopic_uid: ${topic.topic_uid}\nid: "${topic.id}"\nslug: ${slug}\ntitle: ${title}\nmust_answer: ["What must be answered?"]\nscope_role: primary\ndepends_on_topic_uids: []\n---\n${body}`);
 }
 
 function runGate(bundlePath) {
@@ -156,5 +161,49 @@ describe('check-gate-seed-topics-ready', () => {
     assert.deepEqual(output.hints.map((candidate) => candidate.rule_id), ['canonical_topic_state_prerequisite']);
     assert.ok(output.check.masked_rule_ids.includes('seed_topics_dir_non_empty'));
     assert.ok(output.check.masked_rule_ids.includes('slug_consistency'));
+  });
+
+  it('rejects a current-marker seed with an initialization ghost below its editable boundary', () => {
+    const bundlePath = createBundle('initialization-ghost');
+    writeCanonicalPlan(bundlePath, [TOPIC]);
+    writeSeed(bundlePath, TOPIC, {
+      body: [
+        '# Topic A',
+        '',
+        renderSeedInitializationRegion(),
+        '',
+        `## ${SEED_TOPIC_INITIALIZATION.appendixHeading}`,
+        '',
+        '## 初始假设、缺口或张力',
+        '',
+        'pending — old template ghost must not remain in the Engine-owned appendix.',
+        '',
+      ].join('\n'),
+    });
+
+    const result = runGate(bundlePath);
+    const output = JSON.parse(result.stdout);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'seed_initialization_structure');
+
+    assert.equal(result.status, 1, result.stderr);
+    assert.equal(output.check.passed, false);
+    assertCompleteHint(hint);
+    assert.match(hint.write_to, /seed-initialization/);
+    assert.match(hint.rerun, /check-gate-seed-topics-ready/);
+  });
+
+  it('keeps an unmarked legacy duplicate body compatible instead of inferring a new authoring authority', () => {
+    const bundlePath = createBundle('legacy-duplicate');
+    writeCanonicalPlan(bundlePath, [TOPIC]);
+    writeSeed(bundlePath, TOPIC, {
+      body: '# Topic A\n\n## 初始假设、缺口或张力\nlegacy duplicate prose\n\n## Appendix\n',
+    });
+
+    const result = runGate(bundlePath);
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(output.check.passed, true, JSON.stringify(output.inspect));
+    assert.equal(output.hints.some((hint) => hint.rule_id === 'seed_initialization_structure'), false);
   });
 });

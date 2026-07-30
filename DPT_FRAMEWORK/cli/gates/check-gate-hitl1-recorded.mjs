@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-gate-hitl1-recorded.mjs — evaluates gate-hitl1-recorded rules
-// @impl GSK-001, GSK-002, GSK-004, GSK-008, PRG-005, PRG-007, PRP-011
+// @impl GSK-001, GSK-002, GSK-004, GSK-008, PRG-002, PRG-005, PRG-007, PRP-011, RES-002
 // Usage: node check-gate-hitl1-recorded.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -23,6 +23,12 @@ import {
 } from '../../engine/helpers/wave-contract-findings.mjs';
 import { ProfileSchema } from '../../schema/index.mjs';
 import { inspectCanonicalTopicState } from '../../engine/helpers/canonical-topic-state.mjs';
+import {
+  buildResearchStyleApplyCommand,
+  evaluateResearchStyleProjectionFreshness,
+  hasOnlyResearchStyleProjectionIssues,
+  readResearchStyleDefinition,
+} from '../../engine/helpers/research-style-projection.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
@@ -197,6 +203,62 @@ function recordedAtFinding(rule, failure) {
   });
 }
 
+function styleProjectionFinding(freshness) {
+  const profilePath = resolveFsPath(bundlePath, 'rb_profile.yaml');
+  const command = buildResearchStyleApplyCommand({
+    bundlePath,
+    selectedProfile: freshness.selected_profile,
+  });
+  const stateDetail = freshness.state === 'absent'
+    ? 'is absent'
+    : freshness.state === 'partial'
+      ? 'is partial or structurally invalid'
+      : 'does not match the current selected-profile projection';
+  return makeContractFinding({
+    id: 'style_projection_freshness',
+    ruleId: 'style_projection_freshness',
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'required_structure',
+    surface: `${profilePath}#/research_style_params`,
+    expected: {
+      selected_profile: freshness.selected_profile,
+      committed_topic_count: freshness.topic_count,
+      research_style_params: freshness.expected_params,
+    },
+    observed: {
+      state: freshness.state,
+      research_style_params: freshness.observed_params,
+      differing_fields: freshness.differing_fields || [],
+      missing_fields: freshness.missing_fields || [],
+      unexpected_fields: freshness.unexpected_fields || [],
+    },
+    missingFact: `research_style_params ${stateDetail} for selected profile '${freshness.selected_profile}' at committed topic count ${freshness.topic_count}.`,
+    repairKind: 'engine_operation',
+    writeTo: command,
+    repair: `Run the existing style projection command, then rerun this same Gate: ${command}`,
+    detail: `[style_projection_freshness] research_style_params ${stateDetail} for '${freshness.selected_profile}' and committed topic count ${freshness.topic_count}.`,
+  });
+}
+
+function styleProjectionConfigurationFinding(detail, observed = null) {
+  return makeContractFinding({
+    id: 'style_projection_freshness',
+    ruleId: 'style_projection_freshness',
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'configuration_integrity',
+    surface: 'Research style definition / freshness evaluator contract',
+    expected: 'The selected profile resolves to a valid static research style definition.',
+    observed,
+    missingFact: detail,
+    repairKind: 'missing_contract',
+    writeTo: 'Research style definition and freshness evaluator implementation boundary',
+    repair: 'Repair the static style-definition contract before rerunning this Gate.',
+    detail: `[style_projection_freshness] ${detail}`,
+  });
+}
+
 const topicState = inspectCanonicalTopicState({ bundlePath });
 if (topicState.mode !== 'canonical' || topicState.passed !== true) {
   const blocker = topicState.blockers?.[0];
@@ -269,7 +331,7 @@ for (const rule of definition.rules) {
           };
         } else {
           const parsed = ProfileSchema.safeParse(profile.value);
-          if (!parsed.success) {
+          if (!parsed.success && !hasOnlyResearchStyleProjectionIssues(parsed.error.issues)) {
             const issues = parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ');
             failure = {
               expected: 'ProfileSchema accepts parsed rb_profile.yaml.',
@@ -407,6 +469,37 @@ for (const rule of definition.rules) {
         ? ['hitl1_recorded_at_non_empty']
         : [],
     }));
+  }
+}
+
+if (findings.length > 0) {
+  maskedRuleIds.add('style_projection_freshness');
+} else {
+  checksRun += 1;
+  const profile = readProfile();
+  const selectedProfile = profile.value?.research_profile;
+  try {
+    const freshness = evaluateResearchStyleProjectionFreshness({
+      selectedProfile,
+      styleDefinition: readResearchStyleDefinition(selectedProfile),
+      topicCount: topicState.topics.length,
+      researchStyleParams: profile.value?.research_style_params,
+    });
+    if (!freshness.passed) {
+      if (freshness.state === 'style_definition_invalid' || freshness.state === 'selected_profile_unusable') {
+        findings.push(styleProjectionConfigurationFinding(
+          freshness.error || `Selected profile '${selectedProfile ?? 'null'}' is unavailable to the style freshness evaluator.`,
+          freshness,
+        ));
+      } else {
+        findings.push(styleProjectionFinding(freshness));
+      }
+    }
+  } catch (error) {
+    findings.push(styleProjectionConfigurationFinding(
+      `Cannot load the selected research style definition: ${error.message || String(error)}`,
+      { selected_profile: selectedProfile ?? null },
+    ));
   }
 }
 

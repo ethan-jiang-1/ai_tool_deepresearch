@@ -99,3 +99,24 @@ inspect 随即从 13 个 blocker 增加到 62 个，并再次发现
 `next_hop ... - **entry_id**` 粘连。仅对 bundle Markdown 做机械换行归一化后，inspect
 恢复到 12 个 blocker；没有改 framework、ledger、result、receipt、trace、queue 或
 status。这是同一 writer 缺陷的第二次真实复现，不是新增的框架修复。
+
+## C2 disposition (2026-07-30)
+
+Fixed at the deterministic writer boundary. The dependency-neutral
+`DPT_FRAMEWORK/engine/helpers/projection-entry-contract.mjs` now owns selected
+entry parsing/rendering, and
+`DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs` uses it for
+separator-preserving identity upsert and a pre-publication selected-family
+postcondition. A malformed preserved neighbor fails before workspace
+publication instead of creating a later inspect cascade.
+
+Verification coordinates:
+
+- `tests/engine/helpers/canonical-topic-state.test.mjs`
+- `tests/engine/helpers/return-map.test.mjs`
+- `tests/integration/cli/operate-topic-state-projection.test.mjs`
+- `tests/integration/md/canonical-topic-state-contract.test.mjs`
+
+Legacy readable content is not bulk-rewritten. A selected family whose current
+bytes cannot be parsed is rejected by the writer; unrelated future-Wave
+families do not become a Wave0 packet blocker.

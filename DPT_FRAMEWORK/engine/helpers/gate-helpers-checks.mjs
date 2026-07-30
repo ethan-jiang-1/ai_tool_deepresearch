@@ -11,6 +11,7 @@ import {
   readBundlePlan,
   readSubmittedWorkUnitDeclarations,
   getDeclaredReferencePaths,
+  parseMdFrontmatter,
 } from './gate-helpers-readers.mjs';
 import { validateIndexMD } from '../../schema/contracts/reference.mjs';
 import { evaluateTopicLayouts, resolveReferenceTopicBinding } from './topic-layout.mjs';
@@ -319,7 +320,14 @@ export const REQUIRED_REFERENCE_SECTIONS = [
   'Risks And Limitations',
 ];
 
-export function parseReferenceMetadata(mdContent) {
+function metadataValueToString(value) {
+  if (value === null || value === undefined) return '';
+  if (Array.isArray(value)) return value.map(metadataValueToString).filter(Boolean).join('; ');
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value).trim();
+}
+
+function legacyReferenceMetadata(mdContent) {
   const semanticNames = new Set(REQUIRED_REFERENCE_SECTIONS.map(normalizeMarkdownSemanticHeading));
   const firstSemanticSection = markdownSemanticSectionEntries(mdContent)
     .find((entry) => semanticNames.has(entry.name));
@@ -332,6 +340,81 @@ export function parseReferenceMetadata(mdContent) {
     if (match) metadata.set(match[1], match[2].trim());
   }
   return metadata;
+}
+
+// @impl REF-002, REF-007
+// The shared reader keeps writer presentation separate from metadata semantics:
+// new references use an opening YAML mapping, while legacy bullet metadata
+// remains a read-only compatibility input for all existing consumers.
+export function readReferenceMetadata(mdContent) {
+  const content = String(mdContent || '');
+  if (!/^---(?:\r?\n|$)/.test(content)) {
+    return { metadata: legacyReferenceMetadata(content), presentation: 'legacy_bullets', error: null };
+  }
+
+  if (!/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/.test(content)) {
+    return {
+      metadata: new Map(),
+      presentation: 'frontmatter',
+      error: {
+        code: 'reference_metadata_frontmatter_invalid',
+        reason: 'frontmatter boundary is missing or malformed',
+      },
+    };
+  }
+
+  let parsed;
+  try {
+    parsed = parseMdFrontmatter(content);
+  } catch (error) {
+    return {
+      metadata: new Map(),
+      presentation: 'frontmatter',
+      error: {
+        code: 'reference_metadata_frontmatter_invalid',
+        reason: `YAML parse failed: ${error.message}`,
+      },
+    };
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return {
+      metadata: new Map(),
+      presentation: 'frontmatter',
+      error: {
+        code: 'reference_metadata_frontmatter_invalid',
+        reason: 'frontmatter must decode to one YAML mapping',
+      },
+    };
+  }
+
+  return {
+    metadata: new Map(Object.entries(parsed).map(([key, value]) => [key, metadataValueToString(value)])),
+    presentation: 'frontmatter',
+    error: null,
+  };
+}
+
+export function parseReferenceMetadata(mdContent) {
+  return readReferenceMetadata(mdContent).metadata;
+}
+
+function referenceMetadataRootFinding(rule, file, error, { defaultRuleId = 'reference_format' } = {}) {
+  const ruleId = rule?.id || defaultRuleId;
+  const detail = `[reference_metadata_frontmatter_invalid] ${file.relPath}: ${error.reason}. Repair the opening YAML frontmatter mapping.`;
+  return checkerFinding(rule, {
+    defaultRuleId,
+    id: `${ruleId}:${file.relPath}:metadata_frontmatter`,
+    blockingBasis: 'required_structure',
+    surface: file.absPath,
+    expected: 'One opening YAML frontmatter mapping containing reference metadata.',
+    observed: error.reason,
+    missingFact: `${file.relPath} has invalid reference metadata frontmatter: ${error.reason}.`,
+    repairKind: 'agent_action',
+    writeTo: `${file.absPath}#frontmatter`,
+    repair: `Repair the opening YAML frontmatter mapping in ${file.relPath}, then rerun this checkpoint.`,
+    detail,
+  });
 }
 
 
@@ -349,25 +432,13 @@ export function checkReferenceFormatFiles(files, { rule = null, bundlePath = nul
   }
   for (const file of files) {
     const content = readFileSync(file.absPath, 'utf-8');
-    if (content.trimStart().startsWith('---')) {
-      const detail = `YAML frontmatter is not allowed in ${file.relPath}`;
-      inspect.push(detail);
-      findings.push(checkerFinding(rule, {
-        defaultRuleId: 'reference_format',
-        id: `${rule?.id || 'reference_format'}:${file.relPath}:yaml_frontmatter`,
-        blockingBasis: 'required_structure',
-        surface: file.absPath,
-        expected: 'Reference metadata uses the accepted bullet/colon metadata block before semantic sections.',
-        observed: 'YAML frontmatter fence',
-        missingFact: `${file.relPath} uses YAML frontmatter instead of the accepted reference metadata block.`,
-        repairKind: 'agent_action',
-        writeTo: file.absPath,
-        repair: `Rewrite the metadata block in ${file.relPath} using the accepted bullet/colon format.`,
-        detail,
-      }));
-      continue;
-    }
-    const metadata = parseReferenceMetadata(content);
+    const metadataRead = readReferenceMetadata(content);
+    const metadata = metadataRead.metadata;
+    if (metadataRead.error) {
+      const finding = referenceMetadataRootFinding(rule, file, metadataRead.error);
+      inspect.push(finding.detail);
+      findings.push(finding);
+    } else {
     for (const field of REQUIRED_REFERENCE_METADATA_FIELDS) {
       if (!metadata.has(field) || !metadata.get(field)) {
         const detail = `Missing required metadata "${field}" in ${file.relPath}`;
@@ -421,6 +492,7 @@ export function checkReferenceFormatFiles(files, { rule = null, bundlePath = nul
         detail,
       }));
     }
+    }
     for (const section of REQUIRED_REFERENCE_SECTIONS) {
       if (!extractSection(content, section)) {
         const detail = `Missing or empty section "## ${section}" in ${file.relPath}`;
@@ -449,7 +521,16 @@ export function checkReferenceSourceUrls(files, { rule = null } = {}) {
   const findings = [];
   for (const file of files) {
     const content = readFileSync(file.absPath, 'utf-8');
-    const metadata = parseReferenceMetadata(content);
+    const metadataRead = readReferenceMetadata(content);
+    if (metadataRead.error) {
+      const finding = referenceMetadataRootFinding(rule, file, metadataRead.error, {
+        defaultRuleId: 'reference_source_url_parseable',
+      });
+      inspect.push(finding.detail);
+      findings.push(finding);
+      continue;
+    }
+    const metadata = metadataRead.metadata;
     const sourceUrl = metadata.get('source_url') || '';
     if (!sourceUrl) {
       const detail = `Missing metadata source_url in ${file.relPath}`;
@@ -570,7 +651,19 @@ export function classifyReferenceAuthority(bundlePath, file) {
   }
 
   const content = readFileSync(absPath, 'utf-8');
-  const metadata = parseReferenceMetadata(content);
+  const metadataRead = readReferenceMetadata(content);
+  if (metadataRead.error) {
+    return referenceAuthorityFailure({
+      authority: 'unbacked',
+      reasonCode: metadataRead.error.code,
+      reason: `projection_backing_drift: ${relPath} has invalid reference metadata frontmatter: ${metadataRead.error.reason}`,
+      blockingBasis: 'required_structure',
+      repairKind: 'agent_action',
+      writeTo: `${resolvePath(bundlePath, relPath)}#frontmatter`,
+      missingFact: `${relPath} has invalid reference metadata frontmatter needed to bind submitted source backing.`,
+    });
+  }
+  const metadata = metadataRead.metadata;
   const sourceUrls = sourceUrlsFromMetadata(metadata);
   if (sourceUrls.length === 0) {
     return referenceAuthorityFailure({

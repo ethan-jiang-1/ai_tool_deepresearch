@@ -71,6 +71,15 @@ canonical Topic binding, reviewed work-unit refs, depth dimensions/profile
 judgments, `decision`, and supplementary queue IDs. Legacy/Agent-helpful
 source/cache/new-source projections remain readable but non-authoritative.
 
+`evidence-summary.md` and `question-list.md` are Wave1 artifact-family
+documents, not Seed Topic return-map documents. Their required Source URLs, Key
+Findings, and question-list semantic sections SHALL be evaluated by their
+existing artifact contracts and submitted output coverage. A Wave1 inspect or
+gate SHALL NOT require `evidence_meaning`, `relationship`, `refs`, `status`, or
+`next_hop` inside either artifact, and a missing return-map field SHALL not be
+emitted for them. Their existence, content, and output coverage remain
+independently fail-closed under their declared owners.
+
 The reference-convergence evaluator SHALL use those submitted backing facts and
 the current canonical Topic identity, committed consumer reference projections,
 index table, profile reference floor, and existing supplementary queue demand
@@ -155,6 +164,15 @@ manually.
   work-unit output coverage
 - **THEN** the gate SHALL reject that artifact as unsubmitted
 - **AND** it SHALL not use filesystem presence as delegated authority
+
+#### Scenario: Wave1 artifact does not require a return map
+
+- **WHEN** a submitted evidence-summary and question-list satisfy their own
+  artifact contracts but contain no return-map entry fields
+- **THEN** Wave1 inspection SHALL not report return-map missing-fields,
+  naked-evidence-list, or unsupported-prose findings for either artifact
+- **AND** a malformed Seed Topic projection SHALL retain its independent
+  return-map finding and repair coordinate
 
 #### Scenario: Reviewed work-unit refs derive source and cache facts
 
@@ -426,4 +444,3 @@ or ask the user to perform ordinary repair.
 - **THEN** formal submit SHALL evaluate its existing delegated contract
 - **AND** the Phase-owned convergence/materialization loop SHALL own any later
   consumer-reference closeout
-

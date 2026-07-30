@@ -168,6 +168,35 @@ describe('WorkUnitLateAcceptContextSchema', () => {
 });
 
 describe('WorkUnitLedgerRecordSchema', () => {
+  it('limits source contributions to matching Wave0 source-intake ledger rows', () => {
+    const contribution = {
+      target: 'artifacts/wave0/topic-a/source.yaml',
+      direct_contract: 'wave0.source-metadata-array.v1',
+      validated_length: 2,
+      semantic_digest: 'a'.repeat(64),
+    };
+    const accepted = baseLedgerRow({
+      output_files: [{ path: contribution.target, role: 'source_yaml' }],
+      source_contribution: contribution,
+    });
+    assert.deepEqual(WorkUnitLedgerRecordSchema.parse(accepted).source_contribution, contribution);
+
+    assert.equal(WorkUnitLedgerRecordSchema.safeParse(baseLedgerRow({
+      wave: 1,
+      kind: 'wave1_topic_deepening',
+      output_files: [{ path: contribution.target, role: 'source_yaml' }],
+      source_contribution: contribution,
+    })).success, false);
+    assert.equal(WorkUnitLedgerRecordSchema.safeParse(baseLedgerRow({
+      output_files: [{ path: 'artifacts/wave0/topic-a/other.yaml', role: 'source_yaml' }],
+      source_contribution: contribution,
+    })).success, false);
+    assert.equal(WorkUnitLedgerRecordSchema.safeParse(baseLedgerRow({
+      output_files: [{ path: contribution.target, role: 'source_yaml' }],
+      source_contribution: { ...contribution, semantic_digest: 'not-a-sha256' },
+    })).success, false);
+  });
+
   it('accepts audited late-submit rows and hashes audit fields', () => {
     const row = baseLedgerRow({
       late_accept: true,

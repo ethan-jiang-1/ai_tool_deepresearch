@@ -74,7 +74,7 @@ Reference evidence 存放在平铺的 `reference/` 目录下（无子目录）�
 - **`artifacts/wave0/<topic>/source.yaml`**：Thin YAML source 列表。Per topic，每条满足 `ReferenceMetadataSchema`（url/title/retrieved_date/topic_tag/notes）。来自 `topic_registry` 的 slug。Foundation floor：每个 topic ≥ 1 条。
 - **不再存在**：`reference/<topic>/` 嵌套子目录、`reference/00_shared/` 目录、`reference/<topic>/source.yaml`（thin YAML 迁至 `artifacts/wave0/`）。
 
-Reference rich MD metadata is the project metadata block format: lines such as `- source_url: ...` before the first `## ` section. It is not YAML frontmatter. Do not wrap reference metadata in `---` fences.
+New reference rich MD begins with one opening YAML-frontmatter mapping before its Markdown title and semantic sections. The shared `readReferenceMetadata()` reader supplies the mapping values to format, URL, index, count, and backing consumers. Legacy `- source_url: ...` bullet metadata before the first semantic section remains read-compatible only; it is not the presentation a new producer should write. A malformed/non-mapping frontmatter block has one `reference_metadata_frontmatter_invalid` repair root; a valid mapping missing a required key has that key's normal field repair.
 
 ## Seed Topics
 
@@ -84,7 +84,7 @@ Reference rich MD metadata is the project metadata block format: lines such as `
 
 | Token | Slot owner | Materialization condition |
 |-------|---------|---------|
-| `__BACKFILL_WAVE0_EVIDENCE__` | Wave0 / `wave0_evidence` | each current result-declared `source.yaml` array candidate is packet-materialized |
+| `__BACKFILL_WAVE0_EVIDENCE__` | Wave0 / `wave0_evidence` | each candidate owned by a submitted Wave0 source contribution is packet-materialized using the existing inspection/preflight coordinate |
 | `__BACKFILL_WAVE1_MECHANISMS__` | Wave1 / `wave1_mechanisms` | Wave1 atomically materializes all three owned slots |
 | `__BACKFILL_WAVE1_TRENDS__` | Wave1 / `wave1_trends` | Wave1 atomically materializes all three owned slots |
 | `__BACKFILL_WAVE2_JUDGMENT__` | Wave2 / `wave2_judgment` | a current-round W2F finding resolved to the topic is packet-materialized |

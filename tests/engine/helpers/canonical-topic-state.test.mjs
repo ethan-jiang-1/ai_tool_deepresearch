@@ -14,6 +14,11 @@ import {
   SEED_TOPIC_PROJECTION_CARD_LABEL,
   SEED_TOPIC_PROJECTION_SLOTS,
 } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
+import { SEED_TOPIC_INITIALIZATION } from '../../../DPT_FRAMEWORK/engine/helpers/seed-topic-authoring-evaluator.mjs';
+import {
+  parseProjectionEntryArea,
+  upsertProjectionEntryArea,
+} from '../../../DPT_FRAMEWORK/engine/helpers/projection-entry-contract.mjs';
 import { diffSnapshots, snapshotTree } from '../../helpers/authority-snapshot.mjs';
 import { claimAndSubmitWorkUnit } from '../work-unit-test-helpers.mjs';
 import { writeGateAttempt } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
@@ -79,6 +84,16 @@ function seedBody(raw) {
 
 function assertCompleteSeedSkeleton(raw) {
   const body = seedBody(raw);
+  const start = body.indexOf(SEED_TOPIC_INITIALIZATION.startMarker);
+  const end = body.indexOf(SEED_TOPIC_INITIALIZATION.endMarker);
+  const appendix = body.indexOf(`## ${SEED_TOPIC_INITIALIZATION.appendixHeading}`);
+  assert.equal(body.split(SEED_TOPIC_INITIALIZATION.startMarker).length - 1, 1, 'initialization start marker must appear exactly once');
+  assert.equal(body.split(SEED_TOPIC_INITIALIZATION.endMarker).length - 1, 1, 'initialization end marker must appear exactly once');
+  assert.ok(start >= 0 && start < end && end < appendix, 'initialization must precede the Engine-owned appendix');
+  const initialization = body.slice(start, end);
+  for (const section of SEED_TOPIC_INITIALIZATION.sections) {
+    assert.equal(initialization.split(`## ${section.heading}`).length - 1, 1, `${section.heading} must appear once inside initialization`);
+  }
   for (const heading of SEED_HEADINGS) assert.ok(body.includes(heading), `missing ${heading}`);
   for (const token of SEED_BACKFILL_TOKENS) {
     assert.equal(body.split(token).length - 1, 1, `${token} must appear exactly once`);
@@ -100,6 +115,16 @@ function writeRerunProfile(dir, rerunCount = 0) {
   writeFileSync(join(dir, 'rb_profile.yaml'), `human_decision_checkpoints:\n  hitl2:\n    rerun_count: ${rerunCount}\n`);
 }
 
+function writeSelectedResearchProfile(dir, profile = 'quick_factual') {
+  writeFileSync(join(dir, 'rb_profile.yaml'), [
+    `research_profile: ${profile}`,
+    'research_access:',
+    '  status: available',
+    '  retained_note: keep-this-profile-byte-stable',
+    '',
+  ].join('\n'));
+}
+
 function directionCandidate({ count = 1, action = 'supplement' } = {}) {
   return {
     rerun_count: count,
@@ -112,6 +137,28 @@ function directionCandidate({ count = 1, action = 'supplement' } = {}) {
 }
 
 describe('canonical topic state', () => {
+  it('keeps projection entry boundaries parseable across an identity upsert', () => {
+    const entry = (entryId, evidenceMeaning) => ({
+      entry_id: entryId,
+      evidence_meaning: evidenceMeaning,
+      relationship: 'supports',
+      refs: ['reference/topic-a.md'],
+      status: 'supported',
+      next_hop: 'Read the reference.',
+    });
+    const first = entry('work/1', 'First navigation.');
+    const second = entry('work/2', 'Second navigation.');
+    const area = upsertProjectionEntryArea('', { initialToken: '__TEST_TOKEN__', entries: [first, second] });
+    const replay = upsertProjectionEntryArea(area, {
+      initialToken: '__TEST_TOKEN__',
+      entries: [entry('work/1', 'Corrected first navigation.')],
+    });
+
+    assert.match(replay, /Read the reference\.\n\n- \*\*entry_id\*\*: work\/2/);
+    assert.equal(parseProjectionEntryArea(replay).passed, true);
+    assert.equal(parseProjectionEntryArea(`${replay.replace('\n\n- **entry_id**: work/2', '- **entry_id**: work/2')}`).passed, false);
+  });
+
   it('exposes focused seed bindings without progress or workspace evaluation', () => {
     const dir = bundle('topic-seed-binding');
     applyCanonicalTopicState({ bundlePath: dir, input });
@@ -129,6 +176,38 @@ describe('canonical topic state', () => {
     assert.equal(inspected.mode, 'canonical'); assert.equal(inspected.topics[0].state, 'not_started'); assert.equal(inspected.passed, true);
     assert.match(inspected.plan_sha256, /^[0-9a-f]{64}$/);
     assert.deepEqual(inspected.layout_baseline.topics[0], { topic_uid: inspected.topics[0].topic_uid, title: 'Topic A', slug_stem: 'topic-a' });
+  });
+  it('returns the existing style writer handoff only for a committed registry-length change', () => {
+    const dir = bundle('topic-style-handoff-add');
+    writeSelectedResearchProfile(dir);
+    const profilePath = join(dir, 'rb_profile.yaml');
+    const profileBefore = readFileSync(profilePath, 'utf8');
+
+    const added = applyCanonicalTopicState({ bundlePath: dir, input });
+    assert.equal(added.verdict, 'committed');
+    assert.deepEqual(added.style_projection?.checkpoint, { gate: 'hitl1-recorded', current_node: 'phases/phase-hitl1.md' });
+    assert.equal(added.style_projection?.status, 'refresh_required');
+    assert.equal(added.style_projection?.owner, 'DPT_FRAMEWORK/cli/apply-research-style.mjs');
+    assert.equal(added.style_projection?.selected_profile, 'quick_factual');
+    assert.equal(added.style_projection?.committed_topic_count, 1);
+    assert.match(added.style_projection?.command || '', /apply-research-style\.mjs/);
+    assert.match(added.style_projection?.command || '', /--style quick_factual$/);
+    assert.equal(readFileSync(profilePath, 'utf8'), profileBefore);
+
+    const topic = inspectCanonicalTopicState({ bundlePath: dir }).topics[0];
+    const unchangedLength = applyCanonicalTopicState({
+      bundlePath: dir,
+      input: {
+        context: 'hitl1',
+        actions: [{
+          action: 'update_intent', topic_uid: topic.topic_uid, title: 'Topic A refined',
+          must_answer: ['What changed?'], scope_role: 'primary', depends_on_topic_uids: [],
+        }],
+      },
+    });
+    assert.equal(unchangedLength.verdict, 'committed');
+    assert.equal(unchangedLength.style_projection, undefined);
+    assert.equal(readFileSync(profilePath, 'utf8'), profileBefore);
   });
   it('renders the complete shared seed skeleton for HITL1 and rerun add_topic', () => {
     const hitl1 = bundle('topic-seed-hitl1');
@@ -149,12 +228,19 @@ describe('canonical topic state', () => {
     applyCanonicalTopicState({ bundlePath: dir, input });
     const rendered = seedBody(readFileSync(join(dir, 'seed_topics/01_topic-a.md'), 'utf8'));
     const contract = readFileSync('DPT_FRAMEWORK/workflows/nodes/templates/seed-topic-template.md', 'utf8');
+    const initialization = contract.slice(contract.indexOf('## Initialization Skeleton'), contract.indexOf('## Appendix Slot Map'));
     const appendix = contract.slice(contract.indexOf('## Appendix Slot Map'));
     const headings = appendix.split(/\r?\n/)
       .filter((line) => SEED_TOPIC_PROJECTION_SLOTS.some((slot) => line === `## ${slot.canonicalHeading}`));
     const tokens = [...contract.matchAll(/__BACKFILL_[A-Z0-9_]+__/g)].map((match) => match[0]);
     assert.deepEqual(headings, SEED_TOPIC_PROJECTION_SLOTS.map((slot) => `## ${slot.canonicalHeading}`));
     assert.deepEqual(tokens, SEED_BACKFILL_TOKENS);
+    assert.match(initialization, /seed-topic-region: seed-initialization/);
+    assert.match(initialization, /seed-topic-region: research-appendix/);
+    assert.equal(initialization.split(SEED_TOPIC_INITIALIZATION.startMarker).length - 1, 1);
+    assert.equal(initialization.split(SEED_TOPIC_INITIALIZATION.endMarker).length - 1, 1);
+    assert.ok(initialization.indexOf(SEED_TOPIC_INITIALIZATION.startMarker) < initialization.indexOf(SEED_TOPIC_INITIALIZATION.endMarker));
+    for (const section of SEED_TOPIC_INITIALIZATION.sections) assert.match(initialization, new RegExp(`## ${section.heading}`));
     for (const heading of headings) assert.ok(rendered.includes(heading), heading);
     for (const token of tokens) assert.equal(rendered.split(token).length - 1, 1, token);
     assert.equal((contract.match(new RegExp(SEED_TOPIC_PROJECTION_CARD_LABEL, 'g')) || []).length, SEED_TOPIC_PROJECTION_SLOTS.length);
@@ -221,6 +307,7 @@ describe('canonical topic state', () => {
     });
     assert.equal(result.verdict, 'committed');
     assert.equal(result.binding_repair, null);
+    assert.equal(result.style_projection, undefined);
     const enriched = readFileSync(seedPath, 'utf8');
     const enrichedHeader = enriched.match(/^---\n[\s\S]*?\n---\n/)[0];
     assert.equal(enriched.slice(enrichedHeader.length), suffix);
@@ -302,12 +389,47 @@ describe('canonical topic state', () => {
     ] };
     const applied = applyCanonicalTopicState({ bundlePath: dir, input: layout });
     assert.equal(applied.verdict, 'committed');
+    assert.equal(applied.style_projection, undefined);
     const plan = readFileSync(join(dir, 'rb_plan.md'), 'utf8');
     assert.match(plan, /slug: 01_topic-a-new/);
     assert.match(plan, /slug: 01_topic-a/);
     assert.equal(existsSync(join(dir, 'seed_topics/01_topic-a-new.md')), true);
     assert.equal(existsSync(join(dir, 'seed_topics/01_topic-a.md')), false);
     assert.equal(existsSync(join(dir, 'seed_topics/02_topic-b.md')), true);
+  });
+  it('does not request a style projection for rename or reorder without a registry-length change', () => {
+    const dir = bundle('topic-layout-style-noop');
+    writeSelectedResearchProfile(dir);
+    const two = {
+      context: 'hitl1',
+      actions: [
+        input.actions[0],
+        { ...input.actions[0], title: 'Topic B', slug_stem: 'topic-b', must_answer: ['B?'], scope_role: 'supporting' },
+      ],
+    };
+    applyCanonicalTopicState({ bundlePath: dir, input: two });
+    authorizeRerun(dir);
+
+    let inspected = inspectCanonicalTopicState({ bundlePath: dir });
+    const renamed = applyCanonicalTopicState({
+      bundlePath: dir,
+      input: {
+        ...inspected.layout_baseline,
+        topics: inspected.layout_baseline.topics.map((topic, index) => index === 0
+          ? { ...topic, title: 'Topic A renamed', slug_stem: 'topic-a-renamed' }
+          : topic),
+      },
+    });
+    assert.equal(renamed.verdict, 'committed');
+    assert.equal(renamed.style_projection, undefined);
+
+    inspected = inspectCanonicalTopicState({ bundlePath: dir });
+    const reordered = applyCanonicalTopicState({
+      bundlePath: dir,
+      input: { ...inspected.layout_baseline, topics: [...inspected.layout_baseline.topics].reverse() },
+    });
+    assert.equal(reordered.verdict, 'committed');
+    assert.equal(reordered.style_projection, undefined);
   });
   it('refreshes a standard Topic Registry table and preserves a nonstandard body with advisory', () => {
     const standard = bundle('topic-layout-table'); applyCanonicalTopicState({ bundlePath: standard, input });
@@ -349,15 +471,23 @@ describe('canonical topic state', () => {
     assert.equal(existsSync(join(crashDir, 'seed_topics/01_renamed.md')), true);
     assert.equal(existsSync(join(crashDir, 'seed_topics/01_topic-a.md')), false);
   });
-  it('safely removes only an unstarted dependency-free topic and names style follow-up', () => {
+  it('safely removes only an unstarted dependency-free topic and returns the style handoff', () => {
     const dir = bundle('topic-layout-remove');
+    writeSelectedResearchProfile(dir);
+    const profilePath = join(dir, 'rb_profile.yaml');
+    const profileBefore = readFileSync(profilePath, 'utf8');
     applyCanonicalTopicState({ bundlePath: dir, input: { context: 'hitl1', actions: [input.actions[0], { ...input.actions[0], title: 'Topic B', slug_stem: 'topic-b', must_answer: ['B?'] }] } });
     authorizeRerun(dir);
     const inspected = inspectCanonicalTopicState({ bundlePath: dir });
     const remove = { ...inspected.layout_baseline, topics: [inspected.layout_baseline.topics[0]], remove_topic_uids: [inspected.topics[1].topic_uid] };
     const applied = applyCanonicalTopicState({ bundlePath: dir, input: remove });
     assert.equal(applied.verdict, 'committed');
-    assert.equal(applied.follow_up, 'recompute_research_style');
+    assert.equal(applied.style_projection?.status, 'refresh_required');
+    assert.equal(applied.style_projection?.selected_profile, 'quick_factual');
+    assert.equal(applied.style_projection?.committed_topic_count, 1);
+    assert.deepEqual(applied.style_projection?.checkpoint, { gate: 'rerun-ready', current_node: 'phases/phase-rerun.md' });
+    assert.match(applied.style_projection?.command || '', /apply-research-style\.mjs/);
+    assert.equal(readFileSync(profilePath, 'utf8'), profileBefore);
     assert.equal(existsSync(join(dir, 'seed_topics/02_topic-b.md')), false);
     assert.equal(inspectCanonicalTopicState({ bundlePath: dir }).topics.length, 1);
   });

@@ -11,11 +11,7 @@ import {
   projectInspectContract,
 } from '../engine/helpers/wave-contract-findings.mjs';
 import { evaluateWave1Contract } from '../engine/helpers/wave-contract-evaluators.mjs';
-import {
-  inspectReferenceReturnMaps,
-  evaluateSeedTopicProjectionReadiness,
-  inspectWaveArtifactReturnMaps,
-} from '../engine/helpers/return-map.mjs';
+import { evaluateSeedTopicProjectionReadiness } from '../engine/helpers/return-map.mjs';
 import { buildCanonicalTopicRegistryFact } from '../engine/helpers/topic-registry-fact.mjs';
 
 const bundleFlag = process.argv.indexOf('--bundle');
@@ -59,24 +55,11 @@ if (error) {
 let topicRegistryFact = null;
 try { topicRegistryFact = buildCanonicalTopicRegistryFact(resolvedBundlePath); } catch { /* evaluator owns plan prerequisite */ }
 const evaluation = evaluateWave1Contract(resolvedBundlePath, definition, { topicRegistryFact });
-const topicSlugs = topicRegistryFact?.topic_registry.map((topic) => topic.slug) || [];
 const seedMap = evaluateSeedTopicProjectionReadiness(resolvedBundlePath, { wave: 'wave1', topicRegistryFact });
-const artifactMap = inspectWaveArtifactReturnMaps(resolvedBundlePath, 'wave1', topicSlugs);
-const referenceMap = { passed: true, inspect: [], advice: [], findings: [], classification: 'diagnostic-only' };
-for (const topic of topicSlugs) {
-  const result = inspectReferenceReturnMaps(resolvedBundlePath, topic);
-  referenceMap.inspect.push(...result.inspect);
-  referenceMap.advice.push(...result.advice);
-  referenceMap.findings.push(...(result.findings || []));
-  if (!result.passed) referenceMap.passed = false;
-}
-referenceMap.classification = referenceMap.passed ? 'diagnostic-only' : 'blocking';
 
 const additionalFindings = [
   ...(seedMap.findings || []),
-  ...(artifactMap.findings || []),
-  ...(referenceMap.findings || []),
 ];
-const returnMapClassification = seedMap.passed && artifactMap.passed && referenceMap.passed ? 'diagnostic-only' : 'blocking';
+const returnMapClassification = seedMap.classification;
 const output = projectInspectContract({ wave: 'wave1', evaluation, additionalFindings, additionalChecksRun: 1, returnMapClassification, checkpointCommand });
 emitInspectResult(output, output.check.passed ? 0 : 1);

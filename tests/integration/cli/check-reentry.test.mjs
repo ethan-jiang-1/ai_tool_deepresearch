@@ -10,6 +10,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { addCanonicalRecoveryIncident } from './recovery-incident-fixture.mjs';
 import { createTerminalFinalBundle } from './post-final-recovery-fixture.mjs';
+import { claimAndSubmitWorkUnit } from '../../engine/work-unit-test-helpers.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-reentry-tmp');
@@ -115,6 +116,39 @@ function recursiveSnapshot(root, current = root, output = {}) {
     else output[relativePath] = statSync(absolutePath).size;
   }
   return output;
+}
+
+function phaseOwnedReference(sourceUrl, backingBody) {
+  return [
+    '---',
+    `source_url: "${sourceUrl}"`,
+    'acceptance_status: accepted',
+    'source_type: primary',
+    'tier: "Tier 2"',
+    'evidence_role: deepening_reference',
+    'trust_level: practitioner',
+    'why_it_matters: "Backed reference."',
+    'accessed_at: "2026-07-14"',
+    'related_topic: topic-a',
+    '---',
+    '',
+    '# Topic A Reference',
+    '',
+    '## Key Facts',
+    '- Fact.',
+    '',
+    '## Core Content Capture',
+    backingBody,
+    '',
+    '## Relevance To This Research',
+    'Relevant.',
+    '',
+    '## Quotable Terms / Concepts',
+    '- Term.',
+    '',
+    '## Risks And Limitations',
+    '- Risk.',
+  ].join('\n');
 }
 
 describe('check-reentry CLI', () => {
@@ -380,14 +414,60 @@ describe('check-reentry CLI', () => {
   });
 
   describe('ledger coverage audit', () => {
-    it('blocks on orphan reference files (no ledger declaration)', () => {
+    it('accepts a submitted-backed Phase-owned reference without a synthetic declaration', () => {
+      const dir = setupBundle('rt-phase-owned-reference', {
+        current_gate: 'wave0_complete',
+        next_gate: 'wave1_complete',
+      });
+      const sourceUrl = 'https://example.com/research/topic-a-source';
+      const cacheTrail = '_cache/wave1/primary/topic-a/s01_source';
+      const evidencePath = 'artifacts/wave1/topic-a/evidence-summary.md';
+      // The work-unit helper establishes the canonical UID-bound seed via the normal claim path.
+      rmSync(join(dir, 'seed_topics', 'topic-a.md'));
+      rmSync(join(dir, 'seed_topics', 'topic-b.md'));
+      rmSync(join(dir, 'artifacts', 'wave0', 'topic-b'), { recursive: true, force: true });
+      rmSync(join(dir, 'artifacts', 'wave1', 'topic-b'), { recursive: true, force: true });
+      const submitted = claimAndSubmitWorkUnit(dir, {
+        phase: 'wave1',
+        queueItemId: 'topic-a',
+        outputs: [],
+        cacheTrails: [{ path: cacheTrail, url: sourceUrl }],
+        resultOverrides: {
+          source_claims: [{
+            url: sourceUrl,
+            acceptance_status: 'accepted',
+            is_new_vs_wave0: true,
+            source_ref: evidencePath,
+            cache_trail_refs: [cacheTrail],
+          }],
+          accepted_source_urls: [sourceUrl],
+        },
+      });
+      writeFileSync(join(dir, 'reference', 'topic-a-source.md'), phaseOwnedReference(
+        sourceUrl,
+        `This projection cites ${evidencePath}, ${cacheTrail}, and _work_units/wave1/${submitted.record.work_id}/ as submitted backing.`,
+      ));
+      const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf8'));
+      status.current_gate = 'wave1_complete';
+      status.next_gate = 'wave2_complete';
+      writeFileSync(join(dir, 'rb_status.json'), JSON.stringify(status));
+
+      const res = runCliJson(dir, 'wave1_complete');
+      assert.equal(res.exitCode, 0, res.stderr || JSON.stringify(res.stdout?.blockers));
+      assert.equal(res.stdout.blockers.some((blocker) => blocker.check === 'ledger_coverage'), false, JSON.stringify(res.stdout.blockers));
+    });
+
+    it('blocks an unbacked reference with classifier-derived detail', () => {
       const dir = setupBundle('rt-orphan', {}, {}, {
         'reference/topic-a-orphan.md': '# Orphan\n',
       });
 
       const res = runCliJson(dir, 'wave1_complete');
-      assert.ok(res.stdout.blockers.some(b => b.check === 'ledger_coverage'),
-        'Should block on undeclared reference file');
+      const blocker = res.stdout.blockers.find((entry) => entry.check === 'ledger_coverage');
+      assert.ok(blocker, 'Should block an unbacked reference');
+      assert.match(blocker.message, /Reference authority is not established/);
+      assert.ok(blocker.detail.reason_code);
+      assert.ok(blocker.detail.missing_fact);
     });
   });
 

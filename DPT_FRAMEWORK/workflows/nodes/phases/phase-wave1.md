@@ -202,7 +202,7 @@ Write each complete projection to a retained staging file, commit it with `opera
 
 Each Phase-owned reference must:
 
-- follow the loaded `shared-reference-template`: metadata block, no YAML frontmatter, eight common metadata fields plus one resolvable topic binding, five required non-empty semantic sections, and concrete source URLs. Heading case, level, spacing, section order, and list presentation are tolerant;
+- follow the loaded `shared-reference-template`: one opening YAML-frontmatter metadata mapping, eight common metadata fields plus one resolvable topic binding, five required non-empty semantic sections, and concrete source URLs. Legacy bullet metadata is read-compatible only. Heading case, level, spacing, section order, and list presentation are tolerant;
 - use `source_url` from submitted `source_claims[]`, `accepted_source_urls[]`, verified cache trails, or explicit degraded-capture records;
 - include body refs/links to submitted backing such as `artifacts/wave1/{topic}/evidence-summary.md`, `artifacts/wave1/{topic}/question-list.md`, `_cache/wave1/...`, and `_work_units/wave1/{work_id}/`;
 - never introduce an accepted source URL absent from submitted backing. If a needed source is absent, enqueue supplementary `wave1_topic_deepening` instead of direct-searching or inventing a reference.

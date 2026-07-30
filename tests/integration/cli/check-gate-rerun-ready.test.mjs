@@ -7,9 +7,11 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-gate-rerun-ready-tmp');
+const STYLE_CLI = join(__dirname, '..', '..', '..', 'DPT_FRAMEWORK', 'cli', 'apply-research-style.mjs');
 const DEFINITION = JSON.parse(readFileSync(join(__dirname, '..', '..', '..', 'DPT_FRAMEWORK', 'schema', 'gate_definitions', 'gate-rerun-ready.definition.json'), 'utf8'));
 const COUNT_RULE = DEFINITION.rules.find((rule) => rule.id === 'rerun_count_valid' && rule.check === 'rerun_count_limit');
 assert.equal(COUNT_RULE?.operator, 'less_than');
@@ -38,6 +40,20 @@ function assertCompleteHint(hint) {
   assert.ok(hint?.missing_fact);
   assert.ok(hint?.write_to);
   assert.ok(hint?.rerun);
+}
+
+function applyStyle(bundlePath, style = 'quick_factual') {
+  return JSON.parse(execFileSync(process.execPath, [STYLE_CLI, '--bundle', bundlePath, '--style', style], {
+    encoding: 'utf-8',
+    timeout: 10000,
+  }));
+}
+
+function updateProfile(bundlePath, mutate) {
+  const profilePath = join(bundlePath, 'rb_profile.yaml');
+  const profile = parseYaml(readFileSync(profilePath, 'utf8'));
+  mutate(profile);
+  writeFileSync(profilePath, stringifyYaml(profile));
 }
 
 /** Extract the complete multi-line JSON object from optional leading output. */
@@ -172,6 +188,10 @@ function setupBundle(name, overrides = {}) {
     ].join('\n'));
   }
 
+  if (!overrides.skip_style_apply) {
+    assert.equal(applyStyle(dir, profile.research_profile).topic_count, 1);
+  }
+
   return dir;
 }
 
@@ -219,6 +239,41 @@ describe('gate-rerun-ready — happy path', () => {
   });
 });
 
+describe('gate-rerun-ready — style projection freshness', () => {
+  it('repairs a stale complete projection through the existing CLI and the same Gate', () => {
+    const bundle = setupBundle('stale-style');
+    updateProfile(bundle, (profile) => { profile.research_style_params.wave0_shared_ref_total += 1; });
+
+    const failed = runGate(bundle);
+    const hint = failed.hints.find((candidate) => candidate.rule_id === 'style_projection_freshness');
+    assert.equal(failed.check.passed, false);
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'engine_operation');
+    assert.match(hint.write_to, /apply-research-style\.mjs/);
+    assert.match(hint.rerun, /check-gate-rerun-ready/);
+
+    assert.equal(applyStyle(bundle).topic_count, 1);
+    assert.equal(runGate(bundle).check.passed, true);
+  });
+
+  it('returns one direct root for absent or partial params', () => {
+    for (const [label, mutate] of [
+      ['absent', (profile) => { delete profile.research_style_params; }],
+      ['partial', (profile) => { profile.research_style_params = { wave0_shared_ref_total: 1 }; }],
+    ]) {
+      const bundle = setupBundle(`style-${label}`);
+      updateProfile(bundle, mutate);
+      const result = runGate(bundle);
+      const hint = result.hints.find((candidate) => candidate.rule_id === 'style_projection_freshness');
+
+      assert.equal(result.check.passed, false, label);
+      assertCompleteHint(hint);
+      assert.equal(hint.repair_kind, 'engine_operation');
+      assert.equal(result.hints.some((candidate) => candidate.rule_id === 'rerun_profile_prerequisite'), false, label);
+    }
+  });
+});
+
 // ─── Rationale rule ────────────────────────────────────────────────────────
 
 describe('gate-rerun-ready — rerun_rationale_present', () => {
@@ -234,6 +289,8 @@ describe('gate-rerun-ready — rerun_rationale_present', () => {
     assertCompleteHint(hint);
     assert.strictEqual(hint.repair_kind, 'user_decision');
     assert.strictEqual(hint.write_to, 'phases/phase-hitl2.md');
+    assert.equal(result.hints.some((candidate) => candidate.rule_id === 'style_projection_freshness'), false);
+    assert.ok(result.check.masked_rule_ids.includes('style_projection_freshness'));
   });
 
   it('fails when rationale is absent', () => {

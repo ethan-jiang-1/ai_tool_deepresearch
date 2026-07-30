@@ -87,11 +87,14 @@ function prepareInspectableWave0Reference(bundle, refPath) {
   writeFileSync(join(bundle, 'reference/README.md'), '# Reference Evidence\nFlat reference directory.\n');
 }
 
-function submitWave0Authority(bundle, topic, { sourceContent = null } = {}) {
+function submitWave0Authority(bundle, topic, {
+  sourceContent = null,
+  queueItemId = 'wave0-topic-a',
+} = {}) {
   const refPath = 'reference/00-shared-topic-a.md';
   const submission = claimAndSubmitWorkUnit(bundle, {
     phase: 'wave0',
-    queueItemId: 'wave0-topic-a',
+    queueItemId,
     queueItemOverrides: {
       payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug, wave: 0 },
       lineage: { topic_uid: topic.topic_uid, topic_slug: topic.slug, phase: 'wave0' },
@@ -117,6 +120,16 @@ function submitWave0Authority(bundle, topic, { sourceContent = null } = {}) {
   assert.equal(submission.submitted.ok, true, JSON.stringify(submission.submitted));
   if (sourceContent) prepareInspectableWave0Reference(bundle, refPath);
   return { workId: submission.record.work_id, refPath };
+}
+
+function appendSourceCandidate(topicSlug) {
+  return [
+    '- url: https://example.com/wave0/topic-a/third',
+    '  title: Candidate three',
+    '  retrieved_date: 2026-07-27',
+    `  topic_tag: ${topicSlug}`,
+    '',
+  ].join('\n');
 }
 
 function authorizeWave0(bundle) {
@@ -199,6 +212,7 @@ describe('operate-topic-state projection packets', () => {
     assert.equal(result.output.verdict, 'committed');
     assert.equal(result.output.action, 'apply_seed_projection');
     assert.deepEqual(result.output.slots, ['wave0_evidence']);
+    assert.equal(result.output.style_projection, undefined);
 
     const seed = readFileSync(join(bundle, 'seed_topics', `${topic.slug}.md`), 'utf8');
     assert.match(seed, /回填卡（只读操作约束，不是 Projection Entry）/);
@@ -248,5 +262,112 @@ describe('operate-topic-state projection packets', () => {
     const converged = runInspect(bundle);
     assert.doesNotMatch(converged.output.inspect.join('\n'), /return_map_current_candidate_omission/);
     assert.equal(converged.output.check.return_map_classification, 'diagnostic-only', JSON.stringify(converged.output, null, 2));
+  });
+
+  it('admits only the exact contribution-owned Wave0 ordinal used by inspect', () => {
+    const { bundle, topic } = makeBundle('operate-projection-contribution-coordinate');
+    const initialContent = sourceArray(topic.slug);
+    const initial = submitWave0Authority(bundle, topic, {
+      queueItemId: 'wave0-topic-a-initial',
+      sourceContent: initialContent,
+    });
+    const supplement = submitWave0Authority(bundle, topic, {
+      queueItemId: 'wave0-topic-a-supplement',
+      sourceContent: `${initialContent}\n${appendSourceCandidate(topic.slug)}`,
+    });
+    authorizeWave0(bundle);
+
+    const invalid = runApply(bundle, packet(topic, initial, {
+      entries: [packetEntry(initial, 3, { deferred: true })],
+    }));
+    assert.equal(invalid.status, 1, invalid.stderr || invalid.stdout);
+    assert.equal(invalid.output.reason_code, 'projection_source_identity_not_current');
+    assert.equal(preparedWorkspaceCount(bundle), 0);
+
+    const initialEntries = runApply(bundle, packet(topic, initial, {
+      entries: [packetEntry(initial, 1), packetEntry(initial, 2, { deferred: true })],
+    }));
+    assert.equal(initialEntries.status, 0, initialEntries.stderr || initialEntries.stdout);
+    const supplementEntry = runApply(bundle, packet(topic, supplement, {
+      entries: [packetEntry(supplement, 3, { deferred: true })],
+    }));
+    assert.equal(supplementEntry.status, 0, supplementEntry.stderr || supplementEntry.stdout);
+
+    const inspected = runInspect(bundle);
+    assert.equal(inspected.status, 0, inspected.stderr || inspected.stdout);
+    assert.equal(inspected.output.check.return_map_classification, 'diagnostic-only', JSON.stringify(inspected.output, null, 2));
+  });
+
+  it('keeps adjacent entries separately parseable when replaying an existing packet entry', () => {
+    const { bundle, topic } = makeBundle('operate-projection-replay-boundary');
+    const authority = submitWave0Authority(bundle, topic, { sourceContent: sourceArray(topic.slug) });
+    authorizeWave0(bundle);
+
+    const initial = runApply(bundle, packet(topic, authority, {
+      entries: [packetEntry(authority, 1), packetEntry(authority, 2, { deferred: true })],
+    }));
+    assert.equal(initial.status, 0, initial.stderr || initial.stdout);
+
+    const replay = runApply(bundle, packet(topic, authority, {
+      entries: [packetEntry(authority, 1)],
+    }));
+    assert.equal(replay.status, 0, replay.stderr || replay.stdout);
+
+    const seed = readFileSync(join(bundle, 'seed_topics', `${topic.slug}.md`), 'utf8');
+    assert.match(seed, new RegExp(
+      `\\*\\*next_hop\\*\\*: Read the concrete reference before Wave1 deepening\\.\\n\\n- \\*\\*entry_id\\*\\*: ${authority.workId}/2`,
+    ));
+    const inspected = runInspect(bundle);
+    assert.doesNotMatch(inspected.output.inspect.join('\n'), /return_map_missing_fields/);
+  });
+
+  it('rejects a malformed preserved selected-slot neighbor before workspace publication', () => {
+    const { bundle, topic } = makeBundle('operate-projection-malformed-neighbor');
+    const authority = submitWave0Authority(bundle, topic, { sourceContent: sourceArray(topic.slug) });
+    authorizeWave0(bundle);
+    const first = runApply(bundle, packet(topic, authority));
+    assert.equal(first.status, 0, first.stderr || first.stdout);
+
+    const seedPath = join(bundle, 'seed_topics', `${topic.slug}.md`);
+    const corrupted = readFileSync(seedPath, 'utf8').replace(
+      '## Wave1：本主题的机制理解',
+      [
+        '- **entry_id**: malformed-neighbor/1',
+        '  - **evidence_meaning**: Preserved neighbor is incomplete.',
+        '  - **relationship**: supports',
+        '  - **refs**:',
+        `    - ${authority.refPath}`,
+        '  - **status**: supported',
+        '',
+        '## Wave1：本主题的机制理解',
+      ].join('\n'),
+    );
+    writeFileSync(seedPath, corrupted);
+
+    const replay = runApply(bundle, packet(topic, authority));
+    assert.equal(replay.status, 1, replay.stderr || replay.stdout);
+    assert.equal(replay.output.reason_code, 'writer_postcondition_failed');
+    assert.equal(preparedWorkspaceCount(bundle), 0);
+    assert.equal(readFileSync(seedPath, 'utf8'), corrupted);
+  });
+
+  it('reports an exact near-match reference before publishing a packet', () => {
+    const { bundle, topic } = makeBundle('operate-projection-near-match');
+    const authority = submitWave0Authority(bundle, topic);
+    authorizeWave0(bundle);
+
+    const missingRef = 'reference/00-shared-topic-a-01.md';
+    const nearMatch = 'reference/00-shared-topic-a-1.md';
+    writeFileSync(join(bundle, nearMatch), referenceContent({ related_topic: topic.slug }));
+    const result = runApply(bundle, packet(topic, authority, {
+      entries: [{ ...packetEntry(authority, 1), refs: [missingRef] }],
+    }));
+
+    assert.equal(result.status, 1, result.stderr || result.stdout);
+    assert.equal(result.output.verdict, 'blocked');
+    assert.equal(result.output.reason_code, 'projection_entry_ref_missing');
+    assert.deepEqual(result.output.near_matches, [nearMatch]);
+    assert.match(result.output.recommended_action, /reference/i);
+    assert.equal(preparedWorkspaceCount(bundle), 0);
   });
 });

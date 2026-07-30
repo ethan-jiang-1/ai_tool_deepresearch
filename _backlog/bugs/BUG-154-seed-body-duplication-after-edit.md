@@ -50,3 +50,23 @@ Option B: `enrich_seed` apply should also rewrite the body initialization area, 
 **Why:** The current template design assumes the Agent will write the entire body in one pass, but the `Edit` tool operates on substring matches. The mismatch between tool capability and template design creates persistent content debt.
 
 **How to apply:** Short-term: add a `<!-- INITIALIZATION_END -->` marker to the template and have the gate's agent verification (`content_has_all_sections`) check that no `pending —` text exists below it. Long-term: have the Engine regenerate the full body from template + enrichment during `enrich_seed` apply.
+
+## C2 disposition (2026-07-30)
+
+Fixed for newly rendered canonical seeds. The renderer and shared template now
+place one stable `seed-initialization` start/end region before the Engine-owned
+research appendix. `seed-topics-ready` checks current-marker seeds for
+renderer-owned initialization headings or pending markers below that end
+boundary; `enrich_seed` still preserves body ownership rather than becoming a
+general body-rewrite API.
+
+Verification coordinates:
+
+- `tests/engine/helpers/canonical-topic-state.test.mjs`
+- `tests/integration/cli/check-gate-seed-topics-ready.test.mjs`
+- `tests/integration/cli/operate-topic-state-seed-enrichment.test.mjs`
+- `tests/integration/md/seed-topic-projection-document-contract.test.mjs`
+
+Pre-C2 seeds without the current markers remain readable, including historical
+duplicate body prose. C2 deliberately does not infer authority from those bytes
+or bulk-migrate them.

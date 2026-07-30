@@ -38,3 +38,26 @@ Option B: The HITL1 gate should detect `research_style_params.wave0_shared_ref_t
 **Why:** The current design relies on the Agent noticing and acting on a `follow_up` string — the weakest possible contract. The Engine already has the logic to compute correct params; it should apply them or at minimum gate-check them.
 
 **How to apply:** Short-term: add a gate rule to `hitl1-recorded` that verifies `research_style_params` are consistent with current `topic_count`. Long-term: have `apply` auto-trigger style recompute when topic_count changes.
+
+## C2 disposition (2026-07-30)
+
+Fixed with the short feedback loop, not an automatic cross-owner mutation.
+`canonical-topic-state` returns a structured `style_projection` handoff only
+after a committed registry-length change; the existing
+`apply-research-style.mjs` remains the sole profile writer. The shared pure
+freshness evaluator is consumed by `check-gate-hitl1-recorded.mjs` and
+`check-gate-rerun-ready.mjs`, which return one exact writer command and rerun
+of the same Gate for absent, partial, wrong-profile, or stale parameters.
+
+Verification coordinates:
+
+- `tests/engine/helpers/research-style-params.test.mjs`
+- `tests/engine/helpers/canonical-topic-state.test.mjs`
+- `tests/integration/cli/apply-research-style.test.mjs`
+- `tests/integration/cli/check-gate-hitl1-recorded.test.mjs`
+- `tests/integration/cli/check-gate-rerun-ready.test.mjs`
+- `tests/integration/md/phase-hitl1-research-access.test.mjs`
+
+Outside the current HITL1/rerun freshness checkpoints, legacy count-floor
+fallback remains readable-compatible. It does not permit a current readiness
+checkpoint to accept an absent style projection.

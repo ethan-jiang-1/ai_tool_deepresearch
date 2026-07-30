@@ -27,20 +27,32 @@ describe('REF-007 parser-aligned Agent guidance', () => {
     assert.match(combined, /yaml\.stringify/);
   });
 
-  it('reference metadata guidance forbids YAML frontmatter and names parseReferenceMetadata', () => {
+  it('reference metadata guidance teaches canonical YAML frontmatter and one shared reader', () => {
     const template = readNode('shared/shared-reference-template.md');
     const schemas = readNode('shared/shared-schemas.md');
     const extractor = readNode('phases/subagent-dpt-evidence-extractor.md');
     const combined = `${template}\n${schemas}\n${extractor}`;
 
-    assert.match(combined, /metadata block/);
-    assert.match(combined, /- source_url:/);
-    assert.match(combined, /not YAML frontmatter|no YAML frontmatter/i);
-    assert.match(combined, /---` fences|`---` frontmatter is forbidden/);
-    assert.match(combined, /parseReferenceMetadata\(\)/);
+    assert.match(combined, /opening YAML-frontmatter mapping/i);
+    assert.match(combined, /source_url:/);
+    assert.match(combined, /readReferenceMetadata\(\)/);
+    assert.match(combined, /legacy.*read-compatible|read-compatible.*legacy/i);
+    assert.match(combined, /reference_metadata_frontmatter_invalid/);
+    assert.match(combined, /yaml\.stringify/);
   });
 
-  it('current guidance no longer describes reference Markdown as YAML frontmatter', () => {
+  it('current reference producers load one canonical template and do not retain the retired writer form', () => {
+    const directTemplateConsumers = [
+      'phases/subagent-dpt-source-intake.md',
+      'phases/subagent-dpt-evidence-extractor.md',
+      'phases/subagent-dpt-topic-scout.md',
+      'phases/phase-wave0.md',
+      'phases/phase-wave1.md',
+    ];
+    for (const ref of directTemplateConsumers) {
+      assert.match(readNode(ref), /requires:[\s\S]*- shared\/shared-reference-template/, ref);
+    }
+
     const refs = [
       'shared/shared-schemas.md',
       'shared/shared-reference-template.md',
@@ -50,23 +62,21 @@ describe('REF-007 parser-aligned Agent guidance', () => {
       'phases/phase-wave0.md',
       'phases/phase-wave1.md',
     ];
-    const offenders = [];
-
     for (const ref of refs) {
       const md = readNode(ref);
-      const pattern = /reference\/[^`\n]*YAML frontmatter|YAML frontmatter[^.\n]*reference\//i;
-      if (pattern.test(md)) offenders.push(ref);
+      assert.doesNotMatch(md, /not YAML frontmatter|frontmatter is forbidden|Do not use YAML frontmatter in rich reference files/i, ref);
     }
-
-    assert.deepEqual(offenders, []);
   });
 
   it('Wave1 loads the shared tolerant reference template through requires', () => {
     const phase = readNode('phases/phase-wave1.md');
     const template = readNode('shared/shared-reference-template.md');
     const extractor = readNode('phases/subagent-dpt-evidence-extractor.md');
+    const scout = readNode('phases/subagent-dpt-topic-scout.md');
 
     assert.match(phase, /requires:[\s\S]*- shared\/shared-reference-template/);
+    assert.match(extractor, /requires:[\s\S]*- shared\/shared-reference-template/);
+    assert.match(scout, /requires:[\s\S]*- shared\/shared-reference-template/);
     assert.match(template, /required and non-empty|必须存在且非空/i);
     assert.match(template, /case|大小写/i);
     assert.match(template, /heading level|标题层级/i);

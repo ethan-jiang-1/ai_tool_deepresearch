@@ -17,7 +17,7 @@ import {
   projectInspectContract,
 } from '../engine/helpers/wave-contract-findings.mjs';
 import { evaluateWave0Contract } from '../engine/helpers/wave-contract-evaluators.mjs';
-import { evaluateSeedTopicProjectionReadiness, inspectReferenceReturnMaps } from '../engine/helpers/return-map.mjs';
+import { evaluateSeedTopicProjectionReadiness } from '../engine/helpers/return-map.mjs';
 import { buildCanonicalTopicRegistryFact } from '../engine/helpers/topic-registry-fact.mjs';
 import { validateIndexMD } from '../schema/contracts/reference.mjs';
 
@@ -125,11 +125,9 @@ if (existsSync(readmePath) && readFileSync(readmePath, 'utf8').trim().length ===
 }
 
 const seedMap = evaluateSeedTopicProjectionReadiness(resolvedBundlePath, { wave: 'wave0', topicRegistryFact });
-const referenceMap = inspectReferenceReturnMaps(resolvedBundlePath, '00-shared-');
 additionalChecksRun += 1;
 additionalFindings.push(...(seedMap.findings || []));
-additionalFindings.push(...(referenceMap.findings || []));
-const returnMapClassification = seedMap.passed && referenceMap.passed ? 'diagnostic-only' : 'blocking';
+const returnMapClassification = seedMap.classification;
 
 const output = projectInspectContract({ wave: 'wave0', evaluation, additionalFindings, additionalChecksRun, returnMapClassification, checkpointCommand });
 emitInspectResult(output, output.check.passed ? 0 : 1);

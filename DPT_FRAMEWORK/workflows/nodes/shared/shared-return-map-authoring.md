@@ -18,9 +18,12 @@ belong to `command_playbook/operate-topic-state.md`. This pointer intentionally
 defines no second entry grammar, slot ownership, token lifecycle, or writer
 path.
 
-For Wave0, `<work_id>/N` names the `N`th position in the current
-result-declared, schema-valid `artifacts/wave0/<topic>/source.yaml` array. It
-is a current projection coordinate, not a permanent `result_hash` snapshot or
-source authority; one source intake may therefore need several exact entries or
-identity-bound deferred dispositions. Use the template for entry shape and the
-existing playbook for the one legal packet/apply/inspect loop.
+For Wave0, obtain `<work_id>/N` from the contribution-aware Wave0
+inspection/preflight result. `N` is the exact global ordinal owned by that
+submitted contribution in the current validated
+`artifacts/wave0/<topic>/source.yaml` array. A later legal append has its own
+contribution/work ID and owns only its appended interval; do not infer history
+from the mutable full array or `result_hash`. One contribution may therefore
+need several exact entries or identity-bound deferred dispositions. Use the
+template for entry shape and the existing playbook for the one legal
+packet/apply/inspect loop.

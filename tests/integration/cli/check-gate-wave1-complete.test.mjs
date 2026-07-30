@@ -180,6 +180,41 @@ const EMPTY_FINDINGS_SUMMARY = `# Evidence Summary: Topic A
 1. [开放] Question?
 `;
 
+function canonicalRichReference(sourceUrl, backing = '') {
+  return [
+    '---',
+    `source_url: "${sourceUrl}"`,
+    'acceptance_status: accepted',
+    'source_type: secondary',
+    'tier: "Tier 2"',
+    'evidence_role: deepening_reference',
+    'trust_level: practitioner',
+    'why_it_matters: "Deepening evidence."',
+    'accessed_at: "2026-06-15"',
+    'related_topic: topic-a',
+    '---',
+    '',
+    '# Topic A Deepening Reference',
+    '',
+    '## Key Facts',
+    '- Finding one: Important initial finding.',
+    '- Finding two: Second key insight.',
+    '- Finding three: Third data point.',
+    '',
+    '## Core Content Capture',
+    `This is a substantive core content capture section with submitted-backing context. ${backing}`,
+    '',
+    '## Relevance To This Research',
+    'Relevant.',
+    '',
+    '## Quotable Terms / Concepts',
+    '- Term.',
+    '',
+    '## Risks And Limitations',
+    '- None.',
+  ].join('\n');
+}
+
 const VALID_QUESTION_LIST = `# Question List - Topic: Topic A
 
 produced_at_ref_count: 1
@@ -1100,19 +1135,23 @@ describe('check-gate-wave1-complete', () => {
     assert.ok(output.inspect.some(m => m.includes('projection_backing_drift') || m.includes('submitted backing')), `Expected orphan/backing fail: ${JSON.stringify(output.inspect)}`);
   });
 
-  it('10. rejects YAML frontmatter reference files', () => {
+  it('10. accepts canonical YAML rich references without return-map fields', () => {
     const dir = createBundle(unique('yamlref'));
+    const sourceUrl = 'https://example.com/news/deepening-topic-a';
+    const cacheTrail = '_cache/wave1/primary/topic-a/deepening-topic-a';
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitAndReviewWave1WorkUnit(dir);
+    const submission = submitAndReviewWave1WorkUnit(dir, { sourceUrl, cacheTrail });
+    const canonical = canonicalWave1ReferencePath({ topicSlug: 'topic-a', sourceUrl });
+    const backing = `Submitted backing: reference/01-topic-a-deepening.md, ${cacheTrail}, and _work_units/wave1/${submission.record.work_id}/.`;
+    writeFileSync(join(dir, 'reference/01-topic-a-deepening.md'), canonicalRichReference(sourceUrl, backing));
+    writeFileSync(join(dir, canonical.path), canonicalRichReference(sourceUrl, backing));
     writeWave1Trace(dir);
-    writeFileSync(join(dir, 'reference/01-topic-a-deepening.md'),
-      '---\nsource_url: https://example.com/news/deepening-topic-a\n---\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n');
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
-    assert.equal(output.check.passed, false);
-    assert.ok(output.inspect.some(m => m.includes('YAML frontmatter')), `Expected YAML format fail: ${JSON.stringify(output.inspect)}`);
+    assert.equal(output.check.passed, true, `Expected canonical YAML reference to pass: ${JSON.stringify(output.inspect)}`);
+    assert.equal(output.inspect.some((message) => /return_map_/.test(message)), false, JSON.stringify(output.inspect));
   });
 
   it('11. fails when depth-review.yaml is missing', () => {

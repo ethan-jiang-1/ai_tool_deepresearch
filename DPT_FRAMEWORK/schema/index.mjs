@@ -34,6 +34,7 @@ export {
   WorkUnitIndexRecordSchema,
   WorkUnitIndexSchema,
   WorkUnitLedgerRecordSchema,
+  SourceContributionSchema,
   WorkUnitManifestSchema,
   WorkUnitResultSchema,
   WorkUnitRuntimeReceiptEventSchema,

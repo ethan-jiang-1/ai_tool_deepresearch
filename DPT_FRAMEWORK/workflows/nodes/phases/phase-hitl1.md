@@ -69,7 +69,7 @@ topic_registry:
 
 `NN` 取自数组位置（第 1 个 topic → `01_`，第 2 个 → `02_`，以此类推），与 `id` 字段值无关。如果 `id` 字段写作 `t1`/`t2`，slug 仍用数组位置 `01_`/`02_`。
 
-用户确认后，Agent 先把完整 approved topic set 写入 caller-owned retained JSON。只有在 §3b 已通过既有 status synchronization 后，才运行一次 `operate-topic-state.mjs apply`。Engine 在 legal HITL1 current-node/status window 中分配 immutable UID/ordinal/slug，并用一个 prepared manifest 提交最终 registry 与全部 UID-bound seed skeletons。若返回 accepted workspace，Agent 运行 exact recover command 后重试；不得直接编辑 registry/seed。
+用户确认后，Agent 先把完整 approved topic set 写入 caller-owned retained JSON。只有在 §3b 已通过既有 status synchronization 后，才运行一次 `operate-topic-state.mjs apply`。Engine 在 legal HITL1 current-node/status window 中分配 immutable UID/ordinal/slug，并用一个 prepared manifest 提交最终 registry 与全部 UID-bound seed skeletons。若返回 accepted workspace，Agent 运行 exact recover command 后重试；不得直接编辑 registry/seed。提交成功后立刻读取结果；只有结果返回的 `style_projection` handoff 才决定后续是否需要 style writer。
 
 **Gate 不判断 rewrite 质量。** 人类审查 topic semantics；Engine 验证 canonical identity/intent、UID-bound seed projection、workspace completion 与既有 profile/access contract。
 
@@ -96,7 +96,7 @@ topic_registry:
      ```bash
      node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl1_recorded
      ```
-     读取并消费成功 stdout 后，才写 retained topic-state input 并运行 `operate-topic-state apply`。同步失败时 canonical topic state 不变；Agent 只遵循返回的既有 legal operation 或 no-path boundary，不手写 `rb_status.json`、不用 force/context bypass，也不先跑 HITL1 Gate 来发现顺序。普通 apply/recover 命令由 Agent 执行，不要求用户共同运行；普通 status 命令同样由 Agent 执行。
+     读取并消费成功 stdout 后，才写 retained topic-state input 并运行 `operate-topic-state apply`。读取 committed apply/recover JSON 后按 §3c 消费其中的 style handoff，再做 probe 与 HITL1 Gate。同步失败时 canonical topic state 不变；Agent 只遵循返回的既有 legal operation 或 no-path boundary，不手写 `rb_status.json`、不用 force/context bypass，也不先跑 HITL1 Gate 来发现顺序。普通 apply/recover 命令由 Agent 执行，不要求用户共同运行；普通 status 命令同样由 Agent 执行。
 
 ### 3b.1 Optional User Research Controls Snapshot
 
@@ -106,33 +106,22 @@ topic_registry:
 
 用户明确授权读本地文件时，只读取一次并只摘取本 run 适用、可分享的控制到 snapshot；不得保留路径、以后重读、递归读取链接、复制无关内容或形成同步协议。若控制与 profile、must-answer 或 style 有 material conflict，先在本 HITL1 取得最小用户决定并更新既有 structured owner；不得让 silent phase 私自选择赢家。文件不可读、意图不清或控制过宽时，只问最小澄清或 host prerequisite，绝不虚构 snapshot。topic-state apply/recover 后继续读取已 durable 的 host-file snapshot，不从 chat 或外部路径重建。
 
-### 3c. Research Style Parameters（研究风格参数应用）
+### 3c. Research Style Projection Handoff（研究风格参数投影）
 
-用户选择 `research_profile` 后，Agent MUST 运行 **`apply-research-style.mjs` CLI** 将对应研究风格的参数写入 `rb_profile.yaml`。该 CLI 是参数计算的**唯一权威**——Agent 不读 JSON style 文件、不做乘法、不手写参数。
+`apply-research-style.mjs` 仍是 `rb_profile.yaml#/research_style_params` 的唯一 writer；topic-state 和 Gate 都不写 profile。它必须在 canonical topic registry 已 committed 后才运行，且只由 topic-state 返回的 structured handoff 触发。
 
 **操作步骤：**
 
-1. **跑 CLI**：
-   ```bash
-   node DPT_FRAMEWORK/cli/apply-research-style.mjs --bundle <path> --style <research_profile>
-   ```
-   例如 `--style claim_verification`。CLI 自动读取 `topic_registry` 长度、计算 topic-count-dependent 值（如 `wave0_shared_ref_total`）、将所有参数写入 `rb_profile.yaml#/research_style_params`、更新 `research_profile` 字段。
-
-2. **验证输出**：读 stdout JSON。确认：
-   - `applied` 匹配用户选择的 profile
-   - `topic_count` 匹配 `rb_plan.md` 中的 topic_registry 长度
-   - `wave0_shared_ref_total` 在合理范围（例如 `claim_verification` 3 个 topic 应为 `12`；若 topic_count=0 则只等于 base 值 `6`——这是合法的，后续 seed-topics 物化后 topic_count 会更新）
-   - exit code = 0（非 0 → 读 stderr → 排查原因 → 重跑）
-
-3. **无需自检参数一致性**：CLI 是 JS 确定性计算——同一个 style JSON + 同一个 topic_count 一定产出相同结果。参数正确性由 CLI 保证，不由 Agent 自检保证。
+1. **读取 committed topic-state JSON**：若结果含有 `style_projection.status: refresh_required`，读取其中的 `selected_profile`、`committed_topic_count`、`checkpoint` 与 `command`。这些是已经提交的 direct facts，不从 profile 再解析或重建命令。
+2. **执行 exact command**：运行 `style_projection.command` 原样返回的既有 `apply-research-style.mjs` CLI。该命令读取已提交 registry，计算完整参数对象，并只写 `research_profile` / `research_style_params`。读 stdout，确认 `applied` 与 handoff 的 profile 一致，`topic_count` 与 handoff 的 committed count 一致；Agent 不读 style JSON、不做乘法、不手写参数。
+3. **没有 handoff 就不做 style work**：投影/enrichment/rename/reorder 等没有 registry-length change 时，结果不会含 style handoff；不要解析 profile 或启动无条件 style CLI。若 handoff 明示 `profile_unavailable`，不要猜选 profile 或直接改 profile，保留给已有 profile/Gate owner 的 direct root。
+4. **同一 Gate 复核 freshness**：在其他 HITL1 prerequisite 已通过后，`check-gate-hitl1-recorded.mjs` 会比较完整参数、selected profile 与 committed count。它不是 style writer；若失败，structured hint 仍只给出同一个 CLI 与同一个 Gate rerun。
 
 **风格选项展示**：向用户展示 research profile 选项时，只展示 `user_visible: true` 的风格（`quick_factual`、`exploratory_map`、`claim_verification`）。`debug` 风格 (`user_visible: false`) 不展示——仅用于开发/测试。
 
-**参数不被 gate 二次验证**：`research_style_params` 的正确性依赖 CLI 的确定性计算——HITL1 gate 只验证 `research_profile ≠ not_selected`，不对比 JSON 源文件与 profile 内容是否一致。`apply-research-style.mjs` 是参数 computation 的 trust root，其输出由测试保证正确性。
-
 ### 3d. Research Access Probe（进入 silent waves 前的能力确认）
 
-Research style CLI 成功后，Agent MUST 使用当前环境的实际 search/fetch surfaces 执行一个短而固定的 capability probe。`execution_contract.search_policy: capability_probe_only` 只授权这个 probe；它不授权 research evidence collection、work-unit delegation 或 Wave work。
+已提交 topic-state 的 required style handoff 完成后，Agent MUST 使用当前环境的实际 search/fetch surfaces 执行一个短而固定的 capability probe。`execution_contract.search_policy: capability_probe_only` 只授权这个 probe；它不授权 research evidence collection、work-unit delegation 或 Wave work。
 
 **固定顺序：**
 

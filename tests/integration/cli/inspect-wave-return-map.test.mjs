@@ -106,6 +106,37 @@ function referenceWithReturnMap(extra = '') {
   ].join('\n');
 }
 
+function richReference() {
+  return [
+    '---',
+    'source_url: "https://example.com/a"',
+    'acceptance_status: accepted',
+    'source_type: secondary',
+    'tier: "Tier 2"',
+    'evidence_role: foundation',
+    'trust_level: practitioner',
+    'why_it_matters: "Foundation evidence."',
+    'accessed_at: "2026-06-15"',
+    'related_topic: all',
+    '---',
+    '',
+    '## Key Facts',
+    '- Fact 1',
+    '',
+    '## Core Content Capture',
+    'Content capture.',
+    '',
+    '## Relevance To This Research',
+    'This rich reference supplies consumer-facing context without becoming a Seed Topic projection.',
+    '',
+    '## Quotable Terms / Concepts',
+    '- Concept',
+    '',
+    '## Risks And Limitations',
+    '- Limitation',
+  ].join('\n');
+}
+
 function canonicalWave1ReturnMap(ref = 'reference/topic-a-a.md') {
   return [
     '- evidence_meaning: Mechanism evidence clarifies the trend.',
@@ -181,6 +212,79 @@ describe('wave inspect return-map diagnostics', () => {
     assert.equal(output.check.return_map_classification, 'diagnostic-only', output.inspect.join('\n'));
     assert.equal(Object.hasOwn(output.check, 'return_map_diagnostic_only'), false);
     assert.equal(output.inspect.some((line) => line.includes('return_map_missing_fields')), false, output.inspect.join('\n'));
+  });
+
+  it('keeps rich references and normal Wave1 artifacts outside the return-map grammar', () => {
+    const wave0Bundle = createTempDir('inspect-w0-rich-reference');
+    writeCommon(wave0Bundle);
+    writeFileSync(join(wave0Bundle, 'reference/00-shared-a.md'), richReference());
+    writeSeed(wave0Bundle, [
+      '## 本轮新增证据',
+      '',
+      '- evidence_meaning: A Seed Topic entry provides the actual navigation map.',
+      '  relationship: context',
+      '  refs:',
+      '    - reference/00-shared-a.md',
+      '  status: supported',
+      '  next_hop: Read the rich reference.',
+    ].join('\n'));
+
+    const wave0 = runInspect('inspect-wave0-output.mjs', wave0Bundle).output;
+    assert.doesNotMatch(
+      wave0.inspect.join('\n'),
+      /reference\/00-shared-a\.md:.*return_map_(?:missing_fields|naked_evidence_list|unsupported_prose)/,
+      wave0.inspect.join('\n'),
+    );
+
+    const wave1Bundle = createTempDir('inspect-w1-ordinary-artifacts');
+    writeCommon(wave1Bundle);
+    writeFileSync(join(wave1Bundle, 'reference/topic-a-a.md'), richReference());
+    writeFileSync(join(wave1Bundle, 'artifacts/wave1/topic-a/evidence-summary.md'), [
+      '# Evidence Summary',
+      '',
+      '## Source URLs',
+      'https://example.com/a',
+      '',
+      '## Key Findings',
+      '- The evidence is relevant.',
+    ].join('\n'));
+    writeFileSync(join(wave1Bundle, 'artifacts/wave1/topic-a/question-list.md'), [
+      '# Questions',
+      '',
+      '## Topic Investigation Targets',
+      '- Verify the mechanism.',
+      '',
+      '## Question Reconciliation',
+      'Current evidence is partial.',
+      '',
+      '## Emergent Question Protocol',
+      'No emergent question.',
+      '',
+      '## Exploration / Exploitation Decision',
+      'Continue investigation.',
+    ].join('\n'));
+    writeSeed(wave1Bundle, [
+      '## 本轮新增机制理解',
+      '',
+      '- evidence_meaning: Seed projection is separate from the artifacts.',
+      '  relationship: partial',
+      '  refs:',
+      '    - reference/topic-a-a.md',
+      '  status: partial',
+      '  next_hop: Reconcile the open question.',
+      '',
+      '## 本轮新增趋势与难点',
+      '',
+      '## 待验证问题',
+    ].join('\n'));
+
+    const wave1 = runInspect('inspect-wave1-output.mjs', wave1Bundle).output;
+    assert.equal(wave1.check.return_map_classification, 'diagnostic-only', wave1.inspect.join('\n'));
+    assert.doesNotMatch(
+      wave1.inspect.join('\n'),
+      /(?:reference\/topic-a-a\.md|artifacts\/wave1\/topic-a\/(?:evidence-summary|question-list)\.md):.*return_map_/,
+      wave1.inspect.join('\n'),
+    );
   });
 
   it('does not let a complete Wave1 sibling mask a prose-only target section', () => {

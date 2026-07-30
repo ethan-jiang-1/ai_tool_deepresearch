@@ -21,7 +21,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import {
   classifyReferenceAuthority,
-  parseReferenceMetadata,
+  readReferenceMetadata,
 } from './gate-helpers-checks.mjs';
 import {
   readSubmittedWorkUnitDeclarations,
@@ -74,12 +74,14 @@ export function isCountable(refPath, bundleDir) {
   }
 
   // ── Parse metadata block ──
-  let metadata;
+  let metadataRead;
   try {
-    metadata = parseReferenceMetadata(content);
+    metadataRead = readReferenceMetadata(content);
   } catch {
     return { countable: false, reason: 'unparseable' };
   }
+  if (metadataRead.error) return { countable: false, reason: 'unparseable' };
+  const metadata = metadataRead.metadata;
 
   // ── Detect unparseable: no metadata fields AND no ## sections ──
   const hasSections = /^##\s+/m.test(content);

@@ -15,11 +15,7 @@ import {
 import { evaluateWave2Contract } from '../engine/helpers/wave-contract-evaluators.mjs';
 import { loadWave2FindingIndexFact } from '../engine/helpers/wave-depth-contracts.mjs';
 import { buildCanonicalTopicRegistryFact } from '../engine/helpers/topic-registry-fact.mjs';
-import {
-  inspectReferenceReturnMaps,
-  evaluateSeedTopicProjectionReadiness,
-  inspectWaveArtifactReturnMaps,
-} from '../engine/helpers/return-map.mjs';
+import { evaluateSeedTopicProjectionReadiness } from '../engine/helpers/return-map.mjs';
 
 const bundleFlag = process.argv.indexOf('--bundle');
 const bundlePath = bundleFlag >= 0 ? process.argv[bundleFlag + 1] : process.argv[2];
@@ -89,13 +85,9 @@ additionalFindings.push(...crossPresentation.findings.map((finding) => makeContr
 })));
 
 const seedMap = evaluateSeedTopicProjectionReadiness(resolvedBundlePath, { wave: 'wave2', topicRegistryFact, findingIndexFact });
-const artifactMap = inspectWaveArtifactReturnMaps(resolvedBundlePath, 'wave2');
-const referenceMap = inspectReferenceReturnMaps(resolvedBundlePath, '00-cross-');
 additionalChecksRun += 1;
 additionalFindings.push(...(seedMap.findings || []));
-additionalFindings.push(...(artifactMap.findings || []));
-additionalFindings.push(...(referenceMap.findings || []));
-const returnMapClassification = seedMap.passed && artifactMap.passed && referenceMap.passed ? 'diagnostic-only' : 'blocking';
+const returnMapClassification = seedMap.classification;
 
 const output = projectInspectContract({ wave: 'wave2', evaluation, additionalFindings, additionalChecksRun, returnMapClassification, checkpointCommand });
 emitInspectResult(output, output.check.passed ? 0 : 1);

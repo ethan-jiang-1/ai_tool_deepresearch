@@ -22,7 +22,10 @@ import {
   makeDefinitionRuleFinding,
 } from '../../engine/helpers/wave-contract-findings.mjs';
 import { inspectCanonicalTopicState, inspectSeedTopicsAuthoringAuthorization } from '../../engine/helpers/canonical-topic-state.mjs';
-import { evaluateSeedTopicAuthoring } from '../../engine/helpers/seed-topic-authoring-evaluator.mjs';
+import {
+  evaluateSeedInitializationStructure,
+  evaluateSeedTopicAuthoring,
+} from '../../engine/helpers/seed-topic-authoring-evaluator.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
@@ -315,6 +318,31 @@ for (const rule of definition.rules) {
           detail: `[${rule.id}] ${seed.relativePath} canonical title binding failed`,
           maskedByRuleId: canonicalParentRuleId || seedDirectoryRoot,
         }));
+      }
+    } else if (rule.check === 'seed_initialization_structure') {
+      if (canonicalParentRuleId || seedDirectoryRoot) {
+        maskedRuleIds.add(rule.id);
+        continue;
+      }
+      for (const seed of getDiskSeeds()) {
+        const structure = evaluateSeedInitializationStructure({ raw: seed.raw, relativePath: seed.relativePath });
+        if (structure.passed) continue;
+        findings.push(makeContractFinding({
+          id: `${rule.id}:${seed.filenameStem}`,
+          ruleId: rule.id,
+          findingSource: 'checker',
+          classification: 'blocking',
+          blockingBasis: 'required_structure',
+          surface: seed.relativePath,
+          expected: structure.expected,
+          observed: structure.observed,
+          missingFact: structure.missing_fact,
+          repairKind: 'agent_action',
+          writeTo: `${seed.relativePath}#seed-initialization`,
+          detail: `[${rule.id}] ${seed.relativePath}: ${structure.missing_fact}`,
+          repair: 'Edit only the bounded seed-initialization region through the current seed materialization/enrichment loop, preserve the Engine-owned appendix, then rerun this Gate.',
+        }));
+        break;
       }
     } else if (rule.check !== 'placeholder') {
       findings.push(configurationFinding(rule, `Unknown check type: ${rule.check} (mode: ${rule.mode || 'n/a'}) — must fail (check type not implemented)`));

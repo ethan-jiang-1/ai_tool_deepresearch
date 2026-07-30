@@ -103,7 +103,8 @@ families retain their accepted names and authority contracts.
 
 每个 `reference/*.md` 文件 SHALL 遵循一致的 rich MD 模板，包含：
 
-1. **Metadata block**（文件头部，无 YAML fence，colon-separated key-value）：
+1. **Metadata block**: New or rewritten reference files SHALL begin with one
+   `---` delimited YAML mapping containing:
    - `source_url`: 原始 URL
    - `source_file`: 本地文件路径或 `_none_`
    - `acceptance_status`: `accepted` / `accepted ⚠️` / `EXCLUDED`
@@ -125,6 +126,15 @@ families retain their accepted names and authority contracts.
 
 The required metadata contract SHALL remain the eight common keys `source_url`, `acceptance_status`, `source_type`, `tier`, `evidence_role`, `trust_level`, `why_it_matters`, and `accessed_at`, plus one resolvable topic-binding form. `related_topic_uid` and legacy `related_topic` are compatibility inputs to one canonical resolver, not two authorities. A normal first-run reference that uses the existing `related_topic` form SHALL remain valid. A rerun or historical reference that uses only an exact `related_topic_uid` SHALL also be valid. Conflict, unknown identity, or ambiguity SHALL fail as topic binding rather than as a missing raw field.
 
+Existing bullet metadata lines of the form `- key: value` before the first
+recognized semantic section SHALL remain read-compatible only; they are not the
+canonical writer presentation and do not require a bulk migration. A
+frontmatter-bearing reference SHALL obtain metadata only from its opening YAML
+mapping. Malformed YAML, a non-mapping YAML root, or an invalid frontmatter
+boundary SHALL produce one parser-owned reference-metadata root with a repair
+target at the metadata block, rather than a cascade of inferred missing-field
+roots.
+
 2. **Standard semantic sections**：
    - `## Key Facts`（bullet list，定量 + 定性事实）
    - `## Core Content Capture`（narrative synthesis paragraph）
@@ -134,11 +144,23 @@ The required metadata contract SHALL remain the eight common keys `source_url`, 
 
 The five semantic sections SHALL remain required and non-empty, but the shared parser SHALL identify them tolerantly across harmless heading case, heading level, surrounding spacing, and section order differences. Exact `##` level, a fixed section order, a fixed prose character count, and a fixed number of `Key Facts` bullets SHALL NOT be blocking authority. `Key Facts` count or prose-richness feedback MAY remain advisory; `Core Content Capture` SHALL remain a distinct narrative semantic section rather than being inferred from the Key Facts list.
 
-#### Scenario: Reference file has complete metadata
+#### Scenario: Reference file has complete canonical metadata
 
-- **WHEN** Agent 创建 reference `.md` 文件
-- **THEN** 文件 SHALL 包含所有 common required metadata 字段和一个可解析 topic binding
-- **AND** 字段格式遵循 colon-separated key-value 约定
+- **WHEN** an Agent creates or rewrites a reference `.md` file
+- **THEN** the file SHALL contain all common required metadata fields and one resolvable topic binding in its opening YAML frontmatter mapping
+- **AND** values with YAML-sensitive punctuation or prose SHALL use YAML-safe quoting or block syntax
+
+#### Scenario: Legacy inline metadata remains readable
+
+- **WHEN** an existing reference contains all common required metadata as bullet key-value lines before its first semantic section
+- **THEN** reference format validation SHALL continue to read and validate that metadata through the same semantic reader
+- **AND** the existing bundle SHALL not require a formatting-only rewrite merely to pass current inspection
+
+#### Scenario: Invalid frontmatter has one metadata root
+
+- **WHEN** a reference begins with an unparseable or non-mapping YAML frontmatter block
+- **THEN** reference format validation SHALL report one metadata-frontmatter root that identifies the frontmatter block as the repair surface
+- **AND** it SHALL not emit one missing-field finding for each key that the invalid mapping could not supply
 
 #### Scenario: UID form satisfies topic binding
 
@@ -376,18 +398,13 @@ projection repair when the convergence result says so.
 
 Wave1 topic reference file format SHALL remain aligned with `shared-reference-template.md`, but canonical Wave1 topic reference materialization SHALL be Phase-owned after successful work-unit submit. Sub-agent role/task guidance SHALL provide source evidence, source claims, cache trails, and optional source-candidate details needed for materialization; it SHALL NOT make rich topic reference Markdown a required delegated receipt unless a separate accepted task explicitly assigns that output.
 
-The format specification SHALL be available to the Phase Agent materialization guidance and to any work-unit task that is explicitly assigned a reference output. The format SHALL align with `shared-reference-template.md`:
+The format specification SHALL be available to the Phase Agent materialization guidance and to any work-unit task that is explicitly assigned a reference output. New rich-reference files SHALL begin with one YAML-frontmatter mapping containing the eight common metadata fields plus one resolvable topic-binding form, then expose the five required non-empty semantic sections. Legacy bullet metadata before the first recognized semantic section remains read-compatible only; it is not a second writer presentation. Heading case, level, spacing, section order, and list presentation remain tolerant. A malformed or non-mapping frontmatter block SHALL return the shared `reference_metadata_frontmatter_invalid` root at that mapping rather than field-level cascades.
 
-- **Metadata block**: at the top of the file, before the first `## ` header. Each line in `- key: value` format. 9 required fields: `source_url`, `acceptance_status`, `source_type`, `tier`, `evidence_role`, `trust_level`, `why_it_matters`, `accessed_at`, `related_topic`
-- **5 standard sections** (`## ` headers, fixed order): Key Facts, Core Content Capture, Relevance To This Research, Quotable Terms / Concepts, Risks And Limitations
-- **Explicitly exclude YAML frontmatter**: reference files SHALL NOT use `---` wrapped YAML frontmatter format
-
-#### Scenario: Phase Agent guidance includes reference format spec
+#### Scenario: Phase Agent guidance includes canonical reference format
 
 - **WHEN** the Phase Agent materializes Wave1 topic references after successful submit
-- **THEN** the materialization guidance SHALL include or point to the reference metadata and section format
-- **AND** the generated reference SHALL list 9 metadata field names and 5 section header names
-- **AND** the reference SHALL forbid YAML frontmatter format
+- **THEN** its guidance SHALL include or point to one opening YAML-frontmatter metadata mapping and the five semantic sections
+- **AND** it SHALL not tell the Agent to rewrite existing valid legacy bullet metadata merely to change presentation
 
 #### Scenario: Sub-agent role is not canonical reference presentation owner
 
@@ -395,19 +412,19 @@ The format specification SHALL be available to the Phase Agent materialization g
 - **THEN** the task SHALL require submitted source evidence, source claims, cache trails, result, and receipt surfaces
 - **AND** it SHALL NOT require canonical topic reference presentation as a delegated receipt unless that task explicitly assigns reference output under an accepted output contract
 
-#### Scenario: Explicitly assigned reference output uses same format
+#### Scenario: Explicitly assigned reference output uses the shared format
 
 - **WHEN** a future or supplementary accepted work-unit task explicitly assigns a rich reference Markdown output
-- **THEN** that output SHALL use the same metadata block and five standard sections
+- **THEN** that output SHALL use the same opening YAML-frontmatter metadata mapping and five semantic sections
 - **AND** it SHALL still require submitted source/cache backing before it can count as fetched-source evidence
 
 ### Requirement: Agent-facing source.yaml and reference metadata formats SHALL be parser-aligned and complete
 
 Agent-facing phase docs, shared schema docs, work-unit tasks, and repair diagnostics SHALL describe `artifacts/waveN/{topic}/source.yaml` in the exact shape parsed by the Engine: a top-level YAML array where each entry includes at least `url`, `title`, `retrieved_date`, and `topic_tag`. Guidance SHALL warn that wrapping entries under `sources:`, `wave:`, or `topic:` produces an object and is invalid for this parser.
 
-Reference Markdown metadata SHALL be documented as bullet or colon-separated metadata in the accepted project format, not YAML frontmatter. Guidance SHALL describe the eight common required fields plus one topic-binding form, explain that `related_topic_uid` and legacy `related_topic` feed the same canonical resolver, and state that conflicting dual declarations fail. Normal first-run guidance MAY retain its current legacy producer form; rerun/history guidance SHALL NOT require mass rewriting of already covered references merely to change identity spelling.
+Reference Markdown metadata guidance SHALL present opening YAML frontmatter as the canonical new-output form parsed by the shared reference metadata reader. Guidance SHALL describe the eight common required fields plus one topic-binding form, explain that `related_topic_uid` and legacy `related_topic` feed the same canonical resolver, and state that conflicting dual declarations fail. It SHALL explicitly state that legacy bullet metadata remains read-compatible but is not the form a new producer should choose. A malformed YAML mapping SHALL receive a parser-aligned metadata-block repair; a valid mapping missing one required field SHALL receive the existing field-specific repair. Normal first-run guidance SHALL not require a rerun-specific metadata branch, and rerun/history guidance SHALL not require mass rewriting of already covered legacy references merely to change presentation.
 
-At the Wave0 source-intake authoring decision point, the actual delegated actor guidance SHALL load `shared/shared-reference-template` through its `requires` chain. The template SHALL expose the canonical `reference/00-shared-<slug>.md` filename, parser-aligned rich Markdown metadata/semantic sections, and the required `output_files[]` `reference` declaration with `source_url`. A Phase document merely mentioning the template, indirect discovery by the actor, a bare YAML document, a YAML fence, filesystem presence, a noncanonical filename, or an otherwise parseable reference with no formal submitted backing SHALL NOT substitute for that producer contract. This requirement SHALL NOT create a byte-exact formatting rule, a second parser, a generic Markdown linter, a new reference metadata authority, or Phase-owned Wave0 reference creation.
+At the Wave0 source-intake authoring decision point, the actual delegated actor guidance SHALL load `shared/shared-reference-template` through its `requires` chain. The template SHALL expose the canonical `reference/00-shared-<slug>.md` filename, parser-aligned YAML-frontmatter rich Markdown metadata and semantic sections, and the required `output_files[]` `reference` declaration with `source_url`. A Phase document merely mentioning the template, indirect discovery by the actor, a bare YAML document without Markdown sections, filesystem presence, a noncanonical filename, or an otherwise parseable reference with no formal submitted backing SHALL NOT substitute for that producer contract. This requirement SHALL NOT create a byte-exact formatting rule, a second parser, a generic Markdown linter, a new reference metadata authority, or Phase-owned Wave0 reference creation.
 
 Guidance SHALL keep `reference/_INDEX.md` separate from topic identity authority: it is the accepted eight-column navigation table and must be updated by the normal Wave materialization step. Repair diagnostics SHALL distinguish an invalid/missing table parent from missing rows and SHALL give one nearest same-inspect action without asking the user to run ordinary repair commands.
 
@@ -429,11 +446,11 @@ Guidance SHALL keep `reference/_INDEX.md` separate from topic identity authority
 - **THEN** guidance SHALL instruct it to quote or block-string those values using YAML-safe syntax
 - **AND** diagnostics SHALL prefer parser-aligned repair language over generic "cannot parse YAML array"
 
-#### Scenario: Reference metadata is not YAML frontmatter
+#### Scenario: Reference metadata uses canonical YAML frontmatter
 
 - **WHEN** an Agent writes `reference/*.md`
-- **THEN** guidance SHALL identify the accepted metadata format parsed by `parseReferenceMetadata()`
-- **AND** it SHALL warn that YAML frontmatter fences are not the current reference metadata contract
+- **THEN** guidance SHALL show an opening YAML frontmatter mapping as the accepted metadata form parsed by the shared reference metadata reader
+- **AND** it SHALL distinguish legacy bullet compatibility from the canonical new-output form
 
 #### Scenario: Source intake receives the reference template it must use
 

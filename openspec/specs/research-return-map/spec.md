@@ -12,6 +12,8 @@ Wave0, Wave1, and Wave2 return/backfill surfaces SHALL include an Agent-readable
 
 The return map is a navigation and interpretation layer over existing authority surfaces. It SHALL NOT replace submitted work-unit ledger rows, `reference/*.md`, `artifacts/waveN/...`, `_cache/...`, or `finding-index.yaml`, and it SHALL NOT make filesystem-only or undeclared evidence count for gate coverage.
 
+Return-map shape checks SHALL consume only the declared Seed Topic projection/backfill slots for the inspected Wave. A rich reference file, a Wave1 `evidence-summary.md` or `question-list.md` artifact, a Wave2 synthesis/ledger/index artifact, a Phase-owned reference projection, or `reference/_INDEX.md` SHALL NOT be inferred to be a return-map document merely from its directory, filename, URL, or prose. Those artifacts SHALL be evaluated only through their declared format, artifact, index, and submitted-backing contracts.
+
 Return-map shape checks SHALL be implemented as Agent-facing guidance, task/backfill validation, inspect output, or advice. Missing or malformed return-map fields SHALL NOT by themselves establish or revoke delegated gate coverage, phase handoff evidence, readiness evidence, final delivery evidence, or submitted work-unit authority.
 
 Each important return-map entry SHALL include at least:
@@ -38,8 +40,20 @@ Each important return-map entry SHALL include at least:
 #### Scenario: Return-map validation is diagnostic only
 
 - **WHEN** an inspect/advice command reports missing `evidence_meaning`, `relationship`, `refs`, `status`, or `next_hop`
-- **THEN** the diagnostic SHALL direct the Agent to repair the map or backfill shape
+- **THEN** the diagnostic SHALL direct the Agent to repair the map or backfill shape through its existing legal writer
 - **AND** it SHALL NOT treat the map shape as a substitute for submitted work-unit rows, gate attempts, phase handoff witnesses, or final delivery evidence
+
+#### Scenario: Rich reference is not a return-map input
+
+- **WHEN** a submitted rich reference has canonical reference metadata and semantic sections but no return-map entry fields
+- **THEN** Wave inspect SHALL not emit a return-map missing-fields, naked-evidence-list, or unsupported-prose finding for that reference
+- **AND** its format and submitted-backing checks SHALL retain their existing owners
+
+#### Scenario: Wave1 artifact is not a return-map input
+
+- **WHEN** a submitted Wave1 `evidence-summary.md` or `question-list.md` satisfies its declared artifact contract but omits return-map fields
+- **THEN** Wave1 inspect SHALL not emit return-map findings for that artifact
+- **AND** a malformed Seed Topic Wave1 projection SHALL still be reported at its exact Seed Topic coordinate
 
 ### Requirement: Seed-topic backfill SHALL preserve traceable meaning, not only evidence lists or conclusions
 

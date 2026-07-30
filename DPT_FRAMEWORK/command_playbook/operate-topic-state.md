@@ -83,13 +83,16 @@ Wave0 is authorized only in `seed_topics_ready -> wave0_complete` and owns
 `wave1_mechanisms`, `wave1_trends`, and `pending_questions`. Wave2 is
 authorized only in `wave1_complete -> wave2_complete`, always includes
 `wave2_judgment`, and may additionally upsert its exact current-round W2F
-entry in `pending_questions`. For Wave0, `<work_id>/N` uses the 1-based `N`
-from that work unit's current result-declared, schema-valid
-`artifacts/wave0/<topic>/source.yaml` array. This is a current projection
-coordinate, not a permanent `result_hash` snapshot: one work ID may contribute
-multiple entries or exact deferred dispositions in one `wave0_evidence` update,
-and neither a bare work ID nor one arbitrary ordinal covers the whole source
-intake. Wave1 entries use `<work_id>/<positive ordinal>`; Wave2 `entry_id`
+entry in `pending_questions`. For Wave0, obtain `<work_id>/N` from the existing
+contribution-aware Wave0 inspection/preflight result: `N` is the exact global
+ordinal that this submitted work unit's contribution owns in the current
+validated `artifacts/wave0/<topic>/source.yaml` array. A later legal append has
+its own contribution/work ID and owns only its appended interval. Do not
+recalculate historical ownership from the mutable full array or treat
+`result_hash` as a source-byte snapshot. One work ID may contribute multiple
+entries or exact deferred dispositions in one `wave0_evidence` update, and
+neither a bare work ID nor one arbitrary ordinal covers the whole source intake.
+Wave1 entries use `<work_id>/<positive ordinal>`; Wave2 `entry_id`
 equals its exact source `W2F-*` finding resolved to this topic.
 
 The writer preserves every read-only card, consumes a first token or upserts a

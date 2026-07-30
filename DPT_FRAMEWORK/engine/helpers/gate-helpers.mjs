@@ -56,6 +56,7 @@ export {
   REQUIRED_REFERENCE_METADATA_FIELDS,
   REFERENCE_TOPIC_BINDING_FIELDS,
   REQUIRED_REFERENCE_SECTIONS,
+  readReferenceMetadata,
   parseReferenceMetadata,
   classifyReferenceAuthority,
   checkReferenceFormatFiles,

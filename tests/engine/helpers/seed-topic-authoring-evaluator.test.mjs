@@ -1,7 +1,12 @@
 // @impl STM-001, STM-002, STM-003
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluateSeedTopicAuthoring } from '../../../DPT_FRAMEWORK/engine/helpers/seed-topic-authoring-evaluator.mjs';
+import {
+  evaluateSeedInitializationStructure,
+  evaluateSeedTopicAuthoring,
+  renderSeedInitializationRegion,
+  SEED_TOPIC_INITIALIZATION,
+} from '../../../DPT_FRAMEWORK/engine/helpers/seed-topic-authoring-evaluator.mjs';
 
 const topic = Object.freeze({
   topic_uid: 'tp_123e4567-e89b-42d3-a456-426614174000',
@@ -75,5 +80,29 @@ describe('evaluateSeedTopicAuthoring', () => {
     assert.equal(result.reason_code, 'path_mismatch');
     assert.equal(result.write_to, 'seed_topics/other.md');
     assert.match(result.missing_fact, /must be seed_topics\/01_topic-a\.md/);
+  });
+
+  it('accepts one current initialization region before the Engine-owned appendix', () => {
+    const raw = `${seed()}# Topic A\n\n${renderSeedInitializationRegion()}\n\n## ${SEED_TOPIC_INITIALIZATION.appendixHeading}\n\n## 历史摘要\n`;
+    const result = evaluateSeedInitializationStructure({ raw, relativePath: 'seed_topics/01_topic-a.md' });
+
+    assert.deepEqual(result, { passed: true, mode: 'current', relative_path: 'seed_topics/01_topic-a.md' });
+  });
+
+  it('rejects a renderer-owned heading or pending marker below a current initialization boundary', () => {
+    const raw = `${seed()}# Topic A\n\n${renderSeedInitializationRegion()}\n\n## ${SEED_TOPIC_INITIALIZATION.appendixHeading}\n\n## 初始假设、缺口或张力\n\npending — stale template ghost\n`;
+    const result = evaluateSeedInitializationStructure({ raw, relativePath: 'seed_topics/01_topic-a.md' });
+
+    assert.equal(result.passed, false);
+    assert.equal(result.reason_code, 'seed_initialization_structure');
+    assert.equal(result.write_to, 'seed_topics/01_topic-a.md#/seed-initialization');
+    assert.match(result.missing_fact, /below the initialization boundary/);
+  });
+
+  it('leaves an unmarked legacy duplicate body readable without inferring a current structure', () => {
+    const raw = `${seed()}# Topic A\n\n## 初始假设、缺口或张力\nlegacy duplicate body prose\n\n## Appendix\n`;
+    const result = evaluateSeedInitializationStructure({ raw, relativePath: 'seed_topics/01_topic-a.md' });
+
+    assert.deepEqual(result, { passed: true, mode: 'legacy', relative_path: 'seed_topics/01_topic-a.md' });
   });
 });

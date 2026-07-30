@@ -122,3 +122,26 @@ attempt，破坏 evidence provenance。新 work unit、cache、ledger 和正确�
 - 调整方向：对弱模型只需明确“新来源必须用 supplement work ID 投影”；不能让模型为了
   通过 inspect 伪造 `i0002/20` 或 `i0005/13..23`。修复应落在 immutable snapshot/lineage，
   而非数据补丁。
+
+## C2 disposition (2026-07-30)
+
+Fixed for current-version Wave0 first acceptance by
+`DPT_FRAMEWORK/engine/work-unit-submit.mjs` and
+`DPT_FRAMEWORK/engine/work-unit-projection.mjs`. Submit now derives one
+hash-bound `source_contribution` from the passed source-array snapshot; the
+reader groups it by canonical Topic and exact target, then assigns only the
+strictly extending global interval to each submitted work ID. Prefix drift,
+shortening, an unsubmitted suffix, and a non-monotonic declaration produce one
+parent root and mask dependent candidate omissions.
+
+Verification coordinates:
+
+- `tests/engine/work-unit-submit.test.mjs`
+- `tests/engine/work-unit-projection.test.mjs`
+- `tests/integration/cli/check-gate-wave0-complete.test.mjs`
+- `openspec/changes/make-canonical-topic-state-projections-coherent/evidence/wave0-contribution-boundary-replay.md`
+
+The historical bundle named above is not retroactively rewritten. A same-target
+multi-row legacy group that lacks a contribution witness now returns one honest
+missing-boundary root; a singleton legacy row remains bounded read-compatible.
+Neither case authorizes ledger edits or inferred historical ordinal ownership.

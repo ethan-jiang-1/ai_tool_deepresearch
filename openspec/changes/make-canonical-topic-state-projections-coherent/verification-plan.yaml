@@ -1,0 +1,301 @@
+schema_version: verification-routing/v1
+change: make-canonical-topic-state-projections-coherent
+test_classes:
+  unit:
+    status: selected
+    rationale: Submission-bound contribution facts, semantic prefix comparison, entry parsing, navigation classification, seed structure, and style freshness are deterministic helper and transaction boundaries.
+  integration:
+    status: selected
+    rationale: Production submit, topic-state, inspect, and Gate CLIs, plus their declared Markdown control surfaces, must expose the same direct roots and existing-writer feedback without a workflow-scale simulation.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: C2 changes deterministic writer/reader and checkpoint contracts without adding or changing a multi-phase transition; selected production CLI integrations cover the affected lifecycle windows without simulating a full workflow chain.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: C2 improves deterministic feedback and Markdown guidance but makes no claim that a real Agent performs research, repairs a bundle, or follows a host lifecycle.
+claims:
+  - id: wave0-submit-records-narrow-contribution
+    statement: >-
+      DEW-005: first acceptance of a current Wave0 source intake records an Engine-derived, hash-bound contribution declaration while duplicate and late-submit replay retain it and non-Wave0 output remains outside the feature.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-submit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: lost-wave0-contribution-witness-fails-closed
+    statement: >-
+      DEW-005: after a production current Wave0 submit, source mutation plus deletion of its contribution-bearing ledger row cannot make recover-declaration recreate provenance from live bytes or append a replacement row; it returns one missing-contract/no-legal-recovery result.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-submit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-reader-uses-disjoint-contribution-intervals
+    statement: >-
+      RRM-007: the Wave0 projection reader derives global candidate coordinates from ordered submitted contributions, retains singleton-legacy compatibility only without a competing row, and reports contribution parent roots without mutable-path reassignment.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-projection.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: packet-transaction-preserves-selected-family
+    statement: >-
+      CTS-004 and RRM-004: packet preflight, separator-preserving upsert, selected-family parser postcondition, and concrete navigation admission reject corruption or a forward reference before publication.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/canonical-topic-state.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: return-map-reader-reuses-navigation-and-contribution-results
+    statement: >-
+      RRM-004 and RRM-007: return-map readiness accepts the same concrete/deferred navigation classification and exact contribution identities as packet admission, and current-demand token handling produces one shared evaluator root without a duplicate parser, candidate validator, or Gate-specific token result.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/return-map.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: style-projection-computation-remains-single-source
+    statement: >-
+      RES-002: one pure freshness evaluator uses the existing complete style projection for the selected profile and committed topic count without a second computation or profile writer.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/research-style-params.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: topic-state-style-handoff-is-length-bound
+    statement: >-
+      CTS-004, RES-007, and RES-008: topic-state returns a structured existing-style-writer handoff only after a committed registry-length change, including add and safe remove, and never writes profile fields itself.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/canonical-topic-state.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: submit-and-wave0-gate-share-contribution-contract
+    statement: >-
+      DEW-005 and RRM-007: production submit plus Wave0 Gate distinguish a legal append from prefix drift and expose the exact contribution-owned candidate requirements on a temporary bundle.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave0-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: submit-cli-persists-contribution-before-reader-use
+    statement: >-
+      DEW-005: the production work-unit submit CLI persists the Engine-derived Wave0 contribution declaration in a valid submitted ledger row before a reader can use it, while caller-provided fields cannot supply it.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: topic-state-packet-preflight-is-reader-compatible
+    statement: >-
+      CTS-004, RRM-004, and RRM-007: the production topic-state CLI rejects an invalid contribution coordinate, malformed selected neighbor, or missing near-match reference before publishing and accepts a reader-valid packet.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-projection.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: seed-body-boundary-is-current-version-strict
+    statement: >-
+      STM-001 and STM-002: new seed rendering and the production seed Gate reject a current-marker template ghost while retaining bounded legacy-body compatibility.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-seed-topics-ready.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: topic-state-renders-one-initialization-region
+    statement: >-
+      STM-001: the production topic-state seed materialization path renders one current initialization boundary plus an Engine-owned appendix without changing legacy seed body history.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-seed-enrichment.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: style-cli-preserves-profile-while-projecting-current-count
+    statement: >-
+      RES-002: the existing style CLI writes a complete current-count projection while preserving unrelated profile facts including research access.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/apply-research-style.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: seed-template-and-wave0-guidance-preserve-ownership-boundaries
+    statement: >-
+      STM-001 and RWP-001: the Seed template, executable slot descriptors, and Wave0 guidance expose one Agent-editable initialization boundary and contribution-owned coordinates without embedding packet execution or a competing source authority.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/seed-topic-projection-document-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl1-style-freshness-uses-existing-cli
+    statement: >-
+      RES-002, PRG-002, and PRP-002: the production HITL1 Gate reports one stale-style root with the existing CLI and allows the exact current projection without a new user decision, while an unavailable canonical topic-state prerequisite masks that dependent root.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-hitl1-recorded.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rerun-style-freshness-preserves-rerun-owner
+    statement: >-
+      RES-002 and REI-003: the production rerun-ready Gate returns one stale-style root through the existing writer only after its rerun/profile/topic-state prerequisites, while preserving accepted rerun count and C5 lineage ownership.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-rerun-ready.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl1-phase-guidance-exposes-style-feedback-loop
+    statement: >-
+      PRP-002: HITL1 Markdown guidance places canonical topic materialization before the existing style projection and treats a freshness root as one mechanical same-Gate repair.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/phase-hitl1-research-access.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rerun-phase-guidance-exposes-style-feedback-loop
+    statement: >-
+      CTS-004, RES-002, and REI-003: rerun Markdown consumes the topic-state handoff's exact command before the existing style CLI and rerun-ready Gate, does not parse the profile to construct a second command, and neither asks the user to run it nor makes the Gate a profile writer.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/canonical-topic-state-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-phase-guidance-requests-contribution-feedback
+    statement: >-
+      RWP-001 and RWP-014: Wave0 Markdown guidance requests contribution-owned coordinates from existing Engine feedback and does not teach mutable-array provenance reconstruction or seed hand edits.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/phase-wave0-queue-loop.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

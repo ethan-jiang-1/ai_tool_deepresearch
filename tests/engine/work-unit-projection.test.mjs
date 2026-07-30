@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
+import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -29,6 +30,50 @@ const DUPLICATE_SOURCE_YAML = [
   '  topic_tag: current-topic',
   '',
 ].join('\n');
+
+function sourceArray(count, slug = 'current-topic') {
+  return Array.from({ length: count }, (_, index) => [
+    `- url: https://example.com/source-${index + 1}`,
+    `  title: Source ${index + 1}`,
+    '  retrieved_date: 2026-07-20',
+    `  topic_tag: ${slug}`,
+  ].join('\n')).join('\n') + '\n';
+}
+
+function stableStringify(value) {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function hashValue(value) {
+  return createHash('sha256').update(stableStringify(value)).digest('hex');
+}
+
+function removeRecordedSourceContribution(dir, workId) {
+  const ledgerPath = path.join(dir, 'rb_output_declarations.jsonl');
+  const rows = readFileSync(ledgerPath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  const row = rows.find((candidate) => candidate.work_id === workId);
+  assert.ok(row, `missing submitted ledger row for ${workId}`);
+  delete row.source_contribution;
+  const { ledger_record_hash: _existing, ...ledgerBase } = row;
+  row.ledger_record_hash = hashValue(ledgerBase);
+  writeFileSync(ledgerPath, `${rows.map((candidate) => JSON.stringify(candidate)).join('\n')}\n`);
+
+  const indexPath = path.join(dir, '_work_units/_index.json');
+  const index = JSON.parse(readFileSync(indexPath, 'utf8'));
+  index.work_units[workId].ledger_record_hash = row.ledger_record_hash;
+  writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
+}
+
+function assertContributionRoot(result, ruleId) {
+  assert.equal(result.passed, false);
+  assert.deepEqual(result.candidates, []);
+  assert.equal(result.root_findings.length, 1);
+  assert.equal(result.root_findings[0].rule_id, ruleId);
+}
 
 function writeProjectionPlan(dir, {
   slug = 'current-topic',
@@ -196,6 +241,108 @@ describe('eligible work-unit projection', () => {
     assert.deepEqual(collectWave0Candidates(dir), {
       passed: true, candidates: [], root_findings: [], warnings: [],
     });
+  });
+
+  it('does not reassign appended source ordinals to historical submitted work', () => {
+    const dir = bundle();
+    const initial = submitWave0(dir, {
+      queueItemId: 'queue-wave0-initial',
+      sourceContent: sourceArray(19),
+    });
+    const supplement = submitWave0(dir, {
+      queueItemId: 'queue-wave0-supplement',
+      sourceContent: sourceArray(20),
+    });
+
+    const candidates = collectWave0Candidates(dir);
+    assert.equal(candidates.passed, true, JSON.stringify(candidates.root_findings));
+    assert.deepEqual(
+      candidates.candidates
+        .filter((candidate) => candidate.work_id === initial.record.work_id)
+        .map((candidate) => candidate.source_ordinal),
+      Array.from({ length: 19 }, (_, index) => index + 1),
+    );
+    assert.deepEqual(
+      candidates.candidates
+        .filter((candidate) => candidate.work_id === supplement.record.work_id)
+        .map((candidate) => candidate.source_ordinal),
+      [20],
+    );
+  });
+
+  it('returns one submitted contribution root for current prefix drift and masks candidates', () => {
+    const dir = bundle();
+    submitWave0(dir, { sourceContent: sourceArray(2) });
+    writeFileSync(path.join(dir, 'artifacts/wave0/current-topic/source.yaml'), sourceArray(2).replace('Source 1', 'Changed source 1'));
+
+    assertContributionRoot(
+      collectWave0Candidates(dir),
+      'submitted_source_contribution_prefix_drift',
+    );
+  });
+
+  it('returns direct roots for a shortened prefix and an unsubmitted suffix', () => {
+    const shortened = bundle();
+    submitWave0(shortened, { sourceContent: sourceArray(2) });
+    writeFileSync(path.join(shortened, 'artifacts/wave0/current-topic/source.yaml'), sourceArray(1));
+    assertContributionRoot(
+      collectWave0Candidates(shortened),
+      'submitted_source_contribution_prefix_shortened',
+    );
+
+    const suffix = bundle();
+    submitWave0(suffix, { sourceContent: sourceArray(2) });
+    writeFileSync(path.join(suffix, 'artifacts/wave0/current-topic/source.yaml'), sourceArray(3));
+    assertContributionRoot(
+      collectWave0Candidates(suffix),
+      'submitted_source_contribution_unsubmitted_suffix',
+    );
+  });
+
+  it('rejects non-monotonic declared contribution lengths without assigning candidates', () => {
+    const dir = bundle();
+    submitWave0(dir, { queueItemId: 'queue-wave0-first', sourceContent: sourceArray(2) });
+    submitWave0(dir, { queueItemId: 'queue-wave0-second', sourceContent: sourceArray(2) });
+
+    assertContributionRoot(
+      collectWave0Candidates(dir),
+      'submitted_source_contribution_non_monotonic',
+    );
+  });
+
+  it('keeps one legacy source row readable without inventing an unsubmitted suffix boundary', () => {
+    const dir = bundle();
+    const submitted = submitWave0(dir, { sourceContent: sourceArray(2) });
+    removeRecordedSourceContribution(dir, submitted.record.work_id);
+    writeFileSync(path.join(dir, 'artifacts/wave0/current-topic/source.yaml'), sourceArray(3));
+
+    const candidates = collectWave0Candidates(dir);
+    assert.equal(candidates.passed, true, JSON.stringify(candidates.root_findings));
+    assert.deepEqual(
+      candidates.candidates.map((candidate) => candidate.entry_id),
+      [1, 2, 3].map((ordinal) => `${submitted.record.work_id}/${ordinal}`),
+    );
+  });
+
+  it('rejects mixed and multi-row legacy source groups without inferring an ordinal split', () => {
+    const mixed = bundle();
+    const initial = submitWave0(mixed, { queueItemId: 'queue-wave0-initial', sourceContent: sourceArray(2) });
+    submitWave0(mixed, { queueItemId: 'queue-wave0-supplement', sourceContent: sourceArray(3) });
+    removeRecordedSourceContribution(mixed, initial.record.work_id);
+    assertContributionRoot(
+      collectWave0Candidates(mixed),
+      'submitted_source_contribution_missing_boundary',
+    );
+
+    const legacy = bundle();
+    const first = submitWave0(legacy, { queueItemId: 'queue-wave0-legacy-first', sourceContent: sourceArray(2) });
+    const second = submitWave0(legacy, { queueItemId: 'queue-wave0-legacy-second', sourceContent: sourceArray(3) });
+    removeRecordedSourceContribution(legacy, first.record.work_id);
+    removeRecordedSourceContribution(legacy, second.record.work_id);
+    assertContributionRoot(
+      collectWave0Candidates(legacy),
+      'submitted_source_contribution_missing_boundary',
+    );
   });
 
   it('returns an empty valid candidate set for a declared empty source array', () => {

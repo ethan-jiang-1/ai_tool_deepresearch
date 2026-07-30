@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { basename, join, resolve as resolvePath } from 'node:path';
+import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
+import { join, resolve as resolvePath } from 'node:path';
 
 import {
   evaluateCanonicalSeedBindings,
@@ -13,26 +13,44 @@ import {
   collectEligibleWave0CandidateProjection,
   readProjectionProfileRound,
 } from '../work-unit-projection.mjs';
+import {
+  EMPTY_PROJECTION_REFS_RE,
+  PROJECTION_ENTRY_FIELDS,
+  evaluateProjectionEntryNavigation,
+  extractConcreteProjectionReferences,
+  extractProjectionBundleRefs,
+  isAcceptedDeferredProjectionEntry,
+  isEvidenceBearingProjectionEntry,
+  isLimitationProjectionEntry,
+  parseProjectionEntries,
+  projectionEntryFieldPresent,
+} from './projection-entry-contract.mjs';
 
 // @impl RRM-005, WTS-004, WTS-007
 
-export const RETURN_MAP_FIELDS = ['evidence_meaning', 'relationship', 'refs', 'status', 'next_hop'];
+export const RETURN_MAP_FIELDS = PROJECTION_ENTRY_FIELDS;
 export const RETURN_MAP_RELATIONSHIPS = ['supports', 'refutes', 'partial', 'opens', 'defers', 'context'];
 export const RETURN_MAP_STATUS_LABELS = ['supported', 'refuted', 'partial', 'open', 'emergent', 'deferred'];
 
-const FIELD_PATTERNS = Object.fromEntries(
-  RETURN_MAP_FIELDS.map((field) => [field, new RegExp(`^\\s*(?:[-*]\\s+)?(?:\\*\\*${field}\\*\\*|${field})\\s*:`, 'im')]),
-);
-const FIELD_LINE_RE = /^\s*(?:[-*]\s+)?(?:\*\*(evidence_meaning|relationship|refs|status|next_hop)\*\*|(evidence_meaning|relationship|refs|status|next_hop))\s*:\s*(.*)$/i;
-const ENTRY_ID_LINE_RE = /^\s*(?:[-*]\s+)?(?:\*\*entry_id\*\*|entry_id)\s*:\s*(\S+)\s*$/i;
-const BUNDLE_REF_RE = /\b(?:reference|artifacts|_cache|_work_units|seed_topics)\/[^\s,;)\]）(（]+/gi;
-const REF_COUNT_SUFFIX_RE = /(?:\([^)]+\)|（[^）]+）)/;
-const LIMITATION_NEXT_HOP_RE = /\b(?:limitation|defer(?:red)?|hitl2|no materializable evidence|not materializable|record[-_ ]?only|requires[-_ ]?internal[-_ ]?data|blocked|not source[-_ ]?backed)\b/i;
-const EMPTY_REFS_RE = /^\s*(?:none|n\/a|no materializable evidence|not materialized|no concrete reference|无|暂无|none yet)?\s*$/i;
+const EMPTY_REFS_RE = EMPTY_PROJECTION_REFS_RE;
 
 function readText(absPath) {
   if (!existsSync(absPath)) return null;
   return readFileSync(absPath, 'utf-8');
+}
+
+function readReferenceNavigationFact(bundlePath) {
+  if (!bundlePath) return { referencePaths: [], requireExisting: false };
+  const root = join(bundlePath, 'reference');
+  if (!existsSync(root) || lstatSync(root).isSymbolicLink() || !lstatSync(root).isDirectory()) {
+    return { referencePaths: [], requireExisting: true };
+  }
+  const referencePaths = readdirSync(root).sort().flatMap((name) => {
+    const target = join(root, name);
+    if (!name.endsWith('.md') || lstatSync(target).isSymbolicLink() || !lstatSync(target).isFile()) return [];
+    return [`reference/${name}`];
+  });
+  return { referencePaths, requireExisting: true };
 }
 
 // @impl RRM-006
@@ -61,38 +79,8 @@ function hasUnsupportedProse(content) {
   const body = String(content || '').replace(/^---[\s\S]*?---\s*/m, '').trim();
   if (body.length < 80) return false;
   const hasAnyPath = /\b(?:reference|artifacts|_cache|_work_units|seed_topics)\//.test(body);
-  const hasMapField = RETURN_MAP_FIELDS.some((field) => FIELD_PATTERNS[field].test(body));
+  const hasMapField = RETURN_MAP_FIELDS.some((field) => projectionEntryFieldPresent(body, field));
   return !hasAnyPath && !hasMapField;
-}
-
-function cleanRef(ref) {
-  return String(ref || '')
-    .trim()
-    .replace(/^["'`]+|["'`]+$/g, '')
-    .replace(/[.。,:;]+$/g, '');
-}
-
-function isSafeBundleRelative(ref) {
-  if (!ref || ref.startsWith('/') || /^[A-Za-z]:[\\/]/.test(ref)) return false;
-  return !ref.split(/[\\/]+/).includes('..');
-}
-
-function extractBundleRefs(text) {
-  const refs = [];
-  for (const match of String(text || '').matchAll(BUNDLE_REF_RE)) {
-    const ref = cleanRef(match[0]);
-    if (ref) refs.push(ref);
-  }
-  return [...new Set(refs)];
-}
-
-function escapeRegex(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function refHasCountSummary(text, ref) {
-  const pattern = new RegExp(`${escapeRegex(ref)}\\s*(?:\\([^)]+\\)|（[^）]+）)`, 'i');
-  return pattern.test(text);
 }
 
 function returnMapFinding({
@@ -127,76 +115,7 @@ function returnMapFinding({
 }
 
 export function extractReturnMapEntries(content) {
-  const entries = [];
-  let current = null;
-  let activeField = null;
-  let activeFieldIndent = -1;
-  const lines = String(content || '').split(/\r?\n/);
-
-  const pushCurrent = () => {
-    if (!current) return;
-    if (current.metadata?.entry_id && Object.keys(current.fields).length === 0) current.metadataIssues.push('dangling_entry_id');
-    current.text = current.rawLines.join('\n');
-    entries.push(current);
-    current = null;
-    activeField = null;
-    activeFieldIndent = -1;
-  };
-
-  lines.forEach((line, index) => {
-    const indent = line.match(/^\s*/)[0].length;
-    const listMarker = line.match(/^(\s*)[-*]\s+/);
-    const listIndent = listMarker ? listMarker[1].length : null;
-    const match = line.match(FIELD_LINE_RE);
-    if (match) {
-      const field = (match[1] || match[2]).toLowerCase();
-      const value = match[3].trim();
-      const startsPeerItem = current && listIndent !== null && current.listIndent !== null && listIndent <= current.listIndent;
-      if (startsPeerItem || (field === 'evidence_meaning' && current && Object.hasOwn(current.fields, 'evidence_meaning'))) {
-        pushCurrent();
-      }
-      if (!current) {
-        current = { fields: {}, metadata: {}, metadataIds: [], metadataIssues: [], rawLines: [], startLine: index + 1, endLine: index + 1, listIndent };
-      }
-      current.rawLines.push(line);
-      current.endLine = index + 1;
-      current.fields[field] = current.fields[field] ? `${current.fields[field]}\n${value}` : value;
-      activeField = field;
-      activeFieldIndent = indent;
-      return;
-    }
-
-    const metadata = line.match(ENTRY_ID_LINE_RE);
-    if (metadata) {
-      const startsPeerItem = current && listIndent !== null && current.listIndent !== null && listIndent <= current.listIndent;
-      if (startsPeerItem) pushCurrent();
-      if (!current) current = { fields: {}, metadata: {}, metadataIds: [], metadataIssues: [], rawLines: [], startLine: index + 1, endLine: index + 1, listIndent };
-      if (current.metadata.entry_id) current.metadataIssues.push('duplicate_entry_id');
-      current.metadata.entry_id = metadata[1];
-      current.metadataIds.push(metadata[1]);
-      current.rawLines.push(line);
-      current.endLine = index + 1;
-      return;
-    }
-
-    if (!current) return;
-    if (/^\s*##\s+/.test(line) || (/^\s*[-*]\s+/.test(line) && !/^\s{2,}[-*]\s+/.test(line) && activeField !== 'refs')) {
-      pushCurrent();
-      return;
-    }
-    if (activeField === 'refs' && /^\s*[-*]\s+/.test(line) && indent > activeFieldIndent) {
-      current.rawLines.push(line);
-      current.endLine = index + 1;
-      const refValue = line.replace(/^\s*[-*]\s+/, '').trim();
-      current.fields.refs = current.fields.refs ? `${current.fields.refs}\n${refValue}` : refValue;
-      return;
-    }
-    if (line.trim() === '') return;
-    pushCurrent();
-  });
-
-  pushCurrent();
-  return entries;
+  return parseProjectionEntries(content);
 }
 
 const SEED_SECTION_FAMILIES = Object.freeze(Object.fromEntries(['wave0', 'wave1', 'wave2'].map((wave) => [
@@ -233,104 +152,62 @@ function fieldValue(entry, field) {
 }
 
 export function isLimitationReturnMapEntry(entry) {
-  const relationship = fieldValue(entry, 'relationship');
-  const status = fieldValue(entry, 'status');
-  const refs = fieldValue(entry, 'refs');
-  const nextHop = fieldValue(entry, 'next_hop');
-  const refsAreEmpty = EMPTY_REFS_RE.test(refs) || extractBundleRefs(entry?.text || '').length === 0;
-  const relationshipLimits = /\b(?:opens|defers|context)\b/.test(relationship);
-  const statusLimits = /\b(?:open|deferred)\b/.test(status);
-  return refsAreEmpty && relationshipLimits && statusLimits && LIMITATION_NEXT_HOP_RE.test(nextHop);
+  return isLimitationProjectionEntry(entry);
 }
 
 export function isEvidenceBearingReturnMapEntry(entry) {
-  if (!entry || isLimitationReturnMapEntry(entry)) return false;
-  const relationship = fieldValue(entry, 'relationship');
-  const status = fieldValue(entry, 'status');
-  const hasRefs = extractBundleRefs(entry.text).length > 0 || /\bhttps?:\/\//i.test(entry.text);
-  const relationshipClaimsEvidence = /\b(?:supports|refutes|partial|context)\b/.test(relationship);
-  const statusClaimsEvidence = /\b(?:supported|refuted|partial|emergent)\b/.test(status);
-  return hasRefs || relationshipClaimsEvidence || statusClaimsEvidence;
+  return isEvidenceBearingProjectionEntry(entry);
 }
 
 export function extractConcreteReferenceRefs(content, { bundlePath = null } = {}) {
-  const refs = [];
-  const rejectedRefs = [];
-  const text = String(content || '');
-
-  for (const ref of extractBundleRefs(text).filter((entry) => entry.startsWith('reference/'))) {
-    if (ref.includes('*') || (REF_COUNT_SUFFIX_RE.test(text) && refHasCountSummary(text, ref))) {
-      rejectedRefs.push({ ref, reason: 'glob_or_count_summary' });
-      continue;
-    }
-    if (!isSafeBundleRelative(ref)) {
-      rejectedRefs.push({ ref, reason: 'unsafe_ref' });
-      continue;
-    }
-    if (!/^reference\/[^/]+\.md$/.test(ref)) {
-      rejectedRefs.push({ ref, reason: 'not_concrete_reference_md' });
-      continue;
-    }
-    if (bundlePath && !existsSync(join(bundlePath, ref))) {
-      rejectedRefs.push({ ref, reason: 'missing_reference_file' });
-      continue;
-    }
-    refs.push(ref);
-  }
-
-  return { refs: [...new Set(refs)], rejectedRefs };
+  return extractConcreteProjectionReferences(content, readReferenceNavigationFact(bundlePath));
 }
 
-function validateConcreteReferenceNavigation(entries, relPath, bundlePath) {
+function validateConcreteReferenceNavigation(entries, relPath, bundlePath, referenceFact) {
   const inspect = [];
   const advice = [];
   const findings = [];
 
   for (const entry of entries) {
-    if (!isEvidenceBearingReturnMapEntry(entry)) continue;
-    const concrete = extractConcreteReferenceRefs(entry.text, { bundlePath });
-    const internalRefs = extractBundleRefs(entry.text).filter((ref) => /^(?:artifacts|_cache|_work_units)\//.test(ref));
-
-    for (const rejected of concrete.rejectedRefs) {
-      const reason = rejected.reason === 'glob_or_count_summary'
-        ? 'refs must enumerate concrete reference/*.md files; glob/count summaries such as reference/topic-*.md (N files) are not navigable'
-        : rejected.reason === 'missing_reference_file'
-          ? 'referenced concrete reference file does not exist under the active bundle root'
-          : rejected.reason === 'unsafe_ref'
-            ? 'reference ref is unsafe or escapes the bundle'
-            : 'reference ref is not a flat concrete reference/*.md file';
-      const detail = `[return_map_concrete_reference] ${relPath}:${entry.startLine}: ${rejected.ref} invalid (${reason}). Classification: blocking. Repair target: replace refs with concrete existing bundle-relative reference/*.md entries or mark the entry as an explicit limitation/no-materializable-evidence state.`;
-      inspect.push(detail);
-      findings.push(returnMapFinding({
-        ruleId: 'return_map_concrete_reference',
-        relPath,
-        bundlePath,
-        line: entry.startLine,
-        blockingBasis: 'binding_integrity',
-        expected: 'Every evidence-bearing return-map ref names one safe, concrete, existing flat reference/*.md file.',
-        observed: { ref: rejected.ref, reason: rejected.reason },
-        missingFact: `${relPath}:${entry.startLine} contains invalid return-map reference '${rejected.ref}' (${rejected.reason}).`,
-        detail,
-        repair: `Replace the invalid ref in ${relPath} with a concrete existing reference/*.md path or record an explicit limitation.`,
-      }));
-    }
-
-    if (concrete.refs.length === 0) {
-      const detail = `[return_map_missing_concrete_reference] ${relPath}:${entry.startLine}: evidence-bearing return-map entry must include at least one concrete existing reference/*.md ref; ${internalRefs.length > 0 ? `found only internal provenance refs (${internalRefs.join(', ')})` : 'found no concrete reference refs'}. Classification: blocking. Repair target: add concrete reference/*.md refs, or rewrite this entry as a deterministic limitation/no-materializable-evidence entry.`;
-      inspect.push(detail);
-      findings.push(returnMapFinding({
-        ruleId: 'return_map_missing_concrete_reference',
-        relPath,
-        bundlePath,
-        line: entry.startLine,
-        blockingBasis: 'binding_integrity',
-        expected: 'Every evidence-bearing return-map entry includes at least one concrete existing reference/*.md consumer-navigation ref.',
-        observed: { concrete_reference_refs: [], internal_refs: internalRefs },
-        missingFact: `${relPath}:${entry.startLine} has an evidence-bearing return-map entry without a concrete existing reference/*.md ref.`,
-        detail,
-        repair: `Add a concrete existing reference/*.md ref in ${relPath}, or rewrite the entry as an explicit limitation.`,
-      }));
-    }
+    if (RETURN_MAP_FIELDS.some((field) => !String(entry.fields?.[field] || '').trim())) continue;
+    const navigation = evaluateProjectionEntryNavigation(entry, referenceFact);
+    if (navigation.passed) continue;
+    const internalRefs = extractProjectionBundleRefs(entry.text).filter((ref) => /^(?:artifacts|_cache|_work_units)\//.test(ref));
+    const invalid = navigation.invalid_refs?.[0] || null;
+    const missing = navigation.missing_refs?.[0] || null;
+    const needsConcrete = navigation.reason_code === 'projection_entry_concrete_ref_missing'
+      || navigation.reason_code === 'projection_entry_deferred_limitation_missing';
+    const ruleId = needsConcrete ? 'return_map_missing_concrete_reference' : 'return_map_concrete_reference';
+    const invalidReason = invalid?.reason === 'glob_or_count_summary'
+      ? 'refs must enumerate concrete reference/*.md files; glob/count summaries such as reference/topic-*.md (N files) are not navigable'
+      : invalid?.reason === 'unsafe_ref'
+        ? 'reference ref is unsafe or escapes the bundle'
+        : invalid
+          ? 'reference ref is not a flat concrete reference/*.md file'
+          : missing
+            ? 'referenced concrete reference file does not exist under the active bundle root'
+            : navigation.message;
+    const detail = needsConcrete
+      ? `[${ruleId}] ${relPath}:${entry.startLine}: evidence-bearing return-map entry must include one concrete existing reference/*.md ref or an explicit defers/deferred limitation; ${internalRefs.length > 0 ? `found only internal provenance refs (${internalRefs.join(', ')})` : navigation.message}. Classification: blocking. Repair target: add concrete reference/*.md refs or record the accepted deferred disposition.`
+      : `[${ruleId}] ${relPath}:${entry.startLine}: ${invalidReason}.${navigation.near_matches?.length ? ` Near matches: ${navigation.near_matches.join(', ')}.` : ''} Classification: blocking. Repair target: replace refs with concrete existing bundle-relative reference/*.md entries or record the accepted deferred disposition.`;
+    inspect.push(detail);
+    findings.push(returnMapFinding({
+      ruleId,
+      relPath,
+      bundlePath,
+      line: entry.startLine,
+      blockingBasis: 'binding_integrity',
+      expected: 'Every evidence-bearing return-map entry includes one safe, concrete, existing flat reference/*.md consumer-navigation ref or the accepted deferred disposition.',
+      observed: {
+        reason_code: navigation.reason_code,
+        ref: invalid?.ref || missing || null,
+        near_matches: navigation.near_matches || [],
+        internal_refs: internalRefs,
+      },
+      missingFact: `${relPath}:${entry.startLine} has invalid return-map navigation: ${navigation.message}`,
+      detail,
+      repair: `Add a concrete existing reference/*.md ref in ${relPath}, or record the accepted defers/deferred limitation.`,
+    }));
   }
 
   if (inspect.length > 0) {
@@ -347,12 +224,13 @@ export function validateReturnMapContent(content, relPath, {
   requireWave2Refs = false,
   requireConcreteReferenceNavigation = false,
   bundlePath = null,
+  referenceFact = null,
 } = {}) {
   const inspect = [];
   const advice = [];
   const findings = [];
   const text = String(content || '');
-  const missingFields = requireFields.filter((field) => !FIELD_PATTERNS[field].test(text));
+  const missingFields = requireFields.filter((field) => !projectionEntryFieldPresent(text, field));
   const entries = extractReturnMapEntries(text);
   const evidenceEntries = entries.filter(isEvidenceBearingReturnMapEntry);
 
@@ -494,7 +372,7 @@ export function validateReturnMapContent(content, relPath, {
   }
 
   if (requireConcreteReferenceNavigation) {
-    const navigation = validateConcreteReferenceNavigation(entries, relPath, bundlePath);
+    const navigation = validateConcreteReferenceNavigation(entries, relPath, bundlePath, referenceFact || readReferenceNavigationFact(bundlePath));
     inspect.push(...navigation.inspect);
     advice.push(...navigation.advice);
     findings.push(...navigation.findings);
@@ -557,10 +435,7 @@ function metadataIdentityCanCoverRow(entry) {
 }
 
 function isExplicitDeferredProjectionDisposition(entry) {
-  const relationship = fieldValue(entry, 'relationship').replace(/[`"'.,;]+$/g, '');
-  const status = fieldValue(entry, 'status').replace(/[`"'.,;]+$/g, '');
-  const nextHop = fieldValue(entry, 'next_hop');
-  return relationship === 'defers' && status === 'deferred' && LIMITATION_NEXT_HOP_RE.test(nextHop);
+  return isAcceptedDeferredProjectionEntry(entry);
 }
 
 export function extractSeedFamilyEntries(content, wave) {
@@ -652,6 +527,44 @@ function projectionReadinessFinding(bundlePath, {
     repairKind: 'agent_action',
     writeTo: 'Projection Packet -> operate-topic-state apply -> same Wave inspect',
     repair: 'Read the current direct authority, repair the retained Projection Packet through operate-topic-state apply, then rerun this same Wave inspect.',
+    detail,
+  });
+}
+
+function projectionNavigationFinding(bundlePath, {
+  topicUid,
+  slotId,
+  relPath,
+  line,
+  entry,
+  navigation,
+}) {
+  const ruleId = navigation.reason_code === 'projection_entry_generic_prose'
+    ? 'seed_projection_generic_prose'
+    : navigation.reason_code === 'projection_entry_deferred_limitation_missing'
+      ? 'seed_projection_deferred_disposition_invalid'
+      : navigation.reason_code === 'projection_entry_concrete_ref_missing'
+        ? 'return_map_missing_concrete_reference'
+        : 'return_map_concrete_reference';
+  const nearMatches = navigation.near_matches?.length ? ` Near matches: ${navigation.near_matches.join(', ')}.` : '';
+  const internalRefs = extractProjectionBundleRefs(entry?.text || '').filter((ref) => /^(?:artifacts|_cache|_work_units)\//.test(ref));
+  const detail = navigation.reason_code === 'projection_entry_concrete_ref_missing' && internalRefs.length > 0
+    ? `[${ruleId}] ${relPath}:${line}: evidence-bearing Projection Entry has found only internal provenance refs (${internalRefs.join(', ')}); add a concrete existing reference/*.md consumer-navigation ref or the accepted deferred disposition.`
+    : `[${ruleId}] ${relPath}:${line}: ${navigation.message}${nearMatches}`;
+  return projectionReadinessFinding(bundlePath, {
+    ruleId,
+    topicUid,
+    slotId,
+    relPath,
+    line,
+    expected: 'A complete Projection Entry has concrete existing reference/*.md navigation or the accepted defers/deferred limitation disposition.',
+    observed: {
+      reason_code: navigation.reason_code,
+      missing_refs: navigation.missing_refs || [],
+      invalid_refs: navigation.invalid_refs || [],
+      near_matches: navigation.near_matches || [],
+    },
+    missingFact: `${relPath}:${line} has invalid Projection Entry navigation: ${navigation.message}`,
     detail,
   });
 }
@@ -844,6 +757,7 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
     : { parentUsable: true, blockers: [], current: new Map(), legacy: new Map() };
   if (!findingDemands.parentUsable) return projectionReadinessResult(findingDemands.blockers);
   if (findingDemands.blockers.length > 0) return projectionReadinessResult(findingDemands.blockers);
+  const referenceFact = readReferenceNavigationFact(bundlePath);
 
   const bindingByUid = new Map(evaluateCanonicalSeedBindings(bundlePath, { topic_registry: topicRegistryFact.topic_registry })
     .map((binding) => [binding.topic_uid, binding]));
@@ -927,7 +841,11 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
         }));
         structuralFailure = true;
       } else {
-        const local = validateReturnMapContent(body, relPath, { requireConcreteReferenceNavigation: true, bundlePath });
+        const local = validateReturnMapContent(body, relPath, {
+          requireConcreteReferenceNavigation: true,
+          bundlePath,
+          referenceFact,
+        });
         findings.push(...local.findings);
         if (!local.passed) structuralFailure = true;
       }
@@ -942,10 +860,9 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
     const currentFindingSet = new Set(currentFindingIds);
     const knownFindingIds = new Set([...currentFindingIds, ...legacyFindingIds]);
     for (const entry of entries) {
-      const emptyRefs = EMPTY_REFS_RE.test(fieldValue(entry, 'refs'));
       const validation = validateReturnMapContent(entry.text, relPath, {
-        requireConcreteReferenceNavigation: !emptyRefs,
         bundlePath,
+        referenceFact,
       });
       for (const finding of validation.findings) {
         finding.surface = `${resolvePath(bundlePath, relPath)}#L${entry.startLine}`;
@@ -953,21 +870,19 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
       }
       findings.push(...validation.findings);
       if (!validation.passed) structuralFailure = true;
-      if (validation.passed && emptyRefs && !isExplicitDeferredProjectionDisposition(entry)) {
-        findings.push(projectionReadinessFinding(bundlePath, {
-          ruleId: 'seed_projection_deferred_disposition_invalid', topicUid: topic.topic_uid, slotId: entry.section, relPath, line: entry.startLine,
-          expected: 'refs: none is allowed only for an explicit relationship: defers, status: deferred disposition with a limitation in next_hop.',
-          observed: {
-            relationship: fieldValue(entry, 'relationship'),
-            status: fieldValue(entry, 'status'),
-            next_hop: fieldValue(entry, 'next_hop'),
-          },
-          missingFact: `${relPath}:${entry.startLine} uses refs: none without the accepted explicit deferred disposition.`,
-          detail: `[seed_projection_deferred_disposition_invalid] ${relPath}:${entry.startLine} must use defers/deferred with a limitation when refs: none.`,
+      const navigation = validation.passed ? evaluateProjectionEntryNavigation(entry, referenceFact) : null;
+      if (navigation && !navigation.passed) {
+        findings.push(projectionNavigationFinding(bundlePath, {
+          topicUid: topic.topic_uid,
+          slotId: entry.section,
+          relPath,
+          line: entry.startLine,
+          entry,
+          navigation,
         }));
         structuralFailure = true;
-        continue;
       }
+      const entryUsable = validation.passed && navigation?.passed;
       const identities = extractExactProjectionIdentities(entry);
       if (wave === 'wave0') {
         const candidateId = identities.metadataCandidateId;
@@ -998,7 +913,7 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
             detail: `[seed_projection_entry_identity] ${relPath}:${entry.startLine} has invalid Wave0 candidate identity binding.`,
           }));
           structuralFailure = true;
-        } else if (validation.passed && candidateId && currentCandidateIds.has(candidateId)) {
+        } else if (entryUsable && candidateId && currentCandidateIds.has(candidateId)) {
           validCandidateIds.add(candidateId);
         }
       } else if (wave === 'wave2') {
@@ -1013,7 +928,7 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
             detail: `[seed_projection_entry_identity] ${relPath}:${entry.startLine} has invalid Wave2 identity binding.`,
           }));
           structuralFailure = true;
-        } else if (validation.passed) {
+        } else if (entryUsable) {
           validFindingIds.add([...ids][0]);
         }
       } else {
@@ -1036,7 +951,7 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
             detail: `[seed_projection_entry_identity] ${relPath}:${entry.startLine} has invalid ${wave} identity binding.`,
           }));
           structuralFailure = true;
-        } else if (validation.passed && currentIds.size === 1) {
+        } else if (entryUsable && currentIds.size === 1) {
           validWorkIds.add([...currentIds][0]);
         }
       }
@@ -1077,48 +992,4 @@ function projectionReadinessResult(findings) {
 
 export function inspectSeedTopicReturnMaps(bundlePath, options = {}) {
   return evaluateSeedTopicProjectionReadiness(bundlePath, options);
-}
-
-export function inspectWaveArtifactReturnMaps(bundlePath, wave, topicSlugs = []) {
-  const inspect = [];
-  const advice = [];
-  const findings = [];
-
-  if (wave === 'wave1') {
-    for (const topic of topicSlugs) {
-      for (const file of ['evidence-summary.md', 'question-list.md']) {
-        const relPath = `artifacts/wave1/${topic}/${file}`;
-        const content = readText(join(bundlePath, relPath));
-        if (content === null) continue;
-        const validation = validateReturnMapContent(content, relPath, { requireWave1Refs: true, bundlePath });
-        inspect.push(...validation.inspect);
-        advice.push(...validation.advice);
-        findings.push(...validation.findings);
-      }
-    }
-  }
-
-  return { passed: inspect.length === 0, inspect, advice, findings, diagnosticOnly: inspect.length === 0, classification: inspect.length === 0 ? 'diagnostic-only' : 'blocking' };
-}
-
-export function inspectReferenceReturnMaps(bundlePath, prefix = '') {
-  const inspect = [];
-  const advice = [];
-  const findings = [];
-  const refDir = join(bundlePath, 'reference');
-  if (!existsSync(refDir)) return { passed: true, inspect, advice, findings, diagnosticOnly: true, classification: 'diagnostic-only' };
-
-  for (const file of readdirSync(refDir).filter((entry) => entry.endsWith('.md'))) {
-    if (file === '_INDEX.md' || file === 'README.md') continue;
-    if (prefix && !file.startsWith(prefix)) continue;
-    const relPath = `reference/${basename(file)}`;
-    const content = readText(join(refDir, file));
-    if (content === null) continue;
-    const validation = validateReturnMapContent(content, relPath, { bundlePath });
-    inspect.push(...validation.inspect);
-    advice.push(...validation.advice);
-    findings.push(...validation.findings);
-  }
-
-  return { passed: inspect.length === 0, inspect, advice, findings, diagnosticOnly: inspect.length === 0, classification: inspect.length === 0 ? 'diagnostic-only' : 'blocking' };
 }

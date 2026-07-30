@@ -6,6 +6,10 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { join } from 'node:path';
 import { writeGateAttempt } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 import { applyCanonicalTopicState, recoverCanonicalTopicState } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
+import {
+  renderSeedInitializationRegion,
+  SEED_TOPIC_INITIALIZATION,
+} from '../../../DPT_FRAMEWORK/engine/helpers/seed-topic-authoring-evaluator.mjs';
 
 const root = process.cwd();
 const cli = join(root, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs');
@@ -92,5 +96,22 @@ describe('operate-topic-state seed enrichment', () => {
     assert.match(updated, /legacy_unknown: preserved/);
     assert.ok(updated.endsWith(suffix));
     assert.equal(JSON.parse(readFileSync(join(dir, 'rb_queue.json'), 'utf8')).active_window[0].queue_item_id, 'legacy-seed-card');
+  });
+
+  it('preserves a current marker-bounded initialization body while enrich_seed updates only structured fields', () => {
+    const dir = bundle('current-marker-body'); authorize(dir);
+    const seedPath = join(dir, 'seed_topics', `${topic.slug}.md`);
+    const header = readFileSync(seedPath, 'utf8').match(/^---\n[\s\S]*?\n---\n/)[0];
+    const body = `# Topic A\n\n${renderSeedInitializationRegion()}\n\n## ${SEED_TOPIC_INITIALIZATION.appendixHeading}\n\n## 历史摘要\n\n*(new seed)*\n`;
+    writeFileSync(seedPath, `${header}${body}`);
+
+    const { result } = apply(dir, input());
+    const updated = readFileSync(seedPath, 'utf8');
+    const updatedHeader = updated.match(/^---\n[\s\S]*?\n---\n/)[0];
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(updated.slice(updatedHeader.length), body);
+    assert.equal(updated.split(SEED_TOPIC_INITIALIZATION.startMarker).length - 1, 1);
+    assert.equal(updated.split(SEED_TOPIC_INITIALIZATION.endMarker).length - 1, 1);
   });
 });

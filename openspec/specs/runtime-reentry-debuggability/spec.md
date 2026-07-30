@@ -87,9 +87,17 @@ The CLI SHALL return check/inspect/advice JSON and SHALL validate:
 - phase target aliases map to a known reentry checkpoint and required artifact set
 - queue state is compatible with current lifecycle status
 - required artifacts for phases up to the target exist
-- ledger declarations cover reference files that participate in gate pass conditions
+- each participating reference has the same accepted authority classification used by the normal Wave evaluator: either a submitted delegated reference output or a valid Phase-owned projection backed by the accepted submitted source/cache/work-unit facts; a direct declaration alone is not a second stricter reentry authority
 - latest checkpoint manifest is present when available and reports drift against current files
 - unresolved blocking unplanned files are reported
+
+The reentry reference audit SHALL reuse the existing pure
+reference-authority classifier rather than maintain a direct-ledger-only scan.
+A valid Phase-owned projection SHALL not be instructed to gain a synthetic
+delegated reference declaration. A genuinely unbacked, unsafe, or
+delegated-bypass reference SHALL remain blocking and SHALL report the
+classifier's direct missing backing fact and existing legal repair or
+missing-contract boundary.
 
 When a valid newer `post_final_reentry` event, its exact current after-profile, route-bound rerun load and exceptional `phase_transition` explain the immediate legal profile/current-node/status-window evolution after an older HITL2 checkpoint, the checker SHALL use the event's bound before/after profile facts plus the event/load/phase-transition/current rerun window as the current baseline for those control changes. It SHALL preserve the older checkpoint as historical context but SHALL NOT report its superseded profile/status hashes as unexplained blocker drift. Before initial topic-state authorization, a current profile that no longer matches the event-bound after-profile SHALL remain blocker drift.
 
@@ -109,6 +117,18 @@ The CLI SHALL NOT mutate runtime files.
 - **AND** process exit code SHALL be `0`
 - **AND** output SHALL include `normalized_target.status_gate = "wave1_complete"`
 - **AND** output SHALL include `normalized_target.gate_key = "wave1-complete"`
+
+#### Scenario: Phase-owned reference has the normal authority interpretation
+
+- **WHEN** a Wave1 reference is not a direct delegated reference output but has valid Phase-owned submitted source/cache/work-unit backing
+- **THEN** normal Wave evaluation and `check-reentry` SHALL both classify it as a valid Phase-owned projection
+- **AND** reentry SHALL not emit a `ledger_coverage` blocker or direct the Agent to mutate `rb_output_declarations.jsonl`
+
+#### Scenario: Unbacked reference remains blocking
+
+- **WHEN** a reference is neither a submitted delegated output nor a valid Phase-owned projection
+- **THEN** `check-reentry` SHALL return a blocking reference-authority finding
+- **AND** it SHALL expose the classifier's missing fact rather than report a generic declaration-only requirement
 
 #### Scenario: Phase alias normalizes to canonical node
 

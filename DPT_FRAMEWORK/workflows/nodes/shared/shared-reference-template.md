@@ -35,13 +35,13 @@ When the Phase Agent materializes a backed reference projection, write the compl
 
 ## File Format
 
-每个 `reference/*.md` 文件包含两部分：metadata block + 标准 section body。
+每个 `reference/*.md` 文件包含两部分：opening YAML-frontmatter metadata mapping + 标准 section body。
 
 ### Part 1: Metadata Block（必填字段以 **粗体** 标注）
 
-Metadata block 位于首个 recognized semantic section 之前；文件可以先有一个可选 title。每行格式：`- key: value`（第一个 `: ` 后的部分为 value）。
+New files begin with one `---`-delimited YAML mapping, before the Markdown title and the first recognized semantic section. Quote YAML-sensitive values or use YAML block syntax for long prose.
 
-This metadata block is the accepted parser contract. It is not YAML frontmatter: do not put metadata between `---` fences, do not write `source_url:` as bare YAML keys, and do not use `sources:` wrappers. `parseReferenceMetadata()` reads only bullet metadata lines before the first section.
+This opening mapping is the canonical writer contract. `readReferenceMetadata()` supplies its semantic values to format, URL, index, count, and backing consumers. Existing legacy `- key: value` lines before the first semantic section remain read-compatible only; do not choose that retired presentation for a new file. Do not use a `sources:` wrapper or a non-mapping YAML root. If inspect reports `reference_metadata_frontmatter_invalid`, repair the opening mapping itself; if a valid mapping is missing one required key, repair that named key and rerun the same checkpoint.
 
 **必填 contract facts**（inspect CLI 会检查这些 key 是否存在且非空）：八个 common metadata fields，加一个可解析的 Topic binding。Topic binding 可以使用 exact registered `related_topic_uid`（或 `all`），也可以兼容使用 `related_topic` 的 exact current/previous id、slug、逗号列表（或 `all`）。两种形式同时出现时必须解析一致。
 
@@ -75,17 +75,19 @@ Each file must contain all five semantic sections; every section is required and
 ## Example
 
 ```markdown
-# AI Agent Taxonomy & Enterprise Deployment 2025-2026
+---
+source_url: "https://example.com/agent-taxonomy"
+acceptance_status: accepted
+source_type: secondary
+tier: "Tier 2"
+evidence_role: foundation
+trust_level: practitioner
+why_it_matters: "All topics use AI agent language; shared taxonomy enables cross-topic comparison."
+accessed_at: "2026-06-26"
+related_topic: all
+---
 
-- source_url: https://example.com/agent-taxonomy
-- acceptance_status: accepted
-- source_type: secondary (industry framework synthesis)
-- tier: Tier 2
-- evidence_role: foundation
-- trust_level: practitioner
-- why_it_matters: All topics use "AI agent" language — shared taxonomy needed for cross-topic comparison
-- accessed_at: 2026-06-26
-- related_topic: all
+# AI Agent Taxonomy & Enterprise Deployment 2025-2026
 
 ## Key Facts
 

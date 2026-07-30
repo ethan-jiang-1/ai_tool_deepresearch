@@ -24,6 +24,7 @@ import {
   readBundlePlan,
   readBundleProfile,
   parseMdFrontmatter,
+  classifyReferenceAuthority,
 } from '../engine/helpers/gate-helpers.mjs';
 import { auditFileObservability } from '../engine/helpers/file-observability.mjs';
 import { buildRecoverySummary } from '../engine/helpers/recovery-contract.mjs';
@@ -566,15 +567,8 @@ function auditLedgerCoverage(bundlePath, target) {
   const refPhases = ['wave0', 'wave1', 'wave2'];
   if (!refPhases.includes(target.phase_key)) return { blockers, warnings };
 
-  const declarations = readOutputDeclarations(bundlePath);
-  const declaredPaths = new Set();
-  for (const decl of declarations) {
-    for (const entry of decl.output_files || []) {
-      declaredPaths.add(entry.path);
-    }
-  }
-
-  // Check reference/ directory for undeclared files
+  // Reference authority has one interpretation in normal Wave evaluation and
+  // reentry: submitted delegated output or a valid Phase-owned projection.
   const refDir = join(bundlePath, 'reference');
   if (!existsSync(refDir)) return { blockers, warnings };
 
@@ -586,14 +580,23 @@ function auditLedgerCoverage(bundlePath, target) {
   } catch { /* ignore */ }
 
   for (const rf of refFiles) {
-    if (!declaredPaths.has(rf)) {
-      blockers.push({
-        severity: 'blocker',
-        check: 'ledger_coverage',
-        message: `Reference file is not declared in rb_output_declarations.jsonl: ${rf}`,
-        detail: { path: rf, phase: target.phase_key },
-      });
-    }
+    const classification = classifyReferenceAuthority(bundlePath, rf);
+    if (classification.passed) continue;
+    const root = classification.root_contract || {};
+    blockers.push({
+      severity: 'blocker',
+      check: 'ledger_coverage',
+      message: `Reference authority is not established for ${rf}: ${classification.reason}`,
+      detail: {
+        path: rf,
+        phase: target.phase_key,
+        authority: classification.authority,
+        reason_code: classification.reason_code || null,
+        missing_fact: root.missing_fact || null,
+        repair_kind: root.repair_kind || null,
+        write_to: root.write_to || null,
+      },
+    });
   }
 
   return { blockers, warnings };

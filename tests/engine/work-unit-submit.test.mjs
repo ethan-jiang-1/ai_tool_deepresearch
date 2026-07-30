@@ -39,11 +39,36 @@ function tempBundle() {
   return mkdtempSync(path.join(os.tmpdir(), 'wu-submit-'));
 }
 
+function writeCanonicalSeed(dir, {
+  topicUid = 'tp_123e4567-e89b-12d3-a456-426614174000',
+  id = '01',
+  slug = 'topic-a',
+  title = 'Topic A',
+  mustAnswer = ['A?'],
+  scopeRole = 'primary',
+} = {}) {
+  mkdirSync(path.join(dir, 'seed_topics'), { recursive: true });
+  const seedPath = path.join(dir, 'seed_topics', `${slug}.md`);
+  if (existsSync(seedPath)) return;
+  writeFileSync(seedPath, `---
+topic_uid: ${topicUid}
+id: "${id}"
+slug: ${slug}
+title: ${title}
+must_answer: ${JSON.stringify(mustAnswer)}
+scope_role: ${scopeRole}
+depends_on_topic_uids: []
+---
+# ${title}
+`);
+}
+
 function writeCanonicalPlan(dir, { previous = [] } = {}) {
   const previousLayouts = previous.length > 0
     ? `\n${previous.map((slug, index) => `      - id: "0${index}"\n        slug: ${slug}`).join('\n')}`
     : ' []';
   writeFileSync(path.join(dir, 'rb_plan.md'), `---\nplan_basename: test\nderived_topic_count: 1\ntopic_registry_version: "2"\ntopic_registry:\n  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174000\n    id: "01"\n    slug: topic-a\n    title: Topic A\n    must_answer: ["A?"]\n    scope_role: primary\n    depends_on_topic_uids: []\n    previous_layouts:${previousLayouts}\n---\n# Plan\n`);
+  writeCanonicalSeed(dir);
 }
 
 function cleanup(dir) {
@@ -91,7 +116,7 @@ function delegatedWave1(id, topicSlug = 'topic-a', overrides = {}) {
     title: `Delegated ${id}`,
     targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-evidence-extractor', timeout_ms: 600000 } },
     kind: 'wave1_topic_deepening',
-    producer_rule: 'wave1_topic_deepening_dispatch',
+    producer_rule: 'topic_deepening',
     payload: {
       topic_uid: topicUid,
       topic_slug: topicSlug,
@@ -163,6 +188,15 @@ topic_registry:
 ---
 # Plan
 `);
+  writeCanonicalSeed(dir);
+  writeCanonicalSeed(dir, {
+    topicUid: 'tp_123e4567-e89b-12d3-a456-426614174001',
+    id: '02',
+    slug: 'topic-b',
+    title: 'Topic B',
+    mustAnswer: ['B?'],
+    scopeRole: 'supporting',
+  });
 }
 
 function ledgerRows(dir) {
@@ -221,6 +255,14 @@ const VALID_CURRENT_SOURCE_YAML = [
   '  title: Example source',
   '  retrieved_date: 2026-07-20',
   '  topic_tag: topic-a',
+  '',
+].join('\n');
+
+const PRESENTATION_EQUIVALENT_SOURCE_YAML = [
+  '- topic_tag: topic-a',
+  '  retrieved_date: 2026-07-20',
+  '  title: Example source',
+  '  url: https://example.com/source',
   '',
 ].join('\n');
 
@@ -719,7 +761,7 @@ describe('submitWorkUnit', () => {
     }
   });
 
-  it('does not reaccept changed direct bytes during duplicate replay or declaration recovery', () => {
+  it('derives a hash-bound current Wave0 contribution and retains it for duplicate/idempotent replay', () => {
     const dir = tempBundle();
     try {
       const record = claimCurrentWave0(dir);
@@ -727,6 +769,19 @@ describe('submitWorkUnit', () => {
       const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
       assert.equal(submitted.ok, true);
       const [originalRow] = readWorkUnitLedgerRows(dir);
+      assert.deepEqual(Object.keys(originalRow.source_contribution).sort(), [
+        'direct_contract', 'semantic_digest', 'target', 'validated_length',
+      ]);
+      assert.deepEqual(originalRow.source_contribution, {
+        target: sourcePath,
+        direct_contract: 'wave0.source-metadata-array.v1',
+        validated_length: 1,
+        semantic_digest: originalRow.source_contribution.semantic_digest,
+      });
+      assert.match(originalRow.source_contribution.semantic_digest, /^[a-f0-9]{64}$/);
+      const withoutContribution = { ...originalRow };
+      delete withoutContribution.source_contribution;
+      assert.notEqual(computeWorkUnitLedgerRecordHash(withoutContribution), originalRow.ledger_record_hash);
 
       writeFileSync(path.join(dir, sourcePath), 'changed: after-acceptance\n');
       const duplicate = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
@@ -734,11 +789,109 @@ describe('submitWorkUnit', () => {
       assert.equal(duplicate.duplicate, true);
       assert.deepEqual(readWorkUnitLedgerRows(dir), [originalRow]);
 
+      const idempotent = recoverWorkUnitDeclaration(dir, { work_id: record.work_id });
+      assert.equal(idempotent.ok, true);
+      assert.equal(idempotent.changed, false);
+      assert.equal(idempotent.idempotent, true);
+      assert.deepEqual(readWorkUnitLedgerRows(dir), [originalRow]);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('tolerates equivalent source YAML presentation but rejects caller-supplied contribution declarations', () => {
+    const firstDir = tempBundle();
+    const secondDir = tempBundle();
+    const callerDir = tempBundle();
+    try {
+      const firstRecord = claimCurrentWave0(firstDir);
+      const firstCandidate = writeCurrentWave0SubmitFiles(firstDir, firstRecord);
+      assert.equal(submitWorkUnit(firstDir, { work_id: firstRecord.work_id, resultPath: firstCandidate.resultPath }).ok, true);
+      const firstDigest = readWorkUnitLedgerRows(firstDir)[0].source_contribution.semantic_digest;
+
+      const secondRecord = claimCurrentWave0(secondDir);
+      const secondCandidate = writeCurrentWave0SubmitFiles(secondDir, secondRecord);
+      writeFileSync(path.join(secondDir, secondCandidate.sourcePath), PRESENTATION_EQUIVALENT_SOURCE_YAML);
+      assert.equal(submitWorkUnit(secondDir, { work_id: secondRecord.work_id, resultPath: secondCandidate.resultPath }).ok, true);
+      assert.equal(readWorkUnitLedgerRows(secondDir)[0].source_contribution.semantic_digest, firstDigest);
+
+      const callerRecord = claimCurrentWave0(callerDir);
+      const callerCandidate = writeCurrentWave0SubmitFiles(callerDir, callerRecord);
+      const callerResult = readResult(callerCandidate.resultPath);
+      callerResult.source_contribution = {
+        target: callerCandidate.sourcePath,
+        direct_contract: 'wave0.source-metadata-array.v1',
+        validated_length: 1,
+        semantic_digest: firstDigest,
+      };
+      writeResult(callerCandidate.resultPath, callerResult);
+      const rejected = submitWorkUnit(callerDir, { work_id: callerRecord.work_id, resultPath: callerCandidate.resultPath });
+      assert.equal(rejected.ok, false);
+      assertNoLedger(callerDir);
+    } finally {
+      cleanup(firstDir);
+      cleanup(secondDir);
+      cleanup(callerDir);
+    }
+  });
+
+  it('fails closed when a hash-bound source contribution row is lost', () => {
+    const dir = tempBundle();
+    try {
+      const record = claimCurrentWave0(dir);
+      const { resultPath, sourcePath } = writeCurrentWave0SubmitFiles(dir, record);
+      assert.equal(submitWorkUnit(dir, { work_id: record.work_id, resultPath }).ok, true);
+      writeFileSync(path.join(dir, sourcePath), 'changed: after-acceptance\n');
+      rmSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER));
+      const beforeRecovery = authoritySnapshot(dir, record);
+
+      const recovered = recoverWorkUnitDeclaration(dir, { work_id: record.work_id });
+      assert.equal(recovered.ok, false);
+      assert.equal(recovered.reason_code, 'missing_source_contribution_no_legal_recovery');
+      assert.equal(recovered.repair_kind, 'missing_contract');
+      assert.match(recovered.missing_fact, /no legal recovery|source_contribution/i);
+      assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
+      assertSnapshotEqual(authoritySnapshot(dir, record), beforeRecovery, 'lost contribution recovery must not mutate authority');
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('recovers an exact legacy no-contribution declaration without reading changed source bytes', () => {
+    const dir = tempBundle();
+    try {
+      const record = downgradeAssignmentToLegacy(dir, claimOneWave0(dir));
+      const resultPath = writeValidSubmitFiles(dir, record);
+      const sourcePath = path.join(dir, 'artifacts/wave0/topic-a/source.yaml');
+      mkdirSync(path.dirname(sourcePath), { recursive: true });
+      writeFileSync(sourcePath, VALID_CURRENT_SOURCE_YAML);
+      assert.equal(submitWorkUnit(dir, { work_id: record.work_id, resultPath }).ok, true);
+      const [originalRow] = readWorkUnitLedgerRows(dir);
+      assert.equal(Object.hasOwn(originalRow, 'source_contribution'), false);
+
+      writeFileSync(sourcePath, 'changed: legacy source bytes\n');
       rmSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER));
       const recovered = recoverWorkUnitDeclaration(dir, { work_id: record.work_id });
       assert.equal(recovered.ok, true);
-      assert.equal(recovered.recovered, true);
+      assert.equal(recovered.changed, true);
       assert.deepEqual(readWorkUnitLedgerRows(dir), [originalRow]);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('does not add source contribution to current Wave1 submissions', () => {
+    const dir = tempBundle();
+    try {
+      writeCanonicalPlan(dir);
+      saveSeedQueue(dir, [delegatedWave1('wave1-contribution-exclusion', 'topic-a', {
+        payload: { ...CURRENT_TOPIC, wave: 1, assignment_mode: 'primary' },
+      })]);
+      claimWorkUnits(dir, { phase: 'wave1', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
+      const resultPath = writeValidWave1SubmitFiles(dir, record);
+      assert.equal(submitWorkUnit(dir, { work_id: record.work_id, resultPath }).ok, true);
+      assert.equal(Object.hasOwn(readWorkUnitLedgerRows(dir)[0], 'source_contribution'), false);
     } finally {
       cleanup(dir);
     }
@@ -838,19 +991,19 @@ describe('submitWorkUnit', () => {
         required_receipts: ['file:artifacts/wave0/old-topic-a/source.yaml'],
         writes_to: ['artifacts/wave0/old-topic-a/source.yaml'],
       })]);
-      assert.throws(
-        () => claimWorkUnits(legacyDir, { phase: 'wave0', count: 1 }),
-        /current canonical UID\/slug binding/,
-      );
+      const legacyClaim = claimWorkUnits(legacyDir, { phase: 'wave0', count: 1 });
+      assert.equal(legacyClaim.ok, false);
+      assert.equal(legacyClaim.claimed_count, 0);
+      assert.match(legacyClaim.admission.reason, /current canonical UID\/slug binding/);
       assert.equal(existsSync(workUnitIndexPath(legacyDir)), false);
       assertNoLedger(legacyDir);
 
       writeCanonicalPlan(mismatchDir);
       saveSeedQueue(mismatchDir, [delegated('queue-mismatch', { payload: { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174001', topic_slug: 'topic-a' } })]);
-      assert.throws(
-        () => claimWorkUnits(mismatchDir, { phase: 'wave0', count: 1 }),
-        /current canonical UID\/slug binding/,
-      );
+      const mismatchClaim = claimWorkUnits(mismatchDir, { phase: 'wave0', count: 1 });
+      assert.equal(mismatchClaim.ok, false);
+      assert.equal(mismatchClaim.claimed_count, 0);
+      assert.match(mismatchClaim.admission.reason, /current canonical UID\/slug binding/);
       assert.equal(existsSync(workUnitIndexPath(mismatchDir)), false);
       assertNoLedger(mismatchDir);
     } finally {
@@ -1991,7 +2144,7 @@ describe('submitWorkUnit', () => {
           assert.equal(submitWorkUnit(dir, { work_id: prior.work_id, resultPath: priorResultPath }).ok, true, testCase.label);
         } else if (testCase.prior?.wave === 2) {
           saveSeedQueue(dir, [delegatedWave2('wave2-prior', 'W2F-001', {
-            payload: { finding_id: 'W2F-001', wave: 2, topic_slug: testCase.prior.topic },
+            payload: { finding_id: 'W2F-001', wave: 2 },
           })]);
           claimWorkUnits(dir, { phase: 'wave2', count: 1 });
           const prior = loadWorkUnitIndex(dir).work_units['wu-w2-b000-targ-i0001'];
@@ -2303,8 +2456,8 @@ describe('submitWorkUnit', () => {
   it('late-submit accepts an eligible timed-out work unit and removes queued retry demand', () => {
     const dir = tempBundle();
     try {
-      const record = claimOneWave0(dir);
-      const resultPath = writeValidSubmitFiles(dir, record);
+      const record = claimCurrentWave0(dir);
+      const { resultPath } = writeCurrentWave0SubmitFiles(dir, record);
       forceTimeout(dir, record);
 
       const accepted = lateSubmitWorkUnit(dir, {
@@ -2340,6 +2493,12 @@ describe('submitWorkUnit', () => {
       assert.equal(row.late_accept_reason, 'late result arrived after timeout');
       assert.equal(row.terminal_status_before_accept, 'timed_out');
       assert.deepEqual(row.superseded_retry_work_ids, []);
+      assert.deepEqual(row.source_contribution, {
+        target: 'artifacts/wave0/topic-a/source.yaml',
+        direct_contract: 'wave0.source-metadata-array.v1',
+        validated_length: 1,
+        semantic_digest: row.source_contribution.semantic_digest,
+      });
       assert.equal(row.ledger_record_hash, computeWorkUnitLedgerRecordHash(row));
       const submittedRecord = index.work_units[record.work_id];
       const submittedStatus = JSON.parse(readFileSync(path.join(dir, record.paths.status_ref), 'utf-8'));
@@ -2360,7 +2519,7 @@ describe('submitWorkUnit', () => {
     for (const late of [false, true]) {
       const dir = tempBundle();
       try {
-        const record = claimOneWave0(dir);
+        const record = downgradeAssignmentToLegacy(dir, claimOneWave0(dir));
         const resultPath = writeValidSubmitFiles(dir, record);
         const submitted = late
           ? (forceTimeout(dir, record), lateSubmitWorkUnit(dir, {
@@ -2372,6 +2531,7 @@ describe('submitWorkUnit', () => {
         assert.equal(submitted.ok, true);
 
         const [originalRow] = readWorkUnitLedgerRows(dir);
+        assert.equal(Object.hasOwn(originalRow, 'source_contribution'), false);
         const indexBefore = readFileSync(workUnitIndexPath(dir));
         const statusBefore = readFileSync(path.join(dir, record.paths.status_ref));
         const queueBefore = readFileSync(path.join(dir, 'rb_queue.json'));
@@ -2414,7 +2574,7 @@ describe('submitWorkUnit', () => {
     const normalDir = tempBundle();
     const lateDir = tempBundle();
     try {
-      const normalRecord = claimOneWave0(normalDir);
+      const normalRecord = downgradeAssignmentToLegacy(normalDir, claimOneWave0(normalDir));
       const normalResultPath = writeValidSubmitFiles(normalDir, normalRecord);
       const normalSubmitted = submitWorkUnit(normalDir, { work_id: normalRecord.work_id, resultPath: normalResultPath });
       assert.equal(normalSubmitted.ok, true);
@@ -2434,7 +2594,7 @@ describe('submitWorkUnit', () => {
       assert.equal(normalRecovered.legacy_reconstruction, true);
       assert.deepEqual(readWorkUnitLedgerRows(normalDir), [normalRow]);
 
-      const lateRecord = claimOneWave0(lateDir);
+      const lateRecord = downgradeAssignmentToLegacy(lateDir, claimOneWave0(lateDir));
       const lateResultPath = writeValidSubmitFiles(lateDir, lateRecord);
       forceTimeout(lateDir, lateRecord);
       const lateSubmitted = lateSubmitWorkUnit(lateDir, {
@@ -2465,7 +2625,7 @@ describe('submitWorkUnit', () => {
     const conflictDir = tempBundle();
     const unsubmittedDir = tempBundle();
     try {
-      const missingRecord = claimOneWave0(missingEvidenceDir);
+      const missingRecord = downgradeAssignmentToLegacy(missingEvidenceDir, claimOneWave0(missingEvidenceDir));
       const missingResult = writeValidSubmitFiles(missingEvidenceDir, missingRecord);
       assert.equal(submitWorkUnit(missingEvidenceDir, { work_id: missingRecord.work_id, resultPath: missingResult }).ok, true);
       rmSync(path.join(missingEvidenceDir, WORK_UNIT_OUTPUT_LEDGER));
@@ -2491,7 +2651,7 @@ describe('submitWorkUnit', () => {
       assert.deepEqual(readFileSync(path.join(missingEvidenceDir, 'rb_queue.json')), missingBefore.queue);
       assert.deepEqual(readFileSync(missingStatusPath), missingBefore.status);
 
-      const driftRecord = claimOneWave0(hashDriftDir);
+      const driftRecord = downgradeAssignmentToLegacy(hashDriftDir, claimOneWave0(hashDriftDir));
       const driftResult = writeValidSubmitFiles(hashDriftDir, driftRecord);
       assert.equal(submitWorkUnit(hashDriftDir, { work_id: driftRecord.work_id, resultPath: driftResult }).ok, true);
       rmSync(path.join(hashDriftDir, WORK_UNIT_OUTPUT_LEDGER));
@@ -2506,11 +2666,11 @@ describe('submitWorkUnit', () => {
       const drifted = recoverWorkUnitDeclaration(hashDriftDir, { work_id: driftRecord.work_id });
       assert.equal(drifted.ok, false);
       assert.equal(drifted.repair_kind, 'missing_contract');
-      assert.match(drifted.missing_fact, /cannot reproduce recorded declaration hash/);
+      assert.match(drifted.missing_fact, /no legal recovery can reproduce.*legacy no-contribution/i);
       assert.equal(existsSync(path.join(hashDriftDir, WORK_UNIT_OUTPUT_LEDGER)), false);
       assert.deepEqual(readFileSync(workUnitIndexPath(hashDriftDir)), driftBefore);
 
-      const conflictRecord = claimOneWave0(conflictDir);
+      const conflictRecord = downgradeAssignmentToLegacy(conflictDir, claimOneWave0(conflictDir));
       const conflictResult = writeValidSubmitFiles(conflictDir, conflictRecord);
       assert.equal(submitWorkUnit(conflictDir, { work_id: conflictRecord.work_id, resultPath: conflictResult }).ok, true);
       rmSync(path.join(conflictDir, WORK_UNIT_OUTPUT_LEDGER));

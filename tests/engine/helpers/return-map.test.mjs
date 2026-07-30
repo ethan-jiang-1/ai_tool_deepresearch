@@ -11,7 +11,6 @@ import {
   extractSeedFamilyEntries,
   extractSeedSectionFamily,
   evaluateSeedTopicProjectionReadiness,
-  inspectWaveArtifactReturnMaps,
   isEvidenceBearingReturnMapEntry,
   isLimitationReturnMapEntry,
   validateReturnMapContent,
@@ -260,6 +259,21 @@ describe('return-map diagnostics', () => {
     assert.deepEqual(extracted.rejectedRefs.map((ref) => ref.reason), ['glob_or_count_summary', 'not_concrete_reference_md']);
   });
 
+  it('reports the same bounded basename near match as packet admission', () => {
+    const dir = tempBundle();
+    writeRef(dir, 'reference/topic-a-source-1.md');
+    const result = validateReturnMapContent(
+      entry({ refs: ['reference/topic-a-source-01.md'] }),
+      'seed_topics/topic-a.md',
+      { bundlePath: dir, requireConcreteReferenceNavigation: true },
+    );
+
+    assert.equal(result.passed, false);
+    const finding = result.findings.find((candidate) => candidate.rule_id === 'return_map_concrete_reference');
+    assert.deepEqual(finding.observed.near_matches, ['reference/topic-a-source-1.md']);
+    assert.match(finding.detail, /Near matches: reference\/topic-a-source-1\.md/);
+  });
+
   it('isolates canonical target section families with suffixes and repeated bounded headings', () => {
     const content = [
       '## 本轮新增证据', entry(),
@@ -289,16 +303,24 @@ describe('return-map diagnostics', () => {
     assert.ok(result.findings.some((finding) => finding.rule_id === 'return_map_unsupported_prose'));
   });
 
-  it('does not parse Wave2 phase artifacts as Seed Topic return-map entries', () => {
-    const dir = tempBundle();
+  it('evaluates only declared Seed Topic slots, not rich references or phase artifacts', () => {
+    const { dir, topic } = canonicalWave0Bundle();
+    const record = submitWave0(dir, topic);
+    writeRef(dir);
+    mkdirSync(path.join(dir, 'artifacts', 'wave1', topic.slug), { recursive: true });
     mkdirSync(path.join(dir, 'artifacts', 'wave2'), { recursive: true });
-    writeFileSync(path.join(dir, 'artifacts/wave2/synthesis.md'), '# Synthesis\n\nNarrative prose without return-map fields.\n');
-    writeFileSync(path.join(dir, 'artifacts/wave2/cross-topic-ledger.md'), '## Cross-Topic Scan Matrix\n\nLedger prose without return-map fields.\n');
-    writeFileSync(path.join(dir, 'artifacts/wave2/finding-index.yaml'), 'findings: []\n');
+    writeFileSync(path.join(dir, 'reference', '00-shared-prose.md'), '# Rich Reference\n\nNarrative prose without return-map fields.\n');
+    writeFileSync(path.join(dir, 'artifacts', 'wave1', topic.slug, 'evidence-summary.md'), '# Evidence Summary\n\nNarrative prose without return-map fields.\n');
+    writeFileSync(path.join(dir, 'artifacts', 'wave1', topic.slug, 'question-list.md'), '# Question List\n\nNarrative prose without return-map fields.\n');
+    writeFileSync(path.join(dir, 'artifacts', 'wave2', 'synthesis.md'), '# Synthesis\n\nNarrative prose without return-map fields.\n');
+    replaceWave0Token(dir, topic, [
+      entry({ entryId: `${record.work_id}/1` }),
+      entry({ entryId: `${record.work_id}/2` }),
+    ].join('\n\n'));
 
-    const result = inspectWaveArtifactReturnMaps(dir, 'wave2');
+    const result = evaluateWave0Readiness(dir);
     assert.equal(result.passed, true, result.inspect.join('\n'));
-    assert.deepEqual(result.findings, []);
+    assert.equal(result.findings.some((finding) => /(?:reference\/00-shared|artifacts\/wave[12])/.test(finding.surface)), false);
   });
 
   it('keeps optional entry_id and exact identities entry-local', () => {

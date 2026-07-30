@@ -18,6 +18,7 @@ import {
   referenceMetadataAuthoringFields,
 } from '../../schema/contracts/reference.mjs';
 import { parseMarkdownSemanticSections } from './gate-helpers-checks.mjs';
+import { hashValue } from '../work-unit-utils.mjs';
 
 const MAX_BYTES = 4 * 1024 * 1024;
 const READ_BYTES = MAX_BYTES + 1;
@@ -248,8 +249,13 @@ function evaluateWave0(content, common, snapshotMeta) {
       ...snapshotMeta,
       validated_array_length: result.data.length,
     },
+    validated_value: result.data,
     roots: [],
   };
+}
+
+export function semanticOrderedArrayDigest(value) {
+  return hashValue(ReferenceMetadataArraySchema.parse(value));
 }
 
 function evaluateEvidenceSummary(content, common, snapshotMeta) {

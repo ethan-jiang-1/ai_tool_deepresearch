@@ -251,6 +251,15 @@ evaluation; inspect remains read-only. Neither wrapper SHALL retain an
 independent broad `reference/*{topic}*.md` count, filename interpretation, or
 index/floor repair decision.
 
+Wave1 inspect composition SHALL keep the direct evaluator families separate:
+the shared Wave1 evaluator owns submitted output/artifact/reference/backing
+checks; the Seed Topic projection evaluator owns return-map entry shape,
+identity, and concrete-navigation checks. A generic return-map reader SHALL
+not scan `evidence-summary.md`, `question-list.md`, or rich reference files.
+The returned return-map classification SHALL derive from the Seed Topic
+projection evaluator alone, while independently invalid Wave1 artifacts retain
+their declared artifact rule IDs and direct repair coordinates.
+
 The convergence result SHALL return the earliest usable direct parent root or
 one per-Topic nearest action in this order:
 
@@ -312,6 +321,15 @@ presentation, SHALL own the blocking result.
   /true-deficit/satisfied convergence class and repair coordinates
 - **AND** only the formal gate wrapper MAY perform accepted durable gate side
   effects
+
+#### Scenario: Wave1 return-map inspection has one declared input family
+
+- **WHEN** valid `evidence-summary.md`, `question-list.md`, and rich reference
+  documents lack return-map fields while a Seed Topic slot is malformed
+- **THEN** Wave1 inspect SHALL emit return-map feedback only for the Seed Topic
+  coordinate
+- **AND** it SHALL preserve any independently applicable artifact or backing
+  finding with its existing rule ID
 
 #### Scenario: canonical materialization masks floor deficit
 

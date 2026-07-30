@@ -18,6 +18,7 @@ execution_contract:
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas
+  - shared/shared-reference-template
   - shared/shared-page-fetch-guidance
 suggested_context: []
 ---
@@ -111,7 +112,7 @@ The Phase Agent, not the Sub-agent, updates `cross-topic-ledger.md`, `synthesis.
 
 - Return JSON → `JSON.stringify(result, null, 2)` matching `result.schema.json`
 - JSON files (e.g. `meta.json`) → `JSON.stringify(data, null, 2)`
-- YAML content such as `source.yaml` → `yaml.stringify(data)` from the `yaml` npm package. Reference Markdown uses bullet metadata blocks, not YAML frontmatter.
+- YAML content such as `source.yaml` → `yaml.stringify(data)` from the `yaml` npm package. If a task explicitly assigns rich reference Markdown, use the loaded shared template's opening YAML-frontmatter mapping; legacy bullet metadata is read-compatible only.
 
 Construct a plain JavaScript object, serialize it, then write the result. NEVER hand-concatenate structured formats with template literals, string interpolation, or shell heredocs. Values containing double quotes, colons, newlines, emoji, or CJK characters will produce malformed output when hand-concatenated.
 

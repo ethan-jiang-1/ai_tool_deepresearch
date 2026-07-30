@@ -26,7 +26,10 @@ playbook for the writer named by each backfill card.
 
 The Engine projects `topic_uid`, `id`, `slug`, `title`, `must_answer`,
 `scope_role`, and `depends_on_topic_uids` from the canonical registry. The
-Seed Topics Agent supplies only the existing complete enrichment object:
+Seed Topics Agent supplies only the existing complete enrichment object and
+edits only the one bounded `seed-initialization` region. The stable markers
+belong to the executable seed descriptor; the research appendix starts after
+the end marker and is Engine-owned.
 
 ```yaml
 hypothesis: "pending - record an explicit gap when upstream facts are insufficient"
@@ -42,6 +45,9 @@ evidence_route:
 
 ```markdown
 # <topic title>
+
+<!-- seed-topic-region: seed-initialization | owner: Agent | start-marker: seed-initialization:start | end-marker: seed-initialization:end -->
+<!-- seed-initialization:start -->
 
 ## 主题定位
 <why this Topic matters and its research role>
@@ -60,7 +66,9 @@ evidence_route:
 ## 下游位置（可选）
 - <report location or explicit unassigned state>
 
----
+<!-- seed-initialization:end -->
+
+<!-- seed-topic-region: research-appendix | owner: Engine | boundary: ═══ 研究轮次追加区 ═══ -->
 
 ## ═══ 研究轮次追加区 ═══
 
@@ -83,7 +91,7 @@ change in a future OpenSpec change.
 > - 写入者：Wave0 Phase Agent
 > - 依据：当前轮已 submitted 的 Wave0 work-unit
 > - 回填时机：当前轮 Wave0 work-unit 已 submitted 后
-> - 写法：<work_id>/<N>；N 是当前 result-declared、schema-valid `artifacts/wave0/<topic>/source.yaml` array 的 1-based ordinal（current projection coordinate，不是 result_hash 的永久 snapshot）；必须含 entry_id、evidence_meaning、relationship、refs、status、next_hop
+> - 写法：<work_id>/<N>；N 是该 submitted source contribution 在当前 validated `artifacts/wave0/<topic>/source.yaml` array 中拥有的 exact global ordinal；后续合法 append 使用自己的 contribution/work_id（不是 result_hash 的 source-byte snapshot）；必须含 entry_id、evidence_meaning、relationship、refs、status、next_hop
 > - 操作：由 Wave0 closeout 经 operate-topic-state materialize；详见 command_playbook/operate-topic-state.md#Wave Projection Packet
 > - 禁止：手改本节；只写 “Wave0 submitted”；把 artifact/cache 当唯一 consumer ref
 
@@ -159,13 +167,14 @@ Every rendered backfill entry has one stable identity plus the five fields:
   - **next_hop**: <concrete navigation or explicit limitation>
 ```
 
-Wave0 `entry_id` uses `<work_id>/N`, where `N` is the 1-based position in the
-current result-declared, schema-valid `artifacts/wave0/<topic>/source.yaml` array.
-It is a current projection coordinate, not a permanent candidate ID or a
-`result_hash` snapshot; one source intake with multiple current positions needs
-one entry or exact deferred disposition for each position. Wave1 `entry_id`
-uses its exact submitted `work_id` plus a positive ordinal. Wave2 `entry_id`
-uses its exact current-round W2F finding ID. Evidence-bearing
+Wave0 `entry_id` uses `<work_id>/N`, where `N` is the exact global ordinal
+returned for that submitted work unit by the contribution-aware Wave0
+inspection/preflight result. A later legal append has its own contribution and
+work ID, and owns only its appended interval; do not infer either identity from
+the mutable full array or `result_hash`. One contribution with multiple owned
+positions needs one entry or exact deferred disposition for each position.
+Wave1 `entry_id` uses its exact submitted `work_id` plus a positive ordinal.
+Wave2 `entry_id` uses its exact current-round W2F finding ID. Evidence-bearing
 `refs` lead with one existing flat `reference/*.md` file; `artifacts/`,
 `_cache/`, and `_work_units/` are secondary provenance only. A deferred entry
 uses `relationship: defers`, `refs: [none]`, `status: deferred`, and a concrete

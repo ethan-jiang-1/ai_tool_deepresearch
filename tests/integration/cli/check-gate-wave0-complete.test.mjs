@@ -16,6 +16,7 @@ import { tryLoadGateDefinition } from '../../../DPT_FRAMEWORK/engine/helpers/gat
 import { evaluateSeedTopicProjectionReadiness } from '../../../DPT_FRAMEWORK/engine/helpers/return-map.mjs';
 import { buildCanonicalTopicRegistryFact } from '../../../DPT_FRAMEWORK/engine/helpers/topic-registry-fact.mjs';
 import { evaluateWave0Contract } from '../../../DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs';
+import { collectEligibleWave0CandidateProjection } from '../../../DPT_FRAMEWORK/engine/work-unit-projection.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs');
@@ -83,6 +84,7 @@ function renderCanonicalSeed(topic) {
 function materializeWave0Projection(dir, submission, {
   deferred = false,
   ordinal = 1,
+  ordinals = null,
   preserveExistingSeed = false,
 } = {}) {
   const planFrontmatter = readFileSync(join(dir, 'rb_plan.md'), 'utf8').match(/^---\n([\s\S]*?)\n---/);
@@ -92,10 +94,11 @@ function materializeWave0Projection(dir, submission, {
   const seedPath = join(dir, 'seed_topics', `${topic.slug}.md`);
   if (!preserveExistingSeed || !existsSync(seedPath)) writeFileSync(seedPath, renderCanonicalSeed(topic));
 
-  const entry = deferred
+  const entryOrdinals = ordinals || [ordinal];
+  const entries = entryOrdinals.map((entryOrdinal) => (deferred
     ? {
       source_identity: { kind: 'submitted_work', work_id: submission.record.work_id },
-      entry_id: `${submission.record.work_id}/${ordinal}`,
+      entry_id: `${submission.record.work_id}/${entryOrdinal}`,
       evidence_meaning: 'The submitted Wave0 authority has no materializable consumer reference.',
       relationship: 'defers',
       refs: ['none'],
@@ -104,13 +107,13 @@ function materializeWave0Projection(dir, submission, {
     }
     : {
       source_identity: { kind: 'submitted_work', work_id: submission.record.work_id },
-      entry_id: `${submission.record.work_id}/${ordinal}`,
+      entry_id: `${submission.record.work_id}/${entryOrdinal}`,
       evidence_meaning: 'The submitted Wave0 source establishes the topic evidence route.',
       relationship: 'supports',
       refs: ['reference/00-shared-ai-safety.md'],
       status: 'supported',
       next_hop: 'Read the shared reference before Wave1 deepening.',
-    };
+    }));
   const result = applyCanonicalTopicState({
     bundlePath: dir,
     input: {
@@ -118,7 +121,7 @@ function materializeWave0Projection(dir, submission, {
       action: 'apply_seed_projection',
       topic_uid: topic.topic_uid,
       wave: 'wave0',
-      updates: [{ slot_id: 'wave0_evidence', entries: [entry] }],
+      updates: [{ slot_id: 'wave0_evidence', entries }],
     },
   });
   assert.ok(['committed', 'unchanged'].includes(result.verdict), JSON.stringify(result));
@@ -141,6 +144,15 @@ const VALID_REF_SECOND = `- url: "https://example.com/article-3"
   retrieved_date: "2026-06-17"
   topic_tag: "topic-a"
 `;
+
+function sourceMetadataArray(count) {
+  return Array.from({ length: count }, (_, index) => [
+    `- url: "https://example.com/article-${index + 1}"`,
+    `  title: "Wave0 Source ${index + 1}"`,
+    '  retrieved_date: "2026-06-15"',
+    '  topic_tag: "topic-a"',
+  ].join('\n')).join('\n') + '\n';
+}
 const SCHEMA_INVALID_REF = `- url: ""
   title: "Missing URL"
   retrieved_date: "2026-06-15"
@@ -148,7 +160,7 @@ const SCHEMA_INVALID_REF = `- url: ""
 `;
 
 /** Set up happy-path wave0 artifacts (post-redesign: flat reference + artifacts/wave0). */
-function setupHappyPath(dir) {
+function setupHappyPath(dir, { sourceContent = VALID_REF } = {}) {
   // Flat reference directory
   writeFileSync(join(dir, 'reference/_INDEX.md'),
     '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |\n' +
@@ -168,7 +180,7 @@ function setupHappyPath(dir) {
   // Thin YAML in artifacts/wave0/ per topic
   mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-a'), { recursive: true });
   mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-b'), { recursive: true });
-  writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), VALID_REF);
+  writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), sourceContent);
   writeFileSync(join(dir, 'artifacts/wave0/topic-b/source.yaml'), VALID_REF_B);
 
   writeTraceEvents(dir, [
@@ -214,6 +226,32 @@ function setupHappyPath(dir) {
   });
   materializeWave0Projection(dir, submission);
   return submission;
+}
+
+function submitWave0Supplement(dir, sourceContent) {
+  return claimAndSubmitWorkUnit(dir, {
+    phase: 'wave0',
+    queueItemId: 'topic-a-supplement',
+    preserveQueue: true,
+    queueItemOverrides: {
+      payload: {
+        wave: 0,
+        topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+        topic_slug: 'topic-a',
+      },
+      required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+      writes_to: ['artifacts/wave0/topic-a/source.yaml'],
+    },
+    outputs: [{
+      path: 'artifacts/wave0/topic-a/source.yaml',
+      role: 'source_yaml',
+      content: sourceContent,
+    }],
+    cacheTrails: [{
+      path: '_cache/wave0/primary/topic-a/supplement',
+      url: 'https://example.com/research/ai-safety-supplement',
+    }],
+  });
 }
 
 function setupWave0WithoutSharedReference(dir, { submitWorkUnit = true } = {}) {
@@ -293,7 +331,7 @@ describe('check-gate-wave0-complete', () => {
     assert.equal(output.check.failed_rule_ids.some((id) => id.includes('topic-a-new')), false);
   });
 
-  it('requires every current Wave0 source-array candidate through the shared readiness evaluator', () => {
+  it('reports an unsubmitted Wave0 suffix through one shared contribution parent root', () => {
     const dir = createBundle(unique('candidate-projection'));
     const submission = setupHappyPath(dir);
     writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `${VALID_REF}${VALID_REF_SECOND}`);
@@ -306,22 +344,48 @@ describe('check-gate-wave0-complete', () => {
       wave: 'wave0',
       topicRegistryFact: buildCanonicalTopicRegistryFact(dir),
     });
+    const contributionRoots = readiness.findings.filter((finding) => finding.rule_id === 'submitted_source_contribution_unsubmitted_suffix');
+    assert.equal(contributionRoots.length, 1);
     const omissions = readiness.findings.filter((finding) => finding.rule_id === 'return_map_current_candidate_omission');
-    assert.equal(omissions.length, 1);
-    assert.match(omissions[0].detail, new RegExp(`${submission.record.work_id}/2`));
+    assert.equal(omissions.length, 0);
 
     const incomplete = runGate(dir);
     assert.equal(incomplete.status, 1, incomplete.stderr || incomplete.stdout);
     const incompleteOutput = JSON.parse(incomplete.stdout);
-    assert.ok(incompleteOutput.check.failed_rule_ids.includes('return_map_current_candidate_omission'));
-    assert.ok(incompleteOutput.inspect.some((line) => new RegExp(`return_map_current_candidate_omission.*${submission.record.work_id}/2`).test(line)));
+    assert.ok(incompleteOutput.check.failed_rule_ids.includes('submitted_source_contribution_unsubmitted_suffix'));
+    assert.equal(incompleteOutput.check.failed_rule_ids.includes('return_map_current_candidate_omission'), false);
+    assert.ok(incompleteOutput.inspect.some((line) => /submitted_source_contribution_unsubmitted_suffix/.test(line)));
+  });
 
-    materializeWave0Projection(dir, submission, { deferred: true, ordinal: 2, preserveExistingSeed: true });
-    const repaired = runGate(dir);
-    assert.equal(repaired.status, 0, repaired.stderr || repaired.stdout);
-    const repairedOutput = JSON.parse(repaired.stdout);
-    assert.equal(repairedOutput.check.passed, true, repairedOutput.inspect.join('\n'));
-    assert.equal(repairedOutput.check.failed_rule_ids.includes('return_map_current_candidate_omission'), false);
+  it('keeps legal nineteen-to-twenty supplement coordinates disjoint in readiness and Gate', () => {
+    const dir = createBundle(unique('candidate-contribution-append'));
+    const initial = setupHappyPath(dir, { sourceContent: sourceMetadataArray(19) });
+    materializeWave0Projection(dir, initial, {
+      deferred: true,
+      ordinals: Array.from({ length: 19 }, (_, index) => index + 1),
+      preserveExistingSeed: true,
+    });
+    const supplement = submitWave0Supplement(dir, sourceMetadataArray(20));
+    materializeWave0Projection(dir, supplement, { deferred: true, ordinal: 20, preserveExistingSeed: true });
+
+    const topicRegistryFact = buildCanonicalTopicRegistryFact(dir);
+    const candidates = collectEligibleWave0CandidateProjection(dir, { topicRegistryFact });
+    assert.equal(candidates.passed, true, JSON.stringify(candidates.root_findings));
+    assert.deepEqual(
+      candidates.candidates.filter((candidate) => candidate.work_id === initial.record.work_id).map((candidate) => candidate.source_ordinal),
+      Array.from({ length: 19 }, (_, index) => index + 1),
+    );
+    assert.deepEqual(
+      candidates.candidates.filter((candidate) => candidate.work_id === supplement.record.work_id).map((candidate) => candidate.source_ordinal),
+      [20],
+    );
+
+    const readiness = evaluateSeedTopicProjectionReadiness(dir, { wave: 'wave0', topicRegistryFact });
+    assert.equal(readiness.passed, true, JSON.stringify(readiness.findings));
+
+    const gate = runGate(dir);
+    assert.equal(gate.status, 0, gate.stderr || gate.stdout);
+    assert.equal(JSON.parse(gate.stdout).check.passed, true, gate.stdout);
   });
 
   it('1b. inspect reads bullet metadata after an optional H1 title', () => {
@@ -414,11 +478,12 @@ describe('check-gate-wave0-complete', () => {
       assert.equal(output.check.failed_rule_ids.includes('wave0_work_unit_submission_presence'), true);
       const hint = output.hints.find((entry) => entry.rule_id === 'wave0_work_unit_submission_presence');
       assert.ok(hint);
-      assert.equal(hint.repair_kind, 'engine_operation');
+      assert.equal(hint.repair_kind, 'missing_contract');
       assert.match(hint.missing_fact, new RegExp(workId));
-      assert.match(hint.write_to, /operate-work-unit\.mjs recover-declaration/);
+      assert.match(hint.missing_fact, /no legal recovery|legacy no-contribution/i);
+      assert.match(hint.write_to, /submitted declaration recovery prerequisites/i);
       assert.match(hint.write_to, new RegExp(workId));
-      assert.doesNotMatch(hint.write_to, /rb_output_declarations\.jsonl/);
+      assert.match(hint.write_to, /do not edit rb_output_declarations\.jsonl/i);
       for (const dependent of [
         'cache_coverage',
         'wave0_work_unit_ledger_exists',

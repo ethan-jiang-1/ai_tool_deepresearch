@@ -51,10 +51,10 @@ import {
   validateQueueBindingForSubmit,
   validateManifestTopicBinding,
 } from './work-unit-validation.mjs';
-import { evaluateDirectOutputTarget } from './helpers/direct-output-contract.mjs';
+import { evaluateDirectOutputTarget, semanticOrderedArrayDigest } from './helpers/direct-output-contract.mjs';
 import { deriveWorkUnitCandidateProjection } from './work-unit-candidate-projection.mjs';
 
-import { WorkUnitLedgerRecordSchema, WorkUnitStatusFileSchema } from '../schema/contracts/work-unit.mjs';
+import { SourceContributionSchema, WorkUnitLedgerRecordSchema, WorkUnitStatusFileSchema } from '../schema/contracts/work-unit.mjs';
 import { loadQueue, saveQueue } from './queue-manager-lifecycle.mjs';
 import { refill } from './queue-manager-window.mjs';
 import { logToRun } from './logger.mjs';
@@ -434,7 +434,7 @@ function buildLateSubmitDurabilityFailure(prepared, error, rollback) {
   };
 }
 
-function buildLedgerRow({ record, result, resultHash, declaredAt, auditFields = {} }) {
+function buildLedgerRow({ record, result, resultHash, declaredAt, auditFields = {}, sourceContribution = null }) {
   const actorExecution = record.actor_execution || {
     execution_actor_class: 'legacy_unrecorded',
     delegated_role_key: null,
@@ -464,6 +464,7 @@ function buildLedgerRow({ record, result, resultHash, declaredAt, auditFields = 
     accepted_source_urls: result.accepted_source_urls || [],
     cache_trails: result.cache_trails || [],
     result_hash: resultHash,
+    ...(sourceContribution ? { source_contribution: sourceContribution } : {}),
     actor_contract_version: 'work-unit.actor.v1',
     actor_execution: actorExecution,
     ...auditFields,
@@ -489,7 +490,7 @@ function declarationRecoveryFailure(bundleDir, workId, error) {
     recovered: false,
     changed: false,
     work_id: workId || null,
-    reason_code: 'declaration_recovery_prerequisite_failed',
+    reason_code: error?.recovery_reason_code || 'declaration_recovery_prerequisite_failed',
     repair_kind: 'missing_contract',
     missing_fact: missingFact,
     write_to: `submitted declaration recovery prerequisites for ${workId || '<work-id>'}; do not edit rb_output_declarations.jsonl, index, status, queue, or hashes manually`,
@@ -617,6 +618,45 @@ function prepareCurrentDeclarationRecovery(bundleDir, workId) {
     throw new Error(`submitted replacement conflict for ${record.queue_item_id}: ${[...new Set(conflictIds)].join(', ')}`);
   }
 
+  const queue = readQueueSideEffectFree(bundleDir);
+  if (queue.delegated_in_flight?.[record.queue_item_id]) {
+    throw new Error(`submitted queue item ${record.queue_item_id} is still delegated in flight`);
+  }
+  const terminalRows = (queue.terminal_history || []).filter((entry) => entry.queue_item_id === record.queue_item_id);
+  const terminal = terminalRows.find((entry) => (
+    entry.work_id === record.work_id && entry.terminal_status === 'done'
+  ));
+  if (terminalRows.length !== 1 || !terminal) {
+    throw new Error(`queue terminal history does not contain exactly one done row for ${record.queue_item_id}/${record.work_id}`);
+  }
+  if (queueItemSnapshotHash(terminal.item) !== record.queue_item_snapshot_hash) {
+    throw new Error(`queue terminal snapshot mismatch for ${record.work_id}`);
+  }
+
+  if (existingRows.length === 1) {
+    const [ledgerRow] = existingRows;
+    for (const retryWorkId of ledgerRow.superseded_retry_work_ids || []) {
+      const retry = index.work_units[retryWorkId];
+      if (!retry || retry.status !== 'abandoned' || retry.terminal_reason !== 'superseded_by_late_accept') {
+        throw new Error(`superseded retry binding is invalid for ${retryWorkId}`);
+      }
+      if (ledgerRows.some((row) => row.work_id === retryWorkId)) {
+        throw new Error(`superseded retry ${retryWorkId} already has submitted declaration coverage`);
+      }
+    }
+    return {
+      index,
+      record,
+      status,
+      queue,
+      ledgerRows,
+      ledgerRow,
+      existing: true,
+      reconstructionSource: 'existing_hash_valid_row',
+      legacy: false,
+    };
+  }
+
   const normalizations = [];
   const manifest = readAndValidateManifest(bundleDir, index, record);
   validateManifestTopicBinding(bundleDir, manifest);
@@ -646,21 +686,6 @@ function prepareCurrentDeclarationRecovery(bundleDir, workId) {
     virtualCachePages: cacheValidation.virtualCachePages,
     manifest,
   });
-
-  const queue = readQueueSideEffectFree(bundleDir);
-  if (queue.delegated_in_flight?.[record.queue_item_id]) {
-    throw new Error(`submitted queue item ${record.queue_item_id} is still delegated in flight`);
-  }
-  const terminalRows = (queue.terminal_history || []).filter((entry) => entry.queue_item_id === record.queue_item_id);
-  const terminal = terminalRows.find((entry) => (
-    entry.work_id === record.work_id && entry.terminal_status === 'done'
-  ));
-  if (terminalRows.length !== 1 || !terminal) {
-    throw new Error(`queue terminal history does not contain exactly one done row for ${record.queue_item_id}/${record.work_id}`);
-  }
-  if (queueItemSnapshotHash(terminal.item) !== record.queue_item_snapshot_hash) {
-    throw new Error(`queue terminal snapshot mismatch for ${record.work_id}`);
-  }
 
   const evidence = readOriginalSubmitEvidence(bundleDir, record);
   const timestampsUnified = status.updated_at === record.terminal_at && terminal.completed_at === record.terminal_at;
@@ -699,7 +724,11 @@ function prepareCurrentDeclarationRecovery(bundleDir, workId) {
     }
   }
   if (matches.size === 0) {
-    throw new Error(`missing_contract: current direct owners and original submit/transaction evidence cannot reproduce recorded declaration hash for ${record.work_id}`);
+    const error = new Error(`missing_contract: no legal recovery can reproduce ${record.work_id}'s hash from the exact legacy no-contribution declaration shape; do not reread source.yaml or append provenance.`);
+    if (record.wave === 0 && record.kind === 'wave0_source_intake') {
+      error.recovery_reason_code = 'missing_source_contribution_no_legal_recovery';
+    }
+    throw error;
   }
   if (matches.size > 1) {
     throw new Error(`missing_contract: declaration reconstruction is ambiguous for ${record.work_id}`);
@@ -766,6 +795,7 @@ function normalizeWave1RequiredOutputRoles(result, record, manifest, normalizati
 }
 
 function requireDirectOutputs(bundleDir, manifest) {
+  const evaluations = new Map();
   for (const required of manifest.output_contract.required_outputs || []) {
     const evaluated = evaluateDirectOutputTarget({
       bundleDir,
@@ -783,7 +813,37 @@ function requireDirectOutputs(bundleDir, manifest) {
       };
       throw error;
     }
+    evaluations.set(required.path, { required, evaluated });
   }
+  return evaluations;
+}
+
+function deriveSourceContribution(record, manifest, result, directOutputEvaluations) {
+  if (record.wave !== 0 || record.kind !== 'wave0_source_intake' || !record.assignment_contract_version) return null;
+  const sourceRequirements = (manifest.output_contract.required_outputs || []).filter((required) => (
+    required.role === 'source_yaml' && required.direct_contract === 'wave0.source-metadata-array.v1'
+  ));
+  if (sourceRequirements.length === 0) return null;
+  if (sourceRequirements.length !== 1) {
+    throw new Error(`current Wave0 source intake requires exactly one source_yaml direct-output tuple for ${record.work_id}`);
+  }
+  const [required] = sourceRequirements;
+  const evaluated = directOutputEvaluations.get(required.path)?.evaluated;
+  if (!evaluated?.passed || !Array.isArray(evaluated.validated_value)) {
+    throw new Error(`current Wave0 source intake lacks one validated source-array snapshot for ${record.work_id}`);
+  }
+  const matchingOutputs = (result.output_files || []).filter((output) => (
+    output.path === required.path && output.role === 'source_yaml'
+  ));
+  if (matchingOutputs.length !== 1) {
+    throw new Error(`current Wave0 source intake result lacks exactly one declared source_yaml output for ${record.work_id}`);
+  }
+  return SourceContributionSchema.parse({
+    target: required.path,
+    direct_contract: required.direct_contract,
+    validated_length: evaluated.validated_value.length,
+    semantic_digest: semanticOrderedArrayDigest(evaluated.validated_value),
+  });
 }
 
 export function reasonCodeForSubmit(message) {
@@ -1085,7 +1145,7 @@ function validateSubmitPlan(bundleDir, {
   const normalizedResult = normalizeWave1RequiredOutputRoles(result, record, manifest, normalizations, resultPath);
   const resultHash = hashValue(normalizedResult);
   readAndValidateBeacon(bundleDir, record, manifest);
-  requireDirectOutputs(bundleDir, manifest);
+  const directOutputEvaluations = requireDirectOutputs(bundleDir, manifest);
   const runtimeReceipt = validateSubmitRuntimeReceipt(bundleDir, record, {
     normalizations,
     allowNonceNormalization: resultPathInsideAssignedDir,
@@ -1106,6 +1166,7 @@ function validateSubmitPlan(bundleDir, {
     virtualCachePages: cacheValidation.virtualCachePages,
     manifest,
   });
+  const sourceContribution = deriveSourceContribution(record, manifest, normalizedResult, directOutputEvaluations);
   return {
     duplicate: false,
     index,
@@ -1117,6 +1178,7 @@ function validateSubmitPlan(bundleDir, {
     runtime_receipt_content: runtimeReceipt.canonical_content,
     normalizations,
     virtual_cache_pages: cacheValidation.virtualCachePages,
+    source_contribution: sourceContribution,
   };
 }
 
@@ -1414,6 +1476,7 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
   let cacheValid = false;
   let beaconValid = false;
   const directOutputPasses = new Set();
+  const directOutputEvaluations = new Map();
 
   try {
     index = loadWorkUnitIndex(bundleDir, { createIfMissing: false });
@@ -1491,6 +1554,7 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
       });
       if (evaluated.passed) {
         directOutputPasses.add(required.path);
+        directOutputEvaluations.set(required.path, { required, evaluated });
       } else {
         violations.push(...evaluated.roots.map((directRoot) => directOutputViolation(bundleDir, record, resultPath, directRoot)));
       }
@@ -1547,6 +1611,17 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
     }
   }
 
+  let sourceContribution = null;
+  if (manifest && normalizedResult && violations.length === 0) {
+    try {
+      sourceContribution = deriveSourceContribution(record, manifest, normalizedResult, directOutputEvaluations);
+    } catch (error) {
+      violations.push(...violationsForError(error, {
+        phase: 'direct_outputs', bundleDir, record, resultPath,
+      }));
+    }
+  }
+
   return finalizeCandidatePlan({
     index,
     record,
@@ -1558,6 +1633,7 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
     runtime_receipt: runtimeReceipt,
     normalizations,
     virtual_cache_pages: cacheValidation.virtualCachePages,
+    source_contribution: sourceContribution,
     violations,
   });
 }
@@ -1654,6 +1730,7 @@ export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
           result: activePrepared.result,
           resultHash: activePrepared.result_hash,
           declaredAt: submittedAt,
+          sourceContribution: activePrepared.source_contribution,
           auditFields: {
             late_accept: true,
             late_accept_reason: activePrepared.reason,
@@ -1977,6 +2054,7 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
         result: activePrepared.result,
         resultHash: activePrepared.result_hash,
         declaredAt: submittedAt,
+        sourceContribution: activePrepared.source_contribution,
       });
       const ledgerRecordHash = ledgerRow.ledger_record_hash;
 

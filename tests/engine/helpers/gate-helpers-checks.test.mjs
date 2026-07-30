@@ -3,13 +3,15 @@
 // and cache_coverage.
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert';
-import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as gateHelpers from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 import {
   extractSection,
   parseMarkdownSemanticSections,
+  parseReferenceMetadata,
+  readReferenceMetadata,
   listMatchingBundleFiles,
   checkReferenceFormatFiles,
   checkReferenceSourceUrls,
@@ -27,6 +29,62 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-gate-helpers-checks-tmp');
+
+function canonicalReferenceFrontmatter({
+  sourceUrl = 'https://example.com/news/a',
+  relatedTopic = 'topic-a',
+  coreContent = 'Narrative capture.',
+} = {}) {
+  return [
+    '---',
+    `source_url: "${sourceUrl}"`,
+    'acceptance_status: accepted',
+    'source_type: primary',
+    'tier: "Tier 2"',
+    'evidence_role: deepening_reference',
+    'trust_level: practitioner',
+    'why_it_matters: "Relevant."',
+    'accessed_at: "2026-07-14"',
+    `related_topic: "${relatedTopic}"`,
+    '---',
+    '',
+    '# Reference',
+    '',
+    '## Key Facts',
+    'Fact.',
+    '',
+    '## Core Content Capture',
+    coreContent,
+    '',
+    '## Relevance To This Research',
+    'Relevant.',
+    '',
+    '## Quotable Terms / Concepts',
+    'Term.',
+    '',
+    '## Risks And Limitations',
+    'Risk.',
+  ].join('\n');
+}
+
+const REFERENCE_SEMANTIC_BODY = [
+  '# Reference',
+  '',
+  '## Key Facts',
+  'Fact.',
+  '',
+  '## Core Content Capture',
+  'Narrative.',
+  '',
+  '## Relevance To This Research',
+  'Relevant.',
+  '',
+  '## Quotable Terms / Concepts',
+  'Term.',
+  '',
+  '## Risks And Limitations',
+  'Risk.',
+].join('\n');
 
 after(() => {
   if (existsSync(TMP)) rmSync(TMP, { recursive: true, force: true });
@@ -266,15 +324,51 @@ describe('reference file gate helpers', () => {
     }
   });
 
-  it('rejects YAML frontmatter reference format', () => {
+  it('accepts canonical YAML frontmatter while keeping legacy metadata readable', () => {
     const dir = join(__dirname, '.test-gh-ref-yaml');
     mkdirSync(join(dir, 'reference'), { recursive: true });
-    writeFileSync(join(dir, 'reference', 'topic-a-bad.md'), '---\nsource_url: https://example.com/news/a\n---\n## Key Facts\n- Fact\n');
+    writeFileSync(join(dir, 'reference', 'topic-a-canonical.md'), canonicalReferenceFrontmatter());
     try {
       const files = listMatchingBundleFiles(dir, 'reference/*topic-a*.md');
-      const result = checkReferenceFormatFiles(files);
-      assert.equal(result.passed, false);
-      assert.ok(result.inspect.some((i) => i.includes('YAML frontmatter')));
+      const format = checkReferenceFormatFiles(files);
+      const urls = checkReferenceSourceUrls(files);
+      const canonical = readReferenceMetadata(readFileSync(join(dir, 'reference', 'topic-a-canonical.md'), 'utf8'));
+      const legacy = readReferenceMetadata('- source_url: https://example.com/legacy\n- acceptance_status: accepted\n\n## Key Facts\n- Fact\n');
+
+      assert.equal(format.passed, true, format.inspect.join('; '));
+      assert.equal(urls.passed, true, urls.inspect.join('; '));
+      assert.equal(canonical.presentation, 'frontmatter');
+      assert.equal(canonical.metadata.get('source_url'), 'https://example.com/news/a');
+      assert.equal(parseReferenceMetadata(readFileSync(join(dir, 'reference', 'topic-a-canonical.md'), 'utf8')).get('related_topic'), 'topic-a');
+      assert.equal(legacy.presentation, 'legacy_bullets');
+      assert.equal(legacy.metadata.get('source_url'), 'https://example.com/legacy');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('short-circuits malformed or non-mapping frontmatter at one metadata root', () => {
+    const dir = join(__dirname, '.test-gh-ref-invalid-frontmatter');
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    const cases = {
+      malformed: `---\nsource_url: [unterminated\n---\n${REFERENCE_SEMANTIC_BODY}`,
+      non_mapping: `---\n- source_url: https://example.com/news/a\n---\n${REFERENCE_SEMANTIC_BODY}`,
+    };
+    try {
+      for (const [name, content] of Object.entries(cases)) {
+        const path = join(dir, 'reference', `topic-a-${name}.md`);
+        writeFileSync(path, content);
+        const file = { relPath: `reference/topic-a-${name}.md`, absPath: path };
+        const metadata = readReferenceMetadata(content);
+        const format = checkReferenceFormatFiles([file]);
+        const urls = checkReferenceSourceUrls([file]);
+
+        assert.equal(metadata.error?.code, 'reference_metadata_frontmatter_invalid');
+        assert.equal(format.findings.filter((finding) => /metadata_frontmatter/.test(finding.id)).length, 1, format.inspect.join('\n'));
+        assert.equal(format.findings.some((finding) => /:metadata:|topic_binding/.test(finding.id)), false, format.inspect.join('\n'));
+        assert.equal(urls.findings.filter((finding) => /metadata_frontmatter/.test(finding.id)).length, 1, urls.inspect.join('\n'));
+        assert.equal(urls.findings.some((finding) => /:missing|:empty/.test(finding.id)), false, urls.inspect.join('\n'));
+      }
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -331,9 +425,9 @@ describe('reference file gate helpers', () => {
         },
       });
       mkdirSync(join(dir, 'reference'), { recursive: true });
-      writeFileSync(join(dir, 'reference', 'topic-a-source.md'), referenceContent({
-        source_url: sourceUrl,
-        related_topic: 'topic-a',
+      writeFileSync(join(dir, 'reference', 'topic-a-source.md'), canonicalReferenceFrontmatter({
+        sourceUrl,
+        relatedTopic: 'topic-a',
         coreContent: `This Phase-owned projection cites submitted backing ${evidencePath} and ${cacheTrail}. The capture text is long enough to satisfy the countable reference threshold while preserving source provenance.`,
       }));
 

@@ -1,0 +1,106 @@
+schema_version: verification-routing/v1
+change: converge-artifact-contract-evaluators
+test_classes:
+  unit:
+    status: selected
+    rationale: Artifact-family routing, rich-reference metadata parsing, and submitted-backing classification are deterministic pure/helper boundaries.
+  integration:
+    status: selected
+    rationale: Production inspect, formal gate, and reentry CLIs must prove that their composed evaluators retain one authority interpretation on temporary bundles.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: This change does not alter a multi-phase lifecycle transition; the production CLI seams cover its complete deterministic behavior without unrelated workflow progression.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change makes no claim about Agent or host behavior. It changes deterministic contract selection and the feedback returned to an Agent.
+claims:
+  - id: return-map-reader-stays-on-seed-projection
+    statement: >-
+      RRM-001, WAI-005, and RWG-005: the return-map helper strictly evaluates declared Seed Topic entries while rich references and normal Wave1 artifacts are excluded from that grammar.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/return-map.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: canonical-reference-metadata-reader
+    statement: >-
+      REF-002 and REF-007: canonical YAML-frontmatter rich references, legacy bullet references, and malformed frontmatter have one shared metadata interpretation with root-first failure behavior.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/gate-helpers-checks.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave-inspect-family-separation
+    statement: >-
+      RRM-001, WAI-005, and RWG-005: temporary production Wave0/Wave1 inspection accepts valid rich references and normal Wave1 artifacts without return-map fields, while malformed Seed Topic entries retain exact blocking findings.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/inspect-wave-return-map.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-artifact-and-reference-contracts-remain-strict
+    statement: >-
+      REF-002, REF-007, WAI-005, and RWG-005: production Wave1 Gate preserves independent artifact and submitted-backing roots while accepting a valid YAML-frontmatter rich reference and no Return Map workaround.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave1-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: reentry-and-wave-share-reference-authority
+    statement: >-
+      RRD-002 and RWG-005: check-reentry accepts a valid Phase-owned submitted-backed reference without a synthetic declaration and still blocks an unbacked reference with classifier-derived detail.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-reentry.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: reference-guidance-matches-canonical-reader
+    statement: >-
+      REF-007: shared reference template and producer guidance teach canonical YAML frontmatter, legacy-read compatibility, required semantic sections, and no competing metadata parser.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/parser-aligned-guidance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

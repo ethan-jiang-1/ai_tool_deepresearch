@@ -535,6 +535,22 @@ export const WorkUnitResultSchema = z.object({
   cache_trails: z.array(z.string().min(1)).default([]),
 }).strict();
 
+function isCanonicalBundleRelativeTarget(value) {
+  if (typeof value !== 'string' || value.length === 0 || value === '.' || value.startsWith('/') || /^[A-Za-z]:[\\/]/.test(value)) return false;
+  if (value.includes('\\') || value.includes('//') || value.includes('{') || value.includes('}') || value.includes('*')) return false;
+  const segments = value.split('/');
+  return !segments.some((segment) => segment === '' || segment === '.' || segment === '..');
+}
+
+export const SourceContributionSchema = z.object({
+  target: z.string().min(1).refine(isCanonicalBundleRelativeTarget, {
+    message: 'source contribution target must be a canonical bundle-relative path',
+  }),
+  direct_contract: z.literal('wave0.source-metadata-array.v1'),
+  validated_length: z.number().int().nonnegative(),
+  semantic_digest: z.string().regex(/^[a-f0-9]{64}$/, 'source contribution digest must be a lowercase SHA-256 hex string'),
+}).strict();
+
 export const WorkUnitLedgerRecordSchema = z.object({
   declared_at: z.string().datetime(),
   work_id: z.string().regex(WORK_UNIT_ID_PATTERN),
@@ -552,6 +568,7 @@ export const WorkUnitLedgerRecordSchema = z.object({
   accepted_source_urls: WorkUnitResultSchema.shape.accepted_source_urls,
   cache_trails: WorkUnitResultSchema.shape.cache_trails,
   result_hash: z.string().min(1),
+  source_contribution: SourceContributionSchema.optional(),
   actor_contract_version: z.literal(WORK_UNIT_ACTOR_CONTRACT_VERSION).optional(),
   actor_execution: LedgerActorExecutionSchema.optional(),
   late_accept: z.literal(true).optional(),
@@ -560,6 +577,24 @@ export const WorkUnitLedgerRecordSchema = z.object({
   superseded_retry_work_ids: z.array(z.string().regex(WORK_UNIT_ID_PATTERN)).optional(),
   ledger_record_hash: z.string().min(1),
 }).strict().superRefine((data, ctx) => {
+  if (data.source_contribution) {
+    if (data.wave !== 0 || data.kind !== 'wave0_source_intake') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['source_contribution'],
+        message: 'source_contribution is only legal for Wave0 wave0_source_intake ledger rows',
+      });
+    }
+    if (!data.output_files.some((entry) => (
+      entry.path === data.source_contribution.target && entry.role === 'source_yaml'
+    ))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['source_contribution', 'target'],
+        message: 'source_contribution target must be one declared source_yaml output',
+      });
+    }
+  }
   if (Boolean(data.actor_contract_version) !== Boolean(data.actor_execution)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'ledger actor contract fields must appear together' });
   }
