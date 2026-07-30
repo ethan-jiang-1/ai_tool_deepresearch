@@ -84,8 +84,8 @@ archive move 绑定。三个 checker 今天仍以 `tasks.md` 文本为主、arch
 最终推荐不是两个松散层，而是 `08` 的**一个 loop**：复用历史上已经有效的
 `config.rules.tasks -> tasks.md -> openspec/governance checker` 接入链；再用 OpenSpec 1.7 的
 `operations.apply/archive.guidance` 自动把 targeted review 推回当前 Agent。finding 进入未完成 tasks；
-archive 时对 actual diff 再 review；最后由 governance finalizer 在 lifecycle marker、任务和现有 checker
-全部通过后包装 native OpenSpec archive。新的有界 lifecycle capability 拥有这条 feedback loop；现有
+archive 时对 change-scoped actual diff 再 review；最后由 governance finalizer 在 lifecycle marker、任务和
+现有 checker 全部通过后包装 native OpenSpec archive。新的有界 lifecycle capability 拥有这条 feedback loop；现有
 RET/VER capability 继续拥有各自 checker 的事实。`AGENTS.md` / `CLAUDE.md` 只放短路由，七问保留
 单一 guidance 来源；项目声明支持的入口必须收敛到同一个 finalizer。
 

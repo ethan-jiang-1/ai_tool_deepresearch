@@ -90,8 +90,9 @@ finalizer 检查其存在/闭合；详细证据见 `evidence/E-governance-integr
    consumer 会记住的**局部补丁**？（这是“反反复复”的元因）
 5. **Authority / 时间**：你在读一个 live/current 值，而本意是 submitted/historical snapshot（或反之）？
    这次“sync/repair”有没有**悄悄改写历史**？（BUG-151/179–186；五层之 2）
-6. **反馈半边**：Engine 裁决之后，Agent 拿到的是 **direct root + 合法写入面 + 同一 checkpoint 重跑**，
-   还是只是一句拒绝？（BUG-150/153/155/158/160/171/173/177/183）
+6. **反馈半边**：Engine 裁决之后，Agent 拿到的是 **direct root + 已接受的合法写入面 + 同一 checkpoint
+   重跑**，或没有合法修复时诚实的 **owner / terminal / missing-contract boundary**，还是只是一句拒绝？
+   （BUG-150/153/155/158/160/171/173/177/183）
 7. **删除测试**：这次**删除/合并/避免**了什么复杂度，而不只是新增？（net simplification；simple-reliable-control）
 
 注：这些是 **advisory 自检**，不是机器 verdict——GCO-007 允许提醒，禁止裁决。机器只对其中**可确定**的
@@ -100,9 +101,10 @@ finalizer 检查其存在/闭合；详细证据见 `evidence/E-governance-integr
 ## 7. Reviewer 形状（advisory，GCO-007-safe）
 
 - 输入：当前 change 的 `proposal.md`/`design.md`/delta specs +（apply 期）`apply-target-manifest.md`
-  声明的 touched surfaces + git diff。
-- **语义部分**：当前 Agent 直接消费 `guidelines/change-feedback-loop.md` 的 risk-led review protocol，把
-  touched surfaces 对到相关 meta-question，输出有证据、可行动的 finding。现有
+  声明的 touched surfaces + change-scoped git diff；具体 baseline 与 owned-surface contract 由 `08` 要求的
+  proposal/design 定义，不能把整个 dirty worktree 冒充 selected change。
+- **语义部分**：当前 Agent 按 accepted lifecycle protocol 消费 `guidelines/change-feedback-loop.md` 的
+  risk-led meta-question 与 review posture，把 touched surfaces 对到相关问题，输出有证据、可行动的 finding。现有
   `polish-openspec-change` 只是方法来源，不是跨 harness 运行依赖。需要工作的 finding 变成 pending task；
   不另调一个外部 LLM judge，也不建 file-pattern 伪语义分类器。
 - **确定性部分**：现有 checker 和 archive closure 由 `08` 的 repo-owned finalizer 负责。Reviewer 读取

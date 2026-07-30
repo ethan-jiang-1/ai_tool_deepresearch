@@ -39,7 +39,7 @@ pre-apply plan review  <--- OpenSpec apply guidance 自动推送
 apply / resume apply   <--- tasks 跨 session 保存当前工作
         |
         v
-closeout review actual diff  <--- OpenSpec archive guidance 自动推送
+closeout review change-scoped actual diff  <--- OpenSpec archive guidance 自动推送
         |
         +-- 有 finding --> 写成未完成 task --> 回到 apply
         |
@@ -54,7 +54,7 @@ closeout review actual diff  <--- OpenSpec archive guidance 自动推送
 
 1. 这是一项独立的 change-lifecycle capability；RET/VER 继续只拥有各自 checker 的事实，不接收整条
    feedback-loop 行为；
-2. 语义 review 的单一内容源是 `guidelines/change-feedback-loop.md`，由当前 Agent 执行；
+2. 语义 review 的单一 advisory 内容源是 `guidelines/change-feedback-loop.md`，由当前 Agent 执行；
    `.agents/skills/polish-openspec-change` 不是运行依赖；
 3. `rules.tasks` 生成两个 durable lifecycle task，`operationGuidance` 负责事件送达，二者同时存在；
 4. 项目声明支持的 archive 入口都把最终 transition 路由到同一个 governance finalizer；
@@ -119,12 +119,12 @@ archive transition。
 
 | Surface | 责任 | 明确不负责 |
 |---|---|---|
-| `guidelines/change-feedback-loop.md` | risk-led meta-question 与 review protocol 的单一 advisory 来源 | runtime 行为、archive 权威、机器 verdict |
+| `guidelines/change-feedback-loop.md` | risk-led meta-question 与 implementation-neutral review posture 的单一 advisory 来源 | lifecycle protocol、runtime 行为、archive 权威、机器 verdict |
 | `AGENTS.md` / `CLAUDE.md` | 短 bootstrap：OpenSpec work 必须读取 operation guidance，并只能经 finalizer archive | 复制七问、复制 checker 列表、保存 session 状态 |
 | `openspec/config.yaml` artifact `rules` | proposal/design/tasks 生成时把 review 义务放进产物；`rules.tasks` 生成带稳定 marker 的 plan/closeout task | 自动执行命令、证明 review 质量 |
 | `openspec/config.yaml` `operations.apply/archive.guidance` | 每次 apply/archive 调用时把当前 guidance 自动送入 Agent context | 证明任务完成、替代硬 gate |
 | `tasks.md` | 保存 required review、finding、修复和 done condition，跨 session 继续 | 触发器、semantic proof、机器 authority |
-| plan/closeout reviewer | 当前 LLM Agent 按 guideline 读 change 与实际 diff，提出有证据的 finding | deterministic pass/fail、另起一套 reviewer/LLM service |
+| plan/closeout reviewer | 当前 LLM Agent 按 accepted protocol 和 guideline 读 change 与 change-scoped actual diff，提出有证据的 finding | deterministic pass/fail、另起一套 reviewer/LLM service |
 | `openspec/governance/` finalizer | 聚合既有 checker，检查 required marker/task 机械闭合；全部通过后才调用 native OpenSpec archive | 判断设计质量、研究语义或 finding 是否“够深”、重写 archive mechanics |
 | 新的 change-lifecycle accepted spec | 定义上述生命周期行为及边界 | 重复 RET/VER 各自 checker 的事实、用 prose 冒充执行 |
 
@@ -160,21 +160,23 @@ operations:
 
 - `rules.tasks` 在**产物生成时**写入 durable obligation，34/34 的传播率说明它是成熟 seam；
 - `operations.apply/archive.guidance` 在**每次操作发生时**重新推送当前 feedback posture，补足 resumed
-  session 与 actual-diff closeout。
+  session 与 change-scoped actual-diff closeout。
 
 前者解决“跨 session 留下什么”，后者解决“此刻为什么重新看它”；二者都不单独提供 executable gate。
 
 另一个必须保留的边界：当前 1.7 archive skill 明确把 `instructions archive` lookup 定义为 advisory，
 lookup 失败时可以继续。因此 operation guidance 只拥有**自动送达/触发 review**，不能单独承担 hard gate。
-项目声明支持的入口必须在无法取得 required guidance 时停止，并把最终 archive transition 路由到
-deterministic finalizer；哪些 tracked adapter 属于支持集合，须在 proposal 时按真实 discovery/调用路径盘点，
-不能把“文件存在”直接等同于“项目承诺长期维护”。
+项目声明支持的入口必须在无法取得 required guidance 时停止，并报告已观察到的 lookup root；只有 accepted
+contract 定义了合法修复时才给出 repair / rerun，否则返回已知 owner / terminal / missing-contract boundary，
+不得伪造 guidance 或泛化成无条件重试。最终 archive transition 必须路由到 deterministic finalizer。哪些
+tracked adapter 属于支持集合，须在 proposal 时按真实 discovery/调用路径盘点，不能把“文件存在”直接等同于
+“项目承诺长期维护”。
 
 ## 5. 三个触发点
 
 ### 5.1 Apply 入口：先 review plan，再碰 target
 
-`operations.apply.guidance` 应执行以下协议：
+`operations.apply.guidance` 应指示当前 Agent 执行 accepted lifecycle protocol：
 
 1. 读取 `guidelines/change-feedback-loop.md`；第一次 target edit 前，review
    proposal/design/delta specs/tasks，以及适用的 verification plan；
@@ -184,8 +186,9 @@ deterministic finalizer；哪些 tracked adapter 属于支持集合，须在 pro
 4. resumed apply 时，对**当前 pending task**重新注入相关问题，而不是重读一整本 bug 历史。
 
 review posture 固定为 whole-change coherence 后接 risk-led pass：能由 accepted facts 决定的 planning defect
-当场修正；涉及新语义、scope、权限或风险决定时停止 target edit，并把精确问题交给用户。这个 protocol
-直接进入 guideline 与 operation guidance，不依赖只存在于某个 harness 的 skill，也不另造 LLM judge service。
+当场修正；涉及新语义、scope、权限或风险决定时停止 target edit，并把精确问题交给用户。accepted spec
+拥有 lifecycle protocol，operation guidance 在事件上送达它；guideline 只提供 implementation-neutral 的
+meta-question 与 review posture。三者不依赖只存在于某个 harness 的 skill，也不另造 LLM judge service。
 
 这个 plan review 必须由 `rules.tasks` 生成一个带稳定 lifecycle marker 的 task，而不是只依赖 guidance
 临时提醒。marker 只供 finalizer 确认 required task 存在、已完成；review finding 本身仍用正常 task prose
@@ -203,19 +206,21 @@ review posture 固定为 whole-change coherence 后接 risk-led pass：能由 ac
 这使反馈跨 session 持久化。聊天总结不是状态；task 也不是 proof，但它至少保证下一次
 `openspec instructions apply` 会重新把未完成工作送回 Agent。
 
-### 5.3 Archive 入口：actual-diff closeout review + finalizer
+### 5.3 Archive 入口：change-scoped actual-diff closeout review + finalizer
 
-`operations.archive.guidance` 应执行以下协议：
+`operations.archive.guidance` 应指示当前 Agent 执行 accepted lifecycle protocol：
 
-1. 对**实际 diff**再跑一次 closeout review，而不是只相信 propose 时的设计；
+1. 对**当前 change 归属的实际 diff**再跑一次 closeout review，而不是只相信 propose 时的设计；
 2. 若发现新问题，把它写成未完成 task 并停止 archive，回到 apply；
 3. 无新 finding 后，复用 current archive flow 的 Agent-driven delta sync，并对每个 delta/main 再比较；
 4. sync 已闭合后调用 repo-owned finalizer；任何非零退出都停止，不得另行裸 `mv` 或直接暴露
    `openspec archive --yes`。
 
-closeout review 由当前 archive Agent 直接按同一 guideline 执行。它读实际 diff 和实现，只修 change artifacts、
-添加 pending tasks 并停止 archive；target 修复回到 apply。这样语义 review 与修复执行的责任保持清楚，
-且所有 harness 消费同一个 protocol。
+closeout review 由当前 archive Agent 按 accepted protocol 和同一 guideline 执行。它读 change-scoped actual
+diff 和实现，只修 change artifacts、添加 pending tasks 并停止 archive；target 修复回到 apply。proposal/design
+必须定义 authoritative baseline 与 owned surface set；若当前 worktree 中无法把 selected change 与其它改动可靠
+分开，就停止并暴露 missing-boundary，不得对整个 worktree 冒充完成 review。这个 input boundary 不新增
+diff-identity receipt，也不把 Agent review 伪装成机器 proof。
 
 closeout task 同样由 `rules.tasks` 生成稳定 marker。若 review 产生 finding，该 task 保持未完成；新增修复 task
 完成后重新 review，最后才勾选 closeout。本 capability 不添加“LLM 思考质量 receipt”；机器只验证 task 的存在、
@@ -244,9 +249,11 @@ node openspec/governance/finalize-change-archive.mjs --change "<name>"
 8. 解析 native result，并与实际 active/archive path 对照；只有目标正确、`specsUpdated: false` 且 move
    可确认时才报告成功。其余情况报告已观察到的事实，不猜测成功，也不自动回滚。
 
-Interface 应返回稳定的结构化结果和简短人类摘要：失败给出最早 direct root、合法修复面和同一重跑命令；
-成功只声称这些机械条件和 move 已完成。精确字段、error category 与 exit-code mapping 应在 proposal/design
-根据 native CLI 的真实 failure modes 定义；本 recommendation 不预先创造第二套 archive 状态模型。
+Interface 应返回稳定的结构化结果和简短人类摘要：失败先给出最早 direct root；只有 accepted contract 为
+当前 boundary 定义了合法修复时，才给出修复面和同一重跑命令，否则返回已知 owner / terminal /
+missing-contract boundary。成功只声称这些机械条件和 move 已完成。精确字段、error category 与 exit-code
+mapping 应在 proposal/design 根据 native CLI 的真实 failure modes 定义；本 recommendation 不预先创造
+第二套 archive 状态模型。
 
 finalizer **不**运行/伪造 Agent experiments，不把 asset registration 当 native test PASS，不判断七问答案质量，
 也不替代 spec sync 的 Agent-driven merge。它把 project preconditions 包在 OpenSpec 原生 archive transition
@@ -293,7 +300,8 @@ native test evidence。
 machine fact。现有 checkpoint 不足之处是 project checks 与 OpenSpec transition 分离；新增
 Module 删除的是各 adapter 重复 gate、手写 archive mechanics 与“检查后仍可裸 move”的隐含路径。它不新增
 persistent state、semantic receipt、retry tree、rollback branch 或现有事实的重复 validator。
-失败后的唯一最近动作是修复被点名的 direct prerequisite，再重跑同一个 finalizer。
+失败后的最近结果只有两类：若存在 accepted legal repair，就修复被点名的 direct prerequisite 并重跑同一个
+finalizer；否则显式返回 owner / terminal / missing-contract boundary，不发明 writer、repair 或 retry path。
 
 adapter 是否仍会调用 finalizer 是这个 Module 的**入口完整性**，不是它内部的 archive prerequisite。
 把 adapter 扫描器塞进 finalizer 既扩大责任，又无法保护“坏 adapter 根本没有调用 finalizer”这一自举缺口；
@@ -308,7 +316,7 @@ validation/collision/archive naming/move；用户只处理新的 spec-sync/语�
 两份 root instruction 只需要保持三个相同语义：
 
 1. apply/archive 时读取当前 `openspec instructions` 返回的 `operationGuidance`；required guidance
-   不可用时停止；
+   不可用时停止，并暴露 lookup root 与最近的合法 repair / rerun 或 owner / terminal / missing-contract boundary；
 2. actionable finding 必须成为 active change 的 pending task；
 3. archive 只能经 repo-owned finalizer，不得 raw move 或直接调用 native archive 绕过 project checks。
 
@@ -323,15 +331,15 @@ validation/collision/archive naming/move；用户只处理新的 spec-sync/语�
 
 ```md
 - [ ] Review planning artifacts and resolve risk-led findings before target edits. <!-- openspec-feedback:plan-review -->
-- [ ] Review the actual diff, resolve findings, then sync and re-compare every delta spec. <!-- openspec-feedback:closeout-review -->
+- [ ] Review the change-scoped actual diff, resolve findings, then sync and re-compare every delta spec. <!-- openspec-feedback:closeout-review -->
 ```
 
 具体责任分别是：
 
 1. **Plan review task**：第一次 target edit 前完成，done condition 是 planning artifacts 已吸收
    risk-led finding，适用的 plan-mode/strict checks 通过；
-2. **Closeout review task**：实际 diff 完成后执行；有 finding 时它保持未完成并产生修复 task；clean pass
-   后完成 Agent-driven delta sync/re-compare，才可勾选。
+2. **Closeout review task**：selected change 的实际改动完成后，对 change-scoped actual diff 执行；有 finding
+   时它保持未完成并产生修复 task；clean pass 后完成 Agent-driven delta sync/re-compare，才可勾选。
 
 marker 的目的只是让 finalizer 不靠自然语言 regex 确认 required lifecycle task **存在且已勾选**。它不是
 semantic object card，不保存 review 结论，也不声称 checkbox 能证明思考质量。历史上 34/34 的 project
@@ -386,8 +394,9 @@ truthfully 满足新 marker contract：已经开始 apply 的 change 执行 mid-
 - gate 逻辑只存在于 finalizer。adapter/update conformance 用 focused static/integration evidence 保护，
   `openspec update` 后重跑；它不是 finalizer 每次 archive 时再执行的一层 validator。
 
-生成文件因此仍不是行为 Source of Record；它们只是把各 harness 接到同一 Interface 的 Adapter。accepted spec、
-config、guideline 和 governance Module 拥有行为，adapter 只拥有“如何从当前 harness 调到该 Interface”。
+生成文件因此仍不是行为 Source of Record；它们只是把各 harness 接到同一 Interface 的 Adapter。accepted spec
+拥有 lifecycle behavior，config 负责事件送达，guideline 拥有 advisory wisdom，governance Module 拥有
+deterministic closure；adapter 只拥有“如何从当前 harness 调到该 Interface”。
 
 ## 11. 自动化强度的诚实边界
 
@@ -439,7 +448,8 @@ Task 顺序如下：
 - 新建 tasks 会收到两个 lifecycle marker；每次 apply/resumed-apply invocation 无需用户另行提醒即可收到当前
   apply guidance；
 - adoption 时的 active changes 已显式、truthful 地迁移；archived history 未被改写，也没有永久 bypass；
-- archive 调用会对 actual diff 做 closeout review；finding 会变成 pending task 并回到 apply；
+- archive 调用会对 authoritative change-scoped actual diff 做 closeout review；无法从同一 worktree 可靠分离
+  selected change 时会停止并暴露 missing-boundary；finding 会变成 pending task 并回到 apply；
 - missing/duplicate/unchecked lifecycle marker、其它 pending task、strict validation 或三个既有 governance
   checker 任一失败时，finalizer 不调用 native archive；
 - finalizer 的成功路径由 native `openspec archive --json --skip-specs` 完成，且 `specsUpdated: false`、main specs
