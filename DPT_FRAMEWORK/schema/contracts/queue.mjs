@@ -1,6 +1,10 @@
-// @impl AGQ-001, AGQ-005, AGQ-017, AGQ-020, SCO-009
+// @impl AGQ-001, AGQ-005, AGQ-017, AGQ-020, AGQ-026, SCO-009
 import { z } from 'zod';
 import { QueueHealth, StopAuthorizationState } from '../enums.mjs';
+import {
+  WORK_UNIT_ID_PATTERN,
+  WorkUnitSupersessionRootSchema,
+} from './work-unit.mjs';
 
 export const QUEUE_ACTIVE_WINDOW_LIMIT = 20;
 export const QUEUE_SCHEMA_VERSION = 'queue.v2';
@@ -13,6 +17,32 @@ const REPLACEMENT_LINEAGE_FIELDS = [
   'replacement_terminal_reason',
   'replacement_queue_item_snapshot_hash',
 ];
+export const WORK_UNIT_SUPERSESSION_LINEAGE_FIELDS = Object.freeze([
+  'supersession_of_work_id',
+  'supersession_of_queue_item_id',
+  'supersession_accepted_ledger_record_hash',
+  'supersession_root',
+  'supersession_tx_id',
+]);
+const SUPERSESSION_RELATION_ONLY_FIELDS = [
+  'schema_version',
+  'predecessor_work_id',
+  'predecessor_queue_item_id',
+  'accepted_ledger_record_hash',
+  'root_code',
+  'reason',
+  'recorded_at',
+  'tx_id',
+  'successor_queue_item_id',
+];
+
+export const WorkUnitSupersessionQueueLineageSchema = z.object({
+  supersession_of_work_id: z.string().regex(WORK_UNIT_ID_PATTERN),
+  supersession_of_queue_item_id: z.string().trim().min(1),
+  supersession_accepted_ledger_record_hash: z.string().regex(/^[a-f0-9]{64}$/),
+  supersession_root: WorkUnitSupersessionRootSchema,
+  supersession_tx_id: z.string().trim().min(1),
+}).strict();
 
 export const TargetSpecSchema = z.object({
   controller: z.enum(['main-agent', 'engine']),
@@ -92,6 +122,27 @@ export const QueueDemandItemSchema = z.object({
         path: ['lineage', 'replacement_terminal_status'],
         message: 'replacement_terminal_status must be failed or abandoned',
       });
+    }
+  }
+  const supersessionFieldsPresent = WORK_UNIT_SUPERSESSION_LINEAGE_FIELDS
+    .filter((field) => Object.hasOwn(data.lineage || {}, field));
+  if (supersessionFieldsPresent.length > 0) {
+    const lineage = Object.fromEntries(WORK_UNIT_SUPERSESSION_LINEAGE_FIELDS.map((field) => [field, data.lineage?.[field]]));
+    const parsed = WorkUnitSupersessionQueueLineageSchema.safeParse(lineage);
+    if (!parsed.success) {
+      parsed.error.issues.forEach((issue) => ctx.addIssue({
+        ...issue,
+        path: ['lineage', ...issue.path],
+      }));
+    }
+    for (const field of SUPERSESSION_RELATION_ONLY_FIELDS) {
+      if (Object.hasOwn(data.lineage, field)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['lineage', field],
+          message: `${field} belongs to the index supersession relation, not queue lineage`,
+        });
+      }
     }
   }
 });

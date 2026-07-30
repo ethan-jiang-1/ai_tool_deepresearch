@@ -85,7 +85,7 @@ Existing active bundle reload enters through `RUN_BUNDLE.md` (fallback `BUNDLE_M
 | 命令 | 文件 | 说明 |
 |------|------|------|
 | setup-real-subagents | command_playbook/setup-real-subagents.md | 设置 Codex/Claude Code 项目级 real subagent 定义 |
-| operate-work-unit.mjs | cli/operate-work-unit.mjs | delegated work-unit 生命周期（`claim`/`submit`/`late-submit`/`recover-declaration`/`replace`/`fail`/`timeout`/`abandon`/`open-batch`/`inspect`），生产 delegated completion 与 declaration recovery 的唯一 existing-owner CLI；成功 `claim` 输出 poll/inspect continuation cue，普通 `submit` 只接受 claimed，`replace` 从 failed/abandoned terminal authority 派生一次 queue demand 而不分配新 work ID，`late-submit` 是 timed_out 的显式审计入口，`recover-declaration <bundle> --work-id <submitted_id>` 只恢复 hash-identical missing ledger row且不接收`--result` |
+| operate-work-unit.mjs | cli/operate-work-unit.mjs | delegated work-unit 生命周期（`claim`/`dry-submit`/`submit`/`late-submit`/`recover-declaration`/`recover-transaction`/`replace`/`supersede`/`fail`/`timeout`/`abandon`/`open-batch`/`inspect`）；成功 `claim` 输出 poll/inspect continuation cue，普通 `submit` 只接受 claimed，`replace` 处理 failed/abandoned，`supersede` 为 eligible submitted drift 建一个 fresh successor，两个 recovery operation 均保持既有 authority 边界 |
 | work-unit-actor-decision | command_playbook/work-unit-actor-decision.md | queue-front role inspect → 一次真实 native probe → 同一 claim checkpoint；normal batch、单项 Phase Agent fallback 或 no-claim |
 | provenance-forensics-guide | command_playbook/provenance-forensics-guide.md | 事后判定 delegated 证据 provenance 真伪；submitted work-unit ledger 是 gate authority |
 
@@ -113,6 +113,22 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration <bundle> --work
 ```
 
 该 operation 不接收`--result`，不重跑 research、不完成 queue、不改 index/status hash，也不允许手写 `rb_output_declarations.jsonl`。
+
+### Work-Unit Attempt Recovery
+
+Always preserve the exact inspect, dry-submit, timeout-preflight, formal-submit, or Gate command that exposed the root. The structured projection binds the caller's operation and `work_id` separately from any holder `tx_id`, holder operation, target work/queue coordinates, and journal disposition.
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-transaction <bundle> --tx-id <id>
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs supersede <bundle> --work-id <submitted_id> --reason <audit-reason>
+```
+
+- `busy` requires a schema-valid lock owner paired with its readable non-suspect v2 journal. Wait, then rerun the exact caller operation for the same work/checkpoint. The holder is not actor ownership, progress, process-death, or liveness evidence.
+- `suspect_transaction` is not a wait or force-timeout cue. Run the exact `recover-transaction` command only when `repair_kind: recover_transaction` names one unlocked v2 `started`/`suspect` journal and its `write_to`/`tx_id`; then rerun the preserved checkpoint. A valid holder remains `busy`; legacy, incomplete, unsafe, drifted, or held-suspect proof is `missing_contract`, with no lock deletion or original-target edit.
+- Exact `recover-declaration` takes precedence over `supersede`; after declaration recovery succeeds, rerun the same inspect/Gate. `supersede` is legal only when Engine feedback selects attributable post-submit drift after declaration recovery is unavailable. Its result binds the exact predecessor work/queue IDs, committing transaction ID, and one `successor_queue_item_id`.
+- Continue from the returned successor's ordinary location. A queued successor uses a current role observation and normal claim; an in-flight successor is polled by its existing work ID; a terminal successor follows only its own ordinary replacement/retry/supersession contract. Only the unique current lineage leaf's normal submit or audited late-submit can restore coverage, after which the same inspect/Gate reruns.
+
+Logical `actor_execution` plus exact `work_id` and `receipt_nonce` guides which route authors a claimed candidate. Only `phase_agent_fallback` lets the Phase Agent author that exact fallback candidate; for `delegated_subagent`, it may inspect and submit the returned candidate but must not author substitute content under the same binding. This is not physical actor authentication or host/sub-agent liveness proof. Never manually edit `rb_output_declarations.jsonl`, `_work_units/_index.json`, `_status.json`, `rb_queue.json`, `_work_units/.lock`, transaction journals, `result_hash`, or `ledger_record_hash`.
 
 ## 质量检查
 | 工具 | 文件 | 说明 |

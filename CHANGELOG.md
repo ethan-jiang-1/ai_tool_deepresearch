@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.64
+
+- Work-unit inspect and submit preflight now expose one derived attempt disposition from the exact logical actor, work/queue IDs, receipt nonce, assigned result/receipt coordinates, transaction fact, and ledger-first coverage relation. The binding guides Agent Flow; it does not authenticate a physical writer or prove host/sub-agent liveness.
+- Work-unit transaction v2 maps verified contention to structured `busy`, malformed or unresolved proof to `suspect_transaction`, and permits `recover-transaction` only for one unlocked named journal whose complete before-image still matches. Recovery never steals a lock, guesses process death, or edits original target authority.
+- Submitted correction now uses exact declaration-recovery precedence or one audited `supersede` relation plus a fresh ordinary successor. Gate counts only the unique current lineage leaf's normal submit/audited late-submit row; predecessor authority and legacy bytes remain immutable.
+
 ## v0.63
 
 - Selected Agent-facing operations now provide side-effect-free standalone help and direct code-`2` invocation/configuration feedback before bundle evaluation or mutation. Their exact grammar is documented without falsely normalizing unrelated utilities.

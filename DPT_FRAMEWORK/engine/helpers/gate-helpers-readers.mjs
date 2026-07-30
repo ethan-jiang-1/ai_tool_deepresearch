@@ -1,5 +1,5 @@
 // gate-helpers-readers.mjs — Bundle file readers: plan, profile, frontmatter, declarations, validators, file listing
-// @impl GSK-001, FRE-003
+// @impl GSK-001, FRE-003, DEW-024, WPG-016
 // Canonical location: DPT_FRAMEWORK/engine/helpers/gate-helpers-readers.mjs
 //
 // Re-exported by gate-helpers.mjs for backward compatibility.
@@ -14,6 +14,11 @@ import {
   WorkUnitLedgerRecordSchema,
 } from '../../schema/index.mjs';
 import { readBundleName } from '../logger.mjs';
+import {
+  readSubmittedStatusFile,
+  validateCurrentSubmittedLedgerFact,
+} from '../work-unit-submitted-ledger.mjs';
+import { evaluateNormalizedSubmittedWorkUnitLedger } from '../work-unit-supersession.mjs';
 import { z } from 'zod';
 
 // ─── Markdown Frontmatter Parsing ──────────────────────────────────────────
@@ -266,7 +271,7 @@ function isWorkUnitLikeLedgerRow(row) {
   return row && typeof row === 'object' && typeof row.work_id === 'string' && row.work_id.startsWith('wu-');
 }
 
-function collectWorkUnitLedgerRowIssues(row, index) {
+function collectWorkUnitLedgerRowIssues(bundlePath, row, index) {
   const parsed = WorkUnitLedgerRecordSchema.safeParse(row);
   if (!parsed.success) {
     if (!isWorkUnitLikeLedgerRow(row)) return { row: null, indexRecord: null, issues: [] };
@@ -297,8 +302,12 @@ function collectWorkUnitLedgerRowIssues(row, index) {
     if (ledgerRow.work_unit_ref !== indexRecord.paths.work_unit_dir) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: work_unit_ref`);
     if (ledgerRow.result_ref !== indexRecord.paths.result_ref) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: result_ref`);
     if (ledgerRow.runtime_receipt_ref !== indexRecord.paths.runtime_receipt_ref) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: runtime_receipt_ref`);
-    if (ledgerRow.result_hash !== indexRecord.result_hash) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: result_hash`);
-    if (ledgerRow.ledger_record_hash !== indexRecord.ledger_record_hash) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: ledger_record_hash`);
+    try {
+      const status = readSubmittedStatusFile(bundlePath, indexRecord);
+      validateCurrentSubmittedLedgerFact({ record: indexRecord, row: ledgerRow, status });
+    } catch (error) {
+      issues.push(error.message || String(error));
+    }
     if (ledgerRow.late_accept === true) {
       const submittedReplacements = Object.values(index?.work_units || {})
         .filter((record) => record.queue_item_id === ledgerRow.queue_item_id && record.work_id !== ledgerRow.work_id && record.status === 'submitted');
@@ -320,50 +329,11 @@ function collectWorkUnitLedgerRowIssues(row, index) {
  */
 // @impl RRM-007
 export function readNormalizedSubmittedWorkUnitDeclarations(bundlePath) {
-  const rawRows = readOutputDeclarations(bundlePath);
-  if (rawRows.length === 0) return { facts: [], legacy_non_work_unit_rows: [], kind_registry: null };
-
-  let index = null;
   try {
-    index = loadSubmittedWorkUnitIndex(bundlePath);
+    return evaluateNormalizedSubmittedWorkUnitLedger(bundlePath);
   } catch (error) {
-    throw new Error(`work-unit index invalid while reading declarations: ${error.message}`);
+    throw new Error(`invalid submitted work-unit declaration ledger: ${error.message || String(error)}`);
   }
-
-  const facts = [];
-  const legacyRows = [];
-  const validRows = [];
-  const issues = [];
-  for (const row of rawRows) {
-    const checked = collectWorkUnitLedgerRowIssues(row, index);
-    issues.push(...checked.issues);
-    if (!checked.row && !isWorkUnitLikeLedgerRow(row)) legacyRows.push(row);
-    if (checked.row) validRows.push(checked.row);
-    if (checked.row && checked.indexRecord && checked.issues.length === 0) {
-      facts.push({ ledger_row: checked.row, index_record: checked.indexRecord });
-    }
-  }
-
-  const rowsByQueueItem = new Map();
-  for (const row of validRows) {
-    const rows = rowsByQueueItem.get(row.queue_item_id) || [];
-    rows.push(row);
-    rowsByQueueItem.set(row.queue_item_id, rows);
-  }
-  for (const [queueItemId, rows] of rowsByQueueItem.entries()) {
-    if (rows.length > 1 && rows.some((row) => row.late_accept === true)) {
-      issues.push(`late-accept conflict for ${queueItemId}: multiple submitted ledger rows ${rows.map((row) => row.work_id).join(', ')}`);
-    }
-  }
-
-  if (issues.length > 0) {
-    throw new Error(`invalid submitted work-unit declaration ledger: ${issues.join('; ')}`);
-  }
-  return {
-    facts,
-    legacy_non_work_unit_rows: legacyRows,
-    kind_registry: index?.kind_registry || null,
-  };
 }
 
 export function readSubmittedWorkUnitDeclarations(bundlePath) {

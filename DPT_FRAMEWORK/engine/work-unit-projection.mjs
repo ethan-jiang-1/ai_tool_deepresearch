@@ -1,4 +1,4 @@
-// @impl RRM-007, RWG-018
+// @impl DEW-024, RRM-007, RWG-018
 // Narrow submitted-work projection for return-map and eligible-row consumers.
 
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
@@ -237,7 +237,7 @@ function authenticateWave0SourceFact(bundleDir, fact) {
     record,
     { outputContract: manifest.output_contract },
   );
-  if (hashValue(result) !== record.result_hash) {
+  if (hashValue(result) !== fact.ledger_row.result_hash) {
     throw new Error(`submitted result hash mismatch for ${row.work_id}`);
   }
   validateOutputFiles(bundleDir, result, manifest.output_contract);

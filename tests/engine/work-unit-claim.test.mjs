@@ -1,6 +1,6 @@
 // @impl DEW-003, AGQ-014, SUD-001, SUD-002, LOG-006
 
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { mkdtempSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -14,6 +14,9 @@ import {
   makeItem,
   saveQueue,
 } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+import {
+  WORK_UNIT_SUBMISSION_CONTRACT_VERSION,
+} from '../../DPT_FRAMEWORK/schema/contracts/work-unit.mjs';
 import {
   claimWorkUnits,
   closeWorkUnitAttempt,
@@ -129,6 +132,18 @@ describe('claimWorkUnits', () => {
 
       const index = loadWorkUnitIndex(dir);
       assert.equal(Object.keys(index.work_units).length, 2);
+      for (const workId of result.claimed_work_ids) {
+        const record = index.work_units[workId];
+        const manifest = JSON.parse(readFileSync(path.join(dir, record.paths.manifest_ref), 'utf8'));
+        const beacon = JSON.parse(readFileSync(path.join(dir, record.paths.beacon_ref), 'utf8'));
+        assert.equal(record.submission_contract_version, WORK_UNIT_SUBMISSION_CONTRACT_VERSION);
+        assert.equal(manifest.submission_contract_version, WORK_UNIT_SUBMISSION_CONTRACT_VERSION);
+        assert.equal(beacon.submission_contract_version, WORK_UNIT_SUBMISSION_CONTRACT_VERSION);
+        const task = readFileSync(path.join(dir, record.paths.task_ref), 'utf8');
+        assert.match(task, /Logical actor route: `delegated_subagent`/);
+        assert.ok(task.includes(`work_id \`${workId}\`, receipt_nonce \`${record.receipt_nonce}\``));
+        assert.match(task, /does not authenticate a physical writer or prove host\/sub-agent liveness/i);
+      }
       const txFiles = readdirSync(transactionDir(dir)).filter((name) => name.endsWith('.json'));
       assert.equal(txFiles.length, 1);
       assert.match(JSON.stringify(result.prompt_refs), /task\.md/);

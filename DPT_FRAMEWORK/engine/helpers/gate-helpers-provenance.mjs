@@ -1,5 +1,5 @@
 // gate-helpers-provenance.mjs - Work-unit provenance gate checks and bypass diagnostics
-// @impl WPG-001, WPG-002, WPG-003, WPG-004, WPG-005, WPG-006, WPG-007, WPG-008, WPG-012, RWG-017, RWG-018
+// @impl WPG-001, WPG-002, WPG-003, WPG-004, WPG-005, WPG-006, WPG-007, WPG-008, WPG-012, WPG-016, RWG-017, RWG-018
 // Canonical location: DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs
 
 import { existsSync, readFileSync, readdirSync, statSync, appendFileSync } from 'node:fs';
@@ -129,6 +129,7 @@ export function checkSubmittedDeclarationRecovery(bundlePath, rule) {
   const declaredWorkIds = new Set(ledgerRows.map((row) => row.work_id));
   const gaps = Object.values(index.work_units || {})
     .filter((record) => record.status === 'submitted')
+    .filter((record) => !record.supersession_relation)
     .filter((record) => indexRecordMatchesRule(record, rule))
     .filter((record) => !declaredWorkIds.has(record.work_id))
     .map((record) => ({

@@ -43,3 +43,16 @@ Option B: The Phase Agent should be able to "hold" a submission and merge sub-ag
 Option C: The sub-agent should detect "already submitted" and append its additional sources via a supplementary demand path instead of silently failing.
 
 **Why:** The current binary submit model (first submission wins) creates a perverse incentive to either wait indefinitely for sub-agents or submit prematurely. Neither is correct for a framework that values evidence quality.
+
+## C4 Disposition (2026-07-31)
+
+- Implemented path (`DEW-022`, `DEW-024`): claim now binds one logical `actor_execution` route together with
+  exact `work_id`, `receipt_nonce`, result, and receipt coordinates across manifest/index/beacon/task/result
+  validation. Generated task and Phase guidance prohibit Phase-authored substitute content under a
+  `delegated_subagent` binding; only an explicitly claimed `phase_agent_fallback` may author its exact attempt.
+  Stale predecessor identity or actor-route candidates are rejected before ledger/queue mutation. Eligible
+  post-submit integrity drift uses audited `supersede` and a fresh successor instead of in-place overwrite.
+- Residual boundary: this is logical routing and deterministic candidate validation, not physical writer
+  authentication, host/sub-agent liveness, or proof that an Agent obeyed the prose. Same-binding physical-writer
+  behavior remains observation-gated (including the separate BUG-170 concern); richer late content without
+  direct drift remains supplementary/semantic work, not automatic replacement authority.

@@ -1,4 +1,4 @@
-// @impl DEW-014
+// @impl DEW-014, DEW-023, CHI-004
 // Read-only progress-aware timeout preflight for delegated work-unit attempts.
 
 import {
@@ -35,6 +35,7 @@ import {
   queuePath,
   queueStateFromFile,
 } from './queue-manager-core.mjs';
+import { inspectWorkUnitTransaction } from './work-unit-transaction.mjs';
 
 const NON_REPAIRABLE_DRY_CODES = new Set(['wrong_work_id', 'stale_snapshot', 'duplicate_content_mismatch']);
 const NON_REPAIRABLE_DRY_PHASES = new Set(['work_unit_status', 'queue_binding', 'work_unit_record', 'work_unit_index']);
@@ -353,10 +354,14 @@ function recommendationBasisFor(payload) {
 }
 
 function finalizePreflight(payload) {
-  return WorkUnitTimeoutPreflightSchema.parse({
-    ...payload,
+  const transaction = payload.transaction || null;
+  const schemaPayload = { ...payload };
+  delete schemaPayload.transaction;
+  const parsed = WorkUnitTimeoutPreflightSchema.parse({
+    ...schemaPayload,
     recommendation_basis: payload.recommendation_basis || recommendationBasisFor(payload),
   });
+  return transaction ? { ...parsed, transaction } : parsed;
 }
 
 export function timeoutPreflightWorkUnit(bundleDir, { work_id, resultPath = null, nowMs = Date.now() } = {}) {
@@ -395,6 +400,32 @@ export function timeoutPreflightWorkUnit(bundleDir, { work_id, resultPath = null
       recommended_action: 'block',
       inspect: [`claimed_at is invalid for ${record.work_id}`],
       advice: ['Repair work-unit index through Engine tooling before timeout.'],
+    });
+  }
+
+  const transaction = inspectWorkUnitTransaction(bundleDir, {
+    operation: 'work_unit_timed_out',
+    targetWorkIds: [record.work_id],
+    targetQueueItemIds: [record.queue_item_id],
+    rerun: `node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight ${JSON.stringify(path.resolve(bundleDir))} --work-id ${JSON.stringify(record.work_id)}`,
+  });
+  if (transaction.disposition !== 'none') {
+    const busy = transaction.disposition === 'busy';
+    const directIssue = busy
+      ? `Global transaction ${transaction.holder.tx_id} blocks timeout; targets_same_attempt=${transaction.targets_same_attempt}.`
+      : transaction.missing_fact;
+    return finalizePreflight({
+      ...base,
+      transaction,
+      recommended_action: busy ? 'wait' : 'block',
+      inspect: [directIssue],
+      advice: busy
+        ? [`Wait without changing this attempt, then rerun: ${transaction.rerun}`]
+        : [`Transaction integrity is suspect; use only the reported recovery boundary, then rerun the same timeout-preflight. ${transaction.rerun}`],
+      recommendation_basis: {
+        branch: 'integrity',
+        facts: { direct_issue: directIssue },
+      },
     });
   }
 

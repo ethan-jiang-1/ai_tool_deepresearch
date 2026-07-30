@@ -1,4 +1,4 @@
-// @impl DEW-002, DEW-004, SDC-001, SDC-002, SDC-003, FRE-005
+// @impl DEW-002, DEW-004, DEW-023, CHI-004, SDC-001, SDC-002, SDC-003, FRE-005
 // Work-unit index: path helpers, ID parsing/validation, status counting, index CRUD, ID allocation, record lookup, transactions.
 
 import {
@@ -10,7 +10,6 @@ import {
   writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 
 import {
   WORK_UNITS,
@@ -273,40 +272,10 @@ function writeTransaction(bundleDir, tx) {
   writeJson(transactionPath(bundleDir, tx.tx_id), tx);
 }
 
-export function withWorkUnitTransaction(bundleDir, operation, fn) {
-  ensureWorkUnitDirs(bundleDir);
-  const lockPath = path.join(bundleDir, WORK_UNITS.LOCK);
-  mkdirSync(lockPath);
-  const tx = {
-    schema_version: 'work-unit.transaction.v1',
-    tx_id: `tx-${Date.now()}-${randomUUID().slice(0, 8)}`,
-    operation,
-    status: 'started',
-    started_at: now(),
-    committed_at: null,
-  };
-  try {
-    writeTransaction(bundleDir, tx);
-    const result = fn({ tx_id: tx.tx_id });
-    writeTransaction(bundleDir, { ...tx, status: 'committed', committed_at: now() });
-    return result;
-  } catch (error) {
-    writeTransaction(bundleDir, { ...tx, status: 'failed', error: error.message || String(error), committed_at: null });
-    try {
-      traceWorkUnitEvent(bundleDir, 'work_unit_transaction_failed', {
-        tx_id: tx.tx_id,
-        operation,
-        reason: error.message || String(error),
-      });
-      logToRun(bundleDir, 'error', 'work_unit_transaction_failed', {
-        kind: 'work_unit_transaction',
-        tx_id: tx.tx_id,
-        operation,
-        reason: error.message || String(error),
-      });
-    } catch { /* preserve original transaction error */ }
-    throw error;
-  } finally {
-    rmSync(lockPath, { recursive: true, force: true });
-  }
-}
+export {
+  inspectWorkUnitTransaction,
+  recoverWorkUnitTransaction,
+  transactionLockOwnerPath,
+  withWorkUnitTransaction,
+  WORK_UNIT_TRANSACTION_TRANSITIONS,
+} from './work-unit-transaction.mjs';

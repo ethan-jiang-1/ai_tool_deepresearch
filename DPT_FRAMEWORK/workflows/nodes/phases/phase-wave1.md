@@ -188,6 +188,10 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id>
 
 For a rejected supplied observation, read `actor_observation_feedback` at the claim result: it names the planned `dpt-evidence-extractor` role, one primary conflict, the closed legal tuples, and the same claim rerun. The generated `Completion Contract` carries the same actor/candidate vocabulary and does not add a task-only actor proof or cache mapping.
 
+At every inspect, dry-submit, timeout-preflight, formal-submit, or Gate root, preserve the emitted rerun and read the exact attempt disposition. The claimed `actor_execution` plus `work_id` and `receipt_nonce` owns candidate authorship: for `delegated_subagent`, the Phase Agent may submit the returned candidate but must not author substitute content under that binding; only `phase_agent_fallback` may author its exact fallback attempt. This is logical guidance, not physical actor authentication or host/sub-agent liveness proof.
+
+For structured `busy`, read caller work/operation separately from holder transaction/work/queue coordinates, wait, and rerun the exact caller checkpoint. For `suspect_transaction`, run `operate-work-unit recover-transaction <bundle> --tx-id <id>` only when `repair_kind` names the exact unlocked journal; otherwise preserve `missing_contract`. Exact `recover-declaration` takes precedence over `supersede`. Run `operate-work-unit supersede <bundle> --work-id <submitted_id> --reason <audit-reason>` only when selected, then use the returned `successor_queue_item_id` and ordinary location for current role observation, normal claim/poll/submit, and the same inspect/Gate rerun. Do not reactivate the predecessor or manually edit ledger/index/status/queue/lock/journal/hash authority.
+
 Immediately after a successful formal submit, complete this visible Phase checklist before treating the returned topic as closed:
 
 1. Run the existing reference/index materialization in §3.2.2 from the submitted backing.

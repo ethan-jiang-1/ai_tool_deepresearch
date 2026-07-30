@@ -78,6 +78,18 @@ topic_registry:
 ---
 # Plan
 `);
+  mkdirSync(join(dir, 'seed_topics'), { recursive: true });
+  writeFileSync(join(dir, 'seed_topics/topic-a.md'), `---
+topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
+id: "01"
+slug: topic-a
+title: Topic A
+must_answer: ["What matters?"]
+scope_role: primary
+depends_on_topic_uids: []
+---
+# Topic A
+`);
   let queue = createQueue('gate-reader');
   queue = enqueue(queue, readerQueueItem(id));
   saveQueue(dir, queue);
@@ -377,14 +389,14 @@ describe('readOutputDeclarations', () => {
 
       assert.throws(
         () => readSubmittedWorkUnitDeclarations(dir),
-        /work-unit declaration schema invalid/,
+        /current submitted row is attributable but invalid/,
       );
     } finally {
       cleanupWorkUnitBundle(dir);
     }
   });
 
-  it('fails closed when a late-accepted row conflicts with a submitted replacement', () => {
+  it('fails closed before choosing between a forged late row and a submitted replacement', () => {
     const dir = tempWorkUnitBundle('gh-reader-late-conflict-');
     try {
       seedReaderQueue(dir);
@@ -431,8 +443,9 @@ describe('readOutputDeclarations', () => {
         ledger_record_hash: computeWorkUnitLedgerRecordHash(forgedLateRowBase),
       };
       target.status = 'submitted';
-      target.result_hash = forgedLateRow.result_hash;
-      target.ledger_record_hash = forgedLateRow.ledger_record_hash;
+      delete target.result_hash;
+      delete target.ledger_record_hash;
+      target.accepted_ledger_record_hash = forgedLateRow.ledger_record_hash;
       index.work_units[target.work_id] = target;
       saveWorkUnitIndex(dir, index);
       writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
@@ -442,7 +455,7 @@ describe('readOutputDeclarations', () => {
 
       assert.throws(
         () => readSubmittedWorkUnitDeclarations(dir),
-        /late-accept conflict/,
+        /late-accept conflict|submitted status binding mismatch/,
       );
     } finally {
       cleanupWorkUnitBundle(dir);

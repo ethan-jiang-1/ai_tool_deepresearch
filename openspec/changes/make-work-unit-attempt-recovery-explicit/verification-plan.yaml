@@ -1,0 +1,220 @@
+schema_version: verification-routing/v1
+change: make-work-unit-attempt-recovery-explicit
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Closed current/legacy schemas, attempt-binding projection, transaction disposition, mutation-manifest
+      inventory, and ledger-first reader selection are narrow deterministic contracts that need focused positive
+      and fail-closed proof without a runtime bundle.
+  integration:
+    status: selected
+    rationale: >-
+      Public work-unit CLI processes must prove real global-lock contention, same-attempt timeout protection,
+      no-side-effect submit preflight, proof-limited transaction recovery, and exact Agent-facing Markdown
+      command/rerun wiring through production entrypoints and temporary bundles.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      Supersession and declaration recovery cross index, ledger, status, transaction, queue, and Gate authority;
+      a disposable deterministic bundle must prove the complete predecessor-to-successor chain, strict
+      historical isolation, and rejection of manual or corrupt-authority shortcuts.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      Deterministic tests can prove logical binding, generated guidance delivery, CLI supply-and-demand wiring,
+      and cross-attempt rejection. C4 does not claim that a physical writer obeys that guidance, that a host
+      invokes or resumes an actor, or that a lock holder is live; BUG-170 therefore remains observation-gated.
+claims:
+  - id: closed-attempt-recovery-schemas-reject-mixed-authority
+    statement: >-
+      DEW-023, DEW-024, and AGQ-026: strict schemas cover the attempt-bound work-unit.submission.v1 marker,
+      ledger-first submitted records, immutable acceptance/supersession relation, exact successor lineage,
+      lock owner, transaction-v2 before-image manifest, and busy/suspect projection; markerless attempts and
+      transaction-v1 journals remain explicit legacy branches while partial, unknown, or mixed authority fails closed.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/contracts/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: attempt-binding-projects-one-logical-route
+    statement: >-
+      DEW-022 and CHI-004: one non-persistent disposition derives identity, transaction, coverage, and the
+      existing structured next action from work_id, receipt_nonce, actor_execution, assigned coordinates, and
+      direct authority. Stale predecessor candidates/receipts cannot enter a successor, without claiming
+      physical actor authentication or liveness.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: mutation-manifest-and-ledger-first-inventories-are-complete
+    statement: >-
+      DEW-023 and DEW-024: every work-unit mutation caller declares all rollback-owned canonical exact-path
+      targets and their before-images before its first target write, releases its lock as the final action, and
+      performs no target write afterward; proof-verified rollback is distinct from suspect history; and every
+      marked submit/duplicate/postcondition reader resolves current hashes from the ledger without writing or
+      consuming legacy index/status mirrors.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: global-contention-separates-caller-and-holder
+    statement: >-
+      DEW-023 and CHI-004: actual concurrent formal-submit processes for identical and different work IDs map
+      one valid non-suspect v2 global holder, including its settled final-release window, to structured busy
+      feedback with separate caller/holder coordinates, disposition, and the caller's same-operation rerun. The loser creates no candidate, lease, authority, or blocking-journal
+      mutation, and dry-submit evaluates submit-owned integrity without invoking or predicting a Phase Gate.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: timeout-protects-same-attempt-even-when-forced
+    statement: >-
+      DEW-023 and CHI-004: a valid active v2 started journal targeting the checked work ID blocks both default and forced
+      timeout with no terminal/retry mutation; a valid different-target global holder remains contention rather
+      than actor/progress evidence; and a suspect pair receives neither fictional wait nor force advice.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: transaction-recovery-is-unlocked-and-proof-limited
+    statement: >-
+      DEW-023 and CHI-004: recover-transaction changes only one unlocked v2 prior journal to rolled_back through
+      a normal recovery transaction when every declared target equals its complete before-image; settled
+      journals are idempotent, any valid non-suspect global holder returns busy, and legacy, incomplete, unsafe,
+      suspect-holder, or drifted proof returns missing_contract without lock deletion, original-target mutation,
+      age inference, or guessed commit.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: exact-declaration-recovery-precedes-supersession
+    statement: >-
+      DEW-024, WPG-001, WPG-002, and CHI-004: a missing declaration that can be reproduced hash-identically
+      exposes recover-declaration alone and returns through the normal current-row checkpoint. Supersession is
+      considered only when exact recovery is unavailable and the complete marked or legacy acceptance tuple
+      remains compatible.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: supersession-creates-one-ordinary-successor
+    statement: >-
+      DEW-024 and AGQ-026: eligible attributable post-submit drift atomically adds one strict immutable relation
+      as the predecessor's only authority diff. Its nine exact fields bind schema version, predecessor work/queue
+      IDs, accepted ledger hash, one of the six closed roots selected in declaration-missing/declaration-drift/
+      result/runtime-receipt/output/cache order, audit reason/time, transaction ID, and one fresh successor queue
+      ID. Declaration roots first exhaust exact recovery. The same transaction creates one terminal-snapshot-
+      derived successor demand whose queue ID and five direct-parent lineage fields map exactly to the relation;
+      schema/reason/time remain relation-only. Pre-existing predecessor fields and ledger/status/result/receipt/
+      cache/terminal-history bytes remain unchanged; the successor preserves immutable contract/extension fields
+      while regenerating queue identity/status/timestamps and transient restore_priority, which resets to normal.
+      Repetition after a lost response returns the original relation and same queued, in-flight, or terminal
+      successor even when the new caller reason differs; immutable audit fields are not rewritten. Later legal
+      edges resolve one acyclic current leaf, including audited late-submit selection and retry cleanup rather
+      than greatest attempt index. No-drift richer content, branch/cycle drift, parent reactivation, work-ID
+      allocation, or sibling demand is accepted.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: gate-counts-only-strict-current-successor-authority
+    statement: >-
+      WPG-001, WPG-002, and WPG-016: Gate can isolate one work-ID-attributable superseded predecessor as
+      historical only when relation, unique acyclic one-leaf lineage, cardinality, transaction, and acceptance evidence agree; current
+      rows remain strict, duplicate/unparseable/unattributable ledger corruption remains globally blocking, and
+      only the unique current lineage leaf's hash-valid existing normal-submit/audited-late-submit row restores
+      current coverage.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: agent-facing-guidance-wires-every-new-operation
+    statement: >-
+      DEW-022, DEW-023, DEW-024, and CHI-004: RUN, command, shared-subagent, Phase-loop, generated-task, and
+      provenance-forensics Markdown expose exact supersede, recover-transaction, busy, declaration-recovery,
+      and successor coordinates plus same-checkpoint reruns. They never direct same-binding Phase-authored
+      delegated content or manual authority edits and do not claim physical-writer behavior or liveness.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/work-unit-attempt-recovery-guidance.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

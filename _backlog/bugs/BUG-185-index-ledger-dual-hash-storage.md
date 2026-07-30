@@ -18,3 +18,13 @@ There is no Engine operation to sync index hashes from the ledger. The Phase Age
 ## Expected behavior
 
 `operate-work-unit sync-index` should read the ledger and update the index to match. Alternatively, the index should not store hashes — it should derive them from the ledger.
+
+## C4 Disposition (2026-07-31)
+
+- Implemented path (`DEW-024`): every new claim binds `work-unit.submission.v1`; after acceptance its ledger
+  row is the sole current source of `result_hash`, `ledger_record_hash`, and coverage. The marked index keeps
+  only immutable `accepted_ledger_record_hash` acceptance evidence, and marked index/status records keep no
+  current hash mirrors. Submit, duplicate/replay checks, inspect, and Gate share the same ledger-first evaluator.
+- Residual boundary: markerless historical attempts retain their explicit legacy mirror representation and
+  fail closed on disagreement. C4 adds no `sync-index` or recompute command and never migrates or rewrites those
+  immutable legacy bytes; incomplete/mixed/unknown marker representations remain `missing_contract`.

@@ -189,8 +189,9 @@ export function seedDelegatedQueue(dir, items = [delegatedQueueItem('queue-a')])
       && typeof topic?.scope_role === 'string'
       && Array.isArray(topic?.depends_on_topic_uids)
     ));
+  let canonicalTopics = canonicalPlan ? plan.topic_registry : [];
   if (!canonicalPlan) {
-    const topics = [...new Map(items
+    canonicalTopics = [...new Map(items
       .filter((item) => item.payload?.topic_uid && item.payload?.topic_slug)
       .map((item) => [item.payload.topic_uid, {
         topic_uid: item.payload.topic_uid,
@@ -202,15 +203,16 @@ export function seedDelegatedQueue(dir, items = [delegatedQueueItem('queue-a')])
         depends_on_topic_uids: [],
         previous_layouts: [],
       }])).values()];
-    if (topics.length > 0) {
+    if (canonicalTopics.length > 0) {
       writeFileSync(planPath, `---\n${JSON.stringify({
         plan_basename: path.basename(dir),
-        derived_topic_count: topics.length,
+        derived_topic_count: canonicalTopics.length,
         topic_registry_version: '2',
-        topic_registry: topics,
+        topic_registry: canonicalTopics,
       }, null, 2)}\n---\n# Plan\n`);
     }
   }
+  if (canonicalTopics.length > 0) ensureCanonicalSeedBindings(dir, canonicalTopics);
   let queue = createQueue(path.basename(dir));
   for (const item of items) queue = enqueue(queue, item);
   saveQueue(dir, queue);
@@ -257,6 +259,8 @@ export function claimAndSubmitWorkUnit(dir, {
   actorDecision = availableActorDecision(kind),
   preserveQueue = false,
   legacyAssignment = false,
+  submit = true,
+  submitOptions = {},
 } = {}) {
   const queueItem = delegatedQueueItem(queueItemId, {
     phase,
@@ -387,6 +391,8 @@ export function claimAndSubmitWorkUnit(dir, {
     ...resultOverrides,
   }, null, 2)}\n`);
 
-  const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+  const submitted = submit
+    ? submitWorkUnit(dir, { work_id: record.work_id, resultPath, ...submitOptions })
+    : null;
   return { record, submitted, resultPath };
 }

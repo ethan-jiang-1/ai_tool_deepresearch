@@ -18,3 +18,14 @@ Multiple failed submit attempts created 18 stale transaction files that had to b
 ## Expected behavior
 
 `operate-work-unit dry-submit` should include a gate preflight check that validates ledger integrity, index consistency, and transaction cleanliness. The current dry-submit only validates result/output/cache/receipt — not the Engine state that submit will modify.
+
+## C4 Disposition (2026-07-31)
+
+- Implemented path (`DEW-023`, `CHI-004`): dry-submit and formal submit now share one read-only
+  submit-integrity evaluator for attempt binding, current ledger/index relation, queue/successor binding, and
+  transaction disposition. Formal submit reruns it after acquiring the global lock. It returns structured
+  `busy`, `suspect_transaction`, declaration-recovery, supersession, or no-path facts without candidate/authority
+  side effects; fault injection covers rollback versus suspect disposition.
+- Residual boundary: this is intentionally not a Gate preflight. Content completeness, delegated coverage
+  counts/floors, references, and cross-work-unit Phase rules remain owned by the formal Gate, so dry-submit
+  cannot promise that a Wave Gate will pass or become a second Gate evaluator.

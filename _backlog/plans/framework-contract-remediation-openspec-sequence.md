@@ -1,14 +1,21 @@
 ---
 title: Progressive OpenSpec Sequence for Framework Contract Remediation
-status: c2_applied_verified_pending_archive
+status: c3_archived__c4_proposal_polished__review_required
 created: 2026-07-29
 predecessor: framework-contract-feedback-and-control-structure-analysis
-last_completed_change: converge-artifact-contract-evaluators
-last_completed_archive: openspec/changes/archive/2026-07-30-converge-artifact-contract-evaluators
-active_change: make-canonical-topic-state-projections-coherent
-active_change_status: applied_verified_pending_archive
-next_change: make-agent-operation-contracts-direct
-next_change_status: pending_proposal
+last_completed_change: make-agent-operation-contracts-direct
+last_completed_archive: openspec/changes/archive/2026-07-30-make-agent-operation-contracts-direct
+active_change: make-work-unit-attempt-recovery-explicit
+active_change_status: proposal_polished__review_required__c3_archived__archive_commit_177275226
+c2_task_progress: 26/26
+c2_selected_node_test: 277_passed_0_failed
+c2_archive_status: archived_2026-07-30__14_modified_requirements_synced__committed_177275226
+c3_task_progress: 30/30__selected_verification_and_governance_passed
+c3_selected_node_test: 225_passed_0_failed
+c3_archive_status: archived_2026-07-30__14_modified_requirements_synced__committed_177275226
+next_change: make-work-unit-attempt-recovery-explicit
+next_change_status: proposal_polished__review_required__unblocked_by_c3_archive
+c3_proposal_artifacts: proposal_done__specs_done__design_done__tasks_done__verification_plan_done__strict_governance_routing_plan_passed
 source_bugs:
   - BUG-143
   - BUG-146
@@ -60,7 +67,7 @@ current real-bundle evidence
 C1 artifact contract / evaluator convergence [archived 2026-07-30]
           |
           v
-C2 canonical topic-state and projection integrity
+C2 canonical topic-state and projection integrity [archived 2026-07-30]
           |
           v
 C3 Agent-facing control and feedback contract
@@ -77,14 +84,27 @@ observation 才能判定 DPT 可拥有的故障；后者是研究质量政策，
 
 C1 已于 2026-07-30 归档至
 `openspec/changes/archive/2026-07-30-converge-artifact-contract-evaluators`。C2 已完成 proposal、
-explore、polish 与 `/opsx:apply` 的全部 26 项任务，active change 为
-`openspec/changes/make-canonical-topic-state-projections-coherent`，当前状态为
-`applied; verified; pending archive`。其 selected `node:test` assets 为 277 passed / 0 failed；真实
-disposable-bundle replay 记录了合法 append 的 `i0001/1..2`、`i0002/3` ownership，以及 controlled
+explore、polish 与 `/opsx:apply` 的全部 26 项任务，并于 2026-07-30 归档至
+`openspec/changes/archive/2026-07-30-make-canonical-topic-state-projections-coherent`；native archive
+已将 14 个 modified requirement 同步到主规格。其 selected `node:test` assets 为 277 passed / 0 failed；
+真实 disposable-bundle replay 记录了合法 append 的 `i0001/1..2`、`i0002/3` ownership，以及 controlled
 prefix drift 的单一 `submitted_source_contribution_prefix_drift` root（零 candidates）。routing、strict
-OpenSpec、requirement/spec governance 与 `git diff --check` 均已通过。C3 可以在此时仅创建 proposal
-供审阅，但不得在 C2 archive 前进入 `/opsx:apply`；其后续实现仍保持
-`propose -> explore -> apply -> archive` 的顺序。
+OpenSpec、requirement/spec governance 与 `git diff --check` 均已通过。C3 的 `proposal.md`、全部 delta
+specs、`design.md`、依赖有序 `tasks.md` 与 `verification-plan.yaml` 已完成；C2 archive 前置条件已经满足，
+且 C3 已通过 strict OpenSpec、requirement/spec governance、verification-routing plan（17 claims）与
+`git diff --check`。审阅/polish 已完成，现已进入 `/opsx:apply`：共享 invocation helper、selected CLI
+preflight、topic-state schema/validation feedback、pure controls renderer、bounded entry presentation、claim/timeout
+projections、Wave0 omission batching，以及 selected documentation regressions 已按 approved task list 收敛。
+全部 30/30 项已经勾选；17 个 selected `node:test` assets 为 225 passed / 0 failed，routing assets
+（17 claims）、strict OpenSpec、requirement/spec governance 与 `git diff --check` 均通过。C3 已于
+2026-07-30 native archive 至 `openspec/changes/archive/2026-07-30-make-agent-operation-contracts-direct`，并同步
+14 个 modified requirements 到主规格；proposal 的长度/large-delta 警告为 non-blocking，archive 已完成，
+并已由提交 `177275226` 固化。C4 已创建完整 proposal、design、四份 delta specs、tasks 与 verification
+plan；strict OpenSpec、verification-routing plan 与 `git diff --check` 已通过。随后完成 proposal
+polish：attempt disposition 收敛为既有 binding 的派生 view，不新增 fence 或 `superseded` status；
+submitted ledger 仍是 current hash/coverage authority，index 只保留 immutable acceptance/supersession
+relation；active transaction、timeout 与 proof-limited recovery 共享同一 direct fact。该 change 现停在
+review 门，仍保持 `propose -> explore -> apply -> archive` 的顺序，不得提前修改 target code。
 
 ## 2. 为什么是这个数量
 
@@ -110,9 +130,9 @@ recovery path。
 | 顺序 | 暂定 change id | 状态 | 精确问题 | 主要票据 | 明确不包含 |
 |---:|---|---|---|---|---|
 | C1 | `converge-artifact-contract-evaluators` | archived 2026-07-30 | 每种 artifact 的 grammar、authority classification 和 evaluator scope 是什么？ | 146, 162, 172, 178 | topic writer、count-floor policy、work-unit recovery |
-| C2 | `make-canonical-topic-state-projections-coherent` | applied; verified; pending archive | canonical topic state 如何在合法写入后保持 whole-document parseability、时间语义与 derived freshness？ | 151, 152, 154, 157, 176 | CLI help framework、queue/work-unit rework |
-| C3 | `make-agent-operation-contracts-direct` | planned | Agent 在每个决定点如何发现 protocol、看到最早 direct root，并得到一个合法下一动作？ | 150, 153, 155, 156, 158, 159, 160, 171, 173, 177, 183, 184 | 自动 repair controller、改变 evidence authority、host adapter |
-| C4 | `make-work-unit-attempt-recovery-explicit` | planned | active/submitted attempt 的 owner、contention、finality、correction 与 transaction recovery 的 legal semantics 是什么？ | 148, 174, 179--186 | mutable ledger workaround、full-phase Gate prediction、generic retry service |
+| C2 | `make-canonical-topic-state-projections-coherent` | archived 2026-07-30 | canonical topic state 如何在合法写入后保持 whole-document parseability、时间语义与 derived freshness？ | 151, 152, 154, 157, 176 | CLI help framework、queue/work-unit rework |
+| C3 | `make-agent-operation-contracts-direct` | archived 2026-07-30 (30/30 tasks, 225 selected tests passed, 14 requirements synced) | Agent 在每个决定点如何发现 protocol、看到最早 direct root，并得到一个合法下一动作？ | 150, 153, 155, 156, 158, 159, 160, 171, 177, 184；173/183 已由 DEW-021 覆盖，159 已由 WNC-010/CPT handoff contract 覆盖，均已记录处置 | 自动 repair controller、改变 evidence authority、host adapter |
+| C4 | `make-work-unit-attempt-recovery-explicit` | proposal polished; review required | active/submitted attempt 的 owner、contention、finality、correction 与 transaction recovery 的 legal semantics 是什么？ | 148, 174, 179--186 | mutable ledger workaround、full-phase Gate prediction、generic retry service |
 | C5 | `connect-hitl1-research-access-by-semantic-capability` | conditional; not proposed | 当前 host 如何以真实 search + same-URL fetch 能力接入 HITL1，而不是用工具名或配置猜测？ | 143 | 通用 capability registry、虚假 search 成功、host liveness promise |
 
 ## 4. 逐项执行清单
@@ -130,14 +150,23 @@ C4 的语义尚未决定时为 BUG-179--186 单独加 sync/recompute/retry 命�
 - [x] **5. 创建 C2 proposal。** 已创建 `make-canonical-topic-state-projections-coherent`，其 proposal 的中心是 canonical topic-state 这个 module 的 interface，而不是“给 `apply` 多加几个 if”。
 - [x] **6. C2 explore 与 polish。** 已决定并记录三件不能混合的语义：Wave0 candidate identity 是 submission-bound contribution 之上的 current projection coordinate；supplement/append 不重写历史 authority；Seed template 的 editable body、appendix slot 与 projection slot 有明确 writer。writer postcondition 与 reader/evaluator 同源，style recomputation 保留唯一 owner 与可见顺序；严格 Change、routing、requirement/spec checks 均通过，并已作为 `/opsx:apply` 的约束实施。
 - [x] **7. C2 apply。** 已完成全部 26 项 accepted tasks：committed postcondition 覆盖整个受影响 slot/document 的可解析性；topic registry/style projection freshness 有唯一 writer 与同一 Gate repair loop；ref-existence/forward-reference 只由共享 owner checkpoint 裁决。topic-state 未获得 profile、ledger、queue 或手工 Markdown fallback 写入权。
-- [ ] **8. C2 archive。** 所需 multi-entry replay、supplement/provenance、body-template edit、style/topic ordering、missing/near-match ref 和 complete-current-candidate negative cases 已完成并记录；remaining action 是在最终审阅后执行 native archive。replay 已证明写入成功后同一 reader 可读回相邻历史 entry，且不会把新增 source 伪装成旧 submitted result。
+- [x] **8. C2 archive。** 已于 2026-07-30 native archive 至 `openspec/changes/archive/2026-07-30-make-canonical-topic-state-projections-coherent`，并同步 14 个 modified requirement。所需 multi-entry replay、supplement/provenance、body-template edit、style/topic ordering、missing/near-match ref 和 complete-current-candidate negative cases 均已记录；归档同步前保留了主规格中并行演进的既有 scenario，未以 C2 delta 覆盖它们。
 
-- [ ] **9. 创建 C3 proposal。** 运行 `/opsx:propose make-agent-operation-contracts-direct`。此 change 的 reader 是当前执行中的 Agent，不是 shell 熟练用户；它必须复用 C1/C2 已经稳定的 contract facts。
-- [ ] **10. C3 explore。** 列出所有 public Engine operation 的共同最小 interface：invocation/help、schema/context discovery、validation root、owner/writable surface、same-check rerun、以及“无合法路径”的 honest boundary。把 phase-entry action core 与 full reference closure 分开；确认 task checklist、role guidance、timeout diagnosis 和 phase ordering分别只是同一 contract 的不同呈现，不再复制 validator。
-- [ ] **11. C3 apply。** 在不新增 generic agent controller 的前提下，收敛 CLI `--help`/usage、context/schema discovery、field-level/root-first rejection、task/phase action cards、`enter-phase` 默认输出、status preflight、cache/reference mapping guidance 与 timeout explanation。修复缺失的 phase-declared surface 或删除错误引用。反馈只指向已有 legal operation；无路径时返回 owner/missing-contract，而不是诱导 Agent 手改 authority。
-- [ ] **12. C3 archive。** 用 focused CLI/Markdown tests 证明 Agent 无须读 Engine 源码即可发现合法 protocol；用 deterministic negative cases 验证 root-first、one-next-action、help invocation 与 output-size/cue placement；以真实 Agent-flow observation 评估信息形状改善，但不把它当作 host liveness 证明。
+- [x] **9. 完成 C3 proposal。** `make-agent-operation-contracts-direct` 的 `proposal.md`、全部 delta specs、`design.md`、依赖有序的 `tasks.md` 与 change-root `verification-plan.yaml` 已完成。C2 archive 后已对 `CTS-004`/`RRM-007` delta 做无损 rebase；strict OpenSpec、requirement/spec governance、verification-routing plan（17 claims）与 `git diff --check` 均通过。proposal 保持执行中的 Agent 为读者，而不是 shell 熟练用户；它复用 C1/C2 已稳定的 contract facts，未新增 controller 或第二 authority。
+- [x] **10. C3 explore。** 已列出并在 proposal/design/polish 中收敛 public Engine operation 的共同最小 interface：invocation/help、schema/context discovery、validation root、owner/writable surface、same-check rerun、以及“无合法路径”的 honest boundary。phase-entry action core 与 full reference closure 已分开；task checklist、role guidance、timeout diagnosis 和 phase ordering 都保持为同一 contract 的不同呈现，不复制 validator。
+- [x] **11. C3 apply。** 已完成全部 30 项 approved tasks：在不新增 generic agent controller 的前提下，收敛 CLI `--help`/usage、context/schema discovery、field-level/root-first rejection、task/phase action cards、`enter-phase` 默认输出、status preflight、cache/reference mapping guidance 与 timeout explanation。selected tests 为 225 passed / 0 failed；routing assets、strict OpenSpec、requirement/spec governance 与 `git diff --check` 已通过。反馈只指向已有 legal operation；无路径时返回 owner/missing-contract，而不是诱导 Agent 手改 authority。
+- [x] **12. C3 archive。** 已于 2026-07-30 native archive 至 `openspec/changes/archive/2026-07-30-make-agent-operation-contracts-direct`，同步 9 个 capability 下的 14 个 modified requirements。archive 前的 17 个 selected assets 为 225 passed / 0 failed；routing assets、strict OpenSpec、requirement/spec governance 与 `git diff --check` 均已通过。proposal 的长度/large-delta 警告为 non-blocking，未阻止归档。
 
-- [ ] **13. 创建 C4 proposal。** 运行 `/opsx:propose make-work-unit-attempt-recovery-explicit`。此 change 的 proposal 必须先陈述当前 immutable submitted authority 为什么正确，以及它无法处理的已接受 attempt 损坏事实是什么。
+- [x] **13. 创建并 polish C4 proposal。** 已创建并打磨 `make-work-unit-attempt-recovery-explicit` 的完整
+  proposal、design、`delegated-work-units` / `agentic-queue` / `work-unit-provenance-gate` /
+  `check-inspect-feedback` delta specs、依赖有序 tasks 与 7-claim verification plan。proposal 保留 immutable
+  submitted ledger authority，并将当前可处理的 attempt 损坏限定为 audited supersession -> fresh successor；
+  attempt disposition 是由既有 `work_id` + `receipt_nonce` + `actor_execution` 得到的 reader-facing view，
+  不是新 fence/status。submitted predecessor 保持 `status: submitted`，以 immutable relation 推导 historical
+  non-current coverage；missing/corrupt ledger 仅在 durable acceptance evidence 存在时可 supersede。active
+  `started` journal 产生 busy/wait 并禁止 timeout terminalization，其他 lock/journal 异常为
+  `suspect_transaction`，且仅有 proof-limited `recover-transaction`。strict OpenSpec、verification-routing
+  plan 与 `git diff --check` 均已再次通过，现等待 review 后再进入 C4 explore。
 - [ ] **14. C4 explore。** 在设计中先选择且只选择一个 audited correction model：例如 terminalize-and-successor 或有明确 identity/receipt rules 的 audited supersession；不得同时保留两条静默 success path。明确定义 Phase Agent、delegated actor、lock owner、result path 和 lease 的 ownership transfer/fencing；区分 submit-integrity preflight 与 phase-Gate verdict；确定 stale transaction 的 truth/recovery 归属及 index/ledger hash 的唯一 interpretation direction。
 - [ ] **15. C4 apply。** 依照选定模型实现 structured contention、attempt ownership、合法 correction/rework、queue relation、transaction cleanup/recovery 和只检查 submit-owned direct facts的 preflight。保留 ledger/hash fail-closed，不允许任意 recompute/sync、直接 queue reactivation 或已提交 row 就地覆盖；任何新 legal path 必须产生审计可读的 attempt lineage。
 - [ ] **16. C4 archive。** 使用真实 filesystem/interleaving fault-injection 或等价 deterministic transaction evidence，覆盖 concurrent submit、late delegate completion、hash mismatch、failed transaction、terminal correction 和 index/ledger consistency。验证 Phase Gate 不被 dry-submit 承诺预测，且无合法 recovery 时 Engine 明确返回 missing-contract/terminal，而非 raw exception。

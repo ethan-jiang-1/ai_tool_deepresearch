@@ -1,4 +1,4 @@
-// @impl DEW-002, DEW-003, DEW-004, DEW-006, DEW-014, EXO-001, SWE-006
+// @impl DEW-002, DEW-003, DEW-004, DEW-006, DEW-014, DEW-023, DEW-024, CHI-004, EXO-001, SWE-006
 // Work-unit lifecycle: create, parse phase, eligibility, claim, close, batch open.
 
 import path from 'node:path';
@@ -9,6 +9,7 @@ import { parse as parseYaml } from 'yaml';
 import {
   WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
   WORK_UNIT_MANIFEST_SCHEMA_VERSION,
+  WORK_UNIT_SUBMISSION_CONTRACT_VERSION,
   WorkUnitManifestSchema,
   WorkUnitStatusFileSchema,
 } from '../schema/contracts/work-unit.mjs';
@@ -61,6 +62,34 @@ import { logToRun } from './logger.mjs';
 import { resolveWorkUnitAssignmentContract } from './work-unit-assignment-contract.mjs';
 import { admitQueueDemand } from './helpers/queue-demand-admission.mjs';
 
+const WORK_UNIT_INDEX_TARGET = '_work_units/_index.json';
+const QUEUE_TARGET = 'rb_queue.json';
+
+function envelopeMutationTargets(refs) {
+  return [
+    refs.manifest_ref,
+    refs.task_ref,
+    refs.result_schema_ref,
+    refs.beacon_ref,
+    refs.runtime_receipt_ref,
+    refs.status_ref,
+    refs.agent_ref,
+  ];
+}
+
+function previewWorkUnitAllocation(index, { queueItem, wave, kind, batchReason = 'initial_phase_drain' }) {
+  const allocation = allocateWorkId(index, {
+    wave,
+    kind,
+    queue_item_id: queueItem.queue_item_id,
+    batchReason,
+  });
+  return {
+    allocation,
+    refs: refsForWorkUnit('', allocation).refs,
+  };
+}
+
 function readProfileRerunCount(bundleDir) {
   try {
     const profilePath = path.join(bundleDir, 'rb_profile.yaml');
@@ -112,6 +141,7 @@ function createWorkUnitInIndex(bundleDir, index, {
     timeout_ms: timeoutMs,
     deadline_at: deadlineAt,
     ...(assignmentContractVersion ? { assignment_contract_version: assignmentContractVersion } : {}),
+    submission_contract_version: WORK_UNIT_SUBMISSION_CONTRACT_VERSION,
     output_contract: outputContract,
     cache_policy: kindContract.cache_policy,
     runtime_refs,
@@ -144,6 +174,7 @@ function createWorkUnitInIndex(bundleDir, index, {
     timeout_ms: manifest.timeout_ms,
     deadline_at: manifest.deadline_at,
     ...(manifest.assignment_contract_version ? { assignment_contract_version: manifest.assignment_contract_version } : {}),
+    submission_contract_version: manifest.submission_contract_version,
     runtime_refs: manifest.runtime_refs,
     actor_contract_version: manifest.actor_contract_version,
     actor_execution: manifest.actor_execution,
@@ -259,7 +290,19 @@ export function createWorkUnit(bundleDir, options = {}) {
       };
     }
   }
-  return withWorkUnitTransaction(bundleDir, 'create_work_unit', () => {
+  const previewIndex = loadIndexView(bundleDir);
+  const preview = previewWorkUnitAllocation(clone(previewIndex), {
+    queueItem: options.queueItem,
+    wave: options.wave,
+    kind: options.kind || options.queueItem?.kind,
+    batchReason: options.batchReason,
+  });
+  return withWorkUnitTransaction(bundleDir, 'create_work_unit', {
+    targetWorkIds: [preview.allocation.work_id],
+    targetQueueItemIds: [options.queueItem.queue_item_id],
+    mutationTargets: [WORK_UNIT_INDEX_TARGET, ...envelopeMutationTargets(preview.refs)],
+    hooks: options.transactionHooks,
+  }, () => {
     const index = loadWorkUnitIndex(bundleDir, { createIfMissing: true });
     const { record, manifest } = createWorkUnitInIndex(bundleDir, index, {
       ...options,
@@ -309,10 +352,13 @@ export function phaseInFlight(queue, wave) {
     .filter((entry) => entry.wave === wave);
 }
 
-export function openWorkUnitBatch(bundleDir, { phase, reason, lineage = {} } = {}) {
+export function openWorkUnitBatch(bundleDir, { phase, reason, lineage = {}, transactionHooks = null } = {}) {
   const wave = parsePhase(phase);
   if (!reason) throw new Error('--reason is required');
-  return withWorkUnitTransaction(bundleDir, 'open_work_unit_batch', ({ tx_id }) => {
+  return withWorkUnitTransaction(bundleDir, 'open_work_unit_batch', {
+    mutationTargets: [WORK_UNIT_INDEX_TARGET],
+    hooks: transactionHooks,
+  }, ({ tx_id }) => {
     const index = loadWorkUnitIndex(bundleDir, { createIfMissing: true });
     const key = waveKey(wave);
     if (!index.waves[key]) index.waves[key] = { current_batch_index: 0, batches: {} };
@@ -478,6 +524,7 @@ export function claimWorkUnits(bundleDir, {
   batchReason = 'initial_phase_drain',
   actorObservation = null,
   executionActorClass = 'delegated_subagent',
+  transactionHooks = null,
 } = {}) {
   const wave = parsePhase(phase);
   const requestedCount = Number.parseInt(String(count), 10);
@@ -637,8 +684,30 @@ export function claimWorkUnits(bundleDir, {
   const effectiveCount = decision.execution_actor_class === 'phase_agent_fallback' ? 1 : assignmentPlans.length;
   const effectivePlans = assignmentPlans.slice(0, effectiveCount);
   const deliveryPlans = preflightClaimDelivery(effectivePlans);
+  const allocationIndex = clone(previewIndex);
+  const plannedAllocations = deliveryPlans.map((plan) => previewWorkUnitAllocation(allocationIndex, {
+    queueItem: plan.item,
+    wave,
+    kind: plan.kind,
+    batchReason,
+  }));
 
-  return withWorkUnitTransaction(bundleDir, 'claim_work_units', ({ tx_id }) => {
+  return withWorkUnitTransaction(bundleDir, 'claim_work_units', {
+    targetWorkIds: plannedAllocations.map(({ allocation }) => allocation.work_id),
+    targetQueueItemIds: deliveryPlans.map((plan) => plan.queue_item_id),
+    mutationTargets: [
+      WORK_UNIT_INDEX_TARGET,
+      QUEUE_TARGET,
+      ...plannedAllocations.flatMap(({ refs }) => envelopeMutationTargets(refs)),
+    ],
+    rerun: [
+      'node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim',
+      claimCommandArg(path.resolve(bundleDir)),
+      '--phase', claimCommandArg(phase),
+      '--count', claimCommandArg(requestedCount),
+    ].join(' '),
+    hooks: transactionHooks,
+  }, ({ tx_id }) => {
     let { queue, index } = recheckClaimPlan(bundleDir, deliveryPlans, previewIndexPlan);
     const claimed = [];
     let blockedBy = preview.blocked_by_queue_item_id;
@@ -933,12 +1002,17 @@ function replacementAuthority(bundleDir, workId, { queue = null } = {}) {
   };
 }
 
-export function replaceWorkUnitAttempt(bundleDir, { work_id } = {}) {
+export function replaceWorkUnitAttempt(bundleDir, { work_id, transactionHooks = null } = {}) {
   if (!work_id) throw new Error('--work-id is required');
   const preview = replacementAuthority(bundleDir, work_id);
   if (!preview.ok || preview.idempotent) return preview;
 
-  return withWorkUnitTransaction(bundleDir, 'work_unit_replace', ({ tx_id }) => {
+  return withWorkUnitTransaction(bundleDir, 'work_unit_replace', {
+    targetWorkIds: [preview.record.work_id],
+    targetQueueItemIds: [preview.record.queue_item_id, preview.replacement.queue_item_id],
+    mutationTargets: [QUEUE_TARGET],
+    hooks: transactionHooks,
+  }, ({ tx_id }) => {
     const queue = loadQueue(bundleDir);
     const current = replacementAuthority(bundleDir, work_id, { queue });
     if (!current.ok || current.idempotent) return current;
@@ -978,7 +1052,14 @@ export function replaceWorkUnitAttempt(bundleDir, { work_id } = {}) {
   });
 }
 
-export function closeWorkUnitAttempt(bundleDir, { work_id, status, reason, force = false, nowMs = Date.now() } = {}) {
+export function closeWorkUnitAttempt(bundleDir, {
+  work_id,
+  status,
+  reason,
+  force = false,
+  nowMs = Date.now(),
+  transactionHooks = null,
+} = {}) {
   if (!['failed', 'timed_out', 'abandoned'].includes(status)) throw new Error(`unsupported terminal status: ${status}`);
   if (!reason) throw new Error('--reason is required');
 
@@ -1011,6 +1092,21 @@ export function closeWorkUnitAttempt(bundleDir, { work_id, status, reason, force
   const timeoutPreflight = status === 'timed_out'
     ? timeoutPreflightWorkUnit(bundleDir, { work_id: record.work_id, nowMs })
     : null;
+  if (status === 'timed_out' && timeoutPreflight?.transaction?.disposition !== undefined
+    && timeoutPreflight.transaction.disposition !== 'none') {
+    return {
+      ok: false,
+      work_id: record.work_id,
+      queue_item_id: record.queue_item_id,
+      status: record.status,
+      timeout_preflight: timeoutPreflight,
+      transaction: timeoutPreflight.transaction,
+      recommended_action: timeoutPreflight.recommended_action,
+      progress: timeoutPreflight.progress,
+      inspect: timeoutPreflight.inspect,
+      advice: timeoutPreflight.advice,
+    };
+  }
   if (status === 'timed_out' && !force && !timeoutPreflight.timeout_eligible) {
     return {
       ok: false,
@@ -1026,7 +1122,12 @@ export function closeWorkUnitAttempt(bundleDir, { work_id, status, reason, force
   }
 
   const manifest = readAndValidateManifest(bundleDir, index, record);
-  return withWorkUnitTransaction(bundleDir, `work_unit_${status}`, ({ tx_id }) => {
+  return withWorkUnitTransaction(bundleDir, `work_unit_${status}`, {
+    targetWorkIds: [record.work_id],
+    targetQueueItemIds: [record.queue_item_id],
+    mutationTargets: [WORK_UNIT_INDEX_TARGET, QUEUE_TARGET, record.paths.status_ref],
+    hooks: transactionHooks,
+  }, ({ tx_id }) => {
     let queue = loadQueue(bundleDir);
     const inFlight = queue.delegated_in_flight?.[record.queue_item_id];
     if (!inFlight || inFlight.work_id !== record.work_id) {

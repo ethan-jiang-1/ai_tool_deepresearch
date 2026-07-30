@@ -1,13 +1,19 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.63**
+> **DPT_FRAMEWORK v0.64**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.63
+## Current Release: v0.64
+
+- Work-unit inspect and submit preflight now expose one derived attempt disposition from the exact logical actor, work/queue IDs, receipt nonce, assigned result/receipt coordinates, transaction fact, and ledger-first coverage relation. The binding guides Agent Flow; it does not authenticate a physical writer or prove host/sub-agent liveness.
+
+- Work-unit transaction v2 maps verified contention to structured `busy`, malformed or unresolved proof to `suspect_transaction`, and permits `recover-transaction` only for one unlocked named journal whose complete before-image still matches. Recovery never steals a lock, guesses process death, or edits original target authority.
+
+- Submitted correction now uses exact declaration-recovery precedence or one audited `supersede` relation plus a fresh ordinary successor. Gate counts only the unique current lineage leaf's normal submit/audited late-submit row; predecessor authority and legacy bytes remain immutable.
 
 - Selected Agent-facing operations now have standalone help, exact documented non-help grammar, and direct code-`2` invocation/configuration feedback before bundle evaluation or mutation. Their structured output stays with the existing domain owner; unrelated utilities keep their documented exceptions.
 
@@ -72,6 +78,10 @@ At decision points, read any emitted `continuation` cue immediately: gate pass/f
 Interactive in-run checkpoints 只有 `hitl1`（Agent 基于已知事实给一个推荐，用户定方向 / profile / topics）和 `hitl2`（Agent 总结当前研究并给一个推荐，用户决定交付或合法 rerun/repair）。两点之间及之后的非终端 `stop: no` phase 静默自主推进：框架不主动提问、确认、汇报进度或等待 acknowledgement；若用户主动发来的消息已经是当前 conversation turn，Agent 直接回答当前事实或最小能力边界，但该回答不创建 checkpoint、permission、route、mutation/reentry authority 或持久 mid-run intent，原有 autonomous next action 不变。Final 是 terminal delivery，不是第三个交互 checkpoint；它在 artifacts 存在后交付，明确 post-final rerun 才通过 accepted recovery 重新进入。
 
 Delegated sub-agent work uses the Engine-mediated work-unit path only: queue demand item -> `operate-work-unit claim` -> sub-agent task under bundle-root `_work_units/` -> verified files/cache/result/receipt under active `bundle_dir` -> `operate-work-unit submit` -> submitted ledger row -> gate. Normal `submit` accepts claimed attempts only and rejects terminal attempts. The only terminal recovery exception is explicit audited `operate-work-unit late-submit` for eligible `timed_out` attempts when no replacement has submitted. Do not use queue completion as delegated success; `operate-queue complete` is for non-delegated queue work. Bare runtime paths such as `_work_units/...`, `rb_queue.json`, `reference/`, `artifacts/`, `_cache/`, and `_logs/` resolve under the active bundle root selected above, not repo root or `DPT_FRAMEWORK/`.
+
+For work-unit recovery, preserve the exact command/checkpoint that produced the feedback and read its structured `attempt_disposition`. `busy` separates caller operation/work coordinates from holder transaction/operation/work/queue coordinates and `journal_disposition`; wait without inferring progress or liveness, then rerun the caller's exact same operation. `suspect_transaction` authorizes `node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-transaction <bundle> --tx-id <id>` only when `repair_kind` names that operation for the exact unlocked journal; after a successful or idempotent result, rerun the preserved inspect, dry-submit, timeout-preflight, submit, or Gate checkpoint. Otherwise `missing_contract` is the boundary.
+
+For submitted drift, exact `node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration <bundle> --work-id <submitted_id>` always takes precedence when offered; run it and rerun the same inspect/Gate checkpoint. Run `node DPT_FRAMEWORK/cli/operate-work-unit.mjs supersede <bundle> --work-id <submitted_id> --reason <audit-reason>` only when Engine feedback names it. Read the returned predecessor `work_id`, predecessor `queue_item_id`, transaction ID, and `successor_queue_item_id`; continue from that successor's returned ordinary location through current actor observation, normal claim/poll, and normal submit or audited late-submit, then rerun the same checkpoint. Never reactivate the predecessor or manually edit ledger, index, status, queue, lock, journal, `result_hash`, or `ledger_record_hash` authority.
 
 If status or terminal output looks suspicious, run `node DPT_FRAMEWORK/cli/audit-phase-status.mjs --bundle <path>`. The audit is diagnostic-only: it reports drift, missing witnesses, failed-gate downstream status, or premature `final/` output; it does not repair status. In non-terminal `stop: no`, a caught would-have-surfaced moment is recorded with `log-event.mjs --surfacing-intent` and then aborted; the event is diagnostic-only and never permission to surface.
 

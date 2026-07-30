@@ -223,9 +223,12 @@ function downgradeAssignmentToLegacy(dir, record, { stripTopicBinding = false } 
   const beacon = readResult(beaconPath);
 
   delete nextRecord.assignment_contract_version;
+  delete nextRecord.submission_contract_version;
   delete manifest.assignment_contract_version;
+  delete manifest.submission_contract_version;
   delete manifest.output_contract.required_outputs;
   delete beacon.assignment_contract_version;
+  delete beacon.submission_contract_version;
   delete beacon.output_contract.required_outputs;
 
   if (stripTopicBinding) {
@@ -1166,7 +1169,7 @@ describe('submitWorkUnit', () => {
     }
   });
 
-  it('dry-submit reports canonicalizations through a virtual cache page without persisting result, receipt, or cache aliases', () => {
+  it('dry-submit reports safe canonicalizations without weakening attempt-bound receipt identity', () => {
     const dir = tempBundle();
     try {
       saveSeedQueue(dir, [delegated('queue-a')]);
@@ -1175,7 +1178,12 @@ describe('submitWorkUnit', () => {
       const resultPath = writeValidSubmitFiles(dir, record);
       writeResult(resultPath, { result: readResult(resultPath) });
       writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
+        schema_version: 'work-unit.receipt-event.v1',
         event: 'work_done',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        kind: record.kind,
+        receipt_nonce: record.receipt_nonce,
         actor_contract_version: record.actor_contract_version,
         execution_actor_class: record.actor_execution.execution_actor_class,
         ts: '2026-07-06T00:00:00.000Z',
@@ -1192,8 +1200,6 @@ describe('submitWorkUnit', () => {
       const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
       assert.equal(dry.ok, true);
       assert.ok(dry.normalizations.some((item) => item.kind === 'result_wrapper_unwrapped'));
-      assert.ok(dry.normalizations.some((item) => item.kind === 'receipt_schema_defaulted'));
-      assert.ok(dry.normalizations.some((item) => item.kind === 'receipt_binding_identity_autofilled'));
       assert.ok(dry.normalizations.some((item) => item.kind === 'cache_page_content_canonicalized'));
       assert.deepEqual(dry.virtual_cache_pages, [cacheTrailPath(record)]);
       assertSnapshotEqual(authoritySnapshot(dir, record, [
@@ -1263,8 +1269,9 @@ describe('submitWorkUnit', () => {
 
       const savedIndex = loadWorkUnitIndex(dir);
       assert.equal(savedIndex.work_units[second.work_id].status, 'submitted');
-      assert.equal(savedIndex.work_units[second.work_id].result_hash, submitted.result_hash);
-      assert.equal(savedIndex.work_units[second.work_id].ledger_record_hash, submitted.ledger_record_hash);
+      assert.equal(savedIndex.work_units[second.work_id].accepted_ledger_record_hash, submitted.ledger_record_hash);
+      assert.equal(Object.hasOwn(savedIndex.work_units[second.work_id], 'result_hash'), false);
+      assert.equal(Object.hasOwn(savedIndex.work_units[second.work_id], 'ledger_record_hash'), false);
       assert.equal(savedIndex.work_units[second.work_id].late_accept_context, undefined);
 
       const rows = ledgerRows(dir);
@@ -1283,6 +1290,8 @@ describe('submitWorkUnit', () => {
       assert.equal(rows[0].work_unit_ref, second.paths.work_unit_dir);
       const submittedRecord = savedIndex.work_units[second.work_id];
       const submittedStatus = JSON.parse(readFileSync(path.join(dir, second.paths.status_ref), 'utf-8'));
+      assert.equal(Object.hasOwn(submittedStatus, 'result_hash'), false);
+      assert.equal(Object.hasOwn(submittedStatus, 'ledger_record_hash'), false);
       const terminalEntry = queue.terminal_history.find((entry) => entry.work_id === second.work_id);
       assert.equal(rows[0].declared_at, submittedRecord.terminal_at);
       assert.equal(rows[0].declared_at, submittedStatus.updated_at);
@@ -1406,7 +1415,7 @@ describe('submitWorkUnit', () => {
       writeFileSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER), '');
       const missingLedger = inspectWorkUnits(dir);
       assert.equal(missingLedger.passed, false);
-      assert.match(missingLedger.inspect.join('\n'), /submitted work unit missing ledger row/);
+      assert.match(missingLedger.inspect.join('\n'), /submitted ledger row is missing/);
     } finally {
       cleanup(dir);
     }
@@ -1501,7 +1510,7 @@ describe('submitWorkUnit', () => {
     }
   });
 
-  it('canonicalizes missing receipt schema and binding identity while rejecting receipt conflicts', () => {
+  it('defaults a receipt schema only when exact attempt identity is already present and rejects binding conflicts', () => {
     const acceptedDir = tempBundle();
     try {
       saveSeedQueue(acceptedDir, [delegated('queue-a')]);
@@ -1510,6 +1519,10 @@ describe('submitWorkUnit', () => {
       const resultPath = writeValidSubmitFiles(acceptedDir, record);
       writeFileSync(path.join(acceptedDir, record.paths.runtime_receipt_ref), `${JSON.stringify({
         event: 'work_done',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        kind: record.kind,
+        receipt_nonce: record.receipt_nonce,
         actor_contract_version: record.actor_contract_version,
         execution_actor_class: record.actor_execution.execution_actor_class,
         ts: '2026-07-06T00:00:00.000Z',
@@ -1519,11 +1532,7 @@ describe('submitWorkUnit', () => {
       const submitted = submitWorkUnit(acceptedDir, { work_id: record.work_id, resultPath });
       assert.equal(submitted.ok, true);
       assert.equal(submitted.normalizations.some((item) => item.kind === 'receipt_schema_defaulted'), true);
-      assert.equal(submitted.normalizations.some((item) => (
-        item.kind === 'receipt_binding_identity_autofilled'
-          && item.fields.includes('work_id')
-          && item.fields.includes('receipt_nonce')
-      )), true);
+      assert.equal(submitted.normalizations.some((item) => item.kind === 'receipt_binding_identity_autofilled'), false);
       const [event] = receiptEvents(acceptedDir, record);
       assert.equal(event.schema_version, 'work-unit.receipt-event.v1');
       assert.equal(event.work_id, record.work_id);
@@ -1536,6 +1545,17 @@ describe('submitWorkUnit', () => {
     }
 
     const cases = [
+      {
+        name: 'missing binding identity',
+        event(record) {
+          return {
+            event: 'work_done',
+            actor_contract_version: record.actor_contract_version,
+            execution_actor_class: record.actor_execution.execution_actor_class,
+          };
+        },
+        pattern: /runtime receipt mismatch|work_id|receipt_nonce/,
+      },
       {
         name: 'schema conflict',
         event(record) {
@@ -1677,7 +1697,7 @@ describe('submitWorkUnit', () => {
     }
   });
 
-  it('normalizes stale nonce only for complete binding inside the assigned work-unit directory', () => {
+  it('rejects stale nonces even when result and receipt agree inside the assigned directory', () => {
     const acceptedDir = tempBundle();
     try {
       saveSeedQueue(acceptedDir, [delegated('queue-a')]);
@@ -1701,10 +1721,12 @@ describe('submitWorkUnit', () => {
       })}\n`);
 
       const submitted = submitWorkUnit(acceptedDir, { work_id: record.work_id, resultPath: assignedResultPath });
-      assert.equal(submitted.ok, true);
-      assert.equal(submitted.normalizations.filter((item) => item.kind === 'nonce_normalized_from_record').length, 2);
-      assert.equal(assignedResult(acceptedDir, record).receipt_nonce, record.receipt_nonce);
-      assert.equal(receiptEvents(acceptedDir, record)[0].receipt_nonce, record.receipt_nonce);
+      assert.equal(submitted.ok, false);
+      assert.ok(['nonce_mismatch', 'missing_receipt'].includes(submitted.last_submit_rejection.reason_code));
+      assert.match(submitted.inspect.join('\n'), /receipt_nonce|nonce/i);
+      assert.equal(assignedResult(acceptedDir, record).receipt_nonce, staleNonce);
+      assert.equal(receiptEvents(acceptedDir, record)[0].receipt_nonce, staleNonce);
+      assertNoLedger(acceptedDir);
     } finally {
       cleanup(acceptedDir);
     }
@@ -2508,7 +2530,7 @@ describe('submitWorkUnit', () => {
       assert.equal(readSubmittedWorkUnitDeclarations(dir).length, 1);
 
       rmSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER));
-      assert.deepEqual(readSubmittedWorkUnitDeclarations(dir), []);
+      assert.throws(() => readSubmittedWorkUnitDeclarations(dir), /submitted ledger row is missing/);
       assert.ok(loadWorkUnitIndex(dir).work_units[record.work_id].late_accept_context);
     } finally {
       cleanup(dir);
@@ -2666,7 +2688,7 @@ describe('submitWorkUnit', () => {
       const drifted = recoverWorkUnitDeclaration(hashDriftDir, { work_id: driftRecord.work_id });
       assert.equal(drifted.ok, false);
       assert.equal(drifted.repair_kind, 'missing_contract');
-      assert.match(drifted.missing_fact, /no legal recovery can reproduce.*legacy no-contribution/i);
+      assert.match(drifted.missing_fact, /no legal recovery can reproduce.*source_contribution/i);
       assert.equal(existsSync(path.join(hashDriftDir, WORK_UNIT_OUTPUT_LEDGER)), false);
       assert.deepEqual(readFileSync(workUnitIndexPath(hashDriftDir)), driftBefore);
 
@@ -2981,14 +3003,14 @@ describe('submitWorkUnit', () => {
         ...index.work_units[record.work_id],
         work_id: replacementWorkId,
         status: 'submitted',
-        ledger_record_hash: replacementRow.ledger_record_hash,
+        accepted_ledger_record_hash: replacementRow.ledger_record_hash,
       };
       writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
       writeLedgerRows(dir, [lateRow, replacementRow]);
 
       assert.throws(
         () => readSubmittedWorkUnitDeclarations(dir),
-        /late-accept conflict/,
+        /late-accept conflict|submitted status binding mismatch/,
       );
     } finally {
       cleanup(dir);

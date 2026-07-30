@@ -1,19 +1,34 @@
-// @impl DEW-002, DEW-013, FRE-005
+// @impl DEW-002, DEW-013, DEW-023, DEW-024, CHI-004, FRE-005
 
 import {
   execFileSync as execFileSyncProduction,
   spawn as spawnProduction,
   spawnSync as spawnSyncProduction,
 } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, watch, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { makeItem } from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
 import { createQueue, enqueue, saveQueue } from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
-import { WORK_UNIT_OUTPUT_LEDGER, createWorkUnit, loadWorkUnitIndex, transactionDir, workUnitIndexPath } from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import {
+  WORK_UNIT_OUTPUT_LEDGER,
+  createWorkUnit,
+  loadWorkUnitIndex,
+  transactionDir,
+  transactionLockOwnerPath,
+  workUnitIndexPath,
+} from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import {
+  WORK_UNIT_TRANSACTION_LOCK_SCHEMA_VERSION,
+  WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
+  WorkUnitTransactionLockOwnerSchema,
+  WorkUnitTransactionV2JournalSchema,
+} from '../../../DPT_FRAMEWORK/schema/contracts/work-unit-transaction.mjs';
 
 const CLI = path.resolve('DPT_FRAMEWORK/cli/operate-work-unit.mjs');
 const AVAILABLE_ACTOR_ARGS = ['--actor-outcome', 'available', '--actor-source', 'native_probe', '--actor-role-key', 'dpt-source-intake', '--actor-reason', 'probe_succeeded', '--execution-actor', 'delegated_subagent'];
@@ -37,6 +52,30 @@ function tempBundle() {
 
 function cleanup(dir) {
   rmSync(dir, { recursive: true, force: true });
+}
+
+function waitForPath(file, timeoutMs = 5000) {
+  const started = Date.now();
+  return new Promise((resolve, reject) => {
+    const poll = () => {
+      if (existsSync(file)) return resolve();
+      if (Date.now() - started > timeoutMs) return reject(new Error(`timed out waiting for ${file}`));
+      setTimeout(poll, 10);
+    };
+    poll();
+  });
+}
+
+function childCompletion(child) {
+  return new Promise((resolve, reject) => {
+    let stderr = '';
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.once('error', reject);
+    child.once('close', (status, signal) => {
+      if (status === 0) resolve();
+      else reject(new Error(`child exited ${status ?? signal}: ${stderr}`));
+    });
+  });
 }
 
 function assertNoFlagRuntimeDirs(parentDir) {
@@ -379,7 +418,7 @@ describe('operate-work-unit inspect', () => {
         JSON.parse(readFileSync(path.join(transactionDir(dir), name), 'utf8'))
       ));
       assert.equal(transactions.length, 1);
-      assert.equal(transactions[0].status, 'failed');
+      assert.equal(transactions[0].status, 'rolled_back');
       assert.equal(readdirSync(path.join(dir, '_work_units')).some((name) => /^wave0$/.test(name)), false);
       const tracePath = path.join(dir, 'rb_trace.jsonl');
       const trace = existsSync(tracePath) ? readFileSync(tracePath, 'utf8') : '';
@@ -686,6 +725,9 @@ describe('operate-work-unit inspect', () => {
       assert.equal(out.side_effects, false);
       assert.equal(out.expected_submit, 'pass');
       assert.deepEqual(out.violations, []);
+      assert.equal(out.submit_integrity.submit_owned_only, true);
+      assert.equal(out.submit_integrity.gate_evaluated, false);
+      assert.deepEqual(out.submit_integrity.roots, []);
       assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
       assert.equal(loadWorkUnitIndex(dir).work_units[workId].status, 'claimed');
     } finally {
@@ -918,7 +960,7 @@ describe('operate-work-unit inspect', () => {
     }
   });
 
-  it('keeps an existing contribution declaration idempotent and fails closed when its missing row cannot be recovered', () => {
+  it('keeps an existing contribution declaration idempotent and exactly recovers its missing row', () => {
     const dir = tempBundle();
     try {
       saveQueueWith(dir, [queueItem()]);
@@ -947,14 +989,13 @@ describe('operate-work-unit inspect', () => {
         encoding: 'utf-8',
         timeout: 5000,
       });
-      assert.equal(recovered.status, 1, recovered.stderr || recovered.stdout);
+      assert.equal(recovered.status, 0, recovered.stderr || recovered.stdout);
       const out = JSON.parse(recovered.stdout);
-      assert.equal(out.ok, false);
-      assert.equal(out.recovered, false);
-      assert.equal(out.reason_code, 'missing_source_contribution_no_legal_recovery');
-      assert.equal(out.repair_kind, 'missing_contract');
-      assert.match(out.missing_fact, /do not reread source\.yaml or append provenance/);
-      assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
+      assert.equal(out.ok, true);
+      assert.equal(out.recovered, true);
+      assert.equal(out.changed, true);
+      assert.equal(out.ledger_record_hash, originalRow.ledger_record_hash);
+      assert.deepEqual(readFileSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), originalLedger);
       assert.equal(readFileSync(workUnitIndexPath(dir), 'utf-8'), indexBeforeLoss);
       assert.equal(readFileSync(path.join(dir, 'rb_queue.json'), 'utf-8'), queueBeforeLoss);
       assert.equal(submitted.ledger_record_hash, originalRow.ledger_record_hash);
@@ -1211,13 +1252,622 @@ describe('operate-work-unit inspect', () => {
 
       const result = spawnSync(process.execPath, [CLI, 'inspect', dir], { encoding: 'utf-8' });
       assert.equal(result.status, 1);
-      assert.match(result.stdout, /uncommitted transaction/);
+      assert.match(result.stdout, /suspect legacy transaction|unlocked unresolved transaction journal/);
       const trace = readFileSync(path.join(dir, 'rb_trace.jsonl'), 'utf-8');
       const log = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
       assert.match(trace, /work_unit_transaction_mismatch/);
       assert.match(log, /work_unit_transaction_mismatch/);
     } finally {
       cleanup(dir);
+    }
+  });
+});
+
+describe('operate-work-unit attempt recovery operations', () => {
+  it('returns structured busy for same- and different-work submit CLI contenders without loser mutation', async () => {
+    const dir = tempBundle();
+    let holder = null;
+    let holderDone = null;
+    try {
+      saveQueueWith(dir, [
+        currentWave0QueueItem('queue-contention-a'),
+        currentWave0QueueItem('queue-contention-b'),
+      ]);
+      const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0', '--count', '2'], {
+        encoding: 'utf8',
+      });
+      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
+      const [holderWorkId, otherWorkId] = JSON.parse(claim.stdout).claimed_work_ids;
+      const indexBefore = loadWorkUnitIndex(dir);
+      const holderRecord = indexBefore.work_units[holderWorkId];
+      const otherRecord = indexBefore.work_units[otherWorkId];
+      const holderResultPath = writeValidSubmitFiles(dir, holderRecord);
+      const otherResultPath = writeValidSubmitFiles(dir, otherRecord);
+      const queueBefore = readFileSync(path.join(dir, 'rb_queue.json'), 'base64');
+      const indexBytesBefore = readFileSync(workUnitIndexPath(dir), 'base64');
+      const holderResultBefore = readFileSync(holderResultPath, 'base64');
+      const otherResultBefore = readFileSync(otherResultPath, 'base64');
+      const baselineJournalNames = readdirSync(transactionDir(dir))
+        .filter((name) => name.endsWith('.json'))
+        .sort();
+
+      const transactionModule = pathToFileURL(path.resolve('DPT_FRAMEWORK/engine/work-unit-transaction.mjs')).href;
+      const holderScript = `
+        import { withWorkUnitTransaction } from ${JSON.stringify(transactionModule)};
+        const result = withWorkUnitTransaction(${JSON.stringify(dir)}, 'submit_work_unit', {
+          targetWorkIds: [${JSON.stringify(holderWorkId)}],
+          targetQueueItemIds: [${JSON.stringify(holderRecord.queue_item_id)}],
+          mutationTargets: ['rb_queue.json']
+        }, () => {
+          Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2500);
+          return { ok: true };
+        });
+        if (!result.ok) process.exit(2);
+      `;
+      holder = spawnProduction(process.execPath, ['--input-type=module', '--eval', holderScript], {
+        cwd: path.resolve('.'),
+        stdio: ['ignore', 'ignore', 'pipe'],
+      });
+      holderDone = childCompletion(holder);
+      await waitForPath(transactionLockOwnerPath(dir));
+      const journalNamesBefore = readdirSync(transactionDir(dir))
+        .filter((name) => name.endsWith('.json'))
+        .sort();
+      assert.equal(journalNamesBefore.length, baselineJournalNames.length + 1);
+
+      const contenders = [
+        { workId: holderWorkId, resultPath: holderResultPath, sameAttempt: true },
+        { workId: otherWorkId, resultPath: otherResultPath, sameAttempt: false },
+      ];
+      for (const contender of contenders) {
+        const result = spawnSync(process.execPath, [
+          CLI,
+          'submit',
+          dir,
+          '--work-id',
+          contender.workId,
+          '--result',
+          contender.resultPath,
+        ], { encoding: 'utf8' });
+        assert.equal(result.status, 1, result.stderr || result.stdout);
+        assert.equal(result.stderr, '');
+        assert.doesNotMatch(result.stdout, /EEXIST/);
+        const outcome = JSON.parse(result.stdout);
+        assert.equal(outcome.ok, false);
+        assert.equal(outcome.reason_code, 'busy');
+        assert.equal(outcome.transaction.caller.operation, 'submit_work_unit');
+        assert.equal(outcome.transaction.caller.work_id, contender.workId);
+        assert.equal(outcome.transaction.holder.operation, 'submit_work_unit');
+        assert.equal(outcome.transaction.holder.target_work_ids.includes(holderWorkId), true);
+        assert.equal(outcome.transaction.targets_same_attempt, contender.sameAttempt);
+        assert.match(outcome.rerun, new RegExp(contender.workId));
+      }
+
+      assert.equal(readFileSync(path.join(dir, 'rb_queue.json'), 'base64'), queueBefore);
+      assert.equal(readFileSync(workUnitIndexPath(dir), 'base64'), indexBytesBefore);
+      assert.equal(readFileSync(holderResultPath, 'base64'), holderResultBefore);
+      assert.equal(readFileSync(otherResultPath, 'base64'), otherResultBefore);
+      assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
+      assert.deepEqual(
+        readdirSync(transactionDir(dir)).filter((name) => name.endsWith('.json')).sort(),
+        journalNamesBefore,
+      );
+      const indexAfter = loadWorkUnitIndex(dir);
+      assert.equal(indexAfter.work_units[holderWorkId].status, 'claimed');
+      assert.equal(indexAfter.work_units[otherWorkId].status, 'claimed');
+      assert.equal(indexAfter.work_units[holderWorkId].deadline_at, holderRecord.deadline_at);
+      assert.equal(indexAfter.work_units[otherWorkId].deadline_at, otherRecord.deadline_at);
+      await holderDone;
+      holder = null;
+      holderDone = null;
+    } finally {
+      if (holder && holder.exitCode === null) holder.kill('SIGKILL');
+      await holderDone?.catch(() => {});
+      cleanup(dir);
+    }
+  });
+
+  it('reports a committed final-release holder as global busy without active-attempt semantics', async () => {
+    const dir = tempBundle();
+    const readyFile = path.join(path.dirname(dir), `${path.basename(dir)}.settled-ready`);
+    let holder = null;
+    let holderDone = null;
+    try {
+      saveQueueWith(dir, [currentWave0QueueItem('queue-settled-holder')]);
+      const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf8' });
+      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
+      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      const queueBefore = readFileSync(path.join(dir, 'rb_queue.json'), 'base64');
+      const indexBefore = readFileSync(workUnitIndexPath(dir), 'base64');
+
+      const transactionModule = pathToFileURL(path.resolve('DPT_FRAMEWORK/engine/work-unit-transaction.mjs')).href;
+      const holderScript = `
+        import { writeFileSync } from 'node:fs';
+        import { withWorkUnitTransaction } from ${JSON.stringify(transactionModule)};
+        const result = withWorkUnitTransaction(${JSON.stringify(dir)}, 'submit_work_unit', {
+          targetWorkIds: [${JSON.stringify(workId)}],
+          targetQueueItemIds: [${JSON.stringify(record.queue_item_id)}],
+          mutationTargets: ['rb_queue.json'],
+          hooks: {
+            afterCommittedBeforeRelease() {
+              writeFileSync(${JSON.stringify(readyFile)}, 'ready\\n');
+              Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1800);
+            }
+          }
+        }, () => ({ ok: true }));
+        if (!result.ok) process.exit(2);
+      `;
+      holder = spawnProduction(process.execPath, ['--input-type=module', '--eval', holderScript], {
+        cwd: path.resolve('.'),
+        stdio: ['ignore', 'ignore', 'pipe'],
+      });
+      holderDone = childCompletion(holder);
+      await waitForPath(readyFile);
+
+      const contender = spawnSync(process.execPath, [
+        CLI, 'submit', dir, '--work-id', workId, '--result', resultPath,
+      ], { encoding: 'utf8' });
+      assert.equal(contender.status, 1, contender.stderr || contender.stdout);
+      assert.equal(contender.stderr, '');
+      const outcome = JSON.parse(contender.stdout);
+      assert.equal(outcome.reason_code, 'busy');
+      assert.equal(outcome.transaction.holder.journal_disposition, 'committed');
+      assert.equal(outcome.transaction.targets_same_attempt, false);
+      assert.equal(outcome.transaction.caller.work_id, workId);
+      assert.equal(outcome.transaction.holder.target_work_ids.includes(workId), true);
+      assert.match(outcome.rerun, new RegExp(workId));
+      assert.equal(readFileSync(path.join(dir, 'rb_queue.json'), 'base64'), queueBefore);
+      assert.equal(readFileSync(workUnitIndexPath(dir), 'base64'), indexBefore);
+      assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
+
+      await holderDone;
+      holder = null;
+      holderDone = null;
+    } finally {
+      if (holder && holder.exitCode === null) holder.kill('SIGKILL');
+      await holderDone?.catch(() => {});
+      rmSync(readyFile, { force: true });
+      cleanup(dir);
+    }
+  });
+
+  it('blocks default and forced timeout for valid holders and exposes no unrelated progress', async () => {
+    for (const sameAttempt of [true, false]) {
+      const dir = tempBundle();
+      let holder = null;
+      let holderDone = null;
+      try {
+        saveQueueWith(dir, [currentWave0QueueItem(`queue-timeout-${sameAttempt ? 'same' : 'other'}`)]);
+        const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf8' });
+        assert.equal(claim.status, 0, claim.stderr || claim.stdout);
+        const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
+        const record = loadWorkUnitIndex(dir).work_units[workId];
+        const holderWorkId = sameAttempt ? workId : 'wu-w0-b000-src-i9999';
+        const holderQueueId = sameAttempt ? record.queue_item_id : 'queue-unrelated-holder';
+        const queueBefore = readFileSync(path.join(dir, 'rb_queue.json'), 'base64');
+        const indexBefore = readFileSync(workUnitIndexPath(dir), 'base64');
+        const transactionModule = pathToFileURL(path.resolve('DPT_FRAMEWORK/engine/work-unit-transaction.mjs')).href;
+        const holderScript = `
+          import { withWorkUnitTransaction } from ${JSON.stringify(transactionModule)};
+          const result = withWorkUnitTransaction(${JSON.stringify(dir)}, 'submit_work_unit', {
+            targetWorkIds: [${JSON.stringify(holderWorkId)}],
+            targetQueueItemIds: [${JSON.stringify(holderQueueId)}],
+            mutationTargets: ['rb_queue.json']
+          }, () => {
+            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2600);
+            return { ok: true };
+          });
+          if (!result.ok) process.exit(2);
+        `;
+        holder = spawnProduction(process.execPath, ['--input-type=module', '--eval', holderScript], {
+          cwd: path.resolve('.'),
+          stdio: ['ignore', 'ignore', 'pipe'],
+        });
+        holderDone = childCompletion(holder);
+        await waitForPath(transactionLockOwnerPath(dir));
+        const journalNames = readdirSync(transactionDir(dir)).filter((name) => name.endsWith('.json')).sort();
+
+        const preflight = spawnSync(process.execPath, [
+          CLI, 'timeout-preflight', dir, '--work-id', workId,
+        ], { encoding: 'utf8' });
+        assert.equal(preflight.status, 1, preflight.stderr || preflight.stdout);
+        assert.equal(preflight.stderr, '');
+        const projected = JSON.parse(preflight.stdout);
+        assert.equal(projected.timeout_eligible, false);
+        assert.equal(projected.recommended_action, 'wait');
+        assert.equal(projected.transaction.disposition, 'busy');
+        assert.equal(projected.transaction.targets_same_attempt, sameAttempt);
+        assert.equal(projected.transaction.caller.work_id, workId);
+        assert.equal(projected.transaction.holder.target_work_ids.includes(holderWorkId), true);
+        assert.match(projected.transaction.rerun, /timeout-preflight/);
+        if (!sameAttempt) {
+          assert.equal(projected.progress.sources.some((source) => source.source_type === 'engine_event'), false);
+        }
+
+        for (const force of [false, true]) {
+          const args = [CLI, 'timeout', dir, '--work-id', workId, '--reason', force ? 'forced while held' : 'default while held'];
+          if (force) args.push('--force');
+          const closed = spawnSync(process.execPath, args, { encoding: 'utf8' });
+          assert.equal(closed.status, 1, closed.stderr || closed.stdout);
+          assert.equal(closed.stderr, '');
+          const outcome = JSON.parse(closed.stdout);
+          assert.equal(outcome.ok, false);
+          assert.equal(outcome.transaction.disposition, 'busy');
+          assert.equal(outcome.transaction.targets_same_attempt, sameAttempt);
+          assert.equal(outcome.recommended_action, 'wait');
+        }
+
+        if (sameAttempt) {
+          const owner = JSON.parse(readFileSync(transactionLockOwnerPath(dir), 'utf8'));
+          const recovery = spawnSync(process.execPath, [
+            CLI, 'recover-transaction', dir, '--tx-id', owner.tx_id,
+          ], { encoding: 'utf8' });
+          assert.equal(recovery.status, 1, recovery.stderr || recovery.stdout);
+          const outcome = JSON.parse(recovery.stdout);
+          assert.equal(outcome.reason_code, 'busy');
+          assert.equal(outcome.transaction.holder.tx_id, owner.tx_id);
+          assert.match(outcome.rerun, /recover-transaction/);
+        }
+
+        assert.equal(readFileSync(path.join(dir, 'rb_queue.json'), 'base64'), queueBefore);
+        assert.equal(readFileSync(workUnitIndexPath(dir), 'base64'), indexBefore);
+        assert.deepEqual(
+          readdirSync(transactionDir(dir)).filter((name) => name.endsWith('.json')).sort(),
+          journalNames,
+        );
+        assert.equal(loadWorkUnitIndex(dir).work_units[workId].status, 'claimed');
+        await holderDone;
+        holder = null;
+        holderDone = null;
+      } finally {
+        if (holder && holder.exitCode === null) holder.kill('SIGKILL');
+        await holderDone?.catch(() => {});
+        cleanup(dir);
+      }
+    }
+  });
+
+  it('keeps held suspect transaction proof off wait, force-timeout, and recovery paths', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [currentWave0QueueItem('queue-suspect-timeout')]);
+      const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf8' });
+      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
+      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+      const queuePath = path.join(dir, 'rb_queue.json');
+      const queueBefore = readFileSync(queuePath, 'base64');
+      const indexBefore = readFileSync(workUnitIndexPath(dir), 'base64');
+      const txId = 'tx-held-suspect-cli';
+      const journalRef = `_work_units/_transactions/${txId}.json`;
+      const now = '2026-07-31T00:00:00.000Z';
+      const journal = WorkUnitTransactionV2JournalSchema.parse({
+        schema_version: WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
+        tx_id: txId,
+        operation: 'submit_work_unit',
+        journal_ref: journalRef,
+        target_work_ids: [workId],
+        target_queue_item_ids: [record.queue_item_id],
+        mutation_manifest: {
+          targets: [{
+            path: 'rb_queue.json',
+            before_exists: true,
+            before_sha256: createHash('sha256').update(readFileSync(queuePath)).digest('hex'),
+          }],
+        },
+        status: 'suspect',
+        started_at: now,
+        settled_at: now,
+        error: 'held transaction cannot establish rollback',
+      });
+      const owner = WorkUnitTransactionLockOwnerSchema.parse({
+        schema_version: WORK_UNIT_TRANSACTION_LOCK_SCHEMA_VERSION,
+        tx_id: txId,
+        operation: journal.operation,
+        journal_ref: journal.journal_ref,
+        target_work_ids: journal.target_work_ids,
+        target_queue_item_ids: journal.target_queue_item_ids,
+        acquired_at: now,
+      });
+      mkdirSync(path.dirname(path.join(dir, journalRef)), { recursive: true });
+      writeFileSync(path.join(dir, journalRef), `${JSON.stringify(journal, null, 2)}\n`);
+      mkdirSync(path.dirname(transactionLockOwnerPath(dir)), { recursive: true });
+      writeFileSync(transactionLockOwnerPath(dir), `${JSON.stringify(owner, null, 2)}\n`);
+
+      const preflight = spawnSync(process.execPath, [
+        CLI, 'timeout-preflight', dir, '--work-id', workId,
+      ], { encoding: 'utf8' });
+      assert.equal(preflight.status, 1, preflight.stderr || preflight.stdout);
+      const projected = JSON.parse(preflight.stdout);
+      assert.equal(projected.recommended_action, 'block');
+      assert.equal(projected.transaction.disposition, 'suspect_transaction');
+      assert.equal(projected.transaction.repair_kind, 'missing_contract');
+      assert.doesNotMatch(JSON.stringify(projected.advice), /wait|--force|delete.*lock/i);
+
+      const forced = spawnSync(process.execPath, [
+        CLI, 'timeout', dir, '--work-id', workId, '--reason', 'must remain blocked', '--force',
+      ], { encoding: 'utf8' });
+      assert.equal(forced.status, 1, forced.stderr || forced.stdout);
+      const forceOutcome = JSON.parse(forced.stdout);
+      assert.equal(forceOutcome.transaction.disposition, 'suspect_transaction');
+      assert.equal(forceOutcome.recommended_action, 'block');
+
+      const recovery = spawnSync(process.execPath, [
+        CLI, 'recover-transaction', dir, '--tx-id', txId,
+      ], { encoding: 'utf8' });
+      assert.equal(recovery.status, 1, recovery.stderr || recovery.stdout);
+      const recoveryOutcome = JSON.parse(recovery.stdout);
+      assert.equal(recoveryOutcome.reason_code, 'suspect_transaction');
+      assert.equal(recoveryOutcome.repair_kind, 'missing_contract');
+
+      assert.equal(readFileSync(queuePath, 'base64'), queueBefore);
+      assert.equal(readFileSync(workUnitIndexPath(dir), 'base64'), indexBefore);
+      assert.equal(loadWorkUnitIndex(dir).work_units[workId].status, 'claimed');
+      assert.equal(JSON.parse(readFileSync(path.join(dir, journalRef), 'utf8')).status, 'suspect');
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('supersedes eligible drift once and replays the immutable relation through stdout JSON', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0', '--count', '1'], {
+        encoding: 'utf8',
+      });
+      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
+      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      const submit = spawnSync(process.execPath, [CLI, 'submit', dir, '--work-id', workId, '--result', resultPath], {
+        encoding: 'utf8',
+      });
+      assert.equal(submit.status, 0, submit.stderr || submit.stdout);
+      const assignedResultPath = path.join(dir, record.paths.result_ref);
+      const drifted = JSON.parse(readFileSync(assignedResultPath, 'utf8'));
+      drifted.summary = 'post-submit drift for CLI supersession';
+      writeFileSync(assignedResultPath, `${JSON.stringify(drifted, null, 2)}\n`);
+
+      const first = spawnSync(process.execPath, [
+        CLI, 'supersede', dir, '--work-id', workId, '--reason', 'CLI observed result drift',
+      ], { encoding: 'utf8' });
+      assert.equal(first.status, 0, first.stderr || first.stdout);
+      assert.equal(first.stderr, '');
+      const created = JSON.parse(first.stdout);
+      assert.equal(created.created, true);
+      assert.equal(created.relation.predecessor_work_id, workId);
+      assert.equal(created.relation.root_code, 'submitted_result_drift');
+
+      const replay = spawnSync(process.execPath, [
+        CLI, 'supersede', dir, '--work-id', workId, '--reason', 'different lost-response retry reason',
+      ], { encoding: 'utf8' });
+      assert.equal(replay.status, 0, replay.stderr || replay.stdout);
+      const replayed = JSON.parse(replay.stdout);
+      assert.equal(replayed.idempotent, true);
+      assert.deepEqual(replayed.relation, created.relation);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('returns structured supersession no-path while keeping invocation faults on stderr', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf8' });
+      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      assert.equal(spawnSync(process.execPath, [
+        CLI, 'submit', dir, '--work-id', workId, '--result', resultPath,
+      ], { encoding: 'utf8' }).status, 0);
+
+      const noPath = spawnSync(process.execPath, [
+        CLI, 'supersede', dir, '--work-id', workId, '--reason', 'richer content only',
+      ], { encoding: 'utf8' });
+      assert.equal(noPath.status, 1);
+      assert.equal(noPath.stderr, '');
+      const outcome = JSON.parse(noPath.stdout);
+      assert.equal(outcome.ok, false);
+      assert.equal(outcome.repair_kind, 'semantic_boundary');
+
+      for (const args of [
+        ['supersede', dir, '--work-id', workId],
+        ['supersede', dir, '--work-id', workId, '--reason', 'x', '--tx-id', 'forbidden'],
+        ['recover-transaction', dir],
+        ['recover-transaction', dir, '--tx-id', 'tx-x', '--work-id', workId],
+      ]) {
+        const invalid = spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8' });
+        assert.equal(invalid.status, 1);
+        assert.equal(invalid.stdout, '');
+        assert.match(invalid.stderr, /required|does not accept/);
+      }
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('recovers only one exact unlocked v2 journal and leaves original targets unchanged', () => {
+    for (const testCase of [
+      { initialStatus: 'started', drifted: false },
+      { initialStatus: 'suspect', drifted: false },
+      { initialStatus: 'started', drifted: true },
+    ]) {
+      const { initialStatus, drifted } = testCase;
+      const dir = tempBundle();
+      try {
+        const authorityRef = 'authority.json';
+        const authorityPath = path.join(dir, authorityRef);
+        writeFileSync(authorityPath, 'before\n');
+        const txId = `tx-cli-${initialStatus}-${drifted ? 'drifted' : 'exact'}`;
+        const journalRef = `_work_units/_transactions/${txId}.json`;
+        mkdirSync(transactionDir(dir), { recursive: true });
+        const journal = WorkUnitTransactionV2JournalSchema.parse({
+          schema_version: WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
+          tx_id: txId,
+          operation: 'submit_work_unit',
+          journal_ref: journalRef,
+          target_work_ids: ['wu-w0-b000-src-i0001'],
+          target_queue_item_ids: ['queue-source-topic-a'],
+          mutation_manifest: {
+            targets: [{
+              path: authorityRef,
+              before_exists: true,
+              before_sha256: createHash('sha256').update('before\n').digest('hex'),
+            }],
+          },
+          status: initialStatus,
+          started_at: '2026-07-30T00:00:00.000Z',
+          settled_at: initialStatus === 'suspect' ? '2026-07-30T00:01:00.000Z' : null,
+          error: initialStatus === 'suspect' ? 'original rollback proof was unresolved' : null,
+        });
+        writeFileSync(path.join(dir, journalRef), `${JSON.stringify(journal, null, 2)}\n`);
+        if (drifted) writeFileSync(authorityPath, 'drifted\n');
+        const authorityBefore = readFileSync(authorityPath, 'base64');
+
+        const recovered = spawnSync(process.execPath, [
+          CLI, 'recover-transaction', dir, '--tx-id', txId,
+        ], { encoding: 'utf8' });
+        assert.equal(recovered.status, drifted ? 1 : 0, recovered.stderr || recovered.stdout);
+        assert.equal(recovered.stderr, '');
+        const outcome = JSON.parse(recovered.stdout);
+        assert.equal(outcome.ok, !drifted);
+        assert.equal(readFileSync(authorityPath, 'base64'), authorityBefore);
+        const prior = JSON.parse(readFileSync(path.join(dir, journalRef), 'utf8'));
+        assert.equal(prior.status, drifted ? initialStatus : 'rolled_back');
+        if (drifted) {
+          assert.equal(outcome.reason_code, 'suspect_transaction');
+          assert.equal(outcome.repair_kind, 'missing_contract');
+        } else {
+          assert.equal(outcome.changed, true);
+          const recoveryJournal = readdirSync(transactionDir(dir))
+            .map((name) => JSON.parse(readFileSync(path.join(transactionDir(dir), name), 'utf8')))
+            .find((entry) => entry.operation === 'recover_work_unit_transaction');
+          assert.equal(recoveryJournal.status, 'committed');
+          assert.deepEqual(recoveryJournal.mutation_manifest.targets.map((target) => target.path), [journalRef]);
+        }
+      } finally {
+        cleanup(dir);
+      }
+    }
+  });
+
+  it('returns settled recovery idempotently and rejects legacy, incomplete, and unsafe proof', () => {
+    for (const status of ['committed', 'rolled_back']) {
+      const dir = tempBundle();
+      try {
+        const authorityRef = 'authority.json';
+        const authorityPath = path.join(dir, authorityRef);
+        writeFileSync(authorityPath, 'before\n');
+        const txId = `tx-cli-settled-${status}`;
+        const journalRef = `_work_units/_transactions/${txId}.json`;
+        mkdirSync(transactionDir(dir), { recursive: true });
+        const journal = WorkUnitTransactionV2JournalSchema.parse({
+          schema_version: WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
+          tx_id: txId,
+          operation: 'submit_work_unit',
+          journal_ref: journalRef,
+          target_work_ids: ['wu-w0-b000-src-i0001'],
+          target_queue_item_ids: ['queue-source-topic-a'],
+          mutation_manifest: {
+            targets: [{
+              path: authorityRef,
+              before_exists: true,
+              before_sha256: createHash('sha256').update('before\n').digest('hex'),
+            }],
+          },
+          status,
+          started_at: '2026-07-30T00:00:00.000Z',
+          settled_at: '2026-07-30T00:01:00.000Z',
+          error: status === 'rolled_back' ? 'exact before-images restored' : null,
+        });
+        writeFileSync(path.join(dir, journalRef), `${JSON.stringify(journal, null, 2)}\n`);
+        const before = recursiveSnapshot(dir);
+        const recovered = spawnSync(process.execPath, [
+          CLI, 'recover-transaction', dir, '--tx-id', txId,
+        ], { encoding: 'utf8' });
+        assert.equal(recovered.status, 0, recovered.stderr || recovered.stdout);
+        assert.equal(recovered.stderr, '');
+        const outcome = JSON.parse(recovered.stdout);
+        assert.equal(outcome.ok, true);
+        assert.equal(outcome.changed, false);
+        assert.equal(outcome.idempotent, true);
+        assert.equal(outcome.disposition, status);
+        assert.deepEqual(recursiveSnapshot(dir), before);
+      } finally {
+        cleanup(dir);
+      }
+    }
+
+    const invalidCases = [
+      {
+        name: 'legacy',
+        journal: {
+          schema_version: 'work-unit.transaction.v1',
+          tx_id: 'tx-cli-invalid-legacy',
+          operation: 'submit_work_unit',
+          status: 'failed',
+          started_at: '2026-07-30T00:00:00.000Z',
+          committed_at: null,
+          error: 'legacy failed transaction',
+        },
+      },
+      {
+        name: 'incomplete',
+        journal: {
+          schema_version: WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
+          tx_id: 'tx-cli-invalid-incomplete',
+          operation: 'submit_work_unit',
+          journal_ref: '_work_units/_transactions/tx-cli-invalid-incomplete.json',
+          target_work_ids: ['wu-w0-b000-src-i0001'],
+          target_queue_item_ids: ['queue-source-topic-a'],
+          status: 'started',
+          started_at: '2026-07-30T00:00:00.000Z',
+          settled_at: null,
+          error: null,
+        },
+      },
+      {
+        name: 'unsafe',
+        journal: {
+          schema_version: WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
+          tx_id: 'tx-cli-invalid-unsafe',
+          operation: 'submit_work_unit',
+          journal_ref: '_work_units/_transactions/tx-cli-invalid-unsafe.json',
+          target_work_ids: ['wu-w0-b000-src-i0001'],
+          target_queue_item_ids: ['queue-source-topic-a'],
+          mutation_manifest: { targets: [{ path: '../authority.json', before_exists: false }] },
+          status: 'started',
+          started_at: '2026-07-30T00:00:00.000Z',
+          settled_at: null,
+          error: null,
+        },
+      },
+    ];
+    for (const testCase of invalidCases) {
+      const dir = tempBundle();
+      try {
+        const txId = testCase.journal.tx_id;
+        const journalRef = `_work_units/_transactions/${txId}.json`;
+        mkdirSync(transactionDir(dir), { recursive: true });
+        writeFileSync(path.join(dir, journalRef), `${JSON.stringify(testCase.journal, null, 2)}\n`);
+        const before = recursiveSnapshot(dir);
+        const recovered = spawnSync(process.execPath, [
+          CLI, 'recover-transaction', dir, '--tx-id', txId,
+        ], { encoding: 'utf8' });
+        assert.equal(recovered.status, 1, `${testCase.name}: ${recovered.stderr || recovered.stdout}`);
+        assert.equal(recovered.stderr, '');
+        const outcome = JSON.parse(recovered.stdout);
+        assert.equal(outcome.reason_code, 'suspect_transaction', testCase.name);
+        assert.equal(outcome.repair_kind, 'missing_contract', testCase.name);
+        assert.deepEqual(recursiveSnapshot(dir), before, testCase.name);
+        assert.equal(existsSync(path.join(dir, '_work_units', '.lock')), false, testCase.name);
+      } finally {
+        cleanup(dir);
+      }
     }
   });
 });

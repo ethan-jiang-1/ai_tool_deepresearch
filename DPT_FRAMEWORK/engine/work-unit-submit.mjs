@@ -1,4 +1,4 @@
-// @impl DEW-005, DEW-013, FRE-005, EXO-001
+// @impl DEW-005, DEW-013, DEW-023, DEW-024, CHI-004, FRE-005, EXO-001
 // Work-unit submit and dry-submit preflight: validation planning, durability, ledger row building, rejection, prepare and submit.
 
 import {
@@ -53,11 +53,40 @@ import {
 } from './work-unit-validation.mjs';
 import { evaluateDirectOutputTarget, semanticOrderedArrayDigest } from './helpers/direct-output-contract.mjs';
 import { deriveWorkUnitCandidateProjection } from './work-unit-candidate-projection.mjs';
+import {
+  acceptedLedgerRecordHashFor,
+  isMarkedWorkUnitSubmission,
+  loadCurrentSubmittedLedgerFact,
+  readSubmittedLedgerDocument,
+  readSubmittedStatusFile,
+  validateCurrentSubmittedLedgerFact,
+} from './work-unit-submitted-ledger.mjs';
 
-import { SourceContributionSchema, WorkUnitLedgerRecordSchema, WorkUnitStatusFileSchema } from '../schema/contracts/work-unit.mjs';
+import {
+  SourceContributionSchema,
+  WorkUnitLedgerRecordSchema,
+  WorkUnitStatusFileSchema,
+  WorkUnitSubmissionV1StatusFileSchema,
+} from '../schema/contracts/work-unit.mjs';
 import { loadQueue, saveQueue } from './queue-manager-lifecycle.mjs';
 import { refill } from './queue-manager-window.mjs';
 import { logToRun } from './logger.mjs';
+import { projectWorkUnitAttemptDisposition } from './work-unit-attempt-disposition.mjs';
+import { evaluateWorkUnitSubmitIntegrity } from './work-unit-submit-integrity.mjs';
+
+const WORK_UNIT_INDEX_TARGET = '_work_units/_index.json';
+const QUEUE_TARGET = 'rb_queue.json';
+
+function formalSubmitRerun(bundleDir, workId, resultPath, { late = false, reason = null } = {}) {
+  return [
+    'node DPT_FRAMEWORK/cli/operate-work-unit.mjs',
+    late ? 'late-submit' : 'submit',
+    JSON.stringify(path.resolve(bundleDir)),
+    '--work-id', JSON.stringify(workId),
+    '--result', JSON.stringify(path.resolve(resultPath)),
+    ...(late ? ['--reason', JSON.stringify(reason)] : []),
+  ].join(' ');
+}
 
 function captureFileSnapshot(filePath) {
   return existsSync(filePath)
@@ -96,6 +125,29 @@ function restoreSubmitSnapshot(snapshot) {
     }
   }
   return { ok: failures.length === 0, failures };
+}
+
+function writeSubmittedStatusAndHashes(bundleDir, record, { resultHash, ledgerRecordHash, submittedAt }) {
+  if (isMarkedWorkUnitSubmission(record)) {
+    writeJson(path.join(bundleDir, record.paths.status_ref), WorkUnitSubmissionV1StatusFileSchema.parse({
+      work_id: record.work_id,
+      status: 'submitted',
+      updated_at: submittedAt,
+    }));
+    delete record.result_hash;
+    delete record.ledger_record_hash;
+    record.accepted_ledger_record_hash = ledgerRecordHash;
+    return;
+  }
+  writeJson(path.join(bundleDir, record.paths.status_ref), WorkUnitStatusFileSchema.parse({
+    work_id: record.work_id,
+    status: 'submitted',
+    result_hash: resultHash,
+    ledger_record_hash: ledgerRecordHash,
+    updated_at: submittedAt,
+  }));
+  record.result_hash = resultHash;
+  record.ledger_record_hash = ledgerRecordHash;
 }
 
 function verifySubmitDurablePostcondition(bundleDir, record) {
@@ -484,13 +536,16 @@ function declarationRecoveryCommand(bundleDir, workId) {
 }
 
 function declarationRecoveryFailure(bundleDir, workId, error) {
-  const missingFact = error?.message || String(error);
+  const reasonCode = error?.recovery_reason_code || 'declaration_recovery_prerequisite_failed';
+  const missingFact = reasonCode === 'missing_source_contribution_no_legal_recovery'
+    ? `No legal recovery can reproduce ${workId || '<work-id>'}: its hash-bound source_contribution no longer matches the accepted direct source bytes.`
+    : error?.message || String(error);
   return {
     ok: false,
     recovered: false,
     changed: false,
     work_id: workId || null,
-    reason_code: error?.recovery_reason_code || 'declaration_recovery_prerequisite_failed',
+    reason_code: reasonCode,
     repair_kind: 'missing_contract',
     missing_fact: missingFact,
     write_to: `submitted declaration recovery prerequisites for ${workId || '<work-id>'}; do not edit rb_output_declarations.jsonl, index, status, queue, or hashes manually`,
@@ -500,7 +555,7 @@ function declarationRecoveryFailure(bundleDir, workId, error) {
   };
 }
 
-function readOriginalSubmitEvidence(bundleDir, record) {
+function readOriginalSubmitEvidence(bundleDir, record, { resultHash, ledgerRecordHash }) {
   const tracePath = path.join(bundleDir, 'rb_trace.jsonl');
   if (!existsSync(tracePath)) return [];
   let events;
@@ -532,8 +587,8 @@ function readOriginalSubmitEvidence(bundleDir, record) {
       event.event === 'work_unit_submitted' &&
       event.work_id === record.work_id &&
       event.queue_item_id === record.queue_item_id &&
-      event.result_hash === record.result_hash &&
-      event.ledger_record_hash === record.ledger_record_hash &&
+      event.result_hash === resultHash &&
+      event.ledger_record_hash === ledgerRecordHash &&
       transactions.has(event.tx_id)
     ))
     .map((event) => {
@@ -543,8 +598,8 @@ function readOriginalSubmitEvidence(bundleDir, record) {
         candidate.tx_id === event.tx_id &&
         candidate.work_id === record.work_id &&
         candidate.queue_item_id === record.queue_item_id &&
-        candidate.result_hash === record.result_hash &&
-        candidate.ledger_record_hash === record.ledger_record_hash
+        candidate.result_hash === resultHash &&
+        candidate.ledger_record_hash === ledgerRecordHash
       ));
       return { event, transaction, lateEvent };
     });
@@ -591,21 +646,41 @@ function prepareCurrentDeclarationRecovery(bundleDir, workId) {
   if (record.status !== 'submitted') {
     throw new Error(`work_id ${record.work_id} is ${record.status}; recover-declaration requires an already-submitted attempt`);
   }
-  if (!record.result_hash || !record.ledger_record_hash || !record.terminal_at) {
-    throw new Error(`submitted index record ${record.work_id} lacks result_hash, ledger_record_hash, or terminal_at`);
+  const marked = isMarkedWorkUnitSubmission(record);
+  const acceptedLedgerRecordHash = acceptedLedgerRecordHashFor(record);
+  if (!acceptedLedgerRecordHash || !record.terminal_at) {
+    throw new Error(`submitted index record ${record.work_id} lacks version-applicable accepted ledger hash or terminal_at`);
+  }
+  if (!marked && !record.result_hash) {
+    throw new Error(`legacy submitted index record ${record.work_id} lacks result_hash`);
   }
 
-  const statusPath = path.join(bundleDir, record.paths.status_ref);
-  if (!existsSync(statusPath)) throw new Error(`submitted status file is missing: ${record.paths.status_ref}`);
-  const status = WorkUnitStatusFileSchema.parse(JSON.parse(readFileSync(statusPath, 'utf-8')));
+  const status = readSubmittedStatusFile(bundleDir, record);
   if (status.work_id !== record.work_id || status.status !== 'submitted') {
     throw new Error(`submitted status/index binding mismatch for ${record.work_id}`);
   }
-  if (status.result_hash !== record.result_hash || status.ledger_record_hash !== record.ledger_record_hash) {
+  if (!marked && (status.result_hash !== record.result_hash || status.ledger_record_hash !== record.ledger_record_hash)) {
     throw new Error(`submitted status/index hash mismatch for ${record.work_id}`);
   }
 
-  const ledgerRows = readWorkUnitLedgerRows(bundleDir);
+  const ledgerDocument = readSubmittedLedgerDocument(bundleDir);
+  if (ledgerDocument.unattributable_errors.length > 0) {
+    throw new Error(`submitted ledger has unattributable corruption: ${ledgerDocument.unattributable_errors.map((item) => `line ${item.line} ${item.reason}`).join('; ')}`);
+  }
+  if (ledgerDocument.duplicate_work_ids.length > 0) {
+    throw new Error(`submitted ledger has duplicate work IDs: ${ledgerDocument.duplicate_work_ids.join(', ')}`);
+  }
+  const foreignInvalidRows = ledgerDocument.attributable_invalid_rows
+    .filter((item) => item.work_id !== record.work_id);
+  if (foreignInvalidRows.length > 0) {
+    throw new Error(`submitted ledger has unrelated attributable corruption: ${foreignInvalidRows.map((item) => item.work_id).join(', ')}`);
+  }
+  const invalidTargetRows = ledgerDocument.attributable_invalid_rows
+    .filter((item) => item.work_id === record.work_id);
+  if (invalidTargetRows.length > 1) {
+    throw new Error(`multiple drifted submitted declaration rows exist for ${record.work_id}`);
+  }
+  const ledgerRows = ledgerDocument.valid_rows;
   const existingRows = targetLedgerRows(ledgerRows, record);
   if (existingRows.length > 1) throw new Error(`multiple submitted declaration rows exist for ${record.work_id}`);
 
@@ -635,6 +710,7 @@ function prepareCurrentDeclarationRecovery(bundleDir, workId) {
 
   if (existingRows.length === 1) {
     const [ledgerRow] = existingRows;
+    validateCurrentSubmittedLedgerFact({ record, row: ledgerRow, status });
     for (const retryWorkId of ledgerRow.superseded_retry_work_ids || []) {
       const retry = index.work_units[retryWorkId];
       if (!retry || retry.status !== 'abandoned' || retry.terminal_reason !== 'superseded_by_late_accept') {
@@ -668,7 +744,7 @@ function prepareCurrentDeclarationRecovery(bundleDir, workId) {
   });
   const result = normalizeWave1RequiredOutputRoles(parsedResult, record, manifest, normalizations, assignedResultPath);
   const resultHash = hashValue(result);
-  if (resultHash !== record.result_hash) {
+  if (!marked && resultHash !== record.result_hash) {
     throw new Error(`submitted result hash mismatch for ${record.work_id}`);
   }
 
@@ -687,9 +763,27 @@ function prepareCurrentDeclarationRecovery(bundleDir, workId) {
     manifest,
   });
 
-  const evidence = readOriginalSubmitEvidence(bundleDir, record);
+  let sourceContribution;
+  try {
+    const directOutputEvaluations = requireDirectOutputs(bundleDir, manifest);
+    sourceContribution = deriveSourceContribution(record, manifest, result, directOutputEvaluations);
+  } catch (error) {
+    if (marked && record.wave === 0 && record.kind === 'wave0_source_intake') {
+      error.recovery_reason_code = 'missing_source_contribution_no_legal_recovery';
+    }
+    throw error;
+  }
+  const evidence = readOriginalSubmitEvidence(bundleDir, record, {
+    resultHash,
+    ledgerRecordHash: acceptedLedgerRecordHash,
+  });
   const timestampsUnified = status.updated_at === record.terminal_at && terminal.completed_at === record.terminal_at;
   const timestampCandidates = new Set([record.terminal_at, status.updated_at, terminal.completed_at]);
+  for (const invalid of invalidTargetRows) {
+    if (typeof invalid.value?.declared_at === 'string' && Number.isFinite(Date.parse(invalid.value.declared_at))) {
+      timestampCandidates.add(invalid.value.declared_at);
+    }
+  }
   for (const item of evidence) {
     for (const candidate of [
       item.event.ts,
@@ -714,11 +808,19 @@ function prepareCurrentDeclarationRecovery(bundleDir, workId) {
       : recoveryAuditOptions(record, evidence)) {
       let candidate;
       try {
-        candidate = buildLedgerRow({ record, result, resultHash, declaredAt, auditFields: audit.fields });
+        candidate = buildLedgerRow({
+          record,
+          result,
+          resultHash,
+          declaredAt,
+          auditFields: audit.fields,
+          sourceContribution,
+        });
       } catch {
         continue;
       }
-      if (candidate.ledger_record_hash !== record.ledger_record_hash || candidate.ledger_record_hash !== status.ledger_record_hash) continue;
+      if (candidate.ledger_record_hash !== acceptedLedgerRecordHash) continue;
+      if (!marked && candidate.ledger_record_hash !== status.ledger_record_hash) continue;
       const key = JSON.stringify(candidate);
       matches.set(key, { row: candidate, source: audit.source });
     }
@@ -760,7 +862,32 @@ function prepareCurrentDeclarationRecovery(bundleDir, workId) {
     existing: existingRows.length === 1,
     reconstructionSource,
     legacy: reconstructionSource.startsWith('legacy_') || !timestampsUnified,
+    replaceLine: invalidTargetRows[0]?.line || null,
   };
+}
+
+function writeRecoveredDeclaration(bundleDir, prepared) {
+  if (!prepared.replaceLine) {
+    appendLedgerRow(bundleDir, prepared.ledgerRow);
+    return;
+  }
+  const file = ledgerPath(bundleDir);
+  const lines = readFileSync(file, 'utf-8').split(/\r?\n/);
+  const lineIndex = prepared.replaceLine - 1;
+  if (lineIndex < 0 || lineIndex >= lines.length || !lines[lineIndex].trim()) {
+    throw new Error(`drifted declaration line ${prepared.replaceLine} changed before recovery`);
+  }
+  let current;
+  try {
+    current = JSON.parse(lines[lineIndex]);
+  } catch {
+    throw new Error(`drifted declaration line ${prepared.replaceLine} is no longer attributable`);
+  }
+  if (current?.work_id !== prepared.record.work_id) {
+    throw new Error(`drifted declaration line ${prepared.replaceLine} changed work_id before recovery`);
+  }
+  lines[lineIndex] = JSON.stringify(prepared.ledgerRow);
+  writeFileSync(file, `${lines.join('\n').replace(/\n+$/, '')}\n`);
 }
 
 function normalizeWave1RequiredOutputRoles(result, record, manifest, normalizations, resultPath) {
@@ -891,6 +1018,7 @@ function recordSubmitRejection(bundleDir, {
   violations = [],
   candidateProjection = null,
   selectedPrimary = null,
+  transactionHooks = null,
 }) {
   const guidance = rejectionGuidance(violations, selectedPrimary);
   const projection = candidateProjection ? {
@@ -961,7 +1089,13 @@ function recordSubmitRejection(bundleDir, {
     };
   }
 
-  return withWorkUnitTransaction(bundleDir, 'reject_work_unit_submit', ({ tx_id }) => {
+  return withWorkUnitTransaction(bundleDir, 'reject_work_unit_submit', {
+    targetWorkIds: [record.work_id],
+    targetQueueItemIds: [record.queue_item_id],
+    mutationTargets: [WORK_UNIT_INDEX_TARGET, record.paths.status_ref],
+    rerun: drySubmitRerun(bundleDir, record.work_id, resultPath),
+    hooks: transactionHooks,
+  }, ({ tx_id }) => {
     const rejection = submitRejectionPayload(record, reason, resultPath);
     record.last_submit_rejection = rejection;
     index.work_units[record.work_id] = record;
@@ -1122,9 +1256,18 @@ function validateSubmitPlan(bundleDir, {
     });
     const result = normalizeWave1RequiredOutputRoles(parsedResult, record, replayManifest, normalizations, resultPath);
     const resultHash = hashValue(result);
-    const ledgerRow = findSubmittedLedgerRow(bundleDir, record.work_id);
-    if (record.result_hash === resultHash && ledgerRow?.ledger_record_hash === record.ledger_record_hash) {
-      return { duplicate: true, index, record, result, result_hash: resultHash, ledger_record_hash: record.ledger_record_hash, ledger_row: ledgerRow, normalizations };
+    const submitted = loadCurrentSubmittedLedgerFact(bundleDir, record);
+    if (submitted.result_hash === resultHash) {
+      return {
+        duplicate: true,
+        index,
+        record,
+        result,
+        result_hash: resultHash,
+        ledger_record_hash: submitted.ledger_record_hash,
+        ledger_row: submitted.row,
+        normalizations,
+      };
     }
     throw new Error(`different-content duplicate submit rejected for ${record.work_id}`);
   }
@@ -1248,10 +1391,11 @@ function prepareLateSubmitIdempotent(bundleDir, { index, record, ledgerRows, res
   });
   const result = normalizeWave1RequiredOutputRoles(parsedResult, record, manifest, normalizations, resultPath);
   const resultHash = hashValue(result);
-  if (resultHash !== existingRow.result_hash || resultHash !== record.result_hash) {
+  const submitted = loadCurrentSubmittedLedgerFact(bundleDir, record, { ledgerRows });
+  if (resultHash !== existingRow.result_hash || resultHash !== submitted.result_hash) {
     throw new Error(`audited late-submit replay result hash mismatch for ${record.work_id}`);
   }
-  if (existingRow.ledger_record_hash !== record.ledger_record_hash) {
+  if (existingRow.ledger_record_hash !== submitted.ledger_record_hash) {
     throw new Error(`audited late-submit replay ledger/index mismatch for ${record.work_id}`);
   }
 
@@ -1642,18 +1786,31 @@ function publicNormalizations(normalizations) {
   return normalizations.map((item) => ({ ...item }));
 }
 
+function invokeTransactionMutationBoundary(transactionHooks, boundary, context = {}) {
+  if (typeof transactionHooks?.afterMutationBoundary === 'function') {
+    transactionHooks.afterMutationBoundary({ boundary, ...context });
+  }
+}
+
 export function drySubmitWorkUnit(bundleDir, { work_id, resultPath } = {}) {
   const plan = collectDrySubmitPlan(bundleDir, { work_id, resultPath });
+  const submitIntegrity = plan.record
+    ? evaluateWorkUnitSubmitIntegrity(bundleDir, {
+        index: plan.index,
+        record: plan.record,
+        resultPath,
+      })
+    : null;
   const reasonCodes = [...new Set((plan.violations || []).map((item) => item.code))];
   const base = {
-    ok: (plan.violations || []).length === 0,
+    ok: (plan.violations || []).length === 0 && (submitIntegrity?.ok ?? true),
     dry_run: true,
     side_effects: false,
     work_id: plan.record?.work_id || work_id,
     queue_item_id: plan.record?.queue_item_id || null,
     status: plan.record?.status || 'unknown',
-    expected_submit: (plan.violations || []).length === 0 ? 'pass' : 'fail',
-    reason_codes: reasonCodes,
+    expected_submit: (plan.violations || []).length === 0 && (submitIntegrity?.ok ?? true) ? 'pass' : 'fail',
+    reason_codes: [...new Set([...reasonCodes, ...(submitIntegrity?.roots || []).map((item) => item.code)])],
     violations: plan.violations || [],
     selected_primary: plan.selected_primary || null,
     recommended_action: plan.candidate_projection.recommended_action,
@@ -1664,6 +1821,13 @@ export function drySubmitWorkUnit(bundleDir, { work_id, resultPath } = {}) {
       ? 'Dry-submit passed. Run formal operate-work-unit submit to persist ledger, queue, result, receipt, trace, and cache authority.'
       : 'Repair the reported candidate result, receipt, output, cache, source-claim, or queue-binding issues, then rerun dry-submit or formal submit.',
   };
+  if (submitIntegrity) base.submit_integrity = submitIntegrity;
+  if (plan.record) {
+    base.attempt_disposition = projectWorkUnitAttemptDisposition(bundleDir, plan.record, {
+      operation: 'submit_work_unit',
+      rerun: drySubmitRerun(bundleDir, plan.record.work_id, resultPath),
+    });
+  }
   if (base.ok) {
     base.result_hash = plan.result_hash;
     base.virtual_cache_pages = [...(plan.virtual_cache_pages || new Map()).keys()];
@@ -1671,14 +1835,37 @@ export function drySubmitWorkUnit(bundleDir, { work_id, resultPath } = {}) {
   return base;
 }
 
-export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = {}) {
+export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason, transactionHooks = null } = {}) {
   const planned = prepareLateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason });
   if (planned.rejection) return planned.rejection;
   if (planned.idempotent) return planned.idempotent;
 
   const prepared = planned.prepared;
   try {
-    return withWorkUnitTransaction(bundleDir, 'late_submit_work_unit', ({ tx_id }) => {
+    const cachePageTargets = [...(prepared.virtual_cache_pages || new Map()).keys()]
+      .map((trail) => path.join(trail, 'page.md'));
+    const retryStatusTargets = (prepared.cleanupPlan.supersededRetryWorkIds || [])
+      .map((retryWorkId) => prepared.index.work_units[retryWorkId]?.paths?.status_ref)
+      .filter(Boolean);
+    return withWorkUnitTransaction(bundleDir, 'late_submit_work_unit', {
+      targetWorkIds: [prepared.record.work_id, ...(prepared.cleanupPlan.supersededRetryWorkIds || [])],
+      targetQueueItemIds: [prepared.record.queue_item_id],
+      mutationTargets: [
+        prepared.record.paths.result_ref,
+        prepared.record.paths.runtime_receipt_ref,
+        prepared.record.paths.status_ref,
+        ...retryStatusTargets,
+        ...cachePageTargets,
+        WORK_UNIT_OUTPUT_LEDGER,
+        WORK_UNIT_INDEX_TARGET,
+        QUEUE_TARGET,
+      ],
+      rerun: formalSubmitRerun(bundleDir, prepared.record.work_id, resultPath, {
+        late: true,
+        reason: prepared.reason,
+      }),
+      hooks: transactionHooks,
+    }, ({ tx_id }) => {
       let index = loadWorkUnitIndex(bundleDir, { createIfMissing: false });
       let record = requireWorkUnitRecord(index, prepared.record.work_id);
       if (record.status !== 'timed_out') {
@@ -1743,17 +1930,12 @@ export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
         applyCandidateCanonicalizations(bundleDir, activePrepared);
         writeJson(path.join(bundleDir, record.paths.result_ref), activePrepared.result);
         writeFileSync(path.join(bundleDir, record.paths.runtime_receipt_ref), activePrepared.runtime_receipt_content);
-        writeJson(path.join(bundleDir, record.paths.status_ref), WorkUnitStatusFileSchema.parse({
-          work_id: record.work_id,
-          status: 'submitted',
-          result_hash: activePrepared.result_hash,
-          ledger_record_hash: ledgerRecordHash,
-          updated_at: submittedAt,
-        }));
-
+        writeSubmittedStatusAndHashes(bundleDir, record, {
+          resultHash: activePrepared.result_hash,
+          ledgerRecordHash,
+          submittedAt,
+        });
         record.status = 'submitted';
-        record.result_hash = activePrepared.result_hash;
-        record.ledger_record_hash = ledgerRecordHash;
         record.terminal_at = submittedAt;
         record.late_accept_context = {
           late_accept_reason: activePrepared.reason,
@@ -1761,6 +1943,10 @@ export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
           superseded_retry_work_ids: [...currentCleanupPlan.supersededRetryWorkIds],
         };
         index.work_units[record.work_id] = record;
+        invokeTransactionMutationBoundary(transactionHooks, 'targeted_attempt_saved', {
+          bundleDir,
+          work_id: record.work_id,
+        });
 
         for (const retry of retryRecords) {
           retry.status = 'abandoned';
@@ -1773,6 +1959,11 @@ export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
             updated_at: submittedAt,
           }));
         }
+        invokeTransactionMutationBoundary(transactionHooks, 'retry_statuses_saved', {
+          bundleDir,
+          work_id: record.work_id,
+          retry_work_ids: retryRecords.map((retry) => retry.work_id),
+        });
 
         let nextQueue = applyLateSubmitQueueCleanup(queue, record, prepared.cleanupPlan);
         nextQueue.terminal_history.push({
@@ -1786,8 +1977,20 @@ export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
         nextQueue = refill(nextQueue);
 
         appendLedgerRow(bundleDir, ledgerRow);
+        invokeTransactionMutationBoundary(transactionHooks, 'ledger_appended', {
+          bundleDir,
+          work_id: record.work_id,
+        });
         const savedIndex = saveWorkUnitIndex(bundleDir, index);
+        invokeTransactionMutationBoundary(transactionHooks, 'index_saved', {
+          bundleDir,
+          work_id: record.work_id,
+        });
         const savedQueue = saveQueue(bundleDir, nextQueue);
+        invokeTransactionMutationBoundary(transactionHooks, 'queue_saved', {
+          bundleDir,
+          work_id: record.work_id,
+        });
 
         const postcondition = verifyLateSubmitDurablePostcondition(bundleDir, record, {
           supersededRetryWorkIds: activePrepared.cleanupPlan.supersededRetryWorkIds,
@@ -1883,7 +2086,7 @@ export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
   }
 }
 
-export function recoverWorkUnitDeclaration(bundleDir, { work_id } = {}) {
+export function recoverWorkUnitDeclaration(bundleDir, { work_id, transactionHooks = null } = {}) {
   let prepared;
   try {
     prepared = prepareCurrentDeclarationRecovery(bundleDir, work_id);
@@ -1905,7 +2108,13 @@ export function recoverWorkUnitDeclaration(bundleDir, { work_id } = {}) {
   }
 
   try {
-    return withWorkUnitTransaction(bundleDir, 'recover_work_unit_declaration', ({ tx_id }) => {
+    return withWorkUnitTransaction(bundleDir, 'recover_work_unit_declaration', {
+      targetWorkIds: [prepared.record.work_id],
+      targetQueueItemIds: [prepared.record.queue_item_id],
+      mutationTargets: [WORK_UNIT_OUTPUT_LEDGER],
+      rerun: declarationRecoveryCommand(bundleDir, prepared.record.work_id),
+      hooks: transactionHooks,
+    }, ({ tx_id }) => {
       const active = prepareCurrentDeclarationRecovery(bundleDir, work_id);
       if (active.existing) {
         return {
@@ -1923,10 +2132,10 @@ export function recoverWorkUnitDeclaration(bundleDir, { work_id } = {}) {
 
       const ledgerSnapshot = captureFileSnapshot(ledgerPath(bundleDir));
       try {
-        appendLedgerRow(bundleDir, active.ledgerRow);
+        writeRecoveredDeclaration(bundleDir, active);
         const restoredRows = readWorkUnitLedgerRows(bundleDir);
         const restored = restoredRows.filter((row) => row.work_id === active.record.work_id);
-        if (restored.length !== 1 || restored[0].ledger_record_hash !== active.record.ledger_record_hash) {
+        if (restored.length !== 1 || restored[0].ledger_record_hash !== acceptedLedgerRecordHashFor(active.record)) {
           throw new Error(`recovered declaration durable postcondition failed for ${active.record.work_id}`);
         }
         traceWorkUnitEvent(bundleDir, 'work_unit_declaration_recovered', {
@@ -1999,7 +2208,12 @@ export function inspectWorkUnitDeclarationRecovery(bundleDir, { work_id } = {}) 
   }
 }
 
-export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave = null } = {}) {
+export function submitWorkUnit(bundleDir, {
+  work_id,
+  resultPath,
+  afterQueueSave = null,
+  transactionHooks = null,
+} = {}) {
   let prepared;
   try {
     prepared = prepareWorkUnitSubmit(bundleDir, { work_id, resultPath });
@@ -2012,6 +2226,7 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
       violations: preflight.violations || [],
       candidateProjection: preflight.candidate_projection || null,
       selectedPrimary: preflight.selected_primary || null,
+      transactionHooks,
     });
   }
   if (prepared.duplicate) {
@@ -2027,8 +2242,44 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
     };
   }
 
+  const outerIntegrity = evaluateWorkUnitSubmitIntegrity(bundleDir, {
+    index: prepared.index,
+    record: prepared.record,
+    resultPath,
+  });
+  if (!outerIntegrity.ok) {
+    return {
+      ok: false,
+      work_id: prepared.record.work_id,
+      queue_item_id: prepared.record.queue_item_id,
+      reason_code: outerIntegrity.selected_primary.code,
+      repair_kind: outerIntegrity.selected_primary.repair_kind,
+      missing_fact: outerIntegrity.selected_primary.missing_fact,
+      write_to: outerIntegrity.selected_primary.write_to,
+      rerun: outerIntegrity.selected_primary.rerun,
+      transaction: outerIntegrity.transaction,
+      submit_integrity: outerIntegrity,
+    };
+  }
+
   try {
-    return withWorkUnitTransaction(bundleDir, 'submit_work_unit', ({ tx_id }) => {
+    const cachePageTargets = [...(prepared.virtual_cache_pages || new Map()).keys()]
+      .map((trail) => path.join(trail, 'page.md'));
+    return withWorkUnitTransaction(bundleDir, 'submit_work_unit', {
+      targetWorkIds: [prepared.record.work_id],
+      targetQueueItemIds: [prepared.record.queue_item_id],
+      mutationTargets: [
+        prepared.record.paths.result_ref,
+        prepared.record.paths.runtime_receipt_ref,
+        prepared.record.paths.status_ref,
+        ...cachePageTargets,
+        WORK_UNIT_OUTPUT_LEDGER,
+        WORK_UNIT_INDEX_TARGET,
+        QUEUE_TARGET,
+      ],
+      rerun: formalSubmitRerun(bundleDir, prepared.record.work_id, resultPath),
+      hooks: transactionHooks,
+    }, ({ tx_id }) => {
       const activePrepared = prepareWorkUnitSubmit(bundleDir, { work_id, resultPath });
       if (activePrepared.duplicate) {
         return {
@@ -2040,6 +2291,25 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
           result_hash: activePrepared.result_hash,
           ledger_record_hash: activePrepared.ledger_record_hash,
           normalizations: activePrepared.normalizations,
+        };
+      }
+      const lockedIntegrity = evaluateWorkUnitSubmitIntegrity(bundleDir, {
+        index: activePrepared.index,
+        record: activePrepared.record,
+        resultPath,
+        currentTxId: tx_id,
+      });
+      if (!lockedIntegrity.ok) {
+        return {
+          ok: false,
+          work_id: activePrepared.record.work_id,
+          queue_item_id: activePrepared.record.queue_item_id,
+          reason_code: lockedIntegrity.selected_primary.code,
+          repair_kind: lockedIntegrity.selected_primary.repair_kind,
+          missing_fact: lockedIntegrity.selected_primary.missing_fact,
+          write_to: lockedIntegrity.selected_primary.write_to,
+          rerun: lockedIntegrity.selected_primary.rerun,
+          submit_integrity: lockedIntegrity,
         };
       }
       const index = activePrepared.index;
@@ -2062,17 +2332,12 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
         applyCandidateCanonicalizations(bundleDir, activePrepared);
         writeJson(path.join(bundleDir, record.paths.result_ref), activePrepared.result);
         writeFileSync(path.join(bundleDir, record.paths.runtime_receipt_ref), activePrepared.runtime_receipt_content);
-        writeJson(path.join(bundleDir, record.paths.status_ref), WorkUnitStatusFileSchema.parse({
-          work_id: record.work_id,
-          status: 'submitted',
-          result_hash: activePrepared.result_hash,
-          ledger_record_hash: ledgerRecordHash,
-          updated_at: submittedAt,
-        }));
-
+        writeSubmittedStatusAndHashes(bundleDir, record, {
+          resultHash: activePrepared.result_hash,
+          ledgerRecordHash,
+          submittedAt,
+        });
         record.status = 'submitted';
-        record.result_hash = activePrepared.result_hash;
-        record.ledger_record_hash = ledgerRecordHash;
         record.terminal_at = submittedAt;
         index.work_units[record.work_id] = record;
 

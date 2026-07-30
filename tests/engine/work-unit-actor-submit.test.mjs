@@ -55,6 +55,7 @@ describe('work-unit actor provenance', () => {
         delete target.actor_contract_version;
         delete target.actor_execution;
         delete target.assignment_contract_version;
+        delete target.submission_contract_version;
         if (target.output_contract) delete target.output_contract.required_outputs;
         writeFileSync(ref, `${JSON.stringify(value, null, 2)}\n`);
       }

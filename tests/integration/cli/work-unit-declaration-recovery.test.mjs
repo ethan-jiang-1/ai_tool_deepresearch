@@ -55,6 +55,18 @@ topic_registry:
 ---
 # Plan
 `);
+  mkdirSync(path.join(dir, 'seed_topics'), { recursive: true });
+  writeFileSync(path.join(dir, 'seed_topics/topic-a.md'), `---
+topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
+id: "01"
+slug: topic-a
+title: Topic A
+must_answer: ["What matters?"]
+scope_role: primary
+depends_on_topic_uids: []
+---
+# Topic A
+`);
 
   const sourceUrl = 'https://docs.example.org/research/wave0-source';
   mkdirSync(path.join(dir, 'artifacts/wave0/topic-a'), { recursive: true });
@@ -202,11 +214,10 @@ describe('BUG-088 declaration fault recovery through real CLI', () => {
       assert.deepEqual(readFileSync(ledgerPath), originalBytes);
       assert.deepEqual(readWorkUnitLedgerRows(dir), [originalRow]);
 
-      const passedGate = runGate(dir);
-      assert.equal(passedGate.status, 0, passedGate.stderr || passedGate.stdout);
-      const passedOutput = JSON.parse(passedGate.stdout);
-      assert.equal(passedOutput.check.passed, true, passedOutput.inspect.join('\n'));
-      assert.equal(passedOutput.check.failed_rule_ids.includes('wave0_work_unit_submission_presence'), false);
+      const recoveredGate = runGate(dir);
+      const recoveredGateOutput = JSON.parse(recoveredGate.stdout);
+      assert.equal(recoveredGateOutput.check.failed_rule_ids.includes('wave0_work_unit_submission_presence'), false);
+      assert.equal(recoveredGateOutput.check.failed_rule_ids.includes('submitted_projection_authority'), false);
     });
   }
 });

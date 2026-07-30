@@ -1,4 +1,4 @@
-// @impl DEW-002, DEW-004, DEW-014, FRE-005, SDC-001, SDC-002, SDC-003
+// @impl DEW-002, DEW-004, DEW-014, DEW-024, FRE-005, SDC-001, SDC-002, SDC-003
 import { z } from 'zod';
 import path from 'node:path';
 
@@ -10,6 +10,8 @@ export const WORK_UNIT_AGENT_SCHEMA_VERSION = 'work-unit.agent.v1';
 export const WORK_UNIT_RECEIPT_EVENT_SCHEMA_VERSION = 'work-unit.receipt-event.v1';
 export const WORK_UNIT_ACTOR_CONTRACT_VERSION = 'work-unit.actor.v1';
 export const WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION = 'work-unit.assignment.v1';
+export const WORK_UNIT_SUBMISSION_CONTRACT_VERSION = 'work-unit.submission.v1';
+export const WORK_UNIT_SUPERSESSION_SCHEMA_VERSION = 'work-unit.supersession.v1';
 
 export const WORK_UNIT_ID_PATTERN = /^wu-w(?<wave>[0-9]+)-b(?<batch>[0-9]{3})-(?<kind_code>[a-z][a-z0-9]{1,7})-i(?<claim>[0-9]{4})$/;
 
@@ -17,6 +19,28 @@ export const WorkUnitStatus = z.enum(['claimed', 'submitted', 'failed', 'timed_o
 export const WorkUnitTerminalStatus = z.enum(['submitted', 'failed', 'timed_out', 'abandoned']);
 
 const JsonObject = z.record(z.string(), z.unknown());
+const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/, 'hash must be a lowercase SHA-256 hex string');
+
+export const WorkUnitSupersessionRootSchema = z.enum([
+  'submitted_declaration_missing',
+  'submitted_declaration_drift',
+  'submitted_result_drift',
+  'submitted_runtime_receipt_drift',
+  'submitted_output_drift',
+  'submitted_cache_drift',
+]);
+
+export const WorkUnitSupersessionRelationSchema = z.object({
+  schema_version: z.literal(WORK_UNIT_SUPERSESSION_SCHEMA_VERSION),
+  predecessor_work_id: z.string().regex(WORK_UNIT_ID_PATTERN),
+  predecessor_queue_item_id: z.string().trim().min(1),
+  accepted_ledger_record_hash: Sha256Schema,
+  root_code: WorkUnitSupersessionRootSchema,
+  reason: z.string().trim().min(1),
+  recorded_at: z.string().datetime(),
+  tx_id: z.string().trim().min(1),
+  successor_queue_item_id: z.string().trim().min(1),
+}).strict();
 
 export const DirectOutputContractIdSchema = z.enum([
   'wave0.source-metadata-array.v1',
@@ -333,6 +357,7 @@ export const WorkUnitManifestSchema = z.object({
   timeout_ms: z.number().int().positive(),
   deadline_at: z.string().datetime(),
   assignment_contract_version: z.literal(WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION).optional(),
+  submission_contract_version: z.literal(WORK_UNIT_SUBMISSION_CONTRACT_VERSION).optional(),
   output_contract: JsonObject,
   cache_policy: JsonObject,
   runtime_refs: RuntimeRefsSchema,
@@ -361,6 +386,7 @@ export const WorkUnitBeaconSchema = z.object({
   receipt_nonce: z.string().min(16),
   deadline_at: z.string().datetime(),
   assignment_contract_version: z.literal(WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION).optional(),
+  submission_contract_version: z.literal(WORK_UNIT_SUBMISSION_CONTRACT_VERSION).optional(),
   work_unit_dir: z.string().min(1),
   manifest_ref: z.string().min(1),
   task_ref: z.string().min(1),
@@ -424,6 +450,7 @@ export const WorkUnitIndexRecordSchema = z.object({
   timeout_ms: z.number().int().positive(),
   deadline_at: z.string().datetime(),
   assignment_contract_version: z.literal(WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION).optional(),
+  submission_contract_version: z.literal(WORK_UNIT_SUBMISSION_CONTRACT_VERSION).optional(),
   last_observed_at: z.string().datetime().optional(),
   runtime_refs: RuntimeRefsSchema,
   actor_contract_version: z.literal(WORK_UNIT_ACTOR_CONTRACT_VERSION).optional(),
@@ -431,12 +458,78 @@ export const WorkUnitIndexRecordSchema = z.object({
   paths: WorkUnitPathRefsSchema,
   result_hash: z.string().min(1).optional(),
   ledger_record_hash: z.string().min(1).optional(),
+  accepted_ledger_record_hash: Sha256Schema.optional(),
+  supersession_relation: WorkUnitSupersessionRelationSchema.optional(),
   late_accept_context: WorkUnitLateAcceptContextSchema.optional(),
   last_submit_rejection: z.record(z.string(), z.unknown()).optional(),
   terminal_reason: z.string().optional(),
   terminal_at: z.string().datetime().optional(),
 }).strict().superRefine((data, ctx) => {
   if (Boolean(data.actor_contract_version) !== Boolean(data.actor_execution)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'index actor contract fields must appear together' });
+  const marked = data.submission_contract_version === WORK_UNIT_SUBMISSION_CONTRACT_VERSION;
+  if (marked) {
+    for (const field of ['result_hash', 'ledger_record_hash']) {
+      if (Object.hasOwn(data, field)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: `marked submission cannot retain legacy current ${field}`,
+        });
+      }
+    }
+    if (data.status === 'submitted' && !data.accepted_ledger_record_hash) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['accepted_ledger_record_hash'],
+        message: 'marked submitted work unit requires its immutable accepted ledger fingerprint',
+      });
+    }
+    if (data.status !== 'submitted' && data.accepted_ledger_record_hash) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['accepted_ledger_record_hash'],
+        message: 'accepted ledger fingerprint is only legal after marked submission',
+      });
+    }
+  } else if (data.accepted_ledger_record_hash) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['accepted_ledger_record_hash'],
+      message: 'markerless legacy work unit cannot carry a standalone marked acceptance fingerprint',
+    });
+  }
+  if (data.supersession_relation) {
+    const relation = data.supersession_relation;
+    if (data.status !== 'submitted') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['supersession_relation'],
+        message: 'supersession relation is only legal on a submitted predecessor',
+      });
+    }
+    if (relation.predecessor_work_id !== data.work_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['supersession_relation', 'predecessor_work_id'],
+        message: 'supersession predecessor_work_id must match the containing index record',
+      });
+    }
+    if (relation.predecessor_queue_item_id !== data.queue_item_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['supersession_relation', 'predecessor_queue_item_id'],
+        message: 'supersession predecessor_queue_item_id must match the containing index record',
+      });
+    }
+    const acceptedHash = marked ? data.accepted_ledger_record_hash : data.ledger_record_hash;
+    if (acceptedHash && relation.accepted_ledger_record_hash !== acceptedHash) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['supersession_relation', 'accepted_ledger_record_hash'],
+        message: 'supersession accepted hash must match version-applicable index acceptance evidence',
+      });
+    }
+  }
   if (data.late_accept_context && data.status !== 'submitted') {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -487,14 +580,20 @@ export const WorkUnitIndexSchema = z.object({
   updated_at: z.string().datetime(),
 }).strict();
 
-export const WorkUnitStatusFileSchema = z.object({
+const WorkUnitStatusFileBaseShape = {
   schema_version: z.literal(WORK_UNIT_STATUS_SCHEMA_VERSION).default(WORK_UNIT_STATUS_SCHEMA_VERSION),
   work_id: z.string().regex(WORK_UNIT_ID_PATTERN),
   status: WorkUnitStatus,
   updated_at: z.string().datetime(),
+  last_submit_rejection: z.record(z.string(), z.unknown()).optional(),
+};
+
+export const WorkUnitSubmissionV1StatusFileSchema = z.object(WorkUnitStatusFileBaseShape).strict();
+
+export const WorkUnitStatusFileSchema = z.object({
+  ...WorkUnitStatusFileBaseShape,
   result_hash: z.string().min(1).optional(),
   ledger_record_hash: z.string().min(1).optional(),
-  last_submit_rejection: z.record(z.string(), z.unknown()).optional(),
 }).strict();
 
 export const WorkUnitAgentFileSchema = z.object({

@@ -42,6 +42,9 @@ describe('current actor-bound work-unit delivery', () => {
       assert.match(task, /workflows\/nodes\/phases\/subagent-dpt-evidence-extractor\.md/);
       assert.match(task, /shared-page-fetch-guidance/);
       assert.match(task, /## Completion Contract/);
+      assert.match(task, /Logical actor route: `delegated_subagent`/);
+      assert.match(task, /Only the selected delegated-subagent route authors candidate content/);
+      assert.match(task, /does not authenticate a physical writer or prove host\/sub-agent liveness/i);
       assert.match(task, /### Required Outputs/);
       assert.match(task, /Wave1 evidence summary/);
       assert.match(task, /Wave1 question list/);
@@ -67,6 +70,8 @@ describe('current actor-bound work-unit delivery', () => {
         },
       });
       assert.match(task, /execution_actor_class: `phase_agent_fallback`/);
+      assert.match(task, /Logical actor route: `phase_agent_fallback`/);
+      assert.match(task, /may author candidate content only for this exact fallback attempt/);
       assert.match(task, /subagent-dpt-evidence-extractor\.md/);
       assert.match(task, /shared-page-fetch-guidance/);
       assert.match(prompt.spawn_prompt, /subagent-dpt-evidence-extractor\.md/);

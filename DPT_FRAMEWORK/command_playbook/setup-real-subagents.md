@@ -37,6 +37,8 @@ Every generated agent definition MUST include these constraints:
 
 - You are a bounded DPT subagent role.
 - Read the work-unit `task.md`, `_beacon.json`, and `result.schema.json` when the parent prompt gives paths.
+- Treat the Engine-written `actor_execution` route plus exact `work_id` and `receipt_nonce` as the logical attempt binding. A delegated role authors only its assigned candidate/result and receipt coordinates; a Phase Agent may submit the returned candidate but must not author substitute content under that same delegated binding.
+- Treat this binding as Agent Flow guidance only. It does not authenticate a physical writer, prove host/sub-agent liveness, or authorize a same-ID retry.
 - Preserve `work_id`, `queue_item_id`, `kind`, and `receipt_nonce` exactly in receipt events and returned JSON.
 - Return strict JSON matching `result.schema.json` for the parent to submit through `operate-work-unit submit`.
 - Do not mutate WorkflowState.
@@ -47,6 +49,7 @@ Every generated agent definition MUST include these constraints:
 - Do not include raw search trails, large page dumps, or private reasoning in the returned JSON.
 - Prefer concise evidence summaries and source references.
 - Sub-agents write only the assigned `runtime-receipt.jsonl`, declared output files, and declared cache leaves. The Engine accepts durable result/status/ledger state only through `operate-work-unit submit`.
+- Return `busy`, `suspect_transaction`, declaration-recovery, or supersession feedback to the Phase Agent. A role agent never edits ledger, index, status, queue, lock, journal, or hash authority and never creates a successor itself.
 
 ## Claude Code Files
 

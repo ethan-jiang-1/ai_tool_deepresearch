@@ -63,7 +63,15 @@ Non-gate current-state inventory:
 
 - Inspect-wave CLIs emit `{ check, inspect, advice }` without `routing`; they use `0` for inspected structure pass, `1` for inspect failure, and `2` for caller invocation errors such as missing bundle input.
 - `check-reentry.mjs` emits structured stdout with `inspect`/`advice`; it uses `0` clean, `1` blockers/drift, and `2` invalid target/args/config/caller request.
-- `operate-work-unit.mjs` is the delegated work-unit lifecycle CLI. Successful `submit` is the Engine boundary that completes the queue demand and appends the submitted ledger row.
+- `operate-work-unit.mjs` is the delegated work-unit lifecycle CLI. Successful `submit` is the Engine boundary that completes the queue demand and appends the submitted ledger row. Its public recovery operations are exact:
+
+  ```bash
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration <bundle> --work-id <submitted_id>
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-transaction <bundle> --tx-id <id>
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs supersede <bundle> --work-id <submitted_id> --reason <audit-reason>
+  ```
+
+  Read structured output even on a non-zero runtime outcome. `busy` names caller operation/work coordinates separately from holder transaction/operation/target work/queue coordinates and its journal disposition; wait and rerun the exact caller operation at the same checkpoint without inferring physical actor identity, progress, or liveness. `suspect_transaction` permits `recover-transaction` only when the returned `repair_kind`, exact journal `write_to`, and transaction ID select one unlocked proof-complete v2 journal; otherwise `missing_contract` is the boundary. Exact `recover-declaration` precedes `supersede`. A successful supersession returns the predecessor work/queue coordinates, committing transaction, and one `successor_queue_item_id`; use that successor's ordinary actor-observed claim/poll/submit route and rerun the original inspect/Gate. Never manually edit ledger, index, status, queue, lock, journal, or hash authority.
 - `validate-work-unit-hygiene.mjs` is a static production-surface hygiene gate. It exits `1` when removed delegated authority tokens, unsupported provenance check names, or queue/index semantic regressions appear in active framework surfaces.
 - Many utility validators are binary `0/1` and do not yet share a common exit helper.
 - `log-event.mjs` always exits `0`, even when a diagnostic log or trace write cannot be completed. This exception keeps logging failure from blocking Agent flow, but it is not evidence that a load-bearing trace event was written.

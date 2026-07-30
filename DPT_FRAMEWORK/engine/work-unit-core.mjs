@@ -1,4 +1,4 @@
-// @impl DEW-002, DEW-004, DEW-006, DEW-013, DEW-014, FRE-005, SDC-001, SDC-002, SDC-003, EXO-001, FIO-001, SNC-005, REF-006, WAI-008, WTS-010
+// @impl DEW-002, DEW-004, DEW-006, DEW-013, DEW-014, DEW-022, DEW-023, DEW-024, AGQ-026, WPG-016, CHI-004, FRE-005, SDC-001, SDC-002, SDC-003, EXO-001, FIO-001, SNC-005, REF-006, WAI-008, WTS-010
 // Work-unit core barrel: re-exports from submodules. All public API preserved.
 
 // Constants (5)
@@ -69,3 +69,22 @@ export {
 
 // Narrow eligible projection (1)
 export { collectEligibleRows } from './work-unit-projection.mjs';
+
+export { projectWorkUnitAttemptDisposition } from './work-unit-attempt-disposition.mjs';
+export { evaluateWorkUnitSubmitIntegrity } from './work-unit-submit-integrity.mjs';
+
+export {
+  buildSupersessionSuccessorDemand,
+  evaluateNormalizedSubmittedWorkUnitLedger,
+  evaluateWorkUnitSupersessionEligibility,
+  resolveWorkUnitSupersessionLineage,
+  supersedeWorkUnitAttempt,
+  validateSubmittedPredecessorAuthority,
+} from './work-unit-supersession.mjs';
+
+export {
+  inspectWorkUnitTransaction,
+  recoverWorkUnitTransaction,
+  transactionLockOwnerPath,
+  WORK_UNIT_TRANSACTION_TRANSITIONS,
+} from './work-unit-transaction.mjs';

@@ -19,6 +19,8 @@ export {
   QUEUE_SCHEMA_VERSION,
   QueueDemandItemSchema,
   QueueSchema,
+  WORK_UNIT_SUPERSESSION_LINEAGE_FIELDS,
+  WorkUnitSupersessionQueueLineageSchema,
 } from './contracts/queue.mjs';
 export { ProfileSchema, ResearchStyleParamsSchema } from './contracts/profile.mjs';
 export { CanonicalPlanSchema, CanonicalTopicEntrySchema, PreviousTopicLayoutSchema, LegacyPlanSchema, LegacyTopicEntrySchema, PlanSchema } from './contracts/plan.mjs';
@@ -29,6 +31,8 @@ export {
   WORK_UNIT_BEACON_SCHEMA_VERSION,
   WORK_UNIT_INDEX_SCHEMA_VERSION,
   WORK_UNIT_MANIFEST_SCHEMA_VERSION,
+  WORK_UNIT_SUBMISSION_CONTRACT_VERSION,
+  WORK_UNIT_SUPERSESSION_SCHEMA_VERSION,
   WorkUnitAgentFileSchema,
   WorkUnitBeaconSchema,
   WorkUnitIndexRecordSchema,
@@ -40,7 +44,27 @@ export {
   WorkUnitRuntimeReceiptEventSchema,
   WorkUnitStatus,
   WorkUnitStatusFileSchema,
+  WorkUnitSubmissionV1StatusFileSchema,
+  WorkUnitSupersessionRelationSchema,
+  WorkUnitSupersessionRootSchema,
 } from './contracts/work-unit.mjs';
+export {
+  WORK_UNIT_TRANSACTION_LOCK_SCHEMA_VERSION,
+  WORK_UNIT_TRANSACTION_V1_SCHEMA_VERSION,
+  WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
+  WorkUnitTransactionBusyProjectionSchema,
+  WorkUnitTransactionJournalSchema,
+  WorkUnitTransactionLockOwnerSchema,
+  WorkUnitTransactionMutationManifestSchema,
+  WorkUnitTransactionMutationTargetSchema,
+  WorkUnitTransactionOperationSchema,
+  WorkUnitTransactionPairSchema,
+  WorkUnitTransactionProjectionSchema,
+  WorkUnitTransactionSuspectProjectionSchema,
+  WorkUnitTransactionV1JournalSchema,
+  WorkUnitTransactionV2DispositionSchema,
+  WorkUnitTransactionV2JournalSchema,
+} from './contracts/work-unit-transaction.mjs';
 export {
   PLAYBOOK_BUNDLE_ROLE_RE,
   PLAYBOOK_CASE_RE,

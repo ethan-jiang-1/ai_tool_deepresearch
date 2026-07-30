@@ -1,4 +1,4 @@
-// @impl DEW-002, SNC-008, WAI-008, WTS-010
+// @impl DEW-002, DEW-022, DEW-024, SNC-008, WAI-008, WTS-010
 // Work-unit envelope: file refs, result schema, task markdown, spawn prompt, envelope write.
 
 import {
@@ -363,6 +363,26 @@ function actorGuidanceSpawnLines(actorDelivery) {
   ];
 }
 
+function logicalAttemptGuidanceLines(manifest, abs) {
+  if (!manifest.actor_execution) return [];
+  const actorClass = manifest.actor_execution.execution_actor_class;
+  const common = [
+    `- Logical actor route: \`${actorClass}\`; exact attempt: work_id \`${manifest.work_id}\`, receipt_nonce \`${manifest.receipt_nonce}\`.`,
+    `- Assigned candidate coordinate: \`${abs.result_ref}\`; assigned receipt coordinate: \`${abs.runtime_receipt_ref}\`.`,
+    '- This logical binding guides the Agent Flow only. It does not authenticate a physical writer or prove host/sub-agent liveness.',
+  ];
+  if (actorClass === 'phase_agent_fallback') {
+    return [
+      ...common,
+      '- The Phase Agent may author candidate content only for this exact fallback attempt. It gains no write authority over any separately claimed delegated-subagent attempt.',
+    ];
+  }
+  return [
+    ...common,
+    '- Only the selected delegated-subagent route authors candidate content for this coordinate. The Phase Agent may wait, inspect, dry-submit, formally submit the returned candidate, or use an existing terminal/supersession operation; it must not author substitute content under this binding.',
+  ];
+}
+
 function lifecycleReceiptExample(manifest, event) {
   return {
     schema_version: 'work-unit.receipt-event.v1',
@@ -416,6 +436,7 @@ function taskMarkdown(manifest, bundleDir, resultSchema, actorDelivery) {
     `- work_id: \`${manifest.work_id}\`; queue_item_id: \`${manifest.queue_item_id}\`; kind: \`${manifest.kind}\`; receipt_nonce: \`${manifest.receipt_nonce}\`.`,
     ...(manifest.assignment_contract_version ? [`- assignment_contract_version: \`${manifest.assignment_contract_version}\`.`] : []),
     ...(manifest.actor_contract_version ? [`- execution_actor_class: \`${manifest.actor_execution.execution_actor_class}\`; delegated_role_key: \`${manifest.actor_execution.delegated_role_key}\`.`] : []),
+    ...logicalAttemptGuidanceLines(manifest, abs),
     `- bundle_dir: \`${path.resolve(bundleDir)}\`; work_unit_dir: \`${manifest.paths.work_unit_dir}\`.`,
     `- Authority refs: manifest \`${manifest.paths.manifest_ref}\`; beacon \`${manifest.paths.beacon_ref}\`; result schema \`${manifest.paths.result_schema_ref}\`; result \`${manifest.paths.result_ref}\`; runtime receipt \`${manifest.paths.runtime_receipt_ref}\`.`,
     `- Result schema requires: ${resultSchema.required.join(', ')}. Allowed fields: ${Object.keys(resultSchema.properties).join(', ')}.`,
@@ -467,7 +488,7 @@ function taskMarkdown(manifest, bundleDir, resultSchema, actorDelivery) {
     '',
     '### Lifecycle Receipt And Handoff',
     '',
-    `- Append JSONL to \`${manifest.paths.runtime_receipt_ref}\`; every event carries work_id, queue_item_id, kind, and receipt_nonce. \`log-event.mjs\` is diagnostic only.`,
+    `- Append lifecycle evidence as JSONL to the assigned runtime receipt \`${manifest.paths.runtime_receipt_ref}\`; every event carries work_id, queue_item_id, kind, and receipt_nonce. \`log-event.mjs\` is optional diagnostic mirroring only and never satisfies or replaces the assigned receipt.`,
     '- Progress events are diagnostics only; they do not satisfy output, cache, source-claim, ledger, or gate authority.',
     '',
     '```jsonl',
@@ -477,7 +498,9 @@ function taskMarkdown(manifest, bundleDir, resultSchema, actorDelivery) {
     '### Verify Before Return',
     '',
     '- Write every output, cache leaf, receipt event, and result under the active bundle root. Do not mutate queue, index, ledger, beacon, or Gate state.',
-    `- Run the existing same-candidate check: \`node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit "${path.resolve(bundleDir)}" --work-id "${manifest.work_id}" --result "${abs.result_ref}"\`.`,
+    '- Verify every assigned required output against its listed direct contract before recording `work_done`.',
+    `- The Phase Agent runs the existing same claimed attempt dry-submit after the actor returns: \`node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit "${path.resolve(bundleDir)}" --work-id "${manifest.work_id}" --result "${abs.result_ref}"\`.`,
+    '- Return any later `busy`, `suspect_transaction`, `recover-declaration`, or `supersede` feedback to the Phase Agent. The selected actor does not edit ledger/index/status/queue/lock/journal/hash authority or create a successor.',
     '- Return the result path to the Phase Agent. Formal submit is the only normal first-acceptance owner.',
     '',
     ...actorGuidanceTaskLines(actorDelivery),
@@ -500,12 +523,18 @@ export function spawnPromptForWorkUnit(manifest, bundleDir = null, { actorDelive
   const actorInstruction = parsed.actor_execution?.execution_actor_class === 'phase_agent_fallback'
     ? `You are the Phase Agent executing explicit fallback work unit ${parsed.work_id}.`
     : `You are executing delegated work unit ${parsed.work_id} as role ${parsed.actor_execution?.delegated_role_key || '<legacy-unrecorded>'}.`;
+  const routeBoundary = parsed.actor_execution?.execution_actor_class === 'phase_agent_fallback'
+    ? `Author only this exact fallback attempt (${parsed.work_id}, receipt_nonce ${parsed.receipt_nonce}); this grants no authority over another delegated attempt.`
+    : `Only this delegated route authors candidate content for ${parsed.work_id}; the Phase Agent may inspect or submit the returned candidate but must not author substitute content under the same binding.`;
   return [
     actorInstruction,
     '',
     resolvedBundleDir ? `Active bundle_dir: ${resolvedBundleDir}` : 'Read bundle_dir from the assigned _beacon.json before writing files.',
     `Open task.md and begin at ## Completion Contract: ${absTask}`,
     'The task Completion Contract is the sole attempt-bound authoring entry. Do not infer, duplicate, or replace it with a separate result, receipt, cache, or identity instruction set.',
+    routeBoundary,
+    'The binding is logical guidance, not physical actor authentication or liveness proof.',
+    'Append lifecycle evidence as JSONL to the assigned receipt named by the task Completion Contract; log-event.mjs is optional diagnostic mirroring only and never satisfies or replaces that receipt.',
     ...actorGuidanceSpawnLines(normalizedActorDelivery),
     'Use no authority outside the task Completion Contract. Return the result path to the Phase Agent after the task-directed verification.',
   ].join('\n');
@@ -530,6 +559,7 @@ export function writeWorkUnitEnvelope(bundleDir, manifest, { actorDelivery } = {
     receipt_nonce: parsed.receipt_nonce,
     deadline_at: parsed.deadline_at,
     ...(parsed.assignment_contract_version ? { assignment_contract_version: parsed.assignment_contract_version } : {}),
+    ...(parsed.submission_contract_version ? { submission_contract_version: parsed.submission_contract_version } : {}),
     work_unit_dir: parsed.paths.work_unit_dir,
     manifest_ref: parsed.paths.manifest_ref,
     task_ref: parsed.paths.task_ref,

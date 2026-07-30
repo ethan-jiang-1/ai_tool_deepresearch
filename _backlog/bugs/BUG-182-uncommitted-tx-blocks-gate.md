@@ -18,3 +18,15 @@ The fix was manually deleting all `tx-*.json` files. There is no Engine operatio
 ## Expected behavior
 
 `operate-work-unit sweep` or a gate preflight should clean up uncommitted transactions that are older than the last successful submit. Stale transactions should not block gate passage.
+
+## C4 Disposition (2026-07-31)
+
+- Implemented path (`DEW-023`, `CHI-004`): new transaction-v2 journals declare complete exact-path
+  before-images before target mutation and settle as `committed`, proof-verified `rolled_back`, or `suspect`
+  before final lock release. Proven rollback history no longer blocks solely by existing. One exact unlocked
+  v2 `started`/`suspect` journal may be reconciled with
+  `operate-work-unit recover-transaction <bundle> --tx-id <id>` only when all declared targets still match;
+  settled recovery is idempotent and changes no original target authority.
+- Residual boundary: C4 adds no age sweep, batch cleanup, lock stealing, or dead-process inference. Any valid
+  non-suspect held pair remains honest `busy`; legacy/incomplete/drifted proof or a suspect held pair remains
+  `missing_contract`. Host crash/liveness recovery requires a future fencing contract.

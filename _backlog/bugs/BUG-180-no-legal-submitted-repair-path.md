@@ -26,3 +26,15 @@ A single hash mismatch (caused by sub-agent/Phase Agent result collision, BUG-17
 ## Expected behavior
 
 `operate-work-unit replace` should accept submitted work units when the Phase Agent declares "result content mismatch — replacing with corrected result." The hash mismatch is proof that the submitted result is no longer valid.
+
+## C4 Disposition (2026-07-31)
+
+- Implemented path (`DEW-024`, `AGQ-026`, `CHI-004`): submitted correction is the new
+  `operate-work-unit supersede <bundle> --work-id <submitted_id> --reason <reason>` operation, not an expansion
+  of terminal `replace`. It rechecks attributable integrity drift, writes one immutable nine-field relation,
+  and atomically creates one fresh terminal-snapshot-derived queue successor while preserving predecessor
+  status, ledger/result/receipt/cache, and terminal history. Exact declaration recovery is the sole nearer path
+  when reachable; replay returns the original relation/successor without a sibling.
+- Residual boundary: index/status/terminal-queue drift, malformed relation, branched/cyclic lineage, or
+  unattributable ledger corruption remains `missing_contract`. A merely richer late result is a semantic or
+  supplementary-work decision and does not authorize deterministic replacement.

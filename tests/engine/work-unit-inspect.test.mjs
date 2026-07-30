@@ -84,7 +84,7 @@ describe('work-unit inspect', () => {
       writeFileSync(path.join(txDir, 'tx-open.json'), JSON.stringify({ tx_id: 'tx-open', status: 'started' }));
       const result = inspectWorkUnits(dir);
       assert.equal(result.passed, false);
-      assert.match(result.inspect.join('\n'), /uncommitted transaction/);
+      assert.match(result.inspect.join('\n'), /suspect legacy transaction|unlocked unresolved transaction journal/);
     } finally {
       cleanup(dir);
     }

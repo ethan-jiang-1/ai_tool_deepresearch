@@ -1,4 +1,4 @@
-// @impl EXO-001, FIO-001
+// @impl DEW-022, DEW-023, DEW-024, WPG-016, CHI-004, EXO-001, FIO-001
 // Work-unit inspect: list dirs, transaction/receipt/beacon/ledger issues, inspect entry point.
 
 import {
@@ -38,6 +38,11 @@ import {
   WorkUnitRuntimeReceiptEventSchema,
 } from '../schema/contracts/work-unit.mjs';
 import { readAndValidateBeacon } from './work-unit-validation.mjs';
+import { loadCurrentSubmittedLedgerFact } from './work-unit-submitted-ledger.mjs';
+import { projectWorkUnitAttemptDisposition } from './work-unit-attempt-disposition.mjs';
+import { evaluateNormalizedSubmittedWorkUnitLedger } from './work-unit-supersession.mjs';
+import { WorkUnitTransactionJournalSchema } from '../schema/contracts/work-unit-transaction.mjs';
+import { inspectWorkUnitTransaction } from './work-unit-transaction.mjs';
 
 function listWorkUnitDirs(bundleDir) {
   const root = workUnitsRoot(bundleDir);
@@ -59,9 +64,21 @@ function transactionIssues(bundleDir) {
   const issues = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
-    const tx = readJson(path.join(dir, entry.name));
-    if (tx.status !== 'committed') issues.push(`uncommitted transaction ${entry.name}: status=${tx.status || '<missing>'}`);
+    try {
+      const tx = WorkUnitTransactionJournalSchema.parse(readJson(path.join(dir, entry.name)));
+      if (tx.schema_version === 'work-unit.transaction.v1' && tx.status !== 'committed') {
+        issues.push(`suspect legacy transaction ${entry.name}: status=${tx.status}`);
+      }
+      if (tx.schema_version === 'work-unit.transaction.v2' && ['started', 'suspect'].includes(tx.status)) {
+        issues.push(`unresolved transaction ${entry.name}: status=${tx.status}`);
+      }
+    } catch (error) {
+      issues.push(`invalid transaction journal ${entry.name}: ${error.message || String(error)}`);
+    }
   }
+  const current = inspectWorkUnitTransaction(bundleDir, { operation: 'submit_work_unit' });
+  if (current.disposition === 'busy') issues.push(`work-unit transaction busy: ${current.holder.tx_id}`);
+  if (current.disposition === 'suspect_transaction') issues.push(current.missing_fact);
   return issues;
 }
 
@@ -94,45 +111,25 @@ function runtimeReceiptIssues(bundleDir, record) {
 
 function ledgerIssues(bundleDir, index) {
   const issues = [];
+  const historicalWorkIds = new Set();
   const unsupportedLedger = path.join(workUnitsRoot(bundleDir), '_ledger.jsonl');
   if (existsSync(unsupportedLedger)) {
     issues.push('unsupported delegated ledger present: _work_units/_ledger.jsonl; production submissions use rb_output_declarations.jsonl');
   }
 
-  let rows = [];
+  let normalized;
   try {
-    rows = readWorkUnitLedgerRows(bundleDir);
+    normalized = evaluateNormalizedSubmittedWorkUnitLedger(bundleDir);
   } catch (error) {
     issues.push(`work-unit ledger invalid: ${error.message}`);
-    return issues;
+    return { issues, historicalWorkIds };
   }
-  const rowsByWorkId = new Map();
-  for (const row of rows) {
-    if (rowsByWorkId.has(row.work_id)) issues.push(`duplicate work-unit ledger row: ${row.work_id}`);
-    rowsByWorkId.set(row.work_id, row);
-    const record = index.work_units[row.work_id];
-    if (!record) {
-      issues.push(`ledger row without index record: ${row.work_id}`);
-      continue;
-    }
-    if (record.status !== 'submitted') issues.push(`ledger row for non-submitted work unit: ${row.work_id} status=${record.status}`);
-  }
+  for (const historical of normalized.historical || []) historicalWorkIds.add(historical.work_id);
 
-  for (const [workId, record] of Object.entries(index.work_units || {})) {
-    if (record.status !== 'submitted') continue;
-    const row = rowsByWorkId.get(workId);
-    if (!row) {
-      issues.push(`submitted work unit missing ledger row: ${workId}`);
-      continue;
-    }
-    for (const field of ['queue_item_id', 'wave', 'kind', 'producer_rule', 'creation_reason', 'receipt_nonce']) {
-      if (row[field] !== record[field]) issues.push(`ledger/index mismatch for ${workId}: ${field}`);
-    }
-    if (row.work_unit_ref !== record.paths.work_unit_dir) issues.push(`ledger/index mismatch for ${workId}: work_unit_ref`);
-    if (row.result_ref !== record.paths.result_ref) issues.push(`ledger/index mismatch for ${workId}: result_ref`);
-    if (row.runtime_receipt_ref !== record.paths.runtime_receipt_ref) issues.push(`ledger/index mismatch for ${workId}: runtime_receipt_ref`);
-    if (row.result_hash !== record.result_hash) issues.push(`ledger/index mismatch for ${workId}: result_hash`);
-    if (row.ledger_record_hash !== record.ledger_record_hash) issues.push(`ledger/index mismatch for ${workId}: ledger_record_hash`);
+  for (const fact of normalized.facts) {
+    const row = fact.ledger_row;
+    const record = fact.index_record;
+    const workId = record.work_id;
     const expectedActorClass = record.actor_execution?.execution_actor_class || 'legacy_unrecorded';
     const ledgerActorClass = row.actor_execution?.execution_actor_class || 'legacy_unrecorded';
     if (ledgerActorClass !== expectedActorClass) issues.push(`ledger/index mismatch for ${workId}: execution_actor_class`);
@@ -143,7 +140,7 @@ function ledgerIssues(bundleDir, index) {
     } else {
       try {
         const result = WorkUnitResultSchema.parse(readJson(resultPath));
-        if (hashValue(result) !== record.result_hash) issues.push(`submitted result hash mismatch: ${workId}`);
+        if (hashValue(result) !== row.result_hash) issues.push(`submitted result hash mismatch: ${workId}`);
         if (record.actor_contract_version && result.execution_actor_class !== expectedActorClass) issues.push(`result/index mismatch for ${workId}: execution_actor_class`);
       } catch (error) {
         issues.push(`submitted result invalid for ${workId}: ${error.message}`);
@@ -169,7 +166,7 @@ function ledgerIssues(bundleDir, index) {
     }
   }
 
-  return issues;
+  return { issues, historicalWorkIds };
 }
 
 export function inspectWorkUnits(bundleDir, {
@@ -231,6 +228,10 @@ export function inspectWorkUnits(bundleDir, {
       recorded_at: null,
     },
   }));
+  const attempt_disposition = Object.values(index.work_units).map((record) => ({
+    work_id: record.work_id,
+    ...projectWorkUnitAttemptDisposition(bundleDir, record, { operation: 'submit_work_unit' }),
+  }));
 
   const expectedCounts = computeStatusCounts(index.work_units);
   if (JSON.stringify(expectedCounts) !== JSON.stringify(index.status_counts)) {
@@ -242,7 +243,8 @@ export function inspectWorkUnits(bundleDir, {
   if (JSON.stringify(projectionComparable(expectedProjection)) !== JSON.stringify(projectionComparable(index.inspect_projection))) {
     issues.push('inspect projection drift: total/by_wave/nonterminal do not match work_units');
   }
-  issues.push(...ledgerIssues(bundleDir, index));
+  const normalizedLedger = ledgerIssues(bundleDir, index);
+  issues.push(...normalizedLedger.issues);
 
   const nonterminalByQueueItem = new Map();
   const indexedDirs = new Set();
@@ -281,7 +283,9 @@ export function inspectWorkUnits(bundleDir, {
     } catch (error) {
       issues.push(`manifest invalid for ${workId}: ${error.message}`);
     }
-    issues.push(...runtimeReceiptIssues(bundleDir, record));
+    if (!normalizedLedger.historicalWorkIds.has(record.work_id)) {
+      issues.push(...runtimeReceiptIssues(bundleDir, record));
+    }
   }
 
   for (const [waveName, waveState] of Object.entries(index.waves || {})) {
@@ -301,8 +305,8 @@ export function inspectWorkUnits(bundleDir, {
   }
 
   if (issues.length === 0) {
-    return { passed: true, check: true, inspect: [], projection, actor_projection, advice: 'Work-unit index and envelope surfaces are consistent.' };
+    return { passed: true, check: true, inspect: [], projection, actor_projection, attempt_disposition, advice: 'Work-unit index and envelope surfaces are consistent.' };
   }
   if (emitDiagnostics) emitWorkUnitInspectDiagnostics(bundleDir, { issues, source: diagnosticSource });
-  return { passed: false, check: false, inspect: issues, projection, actor_projection, advice: 'Resolve work-unit index/envelope drift before running delegated gates.' };
+  return { passed: false, check: false, inspect: issues, projection, actor_projection, attempt_disposition, advice: 'Resolve work-unit index/envelope drift before running delegated gates.' };
 }

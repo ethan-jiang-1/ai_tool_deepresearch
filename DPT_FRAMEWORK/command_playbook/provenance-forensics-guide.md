@@ -39,7 +39,7 @@ Judge evidence-producing delegated work by `work_id`, not by wave alone.
 | Signal | Where to look | Good pattern | Bad pattern |
 | --- | --- | --- | --- |
 | W0 ledger row | `rb_output_declarations.jsonl` | One submitted row for the `work_id`, valid hash, expected wave/kind/scope | No row, duplicate conflicting rows, bad hash, hand-written-looking row |
-| W1 index status | `_work_units/_index.json` | `status: submitted`, queue binding and result hashes match the row | Claimed/failed/timed_out/abandoned status, missing record, mismatched hashes |
+| W1 index status | `_work_units/_index.json` | `status: submitted`, exact queue binding, and for marked attempts one immutable `accepted_ledger_record_hash`; current hashes resolve from the ledger | Claimed/failed/timed_out/abandoned status, missing record, legacy mirror mismatch, or malformed supersession relation |
 | W2 envelope binding | `_work_units/waveN/{work_id}/manifest.json`, `_beacon.json`, `result.json` | Same `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, snapshot hash | Mismatched identity, missing nonce, wrong wave/kind, stale queue snapshot |
 | W3 receipt evidence | `runtime-receipt.jsonl`, `_logs/run.log`, `rb_trace.jsonl` | Lifecycle events carry matching `work_id` and `receipt_nonce` | Missing lifecycle events, malformed nonce, different work-unit identity |
 | W4 output/cache | Declared `output_files[]` and `cache_trails[]` | Declared paths exist and cache leaves contain `websearch.json`, `page.md`, `meta.json` | Filesystem-only outputs, undeclared cache, missing cache leaves |
@@ -52,8 +52,8 @@ Advisory diagnostics such as nonce mismatch, lifecycle evidence missing, transac
 | Tier | Observed pattern | Conclusion | Remedy |
 | --- | --- | --- | --- |
 | 1 | W0-W5 all agree | Delegated provenance is real for that work unit | Accept coverage; repair only content/schema issues that the gate reports. |
-| 2 | Ledger row exists but cross-checks fail | Submitted coverage is structurally inconsistent | Treat as gate failure or corruption; repair by re-running submit only when the attempt is still valid, otherwise close/retry with a new `work_id`. |
-| 3 | Envelope/output/cache exist but no submitted ledger row | Bypassed, incomplete, or a declaration fault that still requires direct submitted-state proof | Do not count filesystem presence. If index and status both say `submitted` with the same recorded hash, run the existing-owner `recover-declaration` operation; otherwise use the normal claimed submit or terminal/refill path. |
+| 2 | Current ledger row exists but submitted result/receipt/output/cache bytes drift | Submitted historical acceptance exists but current integrity is unresolved | Run `supersede` only when inspect selects it; preserve predecessor bytes and continue from the returned fresh successor. Do not recompute or sync hashes. |
+| 3 | Envelope/output/cache exist but no submitted ledger row | Bypassed, incomplete, or a declaration fault that still requires direct submitted-state proof | Do not count filesystem presence. If inspect selects exact `recover-declaration`, run only that operation first; use `supersede` only when exact recovery is unavailable and Engine feedback proves the full acceptance tuple. |
 | 4 | Claimed attempt is expired or terminal without ledger row | Attempt did not produce accepted coverage | Use `timeout`, `fail`, or `abandon` as appropriate; retry allocates a different `work_id`. |
 | 5 | Ledger-looking row lacks Engine submit consistency | Hand-shaped or stale declaration suspected | Reject as coverage; inspect transaction/index/result surfaces and rerun the phase repair path. |
 | 6 | Direct/orphan delegated outputs coexist with submitted work-unit outputs | Mixed provenance | Gate should report bypass diagnostics. Keep only submitted coverage authoritative and clean or repair the stray artifacts. |
@@ -67,15 +67,21 @@ One-line summary: a delegated output counts only when the Engine accepted it thr
 3. For each expected delegated output, identify its `work_id` from the submitted ledger row.
 4. Read W0-W5 from §2 for that `work_id`.
 5. Classify it with §3.
-6. Repair through the work-unit lifecycle only: corrected submit for still-claimed attempts, terminal closure plus retry for failed/expired attempts, gate-failure refill for missing demand, or the exact declaration operation below for an already-submitted missing row.
+6. Repair through the work-unit lifecycle only: corrected submit for still-claimed attempts, terminal closure plus retry for failed/expired attempts, gate-failure refill for missing demand, exact declaration recovery when selected, proof-limited transaction recovery when selected, or audited supersession when selected for eligible submitted drift.
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration <bundle> --work-id <submitted_id>
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-transaction <bundle> --tx-id <id>
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs supersede <bundle> --work-id <submitted_id> --reason <audit-reason>
 ```
 
 `recover-declaration` accepts no `--result`. It does not rerun work, complete the queue, rebind index/status hashes, or turn reconstruction facts into coverage; it appends only when existing direct owners reproduce the already-recorded declaration hash.
 
-Never repair provenance by hand-editing `rb_output_declarations.jsonl`, work-unit index state, queue completion, or gate status.
+`busy` is valid only for a paired readable non-suspect v2 lock owner/journal. Read caller operation/work coordinates separately from the holder transaction/operation/target work/queue coordinates and disposition, wait without claiming progress or liveness, and rerun the exact caller checkpoint. `suspect_transaction` permits `recover-transaction` only for the exact unlocked proof-complete journal named by `repair_kind`/`write_to`; otherwise retain `missing_contract`. After recovery, rerun the original inspect/Gate.
+
+Exact `recover-declaration` takes precedence over `supersede`. A successful `supersede` result names the immutable predecessor work/queue relation, its transaction, one `successor_queue_item_id`, and the successor's ordinary location. Follow current actor observation, claim/poll, and normal submit or audited late-submit for the unique current lineage leaf, then rerun the same inspect/Gate. The predecessor remains historical and must not be reactivated.
+
+Never repair provenance by hand-editing `rb_output_declarations.jsonl`, work-unit index/status, queue, lock, transaction journal, Gate status, `result_hash`, or `ledger_record_hash`. Logical actor binding and transaction facts do not authenticate a physical writer or prove host/sub-agent liveness.
 
 ## 5. Quick File-Path Reference
 

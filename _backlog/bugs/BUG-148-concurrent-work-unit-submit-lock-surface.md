@@ -91,3 +91,15 @@ Engine 的单写锁是保护 ledger/queue/index 原子性的合理边界；本 b
   且不返回 structured wait/retry 是 framework CLI 的独立问题。
 - 调整方向：先在 phase instructions 给出串行提交顺序和同一 work-id 重试规则，再补
   structured lock-busy feedback；不能移除锁或用 force timeout 掩盖竞争。
+
+## C4 Disposition (2026-07-31)
+
+- Implemented path (`DEW-023`, `CHI-004`): every new mutation uses a paired schema-valid lock owner and
+  `work-unit.transaction.v2` journal. A losing submit now receives structured `busy` with separate caller
+  operation/work coordinates, holder transaction/operation/work/queue coordinates, holder disposition, and
+  the caller's exact same-operation rerun; actual concurrent CLI-process regression proves no raw `EEXIST`,
+  loser ledger/lease mutation, re-claim, or blocking loser journal.
+- Residual boundary: a valid held pair proves global contention only. It does not prove that the holder process
+  is live or will progress. Malformed/unpaired/legacy/suspect proof is `suspect_transaction`, and physical
+  lock-holder recovery still requires a separate host/fencing contract rather than age, force-timeout, or lock
+  deletion.

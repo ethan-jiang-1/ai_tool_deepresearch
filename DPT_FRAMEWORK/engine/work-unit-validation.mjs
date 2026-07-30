@@ -1,4 +1,4 @@
-// @impl DEW-004, SNC-005, REF-006
+// @impl DEW-004, DEW-022, DEW-024, SNC-005, REF-006
 // Work-unit validation: manifest/beacon/result reading, runtime receipt validation,
 // output file validation, cache trail validation, source claim validation, queue binding validation.
 
@@ -33,6 +33,7 @@ import {
 import {
   WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
   WORK_UNIT_RECEIPT_EVENT_SCHEMA_VERSION,
+  WORK_UNIT_SUBMISSION_CONTRACT_VERSION,
   WorkUnitBeaconSchema,
   WorkUnitManifestSchema,
   WorkUnitResultSchema,
@@ -45,6 +46,7 @@ import { queueItemSnapshotHash, queuePath, queueStateFromFile } from './queue-ma
 import { createQueue, loadQueue } from './queue-manager-lifecycle.mjs';
 import { kindContractForQueueItem } from './work-unit-utils.mjs';
 import { resolveWorkUnitAssignmentContract } from './work-unit-assignment-contract.mjs';
+import { loadCurrentSubmittedLedgerFact } from './work-unit-submitted-ledger.mjs';
 import {
   cacheLeafMapping,
   resolveCacheLeafContract,
@@ -64,6 +66,14 @@ export function readAndValidateManifest(bundleDir, index, record) {
   validateWorkIdBinding({ ...manifest, kindRegistry: index.kind_registry });
   for (const field of ['work_id', 'queue_item_id', 'wave', 'kind', 'kind_code', 'receipt_nonce', 'queue_item_snapshot_hash']) {
     if (manifest[field] !== record[field]) throw new Error(`manifest/index mismatch for ${record.work_id}: ${field}`);
+  }
+  const recordSubmissionVersion = record.submission_contract_version;
+  const manifestSubmissionVersion = manifest.submission_contract_version;
+  if (recordSubmissionVersion || manifestSubmissionVersion) {
+    if (recordSubmissionVersion !== WORK_UNIT_SUBMISSION_CONTRACT_VERSION
+      || manifestSubmissionVersion !== recordSubmissionVersion) {
+      throw new Error(`manifest/index mismatch for ${record.work_id}: submission_contract_version`);
+    }
   }
   const recordAssignmentVersion = record.assignment_contract_version;
   const manifestAssignmentVersion = manifest.assignment_contract_version;
@@ -136,6 +146,10 @@ export function readAndValidateBeacon(bundleDir, record, manifest) {
     || beacon.assignment_contract_version !== manifest.assignment_contract_version) {
     throw new Error(`beacon assignment_contract_version drift for ${record.work_id}`);
   }
+  if (beacon.submission_contract_version !== record.submission_contract_version
+    || beacon.submission_contract_version !== manifest.submission_contract_version) {
+    throw new Error(`beacon submission_contract_version drift for ${record.work_id}`);
+  }
   if (hashValue(beacon.output_contract) !== hashValue(manifest.output_contract)) {
     throw new Error(`beacon output_contract drift for ${record.work_id}`);
   }
@@ -199,12 +213,13 @@ export function readAndValidateResult(bundleDir, resultPath, record, { normaliza
       });
     }
   }
+  const strictAttemptBinding = record.submission_contract_version === WORK_UNIT_SUBMISSION_CONTRACT_VERSION;
   if (normalized.receipt_nonce !== undefined && normalized.receipt_nonce !== record.receipt_nonce) {
     const hasCompleteBinding = normalized.work_id === record.work_id
       && normalized.queue_item_id === record.queue_item_id
       && normalized.kind === record.kind;
     const insideAssignedDir = isPathInsideDir(resultPath, path.join(bundleDir, record.paths.work_unit_dir));
-    if (!hasCompleteBinding || !insideAssignedDir) {
+    if (strictAttemptBinding || !hasCompleteBinding || !insideAssignedDir) {
       validationIssues.push({
         code: 'result_binding_mismatch',
         path: ['receipt_nonce'],
@@ -313,9 +328,13 @@ export function validateSubmitRuntimeReceipt(bundleDir, record, { normalizations
       throw new Error(`runtime receipt schema_version mismatch for ${record.work_id} line ${index + 1}`);
     }
 
+    const strictAttemptBinding = record.submission_contract_version === WORK_UNIT_SUBMISSION_CONTRACT_VERSION;
     const autofilled = [];
     for (const field of ['work_id', 'queue_item_id', 'kind']) {
       if (eventCandidate[field] === undefined) {
+        if (strictAttemptBinding) {
+          throw new Error(`runtime receipt missing exact attempt binding for ${record.work_id} line ${index + 1}: ${field}`);
+        }
         eventCandidate[field] = record[field];
         autofilled.push(field);
       } else if (eventCandidate[field] !== record[field]) {
@@ -323,13 +342,16 @@ export function validateSubmitRuntimeReceipt(bundleDir, record, { normalizations
       }
     }
     if (eventCandidate.receipt_nonce === undefined) {
+      if (strictAttemptBinding) {
+        throw new Error(`runtime receipt missing exact attempt binding for ${record.work_id} line ${index + 1}: receipt_nonce`);
+      }
       eventCandidate.receipt_nonce = record.receipt_nonce;
       autofilled.push('receipt_nonce');
     } else if (eventCandidate.receipt_nonce !== record.receipt_nonce) {
       const receiptHasCompleteBinding = parsed.work_id === record.work_id
         && parsed.queue_item_id === record.queue_item_id
         && parsed.kind === record.kind;
-      if (!allowNonceNormalization || !receiptHasCompleteBinding) {
+      if (strictAttemptBinding || !allowNonceNormalization || !receiptHasCompleteBinding) {
         throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: receipt_nonce`);
       }
       recordSubmitNormalization(normalizations, {
@@ -578,12 +600,11 @@ export function buildSourceRefLineage(bundleDir, currentManifest) {
     let priorManifest = null;
     let priorBinding = null;
     let authorityReason = null;
-    if (!record || record.status !== 'submitted'
-      || record.ledger_record_hash !== row.ledger_record_hash
-      || record.result_hash !== row.result_hash) {
+    if (!record || record.status !== 'submitted') {
       authorityReason = 'prior_submitted_binding_invalid';
     } else {
       try {
+        loadCurrentSubmittedLedgerFact(bundleDir, record, { ledgerRows: rows });
         priorManifest = readAndValidateManifest(bundleDir, index, record);
         priorBinding = validateManifestTopicBinding(bundleDir, priorManifest);
       } catch {

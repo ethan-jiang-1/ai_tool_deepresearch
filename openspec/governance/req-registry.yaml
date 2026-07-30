@@ -162,6 +162,7 @@ AGQ-022: agentic-queue — Wave delegated queue loops prefer bounded batched cla
 AGQ-023: agentic-queue — Phase task-card examples preserve queue_item_id as queue demand identity
 AGQ-024: agentic-queue — Actor preflight no-claim preserves queue demand and lifecycle semantics
 AGQ-025: agentic-queue — New topic-scoped queue demand binds canonical topic UID and current slug
+AGQ-026: agentic-queue — Submitted predecessors with immutable supersession relations create a fresh queue successor without reactivation
 
 # agent-output-declaration
 AGO-001: agent-output-declaration — Work-unit result output_files declaration with role and source_url rules
@@ -208,6 +209,7 @@ CMI-009: cmd-bundle-instantiation — Bundle creators render actual framework na
 CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop
 CHI-002: check-inspect-feedback — C&I feedback loop for fork variant (topicReadiness validation)
 CHI-003: check-inspect-feedback — Recovery advice identifies one reachable nearest legal action per independent root
+CHI-004: check-inspect-feedback — Attempt recovery feedback exposes one ownership-safe legal action
 
 # delegated-work-units
 DEW-001: delegated-work-units — Work-unit pipeline is the sole production delegated-work path
@@ -231,6 +233,9 @@ DEW-018: delegated-work-units — Work-unit records preserve truthful execution 
 DEW-019: delegated-work-units — Work-unit provenance inherits UID-bound queue identity without duplicate result or ledger fields
 DEW-020: delegated-work-units — Existing task_brief may carry a beacon-rooted read-only user-controls coordinate without work-unit authority expansion
 DEW-021: delegated-work-units — Delegated work contract entry is constructible from one generated projection
+DEW-022: delegated-work-units — Work-unit attempts expose logical execution guidance from existing attempt bindings
+DEW-023: delegated-work-units — Submit exposes a bounded integrity preflight and transaction disposition
+DEW-024: delegated-work-units — Submitted correction uses audited supersession and one fresh successor
 
 # conditional-nodes
 COS-001: conditional-nodes — Deterministic branch checkpoint transforms
@@ -482,6 +487,7 @@ WPG-012: work-unit-provenance-gate — Provenance gates distinguish Phase-owned 
 WPG-013: work-unit-provenance-gate — Wave1 required output coverage and Wave2 cross-reference provenance preserve authority contracts
 WPG-014: work-unit-provenance-gate — Gates count audited late-accepted work-unit ledger rows
 WPG-015: work-unit-provenance-gate — Work unit index record carries Engine-owned rerun_count stamped at claim time for round identification
+WPG-016: work-unit-provenance-gate — Provenance gates derive current submitted coverage from immutable supersession relations
 
 
 # seg2node

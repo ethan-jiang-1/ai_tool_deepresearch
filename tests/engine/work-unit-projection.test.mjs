@@ -64,7 +64,12 @@ function removeRecordedSourceContribution(dir, workId) {
 
   const indexPath = path.join(dir, '_work_units/_index.json');
   const index = JSON.parse(readFileSync(indexPath, 'utf8'));
-  index.work_units[workId].ledger_record_hash = row.ledger_record_hash;
+  const record = index.work_units[workId];
+  if (record.submission_contract_version === 'work-unit.submission.v1') {
+    record.accepted_ledger_record_hash = row.ledger_record_hash;
+  } else {
+    record.ledger_record_hash = row.ledger_record_hash;
+  }
   writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
 }
 

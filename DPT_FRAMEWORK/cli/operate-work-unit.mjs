@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @impl FRE-005, DEW-002, DEW-006, DEW-013, DEW-014
+// @impl FRE-005, DEW-002, DEW-006, DEW-013, DEW-014, DEW-023, DEW-024, CHI-004
 // Work-unit CLI. Claim/inspect/submit are wired; terminal commands are added in later apply sections.
 
 import path from 'node:path';
@@ -15,8 +15,10 @@ import {
   lateSubmitWorkUnit,
   openWorkUnitBatch,
   recoverWorkUnitDeclaration,
+  recoverWorkUnitTransaction,
   replaceWorkUnitAttempt,
   submitWorkUnit,
+  supersedeWorkUnitAttempt,
   timeoutPreflightWorkUnit,
 } from '../engine/work-unit-core.mjs';
 
@@ -28,7 +30,9 @@ function usage() {
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <id> --result <result.json>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs late-submit <bundle> --work-id <timed_out_id> --result <result.json> --reason <reason>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs replace <bundle> --work-id <failed_or_abandoned_id>
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs supersede <bundle> --work-id <submitted_id> --reason <reason>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration <bundle> --work-id <submitted_id>
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-transaction <bundle> --tx-id <id>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs fail <bundle> --work-id <id> --reason <reason>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --reason <reason> [--force]
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs abandon <bundle> --work-id <id> --reason <reason>
@@ -66,6 +70,16 @@ function guardInvocation(args) {
   }
 }
 
+function assertOnlySuppliedOptions(args, allowed, command) {
+  const supplied = args
+    .filter((arg) => arg.startsWith('--'))
+    .map((arg) => arg.slice(2).split('=', 1)[0]);
+  const unsupported = [...new Set(supplied)].filter((name) => !allowed.has(name));
+  if (unsupported.length > 0) {
+    throw new Error(`${command} does not accept ${unsupported.map((name) => `--${name}`).join(', ')}`);
+  }
+}
+
 const rawArgs = process.argv.slice(2);
 guardInvocation(rawArgs);
 
@@ -92,6 +106,7 @@ const { values } = parseArgs({
     'execution-actor': { type: 'string', default: 'delegated_subagent' },
     'eligible-rows': { type: 'boolean', default: false },
     topic: { type: 'string' },
+    'tx-id': { type: 'string' },
   },
   allowPositionals: false,
 });
@@ -177,9 +192,27 @@ try {
     emit(result);
     process.exit(result.ok ? 0 : 1);
   }
+  if (command === 'recover-transaction') {
+    assertOnlySuppliedOptions(rawArgs.slice(2), new Set(['tx-id']), command);
+    if (!values['tx-id']) throw new Error('--tx-id is required');
+    const result = recoverWorkUnitTransaction(bundleDir, { tx_id: values['tx-id'] });
+    emit(result);
+    process.exit(result.ok ? 0 : 1);
+  }
   if (command === 'replace') {
     if (!values['work-id']) throw new Error('--work-id is required');
     const result = replaceWorkUnitAttempt(bundleDir, { work_id: values['work-id'] });
+    emit(result);
+    process.exit(result.ok ? 0 : 1);
+  }
+  if (command === 'supersede') {
+    assertOnlySuppliedOptions(rawArgs.slice(2), new Set(['work-id', 'reason']), command);
+    if (!values['work-id']) throw new Error('--work-id is required');
+    if (!values.reason) throw new Error('--reason is required');
+    const result = supersedeWorkUnitAttempt(bundleDir, {
+      work_id: values['work-id'],
+      reason: values.reason,
+    });
     emit(result);
     process.exit(result.ok ? 0 : 1);
   }

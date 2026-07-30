@@ -83,6 +83,18 @@ topic_registry:
 ---
 # Plan
 `);
+  mkdirSync(join(dir, 'seed_topics'), { recursive: true });
+  writeFileSync(join(dir, 'seed_topics/topic-a.md'), `---
+topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
+id: "01"
+slug: topic-a
+title: Topic A
+must_answer: ["What matters?"]
+scope_role: primary
+depends_on_topic_uids: []
+---
+# Topic A
+`);
   let queue = createQueue('wpg-late');
   queue = enqueue(queue, delegatedWave0Item());
   saveQueue(dir, queue);
