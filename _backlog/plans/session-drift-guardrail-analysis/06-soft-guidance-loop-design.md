@@ -101,9 +101,10 @@ finalizer 检查其存在/闭合；详细证据见 `evidence/E-governance-integr
 
 - 输入：当前 change 的 `proposal.md`/`design.md`/delta specs +（apply 期）`apply-target-manifest.md`
   声明的 touched surfaces + git diff。
-- **语义部分**：当前 Agent 复用 `polish-openspec-change` 的 risk-led review posture，把 touched surfaces
-  对到相关 meta-question，输出有证据、可行动的 finding。需要工作的 finding 变成 pending task；不另调
-  一个外部 LLM judge，也不建 file-pattern 伪语义分类器。
+- **语义部分**：当前 Agent 直接消费 `guidelines/change-feedback-loop.md` 的 risk-led review protocol，把
+  touched surfaces 对到相关 meta-question，输出有证据、可行动的 finding。现有
+  `polish-openspec-change` 只是方法来源，不是跨 harness 运行依赖。需要工作的 finding 变成 pending task；
+  不另调一个外部 LLM judge，也不建 file-pattern 伪语义分类器。
 - **确定性部分**：现有 checker 和 archive closure 由 `08` 的 repo-owned finalizer 负责。Reviewer 读取
   其 Check/Inspect/Advice，但不重判结果。
 - **不 pass/fail 语义**：reviewer 可以得出“有未解决 finding，因此 change 尚未 ready”的 Agent 判断；

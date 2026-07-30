@@ -37,7 +37,7 @@ source_bugs:
   - BUG-185
   - BUG-186
 explored_mechanism: two-tier (derived consumption-boundary check + declared semantic-object card)
-recommendation: one OpenSpec-centered feedback loop — reuse the historical openspec/governance attach pattern, short AGENTS/CLAUDE routing, OpenSpec 1.7 artifact/operation guidance, persistent finding tasks, risk-led Agent review, and a guarded governance finalizer around native archive (`08`)
+recommendation: one OpenSpec-centered feedback loop — short AGENTS/CLAUDE routing, OpenSpec 1.7 artifact/operation guidance, persistent finding tasks, risk-led Agent review, supported-entry convergence, and a guarded governance finalizer around native archive (`08`)
 related:
   - _backlog/plans/framework-contract-feedback-and-control-structure-analysis.md
   - _backlog/plans/framework-contract-remediation-openspec-sequence.md
@@ -50,7 +50,7 @@ related:
 这是一份 **analysis-only 规划文档**。它记录“如何为每一个 OpenSpec session
 引入一个自动机制，防止 BUG-143…186 那类反复出现的语义漂移 bug”的**完整思考路线**
 ——包括走通的结论和走不通的死路。它**不创建 OpenSpec change，也不改任何实现代码**。
-最终推荐与候选 change 形状在 `08`；真正 artifacts 仍须由后续 `/opsx:propose` 单独承载。
+最终建议与要创建的 change 边界在 `08`；真正 artifacts 仍须由后续 `/opsx:propose` 单独承载。
 
 它是 `_backlog/plans/framework-contract-remediation-openspec-sequence.md` 的**前件/伴随件**：
 那份计划决定“修哪几个已知语义对象”（C1–C5）；本文决定“之后怎样在 change lifecycle 中重新触发
@@ -85,7 +85,9 @@ archive move 绑定。三个 checker 今天仍以 `tasks.md` 文本为主、arch
 `config.rules.tasks -> tasks.md -> openspec/governance checker` 接入链；再用 OpenSpec 1.7 的
 `operations.apply/archive.guidance` 自动把 targeted review 推回当前 Agent。finding 进入未完成 tasks；
 archive 时对 actual diff 再 review；最后由 governance finalizer 在 lifecycle marker、任务和现有 checker
-全部通过后包装 native OpenSpec archive。`AGENTS.md` / `CLAUDE.md` 只放短路由，七问保留单一 guidance 来源。
+全部通过后包装 native OpenSpec archive。新的有界 lifecycle capability 拥有这条 feedback loop；现有
+RET/VER capability 继续拥有各自 checker 的事实。`AGENTS.md` / `CLAUDE.md` 只放短路由，七问保留
+单一 guidance 来源；项目声明支持的入口必须收敛到同一个 finalizer。
 
 只有真实复发证明现有 reviewer + regression + finalizer 仍有一个可机械推导的窄缺口时，才回头做
 定向 Tier-A；不预先建设全 repo 语义扫描器。
@@ -101,7 +103,7 @@ archive 时对 actual diff 再 review；最后由 governance finalizer 在 lifec
 | `05-deferred-openspec-change-sketch.md` | 已被 `08` 取代的 narrow hard-floor provisional sketch，保留历史路线 |
 | `06-soft-guidance-loop-design.md` | advisory 跨 session guidance loop 与 7 条 meta-question；触发/载体已按 OpenSpec 1.7 收束到 `08` |
 | `07-open-question-guidelines-into-openspec.md` | **本机制已决定 A**：`guidelines/` 不搬；guidance 修改走 OpenSpec lifecycle，并由 config bridge 在事件上主动注入 |
-| `08-final-recommendation-openspec-feedback-loop.md` | **最终建议**：OpenSpec-centered feedback loop；明确 AGENTS/CLAUDE、operation guidance、tasks、Agent reviewer 与 guarded finalizer 的单一职责 |
+| `08-final-recommendation-openspec-feedback-loop.md` | **最终建议**：OpenSpec-centered feedback loop；明确 lifecycle ownership、AGENTS/CLAUDE、operation guidance、tasks、Agent reviewer、supported entry 与 guarded finalizer 的边界 |
 | `evidence/A-session-lifecycle-and-attach-points.md` | session 生命周期、OpenSpec 1.7 operation guidance 与 executable gate 缺口核实 |
 | `evidence/B-consumption-graph-derivability.md` | artifact→evaluator 消费图的可派生性核实 |
 | `evidence/C-object-card-dimensions.md` | 语义对象卡的 10 个维度：哪些已声明/未表示/未 enforce |
@@ -110,13 +112,12 @@ archive 时对 actual diff 再 review；最后由 governance finalizer 在 lifec
 
 ## 3. 与 C1–C5 的关系
 
-C1 已归档；C2（`make-canonical-topic-state-projections-coherent`）当前处于 apply。审阅期间它已从
-17/26 前进到 22/26 tasks，说明进度只是易变快照；后续 proposal 必须重跑 `openspec list --json`，不能
-把这里的数字写进 migration/runtime logic。
-本文的最终推荐项是一个**横切 lifecycle change**（候选 `establish-openspec-change-feedback-loop`），
-不属于 C2–C5 中任何一个。建议它作为 **C0/meta 前件**先行或并行落地：
-它让 C2–C5（以及之后所有 change）在 apply/archive 事件收到 targeted feedback，并在归档时由
-deterministic finalizer 闭合，从而把“修内容”和“验证本次 change 未留下同类漂移”接成一条可返回的回路。
+active change set 与 task 进度是易变事实；后续 proposal 必须重新运行 `openspec list --json`，不能把
+本次审阅时看到的名称、数量或完成度写进 migration/runtime logic。
+本文的最终推荐项是一个**横切 lifecycle change**（`establish-openspec-change-feedback-loop`），
+不属于 C2–C5 中任何一个。它是后续 focused meta change；proposal 时仍 active 以及之后创建的 change
+会在 apply/archive 事件收到 targeted feedback，并在归档时由 deterministic finalizer 闭合，从而把
+“修内容”和“验证本次 change 未留下同类漂移”接成一条可返回的回路。
 
 ## 4. 需要避免的错误归因
 

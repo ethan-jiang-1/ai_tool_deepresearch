@@ -71,5 +71,5 @@
 
 ## 与 C2–C5 的排程建议
 
-原建议是作为 C0/meta 前件先行；当前 C2 已进入 apply，且最终机制范围已扩大。实际排程以 `08` 的
+原建议是作为 C0/meta 前件先行；该草稿形成时 C2 已进入 apply，且最终机制范围已扩大。实际排程以 `08` 的
 `establish-openspec-change-feedback-loop` proposal 为准，不再声称 C2 必然能在自己的 archive 前吃到尚未实现的 gate。

@@ -127,11 +127,11 @@ CLI verdict、task/artifact completeness 与 native archive result。
 ### 复用 C：`rules.tasks` 负责生成 durable obligations
 
 Plan review 和 closeout review 必须写入 `rules.tasks`，而不只写在大 `context:` 或 root prose 中。
-为避免 finalizer 用自然语言猜 task，使用两个极小、稳定的 lifecycle marker，例如：
+为避免 finalizer 用自然语言猜 task，最终 recommendation 固定使用两个极小、稳定的 lifecycle marker：
 
 ```md
-- [ ] ... <!-- feedback-loop:plan-review -->
-- [ ] ... <!-- feedback-loop:closeout-review -->
+- [ ] ... <!-- openspec-feedback:plan-review -->
+- [ ] ... <!-- openspec-feedback:closeout-review -->
 ```
 
 marker 只证明 required task 存在及 checkbox 已闭合；不对 review 内容作 semantic verdict。
@@ -154,7 +154,7 @@ naming 或 normal move，也不引入写后恢复分支。它要求 project chec
 - 不把七条 semantic question 搬进 checker 或 Zod schema；Engine 不能裁决设计思考质量。
 - 不把完整 checker 命令和逻辑复制到每个生成 adapter；`openspec update` 会让这些副本继续漂移。
 - 不把 finalizer 塞进 `requirement-traceability` 或 `verification-routing` 的实现内部。它协调多个 checker，
-  应由新的 change-lifecycle capability 拥有；各既有 capability 继续拥有自己的事实。
+  应由新的有界 change-lifecycle capability 拥有；各既有 capability 继续拥有自己的事实。
 
 ## 6. 对 08 的直接结论
 
