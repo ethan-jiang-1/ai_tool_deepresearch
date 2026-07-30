@@ -6,6 +6,17 @@ import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 import { claimAndSubmitWorkUnit } from '../../engine/work-unit-test-helpers.mjs';
+import {
+  instantiateBundle,
+  runGate,
+} from '../../e2e/helpers/deterministic-chain-harness.mjs';
+import {
+  PRIMARY_TOPIC,
+  passAndEnter,
+  recordWaveCompletion,
+  stageWave0,
+  writePlanAndProfile,
+} from '../../e2e/helpers/research-chain-fixture.mjs';
 
 const REPO_ROOT = process.cwd();
 const TOPIC_UID = 'tp_123e4567-e89b-42d3-a456-426614174010';
@@ -184,6 +195,65 @@ function submitWave1(bundle, queueItemId = 'queue-current') {
 }
 
 describe('wave inspect return-map diagnostics', () => {
+  it('shares one ordered Wave0 omission batch between production inspect and Gate output', () => {
+    const root = createTempDir('inspect-w0-batch-gate');
+    const bundle = instantiateBundle(root, 'return-map-batch');
+    writePlanAndProfile(bundle);
+    passAndEnter(bundle, 'instantiation-complete', 'phases/phase-instantiation.md', 'hitl1_recorded');
+    passAndEnter(bundle, 'hitl1-recorded', 'phases/phase-hitl1.md', 'setup_ready');
+    passAndEnter(bundle, 'setup-ready', 'phases/phase-setup.md', 'setup_ready');
+    passAndEnter(bundle, 'seed-topics-ready', 'phases/phase-seed-topics.md', 'seed_topics_ready');
+
+    const first = stageWave0(bundle, 'batch-a', { project: false, completion: false });
+    const expandedSource = [
+      '- url: "https://research.example.org/batch-a"',
+      '  title: "Continuity batch-a"',
+      '  retrieved_date: "2026-07-15"',
+      '  topic_tag: "topic-a"',
+      '- url: "https://research.example.org/batch-b"',
+      '  title: "Continuity batch-b"',
+      '  retrieved_date: "2026-07-15"',
+      '  topic_tag: "topic-a"',
+      '',
+    ].join('\n');
+    const second = claimAndSubmitWorkUnit(bundle, {
+      phase: 'wave0',
+      queueItemId: 'wave0-batch-b',
+      preserveQueue: true,
+      queueItemOverrides: {
+        payload: { topic_uid: PRIMARY_TOPIC.topic_uid, topic_slug: PRIMARY_TOPIC.slug },
+        lineage: { topic_uid: PRIMARY_TOPIC.topic_uid, topic_slug: PRIMARY_TOPIC.slug, phase: 'wave0' },
+      },
+      outputs: [{
+        path: 'artifacts/wave0/topic-a/source.yaml',
+        role: 'source_yaml',
+        content: expandedSource,
+      }],
+      cacheTrails: [{
+        path: '_cache/wave0/primary/wave0-batch-b/batch-b',
+        url: 'https://research.example.org/batch-b',
+      }],
+    });
+    assert.equal(second.submitted.ok, true, JSON.stringify(second.submitted));
+
+    const seedPath = join(bundle, 'seed_topics/topic-a.md');
+    writeFileSync(seedPath, readFileSync(seedPath, 'utf8').replace('__BACKFILL_WAVE0_EVIDENCE__', ''));
+    const expectedIds = [`${first.record.work_id}/1`, `${second.record.work_id}/2`];
+
+    const inspected = runInspect('inspect-wave0-output.mjs', bundle);
+    assert.equal(inspected.status, 1, JSON.stringify(inspected.output));
+    const inspectHints = inspected.output.hints.filter((hint) => hint.rule_id === 'return_map_current_candidate_omission');
+    assert.equal(inspectHints.length, 1, JSON.stringify(inspected.output));
+    for (const id of expectedIds) assert.match(inspectHints[0].missing_fact, new RegExp(id.replace('/', '\\/')));
+
+    recordWaveCompletion(bundle, 'wave0');
+    const gated = runGate(bundle, 'wave0-complete', 'phases/phase-wave0.md', { expectedStatus: 1 }).output;
+    assert.equal(Object.hasOwn(gated, 'findings'), false);
+    const gateHints = gated.hints.filter((hint) => hint.rule_id === 'return_map_current_candidate_omission');
+    assert.equal(gateHints.length, 1, JSON.stringify(gated));
+    for (const id of expectedIds) assert.match(gateHints[0].missing_fact, new RegExp(id.replace('/', '\\/')));
+  });
+
   it('wave0 flags naked seed backfill evidence lists without changing gate authority', () => {
     const bundle = createTempDir('inspect-w0-rmap');
     writeCommon(bundle);

@@ -2,6 +2,20 @@
 
 Use this playbook only inside the existing legal HITL1, route-bound HITL2→rerun, or witnessed Seed Topics lifecycle position. It does not create reentry, override, maintenance, or post-final mutation authority.
 
+## Discover The Accepted Input Before Apply
+
+Use the read-only schema operation before authoring a context-specific retained input:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-topic-state.mjs schema --context <hitl1|rerun|seed_topics|wave_projection>
+```
+
+It returns the available action form, required and optional paths, closed values, nested value shapes, and an illustrative template that the actual top-level `TopicApplyPlanSchema` accepts. It does not read a bundle, infer the current lifecycle window, or authorize an `apply` mutation.
+
+`--help` or `-h` is standalone and exits `0`. The exact non-help forms are `inspect --bundle <bundle>`, `schema --context <context>`, `apply --bundle <bundle> --input <retained-input.json>`, and `recover --bundle <bundle> --operation-id <id>`; unknown, duplicate, mixed, positional, missing-value, or unknown-context forms are code `2` invocation/configuration roots before bundle or workspace access.
+
+When a retained `apply` input reaches the existing Zod validator and is invalid, read `validation_errors[]` and its primary field path. Those details are safe schema expectations, not a new writer or authorization claim: correct only the retained input, run the same `apply`, then run the same applicable inspect/Gate checkpoint. A lifecycle, owner, or missing-writer rejection remains that direct boundary and is not field-level permission to edit another authority.
+
 ```bash
 node DPT_FRAMEWORK/cli/operate-topic-state.mjs inspect --bundle <bundle>
 ```

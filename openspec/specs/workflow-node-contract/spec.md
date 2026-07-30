@@ -237,6 +237,25 @@ The phase wording SHALL give concrete source-gate `advance-status` commands so t
 | readiness | `phases/phase-final.md` | `advance-status --to readiness_passed` |
 | rerun | `phases/phase-seed-topics.md` | `advance-status --to rerun_ready` |
 
+The target phase's `## 0. Execution Brief` SHALL be a bounded action core for
+entry presentation. It SHALL keep the already accepted order visible to an
+Agent at the transition decision point: consume `check.next` through
+`enter-phase`; synchronize the just-passed source gate through the exact
+`advance-status --to <source_gate_enum>` command; then execute the loaded
+target node. Shared dependency prose remains reference material rather than a
+precondition for seeing that sequence. The action core is an Agent-facing
+projection and SHALL not replace the loaded node, `load_complete`, status, or
+gate authority.
+
+Before `enter-phase` may write its route-bound `load_complete`, it SHALL
+preflight that target action-core structure as framework configuration. A
+missing or ambiguous `## 0. Execution Brief` through-next-H2 boundary is a
+direct configuration result, not an entry witness: it SHALL leave both
+`load_complete` and `rb_status.json#/current_node` unchanged and SHALL not
+infer replacement Markdown or another target node. This preflight reads only
+the selected framework target source; it SHALL not invoke the workflow loader,
+resolve the dependency closure, or emit a workflow/trace/receipt event.
+
 #### Scenario: Wave phase gate pass uses enter-phase
 
 - **WHEN** a wave phase node describes its Gate Pass behavior
@@ -279,6 +298,14 @@ The phase wording SHALL give concrete source-gate `advance-status` commands so t
 - **THEN** HITL2 SHALL consume `phases/phase-rerun.md` through `enter-phase` and synchronize with `advance-status --to hitl2_recorded`
 - **AND** neither branch SHALL let `advance-status` choose the target in place of the selected `check.next`
 
+#### Scenario: Action core keeps the handoff sequence visible
+
+- **WHEN** a lifecycle node is entered from a passed source gate
+- **THEN** its bounded entry action core SHALL make the source-gate status-sync
+  command visible before target-phase work begins
+- **AND** shared dependency reference content SHALL not obscure or replace the
+  accepted `enter-phase` -> `advance-status` -> execute ordering
+
 ### Requirement: Lifecycle node wording uses canonical phase-boundary terms
 
 Lifecycle phase nodes and shared workflow Markdown SHALL use the canonical phase-boundary terminology when describing gate pass behavior.
@@ -293,6 +320,14 @@ On a deterministic gate pass, lifecycle wording SHALL preserve this order and me
 
 Lifecycle Markdown SHALL NOT describe `advance-status` as entering/loading/executing the next phase, SHALL NOT describe `enter-phase` or `load_complete` as target work completion, and SHALL NOT call local artifact creation or queue drain a phase boundary unless the current gate has passed and emitted the accepted `check.next`.
 
+The compact entry action core, continuation cue, and shared-file manifest SHALL
+use this same vocabulary. The default manifest is the successful load plan's
+ordered dependency refs with the target node excluded; it is a ref list, not
+concatenated Markdown. `--full` retains the complete loaded closure as an
+explicit additional view. They are presentation of an already witnessed
+handoff, not an additional transition, status writer, scheduler, or proof that
+the target phase's work is complete.
+
 #### Scenario: On Gate Pass wording preserves boundary order
 
 - **WHEN** a lifecycle phase node documents deterministic Gate Pass behavior
@@ -304,6 +339,13 @@ Lifecycle Markdown SHALL NOT describe `advance-status` as entering/loading/execu
 - **WHEN** a lifecycle node or shared workflow Markdown says that `advance-status` enters the next phase or that `enter-phase` completes the target phase
 - **THEN** the docs validator or regression SHALL fail
 - **AND** the failure SHALL identify the file and boundary term that overclaims
+
+#### Scenario: Compact entry language does not overclaim completion
+
+- **WHEN** an action core or entry cue names the loaded target phase
+- **THEN** it SHALL distinguish entry and source-gate synchronization from that
+  target's later work and Gate result
+- **AND** it SHALL not introduce a new phase-boundary term or execution owner
 
 ### Requirement: Self-documenting lifecycle and work-unit sub-agent guidance nodes
 

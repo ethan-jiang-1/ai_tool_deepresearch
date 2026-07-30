@@ -1,6 +1,6 @@
 // exit-code-convention.test.mjs
 // Inventory and representative runtime checks for the documented CLI exit-code convention.
-// @impl CLE-004
+// @impl CLE-001, CLE-003, CLE-004
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
@@ -15,8 +15,8 @@ const CLI_DIR = join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli');
 
 const CLI_CONVENTION_INVENTORY = {
   'advance-status.mjs': {
-    class: 'non-gate structured utility',
-    coverage: ['tests/integration/cli/advance-status.test.mjs', 'this file: missing args exits 1'],
+    class: 'selected non-gate structured operation with standalone help and code 2 invocation errors',
+    coverage: ['tests/integration/cli/advance-status.test.mjs', 'this file: missing args exits 2'],
   },
   'audit-phase-status.mjs': {
     class: 'non-gate diagnostic structured utility with code 2 caller/config errors',
@@ -39,12 +39,12 @@ const CLI_CONVENTION_INVENTORY = {
     coverage: ['tests/integration/cli/post-final-recovery.test.mjs', 'this file: missing operation exits 2'],
   },
   'operate-topic-state.mjs': {
-    class: 'non-gate canonical topic-state utility with code 2 caller/config errors',
+    class: 'selected non-gate canonical topic-state operation with standalone help and code 2 caller/config errors',
     coverage: ['tests/integration/cli/operate-topic-state.test.mjs', 'this file: missing operation exits 2'],
   },
   'enter-phase.mjs': {
-    class: 'non-gate structured handoff utility',
-    coverage: ['tests/integration/cli/enter-phase.test.mjs', 'this file: missing args exits 1'],
+    class: 'selected non-gate structured handoff operation with standalone help and code 2 invocation errors',
+    coverage: ['tests/integration/cli/enter-phase.test.mjs', 'this file: missing args exits 2'],
   },
   'inspect-bundle.mjs': {
     class: 'non-gate inspection utility',
@@ -78,6 +78,14 @@ const CLI_CONVENTION_INVENTORY = {
     class: 'non-gate delegated work-unit utility',
     coverage: ['tests/integration/cli/operate-work-unit.test.mjs', 'this file: missing command exits 1'],
   },
+  'plan-hostfile-sections.mjs': {
+    class: 'selected pure controls renderer with standalone help and code 2 invocation errors',
+    coverage: ['tests/integration/cli/user-research-controls-contract.test.mjs', 'this file: missing subcommand exits 2'],
+  },
+  'sync-reference-index.mjs': {
+    class: 'non-gate reference-index synchronization utility with code 2 missing-bundle error',
+    coverage: ['this file: missing bundle exits 2'],
+  },
   'validate-bundle.mjs': {
     class: 'non-gate binary validator',
     coverage: ['tests/integration/cli/validate-bundle.test.mjs', 'this file: missing bundle exits 1'],
@@ -101,14 +109,14 @@ const CLI_CONVENTION_INVENTORY = {
 };
 
 const SAFE_INVOCATION_SAMPLES = [
-  { cli: 'advance-status.mjs', args: [], expectedStatus: 1 },
+  { cli: 'advance-status.mjs', args: [], expectedStatus: 2 },
   { cli: 'audit-phase-status.mjs', args: [], expectedStatus: 2 },
   { cli: 'apply-research-style.mjs', args: [], expectedStatus: 1 },
   { cli: 'check-reentry.mjs', args: [], expectedStatus: 2 },
   { cli: 'operate-artifact-persistence.mjs', args: [], expectedStatus: 2 },
   { cli: 'operate-post-final-recovery.mjs', args: [], expectedStatus: 2 },
   { cli: 'operate-topic-state.mjs', args: [], expectedStatus: 2 },
-  { cli: 'enter-phase.mjs', args: [], expectedStatus: 1 },
+  { cli: 'enter-phase.mjs', args: [], expectedStatus: 2 },
   { cli: 'inspect-bundle.mjs', args: [], expectedStatus: 1 },
   { cli: 'inspect-wave0-output.mjs', args: [], expectedStatus: 2 },
   { cli: 'inspect-wave1-output.mjs', args: [], expectedStatus: 2 },
@@ -117,6 +125,8 @@ const SAFE_INVOCATION_SAMPLES = [
   { cli: 'log-event.mjs', args: ['--level', 'info', '--msg', 'missing bundle'], expectedStatus: 0 },
   { cli: 'operate-queue.mjs', args: [], expectedStatus: 1 },
   { cli: 'operate-work-unit.mjs', args: [], expectedStatus: 1 },
+  { cli: 'plan-hostfile-sections.mjs', args: [], expectedStatus: 2 },
+  { cli: 'sync-reference-index.mjs', args: [], expectedStatus: 2 },
   { cli: 'validate-bundle.mjs', args: [], expectedStatus: 1 },
   { cli: 'validate-phase-templates.mjs', args: [], expectedStatus: 1 },
   { cli: 'validate-playbook.mjs', args: [], expectedStatus: 2 },
@@ -205,6 +215,38 @@ describe('CLI exit-code convention runtime representatives', () => {
     const cli = join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'log-event.mjs');
     const result = runNode([cli, '--level', 'info', '--msg', 'missing bundle']);
     assert.equal(result.status, 0);
+  });
+
+  it('selected public operations keep standalone help and malformed static forms outside domain evaluation', () => {
+    const selectedHelp = [
+      'advance-status.mjs',
+      'enter-phase.mjs',
+      'inspect-wave0-output.mjs',
+      'inspect-wave1-output.mjs',
+      'inspect-wave2-output.mjs',
+      'operate-topic-state.mjs',
+      'plan-hostfile-sections.mjs',
+    ];
+    for (const cli of selectedHelp) {
+      const result = runNode([join(CLI_DIR, cli), '--help']);
+      assert.equal(result.status, 0, `${cli}: ${result.stderr || result.stdout}`);
+      assert.match(result.stdout, /Usage:/, cli);
+    }
+
+    const invalidForms = [
+      { cli: 'inspect-wave0-output.mjs', args: ['bare-bundle'], waveEnvelope: true },
+      { cli: 'operate-topic-state.mjs', args: ['schema', '--context', 'hitl1', '--context', 'rerun'] },
+      { cli: 'enter-phase.mjs', args: ['--node', 'phases/phase-wave1.md', '--node', 'phases/phase-wave2.md'] },
+      { cli: 'advance-status.mjs', args: ['--to', 'wave0_complete', '--to', 'wave0_complete'] },
+      { cli: 'plan-hostfile-sections.mjs', args: ['render-no-controls', '--input', 'snapshot.txt'] },
+    ];
+    for (const sample of invalidForms) {
+      const result = runNode([join(CLI_DIR, sample.cli), ...sample.args]);
+      assert.equal(result.status, 2, `${sample.cli}: ${result.stderr || result.stdout}`);
+      const output = JSON.parse(result.stdout);
+      if (sample.waveEnvelope) assert.equal(output.check.passed, false);
+      else assert.equal(output.error, 'invalid_invocation');
+    }
   });
 
   for (const sample of SAFE_INVOCATION_SAMPLES) {

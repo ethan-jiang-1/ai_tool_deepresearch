@@ -31,3 +31,7 @@ Same fix as BUG-153: surface validation errors at the top level of the response.
 **Why:** The claim command is the gateway to all delegated work. Making it hard to invoke correctly blocks the entire Wave0 pipeline.
 
 **How to apply:** Add a top-level `validation_errors[]` field, or at minimum include the expected reason_code values in the `recommended_action` string.
+
+## C3 Disposition (2026-07-30)
+
+C3 projects the existing claim validator as top-level `actor_observation_feedback`: planned role, one primary conflict, bounded conflicts, closed legal tuples, and the same claim rerun. It does not create availability proof, manufacture an observation, allocate work, or introduce a second actor-policy validator.

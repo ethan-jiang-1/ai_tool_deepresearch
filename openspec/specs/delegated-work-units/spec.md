@@ -418,15 +418,27 @@ diagnostic but SHALL NOT leave any partial claim authority.
 
 ### Requirement: Submit SHALL be the only successful delegated completion transition
 
-Normal `submit` and the existing audited `late-submit` SHALL remain the only operations that convert an eligible delegated attempt into successful completion, complete queue demand, and create submitted coverage. The narrow `recover-declaration` operation introduced for an already-submitted attempt SHALL NOT be a completion transition: it SHALL accept no new result, perform no research, allocate no work unit, change no queue outcome, and create no new actor provenance. It SHALL only restore a missing bundle declaration row after proving that the work unit was already successfully submitted.
+Normal `submit` and the existing audited `late-submit` SHALL remain the only operations that convert an eligible delegated attempt into successful completion, complete queue demand, and create submitted coverage. The narrow `recover-declaration` operation introduced for an already-submitted attempt SHALL NOT be a completion transition: it SHALL accept no new result, perform no research, allocate no work unit, change no queue outcome, and create no new actor provenance. It SHALL restore a missing bundle declaration row only when existing durable facts can prove one hash-identical historical row; it SHALL not synthesize a missing Wave0 contribution witness.
 
 For a current-version claimed attempt, normal first submit and eligible first late-submit SHALL evaluate every resolved required output through the shared direct-output evaluator before any successful queue, index, status, result, receipt, cache, transaction, or ledger mutation. Each acceptance invocation SHALL obtain its own fresh bounded byte snapshot; a previous dry-submit PASS, prior bytes, mtime, or cached evaluator result SHALL NOT authorize formal acceptance. Formal submit remains the only normal first-acceptance authority.
 
+For each accepted `wave0_source_intake` required output with direct contract
+`wave0.source-metadata-array.v1`, the Engine SHALL derive one
+`source_contribution` declaration from that same passed snapshot before writing
+the submitted ledger row. The declaration SHALL contain only the exact
+bundle-relative target, direct-contract ID, validated array length, and a
+deterministic semantic digest of the ordered validated array. It SHALL be
+Engine-generated, included in the ledger-record hash, and unavailable as a
+caller-supplied result field. It answers only which prefix of the current
+declared source array this accepted work unit observed; it is not a general
+artifact-history service, an evidence ledger, a new receipt, or permission to
+rewrite source bytes.
+
 The submit owner SHALL verify the index-bound assignment_contract_version, hash-bound queue snapshot, canonical recorded Topic coordinates, and exact reconstructed manifest/beacon output contract before reading candidate output content. Missing or unknown current contract facts SHALL fail closed. An attempt with no assignment_contract_version SHALL use only the explicitly defined legacy submit semantics and SHALL NOT be upgraded by current framework or bundle version inference.
 
-Same-content duplicate normal submit, audited late-submit replay, and recover-declaration are historical postcondition operations rather than new candidate acceptance. They SHALL validate their existing result_hash, ledger_record_hash, submitted index/status/queue postconditions, and original reconstruction facts without making historical success depend on current mutable artifact bytes. Recover-declaration SHALL not invoke the live direct-output evaluator or create a new content acceptance. Wave inspect/Gate SHALL continue to evaluate current post-submit artifact content.
+Same-content duplicate normal submit, audited late-submit replay, and recover-declaration are historical postcondition operations rather than new candidate acceptance. They SHALL validate their existing result_hash, ledger_record_hash, submitted index/status/queue postconditions, and original reconstruction facts without making historical success depend on current mutable artifact bytes. Duplicate and late-submit replay SHALL retain an already-recorded `source_contribution` declaration verbatim. `recover-declaration` SHALL not invoke the live direct-output evaluator or create a new content acceptance: an already-present row remains idempotent, and an absent row may be restored only if the no-contribution historical row shape reproduces its stored hash exactly. If an absent row's stored hash requires `source_contribution`, the contribution fact is not durable anywhere outside that row; recovery SHALL fail closed with one `missing_contract` / no-legal-recovery boundary, SHALL NOT reread current `source.yaml` to infer it, and SHALL NOT append a ledger row. Wave inspect/Gate SHALL continue to evaluate current post-submit artifact content.
 
-The direct-output evaluation proves only that the one snapshot read by the authoritative first-acceptance invocation satisfied its contract. Existing result_hash and ledger_record_hash do not bind artifact bytes. This requirement SHALL NOT add an artifact hash, immutable-content claim, ledger field, or atomic byte-commit guarantee.
+The normal direct-output verdict still proves only that the snapshot read at first acceptance satisfied its contract. `result_hash` and the general `ledger_record_hash` SHALL NOT be described as global immutable artifact-byte claims. The narrow Wave0 `source_contribution` declaration is the sole exception: it binds only the semantic array prefix needed for later candidate ownership evaluation. This requirement SHALL NOT add an artifact hash, immutable-content claim, generic ledger field, or atomic byte-commit guarantee.
 
 #### Scenario: Declaration recovery is not delegated completion
 
@@ -445,6 +457,24 @@ The direct-output evaluation proves only that the one snapshot read by the autho
 - **WHEN** a valid result is submitted for a claimed work unit
 - **THEN** the Engine SHALL complete the bound `queue_item_id`
 - **AND** append exactly one work-unit ledger row for that `work_id`
+
+#### Scenario: Wave0 submit records a contribution boundary
+
+- **WHEN** first submit accepts a schema-valid Wave0 `source.yaml` array with
+  nineteen ordered entries
+- **THEN** its submitted declaration SHALL record the exact target, contract ID,
+  length `19`, and the semantic digest of those nineteen entries
+- **AND** neither the Agent nor its result JSON SHALL provide, choose, or alter
+  that declaration
+
+#### Scenario: Later append cannot rewrite prior contribution
+
+- **WHEN** a later legal Wave0 submit sees the same target extended from
+  nineteen to twenty entries
+- **THEN** its declaration SHALL bind the twenty-entry prefix from that later
+  acceptance
+- **AND** the earlier nineteen-entry declaration SHALL remain hash-bound
+  historical data rather than being rewritten or re-evaluated from the new file
 
 #### Scenario: normal submit still rejects timed-out attempts
 
@@ -467,21 +497,49 @@ The direct-output evaluation proves only that the one snapshot read by the autho
 
 #### Scenario: duplicate normal submit does not depend on live artifact bytes
 
-- **WHEN** a normally submitted work unit receives a same-result duplicate submit after an output file has changed
-- **THEN** duplicate handling SHALL decide idempotency from recorded result and ledger bindings plus durable postconditions
-- **AND** current artifact content SHALL remain the Wave inspect/Gate responsibility
+- **WHEN** a normally submitted Wave0 work unit receives a same-result duplicate
+  submit after its source file has changed
+- **THEN** duplicate handling SHALL decide idempotency from recorded result and
+  ledger bindings plus durable postconditions
+- **AND** it SHALL retain the original `source_contribution` rather than
+  evaluate current bytes as a new accepted contribution
+- **AND** current artifact content SHALL remain the Wave inspect/Gate
+  responsibility
 
 #### Scenario: declaration recovery does not reaccept candidate content
 
-- **WHEN** recover-declaration restores a missing row for an already-submitted work ID
-- **THEN** it SHALL reconstruct the original hash-identical row without rereading live required-output content for a new verdict
-- **AND** recovery SHALL not advertise a new direct-contract acceptance time
+- **WHEN** recover-declaration restores an exact-reconstructable historical row
+  for an already-submitted work ID
+- **THEN** it SHALL reconstruct the original hash-identical row without
+  rereading live required-output content for a new verdict
+- **AND** recovery SHALL not advertise a new direct-contract acceptance time or
+  contribution boundary
 
 #### Scenario: direct evaluation does not create artifact hash authority
 
 - **WHEN** first submit accepts a required-output snapshot
-- **THEN** the verdict SHALL state only that the evaluated snapshot passed at that invocation
-- **AND** no ledger or index field SHALL imply that later bytes are hash-bound by this change
+- **THEN** the verdict SHALL state only that the evaluated snapshot passed at
+  that invocation
+- **AND** no ledger or index field other than the narrow `source_contribution`
+  declaration SHALL imply that later bytes are hash-bound by this change
+
+#### Scenario: Missing contribution witness fails closed
+
+- **WHEN** a current Wave0 first submit recorded a hash-bound
+  `source_contribution`, its declaration row is later absent, and current
+  `source.yaml` has changed
+- **THEN** recover-declaration SHALL return one `missing_contract` / no-legal-
+  recovery boundary before ledger mutation
+- **AND** it SHALL not derive a replacement contribution from current source
+  bytes, result data, index/status hash values, queue history, trace, or
+  transaction metadata
+#### Scenario: Non-Wave0 outputs do not gain general artifact immutability
+
+- **WHEN** first submit accepts a required output other than
+  `wave0.source-metadata-array.v1`
+- **THEN** no `source_contribution` declaration SHALL be created
+- **AND** the ledger SHALL not imply a global immutable-content or
+  artifact-versioning contract
 
 ### Requirement: Invalid submit SHALL remain non-terminal
 
@@ -1225,6 +1283,19 @@ When timeout-preflight evaluates a present candidate for a current-version attem
 
 Unsafe reader roots, contract drift, unknown assignment version, wrong identity, and ambiguous authority SHALL remain inspect/block rather than timeout eligibility. Timeout-preflight SHALL remain read-only and SHALL not cache the direct-output verdict, persist repair_scope, rewrite the artifact, or create replacement demand.
 
+Every emitted timeout preflight result SHALL also include a bounded
+`recommendation_basis` projection for its already selected
+`recommended_action`. The projection SHALL identify one existing direct branch
+source (`candidate`, `progress`, `lease`, or `integrity`) and the small set of
+direct observed facts that caused that branch to win, such as a dry-submit
+candidate root, most recent identity-bound progress, effective lease time, or
+binding/contract blocker. It SHALL be derived from the same preflight result;
+it SHALL not run a second candidate evaluator, create a new timeout rule,
+extend a lease, authorize a forced timeout, or turn diagnostic detail into
+attempt authority. A caller can therefore distinguish why `submit`, `repair`,
+`wait`, `timeout`, `inspect`, or `block` was selected without inferring policy
+from a long array of unrelated diagnostics.
+
 #### Scenario: no-progress claimed attempt is timeout eligible
 
 - **WHEN** a claimed work unit has no candidate result, an empty or missing runtime receipt, no observed output/cache progress, and its effective idle lease has expired
@@ -1373,6 +1444,16 @@ Unsafe reader roots, contract drift, unknown assignment version, wrong identity,
 - **THEN** recommended_action SHALL be inspect or block
 - **AND** default timeout SHALL not use the failure as evidence that the attempt is safely idle
 
+#### Scenario: Recommendation basis distinguishes otherwise similar stalled attempts
+
+- **WHEN** two claimed work units are both past their initial deadline but one
+  has a dry-submit-ready candidate and the other has recent identity-bound
+  receipt progress
+- **THEN** their timeout preflight results SHALL expose different direct
+  `recommendation_basis` branches for `submit` and `wait`
+- **AND** neither result SHALL alter timeout eligibility, lease state, or the
+  legal terminalization path merely to explain the recommendation
+
 ### Requirement: Work-unit claim SHALL evaluate one explicit actor observation before allocation
 
 When eligible delegated demand exists, every new work-unit claim SHALL build a read-only candidate plan before mutation and SHALL receive an explicit decision-point actor observation bound to that plan's delegated `role_key`. The observation SHALL contain `outcome: available|unavailable|unknown`, `source: native_probe|not_observed`, the exact role key, and a normalized reason code. The role key itself is the actor surface identifier; this contract SHALL NOT add a second arbitrary actor-surface string or an undefined host-report authority. A normal delegated candidate plan SHALL contain only the contiguous eligible queue-front prefix, up to the requested count, whose delegated role key and kind actor policy are valid. A fallback candidate plan SHALL contain only the single eligible queue-front item because fallback effective count is one. Claim SHALL evaluate the plan and observation before allocating a work ID, opening or incrementing a batch, moving queue demand into delegated in-flight state, or creating a work-unit directory.
@@ -1389,6 +1470,18 @@ An inconclusive tool error SHALL NOT be normalized to unavailable or authorize f
 The existing Engine-owned work-unit kind contract SHALL declare an actor policy for each supported kind. The accepted mappings SHALL be `wave0_source_intake → dpt-source-intake`, `wave1_topic_deepening → dpt-evidence-extractor`, and `wave2_targeted_evidence → dpt-topic-scout`; all three SHALL allow single-attempt `phase_agent_fallback`. Candidate kind/role mismatch SHALL fail before mutation. Missing/unknown kind policy SHALL fail closed. If delegated execution is unavailable and the queue-front candidate permits fallback, a delegated no-claim verdict SHALL recommend one explicit fallback claim. If the queue-front policy prohibits fallback, the one recommended action SHALL be to resolve the external actor blocker and rerun normal claim.
 
 Actor preflight SHALL reuse the existing work-unit claim trace/log event family rather than create a new actor-preflight event family. Successful claim events SHALL include the normalized role key, outcome, source, reason code, actor class, and policy decision. A valid no-claim SHALL use the existing claim-rejected event with the same normalized fields and verdict. Invalid CLI/schema input SHALL fail before trace mutation. These diagnostic fields SHALL NOT become a reusable availability token, lifecycle mode, or future claim authority.
+
+For a supplied actor observation that is incomplete, enum-invalid, or
+contradictory, public claim output SHALL project the existing validation result
+at the top level as `actor_observation_feedback`. It SHALL contain the planned
+role key, one primary field conflict, bounded field-level conflicts, the full
+closed vocabulary of legal `{ outcome, source, reason_code }` tuples for that
+role, and the one same-claim rerun coordinate. Existing nested `input_issues`
+MAY remain as durable diagnostic detail, but callers SHALL not need to search it
+to discover the conflicting field or legal tuple. This projection SHALL reuse
+the existing actor policy/validator and SHALL not relax role proof, infer
+availability, allocate a work unit, or write claim/queue/index/batch/envelope
+state.
 
 #### Scenario: Available delegated actor permits normal claim
 
@@ -1442,6 +1535,15 @@ Actor preflight SHALL reuse the existing work-unit claim trace/log event family 
 - **WHEN** a claimed attempt has a work-started receipt or Engine-observed output/cache progress
 - **THEN** later actor/runtime trouble SHALL remain under existing inspect, repair, and timeout-preflight contracts
 - **AND** it SHALL NOT be automatically failed or converted to fallback
+
+#### Scenario: Claim exposes invalid actor vocabulary at the decision point
+
+- **WHEN** a claim supplies an unsupported `actor_reason` or a contradictory
+  actor observation for the planned role
+- **THEN** top-level `actor_observation_feedback` SHALL name the primary field
+  conflict and the complete legal tuple vocabulary for that role
+- **AND** the command SHALL retain the existing no-mutation, same-claim repair
+  boundary without turning historical actor observations into proof
 
 ### Requirement: Phase Agent fallback SHALL remain inside the work-unit transaction
 
@@ -1589,6 +1691,13 @@ Claimed normal dry-submit and normal formal-submit rejection SHALL use the exist
 
 This requirement SHALL reuse the existing actor decision, envelope renderer, direct-output evaluator, submit validation, candidate projection, timeout, and formal submit paths. It SHALL NOT add a generic controller, retry branch, actor selector, mutable provenance, ledger amendment, queue recovery operation, Gate/degradation rule, or a general HITL1-to-role proof conversion.
 
+The generated Completion Contract and public claim feedback SHALL consume the
+same validator-owned actor-observation vocabulary. Timeout preflight's
+`recommendation_basis` SHALL consume the already selected candidate/progress/
+lease/integrity branch rather than copy a task-only candidate validator. These
+are reader projections of existing contracts, not a second task protocol,
+cache-trail mapping, role proof, or recovery path.
+
 #### Scenario: Invalid observation is discoverable without weakening role proof
 
 - **WHEN** an eligible Wave0 claim for `dpt-source-intake` supplies `available/not_observed/probe_succeeded`
@@ -1636,3 +1745,13 @@ This requirement SHALL reuse the existing actor decision, envelope renderer, dir
 - **WHEN** an already-claimed work unit predates this generated Completion Contract task section
 - **THEN** dry-submit, formal submit, timeout-preflight, terminal handling, and historical ledger reading SHALL continue through their existing attempt-bound contract surfaces
 - **AND** no claim, index, manifest, beacon, result, receipt, cache, queue, or ledger byte SHALL be rewritten to retrofit the projection
+
+#### Scenario: Generated and public feedback stay on one contract lineage
+
+- **WHEN** a planned claim is rejected for an invalid actor observation or a
+  claimed attempt receives timeout preflight advice
+- **THEN** its visible tuple vocabulary or recommendation basis SHALL derive
+  from the same existing actor or preflight contract used by the corresponding
+  checkpoint
+- **AND** task guidance SHALL not add a duplicate cache-trail, actor-proof, or
+  timeout validator to explain that result

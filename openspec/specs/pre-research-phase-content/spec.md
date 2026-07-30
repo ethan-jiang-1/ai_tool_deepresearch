@@ -58,7 +58,7 @@ Section requirements:
   - write `human_decision_checkpoints.hitl1.status` and `.recorded_at`;
   - after that semantic decision is recorded, invoke the existing `advance-status --to hitl1_recorded`, consume its successful bootstrap-compatible status output, and establish `current_gate: hitl1_recorded` / `next_gate: setup_ready` before any topic-state apply; the Agent SHALL not hand-edit status or use a failed Gate to discover this order;
   - only after that existing status synchronization succeeds, write a retained topic-state input file containing `add_topic` entries with title, descriptive slug stem, must-answer set, scope role and dependencies, then run one existing `operate-topic-state apply` change set so the approved canonical registry and all UID-bound seed skeletons commit together; do not directly write registry frontmatter or defer approved intent to the seed phase;
-  - run `apply-research-style.mjs` using committed registry count;
+  - read the committed topic-state result; when it exposes a `style_projection` handoff after a registry-length change, run its exact existing `apply-research-style.mjs` command using the selected profile and committed registry count, then rerun the named HITL1 Gate; a no-length-change result SHALL not create a style operation;
   - execute one neutral capability-only search, consider at most the first three syntactically eligible actual HTTP(S) candidates in returned order, and process them serially through the bounded native-first/same-URL fallback sequence described below. Record one final direct `research_access` observation.
 - **Expected Artifacts**: canonical `rb_plan.md` registry, matching UID-bound seeds, and `rb_profile.yaml` containing user choices, style parameters, HITL1 marker and research-access observation.
 - **Gate Command**: existing `check-gate-hitl1-recorded.mjs` under the current node.
@@ -82,6 +82,12 @@ HITL1 natural-language mapping SHALL be a prompt-side Agent responsibility withi
 HITL1 gate SHALL require `CanonicalPlanSchema`, exact UID-bound seed projection and completed topic-state workspace state. Legacy-compatible plan readability SHALL not count as HITL1 completion. The Agent SHALL run the existing gate after user input; `stop: yes` does not waive deterministic checks.
 
 Initial topic-state apply SHALL run only after `enter-phase` has populated `rb_status.json#/current_node: phases/phase-hitl1.md` and the existing bootstrap-compatible status synchronization has established `current_gate: hitl1_recorded` / `next_gate: setup_ready`. The apply context argument is descriptive only; it SHALL NOT authorize mutation when those direct lifecycle facts are absent or stale.
+
+#### Scenario: HITL1 uses the style handoff after topic materialization
+
+- **WHEN** the accepted HITL1 topic-state operation commits a registry whose length changes
+- **THEN** the Phase Agent SHALL consume the returned `style_projection` handoff through the existing style CLI before `check-gate-hitl1-recorded.mjs`
+- **AND** it SHALL treat a freshness failure as one mechanical same-Gate repair, not as a new user decision or direct profile edit
 
 #### Scenario: User approves initial topics and Agent materializes them
 - **WHEN** HITL1 has presented a complete recommendation and the user answers “按这个开始” or otherwise clearly approves the proposed topic semantics
@@ -325,10 +331,28 @@ Setup completion SHALL mean `setup-ready` gate pass plus `check.next`, not "vali
 
 The HITL1 phase body and brief SHALL invite the user to optionally provide per-run research controls and SHALL record the resolved control brief in the canonical host-file subsection. HITL1 SHALL resolve a material conflict with profile, must-answer, or style through the existing structured owner before it records both surfaces. The phase SHALL NOT add a profile field, Gate rule, lifecycle state, file-upload checkpoint, background sync, or later silent-wave writer for the controls.
 
+When writing the accepted no-controls or supplied-controls form, HITL1 guidance
+SHALL direct the Agent to obtain exact text from the existing pure
+`plan-hostfile-sections` renderer, then write that returned text only to the
+already Agent-owned `rb_plan.md## Constraints > ### User Research Controls`
+coordinate. The renderer is a presentation helper, not a host-file writer or
+topic-state input authority. If its public command surface is unavailable or
+rejects its invocation, guidance SHALL expose that missing-contract or direct
+invocation boundary; it SHALL not tell the Agent to imitate a shorter fence,
+invent an alternative rendering protocol, or bypass the existing owner.
+
 #### Scenario: material conflict is decided before silent work
 - **WHEN** a proposed control materially conflicts with profile or must-answer meaning
 - **THEN** HITL1 obtains the one needed user decision and updates the existing structured owner where necessary
 - **AND** later phases do not choose an implicit winner or mutate profile facts from the prose brief
+
+#### Scenario: HITL1 uses the reachable controls renderer without widening authority
+
+- **WHEN** a resolved HITL1 controls decision is ready for durable capture
+- **THEN** the Agent SHALL use the documented pure renderer and write its
+  returned section at the existing host-file coordinate before topic-state apply
+- **AND** it SHALL not treat renderer output as profile, Gate, lifecycle, or
+  topic-state input authority
 
 ### Requirement: Research phases consume the original host-file coordinate
 

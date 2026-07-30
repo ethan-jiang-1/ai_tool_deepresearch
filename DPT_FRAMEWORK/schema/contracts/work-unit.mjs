@@ -194,6 +194,17 @@ export const ActorObservationProvidedObservationSchema = z.object({
   role_key: JsonSafeValueSchema.nullable(),
   reason_code: JsonSafeValueSchema.nullable(),
 }).strict();
+export const ActorObservationFeedbackConflictSchema = z.object({
+  field: z.string().min(1),
+  message: z.string().min(1),
+}).strict();
+export const ActorObservationFeedbackSchema = z.object({
+  planned_role_key: z.string().min(1),
+  primary_conflict: ActorObservationFeedbackConflictSchema,
+  conflicts: z.array(ActorObservationFeedbackConflictSchema).min(1).max(4),
+  legal_tuples: z.array(ActorObservationLegalTupleSchema).length(7),
+  rerun: z.string().min(1),
+}).strict();
 
 export function actorObservationLegalTuples() {
   return ACTOR_OBSERVATION_CASES.flatMap((entry) => entry.reason_codes.map((reason_code) => (
@@ -674,6 +685,35 @@ export const WorkUnitTimeoutProgressSchema = z.object({
   sources: z.array(WorkUnitTimeoutProgressSourceSchema).default([]),
 }).strict();
 
+export const WorkUnitTimeoutRecommendationBasisSchema = z.discriminatedUnion('branch', [
+  z.object({
+    branch: z.literal('candidate'),
+    facts: z.object({
+      candidate_projection: WorkUnitCandidateProjectionSchema,
+    }).strict(),
+  }).strict(),
+  z.object({
+    branch: z.literal('progress'),
+    facts: z.object({
+      latest_engine_observed_progress_at: z.string().datetime(),
+      effective_timeout_at: z.string().datetime(),
+    }).strict(),
+  }).strict(),
+  z.object({
+    branch: z.literal('lease'),
+    facts: z.object({
+      lease_anchor_at: z.string().datetime(),
+      effective_timeout_at: z.string().datetime(),
+    }).strict(),
+  }).strict(),
+  z.object({
+    branch: z.literal('integrity'),
+    facts: z.object({
+      direct_issue: z.string().min(1),
+    }).strict(),
+  }).strict(),
+]);
+
 export const WorkUnitTimeoutPreflightSchema = z.object({
   ok: z.boolean(),
   work_id: z.string().min(1),
@@ -688,6 +728,7 @@ export const WorkUnitTimeoutPreflightSchema = z.object({
   effective_timeout_at: z.string().datetime().nullable().default(null),
   progress: WorkUnitTimeoutProgressSchema,
   candidate_projection: WorkUnitCandidateProjectionSchema.nullable().default(null),
+  recommendation_basis: WorkUnitTimeoutRecommendationBasisSchema,
   inspect: z.array(z.string()).default([]),
   advice: z.array(z.string()).default([]),
 }).strict().superRefine((data, ctx) => {

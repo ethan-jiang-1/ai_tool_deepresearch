@@ -34,3 +34,7 @@ The Phase Agent couldn't determine the correct action from the preflight output 
 ```
 
 **Why:** The current binary recommendation ("submit" vs "wait") gives the Phase Agent no basis for deciding whether to follow the recommendation or override it. A diagnostic trail would make the preflight actionable.
+
+## C3 Disposition (2026-07-30)
+
+C3 exposes `recommendation_basis` from the already selected candidate, progress, lease, or integrity branch. It gives the direct facts behind `submit`, `repair`, `wait`, `inspect`, `block`, or `timeout` while preserving existing eligibility, lease, dry-submit, terminalization, and recovery semantics.

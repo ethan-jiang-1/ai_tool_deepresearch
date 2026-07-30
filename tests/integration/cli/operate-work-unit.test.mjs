@@ -566,6 +566,12 @@ describe('operate-work-unit inspect', () => {
         assert.equal(out.actor_observation_contract.planned_role_key, 'dpt-source-intake');
         assert.equal(out.actor_observation_contract.legal_tuples.length, 7);
         assert.ok(out.actor_preflight.input_issues.length > 0);
+        assert.equal(out.actor_observation_feedback.planned_role_key, 'dpt-source-intake');
+        assert.equal(typeof out.actor_observation_feedback.primary_conflict.field, 'string');
+        assert.ok(out.actor_observation_feedback.conflicts.length > 0);
+        assert.ok(out.actor_observation_feedback.conflicts.length <= 4);
+        assert.equal(out.actor_observation_feedback.legal_tuples.length, 7);
+        assert.match(out.actor_observation_feedback.rerun, /operate-work-unit\.mjs claim/);
         assert.equal(out.claimed_count, 0);
         assert.deepEqual(recursiveSnapshot(dir), before);
         assert.equal(existsSync(workUnitIndexPath(dir)), false);
@@ -981,6 +987,8 @@ describe('operate-work-unit inspect', () => {
       assert.equal(eligibleOut.timeout_eligible, true);
       assert.equal(eligibleOut.check, true);
       assert.equal(eligibleOut.recommended_action, 'timeout');
+      assert.equal(eligibleOut.recommendation_basis.branch, 'lease');
+      assert.equal(eligibleOut.recommendation_basis.facts.effective_timeout_at, eligibleOut.effective_timeout_at);
 
       saveQueueWith(refusedDir, [queueItem()]);
       const refusedClaim = execFileSync(process.execPath, [CLI, 'claim', refusedDir, '--phase', 'wave0'], { encoding: 'utf-8' });
@@ -997,6 +1005,8 @@ describe('operate-work-unit inspect', () => {
       const refusedOut = JSON.parse(refused.stdout);
       assert.equal(refusedOut.timeout_eligible, false);
       assert.equal(['wait', 'repair', 'submit', 'inspect', 'block'].includes(refusedOut.recommended_action), true);
+      assert.equal(refusedOut.recommendation_basis.branch, 'progress');
+      assert.equal(refusedOut.recommendation_basis.facts.latest_engine_observed_progress_at, refusedOut.progress.latest_engine_observed_progress_at);
       assert.equal(readFileSync(workUnitIndexPath(refusedDir), 'utf-8'), beforeIndex);
       assert.equal(readFileSync(path.join(refusedDir, 'rb_queue.json'), 'utf-8'), beforeQueue);
     } finally {
@@ -1025,6 +1035,8 @@ describe('operate-work-unit inspect', () => {
         primary_root_code: dry.primary_root_code,
       });
       assert.deepEqual(Object.keys(out.candidate_projection).sort(), ['primary_root_code', 'recommended_action']);
+      assert.equal(out.recommendation_basis.branch, 'candidate');
+      assert.deepEqual(out.recommendation_basis.facts.candidate_projection, out.candidate_projection);
     } finally {
       cleanup(dir);
     }

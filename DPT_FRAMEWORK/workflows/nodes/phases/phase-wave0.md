@@ -28,6 +28,7 @@ suggested_context:
 
 - **Objective**: collect foundation source metadata and shared reference evidence for every topic.
 - **Start here**: load `rb_queue.json`, `rb_plan.md` topic registry and, when present, `## Constraints > User Research Controls`, seed topic files, profile thresholds, and `dpt-source-intake` role guidance.
+- **Entry prerequisite**: after `enter-phase` loads this node, run `node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to seed_topics_ready` before Wave0 work or its Gate; this synchronizes the passed source gate and does not prove Wave0 completion.
 - **Delegated path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit dry-submit` repair loop -> formal `operate-work-unit submit` -> submitted ledger row -> gate.
 - **Completion check**: side-effect-free `inspect-wave0-output.mjs` passes first, then `check-gate-wave0-complete.mjs` passes for `phases/phase-wave0.md`.
 - **Failure posture**: do not direct-search from the Phase Agent as a substitute for delegated evidence. Use submit rejection, terminal attempt closure, refill, and gate feedback.
@@ -141,6 +142,8 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase wave0 --coun
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>
 ```
 
+If claim rejects a supplied observation, use top-level `actor_observation_feedback` to read the planned `dpt-source-intake` role, primary conflict, closed legal tuples, and its same-claim rerun. The generated `Completion Contract` uses this same actor/candidate vocabulary; it is not a second actor proof or cache rule.
+
 For each claimed work unit, use the claim output's canonical absolute `bundle_dir` and absolute `prompt_refs[]` paths. Never derive the bundle root from cwd, append a bundle basename, or switch to a same-named nested directory.
 
 1. Read `prompt_refs[].task_ref`, `beacon_ref`, and `result_schema_ref` at their returned absolute paths. Confirm that `_beacon.json` carries the same canonical absolute `bundle_dir`. Treat the beacon as immutable: do not overwrite, edit, or repair `_beacon.json`; an identity/root conflict belongs at the Engine checkpoint.
@@ -170,7 +173,7 @@ If formal submit rejects because mutable facts changed after dry-submit, repair 
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight <bundle> --work-id <work_id> [--result <result.json>]
 ```
 
-Parse structured stdout even when timeout preflight exits non-zero. Follow `recommended_action` exactly: `submit` runs formal submit; `repair` repairs the same `work_id`; `wait` continues active polling; `inspect` inspects and repairs candidate or Engine binding; `block` assigns the deterministic blocker to its named owner and leaves the phase undrained without initiating a user wait; `timeout` permits normal terminal timeout. Only after that decision may the Phase Agent use an explicit close command:
+Parse structured stdout even when timeout preflight exits non-zero. Follow `recommended_action` exactly: `submit` runs formal submit; `repair` repairs the same `work_id`; `wait` continues active polling; `inspect` inspects and repairs candidate or Engine binding; `block` assigns the deterministic blocker to its named owner and leaves the phase undrained without initiating a user wait; `timeout` permits normal terminal timeout. Read the matching `recommendation_basis` branch (`candidate`, `progress`, `lease`, or `integrity`) as the direct reason for that action; it does not create a new timeout rule. Only after that decision may the Phase Agent use an explicit close command:
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs fail <bundle> --work-id <work_id> --reason "<reason>"

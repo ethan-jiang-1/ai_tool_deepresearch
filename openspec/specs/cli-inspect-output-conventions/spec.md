@@ -242,6 +242,18 @@ Exit codes SHALL remain `0` for pass, `1` for known inspected-contract failure, 
 
 Shared artifact/provenance failures SHALL be projected from the same `wave-contract-findings.mjs` finding used by the formal Gate. Inspect-only advisory findings MAY use that same shape, but SHALL remain non-blocking and SHALL NOT acquire formal routing or durable side effects.
 
+Before resolving a bundle or loading a Wave definition, each Wave inspect CLI
+SHALL parse its public invocation. Its only legal forms are one standalone
+`--help` or `-h`, or exactly one `--bundle <bundle-path>` pair with no positional
+arguments. Help SHALL write its static usage/help response, exit `0`, and
+perform no bundle read, evaluator call, or side effect. A bare positional path,
+missing, duplicate, unknown, incomplete, option-looking, or
+nonexistent/not-directory bundle argument SHALL instead return the existing
+structured non-gate invocation/configuration envelope with exit `2`. Only a
+validated resolved bundle directory may appear in a domain finding's
+`write_to`, `rerun`, or checkpoint command. An untrusted option token or an
+unvalidated path SHALL never be reflected into those repair coordinates.
+
 #### Scenario: Missing bundle still returns structured inspect JSON
 
 - **WHEN** `inspect-wave1-output.mjs` is invoked without a bundle argument
@@ -265,6 +277,31 @@ Shared artifact/provenance failures SHALL be projected from the same `wave-contr
 - **WHEN** an inspect-wave CLI is called without the required bundle argument
 - **THEN** it MAY use code `2` as caller invocation error
 - **AND** the framework exit-code docs SHALL list this as a non-gate command class
+
+#### Scenario: Help never becomes a Wave artifact verdict
+
+- **WHEN** any `inspect-wave{0,1,2}-output.mjs` command is invoked with
+  `--help` or `-h`
+- **THEN** it SHALL exit `0` after static help output
+- **AND** it SHALL not load a Gate definition, resolve a bundle, or emit a
+  Wave-domain finding
+
+#### Scenario: Unsafe invocation input cannot become a rerun command
+
+- **WHEN** a Wave inspect caller supplies an option token or nonexistent path
+  in place of a valid bundle directory
+- **THEN** the command SHALL return one structured invocation/configuration
+  root with exit `2`
+- **AND** its `write_to`, `rerun`, and command hint SHALL use only a stable
+  placeholder or a validated bundle coordinate, never the supplied token
+
+#### Scenario: Bare bundle path is rejected before Wave evaluation
+
+- **WHEN** an inspect-wave CLI receives `<bundle-path>` without `--bundle`
+- **THEN** it SHALL return the structured non-gate invocation envelope with exit
+  `2` before it resolves the path, loads a definition, or evaluates Wave output
+- **AND** its repair coordinate SHALL use the documented `--bundle
+  <bundle-path>` template rather than echo the supplied path
 
 ### Requirement: Inspect output SHALL classify blocking, advisory, and diagnostic-only findings accurately
 

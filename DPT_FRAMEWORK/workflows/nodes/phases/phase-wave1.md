@@ -28,6 +28,7 @@ suggested_context:
 
 - **Objective**: produce submitted `evidence-summary.md`, `question-list.md`, source backing, Phase-owned topic reference projections, and Phase-owned `depth-review.yaml` for every topic.
 - **Start here**: load Wave0 outputs, seed topics, queue state, profile thresholds, and, when present, `rb_plan.md## Constraints > User Research Controls`, then `dpt-evidence-extractor` role guidance.
+- **Entry prerequisite**: after `enter-phase` loads this node, run `node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave0_complete` before Wave1 work or its Gate; this synchronizes the passed source gate and does not prove Wave1 completion.
 - **Delegated path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit submit` -> submitted ledger row -> gate.
 - **Completion check**: side-effect-free `inspect-wave1-output.mjs` passes first, then `check-gate-wave1-complete.mjs` passes for `phases/phase-wave1.md`.
 - **Failure posture**: do not direct-search new Wave1 evidence from the Phase Agent. Repair rejected submits, produce a visible `blocked_contract`, or refill with supplementary work units.
@@ -185,6 +186,8 @@ Consume the returned Engine disposition without inventing another repair route:
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
 ```
 
+For a rejected supplied observation, read `actor_observation_feedback` at the claim result: it names the planned `dpt-evidence-extractor` role, one primary conflict, the closed legal tuples, and the same claim rerun. The generated `Completion Contract` carries the same actor/candidate vocabulary and does not add a task-only actor proof or cache mapping.
+
 Immediately after a successful formal submit, complete this visible Phase checklist before treating the returned topic as closed:
 
 1. Run the existing reference/index materialization in §3.2.2 from the submitted backing.
@@ -271,6 +274,8 @@ These are Agent discipline checks. The gate enforces structural and provenance c
 After formal Wave1 submit, read the same Wave1 inspect feedback. When it names submitted backing materialization, use every returned `write_to` canonical target and its listed `source_url`, `work_ids`, `work_unit_refs`, `source_refs`, and `cache_trail_refs` as the only candidate coordinates; persist each matching `reference/{current-topic.slug}-{deterministic-source-qualifier}.md` through the existing path, then run `node DPT_FRAMEWORK/cli/sync-reference-index.mjs --bundle <path>`, refresh affected Seed Topic references through the existing packet writer, and rerun that same inspect. Do not raw-edit a seed or `_INDEX.md`, choose a legacy filename, or direct-search to repair a projection. A separately returned legacy/index/ledger/queue/receipt/provenance/format hint remains its own root; do not suppress it, hand-edit its authority, or treat materialization as its repair. If and only if convergence reports a true floor deficit after materialization and index sync, enqueue the existing supplementary `wave1_topic_deepening` card with a fresh globally unused `queue_item_id`, explicit canonical `payload.topic_uid` / `payload.topic_slug`, `payload.assignment_mode: supplementary`, `payload.reference_floor_deficit` equal to the returned positive deficit, and `required_receipts: []`; reuse a named live supplementary demand rather than duplicate it. A primary card uses `payload.assignment_mode: primary` plus the exact evidence-summary.md/question-list.md file receipt pair. Assignment intent is never inferred from an ID suffix, prose, `writes_to`, or receipt emptiness.
 
 The supplementary item follows the same claim/task/dry-submit/formal-submit loop. Use only exact prior paths listed in the claimed task's `Completion Contract -> Cache And Source Facts`; if none is listed, produce a genuinely current assigned output rather than guessing from a filename. Repair `/source_claims/<index>/source_ref` on the same candidate when dry-submit rejects lineage, and never copy an old evidence file into `output_files[]` or overwrite it solely to make validation pass.
+
+For an expired or stale claimed attempt, `timeout-preflight` returns one closed `recommended_action` plus `recommendation_basis`. Read its `candidate`, `progress`, `lease`, or `integrity` direct facts before choosing the existing submit, same-candidate repair, polling, inspection, owner, or timeout path; the basis is explanatory only and never changes candidate validity, lease, or terminal authority.
 
 For a mode-absent unclaimed Wave1 card, run `operate-queue.mjs repair <bundle> --queue-item-id <id> --set-assignment-mode <primary|supplementary>`; do not infer its mode.
 

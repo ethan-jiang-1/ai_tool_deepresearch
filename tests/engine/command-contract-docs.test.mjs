@@ -282,6 +282,67 @@ describe('Agent-facing command contract docs', () => {
     }
   });
 
+  it('documents the selected operation grammar and direct feedback boundary without normalizing utilities', () => {
+    const commands = read('DPT_FRAMEWORK/COMMANDS.md');
+    const cliReadme = read('DPT_FRAMEWORK/cli/README.md');
+
+    for (const text of [commands, cliReadme]) {
+      for (const marker of [
+        'Selected Operation Invocation Contract',
+        'Selected Public Operation Parsing',
+      ]) {
+        if (text === commands && marker === 'Selected Public Operation Parsing') continue;
+        if (text === cliReadme && marker === 'Selected Operation Invocation Contract') continue;
+        assert.ok(text.includes(marker), `selected-operation section missing marker: ${marker}`);
+      }
+      assert.match(text, /standalone `--help` or `-h`/i);
+      assert.match(text, /unvalidated (?:argument )?token/);
+      assert.match(text, /code-`2`|exits `2`/);
+      for (const marker of [
+        'inspect-wave{0,1,2}-output.mjs',
+        'schema --context <context>',
+        'validation_errors[]',
+        'enter-phase.mjs',
+        'target-excluding',
+        'advance-status.mjs',
+        'plan-hostfile-sections.mjs',
+      ]) {
+        assert.ok(text.includes(marker), `selected-operation documentation missing marker: ${marker}`);
+      }
+    }
+
+    assert.match(commands, /cue-first|presents its `DPT_CONTINUATION_CUE` first/);
+    assert.match(commands, /does not normalize unrelated utilities/i);
+    assert.match(cliReadme, /not a claim that every utility/i);
+  });
+
+  it('keeps topic-state schema discovery and controls rendering on their existing owner boundaries', () => {
+    const topicState = read('DPT_FRAMEWORK/command_playbook/operate-topic-state.md');
+    const controls = read('DPT_FRAMEWORK/command_playbook/plan-hostfile-sections.md');
+
+    for (const marker of [
+      'Discover The Accepted Input Before Apply',
+      'schema --context <hitl1|rerun|seed_topics|wave_projection>',
+      'TopicApplyPlanSchema',
+      'validation_errors[]',
+      'does not read a bundle',
+      'does not create reentry',
+      'unknown-context forms are code `2`',
+    ]) {
+      assert.ok(topicState.includes(marker), `topic-state playbook missing marker: ${marker}`);
+    }
+
+    for (const marker of [
+      'render-no-controls',
+      'render-supplied-controls --input <snapshot-path>',
+      'exits `2`',
+      'do not hand-write a substitute fence',
+    ]) {
+      assert.ok(controls.includes(marker), `controls playbook missing marker: ${marker}`);
+    }
+    assert.match(controls, /never\s+selects a bundle/);
+  });
+
   it('rejects known command-audience and boundary wording drift unless allowlisted', () => {
     const violations = collectForbiddenPhraseViolations();
     assert.deepStrictEqual(
@@ -311,5 +372,47 @@ describe('Phase-boundary terminology docs', () => {
     assert.ok(text.includes('synchronize the just-passed source gate'));
     assert.ok(text.includes('status synchronization authority'));
     assert.match(text, /target-?phase work completion|target work completion/);
+  });
+
+  it('places source-gate synchronization in each Wave action core before target work', () => {
+    const cases = [
+      ['phase-wave0.md', 'seed_topics_ready', 'Wave0'],
+      ['phase-wave1.md', 'wave0_complete', 'Wave1'],
+      ['phase-wave2.md', 'wave1_complete', 'Wave2'],
+    ];
+
+    for (const [file, sourceGate, wave] of cases) {
+      const text = read(`DPT_FRAMEWORK/workflows/nodes/phases/${file}`);
+      const core = text.slice(text.indexOf('## 0. Execution Brief'), text.indexOf('\n## 1. Stage Goal'));
+      const prerequisite = `advance-status.mjs --bundle <path> --to ${sourceGate}`;
+
+      assert.ok(core.includes('**Entry prerequisite**'), `${file} must expose the entry prerequisite`);
+      assert.ok(core.includes(prerequisite), `${file} must name its exact source-gate sync command`);
+      assert.ok(core.includes(`does not prove ${wave} completion`), `${file} must not overclaim target completion`);
+      assert.ok(core.indexOf('**Entry prerequisite**') < core.indexOf('**Completion check**'), `${file} must surface sync before the target completion check`);
+    }
+  });
+
+  it('keeps claim and timeout vocabulary aligned across the shared protocol and Wave guidance', () => {
+    const shared = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md');
+    for (const marker of [
+      'actor_observation_feedback',
+      'planned_role_key',
+      'primary_conflict',
+      'legal_tuples',
+      'same-claim `rerun`',
+      'recommendation_basis',
+      '`candidate`, `progress`, `lease`, or `integrity`',
+      'does not run another candidate evaluator',
+    ]) {
+      assert.ok(shared.includes(marker), `shared protocol missing marker: ${marker}`);
+    }
+
+    for (const file of ['phase-wave0.md', 'phase-wave1.md', 'phase-wave2.md']) {
+      const text = read(`DPT_FRAMEWORK/workflows/nodes/phases/${file}`);
+      assert.ok(text.includes('actor_observation_feedback'), `${file} must surface claim feedback`);
+      assert.ok(text.includes('recommendation_basis'), `${file} must surface timeout basis`);
+      assert.match(text, /actor\/candidate vocabulary|actor\/candidate terms/);
+    }
   });
 });

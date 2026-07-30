@@ -99,7 +99,21 @@ The existing `log-event.mjs` CLI SHALL be extended with a `--event` parameter fo
 
 ### Requirement: Enter phase CLI witnesses lifecycle node entry (CPT-003)
 
-`enter-phase` SHALL continue to validate the latest trace-durable clean or degraded handoff, load the target dependency closure through `assessNode()`, write route-bound `load_complete`, and update `rb_status.json#/current_node` without mutating gate windows.
+After valid static invocation and latest trace-durable clean/degraded handoff
+authorization, `enter-phase` SHALL preflight the selected target's action-core
+configuration before it calls `assessNode()`. Only then SHALL it load the target
+dependency closure through `assessNode()`, write route-bound `load_complete`,
+and update `rb_status.json#/current_node` without mutating gate windows.
+
+`enter-phase --help` and `-h` SHALL return static invocation help with exit
+code `0` and no bundle, trace, status, or loader side effect. Its only non-help
+form is exactly one `--bundle <bundle-path>` and one `--node <file-ref>`, with
+optional one `--full`, no positional arguments, and no other option. Missing,
+unknown, duplicate, mixed-help, absent-value, or invalid target invocation
+shape SHALL return one direct code-`2` invocation/configuration result before
+the command reads runtime truth or appends `load_complete`. A valid entry
+remains the existing side-effecting witness operation; these help and rejection
+forms do not weaken its lifecycle checks.
 
 The accepted handoff vocabulary SHALL contain exactly two Engine-written classes:
 
@@ -110,13 +124,34 @@ Handoff selection SHALL compare structurally valid authorities from both classes
 
 The exceptional event SHALL bind its request digest, operation id, previous readiness->Final handoff/load lineage, expected profile/terminal-status/final-inventory facts, transition-table resolution and derived target status window. One structural parser SHALL produce immutable event facts; closed stage predicates SHALL add the mutable checks needed by entry, status sync and completed rerun preflight. Before phase entry it SHALL be accepted only when those facts remain current, no accepted C5 workspace remains, re-resolving HITL2 outcome `rerun` produces the recorded target/window, the event is not superseded, `rb_profile.yaml` matches the committed recovery profile, and `rb_status.json` remains the terminal Final window. After a route-bound rerun `load_complete` exists, `advance-status` SHALL validate the immutable event and that exact load witness before writing the derived `hitl2_recorded -> rerun_ready` window. Downstream consumers SHALL then require event+load+phase_transition+current rerun window without reapplying the terminal pre-entry predicate. Arbitrary trace text, C5-local/caller-supplied target nodes, `human-directed` flags and hand-written gate attempts SHALL NOT become handoff authority.
 
-Successful stdout SHALL remain Agent-readable Markdown with stable file-boundary markers and no mixed JSON status envelope. After the loaded dependency closure, the CLI SHALL append one short generated continuation block derived from the target node frontmatter:
+Successful stdout SHALL remain Agent-readable Markdown with stable markers and
+no mixed JSON status envelope. By default, it SHALL be a bounded entry
+presentation in this order: one generated continuation block derived from the
+target node frontmatter; the exact existing source-gate status synchronization
+command now required before target work; the target phase's `## 0. Execution
+Brief` action core; and the ordered shared-file manifest. That manifest SHALL
+contain only the successful load plan's dependency refs, in load order, with the
+target node excluded and no concatenated Markdown bytes. The default SHALL NOT
+concatenate the complete shared dependency closure. The explicit `--full` form
+SHALL retain the complete original loaded Markdown closure, including the target
+node, for an Agent that needs reference detail, while preserving the same
+visible continuation and source-gate synchronization information. Neither form
+SHALL invoke `advance-status`, choose a route, or merge the two lifecycle
+writers.
+
+The generated continuation block SHALL contain:
 
 - non-terminal stop:no: `interaction: do_not_initiate`; execute the loaded node now without initiating a user-facing pause;
 - stop:yes: `interaction: required`; follow the loaded HITL prompt;
 - Final: `interaction: terminal_delivery`; deliver final artifacts only.
 
-The generated block SHALL be a feedback projection, not a new authority surface, and SHALL not duplicate the full silent-execution contract. `do_not_initiate` SHALL not prohibit answering an already received user-initiated normal conversation turn, and the Engine SHALL not read chat state to produce the token. The block SHALL be the final stdout content and use stable markers with short key/value lines:
+The generated block SHALL be a feedback projection, not a new authority
+surface, and SHALL not duplicate the full silent-execution contract.
+`do_not_initiate` SHALL not prohibit answering an already received
+user-initiated normal conversation turn, and the Engine SHALL not read chat
+state to produce the token. The block SHALL be the first default stdout content
+and use stable markers with short key/value lines; `--full` SHALL keep it
+visible before the expanded dependency closure:
 
 ```markdown
 <!-- DPT_CONTINUATION_CUE_START -->
@@ -127,6 +162,15 @@ node_ref: phases/phase-wave1.md
 ```
 
 For a post-final recovery handoff, route-bound `load_complete` SHALL reference the recovery event identity and lineage rather than pretending a HITL2 gate attempt occurred. Its additive binding fields SHALL be `handoff_source_kind: post_final_reentry`, `handoff_source_event_id`, `handoff_source_event_index`, `handoff_source_event_sha256`, `handoff_source_operation_id`, and the existing `handoff_target_node`. Existing source-gate handoff behavior SHALL remain unchanged.
+
+The action-core preflight is a read-only framework configuration check over the
+target Markdown's `## 0. Execution Brief` through the next H2. A missing or
+ambiguous boundary SHALL return a structured configuration result with exit `2`
+before `assessNode()` runs; it SHALL not append `load_complete`, mutate
+`current_node`, emit a workflow/trace/receipt event, or synthesize a replacement
+action core. The preflight SHALL read only the selected framework target source;
+it SHALL not invoke the workflow loader or resolve the target dependency
+closure.
 
 #### Scenario: Enter phase accepts degraded source pass
 
@@ -161,15 +205,25 @@ For a post-final recovery handoff, route-bound `load_complete` SHALL reference t
 
 #### Scenario: stop:no rendered output ends with continuation cue
 
+> **Scenario identity note:** This historical heading is retained for OpenSpec
+> archive identity. The current behavior deliberately requires the cue to begin
+> default stdout, not end it.
+
 - **WHEN** enter-phase loads `phases/phase-wave1.md`
-- **THEN** stdout SHALL include the normal loaded Markdown and autonomous header
-- **AND** the final generated block SHALL state `interaction: do_not_initiate` and direct execution of Wave1
+- **THEN** default stdout SHALL begin with the generated block stating
+  `interaction: do_not_initiate` and direct execution of Wave1
+- **AND** it SHALL then expose the source-gate status synchronization, action
+  core, and shared-file manifest without the full dependency closure
 - **AND** the block SHALL NOT create a chat-interception or permission contract
 
 #### Scenario: stop:yes rendered output ends with interaction cue
 
+> **Scenario identity note:** This historical heading is retained for OpenSpec
+> archive identity. The current behavior deliberately requires the cue to begin
+> default stdout, not end it.
+
 - **WHEN** enter-phase loads HITL2
-- **THEN** the final generated block SHALL state that user interaction is required
+- **THEN** the leading generated block SHALL state that user interaction is required
 
 #### Scenario: Enter phase rejects unauthorized or stale route
 
@@ -182,6 +236,43 @@ For a post-final recovery handoff, route-bound `load_complete` SHALL reference t
 - **WHEN** loading succeeded but updating `current_node` fails
 - **THEN** stdout SHALL be diagnostic JSON rather than successful Markdown
 - **AND** a later audit SHALL treat the existing load with terminal Final `current_node` as incomplete entry and recommend the same `enter-phase` retry, not `advance-status`
+
+#### Scenario: Default entry keeps action and status synchronization visible
+
+- **WHEN** `enter-phase` legally enters `phases/phase-wave1.md`
+- **THEN** default stdout SHALL place the continuation cue and exact
+  `advance-status --to wave0_complete` command before the Wave1 action core
+- **AND** it SHALL list only the load-ordered dependency refs other than the
+  target node, without concatenating their full contents
+- **AND** `load_complete` and `current_node` behavior SHALL remain the existing
+  entry witness behavior
+
+#### Scenario: Full entry retains reference closure explicitly
+
+- **WHEN** a caller invokes a legal `enter-phase` entry with `--full`
+- **THEN** stdout SHALL include the complete loaded dependency closure, including
+  the target node, in addition to the bounded entry information
+- **AND** the command SHALL not run `advance-status` or create a second
+  lifecycle transition
+
+#### Scenario: Help and invalid invocation do not create an entry witness
+
+- **WHEN** `enter-phase` receives `--help`, `-h`, or an invalid invocation
+  before a valid bundle/node pair is supplied
+- **THEN** help SHALL exit `0` and invalid invocation SHALL exit `2`
+- **AND** neither path SHALL read a bundle, append `load_complete`, or mutate
+  `rb_status.json#/current_node`
+
+#### Scenario: Action-core configuration failure does not create an entry witness
+
+- **WHEN** a validly authorized target lacks one unambiguous `## 0. Execution
+  Brief` block through the next H2
+- **THEN** `enter-phase` SHALL return the structured framework-configuration
+  result with exit `2` before `assessNode()` runs
+- **AND** it SHALL not append `load_complete` or mutate
+  `rb_status.json#/current_node`
+- **AND** it SHALL not emit a workflow, trace, or receipt event while attempting
+  the action-core preflight
 
 ### Requirement: Advance status refuses unwitnessed or unpassed phase handoffs (CPT-004)
 
@@ -207,6 +298,22 @@ For both classes the CLI SHALL use the actual/resolved target instead of choosin
 On failure, the CLI SHALL print JSON with `status: "error"`, a short `reason`, and `advice[]` naming the missing trace condition and the appropriate `enter-phase` or owner remedy. It SHALL exit non-zero and SHALL NOT mutate `rb_status.json` or append `phase_transition`.
 
 The existing success output shape SHALL be preserved.
+
+`advance-status --help` and `-h` SHALL return static help with exit code `0`
+and no status/trace side effect. Unknown options, missing required values, and
+invalid invocation shape SHALL return a direct code-`2` structured error before
+the command reads a bundle or evaluates a handoff. Once a valid invocation
+reaches the existing handoff checker, its normal accepted/rejected lifecycle
+semantics and code-`0`/`1` outcomes remain unchanged. A rejected witnessed
+handoff SHALL continue to name its earliest missing/invalid trace condition and
+the exact existing `enter-phase`, Gate, or owner boundary; it SHALL not suggest
+manual status editing or invent another route.
+
+The only non-help `advance-status` form SHALL contain exactly one `--bundle
+<bundle-path>` and one `--to <source-gate-enum>` pair, with no positional
+arguments or other options. A duplicate pair, mixed-help form, or any unlisted
+shape is the same side-effect-free code-`2` path; it does not reach bundle,
+trace, manifest, or handoff evaluation.
 
 Successful status synchronization SHALL establish a source-gate status window for the next lifecycle phase. After accepted source checkpoint `G` points to target node `N`, `advance-status --to <G enum>` SHALL set:
 
@@ -328,6 +435,23 @@ For multi-outcome HITL2, normal status synchronization SHALL remain tied to the 
 - **AND** `enter-phase --bundle <bundle> --node phases/phase-final.md` has written a later `load_complete(entry="phases/phase-final.md")`
 - **AND** `advance-status.mjs --bundle <bundle> --to readiness_passed` succeeds
 - **THEN** `rb_status.json` SHALL contain `current_gate: "readiness_passed"` and `next_gate: "none"`
+
+#### Scenario: Advance status help and parser rejection are side-effect-free
+
+- **WHEN** `advance-status.mjs --help`, `-h`, or an unknown/missing-option
+  invocation is supplied
+- **THEN** help SHALL exit `0` and parser/invocation rejection SHALL exit `2`
+- **AND** neither path SHALL read or write `rb_status.json` or append
+  `phase_transition`
+
+#### Scenario: Missing entry witness names the existing handoff action
+
+- **WHEN** a valid `advance-status --to <source_gate>` invocation reaches a
+  missing or stale route-bound entry witness
+- **THEN** its structured rejection SHALL identify that direct trace condition
+  and the exact existing `enter-phase` retry or owner boundary
+- **AND** it SHALL not propose a status override, an automatic entry, or a
+  competing route selection
 
 ### Requirement: Phase-boundary terminology separates transition, handoff, completion, and witnessing
 

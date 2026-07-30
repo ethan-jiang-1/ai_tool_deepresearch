@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { execFileSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { chmodSync, cpSync, existsSync, mkdtempSync, rmSync, symlinkSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -65,11 +65,13 @@ describe('enter-phase CLI', { concurrency: false }, () => {
     };
   }
 
-  function assertFinalCue(out, expected) {
+  function assertLeadingCue(out, expected) {
     const marker = '<!-- DPT_CONTINUATION_CUE_START -->';
-    const idx = out.lastIndexOf(marker);
-    assert.notEqual(idx, -1, `expected final continuation cue marker; stdout tail:\n${out.slice(-500)}`);
-    const block = out.slice(idx).trim();
+    const idx = out.indexOf(marker);
+    assert.equal(idx, 0, `expected leading continuation cue marker; stdout head:\n${out.slice(0, 500)}`);
+    const end = out.indexOf('<!-- DPT_CONTINUATION_CUE_END -->');
+    assert.notEqual(end, -1, 'expected continuation cue end marker');
+    const block = out.slice(idx, end + '<!-- DPT_CONTINUATION_CUE_END -->'.length).trim();
     assert.equal(block, [
       '<!-- DPT_CONTINUATION_CUE_START -->',
       `interaction: ${expected.interaction}`,
@@ -77,18 +79,20 @@ describe('enter-phase CLI', { concurrency: false }, () => {
       `node_ref: ${expected.node_ref}`,
       '<!-- DPT_CONTINUATION_CUE_END -->',
     ].join('\n'));
-    assert.equal(out.trimEnd().endsWith('<!-- DPT_CONTINUATION_CUE_END -->'), true);
   }
 
   it('renders markdown and writes route-bound load_complete plus current_node without changing gate window', () => {
     const out = run(['--bundle', dir, '--node', 'phases/phase-wave1.md']);
 
     assert.doesNotMatch(out.trimStart(), /^\{/);
-    assertFinalCue(out, {
+    assertLeadingCue(out, {
       interaction: 'do_not_initiate',
       next_action: 'execute_loaded_node',
       node_ref: 'phases/phase-wave1.md',
     });
+    assert.ok(out.indexOf('--to wave0_complete') < out.indexOf('## 0. Execution Brief'));
+    assert.match(out, /DPT_SHARED_FILE_MANIFEST_START/);
+    assert.doesNotMatch(out, /DPT_LOADED_FILE_START/);
     const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf8'));
     assert.equal(status.current_node, 'phases/phase-wave1.md');
     assert.equal(status.current_gate, 'wave0_complete');
@@ -101,6 +105,70 @@ describe('enter-phase CLI', { concurrency: false }, () => {
     assert.equal(load.handoff_source_node, 'phases/phase-wave0.md');
     assert.equal(load.handoff_target_node, 'phases/phase-wave1.md');
     assert.equal(load.handoff_source_attempt_index, 0);
+  });
+
+  it('keeps the full dependency closure behind explicit --full while retaining the bounded entry first', () => {
+    const out = run(['--bundle', dir, '--node', 'phases/phase-wave1.md', '--full']);
+    assertLeadingCue(out, {
+      interaction: 'do_not_initiate',
+      next_action: 'execute_loaded_node',
+      node_ref: 'phases/phase-wave1.md',
+    });
+    assert.ok(out.indexOf('--to wave0_complete') < out.indexOf('## 0. Execution Brief'));
+    assert.match(out, /DPT_SHARED_FILE_MANIFEST_START/);
+    assert.match(out, /DPT_LOADED_FILE_START phases\/phase-wave1\.md/);
+    const manifest = out.slice(out.indexOf('DPT_SHARED_FILE_MANIFEST_START'), out.indexOf('DPT_SHARED_FILE_MANIFEST_END'));
+    assert.doesNotMatch(manifest, /phases\/phase-wave1\.md/);
+  });
+
+  it('serves standalone help and rejects malformed entry grammar before trace or status mutation', () => {
+    const statusPath = join(dir, 'rb_status.json');
+    const tracePath = join(dir, 'rb_trace.jsonl');
+    const beforeStatus = readFileSync(statusPath, 'utf8');
+    const beforeTrace = readFileSync(tracePath, 'utf8');
+    const help = spawnSync('node', ['DPT_FRAMEWORK/cli/enter-phase.mjs', '--help'], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    });
+    assert.equal(help.status, 0, help.stderr || help.stdout);
+    assert.match(help.stdout, /Usage:/);
+
+    const malformed = spawnSync('node', ['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', dir, '--node'], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    });
+    assert.equal(malformed.status, 2, malformed.stderr || malformed.stdout);
+    const output = JSON.parse(malformed.stdout);
+    assert.equal(output.error, 'invalid_invocation');
+    assert.equal(readFileSync(statusPath, 'utf8'), beforeStatus);
+    assert.equal(readFileSync(tracePath, 'utf8'), beforeTrace);
+  });
+
+  it('rejects malformed target action-core configuration before loader or entry-witness writes', () => {
+    const frameworkRoot = mkdtempSync(join(tmpdir(), 'dpt-enter-phase-framework-'));
+    const framework = join(frameworkRoot, 'DPT_FRAMEWORK');
+    const statusPath = join(dir, 'rb_status.json');
+    const tracePath = join(dir, 'rb_trace.jsonl');
+    const beforeStatus = readFileSync(statusPath, 'utf8');
+    const beforeTrace = readFileSync(tracePath, 'utf8');
+    cpSync(join(REPO_ROOT, 'DPT_FRAMEWORK'), framework, { recursive: true });
+    symlinkSync(join(REPO_ROOT, 'node_modules'), join(frameworkRoot, 'node_modules'), 'dir');
+    writeFileSync(join(framework, 'workflows/nodes/phases/phase-wave1.md'), '# Invalid Wave1 Configuration\n');
+    try {
+      const result = spawnSync('node', [join(framework, 'cli/enter-phase.mjs'), '--bundle', dir, '--node', 'phases/phase-wave1.md'], {
+        cwd: REPO_ROOT,
+        encoding: 'utf8',
+      });
+      assert.equal(result.status, 2, result.stderr || result.stdout);
+      const output = JSON.parse(result.stdout);
+      assert.equal(output.error, 'framework_configuration');
+      assert.equal(output.reason_code, 'execution_brief_missing');
+    } finally {
+      rmSync(frameworkRoot, { recursive: true, force: true });
+    }
+    assert.equal(readFileSync(statusPath, 'utf8'), beforeStatus);
+    assert.equal(readFileSync(tracePath, 'utf8'), beforeTrace);
+    assert.equal(existsSync(join(dir, 'runtime-receipt.jsonl')), false);
   });
 
   it('accepts degraded source pass and preserves degraded context on load_complete', () => {
@@ -133,7 +201,7 @@ describe('enter-phase CLI', { concurrency: false }, () => {
     ]);
 
     const out = run(['--bundle', dir, '--node', 'phases/phase-hitl2.md']);
-    assertFinalCue(out, {
+    assertLeadingCue(out, {
       interaction: 'required',
       next_action: 'wait_for_user_in_loaded_node',
       node_ref: 'phases/phase-hitl2.md',
@@ -151,7 +219,7 @@ describe('enter-phase CLI', { concurrency: false }, () => {
     ]);
 
     const out = run(['--bundle', dir, '--node', 'phases/phase-final.md']);
-    assertFinalCue(out, {
+    assertLeadingCue(out, {
       interaction: 'terminal_delivery',
       next_action: 'deliver_final_artifacts',
       node_ref: 'phases/phase-final.md',

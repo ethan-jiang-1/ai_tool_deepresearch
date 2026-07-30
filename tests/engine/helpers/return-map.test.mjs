@@ -65,6 +65,32 @@ function canonicalWave0Bundle() {
   return { dir, topic: fact.topic_registry[0] };
 }
 
+function canonicalWave0BundleWithTopics(topics) {
+  const dir = tempBundle();
+  mkdirSync(path.join(dir, 'seed_topics'), { recursive: true });
+  mkdirSync(path.join(dir, '_work_units'), { recursive: true });
+  writeFileSync(path.join(dir, 'rb_plan.md'), '---\nplan_basename: return-map-wave0\nderived_topic_count: 0\ntopic_registry_version: "2"\ntopic_registry: []\n---\n# Plan\n');
+  writeFileSync(path.join(dir, 'rb_profile.yaml'), 'human_decision_checkpoints:\n  hitl2:\n    rerun_count: 0\n');
+  writeFileSync(path.join(dir, 'rb_status.json'), JSON.stringify({ current_mode: 'execution', state: 'not_started', current_gate: 'hitl1_recorded', next_gate: 'setup_ready', current_node: 'phases/phase-hitl1.md' }));
+  writeFileSync(path.join(dir, 'rb_trace.jsonl'), '');
+  const applied = applyCanonicalTopicState({
+    bundlePath: dir,
+    input: {
+      context: 'hitl1',
+      actions: topics.map(({ title, slug_stem }) => ({
+        action: 'add_topic',
+        title,
+        slug_stem,
+        must_answer: ['What matters?'],
+        scope_role: 'primary',
+        depends_on_topic_uids: [],
+      })),
+    },
+  });
+  assert.equal(applied.verdict, 'committed');
+  return { dir, topics: buildCanonicalTopicRegistryFact(dir).topic_registry };
+}
+
 function sourceArrayYaml(topicSlug) {
   return [
     '- url: https://example.com/duplicate',
@@ -79,10 +105,10 @@ function sourceArrayYaml(topicSlug) {
   ].join('\n');
 }
 
-function submitWave0(dir, topic) {
+function submitWave0(dir, topic, queueItemId = 'return-map-wave0') {
   const submitted = claimAndSubmitWorkUnit(dir, {
     phase: 'wave0',
-    queueItemId: 'return-map-wave0',
+    queueItemId,
     preserveQueue: true,
     queueItemOverrides: {
       payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug },
@@ -390,6 +416,33 @@ describe('return-map diagnostics', () => {
     assert.equal(resolved.passed, true, resolved.inspect.join('\n'));
   });
 
+  it('batches only homogeneous Wave0 candidate omissions and keeps topic families separate', () => {
+    const batch = canonicalWave0BundleWithTopics([
+      { title: 'Topic A', slug_stem: 'topic-a' },
+      { title: 'Topic B', slug_stem: 'topic-b' },
+    ]);
+    const [topicA, topicB] = batch.topics;
+    const recordA = submitWave0(batch.dir, topicA, 'return-map-wave0-a');
+    const recordB = submitWave0(batch.dir, topicB, 'return-map-wave0-b');
+    replaceWave0Token(batch.dir, topicA, '');
+    replaceWave0Token(batch.dir, topicB, '');
+
+    const result = evaluateWave0Readiness(batch.dir);
+    const omissions = result.findings.filter((finding) => finding.rule_id === 'return_map_current_candidate_omission');
+    assert.equal(omissions.length, 2);
+    const byTopic = new Map(omissions.map((finding) => [finding.observed.topic_uid, finding]));
+    assert.deepEqual(byTopic.get(topicA.topic_uid).missing_candidate_ids, [
+      `${recordA.work_id}/1`,
+      `${recordA.work_id}/2`,
+    ]);
+    assert.deepEqual(byTopic.get(topicB.topic_uid).missing_candidate_ids, [
+      `${recordB.work_id}/1`,
+      `${recordB.work_id}/2`,
+    ]);
+    assert.equal(byTopic.get(topicA.topic_uid).missing_candidate_ids.some((id) => id.startsWith(`${recordB.work_id}/`)), false);
+    assert.equal(byTopic.get(topicB.topic_uid).missing_candidate_ids.some((id) => id.startsWith(`${recordA.work_id}/`)), false);
+  });
+
   it('does not let bare, malformed, or out-of-range Wave0 identities hide candidate omissions', () => {
     const bare = canonicalWave0Bundle();
     const bareRecord = submitWave0(bare.dir, bare.topic);
@@ -397,7 +450,9 @@ describe('return-map diagnostics', () => {
     replaceWave0Token(bare.dir, bare.topic, entry({ refs: [bareRecord.work_id, 'reference/topic-a-source.md'] }));
     const bareResult = evaluateWave0Readiness(bare.dir);
     assert.equal(bareResult.passed, false);
-    assert.equal(bareResult.findings.filter((finding) => finding.rule_id === 'return_map_current_candidate_omission').length, 2);
+    const omissions = bareResult.findings.filter((finding) => finding.rule_id === 'return_map_current_candidate_omission');
+    assert.equal(omissions.length, 1);
+    assert.deepEqual(omissions[0].missing_candidate_ids, [`${bareRecord.work_id}/1`, `${bareRecord.work_id}/2`]);
     assert.equal(bareResult.findings.some((finding) => finding.rule_id === 'seed_projection_entry_identity'), false);
 
     const invalid = canonicalWave0Bundle();

@@ -79,7 +79,7 @@ must never contain duplicate initialization skeletons.
 - **AND** the template SHALL answer the instantiated document-shape question
   without defining packet execution or repair semantics
 
-#### Scenario: New seed has one editable body and aligned appendix
+#### Scenario: New seed has an aligned empty appendix
 
 - **WHEN** topic-state materializes a new canonical seed before later Waves
   produce research facts
@@ -104,7 +104,7 @@ must never contain duplicate initialization skeletons.
 - **AND** the card SHALL survive later writer materialization without becoming
   an entry or a second source of authority
 
-#### Scenario: Wave0 card makes contribution ordinal fillable without owning protocol
+#### Scenario: Wave0 card makes ordinal fillable without owning protocol
 
 - **WHEN** a Phase Agent reads a newly rendered Wave0 card before closeout
 - **THEN** the card SHALL explain that `<work_id>/N` uses the current source

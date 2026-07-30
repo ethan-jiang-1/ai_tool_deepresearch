@@ -89,6 +89,43 @@ adoption, when requested after successful C5 reentry, SHALL use existing
 explicit `migrate_legacy` semantics and SHALL NOT be performed by C5 or inferred
 from files.
 
+`operate-topic-state` SHALL expose a read-only `schema --context <context>`
+operation derived from the same accepted Zod input contracts used by `apply`.
+For every supported context it SHALL return a bounded authoring projection of
+the available action form(s), required and optional field paths, closed enum
+vocabulary, nested value shapes, and a parseable illustrative template. The
+projection visitor MAY unwrap an existing `ZodEffects` wrapper only to discover
+its inner structural branch; it SHALL NOT serialize, restate, or reimplement a
+refinement, transform, or cross-field rule. Every emitted illustrative template
+SHALL pass the actual top-level `TopicApplyPlanSchema`. If an unsupported or
+effect-dependent form cannot be structurally discovered and verified that way,
+the schema operation SHALL fail closed with one structured framework-
+configuration root and code `2`, rather than emit a partial or plausible
+template. It SHALL NOT create a second validator, infer a context from bundle
+state, claim that the selected lifecycle window is legal, or authorize an
+`apply` mutation.
+
+The only non-help topic-state forms SHALL be `inspect --bundle <bundle-path>`,
+`schema --context <context>`, `apply --bundle <bundle-path> --input
+<input-path>`, and `recover --bundle <bundle-path> --operation-id
+<operation-id>`. Required options occur exactly once; no positional arguments
+after the operation and no other option are accepted. An unknown context or
+invalid operation/invocation shape SHALL return one direct code-`2` invocation
+root before a bundle or workspace is read. A standalone `--help` or `-h` SHALL
+list `inspect`, `schema`, `apply`, and `recover` with their accepted arguments,
+exit `0`, and leave every bundle surface unchanged.
+
+When `apply` reaches the existing Zod input validator and input is invalid, its
+blocked result SHALL preserve the validator as the sole authority while adding
+bounded safe `validation_errors[]`. Each item SHALL include a stable field path,
+issue code/message, and only contract-safe expectation detail such as required
+shape, closed allowed values, or received value type; it SHALL not echo arbitrary
+input values, raw file bytes, or a stack trace. The result SHALL identify one
+primary validation path and the same `apply` checkpoint. It SHALL distinguish
+input repair from lifecycle/owner rejection: field-level input detail does not
+turn a missing reentry witness, forbidden writer, or unavailable mutation form
+into an Agent-writable path.
+
 #### Scenario: Packet uses the existing atomic writer
 
 - **WHEN** a loaded Wave1 phase submits a valid packet for mechanisms, trends
@@ -97,12 +134,56 @@ from files.
   workspace transaction
 - **AND** an invalid slot, identity, navigation target, or entry SHALL prevent
   any partial seed replacement
-#### Scenario: Packet transaction does not rewrite plan or profile authority
+
+#### Scenario: Schema projection is discoverable but cannot authorize mutation
+
+- **WHEN** an Agent invokes `operate-topic-state schema --context seed_topics`
+  or another supported declared context
+- **THEN** the command SHALL return the context's Zod-derived authoring
+  projection without reading or writing a runtime bundle
+- **AND** the response SHALL not claim that an apply window, topic identity, or
+  writer authorization exists
+
+#### Scenario: Refined form is not advertised without real-schema verification
+
+- **WHEN** schema discovery reaches an existing effect-wrapped TopicApplyPlanSchema
+  form
+- **THEN** it MAY use the wrapped inner shape only for structural field discovery
+- **AND** it SHALL emit a template only after the actual top-level schema accepts
+  it, without reproducing the effect's cross-field rule
+- **AND** an unsupported or unverifiable form SHALL instead return one bounded
+  framework-configuration root with exit `2` and no bundle/workspace access
+
+#### Scenario: Invalid apply gives safe field-level feedback before workspace creation
+
+- **WHEN** a retained topic-state apply input supplies a scalar where a required
+  list is expected or an unsupported closed enum value
+- **THEN** the blocked result SHALL expose bounded `validation_errors[]` and a
+  primary field path from the existing validator
+- **AND** no workspace, plan/seed replacement, status, trace, ledger, or
+  profile mutation SHALL occur
+- **AND** the only repair loop SHALL remain correction of the retained input and
+  rerun of the same `apply` checkpoint
+
+#### Scenario: Help never evaluates topic state
+
+- **WHEN** `operate-topic-state.mjs --help` or `-h` is invoked
+- **THEN** it SHALL exit `0` after static operation help
+- **AND** it SHALL not parse an input file, inspect a bundle, create a workspace,
+  or mutate canonical state
+#### Scenario: Packet transaction does not rewrite plan authority
 
 - **WHEN** a valid Wave packet materializes a projection for one current topic
 - **THEN** its topic-state workspace manifest SHALL stage only that selected
   `seed_topics/<current-slug>.md` replacement
-- **AND** it SHALL NOT stage or replace `rb_plan.md` or `rb_profile.yaml`
+- **AND** it SHALL NOT stage or replace `rb_plan.md`
+
+#### Scenario: Packet transaction does not rewrite profile authority
+
+- **WHEN** a valid Wave packet materializes a projection for one current topic
+- **THEN** its topic-state workspace manifest SHALL stage only that selected
+  `seed_topics/<current-slug>.md` replacement
+- **AND** it SHALL NOT stage or replace `rb_profile.yaml`
 #### Scenario: Wave0 entry uses its contribution-owned ordinal
 
 - **WHEN** an earlier accepted Wave0 source contribution owns global ordinals
@@ -156,7 +237,7 @@ from files.
 - **AND** user direction, generic inspect, or existing result files SHALL NOT
   create permission
 
-#### Scenario: Rerun preserves entry boundaries
+#### Scenario: Rerun is idempotent and Wave2 preserves Wave1 questions
 
 - **WHEN** the same accepted packet is replayed, or Wave2 upserts a W2F entry
   in `pending_questions` after Wave1 entries exist

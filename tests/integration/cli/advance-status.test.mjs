@@ -2,7 +2,7 @@
 
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { chmodSync, mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -92,6 +92,29 @@ describe('advance-status CLI', { concurrency: false }, () => {
     assert.equal(result.continuation, undefined);
     assert.match(result.continuation_diagnostic, /bootstrap-compatible status sync/);
     assert.ok(existsSync(tracePath));
+  });
+
+  it('serves standalone help and rejects malformed invocation before status or trace access', () => {
+    const before = readFileSync(statusPath, 'utf8');
+    const help = spawnSync('node', ['DPT_FRAMEWORK/cli/advance-status.mjs', '--help'], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    });
+    assert.equal(help.status, 0, help.stderr || help.stdout);
+    assert.match(help.stdout, /Usage:/);
+    assert.equal(readFileSync(statusPath, 'utf8'), before);
+    assert.equal(existsSync(tracePath), false);
+
+    const malformed = spawnSync('node', ['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', dir], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    });
+    assert.equal(malformed.status, 2, malformed.stderr || malformed.stdout);
+    const output = JSON.parse(malformed.stdout);
+    assert.equal(output.status, 'error');
+    assert.equal(output.error, 'invalid_invocation');
+    assert.equal(readFileSync(statusPath, 'utf8'), before);
+    assert.equal(existsSync(tracePath), false);
   });
 
   it('fails covered source gate without gate pass witness and does not mutate status', () => {

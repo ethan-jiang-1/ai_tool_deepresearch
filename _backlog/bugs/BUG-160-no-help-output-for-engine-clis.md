@@ -72,3 +72,7 @@ Operations:
 **Why:** The Agent is the primary user of these CLIs. Every invocation starts with zero knowledge of the interface. Without `--help`, the Agent's only discovery path is reading Engine source — the least efficient and most error-prone method.
 
 **How to apply:** Add a `printUsage()` function to each CLI that fires when no arguments are given or `--help` is passed. The usage should list all operations, required flags per operation, and point to schema discovery for input formats. This is a ~20-line change per CLI with outsized DX impact.
+
+## C3 Disposition (2026-07-30)
+
+C3 addresses the selected public operations only: Wave inspect, topic-state, phase entry, status synchronization, and HITL1 controls rendering now provide standalone help and strict documented invocation feedback. It does not claim that every Engine CLI, including unrelated queue utilities, has been normalized; those remain separately documented surfaces rather than a reason to add a generic CLI controller.

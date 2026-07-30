@@ -1,0 +1,275 @@
+schema_version: verification-routing/v1
+change: make-agent-operation-contracts-direct
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Direct operation projections are narrow deterministic helpers: static invocation parsing, Zod-derived authoring shape, safe error mapping, cue/action-core extraction, existing claim/timeout branch presentation, omission batching, and release-version alignment all require focused contract tests.
+  integration:
+    status: selected
+    rationale: >-
+      Selected public CLIs must prove help and invocation short-circuiting, preservation of existing domain behavior, temporary-bundle side-effect boundaries, and Markdown/CLI ownership loops through production entrypoints.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      C3 changes local operation presentation and feedback while preserving the existing transition table, Gate authority, and lifecycle semantics; focused production CLI integrations cover its bounded entry and status edges without asserting a workflow-scale state-chain change.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      C3 improves what an executing Agent can read but does not claim that a real Agent follows it, performs research, repairs a bundle, or has host liveness; a fixture or static presentation check cannot prove those behaviors.
+claims:
+  - id: selected-cli-static-invocation-contract
+    statement: >-
+      CLE-001 and CLE-003: selected public operation helpers distinguish side-effect-free help from bounded code-2 invocation/configuration feedback without becoming a generic command controller.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/cli-operation-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: topic-state-schema-and-safe-validation-projection
+    statement: >-
+      CTS-004: supported TopicApplyPlanSchema forms, including effect-wrapped structural branches, produce context-discriminated templates that the actual top-level schema parses; bounded validation errors retain Zod as the only validator and redact arbitrary retained input values.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/canonical-topic-state.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: controls-renderer-remains-pure
+    statement: >-
+      PHS-007: exact no-controls and supplied-controls rendering derives only from the shared helper and does not resolve a bundle, write a host file, or establish a new authority.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/plan-hostfile-sections.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: phase-entry-action-core-projection
+    statement: >-
+      WNC-010, WNC-011, and CPT-003: a preflighted bounded entry presentation extracts one unambiguous Execution Brief and an ordered target-excluding shared-file manifest; malformed action-core configuration writes no loader/trace/receipt/entry witness, and full closure remains explicitly opt-in.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/phase-entry-presentation.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: claim-and-timeout-project-existing-branches
+    statement: >-
+      DEW-014, DEW-016, and DEW-021: claim exposes validator-owned actor tuple feedback and timeout exposes its selected recommendation basis without allocating work, changing leases, or introducing another candidate validator.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-claim.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: timeout-recommendation-basis-is-read-only
+    statement: >-
+      DEW-014 and DEW-021: otherwise similar timeout-preflight outcomes disclose their existing candidate/progress/lease/integrity basis while retaining timeout eligibility and terminalization semantics.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-terminal.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-omission-batch-preserves-identity
+    statement: >-
+      RRM-007: homogeneous current Wave0 omissions become one ordered identity-complete finding after parent masking, while distinct authority or writer families remain separate and incomplete coverage remains blocking.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/return-map.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: command-documentation-states-selected-contract-boundary
+    statement: >-
+      CLE-001, CLE-003, WNC-010, and WNC-011: Agent-facing command and phase documentation expose selected direct operation contracts without claiming that unrelated utilities share them or that entry proves target-phase completion.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/command-contract-docs.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: release-version-surfaces-remain-aligned
+    statement: >-
+      VEM-001, VEM-002, VEM-003, and VEM-004: the proposal-declared v0.63 release updates the concise root CHANGELOG entry and both DPT_FRAMEWORK/RUN.md version references; the extended version-management test proves they match without creating a framework-local changelog authority.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/version-management.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: selected-cli-help-and-code-two-boundary
+    statement: >-
+      CLE-001, CLE-003, CTS-004, CPT-003, and CPT-004: selected operation CLIs return code-0 help and code-2 malformed invocation before bundle evaluation or mutation, while valid domain failures retain their existing contracts.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/exit-code-convention.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave-inspect-rejects-unsafe-invocation-before-domain-evaluation
+    statement: >-
+      IOC-004 and CLE-001: each Wave inspect CLI keeps its structured non-gate envelope, rejects a bare positional path and other invalid bundle input before evaluator work, and never reflects unvalidated tokens into repair coordinates.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/inspect-wave-contract-output.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: topic-state-schema-command-and-apply-boundary
+    statement: >-
+      CTS-004: the production topic-state CLI serves read-only context schema and safe invalid-input feedback before any workspace publication, while a valid parsed apply continues to use its existing authorization and writer path.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: controls-renderer-cli-and-hitl1-owner-loop
+    statement: >-
+      PHS-007 and PRP-012: the public controls renderer produces exact text without a bundle write, and HITL1 guidance retains the existing Agent-owned host-file coordinate and material-conflict boundary.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/user-research-controls-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: entry-default-and-full-presentation-retain-witness
+    statement: >-
+      CPT-003, WNC-010, and WNC-011: production enter-phase preflights action-core configuration before it can invoke the loader or write trace/receipt/entry state, then makes cue, exact status synchronization, action core, and ordered target-excluding manifest visible by default; --full retains the full closure and neither form performs status mutation.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/enter-phase.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: advance-status-retains-direct-handoff-owner
+    statement: >-
+      CPT-004 and CLE-001: advance-status help/parser failures are side-effect-free, while valid rejected handoffs continue to identify their existing trace/entry owner instead of suggesting manual status mutation.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/advance-status.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: work-unit-public-feedback-reuses-current-facts
+    statement: >-
+      DEW-014, DEW-016, and DEW-021: public claim and timeout-preflight CLI output carries one selected legal tuple/root/basis while preserving no-mutation rejection, existing submit/repair/wait/inspect/block/timeout semantics, and generated-contract lineage.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave-inspect-and-gate-share-omission-batch
+    statement: >-
+      RRM-007: production Wave inspect exposes the evaluator's one homogeneous ordered omission batch and retains exact per-candidate coverage rather than a CLI-local aggregate or relaxed Gate condition.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/inspect-wave-return-map.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

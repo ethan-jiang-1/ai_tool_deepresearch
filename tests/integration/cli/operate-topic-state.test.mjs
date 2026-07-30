@@ -33,4 +33,38 @@ describe('operate-topic-state CLI', () => {
   it('uses exit 2 for invalid invocation', () => {
     const result = run('apply', '--bundle', makeBundle('topic-invalid')); assert.equal(result.status, 2);
   });
+  it('rejects malformed recovery identity before bundle workspace access', () => {
+    const dir = makeBundle('topic-invalid-recovery');
+    const before = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8');
+    const result = run('recover', '--bundle', dir, '--operation-id', '../../not-a-workspace');
+    assert.equal(result.status, 2, result.stderr || result.stdout);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.error, 'invalid_invocation');
+    assert.equal(output.coordinate, '<operation-id>');
+    assert.match(output.reason, /workspace UUID/);
+    assert.equal(readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8'), before);
+  });
+  it('exposes read-only schema discovery and safe invalid-input feedback before a writer can run', () => {
+    const help = run('--help');
+    assert.equal(help.status, 0, help.stderr || help.stdout);
+    assert.match(help.stdout, /schema --context/);
+
+    const schema = run('schema', '--context', 'hitl1');
+    assert.equal(schema.status, 0, schema.stdout);
+    const projection = JSON.parse(schema.stdout);
+    assert.equal(projection.context, 'hitl1');
+    assert.ok(projection.forms.length > 0);
+
+    const dir = makeBundle('topic-invalid-input');
+    const inputPath = join(dir, 'invalid.json');
+    writeFileSync(inputPath, JSON.stringify({ context: 'hitl1', actions: [] }));
+    const before = readFileSync(join(dir, 'rb_plan.md'), 'utf8');
+    const invalid = run('apply', '--bundle', dir, '--input', inputPath);
+    assert.equal(invalid.status, 1, invalid.stdout);
+    const feedback = JSON.parse(invalid.stdout);
+    assert.equal(feedback.reason_code, 'input_invalid');
+    assert.ok(feedback.validation_errors.length > 0);
+    assert.equal(typeof feedback.primary_validation_path, 'string');
+    assert.equal(readFileSync(join(dir, 'rb_plan.md'), 'utf8'), before);
+  });
 });

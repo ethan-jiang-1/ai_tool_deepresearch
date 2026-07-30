@@ -143,6 +143,24 @@ describe('wave inspect output and purity', () => {
       assert.match(output.hints[0].missing_fact, /--bundle/);
       assert.match(output.hints[0].rerun, /--bundle <bundle-path>$/);
     });
+
+    it(`${cli} treats standalone help and malformed bundle grammar as side-effect-free invocation handling`, () => {
+      const bundle = writeBundle();
+      const before = snapshot(bundle);
+      const help = spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli', cli), '--help'], { encoding: 'utf8', timeout: 10000 });
+      assert.equal(help.status, 0, help.stderr || help.stdout);
+      assert.match(help.stdout, /Usage:/);
+      assert.deepEqual(snapshot(bundle), before);
+
+      const bare = spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli', cli), bundle], { encoding: 'utf8', timeout: 10000 });
+      assert.equal(bare.status, 2, bare.stderr || bare.stdout);
+      const output = JSON.parse(bare.stdout);
+      assert.equal(output.check.passed, false);
+      assert.equal(output.hints.length, 1);
+      assert.match(output.hints[0].rerun, /--bundle <bundle-path>$/);
+      assert.doesNotMatch(output.hints[0].rerun, new RegExp(bundle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      assert.deepEqual(snapshot(bundle), before);
+    });
   }
 
   it('Wave0 inspect accepts UID-only shared-reference binding without legacy-field advice', () => {

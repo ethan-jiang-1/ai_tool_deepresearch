@@ -22,3 +22,7 @@ This is the last remaining gate failure. All 5 topics need projection entries fo
 ## Expected behavior
 
 The gate should suggest the missing candidate IDs in a batch-repairable format. Currently each missing entry generates a separate hint, producing dozens of hints that are hard to action programmatically.
+
+## C3 Disposition (2026-07-30)
+
+C3 retains every current candidate as mandatory, but groups homogeneous Wave0 omissions in the existing shared return-map evaluator after parent-root masking. One finding now carries the stable identity-complete `missing_candidate_ids[]` for one topic, writable Seed Topic family, repair kind, and Projection Packet coordinate; inspect and the formal Gate reuse that same result.

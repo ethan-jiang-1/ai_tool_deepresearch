@@ -85,3 +85,7 @@ caller/invocation fault 伪装成业务状态故障，增加误修复和错误�
   bundle 路径并进入领域 evaluator 是 deterministic CLI invocation bug。
 - 调整方向：指导层可要求先读 `COMMANDS.md` 的确切调用形状，但 CLI 仍必须在入口处理
   `--help`、未知参数、缺值和非法路径，避免把调用错误伪装成业务 blocker。
+
+## C3 Disposition (2026-07-30)
+
+C3 implements the selected Wave inspect invocation boundary through the shared static helper. Standalone `--help`/`-h` exits `0` before a bundle read; bare, duplicate, mixed, missing, or unusable bundle forms return code `2` in the existing `{ check, inspect, advice, hints }` envelope. The evaluator and Gate keep their existing authority, and unvalidated argv never becomes a repair coordinate.

@@ -14,14 +14,23 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseArgs } from 'node:util';
 import { parseMdFrontmatter } from '../engine/helpers/gate-helpers-readers.mjs';
 import { validateSourceGateStatusSync } from '../engine/helpers/handoff-helpers.mjs';
 import { continuationForLoadedNode } from '../engine/helpers/continuation-cue.mjs';
+import {
+  invocationError,
+  parseOperationInvocation,
+  validateBundleDirectory,
+} from '../engine/helpers/cli-operation-contract.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WORKFLOWS_DIR = join(__dirname, '..', 'workflows');
 const NODES_DIR = join(WORKFLOWS_DIR, 'nodes');
+const command = 'node DPT_FRAMEWORK/cli/advance-status.mjs';
+const usage = [
+  'Usage:',
+  `  ${command} --bundle <bundle-path> --to <source-gate-enum>`,
+].join('\n');
 
 // ── Helpers ──
 
@@ -72,32 +81,76 @@ function readLoadedNodeContinuation(nodeRef) {
 
 // ── Main ──
 
-const { values } = parseArgs({
-  options: {
-    bundle: { type: 'string' },
-    to:     { type: 'string' },
-  },
-  strict: true,
+function emit(value) {
+  console.log(JSON.stringify(value));
+}
+
+function failInvocation(reason, extra = {}) {
+  emit({
+    ...invocationError({ command: 'advance-status', reason, usage }),
+    advice: [usage],
+    ...extra,
+  });
+  process.exit(2);
+}
+
+const invocation = parseOperationInvocation(process.argv.slice(2), {
+  usage,
+  forms: [{
+    id: 'advance-status',
+    positionals: [],
+    options: {
+      bundle: { required: true },
+      to: { required: true },
+    },
+  }],
 });
 
-if (!values.bundle || !values.to) {
-  console.log(JSON.stringify({ status: 'error', reason: 'Missing required args: --bundle <path> --to <gate>' }));
-  process.exit(1);
+if (invocation.kind === 'help') {
+  process.stdout.write(`${usage}\n`);
+  process.exit(0);
+}
+if (invocation.kind === 'invalid') failInvocation(invocation.reason);
+
+const { bundle: bundleArgument, to: targetGateEnum } = invocation.values;
+let manifest;
+let chain;
+try {
+  manifest = loadManifest();
+  chain = loadChain();
+} catch {
+  failInvocation('framework workflow configuration cannot resolve source gates', {
+    error: 'framework_configuration',
+    reason_code: 'workflow_transition_configuration_unavailable',
+  });
 }
 
-const bundlePath = values.bundle;
-const targetGateEnum = values.to;
-
-// Validate bundle exists
-if (!existsSync(bundlePath)) {
-  console.log(JSON.stringify({ status: 'error', reason: `Bundle not found: ${bundlePath}` }));
-  process.exit(1);
+const targetGateKey = gateEnumToKey(targetGateEnum);
+const currentNode = manifest.gateToNode.get(targetGateKey);
+if (!currentNode) {
+  failInvocation('option --to must name a declared source-gate enum', {
+    coordinate: '<source-gate-enum>',
+    supported_source_gates: [...manifest.gateToNode.keys()]
+      .map(gateKeyToEnum)
+      .sort(),
+  });
 }
+
+const transitions = chain[currentNode];
+if (!transitions) {
+  failInvocation('framework workflow configuration has no transition record for the selected source gate', {
+    error: 'framework_configuration',
+    reason_code: 'workflow_transition_configuration_invalid',
+  });
+}
+
+const bundle = validateBundleDirectory(bundleArgument);
+if (!bundle.ok) failInvocation(bundle.reason, { coordinate: bundle.coordinate });
+const bundlePath = bundle.path;
 
 const statusPath = join(bundlePath, 'rb_status.json');
 if (!existsSync(statusPath)) {
-  console.log(JSON.stringify({ status: 'error', reason: `rb_status.json not found in ${bundlePath}` }));
-  process.exit(1);
+  failInvocation('bundle is missing required rb_status.json', { coordinate: '<bundle-path>' });
 }
 
 // Load current status
@@ -105,28 +158,13 @@ let status;
 try {
   status = JSON.parse(readFileSync(statusPath, 'utf-8'));
 } catch {
-  console.log(JSON.stringify({ status: 'error', reason: 'Failed to parse rb_status.json' }));
-  process.exit(1);
+  failInvocation('bundle rb_status.json must contain valid JSON', { coordinate: '<bundle-path>' });
 }
 
 // Resolve gate → node → next node → next gate via manifest + chain.
 // Covered source-gate handoffs are validated against trace first; bootstrap
 // compatibility source gates retain the legacy chain lookup below.
-const targetGateKey = gateEnumToKey(targetGateEnum);
-const { gateToNode, nodeToGate } = loadManifest();
-const chain = loadChain();
-
-const currentNode = gateToNode.get(targetGateKey);
-if (!currentNode) {
-  console.log(JSON.stringify({ status: 'error', reason: `Unknown gate: "${targetGateEnum}" (key: "${targetGateKey}"). Check manifest.json for valid gate keys.` }));
-  process.exit(1);
-}
-
-const transitions = chain[currentNode];
-if (!transitions) {
-  console.log(JSON.stringify({ status: 'error', reason: `Node "${currentNode}" not found in chain.json.` }));
-  process.exit(1);
-}
+const { nodeToGate } = manifest;
 
 const handoffCheck = validateSourceGateStatusSync(bundlePath, targetGateEnum);
 if (!handoffCheck.ok) {

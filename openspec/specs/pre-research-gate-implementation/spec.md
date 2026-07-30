@@ -83,7 +83,30 @@ Rules SHALL cover:
 
 The gate SHALL rely on `ProfileSchema` as the single validator for available-branch timestamp, HTTP(S) URL, and fetch-success consistency. It SHALL NOT add a dedicated research-access check type, duplicate cross-field validator, inspect command, degraded pass, or alternate Setup route.
 
+After the existing canonical topic-state prerequisite has established a current committed registry and the selected profile is usable, this Gate SHALL call the shared side-effect-free style-projection freshness evaluator over `research_style_params`, that selected profile, and the committed registry length. Absent, partial, wrong-profile, or stale parameters SHALL produce one direct `style_projection_freshness` root. Its feedback SHALL name the selected profile, committed count, the existing `apply-research-style.mjs` command, and rerun of this same Gate. A malformed profile, unavailable research access, or canonical topic-state prerequisite failure SHALL retain its earlier root and mask the dependent freshness result. The Gate SHALL not write profile fields, select a style, mutate canonical topic state, add a generic style controller, or create another HITL decision.
+
 Missing `research_access`, `unprobed`, and `unavailable` SHALL fail with deterministic advice that directs the Phase Agent to inspect the recorded reason when present, repair or switch the environment, and rerun the same HITL1 probe and gate. The gate SHALL NOT authorize Setup or any silent wave while research access is not available.
+
+#### Scenario: Stale style projection blocks HITL1 at its existing owner
+
+- **WHEN** HITL1 has a committed five-topic registry but `research_style_params` reflect zero topics
+- **THEN** `check-gate-hitl1-recorded.mjs` SHALL return one `style_projection_freshness` root
+- **AND** its feedback SHALL identify `apply-research-style.mjs --bundle <path> --style <selected-profile>` and rerun of the same Gate
+
+#### Scenario: Valid current style projection permits the existing HITL1 path
+
+- **WHEN** the selected profile and complete `research_style_params` exactly match the committed current registry length
+- **THEN** the style-projection check SHALL add no failure
+- **AND** all other existing HITL1 rules SHALL retain their own verdict ownership
+
+#### Scenario: Canonical topic-state prerequisite masks freshness
+
+- **WHEN** a selected HITL1 profile has absent or stale style parameters but the
+  canonical registry/current-seed prerequisite is unavailable
+- **THEN** the Gate SHALL return the existing canonical topic-state prerequisite
+  root rather than `style_projection_freshness`
+- **AND** feedback SHALL retain that prerequisite's existing owner and rerun
+  boundary without proposing a profile write first
 
 #### Scenario: All HITL1 rules pass with available access
 

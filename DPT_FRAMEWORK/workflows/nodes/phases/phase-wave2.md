@@ -28,6 +28,7 @@ suggested_context:
 
 - **Objective**: produce cross-topic synthesis artifacts and delegate only new search/evidence work through work units.
 - **Start here**: load Wave1 artifacts, `finding-index.yaml` expectations, queue state, profile thresholds, and, when present, `rb_plan.md## Constraints > User Research Controls`, then Wave2 role guidance.
+- **Entry prerequisite**: after `enter-phase` loads this node, run `node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave1_complete` before Wave2 work or its Gate; this synchronizes the passed source gate and does not prove Wave2 completion.
 - **Pure synthesis path**: Phase Agent reads existing submitted evidence and writes synthesis artifacts.
 - **Delegated evidence path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit submit` -> submitted ledger row -> gate.
 - **Completion check**: side-effect-free `inspect-wave2-output.mjs` passes first, then `check-gate-wave2-complete.mjs` passes for `phases/phase-wave2.md`.
@@ -185,7 +186,9 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
 ```
 
-Actively poll targeted-evidence result/receipt/output/cache readiness without waiting for user continuation or task notification. For every expired or stale claimed attempt, run `operate-work-unit timeout-preflight <bundle> --work-id <work_id> [--result <result.json>]` and parse structured stdout even when the command exits non-zero. Follow the closed advice branches: formal `submit`, same-`work_id` `repair`, active-poll `wait`, authority `inspect`, owner-assigned deterministic `block`, or normal terminal `timeout`. A `block` assigns responsibility and leaves the phase undrained; it does not initiate a user wait. Any `submit`, `repair`, `wait`, `inspect`, or `block` recommendation means delegated in-flight work is not drained.
+If a supplied actor observation is invalid, `actor_observation_feedback` names the planned `dpt-topic-scout` role, primary field conflict, closed legal tuples, and exact same-claim rerun. Read that existing projection rather than deriving a tuple from task text; the generated `Completion Contract` uses the same actor/candidate terms and adds no second validator.
+
+Actively poll targeted-evidence result/receipt/output/cache readiness without waiting for user continuation or task notification. For every expired or stale claimed attempt, run `operate-work-unit timeout-preflight <bundle> --work-id <work_id> [--result <result.json>]` and parse structured stdout even when the command exits non-zero. Follow the closed advice branches: formal `submit`, same-`work_id` `repair`, active-poll `wait`, authority `inspect`, owner-assigned deterministic `block`, or normal terminal `timeout`. Its `recommendation_basis` uses one existing `candidate`, `progress`, `lease`, or `integrity` branch to explain that action; it neither evaluates another candidate nor changes lease or terminal authority. A `block` assigns responsibility and leaves the phase undrained; it does not initiate a user wait. Any `submit`, `repair`, `wait`, `inspect`, or `block` recommendation means delegated in-flight work is not drained.
 
 `timeout --force --reason <reason>` is exceptional and audited, not the normal response to recent progress, repairable candidates, or invalid binding. This preflight loop does not change the Wave2 authority split: pure synthesis continues from existing accepted backing, while newly fetched targeted evidence counts only after successful `wave2_targeted_evidence` submit. Phase-owned finding-index, cross-topic ledger, synthesis, backfill, and `00-cross` materialization remain downstream of accepted evidence.
 

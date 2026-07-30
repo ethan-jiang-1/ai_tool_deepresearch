@@ -50,3 +50,7 @@ The task.md should front-load the output requirements in a prominent checklist:
 ```
 
 **Why:** The contract language is correct but the presentation buries actionable requirements under reference material.
+
+## C3 Disposition (2026-07-30)
+
+C3 confirms this is not a new cache-trail or task-only mapping authority. The existing DEW-021 generated Completion Contract remains the owner for cache and source facts; C3 keeps its actor/candidate vocabulary aligned with public claim feedback and phase guidance without duplicating cache validation. The concrete task-card presentation remains an existing-owner documentation surface, not a new C3 validator or writer.

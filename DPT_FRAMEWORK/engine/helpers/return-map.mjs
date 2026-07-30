@@ -596,6 +596,35 @@ function projectionOmissionFinding(bundlePath, relPath, wave, topicUid, identity
   });
 }
 
+function projectionCandidateOmissionBatchFinding(bundlePath, relPath, topicUid, missingCandidateIds) {
+  const surface = resolvePath(bundlePath, relPath);
+  const finding = makeContractFinding({
+    id: `return_map_current_candidate_omission:${topicUid}`,
+    ruleId: 'return_map_current_candidate_omission',
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'binding_integrity',
+    surface,
+    expected: {
+      wave: 'wave0',
+      topic_uid: topicUid,
+      candidate_coverage: 'Every current <work_id>/<ordinal> has one exact Projection Entry or accepted identity-bound disposition.',
+    },
+    observed: {
+      topic_uid: topicUid,
+      wave: 'wave0',
+      missing_candidate_ids: missingCandidateIds,
+      projected: false,
+    },
+    missingFact: `${relPath} omits current Wave0 candidate projection identities: ${missingCandidateIds.join(', ')}.`,
+    repairKind: 'agent_action',
+    writeTo: 'Projection Packet -> operate-topic-state apply -> same Wave inspect',
+    repair: 'Read the current contribution authority, repair the retained Projection Packet through operate-topic-state apply, then rerun this same Wave inspect.',
+    detail: `[return_map_current_candidate_omission] ${relPath}: missing Wave0 candidates for ${topicUid}: ${missingCandidateIds.join(', ')}.`,
+  });
+  return { ...finding, missing_candidate_ids: [...missingCandidateIds] };
+}
+
 function projectionFieldFinding(bundlePath, indexRel, findingId, field, reason) {
   const surface = `${resolvePath(bundlePath, indexRel)}#findings/${findingId}/${field}`;
   return makeContractFinding({
@@ -958,10 +987,11 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
     }
     if (structuralFailure) continue;
 
-    for (const candidate of currentCandidates) {
-      if (!validCandidateIds.has(candidate.entry_id)) {
-        findings.push(projectionOmissionFinding(bundlePath, relPath, wave, topic.topic_uid, candidate.entry_id, { candidate: true }));
-      }
+    const missingCandidateIds = currentCandidates
+      .filter((candidate) => !validCandidateIds.has(candidate.entry_id))
+      .map((candidate) => candidate.entry_id);
+    if (missingCandidateIds.length > 0) {
+      findings.push(projectionCandidateOmissionBatchFinding(bundlePath, relPath, topic.topic_uid, missingCandidateIds));
     }
     for (const row of currentRows) {
       if (!validWorkIds.has(row.work_id)) findings.push(projectionOmissionFinding(bundlePath, relPath, wave, topic.topic_uid, row.work_id));

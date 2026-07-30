@@ -4,6 +4,7 @@
 import {
   ACTOR_OBSERVATION_CASES,
   ActorObservationContractProjectionSchema,
+  ActorObservationFeedbackSchema,
   ActorObservationInputIssueSchema,
   ActorObservationInputSchema,
   ActorObservationProvidedObservationSchema,
@@ -58,6 +59,40 @@ export function describeActorObservationInputIssues(observation) {
     return ActorObservationInputIssueSchema.parse({ field, supplied_value, message: issue.message });
   });
   return { valid: false, provided_observation, input_issues };
+}
+
+function safeActorObservationConflict(issue) {
+  const field = typeof issue?.field === 'string' && issue.field.length > 0
+    ? issue.field
+    : 'actor_observation';
+  return {
+    field,
+    message: `The supplied ${field} does not satisfy the declared actor-observation contract.`,
+  };
+}
+
+/**
+ * Expose the already-computed validator conflict at the claim decision point.
+ * This projection deliberately omits caller-provided values; nested diagnostics
+ * retain them when the existing lifecycle result needs durable detail.
+ */
+export function projectActorObservationFeedback({ plannedRoleKey, inputIssues, rerun, limit = 4 }) {
+  const conflicts = (Array.isArray(inputIssues) ? inputIssues : [])
+    .slice(0, Math.max(1, Math.min(limit, 4)))
+    .map(safeActorObservationConflict);
+  if (conflicts.length === 0) {
+    conflicts.push({
+      field: 'actor_observation',
+      message: 'The supplied actor observation does not satisfy the declared actor-observation contract.',
+    });
+  }
+  return ActorObservationFeedbackSchema.parse({
+    planned_role_key: plannedRoleKey,
+    primary_conflict: conflicts[0],
+    conflicts,
+    legal_tuples: actorObservationLegalTuples(),
+    rerun,
+  });
 }
 
 export function normalizeActorObservation(observation, plannedRoleKey) {

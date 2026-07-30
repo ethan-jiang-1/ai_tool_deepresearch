@@ -40,14 +40,14 @@ Entries may be treated as limitation/non-materialized only when their return-map
 fields explicitly mark deferral/open/no materializable evidence and do not claim
 existing evidence support through refs or status.
 
-#### Scenario: Concrete existing reference ref passes
+#### Scenario: concrete existing reference ref passes
 
 - **WHEN** an evidence-bearing return-map entry contains
   `refs: reference/01_topic-source.md`
 - **AND** that file exists as a regular file under the active bundle root
 - **THEN** packet admission and return-map readiness SHALL both accept the
   navigation ref
-#### Scenario: Internal-only refs fail
+#### Scenario: internal-only refs fail
 
 - **WHEN** an evidence-bearing return-map entry contains refs only to
   `artifacts/wave1/01_topic/evidence-summary.md`, `_cache/wave1/...`, or
@@ -56,18 +56,18 @@ existing evidence support through refs or status.
   concrete consumer navigation
 - **AND** feedback SHALL ask for a concrete existing `reference/*.md` ref or
   an explicit deferred disposition
-#### Scenario: Globbed reference ref fails
+#### Scenario: globbed reference ref fails
 
 - **WHEN** an entry contains `reference/01_topic-*.md`
 - **THEN** the normalized evaluator SHALL reject it
 - **AND** diagnostics SHALL require enumerated concrete reference files
-#### Scenario: Count-summary reference ref fails
+#### Scenario: count-summary reference ref fails
 
 - **WHEN** an entry contains `reference/01_topic-*.md (8 files)` or
   `reference/01_topic-*.md（8 个）`
 - **THEN** the normalized evaluator SHALL reject it
 - **AND** diagnostics SHALL identify the glob/count summary as non-navigable
-#### Scenario: Missing near-match is actionable before write
+#### Scenario: missing concrete reference ref fails
 
 - **WHEN** a packet names `reference/00-shared-cross-methodology-01.md` and
   only `reference/00-shared-cross-methodology-1.md` exists
@@ -80,7 +80,7 @@ existing evidence support through refs or status.
 - **THEN** the entry MAY omit concrete `reference/*.md`
 - **AND** it SHALL still include refs to the relevant artifacts or process surfaces when available
 
-#### Scenario: Navigation classification does not rely on prose judgment
+#### Scenario: deterministic evidence-bearing predicate does not rely on prose judgment
 
 - **WHEN** an entry uses an evidence-bearing accepted `relationship` or
   `status`
@@ -295,13 +295,23 @@ reloaded independently by the second evaluator.
 - **AND** it SHALL not create a reference, source claim, receipt, or accepted
   evidence fact
 
-#### Scenario: Source-contribution parent masks dependent candidates
+#### Scenario: Source-output parent masks dependent candidates
 
 - **WHEN** a current eligible Wave0 row cannot establish a valid submitted
   contribution or its required current `source.yaml` output
 - **THEN** inspect and formal gate SHALL report the direct submitted-source
   contribution/authority root
 - **AND** they SHALL not emit derived candidate omissions for that target
+
+#### Scenario: Current-wave token preserves first materialization behavior
+
+- **WHEN** a seed topic contains the target wave's accepted backfill token
+- **THEN** target-wave family availability, entry shape, and projection coverage
+  SHALL retain the accepted token skip behavior
+- **AND** the existing Wave evaluator's stale-token finding SHALL remain
+  independent and MAY still fail the aggregate inspect command
+- **AND** no second generic token family SHALL be introduced
+
 #### Scenario: Current direct output is not a result-hash snapshot
 
 - **WHEN** an accepted Wave0 contribution proves a three-entry prefix and the

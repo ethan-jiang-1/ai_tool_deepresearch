@@ -16,6 +16,7 @@ import {
   actorObservationContractProjection,
   describeActorObservationInputIssues,
   evaluateActorDecision,
+  projectActorObservationFeedback,
 } from './work-unit-actor.mjs';
 import {
   now,
@@ -530,6 +531,12 @@ export function claimWorkUnits(bundleDir, {
     const malformed = describeActorObservationInputIssues(actorObservation);
     if (!malformed.valid) {
       const recommendedAction = `Perform one bounded native probe for ${preview.planned_role_key}, then rerun the same claim.`;
+      const repair = malformedActorObservationRepair({
+        bundleDir,
+        phase,
+        requestedCount,
+        plannedRoleKey: preview.planned_role_key,
+      });
       const actorPreflight = {
         verdict: 'invalid_input',
         reason: 'actor_observation_input_invalid',
@@ -553,13 +560,13 @@ export function claimWorkUnits(bundleDir, {
         prompt_refs: [],
         actor_preflight: actorPreflight,
         actor_observation_contract: actorObservationContract,
-        recommended_action: recommendedAction,
-        ...malformedActorObservationRepair({
-          bundleDir,
-          phase,
-          requestedCount,
+        actor_observation_feedback: projectActorObservationFeedback({
           plannedRoleKey: preview.planned_role_key,
+          inputIssues: malformed.input_issues,
+          rerun: repair.rerun,
         }),
+        recommended_action: recommendedAction,
+        ...repair,
         queue: previewQueue,
       };
     }

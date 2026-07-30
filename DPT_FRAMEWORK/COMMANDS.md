@@ -31,7 +31,7 @@ Short operating note only; deeper terminology canon lives in `guidelines/agentic
 
 `enter-phase` / `load_complete` prove target-node entry/loading, not target-phase work completion. `advance-status` synchronizes the just-passed source gate; it does not enter, load, or execute the next phase. `current_node` is a resume coordinate, not gate pass evidence.
 
-`continuation` cues are Agent-facing decision-point projections. Gate and lifecycle outputs use `interaction: do_not_initiate|required|terminal_delivery`; successful claim output is action-only because claim does not own lifecycle placement. `enter-phase` emits a final `DPT_CONTINUATION_CUE` Markdown block. A cue tells the Agent the one immediate next action already implied by direct Engine facts. It is not permission, not a new status field, not routing authority, not completion proof, and not an entry/status/submit witness.
+`continuation` cues are Agent-facing decision-point projections. Gate and lifecycle outputs use `interaction: do_not_initiate|required|terminal_delivery`; successful claim output is action-only because claim does not own lifecycle placement. `enter-phase` presents its `DPT_CONTINUATION_CUE` first, followed by the exact existing source-gate `advance-status` command, the target action core, and a target-excluding shared-file manifest. A cue tells the Agent the one immediate next action already implied by direct Engine facts. It is not permission, not a new status field, not routing authority, not completion proof, and not an entry/status/submit witness.
 
 ## CLI Exit-Code Convention
 
@@ -46,16 +46,30 @@ Exit codes are a canonical interpretation and target convention for Agent caller
 Current inventory:
 
 - Gate CLIs use the shared gate result helper and emit structured stdout `{ check, routing, inspect, advice }`; `routing.kind` of `invalid_input` or `config_error` exits `2`, gate failure exits `1`, pass exits `0`.
-- Inspect-wave CLIs are non-gate structured-output commands; stdout `{ check, inspect, advice }` is the Agent decision surface, with `2` reserved for caller invocation errors such as missing bundle input.
+- Inspect-wave CLIs are non-gate structured-output commands; stdout `{ check, inspect, advice, hints }` is the Agent decision surface, with `2` reserved for caller invocation errors such as missing bundle input.
 - `check-reentry.mjs` is a non-gate structured-output command: `0` clean, `1` blockers/drift, `2` invalid target/args/config/caller request. Loaded/normalized results use schema `1.1.0` and add `recovery.canonical_topic_findings[]` plus one `root_findings[]` entry per independent blocker. A root exposes at most one reachable action; `missing_contract` means the Engine knows the suggested route is unavailable and the Agent must not loop that command or hand-write authority.
 - `operate-artifact-persistence.mjs` is a two-operation mechanical durability command: `persist` exits `0` when committed, `1` on a compare-and-swap or accepted-operation blocker, and `2` for invalid invocation/configuration; `sweep` exits `0` when every accepted workspace is finalized/cleaned, `1` when any workspace needs Agent action, and `2` for invalid invocation/configuration. Always read the JSON verdict; sweep requires a quiescent bundle with no concurrent persist.
-- `operate-topic-state.mjs` is the single three-operation canonical topic command: `inspect` is read-only and emits a copy-ready layout baseline; sanctioned rerun `apply` accepts one complete `mutate_layout` target for rename/reorder/renumber/safe-remove and commits only plan+listed current seeds; `recover` rolls one accepted workspace forward without new semantics. Historical artifact/reference/output paths remain in place. Context and `human-directed` are not mutation authority, and post-final fresh mutation remains unavailable.
+- `operate-topic-state.mjs` is the single four-operation canonical topic command: read-only `inspect` emits a copy-ready layout baseline; read-only `schema --context <context>` derives a bounded authoring projection from the actual accepted input schema; sanctioned rerun `apply` accepts one complete `mutate_layout` target for rename/reorder/renumber/safe-remove and commits only plan+listed current seeds; `recover` rolls one accepted workspace forward without new semantics. Invalid retained `apply` input exposes bounded safe `validation_errors[]` from the existing Zod validator. Historical artifact/reference/output paths remain in place. Context and `human-directed` are not mutation authority, and post-final fresh mutation remains unavailable.
 - `operate-post-final-recovery.mjs` is the narrow `inspect|apply|recover` Final→rerun operation. `inspect` is read-only; `apply` consumes one retained request and commits current HITL2 projection plus one Engine-written event; `recover` finishes only exact prepared bytes. Exit `1` means deterministic blocker or exact recovery required, and exit `2` means invalid invocation/configuration/internal failure. It never writes status/topic/queue/final authority or authenticates the human caller.
 - Many current utility validators are binary `0/1` and do not yet share a common exit helper.
 - `log-event.mjs` is an always-`0` diagnostic/logging exception; logging failure must not be treated as proof that a load-bearing trace event was written.
 - Known doc/code drift: `validate-workflow-package.mjs` header documents code `2` for invocation errors, but current code only exits `0` or `1`; record this as future reconciliation, not current behavior.
 
 Exit codes SHALL NOT encode morale, reassurance, retry strategy, progress pressure, fatigue, or autonomous-continuation reminders. Those signals belong in `advice[]`, structured diagnostics, or Agent-readable Markdown. Exit code alone must never be treated as the full contract.
+
+### Selected Operation Invocation Contract
+
+The following selected public operations share a narrow discoverability boundary. Standalone `--help` or `-h` prints usage, exits `0`, and does not read a bundle, input, workspace, trace, or status. Every non-help form below is exact: required named options occur once, and unknown, duplicate, mixed, positional, missing-value, or unusable explicit path forms return one structured code-`2` invocation/configuration root before domain work. Never copy an unvalidated argument token into a repair coordinate, `write_to`, or rerun command.
+
+| Operation | Exact non-help form | Agent-visible result |
+| --- | --- | --- |
+| Wave inspect | `inspect-wave{0,1,2}-output.mjs --bundle <bundle-path>` | `{ check, inspect, advice, hints }`; read `hints[]` for one direct repair or owner boundary. |
+| Canonical topic state | `operate-topic-state.mjs inspect --bundle <bundle-path>`; `schema --context <context>`; `apply --bundle <bundle-path> --input <input-path>`; `recover --bundle <bundle-path> --operation-id <operation-id>` | `schema` is read-only discovery. Invalid retained `apply` input exposes safe `validation_errors[]`; correct that input and rerun the same `apply`. |
+| Phase entry | `enter-phase.mjs --bundle <bundle-path> --node <file-ref> [--full]` | Default output is cue first, exact source-gate status sync, target `Execution Brief`, then ordered target-excluding manifest. `--full` adds the complete loaded closure; neither form completes target work or mutates status. |
+| Status synchronization | `advance-status.mjs --bundle <bundle-path> --to <source-gate-enum>` | This command alone synchronizes the just-passed source gate after the existing entry witness. It does not enter, load, or execute the target phase. |
+| HITL1 controls renderer | `plan-hostfile-sections.mjs render-no-controls`; `render-supplied-controls --input <snapshot-path>` | Prints deterministic section text only. The Agent writes it only at the existing host-file coordinate; the renderer never selects or writes a bundle. |
+
+This selected contract does not normalize unrelated utilities. Their documented invocation and output classes remain authoritative.
 
 ## 实例化与开始 Research
 | 命令 | 文件 | 说明 |
@@ -111,7 +125,7 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration <bundle> --work
 ## Phase Handoff
 | 工具 | 文件 | 说明 |
 |------|------|------|
-| enter-phase.mjs | cli/enter-phase.mjs | 消费 gate CLI 返回的 `check.next`，调用 workflow loader 渲染下一 node Markdown，写入 route-bound `load_complete` handoff witness 和 `rb_status.json.current_node`，并在成功 Markdown 末端输出 loaded-node continuation block；不证明 target phase work completion |
+| enter-phase.mjs | cli/enter-phase.mjs | 消费 gate CLI 返回的 `check.next`，调用 workflow loader 渲染下一 node Markdown，写入 route-bound `load_complete` handoff witness 和 `rb_status.json.current_node`；默认输出 cue-first 的 source-gate sync、target action core 与 target-excluding manifest，`--full` 才附加 complete closure；不证明 target phase work completion |
 | advance-status.mjs | cli/advance-status.mjs | 在 `enter-phase` witness 存在后同步 just-passed source gate；covered handoff 使用真实 `gate_attempt.next` 和 `current_node` 输出 continuation cue；does not enter, load, or execute the next phase |
 
 ## Post-Final Rerun Recovery

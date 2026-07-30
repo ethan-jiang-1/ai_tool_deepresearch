@@ -49,3 +49,7 @@ Or: `enter-phase` should automatically run `advance-status` as part of its hando
 **Why:** The current design treats `advance-status` as a separate concern from `enter-phase`, but in practice they form an atomic handoff pair. Separating them creates a state where the Agent has entered a phase but the status window hasn't advanced — a state that the gate correctly rejects but the phase instructions don't warn about.
 
 **How to apply:** Either document the pre-gate status check in each phase's §5, or merge `advance-status` into `enter-phase` as an automatic side effect.
+
+## C3 Disposition (2026-07-30)
+
+C3 keeps the two existing owners separate: `enter-phase` establishes the route-bound entry witness, and `advance-status` alone synchronizes the just-passed source gate. The cue-first entry presentation and each Wave `Execution Brief` now expose the exact source-gate command as a prerequisite before target work or its Gate. C3 intentionally does not merge that status mutation into phase entry.

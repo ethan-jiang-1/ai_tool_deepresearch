@@ -50,3 +50,7 @@ Either:
 **Why:** Phase instructions are the contract between the framework and the Agent. Referencing a non-existent command creates a `missing_contract` situation that the Agent must work around, weakening the structural integrity the gates are designed to enforce.
 
 **How to apply:** Check if `renderSuppliedControls` exists in `engine/helpers/plan-hostfile-sections.mjs`. If yes, wrap it in a thin CLI. If not, update the phase instruction.
+
+## C3 Disposition (2026-07-30)
+
+C3 adds the thin public `plan-hostfile-sections.mjs` renderer with exactly `render-no-controls` and `render-supplied-controls --input <snapshot-path>`. It prints deterministic text only, rejects malformed invocation with code `2`, and preserves the existing Agent-owned `rb_plan.md` coordinate rather than creating a second host-file authority.

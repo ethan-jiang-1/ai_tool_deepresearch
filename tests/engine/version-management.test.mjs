@@ -32,12 +32,14 @@ describe('framework version management', () => {
     assert.ok(latest.body.trim().length > 0, 'latest changelog entry body must not be empty');
   });
 
-  it('keeps RUN.md banner aligned to the latest changelog entry', () => {
+  it('keeps both RUN.md version references aligned to the latest changelog entry', () => {
     const latest = latestChangelogEntry(read('CHANGELOG.md'));
     const run = read('DPT_FRAMEWORK/RUN.md');
 
-    assert.ok(run.includes(`DPT_FRAMEWORK ${latest.version}`),
+    assert.ok(run.includes(`> **DPT_FRAMEWORK ${latest.version}**`),
       `RUN.md banner should include "DPT_FRAMEWORK ${latest.version}"`);
+    assert.ok(run.includes(`## Current Release: ${latest.version}`),
+      `RUN.md current-release section should include "${latest.version}"`);
     assert.doesNotMatch(run, /v0\.5 work-unit path/);
   });
 

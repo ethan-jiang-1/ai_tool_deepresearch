@@ -25,3 +25,7 @@ None of these requirements were documented in the task.md or shared-reference-te
 ## Expected behavior
 
 The task.md result JSON starter should include a comment: "Each reference in output_files requires a corresponding cache_trail directory with websearch.json, page.md, and meta.json."
+
+## C3 Disposition (2026-07-30)
+
+C3 confirms that the cache-trail-to-output relationship remains owned by the existing DEW-021 completion-contract/task surface. It deliberately does not add a second mapping, writer, or validator in public claim/timeout feedback. The C3 guidance points Agents to the existing generated Completion Contract and the same submit/checkpoint loop; a future change may refine task-card presentation only if that existing owner is insufficient.

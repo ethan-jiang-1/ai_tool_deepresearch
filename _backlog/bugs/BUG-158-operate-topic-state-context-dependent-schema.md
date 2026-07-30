@@ -45,3 +45,7 @@ This is the **single biggest source of friction** in the current run. Of the ~6-
 **Why:** The Agent is the primary user of this CLI. The current design assumes the Agent already knows the schema shape for each phase context. In practice, the Agent discovers schemas by reading Engine source — a fragile, slow, and error-prone pattern that contradicts the framework's contract-lineage design principle.
 
 **How to apply:** Add a `schema` subcommand that outputs the Zod schema as JSON Schema for a given context. Add `--help` output listing valid contexts. Fix validation errors per BUG-153.
+
+## C3 Disposition (2026-07-30)
+
+C3 adds read-only `operate-topic-state schema --context <context>`. Its narrow structural visitor derives supported context/action forms, field shapes, closed values, and only templates the actual top-level schema parses; unsupported or unverifiable forms fail closed with code `2`. It deliberately does not infer lifecycle authorization or expose a second writer path.

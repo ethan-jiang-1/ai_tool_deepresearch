@@ -194,4 +194,30 @@ describe('claimWorkUnits', () => {
       cleanup(dir);
     }
   });
+
+  it('projects malformed actor observation feedback from the existing validator without allocating work', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-invalid-observation')]);
+      const result = claimWorkUnits(dir, {
+        phase: 'wave0',
+        actorObservation: {
+          outcome: 'available',
+          source: 'not_observed',
+          role_key: 'dpt-source-intake',
+          reason_code: 'probe_succeeded',
+        },
+        executionActorClass: 'delegated_subagent',
+      });
+      assert.equal(result.claimed_count, 0);
+      assert.equal(result.actor_observation_feedback.planned_role_key, 'dpt-source-intake');
+      assert.equal(typeof result.actor_observation_feedback.primary_conflict.field, 'string');
+      assert.ok(result.actor_observation_feedback.conflicts.length > 0);
+      assert.ok(result.actor_observation_feedback.legal_tuples.length > 0);
+      assert.match(result.actor_observation_feedback.rerun, /operate-work-unit\.mjs claim/);
+      assert.equal(existsSync(workUnitIndexPath(dir)), false);
+    } finally {
+      cleanup(dir);
+    }
+  });
 });

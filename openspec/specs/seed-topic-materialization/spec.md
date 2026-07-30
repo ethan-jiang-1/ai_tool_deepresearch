@@ -20,7 +20,8 @@ finalize and gate.
 On an empty queue, the phase SHALL read `rb_plan.md#/topic_registry`, create
 one complete `seed_topic_materialize` QueueItemSchema card per current topic,
 and enqueue it through the existing queue path. During execution it SHALL
-resolve the claimed slug to one current UID, edit only Agent-owned body content,
+resolve the claimed slug to one current UID, edit only the declared
+Agent-editable initialization region,
 retain a complete `enrich_seed` input, invoke existing `operate-topic-state
 apply`, complete the card through existing receipt validation, and return to
 claim. It SHALL not hand-author registry-owned YAML fields or use direct seed
@@ -36,9 +37,13 @@ repair and rerun-direction operations belong to the existing
 `command_playbook/operate-topic-state.md`; they SHALL NOT be duplicated in a
 template.
 
-Every new canonical seed SHALL retain its accepted two-part form: registry-
-projected canonical frontmatter plus Agent-owned enrichment/body, followed by
-the research-round appendix. The appendix SHALL contain, in slot-map order,
+Every newly rendered canonical seed SHALL have exactly two visibly distinct
+body regions in this order: one `seed-initialization` region bounded by stable
+start/end markers and containing the single Agent-editable initialization
+headings, followed by one Engine-owned research-round appendix. The
+initialization end marker SHALL occur exactly once before the appendix; no
+initialization heading or template pending marker may appear below it. The
+appendix SHALL contain, in slot-map order,
 `## Wave0：本主题的新增来源证据`,
 `## Wave1：本主题的机制理解`,
 `## Wave1：本主题的趋势、难点与限制`,
@@ -49,28 +54,30 @@ read-only `回填卡（只读操作约束，不是 Projection Entry）`, then th
 or entries. The card SHALL state its writer, direct authority, `entry_id` plus
 five-field entry shape, backfill timing, a concise `operate-topic-state`
 materialization pointer and prohibitions; it SHALL not be a Projection Entry.
-The renderer's small executable slot map is the
-structural source; the shared template is its readable mirror. Static parity
-SHALL fail on a missing, extra, reordered or renamed canonical heading/token/
-owner/card descriptor, while ignoring prose bytes, YAML field order and
-presentation-only whitespace.
+The renderer's small executable slot map is the structural source; the shared
+template is its readable mirror. Static parity SHALL fail on missing, extra,
+reordered, or renamed region/heading/token/owner/card descriptors while
+ignoring prose bytes, YAML field order, and presentation-only whitespace.
 
-For the Wave0 `wave0_evidence` card specifically, its existing
-`<work_id>/<positive ordinal>` notation SHALL define the positive ordinal as the
-1-based position in that current work unit's result-declared, schema-valid
-`artifacts/wave0/<topic>/source.yaml` array. It SHALL state that this is a
-current projection coordinate rather than a permanent `result_hash` snapshot; a
-multi-element source intake is backfilled with one entry or exact identity-bound
-deferred disposition per current array candidate, potentially in one packet.
-The card SHALL NOT embed packet JSON, lifecycle authorization, source parsing
-mechanics, or a second source-authority claim.
+For the Wave0 `wave0_evidence` card specifically, its
+`<work_id>/<positive ordinal>` notation SHALL define the positive ordinal as
+the exact global ordinal owned by that work unit's submitted source contribution
+in the current validated `artifacts/wave0/<topic>/source.yaml` array. It SHALL
+state that a later legal append gets its own contribution identity and SHALL not
+describe `result_hash` as a source-byte snapshot. A multi-element source
+intake is backfilled with one entry or exact identity-bound deferred disposition
+per contribution-owned candidate, potentially in one packet. The card SHALL NOT
+embed packet JSON, lifecycle authorization, source parsing mechanics, or a
+second source-authority claim.
 
 `rb_plan.md#/topic_registry` remains Topic identity/intent authority;
 frontmatter remains the structured enrichment surface; submitted work-unit and
-finding facts remain projection authority. The template, renderer and initial
-seed phase SHALL not create a new evidence, identity, gate or receipt authority.
+finding facts remain projection authority. The template, renderer, and initial
+seed phase SHALL not create a new evidence, identity, gate, or receipt authority.
 Empty later-Wave slots remain legal for `seed-topics-ready`; no semantic quality
-judgment is introduced.
+judgment is introduced. Legacy seeds remain readable: their body prose is not
+retroactively migrated or inferred into frontmatter, but a newly rendered seed
+must never contain duplicate initialization skeletons.
 
 #### Scenario: Seed phase loads the pure document template
 
@@ -84,10 +91,18 @@ judgment is introduced.
 
 - **WHEN** topic-state materializes a new canonical seed before later Waves
   produce research facts
-- **THEN** the seed SHALL contain every canonical ordered slot and its accepted
-  token exactly once
+- **THEN** it SHALL contain exactly one bounded initialization region followed
+  by every ordered appendix slot and token exactly once
 - **AND** seed-topics-ready SHALL not fail merely because a later Wave has not
   projected an entry
+#### Scenario: Editing initialization cannot leave a second template ghost
+
+- **WHEN** an Agent replaces initialization content through the declared editable
+  region
+- **THEN** no duplicate initialization heading or template pending marker SHALL
+  remain below the initialization end marker
+- **AND** the appendix cards, tokens, and future projection ownership SHALL
+  remain unchanged
 
 #### Scenario: New seed renders fixed backfill cards
 
@@ -100,11 +115,10 @@ judgment is introduced.
 #### Scenario: Wave0 card makes ordinal fillable without owning protocol
 
 - **WHEN** a Phase Agent reads a newly rendered Wave0 card before closeout
-- **THEN** the card SHALL explain that `<work_id>/N` uses the current
-  result-declared `source.yaml` array's 1-based `N`
+- **THEN** the card SHALL explain that `<work_id>/N` uses the current source
+  array ordinal owned by that submitted contribution
 - **AND** it SHALL direct the Agent to the existing command playbook for packet
   formation and apply/repair mechanics
-
 #### Scenario: One template card does not turn candidates into evidence
 
 - **WHEN** a Wave0 card describes multiple candidates from one source intake
@@ -115,11 +129,10 @@ judgment is introduced.
 
 #### Scenario: Template and renderer drift fail deterministically
 
-- **WHEN** a template edit changes a slot heading, token, owner or order without
-  the corresponding executable slot-map change, or vice versa
+- **WHEN** a template edit changes a region marker, slot heading, token, owner,
+  or order without the corresponding executable descriptor change, or vice versa
 - **THEN** static parity validation SHALL fail
-- **AND** runtime code SHALL not parse guidance Markdown to discover the change
-
+- **AND** runtime code SHALL not parse guidance Markdown to discover behavior
 #### Scenario: Initialization remains a structured authoring loop
 
 - **WHEN** a claimed seed-topic materialization card has insufficient upstream
@@ -131,12 +144,10 @@ judgment is introduced.
 
 #### Scenario: Legacy body remains readable
 
-- **WHEN** a pre-existing seed contains compatible legacy body prose outside
-  canonical structured fields
+- **WHEN** a pre-existing seed contains compatible legacy body prose or
+  duplicate historical headings outside canonical structured fields
 - **THEN** the initial enrichment path SHALL preserve it as body history
-- **AND** it SHALL not infer canonical identity, evidence authority or a
-  projection writer path from that prose
-
+- **AND** it SHALL not require a bulk migration or infer body prose as authority
 #### Scenario: Phase Agent executes seed-topics via queue-driven loop
 
 - **WHEN** the Phase Agent loads `phase-seed-topics.md`
@@ -208,6 +219,30 @@ judgment is introduced.
 - `rb_status.json#/next_gate == wave0_complete`
 
 Topic 集合的 source of truth SHALL 为 `rb_plan.md` frontmatter 的 `topic_registry`（与 `wave0-complete` gate D5 一致）。Gate SHALL 枚举 registry 的 slug，SHALL NOT 扫描磁盘推断 topic 集合。`topic_registry` 为空时 gate SHALL return `passed: false`。
+
+For a seed rendered with the current canonical initialization markers, the Gate
+SHALL additionally verify exactly one ordered initialization region, exactly one
+initialization end marker before the appendix, and absence of renderer-owned
+initialization headings or pending markers below that boundary. A legacy seed
+without current markers remains read-compatible and is not failed solely for
+historical duplicate body prose. The Gate SHALL not judge the Agent's research
+prose or treat the body as a second canonical registry.
+
+#### Scenario: Current canonical seed rejects a template ghost
+
+- **WHEN** a current-marker seed retains a duplicated renderer-owned
+  initialization heading or pending marker below its initialization end marker
+- **THEN** `seed-topics-ready` SHALL return one structural seed-body root
+- **AND** feedback SHALL identify the bounded initialization edit surface and
+  the same Gate rerun
+
+#### Scenario: Legacy duplicate does not create new authority failure
+
+- **WHEN** a legacy seed lacks current initialization markers but contains old
+  duplicate prose
+- **THEN** the Gate SHALL preserve existing compatibility behavior
+- **AND** it SHALL not infer a second topic registry, evidence fact, or raw
+  Metadata repair path
 
 #### Scenario: All seed topics rules pass
 

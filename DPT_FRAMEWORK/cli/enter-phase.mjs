@@ -1,64 +1,112 @@
 #!/usr/bin/env node
-// enter-phase.mjs — Agent-facing lifecycle node entry witness
-// @impl CPT-003
+// @impl CPT-003, WNC-010, WNC-011, CLE-001
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseArgs } from 'node:util';
+
 import { createTrace } from '../engine/trace.mjs';
-import { createState, createWorkflowRuntime, assessNode } from '../engine/workflow-chain.mjs';
+import {
+  assessNode,
+  createState,
+  createWorkflowRuntime,
+  nodePath,
+} from '../engine/workflow-chain.mjs';
+import {
+  invocationError,
+  parseOperationInvocation,
+  validateBundleDirectory,
+  validateWorkflowPhaseReference,
+} from '../engine/helpers/cli-operation-contract.mjs';
+import { continuationForLoadedNode } from '../engine/helpers/continuation-cue.mjs';
 import { validateEnterPhaseTarget } from '../engine/helpers/handoff-helpers.mjs';
-import { continuationForLoadedNode, renderContinuationBlock } from '../engine/helpers/continuation-cue.mjs';
+import {
+  extractExecutionBrief,
+  renderPhaseEntryPresentation,
+} from '../engine/helpers/phase-entry-presentation.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const NODES_DIR = join(__dirname, '..', 'workflows', 'nodes');
+const command = 'node DPT_FRAMEWORK/cli/enter-phase.mjs';
+const usage = [
+  'Usage:',
+  `  ${command} --bundle <bundle-path> --node <file-ref> [--full]`,
+].join('\n');
 
-function fail(reason, advice = [], exitCode = 1) {
-  console.log(JSON.stringify({ status: 'error', reason, advice }, null, 2));
+function emit(value) {
+  process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+}
+
+function fail(reason, advice = [], exitCode = 1, extra = {}) {
+  emit({ status: 'error', reason, advice, ...extra });
   process.exit(exitCode);
 }
 
-let values;
-try {
-  ({ values } = parseArgs({
+function failInvocation(reason, extra = {}) {
+  emit({
+    ...invocationError({ command: 'enter-phase', reason, usage }),
+    advice: [usage],
+    ...extra,
+  });
+  process.exit(2);
+}
+
+function failConfiguration(preflight) {
+  fail(preflight.reason, [
+    'Repair the selected framework node action core before retrying enter-phase.',
+  ], 2, {
+    error: 'framework_configuration',
+    reason_code: preflight.reason_code,
+  });
+}
+
+const invocation = parseOperationInvocation(process.argv.slice(2), {
+  usage,
+  forms: [{
+    id: 'enter-phase',
+    positionals: [],
     options: {
-      bundle: { type: 'string' },
-      node: { type: 'string' },
+      bundle: { required: true },
+      node: { required: true },
+      full: { type: 'boolean' },
     },
-    strict: true,
-  }));
-} catch (err) {
-  fail(`Invalid arguments: ${err.message}`, ['Usage: node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>']);
+  }],
+});
+
+if (invocation.kind === 'help') {
+  process.stdout.write(`${usage}\n`);
+  process.exit(0);
 }
+if (invocation.kind === 'invalid') failInvocation(invocation.reason);
 
-if (!values.bundle || !values.node) {
-  fail('Missing required args: --bundle <path> --node <fileRef>', ['Usage: node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>']);
-}
+const bundle = validateBundleDirectory(invocation.values.bundle);
+if (!bundle.ok) failInvocation(bundle.reason, { coordinate: bundle.coordinate });
+const target = validateWorkflowPhaseReference(invocation.values.node);
+if (!target.ok) failInvocation(target.reason, { coordinate: target.coordinate });
 
-const bundlePath = values.bundle;
-const targetNode = values.node;
-
-if (!existsSync(bundlePath)) {
-  fail(`Bundle not found: ${bundlePath}`);
-}
-
+const bundlePath = bundle.path;
+const targetNode = target.value;
 const tracePath = join(bundlePath, 'rb_trace.jsonl');
-if (!existsSync(tracePath)) {
-  fail(`rb_trace.jsonl not found in ${bundlePath}`);
-}
-
+if (!existsSync(tracePath)) fail(`rb_trace.jsonl not found in selected bundle`, []);
 const statusPath = join(bundlePath, 'rb_status.json');
-if (!existsSync(statusPath)) {
-  fail(`rb_status.json not found in ${bundlePath}`);
-}
+if (!existsSync(statusPath)) fail(`rb_status.json not found in selected bundle`, []);
 
 const authorization = validateEnterPhaseTarget(bundlePath, targetNode);
-if (!authorization.ok) {
-  fail(authorization.reason, authorization.advice || []);
-}
-
+if (!authorization.ok) fail(authorization.reason, authorization.advice || []);
 const { handoff } = authorization;
+
+let actionCore;
+try {
+  actionCore = extractExecutionBrief(readFileSync(nodePath(targetNode, NODES_DIR), 'utf8'), { nodeRef: targetNode });
+} catch (error) {
+  actionCore = {
+    ok: false,
+    reason_code: 'execution_brief_source_unreadable',
+    reason: `cannot read target framework node ${targetNode}: ${error.message}`,
+  };
+}
+if (!actionCore.ok) failConfiguration(actionCore);
+
 const baseTrace = createTrace(tracePath, { consoleEcho: false });
 const trace = {
   traceFilePath: baseTrace.traceFilePath,
@@ -99,10 +147,9 @@ const state = createState();
 let result;
 try {
   result = assessNode(targetNode, state, runtime, trace);
-} catch (err) {
-  fail(`Failed to load node "${targetNode}": ${err.message}`);
+} catch (error) {
+  fail(`Failed to load node "${targetNode}": ${error.message}`);
 }
-
 if (!result || result.status !== 'loaded') {
   fail(`Failed to load node "${targetNode}": ${result?.error || 'unknown loader error'}`);
 }
@@ -120,25 +167,31 @@ if (!continuation) {
 }
 
 try {
-  const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
+  const status = JSON.parse(readFileSync(statusPath, 'utf8'));
   status.current_node = targetNode;
   writeFileSync(statusPath, JSON.stringify(status, null, 2) + '\n');
-} catch (err) {
+} catch (error) {
   fail(
-    `Failed to write rb_status.json current_node after load_complete: ${err.message}`,
+    `Failed to write rb_status.json current_node after load_complete: ${error.message}`,
     ['Treat this as a partial phase-entry failure; repair or retry through Engine tooling before continuing.'],
   );
 }
 
-const sections = [];
-for (const fileRef of result.plan || []) {
-  const entry = runtime.contentCache.get(fileRef);
-  if (!entry) {
-    fail(`Loaded plan references missing cache entry: ${fileRef}`);
-  }
-  sections.push(`<!-- DPT_LOADED_FILE_START ${fileRef} -->\n\n${entry.md.trimEnd()}\n\n<!-- DPT_LOADED_FILE_END ${fileRef} -->`);
-}
-sections.push(renderContinuationBlock(continuation));
+const statusSyncCommand = `node DPT_FRAMEWORK/cli/advance-status.mjs --bundle ${bundlePath} --to ${handoff.sourceGateEnum}`;
+const bounded = renderPhaseEntryPresentation({
+  continuation,
+  status_sync_command: statusSyncCommand,
+  action_core: actionCore.action_core,
+  load_plan: result.plan,
+  target_node: targetNode,
+});
 
-writeFileSync(1, `${sections.join('\n\n')}\n`);
-process.exit(0);
+const fullClosure = invocation.values.full
+  ? result.plan.map((fileRef) => {
+    const entry = runtime.contentCache.get(fileRef);
+    if (!entry) fail(`Loaded plan references missing cache entry: ${fileRef}`);
+    return `<!-- DPT_LOADED_FILE_START ${fileRef} -->\n\n${entry.md.trimEnd()}\n\n<!-- DPT_LOADED_FILE_END ${fileRef} -->`;
+  }).join('\n\n')
+  : null;
+
+process.stdout.write(`${fullClosure ? `${bounded}\n\n${fullClosure}` : bounded}\n`);

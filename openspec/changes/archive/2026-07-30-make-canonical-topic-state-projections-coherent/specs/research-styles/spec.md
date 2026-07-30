@@ -41,7 +41,7 @@ project the existing phase-rerun count owner. This explanation SHALL not modify
 the C5 event, prepared manifest, profile schema, stage/action vocabulary, or
 downstream rule authority, and SHALL not turn C5 into a general style writer.
 
-#### Scenario: HITL1 materializes topics before style projection
+#### Scenario: HITL1 applies parameters via CLI
 
 - **WHEN** a user selects `claim_verification` during HITL1 and canonical
   topic-state applies five topics
@@ -50,6 +50,8 @@ downstream rule authority, and SHALL not turn C5 into a general style writer.
   the committed five-topic registry exists
 - **AND** stdout SHALL report `topic_count: 5` and the corresponding complete
   parameter object
+- **AND** the Agent SHALL verify the JSON result and successful exit before the
+  HITL1 readiness checkpoint
 #### Scenario: Gate CLI reads dynamic threshold from profile
 - **WHEN** gate CLI evaluates a `count_floor` rule with `threshold_source` pointing to `rb_profile.yaml#/research_style_params/wave0_shared_ref_total`
 - **THEN** it SHALL resolve the threshold by reading the value at that path in `rb_profile.yaml`
@@ -109,11 +111,13 @@ committed registry length. Prepared or blocked topic-state workspaces SHALL not
 affect profile calculation, and topic-state code SHALL not directly mutate
 profile fields.
 
-#### Scenario: Add exposes refresh before readiness
+#### Scenario: Add recomputes style after commit
 
 - **WHEN** add-topic commits and changes the registry length
 - **THEN** the topic-state result SHALL expose the existing style CLI as the
   refresh owner before the active HITL1 or rerun readiness gate
+- **AND** the Agent SHALL run that CLI against the committed registry before
+  the active HITL1 or rerun readiness gate
 - **AND** only that CLI can write the updated params
 
 ### Requirement: Safe topic removal SHALL reuse the existing research-style owner
@@ -123,9 +127,10 @@ registry length, its structured result SHALL expose the same style-projection
 handoff. Topic-state code SHALL not write profile fields, and rename/reorder
 without count change SHALL not trigger style recomputation.
 
-#### Scenario: Safe remove refreshes once
+#### Scenario: Safe remove recomputes style once
 
 - **WHEN** layout commit reduces canonical registry length
 - **THEN** the result SHALL expose one style refresh through the existing CLI
   before the rerun-ready gate
+- **AND** the Agent SHALL run that CLI before the rerun-ready gate
 - **AND** topic-state SHALL leave unrelated profile sections untouched

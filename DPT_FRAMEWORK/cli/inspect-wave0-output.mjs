@@ -4,7 +4,7 @@
 // @impl IOC-001, IOC-005, RWG-018
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { join, resolve as resolvePath } from 'node:path';
+import { join } from 'node:path';
 
 import {
   checkReferenceFormatFiles,
@@ -20,25 +20,29 @@ import { evaluateWave0Contract } from '../engine/helpers/wave-contract-evaluator
 import { evaluateSeedTopicProjectionReadiness } from '../engine/helpers/return-map.mjs';
 import { buildCanonicalTopicRegistryFact } from '../engine/helpers/topic-registry-fact.mjs';
 import { validateIndexMD } from '../schema/contracts/reference.mjs';
+import { parseOperationInvocation, validateBundleDirectory } from '../engine/helpers/cli-operation-contract.mjs';
 
-const bundleFlag = process.argv.indexOf('--bundle');
-const bundlePath = bundleFlag >= 0 ? process.argv[bundleFlag + 1] : process.argv[2];
 const commandFor = (bundle) => `node DPT_FRAMEWORK/cli/inspect-wave0-output.mjs --bundle ${bundle || '<bundle-path>'}`;
-if (!bundlePath) {
+const usage = `Usage:\n  ${commandFor('<bundle-path>')}`;
+const invocation = parseOperationInvocation(process.argv.slice(2), {
+  usage,
+  forms: [{ id: 'inspect-wave0', positionals: [], options: { bundle: { required: true } } }],
+});
+function failInvocation(reason) {
   const finding = makeContractFinding({
-    id: 'wave0_inspect_bundle_required',
-    ruleId: 'wave0_inspect_bundle_required',
+    id: 'wave0_inspect_invocation_invalid',
+    ruleId: 'wave0_inspect_invocation_invalid',
     findingSource: 'checker',
     classification: 'blocking',
     blockingBasis: 'invocation_contract',
     surface: 'Wave0 inspect invocation --bundle',
-    expected: 'A selected active bundle path supplied through --bundle.',
-    observed: 'argument absent',
-    missingFact: 'Required Wave0 inspect invocation argument --bundle is missing.',
+    expected: 'Exactly one --bundle <bundle-path> pair and no positional arguments.',
+    observed: 'invalid static invocation',
+    missingFact: `Wave0 inspect invocation is invalid: ${reason}`,
     repairKind: 'engine_operation',
-    writeTo: 'Wave0 inspect invocation argument --bundle',
+    writeTo: 'Wave0 inspect CLI invocation grammar',
     repair: 'Provide --bundle <bundle-path> and rerun Wave0 inspect.',
-    detail: '[wave0_inspect_bundle_required] Missing required argument: --bundle <bundle-path>',
+    detail: `[wave0_inspect_invocation_invalid] ${reason}`,
   });
   emitInspectResult(projectInspectContract({
     wave: 'wave0',
@@ -46,8 +50,15 @@ if (!bundlePath) {
     checkpointCommand: commandFor(null),
   }), 2);
 }
+if (invocation.kind === 'help') {
+  process.stdout.write(`${usage}\n`);
+  process.exit(0);
+}
+if (invocation.kind === 'invalid') failInvocation(invocation.reason);
+const bundle = validateBundleDirectory(invocation.values.bundle);
+if (!bundle.ok) failInvocation(bundle.reason);
 
-const resolvedBundlePath = resolvePath(bundlePath);
+const resolvedBundlePath = bundle.path;
 const checkpointCommand = commandFor(resolvedBundlePath);
 
 const { definition, error } = tryLoadGateDefinition('wave0-complete', null);

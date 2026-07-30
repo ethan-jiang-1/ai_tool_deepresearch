@@ -102,7 +102,7 @@ topic_registry:
 
 用户可提供优先级、明确排除、来源/证据偏好、分析视角、交付要求或相关业务背景。它们是本轮研究指导，不是 profile、Gate、来源 floor、receipt、lifecycle 或 schema override。
 
-在用户决定和任何 material conflict 已澄清后，Agent 只做一次以下持久化写入，随后才创建 retained topic-state input：无额外控制时写入精确 no-controls sentence；有控制时用 `plan-hostfile-sections.mjs` 的 `renderSuppliedControls()` 在 `rb_plan.md## Constraints > ### User Research Controls` 写入精确 label 和 literal snapshot。不得手写较短 fence。
+在用户决定和任何 material conflict 已澄清后，Agent 先运行纯 renderer，读取 stdout，再只在已有的 `rb_plan.md## Constraints > ### User Research Controls` coordinate 写入返回的精确 section，随后才创建 retained topic-state input：无额外控制时运行 `node DPT_FRAMEWORK/cli/plan-hostfile-sections.mjs render-no-controls`；有控制时把已解析的本 run snapshot 放在显式 UTF-8 input path，运行 `node DPT_FRAMEWORK/cli/plan-hostfile-sections.mjs render-supplied-controls --input <snapshot-path>`。renderer 不寻找 bundle、不写 host file，也不取得新的 writer authority。若 renderer 缺失或返回 code `2` invocation/configuration root，只修正该调用或报告缺失 contract；不得手写较短 fence、发明 alternate rendering protocol，或绕过已有 host-file owner。
 
 用户明确授权读本地文件时，只读取一次并只摘取本 run 适用、可分享的控制到 snapshot；不得保留路径、以后重读、递归读取链接、复制无关内容或形成同步协议。若控制与 profile、must-answer 或 style 有 material conflict，先在本 HITL1 取得最小用户决定并更新既有 structured owner；不得让 silent phase 私自选择赢家。文件不可读、意图不清或控制过宽时，只问最小澄清或 host prerequisite，绝不虚构 snapshot。topic-state apply/recover 后继续读取已 durable 的 host-file snapshot，不从 chat 或外部路径重建。
 

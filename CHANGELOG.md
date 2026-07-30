@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.63
+
+- Selected Agent-facing operations now provide side-effect-free standalone help and direct code-`2` invocation/configuration feedback before bundle evaluation or mutation. Their exact grammar is documented without falsely normalizing unrelated utilities.
+- Canonical topic-state now exposes read-only `schema --context` discovery and bounded safe Zod validation feedback; existing authorization and atomic writer ownership remain unchanged.
+- HITL1 controls rendering is a pure public CLI, and phase entry now presents a cue-first bounded action core with the exact source-gate status sync and target-excluding manifest by default; `--full` retains the complete closure.
+- Claim and timeout output project existing actor-observation and selected recommendation facts, while Wave0 omission feedback batches only homogeneous current candidate coordinates. No controller, automatic repair service, altered evidence authority, or host-liveness promise is introduced.
+
 ## v0.62
 
 - Canonical topic-state projection now preserves independently parseable selected-slot entries across identity upsert, and packet admission plus Wave readiness share one concrete-navigation interpretation.

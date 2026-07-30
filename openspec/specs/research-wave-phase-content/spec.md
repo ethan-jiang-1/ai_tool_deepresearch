@@ -18,6 +18,14 @@ Before delegated claim, the Phase Agent SHALL read the queue-front role, perform
 
 For returned work, phase guidance SHALL direct the Agent to consume the existing dry-submit disposition before formal submit: `repair_same_candidate` permits only its authorized mechanical candidate repair and a same-check rerun; `return_to_actor` preserves actor-owned semantic work; `fail_and_replace` uses the existing terminal/replacement path; and `inspect_contract` remains at the Engine owner or missing-contract boundary. It SHALL not scan the filesystem to declare or amend backing, and formal submit remains the only transition that unlocks reference materialization.
 
+After a successful Wave0 submit, the Phase Agent SHALL obtain each Seed Projection Packet coordinate from the existing contribution-aware Wave0 inspection/preflight result. `<work_id>/N` means the global ordinal that the submitted work unit's accepted source contribution owns in the current valid source array. A later legal append has a different work ID and owns only its appended ordinal interval. The Phase Agent SHALL not recalculate every historical work unit against the mutable full array, assign a suffix to an earlier work ID, hand-edit a seed, or treat `result_hash` as a source-byte snapshot. A contribution-prefix or missing-boundary feedback root is an Engine-owned condition to inspect and rerun through the existing legal path, not a prompt to fabricate provenance.
+
+#### Scenario: Wave0 closeout uses submitted contribution coordinates
+
+- **WHEN** one accepted Wave0 contribution owns source ordinals `1..19` and a legal later contribution owns ordinal `20`
+- **THEN** phase guidance SHALL direct the Agent to use the first work ID only for `/1..19` and the later work ID only for `/20`
+- **AND** it SHALL not tell the Agent to reconstruct those identities from current file length or result prose
+
 #### Scenario: Wave0 source intake uses work-unit commands
 
 - **WHEN** Wave0 source intake has delegated queue demand
@@ -347,7 +355,7 @@ Phase-wave0 §3.3、Phase-wave1 §3.3、and Phase-wave2 §3.2.3 SHALL instruct t
 
 1. Read current-round submitted rows via `operate-work-unit inspect --eligible-rows` for the topic/wave. Eligible rows are those whose work unit index record `rerun_count` matches the current `rb_profile.yaml` value, validated through ledger/index/manifest/queue-snapshot/canonical-topic binding by the Engine.
 2. Read submitted outputs at the returned `result_path` locations. Derive return-map entries (evidence_meaning, relationship, refs, status, next_hop) by reading the outputs — NOT by mechanically extracting fields from ledger rows.
-3. Assign each new entry an `entry_id` in the format `<work_id>/<n>` where `n` is a 1-based index unique within the work unit. Check whether this `entry_id` already appears in the section; if not, append the entry at section bottom.
+3. For Wave0, obtain each new `<work_id>/<n>` entry ID from the existing submitted contribution reader: `n` is the exact global source-array ordinal owned by that accepted work unit's contribution, not a per-work-unit local index or a mutable-array re-read. For Wave1, retain the existing positive ordinal unique within the submitted work unit. For Wave2, retain the exact current-round W2F identity. Use the existing Projection Packet writer to upsert the returned identity; do not append raw Markdown or infer a historical ordinal split.
 4. For entries that should not appear in the projection (intermediate outputs, process-only, not consumer-facing), write an explicit no-projection disposition entry with `relationship: defers`, `status: deferred`, and `next_hop` containing a limitation reason.
 
 Wave1 and Wave2 SHALL add a §3.0 “Classify Direct Facts” section implementing the existing RWP-014 classification. Classification SHALL use the shared direction resolver (`resolveRerunDirection`) to determine whether the `## 本轮重跑方向` section's intent is current. Only `matching` or `future` states SHALL activate supplement intent. `stale`/`legacy_unbound`/`invalid` SHALL be treated as no supplement intent.
@@ -361,6 +369,12 @@ For Wave0, “与首次运行一致” SHALL include creation of delegated queue
 When the accepted actor branch is `phase_agent_fallback`, the Wave0 phase SHALL instruct the Phase Agent to execute the assigned work inside the generated envelope, use the generated exact-binding result starter, run `operate-work-unit dry-submit`, repair the same assigned candidate until preflight passes, and then run formal submit. The phase SHALL NOT describe post-hoc result/receipt construction as a way to grant provenance to work performed outside the claimed envelope.
 
 Rerun 场景表的 `action: add` 行 SHALL 新增一行说明：`_cache/ 写入：与首次运行一致——每个 source 在 sNN_<slug>/ 下保存 3 文件`。
+
+#### Scenario: Wave0 rerun projection keeps contribution ownership
+
+- **WHEN** a prior submitted Wave0 contribution proves nineteen source entries and a later current-round contribution proves the same prefix extended to twenty
+- **THEN** Wave0 rerun guidance SHALL use the existing contribution reader to project the first work ID's `/1..19` and the later work ID's `/20`
+- **AND** it SHALL not assign `/20` to the earlier work ID or tell the Agent to modify historical ledger data
 
 #### Scenario: Projection updated from current-round rows only
 

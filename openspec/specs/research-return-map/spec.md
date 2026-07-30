@@ -153,50 +153,76 @@ validator logic locally or surface an ordinary mechanical repair to the user.
 
 ### Requirement: Evidence-bearing return-map refs SHALL include concrete existing reference files
 
-Evidence-bearing seed-topic return-map entries SHALL include at least one concrete, bundle-relative, existing `reference/*.md` file ref unless the entry explicitly records that no consumer-facing reference is materializable and gives a limitation / deferral reason.
+An evidence-bearing Seed Topic return-map entry SHALL include at least one safe,
+flat, concrete bundle-relative `reference/*.md` consumer-navigation ref. A
+glob, wildcard, directory, aggregate count, internal artifact/cache/work-unit
+path, unsafe path, or nonexistent reference SHALL not satisfy this requirement.
+An entry explicitly marked as a deterministic limitation, deferral, no
+materializable source, or non-consumer-facing state may omit a concrete reference
+only through the accepted field-level deferred form.
 
-`reference/` is the primary consumer navigation layer. `artifacts/`, `_cache/`, and `_work_units/` MAY appear as secondary provenance refs, but they SHALL NOT be the only refs for an evidence-bearing return-map entry that claims support, refutation, partial support, emergent evidence, or context from existing evidence.
+One normalized concrete-navigation evaluator SHALL supply this rule to both
+Projection Packet admission and Wave return-map readiness. Packet admission is
+the owner of whether a new evidence-bearing entry may be committed: a concrete
+reference must already exist there, and an unresolved forward reference SHALL
+not be written. The later Wave reader SHALL reuse the same classification for
+existing content rather than implement a differently timed or less precise path.
+A missing concrete path SHALL name the exact missing path and, when available, a
+bounded list of exact basename near matches in the active `reference/`
+directory. The evaluator SHALL not create a reference, infer a reference from
+source/cache/ledger data, or ask the Agent to alter submitted authority.
 
-Glob refs and count summaries SHALL be invalid as consumer navigation refs. This includes patterns such as `reference/topic-*.md`, `reference/topic-*.md (8 files)`, and `reference/topic-*.md（8 个）`. The map must enumerate concrete files.
+This navigation requirement does not make return maps evidence authority.
+Submitted work-unit ledgers, reference backing checks, cache trails, and accepted
+gate surfaces remain authority for evidence count and provenance. The return map
+only tells a future Agent or reader where to navigate. Concrete navigation
+validation remains blocking for relevant Wave inspect and formal gate paths when
+it contributes to their failed readiness result, but it SHALL reuse the same
+entry classification as packet admission rather than introduce a second
+validator.
 
-This requirement does not make return maps evidence authority. Submitted work-unit ledgers, reference backing checks, cache trails, and accepted gate surfaces remain the authority for whether evidence counts. The return map only tells a future Agent or reader where to navigate.
-
-Implementation SHALL use a deterministic evidence-bearing predicate instead of broad prose interpretation. At minimum, entries with relationship/status values that claim support, refutation, partial support, emergent evidence, or contextual evidence SHALL be treated as evidence-bearing. Entries may be treated as limitation/non-materialized only when their return-map fields explicitly mark deferral/open/no materializable evidence and do not claim existing evidence support through refs or status.
-
-Concrete reference validation for evidence-bearing seed-topic return-map entries SHALL be blocking for `inspect-wave0-output`, `inspect-wave1-output`, `inspect-wave2-output`, and any active gate/check that declares return-map navigation readiness. It SHALL NOT be described as diagnostic-only when the command includes the finding in `check.passed: false`.
+Implementation SHALL use the accepted field-level evidence-bearing predicate
+instead of broad surrounding-prose interpretation. At minimum, entries with
+relationship/status values that claim support, refutation, partial support,
+emergent evidence, or contextual evidence SHALL be treated as evidence-bearing.
+Entries may be treated as limitation/non-materialized only when their return-map
+fields explicitly mark deferral/open/no materializable evidence and do not claim
+existing evidence support through refs or status.
 
 #### Scenario: concrete existing reference ref passes
 
-- **WHEN** an evidence-bearing return-map entry contains `refs: reference/01_topic-source.md`
-- **AND** `reference/01_topic-source.md` exists under the active bundle root
-- **THEN** return-map concrete reference validation SHALL pass for that entry
-
+- **WHEN** an evidence-bearing return-map entry contains
+  `refs: reference/01_topic-source.md`
+- **AND** that file exists as a regular file under the active bundle root
+- **THEN** packet admission and return-map readiness SHALL both accept the
+  navigation ref
 #### Scenario: internal-only refs fail
 
-- **WHEN** an evidence-bearing return-map entry contains refs only to `artifacts/wave1/01_topic/evidence-summary.md`, `_cache/wave1/...`, or `_work_units/wave1/...`
-- **THEN** return-map concrete reference validation SHALL fail
-- **AND** advice SHALL ask the Agent to add concrete `reference/*.md` navigation or record an explicit limitation
-- **AND** wave inspect output SHALL classify the finding as blocking when it contributes to command failure
-
+- **WHEN** an evidence-bearing return-map entry contains refs only to
+  `artifacts/wave1/01_topic/evidence-summary.md`, `_cache/wave1/...`, or
+  `_work_units/wave1/...`
+- **THEN** packet admission and Wave readiness SHALL reject it as lacking
+  concrete consumer navigation
+- **AND** feedback SHALL ask for a concrete existing `reference/*.md` ref or
+  an explicit deferred disposition
 #### Scenario: globbed reference ref fails
 
-- **WHEN** a return-map entry contains `reference/01_topic-*.md`
-- **THEN** validation SHALL fail
+- **WHEN** an entry contains `reference/01_topic-*.md`
+- **THEN** the normalized evaluator SHALL reject it
 - **AND** diagnostics SHALL require enumerated concrete reference files
-
 #### Scenario: count-summary reference ref fails
 
-- **WHEN** a return-map entry contains `reference/01_topic-*.md (8 files)` or `reference/01_topic-*.md（8 个）`
-- **THEN** validation SHALL fail
+- **WHEN** an entry contains `reference/01_topic-*.md (8 files)` or
+  `reference/01_topic-*.md（8 个）`
+- **THEN** the normalized evaluator SHALL reject it
 - **AND** diagnostics SHALL identify the glob/count summary as non-navigable
-
 #### Scenario: missing concrete reference ref fails
 
-- **WHEN** a return-map entry contains `reference/01_topic-source.md`
-- **AND** that file does not exist under the active bundle root
-- **THEN** validation SHALL fail
-- **AND** diagnostics SHALL name the missing reference file
-
+- **WHEN** a packet names `reference/00-shared-cross-methodology-01.md` and
+  only `reference/00-shared-cross-methodology-1.md` exists
+- **THEN** packet admission SHALL reject without publishing the seed replacement
+- **AND** its one root SHALL name the missing path, the existing near match, the
+  existing materialization/selection owner, and the same apply rerun
 #### Scenario: explicit limitation may omit concrete reference
 
 - **WHEN** a return-map entry records an explicit limitation, deferral, no materializable source, or non-consumer-facing status
@@ -205,9 +231,12 @@ Concrete reference validation for evidence-bearing seed-topic return-map entries
 
 #### Scenario: deterministic evidence-bearing predicate does not rely on prose judgment
 
-- **WHEN** a return-map entry uses `relationship: supports`, `relationship: refutes`, `relationship: partial`, `relationship: context`, `status: supported`, `status: refuted`, `status: partial`, or `status: emergent`
-- **THEN** concrete reference validation SHALL treat the entry as evidence-bearing
-- **AND** the validator SHALL NOT require semantic interpretation of the surrounding prose to decide whether the entry needs concrete `reference/*.md` refs
+- **WHEN** an entry uses an evidence-bearing accepted `relationship` or
+  `status`
+- **THEN** the evaluator SHALL apply this concrete-reference rule from those
+  fields
+- **AND** it SHALL not semantically interpret surrounding prose to decide
+  whether a concrete ref is required
 
 ### Requirement: Return-map parsing SHALL tolerate balanced field presentation wrappers
 
@@ -270,25 +299,46 @@ family:
 
 | Wave | owned slot family | current projection identity |
 | --- | --- | --- |
-| Wave0 | `wave0_evidence` | each candidate coordinate in a current eligible result-declared `source.yaml` array |
+| Wave0 | `wave0_evidence` | each ordinal in one current submitted source contribution |
 | Wave1 | `wave1_mechanisms`, `wave1_trends`, `pending_questions` | each current eligible submitted `work_id` |
 | Wave2 | `wave2_judgment` plus exact W2F entries in `pending_questions` | each current-round usable finding resolved to the topic |
 
-For Wave0, the evaluator SHALL obtain candidates only through a narrow
-submitted-candidate projection reader. That reader SHALL authenticate a current
+For Wave0, the evaluator SHALL obtain candidates only through the submitted
+candidate-contribution reader. That reader SHALL authenticate each current
 eligible `wave0_source_intake` row, its validated manifest exact required tuple
 `(path, role: source_yaml, direct_contract: wave0.source-metadata-array.v1)`,
-and a validated result whose `hashValue(result)` equals the accepted
-`result_hash` before accepting the declared output. It SHALL call the neutral
-direct-output operation for that tuple and, only after a passed
-`ReferenceMetadataArraySchema` result, derive ordinals
-`1..snapshot_meta.validated_array_length`. The resulting coordinate is
-`<work_id>/<1-based source.yaml array ordinal>`. `result_hash` binds the result
-declaration rather than source bytes; this is a current inspection-time
-projection, not a persistent candidate snapshot. The reader/evaluator SHALL not
-discover source files by directory scan, select an optional/orphan output, infer
-candidates from generic prose, collapse duplicate URLs, parse YAML, or expose a
-source catalog.
+a validated result whose `hashValue(result)` equals accepted `result_hash`, and
+the Engine-written `source_contribution` declaration in its hash-valid ledger
+row. For each exact target and Topic, ledger append order SHALL define the
+contribution sequence. The reader SHALL evaluate the current direct output once
+through the neutral source-array contract, then verify that every contribution
+declaration matches the semantic digest of its exact current array prefix and
+that later declarations extend, rather than rewrite or reorder, earlier prefixes.
+
+For a valid sequence, contribution `n` owns precisely the global 1-based
+ordinal interval after the previous declared length through its own declared
+length. The resulting coordinate is `<work_id>/<global source.yaml ordinal>`.
+A later append therefore owns only its new ordinals: an initial nineteen-entry
+contribution followed by a twenty-entry contribution yields the first work ID's
+`/1..19` and the later work ID's `/20`, never both work IDs for the same
+ordinal. Duplicate URLs remain separate ordered candidate identities. The reader
+SHALL not derive candidates from a directory scan, optional/orphan output,
+generic prose, source catalog, or the mutable current length of every
+historical work row.
+
+A current source suffix that no submitted contribution declares, a changed or
+shortened historical prefix, or a non-monotonic same-target declaration SHALL
+produce one direct submitted-source-contribution root and mask dependent
+candidate omissions when the group has a valid declared-contribution sequence.
+Any same-target group containing a legacy row without a declaration and another
+submitted row SHALL instead produce one missing-contribution-boundary root. A
+single legacy source row with no competing same-target row remains
+read-compatible through existing current-output behavior; it does not establish
+a new snapshot, contribution boundary, or unsubmitted-suffix assertion for
+another row. This compatibility SHALL not assign a later append to a historical
+legacy work ID. `result_hash` still binds result declaration, not general source
+bytes; the narrow ledger contribution declaration is the only source-ownership
+fact used here.
 
 For Wave1 and Wave2, the direct sources remain the canonical registry/current-
 seed binding, current eligible submitted Wave1 rows, current-round usable Wave2
@@ -328,11 +378,18 @@ For a usable Wave0 family, a candidate is covered only by a valid entry whose
 entry-local `entry_id` equals its exact candidate coordinate. A valid explicit
 deferred disposition uses the same exact `entry_id`; generic `Wave0 submitted`
 prose, anonymous `refs: none`, a bare work ID in `refs`, or an out-of-range /
-wrong-coordinate entry SHALL not cover it. Each uncovered current coordinate
-SHALL yield one blocking `return_map_current_candidate_omission` finding that
-names the exact coordinate. A schema-valid empty source array creates no
-candidate demand; independent Wave0 source-output/floor contracts retain their
-existing verdict ownership.
+wrong-coordinate entry SHALL not cover it. Every uncovered current coordinate
+remains an independent mandatory coverage fact. For omissions sharing one
+current canonical `topic_uid`, Wave0 writable Seed Topic family, repair kind,
+and existing Projection Packet -> topic-state apply coordinate, the evaluator
+SHALL project them as one ordered blocking
+`return_map_current_candidate_omission` finding with an identity-complete
+`missing_candidate_ids[]` list. The list SHALL retain every exact
+`<work_id>/<ordinal>` in contribution/ordinal order. It SHALL not batch across
+topics, Waves, writer coordinates, parent authority roots, or different finding
+classes, and it SHALL not reduce required entry/disposition coverage. A
+schema-valid empty source array creates no candidate demand; independent Wave0
+source-output/floor contracts retain their existing verdict ownership.
 
 For a usable Wave1/Wave2 family, the existing current work-id and W2F coverage
 forms remain accepted. Once parents are usable, every current submitted Wave1
@@ -371,29 +428,71 @@ reloaded independently by the second evaluator.
 
 #### Scenario: Current token blocks Wave0 completion
 
-- **WHEN** a current eligible Wave0 row exists and its current seed retains
-  `__BACKFILL_WAVE0_EVIDENCE__`
+- **WHEN** a current eligible Wave0 contribution exists and its current seed
+  retains `__BACKFILL_WAVE0_EVIDENCE__`
 - **THEN** inspect and formal Wave0 gate SHALL report one exact blocking slot
   root
 - **AND** degraded handoff SHALL not be emitted
-
 #### Scenario: One Wave0 entry cannot cover two submitted candidates
 
-- **WHEN** one current eligible Wave0 submitted row has a current
-  result-declared `source.yaml` with two schema-valid array elements and the
-  Seed Topic contains only a valid `<work_id>/1` entry
+- **WHEN** one current eligible Wave0 contribution owns two source-array
+  ordinals and the Seed Topic contains only a valid `<work_id>/1` entry
 - **THEN** inspect and formal Wave0 gate SHALL report exactly the uncovered
   `<work_id>/2` `return_map_current_candidate_omission`
-- **AND** a bare `<work_id>` reference elsewhere SHALL not suppress that finding
+- **AND** a bare `<work_id>` reference elsewhere SHALL not suppress that
+  finding
+#### Scenario: Submitted append owns only its new ordinal
+
+- **WHEN** a first submitted contribution proves a nineteen-entry array and a
+  later submitted contribution proves the same prefix extended to twenty
+  entries
+- **THEN** inspect and formal gate SHALL require first-work `/1..19` and
+  later-work `/20`
+- **AND** they SHALL not require first-work `/20` or later-work `/1..19`
+
+#### Scenario: Source prefix drift masks omissions
+
+- **WHEN** a current source array changes, reorders, or shortens a prefix proven
+  by an accepted contribution declaration
+- **THEN** inspect and formal gate SHALL report one direct
+  source-contribution root for that target
+- **AND** they SHALL not emit per-candidate omissions derived from the invalid
+  prefix
+
+#### Scenario: Unsubmitted appended suffix is not historical evidence
+
+- **WHEN** a valid declared-contribution sequence's current source array extends
+  beyond its latest accepted contribution declaration
+- **THEN** inspect and formal gate SHALL report the direct unsubmitted-suffix
+  root
+- **AND** they SHALL not assign the suffix to an earlier work ID or ask the
+  Agent to fabricate historical projection entries
+
+#### Scenario: Ambiguous legacy shared target fails honestly
+
+- **WHEN** a legacy submitted Wave0 row without a contribution declaration
+  shares its current source target with another submitted row
+- **THEN** inspect and formal gate SHALL report one missing-contribution-boundary
+  root
+- **AND** they SHALL not infer an ordinal split from timestamps, prose, existing
+  projection entries, or filesystem order
+
+#### Scenario: Single legacy source target remains readable
+
+- **WHEN** exactly one legacy submitted Wave0 row names a schema-valid current
+  source target and no competing same-target contribution exists
+- **THEN** the evaluator SHALL retain existing current-output read compatibility
+  for that row
+- **AND** it SHALL not synthesize a ledger contribution declaration or an
+  unsubmitted-suffix root
 
 #### Scenario: Duplicate URLs remain separate submitted candidates
 
-- **WHEN** two positions in one current result-declared `source.yaml` array have
-  the same URL and otherwise valid metadata
-- **THEN** they SHALL remain distinct `<work_id>/1` and `<work_id>/2`
-  projection identities
+- **WHEN** two positions in one valid source contribution have the same URL and
+  otherwise valid metadata
+- **THEN** they SHALL remain distinct exact work-ID/ordinal projection
+  identities
 - **AND** one entry SHALL not satisfy both positions
-
 #### Scenario: Exact deferred candidate disposition is complete navigation
 
 - **WHEN** a current Wave0 candidate has no materializable consumer reference
@@ -405,22 +504,29 @@ reloaded independently by the second evaluator.
 
 #### Scenario: Source-output parent masks dependent candidates
 
-- **WHEN** a current eligible Wave0 row cannot establish a hash-bound,
-  declared safe, schema-valid `source.yaml` output
+- **WHEN** a current eligible Wave0 row cannot establish a valid submitted
+  contribution or its required current `source.yaml` output
 - **THEN** inspect and formal gate SHALL report the direct submitted-source
-  authority/output root
-- **AND** they SHALL not emit derived candidate omissions for that row
+  contribution/authority root
+- **AND** they SHALL not emit derived candidate omissions for that target
+
+#### Scenario: Current-wave token preserves first materialization behavior
+
+- **WHEN** a seed topic contains the target wave's accepted backfill token
+- **THEN** target-wave family availability, entry shape, and projection coverage
+  SHALL retain the accepted token skip behavior
+- **AND** the existing Wave evaluator's stale-token finding SHALL remain
+  independent and MAY still fail the aggregate inspect command
+- **AND** no second generic token family SHALL be introduced
 
 #### Scenario: Current direct output is not a result-hash snapshot
 
-- **WHEN** an otherwise accepted Wave0 result still declares its required
-  `source_yaml` output and the current direct output has three schema-valid
-  array elements
-- **THEN** the candidate reader SHALL derive `<work_id>/1`, `<work_id>/2`, and
-  `<work_id>/3` from the successful direct-output cardinality
+- **WHEN** an accepted Wave0 contribution proves a three-entry prefix and the
+  current direct output retains that ordered schema-valid prefix
+- **THEN** the candidate reader SHALL derive the contribution's exact three
+  global ordinal coordinates
 - **AND** it SHALL not claim that `result_hash` hashes or freezes the
   `source.yaml` bytes
-
 #### Scenario: Wave1 keeps its existing row identity behavior
 
 - **WHEN** Wave1 evaluates a current submitted row with an accepted exact
@@ -437,13 +543,12 @@ reloaded independently by the second evaluator.
 
 #### Scenario: Valid writer output satisfies one truth path
 
-- **WHEN** a legal packet writes an entry bound to a current Wave0 candidate,
-  current Wave1 submitted work, or current-round W2F identity resolved to its
-  topic in its owned slot
-- **THEN** the same pure evaluator used by inspect and gate SHALL recognize
-  that identity once
+- **WHEN** a legal packet writes an entry bound to a current Wave0 contribution
+  ordinal, current Wave1 submitted work, or current-round W2F identity in its
+  owned slot
+- **THEN** the same pure evaluator used by inspect and gate SHALL recognize that
+  identity once
 - **AND** neither caller SHALL maintain a competing token/entry validator
-
 #### Scenario: Read compatibility does not authorize an ambiguous write
 
 - **WHEN** a historical current seed has repeated recognized heading occurrences
@@ -456,11 +561,10 @@ reloaded independently by the second evaluator.
 
 #### Scenario: Parent failure masks dependent omissions
 
-- **WHEN** current registry binding, submitted authority or finding-index parent
-  is unusable
+- **WHEN** current registry binding, submitted source contribution/authority, or
+  finding-index parent is unusable
 - **THEN** the evaluator SHALL report that direct root once per parent
 - **AND** it SHALL mask dependent per-entry/per-row projection omissions
-
 #### Scenario: No current authority does not invent a projection demand
 
 - **WHEN** a usable current topic has no current submitted/finding authority
@@ -689,12 +793,16 @@ reloaded independently by the second evaluator.
 - **THEN** Wave0 target-family validation SHALL proceed
 - **AND** the Wave1 token SHALL NOT make Wave0 pass or skip
 
-#### Scenario: Current-wave token preserves first materialization behavior
+#### Scenario: Current-wave token uses the shared projection evaluator
 
-- **WHEN** a seed topic contains the target wave's accepted backfill token
-- **THEN** target-wave family availability, entry shape, and projection coverage SHALL retain the accepted token skip behavior
-- **AND** the existing Wave evaluator's stale-token finding SHALL remain independent and MAY still fail the aggregate inspect command
-- **AND** no second generic token family SHALL be introduced
+- **WHEN** a seed topic retains the target wave's accepted backfill token and
+  current direct-authority demand exists for that slot
+- **THEN** the shared projection evaluator SHALL return one exact
+  `seed_projection_token` root to both inspect and formal Gate
+- **AND** no retired Wave1/Wave2 Gate-specific stale-token rule SHALL emit a
+  second finding for the same token
+- **AND** with no current demand, a token SHALL not fabricate a projection entry
+  requirement or a new generic token family
 
 #### Scenario: All eligible rows referenced passes check
 
@@ -704,11 +812,32 @@ reloaded independently by the second evaluator.
 
 #### Scenario: Missing Wave0 candidate produces a blocking finding
 
-- **WHEN** a topic has one eligible Wave0 row (work_id `wv0_abc`) from round 2
-  whose current result-declared source array has two valid elements
+- **WHEN** a topic has one eligible Wave0 contribution (work_id `wv0_abc`) from
+  round 2 that owns two validated current source-array ordinals
 - **AND** only `entry_id: wv0_abc/1` is present in the section
 - **AND** no exact no-projection disposition entry exists for `wv0_abc/2`
 - **THEN** inspect SHALL produce a blocking finding naming `wv0_abc/2`
+
+#### Scenario: Homogeneous Wave0 omissions are one complete repair root
+
+- **WHEN** one current Seed Topic's usable Wave0 family lacks valid entries or
+  exact deferred dispositions for several contribution-owned candidates
+- **THEN** inspect and the formal Wave0 gate SHALL emit one blocking
+  `return_map_current_candidate_omission` finding at that topic's existing
+  Projection Packet repair coordinate
+- **AND** `missing_candidate_ids[]` SHALL list every exact missing
+  `<work_id>/<ordinal>` in stable contribution/ordinal order
+- **AND** the same topic-state apply then same Wave inspect loop SHALL remain
+  the only legal repair loop
+
+#### Scenario: Omission batching does not merge distinct authority families
+
+- **WHEN** missing Wave0 candidate identities belong to different canonical
+  topics, different Wave families, or are masked by different parent roots
+- **THEN** the evaluator SHALL retain separate finding groups or their existing
+  parent root instead of combining them
+- **AND** each exact candidate coverage requirement SHALL remain independently
+  visible to the relevant writer and formal gate
 
 #### Scenario: No-projection disposition satisfies check
 

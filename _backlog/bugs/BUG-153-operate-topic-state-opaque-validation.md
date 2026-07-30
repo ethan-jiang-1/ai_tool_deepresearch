@@ -43,3 +43,7 @@ The error response should include `validation_errors[]` with per-field `path`, `
 **Why:** The `repair_kind: agent_action` contract assumes the Agent can self-correct, but without field-level diagnostics, the Agent has no actionable information beyond "read the source code." This violates the contract-lineage-aware feedback principle [[contract-lineage-aware-feedback]].
 
 **How to apply:** In `canonical-topic-state.mjs`, when `TopicApplyPlanSchema.safeParse(input)` fails, include `parsed.error.issues` in the error response. At minimum surface `issues[0].path` and `issues[0].message`. Consider a `validation_summary` field with all issue paths.
+
+## C3 Disposition (2026-07-30)
+
+C3 retains `TopicApplyPlanSchema` as the sole validator and projects bounded safe `validation_errors[]` from its `ZodIssue[]`: a stable primary field coordinate, safe expectation detail, and the same `apply` rerun. It redacts arbitrary retained values, file bytes, paths, and stack traces; lifecycle and owner rejections remain their original non-writable boundary.

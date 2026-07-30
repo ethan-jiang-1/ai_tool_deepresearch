@@ -71,6 +71,20 @@ Non-gate current-state inventory:
 
 Exit codes SHALL NOT encode morale, encouragement, progress pressure, fatigue, or reassurance. Put repair direction and autonomous-continuation reminders in `inspect[]`, `advice[]`, structured diagnostics, or Agent-readable Markdown.
 
+### Selected Public Operation Parsing
+
+Only the following public operations use the C3 static invocation helper. For each, standalone `--help` or `-h` exits `0` before bundle/input/domain access. Any unlisted positional, duplicate, mixed, unknown, missing-value, or unusable explicit-path form exits `2` with a structured invocation/configuration root before an evaluator, writer, trace append, status mutation, or controls render runs. This is not a claim that every utility in this directory shares that parser.
+
+| CLI | Accepted non-help grammar | Preserved owner/output boundary |
+| --- | --- | --- |
+| `inspect-wave{0,1,2}-output.mjs` | exactly `--bundle <bundle-path>` | Non-gate `{ check, inspect, advice, hints }`; its existing evaluator owns domain findings. |
+| `operate-topic-state.mjs` | `inspect --bundle <bundle-path>`; `schema --context <context>`; `apply --bundle <bundle-path> --input <input-path>`; `recover --bundle <bundle-path> --operation-id <operation-id>` | `schema` is read-only Zod-derived discovery. Invalid retained `apply` input carries safe `validation_errors[]`; topic-state keeps authorization and writing ownership. |
+| `enter-phase.mjs` | `--bundle <bundle-path> --node <file-ref> [--full]` | Default presentation is cue, exact status-sync command, target action core, and target-excluding manifest. `--full` additionally returns full loaded closure; entry does not synchronize status or prove target work. |
+| `advance-status.mjs` | `--bundle <bundle-path> --to <source-gate-enum>` | Keeps its existing trace-witness validation and remains the sole status writer. |
+| `plan-hostfile-sections.mjs` | `render-no-controls`; `render-supplied-controls --input <snapshot-path>` | Prints deterministic text only; it does not resolve, select, or write a bundle. |
+
+Do not reflect an unvalidated token into `write_to`, a rerun command, or a writable coordinate. Read each command's structured output for the direct root and the existing legal next operation.
+
 ## Gate Output Contract — Structured CLIs Cannot Return Useless Output
 
 Gate CLIs and documented structured-output CLIs are Agent actor 的眼睛。如果它们崩了、返回空 JSON、或 inspect 为空，Phase Agent 通过 Markdown control surface 执行时会不知所措——它不知道该修什么、该往哪走。**容错可以，但不能丢失可操作性。**

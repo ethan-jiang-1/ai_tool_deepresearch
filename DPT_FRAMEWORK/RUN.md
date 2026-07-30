@@ -1,13 +1,21 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.62**
+> **DPT_FRAMEWORK v0.63**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.62
+## Current Release: v0.63
+
+- Selected Agent-facing operations now have standalone help, exact documented non-help grammar, and direct code-`2` invocation/configuration feedback before bundle evaluation or mutation. Their structured output stays with the existing domain owner; unrelated utilities keep their documented exceptions.
+
+- `operate-topic-state schema --context <context>` gives a read-only Zod-derived authoring projection, and an invalid retained apply input exposes bounded safe `validation_errors[]`. Schema discovery does not create a writer window or lifecycle authorization.
+
+- `enter-phase` now makes its continuation cue and exact source-gate `advance-status` command visible before the target action core and target-excluding manifest; use `--full` only when complete reference closure is needed. Entry and status sync still do not prove target-phase work completion.
+
+- HITL1 controls use the pure `plan-hostfile-sections` renderer; claim and timeout output expose existing actor-observation and recommendation-basis facts; Wave0 reports homogeneous omitted candidates in one identity-complete batch. These feedback loops add no controller, repair service, new evidence authority, or host-liveness promise.
 
 - Canonical topic-state packets now use one shared selected-slot parser and concrete-navigation evaluation with Wave readiness. A successful packet preserves independently parseable neighboring entries; a missing concrete reference or malformed selected neighbor returns direct feedback before publication.
 

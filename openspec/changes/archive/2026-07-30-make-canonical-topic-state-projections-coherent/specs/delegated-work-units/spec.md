@@ -81,7 +81,7 @@ The normal direct-output verdict still proves only that the snapshot read at fir
 - **THEN** normal submit SHALL reject before success mutation
 - **AND** it SHALL not fall back to the legacy role normalizer or actor-declared contract data
 
-#### Scenario: Duplicate normal submit retains recorded contribution
+#### Scenario: duplicate normal submit does not depend on live artifact bytes
 
 - **WHEN** a normally submitted Wave0 work unit receives a same-result duplicate
   submit after its source file has changed
@@ -89,7 +89,10 @@ The normal direct-output verdict still proves only that the snapshot read at fir
   ledger bindings plus durable postconditions
 - **AND** it SHALL retain the original `source_contribution` rather than
   evaluate current bytes as a new accepted contribution
-#### Scenario: Declaration recovery does not reaccept candidate content
+- **AND** current artifact content SHALL remain the Wave inspect/Gate
+  responsibility
+
+#### Scenario: declaration recovery does not reaccept candidate content
 
 - **WHEN** recover-declaration restores an exact-reconstructable historical row
   for an already-submitted work ID
@@ -97,6 +100,14 @@ The normal direct-output verdict still proves only that the snapshot read at fir
   rereading live required-output content for a new verdict
 - **AND** recovery SHALL not advertise a new direct-contract acceptance time or
   contribution boundary
+
+#### Scenario: direct evaluation does not create artifact hash authority
+
+- **WHEN** first submit accepts a required-output snapshot
+- **THEN** the verdict SHALL state only that the evaluated snapshot passed at
+  that invocation
+- **AND** no ledger or index field other than the narrow `source_contribution`
+  declaration SHALL imply that later bytes are hash-bound by this change
 
 #### Scenario: Missing contribution witness fails closed
 

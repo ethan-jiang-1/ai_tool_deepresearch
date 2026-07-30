@@ -314,8 +314,49 @@ function parseCandidate(candidatePath) {
   }
 }
 
+function recommendationBasisFor(payload) {
+  if (payload.candidate_projection) {
+    return {
+      branch: 'candidate',
+      facts: { candidate_projection: payload.candidate_projection },
+    };
+  }
+  const latestProgress = payload.progress?.latest_engine_observed_progress_at;
+  if (payload.recommended_action === 'wait' && latestProgress && payload.effective_timeout_at) {
+    return {
+      branch: 'progress',
+      facts: {
+        latest_engine_observed_progress_at: latestProgress,
+        effective_timeout_at: payload.effective_timeout_at,
+      },
+    };
+  }
+  if (
+    (payload.recommended_action === 'wait' || payload.recommended_action === 'timeout')
+    && payload.lease_anchor_at
+    && payload.effective_timeout_at
+  ) {
+    return {
+      branch: 'lease',
+      facts: {
+        lease_anchor_at: payload.lease_anchor_at,
+        effective_timeout_at: payload.effective_timeout_at,
+      },
+    };
+  }
+  return {
+    branch: 'integrity',
+    facts: {
+      direct_issue: payload.inspect?.[0] || 'timeout preflight could not establish a safe claimed-attempt boundary',
+    },
+  };
+}
+
 function finalizePreflight(payload) {
-  return WorkUnitTimeoutPreflightSchema.parse(payload);
+  return WorkUnitTimeoutPreflightSchema.parse({
+    ...payload,
+    recommendation_basis: payload.recommendation_basis || recommendationBasisFor(payload),
+  });
 }
 
 export function timeoutPreflightWorkUnit(bundleDir, { work_id, resultPath = null, nowMs = Date.now() } = {}) {

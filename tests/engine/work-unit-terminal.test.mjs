@@ -77,6 +77,18 @@ topic_registry:
 ---
 # Plan
 `);
+  mkdirSync(path.join(dir, 'seed_topics'), { recursive: true });
+  writeFileSync(path.join(dir, 'seed_topics', 'topic-a.md'), `---
+topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
+id: "01"
+slug: topic-a
+title: Topic A
+must_answer: ["What matters?"]
+scope_role: primary
+depends_on_topic_uids: []
+---
+# Topic A
+`);
   let queue = createQueue(path.basename(dir));
   for (const item of items) queue = enqueue(queue, item);
   saveQueue(dir, queue);
@@ -716,6 +728,8 @@ describe('work-unit terminal attempts', () => {
       assert.equal(preflight.recommended_action, 'timeout');
       assert.equal(preflight.lease_anchor_at, record.claimed_at);
       assert.equal(preflight.progress.latest_engine_observed_progress_at, null);
+      assert.equal(preflight.recommendation_basis.branch, 'lease');
+      assert.equal(preflight.recommendation_basis.facts.effective_timeout_at, preflight.effective_timeout_at);
     } finally {
       cleanup(dir);
     }

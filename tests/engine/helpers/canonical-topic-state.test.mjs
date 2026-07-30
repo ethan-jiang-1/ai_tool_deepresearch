@@ -8,11 +8,14 @@ import { parse as parseYaml } from 'yaml';
 import { createTempDir } from '../../helpers/temp-dirs.mjs';
 import {
   applyCanonicalTopicState,
+  describeTopicApplyPlanSchema,
   evaluateCanonicalSeedBindings,
   inspectCanonicalTopicState,
+  projectTopicApplyValidationErrors,
   recoverCanonicalTopicState,
   SEED_TOPIC_PROJECTION_CARD_LABEL,
   SEED_TOPIC_PROJECTION_SLOTS,
+  TopicApplyPlanSchema,
 } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
 import { SEED_TOPIC_INITIALIZATION } from '../../../DPT_FRAMEWORK/engine/helpers/seed-topic-authoring-evaluator.mjs';
 import {
@@ -642,5 +645,42 @@ describe('canonical topic state', () => {
       assert.equal(applyCanonicalTopicState({ bundlePath: dir, input: invalid }).reason_code, 'input_invalid');
     }
     assert.throws(() => applyCanonicalTopicState({ bundlePath: dir, input: { ...directionOnly, actions: [{ ...directionOnly.actions[0], direction: directionCandidate({ count: 2 }) }] } }), /rerun direction count/);
+  });
+  it('derives parseable context authoring forms from the actual TopicApplyPlanSchema and projects only safe Zod feedback', () => {
+    const discoveredActions = new Map();
+    for (const context of ['hitl1', 'rerun', 'seed_topics', 'wave_projection']) {
+      const projection = describeTopicApplyPlanSchema(context);
+      assert.equal(projection.ok, true, JSON.stringify(projection));
+      assert.equal(projection.context, context);
+      assert.ok(projection.forms.length > 0);
+      discoveredActions.set(context, projection.forms.map((form) => form.action));
+      for (const form of projection.forms) {
+        assert.equal(TopicApplyPlanSchema.safeParse(form.template).success, true, JSON.stringify(form));
+        assert.ok(Array.isArray(form.required_fields));
+        assert.ok(Array.isArray(form.optional_fields));
+        assert.equal(typeof form.closed_values, 'object');
+        assert.equal(typeof form.value_shapes, 'object');
+      }
+    }
+    assert.ok(discoveredActions.get('rerun').includes('set_rerun_direction'), 'effect-wrapped rerun form must be verified by the top-level schema');
+    assert.ok(discoveredActions.get('wave_projection').includes('apply_seed_projection'));
+    const unknown = describeTopicApplyPlanSchema('not-a-declared-context');
+    assert.equal(unknown.ok, false);
+    assert.equal(unknown.reason_code, 'topic_apply_schema_context_unknown');
+
+    const invalid = TopicApplyPlanSchema.safeParse({ context: 'hitl1', actions: [] });
+    assert.equal(invalid.success, false);
+    const feedback = projectTopicApplyValidationErrors(invalid.error.issues);
+    assert.ok(feedback.validation_errors.length > 0);
+    assert.equal(feedback.primary_validation_path, feedback.validation_errors[0].path);
+    assert.equal(Object.hasOwn(feedback.validation_errors[0], 'received_value'), false);
+
+    const secret = 'do-not-echo-this-retained-value';
+    const enumInvalid = TopicApplyPlanSchema.safeParse({
+      context: 'hitl1',
+      actions: [{ action: 'add_topic', title: 'Topic', slug_stem: 'topic', must_answer: ['Question'], scope_role: secret }],
+    });
+    assert.equal(enumInvalid.success, false);
+    assert.doesNotMatch(JSON.stringify(projectTopicApplyValidationErrors(enumInvalid.error.issues)), new RegExp(secret));
   });
 });

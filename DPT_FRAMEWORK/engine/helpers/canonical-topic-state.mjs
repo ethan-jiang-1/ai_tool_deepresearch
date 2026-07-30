@@ -33,7 +33,7 @@ import {
 
 export const TOPIC_STATE_SCHEMA_VERSION = '1.1.0';
 export const TOPIC_STATE_ROOT = '_diagnostics/topic-state';
-export const TOPIC_STATE_OPERATIONS = Object.freeze(['inspect', 'apply', 'recover']);
+export const TOPIC_STATE_OPERATIONS = Object.freeze(['inspect', 'schema', 'apply', 'recover']);
 
 // @impl STM-001, RRM-002, RRM-003
 // The executable structural source for a Seed Topic's research-round appendix.
@@ -395,6 +395,324 @@ const ProjectionPacketSchema = z.object({
   }
 });
 export const TopicApplyPlanSchema = z.union([MigrationPlanSchema, MutationPlanSchema, LayoutPlanSchema, SeedEnrichmentPlanSchema, ProjectionPacketSchema]);
+
+const TOPIC_SCHEMA_OMIT = Symbol('topic-schema-omit');
+const TOPIC_SCHEMA_TYPES = z.ZodFirstPartyTypeKind;
+
+function topicSchemaType(schema) {
+  return schema?._def?.typeName || null;
+}
+
+// Effects are unwrapped only to describe the supported structural branch. The
+// actual top-level schema remains the sole source of refinement validation.
+function unwrapTopicSchemaStructure(schema) {
+  let current = schema;
+  while (topicSchemaType(current) === TOPIC_SCHEMA_TYPES.ZodEffects) current = current._def.schema;
+  return current;
+}
+
+function unwrapTopicSchemaOptional(schema) {
+  let current = schema;
+  while ([TOPIC_SCHEMA_TYPES.ZodOptional, TOPIC_SCHEMA_TYPES.ZodDefault].includes(topicSchemaType(current))) {
+    current = current._def.innerType;
+  }
+  return current;
+}
+
+function topicSchemaShape(schema) {
+  const unwrapped = unwrapTopicSchemaStructure(schema);
+  if (topicSchemaType(unwrapped) !== TOPIC_SCHEMA_TYPES.ZodObject) {
+    throw new Error(`unsupported topic-state structural form: ${topicSchemaType(unwrapped) || 'unknown'}`);
+  }
+  return unwrapped._def.shape();
+}
+
+function topicSchemaClosedValues(schema) {
+  const unwrapped = unwrapTopicSchemaOptional(unwrapTopicSchemaStructure(schema));
+  const type = topicSchemaType(unwrapped);
+  if (type === TOPIC_SCHEMA_TYPES.ZodLiteral) return [unwrapped._def.value];
+  if (type === TOPIC_SCHEMA_TYPES.ZodEnum) return [...unwrapped._def.values];
+  return null;
+}
+
+function topicSchemaActionForms(branch) {
+  const shape = topicSchemaShape(branch);
+  if (shape.action) {
+    const values = topicSchemaClosedValues(shape.action);
+    if (!values?.length) throw new Error('unsupported topic-state action form');
+    return values.map((action) => ({ action }));
+  }
+  const actions = unwrapTopicSchemaOptional(unwrapTopicSchemaStructure(shape.actions));
+  if (topicSchemaType(actions) !== TOPIC_SCHEMA_TYPES.ZodArray) throw new Error('unsupported topic-state actions form');
+  const variants = unwrapTopicSchemaStructure(actions._def.type);
+  if (topicSchemaType(variants) !== TOPIC_SCHEMA_TYPES.ZodDiscriminatedUnion) {
+    throw new Error('unsupported topic-state action union');
+  }
+  const forms = [];
+  for (const option of variants._def.options) {
+    const values = topicSchemaClosedValues(topicSchemaShape(option).action);
+    if (!values?.length) throw new Error('unsupported topic-state action discriminator');
+    for (const action of values) forms.push({ action });
+  }
+  return forms;
+}
+
+function topicSchemaPath(pathParts) {
+  if (!pathParts.length) return 'input';
+  return pathParts.reduce((result, part) => {
+    if (typeof part === 'number') return `${result}[${part}]`;
+    if (!result) return part;
+    return `${result}.${part}`;
+  }, '');
+}
+
+function topicSchemaFieldPath(pathParts) {
+  return topicSchemaPath(pathParts.map((part) => (typeof part === 'number' ? '[]' : part)))
+    .replace(/\.\[\]/g, '[]');
+}
+
+function topicSchemaStringExample(schema, state, pathParts) {
+  if (pathParts.at(-1) === 'entry_id') return state.entryId;
+  const regex = (schema._def.checks || []).find((check) => check.kind === 'regex')?.regex;
+  const source = regex?.source || '';
+  if (source.includes('wu-w')) return 'wu-w0-b001-a1-i0001';
+  if (source.includes('W2F-')) return 'W2F-001';
+  if (source.includes('[0-9a-f]{64}')) return '0'.repeat(64);
+  if (source.includes('a-z0-9')) return 'example-slug';
+  return 'example';
+}
+
+function topicSchemaNumberExample(schema) {
+  const minimum = (schema._def.checks || []).find((check) => check.kind === 'min')?.value;
+  return Number.isFinite(minimum) ? Math.max(minimum, 0) : 1;
+}
+
+function isFormActionPath(pathParts) {
+  return (pathParts.length === 1 && pathParts[0] === 'action')
+    || (pathParts.length === 3 && pathParts[0] === 'actions' && pathParts[1] === 0 && pathParts[2] === 'action');
+}
+
+function topicSchemaUnionOption(schema, state, pathParts) {
+  const options = [...(schema._def.options || [])];
+  if (!options.length) throw new Error('unsupported empty topic-state union');
+  if (topicSchemaType(schema) === TOPIC_SCHEMA_TYPES.ZodDiscriminatedUnion && schema._def.discriminator === 'action' && state.action) {
+    const selected = options.find((option) => topicSchemaClosedValues(topicSchemaShape(option).action)?.includes(state.action));
+    if (selected) return selected;
+  }
+  return options[0];
+}
+
+function topicSchemaExample(schema, state, pathParts = []) {
+  const type = topicSchemaType(schema);
+  if (type === TOPIC_SCHEMA_TYPES.ZodEffects) return topicSchemaExample(schema._def.schema, state, pathParts);
+  if (type === TOPIC_SCHEMA_TYPES.ZodOptional || type === TOPIC_SCHEMA_TYPES.ZodDefault) {
+    return state.includeOptional ? topicSchemaExample(schema._def.innerType, state, pathParts) : TOPIC_SCHEMA_OMIT;
+  }
+  if (type === TOPIC_SCHEMA_TYPES.ZodObject) {
+    const value = {};
+    for (const [key, child] of Object.entries(schema._def.shape())) {
+      const childValue = topicSchemaExample(child, state, [...pathParts, key]);
+      if (childValue !== TOPIC_SCHEMA_OMIT) value[key] = childValue;
+    }
+    return value;
+  }
+  if (type === TOPIC_SCHEMA_TYPES.ZodArray) {
+    const minimum = schema._def.minLength?.value ?? 1;
+    return Array.from({ length: Math.max(minimum, 1) }, () => topicSchemaExample(schema._def.type, state, [...pathParts, 0]));
+  }
+  if (type === TOPIC_SCHEMA_TYPES.ZodString) return topicSchemaStringExample(schema, state, pathParts);
+  if (type === TOPIC_SCHEMA_TYPES.ZodNumber) return topicSchemaNumberExample(schema);
+  if (type === TOPIC_SCHEMA_TYPES.ZodBoolean) return true;
+  if (type === TOPIC_SCHEMA_TYPES.ZodLiteral) return schema._def.value;
+  if (type === TOPIC_SCHEMA_TYPES.ZodEnum) {
+    if (topicSchemaPath(pathParts) === 'context') return state.context;
+    if (isFormActionPath(pathParts) && state.action) return state.action;
+    return schema._def.values[Math.min(state.enumIndex, schema._def.values.length - 1)];
+  }
+  if (type === TOPIC_SCHEMA_TYPES.ZodDiscriminatedUnion || type === TOPIC_SCHEMA_TYPES.ZodUnion) {
+    return topicSchemaExample(topicSchemaUnionOption(schema, state, pathParts), state, pathParts);
+  }
+  throw new Error(`unsupported topic-state schema node: ${type || 'unknown'}`);
+}
+
+function parseableTopicSchemaTemplate(branch, context, action) {
+  for (const includeOptional of [false, true]) {
+    for (const enumIndex of [0, 1]) {
+      for (const entryId of ['example', 'wu-w0-b001-a1-i0001/1', 'W2F-001']) {
+        const template = topicSchemaExample(branch, { context, action, includeOptional, enumIndex, entryId });
+        if (TopicApplyPlanSchema.safeParse(template).success) return template;
+      }
+    }
+  }
+  return null;
+}
+
+function topicSchemaValueShape(schema) {
+  const unwrapped = unwrapTopicSchemaOptional(unwrapTopicSchemaStructure(schema));
+  const type = topicSchemaType(unwrapped);
+  const names = {
+    [TOPIC_SCHEMA_TYPES.ZodString]: 'string',
+    [TOPIC_SCHEMA_TYPES.ZodNumber]: 'number',
+    [TOPIC_SCHEMA_TYPES.ZodBoolean]: 'boolean',
+    [TOPIC_SCHEMA_TYPES.ZodLiteral]: 'literal',
+    [TOPIC_SCHEMA_TYPES.ZodEnum]: 'enum',
+    [TOPIC_SCHEMA_TYPES.ZodObject]: 'object',
+    [TOPIC_SCHEMA_TYPES.ZodArray]: 'array',
+    [TOPIC_SCHEMA_TYPES.ZodUnion]: 'union',
+    [TOPIC_SCHEMA_TYPES.ZodDiscriminatedUnion]: 'discriminated_union',
+  };
+  if (!names[type]) throw new Error(`unsupported topic-state schema node: ${type || 'unknown'}`);
+  return names[type];
+}
+
+function collectTopicSchemaFields(schema, state, fields, pathParts = [], required = true) {
+  const type = topicSchemaType(schema);
+  if (type === TOPIC_SCHEMA_TYPES.ZodEffects) {
+    collectTopicSchemaFields(schema._def.schema, state, fields, pathParts, required);
+    return;
+  }
+  if (type === TOPIC_SCHEMA_TYPES.ZodOptional || type === TOPIC_SCHEMA_TYPES.ZodDefault) {
+    collectTopicSchemaFields(schema._def.innerType, state, fields, pathParts, false);
+    return;
+  }
+  if (pathParts.length) {
+    const field = { path: topicSchemaFieldPath(pathParts), shape: topicSchemaValueShape(schema), required };
+    const values = topicSchemaClosedValues(schema);
+    if (values) field.allowed_values = values;
+    fields.push(field);
+  }
+  if (type === TOPIC_SCHEMA_TYPES.ZodObject) {
+    for (const [key, child] of Object.entries(schema._def.shape())) {
+      collectTopicSchemaFields(child, state, fields, [...pathParts, key], required);
+    }
+  } else if (type === TOPIC_SCHEMA_TYPES.ZodArray) {
+    collectTopicSchemaFields(schema._def.type, state, fields, [...pathParts, 0], required);
+  } else if (type === TOPIC_SCHEMA_TYPES.ZodDiscriminatedUnion || type === TOPIC_SCHEMA_TYPES.ZodUnion) {
+    collectTopicSchemaFields(topicSchemaUnionOption(schema, state, pathParts), state, fields, pathParts, required);
+  }
+}
+
+function topicSchemaForm(branch, context, action, index) {
+  const template = parseableTopicSchemaTemplate(branch, context, action);
+  if (!template) return null;
+  const fields = [];
+  collectTopicSchemaFields(branch, { context, action }, fields);
+  const uniqueFields = [...new Map(fields.map((field) => [field.path, field])).values()];
+  return {
+    id: `${context}:${action}:${index + 1}`,
+    action,
+    required_fields: uniqueFields.filter((field) => field.required).map((field) => field.path),
+    optional_fields: uniqueFields.filter((field) => !field.required).map((field) => field.path),
+    closed_values: Object.fromEntries(uniqueFields.filter((field) => field.allowed_values).map((field) => [field.path, field.allowed_values])),
+    value_shapes: Object.fromEntries(uniqueFields.map((field) => [field.path, field.shape])),
+    template,
+  };
+}
+
+/**
+ * Derive a bounded authoring view from the supported current Zod branch graph.
+ * This is structural discovery only; final templates are admitted solely by the
+ * actual top-level TopicApplyPlanSchema.
+ */
+export function describeTopicApplyPlanSchema(context) {
+  try {
+    if (typeof context !== 'string' || !context) {
+      return { ok: false, reason_code: 'topic_apply_schema_context_unknown', reason: 'schema --context requires one declared context value' };
+    }
+    const root = unwrapTopicSchemaStructure(TopicApplyPlanSchema);
+    if (topicSchemaType(root) !== TOPIC_SCHEMA_TYPES.ZodUnion) throw new Error('unsupported TopicApplyPlanSchema root');
+    const branches = [...root._def.options];
+    const declaredContexts = [...new Set(branches.flatMap((branch) => topicSchemaClosedValues(topicSchemaShape(branch).context) || []))];
+    if (!declaredContexts.includes(context)) {
+      return { ok: false, reason_code: 'topic_apply_schema_context_unknown', reason: `unknown topic-state schema context: ${context}`, supported_contexts: declaredContexts };
+    }
+    const forms = [];
+    for (const [index, branch] of branches.entries()) {
+      const contexts = topicSchemaClosedValues(topicSchemaShape(branch).context) || [];
+      if (!contexts.includes(context)) continue;
+      for (const { action } of topicSchemaActionForms(branch)) {
+        const form = topicSchemaForm(branch, context, action, index);
+        if (form) forms.push(form);
+      }
+    }
+    if (!forms.length) throw new Error(`no parseable topic-state schema form for context ${context}`);
+    return {
+      ok: true,
+      schema_version: TOPIC_STATE_SCHEMA_VERSION,
+      operation: 'schema',
+      context,
+      supported_contexts: declaredContexts,
+      forms,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      reason_code: 'topic_apply_schema_configuration_invalid',
+      reason: error.message || String(error),
+    };
+  }
+}
+
+function validationPath(pathParts) {
+  if (!Array.isArray(pathParts) || pathParts.length === 0) return 'input';
+  return pathParts.reduce((result, part) => {
+    if (typeof part === 'number') return `${result}[${part}]`;
+    return result ? `${result}.${part}` : String(part);
+  }, '');
+}
+
+function selectTopicValidationIssues(issues) {
+  const candidates = issues.flatMap((issue) => issue?.code === 'invalid_union' && Array.isArray(issue.unionErrors)
+    ? issue.unionErrors.map((error) => error.issues || [])
+    : [[issue]]);
+  const score = (candidate) => candidate.reduce((total, issue) => {
+    const path = validationPath(issue?.path);
+    if (path === 'context' && ['invalid_literal', 'invalid_enum_value'].includes(issue?.code)) return total + 100;
+    if (issue?.code === 'unrecognized_keys') return total + 10;
+    return total + 1;
+  }, 0);
+  return candidates.sort((left, right) => score(left) - score(right))[0] || [];
+}
+
+function safeValidationMessage(issue) {
+  if (issue.code === 'invalid_type') return `Expected ${issue.expected}; received ${issue.received}.`;
+  if (issue.code === 'invalid_enum_value') return 'Value must be one of the allowed values.';
+  if (issue.code === 'invalid_literal') return 'Value must match the required literal.';
+  if (issue.code === 'too_small') return 'Value does not meet the declared minimum.';
+  if (issue.code === 'too_big') return 'Value exceeds the declared maximum.';
+  if (issue.code === 'unrecognized_keys') return 'Object contains unsupported fields.';
+  if (issue.code === 'invalid_string') return 'String does not meet the declared format.';
+  if (issue.code === 'custom') return 'Value violates a declared cross-field constraint.';
+  return 'Value does not satisfy the declared topic-state input schema.';
+}
+
+/** Project existing Zod issues without exposing retained input values or bytes. */
+export function projectTopicApplyValidationErrors(issues, { limit = 5 } = {}) {
+  const selected = selectTopicValidationIssues(Array.isArray(issues) ? issues : []);
+  const validation_errors = selected.slice(0, Math.max(1, Math.min(limit, 5))).map((issue) => {
+    const item = {
+      path: validationPath(issue.path),
+      code: issue.code || 'invalid_input',
+      message: safeValidationMessage(issue),
+    };
+    if (issue.code === 'invalid_type') {
+      item.expected_shape = issue.expected;
+      item.received_type = issue.received;
+    } else if (issue.code === 'invalid_enum_value') {
+      item.allowed_values = [...issue.options];
+    } else if (issue.code === 'invalid_literal') {
+      item.expected_value = issue.expected;
+    } else if (issue.code === 'too_small' || issue.code === 'too_big') {
+      item.expected_limit = issue.minimum ?? issue.maximum;
+      item.limit_type = issue.type;
+    }
+    return item;
+  });
+  return {
+    validation_errors,
+    primary_validation_path: validation_errors[0]?.path || 'input',
+  };
+}
 
 function hashBytes(value) { return createHash('sha256').update(value).digest('hex'); }
 function fsyncPath(filePath) { const fd = openSync(filePath, constants.O_RDONLY); try { fsyncSync(fd); } finally { closeSync(fd); } }
@@ -1271,14 +1589,17 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
   const parsed = TopicApplyPlanSchema.safeParse(input);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
+    const validation = projectTopicApplyValidationErrors(parsed.error.issues);
     return {
       schema_version: TOPIC_STATE_SCHEMA_VERSION,
       operation: 'apply',
       verdict: 'blocked',
       reason_code: 'input_invalid',
       repair_kind: 'agent_action',
-      coordinate: issue?.path?.join('.') || null,
+      coordinate: validation.primary_validation_path || issue?.path?.join('.') || null,
       reason: issue?.message || 'invalid topic-state input',
+      ...validation,
+      rerun: 'node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle <bundle-path> --input <input-path>',
       recommended_action: 'Correct the retained complete input and rerun this same apply checkpoint.',
     };
   }

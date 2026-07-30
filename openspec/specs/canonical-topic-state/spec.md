@@ -329,44 +329,106 @@ operation shape: `context: wave_projection`,
 be strict and SHALL NOT accept file paths, headings, token text, line numbers,
 raw Markdown, arbitrary patch/append instructions, or a request to mutate any
 surface other than the selected current seed document. Each entry SHALL bind to
-one submitted work identity for Wave0/1 or one exact current-round W2F finding
-identity for Wave2 whose accepted `affected_topics` resolution includes the
-packet `topic_uid`, SHALL render the slot descriptor's stable `entry_id`, and
-SHALL contain the accepted return-map fields or an explicit deferred disposition. A new
-Wave0/1 `entry_id` SHALL bind its exact submitted work ID plus positive ordinal;
-a new Wave2 `entry_id` SHALL equal its exact source `W2F-*` finding ID. The
-writer SHALL reject a mismatch before workspace creation and SHALL NOT require
-the W2F ID to be duplicated in the navigation `refs` field.
+one current submitted contribution/work identity for Wave0/1 or one exact
+current-round W2F finding identity for Wave2 whose accepted `affected_topics`
+resolution includes the packet `topic_uid`, SHALL render the slot descriptor's
+stable `entry_id`, and SHALL contain the accepted return-map fields or an
+explicit deferred disposition. A Wave0 entry ID SHALL equal the exact
+submission-owned global source ordinal returned by the shared contribution
+reader; a Wave1 entry ID SHALL bind its exact submitted work ID plus positive
+ordinal; and a Wave2 entry ID SHALL equal its exact source `W2F-*` finding ID.
+The writer SHALL reject a mismatch before workspace creation and SHALL NOT
+require the W2F ID to be duplicated in navigation `refs`.
 
 Projection apply SHALL be authorized only inside the existing route-bound,
-loaded current Wave phase and its normal pre-completion window: Wave0 requires
+loaded current Wave phase and normal pre-completion window: Wave0 requires
 `phases/phase-wave0.md` plus `seed_topics_ready` -> `wave0_complete`; Wave1
 requires `phases/phase-wave1.md` plus `wave0_complete` -> `wave1_complete`; and
 Wave2 requires `phases/phase-wave2.md` plus `wave1_complete` ->
 `wave2_complete`. Each row SHALL also require its existing route-bound handoff
 load witness. Projection apply SHALL verify current canonical UID/slug binding,
-selected Wave-to-slot ownership, direct submitted-row/finding identity
-eligibility (including current-round and target-topic binding for Wave2), one
-unique recognized target for every selected slot, and entry identity before
-workspace creation. Every slot selected by the packet SHALL have
-exactly one recognized target: its canonical heading/card or a declared legacy
-heading base under the accepted bounded suffix grammar. A partial or mixed layout
-from earlier legal upgrades is valid. A valid operation SHALL stage and
-atomically replace only that seed through the existing
-`_diagnostics/topic-state/<operation-id>/` workspace and existing `recover`; it
-SHALL NOT stage or replace `rb_plan.md`. Token consumption, identity upsert,
-card preservation, any allowed targeted legacy heading/card upgrade, and a
-post-write parser/readiness assertion SHALL be part of that same transaction. It
-SHALL NOT create submitted coverage, reference files, source claims, findings,
-receipt rows or completion trace.
+selected Wave-to-slot ownership, direct submitted-contribution/row/finding
+eligibility, one unique recognized target for every selected slot, entry
+identity, and the shared concrete-navigation rule before workspace creation.
+An evidence-bearing entry has no forward-reference success path: it SHALL name
+an existing safe concrete `reference/*.md` navigation target or use the
+existing explicit deferred form. A missing target SHALL return one writer-owned
+root with exact near-match candidates when the active reference namespace has
+them; it SHALL not write the packet and SHALL not ask the Agent to alter ledger
+or source authority.
 
-C5 SHALL widen only the accepted rerun witness class consumed by topic-state
-authorization. The post-final recovery helper SHALL own profile/reentry event
-mutation; existing `enter-phase`/`advance-status` SHALL retain node/status
-ownership; topic-state SHALL continue to own only plan/current seeds.
-Historical addendum adoption, when requested after successful C5 reentry, SHALL
-use existing explicit `migrate_legacy` semantics and SHALL NOT be performed by
-C5 or inferred from files.
+Every slot selected by a packet SHALL have exactly one recognized target: its
+canonical heading/card or a declared legacy heading base under the accepted
+bounded suffix grammar. A partial or mixed layout from earlier legal upgrades
+is valid. A valid operation SHALL stage and atomically replace only that seed
+through the existing `_diagnostics/topic-state/<operation-id>/` workspace and
+existing `recover`; it SHALL NOT stage or replace `rb_plan.md`.
+
+Before prepared publication, the staged selected slot family SHALL be read by
+the same structural entry parser used by readiness evaluation. Every preserved
+and newly written entry boundary in that family SHALL remain independently
+parseable; every selected `entry_id` SHALL occur exactly once; cards and
+unrelated entries SHALL remain present; and token consumption SHALL be exact.
+The writer SHALL preserve an explicit block separator on replacement or append.
+A parser/postcondition failure SHALL reject before workspace publication with
+one writer root rather than return `committed` and leave a later inspect to
+discover concatenated neighboring entries. Token consumption, identity upsert,
+card preservation, allowed targeted legacy heading/card upgrade, navigation
+validation, and this whole-slot postcondition SHALL be part of the same
+transaction. Projection apply SHALL NOT create submitted coverage, reference
+files, source claims, findings, receipt rows, completion trace, or profile
+projection.
+
+When a committed topic-state operation changes canonical registry length, its
+result SHALL expose one structured style-projection handoff identifying the
+existing `apply-research-style.mjs` owner, selected profile, committed topic
+count, exact legal command, and same readiness checkpoint. The handoff is
+direct feedback, not a profile write, new lifecycle state, or substitute for
+the style freshness verdict. No length change SHALL report a refresh
+obligation. C5 SHALL widen only the accepted rerun witness class consumed by
+topic-state authorization; the post-final recovery helper owns profile/reentry
+event mutation and `enter-phase`/`advance-status` retain node/status ownership;
+topic-state SHALL continue to own only plan/current seeds. Historical addendum
+adoption, when requested after successful C5 reentry, SHALL use existing
+explicit `migrate_legacy` semantics and SHALL NOT be performed by C5 or inferred
+from files.
+
+`operate-topic-state` SHALL expose a read-only `schema --context <context>`
+operation derived from the same accepted Zod input contracts used by `apply`.
+For every supported context it SHALL return a bounded authoring projection of
+the available action form(s), required and optional field paths, closed enum
+vocabulary, nested value shapes, and a parseable illustrative template. The
+projection visitor MAY unwrap an existing `ZodEffects` wrapper only to discover
+its inner structural branch; it SHALL NOT serialize, restate, or reimplement a
+refinement, transform, or cross-field rule. Every emitted illustrative template
+SHALL pass the actual top-level `TopicApplyPlanSchema`. If an unsupported or
+effect-dependent form cannot be structurally discovered and verified that way,
+the schema operation SHALL fail closed with one structured framework-
+configuration root and code `2`, rather than emit a partial or plausible
+template. It SHALL NOT create a second validator, infer a context from bundle
+state, claim that the selected lifecycle window is legal, or authorize an
+`apply` mutation.
+
+The only non-help topic-state forms SHALL be `inspect --bundle <bundle-path>`,
+`schema --context <context>`, `apply --bundle <bundle-path> --input
+<input-path>`, and `recover --bundle <bundle-path> --operation-id
+<operation-id>`. Required options occur exactly once; no positional arguments
+after the operation and no other option are accepted. An unknown context or
+invalid operation/invocation shape SHALL return one direct code-`2` invocation
+root before a bundle or workspace is read. A standalone `--help` or `-h` SHALL
+list `inspect`, `schema`, `apply`, and `recover` with their accepted arguments,
+exit `0`, and leave every bundle surface unchanged.
+
+When `apply` reaches the existing Zod input validator and input is invalid, its
+blocked result SHALL preserve the validator as the sole authority while adding
+bounded safe `validation_errors[]`. Each item SHALL include a stable field path,
+issue code/message, and only contract-safe expectation detail such as required
+shape, closed allowed values, or received value type; it SHALL not echo arbitrary
+input values, raw file bytes, or a stack trace. The result SHALL identify one
+primary validation path and the same `apply` checkpoint. It SHALL distinguish
+input repair from lifecycle/owner rejection: field-level input detail does not
+turn a missing reentry witness, forbidden writer, or unavailable mutation form
+into an Agent-writable path.
 
 #### Scenario: Packet uses the existing atomic writer
 
@@ -374,15 +436,66 @@ C5 or inferred from files.
   and pending-question slots of one current topic
 - **THEN** topic-state SHALL stage all three slot changes in one existing
   workspace transaction
-- **AND** an invalid slot, identity or entry SHALL prevent any partial seed
-  replacement
+- **AND** an invalid slot, identity, navigation target, or entry SHALL prevent
+  any partial seed replacement
 
+#### Scenario: Schema projection is discoverable but cannot authorize mutation
+
+- **WHEN** an Agent invokes `operate-topic-state schema --context seed_topics`
+  or another supported declared context
+- **THEN** the command SHALL return the context's Zod-derived authoring
+  projection without reading or writing a runtime bundle
+- **AND** the response SHALL not claim that an apply window, topic identity, or
+  writer authorization exists
+
+#### Scenario: Refined form is not advertised without real-schema verification
+
+- **WHEN** schema discovery reaches an existing effect-wrapped TopicApplyPlanSchema
+  form
+- **THEN** it MAY use the wrapped inner shape only for structural field discovery
+- **AND** it SHALL emit a template only after the actual top-level schema accepts
+  it, without reproducing the effect's cross-field rule
+- **AND** an unsupported or unverifiable form SHALL instead return one bounded
+  framework-configuration root with exit `2` and no bundle/workspace access
+
+#### Scenario: Invalid apply gives safe field-level feedback before workspace creation
+
+- **WHEN** a retained topic-state apply input supplies a scalar where a required
+  list is expected or an unsupported closed enum value
+- **THEN** the blocked result SHALL expose bounded `validation_errors[]` and a
+  primary field path from the existing validator
+- **AND** no workspace, plan/seed replacement, status, trace, ledger, or
+  profile mutation SHALL occur
+- **AND** the only repair loop SHALL remain correction of the retained input and
+  rerun of the same `apply` checkpoint
+
+#### Scenario: Help never evaluates topic state
+
+- **WHEN** `operate-topic-state.mjs --help` or `-h` is invoked
+- **THEN** it SHALL exit `0` after static operation help
+- **AND** it SHALL not parse an input file, inspect a bundle, create a workspace,
+  or mutate canonical state
 #### Scenario: Packet transaction does not rewrite plan authority
 
 - **WHEN** a valid Wave packet materializes a projection for one current topic
 - **THEN** its topic-state workspace manifest SHALL stage only that selected
   `seed_topics/<current-slug>.md` replacement
 - **AND** it SHALL NOT stage or replace `rb_plan.md`
+
+#### Scenario: Packet transaction does not rewrite profile authority
+
+- **WHEN** a valid Wave packet materializes a projection for one current topic
+- **THEN** its topic-state workspace manifest SHALL stage only that selected
+  `seed_topics/<current-slug>.md` replacement
+- **AND** it SHALL NOT stage or replace `rb_profile.yaml`
+#### Scenario: Wave0 entry uses its contribution-owned ordinal
+
+- **WHEN** an earlier accepted Wave0 source contribution owns global ordinals
+  `1..19` and a later accepted append contribution owns ordinal `20`
+- **THEN** a Wave0 packet SHALL accept `earlier-work-id/1..19` and
+  `later-work-id/20` only at their exact source identities
+- **AND** it SHALL reject a packet that assigns ordinal `20` to the earlier
+  work ID
 
 #### Scenario: Packet cannot select another Wave's slot
 
@@ -393,12 +506,30 @@ C5 or inferred from files.
 
 #### Scenario: Current authority identity is required
 
-- **WHEN** a Wave0/1 packet names a non-current or unsubmitted work ID, or a
+- **WHEN** a Wave0/1 packet names a non-current or unsubmitted identity, or a
   Wave2 packet names an absent, legacy-round, unusable, or other-topic W2F
   finding
 - **THEN** apply SHALL reject before workspace creation with that direct
   identity/authority root
 - **AND** it SHALL NOT treat a seed entry as evidence authority
+#### Scenario: Missing reference reports one actionable writer root
+
+- **WHEN** an evidence-bearing packet entry names
+  `reference/01-topic-source-01.md` that is absent while
+  `reference/01-topic-source-1.md` exists
+- **THEN** apply SHALL reject before workspace publication with the missing path
+  and the near-match candidate
+- **AND** it SHALL direct the Agent to the existing reference
+  materialization/selection surface and the same apply checkpoint
+
+#### Scenario: Existing malformed neighbor blocks publication
+
+- **WHEN** a selected slot contains an entry whose boundary cannot be
+  independently parsed after the proposed replacement
+- **THEN** apply SHALL reject before workspace publication with one writer
+  postcondition root
+- **AND** it SHALL not claim a committed packet or require an unrelated Wave
+  slot to be repaired
 
 #### Scenario: Projection authorization does not create a new lifecycle
 
@@ -414,11 +545,10 @@ C5 or inferred from files.
 
 - **WHEN** the same accepted packet is replayed, or Wave2 upserts a W2F entry
   in `pending_questions` after Wave1 entries exist
-- **THEN** replay SHALL leave the seed unchanged without duplicating entries or
-  re-injecting a consumed token
+- **THEN** replay SHALL leave the seed unchanged without duplicating entries,
+  concatenating the next entry, or re-injecting a consumed token
 - **AND** Wave2 SHALL preserve Wave1 entries and modify only the matching W2F
   identity
-
 #### Scenario: Legal packet atomically upgrades its declared legacy heading
 
 - **WHEN** an otherwise legal packet targets one or more owned slots represented
@@ -437,6 +567,22 @@ C5 or inferred from files.
 - **THEN** apply SHALL reject with one `seed_projection_layout_ambiguous` root
   before workspace creation
 - **AND** it SHALL not choose, rename or insert a card into any occurrence
+
+#### Scenario: Structured style handoff retains the existing writer
+
+- **WHEN** a committed topic-state mutation changes canonical registry length
+  in a legal HITL1 or rerun window
+- **THEN** its result SHALL expose the existing style CLI as the next owner with
+  the committed topic count and exact rerun checkpoint
+- **AND** topic-state SHALL not write, normalize, or infer
+  `research_style_params`
+
+#### Scenario: No length change does not invent style work
+
+- **WHEN** a projection packet, enrichment write, rename, or reorder leaves
+  registry length unchanged
+- **THEN** topic-state SHALL not emit a style refresh obligation
+- **AND** it SHALL not create a second lifecycle state or profile mutation
 
 #### Scenario: Unrecognized layout remains read-compatible but is not guessed
 

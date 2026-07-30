@@ -4,11 +4,12 @@ import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { applyCanonicalTopicState } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
-import { renderSuppliedControls } from '../../../DPT_FRAMEWORK/engine/helpers/plan-hostfile-sections.mjs';
+import { renderNoControls, renderSuppliedControls } from '../../../DPT_FRAMEWORK/engine/helpers/plan-hostfile-sections.mjs';
 import { kindContractForQueueItem } from '../../../DPT_FRAMEWORK/engine/work-unit-utils.mjs';
 
 const root = process.cwd();
 const instantiate = join(root, 'experiments_env/shared/new-disposable-bundle.mjs');
+const controlsCli = join(root, 'DPT_FRAMEWORK/cli/plan-hostfile-sections.mjs');
 const bundles = join(root, 'tests', '.test-bundles');
 const created = [];
 
@@ -44,5 +45,36 @@ describe('user research controls contract', () => {
     const contract = kindContractForQueueItem({ queue_item_id: 'q', task_brief: brief }, 'wave1_topic_deepening');
     assert.equal(contract.task_brief, brief);
     assert.equal(Object.hasOwn(contract, 'user_controls'), false);
+  });
+
+  it('renders controls through the pure CLI without selecting or writing a bundle', () => {
+    const path = bundle();
+    const planPath = join(path, 'rb_plan.md');
+    const before = readFileSync(planPath, 'utf8');
+
+    const none = spawnSync('node', [controlsCli, 'render-no-controls'], { encoding: 'utf8', timeout: 10000 });
+    assert.equal(none.status, 0, none.stderr || none.stdout);
+    assert.equal(none.stdout.trimEnd(), renderNoControls());
+
+    const snapshotPath = join(path, 'controls.txt');
+    const snapshot = 'Only primary sources.\n## Progress\n- [ ] literal\n中文 UTF-8';
+    writeFileSync(snapshotPath, snapshot);
+    const supplied = spawnSync('node', [controlsCli, 'render-supplied-controls', '--input', snapshotPath], { encoding: 'utf8', timeout: 10000 });
+    assert.equal(supplied.status, 0, supplied.stderr || supplied.stdout);
+    assert.equal(supplied.stdout.trimEnd(), renderSuppliedControls(snapshot));
+
+    const invalid = spawnSync('node', [controlsCli, 'render-supplied-controls'], { encoding: 'utf8', timeout: 10000 });
+    assert.equal(invalid.status, 2);
+    const unknown = spawnSync('node', [controlsCli, 'render-unknown'], { encoding: 'utf8', timeout: 10000 });
+    assert.equal(unknown.status, 2);
+    assert.equal(JSON.parse(unknown.stdout).error, 'invalid_invocation');
+    const duplicate = spawnSync('node', [controlsCli, 'render-supplied-controls', '--input', snapshotPath, '--input', snapshotPath], { encoding: 'utf8', timeout: 10000 });
+    assert.equal(duplicate.status, 2);
+    const mixedHelp = spawnSync('node', [controlsCli, '--help', 'render-no-controls'], { encoding: 'utf8', timeout: 10000 });
+    assert.equal(mixedHelp.status, 2);
+    const help = spawnSync('node', [controlsCli, '--help'], { encoding: 'utf8', timeout: 10000 });
+    assert.equal(help.status, 0, help.stderr || help.stdout);
+    assert.match(help.stdout, /render-supplied-controls --input/);
+    assert.equal(readFileSync(planPath, 'utf8'), before);
   });
 });
