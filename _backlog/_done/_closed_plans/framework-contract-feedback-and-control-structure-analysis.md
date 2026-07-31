@@ -1,7 +1,11 @@
 ---
 title: Framework Contract, Feedback, and Control-Shape Analysis
-status: analysis_only_no_change_proposed
+status: closed__analysis_consumed_by_cls_042__bug175_policy_remains_active
 created: 2026-07-29
+closed: 2026-07-31
+closed_as: CLS-043
+closure_basis: framework_contract_remediation_openspec_sequence_cls_042__c1_to_c5_archived__bug170_checkpoint_alignment_archived
+successor: framework-contract-remediation-openspec-sequence__CLS-042
 source_bugs:
   - BUG-143
   - BUG-146
@@ -38,6 +42,13 @@ source_bugs:
 ---
 
 # Framework Contract, Feedback, and Control-Shape Analysis
+
+> **关闭记录（2026-07-31，CLS-043）：** 本文的系统性诊断已由后继
+> `framework-contract-remediation-openspec-sequence`（CLS-042）拆解并完成 C1--C5、独立的
+> lifecycle feedback-loop，以及 BUG-170 的 actor/Gate checkpoint alignment。其覆盖的 31 张
+> 确定性/合同修复卡已归入 `_fixed_bugs/`。BUG-175 仍在活跃 bug 中等待用户质量政策决定；它是
+> 独立的 policy boundary，不是本 analysis 文档尚未完成的执行项。C5 available claim 与真实
+> Actor completion 继续保持 `NOT_RUN`，未被归档改写为成功。
 
 ## 1. 这份分析的结论
 

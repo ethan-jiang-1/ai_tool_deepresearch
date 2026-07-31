@@ -64,5 +64,6 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-040 | 2026-07-28 | deferred_conversation-capture-host-capabilities.md | Completed host-capability research: framework-owned Codex app-server, Claude Agent SDK, and stream-json integrations can own a ledger; externally launched native-client sessions remain best-effort observation only. No framework implementation task remains. |
 | CLS-041 | 2026-07-29 | dpt-routing-and-wave-contract-integrity.md | Archived routing entry hardening, Wave0 verdict disambiguation, and Wave1 direct closeout feedback. BUG-142's real Agent-flow classification remains separately pending. |
 | CLS-042 | 2026-07-31 | framework-contract-remediation-openspec-sequence.md | C1--C5、lifecycle feedback-loop 与 BUG-170 actor/Gate canary boundary alignment 均已 archive；C5 available claim 和真实 Actor completion 保持 honest `NOT_RUN`，BUG-175/184 为 accepted policy residual。 |
+| CLS-043 | 2026-07-31 | framework-contract-feedback-and-control-structure-analysis.md | 系统性 contract/feedback/control-shape 诊断已由 CLS-042 的 C1--C5 与 BUG-170 alignment 吸收；BUG-175 保持独立 active quality-policy decision。 |
 
-**Next available plan ID: CLS-043**
+**Next available plan ID: CLS-044**

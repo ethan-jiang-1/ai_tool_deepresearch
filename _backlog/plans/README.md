@@ -17,7 +17,6 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `framework-contract-feedback-and-control-structure-analysis` | 承接 BUG-143、146、148、150--160、162、170--186 的系统性架构诊断。将确定性 contract/evaluator 缺陷、Agent 可反馈的概率性产物错误、宿主/actor 观察和未决 recovery/quality 语义分开；不预设实现解法。 | analysis complete / awaiting bounded design decision |
 | `silent-autonomous-execution` | 承接 `source_bugs: BUG-099/104/106`（stop-no halt、context pollution、stop-no-violation-repeats）。独立 research backlog：把「静默自主」拆成 DPT 可确定性修复的 phase-entry correctness 与一般 coding-agent/host 是否发起下一 turn 的 actor liveness 两层，分开研究与证明。BUG-103 的入口 handoff guidance 已由 archived change 修复；其余仍 deferred 于核心 work-unit、evidence-production 与 Gate 路径稳定可跑之后。 | deferred research / scoping（无固定 OpenSpec change） |
 
 ---
@@ -27,6 +26,7 @@
 | Plan | 关闭依据 |
 |------|----------|
 | `framework-contract-remediation-openspec-sequence` | CLS-042：C1--C5、lifecycle feedback-loop 和 BUG-170 actor/Gate canary boundary alignment 均已 archive；C5 available claim 与真实 Actor completion 均诚实保留为 `NOT_RUN`，BUG-175/184 保持 accepted policy residual，不添加 controller。 |
+| `framework-contract-feedback-and-control-structure-analysis` | CLS-043：诊断已由 CLS-042 的 C1--C5、lifecycle feedback-loop 与 BUG-170 alignment 完成收敛；31 张修复卡已结案，BUG-175 保持独立活跃的质量政策决定。 |
 
 ---
 

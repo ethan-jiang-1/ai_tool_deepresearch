@@ -39,7 +39,7 @@ source_bugs:
 explored_mechanism: two-tier (derived consumption-boundary check + declared semantic-object card)
 recommendation: one OpenSpec-centered feedback loop — short AGENTS/CLAUDE routing, OpenSpec 1.7 artifact/operation guidance, persistent finding tasks, risk-led Agent review, supported-entry convergence, and a guarded governance finalizer around native archive (`08`)
 related:
-  - _backlog/plans/framework-contract-feedback-and-control-structure-analysis.md
+  - _backlog/_done/_closed_plans/framework-contract-feedback-and-control-structure-analysis.md
   - _backlog/_done/_closed_plans/framework-contract-remediation-openspec-sequence.md
 ---
 
