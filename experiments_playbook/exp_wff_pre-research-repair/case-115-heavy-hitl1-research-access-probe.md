@@ -16,7 +16,7 @@ fixture: setup_only
 runtime: real_disposable_bundle
 external_calls: real
 verdict_judge: deterministic
-req: SCO-002, PRP-002, PRP-005, PRG-002
+req: SCO-002, PRP-002, PRP-005, PRG-002, REA-002, REA-003
 not_run_if: "The independent authenticated Subject Agent runtime or required stable-ID public tool-use/result facts are unavailable to the deterministic observer."
 ---
 
@@ -29,6 +29,14 @@ not_run_if: "The independent authenticated Subject Agent runtime or required sta
 The Playbook Agent prepares fixed HITL1 choices at a legal HITL1 entry. Only the independent Subject Agent may perform the actual search/fetch probe, write `rb_profile.yaml#/research_access`, run the HITL1 Gate, and consume an available-branch handoff. The Playbook Agent must not run the probe itself or fabricate an available/unavailable observation.
 
 Both honest Subject branches satisfy the general actor claim. The Subject performs one neutral search and processes at most the first three syntactically eligible actual HTTP(S) results in returned order. For each candidate it tries native `WebFetch` first and, only when native returns no real page content and existing host permission independently allows it, at most one exact standalone same-URL `curl` fallback from the production surface. The first real content ends the entire sequence. A permission or no-legal-path boundary stops at the current candidate; no later candidate or fallback tier is allowed. The Subject writes one final profile observation: `eligible_candidate_count` and `final_candidate_ordinal` identify the bounded final candidate, while the no-candidate branch records count zero with `not_attempted` and no URL. Available means the successful surface is recorded in profile `available`, the same Gate passes and Setup handoff is consumed. Unavailable means the bounded sequence cannot legally return real content, profile `unavailable`, the same Gate fails and no Setup handoff occurs. Probe URL and bytes must not enter research evidence surfaces.
+
+For this Change, the Subject is launched through the selected generic
+`claude-deepseek.mjs` / `deepseek_anthropic_compatible` adapter with no caller-supplied
+permission-bypass option. The runner injects the selected adapter contract and retains
+that invocation declaration in the existing durable Subject prompt; the focused
+deterministic runner-argv test proves the recorded generic mode cannot contain a
+bypass option. A run that changes that permission mode is not evidence for this
+adapter's available-path claim.
 
 The optional fallback witness is separate from that general claim and applies only when the retained public Subject events expose the complete native-failure-to-curl branch. A first-candidate success is sufficient for the general claim; candidate-two/three behavior is never inferred when its public branch is absent. This case observes the configured Claude Subject runtime; it does not prove Codex behavior, and the deterministic observer does not fetch, re-judge arbitrary page bytes for semantic identity, or author profile/Gate success. Missing or contradictory provider-scoped public tool facts are `NOT_RUN`.
 

@@ -26,6 +26,15 @@ DEEPSEEK_MODEL=deepseek-v4-pro
 
 `.env` is provider configuration for the child Agent runtime. It is not experiment state. Agent Experiment paths and cross-tool-call bundle roles use explicit context files/arguments; caller/inherited env cannot override selected provider routing.
 
+## Selected HITL1 Research-Access Adapter
+
+`research-access-adapter.md` is the one Agent-readable contract for the selected
+Claude CLI / `deepseek_anthropic_compatible` HITL1 research-access host. It describes
+the generic non-bypass launcher invocation and the Agent-owned `WebSearch` -> returned
+URL -> same-URL `WebFetch` boundary. The launcher only starts the runtime; it neither
+performs the probe nor turns configuration, `--check`, or a fixture into access proof.
+The existing profile observation and HITL1 Gate remain the runtime authorities.
+
 ## Autorun Supervisor: `run-agent-experiment.mjs`
 
 This is the normal Agent Experiment Autorun entry. The Supervisor selects exact manifest paths, creates isolated case run roots, launches one real Headless Playbook Agent per case through the shared Agent CLI contract, validates native completion, runs declared health, writes durable audit/evidence/report records, and optionally removes clean PASS roots. It never executes Markdown steps or derives native PASS/FAIL from arbitrary trace checks.

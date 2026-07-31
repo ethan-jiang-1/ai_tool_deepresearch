@@ -24,6 +24,8 @@ import {
   createState,
   createWorkflowRuntime,
 } from '../../DPT_FRAMEWORK/engine/workflow-chain.mjs';
+import { SELECTED_RESEARCH_ACCESS_ADAPTER_PATH } from '../../DPT_FRAMEWORK/host_tools/lib/research-access-adapter.mjs';
+import { buildIterativeInteractionSubjectInvocation } from './iterative-interaction-subject-launch.mjs';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const LAUNCHER = join(REPO_ROOT, 'DPT_FRAMEWORK', 'host_tools', 'claude-deepseek.mjs');
@@ -406,40 +408,33 @@ const systemPrompt = [
   `The exact bundle path provided by the runner is: ${bundle}`,
   'The runner loaded the current production required closure plus the interaction brief below, read-only from the framework. Use it as the current Agent-facing control surface and inspect only direct bundle facts needed for the current turn.',
   `This is a bounded smoke proof. ${subject.boundary} Do not inspect framework source or unrelated repository guidance outside the injected surface.`,
+  subjectId === '115'
+    ? `<!-- DPT_SELECTED_RESEARCH_ACCESS_ADAPTER_START -->\n\n${readFileSync(SELECTED_RESEARCH_ACCESS_ADAPTER_PATH, 'utf8').trimEnd()}\n\n<!-- DPT_SELECTED_RESEARCH_ACCESS_ADAPTER_END -->`
+    : null,
   productionSurface.text,
-].join('\n\n');
+].filter(Boolean).join('\n\n');
 const evidenceStem = `case-${subjectId}`;
 const promptPath = join(bundle, `${evidenceStem}-subject-prompt.json`);
 const resultPath = join(bundle, `${evidenceStem}-subject-result.json`);
+const sessionId = randomUUID();
+const invocation = buildIterativeInteractionSubjectInvocation({
+  subjectId,
+  launcherPath: LAUNCHER,
+  settingsPath: SETTINGS_PATH,
+  tools: subject.tools,
+  sessionId,
+  systemPrompt,
+});
 writeFileSync(promptPath, `${JSON.stringify({
   subject: subjectId,
   system_prompt: systemPrompt,
   messages: subject.messages,
   tools: subject.tools,
   loaded_node: productionSurface.nodeRef,
+  ...(invocation.adapter_invocation ? { adapter_invocation: invocation.adapter_invocation } : {}),
 }, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
 const transcriptFd = openSync(transcriptPath, 'wx', 0o600);
-const sessionId = randomUUID();
-const claudeArgs = [
-  LAUNCHER,
-  '--settings', SETTINGS_PATH,
-  '--setting-sources', '',
-  '--bare',
-  '--disable-slash-commands',
-  '--no-chrome',
-  '--tools', subject.tools,
-  '--model', 'opus',
-  '--effort', 'low',
-  '--session-id', sessionId,
-  '--no-session-persistence',
-  '--dangerously-skip-permissions',
-  '--prompt-suggestions', 'false',
-  '--system-prompt', systemPrompt,
-  '-p',
-  '--input-format', 'stream-json',
-  '--output-format', 'stream-json',
-  '--verbose',
-];
+const claudeArgs = [LAUNCHER, ...invocation.claude_args];
 
 const child = spawn(process.execPath, claudeArgs, {
   cwd: REPO_ROOT,

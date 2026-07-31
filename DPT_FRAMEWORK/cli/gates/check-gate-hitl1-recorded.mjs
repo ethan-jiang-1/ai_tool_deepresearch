@@ -29,6 +29,7 @@ import {
   hasOnlyResearchStyleProjectionIssues,
   readResearchStyleDefinition,
 } from '../../engine/helpers/research-style-projection.mjs';
+import { selectedAdapterUnavailableFact, selectedAdapterUnavailableRoot } from '../../host_tools/lib/research-access-adapter.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
@@ -161,6 +162,8 @@ function profileSchemaFinding(rule, failure) {
 function researchAccessFinding(rule, failure) {
   const profileCoordinate = `${resolveFsPath(bundlePath, 'rb_profile.yaml')}#/research_access`;
   const unavailable = failure.accessStatus === 'unavailable';
+  const adapterRoot = unavailable ? selectedAdapterUnavailableRoot(failure.accessReason) : null;
+  const adapterFact = adapterRoot ? selectedAdapterUnavailableFact(adapterRoot) : null;
   return makeContractFinding({
     id: rule.id,
     ruleId: rule.id,
@@ -170,12 +173,18 @@ function researchAccessFinding(rule, failure) {
     surface: exactTarget(rule.target),
     expected: failure.expected,
     observed: failure.observed,
-    missingFact: failure.missingFact,
+    missingFact: adapterFact
+      ? `Selected research-access adapter recorded ${adapterFact.root} at ${profileCoordinate}/reason.`
+      : failure.missingFact,
     repairKind: unavailable ? 'external_action' : 'agent_action',
-    writeTo: unavailable
+    writeTo: adapterFact
+      ? `Selected adapter contract DPT_FRAMEWORK/host_tools/research-access-adapter.md (${adapterFact.owner}); direct fact at ${profileCoordinate}/reason`
+      : unavailable
       ? `External research-access prerequisite recorded at ${profileCoordinate}/reason`
       : profileCoordinate,
-    repair: unavailable
+    repair: adapterFact
+      ? adapterFact.repair
+      : unavailable
       ? 'Read research_access.reason, resolve or switch the unavailable search/fetch environment, then let the Agent rerun the real HITL1 probe.'
       : 'Run the real HITL1 search/fetch probe, record its direct result, and rerun this Gate.',
     detail: `[${rule.id}] ${failure.detail}`,
@@ -393,6 +402,9 @@ for (const rule of definition.rules) {
                 detail: `${rule.target}: expected "${rule.value}", got "${value}"`,
                 maskedByRuleId: parentRoot,
                 accessStatus: rule.id === 'research_access_available' ? value : null,
+                accessReason: rule.id === 'research_access_available' && typeof profile.value.research_access?.reason === 'string'
+                  ? profile.value.research_access.reason
+                  : null,
               };
               if (rule.id === 'hitl1_status_recorded') maskedRuleIds.add('hitl1_recorded_at_non_empty');
             }

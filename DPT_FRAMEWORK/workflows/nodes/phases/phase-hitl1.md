@@ -121,6 +121,13 @@ topic_registry:
 
 ### 3d. Research Access Probe（进入 silent waves 前的能力确认）
 
+开始本节前，Agent MUST 读取 `DPT_FRAMEWORK/host_tools/research-access-adapter.md`。当前唯一选择是
+`claude-deepseek.mjs` 启动的 Claude CLI / `deepseek_anthropic_compatible` host；该 contract 的
+generic invocation 没有 caller-supplied permission bypass。它声明 Agent 已可使用的 native
+`WebSearch` / `WebFetch` surface，而不是让 Agent 在 bundle 内启动 launcher、选择另一个 provider、
+把 launcher `--check` 当 capability proof，或向用户索要 pipeline command。用户的 HITL1 semantic
+decision 已记录且 declared native operation 可用时，Agent 直接执行本节 probe，不再请求第二次确认。
+
 已提交 topic-state 的 required style handoff 完成后，Agent MUST 使用当前环境的实际 search/fetch surfaces 执行一个短而固定的 capability probe。`execution_contract.search_policy: capability_probe_only` 只授权这个 probe；它不授权 research evidence collection、work-unit delegation 或 Wave work。
 
 **固定顺序：**
@@ -148,6 +155,10 @@ topic_registry:
     reason: <direct non-empty reason>
     eligible_candidate_count: 0
   ```
+  当 selected adapter 没有 callable `WebSearch` / `WebFetch` 时，`reason` MUST 以
+  `surface_absent:` 开头；当 selected host policy 拒绝 declared operation 时，`reason` MUST 以
+  `permission_required:` 开头。两个 prefix 都只是在 existing direct reason 内暴露 external root，
+  不增加 profile field、Gate 或 retry authority。
 - 当前 candidate 在 native fetch 返回 requested real page content：
   ```yaml
   research_access:
@@ -168,7 +179,7 @@ topic_registry:
 
 **权限边界：** Native failure does not authorize shell/network access，也不授权绕过 policy。已独立配置的 host permission 足够时，fallback/write/Gate 是 Agent-owned mechanics：不得要求用户运行 `curl`、确认继续或代跑 pipeline，也不得静默扩大 committed project config。若 `curl`/network permission 缺失、target 不合格、binary 不存在或 fallback 失败，先记录 honest unavailable，只暴露最小 permission/external-environment prerequisite；用户同意本身不能把失败或缺失的 page content 变成 success。
 
-**Unavailable recovery：** 保留已记录的 `research_profile`、`root_must_answer_set`、style params 和 `hitl1.status: recorded`。明确告诉用户当前环境无法启动 evidence-backed waves；最小外部前置条件解决后，由 Agent 重跑本节同一 bounded probe 和同一 gate，不要求用户重复回答 HITL1 choices。在 probe 与 gate 成功前不得进入 Setup。
+**Unavailable recovery：** 保留已记录的 `research_profile`、`root_must_answer_set`、style params 和 `hitl1.status: recorded`。`surface_absent:` 指向 selected Claude host 的 callable tool surface，`permission_required:` 指向 selected host policy；两者都由当前 adapter contract 解释。明确告诉用户当前环境无法启动 evidence-backed waves；最小外部前置条件解决后，由 Agent 重跑本节同一 bounded probe 和同一 gate，不要求用户重复回答 HITL1 choices，也不要求用户运行 `curl` 或手改 profile。在 probe 与 gate 成功前不得进入 Setup。
 
 **Evidence boundary：** Probe URL、page content 和 tool output SHALL NOT 写入或计入 `reference/`、`_cache/`、`artifacts/`、work-unit output/result/receipt、`rb_work_unit_ledger.jsonl`、`rb_output_declarations.jsonl` 或任何 Wave coverage/count floor。
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.65
+
+- HITL1 now names one selected Claude CLI / `deepseek_anthropic_compatible`
+  research-access adapter. The Phase Agent owns the bounded native
+  `WebSearch` -> returned URL -> same-URL `WebFetch` probe; the generic host bridge
+  remains non-bypass and does not become a research controller.
+- `surface_absent:` and `permission_required:` remain direct unavailable profile
+  observations. The existing HITL1 Gate projects their selected-host boundary and
+  reruns the same probe/Gate without creating another checker, Setup route, provider
+  fallback, or research-evidence authority.
+- Case 115 now uses that same generic non-bypass invocation. Its retained Subject
+  trace is provider-scoped, and an unavailable or permission-denied outcome is not
+  represented as selected-adapter availability proof.
+
 ## v0.64
 
 - Work-unit inspect and submit preflight now expose one derived attempt disposition from the exact logical actor, work/queue IDs, receipt nonce, assigned result/receipt coordinates, transaction fact, and ledger-first coverage relation. The binding guides Agent Flow; it does not authenticate a physical writer or prove host/sub-agent liveness.

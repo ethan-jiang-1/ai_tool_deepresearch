@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @impl PRP-002, PRP-005
+// @impl PRP-002, PRP-005, REA-002, REA-003
 
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
@@ -8,6 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { parse as parseYaml } from 'yaml';
 
 import { createTrace } from '../../DPT_FRAMEWORK/engine/trace.mjs';
+import { validateSelectedAdapterSameUrlBinding } from '../../DPT_FRAMEWORK/host_tools/lib/research-access-adapter.mjs';
 import { recordCheck } from './wff-playbook-utils.mjs';
 
 const [caseId, action, ...rest] = process.argv.slice(2);
@@ -372,12 +373,19 @@ function record115(events) {
   const finalNative = nativeUses[finalNativeIndex];
   const finalNativeResult = nativeResults[finalNativeIndex];
   const finalCurl = nativeToCurl.get(finalNativeIndex);
+  const selectedBinding = !noCandidate && finalNative
+    ? validateSelectedAdapterSameUrlBinding({
+      candidateUrl: candidates[finalNativeIndex],
+      fetchTargetUrl: finalNative.value.input.url,
+      resultUrl: access.result_url,
+    })
+    : null;
   const availableNative = !noCandidate && sequenceValid && nativeUses.length === count && hasRealContent(finalNativeResult)
     && access.status === 'available' && access.fetch_outcome === 'success' && typeof access.fetch_surface === 'string' && access.fetch_surface !== 'curl'
-    && attempt?.passed === true && setupLoad;
+    && selectedBinding?.same_url_bound === true && attempt?.passed === true && setupLoad;
   const availableCurl = !noCandidate && sequenceValid && nativeUses.length === count && !hasRealContent(finalNativeResult)
     && finalCurl && hasRealContent(finalCurl.result) && access.status === 'available' && access.fetch_outcome === 'success'
-    && access.fetch_surface === 'curl' && attempt?.passed === true && setupLoad;
+    && access.fetch_surface === 'curl' && selectedBinding?.same_url_bound === true && attempt?.passed === true && setupLoad;
   const unavailableSearch = noCandidate && sequenceValid && access.status === 'unavailable' && access.reason
     && attempt?.passed === false && !setupLoad;
   const unavailableNoFetch = !noCandidate && sequenceValid && nativeUses.length === count - 1
@@ -393,7 +401,7 @@ function record115(events) {
   recordCheck(tracePath, {
     gate: 'hitl1-research-access-probe',
     passed: Boolean(availableNative || availableCurl || unavailableSearch || unavailableNoFetch || unavailableCurl || unavailableNoCurl),
-    detail: JSON.stringify({ availableNative, availableCurl, unavailableSearch, unavailableNoFetch, unavailableCurl, unavailableNoCurl }),
+    detail: JSON.stringify({ availableNative, availableCurl, unavailableSearch, unavailableNoFetch, unavailableCurl, unavailableNoCurl, selectedBinding }),
   });
   recordCheck(tracePath, { gate: 'probe-evidence-boundary', passed: leaks.length === 0, detail: JSON.stringify(leaks) });
 

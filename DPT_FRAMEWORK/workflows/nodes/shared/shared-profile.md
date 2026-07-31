@@ -53,6 +53,7 @@ suggested_context:
   - `available`：`probed_at`、HTTP(S) `result_url`、`fetch_outcome: success`，可选 `search_surface` / `fetch_surface`
   - `unavailable`：`probed_at`、`fetch_outcome: failed|blocked|not_attempted`、非空 `reason`，可选 `result_url` / surface fields
 - **authority**：只记录直接 probe observation，不是研究 evidence，也不证明未来 invocation 永远可用
+- **selected adapter roots**：当前 HITL1 adapter 由 `DPT_FRAMEWORK/host_tools/research-access-adapter.md` 声明。该 adapter 无 callable native surface 时，`reason` 以 `surface_absent:` 开头；selected host policy 拒绝时，`reason` 以 `permission_required:` 开头。它们仍是现有 `reason` 的直接 observation，不是新 field、provider selection、permission grant 或 Gate authority。
 
 ### `research_style_params`
 

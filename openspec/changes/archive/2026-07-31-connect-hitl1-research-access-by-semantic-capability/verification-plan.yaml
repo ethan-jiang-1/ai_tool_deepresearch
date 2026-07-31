@@ -1,0 +1,125 @@
+schema_version: verification-routing/v1
+change: connect-hitl1-research-access-by-semantic-capability
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Adapter declaration parsing, unavailable root normalization, and same-probe URL
+      pairing are bounded deterministic contracts that need fail-closed coverage without
+      a runtime bundle or external provider.
+  integration:
+    status: selected
+    rationale: >-
+      HITL1 phase guidance, profile observation writing, and existing Gate feedback
+      must be checked together through production entrypoints and temporary bundles,
+      without making an external provider call.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      A disposable bundle must prove the complete selected-unavailable
+      loop from retained HITL1 semantics through the unchanged Gate/no-advance path.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      Only an authorized concrete provider runtime can establish the external claim that
+      a real Agent received a candidate URL and fetched real content from that same URL.
+claims:
+  - id: adapter-contract-and-url-binding
+    statement: >-
+      REA-001 and REA-002: the selected Claude CLI / `deepseek_anthropic_compatible`
+      adapter uses only the generic non-bypass launcher mode, exposes its named
+      search/fetch semantic boundary, normalizes absent-surface/permission roots, and
+      rejects a fetch target that is not the current search-returned candidate without
+      any bundle mutation or available observation.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/host_tools/research-access-adapter.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: case-115-runner-uses-selected-generic-permission-mode
+    statement: >-
+      REA-001 and REA-003: the case-115 Subject runner constructs the selected
+      generic Claude CLI / `deepseek_anthropic_compatible` invocation without a
+      caller-supplied permission-bypass option, so a real case-115 trace is not
+      paired with a stronger privileged launch mode.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/experiments_env/case-115-subject-runner.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl1-guidance-and-gate-project-direct-adapter-root
+    statement: >-
+      PRP-015 and PRG-010: production HITL1 guidance keeps semantic confirmation,
+      adapter invocation, direct profile observation, and same-Gate rerun distinct;
+      temporary bundles with surface_absent and permission_required observations expose
+      the existing blocking rule and no Setup
+      route without user-run commands, a second checker, or a profile hand edit.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/hitl1-research-access-adapter.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: unavailable-loop-preserves-hitl1-and-evidence-boundary
+    statement: >-
+      REA-002, REA-003, PRP-015, and PRG-010: a fresh deterministic bundle traverses
+      recorded HITL1 semantics and an unavailable selected-adapter observation,
+      retains the user decision, profile-only access fact, unchanged no-advance
+      routing, and no probe leakage into evidence/cache/work-unit surfaces. It does
+      not claim an external provider call occurred.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/hitl1-research-access-adapter.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: selected-provider-establishes-same-url-available-observation
+    statement: >-
+      REA-002 and REA-003: in the selected generic non-bypass Claude CLI /
+      `deepseek_anthropic_compatible` runtime, an independent real Subject Agent runs
+      one neutral search, retains a candidate URL
+      returned by that search, fetches real requested-page content from that same URL,
+      records the existing available profile observation, and reaches the existing
+      HITL1 Gate route. This proof is provider- and host-scoped; unavailable or
+      permission-denied execution is NOT_RUN for this available claim, not success.
+      Case-115's broader bounded-probe verdict may pass that honest unavailable
+      branch and SHALL NOT be cited as this claim's PASS without the retained
+      available same-URL trace facts.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wff_pre-research-repair/case-115-heavy-hitl1-research-access-probe.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

@@ -74,6 +74,7 @@ prefixes:
   PRG: pre-research-gate-implementation
   PRP: pre-research-phase-content
   QIV: queue-input-validation
+  REA: research-access-adapter
   REF: reference-flat-format
   REI: rerun-incremental-node
   RPG: relay-provenance-gate       # all entries deprecated; no spec directory; replacement WPG
@@ -574,6 +575,7 @@ PRG-006: pre-research-gate-implementation — Gate CLI evaluates setup rules fro
 PRG-007: pre-research-gate-implementation — Gate JSON feedback and playbook verdict checks retain distinct owners in the root trace
 PRG-008: pre-research-gate-implementation — Gate audit and experiment verdict events share rb_trace.jsonl without sharing authority
 PRG-009: pre-research-gate-implementation — HITL1 recorded gate status rules (status_current_gate and status_next_gate added to gate-hitl1-recorded.definition.json)
+PRG-010: pre-research-gate-implementation — HITL1 unavailable access feedback names the selected adapter boundary and same-probe rerun
 PRP-001: pre-research-phase-content — Phase instantiation body completeness (9-section body, real CLI shape, scope boundary)
 PRP-002: "pre-research-phase-content — Phase HITL1 body completeness and stop semantics (stop: yes, payload checklist, writes to profile)"
 PRP-003: "pre-research-phase-content — Phase setup body completeness and stop semantics (stop: no, structural consistency, not readiness)"
@@ -588,6 +590,7 @@ PRP-011: pre-research-phase-content — HITL1 atomically materializes approved c
 PRP-012: pre-research-phase-content — HITL1 captures optional user research controls in one bounded host-file snapshot without creating profile or lifecycle authority
 PRP-013: pre-research-phase-content — Seed, Wave, and Final guidance consume the original user-controls host-file coordinate and preserve existing conflict/limitation paths
 PRP-014: pre-research-phase-content — HITL1 captures user controls before canonical topic-state apply so the committed host-file snapshot survives topic-state recovery
+PRP-015: pre-research-phase-content — HITL1 uses one selected semantic adapter without treating user confirmation as host capability permission
 
 # wff-research-waves / research-wave-phase-content
 RWP-001: research-wave-phase-content — Wave0 phase body completeness (9-section, foundation shared reference collection, ReferenceMetadata schema)
@@ -844,6 +847,11 @@ URC-002: user-research-controls — User controls guide Agent research judgment 
 URC-003: user-research-controls — HITL1 local-file convenience is snapshot-only and bounded to intended shareable material
 SCO-012: schema-core — stripMdFrontmatter() extracts body from Markdown (inverse of parseMdFrontmatter)
 RWG-014: research-wave-gate-implementation — setup-ready gate validates plan body content (non-empty + no unfilled required-fill markers)
+
+# research-access-adapter
+REA-001: research-access-adapter — One selected adapter declares semantic search and same-URL fetch facts
+REA-002: research-access-adapter — Adapter execution preserves bounded probe order and direct unavailable boundaries
+REA-003: research-access-adapter — Adapter availability evidence remains provider-scoped and outside research evidence authority
 
 # research-styles
 RES-001: research-styles — Research style JSON definition files under DPT_FRAMEWORK/schema/research-styles/
