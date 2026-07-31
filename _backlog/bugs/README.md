@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-07-29 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-07-31 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -15,37 +15,28 @@
 
 ## 活跃列表
 
-> **当前优先级：没有已验证的活跃 P1 implementation defect。** 先通过真实 bundle 让 work-unit、evidence-production 与 Gate 路径稳定、可重复运行；只对由该运行产生的 fresh direct root 提出下一个 change。下表的 P2/P3 卡不能替代这项运行证据。
+> **当前优先级：没有已验证的活跃 framework implementation defect。** BUG-099/104/106 等待真实
+> Agent-flow observation；BUG-175 等待用户的质量政策决定。它们都不能替代新的 bundle direct root。
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
 | [BUG-099](BUG-099-stop-no-agent-halted-at-wave0.md) | P2 | wave0 | deferred operability：`stop: no` phase agent 在 wave0 主动停下，当前可由一次用户续跑恢复，不阻塞核心 bundle contract 可达性 |
 | [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | enter-phase 每次渲染完整 shared context 造成累积 context 压力 |
 | [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P2 | wave0→wave1 | deferred operability：agent 输出总结而未执行下一 phase，当前可由一次用户续跑恢复 |
-| [BUG-143](BUG-143-hitl1-research-access-host-surface-gap.md) | P2 | hitl1 | HITL1 将 Claude 的 WebSearch/WebFetch 名称当成隐含能力入口，缺少 Codex 等价 search/fetch Adapter，导致 access Gate 在 Setup 前阻断 |
-| [BUG-146](BUG-146-wave0-reference-return-map-contract-collision.md) | P2 | wave0 | Rich shared reference 只满足 reference contract，却被 Wave0 inspect 当成 return-map 文档强制缺失五个 entry 字段，阻断 closeout |
-| [BUG-148](BUG-148-concurrent-work-unit-submit-lock-surface.md) | P2 | wave0 | 并行 formal submit 遇到单锁只返回裸 `.lock`/`EEXIST`，没有 structured retry，导致 claimed lease 过期级联 |
-| [BUG-150](BUG-150-wave0-inspect-help-treated-as-bundle.md) | P2 | wave0 | `inspect-wave0-output --help` 被当成 bundle 路径，返回误导性的 topic-registry 业务 blocker 而不是调用错误 |
-| [BUG-151](BUG-151-wave0-supplement-live-source-array-provenance-drift.md) | P2 | wave0 | supplementary append 改变历史 source.yaml 的 live cardinality，inspect 要求把新候选错误归属给旧 work ID |
-| [BUG-152](BUG-152-wave0-topic-state-projection-upsert-concatenates-entries.md) | P2 | wave0 | topic-state projection upsert 粘连相邻 entry，导致合法 Seed Topic projection 被解析成缺字段 |
-| [BUG-153](BUG-153-operate-topic-state-opaque-validation.md) | P1 | hitl1, seed-topics | operate-topic-state apply Zod 校验失败只返回 "Invalid input"，无字段级错误详情，Agent 必须 grep Engine 源码才能发现 schema |
-| [BUG-154](BUG-154-seed-body-duplication-after-edit.md) | P2 | seed-topics | seed topic 文件经 Agent Edit 后残留旧 template pending 内容，body 出现重复段落（enrichment + old ghost） |
-| [BUG-155](BUG-155-plan-hostfile-sections-missing.md) | P2 | hitl1 | phase-hitl1.md 引用的 `plan-hostfile-sections.mjs` CLI 不存在，对应模块只在 `engine/helpers/` 下 |
-| [BUG-156](BUG-156-enter-phase-output-overload.md) | P2 | 跨 phase | enter-phase 拼接所有 shared 文件输出 36KB+，continuation cue 被淹没，每次 phase 切换需额外 Read |
-| [BUG-157](BUG-157-research-style-params-stale-pre-topic.md) | P2 | hitl1 | research_style_params 在 topic_count=0 时首次计算，topic-state apply 后仅靠 follow_up 字符串提醒重算 |
-| [BUG-158](BUG-158-operate-topic-state-context-dependent-schema.md) | P1 | hitl1, seed-topics | operate-topic-state apply 的 JSON schema 随 context 字段切换（hitl1/seed_topics/wave_projection），零可发现性 |
-| [BUG-159](BUG-159-advance-status-ordering-contract.md) | P3 | setup, seed-topics | advance-status 必须在 gate 前运行，但 phase 文档只记录 enter-phase 后的执行顺序，导致每 phase 多 1 次 repair |
-| [BUG-160](BUG-160-no-help-output-for-engine-clis.md) | P3 | 跨 phase | operate-topic-state 和 operate-queue CLI 无 --help/usage 输出，拒绝 --help 为 invalid_invocation |
-| [BUG-162](BUG-162-wave1-artifact-return-map-parser-collision.md) | P1 | wave1 | `inspectWaveArtifactReturnMaps` 对 wave1 `evidence-summary.md`/`question-list.md` 套用 Seed return-map 语法，标准已提交 artifact 因字段缺失被阻断（Wave1 版 BUG-134；`return-map.mjs:1087-1093`） |
-| [BUG-170](BUG-170-wave0-subagent-deadlock.md) | P1 | wave0 | **CCDS4** dpt-source-intake sub-agent 在 work_started/fetch_batch_started 停滞，不产出 result.json；Phase Agent 被迫手动写所有 artifact |
-| [BUG-171](BUG-171-claim-actor-reason-code-opaque.md) | P1 | wave0 | **CCDS4** operate-work-unit claim 的 reason_code 必须精确匹配 enum，错误信息虽列出合法值但埋在 nested JSON 深处 |
-| [BUG-172](BUG-172-reference-yaml-frontmatter-rejected.md) | P2 | wave0 | **CCDS4** reference .md 文件的 YAML frontmatter 被 inspect 拒绝——只允许纯 prose body，与 seed_topics 格式矛盾 |
-| [BUG-173](BUG-173-cache-trail-requirements-undocumented.md) | P2 | wave0 | **CCDS4** cache trail 要求（websearch.json+page.md+meta.json 每个 dir）在 task.md 中被合同语言淹没 |
-| [BUG-174](BUG-174-phase-agent-subagent-result-collision.md) | P2 | wave0 | **CCDS4** Phase Agent 提前 submit 后，sub-agent 完成时遭遇 "already submitted"——更丰富的 sub-agent 产出被丢弃 |
 | [BUG-175](BUG-175-count-floors-as-absolute-gate-blockers.md) | P2 | wave0 | **CCDS4** per_topic=10 + shared_ref=9 是硬 blocker，无 degradation 路径；exploratory_map 实际需要 59 个 source 条目 |
-| [BUG-176](BUG-176-seed-projection-entry-ref-validation.md) | P2 | wave0 | **CCDS4** projection entry refs 必须指向已存在的文件——命名细微差异（1 vs 01）导致所有 projection apply 级联失败 |
-| [BUG-177](BUG-177-timeout-preflight-ambiguous-recommendations.md) | P3 | wave0 | **CCDS4** timeout-preflight 对相似状态的 work unit 给出矛盾建议（submit vs wait），无诊断解释 |
-| [BUG-178](BUG-178-check-reentry-phase-owned-reference-audit-gap.md) | P2 | wave0→wave1 reentry | check-reentry 仍要求 Phase-owned submitted-backed reference 直接出现在 delegated ledger，阻断合法 closeout 后的 reentry audit |
+
+## 最近关闭 (2026-07-31)
+
+以下记录已移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)：
+
+| Bug | 结案依据 |
+|-----|----------|
+| BUG-143 | `connect-hitl1-research-access-by-semantic-capability` 已 archive（`44bf1fe58`）：DPT 的 semantic adapter、same-URL binding 和 honest unavailable path 已交付；selected host 的 available claim 保持 `NOT_RUN`。 |
+| BUG-146 / BUG-162 / BUG-172 / BUG-178 | `converge-artifact-contract-evaluators` 已 archive：reference、Wave artifact、Seed projection 与 reentry 使用各自正确的 evaluator/authority scope。 |
+| BUG-151 / BUG-152 / BUG-154 / BUG-157 / BUG-176 | `make-canonical-topic-state-projections-coherent` 已 archive：canonical writer、current contribution、template body、style freshness 和 projection navigation 都有单一合法路径。 |
+| BUG-150 / BUG-153 / BUG-155 / BUG-156 / BUG-158 / BUG-159 / BUG-160 / BUG-171 / BUG-173 / BUG-177 / BUG-183 / BUG-184 | `make-agent-operation-contracts-direct` 已 archive（`177275226`）：Engine 直接 feedback、bounded entry、generated Completion Contract 与 batch omission feedback 已收敛；BUG-184 的 coverage policy 本身仍是独立用户决策。 |
+| BUG-148 / BUG-174 / BUG-179 / BUG-180 / BUG-181 / BUG-182 / BUG-185 / BUG-186 | `make-work-unit-attempt-recovery-explicit` 已 archive（`9d87b5b52`）：attempt ownership、contention、integrity recovery、successor lineage 和 submit preflight 已有唯一 legal path。 |
+| BUG-170 | `align-real-actor-canary-checkpoint-boundaries` 已 archive（`116e4087d`）：actor-only canary 不再把未建立的 Phase Gate 当作 handoff failure；host/model completion 保持 `NOT_RUN`，不添加 controller。 |
 
 ### 本批次模型与归因说明（2026-07-29）
 
@@ -88,7 +79,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 
 > BUG-099/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 计划承接，均 deferred 于核心 work-unit / evidence / Gate 运行路径稳定之后。BUG-129/130/131/142 已移至 `../_done/_suspened_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
-**Next available bug ID: BUG-179**
+**Next available bug ID: BUG-187**
 
 ## BUG-132–137 接手地图
 

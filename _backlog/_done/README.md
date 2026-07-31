@@ -10,7 +10,7 @@
 ```
 _done/
 ├── README.md              # 本文件（状态总览 + 查阅指南）
-├── _fixed_bugs/           # 已修复/结案 Bug（130 个，含间隔）
+├── _fixed_bugs/           # 已修复/结案 Bug（161 个，含间隔）
 ├── _suspened_bugs/        # 悬挂 Bug（7 个：BUG-026, 028, 030, 129--131, 142）
 ├── _done_todos/           # 已完成 TODO（16 个，DONE-001~016）+ 已吸收 standalone TODO（3 个）
 ├── _closed_plans/         # 已完成 Plan（42 个）
@@ -25,7 +25,7 @@ _done/
 
 | 归档目录 | 数量 | Next ID |
 |---------|------|---------|
-| `_fixed_bugs/` | 130 个已修复/结案 bug（含间隔） | BUG-143 |
+| `_fixed_bugs/` | 161 个已修复/结案 bug（含间隔） | BUG-187 |
 | `_suspened_bugs/` | 7 个悬挂 bug（BUG-026, 028, 030, 129--131, 142） | — |
 | `_done_todos/` | 16 个已完成 todo（DONE-001~016）+ 3 个已吸收设计输入（非实现） | DONE-017 |
 | `_closed_plans/` | 42 个已完成 plan | CLS-043 |

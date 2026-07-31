@@ -7,7 +7,7 @@ source: CCDS4 (Claude Code + DeepSeek v4, 2026-07-29)
 surfaced_at: 2026-07-29
 ---
 
-# BUG-162: dpt-source-intake sub-agent deadlock
+# BUG-170: dpt-source-intake sub-agent deadlock
 
 ## What happened
 
@@ -41,3 +41,20 @@ Option B: Phase Agent executes delegated work directly (not via sub-agent spawn)
 **Why:** The current contract-first task design is architecturally correct but operationally broken for real sub-agent execution. The sub-agent drowns in contract language before reaching actual work.
 
 **How to apply:** Create a "fast path" task.md variant that front-loads the actionable instructions and defers contract reference to a separate "reference" section at the bottom.
+
+## Final DPT Disposition (2026-07-31)
+
+Three independent Heavy canary attempts (case-406, case-604, and case-221)
+ended without native completion, so they do not prove or disprove Subject Actor
+completion. Their host outcomes remain `NOT_RUN`; this record does not infer a
+task-length cause, host liveness defect, or permission failure from the old
+incident.
+
+The review did find one DPT-owned false classification: actor-only canaries
+were requiring an unestablished Phase Gate after submit. The archived
+`align-real-actor-canary-checkpoint-boundaries` change removes that helper
+invocation and required-check path, preserves Gate ownership in Phase-ready
+playbooks, and has 7/7 focused deterministic regressions. It does not add a
+watcher, scheduler, retry/controller, or synthetic Phase projection. The
+closed DPT bug is that actor handoff was misreported through the wrong
+checkpoint; host/model completion remains an external observation boundary.

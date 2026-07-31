@@ -139,3 +139,18 @@ node DPT_FRAMEWORK/host_tools/claude-deepseek.mjs --check
 - 调整方向：优先补 semantic capability discovery/adapter contract；Agent guidance
   只能要求先证明 search→same-URL fetch，不能把工具名称、launcher 配置或模型记忆当成
   research access。
+
+## C5 Disposition (2026-07-31)
+
+`connect-hitl1-research-access-by-semantic-capability` is archived at
+`openspec/changes/archive/2026-07-31-connect-hitl1-research-access-by-semantic-capability`
+(commit `44bf1fe58`). It adds the selected adapter contract, explicit
+available/unavailable observation boundary, same-URL binding, and HITL1
+feedback/Gate projection. Deterministic adapter, runner, guidance, Gate, and
+unavailable-loop evidence passed.
+
+The selected real case-115 Subject runtime exposed neither public `WebSearch`
+nor `WebFetch`, so its available-path claim is correctly `NOT_RUN`. This closes
+the DPT-owned naming/connection gap while leaving present host capability as an
+external boundary; no launcher check, shell fetch, or fixture is recorded as
+research-access success.

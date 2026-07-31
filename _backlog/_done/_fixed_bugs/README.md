@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-07-29 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-07-31 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -145,8 +145,39 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-139 | 2026-07-29 | DPT-selected research entry contract now explicitly routes before generic research shortcuts; host-level matcher suppression remains residual |
 | BUG-140 | 2026-07-29 | DPT-selected research entry contract now prohibits pre-entry ad-hoc search/fetch/synthesis; host tool availability remains residual |
 | BUG-141 | 2026-07-29 | Wave Gate public verdict is mutually exclusive across blocking failure, clean pass, and degraded handoff |
+| BUG-143 | 2026-07-31 | HITL1 semantic research-access adapter boundary; selected host availability remains honest `NOT_RUN` |
+| BUG-146 | 2026-07-31 | Wave0 rich-reference and return-map evaluator contract collision |
+| BUG-148 | 2026-07-31 | Structured concurrent work-unit submit contention and legal rerun boundary |
+| BUG-150 | 2026-07-31 | Wave0 inspect help invocation no longer enters bundle evaluation |
+| BUG-151 | 2026-07-31 | Wave0 supplementary source contribution provenance drift |
+| BUG-152 | 2026-07-31 | Topic-state projection upsert preserves adjacent entries |
+| BUG-153 | 2026-07-31 | Topic-state validation exposes direct field-level feedback |
+| BUG-154 | 2026-07-31 | Canonical seed initialization prevents body duplication after edit |
+| BUG-155 | 2026-07-31 | Plan-hostfile section operation is discoverable through the public contract |
+| BUG-156 | 2026-07-31 | Bounded phase-entry presentation preserves the next action cue |
+| BUG-157 | 2026-07-31 | Research-style projection freshness has one legal writer loop |
+| BUG-158 | 2026-07-31 | Context-dependent topic-state schemas are discoverable at the operation boundary |
+| BUG-159 | 2026-07-31 | Advance-status ordering is delivered at the phase action point |
+| BUG-160 | 2026-07-31 | Selected Engine CLIs expose standalone help and invocation feedback |
+| BUG-162 | 2026-07-31 | Wave1 artifact return-map parser collision |
+| BUG-170 | 2026-07-31 | Actor canary checkpoint no longer conflates submit with Phase Gate readiness; host completion remains `NOT_RUN` |
+| BUG-171 | 2026-07-31 | Claim actor reason-code feedback exposes the direct legal action |
+| BUG-172 | 2026-07-31 | Reference metadata grammar and evaluator scope are aligned |
+| BUG-173 | 2026-07-31 | Generated Completion Contract exposes cache-trail requirements at the authoring point |
+| BUG-174 | 2026-07-31 | Phase/Actor attempt ownership collision has an audited successor path |
+| BUG-176 | 2026-07-31 | Projection reference validation supplies an exact owner and repair coordinate |
+| BUG-177 | 2026-07-31 | Timeout preflight returns recommendation basis for the direct branch |
+| BUG-178 | 2026-07-31 | Reentry audit shares Phase-owned reference authority with the Wave Gate |
+| BUG-179 | 2026-07-31 | Ledger hash drift uses declaration recovery or audited supersession, not recomputation |
+| BUG-180 | 2026-07-31 | Submitted correction has one audited supersession-to-successor path |
+| BUG-181 | 2026-07-31 | Terminal queue history remains immutable while successor demand is legal |
+| BUG-182 | 2026-07-31 | Transaction recovery distinguishes settled, recoverable, busy, and missing-contract states |
+| BUG-183 | 2026-07-31 | Cache-trail mapping contract is delivered through the generated Completion Contract |
+| BUG-184 | 2026-07-31 | Current-candidate omissions are grouped into one identity-complete repair finding |
+| BUG-185 | 2026-07-31 | Current result/hash truth is ledger-first, without a sync-index path |
+| BUG-186 | 2026-07-31 | Submit-integrity preflight shares the formal-submit direct facts without becoming a Gate |
 
-**Next available bug ID: BUG-143**
+**Next available bug ID: BUG-187**
 
 ---
 

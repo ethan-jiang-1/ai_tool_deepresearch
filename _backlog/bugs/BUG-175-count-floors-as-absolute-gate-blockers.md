@@ -7,7 +7,7 @@ source: CCDS4 (Claude Code + DeepSeek v4, 2026-07-29)
 surfaced_at: 2026-07-29
 ---
 
-# BUG-167: Count floors as absolute gate blockers
+# BUG-175: Count floors as absolute gate blockers
 
 ## What happened
 
@@ -36,3 +36,13 @@ Option A: Degraded pass. If count floors aren't met but all submitted sources ar
 Option B: Lower default floors for `exploratory_map`. 10 per topic + 9 shared = 59 total source requirements. For a landscape mapping study, 5-6 high-quality sources per topic with 3-4 shared should be sufficient.
 
 **Why:** Count floors protect against thin research, but when they become the primary blocker (while actual source quality is fine), they create perverse incentives to fabricate entries.
+
+## Current Policy Disposition (2026-07-31)
+
+The completed framework-contract remediation plan leaves the accepted
+`exploratory_map` count-floor and current-candidate coverage policies unchanged.
+There is no new qualifying research-bundle evidence, and no user decision, that
+authorizes lower floors or a new degradation route. This remains an active
+product-policy question rather than a pending Engine implementation defect;
+any reconsideration requires a separate policy-only OpenSpec change and must
+continue to prohibit fabricated sources or references.
