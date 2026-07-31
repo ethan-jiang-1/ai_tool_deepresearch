@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-07-31 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-08-01 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -65,5 +65,6 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-041 | 2026-07-29 | dpt-routing-and-wave-contract-integrity.md | Archived routing entry hardening, Wave0 verdict disambiguation, and Wave1 direct closeout feedback. BUG-142's real Agent-flow classification remains separately pending. |
 | CLS-042 | 2026-07-31 | framework-contract-remediation-openspec-sequence.md | C1--C5、lifecycle feedback-loop 与 BUG-170 actor/Gate canary boundary alignment 均已 archive；C5 available claim 和真实 Actor completion 保持 honest `NOT_RUN`，BUG-175/184 为 accepted policy residual。 |
 | CLS-043 | 2026-07-31 | framework-contract-feedback-and-control-structure-analysis.md | 系统性 contract/feedback/control-shape 诊断已由 CLS-042 的 C1--C5 与 BUG-170 alignment 吸收；BUG-175 保持独立 active quality-policy decision。 |
+| CLS-044 | 2026-08-01 | session-drift-guardrail-analysis/ | 唯一建议 `establish-openspec-change-feedback-loop` 已 archive：operation guidance 推送 review、finding 进入 tasks、governance finalizer 闭合 archive；Tier-A/Tier-B validator、SessionStart hook 与 guidance 搬迁均明确不采用。 |
 
-**Next available plan ID: CLS-044**
+**Next available plan ID: CLS-045**
