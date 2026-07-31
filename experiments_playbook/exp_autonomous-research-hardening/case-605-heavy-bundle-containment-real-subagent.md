@@ -58,7 +58,7 @@ RESULT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1])
 node experiments_env/shared/run-fixture-backed-case.mjs --case case-605 --bundle "$B" --real-result "$RESULT" > "$STATE/case605-submitted.json"
 ```
 
-The helper runs production submit, Wave0 gate, and `inspect-bundle` from repo command cwd. It records containment facts but does not relocate or delete any leak.
+The helper runs production submit and `inspect-bundle` from repo command cwd. The containment checkpoint stops after submit plus inspection; it does not run a Wave0 Gate or assert Phase readiness. It records containment facts but does not relocate or delete any leak.
 
 ## Step 4 - Record the exact containment checks
 

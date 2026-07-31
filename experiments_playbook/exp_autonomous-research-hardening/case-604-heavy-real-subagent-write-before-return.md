@@ -60,6 +60,8 @@ RESULT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1])
 node experiments_env/shared/run-fixture-backed-case.mjs --case case-604 --bundle "$B" --real-result "$RESULT" > "$STATE/case604-submitted.json"
 ```
 
+The actor checkpoint stops after the Subject-owned result/receipt/output/cache facts and Engine submit are recorded. This helper does not run a Wave0 Gate or assert Phase readiness; those remain the responsibility of a Phase-ready Wave0 playbook.
+
 ## Step 4 - Record the four exact actor checks
 
 ```bash

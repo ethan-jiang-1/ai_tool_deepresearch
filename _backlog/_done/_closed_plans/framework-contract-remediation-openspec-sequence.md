@@ -1,12 +1,15 @@
 ---
 title: Progressive OpenSpec Sequence for Framework Contract Remediation
-status: c4_archived__change_feedback_loop_archived__c5_external_provider_gate_pending
+status: closed__c1_to_c5_archived__bug170_contract_alignment_archived__bug175_bug184_accepted_policy_residuals
 created: 2026-07-29
+closed: 2026-07-31
+last_verified: 2026-07-31
+verification_basis: c5_archive_44bf1fe58__bug170_archive_2026-07-31-align-real-actor-canary-checkpoint-boundaries__focused_7_of_7__strict_governance_and_routing_passed
 predecessor: framework-contract-feedback-and-control-structure-analysis
-last_completed_change: establish-openspec-change-feedback-loop
-last_completed_archive: openspec/changes/archive/2026-07-31-establish-openspec-change-feedback-loop
+last_completed_change: align-real-actor-canary-checkpoint-boundaries
+last_completed_archive: openspec/changes/archive/2026-07-31-align-real-actor-canary-checkpoint-boundaries
 active_change: none
-active_change_status: no_active_change__change_feedback_loop_archived__archive_commit_c57b27eff
+active_change_status: no_active_change__openspec_list_empty_after_final_archive
 c2_task_progress: 26/26
 c2_selected_node_test: 277_passed_0_failed
 c2_archive_status: archived_2026-07-30__14_modified_requirements_synced__committed_177275226
@@ -17,10 +20,13 @@ c4_task_progress: 44/44__all_done
 c4_selected_node_test: 88_passed_0_failed
 c4_broader_regression: engine_229/229__cli_49/49__engine_integration_9/9__markdown_18/18
 c4_archive_status: archived_2026-07-31__four_specs_synced__six_new_ids__two_existing_wpg_requirements_modified__committed_9d87b5b52
-next_change: connect-hitl1-research-access-by-semantic-capability
-next_change_status: conditional__real_search_same_url_fetch_evidence_required__not_proposed
+c5_archive_status: archived_2026-07-31__selected_adapter_and_unavailable_path_implemented__available_claim_not_run__committed_44bf1fe58
+bug170_disposition: resolved_dpt_owned_actor_gate_checkpoint_mismatch__host_liveness_remains_external_not_run__no_controller_added
+bug175_bug184_disposition: accepted_policy_residuals__no_quality_or_coverage_semantics_changed
+next_change: none
+next_change_status: plan_closed__future_policy_or_host_evidence_requires_a_new_bounded_change
 next_unblocked_change: none
-next_unblocked_change_status: blocked__c5_requires_a_user_selected_authorized_semantic_search_provider__no_new_change_proposed
+next_unblocked_change_status: none__openspec_list_empty
 c3_proposal_artifacts: proposal_done__specs_done__design_done__tasks_done__verification_plan_done__strict_governance_routing_plan_passed
 source_bugs:
   - BUG-143
@@ -59,6 +65,26 @@ source_bugs:
 
 # Progressive OpenSpec Sequence for Framework Contract Remediation
 
+## 0. 最终状态（2026-07-31 已关闭）
+
+**这份框架合同修复计划已完成并关闭。** C1--C4、独立的 lifecycle feedback-loop、C5，以及
+BUG-170 的有界 actor/Gate checkpoint alignment change 都已完成 `propose -> explore -> apply -> archive`。
+最终 archive 后 `openspec list --json` 为空；没有 active change。
+
+- **C5 / BUG-143：** `connect-hitl1-research-access-by-semantic-capability` 已 archive 并由提交
+  `44bf1fe58` 固化。selected Claude/DeepSeek-compatible adapter 和 unavailable fail-closed path 已实现；真实
+  case-115 的 available-path claim 因 Subject runtime 未公开 `WebSearch` 而是 `NOT_RUN`。这不是 provider
+  availability 的虚假 PASS，HITL1 会保持 honest unavailable。
+- **BUG-170：** case-406、case-604 与 case-221 的三次真实 Actor attempt 都没有 native completion，故其
+  Actor-behavior claims 均为 host-scoped `NOT_RUN`。同时，实际 helper/playbook review 证实 canary 曾错误地把
+  未建立的 Phase Gate 放进 actor verdict；`align-real-actor-canary-checkpoint-boundaries` 已删除该 DPT-owned
+  mismatch 并 archive。没有添加 controller、scheduler、retry 或 synthetic Phase projection。
+- **BUG-175/184：** 当前 accepted count-floor 和 current-candidate coverage 语义不变。它们被记录为
+  accepted policy residuals，只有新的合格研究 bundle 证据和用户的质量语义决定才能开启独立 policy change。
+
+因此关闭的是本计划拥有的 contract remediation；host capability/liveness 和未来质量政策仍保持各自诚实的
+authority boundary。
+
 ## 1. 计划结论
 
 本计划建议 **4 个必做的顺序 OpenSpec change，加最多 1 个有外部前提的 host-integration
@@ -81,7 +107,10 @@ C3 Agent-facing control and feedback contract [archived 2026-07-30]
           v
 C4 work-unit attempt ownership and legal recovery [archived 2026-07-31]
 
-C5 semantic research-access adapter  (only after a real host/provider is selected)
+C5 semantic research-access adapter  [archived 2026-07-31; available claim NOT_RUN]
+          |
+          v
+BUG-170 actor/Gate canary boundary alignment [archived 2026-07-31; no controller]
 ```
 
 `BUG-170` 和 `BUG-175` 不被预先塞进 implementation change：前者需要真实 Agent/host
@@ -116,14 +145,12 @@ strict OpenSpec、verification-routing assets、requirement/spec governance 与 
 已将四份 delta specs 同步到主规格（六个新 requirement ID、两个既有 WPG requirement 修改），native archive 至
 `openspec/changes/archive/2026-07-31-make-work-unit-attempt-recovery-explicit`，并由提交 `9d87b5b52` 固化。
 
-**2026-07-31 路由说明：** C5 仍缺少当前 Agent 实际可调用、可授权、能返回 candidate URL 且可同 URL fetch
-的 search provider，因此保持 conditional，不把 fetch/curl 或 launcher preflight 误记为满足。为继续处理已有
-本地、独立的 lifecycle evidence，`establish-openspec-change-feedback-loop`
-（见 `session-drift-guardrail-analysis/08-final-recommendation-openspec-feedback-loop.md`）已完成
-`propose -> apply -> archive`：它新增 durable review task、operation guidance 和唯一 archive finalizer，主规格
-已同步，native archive 位于 `openspec/changes/archive/2026-07-31-establish-openspec-change-feedback-loop`，并由
-提交 `c57b27eff` 固化。该 change 只收敛 OpenSpec lifecycle governance，不替代或提前实现 C5；当前没有另一个
-已证实 unblocked 的 implementation change。
+**2026-07-31 最终收尾：** C5 已完成 `propose -> apply -> archive`，native archive 位于
+`openspec/changes/archive/2026-07-31-connect-hitl1-research-access-by-semantic-capability`，提交为
+`44bf1fe58`。case-115 的 available observation 仍为 `NOT_RUN`，因为 selected Subject runtime 没有公开
+`WebSearch`；adapter 不把 launcher、配置或 `curl` 误记成 research access。随后 `align-real-actor-canary-checkpoint-boundaries`
+完成并 archive 至 `openspec/changes/archive/2026-07-31-align-real-actor-canary-checkpoint-boundaries`：它把真实
+Actor canary 从未建立的 Phase Gate 分离，保留 Gate 在 Phase-ready playbook 的 authority，而不建设 controller。
 
 ## 2. 为什么是这个数量
 
@@ -152,7 +179,7 @@ recovery path。
 | C2 | `make-canonical-topic-state-projections-coherent` | archived 2026-07-30 | canonical topic state 如何在合法写入后保持 whole-document parseability、时间语义与 derived freshness？ | 151, 152, 154, 157, 176 | CLI help framework、queue/work-unit rework |
 | C3 | `make-agent-operation-contracts-direct` | archived 2026-07-30 (30/30 tasks, 225 selected tests passed, 14 requirements synced) | Agent 在每个决定点如何发现 protocol、看到最早 direct root，并得到一个合法下一动作？ | 150, 153, 155, 156, 158, 159, 160, 171, 177, 184；173/183 已由 DEW-021 覆盖，159 已由 WNC-010/CPT handoff contract 覆盖，均已记录处置 | 自动 repair controller、改变 evidence authority、host adapter |
 | C4 | `make-work-unit-attempt-recovery-explicit` | archived 2026-07-31 (44/44 tasks, 88 selected tests passed, four specs synced, commit `9d87b5b52`) | active/submitted attempt 的 owner、contention、finality、correction 与 transaction recovery 的 legal semantics 是什么？ | 148, 174, 179--186 | mutable ledger workaround、full-phase Gate prediction、generic retry service |
-| C5 | `connect-hitl1-research-access-by-semantic-capability` | conditional; not proposed | 当前 host 如何以真实 search + same-URL fetch 能力接入 HITL1，而不是用工具名或配置猜测？ | 143 | 通用 capability registry、虚假 search 成功、host liveness promise |
+| C5 | `connect-hitl1-research-access-by-semantic-capability` | archived 2026-07-31 (`44bf1fe58`); available claim NOT_RUN | 当前 host 如何以真实 search + same-URL fetch 能力接入 HITL1，而不是用工具名或配置猜测？ | 143 | 通用 capability registry、虚假 search 成功、host liveness promise |
 
 独立于 C1--C5 的 lifecycle governance change
 `establish-openspec-change-feedback-loop` 已于 2026-07-31 archive（commit `c57b27eff`）；它处理跨 session 的
@@ -163,7 +190,10 @@ OpenSpec review/closeout drift，不改变 C5 的 external-provider gate。
 下面的勾选项是唯一的执行顺序。不要为了“先试一试”跳过 `explore` 直接开始 code，也不要在
 C4 的语义尚未决定时为 BUG-179--186 单独加 sync/recompute/retry 命令。
 
-- [ ] **0. 固定基线。** 保存当前 real-bundle red evidence、命令输出、active accepted specs 与本计划的 ticket map；确认 `openspec list --json` 仍无冲突 active change。对每个票据记录它是 deterministic fixture、真实 Agent observation、host observation，还是 authority-mutation 后的 recovery incident。
+- [x] **0. 固定基线。** C1--C4 的 real-bundle evidence、verification assets、accepted specs 和 ticket
+  disposition 已随各自 archive 固化；2026-07-31 再核对时无 active change、工作树干净。票据继续按
+  deterministic fixture、真实 Agent observation、host observation 与 authority-mutation recovery incident
+  区分，不能互相替代。
 
 - [x] **1. 创建 C1 proposal。** 已创建 `converge-artifact-contract-evaluators` proposal，限定为恢复 artifact family 的正确 evaluator scope，而不是把合法内容改写成错误 parser 喜欢的形状。
 - [x] **2. C1 explore。** 已完成 artifact/consumer matrix 与 authority interpretation 决策，涵盖 Seed projection entry、rich reference、Wave artifact、phase-owned projection、index、canonical metadata presentation，以及 normal Wave Gate 与 `check-reentry` 的共享解释。
@@ -200,12 +230,24 @@ C4 的语义尚未决定时为 BUG-179--186 单独加 sync/recompute/retry 命�
   `openspec/changes/archive/2026-07-31-establish-openspec-change-feedback-loop`，提交为 `c57b27eff`。该收敛不提供
   C5 search capability，也不改变 BUG-170/175/184 的 observation/policy gates。
 
-- [ ] **17. C5 的外部决策门。** 在启动 C5 前，记录一个当前 Agent 实际可调用、可授权、能返回真实 candidate URL 的 search provider/surface。只有 fetch/curl、launcher 配置成功、或模型声称“可搜索”都不满足此门；若没有这样的 surface，保持 HITL1 honest unavailable，C5 不创建。
-- [ ] **18. 创建并 explore C5（仅在第 17 项满足后）。** 运行 `/opsx:propose connect-hitl1-research-access-by-semantic-capability`，明确 search 与 fetch 是两个 capability、同一 URL binding 是什么、host adapter 的可信 observation 是什么、不可用时哪个 owner/用户边界可处理。不得扩张为 host scheduler、tool matrix、background retry 或通用 provider registry。
-- [ ] **19. C5 apply 与 archive（条件项）。** 接入真实 semantic surface，保留现有 unavailable fail-closed 分支；以 real Agent search -> returned URL -> same-URL fetch observation 验证 available，以无 provider / permission denied 观察验证 unavailable。fixture 只能验证 Engine schema/gate mechanics，不能作为能力可用证明。
+- [x] **17. C5 的 planning 决策门。** 用户已授权选择现存 Claude CLI /
+  DeepSeek-compatible host；provider decision、Agent-native search/fetch contract、case-115 的 returned-order/same-URL binding evidence 和 unavailable semantics 已记录。此决定不把 launcher preflight、工具名称或用户授权误写为 research access success。
+- [x] **18a. 创建并 polish C5 proposal。** 已创建并打磨 `connect-hitl1-research-access-by-semantic-capability` 的 proposal、三份 delta specs、design、tasks、verification plan 与 provider decision；strict OpenSpec、requirement/spec governance、routing plan 与 `git diff --check` 通过。计划明确传统 host bridge 不编排 search/fetch，Agent 才是语义 probe 的执行者。
+- [x] **18b. C5 apply-ready review。** 已完成 whole-change coherence 与 runtime/evidence-boundary risk review：search 与 fetch 是两个 capability，case-115 证明 returned-order/same-URL binding，host permission/surface 缺失保持 unavailable/NOT_RUN；不得扩张为 host scheduler、tool matrix、background retry 或通用 provider registry。
+- [x] **19. C5 apply 与 archive。** `connect-hitl1-research-access-by-semantic-capability` 已实现 selected
+  semantic adapter、available/unavailable observation grammar、HITL1 feedback/Gate projection 与 case-115 route，archive
+  位于 `openspec/changes/archive/2026-07-31-connect-hitl1-research-access-by-semantic-capability`，提交为 `44bf1fe58`。
+  Deterministic adapter/guidance/Gate evidence 通过；真实 case-115 native completion 是 `NOT_RUN`（没有 public
+  `WebSearch`），所以 available claim 没有被 fixture、配置或 launcher 成功替代。
 
-- [ ] **20. BUG-170 验证门。** 在 C3 后用多个独立真实 Agent-flow run 观察 sub-agent completion、host/permission、工具调用与 context shape。只有发现 DPT 可确定性 handoff/ownership defect，才从观察中提出一个新的、有界 change；一次 stop、一次 SendMessage 介入或静态 prompt 测试都不能开新 controller。
-- [ ] **21. BUG-175 政策门。** C1--C3 稳定后，用真实、合格、无填充的研究 bundle 评估 `exploratory_map` 的 floors 是否确实与用户选择的研究目标失配。若用户决定改变质量语义，才提出一个单独、policy-only 的小 change；它不得与 parser、writer 或 recovery 变更捆绑，也不得把 fabrication 变成 degraded pass。
+- [x] **20. BUG-170 验证门。** case-406、case-604、case-221 的独立真实 Actor attempt 分别以 budget
+  exhausted、agent timeout、budget exhausted 结束，均无 native completion，故 Actor-behavior claims 维持 host-scoped
+  `NOT_RUN`。它们与 scoped helper/playbook review 一起暴露了 DPT-owned canary checkpoint mismatch：actor-only
+  verdict 错误要求未建立的 Phase Gate。`align-real-actor-canary-checkpoint-boundaries` 已 archive；focused regression
+  7/7 证明 actor submit/inspect 路径不再调用或需要该 Gate。host liveness 未被归因给 DPT，且没有新 controller。
+- [x] **21. BUG-175/184 政策门。** 用户没有选择改变已接受的 `exploratory_map` floors 或 current-candidate
+  coverage contract，也没有新的合格研究 bundle 证据能够推翻它们。两项以 accepted policy residual 关闭本计划；
+  未来若有新的质量语义决定，必须单独提出 policy-only change，且仍禁止 fabricated source/reference。
 
 ## 5. C1：Artifact Contract And Evaluator Convergence
 
@@ -333,14 +375,13 @@ writer, receipt/hash lineage, queue relation, failure mode 和 same-check action
 **精确的 reader question：** “当前 Agent 是否通过一个真实、当前可调用的 semantic search surface
 获得 candidate URL，并通过合法 fetch surface 抓取同一个 URL？”
 
-**为何条件化：** 已 archive 的 HITL1 probe contract 正确地要求 real search + fetch 且在不可用时
-fail closed；BUG-143 不是要取消这一点，而是当前 Codex/host 没有一个已选择并可验证的 search
-adapter。没有 provider choice 时，任何 DPT code 都无法合法把 shell、`curl` 或 launcher config
-升级为 search success。
+**为何条件化：** HITL1 probe contract 正确地要求 real search + fetch 且在不可用时 fail closed；BUG-143
+不是要取消这一点，而是不能把 shell、`curl`、launcher config 或模型自述升级为 search success。
 
-**Current gate state (2026-07-31):** this Agent has no callable authorized semantic-search surface, and the
-repository has no selected provider adapter. C5 therefore remains unproposed; selecting an external provider is
-a user/host permission and risk decision, not an implementation detail for this plan to infer.
+**最终状态（2026-07-31）：** 用户授权的 Claude CLI / DeepSeek-compatible adapter 已由 C5 接入、测试并 archive。
+selected Subject runtime 的真实 case-115 没有公开 `WebSearch` 或 `WebFetch`，所以没有 returned candidate 或
+same-URL fetch；available-path claim 正确为 `NOT_RUN`，HITL1 保持 unavailable。该结果只描述当前 host capability，
+不否定 adapter contract，也不授权一个备用 provider、host scheduler 或 synthetic observation。
 
 **应修改的 accepted capability 范围：** `pre-research-phase-content`、
 `pre-research-gate-implementation`、`research-styles`/profile observation，以及需要时新的窄
@@ -354,8 +395,9 @@ host integration contract。开始 proposal 前必须已经具备第 17 项的�
   当成证据，不把 probe 泄漏到 research evidence surface。
 - 不把 C5 扩张成模型 liveness、sub-agent scheduler、host daemon 或 generic tool registry。
 
-**Done 不是：** 在开发机能 `curl` 一个页面。Done 是目标 host 上真实 Agent 产生 search ->
-same-URL fetch observation，HITL1 Gate 在 available/unavailable 两条真实路径上都忠实运行。
+**Done 不是：** 在开发机能 `curl` 一个页面。C5 已完成的是 selected adapter 对 available/unavailable 的
+honest deterministic handling；目标 host 的 real Agent search -> same-URL fetch 仍需未来独立 runtime observation，
+不能由本计划伪造为 PASS。
 
 ## 10. 跨 Change 的不可违反规则
 
@@ -383,6 +425,11 @@ C3 可减少 action-surface 噪声，C4 可消除 Phase/actor 同写的错误处
 host 发起下一 turn 或保证模型调用工具。观察之后若发现的是 DPT handoff/readiness contract 缺陷，
 再提一个有界 change；若是 host liveness residual，则记录为 host evidence，不建设 watcher。
 
+**最终处置：** 三条独立 Heavy canary attempt 都未取得 native completion，不能证明 Actor behavior；但
+review 发现真实 canary 的 native verdict 把 actor checkpoint 与 Phase Gate readiness 混为一谈。该 DPT-owned
+defect 已由 `align-real-actor-canary-checkpoint-boundaries` archive 收敛：actor canary 止于 submit/inspect，
+Phase-ready playbook 才拥有 Gate。host liveness 仍是 external `NOT_RUN` residual，不建设 watcher 或 controller。
+
 ### BUG-175：Count floors
 
 当前 accepted research-style contract 把 floor 作为动态 profile threshold。是否应降低
@@ -391,12 +438,18 @@ host 发起下一 turn 或保证模型调用工具。观察之后若发现的是
 的填充行为证明 floor 本身错误。任何未来 policy change 必须独立，且仍禁止 fabricated source/
 reference。
 
+**最终处置：** 用户没有选择修改这项质量语义，且没有新的合格研究 bundle 证明 floor 与目标失配；因此
+BUG-175 保留为 accepted policy residual，不作为 framework contract remediation 的未完成 implementation task。
+
 ### BUG-184：所有 current candidates 的 disposition
 
 accepted return-map contract 当前明确要求每个 current candidate coordinate 有 entry 或显式、
 identity-bound deferred disposition。C2 处理这个 coordinate 的时间语义，C3 处理批量、直接的
 omission feedback；本计划不预先取消 coverage contract。若未来要改变“每个 candidate”这个规则，
 它应与 BUG-175 同样作为独立质量/coverage policy decision。
+
+**最终处置：** 现有 coverage contract 保持；BUG-184 随 BUG-175 作为 accepted policy residual 留在
+未来独立的质量/coverage 决策边界内。
 
 ## 12. 计划完成的定义
 
@@ -412,3 +465,9 @@ omission feedback；本计划不预先取消 coverage contract。若未来要改
    Gate/authority contract；
 5. 每个 archive 都更新 accepted specs、requirement registry、verification routing、release
    evidence 与本计划的 ticket disposition。
+
+**关闭记录（2026-07-31）：** 条件 1 已由 C1--C4 archives 满足；条件 2 已由 C5 archive（available claim
+`NOT_RUN`）满足；条件 3 已由 BUG-170 的 DPT-owned checkpoint repair 和 BUG-175/184 的 accepted residual
+disposition 满足；条件 4 保持无 fake evidence、hand edit 或 controller；条件 5 已在各 change archive 和上述
+ticket disposition 中记录。本计划移入 closed plans，未来的 host observation 或 policy decision 必须从新的
+bounded change 开始。

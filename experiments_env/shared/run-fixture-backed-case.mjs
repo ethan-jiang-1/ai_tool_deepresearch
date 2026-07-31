@@ -1340,7 +1340,6 @@ function realSubagentCase(opts, spec) {
     ? readFileSync(receiptPath, 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse)
     : [];
   const submit = submitWorkUnitViaCli(bundleDir, { work_id: workId, resultPath });
-  const gate = runWave0Gate(bundleDir, 'gate-wave0.json', { monitored: true });
   const events = readTrace(bundleDir);
   const baseChecks = {
     task: beacon.work_id === workId && existsSync(path.resolve(prompt.task_path)),
@@ -1348,7 +1347,6 @@ function realSubagentCase(opts, spec) {
     receipt: receiptRows.some((row) => row.work_id === workId && row.receipt_nonce === beacon.receipt_nonce),
     output: Boolean(candidate.output_files?.length) && existsSync(outputPath),
     submit: submit.ok === true,
-    gate: gate.status === 0 && gate.json?.check?.passed === true,
     traced: events.some((e) => e.event === 'work_unit_submitted' && e.work_id === workId),
   };
   const inspect = spec.caseId === 'case-605' ? runNodeLoose([INSPECT_BUNDLE, bundleDir]) : null;
@@ -1358,7 +1356,6 @@ function realSubagentCase(opts, spec) {
     { label: 'real-subagent-receipt-nonce-preserved', passed: baseChecks.receipt, detail: receiptPath },
     { label: 'real-subagent-output-written', passed: baseChecks.output, detail: outputPath },
     { label: 'real-subagent-submit-succeeded', passed: baseChecks.submit, detail: workId },
-    { label: 'wave0-gate-pass', passed: baseChecks.gate, detail: JSON.stringify(gate.json?.inspect || []) },
     { label: 'work-unit-submit-traced', passed: baseChecks.traced, detail: workId },
     { label: 'no-chat-only-return', passed: baseChecks.result && baseChecks.receipt && baseChecks.output, detail: 'durable result, receipt, and output exist' },
     { label: 'inspect-bundle-no-active-leak', passed: inspect?.status === 0 && !inspect.stdout.includes('active_bundle_blocker'), detail: inspect?.stdout || '' },
@@ -1420,7 +1417,7 @@ const REAL_SUBAGENT_CASES = {
       'Use the fixture source URL and local facts in those independently authored outputs plus one cache trail, receipt, and result. Cache files must record that the capture is local fixture input and that no external fetch occurred.',
     ].join(' '),
     notRunReason: 'Native dpt-source-intake Sub-agent or required local actor capability is unavailable.',
-    requiredChecks: ['real-subagent-task-bound', 'real-subagent-result-written', 'real-subagent-receipt-nonce-preserved', 'real-subagent-output-written', 'real-subagent-submit-succeeded', 'wave0-gate-pass', 'work-unit-submit-traced'],
+    requiredChecks: ['real-subagent-task-bound', 'real-subagent-result-written', 'real-subagent-receipt-nonce-preserved', 'real-subagent-output-written', 'real-subagent-submit-succeeded', 'work-unit-submit-traced'],
   },
   'case-604': {
     caseId: 'case-604', suffix: 'arh_real_subagent', topicSlug: 'agent-runtime-sources', topicTitle: 'Agent runtime sources',
@@ -1873,13 +1870,10 @@ function case221(opts) {
     const resultPath = path.join(realDir, `${workId}.result.json`);
     return { workId, submit: submitWorkUnitViaCli(bundleDir, { work_id: workId, resultPath }) };
   });
-  appendTrace(bundleDir, { event: 'wave1_completion', source: 'case-221-real-agent' });
-  const gate = runWave1Gate(bundleDir);
   const inspect = inspectWorkUnitsViaCli(bundleDir);
   const checks = [
     { label: 'real-batch-claim', passed: claim.claimed_count === 2, detail: JSON.stringify(claim.claimed_work_ids) },
     { label: 'real-batch-submit', passed: submits.every((entry) => entry.submit.ok === true), detail: submits.map((entry) => entry.workId).join(', ') },
-    { label: 'wave1-gate', passed: gate.status === 0 && gate.json?.check?.passed === true, detail: JSON.stringify(gate.json.inspect || []) },
     { label: 'work-unit-inspect', passed: inspect.passed === true, detail: 'inspect passed' },
   ];
   for (const check of checks) recordCheck(bundleDir, 'case-221', 'wave1-real-batch', check.passed, check.detail, { label: check.label });

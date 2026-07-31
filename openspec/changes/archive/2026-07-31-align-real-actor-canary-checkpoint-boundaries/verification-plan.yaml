@@ -1,0 +1,119 @@
+schema_version: verification-routing/v1
+change: align-real-actor-canary-checkpoint-boundaries
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The change adds no pure Engine/schema computation. Its deterministic behavior is the
+      real helper/CLI and Markdown contract boundary, which belongs to integration coverage.
+  integration:
+    status: selected
+    rationale: >-
+      Temporary contained bundles, the shared helper, real work-unit submit/inspect CLIs,
+      and Markdown frontmatter must prove that actor-only required checks stop before
+      Phase Gate evaluation without making a real Subject Actor claim.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No lifecycle transition or full deterministic phase chain changes. A synthetic
+      Phase chain would either duplicate existing Wave Gate coverage or manufacture the
+      semantic projections this change deliberately keeps out of fixture setup.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      The retained Heavy cases are the only native evidence route for the claim that a
+      real Subject Actor completes the narrowed checkpoint. Their real execution is
+      host/budget/provider-bound and may honestly record NOT_RUN without being replaced
+      by deterministic fixtures.
+claims:
+  - id: source-intake-helper-stops-before-unestablished-wave0-gate
+    statement: >-
+      AGT-003 and EXR-006: a temporary case-406 actor-envelope bundle can accept
+      deterministic test-owned candidate bytes through the production work-unit submit
+      boundary and report only its actor checkpoint; it does not invoke or require a
+      Wave0 Gate, manufacture a Wave0 projection, or claim real Subject behavior.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/case-406-real-subagent-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-actor-canary-contract-stops-before-phase-gate
+    statement: >-
+      AGT-003 and RWE-002: case-221 retains generated-task, dry/formal-submit,
+      ledger and work-unit-inspect evidence for two real Actor results, but its
+      frontmatter and Markdown omit Wave1 Gate/phase-completion verdict work when no
+      Phase-owned canonical projection is established.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/case-221-first-return-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: case406-real-actor-boundary-verdict
+    statement: >-
+      AGT-003 and EXR-006: a real no-network dpt-source-intake Subject Actor writes
+      the assigned durable result/receipt/output/cache facts and submits by work_id;
+      native completion evaluates that actor checkpoint without asserting Wave0
+      readiness. This is a host-scoped actor-behavior claim.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_engine-boundary/case-406-heavy-real-subagent-boundary.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_subagent
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
+  - id: case604-real-actor-checkpoint-without-unrelated-wave0-gate
+    statement: >-
+      AGT-003: a real dpt-source-intake Subject Actor that performs its declared
+      search/fetch task can complete the result/receipt/output/cache/submit checkpoint
+      without the helper launching an unrelated Wave0 Gate or claiming Phase readiness.
+      This is a provider- and host-scoped actor-behavior claim.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_autonomous-research-hardening/case-604-heavy-real-subagent-write-before-return.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_subagent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
+  - id: case221-real-batch-checkpoint-without-unestablished-wave1-gate
+    statement: >-
+      AGT-003 and RWE-002: two real dpt-evidence-extractor Subject Actors can complete
+      the declared batch actor checkpoint through generated task evidence, dry/formal
+      submit, ledger and inspection without using fixture-created semantic Wave1
+      projections or reporting a Wave1 Gate pass. This is a provider- and host-scoped
+      actor-behavior claim.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wfn_wave1/case-221-heavy-batch-subagent.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_subagent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

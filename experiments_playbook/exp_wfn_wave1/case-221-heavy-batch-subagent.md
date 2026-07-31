@@ -2,9 +2,9 @@
 schema: command-experiment/v2
 experiment: wfn-wave1
 case: case-221-heavy-batch-subagent
-case_goal: "Verify real Wave1 batch topic-deepening through work-unit claim, real dpt-evidence-extractor actors, submit-by-work-id, ledger coverage, backfill, and Wave1 gate pass."
+case_goal: "Verify real Wave1 batch topic-deepening through work-unit claim, real dpt-evidence-extractor actors, dry/formal submit-by-work-id, ledger coverage, and work-unit inspection."
 verdict_mode: all
-required_checks: [real-wave1-batch-submit, wave1-gate, work-unit-inspect]
+required_checks: [real-wave1-batch-submit, work-unit-inspect]
 bundle_roles: [verdict]
 verdict_role: verdict
 health_roles: [verdict]
@@ -26,32 +26,35 @@ not_run_if: "Either native dpt-evidence-extractor Sub-agent or required real sea
 
 Heavy real-Agent canary. This case cannot PASS from fixture data. The Main Agent may use fixture scaffolding for bundle/topic setup, but each Wave1 delegated result must be produced by a real `dpt-evidence-extractor` actor from the claimed work-unit task and accepted only through `operate-work-unit submit`.
 
+The canary stops at its two-Actor submit and inspection checkpoint. It does not establish Phase-owned Wave1 semantic projections, invoke a Wave1 Gate, or report Wave1 readiness; a Phase-ready Wave1 playbook owns those claims.
+
 For DEW-021, retained `subject_task` evidence proves only that the real actor was supplied the generated claimed task whose first authoring section is `## Completion Contract` before its first returned work is evaluated through the native chain. It does not prove the actor privately read that section, reasoned from it, produced any parent-authored bytes, caused a particular result, received BUG-120 Phase-Agent reference guidance, or achieved research quality.
 
 ## Reality Distance Ledger
 
 | Dimension | Statement |
 | --- | --- |
-| Runtime context | Real disposable bundle with witnessed Wave0-to-Wave1 handoff |
-| Framework path | Real `operate-queue enqueue`, `operate-work-unit claim/submit`, submitted ledger, `operate-work-unit inspect`, and Wave1 gate CLI |
+| Runtime context | Real disposable bundle with fixture-established Wave1 work-unit setup |
+| Framework path | Real `operate-queue enqueue`, `operate-work-unit claim/submit`, submitted ledger, and `operate-work-unit inspect` |
 | Fixture input | Bundle/topic scaffolding only |
 | Agent actor | Required: two real `dpt-evidence-extractor` actors |
 | External calls | Required when actor task uses WebSearch/WebFetch or approved fetch chain |
-| Verdict source | Trace checks, real submit JSON, work-unit ledger/index, Wave1 gate JSON |
-| Does not prove | Nothing if reported `NOT_RUN`; a fixture-backed PASS is forbidden |
+| Verdict source | Trace checks, real submit JSON, work-unit ledger/index, and work-unit inspect JSON |
+| Does not prove | Wave1 Phase readiness, a Wave1 Gate pass, research quality, or anything if reported `NOT_RUN`; a fixture-backed PASS is forbidden |
 
 # case-221-heavy-batch-subagent
 
 ## Expected Runtime Path
 
-1. Create a Wave1-ready disposable bundle with two topics.
+1. Create a disposable bundle with two Wave1 work-unit topics.
 2. Enqueue two `wave1_topic_deepening` queue demands.
 3. Claim both through one `operate-work-unit claim --count 2`.
 4. Supply each real `dpt-evidence-extractor` actor its generated claimed work-unit task, whose first authoring section is `## Completion Contract`.
 5. Each actor writes result/receipt/output/cache according to its work-unit contract.
 6. Main Agent submits each result by `work_id`, in any return order.
-7. Main Agent reads submit JSON, work-unit inspect JSON, and Wave1 gate JSON before recording trace checks.
-8. If no real actor surface is available, record `NOT_RUN` and stop.
+7. Main Agent reads submit JSON and work-unit inspect JSON before recording trace checks.
+8. Actor-checkpoint PASS does not establish Wave1 Phase readiness or a Gate pass.
+9. If no real actor surface is available, record `NOT_RUN` and stop.
 
 ## Step 1: [MAIN/SHELL] Create Runtime Context
 
@@ -183,21 +186,11 @@ console.log(JSON.stringify(firstReturn, null, 2));
 JS
 ```
 
-## Step 5: [MAIN/SHELL] Gate And Trace Verdict
+## Step 5: [MAIN/SHELL] Submit And Trace Verdict
 
 ```bash
 B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node --input-type=module - "$B" <<'JS'
-import { readFileSync } from 'node:fs';
-import { appendTrace } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-const bundle = process.argv[2];
-const firstReturn = JSON.parse(readFileSync(`${bundle}/case-221-first-return.json`, 'utf8'));
-if (firstReturn.submits.length === 2 && firstReturn.submits.every((entry) => entry.submit.output?.ok === true)) {
-  appendTrace(bundle, { event: 'wave1_completion', source: 'case-221-real-agent' });
-}
-JS
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect "$B" > "$B/case-221-inspect.json"
-node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-221-gate.json"
 node --input-type=module - "$B" <<'JS'
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -207,7 +200,6 @@ import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
 const bundle = process.argv[2];
 const submit = JSON.parse(readFileSync(`${bundle}/case-221-submit.json`, 'utf8'));
 const inspect = JSON.parse(readFileSync(`${bundle}/case-221-inspect.json`, 'utf8'));
-const gate = JSON.parse(readFileSync(`${bundle}/case-221-gate.json`, 'utf8'));
 const evidence = JSON.parse(readFileSync(`${bundle}/case-221-subagent-evidence.json`, 'utf8'));
 const firstReturn = JSON.parse(readFileSync(`${bundle}/case-221-first-return.json`, 'utf8'));
 const result = JSON.parse(readFileSync(evidence.result, 'utf8'));
@@ -259,10 +251,11 @@ recordPlaybookCheck(bundle, {
   }),
 });
 recordPlaybookCheck(bundle, { gate: 'work-unit-inspect', passed: inspect.passed === true, detail: JSON.stringify(inspect.inspect || []) });
-recordPlaybookCheck(bundle, { gate: 'wave1-gate', passed: gate.check?.passed === true, detail: JSON.stringify(gate.inspect || []) });
 console.log('Recorded native checks; Supervisor finalizer is authoritative.');
 JS
 ```
+
+These checks prove only the two-Actor submit and inspection checkpoint. They do not establish semantic Wave1 projections or Gate readiness.
 
 ## Step 6: [MAIN/SHELL] Native completion
 

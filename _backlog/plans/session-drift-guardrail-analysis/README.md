@@ -40,7 +40,7 @@ explored_mechanism: two-tier (derived consumption-boundary check + declared sema
 recommendation: one OpenSpec-centered feedback loop — short AGENTS/CLAUDE routing, OpenSpec 1.7 artifact/operation guidance, persistent finding tasks, risk-led Agent review, supported-entry convergence, and a guarded governance finalizer around native archive (`08`)
 related:
   - _backlog/plans/framework-contract-feedback-and-control-structure-analysis.md
-  - _backlog/plans/framework-contract-remediation-openspec-sequence.md
+  - _backlog/_done/_closed_plans/framework-contract-remediation-openspec-sequence.md
 ---
 
 # Per-OpenSpec-Session Drift Guardrail — Analysis
@@ -52,7 +52,7 @@ related:
 ——包括走通的结论和走不通的死路。它**不创建 OpenSpec change，也不改任何实现代码**。
 最终建议与要创建的 change 边界在 `08`；真正 artifacts 仍须由后续 `/opsx:propose` 单独承载。
 
-它是 `_backlog/plans/framework-contract-remediation-openspec-sequence.md` 的**前件/伴随件**：
+它是 `_backlog/_done/_closed_plans/framework-contract-remediation-openspec-sequence.md` 的**前件/伴随件**：
 那份计划决定“修哪几个已知语义对象”（C1–C5）；本文决定“之后怎样在 change lifecycle 中重新触发
 相关 review、持久化 finding，并闭合可确定检查”。前者修已知内容，后者降低跨 change 复发率；边界不同，
 但会在 apply/archive closeout 汇合。

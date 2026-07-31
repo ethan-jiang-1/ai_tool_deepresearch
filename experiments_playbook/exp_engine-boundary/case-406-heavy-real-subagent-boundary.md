@@ -2,9 +2,9 @@
 schema: command-experiment/v2
 experiment: engine-boundary
 case: case-406-heavy-real-subagent-boundary
-case_goal: "验证独立 dpt-source-intake Sub-agent 按真实 work-unit envelope 写 result/receipt/output 后，经 submit 产生 ledger、trace 和 Wave0 gate proof；native Sub-agent 不可用时诚实 NOT_RUN。"
+case_goal: "验证独立 dpt-source-intake Sub-agent 按真实 work-unit envelope 写 result/receipt/output 后，经 submit 产生 ledger 和 trace actor-checkpoint proof；native Sub-agent 不可用时诚实 NOT_RUN。"
 verdict_mode: all
-required_checks: [real-subagent-task-bound, real-subagent-result-written, real-subagent-receipt-nonce-preserved, real-subagent-output-written, real-subagent-submit-succeeded, wave0-gate-pass, work-unit-submit-traced]
+required_checks: [real-subagent-task-bound, real-subagent-result-written, real-subagent-receipt-nonce-preserved, real-subagent-output-written, real-subagent-submit-succeeded, work-unit-submit-traced]
 bundle_roles: [verdict]
 verdict_role: verdict
 health_roles: [verdict]
@@ -27,7 +27,7 @@ not_run_if: "The native dpt-source-intake Sub-agent tool or required local tool 
 
 PASS requires an independent native `dpt-source-intake` Sub-agent. The Playbook Agent may prepare the work-unit envelope, invoke the Subject Sub-agent, read its returned feedback, submit its exact durable result, and record deterministic checks. It must not perform the bounded Subject task itself, write or repair Subject result/receipt/output/cache bytes on the Subject's behalf, or turn fixture/parent output into Agent-behavior evidence.
 
-This is a no-network native-actor canary: `external_calls: none` is deliberate. Setup is fixture-backed, but the actor boundary is real. If the native Sub-agent surface or its required local capabilities are unavailable, finalize NOT_RUN with the prepared bundle and stop. Do not manufacture the seven required checks.
+This is a no-network native-actor canary: `external_calls: none` is deliberate. Setup is fixture-backed, but the actor boundary is real. Its PASS establishes only the submitted actor checkpoint; it does not assert Wave0 readiness or a Wave0 Gate pass. If the native Sub-agent surface or its required local capabilities are unavailable, finalize NOT_RUN with the prepared bundle and stop. Do not manufacture the declared required checks.
 
 ## Step 1 - Prepare and register one claimed work unit
 
@@ -56,7 +56,7 @@ printf '%s\n' 'native dpt-source-intake Sub-agent or required local actor capabi
 
 NOT_RUN is deferred evidence, not PASS or fixture failure. Do not continue to Step 3 after finalizing it.
 
-## Step 3 - Submit the Subject-owned result and run the gate
+## Step 3 - Submit the Subject-owned result
 
 Only after Step 2 has produced the assigned durable files. Skip Steps 3 and 4 when the unavailable marker exists:
 
@@ -70,6 +70,8 @@ node experiments_env/shared/run-fixture-backed-case.mjs \
   --real-result "$RESULT" > "$STATE/case406-submitted.json"
 ```
 
+The helper stops at the Subject-owned result/receipt/output, Engine submit, and trace facts. It does not run the Wave0 Gate or create a Phase-owned projection; only a Phase-ready Wave0 playbook may assert Wave0 readiness.
+
 ## Step 4 - Record exact case-owned checks
 
 ```bash
@@ -82,7 +84,7 @@ const verdict = JSON.parse(readFileSync(join(bundle, 'case-406-verdict.json')));
 const required = [
   'real-subagent-task-bound', 'real-subagent-result-written',
   'real-subagent-receipt-nonce-preserved', 'real-subagent-output-written',
-  'real-subagent-submit-succeeded', 'wave0-gate-pass', 'work-unit-submit-traced',
+  'real-subagent-submit-succeeded', 'work-unit-submit-traced',
 ];
 const byLabel = new Map(verdict.checks.map((row) => [row.label, row]));
 for (const gate of required) appendFileSync(join(bundle, 'rb_trace.jsonl'), `${JSON.stringify({
