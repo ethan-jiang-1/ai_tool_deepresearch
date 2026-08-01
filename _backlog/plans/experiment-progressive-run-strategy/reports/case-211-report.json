@@ -1,0 +1,10 @@
+{
+  "case": "case-211-heavy-wave0-happy-path",
+  "outcome": "ERROR",
+  "native": null,
+  "health": null,
+  "reason": "case_budget_exhausted",
+  "cost": 2.0059260000000005,
+  "duration_ms": 363294,
+  "completion": null
+}

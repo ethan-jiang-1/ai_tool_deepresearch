@@ -1,0 +1,10 @@
+{
+  "case": "case-715-heavy-wave-target-receipt-closure",
+  "outcome": "ERROR",
+  "native": null,
+  "health": null,
+  "reason": "native_completion_invalid: ENOENT: no such file or directory, lstat '/Users/bowhead/ai_tool_deepresearch/.exp-bundles/runs/34010ed4-a95e-42ef-804a-5edc9c9c76b9/001-case-715-heavy-wave-target-receipt-closure-dcc8fc49-b77a-47a2-b30d-8f9cdf62abb8/agent-experiment-completion.json'",
+  "cost": 0.45428899999999994,
+  "duration_ms": 78941,
+  "completion": null
+}

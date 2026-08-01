@@ -1,0 +1,51 @@
+{
+  "case": "case-406-heavy-real-subagent-boundary",
+  "outcome": "FAIL",
+  "native": "FAIL",
+  "health": "ISSUES",
+  "reason": null,
+  "cost": 1.0800520000000002,
+  "duration_ms": 264877,
+  "completion": {
+    "outcome": "FAIL",
+    "verdict_mode": "all",
+    "checks_total": 7,
+    "considered_checks": [
+      {
+        "gate": "real-subagent-task-bound",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "real-subagent-result-written",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "real-subagent-receipt-nonce-preserved",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "real-subagent-output-written",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "real-subagent-submit-succeeded",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "wave0-gate-pass",
+        "passed": false,
+        "expected": true
+      },
+      {
+        "gate": "work-unit-submit-traced",
+        "passed": true,
+        "expected": true
+      }
+    ]
+  }
+}

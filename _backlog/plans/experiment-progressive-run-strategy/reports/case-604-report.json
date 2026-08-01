@@ -1,0 +1,36 @@
+{
+  "case": "case-604-heavy-real-subagent-write-before-return",
+  "outcome": "PASS",
+  "native": "PASS",
+  "health": "ISSUES",
+  "reason": null,
+  "cost": 2.3772919999999997,
+  "duration_ms": 420792,
+  "completion": {
+    "outcome": "PASS",
+    "verdict_mode": "all",
+    "checks_total": 4,
+    "considered_checks": [
+      {
+        "gate": "real-subagent-result-written",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "real-subagent-receipt-nonce-preserved",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "real-subagent-submit-succeeded",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "no-chat-only-return",
+        "passed": true,
+        "expected": true
+      }
+    ]
+  }
+}

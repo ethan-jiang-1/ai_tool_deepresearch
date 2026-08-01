@@ -1,0 +1,10 @@
+{
+  "case": "case-153-standard-wave-fault-tolerance",
+  "outcome": "ERROR",
+  "native": null,
+  "health": null,
+  "reason": "case_budget_exhausted",
+  "cost": 6.006025999999998,
+  "duration_ms": 837255,
+  "completion": null
+}

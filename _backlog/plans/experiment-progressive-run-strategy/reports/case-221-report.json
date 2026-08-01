@@ -1,0 +1,10 @@
+{
+  "case": "case-221-heavy-batch-subagent",
+  "outcome": "ERROR",
+  "native": null,
+  "health": null,
+  "reason": "agent_timeout",
+  "cost": null,
+  "duration_ms": 600134,
+  "completion": null
+}

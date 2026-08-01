@@ -1,0 +1,36 @@
+{
+  "case": "case-231-heavy-synthesis-happy-path",
+  "outcome": "PASS",
+  "native": "PASS",
+  "health": "ISSUES",
+  "reason": null,
+  "cost": 3.855134,
+  "duration_ms": 497521,
+  "completion": {
+    "outcome": "PASS",
+    "verdict_mode": "all",
+    "checks_total": 4,
+    "considered_checks": [
+      {
+        "gate": "wave2-artifact-triplet",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "wave2-backfill-complete",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "wave2-pure-gate-pass",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "wave2-no-delegated-row-required",
+        "passed": true,
+        "expected": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "case": "case-204-heavy-canonical-seed-authoring",
+  "outcome": "CANCELLED",
+  "native": null,
+  "health": null,
+  "reason": "external_sigterm",
+  "cost": null,
+  "duration_ms": 130664,
+  "completion": null
+}

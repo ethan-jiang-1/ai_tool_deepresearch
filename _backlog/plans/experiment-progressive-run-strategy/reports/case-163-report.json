@@ -1,0 +1,10 @@
+{
+  "case": "case-163-heavy-rerun-add-real-cache-trail",
+  "outcome": "ERROR",
+  "native": null,
+  "health": null,
+  "reason": "native_completion_invalid: ENOENT: no such file or directory, lstat '/Users/bowhead/ai_tool_deepresearch/.exp-bundles/runs/d2a8bd0b-e545-43fb-856c-bb9a4b9d9bd2/001-case-163-heavy-rerun-add-real-cache-trail-924171fb-bbd8-4a05-8b63-22acdce6ac0b/agent-experiment-completion.json'",
+  "cost": 13.714914999999992,
+  "duration_ms": 1580569,
+  "completion": null
+}

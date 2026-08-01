@@ -1,0 +1,31 @@
+{
+  "case": "case-114-heavy-hitl1-manual-review",
+  "outcome": "PASS",
+  "native": "PASS",
+  "health": "ISSUES",
+  "reason": null,
+  "cost": 1.9487350000000006,
+  "duration_ms": 315542,
+  "completion": {
+    "outcome": "PASS",
+    "verdict_mode": "all",
+    "checks_total": 3,
+    "considered_checks": [
+      {
+        "gate": "six-auto-vectors",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "auto-branch-no-human-wait",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "hitl1-recorded",
+        "passed": true,
+        "expected": true
+      }
+    ]
+  }
+}

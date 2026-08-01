@@ -1,0 +1,61 @@
+{
+  "case": "case-124-standard-seed-topics-boundary",
+  "outcome": "FAIL",
+  "native": "FAIL",
+  "health": "ISSUES",
+  "reason": null,
+  "cost": 2.039631,
+  "duration_ms": 326505,
+  "completion": {
+    "outcome": "FAIL",
+    "verdict_mode": "all",
+    "checks_total": 9,
+    "considered_checks": [
+      {
+        "gate": "seed-topics-ready-happy",
+        "passed": false,
+        "expected": true
+      },
+      {
+        "gate": "seed-topics-ready-happy",
+        "passed": false,
+        "expected": true
+      },
+      {
+        "gate": "seed-topics-ready-happy",
+        "passed": false,
+        "expected": true
+      },
+      {
+        "gate": "seed-topics-ready-happy",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "empty-directory-rejected",
+        "passed": false,
+        "expected": false
+      },
+      {
+        "gate": "empty-directory-rejected",
+        "passed": false,
+        "expected": false
+      },
+      {
+        "gate": "missing-slug-rejected",
+        "passed": false,
+        "expected": false
+      },
+      {
+        "gate": "extra-slug-rejected",
+        "passed": false,
+        "expected": false
+      },
+      {
+        "gate": "slug-consistency-two-way",
+        "passed": true,
+        "expected": true
+      }
+    ]
+  }
+}

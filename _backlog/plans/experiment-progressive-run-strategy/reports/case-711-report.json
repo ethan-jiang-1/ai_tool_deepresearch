@@ -1,0 +1,36 @@
+{
+  "case": "case-711-heavy-hitl1-natural-acceptance",
+  "outcome": "PASS",
+  "native": "PASS",
+  "health": "CLEAN",
+  "reason": null,
+  "cost": 0.28500800000000004,
+  "duration_ms": 183478,
+  "completion": {
+    "outcome": "PASS",
+    "verdict_mode": "all",
+    "checks_total": 4,
+    "considered_checks": [
+      {
+        "gate": "case-711-transcript-contract",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "case-711-no-second-confirmation",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "case-711-subject-owned-existing-writes",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "case-711-real-probe-and-gate-branch",
+        "passed": true,
+        "expected": true
+      }
+    ]
+  }
+}

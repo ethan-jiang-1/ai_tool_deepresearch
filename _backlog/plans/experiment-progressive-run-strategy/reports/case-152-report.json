@@ -1,0 +1,10 @@
+{
+  "case": "case-152-standard-wave-repair-loop",
+  "outcome": "ERROR",
+  "native": null,
+  "health": null,
+  "reason": "agent_timeout",
+  "cost": 0,
+  "duration_ms": 1119968,
+  "completion": null
+}

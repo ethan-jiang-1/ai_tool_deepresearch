@@ -1,0 +1,10 @@
+{
+  "case": "case-712-heavy-hitl2-natural-rerun",
+  "outcome": "ERROR",
+  "native": null,
+  "health": null,
+  "reason": "agent_nonzero_1",
+  "cost": 1.8019320000000003,
+  "duration_ms": 292839,
+  "completion": null
+}

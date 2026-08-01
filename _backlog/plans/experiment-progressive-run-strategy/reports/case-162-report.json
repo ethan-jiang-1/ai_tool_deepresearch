@@ -1,0 +1,171 @@
+{
+  "case": "case-162-standard-gate-reentry-cache-coverage",
+  "outcome": "ERROR",
+  "native": "FAIL",
+  "health": null,
+  "reason": "agent_timeout",
+  "cost": 5.329938999999999,
+  "duration_ms": 900223,
+  "completion": {
+    "outcome": "FAIL",
+    "verdict_mode": "all",
+    "checks_total": 31,
+    "considered_checks": [
+      {
+        "gate": "orphan-direct-artifact-fails-gate",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "file-observability-orphan-feedback",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "reentry-orphan-blocker",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "clean-submitted-gate-passes",
+        "passed": false,
+        "expected": true
+      },
+      {
+        "gate": "ledger-counts-only-submitted-topic-a",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "submitted-work-unit-rows",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "clean-submitted-gate-passes",
+        "passed": false,
+        "expected": true
+      },
+      {
+        "gate": "ledger-counts-only-submitted-topic-a",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "submitted-work-unit-rows",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "clean-submitted-gate-passes",
+        "passed": false,
+        "expected": true
+      },
+      {
+        "gate": "ledger-counts-only-submitted-topic-a",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "submitted-work-unit-rows",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "clean-submitted-gate-passes",
+        "passed": false,
+        "expected": true
+      },
+      {
+        "gate": "ledger-counts-only-submitted-topic-a",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "submitted-work-unit-rows",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "clean-submitted-gate-passes",
+        "passed": false,
+        "expected": true
+      },
+      {
+        "gate": "ledger-counts-only-submitted-topic-a",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "submitted-work-unit-rows",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "clean-submitted-gate-passes",
+        "passed": false,
+        "expected": true
+      },
+      {
+        "gate": "ledger-counts-only-submitted-topic-a",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "submitted-work-unit-rows",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "clean-submitted-gate-passes",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "ledger-counts-only-submitted-topic-a",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "submitted-work-unit-rows",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "orphan-direct-artifact-fails-gate",
+        "passed": false,
+        "expected": true
+      },
+      {
+        "gate": "file-observability-orphan-feedback",
+        "passed": false,
+        "expected": true
+      },
+      {
+        "gate": "reentry-orphan-blocker",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "cache-coverage-drift",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "file-observability-cache-gap",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "reentry-cache-gap",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "heavy-health-cache-gap",
+        "passed": true,
+        "expected": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "case": "case-318-heavy-rerun-direction-recovery",
+  "outcome": "PASS",
+  "native": "PASS",
+  "health": "CLEAN",
+  "reason": null,
+  "cost": 0.253106,
+  "duration_ms": 128839,
+  "completion": {
+    "outcome": "PASS",
+    "verdict_mode": "all",
+    "checks_total": 6,
+    "considered_checks": [
+      {
+        "gate": "case-318-real-subject-executions",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "case-318-current-direction-produced",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "case-318-direction-preserved-during-recovery",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "case-318-profile-recovered-to-direction",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "case-318-real-rerun-gate-pass",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "case-318-witnessed-seed-topics-handoff",
+        "passed": true,
+        "expected": true
+      }
+    ]
+  }
+}

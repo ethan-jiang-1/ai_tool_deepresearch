@@ -1,0 +1,10 @@
+{
+  "case": "case-101-standard-pre-research-happy",
+  "outcome": "ERROR",
+  "native": null,
+  "health": null,
+  "reason": "agent_nonzero_1",
+  "cost": 0,
+  "duration_ms": 185392,
+  "completion": null
+}

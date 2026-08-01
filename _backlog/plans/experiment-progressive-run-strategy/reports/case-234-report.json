@@ -1,0 +1,10 @@
+{
+  "case": "case-234-heavy-subagent-search",
+  "outcome": "CANCELLED",
+  "native": null,
+  "health": null,
+  "reason": "external_sigterm",
+  "cost": null,
+  "duration_ms": 111074,
+  "completion": null
+}

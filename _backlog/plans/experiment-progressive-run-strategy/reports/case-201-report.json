@@ -1,0 +1,46 @@
+{
+  "case": "case-201-standard-seedtopics-queue-loop",
+  "outcome": "FAIL",
+  "native": "FAIL",
+  "health": "ISSUES",
+  "reason": null,
+  "cost": 4.512061999999999,
+  "duration_ms": 554339,
+  "completion": {
+    "outcome": "FAIL",
+    "verdict_mode": "all",
+    "checks_total": 6,
+    "considered_checks": [
+      {
+        "gate": "seedtopic-enqueued",
+        "passed": false,
+        "expected": true
+      },
+      {
+        "gate": "seedtopic-claimed",
+        "passed": false,
+        "expected": true
+      },
+      {
+        "gate": "phase-agent-materialized",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "seedtopic-completed",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "queue-drained",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "seed-topics-ready",
+        "passed": true,
+        "expected": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "case": "case-164-heavy-direct-output-candidate-contract",
+  "outcome": "CANCELLED",
+  "native": null,
+  "health": null,
+  "reason": "external_sigint",
+  "cost": null,
+  "duration_ms": 167488,
+  "completion": null
+}

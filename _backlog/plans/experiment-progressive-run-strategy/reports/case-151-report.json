@@ -1,0 +1,10 @@
+{
+  "case": "case-151-standard-waves-full-chain",
+  "outcome": "ERROR",
+  "native": null,
+  "health": null,
+  "reason": "agent_timeout",
+  "cost": 1.269138,
+  "duration_ms": 2404326,
+  "completion": null
+}

@@ -1,0 +1,36 @@
+{
+  "case": "case-222-heavy-gate-fail-repair",
+  "outcome": "PASS",
+  "native": "PASS",
+  "health": "ISSUES",
+  "reason": null,
+  "cost": 5.55271,
+  "duration_ms": 741297,
+  "completion": {
+    "outcome": "PASS",
+    "verdict_mode": "all",
+    "checks_total": 4,
+    "considered_checks": [
+      {
+        "gate": "wave1-initial-gate-fails",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "wave1-repair-batch",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "wave1-repaired-gate-passes",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "wave1-gate-fail-then-pass",
+        "passed": true,
+        "expected": true
+      }
+    ]
+  }
+}
