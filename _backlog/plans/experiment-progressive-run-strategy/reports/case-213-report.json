@@ -1,0 +1,61 @@
+{
+  "case": "case-213-light-happy-and-fail",
+  "outcome": "PASS",
+  "native": "PASS",
+  "health": "ISSUES",
+  "reason": null,
+  "cost": 3.397558,
+  "duration_ms": 537438,
+  "completion": {
+    "outcome": "PASS",
+    "verdict_mode": "all",
+    "checks_total": 9,
+    "considered_checks": [
+      {
+        "gate": "multi-claim-count",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "multi-submit",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "multi-ledger-rows",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "multi-gate-pass",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "missing-receipt-rejected",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "invalid-result-rejected",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "rejected-work-units-no-ledger",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "timeout-retry-new-work-id",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "orphan-output-gate-rejects",
+        "passed": true,
+        "expected": true
+      }
+    ]
+  }
+}

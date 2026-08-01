@@ -18,7 +18,7 @@
 | Plan | 简述 | 状态 |
 |------|------|------|
 | `silent-autonomous-execution` | 承接 `BUG-099/104/106` 的历史 stop/context observation。已与现行 Chain/Queue/Work Unit swarm 对齐：silent poll-submit loop、actor probe/fallback 与 continuation cues 是既有 contract；三次 real-actor canary 仍为 host-scoped `NOT_RUN`。没有 current-head Phase-Agent reproduction，也没有 active OpenSpec change；仅在新的可审计 `agent_flow_e2e` observation 出现后重开。 | deferred observation（无固定 OpenSpec change） |
-| `experiment-progressive-run-strategy` | 基于 2026-08-01 实测耗时数据，将 101 个 autorun-compatible cases 按实际 runtime 重分为 Sprint/Standard/Marathon/Real-Agent 四档，替代历史 light/standard/heavy 标签。 | drafting — 等推敲后执行 |
+| `experiment-progressive-run-strategy` | 基于 2026-08-01 实测耗时数据，将 101 个 autorun-compatible cases 按实际 runtime 重分为 Sprint/Standard/Marathon/Real-Agent 四档。详见 [`experiment-progressive-run-strategy/`](experiment-progressive-run-strategy/) — `results.md`（23 case 实测数据）、`issues.md`（4 个已知问题）、`reports/`（9 个 case 的 minimal report JSON）。 | 数据收集阶段 — 16/39 light 未跑，standard/heavy 全未跑 |
 
 ---
 

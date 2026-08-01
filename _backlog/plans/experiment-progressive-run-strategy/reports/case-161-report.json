@@ -1,0 +1,46 @@
+{
+  "case": "case-161-light-complete-cache-trails",
+  "outcome": "PASS",
+  "native": "PASS",
+  "health": "ISSUES",
+  "reason": null,
+  "cost": 0.41535,
+  "duration_ms": 73698,
+  "completion": {
+    "outcome": "PASS",
+    "verdict_mode": "all",
+    "checks_total": 6,
+    "considered_checks": [
+      {
+        "gate": "valid-cache-submit-ledger",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "cache-coverage-valid-row",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "reject-incomplete-cache-leaf",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "reject-unsafe-cache-escape",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "reject-unsafe-cache-parent",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "invalid-cache-no-extra-ledger",
+        "passed": true,
+        "expected": true
+      }
+    ]
+  }
+}

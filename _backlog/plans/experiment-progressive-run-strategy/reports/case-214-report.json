@@ -1,0 +1,66 @@
+{
+  "case": "case-214-light-timeout-progress-lease",
+  "outcome": "PASS",
+  "native": "PASS",
+  "health": "ISSUES",
+  "reason": null,
+  "cost": 0.340275,
+  "duration_ms": 68879,
+  "completion": {
+    "outcome": "PASS",
+    "verdict_mode": "all",
+    "checks_total": 10,
+    "considered_checks": [
+      {
+        "gate": "no-progress-preflight-timeout-eligible",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "no-progress-timeout-requeues-retry",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "progress-preflight-refuses-timeout",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "progress-default-timeout-no-side-effect",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "submit-ready-candidate-routes-submit",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "repairable-external-candidate-routes-repair",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "external-candidate-mtime-does-not-extend-lease",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "wrong-identity-candidate-routes-inspect",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "force-timeout-records-audit",
+        "passed": true,
+        "expected": true
+      },
+      {
+        "gate": "late-submit-after-timeout-remains-rejected",
+        "passed": true,
+        "expected": true
+      }
+    ]
+  }
+}

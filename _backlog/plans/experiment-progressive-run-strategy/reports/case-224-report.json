@@ -1,0 +1,10 @@
+{
+  "case": "case-224-light-happy-and-fail",
+  "outcome": "ERROR",
+  "native": null,
+  "health": null,
+  "reason": "agent_timeout",
+  "cost": 4.687003,
+  "duration_ms": 600204,
+  "completion": null
+}
