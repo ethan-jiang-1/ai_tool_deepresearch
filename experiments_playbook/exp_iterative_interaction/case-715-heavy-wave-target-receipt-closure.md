@@ -55,10 +55,77 @@ PASS requires deterministic inspection of the real bundle and raw Subject transc
 
 If the independent Agent or real tools are unavailable, finalize `NOT_RUN` with the unavailable reason. Do not create a scripted depth review, finding, or trace entry as a fixture PASS.
 
-## Run
+## Step 1: [PLAYBOOK AGENT] Prepare Legal Wave1 Boundary
 
-Use the existing iterative-interaction Subject adapter and finalizer pattern from case 711, substituting case id `715`. The Subject Agent must run two sequential phases (Wave1 then Wave2) within the same bundle, with a real `enter-phase` transition and `load_complete` handoff between them.
+```bash
+B=$(node experiments_env/shared/prepare-iterative-interaction-case.mjs 715 --target-dir {{CASE_RUN_ROOT_SH}} 2>/dev/null) || true
+if [ -z "$B" ] || [ ! -d "$B" ]; then
+  B=$(printf '%s/dpt_disp_case-715_NOTREADY' {{CASE_RUN_ROOT_SH}})
+  mkdir -p "$B"
+  printf '%s\n' 'case-715 infrastructure not ready: prepare helper does not support case 715' > "$B/case-715-infra-unavailable.txt"
+fi
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+```
 
-The research question must involve at least two canonical topics where one topic's evidence naturally raises a question best answered by cross-topic synthesis — giving the Agent a legitimate reason to declare carried targets rather than fabricating them.
+## Step 2: [SUBJECT AGENT] Wave1 Depth Review With Carried Targets
 
-Preserve the adapter-owned `subject_prompt`, raw `subject_transcript`, and `subject_result` for each phase in the verdict bundle before the one native finalizer boundary.
+If the prepare infrastructure is unavailable, skip Subject execution and proceed to finalization. Otherwise, run one independently authenticated real Agent session for Wave1 depth review.
+
+The subject system instruction is limited to:
+
+```text
+You are the independent subject Agent for case 715 Wave1. Work only in the exact bundle path provided by the runner. Load the bundle's current production lifecycle surface and direct facts. Execute the current phase's depth review contract and produce carried_targets where evidence naturally crosses topic boundaries.
+```
+
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+if [ -f "$B/case-715-infra-unavailable.txt" ]; then
+  printf '%s\n' 'case-715 infrastructure not ready — skipping Subject execution' > "$B/case-715-subject-unavailable.txt"
+else
+  set +e
+  node experiments_env/shared/run-iterative-interaction-subject.mjs 715-wave1 --bundle "$B" 2>/dev/null
+  SUBJECT_STATUS=$?
+  set -e
+  if [ "$SUBJECT_STATUS" -ne 0 ]; then
+    printf '%s\n' 'independent Subject Agent or required real tools unavailable' > "$B/case-715-subject-unavailable.txt"
+  fi
+fi
+```
+
+## Step 3: [SUBJECT AGENT] Wave2 Synthesis With Receipt-Bound Findings
+
+After the Wave1 Gate passes and projects the carried_target_receipt, run a second independent Subject session for Wave2 synthesis. If the first Subject session was unavailable, skip.
+
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+if [ ! -f "$B/case-715-subject-unavailable.txt" ] && [ ! -f "$B/case-715-infra-unavailable.txt" ]; then
+  set +e
+  node experiments_env/shared/run-iterative-interaction-subject.mjs 715-wave2 --bundle "$B" 2>/dev/null
+  SUBJECT2_STATUS=$?
+  set -e
+  if [ "$SUBJECT2_STATUS" -ne 0 ]; then
+    printf '%s\n' 'independent Wave2 Subject Agent unavailable' > "$B/case-715-subject-unavailable.txt"
+  fi
+fi
+```
+
+## Step 4: [OBSERVER] Hash And Derive Native Verdict
+
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+EXTRA_ARGS=()
+if [ -f "$B/case-715-subject-unavailable.txt" ]; then
+  EXTRA_ARGS+=(--not-run-reason "$(cat "$B/case-715-subject-unavailable.txt")")
+elif [ -f "$B/case-715-infra-unavailable.txt" ]; then
+  EXTRA_ARGS+=(--not-run-reason "$(cat "$B/case-715-infra-unavailable.txt")")
+fi
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+```
+
+PASS requires deterministic inspection of the real bundle and raw Subject transcripts showing explicit carried targets, receipt projection, receipt-bound findings, closure coverage, and no fabricated path. When the infrastructure or Subject Agent is unavailable, the case produces an honest NOT_RUN through the single native finalizer boundary.
+
+The light health profile is intentional because the verdict checks focus on structural contract compliance at the Wave1→Wave2 boundary. The filename's `heavy` cost continues to describe the real external Subject expense.
+
+## Step 5: [PLAYBOOK AGENT] Stop
+
+Stop after native completion. The Autorun Supervisor validates the completion, runs Light health, exports durable Subject evidence, and preserves FAIL or NOT_RUN roots.

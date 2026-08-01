@@ -15,15 +15,16 @@
 
 ## 活跃列表
 
-> **当前优先级：没有已验证的活跃 framework implementation defect。** BUG-099/104/106 等待真实
-> Agent-flow observation；BUG-175 等待用户的质量政策决定。它们都不能替代新的 bundle direct root。
+> **当前优先级：没有已验证的活跃 framework implementation defect。** BUG-099/104/106 是旧 swarm
+> incident 留下的 residual observation，等待 fresh current-head Phase-Agent `agent_flow_e2e`；当前 real-actor
+> canary 是 host-scoped `NOT_RUN`，不能替代这一观察。BUG-175 等待 exploratory_map 质量阈值的政策决定。它们都不能替代新的 bundle direct root。
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
-| [BUG-099](BUG-099-stop-no-agent-halted-at-wave0.md) | P2 | wave0 | deferred operability：`stop: no` phase agent 在 wave0 主动停下，当前可由一次用户续跑恢复，不阻塞核心 bundle contract 可达性 |
-| [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | enter-phase 每次渲染完整 shared context 造成累积 context 压力 |
-| [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P2 | wave0→wave1 | deferred operability：agent 输出总结而未执行下一 phase，当前可由一次用户续跑恢复 |
-| [BUG-175](BUG-175-count-floors-as-absolute-gate-blockers.md) | P2 | wave0 | **CCDS4** per_topic=10 + shared_ref=9 是硬 blocker，无 degradation 路径；exploratory_map 实际需要 59 个 source 条目 |
+| [BUG-099](BUG-099-stop-no-agent-halted-at-wave0.md) | P2 | wave0 | historical `stop: no` halt observation；无 current-head Phase-Agent reproduction，real-actor canary 为 `NOT_RUN` |
+| [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | historical repeated-rendering/context-pressure hypothesis；尚无 current-head causal evidence |
+| [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P2 | wave0→wave1 | historical report-instead-of-execute observation；无 current-head Phase-Agent reproduction |
+| [BUG-175](BUG-175-count-floors-as-absolute-gate-blockers.md) | P2 | wave0 | `exploratory_map` per-topic=10、shared=`4 + 1 * topic_count`；count-floor-only Gate failure 可在 fatigue threshold 后 degraded handoff，剩余问题是默认阈值校准 |
 
 ## 最近关闭 (2026-07-31)
 
@@ -77,7 +78,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 | BUG-159 | P3 文档契约 | advance-status 前置条件未写入 phase §5 |
 | BUG-160 | P3 CLI 可用性 | operate-topic-state/queue 无 --help |
 
-> BUG-099/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 计划承接，均 deferred 于核心 work-unit / evidence / Gate 运行路径稳定之后。BUG-129/130/131/142 已移至 `../_done/_suspened_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
+> BUG-099/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspened_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
 **Next available bug ID: BUG-187**
 

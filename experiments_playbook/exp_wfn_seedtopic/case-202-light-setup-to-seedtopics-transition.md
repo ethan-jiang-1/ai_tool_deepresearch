@@ -3,7 +3,7 @@ schema: command-experiment/v2
 experiment: wfn-seedtopic
 case: case-202-light-setup-to-seedtopics-transition
 case_goal: "验证 setup-ready gate → seed-topics phase → seed-topics-ready gate 过渡机制：status 推进、slug 三重一致、gate.next 指向 wave0。"
-verdict_mode: all
+verdict_mode: last
 required_checks: [setup-ready, witnessed-seed-topics-entry, seed-topics-ready]
 bundle_roles: [verdict]
 verdict_role: verdict

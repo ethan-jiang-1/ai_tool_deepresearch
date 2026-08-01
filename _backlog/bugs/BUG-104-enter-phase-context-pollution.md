@@ -20,6 +20,20 @@ Agent stop remains unproven. Keep this card deferred/research-only until a
 real-Agent observation isolates the effect; do not add session memory or a
 host controller from deterministic fixture evidence.
 
+## Current Swarm Alignment (2026-08-01)
+
+This card records a historical rendering measurement and a context-pressure
+hypothesis. Current silent execution is governed by the Chain/Queue/Work Unit
+model, including active work-unit polling and deterministic continuation cues;
+it does not use session-level loaded-file memory. `case-606` proves cue shape,
+not a causal relation between rendered Markdown and a Phase-Agent stop. The
+available real-actor canaries have no native completion (`NOT_RUN`).
+
+A fresh current-head Phase-Agent observation must re-measure the actual loaded
+closure and retain prompt/transcript plus bundle handoff evidence before this
+card can support any DPT-owned proposal. Earlier byte counts and the incident
+timeline are historical context, not a current causal finding.
+
 ## 现象
 
 每次 `enter-phase --node <next>` 调用都会渲染该 phase 所需的 shared context 文件。例如 enter-phase 到 hitl1 时：
@@ -41,14 +55,15 @@ host controller from deterministic fixture evidence.
 
 每次 transition 都向 agent context 追加 shared context 内容。到 wave0 时，agent context 中已有多次重复加载的 shared-profile.md、shared-schemas.md、shared-silent-execution.md 等。
 
-## 根因
+## 历史解释（未证实）
 
 `enter-phase` 的设计假设每个 phase 是独立 session——但实际 run 中，一个 agent session 会连续穿越多个 phase。同一个 shared context 文件（如 shared-profile.md）被加载了 3-4 次，每次都是相同内容。
 
-这是导致 BUG-099（agent 在 wave0 停下来）的重要贡献因素。
+这曾被视为 BUG-099 的可能贡献因素；尚无 current-head real-Agent evidence
+证明这一因果关系。
 
-## 建议方向
+## 已排除或尚未采纳的方向
 
-- `enter-phase` 对 shared context 做幂等去重：同一次 agent session 中，相同的 shared node id 只渲染一次
-- 或者在 `enter-phase` 输出中使用引用标记（`<!-- INCLUDE shared-profile.md -->`）而非全文渲染，让 agent 按需读取
-- 长期：将 shared context 从每次 transition 的渲染中移出，改为 phase agent 启动时一次性加载的"常驻上下文"
+- session-level shared-context de-duplication：这会把 Agent 已读/仍保留的对话状态伪装成 DPT authority
+- 只输出引用标记：这会令 fresh Phase Agent 在首个动作前缺少当前控制面
+- 将 shared context 变成一次性常驻上下文：这会建立当前系统没有的 session-memory contract

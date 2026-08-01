@@ -17,7 +17,8 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `silent-autonomous-execution` | 承接 `source_bugs: BUG-099/104/106`（stop-no halt、context pollution、stop-no-violation-repeats）。独立 research backlog：把「静默自主」拆成 DPT 可确定性修复的 phase-entry correctness 与一般 coding-agent/host 是否发起下一 turn 的 actor liveness 两层，分开研究与证明。BUG-103 的入口 handoff guidance 已由 archived change 修复；其余仍 deferred 于核心 work-unit、evidence-production 与 Gate 路径稳定可跑之后。 | deferred research / scoping（无固定 OpenSpec change） |
+| `silent-autonomous-execution` | 承接 `BUG-099/104/106` 的历史 stop/context observation。已与现行 Chain/Queue/Work Unit swarm 对齐：silent poll-submit loop、actor probe/fallback 与 continuation cues 是既有 contract；三次 real-actor canary 仍为 host-scoped `NOT_RUN`。没有 current-head Phase-Agent reproduction，也没有 active OpenSpec change；仅在新的可审计 `agent_flow_e2e` observation 出现后重开。 | deferred observation（无固定 OpenSpec change） |
+| `experiment-progressive-run-strategy` | 基于 2026-08-01 实测耗时数据，将 101 个 autorun-compatible cases 按实际 runtime 重分为 Sprint/Standard/Marathon/Real-Agent 四档，替代历史 light/standard/heavy 标签。 | drafting — 等推敲后执行 |
 
 ---
 

@@ -1,48 +1,80 @@
 ---
 bug_id: BUG-175
-title: Count floors (per_topic=10, shared_ref=9) are absolute gate blockers with no degradation path
+title: exploratory_map count-floor calibration remains a product-policy decision
 severity: P2
 phase: wave0
+status: policy_residual
 source: CCDS4 (Claude Code + DeepSeek v4, 2026-07-29)
 surfaced_at: 2026-07-29
+revised: 2026-08-01
 ---
 
-# BUG-175: Count floors as absolute gate blockers
+# BUG-175: exploratory_map count-floor calibration
 
-## What happened
+## Current technical finding (2026-08-01)
+
+The implementation claim in the original report is no longer correct: count
+floors are not absolute Wave0 Gate blockers.
+
+Both `shared_ref_count_floor` and `per_topic_count_floor` are marked
+`degradation_eligible` in the Wave0 Gate definition. After the fatigue
+threshold (currently three attempts), when those are the only unresolved
+rules, the Gate emits a legal degraded handoff with `degraded_rules` rather
+than a clean pass. The Gate remains fail-closed when any queue, provenance,
+structural, trace, or other ineligible blocker remains.
+
+The focused integration coverage exercises both boundaries: a shared-reference
+count-floor-only case produces the degraded handoff, while a case with an
+unsubmitted work unit still fails. The original "no degradation path" claim is
+therefore closed as an implementation diagnosis.
+
+## Policy residual
+
+`exploratory_map` still calibrates Wave0 at 10 source entries per topic plus
+`4 + 1 * topic_count` shared references. For five topics, that is 50 per-topic
+entries plus 9 shared references. Whether those default quality floors should
+be lower remains a product-policy question, not a pending Engine defect.
+
+Any threshold change requires a policy-only OpenSpec change supported by new,
+qualifying real-bundle evidence. Fabricated sources, synthetic source entries,
+and invented cross-topic references remain prohibited; degraded handoff is not
+permission to create them.
+
+## Historical incident (2026-07-29)
 
 `exploratory_map` profile sets:
 - `wave0_per_topic_source_floor: 10` (10 source entries per topic)
-- `wave0_shared_ref_total: 9` (9 shared reference files)
+- `wave0_shared_ref_total: 4 + 1 * topic_count` (9 shared reference files for 5 topics)
 
-These are **hard gate requirements** — `inspect-wave0-output.mjs` reports them as `blocking` failures with no degradation path. Meeting them required:
+The CCDS4 report described these as hard requirements and recorded that meeting
+them required:
 
 1. Creating 9 shared reference files from scratch (mechanical busywork)
 2. Padding source.yaml files from 5-8 entries to exactly 10 (adding entries for sources that weren't actually fetched)
 
-The shared references are especially problematic: each must be a parseable Markdown file without YAML frontmatter (BUG-164), with a real `source_url`, and cross-referenced by projection entries. Creating 9 such files that pass all validations is ~15-20 minutes of mechanical work with zero research value.
+The historical report likely conflated `inspect-wave0-output.mjs` diagnostics,
+additional ineligible blockers, or both with the formal Gate verdict. The
+degradation-policy implementation predates the report (commit `6e47de3ea`,
+2026-07-24), but the original runtime bundle and trace are unavailable, so the
+exact historical path cannot be reconstructed.
 
-## Impact
+## Historical impact report
 
-~40% of Wave0 execution time was spent meeting count floors rather than doing actual evidence collection. The Phase Agent had to:
+The report estimated that ~40% of Wave0 execution time was spent meeting count
+floors rather than doing actual evidence collection. It said the Phase Agent
+had to:
 - Write 9 shared reference files with fabricated cross-topic relevance
 - Add 15+ synthetic source entries to underfilled topics
-- Fix reference format issues (BUG-164) that were only discoverable through inspect failures
 
-## Expected behavior
+This remains useful evidence for a future calibration decision, but not proof
+of current Gate behavior.
 
-Option A: Degraded pass. If count floors aren't met but all submitted sources are valid and cover key dimensions, the gate should pass with `degraded_rules` noting the count gap. The current `quality_min_tier: tier_3` and `quality_min_substance: thin` in research_style_params suggest a degradation path exists in the schema but isn't wired to the gate.
+## Policy question
 
-Option B: Lower default floors for `exploratory_map`. 10 per topic + 9 shared = 59 total source requirements. For a landscape mapping study, 5-6 high-quality sources per topic with 3-4 shared should be sufficient.
-
-**Why:** Count floors protect against thin research, but when they become the primary blocker (while actual source quality is fine), they create perverse incentives to fabricate entries.
-
-## Current Policy Disposition (2026-07-31)
+The former Option A, wiring a degraded pass for eligible count-floor gaps, is
+already implemented. A lower default floor remains possible only through the
+evidence-backed policy route above.
 
 The completed framework-contract remediation plan leaves the accepted
-`exploratory_map` count-floor and current-candidate coverage policies unchanged.
-There is no new qualifying research-bundle evidence, and no user decision, that
-authorizes lower floors or a new degradation route. This remains an active
-product-policy question rather than a pending Engine implementation defect;
-any reconsideration requires a separate policy-only OpenSpec change and must
-continue to prohibit fabricated sources or references.
+`exploratory_map` count-floor policy unchanged. There is no new qualifying
+research-bundle evidence or user decision authorizing lower defaults.

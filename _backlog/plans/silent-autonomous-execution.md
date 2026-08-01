@@ -1,94 +1,63 @@
 ---
 title: Silent autonomous execution
-status: research_backlog_with_no_fixed_openspec_change
+status: deferred_current_head_observation__no_active_openspec_change
 created: 2026-07-24
-revised: 2026-07-28
+revised: 2026-08-01
 source_bugs: BUG-099, BUG-104, BUG-106
-evidence_bundle: dpt_rb_openspec-large-project-maintenance-patterns
+current_execution_model: chain_queue_work_unit
 ---
 
 # Silent Autonomous Execution
 
-## 1. Decision
+## 1. Current Decision
 
-`stop: no` 的“静默自主”不能再被表述为一个已收敛、单一的 OpenSpec change。它横跨两个不同的事实层：DPT 可确定性修复的 phase-entry correctness，以及一般 coding-agent/host 是否发起下一 turn 的 actor liveness。两者必须分开研究、分开证明。
+这份计划只保留 `BUG-099`、`BUG-104` 与 `BUG-106` 的**当前 swarm 残余观察边界**。它不再承接一个 phase-handoff implementation candidate，也不预设新的 OpenSpec change。
 
-本计划是独立的 research backlog，不预先承诺 Change 数量、proposal 名称或 `/opsx:apply` 顺序。它不阻塞 [Wave execution and gate remediation](../_done/_closed_plans/wave-execution-and-gate-remediation.md) 的三个已收敛 producer/Gate changes。
-
-**Priority update (2026-07-27):** this plan is deferred behind reliable
-end-to-end execution of the work-unit, evidence-production, and Gate paths.
-The observed stops are recoverable with an extra user continuation turn; they
-do not currently establish that those core paths are unreachable. Do not open
-this plan's candidate change until real bundles can otherwise run routinely.
+当前生产执行模型是 [Chain / Queue / Work Unit](../../guidelines/agentic-execution-model.md)：
 
 ```text
-DPT deterministic means
-  legal handoff -> status sync -> bounded truthful entry -> first legal action
-
-host / Agent liveness
-  model decision or host-native continuation -> later turn, or terminal stop
+gate -> chain handoff -> phase-local queue demand
+     -> work unit -> Sub-agent -> submit -> ledger -> gate
 ```
 
-前者是 DPT 可拥有的 action-readiness contract；后者不是 DPT 可移植 authority。任何未来 proposal 必须先说明自己只修改前者，还是在 host/operator scope 中记录后者，不能把“希望 Agent 不停”伪装成 Engine guarantee。
+Phase Agent 负责读取 Markdown 控制面、运行确定性 checkpoint，并在 delegated work 已在飞行时主动 poll、submit、repair 或 terminalize；Sub-agent 只执行受限 work unit，不能改 queue、ledger、Gate 或 phase 路由。这个模型取代了旧计划中把“停在 phase entry”与一个拟议的单命令 handoff 绑定的叙事。
 
-## 2. Current Facts
+BUG-103 的 handoff guidance 缺口已由 archived `align-phase-handoff-status-sync-guidance` 关闭。当前 handoff 仍按既有权威消费 `check.next`：`enter-phase` 见证目标 Markdown entry，随后仅在当前 source-gate window 要求时运行 `advance-status`，目标 phase 才执行自己的合法动作。它提供 action readiness，不承诺模型会再发一次 tool call，也不承诺 host 会开启下一 turn。
 
-### Proven DPT defects
+## 2. Current Swarm Contract
 
-1. `enter-phase` and `advance-status` have deliberately separate durable responsibilities: the former writes route-bound entry and `current_node`; the latter synchronizes the source-gate window. BUG-103's direct entry-guidance omission was closed by the archived `align-phase-handoff-status-sync-guidance` change; this plan does not reopen it.
-2. 正常 phase entry 反复渲染完整 `requires` closure；被重复注入的控制面过大是可测事实，但不是特定 Agent 停止的充分因果证明。
-3. The final `enter-phase` continuation cue still precedes status synchronization. The public handoff interface must therefore present the complete order without implying that entry alone is ready for target-phase work.
+- `stop: no` 的 Phase Agent 不主动把进度、问题、确认或 continuation request 浮出给用户；它按 [shared silent-execution contract](../../DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md) repair、换策略、消费合法 handoff 或 silent hold。
+- delegated phase 采用 active poll-submit-repair-terminalize loop：从 bundle truth 重建 in-flight work，使用 `operate-work-unit inspect`，不等待 task notification、用户续跑或外部 workflow 状态。
+- 每次 delegated claim 先有 exact-role native probe，再在 `delegated_subagent` 与明确的 `phase_agent_fallback` 之间作已接受的选择。这个 execution actor 绑定 authorship 与 submit 边界，不证明物理 actor 身份或 host/sub-agent liveness；见 [actor decision loop](../../DPT_FRAMEWORK/command_playbook/work-unit-actor-decision.md)。
+- continuation cue 是现有确定性反馈，不是 scheduler。`case-606` 只证明 cue 在真实 CLI 输出中可见，明确不证明 Agent behavior。
 
-### Proven platform boundary
+## 3. Evidence Boundary
 
-Codex 的 plan update 和 Claude Code 的 task list 都是 tracking surface，不会调度新的 turn。两种平台的 host-native continuation mechanism 也都受 surface、版本、feature 或 operator configuration 约束；它们是 host evidence，不是 DPT state，也不能成为 portable bundle contract。
+已归档的 framework-contract remediation 已把 current deterministic contracts 和 real-actor canary checkpoint 对齐；它没有把 actor behavior 改写成 PASS。2026-07-31 的三次真实 Actor canary（case-406、case-604、case-221）都未产生 native completion，因此是 host-scoped `NOT_RUN`，不是成功、失败或 DPT host-liveness defect。见 [CLS-042 closure record](../_done/_closed_plans/framework-contract-remediation-openspec-sequence.md)。
 
-### Still unproven
+因此，目前没有下列任何一种结论：
 
-- 哪一项 entry-surface 因素、模型状态或上下文压力导致某次 Agent stop。
-- 完成 direct handoff 后，一般 Agent 是否会在同一 turn 或后续 host turn 可靠执行首个目标动作。
-- 是否存在不越过 Agent/Markdown/Engine boundary 的额外 DPT 帮助，而非重复 prompt、session cache 或 host controller。
+- 没有 current-head Phase Agent observation 证明 BUG-099/106 的旧 stop/report 行为仍会在完整 handoff 后复现。
+- 没有证据把旧 incident 的 stop 归因于 repeated `enter-phase` rendering、某个 byte count、模型状态或单句 Markdown。
+- 没有可移植的 DPT authority 能启动 host 的下一 turn，或保证 Sub-agent/Phase Agent 会完成。
 
-## 3. Research Tracks
+旧的 `make-phase-handoff-entry-direct` / `consume-phase-handoff` 方案、entry-core projection、session-level loaded-file cache 与 host-specific continuation research 都不再是本计划的当前方向。
 
-### A. Candidate deterministic handoff improvement
+## 4. Reopen Gate
 
-候选设计是 `make-phase-handoff-entry-direct`：normal caller 只提供 bundle；模块从现有 trace/status authority 推导合法 edge、完成或恢复既有 load/status chain，并只在同步持久化后交付 bounded entry core。
+只有出现新的 current-head disposable `agent_flow_e2e` observation 时，才重新评估本计划。该 observation 必须保留 Subject prompt/transcript、host/version/mode、是否启用 host-native continuation、bundle `rb_trace.jsonl`、status/handoff evidence，以及 completed handoff 后的第一个 Phase-Agent action。
 
-这是候选，不是已批准 change。它必须独立通过 deletion test，且不得引入 workflow walker、chat observer、session registry、goal state、hidden retry tree 或“已读”记忆。
+评估时先区分事实类型：
 
-### B. Real-Agent actor evidence
+1. 若 direct trace/status/queue/work-unit contract 有确定性缺陷，才为该缺陷提出一个有界 OpenSpec change。
+2. 若 Phase Agent 未执行首个合法动作，保留为 actor-behavior observation；同一 host 的额外 turn 只记录 host evidence，不能单独关闭 BUG-099/106。
+3. 若只观察到 context correlation，先记录 current dependency/render measurement，不把它升级为因果或 session-memory contract。
 
-`BUG-099` 与 `BUG-106` 的 closure 只能来自重复、独立的 `agent_flow_e2e` observation：完成合法 handoff 后，Agent 是否实际执行 entry core 的首个目标动作。记录 host/version/mode 与是否开启 host-native continuation，但 host 额外开启一轮本身不是 DPT closure evidence。
+任何 future proposal 都必须继续保留 `queue demand -> work unit -> sub-agent -> submit -> ledger -> gate` 的单一路径，并明确其不会承诺 host turn liveness。
 
-### C. Host-means boundary
+## 5. Non-Goals
 
-继续维护 Codex/Claude Code 的一手证据，目的仅是排除错误设计与准确标注实验环境。不得把 `/goal`、`/loop`、Stop hooks、token-budget continuation 或 Codex active goals 复制进 DPT。
-
-## 4. Decision Gates Before A Proposal
-
-The bounded guidance defect above may proceed independently through a minimal
-OpenSpec change. The broader Track A candidate may proceed only when all of
-the following are true:
-
-1. public interface 的 deterministic contract、partial recovery 和 fresh-session entry-core contract 已明确；
-2. proposal 的 Done 不承诺 host 发起下一 turn；
-3. real-Agent verification 的断言与 deterministic test 的断言明确分层；
-4. scope 未吸收 host controller、平台 adapter、chat observation 或其他 Wave/Gate remediation。
-
-若实验只表明 host liveness 不可移植，则保留 BUG-099/106 为 residual actor observations，而不是用 DPT code 制造假的 closure。它们在当前排序为 P2 deferred operability，不能抢占核心运行正确性工作。
-
-## 5. Evidence Index
-
-- [Candidate direct phase-entry root cause](silent-autonomous-execution/candidate-direct-phase-entry-root-cause.md)
-- [Coding-agent loop analysis](silent-autonomous-execution/analysis-coding-agent-loop-platform.md)
-- [DPT-means boundary](silent-autonomous-execution/analysis-dpt-means-boundary.md)
-- [Codex source reference](silent-autonomous-execution/ref_codex-agent-loop-research.md)
-- [Claude Code source reference](silent-autonomous-execution/ref_claude-code-agent-loop-research.md)
-
-## 6. Non-Goals
-
-- 以 slash command、goal feature 或 task list 代替 DPT lifecycle contract。
-- 为 bundle 添加 idle watcher、host session registry、chat/tool-call observer 或第二 state machine。
-- 以静态 Markdown、fixture、console output 或 host-resumed turn 声称 actor compliance。
-- 因为研究线暂未收敛而阻塞其余 Wave producer/Gate remediation。
+- 不重开已归档的 handoff guidance change，不引入 `consume-phase-handoff` 或第二 lifecycle writer。
+- 不把 Codex/Claude 的 goal、task list、hook、loop 或 token budget feature 复制进 bundle state。
+- 不添加 idle watcher、chat/tool-call observer、session registry、loaded-file read cache、workflow walker 或 hidden retry controller。
+- 不用 fixture、静态 Markdown、console output、host-resumed turn 或 `NOT_RUN` 伪造 Phase-Agent/Sub-agent behavior evidence。
