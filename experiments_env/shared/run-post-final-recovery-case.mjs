@@ -67,7 +67,7 @@ try {
   if (reentry.post_final_recovery?.stage !== 'synchronized_initial_profile') throw new Error('reentry did not expose synchronized initial C5 stage');
 
   const topicInput = join(bundle, '_topic-input.json');
-  writeFileSync(topicInput, `${JSON.stringify({ context: 'rerun', actions: [{ action: 'add_topic', title: 'Controlled Comparison', slug_stem: 'controlled-comparison', must_answer: ['What changed?'], scope_role: 'comparison', depends_on_topic_uids: [] }] }, null, 2)}\n`);
+  writeFileSync(topicInput, `${JSON.stringify({ context: 'rerun', actions: [{ action: 'add_topic', title: 'Controlled Comparison', slug_stem: 'controlled-comparison', must_answer: ['What changed?'], scope_role: 'comparison', depends_on_topic_uids: [], direction: { rerun_count: 1, action: 'add', new_search_dimensions: 'Controlled comparison topic for post-final recovery rerun', adjusted_depth: 'standard', search_guardrails: 'standard', rationale_excerpt: 'Post-final recovery adding comparison topic' } }] }, null, 2)}\n`);
   const topic = runJson(['DPT_FRAMEWORK/cli/operate-topic-state.mjs', 'apply', '--bundle', bundle, '--input', topicInput]);
   if (topic.verdict !== 'committed') throw new Error(`topic-state apply failed: ${topic.reason_code || topic.verdict}`);
 
@@ -75,6 +75,7 @@ try {
   const profile = parseYaml(readFileSync(profilePath, 'utf8'));
   profile.human_decision_checkpoints.hitl2.rerun_count = 1;
   writeFileSync(profilePath, `${stringifyYaml(profile).trimEnd()}\n`);
+  run(['DPT_FRAMEWORK/cli/apply-research-style.mjs', '--bundle', bundle, '--style', 'quick_factual']);
   const gate = runJson(['DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs', '--bundle', bundle, '--current-node', 'phases/phase-rerun.md']);
   if (!gate.check?.passed || gate.check.next !== 'phases/phase-seed-topics.md') throw new Error('rerun-ready did not pass with expected next');
   run(['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', bundle, '--node', gate.check.next]);

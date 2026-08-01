@@ -7,6 +7,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
+import { renderSeedProjectionCard, projectionSlotsForWave } from '../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
 
 import { claimAndSubmitFixtureWorkUnit } from './work-unit-playbook-utils.mjs';
 
@@ -108,6 +109,7 @@ function submitFixture(bundle, phase, queueId, outputPath, content, extras = [])
     extra_output_files: extras,
   });
   assert.equal(result.submit.ok, true);
+  return result;
 }
 
 function writePlanProfileAndSeed(bundle, planBasename) {
@@ -173,27 +175,76 @@ function stageWave0(bundle) {
   writeFileSync(join(bundle, refPath), ref);
   writeFileSync(join(bundle, 'reference/README.md'), '# Reference Evidence\n');
   ensureIndexRow(bundle, `| ${refPath} | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-15 |`);
-  submitFixture(bundle, 'wave0', 'case318-wave0', refPath, ref, [
+  const submitted = submitFixture(bundle, 'wave0', 'case318-wave0', refPath, ref, [
     { path: 'artifacts/wave0/topic-a/source.yaml', role: 'source_yaml', content: source },
   ]);
+  const workId = submitted.record.work_id;
+  const wave0Card = renderSeedProjectionCard(projectionSlotsForWave('wave0')[0]);
+  writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `${readFileSync(join(bundle, 'seed_topics/topic-a.md'), 'utf8')}\n## Wave0：本主题的新增来源证据\n\n${wave0Card}\n- **entry_id**: ${workId}/1\n  - **evidence_meaning**: Setup-only fixture establishes prior research state via shared foundation reference.\n  - **relationship**: supports\n  - **refs**:\n    - ${refPath}\n  - **status**: supported\n  - **next_hop**: continue\n`);
   logCompletion(bundle, 'wave0_completion');
 }
 
 function stageWave1(bundle) {
   mkdirSync(join(bundle, 'artifacts/wave1/topic-a'), { recursive: true });
-  const summary = '# Evidence Summary: Rerun Continuity\n\n## Source URLs\n- [Case 318](https://research.example.org/case-318/wave1)\n\n## Key Findings\n1. **Recovery**: Direction/profile binding is observable.\n\n## Open Questions\n1. [开放] Can an Agent recover the crash window?\n';
-  const questions = '# Question List - Rerun Continuity\n\n## Topic Investigation Targets\n| target_id | target_question | origin | status | backing_refs | next_action |\n| --- | --- | --- | --- | --- | --- |\n| T01 | Can an Agent recover the crash window? | rerun | 开放 | https://research.example.org/case-318/wave1 | 移交 wave2 |\n\n## Question Reconciliation\n- [部分进展] The deterministic boundary exists.\n\n## Emergent Question Protocol\n- result: no_new_questions_after_protocol\n\n## Exploration / Exploitation Decision\n- decision: continue\n';
-  const refPath = 'reference/topic-a-case-318-deepening.md';
-  const ref = '- source_url: https://research.example.org/case-318/wave1\n- acceptance_status: accepted\n- source_type: secondary\n- tier: Tier 2\n- evidence_role: deepening_reference\n- trust_level: practitioner\n- why_it_matters: Setup-only Wave1 predecessor evidence.\n- accessed_at: 2026-07-15\n- related_topic: topic-a\n\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nA setup-only deepening fixture sufficient for the real Wave1 gate.\n\n## Relevance To This Research\nRelevant.\n\n## Quotable Terms / Concepts\n- recovery\n\n## Risks And Limitations\n- Fixture only.\n';
+  const summary = '# Evidence Summary: Rerun Continuity\n\n## Source URLs\n- [Case 318](https://research.example.org/case-318/case318-wave1)\n\n## Key Findings\n1. **Recovery**: Direction/profile binding is observable.\n\n## Open Questions\n1. [开放] Can an Agent recover the crash window?\n';
+  const questions = '# Question List - Rerun Continuity\n\n## Topic Investigation Targets\n| target_id | target_question | origin | status | backing_refs | next_action |\n| --- | --- | --- | --- | --- | --- |\n| T01 | Can an Agent recover the crash window? | rerun | 开放 | https://research.example.org/case-318/case318-wave1 | 移交 wave2 |\n\n## Question Reconciliation\n- [部分进展] The deterministic boundary exists.\n\n## Emergent Question Protocol\n- result: no_new_questions_after_protocol\n\n## Exploration / Exploitation Decision\n- decision: continue\n';
+  const sourceUrl = 'https://research.example.org/case-318/case318-wave1';
+  const canonicalPath = 'reference/topic-a-research-example-org-case-318-case318-wave1-2c140f24eb8f.md';
+  const ref = `- source_url: ${sourceUrl}\n- acceptance_status: accepted\n- source_type: secondary\n- tier: Tier 2\n- evidence_role: deepening_reference\n- trust_level: practitioner\n- why_it_matters: Setup-only Wave1 predecessor evidence.\n- accessed_at: 2026-07-15\n- related_topic: topic-a\n\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nA setup-only deepening fixture sufficient for the real Wave1 gate.\n\n## Relevance To This Research\nRelevant.\n\n## Quotable Terms / Concepts\n- recovery\n\n## Risks And Limitations\n- Fixture only.\n`;
   writeFileSync(join(bundle, 'artifacts/wave1/topic-a/evidence-summary.md'), summary);
   writeFileSync(join(bundle, 'artifacts/wave1/topic-a/question-list.md'), questions);
-  writeFileSync(join(bundle, refPath), ref);
-  ensureIndexRow(bundle, `| ${refPath} | secondary | practitioner | Tier 2 | topic-a | wave1_topic | accepted | 2026-07-15 |`);
-  submitFixture(bundle, 'wave1', 'case318-wave1', refPath, ref, [
+  ensureIndexRow(bundle, `| ${canonicalPath} | secondary | practitioner | Tier 2 | topic-a | wave1_topic | accepted | 2026-07-15 |`);
+  const submitted = submitFixture(bundle, 'wave1', 'case318-wave1', canonicalPath, ref, [
     { path: 'artifacts/wave1/topic-a/evidence-summary.md', role: 'evidence_summary', content: summary },
     { path: 'artifacts/wave1/topic-a/question-list.md', role: 'question_list', content: questions },
   ]);
-  writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `${readFileSync(join(bundle, 'seed_topics/topic-a.md'), 'utf8')}\n## 本轮新增机制理解\n- Direction/profile binding is deterministic.\n\n## 本轮新增趋势与难点\n- Crash-window recovery needs Agent reasoning.\n\n## 待验证问题\n- [部分解答] Can an Agent recover the crash window?\n`);
+  const workId = submitted.record.work_id;
+  // Append work-unit and cache-trail citations to the reference body for canonical projection binding
+  const trailRef = '_cache/wave1/primary/case318-wave1/case318-wave1';
+  const wuRef = `_work_units/wave1/${workId}`;
+  writeFileSync(join(bundle, canonicalPath), `${readFileSync(join(bundle, canonicalPath), 'utf8')}\n## Work Unit Citation\n- ${canonicalPath}\n- ${wuRef}\n- ${trailRef}\n`);
+  // Patch depth-review.yaml to add carried_targets
+  const drPath = join(bundle, 'artifacts/wave1/topic-a/depth-review.yaml');
+  const dr = parseYaml(readFileSync(drPath, 'utf8'));
+  dr.carried_targets = [];
+  writeFileSync(drPath, stringifyYaml(dr));
+  const w1mechCard = renderSeedProjectionCard(projectionSlotsForWave('wave1')[0]);
+  const w1trendCard = renderSeedProjectionCard(projectionSlotsForWave('wave1')[1]);
+  const w1pqCard = renderSeedProjectionCard(projectionSlotsForWave('wave1')[2]);
+  writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `${readFileSync(join(bundle, 'seed_topics/topic-a.md'), 'utf8')}
+## Wave1：本主题的机制理解
+
+${w1mechCard}
+- **entry_id**: ${workId}/1
+  - **evidence_meaning**: Direction/profile binding is deterministic and observable through the gate lifecycle.
+  - **relationship**: supports
+  - **refs**:
+    - ${canonicalPath}
+  - **status**: supported
+  - **next_hop**: continue
+
+## Wave1：本主题的趋势、难点与限制
+
+${w1trendCard}
+- **entry_id**: ${workId}/2
+  - **evidence_meaning**: Crash-window recovery needs Agent reasoning to preserve directional continuity across gate cycles.
+  - **relationship**: partial
+  - **refs**:
+    - ${canonicalPath}
+  - **status**: partial
+  - **next_hop**: wave2
+
+## 本主题的待验证问题与后续验证路径
+
+${w1pqCard}
+- **entry_id**: ${workId}/3
+  - **evidence_meaning**: Can an Agent recover the crash window and preserve the direction bytes across a profile mismatch?
+  - **relationship**: opens
+  - **refs**:
+    - ${canonicalPath}
+  - **status**: open
+  - **next_hop**: wave2
+`);
   logCompletion(bundle, 'wave1_completion');
 }
 
@@ -222,7 +273,6 @@ function stageWave2(bundle) {
       profile_params_read: ['p0p1_independent_backing'], ineligibility_reasons: [],
     },
   }));
-  writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `${readFileSync(join(bundle, 'seed_topics/topic-a.md'), 'utf8')}\n## Wave2 Judgment\nW2F-318 establishes the pre-rerun baseline.\n\n## Pending Questions\n- [部分解答] Can an Agent recover the crash window?\n`);
   logCompletion(bundle, 'wave2_completion');
 }
 
