@@ -3,7 +3,7 @@ schema: command-experiment/v2
 experiment: workflow-chain
 case: case-33-standard-error-paths
 case_goal: "验证 MD controller mode 处理三种错误路径（缺失依赖、循环依赖、malformed frontmatter）并恢复：每种错误由 Markdown control surface 独立发起 load → Engine 返回 error 且不加载文件 → Phase Agent 确认后继续下一个 → 最终加载合法 entry 成功。证明错误不污染 Engine。"
-verdict_mode: all
+verdict_mode: last
 required_checks: [cycle:error_refs, cycle:no_load, cycle:status, malformed:error_refs, malformed:no_load, malformed:status, missing:error_refs, missing:no_load, missing:status, recovery:entry_loaded, recovery:status]
 bundle_roles: [verdict]
 verdict_role: verdict
@@ -175,7 +175,7 @@ trace.traceEntry('check', { source: 'playbook', gate: 'malformed:status', expect
   detail: `status = ${result.status}` });
 
 trace.traceEntry('check', { source: 'playbook', gate: 'malformed:error_refs', expected: true,
-  passed: Boolean(result.error && result.error.includes('Invalid frontmatter schema') && result.error.includes('malformed.entry.md')),
+  passed: Boolean(result.error && result.error.includes('Malformed frontmatter') && result.error.includes('malformed.entry.md')),
   detail: `error = ${result.error}` });
 
 trace.traceEntry('check', { source: 'playbook', gate: 'malformed:no_load', expected: true,

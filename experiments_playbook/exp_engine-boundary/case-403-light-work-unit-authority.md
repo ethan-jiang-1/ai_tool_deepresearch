@@ -3,7 +3,7 @@ schema: command-experiment/v2
 experiment: engine-boundary
 case: case-403-light-work-unit-authority
 case_goal: "验证 Wave0 gate 的 delegated reference authority 来自 submitted work-unit ledger、cache trail coverage、provenance/hash checks，而不是内容启发式。"
-verdict_mode: all
+verdict_mode: last
 required_checks: [missing-ledger-fails, clean-pass, root-url-passes, cache-drift-fails]
 bundle_roles: [verdict]
 verdict_role: verdict

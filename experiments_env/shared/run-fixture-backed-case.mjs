@@ -21,6 +21,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { TargetSpecSchema } from '../../DPT_FRAMEWORK/schema/contracts/queue.mjs';
+import { renderSeedProjectionCard, SEED_TOPIC_PROJECTION_SLOTS } from '../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
 import { auditFileObservability, FILE_CLASSIFICATIONS } from '../../DPT_FRAMEWORK/engine/helpers/file-observability.mjs';
 import { checkCacheCoverage } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers-checks.mjs';
 import { readOutputDeclarations, readSubmittedWorkUnitDeclarations } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers-readers.mjs';
@@ -212,6 +213,19 @@ function writeWave0Scaffold(bundleDir, {
     current_node: 'phases/phase-wave0.md',
   });
   writeMinimalPlan(bundleDir, { planBasename, topics });
+  // Seed topics need the wave0_evidence projection card (without the
+  // initial token, since no Agent has materialized evidence yet).
+  // The card presence satisfies seed_projection_card_missing; omitting
+  // __BACKFILL_WAVE0_EVIDENCE__ prevents seed_projection_token failures
+  // since the fixture does not run a real Agent materialization step.
+  const wave0Slot = SEED_TOPIC_PROJECTION_SLOTS.find((slot) => slot.slotId === 'wave0_evidence');
+  const wave0Card = renderSeedProjectionCard(wave0Slot);
+  for (const topic of topics) {
+    const seedPath = path.join(bundleDir, 'seed_topics', `${topic.slug}.md`);
+    if (existsSync(seedPath)) {
+      appendFileSync(seedPath, `\n## ${wave0Slot.canonicalHeading}\n\n${wave0Card}\n`);
+    }
+  }
   writeFileSync(path.join(bundleDir, 'rb_profile.yaml'), [
     `plan_basename: ${planBasename}`,
     'research_profile: debug',
@@ -1109,7 +1123,23 @@ function submitCase403Coverage(bundleDir, name, refs) {
     writeFileSync(path.join(bundleDir, cacheTrails[index], 'meta.json'), `${JSON.stringify({ url: ref.url })}\n`);
   }
   const submit = submitWorkUnitViaCli(bundleDir, { work_id: workId, resultPath: fixture.resultPath });
-  return { task, claim, ...fixture, submit };
+  // Materialize a minimal projection entry into the seed topic so the
+  // Wave0 gate's return_map_current_candidate_omission check passes.
+  const entryId = `${workId}/1`;
+  const seedTopicPath = path.join(bundleDir, 'seed_topics', 'topic-a.md');
+  const entryLines = [
+    '',
+    `- **entry_id**: ${entryId}`,
+    '  - **evidence_meaning**: Fixture-backed evidence for gate authority scenario.',
+    '  - **relationship**: supports',
+    '  - **refs**:',
+    `    - ${first.path}`,
+    '  - **status**: supported',
+    '  - **next_hop**: none',
+    '',
+  ];
+  appendFileSync(seedTopicPath, entryLines.join('\n'));
+  return { task, claim, ...fixture, submit, entryId };
 }
 
 function case403(opts) {

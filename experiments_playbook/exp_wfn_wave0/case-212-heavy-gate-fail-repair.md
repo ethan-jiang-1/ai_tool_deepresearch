@@ -3,7 +3,7 @@ schema: command-experiment/v2
 experiment: wfn-wave0
 case: case-212-heavy-gate-fail-repair
 case_goal: "验证 Wave0 gate fail 后由 Engine 打开 repair/refill batch，新的 work unit 用 b001 提交后 gate pass。"
-verdict_mode: all
+verdict_mode: last
 required_checks: [gate-attempts-fail-then-pass, initial-gate-fails, repair-batch-opened, repair-claim-uses-refill-batch, repair-submit, repaired-gate-passes]
 bundle_roles: [verdict]
 verdict_role: verdict

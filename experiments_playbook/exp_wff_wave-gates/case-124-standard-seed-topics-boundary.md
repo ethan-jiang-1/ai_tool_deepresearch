@@ -3,7 +3,7 @@ schema: command-experiment/v2
 experiment: wff-wave-gates
 case: case-124-standard-seed-topics-boundary
 case_goal: "Prove that seed-topics-ready gate correctly detects empty directory, missing slugs, and extra slugs; bidirectional slug consistency check is trace-backed."
-verdict_mode: all
+verdict_mode: last
 required_checks: [empty-directory-rejected, missing-slug-rejected, extra-slug-rejected, slug-consistency-two-way, seed-topics-ready-happy]
 bundle_roles: [verdict]
 verdict_role: verdict

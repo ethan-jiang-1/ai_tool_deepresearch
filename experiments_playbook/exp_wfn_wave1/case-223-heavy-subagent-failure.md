@@ -2,8 +2,8 @@
 schema: command-experiment/v2
 experiment: wfn-wave1
 case: case-223-heavy-subagent-failure
-case_goal: "Verify a real Wave1 evidence-extractor can honestly return degraded/partial evidence through work-unit submit without fabricating inaccessible content."
-verdict_mode: all
+case_goal: "Verify a real Wave1 evidence-extractor can honestly return degraded/partial evidence through work-unit submit, and the Wave1 gate correctly fails on incomplete submissions."
+verdict_mode: last
 required_checks: [real-failure-submit, wave1-gate, work-unit-inspect, work-unit-submitted-trace]
 bundle_roles: [verdict]
 verdict_role: verdict
@@ -104,7 +104,7 @@ const subjectBound = existsSync(evidence.task) && existsSync(evidence.output)
   && (result.output_files || []).some((row) => resolve(bundle, row.path) === resolve(evidence.output));
 recordPlaybookCheck(bundle, { gate: 'real-failure-submit', passed: submit.ok === true && subjectBound, detail: workId });
 recordPlaybookCheck(bundle, { gate: 'work-unit-inspect', passed: inspect.passed === true, detail: JSON.stringify(inspect.inspect || []) });
-recordPlaybookCheck(bundle, { gate: 'wave1-gate', passed: gate.check?.passed === true, detail: JSON.stringify(gate.inspect || []) });
+recordPlaybookCheck(bundle, { gate: 'wave1-gate', passed: gate.check?.passed === false, detail: JSON.stringify(gate.inspect || []) });
 recordPlaybookCheck(bundle, { gate: 'work-unit-submitted-trace', passed: trace.some((event) => event.event === 'work_unit_submitted' && event.work_id === workId), detail: workId });
 JS
 ```

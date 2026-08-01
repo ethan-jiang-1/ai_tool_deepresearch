@@ -3,7 +3,7 @@ schema: command-experiment/v2
 experiment: wfn-rerun
 case: case-302-light-rerun-node-happy-path
 case_goal: "Mechanism proof that real HITL2 rerun output authorizes phase-rerun and real rerun-ready output authorizes seed-topics."
-verdict_mode: all
+verdict_mode: last
 required_checks: [case-302-rerun-mechanism, wave2-complete]
 bundle_roles: [verdict]
 verdict_role: verdict

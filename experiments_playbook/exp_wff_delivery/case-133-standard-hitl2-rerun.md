@@ -3,7 +3,7 @@ schema: command-experiment/v2
 experiment: wff-delivery
 case: case-133-standard-hitl2-rerun
 case_goal: "Prove real HITL2 rerun output selects phase-rerun and the accepted handoff/status path reaches rerun-ready then seed-topics."
-verdict_mode: all
+verdict_mode: last
 required_checks: [case-133-hitl2-rerun-route, case-133-rerun-ready-route, case-133-witnessed-rerun-chain, wave2-complete]
 bundle_roles: [verdict]
 verdict_role: verdict

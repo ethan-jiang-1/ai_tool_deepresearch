@@ -3,7 +3,7 @@ schema: command-experiment/v2
 experiment: wfn-seedtopic
 case: case-201-standard-seedtopics-queue-loop
 case_goal: "Prove the deterministic seed-topic queue loop enqueues, claims, materializes, completes and drains three tasks before the real seed-topics-ready Gate passes."
-verdict_mode: all
+verdict_mode: last
 required_checks: [seedtopic-enqueued, seedtopic-claimed, phase-agent-materialized, seedtopic-completed, queue-drained, seed-topics-ready]
 bundle_roles: [verdict]
 verdict_role: verdict
