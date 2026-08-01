@@ -18,7 +18,7 @@
 | Plan | 简述 | 状态 |
 |------|------|------|
 | `silent-autonomous-execution` | 承接 `BUG-099/104/106` 的历史 stop/context observation。已与现行 Chain/Queue/Work Unit swarm 对齐：silent poll-submit loop、actor probe/fallback 与 continuation cues 是既有 contract；三次 real-actor canary 仍为 host-scoped `NOT_RUN`。没有 current-head Phase-Agent reproduction，也没有 active OpenSpec change；仅在新的可审计 `agent_flow_e2e` observation 出现后重开。 | deferred observation（无固定 OpenSpec change） |
-| `experiment-progressive-run-strategy` | 基于 2026-08-01/02 实测耗时数据，101 个 autorun-compatible cases 全部跑完。汇总见 [`MASTER_SUMMARY.md`](experiment-progressive-run-strategy/MASTER_SUMMARY.md) — PASS 率 69%，CLEAN 率 26%，15 FAIL，13 ERROR。 | 数据收集完成 — 待决定修复策略 |
+| `experiment-progressive-run-strategy` | 2026-08-01/02：101 cases 全部跑完，15 FAIL 全部修复。汇总见 [`MASTER_SUMMARY.md`](experiment-progressive-run-strategy/MASTER_SUMMARY.md) — PASS 率 83%（84/101），FAIL 0，ERROR 14，NOT_RUN 3。修复详情入 [`_fixes_done/`](experiment-progressive-run-strategy/_fixes_done/)。 | ✅ 完成 |
 
 ---
 
