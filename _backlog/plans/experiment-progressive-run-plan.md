@@ -51,6 +51,61 @@
 | calibration (`900000` ms dry-run) | 先选 5 个可校准 deterministic case | 93 个候选因边界被保留；真实运行前重新计算 |
 | discovery（7 天 Agent-behavior freshness） | 15 分钟请求中含 1 个 due Agent-behavior case；共 20 个 due | 这是一条独立、低频、高成本证据线 |
 
+## Execution Checklist
+
+这里是本计划唯一的执行进度面板。叙述章节定义边界和 done condition；只有 native evidence、dry-run output、通过严格校验的 OpenSpec planning artifact 或已归档 OpenSpec 允许勾选对应项目。
+
+### Phase 0 - Historical Measurement
+
+- [x] P0.1 保留 2026-08-01 的测量、耗时和问题记录为历史 evidence。
+- [x] P0.2 明确历史 `light|standard|heavy` 与 Sprint/Standard/Marathon 不是当前执行分类。
+
+### Phase 1 - Fast Regression Foundation
+
+- [x] P1.1 归档 `fast-regression-run-profile` change。
+- [x] P1.2 建立 matching-v2 `PASS+CLEAN` 的 virtual fast regression admission。
+- [x] P1.3 以真实 qualification evidence 建立初始 3-case fast pool。
+
+### Phase 2 - Diagnostic Remediation
+
+- [x] P2.1 重新运行 unrestricted diagnostic dry-run，确认当前 diagnostic 候选和 direct reasons。
+- [x] P2.2 用 `480000` ms / `$3.00` one-case envelope 预检，确认只选择 `case-51-standard-happy-path`。
+- [x] P2.3 运行 P2.1 slice：`case-51-standard-happy-path`；native `PASS`、health `ISSUES`、实际 `351290` ms / `$1.9991`，report `730af6f6-2844-48a3-9e7e-b6933a244c54`。
+- [x] P2.4 检查该 slice 的 native outcome、health、audit、trace 和实际 duration/cost。
+- [x] P2.4a 读取 retained report：确认 native `PASS` 与 health `ISSUES` 独立，提取 timeline、work-unit 和 rerun style-projection 信号。
+- [x] P2.4b 用 preserved run root 重放每个 health 信号，建立秒级 red-capable loop：0.4s 纯读回放重现 proceed trace/log `9/8`、三个 bundle 的缺失 work-unit authority，以及 rerun `false,false,true` 的 style-projection 修复序列。
+- [x] P2.4c 区分 fixture/playbook、health policy 与 framework contract owner，形成 root-cause decision。
+- [x] P2.4c.1 `case-51` fixture/playbook 已落后于 Wave1 carried-target receipt contract：bare `writeGateAttempt` 静默遗漏 `wave1-complete`，Headless Agent 随后直接补写 trace，造成 `9/8` timeline mismatch。修复归属：case fixture，必须由合法 Engine writer 产生 receipt-bound attempt。
+- [x] P2.4c.2 `case-51` rerun fixture 在其 happy path 中漏掉 `research_style_params`：真实 history 为 `false,false,true`，当前 projection 已 fresh。修复归属：case fixture，在首个 rerun gate 前建立既有 style projection；不改变 health 对真实失败的记录。
+- [x] P2.4c.3 `standard` implementation 将 `work_units` 列为 required，但 accepted `experiment-observability` spec 的 standard 只要求 light + gate diagnostics + timeline。修复归属：health-policy/contract alignment，不能由未分配 work 的 fixture 伪造 `_work_units` authority。
+- [x] P2.5 为已确认 root cause 建立并严格验证两个 focused `experiment-progressive-run-diagnostic-<root>` proposal；health-scope 已完成归档，fixture change 已完成 planning。
+- [x] P2.5a `experiment-progressive-run-diagnostic-standard-health-scope`：EXO-002 delta、design、tasks 和 verification plan 已落实、验证并归档；`standard` work-unit diagnostics 保持可见但不再阻断 top-level health。
+- [x] P2.5b `experiment-progressive-run-diagnostic-case-51-fixture`：fixture repair proposal、design、tasks 和 verification plan 完整；clean-health proof 显式依赖 P2.6。
+- [x] P2.6 apply 并归档 `experiment-progressive-run-diagnostic-standard-health-scope`，完成 focused schema/verifier validation；不得伪造 `_work_units` authority。
+- [ ] P2.7 再 apply `experiment-progressive-run-diagnostic-case-51-fixture`，完成其 Markdown fixture contract validation。
+- [ ] P2.8 以既定 one-case envelope 对 `case-51-standard-happy-path` 做一次 bounded real requalification；检查 native outcome、health、trace/log、audit 和 retained report。
+- [ ] P2.9 重新运行 diagnostic dry-run；仅由更新后的 profile 决定下一例或 Phase 2 stop condition。
+- [ ] P2.10 对每一个后续已启动 slice 重复 P2.2、P2.4、P2.5、P2.9，不扩大该 slice 的 timeout 或 budget。
+
+### Phase 3 - Deterministic Calibration
+
+- [ ] P3.1 在 Phase 2 首批结论后重新运行 bounded calibration dry-run。
+- [ ] P3.2 以一例一检查方式运行当前第一例 calibration slice。
+- [ ] P3.3 记录更新后的 deterministic observation，并让现有 selector 自然重算 fast pool/gaps。
+- [ ] P3.4 达到本轮 budget、无候选或覆盖问题已回答时停止并复盘。
+
+### Phase 4 - Agent-Behavior Discovery Pilot
+
+- [ ] P4.1 确认 provider、预算和 Subject Agent / judge 前提。
+- [ ] P4.2 运行 bounded discovery dry-run，确认当前 pilot，而不固定历史 `case-711`。
+- [ ] P4.3 只执行一个当前 selected pilot，并审阅 Subject evidence、native outcome、health 与 unavailable boundary。
+- [ ] P4.4 仅在确认 framework/contract 缺口时建立 `experiment-progressive-run-agent-behavior-<root>` proposal。
+
+### Phase 5 - Policy Review
+
+- [ ] P5.1 汇总 Phase 2-4 的 direct evidence，不把历史 filename tier 当 policy evidence。
+- [ ] P5.2 只有证据支持 SLO/profile 语义变化时，建立 `experiment-progressive-run-policy-revision` proposal。
+
 ## 后续阶段与顺序
 
 ```text
@@ -75,16 +130,17 @@ Phase 4: Agent-behavior discovery pilot    Phase 5: Policy review
 
 ### Phase 2 - Diagnostic Remediation
 
-状态：下一步，尚未执行真实 batch。
+状态：已完成首个 real diagnostic slice、root-cause split 和 health-scope repair；下一步是 P2.7-P2.9 的顺序 apply/requalification/checkpoint。
 
 目的：先处理当前有 FAIL、ERROR、NOT_RUN、PASS+ISSUES 或 stale/unknown direct fact 的 case，避免把已知异常混进 calibration 或 fast regression。
 
 执行步骤：
 
 1. 每次先运行 bounded `diagnostic --dry-run --json`，确认当前被选 case、预测和 omitted 原因。
-2. 经明确预算批准后，只运行该次 bounded selection；不因为遗漏候选扩大 timeout 或预算。
-3. 逐 case 阅读 native outcome、health、audit 和 trace，写出一个明确 root-cause decision。
-4. 任何需要修改 framework、playbook、case 内容、contract 或健康策略的 root cause，都先创建一个或多个 focused OpenSpec change；诊断结果本身不授予 target edit 权限。
+2. 一个 diagnostic slice 只启动该次 profile 的第一例：用足以容纳第一例、但不能纳入下一例的明确 duration/budget envelope；不退回成手工 `--case` 队列。
+3. 每例结束后立即检查 native outcome、health、audit 和 trace，并重新运行 dry-run；下一例永远由更新后的 profile 决定。
+4. 不因为遗漏候选扩大 timeout 或预算；每个 slice 都是一个可见的 stop/checkpoint。
+5. 任何需要修改 framework、playbook、case 内容、contract 或健康策略的 root cause，都先创建一个或多个 focused OpenSpec change；诊断结果本身不授予 target edit 权限。
 
 退出条件：每个已启动 case 都有 native result 与独立 health 结论；每个可行动问题都有 owner、最小修复和独立验证方式。不得把多个不相关问题塞进一个“大诊断 change”。
 
@@ -131,7 +187,9 @@ Phase 4: Agent-behavior discovery pilot    Phase 5: Policy review
 | 阶段 | Change 名称 | 状态 | 建立条件 |
 | --- | --- | --- | --- |
 | Phase 1 | `fast-regression-run-profile` | 已完成并归档 | 已落地 |
-| Phase 2 | `experiment-progressive-run-diagnostic-<root>` | 预留命名槽 | 某次 diagnostic 给出可复现、跨边界的明确 root cause |
+| Phase 2 | `experiment-progressive-run-diagnostic-standard-health-scope` | 已完成并归档 | 已确认 EXO-002 standard health scope drift |
+| Phase 2 | `experiment-progressive-run-diagnostic-case-51-fixture` | planning complete，依赖前一项 | 已确认 case-51 fixture/playbook drift |
+| Phase 2 | `experiment-progressive-run-diagnostic-<root>` | 未来 root cause 的命名槽 | 后续 diagnostic 给出可复现、跨边界的明确 root cause |
 | Phase 4 | `experiment-progressive-run-agent-behavior-<root>` | 预留命名槽 | pilot 证明需要框架、contract 或操作能力改变 |
 | Phase 5 | `experiment-progressive-run-policy-revision` | 预留命名槽 | 多轮 evidence 支持修改 profile/SLO 语义 |
 
@@ -139,4 +197,4 @@ Phase 4: Agent-behavior discovery pilot    Phase 5: Policy review
 
 ## 下一步
 
-下一次有实验预算的操作先走 Phase 2：重新跑 diagnostic dry-run，确认当次选择后启动该次小批真实 run。完成后只做两件事：记录 direct evidence，并判断是否出现第一个 `experiment-progressive-run-diagnostic-<root>` proposal 的合法边界。Phase 3 和 Phase 4 仍已预先排好，但不抢在该证据之前实施。
+当前先按 P2.7 -> P2.8 -> P2.9 推进：修 case-51 fixture，再做一次 bounded real requalification，最后重新让 diagnostic profile 选择下一例。不得在这条重跑验证完成前启动 `case-52`；Phase 3 和 Phase 4 仍已预先排好，但不抢在 Phase 2 的 fresh selection 之前实施。

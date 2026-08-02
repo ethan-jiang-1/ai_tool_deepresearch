@@ -1,0 +1,56 @@
+schema_version: verification-routing/v1
+change: experiment-progressive-run-diagnostic-standard-health-scope
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The profile table and report aggregation are deterministic functions whose required-section policy can be
+      verified without a runtime bundle or an Agent.
+  integration:
+    status: selected
+    rationale: >-
+      The health-verifier CLI must preserve an actual work-unit inspector diagnostic while applying standard and
+      heavy top-level health policy differently over the same bundle facts.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      This change does not add a multi-phase Engine workflow or lifecycle chain; the profile table and verifier
+      boundary provide the full deterministic proof surface.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change corrects post-run health policy only. The dependent case-51 fixture change separately owns the
+      bounded real Headless Playbook-Agent requalification.
+claims:
+  - id: standard-profile-excludes-work-unit-authority
+    statement: >-
+      EXO-002: standard requires the light sections plus gate diagnostics and trace/log timeline consistency,
+      but not work-unit authority; heavy continues to require work-unit authority and provenance sections.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/health-report-schema.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: optional-work-unit-diagnostic-stays-visible-for-standard
+    statement: >-
+      EXO-002: the health verifier preserves a real invalid work-unit inspector result as an optional standard
+      section without changing top-level health, while the same result remains a required heavy health issue.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/experiments_env/verify-bundle-health.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

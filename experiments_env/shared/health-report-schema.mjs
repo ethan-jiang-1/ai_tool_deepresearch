@@ -160,17 +160,17 @@ export const HealthReportSchema = z.object({
  * Profile table: which sections are required for each profile.
  *
  *   light    — trace parse/count, legacy trace absence, bundle validate/inspect
- *   standard — light + gate diagnostics, gate output/trace timeline consistency,
- *              work-unit lifecycle projection
- *   heavy    — standard + submitted ledger, output files, cache trails,
- *              source recoverability
+ *   standard — light + gate diagnostics, gate output/trace timeline consistency;
+ *              work-unit lifecycle remains an optional diagnostic projection
+ *   heavy    — standard + required work-unit lifecycle, submitted ledger,
+ *              output files, cache trails, source recoverability
  */
 export const PROFILE_TABLE = {
   light: {
     required_sections: ['trace', 'legacy_trace', 'bundle_schema'],
   },
   standard: {
-    required_sections: ['trace', 'legacy_trace', 'bundle_schema', 'gate_attempts', 'timeline', 'work_units'],
+    required_sections: ['trace', 'legacy_trace', 'bundle_schema', 'gate_attempts', 'timeline'],
   },
   heavy: {
     required_sections: ['trace', 'legacy_trace', 'bundle_schema', 'gate_attempts', 'timeline', 'work_units', 'ledger', 'cache_trails', 'source_recoverability'],

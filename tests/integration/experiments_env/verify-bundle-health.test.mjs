@@ -4,7 +4,7 @@
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createQueue } from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
@@ -25,6 +25,7 @@ import {
 const __dirname = new URL('.', import.meta.url).pathname;
 const ROOT = process.cwd();
 const VERIFIER = join(ROOT, 'experiments_env', 'shared', 'verify-bundle-health.mjs');
+const INSTANTIATE = join(ROOT, 'DPT_FRAMEWORK', 'cli', 'instantiate-run-bundle.mjs');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Synthetic Bundle Fixture Helpers
@@ -108,6 +109,23 @@ function createGateArtifactBundle(name) {
     captured_at: '2026-01-01T00:00:01.000Z',
   };
   writeFileSync(join(gatesDir, '0001-wave0-complete.json'), JSON.stringify(artifact1, null, 2));
+
+  return dir;
+}
+
+function createCanonicalStandardBundle(name) {
+  const instantiation = spawnSync('node', [INSTANTIATE, name, '--target-dir', FIXTURE_BASE], { encoding: 'utf-8', timeout: 30000 });
+  if (instantiation.status !== 0) {
+    throw new Error(`Failed to instantiate ${name}: ${instantiation.stderr || instantiation.stdout}`);
+  }
+
+  const dir = instantiation.stdout.trim().split(/\r?\n/).at(-1);
+  const gateAttempt = { ts: '2026-01-01T00:00:01.000Z', event: 'gate_attempt', gate: 'wave0-complete', passed: true };
+  appendFileSync(join(dir, 'rb_trace.jsonl'), `${JSON.stringify(gateAttempt)}\n`);
+  appendFileSync(join(dir, '_logs', 'run.log'), `${JSON.stringify(gateAttempt)}\n`);
+  const gatesDir = join(dir, '_observability', 'gates');
+  mkdirSync(gatesDir, { recursive: true });
+  writeFileSync(join(gatesDir, '0001-wave0-complete.json'), JSON.stringify({ gate: 'wave0-complete', exit_code: 0 }, null, 2));
 
   return dir;
 }
@@ -259,9 +277,22 @@ describe('verify-bundle-health.mjs', () => {
 
       assert.strictEqual(report.gate_attempts.required, true);
       assert.strictEqual(report.timeline.required, true);
-      assert.strictEqual(report.work_units.required, true);
+      assert.strictEqual(report.work_units.required, false);
       assert.strictEqual(report.work_units.status, 'clean');
       assert.strictEqual(report.work_units.total, 0);
+    });
+
+    it('keeps an invalid work-unit authority visible without failing standard health', () => {
+      const dir = createCanonicalStandardBundle('std-optional-work-unit');
+      const r = spawnSync('node', [VERIFIER, '--bundle', dir, '--profile', 'standard', '--json'], { encoding: 'utf-8', timeout: 30000 });
+      const report = JSON.parse(r.stdout.trim());
+
+      assert.strictEqual(r.status, 0);
+      assert.strictEqual(report.status, 'clean');
+      assert.strictEqual(report.work_units.required, false);
+      assert.strictEqual(report.work_units.status, 'issues');
+      assert.match(report.work_units.diagnostics.join('\n'), /missing existing work-unit authority/);
+      assert.strictEqual(report.issues.some(issue => issue.section === 'work_units'), false);
     });
 
     it('reads gate wrapper artifacts when present', () => {
@@ -317,6 +348,7 @@ describe('verify-bundle-health.mjs', () => {
 
       assert.strictEqual(report.work_units.status, 'issues');
       assert.match(report.work_units.diagnostics.join('\n'), /missing runtime receipt/);
+      assert.strictEqual(report.status, 'issues');
     });
 
     it('reports issues when cache trail leaves are missing', () => {
@@ -334,7 +366,7 @@ describe('verify-bundle-health.mjs', () => {
     it('projects work-unit lifecycle states including expired, retries, and late submits', () => {
       const { dir, retryWorkId } = createLifecycleProjectionBundle('heavy-lifecycle');
       assert.ok(retryWorkId, 'retry work unit should be claimed');
-      const r = spawnSync('node', [VERIFIER, '--bundle', dir, '--profile', 'standard', '--json'], { encoding: 'utf-8', timeout: 30000 });
+      const r = spawnSync('node', [VERIFIER, '--bundle', dir, '--profile', 'heavy', '--json'], { encoding: 'utf-8', timeout: 30000 });
       const report = JSON.parse(r.stdout.trim());
 
       assert.strictEqual(report.work_units.status, 'issues');

@@ -46,15 +46,9 @@ describe('Profile Table', () => {
     assert.deepStrictEqual(required, ['trace', 'legacy_trace', 'bundle_schema']);
   });
 
-  it('standard requires light checks + gate_attempts + timeline + work_units', () => {
+  it('standard requires light checks + gate_attempts + timeline, not work_units', () => {
     const required = requiredSectionsFor('standard');
-    assert.ok(required.includes('trace'));
-    assert.ok(required.includes('legacy_trace'));
-    assert.ok(required.includes('bundle_schema'));
-    assert.ok(required.includes('gate_attempts'));
-    assert.ok(required.includes('timeline'));
-    assert.ok(required.includes('work_units'));
-    assert.strictEqual(required.length, 6);
+    assert.deepStrictEqual(required, ['trace', 'legacy_trace', 'bundle_schema', 'gate_attempts', 'timeline']);
   });
 
   it('heavy requires standard checks + work_units + ledger + cache_trails + source recoverability', () => {
@@ -70,7 +64,7 @@ describe('Profile Table', () => {
     assert.strictEqual(isRequiredSection('light', 'trace'), true);
     assert.strictEqual(isRequiredSection('light', 'ledger'), false);
     assert.strictEqual(isRequiredSection('standard', 'gate_attempts'), true);
-    assert.strictEqual(isRequiredSection('standard', 'work_units'), true);
+    assert.strictEqual(isRequiredSection('standard', 'work_units'), false);
     assert.strictEqual(isRequiredSection('standard', 'ledger'), false);
     assert.strictEqual(isRequiredSection('heavy', 'work_units'), true);
     assert.strictEqual(isRequiredSection('heavy', 'ledger'), true);
@@ -318,6 +312,7 @@ describe('buildHealthReport', () => {
       },
     });
     assert.strictEqual(report.status, 'clean');
+    assert.strictEqual(report.work_units.required, false);
   });
 });
 
@@ -335,8 +330,8 @@ describe('Profile Table — standard profile scoping', () => {
     const lightRequired = new Set(PROFILE_TABLE.light.required_sections);
     for (const section of PROFILE_TABLE.standard.required_sections) {
       if (lightRequired.has(section)) continue;
-      // Standard adds gate_attempts + timeline + work_units (which are NOT in light)
-      assert.ok(['gate_attempts', 'timeline', 'work_units'].includes(section), `Unexpected standard-only section: ${section}`);
+      // Standard adds gate_attempts + timeline (which are NOT in light)
+      assert.ok(['gate_attempts', 'timeline'].includes(section), `Unexpected standard-only section: ${section}`);
     }
   });
 
@@ -344,7 +339,7 @@ describe('Profile Table — standard profile scoping', () => {
     const standardRequired = new Set(PROFILE_TABLE.standard.required_sections);
     for (const section of PROFILE_TABLE.heavy.required_sections) {
       if (standardRequired.has(section)) continue;
-      assert.ok(['ledger', 'cache_trails', 'source_recoverability'].includes(section), `Unexpected heavy-only section: ${section}`);
+      assert.ok(['work_units', 'ledger', 'cache_trails', 'source_recoverability'].includes(section), `Unexpected heavy-only section: ${section}`);
     }
   });
 });
