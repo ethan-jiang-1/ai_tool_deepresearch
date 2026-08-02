@@ -3,6 +3,8 @@
 > 2026-08-01 | 基于真实耗时数据的 progressive execution plan
 >
 > **背景**：`RUN_INTERACTIVE_EXPS.md` 对应的 101 个 autorun-compatible cases 很久没跑。第一次试跑 light tier 发现历史 light/standard/heavy 标签跟实际耗时严重脱节。
+>
+> **状态（2026-08-02）**：这是 Phase 0 的历史测量与当时的初始假设。它保留为证据，不再是当前的执行指令。后续阶段、已完成工作和 OpenSpec 分拆见 [Experiment Progressive Run Plan](experiment-progressive-run-plan.md)。其中的 Wave A-D 已被虚拟 profile 路由取代，不能再按本文的静态速度分类或 timeout 直接执行。
 
 ## 数据来源
 
