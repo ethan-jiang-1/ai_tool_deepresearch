@@ -1,4 +1,4 @@
-<!-- @impl EXA-001, EXA-002, EXA-003, EXA-004, EXA-005, EXA-006, EXA-007, EXA-008, PLR-001, PLR-003, VER-001, VER-006 -->
+<!-- @impl ERS-001, ERS-002, ERS-003, EXA-001, EXA-002, EXA-003, EXA-004, EXA-005, EXA-006, EXA-007, EXA-008, EXA-009, EXO-007, PLR-001, PLR-003, PLR-004, VER-001, VER-006 -->
 
 # experiments_playbook
 
@@ -44,6 +44,7 @@ Headless non-dry-run requires an explicit total USD budget:
 node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --case case-41-light-minimal-path --max-total-budget-usd 1
 node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --group agentic-queue --tier light --max-total-budget-usd 5 --max-case-budget-usd 1
 node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --all --max-total-budget-usd 20 --cleanup-pass
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --run-profile calibration --max-predicted-duration-ms 600000 --max-total-budget-usd 5 --max-case-budget-usd 1
 ```
 
 Inspect selection without credentials, Agent launch, run roots, or mutation:
@@ -51,6 +52,7 @@ Inspect selection without credentials, Agent launch, run roots, or mutation:
 ```bash
 node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --tier light --dry-run
 node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --group agentic-queue --tier standard --dry-run --json
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --run-profile discovery --max-predicted-duration-ms 900000 --dry-run --json
 ```
 
 Interactive replay is exactly one case, user-present, and always preserved:
@@ -60,6 +62,8 @@ node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --interactive --case case
 ```
 
 The optional per-case cap cannot exceed the total budget. The Supervisor passes the current cap to the Agent CLI, accumulates only a valid final cost, and stops further launch if cost becomes unknown or the batch budget is exhausted. Cost never changes native PASS/FAIL/NOT_RUN.
+
+Every Headless run must name an exact selector or an explicit run profile. `calibration`, `discovery`, and `diagnostic` are virtual bounded queries and require `--max-predicted-duration-ms`; `assurance` also requires an explicit legacy selector scope. Their data comes from current manifest/frontmatter and retained Supervisor reports, not a moved case tree or persistent classification. Filename `light|standard|heavy` remains a creation-time estimate and legacy filter, while `health_profile` remains a separate case health policy. A change's coverage scope stays in its declared `verification-plan.yaml`; paths and `@impl` markers do not select it automatically.
 
 ## Execution rules
 
@@ -82,10 +86,10 @@ Before deletion, durable prompt, sanitized structured Agent transcript/stderr, f
 
 Cases 901–949 are real-human Interactive evidence and Headless Autorun reports them as HUMAN rather than fabricating judgment. Their co-located +50 cases 950–999 use structured AI-judge provenance. An AI-judge result does not replace or delete its human pair, and the same actor cannot both produce and judge the semantic output.
 
-## Cost classes
+## Filename cost estimates
 
-- Light: bounded fast execution, usually deterministic JS/CLI/gate/filesystem work.
-- Standard: multi-step real-bundle work without the Heavy cost boundary.
-- Heavy: real Agent/sub-agent work, external calls, long chain, or other expensive/slow execution.
+- Light: initial bounded-cost estimate retained for compatibility filtering.
+- Standard: initial multi-step cost estimate retained for compatibility filtering.
+- Heavy: initial expensive/slow execution estimate retained for compatibility filtering.
 
-Cost is not proof class and is not health profile. Test class remains one of `unit`, `integration`, `deterministic_e2e`, or `agent_flow_e2e` under accepted `verification-routing`.
+These filename estimates are not a measured speed, proof, freshness, or health classification. Profile output keeps historical duration/cost, source/execution-surface relation, native outcome, and health as separate facts. Test class remains one of `unit`, `integration`, `deterministic_e2e`, or `agent_flow_e2e` under accepted `verification-routing`.

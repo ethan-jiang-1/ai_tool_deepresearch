@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @impl EXA-001, EXA-002, EXA-003, EXA-004, EXA-005, EXA-006, EXA-007, EXA-008, PLR-001, PLR-003
+// @impl ERS-001, ERS-002, ERS-003, EXA-001, EXA-002, EXA-003, EXA-004, EXA-005, EXA-006, EXA-007, EXA-008, EXA-009, EXO-007, PLR-001, PLR-003
 // Agent Experiment Autorun Supervisor. Supervises one Agent per case; never executes Markdown flow or re-judges trace verdicts.
 
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
@@ -7,7 +7,12 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
-import { readAndValidateManifest } from './lib/agent-experiment-contract.mjs';
+import {
+  AgentExperimentAuditEventV2Schema,
+  AgentExperimentBatchReportV2Schema,
+  readAndValidateManifest,
+  sha256Bytes,
+} from './lib/agent-experiment-contract.mjs';
 import {
   buildHeadlessAgentCliPlan,
   buildInteractiveAgentCliPlan,
@@ -27,9 +32,13 @@ import {
   runHeadlessAgent,
   runHealthChecks,
   runInteractiveAgent,
-  selectManifestEntries,
   validateNativeCompletion,
 } from './lib/agent-experiment-supervisor.mjs';
+import {
+  buildExecutionSurfaces,
+  planExperimentRun,
+  readRetainedExperimentObservations,
+} from './lib/experiment-run-strategy.mjs';
 import { randomUUID } from 'node:crypto';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -41,7 +50,8 @@ const PROOF_BOUNDARY = Object.freeze({
 
 function usage(message = null) {
   if (message) console.error(message);
-  console.error('Usage: run-agent-experiment.mjs [--case <exact>|--group <group> [--tier <cost>]|--tier <cost>|--all] [--dry-run] [--json]');
+  console.error('Usage: run-agent-experiment.mjs [--case <exact>|--group <group> [--tier <cost>]|--tier <cost>|--all|--run-profile <calibration|discovery|diagnostic|assurance>] [--dry-run] [--json]');
+  console.error('       Profile: --max-predicted-duration-ms <positive> [--agent-behavior-fresh-after-ms <positive>]');
   console.error('       Headless: --max-total-budget-usd <positive> [--max-case-budget-usd <positive>] [--cleanup-pass] [--timeout <ms>]');
   console.error('       Interactive: --interactive --case <exact> [--timeout <ms>]');
   process.exit(2);
@@ -71,6 +81,9 @@ export function parseSupervisorCli(argv) {
         'health-timeout': { type: 'string', default: '60000' },
         'max-total-budget-usd': { type: 'string' },
         'max-case-budget-usd': { type: 'string' },
+        'run-profile': { type: 'string' },
+        'max-predicted-duration-ms': { type: 'string' },
+        'agent-behavior-fresh-after-ms': { type: 'string' },
         json: { type: 'boolean', default: false },
         'dry-run': { type: 'boolean', default: false },
       },
@@ -80,7 +93,17 @@ export function parseSupervisorCli(argv) {
   const timeoutMs = positiveNumber(values.timeout, '--timeout', { integer: true });
   const healthTimeoutMs = positiveNumber(values['health-timeout'], '--health-timeout', { integer: true });
   const interactive = values.interactive;
-  if (interactive && (values.group || values.tier || values.all || values['cleanup-pass'] || values['max-total-budget-usd'] || values['max-case-budget-usd'])) {
+  const runProfile = values['run-profile'] ?? null;
+  const maxPredictedDurationMs = values['max-predicted-duration-ms'] === undefined
+    ? null
+    : positiveNumber(values['max-predicted-duration-ms'], '--max-predicted-duration-ms', { integer: true });
+  const agentBehaviorFreshAfterMs = values['agent-behavior-fresh-after-ms'] === undefined
+    ? null
+    : positiveNumber(values['agent-behavior-fresh-after-ms'], '--agent-behavior-fresh-after-ms', { integer: true });
+  if (runProfile !== null && !['calibration', 'discovery', 'diagnostic', 'assurance'].includes(runProfile)) {
+    usage('--run-profile must be calibration, discovery, diagnostic, or assurance');
+  }
+  if (interactive && (values.group || values.tier || values.all || values['cleanup-pass'] || values['max-total-budget-usd'] || values['max-case-budget-usd'] || runProfile || maxPredictedDurationMs !== null || agentBehaviorFreshAfterMs !== null)) {
     usage('--interactive accepts only one exact --case plus timeout/json options');
   }
   let maxTotalBudgetUsd = null;
@@ -89,6 +112,16 @@ export function parseSupervisorCli(argv) {
   if (values['max-case-budget-usd'] !== undefined) maxCaseBudgetUsd = positiveNumber(values['max-case-budget-usd'], '--max-case-budget-usd');
   if (maxCaseBudgetUsd !== null && maxTotalBudgetUsd === null) usage('--max-case-budget-usd requires --max-total-budget-usd');
   if (maxCaseBudgetUsd !== null && maxTotalBudgetUsd !== null && maxCaseBudgetUsd > maxTotalBudgetUsd) usage('--max-case-budget-usd cannot exceed --max-total-budget-usd');
+  const hasExactSelector = Boolean(values.case || values.group || values.tier || values.all);
+  if (!interactive && runProfile !== null) {
+    if (maxPredictedDurationMs === null) usage('--run-profile requires --max-predicted-duration-ms');
+    if (runProfile === 'assurance' && !hasExactSelector) usage('--run-profile assurance requires an explicit --case, --group, --tier, or --all scope');
+    if (runProfile !== 'assurance' && hasExactSelector) usage('--run-profile calibration, discovery, and diagnostic are exclusive with exact selectors');
+  }
+  if (!interactive && runProfile === null) {
+    if (maxPredictedDurationMs !== null || agentBehaviorFreshAfterMs !== null) usage('--max-predicted-duration-ms and --agent-behavior-fresh-after-ms require --run-profile');
+    if (!hasExactSelector) usage('Headless execution requires an explicit selector or --run-profile');
+  }
   if (!interactive && !values['dry-run'] && maxTotalBudgetUsd === null) usage('Headless execution requires --max-total-budget-usd');
   return {
     caseId: values.case ?? null,
@@ -101,6 +134,9 @@ export function parseSupervisorCli(argv) {
     healthTimeoutMs,
     maxTotalBudgetUsd,
     maxCaseBudgetUsd,
+    runProfile,
+    maxPredictedDurationMs,
+    agentBehaviorFreshAfterMs,
     json: values.json,
     dryRun: values['dry-run'],
   };
@@ -111,18 +147,24 @@ function selectionProjection(selected, opts) {
     opts.maxTotalBudgetUsd,
     selected.length * (opts.maxCaseBudgetUsd ?? opts.maxTotalBudgetUsd),
   );
-  return selected.map((entry, index) => ({
-    ordinal: index + 1,
-    case: entry.frontmatter.case,
-    experiment: entry.frontmatter.experiment,
-    cost: entry.cost,
-    health_profile: entry.frontmatter.health_profile,
-    proof_subject: entry.frontmatter.proof_subject,
-    verdict_judge: entry.frontmatter.verdict_judge,
-    path: entry.path,
-    manual_human: isRealHumanCase(entry.frontmatter.case),
-    maximum_budget_exposure_usd: exposure === null ? null : Math.min(opts.maxCaseBudgetUsd ?? exposure, exposure),
-  }));
+  return selected.map((selectedItem, index) => {
+    const { entry, observation, selection_observation: selectionObservation } = selectedItem;
+    return {
+      ordinal: index + 1,
+      case: entry.frontmatter.case,
+      experiment: entry.frontmatter.experiment,
+      cost: entry.cost,
+      health_profile: entry.frontmatter.health_profile,
+      proof_subject: entry.frontmatter.proof_subject,
+      verdict_judge: entry.frontmatter.verdict_judge,
+      path: entry.path,
+      manual_human: isRealHumanCase(entry.frontmatter.case),
+      maximum_budget_exposure_usd: exposure === null ? null : Math.min(opts.maxCaseBudgetUsd ?? exposure, exposure),
+      source_relation: observation.source_relation,
+      execution_surface_relation: observation.execution_surface_relation,
+      selection_observation: selectionObservation,
+    };
+  });
 }
 
 function reasonForProcess(processResult) {
@@ -159,9 +201,9 @@ function printReport(report) {
   console.log(`report: ${report.report_path}`);
 }
 
-function terminalEventBase({ batchId, ordinal, entry, prepared, opts, startedAt, durationMs }) {
+function terminalEventBase({ batchId, ordinal, entry, selectedItem, prepared, opts, startedAt, durationMs }) {
   return {
-    schema_version: 'agent-experiment-audit-event/v1',
+    schema_version: 'agent-experiment-audit-event/v2',
     event: 'case_result',
     ts: new Date().toISOString(),
     batch_id: batchId,
@@ -183,7 +225,33 @@ function terminalEventBase({ batchId, ordinal, entry, prepared, opts, startedAt,
       instruction_sha256: prepared.context.instruction_sha256,
       manifest_sha256: prepared.context.manifest_sha256,
     } : null,
+    execution_surface: selectedItem.observation.execution_surface,
+    selection_observation: selectedItem.selection_observation,
   };
+}
+
+function withSelectionFacts(result, selectedItem) {
+  return {
+    ...result,
+    execution_surface: selectedItem.observation.execution_surface,
+    selection_observation: selectedItem.selection_observation,
+  };
+}
+
+function appendV2AuditEvent(expBundlesRoot, event) {
+  return appendAuditEvent(expBundlesRoot, AgentExperimentAuditEventV2Schema.parse(event));
+}
+
+function assertProfileSelectionStillCurrent({ repoRoot, manifestPath, selectedItem }) {
+  const currentManifest = readAndValidateManifest({ repoRoot, manifestPath, requireExactCorpus: true });
+  const currentIndex = currentManifest.entries.findIndex((entry) => entry.frontmatter.case === selectedItem.entry.frontmatter.case);
+  const currentEntry = currentManifest.entries[currentIndex];
+  if (!currentEntry || currentEntry.path !== selectedItem.entry.path || currentIndex !== selectedItem.observation.manifest_index) {
+    throw new Error(`profile selection is no longer registered in its selected manifest position: ${selectedItem.entry.frontmatter.case}`);
+  }
+  if (sha256Bytes(readFileSync(currentEntry.fullPath)) !== selectedItem.observation.execution_surface.source_playbook_sha256) {
+    throw new Error(`profile selection source changed after selection: ${selectedItem.entry.frontmatter.case}`);
+  }
 }
 
 export async function runSupervisor(opts, { executable = 'claude', repoRoot = REPO_ROOT } = {}) {
@@ -194,13 +262,59 @@ export async function runSupervisor(opts, { executable = 'claude', repoRoot = RE
   const interactiveInstruction = join(projectRoot, 'experiments_playbook/RUN_INTERACTIVE_EXPS.md');
   const healthCli = join(projectRoot, 'experiments_env/shared/verify-bundle-health.mjs');
   const manifest = readAndValidateManifest({ repoRoot: projectRoot, manifestPath, requireExactCorpus: true });
-  const selected = selectManifestEntries(manifest.entries, opts);
-  for (const entry of selected) preflightRuntimeBindings(readFileSync(entry.fullPath, 'utf8'));
+  const instructionPath = opts.interactive ? interactiveInstruction : headlessInstruction;
+  const executionSurfaces = buildExecutionSurfaces({ entries: manifest.entries, repoRoot: projectRoot, instructionPath });
+  const retained = readRetainedExperimentObservations({ expBundlesRoot: expBundles });
+  const selector = {
+    case: opts.caseId ?? null,
+    group: opts.group ?? null,
+    tier: opts.tier ?? null,
+    all: opts.all ?? false,
+  };
+  const runProfile = opts.runProfile ?? null;
+  const hasExactSelector = Boolean(selector.case || selector.group || selector.tier || selector.all);
+  if (opts.interactive && (runProfile !== null || selector.case === null || selector.group !== null || selector.tier !== null || selector.all)) {
+    throw new Error('interactive execution requires exactly one --case and no profile or batch selector');
+  }
+  if (!opts.interactive && runProfile !== null && runProfile !== 'assurance' && hasExactSelector) {
+    throw new Error('calibration, discovery, and diagnostic profiles are exclusive with exact selectors');
+  }
+  if (!opts.interactive && runProfile === 'assurance' && !hasExactSelector) {
+    throw new Error('assurance profile requires an explicit selector scope');
+  }
+  const profileRequest = runProfile === null ? null : {
+    profile: runProfile,
+    selector: runProfile === 'assurance' ? selector : null,
+    max_predicted_duration_ms: opts.maxPredictedDurationMs ?? null,
+    max_total_budget_usd: opts.maxTotalBudgetUsd ?? null,
+    max_case_budget_usd: opts.maxCaseBudgetUsd ?? null,
+    agent_behavior_fresh_after_ms: opts.agentBehaviorFreshAfterMs ?? undefined,
+    now: new Date().toISOString(),
+  };
+  const plan = planExperimentRun({
+    entries: manifest.entries,
+    executionSurfaces,
+    retainedObservations: retained.observations,
+    retainedObservationDiagnostics: retained.diagnostics,
+    profileRequest,
+    selector: profileRequest === null ? selector : null,
+  });
+  const selected = plan.selected;
+  for (const selectedItem of selected) preflightRuntimeBindings(readFileSync(selectedItem.entry.fullPath, 'utf8'));
   if (opts.dryRun) {
-    return { dry_run: true, proof_boundary: PROOF_BOUNDARY, selected_count: selected.length, selected: selectionProjection(selected, opts) };
+    return {
+      dry_run: true,
+      proof_boundary: PROOF_BOUNDARY,
+      selected_count: selected.length,
+      selected: selectionProjection(selected, opts),
+      selection: plan.selection,
+    };
+  }
+  if (selected.length === 0) {
+    throw new Error(`run profile ${runProfile} selected no runnable cases; inspect with --dry-run`);
   }
 
-  if (!existsSync(opts.interactive ? interactiveInstruction : headlessInstruction)) throw new Error('Agent instruction surface is missing');
+  if (!existsSync(instructionPath)) throw new Error('Agent instruction surface is missing');
   loadAgentCliBase({ repoRoot: projectRoot, executable });
   assertExpBundlesSourceIsolation(projectRoot, expBundles);
 
@@ -218,37 +332,46 @@ export async function runSupervisor(opts, { executable = 'claude', repoRoot = RE
 
   try {
     for (let index = 0; index < selected.length; index += 1) {
-      const entry = selected[index];
+      const selectedItem = selected[index];
+      const entry = selectedItem.entry;
       const ordinal = index + 1;
       const startedAt = new Date().toISOString();
       const startMs = Date.now();
       if (signalExit || stopLaunchReason) {
         const lifecycle = signalExit ? 'CANCELLED' : 'ERROR';
         const reason = signalExit ? `external_${signalExit === 130 ? 'sigint' : 'sigterm'}` : stopLaunchReason;
-        const result = {
+        const result = withSelectionFacts({
           case: entry.frontmatter.case, experiment: entry.frontmatter.experiment, playbook_path: entry.path,
           native_outcome: null, lifecycle_outcome: lifecycle, effective_outcome: lifecycle,
           agent_process: 'not_started', health: null, health_reports: [], reason, duration_ms: 0,
           cost_usd: null, accumulated_cost_usd: accumulatedCostUsd, run_root: null, run_root_available: false,
           cleanup_requested: opts.cleanupPass, cleanup_eligible: false, cleanup_status: 'not_attempted',
           completion: null, logs: { prompt: null, stdout: null, stderr: null }, evidence: null,
-        };
+        }, selectedItem);
         results.push(result);
-        try { appendAuditEvent(expBundles, { ...terminalEventBase({ batchId, ordinal, entry, prepared: null, opts, startedAt, durationMs: 0 }), ...result }); } catch {}
+        try {
+          appendV2AuditEvent(expBundles, {
+            ...terminalEventBase({ batchId, ordinal, entry, selectedItem, prepared: null, opts, startedAt, durationMs: 0 }),
+            ...result,
+          });
+        } catch {}
         continue;
       }
 
       if (!opts.interactive && isRealHumanCase(entry.frontmatter.case)) {
-        const result = {
+        const result = withSelectionFacts({
           case: entry.frontmatter.case, experiment: entry.frontmatter.experiment, playbook_path: entry.path,
           native_outcome: null, lifecycle_outcome: 'HUMAN', effective_outcome: 'HUMAN', agent_process: 'not_started',
           health: null, health_reports: [], reason: 'real_human_judgment_requires_interactive', duration_ms: 0,
           cost_usd: 0, accumulated_cost_usd: accumulatedCostUsd, run_root: null, run_root_available: false,
           cleanup_requested: opts.cleanupPass, cleanup_eligible: false, cleanup_status: 'not_attempted', completion: null,
           logs: { prompt: null, stdout: null, stderr: null }, evidence: null,
-        };
+        }, selectedItem);
         results.push(result);
-        appendAuditEvent(expBundles, { ...terminalEventBase({ batchId, ordinal, entry, prepared: null, opts, startedAt, durationMs: 0 }), ...result });
+        appendV2AuditEvent(expBundles, {
+          ...terminalEventBase({ batchId, ordinal, entry, selectedItem, prepared: null, opts, startedAt, durationMs: 0 }),
+          ...result,
+        });
         continue;
       }
 
@@ -263,6 +386,7 @@ export async function runSupervisor(opts, { executable = 'claude', repoRoot = RE
       let caseAudit = null;
       let currentCap = null;
       try {
+        if (runProfile !== null) assertProfileSelectionStillCurrent({ repoRoot: projectRoot, manifestPath, selectedItem });
         prepared = prepareCaseRun({
           repoRoot: projectRoot, expBundlesRoot: expBundles, batchId, ordinal, entry,
           mode: opts.interactive ? 'interactive_agent' : 'headless_agent', manifestPath,
@@ -331,7 +455,7 @@ export async function runSupervisor(opts, { executable = 'claude', repoRoot = RE
       }
 
       const durationMs = Date.now() - startMs;
-      let result = {
+      let result = withSelectionFacts({
         case: entry.frontmatter.case, experiment: entry.frontmatter.experiment, playbook_path: entry.path,
         native_outcome: nativeOutcome, lifecycle_outcome: lifecycleOutcome, effective_outcome: effectiveOutcome,
         agent_process: processResult.processOutcome, health: health.aggregate, health_reports: health.reports,
@@ -340,9 +464,12 @@ export async function runSupervisor(opts, { executable = 'claude', repoRoot = RE
         run_root_available: Boolean(prepared && existsSync(prepared.caseRunRoot)), cleanup_requested: opts.cleanupPass,
         cleanup_eligible: cleanupEligible, cleanup_status: cleanupStatus, completion,
         logs: processResult.logs, evidence,
-      };
+      }, selectedItem);
       try {
-        caseAudit = appendAuditEvent(expBundles, { ...terminalEventBase({ batchId, ordinal, entry, prepared, opts, startedAt, durationMs }), ...result });
+        caseAudit = appendV2AuditEvent(expBundles, {
+          ...terminalEventBase({ batchId, ordinal, entry, selectedItem, prepared, opts, startedAt, durationMs }),
+          ...result,
+        });
       } catch (error) {
         lifecycleOutcome = 'ERROR'; effectiveOutcome = 'ERROR'; reason = `audit_failed: ${error.message}`;
         cleanupEligible = false; cleanupInfrastructureFailed = true;
@@ -354,19 +481,23 @@ export async function runSupervisor(opts, { executable = 'claude', repoRoot = RE
           assertExpBundlesSourceIsolation(projectRoot, expBundles);
           cleanupCaseRoot(prepared);
           cleanupStatus = 'removed';
-          appendAuditEvent(expBundles, {
-            schema_version: 'agent-experiment-audit-event/v1', event: 'cleanup_result', ts: new Date().toISOString(),
+          appendV2AuditEvent(expBundles, {
+            schema_version: 'agent-experiment-audit-event/v2', event: 'cleanup_result', ts: new Date().toISOString(),
             batch_id: batchId, ordinal, case: entry.frontmatter.case, case_result_sha256: caseAudit.record_sha256,
             cleanup_status: cleanupStatus, removed_path: prepared.caseRunRoot, lifecycle_outcome_override: null,
+            execution_surface: selectedItem.observation.execution_surface,
+            selection_observation: selectedItem.selection_observation,
           });
         } catch (error) {
           cleanupStatus = 'failed'; cleanupInfrastructureFailed = true;
           lifecycleOutcome = 'ERROR'; effectiveOutcome = 'ERROR'; reason = `cleanup_failed: ${error.message}`;
           try {
-            appendAuditEvent(expBundles, {
-              schema_version: 'agent-experiment-audit-event/v1', event: 'cleanup_result', ts: new Date().toISOString(),
+            appendV2AuditEvent(expBundles, {
+              schema_version: 'agent-experiment-audit-event/v2', event: 'cleanup_result', ts: new Date().toISOString(),
               batch_id: batchId, ordinal, case: entry.frontmatter.case, case_result_sha256: caseAudit.record_sha256,
               cleanup_status: cleanupStatus, removed_path: prepared.caseRunRoot, lifecycle_outcome_override: 'ERROR', reason,
+              execution_surface: selectedItem.observation.execution_surface,
+              selection_observation: selectedItem.selection_observation,
             });
           } catch {}
         }
@@ -384,7 +515,7 @@ export async function runSupervisor(opts, { executable = 'claude', repoRoot = RE
 
   const reportPath = join(expBundles, '_reports', `${batchId}.json`);
   const report = {
-    schema_version: 'agent-experiment-batch-report/v1',
+    schema_version: 'agent-experiment-batch-report/v2',
     batch_id: batchId,
     generated_at: new Date().toISOString(),
     runner: 'run-agent-experiment.mjs',
@@ -398,8 +529,9 @@ export async function runSupervisor(opts, { executable = 'claude', repoRoot = RE
     results,
     report_path: reportPath,
   };
-  atomicWriteJson(reportPath, report);
-  return { ...report, exit_code: exitCodeFor(results, signalExit) };
+  const validatedReport = AgentExperimentBatchReportV2Schema.parse(report);
+  atomicWriteJson(reportPath, validatedReport);
+  return { ...validatedReport, exit_code: exitCodeFor(results, signalExit) };
 }
 
 async function main() {

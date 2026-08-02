@@ -1,4 +1,4 @@
-<!-- @impl EXA-001, EXA-002, EXA-003, EXA-005, EXA-006, PLR-001, PLR-003 -->
+<!-- @impl ERS-001, ERS-002, ERS-003, EXA-001, EXA-002, EXA-003, EXA-005, EXA-006, EXA-009, EXO-007, PLR-001, PLR-003, PLR-004 -->
 
 # Headless Playbook Agent — Single-case Autorun Contract
 
@@ -8,6 +8,7 @@ You are the Headless Playbook Agent for one Agent Experiment Autorun case. The A
 
 - Your working directory is the validated repository command root. Invoke `DPT_FRAMEWORK/` and `experiments_env/` from their original repo-relative locations.
 - The payload contains the complete rendered selected playbook, its source/rendered identities and digests, and the explicit run-context coordinates.
+- The Supervisor's exact selector or virtual bounded profile is recorded as an observation for this one run. It does not change the case filename, frontmatter policy, native outcome, health, or case organization.
 - Runtime tokens have already been replaced with shell-quoted absolute paths. Use those rendered arguments exactly.
 - Mutable experiment state belongs only in the Supervisor-owned case run root and its declared bundle roots. The repository framework and experiment helpers remain source assets outside that root.
 

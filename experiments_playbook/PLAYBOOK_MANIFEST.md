@@ -1,4 +1,4 @@
-<!-- @impl EXA-002, EXA-004, PLR-001 -->
+<!-- @impl ERS-001, EXA-002, EXA-004, EXA-009, PLR-001, PLR-004 -->
 
 # Agent Experiment Playbook Manifest
 
@@ -115,4 +115,4 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 | `exph_workflow-foundation/case-951-heavy-topic-rewrite-ai-judge.md` |
 <!-- /agent-experiment-manifest -->
 
-Selection preserves this order. No filter selects autorun-compatible Light cases. Exact `--case` selects one full identity; `--group` may combine with one filename cost tier; `--all` selects every autorun-compatible case while excluding real-human manual cases. Cases 901-949 require bounded Interactive execution and actual human judgment; their co-located +50 AI-judge pairs remain separate evidence.
+Selection preserves this order. Every Headless launch supplies an exact `--case`, `--group` with optional filename `--tier`, `--tier`, `--all`, or an explicit bounded run profile. Filename cost is a creation-time estimate and compatibility filter only; it does not classify current duration, coverage, proof, or health. Cases 901-949 require bounded Interactive execution and actual human judgment; their co-located +50 AI-judge pairs remain separate evidence.

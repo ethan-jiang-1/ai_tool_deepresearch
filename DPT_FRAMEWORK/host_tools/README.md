@@ -1,4 +1,4 @@
-<!-- @impl EXA-001, EXA-002, EXA-003, EXA-008, LDC-001, LDC-002, LDC-005, LDC-008, LDC-009 -->
+<!-- @impl ERS-001, ERS-002, ERS-003, EXA-001, EXA-002, EXA-003, EXA-004, EXA-008, EXA-009, EXO-007, LDC-001, LDC-002, LDC-005, LDC-008, LDC-009, PLR-004 -->
 
 # Host Tools
 
@@ -59,15 +59,23 @@ node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
 # Cleanup only effective PASS + required health CLEAN after durable audit/export
 node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
   --tier light --max-total-budget-usd 5 --cleanup-pass
+
+# Bounded virtual calibration; this does not rename or move cases
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
+  --run-profile calibration --max-predicted-duration-ms 600000 \
+  --max-total-budget-usd 5 --max-case-budget-usd 1
 ```
 
-No filter defaults to autorun-compatible Light cases in manifest order. `--case` is exact and exclusive. `--group` may combine with one `--tier`; `--all` is exclusive. The optional case cap cannot exceed the total. The Supervisor passes the current cap to Claude, accumulates one valid final `total_cost_usd` per started Headless case, and stops further launch on missing/malformed cost or exhausted budget. Cost does not affect native verdict.
+Every Headless invocation supplies either an exact selector or a run profile. `--case` is exact and exclusive. `--group` may combine with one filename `--tier`; `--all` is exclusive. `calibration`, `discovery`, and `diagnostic` profiles require `--max-predicted-duration-ms` and cannot combine with exact selectors. `assurance` requires both that bound and an explicit selector scope; change impact remains declared in the change's `verification-plan.yaml`, not inferred from paths or implementation tags.
+
+Filename `light|standard|heavy` is a creation-time cost estimate and legacy compatibility filter, not a current speed, coverage, or proof label. `health_profile` remains an independent V2 health policy. The Supervisor recomputes profile observations from current manifest/frontmatter plus retained reports; no case move, rename, or persistent reclassification is required when measurements change. The optional case cap cannot exceed the total. The Supervisor passes the current cap to Claude, accumulates one valid final `total_cost_usd` per started Headless case, and stops further launch on missing/malformed cost or exhausted budget. Cost does not affect native verdict.
 
 Dry-run validates exact manifest/V2 selection without loading credentials, creating `.exp-bundles/`, or launching an Agent:
 
 ```bash
 node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --tier light --dry-run
 node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --group agentic-queue --tier standard --dry-run --json
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --run-profile discovery --max-predicted-duration-ms 900000 --dry-run --json
 ```
 
 Interactive diagnosis/replay is exactly one case, uses normal user-present TTY permission handling, and always preserves its run root:

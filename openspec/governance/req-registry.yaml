@@ -51,6 +51,7 @@ prefixes:
   EXO: experiment-observability
   EXS: experiment-shared-infra
   EXR: experiment-ref-integrity
+  ERS: experiment-run-strategy
   EXA: experiment-agent-autorun
   FOR: fork-repair-converge
   FRE: framework-engine
@@ -283,6 +284,12 @@ EXO-003: experiment-observability — Gate monitor wrapper preserves gate exit s
 EXO-004: experiment-observability — Non-verdict diagnostic trace events for observability
 EXO-005: experiment-observability — Ledger-driven Heavy provenance inspection
 EXO-006: experiment-observability — Autorun Supervisor reports native outcome, health, durable trace and Subject evidence separately
+EXO-007: experiment-observability — Retained reports bind selection observations to an execution surface
+
+# experiment-run-strategy
+ERS-001: experiment-run-strategy — Virtual case observations retain separate current policy, historical runtime, outcome, health, and comparability facts
+ERS-002: experiment-run-strategy — Explicit bounded run profiles select an explainable next batch without persistent classification or scheduling
+ERS-003: experiment-run-strategy — Agent-behavior coverage gaps remain visible independently of deterministic selection
 
 # file-observability
 # experiment-auto-runner
@@ -294,6 +301,7 @@ EXA-005: experiment-agent-autorun — Trace-bound native completion is the only 
 EXA-006: experiment-agent-autorun — Supervisor-owned case roots bind explicit runtime paths without framework copies or bundle guessing
 EXA-007: experiment-agent-autorun — Native outcome, health, durable audit evidence and explicit containment-safe cleanup remain orthogonal
 EXA-008: experiment-agent-autorun — Human and AI judge bands, Agent runtime budget and ordinary-CI proof boundaries remain explicit
+EXA-009: experiment-agent-autorun — Autorun exposes bounded explicit run-profile selection without becoming a controller
 
 FIO-001: file-observability — Engine audits phase-owned directories with stable file finding classifications
 FIO-002: file-observability — Unplanned files produce inspect/advice and authority blockers when relevant
@@ -555,6 +563,7 @@ EXR-006: experiment-ref-integrity — case-406 verifies real Sub-agent boundary 
 SCO-009: schema-core — Queue v2 contract separates queue_item_id demand identity from work_id attempt identity
 PLR-001: playbook-runner — PLAYBOOK_MANIFEST plus Agent Autorun instruction is the normal Playbook Agent entry
 PLR-003: playbook-runner — Playbook Agent native completion hands deterministic health report and cleanup to the Supervisor
+PLR-004: playbook-runner — Normal Autorun guidance distinguishes virtual run strategy from filename cost and health policy
 POF-001: post-final-recovery — Terminal Final eligibility, retained post-final rerun request, owner precedence, and accepted-lineage replay
 POF-002: post-final-recovery — Prepared profile/event transaction uses event-last exact roll-forward recovery
 POF-003: post-final-recovery — Engine-written Final-lineage-bound exceptional handoff reuses existing HITL2 rerun owners

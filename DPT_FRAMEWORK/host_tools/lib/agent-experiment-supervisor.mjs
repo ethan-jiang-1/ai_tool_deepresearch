@@ -1,4 +1,4 @@
-// @impl EXA-002, EXA-003, EXA-004, EXA-005, EXA-006, EXA-007, EXA-008, PLR-003
+// @impl EXA-002, EXA-003, EXA-004, EXA-005, EXA-006, EXA-007, EXA-008, EXA-009, PLR-003
 // Deterministic host lifecycle helpers. Markdown Agent Flow is never parsed here.
 
 import { spawn } from 'node:child_process';
@@ -133,7 +133,7 @@ export function selectManifestEntries(entries, filters) {
   if (all) return selected;
   if (group) selected = selected.filter((entry) => entry.frontmatter.experiment === group);
   if (tier) selected = selected.filter((entry) => entry.cost === tier);
-  if (!group && !tier) selected = selected.filter((entry) => entry.cost === 'light');
+  if (!group && !tier) fail('Headless execution requires an explicit selector or --run-profile');
   if (selected.length === 0) fail('selection is empty or the exact group/tier is unknown');
   return selected;
 }

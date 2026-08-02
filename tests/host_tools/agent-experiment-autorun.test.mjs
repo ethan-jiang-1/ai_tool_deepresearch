@@ -1,4 +1,4 @@
-// @impl EXA-004, EXA-005, EXA-006, EXA-007, PLR-001, PLR-003
+// @impl EXA-004, EXA-005, EXA-006, EXA-007, EXA-009, PLR-001, PLR-003
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -531,8 +531,8 @@ describe('Supervisor selection, launcher and source-isolation policy', () => {
     entry('case-3-light-third', 'alpha', 'light'),
   ];
 
-  it('preserves manifest order across default, exact, group/tier and all selection', () => {
-    assert.deepEqual(selectManifestEntries(entries, {}).map((item) => item.frontmatter.case), ['case-1-light-first', 'case-3-light-third']);
+  it('preserves manifest order across explicit exact, group/tier and all selection', () => {
+    assert.throws(() => selectManifestEntries(entries, {}), /explicit selector|run-profile/);
     assert.deepEqual(selectManifestEntries(entries, { group: 'alpha', tier: 'light' }).map((item) => item.frontmatter.case), ['case-1-light-first', 'case-3-light-third']);
     assert.deepEqual(selectManifestEntries(entries, { all: true }).map((item) => item.frontmatter.case), ['case-2-standard-second', 'case-1-light-first', 'case-3-light-third']);
     assert.deepEqual(selectManifestEntries(entries, { caseId: 'case-901-heavy-human' }).map((item) => item.frontmatter.case), ['case-901-heavy-human']);
@@ -595,13 +595,13 @@ describe('Supervisor selection, launcher and source-isolation policy', () => {
     } finally { rmSync(root, { recursive: true, force: true }); }
   });
 
-  it('selects only Light by default, excludes real-human from batch, and filters by cost from filename', () => {
+  it('requires an explicit selector, excludes real-human from batch, and filters by filename cost', () => {
     const mixed = [
       { path: 'exp_sample/case-1-light-first.md', cost: 'light', frontmatter: { case: 'case-1-light-first', experiment: 'sample', verdict_judge: 'deterministic' } },
       { path: 'exp_sample/case-2-standard-second.md', cost: 'standard', frontmatter: { case: 'case-2-standard-second', experiment: 'sample', verdict_judge: 'deterministic' } },
       { path: 'exp_sample/case-3-heavy-third.md', cost: 'heavy', frontmatter: { case: 'case-3-heavy-third', experiment: 'sample', verdict_judge: 'deterministic' } },
     ];
-    assert.deepEqual(selectManifestEntries(mixed, {}).map((item) => item.frontmatter.case), ['case-1-light-first']);
+    assert.throws(() => selectManifestEntries(mixed, {}), /explicit selector|run-profile/);
     assert.deepEqual(selectManifestEntries(mixed, { tier: 'standard' }).map((item) => item.frontmatter.case), ['case-2-standard-second']);
     assert.deepEqual(selectManifestEntries(mixed, { tier: 'heavy' }).map((item) => item.frontmatter.case), ['case-3-heavy-third']);
     assert.deepEqual(selectManifestEntries(mixed, { all: true }).map((item) => item.frontmatter.case), ['case-1-light-first', 'case-2-standard-second', 'case-3-heavy-third']);

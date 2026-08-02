@@ -1,4 +1,4 @@
-// @impl EXA-003, EXA-004, EXA-005, EXA-006, EXA-007, EXA-008, LDC-002, LDC-005, LDC-008
+// @impl ERS-001, ERS-002, ERS-003, EXA-003, EXA-004, EXA-005, EXA-006, EXA-007, EXA-008, EXA-009, EXO-007, LDC-002, LDC-005, LDC-008
 // Deterministic Supervisor mechanics only; this fixture is not real Playbook-Agent evidence.
 
 import assert from 'node:assert/strict';
@@ -33,11 +33,89 @@ describe('run-agent-experiment deterministic host lifecycle', () => {
     for (const args of [
       ['--case', 'case-41-light-minimal-path', '--json'],
       ['--dry-run', '--max-case-budget-usd', '0.1', '--json'],
+      ['--dry-run', '--json'],
+      ['--run-profile', 'calibration', '--dry-run', '--json'],
     ]) {
       const result = spawnSync(process.execPath, [cli, ...args], { cwd: REAL_REPO, encoding: 'utf8' });
       assert.equal(result.status, 2, args.join(' '));
-      assert.match(result.stderr, /max-total-budget-usd|Headless execution requires/);
+      assert.match(result.stderr, /max-total-budget-usd|Headless execution requires|max-predicted-duration-ms/);
     }
+  });
+
+  it('keeps profile dry-run credential-free and mutation-free', async () => {
+    const fixture = makeProject({ writeEnv: false });
+    const result = await runSupervisor(baseOptions({
+      caseId: null,
+      runProfile: 'calibration',
+      maxPredictedDurationMs: 120000,
+      maxTotalBudgetUsd: null,
+      dryRun: true,
+    }), { repoRoot: fixture.root, executable: fixture.executable });
+    assert.equal(result.dry_run, true);
+    assert.equal(result.selection.mode, 'profile');
+    assert.equal(result.selection.profile, 'calibration');
+    assert.equal(result.selected_count, 1);
+    assert.equal(result.selected[0].selection_observation.prediction_basis, 'filename_initial_estimate');
+    assert.equal(existsSync(path.join(fixture.root, '.exp-bundles')), false);
+  });
+
+  it('rejects an unsafe helper inventory before a profile dry-run can create state', async () => {
+    const fixture = makeProject({ writeEnv: false });
+    const helper = path.join(fixture.root, 'experiments_env/shared/verify-bundle-health.mjs');
+    rmSync(helper);
+    symlinkSync(path.join(fixture.root, 'experiments_playbook/RUN_AGENT_AUTORUN_EXPS.md'), helper);
+    await assert.rejects(() => runSupervisor(baseOptions({
+      caseId: null,
+      runProfile: 'calibration',
+      maxPredictedDurationMs: 120000,
+      maxTotalBudgetUsd: null,
+      dryRun: true,
+    }), { repoRoot: fixture.root, executable: fixture.executable }), /helper path is a symlink/);
+    assert.equal(existsSync(path.join(fixture.root, '.exp-bundles')), false);
+  });
+
+  it('rejects an empty profile launch before loading credentials or creating a run root', async () => {
+    const fixture = makeProject({ writeEnv: false });
+    await assert.rejects(() => runSupervisor(baseOptions({
+      caseId: null,
+      runProfile: 'diagnostic',
+      maxPredictedDurationMs: 120000,
+      maxTotalBudgetUsd: 1,
+    }), { repoRoot: fixture.root, executable: fixture.executable }), /selected no runnable cases/);
+    assert.equal(existsSync(path.join(fixture.root, '.exp-bundles')), false);
+  });
+
+  it('preserves legacy filename-tier selection as an explicit compatibility filter', async () => {
+    const fixture = makeProject();
+    configureFixturePlaybook(fixture, { caseId: 'case-2-standard-fixture' });
+    const report = await runSupervisor(baseOptions({ caseId: null, tier: 'standard' }), { repoRoot: fixture.root, executable: fixture.executable });
+    assert.equal(report.results.length, 1);
+    assert.equal(report.results[0].case, 'case-2-standard-fixture');
+    assert.equal(report.results[0].selection_observation.mode, 'exact');
+    assert.equal(report.results[0].selection_observation.prediction_basis, 'explicit_selector');
+  });
+
+  it('hands a bounded profile to the existing lifecycle and keeps v2 report facts orthogonal', async () => {
+    const fixture = makeProject({ healthStatus: 'issues' });
+    const report = await runSupervisor(baseOptions({
+      caseId: null,
+      runProfile: 'calibration',
+      maxPredictedDurationMs: 120000,
+    }), { repoRoot: fixture.root, executable: fixture.executable });
+    const result = report.results[0];
+    assert.equal(report.schema_version, 'agent-experiment-batch-report/v2');
+    assert.equal(result.native_outcome, 'PASS');
+    assert.equal(result.effective_outcome, 'PASS');
+    assert.equal(result.health, 'ISSUES');
+    assert.equal(result.selection_observation.mode, 'profile');
+    assert.equal(result.selection_observation.profile, 'calibration');
+    assert.match(result.execution_surface.fingerprint, /^[a-f0-9]{64}$/);
+    const retained = JSON.parse(readFileSync(report.report_path, 'utf8'));
+    assert.equal(retained.schema_version, 'agent-experiment-batch-report/v2');
+    const auditRows = readFileSync(path.join(fixture.root, '.exp-bundles/_audit/agent-experiment-runs.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+    assert.equal(auditRows[0].schema_version, 'agent-experiment-audit-event/v2');
+    assert.equal(auditRows[0].execution_surface.fingerprint, result.execution_surface.fingerprint);
+    assert.equal(auditRows[0].selection_observation.profile, 'calibration');
   });
 
   it('uses exact repo cwd, rendered stdin, effective Headless flags, isolated env and native completion', async () => {
@@ -391,7 +469,8 @@ function baseOptions(overrides = {}) {
   return {
     caseId: 'case-1-light-fixture', group: null, tier: null, all: false, interactive: false,
     cleanupPass: false, timeoutMs: 10000, healthTimeoutMs: 10000,
-    maxTotalBudgetUsd: 1, maxCaseBudgetUsd: null, json: true, dryRun: false,
+    maxTotalBudgetUsd: 1, maxCaseBudgetUsd: null, runProfile: null, maxPredictedDurationMs: null,
+    agentBehaviorFreshAfterMs: null, json: true, dryRun: false,
     ...overrides,
   };
 }

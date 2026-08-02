@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.66
+
+- Agent Experiment Autorun no longer falls back to filename-Light cases. Headless launch now requires an explicit legacy selector or a bounded `calibration`, `discovery`, `diagnostic`, or `assurance` run profile.
+- Run profiles are read-only virtual observations over the current manifest/frontmatter and retained reports. They preserve filename estimate, empirical duration/cost, native outcome, lifecycle, health, source relation, and execution-surface relation as separate facts without moving, renaming, or persistently classifying cases.
+- New retained batch reports and audit events use v2 execution-surface and selection observations. Earlier v1 reports remain useful for historical cost/outcome/health while exposing unknown comparability rather than fabricated freshness or current Agent-behavior coverage.
+
 ## v0.65
 
 - HITL1 now names one selected Claude CLI / `deepseek_anthropic_compatible`

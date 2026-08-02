@@ -1,13 +1,22 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.65**
+> **DPT_FRAMEWORK v0.66**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.65
+## Current Release: v0.66
+
+- Agent Experiment Autorun now requires an explicit legacy selector or bounded virtual
+  run profile. Its read-only selection projection preserves filename estimate, empirical
+  duration/cost, source/execution-surface relation, native outcome, lifecycle, and health
+  as separate facts; it does not move or reclassify cases, schedule future batches, or
+  replace Playbook-Agent/native-completion authority.
+- Retained Autorun reports/audit now carry v2 selection and execution-surface identities.
+  Earlier v1 observations remain historical cost/outcome/health inputs with unknown
+  comparability, never fabricated current proof or Agent-behavior freshness.
 
 - HITL1 now uses one selected Claude CLI / `deepseek_anthropic_compatible`
   research-access adapter. The Agent owns the bounded native `WebSearch` -> returned

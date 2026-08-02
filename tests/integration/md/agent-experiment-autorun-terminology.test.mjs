@@ -1,4 +1,4 @@
-// @impl EXA-001, EXA-002, EXA-008, PLR-001, VER-006
+// @impl ERS-001, ERS-002, ERS-003, EXA-001, EXA-002, EXA-008, EXA-009, EXO-007, PLR-001, PLR-004, VER-006
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { describe, it } from 'node:test';
@@ -30,14 +30,13 @@ const STATIC_KNOWLEDGE_SURFACES = [
   'experiments_playbook/README.md',
   'DPT_FRAMEWORK/host_tools/README.md',
 ];
-const ACTIVE_DELTA_SPECS_ROOT = 'openspec/changes/experiment-auto-runner/specs';
 const SPEC_SENTINELS = {
   'agent-testing': 'native completion',
   'agentic-queue': 'native completion',
-  'experiment-agent-autorun': 'Agent Experiment Autorun',
-  'experiment-observability': 'Agent Experiment Autorun',
+  'experiment-agent-autorun': 'Autorun Supervisor',
+  'experiment-observability': 'Autorun',
   'local-deepseek-claude-launcher': 'Agent Experiment Autorun',
-  'playbook-runner': 'Agent Experiment Autorun',
+  'playbook-runner': 'Autorun',
   'pre-research-experiments': 'native completion',
   'pre-research-gate-implementation': 'native completion',
   'research-wave-experiments': 'native completion',
@@ -57,9 +56,16 @@ function testSources(path = 'tests') {
   return files;
 }
 
-function capabilitySpecPath(capability, activeDeltaSpecsRoot = ACTIVE_DELTA_SPECS_ROOT) {
-  const deltaPath = `${activeDeltaSpecsRoot}/${capability}/spec.md`;
-  return existsSync(deltaPath) ? deltaPath : `openspec/specs/${capability}/spec.md`;
+function activeDeltaSpecPaths(capability) {
+  return readdirSync('openspec/changes', { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name !== 'archive')
+    .map((entry) => `openspec/changes/${entry.name}/specs/${capability}/spec.md`)
+    .filter(existsSync)
+    .sort();
+}
+
+function capabilitySpecPaths(capability, activeDeltaPaths = activeDeltaSpecPaths(capability)) {
+  return activeDeltaPaths.length > 0 ? activeDeltaPaths : [`openspec/specs/${capability}/spec.md`];
 }
 
 describe('Agent Experiment Autorun terminology knowledge surfaces', () => {
@@ -107,19 +113,34 @@ describe('Agent Experiment Autorun terminology knowledge surfaces', () => {
     }
   });
 
-  it('follows active delta specs before archive and matching main specs after archive', () => {
+  it('follows every active delta spec before archive and matching main specs after archive', () => {
     for (const [capability, sentinel] of Object.entries(SPEC_SENTINELS)) {
-      const path = capabilitySpecPath(capability);
-      const activeDeltaPath = `${ACTIVE_DELTA_SPECS_ROOT}/${capability}/spec.md`;
-      const expectedPath = existsSync(activeDeltaPath)
-        ? activeDeltaPath
-        : `openspec/specs/${capability}/spec.md`;
-      assert.equal(path, expectedPath);
-      assert.match(read(path), new RegExp(sentinel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${capability} must retain its terminology anchor`);
+      const paths = capabilitySpecPaths(capability);
+      for (const path of paths) {
+        assert.match(read(path), new RegExp(sentinel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${capability} must retain its terminology anchor`);
+      }
     }
 
-    const archivedPath = capabilitySpecPath('agent-testing', 'openspec/changes/archived-experiment-auto-runner/specs');
-    assert.equal(archivedPath, 'openspec/specs/agent-testing/spec.md');
+    const archivedPaths = capabilitySpecPaths('agent-testing', []);
+    assert.deepEqual(archivedPaths, ['openspec/specs/agent-testing/spec.md']);
+  });
+
+  it('documents virtual bounded run profiles without reviving filename-Light normal launch', () => {
+    const surfaces = [
+      'experiments_playbook/README.md',
+      'DPT_FRAMEWORK/host_tools/README.md',
+      'experiments_playbook/PLAYBOOK_MANIFEST.md',
+      'experiments_playbook/RUN_AGENT_AUTORUN_EXPS.md',
+    ].map(read).join('\n');
+    for (const profile of ['calibration', 'discovery', 'diagnostic', 'assurance']) {
+      assert.match(surfaces, new RegExp(profile));
+    }
+    assert.match(surfaces, /max-predicted-duration-ms/);
+    assert.match(surfaces, /creation-time (?:cost )?estimate/);
+    assert.match(surfaces, /health_profile/);
+    assert.match(surfaces, /verification-plan\.yaml/);
+    assert.doesNotMatch(surfaces, /No filter selects autorun-compatible Light cases/);
+    assert.doesNotMatch(surfaces, /No filter defaults to autorun-compatible Light cases/);
   });
 
   it('does not revive retired autorun instruction or host-entry names', () => {

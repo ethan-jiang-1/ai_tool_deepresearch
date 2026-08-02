@@ -1,4 +1,4 @@
-// @impl EXA-004, EXA-005, EXA-006, PLR-001, PLR-003
+// @impl ERS-001, EXA-004, EXA-005, EXA-006, EXO-007, PLR-001, PLR-003
 // Pure Agent Experiment Autorun manifest, V2 and migration-ledger contracts.
 
 import { createHash, randomUUID } from 'node:crypto';
@@ -21,6 +21,277 @@ const absolutePath = z.string().min(1).refine((value) => isAbsolute(value), 'mus
 const sha256 = z.string().regex(sha256Pattern);
 
 export const AgentExperimentPolicySchema = PlaybookPolicySchema;
+
+const caseIdentity = z.string().regex(/^case-\d+-(?:light|standard|heavy)-[a-z0-9-]+$/);
+const finiteNonnegative = z.number().finite().nonnegative();
+const relativeExecutionSurfacePath = z.string().regex(/^(?:DPT_FRAMEWORK|experiments_env\/shared)\/[A-Za-z0-9._/-]+$/)
+  .refine((value) => !value.includes('//') && !value.split('/').includes('.') && !value.split('/').includes('..'), 'must be a safe relative helper path');
+const manifestEntryPath = z.string().regex(/^exp(?:h)?_[a-z0-9_-]+\/case-\d+-(?:light|standard|heavy)-[a-z0-9-]+\.md$/);
+
+export const ExperimentExactSelectorSchema = z.object({
+  case: caseIdentity.nullable(),
+  group: z.string().trim().min(1).nullable(),
+  tier: z.enum(['light', 'standard', 'heavy']).nullable(),
+  all: z.boolean(),
+}).strict().superRefine((value, ctx) => {
+  if (value.case !== null && (value.group !== null || value.tier !== null || value.all)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['case'], message: 'exact case is exclusive with group, tier, and all' });
+  }
+  if (value.all && (value.group !== null || value.tier !== null)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['all'], message: 'all is exclusive with group and tier' });
+  }
+  if (value.case === null && value.group === null && value.tier === null && !value.all) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'selector must name case, group, tier, or all' });
+  }
+});
+
+export const AgentExperimentExecutionSurfaceSchema = z.object({
+  schema_version: z.literal('agent-experiment-execution-surface/v1'),
+  manifest_entry: z.object({
+    path: manifestEntryPath,
+    case: caseIdentity,
+  }).strict(),
+  source_playbook_sha256: sha256,
+  instruction_sha256: sha256,
+  framework_helper_inventory: z.array(z.object({
+    path: relativeExecutionSurfacePath,
+    sha256,
+  }).strict()),
+  framework_helper_sha256: sha256,
+  fingerprint: sha256,
+}).strict().superRefine((value, ctx) => {
+  const paths = value.framework_helper_inventory.map((item) => item.path);
+  if (new Set(paths).size !== paths.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['framework_helper_inventory'], message: 'helper paths must be unique' });
+  }
+  if (JSON.stringify(paths) !== JSON.stringify([...paths].sort())) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['framework_helper_inventory'], message: 'helper paths must be sorted' });
+  }
+  if (executionSurfaceHelperDigest(value.framework_helper_inventory) !== value.framework_helper_sha256) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['framework_helper_sha256'], message: 'does not match the canonical helper inventory' });
+  }
+  if (executionSurfaceFingerprint(value) !== value.fingerprint) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['fingerprint'], message: 'does not match the canonical execution surface' });
+  }
+});
+
+export function executionSurfaceHelperDigest(inventory) {
+  const canonicalInventory = inventory.map((item) => ({ path: item.path, sha256: item.sha256 }));
+  return sha256Bytes(Buffer.from(JSON.stringify(canonicalInventory)));
+}
+
+export function executionSurfaceFingerprint(surface) {
+  return sha256Bytes(Buffer.from(JSON.stringify({
+    schema_version: surface.schema_version,
+    manifest_entry: surface.manifest_entry,
+    source_playbook_sha256: surface.source_playbook_sha256,
+    instruction_sha256: surface.instruction_sha256,
+    framework_helper_sha256: surface.framework_helper_sha256,
+  })));
+}
+
+export const ExperimentSelectionObservationSchema = z.object({
+  schema_version: z.literal('agent-experiment-selection-observation/v1'),
+  mode: z.enum(['exact', 'profile']),
+  exact_selector: ExperimentExactSelectorSchema.nullable(),
+  profile: z.enum(['calibration', 'discovery', 'diagnostic', 'assurance']).nullable(),
+  prediction_basis: z.enum(['explicit_selector', 'observed_matching', 'observed_stale', 'filename_initial_estimate', 'unavailable']),
+  predicted_duration_ms: z.number().int().nonnegative().nullable(),
+  predicted_cost_usd: finiteNonnegative.nullable(),
+  reserved_cost_usd: finiteNonnegative.nullable(),
+  selection_reason: z.array(z.string().trim().min(1)).min(1),
+}).strict().superRefine((value, ctx) => {
+  if (value.mode === 'exact' && (value.exact_selector === null || value.profile !== null)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'exact selection must carry one exact selector and no profile' });
+  }
+  if (value.mode === 'profile' && value.profile === null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['profile'], message: 'profile selection requires a profile name' });
+  }
+  if (value.mode === 'profile' && value.profile !== 'assurance' && value.exact_selector !== null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['exact_selector'], message: 'only assurance may carry an exact selector scope' });
+  }
+  if (value.mode === 'profile' && value.profile === 'assurance' && value.exact_selector === null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['exact_selector'], message: 'assurance requires an explicit selector scope' });
+  }
+  if (value.prediction_basis === 'explicit_selector' && (value.predicted_duration_ms !== null || value.predicted_cost_usd !== null || value.reserved_cost_usd !== null)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['prediction_basis'], message: 'explicit selection does not claim a prediction' });
+  }
+  if (value.prediction_basis === 'unavailable' && value.predicted_duration_ms !== null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['predicted_duration_ms'], message: 'unavailable prediction cannot carry a duration' });
+  }
+});
+
+const OutcomeSchema = z.enum(['PASS', 'FAIL', 'NOT_RUN']).nullable();
+const LifecycleOutcomeSchema = z.enum(['ERROR', 'CANCELLED']).nullable();
+const EffectiveOutcomeSchema = z.enum(['PASS', 'FAIL', 'NOT_RUN', 'HUMAN', 'ERROR', 'CANCELLED']);
+const HealthSchema = z.enum(['CLEAN', 'ISSUES', 'ERROR']).nullable();
+const LogReferenceSchema = z.object({ path: absolutePath, bytes: z.number().int().nonnegative(), sha256 }).strict();
+const ReportResultV1Schema = z.object({
+  case: caseIdentity,
+  experiment: z.string().trim().min(1),
+  playbook_path: manifestEntryPath,
+  native_outcome: OutcomeSchema,
+  lifecycle_outcome: LifecycleOutcomeSchema,
+  effective_outcome: EffectiveOutcomeSchema,
+  health: HealthSchema,
+  duration_ms: z.number().int().nonnegative(),
+  cost_usd: finiteNonnegative.nullable(),
+  completion: z.object({
+    source_playbook_sha256: sha256,
+    outcome: z.enum(['PASS', 'FAIL', 'NOT_RUN']),
+  }).passthrough().nullable(),
+}).passthrough();
+
+const ReportResultV2Schema = z.object({
+  case: caseIdentity,
+  experiment: z.string().trim().min(1),
+  playbook_path: manifestEntryPath,
+  native_outcome: OutcomeSchema,
+  lifecycle_outcome: LifecycleOutcomeSchema,
+  effective_outcome: EffectiveOutcomeSchema,
+  agent_process: z.string().trim().min(1),
+  health: HealthSchema,
+  health_reports: z.array(z.unknown()),
+  reason: z.string().nullable(),
+  duration_ms: z.number().int().nonnegative(),
+  cost_usd: finiteNonnegative.nullable(),
+  accumulated_cost_usd: finiteNonnegative,
+  run_root: absolutePath.nullable(),
+  run_root_available: z.boolean(),
+  cleanup_requested: z.boolean(),
+  cleanup_eligible: z.boolean(),
+  cleanup_status: z.enum(['not_attempted', 'removed', 'failed']),
+  completion: z.lazy(() => AgentExperimentCompletionSchema).nullable(),
+  logs: z.object({
+    prompt: LogReferenceSchema.nullable(),
+    stdout: LogReferenceSchema.nullable(),
+    stderr: LogReferenceSchema.nullable(),
+  }).strict(),
+  evidence: z.unknown().nullable(),
+  execution_surface: AgentExperimentExecutionSurfaceSchema,
+  selection_observation: ExperimentSelectionObservationSchema,
+}).strict();
+
+const SummarySchema = z.object({
+  total: z.number().int().nonnegative(),
+  PASS: z.number().int().nonnegative(),
+  FAIL: z.number().int().nonnegative(),
+  NOT_RUN: z.number().int().nonnegative(),
+  HUMAN: z.number().int().nonnegative(),
+  ERROR: z.number().int().nonnegative(),
+  CANCELLED: z.number().int().nonnegative(),
+}).strict();
+const ProofBoundarySchema = z.object({
+  deterministic_fixture_proves: z.string().trim().min(1),
+  agent_flow_proof_requires: z.array(z.string().trim().min(1)),
+}).strict();
+
+export const AgentExperimentBatchReportV1Schema = z.object({
+  schema_version: z.literal('agent-experiment-batch-report/v1'),
+  batch_id: z.string().uuid(),
+  generated_at: z.string().datetime(),
+  results: z.array(ReportResultV1Schema),
+}).passthrough();
+
+export const AgentExperimentBatchReportV2Schema = z.object({
+  schema_version: z.literal('agent-experiment-batch-report/v2'),
+  batch_id: z.string().uuid(),
+  generated_at: z.string().datetime(),
+  runner: z.literal('run-agent-experiment.mjs'),
+  execution_mode: z.enum(['headless_agent', 'interactive_agent']),
+  proof_boundary: ProofBoundarySchema,
+  cleanup_requested: z.boolean(),
+  max_total_budget_usd: finiteNonnegative.nullable(),
+  max_case_budget_usd: finiteNonnegative.nullable(),
+  accumulated_cost_usd: finiteNonnegative,
+  summary: SummarySchema,
+  results: z.array(ReportResultV2Schema),
+  report_path: absolutePath,
+}).strict();
+
+export const AgentExperimentBatchReportSchema = z.discriminatedUnion('schema_version', [
+  AgentExperimentBatchReportV1Schema,
+  AgentExperimentBatchReportV2Schema,
+]);
+
+const AuditRunContextSchema = z.object({
+  path: absolutePath,
+  sha256,
+  run_id: z.string().uuid(),
+  root_identity: z.object({ dev: z.string().regex(/^\d+$/), ino: z.string().regex(/^\d+$/) }).strict(),
+  source_playbook_sha256: sha256,
+  rendered_playbook_sha256: sha256,
+  instruction_sha256: sha256,
+  manifest_sha256: sha256,
+}).strict();
+
+const AuditCaseResultV2Schema = z.object({
+  schema_version: z.literal('agent-experiment-audit-event/v2'),
+  event: z.literal('case_result'),
+  ts: z.string().datetime(),
+  batch_id: z.string().uuid(),
+  ordinal: z.number().int().positive(),
+  case: caseIdentity,
+  experiment: z.string().trim().min(1),
+  playbook_path: manifestEntryPath,
+  cost_class: z.enum(['light', 'standard', 'heavy']),
+  execution_mode: z.enum(['headless_agent', 'interactive_agent']),
+  started_at: z.string().datetime(),
+  duration_ms: z.number().int().nonnegative(),
+  run_context: AuditRunContextSchema.nullable(),
+  native_outcome: OutcomeSchema,
+  lifecycle_outcome: LifecycleOutcomeSchema,
+  effective_outcome: EffectiveOutcomeSchema,
+  agent_process: z.string().trim().min(1),
+  health: HealthSchema,
+  health_reports: z.array(z.unknown()),
+  reason: z.string().nullable(),
+  cost_usd: finiteNonnegative.nullable(),
+  accumulated_cost_usd: finiteNonnegative,
+  run_root: absolutePath.nullable(),
+  run_root_available: z.boolean(),
+  cleanup_requested: z.boolean(),
+  cleanup_eligible: z.boolean(),
+  cleanup_status: z.enum(['not_attempted', 'removed', 'failed']),
+  completion: z.lazy(() => AgentExperimentCompletionSchema).nullable(),
+  logs: z.object({
+    prompt: LogReferenceSchema.nullable(),
+    stdout: LogReferenceSchema.nullable(),
+    stderr: LogReferenceSchema.nullable(),
+  }).strict(),
+  evidence: z.unknown().nullable(),
+  execution_surface: AgentExperimentExecutionSurfaceSchema,
+  selection_observation: ExperimentSelectionObservationSchema,
+}).strict();
+
+const AuditCleanupResultV2Schema = z.object({
+  schema_version: z.literal('agent-experiment-audit-event/v2'),
+  event: z.literal('cleanup_result'),
+  ts: z.string().datetime(),
+  batch_id: z.string().uuid(),
+  ordinal: z.number().int().positive(),
+  case: caseIdentity,
+  case_result_sha256: sha256,
+  cleanup_status: z.enum(['removed', 'failed']),
+  removed_path: absolutePath,
+  lifecycle_outcome_override: z.enum(['ERROR']).nullable(),
+  reason: z.string().nullable().optional(),
+  execution_surface: AgentExperimentExecutionSurfaceSchema,
+  selection_observation: ExperimentSelectionObservationSchema,
+}).strict();
+
+export const AgentExperimentAuditEventV1Schema = z.object({
+  schema_version: z.literal('agent-experiment-audit-event/v1'),
+  event: z.string().trim().min(1),
+}).passthrough();
+export const AgentExperimentAuditEventV2Schema = z.discriminatedUnion('event', [
+  AuditCaseResultV2Schema,
+  AuditCleanupResultV2Schema,
+]);
+export const AgentExperimentAuditEventSchema = z.union([
+  AgentExperimentAuditEventV1Schema,
+  AgentExperimentAuditEventV2Schema,
+]);
 
 export const AgentExperimentRunContextSchema = z.object({
   schema_version: z.literal('agent-experiment-run/v1'),
