@@ -90,8 +90,8 @@
 
 ### Phase 3 - Deterministic Calibration
 
-- [ ] P3.1 在 Phase 2 首批结论后重新运行 bounded calibration dry-run。
-- [ ] P3.2 以一例一检查方式运行当前第一例 calibration slice。
+- [x] P3.1 在 Phase 2 首批结论后重新运行 bounded calibration dry-run：`900000` ms fresh profile 选出 5 个当前候选，第一例为 `case-11-light-four-returns`（observed-stale 预测 `38053` ms / `$0.257206`）；`case-181` 仍是 stale calibration candidate，但不是当前第一例。
+- [ ] P3.2 以一例一检查方式运行当前第一例 calibration slice。已验证 `38053` ms / `$0.257206` total/per-case 的 one-case preflight 只选中 `case-11-light-four-returns`；`case-181` 因预测 `382873` ms / `$1.266596` 超出该 envelope 而未获本 slice 授权。其 fixture repair 仅有静态 contract evidence，未运行替代 case。
 - [ ] P3.3 记录更新后的 deterministic observation，并让现有 selector 自然重算 fast pool/gaps。
 - [ ] P3.4 达到本轮 budget、无候选或覆盖问题已回答时停止并复盘。
 
@@ -131,7 +131,7 @@ Phase 4: Agent-behavior discovery pilot    Phase 5: Policy review
 
 ### Phase 2 - Diagnostic Remediation
 
-状态：已完成 case-51 的 real diagnostic slice、root-cause split、health-scope repair、fixture repair 与 fresh requalification；下一步是 P2.10 对 profile-selected case-52 的独立 preflight，不能复用 case-51 的 envelope。
+状态：首批 remediation 已完成：case-51 取得 `PASS+CLEAN`，case-52 fixture repair 已归档并取得 native `PASS`、health `ISSUES` 的真实 requalification。case-52 因 `PASS+ISSUES` 仍是 diagnostic 的当前第一例，不能据此盲目启动 case-53；该 selection 行为留作后续独立决策。Phase 3 现可从 fresh calibration preflight 开始。
 
 目的：先处理当前有 FAIL、ERROR、NOT_RUN、PASS+ISSUES 或 stale/unknown direct fact 的 case，避免把已知异常混进 calibration 或 fast regression。
 
@@ -147,7 +147,7 @@ Phase 4: Agent-behavior discovery pilot    Phase 5: Policy review
 
 ### Phase 3 - Deterministic Calibration
 
-状态：等待 Phase 2 的首批结论后执行。
+状态：P3.1 已完成。fresh `900000` ms calibration profile 的首个候选是 `case-11-light-four-returns`；以它的 `38053` ms / `$0.257206` 预测构造的 one-case preflight 只选择该例。`case-181` 的 fixture source 已修复，但该变更的 selector-bound requalification 条件未满足：它在本 envelope 下以 `382873` ms / `$1.266596` 被 `predicted_duration_exceeds_bound` 排除。因此 P3.2 仍应从 case-11 的 real slice 开始，case-181 不应由手工 selector 跳队。
 
 目的：用当前测量补齐 deterministic case 的 duration/cost/source/execution-surface observation，逐步扩大可证明的 fast pool，而不是完成一个静态 Wave B/C 清单。
 
@@ -198,4 +198,4 @@ Phase 4: Agent-behavior discovery pilot    Phase 5: Policy review
 
 ## 下一步
 
-case-51 的 P2.7 -> P2.8 -> P2.9 已完成：fixture repair 已获得 native `PASS+CLEAN` requalification，随后 diagnostic profile 合法选择 `case-52` 为下一例。现在只能按 P2.10 为 case-52 重新计算 one-case envelope；Phase 3 和 Phase 4 仍已预先排好，但不抢在该 Phase 2 fresh selection 之前实施。
+执行 P3.2：在已验证的 `38053` ms / `$0.257206` one-case calibration envelope 下运行 `case-11-light-four-returns`，审阅 native completion、light health、audit、trace 与实际 duration/cost；随后重新运行 fresh calibration dry-run，更新 P3.3 的 selector 事实。不得以 `--case` 跳过当前 profile 顺序，也不得把 case-181 的静态 fixture repair 写成 fresh runtime evidence。

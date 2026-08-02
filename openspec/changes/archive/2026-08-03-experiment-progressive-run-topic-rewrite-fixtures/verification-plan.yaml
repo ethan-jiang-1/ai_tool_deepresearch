@@ -1,0 +1,58 @@
+schema_version: verification-routing/v1
+change: experiment-progressive-run-topic-rewrite-fixtures
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      This change repairs Markdown fixture sequencing and invokes existing Engine operations; it adds no new pure
+      Engine function.
+  integration:
+    status: selected
+    rationale: >-
+      A JS-led Markdown contract test can lock the legal topic-state/style-writer ordering in both fixtures without
+      claiming that it executes a Headless Playbook Agent.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      The changed proof subject is an existing Markdown case executed by a Headless Playbook Agent, not a new
+      JS-led workflow-scale chain.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      Only a fresh bounded Headless Playbook-Agent execution can prove that the selected calibration case reaches
+      native completion without fixture-caused failed HITL1 attempts.
+claims:
+  - id: topic-rewrite-fixtures-use-existing-writers
+    statement: >-
+      AGT-010: both revised topic-rewrite fixtures retain their V2 deterministic-contract policy, submit their
+      approved HITL1 topic inputs through the existing `operate-topic-state` writer, and apply the selected research
+      style through the existing CLI after topic-state application and before their first HITL1 Gate invocation.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/topic-rewrite-fixtures-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: case-181-repaired-calibration-observation
+    statement: >-
+      A fresh current-calibration, one-case Headless Playbook-Agent execution of case-181 produces native PASS and
+      CLEAN light health, with one passing HITL1 Gate/check set, canonical Engine-authored topic-state evidence, and
+      a fresh selected-profile style projection before the Gate.
+    test_class: agent_flow_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wff_topic-rewrite/case-181-light-hitl1-topic-rewrite-vague.md
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
