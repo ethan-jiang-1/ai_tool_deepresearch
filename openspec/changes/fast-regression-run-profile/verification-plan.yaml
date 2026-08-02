@@ -1,0 +1,97 @@
+schema_version: verification-routing/v1
+change: fast-regression-run-profile
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Regression admission, matching-v2 qualification distinction, fixed SLO evaluation, all-mode review
+      gate, recommendation tie-breaking, group rotation, breach exclusion, and coverage-gap projection are
+      pure deterministic functions over supplied manifest and retained-observation facts.
+  integration:
+    status: selected
+    rationale: >-
+      The production Supervisor parser/selection/report boundary must reject widened regression requests
+      before side effects, apply the effective per-case cap, distinguish normal from explicit qualification,
+      and keep runner/frontmatter guidance aligned without claiming a fixture launched a real Playbook Agent.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      This change does not introduce a multi-phase Engine workflow, state transition chain, or new bundle
+      lifecycle; focused strategy and Supervisor integration tests cover its deterministic boundary.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      Initial qualification is an explicitly bounded real Headless Playbook-Agent execution over a disposable
+      case root. Its native trace completion is the only evidence that a v2 qualification run occurred.
+claims:
+  - id: fast-regression-admission-projection
+    statement: >-
+      ERS-002: current manifest/frontmatter plus one latest retained result produce a virtual
+      deterministic-only fast-regression admission/coverage projection; matching v2 PASS+CLEAN facts from
+      one record, 120-second/$0.60 case SLO, reviewed all-mode safety, one-per-group rotation, explicit
+      qualification, breach exclusion, and no cross-record fact stitching are fail-closed and explainable.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/host_tools/experiment-run-strategy.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: supervisor-enforces-fast-regression-envelope
+    statement: >-
+      EXA-004, EXA-009, and EXO-007: the real Supervisor parser and lifecycle boundary reject widened or
+      ambiguous regression requests before side effects, retain versioned qualification intent/report facts,
+      and enforce the effective 8-minute-forecast/$3/$0.60 envelope plus explicit bounded Agent and per-health-target timeouts
+      while preserving native outcome and health orthogonality.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/host_tools/run-agent-experiment.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: runner-guidance-keeps-fast-regression-bounded
+    statement: >-
+      PLR-004: normal knowledge surfaces document the explicit fast regression and qualification paths,
+      neutral author recommendation, group gaps, and slow-case routes without reviving filename-Light
+      default selection, a persistent taxonomy, or a scheduler claim.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-experiment-autorun-terminology.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: initial-qualification-is-real-playbook-evidence
+    statement: >-
+      The initial selected qualification uses a real Headless Playbook Agent over a fresh disposable runtime
+      and records a trace-bound v2 native completion; the currently source-matching historical case-606
+      result supports candidate forecasting only, while deterministic test fixtures do not stand in for
+      that execution evidence.
+    test_class: agent_flow_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_autonomous-research-hardening/case-606-light-continuation-cues.md
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
