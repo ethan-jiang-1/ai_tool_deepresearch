@@ -1,0 +1,59 @@
+schema_version: verification-routing/v1
+change: experiment-progressive-run-diagnostic-case-52-fixture
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      This change corrects Markdown fixture composition and adds no new pure Engine function.
+  integration:
+    status: selected
+    rationale: >-
+      A JS-led Markdown contract test can lock the receipt-bound fixture writer and independent-block handoff
+      without claiming that it executes a Headless Playbook Agent.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      The changed proof subject is an existing Markdown case executed by a Headless Playbook Agent, not a new
+      JS-led workflow-scale chain.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      Only a real bounded Headless Playbook-Agent run can demonstrate that the repaired fixture produces the
+      legal Wave1 predecessor, preserves the deliberate fail/repair pairs, and no longer ends native FAIL.
+claims:
+  - id: case-52-playbook-contract-is-valid
+    statement: >-
+      AGT-010: the revised case-52 Markdown keeps its V2 policy, derives a valid carried-target receipt for its
+      fixture-owned Wave1 predecessor, passes it to the existing Engine writer with strict trace durability, and
+      enters the already-validated readiness target without reading a prior shell block's `$N` value.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/case-52-fixture-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: case-52-repaired-fail-repair-observation
+    statement: >-
+      A fresh one-case diagnostic-profile Headless Playbook-Agent execution of case-52 produces native PASS,
+      contains Engine-authored receipt-bound Wave1 predecessor evidence in paired trace/log output, and contains
+      real false/true pairs for both intended HITL2 and readiness repairs. Standard health remains an independent
+      expected ISSUES observation for the deliberate first-attempt failures, with no missing passed
+      wave1-complete lineage or trace/log timeline mismatch.
+    test_class: agent_flow_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wff_validation/case-52-standard-fail-repair.md
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

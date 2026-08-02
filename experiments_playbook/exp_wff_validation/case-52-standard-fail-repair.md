@@ -53,7 +53,10 @@ human_decision_checkpoints:
 YAML
 node --input-type=module - "$B" <<'JS'
 import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { selectWave1CarriedTargetReceipt } from './DPT_FRAMEWORK/engine/helpers/wave-carried-target-receipts.mjs';
 const bundle=process.argv[2];
+const carriedTargetSelection = selectWave1CarriedTargetReceipt(bundle);
+if (!carriedTargetSelection.ok) throw new Error(`Cannot create Wave1 fixture receipt: ${carriedTargetSelection.findings.map((finding) => finding.detail).join('; ')}`);
 const fixtures=[
   ['instantiation-complete','phases/phase-instantiation.md','phases/phase-hitl1.md'],
   ['hitl1-recorded','phases/phase-hitl1.md','phases/phase-setup.md'],
@@ -63,7 +66,14 @@ const fixtures=[
   ['wave1-complete','phases/phase-wave1.md','phases/phase-wave2.md'],
   ['wave2-complete','phases/phase-wave2.md','phases/phase-hitl2.md'],
 ];
-for(const [gate,currentNodeRef,next] of fixtures) writeGateAttempt(bundle,{check:{gate,passed:true,currentNodeRef,next},routing:{kind:'next',next},inspect:[],advice:[]});
+for (const [gate,currentNodeRef,next] of fixtures) {
+  const result = { check: { gate, passed: true, currentNodeRef, next }, routing: { kind: 'next', next, detail: 'declared direct-predecessor fixture' }, inspect: [], advice: [] };
+  if (gate === 'wave1-complete') {
+    writeGateAttempt(bundle, result, { carriedTargetReceipt: carriedTargetSelection.receipt, strictTrace: true });
+  } else {
+    writeGateAttempt(bundle, result);
+  }
+}
 JS
 node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-52-enter-hitl2.md"
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-52-advance-wave2.json"
@@ -95,7 +105,7 @@ set -e
 BAD_OK=false; [ "$BAD_STATUS" -ne 0 ] && printf '%s' "$BAD" | grep -q 'enter-phase' && BAD_OK=true
 node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-52-unwitnessed-status-rejected',passed:$BAD_OK,detail:'source-gate status sync requires route-bound entry'}))"
 
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$N" > "$B/case-52-enter-readiness.md"
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-readiness.md > "$B/case-52-enter-readiness.md"
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-52-advance-hitl2.json"
 ```
 

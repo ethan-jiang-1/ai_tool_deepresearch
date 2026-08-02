@@ -86,7 +86,7 @@
 - [x] P2.8a 重新运行 current diagnostic dry-run：`480000` ms / `$2.00` envelope 只选择 `case-51-standard-happy-path`（预测 `351290` ms / `$1.9991`）；`$3.00` 已会选择三例，不能用于本 slice。
 - [x] P2.8b 以 P2.8a 的 one-case envelope 对 `case-51-standard-happy-path` 做一次 bounded real requalification；report `3f6c28fd-f043-41f0-ae5c-23ef9b7fc4bf` 为 native `PASS` + aggregate `CLEAN`，实际 `144036` ms / `$0.741939`，三角色 health clean、Wave1 trace/log `1/1` 且带 receipt、rerun-ready 仅一次 pass，audit 同步记录该 profile selection。
 - [x] P2.9 重新运行 `900000` ms diagnostic dry-run；`case-51` 已退出 diagnostic，profile 的下一例是 `case-52-standard-fail-repair`（预测 `370910` ms / `$1.668948`），后续候选仅作排程信息。
-- [ ] P2.10 对 profile 当前选出的 `case-52-standard-fail-repair` 启动下一 slice 前，先重复其 own one-case envelope preflight；每个后续已启动 slice 都重复 P2.2、P2.4、P2.5、P2.9，不扩大该 slice 的 timeout 或 budget。
+- [x] P2.10 对 profile 当前选出的 `case-52-standard-fail-repair` 重复 own one-case envelope preflight：`120000` ms / `$0.60` 仅选中它（预测 `98452` ms / `$0.455172`），随后 requalification report `ac5dcd6a-679f-4905-8ddf-de03e433211c` 为 native `PASS`、health `ISSUES`、实际 `87677` ms / `$0.592476`。Wave1 由 Engine 写入 carried-target receipt，trace/log 为 `11/11`、零 mismatch，HITL2 与 readiness 各有真实 false/true pair；health `ISSUES` 保留有意的首次失败，不能写成 `CLEAN`。重新运行 `900000` ms diagnostic dry-run 后，case-52 因 `PASS+ISSUES` 仍是第一例，case-53 为第二例；未扩大 timeout/budget 或启动下一 slice。
 
 ### Phase 3 - Deterministic Calibration
 
