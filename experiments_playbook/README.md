@@ -53,6 +53,7 @@ Inspect selection without credentials, Agent launch, run roots, or mutation:
 node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --tier light --dry-run
 node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --group agentic-queue --tier standard --dry-run --json
 node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --run-profile discovery --max-predicted-duration-ms 900000 --dry-run --json
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --run-profile regression --max-predicted-duration-ms 480000 --dry-run --json
 ```
 
 Interactive replay is exactly one case, user-present, and always preserved:
@@ -64,6 +65,38 @@ node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --interactive --case case
 The optional per-case cap cannot exceed the total budget. The Supervisor passes the current cap to the Agent CLI, accumulates only a valid final cost, and stops further launch if cost becomes unknown or the batch budget is exhausted. Cost never changes native PASS/FAIL/NOT_RUN.
 
 Every Headless run must name an exact selector or an explicit run profile. `calibration`, `discovery`, and `diagnostic` are virtual bounded queries and require `--max-predicted-duration-ms`; `assurance` also requires an explicit legacy selector scope. Their data comes from current manifest/frontmatter and retained Supervisor reports, not a moved case tree or persistent classification. Filename `light|standard|heavy` remains a creation-time estimate and legacy filter, while `health_profile` remains a separate case health policy. A change's coverage scope stays in its declared `verification-plan.yaml`; paths and `@impl` markers do not select it automatically.
+
+## Fast regression
+
+`regression` is a virtual high-frequency deterministic regression profile, not a test class, permanent suite, filename tier, schedule, or Agent-behavior proof. Normal regression selects only current matching-v2 deterministic cases with one latest PASS, CLEAN result inside the fast SLO. It selects at most one case per `experiment` group and reports uncovered groups instead of filling the batch with another group or a slower case.
+
+The maximum envelope is a `480000` ms selection forecast, `$3.00` total budget, `$0.60` effective per-case budget, `120000` ms explicit Agent timeout, and `60000` ms per-health-target timeout. Operators may tighten those bounds but cannot widen them. The forecast is not a batch deadline or scheduler.
+
+Inspect normal membership without credentials or mutation:
+
+```bash
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
+  --run-profile regression --max-predicted-duration-ms 480000 --dry-run --json
+```
+
+Run the currently qualified fast members with an explicit bounded timeout:
+
+```bash
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
+  --run-profile regression --max-predicted-duration-ms 480000 \
+  --max-total-budget-usd 3 --timeout 120000 --health-timeout 60000
+```
+
+When a fast source-matching historical observation lacks a matching v2 execution surface or carries a stale one, normal regression reports `needs_qualification` and does not launch it. Only the explicit qualification path may run that candidate under the same envelope:
+
+```bash
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
+  --run-profile regression --regression-qualification \
+  --max-predicted-duration-ms 480000 --max-total-budget-usd 3 \
+  --timeout 120000 --health-timeout 60000
+```
+
+`regression_recommendation: recommended` is optional author ordering advice only. Its absence is neutral; it cannot bypass result, health, SLO, or budget checks. A `verdict_mode: all` case also needs a reviewed `regression_retry_safety: reviewed` declaration before regression admission. Neither field changes native verdict semantics, and no existing case needs a move, rename, or permanent class. Slow, stale, Agent-behavior, FAIL, ERROR, ISSUES, or unqualified cases remain available through explicit calibration, diagnostic, or assurance work.
 
 ## Execution rules
 

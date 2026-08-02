@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 
-import { formatPlaybookManifest } from '../../../DPT_FRAMEWORK/host_tools/lib/agent-experiment-contract.mjs';
+import { formatPlaybookManifest, sha256Bytes } from '../../../DPT_FRAMEWORK/host_tools/lib/agent-experiment-contract.mjs';
 import { runSupervisor } from '../../../DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs';
 
 const REAL_REPO = path.resolve(new URL('../../..', import.meta.url).pathname);
@@ -85,6 +85,81 @@ describe('run-agent-experiment deterministic host lifecycle', () => {
     assert.equal(existsSync(path.join(fixture.root, '.exp-bundles')), false);
   });
 
+  it('rejects widened or timeout-implicit regression requests before creating runtime state', async () => {
+    for (const overrides of [
+      { maxPredictedDurationMs: 480_001, maxTotalBudgetUsd: 3, maxCaseBudgetUsd: 0.60, timeoutMs: 120_000, timeoutExplicit: true, healthTimeoutMs: 60_000, dryRun: true },
+      { maxPredictedDurationMs: 480_000, maxTotalBudgetUsd: 4, maxCaseBudgetUsd: 0.60, timeoutMs: 120_000, timeoutExplicit: true, healthTimeoutMs: 60_000, dryRun: true },
+      { maxPredictedDurationMs: 480_000, maxTotalBudgetUsd: 3, maxCaseBudgetUsd: 0.61, timeoutMs: 120_000, timeoutExplicit: true, healthTimeoutMs: 60_000, dryRun: true },
+      { maxPredictedDurationMs: 480_000, maxTotalBudgetUsd: 3, maxCaseBudgetUsd: 0.60, timeoutMs: 120_001, timeoutExplicit: true, healthTimeoutMs: 60_000, dryRun: true },
+      { maxPredictedDurationMs: 480_000, maxTotalBudgetUsd: 3, maxCaseBudgetUsd: 0.60, timeoutMs: 120_000, timeoutExplicit: true, healthTimeoutMs: 60_001, dryRun: true },
+      { maxPredictedDurationMs: 480_000, maxTotalBudgetUsd: 3, maxCaseBudgetUsd: 0.60, timeoutExplicit: false, healthTimeoutMs: 60_000, dryRun: false },
+    ]) {
+      const fixture = makeProject({ writeEnv: false });
+      await assert.rejects(() => runSupervisor(baseOptions({
+        caseId: null,
+        runProfile: 'regression',
+        ...overrides,
+      }), { repoRoot: fixture.root, executable: fixture.executable }), /regression|explicit timeout/i);
+      assert.equal(existsSync(path.join(fixture.root, '.exp-bundles')), false);
+    }
+  });
+
+  it('keeps normal regression and explicit qualification distinct under the effective fast cap', async () => {
+    const normalFixture = makeProject();
+    await runSupervisor(baseOptions(), { repoRoot: normalFixture.root, executable: normalFixture.executable });
+    const normal = await runSupervisor(baseOptions({
+      caseId: null,
+      runProfile: 'regression',
+      maxPredictedDurationMs: 480_000,
+      maxTotalBudgetUsd: 1,
+      maxCaseBudgetUsd: null,
+      timeoutMs: 120_000,
+      timeoutExplicit: true,
+      healthTimeoutMs: 60_000,
+    }), { repoRoot: normalFixture.root, executable: normalFixture.executable });
+    assert.equal(normal.results.length, 1);
+    assert.equal(normal.max_case_budget_usd, 0.60);
+    assert.equal(normal.results[0].selection_observation.schema_version, 'agent-experiment-selection-observation/v2');
+    assert.equal(normal.results[0].selection_observation.regression_intent, 'normal');
+    assert.equal(normal.results[0].selection_observation.profile, 'regression');
+    const normalCapture = JSON.parse(readFileSync(path.join(normal.results[0].run_root, '_diagnostics/fixture-invocation.json'), 'utf8'));
+    assert.equal(normalCapture.argv[normalCapture.argv.indexOf('--max-budget-usd') + 1], '0.6');
+    const normalContext = JSON.parse(readFileSync(path.join(normal.results[0].run_root, 'agent-experiment-run.json'), 'utf8'));
+    assert.equal(Object.hasOwn(normalContext.policy, 'regression_recommendation'), false);
+    assert.equal(Object.hasOwn(normalContext.policy, 'regression_retry_safety'), false);
+
+    const qualificationFixture = makeProject();
+    writeHistoricalV1Report(qualificationFixture);
+    const normalDryRun = await runSupervisor(baseOptions({
+      caseId: null,
+      runProfile: 'regression',
+      maxPredictedDurationMs: 480_000,
+      maxTotalBudgetUsd: null,
+      maxCaseBudgetUsd: null,
+      timeoutExplicit: false,
+      dryRun: true,
+    }), { repoRoot: qualificationFixture.root, executable: qualificationFixture.executable });
+    assert.equal(normalDryRun.selected_count, 0);
+    assert.equal(normalDryRun.selection.regression.admissions[0].status, 'needs_qualification');
+    assert.equal(existsSync(path.join(qualificationFixture.root, '.exp-bundles/runs')), false);
+
+    const qualification = await runSupervisor(baseOptions({
+      caseId: null,
+      runProfile: 'regression',
+      regressionQualification: true,
+      maxPredictedDurationMs: 480_000,
+      maxTotalBudgetUsd: 3,
+      maxCaseBudgetUsd: null,
+      timeoutMs: 120_000,
+      timeoutExplicit: true,
+      healthTimeoutMs: 60_000,
+    }), { repoRoot: qualificationFixture.root, executable: qualificationFixture.executable });
+    assert.equal(qualification.results[0].selection_observation.regression_intent, 'qualification');
+    assert.equal(qualification.results[0].selection_observation.prediction_basis, 'observed_source_matching_history');
+    assert.equal(qualification.results[0].native_outcome, 'PASS');
+    assert.equal(qualification.results[0].health, 'CLEAN');
+  });
+
   it('preserves legacy filename-tier selection as an explicit compatibility filter', async () => {
     const fixture = makeProject();
     configureFixturePlaybook(fixture, { caseId: 'case-2-standard-fixture' });
@@ -109,6 +184,8 @@ describe('run-agent-experiment deterministic host lifecycle', () => {
     assert.equal(result.health, 'ISSUES');
     assert.equal(result.selection_observation.mode, 'profile');
     assert.equal(result.selection_observation.profile, 'calibration');
+    assert.equal(result.selection_observation.schema_version, 'agent-experiment-selection-observation/v2');
+    assert.equal(result.selection_observation.regression_intent, null);
     assert.match(result.execution_surface.fingerprint, /^[a-f0-9]{64}$/);
     const retained = JSON.parse(readFileSync(report.report_path, 'utf8'));
     assert.equal(retained.schema_version, 'agent-experiment-batch-report/v2');
@@ -468,9 +545,9 @@ describe('run-agent-experiment deterministic host lifecycle', () => {
 function baseOptions(overrides = {}) {
   return {
     caseId: 'case-1-light-fixture', group: null, tier: null, all: false, interactive: false,
-    cleanupPass: false, timeoutMs: 10000, healthTimeoutMs: 10000,
+    cleanupPass: false, timeoutMs: 10000, timeoutExplicit: true, healthTimeoutMs: 10000,
     maxTotalBudgetUsd: 1, maxCaseBudgetUsd: null, runProfile: null, maxPredictedDurationMs: null,
-    agentBehaviorFreshAfterMs: null, json: true, dryRun: false,
+    agentBehaviorFreshAfterMs: null, regressionQualification: false, json: true, dryRun: false,
     ...overrides,
   };
 }
@@ -495,6 +572,7 @@ experiment: fixture
 case: case-1-light-fixture
 case_goal: Prove deterministic Supervisor mechanics only.
 verdict_mode: all
+regression_retry_safety: reviewed
 required_checks: [fixture-pass]
 bundle_roles: [verdict]
 verdict_role: verdict
@@ -529,6 +607,30 @@ console.log(JSON.stringify({schema_version:'experiment_health.v1',bundle_path:bu
   writeFileSync(executable, agentFixtureSource(fixtureMode));
   chmodSync(executable, 0o755);
   return { root, executable };
+}
+
+function writeHistoricalV1Report(fixture) {
+  const reportDir = path.join(fixture.root, '.exp-bundles/_reports');
+  mkdirSync(reportDir, { recursive: true });
+  const playbookPath = 'exp_fixture/case-1-light-fixture.md';
+  const sourcePlaybookSha256 = sha256Bytes(readFileSync(path.join(fixture.root, 'experiments_playbook', playbookPath)));
+  writeFileSync(path.join(reportDir, 'historical-v1.json'), `${JSON.stringify({
+    schema_version: 'agent-experiment-batch-report/v1',
+    batch_id: '00000000-0000-4000-8000-000000000007',
+    generated_at: '2026-08-01T00:00:00.000Z',
+    results: [{
+      case: 'case-1-light-fixture',
+      experiment: 'fixture',
+      playbook_path: playbookPath,
+      native_outcome: 'PASS',
+      lifecycle_outcome: null,
+      effective_outcome: 'PASS',
+      health: 'CLEAN',
+      duration_ms: 100,
+      cost_usd: 0.25,
+      completion: { source_playbook_sha256: sourcePlaybookSha256, outcome: 'PASS' },
+    }],
+  }, null, 2)}\n`);
 }
 
 function configureFixturePlaybook(fixture, { caseId, replacements = [] }) {

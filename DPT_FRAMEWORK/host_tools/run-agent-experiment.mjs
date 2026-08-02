@@ -35,6 +35,7 @@ import {
   validateNativeCompletion,
 } from './lib/agent-experiment-supervisor.mjs';
 import {
+  FAST_REGRESSION_SLO,
   buildExecutionSurfaces,
   planExperimentRun,
   readRetainedExperimentObservations,
@@ -50,7 +51,7 @@ const PROOF_BOUNDARY = Object.freeze({
 
 function usage(message = null) {
   if (message) console.error(message);
-  console.error('Usage: run-agent-experiment.mjs [--case <exact>|--group <group> [--tier <cost>]|--tier <cost>|--all|--run-profile <calibration|discovery|diagnostic|assurance>] [--dry-run] [--json]');
+  console.error('Usage: run-agent-experiment.mjs [--case <exact>|--group <group> [--tier <cost>]|--tier <cost>|--all|--run-profile <calibration|discovery|diagnostic|assurance|regression>] [--regression-qualification] [--dry-run] [--json]');
   console.error('       Profile: --max-predicted-duration-ms <positive> [--agent-behavior-fresh-after-ms <positive>]');
   console.error('       Headless: --max-total-budget-usd <positive> [--max-case-budget-usd <positive>] [--cleanup-pass] [--timeout <ms>]');
   console.error('       Interactive: --interactive --case <exact> [--timeout <ms>]');
@@ -77,20 +78,22 @@ export function parseSupervisorCli(argv) {
         all: { type: 'boolean', default: false },
         interactive: { type: 'boolean', default: false },
         'cleanup-pass': { type: 'boolean', default: false },
-        timeout: { type: 'string', default: '600000' },
+        timeout: { type: 'string' },
         'health-timeout': { type: 'string', default: '60000' },
         'max-total-budget-usd': { type: 'string' },
         'max-case-budget-usd': { type: 'string' },
         'run-profile': { type: 'string' },
         'max-predicted-duration-ms': { type: 'string' },
         'agent-behavior-fresh-after-ms': { type: 'string' },
+        'regression-qualification': { type: 'boolean', default: false },
         json: { type: 'boolean', default: false },
         'dry-run': { type: 'boolean', default: false },
       },
     }));
   } catch (error) { usage(error.message); }
   if (values.tier && !['light', 'standard', 'heavy'].includes(values.tier)) usage('--tier must be light, standard, or heavy');
-  const timeoutMs = positiveNumber(values.timeout, '--timeout', { integer: true });
+  const timeoutExplicit = values.timeout !== undefined;
+  const timeoutMs = positiveNumber(values.timeout ?? '600000', '--timeout', { integer: true });
   const healthTimeoutMs = positiveNumber(values['health-timeout'], '--health-timeout', { integer: true });
   const interactive = values.interactive;
   const runProfile = values['run-profile'] ?? null;
@@ -100,23 +103,35 @@ export function parseSupervisorCli(argv) {
   const agentBehaviorFreshAfterMs = values['agent-behavior-fresh-after-ms'] === undefined
     ? null
     : positiveNumber(values['agent-behavior-fresh-after-ms'], '--agent-behavior-fresh-after-ms', { integer: true });
-  if (runProfile !== null && !['calibration', 'discovery', 'diagnostic', 'assurance'].includes(runProfile)) {
-    usage('--run-profile must be calibration, discovery, diagnostic, or assurance');
+  if (runProfile !== null && !['calibration', 'discovery', 'diagnostic', 'assurance', 'regression'].includes(runProfile)) {
+    usage('--run-profile must be calibration, discovery, diagnostic, assurance, or regression');
   }
-  if (interactive && (values.group || values.tier || values.all || values['cleanup-pass'] || values['max-total-budget-usd'] || values['max-case-budget-usd'] || runProfile || maxPredictedDurationMs !== null || agentBehaviorFreshAfterMs !== null)) {
+  if (interactive && (values.group || values.tier || values.all || values['cleanup-pass'] || values['max-total-budget-usd'] || values['max-case-budget-usd'] || runProfile || maxPredictedDurationMs !== null || agentBehaviorFreshAfterMs !== null || values['regression-qualification'])) {
     usage('--interactive accepts only one exact --case plus timeout/json options');
   }
   let maxTotalBudgetUsd = null;
   let maxCaseBudgetUsd = null;
   if (values['max-total-budget-usd'] !== undefined) maxTotalBudgetUsd = positiveNumber(values['max-total-budget-usd'], '--max-total-budget-usd');
   if (values['max-case-budget-usd'] !== undefined) maxCaseBudgetUsd = positiveNumber(values['max-case-budget-usd'], '--max-case-budget-usd');
-  if (maxCaseBudgetUsd !== null && maxTotalBudgetUsd === null) usage('--max-case-budget-usd requires --max-total-budget-usd');
-  if (maxCaseBudgetUsd !== null && maxTotalBudgetUsd !== null && maxCaseBudgetUsd > maxTotalBudgetUsd) usage('--max-case-budget-usd cannot exceed --max-total-budget-usd');
+  if (maxCaseBudgetUsd !== null && maxTotalBudgetUsd === null && runProfile !== 'regression') usage('--max-case-budget-usd requires --max-total-budget-usd');
+  const effectiveTotalBudgetUsd = runProfile === 'regression'
+    ? maxTotalBudgetUsd ?? FAST_REGRESSION_SLO.max_total_budget_usd
+    : maxTotalBudgetUsd;
+  if (maxCaseBudgetUsd !== null && effectiveTotalBudgetUsd !== null && maxCaseBudgetUsd > effectiveTotalBudgetUsd) usage('--max-case-budget-usd cannot exceed --max-total-budget-usd');
   const hasExactSelector = Boolean(values.case || values.group || values.tier || values.all);
   if (!interactive && runProfile !== null) {
     if (maxPredictedDurationMs === null) usage('--run-profile requires --max-predicted-duration-ms');
     if (runProfile === 'assurance' && !hasExactSelector) usage('--run-profile assurance requires an explicit --case, --group, --tier, or --all scope');
-    if (runProfile !== 'assurance' && hasExactSelector) usage('--run-profile calibration, discovery, and diagnostic are exclusive with exact selectors');
+    if (runProfile !== 'assurance' && hasExactSelector) usage('--run-profile calibration, discovery, diagnostic, and regression are exclusive with exact selectors');
+  }
+  if (values['regression-qualification'] && runProfile !== 'regression') usage('--regression-qualification requires --run-profile regression');
+  if (runProfile === 'regression') {
+    if (maxPredictedDurationMs > FAST_REGRESSION_SLO.max_predicted_batch_duration_ms) usage('--max-predicted-duration-ms cannot exceed the regression fast SLO');
+    if (maxTotalBudgetUsd !== null && maxTotalBudgetUsd > FAST_REGRESSION_SLO.max_total_budget_usd) usage('--max-total-budget-usd cannot exceed the regression fast SLO');
+    if (maxCaseBudgetUsd !== null && maxCaseBudgetUsd > FAST_REGRESSION_SLO.max_effective_case_budget_usd) usage('--max-case-budget-usd cannot exceed the regression fast SLO');
+    if (timeoutExplicit && timeoutMs > FAST_REGRESSION_SLO.max_agent_timeout_ms) usage('--timeout cannot exceed the regression fast SLO');
+    if (healthTimeoutMs > FAST_REGRESSION_SLO.max_health_target_timeout_ms) usage('--health-timeout cannot exceed the regression fast SLO');
+    if (!values['dry-run'] && !timeoutExplicit) usage('non-dry regression requires an explicit --timeout');
   }
   if (!interactive && runProfile === null) {
     if (maxPredictedDurationMs !== null || agentBehaviorFreshAfterMs !== null) usage('--max-predicted-duration-ms and --agent-behavior-fresh-after-ms require --run-profile');
@@ -131,12 +146,14 @@ export function parseSupervisorCli(argv) {
     interactive,
     cleanupPass: values['cleanup-pass'],
     timeoutMs,
+    timeoutExplicit,
     healthTimeoutMs,
     maxTotalBudgetUsd,
     maxCaseBudgetUsd,
     runProfile,
     maxPredictedDurationMs,
     agentBehaviorFreshAfterMs,
+    regressionQualification: values['regression-qualification'],
     json: values.json,
     dryRun: values['dry-run'],
   };
@@ -254,7 +271,50 @@ function assertProfileSelectionStillCurrent({ repoRoot, manifestPath, selectedIt
   }
 }
 
+function normalizeRegressionOptions(opts) {
+  if (opts.regressionQualification && opts.runProfile !== 'regression') {
+    throw new Error('regression qualification requires regression profile');
+  }
+  if (opts.runProfile !== 'regression') return opts;
+  if (!Number.isInteger(opts.maxPredictedDurationMs) || opts.maxPredictedDurationMs <= 0) {
+    throw new Error('regression requires a positive predicted-duration bound');
+  }
+  if (opts.maxPredictedDurationMs > FAST_REGRESSION_SLO.max_predicted_batch_duration_ms) {
+    throw new Error('regression predicted duration cannot exceed the fast SLO');
+  }
+  if (opts.maxTotalBudgetUsd !== null && opts.maxTotalBudgetUsd !== undefined && opts.maxTotalBudgetUsd > FAST_REGRESSION_SLO.max_total_budget_usd) {
+    throw new Error('regression total budget cannot exceed the fast SLO');
+  }
+  if (opts.maxCaseBudgetUsd !== null && opts.maxCaseBudgetUsd !== undefined && opts.maxCaseBudgetUsd > FAST_REGRESSION_SLO.max_effective_case_budget_usd) {
+    throw new Error('regression per-case budget cannot exceed the fast SLO');
+  }
+  if (opts.timeoutExplicit && opts.timeoutMs > FAST_REGRESSION_SLO.max_agent_timeout_ms) {
+    throw new Error('regression Agent timeout cannot exceed the fast SLO');
+  }
+  if ((opts.healthTimeoutMs ?? FAST_REGRESSION_SLO.max_health_target_timeout_ms) > FAST_REGRESSION_SLO.max_health_target_timeout_ms) {
+    throw new Error('regression health timeout cannot exceed the fast SLO');
+  }
+  if (!opts.dryRun && !opts.timeoutExplicit) {
+    throw new Error('non-dry regression requires an explicit timeout');
+  }
+  if (!opts.dryRun && !(opts.maxTotalBudgetUsd > 0)) {
+    throw new Error('Headless execution requires --max-total-budget-usd');
+  }
+  const maxTotalBudgetUsd = opts.maxTotalBudgetUsd ?? FAST_REGRESSION_SLO.max_total_budget_usd;
+  if (opts.maxCaseBudgetUsd !== null && opts.maxCaseBudgetUsd !== undefined && opts.maxCaseBudgetUsd > maxTotalBudgetUsd) {
+    throw new Error('regression per-case budget cannot exceed total budget');
+  }
+  const maxCaseBudgetUsd = Math.min(opts.maxCaseBudgetUsd ?? FAST_REGRESSION_SLO.max_effective_case_budget_usd, maxTotalBudgetUsd);
+  return {
+    ...opts,
+    maxTotalBudgetUsd,
+    maxCaseBudgetUsd,
+    healthTimeoutMs: opts.healthTimeoutMs ?? FAST_REGRESSION_SLO.max_health_target_timeout_ms,
+  };
+}
+
 export async function runSupervisor(opts, { executable = 'claude', repoRoot = REPO_ROOT } = {}) {
+  opts = normalizeRegressionOptions(opts);
   const projectRoot = realpathSync(repoRoot);
   const expBundles = join(projectRoot, '.exp-bundles');
   const manifestPath = join(projectRoot, 'experiments_playbook/PLAYBOOK_MANIFEST.md');
@@ -277,7 +337,7 @@ export async function runSupervisor(opts, { executable = 'claude', repoRoot = RE
     throw new Error('interactive execution requires exactly one --case and no profile or batch selector');
   }
   if (!opts.interactive && runProfile !== null && runProfile !== 'assurance' && hasExactSelector) {
-    throw new Error('calibration, discovery, and diagnostic profiles are exclusive with exact selectors');
+    throw new Error('calibration, discovery, diagnostic, and regression profiles are exclusive with exact selectors');
   }
   if (!opts.interactive && runProfile === 'assurance' && !hasExactSelector) {
     throw new Error('assurance profile requires an explicit selector scope');
@@ -289,6 +349,9 @@ export async function runSupervisor(opts, { executable = 'claude', repoRoot = RE
     max_total_budget_usd: opts.maxTotalBudgetUsd ?? null,
     max_case_budget_usd: opts.maxCaseBudgetUsd ?? null,
     agent_behavior_fresh_after_ms: opts.agentBehaviorFreshAfterMs ?? undefined,
+    regression_intent: runProfile === 'regression'
+      ? opts.regressionQualification ? 'qualification' : 'normal'
+      : undefined,
     now: new Date().toISOString(),
   };
   const plan = planExperimentRun({

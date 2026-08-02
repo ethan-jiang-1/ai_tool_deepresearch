@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.67
+
+- Added the bounded `regression` Autorun profile: normal runs select only current matching-v2 deterministic `PASS+CLEAN` results within a fixed `480000` ms / `$3.00` / `$0.60` fast envelope, at most one case per `experiment` group.
+- Added explicit `--regression-qualification` for source-matching fast history that needs fresh runtime identity; normal regression never silently launches it, retries it, or substitutes a slower case.
+- Regression membership remains a virtual observation. Optional frontmatter recommendation/retry-safety fields are bounded admission input, not outcome, health, budget, or persistent case-class authority.
+- Execution-surface identity now follows the actual Supervisor/runtime helper closure and helpers named by the selected control surface, so documentation-only release edits do not invalidate a qualified result while relevant helper drift remains visible.
+
 ## v0.66
 
 - Agent Experiment Autorun no longer falls back to filename-Light cases. Headless launch now requires an explicit legacy selector or a bounded `calibration`, `discovery`, `diagnostic`, or `assurance` run profile.

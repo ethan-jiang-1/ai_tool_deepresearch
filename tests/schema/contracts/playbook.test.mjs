@@ -33,6 +33,19 @@ describe('PlaybookFrontmatterSchema command-experiment/v2', () => {
     assert.equal(parsed.not_run_if, 'required actor unavailable');
   });
 
+  it('accepts neutral regression authoring advice only in its legal shape', () => {
+    const reviewed = PlaybookFrontmatterSchema.parse({
+      ...VALID,
+      regression_recommendation: 'recommended',
+      regression_retry_safety: 'reviewed',
+    });
+    assert.equal(reviewed.regression_recommendation, 'recommended');
+    assert.equal(reviewed.regression_retry_safety, 'reviewed');
+    assert.equal(PlaybookFrontmatterSchema.parse(VALID).regression_recommendation, undefined);
+    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, verdict_mode: 'last', regression_retry_safety: 'reviewed' }).success);
+    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, regression_recommendation: 'preferred' }).success);
+  });
+
   it('accepts an Agent-behavior profile with durable evidence', () => {
     assert.ok(PlaybookFrontmatterSchema.safeParse({
       ...VALID,

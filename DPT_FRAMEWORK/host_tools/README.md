@@ -64,9 +64,19 @@ node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
 node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
   --run-profile calibration --max-predicted-duration-ms 600000 \
   --max-total-budget-usd 5 --max-case-budget-usd 1
+
+# Fast virtual regression inspection
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
+  --run-profile regression --max-predicted-duration-ms 480000 --dry-run --json
 ```
 
 Every Headless invocation supplies either an exact selector or a run profile. `--case` is exact and exclusive. `--group` may combine with one filename `--tier`; `--all` is exclusive. `calibration`, `discovery`, and `diagnostic` profiles require `--max-predicted-duration-ms` and cannot combine with exact selectors. `assurance` requires both that bound and an explicit selector scope; change impact remains declared in the change's `verification-plan.yaml`, not inferred from paths or implementation tags.
+
+`regression` is a virtual high-frequency deterministic profile. It is neither a permanent suite nor a filename cost class, and it selects at most one current qualifying deterministic case from each `experiment` group. Its fixed maximum envelope is `480000` ms predicted duration, `$3.00` total budget, `$0.60` effective per-case budget, `120000` ms Agent timeout, and `60000` ms per-health-target timeout. A caller may tighten but never widen those values; the eight-minute value is a selection forecast, not a scheduler deadline.
+
+Normal regression requires a current matching-v2 PASS+CLEAN result and, for non-dry execution, an explicit `--timeout` at or below `120000`. It reports a group gap rather than starting an unqualified, slow, stale, Agent-behavior, FAIL, ERROR, or ISSUES case. A source-matching historical fast result without a matching v2 execution surface is `needs_qualification`; only `--run-profile regression --regression-qualification` may launch it under the same bounds.
+
+`regression_recommendation: recommended` is optional author ordering advice. It is neutral when absent and cannot grant membership, outcome, health, cost, budget, or coverage authority. A `verdict_mode: all` playbook additionally needs `regression_retry_safety: reviewed` before admission. These fields do not change the native verdict, and measurements never require moving, renaming, or permanently reclassifying a playbook.
 
 Filename `light|standard|heavy` is a creation-time cost estimate and legacy compatibility filter, not a current speed, coverage, or proof label. `health_profile` remains an independent V2 health policy. The Supervisor recomputes profile observations from current manifest/frontmatter plus retained reports; no case move, rename, or persistent reclassification is required when measurements change. The optional case cap cannot exceed the total. The Supervisor passes the current cap to Claude, accumulates one valid final `total_cost_usd` per started Headless case, and stops further launch on missing/malformed cost or exhausted budget. Cost does not affect native verdict.
 
@@ -76,6 +86,7 @@ Dry-run validates exact manifest/V2 selection without loading credentials, creat
 node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --tier light --dry-run
 node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --group agentic-queue --tier standard --dry-run --json
 node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --run-profile discovery --max-predicted-duration-ms 900000 --dry-run --json
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --run-profile regression --max-predicted-duration-ms 480000 --dry-run --json
 ```
 
 Interactive diagnosis/replay is exactly one case, uses normal user-present TTY permission handling, and always preserves its run root:

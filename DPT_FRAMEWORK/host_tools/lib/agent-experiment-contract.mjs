@@ -90,17 +90,26 @@ export function executionSurfaceFingerprint(surface) {
   })));
 }
 
-export const ExperimentSelectionObservationSchema = z.object({
-  schema_version: z.literal('agent-experiment-selection-observation/v1'),
-  mode: z.enum(['exact', 'profile']),
-  exact_selector: ExperimentExactSelectorSchema.nullable(),
-  profile: z.enum(['calibration', 'discovery', 'diagnostic', 'assurance']).nullable(),
-  prediction_basis: z.enum(['explicit_selector', 'observed_matching', 'observed_stale', 'filename_initial_estimate', 'unavailable']),
-  predicted_duration_ms: z.number().int().nonnegative().nullable(),
-  predicted_cost_usd: finiteNonnegative.nullable(),
-  reserved_cost_usd: finiteNonnegative.nullable(),
-  selection_reason: z.array(z.string().trim().min(1)).min(1),
-}).strict().superRefine((value, ctx) => {
+const SelectionObservationV1ProfileSchema = z.enum(['calibration', 'discovery', 'diagnostic', 'assurance']);
+const SelectionObservationV2ProfileSchema = z.enum(['calibration', 'discovery', 'diagnostic', 'assurance', 'regression']);
+const SelectionObservationV1PredictionBasisSchema = z.enum(['explicit_selector', 'observed_matching', 'observed_stale', 'filename_initial_estimate', 'unavailable']);
+const SelectionObservationV2PredictionBasisSchema = z.enum(['explicit_selector', 'observed_matching', 'observed_stale', 'observed_source_matching_history', 'filename_initial_estimate', 'unavailable']);
+
+function selectionObservationShape({ schemaVersion, profile, predictionBasis }) {
+  return {
+    schema_version: z.literal(schemaVersion),
+    mode: z.enum(['exact', 'profile']),
+    exact_selector: ExperimentExactSelectorSchema.nullable(),
+    profile: profile.nullable(),
+    prediction_basis: predictionBasis,
+    predicted_duration_ms: z.number().int().nonnegative().nullable(),
+    predicted_cost_usd: finiteNonnegative.nullable(),
+    reserved_cost_usd: finiteNonnegative.nullable(),
+    selection_reason: z.array(z.string().trim().min(1)).min(1),
+  };
+}
+
+function refineSelectionObservation(value, ctx) {
   if (value.mode === 'exact' && (value.exact_selector === null || value.profile !== null)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'exact selection must carry one exact selector and no profile' });
   }
@@ -119,7 +128,36 @@ export const ExperimentSelectionObservationSchema = z.object({
   if (value.prediction_basis === 'unavailable' && value.predicted_duration_ms !== null) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['predicted_duration_ms'], message: 'unavailable prediction cannot carry a duration' });
   }
+}
+
+export const ExperimentSelectionObservationV1Schema = z.object(selectionObservationShape({
+  schemaVersion: 'agent-experiment-selection-observation/v1',
+  profile: SelectionObservationV1ProfileSchema,
+  predictionBasis: SelectionObservationV1PredictionBasisSchema,
+})).strict().superRefine(refineSelectionObservation);
+
+export const ExperimentSelectionObservationV2Schema = z.object({
+  ...selectionObservationShape({
+    schemaVersion: 'agent-experiment-selection-observation/v2',
+    profile: SelectionObservationV2ProfileSchema,
+    predictionBasis: SelectionObservationV2PredictionBasisSchema,
+  }),
+  regression_intent: z.enum(['normal', 'qualification']).nullable(),
+}).strict().superRefine((value, ctx) => {
+  refineSelectionObservation(value, ctx);
+  const isRegression = value.mode === 'profile' && value.profile === 'regression';
+  if (isRegression && value.regression_intent === null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['regression_intent'], message: 'regression profile requires regression intent' });
+  }
+  if (!isRegression && value.regression_intent !== null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['regression_intent'], message: 'regression intent requires regression profile' });
+  }
 });
+
+export const ExperimentSelectionObservationSchema = z.union([
+  ExperimentSelectionObservationV1Schema,
+  ExperimentSelectionObservationV2Schema,
+]);
 
 const OutcomeSchema = z.enum(['PASS', 'FAIL', 'NOT_RUN']).nullable();
 const LifecycleOutcomeSchema = z.enum(['ERROR', 'CANCELLED']).nullable();

@@ -132,13 +132,16 @@ describe('Agent Experiment Autorun terminology knowledge surfaces', () => {
       'experiments_playbook/PLAYBOOK_MANIFEST.md',
       'experiments_playbook/RUN_AGENT_AUTORUN_EXPS.md',
     ].map(read).join('\n');
-    for (const profile of ['calibration', 'discovery', 'diagnostic', 'assurance']) {
+    for (const profile of ['calibration', 'discovery', 'diagnostic', 'assurance', 'regression']) {
       assert.match(surfaces, new RegExp(profile));
     }
     assert.match(surfaces, /max-predicted-duration-ms/);
     assert.match(surfaces, /creation-time (?:cost )?estimate/);
     assert.match(surfaces, /health_profile/);
     assert.match(surfaces, /verification-plan\.yaml/);
+    assert.match(surfaces, /regression-qualification/);
+    assert.match(surfaces, /480000/);
+    assert.match(surfaces, /regression_recommendation/);
     assert.doesNotMatch(surfaces, /No filter selects autorun-compatible Light cases/);
     assert.doesNotMatch(surfaces, /No filter defaults to autorun-compatible Light cases/);
   });

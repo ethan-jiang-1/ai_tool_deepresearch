@@ -2,7 +2,7 @@
 // Read-only experiment observation and bounded selection helpers. This module never writes state or launches Agents.
 
 import { lstatSync, existsSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 
 import { z } from 'zod';
 
@@ -23,15 +23,32 @@ export const INITIAL_DURATION_MS_BY_FILENAME_COST = Object.freeze({
   heavy: 1_200_000,
 });
 export const DEFAULT_AGENT_BEHAVIOR_FRESH_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+export const FAST_REGRESSION_SLO = Object.freeze({
+  max_observed_duration_ms: 120_000,
+  max_observed_cost_usd: 0.60,
+  max_predicted_batch_duration_ms: 480_000,
+  max_total_budget_usd: 3.00,
+  max_effective_case_budget_usd: 0.60,
+  max_agent_timeout_ms: 120_000,
+  max_health_target_timeout_ms: 60_000,
+});
 
 const CASE_ID_RE = /^case-\d+-(?:light|standard|heavy)-[a-z0-9-]+$/;
-const PROFILE_NAMES = ['calibration', 'discovery', 'diagnostic', 'assurance'];
+const PROFILE_NAMES = ['calibration', 'discovery', 'diagnostic', 'assurance', 'regression'];
 const relativePlaybookPath = z.string().regex(/^exp(?:h)?_[a-z0-9_-]+\/case-\d+-(?:light|standard|heavy)-[a-z0-9-]+\.md$/);
 const finitePositive = z.number().finite().positive();
 const timestamp = z.string().datetime();
 const outcome = z.enum(['PASS', 'FAIL', 'NOT_RUN']).nullable();
 const lifecycleOutcome = z.enum(['ERROR', 'CANCELLED']).nullable();
 const health = z.enum(['CLEAN', 'ISSUES', 'ERROR']).nullable();
+const EXECUTION_SURFACE_RUNTIME_ENTRYPOINTS = Object.freeze([
+  'DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs',
+  'DPT_FRAMEWORK/cli/inspect-bundle.mjs',
+  'DPT_FRAMEWORK/cli/validate-bundle.mjs',
+  'experiments_env/shared/verify-bundle-health.mjs',
+]);
+const STATIC_RELATIVE_IMPORT_RE = /\bimport\s+(?:[\s\S]*?\s+from\s+)?['"](\.{1,2}\/[^'"]+)['"]/g;
+const NAMED_HELPER_PATH_RE = /\b(?:DPT_FRAMEWORK|experiments_env\/shared)\/[A-Za-z0-9._/-]+\.mjs\b/g;
 
 export const ExperimentRunStrategyRequestSchema = z.object({
   profile: z.enum(PROFILE_NAMES),
@@ -40,6 +57,7 @@ export const ExperimentRunStrategyRequestSchema = z.object({
   max_total_budget_usd: finitePositive.nullable(),
   max_case_budget_usd: finitePositive.nullable(),
   agent_behavior_fresh_after_ms: z.number().int().positive().default(DEFAULT_AGENT_BEHAVIOR_FRESH_AFTER_MS),
+  regression_intent: z.enum(['normal', 'qualification']).optional(),
   now: timestamp,
 }).strict().superRefine((value, ctx) => {
   if (value.profile === 'assurance' && value.selector === null) {
@@ -48,10 +66,25 @@ export const ExperimentRunStrategyRequestSchema = z.object({
   if (value.profile !== 'assurance' && value.selector !== null) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['selector'], message: 'only assurance may combine a profile with an exact selector' });
   }
-  if (value.max_case_budget_usd !== null && value.max_total_budget_usd === null) {
+  if (value.regression_intent !== undefined && value.profile !== 'regression') {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['regression_intent'], message: 'regression intent requires regression profile' });
+  }
+  if (value.profile === 'regression' && value.max_predicted_duration_ms > FAST_REGRESSION_SLO.max_predicted_batch_duration_ms) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['max_predicted_duration_ms'], message: 'regression predicted duration cannot exceed the fast SLO' });
+  }
+  if (value.profile === 'regression' && value.max_total_budget_usd !== null && value.max_total_budget_usd > FAST_REGRESSION_SLO.max_total_budget_usd) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['max_total_budget_usd'], message: 'regression total budget cannot exceed the fast SLO' });
+  }
+  if (value.profile === 'regression' && value.max_case_budget_usd !== null && value.max_case_budget_usd > FAST_REGRESSION_SLO.max_effective_case_budget_usd) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['max_case_budget_usd'], message: 'regression per-case budget cannot exceed the fast SLO' });
+  }
+  if (value.profile !== 'regression' && value.max_case_budget_usd !== null && value.max_total_budget_usd === null) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['max_case_budget_usd'], message: 'per-case budget requires a total budget' });
   }
-  if (value.max_case_budget_usd !== null && value.max_total_budget_usd !== null && value.max_case_budget_usd > value.max_total_budget_usd) {
+  const effectiveTotalBudget = value.profile === 'regression'
+    ? value.max_total_budget_usd ?? FAST_REGRESSION_SLO.max_total_budget_usd
+    : value.max_total_budget_usd;
+  if (value.max_case_budget_usd !== null && effectiveTotalBudget !== null && value.max_case_budget_usd > effectiveTotalBudget) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['max_case_budget_usd'], message: 'per-case budget cannot exceed total budget' });
   }
 });
@@ -101,7 +134,7 @@ const OmittedCandidateSchema = z.object({
   experiment: z.string().trim().min(1),
   path: relativePlaybookPath,
   reason: z.string().trim().min(1),
-  prediction_basis: z.enum(['observed_matching', 'observed_stale', 'filename_initial_estimate', 'unavailable']),
+  prediction_basis: z.enum(['observed_matching', 'observed_stale', 'observed_source_matching_history', 'filename_initial_estimate', 'unavailable']),
   predicted_duration_ms: z.number().int().nonnegative().nullable(),
   predicted_cost_usd: z.number().finite().nonnegative().nullable(),
 }).strict();
@@ -113,12 +146,45 @@ const AgentBehaviorCoverageSchema = z.object({
   reasons: z.array(z.string().trim().min(1)).min(1),
 }).strict();
 
+const RegressionAdmissionSchema = z.object({
+  case: z.string().regex(CASE_ID_RE),
+  experiment: z.string().trim().min(1),
+  path: relativePlaybookPath,
+  status: z.enum(['eligible', 'needs_qualification', 'ineligible']),
+  reasons: z.array(z.string().trim().min(1)).min(1),
+  latest_result_at: timestamp.nullable(),
+  prediction_basis: z.enum(['observed_matching', 'observed_source_matching_history', 'unavailable']),
+  predicted_duration_ms: z.number().int().nonnegative().nullable(),
+  predicted_cost_usd: z.number().finite().nonnegative().nullable(),
+}).strict();
+
+const FastRegressionEnvelopeSchema = z.object({
+  max_predicted_batch_duration_ms: z.number().int().positive(),
+  max_total_budget_usd: finitePositive,
+  max_effective_case_budget_usd: finitePositive,
+  max_agent_timeout_ms: z.number().int().positive(),
+  max_health_target_timeout_ms: z.number().int().positive(),
+}).strict();
+
+const RegressionGroupGapSchema = z.object({
+  experiment: z.string().trim().min(1),
+  reasons: z.array(z.string().trim().min(1)).min(1),
+}).strict();
+
+const RegressionSelectionSchema = z.object({
+  intent: z.enum(['normal', 'qualification']),
+  envelope: FastRegressionEnvelopeSchema,
+  admissions: z.array(RegressionAdmissionSchema),
+  group_gaps: z.array(RegressionGroupGapSchema),
+}).strict();
+
 export const ExperimentRunSelectionSchema = z.object({
   mode: z.enum(['exact', 'profile']),
   profile: z.enum(PROFILE_NAMES).nullable(),
   selected: z.array(SelectionCandidateSchema),
   omitted: z.array(OmittedCandidateSchema),
   agent_behavior_coverage: AgentBehaviorCoverageSchema.nullable(),
+  regression: RegressionSelectionSchema.nullable(),
   retained_observation_diagnostics: z.array(z.string().trim().min(1)),
 }).strict();
 
@@ -137,65 +203,82 @@ function isoNow(now) {
 
 function isRegularFile(pathValue, label) {
   const stat = lstatSync(pathValue);
-  if (!stat.isFile() || stat.isSymbolicLink()) fail(`${label} must be a non-symlink regular file: ${pathValue}`);
+  if (stat.isSymbolicLink()) fail(`${label} path is a symlink: ${pathValue}`);
+  if (!stat.isFile()) fail(`${label} must be a regular file: ${pathValue}`);
 }
 
-function executionSurfacePath(prefix, root, filePath) {
-  const fileRelative = relative(root, filePath).split(sep).join('/');
+function executionSurfacePath(repoRoot, filePath) {
+  const fileRelative = relative(repoRoot, filePath).split(sep).join('/');
   if (!fileRelative || fileRelative.startsWith('../') || fileRelative.includes('/../')) fail(`helper path escapes its source root: ${filePath}`);
-  return `${prefix}/${fileRelative}`;
+  if (!fileRelative.startsWith('DPT_FRAMEWORK/') && !fileRelative.startsWith('experiments_env/shared/')) {
+    fail(`execution-surface helper is outside the supported runtime roots: ${filePath}`);
+  }
+  return fileRelative;
 }
 
-function collectHelperFiles(prefix, logicalRoot) {
-  if (!existsSync(logicalRoot)) fail(`execution-surface helper root is missing: ${logicalRoot}`);
-  const logicalStat = lstatSync(logicalRoot);
-  if (!logicalStat.isDirectory() && !logicalStat.isSymbolicLink()) fail(`execution-surface helper root is not a directory: ${logicalRoot}`);
-  const root = realpathSync(logicalRoot);
-  const rootStat = lstatSync(root);
-  if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) fail(`execution-surface helper root is unsafe: ${logicalRoot}`);
+function namedHelperPaths(bytes) {
+  return [...new Set([...bytes.toString('utf8').matchAll(NAMED_HELPER_PATH_RE)].map((match) => match[0]))].sort();
+}
 
-  const inventory = [];
-  const walk = (pathValue) => {
-    const stat = lstatSync(pathValue);
-    if (stat.isSymbolicLink()) fail(`execution-surface helper path is a symlink: ${pathValue}`);
-    if (stat.isDirectory()) {
-      for (const entry of readdirSync(pathValue).sort()) walk(join(pathValue, entry));
-      return;
+function staticRelativeImportSpecifiers(bytes) {
+  return [...bytes.toString('utf8').matchAll(STATIC_RELATIVE_IMPORT_RE)].map((match) => match[1]);
+}
+
+function collectExecutionSurfaceHelpers({ repoRoot, entrypoints }) {
+  const pending = entrypoints.map((entrypoint) => resolve(repoRoot, entrypoint));
+  const inventoryByPath = new Map();
+  while (pending.length > 0) {
+    const pathValue = pending.pop();
+    const helperPath = executionSurfacePath(repoRoot, pathValue);
+    if (inventoryByPath.has(helperPath)) continue;
+    isRegularFile(pathValue, 'execution-surface helper');
+    const bytes = readFileSync(pathValue);
+    inventoryByPath.set(helperPath, { path: helperPath, sha256: sha256Bytes(bytes) });
+    for (const specifier of staticRelativeImportSpecifiers(bytes)) {
+      pending.push(resolve(dirname(pathValue), specifier));
     }
-    if (!stat.isFile()) fail(`execution-surface helper path is not a regular file: ${pathValue}`);
-    inventory.push({
-      path: executionSurfacePath(prefix, root, pathValue),
-      sha256: sha256Bytes(readFileSync(pathValue)),
-    });
-  };
-  walk(root);
-  return inventory;
+  }
+  return [...inventoryByPath.values()].sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
+}
+
+function mergeHelperInventories(...inventories) {
+  const inventoryByPath = new Map();
+  for (const inventory of inventories) {
+    for (const helper of inventory) {
+      const existing = inventoryByPath.get(helper.path);
+      if (existing && existing.sha256 !== helper.sha256) fail(`execution-surface helper digest conflict: ${helper.path}`);
+      inventoryByPath.set(helper.path, helper);
+    }
+  }
+  return [...inventoryByPath.values()].sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
 }
 
 /** Returns a reusable read-only helper/instruction identity snapshot. */
 export function buildExecutionSurfaceSnapshot({ repoRoot, instructionPath }) {
   isRegularFile(instructionPath, 'instruction');
-  const inventory = [
-    ...collectHelperFiles('DPT_FRAMEWORK', join(repoRoot, 'DPT_FRAMEWORK')),
-    ...collectHelperFiles('experiments_env/shared', join(repoRoot, 'experiments_env/shared')),
-  ].sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
+  const instructionBytes = readFileSync(instructionPath);
+  const inventory = collectExecutionSurfaceHelpers({
+    repoRoot,
+    entrypoints: [...EXECUTION_SURFACE_RUNTIME_ENTRYPOINTS, ...namedHelperPaths(instructionBytes)],
+  });
   return Object.freeze({
-    instruction_sha256: sha256Bytes(readFileSync(instructionPath)),
+    instruction_sha256: sha256Bytes(instructionBytes),
     framework_helper_inventory: Object.freeze(inventory),
     framework_helper_sha256: executionSurfaceHelperDigest(inventory),
   });
 }
 
 /** Creates a strict v1 identity for one currently registered playbook. */
-export function buildExecutionSurface(entry, snapshot) {
+export function buildExecutionSurface(entry, snapshot, sourceHelperInventory = []) {
   isRegularFile(entry.fullPath, 'source playbook');
+  const frameworkHelperInventory = mergeHelperInventories(snapshot.framework_helper_inventory, sourceHelperInventory);
   const surface = {
     schema_version: 'agent-experiment-execution-surface/v1',
     manifest_entry: { path: entry.path, case: entry.frontmatter.case },
     source_playbook_sha256: sha256Bytes(readFileSync(entry.fullPath)),
     instruction_sha256: snapshot.instruction_sha256,
-    framework_helper_inventory: snapshot.framework_helper_inventory,
-    framework_helper_sha256: snapshot.framework_helper_sha256,
+    framework_helper_inventory: frameworkHelperInventory,
+    framework_helper_sha256: executionSurfaceHelperDigest(frameworkHelperInventory),
     fingerprint: null,
   };
   surface.fingerprint = executionSurfaceFingerprint(surface);
@@ -204,7 +287,13 @@ export function buildExecutionSurface(entry, snapshot) {
 
 export function buildExecutionSurfaces({ entries, repoRoot, instructionPath }) {
   const snapshot = buildExecutionSurfaceSnapshot({ repoRoot, instructionPath });
-  return new Map(entries.map((entry) => [entry.frontmatter.case, buildExecutionSurface(entry, snapshot)]));
+  return new Map(entries.map((entry) => {
+    const sourceHelperInventory = collectExecutionSurfaceHelpers({
+      repoRoot,
+      entrypoints: namedHelperPaths(readFileSync(entry.fullPath)),
+    });
+    return [entry.frontmatter.case, buildExecutionSurface(entry, snapshot, sourceHelperInventory)];
+  }));
 }
 
 function nullableOutcome(value) {
@@ -480,6 +569,225 @@ function diagnosticReasons(item) {
   return reasons;
 }
 
+function regressionIntentFor(request) {
+  return request.profile === 'regression' ? request.regression_intent ?? 'normal' : null;
+}
+
+function fastRegressionEnvelopeFor(request) {
+  const maxTotalBudgetUsd = request.max_total_budget_usd ?? FAST_REGRESSION_SLO.max_total_budget_usd;
+  return {
+    max_predicted_batch_duration_ms: request.max_predicted_duration_ms,
+    max_total_budget_usd: maxTotalBudgetUsd,
+    max_effective_case_budget_usd: Math.min(request.max_case_budget_usd ?? FAST_REGRESSION_SLO.max_effective_case_budget_usd, maxTotalBudgetUsd),
+    max_agent_timeout_ms: FAST_REGRESSION_SLO.max_agent_timeout_ms,
+    max_health_target_timeout_ms: FAST_REGRESSION_SLO.max_health_target_timeout_ms,
+  };
+}
+
+function regressionAdmission(item) {
+  const latest = item.history[0] ?? null;
+  const reasons = [];
+  if (!headlessEligible(item)) reasons.push('headless_ineligible');
+  if (item.observation.proof_profile.subject !== 'deterministic_contract') {
+    reasons.push(item.observation.proof_profile.subject === 'agent_behavior' ? 'proof_subject_agent_behavior' : 'proof_subject_not_deterministic');
+  }
+  if (item.entry.frontmatter.verdict_mode === 'all' && item.entry.frontmatter.regression_retry_safety !== 'reviewed') {
+    reasons.push('all_mode_retry_safety_unreviewed');
+  }
+  if (latest === null) {
+    return RegressionAdmissionSchema.parse({
+      case: item.observation.case,
+      experiment: item.observation.experiment,
+      path: item.observation.path,
+      status: 'ineligible',
+      reasons: [...reasons, 'no_retained_result'],
+      latest_result_at: null,
+      prediction_basis: 'unavailable',
+      predicted_duration_ms: null,
+      predicted_cost_usd: null,
+    });
+  }
+
+  const sourceRelation = relationForSource(item.observation.execution_surface, latest);
+  const hasV2ExecutionSurface = latest.execution_surface !== null && latest.execution_surface !== undefined;
+  const executionRelation = relationForExecutionSurface(item.observation.execution_surface, latest);
+  const requiresExecutionSurfaceQualification = sourceRelation === 'matching'
+    && hasV2ExecutionSurface
+    && executionRelation === 'stale';
+  if (sourceRelation !== 'matching') reasons.push(`source_relation_${sourceRelation}`);
+  if (hasV2ExecutionSurface && executionRelation !== 'matching' && !requiresExecutionSurfaceQualification) {
+    reasons.push(`execution_surface_relation_${executionRelation}`);
+  }
+
+  if (latest.native_outcome !== 'PASS') {
+    reasons.push(latest.native_outcome === 'FAIL' ? 'native_fail' : latest.native_outcome === 'NOT_RUN' ? 'native_not_run' : 'native_outcome_missing');
+  }
+  if (latest.lifecycle_outcome !== null && latest.lifecycle_outcome !== undefined) {
+    reasons.push(`lifecycle_${String(latest.lifecycle_outcome).toLowerCase()}`);
+  }
+  if (latest.health !== 'CLEAN') {
+    reasons.push(latest.health === 'ISSUES' ? 'health_issues' : latest.health === 'ERROR' ? 'health_error' : 'health_missing');
+  }
+  if (latest.duration_ms === null || latest.duration_ms === undefined) reasons.push('duration_missing');
+  else if (latest.duration_ms > FAST_REGRESSION_SLO.max_observed_duration_ms) reasons.push('duration_exceeds_fast_slo');
+  if (latest.cost_usd === null || latest.cost_usd === undefined) reasons.push('cost_missing');
+  else if (latest.cost_usd > FAST_REGRESSION_SLO.max_observed_cost_usd) reasons.push('cost_exceeds_fast_slo');
+
+  const predictionBasis = sourceRelation === 'matching' && hasV2ExecutionSurface && executionRelation === 'matching'
+    ? 'observed_matching'
+    : sourceRelation === 'matching' && (!hasV2ExecutionSurface || requiresExecutionSurfaceQualification)
+      ? 'observed_source_matching_history'
+      : 'unavailable';
+  let status = 'ineligible';
+  if (reasons.length === 0 && hasV2ExecutionSurface && executionRelation === 'matching') {
+    status = 'eligible';
+    reasons.push('matching_v2_pass_clean_within_fast_slo');
+  } else if (reasons.length === 0 && (!hasV2ExecutionSurface || requiresExecutionSurfaceQualification)) {
+    status = 'needs_qualification';
+    reasons.push(requiresExecutionSurfaceQualification
+      ? 'matching_source_history_requires_execution_surface_qualification'
+      : 'matching_source_history_requires_v2_qualification');
+  }
+
+  return RegressionAdmissionSchema.parse({
+    case: item.observation.case,
+    experiment: item.observation.experiment,
+    path: item.observation.path,
+    status,
+    reasons,
+    latest_result_at: latest.generated_at,
+    prediction_basis: predictionBasis,
+    predicted_duration_ms: latest.duration_ms ?? null,
+    predicted_cost_usd: latest.cost_usd ?? null,
+  });
+}
+
+function compareRegressionCandidates(left, right) {
+  const leftRecommended = left.item.entry.frontmatter.regression_recommendation === 'recommended';
+  const rightRecommended = right.item.entry.frontmatter.regression_recommendation === 'recommended';
+  if (leftRecommended !== rightRecommended) return Number(rightRecommended) - Number(leftRecommended);
+  const leftHistory = Date.parse(left.item.history[0]?.generated_at ?? '1970-01-01T00:00:00.000Z');
+  const rightHistory = Date.parse(right.item.history[0]?.generated_at ?? '1970-01-01T00:00:00.000Z');
+  return leftHistory - rightHistory || left.item.observation.manifest_index - right.item.observation.manifest_index;
+}
+
+function orderedRegressionGroups(groupedCandidates, allGroups, recency) {
+  return [...allGroups.keys()].sort((left, right) => {
+    const leftMs = recency.has(left) ? Date.parse(recency.get(left)) : 0;
+    const rightMs = recency.has(right) ? Date.parse(recency.get(right)) : 0;
+    return leftMs - rightMs || left.localeCompare(right);
+  }).map((experiment) => ({
+    experiment,
+    candidates: [...(groupedCandidates.get(experiment) ?? [])].sort(compareRegressionCandidates),
+  }));
+}
+
+function selectFastRegressionProfile({ items, request, retainedObservationDiagnostics }) {
+  const intent = regressionIntentFor(request);
+  const envelope = FastRegressionEnvelopeSchema.parse(fastRegressionEnvelopeFor(request));
+  const admitted = items.map((item) => ({ item, admission: regressionAdmission(item) }));
+  const selectableStatus = intent === 'normal' ? 'eligible' : 'needs_qualification';
+  const allGroups = new Map();
+  const groupedCandidates = new Map();
+  for (const entry of admitted) {
+    const group = entry.item.observation.experiment;
+    const groupItems = allGroups.get(group) ?? [];
+    groupItems.push(entry);
+    allGroups.set(group, groupItems);
+    if (entry.admission.status === selectableStatus) {
+      const candidates = groupedCandidates.get(group) ?? [];
+      candidates.push(entry);
+      groupedCandidates.set(group, candidates);
+    }
+  }
+
+  const selected = [];
+  const selectedViews = [];
+  const omitted = [];
+  const groupOmissionReasons = new Map();
+  let reservedDurationMs = 0;
+  let reservedCostUsd = 0;
+  const recency = groupLastSelectedAt(items);
+  for (const { experiment, candidates } of orderedRegressionGroups(groupedCandidates, allGroups, recency)) {
+    for (const candidate of candidates) {
+      const prediction = {
+        basis: candidate.admission.prediction_basis,
+        duration_ms: candidate.admission.predicted_duration_ms,
+        cost_usd: candidate.admission.predicted_cost_usd,
+      };
+      let omissionReason = null;
+      if (prediction.duration_ms === null || prediction.cost_usd === null) omissionReason = 'regression_prediction_unavailable';
+      else if (reservedDurationMs + prediction.duration_ms > envelope.max_predicted_batch_duration_ms) omissionReason = 'predicted_duration_exceeds_bound';
+      else if (prediction.cost_usd > envelope.max_effective_case_budget_usd) omissionReason = 'predicted_cost_exceeds_case_budget';
+      else if (reservedCostUsd + prediction.cost_usd > envelope.max_total_budget_usd) omissionReason = 'predicted_cost_exceeds_total_budget';
+      if (omissionReason !== null) {
+        omitted.push(omittedView(candidate.item, omissionReason, prediction));
+        const reasons = groupOmissionReasons.get(experiment) ?? [];
+        reasons.push(omissionReason);
+        groupOmissionReasons.set(experiment, reasons);
+        continue;
+      }
+      const selectionObservation = ExperimentSelectionObservationSchema.parse({
+        schema_version: 'agent-experiment-selection-observation/v2',
+        mode: 'profile',
+        exact_selector: null,
+        profile: 'regression',
+        regression_intent: intent,
+        prediction_basis: prediction.basis,
+        predicted_duration_ms: prediction.duration_ms,
+        predicted_cost_usd: prediction.cost_usd,
+        reserved_cost_usd: prediction.cost_usd,
+        selection_reason: [
+          'profile_regression',
+          `regression_intent_${intent}`,
+          `regression_admission_${candidate.admission.status}`,
+          recency.has(experiment) ? 'group_rotation_least_recently_selected' : 'group_rotation_no_retained_selection',
+          ...(candidate.item.entry.frontmatter.regression_recommendation === 'recommended' ? ['author_recommendation'] : []),
+          `prediction_${prediction.basis}`,
+          'within_fast_regression_envelope',
+        ],
+      });
+      const selectedItem = { ...candidate.item, selection_observation: selectionObservation };
+      selected.push(selectedItem);
+      selectedViews.push(selectedView(selectedItem, selectionObservation));
+      reservedDurationMs += prediction.duration_ms;
+      reservedCostUsd += prediction.cost_usd;
+      break;
+    }
+  }
+
+  const selectedGroups = new Set(selected.map((item) => item.observation.experiment));
+  const groupGaps = [];
+  for (const [experiment, groupItems] of allGroups) {
+    if (selectedGroups.has(experiment)) continue;
+    const gapReasons = [...new Set(groupOmissionReasons.get(experiment) ?? [])];
+    if (gapReasons.length === 0) {
+      const statuses = new Set(groupItems.map((entry) => entry.admission.status));
+      if (statuses.has('needs_qualification') && intent === 'normal') gapReasons.push('needs_qualification');
+      else if (statuses.has('eligible') && intent === 'qualification') gapReasons.push('no_needs_qualification_candidate');
+      else gapReasons.push(`no_${selectableStatus}_candidate`);
+      for (const entry of groupItems) gapReasons.push(...entry.admission.reasons);
+    }
+    groupGaps.push({ experiment, reasons: [...new Set(gapReasons)] });
+  }
+
+  const selection = ExperimentRunSelectionSchema.parse({
+    mode: 'profile',
+    profile: 'regression',
+    selected: selectedViews,
+    omitted,
+    agent_behavior_coverage: null,
+    regression: {
+      intent,
+      envelope,
+      admissions: admitted.map((entry) => entry.admission),
+      group_gaps: groupGaps,
+    },
+    retained_observation_diagnostics: retainedObservationDiagnostics,
+  });
+  return { selected, selection };
+}
+
 function matchingExactScope(items, selector) {
   let selected = items.filter((item) => {
     if (selector.case !== null) return item.observation.case === selector.case;
@@ -605,6 +913,13 @@ function coverageForAgentBehavior({ profile, allItems, selectedItems, omitted, r
 /** Selects a bounded profile from caller-supplied facts; it performs no filesystem writes or runtime launch. */
 export function selectExperimentRunProfile({ items, request, retainedObservationDiagnostics = [] }) {
   const parsedRequest = ExperimentRunStrategyRequestSchema.parse(request);
+  if (parsedRequest.profile === 'regression') {
+    return selectFastRegressionProfile({
+      items,
+      request: parsedRequest,
+      retainedObservationDiagnostics,
+    });
+  }
   let candidates;
   const candidateReasons = new Map();
   if (parsedRequest.profile === 'calibration') {
@@ -667,10 +982,11 @@ export function selectExperimentRunProfile({ items, request, retainedObservation
       }
     }
     const selectionObservation = ExperimentSelectionObservationSchema.parse({
-      schema_version: 'agent-experiment-selection-observation/v1',
+      schema_version: 'agent-experiment-selection-observation/v2',
       mode: 'profile',
       exact_selector: parsedRequest.profile === 'assurance' ? parsedRequest.selector : null,
       profile: parsedRequest.profile,
+      regression_intent: null,
       prediction_basis: prediction.basis,
       predicted_duration_ms: prediction.duration_ms,
       predicted_cost_usd: prediction.cost_usd,
@@ -694,6 +1010,7 @@ export function selectExperimentRunProfile({ items, request, retainedObservation
       omitted,
       request: parsedRequest,
     }),
+    regression: null,
     retained_observation_diagnostics: retainedObservationDiagnostics,
   });
   return { selected, selection };
@@ -705,10 +1022,11 @@ export function selectExactExperimentCases({ items, selector, retainedObservatio
   const scoped = matchingExactScope(items, parsedSelector);
   const selected = scoped.map((item) => {
     const selectionObservation = ExperimentSelectionObservationSchema.parse({
-      schema_version: 'agent-experiment-selection-observation/v1',
+      schema_version: 'agent-experiment-selection-observation/v2',
       mode: 'exact',
       exact_selector: parsedSelector,
       profile: null,
+      regression_intent: null,
       prediction_basis: 'explicit_selector',
       predicted_duration_ms: null,
       predicted_cost_usd: null,
@@ -723,6 +1041,7 @@ export function selectExactExperimentCases({ items, selector, retainedObservatio
     selected: selected.map((item) => selectedView(item, item.selection_observation)),
     omitted: [],
     agent_behavior_coverage: null,
+    regression: null,
     retained_observation_diagnostics: retainedObservationDiagnostics,
   });
   return { selected, selection };

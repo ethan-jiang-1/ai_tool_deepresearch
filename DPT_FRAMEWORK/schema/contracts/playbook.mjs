@@ -31,6 +31,8 @@ const policyShape = {
   runtime: z.literal('real_disposable_bundle'),
   external_calls: z.enum(['none', 'real']),
   verdict_judge: z.enum(['deterministic', 'real_human', 'ai_judge']),
+  regression_recommendation: z.literal('recommended').optional(),
+  regression_retry_safety: z.literal('reviewed').optional(),
 };
 
 function refinePolicy(value, ctx) {
@@ -72,6 +74,10 @@ function refinePolicy(value, ctx) {
     if (value.durable_evidence_roles.length === 0) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['durable_evidence_roles'], message: 'agent_behavior requires Subject evidence roles' });
     }
+  }
+
+  if (value.regression_retry_safety !== undefined && value.verdict_mode !== 'all') {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['regression_retry_safety'], message: 'is valid only for verdict_mode all' });
   }
 }
 

@@ -142,26 +142,24 @@ The Autorun Supervisor MAY aggregate these facts, but its report is a projection
 
 Every newly written Autorun per-case audit event and retained batch report SHALL include a versioned execution-surface identity and the selection observation that caused the case to be selected. The identity SHALL bind the current selected source playbook, injected instruction, manifest entry, and the named framework/host helper bytes that participate in preparation, launch, completion validation, health, audit, and report production. The selection observation SHALL identify exact selector or run profile, prediction basis, and selection reason without inventing a result.
 
-The report contract SHALL version this addition and the strategy reader SHALL remain able to read retained earlier report versions. Earlier reports without the new identity SHALL remain valid historical cost/outcome/health observations but SHALL produce `unknown` current execution-surface relation. A differing comparable identity SHALL produce `stale`; equal comparable identity may produce `matching` only as a report-comparison fact. Neither relation SHALL be interpreted as native completion, health verdict, proof of current Agent behavior, or permission to delete a preserved root.
+For this change, the existing outer `agent-experiment-batch-report/v2` and v2 audit-event contracts remain the durable result envelopes. Newly written selection observations SHALL use a versioned v2 form that records `regression_intent` as `normal` or `qualification` only when `profile` is `regression`, and as null otherwise. Readers SHALL continue to accept v1 selection observations and all retained v1/v2 report envelopes; a historical v1 report remains a historical observation with unknown execution-surface relation, not a regression membership claim.
 
-Outcome, lifecycle, Agent process, health, cleanup, duration, and cost SHALL remain orthogonal report facts. In particular, selection metadata and execution-surface comparison SHALL NOT turn PASS plus ISSUES into FAIL, turn FAIL into diagnostic-only success, or suppress a report's native/lifecycle result.
+Outcome, lifecycle, Agent process, health, cleanup, duration, and cost SHALL remain orthogonal report facts. In particular, a regression selection observation or later admission comparison SHALL NOT turn PASS plus ISSUES into FAIL, turn FAIL into diagnostic-only success, suppress a native/lifecycle result, or itself authorize cleanup.
 
-#### Scenario: A new report supports later freshness comparison
+#### Scenario: Qualification intent remains auditable without becoming an outcome
 
-- **WHEN** the Supervisor writes a completed or failed case result after this capability applies
-- **THEN** its durable retained observation SHALL include the versioned execution-surface identity and selection observation
-- **AND** a later strategy projection can compare those bytes against the current registered case
-- **AND** the report retains its native outcome and health as separate fields
+- **WHEN** an explicitly qualified regression case writes a v2 audit event or retained report
+- **THEN** its selection observation identifies `profile: regression` and `regression_intent: qualification`
+- **AND** native outcome, health, duration, and cost remain separate runtime facts
 
-#### Scenario: Historical report is useful but freshness is unknown
+#### Scenario: Earlier selection observations remain readable
 
-- **WHEN** a strategy reader encounters a valid retained batch report produced before execution-surface identity existed
-- **THEN** it MAY use valid duration/cost/outcome/health facts as historical observations
-- **AND** it SHALL report current execution-surface relation as `unknown`
-- **AND** it SHALL not manufacture a fingerprint from a filename, directory, or aggregate summary
+- **WHEN** a retained v2 report carries the pre-existing v1 selection observation form
+- **THEN** the reader accepts it as a valid retained observation
+- **AND** it does not manufacture regression intent for that historical result
 
-#### Scenario: Helper change does not rewrite an old result
+#### Scenario: A regression health breach remains an observation, not a rewritten verdict
 
-- **WHEN** a current framework/host helper fingerprint differs from a retained comparable observation
-- **THEN** the strategy projection SHALL mark the observation `stale`
-- **AND** the retained native outcome and health SHALL remain unchanged and auditable
+- **WHEN** a regression-selected case records native PASS and health ISSUES
+- **THEN** the retained report preserves PASS and ISSUES as separate facts
+- **AND** a later regression projection reports the health breach as `ineligible` rather than manufacturing native FAIL
