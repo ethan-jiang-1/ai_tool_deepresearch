@@ -1,6 +1,6 @@
 # _done — 已完成/已归档记录
 
-> 最后更新: 2026-08-01 | `_backlog/_done/` — 所有已完成内容与已吸收设计输入的归档根目录。
+> 最后更新: 2026-08-03 | `_backlog/_done/` — 所有已完成内容与已吸收设计输入的归档根目录。
 > **`_` 前缀 = coding agent 默认忽略，除非显式点名要读。**
 >
 > 状态总览和查阅指南在本文件。活跃工作的 PENDING 表、依赖链、执行顺序 → 见 [`../todos/README.md`](../todos/README.md)。
@@ -13,7 +13,7 @@ _done/
 ├── _fixed_bugs/           # 已修复/结案 Bug（161 个，含间隔）
 ├── _suspened_bugs/        # 悬挂 Bug（7 个：BUG-026, 028, 030, 129--131, 142）
 ├── _done_todos/           # 已完成 TODO（16 个，DONE-001~016）+ 已吸收 standalone TODO（3 个）
-├── _closed_plans/         # 已完成 Plan（44 个）
+├── _closed_plans/         # 已完成 Plan（46 个）
 └── _old_topics/           # 历史归档（⚠️ 勿读，除非显式要求）
 ```
 
@@ -28,7 +28,7 @@ _done/
 | `_fixed_bugs/` | 161 个已修复/结案 bug（含间隔） | BUG-187 |
 | `_suspened_bugs/` | 7 个悬挂 bug（BUG-026, 028, 030, 129--131, 142） | — |
 | `_done_todos/` | 16 个已完成 todo（DONE-001~016）+ 3 个已吸收设计输入（非实现） | DONE-017 |
-| `_closed_plans/` | 44 个已完成 plan | CLS-045 |
+| `_closed_plans/` | 46 个已完成 plan | CLS-047 |
 | `_old_topics/` | 历史归档：`_v12-migration/`（6 个 OpenSpec change 全 DONE）、`_workflow/`（8 个 OpenSpec change 全 ARCHIVED）、`_original_dpt_requirement/`、`_original_dpt_v12/`、`_guideline/`、`_trainsistion/` | — |
 
 关键完成项（按完成日期）：

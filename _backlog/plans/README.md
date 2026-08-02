@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-01 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-03 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,10 +17,17 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
+| `experiment-progressive-follow-up-plan` | 已完成 progressive-run round 的条件性后续入口：selected-host research access、case-211/406 fresh real-actor requalification，以及 profile-led diagnostic/calibration refresh。每次必须重新获得 fresh selection 和独立预算；不自动运行。 | dormant intake（无 active run） |
 | `silent-autonomous-execution` | 承接 `BUG-099/104/106` 的历史 stop/context observation。已与现行 Chain/Queue/Work Unit swarm 对齐：silent poll-submit loop、actor probe/fallback 与 continuation cues 是既有 contract；三次 real-actor canary 仍为 host-scoped `NOT_RUN`。没有 current-head Phase-Agent reproduction，也没有 active OpenSpec change；仅在新的可审计 `agent_flow_e2e` observation 出现后重开。 | deferred observation（无固定 OpenSpec change） |
-| `experiment-progressive-run-strategy` | 2026-08-01/02：101 cases 全部跑完，15 FAIL 全部修复。汇总见 [`MASTER_SUMMARY.md`](experiment-progressive-run-strategy/MASTER_SUMMARY.md) — PASS 率 83%（84/101），FAIL 0，ERROR 14，NOT_RUN 3。修复详情入 [`_fixes_done/`](experiment-progressive-run-strategy/_fixes_done/)。 | ✅ 完成 |
 
 ---
+
+## 最近关闭 (2026-08-03)
+
+| Plan | 关闭依据 |
+|------|----------|
+| `experiment-progressive-run-plan` | P0-P5 的 bounded execution、root-cause repairs 和 policy review 均已闭合；future-triggered work 已移至 `experiment-progressive-follow-up-plan`，不会使本轮保持 active。 |
+| `experiment-progressive-run-strategy` | 仅保留 Phase 0 历史测量和报告附件；静态 Wave/tier 路线已被完成的 profile-driven plan 取代，故整体归档。 |
 
 ## 最近关闭 (2026-08-01)
 

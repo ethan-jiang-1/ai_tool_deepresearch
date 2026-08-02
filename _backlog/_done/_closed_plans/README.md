@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-08-01 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-08-03 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -66,5 +66,7 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-042 | 2026-07-31 | framework-contract-remediation-openspec-sequence.md | C1--C5、lifecycle feedback-loop 与 BUG-170 actor/Gate canary boundary alignment 均已 archive；C5 available claim 和真实 Actor completion 保持 honest `NOT_RUN`，BUG-175/184 为 accepted policy residual。 |
 | CLS-043 | 2026-07-31 | framework-contract-feedback-and-control-structure-analysis.md | 系统性 contract/feedback/control-shape 诊断已由 CLS-042 的 C1--C5 与 BUG-170 alignment 吸收；BUG-175 保持独立 active quality-policy decision。 |
 | CLS-044 | 2026-08-01 | session-drift-guardrail-analysis/ | 唯一建议 `establish-openspec-change-feedback-loop` 已 archive：operation guidance 推送 review、finding 进入 tasks、governance finalizer 闭合 archive；Tier-A/Tier-B validator、SessionStart hook 与 guidance 搬迁均明确不采用。 |
+| CLS-045 | 2026-08-03 | experiment-progressive-run-plan.md | P0-P5 的 bounded progressive execution、case-local repair 和 policy review 已结束；future-triggered host access、fresh real-actor requalification 与 profile-led refresh 移至独立 dormant intake plan，不保留自动运行。 |
+| CLS-046 | 2026-08-03 | experiment-progressive-run-strategy.md + experiment-progressive-run-strategy/ | Phase 0 的历史测量与 57 个报告附件；静态 Wave/tier 路线已被 CLS-045 的 profile-driven completed round 取代，保留为证据而非活跃执行指令。 |
 
-**Next available plan ID: CLS-045**
+**Next available plan ID: CLS-047**
