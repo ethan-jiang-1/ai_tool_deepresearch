@@ -1,0 +1,81 @@
+schema_version: verification-routing/v1
+change: progressive-experiment-run-strategy
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Virtual observations, v1/v2 report interpretation, source/fingerprint comparison, conservative
+      prediction, profile admission, deterministic group rotation, and Agent-behavior gap reporting are
+      closed deterministic projections over supplied manifest/report facts.
+  integration:
+    status: selected
+    rationale: >-
+      The production Supervisor must reject unselected/profile-invalid invocations before side effects,
+      retain explicit legacy selectors, emit v2 report/audit observations, and keep the normal runner
+      documentation aligned without claiming a fixture launched a real Playbook Agent.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      This change adds no runtime-bundle lifecycle transition, Gate, or workflow-scale deterministic chain;
+      focused host-tool integration covers the changed selection-to-launch boundary without simulating
+      unrelated research phases.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The changed proof subject is deterministic Supervisor selection and report projection. A fixture cannot
+      prove real Playbook-Agent execution, while existing native playbooks remain the authority for any later
+      Agent-behavior run selected by this strategy.
+claims:
+  - id: virtual-observation-profile-selection
+    statement: >-
+      ERS-001, ERS-002, and ERS-003: current manifest/frontmatter facts plus retained v1/v2 observations
+      produce a read-only virtual projection that separates filename estimate, outcome, lifecycle, health,
+      cost and execution-surface relation; calibration/discovery/diagnostic/assurance selection is bounded,
+      deterministic, group-rotated where applicable, and reports an Agent-behavior gap rather than replacing
+      it with deterministic coverage.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/host_tools/experiment-run-strategy.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: supervisor-explicit-selection-and-v2-observation
+    statement: >-
+      EXA-004, EXA-009, and EXO-007: the real Supervisor parser/selection path fails before run-root or Agent
+      setup when no selector or valid bounded profile is supplied, retains explicit legacy selector behavior,
+      and writes v2 selection/execution-surface facts while keeping native outcome and health orthogonal.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/host_tools/run-agent-experiment.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: runner-guidance-keeps-virtual-classification
+    statement: >-
+      PLR-004: the current normal Autorun documents distinguish filename estimates, health profile, explicit
+      legacy selection and bounded run profiles; it neither restores a no-filter Light default nor asks authors
+      to physically reclassify cases.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-experiment-autorun-terminology.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
