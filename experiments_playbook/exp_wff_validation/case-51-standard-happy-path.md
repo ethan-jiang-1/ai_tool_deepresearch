@@ -60,7 +60,10 @@ human_decision_checkpoints:
 YAML
 node --input-type=module - "$B" <<'JS'
 import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { selectWave1CarriedTargetReceipt } from './DPT_FRAMEWORK/engine/helpers/wave-carried-target-receipts.mjs';
 const bundle = process.argv[2];
+const carriedTargetSelection = selectWave1CarriedTargetReceipt(bundle);
+if (!carriedTargetSelection.ok) throw new Error(`Cannot create Wave1 fixture receipt: ${carriedTargetSelection.findings.map((finding) => finding.detail).join('; ')}`);
 const fixtures = [
   ['instantiation-complete','phases/phase-instantiation.md','phases/phase-hitl1.md'],
   ['hitl1-recorded','phases/phase-hitl1.md','phases/phase-setup.md'],
@@ -70,7 +73,14 @@ const fixtures = [
   ['wave1-complete','phases/phase-wave1.md','phases/phase-wave2.md'],
   ['wave2-complete','phases/phase-wave2.md','phases/phase-hitl2.md'],
 ];
-for (const [gate,currentNodeRef,next] of fixtures) writeGateAttempt(bundle,{check:{gate,passed:true,currentNodeRef,next},routing:{kind:'next',next,detail:'declared direct-predecessor fixture'},inspect:[],advice:[]});
+for (const [gate,currentNodeRef,next] of fixtures) {
+  const result = { check: { gate, passed: true, currentNodeRef, next }, routing: { kind: 'next', next, detail: 'declared direct-predecessor fixture' }, inspect: [], advice: [] };
+  if (gate === 'wave1-complete') {
+    writeGateAttempt(bundle, result, { carriedTargetReceipt: carriedTargetSelection.receipt, strictTrace: true });
+  } else {
+    writeGateAttempt(bundle, result);
+  }
+}
 JS
 node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-51-enter-hitl2.md"
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-51-advance-wave2.json"
@@ -135,6 +145,7 @@ OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$R" --gate
 N=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.next)
 node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$R" --node "$N" > "$R/case-51-enter-rerun.md"
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$R" --to hitl2_recorded > "$R/case-51-advance-hitl2.json"
+node DPT_FRAMEWORK/cli/apply-research-style.mjs --bundle "$R" --style quick_factual > "$R/case-51-rerun-style.json"
 OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$R" --gate rerun-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle "$R" --current-node phases/phase-rerun.md)
 P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
 N2=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.next)

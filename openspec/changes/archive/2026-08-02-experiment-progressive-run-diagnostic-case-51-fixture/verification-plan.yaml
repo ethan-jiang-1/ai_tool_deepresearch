@@ -1,0 +1,58 @@
+schema_version: verification-routing/v1
+change: experiment-progressive-run-diagnostic-case-51-fixture
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      This change corrects Markdown fixture sequencing and introduces no new pure Engine function.
+  integration:
+    status: selected
+    rationale: >-
+      A JS-led Markdown contract test can keep the exact fixture ordering and legal Engine-writer boundary
+      from silently regressing, without pretending to prove a Headless Playbook-Agent execution.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      The changed proof subject is Headless Playbook-Agent execution of an existing Markdown case, not a new
+      JS-led workflow chain.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      Only a real Headless Playbook-Agent run can show that the fixture no longer induces a hand-written trace,
+      repeated style-projection repair, or an unexpected health issue.
+claims:
+  - id: case-51-playbook-contract-is-valid
+    statement: >-
+      AGT-010: the revised case-51 Markdown keeps its V2 policy, derives a valid carried-target receipt for its
+      fixture-owned Wave1 predecessor, uses the existing Engine writer with strict trace durability, and applies
+      the selected research style before the first rerun-ready Gate invocation.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/case-51-fixture-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: case-51-clean-fixture-observation
+    statement: >-
+      After `experiment-progressive-run-diagnostic-standard-health-scope` is applied, a bounded real Headless
+      Playbook-Agent execution of case-51 produces native PASS with all three declared standard health targets
+      clean, a Wave1 attempt written by the Engine with a carried-target receipt in both trace and log, and no
+      failed rerun-ready style-projection attempt.
+    test_class: agent_flow_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wff_validation/case-51-standard-happy-path.md
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

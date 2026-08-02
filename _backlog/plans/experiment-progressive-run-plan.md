@@ -80,12 +80,13 @@
 - [x] P2.4c.3 `standard` implementation 将 `work_units` 列为 required，但 accepted `experiment-observability` spec 的 standard 只要求 light + gate diagnostics + timeline。修复归属：health-policy/contract alignment，不能由未分配 work 的 fixture 伪造 `_work_units` authority。
 - [x] P2.5 为已确认 root cause 建立并严格验证两个 focused `experiment-progressive-run-diagnostic-<root>` proposal；health-scope 已完成归档，fixture change 已完成 planning。
 - [x] P2.5a `experiment-progressive-run-diagnostic-standard-health-scope`：EXO-002 delta、design、tasks 和 verification plan 已落实、验证并归档；`standard` work-unit diagnostics 保持可见但不再阻断 top-level health。
-- [x] P2.5b `experiment-progressive-run-diagnostic-case-51-fixture`：fixture repair proposal、design、tasks 和 verification plan 完整；clean-health proof 显式依赖 P2.6。
+- [x] P2.5b `experiment-progressive-run-diagnostic-case-51-fixture`：fixture repair proposal、design、tasks 和 verification plan 已落实、requalify 并归档；clean-health proof 在 P2.6 后取得。
 - [x] P2.6 apply 并归档 `experiment-progressive-run-diagnostic-standard-health-scope`，完成 focused schema/verifier validation；不得伪造 `_work_units` authority。
-- [ ] P2.7 再 apply `experiment-progressive-run-diagnostic-case-51-fixture`，完成其 Markdown fixture contract validation。
-- [ ] P2.8 以既定 one-case envelope 对 `case-51-standard-happy-path` 做一次 bounded real requalification；检查 native outcome、health、trace/log、audit 和 retained report。
-- [ ] P2.9 重新运行 diagnostic dry-run；仅由更新后的 profile 决定下一例或 Phase 2 stop condition。
-- [ ] P2.10 对每一个后续已启动 slice 重复 P2.2、P2.4、P2.5、P2.9，不扩大该 slice 的 timeout 或 budget。
+- [x] P2.7 apply 并归档 `experiment-progressive-run-diagnostic-case-51-fixture`，完成其 Markdown fixture contract validation；focused contract test 与 `validate-playbook` 均通过。
+- [x] P2.8a 重新运行 current diagnostic dry-run：`480000` ms / `$2.00` envelope 只选择 `case-51-standard-happy-path`（预测 `351290` ms / `$1.9991`）；`$3.00` 已会选择三例，不能用于本 slice。
+- [x] P2.8b 以 P2.8a 的 one-case envelope 对 `case-51-standard-happy-path` 做一次 bounded real requalification；report `3f6c28fd-f043-41f0-ae5c-23ef9b7fc4bf` 为 native `PASS` + aggregate `CLEAN`，实际 `144036` ms / `$0.741939`，三角色 health clean、Wave1 trace/log `1/1` 且带 receipt、rerun-ready 仅一次 pass，audit 同步记录该 profile selection。
+- [x] P2.9 重新运行 `900000` ms diagnostic dry-run；`case-51` 已退出 diagnostic，profile 的下一例是 `case-52-standard-fail-repair`（预测 `370910` ms / `$1.668948`），后续候选仅作排程信息。
+- [ ] P2.10 对 profile 当前选出的 `case-52-standard-fail-repair` 启动下一 slice 前，先重复其 own one-case envelope preflight；每个后续已启动 slice 都重复 P2.2、P2.4、P2.5、P2.9，不扩大该 slice 的 timeout 或 budget。
 
 ### Phase 3 - Deterministic Calibration
 
@@ -130,7 +131,7 @@ Phase 4: Agent-behavior discovery pilot    Phase 5: Policy review
 
 ### Phase 2 - Diagnostic Remediation
 
-状态：已完成首个 real diagnostic slice、root-cause split 和 health-scope repair；下一步是 P2.7-P2.9 的顺序 apply/requalification/checkpoint。
+状态：已完成 case-51 的 real diagnostic slice、root-cause split、health-scope repair、fixture repair 与 fresh requalification；下一步是 P2.10 对 profile-selected case-52 的独立 preflight，不能复用 case-51 的 envelope。
 
 目的：先处理当前有 FAIL、ERROR、NOT_RUN、PASS+ISSUES 或 stale/unknown direct fact 的 case，避免把已知异常混进 calibration 或 fast regression。
 
@@ -188,7 +189,7 @@ Phase 4: Agent-behavior discovery pilot    Phase 5: Policy review
 | --- | --- | --- | --- |
 | Phase 1 | `fast-regression-run-profile` | 已完成并归档 | 已落地 |
 | Phase 2 | `experiment-progressive-run-diagnostic-standard-health-scope` | 已完成并归档 | 已确认 EXO-002 standard health scope drift |
-| Phase 2 | `experiment-progressive-run-diagnostic-case-51-fixture` | planning complete，依赖前一项 | 已确认 case-51 fixture/playbook drift |
+| Phase 2 | `experiment-progressive-run-diagnostic-case-51-fixture` | 已完成并归档 | 已确认 case-51 fixture/playbook drift |
 | Phase 2 | `experiment-progressive-run-diagnostic-<root>` | 未来 root cause 的命名槽 | 后续 diagnostic 给出可复现、跨边界的明确 root cause |
 | Phase 4 | `experiment-progressive-run-agent-behavior-<root>` | 预留命名槽 | pilot 证明需要框架、contract 或操作能力改变 |
 | Phase 5 | `experiment-progressive-run-policy-revision` | 预留命名槽 | 多轮 evidence 支持修改 profile/SLO 语义 |
@@ -197,4 +198,4 @@ Phase 4: Agent-behavior discovery pilot    Phase 5: Policy review
 
 ## 下一步
 
-当前先按 P2.7 -> P2.8 -> P2.9 推进：修 case-51 fixture，再做一次 bounded real requalification，最后重新让 diagnostic profile 选择下一例。不得在这条重跑验证完成前启动 `case-52`；Phase 3 和 Phase 4 仍已预先排好，但不抢在 Phase 2 的 fresh selection 之前实施。
+case-51 的 P2.7 -> P2.8 -> P2.9 已完成：fixture repair 已获得 native `PASS+CLEAN` requalification，随后 diagnostic profile 合法选择 `case-52` 为下一例。现在只能按 P2.10 为 case-52 重新计算 one-case envelope；Phase 3 和 Phase 4 仍已预先排好，但不抢在该 Phase 2 fresh selection 之前实施。
