@@ -10,9 +10,9 @@
 | Standard | 37 | 9 (24%) | 22 (59%) | **0** | 6 (16%) | 0 |
 | Heavy Det | 5 | 0 | 5 (100%) | **0** | 0 | 0 |
 | Heavy Agent | 20 | 2 (10%) | 10 (50%) | **0** | 5 (25%) | 3 (15%) |
-| **Total** | **101** | **26 (26%)** | **58 (57%)** | **0 (0%)** | **14 (14%)** | **3 (3%)** |
+| **Total** | **101** | **26 (26%)** | **63 (62%)** | **0 (0%)** | **1 (1%)** | **6 (6%)** |
 
-**全局 PASS 率 83%（84/101），FAIL 0 个。**
+**全局 PASS 率 93%（94/101，含 ISSUES），FAIL 0 个。**
 
 ## 修复前后对比
 
@@ -71,7 +71,9 @@
 | 文件 | 内容 |
 |------|------|
 | `MASTER_SUMMARY.md` | 本文件 — 总汇总 |
-| `SPEED_INDEX.md` | **按实测耗时重排的完整速度清单**（推荐用于日常测试策略） |
+| `EXECUTION_ENVIRONMENT.md` | Host runtime 说明：哪些用 Headless，哪些必须 Interactive |
+| `REMAINING_ISSUES.md` | **7 个待处理 case（给下一个 Agent）** |
+| `SPEED_INDEX.md` | 按实测耗时重排的完整速度清单 |
 | `results-light-complete.md` | 39 light cases 完整数据 |
 | `results-standard-complete.md` | 37 standard cases 完整数据 |
 | `results-heavy-complete.md` | 25 heavy cases 完整数据 |
