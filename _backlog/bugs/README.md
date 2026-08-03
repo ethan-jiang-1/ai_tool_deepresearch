@@ -25,6 +25,19 @@
 | [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | historical repeated-rendering/context-pressure hypothesis；尚无 current-head causal evidence |
 | [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P2 | wave0→wave1 | historical report-instead-of-execute observation；无 current-head Phase-Agent reproduction |
 | [BUG-175](BUG-175-count-floors-as-absolute-gate-blockers.md) | P2 | wave0 | `exploratory_map` per-topic=10、shared=`4 + 1 * topic_count`；count-floor-only Gate failure 可在 fatigue threshold 后 degraded handoff，剩余问题是默认阈值校准 |
+| [BUG-187](BUG-187-hitl1-capability-probe-opaque-to-user.md) | P3 | hitl1 | HITL1 §3d capability probe 对用户不可见——中性 probe search/curl fallback 暴露为会话噪音，`research_access` plumbing 与用户 HITL 决策混在 `rb_profile.yaml` |
+| [BUG-188](BUG-188-subagent-wait-no-progress-visibility.md) | P3 | wave0 | sub-agent wait 无进度可见性——TUI 静态 "Waiting" 指示器与 agent freeze 无法区分；sub-agent 实际在活跃工作但用户无感知 |
+| [BUG-189](BUG-189-shared-ref-count-floor-delegated-bypass.md) | P1 | wave0 | `shared_ref_count_floor` 把 Phase-Agent 直接产出的 reference 文件判为 `delegated_bypass` 不计入阈值；Phase Agent 无合法路径让 reference 计入 gate coverage |
+| [BUG-190](BUG-190-source-identity-kind-naming-obscure.md) | P2 | wave0 | `source_identity.kind` discriminator 应为 `submitted_work` 而非直觉的 `work_unit`；error message 不列出合法值，每次浪费 1-3 个 repair cycle |
+| [BUG-191](BUG-191-wave0-projection-ordinal-scaling.md) | P1 | wave0 | `return_map_current_candidate_omission` 要求每个 ordinal 位置都有 projection entry——85 sources 要手写 85 条 entry，O(N) 不可扩展 |
+| [BUG-192](BUG-192-degraded-gate-triggers-de-facto-hitl.md) | P2 | wave0→wave1 | degraded gate pass + fatigue 组合触发 Agent 编造"跳过 wave1"选项并主动提 A/B choice——`stop: no` 违规 |
+| [BUG-193](BUG-193-wave1-subagent-wait-no-progress-sibling.md) | P3 | wave1 | wave1 复现 BUG-188 同一 pattern——sub-agent wait 无进度可见性；确认 active-poll 契约 vs 阻塞 host wait 跨 phase 一致 |
+| [BUG-194](BUG-194-wave1-assignment-mode-payload-location.md) | P2 | wave1 | `operate-queue.mjs enqueue` 拒绝 task card——`assignment_mode` 在顶层而非 payload 内；phase 指令模板含糊 |
+| [BUG-195](BUG-195-wave1-source-claims-cache-trail-refs-missing.md) | P0 | wave1 | `dpt-evidence-extractor` 的 `source_claims[]` 缺 `cache_trail_refs`——dry-submit 报 `missing_cache` + `fail_and_replace`，5 个 topic 中 3 个命中 |
+| [BUG-196](BUG-196-work-done-receipt-no-status-transition.md) | P1 | wave1 | `work_done` receipt 事件不把 work unit 从 `claimed` 转走——dry-submit 在 sub-agent 完成后仍返回 `return_to_actor` |
+| [BUG-197](BUG-197-wave1-queue-blocks-reenqueue-after-failure.md) | P0 | wave1 | work-unit fail 后无法对同一 topic 重新 enqueue——`assignment contract rejected: primary Wave1 assignment receipt shape is invalid or duplicated`，无 gate repair 路径 |
+| [BUG-198](BUG-198-phase-agent-direct-search-no-subagent.md) | P2 | wave2 | Phase Agent 在 `work_unit_required_for_new_evidence` 阶段直接 WebSearch——应 spawn sub-agent 而非主 agent 搜索；degraded mode 导致 contract 遗忘 |
+| [BUG-199](BUG-199-synthesis-no-evidence-citations.md) | P1 | final | `final/synthesis-2026-08-03.md` 声称 evidence-backed 但全文 0 处证据引用；wave1 topic 01/03/05 证据文件在磁盘但 work unit failed 未 submit |
 
 ## 最近关闭 (2026-07-31)
 
