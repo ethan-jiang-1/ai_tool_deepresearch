@@ -34,6 +34,7 @@ Start from the repository root and choose only the top-level surface relevant to
 Do not list, scan, or read these paths as task context unless the user explicitly identifies a concrete path:
 
 - `node_modules/`
+- `.env/`
 - `_backlog/`
 - `_temp/`
 - `.exp-bundles/`, including lowercase `dpt_rb_*/` run-bundle directories
