@@ -1,0 +1,84 @@
+schema_version: verification-routing/v1
+change: experiment-progressive-run-agent-behavior-case-211-fixture
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      A narrow helper option changes fixture setup behavior and needs a JS-led
+      default-versus-opt-out regression test without claiming a Playbook-Agent
+      or Subject-Agent execution.
+  integration:
+    status: selected
+    rationale: >-
+      A JS-led Markdown contract test can lock the required Wave0 composition
+      and ownership boundary without treating source text as real Agent proof.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      The changed proof subject is an existing real-Actor Markdown playbook,
+      not a new JS-led workflow-scale deterministic chain.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      Only a fresh discovery-selected Headless Playbook-Agent run with a real
+      dpt-source-intake Subject can establish the repaired real-Actor and Heavy
+      observability claim.
+claims:
+  - id: wave0-scaffold-opt-out-keeps-defaults
+    statement: >-
+      RWE-001: writeWave0Scaffold preserves its current default predecessor and
+      completion trace facts for fixture-backed callers, while its explicit
+      case-211 opt-out creates no synthetic seed handoff or wave0_completion
+      evidence.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/experiments_env/shared/work-unit-playbook-utils.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: case-211-wave0-flow-contract-is-valid
+    statement: >-
+      RWE-001: the case-211 V2 Markdown explicitly assigns its conditional
+      shared reference to the real source-intake actor, establishes the legal
+      fixture-bound setup/seed predecessor, uses dry-submit before formal
+      submit, obtains and applies the existing Wave0 Projection Packet, logs
+      actual completion, retains direct inspect JSON, and captures the Wave0
+      Gate through the existing monitor without synthetic handoff/completion
+      setup.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/case-211-fixture-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: case-211-repaired-real-actor-observation
+    statement: >-
+      A fresh current discovery-profile, one-case Headless Playbook-Agent run
+      selected as case-211 produces native PASS and CLEAN Heavy health with
+      actor-owned shared-reference/source/cache evidence, successful
+      dry-submit/formal-submit, Engine-authored Seed Projection Packet state,
+      and monitored Wave0 inspect/Gate evidence.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wfn_wave0/case-211-heavy-wave0-happy-path.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_subagent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

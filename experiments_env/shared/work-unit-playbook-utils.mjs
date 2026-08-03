@@ -214,6 +214,7 @@ export function writeWave0Scaffold(bundleDir, {
   planBasename = path.basename(bundleDir),
   topics = [{ id: 't1', slug: 'topic-a', title: 'Topic A' }],
   referenceRows = ['| 00-shared-topic-a.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-06 |'],
+  syntheticWave0Trace = true,
 } = {}) {
   writeMinimalStatus(bundleDir, { current_gate: 'seed_topics_ready', next_gate: 'wave0_complete', current_node: 'phases/phase-wave0.md' });
   writeMinimalPlan(bundleDir, { planBasename, topics });
@@ -252,8 +253,10 @@ export function writeWave0Scaffold(bundleDir, {
     ...referenceRows,
     '',
   ].join('\n'));
-  writeWave0Handoff(bundleDir);
-  appendTrace(bundleDir, { event: 'wave0_completion', source: 'work-unit-playbook-fixture' });
+  if (syntheticWave0Trace) {
+    writeWave0Handoff(bundleDir);
+    appendTrace(bundleDir, { event: 'wave0_completion', source: 'work-unit-playbook-fixture' });
+  }
 }
 
 export function writeWave1Scaffold(bundleDir, {

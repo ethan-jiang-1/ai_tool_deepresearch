@@ -8,7 +8,7 @@ required_checks: [real-subagent-task-bound, real-subagent-result-written, real-s
 bundle_roles: [verdict]
 verdict_role: verdict
 health_roles: [verdict]
-health_profile: heavy
+health_profile: light
 durable_evidence_roles: [subject_task, subject_result, subject_receipt, subject_output]
 proof_subject: agent_behavior
 subject_execution: real_subagent
@@ -28,6 +28,8 @@ not_run_if: "The native dpt-source-intake Sub-agent tool or required local tool 
 PASS requires an independent native `dpt-source-intake` Sub-agent. The Playbook Agent may prepare the work-unit envelope, invoke the Subject Sub-agent, read its returned feedback, submit its exact durable result, and record deterministic checks. It must not perform the bounded Subject task itself, write or repair Subject result/receipt/output/cache bytes on the Subject's behalf, or turn fixture/parent output into Agent-behavior evidence.
 
 This is a no-network native-actor canary: `external_calls: none` is deliberate. Setup is fixture-backed, but the actor boundary is real. Its PASS establishes only the submitted actor checkpoint; it does not assert Wave0 readiness or a Wave0 Gate pass. If the native Sub-agent surface or its required local capabilities are unavailable, finalize NOT_RUN with the prepared bundle and stop. Do not manufacture the declared required checks.
+
+This Heavy-cost case intentionally uses `health_profile: light`: it has no Phase-owned Gate or monitor artifact to inspect. The native required checks and retained Subject evidence remain the authority for the submitted actor checkpoint; a full Wave0 playbook owns Gate and Heavy provenance claims.
 
 ## Step 1 - Prepare and register one claimed work unit
 
@@ -113,4 +115,4 @@ fi
 node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
-Stop after native completion. The Autorun Supervisor owns Heavy health, durable Subject-evidence export, audit, preservation, and optional clean-PASS cleanup of the complete case run root.
+Stop after native completion. The Autorun Supervisor owns Light health, durable Subject-evidence export, audit, preservation, and optional clean-PASS cleanup of the complete case run root.

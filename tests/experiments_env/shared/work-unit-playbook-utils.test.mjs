@@ -10,10 +10,12 @@ import {
   claimAndSubmitFixtureWorkUnit,
   inspectWorkUnitsViaCli,
   readWorkUnitLedgerRows,
+  readTrace,
   recordPlaybookCheck,
   sourceYamlContent,
   writeMinimalPlan,
   writeMinimalStatus,
+  writeWave0Scaffold,
 } from '../../../experiments_env/shared/work-unit-playbook-utils.mjs';
 
 describe('work-unit playbook utils', () => {
@@ -63,5 +65,34 @@ describe('work-unit playbook utils', () => {
       assert.equal(row.passed, false);
       assert.equal(row.expected, false);
     } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+
+  it('keeps Wave0 synthetic traces by default and allows the case-211 opt-out', () => {
+    const defaultDir = mkdtempSync(path.join(os.tmpdir(), 'wu-wave0-default-'));
+    const optOutDir = mkdtempSync(path.join(os.tmpdir(), 'wu-wave0-opt-out-'));
+    try {
+      writeWave0Scaffold(defaultDir, { planBasename: 'wave0-default' });
+      writeWave0Scaffold(optOutDir, {
+        planBasename: 'wave0-opt-out',
+        syntheticWave0Trace: false,
+      });
+
+      assert.deepEqual(readTrace(defaultDir).map((entry) => entry.event), [
+        'gate_attempt',
+        'load_complete',
+        'wave0_completion',
+      ]);
+      assert.deepEqual(readTrace(optOutDir), []);
+
+      const defaultStatus = JSON.parse(readFileSync(path.join(defaultDir, 'rb_status.json'), 'utf8'));
+      const optOutStatus = JSON.parse(readFileSync(path.join(optOutDir, 'rb_status.json'), 'utf8'));
+      assert.equal(defaultStatus.current_gate, 'seed_topics_ready');
+      assert.equal(optOutStatus.current_gate, 'seed_topics_ready');
+      assert.equal(defaultStatus.current_node, 'phases/phase-wave0.md');
+      assert.equal(optOutStatus.current_node, 'phases/phase-wave0.md');
+    } finally {
+      rmSync(defaultDir, { recursive: true, force: true });
+      rmSync(optOutDir, { recursive: true, force: true });
+    }
   });
 });

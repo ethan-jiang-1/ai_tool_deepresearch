@@ -1,0 +1,62 @@
+schema_version: verification-routing/v1
+change: experiment-progressive-run-agent-behavior-case-406-fixture
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The existing generic scaffold option is reused without changing its
+      default behavior; the smallest affected seam is the case composition.
+  integration:
+    status: selected
+    rationale: >-
+      A temporary-bundle JS-led test can exercise the case runner, production
+      work-unit submit path, trace facts, and selected Light health report
+      without claiming real Subject-Agent behavior.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      This repair changes one real-subagent case's policy and fixture
+      composition, not a new JS-led workflow-scale deterministic chain.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      Only a fresh profile-selected Headless Playbook-Agent run with a real
+      dpt-source-intake Subject can re-establish the repaired actor boundary
+      and independent Light health result.
+claims:
+  - id: case-406-early-boundary-health-contract
+    statement: >-
+      EXR-006 and EXO-002: case-406's test-owned work-unit envelope submits
+      through the production helper with no fixture-authored Wave0 handoff or
+      completion trace and no Gate monitor, while its explicit Light health
+      report is clean and its native actor-boundary checks remain exact.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/case-406-real-subagent-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: case-406-requalified-real-subagent-observation
+    statement: >-
+      A fresh discovery-selected case-406 Headless Playbook-Agent run produces
+      native PASS and CLEAN Light health from a real no-network
+      dpt-source-intake Subject's submitted task, receipt, result, and output
+      evidence, without a Wave0 Gate or Phase-ready claim.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_engine-boundary/case-406-heavy-real-subagent-boundary.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_subagent
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

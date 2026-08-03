@@ -1,4 +1,4 @@
-// @impl AGT-003, EXR-006, EXA-003, EXA-005, EXA-006, EXA-008, VER-006
+// @impl AGT-003, EXR-006, EXO-002, EXA-003, EXA-005, EXA-006, EXA-008, VER-006
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
@@ -14,6 +14,7 @@ import {
 
 const CASE = 'experiments_playbook/exp_engine-boundary/case-406-heavy-real-subagent-boundary.md';
 const FIXTURE_RUNNER = 'experiments_env/shared/run-fixture-backed-case.mjs';
+const HEALTH_VERIFIER = 'experiments_env/shared/verify-bundle-health.mjs';
 const REPO = path.resolve(new URL('../../..', import.meta.url).pathname);
 
 function runCase(args) {
@@ -30,10 +31,23 @@ function traceEvents(bundleDir) {
     .map((line) => JSON.parse(line));
 }
 
+function runHealth(bundleDir, profile) {
+  return spawnSync(process.execPath, [
+    path.join(REPO, HEALTH_VERIFIER),
+    '--bundle', bundleDir,
+    '--profile', profile,
+    '--json',
+  ], {
+    cwd: REPO,
+    encoding: 'utf8',
+  });
+}
+
 describe('case-406 native Sub-agent contract', () => {
   it('keeps the no-network local task boundary while stopping before Wave0 readiness', () => {
     const playbook = readFileSync(CASE, 'utf8');
     const runner = readFileSync(FIXTURE_RUNNER, 'utf8');
+    assert.match(playbook, /health_profile: light/);
     assert.match(playbook, /neither the Playbook Agent nor Subject Sub-agent may invoke WebSearch, WebFetch, curl, wget, or another network client/);
     assert.match(runner, /case406LocalSourceFixture/);
     assert.match(runner, /_fixtures\/case-406-local-source\.md/);
@@ -79,7 +93,22 @@ describe('case-406 native Sub-agent contract', () => {
     }
   });
 
-  it('submits a test-owned envelope through the production helper without a Wave0 Gate', () => {
+  it('keeps synthetic Wave0 trace as the default for another real-subagent fixture', () => {
+    const target = mkdtempSync(path.join(tmpdir(), 'case-604-default-wave0-trace-'));
+    try {
+      const result = runCase(['--case', 'case-604', '--prepare-only', '--target-dir', target]);
+      assert.equal(result.status, 0, result.stderr);
+      const prepared = JSON.parse(result.stdout);
+      const events = traceEvents(prepared.bundle);
+      assert.equal(events.some((event) => event.event === 'gate_attempt' && event.gate === 'seed-topics-ready'), true);
+      assert.equal(events.some((event) => event.event === 'load_complete' && event.entry === 'phases/phase-wave0.md'), true);
+      assert.equal(events.some((event) => event.event === 'wave0_completion'), true);
+    } finally {
+      rmSync(target, { recursive: true, force: true });
+    }
+  });
+
+  it('submits a test-owned envelope without fixture Wave0 facts or Gate health', () => {
     const target = mkdtempSync(path.join(tmpdir(), 'case-406-actor-checkpoint-'));
     try {
       const preparedRun = runCase(['--case', 'case-406', '--prepare-only', '--target-dir', target]);
@@ -126,8 +155,19 @@ describe('case-406 native Sub-agent contract', () => {
       ]);
       assert.equal(existsSync(path.join(prepared.bundle, 'gate-wave0.json')), false);
       const events = traceEvents(prepared.bundle);
+      assert.equal(events.some((event) => event.event === 'gate_attempt' && event.gate === 'seed-topics-ready'), false);
+      assert.equal(events.some((event) => event.event === 'load_complete' && event.entry === 'phases/phase-wave0.md'), false);
+      assert.equal(events.some((event) => event.event === 'wave0_completion'), false);
       assert.equal(events.some((event) => event.event === 'gate_attempt' && event.gate === 'wave0-complete'), false);
       assert.equal(events.some((event) => event.event === 'check' && event.gate === 'wave0-gate-pass'), false);
+      assert.equal(existsSync(path.join(prepared.bundle, '_observability', 'gates')), false);
+
+      const healthRun = runHealth(prepared.bundle, 'light');
+      assert.equal(healthRun.status, 0, healthRun.stderr);
+      const health = JSON.parse(healthRun.stdout);
+      assert.equal(health.status, 'clean');
+      assert.equal(health.gate_attempts.required, false);
+      assert.equal(health.timeline.required, false);
     } finally {
       rmSync(target, { recursive: true, force: true });
     }

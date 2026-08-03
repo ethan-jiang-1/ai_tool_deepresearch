@@ -206,6 +206,7 @@ function writeWave0Scaffold(bundleDir, {
   planBasename = path.basename(bundleDir),
   topics = [{ id: 't1', slug: 'topic-a', title: 'Topic A' }],
   referenceRows = ['| 00-shared-topic-a.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-06 |'],
+  syntheticWave0Trace = true,
 } = {}) {
   writeMinimalStatus(bundleDir, {
     current_gate: 'seed_topics_ready',
@@ -261,8 +262,10 @@ function writeWave0Scaffold(bundleDir, {
     ...referenceRows,
     '',
   ].join('\n'));
-  writeWave0Handoff(bundleDir);
-  appendTrace(bundleDir, { event: 'wave0_completion', source: 'work-unit-playbook-fixture' });
+  if (syntheticWave0Trace) {
+    writeWave0Handoff(bundleDir);
+    appendTrace(bundleDir, { event: 'wave0_completion', source: 'work-unit-playbook-fixture' });
+  }
 }
 
 function sourceYamlExtra(topicSlug, sourceUrl, title = 'Fixture Source') {
@@ -1319,6 +1322,7 @@ function realSubagentCase(opts, spec) {
       planBasename: spec.suffix,
       topics: [{ id: 't1', slug: spec.topicSlug, title: spec.topicTitle }],
       referenceRows: [`| 00-shared-${spec.topicSlug}.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-06 |`],
+      syntheticWave0Trace: spec.syntheticWave0Trace ?? true,
     });
 
     const task = queueItemForWorkUnit({
@@ -1421,6 +1425,7 @@ function case406LocalSourceFixture(bundleDir) {
 const REAL_SUBAGENT_CASES = {
   'case-406': {
     caseId: 'case-406', suffix: 'eb_real_work_unit', topicSlug: 'agentic-coding-tools', topicTitle: 'Agentic coding tools',
+    syntheticWave0Trace: false,
     taskTitle: 'Real Sub-agent source intake', action: 'Use only the assigned local task context to produce the declared source-intake output and cache contract without external calls.',
     localFixture: case406LocalSourceFixture,
     taskBrief: ({ localFixtureRef }) => [

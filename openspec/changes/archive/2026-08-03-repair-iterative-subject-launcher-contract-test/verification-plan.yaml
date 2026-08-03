@@ -1,0 +1,40 @@
+schema_version: verification-routing/v1
+change: repair-iterative-subject-launcher-contract-test
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The pure launcher already has focused unit coverage; this change repairs
+      only an existing integration asset's cross-module ownership assertion.
+  integration:
+    status: selected
+    rationale: >-
+      The existing JS-led test reads the runner, pure launcher, and Markdown
+      control surfaces together to guard their ownership boundary.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale state chain or production CLI behavior changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      No Markdown playbook behavior or real Agent execution claim changes.
+claims:
+  - id: iterative-subject-launcher-argv-owner
+    statement: >-
+      The integration contract reads the selected Subject CLI argv assertion
+      from the pure launcher builder while retaining runner lifecycle checks,
+      so the accepted generic non-bypass invocation cannot fail merely because
+      its implementation ownership is modularized.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/iterative-interaction-agent-flow-playbooks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

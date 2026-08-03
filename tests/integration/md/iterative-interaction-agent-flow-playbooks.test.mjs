@@ -9,6 +9,7 @@ const read = (path) => readFileSync(`${ROOT}/${path}`, 'utf8');
 const setup = read('experiments_env/shared/prepare-iterative-interaction-case.mjs');
 const observer = read('experiments_env/shared/observe-iterative-interaction-case.mjs');
 const subjectRunner = read('experiments_env/shared/run-iterative-interaction-subject.mjs');
+const subjectLauncher = read('experiments_env/shared/iterative-interaction-subject-launch.mjs');
 const registry = read('experiments_playbook/PLAYBOOK_MANIFEST.md');
 const cases = {
   711: read('experiments_playbook/exp_iterative_interaction/case-711-heavy-hitl1-natural-acceptance.md'),
@@ -65,15 +66,19 @@ describe('iterative interaction real-Agent playbooks', () => {
     assert.match(subjectRunner, /settings\?\.env\?\.ENABLE_TOOL_SEARCH !== 'true'/);
     assert.match(subjectRunner, /ENABLE_TOOL_SEARCH: 'true'/);
     assert.match(subjectRunner, /flag: 'wx'/);
-    assert.match(subjectRunner, /--setting-sources', ''/);
+    assert.match(subjectLauncher, /--setting-sources', ''/);
+    assert.match(subjectLauncher, /--bare'/);
+    assert.match(subjectLauncher, /--tools', tools/);
+    assert.match(subjectLauncher, /--effort', 'low'/);
+    assert.doesNotMatch(subjectRunner, /--setting-sources', ''/);
+    assert.doesNotMatch(subjectRunner, /--bare'/);
+    assert.doesNotMatch(subjectRunner, /--tools', subject\.tools/);
+    assert.doesNotMatch(subjectRunner, /--effort', 'low'/);
     assert.match(subjectRunner, /SUBJECT_TIMEOUT_MS = 3 \* 60 \* 1000/);
     assert.match(subjectRunner, /tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write'/);
     assert.match(subjectRunner, /tools: 'Bash,Edit,Glob,Grep,Read,Write'/);
     assert.match(subjectRunner, /tools: 'Glob,Grep,Read'/);
     assert.match(subjectRunner, /boundary: 'Answer only the current user turn from direct bundle facts, then stop\.'/);
-    assert.match(subjectRunner, /--bare'/);
-    assert.match(subjectRunner, /--tools', subject\.tools/);
-    assert.match(subjectRunner, /--effort', 'low'/);
     assert.match(subjectRunner, /assessNode\(nodeRef, createState\(\), runtime\)/);
     assert.match(subjectRunner, /frontmatter\?\.suggested_context/);
     assert.match(subjectRunner, /filter\(\(fileRef\) => fileRef\.startsWith\('brief\/'\)\)/);
