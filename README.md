@@ -15,26 +15,27 @@ Before triggering `DPT_FRAMEWORK/RUN.md`, complete the human preflight in [`SETU
 ## Start Here
 
 - **⚠️ This is an agent engineering project, not a traditional program.** Read `guidelines/project-charter.md` first, especially when direction or layer ownership is unclear.
-- Project guidance, philosophy, error tolerance, experiment rules: `guidelines/`
-- Project rules and architecture context: `openspec/config.yaml`
-- Current active work: `openspec/changes/`
-- Accepted requirements/specs: `openspec/specs/`
-- Requirement tracking checks: `openspec/governance/`
-- Runtime framework and agent playbooks: `DPT_FRAMEWORK/` (`validate-bundle.mjs`, `inspect-bundle.mjs`)
-- Frozen prototypes and experiment fixtures: `experiments_env/`
+- Start from the repository root and choose the top-level surface relevant to the task. Do not pre-read every root document or recursively scan directories; use the Coding Agent's normal instruction-discovery behavior and the task context.
 
 ## Directory Map
 
 | Directory | What it is |
 |-----------|------------|
-| `DPT_FRAMEWORK/` | 可发行框架：engine、schema、CLI、trace writer、command playbook。不放测试 |
-| `DPT_FRAMEWORK/engine/` | 生产级确定性 engine（queue-manager, gate-loop, gate-fork, ...） |
-| `experiments_playbook/exp_*/` | coding Agent 执行 Markdown 的 `agent_flow_e2e` playbook |
-| `experiments_env/shared/` | 实验共享工具（如 `new-disposable-bundle.mjs`），不进生产 |
-| `experiments_env/prototype-*/` | 已冻结原型：仅 fixture + 笔记，不含 engine/trace/CLI 代码 |
-| `tests/` | JS-led `unit`、`integration`、`deterministic_e2e`，`node:test` + `node:assert` |
-| `openspec/` | Spec-driven development：specs、changes、governance、config |
-| `guidelines/` | 项目原则、层级边界、实验规范、机制草案 |
+| `guidelines/` | 项目原则、层级边界与操作指引 |
+| `openspec/` | Spec-driven development：规则、changes、specs 与 governance |
+| `DPT_FRAMEWORK/` | 可发行框架与 Agent-facing playbooks |
+| `tests/` | JS-led verification |
+| `experiments_playbook/` | Coding-Agent/Markdown-led experiments |
+| `experiments_env/` | 已冻结原型与实验 fixture |
+
+## Do Not Read
+
+Do not list, scan, or read these paths as task context unless the user explicitly identifies a concrete path:
+
+- `node_modules/`
+- `_backlog/`
+- `_temp/`
+- `.exp-bundles/`, including lowercase `dpt_rb_*/` run-bundle directories
 
 ## Test Layering
 

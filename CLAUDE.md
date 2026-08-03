@@ -18,18 +18,25 @@ Use `guidelines/` when the right direction, layer boundary, or experiment path i
 
 For selected DPT research, choose and read exactly one entry before request-specific research work: an explicitly supplied reachable existing bundle (or its `RUN_BUNDLE.md` / `BUNDLE_MAP.md`) with continuation or inspection intent uses `DPT_FRAMEWORK/command_playbook/continue-run-bundle.md`; otherwise research, deep-research, investigation, or report intent with `DPT_FRAMEWORK/` selected uses `DPT_FRAMEWORK/RUN.md`. A discovered, bare, or unreachable map does not select a run. Before the selected entry is read, do not invoke `research`, `deep-research`, or an equivalent one-shot shortcut, perform request-specific WebSearch/WebFetch, or collect/synthesize evidence manually. The selected entry and its later phase instructions authorize subsequent legal research work.
 
-## Where To Look
+## Repository Reading Scope
 
-- Project philosophy, error tolerance, rules: `guidelines/`
-- Project rules/context: `openspec/config.yaml`
-- Active changes: `openspec/changes/`
-- Accepted specs: `openspec/specs/`
-- Requirement registry and checks: `openspec/governance/`
-- Framework code/playbooks: `DPT_FRAMEWORK/` (`validate-bundle.mjs`, `inspect-bundle.mjs`)
-- Prototypes: `experiments_env/`
-- JS-led tests: `unit` under focused `tests/` paths, `integration` under `tests/integration/`, and `deterministic_e2e` under `tests/e2e/`
-- Coding-Agent/Markdown-led `agent_flow_e2e`: `experiments_playbook/exp_*/` over real disposable bundles
-- Routing semantics: accepted `verification-routing` spec
+Start from the repository root and choose only the top-level surface relevant to the task. Do not pre-read every root file or recursively scan directories; follow the Coding Agent's normal instruction-discovery behavior and the task context. Once inside a surface, read only what the task needs.
+
+- `guidelines/` — project principles and operating guidance
+- `openspec/` — project rules, active changes, accepted specs, and governance
+- `DPT_FRAMEWORK/` — distributable framework and Agent-facing playbooks
+- `tests/` — JS-led verification
+- `experiments_playbook/` — Coding-Agent/Markdown-led experiments
+- `experiments_env/` — frozen prototypes and experiment fixtures
+
+## Do Not Read
+
+Do not list, scan, or read these paths as task context unless the user explicitly identifies a concrete path:
+
+- `node_modules/`
+- `_backlog/`
+- `_temp/`
+- `.exp-bundles/`, including lowercase `dpt_rb_*/` run-bundle directories
 
 ## Hard Rules
 
