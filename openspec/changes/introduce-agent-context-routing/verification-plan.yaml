@@ -1,0 +1,43 @@
+schema_version: verification-routing/v1
+change: introduce-agent-context-routing
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      One focused node:test can read the actual repository entry and context
+      documents in process, preserving the static documentation contract
+      without claiming Agent behavior.
+  integration:
+    status: not_applicable
+    rationale: >-
+      This change invokes no production CLI and crosses no runtime/component
+      boundary that requires a subprocess or temporary bundle.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      This change does not alter a workflow-scale deterministic state chain or
+      lifecycle transition.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The claim concerns documentation discovery only and cannot prove or
+      require real Agent research, judgment, writing, or repair behavior.
+claims:
+  - id: agent-context-routing-document-contract
+    statement: >-
+      ACR-001 through ACR-004: root and framework Agent entry documents retain
+      the Charter-then-context route, root CONTEXT.md retains its
+      non-authority vocabulary boundary, and ADR 0001 retains the selected
+      LLM/Markdown and Engine control split.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/agent-context-routing.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
