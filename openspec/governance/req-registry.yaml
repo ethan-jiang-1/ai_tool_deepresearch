@@ -25,6 +25,7 @@
 # check-project-reqs.mjs 自动忽略。
 # ──────────────────────────────────────────────
 prefixes:
+  ACR: agent-context-routing
   ACS: agent-command-surface
   AGO: agent-output-declaration
   AGQ: agentic-queue
@@ -126,6 +127,12 @@ ACS-002: agent-command-surface — Entry docs distinguish one-time human trigger
 ACS-003: agent-command-surface — Existing static documentation regression locks stable Agent-owned helper markers and known audience/HITL drift phrases without prose classification
 ACS-004: agent-command-surface — Phase-boundary terminology is discoverable and aligned with guidance terminology canon
 ACS-005: agent-command-surface — Existing bundle continuation has one Agent-owned playbook
+
+# agent-context-routing
+ACR-001: agent-context-routing — Root CONTEXT.md preserves canonical terminology boundaries without becoming behavior, executable, or runtime authority
+ACR-002: agent-context-routing — Root and framework Agent entry routes require Charter-then-context and preserve existing operating surfaces
+ACR-003: agent-context-routing — Root ADR records Markdown-driven Agent Flow and Engine-gated deterministic checkpoints without redefining behavior
+ACR-004: agent-context-routing — Static documentation regression preserves context routing, source boundaries, and ADR deferral
 
 # agent-testing
 AGT-001: agent-testing — Agent-assisted test playbook for gate-loop

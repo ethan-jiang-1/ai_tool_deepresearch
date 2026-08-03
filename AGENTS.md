@@ -14,6 +14,13 @@ Core split: the LLM Agent searches, reads, writes evidence, and synthesizes. The
 
 Use `guidelines/` when the right direction, layer boundary, or experiment path is unclear. Start with `guidelines/project-charter.md`.
 
+For every substantive repository task, after the required Project Charter read,
+read root `CONTEXT.md` to align terminology and ownership boundaries.
+`CONTEXT.md` is a non-authoritative glossary: normal instruction-discovery
+behavior and task-specific authoritative sources still decide the relevant work.
+Read `docs/adr/` only when a task needs a durable architecture rationale; it is
+on-demand, not another mandatory pre-task read.
+
 ## Deep Research Routing
 
 For selected DPT research, choose and read exactly one entry before request-specific research work: an explicitly supplied reachable existing bundle (or its `RUN_BUNDLE.md` / `BUNDLE_MAP.md`) with continuation or inspection intent uses `DPT_FRAMEWORK/command_playbook/continue-run-bundle.md`; otherwise research, deep-research, investigation, or report intent with `DPT_FRAMEWORK/` selected uses `DPT_FRAMEWORK/RUN.md`. A discovered, bare, or unreachable map does not select a run. Before the selected entry is read, do not invoke `research`, `deep-research`, or an equivalent one-shot shortcut, perform request-specific WebSearch/WebFetch, or collect/synthesize evidence manually. The selected entry and its later phase instructions authorize subsequent legal research work.
@@ -24,6 +31,7 @@ Start from the repository root and choose only the top-level surface relevant to
 
 - `guidelines/` — project principles and operating guidance
 - `openspec/` — project rules, active changes, accepted specs, and governance
+- `docs/adr/` — on-demand durable architecture decisions
 - `DPT_FRAMEWORK/` — distributable framework and Agent-facing playbooks
 - `tests/` — JS-led verification
 - `experiments_playbook/` — Coding-Agent/Markdown-led experiments

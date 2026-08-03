@@ -4,6 +4,18 @@ Deep Research Framework (`DPT_FRAMEWORK/`) 的运行时入口说明。
 
 框架采用 recommendation-first 的两点交互节奏：HITL1 对齐，静默自主研究，HITL2 审阅，Final 交付；用户主动问答不会自动变成新的 checkpoint 或运行权力。
 
+## 共享项目上下文
+
+开始 framework work 前，先读 [Project Charter](../guidelines/project-charter.md)，再读
+[root `CONTEXT.md`](../CONTEXT.md)。根 `CONTEXT.md` 是全项目唯一的术语对齐
+glossary；它不替代 applicable accepted/executable contract，也不在
+`DPT_FRAMEWORK/` 创建第二份 `CONTEXT.md`。
+
+这个 pre-read 不是 DPT research entry，不选择 run，也不授权 request-specific
+research；它不改变随后 `continue-run-bundle.md` / `RUN.md` 的 existing selection。
+完成这个 pre-read 后，再按本文的触发规则、`COMMANDS.md` 和 selected playbook
+进入具体操作。
+
 > **最快触发**：把本目录下的 `RUN.md` 拖进对话——文件内容会直接进上下文，触发本框架，绕开"要不要进目录"的判断。
 
 ## 触发规则（最高优先）

@@ -2,6 +2,18 @@
 
 Claude Code 读到本文件时（在 `DPT_FRAMEWORK/` 下执行 workflow，或被用户指向本框架时），按下面的优先级行事。
 
+## 共享项目上下文
+
+开始任何 framework work 前，先读 `../guidelines/project-charter.md`，再读
+`../CONTEXT.md`。根 `CONTEXT.md` 是全项目唯一的术语对齐 glossary；它不替代
+applicable accepted/executable contract，也不在 `DPT_FRAMEWORK/` 创建第二份
+`CONTEXT.md`。
+
+完成这个 pre-read 后，再按本目录的 `README.md`、`COMMANDS.md` 和 selected
+playbook 进入具体操作。这个 pre-read 不是 DPT research entry，不选择 run，也不
+授权 request-specific research；下方既有的 `continue-run-bundle.md` / `RUN.md`
+选择规则保持不变。
+
 ## ⚡ 第一优先：这是一个 Deep Research 引擎，不是代码库
 
 **用户表达了研究意图——研究/调研/deep research/research report/"帮我查…"/"…是什么"等——尤其提到 `DPT_FRAMEWORK` 或 deep research → 触发本框架，不要把它当代码探索请求。**

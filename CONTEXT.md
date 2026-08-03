@@ -4,6 +4,23 @@ This glossary gives Agents and maintainers one shared language for the Deep
 Research Tool project. It does not replace project guidance, accepted specs,
 executable contracts, or runtime truth.
 
+## Terminology Sources and Authority Boundary
+
+`CONTEXT.md` is a vocabulary-alignment surface: it gives a short shared
+language, not a behavior specification, executable contract, Gate verdict, or
+runtime projection. Read the [Project Charter](guidelines/project-charter.md)
+for project authority boundaries, the [Guidelines Index](guidelines/README.md)
+for the guidance suite, and the [Agentic Execution Model](guidelines/agentic-execution-model.md)
+for the execution terminology canon. The complete Phase Agent, Sub-agent, Queue
+demand item, Work unit, and Submit vocabulary stays in that execution-model
+canon; the entries here are compressed orientation only.
+
+Current behavior, executable contracts, and current runtime facts remain with
+their applicable Sources of Record. For the durable rationale behind the
+control split, see [ADR 0001](docs/adr/0001-keep-agent-flow-markdown-driven-and-engine-gated.md).
+It is optional architecture rationale, not a mandatory pre-task read or a new
+authority.
+
 ## System and Runtime
 
 **Deep Research Tool project**:
@@ -28,9 +45,9 @@ delivery. It is a lifecycle, not a framework asset or filesystem location.
 _Avoid_: active bundle, Deep Research Framework
 
 **Active bundle**:
-The currently selected persistent context for one research run. It holds that
-run's durable facts and is distinct from both the framework and the run
-lifecycle.
+The selected runtime context for one production research run or disposable
+experiment. It holds that run's durable facts and is distinct from both the
+reusable framework and the run lifecycle.
 _Avoid_: research run, Deep Research Framework, repository root
 
 ## Actors
@@ -73,7 +90,9 @@ memory or reusable framework assets.
 _Avoid_: conversation context, framework assets
 
 **Source of Record**:
-The one authoritative surface for a particular class of facts.
+The one authoritative surface for a particular class of facts. It identifies
+only who decides that class of facts; it does not by itself grant authority,
+capability, permission, liveness, or evidence.
 _Avoid_: projection, chat summary, guidance prose
 
 ## Deterministic Checkpoints
@@ -97,8 +116,9 @@ _Avoid_: Gate verdict, runtime state
 
 **Gate verdict**:
 Engine-produced deterministic checkpoint feedback for a Gate, including
-whether it passed against the current run state. It is runtime truth; it does
-not load workflow nodes or choose a semantic repair strategy.
+whether it passed against the current run state. It is runtime truth, but it
+does not itself select the next Chain phase, load workflow nodes, or choose a
+semantic repair strategy.
 _Avoid_: Gate definition, workflow decision, phase completion
 
 ## Evidence
@@ -154,8 +174,9 @@ _Avoid_: phase transition, phase handoff, load complete
 ## Execution Model
 
 **Chain**:
-Phase-to-phase routing. A passed Gate triggers route lookup for the next phase;
-Chain does not inspect a Queue or allocate work.
+Phase-to-phase routing. A passed Gate yields a verdict, then Chain uses accepted
+transition authority to select the next phase; Chain does not inspect a Queue
+or allocate work.
 _Avoid_: workflow controller, Queue, Work unit
 
 **Queue**:

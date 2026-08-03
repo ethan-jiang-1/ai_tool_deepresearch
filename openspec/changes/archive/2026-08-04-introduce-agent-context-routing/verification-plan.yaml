@@ -1,0 +1,56 @@
+schema_version: verification-routing/v1
+change: introduce-agent-context-routing
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The claim compares relationships among separately owned root and framework
+      Markdown entry surfaces, so it is not an isolated module or helper
+      contract.
+  integration:
+    status: selected
+    rationale: >-
+      One focused node:test reads the actual root and framework Markdown entry
+      surfaces in process and proves their cross-document routing contract
+      without claiming Agent behavior, invoking a CLI, or creating a bundle.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      This change does not alter a workflow-scale deterministic state chain or
+      lifecycle transition.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The claim concerns documentation discovery only and cannot prove or
+      require real Agent research, judgment, writing, or repair behavior.
+claims:
+  - id: agent-context-routing-document-contract
+    statement: >-
+      ACR-001 through ACR-004: all root and framework AGENTS.md/CLAUDE.md
+      behavior files plus README entry documents retain their Charter-then-context
+      route, the root route remains within Before Anything Else, and paired
+      behavior-file pre-read blocks stay synchronized,
+      framework routes point to the root rather than a local glossary, each
+      preserves its existing operating routes, places the framework README
+      pre-read before its `最快触发` callout and trigger rules, and retains the
+      framework pre-read non-entry boundary after that pre-read;
+      DPT_FRAMEWORK/CONTEXT.md remains absent; root docs/adr remains
+      discoverable; root CONTEXT.md
+      retains its three guidance canon links and non-authority vocabulary
+      boundaries plus active-bundle, Gate-versus-Chain, and Source-of-Record
+      distinctions, and
+      ADR 0001 remains discoverable from Context and retains its decision-record
+      shape with `Accepted` status, selected LLM/Markdown and Engine control
+      split, and current-behavior deferral.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-context-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
