@@ -39,6 +39,9 @@ describe('case-115 Subject runner invocation', () => {
 
     assert.match(runner, /buildIterativeInteractionSubjectInvocation/);
     assert.match(runner, /adapter_invocation/);
+    assert.match(runner, /codex-only-dpt-iterative-subject-deepseek-v2\.settings\.json/);
+    assert.match(runner, /ENABLE_TOOL_SEARCH: 'true'/);
+    assert.match(runner, /settings\?\.env\?\.ENABLE_TOOL_SEARCH !== 'true'/);
   });
 
   it('does not alter legacy non-selected Subject invocation policy', () => {

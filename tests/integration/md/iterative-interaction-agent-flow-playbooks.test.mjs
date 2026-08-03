@@ -60,8 +60,10 @@ describe('iterative interaction real-Agent playbooks', () => {
   });
 
   it('uses one Codex-only settings identity and preserves subject-session boundaries', () => {
-    assert.match(subjectRunner, /codex-only-dpt-iterative-subject-deepseek-v1\.settings\.json/);
+    assert.match(subjectRunner, /codex-only-dpt-iterative-subject-deepseek-v2\.settings\.json/);
     assert.match(subjectRunner, /if \(existsSync\(SETTINGS_PATH\)\)/);
+    assert.match(subjectRunner, /settings\?\.env\?\.ENABLE_TOOL_SEARCH !== 'true'/);
+    assert.match(subjectRunner, /ENABLE_TOOL_SEARCH: 'true'/);
     assert.match(subjectRunner, /flag: 'wx'/);
     assert.match(subjectRunner, /--setting-sources', ''/);
     assert.match(subjectRunner, /SUBJECT_TIMEOUT_MS = 3 \* 60 \* 1000/);

@@ -1,0 +1,83 @@
+schema_version: verification-routing/v1
+change: enable-selected-host-research-tools
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The selected Subject invocation/settings identity is a narrow deterministic
+      contract and needs coverage without launching an Agent or touching a private
+      settings file.
+  integration:
+    status: selected
+    rationale: >-
+      A fake Claude child can verify the shared launcher delivers its fixed
+      tool-discovery environment through the actual direct launch boundary without
+      an external provider call.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      This change alters host configuration only; the existing research-access
+      deterministic loop and Gate/state chain are unchanged.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      Only a fresh selected real Subject runtime can prove that the enabled surface
+      reaches a search result and same-URL fetch under the selected provider.
+claims:
+  - id: subject-settings-v2-enables-tool-discovery
+    statement: >-
+      The case-115 Subject runner retains its selected generic non-bypass invocation,
+      creates/uses the new tool-owned v2 settings identity, and declares
+      ENABLE_TOOL_SEARCH=true without starting a real Agent runtime.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/experiments_env/case-115-subject-runner.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: launcher-enables-owned-tool-discovery
+    statement: >-
+      LDC-002: a direct launcher child receives launcher-owned
+      ENABLE_TOOL_SEARCH=true when its parent inherits false, while caller extras
+      that attempt to select the setting fail before a child starts; provider routing,
+      credential isolation, and generic non-bypass argv remain unchanged.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/host-tools/claude-deepseek.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: selected-host-proves-available-search-fetch-path
+    statement: >-
+      In one fresh assurance-profile run whose explicit scope is only case-115 and
+      which remains selected under the declared 360000 ms / $1.00 envelope, the
+      independent real Subject records a WebSearch candidate and native same-URL
+      WebFetch or already permitted exact fallback, writes the existing available
+      profile observation, and reaches the existing HITL1 Gate. A visible tool name,
+      unavailable result, permission denial, selection omission, or budget boundary
+      is NOT_RUN for this available-path claim rather than success; this change makes
+      no automatic retry or discovery-queue progression.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wff_pre-research-repair/case-115-heavy-hitl1-research-access-probe.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

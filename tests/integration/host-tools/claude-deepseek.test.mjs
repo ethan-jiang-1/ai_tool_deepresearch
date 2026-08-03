@@ -9,6 +9,8 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 
+import { buildChildEnv } from '../../../DPT_FRAMEWORK/host_tools/lib/env-deepseek.mjs';
+
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..', '..', '..');
 const LAUNCHER_SRC = join(REPO_ROOT, 'DPT_FRAMEWORK', 'host_tools', 'claude-deepseek.mjs');
@@ -236,12 +238,24 @@ describe('claude-deepseek.mjs', () => {
     const r = runLauncher(d, [], {
       ANTHROPIC_BASE_URL: 'https://evil.com',
       ANTHROPIC_AUTH_TOKEN: 'sk-evil',
+      ENABLE_TOOL_SEARCH: 'false',
       CLAUDE_FAKE_RECORD_FILE: recordFile,
     });
     assert.equal(r.status, 0);
     const record = readRecord(d, recordFile);
     assert.equal(record.env.ANTHROPIC_BASE_URL, 'https://api.deepseek.com/anthropic');
     assert.notEqual(record.env.ANTHROPIC_AUTH_TOKEN, 'sk-evil');
+    assert.equal(record.env.ENABLE_TOOL_SEARCH, 'true');
+  });
+
+  it('rejects caller extras that attempt to select owned tool discovery', () => {
+    assert.throws(() => buildChildEnv({
+      DEEPSEEK_API_KEY: 'sk-root-key',
+      DEEPSEEK_ANTHROPIC_BASE_URL: 'https://api.deepseek.com/anthropic',
+      DEEPSEEK_MODEL: 'deepseek-v4-pro',
+    }, {
+      ENABLE_TOOL_SEARCH: 'false',
+    }), /extra env cannot override provider routing: ENABLE_TOOL_SEARCH/);
   });
 
   // 12

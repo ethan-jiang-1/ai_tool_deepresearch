@@ -35,7 +35,7 @@ const SETTINGS_PATH = join(
   homedir(),
   '.codex',
   'private',
-  'codex-only-dpt-iterative-subject-deepseek-v1.settings.json',
+  'codex-only-dpt-iterative-subject-deepseek-v2.settings.json',
 );
 
 const SUBJECTS = {
@@ -263,7 +263,10 @@ function parseEnv(path) {
 
 function ensureUniqueSettings() {
   if (existsSync(SETTINGS_PATH)) {
-    JSON.parse(readFileSync(SETTINGS_PATH, 'utf8'));
+    const settings = JSON.parse(readFileSync(SETTINGS_PATH, 'utf8'));
+    if (settings?.env?.ENABLE_TOOL_SEARCH !== 'true') {
+      throw new Error(`existing ${SETTINGS_PATH} does not enable tool search`);
+    }
     chmodSync(SETTINGS_PATH, 0o600);
     return 'reused';
   }
@@ -288,7 +291,7 @@ function ensureUniqueSettings() {
       ANTHROPIC_DEFAULT_HAIKU_MODEL: values.DEEPSEEK_HAIKU_MODEL || model,
       CLAUDE_CODE_SUBAGENT_MODEL: values.DEEPSEEK_SUBAGENT_MODEL || model,
       CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
-      ENABLE_TOOL_SEARCH: 'false',
+      ENABLE_TOOL_SEARCH: 'true',
       CLAUDE_CODE_AUTO_COMPACT_WINDOW: '1000000',
     },
   };

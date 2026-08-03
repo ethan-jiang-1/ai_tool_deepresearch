@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.68
+
+- The selected DeepSeek/Claude launcher now enables its owned tool-discovery setting
+  for direct, supervised, and fresh independent-Subject launches. This requests the
+  declared native research surface for an ordinary bounded probe; it does not itself
+  claim callable search/fetch or available research access.
+
 ## v0.67
 
 - Added the bounded `regression` Autorun profile: normal runs select only current matching-v2 deterministic `PASS+CLEAN` results within a fixed `480000` ms / `$3.00` / `$0.60` fast envelope, at most one case per `experiment` group.

@@ -91,7 +91,7 @@ export function buildChildEnv(vars, extraEnv = {}) {
   childEnv.CLAUDE_CODE_SUBAGENT_MODEL = model;
 
   childEnv.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1';
-  childEnv.ENABLE_TOOL_SEARCH = 'false';
+  childEnv.ENABLE_TOOL_SEARCH = 'true';
   childEnv.API_TIMEOUT_MS = '3000000';
 
   return childEnv;

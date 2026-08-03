@@ -41,6 +41,8 @@ The launcher is a pre-trigger host tool — it operates before Claude Code initi
 
 The shared launcher contract SHALL preserve the accepted `.env` parsing and provider isolation rules for both direct and supervised launch. Caller extras MAY supply lifecycle-only values such as a test executable or diagnostic path through an explicit test/internal API, but SHALL NOT override the repo-selected endpoint, credential, model aliases, or fixed isolation values. Neither direct nor supervised reports/logs SHALL expose credential material or a complete child environment.
 
+The shared launcher contract SHALL set its owned `ENABLE_TOOL_SEARCH` value to `true` after removing any inherited value. This setting makes the already selected Agent-native research tool-discovery surface requestable; it SHALL NOT establish that `WebSearch` or `WebFetch` is callable, permitted, returned content, or an available `research_access` observation.
+
 #### Scenario: Supervisor cannot override provider routing through inherited or extra env
 
 - **WHEN** the Supervisor process or a fixture supplies conflicting `ANTHROPIC_*`, `DEEPSEEK_*`, model or endpoint values
@@ -75,6 +77,18 @@ The shared launcher contract SHALL preserve the accepted `.env` parsing and prov
 - **WHEN** the root `.env` contains an unrelated key and shell command-substitution text
 - **THEN** the shared launcher contract does not execute the text
 - **AND** the unrelated key is not added to any Claude child environment from `.env`
+
+#### Scenario: inherited tool-discovery setting is replaced by launcher-owned enablement
+
+- **WHEN** a direct launcher, Supervisor, or fixture inherits `ENABLE_TOOL_SEARCH=false`
+- **THEN** the resulting production Claude child receives launcher-owned `ENABLE_TOOL_SEARCH=true`
+- **AND** the inherited value does not alter provider routing, permission mode, or the separate runtime evidence requirement for research access
+
+#### Scenario: caller extra cannot select tool discovery
+
+- **WHEN** a direct launcher, Supervisor, or fixture supplies `ENABLE_TOOL_SEARCH` through caller extras
+- **THEN** invocation-plan construction fails before a production Claude child is started
+- **AND** the rejected value does not alter provider routing, permission mode, or the separate runtime evidence requirement for research access
 
 ### Requirement: Endpoint URL validation
 
