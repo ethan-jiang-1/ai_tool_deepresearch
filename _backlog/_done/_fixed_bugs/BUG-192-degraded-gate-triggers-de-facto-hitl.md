@@ -7,6 +7,7 @@ bundle: dpt_rb_agentic-rd-org-delivery-systems-2026
 phase: wave0→wave1
 node: phases/phase-wave1.md
 related: BUG-099 (wave0 halt), BUG-188 (static wait), BUG-189 (degraded shared_ref_count_floor)
+status: closed_current_head_unobserved_behavior
 ---
 
 # BUG-192: Degraded gate → false choice → de-facto HITL
@@ -126,3 +127,16 @@ observation. Classify this card as a selected-host capability residual with no
 framework root admitted. Re-run only after a host exposes the required surface
 and a fresh degraded-handoff objective is authorized; no controller or skip
 path is admitted from either case.
+
+## Closure (2026-08-05)
+
+The dedicated C2 case was implemented and archived as
+`2026-08-05-add-degraded-handoff-requalification-case`. Its sole permitted
+assurance invocation stopped at Supervisor selection with
+`duration_prediction_unavailable`, before launch; the archive's
+`apply-ledger.md` retains that boundary. There is no native completion, Subject
+transcript/result, direct user-choice evidence, or behavior verdict. C3 is not
+admitted. This closes the historical report as a current-head unobserved
+behavior residual, not as proof of compliance or remediation. Reopen only with
+retained current degraded-handoff Subject evidence showing the prohibited
+choice or phase skip.

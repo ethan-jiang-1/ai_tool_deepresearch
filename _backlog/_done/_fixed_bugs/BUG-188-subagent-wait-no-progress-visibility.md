@@ -7,6 +7,7 @@ bundle: dpt_rb_agentic-rd-org-delivery-systems-2026
 phase: wave0
 node: phases/phase-wave0.md
 related: BUG-099 (historical wave0 halt), BUG-187 (HITL1 probe opacity)
+status: closed_host_owned_residual
 ---
 
 # BUG-188: Sub-agent wait — no progress visibility
@@ -153,3 +154,13 @@ current conclusion is a host UX residual: the host has display-only wait status,
 but this run did not establish an authoritative progress channel that the
 Engine or Agent Flow can consume. No DPT wait controller or silent-execution
 exception is admitted from this observation.
+
+## Closure (2026-08-05)
+
+The selected host disproved the card's completely-static-display claim by
+rendering a background-agent row, elapsed/token counters, a waiting indicator,
+and spinner updates. Its remaining display-only progress semantics are owned by
+the host, not a DPT Engine or Markdown contract. No DPT implementation change
+is admissible. Reopen only when the host owner provides a stable authoritative
+interface with task identity, timestamped progress/terminal events, a retained
+read API, and a stalled-versus-running owner.

@@ -1,6 +1,6 @@
 # Active Todos — 活跃 todo + 依赖链 + 执行顺序
 
-> 最后更新: 2026-07-22 | `_backlog/todos/` — 活跃 todo 在此，做完移入 [`../_done/_done_todos/`](../_done/_done_todos/)。
+> 最后更新: 2026-08-05 | `_backlog/todos/` — 活跃 todo 在此，做完移入 [`../_done/_done_todos/`](../_done/_done_todos/)。
 >
 > **本文件是所有活跃工作的中枢。** todo 没有编号，文件名即标识。完成后文件名不变，位置即状态。
 >
@@ -29,6 +29,7 @@
 | 2 | `todo-helper-not-tool.md` | **北星 / 实施延后** | 同事人格层 | 等问题闭环与 recovery 经真实 run 稳定后再抬 |
 | 3 | `todo-hooks-deferral.md` | **延后 / parked** | workflow boundary hooks | 仅在现有 Gate/inspect/reentry 有真实直接缺口时重启 |
 | 4 | `todo-context-reground.md` | **parked** | head re-ground | recovery 已 DONE；仅在现有 reload 不足的真实 case 下重启 |
+| 5 | `todo-topic-specific-research-effort.md` | **parked / policy exploration** | Topic 级 Wave0 evidence floor 与后续研究强度 | 先以真实 bundle 校准；不得把 `scope_role` 或全局 profile projection 偷作权重 |
 
 ### 本轮已移出活跃
 

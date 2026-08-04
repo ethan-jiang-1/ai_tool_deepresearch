@@ -177,13 +177,20 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-185 | 2026-07-31 | Current result/hash truth is ledger-first, without a sync-index path |
 | BUG-186 | 2026-07-31 | Submit-integrity preflight shares the formal-submit direct facts without becoming a Gate |
 | BUG-187 | 2026-08-03 | HITL1 capability probe opaque to user |
+| BUG-188 | 2026-08-05 | Closed host-owned residual: selected-host wait display is not static, but authoritative progress remains a host interface concern |
 | BUG-189 | 2026-08-03 | Shared reference count floor rejects Phase-Agent-authored reference files as delegated bypass |
 | BUG-190 | 2026-08-03 | `source_identity.kind` discriminator `submitted_work` is non-obvious |
 | BUG-191 | 2026-08-03 | Wave0 return-map projection requires O(N) per-source entries |
+| BUG-192 | 2026-08-05 | Current-head unobserved behavior: C2 stopped at Supervisor selection; no C3 admission or compliance claim |
+| BUG-193 | 2026-08-05 | Closed as BUG-188's Wave1 duplicate host-owned residual |
 | BUG-194 | 2026-08-03 | Wave1 enqueue rejects task cards with top-level `assignment_mode` |
+| BUG-195 | 2026-08-05 | Current-head no-reproduction: retained case-164 native PASS has a submitted per-claim `cache_trail_refs` binding |
+| BUG-196 | 2026-08-05 | Current-head no-reproduction: retained case-164 routes the first completed attempt to semantic `fail_and_replace`, not `return_to_actor` |
+| BUG-197 | 2026-08-05 | Current-head no-reproduction: retained case-164 records a failed primary followed by one submitted fresh-primary replacement |
+| BUG-198 | 2026-08-05 | Current-head unobserved behavior: C2 stopped at Supervisor selection; no C3 admission or compliance claim |
 | BUG-199 | 2026-08-03 | Final synthesis claims evidence-backed findings but cites zero evidence files |
 
-**Next available bug ID: BUG-200**
+**Next available bug ID: BUG-205**
 
 ---
 

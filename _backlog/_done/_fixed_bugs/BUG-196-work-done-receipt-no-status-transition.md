@@ -1,6 +1,6 @@
 # BUG-196: work_done receipt event does not transition work unit status from "claimed"
 
-**Status**: residual — current-head real replay reached semantic validation; no current deterministic root admitted
+**Status**: closed — current-head no-reproduction; reopen only with a retained current `return_to_actor` after `work_done`
 **Severity**: P1 — causes dry-submit to return return_to_actor even after sub-agent completion
 **Found**: 2026-08-03 during `agentic-rd-org-delivery-systems-2026` Wave1 execution
 
@@ -39,5 +39,19 @@ operation and a fresh primary replacement, which submitted successfully.
 The reported claimed-versus-working ambiguity was therefore not reproduced on
 the current head. The case also confirms that an Actor receipt and Engine
 acceptance remain separate facts; no new `work_done` lifecycle status or
-transition is admitted. This card remains an Actor/requalification residual,
-not a proven current Engine defect.
+transition is admitted.
+
+## Closure (2026-08-05)
+
+The retained native `PASS` is now locatable at
+`.exp-bundles/_reports/d2e8115d-8b97-4ccd-8cdb-3dc2ea101236.json`
+(`sha256: fe6f9f62a709e872759d4d94a762856c0f31c504df9a5189041b11d48d9f2390`)
+with completion
+`.exp-bundles/runs/d2e8115d-8b97-4ccd-8cdb-3dc2ea101236/001-case-164-heavy-direct-output-candidate-contract-84c19212-e049-4fb3-8644-87b7a4a3cdda/agent-experiment-completion.json`
+(`sha256: 9dfd25089683cab80524fb39e26c4551d2874bff5c84ef0f326c358603ee22dc`).
+The completion's source-playbook hash equals the current playbook hash
+`6f0b840aa31241f84e83bd19fa2c02e2a9bd4c925ccb40f2152d99fcf73df3c7`.
+The clean bundle records a semantic-contract failure for the first work unit
+and a submitted replacement rather than a terminal post-`work_done`
+`return_to_actor` outcome. Focused current regressions passed 76/76. Reopen
+only when retained current evidence shows the stated receipt/status boundary.

@@ -17,7 +17,6 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `residual-bug-systemic-remediation` | BUG-188/192/193/195--198 按实际 owner 收敛：先用一个 OpenSpec Change 修复 case-164 当前验证资产漂移并复核 Wave1 三卡；degraded Agent 行为仅在真实可观测重现后才进入第二个 Change；宿主 wait UI 不伪造为 DPT 缺陷。 | active evidence-gated remediation |
 | `experiment-progressive-follow-up-plan` | 已完成 progressive-run round 的条件性后续入口：selected-host research access、case-211/406 fresh real-actor requalification，以及 profile-led diagnostic/calibration refresh。每次必须重新获得 fresh selection 和独立预算；不自动运行。 | dormant intake（无 active run） |
 | `silent-autonomous-execution` | 承接 `BUG-099/104/106` 的历史 stop/context observation。已与现行 Chain/Queue/Work Unit swarm 对齐：silent poll-submit loop、actor probe/fallback 与 continuation cues 是既有 contract；三次 real-actor canary 仍为 host-scoped `NOT_RUN`。没有 current-head Phase-Agent reproduction，也没有 active OpenSpec change；仅在新的可审计 `agent_flow_e2e` observation 出现后重开。 | deferred observation（无固定 OpenSpec change） |
 
@@ -27,6 +26,7 @@
 
 | Plan | 关闭依据 |
 |------|----------|
+| `residual-bug-systemic-remediation` | CLS-048：C1、C2 均已 archive；BUG-195--197 有 retained native PASS/current-playbook hash 的 no-reproduction closure；BUG-188/193 以 host-owned boundary 关闭；BUG-192/198 的唯一 C2 assurance selection 未启动，故 C3 不适用且不作合规/修复声称。 |
 | `bug-187-199-systemic-remediation-plan` | CLS-047：C1-C4 已归档；E1 classified 为 host UX residual；E2 的 case-164 requalified BUG-195/196/197 without a current deterministic root, while case-232 reached Wave2 but honestly finalized `NOT_RUN` because the selected host exposed no real search capability. |
 
 ## 最近关闭 (2026-08-03)

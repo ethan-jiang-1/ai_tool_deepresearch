@@ -7,6 +7,7 @@ bundle: dpt_rb_agentic-rd-org-delivery-systems-2026
 phase: wave2 (post-wave1-deadlock degraded mode)
 node: phases/phase-wave2.md, subagents
 related: BUG-192 (degraded gate → contract violation), BUG-197 (wave1 deadlock trigger)
+status: closed_current_head_unobserved_behavior
 ---
 
 # BUG-198: Phase Agent performs direct WebSearch instead of sub-agent delegation
@@ -119,3 +120,16 @@ claim is possible. Classify this card as a selected-host capability residual,
 not a fixed behavior. Re-run only after the host state changes and a bounded
 degraded Wave2 objective is authorized; do not add search interception from
 these observations.
+
+## Closure (2026-08-05)
+
+The dedicated C2 case was implemented and archived as
+`2026-08-05-add-degraded-handoff-requalification-case`. Its sole permitted
+assurance invocation stopped at Supervisor selection with
+`duration_prediction_unavailable`, before launch; the archive's
+`apply-ledger.md` retains that boundary. There is no native completion, Subject
+transcript/result, direct `WebSearch`/`WebFetch` evidence, or behavior verdict.
+C3 is not admitted. This closes the historical report as a current-head
+unobserved behavior residual, not as proof of compliance or remediation.
+Reopen only with retained current degraded-Wave2 Subject tool evidence showing
+a prohibited direct research call.

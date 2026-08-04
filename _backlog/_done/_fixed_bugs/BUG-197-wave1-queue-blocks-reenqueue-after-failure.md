@@ -1,6 +1,6 @@
 # BUG-197: Queue system blocks re-enqueuing topics after work-unit failure, preventing gate repair
 
-**Status**: residual — current-head real replay recovered through fresh primary replacement; no current deterministic root admitted
+**Status**: closed — current-head no-reproduction; reopen only with a retained failed-primary replacement rejection
 **Severity**: P0 — blocks Wave1 gate pass; no recovery path exists
 **Found**: 2026-08-03 during `agentic-rd-org-delivery-systems-2026` Wave1 execution
 
@@ -49,5 +49,20 @@ ledger row; the replacement has exactly one submitted row and reaches `done`.
 
 The reported permanent duplicate-topic block and null replacement path were
 not reproduced on the current head. No queue bypass, degraded Gate floor, or
-new retry authority is admitted. Keep this card as a historical
-Actor/requalification residual pending the separate degraded-mode cases.
+new retry authority is admitted.
+
+## Closure (2026-08-05)
+
+The retained native `PASS` is now locatable at
+`.exp-bundles/_reports/d2e8115d-8b97-4ccd-8cdb-3dc2ea101236.json`
+(`sha256: fe6f9f62a709e872759d4d94a762856c0f31c504df9a5189041b11d48d9f2390`)
+with completion
+`.exp-bundles/runs/d2e8115d-8b97-4ccd-8cdb-3dc2ea101236/001-case-164-heavy-direct-output-candidate-contract-84c19212-e049-4fb3-8644-87b7a4a3cdda/agent-experiment-completion.json`
+(`sha256: 9dfd25089683cab80524fb39e26c4551d2874bff5c84ef0f326c358603ee22dc`).
+The completion's source-playbook hash equals the current playbook hash
+`6f0b840aa31241f84e83bd19fa2c02e2a9bd4c925ccb40f2152d99fcf73df3c7`.
+Its direct work-unit index and trace retain failed
+`case-164-primary-1` followed by submitted `case-164-primary-2`; the
+replacement has one submitted ledger row. Focused current regressions passed
+76/76. Reopen only on retained current evidence that this legal fresh-primary
+replacement path rejects.

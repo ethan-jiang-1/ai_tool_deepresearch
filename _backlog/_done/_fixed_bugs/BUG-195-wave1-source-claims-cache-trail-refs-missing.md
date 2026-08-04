@@ -1,6 +1,6 @@
 # BUG-195: dpt-evidence-extractor sub-agents omit cache_trail_refs in source_claims[]
 
-**Status**: residual — current-head real replay succeeded; no current deterministic root admitted
+**Status**: closed — current-head no-reproduction; reopen only with a retained current failing candidate
 **Severity**: P0 — blocks Wave1 work-unit submit for majority of topics
 **Found**: 2026-08-03 during `agentic-rd-org-delivery-systems-2026` Wave1 execution
 
@@ -43,5 +43,19 @@ and its native dry-submit followed by formal submit passed.
 This is evidence that the current contract can be followed and that one real
 Actor path succeeds. It is not evidence of universal Actor compliance, and the
 empty starter array leaves a possible guidance-legibility concern. No validator
-inference or schema change is admitted from this replay; keep the card as an
-Actor-delivery/requalification residual rather than marking it fixed.
+inference or schema change is admitted from this replay.
+
+## Closure (2026-08-05)
+
+The retained native `PASS` is now locatable at
+`.exp-bundles/_reports/d2e8115d-8b97-4ccd-8cdb-3dc2ea101236.json`
+(`sha256: fe6f9f62a709e872759d4d94a762856c0f31c504df9a5189041b11d48d9f2390`)
+with completion
+`.exp-bundles/runs/d2e8115d-8b97-4ccd-8cdb-3dc2ea101236/001-case-164-heavy-direct-output-candidate-contract-84c19212-e049-4fb3-8644-87b7a4a3cdda/agent-experiment-completion.json`
+(`sha256: 9dfd25089683cab80524fb39e26c4551d2874bff5c84ef0f326c358603ee22dc`).
+The completion's source-playbook hash equals the current playbook hash
+`6f0b840aa31241f84e83bd19fa2c02e2a9bd4c925ccb40f2152d99fcf73df3c7`.
+Its submitted ledger row has an accepted source claim with the declared
+`cache_trail_refs` path. Focused current regressions passed 76/76. This closes
+the historical report without claiming universal Actor compliance; reopen only
+on retained current evidence of the missing per-claim field.

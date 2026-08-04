@@ -7,6 +7,7 @@ bundle: dpt_rb_agentic-rd-org-delivery-systems-2026
 phase: wave1
 node: phases/phase-wave1.md
 related: BUG-188 (wave0 sibling — same root cause)
+status: closed_duplicate_host_owned_residual
 ---
 
 # BUG-193: Wave1 sub-agent wait — confirmed same pattern as BUG-188
@@ -86,3 +87,10 @@ native completion, the assigned `runtime-receipt.jsonl` was empty, and no
 This does not create a Wave1-specific framework root. BUG-193 remains a
 duplicate host UX residual under BUG-188; no DPT controller, progress state, or
 silent-execution exception is admitted.
+
+## Closure (2026-08-05)
+
+Closed as BUG-188's cross-phase duplicate. The same selected-host observation
+shows display-only wait status but no DPT-consumable progress authority, so a
+Wave1-specific DPT route would duplicate the host-owned boundary. Reopen only
+with the authoritative host progress interface required by BUG-188's closure.
