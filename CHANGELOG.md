@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.72
+
+- HITL1 now explains its existing bounded research-access probe before it runs,
+  uses the fixed neutral query `site:wikipedia.org "Internet protocol suite"`,
+  and presents an exact Chinese available/unavailable result after the direct
+  `research_access` observation.
+- The result is not a HITL1 Gate verdict: the normal silent-execution exit is
+  still emitted only after the existing Gate passes, while unavailable access
+  preserves the recorded HITL1 choice and returns to the same legal boundary.
+- The contract adds framework Markdown only. It neither suppresses nor proves
+  selected-host-native tool/error rendering or real Agent adherence; focused
+  static integration coverage proves the text and ordering contract only.
+
 ## v0.71
 
 - A rejected Wave projection now identifies the exact `source_identity.kind`

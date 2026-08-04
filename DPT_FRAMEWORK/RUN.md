@@ -1,13 +1,24 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.71**
+> **DPT_FRAMEWORK v0.72**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.71
+## Current Release: v0.72
+
+- HITL1 now explains its existing bounded research-access probe before it runs,
+  uses the fixed neutral query `site:wikipedia.org "Internet protocol suite"`,
+  and presents an exact Chinese available/unavailable result after the direct
+  `research_access` observation.
+- That result is not a Gate verdict: silent autonomous execution is announced
+  only after the existing HITL1 Gate passes. Unavailable access preserves the
+  recorded choice and follows the same external-boundary/probe/Gate path.
+- This is framework Markdown communication only. It does not suppress or prove
+  selected-host-native tool/error rendering or real Agent behavior; the focused
+  static integration test proves only the text and ordering contract.
 
 - A rejected Wave projection now reports the exact `source_identity.kind` JSON
   Pointer, raw schema discriminator vocabulary, and the one value legal for

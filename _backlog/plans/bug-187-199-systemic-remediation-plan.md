@@ -1,20 +1,20 @@
 ---
 title: BUG-187-199 systemic remediation plan
-status: p2_c1_c2_c3_archived_c4_proposed_polished_apply_pending_e1_e2_pending
+status: p2_c1_c2_c3_archived_c4_applied_sync_governance_closeout_complete_pending_archive_e1_e2_pending
 current_stage: P2
 created: 2026-08-04
-revised: 2026-08-04
+revised: 2026-08-05
 source_bugs: BUG-187, BUG-188, BUG-189, BUG-190, BUG-191, BUG-192, BUG-193, BUG-194, BUG-195, BUG-196, BUG-197, BUG-198, BUG-199
 current_execution_model: chain_queue_work_unit
 active_change: legible-hitl1-capability-probe
-active_change_status: proposal_complete_polished_apply_pending_2026-08-04
+active_change_status: applied_spec_sync_governance_closeout_complete_pending_archive_2026-08-05
 completed_change: surface-actionable-contract-feedback
 completed_change_status: archived_2026-08-04
 previous_completed_change: traceable-final-delivery-backing
 previous_completed_change_status: archived_2026-08-04
 earlier_completed_change: materialize-wave0-submitted-references-and-batch-projections
 earlier_completed_change_status: archived_2026-08-04
-target_code_authorization: proposal_complete_target_edits_require_apply
+target_code_authorization: c4_target_edits_applied_spec_sync_governance_closeout_complete_pending_archive
 ---
 
 # BUG-187-199 Systemic Remediation Plan
@@ -51,7 +51,7 @@ OpenSpec change candidates and two evidence tracks:
 | C1. Wave0 submitted-evidence materialization at scale | [BUG-189](../bugs/BUG-189-shared-ref-count-floor-delegated-bypass.md), [BUG-191](../bugs/BUG-191-wave0-projection-ordinal-scaling.md) | Archived C1 deterministic correction for the source-only submitted-backing and batch-deferred contract. | C1 and C3 are complete. Real Actor observation remains E2. |
 | C2. Direct Agent contract feedback | [BUG-190](../bugs/BUG-190-source-identity-kind-naming-obscure.md), [BUG-194](../bugs/BUG-194-wave1-assignment-mode-payload-location.md), conditionally [BUG-195](../bugs/BUG-195-wave1-source-claims-cache-trail-refs-missing.md) | [`2026-08-04-surface-actionable-contract-feedback`](../../openspec/changes/archive/2026-08-04-surface-actionable-contract-feedback/) archived the two direct feedback loops after deterministic verification, spec sync, governance, and closeout; BUG-195 remains an E2 real-Actor observation boundary. | C2 is complete; BUG-195 still needs a retained real generated `task.md` if it reactivates. |
 | C3. Traceable Final delivery | [BUG-199](../bugs/BUG-199-synthesis-no-evidence-citations.md) | [`2026-08-04-traceable-final-delivery-backing`](../../openspec/changes/archive/2026-08-04-traceable-final-delivery-backing/) archived the bounded Final Evidence Map and pre-persist submitted-backing admission after sync, verification, governance, and closeout. | C3 is complete. Semantic adequacy and actual Agent guidance-following remain Agent/human or future E2 observation concerns. |
-| C4. Legible HITL1 capability probe | [BUG-187](../bugs/BUG-187-hitl1-capability-probe-opaque-to-user.md) | A valid capability probe is confusing because its purpose and result are not presented as a stable user-facing contract. | The controllable Markdown/Agent-facing output boundary, distinct from host-rendered tool logs. |
+| C4. Legible HITL1 capability probe | [BUG-187](../bugs/BUG-187-hitl1-capability-probe-opaque-to-user.md) | `legible-hitl1-capability-probe` has applied the bounded Phase/brief communication contract, passed focused static Markdown verification, and completed spec sync, governance, and closeout; archive remains pending. | A separately authorized retained HITL1 observation for selected-host rendering; static proof does not establish host or real-Actor behavior. |
 | E1. Host wait visibility | [BUG-188](../bugs/BUG-188-subagent-wait-no-progress-visibility.md), [BUG-193](../bugs/BUG-193-wave1-subagent-wait-no-progress-sibling.md) | Host/TUI observation; BUG-193 is a Wave1 duplicate of BUG-188, not a second framework root. | A selected-host capability observation showing whether wait can render progress without violating `stop: no`. |
 | E2. Current-head real Actor requalification | [BUG-192](../bugs/BUG-192-degraded-gate-triggers-de-facto-hitl.md), [BUG-198](../bugs/BUG-198-phase-agent-direct-search-no-subagent.md), replay [BUG-195](../bugs/BUG-195-wave1-source-claims-cache-trail-refs-missing.md)/[BUG-196](../bugs/BUG-196-work-done-receipt-no-status-transition.md)/[BUG-197](../bugs/BUG-197-wave1-queue-blocks-reenqueue-after-failure.md) | Historical Actor behavior must not be converted into a new controller or status from static code alone. | An explicitly authorized, readable current-head bundle and bounded `agent_flow_e2e` observation. |
 
@@ -409,16 +409,24 @@ the framework cannot control.
   verification plan are complete; strict OpenSpec validation and plan-mode
   verification routing pass. The proposal assigns a fixed query, exact
   non-decision/result wording, v0.72 release target, glossary boundary, and no
-  host-rendering promise. Target code remains read-only until Apply.
+  host-rendering promise. Target code was subsequently modified only through
+  the approved Apply task list.
 - [x] Write a C4 proposal with the fixed query, notice, success/unavailable
   result, and the no-new-decision rule. The active proposal is polished and
-  ready for its plan review / Apply entry; it makes no current real-host or
-  real-Actor behavior claim.
+  then applied with its plan review. It makes no current real-host or real-Actor
+  behavior claim.
+- [x] Apply the C4 Markdown contract through
+  [`legible-hitl1-capability-probe`](../../openspec/changes/legible-hitl1-capability-probe/):
+  the brief owns exact Chinese notice/result text; the Phase uses the fixed
+  neutral query and places the direct observation result before the existing
+  HITL1 Gate; the normal silent exit remains Gate-pass-only. Focused static
+  Markdown coverage passed 9/9 and verification-routing assets passed. This is
+  not real-host rendering or real-Actor proof.
 - [ ] Verify the revised control surface against a retained real HITL1
   observation when a run is separately authorized; static Markdown inspection
   alone cannot prove host rendering behavior.
-- [ ] Archive C4 and classify any remaining raw tool-log visibility as a host
-  residual rather than a framework regression.
+- [ ] Archive C4 through the governed finalizer. Classify any remaining raw
+  tool-log visibility as a host residual rather than a framework regression.
 
 ## 9. E1: Host Wait Visibility
 

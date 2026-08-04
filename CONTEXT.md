@@ -282,6 +282,24 @@ _Avoid_: work-unit deferral, source absence, Gate verdict
 
 ## Interaction Model
 
+**HITL1 decision**:
+The recorded research semantic choice made from the user's clear HITL1
+acceptance or correction. It is not a research-access observation, Gate verdict,
+or host permission grant.
+_Avoid_: capability result, ordinary later chat, runtime access fact
+
+**Research-access observation**:
+The direct result of HITL1's bounded search/fetch capability probe, recorded in
+the accepted profile owner and consumed by the existing Gate. It is not a user
+decision, research evidence, host permission grant, or Gate verdict.
+_Avoid_: HITL1 decision, evidence, silent-execution completion
+
+**Selected-host-native rendering**:
+The selected host's presentation of native tool calls, policy/transport errors,
+or permitted shell output. It is a host display fact, not a framework message,
+research-access observation, or framework verdict.
+_Avoid_: framework-controlled UI, probe result, Gate verdict
+
 **HITL1**:
 The first in-run interactive checkpoint, where the user aligns the research
 direction, profile, or topics before autonomous research proceeds.

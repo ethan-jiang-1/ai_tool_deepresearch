@@ -41,6 +41,36 @@ authority: exact-text
 
 <!-- TEMPLATE END -->
 
+## 能力检查沟通
+
+@impl HIU-002, PRP-002
+
+### 探测前提示
+
+<!-- TEMPLATE START -->
+
+在进入静默研究前，我会做一次快速的中性能力检查，确认搜索和网页抓取是否可用。这不是当前研究内容，也不需要你作出新的决定。
+
+<!-- TEMPLATE END -->
+
+### 访问可用
+
+<!-- TEMPLATE START -->
+
+研究访问能力已确认。我会先完成现有 HITL1 检查；通过后将进入静默自主执行。
+
+<!-- TEMPLATE END -->
+
+### 访问不可用
+
+<!-- TEMPLATE START -->
+
+当前环境尚不能完成搜索和网页抓取能力检查。已记录的 HITL1 选择仍然有效；这不是新的研究决定。
+
+<!-- TEMPLATE END -->
+
+这些模板只描述 framework 的用户消息。它们不得承诺隐藏、替代、重述为成功，或以其他方式控制 selected-host-native 的工具调用、policy failure、transport/security error 或 permitted shell output。
+
 ## 出口语
 
 @impl SWE-001

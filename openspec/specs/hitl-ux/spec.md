@@ -114,6 +114,20 @@ Agent 在 HITL1 入口 SHALL 使用 recommendation-first 的预设 prompt 文本
 
 自然语言映射 SHALL 只发生在当前 accepted HITL1 `stop: yes` decision boundary 内。用户的清楚接受或修正 SHALL 直接成为 HITL1 决定；Agent SHALL NOT 再追加 blanket second confirmation。只有存在实质歧义、真实成本/权限扩张或不可逆风险时，Agent 才 SHALL 请求最小确认。普通非 HITL 消息不因本 requirement 获得 profile/topic 持久化或 mutation authority。
 
+`brief/hitl1.md` SHALL also be the exact-text owner for the user-facing communication around the existing research-access probe that follows the recorded HITL1 decision. Before the probe starts, the brief SHALL provide this exact Chinese notice:
+
+> 在进入静默研究前，我会做一次快速的中性能力检查，确认搜索和网页抓取是否可用。这不是当前研究内容，也不需要你作出新的决定。
+
+After the existing probe records `research_access.status: available`, the brief SHALL provide this exact Chinese result:
+
+> 研究访问能力已确认。我会先完成现有 HITL1 检查；通过后将进入静默自主执行。
+
+After the existing probe records `research_access.status: unavailable`, the brief SHALL provide this exact Chinese result:
+
+> 当前环境尚不能完成搜索和网页抓取能力检查。已记录的 HITL1 选择仍然有效；这不是新的研究决定。
+
+PRP-002 controls when the Phase renders these templates: the notice is before the one bounded search, and the corresponding result is directly after the observation and before the existing HITL1 Gate. The available result SHALL NOT claim that the Gate has passed. The existing silent-execution exit remains available only after that Gate passes. The unavailable result SHALL preserve recorded choices and keep the Agent at the existing smallest external boundary plus the same probe/Gate path; it SHALL NOT ask the user to repeat their recorded choices or create another interaction checkpoint. These templates are framework Markdown outputs only. They SHALL NOT promise to hide, replace, summarize as success, or otherwise control selected-host-native tool calls, policy failures, transport/security errors, or permitted shell output.
+
 must-answer 收集 SHALL 满足：
 - Agent SHALL 基于原始问题先提出拟定 must-answer；用户可以直接接受或用自然语言修正；
 - 如果用户不确定或说“先帮我拆问题”，Agent SHALL 基于原始问题和当前对话提出一组具体、可接受或可修改的 must-answer 问题；
@@ -155,9 +169,29 @@ must-answer 收集 SHALL 满足：
 - **THEN** Agent SHALL 只询问区分该语义所需的最小问题
 - **AND** 澄清后 Agent SHALL 记录决定并自行执行后续机械链
 
+#### Scenario: Recorded decision is followed by an explained non-decision check
+- **WHEN** the user has made and the Agent has recorded a valid HITL1 research decision
+- **THEN** the Agent SHALL present the exact pre-probe notice before the research-access search/fetch sequence
+- **AND** the notice SHALL state that the action is not research content and needs no new user decision
+
+#### Scenario: Direct available result is not a Gate verdict
+- **WHEN** the existing probe records `research_access.status: available`
+- **THEN** the Agent SHALL present the exact available result before the existing HITL1 Gate
+- **AND** that result SHALL say only that the remaining HITL1 check will run
+- **AND** it SHALL NOT announce silent autonomous execution until the Gate passes
+
+#### Scenario: Unavailable access does not reopen HITL1 semantics
+- **WHEN** the existing probe records `research_access.status: unavailable`
+- **THEN** the Agent SHALL present the exact unavailable result and preserve the recorded HITL1 choices
+- **AND** it SHALL keep the existing same-probe/Gate repair path rather than ask for another research decision or create a new checkpoint
+
+#### Scenario: Selected-host-native rendering remains an honest residual
+- **WHEN** the selected host renders a native tool call, policy failure, transport/security error, or permitted fallback output during the probe
+- **THEN** the framework's notice/result contract SHALL remain additive and SHALL NOT claim that the host output is hidden, suppressed, or a framework success/failure verdict
+
 #### Scenario: HITL1 exit sets silent phase expectation
-- **WHEN** Agent 完成 HITL1（用户决定已记录且 gate pass）
-- **THEN** Agent SHALL 在推进到 setup 之前告知用户：
+- **WHEN** Agent completes HITL1 (the user decision is recorded and the Gate passes)
+- **THEN** Agent SHALL, after the direct available result and before advancing to setup, use the existing exit text to tell the user:
   - 即将进入静默自主执行阶段（Setup → Seed Topics → Wave 0 → Wave 1 → Wave 2）；
   - 时长取决于研究范围，可能几十分钟到一两天；
   - 框架不会主动浮出报告进度、普通错误、idle 或请求继续确认，Agent 会沿现有合法路径自行处理；

@@ -8,7 +8,7 @@ phase: hitl1
 node: phases/phase-hitl1.md
 ---
 
-# BUG-176: HITL1 capability probe opaque to user
+# BUG-187: HITL1 capability probe opaque to user
 
 ## 现象
 
@@ -90,3 +90,23 @@ search/fetch surface 做一次 neutral capability-only search，确认工具确�
 4. **分离 plumbing 和 user decision**：考虑将 `research_access` 移到
    `rb_status.json` 或 `_diagnostics/` 中，而不是和用户的 HITL 决策放在
    `rb_profile.yaml` 同一文件。或者至少给这个 section 加一个 `# 以下为框架自动探测结果，非用户决策` 注释。
+
+## C4 实施状态（2026-08-05）
+
+`legible-hitl1-capability-probe` 已完成 target implementation、accepted-spec
+sync、project governance 和 closeout review；governed archive 仍 pending。它在
+`brief/hitl1.md` 增加固定的中文 probe 前提示与
+available/unavailable 结果，在 `phase-hitl1.md` 固定
+`site:wikipedia.org "Internet protocol suite"` query，并把结果严格放在
+`research_access` observation 后、既有 HITL1 Gate 前；静默出口仍只在 Gate
+通过后出现。
+
+Focused deterministic evidence: `node --test
+tests/integration/md/phase-hitl1-research-access.test.mjs` passed 9/9 and the
+change's verification-routing asset check passed. This proves the Phase/brief
+Markdown wording and ordering contract only. It does not prove selected-host
+tool/error rendering, actual provider availability, or real Agent adherence.
+
+Remaining boundary: a separately authorized retained HITL1 observation is still
+required to classify raw native tool-log visibility. C4 must still complete the
+governed archive transition before this card can be closed.

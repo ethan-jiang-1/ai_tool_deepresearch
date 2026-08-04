@@ -1,11 +1,13 @@
-// @impl WNC-001, PRP-002, PRP-005
+// @impl WNC-001, PRP-002, PRP-005, HIU-002
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parse as parseYaml } from 'yaml';
 
 const PHASE_PATH = new URL('../../../DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl1.md', import.meta.url);
+const BRIEF_PATH = new URL('../../../DPT_FRAMEWORK/workflows/nodes/brief/hitl1.md', import.meta.url);
 const markdown = readFileSync(PHASE_PATH, 'utf-8');
+const brief = readFileSync(BRIEF_PATH, 'utf-8');
 const frontmatter = parseYaml(markdown.match(/^---\n([\s\S]*?)\n---/)?.[1] || '');
 
 describe('phase-hitl1 research-access contract', () => {
@@ -78,6 +80,39 @@ describe('phase-hitl1 research-access contract', () => {
     assert.match(markdown, /保留已记录的 `research_profile`、`root_must_answer_set`、style params 和 `hitl1\.status: recorded`/);
     assert.match(markdown, /重跑本节同一 bounded probe 和同一 gate/);
     assert.match(markdown, /不得进入 Setup/);
+  });
+
+  it('makes the bounded capability probe a legible non-decision contract', () => {
+    const probe = markdown.slice(
+      markdown.indexOf('### 3d. Research Access Probe'),
+      markdown.indexOf('## 4. Expected Artifacts'),
+    );
+    const gatePass = markdown.slice(
+      markdown.indexOf('## 6. On Gate Pass'),
+      markdown.indexOf('## 7. On Gate Fail'),
+    );
+    const notice = '在进入静默研究前，我会做一次快速的中性能力检查，确认搜索和网页抓取是否可用。这不是当前研究内容，也不需要你作出新的决定。';
+    const available = '研究访问能力已确认。我会先完成现有 HITL1 检查；通过后将进入静默自主执行。';
+    const unavailable = '当前环境尚不能完成搜索和网页抓取能力检查。已记录的 HITL1 选择仍然有效；这不是新的研究决定。';
+
+    for (const message of [notice, available, unavailable]) {
+      assert.ok(brief.includes(message), `missing exact capability message: ${message}`);
+    }
+
+    const noticeIndex = probe.indexOf('能力检查沟通 > 探测前提示');
+    const queryIndex = probe.indexOf('site:wikipedia.org "Internet protocol suite"');
+    const resultIndex = probe.indexOf('写入 final `research_access` observation 后、运行 `hitl1-recorded` Gate 前');
+    assert.ok(noticeIndex >= 0 && queryIndex > noticeIndex, 'notice must precede the fixed search query');
+    assert.ok(resultIndex > queryIndex, 'direct result instruction must follow the bounded probe');
+    assert.match(probe, /`status: available` 输出「能力检查沟通 > 访问可用」/);
+    assert.match(probe, /`status: unavailable` 输出「能力检查沟通 > 访问不可用」/);
+    assert.match(probe, /不是 Gate verdict/);
+    assert.match(probe, /`available` 不得提前发送「出口语」/);
+    assert.match(gatePass, /仅在 `hitl1-recorded` Gate 通过后/);
+    assert.match(gatePass, /「访问可用」结果不是出口语/);
+    assert.match(probe, /不得要求用户重复 HITL1 choices/);
+    assert.match(brief, /不得承诺隐藏、替代、重述为成功[\s\S]*selected-host-native/);
+    assert.match(probe, /不得承诺隐藏、替代、重述为成功[\s\S]*selected-host-native/);
   });
 
   it('forbids fake capability and evidence leakage', () => {
