@@ -8,6 +8,7 @@ import { PlaybookFrontmatterSchema } from '../../../DPT_FRAMEWORK/schema/contrac
 const CASE_PATH = 'experiments_playbook/exp_evidence-extraction/case-164-heavy-direct-output-candidate-contract.md';
 const MANIFEST_PATH = 'experiments_playbook/PLAYBOOK_MANIFEST.md';
 const SUBJECT_RUNNER_PATH = 'experiments_env/shared/run-iterative-interaction-subject.mjs';
+const CHILD_ACTOR = 'dpt-evidence-extractor child actor';
 
 function read(path) {
   return readFileSync(path, 'utf8');
@@ -17,6 +18,32 @@ function frontmatter(markdown) {
   const match = markdown.match(/^---\n([\s\S]*?)\n---/);
   assert.ok(match, 'case-164 frontmatter exists');
   return PlaybookFrontmatterSchema.parse(parseYaml(match[1]));
+}
+
+function readCaseMessages(runner, caseId) {
+  const entryStart = runner.indexOf(`  '${caseId}': {`);
+  assert.notEqual(entryStart, -1, `case ${caseId} runner entry exists`);
+
+  const nextEntryStart = runner.indexOf("\n  '", entryStart + 1);
+  assert.notEqual(nextEntryStart, -1, `case ${caseId} has a next runner entry`);
+  const entry = runner.slice(entryStart, nextEntryStart);
+  const messages = entry.match(/messages: \[\n([\s\S]*?)\n    \],\n    tools:/);
+  assert.ok(messages, `case ${caseId} messages array exists`);
+
+  return {
+    entry,
+    messages: [...messages[1].matchAll(/^      '([^']*)',?$/gm)].map((match) => match[1]),
+  };
+}
+
+function assertCase164MessageProtocol(messages) {
+  assert.equal(messages.length, 3, 'case 164 has exactly three Subject turns');
+
+  const childTurns = messages.filter((message) => message.includes(CHILD_ACTOR));
+  assert.equal(childTurns.length, 2, 'case 164 has exactly two child-bearing turns');
+  assert.match(messages[0], new RegExp(CHILD_ACTOR), 'turn 1 requires the first child actor');
+  assert.doesNotMatch(messages[1], new RegExp(CHILD_ACTOR), 'turn 2 forbids a child actor');
+  assert.match(messages[2], new RegExp(CHILD_ACTOR), 'turn 3 requires the second child actor');
 }
 
 describe('case-164 real-Agent candidate contract', () => {
@@ -61,11 +88,34 @@ describe('case-164 real-Agent candidate contract', () => {
     assert.match(markdown, /do not read private child transcript files, delete evidence, restart setup/i);
     assert.match(markdown, /Never repair or restart the case after a nonzero adapter status/);
     const runner = read(SUBJECT_RUNNER_PATH);
-    const case164 = runner.slice(runner.indexOf("'164':"), runner.indexOf("'232':"));
-    assert.match(case164, /messages: \[/);
-    assert.equal((case164.match(/dpt-evidence-extractor child actor/g) || []).length, 2);
+    const { entry: case164, messages } = readCaseMessages(runner, '164');
+    assert.doesNotMatch(case164, /case-225-child-evidence/);
+    assertCase164MessageProtocol(messages);
     assert.match(case164, /afterTurn: observeCase164Boundary/);
     assert.match(runner, /case-164 turn 2 changed first-child canonical output bytes/);
+  });
+
+  it('rejects malformed case-164 message protocols without changing runtime sources', () => {
+    const { messages } = readCaseMessages(read(SUBJECT_RUNNER_PATH), '164');
+
+    assert.throws(
+      () => assertCase164MessageProtocol(messages.slice(0, 2)),
+      /exactly three Subject turns/,
+    );
+
+    const childInTurn2 = [...messages];
+    childInTurn2[1] = `${childInTurn2[1]} Invoke one ${CHILD_ACTOR}.`;
+    assert.throws(
+      () => assertCase164MessageProtocol(childInTurn2),
+      /exactly two child-bearing turns/,
+    );
+
+    const onlyOneChildTurn = [...messages];
+    onlyOneChildTurn[2] = onlyOneChildTurn[2].replace(CHILD_ACTOR, 'delegated actor');
+    assert.throws(
+      () => assertCase164MessageProtocol(onlyOneChildTurn),
+      /exactly two child-bearing turns/,
+    );
   });
 
   it('retains native rejection and hash boundaries without fixture authority', () => {

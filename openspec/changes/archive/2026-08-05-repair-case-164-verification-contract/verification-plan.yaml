@@ -26,10 +26,11 @@ test_classes:
 claims:
   - id: case-164-ordered-subject-child-protocol
     statement: >-
-      The case-164 integration contract verifies the runner's ordered protocol
-      has exactly three Subject messages, requires a real child actor in turns
-      1 and 3 only, and preserves the replacement-only second turn without
-      relying on repeated prose elsewhere in the runner slice.
+      The test-local case-164 integration contract isolates the runner's
+      case-164 entry before extracting its ordered protocol, then verifies
+      exactly three Subject messages, a real child actor in turns 1 and 3
+      only, and the replacement-only second turn without counting later case
+      definitions; synthetic message arrays prove the negative boundaries.
     test_class: integration
     proof_subject: deterministic_contract
     asset:

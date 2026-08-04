@@ -15,9 +15,12 @@ their actual authority owners, not by treating every historical observation as
 a current DPT Engine defect.
 
 All repository behavior or verification-asset changes use the full OpenSpec
-`propose -> apply -> archive` lifecycle. This plan authorizes neither target
-edits nor a standing experiment/retry loop. The total budget is **at most two
-focused OpenSpec changes**:
+`propose -> polish -> apply -> archive` lifecycle. `polish` means running
+`$polish-openspec-change` immediately after all proposal artifacts exist and
+before `/opsx:apply`; it must earn a `ready for apply` result from two distinct
+planning-review passes. This plan authorizes neither target edits nor a standing
+experiment/retry loop. The total budget is **at most two focused OpenSpec
+changes**:
 
 1. C1 is immediately admissible because a current deterministic test is red.
 2. C2 is conditional on one retained current-head real-Agent reproduction of
@@ -169,18 +172,26 @@ as an Engine defect.
   `repair-case-164-verification-contract` with `skip_specs: true`; proposal,
   task list, and verification-routing plan pass `openspec validate --strict`
   and routing-plan validation.
-- [ ] 8.2.2 Enter `/opsx:apply` for C1. Complete its plan review and
-  verification-routing pre-edit task before touching the target test.
-- [ ] 8.2.3 Replace the raw phrase-count assertion with a structural check of
+- [x] 8.2.2 Run `$polish-openspec-change` for C1 immediately after proposal
+  generation. Require two distinct planning-review passes and a `ready for
+  apply` outcome before `/opsx:apply`; record any resolved planning findings in
+  the C1 artifacts rather than leaving them only in chat.
+- [x] 8.2.3 Entered `/opsx:apply` for C1 after task 8.2.2; completed its plan
+  review and verification-routing pre-edit task before touching the target
+  test.
+- [x] 8.2.4 Replaced the raw phrase-count assertion with a structural check of
   exactly three ordered Subject messages, with real-child instructions in
   turns 1 and 3 only. Preserve the runner, playbook, native evidence, and
   `NOT_RUN` boundary unless a source inconsistency is proven.
-- [ ] 8.2.4 Add negative regression coverage for a missing third turn, a
+- [x] 8.2.5 Added negative regression coverage for a missing third turn, a
   child instruction in turn 2, and any incorrect count of child-bearing
   turns.
-- [ ] 8.2.5 Run C1's selected tests, verification-routing asset validation,
+- [x] 8.2.6 Run C1's selected tests, verification-routing asset validation,
   strict OpenSpec validation, requirement governance, main-spec governance,
-  and closeout review; archive C1 only after all tasks pass.
+  and closeout review. All C1 tasks pass and the change is ready to archive.
+- [x] 8.2.7 Archived C1 through `/opsx:archive` as
+  `2026-08-05-repair-case-164-verification-contract`, following the governed
+  archive transition, before starting the BUG-195--197 disposition.
 
 ### 8.3 BUG-195, BUG-196, BUG-197 Disposition
 
@@ -219,11 +230,15 @@ as an Engine defect.
   choice/phase skip or a Phase-Agent direct research search/fetch. Otherwise
   mark this branch not applicable and close BUG-192/198 as current-head
   unobserved behavior residuals.
-- [ ] 8.5.2 If C2 is admitted, use one focused OpenSpec proposal to reinforce
+- [ ] 8.5.2 After C2 proposal artifacts are complete, run
+  `$polish-openspec-change` before any apply work. Require two distinct passes,
+  `ready for apply`, and change-artifact capture of every resolved finding.
+- [ ] 8.5.3 If C2 is admitted and polished, use one focused OpenSpec proposal
+  to reinforce
   the direct legal action after degraded handoff and the existing delegated
   search boundary. Do not add a chat observer, tool interceptor, new state,
   automatic continuation controller, or new skip route.
-- [ ] 8.5.3 Apply, verify, and archive C2 through its approved task list, then
+- [ ] 8.5.4 Apply, verify, and archive C2 through its approved task list, then
   rerun the same bounded real-Agent observation before claiming behavioral
   remediation.
 
