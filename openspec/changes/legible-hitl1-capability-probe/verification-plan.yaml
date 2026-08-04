@@ -1,0 +1,36 @@
+schema_version: verification-routing/v1
+change: legible-hitl1-capability-probe
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: This change adds no JavaScript helper, schema, or pure deterministic evaluator.
+  integration:
+    status: selected
+    rationale: The Phase and exact-text brief form one Agent-facing Markdown boundary whose stable wording and ordering can be checked deterministically without claiming host or Agent behavior.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The existing lifecycle, profile observation, and HITL1 Gate chain are unchanged; no workflow-scale deterministic transition requires a new proof asset.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: Static Markdown coverage cannot prove actual selected-host rendering or real-Agent adherence. A retained real HITL1 observation remains separately authorized C4/E2 work, not a claim in this change.
+claims:
+  - id: hitl1-probe-communication-contract-is-stable
+    statement: >-
+      PRP-002 and HIU-002: the Phase renders the exact non-decision capability-check
+      notice before its one fixed neutral query, retains the existing bounded probe and
+      same-Gate path, renders the corresponding direct result after the observation and
+      before the Gate, and exposes the silent exit only after Gate pass. The exact-text
+      brief makes no host-output suppression promise. This claim proves only the
+      deterministic Markdown contract, not host rendering or real-Agent behavior.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/phase-hitl1-research-access.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

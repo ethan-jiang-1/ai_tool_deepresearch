@@ -1,20 +1,20 @@
 ---
 title: BUG-187-199 systemic remediation plan
-status: p2_c1_c2_c3_archived_c4_e1_e2_pending
+status: p2_c1_c2_c3_archived_c4_proposed_polished_apply_pending_e1_e2_pending
 current_stage: P2
 created: 2026-08-04
 revised: 2026-08-04
 source_bugs: BUG-187, BUG-188, BUG-189, BUG-190, BUG-191, BUG-192, BUG-193, BUG-194, BUG-195, BUG-196, BUG-197, BUG-198, BUG-199
 current_execution_model: chain_queue_work_unit
-active_change: none
-active_change_status: no_active_change_c1_c2_c3_archived_2026-08-04
+active_change: legible-hitl1-capability-probe
+active_change_status: proposal_complete_polished_apply_pending_2026-08-04
 completed_change: surface-actionable-contract-feedback
 completed_change_status: archived_2026-08-04
 previous_completed_change: traceable-final-delivery-backing
 previous_completed_change_status: archived_2026-08-04
 earlier_completed_change: materialize-wave0-submitted-references-and-batch-projections
 earlier_completed_change_status: archived_2026-08-04
-target_code_authorization: no_active_target_change_c1_c2_c3_archived
+target_code_authorization: proposal_complete_target_edits_require_apply
 ---
 
 # BUG-187-199 Systemic Remediation Plan
@@ -396,10 +396,24 @@ the framework cannot control.
 
 - [x] Identify the stable UX root: the probe is valid, but its purpose and
   outcome are not legible as one bounded action.
-- [ ] Identify which notice/result text is controlled by the phase Markdown and
-  which visual output is forced by the selected host.
-- [ ] Write a C4 proposal with the fixed query, notice, success/unavailable
-  result, and the no-new-decision rule.
+- [x] Identify which notice/result text is controlled by the phase Markdown and
+  which visual output is forced by the selected host. `phase-hitl1.md` owns the
+  pre-probe notice, fixed-query instruction, and concise result wording;
+  `brief/hitl1.md` owns the surrounding HITL1 exit copy. Native tool-call rows,
+  transport/security failures, and any shell output are selected-host rendering
+  facts declared by `research-access-adapter.md`, so C4 can explain the probe
+  but cannot promise to suppress those host surfaces.
+- [x] Complete and polish the active C4 OpenSpec proposal:
+  [`legible-hitl1-capability-probe`](../../openspec/changes/legible-hitl1-capability-probe/).
+  Its proposal, two delta specs, design, task ledger, and four-class
+  verification plan are complete; strict OpenSpec validation and plan-mode
+  verification routing pass. The proposal assigns a fixed query, exact
+  non-decision/result wording, v0.72 release target, glossary boundary, and no
+  host-rendering promise. Target code remains read-only until Apply.
+- [x] Write a C4 proposal with the fixed query, notice, success/unavailable
+  result, and the no-new-decision rule. The active proposal is polished and
+  ready for its plan review / Apply entry; it makes no current real-host or
+  real-Actor behavior claim.
 - [ ] Verify the revised control surface against a retained real HITL1
   observation when a run is separately authorized; static Markdown inspection
   alone cannot prove host rendering behavior.
