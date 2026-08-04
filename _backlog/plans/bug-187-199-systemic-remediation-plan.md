@@ -1,18 +1,20 @@
 ---
 title: BUG-187-199 systemic remediation plan
-status: p2_c1_c3_archived_c2_admission_pending
+status: p2_c1_c2_c3_archived_c4_e1_e2_pending
 current_stage: P2
 created: 2026-08-04
 revised: 2026-08-04
 source_bugs: BUG-187, BUG-188, BUG-189, BUG-190, BUG-191, BUG-192, BUG-193, BUG-194, BUG-195, BUG-196, BUG-197, BUG-198, BUG-199
 current_execution_model: chain_queue_work_unit
 active_change: none
-active_change_status: no_active_change_c1_c3_archived_2026-08-04
-completed_change: traceable-final-delivery-backing
+active_change_status: no_active_change_c1_c2_c3_archived_2026-08-04
+completed_change: surface-actionable-contract-feedback
 completed_change_status: archived_2026-08-04
-previous_completed_change: materialize-wave0-submitted-references-and-batch-projections
+previous_completed_change: traceable-final-delivery-backing
 previous_completed_change_status: archived_2026-08-04
-target_code_authorization: no_active_target_change_c1_c3_archived
+earlier_completed_change: materialize-wave0-submitted-references-and-batch-projections
+earlier_completed_change_status: archived_2026-08-04
+target_code_authorization: no_active_target_change_c1_c2_c3_archived
 ---
 
 # BUG-187-199 Systemic Remediation Plan
@@ -24,11 +26,16 @@ target_code_authorization: no_active_target_change_c1_c3_archived
 > [`2026-08-04-traceable-final-delivery-backing`](../../openspec/changes/archive/2026-08-04-traceable-final-delivery-backing/)
 > after apply, accepted-spec sync, strict validation, governance, feedback
 > closeout, and the governed archive transition all passed.
+> C2 is archived as
+> [`2026-08-04-surface-actionable-contract-feedback`](../../openspec/changes/archive/2026-08-04-surface-actionable-contract-feedback/)
+> after deterministic verification, main-spec sync, feedback closeout, and the
+> governed archive transition all passed.
 >
-> Progress: focused deterministic C1 evidence is retained, including the
-> source-only actor contract, submitted-backing convergence, and batch deferred
-> expansion. It does not prove that a current real Actor followed the guidance;
-> that separately governed E2 observation has not been authorized.
+> Progress: focused deterministic C1/C2 evidence is retained, including the
+> source-only actor contract, submitted-backing convergence, batch deferred
+> expansion, and actionable retained-input feedback. It does not prove that a
+> current real Actor followed the guidance; that separately governed E2
+> observation has not been authorized.
 >
 > Scope: turn thirteen incident cards into the smallest set of independently
 > reviewable system changes, while preserving the distinction between a proven
@@ -42,7 +49,7 @@ OpenSpec change candidates and two evidence tracks:
 | Route | Cards | Current disposition | Next admission fact |
 | --- | --- | --- | --- |
 | C1. Wave0 submitted-evidence materialization at scale | [BUG-189](../bugs/BUG-189-shared-ref-count-floor-delegated-bypass.md), [BUG-191](../bugs/BUG-191-wave0-projection-ordinal-scaling.md) | Archived C1 deterministic correction for the source-only submitted-backing and batch-deferred contract. | C1 and C3 are complete. Real Actor observation remains E2. |
-| C2. Direct Agent contract feedback | [BUG-190](../bugs/BUG-190-source-identity-kind-naming-obscure.md), [BUG-194](../bugs/BUG-194-wave1-assignment-mode-payload-location.md), conditionally [BUG-195](../bugs/BUG-195-wave1-source-claims-cache-trail-refs-missing.md) | Deterministic feedback is too opaque; BUG-195 needs current real delivery evidence before changing a task contract that current head may already generate. | Exact current rejection payloads and, for BUG-195, a retained generated `task.md` from a real attempt. |
+| C2. Direct Agent contract feedback | [BUG-190](../bugs/BUG-190-source-identity-kind-naming-obscure.md), [BUG-194](../bugs/BUG-194-wave1-assignment-mode-payload-location.md), conditionally [BUG-195](../bugs/BUG-195-wave1-source-claims-cache-trail-refs-missing.md) | [`2026-08-04-surface-actionable-contract-feedback`](../../openspec/changes/archive/2026-08-04-surface-actionable-contract-feedback/) archived the two direct feedback loops after deterministic verification, spec sync, governance, and closeout; BUG-195 remains an E2 real-Actor observation boundary. | C2 is complete; BUG-195 still needs a retained real generated `task.md` if it reactivates. |
 | C3. Traceable Final delivery | [BUG-199](../bugs/BUG-199-synthesis-no-evidence-citations.md) | [`2026-08-04-traceable-final-delivery-backing`](../../openspec/changes/archive/2026-08-04-traceable-final-delivery-backing/) archived the bounded Final Evidence Map and pre-persist submitted-backing admission after sync, verification, governance, and closeout. | C3 is complete. Semantic adequacy and actual Agent guidance-following remain Agent/human or future E2 observation concerns. |
 | C4. Legible HITL1 capability probe | [BUG-187](../bugs/BUG-187-hitl1-capability-probe-opaque-to-user.md) | A valid capability probe is confusing because its purpose and result are not presented as a stable user-facing contract. | The controllable Markdown/Agent-facing output boundary, distinct from host-rendered tool logs. |
 | E1. Host wait visibility | [BUG-188](../bugs/BUG-188-subagent-wait-no-progress-visibility.md), [BUG-193](../bugs/BUG-193-wave1-subagent-wait-no-progress-sibling.md) | Host/TUI observation; BUG-193 is a Wave1 duplicate of BUG-188, not a second framework root. | A selected-host capability observation showing whether wait can render progress without violating `stop: no`. |
@@ -121,7 +128,7 @@ The following proposals are rejected unless new evidence changes the analysis:
 | --- | --- | --- |
 | P0 | Triage, current-head contract check, and route separation. | Complete |
 | P1 | Capture admission facts and complete proposal artifacts only where a bounded deterministic or user-facing contract root exists. C1 proposal, specs, design, task list, and implementation entry are complete. | Complete |
-| P2 | Stabilize submitted-evidence and feedback contracts through accepted C1/C2 work before applying C3 against their backing surfaces. C1 and C3 are archived; C2 admission remains pending. | In progress |
+| P2 | Stabilize submitted-evidence and feedback contracts through accepted C1/C2 work before applying C3 against their backing surfaces. C1, C2, and C3 are archived; remaining routes require their own admission facts. | In progress |
 | P3 | Activate E1/E2 only with a selected host or an explicitly authorized real bundle; classify each result before proposing code. | Pending |
 | P4 | Archive accepted changes, update each bug card with its final disposition, and move this plan only when every route has a terminal outcome. | Pending |
 
@@ -234,16 +241,69 @@ formatting a blocker; or create one new feedback implementation per caller.
   direct root for BUG-190 and BUG-194.
 - [x] Verify the current generated contract includes `cache_trail_refs`; BUG-195
   remains conditional until a fresh generated-task observation says otherwise.
-- [ ] Save exact current rejection JSON for the discriminator and Wave1 enqueue
-  cases, including the legal repair surface and rerun command.
-- [ ] Decide whether existing static contract metadata can produce the feedback
-  without a second rule source; record the answer in a C2 proposal.
-- [ ] If BUG-195 activates, retain the failing `task.md`, result receipt, and
-  dry-submit response before proposing the narrowest delivery-contract change.
-- [ ] Specify focused positive and negative checks for path, enum, owner, and
+- [x] Save exact current rejection evidence for the discriminator and Wave1
+  enqueue cases on 2026-08-04. A real `operate-topic-state apply` against a
+  disposable bundle returns only `updates[0]` / `invalid_union` for a Wave0
+  `source_identity.kind: "work_unit"`; the nested current Zod issue is the
+  exact `/updates/0/entries/0/source_identity/kind` discriminator with
+  `submitted_work|finding`, while the Wave0 form admits only
+  `submitted_work`. The legal write surface is the retained input packet and
+  the returned same-`apply` rerun. A production `operate-queue enqueue`
+  against an Engine-materialized canonical Topic returns only
+  `assignment contract rejected: Wave1 assignment_mode must be primary or
+  supplementary`; moving the same value to `payload.assignment_mode` makes
+  the same enqueue succeed. The legal write surface is the unqueued task card,
+  not `rb_queue.json`; allowed values are `primary|supplementary`.
+- [x] Decide that existing static contract metadata is sufficient: the
+  `TopicApplyPlanSchema`/its current schema projection and the existing
+  `work-unit-assignment-contract` are the sole rule sources. C2 may project
+  their path/closed-value/owner/rerun facts, but must not add a validator,
+  alias, or repair controller.
+- [x] Keep BUG-195 inactive for C2. Current-head source-claim schema,
+  task-envelope generator, Phase Wave1 control surface, and role guidance all
+  name `cache_trail_refs`; no fresh real Actor-generated task omission has
+  been observed. A future observation must retain the failing `task.md`,
+  result receipt, and dry-submit response before proposing a delivery-contract
+  change.
+- [x] Create the C2 change
+  [`2026-08-04-surface-actionable-contract-feedback`](../../openspec/changes/archive/2026-08-04-surface-actionable-contract-feedback/)
+  on 2026-08-04. Its proposal-only stage authorized no target implementation,
+  test, accepted-spec, or governance-file edit.
+- [x] Specify focused positive and negative checks for path, enum, owner, and
   same-check rerun feedback, including prerequisite short-circuit behavior.
-- [ ] After approval, apply and archive C2; mark BUG-195 fixed only with fresh
-  real Actor evidence or leave it routed to E2.
+  The active C2 change contains four routed CTS-004/QIV-001 deterministic
+  claims across helper and production-CLI boundaries; its strict validation,
+  routing-plan check, requirement/spec governance, and diff check passed on
+  2026-08-04.
+- [x] Polish the C2 change through two distinct passes on 2026-08-04. Whole
+  change coherence restored the pre-existing C1 CTS-009 heading as a
+  no-runtime, in-sync normalization task rather than allowing it to be absorbed
+  into CTS-004 or duplicated. The risk-led pass keeps Wave-context legality
+  separate from the raw Zod union and multi-Wave slot metadata, and confines
+  Queue JSON stdout to structured missing/unknown `payload.assignment_mode`
+  feedback so other assignment failures retain their existing path. Strict
+  OpenSpec validation, verification-route validation, requirement governance,
+  main-spec governance, and tracked/untracked whitespace checks all pass. C2
+  is ready for apply; no target code, test, accepted-spec, or governance file
+  has been edited during proposal/polish.
+- [x] Apply C2 on 2026-08-04. CTS-004 now selects the nested discriminator
+  issue, reports its exact JSON Pointer, raw union values, Wave-legal value,
+  retained-input surface, and same apply rerun. QIV-001 now carries direct
+  `payload.assignment_mode` metadata from the assignment resolver to enqueue,
+  which emits JSON only for that record and preserves unrelated assignment
+  errors. Focused deterministic evidence passed: CTS helper 34, CTS CLI 14,
+  QIV helper 7, QIV CLI 36, and all four routed asset claims.
+- [x] Sync C2 deltas, re-run governance, and complete the C2 closeout review.
+  On 2026-08-04 CTS-004/QIV-001 were merged into main specs, the C1 CTS-009
+  heading was normalized without semantic change, all selected verification
+  assets plus strict/spec/requirement governance passed, and a rerun-path
+  whitespace closeout finding was repaired and reverified. BUG-195 remains
+  routed to E2 and SHALL NOT be marked fixed without fresh real Actor evidence.
+- [x] Run the governed archive transition for
+  `surface-actionable-contract-feedback`. On 2026-08-04,
+  `finalize-change-archive.mjs` returned `outcome: archived` with all eight
+  checks passed and archived the change as
+  `2026-08-04-surface-actionable-contract-feedback`.
 
 ## 7. C3: Traceable Final Delivery
 

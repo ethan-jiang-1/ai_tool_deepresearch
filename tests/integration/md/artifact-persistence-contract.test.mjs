@@ -62,14 +62,17 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
     assert.match(commands, /three-operation durability command/);
   });
 
-  it('keeps Final-backing vocabulary and v0.70 release scope bounded', () => {
+  it('keeps Final-backing vocabulary and current release scopes bounded', () => {
     for (const term of ['Final key-finding declaration', 'Final Evidence Map', 'Final backing']) {
       assert.match(context, new RegExp(`\\*\\*${term}\\*\\*`));
     }
     assert.match(changelog, /## v0\.70/);
     assert.match(changelog, /structural path\/provenance feedback only/);
-    assert.match(run, /DPT_FRAMEWORK v0\.70/);
-    assert.match(run, /Current Release: v0\.70/);
+    assert.match(changelog, /## v0\.71/);
+    assert.match(changelog, /no aliases,\n  automatic repair, Queue edit path, or Actor-behavior proof/);
+    assert.match(run, /DPT_FRAMEWORK v0\.71/);
+    assert.match(run, /Current Release: v0\.71/);
+    assert.match(run, /non-persisted Engine feedback projections only/);
     assert.match(run, /structural path\/provenance admission only/);
   });
 

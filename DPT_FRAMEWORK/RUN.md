@@ -1,13 +1,27 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.70**
+> **DPT_FRAMEWORK v0.71**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.70
+## Current Release: v0.71
+
+- A rejected Wave projection now reports the exact `source_identity.kind` JSON
+  Pointer, raw schema discriminator vocabulary, and the one value legal for
+  the supplied Wave. Correct the retained input packet and rerun the same
+  `operate-topic-state apply` checkpoint; `work_unit` remains invalid here.
+
+- A missing or unknown Wave1 `payload.assignment_mode` now returns JSON
+  feedback from `operate-queue enqueue` naming the retained unqueued task card,
+  exact path, closed values, and same enqueue rerun. Do not edit `rb_queue.json`;
+  a legal mode with another assignment failure retains its existing error path.
+
+- These are non-persisted Engine feedback projections only: no alias,
+  automatic repair, controller, lifecycle state, or Actor-behavior proof is
+  added.
 
 - Final Markdown reports now use `persist-final-report`: retained staging must
   contain one bounded Evidence Map that connects each declared key finding to

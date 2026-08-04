@@ -426,11 +426,21 @@ blocked result SHALL preserve the validator as the sole authority while adding
 bounded safe `validation_errors[]`. Each item SHALL include a stable field path,
 issue code/message, and only contract-safe expectation detail such as required
 shape, closed allowed values, or received value type; it SHALL not echo arbitrary
-input values, raw file bytes, or a stack trace. The result SHALL identify one
-primary validation path and the same `apply` checkpoint. It SHALL distinguish
-input repair from lifecycle/owner rejection: field-level input detail does not
-turn a missing reentry witness, forbidden writer, or unavailable mutation form
-into an Agent-writable path.
+input values, raw file bytes, or a stack trace. For a rejected recognized
+`source_identity.kind` discriminator in `context: wave_projection`, its item
+SHALL additionally expose an RFC 6901 `json_pointer` and `allowed_values` that
+contain exactly the discriminator values legal for the supplied valid Wave:
+`submitted_work` for Wave0/Wave1 and `finding` for Wave2. When the same
+underlying Zod union declares a broader raw discriminator vocabulary, the item
+MAY expose that fact separately as `schema_allowed_values`; it SHALL NOT present
+that broader vocabulary as legal for the selected Wave. If the Wave itself is
+absent or invalid, the result SHALL retain the ordinary validator feedback and
+SHALL NOT invent a context-narrowed expectation. The result SHALL identify one
+primary validation path, `repair_kind: agent_action`,
+`repair_surface: retained_input`, and the same `apply` checkpoint. It SHALL
+distinguish input repair from lifecycle/owner rejection: field-level input
+detail does not turn a missing reentry witness, forbidden writer, or unavailable
+mutation form into an Agent-writable path.
 
 #### Scenario: Packet uses the existing atomic writer
 
@@ -470,6 +480,30 @@ into an Agent-writable path.
   profile mutation SHALL occur
 - **AND** the only repair loop SHALL remain correction of the retained input and
   rerun of the same `apply` checkpoint
+
+#### Scenario: Wave projection discriminator feedback is context-precise
+
+- **WHEN** a retained Wave0 projection packet reaches the existing
+  `TopicApplyPlanSchema` with `source_identity.kind: "work_unit"`
+- **THEN** its blocked result SHALL name
+  `/updates/0/entries/0/source_identity/kind` as the `json_pointer`, expose
+  `allowed_values: ["submitted_work"]`, identify the retained input as the
+  Agent repair surface, and name the same `apply` rerun
+- **AND** it MAY distinguish the raw
+  `["submitted_work", "finding"]` union vocabulary from the Wave0-legal value
+  without accepting, aliasing, or relabeling `work_unit`
+- **AND** it SHALL create no workspace or mutation of plan, seed, queue,
+  work-unit, ledger, status, trace, or profile authority
+
+#### Scenario: A multi-Wave slot does not broaden a selected Wave's value
+
+- **WHEN** a retained Wave1 projection packet selects `pending_questions` and
+  reaches the existing validator with `source_identity.kind: "work_unit"`
+- **THEN** its context-precise feedback SHALL retain
+  `allowed_values: ["submitted_work"]` for Wave1 rather than treating the
+  multi-Wave slot as permission for `finding`
+- **AND** it SHALL preserve the same direct kind coordinate, retained-input
+  repair surface, and no-mutation boundary
 
 #### Scenario: Help never evaluates topic state
 
@@ -660,7 +694,7 @@ into an Agent-writable path.
   `migrate_legacy` apply succeeds
 - **AND** no addendum file SHALL gain authority from reentry alone
 
-+### Requirement: Wave0 deferred-contribution packets SHALL atomically expand exact retained source identities in the current direct source array
+### Requirement: Wave0 deferred-contribution packets SHALL atomically expand exact retained source identities in the current direct source array
 
 The existing `context: wave_projection`, `action: apply_seed_projection` input SHALL additionally accept one strict Wave0 contribution-scoped deferred-disposition form: its sole `wave0_evidence` update SHALL contain `deferred_contribution` with `source_identity: { kind: submitted_work, work_id }`, one `evidence_meaning`, and one `next_hop`. The existing `submitted_work` value is a source-identity wire discriminator, not aggregate coverage. In this form it is a contribution selector, not a complete individual source identity: only the writer may pair the work ID with derived `<work_id>/<ordinal>` entry IDs. The form SHALL not accept a bare aggregate acknowledgement, a caller-selected ordinal range, file paths, raw Markdown, another Wave's identity form, or caller-selected relationship/status/refs values.
 

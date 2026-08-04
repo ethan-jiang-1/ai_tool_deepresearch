@@ -1,8 +1,24 @@
 # BUG-194: Wave1 enqueue rejects task cards when assignment_mode is at top level instead of payload
 
-**Status**: open
+**Status**: resolved -- deterministic remediation archived; no real Actor-repair claim
 **Severity**: P2 — one-time setup friction; phase instructions template is ambiguous
 **Found**: 2026-08-03 during `agentic-rd-org-delivery-systems-2026` Wave1 execution
+
+**OpenSpec change**: [`2026-08-04-surface-actionable-contract-feedback`](../../openspec/changes/archive/2026-08-04-surface-actionable-contract-feedback/) (QIV-001)
+
+## Implemented Resolution
+
+The existing assignment resolver remains the only rule owner. A missing or
+unknown `payload.assignment_mode` now carries exact structured metadata through
+delegated admission to `operate-queue enqueue`: `payload.assignment_mode`,
+`/payload/assignment_mode`, `primary|supplementary`, the retained unqueued task
+card surface, and the same enqueue command. The result explicitly prohibits a
+direct `rb_queue.json` edit.
+
+The JSON stdout/exit-1 branch applies only to that direct failure. A legal mode
+with malformed receipts retains the existing generic rejection path. Focused
+Engine and production-CLI tests prove this deterministic contract only; they do
+not claim real Actor repair behavior.
 
 ## Symptom
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.71
+
+- A rejected Wave projection now identifies the exact `source_identity.kind`
+  JSON Pointer, the raw schema discriminator vocabulary, and the single kind
+  legal for the supplied Wave. The retained packet is the only repair surface
+  and reruns the same topic-state apply checkpoint.
+- A missing or unknown Wave1 `payload.assignment_mode` now returns structured
+  enqueue feedback for the retained unqueued task card, including the exact
+  path, closed values, and the same enqueue invocation. Other assignment
+  failures retain their existing error path.
+- These are additive deterministic feedback projections: they add no aliases,
+  automatic repair, Queue edit path, or Actor-behavior proof.
+
 ## v0.70
 
 - Final Markdown reports now use `persist-final-report`: a bounded Evidence Map

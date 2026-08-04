@@ -16,6 +16,15 @@ export const WORK_UNIT_ASSIGNMENT_RESERVED_SELECTOR_KEYS = Object.freeze([
 ]);
 
 const RESERVED_SELECTOR_KEYS = new Set(WORK_UNIT_ASSIGNMENT_RESERVED_SELECTOR_KEYS);
+const PAYLOAD_ASSIGNMENT_MODE_FEEDBACK = Object.freeze({
+  kind: 'payload_assignment_mode',
+  coordinate: 'payload.assignment_mode',
+  json_pointer: '/payload/assignment_mode',
+  allowed_values: Object.freeze(['primary', 'supplementary']),
+  repair_kind: 'agent_action',
+  repair_surface: 'retained_unqueued_task_card',
+  rerun_operation: 'enqueue',
+});
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -79,6 +88,18 @@ function validateReferenceFloorDeficit(kind, queueItem) {
   }
 }
 
+function payloadAssignmentModeError() {
+  const error = new Error('Wave1 assignment_mode must be primary or supplementary');
+  error.assignment_contract_feedback = PAYLOAD_ASSIGNMENT_MODE_FEEDBACK;
+  return error;
+}
+
+export function assignmentContractFeedbackFromError(error) {
+  const feedback = error?.assignment_contract_feedback;
+  if (feedback?.kind !== PAYLOAD_ASSIGNMENT_MODE_FEEDBACK.kind) return null;
+  return { ...feedback, allowed_values: [...feedback.allowed_values] };
+}
+
 function requiredOutputsFor({ kind, queueItem, topicBinding }) {
   const receipts = queueItem?.required_receipts;
 
@@ -97,7 +118,7 @@ function requiredOutputsFor({ kind, queueItem, topicBinding }) {
     const { topic_slug: slug } = requireTopicBinding(queueItem, topicBinding);
     const mode = queueItem?.payload?.assignment_mode;
     if (mode !== 'primary' && mode !== 'supplementary') {
-      throw new Error('Wave1 assignment_mode must be primary or supplementary');
+      throw payloadAssignmentModeError();
     }
     if (mode === 'supplementary') {
       exactReceiptSet(receipts, [], 'supplementary Wave1');

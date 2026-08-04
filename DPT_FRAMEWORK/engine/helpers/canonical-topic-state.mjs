@@ -327,6 +327,16 @@ const SeedEnrichmentPlanSchema = z.object({
   enrichment: SeedEnrichmentSchema,
 }).strict();
 const ProjectionTextSchema = z.string().trim().min(1).regex(/^[^\r\n]+$/);
+const PROJECTION_SOURCE_IDENTITY_RULE_BY_WAVE = Object.freeze({
+  wave0: Object.freeze({ allowedValues: Object.freeze(['submitted_work']), messageSubject: 'Wave0/Wave1' }),
+  wave1: Object.freeze({ allowedValues: Object.freeze(['submitted_work']), messageSubject: 'Wave0/Wave1' }),
+  wave2: Object.freeze({ allowedValues: Object.freeze(['finding']), messageSubject: 'Wave2' }),
+});
+
+function projectionSourceIdentityRuleForWave(wave) {
+  return typeof wave === 'string' ? PROJECTION_SOURCE_IDENTITY_RULE_BY_WAVE[wave] || null : null;
+}
+
 const ProjectionSourceIdentitySchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('submitted_work'), work_id: z.string().regex(/^wu-w[0-9]+-b[0-9]{3}-[a-z][a-z0-9]{1,7}-i[0-9]{4}$/) }).strict(),
   z.object({ kind: z.literal('finding'), finding_id: z.string().regex(/^W2F-[0-9]{3,}$/) }).strict(),
@@ -367,6 +377,7 @@ const ProjectionPacketSchema = z.object({
   wave: z.enum(['wave0', 'wave1', 'wave2']),
   updates: z.array(ProjectionPacketUpdateSchema).min(1),
 }).strict().superRefine((packet, issue) => {
+  const sourceIdentityRule = projectionSourceIdentityRuleForWave(packet.wave);
   const seenSlots = new Set();
   for (const [updateIndex, update] of packet.updates.entries()) {
     if (seenSlots.has(update.slot_id)) {
@@ -389,14 +400,12 @@ const ProjectionPacketSchema = z.object({
         issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates', updateIndex, 'entries', entryIndex, 'entry_id'], message: 'entry_id must be unique within one slot update' });
       }
       seenEntries.add(entry.entry_id);
-      if (packet.wave === 'wave2') {
-        if (entry.source_identity.kind !== 'finding') {
-          issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates', updateIndex, 'entries', entryIndex, 'source_identity'], message: 'Wave2 projection entries require a finding source_identity' });
-        } else if (entry.entry_id !== entry.source_identity.finding_id) {
+      if (!sourceIdentityRule?.allowedValues.includes(entry.source_identity.kind)) {
+        issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates', updateIndex, 'entries', entryIndex, 'source_identity'], message: `${sourceIdentityRule?.messageSubject || packet.wave} projection entries require a ${sourceIdentityRule?.allowedValues.join(' or ') || 'declared'} source_identity` });
+      } else if (packet.wave === 'wave2') {
+        if (entry.entry_id !== entry.source_identity.finding_id) {
           issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates', updateIndex, 'entries', entryIndex, 'entry_id'], message: 'Wave2 entry_id must equal its source W2F finding_id' });
         }
-      } else if (entry.source_identity.kind !== 'submitted_work') {
-        issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates', updateIndex, 'entries', entryIndex, 'source_identity'], message: 'Wave0/Wave1 projection entries require a submitted_work source_identity' });
       } else if (!new RegExp(`^${entry.source_identity.work_id}/[1-9][0-9]*$`).test(entry.entry_id)) {
         issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates', updateIndex, 'entries', entryIndex, 'entry_id'], message: 'Wave0/Wave1 entry_id must equal <source work_id>/<positive ordinal>' });
       }
@@ -684,10 +693,19 @@ function validationPath(pathParts) {
   }, '');
 }
 
+function expandTopicValidationIssueCandidates(issues) {
+  const nestedUnionIndex = issues.findIndex((issue) => issue?.code === 'invalid_union' && Array.isArray(issue.unionErrors));
+  if (nestedUnionIndex === -1) return [issues];
+  const nestedUnion = issues[nestedUnionIndex];
+  const siblingIssues = issues.toSpliced(nestedUnionIndex, 1);
+  return nestedUnion.unionErrors.flatMap((error) => expandTopicValidationIssueCandidates([
+    ...siblingIssues,
+    ...(error?.issues || []),
+  ]));
+}
+
 function selectTopicValidationIssues(issues) {
-  const candidates = issues.flatMap((issue) => issue?.code === 'invalid_union' && Array.isArray(issue.unionErrors)
-    ? issue.unionErrors.map((error) => error.issues || [])
-    : [[issue]]);
+  const candidates = expandTopicValidationIssueCandidates(issues);
   const score = (candidate) => candidate.reduce((total, issue) => {
     const path = validationPath(issue?.path);
     if (path === 'context' && ['invalid_literal', 'invalid_enum_value'].includes(issue?.code)) return total + 100;
@@ -695,6 +713,19 @@ function selectTopicValidationIssues(issues) {
     return total + 1;
   }, 0);
   return candidates.sort((left, right) => score(left) - score(right))[0] || [];
+}
+
+function validationJsonPointer(pathParts) {
+  if (!Array.isArray(pathParts) || pathParts.length === 0) return '';
+  return `/${pathParts.map((part) => String(part).replaceAll('~', '~0').replaceAll('/', '~1')).join('/')}`;
+}
+
+function isProjectionSourceIdentityKindIssue(issue) {
+  const path = issue?.path;
+  return issue?.code === 'invalid_union_discriminator'
+    && Array.isArray(issue?.options)
+    && path?.at(-1) === 'kind'
+    && path?.at(-2) === 'source_identity';
 }
 
 function safeValidationMessage(issue) {
@@ -710,7 +741,7 @@ function safeValidationMessage(issue) {
 }
 
 /** Project existing Zod issues without exposing retained input values or bytes. */
-export function projectTopicApplyValidationErrors(issues, { limit = 5 } = {}) {
+export function projectTopicApplyValidationErrors(issues, { limit = 5, input = null } = {}) {
   const selected = selectTopicValidationIssues(Array.isArray(issues) ? issues : []);
   const validation_errors = selected.slice(0, Math.max(1, Math.min(limit, 5))).map((issue) => {
     const item = {
@@ -728,6 +759,14 @@ export function projectTopicApplyValidationErrors(issues, { limit = 5 } = {}) {
     } else if (issue.code === 'too_small' || issue.code === 'too_big') {
       item.expected_limit = issue.minimum ?? issue.maximum;
       item.limit_type = issue.type;
+    }
+    if (isProjectionSourceIdentityKindIssue(issue)) {
+      item.json_pointer = validationJsonPointer(issue.path);
+      item.schema_allowed_values = [...issue.options];
+      const rule = input?.context === 'wave_projection'
+        ? projectionSourceIdentityRuleForWave(input.wave)
+        : null;
+      if (rule) item.allowed_values = [...rule.allowedValues];
     }
     return item;
   });
@@ -1739,13 +1778,14 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
   const parsed = TopicApplyPlanSchema.safeParse(input);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
-    const validation = projectTopicApplyValidationErrors(parsed.error.issues);
+    const validation = projectTopicApplyValidationErrors(parsed.error.issues, { input });
     return {
       schema_version: TOPIC_STATE_SCHEMA_VERSION,
       operation: 'apply',
       verdict: 'blocked',
       reason_code: 'input_invalid',
       repair_kind: 'agent_action',
+      repair_surface: 'retained_input',
       coordinate: validation.primary_validation_path || issue?.path?.join('.') || null,
       reason: issue?.message || 'invalid topic-state input',
       ...validation,

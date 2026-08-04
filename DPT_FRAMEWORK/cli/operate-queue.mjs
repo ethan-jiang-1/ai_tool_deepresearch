@@ -497,11 +497,33 @@ function repairRemoveStale(queue, bundleDir) {
   return { queue, removed };
 }
 
+function delegatedTaskCardAdmission(taskCard, bundleDir) {
+  if (!isDelegatedWorkUnitDemand(taskCard)) return { ok: true, applicable: false, queue_item: taskCard };
+  return admitQueueDemand({ bundleDir, queueItem: taskCard });
+}
+
 function admitDelegatedTaskCard(taskCard, bundleDir) {
-  if (!isDelegatedWorkUnitDemand(taskCard)) return taskCard;
-  const admission = admitQueueDemand({ bundleDir, queueItem: taskCard });
+  const admission = delegatedTaskCardAdmission(taskCard, bundleDir);
   if (!admission.ok) throw new Error(admission.reason);
   return admission.queue_item;
+}
+
+function enqueueAssignmentModeFeedback(admission, { bundlePath, taskPath }) {
+  const feedback = admission?.assignment_contract_feedback;
+  if (feedback?.kind !== 'payload_assignment_mode') return null;
+  const rerun = `node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue ${JSON.stringify(bundlePath)} --task ${JSON.stringify(taskPath)}`;
+  return {
+    ok: false,
+    reason_code: admission.reason_code,
+    reason: admission.reason,
+    coordinate: feedback.coordinate,
+    json_pointer: feedback.json_pointer,
+    allowed_values: feedback.allowed_values,
+    repair_kind: feedback.repair_kind,
+    repair_surface: feedback.repair_surface,
+    rerun,
+    recommended_action: `Correct ${feedback.coordinate} in the retained unqueued task card ${taskPath} to one of ${feedback.allowed_values.join(', ')}. Do not edit rb_queue.json; rerun the same enqueue command.`,
+  };
 }
 
 function findQueueItemLocations(queue, queueItemId) {
@@ -645,7 +667,16 @@ try {
       process.exit(1);
     }
 
-    const admittedTask = admitDelegatedTaskCard(validation.taskCard || taskCard, bundleDir);
+    const admission = delegatedTaskCardAdmission(validation.taskCard || taskCard, bundleDir);
+    if (!admission.ok) {
+      const feedback = enqueueAssignmentModeFeedback(admission, { bundlePath: bundle, taskPath: values.task });
+      if (feedback) {
+        emit(feedback);
+        process.exit(1);
+      }
+      throw new Error(admission.reason);
+    }
+    const admittedTask = admission.queue_item;
     queue = enqueue(queue, admittedTask);
     saveQueue(bundleDir, queue);
     emit({ ok: true, queue });

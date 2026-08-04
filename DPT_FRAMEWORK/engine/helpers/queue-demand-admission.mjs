@@ -9,7 +9,7 @@ import { WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION } from '../../schema/contracts/wo
 import { CanonicalPlanSchema } from '../../schema/contracts/plan.mjs';
 import { DEFAULT_KIND_REGISTRY } from '../work-unit-constants.mjs';
 import { kindContractForQueueItem } from '../work-unit-utils.mjs';
-import { resolveWorkUnitAssignmentContract } from '../work-unit-assignment-contract.mjs';
+import { assignmentContractFeedbackFromError, resolveWorkUnitAssignmentContract } from '../work-unit-assignment-contract.mjs';
 import { inspectCanonicalTopicState } from './canonical-topic-state.mjs';
 import { evaluateTopicLayouts, resolveTopicLayout } from './topic-layout.mjs';
 
@@ -131,7 +131,12 @@ export function evaluateQueueDemandAdmission({ queueItem, currentFacts = {} } = 
       },
     };
   } catch (error) {
-    return rejected(`assignment contract rejected: ${error.message}`, 'assignment_contract_rejected');
+    const assignmentContractFeedback = assignmentContractFeedbackFromError(error);
+    return rejected(
+      `assignment contract rejected: ${error.message}`,
+      'assignment_contract_rejected',
+      assignmentContractFeedback ? { assignment_contract_feedback: assignmentContractFeedback } : {},
+    );
   }
 }
 

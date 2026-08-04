@@ -1,7 +1,7 @@
 // Projection packets must cross the public CLI, lifecycle window, and submitted authority together.
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
@@ -235,6 +235,27 @@ function preparedWorkspaceCount(bundle) {
   return readdirSync(root).filter((name) => existsSync(join(root, name, 'prepared.json'))).length;
 }
 
+function treeSnapshot(root) {
+  if (!existsSync(root)) return null;
+  return readdirSync(root, { recursive: true }).sort().map((relativePath) => {
+    const target = join(root, relativePath);
+    return lstatSync(target).isFile()
+      ? [relativePath, readFileSync(target, 'utf8')]
+      : [relativePath, 'directory'];
+  });
+}
+
+function topicStateMutationSnapshot(bundle, topic) {
+  return {
+    plan: readFileSync(join(bundle, 'rb_plan.md'), 'utf8'),
+    seed: readFileSync(join(bundle, 'seed_topics', `${topic.slug}.md`), 'utf8'),
+    status: readFileSync(join(bundle, 'rb_status.json'), 'utf8'),
+    queue: readFileSync(join(bundle, 'rb_queue.json'), 'utf8'),
+    trace: readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8'),
+    work_units: treeSnapshot(join(bundle, '_work_units')),
+  };
+}
+
 describe('operate-topic-state projection packets', () => {
   it('materializes a current submitted Wave0 entry through the public CLI only in its loaded window', () => {
     const { bundle, topic } = makeBundle('operate-projection-legal');
@@ -275,6 +296,47 @@ describe('operate-topic-state projection packets', () => {
     assert.equal(result.output.verdict, 'blocked');
     assert.equal(result.output.reason_code, 'input_invalid');
     assert.equal(preparedWorkspaceCount(bundle), 0);
+  });
+
+  it('returns exact retained-input feedback for a rejected source identity before topic-state mutation', () => {
+    const { bundle, topic } = makeBundle('operate-projection-source-identity-feedback');
+    const authority = submitWave0Authority(bundle, topic);
+    authorizeWave0(bundle);
+    const before = topicStateMutationSnapshot(bundle, topic);
+    const invalid = packet(topic, authority);
+    invalid.updates[0].entries[0].source_identity = {
+      kind: 'work_unit',
+      retained_secret: 'do-not-echo-this-retained-source-value',
+    };
+
+    const rejected = runApply(bundle, invalid);
+    assert.equal(rejected.status, 1, rejected.stderr || rejected.stdout);
+    assert.equal(rejected.output.verdict, 'blocked');
+    assert.equal(rejected.output.reason_code, 'input_invalid');
+    assert.equal(rejected.output.repair_kind, 'agent_action');
+    assert.equal(rejected.output.repair_surface, 'retained_input');
+    assert.equal(rejected.output.rerun, 'node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle <bundle-path> --input <input-path>');
+    const feedback = rejected.output.validation_errors.find((item) => item.path === 'updates[0].entries[0].source_identity.kind');
+    assert.deepEqual(feedback && {
+      path: feedback.path,
+      json_pointer: feedback.json_pointer,
+      code: feedback.code,
+      allowed_values: feedback.allowed_values,
+      schema_allowed_values: feedback.schema_allowed_values,
+    }, {
+      path: 'updates[0].entries[0].source_identity.kind',
+      json_pointer: '/updates/0/entries/0/source_identity/kind',
+      code: 'invalid_union_discriminator',
+      allowed_values: ['submitted_work'],
+      schema_allowed_values: ['submitted_work', 'finding'],
+    });
+    assert.doesNotMatch(JSON.stringify(rejected.output), /work_unit|do-not-echo-this-retained-source-value/);
+    assert.equal(preparedWorkspaceCount(bundle), 0);
+    assert.deepEqual(topicStateMutationSnapshot(bundle, topic), before);
+
+    const accepted = runApply(bundle, packet(topic, authority));
+    assert.equal(accepted.status, 0, accepted.stderr || accepted.stdout);
+    assert.equal(accepted.output.verdict, 'committed');
   });
 
   it('repairs each current source-array candidate through packet apply and the same Wave0 inspect', () => {

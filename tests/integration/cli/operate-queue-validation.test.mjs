@@ -468,6 +468,85 @@ describe('AGQ-013 Wave1 assignment-mode admission and repair', () => {
     }
   });
 
+  it('returns task-card JSON feedback only for a missing payload assignment_mode', () => {
+    const dir = createBundle(unique('mode-feedback'));
+    const taskPath = join(dir, 'task card.json');
+    writeTaskFile(taskPath, {
+      queue_item_id: 'wave1-deepen-topic-a-feedback',
+      kind: 'wave1_topic_deepening',
+      producer_rule: 'topic_deepening',
+      targets: {
+        controller: 'main-agent',
+        delegates: { to: 'sub-agent', role_key: 'dpt-evidence-extractor', timeout_ms: 600000 },
+      },
+      payload: { topic_slug: 'topic-a' },
+      required_receipts: [],
+      completion_receipt: null,
+    });
+    const malformed = JSON.parse(readFileSync(taskPath, 'utf8'));
+    malformed.assignment_mode = 'primary';
+    writeFileSync(taskPath, JSON.stringify(malformed));
+    const queueBefore = readFileSync(join(dir, 'rb_queue.json'), 'utf8');
+    const traceBefore = readTrace(dir);
+
+    const rejected = runOq(dir, 'enqueue', '--task', taskPath);
+    assert.equal(rejected.status, 1, rejected.stderr || rejected.stdout);
+    assert.equal(rejected.stderr.trim(), '');
+    assert.notEqual(rejected.stdout.trim(), '');
+    const output = JSON.parse(rejected.stdout);
+    assert.deepEqual({
+      reason_code: output.reason_code,
+      coordinate: output.coordinate,
+      json_pointer: output.json_pointer,
+      allowed_values: output.allowed_values,
+      repair_kind: output.repair_kind,
+      repair_surface: output.repair_surface,
+    }, {
+      reason_code: 'assignment_contract_rejected',
+      coordinate: 'payload.assignment_mode',
+      json_pointer: '/payload/assignment_mode',
+      allowed_values: ['primary', 'supplementary'],
+      repair_kind: 'agent_action',
+      repair_surface: 'retained_unqueued_task_card',
+    });
+    assert.equal(output.rerun, `node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue ${JSON.stringify(dir)} --task ${JSON.stringify(taskPath)}`);
+    assert.match(output.recommended_action, /task card/i);
+    assert.match(output.recommended_action, /do not edit.*rb_queue\.json/i);
+    assert.doesNotMatch(output.rerun, /rb_queue\.json/);
+    assert.equal(readFileSync(join(dir, 'rb_queue.json'), 'utf8'), queueBefore);
+    const rejectedTrace = readTrace(dir).slice(traceBefore.length);
+    assert.equal(rejectedTrace.some((event) => event.source === 'agq-save' || event.event === 'queue_assignment_mode_repaired'), false);
+
+    malformed.payload.assignment_mode = 'supplementary';
+    writeFileSync(taskPath, JSON.stringify(malformed));
+    const accepted = runOq(dir, 'enqueue', '--task', taskPath);
+    assert.equal(accepted.status, 0, accepted.stderr || accepted.stdout);
+    assert.equal(JSON.parse(accepted.stdout).ok, true);
+
+    const receiptTaskPath = join(dir, 'receipt-failure-task.json');
+    writeTaskFile(receiptTaskPath, {
+      queue_item_id: 'wave1-deepen-topic-a-receipt-failure',
+      kind: 'wave1_topic_deepening',
+      producer_rule: 'topic_deepening',
+      targets: {
+        controller: 'main-agent',
+        delegates: { to: 'sub-agent', role_key: 'dpt-evidence-extractor', timeout_ms: 600000 },
+      },
+      payload: { topic_slug: 'topic-a', assignment_mode: 'primary' },
+      required_receipts: [],
+      completion_receipt: null,
+    });
+    const queueBeforeReceiptFailure = readFileSync(join(dir, 'rb_queue.json'), 'utf8');
+    const traceBeforeReceiptFailure = readTrace(dir);
+    const receiptFailure = runOq(dir, 'enqueue', '--task', receiptTaskPath);
+    assert.equal(receiptFailure.status, 1);
+    assert.equal(receiptFailure.stdout.trim(), '');
+    assert.match(receiptFailure.stderr, /receipt/i);
+    assert.equal(readFileSync(join(dir, 'rb_queue.json'), 'utf8'), queueBeforeReceiptFailure);
+    const receiptFailureTrace = readTrace(dir).slice(traceBeforeReceiptFailure.length);
+    assert.equal(receiptFailureTrace.some((event) => event.source === 'agq-save' || event.event === 'queue_assignment_mode_repaired'), false);
+  });
+
   it('rejects every direct selector on enqueue without queue mutation', async (t) => {
     const selectors = [
       'required_outputs',

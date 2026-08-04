@@ -97,6 +97,45 @@ describe('evaluateQueueDemandAdmission', () => {
     assert.equal(rejected.reason_code, 'assignment_contract_rejected');
   });
 
+  it('projects only direct payload assignment-mode failures without inferring or mutating', () => {
+    for (const { label, payload, topLevelMode } of [
+      { label: 'missing payload field despite top-level mode', payload: {}, topLevelMode: 'primary' },
+      { label: 'unknown payload value', payload: { assignment_mode: 'unknown' }, topLevelMode: undefined },
+    ]) {
+      const card = delegated('wave1_topic_deepening', { payload, assignment_mode: topLevelMode });
+      if (label.startsWith('missing')) delete card.payload.assignment_mode;
+      const beforeCard = JSON.stringify(card);
+      const beforeFacts = JSON.stringify(currentFacts);
+      const result = evaluateQueueDemandAdmission({ queueItem: card, currentFacts });
+
+      assert.equal(result.ok, false, label);
+      assert.equal(result.reason_code, 'assignment_contract_rejected', label);
+      assert.deepEqual(result.assignment_contract_feedback, {
+        kind: 'payload_assignment_mode',
+        coordinate: 'payload.assignment_mode',
+        json_pointer: '/payload/assignment_mode',
+        allowed_values: ['primary', 'supplementary'],
+        repair_kind: 'agent_action',
+        repair_surface: 'retained_unqueued_task_card',
+        rerun_operation: 'enqueue',
+      }, label);
+      assert.equal(Object.hasOwn(result, 'queue_item'), false, label);
+      assert.equal(JSON.stringify(card), beforeCard, label);
+      assert.equal(JSON.stringify(currentFacts), beforeFacts, label);
+    }
+
+    const receiptFailure = evaluateQueueDemandAdmission({
+      queueItem: delegated('wave1_topic_deepening', {
+        payload: { assignment_mode: 'primary' },
+        required_receipts: [],
+      }),
+      currentFacts,
+    });
+    assert.equal(receiptFailure.ok, false);
+    assert.equal(receiptFailure.reason_code, 'assignment_contract_rejected');
+    assert.equal(Object.hasOwn(receiptFailure, 'assignment_contract_feedback'), false);
+  });
+
   it('excludes non-delegated cards and mutates neither input nor facts', () => {
     const card = delegated('wave1_topic_deepening', { targets: { controller: 'main-agent' }, payload: { assignment_mode: 'invalid' } });
     const beforeCard = JSON.stringify(card);

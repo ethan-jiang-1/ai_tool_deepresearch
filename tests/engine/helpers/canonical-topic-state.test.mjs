@@ -685,4 +685,83 @@ describe('canonical topic state', () => {
     assert.equal(enumInvalid.success, false);
     assert.doesNotMatch(JSON.stringify(projectTopicApplyValidationErrors(enumInvalid.error.issues)), new RegExp(secret));
   });
+
+  it('projects a nested source identity discriminator through the selected Wave contract', () => {
+    const workId = 'wu-w1-b001-a1-i0001';
+    const retainedSecret = 'do-not-echo-the-retained-source-value';
+    const entry = (kind = 'submitted_work') => ({
+      source_identity: kind === 'submitted_work'
+        ? { kind, work_id: workId }
+        : { kind, retained_secret: retainedSecret },
+      entry_id: `${workId}/1`,
+      evidence_meaning: 'The entry preserves an independent contract test.',
+      relationship: 'supports',
+      refs: ['reference/topic-a.md'],
+      status: 'supported',
+      next_hop: 'Read the retained reference.',
+    });
+    const packetFor = (wave) => ({
+      context: 'wave_projection',
+      action: 'apply_seed_projection',
+      topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+      wave,
+      updates: wave === 'wave1'
+        ? [
+          { slot_id: 'wave1_mechanisms', entries: [entry()] },
+          { slot_id: 'wave1_trends', entries: [entry()] },
+          { slot_id: 'pending_questions', entries: [entry('work_unit')] },
+        ]
+        : [{
+          slot_id: wave === 'wave2' ? 'wave2_judgment' : 'wave0_evidence',
+          entries: [entry('work_unit')],
+        }],
+    });
+
+    for (const { wave, updateIndex, expected } of [
+      { wave: 'wave0', updateIndex: 0, expected: ['submitted_work'] },
+      { wave: 'wave1', updateIndex: 2, expected: ['submitted_work'] },
+      { wave: 'wave2', updateIndex: 0, expected: ['finding'] },
+    ]) {
+      const input = packetFor(wave);
+      const parsed = TopicApplyPlanSchema.safeParse(input);
+      assert.equal(parsed.success, false, wave);
+      const feedback = projectTopicApplyValidationErrors(parsed.error.issues, { input });
+      const coordinate = `updates[${updateIndex}].entries[0].source_identity.kind`;
+      const item = feedback.validation_errors.find((candidate) => candidate.path === coordinate);
+      assert.deepEqual(item && {
+        path: item.path,
+        json_pointer: item.json_pointer,
+        code: item.code,
+        allowed_values: item.allowed_values,
+        schema_allowed_values: item.schema_allowed_values,
+      }, {
+        path: coordinate,
+        json_pointer: `/updates/${updateIndex}/entries/0/source_identity/kind`,
+        code: 'invalid_union_discriminator',
+        allowed_values: expected,
+        schema_allowed_values: ['submitted_work', 'finding'],
+      }, wave);
+      assert.doesNotMatch(JSON.stringify(feedback), new RegExp(retainedSecret));
+      assert.doesNotMatch(JSON.stringify(feedback), /work_unit/);
+    }
+
+    for (const wave of ['not-a-wave', undefined]) {
+      const input = packetFor(wave);
+      const parsed = TopicApplyPlanSchema.safeParse(input);
+      assert.equal(parsed.success, false, String(wave));
+      const feedback = projectTopicApplyValidationErrors(parsed.error.issues, { input });
+      const sourceItem = feedback.validation_errors.find((candidate) => candidate.path.endsWith('.source_identity.kind'));
+      assert.ok(sourceItem, String(wave));
+      assert.equal(Object.hasOwn(sourceItem, 'allowed_values'), false, String(wave));
+      assert.deepEqual(sourceItem.schema_allowed_values, ['submitted_work', 'finding'], String(wave));
+    }
+
+    const ordinaryEnum = TopicApplyPlanSchema.safeParse({
+      context: 'hitl1',
+      actions: [{ action: 'add_topic', title: 'Topic', slug_stem: 'topic', must_answer: ['Question'], scope_role: 'unknown' }],
+    });
+    assert.equal(ordinaryEnum.success, false);
+    const ordinaryFeedback = projectTopicApplyValidationErrors(ordinaryEnum.error.issues);
+    assert.deepEqual(ordinaryFeedback.validation_errors[0].allowed_values, ['primary', 'synthesis', 'comparison', 'supporting']);
+  });
 });

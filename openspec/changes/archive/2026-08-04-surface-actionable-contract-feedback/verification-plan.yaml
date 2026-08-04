@@ -1,0 +1,76 @@
+schema_version: verification-routing/v1
+change: surface-actionable-contract-feedback
+test_classes:
+  unit:
+    status: selected
+    rationale: The topic-state issue projection and delegated-demand admission feedback are pure deterministic contract projections that can be exercised without a runtime lifecycle or Actor.
+  integration:
+    status: selected
+    rationale: Production CLIs must prove their own JSON stdout, exit-code, retained-input rerun, and fail-before-mutation boundaries over temporary bundles.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: C2 changes neither a lifecycle transition, Gate, handoff, nor a workflow-scale deterministic chain; focused CLI integration reaches each direct checkpoint seam.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: C2 proves deterministic feedback contracts only. It makes no claim that a current real Agent followed feedback or that BUG-195's historical Actor behavior has reoccurred.
+claims:
+  - id: topic-discriminator-feedback-is-context-precise
+    statement: >-
+      CTS-004: the existing TopicApplyPlanSchema rejection projector returns the exact safe JSON Pointer and Wave-context legal source_identity.kind values, including a Wave1 multi-Wave-slot case; it distinguishes optional raw union vocabulary without accepting an alias, retains no arbitrary input value, and leaves invalid/unknown Wave context unguessed.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/canonical-topic-state.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: topic-apply-feedback-precedes-topic-state-mutation
+    statement: >-
+      CTS-004: production operate-topic-state apply emits the context-precise invalid discriminator feedback with its retained-input same-apply loop, exits 1, and creates no topic-state workspace or mutable authority change; a valid projection packet remains compatible.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-projection.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: queue-admission-preserves-direct-assignment-feedback
+    statement: >-
+      QIV-001: the existing delegated-demand evaluator projects one assignment_contract_rejected result for a missing/unknown payload.assignment_mode with its coordinate, JSON Pointer, primary|supplementary values, retained-unqueued-task-card ownership, and no mode inference or input/fact mutation; a legal mode with a different assignment failure gains no false mode metadata.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/queue-demand-admission.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: queue-enqueue-feedback-is-json-and-non-mutating
+    statement: >-
+      QIV-001: production operate-queue enqueue emits structured JSON stdout and exit 1 for a top-level/missing Wave1 assignment_mode, directs repair to the retained task card and same enqueue, does not direct rb_queue.json editing, leaves Queue bytes and queue success/repair trace authority unchanged, still accepts a valid payload.assignment_mode card, and leaves a legal-mode receipt failure on its existing generic error path.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-queue-validation.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
