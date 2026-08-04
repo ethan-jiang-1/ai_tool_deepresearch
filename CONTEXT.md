@@ -253,6 +253,23 @@ Derived reader or navigation output from submitted backing. It does not replace
 ledger, source, cache, or provenance authority.
 _Avoid_: submitted contribution, source catalog, evidence authority
 
+**Final key-finding declaration**:
+A reader-facing selected conclusion named in a Final Evidence Map. It is not a
+submitted ledger row, a provenance authority, or a semantic verdict.
+_Avoid_: submitted work, citation ledger, claim-quality check
+
+**Final Evidence Map**:
+The bounded Final Markdown table that associates each declared key finding with
+one or more reader-openable backing links. It is not a Gate, a new ledger, or a
+report-wide citation requirement.
+_Avoid_: submitted ledger, Final Gate, prose scanner
+
+**Final backing**:
+An existing submitted direct evidence output or submitted-backed Reference
+resolved for one Final Evidence Map link. Filesystem presence alone does not
+make a path Final backing.
+_Avoid_: disk artifact, cache file, semantic support verdict
+
 **Seed projection**:
 The topic-state rendering that records one source identity's evidence navigation
 or deferred handling in a Seed Topic. It is distinct from a consumer projection.

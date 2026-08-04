@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.70
+
+- Final Markdown reports now use `persist-final-report`: a bounded Evidence Map
+  binds each declared key finding to an exact submitted `source_yaml` /
+  `evidence_summary` output or an existing submitted-backed `reference/`
+  projection before the existing CAS/atomic durability path commits its bytes.
+- Generic `persist` redirects safe Final Markdown targets to that admission, and
+  recovery `sweep` rechecks a prepared Final payload before finalization. The
+  check is structural path/provenance feedback only: it adds no Final Gate,
+  trace event, ledger, or semantic support verdict.
+
 ## v0.69
 
 - Wave0 source intake now submits source/cache facts only. Formal submitted

@@ -1,6 +1,6 @@
 # Content Delivery Phase Content Delta
 
-> req: CDP-006
+> req: CDP-003, CDP-004, CDP-006
 
 ## ADDED Requirements
 
@@ -47,3 +47,41 @@ and submitted-provenance feedback.
   no outgoing Gate or transition
 - **AND** the persistence result and Evidence Map SHALL not replace the
   existing readiness-to-Final handoff and Final-entry evidence
+
+## MODIFIED Requirements
+
+### Requirement: Phase Final body completeness
+
+`phase-final.md` SHALL contain a complete 9-section body. The node SHALL
+declare `phase: final`, `gate: null`, and `stop: "no"`; it SHALL not declare a
+`next` frontmatter field. It SHALL be a terminal node with no outgoing gate and
+no normal next phase.
+
+Delivery completion SHALL be evidenced by the existence of at least one report
+file under the `final/` directory. Because `phase-final.md` is a terminal node
+with `gate: null`, there is no gate CLI to write a `final_delivery` trace event,
+and the charter prohibits hand-writing trace events. Therefore the delivery
+fact is proven by file existence plus legal readiness-to-Final entry, not by a
+`final_delivery` event.
+
+#### Scenario: Final frontmatter contract
+
+- **WHEN** `phase-final.md` is loaded
+- **THEN** its frontmatter SHALL contain `node_type: phase`, `id: phase-final`,
+  `phase: final`, `gate: null`, and `stop: "no"`
+- **AND** it SHALL not contain a `next` frontmatter field
+- **AND** `gate` being `null` SHALL mean no outgoing gate CLI runs after this
+  phase
+
+### Requirement: Final delivery is terminal non-interactive delivery and post-final feedback re-enters through HITL2
+
+Final SHALL remain a terminal non-interactive delivery phase with `gate: null`,
+no `next` frontmatter field, no hidden next phase, no hidden gate, no
+recommendation/confirmation prompt, and no implicit loop.
+
+#### Scenario: Final terminal frontmatter has no outgoing edge
+
+- **WHEN** `phase-final.md` is loaded for terminal delivery
+- **THEN** its frontmatter SHALL use `gate: null` and omit `next`
+- **AND** that absence SHALL not create a hidden next phase, Final Gate, or
+  Final-owned repair loop

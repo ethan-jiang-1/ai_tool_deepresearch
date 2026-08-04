@@ -1,6 +1,6 @@
 # Persist Artifact Safely
 
-Use this playbook when an Agent has finished a content-bearing staging file for `reference/`, `artifacts/`, `final/`, or producer-owned `_cache/` and needs a crash-safe commit into the selected bundle.
+Use this playbook when an Agent has finished a content-bearing staging file for `reference/`, `artifacts/`, producer-owned `_cache/`, or a Final report and needs a crash-safe commit into the selected bundle.
 
 This is an Agent-run ordinary command path. Persistence verdicts assign the next mechanical owner but do not create interaction authority. Under a loaded `stop: no` phase, do not initiate a question, acknowledgement, approval, status, or wait; continue Agent-owned inspect/retry/sweep work, and preserve a genuinely non-delegable host boundary for the current lifecycle owner.
 
@@ -8,13 +8,13 @@ This is an Agent-run ordinary command path. Persistence verdicts assign the next
 
 Keep the completed staging source until the command returns `verdict: committed`.
 
-For a new target:
+For a new non-Final-Markdown target:
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs persist \
   --bundle <bundle> \
   --source <completed-staging-file> \
-  --target <reference|artifacts|final|_cache/path> \
+  --target <reference|artifacts|_cache/path> \
   --expect-absent
 ```
 
@@ -24,11 +24,37 @@ For replacement, calculate the current target SHA-256 and use compare-and-swap:
 node DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs persist \
   --bundle <bundle> \
   --source <completed-staging-file> \
-  --target <reference|artifacts|final|_cache/path> \
+  --target <reference|artifacts|_cache/path> \
   --expect-sha256 <current-target-sha256>
 ```
 
 There is no force overwrite. A blocked compare-and-swap means the Agent must inspect the current target and decide whether to prepare a new staging file or retry with the newly observed digest.
+
+## Final Markdown Reports
+
+For a safe Markdown target under `final/`, write the complete report to retained staging with exactly one bounded Evidence Map declaration table:
+
+```md
+## Evidence Map
+
+| Finding ID | Declared Key Finding | Submitted Backing |
+| --- | --- | --- |
+| F-001 | Concise declared conclusion | [Submitted evidence](../artifacts/wave1/topic/evidence-summary.md) |
+```
+
+Every map row needs non-empty values in all three columns. `Submitted Backing` may link only to an exact submitted `source_yaml` or `evidence_summary` output, or to an existing `reference/` projection whose current authority classification has submitted backing. The map is a reader declaration, not a second ledger or a semantic claim-quality check.
+
+Use the one admitted Final Markdown command:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs persist-final-report \
+  --bundle <bundle> \
+  --source <completed-final-markdown-staging-file> \
+  --target <final/report.md> \
+  --expect-absent
+```
+
+Read its top-level `check`, `inspect`, and `advice`. On a backing rejection, retain staging, repair the named map row or legal backing surface, and rerun `persist-final-report`. A pass establishes only structural declaration, safe-path, and submitted-provenance admission; it does not decide whether the evidence semantically supports the prose. Generic `persist` intentionally rejects safe Final Markdown targets and names `persist-final-report` as the direct rerun operation.
 
 ## Recover After A Crash
 
@@ -41,6 +67,8 @@ node DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs sweep --bundle <bundle>
 - `finalized`: a valid prepared payload was committed and its workspace removed.
 - `cleaned`: the target already contained the prepared bytes and the stale workspace was removed.
 - `blocked`: inspect the one reported root fact and follow its `recommended_action`.
+
+For a blocked prepared Final Markdown workspace, `sweep` has rerun the same backing admission before target rename. Repair the named retained staging/backing boundary, remove only the reported workspace without following symlinks, then rerun `persist-final-report`; do not retry generic `persist` for that Final report.
 
 For an incomplete or invalid workspace, the nearest legal repair is Agent-owned: inspect the reported `_diagnostics/artifact-persistence/<operation-id>/`, remove only that diagnostic workspace without following symlinks, retry persist from the retained staging source, then rerun sweep. For a target conflict, resolve which content should win before removing/retrying the workspace. There is no automatic discard, quarantine, repair-all, or unknown-temp promotion.
 

@@ -78,19 +78,63 @@ submitted work-unit 证据。读者无法从报告追溯到任何一手来源。
 
 ## 建议修复方向
 
-1. **Gate 层强制**：`check-gate-final-complete.mjs` 增加一条
-   `synthesis_evidence_citations` 规则：synthesis 中每个 claim/section 至少
-   引用一个 submitted evidence 表面（`reference/`、`artifacts/`、`_cache/`
-   或 ledger work_id）。零引用 → gate fail。
+1. **Pre-persist admission, not a Final Gate**: every new Final Markdown report
+   now carries a bounded `Evidence Map` whose rows name one key finding plus
+   submitted backing links. The Engine checks table structure, safe
+   target-relative resolution, and submitted provenance at the existing final
+   persistence boundary. It does not scan every sentence or create
+   `check-gate-final-complete.mjs`.
 
-2. **Phase-final guidance**：`phase-final.md` 明确要求 synthesis 的
-   Key Claims 部分必须带 `[ref: reference/00-shared-<slug>.md]` 或
-   `[src: artifacts/wave0/<topic>/source.yaml#sNN]` 形式的引用，没有引用
-   的 finding 不算 delivered。
+2. **One admitted command path**: Final Markdown staging uses
+   `operate-artifact-persistence.mjs persist-final-report`. Generic `persist`
+   rejects safe `final/*.md` targets, and crash recovery `sweep` reruns the
+   same admission before a prepared Final payload can be renamed into place.
 
-3. **孤儿证据清理**：wave1 topic 01/03/05 的 evidence-summary.md 在磁盘上但
+3. **孤儿证据清理 remains separate**：wave1 topic 01/03/05 的 evidence-summary.md 在磁盘上但
    work unit failed。要么走 BUG-197 修复后的 reenqueue 路径正式 submit 它们，
    要么明确标记为 "not_submitted_diagnostic" 并在报告中排除。
+
+## C3 Remediation Status (2026-08-04)
+
+C3 is archived as
+[`2026-08-04-traceable-final-delivery-backing`](../../openspec/changes/archive/2026-08-04-traceable-final-delivery-backing/).
+Its apply implementation, accepted-spec sync, strict validation, governance,
+feedback closeout, and governed archive transition have passed. This card does
+not claim that the historical incident report was rewritten.
+
+Implemented boundary:
+
+- A Final Markdown Evidence Map names `Finding ID`, `Declared Key Finding`, and
+  one or more `Submitted Backing` links. A direct link is accepted only for an
+  exact submitted `source_yaml` / `evidence_summary` output; a `reference/`
+  link remains valid only when the existing submitted-backing classifier
+  accepts it.
+- Missing, malformed, unsafe, symlinked, disk-only, cache-only, Final-output,
+  finding-index, failed, or unsubmitted paths block before a persistence
+  workspace or Final target is created. Generic persistence cannot bypass this
+  admission, and sweep rechecks an old prepared Final payload before it can
+  finalize.
+- The Engine deliberately does not decide whether a linked source
+  substantively supports the finding. Key-finding selection and semantic
+  adequacy remain Agent/human review responsibilities.
+
+Focused evidence retained for the implementation:
+
+- `node --test tests/engine/helpers/final-delivery-backing.test.mjs` passed
+  5/5 evaluator cases using real Engine readers and real work-unit transitions:
+  submitted direct/reference backing is accepted, while a real failed attempt's
+  disk artifact remains rejected.
+- `node --test tests/engine/helpers/artifact-persistence.test.mjs` passed
+  18/18 existing persistence regressions.
+- `node --test tests/integration/cli/artifact-persistence.test.mjs` passed
+  11/11 production CLI cases, including no-workspace rejection, generic
+  redirect, and crash-recovery sweep re-admission.
+- `node --test tests/integration/md/artifact-persistence-contract.test.mjs
+  tests/integration/cli/exit-code-convention.test.mjs` passed 36/36 static and
+  runtime contract cases.
+- Strict OpenSpec validation, verification-routing plan/assets checks,
+  requirement governance (629 registered IDs, 0 orphans), main-spec governance
+  (84 specs, 0 violations), and `git diff --check` all passed after spec sync.
 
 ## 本次 trace 证据
 

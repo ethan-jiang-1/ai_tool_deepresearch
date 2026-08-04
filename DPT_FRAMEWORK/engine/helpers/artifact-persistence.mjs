@@ -21,10 +21,17 @@ import {
 import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { z } from 'zod';
+import {
+  evaluateFinalDeliveryBacking,
+  FinalDeliveryBackingAdviceSchema,
+  FinalDeliveryBackingCheckSchema,
+  FinalDeliveryBackingInspectSchema,
+  isFinalMarkdownTarget,
+} from './final-delivery-backing.mjs';
 
 export const ARTIFACT_PERSISTENCE_SCHEMA_VERSION = '1.0.0';
 export const ARTIFACT_PERSISTENCE_ROOT = '_diagnostics/artifact-persistence';
-export const ARTIFACT_PERSISTENCE_OPERATIONS = Object.freeze(['persist', 'sweep']);
+export const ARTIFACT_PERSISTENCE_OPERATIONS = Object.freeze(['persist', 'persist-final-report', 'sweep']);
 export const ARTIFACT_PERSISTENCE_VERDICTS = Object.freeze(['committed', 'finalized', 'cleaned', 'blocked']);
 export const ARTIFACT_PERSISTENCE_SUPPORTED_ROOTS = Object.freeze(['reference', 'artifacts', 'final', '_cache']);
 export const ARTIFACT_PERSISTENCE_EXCLUDED_SURFACES = Object.freeze([
@@ -98,6 +105,35 @@ export const ArtifactPersistResultSchema = z.object({
     if (value.target === null) context.addIssue({ code: z.ZodIssueCode.custom, path: ['target'], message: 'committed requires target' });
     if (value.reason_code !== 'committed') context.addIssue({ code: z.ZodIssueCode.custom, path: ['reason_code'], message: 'committed verdict requires committed reason_code' });
     if (value.workspace !== null) context.addIssue({ code: z.ZodIssueCode.custom, path: ['workspace'], message: 'committed cannot retain workspace' });
+  }
+});
+
+export const FinalReportPersistResultSchema = z.object({
+  schema_version: z.literal(ARTIFACT_PERSISTENCE_SCHEMA_VERSION),
+  operation: z.literal('persist-final-report'),
+  check: FinalDeliveryBackingCheckSchema,
+  inspect: z.array(FinalDeliveryBackingInspectSchema),
+  advice: z.array(FinalDeliveryBackingAdviceSchema),
+  operation_id: OperationIdSchema.nullable(),
+  target: TargetSchema,
+  verdict: z.enum(['committed', 'blocked']),
+  reason_code: z.string().min(1),
+  reason: z.string().min(1),
+  workspace: z.string().nullable(),
+}).strict().superRefine((value, context) => {
+  if (value.check.target !== value.target) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['check', 'target'], message: 'Final-backing check target must match the persistence target' });
+  }
+  if (!value.check.passed) {
+    if (value.verdict !== 'blocked') context.addIssue({ code: z.ZodIssueCode.custom, path: ['verdict'], message: 'failed backing admission requires a blocked verdict' });
+    if (value.operation_id !== null) context.addIssue({ code: z.ZodIssueCode.custom, path: ['operation_id'], message: 'failed backing admission cannot create a persistence operation' });
+    if (value.workspace !== null) context.addIssue({ code: z.ZodIssueCode.custom, path: ['workspace'], message: 'failed backing admission cannot create a workspace' });
+  }
+  if (value.verdict === 'committed') {
+    if (!value.check.passed) context.addIssue({ code: z.ZodIssueCode.custom, path: ['check', 'passed'], message: 'committed Final report requires passing backing admission' });
+    if (value.reason_code !== 'committed') context.addIssue({ code: z.ZodIssueCode.custom, path: ['reason_code'], message: 'committed verdict requires committed reason_code' });
+    if (value.operation_id === null) context.addIssue({ code: z.ZodIssueCode.custom, path: ['operation_id'], message: 'committed verdict requires operation_id' });
+    if (value.workspace !== null) context.addIssue({ code: z.ZodIssueCode.custom, path: ['workspace'], message: 'committed verdict cannot retain a workspace' });
   }
 });
 
@@ -256,6 +292,21 @@ function resolveSource(sourcePath, targetPath, persistenceRoot) {
     throw new ArtifactPersistenceConfigError('staging source aliases target or persistence workspace', 'source_alias');
   }
   return sourceReal;
+}
+
+/** Validate a persistence request without creating a workspace or mutating a target. */
+export function inspectArtifactPersistenceRequest({ bundlePath, sourcePath, target, expectedTarget } = {}) {
+  const parsedExpectedTarget = ExpectedTargetSchema.parse(expectedTarget);
+  const bundleReal = resolveBundle(bundlePath);
+  const targetResolved = resolveTarget(bundleReal, target);
+  const persistenceRoot = path.join(bundleReal, ...ARTIFACT_PERSISTENCE_ROOT.split('/'));
+  const sourceReal = resolveSource(sourcePath, targetResolved.targetPath, persistenceRoot);
+  return {
+    bundle_real: bundleReal,
+    source_path: sourceReal,
+    target,
+    expected_target: parsedExpectedTarget,
+  };
 }
 
 function ensurePersistenceRoot(bundleReal) {
@@ -460,6 +511,64 @@ export function persistBundleFile({
   }
 }
 
+export function redirectFinalMarkdownPersist({ target } = {}) {
+  return blockedPersist({
+    target,
+    reasonCode: 'final_markdown_requires_admission',
+    reason: 'Final Markdown reports must use persist-final-report so Evidence Map backing is admitted before durability commit.',
+  });
+}
+
+function finalReportPersistResult({ admission, target, persistence = null }) {
+  const durability = persistence || {
+    operation_id: null,
+    target,
+    verdict: 'blocked',
+    reason_code: admission.inspect[0]?.code || 'final_backing_rejected',
+    reason: admission.inspect[0]?.detail || 'Final Markdown backing admission failed.',
+    workspace: null,
+  };
+  return FinalReportPersistResultSchema.parse({
+    schema_version: ARTIFACT_PERSISTENCE_SCHEMA_VERSION,
+    operation: 'persist-final-report',
+    check: admission.check,
+    inspect: admission.inspect,
+    advice: admission.advice,
+    operation_id: durability.operation_id,
+    target: durability.target || target,
+    verdict: durability.verdict,
+    reason_code: durability.reason_code,
+    reason: durability.reason,
+    workspace: durability.workspace,
+  });
+}
+
+/**
+ * Admit a Final Markdown report before it reaches the existing atomic writer.
+ * The preflight intentionally performs no persistence-root or target mutation.
+ */
+export function persistFinalReport({ bundlePath, sourcePath, target, expectedTarget } = {}) {
+  const request = inspectArtifactPersistenceRequest({ bundlePath, sourcePath, target, expectedTarget });
+  if (!isFinalMarkdownTarget(target)) {
+    throw new ArtifactPersistenceConfigError('persist-final-report requires a safe Markdown target under final/', 'final_markdown_target_required');
+  }
+  const markdown = readFileSync(request.source_path, 'utf8');
+  const admission = evaluateFinalDeliveryBacking({
+    bundlePath,
+    target,
+    markdown,
+  });
+  if (!admission.check.passed) return finalReportPersistResult({ admission, target });
+
+  const persisted = persistBundleFile({
+    bundlePath: request.bundle_real,
+    sourcePath: request.source_path,
+    target,
+    expectedTarget: request.expected_target,
+  });
+  return finalReportPersistResult({ admission, target, persistence: persisted });
+}
+
 function blockedSweepEntry({ bundleReal, workspacePath, operationId = null, target = null, sourcePath = null, reasonCode, reason, recommendedAction }) {
   return ArtifactSweepEntrySchema.parse({
     operation_id: operationId,
@@ -485,7 +594,7 @@ function loadOperation(workspacePath) {
   }
 }
 
-function inspectSweepWorkspace({ bundleReal, persistenceRoot, workspacePath }) {
+function inspectSweepWorkspace({ bundleReal, bundleReaderPath, persistenceRoot, workspacePath }) {
   const workspaceName = path.basename(workspacePath);
   const workspaceInfo = lstatSync(workspacePath);
   if (workspaceInfo.isSymbolicLink() || !workspaceInfo.isDirectory()) {
@@ -636,6 +745,27 @@ function inspectSweepWorkspace({ bundleReal, persistenceRoot, workspacePath }) {
     });
   }
 
+  if (isFinalMarkdownTarget(operation.target)) {
+    const admission = evaluateFinalDeliveryBacking({
+      bundlePath: bundleReaderPath,
+      target: operation.target,
+      markdown: readFileSync(payloadPath, 'utf8'),
+    });
+    if (!admission.check.passed) {
+      const issue = admission.inspect[0];
+      return blockedSweepEntry({
+        bundleReal,
+        workspacePath,
+        operationId: operation.operation_id,
+        target: operation.target,
+        sourcePath: operation.source_path,
+        reasonCode: `final_backing_${issue.code}`,
+        reason: issue.detail,
+        recommendedAction: `Repair ${issue.repair_surface} for ${operation.target}, remove only ${relativeWorkspace(bundleReal, workspacePath)}, then rerun persist-final-report from retained staging ${operation.source_path}.`,
+      });
+    }
+  }
+
   try {
     renameSync(payloadPath, targetResolved.targetPath);
     fsyncPath(targetResolved.parentPath);
@@ -666,6 +796,7 @@ function inspectSweepWorkspace({ bundleReal, persistenceRoot, workspacePath }) {
 
 export function sweepPendingArtifactWrites({ bundlePath } = {}) {
   const bundleReal = resolveBundle(bundlePath);
+  const bundleReaderPath = path.resolve(bundlePath);
   const persistenceRoot = path.join(bundleReal, ...ARTIFACT_PERSISTENCE_ROOT.split('/'));
   if (!existsSync(persistenceRoot)) {
     return ArtifactSweepSummarySchema.parse({
@@ -686,6 +817,7 @@ export function sweepPendingArtifactWrites({ bundlePath } = {}) {
     .sort((left, right) => left.name.localeCompare(right.name))
     .map((entry) => inspectSweepWorkspace({
       bundleReal,
+      bundleReaderPath,
       persistenceRoot,
       workspacePath: path.join(persistenceRoot, entry.name),
     }));

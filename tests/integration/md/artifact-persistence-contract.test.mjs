@@ -1,4 +1,4 @@
-// @impl ARP-001, ARP-002, ARP-003
+// @impl ARP-001, ARP-002, ARP-003, ARP-004, CDP-006
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,12 +13,16 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
   const cli = read('DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs');
   const commands = read('DPT_FRAMEWORK/COMMANDS.md');
   const playbook = read('DPT_FRAMEWORK/command_playbook/persist-artifact.md');
+  const phaseFinal = read('DPT_FRAMEWORK/workflows/nodes/phases/phase-final.md');
+  const context = read('CONTEXT.md');
+  const changelog = read('CHANGELOG.md');
+  const run = read('DPT_FRAMEWORK/RUN.md');
   const subagent = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md');
   const antiCheating = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-anti-cheating-rules.md');
 
-  it('exposes one workspace, two operations, supported roots, and excluded authority surfaces', () => {
+  it('exposes one workspace, three operations, supported roots, and excluded authority surfaces', () => {
     assert.match(helper, /ARTIFACT_PERSISTENCE_ROOT = '_diagnostics\/artifact-persistence'/);
-    assert.match(helper, /ARTIFACT_PERSISTENCE_OPERATIONS = Object\.freeze\(\['persist', 'sweep'\]\)/);
+    assert.match(helper, /ARTIFACT_PERSISTENCE_OPERATIONS = Object\.freeze\(\['persist', 'persist-final-report', 'sweep'\]\)/);
     for (const root of ['reference', 'artifacts', 'final', '_cache']) assert.ok(helper.includes(`'${root}'`));
     for (const excluded of ['rb_status.json', 'rb_queue.json', 'rb_trace.jsonl', 'rb_output_declarations.jsonl', '_work_units']) {
       assert.ok(helper.includes(`'${excluded}'`), `missing excluded surface ${excluded}`);
@@ -29,7 +33,7 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
     for (const marker of ['retained staging', 'quiescent', 'retry persist', 'rerun sweep', 'There is no force overwrite']) {
       assert.ok(playbook.includes(marker), `playbook missing ${marker}`);
     }
-    assert.match(commands, /two-operation mechanical durability command/);
+    assert.match(commands, /three-operation durability command/);
     assert.match(antiCheating, /unknown-temp promotion/);
   });
 
@@ -40,6 +44,33 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
     assert.match(subagent, /operate-work-unit submit` remains the transaction owner/);
     assert.doesNotMatch(helper, /COMMANDS\.md|command_playbook|workflows\/nodes/);
     assert.doesNotMatch(cli, /rb_trace\.jsonl|log-event\.mjs|appendTrace/);
+  });
+
+  it('gives Final Markdown one admitted Evidence Map command without changing terminal semantics', () => {
+    for (const source of [phaseFinal, playbook]) {
+      assert.match(source, /Evidence Map/);
+      assert.match(source, /persist-final-report/);
+      assert.match(source, /retained staging/);
+    }
+    assert.match(phaseFinal, /gate: null/);
+    assert.doesNotMatch(phaseFinal, /`gate: none`/);
+    assert.doesNotMatch(phaseFinal, /^next:/m);
+    assert.match(phaseFinal, /不创建 Final Gate、Final trace event/);
+    assert.match(phaseFinal, /MUST NOT 写 `final_delivery` trace event/);
+    assert.match(phaseFinal, /没有 gate CLI/);
+    assert.match(playbook, /Generic `persist` intentionally rejects safe Final Markdown targets/);
+    assert.match(commands, /three-operation durability command/);
+  });
+
+  it('keeps Final-backing vocabulary and v0.70 release scope bounded', () => {
+    for (const term of ['Final key-finding declaration', 'Final Evidence Map', 'Final backing']) {
+      assert.match(context, new RegExp(`\\*\\*${term}\\*\\*`));
+    }
+    assert.match(changelog, /## v0\.70/);
+    assert.match(changelog, /structural path\/provenance feedback only/);
+    assert.match(run, /DPT_FRAMEWORK v0\.70/);
+    assert.match(run, /Current Release: v0\.70/);
+    assert.match(run, /structural path\/provenance admission only/);
   });
 
   it('does not grow recovery controllers or destructive branches', () => {

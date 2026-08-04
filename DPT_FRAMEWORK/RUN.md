@@ -1,13 +1,22 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.69**
+> **DPT_FRAMEWORK v0.70**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.69
+## Current Release: v0.70
+
+- Final Markdown reports now use `persist-final-report`: retained staging must
+  contain one bounded Evidence Map that connects each declared key finding to
+  an exact submitted `source_yaml` / `evidence_summary` output or an existing
+  submitted-backed `reference/` projection before the existing CAS/atomic
+  durability path commits the report bytes. Generic `persist` redirects safe
+  Final Markdown targets, and `sweep` rechecks prepared Final payloads before
+  finalization. This is structural path/provenance admission only: it adds no
+  Final Gate, trace event, ledger, or semantic support verdict.
 
 - Wave0 source intake now submits source/cache facts only. Formal submitted
   backing lets the Phase materialize verified shared references or atomically

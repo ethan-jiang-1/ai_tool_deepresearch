@@ -6,9 +6,13 @@ import { parseArgs } from 'node:util';
 import {
   ARTIFACT_PERSISTENCE_SCHEMA_VERSION,
   ArtifactPersistenceConfigError,
+  inspectArtifactPersistenceRequest,
   persistBundleFile,
+  persistFinalReport,
+  redirectFinalMarkdownPersist,
   sweepPendingArtifactWrites,
 } from '../engine/helpers/artifact-persistence.mjs';
+import { isFinalMarkdownTarget } from '../engine/helpers/final-delivery-backing.mjs';
 import { logToRun } from '../engine/logger.mjs';
 
 function emit(value) {
@@ -19,6 +23,7 @@ function usage() {
   return [
     'Usage:',
     '  node DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs persist --bundle <path> --source <file> --target <bundle-relative-path> (--expect-absent | --expect-sha256 <digest>)',
+    '  node DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs persist-final-report --bundle <path> --source <file> --target <final/report.md> (--expect-absent | --expect-sha256 <digest>)',
     '  node DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs sweep --bundle <path>',
     '',
     'Sweep requires a quiescent bundle: do not run it concurrently with persist.',
@@ -67,8 +72,8 @@ if (values.help) {
   process.exit(0);
 }
 
-if (!['persist', 'sweep'].includes(operation)) {
-  emit(invocationError(operation, 'operation must be persist or sweep'));
+if (!['persist', 'persist-final-report', 'sweep'].includes(operation)) {
+  emit(invocationError(operation, 'operation must be persist, persist-final-report, or sweep'));
   process.exit(2);
 }
 if (!values.bundle) {
@@ -77,19 +82,42 @@ if (!values.bundle) {
 }
 
 try {
-  if (operation === 'persist') {
+  if (operation === 'persist' || operation === 'persist-final-report') {
     if (!values.source || !values.target) {
-      emit(invocationError(operation, '--source and --target are required for persist'));
+      emit(invocationError(operation, '--source and --target are required for persistence operations'));
       process.exit(2);
     }
     const expectationCount = Number(values['expect-absent']) + Number(Boolean(values['expect-sha256']));
     if (expectationCount !== 1) {
-      emit(invocationError(operation, 'persist requires exactly one of --expect-absent or --expect-sha256'));
+      emit(invocationError(operation, `${operation} requires exactly one of --expect-absent or --expect-sha256`));
       process.exit(2);
     }
     const expectedTarget = values['expect-absent']
       ? { kind: 'absent' }
       : { kind: 'sha256', value: values['expect-sha256'] };
+    const request = inspectArtifactPersistenceRequest({
+      bundlePath: values.bundle,
+      sourcePath: values.source,
+      target: values.target,
+      expectedTarget,
+    });
+    if (operation === 'persist' && isFinalMarkdownTarget(values.target)) {
+      const result = redirectFinalMarkdownPersist({ target: request.target });
+      logToRun(values.bundle, 'warn', 'artifact_persistence_persist', result);
+      emit(result);
+      process.exit(1);
+    }
+    if (operation === 'persist-final-report') {
+      const result = persistFinalReport({
+        bundlePath: values.bundle,
+        sourcePath: values.source,
+        target: values.target,
+        expectedTarget,
+      });
+      logToRun(values.bundle, result.verdict === 'blocked' ? 'warn' : 'info', 'artifact_persistence_persist_final_report', result);
+      emit(result);
+      process.exit(result.verdict === 'blocked' ? 1 : 0);
+    }
     const result = persistBundleFile({
       bundlePath: values.bundle,
       sourcePath: values.source,
