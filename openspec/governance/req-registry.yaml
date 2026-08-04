@@ -678,6 +678,7 @@ RWE-009: research-wave-experiments — Wave2 cross-artifact references become st
 RWE-010: research-wave-experiments — Playbook Agent writes wave completion events before gates without gate self-satisfaction
 RWE-011: research-wave-experiments — Timeout preflight and progress lease cases use production facts and Supervisor cleanup
 RWE-012: research-wave-experiments — Wave audited late-accept coverage for timed-out work units
+RWE-013: research-wave-experiments — Real-Agent degraded-handoff requalification case retains the Wave0-to-Wave2 behavioral evidence boundary
 
 # wff-research-waves / seed-topic-materialization
 STM-001: seed-topic-materialization — Seed topic materialization phase node (9-section body, forces topic_registry→seed_topics/ materialization, seed_topics_completion trace event)

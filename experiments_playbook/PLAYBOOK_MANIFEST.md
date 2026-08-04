@@ -52,6 +52,7 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 | `exp_wff_wave-chain/case-151-standard-waves-full-chain.md` |
 | `exp_wff_wave-chain/case-152-standard-wave-repair-loop.md` |
 | `exp_wff_wave-chain/case-153-standard-wave-fault-tolerance.md` |
+| `exp_wff_wave-chain/case-154-heavy-degraded-handoff-requalification.md` |
 | `exp_evidence-extraction/case-161-light-complete-cache-trails.md` |
 | `exp_evidence-extraction/case-162-standard-gate-reentry-cache-coverage.md` |
 | `exp_evidence-extraction/case-163-heavy-rerun-add-real-cache-trail.md` |

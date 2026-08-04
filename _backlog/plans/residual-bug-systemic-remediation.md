@@ -3,7 +3,7 @@ title: Residual bug systemic remediation
 status: active_evidence_gated_remediation
 created: 2026-08-05
 source_bugs: BUG-188, BUG-192, BUG-193, BUG-195, BUG-196, BUG-197, BUG-198
-change_budget: at_most_two_openspec_changes
+change_budget: two_admitted_changes_plus_one_conditional_repair
 ---
 
 # Residual Bug Systemic Remediation
@@ -19,12 +19,14 @@ All repository behavior or verification-asset changes use the full OpenSpec
 `$polish-openspec-change` immediately after all proposal artifacts exist and
 before `/opsx:apply`; it must earn a `ready for apply` result from two distinct
 planning-review passes. This plan authorizes neither target edits nor a standing
-experiment/retry loop. The total budget is **at most two focused OpenSpec
-changes**:
+experiment/retry loop. The default budget is **two focused OpenSpec changes
+plus at most one conditional direct-root repair**:
 
 1. C1 is immediately admissible because a current deterministic test is red.
-2. C2 is conditional on one retained current-head real-Agent reproduction of
-   the shared degraded-handoff behavior.
+2. C2 is admissible after C1 because no existing playbook covers the required
+   current-head degraded-handoff observation.
+3. C3 is conditional on C2 retaining one actual shared degraded-handoff
+   violation; it repairs only the observed root.
 
 No Change is currently admissible for host-owned wait presentation. A host
 integration can only become a third candidate after the host exposes an
@@ -35,7 +37,7 @@ authoritative progress interface; this plan does not reserve a Change for it.
 | Cards | Current finding | Owner | Disposition now |
 | --- | --- | --- | --- |
 | BUG-188, BUG-193 | The selected host now renders a background-agent row, elapsed/token counters, and spinner. It still does not expose a retained authoritative progress event, and DPT cannot change the host TUI or unblock a host `agent_wait`. BUG-193 is a Wave1 duplicate of BUG-188. | Host UI/runtime | External residual; no DPT Change. Keep BUG-193 linked as duplicate evidence, not a separate implementation route. |
-| BUG-192, BUG-198 | The current loaded control surfaces already forbid user questions/A/B choices/phase skips and Phase-Agent direct research search. The only relevant current-head Wave2 run finalized `NOT_RUN` before any callable real search/fetch action, so neither compliant nor violating Agent behavior was observed. | Agent behavior plus host tool surface | One shared requalification gate, then at most C2. |
+| BUG-192, BUG-198 | The current loaded control surfaces already forbid user questions/A/B choices/phase skips and Phase-Agent direct research search. The only relevant current-head Wave2 run finalized `NOT_RUN` before any callable real search/fetch action, so neither compliant nor violating Agent behavior was observed. No existing playbook spans the required degraded Wave0 handoff through the Wave2 decision. | Agent behavior plus host tool surface | C2 creates one shared requalification case; C3 remains conditional on a retained violation. |
 | BUG-195, BUG-196, BUG-197 | The current generated task/schema names `cache_trail_refs`; post-`work_done` semantic failures map to `fail_and_replace`; a fresh primary replacement can enqueue, claim, and submit. The retained case-164 real replay followed this path. | Existing work-unit contract | No Engine/schema/queue change is justified. First repair its currently red verification asset, then close these cards from current evidence unless that repair reveals a distinct root. |
 
 There is no matching prior rejection in `.out-of-scope/` (the directory is
@@ -118,14 +120,28 @@ The run ends at its first terminal `PASS`, `FAIL`, `NOT_RUN`, selection
 omission, or budget boundary. A static test, configured tool name, or partial
 host transcript is not behavior proof.
 
-## 6. C2: Degraded Handoff Contract Reentry (Conditional)
+## 6. C2: Degraded Handoff Requalification Case
 
-C2 opens only if the requalification run observes either forbidden behavior:
-an unsolicited user choice/phase skip after a legal degraded handoff, or a
-Phase-Agent direct research search/fetch in Wave2.
+C2 creates the missing one-case `agent_flow_e2e` observation surface. It
+starts from a current degraded Wave0 handoff, loads Wave1, then reaches the
+Wave2 new-evidence decision under one explicit cost and duration envelope. Its
+native completion retains the Subject prompt/transcript/result, host facts,
+bundle status/trace, Gate JSON, and tool-call evidence. `PASS`, `FAIL`,
+`NOT_RUN`, selection omission, and budget boundary remain distinct outcomes.
+
+C2 does not change the current production handoff or search policy. A static
+test or configured tool name remains insufficient. It must not add a host
+watcher, retry scheduler, progress state, chat observer, WebSearch interceptor,
+fallback provider, skip route, or lifecycle state.
+
+## 7. C3: Degraded Handoff Contract Repair (Only On C2 Reproduction)
+
+C3 opens only if C2 observes either forbidden behavior: an unsolicited user
+choice/phase skip after a legal degraded handoff, or a Phase-Agent direct
+research search/fetch in Wave2.
 
 The two cards share one root only in that case: the Agent left the loaded
-phase's direct legal action after a degraded handoff. Keep C2 narrowly in the
+phase's direct legal action after a degraded handoff. Keep C3 narrowly in the
 Agent-facing handoff surface:
 
 - state the one legal next action immediately after the accepted handoff;
@@ -135,12 +151,12 @@ Agent-facing handoff surface:
   prohibitions; and
 - rerun the same bounded real-Agent scenario after apply.
 
-C2 must not add an Engine chat observer, a tool-call interceptor, an automatic
+C3 must not add an Engine chat observer, a tool-call interceptor, an automatic
 continuation controller, a skip/degraded route, or a new lifecycle state. If
-the requalification does not reproduce a violation, close BUG-192/198 as
-current-head unobserved behavior residuals and do not create C2.
+C2 does not reproduce a violation, close BUG-192/198 as current-head
+unobserved behavior residuals and do not create C3.
 
-## 7. Host Wait Route For BUG-188 And BUG-193
+## 8. Host Wait Route For BUG-188 And BUG-193
 
 The DPT repository cannot repair the host's wait renderer. The current host
 already disproves the historical "completely static" display claim, while its
@@ -154,7 +170,7 @@ execution exception, or artificial heartbeat. Once such an interface exists,
 triage it as a new host-integration request rather than reopening BUG-188/193
 as an Engine defect.
 
-## 8. Step-By-Step Checklist
+## 9. Step-By-Step Checklist
 
 ### 8.1 Triage Baseline
 
@@ -215,57 +231,79 @@ as an Engine defect.
 
 ### 8.4 BUG-192 And BUG-198 Requalification Gate
 
-- [ ] 8.4.1 Confirm that the selected host provides callable real search/fetch,
-  native child execution, and a writable disposable bundle path. If any is
-  absent, retain the terminal `NOT_RUN`/host-capability boundary and do not
-  create C2.
-- [ ] 8.4.2 Obtain one explicit objective and duration/budget envelope; run a
-  fresh profile dry-run and use its first eligible selection only. No forced
-  historical case, fallback provider, or retry loop.
-- [ ] 8.4.3 Execute at most one bounded `agent_flow_e2e` observation from a
-  real degraded Wave0 handoff through the Wave2 new-evidence decision; retain
-  the Subject transcript/result, host facts, bundle status/trace, Gate JSON,
-  and tool-call evidence.
-- [ ] 8.4.4 Classify the first terminal outcome as `PASS`, `FAIL`, `NOT_RUN`,
-  selection omission, or budget boundary. Static Markdown or a configured tool
-  name is not a substitute for this evidence.
+- [x] 8.4.1 Requested the selected-host capability path through the one
+  permitted assurance selection. Supervisor stopped before launch because
+  `duration_prediction_unavailable`; callable real search/fetch, child
+  execution, and bundle-write capability therefore remain unobserved rather
+  than absent or proven available.
+- [x] 8.4.2 Used the explicit C2 objective and `$3`/900-second envelope for one
+  assurance selection, then retained the one read-only dry-run's selection
+  basis. No forced historical case, fallback provider, or retry loop occurred.
+- [x] 8.4.3 Requested at most one bounded `agent_flow_e2e` observation. It did
+  not launch, so no Subject transcript/result, host fact, bundle status/trace,
+  Gate JSON, or tool-call evidence exists.
+- [x] 8.4.4 Classified the first result as a Supervisor selection omission
+  (`duration_prediction_unavailable`), not `PASS`, `FAIL`, `NOT_RUN`, budget
+  boundary, or Agent-behavior evidence. Static Markdown and configured tools
+  remain non-substitutes.
 
-### 8.5 C2: Degraded Handoff Contract Reentry (Only On Reproduction)
+### 8.5 C2: Degraded Handoff Requalification Case
 
-- [ ] 8.5.1 Create C2 only when task 8.4.4 observes an unsolicited user
-  choice/phase skip or a Phase-Agent direct research search/fetch. Otherwise
-  mark this branch not applicable and close BUG-192/198 as current-head
-  unobserved behavior residuals.
-- [ ] 8.5.2 After C2 proposal artifacts are complete, run
+- [x] 8.5.1 Proposed C2 as `add-degraded-handoff-requalification-case` for the
+  missing degraded Wave0 -> Wave1 -> Wave2 observation. Its verified routing
+  plan selects `agent_flow_e2e` and distinguishes `PASS`, `FAIL`, `NOT_RUN`,
+  selection omission, and budget boundary.
+- [x] 8.5.2 Ran `$polish-openspec-change` after C2 proposal completion. The
+  coherence pass corrected native-versus-Supervisor terminal authority and the
+  risk-led pass added same-session Wave2 surface reload plus an actual
+  delegated new-evidence route. `openspec validate --strict`, verification
+  routing plan, project requirement/spec checks, and `git diff --check` pass:
+  `add-degraded-handoff-requalification-case` is ready for apply.
+- [x] 8.5.3 Applied, verified, and archived C2 as
+  `2026-08-05-add-degraded-handoff-requalification-case` through its approved
+  task list and governed finalizer. Static assets and all change validation
+  passed. The one permitted assurance invocation ended at Supervisor selection
+  with `duration_prediction_unavailable`; it created no native completion or
+  Subject behavior evidence and was not retried. This honest selection boundary
+  does not claim production behavioral remediation.
+
+### 8.6 C3: Degraded Handoff Contract Repair (Only On C2 Reproduction)
+
+- [x] 8.6.1 Assessed C3 admission: C2 retained no actual prohibited Subject
+  action because the Supervisor stopped at selection. C3 is not applicable;
+  this is not a behavior closeout for BUG-192/198.
+- [ ] 8.6.2 Record the C2 selection-omission boundary on BUG-192 and BUG-198,
+  then move them to the appropriate completed backlog location as current-head
+  unobserved behavior residuals. Do not claim Agent compliance or remediation.
+- [ ] 8.6.3 If a future evidence-authorized C3 becomes admissible, after its
+  proposal artifacts are complete, run
   `$polish-openspec-change` before any apply work. Require two distinct passes,
   `ready for apply`, and change-artifact capture of every resolved finding.
-- [ ] 8.5.3 If C2 is admitted and polished, use one focused OpenSpec proposal
-  to reinforce
-  the direct legal action after degraded handoff and the existing delegated
-  search boundary. Do not add a chat observer, tool interceptor, new state,
-  automatic continuation controller, or new skip route.
-- [ ] 8.5.4 Apply, verify, and archive C2 through its approved task list, then
-  rerun the same bounded real-Agent observation before claiming behavioral
-  remediation.
+- [ ] 8.6.4 If C3 is admitted and polished, reinforce the direct legal action
+  after degraded handoff and the existing delegated search boundary. Do not add
+  a chat observer, tool interceptor, new state, automatic continuation
+  controller, or new skip route.
+- [ ] 8.6.5 Apply, verify, and archive C3 through its approved task list, then
+  rerun C2 before claiming behavioral remediation.
 
-### 8.6 BUG-188 And BUG-193 Host Disposition
+### 8.7 BUG-188 And BUG-193 Host Disposition
 
-- [ ] 8.6.1 Record the host-owned disposition for BUG-188: the current host
+- [ ] 8.7.1 Record the host-owned disposition for BUG-188: the current host
   already supplies display-only spinner/counters, but no DPT-consumable
   authoritative progress event. Do not open a DPT Change for this fact.
-- [ ] 8.6.2 Close BUG-193 as the Wave1 duplicate of BUG-188, preserving its
+- [ ] 8.7.2 Close BUG-193 as the Wave1 duplicate of BUG-188, preserving its
   cross-phase observation without creating a second implementation route.
-- [ ] 8.6.3 Reopen this host route only when the host owner documents a stable
+- [ ] 8.7.3 Reopen this host route only when the host owner documents a stable
   progress interface with task identity, timestamped progress/terminal events,
   retention/read API, and a stalled-versus-running owner.
 
-### 8.7 Plan Closure
+### 8.8 Plan Closure
 
-- [ ] 8.7.1 Confirm C1 has a terminal OpenSpec outcome and every residual card
+- [ ] 8.8.1 Confirm C1 has a terminal OpenSpec outcome and every residual card
   has either a completed disposition, an explicit host-owned boundary, or one
   current requalification result.
-- [ ] 8.7.2 Confirm no unadmitted controller, retry loop, host adapter, or
+- [ ] 8.8.2 Confirm no unadmitted controller, retry loop, host adapter, or
   broad rewrite remains queued under this plan.
-- [ ] 8.7.3 Move this plan to `_backlog/_done/_closed_plans/` using the normal
+- [ ] 8.8.3 Move this plan to `_backlog/_done/_closed_plans/` using the normal
   backlog archival ritual only after all applicable checklist branches are
   complete or explicitly not applicable.

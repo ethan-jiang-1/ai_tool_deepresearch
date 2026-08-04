@@ -1,0 +1,61 @@
+schema_version: verification-routing/v1
+change: add-degraded-handoff-requalification-case
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The change adds a cross-surface real-Agent observation case rather than
+      an isolated production module.
+  integration:
+    status: selected
+    rationale: >-
+      A root tests/integration contract test verifies the manifest, V2 profile,
+      declared legal phase boundary, and evidence/non-substitution boundary.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      Fixture-backed deterministic chains cannot prove the Subject behavior
+      required for the C3 admission decision.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      One Headless real-Agent run of the new case is the only proof subject
+      that can retain the current-host degraded-handoff observation.
+claims:
+  - id: rwe-013-static-case-contract
+    statement: >-
+      The static integration contract verifies that RWE-013 is registered once
+      with an honest real-Agent V2 proof profile, legal degraded Wave0 -> Wave1
+      -> Wave2 boundary, same-session target-surface reload, and declared
+      native-evidence/non-substitution limits.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/case-154-degraded-handoff-requalification-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rwe-013-current-host-degraded-handoff-observation
+    statement: >-
+      One bounded Headless assurance run retains native completion and declared
+      Subject, Gate, status, trace, target-surface, and tool-call evidence for
+      the exact degraded-handoff observation, or retains the Supervisor's
+      pre-completion cancellation, error, or budget boundary without asserting
+      behavior.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wff_wave-chain/case-154-heavy-degraded-handoff-requalification.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

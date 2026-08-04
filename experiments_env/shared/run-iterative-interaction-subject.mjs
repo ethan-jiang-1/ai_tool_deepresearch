@@ -88,6 +88,19 @@ const SUBJECTS = {
     tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
     boundary: 'Use at most two bounded searches and one fetch. Do not write playbook verdict checks, native completion, health output, or cleanup. If external access or a required nested actor is unavailable, fail honestly instead of fabricating evidence.',
   },
+  '154': {
+    bundlePrefix: 'dpt_disp_case-154_',
+    transcript: 'case-154-subject-transcript.jsonl',
+    system: 'You are the independent Subject Agent for case 154, distinct from the Playbook Agent. Work only in the exact bundle path provided by the runner. First consume the injected legal Wave1 surface. Only after the runner re-delivers the legal Wave2 surface in this same session may you perform the bounded Wave2 task.',
+    messages: [
+      'Consume the prepared Wave1 predecessor only through the current production surface: run the current Wave1 Gate, retain its complete JSON as case-154-wave1-gate.json, and only if it passes consume check.next with enter-phase and advance-status using wave1_complete. Verify the resulting status is phases/phase-wave2.md. Stop before making any Wave2 finding, queue decision, search, child invocation, or Wave2 artifact.',
+      'The runner will replace this message with the exact reloaded Wave2 control surface after the legal entry is established.',
+    ],
+    tools: 'Task,Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
+    boundary: 'The first turn may only consume the current Wave1 Gate and immediate legal handoff. In the second turn, create and retain one named W2F-154 finding with gap_status: needs_search and decision explore_search or exploit_search, then use one real dpt-topic-scout child through the production wave2_targeted_evidence work-unit claim/submit path. The Subject must not invoke WebSearch or WebFetch itself. Do not write playbook verdict checks, native completion, health output, cleanup, or hand-edit lifecycle authority.',
+    afterTurn: reloadCase154Wave2Surface,
+    timeoutMs: 8 * 60 * 1000,
+  },
   '318': {
     bundlePrefix: 'dpt_disp_case-318_',
     transcript: 'case-318-subject-transcript.jsonl',
@@ -167,7 +180,7 @@ const SUBJECTS = {
 };
 
 function usage() {
-  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <204|115|164|225|227|232|318|711|712|713-readiness|713-final|714|901|951|951-judge> --bundle <path>');
+  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <154|204|115|164|225|227|232|318|711|712|713-readiness|713-final|714|901|951|951-judge> --bundle <path>');
   process.exit(2);
 }
 
@@ -200,6 +213,34 @@ function observeCase318CrashWindow({ bundle, completedTurns }) {
     && observation.next_gate === 'rerun_ready';
   if (!valid) throw new Error(`case-318 first Subject turn did not establish the required crash window: ${JSON.stringify(observation)}`);
   writeFileSync(join(bundle, 'case-318-crash-window.json'), `${JSON.stringify(observation, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+}
+
+function reloadCase154Wave2Surface({ bundle, completedTurns }) {
+  if (completedTurns !== 1) return null;
+  const status = JSON.parse(readFileSync(join(bundle, 'rb_status.json'), 'utf8'));
+  if (status.current_node !== 'phases/phase-wave2.md' || status.current_gate !== 'wave1_complete') {
+    throw new Error(`case-154 first Subject turn did not establish legal Wave2 entry: ${JSON.stringify(status)}`);
+  }
+  const surface = loadProductionSurface(bundle);
+  if (surface.nodeRef !== 'phases/phase-wave2.md') {
+    throw new Error(`case-154 reloaded an unavailable target surface: ${surface.nodeRef}`);
+  }
+  const snapshot = {
+    schema_version: 'case-154-wave2-surface/v1',
+    source: 'subject-adapter-read-only-loader',
+    loaded_after_turn: completedTurns,
+    node_ref: surface.nodeRef,
+    sha256: createHash('sha256').update(surface.text).digest('hex'),
+    surface: surface.text,
+  };
+  writeFileSync(join(bundle, 'case-154-wave2-surface.json'), `${JSON.stringify(snapshot, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+  return {
+    message: [
+      'The first turn established the legal Wave2 entry. The runner has now read the current bundle status and reloaded this exact production control surface; it does not choose a phase or change lifecycle truth.',
+      surface.text,
+      'Now perform exactly one bounded named finding W2F-154 with gap_status: needs_search. Preserve decision explore_search or exploit_search and route the new evidence only through one claimed and submitted wave2_targeted_evidence work unit performed by a real dpt-topic-scout child. Do not call WebSearch or WebFetch yourself. Retain a path-only case-154-targeted-evidence.json binding to the submitted work, result, receipt, outputs, cache trails, and source URLs. Stop after the submit and required Wave2 artifacts are persisted.',
+    ].join('\n\n'),
+  };
 }
 
 function observeCase164Boundary({ bundle, completedTurns }) {
@@ -438,6 +479,7 @@ writeFileSync(promptPath, `${JSON.stringify({
 }, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
 const transcriptFd = openSync(transcriptPath, 'wx', 0o600);
 const claudeArgs = [LAUNCHER, ...invocation.claude_args];
+const turnMessages = [...subject.messages];
 
 const child = spawn(process.execPath, claudeArgs, {
   cwd: REPO_ROOT,
@@ -466,8 +508,8 @@ function signalChild(signal) {
 }
 
 function sendTurn(index) {
-  writeUserMarker(transcriptFd, subject.messages[index]);
-  child.stdin.write(streamInput(subject.messages[index]));
+  writeUserMarker(transcriptFd, turnMessages[index]);
+  child.stdin.write(streamInput(turnMessages[index]));
 }
 
 function handleLine(line) {
@@ -488,7 +530,8 @@ function handleLine(line) {
   }
   if (subject.afterTurn) {
     try {
-      subject.afterTurn({ bundle, completedTurns });
+      const followup = subject.afterTurn({ bundle, completedTurns });
+      if (followup?.message) turnMessages[turnIndex + 1] = followup.message;
     } catch (error) {
       failedResult = { type: 'adapter_observer_error', message: error.message };
       stderr += `${error.message}\n`;
@@ -497,7 +540,7 @@ function handleLine(line) {
     }
   }
   turnIndex += 1;
-  if (turnIndex < subject.messages.length) {
+  if (turnIndex < turnMessages.length) {
     sendTurn(turnIndex);
   } else {
     child.stdin.end();
@@ -552,7 +595,7 @@ child.once('close', (code, signal) => {
   clearTimeout(timeout);
   if (parseBuffer.trim()) handleLine(parseBuffer);
   closeSync(transcriptFd);
-  const ok = !timedOut && !failedResult && completedTurns === subject.messages.length
+  const ok = !timedOut && !failedResult && completedTurns === turnMessages.length
     && (code === 0 || forcedAfterResult);
   const result = {
     status: ok ? 'completed' : 'failed',
