@@ -195,6 +195,12 @@ as an Engine defect.
 
 ### 8.3 BUG-195, BUG-196, BUG-197 Disposition
 
+- [ ] 8.3.0 Resolve the case-164 evidence locator discrepancy before any
+  BUG-195--197 closeout: the retained progressive-run report is
+  `CANCELLED` with `native: null`, while the cards cite a successful current-head
+  replay. Locate a native `PASS` result with its retained path and hash, or
+  revise the cards to an unobserved-evidence boundary. Do not treat the card
+  prose as proof and do not propose a behavior change from it.
 - [ ] 8.3.1 After C1 is green, re-read its test evidence and the retained
   native case-164 result. Confirm that `cache_trail_refs`, post-`work_done`
   `fail_and_replace`, and fresh primary replacement remain distinct current
