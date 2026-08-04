@@ -56,7 +56,14 @@ describe('work-unit actor provenance', () => {
         delete target.actor_execution;
         delete target.assignment_contract_version;
         delete target.submission_contract_version;
-        if (target.output_contract) delete target.output_contract.required_outputs;
+        if (target.output_contract) {
+          delete target.output_contract.required_outputs;
+          target.output_contract.output_files = {
+            required: true,
+            allowed_roles: ['reference', 'source_yaml', 'other'],
+            reference_requires_source_url: true,
+          };
+        }
         writeFileSync(ref, `${JSON.stringify(value, null, 2)}\n`);
       }
       const legacyRecord = loadWorkUnitIndex(dir).work_units[workId];

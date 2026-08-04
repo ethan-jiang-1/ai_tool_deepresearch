@@ -9,7 +9,15 @@ export const WORK_UNIT_STATUS_SCHEMA_VERSION = 'work-unit.status.v1';
 export const WORK_UNIT_AGENT_SCHEMA_VERSION = 'work-unit.agent.v1';
 export const WORK_UNIT_RECEIPT_EVENT_SCHEMA_VERSION = 'work-unit.receipt-event.v1';
 export const WORK_UNIT_ACTOR_CONTRACT_VERSION = 'work-unit.actor.v1';
-export const WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION = 'work-unit.assignment.v1';
+// v2 is the contract emitted for new claims. v1 remains parseable because a
+// submitted work unit must retain the output interpretation it was assigned.
+export const LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION = 'work-unit.assignment.v1';
+export const WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION = 'work-unit.assignment.v2';
+export const WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS = Object.freeze([
+  LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+  WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+]);
+export const WorkUnitAssignmentContractVersionSchema = z.enum(WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS);
 export const WORK_UNIT_SUBMISSION_CONTRACT_VERSION = 'work-unit.submission.v1';
 export const WORK_UNIT_SUPERSESSION_SCHEMA_VERSION = 'work-unit.supersession.v1';
 
@@ -356,7 +364,7 @@ export const WorkUnitManifestSchema = z.object({
   claimed_at: z.string().datetime(),
   timeout_ms: z.number().int().positive(),
   deadline_at: z.string().datetime(),
-  assignment_contract_version: z.literal(WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION).optional(),
+  assignment_contract_version: WorkUnitAssignmentContractVersionSchema.optional(),
   submission_contract_version: z.literal(WORK_UNIT_SUBMISSION_CONTRACT_VERSION).optional(),
   output_contract: JsonObject,
   cache_policy: JsonObject,
@@ -385,7 +393,7 @@ export const WorkUnitBeaconSchema = z.object({
   bundle_dir: z.string().min(1),
   receipt_nonce: z.string().min(16),
   deadline_at: z.string().datetime(),
-  assignment_contract_version: z.literal(WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION).optional(),
+  assignment_contract_version: WorkUnitAssignmentContractVersionSchema.optional(),
   submission_contract_version: z.literal(WORK_UNIT_SUBMISSION_CONTRACT_VERSION).optional(),
   work_unit_dir: z.string().min(1),
   manifest_ref: z.string().min(1),
@@ -449,7 +457,7 @@ export const WorkUnitIndexRecordSchema = z.object({
   claimed_at: z.string().datetime(),
   timeout_ms: z.number().int().positive(),
   deadline_at: z.string().datetime(),
-  assignment_contract_version: z.literal(WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION).optional(),
+  assignment_contract_version: WorkUnitAssignmentContractVersionSchema.optional(),
   submission_contract_version: z.literal(WORK_UNIT_SUBMISSION_CONTRACT_VERSION).optional(),
   last_observed_at: z.string().datetime().optional(),
   runtime_refs: RuntimeRefsSchema,

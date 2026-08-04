@@ -27,13 +27,12 @@ export const WORK_UNIT_REQUIRED_RECEIPT_FIELDS = Object.freeze(['work_id', 'queu
 export const DEFAULT_KIND_CONTRACTS = Object.freeze({
   wave0_source_intake: Object.freeze({
     actor_policy: Object.freeze({ delegated_role_key: 'dpt-source-intake', phase_agent_fallback: 'allowed' }),
-    task_brief: 'Research the assigned source-intake demand, write declared reference/source outputs, and return only through the work-unit result contract.',
+    task_brief: 'Research the assigned source-intake demand, write the assigned source metadata and cache facts, and return only through the work-unit result contract.',
     output_contract: Object.freeze({
       required_result_fields: ['work_id', 'queue_item_id', 'kind', 'receipt_nonce', 'output_files', 'cache_trails'],
       output_files: Object.freeze({
         required: true,
-        allowed_roles: ['reference', 'source_yaml', 'other'],
-        reference_requires_source_url: true,
+        allowed_roles: ['source_yaml'],
       }),
     }),
     cache_policy: Object.freeze({

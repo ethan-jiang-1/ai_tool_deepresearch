@@ -31,7 +31,8 @@ import {
   validateWorkIdBinding,
 } from './work-unit-index.mjs';
 import {
-  WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+  LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+  WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS,
   WORK_UNIT_RECEIPT_EVENT_SCHEMA_VERSION,
   WORK_UNIT_SUBMISSION_CONTRACT_VERSION,
   WorkUnitBeaconSchema,
@@ -78,7 +79,7 @@ export function readAndValidateManifest(bundleDir, index, record) {
   const recordAssignmentVersion = record.assignment_contract_version;
   const manifestAssignmentVersion = manifest.assignment_contract_version;
   if (recordAssignmentVersion || manifestAssignmentVersion) {
-    if (recordAssignmentVersion !== WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION
+    if (!WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS.includes(recordAssignmentVersion)
       || manifestAssignmentVersion !== recordAssignmentVersion) {
       throw new Error(`manifest/index mismatch for ${record.work_id}: assignment_contract_version`);
     }
@@ -86,7 +87,14 @@ export function readAndValidateManifest(bundleDir, index, record) {
     if (observedSnapshotHash !== record.queue_item_snapshot_hash) {
       throw new Error(`embedded queue snapshot hash mismatch for ${record.work_id}`);
     }
-    const baseOutputContract = kindContractForQueueItem(manifest.queue_item, record.kind).output_contract;
+    const boundV1BaseOutputContract = recordAssignmentVersion === LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION
+      ? (() => {
+        const { required_outputs: _requiredOutputs, ...boundBase } = manifest.output_contract;
+        return boundBase;
+      })()
+      : null;
+    const baseOutputContract = boundV1BaseOutputContract
+      || kindContractForQueueItem(manifest.queue_item, record.kind).output_contract;
     const expectedOutputContract = resolveWorkUnitAssignmentContract({
       assignmentContractVersion: recordAssignmentVersion,
       kind: record.kind,

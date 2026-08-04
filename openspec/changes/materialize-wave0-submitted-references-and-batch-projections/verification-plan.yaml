@@ -1,0 +1,121 @@
+schema_version: verification-routing/v1
+change: materialize-wave0-submitted-references-and-batch-projections
+test_classes:
+  unit:
+    status: selected
+    rationale: Exact submitted-source backing, reference authority classification, numeric eligibility, convergence ordering, and contribution-scoped packet expansion are deterministic helper/schema boundaries.
+  integration:
+    status: selected
+    rationale: Production work-unit, topic-state, inspect, formal Gate, and Markdown delivery seams must agree on the same submitted-backing facts in temporary bundles.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: This change does not add or alter a multi-phase lifecycle transition. The selected production CLI integration suites exercise the complete deterministic submit-to-projection-to-inspect/Gate boundary without duplicating unrelated workflow progression.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: C1 changes deterministic contracts and Agent-facing guidance, not a claim that a real Agent followed the guidance. A current-head real Actor observation remains separately governed by remediation track E2 and has no selected bundle or external-run authorization in this change.
+claims:
+  - id: current-wave0-claim-is-source-only
+    statement: >-
+      DEW-025: a v2 Wave0 source-intake work unit exposes only its assigned source/cache/result/receipt contribution contract and does not advertise a delegated rich-reference completion route, while a recorded v1 contract remains readable through its version-selected interpretation.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-assignment-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: markerless-legacy-wave0-attempt-remains-legacy
+    statement: >-
+      DEW-025: a markerless historical Wave0 attempt retains its existing legacy compatibility interpretation and is not inferred to be v1 or current v2 from an output path, filename, or current default.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-actor-submit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-guidance-uses-submitted-backing-closeout
+    statement: >-
+      REF-007 and RWP-001: the delivered Wave0 phase and source-intake guidance agree that source intake submits source/cache facts first, then a Phase-owned materialization or identity-bound deferred packet reruns the same inspect; no current actor rich-reference route is taught.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/wave-producer-contract-guidance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: submitted-wave0-backing-has-exact-source-identity
+    statement: >-
+      REF-009: the bounded Wave0 backing reader authenticates current submitted contribution intervals and exposes exact work-id/ordinal backing without URL-only, filesystem-only, mutable-array inference, or broadening the existing submitted_work wire discriminator into aggregate coverage.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-projection.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-reference-authority-preserves-legacy-and-backed-projections
+    statement: >-
+      WPG-017 and REF-009: provenance accepts a valid legacy submitted Wave0 reference and an exact submitted-backed Phase-owned Wave0 projection, while unsubmitted, ambiguous, index-only, and filesystem-only references fail closed.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/gate-helpers-checks.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-convergence-precedes-shared-reference-floor
+    statement: >-
+      RWG-022: selected integration fixtures submit current v2 source/cache-only Wave0 contributions (using marked-v1 data only for legacy direct-reference coverage), and inspect plus formal Wave0 Gate consume one pure convergence outcome, return materializable submitted backing before the dependent floor deficit, preserve independent invalid-backing roots, and report a true deficit only after convergence.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave0-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: batch-deferred-packet-preserves-individual-identity
+    statement: >-
+      CTS-009: with current v2 source/cache-only Wave0 submission fixtures, one strict Wave0 contribution-scoped deferred intent atomically expands current exact identities using the existing defers/[none]/deferred limitation form, leaves a later contribution untouched, rejects collisions/unsubmitted input, supports idempotent replay, and retains explicit-entry compatibility.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-projection.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

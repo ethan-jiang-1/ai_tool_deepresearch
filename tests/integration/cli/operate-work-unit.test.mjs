@@ -178,9 +178,6 @@ function saveQueueWith(dir, items) {
 }
 
 function writeValidSubmitFiles(dir, record) {
-  const outputPath = `reference/${record.work_id}.md`;
-  mkdirSync(path.join(dir, 'reference'), { recursive: true });
-  writeFileSync(path.join(dir, outputPath), '# Source\n\nKey Facts\n');
   const sourcePath = 'artifacts/wave0/topic-a/source.yaml';
   mkdirSync(path.dirname(path.join(dir, sourcePath)), { recursive: true });
   writeFileSync(path.join(dir, sourcePath), [
@@ -220,7 +217,6 @@ function writeValidSubmitFiles(dir, record) {
     execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'done',
     output_files: [
-      { path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' },
       { path: sourcePath, role: 'source_yaml' },
     ],
     cache_trails: [cacheTrail],
@@ -339,7 +335,7 @@ describe('operate-work-unit inspect', () => {
       const output = JSON.parse(result.stdout);
       const record = loadWorkUnitIndex(dir).work_units[output.claimed_work_ids[0]];
       const manifest = JSON.parse(readFileSync(path.join(dir, record.paths.manifest_ref), 'utf8'));
-      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v1');
+      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v2');
       assert.ok(manifest.output_contract.required_result_fields.includes('summary'));
       assert.deepEqual(manifest.output_contract.required_outputs, [{
         path: 'artifacts/wave0/topic-a/source.yaml',

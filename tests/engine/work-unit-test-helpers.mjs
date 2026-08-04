@@ -15,7 +15,11 @@ import {
   loadWorkUnitIndex,
   saveWorkUnitIndex,
   submitWorkUnit,
+  writeWorkUnitEnvelope,
 } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import {
+  LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+} from '../../DPT_FRAMEWORK/schema/contracts/work-unit.mjs';
 
 export function tempWorkUnitBundle(prefix = 'wu-helper-') {
   return mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -243,31 +247,42 @@ export function claimAndSubmitWorkUnit(dir, {
   kind = kindForPhase(phase),
   producer_rule = producerRuleForKind(kind),
   queueItemOverrides = {},
-  outputs = [{
-    path: 'reference/topic-a-source.md',
-    role: 'reference',
-    source_url: 'https://example.com/research/article',
-    source_slug: 's01_source',
-    content: referenceContent(),
-  }],
-  cacheTrails = [{
-    path: `_cache/${phase}/primary/${queueItemId}/s01_source`,
-    url: outputs.find((output) => output.source_url)?.source_url || 'https://example.com/research/article',
-  }],
+  outputs = null,
+  cacheTrails = null,
   resultOverrides = {},
   receiptOverrides = {},
   actorDecision = availableActorDecision(kind),
   preserveQueue = false,
   legacyAssignment = false,
+  legacyV1Assignment = false,
   submit = true,
   submitOptions = {},
 } = {}) {
+  if (legacyAssignment && legacyV1Assignment) {
+    throw new Error('legacyAssignment and legacyV1Assignment are mutually exclusive test fixtures');
+  }
+  if (legacyV1Assignment && kind !== 'wave0_source_intake') {
+    throw new Error('legacyV1Assignment only models historical Wave0 source intake');
+  }
   const queueItem = delegatedQueueItem(queueItemId, {
     phase,
     kind,
     producer_rule,
     ...queueItemOverrides,
   });
+  const requestedOutputs = outputs ?? (kind === 'wave0_source_intake'
+    ? []
+    : [{
+        path: 'reference/topic-a-source.md',
+        role: 'reference',
+        source_url: 'https://example.com/research/article',
+        source_slug: 's01_source',
+        content: referenceContent(),
+      }]);
+  const requestedCacheTrails = cacheTrails ?? [{
+    path: `_cache/${phase}/primary/${queueItemId}/s01_source`,
+    url: requestedOutputs.find((output) => output.source_url)?.source_url || 'https://example.com/research/article',
+  }];
   const planPath = path.join(dir, 'rb_plan.md');
   const planText = existsSync(planPath) ? readFileSync(planPath, 'utf8') : '';
   const frontmatter = planText.match(/^---\n([\s\S]*?)\n---/)?.[1];
@@ -317,7 +332,7 @@ export function claimAndSubmitWorkUnit(dir, {
   let record = loadWorkUnitIndex(dir).work_units[workId];
 
   const manifestPath = path.join(dir, record.paths.manifest_ref);
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  let manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   if (legacyAssignment) {
     const index = loadWorkUnitIndex(dir);
     delete index.work_units[workId].assignment_contract_version;
@@ -331,10 +346,25 @@ export function claimAndSubmitWorkUnit(dir, {
     writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     writeFileSync(beaconPath, `${JSON.stringify(beacon, null, 2)}\n`);
     record = loadWorkUnitIndex(dir).work_units[workId];
+  } else if (legacyV1Assignment) {
+    const index = loadWorkUnitIndex(dir);
+    manifest.assignment_contract_version = LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION;
+    manifest.output_contract = {
+      ...manifest.output_contract,
+      output_files: {
+        required: true,
+        allowed_roles: ['reference', 'source_yaml', 'other'],
+        reference_requires_source_url: true,
+      },
+    };
+    index.work_units[workId].assignment_contract_version = LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION;
+    saveWorkUnitIndex(dir, index);
+    writeWorkUnitEnvelope(dir, manifest);
+    record = loadWorkUnitIndex(dir).work_units[workId];
   }
 
   const requiredOutputs = legacyAssignment ? [] : (manifest.output_contract.required_outputs || []);
-  const effectiveOutputs = [...outputs];
+  const effectiveOutputs = [...requestedOutputs];
   for (const required of requiredOutputs) {
     if (effectiveOutputs.some((output) => output.path === required.path)) continue;
     const content = required.direct_contract === 'wave0.source-metadata-array.v1'
@@ -353,7 +383,7 @@ export function claimAndSubmitWorkUnit(dir, {
     }
   }
 
-  for (const trail of cacheTrails) {
+  for (const trail of requestedCacheTrails) {
     mkdirSync(path.join(dir, trail.path), { recursive: true });
     writeFileSync(path.join(dir, trail.path, 'websearch.json'), '[]\n');
     writeFileSync(path.join(dir, trail.path, 'page.md'), trail.page_content || `# Captured Page\n\nFetched content capture for ${trail.url}. This body preserves the source text used by the work unit.\n`);
@@ -387,7 +417,7 @@ export function claimAndSubmitWorkUnit(dir, {
     execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'done',
     output_files: effectiveOutputs.map(({ content: _content, ...entry }) => entry),
-    cache_trails: cacheTrails.map((trail) => trail.path),
+    cache_trails: requestedCacheTrails.map((trail) => trail.path),
     ...resultOverrides,
   }, null, 2)}\n`);
 

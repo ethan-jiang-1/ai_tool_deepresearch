@@ -252,6 +252,7 @@ DEW-021: delegated-work-units — Delegated work contract entry is constructible
 DEW-022: delegated-work-units — Work-unit attempts expose logical execution guidance from existing attempt bindings
 DEW-023: delegated-work-units — Submit exposes a bounded integrity preflight and transaction disposition
 DEW-024: delegated-work-units — Submitted correction uses audited supersession and one fresh successor
+DEW-025: delegated-work-units — Current Wave0 work-unit contracts expose submitted source contributions without a competing rich-reference route
 
 # conditional-nodes
 COS-001: conditional-nodes — Deterministic branch checkpoint transforms
@@ -511,6 +512,7 @@ WPG-013: work-unit-provenance-gate — Wave1 required output coverage and Wave2 
 WPG-014: work-unit-provenance-gate — Gates count audited late-accepted work-unit ledger rows
 WPG-015: work-unit-provenance-gate — Work unit index record carries Engine-owned rerun_count stamped at claim time for round identification
 WPG-016: work-unit-provenance-gate — Provenance gates derive current submitted coverage from immutable supersession relations
+WPG-017: work-unit-provenance-gate — Wave0 provenance distinguishes legacy delegated references from submitted-backed Phase-owned projections
 
 
 # seg2node
@@ -655,6 +657,7 @@ RET-006: requirement-traceability — Check script compliance as hard gate for a
 
 RWG-020: research-wave-gate-implementation — Wave1 normalizes carried-target declarations and Wave2 verifies receipt-bound finding coverage through existing disposition routes
 RWG-021: research-wave-gate-implementation — Wave adapters project minimal independent evaluator roots and consume shared fail-closed degradation eligibility
+RWG-022: research-wave-gate-implementation — Wave0 shared-reference convergence evaluates submitted backing before a floor verdict
 
 # wff-research-waves / research-wave-experiments
 RWE-001: "research-wave-experiments — Wave0 happy-path + fail playbook (5 trace events: 1 pass + 4 fail, covers count_floor ⊕ schema_valid AND interaction, empty registry, {topic} expansion)"
@@ -799,6 +802,7 @@ REF-005: reference-flat-format — Phase nodes enforce reference file naming con
 REF-006: reference-flat-format — Wave1 sub-agent reference file format specification
 REF-007: reference-flat-format — Agent-facing source.yaml and reference metadata formats are complete and parser-aligned
 REF-008: reference-flat-format — Phase-owned reference materializations preserve submitted source backing
+REF-009: reference-flat-format — Wave0 Phase-owned shared references preserve exact submitted source backing
 
 # verification-routing
 VER-001: verification-routing — Verification claims route through exactly one of four canonical test classes with owned asset boundary and native verdict authority
@@ -889,6 +893,7 @@ CTS-006: canonical-topic-state — Complete layout target commits through the ex
 CTS-007: canonical-topic-state — One pure resolver maps current and historical slug bindings to canonical UID without moving provenance paths
 
 CTS-008: canonical-topic-state — Wave1 depth-review selection resolves one canonical topic UID and current intent binding before receipt projection
+CTS-009: canonical-topic-state — Wave0 deferred-contribution packets atomically expand exact current source identities
 
 # research-return-map
 RRM-001: research-return-map — Research wave returns include Agent-readable evidence-to-claim maps

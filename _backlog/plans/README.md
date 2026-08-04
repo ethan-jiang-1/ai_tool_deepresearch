@@ -17,7 +17,7 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `bug-187-199-systemic-remediation-plan` | 将 BUG-187--199 收敛为四个有界 OpenSpec change candidates（Wave0 submitted-evidence materialization、direct contract feedback、traceable Final delivery、legible HITL1 probe）与两个 evidence track（host wait visibility、current-head real Actor requalification）。当前在 P1：捕获准入证据并准备 proposal；尚无 active change 或自动 apply 授权。 | P1 in progress |
+| `bug-187-199-systemic-remediation-plan` | 将 BUG-187--199 收敛为四个有界 OpenSpec change candidates（Wave0 submitted-evidence materialization、direct contract feedback、traceable Final delivery、legible HITL1 probe）与两个 evidence track（host wait visibility、current-head real Actor requalification）。当前在 P1：C1 `materialize-wave0-submitted-references-and-batch-projections` 已 active，`proposal.md` 完成，`specs`/`design`/`tasks` 待完成；尚无 apply 授权。 | P1 in progress |
 | `experiment-progressive-follow-up-plan` | 已完成 progressive-run round 的条件性后续入口：selected-host research access、case-211/406 fresh real-actor requalification，以及 profile-led diagnostic/calibration refresh。每次必须重新获得 fresh selection 和独立预算；不自动运行。 | dormant intake（无 active run） |
 | `silent-autonomous-execution` | 承接 `BUG-099/104/106` 的历史 stop/context observation。已与现行 Chain/Queue/Work Unit swarm 对齐：silent poll-submit loop、actor probe/fallback 与 continuation cues 是既有 contract；三次 real-actor canary 仍为 host-scoped `NOT_RUN`。没有 current-head Phase-Agent reproduction，也没有 active OpenSpec change；仅在新的可审计 `agent_flow_e2e` observation 出现后重开。 | deferred observation（无固定 OpenSpec change） |
 

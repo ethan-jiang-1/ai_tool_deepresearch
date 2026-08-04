@@ -231,6 +231,16 @@ function downgradeAssignmentToLegacy(dir, record, { stripTopicBinding = false } 
   delete beacon.submission_contract_version;
   delete beacon.output_contract.required_outputs;
 
+  if (nextRecord.wave === 0 && nextRecord.kind === 'wave0_source_intake') {
+    const legacyOutputFiles = {
+      required: true,
+      allowed_roles: ['reference', 'source_yaml', 'other'],
+      reference_requires_source_url: true,
+    };
+    manifest.output_contract.output_files = legacyOutputFiles;
+    beacon.output_contract.output_files = legacyOutputFiles;
+  }
+
   if (stripTopicBinding) {
     delete manifest.queue_item.payload.topic_uid;
     delete manifest.queue_item.payload.topic_slug;
@@ -325,9 +335,16 @@ function forceTimeout(dir, record, reason = 'deadline-expired') {
 }
 
 function writeValidSubmitFiles(dir, record, { summary = 'done' } = {}) {
-  const outputPath = `reference/${record.work_id}.md`;
-  mkdirSync(path.join(dir, 'reference'), { recursive: true });
-  writeFileSync(path.join(dir, outputPath), '# Source\n\nKey Facts\n');
+  const manifest = JSON.parse(readFileSync(path.join(dir, record.paths.manifest_ref), 'utf8'));
+  const requiredOutputs = manifest.output_contract?.required_outputs ?? [];
+  const sourceRequirement = requiredOutputs.find((required) => required.role === 'source_yaml') || null;
+  const outputPath = sourceRequirement?.path || `reference/${record.work_id}.md`;
+  const outputRole = sourceRequirement?.role || 'reference';
+  const outputFile = path.join(dir, outputPath);
+  mkdirSync(path.dirname(outputFile), { recursive: true });
+  writeFileSync(outputFile, outputRole === 'source_yaml'
+    ? VALID_CURRENT_SOURCE_YAML
+    : '# Source\n\nKey Facts\n');
 
   const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
   mkdirSync(path.join(dir, cacheTrail), { recursive: true });
@@ -348,9 +365,11 @@ function writeValidSubmitFiles(dir, record, { summary = 'done' } = {}) {
 
   const resultPath = path.join(dir, '_tmp', `${record.work_id}.result.json`);
   mkdirSync(path.dirname(resultPath), { recursive: true });
-  const manifest = JSON.parse(readFileSync(path.join(dir, record.paths.manifest_ref), 'utf8'));
-  const outputFiles = [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }];
-  for (const required of manifest.output_contract?.required_outputs ?? []) {
+  const outputFiles = outputRole === 'reference'
+    ? [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }]
+    : [{ path: outputPath, role: outputRole }];
+  for (const required of requiredOutputs) {
+    if (required.path === outputPath) continue;
     const requiredPath = path.join(dir, required.path);
     mkdirSync(path.dirname(requiredPath), { recursive: true });
     if (required.direct_contract === 'wave0.source-metadata-array.v1') {
@@ -602,7 +621,7 @@ describe('submitWorkUnit', () => {
     try {
       const record = claimCurrentWave0(dir);
       const { resultPath, sourcePath } = writeCurrentWave0SubmitFiles(dir, record);
-      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v1');
+      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v2');
 
       const firstDry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
       assert.equal(firstDry.ok, true, JSON.stringify(firstDry.violations));
@@ -755,7 +774,7 @@ describe('submitWorkUnit', () => {
       writeResult(resultPath, result);
 
       const dry = drySubmitWorkUnit(currentDir, { work_id: record.work_id, resultPath });
-      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v1');
+      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v2');
       assert.equal(dry.ok, false);
       assert.ok(dry.violations.some((violation) => violation.repair_scope === 'mechanical'));
       assert.equal(dry.normalizations.some((entry) => entry.kind === 'wave1_required_output_role_normalized'), false);
@@ -1814,7 +1833,7 @@ describe('submitWorkUnit', () => {
       claimWorkUnits(dir, { phase: 'wave0', count: 1 });
       const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
       const missingOutputPath = writeValidSubmitFiles(dir, record);
-      rmSync(path.join(dir, `reference/${record.work_id}.md`), { force: true });
+      rmSync(path.join(dir, 'artifacts/wave0/topic-a/source.yaml'), { force: true });
 
       const rejected = submitWorkUnit(dir, { work_id: record.work_id, resultPath: missingOutputPath });
       assert.equal(rejected.ok, false);
@@ -2041,7 +2060,7 @@ describe('submitWorkUnit', () => {
       claimWorkUnits(dir, { phase: 'wave1', count: 1 });
       const supplementary = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0002'];
       const supplementaryManifest = readResult(path.join(dir, supplementary.paths.manifest_ref));
-      assert.equal(supplementary.assignment_contract_version, 'work-unit.assignment.v1');
+      assert.equal(supplementary.assignment_contract_version, 'work-unit.assignment.v2');
       assert.deepEqual(supplementaryManifest.output_contract.required_outputs, []);
       const supplementaryTask = readFileSync(path.join(dir, supplementary.paths.task_ref), 'utf8');
       assert.match(supplementaryTask, /### Cache And Source Facts/);

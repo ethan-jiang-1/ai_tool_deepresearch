@@ -116,9 +116,9 @@ describe('work-unit index and envelope', () => {
         const task = readFileSync(path.join(dir, manifest.paths.task_ref), 'utf8');
         const starter = resultStarterFromTask(task);
 
-        assert.equal(record.assignment_contract_version, 'work-unit.assignment.v1');
-        assert.equal(manifest.assignment_contract_version, 'work-unit.assignment.v1');
-        assert.equal(beacon.assignment_contract_version, 'work-unit.assignment.v1');
+        assert.equal(record.assignment_contract_version, 'work-unit.assignment.v2');
+        assert.equal(manifest.assignment_contract_version, 'work-unit.assignment.v2');
+        assert.equal(beacon.assignment_contract_version, 'work-unit.assignment.v2');
         assert.deepEqual(manifest.output_contract.required_outputs, testCase.expected);
         assert.deepEqual(beacon.output_contract, manifest.output_contract);
         assert.deepEqual(schema.properties.output_files.default, testCase.expected.map(({ path: outputPath, role }) => ({ path: outputPath, role })));
@@ -298,7 +298,7 @@ describe('work-unit index and envelope', () => {
       {
         wave: 0,
         kind: 'wave0_source_intake',
-        roles: ['reference', 'source_yaml', 'other'],
+        roles: ['source_yaml'],
         sourceClaimsAllowed: false,
       },
       {

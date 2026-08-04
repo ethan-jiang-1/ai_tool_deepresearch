@@ -6,9 +6,11 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { queueItemSnapshotHash } from '../../DPT_FRAMEWORK/engine/queue-manager-core.mjs';
+import { readWorkUnitLedgerRows } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
 import { claimAndSubmitWorkUnit, cleanupWorkUnitBundle, delegatedQueueItem, tempWorkUnitBundle } from './work-unit-test-helpers.mjs';
 
-const VERSION = 'work-unit.assignment.v1';
+const VERSION = 'work-unit.assignment.v2';
+const LEGACY_VERSION = 'work-unit.assignment.v1';
 
 const topic = {
   topic_uid: 'tp_00000001-0000-4000-8000-000000000000',
@@ -78,6 +80,10 @@ describe('resolveWorkUnitAssignmentContract', () => {
       role: 'source_yaml',
       direct_contract: 'wave0.source-metadata-array.v1',
     }]);
+    assert.deepEqual(contract.output_files, {
+      required: true,
+      allowed_roles: ['source_yaml'],
+    });
   });
 
   it('resolves a primary Wave1 assignment only from primary plus the exact pair', async () => {
@@ -236,7 +242,60 @@ describe('resolveWorkUnitAssignmentContract', () => {
     });
     assert.deepEqual(contract.required_result_fields, customized.required_result_fields);
     assert.deepEqual(contract.source_claims, customized.source_claims);
+    assert.deepEqual(contract.output_files, {
+      required: true,
+      allowed_roles: ['source_yaml'],
+    });
     assert.equal(requiredOutputs(contract).length, 1);
+  });
+
+  it('keeps an immutable v1 Wave0 rich-reference contract separate from v2 defaults', async () => {
+    const contract = await resolve({
+      assignmentContractVersion: LEGACY_VERSION,
+      kind: 'wave0_source_intake',
+      queueItem: queueItem('wave0_source_intake', {
+        required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+      }),
+    });
+    assert.deepEqual(contract.output_files, baseOutputContract.output_files);
+    assert.deepEqual(requiredOutputs(contract), [{
+      path: 'artifacts/wave0/topic-a/source.yaml',
+      role: 'source_yaml',
+      direct_contract: 'wave0.source-metadata-array.v1',
+    }]);
+  });
+
+  it('accepts a recorded v1 rich reference while rejecting that extra output from a current v2 attempt', () => {
+    const legacyDir = tempWorkUnitBundle('wave0-v1-reference-');
+    const currentDir = tempWorkUnitBundle('wave0-v2-reference-');
+    const referenceOutput = {
+      path: 'reference/00-shared-legacy.md',
+      role: 'reference',
+      source_url: 'https://example.com/legacy',
+      source_slug: 'legacy',
+      content: '# Legacy shared reference\n\nCaptured evidence.\n',
+    };
+    try {
+      const legacy = claimAndSubmitWorkUnit(legacyDir, {
+        legacyV1Assignment: true,
+        outputs: [referenceOutput],
+      });
+      assert.equal(legacy.record.assignment_contract_version, LEGACY_VERSION);
+      assert.equal(legacy.submitted.ok, true, legacy.submitted.inspect?.join('\n'));
+      const legacyManifest = JSON.parse(readFileSync(join(legacyDir, legacy.record.paths.manifest_ref), 'utf8'));
+      assert.equal(legacyManifest.assignment_contract_version, LEGACY_VERSION);
+      assert.ok(readWorkUnitLedgerRows(legacyDir)[0].output_files.some((output) => output.path === referenceOutput.path && output.role === 'reference'));
+
+      const current = claimAndSubmitWorkUnit(currentDir, {
+        outputs: [referenceOutput],
+      });
+      assert.equal(current.record.assignment_contract_version, VERSION);
+      assert.equal(current.submitted.ok, false);
+      assert.match(current.submitted.inspect.join('\n'), /role 'reference'.*source_yaml/i);
+    } finally {
+      cleanupWorkUnitBundle(legacyDir);
+      cleanupWorkUnitBundle(currentDir);
+    }
   });
 
   it('rejects unsafe, duplicate, conflicting, and customization-incompatible resolved output paths', async () => {
@@ -259,12 +318,17 @@ describe('resolveWorkUnitAssignmentContract', () => {
         }),
       },
       {
+        kind: 'wave1_topic_deepening',
         baseOutputContract: {
           ...baseOutputContract,
           output_files: { ...baseOutputContract.output_files, allowed_roles: ['reference'] },
         },
-        queueItem: queueItem('wave0_source_intake', {
-          required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+        queueItem: queueItem('wave1_topic_deepening', {
+          payload: { ...topic, wave: 1, assignment_mode: 'primary' },
+          required_receipts: [
+            'file:artifacts/wave1/topic-a/evidence-summary.md',
+            'file:artifacts/wave1/topic-a/question-list.md',
+          ],
         }),
       },
     ];

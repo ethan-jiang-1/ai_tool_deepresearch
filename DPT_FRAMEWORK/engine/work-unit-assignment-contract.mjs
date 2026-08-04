@@ -1,7 +1,8 @@
 // @impl AGQ-013, DEW-004, DEW-009
 
 import {
-  WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+  LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+  WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS,
   WorkUnitOutputContractSchema,
 } from '../schema/contracts/work-unit.mjs';
 
@@ -128,6 +129,25 @@ function requiredOutputsFor({ kind, queueItem, topicBinding }) {
   throw new Error(`unsupported work-unit assignment kind ${kind}`);
 }
 
+function baseOutputContractForVersion({ assignmentContractVersion, kind, baseOutputContract }) {
+  const outputContract = clone(baseOutputContract);
+  if (kind !== 'wave0_source_intake') return outputContract;
+
+  if (assignmentContractVersion === LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION) {
+    // The caller supplies the bound v1 base from the manifest when validating
+    // history, so a later v2 default cannot narrow an immutable v1 contract.
+    return outputContract;
+  }
+
+  return {
+    ...outputContract,
+    output_files: {
+      required: true,
+      allowed_roles: ['source_yaml'],
+    },
+  };
+}
+
 export function resolveWorkUnitAssignmentContract({
   assignmentContractVersion,
   kind,
@@ -135,7 +155,7 @@ export function resolveWorkUnitAssignmentContract({
   topicBinding,
   baseOutputContract,
 } = {}) {
-  if (assignmentContractVersion !== WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION) {
+  if (!WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS.includes(assignmentContractVersion)) {
     throw new Error(`unsupported assignment contract version ${assignmentContractVersion ?? '<missing>'}`);
   }
   if (!queueItem || typeof queueItem !== 'object') throw new Error('queueItem is required for assignment resolution');
@@ -145,7 +165,7 @@ export function resolveWorkUnitAssignmentContract({
   validateReferenceFloorDeficit(kind, queueItem);
   const requiredOutputs = requiredOutputsFor({ kind, queueItem, topicBinding });
   return WorkUnitOutputContractSchema.parse({
-    ...clone(baseOutputContract),
+    ...baseOutputContractForVersion({ assignmentContractVersion, kind, baseOutputContract }),
     required_outputs: requiredOutputs,
   });
 }
