@@ -1,6 +1,6 @@
 # BUG-189: shared_ref_count_floor rejects Phase-Agent-authored reference files as "delegated_bypass"
 
-**Status**: open
+**Status**: resolved by archived C1 — deterministic contract and focused verification complete; current-head real Actor observation remains E2 work
 **Severity**: P1 — blocks gate pass; requires workaround
 **Found**: 2026-08-03 during `agentic-rd-org-delivery-systems-2026` Wave0 execution
 
@@ -31,3 +31,30 @@ Either:
 - Gate should count reference files with valid frontmatter and _INDEX.md entries regardless of production path, OR
 - Phase Agent should have a legal `operate-artifact-persistence.mjs persist` path that registers reference files as gate-countable without requiring sub-agent delegation, OR
 - Wave0 task card template should ensure sub-agents always include reference outputs when they exist
+
+## C1 Implementation (2026-08-04)
+
+The archived C1 change,
+[`materialize-wave0-submitted-references-and-batch-projections`](../../openspec/changes/archive/2026-08-04-materialize-wave0-submitted-references-and-batch-projections/),
+resolves the contract contradiction without counting arbitrary Phase-authored
+files:
+
+- A newly claimed Wave0 source-intake attempt produces only its assigned
+  source/cache/result/receipt facts. Historical submitted delegated references
+  retain their recorded legacy interpretation.
+- Formal submit creates the submitted Wave0 contribution. The Phase may then
+  materialize a reader-facing shared-reference consumer projection only from
+  one exact submitted `<work_id>/<ordinal>` backing, persist it through the
+  existing boundary, synchronize the index, and rerun the same inspect.
+- Reference provenance accepts the exact backed projection and continues to
+  reject filesystem-only, URL-only, index-only, unsubmitted, or ambiguous
+  backing. The Gate therefore retains one evidence authority rather than
+  treating a Phase-authored file as delegated output.
+
+Focused deterministic evidence from C1 includes
+`tests/integration/cli/check-gate-wave0-complete.test.mjs` (26 passing) and
+`tests/integration/md/wave-producer-contract-guidance.test.mjs` (3 passing).
+Those fixtures prove the Engine and delivered guidance boundary only. No
+current-head real Actor observation was authorized, so that proof remains in
+the separately governed E2 track. C1 strict validation, main-spec sync,
+closeout review, and governed archive all completed on 2026-08-04.

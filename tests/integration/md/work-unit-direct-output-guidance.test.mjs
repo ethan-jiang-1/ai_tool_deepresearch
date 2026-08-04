@@ -1,4 +1,4 @@
-// @impl AGQ-013, DEW-004, DEW-014, SNC-006, RWG-018, WAI-007
+// @impl AGQ-013, DEW-004, DEW-014, DEW-025, SNC-006, RWG-018, WAI-007
 
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
@@ -45,10 +45,12 @@ describe('generated direct-output guidance', () => {
       });
       const { manifest } = createWorkUnit(dir, { queueItem, wave: 0 });
       const task = readFileSync(path.join(dir, manifest.paths.task_ref), 'utf8');
-      assert.match(task, /assignment_contract_version:\s*`?work-unit\.assignment\.v1/);
+      assert.match(task, /assignment_contract_version:\s*`?work-unit\.assignment\.v2/);
       assert.match(task, /artifacts\/wave0\/topic-a\/source\.yaml/);
       assert.match(task, /source_yaml/);
       assert.match(task, /wave0\.source-metadata-array\.v1/);
+      assert.doesNotMatch(task, /reference\/00-shared-/);
+      assert.doesNotMatch(task, /"role": "reference"/);
       assert.match(task, /verify every assigned required output.*before.*work_done/is);
       assert.match(task, /Phase Agent.*dry-submit.*after.*actor.*return/is);
       assert.match(task, /formal submit.*only.*acceptance|formal submit.*success owner/is);

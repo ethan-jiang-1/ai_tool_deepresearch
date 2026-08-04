@@ -40,9 +40,9 @@
       "threshold": 1,
       "threshold_source": "rb_profile.yaml#/research_style_params/wave0_shared_ref_total",
       "degradation_eligible": true,
-      "failure_message": "Fewer than 1 submitted 00-shared-*.md reference output. Use the existing wave0_source_intake delegated work unit to research and fetch a real source, declare reference/00-shared-<slug>.md with role reference and source_url in output_files[], then dry-submit and formally submit it. Do not create an unsubmitted file directly under reference/.",
+      "failure_message": "Fewer than 1 countable submitted or exact submitted-backed 00-shared-*.md consumer projection remains after Wave0 convergence. Current wave0_source_intake work units submit source/cache facts only; when inspect returns exact materializable backing, the Phase materializes the consumer projection and reruns inspect. Do not declare a rich reference output in a current actor result.",
       "finding": { "source": "definition", "blocking_basis": "required_floor" },
-      "repair": { "kind": "agent_action", "write_to": "wave0_source_intake delegated work-unit output_files[] with role reference and source_url; then operate-work-unit dry-submit and submit" }
+      "repair": { "kind": "agent_action", "write_to": "current wave0_source_intake source/cache submit boundary; then exact Phase-owned reference/00-shared-*.md materialization from submitted inspect backing" }
     },
     {
       "id": "no_example_com_shared_ref_url",

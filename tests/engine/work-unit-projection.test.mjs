@@ -1,4 +1,4 @@
-// @impl RRM-007
+// @impl RRM-007, REF-009
 
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
@@ -8,7 +8,8 @@ import path from 'node:path';
 
 import {
   collectEligibleRows,
-  collectEligibleWave0CandidateProjection,
+  collectSubmittedWave0ContributionProjection,
+  readSubmittedWave0Backing,
 } from '../../DPT_FRAMEWORK/engine/work-unit-projection.mjs';
 import { buildCanonicalTopicRegistryFact } from '../../DPT_FRAMEWORK/engine/helpers/topic-registry-fact.mjs';
 import {
@@ -129,6 +130,7 @@ function submitWave0(dir, {
   slug = 'current-topic',
   queueItemId = 'queue-wave0',
   sourceContent = DUPLICATE_SOURCE_YAML,
+  cacheTrails = null,
   legacyAssignment = false,
 } = {}) {
   return claimAndSubmitWorkUnit(dir, {
@@ -145,11 +147,12 @@ function submitWave0(dir, {
       role: 'source_yaml',
       content: sourceContent,
     }],
+    cacheTrails,
   });
 }
 
 function collectWave0Candidates(dir, options = {}) {
-  return collectEligibleWave0CandidateProjection(dir, {
+  return collectSubmittedWave0ContributionProjection(dir, {
     topicRegistryFact: buildCanonicalTopicRegistryFact(dir),
     ...options,
   });
@@ -212,7 +215,7 @@ describe('eligible work-unit projection', () => {
     assert.equal(result.rows.length, 1);
   });
 
-  it('derives ordered current result-declared candidate coordinates and preserves duplicate URLs by position', () => {
+  it('derives ordered retained contribution coordinates and preserves duplicate URLs by position', () => {
     const dir = bundle({ slug: 'old-topic', previousLayouts: [] });
     const submitted = submitWave0(dir, { slug: 'old-topic' });
     writeProjectionPlan(dir);
@@ -243,9 +246,13 @@ describe('eligible work-unit projection', () => {
     ]);
 
     writeFileSync(path.join(dir, 'rb_profile.yaml'), 'human_decision_checkpoints:\n  hitl2:\n    rerun_count: 3\n');
-    assert.deepEqual(collectWave0Candidates(dir), {
-      passed: true, candidates: [], root_findings: [], warnings: [],
+    assert.deepEqual(collectEligibleRows(dir, 'wave0'), {
+      passed: true, rows: [], root_findings: [], warnings: [],
     });
+    assert.deepEqual(
+      collectWave0Candidates(dir).candidates.map((candidate) => candidate.entry_id),
+      [`${submitted.record.work_id}/1`, `${submitted.record.work_id}/2`],
+    );
   });
 
   it('does not reassign appended source ordinals to historical submitted work', () => {
@@ -273,6 +280,61 @@ describe('eligible work-unit projection', () => {
         .map((candidate) => candidate.source_ordinal),
       [20],
     );
+  });
+
+  it('keeps retained Wave0 source-prefix lineage across a later rerun while generic eligibility stays current-round', () => {
+    const dir = bundle({ rerunCount: 0 });
+    const initial = submitWave0(dir, {
+      queueItemId: 'queue-wave0-round-zero',
+      sourceContent: sourceArray(19),
+    });
+    writeFileSync(path.join(dir, 'rb_profile.yaml'), 'human_decision_checkpoints:\n  hitl2:\n    rerun_count: 1\n');
+    const supplement = submitWave0(dir, {
+      queueItemId: 'queue-wave0-round-one',
+      sourceContent: sourceArray(20),
+    });
+
+    // Claim/index insertion order is not source contribution order. Reordering
+    // this object preserves its authority facts and proves the reader uses the
+    // submitted ledger's append order.
+    const indexPath = path.join(dir, '_work_units/_index.json');
+    const index = JSON.parse(readFileSync(indexPath, 'utf8'));
+    index.work_units = Object.fromEntries(Object.entries(index.work_units).reverse());
+    writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
+
+    const currentRows = collectEligibleRows(dir, 'wave0');
+    assert.equal(currentRows.passed, true, JSON.stringify(currentRows.root_findings));
+    assert.deepEqual(currentRows.rows.map((row) => row.work_id), [supplement.record.work_id]);
+
+    const candidates = collectWave0Candidates(dir);
+    assert.equal(candidates.passed, true, JSON.stringify(candidates.root_findings));
+    assert.deepEqual(
+      candidates.candidates
+        .filter((candidate) => candidate.work_id === initial.record.work_id)
+        .map((candidate) => candidate.source_ordinal),
+      Array.from({ length: 19 }, (_, index) => index + 1),
+    );
+    assert.deepEqual(
+      candidates.candidates
+        .filter((candidate) => candidate.work_id === supplement.record.work_id)
+        .map((candidate) => candidate.source_ordinal),
+      [20],
+    );
+
+    assert.equal(readSubmittedWave0Backing(dir, {
+      work_id: initial.record.work_id,
+      entry_id: `${initial.record.work_id}/1`,
+    }).passed, true);
+    assert.equal(readSubmittedWave0Backing(dir, {
+      work_id: supplement.record.work_id,
+      entry_id: `${supplement.record.work_id}/20`,
+    }).passed, true);
+    const reowned = readSubmittedWave0Backing(dir, {
+      work_id: supplement.record.work_id,
+      entry_id: `${supplement.record.work_id}/1`,
+    });
+    assert.equal(reowned.passed, false);
+    assert.match(reowned.root_findings[0].missing_fact, /retained direct source lineage/i);
   });
 
   it('returns one submitted contribution root for current prefix drift and masks candidates', () => {
@@ -358,6 +420,84 @@ describe('eligible work-unit projection', () => {
     });
   });
 
+  it('reads one exact submitted Wave0 backing without collapsing duplicate URLs', () => {
+    const dir = bundle();
+    const cacheTrail = '_cache/wave0/primary/queue-wave0/s01_duplicate';
+    const submitted = submitWave0(dir, {
+      cacheTrails: [{ path: cacheTrail, url: 'https://example.com/duplicate' }],
+    });
+    const entryId = `${submitted.record.work_id}/2`;
+
+    const backing = readSubmittedWave0Backing(dir, {
+      work_id: submitted.record.work_id,
+      entry_id: entryId,
+    });
+
+    assert.equal(backing.passed, true, JSON.stringify(backing.root_findings));
+    assert.deepEqual(backing.backing, {
+      work_id: submitted.record.work_id,
+      entry_id: entryId,
+      source_ordinal: 2,
+      source_url: 'https://example.com/duplicate',
+      source_yaml_ref: 'artifacts/wave0/current-topic/source.yaml',
+      cache_trail_refs: [cacheTrail],
+      result_ref: submitted.record.paths.result_ref,
+      work_unit_ref: submitted.record.paths.work_unit_dir,
+    });
+
+    const first = readSubmittedWave0Backing(dir, {
+      work_id: submitted.record.work_id,
+      entry_id: `${submitted.record.work_id}/1`,
+    });
+    assert.equal(first.passed, true, JSON.stringify(first.root_findings));
+    assert.equal(first.backing.source_url, backing.backing.source_url);
+    assert.notEqual(first.backing.entry_id, backing.backing.entry_id);
+  });
+
+  it('rejects URL-only, mismatched, unsafe, and unsubmitted submitted-backing selectors', () => {
+    const dir = bundle();
+    const submitted = submitWave0(dir);
+
+    const urlOnly = readSubmittedWave0Backing(dir, { source_url: 'https://example.com/duplicate' });
+    assert.equal(urlOnly.passed, false);
+    assert.match(urlOnly.root_findings[0].missing_fact, /safe work_id/i);
+
+    const mismatched = readSubmittedWave0Backing(dir, {
+      work_id: submitted.record.work_id,
+      entry_id: 'wu-other/1',
+    });
+    assert.equal(mismatched.passed, false);
+    assert.match(mismatched.root_findings[0].missing_fact, /must exactly match/i);
+
+    const unsafe = readSubmittedWave0Backing(dir, {
+      work_id: '../unsafe',
+      entry_id: '../unsafe/1',
+    });
+    assert.equal(unsafe.passed, false);
+    assert.match(unsafe.root_findings[0].missing_fact, /safe work_id/i);
+
+    const unsubmitted = readSubmittedWave0Backing(dir, {
+      work_id: 'wu-unsubmitted',
+      entry_id: 'wu-unsubmitted/1',
+    });
+    assert.equal(unsubmitted.passed, false);
+    assert.match(unsubmitted.root_findings[0].missing_fact, /retained direct source lineage/i);
+  });
+
+  it('fails closed when the submitted contribution cache trail drifts after submit', () => {
+    const dir = bundle();
+    const submitted = submitWave0(dir);
+    const cacheTrail = '_cache/wave0/primary/queue-wave0/s01_source';
+    writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{ invalid json\n');
+
+    const backing = readSubmittedWave0Backing(dir, {
+      work_id: submitted.record.work_id,
+      entry_id: `${submitted.record.work_id}/1`,
+    });
+    assert.equal(backing.passed, false);
+    assert.match(backing.root_findings[0].missing_fact, /cache trail/i);
+  });
+
   it('short-circuits candidates on result-hash, tuple, and direct-output parent roots', () => {
     const hashDir = bundle();
     const hashSubmitted = submitWave0(hashDir);
@@ -392,8 +532,11 @@ describe('eligible work-unit projection', () => {
   it('keeps the reader/projection import direction acyclic', () => {
     const reader = readFileSync(path.resolve('DPT_FRAMEWORK/engine/helpers/gate-helpers-readers.mjs'), 'utf8');
     const projection = readFileSync(path.resolve('DPT_FRAMEWORK/engine/work-unit-projection.mjs'), 'utf8');
+    const directOutput = readFileSync(path.resolve('DPT_FRAMEWORK/engine/helpers/direct-output-contract.mjs'), 'utf8');
     assert.doesNotMatch(reader, /work-unit-(?:projection|validation)\.mjs/);
     assert.match(projection, /gate-helpers-readers\.mjs/);
     assert.match(projection, /work-unit-validation\.mjs/);
+    assert.doesNotMatch(directOutput, /gate-helpers-checks\.mjs/);
+    assert.match(directOutput, /markdown-semantic-sections\.mjs/);
   });
 });

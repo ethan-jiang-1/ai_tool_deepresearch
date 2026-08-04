@@ -18,7 +18,6 @@ execution_contract:
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas
-  - shared/shared-reference-template
   - shared/shared-page-fetch-guidance
 suggested_context: []
 ---
@@ -30,7 +29,7 @@ suggested_context: []
 - **Role key**: `dpt-source-intake`
 - **Used by**: Wave0 lifecycle Phase Agent (`phase-wave0.md`) when constructing `wave0_source_intake` work-unit tasks.
 - **Receives**: Work-unit `task.md`, `_beacon.json`, `result.schema.json`, assigned `runtime-receipt.jsonl`, and the output/cache contract for `_work_units/wave0/{work_id}/`.
-- **Produces**: Foundation source metadata in `artifacts/wave0/{topic.slug}/source.yaml`, optional shared rich references, cache trails, runtime receipt events, and bounded result JSON for `operate-work-unit submit`.
+- **Produces**: Foundation source metadata in `artifacts/wave0/{topic.slug}/source.yaml`, cache trails, runtime receipt events, and bounded result JSON for `operate-work-unit submit`.
 - **Write capability**: Requires filesystem read/write/append and directory creation under `bundle_dir`; before return it verifies `result.json`, `runtime-receipt.jsonl`, declared outputs, and required cache leaf files exist under the active bundle root.
 - **Boundary**: This role performs search/fetch/extraction only inside the assigned work-unit contract; it does not read workflow state, mutate queue/status, run gates, append ledgers, or decide phase completion.
 - **Handoff**: Phase Agent submits the result through `operate-work-unit submit --work-id <work_id> --result <result.json>`. Successful submit is the Engine boundary that completes queue demand and appends delegated ledger coverage.
@@ -118,13 +117,12 @@ const yamlString = yaml.stringify(data);
 
 JSON files (e.g. `meta.json`) MUST be written via `JSON.stringify()` — same principle, same anti-pattern prohibition.
 
-When the task discovers a cross-topic foundation source, it may also write:
-
-```text
-reference/00-shared-<slug>.md
-```
-
-Rich reference files use the actor-delivered `shared-reference-template.md` and declare their `output_files[]` entry with role `reference` and `source_url`. The Sub-agent writes this direct `reference` output; the Phase Agent does not reconstruct it as an alternate Wave0 projection.
+The current `wave0_source_intake` contract ends with the assigned source YAML,
+cache, receipt, and result facts. Do not load the shared reference template,
+write `reference/00-shared-*.md`, or declare a `reference` item in
+`output_files[]` to repair a shared-reference floor. A successful formal submit
+creates the submitted Wave0 contribution; only the Phase Agent may later
+materialize a reader-facing consumer projection from exact submitted backing.
 
 ## 4. Execution Within Work Unit
 
@@ -136,7 +134,7 @@ Execution steps:
 2. Read `task.md` for topic slug, title, source expectations, cache path, and output contract.
 3. Search using the topic's guardrails and preferred sources.
 4. Fetch page content using the fetching chain in §5.
-5. Extract source metadata and write `source.yaml`; optionally write `reference/00-shared-*.md`.
+5. Extract source metadata and write the assigned `source.yaml`.
 6. Write cache leaf directories for each source, including `websearch.json`, `page.md`, and `meta.json`.
 7. Write `agent_result_ready` immediately before returning.
 8. Return JSON matching `result.schema.json`, including `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, `output_files[]`, and `cache_trails[]`.
@@ -164,6 +162,7 @@ Read and follow `shared-page-fetch-guidance.md` for the one per-URL access seque
 - Do not perform cross-topic synthesis, conclusion writing, gate evaluation, queue mutation, or status mutation.
 - Do not claim comprehensive coverage; Wave0 only collects foundation references.
 - Do not directly append `rb_output_declarations.jsonl`; `operate-work-unit submit` is the delegated ledger boundary.
+- Do not write a shared rich reference or add a `reference` output declaration for a current Wave0 task; Phase-owned materialization happens only after formal submit.
 
 Universal work-unit prohibitions from `shared-subagent-protocol.md` also apply.
 

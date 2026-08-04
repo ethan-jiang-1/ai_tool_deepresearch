@@ -61,7 +61,7 @@ claims:
     verdict_authority: node_test_exit
   - id: submitted-wave0-backing-has-exact-source-identity
     statement: >-
-      REF-009: the bounded Wave0 backing reader authenticates current submitted contribution intervals and exposes exact work-id/ordinal backing without URL-only, filesystem-only, mutable-array inference, or broadening the existing submitted_work wire discriminator into aggregate coverage.
+      REF-009: the bounded Wave0 backing reader authenticates ledger-ordered retained submitted contribution intervals across prior and current rerun rows for one direct source target, exposes exact work-id/ordinal backing, and prevents a later append from re-owning a prior ordinal without URL-only, filesystem-only, mutable-array inference, or broadening the existing submitted_work wire discriminator into aggregate coverage.
     test_class: unit
     proof_subject: deterministic_contract
     asset:
@@ -106,7 +106,7 @@ claims:
     verdict_authority: node_test_exit
   - id: batch-deferred-packet-preserves-individual-identity
     statement: >-
-      CTS-009: with current v2 source/cache-only Wave0 submission fixtures, one strict Wave0 contribution-scoped deferred intent atomically expands current exact identities using the existing defers/[none]/deferred limitation form, leaves a later contribution untouched, rejects collisions/unsubmitted input, supports idempotent replay, and retains explicit-entry compatibility.
+      CTS-009: with current v2 source/cache-only Wave0 submission fixtures, one strict Wave0 contribution-scoped deferred intent atomically expands retained exact identities in the current direct source array using the existing defers/[none]/deferred limitation form, leaves a later contribution untouched, rejects collisions/unsubmitted input, supports idempotent replay, and retains explicit-entry compatibility.
     test_class: integration
     proof_subject: deterministic_contract
     asset:

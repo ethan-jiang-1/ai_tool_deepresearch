@@ -1,4 +1,4 @@
-// @impl REF-007, RWP-001, RWP-002
+// @impl DEW-025, REF-007, RWP-001, RWP-002
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -8,6 +8,7 @@ import { parse as parseYaml } from 'yaml';
 
 const ROOT = path.resolve(import.meta.dirname, '../../..');
 const NODES = path.join(ROOT, 'DPT_FRAMEWORK/workflows/nodes');
+const FRAMEWORK = path.join(ROOT, 'DPT_FRAMEWORK');
 
 function readNode(relativePath) {
   return readFileSync(path.join(NODES, relativePath), 'utf8');
@@ -19,19 +20,40 @@ function frontmatter(markdown) {
   return parseYaml(match[1]);
 }
 
+function wave0QueueCard(phase) {
+  const match = phase.match(/Task card template:\n\n```json\n([\s\S]*?)\n```/);
+  assert.ok(match, 'Wave0 queue card template is present');
+  return JSON.parse(match[1]);
+}
+
 describe('Wave producer contract guidance', () => {
-  it('delivers the existing rich-reference template to the Wave0 source actor without moving output ownership to the Phase', () => {
+  it('delivers a source/cache-only Wave0 actor contract and Phase-owned submitted-backing closeout', () => {
     const phase = readNode('phases/phase-wave0.md');
     const sourceIntake = readNode('phases/subagent-dpt-source-intake.md');
+    const template = readNode('shared/shared-reference-template.md');
+    const topicState = readFileSync(path.join(FRAMEWORK, 'command_playbook/operate-topic-state.md'), 'utf8');
     const phaseMetadata = frontmatter(phase);
     const roleMetadata = frontmatter(sourceIntake);
+    const card = wave0QueueCard(phase);
 
     assert.ok(phaseMetadata.requires.includes('shared/shared-reference-template'));
-    assert.ok(roleMetadata.requires.includes('shared/shared-reference-template'));
-    assert.match(sourceIntake, /reference\/00-shared-<slug>\.md/);
-    assert.match(sourceIntake, /role\s+`?reference`?/);
-    assert.match(sourceIntake, /source_url/);
-    assert.doesNotMatch(phase, /Phase-owned shared-reference\/index closeout/i);
+    assert.equal(roleMetadata.requires.includes('shared/shared-reference-template'), false);
+    assert.deepEqual(card.writes_to, ['artifacts/wave0/{topic.slug}/source.yaml']);
+    assert.match(card.action, /Return only the current task-contract output_files\[\] and cache_trails\[\]/);
+    assert.match(card.action, /Do not write a reference\/00-shared-\*\.md file or declare a reference output/);
+    assert.match(sourceIntake, /Do not load the shared reference template/);
+    assert.match(sourceIntake, /only the Phase Agent may later\s+materialize a reader-facing consumer projection/);
+    assert.doesNotMatch(sourceIntake, /The Sub-agent writes this direct `reference` output/);
+
+    assert.match(phase, /### 3\.3 Submitted Reference Closeout/);
+    assert.match(phase, /exact `<work_id>\/<ordinal>` source identity/);
+    assert.match(phase, /operate-artifact-persistence\.mjs persist/);
+    assert.match(phase, /sync-reference-index\.mjs/);
+    assert.match(phase, /deferred_contribution/);
+    assert.match(phase, /rerun the same Wave0 inspect/i);
+    assert.match(template, /only the Phase Agent may materialize `00-shared-<slug>\.md`/);
+    assert.match(topicState, /deferred_contribution/);
+    assert.match(topicState, /selects one submitted contribution; it is not a\s+persisted source identity or aggregate coverage/);
   });
 
   it('places Wave1 dry-submit and existing dispositions before formal submit', () => {

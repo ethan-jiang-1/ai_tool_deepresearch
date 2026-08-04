@@ -4,7 +4,7 @@
 
 ### Requirement: Wave0 provenance SHALL distinguish legacy delegated references from submitted-backed Phase-owned projections
 
-Wave0 provenance evaluation SHALL classify a shared reference by the authority it actually claims. A legacy delegated shared reference is valid only when its exact reference output is recorded by a successfully submitted historical Wave0 work-unit row. A current Phase-owned shared reference is valid only when deterministic backing resolves its normal `source_url` and scannable body to one exact submitted Wave0 source identity, written as `<work_id>/<ordinal>`, together with the authenticated source YAML, source URL, cache, result, and work-unit facts needed by the existing backing contract. URL equality or a work ID without the exact ordinal SHALL not select a source identity.
+Wave0 provenance evaluation SHALL classify a shared reference by the authority it actually claims. A legacy delegated shared reference is valid only when its exact reference output is recorded by a successfully submitted historical Wave0 work-unit row. A current Phase-owned shared reference is valid only when deterministic backing resolves its normal `source_url` and scannable body to one exact retained submitted Wave0 source identity, written as `<work_id>/<ordinal>`, together with the authenticated source YAML, source URL, cache, result, and work-unit facts needed by the existing backing contract. For a retained direct source array, that exact identity stays with its ledger-ordered accepted contribution across a later rerun append; a generic current-round eligibility filter does not reassign it. URL equality or a work ID without the exact ordinal SHALL not select a source identity.
 
 A Phase-owned reference SHALL NOT require its own path in delegated `output_files[]`; it is a consumer projection after submit, not a second delegated attempt. Conversely, a matching URL, source layer, `_INDEX.md` row, filename, source YAML on disk, bare `work_id`, or unsubmitted candidate SHALL NOT establish that backing. Ambiguous, malformed, superseded, or unsubmitted backing SHALL fail closed with the nearest submitted-backing root rather than being labeled a valid projection or delegated reference.
 
@@ -16,9 +16,15 @@ A Phase-owned reference SHALL NOT require its own path in delegated `output_file
 
 #### Scenario: exact submitted backing authorizes a Phase-owned Wave0 reference
 
-- **WHEN** a Phase-owned `reference/00-shared-*.md` binds its metadata and scannable body backing to one current submitted Wave0 source identity and its authenticated source/cache/work-unit facts
+- **WHEN** a Phase-owned `reference/00-shared-*.md` binds its metadata and scannable body backing to one retained submitted Wave0 source identity and its authenticated source/cache/work-unit facts
 - **THEN** provenance SHALL classify it as a Phase-owned projection
 - **AND** its absence from delegated reference output declarations SHALL not be a delegated-bypass failure
+
+#### Scenario: retained Phase-owned backing survives a later source append
+
+- **WHEN** a Phase-owned reference cites a valid prior source identity and a later rerun accepts an appended source in the same canonical direct-output target
+- **THEN** provenance SHALL retain the prior reference's exact original backing while the later contribution owns only its appended ordinal interval
+- **AND** it SHALL not classify the prior reference as drifted merely because its work unit is not current-round demand coverage
 
 #### Scenario: presentation surfaces cannot manufacture Wave0 authority
 

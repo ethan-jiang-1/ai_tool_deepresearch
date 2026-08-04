@@ -43,7 +43,6 @@ describe('REF-007 parser-aligned Agent guidance', () => {
 
   it('current reference producers load one canonical template and do not retain the retired writer form', () => {
     const directTemplateConsumers = [
-      'phases/subagent-dpt-source-intake.md',
       'phases/subagent-dpt-evidence-extractor.md',
       'phases/subagent-dpt-topic-scout.md',
       'phases/phase-wave0.md',
@@ -52,6 +51,10 @@ describe('REF-007 parser-aligned Agent guidance', () => {
     for (const ref of directTemplateConsumers) {
       assert.match(readNode(ref), /requires:[\s\S]*- shared\/shared-reference-template/, ref);
     }
+    assert.doesNotMatch(
+      readNode('phases/subagent-dpt-source-intake.md'),
+      /requires:[\s\S]*- shared\/shared-reference-template/,
+    );
 
     const refs = [
       'shared/shared-schemas.md',

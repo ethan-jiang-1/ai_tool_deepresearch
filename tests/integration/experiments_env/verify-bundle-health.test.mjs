@@ -147,20 +147,32 @@ function createHeavyProvenanceBundle(name, { validLedger = true, validWorkUnit =
   mkdirSync(gatesDir, { recursive: true });
   writeFileSync(join(gatesDir, '0001-wave0-complete.json'), JSON.stringify({ gate: 'wave0-complete', exit_code: 0 }, null, 2));
 
-  const { record } = claimAndSubmitWorkUnit(dir, {
+  const { record, submitted } = claimAndSubmitWorkUnit(dir, {
     phase: 'wave0',
     queueItemId: 'topic-a',
+    legacyV1Assignment: true,
     outputs: [{
       path: 'reference/01_topic-source.md',
       role: 'reference',
       source_url: 'https://example.com/article',
       source_slug: 's01_source',
+    }, {
+      path: 'artifacts/wave0/topic-a/source.yaml',
+      role: 'source_yaml',
+      content: [
+        '- url: https://example.com/article',
+        '  title: Example source',
+        '  retrieved_date: 2026-01-01',
+        '  topic_tag: topic-a',
+        '',
+      ].join('\n'),
     }],
     cacheTrails: [{
       path: '_cache/wave0/primary/topic_a/s01_source',
       url: 'https://example.com/article',
     }],
   });
+  assert.equal(submitted?.ok, true, JSON.stringify(submitted));
 
   if (!validLedger) {
     writeFileSync(join(dir, 'rb_output_declarations.jsonl'), '');
@@ -288,7 +300,7 @@ describe('verify-bundle-health.mjs', () => {
       const report = JSON.parse(r.stdout.trim());
 
       assert.strictEqual(r.status, 0);
-      assert.strictEqual(report.status, 'clean');
+      assert.strictEqual(report.status, 'clean', JSON.stringify(report));
       assert.strictEqual(report.work_units.required, false);
       assert.strictEqual(report.work_units.status, 'issues');
       assert.match(report.work_units.diagnostics.join('\n'), /missing existing work-unit authority/);

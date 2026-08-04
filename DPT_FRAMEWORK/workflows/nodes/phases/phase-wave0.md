@@ -26,16 +26,18 @@ suggested_context:
 
 ## 0. Execution Brief
 
-- **Objective**: collect foundation source metadata and shared reference evidence for every topic.
+- **Objective**: collect foundation source metadata for every topic, then use submitted backing for any required shared reference consumer projections.
 - **Start here**: load `rb_queue.json`, `rb_plan.md` topic registry and, when present, `## Constraints > User Research Controls`, seed topic files, profile thresholds, and `dpt-source-intake` role guidance.
 - **Entry prerequisite**: after `enter-phase` loads this node, run `node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to seed_topics_ready` before Wave0 work or its Gate; this synchronizes the passed source gate and does not prove Wave0 completion.
-- **Delegated path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit dry-submit` repair loop -> formal `operate-work-unit submit` -> submitted ledger row -> gate.
+- **Delegated path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit dry-submit` repair loop -> formal `operate-work-unit submit` -> submitted Wave0 contribution -> Phase materialization or deferred projection -> same inspect -> gate.
 - **Completion check**: side-effect-free `inspect-wave0-output.mjs` passes first, then `check-gate-wave0-complete.mjs` passes for `phases/phase-wave0.md`.
 - **Failure posture**: do not direct-search from the Phase Agent as a substitute for delegated evidence. Use submit rejection, terminal attempt closure, refill, and gate feedback.
 
 ## 1. Stage Goal
 
-Create `artifacts/wave0/{topic}/source.yaml` for each topic and shared foundation references under `reference/00-shared-*.md`.
+Create `artifacts/wave0/{topic}/source.yaml` for each topic. After formal submit,
+the Phase Agent may materialize backed shared foundation consumer projections at
+`reference/00-shared-*.md`.
 
 Wave0 is foundation evidence collection, not comprehensive research. Exact floors come from `rb_profile.yaml#/research_style_params`, especially `wave0_per_topic_source_floor` and `wave0_shared_ref_total`.
 
@@ -46,7 +48,7 @@ For each delegated source-intake task, derive the initial candidate URL/source t
 - Active bundle that passed `seed-topics-ready`.
 - `rb_plan.md` frontmatter `topic_registry`.
 - `rb_profile.yaml` research style params.
-- `shared-reference-template.md` through this phase's `requires` chain and the source-intake actor's delivered role guidance.
+- `shared-reference-template.md` through this phase's `requires` chain for Phase-owned materialization after formal submit; the current source-intake actor does not load it as a completion route.
 - `DPT_FRAMEWORK/cli/operate-queue.mjs` for enqueue/check/non-delegated maintenance.
 - `DPT_FRAMEWORK/cli/operate-work-unit.mjs` for delegated claim/submit/fail/timeout/abandon/inspect.
 - `shared-subagent-protocol.md` for work-unit envelope and Sub-agent rules.
@@ -88,10 +90,9 @@ Task card template:
   "kind": "wave0_source_intake",
   "producer_rule": "source_intake_fan_in",
   "priority_class": "P5_new_reference_intake",
-  "action": "Search foundation references for {topic.title}; fetch page content; write artifacts/wave0/{topic.slug}/source.yaml. When this work unit is used to repair missing shared_ref_count_floor coverage, the actor MUST also write reference/00-shared-<slug>.md as a declared reference output with a real source_url; do not create it directly as the Phase Agent. Write leaf cache trails under _cache/wave0/primary/{topic.slug}/; return output_files[] and cache_trails[] for work-unit submit.",
+  "action": "Search foundation sources for {topic.title}; fetch page content; write the assigned artifacts/wave0/{topic.slug}/source.yaml and leaf cache trails under _cache/wave0/primary/{topic.slug}/. Return only the current task-contract output_files[] and cache_trails[] for work-unit submit. Do not write a reference/00-shared-*.md file or declare a reference output; formal submit supplies the Phase-owned shared-reference backing path.",
   "writes_to": [
-    "artifacts/wave0/{topic.slug}/source.yaml",
-    "reference/00-shared-<slug>.md"
+    "artifacts/wave0/{topic.slug}/source.yaml"
   ],
   "required_receipts": [
     "file:artifacts/wave0/{topic.slug}/source.yaml"
@@ -149,7 +150,7 @@ For each claimed work unit, use the claim output's canonical absolute `bundle_di
 1. Read `prompt_refs[].task_ref`, `beacon_ref`, and `result_schema_ref` at their returned absolute paths. Confirm that `_beacon.json` carries the same canonical absolute `bundle_dir`. Treat the beacon as immutable: do not overwrite, edit, or repair `_beacon.json`; an identity/root conflict belongs at the Engine checkpoint.
 2. Spawn the Sub-agent with the generated prompt.
 3. Require real search and page fetch following the per-URL access sequence in `shared-page-fetch-guidance.md`. When page fetch is blocked or unavailable at every prior tier, and independent shell/network permission exists, make at most one bounded `curl` request for that same URL. Do not use search snippets as evidence.
-4. Plan candidate URLs from the explicit `rb_profile.yaml#/research_style_params.wave0_per_topic_source_floor` plus a conservative small margin for fetch failures, duplicates, and non-countable pages. When shared foundation references are assigned, bind the shared-reference target to `wave0_shared_ref_total` or another explicit runtime/profile surface plus the same conservative margin. Do not use a fixed hard-coded fetch aim unless it is written as `profile/runtime floor + named margin`.
+4. Plan candidate URLs from the explicit `rb_profile.yaml#/research_style_params.wave0_per_topic_source_floor` plus a conservative small margin for fetch failures, duplicates, and non-countable pages. `wave0_shared_ref_total` remains a Phase-side planning signal for later submitted-backing materialization; it does not add a rich-reference output to this current actor contract. Do not use a fixed hard-coded fetch aim unless it is written as `profile/runtime floor + named margin`.
 5. Read the generated Result JSON Starter in `task.md`, then have the selected actor prepare the candidate `result.json` at the assigned absolute result path and write the declared output files and leaf cache trails. The starter is guidance generated from the active contract, not a prewritten result or alternate authority.
 6. Ensure `runtime-receipt.jsonl` events carry `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
 7. Actively poll result/receipt/output/cache readiness without waiting for user continuation or task notification.
@@ -165,7 +166,7 @@ Read every structured violation. Repair the same candidate and same claimed atte
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "<canonical-absolute-bundle_dir>" --work-id <work_id> --result <absolute-result.json>
 ```
 
-When a producer writes assigned `artifacts/`, `reference/`, or `_cache/` content through a completed staging file, it may use `operate-artifact-persistence.mjs persist` before submit and must retain staging until `committed`. This does not replace `operate-work-unit submit`, its cache normalization, or submitted-ledger authority.
+When a producer writes assigned `artifacts/` or `_cache/` content through a completed staging file, it may use `operate-artifact-persistence.mjs persist` before submit and must retain staging until `committed`. This does not replace `operate-work-unit submit`, its cache normalization, or submitted-ledger authority.
 
 If formal submit rejects because mutable facts changed after dry-submit, repair the same claimed attempt when possible and return to the same dry-submit checkpoint before another formal submit. For every expired or stale claimed attempt, run timeout preflight before terminal timeout:
 
@@ -195,18 +196,73 @@ For structured `busy`, read caller work/operation separately from holder transac
 
 `timeout --force --reason <reason>` is an exceptional audited operator choice after inspection, not the normal response to progress, repairable candidates, or invalid binding. Do not use queue completion commands for delegated success, and do not run the Wave0 gate while preflight recommends `submit`, `repair`, `wait`, `inspect`, or `block` for any in-flight attempt.
 
-### 3.3 Seed Projection Update
+### 3.3 Submitted Reference Closeout
 
-After each successful submit, never edit a seed, heading, card, or token. `templates/seed-topic-template` gives the Wave0 slot/card and rendered-entry shape. For each affected current canonical topic, read the existing contribution-aware Wave0 inspection/preflight result and retain one exact `<work_id>/N` entry or identity-bound deferred disposition for every candidate owned by that submitted contribution. `N` is the returned global ordinal in the current validated `artifacts/wave0/<topic>/source.yaml` array; a later legal append has its own contribution/work ID and owns only its appended interval. Do not recalculate historical work IDs from the mutable full array or treat `result_hash` as a source-byte snapshot. One contribution may own multiple entries or dispositions in one `wave0_evidence` update; a bare work ID or one arbitrary ordinal never covers it. Use the complete `wave_projection/apply_seed_projection` packet, authorization and repair protocol in `command_playbook/operate-topic-state.md` and invoke existing `operate-topic-state apply` in this loaded Wave0 window. Evidence-bearing entries lead with a concrete existing `reference/00-shared-*.md` ref, while `source.yaml`, `_cache/`, and `_work_units/` remain secondary provenance.
+After each successful formal submit, run the same `inspect-wave0-output.mjs` and
+consume its submitted-reference convergence result before treating a shared
+reference floor as a deficit. When it returns materializable backing, the Phase
+Agent must use only the returned exact `<work_id>/<ordinal>` source identity,
+canonical `write_to`, `source_url`, and submitted source/cache/result/work-unit
+refs. URL equality, a bare work ID, an existing file, or an index row cannot
+select the backing.
 
-When no consumer reference is materializable, retain an identity-bound `defers` / `deferred` entry with `refs: [none]` and an explicit limitation in `next_hop`. The writer consumes a first token or upserts the matching identity atomically; Phase prose never decides which path applies. After every packet apply, run the same `inspect-wave0-output.mjs`; when it names a candidate coordinate, repair the retained packet -> writer -> same inspect loop. A missing writer window, canonical binding, or submitted authority is its direct lifecycle/owner boundary, not permission for a user or Agent to hand-edit seed, source, ledger, receipt, or trace bytes.
+Use `shared-reference-template.md` to write the complete
+`reference/00-shared-<slug>.md` consumer projection to a retained staging file.
+Its body must carry the exact `<work_id>/<ordinal>` coordinate and the returned
+submitted backing refs. Commit that file through
+`operate-artifact-persistence.mjs persist`, consume its `committed|blocked`
+verdict, then run `node DPT_FRAMEWORK/cli/sync-reference-index.mjs --bundle
+<path>` only after a commit. Persistence and indexing provide durable consumer
+navigation; neither creates submitted authority. Rerun the same Wave0 inspect
+after index synchronization.
+
+When the Phase Agent elects an allowed deferred disposition for one submitted
+contribution, retain one `wave_projection/apply_seed_projection` packet with a
+single `wave0_evidence.deferred_contribution` object:
+
+```json
+{
+  "source_identity": { "kind": "submitted_work", "work_id": "<submitted-work-id>" },
+  "evidence_meaning": "<Agent-authored limitation meaning>",
+  "next_hop": "limitation: <concrete next research hop>"
+}
+```
+
+Here `work_id` is a contribution selector, not source coverage. The existing
+topic-state writer resolves submitted authority and expands currently
+unprojected exact identities with the existing `defers` / `["none"]` /
+`deferred` form. Do not hand-enumerate an ordinal range, hand-edit a seed or
+index, or turn a deferred selector into a reference. Apply the retained packet,
+then rerun the same inspect. A true floor deficit is actionable only after this
+convergence path has no materializable submitted backing.
+
+### 3.4 Seed Projection Update
+
+Never edit a seed, heading, card, or token. `templates/seed-topic-template`
+gives the Wave0 slot/card and rendered-entry shape. After a committed
+materialization, retain an explicit `wave0_evidence` entry only for its exact
+`<work_id>/N` identity and concrete `reference/00-shared-*.md` navigation ref;
+`source.yaml`, `_cache/`, and `_work_units/` remain secondary provenance. For a
+contribution-wide deferred outcome, use the one `deferred_contribution` intent
+above instead of repeated manual entries. A later legal append has a different
+work ID and owns only its returned ordinal interval; do not recalculate
+historical ownership from a mutable full array or treat `result_hash` as a
+source-byte snapshot.
+
+Use the complete `wave_projection/apply_seed_projection` packet, authorization,
+and repair protocol in `command_playbook/operate-topic-state.md`, then invoke
+`operate-topic-state apply` in this loaded Wave0 window. After every packet
+apply, rerun the same `inspect-wave0-output.mjs`. A missing writer window,
+canonical binding, or submitted authority is its direct lifecycle/owner
+boundary, not permission for a user or Agent to hand-edit seed, source, ledger,
+receipt, or trace bytes.
 
 ## 4. Expected Artifacts
 
 - `artifacts/wave0/{topic}/source.yaml` for every topic.
 - `reference/00-shared-*.md` when shared foundation references exist.
 - `reference/_INDEX.md` summarizing available references.
-- Submitted work-unit rows in `rb_output_declarations.jsonl` covering delegated outputs and cache trails.
+- Submitted work-unit rows in `rb_output_declarations.jsonl` covering delegated source/cache outputs and cache trails.
 - Seed-topic Wave0 projections materialized through the existing packet writer, with concrete existing `reference/00-shared-*.md` refs as primary consumer navigation; `source.yaml`, `_cache/`, and `_work_units/` refs may appear only as secondary provenance.
 - `rb_trace.jsonl` records the `wave0_completion` event/check surface required by the Wave0 gate definition.
 
@@ -218,7 +274,7 @@ After `rb_queue.json#/active_window`, `#/refill_pool`, and `#/delegated_in_fligh
 node DPT_FRAMEWORK/cli/inspect-wave0-output.mjs --bundle <path>
 ```
 
-This inspect is side-effect-free and non-routing. If it names a projection packet/entry root, repair the retained packet through the existing writer and rerun this same inspect; if it names unavailable authority or layout, follow that direct owner boundary. Do not create a second local validator, hand-edit a seed, or treat an internal artifact/cache ref as a substitute for concrete consumer navigation.
+This inspect is side-effect-free and non-routing. If it names materializable submitted backing, follow Section 3.3's Phase-owned persistence/index path; if it names a projection packet/entry root, repair the retained packet through the existing writer and rerun this same inspect; if it names unavailable authority or layout, follow that direct owner boundary. Do not create a second local validator, hand-edit a seed, or treat an internal artifact/cache ref as a substitute for concrete consumer navigation.
 
 Only after inspect passes, record or refresh the existing `wave0_completion` evidence through the normal phase logging path, then run the formal gate and read its JSON output before deciding the next action:
 
@@ -270,6 +326,7 @@ Do not stop for progress, idle/no-work, or partial-completion reporting. Phase c
 - 禁止手写 `rb_output_declarations.jsonl` rows, work-unit result files, receipts, or trace events.
 - 禁止把 search snippets 当作 fetched source evidence.
 - 禁止 claim 后跳过 Sub-agent task instructions and submit a fabricated result.
+- 禁止让当前 `wave0_source_intake` actor 写入或声明 `reference/00-shared-*.md`; shared references are Phase-owned consumer projections after formal submit.
 - 禁止以 token replacement、raw Markdown patch、heading/path/line number 或手改 seed 完成 Wave0 projection。
 - 禁止把 Wave0 projection 写成 naked URL/evidence list or generic `Wave0 submitted` prose; retain a packet entry with identity, fields, and refs.
 - 禁止让 orphan `reference/00-shared-*.md` satisfy gate coverage.

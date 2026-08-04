@@ -2,6 +2,7 @@
 
 import { spawnSync } from 'node:child_process';
 import {
+  existsSync,
   mkdirSync,
   readFileSync,
   rmSync,
@@ -26,6 +27,10 @@ import {
   loadWorkUnitIndex,
   submitWorkUnit,
 } from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import {
+  applyCanonicalTopicState,
+  renderSeedProjectionAppendix,
+} from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
 import {
   setStatusWindow,
   witnessedHandoffEvents,
@@ -60,8 +65,6 @@ const TARGET_TOPIC = Object.freeze({
   previous_layouts: [],
 });
 
-const SHARED_URL = 'https://www.nist.gov/itl/ai-risk-management-framework';
-
 function unique(label) {
   return `rt_rerun_wave0_${label}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -84,6 +87,12 @@ function writePlan(bundleDir, name, topics) {
     topic_registry: topics,
   };
   writeFileSync(path.join(bundleDir, 'rb_plan.md'), `---\n${JSON.stringify(plan, null, 2)}\n---\n# Research Plan\n`);
+  mkdirSync(path.join(bundleDir, 'seed_topics'), { recursive: true });
+  for (const topic of topics) {
+    const seedPath = path.join(bundleDir, 'seed_topics', `${topic.slug}.md`);
+    if (existsSync(seedPath)) continue;
+    writeFileSync(seedPath, `---\n${JSON.stringify(topic, null, 2)}\n---\n# ${topic.title}\n\n${renderSeedProjectionAppendix()}\n`);
+  }
 }
 
 function writeProfile(bundleDir, name, rerunCount) {
@@ -112,7 +121,6 @@ function writeReferenceScaffold(bundleDir) {
   writeFileSync(path.join(bundleDir, 'reference/_INDEX.md'), [
     '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
     '| --- | --- | --- | --- | --- | --- | --- | --- |',
-    '| 00-shared-ai-rmf.md | primary | expert | Tier 2 | all | wave0_foundation | accepted | 2026-07-14 |',
     '',
   ].join('\n'));
   writeFileSync(path.join(bundleDir, 'reference/README.md'), '# Reference Evidence\n\nShared Wave0 foundation references.\n');
@@ -128,6 +136,9 @@ function createBundle(label, topics, { rerunCount = 0 } = {}) {
   const bundleDir = created.stdout.trim();
   createdDirs.push(bundleDir);
   setStatusWindow(bundleDir, 'seed_topics_ready', 'wave0_complete');
+  const status = readJson(path.join(bundleDir, 'rb_status.json'));
+  status.current_node = 'phases/phase-wave0.md';
+  writeFileSync(path.join(bundleDir, 'rb_status.json'), JSON.stringify(status));
   writePlan(bundleDir, name, topics);
   writeProfile(bundleDir, name, rerunCount);
   writeReferenceScaffold(bundleDir);
@@ -176,7 +187,56 @@ function enqueueTopic(bundleDir, topic) {
     || saved.refill_pool.find((item) => item.queue_item_id === queueItem.queue_item_id);
 }
 
-function executeTopic(bundleDir, topic, { includeSharedReference = false } = {}) {
+function materializeSubmittedWave0Reference(bundleDir, topic, record, sourceUrl, cacheTrail) {
+  const referencePath = `reference/00-shared-${topic.slug}.md`;
+  const stagedPath = path.join(bundleDir, '_tmp', `${topic.slug}-wave0-projection.md`);
+  mkdirSync(path.dirname(stagedPath), { recursive: true });
+  writeFileSync(stagedPath, `${referenceContent({
+    source_url: sourceUrl,
+    related_topic: 'all',
+    evidence_role: 'foundation',
+    accessed_at: '2026-07-14',
+  })}\n\n## Submitted Backing\n- source_identity: ${record.work_id}/1\n- source_yaml_ref: artifacts/wave0/${topic.slug}/source.yaml\n- cache_trail_ref: ${cacheTrail}\n- result_ref: ${record.paths.result_ref}\n- work_unit_ref: ${record.paths.work_unit_dir}\n`);
+
+  const persisted = spawnSync('node', [
+    path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs'),
+    'persist', '--bundle', bundleDir, '--source', stagedPath, '--target', referencePath, '--expect-absent',
+  ], { encoding: 'utf8', timeout: 10000 });
+  assert.equal(persisted.status, 0, persisted.stderr || persisted.stdout);
+
+  const indexed = spawnSync('node', [
+    path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/sync-reference-index.mjs'), '--bundle', bundleDir,
+  ], { encoding: 'utf8', timeout: 10000 });
+  assert.equal(indexed.status, 0, indexed.stderr || indexed.stdout);
+  return referencePath;
+}
+
+function applyWave0SeedProjection(bundleDir, topic, record, referencePath) {
+  const projection = applyCanonicalTopicState({
+    bundlePath: bundleDir,
+    input: {
+      context: 'wave_projection',
+      action: 'apply_seed_projection',
+      topic_uid: topic.topic_uid,
+      wave: 'wave0',
+      updates: [{
+        slot_id: 'wave0_evidence',
+        entries: [{
+          source_identity: { kind: 'submitted_work', work_id: record.work_id },
+          entry_id: `${record.work_id}/1`,
+          evidence_meaning: `Submitted Wave0 source materializes the shared foundation for ${topic.title}.`,
+          relationship: 'supports',
+          refs: [referencePath],
+          status: 'supported',
+          next_hop: 'Read the exact submitted-backed shared reference before Wave1 deepening.',
+        }],
+      }],
+    },
+  });
+  assert.ok(['committed', 'unchanged'].includes(projection.verdict), JSON.stringify(projection));
+}
+
+function executeTopic(bundleDir, topic) {
   const demand = enqueueTopic(bundleDir, topic);
   const claim = claimWorkUnits(bundleDir, {
     phase: 'wave0',
@@ -189,7 +249,7 @@ function executeTopic(bundleDir, topic, { includeSharedReference = false } = {})
     },
     executionActorClass: 'delegated_subagent',
   });
-  assert.equal(claim.ok, true);
+  assert.equal(claim.ok, true, JSON.stringify(claim));
   assert.equal(claim.claimed_count, 1);
   const promptRef = claim.prompt_refs[0];
   const record = loadWorkUnitIndex(bundleDir, { createIfMissing: false }).work_units[promptRef.work_id];
@@ -203,28 +263,11 @@ function executeTopic(bundleDir, topic, { includeSharedReference = false } = {})
   writeFileSync(path.join(bundleDir, sourcePath), sourceYaml(topic, topicUrl));
 
   const outputFiles = [{ path: sourcePath, role: 'source_yaml' }];
-  if (includeSharedReference) {
-    const referencePath = 'reference/00-shared-ai-rmf.md';
-    writeFileSync(path.join(bundleDir, referencePath), `${referenceContent({
-      source_url: SHARED_URL,
-      related_topic: 'all',
-      evidence_role: 'foundation',
-      accessed_at: '2026-07-14',
-    })}\n`);
-    outputFiles.push({
-      path: referencePath,
-      role: 'reference',
-      source_url: SHARED_URL,
-      source_slug: 'ai-rmf',
-    });
-  }
-
-  const cacheUrl = includeSharedReference ? SHARED_URL : topicUrl;
   const cacheTrail = `_cache/wave0/primary/${topic.slug}/foundation`;
   mkdirSync(path.join(bundleDir, cacheTrail), { recursive: true });
   writeFileSync(path.join(bundleDir, cacheTrail, 'websearch.json'), '[]\n');
   writeFileSync(path.join(bundleDir, cacheTrail, 'page.md'), `# Captured Page\n\nFetched foundation content for ${topic.title}.\n`);
-  writeFileSync(path.join(bundleDir, cacheTrail, 'meta.json'), `${JSON.stringify({ url: cacheUrl })}\n`);
+  writeFileSync(path.join(bundleDir, cacheTrail, 'meta.json'), `${JSON.stringify({ url: topicUrl })}\n`);
 
   writeFileSync(path.join(bundleDir, record.paths.runtime_receipt_ref), `${JSON.stringify({
     schema_version: 'work-unit.receipt-event.v1',
@@ -250,7 +293,10 @@ function executeTopic(bundleDir, topic, { includeSharedReference = false } = {})
   const submit = submitWorkUnit(bundleDir, { work_id: record.work_id, resultPath: promptRef.result_path });
   assert.equal(submit.ok, true, JSON.stringify(submit));
 
-  return { demand, record, manifest, resultSchema, starter, drySubmit, submit };
+  const referencePath = materializeSubmittedWave0Reference(bundleDir, topic, record, topicUrl, cacheTrail);
+  applyWave0SeedProjection(bundleDir, topic, record, referencePath);
+
+  return { demand, record, manifest, resultSchema, starter, drySubmit, submit, referencePath };
 }
 
 function contractProjection(execution) {
@@ -315,10 +361,10 @@ describe('rerun-added Topic follows the normal Wave0 producer', () => {
 
   it('keeps bounded first-run/rerun-added contract parity and passes the normal Gate', () => {
     const fresh = createBundle('fresh', [TARGET_TOPIC]);
-    const freshTarget = executeTopic(fresh.bundleDir, TARGET_TOPIC, { includeSharedReference: true });
+    const freshTarget = executeTopic(fresh.bundleDir, TARGET_TOPIC);
 
     const rerun = createBundle('rerun', [HISTORICAL_TOPIC], { rerunCount: 1 });
-    executeTopic(rerun.bundleDir, HISTORICAL_TOPIC, { includeSharedReference: true });
+    executeTopic(rerun.bundleDir, HISTORICAL_TOPIC);
     writePlan(rerun.bundleDir, rerun.name, [HISTORICAL_TOPIC, TARGET_TOPIC]);
     const rerunTarget = executeTopic(rerun.bundleDir, TARGET_TOPIC);
 
@@ -344,7 +390,7 @@ describe('rerun-added Topic follows the normal Wave0 producer', () => {
 
   it('does not treat a rerun-added orphan source.yaml as submitted coverage', () => {
     const rerun = createBundle('orphan', [HISTORICAL_TOPIC], { rerunCount: 1 });
-    executeTopic(rerun.bundleDir, HISTORICAL_TOPIC, { includeSharedReference: true });
+    executeTopic(rerun.bundleDir, HISTORICAL_TOPIC);
     writePlan(rerun.bundleDir, rerun.name, [HISTORICAL_TOPIC, TARGET_TOPIC]);
 
     const orphanPath = path.join(rerun.bundleDir, 'artifacts/wave0', TARGET_TOPIC.slug, 'source.yaml');

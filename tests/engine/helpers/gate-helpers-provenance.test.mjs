@@ -101,9 +101,6 @@ depends_on_topic_uids: []
 }
 
 function writeLateSubmitFixture(dir, record) {
-  const outputPath = `reference/${record.work_id}.md`;
-  mkdirSync(join(dir, 'reference'), { recursive: true });
-  writeFileSync(join(dir, outputPath), '# Source\n\nLate accepted source.\n');
   const sourcePath = 'artifacts/wave0/topic-a/source.yaml';
   mkdirSync(join(dir, 'artifacts/wave0/topic-a'), { recursive: true });
   writeFileSync(join(dir, sourcePath), '- url: https://example.com/source\n  title: Source\n  retrieved_date: 2026-07-20\n  topic_tag: topic-a\n');
@@ -134,7 +131,6 @@ function writeLateSubmitFixture(dir, record) {
     execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'late done',
     output_files: [
-      { path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' },
       { path: sourcePath, role: 'source_yaml' },
     ],
     cache_trails: [cacheTrail],
@@ -188,14 +184,14 @@ function writeIndex(dir, rows) {
 }
 
 describe('work-unit provenance gate helpers', () => {
-  it('accepts only submitted work-unit ledger rows for scoped ledger existence', () => {
+  it('accepts only submitted work-unit ledger rows for scoped source-output existence', () => {
     const dir = tempDir('wpg-ledger-');
     claimAndSubmitWorkUnit(dir, { phase: 'wave0', queueItemId: 'queue-a' });
 
     const result = checkWorkUnitLedgerExists(dir, {
       wave: 'wave0',
       kind: 'wave0_source_intake',
-      role: 'reference',
+      role: 'source_yaml',
     });
 
     assert.equal(result.passed, true);
@@ -203,11 +199,12 @@ describe('work-unit provenance gate helpers', () => {
     assert.match(result.records[0].work_id, /^wu-w0-b000-src-i0001$/);
   });
 
-  it('counts audited late-accepted rows as submitted coverage after normal provenance checks pass', () => {
+  it('counts a current source-only late-accepted row as submitted coverage after normal provenance checks pass', () => {
     const dir = tempDir('wpg-late-coverage-');
     seedWave0Queue(dir);
     claimWorkUnits(dir, { phase: 'wave0', count: 1, ...availableActorDecision('wave0_source_intake') });
     const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+    assert.equal(record.assignment_contract_version, 'work-unit.assignment.v2');
     closeWorkUnitAttempt(dir, {
       work_id: record.work_id,
       status: 'timed_out',
@@ -225,7 +222,7 @@ describe('work-unit provenance gate helpers', () => {
     const result = checkWorkUnitLedgerExists(dir, {
       wave: 'wave0',
       kind: 'wave0_source_intake',
-      role: 'reference',
+      role: 'source_yaml',
     });
 
     assert.equal(result.passed, true, result.inspect.join('; '));

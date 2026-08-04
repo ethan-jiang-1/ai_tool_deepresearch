@@ -64,9 +64,9 @@ suggested_context: []
 
 ## Reference Layer
 
-Reference evidence 存放在平铺的 `reference/` 目录下（无子目录）。每个 source 一个 rich MD 文件，格式见 `shared-reference-template.md`。
+Reference consumer projections 存放在平铺的 `reference/` 目录下（无子目录）。它们供读者导航，格式见 `shared-reference-template.md`，但文件或 index 存在本身不建立 evidence authority。
 
-- **`reference/00-shared-<slug>.md`**：Wave 0 产出。共享基础 reference（rich MD），覆盖 ≥2 个 topic 的跨领域知识。每个文件含 metadata block（9 必填字段）+ 5 个标准 section。Foundation floor：≥ 1 个。
+- **`reference/00-shared-<slug>.md`**：Wave0 Phase-owned consumer projection。它只能在 formal submit 后从一个 exact `<work_id>/<ordinal>` submitted source/cache/result/work-unit backing materialize；不是当前 source-intake actor output。共享基础 reference（rich MD）覆盖 ≥2 个 topic，每个文件含 metadata block（9 必填字段）+ 5 个标准 section。Foundation floor：≥ 1 个。
 - **`reference/{topic_slug}-<qualifier>.md`**：Wave 1 产出。Topic 专属 reference（rich MD），`{topic_slug}` 为 topic 的完整 slug（已含 `NN_` 前缀，如 `01_meal-timing-...`），`<qualifier>` 为 source 短标识。每个文件含 metadata block + 5 个 section。Per topic ≥ 1 个。
 - **`reference/00-cross-<slug>.md`**：Wave 2 consumer reference（可选）。它只能走两条 authority path：existing-backed Phase-owned projection 必须引用 `W2F-xxx`、finding-index/ledger 和 concrete prior accepted submitted backing；newly fetched evidence 必须先由 submitted `wave2_targeted_evidence` work unit 提供 result/receipt/cache/source backing。文件存在本身不建立 authority。
 - **`reference/_INDEX.md`**：Canonical reference inventory table。8 列：`ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed`。每个 wave 完成时更新。`source_layer` 取值：`wave0_foundation` / `wave1_topic` / `wave2_cross`。Index row 和 `source_layer` 是 consumer navigation metadata，不是 evidence authority。

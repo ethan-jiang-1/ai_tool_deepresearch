@@ -8,9 +8,9 @@
 ## Requirements
 ### Requirement: Wave0 phase body completeness
 
-Wave0 phase body SHALL describe source intake delegated work as work-unit kind `wave0_source_intake`. It SHALL load `shared/shared-reference-template` through its actual `requires` chain and instruct the Agent to claim queue demand through `operate-work-unit`, dispatch prompts, run existing dry-submit on returned candidate work before formal submit, submit passing results by `work_id`, and run inspect/gate after phase drain. Shared rich references remain direct declared outputs of the `dpt-source-intake` actor; the Phase Agent SHALL NOT materialize or reconstruct them as a new Wave0 projection.
+Wave0 phase body SHALL describe source intake delegated work as work-unit kind `wave0_source_intake`. It SHALL instruct the Agent to claim queue demand through `operate-work-unit`, dispatch prompts, run existing dry-submit on returned candidate work before formal submit, submit passing results by `work_id`, and run inspect/gate after phase drain. The current source-intake actor contract SHALL cover its assigned `artifacts/wave0/{topic.slug}/source.yaml`, cache, result, and receipt facts only; the phase SHALL NOT ask that actor to author `reference/00-shared-*.md` as a delegated completion or shared-reference-floor route.
 
-When the existing `wave0_source_intake` producer is used to repair missing `shared_ref_count_floor` coverage, its actor SHALL write `reference/00-shared-<slug>.md` as a declared `reference` output with a real `source_url` and complete the existing dry-submit/formal-submit loop. The phase body SHALL state this condition explicitly and SHALL NOT direct the Phase Agent to write the file directly under `reference/`. This conditional shared-reference output SHALL NOT replace or add to the assignment contract's existing required `artifacts/wave0/{topic.slug}/source.yaml` output.
+After formal submit, the Phase Agent SHALL consume the Wave0 submitted-reference convergence result. When it identifies exact materializable submitted backing, the Phase Agent MAY load the existing shared reference template and create one Phase-owned consumer projection through the existing artifact-persistence and index-synchronization boundary. The projection SHALL cite exact submitted source/cache/work-unit backing, then rerun the same inspect. When the Phase Agent elects an allowed deferred outcome, it SHALL use the existing topic-state packet path and its contribution-scoped deferred form; it SHALL not hand-edit a seed, reference index, submitted ledger, source YAML, or cache. No gate or inspect result authorizes a Phase Agent to invent evidence, choose source relevance, or write a reference before submit.
 
 For a sanctioned rerun, Wave0 queue filling SHALL classify current topics from the canonical registry, seed rerun direction and direct queue/work-unit/submitted-ledger facts. A rerun `action:add` topic without current queued, delegated-in-flight or submitted Wave0 coverage SHALL receive the same `source_intake_fan_in` / `wave0_source_intake` delegated demand used by first-run Wave0. An existing topic with valid current-or-previous-layout submitted Wave0 coverage and no supplement intent SHALL NOT be redundantly re-enqueued. An orphan `source.yaml` without submitted coverage SHALL NOT count as completed work.
 
@@ -18,7 +18,7 @@ Before delegated claim, the Phase Agent SHALL read the queue-front role, perform
 
 For returned work, phase guidance SHALL direct the Agent to consume the existing dry-submit disposition before formal submit: `repair_same_candidate` permits only its authorized mechanical candidate repair and a same-check rerun; `return_to_actor` preserves actor-owned semantic work; `fail_and_replace` uses the existing terminal/replacement path; and `inspect_contract` remains at the Engine owner or missing-contract boundary. It SHALL not scan the filesystem to declare or amend backing, and formal submit remains the only transition that unlocks reference materialization.
 
-After a successful Wave0 submit, the Phase Agent SHALL obtain each Seed Projection Packet coordinate from the existing contribution-aware Wave0 inspection/preflight result. `<work_id>/N` means the global ordinal that the submitted work unit's accepted source contribution owns in the current valid source array. A later legal append has a different work ID and owns only its appended ordinal interval. The Phase Agent SHALL not recalculate every historical work unit against the mutable full array, assign a suffix to an earlier work ID, hand-edit a seed, or treat `result_hash` as a source-byte snapshot. A contribution-prefix or missing-boundary feedback root is an Engine-owned condition to inspect and rerun through the existing legal path, not a prompt to fabricate provenance.
+After a successful Wave0 submit, the Phase Agent SHALL obtain each Seed Projection Packet coordinate from the existing contribution-aware Wave0 inspection/preflight result. `<work_id>/N` means the global ordinal that the submitted work unit's accepted source contribution owns in the current valid source array. A later legal append, including one accepted in a later rerun, has a different work ID and owns only its appended ordinal interval; prior accepted prefix ownership remains readable for reference and Seed Projection backing. The Phase Agent SHALL not recalculate every historical work unit against the mutable full array, assign a suffix to an earlier work ID, hand-edit a seed, or treat `result_hash` as a source-byte snapshot. A contribution-prefix or missing-boundary feedback root is an Engine-owned condition to inspect and rerun through the existing legal path, not a prompt to fabricate provenance.
 
 #### Scenario: Wave0 closeout uses submitted contribution coordinates
 
@@ -30,20 +30,19 @@ After a successful Wave0 submit, the Phase Agent SHALL obtain each Seed Projecti
 
 - **WHEN** Wave0 source intake has delegated queue demand
 - **THEN** the phase doc SHALL instruct `operate-work-unit claim`, dry-submit, and formal submit in that order
-- **AND** it SHALL retain shared reference creation as the source-intake actor's declared output through formal submit
+- **AND** it SHALL keep rich shared-reference authoring outside the current actor completion contract
 
-#### Scenario: Shared-floor repair uses the existing delegated producer
+#### Scenario: shared-floor repair uses submitted-backing materialization
 
-- **WHEN** Wave0 repair feedback identifies missing `shared_ref_count_floor` coverage
-- **THEN** the phase doc SHALL direct the Agent to use the existing `wave0_source_intake` output/submit path for `reference/00-shared-<slug>.md`
-- **AND** it SHALL require that declared reference output to carry a real `source_url`
-- **AND** it SHALL NOT direct a direct Phase write under `reference/`
+- **WHEN** Wave0 inspect identifies a materializable submitted source identity while shared-reference floor coverage is incomplete
+- **THEN** the phase doc SHALL direct the Phase Agent to use the exact submitted-backing materialization path and rerun the same inspect
+- **AND** it SHALL not direct a new `wave0_source_intake` actor to create a rich-reference output solely to repair the floor
 
 #### Scenario: Wave0 authoring distinguishes reference roots
 
 - **WHEN** Wave0 guidance asks the Agent to create a shared rich reference
 - **THEN** it SHALL expose the canonical `00-shared-<slug>.md` path, parser-aligned rich Markdown contract, and submitted backing as separate facts
-- **AND** it SHALL not present bare YAML or fenced YAML as an alternate rich-reference contract
+- **AND** it SHALL not present the file, index row, or bare YAML as evidence authority
 
 #### Scenario: Rerun added topic enters normal Wave0 work-unit path
 

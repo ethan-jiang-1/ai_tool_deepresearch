@@ -10,7 +10,7 @@ import {
 import { makeContractFinding } from './wave-contract-findings.mjs';
 import {
   collectEligibleWorkUnitProjection,
-  collectEligibleWave0CandidateProjection,
+  collectSubmittedWave0ContributionProjection,
   readProjectionProfileRound,
 } from '../work-unit-projection.mjs';
 import {
@@ -765,18 +765,19 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
   findingIndexFact = null,
 } = {}) {
   const findings = [];
+  const acceptedDeferredCandidateIds = new Set();
   if (!topicRegistryFact?.topic_registry || !topicRegistryFact?.layouts) {
     // A pre-canonical bundle has no current packet target or legal projection
     // writer. Keep its established read-only return-map behavior intact; the
     // canonical lifecycle owns migration before projection readiness applies.
-    return projectionReadinessResult(findings);
+    return projectionReadinessResult(findings, { accepted_deferred_candidate_ids: [] });
   }
 
   let eligible = { passed: true, rows: [], root_findings: [] };
   let candidateProjection = { passed: true, candidates: [], root_findings: [] };
   if (wave === 'wave0') {
-    candidateProjection = collectEligibleWave0CandidateProjection(bundlePath, { topicRegistryFact });
-    if (!candidateProjection.passed) return projectionReadinessResult(candidateProjection.root_findings || []);
+    candidateProjection = collectSubmittedWave0ContributionProjection(bundlePath, { topicRegistryFact });
+    if (!candidateProjection.passed) return projectionReadinessResult(candidateProjection.root_findings || [], { accepted_deferred_candidate_ids: [] });
   } else if (wave === 'wave1') {
     eligible = collectEligibleWorkUnitProjection(bundlePath, { phase: wave, topicRegistryFact });
     if (!eligible.passed) return projectionReadinessResult(eligible.root_findings || []);
@@ -784,8 +785,8 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
   const findingDemands = wave === 'wave2'
     ? wave2FindingDemands(bundlePath, topicRegistryFact, findingIndexFact)
     : { parentUsable: true, blockers: [], current: new Map(), legacy: new Map() };
-  if (!findingDemands.parentUsable) return projectionReadinessResult(findingDemands.blockers);
-  if (findingDemands.blockers.length > 0) return projectionReadinessResult(findingDemands.blockers);
+  if (!findingDemands.parentUsable) return projectionReadinessResult(findingDemands.blockers, { accepted_deferred_candidate_ids: [] });
+  if (findingDemands.blockers.length > 0) return projectionReadinessResult(findingDemands.blockers, { accepted_deferred_candidate_ids: [] });
   const referenceFact = readReferenceNavigationFact(bundlePath);
 
   const bindingByUid = new Map(evaluateCanonicalSeedBindings(bundlePath, { topic_registry: topicRegistryFact.topic_registry })
@@ -944,6 +945,7 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
           structuralFailure = true;
         } else if (entryUsable && candidateId && currentCandidateIds.has(candidateId)) {
           validCandidateIds.add(candidateId);
+          if (isAcceptedDeferredProjectionEntry(entry)) acceptedDeferredCandidateIds.add(candidateId);
         }
       } else if (wave === 'wave2') {
         const ids = identities.metadataFindingId ? new Set([identities.metadataFindingId]) : identities.refFindingIds;
@@ -1003,10 +1005,12 @@ export function evaluateSeedTopicProjectionReadiness(bundlePath, {
       if (!validFindingIds.has(findingId)) findings.push(projectionOmissionFinding(bundlePath, relPath, wave, topic.topic_uid, findingId, { legacy: true }));
     }
   }
-  return projectionReadinessResult(findings);
+  return projectionReadinessResult(findings, {
+    accepted_deferred_candidate_ids: [...acceptedDeferredCandidateIds].sort(),
+  });
 }
 
-function projectionReadinessResult(findings) {
+function projectionReadinessResult(findings, extras = {}) {
   const blocking = findings.filter((finding) => finding.classification === 'blocking');
   const inspect = blocking.map((finding) => finding.detail);
   const advice = findings.filter((finding) => finding.classification === 'advisory').map((finding) => finding.detail);
@@ -1017,6 +1021,7 @@ function projectionReadinessResult(findings) {
     findings,
     diagnosticOnly: blocking.length === 0,
     classification: blocking.length === 0 ? 'diagnostic-only' : 'blocking',
+    ...extras,
   };
 }
 

@@ -1,10 +1,11 @@
 # Delegated Work Units
 
-> req: DEW-001, DEW-002, DEW-003, DEW-004, DEW-005, DEW-006, DEW-007, DEW-008, DEW-009, DEW-010, DEW-011, DEW-012, DEW-013, DEW-014, DEW-015, DEW-016, DEW-017, DEW-018, DEW-019, DEW-020, DEW-021, DEW-022, DEW-023, DEW-024, SUR-001
+> req: DEW-001, DEW-002, DEW-003, DEW-004, DEW-005, DEW-006, DEW-007, DEW-008, DEW-009, DEW-010, DEW-011, DEW-012, DEW-013, DEW-014, DEW-015, DEW-016, DEW-017, DEW-018, DEW-019, DEW-020, DEW-021, DEW-022, DEW-023, DEW-024, DEW-025, SUR-001
 
 > delta-synced: add-audited-late-accept-for-timed-out-work-units (DEW-005, DEW-006, DEW-011, DEW-015)
 > delta-synced: make-delegated-work-contracts-constructible (DEW-021)
 > delta-synced: make-work-unit-attempt-recovery-explicit (DEW-022, DEW-023, DEW-024)
+> delta-synced: materialize-wave0-submitted-references-and-batch-projections (DEW-025)
 
 ## Purpose
 
@@ -183,20 +184,24 @@ root or recursively under payload/output_contract. The resolver SHALL ignore
 all other unknown payload keys rather than interpreting naming or prose as a
 selector; Markdown and actors SHALL NOT supply contract selection.
 
-The current resolver/assignment literal SHALL be
-`assignment_contract_version: "work-unit.assignment.v1"`, recorded on the
-Engine-owned work-unit index record and copied into manifest and beacon binding
-surfaces. It SHALL be the only resolver-semantics version marker; no separate
-resolver_version field SHALL be created. The index SHALL NOT copy the resolved
-contract. The manifest and beacon output_contract SHALL carry one strict
-required_outputs array whose entries contain one concrete bundle-relative path,
-one canonical role, and one closed direct_contract identity. Claim SHALL reject
-unknown versions or IDs, unsafe or duplicate normalized paths, conflicting
-roles, unsupported required-receipt sets, unresolved Topic bindings, invalid
-reference-floor-deficit shape, and queue-authored direct selectors before
-work-ID allocation, queue mutation, or envelope writes.
+New claims SHALL record
+`assignment_contract_version: "work-unit.assignment.v2"` on the
+Engine-owned work-unit index record and copy it into manifest and beacon binding
+surfaces. A marked v1 envelope SHALL retain its recorded version-selected
+interpretation, and a markerless historical envelope SHALL retain its existing
+legacy compatibility path without path, filename, or current-default inference.
+`assignment_contract_version` SHALL remain the only resolver-semantics version
+marker; no separate resolver_version field SHALL be created. The index SHALL
+NOT copy the resolved contract. The manifest and beacon output_contract SHALL
+carry one strict required_outputs array whose entries contain one concrete
+bundle-relative path, one canonical role, and one closed direct_contract
+identity. Claim SHALL reject unknown versions or IDs, unsafe or duplicate
+normalized paths, conflicting roles, unsupported required-receipt sets,
+unresolved Topic bindings, invalid reference-floor-deficit shape, and
+queue-authored direct selectors before work-ID allocation, queue mutation, or
+envelope writes.
 
-The v1 resolver SHALL support these direct-output bindings:
+The current v2 resolver SHALL support these direct-output bindings:
 
 - `wave0_source_intake` with the exact canonical source.yaml file receipt
   resolves role `source_yaml` and direct contract
@@ -209,7 +214,7 @@ The v1 resolver SHALL support these direct-output bindings:
   empty required-receipt set resolves no current required direct output and
   continues to use contract-authorized prior submitted evidence lineage;
 - `wave2_targeted_evidence` with its existing empty required-receipt shape
-  resolves no direct content blocker in v1.
+  resolves no direct content blocker in v2.
 
 A primary mode without the exact pair, a supplementary mode with non-empty
 receipts, a missing mode, a partial paired set, a receipt for a different
@@ -416,6 +421,39 @@ diagnostic but SHALL NOT leave any partial claim authority.
   and beacon exactly
 - **AND** missing, unknown, or drifting contract surfaces SHALL fail closed
   without falling back to path guessing
+
++### Requirement: Current Wave0 work-unit contracts SHALL expose submitted source contributions without a competing rich-reference route
+
+For a newly claimed `wave0_source_intake` work unit, the Engine-owned assignment contract SHALL describe exactly the assigned `source_yaml` output and its existing required cache/receipt facts. Its generated `task.md`, spawn projection, result-schema guidance, and accepted current-version output declarations SHALL describe that result as a submitted Wave0 source contribution after formal submit. They SHALL NOT advertise, require, or accept a rich `reference/00-shared-*.md` output as a second delegated completion or shared-reference-floor route.
+
+Formal submit remains the only transaction that creates a submitted ledger row. A claimed, dry-submitted, filesystem-only, or chat-returned source artifact SHALL NOT unlock a Phase-owned reference projection. Queue payload, actor prose, and a reference filename SHALL NOT enlarge the current assignment contract.
+
+This requirement is forward-looking. A successfully submitted legacy Wave0 work unit whose immutable bound assignment/result legitimately declared a rich reference output SHALL remain readable and eligible under its recorded contract. A marked `work-unit.assignment.v1` envelope SHALL use its recorded version-selected interpretation; a markerless historical envelope SHALL retain its existing legacy compatibility path and SHALL NOT be inferred to be v1 or v2 from a path, filename, or current default. The Engine SHALL NOT rewrite its manifest, result, ledger row, or output path merely to conform it to the current source-contribution contract.
+
+#### Scenario: new Wave0 attempt has one source contribution contract
+
+- **WHEN** the Engine claims a new `wave0_source_intake` work unit
+- **THEN** its required output contract SHALL contain the exact assigned `source_yaml` tuple and existing cache/receipt obligations
+- **AND** its actor-facing task and result guidance SHALL not present a `reference` output as an assigned completion or floor-repair route
+
+#### Scenario: current submit does not promote an extra reference output
+
+- **WHEN** a current Wave0 candidate declares a `reference/00-shared-*.md` output that was not assigned by its bound contract
+- **THEN** submit validation SHALL reject or ignore that declaration according to the existing strict output-contract boundary
+- **AND** the file SHALL not become delegated evidence authority or shared-reference coverage
+
+#### Scenario: legacy submitted reference remains compatible
+
+- **WHEN** an already submitted historical Wave0 row records a valid declared rich-reference output under its immutable legacy assignment
+- **THEN** provenance and count readers SHALL continue to recognize that row through its recorded submit authority
+- **AND** current claims SHALL not be retroactively changed or required to reproduce that output
+
+#### Scenario: markerless historical attempts are not reclassified by current defaults
+
+- **WHEN** a historical Wave0 envelope lacks an assignment-contract marker but remains valid through the existing legacy compatibility path
+- **THEN** its reader SHALL preserve that legacy interpretation without reconstructing it through current v2 defaults
+- **AND** a path, filename, or reference role SHALL NOT be used to infer a missing v1 or v2 marker
+
 
 ### Requirement: Submit SHALL be the only successful delegated completion transition
 

@@ -1,4 +1,4 @@
-// @impl DEW-024, RRM-007, RWG-018
+// @impl DEW-024, RRM-007, REF-009, RWG-018, RWG-022
 // Narrow submitted-work projection for return-map and eligible-row consumers.
 
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
@@ -15,6 +15,7 @@ import { hashValue, isSafeBundleRelative } from './work-unit-utils.mjs';
 import {
   readAndValidateManifest,
   readAndValidateResult,
+  validateCacheTrails,
   validateOutputFiles,
 } from './work-unit-validation.mjs';
 
@@ -128,14 +129,18 @@ function requireRegularResult(bundleDir, resultRef) {
   if (!stats.isFile() || stats.isSymbolicLink()) throw new Error(`submitted result path is not a regular file: ${resultRef}`);
 }
 
-function collectEligibleWorkUnitProjectionFacts(bundleDir, {
+function collectSubmittedWorkUnitProjectionFacts(bundleDir, {
   phase,
   topic = null,
   topicRegistryFact,
   kind = null,
+  roundScope = 'current',
 } = {}) {
   const wave = PHASE_WAVES[phase];
   if (wave === undefined) throw new Error('--phase must be wave0|wave1|wave2');
+  if (!['current', 'through_current'].includes(roundScope)) {
+    throw new Error('roundScope must be current|through_current');
+  }
 
   let rerunCount;
   try {
@@ -161,11 +166,15 @@ function collectEligibleWorkUnitProjectionFacts(bundleDir, {
   for (const { ledger_row: ledgerRow, index_record: record } of normalized.facts) {
     if (record.status !== 'submitted' || record.wave !== wave) continue;
     if (kind && record.kind !== kind) continue;
-    if (record.rerun_count === undefined || record.rerun_count === null) {
-      legacyCount += 1;
+    if (roundScope === 'current') {
+      if (record.rerun_count === undefined || record.rerun_count === null) {
+        legacyCount += 1;
+        continue;
+      }
+      if (record.rerun_count !== rerunCount) continue;
+    } else if (record.rerun_count !== undefined && record.rerun_count !== null && record.rerun_count > rerunCount) {
       continue;
     }
-    if (record.rerun_count !== rerunCount) continue;
 
     try {
       const manifest = readAndValidateManifest(bundleDir, { kind_registry: normalized.kind_registry }, record);
@@ -198,14 +207,17 @@ function collectEligibleWorkUnitProjectionFacts(bundleDir, {
     }
   }
 
-  const warnings = legacyCount > 0
+  const warnings = roundScope === 'current' && legacyCount > 0
     ? [`eligible_rows: ${legacyCount} legacy submitted row(s) without rerun_count excluded (not current-round authority)`]
     : [];
   return { passed: true, facts, root_findings: [], warnings };
 }
 
 export function collectEligibleWorkUnitProjection(bundleDir, options = {}) {
-  const projection = collectEligibleWorkUnitProjectionFacts(bundleDir, options);
+  const projection = collectSubmittedWorkUnitProjectionFacts(bundleDir, {
+    ...options,
+    roundScope: 'current',
+  });
   if (!projection.passed) {
     return {
       passed: false,
@@ -247,10 +259,16 @@ function authenticateWave0SourceFact(bundleDir, fact) {
   if (declaredSourceOutputs.length !== 1) {
     throw new Error(`submitted result lacks the declared source_yaml output tuple for ${row.work_id}`);
   }
+  validateCacheTrails(bundleDir, result, manifest.cache_policy, {
+    record,
+    normalizations: [],
+    writeCanonicalCache: false,
+  });
   return {
     ...fact,
     source_tuple: sourceTuple,
     source_contribution: fact.ledger_row.source_contribution || null,
+    cache_trail_refs: [...result.cache_trails],
   };
 }
 
@@ -300,15 +318,21 @@ function readCurrentSourceArray(bundleDir, group, directByTarget) {
   return { finding: null, value: direct.validated_value };
 }
 
-function sourceCandidatesForInterval(group, fact, start, end) {
+function sourceCandidatesForInterval(group, fact, start, end, sourceEntries) {
   const candidates = [];
   for (let sourceOrdinal = start; sourceOrdinal <= end; sourceOrdinal += 1) {
+    const source = sourceEntries[sourceOrdinal - 1];
     candidates.push({
       work_id: fact.row.work_id,
       topic_uid: fact.row.topic_uid,
       topic_slug: fact.row.topic_slug,
       source_ordinal: sourceOrdinal,
       entry_id: `${fact.row.work_id}/${sourceOrdinal}`,
+      source_url: source.url,
+      source_yaml_ref: fact.source_tuple.path,
+      cache_trail_refs: [...fact.cache_trail_refs],
+      result_ref: fact.ledger_row.result_ref,
+      work_unit_ref: fact.ledger_row.work_unit_ref,
     });
   }
   return candidates;
@@ -429,7 +453,13 @@ function evaluateDeclaredContributionGroup(bundleDir, group, directByTarget) {
 
   return {
     finding: null,
-    candidates: intervals.flatMap(({ fact, start, end }) => sourceCandidatesForInterval(group, fact, start, end)),
+    candidates: intervals.flatMap(({ fact, start, end }) => sourceCandidatesForInterval(
+      group,
+      fact,
+      start,
+      end,
+      current.value,
+    )),
   };
 }
 
@@ -461,37 +491,38 @@ function evaluateWave0SourceGroup(bundleDir, group, directByTarget) {
     // boundary and therefore cannot diagnose an unsubmitted suffix.
     return {
       finding: null,
-      candidates: sourceCandidatesForInterval(group, group.facts[0], 1, current.value.length),
+      candidates: sourceCandidatesForInterval(group, group.facts[0], 1, current.value.length, current.value),
     };
   }
 
   return evaluateDeclaredContributionGroup(bundleDir, group, directByTarget);
 }
 
-export function collectEligibleWave0CandidateProjection(bundleDir, {
+export function collectSubmittedWave0ContributionProjection(bundleDir, {
   topic = null,
   topicRegistryFact,
 } = {}) {
-  const eligible = collectEligibleWorkUnitProjectionFacts(bundleDir, {
+  const lineage = collectSubmittedWorkUnitProjectionFacts(bundleDir, {
     phase: 'wave0',
     topic,
     topicRegistryFact,
     kind: 'wave0_source_intake',
+    roundScope: 'through_current',
   });
-  if (!eligible.passed) {
+  if (!lineage.passed) {
     return {
       passed: false,
       candidates: [],
-      root_findings: eligible.root_findings,
-      warnings: eligible.warnings,
+      root_findings: lineage.root_findings,
+      warnings: lineage.warnings,
     };
   }
 
   let sourceFacts;
   try {
-    sourceFacts = eligible.facts.map((fact) => authenticateWave0SourceFact(bundleDir, fact));
+    sourceFacts = lineage.facts.map((fact) => authenticateWave0SourceFact(bundleDir, fact));
   } catch (error) {
-    return candidateProjectionFailure(`Wave0 candidate projection authority invalid: ${error.message}`, eligible.warnings);
+    return candidateProjectionFailure(`Wave0 candidate projection authority invalid: ${error.message}`, lineage.warnings);
   }
 
   const candidates = [];
@@ -503,12 +534,114 @@ export function collectEligibleWave0CandidateProjection(bundleDir, {
         passed: false,
         candidates: [],
         root_findings: [result.finding],
-        warnings: eligible.warnings,
+        warnings: lineage.warnings,
       };
     }
     candidates.push(...result.candidates);
   }
-  return { passed: true, candidates, root_findings: [], warnings: eligible.warnings };
+  return { passed: true, candidates, root_findings: [], warnings: lineage.warnings };
+}
+
+function submittedBackingIdentityFailure(message, warnings = []) {
+  return {
+    passed: false,
+    backing: null,
+    root_findings: [makeContractFinding({
+      id: 'submitted_wave0_backing_identity',
+      ruleId: 'submitted_wave0_backing_identity',
+      findingSource: 'checker',
+      classification: 'blocking',
+      blockingBasis: 'binding_integrity',
+      surface: 'Engine-owned submitted Wave0 contribution projection',
+      expected: 'One safe exact submitted Wave0 source identity written as <work_id>/<ordinal>.',
+      observed: message,
+      missingFact: message,
+      repairKind: 'engine_operation',
+      writeTo: 'Existing Wave0 work-unit submit and submitted-backing reader boundary',
+      repair: 'Resolve one retained submitted Wave0 source identity, then rerun the same inspect.',
+      detail: `[submitted_wave0_backing_identity] ${message}`,
+    })],
+    warnings,
+  };
+}
+
+function isSafeWorkId(workId) {
+  return typeof workId === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(workId);
+}
+
+/**
+ * Resolve the direct submitted backing for exactly one retained Wave0 source.
+ *
+ * This reader intentionally exposes a single identity, not a source catalog:
+ * consumers must already know both the submitted work unit and its ordinal.
+ *
+ * @impl REF-009
+ */
+export function readSubmittedWave0Backing(bundleDir, {
+  work_id: workId,
+  entry_id: entryId,
+  topicRegistryFact = null,
+} = {}) {
+  if (!isSafeWorkId(workId) || typeof entryId !== 'string') {
+    return submittedBackingIdentityFailure('Submitted Wave0 backing requires a safe work_id and exact entry_id.');
+  }
+
+  const expectedEntryId = entryId.match(/^([A-Za-z0-9][A-Za-z0-9_-]*)\/([1-9][0-9]*)$/);
+  if (!expectedEntryId || expectedEntryId[1] !== workId) {
+    return submittedBackingIdentityFailure(`entry_id '${entryId}' must exactly match '${workId}/<positive ordinal>'.`);
+  }
+
+  let registry = topicRegistryFact;
+  if (!registry) {
+    try {
+      registry = buildCanonicalTopicRegistryFact(bundleDir);
+    } catch (error) {
+      return submittedBackingIdentityFailure(`Canonical topic authority is unavailable for ${entryId}: ${error.message}`);
+    }
+  }
+
+  const projection = collectSubmittedWave0ContributionProjection(bundleDir, { topicRegistryFact: registry });
+  if (!projection.passed) {
+    return {
+      passed: false,
+      backing: null,
+      root_findings: projection.root_findings,
+      warnings: projection.warnings,
+    };
+  }
+
+  const matches = projection.candidates.filter((candidate) => (
+    candidate.work_id === workId && candidate.entry_id === entryId
+  ));
+  if (matches.length === 0) {
+    return submittedBackingIdentityFailure(
+      `No submitted Wave0 contribution in the retained direct source lineage owns exact source identity ${entryId}.`,
+      projection.warnings,
+    );
+  }
+  if (matches.length > 1) {
+    return submittedBackingIdentityFailure(
+      `Submitted Wave0 source identity ${entryId} resolves ambiguously to ${matches.length} backing candidates.`,
+      projection.warnings,
+    );
+  }
+
+  const [candidate] = matches;
+  return {
+    passed: true,
+    backing: {
+      work_id: candidate.work_id,
+      entry_id: candidate.entry_id,
+      source_ordinal: candidate.source_ordinal,
+      source_url: candidate.source_url,
+      source_yaml_ref: candidate.source_yaml_ref,
+      cache_trail_refs: candidate.cache_trail_refs,
+      result_ref: candidate.result_ref,
+      work_unit_ref: candidate.work_unit_ref,
+    },
+    root_findings: [],
+    warnings: projection.warnings,
+  };
 }
 
 export function collectEligibleRows(bundleDir, phase, topic = null, topicRegistryFact = null) {

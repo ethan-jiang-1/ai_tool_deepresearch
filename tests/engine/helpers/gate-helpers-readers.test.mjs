@@ -100,9 +100,6 @@ function afterDeadline(record) {
 }
 
 function writeReaderSubmitFiles(dir, record) {
-  const outputPath = `reference/${record.work_id}.md`;
-  mkdirSync(join(dir, 'reference'), { recursive: true });
-  writeFileSync(join(dir, outputPath), '# Source\n\nGate reader fixture source.\n');
   const sourcePath = 'artifacts/wave0/topic-a/source.yaml';
   mkdirSync(join(dir, 'artifacts/wave0/topic-a'), { recursive: true });
   writeFileSync(join(dir, sourcePath), '- url: https://example.com/source\n  title: Source\n  retrieved_date: 2026-07-20\n  topic_tag: topic-a\n');
@@ -135,7 +132,6 @@ function writeReaderSubmitFiles(dir, record) {
     execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'done',
     output_files: [
-      { path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' },
       { path: sourcePath, role: 'source_yaml' },
     ],
     cache_trails: [cacheTrail],

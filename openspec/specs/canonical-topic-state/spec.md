@@ -1,6 +1,6 @@
 # Canonical Topic State
 
-> req: CTS-001, CTS-002, CTS-003, CTS-004, CTS-005, CTS-006, CTS-007, CTS-008
+> req: CTS-001, CTS-002, CTS-003, CTS-004, CTS-005, CTS-006, CTS-007, CTS-008, CTS-009
 
 ## Purpose
 
@@ -328,10 +328,12 @@ operation shape: `context: wave_projection`,
 `wave0|wave1|wave2` value, and one or more owned slot updates. The input SHALL
 be strict and SHALL NOT accept file paths, headings, token text, line numbers,
 raw Markdown, arbitrary patch/append instructions, or a request to mutate any
-surface other than the selected current seed document. Each entry SHALL bind to
-one current submitted contribution/work identity for Wave0/1 or one exact
-current-round W2F finding identity for Wave2 whose accepted `affected_topics`
-resolution includes the packet `topic_uid`, SHALL render the slot descriptor's
+surface other than the selected current seed document. Each Wave0 entry SHALL
+bind to a retained submitted contribution identity that owns its exact entry in
+the current direct source array; each Wave1 entry SHALL bind to one current
+submitted work identity; and each Wave2 entry SHALL bind to one exact
+current-round W2F finding identity whose accepted `affected_topics` resolution
+includes the packet `topic_uid`. Each entry SHALL render the slot descriptor's
 stable `entry_id`, and SHALL contain the accepted return-map fields or an
 explicit deferred disposition. A Wave0 entry ID SHALL equal the exact
 submission-owned global source ordinal returned by the shared contribution
@@ -657,6 +659,39 @@ into an Agent-writable path.
 - **THEN** topic identity SHALL remain unchanged until an explicit existing
   `migrate_legacy` apply succeeds
 - **AND** no addendum file SHALL gain authority from reentry alone
+
++### Requirement: Wave0 deferred-contribution packets SHALL atomically expand exact retained source identities in the current direct source array
+
+The existing `context: wave_projection`, `action: apply_seed_projection` input SHALL additionally accept one strict Wave0 contribution-scoped deferred-disposition form: its sole `wave0_evidence` update SHALL contain `deferred_contribution` with `source_identity: { kind: submitted_work, work_id }`, one `evidence_meaning`, and one `next_hop`. The existing `submitted_work` value is a source-identity wire discriminator, not aggregate coverage. In this form it is a contribution selector, not a complete individual source identity: only the writer may pair the work ID with derived `<work_id>/<ordinal>` entry IDs. The form SHALL not accept a bare aggregate acknowledgement, a caller-selected ordinal range, file paths, raw Markdown, another Wave's identity form, or caller-selected relationship/status/refs values.
+
+Before workspace creation, the existing topic-state writer SHALL resolve the retained authenticated submitted contribution and derive every still-unprojected source identity it owns in the current direct source array. It SHALL expand that one input atomically into individual persisted return-map entries whose identities are exact `<work_id>/<ordinal>` values and whose deferred disposition preserves the submitted contribution's supplied meaning and next hop. For each derived entry, the writer SHALL use the existing explicit-limitation values `relationship: defers`, `refs: [none]`, and `status: deferred`; `next_hop` SHALL satisfy the existing limitation rule. The expansion SHALL not create submitted authority, reference files, cache facts, a source catalog, a new status, or a second transaction mechanism.
+
+The writer SHALL reject an unsubmitted, ambiguous, superseded, cross-topic, or non-retained contribution that owns no identity in the current direct source array; a conflicting already materialized/deferred source identity; and any packet that would overwrite a different disposition. Exact replay of an already committed equivalent contribution form SHALL remain idempotent. Existing explicit Wave0 entry packets SHALL remain valid and retain their existing validation and navigation requirements. A later submitted append contribution SHALL own only its own source identities and SHALL not be implicitly deferred by an earlier contribution packet.
+
+#### Scenario: one deferred intent expands only its contribution interval
+
+- **WHEN** a current submitted Wave0 contribution owns identities `work-a/1` through `work-a/19` and a later contribution owns `work-b/20`
+- **THEN** one valid deferred-contribution packet for `work-a` SHALL persist deferred entries only for `work-a/1` through `work-a/19`
+- **AND** `work-b/20` SHALL remain available for its own projection or deferred disposition
+
+#### Scenario: deferred expansion is atomic and collision-safe
+
+- **WHEN** a contribution-scoped deferred packet would collide with an already materialized entry or a different persisted deferred disposition
+- **THEN** topic-state apply SHALL reject before workspace publication
+- **AND** it SHALL not persist a partial subset of the contribution identities
+
+#### Scenario: equivalent deferred replay is idempotent
+
+- **WHEN** the same accepted contribution-scoped deferred packet is replayed after its successful commit
+- **THEN** the writer SHALL leave the seed projection unchanged without duplicating identity-bound entries or consuming another token
+- **AND** the result SHALL preserve the same apply/recover ownership boundary
+
+#### Scenario: explicit entry packets remain supported
+
+- **WHEN** a Wave0 Phase Agent supplies valid explicit entries for exact retained source identities in the current direct source array
+- **THEN** the writer SHALL continue to validate and commit them through the existing packet path
+- **AND** it SHALL not require conversion to the deferred-contribution form
+
 
 ### Requirement: Topic registry SHALL own current and previous layout coordinates
 

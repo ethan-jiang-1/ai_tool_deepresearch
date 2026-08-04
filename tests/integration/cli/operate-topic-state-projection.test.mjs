@@ -48,23 +48,32 @@ function makeBundle(label) {
   return { bundle, topic: readPlan(bundle).topic_registry[0] };
 }
 
-function sourceArray(topicSlug) {
-  return [
-    '- url: https://example.com/wave0/topic-a/duplicate',
-    '  title: Candidate one',
+function sourceArrayOfCount(topicSlug, count) {
+  return Array.from({ length: count }, (_, index) => [
+    `- url: https://example.com/wave0/topic-a/source-${index + 1}`,
+    `  title: Candidate ${index + 1}`,
     '  retrieved_date: 2026-07-27',
     `  topic_tag: ${topicSlug}`,
-    '- url: https://example.com/wave0/topic-a/duplicate',
-    '  title: Candidate two',
-    '  retrieved_date: 2026-07-27',
-    `  topic_tag: ${topicSlug}`,
-    '',
-  ].join('\n');
+  ].join('\n')).join('\n') + '\n';
 }
 
-function inspectableReferenceContent(topic, refPath) {
+function sourceArray(topicSlug) {
+  return sourceArrayOfCount(topicSlug, 2);
+}
+
+function sourceUrlFromContent(sourceContent) {
+  const match = sourceContent.match(/^- url:\s*["']?([^"'\n]+)["']?\s*$/m);
+  assert.ok(match, 'Wave0 fixture source YAML needs one URL');
+  return match[1];
+}
+
+function inspectableReferenceContent(topic, refPath, submission, sourceUrl) {
   return [
-    referenceContent({ related_topic: topic.slug }),
+    referenceContent({
+      related_topic: topic.slug,
+      source_url: sourceUrl,
+      evidence_role: 'foundation',
+    }),
     '',
     '## Projection Navigation',
     '',
@@ -74,10 +83,18 @@ function inspectableReferenceContent(topic, refPath) {
     `    - ${refPath}`,
     '  status: supported',
     '  next_hop: Read the concrete reference before Wave1 deepening.',
+    '',
+    '## Submitted Backing',
+    `- source_identity: ${submission.record.work_id}/1`,
+    `- source_yaml_ref: artifacts/wave0/${topic.slug}/source.yaml`,
+    '- cache_trail_ref: _cache/wave0/primary/topic-a/source',
+    `- result_ref: ${submission.record.paths.result_ref}`,
+    `- work_unit_ref: ${submission.record.paths.work_unit_dir}`,
   ].join('\n');
 }
 
 function prepareInspectableWave0Reference(bundle, refPath) {
+  mkdirSync(join(bundle, 'reference'), { recursive: true });
   writeFileSync(join(bundle, 'reference/_INDEX.md'), [
     '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
     '| --- | --- | --- | --- | --- | --- | --- | --- |',
@@ -88,37 +105,36 @@ function prepareInspectableWave0Reference(bundle, refPath) {
 }
 
 function submitWave0Authority(bundle, topic, {
-  sourceContent = null,
+  sourceContent = sourceArray(topic.slug),
   queueItemId = 'wave0-topic-a',
+  preserveQueue = false,
 } = {}) {
   const refPath = 'reference/00-shared-topic-a.md';
   const submission = claimAndSubmitWorkUnit(bundle, {
     phase: 'wave0',
     queueItemId,
+    preserveQueue,
     queueItemOverrides: {
       payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug, wave: 0 },
       lineage: { topic_uid: topic.topic_uid, topic_slug: topic.slug, phase: 'wave0' },
     },
-    outputs: [
-      {
-        path: refPath,
-        role: 'reference',
-        source_url: 'https://example.com/wave0/topic-a',
-        source_slug: 'wave0-topic-a',
-        content: sourceContent
-          ? inspectableReferenceContent(topic, refPath)
-          : referenceContent({ related_topic: topic.slug }),
-      },
-      ...(sourceContent ? [{
-        path: `artifacts/wave0/${topic.slug}/source.yaml`,
-        role: 'source_yaml',
-        content: sourceContent,
-      }] : []),
-    ],
+    outputs: [{
+      path: `artifacts/wave0/${topic.slug}/source.yaml`,
+      role: 'source_yaml',
+      content: sourceContent,
+    }],
     cacheTrails: [{ path: '_cache/wave0/primary/topic-a/source', url: 'https://example.com/wave0/topic-a' }],
   });
   assert.equal(submission.submitted.ok, true, JSON.stringify(submission.submitted));
-  if (sourceContent) prepareInspectableWave0Reference(bundle, refPath);
+  if (!existsSync(join(bundle, refPath))) {
+    prepareInspectableWave0Reference(bundle, refPath);
+    writeFileSync(join(bundle, refPath), inspectableReferenceContent(
+      topic,
+      refPath,
+      submission,
+      sourceUrlFromContent(sourceContent),
+    ));
+  }
   return { workId: submission.record.work_id, refPath };
 }
 
@@ -172,6 +188,24 @@ function packet(topic, authority, { entries = [packetEntry(authority, 1)], ...ex
       entries,
     }],
     ...extra,
+  };
+}
+
+function deferredContributionPacket(topic, authority, overrides = {}) {
+  return {
+    context: 'wave_projection',
+    action: 'apply_seed_projection',
+    topic_uid: topic.topic_uid,
+    wave: 'wave0',
+    updates: [{
+      slot_id: 'wave0_evidence',
+      deferred_contribution: {
+        source_identity: { kind: 'submitted_work', work_id: authority.workId },
+        evidence_meaning: 'The submitted contribution has no materializable consumer reference for this source interval.',
+        next_hop: 'limitation: no materializable consumer reference is available.',
+        ...overrides,
+      },
+    }],
   };
 }
 
@@ -264,6 +298,132 @@ describe('operate-topic-state projection packets', () => {
     assert.equal(converged.output.check.return_map_classification, 'diagnostic-only', JSON.stringify(converged.output, null, 2));
   });
 
+  it('expands one deferred contribution into exact entries and replays it idempotently', () => {
+    const { bundle, topic } = makeBundle('operate-projection-batch-deferred');
+    const authority = submitWave0Authority(bundle, topic);
+    authorizeWave0(bundle);
+
+    const first = runApply(bundle, deferredContributionPacket(topic, authority));
+    assert.equal(first.status, 0, first.stderr || first.stdout);
+    assert.equal(first.output.verdict, 'committed');
+    assert.deepEqual(first.output.deferred_contribution, {
+      work_id: authority.workId,
+      entry_ids: [`${authority.workId}/1`, `${authority.workId}/2`],
+      newly_materialized_entry_ids: [`${authority.workId}/1`, `${authority.workId}/2`],
+    });
+    const seedPath = join(bundle, 'seed_topics', `${topic.slug}.md`);
+    const firstSeed = readFileSync(seedPath, 'utf8');
+    for (const ordinal of [1, 2]) {
+      assert.equal((firstSeed.match(new RegExp(`entry_id\\*\\*: ${authority.workId}/${ordinal}`, 'g')) || []).length, 1);
+    }
+    assert.match(firstSeed, /relationship\*\*: defers/);
+    assert.match(firstSeed, /status\*\*: deferred/);
+    assert.match(firstSeed, /refs\*\*:\n\s+- none/);
+
+    const replay = runApply(bundle, deferredContributionPacket(topic, authority));
+    assert.equal(replay.status, 0, replay.stderr || replay.stdout);
+    assert.equal(replay.output.verdict, 'unchanged');
+    assert.deepEqual(replay.output.deferred_contribution.newly_materialized_entry_ids, []);
+    assert.equal(readFileSync(seedPath, 'utf8'), firstSeed);
+
+    const inspected = runInspect(bundle);
+    assert.equal(inspected.status, 0, inspected.stderr || inspected.stdout);
+  });
+
+  it('rejects caller-selected deferred contribution ordinals and dispositions before workspace creation', () => {
+    const { bundle, topic } = makeBundle('operate-projection-batch-deferred-strict');
+    const authority = submitWave0Authority(bundle, topic);
+    authorizeWave0(bundle);
+
+    for (const [field, value] of [
+      ['ordinal', 1],
+      ['relationship', 'supports'],
+      ['status', 'supported'],
+      ['refs', [authority.refPath]],
+    ]) {
+      const result = runApply(bundle, deferredContributionPacket(topic, authority, { [field]: value }));
+      assert.equal(result.status, 1, `${field}: ${result.stderr || result.stdout}`);
+      assert.equal(result.output.verdict, 'blocked');
+      assert.equal(result.output.reason_code, 'input_invalid');
+      assert.equal(preparedWorkspaceCount(bundle), 0);
+    }
+  });
+
+  it('rejects an unsubmitted deferred contribution selector before workspace creation', () => {
+    const { bundle, topic } = makeBundle('operate-projection-batch-deferred-unsubmitted');
+    const claimed = claimAndSubmitWorkUnit(bundle, {
+      phase: 'wave0',
+      queueItemId: 'wave0-topic-a-unsubmitted',
+      queueItemOverrides: {
+        payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug, wave: 0 },
+        lineage: { topic_uid: topic.topic_uid, topic_slug: topic.slug, phase: 'wave0' },
+      },
+      outputs: [{
+        path: `artifacts/wave0/${topic.slug}/source.yaml`,
+        role: 'source_yaml',
+        content: sourceArray(topic.slug),
+      }],
+      cacheTrails: [{ path: '_cache/wave0/primary/topic-a/unsubmitted', url: 'https://example.com/wave0/topic-a' }],
+      submit: false,
+    });
+    authorizeWave0(bundle);
+
+    const rejected = runApply(bundle, deferredContributionPacket(topic, { workId: claimed.record.work_id }));
+    assert.equal(rejected.status, 1, rejected.stderr || rejected.stdout);
+    assert.equal(rejected.output.verdict, 'blocked');
+    assert.equal(rejected.output.reason_code, 'projection_deferred_contribution_not_current');
+    assert.equal(preparedWorkspaceCount(bundle), 0);
+  });
+
+  it('rejects a deferred contribution that would overwrite a materialized identity', () => {
+    const { bundle, topic } = makeBundle('operate-projection-batch-deferred-collision');
+    const authority = submitWave0Authority(bundle, topic);
+    authorizeWave0(bundle);
+    const explicit = runApply(bundle, packet(topic, authority));
+    assert.equal(explicit.status, 0, explicit.stderr || explicit.stdout);
+    const seedPath = join(bundle, 'seed_topics', `${topic.slug}.md`);
+    const before = readFileSync(seedPath, 'utf8');
+
+    const rejected = runApply(bundle, deferredContributionPacket(topic, authority));
+    assert.equal(rejected.status, 1, rejected.stderr || rejected.stdout);
+    assert.equal(rejected.output.reason_code, 'projection_deferred_contribution_collision');
+    assert.equal(preparedWorkspaceCount(bundle), 0);
+    assert.equal(readFileSync(seedPath, 'utf8'), before);
+  });
+
+  it('limits one deferred contribution to its own 1..19 interval and leaves later /20 separate', () => {
+    const { bundle, topic } = makeBundle('operate-projection-batch-deferred-interval');
+    const initialContent = sourceArrayOfCount(topic.slug, 19);
+    const initial = submitWave0Authority(bundle, topic, {
+      queueItemId: 'wave0-topic-a-initial',
+      sourceContent: initialContent,
+    });
+    const later = submitWave0Authority(bundle, topic, {
+      queueItemId: 'wave0-topic-a-later',
+      preserveQueue: true,
+      sourceContent: sourceArrayOfCount(topic.slug, 20),
+    });
+    authorizeWave0(bundle);
+
+    const first = runApply(bundle, deferredContributionPacket(topic, initial));
+    assert.equal(first.status, 0, first.stderr || first.stdout);
+    const seedPath = join(bundle, 'seed_topics', `${topic.slug}.md`);
+    const afterFirst = readFileSync(seedPath, 'utf8');
+    for (const ordinal of [1, 19]) {
+      assert.match(afterFirst, new RegExp(`entry_id\\*\\*: ${initial.workId}/${ordinal}`));
+    }
+    assert.doesNotMatch(afterFirst, new RegExp(`entry_id\\*\\*: ${later.workId}/20`));
+    assert.doesNotMatch(afterFirst, new RegExp(`entry_id\\*\\*: ${initial.workId}/20`));
+
+    const second = runApply(bundle, deferredContributionPacket(topic, later));
+    assert.equal(second.status, 0, second.stderr || second.stdout);
+    const afterSecond = readFileSync(seedPath, 'utf8');
+    assert.match(afterSecond, new RegExp(`entry_id\\*\\*: ${later.workId}/20`));
+    assert.doesNotMatch(afterSecond, new RegExp(`entry_id\\*\\*: ${later.workId}/1`));
+    const inspected = runInspect(bundle);
+    assert.equal(inspected.status, 0, inspected.stderr || inspected.stdout);
+  });
+
   it('admits only the exact contribution-owned Wave0 ordinal used by inspect', () => {
     const { bundle, topic } = makeBundle('operate-projection-contribution-coordinate');
     const initialContent = sourceArray(topic.slug);
@@ -274,6 +434,7 @@ describe('operate-topic-state projection packets', () => {
     const supplement = submitWave0Authority(bundle, topic, {
       queueItemId: 'wave0-topic-a-supplement',
       sourceContent: `${initialContent}\n${appendSourceCandidate(topic.slug)}`,
+      preserveQueue: true,
     });
     authorizeWave0(bundle);
 

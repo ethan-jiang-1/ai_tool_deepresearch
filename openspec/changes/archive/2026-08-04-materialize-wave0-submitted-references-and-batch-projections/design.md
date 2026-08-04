@@ -30,7 +30,9 @@ guidance, tests, and the later `CONTEXT.md` glossary update.
 | Work unit / attempt | One Engine-allocated delegated execution attempt, identified by `work_id`. They are the same C1 identity boundary. | A queue demand, source collection, reference, or projection. |
 | `submitted_work` wire discriminator | Existing `source_identity.kind` value saying an entry originates from a submitted work unit, always paired with `work_id`. A persisted Wave0 entry additionally needs `entry_id: <work_id>/<ordinal>` for its exact source coordinate. | An aggregate coverage claim, a new runtime object, a complete source identity by itself, or a synonym for a submitted contribution. |
 | Submitted ledger row | The Engine-written record created by successful submit. | A filesystem artifact or generic success claim. |
-| Submitted Wave0 contribution | One current accepted ledger/result binding plus its declared schema-valid `source.yaml` and verified cache facts. | A bare work ID or every historical byte in a mutable source file. |
+| Submitted Wave0 contribution | One accepted ledger/result binding plus its declared schema-valid `source.yaml` and verified cache facts. It owns one interval in the current valid direct source array, including a retained prefix accepted in an earlier rerun. | A bare work ID or every historical byte in a mutable source file. |
+| Current-round eligible work-unit projection | Current-rerun submitted rows used for Queue demand coverage. | Ownership of retained Wave0 source identities. |
+| Wave0 submitted-contribution lineage | Ledger-ordered retained contributions that own the current direct source-array identities. | A Queue demand projection, source catalog, or aggregate `submitted_work` authority. |
 | Source identity | One contribution-owned `<work_id>/<ordinal>` coordinate. | A bare work ID, URL, title, or path. |
 | Reference | A reader-facing evidence presentation. It can be a compatible legacy delegated output or a backed Phase-owned projection. | Evidence authority merely because it exists or is indexed. |
 | Consumer projection | Derived reference/navigation output from submitted backing. | A replacement for submit, ledger, source, cache, or provenance authority. |
@@ -45,7 +47,7 @@ wire discriminator only where serialization requires it.
 The packet representation follows that vocabulary. An explicit Wave0 entry is
 identity-bound only as the pair `source_identity.work_id` plus
 `entry_id: <work_id>/<ordinal>`. In contrast, a deferred-contribution input's
-`source_identity` contains a submitted work ID solely to select one current
+`source_identity` contains a submitted work ID solely to select one retained
 contribution for expansion; it is never rendered or counted as a source identity
 until the writer derives individual entries.
 
@@ -111,8 +113,9 @@ floor the Engine can derive from already submitted evidence.
 The implementation will extend the existing authenticated Wave0 contribution
 reader in `engine/work-unit-projection.mjs`, or add one narrow adjacent module
 if extraction is needed. It will authenticate the submitted ledger/result,
-required `source_yaml` tuple, current contribution interval, and verified cache
-facts before exposing bounded facts for one exact source identity:
+required `source_yaml` tuple, ledger-ordered retained source-prefix interval,
+and verified cache facts before exposing bounded facts for one exact source
+identity:
 
 - `work_id` and `<work_id>/<ordinal>`;
 - accepted source URL and source-YAML reference;
@@ -125,6 +128,16 @@ neutral direct-output evaluator remains the owner of source-YAML parse/schema
 truth; the new reader consumes its bounded result and only exposes the minimum
 source fact needed by reference materialization/provenance. It returns no raw
 array or reusable source catalog.
+
+The generic eligible-work-unit projection continues to select current-round
+demand coverage. It is not the source-prefix lineage reader: for one canonical
+topic and exact direct-output target, the Wave0 reader retains all accepted
+source-contribution rows through the current round in ledger order. A valid
+prior-round prefix remains owned by its original work unit while it matches the
+current direct source array; a later append owns only the new interval. Missing
+or non-monotonic historical boundaries fail closed. This reuses the ledger and
+direct-output evaluator rather than introducing historical projection state or
+a second catalog.
 
 Alternative considered: have the classifier, materializer, topic-state writer,
 and Gate each parse source YAML and match URLs independently. Rejected because
@@ -186,8 +199,8 @@ contribution and derives its unprojected exact identities. It then writes
 ordinary per-identity deferred entries through the existing token, parser,
 postcondition, idempotency, and recovery machinery.
 
-The writer rejects collisions or a work unit that is not current submitted
-authority. It never accepts a caller-selected ordinal list, so `work-a/1..19`
+The writer rejects collisions or a work unit that owns no retained source
+identity in the current direct source array. It never accepts a caller-selected ordinal list, so `work-a/1..19`
 cannot accidentally defer a later `work-b/20`. Existing explicit entries keep
 their present schema and behavior.
 
@@ -242,8 +255,8 @@ packet, or rerun mechanics; no new user decision is required by this change.
 - **A convergence helper hides a real error behind a materialization hint** ->
   Defer only its own ordered index/floor outcome and retain independent primary
   roots.
-- **Batch input overwrites a manually projected source** -> Derive the current
-  contribution interval before workspace creation, reject collisions, and use
+- **Batch input overwrites a manually projected source** -> Derive the retained
+  contribution interval in the current source lineage before workspace creation, reject collisions, and use
   existing idempotent replay rules.
 - **Terms drift again in Markdown or diagnostics** -> Add the coherence matrix
   guard and update the short glossary during apply; keep behavioral detail in

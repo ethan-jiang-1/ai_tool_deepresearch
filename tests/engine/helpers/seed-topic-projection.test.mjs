@@ -124,25 +124,58 @@ function authorizeWave2FixtureChain(bundle) {
   }));
 }
 
-function submitCurrentWork(bundle, topic, phase) {
-  const refPath = phase === 'wave0'
+function submitCurrentWork(bundle, topic, phase, {
+  preserveQueue = false,
+  queueItemId = `${phase}-topic-a`,
+  wave0Sources = null,
+  referencePath = null,
+} = {}) {
+  const refPath = referencePath || (phase === 'wave0'
     ? 'reference/00-shared-topic-a.md'
-    : 'reference/topic-a-deepening.md';
-  const output = {
-    path: refPath,
-    role: 'reference',
-    source_url: `https://example.com/${phase}/topic-a`,
-    source_slug: `${phase}-topic-a`,
-    content: referenceContent({ related_topic: topic.slug }),
-  };
+    : 'reference/topic-a-deepening.md');
+  const sourceUrl = `https://example.com/${phase}/topic-a`;
+  const submittedWave0Sources = wave0Sources || [{
+    url: sourceUrl,
+    title: 'Current Wave0 source',
+    retrieved_date: '2026-07-27',
+    topic_tag: topic.slug,
+  }];
+  const output = phase === 'wave0'
+    ? {
+      path: `artifacts/wave0/${topic.slug}/source.yaml`,
+      role: 'source_yaml',
+      content: submittedWave0Sources.flatMap((source) => [
+        `- url: ${source.url}`,
+        `  title: ${source.title}`,
+        `  retrieved_date: ${source.retrieved_date}`,
+        `  topic_tag: ${source.topic_tag}`,
+      ]).join('\n').concat('\n'),
+    }
+    : {
+      path: refPath,
+      role: 'reference',
+      source_url: sourceUrl,
+      source_slug: `${phase}-topic-a`,
+      content: referenceContent({ related_topic: topic.slug }),
+    };
   const submitted = claimAndSubmitWorkUnit(bundle, {
     phase,
-    queueItemId: `${phase}-topic-a`,
+    queueItemId,
+    preserveQueue,
     queueItemOverrides: { payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug } },
     outputs: [output],
-    cacheTrails: [{ path: `_cache/${phase}/primary/${phase}-topic-a/source`, url: output.source_url }],
+    cacheTrails: [{
+      path: `_cache/${phase}/primary/${phase}-topic-a/source`,
+      url: phase === 'wave0'
+        ? submittedWave0Sources.at(-1).url
+        : sourceUrl,
+    }],
   });
   assert.equal(submitted.submitted.ok, true);
+  if (phase === 'wave0') {
+    mkdirSync(join(bundle, 'reference'), { recursive: true });
+    writeFileSync(join(bundle, refPath), referenceContent({ related_topic: topic.slug }));
+  }
   return { workId: submitted.record.work_id, refPath };
 }
 
@@ -233,16 +266,41 @@ describe('seed-topic projection materialization', () => {
     assert.equal(evaluateSeedTopicProjectionReadiness(bundle, { wave: 'wave0', topicRegistryFact: fact }).passed, true);
   });
 
-  it('accepts a current Wave0 entry beside a valid historical entry from an earlier round', () => {
+  it('accepts a current Wave0 append entry beside a valid retained historical entry', () => {
     const { bundle, topic } = makeBundle('seed-projection-historical-wave0');
-    const initial = submitCurrentWork(bundle, topic, 'wave0');
+    const initialSource = {
+      url: 'https://example.com/wave0/topic-a-initial',
+      title: 'Initial Wave0 source',
+      retrieved_date: '2026-07-27',
+      topic_tag: topic.slug,
+    };
+    const appendedSource = {
+      url: 'https://example.com/wave0/topic-a-appended',
+      title: 'Appended Wave0 source',
+      retrieved_date: '2026-07-28',
+      topic_tag: topic.slug,
+    };
+    const initial = submitCurrentWork(bundle, topic, 'wave0', {
+      wave0Sources: [initialSource],
+      referencePath: 'reference/00-shared-topic-a-initial.md',
+    });
     authorizeWave(bundle, 'wave0');
     assert.equal(applyCanonicalTopicState({ bundlePath: bundle, input: wave0Packet(topic, submittedEntry(initial.workId, initial.refPath)) }).verdict, 'committed');
 
     writeFileSync(join(bundle, 'rb_profile.yaml'), 'human_decision_checkpoints:\n  hitl2:\n    rerun_count: 1\n');
-    const current = submitCurrentWork(bundle, topic, 'wave0');
+    const current = submitCurrentWork(bundle, topic, 'wave0', {
+      preserveQueue: true,
+      queueItemId: 'wave0-topic-a-rerun-1',
+      wave0Sources: [initialSource, appendedSource],
+      referencePath: 'reference/00-shared-topic-a-appended.md',
+    });
     authorizeWave(bundle, 'wave0');
-    assert.equal(applyCanonicalTopicState({ bundlePath: bundle, input: wave0Packet(topic, submittedEntry(current.workId, current.refPath)) }).verdict, 'committed');
+    assert.equal(applyCanonicalTopicState({
+      bundlePath: bundle,
+      input: wave0Packet(topic, submittedEntry(current.workId, current.refPath, {
+        entry_id: `${current.workId}/2`,
+      })),
+    }).verdict, 'committed');
 
     const readiness = evaluateSeedTopicProjectionReadiness(bundle, {
       wave: 'wave0', topicRegistryFact: buildCanonicalTopicRegistryFact(bundle),

@@ -515,11 +515,13 @@ describe('canonical topic state', () => {
   it('keeps historical outputs and immutable work authority byte-stable across a real mid-seed crash', () => {
     const dir = bundle('topic-layout-incident'); applyCanonicalTopicState({ bundlePath: dir, input });
     let inspected = inspectCanonicalTopicState({ bundlePath: dir }); const topic = inspected.topics[0];
-    claimAndSubmitWorkUnit(dir, {
+    const historical = claimAndSubmitWorkUnit(dir, {
       queueItemId: 'q-history',
+      legacyV1Assignment: true,
       queueItemOverrides: { payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug } },
       outputs: [{ path: `reference/${topic.slug}-source.md`, role: 'reference', source_url: 'https://example.com/history', source_slug: 'history', content: '# Historical source\n' }],
     });
+    assert.equal(historical.submitted.ok, true);
     mkdirSync(join(dir, 'artifacts/wave0', topic.slug), { recursive: true });
     writeFileSync(join(dir, 'artifacts/wave0', topic.slug, 'source.yaml'), '[]\n');
     authorizeRerun(dir); inspected = inspectCanonicalTopicState({ bundlePath: dir });

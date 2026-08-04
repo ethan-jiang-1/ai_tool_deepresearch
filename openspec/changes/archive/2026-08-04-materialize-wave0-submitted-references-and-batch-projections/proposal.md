@@ -49,6 +49,10 @@ filesystem files or an aggregate work ID as evidence authority.
   Batch input compresses repeated authoring only; it does not create a new
   aggregate success fact, relax return-map completeness, or overwrite an
   already materialized source entry.
+- Preserve retained Wave0 source-prefix ownership across a later sanctioned
+  rerun append. Generic current-round work eligibility remains a demand and
+  execution view; it must not cause a later accepted source contribution to
+  re-own an earlier ordinal in the same direct source array.
 - Establish one C1 vocabulary and contract-coherence review across the existing
   assignment resolver, generated `task.md`, submit/provenance readers,
   materialization input, projection packet, inspect/Gate, and repair feedback.
@@ -82,10 +86,14 @@ submitted source.yaml + verified cache
 
 For this change, the terms have deliberately narrow meanings. A **work unit**
 is one Engine-allocated execution attempt identified by `work_id`; it is not a
-queue demand or a source collection. A **submitted Wave0 contribution** is the
-current accepted ledger/result binding for that work unit together with its
-declared, schema-valid `source.yaml` and verified cache facts. A **source
-identity** is one current 1-based source-array coordinate
+queue demand or a source collection. A **submitted Wave0 contribution** is one
+accepted ledger/result binding for that work unit together with its declared,
+schema-valid `source.yaml` and verified cache facts. For a retained source-array
+prefix, accepted contributions remain the ledger-ordered identity lineage even
+when generic work-unit eligibility advances to a later `rerun_count`; "current"
+means the binding still matches the current direct source array, not that it was
+submitted in the latest round. A **source identity** is one current 1-based
+source-array coordinate
 `<work_id>/<ordinal>` from that contribution, never the bare work ID. A
 current Wave0 packet represents that coordinate by pairing
 `source_identity.work_id` with `entry_id`; the wire object alone is only the
@@ -107,6 +115,15 @@ intent; the writer expands it to source identities; and inspect/Gate/feedback
 read that same fact family. The matrix is a reviewable change artifact and
 focused regression surface, not a generic metadata registry or a second
 validator.
+
+The generic current-round eligible-row projection answers whether a work unit
+is demand coverage for the active round. The Wave0 submitted-backing reader
+answers a different bounded question: which accepted contribution owns each
+retained prefix of one current direct `source.yaml`. It therefore uses the
+ledger-ordered same-topic/same-target source-contribution chain, preserving
+valid prior-round prefix owners and refusing a missing or non-monotonic
+boundary. It does not make historical rows current queue coverage or create a
+second ledger.
 
 The existing serialized `source_identity.kind: submitted_work` value remains a
 wire-level provenance discriminator. It says an entry originates from a work

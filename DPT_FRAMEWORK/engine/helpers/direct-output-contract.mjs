@@ -17,7 +17,7 @@ import {
   ReferenceMetadataArraySchema,
   referenceMetadataAuthoringFields,
 } from '../../schema/contracts/reference.mjs';
-import { parseMarkdownSemanticSections } from './gate-helpers-checks.mjs';
+import { parseMarkdownSemanticSections } from './markdown-semantic-sections.mjs';
 import { hashValue } from '../work-unit-utils.mjs';
 
 const MAX_BYTES = 4 * 1024 * 1024;

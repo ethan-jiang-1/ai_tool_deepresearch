@@ -59,6 +59,8 @@ accepts a retained Seed Topic projection packet. It derives the seed path and
 heading from `topic_uid` and `slot_id`; never provide a path, heading, token,
 line number, raw Markdown, append instruction, or patch.
 
+For explicit Wave0 entries, use exact identity-bound entries:
+
 ```json
 {
   "context": "wave_projection",
@@ -91,6 +93,35 @@ line number, raw Markdown, append instruction, or patch.
 }
 ```
 
+For a contribution-wide deferred disposition, use one Wave0-only
+`deferred_contribution` object instead of caller-selected ordinal entries:
+
+```json
+{
+  "context": "wave_projection",
+  "action": "apply_seed_projection",
+  "topic_uid": "tp_<current_uid>",
+  "wave": "wave0",
+  "updates": [{
+    "slot_id": "wave0_evidence",
+    "deferred_contribution": {
+      "source_identity": { "kind": "submitted_work", "work_id": "wu-w0-b001-<kind>-i0001" },
+      "evidence_meaning": "Agent-authored limitation meaning for this submitted contribution",
+      "next_hop": "limitation: state the concrete next research hop"
+    }
+  }]
+}
+```
+
+This `source_identity.work_id` selects one submitted contribution; it is not a
+persisted source identity or aggregate coverage. The writer authenticates it,
+derives every currently unprojected exact `<work_id>/<ordinal>` identity, and
+writes the existing `relationship: "defers"`, `refs: ["none"]`, and
+`status: "deferred"` values atomically. Do not provide an ordinal range,
+relationship, refs, status, file path, raw Markdown, or a combined explicit
+entry in this form. Equivalent replay remains an existing writer recovery
+operation, not a second coverage claim.
+
 Wave0 is authorized only in `seed_topics_ready -> wave0_complete` and owns
 `wave0_evidence`. Wave1 is authorized only in
 `wave0_complete -> wave1_complete` and must atomically include
@@ -112,12 +143,13 @@ equals its exact source `W2F-*` finding resolved to this topic.
 The writer preserves every read-only card, consumes a first token or upserts a
 stable identity, and stages only the selected seed in its existing workspace.
 After a successful apply, run the corresponding same Wave inspect. If inspect
-names a Wave0 candidate coordinate, repair only that retained packet entry or
-disposition, apply through this writer, and rerun the same inspect. For an
-explicit no-consumer-reference outcome, use `relationship: "defers"`,
-`status: "deferred"`, `refs: ["none"]`, and a concrete limitation in
-`next_hop`. A missing writer window, current authority, canonical binding, or
-unique target is an owner/missing-contract boundary; do not hand-edit a seed.
+names materializable Wave0 submitted backing, the Phase Agent first persists
+the exact backed consumer projection and index row through its existing
+artifact-persistence path; if it accepts a contribution-wide unavailable
+outcome, repair only that retained `deferred_contribution` intent. Then apply
+through this writer and rerun the same inspect. A missing writer window,
+current authority, canonical binding, or unique target is an owner/missing-
+contract boundary; do not hand-edit a seed.
 
 If apply reports active queue/work-unit ownership, resolve it through the existing queue/work-unit inspect, submit, repair, or terminalization owner and rerun the same retained input. Do not hand-edit queue, work-unit, ledger, registry, seed, status, or trace bytes.
 

@@ -1,6 +1,7 @@
 // gate-helpers-checks.test.mjs
 // Tests for gate-helpers-checks.mjs: Gate rule checks — reference validation
 // and cache_coverage.
+// @impl REF-009, WPG-017
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
@@ -65,6 +66,33 @@ function canonicalReferenceFrontmatter({
     '## Risks And Limitations',
     'Risk.',
   ].join('\n');
+}
+
+function wave0SourceYaml(urls) {
+  return urls.map((url, index) => [
+    `- url: ${url}`,
+    `  title: Wave0 source ${index + 1}`,
+    '  retrieved_date: 2026-07-20',
+    '  topic_tag: topic-a',
+  ].join('\n')).join('\n') + '\n';
+}
+
+function writeWave0ProjectionProfile(dir) {
+  writeFileSync(join(dir, 'rb_profile.yaml'), 'human_decision_checkpoints:\n  hitl2:\n    rerun_count: 0\n');
+}
+
+function submittedWave0ProjectionContent({ sourceUrl, entryId, sourceYamlRef, cacheTrail, resultRef, workUnitRef }) {
+  return canonicalReferenceFrontmatter({
+    sourceUrl,
+    relatedTopic: 'all',
+    coreContent: [
+      `Submitted source identity: ${entryId}.`,
+      `Source YAML: ${sourceYamlRef}.`,
+      `Cache trail: ${cacheTrail}.`,
+      `Result: ${resultRef}.`,
+      `Work unit: ${workUnitRef}.`,
+    ].join(' '),
+  });
 }
 
 const REFERENCE_SEMANTIC_BODY = [
@@ -443,6 +471,115 @@ describe('reference file gate helpers', () => {
     }
   });
 
+  it('preserves a submitted legacy Wave0 reference and accepts an exact Phase-owned projection', () => {
+    const legacyDir = tempWorkUnitBundle('gh-ref-wave0-legacy-');
+    const projectionDir = tempWorkUnitBundle('gh-ref-wave0-backed-');
+    try {
+      const legacyUrl = 'https://example.com/research/wave0-legacy';
+      claimAndSubmitWorkUnit(legacyDir, {
+        legacyV1Assignment: true,
+        outputs: [{
+          path: 'reference/00-shared-legacy.md',
+          role: 'reference',
+          source_url: legacyUrl,
+          source_slug: 'legacy',
+          content: canonicalReferenceFrontmatter({ sourceUrl: legacyUrl, relatedTopic: 'all' }),
+        }],
+        cacheTrails: [{
+          path: '_cache/wave0/primary/queue-a/legacy',
+          url: legacyUrl,
+        }],
+      });
+      const legacy = classifyReferenceAuthority(legacyDir, 'reference/00-shared-legacy.md');
+      assert.equal(legacy.passed, true, legacy.reason);
+      assert.equal(legacy.authority, 'delegated_fetched_evidence');
+
+      writeWave0ProjectionProfile(projectionDir);
+      const sourceUrl = 'https://example.com/research/wave0-duplicate';
+      const sourceYamlRef = 'artifacts/wave0/topic-a/source.yaml';
+      const cacheTrail = '_cache/wave0/primary/queue-a/duplicate';
+      const submission = claimAndSubmitWorkUnit(projectionDir, {
+        phase: 'wave0',
+        outputs: [{ path: sourceYamlRef, role: 'source_yaml', content: wave0SourceYaml([sourceUrl, sourceUrl]) }],
+        cacheTrails: [{ path: cacheTrail, url: sourceUrl }],
+      });
+      const entryId = `${submission.record.work_id}/2`;
+      mkdirSync(join(projectionDir, 'reference'), { recursive: true });
+      writeFileSync(join(projectionDir, 'reference/00-shared-backed.md'), submittedWave0ProjectionContent({
+        sourceUrl,
+        entryId,
+        sourceYamlRef,
+        cacheTrail,
+        resultRef: submission.record.paths.result_ref,
+        workUnitRef: submission.record.paths.work_unit_dir,
+      }));
+
+      const backed = classifyReferenceAuthority(projectionDir, 'reference/00-shared-backed.md');
+      assert.equal(backed.passed, true, backed.reason);
+      assert.equal(backed.authority, 'phase_owned_projection');
+      assert.deepEqual(backed.source_identity, {
+        work_id: submission.record.work_id,
+        entry_id: entryId,
+        source_ordinal: 2,
+      });
+    } finally {
+      cleanupWorkUnitBundle(legacyDir);
+      cleanupWorkUnitBundle(projectionDir);
+    }
+  });
+
+  it('rejects URL-only, ambiguous, filesystem-only, and index-only Wave0 shared references', () => {
+    const dir = tempWorkUnitBundle('gh-ref-wave0-unbacked-');
+    try {
+      writeWave0ProjectionProfile(dir);
+      const sourceUrl = 'https://example.com/research/wave0-duplicate';
+      const sourceYamlRef = 'artifacts/wave0/topic-a/source.yaml';
+      const cacheTrail = '_cache/wave0/primary/queue-a/duplicate';
+      const submission = claimAndSubmitWorkUnit(dir, {
+        phase: 'wave0',
+        outputs: [{ path: sourceYamlRef, role: 'source_yaml', content: wave0SourceYaml([sourceUrl, sourceUrl]) }],
+        cacheTrails: [{ path: cacheTrail, url: sourceUrl }],
+      });
+      const commonRefs = [sourceYamlRef, cacheTrail, submission.record.paths.result_ref, submission.record.paths.work_unit_dir].join(' ');
+      mkdirSync(join(dir, 'reference'), { recursive: true });
+
+      const refPath = join(dir, 'reference/00-shared-unbacked.md');
+      writeFileSync(refPath, canonicalReferenceFrontmatter({
+        sourceUrl,
+        relatedTopic: 'all',
+        coreContent: `URL-only projection cites ${commonRefs} but does not name a source identity.`,
+      }));
+      const urlOnly = classifyReferenceAuthority(dir, 'reference/00-shared-unbacked.md');
+      assert.equal(urlOnly.passed, false);
+      assert.equal(urlOnly.reason_code, 'wave0_source_identity_missing');
+
+      writeFileSync(refPath, canonicalReferenceFrontmatter({
+        sourceUrl,
+        relatedTopic: 'all',
+        coreContent: `Ambiguous duplicate URL identities ${submission.record.work_id}/1 and ${submission.record.work_id}/2 cite ${commonRefs}.`,
+      }));
+      const ambiguous = classifyReferenceAuthority(dir, 'reference/00-shared-unbacked.md');
+      assert.equal(ambiguous.passed, false);
+      assert.equal(ambiguous.reason_code, 'wave0_source_identity_ambiguous');
+
+      writeFileSync(join(dir, 'reference/_INDEX.md'), [
+        '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
+        '| --- | --- | --- | --- | --- | --- | --- | --- |',
+        '| 00-shared-index-only.md | primary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-20 |',
+      ].join('\n'));
+      writeFileSync(join(dir, 'reference/00-shared-index-only.md'), canonicalReferenceFrontmatter({
+        sourceUrl,
+        relatedTopic: 'all',
+        coreContent: 'This file and its navigation row do not establish submitted backing.',
+      }));
+      const indexOnly = classifyReferenceAuthority(dir, 'reference/00-shared-index-only.md');
+      assert.equal(indexOnly.passed, false);
+      assert.equal(indexOnly.reason_code, 'wave0_source_identity_missing');
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
+  });
+
   it('fails closed when _INDEX.md names a Wave1 reference with no submitted backing', () => {
     const dir = tempWorkUnitBundle('gh-ref-wave1-index-only-');
     try {
@@ -529,6 +666,7 @@ describe('cache coverage work-unit authority', () => {
     const dir = tempWorkUnitBundle('gh-cache-pass-');
     try {
       claimAndSubmitWorkUnit(dir, {
+        legacyV1Assignment: true,
         outputs: [{
           path: 'reference/topic-a-source.md',
           role: 'reference',
@@ -569,6 +707,14 @@ describe('cache coverage work-unit authority', () => {
     const dir = tempWorkUnitBundle('gh-cache-drift-');
     try {
       claimAndSubmitWorkUnit(dir, {
+        legacyV1Assignment: true,
+        outputs: [{
+          path: 'reference/topic-a-source.md',
+          role: 'reference',
+          source_url: 'https://example.com/research/article',
+          source_slug: 's01_source',
+          content: referenceContent({ source_url: 'https://example.com/research/article' }),
+        }],
         cacheTrails: [{
           path: '_cache/wave0/primary/topic-a/s01_source',
           url: 'https://example.com/research/article',
@@ -587,6 +733,14 @@ describe('cache coverage work-unit authority', () => {
     const dir = tempWorkUnitBundle('gh-cache-placeholder-');
     try {
       claimAndSubmitWorkUnit(dir, {
+        legacyV1Assignment: true,
+        outputs: [{
+          path: 'reference/topic-a-source.md',
+          role: 'reference',
+          source_url: 'https://example.com/research/article',
+          source_slug: 's01_source',
+          content: referenceContent({ source_url: 'https://example.com/research/article' }),
+        }],
         cacheTrails: [{
           path: '_cache/wave0/primary/topic-a/s01_source',
           url: 'https://example.com/research/article',
@@ -606,6 +760,7 @@ describe('cache coverage work-unit authority', () => {
     const dir = tempWorkUnitBundle('gh-cache-map-');
     try {
       claimAndSubmitWorkUnit(dir, {
+        legacyV1Assignment: true,
         outputs: [{
           path: 'reference/topic-a-source.md',
           role: 'reference',

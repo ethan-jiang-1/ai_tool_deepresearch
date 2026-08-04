@@ -1,6 +1,6 @@
 // ref-count.test.mjs
 // Tests for isCountable() and countReferences() — authority-scoped numeric eligibility
-// @impl EEX-001, EEX-002, EEX-003
+// @impl EEX-001, EEX-002, EEX-003, REF-009, WPG-017
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert';
 import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
@@ -80,6 +80,20 @@ function setupBundle(name, refs = {}) {
     writeFileSync(join(dir, relPath), content);
   }
   return dir;
+}
+
+function wave0SourceYaml(sourceUrl) {
+  return [
+    `- url: ${sourceUrl}`,
+    '  title: Wave0 source',
+    '  retrieved_date: 2026-07-20',
+    '  topic_tag: topic-a',
+    '',
+  ].join('\n');
+}
+
+function writeWave0ProjectionProfile(dir) {
+  writeFileSync(join(dir, 'rb_profile.yaml'), 'human_decision_checkpoints:\n  hitl2:\n    rerun_count: 0\n');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -240,8 +254,9 @@ describe('countReferences', () => {
     const dir = tempWorkUnitBundle('cr-no-refs-');
     try {
       claimAndSubmitWorkUnit(dir, {
+        phase: 'wave1',
         outputs: [{
-          path: 'artifacts/wave0/topic-a/evidence-summary.md',
+          path: 'artifacts/wave1/topic-a/evidence-summary.md',
           role: 'evidence_summary',
           content: '# Evidence Summary\n',
         }],
@@ -257,6 +272,7 @@ describe('countReferences', () => {
     const dir = tempWorkUnitBundle('cr-mixed-');
     try {
       claimAndSubmitWorkUnit(dir, {
+        legacyV1Assignment: true,
         outputs: [
           {
             path: 'reference/countable-1.md',
@@ -293,6 +309,7 @@ describe('countReferences', () => {
     const dir = tempWorkUnitBundle('cr-orphan-');
     try {
       claimAndSubmitWorkUnit(dir, {
+        legacyV1Assignment: true,
         outputs: [{
           path: 'reference/00-shared-declared.md',
           role: 'reference',
@@ -362,6 +379,40 @@ describe('countReferences', () => {
     }
   });
 
+  it('counts one exact submitted-backed Wave0 Phase-owned projection without adding count-specific provenance logic', () => {
+    const dir = tempWorkUnitBundle('cr-wave0-backed-projection-');
+    try {
+      writeWave0ProjectionProfile(dir);
+      const sourceUrl = 'https://example.com/research/wave0-projection';
+      const sourceYamlRef = 'artifacts/wave0/topic-a/source.yaml';
+      const cacheTrail = '_cache/wave0/primary/queue-a/s01_projection';
+      const submission = claimAndSubmitWorkUnit(dir, {
+        phase: 'wave0',
+        outputs: [{ path: sourceYamlRef, role: 'source_yaml', content: wave0SourceYaml(sourceUrl) }],
+        cacheTrails: [{ path: cacheTrail, url: sourceUrl }],
+      });
+      const entryId = `${submission.record.work_id}/1`;
+      mkdirSync(join(dir, 'reference'), { recursive: true });
+      writeFileSync(join(dir, 'reference/00-shared-backed.md'), referenceContent({
+        source_url: sourceUrl,
+        related_topic: 'all',
+        coreContent: [
+          `Submitted source identity ${entryId}.`,
+          `Source YAML ${sourceYamlRef}.`,
+          `Cache ${cacheTrail}.`,
+          `Result ${submission.record.paths.result_ref}.`,
+          `Work unit ${submission.record.paths.work_unit_dir}.`,
+        ].join(' '),
+      }));
+
+      const result = countReferences(dir, { targetGlob: 'reference/00-shared-*.md' });
+      assert.equal(result.count, 1, JSON.stringify(result));
+      assert.deepEqual(result.uncountable, []);
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
+  });
+
   it('diagnostic filesystem mode discovers all reference/ md files', () => {
     const dir = setupBundle('cr-filesystem', {
       'reference/ref-a.md': refContent({ source_url: 'https://example.com/research/a' }),
@@ -375,6 +426,7 @@ describe('countReferences', () => {
     const dir = tempWorkUnitBundle('cr-glob-');
     try {
       claimAndSubmitWorkUnit(dir, {
+        legacyV1Assignment: true,
         outputs: [
           {
             path: 'reference/00-shared-foundation.md',
@@ -404,6 +456,7 @@ describe('countReferences', () => {
     const dir = tempWorkUnitBundle('cr-scoped-');
     try {
       claimAndSubmitWorkUnit(dir, {
+        legacyV1Assignment: true,
         outputs: [
           {
             path: 'reference/topic-a-source.md',
@@ -438,6 +491,7 @@ describe('countReferences', () => {
     const dir = tempWorkUnitBundle('cr-audit-');
     try {
       claimAndSubmitWorkUnit(dir, {
+        legacyV1Assignment: true,
         outputs: [
           {
             path: 'reference/good.md',

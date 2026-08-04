@@ -1,6 +1,6 @@
 # BUG-191: Wave0 return_map_current_candidate_omission requires per-source projection entries (O(N) scaling)
 
-**Status**: open
+**Status**: resolved by archived C1 — deterministic contract and focused verification complete; current-head real Actor observation remains E2 work
 **Severity**: P1 — blocks gate pass with impractical manual work
 **Found**: 2026-08-03 during `agentic-rd-org-delivery-systems-2026` Wave0 execution
 
@@ -25,3 +25,27 @@ A single projection entry with `relationship: supports` and a ref to the full `s
 ## Workaround
 
 Must create individual deferred entries for every orphaned ordinal. Programmatic generation from source.yaml entry count.
+
+## C1 Implementation (2026-08-04)
+
+The archived C1 change,
+[`materialize-wave0-submitted-references-and-batch-projections`](../../openspec/changes/archive/2026-08-04-materialize-wave0-submitted-references-and-batch-projections/),
+keeps per-source coverage while removing repeated Phase authoring:
+
+- One strict Wave0 `deferred_contribution` packet selects one current submitted
+  contribution and carries only its limitation meaning and next hop.
+- Before workspace creation, the existing topic-state writer derives every
+  currently unprojected exact `<work_id>/<ordinal>` identity and atomically
+  persists the established `defers` / `[none]` / `deferred` entries.
+- Caller-selected ordinals, dispositions, refs, unsubmitted selectors, and
+  collisions are rejected; equivalent replay stays idempotent and a later
+  contribution remains separate. The batch selector is therefore input
+  compression, not work-unit-level coverage.
+
+Focused deterministic evidence from C1 includes
+`tests/integration/cli/operate-topic-state-projection.test.mjs` (13 passing),
+including `1..19` versus later `/20`, collision rejection, idempotent replay,
+and explicit-entry compatibility. This does not prove a current real Actor used
+the packet; that separately governed E2 observation has not been authorized.
+C1 strict validation, main-spec sync, closeout review, and governed archive all
+completed on 2026-08-04.

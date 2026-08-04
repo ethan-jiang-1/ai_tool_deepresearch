@@ -1036,8 +1036,19 @@ export function evaluateNormalizedSubmittedWorkUnitLedger(bundleDir) {
     }
   }
 
+  // `facts` are consumed by provenance readers that may need submit order
+  // rather than work-unit claim/index insertion order.
+  const factsByWorkId = new Map(facts.map((fact) => [fact.ledger_row.work_id, fact]));
+  const ledgerOrderedFacts = document.valid_rows.flatMap((row) => {
+    const fact = factsByWorkId.get(row.work_id);
+    return fact ? [fact] : [];
+  });
+  if (ledgerOrderedFacts.length !== facts.length) {
+    throw new Error('submitted ledger ordering could not account for every current submitted work-unit fact');
+  }
+
   return {
-    facts,
+    facts: ledgerOrderedFacts,
     historical,
     legacy_non_work_unit_rows: document.legacy_non_work_unit_rows,
     kind_registry: index.kind_registry,

@@ -1,27 +1,29 @@
 ---
 title: BUG-187-199 systemic remediation plan
-status: p1_c1_openspec_artifacts_in_progress
-current_stage: P1
+status: p2_c1_archived_c2_admission_pending
+current_stage: P2
 created: 2026-08-04
 revised: 2026-08-04
 source_bugs: BUG-187, BUG-188, BUG-189, BUG-190, BUG-191, BUG-192, BUG-193, BUG-194, BUG-195, BUG-196, BUG-197, BUG-198, BUG-199
 current_execution_model: chain_queue_work_unit
-active_change: materialize-wave0-submitted-references-and-batch-projections
-active_change_status: proposal_complete_specs_design_tasks_pending
-target_code_authorization: not_authorized
+active_change: none
+active_change_status: no_active_change_c1_archived_2026-08-04
+completed_change: materialize-wave0-submitted-references-and-batch-projections
+completed_change_status: archived_2026-08-04
+target_code_authorization: c1_authorized_applied_archived
 ---
 
 # BUG-187-199 Systemic Remediation Plan
 
-> Status: P1 active planning. C1 now has the active OpenSpec change
-> [`materialize-wave0-submitted-references-and-batch-projections`](../../openspec/changes/materialize-wave0-submitted-references-and-batch-projections/)
-> with `proposal.md` complete; `specs`, `design`, and `tasks` remain pending.
-> This document still does not authorize target-code edits.
+> Status: P2 stabilization. C1 is archived as
+> [`2026-08-04-materialize-wave0-submitted-references-and-batch-projections`](../../openspec/changes/archive/2026-08-04-materialize-wave0-submitted-references-and-batch-projections/).
+> Its strict validation, main-spec sync, closeout review, and governed archive
+> transition are complete; no C2-C4 implementation change is active.
 >
-> Progress: P1 admission evidence is sufficient for C1 proposal work; its
-> specification/design/task artifacts are now being developed.
-> A stage moves only when its required artifact or evidence exists; individual
-> checkboxes are not completion claims for work merely begun.
+> Progress: focused deterministic C1 evidence is retained, including the
+> source-only actor contract, submitted-backing convergence, and batch deferred
+> expansion. It does not prove that a current real Actor followed the guidance;
+> that separately governed E2 observation has not been authorized.
 >
 > Scope: turn thirteen incident cards into the smallest set of independently
 > reviewable system changes, while preserving the distinction between a proven
@@ -34,15 +36,15 @@ OpenSpec change candidates and two evidence tracks:
 
 | Route | Cards | Current disposition | Next admission fact |
 | --- | --- | --- | --- |
-| C1. Wave0 submitted-evidence materialization at scale | [BUG-189](../bugs/BUG-189-shared-ref-count-floor-delegated-bypass.md), [BUG-191](../bugs/BUG-191-wave0-projection-ordinal-scaling.md) | Active OpenSpec change; proposal complete for the deterministic contract contradiction and impractical O(N) Agent input. | Delta specs, design, verification plan, and approved task list. |
+| C1. Wave0 submitted-evidence materialization at scale | [BUG-189](../bugs/BUG-189-shared-ref-count-floor-delegated-bypass.md), [BUG-191](../bugs/BUG-191-wave0-projection-ordinal-scaling.md) | Archived C1 deterministic correction for the source-only submitted-backing and batch-deferred contract. | C1 is complete. Real Actor observation remains E2; C3 still needs its own final-persist admission assessment. |
 | C2. Direct Agent contract feedback | [BUG-190](../bugs/BUG-190-source-identity-kind-naming-obscure.md), [BUG-194](../bugs/BUG-194-wave1-assignment-mode-payload-location.md), conditionally [BUG-195](../bugs/BUG-195-wave1-source-claims-cache-trail-refs-missing.md) | Deterministic feedback is too opaque; BUG-195 needs current real delivery evidence before changing a task contract that current head may already generate. | Exact current rejection payloads and, for BUG-195, a retained generated `task.md` from a real attempt. |
 | C3. Traceable Final delivery | [BUG-199](../bugs/BUG-199-synthesis-no-evidence-citations.md) | Final delivery can claim evidence backing without a machine-checkable link to submitted evidence. | The current final-persist boundary and a minimal declared key-finding surface. |
 | C4. Legible HITL1 capability probe | [BUG-187](../bugs/BUG-187-hitl1-capability-probe-opaque-to-user.md) | A valid capability probe is confusing because its purpose and result are not presented as a stable user-facing contract. | The controllable Markdown/Agent-facing output boundary, distinct from host-rendered tool logs. |
 | E1. Host wait visibility | [BUG-188](../bugs/BUG-188-subagent-wait-no-progress-visibility.md), [BUG-193](../bugs/BUG-193-wave1-subagent-wait-no-progress-sibling.md) | Host/TUI observation; BUG-193 is a Wave1 duplicate of BUG-188, not a second framework root. | A selected-host capability observation showing whether wait can render progress without violating `stop: no`. |
 | E2. Current-head real Actor requalification | [BUG-192](../bugs/BUG-192-degraded-gate-triggers-de-facto-hitl.md), [BUG-198](../bugs/BUG-198-phase-agent-direct-search-no-subagent.md), replay [BUG-195](../bugs/BUG-195-wave1-source-claims-cache-trail-refs-missing.md)/[BUG-196](../bugs/BUG-196-work-done-receipt-no-status-transition.md)/[BUG-197](../bugs/BUG-197-wave1-queue-blocks-reenqueue-after-failure.md) | Historical Actor behavior must not be converted into a new controller or status from static code alone. | An explicitly authorized, readable current-head bundle and bounded `agent_flow_e2e` observation. |
 
-The routes are deliberately not all implementation work. C1 is an active
-proposal; C2-C4 may become separate proposals when their admission facts are
+The routes are deliberately not all implementation work. C1 is an archived
+deterministic correction; C2-C4 may become separate proposals when their admission facts are
 captured. E1 and E2 are
 investigation tracks with explicit terminal outcomes; neither creates a standing
 run, retry loop, scheduler, or OpenSpec change by itself.
@@ -54,7 +56,7 @@ run, retry loop, scheduler, or OpenSpec change by itself.
 - [x] Confirm that `openspec list --json` had no active change before C1 was
   created on 2026-08-04.
 - [x] Create the C1 OpenSpec change
-  [`materialize-wave0-submitted-references-and-batch-projections`](../../openspec/changes/materialize-wave0-submitted-references-and-batch-projections/)
+  [`2026-08-04-materialize-wave0-submitted-references-and-batch-projections`](../../openspec/changes/archive/2026-08-04-materialize-wave0-submitted-references-and-batch-projections/)
   and its proposal. `openspec status --change` reports `proposal: done`, with
   `specs` and `design` ready and `tasks` blocked on those artifacts.
 - [x] Separate the proven Wave0 evidence/projection gap from the historical
@@ -64,11 +66,12 @@ run, retry loop, scheduler, or OpenSpec change by itself.
   23/24 relevant subtests, including the submitted contribution and 19-to-20
   ordinal cases. This proves deterministic contract behavior only, not real
   Actor behavior.
-- [ ] Classify the observed unrelated regression before relying on a full Wave0
-  gate green result: `check-gate-wave0-complete` expects
-  `wave0_work_unit_submission_presence.repair_kind=missing_contract`, while
-  current output is `engine_operation` (the failing subtest is 1d). Do not fold
-  this expectation drift into C1 without identifying its direct contract owner.
+- [x] Classify the observed Wave0 gate expectation drift. C1 task 4.5 found
+  that a missing declaration with retained hash-bound index/status facts has a
+  legal direct owner: the existing `recover-declaration` Engine operation, so
+  `wave0_work_unit_submission_presence.repair_kind=engine_operation` is
+  correct. The focused Gate regression now exercises recovery and passes; the
+  opposite no-recovery-fact boundary remains fail-closed.
 - [x] Record the present current-head facts that constrain later proposals:
   generated work-unit contracts contain `cache_trail_refs`; post-`work_done`
   semantic failures can become `fail_and_replace`; failed attempts have a
@@ -112,8 +115,8 @@ The following proposals are rejected unless new evidence changes the analysis:
 | Stage | Outcome | Status |
 | --- | --- | --- |
 | P0 | Triage, current-head contract check, and route separation. | Complete |
-| P1 | Capture admission facts and complete proposal artifacts only where a bounded deterministic or user-facing contract root exists. C1 proposal is complete; its specs/design/tasks remain in progress. | In progress |
-| P2 | Stabilize submitted-evidence and feedback contracts through accepted C1/C2 work before applying C3 against their backing surfaces. | Pending |
+| P1 | Capture admission facts and complete proposal artifacts only where a bounded deterministic or user-facing contract root exists. C1 proposal, specs, design, task list, and implementation entry are complete. | Complete |
+| P2 | Stabilize submitted-evidence and feedback contracts through accepted C1/C2 work before applying C3 against their backing surfaces. C1 is archived; C2 admission and C3 reassessment remain pending. | In progress |
 | P3 | Activate E1/E2 only with a selected host or an explicitly authorized real bundle; classify each result before proposing code. | Pending |
 | P4 | Archive accepted changes, update each bug card with its final disposition, and move this plan only when every route has a terminal outcome. | Pending |
 
@@ -135,7 +138,7 @@ admits only `source_yaml` as required output. BUG-191 exposes the complementary
 scaling failure: the system correctly preserves per-source identity, but gives
 the Agent an O(N) manual packet to express a batch deferred disposition.
 
-**Candidate shape:** extend the existing Phase-owned backed-reference
+**Implemented C1 shape:** extend the existing Phase-owned backed-reference
 materialization model to Wave0, using submitted Wave0 facts as the only source
 of evidence authority. Add a mechanical batch-expansion path for a deferred
 disposition so Agent input can be O(1), while the persisted coverage remains
@@ -168,20 +171,26 @@ identity-bound deferred records with a vague work-unit-level acknowledgement.
   deferred disposition.
 - [x] Create the C1 proposal describing the submitted-backing materialization
   and batch-deferred direction, without authorizing implementation.
-- [ ] In C1 delta specs and design, state the exact materialization writer,
+- [x] In C1 delta specs and design, state the exact materialization writer,
   input facts, output projection, collision/idempotence rule, and failure
   feedback.
-- [ ] In C1 delta specs and design, state the batch-deferred input grammar and
+- [x] In C1 delta specs and design, state the batch-deferred input grammar and
   prove its deterministic, identity-complete expansion without adding
   persistent duplicate truth.
-- [ ] Add C1 acceptance and verification cases for backed materialization,
+- [x] Add C1 acceptance and verification cases for backed materialization,
   batch expansion, duplicate identity rejection, filesystem-only rejection,
   and idempotent rerun.
-- [ ] After approval, apply only the accepted C1 task list; verify focused
-  deterministic tests and one real bounded Actor observation if that evidence is
-  separately authorized.
-- [ ] Archive C1, update BUG-189/BUG-191 with concrete evidence, and reassess
-  C3's final-backing assumptions.
+- [x] Apply the approved C1 task list and retain focused deterministic evidence.
+  A real bounded Actor observation was not authorized and remains separately
+  routed to E2 rather than being inferred from fixtures.
+- [x] Update BUG-189/BUG-191 with the concrete C1 behavior and proof boundary.
+- [x] Complete C1 task 6 verification/sync/closeout and archive it. The
+  governed finalizer archived C1 on 2026-08-04 after strict validation,
+  requirements/spec governance, verification routing, and native archive all
+  passed.
+- [ ] Reassess C3's final-backing assumptions using the archived C1 submitted
+  contribution/projection boundary; this remains C3-specific admission work,
+  not an implied C1 implementation task.
 
 ## 6. C2: Direct Agent Contract Feedback
 

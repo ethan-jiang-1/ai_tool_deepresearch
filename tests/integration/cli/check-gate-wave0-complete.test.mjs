@@ -16,11 +16,12 @@ import { tryLoadGateDefinition } from '../../../DPT_FRAMEWORK/engine/helpers/gat
 import { evaluateSeedTopicProjectionReadiness } from '../../../DPT_FRAMEWORK/engine/helpers/return-map.mjs';
 import { buildCanonicalTopicRegistryFact } from '../../../DPT_FRAMEWORK/engine/helpers/topic-registry-fact.mjs';
 import { evaluateWave0Contract } from '../../../DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs';
-import { collectEligibleWave0CandidateProjection } from '../../../DPT_FRAMEWORK/engine/work-unit-projection.mjs';
+import { collectSubmittedWave0ContributionProjection } from '../../../DPT_FRAMEWORK/engine/work-unit-projection.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs');
 const INSPECT_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-wave0-output.mjs');
+const OPERATE_WORK_UNIT_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-work-unit.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
@@ -36,6 +37,19 @@ function runGate(bundlePath, { attempt } = {}) {
 
 function runInspect(bundlePath) {
   return spawnSync('node', [INSPECT_CLI, '--bundle', bundlePath], { encoding: 'utf-8', timeout: 10000 });
+}
+
+function runDeclarationRecovery(bundlePath, workId) {
+  return spawnSync('node', [OPERATE_WORK_UNIT_CLI, 'recover-declaration', bundlePath, '--work-id', workId], {
+    encoding: 'utf-8',
+    timeout: 10000,
+  });
+}
+
+function submittedMaterializationHint(output) {
+  const hint = output.hints.find((entry) => entry.rule_id === 'wave0_submitted_reference_materialization');
+  assert.ok(hint, JSON.stringify(output.hints));
+  return hint;
 }
 
 async function evaluateDirect(input) {
@@ -86,11 +100,12 @@ function materializeWave0Projection(dir, submission, {
   ordinal = 1,
   ordinals = null,
   preserveExistingSeed = false,
+  topicSlug = 'topic-a',
 } = {}) {
   const planFrontmatter = readFileSync(join(dir, 'rb_plan.md'), 'utf8').match(/^---\n([\s\S]*?)\n---/);
   const plan = JSON.parse(planFrontmatter[1]);
-  const topic = plan.topic_registry.find((entry) => entry.slug === 'topic-a');
-  assert.ok(topic, 'Wave0 fixture requires canonical topic-a');
+  const topic = plan.topic_registry.find((entry) => entry.slug === topicSlug);
+  assert.ok(topic, `Wave0 fixture requires canonical ${topicSlug}`);
   const seedPath = join(dir, 'seed_topics', `${topic.slug}.md`);
   if (!preserveExistingSeed || !existsSync(seedPath)) writeFileSync(seedPath, renderCanonicalSeed(topic));
 
@@ -145,6 +160,11 @@ const VALID_REF_SECOND = `- url: "https://example.com/article-3"
   topic_tag: "topic-a"
 `;
 
+const TOPIC_A_SOURCE_URL = 'https://example.com/article-1';
+const TOPIC_B_SOURCE_URL = 'https://example.com/article-2';
+const TOPIC_A_CACHE = '_cache/wave0/primary/topic-a/source-yaml';
+const TOPIC_B_CACHE = '_cache/wave0/primary/topic-b/source-yaml';
+
 function sourceMetadataArray(count) {
   return Array.from({ length: count }, (_, index) => [
     `- url: "https://example.com/article-${index + 1}"`,
@@ -159,30 +179,60 @@ const SCHEMA_INVALID_REF = `- url: ""
   topic_tag: "topic-a"
 `;
 
-/** Set up happy-path wave0 artifacts (post-redesign: flat reference + artifacts/wave0). */
+function writeWave0PhaseProjection(dir, submission) {
+  writeFileSync(join(dir, 'reference/00-shared-ai-safety.md'),
+    `---\nsource_url: "${TOPIC_A_SOURCE_URL}"\nacceptance_status: accepted\n` +
+    'source_type: secondary\ntier: "Tier 2"\nevidence_role: foundation\ntrust_level: practitioner\n' +
+    'why_it_matters: "Foundation context for the shared research question."\naccessed_at: "2026-06-15"\nrelated_topic: all\n---\n' +
+    '# AI Safety Foundation\n\n' +
+    '## Key Facts\n- Submitted foundation source is available for this consumer projection.\n\n' +
+    '## Core Content Capture\nThe submitted Wave0 source provides bounded foundation evidence for this reader-facing projection.\n\n' +
+    '## Relevance To This Research\nThis reference gives the research a shared foundation.\n\n' +
+    '## Quotable Terms / Concepts\n- AI safety\n\n' +
+    '## Risks And Limitations\n- The source remains one bounded foundation input.\n\n' +
+    '## Submitted Backing\n' +
+    `- source_identity: ${submission.record.work_id}/1\n` +
+    '- source_yaml_ref: artifacts/wave0/topic-a/source.yaml\n' +
+    `- cache_trail_ref: ${TOPIC_A_CACHE}\n` +
+    `- result_ref: ${submission.record.paths.result_ref}\n` +
+    `- work_unit_ref: ${submission.record.paths.work_unit_dir}\n`);
+}
+
+function submitCurrentWave0Source(dir, {
+  queueItemId,
+  topicUid,
+  topicSlug,
+  sourceContent,
+  cachePath,
+  sourceUrl,
+  preserveQueue = false,
+} = {}) {
+  const submission = claimAndSubmitWorkUnit(dir, {
+    queueItemId,
+    preserveQueue,
+    queueItemOverrides: {
+      payload: { wave: 0, topic_uid: topicUid, topic_slug: topicSlug },
+      required_receipts: [`file:artifacts/wave0/${topicSlug}/source.yaml`],
+      writes_to: [`artifacts/wave0/${topicSlug}/source.yaml`],
+    },
+    outputs: [{
+      path: `artifacts/wave0/${topicSlug}/source.yaml`,
+      role: 'source_yaml',
+      content: sourceContent,
+    }],
+    cacheTrails: [{ path: cachePath, url: sourceUrl }],
+  });
+  assert.equal(submission.submitted.ok, true, JSON.stringify(submission.submitted));
+  return submission;
+}
+
+/** Set up a current v2 Wave0 source-only submission with a Phase-owned reference. */
 function setupHappyPath(dir, { sourceContent = VALID_REF } = {}) {
-  // Flat reference directory
   writeFileSync(join(dir, 'reference/_INDEX.md'),
     '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |\n' +
     '| --- | --- | --- | --- | --- | --- | --- | --- |\n' +
     '| 00-shared-ai-safety.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-06-15 |\n');
   writeFileSync(join(dir, 'reference/README.md'), '# Reference Evidence\nFlat reference directory.\n');
-  writeFileSync(join(dir, 'reference/00-shared-ai-safety.md'),
-    '- source_url: https://example.com/research/ai-safety\n- acceptance_status: accepted\n' +
-    '- source_type: secondary\n- tier: Tier 2\n- evidence_role: foundation\n- trust_level: practitioner\n' +
-    '- why_it_matters: Foundational overview of AI safety research.\n- accessed_at: 2026-06-15\n- related_topic: all\n' +
-    '\n## Key Facts\n- Fact 1: AI safety research focuses on alignment and robustness.\n- Fact 2: Major labs have dedicated safety teams.\n- Fact 3: Adversarial attacks remain a key concern.\n- Fact 4: Regulatory frameworks are emerging globally.\n- Fact 5: Open-source models present unique challenges.\n' +
-    '\n## Core Content Capture\nComprehensive overview of the AI safety landscape covering alignment research, robustness against adversarial attacks, and the emerging regulatory frameworks that are shaping the field globally.\n' +
-    '\n## Relevance To This Research\nFoundational context for understanding AI governance landscape.\n' +
-    '\n## Quotable Terms / Concepts\n- AI alignment\n- Adversarial robustness\n' +
-    '\n## Risks And Limitations\n- Field is rapidly evolving; conclusions may date quickly.\n');
-
-  // Thin YAML in artifacts/wave0/ per topic
-  mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-a'), { recursive: true });
-  mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-b'), { recursive: true });
-  writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), sourceContent);
-  writeFileSync(join(dir, 'artifacts/wave0/topic-b/source.yaml'), VALID_REF_B);
-
   writeTraceEvents(dir, [
     ...witnessedHandoffEvents({
       sourceGate: 'seed-topics-ready',
@@ -192,39 +242,26 @@ function setupHappyPath(dir, { sourceContent = VALID_REF } = {}) {
     }),
     { event: 'wave0_completion', ts: new Date().toISOString() },
   ]);
-  const submission = claimAndSubmitWorkUnit(dir, {
+  const submission = submitCurrentWave0Source(dir, {
     queueItemId: 'topic-a',
-    queueItemOverrides: {
-      payload: {
-        wave: 0,
-        topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
-        topic_slug: 'topic-a',
-      },
-      required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
-      writes_to: ['artifacts/wave0/topic-a/source.yaml'],
-    },
-    outputs: [
-      {
-        path: 'reference/00-shared-ai-safety.md',
-        role: 'reference',
-        source_url: 'https://example.com/research/ai-safety',
-        source_slug: 'ai-safety',
-      },
-      {
-        path: 'artifacts/wave0/topic-a/source.yaml',
-        role: 'source_yaml',
-      },
-      {
-        path: 'artifacts/wave0/topic-b/source.yaml',
-        role: 'source_yaml',
-      },
-    ],
-    cacheTrails: [{
-      path: '_cache/wave0/primary/topic-a/ai-safety',
-      url: 'https://example.com/research/ai-safety',
-    }],
+    topicUid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+    topicSlug: 'topic-a',
+    sourceContent,
+    cachePath: TOPIC_A_CACHE,
+    sourceUrl: TOPIC_A_SOURCE_URL,
   });
+  const topicBSubmission = submitCurrentWave0Source(dir, {
+    queueItemId: 'topic-b',
+    topicUid: 'tp_123e4567-e89b-12d3-a456-426614174001',
+    topicSlug: 'topic-b',
+    sourceContent: VALID_REF_B,
+    cachePath: TOPIC_B_CACHE,
+    sourceUrl: TOPIC_B_SOURCE_URL,
+    preserveQueue: true,
+  });
+  writeWave0PhaseProjection(dir, submission);
   materializeWave0Projection(dir, submission);
+  materializeWave0Projection(dir, topicBSubmission, { deferred: true, topicSlug: 'topic-b' });
   return submission;
 }
 
@@ -260,11 +297,6 @@ function setupWave0WithoutSharedReference(dir, { submitWorkUnit = true } = {}) {
     '| --- | --- | --- | --- | --- | --- | --- | --- |\n');
   writeFileSync(join(dir, 'reference/README.md'), '# Reference Evidence\nFlat reference directory.\n');
 
-  mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-a'), { recursive: true });
-  mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-b'), { recursive: true });
-  writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), VALID_REF);
-  writeFileSync(join(dir, 'artifacts/wave0/topic-b/source.yaml'), VALID_REF_B);
-
   writeTraceEvents(dir, [
     ...witnessedHandoffEvents({
       sourceGate: 'seed-topics-ready',
@@ -276,25 +308,26 @@ function setupWave0WithoutSharedReference(dir, { submitWorkUnit = true } = {}) {
   ]);
 
   if (submitWorkUnit) {
-    const submission = claimAndSubmitWorkUnit(dir, {
+    const topicASubmission = submitCurrentWave0Source(dir, {
       queueItemId: 'topic-a',
-      outputs: [
-        {
-          path: 'artifacts/wave0/topic-a/source.yaml',
-          role: 'source_yaml',
-        },
-        {
-          path: 'artifacts/wave0/topic-b/source.yaml',
-          role: 'source_yaml',
-        },
-      ],
-      cacheTrails: [{
-        path: '_cache/wave0/primary/topic-a/source-yaml',
-        url: 'https://example.com/research/source-yaml',
-      }],
+      topicUid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+      topicSlug: 'topic-a',
+      sourceContent: VALID_REF,
+      cachePath: TOPIC_A_CACHE,
+      sourceUrl: TOPIC_A_SOURCE_URL,
     });
-    materializeWave0Projection(dir, submission, { deferred: true });
+    const topicBSubmission = submitCurrentWave0Source(dir, {
+      queueItemId: 'topic-b',
+      topicUid: 'tp_123e4567-e89b-12d3-a456-426614174001',
+      topicSlug: 'topic-b',
+      sourceContent: VALID_REF_B,
+      cachePath: TOPIC_B_CACHE,
+      sourceUrl: TOPIC_B_SOURCE_URL,
+      preserveQueue: true,
+    });
+    return { topicASubmission, topicBSubmission };
   }
+  return { topicASubmission: null, topicBSubmission: null };
 }
 
 describe('check-gate-wave0-complete', () => {
@@ -369,7 +402,7 @@ describe('check-gate-wave0-complete', () => {
     materializeWave0Projection(dir, supplement, { deferred: true, ordinal: 20, preserveExistingSeed: true });
 
     const topicRegistryFact = buildCanonicalTopicRegistryFact(dir);
-    const candidates = collectEligibleWave0CandidateProjection(dir, { topicRegistryFact });
+    const candidates = collectSubmittedWave0ContributionProjection(dir, { topicRegistryFact });
     assert.equal(candidates.passed, true, JSON.stringify(candidates.root_findings));
     assert.deepEqual(
       candidates.candidates.filter((candidate) => candidate.work_id === initial.record.work_id).map((candidate) => candidate.source_ordinal),
@@ -398,49 +431,123 @@ describe('check-gate-wave0-complete', () => {
     assert.equal(output.inspect.some((line) => line.includes('metadata block missing required key')), false, output.inspect.join('\n'));
   });
 
-  it('1b. emits degraded pass for fatigue when only soft count floor fails', () => {
+  it('1b. exposes submitted materialization before a dependent shared-reference floor', () => {
     const dir = createBundle(unique('degraded'));
     setupWave0WithoutSharedReference(dir);
     const rawInspect = JSON.parse(runInspect(dir).stdout);
     assert.equal(rawInspect.check.passed, false);
     assert.equal(Object.hasOwn(rawInspect, 'routing'), false);
     assert.notEqual(rawInspect.check.degraded, true);
+    assert.ok(rawInspect.check.failed_rule_ids.includes('wave0_submitted_reference_materialization'));
+    assert.equal(rawInspect.check.failed_rule_ids.includes('shared_ref_count_floor'), false);
+    const inspectHint = submittedMaterializationHint(rawInspect);
     const result = runGate(dir, { attempt: 3 });
-    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.equal(result.status, 1, result.stderr || result.stdout);
     const output = JSON.parse(result.stdout);
-    assert.equal(output.check.passed, true, `Expected degraded pass, got inspect: ${JSON.stringify(output.inspect)}`);
-    assert.equal(output.check.degraded, true);
-    assert.equal(output.check.next, 'phases/phase-wave1.md');
-    assert.deepEqual(output.check.failed_rule_ids, []);
-    assert.deepEqual(output.check.degraded_rules, ['shared_ref_count_floor']);
-    assert.ok(output.inspect.some((line) => line.includes('[degraded]')));
+    assert.equal(output.check.passed, false, JSON.stringify(output));
+    assert.notEqual(output.check.degraded, true);
+    assert.ok(output.check.failed_rule_ids.includes('wave0_submitted_reference_materialization'));
+    assert.equal(output.check.failed_rule_ids.includes('shared_ref_count_floor'), false);
+    assert.ok(output.inspect.some((line) => line.includes('[wave0_submitted_reference_materialization]')));
+    const gateHint = submittedMaterializationHint(output);
+    assert.deepEqual(
+      {
+        rule_id: gateHint.rule_id,
+        repair_kind: gateHint.repair_kind,
+        missing_fact: gateHint.missing_fact,
+        write_to: gateHint.write_to,
+      },
+      {
+        rule_id: inspectHint.rule_id,
+        repair_kind: inspectHint.repair_kind,
+        missing_fact: inspectHint.missing_fact,
+        write_to: inspectHint.write_to,
+      },
+    );
 
     const traceEvents = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf-8')
       .trim()
       .split('\n')
       .map((line) => JSON.parse(line));
     const lastAttempt = traceEvents.filter((event) => event.event === 'gate_attempt' && event.gate === 'wave0-complete').at(-1);
-    assert.equal(lastAttempt.degraded, true);
-    assert.deepEqual(lastAttempt.degraded_rules, ['shared_ref_count_floor']);
+    assert.notEqual(lastAttempt.degraded, true);
     const diagnostic = JSON.parse(readFileSync(join(dir, lastAttempt.diagnostic_path), 'utf-8'));
-    assert.deepEqual(diagnostic.check.failed_rule_ids, []);
-    assert.ok(diagnostic.findings.some((finding) => finding.rule_id === 'shared_ref_count_floor'));
+    assert.ok(diagnostic.check.failed_rule_ids.includes('wave0_submitted_reference_materialization'));
+    assert.equal(diagnostic.check.failed_rule_ids.includes('shared_ref_count_floor'), false);
+    const diagnosticHint = submittedMaterializationHint(diagnostic);
+    assert.deepEqual(
+      {
+        rule_id: diagnosticHint.rule_id,
+        repair_kind: diagnosticHint.repair_kind,
+        missing_fact: diagnosticHint.missing_fact,
+        write_to: diagnosticHint.write_to,
+      },
+      {
+        rule_id: gateHint.rule_id,
+        repair_kind: gateHint.repair_kind,
+        missing_fact: gateHint.missing_fact,
+        write_to: gateHint.write_to,
+      },
+    );
   });
 
-  it('1b. shared-reference floor feedback names the existing delegated producer', () => {
+  it('1b. retains an independent invalid shared-reference backing beside a materialization candidate', () => {
+    const dir = createBundle(unique('materialization-with-invalid-backing'));
+    const { topicASubmission } = setupWave0WithoutSharedReference(dir);
+    writeWave0PhaseProjection(dir, topicASubmission);
+    const validProjection = join(dir, 'reference/00-shared-ai-safety.md');
+    const invalidProjection = join(dir, 'reference/00-shared-invalid-backing.md');
+    writeFileSync(
+      invalidProjection,
+      readFileSync(validProjection, 'utf8').replace(
+        `${topicASubmission.record.work_id}/1`,
+        `${topicASubmission.record.work_id}/999`,
+      ),
+    );
+    rmSync(validProjection);
+
+    const inspected = JSON.parse(runInspect(dir).stdout);
+    assert.ok(inspected.check.failed_rule_ids.includes('wave0_submitted_reference_materialization'));
+    assert.ok(inspected.check.failed_rule_ids.includes('wave0_reference_backing'));
+    assert.equal(inspected.check.failed_rule_ids.includes('shared_ref_count_floor'), false);
+
+    const result = runGate(dir);
+    assert.equal(result.status, 1, result.stderr || result.stdout);
+    const output = JSON.parse(result.stdout);
+    assert.ok(output.check.failed_rule_ids.includes('wave0_submitted_reference_materialization'));
+    assert.ok(output.check.failed_rule_ids.includes('wave0_reference_backing'));
+    assert.equal(output.check.failed_rule_ids.includes('shared_ref_count_floor'), false);
+  });
+
+  it('1b. emits degraded floor feedback only after all submitted candidates are explicitly deferred', () => {
+    const dir = createBundle(unique('deferred-floor'));
+    const { topicASubmission, topicBSubmission } = setupWave0WithoutSharedReference(dir);
+    materializeWave0Projection(dir, topicASubmission, { deferred: true });
+    materializeWave0Projection(dir, topicBSubmission, { deferred: true, topicSlug: 'topic-b' });
+    const result = runGate(dir, { attempt: 3 });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, true, JSON.stringify(output));
+    assert.equal(output.check.degraded, true);
+    assert.deepEqual(output.check.degraded_rules, ['shared_ref_count_floor']);
+    assert.equal(output.check.failed_rule_ids.includes('wave0_submitted_reference_materialization'), false);
+  });
+
+  it('1b. submitted-backing feedback names a Phase-owned consumer projection target', () => {
     const dir = createBundle(unique('shared-reference-feedback'));
     setupWave0WithoutSharedReference(dir);
     const result = runGate(dir);
     assert.equal(result.status, 1, result.stderr || result.stdout);
     const output = JSON.parse(result.stdout);
-    const hint = output.hints.find((entry) => entry.rule_id === 'shared_ref_count_floor');
+    const hint = output.hints.find((entry) => entry.rule_id === 'wave0_submitted_reference_materialization');
     assert.ok(hint, JSON.stringify(output.hints));
     assert.equal(hint.repair_kind, 'agent_action');
-    assert.match(hint.write_to, /wave0_source_intake/);
-    assert.match(hint.write_to, /output_files\[\]/);
+    assert.match(hint.write_to, /Phase-owned Wave0 consumer projection target/);
+    assert.match(hint.write_to, /source_identity=wu-w0-/);
     assert.match(hint.write_to, /source_url/);
-    assert.match(hint.write_to, /dry-submit and submit/);
-    assert.doesNotMatch(hint.write_to, /^reference\/?$/);
+    assert.match(hint.write_to, /source_yaml_ref/);
+    assert.match(hint.write_to, /cache_trail_refs/);
+    assert.doesNotMatch(hint.write_to, /wave0_source_intake|output_files\[\]/);
   });
 
   it('1c. refuses degraded pass when runtime-truth blockers remain', () => {
@@ -460,16 +567,19 @@ describe('check-gate-wave0-complete', () => {
     assert.ok(output.check.failed_rule_ids.includes('wave0_work_unit_ledger_exists'));
     assert.ok(output.inspect.some((line) => line.includes('[degraded_not_eligible]')));
     const traceEvents = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
-    assert.equal(traceEvents.filter((event) => event.event === 'delegated_bypass_suspected').length, 1);
+    assert.equal(traceEvents.filter((event) => event.event === 'delegated_bypass_suspected').length, 0);
     const runLog = readFileSync(join(dir, '_logs/run.log'), 'utf8');
-    assert.equal(runLog.split('\n').filter((line) => /\] WARN delegated_bypass_suspected\b/.test(line)).length, 1);
+    assert.equal(runLog.split('\n').filter((line) => /\] WARN delegated_bypass_suspected\b/.test(line)).length, 0);
   });
 
   it('1d. returns one submitted-declaration parent root and masks dependent provenance symptoms', () => {
     const dir = createBundle(unique('declaration-gap'));
     setupHappyPath(dir);
     const index = JSON.parse(readFileSync(join(dir, '_work_units/_index.json'), 'utf8'));
-    const workId = Object.values(index.work_units).find((record) => record.status === 'submitted').work_id;
+    const submittedWorkIds = Object.values(index.work_units)
+      .filter((record) => record.status === 'submitted')
+      .map((record) => record.work_id);
+    const [workId] = submittedWorkIds;
     rmSync(join(dir, 'rb_output_declarations.jsonl'));
 
     for (const [checkpoint, result] of [['inspect', runInspect(dir)], ['gate', runGate(dir)]]) {
@@ -478,12 +588,12 @@ describe('check-gate-wave0-complete', () => {
       assert.equal(output.check.failed_rule_ids.includes('wave0_work_unit_submission_presence'), true);
       const hint = output.hints.find((entry) => entry.rule_id === 'wave0_work_unit_submission_presence');
       assert.ok(hint);
-      assert.equal(hint.repair_kind, 'missing_contract');
+      assert.equal(hint.repair_kind, 'engine_operation');
       assert.match(hint.missing_fact, new RegExp(workId));
-      assert.match(hint.missing_fact, /no legal recovery|legacy no-contribution/i);
-      assert.match(hint.write_to, /submitted declaration recovery prerequisites/i);
+      assert.match(hint.missing_fact, /index\/status retain the recorded hash/i);
+      assert.match(hint.write_to, /recover-declaration/);
       assert.match(hint.write_to, new RegExp(workId));
-      assert.match(hint.write_to, /do not edit rb_output_declarations\.jsonl/i);
+      assert.match(hint.write_to, /operate-work-unit\.mjs/);
       for (const dependent of [
         'cache_coverage',
         'wave0_work_unit_ledger_exists',
@@ -499,6 +609,18 @@ describe('check-gate-wave0-complete', () => {
 
     const traceEvents = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
     assert.equal(traceEvents.filter((event) => event.event === 'delegated_bypass_suspected').length, 0);
+
+    for (const submittedWorkId of submittedWorkIds) {
+      const recovery = runDeclarationRecovery(dir, submittedWorkId);
+      assert.equal(recovery.status, 0, recovery.stderr || recovery.stdout);
+      const recovered = JSON.parse(recovery.stdout);
+      assert.equal(recovered.ok, true);
+      assert.equal(recovered.changed, true);
+      assert.equal(recovered.work_id, submittedWorkId);
+    }
+    const recoveredGate = runGate(dir);
+    assert.equal(recoveredGate.status, 0, recoveredGate.stderr || recoveredGate.stdout);
+    assert.equal(JSON.parse(recoveredGate.stdout).check.passed, true);
   });
 
   it('2. fails when reference/_INDEX.md is missing', () => {

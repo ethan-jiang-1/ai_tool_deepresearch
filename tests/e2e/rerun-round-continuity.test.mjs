@@ -10,6 +10,7 @@ import {
   applyCanonicalTopicState,
   renderSeedProjectionAppendix,
 } from '../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
+import { canonicalWave1ReferencePath } from '../../DPT_FRAMEWORK/engine/helpers/wave1-reference-convergence.mjs';
 import {
   advanceStatus, authoritySnapshot, cleanupRoot, createTempRoot,
   enterPhase, instantiateBundle, parseJsonOutput, readStatus, readTrace, REPO_ROOT, restoreBundle, runGate, runNode, snapshotBundle,
@@ -67,10 +68,29 @@ function ensureIndexRow(bundle, row) {
   writeFileSync(indexPath, content);
 }
 
-function submitFixture(bundle, phase, queueId, outputPath, content, extras = []) {
+function persistPhaseReference(bundle, refPath, content) {
+  const stagingPath = join(bundle, '_tmp', `${basename(refPath)}.phase-staged.md`);
+  mkdirSync(join(bundle, '_tmp'), { recursive: true });
+  writeFileSync(stagingPath, content);
+  const persisted = parseJsonOutput(runNode([
+    join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs'),
+    'persist', '--bundle', bundle, '--source', stagingPath, '--target', refPath,
+    '--expect-absent',
+  ]));
+  assert.equal(persisted.verdict, 'committed', JSON.stringify(persisted));
+  const indexed = parseJsonOutput(runNode([
+    join(REPO_ROOT, 'DPT_FRAMEWORK/cli/sync-reference-index.mjs'), '--bundle', bundle,
+  ]));
+  assert.ok(['committed', 'unchanged'].includes(indexed.verdict), JSON.stringify(indexed));
+}
+
+function submitFixture(bundle, phase, queueId, outputPath, content, extras = [], {
+  role = 'reference',
+  sourceUrl = `https://research.example.org/${queueId}`,
+} = {}) {
   const result = claimAndSubmitFixtureWorkUnit(bundle, {
     phase, queue_item_id: queueId, topic_slug: 'topic-a', title: `${phase} deterministic fixture`, output_path: outputPath,
-    role: 'reference', source_url: `https://research.example.org/${queueId}`, source_slug: queueId,
+    role, source_url: sourceUrl, source_slug: queueId,
     output_content: content, extra_output_files: extras,
   });
   assert.equal(result.submit.ok, true);
@@ -79,7 +99,6 @@ function submitFixture(bundle, phase, queueId, outputPath, content, extras = [])
   const accepted = index.work_units[result.record.work_id];
   assert.equal(accepted.status, 'submitted');
   assert.equal(accepted.receipt_nonce, result.record.receipt_nonce);
-  assert.equal(result.submit.ledger_record_hash, accepted.ledger_record_hash);
   const manifest = JSON.parse(readFileSync(join(bundle, accepted.paths.manifest_ref), 'utf8'));
   const candidate = JSON.parse(readFileSync(result.resultPath, 'utf8'));
   assert.equal(manifest.receipt_nonce, accepted.receipt_nonce);
@@ -88,21 +107,36 @@ function submitFixture(bundle, phase, queueId, outputPath, content, extras = [])
     .split('\n').filter(Boolean).map((line) => JSON.parse(line));
   const acceptedRows = ledgerRows.filter((row) => row.work_id === accepted.work_id);
   assert.equal(acceptedRows.length, 1);
-  assert.equal(acceptedRows[0].ledger_record_hash, accepted.ledger_record_hash);
+  assert.equal(acceptedRows[0].queue_item_id, accepted.queue_item_id);
+  assert.equal(acceptedRows[0].receipt_nonce, accepted.receipt_nonce);
+  assert.match(acceptedRows[0].ledger_record_hash, /^[a-f0-9]{64}$/);
   return result;
 }
 
 function stageWave0(bundle, suffix = 'r1') {
   mkdirSync(join(bundle, 'artifacts/wave0/topic-a'), { recursive: true });
   mkdirSync(join(bundle, 'reference'), { recursive: true });
-  const source = `- url: "https://research.example.org/${suffix}"\n  title: "Continuity ${suffix}"\n  retrieved_date: "2026-07-15"\n  topic_tag: "topic-a"\n`;
+  const sourcePath = join(bundle, 'artifacts/wave0/topic-a/source.yaml');
+  const existingSource = existsSync(sourcePath) ? readFileSync(sourcePath, 'utf8') : '';
+  const existingEntries = existingSource ? parseYaml(existingSource) : [];
+  assert.ok(Array.isArray(existingEntries), 'Wave0 fixture source.yaml remains an array');
+  const ordinal = existingEntries.length + 1;
+  const sourceEntry = `- url: "https://research.example.org/${suffix}"\n  title: "Continuity ${suffix}"\n  retrieved_date: "2026-07-15"\n  topic_tag: "topic-a"\n`;
+  const source = `${existingSource.trimEnd()}${existingSource ? '\n' : ''}${sourceEntry}`;
   const refPath = `reference/00-shared-${suffix}.md`;
-  const ref = `- source_url: https://research.example.org/${suffix}\n- acceptance_status: accepted\n- source_type: secondary\n- tier: Tier 2\n- evidence_role: foundation\n- trust_level: practitioner\n- why_it_matters: Rerun continuity fixture.\n- accessed_at: 2026-07-15\n- related_topic: all\n\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nThis fixture is sufficiently substantive to exercise deterministic source and cache contracts without claiming real research quality.\n\n## Relevance To This Research\nRelevant.\n\n## Quotable Terms / Concepts\n- continuity\n\n## Risks And Limitations\n- Fixture only.\n`;
-  writeFileSync(join(bundle, 'artifacts/wave0/topic-a/source.yaml'), source);
-  writeFileSync(join(bundle, refPath), ref);
+  const ref = `---\nsource_url: "https://research.example.org/${suffix}"\nacceptance_status: accepted\nsource_type: secondary\ntier: "Tier 2"\nevidence_role: foundation\ntrust_level: practitioner\nwhy_it_matters: "Rerun continuity fixture."\naccessed_at: "2026-07-15"\nrelated_topic: all\n---\n\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nThis fixture is sufficiently substantive to exercise deterministic source and cache contracts without claiming real research quality.\n\n## Relevance To This Research\nRelevant.\n\n## Quotable Terms / Concepts\n- continuity\n\n## Risks And Limitations\n- Fixture only.\n`;
   writeFileSync(join(bundle, 'reference/README.md'), '# Reference Evidence\n');
-  ensureIndexRow(bundle, `| ${refPath} | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-15 |`);
-  const submitted = submitFixture(bundle, 'wave0', `wave0-${suffix}`, refPath, ref, [{ path: 'artifacts/wave0/topic-a/source.yaml', role: 'source_yaml', content: source }]);
+  const submitted = submitFixture(
+    bundle,
+    'wave0',
+    `wave0-${suffix}`,
+    'artifacts/wave0/topic-a/source.yaml',
+    source,
+    [],
+    { role: 'source_yaml', sourceUrl: `https://research.example.org/${suffix}` },
+  );
+  const refWithBacking = `${ref}\n## Submitted Backing\n- source_identity: ${submitted.record.work_id}/${ordinal}\n- source_yaml_ref: artifacts/wave0/topic-a/source.yaml\n- cache_trail_ref: ${submitted.cache_trails[0]}\n- result_ref: ${submitted.record.paths.result_ref}\n- work_unit_ref: ${submitted.record.paths.work_unit_dir}\n`;
+  persistPhaseReference(bundle, refPath, refWithBacking);
   assert.equal(applyCanonicalTopicState({
     bundlePath: bundle,
     input: {
@@ -110,7 +144,7 @@ function stageWave0(bundle, suffix = 'r1') {
       updates: [{
         slot_id: 'wave0_evidence',
         entries: [{
-          source_identity: { kind: 'submitted_work', work_id: submitted.record.work_id }, entry_id: `${submitted.record.work_id}/1`,
+          source_identity: { kind: 'submitted_work', work_id: submitted.record.work_id }, entry_id: `${submitted.record.work_id}/${ordinal}`,
           evidence_meaning: 'Submitted Wave0 evidence provides the shared continuity foundation.', relationship: 'supports',
           refs: [refPath], status: 'supported', next_hop: 'Read the shared continuity reference first.',
         }],
@@ -123,19 +157,18 @@ function stageWave0(bundle, suffix = 'r1') {
 
 function stageWave1(bundle, suffix = 'r1', { project = true } = {}) {
   mkdirSync(join(bundle, 'artifacts/wave1/topic-a'), { recursive: true });
+  const sourceUrl = `https://research.example.org/${suffix}-deep`;
   const refPath = `reference/topic-a-${suffix}-deepening.md`;
   const returnMap = `- evidence_meaning: Real checkpoints preserve rerun authority.\n  relationship: supports\n  refs:\n    - artifacts/wave1/topic-a/evidence-summary.md\n    - ${refPath}\n  status: supported\n  next_hop: Read the submitted Wave1 projection.\n`;
   const summary = `# Evidence Summary: Topic A\n\n## Source URLs\n- [Continuity](https://research.example.org/${suffix}-deep)\n\n## Key Findings\n1. **Continuity**: Real checkpoints preserve rerun authority.\n\n${returnMap}\n## Open Questions\n1. [开放] Which direction is current?\n`;
   const questions = `# Question List - Topic A\n\n## Topic Investigation Targets\n| target_id | target_question | origin | status | backing_refs | next_action |\n| --- | --- | --- | --- | --- | --- |\n| T01 | Which direction is current? | rerun | 开放 | https://research.example.org/${suffix}-deep | 移交 wave2 |\n\n## Question Reconciliation\n- [部分进展] Count binding is deterministic.\n\n${returnMap}\n## Emergent Question Protocol\n- result: no_new_questions_after_protocol\n\n## Exploration / Exploitation Decision\n- decision: continue\n`;
-  const ref = `- source_url: https://research.example.org/${suffix}-deep\n- acceptance_status: accepted\n- source_type: secondary\n- tier: Tier 2\n- evidence_role: deepening_reference\n- trust_level: practitioner\n- why_it_matters: Deepening fixture.\n- accessed_at: 2026-07-15\n- related_topic: topic-a\n\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nThis deterministic fixture provides sufficient backing for the real Wave1 gate and submitted work-unit contract.\n\n## Relevance To This Research\n${returnMap}\n## Quotable Terms / Concepts\n- binding\n## Risks And Limitations\n- Fixture.\n`;
+  const ref = `---\nsource_url: "${sourceUrl}"\nacceptance_status: accepted\nsource_type: secondary\ntier: "Tier 2"\nevidence_role: deepening_reference\ntrust_level: practitioner\nwhy_it_matters: "Deepening fixture."\naccessed_at: "2026-07-15"\nrelated_topic: topic-a\n---\n\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nThis deterministic fixture provides sufficient backing for the real Wave1 gate and submitted work-unit contract.\n\n## Relevance To This Research\n${returnMap}\n## Quotable Terms / Concepts\n- binding\n## Risks And Limitations\n- Fixture.\n`;
   writeFileSync(join(bundle, 'artifacts/wave1/topic-a/evidence-summary.md'), summary);
   writeFileSync(join(bundle, 'artifacts/wave1/topic-a/question-list.md'), questions);
-  writeFileSync(join(bundle, refPath), ref);
-  ensureIndexRow(bundle, `| ${refPath} | secondary | practitioner | Tier 2 | topic-a | wave1_topic | accepted | 2026-07-15 |`);
   const submitted = submitFixture(bundle, 'wave1', `wave1-${suffix}`, refPath, ref, [
     { path: 'artifacts/wave1/topic-a/evidence-summary.md', role: 'evidence_summary', content: summary },
     { path: 'artifacts/wave1/topic-a/question-list.md', role: 'question_list', content: questions },
-  ]);
+  ], { sourceUrl });
   writeFileSync(join(bundle, 'artifacts/wave1/topic-a/depth-review.yaml'), stringifyYaml({
     version: 'depth-review.v1',
     topic_slug: 'topic-a',
@@ -153,9 +186,16 @@ function stageWave1(bundle, suffix = 'r1', { project = true } = {}) {
     supplementary_queue_item_ids: [],
     carried_targets: [],
   }));
+  const canonical = canonicalWave1ReferencePath({ topicSlug: 'topic-a', sourceUrl });
+  assert.equal(canonical.ok, true, JSON.stringify(canonical));
+  persistPhaseReference(
+    bundle,
+    canonical.path,
+    `${ref}\n## Submitted Backing\n- source_ref: ${refPath}\n- cache_trail_ref: ${submitted.cache_trails[0]}\n- result_ref: ${submitted.record.paths.result_ref}\n- work_unit_ref: ${submitted.record.paths.work_unit_dir}\n`,
+  );
   const packetEntry = (ordinal, evidenceMeaning) => ({
     source_identity: { kind: 'submitted_work', work_id: submitted.record.work_id }, entry_id: `${submitted.record.work_id}/${ordinal}`,
-    evidence_meaning: evidenceMeaning, relationship: 'supports', refs: [refPath], status: 'supported',
+    evidence_meaning: evidenceMeaning, relationship: 'supports', refs: [canonical.path], status: 'supported',
     next_hop: 'Read the submitted Wave1 reference before Wave2 synthesis.',
   });
   if (project) {

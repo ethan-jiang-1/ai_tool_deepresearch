@@ -1,5 +1,5 @@
 // gate-helpers-checks.mjs — Gate rule checks: reference validation and cache_coverage
-// @impl GSK-001, GSK-002, CRC-006, REF-008, WPG-012, RWG-017
+// @impl GSK-001, GSK-002, CRC-006, REF-008, WPG-012, WPG-017, RWG-017
 // Canonical location: DPT_FRAMEWORK/engine/helpers/gate-helpers-checks.mjs
 //
 // Re-exported by gate-helpers.mjs for backward compatibility.
@@ -23,6 +23,15 @@ import {
 } from './cache-leaf-contract.mjs';
 import { makeContractFinding } from './wave-contract-findings.mjs';
 import { normalizeWave1ReferenceUrl } from './reference-url.mjs';
+import { readSubmittedWave0Backing } from '../work-unit-projection.mjs';
+import {
+  extractSection,
+  markdownSemanticSectionEntries,
+  normalizeMarkdownSemanticHeading,
+  parseMarkdownSemanticSections,
+} from './markdown-semantic-sections.mjs';
+
+export { extractSection, parseMarkdownSemanticSections };
 
 function checkerFinding(rule, {
   defaultRuleId,
@@ -225,6 +234,125 @@ function isWave2CrossReference(relPath) {
   return /^reference\/00-cross-[^/]+\.md$/.test(relPath);
 }
 
+function isWave0SharedReference(relPath) {
+  return /^reference\/00-shared-[^/]+\.md$/.test(relPath);
+}
+
+function referenceBody(content) {
+  const text = String(content || '');
+  const frontmatter = text.match(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/);
+  return frontmatter ? text.slice(frontmatter[0].length) : text;
+}
+
+function wave0IdentityMentions(content) {
+  const identities = new Set();
+  const pattern = /\b(wu-[A-Za-z0-9_-]+\/[1-9][0-9]*)\b/g;
+  for (const match of String(content || '').matchAll(pattern)) identities.add(match[1]);
+  return [...identities];
+}
+
+function classifyWave0SharedProjection(bundlePath, relPath, content, sourceUrls) {
+  const normalizedUrls = [...new Set(sourceUrls.map(normalizeUrl).filter(Boolean))];
+  if (normalizedUrls.length !== 1) {
+    return referenceAuthorityFailure({
+      authority: 'unbacked_projection',
+      reasonCode: 'wave0_projection_source_url_ambiguous',
+      reason: `projection_backing_drift: ${relPath} must name one source_url before submitted Wave0 backing can be resolved`,
+      blockingBasis: 'binding_integrity',
+      repairKind: 'agent_action',
+      writeTo: `${resolvePath(bundlePath, relPath)}#metadata.source_url`,
+      missingFact: `${relPath} has ${normalizedUrls.length} distinct source_url values; one exact submitted source identity is required.`,
+    });
+  }
+
+  const body = referenceBody(content);
+  const entryIds = wave0IdentityMentions(body);
+  if (entryIds.length === 0) {
+    return referenceAuthorityFailure({
+      authority: 'unbacked_projection',
+      reasonCode: 'wave0_source_identity_missing',
+      reason: `projection_backing_drift: ${relPath} has no exact <work_id>/<ordinal> submitted Wave0 source identity in its body`,
+      blockingBasis: 'binding_integrity',
+      repairKind: 'agent_action',
+      writeTo: resolvePath(bundlePath, relPath),
+      missingFact: `${relPath} must cite one exact submitted Wave0 source identity in its scannable body; source_url alone is not a selector.`,
+    });
+  }
+  if (entryIds.length > 1) {
+    return referenceAuthorityFailure({
+      authority: 'unbacked_projection',
+      reasonCode: 'wave0_source_identity_ambiguous',
+      reason: `projection_backing_drift: ${relPath} names multiple submitted Wave0 source identities`,
+      blockingBasis: 'binding_integrity',
+      repairKind: 'agent_action',
+      writeTo: resolvePath(bundlePath, relPath),
+      missingFact: `${relPath} names ${entryIds.join(', ')}; a Wave0 consumer projection must bind exactly one source identity.`,
+    });
+  }
+
+  const [entryId] = entryIds;
+  const workId = entryId.slice(0, entryId.lastIndexOf('/'));
+  const backingResult = readSubmittedWave0Backing(bundlePath, {
+    work_id: workId,
+    entry_id: entryId,
+  });
+  if (!backingResult.passed) {
+    const root = backingResult.root_findings?.[0] || {};
+    return referenceAuthorityFailure({
+      authority: 'unbacked_projection',
+      reasonCode: root.rule_id || 'submitted_wave0_backing_unavailable',
+      reason: `projection_backing_drift: ${relPath} cannot resolve submitted Wave0 backing for ${entryId}`,
+      blockingBasis: root.blocking_basis || 'binding_integrity',
+      repairKind: root.repair_kind || 'engine_operation',
+      writeTo: root.write_to || 'Existing Wave0 submitted-backing reader boundary',
+      missingFact: root.missing_fact || `No exact submitted Wave0 backing is available for ${entryId}.`,
+    });
+  }
+
+  const backing = backingResult.backing;
+  if (normalizeUrl(backing.source_url) !== normalizedUrls[0]) {
+    return referenceAuthorityFailure({
+      authority: 'unbacked_projection',
+      reasonCode: 'wave0_submitted_backing_url_mismatch',
+      reason: `projection_backing_drift: ${relPath} source_url does not match submitted source identity ${entryId}`,
+      blockingBasis: 'binding_integrity',
+      repairKind: 'agent_action',
+      writeTo: `${resolvePath(bundlePath, relPath)}#metadata.source_url`,
+      missingFact: `${relPath} source_url does not equal the authenticated submitted URL for ${entryId}.`,
+    });
+  }
+
+  const requiredRefs = [
+    backing.source_yaml_ref,
+    ...backing.cache_trail_refs,
+    backing.result_ref,
+    backing.work_unit_ref,
+  ];
+  const missingRefs = requiredRefs.filter((ref) => !body.includes(ref));
+  if (missingRefs.length > 0) {
+    return referenceAuthorityFailure({
+      authority: 'unbacked_projection',
+      reasonCode: 'wave0_submitted_backing_refs_missing',
+      reason: `projection_backing_drift: ${relPath} lacks scannable submitted Wave0 backing refs`,
+      blockingBasis: 'required_structure',
+      repairKind: 'agent_action',
+      writeTo: resolvePath(bundlePath, relPath),
+      missingFact: `${relPath} must cite the authenticated backing refs for ${entryId}: ${missingRefs.join(', ')}.`,
+    });
+  }
+
+  return {
+    authority: 'phase_owned_projection',
+    passed: true,
+    reason: `Phase-owned Wave0 shared reference is backed by submitted source identity ${entryId}: ${relPath}`,
+    source_identity: {
+      work_id: backing.work_id,
+      entry_id: backing.entry_id,
+      source_ordinal: backing.source_ordinal,
+    },
+  };
+}
+
 function urlsBound(urls, map) {
   if (urls.length === 0) return false;
   return urls.every((url) => map.has(normalizeUrl(url)));
@@ -252,48 +380,6 @@ function referenceAuthorityFailure({
     },
   };
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Markdown Text Utilities
-// ═══════════════════════════════════════════════════════════════════════════
-
-function normalizeMarkdownSemanticHeading(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s*\/\s*/g, ' / ')
-    .replace(/\s+/g, ' ');
-}
-
-function markdownSemanticSectionEntries(mdContent) {
-  const content = String(mdContent || '');
-  const matches = [...content.matchAll(/^[ \t]{0,3}#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*$/gm)];
-  return matches.map((match, index) => ({
-    name: normalizeMarkdownSemanticHeading(match[1]),
-    headingStart: match.index,
-    body: content.slice(
-      match.index + match[0].length,
-      matches[index + 1]?.index ?? content.length,
-    ).trim(),
-  }));
-}
-
-/** Parse Markdown sections by semantic heading, independent of level, case, spacing, or order. */
-export function parseMarkdownSemanticSections(mdContent) {
-  const sections = new Map();
-  for (const entry of markdownSemanticSectionEntries(mdContent)) {
-    if (!sections.has(entry.name) || !sections.get(entry.name)) {
-      sections.set(entry.name, entry.body);
-    }
-  }
-  return sections;
-}
-
-/** Extract a named Markdown section body. */
-export function extractSection(mdContent, sectionName) {
-  return parseMarkdownSemanticSections(mdContent).get(normalizeMarkdownSemanticHeading(sectionName)) || '';
-}
-
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Reference Metadata Constants & Parser
@@ -753,6 +839,10 @@ export function classifyReferenceAuthority(bundlePath, file) {
       passed: true,
       reason: `Existing-backed Wave2 cross reference is a Phase-owned projection: ${relPath}`,
     };
+  }
+
+  if (isWave0SharedReference(relPath)) {
+    return classifyWave0SharedProjection(bundlePath, relPath, content, sourceUrls);
   }
 
   return referenceAuthorityFailure({

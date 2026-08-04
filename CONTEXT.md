@@ -208,6 +208,61 @@ An Engine-written record created by successful Work unit Submit. It is the
 Gate coverage authority for delegated work; filesystem output alone is not.
 _Avoid_: filesystem-only output, hand-written declaration
 
+## Submitted Evidence and Projections
+
+**Submitted Wave0 contribution**:
+One accepted Wave0 ledger/result binding and its declared source/cache facts for
+one Work unit. It owns an interval of source identities in the current valid
+direct source array; a retained prefix remains owned by its original accepted
+contribution across a later rerun append. It is not selected solely by the
+latest `rerun_count`, a bare `work_id`, a filesystem artifact, or aggregate
+source coverage.
+_Avoid_: `submitted_work`, submitted source file, work-unit acknowledgement
+
+**Current-round eligible work-unit projection**:
+A reader for Queue demand coverage from submitted work bound to the current
+rerun. It does not decide ownership of retained Wave0 source identities.
+_Avoid_: Wave0 contribution lineage, source catalog, historical coverage
+
+**Wave0 submitted-contribution lineage**:
+The retained, ledger-ordered Wave0 contributions that own the current direct
+source-array identities. It preserves an original prefix owner and assigns a
+later contribution only its appended suffix; it is distinct from current-round
+Queue demand coverage.
+_Avoid_: current-round eligible projection, aggregate `submitted_work`, source catalog
+
+**Source identity**:
+One exact submitted Wave0 source coordinate, `<work_id>/<ordinal>`. It is not a
+bare work ID, URL, title, or path.
+_Avoid_: work ID, source URL, source record
+
+**`submitted_work` wire discriminator**:
+The serialized `source_identity.kind` value that says an entry originated from
+a Work unit. It is not a submitted contribution, aggregate coverage, or a
+runtime alias.
+_Avoid_: submitted contribution, source identity, aggregate acknowledgement
+
+**Reference**:
+A reader-facing evidence presentation. It may be a legacy delegated output or
+a backed Phase-owned consumer projection; disk or index presence alone is not
+authority.
+_Avoid_: evidence authority, submitted ledger row, source identity
+
+**Consumer projection**:
+Derived reader or navigation output from submitted backing. It does not replace
+ledger, source, cache, or provenance authority.
+_Avoid_: submitted contribution, source catalog, evidence authority
+
+**Seed projection**:
+The topic-state rendering that records one source identity's evidence navigation
+or deferred handling in a Seed Topic. It is distinct from a consumer projection.
+_Avoid_: consumer projection, aggregate work-unit coverage, runtime state
+
+**Deferred disposition**:
+A persisted explanation and next hop bound to one source identity. It is not an
+aggregate acknowledgement, missing coverage, or a Gate status.
+_Avoid_: work-unit deferral, source absence, Gate verdict
+
 ## Interaction Model
 
 **HITL1**:

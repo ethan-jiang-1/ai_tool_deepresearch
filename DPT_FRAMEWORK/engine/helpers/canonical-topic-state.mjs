@@ -1,4 +1,4 @@
-// @impl CTS-001, CTS-002, CTS-003, CTS-004, SCO-013
+// @impl CTS-001, CTS-002, CTS-003, CTS-004, CTS-009, SCO-013
 
 import {
   closeSync, constants, existsSync, fsyncSync, lstatSync, mkdirSync, openSync,
@@ -20,13 +20,14 @@ import { evaluateSeedTopicAuthoring, renderSeedInitializationRegion } from './se
 import { buildResearchStyleApplyCommand, RESEARCH_STYLE_WRITER_PATH } from './research-style-projection.mjs';
 import {
   collectEligibleWorkUnitProjection,
-  collectEligibleWave0CandidateProjection,
+  collectSubmittedWave0ContributionProjection,
   readProjectionProfileRound,
 } from '../work-unit-projection.mjs';
 import { loadWave2FindingIndexFact } from './wave-depth-contracts.mjs';
 import {
   PROJECTION_ENTRY_FIELDS,
   evaluateProjectionEntryNavigation,
+  isAcceptedDeferredProjectionEntry,
   parseProjectionEntryArea,
   upsertProjectionEntryArea,
 } from './projection-entry-contract.mjs';
@@ -343,12 +344,28 @@ const ProjectionUpdateSchema = z.object({
   slot_id: z.enum(SEED_TOPIC_PROJECTION_SLOTS.map((slot) => slot.slotId)),
   entries: z.array(ProjectionEntrySchema).min(1),
 }).strict();
+const Wave0DeferredContributionSchema = z.object({
+  source_identity: z.object({
+    kind: z.literal('submitted_work'),
+    work_id: z.string().regex(/^wu-w[0-9]+-b[0-9]{3}-[a-z][a-z0-9]{1,7}-i[0-9]{4}$/),
+  }).strict(),
+  evidence_meaning: ProjectionTextSchema,
+  next_hop: ProjectionTextSchema,
+}).strict();
+const Wave0DeferredProjectionUpdateSchema = z.object({
+  slot_id: z.literal('wave0_evidence'),
+  deferred_contribution: Wave0DeferredContributionSchema,
+}).strict();
+const ProjectionPacketUpdateSchema = z.union([
+  ProjectionUpdateSchema,
+  Wave0DeferredProjectionUpdateSchema,
+]);
 const ProjectionPacketSchema = z.object({
   context: z.literal('wave_projection'),
   action: z.literal('apply_seed_projection'),
   topic_uid: z.string().min(1),
   wave: z.enum(['wave0', 'wave1', 'wave2']),
-  updates: z.array(ProjectionUpdateSchema).min(1),
+  updates: z.array(ProjectionPacketUpdateSchema).min(1),
 }).strict().superRefine((packet, issue) => {
   const seenSlots = new Set();
   for (const [updateIndex, update] of packet.updates.entries()) {
@@ -359,6 +376,12 @@ const ProjectionPacketSchema = z.object({
     const slot = projectionSlotForId(update.slot_id);
     if (!slot?.ownerWaves.includes(packet.wave)) {
       issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates', updateIndex, 'slot_id'], message: `${update.slot_id} is not owned by ${packet.wave}` });
+    }
+    if (Object.hasOwn(update, 'deferred_contribution')) {
+      if (packet.wave !== 'wave0') {
+        issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates', updateIndex, 'deferred_contribution'], message: 'deferred_contribution is available only in a Wave0 Projection Packet' });
+      }
+      continue;
     }
     const seenEntries = new Set();
     for (const [entryIndex, entry] of update.entries.entries()) {
@@ -1039,23 +1062,23 @@ function validateProjectionAuthority(bundle, canonical, input, topic) {
     topic_registry: canonical.topic_registry,
     layouts: evaluateTopicLayouts(canonical.topic_registry),
   };
-  const entries = input.updates.flatMap((update) => update.entries);
+  const entries = input.updates.flatMap((update) => update.entries || []);
   if (input.wave === 'wave2') {
     validateWave2ProjectionAuthority(bundle, topicRegistryFact, topic.topic_uid, entries);
     return { topicRegistryFact };
   }
   if (input.wave === 'wave0') {
-    const candidateProjection = collectEligibleWave0CandidateProjection(bundle, { topicRegistryFact });
+    const candidateProjection = collectSubmittedWave0ContributionProjection(bundle, { topicRegistryFact });
     if (!candidateProjection.passed) {
       const root = candidateProjection.root_findings?.[0];
-      throw projectionError(root?.rule_id || 'submitted_source_contribution', root?.missing_fact || 'Current submitted Wave0 source contribution authority is unavailable.');
+      throw projectionError(root?.rule_id || 'submitted_source_contribution', root?.missing_fact || 'Submitted Wave0 source-contribution lineage authority is unavailable.');
     }
     const eligibleCandidateIds = new Set(candidateProjection.candidates
       .filter((candidate) => candidate.topic_uid === topic.topic_uid)
       .map((candidate) => candidate.entry_id));
     for (const entry of entries) {
       if (!eligibleCandidateIds.has(entry.entry_id)) {
-        throw projectionError('projection_source_identity_not_current', `${entry.entry_id} is not a current contribution-owned Wave0 source identity for ${topic.topic_uid}.`);
+        throw projectionError('projection_source_identity_not_current', `${entry.entry_id} is not a retained contribution-owned Wave0 source identity for ${topic.topic_uid}.`);
       }
     }
     return { topicRegistryFact, candidateProjection };
@@ -1074,6 +1097,130 @@ function validateProjectionAuthority(bundle, canonical, input, topic) {
   return { topicRegistryFact, eligible };
 }
 
+function projectionSlotTarget(seed, slot) {
+  const candidates = locateSeedProjectionSlots(seed.body, { slotIds: [slot.slotId] }).filter((occurrence) => (
+    occurrence.slotId === slot.slotId
+    && (occurrence.headingKind === 'legacy' || splitSeedProjectionCard(occurrence.content, slot))
+  ));
+  if (candidates.length === 0) {
+    throw projectionError('seed_projection_layout_missing', `${slot.slotId} has no unique recognized canonical/card or declared legacy write target.`);
+  }
+  if (candidates.length > 1) {
+    throw projectionError('seed_projection_layout_ambiguous', `${slot.slotId} has multiple recognized write targets.`);
+  }
+  return candidates[0];
+}
+
+function projectionTargetEntryArea(target, slot) {
+  const card = target.headingKind === 'canonical' ? splitSeedProjectionCard(target.content, slot) : null;
+  return card ? card.entryArea : target.content;
+}
+
+function deferredContributionEntry(workId, candidate, deferred) {
+  return {
+    source_identity: { kind: 'submitted_work', work_id: workId },
+    entry_id: candidate.entry_id,
+    evidence_meaning: deferred.evidence_meaning,
+    relationship: 'defers',
+    refs: ['none'],
+    status: 'deferred',
+    next_hop: deferred.next_hop,
+  };
+}
+
+function entryField(entry, field) {
+  return String(entry?.fields?.[field] || '').trim();
+}
+
+function isEquivalentDeferredContributionEntry(existing, expected) {
+  return existing?.metadata?.entry_id === expected.entry_id
+    && isAcceptedDeferredProjectionEntry(existing)
+    && entryField(existing, 'evidence_meaning') === expected.evidence_meaning
+    && entryField(existing, 'relationship').toLowerCase() === 'defers'
+    && entryField(existing, 'refs').toLowerCase() === 'none'
+    && entryField(existing, 'status').toLowerCase() === 'deferred'
+    && entryField(existing, 'next_hop') === expected.next_hop;
+}
+
+function expandWave0DeferredContribution(bundle, canonical, input, topic, seed) {
+  const update = input.updates[0];
+  if (!Object.hasOwn(update, 'deferred_contribution')) {
+    return { input, deferred_contribution: null };
+  }
+
+  const deferred = update.deferred_contribution;
+  const topicRegistryFact = {
+    topic_registry: canonical.topic_registry,
+    layouts: evaluateTopicLayouts(canonical.topic_registry),
+  };
+  const candidateProjection = collectSubmittedWave0ContributionProjection(bundle, { topicRegistryFact });
+  if (!candidateProjection.passed) {
+    const root = candidateProjection.root_findings?.[0];
+    throw projectionError(root?.rule_id || 'submitted_source_contribution', root?.missing_fact || 'Submitted Wave0 source-contribution lineage authority is unavailable.');
+  }
+
+  const selectedWorkId = deferred.source_identity.work_id;
+  const selectedCandidates = candidateProjection.candidates
+    .filter((candidate) => candidate.work_id === selectedWorkId && candidate.topic_uid === topic.topic_uid)
+    .sort((left, right) => left.source_ordinal - right.source_ordinal);
+  if (selectedCandidates.length === 0) {
+    const boundElsewhere = candidateProjection.candidates.some((candidate) => candidate.work_id === selectedWorkId);
+    throw projectionError(
+      boundElsewhere ? 'projection_deferred_contribution_cross_topic' : 'projection_deferred_contribution_not_current',
+      boundElsewhere
+        ? `${selectedWorkId} is not a retained submitted Wave0 contribution for ${topic.topic_uid}.`
+        : `${selectedWorkId} is not a retained submitted Wave0 contribution with exact source identities for ${topic.topic_uid}.`,
+    );
+  }
+
+  const generated = selectedCandidates.map((candidate) => deferredContributionEntry(selectedWorkId, candidate, deferred));
+  if (!isAcceptedDeferredProjectionEntry({ fields: {
+    relationship: 'defers',
+    refs: 'none',
+    status: 'deferred',
+    next_hop: deferred.next_hop,
+  } })) {
+    throw projectionError('projection_deferred_contribution_limitation_invalid', 'deferred_contribution.next_hop must satisfy the accepted deferred-limitation rule.');
+  }
+
+  const slot = projectionSlotForId('wave0_evidence');
+  const target = projectionSlotTarget(seed, slot);
+  const parsed = parseProjectionEntryArea(projectionTargetEntryArea(target, slot));
+  const existingById = new Map();
+  for (const entry of parsed.entries) {
+    const entryId = entry?.metadata?.entry_id;
+    if (!entryId) continue;
+    const matches = existingById.get(entryId) || [];
+    matches.push(entry);
+    existingById.set(entryId, matches);
+  }
+
+  const entries = [];
+  for (const expected of generated) {
+    const existing = existingById.get(expected.entry_id) || [];
+    if (existing.length > 1 || (existing.length === 1 && !isEquivalentDeferredContributionEntry(existing[0], expected))) {
+      throw projectionError(
+        'projection_deferred_contribution_collision',
+        `${expected.entry_id} already has a different persisted Wave0 projection disposition; contribution-scoped deferred input cannot overwrite it.`,
+        { coordinate: `seed_topics/${topic.slug}.md#${expected.entry_id}` },
+      );
+    }
+    if (existing.length === 0) entries.push(expected);
+  }
+
+  return {
+    input: {
+      ...input,
+      updates: [{ slot_id: 'wave0_evidence', entries }],
+    },
+    deferred_contribution: {
+      work_id: selectedWorkId,
+      entry_ids: generated.map((entry) => entry.entry_id),
+      newly_materialized_entry_ids: entries.map((entry) => entry.entry_id),
+    },
+  };
+}
+
 function buildWaveProjectionMutation(bundle, current, input) {
   const canonical = CanonicalPlanSchema.parse(current);
   const topic = canonical.topic_registry.find((candidate) => candidate.topic_uid === input.topic_uid);
@@ -1082,29 +1229,27 @@ function buildWaveProjectionMutation(bundle, current, input) {
   if (!binding?.ok) throw projectionError('projection_seed_binding_invalid', `Current seed binding is unavailable for ${topic.topic_uid}: ${binding?.reason_code || 'missing'}.`);
   const seed = readSeed(bundle, topic.slug);
   if (!seed.exists) throw projectionError('projection_seed_missing', `Current seed is missing for ${topic.slug}.`);
-  validateProjectionAuthority(bundle, canonical, input, topic);
+  const expanded = input.wave === 'wave0'
+    ? expandWave0DeferredContribution(bundle, canonical, input, topic, seed)
+    : { input, deferred_contribution: null };
+  const projectionInput = expanded.input;
+  validateProjectionAuthority(bundle, canonical, projectionInput, topic);
   const referenceFact = readProjectionReferenceFact(bundle);
-  for (const update of input.updates) for (const entry of update.entries) validateProjectionEntryNavigation(entry, referenceFact);
+  for (const update of projectionInput.updates) for (const entry of update.entries) validateProjectionEntryNavigation(entry, referenceFact);
 
-  const occurrences = locateSeedProjectionSlots(seed.body, { slotIds: input.updates.map((update) => update.slot_id) });
   const replacements = [];
-  for (const update of input.updates) {
+  for (const update of projectionInput.updates) {
     const slot = projectionSlotForId(update.slot_id);
-    if (!slot?.ownerWaves.includes(input.wave)) {
-      throw projectionError('projection_slot_not_owned', `${update.slot_id} is not owned by ${input.wave}.`);
+    if (!slot?.ownerWaves.includes(projectionInput.wave)) {
+      throw projectionError('projection_slot_not_owned', `${update.slot_id} is not owned by ${projectionInput.wave}.`);
     }
-    const candidates = occurrences.filter((occurrence) => occurrence.slotId === slot.slotId && (
-      occurrence.headingKind === 'legacy' || splitSeedProjectionCard(occurrence.content, slot)
-    ));
-    if (candidates.length === 0) throw projectionError('seed_projection_layout_missing', `${slot.slotId} has no unique recognized canonical/card or declared legacy write target.`);
-    if (candidates.length > 1) throw projectionError('seed_projection_layout_ambiguous', `${slot.slotId} has multiple recognized write targets.`);
-    replacements.push(materializeProjectionSlot(seed.body, candidates[0], slot, update.entries));
+    replacements.push(materializeProjectionSlot(seed.body, projectionSlotTarget(seed, slot), slot, update.entries));
   }
   let body = seed.body;
   for (const replacement of replacements.sort((left, right) => right.startOffset - left.startOffset)) {
     body = `${body.slice(0, replacement.startOffset)}${replacement.replacement}${body.slice(replacement.endOffset)}`;
   }
-  assertProjectionPostcondition(body, input, referenceFact);
+  assertProjectionPostcondition(body, projectionInput, referenceFact);
   const header = seed.raw.slice(0, seed.raw.length - seed.body.length);
   return {
     plan: current,
@@ -1112,7 +1257,12 @@ function buildWaveProjectionMutation(bundle, current, input) {
     cleanup_files: [],
     affected_topic_uids: [topic.topic_uid],
     selected_topic: topic,
-    projection: { wave: input.wave, topic_uid: topic.topic_uid, slots: input.updates.map((update) => update.slot_id) },
+    projection: {
+      wave: projectionInput.wave,
+      topic_uid: topic.topic_uid,
+      slots: projectionInput.updates.map((update) => update.slot_id),
+      ...(expanded.deferred_contribution ? { deferred_contribution: expanded.deferred_contribution } : {}),
+    },
   };
 }
 
@@ -1711,6 +1861,7 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
         action: 'apply_seed_projection', wave: mutation.projection.wave,
         topic_uid: mutation.projection.topic_uid, slots: mutation.projection.slots,
         path: `seed_topics/${mutation.selected_topic.slug}.md`,
+        ...(mutation.projection.deferred_contribution ? { deferred_contribution: mutation.projection.deferred_contribution } : {}),
       } : {}),
     };
   }
@@ -1747,6 +1898,7 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
       topic_uid: mutation.projection.topic_uid,
       slots: mutation.projection.slots,
       path: `seed_topics/${mutation.selected_topic.slug}.md`,
+      ...(mutation.projection.deferred_contribution ? { deferred_contribution: mutation.projection.deferred_contribution } : {}),
     } : result;
   } catch (error) {
     if (!error.preserveWorkspace) { rmSync(workspace, { recursive: true, force: true }); fsyncPath(root); }

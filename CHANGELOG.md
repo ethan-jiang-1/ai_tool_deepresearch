@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.69
+
+- Wave0 source intake now submits source/cache facts only. Formal submitted
+  backing lets the Phase materialize verified shared references or atomically
+  expand one deferred disposition into per-source Seed Projections, then rerun
+  the same inspect/Gate; legacy delegated references remain readable and files,
+  indexes, or bare work IDs never become authority.
+
 ## v0.68
 
 - The selected DeepSeek/Claude launcher now enables its owned tool-discovery setting

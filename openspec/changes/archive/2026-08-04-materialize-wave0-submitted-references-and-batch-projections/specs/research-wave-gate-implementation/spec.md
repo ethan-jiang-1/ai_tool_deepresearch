@@ -4,7 +4,7 @@
 
 ### Requirement: Wave0 shared-reference convergence SHALL evaluate submitted backing before a floor verdict
 
-Wave0 inspect and formal Gate SHALL consume one shared, side-effect-free convergence result before reporting a `shared_ref_count_floor` deficit. The evaluator SHALL combine the existing current canonical topic/layout facts, profile floor, submitted Wave0 source contributions, authenticated source/cache/work-unit facts, legacy delegated reference coverage, Phase-owned projection coverage, reference/index navigation facts, and existing numeric count result without creating a second ledger, source catalog, parser, controller, or persistent status.
+Wave0 inspect and formal Gate SHALL consume one shared, side-effect-free convergence result before reporting a `shared_ref_count_floor` deficit. The evaluator SHALL combine the existing current canonical topic/layout facts, profile floor, ledger-ordered retained Wave0 source-contribution prefixes through the current rerun, authenticated source/cache/work-unit facts, legacy delegated reference coverage, Phase-owned projection coverage, reference/index navigation facts, and existing numeric count result without creating a second ledger, source catalog, parser, controller, or persistent status. Generic current-round work eligibility remains separate demand coverage and SHALL NOT reassign a retained prefix identity.
 
 For each relevant source identity, the convergence result SHALL distinguish: valid legacy delegated coverage; valid Phase-owned projection coverage; a materializable submitted source contribution; invalid, ambiguous, superseded, or unsubmitted backing; genuinely missing acquisition coverage; and a true remaining shared-reference floor deficit. Its materialization outcome SHALL include only bounded exact backing and target coordinates needed for the Phase Agent to author one legal consumer projection and rerun the same inspect. Gate execution SHALL remain read-only and SHALL not select source relevance, author a reference, mutate an index, or convert a candidate into authority.
 
@@ -28,3 +28,9 @@ When a materializable candidate exists, inspect and Gate SHALL expose that candi
 - **WHEN** one submitted Wave0 source identity is materializable and a separate shared reference has malformed or unsubmitted backing
 - **THEN** the materialization result SHALL suppress only its own later convergence floor outcome
 - **AND** the separate invalid-backing root SHALL remain a primary blocking diagnostic
+
+#### Scenario: later rerun append keeps prior backing and exposes only its new identity
+
+- **WHEN** one accepted prior contribution owns a retained source prefix and a current rerun accepts a strictly longer source array at the same canonical target
+- **THEN** inspect and Gate SHALL retain the prior contribution's identities and expose the later work unit only for its appended interval
+- **AND** they SHALL not invalidate a correctly backed prior Phase-owned reference solely because that work unit is not current-round demand coverage

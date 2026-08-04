@@ -29,6 +29,13 @@ Phase-owned materialization is legal only after submitted backing exists. The re
 
 Wave1 topic references use `source_url` from submitted `wave1_topic_deepening` backing. Existing-backed `00-cross` references use a primary prior accepted backing source URL in `source_url`, then list additional prior-wave source/cache/work-unit refs plus `finding-index.yaml` and `cross-topic-ledger.md` refs in the body. If a `00-cross` reference claims a newly fetched public source, it must bind to submitted `wave2_targeted_evidence` coverage.
 
+For Wave0, only the Phase Agent may materialize `00-shared-<slug>.md` after
+formal submit and a Wave0 convergence result returns one exact submitted source
+identity. Its `source_url` plus scannable body must name `<work_id>/<ordinal>`
+and the returned source-YAML, cache, result, and work-unit refs. The current
+source-intake actor does not write this file, and a URL, bare work ID, file, or
+index row alone cannot select its backing.
+
 For Wave1, obtain `reference/{current-topic.slug}-{deterministic-source-qualifier}.md` from the canonical locator using one manifest-snapshot-bound submitted backing candidate. Its normalized metadata `source_url` and body refs must bind to that exact candidate's submitted source, cache/degraded trail, and work-unit coordinates. `NN-wave1-*` is legacy navigation history and a current Topic file with another name is a repair diagnostic; neither can satisfy current coverage. After persistence, run `sync-reference-index`; never hand-append index rows.
 
 When the Phase Agent materializes a backed reference projection, write the complete file to a retained staging path first, then commit it with `operate-artifact-persistence.mjs persist` using `--expect-absent` or the observed target SHA-256. Consume the JSON verdict before updating `_INDEX.md`. This durability step does not create backing or delegated authority; the submitted source/cache/work-unit contract above remains decisive.

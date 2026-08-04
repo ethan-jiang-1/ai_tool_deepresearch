@@ -39,6 +39,10 @@ import {
   canonicalWave1ReferencePath,
   evaluateWave1ReferenceTopic,
 } from './wave1-reference-convergence.mjs';
+import {
+  evaluateWave0ReferenceConvergence,
+  WAVE0_SHARED_REFERENCE_TARGET,
+} from './wave0-reference-convergence.mjs';
 import { selectWave1CarriedTargetReceipt } from './wave-carried-target-receipts.mjs';
 import { checkPhaseQueueDrained } from './phase-queue-drain.mjs';
 import { evaluateRerunDirection } from './rerun-direction.mjs';
@@ -220,6 +224,58 @@ function wave1ReferenceConvergenceFinding(bundlePath, rule, topic, outcome) {
         ? (isExistingSupplementary ? 'Execute the existing supplementary Wave1 demand, then rerun this checkpoint.' : 'Enqueue one bounded supplementary Wave1 demand with the returned payload, then rerun this checkpoint.')
         : 'Materialize the indicated canonical reference projection from its submitted backing, then rerun this checkpoint.',
     detail: `[${root}] ${detail}`,
+  });
+}
+
+function wave0MaterializationWriteTo(backing) {
+  return [
+    `Phase-owned Wave0 consumer projection target: ${WAVE0_SHARED_REFERENCE_TARGET}`,
+    `source_identity=${backing.entry_id}`,
+    `source_url=${backing.source_url}`,
+    `source_yaml_ref=${backing.source_yaml_ref}`,
+    `cache_trail_refs=[${coordinateList(backing.cache_trail_refs)}]`,
+    `result_ref=${backing.result_ref}`,
+    `work_unit_ref=${backing.work_unit_ref}`,
+  ].join('; ');
+}
+
+function wave0ReferenceConvergenceFinding(bundlePath, rule, outcome) {
+  if (outcome.outcome === 'materialize_projection') {
+    const backing = outcome.backing;
+    return makeContractFinding({
+      id: `wave0_submitted_reference_materialization:${backing.entry_id}`,
+      ruleId: 'wave0_submitted_reference_materialization',
+      findingSource: 'checker',
+      classification: 'blocking',
+      blockingBasis: 'binding_integrity',
+      surface: WAVE0_SHARED_REFERENCE_TARGET,
+      expected: `At least ${outcome.required} countable Wave0 shared reference projection(s) with exact submitted backing.`,
+      observed: { observed: outcome.observed, required: outcome.required, deficit: outcome.deficit, entry_id: backing.entry_id },
+      missingFact: `Submitted Wave0 source identity ${backing.entry_id} is materializable as one Phase-owned shared consumer projection before a shared-reference floor verdict.`,
+      repairKind: 'agent_action',
+      writeTo: wave0MaterializationWriteTo(backing),
+      repair: 'Use the exact submitted backing to materialize one Phase-owned Wave0 consumer projection, synchronize the reference index, then rerun the same Wave0 inspect.',
+      detail: `[wave0_submitted_reference_materialization] ${backing.entry_id} is exact submitted Wave0 backing available for Phase-owned materialization before the shared-reference floor.`,
+      checkpointContext: { wave0_reference_convergence: outcome.outcome, source_identity: backing.entry_id },
+    });
+  }
+
+  const missingAcquisition = outcome.outcome === 'missing_acquisition';
+  const detail = missingAcquisition
+    ? 'No current submitted Wave0 source contribution is available to materialize a shared consumer projection.'
+    : `Wave0 shared-reference floor remains ${outcome.observed}/${outcome.required}; deficit ${outcome.deficit} after submitted-reference convergence.`;
+  return makeDefinitionRuleFinding({
+    rule,
+    bundlePath,
+    surface: WAVE0_SHARED_REFERENCE_TARGET,
+    expected: `At least ${outcome.required} countable submitted or exact submitted-backed Wave0 shared reference projection(s).`,
+    observed: { observed: outcome.observed, required: outcome.required, deficit: outcome.deficit, outcome: outcome.outcome },
+    missingFact: detail,
+    repair: missingAcquisition
+      ? 'Acquire and formally submit source/cache facts through the current source-only Wave0 work-unit contract, then rerun this same Wave0 inspect for submitted-backing materialization.'
+      : 'Acquire a new source-only Wave0 contribution through the legal work-unit path, then rerun this same Wave0 inspect; do not restore a delegated rich-reference output route.',
+    detail: `[${rule.id}] ${detail}`,
+    checkpointContext: { wave0_reference_convergence: outcome.outcome },
   });
 }
 
@@ -483,6 +539,8 @@ export function evaluateWave0Contract(bundlePath, definition, { topicRegistryFac
   const maskedRuleIds = [];
   const sourceStates = new Map();
   const directResults = new Map();
+  let sharedReferenceFloorRule = null;
+  let wave0ReferenceConvergence = null;
   let layouts;
   try {
     layouts = topicRegistryFact?.wave_layouts || topicLayouts(bundlePath);
@@ -508,6 +566,10 @@ export function evaluateWave0Contract(bundlePath, definition, { topicRegistryFac
 
   for (const rule of definition.rules) {
     if (rule.check === 'placeholder' || rule.check === 'trace_event_present') continue;
+    if (rule.id === 'shared_ref_count_floor' && rule.check === 'count_floor') {
+      sharedReferenceFloorRule = rule;
+      continue;
+    }
     if (declarationGap && ruleDependsOnSubmittedDeclaration(rule, declarationGap.parentRule)) continue;
     const targets = expandRuleTargets(bundlePath, rule, layouts);
 
@@ -611,7 +673,44 @@ export function evaluateWave0Contract(bundlePath, definition, { topicRegistryFac
     }
   }
 
-  return buildContractEvaluation({ checksRun, findings, maskedRuleIds, bypassSuspicion });
+  if (sharedReferenceFloorRule && !declarationGap) {
+    const sourcePrerequisitesReady = layouts.every((layout) => sourceStates.get(layout.topic) === 'valid');
+    const submittedAuthorityBlocked = findings.some((finding) => new Set([
+      'wave0_work_unit_ledger_exists',
+      'wave0_work_unit_output_coverage',
+      'wave0_work_unit_submission_presence',
+    ]).has(finding.rule_id));
+    if (!sourcePrerequisitesReady || submittedAuthorityBlocked) {
+      maskedRuleIds.push(sharedReferenceFloorRule.id);
+    } else {
+      checksRun += 1;
+      try {
+        wave0ReferenceConvergence = evaluateWave0ReferenceConvergence(bundlePath, {
+          topicRegistryFact,
+          requiredFloor: resolveThreshold(sharedReferenceFloorRule, readBundleProfile(bundlePath)),
+          targetGlobs: [sharedReferenceFloorRule.target],
+        });
+        findings.push(...(wave0ReferenceConvergence.independent_findings || []));
+        if (wave0ReferenceConvergence.outcome === 'parent_root') {
+          findings.push(...(wave0ReferenceConvergence.root_findings || []));
+        } else if (wave0ReferenceConvergence.outcome !== 'satisfied') {
+          findings.push(wave0ReferenceConvergenceFinding(bundlePath, sharedReferenceFloorRule, wave0ReferenceConvergence));
+        }
+      } catch (error) {
+        findings.push(configurationFinding(
+          bundlePath,
+          sharedReferenceFloorRule,
+          `Error evaluating Wave0 submitted-reference convergence: ${safeMessage(error)}`,
+          safeMessage(error),
+        ));
+      }
+    }
+  }
+
+  return {
+    ...buildContractEvaluation({ checksRun, findings, maskedRuleIds, bypassSuspicion }),
+    wave0_reference_convergence: wave0ReferenceConvergence,
+  };
 }
 
 export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFact = null } = {}) {
