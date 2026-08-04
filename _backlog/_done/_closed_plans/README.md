@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-08-03 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-08-05 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -68,5 +68,6 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-044 | 2026-08-01 | session-drift-guardrail-analysis/ | 唯一建议 `establish-openspec-change-feedback-loop` 已 archive：operation guidance 推送 review、finding 进入 tasks、governance finalizer 闭合 archive；Tier-A/Tier-B validator、SessionStart hook 与 guidance 搬迁均明确不采用。 |
 | CLS-045 | 2026-08-03 | experiment-progressive-run-plan.md | P0-P5 的 bounded progressive execution、case-local repair 和 policy review 已结束；future-triggered host access、fresh real-actor requalification 与 profile-led refresh 移至独立 dormant intake plan，不保留自动运行。 |
 | CLS-046 | 2026-08-03 | experiment-progressive-run-strategy.md + experiment-progressive-run-strategy/ | Phase 0 的历史测量与 57 个报告附件；静态 Wave/tier 路线已被 CLS-045 的 profile-driven completed round 取代，保留为证据而非活跃执行指令。 |
+| CLS-047 | 2026-08-05 | bug-187-199-systemic-remediation-plan.md | C1-C4 OpenSpec routes archived; E1 host UX and E2 current-head Actor tracks classified as bounded host/Actor residuals. Case-164 native checks passed while its Supervisor timeout remained separate; case-232 honestly finalized NOT_RUN for missing host search capability. |
 
-**Next available plan ID: CLS-047**
+**Next available plan ID: CLS-048**

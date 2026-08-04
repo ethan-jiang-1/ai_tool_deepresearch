@@ -91,10 +91,11 @@ search/fetch surface 做一次 neutral capability-only search，确认工具确�
    `rb_status.json` 或 `_diagnostics/` 中，而不是和用户的 HITL 决策放在
    `rb_profile.yaml` 同一文件。或者至少给这个 section 加一个 `# 以下为框架自动探测结果，非用户决策` 注释。
 
-## C4 实施状态（2026-08-05）
+## C4 实施与归档状态（2026-08-05）
 
 `legible-hitl1-capability-probe` 已完成 target implementation、accepted-spec
-sync、project governance 和 closeout review；governed archive 仍 pending。它在
+sync、project governance、closeout review，并通过 governed finalizer 归档为
+`2026-08-05-legible-hitl1-capability-probe`（8/8 checks passed）。它在
 `brief/hitl1.md` 增加固定的中文 probe 前提示与
 available/unavailable 结果，在 `phase-hitl1.md` 固定
 `site:wikipedia.org "Internet protocol suite"` query，并把结果严格放在
@@ -107,6 +108,22 @@ change's verification-routing asset check passed. This proves the Phase/brief
 Markdown wording and ordering contract only. It does not prove selected-host
 tool/error rendering, actual provider availability, or real Agent adherence.
 
-Remaining boundary: a separately authorized retained HITL1 observation is still
-required to classify raw native tool-log visibility. C4 must still complete the
-governed archive transition before this card can be closed.
+The selected-host observation has now been attempted and classified below. Static
+Markdown evidence and this host-boundary result do not prove selected-host
+rendering or real-Agent adherence; the deterministic C4 implementation and archive
+lifecycle are complete.
+
+## C4 真实观察结果（2026-08-05）
+
+`case-115-heavy-hitl1-research-access-probe` 使用当前
+`deepseek_anthropic_compatible` host 和真实 Subject Agent 运行。Subject 已加载
+当前 `phase-hitl1.md`，并输出固定 query 对应的“访问不可用”结果；但当前 Claude
+CLI context 没有可调用的 `WebSearch` surface，host policy 也拒绝写入
+`rb_profile.yaml` 与执行 HITL1 Gate。因此 native completion 为 `NOT_RUN`，而不是
+available/unavailable Gate verdict；profile 保持 `research_access: unprobed`，health
+为 CLEAN，没有 native tool-log rendering 可供评估。
+
+本次结果的分类是 **selected-host capability residual**，不是 C4 framework
+regression，也不能证明 C4 PASS。批次 `bf4bbc95-e66d-4554-b4ab-167f18856a5e`
+已保留 prompt、transcript、Subject result、completion 和 disposable bundle；只有
+在宿主提供声明的 search surface 及可写 runtime path 后，才有意义重跑同一个 case。

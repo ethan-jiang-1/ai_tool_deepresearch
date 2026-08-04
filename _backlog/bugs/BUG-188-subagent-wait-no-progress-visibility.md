@@ -132,3 +132,24 @@ Agent 在 wait 期间没有任何 user-visible progress，用户（或 Agent 自
 所以本 bug 的严重度进一步下调为**纯 UX 可见性问题**（P3）：功能上无缺陷，
 只是等待期间 TUI 没有任何进度提示，用户无法区分 "waiting（正常）" 和
 "frozen（异常）"。sub-agent 一旦返回，执行自动恢复。
+
+## Selected-host observation (2026-08-05)
+
+The bounded interactive `case-406-heavy-real-subagent-boundary` run used the
+selected Claude-compatible host with exact batch
+`b963a31b-c6f7-4ddd-ba20-1c3600d46c99` and run root
+`/Users/bowhead/ai_tool_deepresearch/.exp-bundles/runs/b963a31b-c6f7-4ddd-ba20-1c3600d46c99/001-case-406-heavy-real-subagent-boundary-81264b4d-045d-4d13-b0d6-cb7248728c34/`.
+The native `dpt-source-intake` Sub-agent was available and was launched. The
+host TUI showed a background-agent row, elapsed time/token count, a waiting
+indicator, and spinner updates, so the historical claim of a completely static
+display was not reproduced on this host.
+
+The run is not Actor completion evidence. The Supervisor timed out after
+`300108ms` with `lifecycle_outcome: ERROR`, `native_outcome: null`, and
+`reason: agent_timeout`. The work unit was claimed, but the exact bundle has an
+empty `runtime-receipt.jsonl`, no `result.json`, and no native completion. Its
+`rb_trace.jsonl` contains setup/claim facts only and no progress event. The
+current conclusion is a host UX residual: the host has display-only wait status,
+but this run did not establish an authoritative progress channel that the
+Engine or Agent Flow can consume. No DPT wait controller or silent-execution
+exception is admitted from this observation.

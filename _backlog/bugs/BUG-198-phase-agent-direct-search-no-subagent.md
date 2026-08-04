@@ -102,3 +102,20 @@ Agent 接受反馈后改 spawn `dpt-claim-verifier` sub-agent。但此时主 Age
 - Agent 在 Wave2 上下文做了两次 direct WebSearch，均被 interrupt
 - User explicitly corrected: "即便是搜索，你也应该用 sub agent 呀"
 - Agent 改 spawn 2 个 `dpt-claim-verifier` sub-agent（正确路径）
+
+## Current-head requalification boundary (2026-08-05)
+
+The real `case-164-heavy-direct-output-candidate-contract` replay does not
+cover this card. It exercises a Wave1 delegated child replacement and does not
+enter degraded Wave2 synthesis or observe a Phase Agent issuing direct
+`WebSearch`/`WebFetch` for new evidence. Its native PASS cannot establish
+compliance with the Wave2 `work_unit_required_for_new_evidence` boundary.
+
+A separate current-head `case-232-heavy-finding-triage` did load the production
+Wave2 node, but the selected host provided no callable real search surface. The
+Subject timed out with zero search/fetch requests and native completion
+`NOT_RUN`; therefore no direct-search behavior was observed and no compliance
+claim is possible. Classify this card as a selected-host capability residual,
+not a fixed behavior. Re-run only after the host state changes and a bounded
+degraded Wave2 objective is authorized; do not add search interception from
+these observations.

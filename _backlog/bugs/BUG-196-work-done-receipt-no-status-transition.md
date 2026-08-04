@@ -1,6 +1,6 @@
 # BUG-196: work_done receipt event does not transition work unit status from "claimed"
 
-**Status**: open
+**Status**: residual — current-head real replay reached semantic validation; no current deterministic root admitted
 **Severity**: P1 — causes dry-submit to return return_to_actor even after sub-agent completion
 **Found**: 2026-08-03 during `agentic-rd-org-delivery-systems-2026` Wave1 execution
 
@@ -26,3 +26,18 @@ The Engine does not treat `work_done` receipt events as status transitions. The 
 - `work_done` receipt event should transition status to `work_done` or at least make dry-submit treat the attempt as ready-for-review
 - `return_to_actor` should only appear when `work_done` is absent from the receipt AND status is `claimed`
 - If `work_done` IS present, dry-submit should proceed to content validation rather than telling Phase Agent to wait for the actor
+
+## Current-head requalification (2026-08-05)
+
+In the bounded real `case-164-heavy-direct-output-candidate-contract` replay,
+the first distinct child emitted a real `work_done` event. The subsequent
+native dry-submit did not return `return_to_actor`; it reached semantic content
+validation and returned `key_findings_missing_or_empty` with
+`recommended_action: fail_and_replace`. The Subject then used the legal fail
+operation and a fresh primary replacement, which submitted successfully.
+
+The reported claimed-versus-working ambiguity was therefore not reproduced on
+the current head. The case also confirms that an Actor receipt and Engine
+acceptance remain separate facts; no new `work_done` lifecycle status or
+transition is admitted. This card remains an Actor/requalification residual,
+not a proven current Engine defect.

@@ -1,6 +1,6 @@
 # BUG-197: Queue system blocks re-enqueuing topics after work-unit failure, preventing gate repair
 
-**Status**: open
+**Status**: residual — current-head real replay recovered through fresh primary replacement; no current deterministic root admitted
 **Severity**: P0 — blocks Wave1 gate pass; no recovery path exists
 **Found**: 2026-08-03 during `agentic-rd-org-delivery-systems-2026` Wave1 execution
 
@@ -37,3 +37,17 @@ Either:
 - `replace` on a failed work unit should create a proper successor queue item, OR
 - `fail` should offer a `retry` option that re-enqueues the same demand, OR
 - Gate should accept degraded pass when topics have `evidence-summary.md` and `question-list.md` on disk but lack formal submit coverage due to known sub-agent contract issues
+
+## Current-head requalification (2026-08-05)
+
+The bounded real `case-164-heavy-direct-output-candidate-contract` replay
+exercised the reported repair boundary. After the first primary attempt failed
+with the real semantic root code, the Subject explicitly enqueued a new primary
+Wave1 demand with fresh `queue_item_id: case-164-primary-2`, claimed it, and
+submitted the second distinct child result. The first attempt has no submitted
+ledger row; the replacement has exactly one submitted row and reaches `done`.
+
+The reported permanent duplicate-topic block and null replacement path were
+not reproduced on the current head. No queue bypass, degraded Gate floor, or
+new retry authority is admitted. Keep this card as a historical
+Actor/requalification residual pending the separate degraded-mode cases.

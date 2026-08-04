@@ -1,6 +1,6 @@
 # BUG-191: Wave0 return_map_current_candidate_omission requires per-source projection entries (O(N) scaling)
 
-**Status**: resolved by archived C1 — deterministic contract and focused verification complete; current-head real Actor observation remains E2 work
+**Status**: resolved by archived C1 — deterministic contract and focused verification complete; no real Actor adherence claim is made
 **Severity**: P1 — blocks gate pass with impractical manual work
 **Found**: 2026-08-03 during `agentic-rd-org-delivery-systems-2026` Wave0 execution
 
@@ -46,6 +46,6 @@ Focused deterministic evidence from C1 includes
 `tests/integration/cli/operate-topic-state-projection.test.mjs` (13 passing),
 including `1..19` versus later `/20`, collision rejection, idempotent replay,
 and explicit-entry compatibility. This does not prove a current real Actor used
-the packet; that separately governed E2 observation has not been authorized.
-C1 strict validation, main-spec sync, closeout review, and governed archive all
-completed on 2026-08-04.
+the packet; no such adherence claim is needed to close the deterministic C1
+route. C1 strict validation, main-spec sync, closeout review, and governed
+archive all completed on 2026-08-04.

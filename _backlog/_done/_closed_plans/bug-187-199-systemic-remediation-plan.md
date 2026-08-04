@@ -1,25 +1,25 @@
 ---
 title: BUG-187-199 systemic remediation plan
-status: p2_c1_c2_c3_archived_c4_applied_sync_governance_closeout_complete_pending_archive_e1_e2_pending
-current_stage: P2
+status: closed_2026-08-05
+current_stage: P4
 created: 2026-08-04
 revised: 2026-08-05
 source_bugs: BUG-187, BUG-188, BUG-189, BUG-190, BUG-191, BUG-192, BUG-193, BUG-194, BUG-195, BUG-196, BUG-197, BUG-198, BUG-199
 current_execution_model: chain_queue_work_unit
-active_change: legible-hitl1-capability-probe
-active_change_status: applied_spec_sync_governance_closeout_complete_pending_archive_2026-08-05
+active_change: null
+active_change_status: none_c1_c2_c3_c4_archived_2026-08-05
 completed_change: surface-actionable-contract-feedback
 completed_change_status: archived_2026-08-04
 previous_completed_change: traceable-final-delivery-backing
 previous_completed_change_status: archived_2026-08-04
 earlier_completed_change: materialize-wave0-submitted-references-and-batch-projections
 earlier_completed_change_status: archived_2026-08-04
-target_code_authorization: c4_target_edits_applied_spec_sync_governance_closeout_complete_pending_archive
+target_code_authorization: no_active_change_target_edits
 ---
 
 # BUG-187-199 Systemic Remediation Plan
 
-> Status: P2 stabilization. C1 is archived as
+> Status: Closed 2026-08-05. C1 is archived as
 > [`2026-08-04-materialize-wave0-submitted-references-and-batch-projections`](../../openspec/changes/archive/2026-08-04-materialize-wave0-submitted-references-and-batch-projections/).
 > Its strict validation, main-spec sync, closeout review, and governed archive
 > transition are complete. C3 is archived as
@@ -30,12 +30,23 @@ target_code_authorization: c4_target_edits_applied_spec_sync_governance_closeout
 > [`2026-08-04-surface-actionable-contract-feedback`](../../openspec/changes/archive/2026-08-04-surface-actionable-contract-feedback/)
 > after deterministic verification, main-spec sync, feedback closeout, and the
 > governed archive transition all passed.
+> C4 is archived as
+> [`2026-08-05-legible-hitl1-capability-probe`](../../openspec/changes/archive/2026-08-05-legible-hitl1-capability-probe/)
+> after implementation, accepted-spec sync, strict validation, governance,
+> closeout, and the governed archive transition all passed.
 >
 > Progress: focused deterministic C1/C2 evidence is retained, including the
 > source-only actor contract, submitted-backing convergence, batch deferred
-> expansion, and actionable retained-input feedback. It does not prove that a
-> current real Actor followed the guidance; that separately governed E2
-> observation has not been authorized.
+> expansion, and actionable retained-input feedback. E1 is classified as a host
+> UX residual. E2 now has one authorized current-head real-Actor replay: the
+> native case result passed its five deterministic checks, while the host
+> Supervisor separately timed out before native completion and remains recorded
+> as `lifecycle_outcome: ERROR`. The replay requalified BUG-195/196/197 only;
+> it does not cover degraded Wave0-to-Wave1 handoff or direct Wave2 search.
+> A separate current-head case-232 observation reached the real Wave2 node but
+> was honestly finalized `NOT_RUN` because the selected host provided no real
+> external search capability. E2 is now classified as terminal host/Actor
+> residual with no admitted framework change; P4 closeout remains.
 >
 > Scope: turn thirteen incident cards into the smallest set of independently
 > reviewable system changes, while preserving the distinction between a proven
@@ -48,12 +59,12 @@ OpenSpec change candidates and two evidence tracks:
 
 | Route | Cards | Current disposition | Next admission fact |
 | --- | --- | --- | --- |
-| C1. Wave0 submitted-evidence materialization at scale | [BUG-189](../bugs/BUG-189-shared-ref-count-floor-delegated-bypass.md), [BUG-191](../bugs/BUG-191-wave0-projection-ordinal-scaling.md) | Archived C1 deterministic correction for the source-only submitted-backing and batch-deferred contract. | C1 and C3 are complete. Real Actor observation remains E2. |
-| C2. Direct Agent contract feedback | [BUG-190](../bugs/BUG-190-source-identity-kind-naming-obscure.md), [BUG-194](../bugs/BUG-194-wave1-assignment-mode-payload-location.md), conditionally [BUG-195](../bugs/BUG-195-wave1-source-claims-cache-trail-refs-missing.md) | [`2026-08-04-surface-actionable-contract-feedback`](../../openspec/changes/archive/2026-08-04-surface-actionable-contract-feedback/) archived the two direct feedback loops after deterministic verification, spec sync, governance, and closeout; BUG-195 remains an E2 real-Actor observation boundary. | C2 is complete; BUG-195 still needs a retained real generated `task.md` if it reactivates. |
-| C3. Traceable Final delivery | [BUG-199](../bugs/BUG-199-synthesis-no-evidence-citations.md) | [`2026-08-04-traceable-final-delivery-backing`](../../openspec/changes/archive/2026-08-04-traceable-final-delivery-backing/) archived the bounded Final Evidence Map and pre-persist submitted-backing admission after sync, verification, governance, and closeout. | C3 is complete. Semantic adequacy and actual Agent guidance-following remain Agent/human or future E2 observation concerns. |
-| C4. Legible HITL1 capability probe | [BUG-187](../bugs/BUG-187-hitl1-capability-probe-opaque-to-user.md) | `legible-hitl1-capability-probe` has applied the bounded Phase/brief communication contract, passed focused static Markdown verification, and completed spec sync, governance, and closeout; archive remains pending. | A separately authorized retained HITL1 observation for selected-host rendering; static proof does not establish host or real-Actor behavior. |
-| E1. Host wait visibility | [BUG-188](../bugs/BUG-188-subagent-wait-no-progress-visibility.md), [BUG-193](../bugs/BUG-193-wave1-subagent-wait-no-progress-sibling.md) | Host/TUI observation; BUG-193 is a Wave1 duplicate of BUG-188, not a second framework root. | A selected-host capability observation showing whether wait can render progress without violating `stop: no`. |
-| E2. Current-head real Actor requalification | [BUG-192](../bugs/BUG-192-degraded-gate-triggers-de-facto-hitl.md), [BUG-198](../bugs/BUG-198-phase-agent-direct-search-no-subagent.md), replay [BUG-195](../bugs/BUG-195-wave1-source-claims-cache-trail-refs-missing.md)/[BUG-196](../bugs/BUG-196-work-done-receipt-no-status-transition.md)/[BUG-197](../bugs/BUG-197-wave1-queue-blocks-reenqueue-after-failure.md) | Historical Actor behavior must not be converted into a new controller or status from static code alone. | An explicitly authorized, readable current-head bundle and bounded `agent_flow_e2e` observation. |
+| C1. Wave0 submitted-evidence materialization at scale | [BUG-189](../bugs/BUG-189-shared-ref-count-floor-delegated-bypass.md), [BUG-191](../bugs/BUG-191-wave0-projection-ordinal-scaling.md) | Archived C1 deterministic correction for the source-only submitted-backing and batch-deferred contract. | Deterministic route terminal; no real Actor adherence claim is made. |
+| C2. Direct Agent contract feedback | [BUG-190](../bugs/BUG-190-source-identity-kind-naming-obscure.md), [BUG-194](../bugs/BUG-194-wave1-assignment-mode-payload-location.md), conditionally [BUG-195](../bugs/BUG-195-wave1-source-claims-cache-trail-refs-missing.md) | [`2026-08-04-surface-actionable-contract-feedback`](../../openspec/changes/archive/2026-08-04-surface-actionable-contract-feedback/) archived the two direct feedback loops after deterministic verification, spec sync, governance, and closeout; case-164 requalified BUG-195 as an Actor-delivery residual without a current deterministic root. | C2 route terminal; no validator inference or schema change is admitted. |
+| C3. Traceable Final delivery | [BUG-199](../bugs/BUG-199-synthesis-no-evidence-citations.md) | [`2026-08-04-traceable-final-delivery-backing`](../../openspec/changes/archive/2026-08-04-traceable-final-delivery-backing/) archived the bounded Final Evidence Map and pre-persist submitted-backing admission after sync, verification, governance, and closeout. | C3 route terminal; semantic adequacy remains outside the deterministic proof boundary. |
+| C4. Legible HITL1 capability probe | [BUG-187](../bugs/BUG-187-hitl1-capability-probe-opaque-to-user.md) | [`2026-08-05-legible-hitl1-capability-probe`](../../openspec/changes/archive/2026-08-05-legible-hitl1-capability-probe/) applied the bounded Phase/brief communication contract, passed focused static Markdown verification, completed spec sync, governance, closeout, and governed archive. A retained real case-115 run classified the selected host as a capability residual: no callable `WebSearch`, no writable bundle surface, and no native tool-log rendering to assess. | No C4 framework change is admitted from this run. A future re-run requires the selected host to expose the declared search surface and writable runtime path. |
+| E1. Host wait visibility | [BUG-188](../bugs/BUG-188-subagent-wait-no-progress-visibility.md), [BUG-193](../bugs/BUG-193-wave1-subagent-wait-no-progress-sibling.md) | Selected-host observation completed: native Sub-agent and a visible host wait/display surface were available, but no authoritative progress-event channel or native completion was retained. BUG-193 remains a Wave1 duplicate of BUG-188, not a second framework root; no DPT controller is admitted. | Any future host integration must name an authoritative progress fact and host owner; the current observation is sufficient to close E1 as a host UX residual. |
+| E2. Current-head real Actor requalification | [BUG-192](../bugs/BUG-192-degraded-gate-triggers-de-facto-hitl.md), [BUG-198](../bugs/BUG-198-phase-agent-direct-search-no-subagent.md), replay [BUG-195](../bugs/BUG-195-wave1-source-claims-cache-trail-refs-missing.md)/[BUG-196](../bugs/BUG-196-work-done-receipt-no-status-transition.md)/[BUG-197](../bugs/BUG-197-wave1-queue-blocks-reenqueue-after-failure.md) | Case-164 requalified BUG-195/196/197 on the current head: native completion `PASS`, all five checks passed, and no deterministic root was reproduced. The separate Supervisor lifecycle `ERROR` is a host timeout, not a DPT verdict. Case-232 reached the real Wave2 node but finalized `NOT_RUN` because the selected host exposed no callable real search surface; BUG-192/198 therefore terminate as host/Actor capability residuals, not behavior PASS. | Re-run only after the selected host exposes the declared real search surface and a new bounded degraded-handoff objective is explicitly authorized. |
 
 The routes are deliberately not all implementation work. C1 is an archived
 deterministic correction; C2-C4 may become separate proposals when their admission facts are
@@ -128,9 +139,9 @@ The following proposals are rejected unless new evidence changes the analysis:
 | --- | --- | --- |
 | P0 | Triage, current-head contract check, and route separation. | Complete |
 | P1 | Capture admission facts and complete proposal artifacts only where a bounded deterministic or user-facing contract root exists. C1 proposal, specs, design, task list, and implementation entry are complete. | Complete |
-| P2 | Stabilize submitted-evidence and feedback contracts through accepted C1/C2 work before applying C3 against their backing surfaces. C1, C2, and C3 are archived; remaining routes require their own admission facts. | In progress |
-| P3 | Activate E1/E2 only with a selected host or an explicitly authorized real bundle; classify each result before proposing code. | Pending |
-| P4 | Archive accepted changes, update each bug card with its final disposition, and move this plan only when every route has a terminal outcome. | Pending |
+| P2 | Stabilize submitted-evidence and feedback contracts through accepted C1/C2 work before applying C3 against their backing surfaces. C1, C2, C3, and C4 are archived; remaining routes require their own admission facts. | Complete |
+| P3 | Activate E1/E2 only with a selected host or an explicitly authorized real bundle; classify each result before proposing code. E1 and E2 are terminal residual classifications with no new framework root. | Complete |
+| P4 | Archive accepted changes, update each bug card with its final disposition, and move this plan only when every route has a terminal outcome. | Complete; CLS-047 |
 
 ## 5. C1: Wave0 Submitted-Evidence Materialization At Scale
 
@@ -193,8 +204,8 @@ identity-bound deferred records with a vague work-unit-level acknowledgement.
   batch expansion, duplicate identity rejection, filesystem-only rejection,
   and idempotent rerun.
 - [x] Apply the approved C1 task list and retain focused deterministic evidence.
-  A real bounded Actor observation was not authorized and remains separately
-  routed to E2 rather than being inferred from fixtures.
+  No real Actor adherence claim is inferred from fixtures; the deterministic C1
+  route is complete and the remaining host/Actor residuals are recorded in E1/E2.
 - [x] Update BUG-189/BUG-191 with the concrete C1 behavior and proof boundary.
 - [x] Complete C1 task 6 verification/sync/closeout and archive it. The
   governed finalizer archived C1 on 2026-08-04 after strict validation,
@@ -298,7 +309,9 @@ formatting a blocker; or create one new feedback implementation per caller.
   heading was normalized without semantic change, all selected verification
   assets plus strict/spec/requirement governance passed, and a rerun-path
   whitespace closeout finding was repaired and reverified. BUG-195 remains
-  routed to E2 and SHALL NOT be marked fixed without fresh real Actor evidence.
+  requalification. Case-164 later supplied that bounded real Actor evidence and
+  classified the card as an Actor-delivery residual; it did not establish a
+  universal compliance guarantee or authorize a schema change.
 - [x] Run the governed archive transition for
   `surface-actionable-contract-feedback`. On 2026-08-04,
   `finalize-change-archive.mjs` returned `outcome: archived` with all eight
@@ -364,8 +377,8 @@ proves a semantic conclusion is correct.
   `2026-08-04-traceable-final-delivery-backing` after status, artifacts, tasks,
   strict validation, requirement/spec governance, verification routing, and
   native archive checks all passed. Historical Final reports remain untouched;
-  a future real Actor observation is still required to establish actual
-  guidance-following behavior.
+  actual guidance-following behavior remains outside this deterministic route's
+  proof boundary; no unresolved framework route is implied.
 
 ## 8. C4: Legible HITL1 Capability Probe
 
@@ -404,7 +417,7 @@ the framework cannot control.
   facts declared by `research-access-adapter.md`, so C4 can explain the probe
   but cannot promise to suppress those host surfaces.
 - [x] Complete and polish the active C4 OpenSpec proposal:
-  [`legible-hitl1-capability-probe`](../../openspec/changes/legible-hitl1-capability-probe/).
+  [`legible-hitl1-capability-probe`](../../openspec/changes/archive/2026-08-05-legible-hitl1-capability-probe/).
   Its proposal, two delta specs, design, task ledger, and four-class
   verification plan are complete; strict OpenSpec validation and plan-mode
   verification routing pass. The proposal assigns a fixed query, exact
@@ -416,43 +429,74 @@ the framework cannot control.
   then applied with its plan review. It makes no current real-host or real-Actor
   behavior claim.
 - [x] Apply the C4 Markdown contract through
-  [`legible-hitl1-capability-probe`](../../openspec/changes/legible-hitl1-capability-probe/):
+  [`2026-08-05-legible-hitl1-capability-probe`](../../openspec/changes/archive/2026-08-05-legible-hitl1-capability-probe/):
   the brief owns exact Chinese notice/result text; the Phase uses the fixed
   neutral query and places the direct observation result before the existing
   HITL1 Gate; the normal silent exit remains Gate-pass-only. Focused static
   Markdown coverage passed 9/9 and verification-routing assets passed. This is
   not real-host rendering or real-Actor proof.
-- [ ] Verify the revised control surface against a retained real HITL1
-  observation when a run is separately authorized; static Markdown inspection
-  alone cannot prove host rendering behavior.
-- [ ] Archive C4 through the governed finalizer. Classify any remaining raw
-  tool-log visibility as a host residual rather than a framework regression.
+- [x] Verify the revised control surface against a retained real HITL1
+  observation. On 2026-08-05, case
+  `case-115-heavy-hitl1-research-access-probe` ran through the selected
+  `deepseek_anthropic_compatible` host with a real Subject Agent. The Subject
+  loaded the current Phase and emitted the exact unavailable result, but native
+  completion was `NOT_RUN` because `WebSearch` was not callable and host policy
+  denied bundle writes/Gate execution; profile remained
+  `research_access: unprobed`, health was CLEAN, and no native tool-log
+  rendering occurred.
+  Batch `bf4bbc95-e66d-4554-b4ab-167f18856a5e` retained the prompt,
+  transcript, result, completion, and bundle. Classify this terminal result as
+  selected-host capability residual, not C4 framework regression or PASS.
+- [x] Archive C4 through the governed finalizer. On 2026-08-05,
+  `finalize-change-archive.mjs` returned `outcome: archived` with all eight
+  checks passed and archived the change as
+  `2026-08-05-legible-hitl1-capability-probe`. This closes the deterministic
+  C4 change lifecycle only; it does not close the separate host/Actor
+  observation boundary.
 
 ## 9. E1: Host Wait Visibility
 
 BUG-193 is retained as a cross-phase reproduction of BUG-188, but it is not a
 separate implementation candidate. Current evidence says the Engine can inspect
-progress and avoids timing out active work; the observed failure is a static
-host `agent_wait` display while the Phase Agent cannot issue another tool call.
+progress and avoids timing out active work. The selected host exposed a dynamic
+TUI display surface, but it did not expose an authoritative progress-event
+channel to the bundle or prove native completion. The remaining gap is therefore
+host/TUI-owned; it is not a missing Engine wait controller.
 
-`stop: no` also prohibits the proposed user-facing progress updates. A static
-"Waiting" affordance is therefore host/TUI-owned unless the selected host offers
-a legal non-interactive progress surface.
+`stop: no` also prohibits the proposed user-facing progress updates. The
+observed display surface does not authorize weakening silent execution.
+
+On 2026-08-05, one bounded interactive run of
+`case-406-heavy-real-subagent-boundary` used batch
+`b963a31b-c6f7-4ddd-ba20-1c3600d46c99` and exact run root
+`/Users/bowhead/ai_tool_deepresearch/.exp-bundles/runs/b963a31b-c6f7-4ddd-ba20-1c3600d46c99/001-case-406-heavy-real-subagent-boundary-81264b4d-045d-4d13-b0d6-cb7248728c34/`.
+The selected host launched the native `dpt-source-intake` Sub-agent; the TUI
+rendered a background-agent row with elapsed time/token count, a waiting
+indicator, and spinner updates. The Supervisor nevertheless timed out at
+`300108ms` with `lifecycle_outcome: ERROR`, `native_outcome: null`, and
+`reason: agent_timeout`. The exact disposable bundle shows the work unit was
+claimed, but `runtime-receipt.jsonl` is empty, `result.json` is absent, and
+`rb_trace.jsonl` contains setup/claim facts only, with no progress event or
+completion. This proves a host display observation, not Actor success or an
+Engine progress contract.
 
 **Tracking:**
 
 - [x] Deduplicate BUG-193 under BUG-188 while preserving it as Wave1 evidence.
 - [x] Establish that the reported wait self-recovers after a sub-agent finishes;
   it is not evidence of an Engine deadlock.
-- [ ] Obtain a selected-host capability record: blocking/non-blocking wait,
-  progress event delivery, and whether rendered progress is visible without a
-  user-facing Phase-Agent message.
-- [ ] Run one bounded host observation only under a fresh explicit budget and
-  evidence objective; retain the host/version/mode and native display result.
-- [ ] If the host exposes a suitable surface, open a host-integration-scoped
-  proposal only after identifying the authoritative progress facts.
-- [ ] If it does not, record `host UX residual`, close this track without a DPT
-  controller, and do not weaken silent execution to simulate progress.
+- [x] Obtain a selected-host capability record: the native Sub-agent surface
+  was available and the host rendered dynamic wait/display status, but the
+  bounded run retained no authoritative progress-event delivery or completion.
+- [x] Run one bounded host observation with a fresh exact bundle and evidence
+  objective; retain the host mode, native display result, Supervisor report,
+  and work-unit claim/progress boundary.
+- [x] Decide that the observed display surface is not a sufficient
+  host-integration contract: no authoritative progress facts were retained,
+  so no host-integration-scoped OpenSpec proposal is admitted.
+- [x] Record `host UX residual`, close this track without a DPT controller, and
+  keep silent execution unchanged. A future host change may reopen E1 only
+  with an explicit progress fact and owner.
 
 ## 10. E2: Current-Head Real Actor Requalification
 
@@ -480,24 +524,78 @@ authorized `agent_flow_e2e` run, not a hand-written fixture.
   interpretation insufficient for a new change.
 - [x] Record that BUG-192/198 involve Actor behavior under degraded context, not
   proof that an Engine transition is missing.
-- [ ] Obtain explicit authorization for one readable, disposable current-head
-  bundle and a narrow `agent_flow_e2e` evidence objective.
-- [ ] Capture the complete evidence package without hand-editing receipts,
-  status, ledger, cache, or task outputs.
-- [ ] Classify the first terminal result: deterministic missing fact,
-  Agent-contract delivery gap, host capability boundary, or no reproduction.
-- [ ] Open one focused proposal only for a proven deterministic/missing-contract
-  root. Otherwise record the terminal observation against the affected card(s).
-- [ ] Re-run the same bounded observation after any accepted fix; do not widen
-  into a background canary program or claim Actor success from fixture tests.
+- [x] Obtain explicit authorization for one readable, disposable current-head
+  bundle and a narrow `agent_flow_e2e` evidence objective. Case-164 used the
+  exact retained bundle rooted at
+  `.exp-bundles/runs/90d42e99-77b1-4af7-8f51-96898325082a/`.
+- [x] Capture the complete evidence package without hand-editing receipts,
+  status, ledger, cache, or task outputs. The exact generated task, both
+  runtime receipts, before/after dry-submit JSON, fail/replacement JSON,
+  Subject transcript/result, native trace, and hash evidence are retained in
+  the case root.
+- [x] Classify the first terminal result: the current head did not reproduce
+  BUG-195/196/197. The real first child emitted `work_done`, was rejected on
+  its semantic contract, and the fresh primary replacement was independently
+  searched, submitted, and recorded in the ledger. The host Supervisor's
+  timeout remains a separate host lifecycle boundary.
+- [x] Open one focused proposal only for a proven deterministic/missing-contract
+  root. No such root was identified, so no target code or OpenSpec change is
+  admitted from this replay.
+- [x] No accepted fix was introduced, so a post-fix rerun is not applicable to
+  this result. A separate case-232 current-head observation reached
+  `phases/phase-wave2.md` but finalized `NOT_RUN`: the Subject timed out with
+  zero real WebSearch/WebFetch requests and the bundle retained no finding or
+  direct-search evidence. Classify BUG-192/198 as selected-host capability
+  residuals; rerun only after the host state changes and a fresh bounded
+  objective is authorized. Do not claim Actor success from fixture tests.
+
+**E2 case-164 result (2026-08-05):**
+
+- Supervisor lifecycle: `lifecycle_outcome: ERROR`, `reason: agent_timeout`,
+  `duration_ms: 600185`, `native_outcome: null`, with the exact run root and
+  audit record retained. This is evidence about host completion, not the
+  native case verdict.
+- Native finalizer: `outcome: PASS`; all five deterministic checks passed.
+  The first child returned `key_findings_missing_or_empty` with
+  `fail_and_replace`; the Subject preserved the first output hashes, created
+  and claimed fresh primary `case-164-primary-2`, and a distinct second child
+  produced independent source/cache facts before the replacement-only submit.
+- BUG-195 boundary: the generated task's authoritative result schema exposes
+  per-claim `cache_trail_refs`; the second real result includes that field for
+  its claim and formal submit succeeds. The empty starter array is not itself
+  a missing claim contract. This proves one current Actor path, not universal
+  guidance compliance.
+- BUG-196 boundary: after a real `work_done` receipt, dry-submit proceeds to
+  semantic validation and returns `fail_and_replace`, not `return_to_actor`.
+  No new `work_done` status is warranted.
+- BUG-197 boundary: fail plus fresh primary enqueue/claim/submit succeeds; the
+  failed attempt has no submitted ledger row and the replacement has exactly
+  one. The reported permanent duplicate-topic block is not reproduced.
+- BUG-192/198 are outside this case: it starts at Wave1, contains no degraded
+  Wave0 gate handoff, and does not observe Phase-Agent direct Wave2 search.
+
+**E2 case-232 result (2026-08-05):**
+
+- The real Subject loaded `phases/phase-wave2.md` after a witnessed Wave1 Gate
+  pass and `load_complete` trace event.
+- The selected host did not expose a callable real search surface: the Subject
+  result reports `SIGTERM`, timeout/aborted tools, and zero
+  `web_search_requests`/`web_fetch_requests`. No Wave2 finding, direct-search
+  attempt, or delegated targeted-search result was produced.
+- Native completion is `NOT_RUN` with the explicit reason
+  `independent Subject Agent runtime or real external search unavailable`.
+  This is an honest host capability boundary, not a PASS/FAIL statement about
+  BUG-192/198 behavior. No search interceptor, degraded controller, or
+  alternate evidence authority is admitted.
 
 ## 11. Sequencing And Closure
 
 The intended order is C1 and C2 first, C4 independently whenever its
 presentation boundary is established, and C3 only after source/backing contracts
-are stable enough to name its legal citations. E1 and E2 remain dormant until
-their explicit activation conditions are met; they do not block deterministic
-proposals that already have direct roots.
+are stable enough to name its legal citations. E1 and E2 were activated only
+after their explicit conditions were met and now have terminal host/Actor
+residual classifications; they do not authorize deterministic proposals without
+a new direct root.
 
 This plan closes only when every route has one of these terminal dispositions:
 
@@ -507,11 +605,14 @@ This plan closes only when every route has one of these terminal dispositions:
   contract; or
 - a successor plan that names a newly discovered independent root.
 
-Before closure:
+Closeout:
 
-- [ ] Update each BUG-187-199 card with its final route, evidence boundary, and
-  fixed/rejected/residual disposition.
-- [ ] Confirm no active OpenSpec change remains incomplete for a route marked
-  resolved.
-- [ ] Move this plan to `_backlog/_done/_closed_plans/` and update both plan
-  indexes only after all routes above are terminal.
+- [x] Update each BUG-187-199 card with its final route, evidence boundary, and
+  fixed/rejected/residual disposition. C1-C4 cards record archived deterministic
+  boundaries; E1 records the host UX residual; E2 records the current-head
+  Actor replay and selected-host capability residual.
+- [x] Confirm no active OpenSpec change remains incomplete for a route marked
+  resolved. `openspec list --json` returned `changes: []` on 2026-08-05.
+- [x] Move this plan to `_backlog/_done/_closed_plans/` and update both plan
+  indexes after all routes reached a terminal disposition. Closed as CLS-047
+  on 2026-08-05.

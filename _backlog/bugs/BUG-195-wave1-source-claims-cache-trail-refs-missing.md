@@ -1,6 +1,6 @@
 # BUG-195: dpt-evidence-extractor sub-agents omit cache_trail_refs in source_claims[]
 
-**Status**: open
+**Status**: residual — current-head real replay succeeded; no current deterministic root admitted
 **Severity**: P0 — blocks Wave1 work-unit submit for majority of topics
 **Found**: 2026-08-03 during `agentic-rd-org-delivery-systems-2026` Wave1 execution
 
@@ -28,3 +28,20 @@ Either:
 - Task.md's Result JSON Starter should include `"cache_trail_refs": []` in every source_claims template entry, OR
 - Role guidance should explicitly list `cache_trail_refs` as required per-claim field, OR
 - Dry-submit validator should infer cache_trail_refs from the top-level `cache_trails[]` when per-claim refs are missing but cache data exists on disk
+
+## Current-head requalification (2026-08-05)
+
+The bounded real `case-164-heavy-direct-output-candidate-contract` replay did not
+reproduce a current deterministic submit defect. Its generated replacement
+`task.md` exposes the authoritative result schema and states that
+`source_claims[]` binds accepted URLs to declared cache trails; the generated
+`result.schema.json` contains the per-claim `cache_trail_refs` property. The
+second distinct real child returned one source claim with
+`cache_trail_refs: ["_cache/wave1/primary/01_candidate-contract/s02_ci_validation"]`,
+and its native dry-submit followed by formal submit passed.
+
+This is evidence that the current contract can be followed and that one real
+Actor path succeeds. It is not evidence of universal Actor compliance, and the
+empty starter array leaves a possible guidance-legibility concern. No validator
+inference or schema change is admitted from this replay; keep the card as an
+Actor-delivery/requalification residual rather than marking it fixed.

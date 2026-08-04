@@ -1,6 +1,6 @@
 # BUG-189: shared_ref_count_floor rejects Phase-Agent-authored reference files as "delegated_bypass"
 
-**Status**: resolved by archived C1 — deterministic contract and focused verification complete; current-head real Actor observation remains E2 work
+**Status**: resolved by archived C1 — deterministic contract and focused verification complete; no real Actor adherence claim is made
 **Severity**: P1 — blocks gate pass; requires workaround
 **Found**: 2026-08-03 during `agentic-rd-org-delivery-systems-2026` Wave0 execution
 
@@ -54,7 +54,7 @@ files:
 Focused deterministic evidence from C1 includes
 `tests/integration/cli/check-gate-wave0-complete.test.mjs` (26 passing) and
 `tests/integration/md/wave-producer-contract-guidance.test.mjs` (3 passing).
-Those fixtures prove the Engine and delivered guidance boundary only. No
-current-head real Actor observation was authorized, so that proof remains in
-the separately governed E2 track. C1 strict validation, main-spec sync,
-closeout review, and governed archive all completed on 2026-08-04.
+Those fixtures prove the Engine and delivered guidance boundary only; they do
+not claim real Actor adherence. C1 strict validation, main-spec sync, closeout
+review, and governed archive all completed on 2026-08-04. The separate E1/E2
+residual tracks are not required to reopen this deterministic C1 route.

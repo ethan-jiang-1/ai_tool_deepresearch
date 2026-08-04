@@ -70,3 +70,19 @@ poll → dry-submit → submit → gate）。
 阻塞 host wait），同样的 host 唤醒机制。用户实测：主 Agent 在第一个
 sub-agent 返回后自动恢复执行，没有死锁。本 card 保留为 BUG-188 的
 wave1 复现证据，修复时按 BUG-188 统一处理。
+
+## Selected-host observation (2026-08-05)
+
+The bounded `case-406-heavy-real-subagent-boundary` observation is retained as
+cross-phase host evidence for this sibling. The selected host launched the
+native `dpt-source-intake` surface and rendered a background-agent row with
+elapsed/token counters and spinner updates. It did not provide a retained
+authoritative progress event: the Supervisor timed out at `300108ms` before
+native completion, the assigned `runtime-receipt.jsonl` was empty, and no
+`result.json` was produced. The exact evidence is in batch
+`b963a31b-c6f7-4ddd-ba20-1c3600d46c99`, run root
+`/Users/bowhead/ai_tool_deepresearch/.exp-bundles/runs/b963a31b-c6f7-4ddd-ba20-1c3600d46c99/001-case-406-heavy-real-subagent-boundary-81264b4d-045d-4d13-b0d6-cb7248728c34/`.
+
+This does not create a Wave1-specific framework root. BUG-193 remains a
+duplicate host UX residual under BUG-188; no DPT controller, progress state, or
+silent-execution exception is admitted.

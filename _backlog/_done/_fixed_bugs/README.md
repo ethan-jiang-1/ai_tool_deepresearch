@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-07-31 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-08-05 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -176,8 +176,14 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-184 | 2026-07-31 | Current-candidate omissions are grouped into one identity-complete repair finding |
 | BUG-185 | 2026-07-31 | Current result/hash truth is ledger-first, without a sync-index path |
 | BUG-186 | 2026-07-31 | Submit-integrity preflight shares the formal-submit direct facts without becoming a Gate |
+| BUG-187 | 2026-08-03 | HITL1 capability probe opaque to user |
+| BUG-189 | 2026-08-03 | Shared reference count floor rejects Phase-Agent-authored reference files as delegated bypass |
+| BUG-190 | 2026-08-03 | `source_identity.kind` discriminator `submitted_work` is non-obvious |
+| BUG-191 | 2026-08-03 | Wave0 return-map projection requires O(N) per-source entries |
+| BUG-194 | 2026-08-03 | Wave1 enqueue rejects task cards with top-level `assignment_mode` |
+| BUG-199 | 2026-08-03 | Final synthesis claims evidence-backed findings but cites zero evidence files |
 
-**Next available bug ID: BUG-187**
+**Next available bug ID: BUG-200**
 
 ---
 

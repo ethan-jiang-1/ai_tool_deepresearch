@@ -109,3 +109,20 @@ Gate 的 `degraded: true` 虽然明确写着"consume check.next through enter-ph
 - Gate diagnostic: `fatigue_warning: true, degraded: true, attempt_count: 4`
 - `enter-phase` loaded phase-wave1 correctly
 - Agent halted with A/B choice after voluntary summary output
+
+## Current-head requalification boundary (2026-08-05)
+
+The real `case-164-heavy-direct-output-candidate-contract` replay does not
+cover this card. It begins at the Wave1 boundary with one queued primary demand;
+it contains no degraded Wave0 Gate pass, fatigue-threshold handoff, or
+Wave0-to-Wave1 `enter-phase` observation. Its native PASS therefore cannot be
+used to claim that degraded handoff behavior or the false A/B choice has been
+fixed.
+
+A separate current-head `case-232-heavy-finding-triage` reached the real Wave2
+node but was finalized `NOT_RUN`: the selected host exposed no callable real
+external search surface, so the Subject timed out before producing a behavioral
+observation. Classify this card as a selected-host capability residual with no
+framework root admitted. Re-run only after a host exposes the required surface
+and a fresh degraded-handoff objective is authorized; no controller or skip
+path is admitted from either case.

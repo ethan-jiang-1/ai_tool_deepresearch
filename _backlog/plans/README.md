@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-04 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-05 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,11 +17,17 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `bug-187-199-systemic-remediation-plan` | 将 BUG-187--199 收敛为四个有界 OpenSpec change candidates（Wave0 submitted-evidence materialization、direct contract feedback、traceable Final delivery、legible HITL1 probe）与两个 evidence track（host wait visibility、current-head real Actor requalification）。当前在 P1：C1 `materialize-wave0-submitted-references-and-batch-projections` 已 active，`proposal.md` 完成，`specs`/`design`/`tasks` 待完成；尚无 apply 授权。 | P1 in progress |
+| `residual-bug-systemic-remediation` | BUG-188/192/193/195--198 按实际 owner 收敛：先用一个 OpenSpec Change 修复 case-164 当前验证资产漂移并复核 Wave1 三卡；degraded Agent 行为仅在真实可观测重现后才进入第二个 Change；宿主 wait UI 不伪造为 DPT 缺陷。 | active evidence-gated remediation |
 | `experiment-progressive-follow-up-plan` | 已完成 progressive-run round 的条件性后续入口：selected-host research access、case-211/406 fresh real-actor requalification，以及 profile-led diagnostic/calibration refresh。每次必须重新获得 fresh selection 和独立预算；不自动运行。 | dormant intake（无 active run） |
 | `silent-autonomous-execution` | 承接 `BUG-099/104/106` 的历史 stop/context observation。已与现行 Chain/Queue/Work Unit swarm 对齐：silent poll-submit loop、actor probe/fallback 与 continuation cues 是既有 contract；三次 real-actor canary 仍为 host-scoped `NOT_RUN`。没有 current-head Phase-Agent reproduction，也没有 active OpenSpec change；仅在新的可审计 `agent_flow_e2e` observation 出现后重开。 | deferred observation（无固定 OpenSpec change） |
 
 ---
+
+## 最近关闭 (2026-08-05)
+
+| Plan | 关闭依据 |
+|------|----------|
+| `bug-187-199-systemic-remediation-plan` | CLS-047：C1-C4 已归档；E1 classified 为 host UX residual；E2 的 case-164 requalified BUG-195/196/197 without a current deterministic root, while case-232 reached Wave2 but honestly finalized `NOT_RUN` because the selected host exposed no real search capability. |
 
 ## 最近关闭 (2026-08-03)
 
