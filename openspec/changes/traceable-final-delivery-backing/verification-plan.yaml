@@ -1,0 +1,76 @@
+schema_version: verification-routing/v1
+change: traceable-final-delivery-backing
+test_classes:
+  unit:
+    status: selected
+    rationale: The Evidence Map grammar, target-relative link resolution, submitted-declaration lookup, reference-authority reuse, fail-closed provenance boundary, and semantic non-judgment are pure deterministic Engine behavior.
+  integration:
+    status: selected
+    rationale: The production persistence CLI must prove that Final-backing admission runs before the existing workspace/atomic write path, generic persist cannot bypass it, and Final guidance names the same legal command.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: This change adds no lifecycle transition, Gate, handoff, or workflow-scale state contract. Focused production CLI and Markdown integration suites cover the full deterministic admission-to-persist seam without duplicating the unrelated research lifecycle.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change validates deterministic structure and provenance, not whether a real Agent chose sound research conclusions or followed citation guidance. No separately authorized real Actor observation is included, and fixture tests cannot prove that behavior.
+claims:
+  - id: final-evidence-map-structure-is-bounded
+    statement: >-
+      FDB-001: the pure Final-backing evaluator reuses the established semantic-section entry parser, parses only one designated Evidence Map table, accepts repeated rows only for one consistent declaration, returns direct structural feedback for absent/empty/malformed/ambiguous rows, and does not scan unrelated Final prose.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/final-delivery-backing.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: final-backing-reuses-submitted-authority
+    statement: >-
+      FDB-002: a declared Final link is accepted only when it is an exact submitted source_yaml/evidence_summary output or an existing submitted-backed reference classification; unsafe absolute/traversal/symlink paths, missing, failed, unsubmitted, cache-only, Final, finding-index, and synthesis-only paths fail closed, while semantic adequacy remains outside the evaluator.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/final-delivery-backing.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: final-persist-admission-precedes-workspace
+    statement: >-
+      ARP-004: the production artifact-persistence CLI returns operation-specific backing check/inspect/advice plus mechanical persistence facts, accepts a valid Final Markdown report through the existing exact-byte CAS path, rejects bad backing before workspace or target mutation, preserves exit-2 configuration handling for unsafe Final-looking targets, reruns the same evaluator before sweep finalizes a controlled prepared Final workspace, and rejects generic safe Final Markdown persist with persist-final-report named in its compatible existing-schema reason as the one direct next operation.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/artifact-persistence.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: final-guidance-demands-admitted-persistence
+    statement: >-
+      CDP-006: Final and persistence Markdown guidance require an Evidence Map plus persist-final-report for Final Markdown staging, preserve retained-staging same-command repair, and retain Final terminal gate/trace/interaction boundaries.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/artifact-persistence-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

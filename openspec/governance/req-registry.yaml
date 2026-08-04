@@ -54,6 +54,7 @@ prefixes:
   EXR: experiment-ref-integrity
   ERS: experiment-run-strategy
   EXA: experiment-agent-autorun
+  FDB: final-delivery-backing
   FOR: fork-repair-converge
   FRE: framework-engine
   FIO: file-observability
@@ -187,6 +188,7 @@ AGO-007: agent-output-declaration — Wave1 submitted ledger canonicalizes requi
 ARP-001: artifact-persistence-recovery — Content-bearing bundle files use one crash-safe persistence workspace with compare-and-swap commit
 ARP-002: artifact-persistence-recovery — Quiescent sweep finalizes or cleans valid prepared workspaces and blocks incomplete or conflicting workspaces
 ARP-003: artifact-persistence-recovery — Persistence results remain structured mechanical facts without granting artifact or lifecycle authority
+ARP-004: artifact-persistence-recovery — Final Markdown reports use submitted-backing admission before the existing crash-safe persistence commit
 
 # bundle-data-isolation
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
@@ -318,6 +320,10 @@ FIO-004: file-observability — Explained files remain non-authoritative until l
 FIO-005: file-observability — Root bundle map files follow canonical map policy
 FIO-006: file-observability — File observability detects canonical topic footprint drift without granting authority
 FIO-007: file-observability — File observability resolves current and historical topic layouts through one canonical resolver
+
+# final-delivery-backing
+FDB-001: final-delivery-backing — Final Markdown reports expose one bounded reader-facing evidence map of declared key findings
+FDB-002: final-delivery-backing — Final report persistence validates declared refs against submitted backing before durable commit
 
 # fork-repair-converge
 FOR-001: fork-repair-converge — Multi-fail shared repair checkpoint convergence
@@ -779,6 +785,7 @@ CDP-002: content-delivery-phase-content — phase-readiness.md 9-section body (d
 CDP-003: content-delivery-phase-content — phase-final.md 9-section body (terminal node gate=none, final report from verified bundle state, anti-cheating)
 CDP-004: content-delivery-phase-content — Final delivery is terminal; post-final feedback re-enters through HITL2 repair/rerun, not a Final-owned loop
 CDP-005: content-delivery-phase-content — Final artifacts count as delivery evidence only after legal readiness-to-final handoff and final node entry
+CDP-006: content-delivery-phase-content — Final guidance declares bounded evidence backing and uses submitted-backing admission without changing terminal semantics
 
 # wff-content-delivery — gate implementation
 CDG-001: content-delivery-gate-implementation — HITL2 recorded gate checks decision brief and durable profile decision facts without a redundant blocking phase-authored trace event
