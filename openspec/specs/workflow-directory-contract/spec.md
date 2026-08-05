@@ -201,7 +201,7 @@ Harness root and SHALL NOT become per-run storage.
 - **THEN** it SHALL treat `repo_command_root` only as the shell command
   location
 - **AND** it SHALL treat `framework_root` only as reusable read-only Harness
-  assets
+  assets at `DEEP_RESEARCH_HARNESS/`
 - **AND** it SHALL treat `current_run_bundle_root` as the only root for mutable
   runtime truth
 

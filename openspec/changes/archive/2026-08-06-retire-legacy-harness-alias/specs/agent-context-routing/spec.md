@@ -103,20 +103,20 @@ Else` blocks and before the existing root Deep-Research-Routing, root
 directory-routing, Harness first-priority routing, `> **最快触发**` callout,
 and Harness trigger block. It SHALL also verify the paired behavior-file
 pre-read blocks stay synchronized; that root/Harness operating routes and
-  `docs/adr/` discovery remain after the pre-read; that all three Harness entry
-  surfaces retain the explicit non-entry boundary; that the glossary retains its
-  canon-source links, non-authority and current-run-bundle distinction markers,
-  and discoverable links to ADRs 0001, 0002, and 0003; that those three ADRs
-  retain their `Accepted` status and respective decision boundaries; that
-  `DEEP_RESEARCH_HARNESS/CONTEXT.md` is absent; and that the repository root has
-  no alternate filesystem entry resolving to the canonical Harness assets.
+`docs/adr/` discovery remain after the pre-read; that all three Harness entry
+surfaces retain the explicit non-entry boundary; that the glossary retains its
+three canon-source links, non-authority and current-run-bundle distinction
+markers, and discoverable links to ADRs 0001, 0002, and 0003; that those three
+ADRs retain their `Accepted` status and respective decision boundaries; that
+`DEEP_RESEARCH_HARNESS/CONTEXT.md` is absent; and that the repository root has
+no alternate filesystem entry resolving to the canonical Harness assets.
 
-The regression SHALL additionally fail when one of its inspected current entry
-documents presents a second supported Harness source coordinate or the
-repository root exposes an alternate filesystem entry resolving to the
-canonical Harness assets. It SHALL not encode the retired source-root vocabulary
-as a live test fixture. Historical Git records and archived OpenSpec artifacts
-are outside this topology assertion.
+This focused regression SHALL additionally fail when one of its inspected
+current entry documents presents a second supported Harness source coordinate
+or the repository root exposes an alternate filesystem entry resolving to the
+canonical Harness assets. It SHALL not encode the retired source-root
+vocabulary as a live test fixture. Historical Git records and archived OpenSpec
+artifacts are outside this topology assertion.
 
 This focused regression SHALL not duplicate the accepted selected-entry and
 pre-entry-research contract. Apply verification SHALL run the existing

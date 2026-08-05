@@ -28,7 +28,8 @@ The normal autorun surfaces SHALL be:
   into one Headless Playbook Agent;
 - `experiments_playbook/RUN_INTERACTIVE_EXPS.md` for single-case manual
   debug/replay and real-human judgment; and
-- `DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs` for the Autorun Supervisor command.
+- `DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs` for the Autorun
+  Supervisor command.
 
 The canonical Harness host-tools location SHALL be the only supported Autorun
 source coordinate. No filesystem alias, alternate root path, or source-identity
@@ -55,13 +56,15 @@ The retired names `RUN_CLI_EXPS.md`, `RUN_TUI_EXPS.md`, and
 surfaces when the change completes. All repository consumers SHALL migrate in
 the same change.
 
-#### Scenario: Only one normal autorun instruction remains
+#### Scenario: Only one normal autorun instruction and source root remain
 
 - **WHEN** the change reaches archive readiness
 - **THEN** the Headless Playbook Agent receives `RUN_AGENT_AUTORUN_EXPS.md`
 - **AND** no active consumer still loads `RUN_CLI_EXPS.md`
 - **AND** the Interactive instruction is labeled debug/replay rather than a
   second normal batch mode
+- **AND** the Autorun command is reachable only below
+  `DEEP_RESEARCH_HARNESS/host_tools/`
 
 #### Scenario: Interactive replay gets the same run context without becoming batch mode
 
