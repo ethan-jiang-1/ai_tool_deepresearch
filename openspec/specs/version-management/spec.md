@@ -15,9 +15,9 @@ entry SHALL consist of a version header and a short summary of what changed.
 Verbose capability lists, file enumerations, requirement IDs, and implementation
 details SHALL NOT appear in CHANGELOG; those belong in OpenSpec change artifacts.
 
-`DEEP_RESEARCH_HARNESS/CHANGELOG.md` and its legacy alias SHALL NOT be retained
-as separate version-history authorities. If a stale copy exists under the
-canonical Harness, this change SHALL remove it rather than update both files.
+`DEEP_RESEARCH_HARNESS/CHANGELOG.md` SHALL NOT be retained as a separate
+version-history authority. If a stale copy exists under the canonical Harness,
+this change SHALL remove it rather than update both files.
 
 #### Scenario: Root changelog is the version source
 

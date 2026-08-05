@@ -9,7 +9,6 @@ import { parse as parseYaml } from 'yaml';
 
 const REPO_ROOT = process.cwd();
 const INSTANTIATE = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs');
-const LEGACY_INSTANTIATE = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdBundleDirs = new Set();
 
@@ -213,26 +212,6 @@ describe('instantiate-run-bundle.mjs integration', () => {
     }
   });
 
-  it('emits a canonical absolute handoff and canonical card through the legacy source alias', () => {
-    const root = mkdtempSync(join(tmpdir(), 'instantiate-legacy-alias-'));
-    const target = join(root, 'relative-target');
-    const relativeTarget = relative(REPO_ROOT, target);
-    const name = uniqueName('legacy-alias');
-    try {
-      const result = runLegacyRaw(name, `--target-dir=${relativeTarget}`);
-      const bundle = join(target, `dpt_rb_${name}`);
-      const currentRunBundleRoot = realpathSync(bundle);
-      const frameworkRoot = realpathSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS'));
-      const entry = readFileSync(join(bundle, 'BUNDLE_ENTRY.md'), 'utf-8');
-
-      assert.equal(result.status, 0, result.stderr);
-      assert.equal(result.stdout.trim(), currentRunBundleRoot);
-      assert.ok(entry.includes(`Deep Research Harness: \`${relative(currentRunBundleRoot, frameworkRoot) || '.'}\``));
-      assert.doesNotMatch(entry, /DPT_FRAMEWORK/);
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
 });
 
 function runInstantiate(...args) {
@@ -245,14 +224,6 @@ function runInstantiate(...args) {
 
 function runRaw(...args) {
   return spawnSync('node', [INSTANTIATE, ...args], {
-    cwd: REPO_ROOT,
-    encoding: 'utf-8',
-    timeout: 10000,
-  });
-}
-
-function runLegacyRaw(...args) {
-  return spawnSync('node', [LEGACY_INSTANTIATE, ...args], {
     cwd: REPO_ROOT,
     encoding: 'utf-8',
     timeout: 10000,

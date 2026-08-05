@@ -1,13 +1,7 @@
-# Workflow Directory Contract
+> req: WDC-001, WDC-004, WDC-006
 
-> req: WDC-001, WDC-002, WDC-003, WDC-004, WDC-005, WDC-006, WDC-007, WDC-008, WDC-009, WDC-010, WDC-011
+## MODIFIED Requirements
 
-## Purpose
-
-定义 Workflow Foundation 所有 artifact 的目录归属、命名约定、runtime coordinate vocabulary、active runtime bundle root 和禁止混放规则。该能力固定两条边界：`DEEP_RESEARCH_HARNESS/` 是可复用 read-only framework assets；当前 run 或实验的 runtime truth 只存在于明确选中的 current run bundle root（production `dpt_rb_*` 或 disposable `dpt_disp_*`）。
-
-Current run bundle root 是所有裸 runtime path 的解析锚点。Specs、workflow nodes、playbooks 或 prompts 中出现的 `rb_queue.json`、`rb_trace.jsonl`、`reference/`、`artifacts/`、`_cache/`、`_logs/`、`final/`、`_work_units/...` 等 runtime path，除非显式写成 `DEEP_RESEARCH_HARNESS/...`，都必须理解为 current run bundle-root relative，而不是 repo-root 或 framework-relative。
-## Requirements
 ### Requirement: Read-only framework assets boundary
 
 `DEEP_RESEARCH_HARNESS/` SHALL be the sole read-only reusable Harness assets
@@ -49,80 +43,6 @@ obligation.
   commands
 - **AND** it SHALL not rewrite the bundle, scan for another bundle, create an
   alternate source path, or infer a replacement coordinate
-
-### Requirement: Workflow node directory structure
-
-Workflow nodes SHALL reside under
-`DEEP_RESEARCH_HARNESS/workflows/nodes/`, split into:
-
-- `phases/` — phase nodes that an Agent follows in phase order before running
-  the associated gate
-- `shared/` — shared nodes providing reusable Agent-readable context
-
-The phase manifest or equivalent lifecycle map SHALL reside at
-`DEEP_RESEARCH_HARNESS/workflows/manifest.json`.
-
-#### Scenario: Phase node location
-
-- **WHEN** an Agent needs instructions for the current phase
-- **THEN** the phase node MUST be at
-  `DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-<phase>.md`
-
-#### Scenario: Shared node location
-
-- **WHEN** an Agent needs shared context such as profile guidance or a gate
-  summary
-- **THEN** the shared node MUST be at
-  `DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-<scope>.md`
-
-#### Scenario: Shared node is not a hidden phase
-
-- **WHEN** a Markdown file is under the `shared/` directory
-- **THEN** it SHALL NOT declare `phase`, `gate`, `next`, or `stop` fields
-- **AND** it SHALL NOT change phase order
-
-### Requirement: Gate artifacts location and shape
-
-Gate-definition JSON files SHALL reside under
-`DEEP_RESEARCH_HARNESS/schema/gate_definitions/`, named
-`gate-<gate-name-kebab>.definition.json`. A Gate definition SHALL be a
-read-only deterministic rule source belonging to the Harness and MUST NOT be
-copied into each `dpt_rb_*` bundle.
-
-Gate CLIs SHALL reside under `DEEP_RESEARCH_HARNESS/cli/gates/`, named
-`check-gate-<gate-name-kebab>.mjs`. Each Gate SHALL have one external CLI
-wrapper. The CLI SHALL explicitly receive a current run bundle root through
-`--bundle` or an equivalent flag and SHALL NOT assume cwd is the target bundle.
-
-Gate engines SHALL reside under `DEEP_RESEARCH_HARNESS/engine/gates/` when a
-per-Gate engine module exists. Shared helpers SHALL reside under
-`DEEP_RESEARCH_HARNESS/engine/helpers/`.
-
-The current Gate transition-table contract SHALL be represented by
-`DEEP_RESEARCH_HARNESS/schema/contracts/gate.mjs`. Gate-definition JSON files
-remain read-only rule sources under the canonical Harness schema directory and
-are loaded by the Gate-helper/per-Gate CLI pipeline; no
-`gate-definition.mjs` executable contract is part of the current accepted
-runtime surface.
-
-#### Scenario: Gate definition is Harness asset not bundle copy
-
-- **WHEN** a `dpt_rb_*` bundle is instantiated
-- **THEN** Gate-definition JSON MUST NOT be copied into the bundle
-- **AND** a Gate CLI reads the definition from the canonical Harness and uses
-  `--bundle` to identify the checked current run bundle root
-
-#### Scenario: One Gate per CLI
-
-- **WHEN** an Agent needs to run a Gate
-- **THEN** it MUST invoke that Gate's independent `check-gate-<name>.mjs`
-- **AND** it MUST NOT distinguish Gates with subcommands on one universal entry
-
-#### Scenario: Gate CLI requires bundle path
-
-- **WHEN** a Gate CLI is called without a `--bundle` argument
-- **THEN** it SHALL fail
-- **AND** it MUST NOT assume a default bundle or scan directories
 
 ### Requirement: Runtime bundle canonical structure
 
@@ -201,7 +121,7 @@ Harness root and SHALL NOT become per-run storage.
 - **THEN** it SHALL treat `repo_command_root` only as the shell command
   location
 - **AND** it SHALL treat `framework_root` only as reusable read-only Harness
-  assets
+  assets at `DEEP_RESEARCH_HARNESS/`
 - **AND** it SHALL treat `current_run_bundle_root` as the only root for mutable
   runtime truth
 
@@ -288,81 +208,6 @@ Harness root and SHALL NOT become per-run storage.
   state
 - **AND** it MUST NOT rely on chat memory or console summary as runtime state
 
-### Requirement: Test and experiment boundary
-
-The repository SHALL use the canonical `verification-routing` test classes and
-asset boundaries:
-
-- `unit` SHALL use focused in-process `node:test` assets under `tests/`, outside
-  `tests/integration/` and `tests/e2e/`, with directories mirroring the owned
-  Harness or project surface where applicable. Test-owned temporary fixture I/O
-  MAY remain in `unit` when it exercises only that one in-process contract;
-- `integration` SHALL use JS-led `node:test` assets under `tests/integration/`;
-- `deterministic_e2e` SHALL use JS-led full-chain state tests under `tests/e2e/`;
-- `agent_flow_e2e` SHALL use coding-Agent-executed Markdown playbooks under the
-  owning `experiments_playbook/exp_*/` family over real disposable run bundles.
-  Workflow-foundation-specific cases SHALL remain under
-  `experiments_playbook/exp_workflow-foundation/` when that family owns the
-  proof.
-
-`regression`, controlled-E2E prose, playbook cost, proof subject, actor type,
-and runtime bundle type SHALL NOT be introduced as competing test classes.
-`DEEP_RESEARCH_HARNESS/` SHALL NOT contain test files, experiment fixtures, or
-playbooks.
-
-#### Scenario: Unit test location
-
-- **WHEN** a focused test covers gate-evaluator deterministic behavior
-- **THEN** its `test_class` SHALL be `unit`
-- **AND** the test file SHALL live under `tests/engine/gates/` corresponding to
-  `DEEP_RESEARCH_HARNESS/engine/gates/`
-
-#### Scenario: Deterministic full chain stays under tests
-
-- **WHEN** JS simulates labeled Markdown/Agent-owned inputs and exercises a
-  long state chain through real Engine paths
-- **THEN** its `test_class` SHALL be `deterministic_e2e`
-- **AND** the test file SHALL live under `tests/e2e/`, not
-  `experiments_playbook/` or a repo-top-level `tests_e2e/`
-
-#### Scenario: agent_flow_e2e is not a JS-led asset
-
-- **WHEN** a coding Agent must execute a Markdown playbook over a real
-  disposable bundle
-- **THEN** its `test_class` SHALL be `agent_flow_e2e`
-- **AND** the playbook SHALL live under the appropriate
-  `experiments_playbook/exp_*/` family, not `tests/`
-
-#### Scenario: Behavior determines class before directory
-
-- **WHEN** a governance test invokes a real checker subprocess and reads or
-  writes fixture repository files
-- **THEN** its `test_class` SHALL be `integration`
-- **AND** it SHALL live under `tests/integration/governance/` rather than using
-  a unit-oriented directory to change its classification
-
-#### Scenario: Temporary fixture I/O does not force integration
-
-- **WHEN** a focused helper or schema test imports one in-process contract and
-  uses a test-owned temporary file as input or output
-- **THEN** its `test_class` MAY remain `unit`
-- **AND** the fixture file SHALL NOT be treated as a production CLI,
-  multi-component, or workflow-chain boundary
-
-### Requirement: Naming conventions
-
-All workflow-foundation artifacts SHALL follow the accepted naming conventions.
-Runtime bundle naming SHALL distinguish production run bundles from disposable
-experiment bundles without changing the runtime-authority boundary or the
-legacy `dpt_rb_*` / `dpt_disp_*` grammar.
-
-#### Scenario: Runtime bundle names identify runtime context type
-
-- **WHEN** a current spec or playbook names a production runtime context
-- **THEN** it SHALL use `dpt_rb_<english-slug>[_collision]`
-- **AND** when it names a disposable experiment runtime context, it SHALL use
-  `dpt_disp_<short>_<case>_<hex>`
-
 ### Requirement: Anti-mixing rules
 
 Harness artifact types SHALL NOT be mixed into each other's directories.
@@ -378,74 +223,3 @@ shall be treated as an additional exception or a second Harness storage tree.
   run bundle root
 - **AND** it SHALL NOT write that runtime output under
   `DEEP_RESEARCH_HARNESS/`
-
-### Requirement: Single canonical workflow package
-
-v1 SHALL have one canonical Deep Research workflow package at
-`DEEP_RESEARCH_HARNESS/workflows/manifest.json`. It SHALL NOT introduce a
-`workflows/<workflow-name>/` namespace.
-
-This decision SHALL NOT limit run-bundle count: one Harness MUST serve multiple
-isolated `dpt_rb_*` run bundles.
-
-#### Scenario: Multiple run bundles share one workflow package
-
-- **WHEN** `dpt_rb_project-a` and `dpt_rb_project-b` both exist as current run
-  bundles for separate operations
-- **THEN** both bundles MUST reference the same
-  `DEEP_RESEARCH_HARNESS/workflows/` phase/shared nodes
-- **AND** each SHALL maintain independent runtime state
-
-### Requirement: Manifest includes rerun phase entry
-
-`DEEP_RESEARCH_HARNESS/workflows/manifest.json` SHALL include a `rerun` phase
-entry in its `phases` array:
-
-```json
-{ "key": "rerun", "node": "phases/phase-rerun.md", "gate": "rerun-ready" }
-```
-
-The rerun phase SHALL be registered as a phase node with its corresponding
-Gate. Its manifest-array position SHALL NOT imply linear runtime order; the
-manifest is an inventory, not a routing table.
-
-#### Scenario: Manifest lists rerun phase
-
-- **WHEN** a workflow consistency validator scans `manifest.json`
-- **THEN** it SHALL find `rerun` among registered phase keys with node
-  `phases/phase-rerun.md` and Gate `rerun-ready`
-
-#### Scenario: Rerun node file exists
-
-- **WHEN** the manifest references `phases/phase-rerun.md`
-- **THEN** the file SHALL exist at
-  `DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-rerun.md`
-
-### Requirement: Command playbooks are Agent-facing command instructions
-
-`DEEP_RESEARCH_HARNESS/command_playbook/` SHALL be described as containing
-Agent-facing command instructions and diagnostic/maintenance playbooks, not as
-instructions for a human or operator co-runner inside the autonomous pipeline.
-
-Harness directory docs SHALL NOT use unqualified `Agent/operator` or
-equivalent slash wording to describe the command-playbook audience. Operator
-or maintainer wording MAY appear only when clearly scoped to post-run
-inspection, diagnostics, repository maintenance, or out-of-band review, and
-not to running lifecycle commands mid-pipeline.
-
-#### Scenario: Command playbook audience is Agent-facing
-
-- **WHEN** Harness docs describe
-  `DEEP_RESEARCH_HARNESS/command_playbook/`
-- **THEN** they SHALL identify the directory as Agent-readable or Agent-facing
-  command guidance
-- **AND** they SHALL NOT identify an operator as a co-runner audience for
-  autonomous pipeline execution
-
-#### Scenario: Diagnostic operator wording is allowed
-
-- **WHEN** a command playbook describes post-run forensics, diagnostic
-  inspection, or maintainer review
-- **THEN** operator wording MAY appear if it is explicitly out-of-band
-- **AND** the wording SHALL NOT imply that an operator runs normal lifecycle
-  commands during `stop: no` execution

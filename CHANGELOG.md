@@ -1,9 +1,17 @@
 # Changelog
 
+## v0.74
+
+- Breaking: `DEEP_RESEARCH_HARNESS/` is the sole reusable Harness source and
+  command coordinate.
+- Existing run bundles retain `RUN_BUNDLE.md` compatibility; an unreachable
+  creation-time Harness coordinate stops continuation before bundle-provided
+  commands.
+
 ## v0.73
 
 - Renamed the reusable system and canonical source root to Deep Research Harness
-  at `DEEP_RESEARCH_HARNESS/`, with `DPT_FRAMEWORK/` retained as a legacy alias.
+  at `DEEP_RESEARCH_HARNESS/`.
 - New run bundles use `BUNDLE_ENTRY.md`; existing `RUN_BUNDLE.md` and
   `BUNDLE_MAP.md` entries remain readable through the documented fallback.
 
@@ -252,7 +260,7 @@
 
 ## v0.33
 
-- Added pre-trigger DeepSeek Claude Code launcher at `DPT_FRAMEWORK/host_tools/claude-deepseek.mjs` that reads three required values from repo-root `.env`, isolates inherited provider environment, validates endpoint URL format, and launches `claude` with transparent argument/stdio/exit-code passthrough.
+- Added pre-trigger DeepSeek Claude Code launcher at `DEEP_RESEARCH_HARNESS/host_tools/claude-deepseek.mjs` that reads three required values from repo-root `.env`, isolates inherited provider environment, validates endpoint URL format, and launches `claude` with transparent argument/stdio/exit-code passthrough.
 
 ## v0.32
 
@@ -329,7 +337,7 @@
 
 ## v0.20
 
-- Added a human pre-trigger setup path for install, Claude Code/Codex permission posture, verification, and DPT_FRAMEWORK entry without turning the autonomous pipeline into a human co-runner flow.
+- Added a human pre-trigger setup path for install, Claude Code/Codex permission posture, verification, and canonical Harness entry without turning the autonomous pipeline into a human co-runner flow.
 - Tightened user-facing language guidance for HITL dynamic content and Final delivery while preserving silent `stop:no`, Final evidence, and host-permission authority boundaries.
 
 ## v0.19
@@ -385,7 +393,7 @@
 
 ## v0.11
 
-- Repo-root agent behavior files now suppress built-in research shortcuts when `DPT_FRAMEWORK/` is the selected or relevant research entry path.
+- Repo-root agent behavior files now suppress built-in research shortcuts when `DEEP_RESEARCH_HARNESS/` is the selected or relevant research entry path.
 - New production and disposable bundles now use `BUNDLE_MAP.md` as the passive root map; legacy `START_FROM_HERE.md` is diagnostic compatibility only.
 - Instantiation gate, inspect/reentry advice, file-observability, docs, and tests now use the bundle-map contract.
 
@@ -414,7 +422,7 @@
 ## v0.6
 
 - Runtime position and queue truth are more durable: `rb_status.json.current_node` records the loaded phase node, work-unit submit verifies queue postconditions before success, and explicit topic slugs unblock supplementary queue tasks with iteration labels.
-- Repo-root `CHANGELOG.md` is the single version-history source, aligned with the `DPT_FRAMEWORK/RUN.md` banner.
+- Repo-root `CHANGELOG.md` is the single version-history source, aligned with the `DEEP_RESEARCH_HARNESS/RUN.md` banner.
 
 ## v0.5
 
@@ -436,4 +444,4 @@
 
 ## v0.1
 
-- 初始版本。DPT_FRAMEWORK 入口 `RUN.md` 支持 drag-trigger，Agent 读到即启动多阶段 gate 驱动的 Deep Research 流程。
+- 初始版本。Deep Research Harness 入口 `RUN.md` 支持 drag-trigger，Agent 读到即启动多阶段 gate 驱动的 Deep Research 流程。

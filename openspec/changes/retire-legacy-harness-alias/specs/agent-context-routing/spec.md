@@ -1,84 +1,6 @@
-# Agent Context Routing
+> req: ACR-001, ACR-002, ACR-004
 
-> req: ACR-001, ACR-002, ACR-003, ACR-004
-
-## Purpose
-
-Give every substantive repository task a short vocabulary-alignment entry route
-that preserves the Deep Research Tool's agentic architecture without turning a
-glossary or ADR into a competing behavior or runtime authority.
-
-## Requirements
-
-### Requirement: Project glossary preserves canonical terminology boundaries
-
-The repository SHALL provide one root `CONTEXT.md` as the shared glossary for
-substantive project work. It SHALL distinguish the Deep Research Tool project,
-the reusable Deep Research Harness, the canonical
-`DEEP_RESEARCH_HARNESS/` directory, a run bundle, a research run, a current
-run bundle, a current run bundle root, the LLM Agent, Markdown control
-surface, Engine, runtime truth, and deterministic/evidence boundaries needed
-to avoid treating the Harness as a traditional JavaScript workflow controller.
-
-`CONTEXT.md` SHALL state that it is a vocabulary-alignment surface and SHALL
-defer behavior, executable contracts, and current runtime facts to their
-existing Sources of Record. Its terminology SHALL remain aligned with the
-guidance terminology canon rather than establishing independent definitions,
-and it SHALL directly identify that canon for its readers.
-
-The glossary SHALL contain direct Markdown links to `guidelines/README.md`,
-`guidelines/agentic-execution-model.md`, and
-`guidelines/project-charter.md` as its terminology and authority sources. It
-SHALL direct readers to the execution-model canon for the complete Phase Agent,
-Sub-agent, Queue demand item, Work unit, and Submit vocabulary rather than
-copying it in full. Its compressed definitions SHALL preserve that a research
-run is a run bundle's lifecycle; a current run bundle is explicitly scoped to
-one operation; its root is the resolved runtime coordinate; and a Gate verdict
-does not itself select the next Chain phase or grant authority, capability,
-permission, liveness, or evidence.
-
-`CONTEXT.md` SHALL link
-`docs/adr/0001-keep-agent-flow-markdown-driven-and-engine-gated.md` and
-`docs/adr/0002-name-the-reusable-surface-deep-research-harness.md` as optional
-architecture rationale. Those links SHALL not make either ADR a mandatory
-pre-task read, behavior authority, or replacement for the Charter.
-
-#### Scenario: Agent establishes the correct control model from the glossary
-
-- **WHEN** a Coding Agent reads root `CONTEXT.md` for a substantive task
-- **THEN** it can distinguish LLM judgment, Markdown Agent Flow, Engine
-  deterministic checkpoints, Harness assets, and current-run-bundle runtime
-  truth
-- **AND** it SHALL NOT treat the glossary as a Gate verdict, executable
-  contract, or current run state
-
-#### Scenario: Glossary preserves critical similarly named distinctions
-
-- **WHEN** a Coding Agent needs to reason about Harness/runtimes or phase
-  advancement
-- **THEN** root `CONTEXT.md` SHALL distinguish Harness from run bundle,
-  research run from current run bundle, current run bundle root from repository
-  root, Gate definition from Gate verdict, and phase handoff from work
-  completion
-- **AND** it SHALL direct the Agent to the existing authority when the glossary
-  alone cannot answer the needed behavior or runtime question
-- **AND** it SHALL identify the relevant guidance terminology canon rather than
-  presenting its wording as an independent definition source
-
-#### Scenario: Glossary preserves authority-sensitive execution distinctions
-
-- **WHEN** a Coding Agent uses root `CONTEXT.md` to orient before task-specific
-  execution work
-- **THEN** it SHALL distinguish a current run bundle from reusable Harness
-  assets for both production runs and disposable experiments
-- **AND** it SHALL identify the current run bundle root as an explicit
-  operation coordinate rather than the newest bundle, a global session value,
-  or a lifecycle-status claim
-- **AND** it SHALL distinguish a Gate verdict from Chain/transition selection
-- **AND** it SHALL not infer authority, capability, permission, liveness, or
-  evidence merely from a named Source of Record
-- **AND** it SHALL route complete execution-model terminology to its guidance
-  canon rather than reproducing a competing full glossary
+## MODIFIED Requirements
 
 ### Requirement: Agent-facing entry routes require the project glossary
 
@@ -170,31 +92,6 @@ the Harness README SHALL state the same boundary in its parent-project route.
 - **AND** they SHALL NOT treat `CONTEXT.md` as a research entry, run selection,
   or authorization for request-specific research work
 
-### Requirement: Root architecture decision record explains the control split
-
-The repository SHALL maintain a root `docs/adr/` decision record. Its first
-record SHALL explain the durable decision that semantic research and
-multi-stage Agent Flow remain LLM/Markdown-driven while the Engine owns
-deterministic checkpoints and feedback.
-
-The ADR SHALL record this as an architectural trade-off against a JavaScript
-workflow-controller design. It SHALL contain a concise `## Status` section
-whose value is `Accepted`, plus concise `## Context`, `## Decision`, and
-`## Consequences` sections, and explicitly defer current behavior to accepted
-OpenSpec contracts. It SHALL not redefine current runtime behavior, override
-accepted OpenSpec contracts, or become an instruction source that replaces the
-Charter or entry routes. Root `CONTEXT.md` SHALL make the record discoverable
-as an optional architecture rationale.
-
-#### Scenario: Maintainer can recover the reason for the split
-
-- **WHEN** a maintainer considers moving research orchestration or semantic
-  judgment into JavaScript
-- **THEN** the root ADR SHALL explain why that is outside the selected
-  architecture
-- **AND** it SHALL identify the Engine as the deterministic trust root rather
-  than the Agent Flow controller
-
 ### Requirement: Context routing remains regression-protected
 
 The project SHALL have a focused deterministic JS-led `integration` regression
@@ -206,20 +103,20 @@ Else` blocks and before the existing root Deep-Research-Routing, root
 directory-routing, Harness first-priority routing, `> **最快触发**` callout,
 and Harness trigger block. It SHALL also verify the paired behavior-file
 pre-read blocks stay synchronized; that root/Harness operating routes and
-`docs/adr/` discovery remain after the pre-read; that all three Harness entry
-surfaces retain the explicit non-entry boundary; that the glossary retains its
-three canon-source links, non-authority and current-run-bundle distinction
-markers, and discoverable links to ADRs 0001, 0002, and 0003; that those three
-ADRs retain their `Accepted` status and respective decision boundaries; that
-`DEEP_RESEARCH_HARNESS/CONTEXT.md` is absent; and that the repository root has
-no alternate filesystem entry resolving to the canonical Harness assets.
+  `docs/adr/` discovery remain after the pre-read; that all three Harness entry
+  surfaces retain the explicit non-entry boundary; that the glossary retains its
+  canon-source links, non-authority and current-run-bundle distinction markers,
+  and discoverable links to ADRs 0001, 0002, and 0003; that those three ADRs
+  retain their `Accepted` status and respective decision boundaries; that
+  `DEEP_RESEARCH_HARNESS/CONTEXT.md` is absent; and that the repository root has
+  no alternate filesystem entry resolving to the canonical Harness assets.
 
-This focused regression SHALL additionally fail when one of its inspected
-current entry documents presents a second supported Harness source coordinate
-or the repository root exposes an alternate filesystem entry resolving to the
-canonical Harness assets. It SHALL not encode the retired source-root
-vocabulary as a live test fixture. Historical Git records and archived OpenSpec
-artifacts are outside this topology assertion.
+The regression SHALL additionally fail when one of its inspected current entry
+documents presents a second supported Harness source coordinate or the
+repository root exposes an alternate filesystem entry resolving to the
+canonical Harness assets. It SHALL not encode the retired source-root vocabulary
+as a live test fixture. Historical Git records and archived OpenSpec artifacts
+are outside this topology assertion.
 
 This focused regression SHALL not duplicate the accepted selected-entry and
 pre-entry-research contract. Apply verification SHALL run the existing

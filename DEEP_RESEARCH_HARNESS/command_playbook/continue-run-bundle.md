@@ -15,8 +15,10 @@ Gate, receipt, trace, permission, or mutation authority.
 
 Do not select a bundle by scanning, a bare filename, chat memory, chronology,
 or a copied/unreachable map. If the supplied bundle or selected Harness context
-is unavailable, state that direct boundary and do not run a map-provided command
-path.
+is unavailable, report the selected Harness context as unavailable and stop
+before executing any bundle-provided command. Do not rewrite the bundle, scan
+for another bundle, create an alternate source path, or infer a replacement
+coordinate.
 
 ## Reload Procedure
 

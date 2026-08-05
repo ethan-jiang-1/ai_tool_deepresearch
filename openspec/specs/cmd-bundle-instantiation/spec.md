@@ -192,10 +192,11 @@ resolve the created bundle directory and the physical
 render `BUNDLE_ENTRY.md` with the bundle name and a canonical-Harness-root
 relative path calculated from those resolved locations. Any framework-root
 coordinate rendered in `BUNDLE_ENTRY.md` or `BUNDLE_MAP.md` SHALL point to the
-canonical physical Harness root even when the creator was invoked through the
-legacy alias. It SHALL NOT assume the bundle is a sibling of the Harness
-merely because that is the default target layout, and it SHALL NOT emit a
-canonical `RUN_BUNDLE.md`.
+canonical physical Harness root. The production creator SHALL be supported
+only from its canonical Harness command location; it SHALL not expose an
+alternate source-root invocation or rendered source coordinate. It SHALL NOT
+assume the bundle is a sibling of the Harness merely because that is the
+default target layout, and it SHALL NOT emit a canonical `RUN_BUNDLE.md`.
 
 `--target-dir` MAY be an explicit relative input, but after the bundle exists
 the creator SHALL print its filesystem-resolved canonical absolute directory
@@ -212,7 +213,8 @@ schema, and no-overwrite contracts remain unchanged.
   directory outside the Harness's sibling layout
 - **THEN** its `BUNDLE_ENTRY.md` SHALL contain a Harness path that resolves
   from that bundle to the actual canonical Harness root used by the creator
-- **AND** it SHALL NOT contain a fixed `../DPT_FRAMEWORK/` assumption
+- **AND** it SHALL not contain a fixed sibling-path assumption or an alternate
+  Harness source coordinate
 
 #### Scenario: Relative creator target yields an absolute current-root handoff
 
@@ -220,4 +222,12 @@ schema, and no-overwrite contracts remain unchanged.
 - **THEN** it SHALL create the same bundle layout under that target and print
   the created bundle's canonical absolute directory to stdout
 - **AND** its rendered Harness coordinates SHALL resolve to
-  `DEEP_RESEARCH_HARNESS/`, not the legacy compatibility alias
+  `DEEP_RESEARCH_HARNESS/` as the only supported source root
+
+#### Scenario: Canonical creator command is the only supported source entry
+
+- **WHEN** an Agent or operator invokes the production bundle creator
+- **THEN** the supported command path SHALL be under
+  `DEEP_RESEARCH_HARNESS/cli/`
+- **AND** the repository SHALL not provide a second source-root command path
+  that reaches the same creator

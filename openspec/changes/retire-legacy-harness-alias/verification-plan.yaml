@@ -1,0 +1,103 @@
+schema_version: verification-routing/v1
+change: retire-legacy-harness-alias
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The retired behavior is a repository-topology and process-entry contract;
+      no isolated in-process helper establishes the breaking source-root
+      boundary more directly than the selected integration assets.
+  integration:
+    status: selected
+    rationale: >-
+      Actual root topology, current guidance, creator output, and fixture-backed
+      inspection can be exercised through node:test without claiming Agent
+      behavior or mutating an existing run bundle.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      A temporary bundle chain proves canonical creation, inspection, runtime
+      containment, release alignment, and Autorun source identity through the
+      only supported Harness root.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change removes a filesystem compatibility path and preserves Agent
+      flow; it makes no claim that a real Agent performs research, judgment,
+      repair, or delivery differently.
+claims:
+  - id: singular-harness-root-and-context-contract
+    statement: >-
+      ACR-001, ACR-002, ACR-004, FRE-001, WDC-001, and WDC-006: current
+      repository topology and Agent-facing documentation expose exactly one
+      canonical Harness root, retain the Charter-then-context route, do not
+      expose an alternate root resolving to the same assets, and preserve the
+      existing continuation stop before a bundle-provided command when the
+      selected Harness context is unavailable.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/deep-research-harness-entry-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: canonical-creator-and-inspector-contract
+    statement: >-
+      CMI-009 and WDC-004: the production creator is reachable only through
+      the canonical Harness root, renders canonical BUNDLE_ENTRY and
+      BUNDLE_MAP coordinates, and emits the resolved current-run-bundle-root
+      handoff for explicit relative targets.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/instantiate-run-bundle.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: canonical-context-and-adr-contract
+    statement: >-
+      ACR-001, ACR-002, and ACR-004: the root glossary and current ADR routes
+      distinguish canonical Harness assets, run-bundle runtime truth, and
+      historical rationale without a second live source coordinate.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-context-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: canonical-harness-runtime-chain
+    statement: >-
+      FRE-001, WDC-001, WDC-004, EXA-002, CMI-009, and VEM-001 through
+      VEM-004: a temporary bundle created, inspected, and written through the
+      canonical Harness root keeps mutable state only below its explicit bundle
+      root, preserves canonical source identity for affected host tooling, and
+      aligns the concise v0.74 breaking-retirement entry with the Harness
+      release banner.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/deep-research-harness-migration.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

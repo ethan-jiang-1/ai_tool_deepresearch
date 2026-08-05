@@ -8,6 +8,20 @@ import { describe, it } from 'node:test';
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const ROOT_BEHAVIOR_FILES = ['AGENTS.md', 'CLAUDE.md'];
 const FRAMEWORK_BEHAVIOR_FILES = ['DEEP_RESEARCH_HARNESS/AGENTS.md', 'DEEP_RESEARCH_HARNESS/CLAUDE.md'];
+const ADR_RATIONALES = [
+  {
+    path: 'docs/adr/0001-keep-agent-flow-markdown-driven-and-engine-gated.md',
+    markers: [/JavaScript workflow controller/, /LLM Agent and\s+Markdown control surfaces/, /Engine as the deterministic trust root/, /accepted OpenSpec contracts/, /records rationale, not runtime truth/],
+  },
+  {
+    path: 'docs/adr/0002-name-the-reusable-surface-deep-research-harness.md',
+    markers: [/canonical semantic name is \*\*Deep Research Harness\*\*/, /\*\*run bundle\*\* remains/, /physical source\s+root/, /ADR 0003/],
+  },
+  {
+    path: 'docs/adr/0003-retire-legacy-harness-source-alias.md',
+    markers: [/sole reusable Harness source, import, and\s+command coordinate/, /selected\s+Harness context as unavailable/, /stop\s+before executing a bundle-provided\s+command/],
+  },
+];
 
 function read(relativePath) {
   return readFileSync(join(REPO_ROOT, relativePath), 'utf8');
@@ -127,6 +141,7 @@ describe('agent context routing contract', () => {
     assert.match(text, /\[Agentic Execution Model\]\(guidelines\/agentic-execution-model\.md\)/);
     assert.match(text, /\[ADR 0001\]\(docs\/adr\/0001-keep-agent-flow-markdown-driven-and-engine-gated\.md\)/);
     assert.match(text, /\[ADR 0002\]\(docs\/adr\/0002-name-the-reusable-surface-deep-research-harness\.md\)/);
+    assert.match(text, /\[ADR 0003\]\(docs\/adr\/0003-retire-legacy-harness-source-alias\.md\)/);
     assert.match(text, /vocabulary-alignment surface/);
     assert.match(text, /not a behavior specification, executable contract, Gate verdict, or\s+runtime projection/);
     assert.match(text, /complete Phase Agent, Sub-agent, Queue\s+demand item, Work unit, and Submit vocabulary/);
@@ -139,22 +154,17 @@ describe('agent context routing contract', () => {
     assert.match(text, /\*\*Research run\*\*:/);
     assert.match(text, /\*\*Current run bundle\*\*:/);
     assert.match(text, /\*\*Current run bundle root\*\*:/);
-    assert.match(text, /\*\*`DPT_FRAMEWORK\/`\*\*:/);
     assert.equal(existsSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/CONTEXT.md')), false, 'framework must not gain a local glossary');
   });
 
-  it('keeps ADR 0001 as an accepted rationale rather than behavior authority', () => {
-    const path = 'docs/adr/0001-keep-agent-flow-markdown-driven-and-engine-gated.md';
-    const text = read(path);
-
-    for (const heading of ['Status', 'Context', 'Decision', 'Consequences']) {
-      assert.match(text, new RegExp(`^## ${heading}$`, 'm'), `${path} must retain ## ${heading}`);
+  it('keeps all current ADRs as accepted rationale rather than behavior authority', () => {
+    for (const { path, markers } of ADR_RATIONALES) {
+      const text = read(path);
+      for (const heading of ['Status', 'Context', 'Decision', 'Consequences']) {
+        assert.match(text, new RegExp(`^## ${heading}$`, 'm'), `${path} must retain ## ${heading}`);
+      }
+      assert.match(text, /## Status\s*\n+Accepted/);
+      for (const marker of markers) assert.match(text, marker, `${path} must retain its decision boundary`);
     }
-    assert.match(text, /## Status\s*\n+Accepted/);
-    assert.match(text, /JavaScript workflow controller/);
-    assert.match(text, /LLM Agent and\s+Markdown control surfaces/);
-    assert.match(text, /Engine as the deterministic trust root/);
-    assert.match(text, /accepted OpenSpec contracts/);
-    assert.match(text, /records rationale, not runtime truth/);
   });
 });

@@ -30,9 +30,9 @@ The normal autorun surfaces SHALL be:
   debug/replay and real-human judgment; and
 - `DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs` for the Autorun Supervisor command.
 
-`DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs` SHALL remain a legacy path
-to the same command only; it SHALL not be shown as a second canonical Autorun
-surface.
+The canonical Harness host-tools location SHALL be the only supported Autorun
+source coordinate. No filesystem alias, alternate root path, or source-identity
+fallback SHALL resolve to the same normal Autorun command.
 
 `run-agent-experiment.mjs --interactive --case <exact-case>` SHALL be the
 bounded Interactive launch path. It SHALL create the same validated run context,

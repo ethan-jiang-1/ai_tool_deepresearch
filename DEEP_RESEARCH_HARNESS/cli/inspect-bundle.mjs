@@ -88,7 +88,6 @@ function repoRootForBundle(activeBundleDir) {
   let cursor = dirname(resolve(activeBundleDir));
   while (cursor && cursor !== dirname(cursor)) {
     if (existsSync(join(cursor, 'DEEP_RESEARCH_HARNESS'))) return cursor;
-    if (existsSync(join(cursor, 'DPT_FRAMEWORK'))) return cursor;
     cursor = dirname(cursor);
   }
   return DEFAULT_REPO_ROOT;

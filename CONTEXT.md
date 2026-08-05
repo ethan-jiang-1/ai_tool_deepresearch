@@ -18,7 +18,8 @@ canon; the entries here are compressed orientation only.
 Current behavior, executable contracts, and current runtime facts remain with
 their applicable Sources of Record. For durable architecture rationale, see
 [ADR 0001](docs/adr/0001-keep-agent-flow-markdown-driven-and-engine-gated.md)
-and [ADR 0002](docs/adr/0002-name-the-reusable-surface-deep-research-harness.md).
+[ADR 0002](docs/adr/0002-name-the-reusable-surface-deep-research-harness.md),
+and [ADR 0003](docs/adr/0003-retire-legacy-harness-source-alias.md).
 They are optional rationale, not mandatory pre-task reads, behavior authority,
 or replacements for the Charter.
 
@@ -34,18 +35,12 @@ A reusable agentic harness that turns a broad research question into an
 evidence-backed, gated research report. It is distinct from both the project
 that develops it and any particular run bundle.
 _Avoid_: Deep Research Tool project, Deep Research Framework, run bundle,
-`DPT_FRAMEWORK/`
+repository source coordinates
 
 **`DEEP_RESEARCH_HARNESS/`**:
 The repository directory containing reusable Deep Research Harness assets.
 It is a filesystem location, not the framework concept or a research run.
 _Avoid_: Deep Research Harness, run bundle, active bundle
-
-**`DPT_FRAMEWORK/`**:
-The legacy relative filesystem alias for `DEEP_RESEARCH_HARNESS/`. It resolves
-to the same reusable Harness assets and is not a second source tree, canonical
-authoring coordinate, or research run.
-_Avoid_: Deep Research Harness, current run bundle, canonical source root
 
 **Run bundle**:
 A durable package for one bounded Deep Research engagement. It contains the

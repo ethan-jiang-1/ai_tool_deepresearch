@@ -11,10 +11,9 @@ import {
 } from 'node:test';
 import {
   existsSync,
-  lstatSync,
   mkdtempSync,
   readFileSync,
-  readlinkSync,
+  readdirSync,
   realpathSync,
   rmSync,
   unlinkSync,
@@ -25,10 +24,24 @@ import { join } from 'node:path';
 
 const REPO_ROOT = process.cwd();
 const HARNESS_ROOT = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS');
-const LEGACY_ROOT = join(REPO_ROOT, 'DPT_FRAMEWORK');
 const INSTANTIATE = join(HARNESS_ROOT, 'cli', 'instantiate-run-bundle.mjs');
 const INSPECT = join(HARNESS_ROOT, 'cli', 'inspect-bundle.mjs');
 const roots = new Set();
+
+function alternateSourceRootEntries() {
+  const canonicalRoot = realpathSync(HARNESS_ROOT);
+  return readdirSync(REPO_ROOT, { withFileTypes: true })
+    .filter((entry) => entry.name !== 'DEEP_RESEARCH_HARNESS')
+    .flatMap((entry) => {
+      try {
+        return realpathSync(join(REPO_ROOT, entry.name)) === canonicalRoot
+          ? [entry.name]
+          : [];
+      } catch {
+        return [];
+      }
+    });
+}
 
 function run(script, args) {
   return spawnSync(process.execPath, [script, ...args], {
@@ -54,13 +67,16 @@ describe('Deep Research Harness entry contract', () => {
   });
 
   it('keeps one physical Harness source tree and canonical static entry routes', () => {
-    assert.equal(lstatSync(LEGACY_ROOT).isSymbolicLink(), true, 'legacy root must remain a symlink');
-    assert.equal(readlinkSync(LEGACY_ROOT), 'DEEP_RESEARCH_HARNESS');
-    assert.equal(realpathSync(LEGACY_ROOT), realpathSync(HARNESS_ROOT));
+    assert.equal(existsSync(HARNESS_ROOT), true, 'canonical Harness root must exist');
+    assert.deepEqual(
+      alternateSourceRootEntries(),
+      [],
+      'repository root must not expose another entry resolving to the Harness assets',
+    );
 
     const adr = readFileSync(join(REPO_ROOT, 'docs', 'adr', '0002-name-the-reusable-surface-deep-research-harness.md'), 'utf8');
     assert.match(adr, /`DEEP_RESEARCH_HARNESS\/` as the physical source\s+root/);
-    assert.match(adr, /`DPT_FRAMEWORK\/` is a relative compatibility symlink/);
+    assert.match(adr, /\*\*run bundle\*\* remains/);
 
     const entryTemplate = readFileSync(join(HARNESS_ROOT, 'rb_templates', 'BUNDLE_ENTRY.md.tmpl'), 'utf8');
     assert.match(entryTemplate, /^# \{\{name\}\}$/m);
@@ -93,6 +109,12 @@ describe('Deep Research Harness entry contract', () => {
     );
     assert.match(continuation, /Do not select a bundle by scanning, a bare filename, chat memory, chronology/i);
     assert.match(continuation, /If all three are absent,\s*report the entry boundary and stop/i);
+    assert.match(continuation, /report the selected Harness context as unavailable/i);
+    assert.match(continuation, /stop\s+before executing any bundle-provided command/i);
+    assert.match(continuation, /Do not rewrite the bundle/i);
+    assert.match(continuation, /scan\s+for another bundle/i);
+    assert.match(continuation, /create an alternate source path/i);
+    assert.match(continuation, /infer a replacement\s+coordinate/i);
   });
 
   it('renders a new entry card and retains bounded legacy entry and map compatibility', () => {

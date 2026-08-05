@@ -125,8 +125,7 @@ for (const d of dirs) {
   mkdirSync(join(bundleDir, d), { recursive: true });
 }
 
-// Handoff and authored navigation coordinates use physical locations, even
-// when this creator was invoked through the legacy DPT_FRAMEWORK alias.
+// Handoff and authored navigation coordinates use physical canonical locations.
 const currentRunBundleRoot = realpathSync(bundleDir);
 const frameworkRoot = realpathSync(join(__dirname, '..'));
 const frameworkRootRelative = relative(currentRunBundleRoot, frameworkRoot) || '.';
