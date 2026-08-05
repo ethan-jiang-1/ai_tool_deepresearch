@@ -10,263 +10,427 @@ Current run bundle root 是所有裸 runtime path 的解析锚点。Specs、work
 ## Requirements
 ### Requirement: Read-only framework assets boundary
 
-`DEEP_RESEARCH_HARNESS/` SHALL 是 read-only framework assets 目录。运行中发生的用户输入、gate attempt、pass/fail、repair、waiting/block、trace event、artifact、final output MUST 只写入 current run bundle root，MUST NOT 写回 `DEEP_RESEARCH_HARNESS/`。
+`DEEP_RESEARCH_HARNESS/` SHALL be the canonical read-only reusable Harness
+assets directory. Runtime user input, gate attempts, pass/fail results, repair
+attempts, waiting/block facts, trace events, artifacts, and final output MUST
+be written only under the current run bundle root and MUST NOT be written to
+the canonical Harness tree.
+
+`DPT_FRAMEWORK/` SHALL remain one compatibility path resolving to the same
+Harness assets. It SHALL not be a second source tree, a second canonical
+authoring path, or runtime storage.
 
 #### Scenario: Gate result written to correct location
 
-- **WHEN** gate CLI 返回 pass/fail/inspect/advice
-- **THEN** gate result 记录在 current run bundle root 的 `rb_trace.jsonl` 和/或 `rb_status.json` 中，MUST NOT 写入 `DEEP_RESEARCH_HARNESS/schema/gate_definitions/`
+- **WHEN** a gate CLI returns pass/fail/inspect/advice
+- **THEN** the gate result is recorded in the current run bundle root's
+  `rb_trace.jsonl` and/or `rb_status.json`
+- **AND** it MUST NOT be written to
+  `DEEP_RESEARCH_HARNESS/schema/gate_definitions/` or the legacy alias
 
-#### Scenario: Multiple bundles share one framework
+#### Scenario: Multiple bundles share one Harness
 
-- **WHEN** 存在两个或以上 `dpt_rb_*` 或 `dpt_disp_*` runtime bundle
-- **THEN** 所有 bundle 通过相对路径引用同一套 `DEEP_RESEARCH_HARNESS/`，各自独立持有 runtime state，互不污染
+- **WHEN** two or more `dpt_rb_*` or `dpt_disp_*` runtime bundles exist
+- **THEN** newly created bundles reference the canonical
+  `DEEP_RESEARCH_HARNESS/` root while legacy bundles may retain a resolvable
+  `DPT_FRAMEWORK/` coordinate
+- **AND** all bundles use one shared Harness asset tree and independently hold
+  runtime state without contamination
 
 ### Requirement: Workflow node directory structure
 
-Workflow nodes SHALL 放置在 `DEEP_RESEARCH_HARNESS/workflows/nodes/` 下，分两个子目录：
+Workflow nodes SHALL reside under
+`DEEP_RESEARCH_HARNESS/workflows/nodes/`, split into:
 
-- `phases/` — phase node，agent 按 phase 顺序执行，完成后运行 gate
-- `shared/` — shared node，提供多个 phase 复用的 Agent-readable context
+- `phases/` — phase nodes that an Agent follows in phase order before running
+  the associated gate
+- `shared/` — shared nodes providing reusable Agent-readable context
 
-Phase manifest 或等价 lifecycle map SHALL 放置在 `DEEP_RESEARCH_HARNESS/workflows/manifest.json`。
+The phase manifest or equivalent lifecycle map SHALL reside at
+`DEEP_RESEARCH_HARNESS/workflows/manifest.json`.
 
 #### Scenario: Phase node location
 
-- **WHEN** agent 需要加载当前 phase 的指令
-- **THEN** phase node MUST 位于 `DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-<phase>.md`
+- **WHEN** an Agent needs instructions for the current phase
+- **THEN** the phase node MUST be at
+  `DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-<phase>.md`
 
 #### Scenario: Shared node location
 
-- **WHEN** agent 需要加载 shared context（如 profile 说明、gate 摘要）
-- **THEN** shared node MUST 位于 `DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-<scope>.md`
+- **WHEN** an Agent needs shared context such as profile guidance or a gate
+  summary
+- **THEN** the shared node MUST be at
+  `DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-<scope>.md`
 
 #### Scenario: Shared node is not a hidden phase
 
-- **WHEN** 一个 Markdown 文件位于 `shared/` 子目录下
-- **THEN** 该文件 SHALL NOT 声明 `phase`、`gate`、`next` 或 `stop` 字段，SHALL NOT 改变 phase order
+- **WHEN** a Markdown file is under the `shared/` directory
+- **THEN** it SHALL NOT declare `phase`, `gate`, `next`, or `stop` fields
+- **AND** it SHALL NOT change phase order
 
 ### Requirement: Gate artifacts location and shape
 
-Gate definition JSON files SHALL 放置在 `DEEP_RESEARCH_HARNESS/schema/gate_definitions/`，命名 `gate-<gate-name-kebab>.definition.json`。Gate definition SHALL 是 read-only deterministic rule source，属于 framework definition，NOT 被复制进每个 `dpt_rb_*`。
+Gate-definition JSON files SHALL reside under
+`DEEP_RESEARCH_HARNESS/schema/gate_definitions/`, named
+`gate-<gate-name-kebab>.definition.json`. A Gate definition SHALL be a
+read-only deterministic rule source belonging to the Harness and MUST NOT be
+copied into each `dpt_rb_*` bundle.
 
-Gate CLI SHALL 放置在 `DEEP_RESEARCH_HARNESS/cli/gates/`，命名 `check-gate-<gate-name-kebab>.mjs`。每个 gate 对应一个外部 CLI wrapper。CLI SHALL 显式接收 current run bundle path（`--bundle` 或等价 flag），不能假设当前工作目录即为目标 bundle。
+Gate CLIs SHALL reside under `DEEP_RESEARCH_HARNESS/cli/gates/`, named
+`check-gate-<gate-name-kebab>.mjs`. Each Gate SHALL have one external CLI
+wrapper. The CLI SHALL explicitly receive a current run bundle root through
+`--bundle` or an equivalent flag and SHALL NOT assume cwd is the target bundle.
 
-Gate engine（loader、evaluator）SHALL 放置在 `DEEP_RESEARCH_HARNESS/engine/gates/` when a per-gate engine module exists。共享 helper SHALL 放置在 `DEEP_RESEARCH_HARNESS/engine/helpers/`。
+Gate engines SHALL reside under `DEEP_RESEARCH_HARNESS/engine/gates/` when a
+per-Gate engine module exists. Shared helpers SHALL reside under
+`DEEP_RESEARCH_HARNESS/engine/helpers/`.
 
-Current gate transition-table contract SHALL be represented by `DEEP_RESEARCH_HARNESS/schema/contracts/gate.mjs`. Gate definition JSON files remain read-only rule sources under `DEEP_RESEARCH_HARNESS/schema/gate_definitions/` and are loaded by the gate helper / per-gate CLI pipeline; no `gate-definition.mjs` executable contract is part of the current accepted runtime surface.
+The current Gate transition-table contract SHALL be represented by
+`DEEP_RESEARCH_HARNESS/schema/contracts/gate.mjs`. Gate-definition JSON files
+remain read-only rule sources under the canonical Harness schema directory and
+are loaded by the Gate-helper/per-Gate CLI pipeline; no
+`gate-definition.mjs` executable contract is part of the current accepted
+runtime surface.
 
-> Apply note: this retires stale accepted prose about a non-existent `gate-definition.mjs` Zod contract. It is not a rename from a gate-definition schema to `gate.mjs`; `gate.mjs` is the current transition-table contract, while gate definition rule data remains JSON under `schema/gate_definitions/`.
+#### Scenario: Gate definition is Harness asset not bundle copy
 
-#### Scenario: Gate definition is framework asset not bundle copy
+- **WHEN** a `dpt_rb_*` bundle is instantiated
+- **THEN** Gate-definition JSON MUST NOT be copied into the bundle
+- **AND** a Gate CLI reads the definition from the canonical Harness and uses
+  `--bundle` to identify the checked current run bundle root
 
-- **WHEN** `dpt_rb_*` 被实例化
-- **THEN** gate definition JSON MUST NOT 被复制进 bundle；gate CLI 从 `DEEP_RESEARCH_HARNESS/` 读取 definition，以 `--bundle` 参数指定检查目标
+#### Scenario: One Gate per CLI
 
-#### Scenario: One gate per CLI
-
-- **WHEN** agent 需要运行某个 gate
-- **THEN** agent MUST 调用独立的 `check-gate-<name>.mjs`，MUST NOT 通过统一入口加 subcommand 区分 gate
+- **WHEN** an Agent needs to run a Gate
+- **THEN** it MUST invoke that Gate's independent `check-gate-<name>.mjs`
+- **AND** it MUST NOT distinguish Gates with subcommands on one universal entry
 
 #### Scenario: Gate CLI requires bundle path
 
-- **WHEN** gate CLI 被调用时未提供 `--bundle` 参数
-- **THEN** CLI SHALL 报错退出，MUST NOT 假设默认 bundle 或扫描目录
+- **WHEN** a Gate CLI is called without a `--bundle` argument
+- **THEN** it SHALL fail
+- **AND** it MUST NOT assume a default bundle or scan directories
 
 ### Requirement: Runtime bundle canonical structure
 
-Active runtime bundles SHALL contain canonical control files and data directories for runtime truth. Production runs use `dpt_rb_*`; disposable experiments use `dpt_disp_*`.
+Current runtime bundles SHALL contain canonical control files and data
+directories for runtime truth. Production runs use `dpt_rb_*`; disposable
+experiments use `dpt_disp_*`. Those bundle-name grammars remain unchanged by
+the Harness-root migration.
 
-The active runtime bundle root (short form: current run bundle root) SHALL be the single mutable runtime directory selected for the current run, command invocation, or controlled experiment. For production it SHALL be the active `dpt_rb_*` directory; for controlled experiments it SHALL be the active `dpt_disp_*` directory. The current run bundle root owns runtime truth for that invocation.
+The current run bundle root SHALL be the single mutable runtime directory
+explicitly selected for one research entry, command invocation, task card, or
+controlled experiment. For production it SHALL be the selected `dpt_rb_*`
+directory; for controlled experiments it SHALL be the selected `dpt_disp_*`
+directory. It owns runtime truth for that operation. At an Agent/CLI handoff,
+the selected root SHALL be supplied in its resolved absolute form; it SHALL NOT
+be inferred from repository root, cwd, shell state, chat memory, chronology,
+or an unqualified bundle mention.
 
-Current specs, framework docs, workflow nodes, bundle templates, and Agent-facing playbooks SHALL use this coordinate vocabulary:
+A CLI MAY accept an explicitly supplied relative bundle path at its boundary,
+but it SHALL resolve the reachable directory to its filesystem-resolved
+canonical absolute form before using it for runtime paths or passing it to an
+Agent/CLI handoff. A new-bundle creator SHALL emit the same resolved absolute
+form to stdout. Relative input is not a second current-run-bundle-root
+coordinate.
 
-- `repo_command_root`: the repository root used to invoke framework commands. It may contain `DEEP_RESEARCH_HARNESS/` and many runtime bundles, but it is not runtime truth.
-- `framework_root`: the `DEEP_RESEARCH_HARNESS/` reusable framework asset root. It contains schemas, CLIs, engines, workflow nodes, templates, and command playbooks; it is read-only during workflow execution.
-- `active_bundle_root`: the selected `dpt_rb_*` or `dpt_disp_*` runtime bundle root. It is the only root for mutable runtime truth.
+Current specs, Harness docs, workflow nodes, bundle templates, and Agent-facing
+playbooks SHALL use this coordinate vocabulary:
 
-For CLI operations, the active runtime bundle root SHALL be the explicit bundle path argument such as `--bundle <path>` or an equivalent positional bundle path. For Agent-facing Markdown flows, it SHALL be the bundle directory named by the run entry, playbook setup, or current task card. When multiple `dpt_rb_*` or `dpt_disp_*` directories exist, every runtime read/write SHALL resolve against the selected current run bundle root for that step.
+- `repo_command_root`: the repository root used to invoke Harness commands. It
+  may contain the canonical Harness root, its legacy alias, and many runtime
+  bundles, but is not runtime truth.
+- `framework_root`: the canonical `DEEP_RESEARCH_HARNESS/` reusable Harness
+  asset root. It contains schemas, CLIs, engines, workflow nodes, templates,
+  and command playbooks, and is read-only during workflow execution.
+- `current_run_bundle_root`: the explicitly selected `dpt_rb_*` or
+  `dpt_disp_*` runtime bundle root. It is the only root for mutable runtime
+  truth.
 
-The active runtime bundle root SHALL NOT be inferred from repository root, `DEEP_RESEARCH_HARNESS/`, chat memory, process working directory, shell state, or whichever bundle was mentioned earlier in conversation.
+For CLI operations, `current_run_bundle_root` SHALL be the explicit bundle
+path argument such as `--bundle <path>` or an equivalent positional bundle
+path. For Agent-facing Markdown flows, it SHALL be the resolved directory
+named by the run entry, playbook setup, or current task card. When multiple
+`dpt_rb_*` or `dpt_disp_*` directories exist, every runtime read/write SHALL
+resolve against the explicitly selected root for that operation.
 
-Unless a path is explicitly rooted in `DEEP_RESEARCH_HARNESS/`, runtime paths in accepted specs and Agent-facing guidance SHALL be read as relative to the active runtime bundle root, not the repository root and not `DEEP_RESEARCH_HARNESS/`. This includes bare paths such as `rb_queue.json`, `rb_trace.jsonl`, `rb_output_declarations.jsonl`, `reference/`, `artifacts/`, `_cache/`, `_logs/`, `final/`, and `_work_units/...`.
+Unless a path is explicitly rooted in `DEEP_RESEARCH_HARNESS/`, runtime paths
+in accepted specs and Agent-facing guidance SHALL be read as relative to
+`current_run_bundle_root`, not repository root or Harness root. This includes
+`rb_queue.json`, `rb_trace.jsonl`, `rb_output_declarations.jsonl`,
+`reference/`, `artifacts/`, `_cache/`, `_logs/`, `final/`, and
+`_work_units/...`.
 
-Bundle-root runtime surfaces include `BUNDLE_MAP.md`, `rb_plan.md`, `rb_profile.yaml`, `rb_status.json`, `rb_queue.json`, `rb_trace.jsonl`, `rb_output_declarations.jsonl`, `seed_topics/`, `reference/`, `artifacts/`, `_cache/`, `_logs/`, `final/`, and `_work_units/`. Production delegated work SHALL use bundle-root `_work_units/` as the work-unit runtime directory tree. Bundle-root `_work_units/_index.json` SHALL be Engine-owned allocation and attempt-state truth, while submitted delegated output coverage SHALL remain in bundle-root `rb_output_declarations.jsonl`.
+Bundle-root runtime surfaces include `BUNDLE_ENTRY.md`, `BUNDLE_MAP.md`,
+`rb_plan.md`, `rb_profile.yaml`, `rb_status.json`, `rb_queue.json`,
+`rb_trace.jsonl`, `rb_output_declarations.jsonl`, `seed_topics/`,
+`reference/`, `artifacts/`, `_cache/`, `_logs/`, `final/`, and
+`_work_units/`. Production delegated work SHALL use bundle-root `_work_units/`
+as its work-unit runtime tree. Bundle-root `_work_units/_index.json` SHALL be
+Engine-owned allocation and attempt-state truth, while submitted delegated
+output coverage SHALL remain in bundle-root `rb_output_declarations.jsonl`.
 
-Legacy bundles can contain `START_FROM_HERE.md`; that file SHALL be treated as deprecated bundle-map compatibility, not as a new-bundle canonical runtime surface.
+Legacy bundles can contain `RUN_BUNDLE.md` and/or `START_FROM_HERE.md`; these
+files SHALL be treated as bounded entry/map compatibility, not new-bundle
+canonical runtime surfaces.
 
-Runtime choices and runtime data SHALL be persisted in the active runtime bundle. Framework definitions, schemas, workflow nodes, CLIs, reusable engine code, templates, and command playbooks SHALL remain under `DEEP_RESEARCH_HARNESS/` and SHALL NOT become per-run storage.
+Runtime choices and runtime data SHALL be persisted under the current run
+bundle root. Harness definitions, schemas, workflow nodes, CLIs, reusable
+Engine code, templates, and command playbooks SHALL remain under the canonical
+Harness root and SHALL NOT become per-run storage.
 
-#### Scenario: coordinate vocabulary distinguishes roots
+#### Scenario: Coordinate vocabulary distinguishes roots
 
-- **WHEN** an Agent reads a spec, workflow node, playbook, or bundle entrypoint that names `repo_command_root`, `framework_root`, and `active_bundle_root`
-- **THEN** it SHALL treat `repo_command_root` only as the shell command location
-- **AND** it SHALL treat `framework_root` only as reusable read-only framework assets
-- **AND** it SHALL treat `active_bundle_root` as the only root for mutable runtime truth
+- **WHEN** an Agent reads a spec, workflow node, playbook, or bundle entrypoint
+  that names `repo_command_root`, `framework_root`, and
+  `current_run_bundle_root`
+- **THEN** it SHALL treat `repo_command_root` only as the shell command
+  location
+- **AND** it SHALL treat `framework_root` only as reusable read-only Harness
+  assets
+- **AND** it SHALL treat `current_run_bundle_root` as the only root for mutable
+  runtime truth
 
-#### Scenario: command root is not runtime root
+#### Scenario: Explicit relative bundle input resolves before handoff
 
-- **WHEN** an Agent runs `node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim dpt_rb_climate-policy`
-- **THEN** the repository root MAY be the process working directory
-- **AND** all runtime state written by the command SHALL resolve under `dpt_rb_climate-policy/`
-- **AND** no runtime state SHALL be written to `./_work_units/`, `./rb_queue.json`, or other repository-root runtime-looking paths
+- **WHEN** a CLI receives `--bundle dpt_rb_climate-policy` from a command
+  working directory where that relative path is reachable
+- **THEN** the filesystem-resolved absolute `dpt_rb_climate-policy/` directory
+  SHALL be the current run bundle root for that invocation and any later
+  Agent/CLI handoff
+- **AND** runtime paths SHALL resolve only inside that directory
 
-#### Scenario: work-units directory is part of delegated runtime structure
+#### Scenario: Command root is not runtime root
+
+- **WHEN** an Agent runs
+  `node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim dpt_rb_climate-policy`
+- **THEN** repository root MAY be the process working directory
+- **AND** all runtime state written by the command SHALL resolve under
+  `dpt_rb_climate-policy/`
+- **AND** no runtime state SHALL be written to `./_work_units/`,
+  `./rb_queue.json`, or another repository-root runtime-looking path
+
+#### Scenario: Work-units directory is part of delegated runtime structure
 
 - **WHEN** a bundle has executed delegated work-unit claim for a wave
-- **THEN** bundle-root `_work_units/waveN/{work_id}/` SHALL contain the claimed work-unit envelope
-- **AND** bundle-root `_work_units/_index.json` SHALL contain the corresponding allocation record
+- **THEN** `<current-run-bundle-root>/_work_units/waveN/{work_id}/` SHALL
+  contain the claimed work-unit envelope
+- **AND** `<current-run-bundle-root>/_work_units/_index.json` SHALL contain
+  the corresponding allocation record
 
-#### Scenario: bundle map is canonical root map
+#### Scenario: Bundle entry and map are canonical root surfaces
 
 - **WHEN** a new bundle is instantiated
-- **THEN** `BUNDLE_MAP.md` SHALL be part of the canonical bundle-root surface
-- **AND** `START_FROM_HERE.md` SHALL NOT be required as a current canonical surface
+- **THEN** `BUNDLE_ENTRY.md` and `BUNDLE_MAP.md` SHALL be part of the canonical
+  bundle-root surface
+- **AND** `RUN_BUNDLE.md` and `START_FROM_HERE.md` SHALL NOT be required as
+  current canonical surfaces
 
-#### Scenario: active runtime bundle root is explicit
+#### Scenario: Work-unit path expands under selected bundle
 
-- **WHEN** a CLI receives `--bundle dpt_rb_climate-policy`
-- **THEN** `dpt_rb_climate-policy/` SHALL be the active runtime bundle root for that invocation
-- **AND** runtime paths such as `rb_queue.json`, `rb_trace.jsonl`, `reference/`, and `_work_units/` SHALL resolve inside that directory
-
-#### Scenario: work-unit path expands under selected bundle
-
-- **WHEN** the selected active runtime bundle root is `dpt_rb_climate-policy/`
+- **WHEN** the current run bundle root is `/repo/dpt_rb_climate-policy/`
 - **AND** a spec, playbook, or prompt names `_work_units/wave1/wu-w1-b000-deep-i0001/`
-- **THEN** the runtime path SHALL mean `dpt_rb_climate-policy/_work_units/wave1/wu-w1-b000-deep-i0001/`
-- **AND** it SHALL NOT mean `./_work_units/wave1/wu-w1-b000-deep-i0001/` at repository root
+- **THEN** the runtime path SHALL mean
+  `/repo/dpt_rb_climate-policy/_work_units/wave1/wu-w1-b000-deep-i0001/`
+- **AND** it SHALL NOT mean `./_work_units/wave1/wu-w1-b000-deep-i0001/` at
+  repository root
 
-#### Scenario: runtime paths are bundle-root relative
+#### Scenario: Runtime paths are bundle-root relative
 
-- **WHEN** an accepted spec or Agent-facing runtime instruction names `reference/`, `artifacts/`, `_cache/`, `_logs/`, `_work_units/`, `rb_queue.json`, `rb_trace.jsonl`, or `rb_output_declarations.jsonl` without a leading framework path
-- **THEN** the path SHALL resolve under the active `dpt_rb_*` or `dpt_disp_*` bundle root
-- **AND** the Agent SHALL NOT create or read it as a repository-root or `DEEP_RESEARCH_HARNESS/` runtime path
+- **WHEN** an accepted spec or Agent-facing runtime instruction names
+  `reference/`, `artifacts/`, `_cache/`, `_logs/`, `_work_units/`,
+  `rb_queue.json`, `rb_trace.jsonl`, or `rb_output_declarations.jsonl` without
+  a leading Harness path
+- **THEN** the path SHALL resolve under the selected `dpt_rb_*` or `dpt_disp_*`
+  current run bundle root
+- **AND** the Agent SHALL NOT create or read it as a repository-root or Harness
+  runtime path
 
-#### Scenario: bare work-unit path requires current run bundle root
+#### Scenario: Bare work-unit path requires current run bundle root
 
-- **WHEN** a prompt or playbook gives the Agent `_work_units/wave2/{work_id}/result.json`
-- **THEN** the Agent SHALL first identify the current run bundle root for that run or experiment
-- **AND** it SHALL resolve the file as `<active-bundle-root>/_work_units/wave2/{work_id}/result.json`
-- **AND** it SHALL NOT create or inspect `./_work_units/wave2/{work_id}/result.json` at repo root
+- **WHEN** a prompt or playbook gives the Agent
+  `_work_units/wave2/{work_id}/result.json`
+- **THEN** the Agent SHALL first identify the current run bundle root for that
+  run or experiment
+- **AND** it SHALL resolve the file as
+  `<current-run-bundle-root>/_work_units/wave2/{work_id}/result.json`
+- **AND** it SHALL NOT create or inspect `./_work_units/wave2/{work_id}/result.json`
+  at repository root
 
-#### Scenario: framework templates are not active runtime state
+#### Scenario: Harness templates are not runtime state
 
-- **WHEN** a template, schema, gate definition, workflow node, CLI, command playbook, or reusable engine helper under `DEEP_RESEARCH_HARNESS/` names a runtime-relative path
-- **THEN** that path SHALL be interpreted only after a caller supplies an active runtime bundle root
-- **AND** the Agent or Engine SHALL NOT write current run data into the framework template, schema, workflow, CLI, or engine directory
+- **WHEN** a template, schema, Gate definition, workflow node, CLI, command
+  playbook, or reusable Engine helper under `DEEP_RESEARCH_HARNESS/` names a
+  runtime-relative path
+- **THEN** that path SHALL be interpreted only after a caller supplies a
+  current run bundle root
+- **AND** the Agent or Engine SHALL NOT write current run data into a Harness
+  template, schema, workflow, CLI, or Engine directory
 
-#### Scenario: runtime truth is in bundle not chat memory
+#### Scenario: Runtime truth is in bundle not chat memory
 
 - **WHEN** an Agent needs to recover current run state
-- **THEN** the Agent MUST reload current run bundle control files and work-unit state
+- **THEN** the Agent MUST reload current-run-bundle control files and work-unit
+  state
 - **AND** it MUST NOT rely on chat memory or console summary as runtime state
 
 ### Requirement: Test and experiment boundary
 
-The repository SHALL use the canonical `verification-routing` test classes and asset boundaries:
+The repository SHALL use the canonical `verification-routing` test classes and
+asset boundaries:
 
-- `unit` SHALL use focused in-process `node:test` assets under `tests/`, outside `tests/integration/` and `tests/e2e/`, with directories mirroring the owned framework or project surface where applicable. Test-owned temporary fixture I/O MAY remain in `unit` when it exercises only that one in-process contract;
+- `unit` SHALL use focused in-process `node:test` assets under `tests/`, outside
+  `tests/integration/` and `tests/e2e/`, with directories mirroring the owned
+  Harness or project surface where applicable. Test-owned temporary fixture I/O
+  MAY remain in `unit` when it exercises only that one in-process contract;
 - `integration` SHALL use JS-led `node:test` assets under `tests/integration/`;
 - `deterministic_e2e` SHALL use JS-led full-chain state tests under `tests/e2e/`;
-- `agent_flow_e2e` SHALL use coding-Agent-executed Markdown playbooks under the owning `experiments_playbook/exp_*/` family over real disposable run bundles. Workflow-foundation-specific cases SHALL remain under `experiments_playbook/exp_workflow-foundation/` when that family owns the proof.
+- `agent_flow_e2e` SHALL use coding-Agent-executed Markdown playbooks under the
+  owning `experiments_playbook/exp_*/` family over real disposable run bundles.
+  Workflow-foundation-specific cases SHALL remain under
+  `experiments_playbook/exp_workflow-foundation/` when that family owns the
+  proof.
 
-`regression`, controlled-E2E prose, playbook cost, proof subject, actor type, and runtime bundle type SHALL NOT be introduced as competing test classes. `DEEP_RESEARCH_HARNESS/` SHALL NOT contain test files, experiment fixtures, or playbooks.
+`regression`, controlled-E2E prose, playbook cost, proof subject, actor type,
+and runtime bundle type SHALL NOT be introduced as competing test classes.
+`DEEP_RESEARCH_HARNESS/` and its legacy alias SHALL NOT contain test files,
+experiment fixtures, or playbooks.
 
 #### Scenario: Unit test location
 
 - **WHEN** a focused test covers gate-evaluator deterministic behavior
 - **THEN** its `test_class` SHALL be `unit`
-- **AND** the test file SHALL live under `tests/engine/gates/` corresponding to `DEEP_RESEARCH_HARNESS/engine/gates/`
+- **AND** the test file SHALL live under `tests/engine/gates/` corresponding to
+  `DEEP_RESEARCH_HARNESS/engine/gates/`
 
 #### Scenario: Deterministic full chain stays under tests
 
-- **WHEN** JS simulates labeled Markdown/Agent-owned inputs and exercises a long state chain through real Engine paths
+- **WHEN** JS simulates labeled Markdown/Agent-owned inputs and exercises a
+  long state chain through real Engine paths
 - **THEN** its `test_class` SHALL be `deterministic_e2e`
-- **AND** the test file SHALL live under `tests/e2e/`, not `experiments_playbook/` or a repo-top-level `tests_e2e/`
+- **AND** the test file SHALL live under `tests/e2e/`, not
+  `experiments_playbook/` or a repo-top-level `tests_e2e/`
 
 #### Scenario: agent_flow_e2e is not a JS-led asset
 
-- **WHEN** a coding Agent must execute a Markdown playbook over a real disposable bundle
+- **WHEN** a coding Agent must execute a Markdown playbook over a real
+  disposable bundle
 - **THEN** its `test_class` SHALL be `agent_flow_e2e`
-- **AND** the playbook SHALL live under the appropriate `experiments_playbook/exp_*/` family, not `tests/`
+- **AND** the playbook SHALL live under the appropriate
+  `experiments_playbook/exp_*/` family, not `tests/`
 
 #### Scenario: Behavior determines class before directory
 
-- **WHEN** a governance test invokes a real checker subprocess and reads or writes fixture repository files
+- **WHEN** a governance test invokes a real checker subprocess and reads or
+  writes fixture repository files
 - **THEN** its `test_class` SHALL be `integration`
-- **AND** it SHALL live under `tests/integration/governance/` rather than using a unit-oriented directory to change its classification
+- **AND** it SHALL live under `tests/integration/governance/` rather than using
+  a unit-oriented directory to change its classification
 
 #### Scenario: Temporary fixture I/O does not force integration
 
-- **WHEN** a focused helper or schema test imports one in-process contract and uses a test-owned temporary file as input or output
+- **WHEN** a focused helper or schema test imports one in-process contract and
+  uses a test-owned temporary file as input or output
 - **THEN** its `test_class` MAY remain `unit`
-- **AND** the fixture file SHALL NOT be treated as a production CLI, multi-component, or workflow-chain boundary
+- **AND** the fixture file SHALL NOT be treated as a production CLI,
+  multi-component, or workflow-chain boundary
 
 ### Requirement: Naming conventions
 
-All workflow foundation artifacts SHALL follow the accepted naming conventions. Runtime bundle naming SHALL distinguish production run bundles from disposable experiment bundles without changing the runtime authority boundary.
+All workflow-foundation artifacts SHALL follow the accepted naming conventions.
+Runtime bundle naming SHALL distinguish production run bundles from disposable
+experiment bundles without changing the runtime-authority boundary or the
+legacy `dpt_rb_*` / `dpt_disp_*` grammar.
 
 #### Scenario: Runtime bundle names identify runtime context type
 
 - **WHEN** a current spec or playbook names a production runtime context
 - **THEN** it SHALL use `dpt_rb_<english-slug>[_collision]`
-- **AND** when it names a disposable experiment runtime context, it SHALL use `dpt_disp_<short>_<case>_<hex>`
+- **AND** when it names a disposable experiment runtime context, it SHALL use
+  `dpt_disp_<short>_<case>_<hex>`
 
 ### Requirement: Anti-mixing rules
 
-Framework artifact types SHALL NOT be mixed into each other's directories. Runtime state, runtime choices, gate result, trace, work-unit attempt data, receipts, artifacts, logs, cache projections, and repair attempt data MUST NOT be written back to `DEEP_RESEARCH_HARNESS/`.
+Harness artifact types SHALL NOT be mixed into each other's directories.
+Runtime state, runtime choices, Gate results, trace, work-unit attempt data,
+receipts, artifacts, logs, cache projections, and repair-attempt data MUST NOT
+be written back to `DEEP_RESEARCH_HARNESS/` or its legacy alias.
 
-#### Scenario: Runtime data is not framework data
+#### Scenario: Runtime data is not Harness data
 
-- **WHEN** an Agent, CLI, gate, or playbook produces runtime state or evidence
-- **THEN** it SHALL write under the active `dpt_rb_*` or `dpt_disp_*` bundle root
-- **AND** it SHALL NOT write that runtime output under `DEEP_RESEARCH_HARNESS/`
+- **WHEN** an Agent, CLI, Gate, or playbook produces runtime state or evidence
+- **THEN** it SHALL write under the selected `dpt_rb_*` or `dpt_disp_*` current
+  run bundle root
+- **AND** it SHALL NOT write that runtime output under
+  `DEEP_RESEARCH_HARNESS/` or `DPT_FRAMEWORK/`
 
 ### Requirement: Single canonical workflow package
 
-v1 阶段 SHALL 只有一个 canonical Deep Research workflow package，使用 `DEEP_RESEARCH_HARNESS/workflows/manifest.json`。SHALL NOT 引入 `workflows/<workflow-name>/` namespace。
+v1 SHALL have one canonical Deep Research workflow package at
+`DEEP_RESEARCH_HARNESS/workflows/manifest.json`. It SHALL NOT introduce a
+`workflows/<workflow-name>/` namespace.
 
-此决策 SHALL NOT 限制 run bundle 数量：同一套 `DEEP_RESEARCH_HARNESS/` MUST 能服务多个互相隔离的 `dpt_rb_*` run bundle。
+This decision SHALL NOT limit run-bundle count: one Harness MUST serve multiple
+isolated `dpt_rb_*` run bundles.
 
 #### Scenario: Multiple run bundles share one workflow package
 
-- **WHEN** 同时存在 `dpt_rb_project-a` 和 `dpt_rb_project-b` 两个 active run bundle
-- **THEN** 两个 bundle MUST 引用同一套 `DEEP_RESEARCH_HARNESS/workflows/` 中的 phase/shared node，各自维护独立的 runtime state
+- **WHEN** `dpt_rb_project-a` and `dpt_rb_project-b` both exist as current run
+  bundles for separate operations
+- **THEN** both bundles MUST reference the same
+  `DEEP_RESEARCH_HARNESS/workflows/` phase/shared nodes
+- **AND** each SHALL maintain independent runtime state
 
 ### Requirement: Manifest includes rerun phase entry
 
-`DEEP_RESEARCH_HARNESS/workflows/manifest.json` SHALL include a `rerun` phase entry in its `phases` array:
+`DEEP_RESEARCH_HARNESS/workflows/manifest.json` SHALL include a `rerun` phase
+entry in its `phases` array:
 
 ```json
 { "key": "rerun", "node": "phases/phase-rerun.md", "gate": "rerun-ready" }
 ```
 
-The rerun phase SHALL be registered as a phase node with its corresponding gate. Its position in the manifest array SHALL NOT imply linear runtime order — the manifest is an inventory, not a routing table.
+The rerun phase SHALL be registered as a phase node with its corresponding
+Gate. Its manifest-array position SHALL NOT imply linear runtime order; the
+manifest is an inventory, not a routing table.
 
 #### Scenario: Manifest lists rerun phase
 
-- **WHEN** a workflow consistency validator scans manifest.json
-- **THEN** it SHALL find `rerun` among the registered phase keys with node `phases/phase-rerun.md` and gate `rerun-ready`
+- **WHEN** a workflow consistency validator scans `manifest.json`
+- **THEN** it SHALL find `rerun` among registered phase keys with node
+  `phases/phase-rerun.md` and Gate `rerun-ready`
 
 #### Scenario: Rerun node file exists
 
-- **WHEN** manifest references `phases/phase-rerun.md`
-- **THEN** the file SHALL exist at `DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-rerun.md`
+- **WHEN** the manifest references `phases/phase-rerun.md`
+- **THEN** the file SHALL exist at
+  `DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-rerun.md`
 
 ### Requirement: Command playbooks are Agent-facing command instructions
 
-`DEEP_RESEARCH_HARNESS/command_playbook/` SHALL be described as containing Agent-facing command instructions and diagnostic/maintenance playbooks, not as instructions for a human or operator co-runner inside the autonomous pipeline.
+`DEEP_RESEARCH_HARNESS/command_playbook/` SHALL be described as containing
+Agent-facing command instructions and diagnostic/maintenance playbooks, not as
+instructions for a human or operator co-runner inside the autonomous pipeline.
 
-Framework directory docs SHALL NOT use unqualified `Agent/operator` or equivalent slash wording to describe the command-playbook audience. Operator or maintainer wording MAY appear only when clearly scoped to post-run inspection, diagnostics, repository maintenance, or out-of-band review, and not to running lifecycle commands mid-pipeline.
+Harness directory docs SHALL NOT use unqualified `Agent/operator` or
+equivalent slash wording to describe the command-playbook audience. Operator
+or maintainer wording MAY appear only when clearly scoped to post-run
+inspection, diagnostics, repository maintenance, or out-of-band review, and
+not to running lifecycle commands mid-pipeline.
 
 #### Scenario: Command playbook audience is Agent-facing
 
-- **WHEN** framework docs describe `DEEP_RESEARCH_HARNESS/command_playbook/`
-- **THEN** they SHALL identify the directory as Agent-readable or Agent-facing command guidance
-- **AND** they SHALL NOT identify operator as a co-runner audience for autonomous pipeline execution
+- **WHEN** Harness docs describe
+  `DEEP_RESEARCH_HARNESS/command_playbook/`
+- **THEN** they SHALL identify the directory as Agent-readable or Agent-facing
+  command guidance
+- **AND** they SHALL NOT identify an operator as a co-runner audience for
+  autonomous pipeline execution
 
 #### Scenario: Diagnostic operator wording is allowed
 
-- **WHEN** a command playbook describes post-run forensics, diagnostic inspection, or maintainer review
+- **WHEN** a command playbook describes post-run forensics, diagnostic
+  inspection, or maintainer review
 - **THEN** operator wording MAY appear if it is explicitly out-of-band
-- **AND** the wording SHALL NOT imply the operator runs normal lifecycle commands during `stop: no` execution
+- **AND** the wording SHALL NOT imply that an operator runs normal lifecycle
+  commands during `stop: no` execution
