@@ -30,27 +30,27 @@ The Playbook Agent creates one fresh `dpt_disp_*` verdict bundle and invokes the
 
 ```bash
 V=$(node experiments_env/shared/new-disposable-bundle.mjs wff_prod_verdict --case case-102 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$V"
-B=$(node DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs wff-prod --target-dir {{CASE_RUN_ROOT_SH}} 2>&1 | tail -1)
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role production-subject --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$V"
+B=$(node DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs wff-prod --target-dir {{CASE_RUN_ROOT_SH}} 2>&1 | tail -1)
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role production-subject --path "$B"
 ```
 
 ## Step 2 - Validate structure and run the real gate
 
 ```bash
-V=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$V"
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
-GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate instantiation-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle "$B" --current-node phases/phase-instantiation.md)
+V=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$V"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$B"
+GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate instantiation-complete -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-instantiation-complete.mjs --bundle "$B" --current-node phases/phase-instantiation.md)
 printf '%s\n' "$GATE" > "$B/case-102-instantiation-gate.json"
 ```
 
 ## Step 3 - Record case-owned checks in the disposable verdict trace
 
 ```bash
-V=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
+V=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
 node --input-type=module - "$V" "$B" <<'JS'
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
@@ -70,9 +70,9 @@ JS
 ## Step 4 - Native completion
 
 ```bash
-V=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$V" --bundle "production-subject=$B"
+V=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$V" --bundle "production-subject=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Standard health for both bundles, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

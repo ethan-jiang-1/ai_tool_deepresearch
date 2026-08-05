@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { claimWorkUnits } from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { claimWorkUnits } from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import {
   availableActorDecision,
   cleanupWorkUnitBundle,
@@ -83,17 +83,17 @@ function removeAllMatches(content, pattern) {
 }
 
 const publicSurfaces = Object.freeze([
-  ['RUN.md', 'DPT_FRAMEWORK/RUN.md'],
-  ['COMMANDS.md', 'DPT_FRAMEWORK/COMMANDS.md'],
-  ['cli/README.md', 'DPT_FRAMEWORK/cli/README.md'],
-  ['shared-subagent-protocol.md', 'DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md'],
-  ['provenance-forensics-guide.md', 'DPT_FRAMEWORK/command_playbook/provenance-forensics-guide.md'],
+  ['RUN.md', 'DEEP_RESEARCH_HARNESS/RUN.md'],
+  ['COMMANDS.md', 'DEEP_RESEARCH_HARNESS/COMMANDS.md'],
+  ['cli/README.md', 'DEEP_RESEARCH_HARNESS/cli/README.md'],
+  ['shared-subagent-protocol.md', 'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md'],
+  ['provenance-forensics-guide.md', 'DEEP_RESEARCH_HARNESS/command_playbook/provenance-forensics-guide.md'],
 ]);
 
 const phaseSurfaces = Object.freeze([
-  ['Wave0', 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md'],
-  ['Wave1', 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md'],
-  ['Wave2', 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md'],
+  ['Wave0', 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md'],
+  ['Wave1', 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md'],
+  ['Wave2', 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave2.md'],
 ]);
 
 describe('work-unit attempt-recovery Agent-facing guidance', () => {
@@ -104,7 +104,7 @@ describe('work-unit attempt-recovery Agent-facing guidance', () => {
   });
 
   it('fails when a caller, coordinate, rerun, or safety boundary is removed', () => {
-    const commands = read('DPT_FRAMEWORK/COMMANDS.md');
+    const commands = read('DEEP_RESEARCH_HARNESS/COMMANDS.md');
     assertPublicRecoveryGuidance(commands, 'validator baseline');
     for (const requirement of publicRecoveryRequirements) {
       const mutated = removeAllMatches(commands, requirement.pattern);
@@ -162,7 +162,7 @@ describe('work-unit attempt-recovery Agent-facing guidance', () => {
   });
 
   it('keeps setup guidance from creating a physical-actor or authority-edit claim', () => {
-    const setup = read('DPT_FRAMEWORK/command_playbook/setup-real-subagents.md');
+    const setup = read('DEEP_RESEARCH_HARNESS/command_playbook/setup-real-subagents.md');
     assert.match(setup, /actor_execution[\s\S]{0,100}work_id[\s\S]{0,100}receipt_nonce/i);
     assert.match(setup, /must not author substitute content under that same delegated binding/i);
     assert.match(setup, /does not authenticate a physical writer, prove host\/sub-agent liveness/i);

@@ -12,7 +12,7 @@ import {
   WORK_UNIT_OUTPUT_LEDGER,
   submitWorkUnit,
   timeoutPreflightWorkUnit,
-} from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import {
   availableActorDecision,
   cleanupWorkUnitBundle,

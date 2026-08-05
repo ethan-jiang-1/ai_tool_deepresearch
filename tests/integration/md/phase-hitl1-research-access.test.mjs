@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parse as parseYaml } from 'yaml';
 
-const PHASE_PATH = new URL('../../../DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl1.md', import.meta.url);
-const BRIEF_PATH = new URL('../../../DPT_FRAMEWORK/workflows/nodes/brief/hitl1.md', import.meta.url);
+const PHASE_PATH = new URL('../../../DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl1.md', import.meta.url);
+const BRIEF_PATH = new URL('../../../DEEP_RESEARCH_HARNESS/workflows/nodes/brief/hitl1.md', import.meta.url);
 const markdown = readFileSync(PHASE_PATH, 'utf-8');
 const brief = readFileSync(BRIEF_PATH, 'utf-8');
 const frontmatter = parseYaml(markdown.match(/^---\n([\s\S]*?)\n---/)?.[1] || '');

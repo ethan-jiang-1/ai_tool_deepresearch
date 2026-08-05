@@ -9,11 +9,11 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 
-import { buildChildEnv } from '../../../DPT_FRAMEWORK/host_tools/lib/env-deepseek.mjs';
+import { buildChildEnv } from '../../../DEEP_RESEARCH_HARNESS/host_tools/lib/env-deepseek.mjs';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..', '..', '..');
-const LAUNCHER_SRC = join(REPO_ROOT, 'DPT_FRAMEWORK', 'host_tools', 'claude-deepseek.mjs');
+const LAUNCHER_SRC = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'host_tools', 'claude-deepseek.mjs');
 const TMP_ROOT = join(REPO_ROOT, 'tests', '.test-tmp');
 const FAKE_CLAUDE = join(TMP_ROOT, 'fake-claude.mjs');
 
@@ -26,10 +26,10 @@ function uniqueName() {
 function setupTemp(name) {
   const dir = join(TMP_ROOT, name);
   rmSync(dir, { recursive: true, force: true });
-  const hostToolsDir = join(dir, 'DPT_FRAMEWORK', 'host_tools');
+  const hostToolsDir = join(dir, 'DEEP_RESEARCH_HARNESS', 'host_tools');
   mkdirSync(hostToolsDir, { recursive: true });
   copyFileSync(LAUNCHER_SRC, join(hostToolsDir, 'claude-deepseek.mjs'));
-  cpSync(join(REPO_ROOT, 'DPT_FRAMEWORK', 'host_tools', 'lib'), join(hostToolsDir, 'lib'), { recursive: true });
+  cpSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'host_tools', 'lib'), join(hostToolsDir, 'lib'), { recursive: true });
   const fakeBin = join(dir, 'fake_bin');
   mkdirSync(fakeBin, { recursive: true });
   copyFileSync(FAKE_CLAUDE, join(fakeBin, 'claude'));
@@ -75,7 +75,7 @@ after(() => {
 });
 
 function runLauncher(tempDir, args = [], extraEnv = {}) {
-  const hostToolsDir = join(tempDir, 'DPT_FRAMEWORK', 'host_tools');
+  const hostToolsDir = join(tempDir, 'DEEP_RESEARCH_HARNESS', 'host_tools');
   const launcher = join(hostToolsDir, 'claude-deepseek.mjs');
   const fakeBin = join(tempDir, 'fake_bin');
   const env = { ...process.env };

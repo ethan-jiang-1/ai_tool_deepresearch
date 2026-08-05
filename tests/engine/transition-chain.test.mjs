@@ -14,11 +14,11 @@ const {
   ChainDefinition,
   loadChain,
   resolveTransition,
-} = await import('../../DPT_FRAMEWORK/engine/transition-chain.mjs');
+} = await import('../../DEEP_RESEARCH_HARNESS/engine/transition-chain.mjs');
 
 const {
   resolveNodeTransitionDetailed,
-} = await import('../../DPT_FRAMEWORK/engine/ask-next.mjs');
+} = await import('../../DEEP_RESEARCH_HARNESS/engine/ask-next.mjs');
 
 const VALID_CHAIN = {
   'phases/phase-instantiation.md': { passed: 'phases/phase-hitl1.md' },

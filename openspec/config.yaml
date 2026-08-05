@@ -77,7 +77,7 @@ context: |
     - 每次 change 完成前必须更新 registry 并运行 openspec/governance/check-project-reqs.mjs
 
   治理工具 (openspec/governance/):
-    需求追踪的工具支撑集中在此目录（与 DPT_FRAMEWORK/ 解耦，属于项目级 OpenSpec 治理扩展）:
+    需求追踪的工具支撑集中在此目录（与 DEEP_RESEARCH_HARNESS/ 解耦，属于项目级 OpenSpec 治理扩展）:
     - req-registry.yaml        — Requirement ID 唯一登记处（只增不删）
     - check-project-reqs.mjs   — registry 一致性扫描（duplicate / unregistered / orphan / reusedRetired）
     - check-project-specs.mjs  — main spec 结构检查（deltaHeaderInMain / missingPurpose / missingRequirements / missingReqHeader）
@@ -106,11 +106,11 @@ context: |
     This is repo lifecycle discipline, not an OpenSpec-native artifact gate: `openspec status/validate`
     does not parse or validate the custom plan.
 
-    tests/fixtures/: 最小测试框架（symlink 到 DPT_FRAMEWORK/），为 tests/ 提供 fixture。
+    tests/fixtures/: 最小测试框架（symlink 到 DEEP_RESEARCH_HARNESS/），为 tests/ 提供 fixture。
 
   实验体系 (Experiments):
     正典术语与责任边界见 `guidelines/command-experiments.md`；当前操作入口见
-    `experiments_playbook/README.md` 与 `DPT_FRAMEWORK/host_tools/README.md`。本文件只保留高频路由:
+    `experiments_playbook/README.md` 与 `DEEP_RESEARCH_HARNESS/host_tools/README.md`。本文件只保留高频路由:
     - Agent Experiment Autorun 是正常 unattended launch model，不是传统 CLI test runner。
     - Autorun Supervisor 选择、启动、监督、验证 native completion、运行 health、审计和清理；不执行 Markdown 或重判 verdict。
     - Agent CLI Launcher 只启动 Coding Agent runtime。
@@ -121,9 +121,9 @@ context: |
     - Engine/CLI 拥有 deterministic checkpoint、receipt、trace 与 native completion contract。
     - `PLAYBOOK_MANIFEST.md` 只拥有 active path/order；V2 frontmatter 拥有 case policy；filename 拥有 cost；native completion 是唯一 case outcome authority。
     - Current surfaces: `experiments_playbook/PLAYBOOK_MANIFEST.md`、`RUN_AGENT_AUTORUN_EXPS.md`、`RUN_INTERACTIVE_EXPS.md` 与
-      `DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs`; detailed behavior remains in accepted specs and executable contracts.
+      `DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs`; detailed behavior remains in accepted specs and executable contracts.
     - 每个 case 使用显式 Supervisor-owned run root；`.exp-bundles/` 只含 run-owned state/log/evidence/audit/report，
-      不复制或链接 repo-root `DPT_FRAMEWORK/`、`experiments_env/`、`tests/`。
+      不复制或链接 repo-root `DEEP_RESEARCH_HARNESS/`、`experiments_env/`、`tests/`。
     - native outcome、host lifecycle、Agent process、health 与 cleanup 分离；playbook finalization 后停止，health/cleanup 由 Supervisor 负责。
     - `experiments_env/shared/` 只提供薄 setup/fact helper；不得成为隐藏 Playbook Agent、第二 verdict 或 cleanup owner。
 
@@ -140,7 +140,7 @@ context: |
     tests/                      — 回归测试 (随代码演进)
 
     Framework — 唯一共享框架目录:
-      DPT_FRAMEWORK/              — reusable framework assets；运行时只读，不保存 run state
+      DEEP_RESEARCH_HARNESS/              — reusable framework assets；运行时只读，不保存 run state
         README.md                 — framework runtime guide
         COMMANDS.md               — 命令索引
         cli/                      — 当前 framework-level CLI，如 instantiate/validate/inspect/operate queue
@@ -151,7 +151,7 @@ context: |
         workflows/                — workflow-foundation target；v1 单主 workflow，不是多 workflow namespace
 
     Bundle — 可多个、彼此隔离的运行时目录:
-      dpt_rb_{name}/              — production Runtime Bundle，通过 ../DPT_FRAMEWORK/ 引用同一套 framework
+      dpt_rb_{name}/              — production Runtime Bundle，通过 ../DEEP_RESEARCH_HARNESS/ 引用同一套 framework
         BUNDLE_MAP.md            — passive bundle map
         rb_plan.md                — 话题设计 (Markdown + JSON frontmatter)
         rb_profile.yaml           — 用户意图 / HITL profile
@@ -192,7 +192,7 @@ rules:
     - 对新增或实质改变的具名 state、projection、status、concept、Module、command 或 reader-facing view，先写简短的 semantic-precision reflection：明确读者/有界问题、必须保留的区别与正常推理停止点（或明确 unknown）
     - 说明 user decision / Agent execution / Engine verdict 的责任边界，不得用 human-directed 创造 permission 或 capability
     - |
-      修改 `DPT_FRAMEWORK/` 行为的 change 必须在 proposal 中声明是否需要 version bump；
+      修改 `DEEP_RESEARCH_HARNESS/` 行为的 change 必须在 proposal 中声明是否需要 version bump；
       需要时声明 target version（如 `v0.2`），作为 implementation 阶段 CHANGELOG 和 RUN.md banner 更新的依据。
   design:
     - "数据结构用 Zod schema 定义（`.refine()` 做跨字段校验）"
@@ -222,9 +222,9 @@ rules:
       收尾检查固化进每个 change 生命周期——防止 requirement ID 堆叠/漏标/被覆盖，
       以及 delta 格式污染 OpenSpec main spec 而无人发现。
     - |
-      修改 `DPT_FRAMEWORK/` 行为且 proposal 声明了 version bump 的 change，
+      修改 `DEEP_RESEARCH_HARNESS/` 行为且 proposal 声明了 version bump 的 change，
       其 tasks 必须包含两步：(a) 更新 `CHANGELOG.md`（简洁格式：版本号 + 一两句说清改了什么）；
-      (b) 同步 `DPT_FRAMEWORK/RUN.md` 版本横幅与 CHANGELOG 最新条目一致。
+      (b) 同步 `DEEP_RESEARCH_HARNESS/RUN.md` 版本横幅与 CHANGELOG 最新条目一致。
     - |
       使用 feedback lifecycle 的 change 必须在 tasks.md 中生成两个 first-class checkbox task：
       一个先于首次 target edit 的 plan review，任务行恰含 `openspec-feedback:plan-review`；

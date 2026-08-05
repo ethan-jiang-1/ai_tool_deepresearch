@@ -8,8 +8,8 @@ import {
   canonicalWave1ReferencePath,
   evaluateWave1ReferenceTopic,
   resolveReviewedWave1SubmittedBacking,
-} from '../../../DPT_FRAMEWORK/engine/helpers/wave1-reference-convergence.mjs';
-import { buildCanonicalTopicRegistryFact } from '../../../DPT_FRAMEWORK/engine/helpers/topic-registry-fact.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs';
+import { buildCanonicalTopicRegistryFact } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/topic-registry-fact.mjs';
 import { claimAndSubmitWorkUnit, cleanupWorkUnitBundle, referenceContent, tempWorkUnitBundle } from '../../engine/work-unit-test-helpers.mjs';
 
 const bundles = [];
@@ -55,13 +55,13 @@ function submitReviewedCandidate(dir, topic) {
 }
 
 function sync(dir) {
-  const result = spawnSync('node', [join(root, 'DPT_FRAMEWORK/cli/sync-reference-index.mjs'), '--bundle', dir], { encoding: 'utf8' });
+  const result = spawnSync('node', [join(root, 'DEEP_RESEARCH_HARNESS/cli/sync-reference-index.mjs'), '--bundle', dir], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr || result.stdout);
   return JSON.parse(result.stdout);
 }
 
 function inspect(dir) {
-  const result = spawnSync('node', [join(root, 'DPT_FRAMEWORK/cli/inspect-wave1-output.mjs'), '--bundle', dir], { encoding: 'utf8' });
+  const result = spawnSync('node', [join(root, 'DEEP_RESEARCH_HARNESS/cli/inspect-wave1-output.mjs'), '--bundle', dir], { encoding: 'utf8' });
   assert.ok([0, 1].includes(result.status), result.stderr || result.stdout);
   return JSON.parse(result.stdout);
 }

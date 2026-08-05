@@ -41,9 +41,9 @@ Markdown control surface 承载 load 指令。每一步 Phase Agent 读取 MD �
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs wc_complex --case case-33 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
-node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs $B
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs $B
 ```
 
 → 预期：validate/inspect 通过。
@@ -57,10 +57,10 @@ MD 指令：「加载 missing.entry.md。」
 missing.entry.md 声明依赖 `nonexistent-file.md`，该文件不存在。Engine 必须返回 error 且不加载任何文件。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime, createState, assessNode } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { createWorkflowRuntime, createState, assessNode } from './DEEP_RESEARCH_HARNESS/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
@@ -107,10 +107,10 @@ MD 指令：「加载 cycle-a.entry.md。」
 cycle-a.entry.md 依赖 cycle-b.dep.md，cycle-b.dep.md 又依赖 cycle-a.entry.md——形成环路。Engine 必须检测并返回 error。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime, createState, assessNode } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { createWorkflowRuntime, createState, assessNode } from './DEEP_RESEARCH_HARNESS/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
@@ -156,10 +156,10 @@ MD 指令：「加载 malformed.entry.md。」
 malformed.entry.md 的 frontmatter JSON schema 不合法（requires 应为数组但是字符串）。Engine 必须返回 error 且不加载文件。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime, createState, assessNode } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { createWorkflowRuntime, createState, assessNode } from './DEEP_RESEARCH_HARNESS/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
@@ -203,10 +203,10 @@ console.log('MD裁决: Step 2.3 — malformed frontmatter → error, 零文件�
 三次错误后，MD 验证 Engine 未被污染——加载合法 entry wave.entry.md 仍正常。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime, createState, assessNode } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { createWorkflowRuntime, createState, assessNode } from './DEEP_RESEARCH_HARNESS/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
@@ -242,8 +242,8 @@ console.log('MD裁决: Step 2.4 — 错误后恢复，正常加载 wave.entry.md
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 3: 结果解读

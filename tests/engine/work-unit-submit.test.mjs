@@ -13,7 +13,7 @@ import {
   makeItem,
   queueItemSnapshotHash,
   saveQueue,
-} from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import {
   WORK_UNIT_OUTPUT_LEDGER,
   claimWorkUnits as claimWorkUnitsProduction,
@@ -30,10 +30,10 @@ import {
   transactionDir,
   workUnitIndexPath,
   workUnitsRoot,
-} from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import {
   readSubmittedWorkUnitDeclarations,
-} from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers-readers.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-readers.mjs';
 
 function tempBundle() {
   return mkdtempSync(path.join(os.tmpdir(), 'wu-submit-'));

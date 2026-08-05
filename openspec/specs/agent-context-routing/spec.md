@@ -14,7 +14,7 @@ glossary or ADR into a competing behavior or runtime authority.
 
 The repository SHALL provide one root `CONTEXT.md` as the shared glossary for
 substantive project work. It SHALL distinguish the project, framework,
-framework directory, research run, active bundle, LLM Agent, Markdown control
+framework directory, research run, current run bundle, LLM Agent, Markdown control
 surface, Engine, runtime truth, and deterministic/evidence boundaries needed
 to avoid treating the framework as a traditional JavaScript workflow
 controller.
@@ -53,7 +53,7 @@ pre-task read, a behavior authority, or a replacement for the Charter.
 
 - **WHEN** a Coding Agent needs to reason about framework/runtimes or phase
   advancement
-- **THEN** root `CONTEXT.md` SHALL distinguish framework from active bundle,
+- **THEN** root `CONTEXT.md` SHALL distinguish framework from current run bundle,
   Gate definition from Gate verdict, and phase handoff from work completion
 - **AND** it SHALL direct the Agent to the existing authority when the glossary
   alone cannot answer the needed behavior or runtime question
@@ -64,7 +64,7 @@ pre-task read, a behavior authority, or a replacement for the Charter.
 
 - **WHEN** a Coding Agent uses root `CONTEXT.md` to orient before task-specific
   execution work
-- **THEN** it SHALL distinguish a selected active bundle from reusable framework
+- **THEN** it SHALL distinguish a selected current run bundle from reusable framework
   assets for both production runs and disposable experiments
 - **AND** it SHALL distinguish a Gate verdict from Chain/transition selection
 - **AND** it SHALL not infer authority, capability, permission, liveness, or
@@ -95,12 +95,12 @@ the durable architecture-decision surface for a task that needs an architecture
 rationale. It SHALL remain an on-demand task-relevant surface, not another
 mandatory pre-task read.
 
-`DPT_FRAMEWORK/AGENTS.md` and `DPT_FRAMEWORK/CLAUDE.md` SHALL each
+`DEEP_RESEARCH_HARNESS/AGENTS.md` and `DEEP_RESEARCH_HARNESS/CLAUDE.md` SHALL each
 independently require framework work to read `../guidelines/project-charter.md`
 and then `../CONTEXT.md` before their framework-local operating documents. The
 two files SHALL provide equivalent Charter-then-context routing obligations
 while retaining their tool-specific identity and existing instructions. They
-SHALL not create or require a separate `DPT_FRAMEWORK/CONTEXT.md`; after the
+SHALL not create or require a separate `DEEP_RESEARCH_HARNESS/CONTEXT.md`; after the
 shared-project pre-read, framework README, COMMANDS, and applicable playbooks
 remain the Agent-facing operating surfaces for framework entry and command
 execution. Applicable accepted and executable contracts retain their existing
@@ -108,7 +108,7 @@ behavior authority. Their shared-project pre-read blocks SHALL be identically
 worded under a `## 共享项目上下文` heading, preserving the local synchronization
 rule without requiring unrelated file bytes to match.
 
-`DPT_FRAMEWORK/README.md` SHALL expose the same parent-project
+`DEEP_RESEARCH_HARNESS/README.md` SHALL expose the same parent-project
 Charter-then-context route before any framework trigger guidance, including the
 existing `> **最快触发**` callout and `## 触发规则（最高优先）` block. It SHALL
 remain the canonical framework runtime guide; the route SHALL not become a DPT
@@ -116,7 +116,7 @@ research entry, run selection, or authorization for request-specific research
 work, and it SHALL not change the existing framework entry selection.
 
 The pre-read SHALL not select, replace, or change the precedence between the
-existing DPT research entry alternatives. After it, the accepted explicit
+existing Deep Research Harness research entry alternatives. After it, the accepted explicit
 existing-bundle route and new-research route SHALL retain their existing
 `continue-run-bundle.md` versus `RUN.md` selection and pre-entry research
 restrictions. The framework behavior-file pre-read blocks SHALL state this
@@ -134,7 +134,7 @@ the framework README SHALL state the same boundary in its parent-project route.
 
 #### Scenario: Framework task does not fork the glossary
 
-- **WHEN** a Coding Agent enters `DPT_FRAMEWORK/` for framework work or a
+- **WHEN** a Coding Agent enters `DEEP_RESEARCH_HARNESS/` for framework work or a
   reader opens its framework runtime guide
 - **THEN** its local `AGENTS.md`, `CLAUDE.md`, and `README.md` SHALL each
   direct it to the root Project Charter before the root glossary
@@ -147,7 +147,7 @@ the framework README SHALL state the same boundary in its parent-project route.
 - **WHEN** the framework behavior routes apply their shared-project pre-read
 - **THEN** they SHALL retain the accepted explicit existing-bundle and
   new-research selected-entry routes after the pre-read
-- **AND** they SHALL NOT treat `CONTEXT.md` as a DPT research entry, run
+- **AND** they SHALL NOT treat `CONTEXT.md` as a Deep Research Harness research entry, run
   selection, or authorization for request-specific research work
 
 ### Requirement: Root architecture decision record explains the control split
@@ -189,7 +189,7 @@ the paired behavior-file pre-read blocks stay synchronized; that root/framework
 operating routes and `docs/adr/` discovery remain after the pre-read; that all
 three framework entry surfaces retain the explicit non-entry boundary; that the
 glossary retains its three canon-source links, non-authority, and
-authority-sensitive distinction markers; that `DPT_FRAMEWORK/CONTEXT.md` is
+authority-sensitive distinction markers; that `DEEP_RESEARCH_HARNESS/CONTEXT.md` is
 absent; and that ADR 0001 retains its `Accepted` status, decision-record
 headings, control split, explicit deferral of current behavior to accepted
 OpenSpec contracts, and a discoverable Context link.
@@ -218,7 +218,7 @@ the documents, judge prose quality, or claim real Agent behavior.
   on-demand `docs/adr/` surface, or a framework pre-read loses its
   non-entry/non-selection/non-research-authorization boundary on any framework
   entry surface,
-  `DPT_FRAMEWORK/CONTEXT.md` is introduced, the glossary loses a canon-source
+  `DEEP_RESEARCH_HARNESS/CONTEXT.md` is introduced, the glossary loses a canon-source
   link, non-authority or authority-sensitive distinction marker, or ADR 0001
   loses its `Accepted` status, a required decision-record heading, its
   OpenSpec-contract deferral marker, or its discoverable Context link

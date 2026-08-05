@@ -1,4 +1,4 @@
-// tests/schema/contracts/gate.test.mjs — 1:1 for DPT_FRAMEWORK/schema/contracts/gate.mjs
+// tests/schema/contracts/gate.test.mjs — 1:1 for DEEP_RESEARCH_HARNESS/schema/contracts/gate.mjs
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -7,7 +7,7 @@ import {
   GATE_TRANSITIONS,
   validateTransitions,
   isValidTransition,
-} from '../../../DPT_FRAMEWORK/schema/contracts/gate.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/gate.mjs';
 
 describe('GATE_MACHINE_STATES', () => {
   it('is a non-empty array', () => {

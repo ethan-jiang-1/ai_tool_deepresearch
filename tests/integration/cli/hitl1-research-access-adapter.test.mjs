@@ -9,10 +9,10 @@ import { stringify as stringifyYaml } from 'yaml';
 
 const ROOT = process.cwd();
 const NEW_BUNDLE = join(ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
-const STYLE = join(ROOT, 'DPT_FRAMEWORK/cli/apply-research-style.mjs');
-const ADVANCE = join(ROOT, 'DPT_FRAMEWORK/cli/advance-status.mjs');
-const GATE = join(ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs');
-const PHASE = join(ROOT, 'DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl1.md');
+const STYLE = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs');
+const ADVANCE = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/advance-status.mjs');
+const GATE = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs');
+const PHASE = join(ROOT, 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl1.md');
 
 function command(script, args, { allowFailure = false } = {}) {
   const result = spawnSync(process.execPath, [script, ...args], { cwd: ROOT, encoding: 'utf8', timeout: 10000 });

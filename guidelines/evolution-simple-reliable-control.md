@@ -6,7 +6,7 @@ status: effective
 created: 2026-07-10
 revised: 2026-07-25
 role: charter-companion evolution direction for control-loop complexity and net simplification
-scope: openspec/changes/, DPT_FRAMEWORK/workflows/, DPT_FRAMEWORK/cli/, DPT_FRAMEWORK/engine/, tests/, experiments_playbook/
+scope: openspec/changes/, DEEP_RESEARCH_HARNESS/workflows/, DEEP_RESEARCH_HARNESS/cli/, DEEP_RESEARCH_HARNESS/engine/, tests/, experiments_playbook/
 authority: guidance
 defers_to:
   - guidelines/project-charter.md

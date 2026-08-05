@@ -36,7 +36,7 @@ Fixture output, Playbook-Agent-authored direction text, missing Subject session 
 
 ```bash
 B=$(node experiments_env/shared/prepare-rerun-direction-canary.mjs --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -64,7 +64,7 @@ JS
 The first turn forms and applies only a retained `set_rerun_direction` candidate through the existing `operate-topic-state apply` CLI, then stops before profile mutation. The adapter snapshots that crash window from durable Subject transcript evidence plus the resulting future direction/profile facts. The second turn must preserve the direction bytes, align the profile count, run the real `rerun-ready` Gate, consume its `check.next`, enter Seed Topics, and synchronize status.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
 node experiments_env/shared/run-iterative-interaction-subject.mjs 318 --bundle "$B"
 SUBJECT_STATUS=$?
@@ -79,7 +79,7 @@ fi
 For an unavailable actor, the same finalizer publishes `NOT_RUN` without substituting Playbook-Agent output. Otherwise the Playbook Agent records six deterministic checks from the retained Subject evidence, the turn-boundary snapshot, final direction bytes, production Gate attempt, handoff trace, profile, and status.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 EXTRA_ARGS=()
 if [ -f "$B/case-318-subject-unavailable.txt" ]; then
   EXTRA_ARGS+=(--not-run-reason "independent authenticated Subject Agent runtime unavailable")
@@ -123,7 +123,7 @@ JS
     --evidence "subject_result=$B/case-318-subject-result.json"
   )
 fi
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
 PASS requires all six checks. Gate PASS alone cannot substitute for Subject execution or direction preservation. Stop after native completion. The Autorun Supervisor owns Heavy health, durable Subject evidence export, audit, preservation, and optional clean-PASS cleanup.

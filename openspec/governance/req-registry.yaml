@@ -192,7 +192,7 @@ ARP-004: artifact-persistence-recovery — Final Markdown reports use submitted-
 
 # bundle-data-isolation
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
-BUI-002: bundle-data-isolation — Runtime output paths stay under active bundle root and repo-root leaks are diagnosed
+BUI-002: bundle-data-isolation — Runtime output paths stay under current run bundle root and repo-root leaks are diagnosed
 
 # bundle-map
 BUM-001: bundle-map — BUNDLE_MAP.md is the canonical passive bundle map
@@ -553,7 +553,7 @@ WFS-003: workflow-fsm-runtime — Machine class with advance(), createMachine fa
 WML-001: workflow-manifest-loading — Workflow-next runtime initializes without manifest/cursor or preloading Markdown [DEPRECATED]
 
 # dedup-experiments-framework (delta specs merged to openspec/specs/)
-FRE-001: framework-engine — DPT_FRAMEWORK/engine/ as canonical directory for 6 production engine modules
+FRE-001: framework-engine — DEEP_RESEARCH_HARNESS/engine/ as canonical directory for 6 production engine modules
 FRE-002: framework-engine — workflow-fsm standalone pure FSM transition resolver (5 exports, 241 lines, zero engine imports) [DEPRECATED]
 FRE-003: framework-engine — Gate helpers shared parseMdFrontmatter and readBundlePlan for YAML 1.2 frontmatter parsing
 FRE-004: framework-engine — Framework internal module layout and release hygiene for delegated-work engine replacement
@@ -564,7 +564,7 @@ TRW-003: trace-writer — Trace entries include bundle field for cross-sink corr
 TRW-004: trace-writer — Run start trace marker (run_start at bundle creation; run_end terminal marker deferred to Phase 2)
 TRW-005: trace-writer — Agent Autorun surfaces use one rb_trace.jsonl sink with trace-bound native completion
 EXS-001: experiment-shared-infra — experiments_env/shared/ directory for experiment-scoped shared infrastructure
-EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_FRAMEWORK/command_experiments_env/scripts/ to experiments_env/shared/"
+EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DEEP_RESEARCH_HARNESS/command_experiments_env/scripts/ to experiments_env/shared/"
 TRW-006: trace-writer — Successful Wave1 gate attempt explicitly projects its normalized carried-target receipt into the routed trace handoff
 
 EXS-003: experiment-shared-infra — Disposable creator rejects malformed argv before filesystem side effects
@@ -691,7 +691,7 @@ STM-007: seed-topic-materialization — Canonical seed topics are exact UID-boun
 STM-008: seed-topic-materialization — Seed projections follow the committed current topic layout after atomic mutation
 
 # workflow-foundation — contracts
-WDC-001: workflow-directory-contract — Read-only framework assets boundary (DPT_FRAMEWORK/ = read-only, dpt_rb_*/ = mutable runtime truth)
+WDC-001: workflow-directory-contract — Read-only framework assets boundary (DEEP_RESEARCH_HARNESS/ = read-only, dpt_rb_*/ = mutable runtime truth)
 WDC-002: workflow-directory-contract — Workflow node directory structure (phases/ and shared/ under workflows/nodes/)
 WDC-003: workflow-directory-contract — Gate artifacts location and shape (gate definitions, CLI, engine, helpers, schema contract)
 WDC-004: workflow-directory-contract — Active runtime bundle root authority, bare runtime path resolution, and canonical runtime structure, including _work_units/ for delegated attempt state
@@ -822,7 +822,7 @@ VER-006: verification-routing — Agent-flow routing distinguishes Supervisor an
 
 # version-management
 VEM-001: version-management — CHANGELOG is concise and human-readable at project root
-VEM-002: version-management — Every DPT_FRAMEWORK behavior change updates CHANGELOG
+VEM-002: version-management — Every DEEP_RESEARCH_HARNESS behavior change updates CHANGELOG
 VEM-003: version-management — RUN.md version banner matches latest CHANGELOG entry
 VEM-004: version-management — Proposal declares the target version and apply uses it without pinning a historical current version
 
@@ -882,7 +882,7 @@ REA-002: research-access-adapter — Adapter execution preserves bounded probe o
 REA-003: research-access-adapter — Adapter availability evidence remains provider-scoped and outside research evidence authority
 
 # research-styles
-RES-001: research-styles — Research style JSON definition files under DPT_FRAMEWORK/schema/research-styles/
+RES-001: research-styles — Research style JSON definition files under DEEP_RESEARCH_HARNESS/schema/research-styles/
 RES-002: research-styles — Profile stores research style parameters in rb_profile.yaml under research_style_params
 RES-003: research-styles — Gate count_floor reads dynamic threshold from profile via threshold_source
 RES-004: research-styles — Phase MD references style-specific targets from profile

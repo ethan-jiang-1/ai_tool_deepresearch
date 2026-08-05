@@ -17,7 +17,7 @@ import { join, extname } from 'node:path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-const FRAMEWORK_ROOT = join(import.meta.dirname, '../../../DPT_FRAMEWORK');
+const FRAMEWORK_ROOT = join(import.meta.dirname, '../../../DEEP_RESEARCH_HARNESS');
 
 // ── Files to scan ──────────────────────────────────────────────────────
 

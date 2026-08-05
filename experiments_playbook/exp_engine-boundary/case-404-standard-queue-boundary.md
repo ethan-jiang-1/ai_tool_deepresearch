@@ -59,7 +59,7 @@ Create a disposable bundle with the default queue state. No delegated work is co
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_queue_work_unit --case case-404 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeMinimalPlan, writeMinimalStatus } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 writeMinimalStatus(process.argv[2]);
@@ -98,8 +98,8 @@ const task = {
 };
 fs.writeFileSync(path.join(bundle, 'case404-nondelegated.json'), `${JSON.stringify(task, null, 2)}\n`);
 JS
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue "$B" --task "$B/case404-nondelegated.json" > "$B/case-404-nondelegated-enqueue.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs claim "$B" --actor main-agent > "$B/case-404-nondelegated-claim.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs enqueue "$B" --task "$B/case404-nondelegated.json" > "$B/case-404-nondelegated-enqueue.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs claim "$B" --actor main-agent > "$B/case-404-nondelegated-claim.json"
 node - "$B" <<'JS'
 const fs = require('fs');
 const path = require('path');
@@ -110,7 +110,7 @@ fs.writeFileSync(path.join(bundle, 'case404-nondelegated-result.json'), `${JSON.
   summary: 'non-delegated completion through operate-queue'
 }, null, 2)}\n`);
 JS
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete "$B" --result "$B/case404-nondelegated-result.json" > "$B/case-404-nondelegated-complete.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs complete "$B" --result "$B/case404-nondelegated-result.json" > "$B/case-404-nondelegated-complete.json"
 ```
 
 Expected: non-delegated enqueue, claim, and complete all exit `0`.
@@ -128,7 +128,7 @@ const task = queueItemForWorkUnit({
 });
 writeFileSync(path.join(bundle, 'case404-delegated-active.json'), `${JSON.stringify(task, null, 2)}\n`);
 JS
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue "$B" --task "$B/case404-delegated-active.json" > "$B/case-404-delegated-enqueue.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs enqueue "$B" --task "$B/case404-delegated-active.json" > "$B/case-404-delegated-enqueue.json"
 node - "$B" <<'JS'
 const fs = require('fs');
 const path = require('path');
@@ -140,15 +140,15 @@ fs.writeFileSync(path.join(bundle, 'case404-delegated-active-result.json'), `${J
 }, null, 2)}\n`);
 JS
 set +e
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete "$B" --result "$B/case404-delegated-active-result.json" > "$B/case-404-delegated-active-complete.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs complete "$B" --result "$B/case404-delegated-active-result.json" > "$B/case-404-delegated-active-complete.json"
 DELEGATED_ACTIVE_STATUS=$?
 set -e
 printf '%s\n' "$DELEGATED_ACTIVE_STATUS" > "$B/case-404-delegated-active-complete.status"
 
-CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
+CLAIM_JSON=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_JSON" > "$B/case-404-delegated-claim.json"
 set +e
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete "$B" --result "$B/case404-delegated-active-result.json" > "$B/case-404-delegated-inflight-complete.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs complete "$B" --result "$B/case404-delegated-active-result.json" > "$B/case-404-delegated-inflight-complete.json"
 DELEGATED_INFLIGHT_STATUS=$?
 set -e
 printf '%s\n' "$DELEGATED_INFLIGHT_STATUS" > "$B/case-404-delegated-inflight-complete.status"
@@ -160,7 +160,7 @@ Expected: delegated queue completion exits `1` both before and after work-unit c
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { TargetSpecSchema } from './DPT_FRAMEWORK/schema/contracts/queue.mjs';
+import { TargetSpecSchema } from './DEEP_RESEARCH_HARNESS/schema/contracts/queue.mjs';
 
 const bundle = process.argv[2];
 const controllerSubAgent = TargetSpecSchema.safeParse({ controller: 'sub-agent' });
@@ -252,8 +252,8 @@ PASS means the surviving queue path is still available for non-delegated work wh
 ## Native completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Heavy health, audit, preservation, and optional clean-PASS cleanup.

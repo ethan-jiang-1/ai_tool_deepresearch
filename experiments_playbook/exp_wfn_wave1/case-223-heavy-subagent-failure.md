@@ -32,7 +32,7 @@ Heavy real-Agent canary. This case cannot PASS from fixture data. A real `dpt-ev
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs w1_real_failure_work_unit --case case-223 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { enqueueWorkUnitTask, queueItemForWorkUnit, writeWave1Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -48,7 +48,7 @@ enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
   title: 'Real Wave1 hard-target degradation proof'
 }), { fileName: 'case223-hard-target.json' });
 JS
-CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-evidence-extractor --actor-reason probe_succeeded --execution-actor delegated_subagent)
+CLAIM_JSON=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim "$B" --phase wave1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-evidence-extractor --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_JSON" > "$B/case-223-claim.json"
 printf '%s\n' "$CLAIM_JSON" | node -e '
 const j = JSON.parse(require("fs").readFileSync(0, "utf8"));
@@ -75,16 +75,16 @@ If the native Sub-agent or real external capability is unavailable, write `case-
 Skip this step when `case-223-subject-unavailable.txt` exists.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 WORK_ID=$(node -e 'const j=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.stdout.write(j.claimed_work_ids[0])' "$B/case-223-claim.json")
 REAL_RESULT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.stdout.write(x.result)' "$B/case-223-subagent-evidence.json")
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$REAL_RESULT" > "$B/case-223-submit.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$REAL_RESULT" > "$B/case-223-submit.json"
 node --input-type=module - "$B" <<'JS'
 import { appendTrace } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 appendTrace(process.argv[2], { event: 'wave1_completion', source: 'case-223-real-subagent' });
 JS
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect "$B" > "$B/case-223-inspect.json"
-node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-223-gate.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs inspect "$B" > "$B/case-223-inspect.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-223-gate.json"
 node --input-type=module - "$B" "$WORK_ID" <<'JS'
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -112,7 +112,7 @@ JS
 ## Step 4: [MAIN/SHELL] Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 EXTRA_ARGS=()
 if [ -f "$B/case-223-subject-unavailable.txt" ]; then
   EXTRA_ARGS+=(--not-run-reason "native dpt-evidence-extractor Sub-agent or required real search/fetch capability unavailable")
@@ -123,7 +123,7 @@ else
   OUTPUT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.output)' "$B/case-223-subagent-evidence.json")
   EXTRA_ARGS+=(--evidence "subject_task=$TASK" --evidence "subject_result=$RESULT" --evidence "subject_receipt=$RECEIPT" --evidence "subject_output=$OUTPUT")
 fi
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Heavy health, durable Subject-evidence export, audit, preservation, and optional clean-PASS cleanup.

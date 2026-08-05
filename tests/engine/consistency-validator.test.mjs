@@ -11,7 +11,7 @@ const TMP = join(import.meta.dirname, '.test-consistency-tmp');
 
 // @impl WNC-007
 const { validateWorkflowPackage } = await import(
-  '../../DPT_FRAMEWORK/engine/consistency-validator.mjs'
+  '../../DEEP_RESEARCH_HARNESS/engine/consistency-validator.mjs'
 );
 
 // ─── Helpers ───────────────────────────────────────────────────────────────

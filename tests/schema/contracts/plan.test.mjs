@@ -1,7 +1,7 @@
-// tests/schema/contracts/plan.test.mjs — 1:1 for DPT_FRAMEWORK/schema/contracts/plan.mjs
+// tests/schema/contracts/plan.test.mjs — 1:1 for DEEP_RESEARCH_HARNESS/schema/contracts/plan.mjs
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { CanonicalPlanSchema, LegacyPlanSchema, PlanSchema } from '../../../DPT_FRAMEWORK/schema/contracts/plan.mjs';
+import { CanonicalPlanSchema, LegacyPlanSchema, PlanSchema } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/plan.mjs';
 
 const valid = { plan_basename: 'test', derived_topic_count: 1, topic_registry: [{ id: 't1', slug: '01_topic-a', title: 'Topic A' }] };
 

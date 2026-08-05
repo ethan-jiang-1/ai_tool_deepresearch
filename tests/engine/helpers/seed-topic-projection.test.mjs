@@ -15,12 +15,12 @@ import {
   SEED_TOPIC_PROJECTION_CARD_LABEL,
   SEED_TOPIC_PROJECTION_SLOTS,
   TopicApplyPlanSchema,
-} from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
-import { evaluateSeedTopicProjectionReadiness, extractSeedFamilyEntries } from '../../../DPT_FRAMEWORK/engine/helpers/return-map.mjs';
-import { buildCanonicalTopicRegistryFact } from '../../../DPT_FRAMEWORK/engine/helpers/topic-registry-fact.mjs';
-import { loadWave2FindingIndexFact } from '../../../DPT_FRAMEWORK/engine/helpers/wave-depth-contracts.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { evaluateSeedTopicProjectionReadiness, extractSeedFamilyEntries } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/return-map.mjs';
+import { buildCanonicalTopicRegistryFact } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/topic-registry-fact.mjs';
+import { loadWave2FindingIndexFact } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-depth-contracts.mjs';
 import { claimAndSubmitWorkUnit, referenceContent } from '../../engine/work-unit-test-helpers.mjs';
-import { writeGateAttempt } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { writeGateAttempt } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 
 const dirs = [];
 const REPO_ROOT = process.cwd();
@@ -95,11 +95,11 @@ function authorizeWave(bundle, wave) {
     inspect: [],
     advice: [],
   });
-  const entered = spawnSync('node', ['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', bundle, '--node', route.targetNode], {
+  const entered = spawnSync('node', ['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', bundle, '--node', route.targetNode], {
     cwd: REPO_ROOT, encoding: 'utf8', timeout: 10000,
   });
   assert.equal(entered.status, 0, entered.stderr || entered.stdout);
-  const advanced = spawnSync('node', ['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', bundle, '--to', route.statusGate], {
+  const advanced = spawnSync('node', ['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundle, '--to', route.statusGate], {
     cwd: REPO_ROOT, encoding: 'utf8', timeout: 10000,
   });
   assert.equal(advanced.status, 0, advanced.stderr || advanced.stdout);
@@ -207,7 +207,7 @@ function preparedWorkspaces(bundle) {
 
 describe('seed-topic projection materialization', () => {
   it('keeps the executable slot map and the pure template card contract aligned', () => {
-    const template = readFileSync('DPT_FRAMEWORK/workflows/nodes/templates/seed-topic-template.md', 'utf8');
+    const template = readFileSync('DEEP_RESEARCH_HARNESS/workflows/nodes/templates/seed-topic-template.md', 'utf8');
     const markers = [...template.matchAll(/<!-- seed-topic-slot: ([a-z0-9_]+) \| owner: ([a-z0-9,]+) \| identity: ([a-z_]+) \| merge: ([a-z_]+) -->\n## (.+?)\n\n> \*\*([^*]+)\*\*/g)];
     assert.equal(markers.length, SEED_TOPIC_PROJECTION_SLOTS.length);
     assert.deepEqual(markers.map((match) => match[1]), SEED_TOPIC_PROJECTION_SLOTS.map((slot) => slot.slotId));

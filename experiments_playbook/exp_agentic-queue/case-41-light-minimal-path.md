@@ -29,20 +29,20 @@ This deterministic fixture-backed Agent-flow case exercises the real queue manag
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs agq_simple --case case-41 --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "$B"
 ```
 
 ## Step 2: Enqueue three ordered queue demands
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { createQueue, enqueue, saveQueue, makeItem } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { createQueue, enqueue, saveQueue, makeItem } from './DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 const bundle = process.argv[2];
 const trace = createTrace(join(bundle, 'rb_trace.jsonl'), { consoleEcho: false });
@@ -67,11 +67,11 @@ JS
 ## Step 3: Claim only the queue front
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { join } from 'node:path';
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { loadQueue, claim, saveQueue } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { loadQueue, claim, saveQueue } from './DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 const bundle = process.argv[2];
 const trace = createTrace(join(bundle, 'rb_trace.jsonl'), { consoleEcho: false });
@@ -90,11 +90,11 @@ JS
 ## Step 4: Complete with the real receipt contract
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { join } from 'node:path';
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { loadQueue, complete, saveQueue } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { loadQueue, complete, saveQueue } from './DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 const bundle = process.argv[2];
 const trace = createTrace(join(bundle, 'rb_trace.jsonl'), { consoleEcho: false });
@@ -107,12 +107,12 @@ JS
 ## Step 5: Verify promotion and the current projection
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { loadQueue } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { loadQueue } from './DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 const bundle = process.argv[2];
 const trace = createTrace(join(bundle, 'rb_trace.jsonl'), { consoleEcho: false });
@@ -132,8 +132,8 @@ JS
 ## Step 6: Publish native completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after finalization. The Supervisor validates the completion, runs Light health, writes durable audit, and applies any explicit cleanup policy.

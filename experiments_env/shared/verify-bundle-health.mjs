@@ -28,10 +28,10 @@ import { fileURLToPath } from 'node:url';
 import {
   inspectWorkUnits,
   readWorkUnitLedgerRows,
-} from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import {
   readSubmittedWorkUnitDeclarations,
-} from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers-readers.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-readers.mjs';
 
 const __dirname = new URL('.', import.meta.url).pathname;
 
@@ -169,7 +169,7 @@ function inspectBundleSchema(bundlePath, profile) {
 
   // Find validate-bundle.mjs relative to the repo root (this script is in experiments_env/shared/)
   const repoRoot = join(__dirname, '..', '..');
-  const frameworkCli = join(repoRoot, 'DPT_FRAMEWORK', 'cli');
+  const frameworkCli = join(repoRoot, 'DEEP_RESEARCH_HARNESS', 'cli');
   const validatePath = join(frameworkCli, 'validate-bundle.mjs');
   const inspectPath = join(frameworkCli, 'inspect-bundle.mjs');
 

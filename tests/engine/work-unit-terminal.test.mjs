@@ -12,7 +12,7 @@ import {
   loadQueue,
   makeItem,
   saveQueue,
-} from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import {
   claimWorkUnits as claimWorkUnitsProduction,
   closeWorkUnitAttempt,
@@ -24,7 +24,7 @@ import {
   submitWorkUnit,
   timeoutPreflightWorkUnit,
   workUnitIndexPath,
-} from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 
 function tempBundle() {
   return mkdtempSync(path.join(os.tmpdir(), 'wu-terminal-'));

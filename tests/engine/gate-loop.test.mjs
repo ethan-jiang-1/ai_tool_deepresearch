@@ -3,7 +3,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { z } from 'zod';
-import { checkGate } from '../../DPT_FRAMEWORK/engine/gate-loop.mjs';
+import { checkGate } from '../../DEEP_RESEARCH_HARNESS/engine/gate-loop.mjs';
 
 // Consumer-defined domain knowledge (lives in MD, not engine)
 

@@ -6,9 +6,9 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { claimWorkUnits, closeWorkUnitAttempt, loadWorkUnitIndex, workUnitIndexPath } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
-import { evaluateActorDecision } from '../../DPT_FRAMEWORK/engine/work-unit-actor.mjs';
-import { loadQueue } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { claimWorkUnits, closeWorkUnitAttempt, loadWorkUnitIndex, workUnitIndexPath } from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
+import { evaluateActorDecision } from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-actor.mjs';
+import { loadQueue } from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import { delegatedQueueItem, recursiveAuthoritySnapshot, seedDelegatedQueue } from './work-unit-test-helpers.mjs';
 
 const policy = { delegated_role_key: 'dpt-source-intake', phase_agent_fallback: 'allowed' };

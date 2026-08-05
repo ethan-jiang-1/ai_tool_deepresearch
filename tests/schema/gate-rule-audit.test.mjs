@@ -9,10 +9,10 @@ import { fileURLToPath } from 'node:url';
 import {
   parseGateDefinitionBytes,
   readGateDefinitionSnapshot,
-} from '../../DPT_FRAMEWORK/schema/contracts/gate-definition.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/schema/contracts/gate-definition.mjs';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const FRAMEWORK_ROOT = join(REPO_ROOT, 'DPT_FRAMEWORK');
+const FRAMEWORK_ROOT = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS');
 const DEFINITIONS_ROOT = join(FRAMEWORK_ROOT, 'schema', 'gate_definitions');
 const CLI_ROOT = join(FRAMEWORK_ROOT, 'cli', 'gates');
 

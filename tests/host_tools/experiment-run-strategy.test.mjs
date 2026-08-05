@@ -10,12 +10,12 @@ import {
   executionSurfaceFingerprint,
   executionSurfaceHelperDigest,
   sha256Bytes,
-} from '../../DPT_FRAMEWORK/host_tools/lib/agent-experiment-contract.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/agent-experiment-contract.mjs';
 import {
   buildExecutionSurfaces,
   planExperimentRun,
   projectExperimentCases,
-} from '../../DPT_FRAMEWORK/host_tools/lib/experiment-run-strategy.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/experiment-run-strategy.mjs';
 
 function digest(value) {
   return sha256Bytes(Buffer.from(value));
@@ -53,7 +53,7 @@ function entry({
 }
 
 function surface(entryValue, { source = null, helper = 'helper-v1', instruction = 'instruction-v1' } = {}) {
-  const inventory = [{ path: 'DPT_FRAMEWORK/host_tools/lib/example.mjs', sha256: digest(helper) }];
+  const inventory = [{ path: 'DEEP_RESEARCH_HARNESS/host_tools/lib/example.mjs', sha256: digest(helper) }];
   const value = {
     schema_version: 'agent-experiment-execution-surface/v1',
     manifest_entry: { path: entryValue.path, case: entryValue.frontmatter.case },
@@ -169,14 +169,14 @@ describe('Experiment Run Strategy', () => {
     const repoRoot = mkdtempSync(join(tmpdir(), 'experiment-run-strategy-'));
     try {
       const instructionPath = writeFixtureFile(repoRoot, 'experiments_playbook/RUN_AGENT_AUTORUN_EXPS.md', '# Headless instruction\n');
-      const sourcePath = writeFixtureFile(repoRoot, 'experiments_playbook/exp_alpha/case-1-light-surface.md', 'node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs\n');
-      writeFixtureFile(repoRoot, 'DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs', "import './lib/agent-experiment-supervisor.mjs';\n");
-      writeFixtureFile(repoRoot, 'DPT_FRAMEWORK/host_tools/lib/agent-experiment-supervisor.mjs', 'export const lifecycle = true;\n');
-      writeFixtureFile(repoRoot, 'DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs', 'export const completion = true;\n');
-      writeFixtureFile(repoRoot, 'DPT_FRAMEWORK/cli/inspect-bundle.mjs', 'export const inspect = true;\n');
-      writeFixtureFile(repoRoot, 'DPT_FRAMEWORK/cli/validate-bundle.mjs', 'export const validate = true;\n');
+      const sourcePath = writeFixtureFile(repoRoot, 'experiments_playbook/exp_alpha/case-1-light-surface.md', 'node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs\n');
+      writeFixtureFile(repoRoot, 'DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs', "import './lib/agent-experiment-supervisor.mjs';\n");
+      writeFixtureFile(repoRoot, 'DEEP_RESEARCH_HARNESS/host_tools/lib/agent-experiment-supervisor.mjs', 'export const lifecycle = true;\n');
+      writeFixtureFile(repoRoot, 'DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs', 'export const completion = true;\n');
+      writeFixtureFile(repoRoot, 'DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs', 'export const inspect = true;\n');
+      writeFixtureFile(repoRoot, 'DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs', 'export const validate = true;\n');
       writeFixtureFile(repoRoot, 'experiments_env/shared/verify-bundle-health.mjs', 'export const health = true;\n');
-      writeFixtureFile(repoRoot, 'DPT_FRAMEWORK/RUN.md', '# v0.66\n');
+      writeFixtureFile(repoRoot, 'DEEP_RESEARCH_HARNESS/RUN.md', '# v0.66\n');
       const selectedEntry = {
         path: 'exp_alpha/case-1-light-surface.md',
         fullPath: sourcePath,
@@ -184,12 +184,12 @@ describe('Experiment Run Strategy', () => {
       };
 
       const baseline = buildExecutionSurfaces({ entries: [selectedEntry], repoRoot, instructionPath }).get(selectedEntry.frontmatter.case);
-      writeFixtureFile(repoRoot, 'DPT_FRAMEWORK/RUN.md', '# v0.67\n');
+      writeFixtureFile(repoRoot, 'DEEP_RESEARCH_HARNESS/RUN.md', '# v0.67\n');
       const documentationOnly = buildExecutionSurfaces({ entries: [selectedEntry], repoRoot, instructionPath }).get(selectedEntry.frontmatter.case);
       assert.equal(documentationOnly.fingerprint, baseline.fingerprint);
-      assert.ok(!baseline.framework_helper_inventory.some((helper) => helper.path === 'DPT_FRAMEWORK/RUN.md'));
+      assert.ok(!baseline.framework_helper_inventory.some((helper) => helper.path === 'DEEP_RESEARCH_HARNESS/RUN.md'));
 
-      writeFixtureFile(repoRoot, 'DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs', 'export const completion = false;\n');
+      writeFixtureFile(repoRoot, 'DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs', 'export const completion = false;\n');
       const helperChanged = buildExecutionSurfaces({ entries: [selectedEntry], repoRoot, instructionPath }).get(selectedEntry.frontmatter.case);
       assert.notEqual(helperChanged.fingerprint, baseline.fingerprint);
     } finally {

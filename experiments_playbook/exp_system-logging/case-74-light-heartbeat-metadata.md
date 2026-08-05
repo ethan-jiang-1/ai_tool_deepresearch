@@ -41,7 +41,7 @@ verdict_judge: deterministic
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs heartbeat --case case-74 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 mkdir -p "$B/_logs"
 echo "B=$B"
 ```
@@ -51,13 +51,13 @@ echo "B=$B"
 ## Step 2: 触发 createRunLogger() 并验证 heartbeat
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 // Import and call createRunLogger — this writes the heartbeat
-const { createRunLogger } = await import('./DPT_FRAMEWORK/engine/logger.mjs');
+const { createRunLogger } = await import('./DEEP_RESEARCH_HARNESS/engine/logger.mjs');
 const log = createRunLogger(process.argv[2]);
 log.info('test_event');
 
@@ -97,7 +97,7 @@ if (hbLine) {
 
   checks.push({
     event: 'check', source: 'playbook', gate: 'heartbeat-has-framework-root',
-    passed: typeof parsed.framework_root === 'string' && parsed.framework_root.includes('DPT_FRAMEWORK'),
+    passed: typeof parsed.framework_root === 'string' && parsed.framework_root.includes('DEEP_RESEARCH_HARNESS'),
     expected: true,
     detail: `framework_root=${parsed.framework_root}`,
   });
@@ -139,8 +139,8 @@ JS
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

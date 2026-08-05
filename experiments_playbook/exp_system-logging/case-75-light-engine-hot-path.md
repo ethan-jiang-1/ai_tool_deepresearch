@@ -42,7 +42,7 @@ verdict_judge: deterministic
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs queue-log --case case-75 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "B=$B"
 ```
 
@@ -51,14 +51,14 @@ echo "B=$B"
 ## Step 2: 运行 queue 操作链
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const {
   loadQueue, saveQueue, enqueue, claim, complete, fail, makeItem,
-} = await import('./DPT_FRAMEWORK/engine/queue-manager.mjs');
+} = await import('./DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs');
 
 const dir = process.argv[2]; // $B (bundle root), process.argv[1] is the script path
 
@@ -147,8 +147,8 @@ JS
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

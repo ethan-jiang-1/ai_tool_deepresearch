@@ -30,7 +30,7 @@ verdict_judge: deterministic
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs canonical_recovery --case case-313 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -62,10 +62,10 @@ echo "B=$B"
 ## Step 2: 运行 production recovery check 并写 trace verdict
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 BEFORE=$(node -e 'const fs=require("fs"),c=require("crypto"),p=require("path");function w(d,o={}){for(const e of fs.readdirSync(d,{withFileTypes:true})){const a=p.join(d,e.name),r=p.relative(process.argv[1],a);if(e.isDirectory())w(a,o);else o[r]=c.createHash("sha256").update(fs.readFileSync(a)).digest("hex")}return o}process.stdout.write(JSON.stringify(w(process.argv[1])))' "$B")
 set +e
-RESULT=$(node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "$B" --at readiness_passed)
+RESULT=$(node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle "$B" --at readiness_passed)
 EXIT=$?
 set -e
 AFTER=$(node -e 'const fs=require("fs"),c=require("crypto"),p=require("path");function w(d,o={}){for(const e of fs.readdirSync(d,{withFileTypes:true})){const a=p.join(d,e.name),r=p.relative(process.argv[1],a);if(e.isDirectory())w(a,o);else o[r]=c.createHash("sha256").update(fs.readFileSync(a)).digest("hex")}return o}process.stdout.write(JSON.stringify(w(process.argv[1])))' "$B")
@@ -92,8 +92,8 @@ JS
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

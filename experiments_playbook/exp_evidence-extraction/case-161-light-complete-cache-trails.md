@@ -53,14 +53,14 @@ Fixture-backed Engine path. No Agent actor and no external calls. Fixture files 
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs eex_submit_cache_trails --case case-161 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "$B"
 ```
 
 ## Step 2: [MAIN/SHELL] Valid Work-Unit Submit Writes Cache Trail To Ledger
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import {
@@ -72,7 +72,7 @@ import {
   sourceYamlExtra,
   writeWave0Scaffold
 } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-import { checkCacheCoverage } from './DPT_FRAMEWORK/engine/helpers/gate-helpers-checks.mjs';
+import { checkCacheCoverage } from './DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs';
 
 const bundle = process.argv[2];
 writeWave0Scaffold(bundle, {
@@ -111,7 +111,7 @@ JS
 ## Step 3: [MAIN/SHELL] Invalid Cache Trails Reject Without Ledger Append
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -133,7 +133,7 @@ function rejected(label, mutate) {
   const workId = claim.claimed_work_ids[0];
   const fixture = writeFixtureResultForWorkUnit(bundle, { work_id: workId, source_slug: label });
   mutate(fixture);
-  const submit = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], { encoding: 'utf8' });
+  const submit = spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], { encoding: 'utf8' });
   const parsed = JSON.parse(submit.stdout);
   return { label, status: submit.status, parsed };
 }
@@ -171,7 +171,7 @@ JS
 ## Step 4: [MAIN/SHELL] Trace Verdict
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 const bundle = process.argv[2];
 console.log(`Native checks recorded for ${bundle}; Supervisor finalizer is authoritative.`);
@@ -185,6 +185,6 @@ PASS means work-unit submit is the cache-trail authority: complete cache leaves 
 ## Step 6: [MAIN/SHELL] Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```

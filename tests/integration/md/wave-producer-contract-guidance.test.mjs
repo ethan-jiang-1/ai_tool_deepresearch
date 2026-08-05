@@ -7,8 +7,8 @@ import { describe, it } from 'node:test';
 import { parse as parseYaml } from 'yaml';
 
 const ROOT = path.resolve(import.meta.dirname, '../../..');
-const NODES = path.join(ROOT, 'DPT_FRAMEWORK/workflows/nodes');
-const FRAMEWORK = path.join(ROOT, 'DPT_FRAMEWORK');
+const NODES = path.join(ROOT, 'DEEP_RESEARCH_HARNESS/workflows/nodes');
+const FRAMEWORK = path.join(ROOT, 'DEEP_RESEARCH_HARNESS');
 
 function readNode(relativePath) {
   return readFileSync(path.join(NODES, relativePath), 'utf8');

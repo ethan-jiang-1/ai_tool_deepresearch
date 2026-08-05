@@ -10,14 +10,14 @@ import {
   selectedAdapterUnavailableFact,
   selectedAdapterUnavailableRoot,
   validateSelectedAdapterSameUrlBinding,
-} from '../../DPT_FRAMEWORK/host_tools/lib/research-access-adapter.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/research-access-adapter.mjs';
 
 describe('selected research-access adapter', () => {
   it('reads the one selected generic non-bypass declaration', () => {
     const contract = readSelectedResearchAccessAdapterContract();
 
     assert.equal(contract.adapter_id, SELECTED_RESEARCH_ACCESS_ADAPTER.id);
-    assert.equal(contract.launcher.entry, 'DPT_FRAMEWORK/host_tools/claude-deepseek.mjs');
+    assert.equal(contract.launcher.entry, 'DEEP_RESEARCH_HARNESS/host_tools/claude-deepseek.mjs');
     assert.equal(contract.launcher.routing, 'deepseek_anthropic_compatible');
     assert.equal(contract.launcher.permission_mode, 'generic_non_bypass');
     assert.equal(contract.operations.search.surface, 'WebSearch');

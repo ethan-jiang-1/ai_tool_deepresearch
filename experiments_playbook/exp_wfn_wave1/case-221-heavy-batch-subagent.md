@@ -60,7 +60,7 @@ For DEW-021, retained `subject_task` evidence proves only that the real actor wa
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs w1_real_batch_work_unit --case case-221 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave1Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -72,14 +72,14 @@ writeWave1Scaffold(process.argv[2], {
   ]
 });
 JS
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$B"
 echo "BUNDLE=$B"
 ```
 
 ## Step 2: [MAIN/SHELL] Enqueue And Claim Batch
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { enqueueWorkUnitTask, queueItemForWorkUnit } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -97,7 +97,7 @@ for (const topic of [
 }
 JS
 
-CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave1 --count 2 --actor-outcome available --actor-source native_probe --actor-role-key dpt-evidence-extractor --actor-reason probe_succeeded --execution-actor delegated_subagent)
+CLAIM_JSON=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim "$B" --phase wave1 --count 2 --actor-outcome available --actor-source native_probe --actor-role-key dpt-evidence-extractor --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_JSON" > "$B/case-221-claim.json"
 printf '%s\n' "$CLAIM_JSON" | node -e '
 const j = JSON.parse(require("fs").readFileSync(0, "utf8"));
@@ -125,14 +125,14 @@ After real actors return, place their result JSON files in a directory named by 
 Then submit them:
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 REAL_RESULT_DIR=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.result_dir)' "$B/case-221-subagent-evidence.json")
 node --input-type=module - "$B" "$REAL_RESULT_DIR" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { loadWorkUnitIndex } from './DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 
 const [bundle, resultDir] = process.argv.slice(2);
 const claim = JSON.parse(readFileSync(`${bundle}/case-221-claim.json`, 'utf8'));
@@ -142,7 +142,7 @@ const actors = [];
 const hashFile = (file) => createHash('sha256').update(readFileSync(file)).digest('hex');
 const runWorkUnitCli = (command, workId, resultPath) => {
   const result = spawnSync(process.execPath, [
-    'DPT_FRAMEWORK/cli/operate-work-unit.mjs', command, bundle,
+    'DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', command, bundle,
     '--work-id', workId, '--result', resultPath,
   ], { encoding: 'utf8' });
   return {
@@ -189,13 +189,13 @@ JS
 ## Step 5: [MAIN/SHELL] Submit And Trace Verdict
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect "$B" > "$B/case-221-inspect.json"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs inspect "$B" > "$B/case-221-inspect.json"
 node --input-type=module - "$B" <<'JS'
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { loadWorkUnitIndex } from './DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 
 const bundle = process.argv[2];
 const submit = JSON.parse(readFileSync(`${bundle}/case-221-submit.json`, 'utf8'));
@@ -260,7 +260,7 @@ These checks prove only the two-Actor submit and inspection checkpoint. They do 
 ## Step 6: [MAIN/SHELL] Native completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 EXTRA_ARGS=()
 if [ -f "$B/case-221-subject-unavailable.txt" ]; then
   EXTRA_ARGS+=(--not-run-reason "native dpt-evidence-extractor Sub-agent or required real search/fetch capability unavailable")
@@ -271,7 +271,7 @@ else
   OUTPUT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.output)' "$B/case-221-subagent-evidence.json")
   EXTRA_ARGS+=(--evidence "subject_task=$TASK" --evidence "subject_result=$RESULT" --evidence "subject_receipt=$RECEIPT" --evidence "subject_output=$OUTPUT")
 fi
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Heavy health, durable Subject-evidence export, audit, preservation, and optional clean-PASS cleanup.

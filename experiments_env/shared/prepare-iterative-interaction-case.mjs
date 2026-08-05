@@ -63,18 +63,18 @@ function runGate(bundle, gate, currentNode) {
     '--gate', gate,
     '--',
     process.execPath,
-    join(REPO_ROOT, `DPT_FRAMEWORK/cli/gates/check-gate-${gate}.mjs`),
+    join(REPO_ROOT, `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-${gate}.mjs`),
     '--bundle', bundle,
     '--current-node', currentNode,
   ]));
 }
 
 function enterPhase(bundle, node) {
-  return runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/enter-phase.mjs'), '--bundle', bundle, '--node', node]);
+  return runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs'), '--bundle', bundle, '--node', node]);
 }
 
 function advanceStatus(bundle, gate) {
-  return parseJson(runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/advance-status.mjs'), '--bundle', bundle, '--to', gate]));
+  return parseJson(runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/advance-status.mjs'), '--bundle', bundle, '--to', gate]));
 }
 
 function passAndEnter(bundle, gate, node, statusGate, stageNext) {
@@ -87,13 +87,13 @@ function passAndEnter(bundle, gate, node, statusGate, stageNext) {
 }
 
 function logCompletion(bundle, event) {
-  runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/log-event.mjs'), '--bundle', bundle, '--event', event]);
+  runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/log-event.mjs'), '--bundle', bundle, '--event', event]);
 }
 
 function instantiateDisposable(caseId) {
   const stem = `iterative-interaction-${caseId}-${randomUUID().slice(0, 8)}`;
   const created = runNode([
-    join(REPO_ROOT, 'DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs'),
+    join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs'),
     stem,
     '--target-dir', TARGET_DIR,
   ]).stdout.trim();

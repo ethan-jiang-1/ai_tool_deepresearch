@@ -31,12 +31,12 @@ verdict_judge: deterministic
 ```bash
 REPO_ROOT=$(pwd)
 B=$(node experiments_env/shared/new-disposable-bundle.mjs chain --case case-301 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
-import { resolveNodeTransitionDetailed } from './DPT_FRAMEWORK/engine/ask-next.mjs';
+import { resolveNodeTransitionDetailed } from './DEEP_RESEARCH_HARNESS/engine/ask-next.mjs';
 import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
 const bundle=process.argv[2];
-const path='./DPT_FRAMEWORK/workflows/transitions.chain.json';
+const path='./DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json';
 const passed=resolveNodeTransitionDetailed(path,'phases/phase-hitl2.md','passed');
 const rerun=resolveNodeTransitionDetailed(path,'phases/phase-hitl2.md','rerun');
 const failed=resolveNodeTransitionDetailed(path,'phases/phase-hitl2.md','failed');
@@ -44,7 +44,7 @@ recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'case-301-passed-exit',passed:passe
 recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'case-301-rerun-exit',passed:rerun.kind==='next'&&rerun.next==='phases/phase-rerun.md',detail:JSON.stringify(rerun)});
 recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'case-301-context-no-transition',passed:failed.kind==='no_transition'&&failed.next===null,detail:JSON.stringify(failed)});
 JS
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 2: 结果解读

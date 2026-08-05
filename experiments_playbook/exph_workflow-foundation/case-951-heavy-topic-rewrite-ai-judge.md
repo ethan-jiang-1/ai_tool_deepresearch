@@ -33,7 +33,7 @@ The input and review criteria match case-901. AI evidence remains explicitly `so
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_rwa_ai --case case-951 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 cat > "$B/rb_profile.yaml" <<'YAML'
 plan_basename: wff_rwa_ai
 research_profile: standard
@@ -49,16 +49,16 @@ human_decision_checkpoints:
     user_decision: not_started
     final_report_view: not_started
 YAML
-node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle "$B" --current-node phases/phase-instantiation.md > "$B/case-951-instantiation-gate.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-instantiation-complete.mjs --bundle "$B" --current-node phases/phase-instantiation.md > "$B/case-951-instantiation-gate.json"
 NEXT=$(node experiments_env/shared/extract-field.mjs check.next < "$B/case-951-instantiation-gate.json")
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-951-enter-hitl1.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to instantiation_complete > "$B/case-951-status.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-951-enter-hitl1.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to instantiation_complete > "$B/case-951-status.json"
 ```
 
 ## Step 2: [MAIN->SUBJECT] Run The Independent Rewrite
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
 node experiments_env/shared/run-iterative-interaction-subject.mjs 951 --bundle "$B"
 SUBJECT_STATUS=$?
@@ -73,7 +73,7 @@ fi
 Skip this step when `case-951-actor-unavailable.txt` exists. The reviewer receives the original input and retained Subject/runtime surfaces, does not share the Subject session, and may write only `case-951-judge-record.json`.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 if [ ! -f "$B/case-951-actor-unavailable.txt" ]; then
   set +e
   node experiments_env/shared/run-iterative-interaction-subject.mjs 951-judge --bundle "$B"
@@ -90,7 +90,7 @@ fi
 Skip this step when `case-951-actor-unavailable.txt` exists.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { appendFileSync, readFileSync, statSync } from 'node:fs';
 import { parse as parseYaml } from 'yaml';
@@ -123,7 +123,7 @@ JS
 ## Step 5: [MAIN/SHELL] Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 EXTRA_ARGS=()
 if [ -f "$B/case-951-actor-unavailable.txt" ]; then
   EXTRA_ARGS+=(--not-run-reason "independent Subject Agent, external capability, or separate AI reviewer unavailable")
@@ -135,7 +135,7 @@ else
     --evidence "judge_record=$B/case-951-judge-record.json"
   )
 fi
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Light health, durable evidence export, audit, preservation, and optional clean-PASS cleanup. Case-901 remains a separate real-human claim regardless of this outcome.

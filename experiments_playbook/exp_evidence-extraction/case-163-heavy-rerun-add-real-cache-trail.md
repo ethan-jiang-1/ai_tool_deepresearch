@@ -73,7 +73,7 @@ The setup must finish with:
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs eex_real_agent_rerun_add --case case-163 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -294,11 +294,11 @@ const historyHashes = Object.fromEntries(
 );
 writeFileSync(path.join(bundle, 'case-163-historical-reference-hashes.json'), `${JSON.stringify(historyHashes, null, 2)}\n`);
 JS
-node DPT_FRAMEWORK/cli/apply-research-style.mjs --bundle "$B" --style debug > "$B/case-163-history-style.json"
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
-node DPT_FRAMEWORK/cli/inspect-wave0-output.mjs --bundle "$B" > "$B/case-163-history-wave0-inspect.json"
-node DPT_FRAMEWORK/cli/inspect-wave1-output.mjs --bundle "$B" > "$B/case-163-history-wave1-inspect.json"
+node DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs --bundle "$B" --style debug > "$B/case-163-history-style.json"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/cli/inspect-wave0-output.mjs --bundle "$B" > "$B/case-163-history-wave0-inspect.json"
+node DEEP_RESEARCH_HARNESS/cli/inspect-wave1-output.mjs --bundle "$B" > "$B/case-163-history-wave1-inspect.json"
 echo "BUNDLE=$B"
 ```
 
@@ -309,10 +309,10 @@ Expected: validation/inspection succeeds, both production Wave inspectors pass t
 Run the formal HITL2 Gate and consume its real handoff. Do not hand-write the `hitl2-recorded` Gate attempt or rerun `load_complete` witness.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md > "$B/case-163-hitl2-gate.json"
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-rerun.md > "$B/case-163-enter-rerun.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-163-hitl2-status.json"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md > "$B/case-163-hitl2-gate.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node phases/phase-rerun.md > "$B/case-163-enter-rerun.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-163-hitl2-status.json"
 ```
 
 Create `case-163-topic-change.json` as the recorded rerun semantic input:
@@ -342,10 +342,10 @@ Create `case-163-topic-change.json` as the recorded rerun semantic input:
 ```
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle "$B" --input "$B/case-163-topic-change.json" > "$B/case-163-topic-apply.json"
-node DPT_FRAMEWORK/cli/operate-topic-state.mjs inspect --bundle "$B" > "$B/case-163-topic-inspect.json"
-node DPT_FRAMEWORK/cli/apply-research-style.mjs --bundle "$B" --style debug > "$B/case-163-style.json"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs apply --bundle "$B" --input "$B/case-163-topic-change.json" > "$B/case-163-topic-apply.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs inspect --bundle "$B" > "$B/case-163-topic-inspect.json"
+node DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs --bundle "$B" --style debug > "$B/case-163-style.json"
 ```
 
 Read the canonical UIDs/current slugs from `case-163-topic-inspect.json`; `slug_stem` is only semantic input. In this fixture the expected current slugs are `03_economic-impact` and `04_workforce-transition`, and every later queue/output/cache/depth/reference coordinate must use those returned values rather than the bare stems.
@@ -357,14 +357,14 @@ Expected: topic-state commits one atomic plan+seed change. Each new UID-bound se
 ## Step 3: [MAIN/SHELL] Pass Rerun And Seed-Topics Gates, Then Claim Normal Wave0 Work
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle "$B" --current-node phases/phase-rerun.md > "$B/case-163-rerun-gate.json"
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-seed-topics.md > "$B/case-163-enter-seed-topics.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to rerun_ready > "$B/case-163-rerun-status.json"
-node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle "$B" --current-node phases/phase-seed-topics.md > "$B/case-163-seed-topics-gate.json"
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-wave0.md > "$B/case-163-enter-wave0.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to seed_topics_ready > "$B/case-163-seed-topics-status.json"
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs open-batch "$B" --phase wave0 --reason rerun_added_topics > "$B/case-163-wave0-open-batch.json"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-rerun-ready.mjs --bundle "$B" --current-node phases/phase-rerun.md > "$B/case-163-rerun-gate.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node phases/phase-seed-topics.md > "$B/case-163-enter-seed-topics.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to rerun_ready > "$B/case-163-rerun-status.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-seed-topics-ready.mjs --bundle "$B" --current-node phases/phase-seed-topics.md > "$B/case-163-seed-topics-gate.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node phases/phase-wave0.md > "$B/case-163-enter-wave0.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to seed_topics_ready > "$B/case-163-seed-topics-status.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs open-batch "$B" --phase wave0 --reason rerun_added_topics > "$B/case-163-wave0-open-batch.json"
 ```
 
 The Phase Agent now follows `phase-wave0.md`: classify the two new Topics from direct facts, enqueue exactly one standard `wave0_source_intake` demand per new Topic, perform a bounded current role probe, and call `operate-work-unit claim`. Historical covered Topics are reuse; no orphan file can suppress a new demand. Save returned work IDs and immutable beacon hashes in `case-163-wave0-claims.json`.
@@ -379,7 +379,7 @@ Dispatch a real Agent/sub-agent for each generated Wave0 task. Each actor must:
 
 - read its generated task, manifest, immutable beacon, result schema, and runtime receipt path;
 - perform real source discovery/fetching for only its assigned Topic;
-- write its own `source.yaml`, declared reference output(s), three-file cache leaves, runtime receipt, and result JSON under the exact active bundle root;
+- write its own `source.yaml`, declared reference output(s), three-file cache leaves, runtime receipt, and result JSON under the exact current run bundle root;
 - render every reference from the loaded shared reference semantic contract, including non-empty required sections and exact canonical Topic binding;
 - write valid return-map entries using `relationship: supports|refutes|partial|opens|defers|context` and `status: supported|refuted|partial|open|emergent|deferred` rather than free-form prose;
 - use the Result Starter contract without overwriting Engine-owned envelope files;
@@ -395,9 +395,9 @@ After the first successful new-Topic native Sub-agent returns, write `case-163-s
 For each returned pair `<work-id> <real-result-path>`:
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit "$B" --work-id <work-id> --result <real-result-path>
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id <work-id> --result <real-result-path>
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs dry-submit "$B" --work-id <work-id> --result <real-result-path>
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs submit "$B" --work-id <work-id> --result <real-result-path>
 ```
 
 The Agent owns ordinary repair: if dry-submit returns violations, use only their `repair_kind`, `missing_fact`, `write_to`, and `rerun`, repair the same candidate/assigned surface, and rerun the same dry-submit. Do not ask the user to run commands and do not hand-edit ledger/index/status/beacon/hash authority.
@@ -409,19 +409,19 @@ Expected: both new Topics have real Engine-written submitted Wave0 rows, complet
 Inject one reversible presentation-independent artifact fault only after the valid Wave0 submits: move `reference/README.md` to `case-163-fault-reference-README.md`. Run the formal Wave0 Gate while preserving its JSON even on nonzero exit.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 mv "$B/reference/README.md" "$B/case-163-fault-reference-README.md"
-node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-163-wave0-failed.json" || true
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-163-wave0-failed.json" || true
 ```
 
 The Agent reads `case-163-wave0-failed.json` and must use the primary `hints[]` only: confirm a complete `rule_id/repair_kind/missing_fact/write_to/rerun`, execute the authorized repair, and invoke the exact same checkpoint named by `rerun`. It must not inspect Engine source, infer repair kind from a path, or ask the user to restore the file.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # After the Agent has performed the hinted repair:
-node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-163-wave0-passed.json"
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-wave1.md > "$B/case-163-enter-wave1.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave0_complete > "$B/case-163-wave0-status.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-163-wave0-passed.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node phases/phase-wave1.md > "$B/case-163-enter-wave1.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to wave0_complete > "$B/case-163-wave0-status.json"
 ```
 
 Expected: first Gate fails on one direct parent root, second same Gate passes, and the two Gate JSON files preserve the repair proof without a second validator.
@@ -448,9 +448,9 @@ From the reviewed hash-valid submitted rows, the Phase Agent:
 Harmless heading case/level/order/list differences are allowed; all required semantic sections remain non-empty. Run the read-only inspect first. Only after it passes, record the accepted completion evidence through the normal Engine operation. Do not invoke the formal Wave1 Gate yet, because the declaration fault must be injected before that Gate creates a Wave2 handoff:
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/inspect-wave1-output.mjs --bundle "$B" > "$B/case-163-wave1-inspect.json"
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --event wave1_completion > "$B/case-163-wave1-completion.json"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/inspect-wave1-output.mjs --bundle "$B" > "$B/case-163-wave1-inspect.json"
+node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle "$B" --event wave1_completion > "$B/case-163-wave1-completion.json"
 ```
 
 Expected: inspect passes using submitted backing, prior source lineage, minimal depth derivation, and shared reference parsing. The completion event is present, but no successful formal Wave1 Gate attempt or Wave2 handoff exists before fault injection.
@@ -462,8 +462,8 @@ Choose the real submitted supplementary Wave1 work ID. Before mutation, store it
 Run the first formal Wave1 Gate attempt and preserve the expected failure JSON:
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-163-wave1-missing-declaration.json" || true
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-163-wave1-missing-declaration.json" || true
 ```
 
 Expected: one `submitted_declaration_missing:<work-id>` parent root, `repair_kind: engine_operation`, exact absolute `recover-declaration` coordinate, and masking of dependent output/cache/count/depth/bypass symptoms. Reconstruction facts do not make the Gate pass. A `handoff_target_mismatch` result means the playbook invoked a successful formal Gate too early and is invalid evidence.
@@ -471,9 +471,9 @@ Expected: one `submitted_declaration_missing:<work-id>` parent root, `repair_kin
 The Agent executes the exact existing-owner operation from the hint:
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration "$B" --work-id <supplementary-work-id> > "$B/case-163-recovery.json"
-node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-163-wave1-restored.json"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs recover-declaration "$B" --work-id <supplementary-work-id> > "$B/case-163-recovery.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-163-wave1-restored.json"
 ```
 
 Expected: the restored row is byte-semantically/hash identical to the recorded pre-fault row, index/status/queue hashes remain unchanged, recovery audit stays outside the row, and the same normal Wave1 Gate reaches its first PASS and creates the Wave2 handoff. No manual row/hash, replacement attempt, or recovery-specific Gate success branch exists.
@@ -485,7 +485,7 @@ Consume the successful restored Wave1 Gate's `check.next`, enter `phases/phase-w
 ## Step 11: [MAIN/SHELL] Record five native checks and finalize once
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 EXTRA_ARGS=()
 if [ -f "$B/case-163-subject-unavailable.txt" ]; then
   EXTRA_ARGS+=(--not-run-reason "required native Sub-agent or real search/fetch capability unavailable")
@@ -529,7 +529,7 @@ JS
   OUTPUT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.output)' "$B/case-163-subagent-evidence.json")
   EXTRA_ARGS+=(--evidence "subject_task=$TASK" --evidence "subject_result=$RESULT" --evidence "subject_receipt=$RECEIPT" --evidence "subject_output=$OUTPUT")
 fi
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
 PASS requires all five current-run checks. A fixture-only or missing-actor run is `NOT_RUN`, never PASS. Stop after native completion. The Autorun Supervisor owns Heavy health, durable Subject-evidence export, audit, preservation, and optional clean-PASS cleanup.

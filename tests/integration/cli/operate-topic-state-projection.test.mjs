@@ -7,12 +7,12 @@ import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 
 import { createTempDir } from '../../helpers/temp-dirs.mjs';
-import { applyCanonicalTopicState } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
+import { applyCanonicalTopicState } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
 import { claimAndSubmitWorkUnit, referenceContent } from '../../engine/work-unit-test-helpers.mjs';
 
 const REPO_ROOT = process.cwd();
-const CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs');
-const INSPECT_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-wave0-output.mjs');
+const CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs');
+const INSPECT_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/inspect-wave0-output.mjs');
 const dirs = [];
 
 after(() => dirs.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
@@ -315,7 +315,7 @@ describe('operate-topic-state projection packets', () => {
     assert.equal(rejected.output.reason_code, 'input_invalid');
     assert.equal(rejected.output.repair_kind, 'agent_action');
     assert.equal(rejected.output.repair_surface, 'retained_input');
-    assert.equal(rejected.output.rerun, 'node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle <bundle-path> --input <input-path>');
+    assert.equal(rejected.output.rerun, 'node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs apply --bundle <bundle-path> --input <input-path>');
     const feedback = rejected.output.validation_errors.find((item) => item.path === 'updates[0].entries[0].source_identity.kind');
     assert.deepEqual(feedback && {
       path: feedback.path,

@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 const REPO_ROOT = join(import.meta.dirname, '../../..');
-const NODES = join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows', 'nodes');
+const NODES = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'workflows', 'nodes');
 
 function readNode(ref) {
   return readFileSync(join(NODES, ref), 'utf-8');

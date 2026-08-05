@@ -366,7 +366,7 @@ presentation, SHALL own the blocking result.
 #### Scenario: Wave1 CLI evaluates depth review from definition
 
 - **WHEN** the Wave1 gate definition contains a depth-review rule
-- **THEN** the CLI SHALL parse the rule target from the active bundle
+- **THEN** the CLI SHALL parse the rule target from the current run bundle
 - **AND** the rule SHALL contribute to the overall pass/fail determination
 
 #### Scenario: Normal legacy reference remains valid
@@ -738,7 +738,7 @@ degraded eligibility, gate-attempt durability, checkpoint, and
 The existing Wave0 source-metadata array fact, Wave1 Key Findings availability
 fact, and Wave1 four-question-section availability fact SHALL remain owned by
 one neutral target-level direct-output module selected only by a closed
-direct_contract ID. Its interface SHALL accept the active bundle root, one
+direct_contract ID. Its interface SHALL accept the current run bundle root, one
 Engine-resolved concrete bundle-relative target, and that ID; it SHALL own
 bounded open/read, fatal UTF-8 plus single-BOM handling, tolerant parsing, and
 contract-local structured roots without reading queue, manifest, result,
@@ -1061,7 +1061,7 @@ Internal surfaces such as `artifacts/`, `_cache/`, and `_work_units/` MAY be rep
 #### Scenario: concrete existing reference ref passes navigation
 
 - **WHEN** an evidence-bearing seed-topic return-map entry includes `reference/01_topic-source.md`
-- **AND** that file exists under the active bundle root
+- **AND** that file exists under the current run bundle root
 - **THEN** the concrete reference navigation check SHALL pass for that entry
 
 ### Requirement: Wave2 cross-reference backing SHALL preserve targeted-evidence and existing-backed projection authorities
@@ -1172,7 +1172,7 @@ Accepted slugs SHALL be alternatives for one UID, not separate mandatory targets
 
 ### Requirement: Wave gate CLIs and playbook verdict checks use one root trace with distinct ownership
 
-Wave gate CLIs SHALL return standard machine-readable `check / routing / inspect / advice` JSON on stdout and append real gate-attempt audit rows to the active bundle's `rb_trace.jsonl`. A command-experiment Playbook Agent/thin driver SHALL parse the real result and append its strict case-owned `event: check`, `source: playbook`, explicit boolean `passed`/`expected` verdict row through the accepted trace writer/helper to the same root trace. Native completion SHALL evaluate only accepted playbook-owned checks under V2 policy. `_trace.jsonl`, console verdict text and gate-authored substitute checks SHALL NOT be current authority.
+Wave gate CLIs SHALL return standard machine-readable `check / routing / inspect / advice` JSON on stdout and append real gate-attempt audit rows to the current run bundle's `rb_trace.jsonl`. A command-experiment Playbook Agent/thin driver SHALL parse the real result and append its strict case-owned `event: check`, `source: playbook`, explicit boolean `passed`/`expected` verdict row through the accepted trace writer/helper to the same root trace. Native completion SHALL evaluate only accepted playbook-owned checks under V2 policy. `_trace.jsonl`, console verdict text and gate-authored substitute checks SHALL NOT be current authority.
 
 #### Scenario: Wave gate output and verdict-check ownership stay distinct in one trace
 

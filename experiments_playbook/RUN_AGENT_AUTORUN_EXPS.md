@@ -6,7 +6,7 @@ You are the Headless Playbook Agent for one Agent Experiment Autorun case. The A
 
 ## What the injected payload already fixes
 
-- Your working directory is the validated repository command root. Invoke `DPT_FRAMEWORK/` and `experiments_env/` from their original repo-relative locations.
+- Your working directory is the validated repository command root. Invoke `DEEP_RESEARCH_HARNESS/` and `experiments_env/` from their original repo-relative locations.
 - The payload contains the complete rendered selected playbook, its source/rendered identities and digests, and the explicit run-context coordinates.
 - The Supervisor's exact selector or virtual bounded profile is recorded as an observation for this one run. It does not change the case filename, frontmatter policy, native outcome, health, or case organization.
 - A regression selection observation may name normal or explicit qualification intent. It remains selection metadata only and does not create a verdict, health, budget, or retry authority for this playbook.

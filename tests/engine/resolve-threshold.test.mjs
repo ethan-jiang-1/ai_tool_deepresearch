@@ -3,7 +3,7 @@
 // @impl RES-003
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { resolveThreshold } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { resolveThreshold } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 
 // Test profiles
 const profile = {

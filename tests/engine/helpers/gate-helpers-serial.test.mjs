@@ -13,7 +13,7 @@ import {
   readYamlArraySafe,
   readJsonFileSafe,
   scanTemplateNotExpanded,
-} from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-resilience-tmp');

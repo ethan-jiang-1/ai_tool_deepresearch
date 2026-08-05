@@ -10,8 +10,8 @@ import {
   collectEligibleRows,
   collectSubmittedWave0ContributionProjection,
   readSubmittedWave0Backing,
-} from '../../DPT_FRAMEWORK/engine/work-unit-projection.mjs';
-import { buildCanonicalTopicRegistryFact } from '../../DPT_FRAMEWORK/engine/helpers/topic-registry-fact.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-projection.mjs';
+import { buildCanonicalTopicRegistryFact } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/topic-registry-fact.mjs';
 import {
   claimAndSubmitWorkUnit,
   cleanupWorkUnitBundle,
@@ -530,9 +530,9 @@ describe('eligible work-unit projection', () => {
   });
 
   it('keeps the reader/projection import direction acyclic', () => {
-    const reader = readFileSync(path.resolve('DPT_FRAMEWORK/engine/helpers/gate-helpers-readers.mjs'), 'utf8');
-    const projection = readFileSync(path.resolve('DPT_FRAMEWORK/engine/work-unit-projection.mjs'), 'utf8');
-    const directOutput = readFileSync(path.resolve('DPT_FRAMEWORK/engine/helpers/direct-output-contract.mjs'), 'utf8');
+    const reader = readFileSync(path.resolve('DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-readers.mjs'), 'utf8');
+    const projection = readFileSync(path.resolve('DEEP_RESEARCH_HARNESS/engine/work-unit-projection.mjs'), 'utf8');
+    const directOutput = readFileSync(path.resolve('DEEP_RESEARCH_HARNESS/engine/helpers/direct-output-contract.mjs'), 'utf8');
     assert.doesNotMatch(reader, /work-unit-(?:projection|validation)\.mjs/);
     assert.match(projection, /gate-helpers-readers\.mjs/);
     assert.match(projection, /work-unit-validation\.mjs/);

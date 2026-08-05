@@ -8,7 +8,7 @@ import {
   continuationForGateResult,
   continuationForLoadedNode,
   renderContinuationBlock,
-} from '../../../DPT_FRAMEWORK/engine/helpers/continuation-cue.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/continuation-cue.mjs';
 
 const STOP_NO = { stop: 'no', gate: 'wave1-complete' };
 const STOP_YES = { stop: 'yes', gate: 'hitl2-recorded' };

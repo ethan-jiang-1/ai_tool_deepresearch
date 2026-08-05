@@ -6,7 +6,7 @@ import {
   CacheLeafMetaSchema,
   inspectCacheLeaf,
   resolveCacheLeafContract,
-} from '../../../DPT_FRAMEWORK/engine/helpers/cache-leaf-contract.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/cache-leaf-contract.mjs';
 
 describe('cache leaf contract projection', () => {
   it('keeps canonical base files while adding assigned sidecars', () => {

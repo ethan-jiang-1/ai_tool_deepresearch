@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { applyCanonicalTopicState } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
-import { renderNoControls, renderSuppliedControls } from '../../../DPT_FRAMEWORK/engine/helpers/plan-hostfile-sections.mjs';
-import { kindContractForQueueItem } from '../../../DPT_FRAMEWORK/engine/work-unit-utils.mjs';
+import { applyCanonicalTopicState } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { renderNoControls, renderSuppliedControls } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/plan-hostfile-sections.mjs';
+import { kindContractForQueueItem } from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-utils.mjs';
 
 const root = process.cwd();
 const instantiate = join(root, 'experiments_env/shared/new-disposable-bundle.mjs');
-const controlsCli = join(root, 'DPT_FRAMEWORK/cli/plan-hostfile-sections.mjs');
+const controlsCli = join(root, 'DEEP_RESEARCH_HARNESS/cli/plan-hostfile-sections.mjs');
 const bundles = join(root, 'tests', '.test-bundles');
 const created = [];
 

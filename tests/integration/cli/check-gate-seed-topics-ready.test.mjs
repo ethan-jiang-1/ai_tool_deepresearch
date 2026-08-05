@@ -6,15 +6,15 @@ import { join } from 'node:path';
 import {
   setStatusWindow,
 } from './handoff-fixtures.mjs';
-import { writeGateAttempt } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { writeGateAttempt } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 import {
   renderSeedInitializationRegion,
   SEED_TOPIC_INITIALIZATION,
-} from '../../../DPT_FRAMEWORK/engine/helpers/seed-topic-authoring-evaluator.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/seed-topic-authoring-evaluator.mjs';
 
 const REPO_ROOT = process.cwd();
-const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs');
-const ENTER_PHASE = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/enter-phase.mjs');
+const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-seed-topics-ready.mjs');
+const ENTER_PHASE = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];

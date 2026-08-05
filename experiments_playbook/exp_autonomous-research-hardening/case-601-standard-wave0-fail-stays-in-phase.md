@@ -42,7 +42,7 @@ Standard controlled MD-controller playbook. Inline JS may create fixture gaps an
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs arh_wave0_fail --case case-601 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -64,11 +64,11 @@ echo "BUNDLE=$B"
 ## Step 2: Run Gate And Audit Feedback
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
-node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-601-wave0-gate.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-601-wave0-gate.json"
 GATE_STATUS=$?
-node DPT_FRAMEWORK/cli/audit-phase-status.mjs --bundle "$B" > "$B/case-601-phase-audit.json"
+node DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs --bundle "$B" > "$B/case-601-phase-audit.json"
 AUDIT_STATUS=$?
 set -e
 
@@ -100,8 +100,8 @@ JS
 ## Step 3: Verdict
 
 ```bash
- B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+ B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Light health, audit, preservation, and optional clean-PASS cleanup.

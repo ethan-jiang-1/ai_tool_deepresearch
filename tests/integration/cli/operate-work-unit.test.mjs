@@ -13,8 +13,8 @@ import { pathToFileURL } from 'node:url';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { makeItem } from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
-import { createQueue, enqueue, saveQueue } from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { makeItem } from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
+import { createQueue, enqueue, saveQueue } from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import {
   WORK_UNIT_OUTPUT_LEDGER,
   createWorkUnit,
@@ -22,15 +22,15 @@ import {
   transactionDir,
   transactionLockOwnerPath,
   workUnitIndexPath,
-} from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import {
   WORK_UNIT_TRANSACTION_LOCK_SCHEMA_VERSION,
   WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
   WorkUnitTransactionLockOwnerSchema,
   WorkUnitTransactionV2JournalSchema,
-} from '../../../DPT_FRAMEWORK/schema/contracts/work-unit-transaction.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/work-unit-transaction.mjs';
 
-const CLI = path.resolve('DPT_FRAMEWORK/cli/operate-work-unit.mjs');
+const CLI = path.resolve('DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs');
 const AVAILABLE_ACTOR_ARGS = ['--actor-outcome', 'available', '--actor-source', 'native_probe', '--actor-role-key', 'dpt-source-intake', '--actor-reason', 'probe_succeeded', '--execution-actor', 'delegated_subagent'];
 
 function withExplicitActor(args) {
@@ -1287,7 +1287,7 @@ describe('operate-work-unit attempt recovery operations', () => {
         .filter((name) => name.endsWith('.json'))
         .sort();
 
-      const transactionModule = pathToFileURL(path.resolve('DPT_FRAMEWORK/engine/work-unit-transaction.mjs')).href;
+      const transactionModule = pathToFileURL(path.resolve('DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs')).href;
       const holderScript = `
         import { withWorkUnitTransaction } from ${JSON.stringify(transactionModule)};
         const result = withWorkUnitTransaction(${JSON.stringify(dir)}, 'submit_work_unit', {
@@ -1378,7 +1378,7 @@ describe('operate-work-unit attempt recovery operations', () => {
       const queueBefore = readFileSync(path.join(dir, 'rb_queue.json'), 'base64');
       const indexBefore = readFileSync(workUnitIndexPath(dir), 'base64');
 
-      const transactionModule = pathToFileURL(path.resolve('DPT_FRAMEWORK/engine/work-unit-transaction.mjs')).href;
+      const transactionModule = pathToFileURL(path.resolve('DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs')).href;
       const holderScript = `
         import { writeFileSync } from 'node:fs';
         import { withWorkUnitTransaction } from ${JSON.stringify(transactionModule)};
@@ -1444,7 +1444,7 @@ describe('operate-work-unit attempt recovery operations', () => {
         const holderQueueId = sameAttempt ? record.queue_item_id : 'queue-unrelated-holder';
         const queueBefore = readFileSync(path.join(dir, 'rb_queue.json'), 'base64');
         const indexBefore = readFileSync(workUnitIndexPath(dir), 'base64');
-        const transactionModule = pathToFileURL(path.resolve('DPT_FRAMEWORK/engine/work-unit-transaction.mjs')).href;
+        const transactionModule = pathToFileURL(path.resolve('DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs')).href;
         const holderScript = `
           import { withWorkUnitTransaction } from ${JSON.stringify(transactionModule)};
           const result = withWorkUnitTransaction(${JSON.stringify(dir)}, 'submit_work_unit', {

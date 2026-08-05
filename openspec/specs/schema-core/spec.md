@@ -169,7 +169,7 @@ The abstract FSM originally defined transitions for 8 states: instantiation_comp
 All schema files SHALL be valid JavaScript (.mjs) that `node` can import directly without compilation.
 
 #### Scenario: node imports schema
-- **WHEN** `node -e "import('./DPT_FRAMEWORK/schema/index.mjs')"` is run
+- **WHEN** `node -e "import('./DEEP_RESEARCH_HARNESS/schema/index.mjs')"` is run
 - **THEN** it succeeds without errors
 
 ### Requirement: PlanSchema validates frontmatter fields

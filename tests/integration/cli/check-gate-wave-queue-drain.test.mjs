@@ -58,8 +58,8 @@ topic_registry:
 
 function run(wave, kind, dir) {
   const cli = kind === 'inspect'
-    ? join(ROOT, `DPT_FRAMEWORK/cli/inspect-${wave}-output.mjs`)
-    : join(ROOT, `DPT_FRAMEWORK/cli/gates/check-gate-${wave}-complete.mjs`);
+    ? join(ROOT, `DEEP_RESEARCH_HARNESS/cli/inspect-${wave}-output.mjs`)
+    : join(ROOT, `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-${wave}-complete.mjs`);
   const args = kind === 'inspect'
     ? [cli, '--bundle', dir]
     : [cli, '--bundle', dir, '--current-node', `phases/phase-${wave}.md`];

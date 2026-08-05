@@ -1,7 +1,7 @@
 // @impl REA-001, REA-003
 // Pure Subject argv construction; it never starts an Agent runtime.
 
-import { buildSelectedResearchAccessAdapterInvocation } from '../../DPT_FRAMEWORK/host_tools/lib/research-access-adapter.mjs';
+import { buildSelectedResearchAccessAdapterInvocation } from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/research-access-adapter.mjs';
 
 export function buildIterativeInteractionSubjectInvocation({
   subjectId,

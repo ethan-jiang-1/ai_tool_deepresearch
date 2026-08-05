@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-asknext-tmp');
 
-const { resolveNodeTransitionDetailed } = await import('../../DPT_FRAMEWORK/engine/ask-next.mjs');
+const { resolveNodeTransitionDetailed } = await import('../../DEEP_RESEARCH_HARNESS/engine/ask-next.mjs');
 
 const CHAIN_DATA = {
   'phases/phase-instantiation.md': { passed: 'phases/phase-hitl1.md' },
@@ -136,7 +136,7 @@ describe('resolveNodeTransitionDetailed — config_error result', () => {
 
 describe('Retired askNext API', () => {
   it('askNext is not exported', async () => {
-    const mod = await import('../../DPT_FRAMEWORK/engine/ask-next.mjs');
+    const mod = await import('../../DEEP_RESEARCH_HARNESS/engine/ask-next.mjs');
     assert.strictEqual(typeof mod.askNext, 'undefined', 'askNext should not be exported');
   });
 });
@@ -145,7 +145,7 @@ describe('Retired askNext API', () => {
 
 describe('resolveNodeTransitionDetailed with real transitions.chain.json', () => {
   it('resolves all 9 lifecycle transitions', () => {
-    const real = join(__dirname, '../../DPT_FRAMEWORK/workflows/transitions.chain.json');
+    const real = join(__dirname, '../../DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json');
 
     const r1 = resolveNodeTransitionDetailed(real, 'phases/phase-instantiation.md', 'passed');
     assert.strictEqual(r1.kind, 'next');

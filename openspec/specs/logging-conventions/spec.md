@@ -12,7 +12,7 @@
 
 The system SHALL use the bundle name as `bundle`, persisted in `rb_status.json`. All entries written to `rb_trace.jsonl` and `_logs/run.log` SHALL include the bundle field so diagnostic sinks can be stitched into a single timeline by `bundle` and `ts`.
 
-`bundle` SHALL be read from active bundle state, normally `rb_status.json`, not from chat memory, process memory, environment variables, or implicit shell state.
+`bundle` SHALL be read from current run bundle state, normally `rb_status.json`, not from chat memory, process memory, environment variables, or implicit shell state.
 
 #### Scenario: Run ID is the bundle name
 
@@ -94,7 +94,7 @@ The Agent-facing log CLI SHALL allow Phase Agents and sub-agents to write bundle
 `## Log` 段 SHALL 引用 `log-event.mjs` CLI 作为记录手段——不让 Agent 手写 JS 格式字符串。
 
 格式要求：
-- 声明记录命令：`node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level <LEVEL> --msg "<message>"`
+- 声明记录命令：`node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle <bundle> --level <LEVEL> --msg "<message>"`
 - 以表格列出至少 2 个日志点：phase START 和 phase END，直接给出可复制的 bash 命令
 - 额外的 phase 特定日志点（如"每个 topic 完成"、"queue refill"）在表格中列出
 

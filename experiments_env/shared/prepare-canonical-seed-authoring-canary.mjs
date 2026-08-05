@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { writeGateAttempt } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { writeGateAttempt } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 
 const targetIndex = process.argv.indexOf('--target-dir');
 if (targetIndex < 0 || !process.argv[targetIndex + 1]) throw new Error('Usage: node prepare-canonical-seed-authoring-canary.mjs --target-dir <dir>');
@@ -18,7 +18,7 @@ writeFileSync(join(bundle, 'rb_status.json'), JSON.stringify({ current_mode: 'ex
 writeFileSync(join(bundle, 'rb_trace.jsonl'), '');
 writeFileSync(join(bundle, 'rb_queue.json'), JSON.stringify({ active_window: [{ queue_item_id: 'case-204-seed', title: 'Enrich canonical seed', targets: { controller: 'main-agent' }, action: 'Write body and apply retained enrich_seed input.', producer_rule: 'seed_topic_materialize', lineage: { topic_slug: topic.slug }, priority_class: 'P3_current_gate_gap', required_receipts: [`file:seed_topics/${topic.slug}.md`], done_condition: 'Structured enrichment committed.', verification: { engine: ['receipt_check'], agent: [] }, writes_to: [`seed_topics/${topic.slug}.md`], status_sync: [], completion_receipt: `file:seed_topics/${topic.slug}.md`, failure_route: 'repair', status: 'queued', restore_priority: 'normal', payload: { topic_slug: topic.slug } }], refill_pool: [], delegated_in_flight: {}, terminal_history: [], queue_health: 'thin', stop_authorization_state: 'unauthorized_continue_required' }));
 writeGateAttempt(bundle, { check: { passed: true, gate: 'setup-ready', currentNodeRef: 'phases/phase-setup.md', next: 'phases/phase-seed-topics.md', failed_rule_ids: [] }, routing: { kind: 'next', next: 'phases/phase-seed-topics.md' }, inspect: [], advice: [] }, { setupReadyStaged: true });
-const enter = spawnSync('node', ['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-seed-topics.md'], { encoding: 'utf8' });
+const enter = spawnSync('node', ['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-seed-topics.md'], { encoding: 'utf8' });
 if (enter.status !== 0) throw new Error(enter.stderr);
 writeFileSync(join(bundle, 'case-204-setup.json'), `${JSON.stringify({ fixture: 'setup_only', subject_execution: 'real_agent', runtime: 'real_disposable_bundle', external_calls: 'none', topic }, null, 2)}\n`);
 process.stdout.write(`${bundle}\n`);

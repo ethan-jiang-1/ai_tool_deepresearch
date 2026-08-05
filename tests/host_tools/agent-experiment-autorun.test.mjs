@@ -20,20 +20,20 @@ import {
   sha256Bytes,
   traceBinding,
   validateCaseCompatibilityLedger,
-} from '../../DPT_FRAMEWORK/host_tools/lib/agent-experiment-contract.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/agent-experiment-contract.mjs';
 import {
   assertExpBundlesSourceIsolation,
   selectManifestEntries,
-} from '../../DPT_FRAMEWORK/host_tools/lib/agent-experiment-supervisor.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/agent-experiment-supervisor.mjs';
 import {
   buildHeadlessAgentCliPlan,
   buildInteractiveAgentCliPlan,
   INTERACTIVE_PROMPT_MAX_BYTES,
-} from '../../DPT_FRAMEWORK/host_tools/lib/agent-cli-launcher.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/agent-cli-launcher.mjs';
 
 const REPO_ROOT = resolve(new URL('../..', import.meta.url).pathname);
-const STATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs');
-const FINALIZER = join(REPO_ROOT, 'DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs');
+const STATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs');
+const FINALIZER = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs');
 const CHANGE_NAME = 'experiment-auto-runner';
 
 function changeArtifactPath(name) {
@@ -442,7 +442,7 @@ describe('feasibility-audit production-contract shapes', () => {
   });
 
   it('represents case-318 repo-cwd source with explicit rendered preparation and state targets', () => {
-    const source = '```bash\nB=$(node experiments_env/shared/prepare-rerun-direction-canary.mjs --target-dir {{CASE_RUN_ROOT_SH}})\nSTATE=$(printf %s {{PLAYBOOK_STATE_DIR_SH}})\nprintf %s "$B" > "$STATE/bundle-path"\nnode DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}}\n```';
+    const source = '```bash\nB=$(node experiments_env/shared/prepare-rerun-direction-canary.mjs --target-dir {{CASE_RUN_ROOT_SH}})\nSTATE=$(printf %s {{PLAYBOOK_STATE_DIR_SH}})\nprintf %s "$B" > "$STATE/bundle-path"\nnode DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}}\n```';
     const rendered = renderRuntimeTokens(source, {
       RUN_CONTEXT_SH: '/tmp/probe/agent-experiment-run.json', CASE_RUN_ROOT_SH: '/tmp/probe', PLAYBOOK_STATE_DIR_SH: '/tmp/probe/_playbook_state',
     }).rendered;
@@ -562,30 +562,30 @@ describe('Supervisor selection, launcher and source-isolation policy', () => {
   it('rejects source-tree symlinks and hardlinks under .exp-bundles', () => {
     const root = mkdtempSync(join(tmpdir(), 'agent-source-isolation-'));
     try {
-      mkdirSync(join(root, 'DPT_FRAMEWORK'), { recursive: true });
+      mkdirSync(join(root, 'DEEP_RESEARCH_HARNESS'), { recursive: true });
       mkdirSync(join(root, 'experiments_env'), { recursive: true });
       mkdirSync(join(root, 'tests'), { recursive: true });
       mkdirSync(join(root, '.exp-bundles'), { recursive: true });
-      writeFileSync(join(root, 'DPT_FRAMEWORK/source.mjs'), 'source');
-      symlinkSync(join(root, 'DPT_FRAMEWORK'), join(root, '.exp-bundles/framework-link'), 'dir');
+      writeFileSync(join(root, 'DEEP_RESEARCH_HARNESS/source.mjs'), 'source');
+      symlinkSync(join(root, 'DEEP_RESEARCH_HARNESS'), join(root, '.exp-bundles/framework-link'), 'dir');
       assert.throws(() => assertExpBundlesSourceIsolation(root, join(root, '.exp-bundles')), /symlink/);
       rmSync(join(root, '.exp-bundles/framework-link'));
-      linkSync(join(root, 'DPT_FRAMEWORK/source.mjs'), join(root, '.exp-bundles/source-hardlink.mjs'));
+      linkSync(join(root, 'DEEP_RESEARCH_HARNESS/source.mjs'), join(root, '.exp-bundles/source-hardlink.mjs'));
       assert.throws(() => assertExpBundlesSourceIsolation(root, join(root, '.exp-bundles')), /hardlinked/);
     } finally { rmSync(root, { recursive: true, force: true }); }
   });
 
-  it('rejects DPT_FRAMEWORK/experiments_env/tests copies under .exp-bundles', () => {
+  it('rejects DEEP_RESEARCH_HARNESS/experiments_env/tests copies under .exp-bundles', () => {
     const root = mkdtempSync(join(tmpdir(), 'agent-source-copy-'));
     try {
-      mkdirSync(join(root, 'DPT_FRAMEWORK'), { recursive: true });
+      mkdirSync(join(root, 'DEEP_RESEARCH_HARNESS'), { recursive: true });
       mkdirSync(join(root, 'experiments_env'), { recursive: true });
       mkdirSync(join(root, 'tests'), { recursive: true });
-      writeFileSync(join(root, 'DPT_FRAMEWORK/source.mjs'), 'source');
+      writeFileSync(join(root, 'DEEP_RESEARCH_HARNESS/source.mjs'), 'source');
       writeFileSync(join(root, 'experiments_env/helper.mjs'), 'helper');
       writeFileSync(join(root, 'tests/test.mjs'), 'test');
       mkdirSync(join(root, '.exp-bundles/runs/batch-1/01-case-1-light-abc'), { recursive: true });
-      for (const copyDir of ['DPT_FRAMEWORK', 'experiments_env', 'tests']) {
+      for (const copyDir of ['DEEP_RESEARCH_HARNESS', 'experiments_env', 'tests']) {
         const dest = join(root, '.exp-bundles/runs/batch-1/01-case-1-light-abc', copyDir);
         mkdirSync(dest, { recursive: true });
         writeFileSync(join(dest, 'copied.mjs'), 'copy');
@@ -744,7 +744,7 @@ function makeRun(policyOverrides = {}, { caseId = 'case-1-light-sample', cost = 
       runtime: 'real_disposable_bundle', external_calls: 'none', verdict_judge: 'deterministic',
       ...policyOverrides,
     },
-    repo_command_root: REPO_ROOT, framework_root: join(REPO_ROOT, 'DPT_FRAMEWORK'), case_run_root: root,
+    repo_command_root: REPO_ROOT, framework_root: join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS'), case_run_root: root,
     case_root_identity: caseRootIdentity(root), completion_path: join(root, 'agent-experiment-completion.json'),
   };
   writeFileSync(contextPath, `${JSON.stringify(context, null, 2)}\n`);

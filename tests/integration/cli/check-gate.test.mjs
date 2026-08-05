@@ -8,7 +8,7 @@ import { cpSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
-const FIXTURE_FW = join(process.cwd(), 'DPT_FRAMEWORK');
+const FIXTURE_FW = join(process.cwd(), 'DEEP_RESEARCH_HARNESS');
 
 // Gate → expected --current-node (from manifest.json)
 const GATE_NODE_MAP = {
@@ -27,7 +27,7 @@ describe('Gate CLI integration', () => {
 
   before(() => {
     tmpDir = createTempDir('check-gate');
-    cpSync(FIXTURE_FW, join(tmpDir, 'DPT_FRAMEWORK'), { recursive: true });
+    cpSync(FIXTURE_FW, join(tmpDir, 'DEEP_RESEARCH_HARNESS'), { recursive: true });
   });
 
   after(cleanupAll);
@@ -166,7 +166,7 @@ describe('Gate CLI integration', () => {
   // ── Output Contract: error scenarios ───────────────────────────────
 
   describe('Output Contract — CLI always returns actionable JSON', () => {
-    function fwCopy() { return join(tmpDir, 'DPT_FRAMEWORK'); }
+    function fwCopy() { return join(tmpDir, 'DEEP_RESEARCH_HARNESS'); }
 
     function writeWave0PreflightState() {
       writeFileSync(join(tmpDir, 'rb_plan.md'), [

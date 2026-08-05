@@ -50,7 +50,7 @@ Fixture-backed Engine case. It proves Wave2 gate and work-unit provenance bounda
 
 ```bash
 B_PURE=$(node experiments_env/shared/new-disposable-bundle.mjs w2_pure_gate_pass --case case-235 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role pure-synthesis-verdict --path "$B_PURE"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role pure-synthesis-verdict --path "$B_PURE"
 node --input-type=module - "$B_PURE" <<'JS'
 import { writeFileSync } from 'node:fs';
 import { appendTrace, writeWave2Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
@@ -62,14 +62,14 @@ writeFileSync(`${bundle}/artifacts/wave2/finding-index.yaml`, 'version: "0.1"\ns
 for (const topic of ['topic-a', 'topic-b']) writeFileSync(`${bundle}/seed_topics/${topic}.md`, `# ${topic}\n\n## Wave2 Judgment\nPure synthesis.\n\n## Pending Questions\n- [resolved]\n`);
 appendTrace(bundle, { event: 'wave2_completion', source: 'case-235-pure' });
 JS
-node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B_PURE" --current-node phases/phase-wave2.md > "$B_PURE/case-235-gate-pure.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs --bundle "$B_PURE" --current-node phases/phase-wave2.md > "$B_PURE/case-235-gate-pure.json"
 ```
 
 ## Step 2: [MAIN/SHELL] Direct Targeted Evidence Must Fail
 
 ```bash
 B_DIRECT=$(node experiments_env/shared/new-disposable-bundle.mjs w2_direct_cross_ref --case case-235 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role direct-cross-ref --path "$B_DIRECT"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role direct-cross-ref --path "$B_DIRECT"
 node --input-type=module - "$B_DIRECT" <<'JS'
 import { writeFileSync } from 'node:fs';
 import { appendTrace, referenceContent, writeWave2Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
@@ -83,7 +83,7 @@ for (const topic of ['topic-a', 'topic-b']) writeFileSync(`${bundle}/seed_topics
 appendTrace(bundle, { event: 'wave2_completion', source: 'case-235-direct' });
 JS
 set +e
-node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B_DIRECT" --current-node phases/phase-wave2.md > "$B_DIRECT/case-235-gate-direct.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs --bundle "$B_DIRECT" --current-node phases/phase-wave2.md > "$B_DIRECT/case-235-gate-direct.json"
 DIRECT_STATUS=$?
 set -e
 test "$DIRECT_STATUS" = "1"
@@ -93,7 +93,7 @@ test "$DIRECT_STATUS" = "1"
 
 ```bash
 B_SUBMITTED=$(node experiments_env/shared/new-disposable-bundle.mjs w2_submitted_cross_ref --case case-235 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role submitted-cross-ref --path "$B_SUBMITTED"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role submitted-cross-ref --path "$B_SUBMITTED"
 node --input-type=module - "$B_SUBMITTED" <<'JS'
 import {
   enqueueWorkUnitTask,
@@ -114,7 +114,7 @@ enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
   finding_id: 'W2F-001',
   title: 'Submitted targeted evidence for W2F-001'
 }), { fileName: 'case235-targeted.json' });
-const claim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave2'], { encoding: 'utf8' }).stdout);
+const claim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave2'], { encoding: 'utf8' }).stdout);
 const workId = claim.claimed_work_ids[0];
 const fixture = writeFixtureResultForWorkUnit(bundle, {
   work_id: workId,
@@ -132,15 +132,15 @@ writeFileSync(`${bundle}/artifacts/wave2/finding-index.yaml`, `version: "0.1"\ns
 for (const topic of ['topic-a', 'topic-b']) writeFileSync(`${bundle}/seed_topics/${topic}.md`, `# ${topic}\n\n## Wave2 Judgment\nSubmitted targeted evidence supports W2F-001.\n\n## Pending Questions\n- [resolved]\n`);
 appendTrace(bundle, { event: 'wave2_completion', source: 'case-235-submitted' });
 JS
-node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B_SUBMITTED" --current-node phases/phase-wave2.md > "$B_SUBMITTED/case-235-gate-submitted.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs --bundle "$B_SUBMITTED" --current-node phases/phase-wave2.md > "$B_SUBMITTED/case-235-gate-submitted.json"
 ```
 
 ## Step 4: [MAIN/SHELL] Record Verdict
 
 ```bash
-B_PURE=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role pure-synthesis-verdict)
-B_DIRECT=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role direct-cross-ref)
-B_SUBMITTED=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role submitted-cross-ref)
+B_PURE=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role pure-synthesis-verdict)
+B_DIRECT=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role direct-cross-ref)
+B_SUBMITTED=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role submitted-cross-ref)
 node --input-type=module - "$B_PURE" "$B_DIRECT" "$B_SUBMITTED" <<'JS'
 import { readFileSync } from 'node:fs';
 import { readWorkUnitLedgerRows, recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
@@ -160,10 +160,10 @@ JS
 ## Step 5: [MAIN/SHELL] Native Completion
 
 ```bash
-B_PURE=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role pure-synthesis-verdict)
-B_DIRECT=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role direct-cross-ref)
-B_SUBMITTED=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role submitted-cross-ref)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} \
+B_PURE=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role pure-synthesis-verdict)
+B_DIRECT=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role direct-cross-ref)
+B_SUBMITTED=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role submitted-cross-ref)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} \
   --bundle "pure-synthesis-verdict=$B_PURE" --bundle "direct-cross-ref=$B_DIRECT" --bundle "submitted-cross-ref=$B_SUBMITTED"
 ```
 

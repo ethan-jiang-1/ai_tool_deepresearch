@@ -254,7 +254,7 @@ function runGate(bundle, gateKey, currentNode, { attempt } = {}) {
     gateKey,
     '--',
     'node',
-    `DPT_FRAMEWORK/cli/gates/check-gate-${gateKey}.mjs`,
+    `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-${gateKey}.mjs`,
     '--bundle',
     bundle,
     '--current-node',
@@ -273,7 +273,7 @@ function runGate(bundle, gateKey, currentNode, { attempt } = {}) {
 
 function enterPhase(bundle, nodeRef, { expectSuccess = true } = {}) {
   const result = runNode([
-    'DPT_FRAMEWORK/cli/enter-phase.mjs',
+    'DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs',
     '--bundle',
     bundle,
     '--node',
@@ -296,7 +296,7 @@ function enterPhase(bundle, nodeRef, { expectSuccess = true } = {}) {
 function advanceStatus(bundle, gateEnum, { expectSuccess = true } = {}) {
   const priorCurrentNode = expectSuccess ? readStatus(bundle).current_node : undefined;
   const result = runNode([
-    'DPT_FRAMEWORK/cli/advance-status.mjs',
+    'DEEP_RESEARCH_HARNESS/cli/advance-status.mjs',
     '--bundle',
     bundle,
     '--to',

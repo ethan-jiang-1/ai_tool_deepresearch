@@ -109,7 +109,7 @@ A thin deterministic helper may prepare fixtures or derive facts. It must not be
 
 Each execution has one explicit Supervisor-owned case run root. Its declared direct-child bundle roots contain mutable case truth. Paths cross tool calls through explicit context-bound state, not shell environment, chat memory, cwd inference, “latest run,” or filesystem order.
 
-`.exp-bundles/` contains run-owned state, logs, evidence, audit, and reports only. `DPT_FRAMEWORK/`, `experiments_env/`, and `tests/` remain one repository-root source tree; they are never copied, symlinked, or hardlinked into a run root.
+`.exp-bundles/` contains run-owned state, logs, evidence, audit, and reports only. `DEEP_RESEARCH_HARNESS/`, `experiments_env/`, and `tests/` remain one repository-root source tree; they are never copied, symlinked, or hardlinked into a run root.
 
 Containment defines mutation and cleanup authority. It is not a security sandbox for hostile playbooks.
 

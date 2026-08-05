@@ -34,10 +34,10 @@ describe('framework version management', () => {
 
   it('keeps both RUN.md version references aligned to the latest changelog entry', () => {
     const latest = latestChangelogEntry(read('CHANGELOG.md'));
-    const run = read('DPT_FRAMEWORK/RUN.md');
+    const run = read('DEEP_RESEARCH_HARNESS/RUN.md');
 
-    assert.ok(run.includes(`> **DPT_FRAMEWORK ${latest.version}**`),
-      `RUN.md banner should include "DPT_FRAMEWORK ${latest.version}"`);
+    assert.ok(run.includes(`> **DEEP_RESEARCH_HARNESS ${latest.version}**`),
+      `RUN.md banner should include "DEEP_RESEARCH_HARNESS ${latest.version}"`);
     assert.ok(run.includes(`## Current Release: ${latest.version}`),
       `RUN.md current-release section should include "${latest.version}"`);
     assert.doesNotMatch(run, /v0\.5 work-unit path/);
@@ -56,18 +56,18 @@ describe('framework version management', () => {
     assert.match(versionDelta, /@deprecated name/);
     assert.match(versionDelta, /proposal-declared target version/);
     assert.match(runEntryDelta, /latest repo-root `CHANGELOG\.md` entry/);
-    assert.doesNotMatch(runEntryDelta, /SHALL state `DPT_FRAMEWORK v0\.[67]`/);
+    assert.doesNotMatch(runEntryDelta, /SHALL state `DEEP_RESEARCH_HARNESS v0\.[67]`/);
     assert.doesNotMatch(normativeVersionDelta, /SHALL (?:be|receive|display).*v0\.[67]/);
   });
 
   it('does not retain a framework-local changelog authority', () => {
-    assert.equal(existsSync(join(REPO_ROOT, 'DPT_FRAMEWORK/CHANGELOG.md')), false);
+    assert.equal(existsSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/CHANGELOG.md')), false);
   });
 
   it('guides future behavior changes to update root changelog and RUN banner', () => {
     const config = read('openspec/config.yaml');
     assert.match(config, /更新 `CHANGELOG\.md`/);
-    assert.match(config, /同步 `DPT_FRAMEWORK\/RUN\.md` 版本横幅/);
-    assert.doesNotMatch(config, /DPT_FRAMEWORK\/CHANGELOG\.md/);
+    assert.match(config, /同步 `DEEP_RESEARCH_HARNESS\/RUN\.md` 版本横幅/);
+    assert.doesNotMatch(config, /DEEP_RESEARCH_HARNESS\/CHANGELOG\.md/);
   });
 });

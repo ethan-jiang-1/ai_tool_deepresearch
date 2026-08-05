@@ -7,7 +7,7 @@ const REPO_ROOT = join(import.meta.dirname, '../../..');
 
 // Project-level guidelines must be able to name retired anti-patterns while rejecting them.
 const SCAN_ROOTS = [
-  'DPT_FRAMEWORK',
+  'DEEP_RESEARCH_HARNESS',
   'experiments_playbook',
   'experiments_env/shared',
   '_backlog/plans',

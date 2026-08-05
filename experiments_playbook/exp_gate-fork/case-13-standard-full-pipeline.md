@@ -43,9 +43,9 @@ verdict_judge: deterministic
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs gf_complex --case case-13 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
-node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs $B
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs $B
 ```
 
 → 预期：validate 5/5 passed。
@@ -56,9 +56,9 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 
 ```bash
 
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
 const bundle = process.argv[2];
 const trace = createTrace(`${bundle}/rb_trace.jsonl`);
 const recordCheck = ({ step, source: _source, ...rest }) => trace.traceEntry('check', { source: 'playbook', gate: step, expected: true, ...rest });
@@ -72,10 +72,10 @@ JS
 
 ```bash
 
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { forkGate } from './DPT_FRAMEWORK/engine/gate-fork.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { forkGate } from './DEEP_RESEARCH_HARNESS/engine/gate-fork.mjs';
 
 const bundle = process.argv[2];
 const trace = createTrace(`${bundle}/rb_trace.jsonl`);
@@ -133,11 +133,11 @@ JS
 
 ```bash
 
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
 import { z } from 'zod';
-import { forkGate } from './DPT_FRAMEWORK/engine/gate-fork.mjs';
+import { forkGate } from './DEEP_RESEARCH_HARNESS/engine/gate-fork.mjs';
 
 const bundle = process.argv[2];
 const trace = createTrace(`${bundle}/rb_trace.jsonl`);
@@ -210,8 +210,8 @@ JS
 ## Step 5: Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 6: 结果解读

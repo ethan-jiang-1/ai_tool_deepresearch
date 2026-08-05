@@ -28,14 +28,14 @@ This case keeps the PDCA loop visible in Markdown: run the real gate against the
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_repair --case case-111 --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 ```
 
 ## Step 2: Run HITL1 gate against the default profile and consume feedback
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle "$B" --current-node phases/phase-hitl1.md || true)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl1-recorded -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs --bundle "$B" --current-node phases/phase-hitl1.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node --input-type=module - "$B" "$PASSED" <<'JS'
@@ -49,7 +49,7 @@ Read the returned `inspect` and `advice`. Confirm the direct profile blockers (u
 ## Step 3: Apply the smallest declared fixture repair
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 cat > "$B/rb_profile.yaml" <<'YAML'
 plan_basename: wff_repair
 research_profile: quick_factual
@@ -78,15 +78,15 @@ owners; do not hand-edit `rb_plan.md`, `seed_topics/`, or `rb_status.json`.
 
 ```bash
 STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
-node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle "$B" --current-node phases/phase-instantiation.md > "$STATE/case111-instantiation.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-instantiation-complete.mjs --bundle "$B" --current-node phases/phase-instantiation.md > "$STATE/case111-instantiation.json"
 NEXT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.check.next)' "$STATE/case111-instantiation.json")
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$STATE/case111-enter-hitl1.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl1_recorded > "$STATE/case111-status.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$STATE/case111-enter-hitl1.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to hitl1_recorded > "$STATE/case111-status.json"
 cat > "$STATE/case111-topic-input.json" <<'JSON'
 {"context":"hitl1","actions":[{"action":"add_topic","title":"AI development risks","slug_stem":"ai-development-risks","must_answer":["What are the key risks in AI development?"],"scope_role":"primary","depends_on_topic_uids":[]}]}
 JSON
-node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle "$B" --input "$STATE/case111-topic-input.json" > "$STATE/case111-topic-apply.json"
-node DPT_FRAMEWORK/cli/operate-topic-state.mjs inspect --bundle "$B" > "$STATE/case111-topic-inspect.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs apply --bundle "$B" --input "$STATE/case111-topic-input.json" > "$STATE/case111-topic-apply.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs inspect --bundle "$B" > "$STATE/case111-topic-inspect.json"
 ```
 
 This setup-only observation proves gate repair mechanics; it does not claim real external research access. The repair is complete only when the real gate's profile, canonical-topic, and status blockers have all been addressed.
@@ -94,8 +94,8 @@ This setup-only observation proves gate repair mechanics; it does not claim real
 ## Step 4: Rerun the same gate and record the real attempt pair
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle "$B" --current-node phases/phase-hitl1.md || true)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl1-recorded -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs --bundle "$B" --current-node phases/phase-hitl1.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node --input-type=module - "$B" "$PASSED" <<'JS'
@@ -112,8 +112,8 @@ JS
 ## Step 5: Publish native completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 The finalizer applies `last` per gate: the repaired `hitl1-recorded` row is considered, while `real-attempt-pair` proves that the fail/pass history was genuine. Stop before health or cleanup.

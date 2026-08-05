@@ -5,8 +5,8 @@ import assert from 'node:assert';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createTrace } from '../../DPT_FRAMEWORK/engine/trace.mjs';
-import { TraceEntrySchema, TraceSchema } from '../../DPT_FRAMEWORK/schema/index.mjs';
+import { createTrace } from '../../DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { TraceEntrySchema, TraceSchema } from '../../DEEP_RESEARCH_HARNESS/schema/index.mjs';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const TEST_DIR = join(__dirname, '../_tmp_trace_test');

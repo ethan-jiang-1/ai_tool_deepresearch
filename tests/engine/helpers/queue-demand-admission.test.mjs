@@ -3,8 +3,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { evaluateQueueDemandAdmission } from '../../../DPT_FRAMEWORK/engine/helpers/queue-demand-admission.mjs';
-import { WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION } from '../../../DPT_FRAMEWORK/schema/contracts/work-unit.mjs';
+import { evaluateQueueDemandAdmission } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/queue-demand-admission.mjs';
+import { WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/work-unit.mjs';
 
 const topic = {
   topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',

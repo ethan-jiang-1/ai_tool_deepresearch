@@ -40,9 +40,9 @@ Markdown control surface 承载步骤指令。每一步是 Phase Agent 读取 MD
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs wc_simple --case case-31 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
-node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs $B
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs $B
 ```
 
 → 预期：validate/inspect 通过。
@@ -60,10 +60,10 @@ MD 指令：「创建 workflow runtime，只加载 nodesDir，不读任何 MD �
 Engine 回答：runtime 就绪，contentCache 为空，无 file_read receipt。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { createWorkflowRuntime } from './DEEP_RESEARCH_HARNESS/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
@@ -108,10 +108,10 @@ MD 指令：「加载 wave.entry.md。」
 Engine 执行：读文件、解析依赖（自包含，无依赖）、加载、写 trace。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime, createState, assessNode } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { createWorkflowRuntime, createState, assessNode } from './DEEP_RESEARCH_HARNESS/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
@@ -154,7 +154,7 @@ console.log('MD裁决: Step 2.2 — Engine 成功加载 wave.entry.md ✅');
 MD 不信任 receipts，读原始 trace 文件交叉验证 Engine 确实写了 file_loaded。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node -e "
 const e=require('fs').readFileSync('$B/rb_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const fileLoaded=e.filter(x=>x.event==='file_loaded');
@@ -179,8 +179,8 @@ console.log('MD裁决: Step 2.3 — trace 文件交叉验证通过 ✅');
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 3: 结果解读

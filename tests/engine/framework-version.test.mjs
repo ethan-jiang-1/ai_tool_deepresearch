@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { readFrameworkVersion } from '../../DPT_FRAMEWORK/engine/helpers/framework-version.mjs';
+import { readFrameworkVersion } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/framework-version.mjs';
 
 const REPO_ROOT = process.cwd();
 

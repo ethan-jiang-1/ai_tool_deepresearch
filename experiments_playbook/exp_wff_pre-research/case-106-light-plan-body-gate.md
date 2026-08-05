@@ -56,11 +56,11 @@ verdict_judge: deterministic
 ```bash
 REPO_ROOT=$(pwd)
 B=$(node experiments_env/shared/new-disposable-bundle.mjs plan_gate --case case-106 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "Bundle: $B"
 
 # Validate
-node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs $B
 
 # Verify template has 6 sections and required-fill markers
 echo "=== Plan body sections ==="
@@ -92,7 +92,7 @@ grep -c "(由 Engine" $B/rb_plan.md && echo "OK: Engine marker found" || echo "M
 setup-ready gate 除了 body 检查外还需：hitl1 recorded、status.current_gate=`setup_ready`、status.next_gate=`seed_topics_ready`、basename 一致性。先修好这些前置，故意留下 placeholder。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 REPO_ROOT=$(pwd)
 echo "Bundle: $B"
 
@@ -133,7 +133,7 @@ EOF
 echo "=== Plan body (markers still present) ==="
 grep "(待填充" $B/rb_plan.md | head -3
 
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate setup-ready -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'setup-ready',passed:$PASSED,expected:false,detail:'required-fill markers still present — gate should FAIL'})})"
@@ -146,7 +146,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 保留 intentionally-allowed markers（`(待 HITL1 填充 — …)` 和 `(由 Engine — …)`），只替换 required-fill markers。**保留 In/Out/待定 结构和 Constraints 5 类结构**——这是 spec 要求的 section 形态，不能简化为一整段 paragraph。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 REPO_ROOT=$(pwd)
 echo "Bundle: $B"
 
@@ -239,7 +239,7 @@ echo ""
 echo "=== Required-fill markers gone? ==="
 grep "(待填充" $B/rb_plan.md && echo "STILL PRESENT — should be gone" || echo "OK: all required-fill markers replaced"
 
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate setup-ready -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'setup-ready',passed:$PASSED,expected:true,detail:'markers replaced, intentionally-allowed markers kept — gate should PASS'})})"
@@ -252,7 +252,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 Gate pass 后 `## Progress` 中 `setup-ready` 行应从 `- [ ]` 翻转为 `- [x]` 且带 ISO8601 时间戳。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 REPO_ROOT=$(pwd)
 
 echo "=== Progress section after gate pass ==="
@@ -283,8 +283,8 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 预期 3 条 `check` event：1 fail（required-fill marker 残留 → 正确拒绝）+ 2 pass（替换后 gate pass，In/Out/待定 + Constraints 5 类结构保留且 intentionally-allowed markers 不误拦 + Progress 翻转）。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 6: 结果解读

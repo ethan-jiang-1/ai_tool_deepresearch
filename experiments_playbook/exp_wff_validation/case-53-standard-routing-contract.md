@@ -53,9 +53,9 @@ verdict_judge: deterministic
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_contract --case case-53 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "$B"
 ```
 
 → 预期：validate / inspect 通过。
@@ -65,9 +65,9 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 ## Step 2: 跑 routing contract
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
 import { readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -77,7 +77,7 @@ const trace = createTrace(join(B, 'rb_trace.jsonl'), { consoleEcho: false });
 const SRC = 'wff-validation/complex-routing-contract';
 trace.traceInit('wff-validation: complex routing contract', { source: SRC });
 
-const realTransitions = 'DPT_FRAMEWORK/workflows/transitions.chain.json';
+const realTransitions = 'DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json';
 const instantiationNode = 'phases/phase-instantiation.md';
 const wrongNode = 'phases/phase-wave0.md';
 
@@ -88,7 +88,7 @@ const originalStatus = readFileSync(join(B, 'rb_status.json'), 'utf-8');
 // Gate diagnostics captured via writeGateAttempt() trace events and _logs/run.log.
 function runGate(transitionsPath, currentNodeRef) {
   return spawnSync('node', [
-    'DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs',
+    'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-instantiation-complete.mjs',
     '--bundle', B,
     '--current-node', currentNodeRef,
     '--transitions', transitionsPath,
@@ -156,8 +156,8 @@ JS
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 4: 结果解读

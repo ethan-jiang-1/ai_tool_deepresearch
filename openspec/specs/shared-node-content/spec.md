@@ -29,7 +29,7 @@ Content SHALL cover at least the current `ProfileSchema` fields:
 
 The HITL2 explanation SHALL distinguish `repair` from `rerun`: `repair` means the Agent repairs the current run through existing legal paths and reruns the HITL2 gate, while `rerun` means the HITL2 gate emits the deterministic handoff to `phases/phase-rerun.md`. It SHALL NOT describe either decision as an automatic restart from instantiation.
 
-The body SHALL include an Authority Boundary section stating that schema authority is `DPT_FRAMEWORK/schema/contracts/profile.mjs` and runtime truth is the active bundle's `rb_profile.yaml`.
+The body SHALL include an Authority Boundary section stating that schema authority is `DEEP_RESEARCH_HARNESS/schema/contracts/profile.mjs` and runtime truth is the current run bundle's `rb_profile.yaml`.
 
 #### Scenario: Agent reads shared-profile for field meaning
 

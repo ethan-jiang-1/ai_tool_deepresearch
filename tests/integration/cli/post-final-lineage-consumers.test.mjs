@@ -8,14 +8,14 @@ import { afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
-import { inspectPostFinalHandoffStage } from '../../../DPT_FRAMEWORK/engine/helpers/handoff-helpers.mjs';
-import { inspectPostFinalRecovery } from '../../../DPT_FRAMEWORK/engine/helpers/post-final-recovery.mjs';
-import { buildRecoverySummary } from '../../../DPT_FRAMEWORK/engine/helpers/recovery-contract.mjs';
+import { inspectPostFinalHandoffStage } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs';
+import { inspectPostFinalRecovery } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs';
+import { buildRecoverySummary } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/recovery-contract.mjs';
 import { createTerminalFinalBundle, requestFromInspection } from './post-final-recovery-fixture.mjs';
 
 const REPO_ROOT = resolve('.');
-const C5_CLI = resolve('DPT_FRAMEWORK/cli/operate-post-final-recovery.mjs');
-const STYLE_CLI = resolve('DPT_FRAMEWORK/cli/apply-research-style.mjs');
+const C5_CLI = resolve('DEEP_RESEARCH_HARNESS/cli/operate-post-final-recovery.mjs');
+const STYLE_CLI = resolve('DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs');
 const roots = [];
 
 afterEach(() => {
@@ -68,8 +68,8 @@ function enterSynchronizedLineage(name) {
   const requestPath = join(root, `${name}-request.json`);
   writeFileSync(requestPath, JSON.stringify(requestFromInspection(inspection)));
   run([C5_CLI, 'apply', '--bundle', bundle, '--input', requestPath]);
-  execFileSync(process.execPath, ['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md'], { cwd: REPO_ROOT });
-  run(['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
+  execFileSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md'], { cwd: REPO_ROOT });
+  run(['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
   return { bundle, name, eventProfile: parseYaml(readFileSync(profilePath, 'utf8')), profilePath };
 }
 

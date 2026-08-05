@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { describe, it } from 'node:test';
-import { parsePlaybookManifest, readAndValidateManifest } from '../../../DPT_FRAMEWORK/host_tools/lib/agent-experiment-contract.mjs';
+import { parsePlaybookManifest, readAndValidateManifest } from '../../../DEEP_RESEARCH_HARNESS/host_tools/lib/agent-experiment-contract.mjs';
 
 const GLOSSARY = [
   'Agent Experiment Autorun',
@@ -22,13 +22,13 @@ const RETIRED_SURFACES = [
 const RETIRED_PATHS = [
   `experiments_playbook/${RETIRED_SURFACES[0]}`,
   `experiments_playbook/${RETIRED_SURFACES[1]}`,
-  `DPT_FRAMEWORK/host_tools/${RETIRED_SURFACES[2]}`,
+  `DEEP_RESEARCH_HARNESS/host_tools/${RETIRED_SURFACES[2]}`,
 ];
 const STATIC_KNOWLEDGE_SURFACES = [
   'openspec/config.yaml',
   'guidelines/command-experiments.md',
   'experiments_playbook/README.md',
-  'DPT_FRAMEWORK/host_tools/README.md',
+  'DEEP_RESEARCH_HARNESS/host_tools/README.md',
 ];
 const SPEC_SENTINELS = {
   'agent-testing': 'native completion',
@@ -82,7 +82,7 @@ describe('Agent Experiment Autorun terminology knowledge surfaces', () => {
   });
 
   it('keeps host and Agent-facing surfaces within their actual roles', () => {
-    const hostReadme = read('DPT_FRAMEWORK/host_tools/README.md');
+    const hostReadme = read('DEEP_RESEARCH_HARNESS/host_tools/README.md');
     for (const term of ['Agent Experiment Autorun', 'Autorun Supervisor', 'Agent CLI Launcher', 'Headless Playbook Agent']) {
       assert.match(hostReadme, new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     }
@@ -101,7 +101,7 @@ describe('Agent Experiment Autorun terminology knowledge surfaces', () => {
   it('keeps ordinary CI and deterministic fixtures outside Agent-flow proof authority', () => {
     assert.match(read('guidelines/command-experiments.md'), /Ordinary CI and `node:test` cannot execute `agent_flow_e2e` by themselves/);
     assert.match(read('experiments_playbook/README.md'), /Supervisor or `node:test` fixtures can prove host mechanics, but cannot substitute/);
-    assert.match(read('DPT_FRAMEWORK/host_tools/README.md'), /`node:test`, CI, or test-owned Claude executable fixtures prove only Autorun Supervisor mechanics/);
+    assert.match(read('DEEP_RESEARCH_HARNESS/host_tools/README.md'), /`node:test`, CI, or test-owned Claude executable fixtures prove only Autorun Supervisor mechanics/);
     assert.match(read('openspec/config.yaml'), /普通 CI\/`node:test` fixture 只能证明 deterministic Supervisor mechanics/);
   });
 
@@ -128,7 +128,7 @@ describe('Agent Experiment Autorun terminology knowledge surfaces', () => {
   it('documents virtual bounded run profiles without reviving filename-Light normal launch', () => {
     const surfaces = [
       'experiments_playbook/README.md',
-      'DPT_FRAMEWORK/host_tools/README.md',
+      'DEEP_RESEARCH_HARNESS/host_tools/README.md',
       'experiments_playbook/PLAYBOOK_MANIFEST.md',
       'experiments_playbook/RUN_AGENT_AUTORUN_EXPS.md',
     ].map(read).join('\n');
@@ -151,7 +151,7 @@ describe('Agent Experiment Autorun terminology knowledge surfaces', () => {
       'openspec/config.yaml',
       'guidelines/command-experiments.md',
       'experiments_playbook/README.md',
-      'DPT_FRAMEWORK/host_tools/README.md',
+      'DEEP_RESEARCH_HARNESS/host_tools/README.md',
       'experiments_playbook/RUN_AGENT_AUTORUN_EXPS.md',
       'experiments_playbook/RUN_INTERACTIVE_EXPS.md',
     ].map(read).join('\n');
@@ -165,7 +165,7 @@ describe('Agent Experiment Autorun terminology knowledge surfaces', () => {
     const validated = readAndValidateManifest({ repoRoot: process.cwd() });
     assert.ok(declaredPaths.length > 0, 'the manifest must register at least one active playbook');
     assert.deepEqual(validated.entries.map((entry) => entry.path), declaredPaths);
-    assert.equal(existsSync('DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs'), true);
+    assert.equal(existsSync('DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs'), true);
     assert.equal(existsSync('experiments_playbook/RUN_AGENT_AUTORUN_EXPS.md'), true);
     assert.equal(existsSync('experiments_playbook/RUN_INTERACTIVE_EXPS.md'), true);
     for (const path of RETIRED_PATHS) assert.equal(existsSync(path), false, `${path} must be retired`);

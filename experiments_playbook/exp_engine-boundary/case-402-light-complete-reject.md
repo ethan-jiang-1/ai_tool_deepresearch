@@ -56,7 +56,7 @@ Create a disposable bundle and Wave0 scaffold exactly as in `case-401`, then kee
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_reject_work_unit --case case-402 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave0Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 writeWave0Scaffold(process.argv[2], { planBasename: 'eb_reject_work_unit' });
@@ -137,7 +137,7 @@ JS
   RESULT_PATH=$(printf '%s\n' "$STAGE_JSON" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.result_path);')
 
   set +e
-  SUBMIT_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$RESULT_PATH")
+  SUBMIT_JSON=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$RESULT_PATH")
   SUBMIT_STATUS=$?
   set -e
   printf '%s\n' "$SUBMIT_JSON" > "$B/case-402-${LABEL}-submit.json"
@@ -216,8 +216,8 @@ PASS means invalid work-unit submits fail closed at the production submit bounda
 ## Native completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Heavy health, audit, preservation, and optional clean-PASS cleanup.

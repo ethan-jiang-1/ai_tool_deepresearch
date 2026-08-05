@@ -26,7 +26,7 @@ Runtime bundle SHALL 包含 `artifacts/wave0/` 目录。该目录在 bundle inst
 
 ### Requirement: Wave0 thin YAML source lists use ReferenceMetadata schema
 
-`artifacts/wave0/<topic>/source.yaml` SHALL 遵循 `DPT_FRAMEWORK/schema/contracts/reference.mjs` 定义的 ReferenceMetadata schema。每条 entry 包含 `url`、`title`、`retrieved_date`、`topic_tag`、`notes`（可选）。
+`artifacts/wave0/<topic>/source.yaml` SHALL 遵循 `DEEP_RESEARCH_HARNESS/schema/contracts/reference.mjs` 定义的 ReferenceMetadata schema。每条 entry 包含 `url`、`title`、`retrieved_date`、`topic_tag`、`notes`（可选）。
 
 Topic 集合的 source of truth SHALL 为 `rb_plan.md` frontmatter 的 `topic_registry`。共享 source（如有）SHALL 写入 `artifacts/wave0/00_shared/source.yaml`。
 
@@ -47,5 +47,5 @@ Topic 集合的 source of truth SHALL 为 `rb_plan.md` frontmatter 的 `topic_re
 
 #### Scenario: Instantiation creates all three wave artifact directories
 
-- **WHEN** 执行 `node DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs <name>`
+- **WHEN** 执行 `node DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs <name>`
 - **THEN** 创建的 bundle 包含 `artifacts/wave0/`、`artifacts/wave1/`、`artifacts/wave2/`

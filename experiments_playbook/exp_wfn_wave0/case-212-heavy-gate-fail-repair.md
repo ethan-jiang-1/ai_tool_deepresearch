@@ -56,7 +56,7 @@ Fixture-backed Engine case, no Agent actor, no external calls. The fixtures stan
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs w0_gate_refill_repair --case case-212 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave0Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -77,7 +77,7 @@ Expected: the bundle contains two Wave0 topics but no submitted work-unit covera
 ## Step 2: [MAIN/SHELL] Submit Topic A Only
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import {
   enqueueWorkUnitTask,
@@ -96,7 +96,7 @@ const task = queueItemForWorkUnit({
 enqueueWorkUnitTask(bundle, task, { fileName: 'case212-topic-a.json' });
 JS
 
-CLAIM_A=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
+CLAIM_A=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_A" > "$B/case-212-topic-a-claim.json"
 WORK_A=$(printf '%s\n' "$CLAIM_A" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.claimed_work_ids[0]);')
 RESULT_A=$(node --input-type=module - "$B" "$WORK_A" <<'JS'
@@ -119,7 +119,7 @@ const fixture = writeFixtureResultForWorkUnit(bundle, {
 console.log(fixture.resultPath);
 JS
 )
-SUBMIT_A=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_A" --result "$RESULT_A")
+SUBMIT_A=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_A" --result "$RESULT_A")
 printf '%s\n' "$SUBMIT_A" > "$B/case-212-topic-a-submit.json"
 ```
 
@@ -128,9 +128,9 @@ Expected: topic-a submit returns `ok: true`, but topic-b remains uncovered.
 ## Step 3: [MAIN/SHELL] Run Gate And Read Failure
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
-node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-212-gate-before-repair.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-212-gate-before-repair.json"
 GATE_BEFORE_STATUS=$?
 set -e
 printf '%s\n' "$GATE_BEFORE_STATUS" > "$B/case-212-gate-before-repair.status"
@@ -150,8 +150,8 @@ Expected: gate rejects and `inspect[]` points at missing/uncounted `topic-b` cov
 ## Step 4: [MAIN/SHELL] Open Repair Batch And Claim Topic B
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-OPENED=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs open-batch "$B" --phase wave0 --reason gate_failure_refill)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+OPENED=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs open-batch "$B" --phase wave0 --reason gate_failure_refill)
 printf '%s\n' "$OPENED" > "$B/case-212-open-batch.json"
 
 node --input-type=module - "$B" <<'JS'
@@ -166,7 +166,7 @@ const task = queueItemForWorkUnit({
 enqueueWorkUnitTask(bundle, task, { fileName: 'case212-topic-b-repair.json' });
 JS
 
-CLAIM_B=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
+CLAIM_B=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_B" > "$B/case-212-topic-b-claim.json"
 WORK_B=$(printf '%s\n' "$CLAIM_B" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.claimed_work_ids[0]);')
 printf '%s\n' "$WORK_B" | grep -- '-b001-'
@@ -177,7 +177,7 @@ Expected: `open-batch` reports `batch_id: "b001"` and the repair claim work ID c
 ## Step 5: [MAIN/SHELL] Submit Repair Result
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 RESULT_B=$(node --input-type=module - "$B" "$WORK_B" <<'JS'
 import {
   referenceContent,
@@ -198,7 +198,7 @@ const fixture = writeFixtureResultForWorkUnit(bundle, {
 console.log(fixture.resultPath);
 JS
 )
-SUBMIT_B=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_B" --result "$RESULT_B")
+SUBMIT_B=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_B" --result "$RESULT_B")
 printf '%s\n' "$SUBMIT_B" > "$B/case-212-topic-b-submit.json"
 ```
 
@@ -207,12 +207,12 @@ Expected: repair submit returns `ok: true`.
 ## Step 6: [MAIN/SHELL] Rerun Gate And Record Verdict
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-212-gate-after-repair.json"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-212-gate-after-repair.json"
 
 node --input-type=module - "$B" "$WORK_B" <<'JS'
 import { readFileSync } from 'node:fs';
-import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { loadWorkUnitIndex } from './DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import { readTrace, recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const [bundle, repairWorkId] = process.argv.slice(2);
@@ -244,6 +244,6 @@ PASS means Wave0 gate feedback can drive a repair/refill batch: the first gate r
 ## Step 8: [MAIN/SHELL] Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```

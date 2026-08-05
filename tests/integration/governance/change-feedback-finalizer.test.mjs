@@ -95,7 +95,7 @@ function createGovernanceFixture() {
   created.push(root);
   run('openspec', ['init', root, '--tools', 'none', '--no-animation']);
   symlinkSync(join(ROOT, 'node_modules'), join(root, 'node_modules'), 'dir');
-  symlinkSync(join(ROOT, 'DPT_FRAMEWORK'), join(root, 'DPT_FRAMEWORK'), 'dir');
+  symlinkSync(join(ROOT, 'DEEP_RESEARCH_HARNESS'), join(root, 'DEEP_RESEARCH_HARNESS'), 'dir');
   copyGovernanceScripts(root);
   run('openspec', ['new', 'change', 'demo-change', '--json'], { cwd: root });
   write(root, 'openspec/governance/req-registry.yaml', 'ZZZ-001: unrelated-capability - intentional first checker failure\n');

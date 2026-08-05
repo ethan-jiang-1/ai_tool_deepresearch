@@ -14,9 +14,9 @@ import {
   isEvidenceBearingReturnMapEntry,
   isLimitationReturnMapEntry,
   validateReturnMapContent,
-} from '../../../DPT_FRAMEWORK/engine/helpers/return-map.mjs';
-import { applyCanonicalTopicState } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
-import { buildCanonicalTopicRegistryFact } from '../../../DPT_FRAMEWORK/engine/helpers/topic-registry-fact.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/return-map.mjs';
+import { applyCanonicalTopicState } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { buildCanonicalTopicRegistryFact } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/topic-registry-fact.mjs';
 import { claimAndSubmitWorkUnit } from '../work-unit-test-helpers.mjs';
 
 const createdDirs = [];
@@ -241,7 +241,7 @@ describe('return-map diagnostics', () => {
       { bundlePath: dir, requireConcreteReferenceNavigation: true },
     );
     assert.equal(missing.passed, false);
-    assert.match(missing.inspect.join('\n'), /does not exist under the active bundle root/);
+    assert.match(missing.inspect.join('\n'), /does not exist under the current run bundle root/);
 
     writeRef(dir);
     const concrete = validateReturnMapContent(

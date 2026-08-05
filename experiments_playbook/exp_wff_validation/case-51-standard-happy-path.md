@@ -31,7 +31,7 @@ verdict_judge: deterministic
 ```bash
 REPO_ROOT=$(pwd)
 B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_proceed --case case-51 --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role proceed-verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role proceed-verdict --path "$B"
 mkdir -p "$B/artifacts/hitl2" "$B/artifacts/wave2" "$B/seed_topics"
 printf '# Topic A\n' > "$B/seed_topics/topic-a.md"
 printf '# Reference Index\n' > "$B/reference/_INDEX.md"
@@ -59,8 +59,8 @@ human_decision_checkpoints:
     rationale: "Proceed."
 YAML
 node --input-type=module - "$B" <<'JS'
-import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
-import { selectWave1CarriedTargetReceipt } from './DPT_FRAMEWORK/engine/helpers/wave-carried-target-receipts.mjs';
+import { writeGateAttempt } from './DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
+import { selectWave1CarriedTargetReceipt } from './DEEP_RESEARCH_HARNESS/engine/helpers/wave-carried-target-receipts.mjs';
 const bundle = process.argv[2];
 const carriedTargetSelection = selectWave1CarriedTargetReceipt(bundle);
 if (!carriedTargetSelection.ok) throw new Error(`Cannot create Wave1 fixture receipt: ${carriedTargetSelection.findings.map((finding) => finding.detail).join('; ')}`);
@@ -82,18 +82,18 @@ for (const [gate,currentNodeRef,next] of fixtures) {
   }
 }
 JS
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-51-enter-hitl2.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-51-advance-wave2.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-51-enter-hitl2.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-51-advance-wave2.json"
 
-H2=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
+H2=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
 H2_NEXT=$(printf '%s\n' "$H2" | node experiments_env/shared/extract-field.mjs check.next)
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$H2_NEXT" > "$B/case-51-enter-readiness.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-51-advance-hitl2.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$H2_NEXT" > "$B/case-51-enter-readiness.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-51-advance-hitl2.json"
 
-RD=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle "$B" --current-node phases/phase-readiness.md)
+RD=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate readiness-passed -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-readiness-passed.mjs --bundle "$B" --current-node phases/phase-readiness.md)
 RD_NEXT=$(printf '%s\n' "$RD" | node experiments_env/shared/extract-field.mjs check.next)
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$RD_NEXT" > "$B/case-51-enter-final.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to readiness_passed > "$B/case-51-advance-readiness.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$RD_NEXT" > "$B/case-51-enter-final.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to readiness_passed > "$B/case-51-advance-readiness.json"
 
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
@@ -101,8 +101,8 @@ import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
 const bundle = process.argv[2];
 const events = readFileSync(`${bundle}/rb_trace.jsonl`,'utf8').trim().split(/\r?\n/).filter(Boolean).map(JSON.parse);
 const status = JSON.parse(readFileSync(`${bundle}/rb_status.json`,'utf8'));
-const manifest = JSON.parse(readFileSync('./DPT_FRAMEWORK/workflows/manifest.json','utf8'));
-const chain = JSON.parse(readFileSync('./DPT_FRAMEWORK/workflows/transitions.chain.json','utf8'));
+const manifest = JSON.parse(readFileSync('./DEEP_RESEARCH_HARNESS/workflows/manifest.json','utf8'));
+const chain = JSON.parse(readFileSync('./DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json','utf8'));
 const witnessed = ['phases/phase-readiness.md','phases/phase-final.md'].every((entry)=>events.some((event)=>event.event==='load_complete'&&event.entry===entry&&Number.isInteger(event.handoff_source_attempt_index)));
 recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'case-51-proceed-witnesses',passed:witnessed&&status.current_node==='phases/phase-final.md'&&status.current_gate==='readiness_passed'&&status.next_gate==='none',detail:'proceed and readiness targets are route-bound and source-synchronized'});
 const final = manifest.phases.find((phase)=>phase.node==='phases/phase-final.md');
@@ -115,7 +115,7 @@ JS
 
 ```bash
 R=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_rerun --case case-51 --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role rerun --path "$R"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role rerun --path "$R"
 mkdir -p "$R/artifacts/hitl2"
 printf '# Decision Brief\nRerun.\n' > "$R/artifacts/hitl2/decision-brief.md"
 cat > "$R/rb_profile.yaml" <<'YAML'
@@ -135,22 +135,22 @@ human_decision_checkpoints:
     rationale: "Refine scope."
 YAML
 node --input-type=module - "$R" <<'JS'
-import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { writeGateAttempt } from './DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 const bundle=process.argv[2];
 writeGateAttempt(bundle,{check:{gate:'wave2-complete',passed:true,currentNodeRef:'phases/phase-wave2.md',next:'phases/phase-hitl2.md'},routing:{kind:'next',next:'phases/phase-hitl2.md'},inspect:[],advice:[]});
 JS
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$R" --node phases/phase-hitl2.md > "$R/case-51-enter-hitl2.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$R" --to wave2_complete > "$R/case-51-advance-wave2.json"
-OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$R" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$R" --current-node phases/phase-hitl2.md)
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$R" --node phases/phase-hitl2.md > "$R/case-51-enter-hitl2.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$R" --to wave2_complete > "$R/case-51-advance-wave2.json"
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$R" --gate hitl2-recorded -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$R" --current-node phases/phase-hitl2.md)
 N=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.next)
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$R" --node "$N" > "$R/case-51-enter-rerun.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$R" --to hitl2_recorded > "$R/case-51-advance-hitl2.json"
-node DPT_FRAMEWORK/cli/apply-research-style.mjs --bundle "$R" --style quick_factual > "$R/case-51-rerun-style.json"
-OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$R" --gate rerun-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle "$R" --current-node phases/phase-rerun.md)
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$R" --node "$N" > "$R/case-51-enter-rerun.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$R" --to hitl2_recorded > "$R/case-51-advance-hitl2.json"
+node DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs --bundle "$R" --style quick_factual > "$R/case-51-rerun-style.json"
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$R" --gate rerun-ready -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-rerun-ready.mjs --bundle "$R" --current-node phases/phase-rerun.md)
 P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
 N2=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.next)
 OK=false; [ "$N" = "phases/phase-rerun.md" ] && [ "$P" = "true" ] && [ "$N2" = "phases/phase-seed-topics.md" ] && OK=true
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role proceed-verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role proceed-verdict)
 node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-51-rerun-alternate',passed:$OK,detail:'real HITL2 rerun and rerun-ready outputs preserve alternate path'}))"
 ```
 
@@ -158,7 +158,7 @@ node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.rec
 
 ```bash
 C=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_context --case case-51 --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role context --path "$C"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role context --path "$C"
 mkdir -p "$C/artifacts/hitl2"
 printf '# Decision Brief\nRepair current run.\n' > "$C/artifacts/hitl2/decision-brief.md"
 cat > "$C/rb_profile.yaml" <<'YAML'
@@ -178,28 +178,28 @@ human_decision_checkpoints:
     rationale: "Repair the current synthesis."
 YAML
 node --input-type=module - "$C" <<'JS'
-import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { writeGateAttempt } from './DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 const bundle=process.argv[2];
 writeGateAttempt(bundle,{check:{gate:'wave2-complete',passed:true,currentNodeRef:'phases/phase-wave2.md',next:'phases/phase-hitl2.md'},routing:{kind:'next',next:'phases/phase-hitl2.md'},inspect:[],advice:[]});
 JS
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$C" --node phases/phase-hitl2.md > "$C/case-51-enter-hitl2.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$C" --to wave2_complete > "$C/case-51-advance-wave2.json"
-OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$C" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$C" --current-node phases/phase-hitl2.md)
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$C" --node phases/phase-hitl2.md > "$C/case-51-enter-hitl2.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$C" --to wave2_complete > "$C/case-51-advance-wave2.json"
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$C" --gate hitl2-recorded -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$C" --current-node phases/phase-hitl2.md)
 P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
 K=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs routing.kind)
 N=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.next)
 OK=false; [ "$P" = "true" ] && [ "$K" = "no_transition" ] && [ "$N" = "null" ] && OK=true
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role proceed-verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role proceed-verdict)
 node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-51-context-no-transition',passed:$OK,detail:'passing repair decision keeps check.next null'}))"
 ```
 
 ## Step 4: Native completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role proceed-verdict)
-R=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role rerun)
-C=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role context)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "proceed-verdict=$B" --bundle "rerun=$R" --bundle "context=$C"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role proceed-verdict)
+R=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role rerun)
+C=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role context)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "proceed-verdict=$B" --bundle "rerun=$R" --bundle "context=$C"
 ```
 
 ## Step 5: 结果解读

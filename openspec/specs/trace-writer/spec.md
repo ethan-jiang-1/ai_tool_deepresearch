@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Define a unified append-only JSONL trace writer at `DPT_FRAMEWORK/engine/trace.mjs` that serves as the single implementation for writing `rb_trace.jsonl` events. It pairs with `DPT_FRAMEWORK/schema/contracts/trace.mjs` — the former writes trace events, the latter validates their format.
+Define a unified append-only JSONL trace writer at `DEEP_RESEARCH_HARNESS/engine/trace.mjs` that serves as the single implementation for writing `rb_trace.jsonl` events. It pairs with `DEEP_RESEARCH_HARNESS/schema/contracts/trace.mjs` — the former writes trace events, the latter validates their format.
 ## Requirements
 ### Requirement: Unified trace writer with configurable behavior
 
@@ -17,12 +17,12 @@ The unified trace writer SHALL continue to append JSONL events with configurable
 
 ### Requirement: Trace writer paired with schema validation
 
-The trace writer at `DPT_FRAMEWORK/engine/trace.mjs` SHALL be the sole mechanism for writing `rb_trace.jsonl` events. The Zod schema at `DPT_FRAMEWORK/schema/contracts/trace.mjs` SHALL validate event format. The writer produces events; the schema validates them — both SHALL be used together for a complete trace audit trail.
+The trace writer at `DEEP_RESEARCH_HARNESS/engine/trace.mjs` SHALL be the sole mechanism for writing `rb_trace.jsonl` events. The Zod schema at `DEEP_RESEARCH_HARNESS/schema/contracts/trace.mjs` SHALL validate event format. The writer produces events; the schema validates them — both SHALL be used together for a complete trace audit trail.
 
 #### Scenario: Writer produces output validatable by schema
 
 - **WHEN** the trace writer appends events to a JSONL file
-- **THEN** each line SHALL conform to `TraceEntrySchema` from `DPT_FRAMEWORK/schema/contracts/trace.mjs`
+- **THEN** each line SHALL conform to `TraceEntrySchema` from `DEEP_RESEARCH_HARNESS/schema/contracts/trace.mjs`
 - **AND** the full file SHALL pass `TraceSchema` validation
 
 ### Requirement: Gate attempt trace entries SHALL include diagnostic path and phase context
@@ -36,7 +36,7 @@ When `writeGateAttempt()` writes a `gate_attempt` event to `rb_trace.jsonl`, the
 
 ### Requirement: Trace entries include bundle field
 
-All modules writing to `rb_trace.jsonl` SHALL include `bundle` where the existing trace contract requires it. The value SHALL be derived from active bundle state, normally `rb_status.json`, not from chat memory.
+All modules writing to `rb_trace.jsonl` SHALL include `bundle` where the existing trace contract requires it. The value SHALL be derived from current run bundle state, normally `rb_status.json`, not from chat memory.
 
 #### Scenario: Queue trace includes bundle
 

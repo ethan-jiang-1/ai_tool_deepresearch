@@ -40,7 +40,7 @@ verdict_judge: deterministic
 ```bash
 REPO_ROOT=$(pwd)
 B=$(node experiments_env/shared/new-disposable-bundle.mjs dlv_chain --case case-131 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 
 cat > "$B/rb_profile.yaml" <<'YAML'
 plan_basename: dlv_chain
@@ -72,7 +72,7 @@ printf '# Synthesis\nDelivery evidence is ready.\n' > "$B/artifacts/wave2/synthe
 printf '# Decision Brief\nProceed to readiness.\n' > "$B/artifacts/hitl2/decision-brief.md"
 
 node --input-type=module - "$B" <<'JS'
-import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { writeGateAttempt } from './DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 const bundle = process.argv[2];
 const fixtures = [
   ['instantiation-complete', 'phases/phase-instantiation.md', 'phases/phase-hitl1.md'],
@@ -92,16 +92,16 @@ for (const [gate, currentNodeRef, next] of fixtures) {
 }
 JS
 
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-131-enter-hitl2.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-131-advance-wave2.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-131-enter-hitl2.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-131-advance-wave2.json"
 echo "BUNDLE=$B"
 ```
 
 ## Step 2: 运行真实 HITL2 gate 并进入 readiness
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-HITL2_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+HITL2_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
 printf '%s\n' "$HITL2_OUTPUT" > "$B/case-131-hitl2.json"
 HITL2_PASSED=$(printf '%s\n' "$HITL2_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 HITL2_NEXT=$(printf '%s\n' "$HITL2_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
@@ -109,15 +109,15 @@ HITL2_OK=false
 [ "$HITL2_PASSED" = "true" ] && [ "$HITL2_NEXT" = "phases/phase-readiness.md" ] && HITL2_OK=true
 node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-131-hitl2-route',passed:$HITL2_OK,detail:'real HITL2 output selects readiness'}))"
 
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$HITL2_NEXT" > "$B/case-131-enter-readiness.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-131-advance-hitl2.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$HITL2_NEXT" > "$B/case-131-enter-readiness.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-131-advance-hitl2.json"
 ```
 
 ## Step 3: 运行真实 readiness gate 并进入 terminal Final
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-READY_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle "$B" --current-node phases/phase-readiness.md)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+READY_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate readiness-passed -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-readiness-passed.mjs --bundle "$B" --current-node phases/phase-readiness.md)
 printf '%s\n' "$READY_OUTPUT" > "$B/case-131-readiness.json"
 READY_PASSED=$(printf '%s\n' "$READY_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 READY_NEXT=$(printf '%s\n' "$READY_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
@@ -125,15 +125,15 @@ READY_OK=false
 [ "$READY_PASSED" = "true" ] && [ "$READY_NEXT" = "phases/phase-final.md" ] && READY_OK=true
 node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-131-readiness-route',passed:$READY_OK,detail:'real readiness output selects final'}))"
 
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$READY_NEXT" > "$B/case-131-enter-final.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to readiness_passed > "$B/case-131-advance-readiness.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$READY_NEXT" > "$B/case-131-enter-final.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to readiness_passed > "$B/case-131-advance-readiness.json"
 
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
 import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
 const bundle = process.argv[2];
-const manifest = JSON.parse(readFileSync('./DPT_FRAMEWORK/workflows/manifest.json', 'utf8'));
-const chain = JSON.parse(readFileSync('./DPT_FRAMEWORK/workflows/transitions.chain.json', 'utf8'));
+const manifest = JSON.parse(readFileSync('./DEEP_RESEARCH_HARNESS/workflows/manifest.json', 'utf8'));
+const chain = JSON.parse(readFileSync('./DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json', 'utf8'));
 const status = JSON.parse(readFileSync(`${bundle}/rb_status.json`, 'utf8'));
 const final = manifest.phases.find((phase) => phase.node === 'phases/phase-final.md');
 recordCheck(`${bundle}/rb_trace.jsonl`, {
@@ -147,8 +147,8 @@ JS
 ## Step 4: Trace verdict
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 5: 结果解读

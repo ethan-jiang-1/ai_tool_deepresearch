@@ -6,7 +6,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
-const VALIDATE = join(process.cwd(), 'DPT_FRAMEWORK/cli/validate-playbook.mjs');
+const VALIDATE = join(process.cwd(), 'DEEP_RESEARCH_HARNESS/cli/validate-playbook.mjs');
 const VALID = `---
 schema: command-experiment/v2
 experiment: gate-fork

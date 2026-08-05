@@ -42,7 +42,7 @@ verdict_judge: deterministic
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs queue_blocker --case case-308 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 
 # 状态已到 hitl2_recorded
 cat > "$B/rb_status.json" << 'JSON'
@@ -111,8 +111,8 @@ echo "B=$B"
 ## Step 2: 验证 blocker 检测
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-RESULT=$(node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "$B" --at hitl2_recorded 2>&1)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+RESULT=$(node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle "$B" --at hitl2_recorded 2>&1)
 EXIT=$?
 
 echo "Exit: $EXIT"
@@ -175,7 +175,7 @@ JS
 ## Step 3: 对比 — done 状态不产生 blocker
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # 把 stale active_window 项改为 done
 cat > "$B/rb_queue.json" << 'JSON'
 {
@@ -212,7 +212,7 @@ cat > "$B/rb_queue.json" << 'JSON'
 }
 JSON
 
-RESULT2=$(node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "$B" --at hitl2_recorded 2>&1)
+RESULT2=$(node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle "$B" --at hitl2_recorded 2>&1)
 EXIT2=$?
 
 node --input-type=module - "$B" "$RESULT2" "$EXIT2" <<'JS'
@@ -252,8 +252,8 @@ JS
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

@@ -8,7 +8,7 @@ import { describe, it } from 'node:test';
 import {
   claimWorkUnits,
   createWorkUnit,
-} from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import {
   availableActorDecision,
   cleanupWorkUnitBundle,

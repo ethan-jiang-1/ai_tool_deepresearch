@@ -6,7 +6,7 @@ import assert from 'node:assert';
 import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isCountable, countReferences, QUALITY_THRESHOLDS } from '../../../DPT_FRAMEWORK/engine/helpers/ref-count.mjs';
+import { isCountable, countReferences, QUALITY_THRESHOLDS } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/ref-count.mjs';
 import {
   claimAndSubmitWorkUnit,
   cleanupWorkUnitBundle,

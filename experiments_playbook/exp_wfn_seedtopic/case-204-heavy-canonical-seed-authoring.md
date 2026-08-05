@@ -26,12 +26,12 @@ The Playbook Agent prepares only a legal Seed Topics entry with one queued card.
 
 ```bash
 B=$(node experiments_env/shared/prepare-canonical-seed-authoring-canary.mjs --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node experiments_env/shared/run-iterative-interaction-subject.mjs 204 --bundle "$B" || printf '%s\n' unavailable > "$B/case-204-subject-unavailable.txt"
 ```
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 EXTRA=()
 if [ -f "$B/case-204-subject-unavailable.txt" ]; then
   EXTRA+=(--not-run-reason "independent authenticated Subject Agent runtime unavailable")
@@ -59,7 +59,7 @@ for (const [gate, passed] of checks) appendFileSync(join(bundle, 'rb_trace.jsonl
 JS
   EXTRA+=(--evidence "subject_prompt=$B/case-204-subject-prompt.json" --evidence "subject_transcript=$B/case-204-subject-transcript.jsonl" --evidence "subject_result=$B/case-204-subject-result.json")
 fi
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA[@]}"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA[@]}"
 ```
 
 Runtime unavailability is an honest `NOT_RUN`; it does not establish the real-Agent claim.

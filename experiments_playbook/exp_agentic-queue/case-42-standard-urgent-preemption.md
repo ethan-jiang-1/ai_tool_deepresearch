@@ -55,9 +55,9 @@ req: AGQ-006, AGQ-019
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs agq_preempt --case case-42 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "$B"
 ```
 
 -> 预期：bundle 创建成功，control files 有效。
@@ -67,17 +67,17 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 入队 `QUEUE_ACTIVE_WINDOW_LIMIT + 1` 个 task cards：前 N 个进入 ordered `active_window`，最后一个进入 `refill_pool`。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync } from 'node:fs';
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
 import {
   QUEUE_ACTIVE_WINDOW_LIMIT,
   createQueue,
   enqueue,
   saveQueue,
   makeItem,
-} from './DPT_FRAMEWORK/engine/queue-manager.mjs';
+} from './DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
@@ -112,9 +112,9 @@ JS
 先 claim front item 使其 running，再 preempt urgent item。urgent 应插入 `active_window[1]`，不打断 running front；原 window tail 进入 `refill_pool` 并带 `lineage.preempted_from: "active_window_tail"`。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
 import {
   QUEUE_ACTIVE_WINDOW_LIMIT,
   loadQueue,
@@ -122,7 +122,7 @@ import {
   preempt,
   saveQueue,
   makeItem,
-} from './DPT_FRAMEWORK/engine/queue-manager.mjs';
+} from './DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
@@ -158,10 +158,10 @@ JS
 完成 `queue-preempt-1`，校验 receipt，触发 promote + refill。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { loadQueue, complete, saveQueue } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { loadQueue, complete, saveQueue } from './DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
@@ -186,14 +186,14 @@ JS
 验证 urgent 成为 `active_window[0]`，displaced tail 回到 window 尾部，projection 包含两者。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { existsSync, readFileSync } from 'node:fs';
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
 import {
   QUEUE_ACTIVE_WINDOW_LIMIT,
   loadQueue,
-} from './DPT_FRAMEWORK/engine/queue-manager.mjs';
+} from './DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
@@ -225,8 +225,8 @@ JS
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 4: 结果解读

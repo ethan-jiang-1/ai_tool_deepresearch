@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { renderReferenceIndex, syncReferenceIndex } from '../../../DPT_FRAMEWORK/engine/helpers/reference-index-sync.mjs';
+import { renderReferenceIndex, syncReferenceIndex } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/reference-index-sync.mjs';
 import { cleanupWorkUnitBundle, referenceContent, tempWorkUnitBundle } from '../work-unit-test-helpers.mjs';
 
 const bundles = [];

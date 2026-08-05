@@ -57,9 +57,9 @@ req: AGQ-006, AGQ-019
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs agq_repair --case case-43 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "$B"
 ```
 
 -> 预期：bundle 创建成功，control files 有效。
@@ -69,10 +69,10 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 验证 queue demand item 不能使用 `work_id` 作为身份；`queue_item_id` 才是 current queue demand identity。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { QueueItemSchema, makeItem } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { QueueItemSchema, makeItem } from './DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
@@ -103,10 +103,10 @@ JS
 入队 `queue-repair-1` 和 `queue-repair-2`。尝试 complete 缺失 file receipt，应阻止 promotion。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { createQueue, enqueue, complete, saveQueue, makeItem } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { createQueue, enqueue, complete, saveQueue, makeItem } from './DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
@@ -138,10 +138,10 @@ JS
 加载 queue，尝试替换 current 但不带 `unsafeCurrent=true`，应抛出异常。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { loadQueue, preempt, makeItem } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { loadQueue, preempt, makeItem } from './DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
@@ -169,10 +169,10 @@ JS
 显式 `unsafeCurrent=true` + `replaceCurrent=true`，允许 urgent 替换 front；旧 front 进入 pool。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { loadQueue, preempt, saveQueue, makeItem } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { loadQueue, preempt, saveQueue, makeItem } from './DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
@@ -203,10 +203,10 @@ JS
 创建新 queue，fail front item 后 repair work 应进入 active window front，原 next item 后移。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { createQueue, enqueue, fail, saveQueue, makeItem } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { createQueue, enqueue, fail, saveQueue, makeItem } from './DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
@@ -234,10 +234,10 @@ JS
 对空 queue 调用 claim，应返回 blocker 状态。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { createQueue, claim } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { createQueue, claim } from './DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
@@ -259,8 +259,8 @@ JS
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 4: 结果解读

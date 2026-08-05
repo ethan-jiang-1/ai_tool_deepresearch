@@ -6,10 +6,10 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ResearchStyleParamsSchema } from '../../DPT_FRAMEWORK/schema/index.mjs';
+import { ResearchStyleParamsSchema } from '../../DEEP_RESEARCH_HARNESS/schema/index.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const STYLES_DIR = join(__dirname, '..', '..', 'DPT_FRAMEWORK', 'schema', 'research-styles');
+const STYLES_DIR = join(__dirname, '..', '..', 'DEEP_RESEARCH_HARNESS', 'schema', 'research-styles');
 
 const STYLES = ['debug', 'quick_factual', 'exploratory_map', 'claim_verification'];
 

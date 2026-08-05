@@ -15,10 +15,10 @@ function read(relPath) {
 }
 
 function listCommandPlaybooks() {
-  const dir = join(REPO_ROOT, 'DPT_FRAMEWORK', 'command_playbook');
+  const dir = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'command_playbook');
   return readdirSync(dir)
     .filter((name) => name.endsWith('.md'))
-    .map((name) => `DPT_FRAMEWORK/command_playbook/${name}`)
+    .map((name) => `DEEP_RESEARCH_HARNESS/command_playbook/${name}`)
     .sort();
 }
 
@@ -39,22 +39,22 @@ describe('human setup preflight docs', () => {
     await import('yaml');
 
     assert.match(read('README.md'), /npm install/);
-    assert.match(read('DPT_FRAMEWORK/command_playbook/start-research.md'), /npm install/);
-    assert.match(read('DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md'), /npm install/);
+    assert.match(read('DEEP_RESEARCH_HARNESS/command_playbook/start-research.md'), /npm install/);
+    assert.match(read('DEEP_RESEARCH_HARNESS/command_playbook/instantiate-run-bundle.md'), /npm install/);
   });
 
   it('makes SETUP.md discoverable before the framework trigger', () => {
     const readme = read('README.md');
-    const run = read('DPT_FRAMEWORK/RUN.md');
+    const run = read('DEEP_RESEARCH_HARNESS/RUN.md');
     const setup = read('SETUP.md');
 
-    assert.match(readme, /Before triggering `DPT_FRAMEWORK\/RUN\.md`.*`SETUP\.md`/s);
+    assert.match(readme, /Before triggering `DEEP_RESEARCH_HARNESS\/RUN\.md`.*`SETUP\.md`/s);
     assert.match(run, /SETUP\.md/);
     assert.match(run, /trigger 前|pre-trigger/);
     assert.match(run, /不要把非 HITL `stop: no` phase 变成权限配置对话/);
 
     assert.match(setup, /before selecting the framework entry path/i);
-    assert.match(setup, /DPT_FRAMEWORK\/RUN\.md/);
+    assert.match(setup, /DEEP_RESEARCH_HARNESS\/RUN\.md/);
     assert.match(setup, /HITL1 and HITL2 are the only interactive in-run checkpoints/);
   });
 
@@ -93,7 +93,7 @@ describe('human setup preflight docs', () => {
 
   it('keeps human permission setup outside Agent-facing command playbooks', () => {
     assert.equal(
-      existsSync(join(REPO_ROOT, 'DPT_FRAMEWORK', 'command_playbook', 'setup-agent-permissions.md')),
+      existsSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'command_playbook', 'setup-agent-permissions.md')),
       false,
       'human permission setup must not be a command_playbook entry',
     );

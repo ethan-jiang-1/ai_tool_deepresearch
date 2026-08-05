@@ -6,8 +6,8 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const REPO_ROOT = process.cwd();
-const ADVANCE_STATUS = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/advance-status.mjs');
-const TOPIC_STATE = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs');
+const ADVANCE_STATUS = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/advance-status.mjs');
+const TOPIC_STATE = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];

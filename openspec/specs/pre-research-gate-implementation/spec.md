@@ -274,7 +274,7 @@ The `status_next_gate` rule SHALL check `rb_status.json#/next_gate` equals `"set
 
 ### Requirement: Gate CLIs return JSON feedback while playbooks record verdict checks in the root trace
 
-Pre-research gate CLIs SHALL continue to return standard machine-readable `check / routing / inspect / advice` JSON on stdout, use exit codes for pass/fail/config error, and append the real gate attempt to the active bundle's `rb_trace.jsonl`. They SHALL NOT manufacture the command-experiment verdict check.
+Pre-research gate CLIs SHALL continue to return standard machine-readable `check / routing / inspect / advice` JSON on stdout, use exit codes for pass/fail/config error, and append the real gate attempt to the current run bundle's `rb_trace.jsonl`. They SHALL NOT manufacture the command-experiment verdict check.
 
 A command-experiment Playbook Agent/thin driver SHALL invoke the real gate CLI, parse its JSON result, and use the accepted trace writer/helper to append a strict `event: check`, `source: playbook` row with stable case-owned gate ID and explicit boolean `passed`/`expected` to the same bundle-root `rb_trace.jsonl`. Native completion SHALL apply the V2 required-check and verdict-mode policy. No `_trace.jsonl`, console summary or hand-written alternate sink SHALL become verdict authority.
 

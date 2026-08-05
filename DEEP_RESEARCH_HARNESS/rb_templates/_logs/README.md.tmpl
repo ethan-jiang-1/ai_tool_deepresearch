@@ -1,0 +1,34 @@
+# _logs/ — 运行时日志与 Trace
+
+> **Non-authority**：本目录下的日志用于调试和诊断，不作为 gate 判定依据。
+
+## 文件清单
+
+| 文件 | 写入者 | 内容 |
+|------|--------|------|
+| `run.log` | `log-event.mjs`（Agent 通过 bash 调用） | 带 envelope 的运行时日志行（`{ts, level, msg, ...}`）。一阶段一 phase START/END 行 |
+
+## Trace: `rb_trace.jsonl`
+
+位于 bundle 根目录，不使用 `_logs/` 子目录。由以下模块统一 append：
+
+| 写入者 | 事件类型 |
+|--------|---------|
+| `queue-manager.mjs` | Queue 生命周期：`enqueue`, `claim`, `complete`, `fail`, `repair` |
+| `work-unit-core.mjs` / `operate-work-unit.mjs` | Work-unit 生命周期：`work_unit_claimed`, `work_unit_submitted`, `work_unit_ledger_appended`, `work_unit_failed`, `work_unit_timed_out`, `work_unit_abandoned` |
+| gate CLI（`writeGateAttempt`） | Gate pass/fail 判定 |
+| playbook thin driver | Experiment verdict `check` event |
+
+## 查看
+
+```bash
+# tail 最新日志
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs <bundle> --log
+
+# 完整结构检查（含所有 trace 文件统计）
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs <bundle>
+```
+
+---
+
+此文件在 bundle instantiation 时自动创建。

@@ -9,10 +9,10 @@ import {
   inspectPostFinalRecovery,
   PostFinalRecoveryCrashError,
   recoverPostFinalRecovery,
-} from '../../../DPT_FRAMEWORK/engine/helpers/post-final-recovery.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs';
 import { createTerminalFinalBundle, requestFromInspection } from '../../integration/cli/post-final-recovery-fixture.mjs';
 
-const rerunDefinition = JSON.parse(readFileSync('DPT_FRAMEWORK/schema/gate_definitions/gate-rerun-ready.definition.json', 'utf8'));
+const rerunDefinition = JSON.parse(readFileSync('DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-rerun-ready.definition.json', 'utf8'));
 const rerunCountRule = rerunDefinition.rules.find((rule) => rule.id === 'rerun_count_valid' && rule.check === 'rerun_count_limit');
 assert.equal(rerunCountRule?.operator, 'less_than');
 assert.ok(Number.isInteger(rerunCountRule?.value) && rerunCountRule.value > 0);

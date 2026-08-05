@@ -8,13 +8,13 @@ import { join, resolve } from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { inspectPostFinalRecovery } from '../../../DPT_FRAMEWORK/engine/helpers/post-final-recovery.mjs';
+import { inspectPostFinalRecovery } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs';
 import { createTerminalFinalBundle } from './post-final-recovery-fixture.mjs';
 
 const REPO_ROOT = resolve('.');
-const DEFINITION_PATH = join(REPO_ROOT, 'DPT_FRAMEWORK/schema/gate_definitions/gate-rerun-ready.definition.json');
-const GATE_PATH = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs');
-const C5_PATH = join(REPO_ROOT, 'DPT_FRAMEWORK/engine/helpers/post-final-recovery.mjs');
+const DEFINITION_PATH = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-rerun-ready.definition.json');
+const GATE_PATH = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-rerun-ready.mjs');
+const C5_PATH = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs');
 const roots = [];
 
 afterEach(() => {

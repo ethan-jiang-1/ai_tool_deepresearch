@@ -44,7 +44,7 @@ The optional fallback witness is separate from that general claim and applies on
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs research_access --case case-115 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 cat > "$B/rb_profile.yaml" <<'YAML'
 plan_basename: research_access
 research_profile: quick_factual
@@ -62,11 +62,11 @@ human_decision_checkpoints:
     user_decision: not_started
     final_report_view: not_started
 YAML
-node DPT_FRAMEWORK/cli/apply-research-style.mjs --bundle "$B" --style quick_factual
-GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle "$B" --current-node phases/phase-instantiation.md)
+node DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs --bundle "$B" --style quick_factual
+GATE=$(node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-instantiation-complete.mjs --bundle "$B" --current-node phases/phase-instantiation.md)
 NEXT=$(printf '%s' "$GATE" | node experiments_env/shared/extract-field.mjs check.next)
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-115-enter-hitl1.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to instantiation_complete > "$B/case-115-status.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-115-enter-hitl1.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to instantiation_complete > "$B/case-115-status.json"
 ```
 
 ## Step 2 - Run the independent Subject Agent
@@ -74,7 +74,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to instantiation_compl
 The shared adapter injects only the current production closure, exact bundle path, and the bounded probe request. It retains the exact prompt, raw event stream, and actual result events. If the authenticated Subject runtime cannot start or complete, finalize NOT_RUN and stop:
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
 node experiments_env/shared/run-iterative-interaction-subject.mjs 115 --bundle "$B"
 SUBJECT_STATUS=$?
@@ -87,7 +87,7 @@ fi
 ## Step 3 - Hash and observe the Subject-owned branch
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 if [ ! -f "$B/case-115-subject-unavailable.txt" ]; then
   set +e
   node experiments_env/shared/observe-iterative-interaction-case.mjs 115 hash --bundle "$B" --transcript "$B/case-115-subject-transcript.jsonl"
@@ -108,7 +108,7 @@ fi
 ## Step 4 - Native completion with Subject evidence
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 EXTRA_ARGS=()
 if [ -f "$B/case-115-subject-unavailable.txt" ]; then
   EXTRA_ARGS+=(--not-run-reason "independent authenticated Subject Agent runtime unavailable")
@@ -119,7 +119,7 @@ elif [ -f "$B/case-115-NOT-RUN.json" ]; then
 else
   EXTRA_ARGS+=(--evidence "subject_prompt=$B/case-115-subject-prompt.json" --evidence "subject_transcript=$B/case-115-subject-transcript.jsonl" --evidence "subject_result=$B/case-115-subject-result.json")
 fi
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Light health, durable Subject evidence export, audit, preservation, and optional clean-PASS cleanup.

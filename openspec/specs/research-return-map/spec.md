@@ -193,7 +193,7 @@ existing evidence support through refs or status.
 
 - **WHEN** an evidence-bearing return-map entry contains
   `refs: reference/01_topic-source.md`
-- **AND** that file exists as a regular file under the active bundle root
+- **AND** that file exists as a regular file under the current run bundle root
 - **THEN** packet admission and return-map readiness SHALL both accept the
   navigation ref
 #### Scenario: internal-only refs fail
@@ -878,7 +878,7 @@ reloaded independently by the second evaluator.
 
 ### Requirement: Template and command guidance SHALL preserve separate Seed Topic questions
 
-`DPT_FRAMEWORK/workflows/nodes/templates/seed-topic-template.md` SHALL be the
+`DEEP_RESEARCH_HARNESS/workflows/nodes/templates/seed-topic-template.md` SHALL be the
 sole canonical, instantiable Seed Topic Document template. `templates/` SHALL
 be a discoverable namespace for current and future document templates, rather
 than a shared-guidance catch-all. This template SHALL own initialization

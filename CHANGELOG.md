@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.73
+
+- Renamed the reusable system and canonical source root to Deep Research Harness
+  at `DEEP_RESEARCH_HARNESS/`, with `DPT_FRAMEWORK/` retained as a legacy alias.
+- New run bundles use `BUNDLE_ENTRY.md`; existing `RUN_BUNDLE.md` and
+  `BUNDLE_MAP.md` entries remain readable through the documented fallback.
+
 ## v0.72
 
 - HITL1 now explains its existing bounded research-access probe before it runs,

@@ -53,7 +53,7 @@ Fixture-backed Engine contract. It proves that a real Wave2-ready bundle accepts
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_pure_synthesis --case case-231 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave2Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -66,7 +66,7 @@ writeWave2Scaffold(process.argv[2], {
   ]
 });
 JS
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$B"
 echo "BUNDLE=$B"
 ```
 
@@ -75,7 +75,7 @@ Expected: validation passes and trace contains a route-bound handoff into `phase
 ## Step 2: [MAIN/SHELL] Enqueue Non-Delegated Wave2 Work
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { enqueueWorkUnitTask } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -128,8 +128,8 @@ Expected: queue has three non-delegated items and no Wave2 delegated in-flight a
 Use the controlled artifact writer only after the real synthesis queue item is claimed:
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/operate-queue.mjs claim "$B" --actor main-agent > "$B/case-231-synthesis-claim.json"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs claim "$B" --actor main-agent > "$B/case-231-synthesis-claim.json"
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync } from 'node:fs';
 import { mkdirSync } from 'node:fs';
@@ -205,7 +205,7 @@ Cross-topic judgment from W2F-001.
 }
 JS
 printf '{"queue_item_id":"wave2-synthesis","receipt":"file:artifacts/wave2/synthesis.md","summary":"pure synthesis artifacts written"}\n' > "$B/case-231-synthesis-result.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete "$B" --result "$B/case-231-synthesis-result.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs complete "$B" --result "$B/case-231-synthesis-result.json"
 ```
 
 Expected: synthesis completion succeeds without `operate-work-unit`.
@@ -213,11 +213,11 @@ Expected: synthesis completion succeeds without `operate-work-unit`.
 ## Step 4: [MAIN/SHELL] Complete Backfill Queue Items
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 for slug in topic-a topic-b; do
-  node DPT_FRAMEWORK/cli/operate-queue.mjs claim "$B" --actor main-agent > "$B/case-231-backfill-$slug-claim.json"
+  node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs claim "$B" --actor main-agent > "$B/case-231-backfill-$slug-claim.json"
   printf '{"queue_item_id":"wave2-backfill-%s","receipt":"file:seed_topics/%s.md","summary":"backfill complete"}\n' "$slug" "$slug" > "$B/case-231-backfill-$slug-result.json"
-  node DPT_FRAMEWORK/cli/operate-queue.mjs complete "$B" --result "$B/case-231-backfill-$slug-result.json"
+  node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs complete "$B" --result "$B/case-231-backfill-$slug-result.json"
 done
 ```
 
@@ -226,12 +226,12 @@ Expected: every backfill item completes through non-delegated queue completion.
 ## Step 5: [MAIN/SHELL] Gate And Trace Verdict
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { appendTrace } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 appendTrace(process.argv[2], { event: 'wave2_completion', source: 'case-231-visible-path' });
 JS
-node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md > "$B/case-231-gate.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md > "$B/case-231-gate.json"
 node --input-type=module - "$B" <<'JS'
 import { existsSync, readFileSync } from 'node:fs';
 import { readWorkUnitLedgerRows, recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
@@ -257,8 +257,8 @@ Expected: gate passes and the submitted Wave2 work-unit row count is `0`.
 ## Step 6: [MAIN/SHELL] Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Heavy health, audit, preservation, and optional clean-PASS cleanup.

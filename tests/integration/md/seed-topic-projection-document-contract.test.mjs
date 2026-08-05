@@ -3,13 +3,13 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
-import { SEED_TOPIC_PROJECTION_SLOTS } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
-import { SEED_TOPIC_INITIALIZATION } from '../../../DPT_FRAMEWORK/engine/helpers/seed-topic-authoring-evaluator.mjs';
+import { SEED_TOPIC_PROJECTION_SLOTS } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { SEED_TOPIC_INITIALIZATION } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/seed-topic-authoring-evaluator.mjs';
 
-const TEMPLATE = 'DPT_FRAMEWORK/workflows/nodes/templates/seed-topic-template.md';
-const PLAYBOOK = 'DPT_FRAMEWORK/command_playbook/operate-topic-state.md';
-const WAVE0 = 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md';
-const SHARED_AUTHORING = 'DPT_FRAMEWORK/workflows/nodes/shared/shared-return-map-authoring.md';
+const TEMPLATE = 'DEEP_RESEARCH_HARNESS/workflows/nodes/templates/seed-topic-template.md';
+const PLAYBOOK = 'DEEP_RESEARCH_HARNESS/command_playbook/operate-topic-state.md';
+const WAVE0 = 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md';
+const SHARED_AUTHORING = 'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-return-map-authoring.md';
 const WAVE0_CONTRIBUTION_INSPECTION = 'contribution-aware Wave0 inspection/preflight result';
 
 function read(path) {
@@ -74,17 +74,17 @@ describe('Seed Topic template and projection protocol boundary', () => {
     assert.match(playbook, /wu-w0-b001-<kind>-i0001\/1[\s\S]*wu-w0-b001-<kind>-i0001\/2/);
     assert.match(wave0, /packet -> writer -> same inspect/);
     for (const path of [
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-seed-topics.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-seed-topics.md',
       WAVE0,
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md',
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave2.md',
     ]) {
       assert.match(read(path), /requires:[\s\S]*- shared\/shared-return-map-authoring/);
     }
   });
 
   it('keeps the one editable initialization boundary visible in the template and seed phase guidance', () => {
-    const seedPhase = read('DPT_FRAMEWORK/workflows/nodes/phases/phase-seed-topics.md');
+    const seedPhase = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-seed-topics.md');
     assert.equal(template.split(SEED_TOPIC_INITIALIZATION.startMarker).length - 1, 1);
     assert.equal(template.split(SEED_TOPIC_INITIALIZATION.endMarker).length - 1, 1);
     assert.ok(template.indexOf(SEED_TOPIC_INITIALIZATION.startMarker) < template.indexOf(SEED_TOPIC_INITIALIZATION.endMarker));

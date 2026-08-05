@@ -52,7 +52,7 @@ Use the native Task/Sub-agent tool to start exactly one `dpt-source-intake` Subj
 After the Task returns, verify that `result_path`, `runtime_receipt_path`, and at least one result-declared output file exist. If the native Task tool cannot launch the named Sub-agent, or it returns without those assigned files and cannot repair its own work, record the unavailable boundary:
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 printf '%s\n' 'native dpt-source-intake Sub-agent or required local actor capability unavailable' > "$B/case-406-subject-unavailable.txt"
 ```
 
@@ -63,7 +63,7 @@ NOT_RUN is deferred evidence, not PASS or fixture failure. Do not continue to St
 Only after Step 2 has produced the assigned durable files. Skip Steps 3 and 4 when the unavailable marker exists:
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
 RESULT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.prepared.result_path)' "$STATE/case406-prepared.json")
 node experiments_env/shared/run-fixture-backed-case.mjs \
@@ -77,7 +77,7 @@ The helper stops at the Subject-owned result/receipt/output, Engine submit, and 
 ## Step 4 - Record exact case-owned checks
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { appendFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -100,7 +100,7 @@ JS
 ## Step 5 - Native completion with exact Subject evidence
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
 EXTRA_ARGS=()
 if [ -f "$B/case-406-subject-unavailable.txt" ]; then
@@ -112,7 +112,7 @@ else
   OUTPUT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.evidence.output)' "$STATE/case406-submitted.json")
   EXTRA_ARGS+=(--evidence "subject_task=$TASK" --evidence "subject_result=$RESULT" --evidence "subject_receipt=$RECEIPT" --evidence "subject_output=$OUTPUT")
 fi
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Light health, durable Subject-evidence export, audit, preservation, and optional clean-PASS cleanup of the complete case run root.

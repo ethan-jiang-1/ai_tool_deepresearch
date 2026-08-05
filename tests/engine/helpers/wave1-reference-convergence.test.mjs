@@ -11,9 +11,9 @@ import {
   inspectWave1CandidateProjection,
   normalizeWave1ReferenceUrl,
   resolveReviewedWave1SubmittedBacking,
-} from '../../../DPT_FRAMEWORK/engine/helpers/wave1-reference-convergence.mjs';
-import { readBundlePlan } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers-readers.mjs';
-import { evaluateTopicLayouts } from '../../../DPT_FRAMEWORK/engine/helpers/topic-layout.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs';
+import { readBundlePlan } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-readers.mjs';
+import { evaluateTopicLayouts } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/topic-layout.mjs';
 import {
   claimAndSubmitWorkUnit,
   cleanupWorkUnitBundle,

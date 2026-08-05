@@ -6,7 +6,7 @@ import assert from 'node:assert';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { auditFileObservability } from '../../../DPT_FRAMEWORK/engine/helpers/file-observability.mjs';
+import { auditFileObservability } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs';
 import {
   claimAndSubmitWorkUnit,
   referenceContent,
@@ -24,6 +24,7 @@ function setupBundle(name, extraFiles = {}) {
   mkdirSync(dir, { recursive: true });
 
   // Control files
+  writeFileSync(join(dir, 'BUNDLE_ENTRY.md'), '# Bundle Entry\n');
   writeFileSync(join(dir, 'BUNDLE_MAP.md'), '# Bundle Map\n');
   writeFileSync(join(dir, 'rb_status.json'), JSON.stringify({ bundle: name, current_gate: 'wave1_complete' }));
   writeFileSync(join(dir, 'rb_plan.md'), [
@@ -53,7 +54,20 @@ function setupBundle(name, extraFiles = {}) {
   mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-a'), { recursive: true });
 
   // Standard files
-  writeFileSync(join(dir, 'seed_topics', 'topic-a.md'), '# Topic A\n');
+  writeFileSync(join(dir, 'seed_topics', 'topic-a.md'), [
+    '---',
+    '{',
+    '  "topic_uid": "tp_123e4567-e89b-12d3-a456-426614174000",',
+    '  "id": "01",',
+    '  "slug": "topic-a",',
+    '  "title": "Topic A",',
+    '  "must_answer": ["What must be established for Topic A?"],',
+    '  "scope_role": "primary",',
+    '  "depends_on_topic_uids": []',
+    '}',
+    '---',
+    '# Topic A',
+  ].join('\n'));
 
   // Extra files (pass as { 'relative/path': 'content' })
   for (const [relPath, content] of Object.entries(extraFiles)) {
@@ -92,10 +106,29 @@ describe('file observability', () => {
     assert.strictEqual(bundleMap.classification, 'expected');
     assert.strictEqual(bundleMap.authority_status, 'none');
 
+    const bundleEntry = result.findings.find(f => f.path === 'BUNDLE_ENTRY.md');
+    assert.ok(bundleEntry, 'BUNDLE_ENTRY.md should be found');
+    assert.strictEqual(bundleEntry.classification, 'expected');
+    assert.strictEqual(bundleEntry.authority_status, 'none');
+
     const rbStatus = result.findings.find(f => f.path === 'rb_status.json');
     assert.ok(rbStatus, 'rb_status.json should be found');
     assert.strictEqual(rbStatus.classification, 'expected');
     assert.strictEqual(rbStatus.severity, 'info');
+  });
+
+  it('classifies legacy RUN_BUNDLE.md as non-authoritative entry compatibility', () => {
+    const dir = setupBundle('fo-legacy-entry', {
+      'RUN_BUNDLE.md': '# Legacy Bundle Entry\n',
+    });
+
+    const result = auditFileObservability(dir, { topicSlugs: ['topic-a'] });
+    const legacy = result.findings.find(f => f.path === 'RUN_BUNDLE.md');
+
+    assert.ok(legacy, 'RUN_BUNDLE.md should be found');
+    assert.strictEqual(legacy.classification, 'expected');
+    assert.strictEqual(legacy.authority_status, 'none');
+    assert.match(legacy.reason, /Legacy non-authoritative bundle entry compatibility/);
   });
 
   it('reports legacy START_FROM_HERE.md as diagnostic compatibility only', () => {

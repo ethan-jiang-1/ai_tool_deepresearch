@@ -2,13 +2,14 @@
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 
 const REPO_ROOT = process.cwd();
-const INSTANTIATE = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs');
+const INSTANTIATE = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs');
+const LEGACY_INSTANTIATE = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdBundleDirs = new Set();
 
@@ -28,6 +29,7 @@ describe('instantiate-run-bundle.mjs integration', () => {
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout.trim(), dir);
     for (const entry of [
+      'BUNDLE_ENTRY.md',
       'BUNDLE_MAP.md',
       'rb_plan.md',
       'rb_profile.yaml',
@@ -50,6 +52,7 @@ describe('instantiate-run-bundle.mjs integration', () => {
     ]) {
       assert.equal(existsSync(join(dir, entry)), true, `missing ${entry}`);
     }
+    assert.equal(existsSync(join(dir, 'RUN_BUNDLE.md')), false, 'fresh bundles must not generate RUN_BUNDLE.md');
     assert.equal(existsSync(join(dir, 'START_FROM_HERE.md')), false, 'fresh bundles must not generate START_FROM_HERE.md');
     const bundleMap = readFileSync(join(dir, 'BUNDLE_MAP.md'), 'utf-8');
     assert.ok(bundleMap.includes('passive bundle map'), 'BUNDLE_MAP.md should identify itself as passive');
@@ -164,7 +167,7 @@ describe('instantiate-run-bundle.mjs integration', () => {
       const result = runRaw(name, `--target-dir=${target}`);
       const bundle = join(target, `dpt_rb_${name}`);
       assert.equal(result.status, 0, result.stderr);
-      assert.equal(result.stdout.trim(), bundle);
+      assert.equal(result.stdout.trim(), realpathSync(bundle));
       assert.equal(existsSync(join(bundle, 'rb_status.json')), true);
       assert.doesNotMatch(result.stderr, /validate-bundle failed|inspect-bundle failed/);
     } finally {
@@ -172,25 +175,27 @@ describe('instantiate-run-bundle.mjs integration', () => {
     }
   });
 
-  it('renders RUN_BUNDLE.md entry point for a non-sibling target directory (BUM-005, CMI-009)', () => {
+  it('renders BUNDLE_ENTRY.md with canonical Harness coordinates for a non-sibling target directory (BUM-005, CMI-009)', () => {
     const root = mkdtempSync(join(tmpdir(), 'instantiate-continuation-'));
     const target = join(root, 'external-runs');
     const name = uniqueName('continuation');
     try {
       const result = runRaw(name, `--target-dir=${target}`);
       const bundle = join(target, `dpt_rb_${name}`);
-      const frameworkRelative = relative(bundle, join(REPO_ROOT, 'DPT_FRAMEWORK')) || '.';
-      const repoRelative = relative(bundle, REPO_ROOT) || '.';
+      const currentRunBundleRoot = realpathSync(bundle);
+      const frameworkRelative = relative(currentRunBundleRoot, realpathSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS'))) || '.';
+      const repoRelative = relative(currentRunBundleRoot, realpathSync(REPO_ROOT)) || '.';
 
       assert.equal(result.status, 0, result.stderr);
+      assert.equal(result.stdout.trim(), currentRunBundleRoot);
 
-      // RUN_BUNDLE.md exists and has the right content
-      const runBundle = readFileSync(join(bundle, 'RUN_BUNDLE.md'), 'utf-8');
-      assert.match(runBundle, /^# /);                         // bundle name heading
-      assert.ok(runBundle.includes(`Framework: \`${frameworkRelative}\``));
-      assert.match(runBundle, /BUNDLE_MAP\.md/);              // points to BUNDLE_MAP.md
-      assert.match(runBundle, /COMMANDS\.md/);                // points to COMMANDS.md
-      assert.doesNotMatch(runBundle, /\{\{[^}]+\}\}/);        // no unreplaced placeholders
+      const entry = readFileSync(join(bundle, 'BUNDLE_ENTRY.md'), 'utf-8');
+      assert.match(entry, /^# /);
+      assert.ok(entry.includes(`Deep Research Harness: \`${frameworkRelative}\``));
+      assert.match(entry, /BUNDLE_MAP\.md/);
+      assert.match(entry, /COMMANDS\.md/);
+      assert.doesNotMatch(entry, /\{\{[^}]+\}\}/);
+      assert.equal(existsSync(join(bundle, 'RUN_BUNDLE.md')), false);
 
       // BUNDLE_MAP.md is a pure passive map — no continuation section
       const map = readFileSync(join(bundle, 'BUNDLE_MAP.md'), 'utf-8');
@@ -207,6 +212,27 @@ describe('instantiate-run-bundle.mjs integration', () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it('emits a canonical absolute handoff and canonical card through the legacy source alias', () => {
+    const root = mkdtempSync(join(tmpdir(), 'instantiate-legacy-alias-'));
+    const target = join(root, 'relative-target');
+    const relativeTarget = relative(REPO_ROOT, target);
+    const name = uniqueName('legacy-alias');
+    try {
+      const result = runLegacyRaw(name, `--target-dir=${relativeTarget}`);
+      const bundle = join(target, `dpt_rb_${name}`);
+      const currentRunBundleRoot = realpathSync(bundle);
+      const frameworkRoot = realpathSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS'));
+      const entry = readFileSync(join(bundle, 'BUNDLE_ENTRY.md'), 'utf-8');
+
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(result.stdout.trim(), currentRunBundleRoot);
+      assert.ok(entry.includes(`Deep Research Harness: \`${relative(currentRunBundleRoot, frameworkRoot) || '.'}\``));
+      assert.doesNotMatch(entry, /DPT_FRAMEWORK/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
 
 function runInstantiate(...args) {
@@ -219,6 +245,14 @@ function runInstantiate(...args) {
 
 function runRaw(...args) {
   return spawnSync('node', [INSTANTIATE, ...args], {
+    cwd: REPO_ROOT,
+    encoding: 'utf-8',
+    timeout: 10000,
+  });
+}
+
+function runLegacyRaw(...args) {
+  return spawnSync('node', [LEGACY_INSTANTIATE, ...args], {
     cwd: REPO_ROOT,
     encoding: 'utf-8',
     timeout: 10000,

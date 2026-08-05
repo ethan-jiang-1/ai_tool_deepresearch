@@ -29,7 +29,7 @@ HITL2 rerun handoff is produced by the real HITL2 gate before the tested rerun-r
 ```bash
 REPO_ROOT=$(pwd)
 ACTIVE_LIMIT=$(node --input-type=module <<'JS'
-import { loadGateDefinition } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { loadGateDefinition } from './DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 
 const definition = loadGateDefinition('rerun-ready');
 const rule = definition.rules.find((candidate) => candidate.id === 'rerun_count_valid');
@@ -47,7 +47,7 @@ process.stdout.write(String(rule.value));
 JS
 )
 B=$(node experiments_env/shared/new-disposable-bundle.mjs maxcount --case case-304 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 mkdir -p "$B/artifacts/hitl2"
 printf '# Decision Brief\nRerun.\n' > "$B/artifacts/hitl2/decision-brief.md"
 cat > "$B/rb_profile.yaml" <<YAML
@@ -67,20 +67,20 @@ human_decision_checkpoints:
     rationale: "An attempt at the active exclusive limit must be blocked."
 YAML
 node --input-type=module - "$B" <<'JS'
-import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { writeGateAttempt } from './DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
 const bundle=process.argv[2];
 writeGateAttempt(bundle,{check:{gate:'wave2-complete',passed:true,currentNodeRef:'phases/phase-wave2.md',next:'phases/phase-hitl2.md'},routing:{kind:'next',next:'phases/phase-hitl2.md'},inspect:[],advice:[]});
 recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'wave2-complete',passed:true,expected:true,detail:'declared direct-predecessor fixture'});
 JS
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-304-enter-hitl2.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-304-advance-wave2.json"
-H2=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-304-enter-hitl2.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-304-advance-wave2.json"
+H2=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
 N=$(printf '%s\n' "$H2" | node experiments_env/shared/extract-field.mjs check.next)
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$N" > "$B/case-304-enter-rerun.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-304-advance-hitl2.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$N" > "$B/case-304-enter-rerun.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-304-advance-hitl2.json"
 set +e
-OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate rerun-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle "$B" --current-node phases/phase-rerun.md 2>/dev/null)
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate rerun-ready -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-rerun-ready.mjs --bundle "$B" --current-node phases/phase-rerun.md 2>/dev/null)
 STATUS=$?
 set -e
 P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
@@ -88,7 +88,7 @@ K=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs routing
 HAS=$(printf '%s\n' "$OUT" | grep -c 'rerun_count' || true)
 OK=false; [ "$STATUS" -ne 0 ] && [ "$P" = "false" ] && [ "$K" = "no_transition" ] && [ "$HAS" -gt 0 ] && OK=true
 node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-304-max-count',passed:$OK,detail:'legal rerun entry then production-parsed active exclusive limit $ACTIVE_LIMIT fails closed'}))"
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## 结果解读

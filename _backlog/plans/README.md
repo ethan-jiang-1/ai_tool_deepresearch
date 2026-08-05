@@ -19,6 +19,7 @@
 |------|------|------|
 | `experiment-progressive-follow-up-plan` | 已完成 progressive-run round 的条件性后续入口：selected-host research access、case-211/406 fresh real-actor requalification，以及 profile-led diagnostic/calibration refresh。每次必须重新获得 fresh selection 和独立预算；不自动运行。 | dormant intake（无 active run） |
 | `silent-autonomous-execution` | 承接 `BUG-099/104/106` 的历史 stop/context observation。已与现行 Chain/Queue/Work Unit swarm 对齐：silent poll-submit loop、actor probe/fallback 与 continuation cues 是既有 contract；三次 real-actor canary 仍为 host-scoped `NOT_RUN`。没有 current-head Phase-Agent reproduction，也没有 active OpenSpec change；仅在新的可审计 `agent_flow_e2e` observation 出现后重开。 | deferred observation（无固定 OpenSpec change） |
+| `rename-framework-to-deep-research-harness` | 将 reusable system 定名为 Deep Research Harness，规定 canonical root、单一 legacy alias、`BUNDLE_ENTRY.md` 新 bundle entry、existing-bundle fallback 与 explicit current run bundle root；实现由同名 OpenSpec change 承载。 | active OpenSpec proposal（未 apply） |
 
 ---
 

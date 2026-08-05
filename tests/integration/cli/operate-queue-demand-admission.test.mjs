@@ -6,12 +6,12 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, basename } from 'node:path';
 
-import { createQueue, enqueue, makeItem, saveQueue } from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { createQueue, enqueue, makeItem, saveQueue } from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
 const ROOT = process.cwd();
-const QUEUE_CLI = join(ROOT, 'DPT_FRAMEWORK/cli/operate-queue.mjs');
-const WORK_UNIT_CLI = join(ROOT, 'DPT_FRAMEWORK/cli/operate-work-unit.mjs');
+const QUEUE_CLI = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs');
+const WORK_UNIT_CLI = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs');
 
 function run(cli, command, bundle, ...args) {
   return spawnSync('node', [cli, command, bundle, ...args], { encoding: 'utf8', timeout: 10000 });

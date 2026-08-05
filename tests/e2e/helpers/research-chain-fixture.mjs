@@ -9,8 +9,8 @@ import { claimAndSubmitFixtureWorkUnit } from '../../../experiments_env/shared/w
 import {
   applyCanonicalTopicState,
   renderSeedProjectionAppendix,
-} from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
-import { canonicalWave1ReferencePath } from '../../../DPT_FRAMEWORK/engine/helpers/wave1-reference-convergence.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { canonicalWave1ReferencePath } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs';
 import {
   advanceStatus, enterPhase, instantiateBundle, readStatus, REPO_ROOT, runGate, runNode,
 } from './deterministic-chain-harness.mjs';
@@ -51,7 +51,7 @@ export function writePlanAndProfile(bundle, { decision = 'not_started', rerunCou
 }
 
 function logCompletion(bundle, event) {
-  runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/log-event.mjs'), '--bundle', bundle, '--event', event]);
+  runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/log-event.mjs'), '--bundle', bundle, '--event', event]);
 }
 
 export function recordWaveCompletion(bundle, wave) {
@@ -71,13 +71,13 @@ function persistPhaseReference(bundle, refPath, content) {
   mkdirSync(join(bundle, '_tmp'), { recursive: true });
   writeFileSync(stagingPath, content);
   const persisted = JSON.parse(runNode([
-    join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs'),
+    join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs'),
     'persist', '--bundle', bundle, '--source', stagingPath, '--target', refPath,
     '--expect-absent',
   ]).stdout);
   assert.equal(persisted.verdict, 'committed', JSON.stringify(persisted));
   const indexed = JSON.parse(runNode([
-    join(REPO_ROOT, 'DPT_FRAMEWORK/cli/sync-reference-index.mjs'), '--bundle', bundle,
+    join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/sync-reference-index.mjs'), '--bundle', bundle,
   ]).stdout);
   assert.ok(['committed', 'unchanged'].includes(indexed.verdict), JSON.stringify(indexed));
 }
@@ -272,7 +272,7 @@ export function buildHitl2Baseline(root, label = 'baseline') {
 
 export function buildTerminalFinalBaseline(root, label = 'terminal') {
   const bundle = buildHitl2Baseline(root, label);
-  runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/apply-research-style.mjs'), '--bundle', bundle, '--style', 'quick_factual']);
+  runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs'), '--bundle', bundle, '--style', 'quick_factual']);
   stageHitl2(bundle, 'proceed_to_readiness', 0);
   passAndEnter(bundle, 'hitl2-recorded', 'phases/phase-hitl2.md', 'hitl2_recorded');
   const readiness = runGate(bundle, 'readiness-passed', 'phases/phase-readiness.md');

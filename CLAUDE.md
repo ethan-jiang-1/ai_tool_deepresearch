@@ -23,7 +23,7 @@ on-demand, not another mandatory pre-task read.
 
 ## Deep Research Routing
 
-For selected DPT research, choose and read exactly one entry before request-specific research work: an explicitly supplied reachable existing bundle (or its `RUN_BUNDLE.md` / `BUNDLE_MAP.md`) with continuation or inspection intent uses `DPT_FRAMEWORK/command_playbook/continue-run-bundle.md`; otherwise research, deep-research, investigation, or report intent with `DPT_FRAMEWORK/` selected uses `DPT_FRAMEWORK/RUN.md`. A discovered, bare, or unreachable map does not select a run. Before the selected entry is read, do not invoke `research`, `deep-research`, or an equivalent one-shot shortcut, perform request-specific WebSearch/WebFetch, or collect/synthesize evidence manually. The selected entry and its later phase instructions authorize subsequent legal research work.
+For selected Deep Research Harness research, choose and read exactly one entry before request-specific research work: an explicitly supplied reachable existing run bundle (or its `BUNDLE_ENTRY.md`, legacy `RUN_BUNDLE.md`, or `BUNDLE_MAP.md`) with continuation or inspection intent uses `DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md`; otherwise research, deep-research, investigation, or report intent with `DEEP_RESEARCH_HARNESS/` selected uses `DEEP_RESEARCH_HARNESS/RUN.md`. The selected bundle directory resolves to the operation's canonical absolute current run bundle root. A discovered, bare, or unreachable map does not select a run. Before the selected entry is read, do not invoke `research`, `deep-research`, or an equivalent one-shot shortcut, perform request-specific WebSearch/WebFetch, or collect/synthesize evidence manually. The selected entry and its later phase instructions authorize subsequent legal research work.
 
 ## Repository Reading Scope
 
@@ -32,7 +32,7 @@ Start from the repository root and choose only the top-level surface relevant to
 - `guidelines/` — project principles and operating guidance
 - `openspec/` — project rules, active changes, accepted specs, and governance
 - `docs/adr/` — on-demand durable architecture decisions
-- `DPT_FRAMEWORK/` — distributable framework and Agent-facing playbooks
+- `DEEP_RESEARCH_HARNESS/` — distributable framework and Agent-facing playbooks
 - `tests/` — JS-led verification
 - `experiments_playbook/` — Coding-Agent/Markdown-led experiments
 - `experiments_env/` — frozen prototypes and experiment fixtures
@@ -53,9 +53,9 @@ Do not list, scan, or read these paths as task context unless the user explicitl
 - Use Node.js >=20, pure JavaScript ESM (`.mjs`). No TypeScript. **Absolutely no Python.** Not for scripts, not for one-liners, not for prototyping — use Node.js for everything.
 - Do not add dependencies. Approved npm deps only: `zod`, `yaml`; otherwise use Node built-ins.
 - Use `node:test` + `node:assert` for JS-led tests.
-- **Tests always under `tests/` at repo root, never inside `DPT_FRAMEWORK/`.** `DPT_FRAMEWORK/` is the distributable framework — framework code only, no test files, no experiment fixtures. Test dirs mirror framework dirs: `tests/engine/`, `tests/engine/`, `tests/schema/`, etc.
+- **Tests always under `tests/` at repo root, never inside `DEEP_RESEARCH_HARNESS/`.** `DEEP_RESEARCH_HARNESS/` is the distributable framework — framework code only, no test files, no experiment fixtures. Test dirs mirror framework dirs: `tests/engine/`, `tests/engine/`, `tests/schema/`, etc.
 - Test placement: `unit`, `integration`, and `deterministic_e2e` live under `tests/`; `agent_flow_e2e` lives under `experiments_playbook/`. Use the accepted `verification-routing` spec for classification.
-- **OpenSpec phase gate: `DPT_FRAMEWORK/` is read-only until `/opsx:apply`.** During propose/explore, work in `openspec/changes/` only. You may read anything for context; you may write only change artifacts (specs, design, tasks). Target code (`DPT_FRAMEWORK/`, `tests/`, `experiments_playbook/`) is modified only during apply, per the approved task list. Deliberation fatigue does not grant an exception.
+- **OpenSpec phase gate: `DEEP_RESEARCH_HARNESS/` is read-only until `/opsx:apply`.** During propose/explore, work in `openspec/changes/` only. You may read anything for context; you may write only change artifacts (specs, design, tasks). Target code (`DEEP_RESEARCH_HARNESS/`, `tests/`, `experiments_playbook/`) is modified only during apply, per the approved task list. Deliberation fatigue does not grant an exception.
 - For a change whose `tasks.md` declares an `openspec-feedback:*` marker, supported apply/archive entries MUST obtain the matching current OpenSpec operation guidance before target edits or finalization. Record actionable findings as ordinary pending tasks. After Agent-owned semantic closeout and spec sync, use `node openspec/governance/finalize-change-archive.mjs --change <name>` as the only supported final archive transition.
 
 ## OpenSpec Workflow

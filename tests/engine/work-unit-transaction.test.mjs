@@ -31,12 +31,12 @@ import {
   timeoutPreflightWorkUnit,
   transactionLockOwnerPath,
   withWorkUnitTransaction,
-} from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import {
   WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
   WorkUnitTransactionLockOwnerSchema,
   WorkUnitTransactionV2JournalSchema,
-} from '../../DPT_FRAMEWORK/schema/contracts/work-unit-transaction.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/schema/contracts/work-unit-transaction.mjs';
 import {
   cleanupWorkUnitBundle,
   availableActorDecision,
@@ -195,7 +195,7 @@ describe('work-unit transaction v2', () => {
     const bundleDir = tempWorkUnitBundle('wu-tx-contention-');
     try {
       writeFileSync(path.join(bundleDir, 'authority.json'), 'before\n');
-      const moduleUrl = pathToFileURL(path.resolve('DPT_FRAMEWORK/engine/work-unit-transaction.mjs')).href;
+      const moduleUrl = pathToFileURL(path.resolve('DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs')).href;
       const holderScript = `
         import { withWorkUnitTransaction } from ${JSON.stringify(moduleUrl)};
         const result = withWorkUnitTransaction(${JSON.stringify(bundleDir)}, 'submit_work_unit', {
@@ -233,7 +233,7 @@ describe('work-unit transaction v2', () => {
       assert.equal(differentWorkProjection.holder.target_work_ids.includes(WORK_ID), true);
 
       const cli = spawnSync(process.execPath, [
-        'DPT_FRAMEWORK/cli/operate-work-unit.mjs',
+        'DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs',
         'recover-transaction',
         bundleDir,
         '--tx-id',
@@ -256,7 +256,7 @@ describe('work-unit transaction v2', () => {
     const readyFile = path.join(path.dirname(bundleDir), `${path.basename(bundleDir)}.settled-ready`);
     try {
       writeFileSync(path.join(bundleDir, 'authority.json'), 'before\n');
-      const moduleUrl = pathToFileURL(path.resolve('DPT_FRAMEWORK/engine/work-unit-transaction.mjs')).href;
+      const moduleUrl = pathToFileURL(path.resolve('DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs')).href;
       const holderScript = `
         import { writeFileSync } from 'node:fs';
         import { withWorkUnitTransaction } from ${JSON.stringify(moduleUrl)};
@@ -365,7 +365,7 @@ describe('work-unit transaction v2', () => {
         });
         const workId = claim.claimed_work_ids[0];
         const holderWorkId = sameAttempt ? workId : 'wu-w0-b000-src-i9999';
-        const moduleUrl = pathToFileURL(path.resolve('DPT_FRAMEWORK/engine/work-unit-transaction.mjs')).href;
+        const moduleUrl = pathToFileURL(path.resolve('DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs')).href;
         const holderScript = `
           import { withWorkUnitTransaction } from ${JSON.stringify(moduleUrl)};
           const result = withWorkUnitTransaction(${JSON.stringify(bundleDir)}, 'submit_work_unit', {

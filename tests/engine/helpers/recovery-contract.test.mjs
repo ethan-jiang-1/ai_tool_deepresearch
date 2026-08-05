@@ -7,7 +7,7 @@ import {
   RecoveryRootFindingSchema,
   RecoverySummarySchema,
   assessStructuredRecoveryAction,
-} from '../../../DPT_FRAMEWORK/engine/helpers/recovery-contract.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/recovery-contract.mjs';
 
 describe('recovery contract', () => {
   it('enforces per-root action/status cross-field rules', () => {

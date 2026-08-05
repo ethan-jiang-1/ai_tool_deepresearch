@@ -4,11 +4,11 @@
 
 ## Purpose
 
-Define the canonical location and import contract for production engine modules under `DPT_FRAMEWORK/engine/`. These engines are the single source of truth for deterministic queue, gate, loader, work-unit, and hygiene mechanisms shared by production run bundles and experiment playbooks.
+Define the canonical location and import contract for production engine modules under `DEEP_RESEARCH_HARNESS/engine/`. These engines are the single source of truth for deterministic queue, gate, loader, work-unit, and hygiene mechanisms shared by production run bundles and experiment playbooks.
 ## Requirements
 ### Requirement: Engine code canonical location
 
-Production work-unit Engine code SHALL live under `DPT_FRAMEWORK/engine/` and production CLI entrypoints SHALL live under `DPT_FRAMEWORK/cli/`. Runtime bundle state SHALL live in the active bundle under `rb_queue.json`, `rb_output_declarations.jsonl`, and `_work_units/`; `DPT_FRAMEWORK/` SHALL remain reusable framework assets, not run state.
+Production work-unit Engine code SHALL live under `DEEP_RESEARCH_HARNESS/engine/` and production CLI entrypoints SHALL live under `DEEP_RESEARCH_HARNESS/cli/`. Runtime bundle state SHALL live in the current run bundle under `rb_queue.json`, `rb_output_declarations.jsonl`, and `_work_units/`; `DEEP_RESEARCH_HARNESS/` SHALL remain reusable framework assets, not run state.
 
 Framework import and location guidance SHALL describe deterministic queue, gate, loader, and work-unit mechanisms. It SHALL NOT describe retired relay/slot engine modules as production mechanisms outside explicit negative, deprecated, checker self-reference, or minimized release-history contexts.
 
@@ -16,7 +16,7 @@ Framework import and location guidance SHALL describe deterministic queue, gate,
 
 - **WHEN** `operate-work-unit claim` runs against a bundle
 - **THEN** work-unit envelope files SHALL be written under the bundle `_work_units/`
-- **AND** no run-specific state SHALL be written under `DPT_FRAMEWORK/`
+- **AND** no run-specific state SHALL be written under `DEEP_RESEARCH_HARNESS/`
 
 #### Scenario: framework guidance avoids retired engine authority
 
@@ -26,7 +26,7 @@ Framework import and location guidance SHALL describe deterministic queue, gate,
 
 ### Requirement: Gate helpers provide shared frontmatter parsing
 
-`DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs` SHALL export two shared functions for Markdown frontmatter parsing, eliminating duplicated `JSON.parse(m[1])` logic across gate CLIs and bundle tooling:
+`DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs` SHALL export two shared functions for Markdown frontmatter parsing, eliminating duplicated `JSON.parse(m[1])` logic across gate CLIs and bundle tooling:
 
 - **`parseMdFrontmatter(rawString)`** — Accept a raw Markdown string. Extract the YAML frontmatter block between `---` delimiters. Parse with `parseYaml()` from the `yaml` package. Return the parsed object, or `{}` if no frontmatter block is found. Throw on invalid YAML syntax.
 - **`readBundlePlan(bundlePath)`** — Accept a bundle directory path. Read `rb_plan.md`, call `parseMdFrontmatter()`, return the parsed plan object. Caching left to the caller.

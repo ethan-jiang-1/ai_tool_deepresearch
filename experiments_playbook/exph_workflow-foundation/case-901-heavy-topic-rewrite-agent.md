@@ -32,7 +32,7 @@ After Subject execution, an actual human reviews the original input, exact Subje
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_rwa_human --case case-901 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 cat > "$B/rb_profile.yaml" <<'YAML'
 plan_basename: wff_rwa_human
 research_profile: standard
@@ -48,10 +48,10 @@ human_decision_checkpoints:
     user_decision: not_started
     final_report_view: not_started
 YAML
-node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle "$B" --current-node phases/phase-instantiation.md > "$B/case-901-instantiation-gate.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-instantiation-complete.mjs --bundle "$B" --current-node phases/phase-instantiation.md > "$B/case-901-instantiation-gate.json"
 NEXT=$(node experiments_env/shared/extract-field.mjs check.next < "$B/case-901-instantiation-gate.json")
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-901-enter-hitl1.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to instantiation_complete > "$B/case-901-status.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-901-enter-hitl1.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to instantiation_complete > "$B/case-901-status.json"
 ```
 
 ## Step 2: [MAIN->SUBJECT] Run The Independent Rewrite
@@ -59,14 +59,14 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to instantiation_compl
 The adapter injects the current production HITL1 closure, exact bundle path, and the same original input used by case-951: `帮我研究一下 AI 安全`. It retains exact prompt, raw Subject transcript, and result. Subject or external-runtime failure is an infrastructure error for this deliberate Interactive case; do not substitute another actor.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node experiments_env/shared/run-iterative-interaction-subject.mjs 901 --bundle "$B"
 ```
 
 ## Step 3: [MAIN/SHELL] Record Subject-Bound Structural Facts
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { appendFileSync, readFileSync, statSync } from 'node:fs';
 import { parse as parseYaml } from 'yaml';
@@ -114,7 +114,7 @@ Replace the descriptive placeholders only with the actual human response; `crite
 ## Step 5: [MAIN/SHELL] Record Structured Human Judgment And Complete
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { appendFileSync, readFileSync } from 'node:fs';
 const bundle = process.argv[2];
@@ -129,7 +129,7 @@ const valid = judge.schema_version === 'agent-experiment-judge/v1'
 if (!valid) throw new Error('actual human judge record is missing or malformed');
 appendFileSync(`${bundle}/rb_trace.jsonl`, `${JSON.stringify({ ts: new Date().toISOString(), event: 'check', source: 'playbook', gate: 'topic-rewrite-real-human-review', passed: judge.verdict === 'pass', expected: true, verdict_judge: 'real_human' })}\n`);
 JS
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" \
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" \
   --evidence "subject_prompt=$B/case-901-subject-prompt.json" \
   --evidence "subject_transcript=$B/case-901-subject-transcript.jsonl" \
   --evidence "subject_result=$B/case-901-subject-result.json" \

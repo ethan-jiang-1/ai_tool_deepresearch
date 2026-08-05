@@ -17,7 +17,7 @@ import {
   AgentExperimentCompletionSchema,
   caseRootIdentity,
   sha256Bytes,
-} from '../../../DPT_FRAMEWORK/host_tools/lib/agent-experiment-contract.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/host_tools/lib/agent-experiment-contract.mjs';
 
 const REPO_ROOT = path.resolve(new URL('../../..', import.meta.url).pathname);
 
@@ -81,7 +81,7 @@ function makeRun(policyOverrides = {}) {
       runtime: 'real_disposable_bundle', external_calls: 'none', verdict_judge: 'deterministic',
       ...policyOverrides,
     },
-    repo_command_root: REPO_ROOT, framework_root: path.join(REPO_ROOT, 'DPT_FRAMEWORK'), case_run_root: root,
+    repo_command_root: REPO_ROOT, framework_root: path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS'), case_run_root: root,
     case_root_identity: caseRootIdentity(root), completion_path: path.join(root, 'agent-experiment-completion.json'),
   };
   writeFileSync(contextPath, `${JSON.stringify(context, null, 2)}\n`);

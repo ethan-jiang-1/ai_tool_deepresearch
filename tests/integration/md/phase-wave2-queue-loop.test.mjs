@@ -26,7 +26,7 @@ import {
   checkSections,
 } from '../../helpers/md-phase-checks.mjs';
 
-const PHASE_MD = path.resolve(import.meta.dirname, '../../../DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md');
+const PHASE_MD = path.resolve(import.meta.dirname, '../../../DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave2.md');
 const body = readFileSync(PHASE_MD, 'utf-8');
 
 // ── frontmatter ──────────────────────────────────────────────────────

@@ -30,12 +30,12 @@ The Playbook Agent uses the production canonical-topic-state helper and topic/qu
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs case-315-topic-state --case case-315 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
-node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle "$B" --current-node phases/phase-instantiation.md > "$STATE/case315-inst.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-instantiation-complete.mjs --bundle "$B" --current-node phases/phase-instantiation.md > "$STATE/case315-inst.json"
 NEXT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.check.next)' "$STATE/case315-inst.json")
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$STATE/case315-hitl1.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl1_recorded > "$STATE/case315-status.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$STATE/case315-hitl1.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to hitl1_recorded > "$STATE/case315-status.json"
 node --input-type=module - "$B" "$STATE/case315-control-before.json" <<'JS'
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -53,14 +53,14 @@ JS
 ## Step 2 - Retain input and inject plan-first crash
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
 cat > "$STATE/case315-topic-input.json" <<'JSON'
 {"context":"hitl1","actions":[{"action":"add_topic","title":"Crash-safe canonical topic","slug_stem":"crash-safe-canonical-topic","must_answer":["Can canonical intent survive a plan-first crash?"],"scope_role":"primary","depends_on_topic_uids":[]}]}
 JSON
 node --input-type=module - "$B" "$STATE/case315-topic-input.json" <<'JS'
 import { readFileSync } from 'node:fs';
-import { applyCanonicalTopicState } from './DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
+import { applyCanonicalTopicState } from './DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
 const [bundle, input] = process.argv.slice(2);
 try {
   applyCanonicalTopicState({ bundlePath: bundle, input: JSON.parse(readFileSync(input)), crashAt: 'after_plan' });
@@ -73,32 +73,32 @@ JS
 ## Step 3 - Inspect exact recovery and queue no-write blocker
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
-node DPT_FRAMEWORK/cli/operate-topic-state.mjs inspect --bundle "$B" > "$STATE/case315-inspect.json" || test $? -eq 1
+node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs inspect --bundle "$B" > "$STATE/case315-inspect.json" || test $? -eq 1
 OP=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.blockers[0].operation_id)' "$STATE/case315-inspect.json")
 cat > "$STATE/case315-task.json" <<'JSON'
 {"queue_item_id":"wave0-source-01_crash-safe-canonical-topic","title":"blocked while seed pending","targets":{"controller":"main-agent"},"action":"do not enqueue before recovery","producer_rule":"source_intake","lineage":{"topic_slug":"01_crash-safe-canonical-topic"},"priority_class":"P5_new_reference_intake","required_receipts":[],"done_condition":"blocked","verification":{"engine":[],"agent":[]},"writes_to":[],"status_sync":[],"completion_receipt":null,"failure_route":"topic-state recover","status":"queued","restore_priority":"normal","payload":{"topic_slug":"01_crash-safe-canonical-topic"}}
 JSON
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue "$B" --task "$STATE/case315-task.json" > "$STATE/case315-enqueue-blocked.json" || test $? -eq 1
+node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs enqueue "$B" --task "$STATE/case315-task.json" > "$STATE/case315-enqueue-blocked.json" || test $? -eq 1
 printf '%s\n' "$OP" > "$STATE/case315-operation-id"
 ```
 
 ## Step 4 - Recover, inspect, and enqueue
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
 OP=$(cat "$STATE/case315-operation-id")
-node DPT_FRAMEWORK/cli/operate-topic-state.mjs recover --bundle "$B" --operation-id "$OP" > "$STATE/case315-recover.json"
-node DPT_FRAMEWORK/cli/operate-topic-state.mjs inspect --bundle "$B" > "$STATE/case315-clean.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue "$B" --task "$STATE/case315-task.json" > "$STATE/case315-enqueue.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs recover --bundle "$B" --operation-id "$OP" > "$STATE/case315-recover.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs inspect --bundle "$B" > "$STATE/case315-clean.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs enqueue "$B" --task "$STATE/case315-task.json" > "$STATE/case315-enqueue.json"
 ```
 
 ## Step 5 - Record exact case checks
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
 node --input-type=module - "$B" "$STATE" <<'JS'
 import { createHash } from 'node:crypto';
@@ -133,8 +133,8 @@ JS
 ## Step 6 - Native completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Light health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

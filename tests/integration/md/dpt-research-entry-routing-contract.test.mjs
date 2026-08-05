@@ -5,11 +5,11 @@ import { describe, it } from 'node:test';
 
 const read = (path) => readFileSync(path, 'utf8');
 const ROOT_SURFACES = ['AGENTS.md', 'CLAUDE.md'];
-const FRAMEWORK_SURFACES = ['DPT_FRAMEWORK/AGENTS.md', 'DPT_FRAMEWORK/CLAUDE.md'];
-const RUN = 'DPT_FRAMEWORK/RUN.md';
-const README = 'DPT_FRAMEWORK/README.md';
-const COMMANDS = 'DPT_FRAMEWORK/COMMANDS.md';
-const START = 'DPT_FRAMEWORK/command_playbook/start-research.md';
+const FRAMEWORK_SURFACES = ['DEEP_RESEARCH_HARNESS/AGENTS.md', 'DEEP_RESEARCH_HARNESS/CLAUDE.md'];
+const RUN = 'DEEP_RESEARCH_HARNESS/RUN.md';
+const README = 'DEEP_RESEARCH_HARNESS/README.md';
+const COMMANDS = 'DEEP_RESEARCH_HARNESS/COMMANDS.md';
+const START = 'DEEP_RESEARCH_HARNESS/command_playbook/start-research.md';
 
 function routingBlock(path) {
   const text = read(path);
@@ -18,15 +18,15 @@ function routingBlock(path) {
   return match[1];
 }
 
-describe('DPT research entry routing contract', () => {
+describe('Deep Research Harness research entry routing contract', () => {
   it('keeps root entry routing synchronized before request-specific research work', () => {
     const blocks = ROOT_SURFACES.map(routingBlock);
     assert.equal(blocks[0], blocks[1], 'root routing guidance must stay synchronized');
 
     const block = blocks[0];
-    assert.match(block, /explicitly supplied reachable existing bundle/i);
+    assert.match(block, /explicitly supplied reachable existing run bundle/i);
     assert.match(block, /continue-run-bundle\.md/);
-    assert.match(block, /otherwise[\s\S]*DPT_FRAMEWORK\/RUN\.md/i);
+    assert.match(block, /otherwise[\s\S]*DEEP_RESEARCH_HARNESS\/RUN\.md/i);
     assert.match(block, /discovered, bare, or unreachable map does not select a run/i);
     assert.match(block, /`research`, `deep-research`, or an equivalent one-shot shortcut/);
     assert.match(block, /request-specific WebSearch\/WebFetch/);
@@ -73,7 +73,7 @@ describe('DPT research entry routing contract', () => {
     assert.match(readme, /不保证宿主不会预先匹配 skill 或注入工具/);
 
     assert.match(commands, /`RUN\.md` 选定新研究 entry 后的下游 playbook/);
-    assert.match(start, /只有在已读 `RUN\.md`、且没有 explicit reachable existing-bundle continuation route 后/);
+    assert.match(start, /只有在已读 `RUN\.md`、且没有 explicit reachable existing-run-bundle continuation route 后/);
     assert.doesNotMatch(start, /新研究入口/);
   });
 });

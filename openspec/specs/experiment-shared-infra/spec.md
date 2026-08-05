@@ -17,7 +17,7 @@ The system SHALL provide a directory `experiments_env/shared/` for experiment-sc
 
 #### Scenario: Production code does not depend on experiment shared
 
-- **WHEN** a production run bundle or `DPT_FRAMEWORK/` module runs
+- **WHEN** a production run bundle or `DEEP_RESEARCH_HARNESS/` module runs
 - **THEN** it SHALL NOT import from `experiments_env/shared/`
 
 ### Requirement: Disposable bundle creation tool
@@ -44,7 +44,7 @@ The disposable bundle creation script SHALL reside at `experiments_env/shared/ne
 #### Scenario: Playbook Step 1 uses new path
 
 - **WHEN** any command experiment playbook runs Step 1 (bundle creation)
-- **THEN** it SHALL invoke `experiments_env/shared/new-disposable-bundle.mjs` (not `DPT_FRAMEWORK/command_experiments_env/scripts/new-disposable-bundle.mjs`)
+- **THEN** it SHALL invoke `experiments_env/shared/new-disposable-bundle.mjs` (not `DEEP_RESEARCH_HARNESS/command_experiments_env/scripts/new-disposable-bundle.mjs`)
 
 ### Requirement: Disposable bundle creator SHALL reject invalid invocation before filesystem side effects
 

@@ -12,8 +12,8 @@ import {
   buildGateResult,
   projectGateHints,
   parseGateCliArgs,
-} from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
-import { makeContractFinding } from '../../../DPT_FRAMEWORK/engine/helpers/wave-contract-findings.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
+import { makeContractFinding } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-findings.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-gate-helpers-core-tmp');
@@ -177,7 +177,7 @@ describe('root-first Gate hints', () => {
       repair_kind: 'agent_action',
       missing_fact: 'surface artifacts/wave1/topic-a/evidence-summary.md; expected required file exists; observed {"exists":false}',
       write_to: 'artifacts/wave1/topic-a/evidence-summary.md',
-      rerun: `node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle ${resolvePath(bundle)} --current-node phases/phase-wave1.md`,
+      rerun: `node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs --bundle ${resolvePath(bundle)} --current-node phases/phase-wave1.md`,
     }]);
   });
 

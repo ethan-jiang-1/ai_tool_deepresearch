@@ -48,7 +48,7 @@ function positiveViolations(text) {
 
 describe('Wave depth contract Markdown guidance', () => {
   it('Wave1 phase teaches depth review, source claims, and supplementary repair loop', () => {
-    const text = read('DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md');
+    const text = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md');
     assert.match(text, /depth-review\.yaml/);
     assert.match(text, /source_claims\[\]/);
     assert.match(text, /accepted_source_urls\[\]/);
@@ -63,7 +63,7 @@ describe('Wave depth contract Markdown guidance', () => {
   });
 
   it('Wave2 phase teaches scan, triage, gap analysis, and pure synthesis eligibility', () => {
-    const text = read('DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md');
+    const text = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave2.md');
     assert.match(text, /scan matrix/i);
     assert.match(text, /triage/i);
     assert.match(text, /confidence/);
@@ -77,8 +77,8 @@ describe('Wave depth contract Markdown guidance', () => {
   });
 
   it('sub-agent guidance keeps bounded work-unit outputs as submitted authority', () => {
-    const wave1 = read('DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-evidence-extractor.md');
-    const wave2 = read('DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-topic-scout.md');
+    const wave1 = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/subagent-dpt-evidence-extractor.md');
+    const wave2 = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/subagent-dpt-topic-scout.md');
     assert.match(wave1, /source_claims\[\]/);
     assert.match(wave1, /accepted_source_urls\[\]/);
     assert.match(wave1, /cache_trail_refs/);

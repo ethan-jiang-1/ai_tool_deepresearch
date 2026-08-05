@@ -1,7 +1,7 @@
 // @impl EXA-006
 
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -19,16 +19,16 @@ describe('Agent Experiment explicit creator/preparation targets', () => {
       ], { cwd: REPO, encoding: 'utf8' });
       assert.equal(result.status, 0, result.stderr);
       const disposable = result.stdout.trim().split(/\r?\n/).at(-1);
-      assert.equal(path.dirname(disposable), target);
+      assert.equal(path.dirname(disposable), realpathSync(target));
       assert.ok(path.basename(disposable).startsWith('dpt_disp_case-999_'));
 
       result = spawnSync(process.execPath, [
-        path.join(REPO, 'DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs'),
+        path.join(REPO, 'DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs'),
         `explicit-target-${Date.now()}`, '--target-dir', target,
       ], { cwd: REPO, encoding: 'utf8' });
       assert.equal(result.status, 0, result.stderr);
       const production = result.stdout.trim().split(/\r?\n/).at(-1);
-      assert.equal(path.dirname(production), target);
+      assert.equal(path.dirname(production), realpathSync(target));
       assert.ok(path.basename(production).startsWith('dpt_rb_'));
       assert.equal(existsSync(path.join(REPO, path.basename(disposable))), false);
       assert.equal(existsSync(path.join(REPO, path.basename(production))), false);

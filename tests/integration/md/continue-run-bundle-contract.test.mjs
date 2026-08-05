@@ -6,20 +6,21 @@ import assert from 'node:assert/strict';
 const read = (path) => readFileSync(path, 'utf8');
 const ROOT_AGENTS = 'AGENTS.md';
 const ROOT_CLAUDE = 'CLAUDE.md';
-const FRAMEWORK_AGENTS = 'DPT_FRAMEWORK/AGENTS.md';
-const FRAMEWORK_CLAUDE = 'DPT_FRAMEWORK/CLAUDE.md';
-const RUN = 'DPT_FRAMEWORK/RUN.md';
-const README = 'DPT_FRAMEWORK/README.md';
-const COMMANDS = 'DPT_FRAMEWORK/COMMANDS.md';
-const PLAYBOOK = 'DPT_FRAMEWORK/command_playbook/continue-run-bundle.md';
+const FRAMEWORK_AGENTS = 'DEEP_RESEARCH_HARNESS/AGENTS.md';
+const FRAMEWORK_CLAUDE = 'DEEP_RESEARCH_HARNESS/CLAUDE.md';
+const RUN = 'DEEP_RESEARCH_HARNESS/RUN.md';
+const README = 'DEEP_RESEARCH_HARNESS/README.md';
+const COMMANDS = 'DEEP_RESEARCH_HARNESS/COMMANDS.md';
+const PLAYBOOK = 'DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md';
 
 describe('existing run-bundle continuation contract', () => {
-  it('routes only an explicit reachable existing bundle before the new-run default', () => {
+  it('routes only an explicit reachable existing run bundle before the new-run default', () => {
     const surfaces = [ROOT_AGENTS, ROOT_CLAUDE, FRAMEWORK_AGENTS, FRAMEWORK_CLAUDE]
       .map(read)
       .join('\n');
 
-    assert.match(surfaces, /RUN_BUNDLE\.md/);
+    assert.match(surfaces, /BUNDLE_ENTRY\.md/);
+    assert.match(surfaces, /legacy `RUN_BUNDLE\.md`/);
     assert.match(surfaces, /BUNDLE_MAP\.md/);
     assert.match(surfaces, /continue-run-bundle\.md/);
     assert.match(surfaces, /explicit|明确|显式/i);
@@ -29,16 +30,24 @@ describe('existing run-bundle continuation contract', () => {
     assert.match(surfaces, /scan|扫描|bare filename|仅.*文件名/i);
   });
 
-  it('bridges RUN_BUNDLE.md through BUNDLE_MAP.md to COMMANDS.md without lifecycle branching', () => {
+  it('bridges BUNDLE_ENTRY.md, legacy RUN_BUNDLE.md, then BUNDLE_MAP.md to COMMANDS.md without lifecycle branching', () => {
     const playbook = read(PLAYBOOK);
     const pointers = [read(RUN), read(README), read(COMMANDS)].join('\n');
 
-    // Simplified playbook: entry → layout → commands
+    // Simplified playbook: selected root → ordered entry → layout → commands
+    assert.match(playbook, /canonical absolute path/);
+    assert.match(playbook, /current\s+run bundle root/i);
+    assert.match(playbook, /BUNDLE_ENTRY\.md/);
     assert.match(playbook, /RUN_BUNDLE\.md/);
     assert.match(playbook, /BUNDLE_MAP\.md/);
     assert.match(playbook, /COMMANDS\.md/);
-    assert.match(playbook, /DPT source tree|DPT source/i);
-    assert.match(playbook, /already selected|已选定/i);
+    assert.match(playbook, /Deep Research Harness/);
+    assert.match(playbook, /selected source context|selected Harness context/i);
+    assert.ok(
+      playbook.indexOf('BUNDLE_ENTRY.md') < playbook.indexOf('RUN_BUNDLE.md') &&
+      playbook.indexOf('RUN_BUNDLE.md') < playbook.indexOf('BUNDLE_MAP.md'),
+      'entry precedence must be BUNDLE_ENTRY.md -> RUN_BUNDLE.md -> BUNDLE_MAP.md',
+    );
 
     // No lifecycle branching — these belong to COMMANDS.md and CLI tools
     assert.doesNotMatch(playbook, /current_node/);
@@ -46,6 +55,7 @@ describe('existing run-bundle continuation contract', () => {
     assert.doesNotMatch(playbook, /phase-final/);
     assert.doesNotMatch(playbook, /readiness_passed/);
     assert.doesNotMatch(playbook, /operate-post-final-recovery\.mjs/);
+    assert.match(playbook, /do not themselves select lifecycle work or runtime authority/);
 
     // Routing surfaces point to the playbook
     assert.match(pointers, /continue-run-bundle\.md/);

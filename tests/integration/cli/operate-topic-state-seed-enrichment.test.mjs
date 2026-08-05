@@ -4,16 +4,16 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { writeGateAttempt } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
-import { applyCanonicalTopicState, recoverCanonicalTopicState } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
+import { writeGateAttempt } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
+import { applyCanonicalTopicState, recoverCanonicalTopicState } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
 import {
   renderSeedInitializationRegion,
   SEED_TOPIC_INITIALIZATION,
-} from '../../../DPT_FRAMEWORK/engine/helpers/seed-topic-authoring-evaluator.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/seed-topic-authoring-evaluator.mjs';
 
 const root = process.cwd();
-const cli = join(root, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs');
-const enter = join(root, 'DPT_FRAMEWORK/cli/enter-phase.mjs');
+const cli = join(root, 'DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs');
+const enter = join(root, 'DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs');
 const dirs = [];
 const topic = { topic_uid: 'tp_123e4567-e89b-42d3-a456-426614174000', id: '01', slug: '01_topic-a', title: 'Topic A', must_answer: ['What?'], scope_role: 'primary', depends_on_topic_uids: [] };
 

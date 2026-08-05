@@ -16,39 +16,63 @@ demand item, Work unit, and Submit vocabulary stays in that execution-model
 canon; the entries here are compressed orientation only.
 
 Current behavior, executable contracts, and current runtime facts remain with
-their applicable Sources of Record. For the durable rationale behind the
-control split, see [ADR 0001](docs/adr/0001-keep-agent-flow-markdown-driven-and-engine-gated.md).
-It is optional architecture rationale, not a mandatory pre-task read or a new
-authority.
+their applicable Sources of Record. For durable architecture rationale, see
+[ADR 0001](docs/adr/0001-keep-agent-flow-markdown-driven-and-engine-gated.md)
+and [ADR 0002](docs/adr/0002-name-the-reusable-surface-deep-research-harness.md).
+They are optional rationale, not mandatory pre-task reads, behavior authority,
+or replacements for the Charter.
 
 ## System and Runtime
 
 **Deep Research Tool project**:
 The repository and engineering effort that develops the Deep Research
-Framework.
-_Avoid_: Deep Research Framework, `DPT_FRAMEWORK/`
+Harness.
+_Avoid_: Deep Research Harness, `DEEP_RESEARCH_HARNESS/`
 
-**Deep Research Framework (DPT Framework)**:
-A reusable agentic framework that turns a broad research question into an
+**Deep Research Harness**:
+A reusable agentic harness that turns a broad research question into an
 evidence-backed, gated research report. It is distinct from both the project
-that develops it and any particular research run.
-_Avoid_: Deep Research Tool project, research run, `DPT_FRAMEWORK/`
+that develops it and any particular run bundle.
+_Avoid_: Deep Research Tool project, Deep Research Framework, run bundle,
+`DPT_FRAMEWORK/`
+
+**`DEEP_RESEARCH_HARNESS/`**:
+The repository directory containing reusable Deep Research Harness assets.
+It is a filesystem location, not the framework concept or a research run.
+_Avoid_: Deep Research Harness, run bundle, active bundle
 
 **`DPT_FRAMEWORK/`**:
-The repository directory containing reusable Deep Research Framework assets.
-It is a filesystem location, not the framework concept or a research run.
-_Avoid_: Deep Research Framework, active bundle
+The legacy relative filesystem alias for `DEEP_RESEARCH_HARNESS/`. It resolves
+to the same reusable Harness assets and is not a second source tree, canonical
+authoring coordinate, or research run.
+_Avoid_: Deep Research Harness, current run bundle, canonical source root
+
+**Run bundle**:
+A durable package for one bounded Deep Research engagement. It contains the
+material needed to resume, inspect, and deliver that engagement; a research
+run is its lifecycle, while a current run bundle is its explicit runtime
+selection.
+_Avoid_: topic, Deep Research Harness, research run, current run bundle
 
 **Research run**:
-One complete instance of research work, from research alignment through final
-delivery. It is a lifecycle, not a framework asset or filesystem location.
-_Avoid_: active bundle, Deep Research Framework
+The lifecycle of work performed through one run bundle, from research
+alignment through final delivery. It is not a harness asset or filesystem location.
+_Avoid_: run bundle, current run bundle, Deep Research Harness
 
-**Active bundle**:
-The selected runtime context for one production research run or disposable
-experiment. It holds that run's durable facts and is distinct from both the
-reusable framework and the run lifecycle.
-_Avoid_: research run, Deep Research Framework, repository root
+**Current run bundle**:
+The run bundle explicitly loaded for the present production research run or
+disposable experiment, CLI invocation, or task card. "Current" describes
+operation scope, not recency or lifecycle status; its directory is the current
+run bundle root.
+_Avoid_: active bundle, latest bundle, Deep Research Harness, repository root
+
+**Current run bundle root**:
+The explicit filesystem directory that identifies a current run bundle and
+roots its runtime-relative paths. Once resolved, its canonical absolute form
+is the handoff coordinate for Agent/CLI work; it comes from new-bundle creation
+or an existing-bundle entry, never from chat memory, repository root, working
+directory, or chronology.
+_Avoid_: active bundle root, latest bundle path, repository root
 
 ## Actors
 
@@ -85,8 +109,8 @@ trace facts. It does not conduct research or make semantic judgments.
 _Avoid_: workflow orchestrator, LLM Agent
 
 **Runtime truth**:
-The durable facts of a research run held in its active bundle. It is not chat
-memory or reusable framework assets.
+The durable facts of a research run held under its current run bundle root. It
+is not chat memory or reusable framework assets.
 _Avoid_: conversation context, framework assets
 
 **Source of Record**:

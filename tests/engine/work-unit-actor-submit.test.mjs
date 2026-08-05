@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { claimWorkUnits, inspectWorkUnits, loadWorkUnitIndex, readWorkUnitLedgerRows, submitWorkUnit, workUnitIndexPath } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { claimWorkUnits, inspectWorkUnits, loadWorkUnitIndex, readWorkUnitLedgerRows, submitWorkUnit, workUnitIndexPath } from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import { claimAndSubmitWorkUnit, cleanupWorkUnitBundle, delegatedQueueItem, seedDelegatedQueue, tempWorkUnitBundle } from './work-unit-test-helpers.mjs';
 
 describe('work-unit actor provenance', () => {

@@ -6,7 +6,7 @@ status: effective
 created: 2026-07-25
 revised: 2026-07-25
 role: charter-companion evolution direction for justified semantic levels and precise bounded reasoning
-scope: openspec/changes/, guidelines/, DPT_FRAMEWORK/, tests/, experiments_playbook/
+scope: openspec/changes/, guidelines/, DEEP_RESEARCH_HARNESS/, tests/, experiments_playbook/
 authority: guidance
 defers_to:
   - guidelines/project-charter.md

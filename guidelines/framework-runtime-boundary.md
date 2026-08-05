@@ -6,7 +6,7 @@ status: effective
 created: 2026-06-19
 revised: 2026-07-25
 role: directory and authority boundary for framework assets versus run bundle runtime state
-scope: DPT_FRAMEWORK/, dpt_rb_*/, dpt_disp_*/
+scope: DEEP_RESEARCH_HARNESS/, dpt_rb_*/, dpt_disp_*/
 authority: guidance
 defers_to:
   - guidelines/project-charter.md
@@ -31,27 +31,27 @@ siblings:
 
 ## Purpose
 
-本文件定义 `DPT_FRAMEWORK/` 和 `dpt_rb_*` / `dpt_disp_*` 的目录和权威边界。它只说明东西应该放在哪里、谁是只读定义、谁是运行时真相，以及 active runtime bundle root 如何锚定 runtime path；不定义具体 schema 字段、CLI flags、状态机或 gate 规则。
+本文件定义 `DEEP_RESEARCH_HARNESS/` 和 `dpt_rb_*` / `dpt_disp_*` 的目录和权威边界。它只说明东西应该放在哪里、谁是只读定义、谁是运行时真相，以及 active runtime bundle root 如何锚定 runtime path；不定义具体 schema 字段、CLI flags、状态机或 gate 规则。
 
 核心规则：
 
 ```text
-DPT_FRAMEWORK/ = read-only framework assets
+DEEP_RESEARCH_HARNESS/ = read-only framework assets
 dpt_rb_*/      = mutable production run bundle root
 dpt_disp_*/    = mutable disposable experiment bundle root
 ```
 
-Active runtime bundle root（简称 active bundle root）是当前 run、CLI invocation 或 controlled experiment 明确选中的那一个 `dpt_rb_*` / `dpt_disp_*` 目录。运行中发生的用户输入、gate attempt、pass/fail、repair、waiting/block、trace、artifact、delegated work-unit attempt 和 final output 都必须写入 active bundle root，不能写回 framework。
+Active runtime bundle root（简称 current run bundle root）是当前 run、CLI invocation 或 controlled experiment 明确选中的那一个 `dpt_rb_*` / `dpt_disp_*` 目录。运行中发生的用户输入、gate attempt、pass/fail、repair、waiting/block、trace、artifact、delegated work-unit attempt 和 final output 都必须写入 current run bundle root，不能写回 framework。
 
-裸 runtime path 默认以 active bundle root 为根：`rb_queue.json`、`rb_trace.jsonl`、`rb_output_declarations.jsonl`、`reference/`、`artifacts/`、`_cache/`、`_logs/`、`final/`、`_work_units/...` 都不是 repo-root path，也不是 `DPT_FRAMEWORK/` path，除非文本显式写出其他根。
+裸 runtime path 默认以 current run bundle root 为根：`rb_queue.json`、`rb_trace.jsonl`、`rb_output_declarations.jsonl`、`reference/`、`artifacts/`、`_cache/`、`_logs/`、`final/`、`_work_units/...` 都不是 repo-root path，也不是 `DEEP_RESEARCH_HARNESS/` path，除非文本显式写出其他根。
 
 三种 coordinate 必须分开理解：
 
-- `repo_command_root`：执行 `node DPT_FRAMEWORK/...` 的仓库根。它只是命令位置，可能同时包含多个 bundle，不承载某次 run 的 truth。
-- `framework_root`：`DPT_FRAMEWORK/`。它是 reusable framework assets 根，包含 schema、CLI、engine、workflow nodes、templates 和 command playbooks，运行时只读。
+- `repo_command_root`：执行 `node DEEP_RESEARCH_HARNESS/...` 的仓库根。它只是命令位置，可能同时包含多个 bundle，不承载某次 run 的 truth。
+- `framework_root`：`DEEP_RESEARCH_HARNESS/`。它是 reusable framework assets 根，包含 schema、CLI、engine、workflow nodes、templates 和 command playbooks，运行时只读。
 - `active_bundle_root`：本次 run、CLI invocation、task card 或实验选中的 `dpt_rb_*` / `dpt_disp_*`。它是唯一 mutable runtime truth 根。
 
-当前 v1 只有一个 canonical Deep Research workflow package，因此 workflow-foundation 路由使用 `DPT_FRAMEWORK/workflows/manifest.json` 和 `DPT_FRAMEWORK/workflows/nodes/`，不使用 `workflows/<workflow-name>/` namespace。这不限制 run bundle 数量；同一套 framework 仍必须支持多个互相隔离的 `dpt_rb_*`。
+当前 v1 只有一个 canonical Deep Research workflow package，因此 workflow-foundation 路由使用 `DEEP_RESEARCH_HARNESS/workflows/manifest.json` 和 `DEEP_RESEARCH_HARNESS/workflows/nodes/`，不使用 `workflows/<workflow-name>/` namespace。这不限制 run bundle 数量；同一套 framework 仍必须支持多个互相隔离的 `dpt_rb_*`。
 
 ---
 
@@ -76,24 +76,24 @@ This file cannot decide:
 This boundary follows [`evolution-simple-reliable-control.md`](evolution-simple-reliable-control.md). Directory separation is valuable because it keeps the truth path short:
 
 ```text
-framework definition -> explicit CLI/check -> active bundle authority -> Agent-facing feedback
+framework definition -> explicit CLI/check -> current run bundle authority -> Agent-facing feedback
 ```
 
 - Runtime checks should read the direct bundle authority for the truth type they validate.
 - `_cache/`, Markdown projections, logs, and console output may explain or render authority; they SHALL NOT become an intermediate truth chain when the direct JSON/YAML/JSONL/ledger surface is available.
 - A new projection should reduce Agent reading cost, not create another state that must be synchronized, recovered, and validated.
-- Framework/runtime compatibility should be handled at explicit schema/CLI boundaries, not by copying mutable state into `DPT_FRAMEWORK/` or maintaining shadow bundle roots.
+- Framework/runtime compatibility should be handled at explicit schema/CLI boundaries, not by copying mutable state into `DEEP_RESEARCH_HARNESS/` or maintaining shadow bundle roots.
 
 ---
 
 ## Framework Assets
 
-`DPT_FRAMEWORK/` is read-only during workflow execution. It may contain code, templates, definitions, schemas, and Agent-facing instructions. It must not contain per-run results.
+`DEEP_RESEARCH_HARNESS/` is read-only during workflow execution. It may contain code, templates, definitions, schemas, and Agent-facing instructions. It must not contain per-run results.
 
 Current executable framework surfaces:
 
 ```text
-DPT_FRAMEWORK/
+DEEP_RESEARCH_HARNESS/
   COMMANDS.md
   cli/
     instantiate-run-bundle.mjs
@@ -110,7 +110,7 @@ DPT_FRAMEWORK/
 Workflow-foundation route map:
 
 ```text
-DPT_FRAMEWORK/
+DEEP_RESEARCH_HARNESS/
   workflows/
     manifest.json
     nodes/
@@ -141,17 +141,17 @@ DPT_FRAMEWORK/
   command_playbook/
 ```
 
-`DPT_FRAMEWORK/workflows/` is the current Agent-facing workflow surface: manifest and Markdown nodes.
+`DEEP_RESEARCH_HARNESS/workflows/` is the current Agent-facing workflow surface: manifest and Markdown nodes.
 
-`DPT_FRAMEWORK/schema/contracts/` contains executable schema contracts.
+`DEEP_RESEARCH_HARNESS/schema/contracts/` contains executable schema contracts.
 
-`DPT_FRAMEWORK/schema/gate_definitions/` is the current location for read-only gate definition JSON. These files define what each gate checks; they are not run data and must not store pass/fail status.
+`DEEP_RESEARCH_HARNESS/schema/gate_definitions/` is the current location for read-only gate definition JSON. These files define what each gate checks; they are not run data and must not store pass/fail status.
 
-`DPT_FRAMEWORK/engine/` contains deterministic engine code.
+`DEEP_RESEARCH_HARNESS/engine/` contains deterministic engine code.
 
-`DPT_FRAMEWORK/cli/` contains executable framework commands. Gate-specific wrappers target `DPT_FRAMEWORK/cli/gates/`.
+`DEEP_RESEARCH_HARNESS/cli/` contains executable framework commands. Gate-specific wrappers target `DEEP_RESEARCH_HARNESS/cli/gates/`.
 
-`DPT_FRAMEWORK/rb_templates/` contains templates copied or materialized into new runtime bundles during instantiation. Only files that become initial bundle content belong here.
+`DEEP_RESEARCH_HARNESS/rb_templates/` contains templates copied or materialized into new runtime bundles during instantiation. Only files that become initial bundle content belong here.
 
 ---
 
@@ -159,7 +159,7 @@ DPT_FRAMEWORK/
 
 Every `dpt_rb_*` production run and `dpt_disp_*` disposable experiment is a mutable runtime bundle. When selected for the current step, that directory is the active runtime bundle root and contains that run's current truth.
 
-The active bundle root is selected explicitly: by a CLI bundle argument, by the run entry, by the playbook setup, or by the current task card. It must not be inferred from repository root, `DPT_FRAMEWORK/`, chat memory, process working directory, or the last bundle mentioned in conversation.
+The current run bundle root is selected explicitly: by a CLI bundle argument, by the run entry, by the playbook setup, or by the current task card. It must not be inferred from repository root, `DEEP_RESEARCH_HARNESS/`, chat memory, process working directory, or the last bundle mentioned in conversation.
 
 Current production bundle routing:
 
@@ -222,10 +222,10 @@ Gate files have three different meanings and must not be mixed:
 
 | Concern | Location | Mutability | Meaning |
 |---------|----------|------------|---------|
-| Gate transition-table contract | `DPT_FRAMEWORK/schema/contracts/gate.mjs` | read-only | Defines gate machine states, events, transitions, and transition validation. |
-| Gate definition target | `DPT_FRAMEWORK/schema/gate_definitions/gate-*.definition.json` | read-only | Defines what a gate checks. |
-| Gate engine target | `DPT_FRAMEWORK/engine/gates/` | read-only | Loads/evaluates definitions against a bundle. |
-| Gate CLI wrapper target | `DPT_FRAMEWORK/cli/gates/check-gate-*.mjs` | read-only | Runs one gate against an explicit bundle. |
+| Gate transition-table contract | `DEEP_RESEARCH_HARNESS/schema/contracts/gate.mjs` | read-only | Defines gate machine states, events, transitions, and transition validation. |
+| Gate definition target | `DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-*.definition.json` | read-only | Defines what a gate checks. |
+| Gate engine target | `DEEP_RESEARCH_HARNESS/engine/gates/` | read-only | Loads/evaluates definitions against a bundle. |
+| Gate CLI wrapper target | `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-*.mjs` | read-only | Runs one gate against an explicit bundle. |
 | Gate runtime status | `<active-bundle-root>/rb_status.json` | mutable | Records current run's phase/gate state summary. |
 | Gate attempt history | `<active-bundle-root>/rb_trace.jsonl` | append-only | Records gate attempts, pass/fail, repair, waiting/block events. |
 | Gate output snapshot | `<active-bundle-root>/_cache/gate-results/` | mutable cache | Optional latest CLI output; not main authority. |
@@ -233,10 +233,10 @@ Gate files have three different meanings and must not be mixed:
 Gate CLI commands MUST accept an explicit bundle path. The workflow-foundation target examples use `--bundle`, but the concrete flag shape belongs to the executable command contract:
 
 ```bash
-node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle dpt_rb_example
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs --bundle dpt_rb_example
 ```
 
-Gate CLI commands MUST NOT infer active run state from chat memory or write results into `DPT_FRAMEWORK/`.
+Gate CLI commands MUST NOT infer active run state from chat memory or write results into `DEEP_RESEARCH_HARNESS/`.
 
 ---
 
@@ -299,31 +299,31 @@ Gate CLI 是纯确定性检查器——遍历 rules、执行 check、返回结�
 - **MUST**：trace check event 记录 gate 的完整回答（passed + next + inspect + advice），不止 passed/failed。
 - **MUST NOT**：用 `console.log` 替代 trace 做 pass/fail 裁决。
 
-Runtime continuity and logging details live in `guidelines/logging-conventions.md`: after context loss, recover from active bundle control files and `rb_trace.jsonl`; use `_logs/run.log` only for diagnosis.
+Runtime continuity and logging details live in `guidelines/logging-conventions.md`: after context loss, recover from current run bundle control files and `rb_trace.jsonl`; use `_logs/run.log` only for diagnosis.
 
 ---
 
 ## MUST
 
-- MUST treat `DPT_FRAMEWORK/` as read-only during run execution.
+- MUST treat `DEEP_RESEARCH_HARNESS/` as read-only during run execution.
 - MUST store mutable runtime truth inside the active runtime bundle root, currently an explicit `dpt_rb_*` or `dpt_disp_*` directory.
 - MUST distinguish framework definition from runtime state.
-- MUST put read-only gate definitions under `DPT_FRAMEWORK/schema/gate_definitions/` when gate definitions are implemented.
+- MUST put read-only gate definitions under `DEEP_RESEARCH_HARNESS/schema/gate_definitions/` when gate definitions are implemented.
 - MUST put current run phase/gate status in `rb_status.json`.
 - MUST put gate attempts, pass/fail events, repair events, waiting/block events, and audit history in `rb_trace.jsonl`.
 - MUST require gate CLIs to receive an explicit bundle path.
-- MUST resolve bare runtime paths such as `rb_queue.json`, `reference/`, `_cache/`, `_logs/`, and `_work_units/...` under the active bundle root.
+- MUST resolve bare runtime paths such as `rb_queue.json`, `reference/`, `_cache/`, `_logs/`, and `_work_units/...` under the current run bundle root.
 - MUST treat `_cache/` as rebuildable diagnostic/projection space, not primary authority.
 - MUST keep runtime quality checks on the shortest direct authority path available for the truth type.
 
 ## MUST NOT
 
-- MUST NOT write gate result, HITL answer, repair attempt, trace, artifact, or final output into `DPT_FRAMEWORK/`.
+- MUST NOT write gate result, HITL answer, repair attempt, trace, artifact, or final output into `DEEP_RESEARCH_HARNESS/`.
 - MUST NOT copy gate definitions into every bundle as runtime state.
-- MUST NOT put mutable run data under `DPT_FRAMEWORK/schema/`, `DPT_FRAMEWORK/workflows/`, `DPT_FRAMEWORK/engine/`, or `DPT_FRAMEWORK/cli/`.
+- MUST NOT put mutable run data under `DEEP_RESEARCH_HARNESS/schema/`, `DEEP_RESEARCH_HARNESS/workflows/`, `DEEP_RESEARCH_HARNESS/engine/`, or `DEEP_RESEARCH_HARNESS/cli/`.
 - MUST NOT put framework definitions in `_cache/`.
 - MUST NOT treat chat memory, progress summaries, or console output as runtime truth.
-- MUST NOT use guideline prose to override accepted specs, executable schema, CLI verdicts, or active bundle state.
+- MUST NOT use guideline prose to override accepted specs, executable schema, CLI verdicts, or current run bundle state.
 - MUST NOT validate a projection of a projection or use cache/log/console as a substitute for direct bundle authority when that authority is readable.
 
 ---
@@ -332,16 +332,16 @@ Runtime continuity and logging details live in `guidelines/logging-conventions.m
 
 | If the artifact is... | Put it in |
 |-----------------------|-----------|
-| Agent-facing lifecycle node target | `DPT_FRAMEWORK/workflows/nodes/phases/` |
-| Agent-facing shared workflow context target | `DPT_FRAMEWORK/workflows/nodes/shared/` |
-| Workflow manifest target | `DPT_FRAMEWORK/workflows/manifest.json` |
-| Operator/Agent command instructions | `DPT_FRAMEWORK/command_playbook/` |
-| Gate transition-table contract target | `DPT_FRAMEWORK/schema/contracts/gate.mjs` |
-| Gate rule definition target | `DPT_FRAMEWORK/schema/gate_definitions/gate-*.definition.json` |
-| Gate evaluator/loader code target | `DPT_FRAMEWORK/engine/gates/` |
-| Gate shared helper code target | `DPT_FRAMEWORK/engine/helpers/` |
-| Gate CLI wrapper target | `DPT_FRAMEWORK/cli/gates/check-gate-*.mjs` |
-| Bundle initial template | `DPT_FRAMEWORK/rb_templates/` |
+| Agent-facing lifecycle node target | `DEEP_RESEARCH_HARNESS/workflows/nodes/phases/` |
+| Agent-facing shared workflow context target | `DEEP_RESEARCH_HARNESS/workflows/nodes/shared/` |
+| Workflow manifest target | `DEEP_RESEARCH_HARNESS/workflows/manifest.json` |
+| Operator/Agent command instructions | `DEEP_RESEARCH_HARNESS/command_playbook/` |
+| Gate transition-table contract target | `DEEP_RESEARCH_HARNESS/schema/contracts/gate.mjs` |
+| Gate rule definition target | `DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-*.definition.json` |
+| Gate evaluator/loader code target | `DEEP_RESEARCH_HARNESS/engine/gates/` |
+| Gate shared helper code target | `DEEP_RESEARCH_HARNESS/engine/helpers/` |
+| Gate CLI wrapper target | `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-*.mjs` |
+| Bundle initial template | `DEEP_RESEARCH_HARNESS/rb_templates/` |
 | Current run profile / HITL data | `<active-bundle-root>/rb_profile.yaml` |
 | Current run workflow status | `<active-bundle-root>/rb_status.json` |
 | Current run queue state | `<active-bundle-root>/rb_queue.json` |

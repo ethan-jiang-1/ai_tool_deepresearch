@@ -2,7 +2,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { projectWaveGatePublicVerdict } from '../../../DPT_FRAMEWORK/engine/helpers/wave-gate-verdict.mjs';
+import { projectWaveGatePublicVerdict } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-gate-verdict.mjs';
 
 describe('Wave Gate public verdict projection', () => {
   it('projects a clean routed pass without quality debt', () => {

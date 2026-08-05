@@ -8,9 +8,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
-import { applyCanonicalTopicState, inspectCanonicalTopicState } from '../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
-import { inspectPostFinalHandoffStage } from '../../DPT_FRAMEWORK/engine/helpers/handoff-helpers.mjs';
-import { inspectPostFinalRecovery } from '../../DPT_FRAMEWORK/engine/helpers/post-final-recovery.mjs';
+import { applyCanonicalTopicState, inspectCanonicalTopicState } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { inspectPostFinalHandoffStage } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs';
+import { inspectPostFinalRecovery } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs';
 import { requestFromInspection } from '../integration/cli/post-final-recovery-fixture.mjs';
 import {
   advanceStatus, cleanupRoot, createTempRoot, enterPhase, readStatus, readTrace,
@@ -28,7 +28,7 @@ function applyC5(bundle, label) {
   const inputPath = join(root, `${label}-request.json`);
   writeFileSync(inputPath, JSON.stringify(requestFromInspection(inspection)));
   const result = runNode([
-    join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-post-final-recovery.mjs'),
+    join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-post-final-recovery.mjs'),
     'apply', '--bundle', bundle, '--input', inputPath,
   ]);
   assert.equal(JSON.parse(result.stdout).verdict, 'committed');
@@ -37,7 +37,7 @@ function applyC5(bundle, label) {
 }
 
 function applyStyle(bundle) {
-  runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/apply-research-style.mjs'), '--bundle', bundle, '--style', 'quick_factual']);
+  runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs'), '--bundle', bundle, '--style', 'quick_factual']);
 }
 
 function incrementCount(bundle) {

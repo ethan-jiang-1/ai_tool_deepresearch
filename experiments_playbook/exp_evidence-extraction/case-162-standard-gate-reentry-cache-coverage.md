@@ -54,7 +54,7 @@ Fixture-backed standard case. The Markdown controller drives real disposable bun
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs eex_gate_reentry_cache --case case-162 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync } from 'node:fs';
 import {
@@ -133,13 +133,13 @@ JS
 ## Step 2: [MAIN/SHELL] Direct Orphan Cannot Satisfy Gate Or Reentry
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { referenceContent, recordPlaybookCheck, sourceYamlContent } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-import { auditFileObservability } from './DPT_FRAMEWORK/engine/helpers/file-observability.mjs';
-import { readOutputDeclarations } from './DPT_FRAMEWORK/engine/helpers/gate-helpers-readers.mjs';
+import { auditFileObservability } from './DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs';
+import { readOutputDeclarations } from './DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-readers.mjs';
 import { spawnSync } from 'node:child_process';
 
 const bundle = process.argv[2];
@@ -155,7 +155,7 @@ writeFileSync(path.join(bundle, 'artifacts/wave0/topic-b/source.yaml'), sourceYa
   title: 'Topic B Orphan'
 }));
 
-const gate = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs', '--bundle', bundle, '--current-node', 'phases/phase-wave0.md'], { encoding: 'utf8' });
+const gate = spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs', '--bundle', bundle, '--current-node', 'phases/phase-wave0.md'], { encoding: 'utf8' });
 writeFileSync(`${bundle}/case-162-gate-with-orphan.json`, gate.stdout);
 
 const fo = auditFileObservability(bundle, {
@@ -166,7 +166,7 @@ const fo = auditFileObservability(bundle, {
 writeFileSync(`${bundle}/case-162-file-observability-with-orphan.json`, `${JSON.stringify(fo, null, 2)}\n`);
 
 writeFileSync(`${bundle}/rb_status.json`, `${JSON.stringify({ bundle: path.basename(bundle), current_gate: 'wave0_complete', next_gate: 'wave1_complete', current_mode: 'execution', state: 'in_progress' }, null, 2)}\n`);
-const reentry = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/check-reentry.mjs', '--bundle', bundle, '--at', 'wave0_complete'], { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+const reentry = spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs', '--bundle', bundle, '--at', 'wave0_complete'], { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
 writeFileSync(`${bundle}/case-162-reentry-with-orphan.json`, reentry.stdout);
 
 const parsedGate = JSON.parse(gate.stdout);
@@ -193,7 +193,7 @@ JS
 ## Step 3: [MAIN/SHELL] Repair Topic-B Through Work-Unit Submit And Gate Passes
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -205,7 +205,7 @@ import {
   referenceContent,
   sourceYamlExtra
 } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-import { countReferences } from './DPT_FRAMEWORK/engine/helpers/ref-count.mjs';
+import { countReferences } from './DEEP_RESEARCH_HARNESS/engine/helpers/ref-count.mjs';
 import { spawnSync } from 'node:child_process';
 
 const bundle = process.argv[2];
@@ -230,7 +230,7 @@ const repaired = claimAndSubmitFixtureWorkUnit(bundle, {
 });
 
 writeFileSync(`${bundle}/rb_status.json`, `${JSON.stringify({ bundle: path.basename(bundle), current_gate: 'seed_topics_ready', next_gate: 'wave0_complete', current_mode: 'execution', state: 'in_progress' }, null, 2)}\n`);
-const gate = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs', '--bundle', bundle, '--current-node', 'phases/phase-wave0.md'], { encoding: 'utf8' });
+const gate = spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs', '--bundle', bundle, '--current-node', 'phases/phase-wave0.md'], { encoding: 'utf8' });
 writeFileSync(`${bundle}/case-162-gate-clean.json`, gate.stdout);
 const parsedGate = JSON.parse(gate.stdout);
 const refCount = countReferences(bundle, { source: 'ledger', targetGlob: 'reference/topic-a*.md', topic: 'topic-a' });
@@ -257,14 +257,14 @@ JS
 ## Step 4: [MAIN/SHELL] Submitted Cache Drift Is Detected Downstream
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-import { checkCacheCoverage } from './DPT_FRAMEWORK/engine/helpers/gate-helpers-checks.mjs';
-import { auditFileObservability } from './DPT_FRAMEWORK/engine/helpers/file-observability.mjs';
-import { readOutputDeclarations } from './DPT_FRAMEWORK/engine/helpers/gate-helpers-readers.mjs';
+import { checkCacheCoverage } from './DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs';
+import { auditFileObservability } from './DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs';
+import { readOutputDeclarations } from './DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-readers.mjs';
 import { spawnSync } from 'node:child_process';
 
 const bundle = process.argv[2];
@@ -278,7 +278,7 @@ const fo = auditFileObservability(bundle, {
 });
 writeFileSync(`${bundle}/case-162-file-observability-drift.json`, `${JSON.stringify(fo, null, 2)}\n`);
 writeFileSync(`${bundle}/rb_status.json`, `${JSON.stringify({ bundle: path.basename(bundle), current_gate: 'wave0_complete', next_gate: 'wave1_complete', current_mode: 'execution', state: 'in_progress' }, null, 2)}\n`);
-const reentry = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/check-reentry.mjs', '--bundle', bundle, '--at', 'wave0_complete'], { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+const reentry = spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs', '--bundle', bundle, '--at', 'wave0_complete'], { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
 writeFileSync(`${bundle}/case-162-reentry-drift.json`, reentry.stdout);
 const parsedReentry = JSON.parse(reentry.stdout);
 recordPlaybookCheck(bundle, {
@@ -307,7 +307,7 @@ JS
 ## Step 5: [MAIN/SHELL] Trace Verdict
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 const bundle = process.argv[2];
 console.log(`Native checks recorded for ${bundle}; Supervisor finalizer is authoritative.`);
@@ -321,6 +321,6 @@ PASS means submitted work-unit ledger rows, not filesystem-only artifacts, are t
 ## Step 7: [MAIN/SHELL] Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```

@@ -31,7 +31,7 @@ Fixture-backed controlled Engine proof. The normalized observations are syntheti
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs actor_preflight --case case-407 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -47,7 +47,7 @@ import {
 } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const bundle = process.argv[2];
-const cli = path.resolve('DPT_FRAMEWORK/cli/operate-work-unit.mjs');
+const cli = path.resolve('DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs');
 writeMinimalStatus(bundle);
 writeMinimalPlan(bundle);
 
@@ -78,8 +78,8 @@ Expected: three checks pass. The first two no-claim calls preserve queue bytes a
 ## Native completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Light health, audit, preservation, and optional clean-PASS cleanup.

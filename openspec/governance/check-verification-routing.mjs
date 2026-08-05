@@ -4,8 +4,8 @@ import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'n
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parse as parseYaml } from 'yaml';
-import { parseMdFrontmatter } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
-import { parsePlaybookManifest } from '../../DPT_FRAMEWORK/host_tools/lib/agent-experiment-contract.mjs';
+import { parseMdFrontmatter } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
+import { parsePlaybookManifest } from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/agent-experiment-contract.mjs';
 import { parseVerificationRoutingPlan } from './verification-routing-contract.mjs';
 
 function usage() {
@@ -98,7 +98,7 @@ if (mode === 'assets') {
       continue;
     }
     if (item.test_class !== 'agent_flow_e2e') continue;
-    const validated = spawnSync(process.execPath, [join(root, 'DPT_FRAMEWORK', 'cli', 'validate-playbook.mjs'), declared], { cwd: root, encoding: 'utf8' });
+    const validated = spawnSync(process.execPath, [join(root, 'DEEP_RESEARCH_HARNESS', 'cli', 'validate-playbook.mjs'), declared], { cwd: root, encoding: 'utf8' });
     if (validated.status !== 0) fail(item.id, 'canonical playbook validation failed', item.asset.path);
     let frontmatter;
     try { frontmatter = parseMdFrontmatter(readFileSync(declared, 'utf8')); } catch { frontmatter = {}; }

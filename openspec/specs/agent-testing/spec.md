@@ -18,7 +18,7 @@ Current main spec Purpose SHALL describe command experiments as case/cost playbo
 - **AND** it SHALL NOT name obsolete simple/medium/complex test filenames as current runnable proof
 
 ### Requirement: Trace 系统支持独立 trace 实例 (AGT-001)
-`DPT_FRAMEWORK/engine/trace.mjs` 模块 SHALL 提供 `createTrace(filePath, options?)` 工厂函数，每次调用返回独立的 trace 实例（无共享状态）。每个测试脚本 SHALL 调用 `createTrace()` 创建自己的 trace 实例。Node SHALL 通过 `trace.traceEntry()` 自动 trace, 不硬编码文件名。
+`DEEP_RESEARCH_HARNESS/engine/trace.mjs` 模块 SHALL 提供 `createTrace(filePath, options?)` 工厂函数，每次调用返回独立的 trace 实例（无共享状态）。每个测试脚本 SHALL 调用 `createTrace()` 创建自己的 trace 实例。Node SHALL 通过 `trace.traceEntry()` 自动 trace, 不硬编码文件名。
 
 #### Scenario: 每个测试独立 trace 文件
 - **WHEN** simple test 设 `const trace = createTrace('dpt_disp_gl_simple/rb_trace.jsonl')` 且 medium test 设 `const trace = createTrace('dpt_disp_gl_medium/rb_trace.jsonl')`

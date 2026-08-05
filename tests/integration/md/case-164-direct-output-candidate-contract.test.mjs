@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parse as parseYaml } from 'yaml';
 
-import { PlaybookFrontmatterSchema } from '../../../DPT_FRAMEWORK/schema/contracts/playbook.mjs';
+import { PlaybookFrontmatterSchema } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/playbook.mjs';
 
 const CASE_PATH = 'experiments_playbook/exp_evidence-extraction/case-164-heavy-direct-output-candidate-contract.md';
 const MANIFEST_PATH = 'experiments_playbook/PLAYBOOK_MANIFEST.md';

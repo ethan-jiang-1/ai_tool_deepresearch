@@ -45,9 +45,9 @@ The Playbook Agent creates one disposable verdict bundle and invokes the real pr
 
 ```bash
 V=$(node experiments_env/shared/new-disposable-bundle.mjs log_startup_verdict --case case-73 --target-dir {{CASE_RUN_ROOT_SH}} --force)
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$V"
-B=$(node DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs log_startup --target-dir {{CASE_RUN_ROOT_SH}} 2>&1 | tail -1)
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role production-subject --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$V"
+B=$(node DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs log_startup --target-dir {{CASE_RUN_ROOT_SH}} 2>&1 | tail -1)
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role production-subject --path "$B"
 echo "B=$B"
 
 # 写 minimal plan
@@ -83,9 +83,9 @@ cat "$B/_logs/run.log"
 ## Step 2: 跑 instantiation-complete gate
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
 
-node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate instantiation-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs \
+node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate instantiation-complete -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-instantiation-complete.mjs \
   --bundle "$B" --current-node "phases/phase-instantiation.md" 2>&1 || true
 
 echo "gate instantiation-complete: done"
@@ -98,9 +98,9 @@ echo "gate instantiation-complete: done"
 ## Step 3: 跑 setup-ready gate
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
 
-node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs \
+node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate setup-ready -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs \
   --bundle "$B" --current-node "phases/phase-setup.md" 2>&1 || true
 
 echo "gate setup-ready: done"
@@ -113,9 +113,9 @@ echo "gate setup-ready: done"
 ## Step 4: 跑 seed-topics-ready gate
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
 
-node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs \
+node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate seed-topics-ready -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-seed-topics-ready.mjs \
   --bundle "$B" --current-node "phases/phase-seed-topics.md" 2>&1 || true
 
 echo "gate seed-topics-ready: done"
@@ -128,15 +128,15 @@ echo "gate seed-topics-ready: done"
 ## Step 5: Agent 写 phase 日志
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
 
 # 模拟 Phase Agent 按照 phase node ## Log 段写日志
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --level info --msg "phase:instantiation START"
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --level info --msg "phase:instantiation END — gate PASS"
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --level info --msg "phase:setup START"
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --level info --msg "phase:setup END — gate FAIL"
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --level info --msg "phase:seed-topics START"
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --level info --msg "phase:seed-topics END — gate FAIL"
+node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle "$B" --level info --msg "phase:instantiation START"
+node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle "$B" --level info --msg "phase:instantiation END — gate PASS"
+node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle "$B" --level info --msg "phase:setup START"
+node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle "$B" --level info --msg "phase:setup END — gate FAIL"
+node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle "$B" --level info --msg "phase:seed-topics START"
+node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle "$B" --level info --msg "phase:seed-topics END — gate FAIL"
 
 echo "Agent phase logs: done"
 ```
@@ -148,18 +148,18 @@ echo "Agent phase logs: done"
 ## Step 6: 验证 log + timeline
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
 
 echo "=== _logs/run.log ==="
 cat "$B/_logs/run.log"
 
 echo ""
 echo "=== --timeline ==="
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B" --timeline 2>&1
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "$B" --timeline 2>&1
 
 echo ""
 echo "=== --summary ==="
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B" --summary 2>&1
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "$B" --summary 2>&1
 ```
 
 → 预期：timeline 缝合 `[trace]` + `[log]`，按 ts 排序。Summary 显示 pass/fail 表 + log 行数。
@@ -169,8 +169,8 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B" --summary 2>&1
 ## Step 7: 验证并记录 verdict checks
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
-V=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
+V=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" "$V" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -203,7 +203,7 @@ const hasPhaseLog = log.includes('phase:instantiation START') && log.includes('p
 
 // Timeline
 const { execSync } = await import('node:child_process');
-const tl = execSync(`node DPT_FRAMEWORK/cli/inspect-bundle.mjs "${process.argv[2]}" --timeline`, { encoding: 'utf-8' });
+const tl = execSync(`node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "${process.argv[2]}" --timeline`, { encoding: 'utf-8' });
 const hasTraceInTl = tl.includes('[trace]');
 const hasLogInTl = tl.includes('[log]');
 const noUnparsed = !tl.includes('[unparsed]');
@@ -260,9 +260,9 @@ JS
 **PASS 含义**：从 `instantiate-run-bundle` 到 HITL1 前的完整启动链路，log + trace 双通道完整、格式统一、可缝合。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
-V=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$V" --bundle "production-subject=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
+V=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$V" --bundle "production-subject=$B"
 ```
 
 Stop after native completion. The Supervisor runs Standard health on both declared bundles and owns durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

@@ -1,0 +1,47 @@
+# Bundle Map — {{name}}
+
+本文件是 passive bundle map：它帮助 human/Agent reload current run bundle root 的内容布局。
+它不是 lifecycle phase node、command playbook、queue authority、gate authority、handoff authority 或 runtime state source。
+
+## Active Runtime Coordinates
+
+- repo_command_root: `{{repo_command_root_relpath}}`；从 current run bundle root 到创建时 repo command root 的相对导航提示。
+- framework_root: `{{framework_root_relpath}}`；从 current run bundle root 到创建时 canonical read-only Deep Research Harness assets 的相对导航提示。
+- current_run_bundle_root: 本文件所在 runtime bundle root；所有 mutable runtime truth 都在这里。
+- bundle_name: `{{name}}`
+- bare runtime paths, including `rb_queue.json`, `reference/`, `artifacts/`, `_cache/`, `_logs/`, `_work_units/`, and `final/`, resolve under current_run_bundle_root.
+
+## Research Content Map
+
+- `seed_topics/`: seed topic Markdown files materialized from `rb_plan.md` topic registry.
+- `reference/`: flat evidence/reference projections plus `_INDEX.md` inventory and `README.md` navigation.
+- `artifacts/wave0/`: wave 0 shared source lists and early topic artifacts.
+- `artifacts/wave1/`: per-topic deepening artifacts such as `evidence-summary.md` and `question-list.md`.
+- `artifacts/wave2/`: synthesis, cross-topic ledger, finding index, and cross-topic projections.
+- `final/`: terminal report artifacts.
+- `_cache/`: rebuildable source/cache material; useful for provenance inspection but not authority by itself.
+
+## Runtime Control Map
+
+- `rb_plan.md`: research plan and topic registry.
+- `rb_profile.yaml`: HITL answers and user-facing preference decisions.
+- `rb_status.json`: runtime status summary. Non-null `current_node` is the current loaded lifecycle Markdown coordinate; `current_gate` and `next_gate` are gate-window state.
+- `rb_queue.json`: queue v2 state.
+- `rb_trace.jsonl`: append-only runtime audit trace.
+- `rb_output_declarations.jsonl`: submitted work-unit output declaration ledger read by gates for delegated Agent outputs.
+- `_work_units/`: Engine-owned work-unit allocation, envelopes, runtime receipts, results, and submit records.
+
+## Diagnostics Map
+
+- `_logs/`: diagnostic logs such as `_logs/run.log`; logs help debugging but do not decide gate verdicts.
+- `_diagnostics/`: diagnostic artifacts when emitted by framework commands.
+- `_checkpoints/`: checkpoint snapshots for reentry/drift comparison when present.
+- `_cache/gate-results/`: rebuildable gate result cache when present.
+- `_cache/projections/`: rebuildable projections when present.
+
+## Reentry Pointers
+
+- Prefer non-null `rb_status.json.current_node` as the lifecycle Markdown coordinate to reload.
+- If `current_node` is `null` or absent, inspect `rb_trace.jsonl`, `_diagnostics/`, `_checkpoints/`, and run the accepted reentry diagnostic command; do not guess the active phase from `current_gate` alone.
+- Use the Deep Research Harness `RUN.md`, command playbooks, phase nodes, and Engine check/inspect/advice output for operating flow.
+- Do not infer gate pass, queue drain, submitted evidence coverage, phase completion, or stop authorization from this map file.

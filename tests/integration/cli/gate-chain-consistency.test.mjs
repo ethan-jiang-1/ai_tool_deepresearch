@@ -28,7 +28,7 @@ function run(cmd) {
 }
 
 function runGate(bundlePath, gateName, currentNode) {
-  const cmd = `node DPT_FRAMEWORK/cli/gates/check-gate-${gateName}.mjs --bundle "${bundlePath}" --current-node "${currentNode}"`;
+  const cmd = `node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-${gateName}.mjs --bundle "${bundlePath}" --current-node "${currentNode}"`;
   try {
     const out = run(cmd);
     return JSON.parse(out);
@@ -47,7 +47,7 @@ describe('Gate chain consistency (instantiation→hitl1→setup→seed-topics)',
     // Clean up any leftover from previous failed run
     if (existsSync(bundlePath)) rmSync(bundlePath, { recursive: true, force: true });
 
-    const out = run(`node DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs ${BUNDLE_NAME} --target-dir ${BUNDLES_DIR}`);
+    const out = run(`node DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs ${BUNDLE_NAME} --target-dir ${BUNDLES_DIR}`);
     bundlePath = out.trim().split('\n').pop(); // last line = absolute path
 
     assert.ok(existsSync(bundlePath), 'bundle directory must exist');
@@ -202,7 +202,7 @@ human_decision_checkpoints:
 
   // ── Use advance-status to move to hitl1 ──
   it('advances status to hitl1_recorded via advance-status CLI', () => {
-    const out = run(`node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "${bundlePath}" --to hitl1_recorded`);
+    const out = run(`node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "${bundlePath}" --to hitl1_recorded`);
     const parsed = JSON.parse(out);
     assert.equal(parsed.status, 'ok');
     assert.equal(parsed.current_gate, 'hitl1_recorded');
@@ -216,7 +216,7 @@ human_decision_checkpoints:
   // ── Gate 2: hitl1-recorded ──
   it('passes hitl1-recorded gate', () => {
     // Log hitl1_recorded trace event (simulates Agent completing HITL1 phase)
-    run(`node DPT_FRAMEWORK/cli/log-event.mjs --bundle "${bundlePath}" --event hitl1_recorded`);
+    run(`node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle "${bundlePath}" --event hitl1_recorded`);
 
     const result = runGate(bundlePath, 'hitl1-recorded', 'phases/phase-hitl1.md');
     assert.equal(result.check.passed, true,
@@ -227,7 +227,7 @@ human_decision_checkpoints:
 
   // ── Bootstrap sync into setup ──
   it('advances status to setup_ready via bootstrap-compatible advance-status CLI', () => {
-    const out = run(`node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "${bundlePath}" --to setup_ready`);
+    const out = run(`node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "${bundlePath}" --to setup_ready`);
     const parsed = JSON.parse(out);
     assert.equal(parsed.status, 'ok');
     assert.equal(parsed.current_gate, 'setup_ready');
@@ -249,7 +249,7 @@ human_decision_checkpoints:
 
   // ── Consume setup check.next, then sync setup source gate ──
   it('enters seed-topics then syncs setup_ready as the just-passed source gate', () => {
-    const entered = run(`node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "${bundlePath}" --node phases/phase-seed-topics.md`);
+    const entered = run(`node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "${bundlePath}" --node phases/phase-seed-topics.md`);
     assert.ok(entered.trim().length > 0, 'enter-phase should render the next control surface');
 
     const trace = readFileSync(join(bundlePath, 'rb_trace.jsonl'), 'utf-8').trim().split('\n').map(l => JSON.parse(l));
@@ -259,7 +259,7 @@ human_decision_checkpoints:
       e.handoff_source_gate === 'setup-ready'
     ), 'enter-phase should write route-bound seed-topics load_complete');
 
-    const out = run(`node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "${bundlePath}" --to setup_ready`);
+    const out = run(`node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "${bundlePath}" --to setup_ready`);
     const parsed = JSON.parse(out);
     assert.equal(parsed.status, 'ok');
     assert.equal(parsed.current_gate, 'setup_ready');
@@ -298,7 +298,7 @@ depends_on_topic_uids:${alpha ? ' []' : `\n  - ${TOPIC_ALPHA_UID}`}
     }
 
     // Log seed_topics_completion (simulates Agent completing seed-topic materialization)
-    run(`node DPT_FRAMEWORK/cli/log-event.mjs --bundle "${bundlePath}" --event seed_topics_completion --detail '{"topic_count":2}'`);
+    run(`node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle "${bundlePath}" --event seed_topics_completion --detail '{"topic_count":2}'`);
   });
 
   // ── Gate 4: seed-topics-ready ──

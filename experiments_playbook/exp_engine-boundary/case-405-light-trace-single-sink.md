@@ -56,7 +56,7 @@ Create a disposable bundle. This case then triggers trace writes from three sepa
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_trace_work_unit --case case-405 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeMinimalPlan, writeMinimalStatus } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 writeMinimalStatus(process.argv[2]);
@@ -73,7 +73,7 @@ Write one trace event through the current framework trace API, then read root `r
 
 ```bash
 node --input-type=module - "$B" <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
 
 const bundle = process.argv[2];
 const trace = createTrace(`${bundle}/rb_trace.jsonl`, { consoleEcho: false });
@@ -130,9 +130,9 @@ fs.writeFileSync(path.join(bundle, 'case405-queue-result.json'), `${JSON.stringi
   summary: 'queue trace sink checkpoint'
 }, null, 2)}\n`);
 JS
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue "$B" --task "$B/case405-queue.json" > "$B/case-405-queue-enqueue.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs claim "$B" --actor main-agent > "$B/case-405-queue-claim.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete "$B" --result "$B/case405-queue-result.json" > "$B/case-405-queue-complete.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs enqueue "$B" --task "$B/case405-queue.json" > "$B/case-405-queue-enqueue.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs claim "$B" --actor main-agent > "$B/case-405-queue-claim.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs complete "$B" --result "$B/case405-queue-result.json" > "$B/case-405-queue-complete.json"
 node - "$B" <<'JS'
 const fs = require('fs');
 const bundle = process.argv[2];
@@ -161,7 +161,7 @@ const task = queueItemForWorkUnit({
 const result = enqueueWorkUnitTask(bundle, task, { fileName: 'case405-work-unit.json' });
 console.log(JSON.stringify(result, null, 2));
 JS
-CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
+CLAIM_JSON=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_JSON" > "$B/case-405-work-unit-claim.json"
 WORK_ID=$(printf '%s\n' "$CLAIM_JSON" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.claimed_work_ids[0]);')
 RESULT_PATH=$(node --input-type=module - "$B" "$WORK_ID" <<'JS'
@@ -184,7 +184,7 @@ const fixture = writeFixtureResultForWorkUnit(bundle, {
 console.log(fixture.resultPath);
 JS
 )
-SUBMIT_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$RESULT_PATH")
+SUBMIT_JSON=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$RESULT_PATH")
 printf '%s\n' "$SUBMIT_JSON" > "$B/case-405-work-unit-submit.json"
 
 node - "$B" "$WORK_ID" <<'JS'
@@ -275,8 +275,8 @@ PASS means framework and controlled playbook trace writers converge on root `rb_
 ## Native completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Heavy health, audit, preservation, and optional clean-PASS cleanup.

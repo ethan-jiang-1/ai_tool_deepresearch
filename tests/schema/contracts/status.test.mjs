@@ -1,7 +1,7 @@
-// tests/schema/contracts/status.test.mjs — 1:1 for DPT_FRAMEWORK/schema/contracts/status.mjs
+// tests/schema/contracts/status.test.mjs — 1:1 for DEEP_RESEARCH_HARNESS/schema/contracts/status.mjs
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { StatusSchema } from '../../../DPT_FRAMEWORK/schema/contracts/status.mjs';
+import { StatusSchema } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/status.mjs';
 
 const valid = { current_mode: 'execution', state: 'not_started', current_gate: 'setup_ready', next_gate: 'seed_topics_ready' };
 

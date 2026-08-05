@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const CLI_DIR = join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli');
+const CLI_DIR = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli');
 
 const CLI_CONVENTION_INVENTORY = {
   'advance-status.mjs': {
@@ -144,7 +144,7 @@ function runNode(args, options = {}) {
 
 function runEmitGateResult(result) {
   const script = `
-    import { emitGateResult } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+    import { emitGateResult } from './DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
     emitGateResult(${JSON.stringify(result)});
   `;
   return runNode(['--input-type=module', '--eval', script]);
@@ -206,13 +206,13 @@ describe('CLI exit-code convention runtime representatives', () => {
   });
 
   it('non-gate binary utility remains documented binary behavior', () => {
-    const cli = join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'validate-bundle.mjs');
+    const cli = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'validate-bundle.mjs');
     const result = runNode([cli, join(REPO_ROOT, '__missing_bundle_for_exit_code_test__')]);
     assert.equal(result.status, 1);
   });
 
   it('log-event.mjs remains an always-0 diagnostic exception for missing args', () => {
-    const cli = join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'log-event.mjs');
+    const cli = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'log-event.mjs');
     const result = runNode([cli, '--level', 'info', '--msg', 'missing bundle']);
     assert.equal(result.status, 0);
   });

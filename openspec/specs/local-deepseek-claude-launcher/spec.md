@@ -4,15 +4,15 @@
 
 ## Purpose
 
-Define a repo-owned, deterministic, fail-closed Claude Code launcher for local Anthropic-compatible DeepSeek endpoints. The Node.js ESM launcher lives in `DPT_FRAMEWORK/host_tools/`; supported configuration values live only in the ignored repo-root `.env`, with their tracked contract in the repo-root `.env.example`.
+Define a repo-owned, deterministic, fail-closed Claude Code launcher for local Anthropic-compatible DeepSeek endpoints. The Node.js ESM launcher lives in `DEEP_RESEARCH_HARNESS/host_tools/`; supported configuration values live only in the ignored repo-root `.env`, with their tracked contract in the repo-root `.env.example`.
 
 The launcher parses supported `.env` keys as data, isolates inherited provider environment state, validates that the configured endpoint is a well-formed URL, provides a credential-safe `--check` preflight mode, and launches `claude` with transparent argument, stdio, exit-code, and signal passthrough. Except for the launcher-owned first argument `--check`, callers use normal Claude Code arguments.
 
-The launcher is a pre-trigger host tool — it operates before Claude Code initialization and before any DPT_FRAMEWORK entry point. It does not introduce a research workflow node, Engine API, bundle state, command playbook, background service, provider fallback, retry tree, or new npm dependency. It does not modify global Claude Code settings or append permission-bypass flags.
+The launcher is a pre-trigger host tool — it operates before Claude Code initialization and before any DEEP_RESEARCH_HARNESS entry point. It does not introduce a research workflow node, Engine API, bundle state, command playbook, background service, provider fallback, retry tree, or new npm dependency. It does not modify global Claude Code settings or append permission-bypass flags.
 ## Requirements
 ### Requirement: Repo-owned launcher and root configuration authority
 
-`DPT_FRAMEWORK/host_tools/claude-deepseek.mjs` SHALL remain the single user-executable Agent CLI Launcher entry. A non-executable pure module under `DPT_FRAMEWORK/host_tools/lib/` MAY own shared config validation and Claude invocation-plan construction so the direct entry and Autorun Supervisor cannot drift. Both SHALL resolve the same checked-in repository root and SHALL use the ignored repo-root `.env` as the sole supported provider configuration authority.
+`DEEP_RESEARCH_HARNESS/host_tools/claude-deepseek.mjs` SHALL remain the single user-executable Agent CLI Launcher entry. A non-executable pure module under `DEEP_RESEARCH_HARNESS/host_tools/lib/` MAY own shared config validation and Claude invocation-plan construction so the direct entry and Autorun Supervisor cannot drift. Both SHALL resolve the same checked-in repository root and SHALL use the ignored repo-root `.env` as the sole supported provider configuration authority.
 
 #### Scenario: Shared builder does not create a second launcher entry
 
@@ -23,7 +23,7 @@ The launcher is a pre-trigger host tool — it operates before Claude Code initi
 #### Scenario: script location
 
 - **WHEN** the launcher is installed
-- **THEN** `DPT_FRAMEWORK/host_tools/claude-deepseek.mjs` remains executable
+- **THEN** `DEEP_RESEARCH_HARNESS/host_tools/claude-deepseek.mjs` remains executable
 - **AND** its shared pure module uses Node.js >=20 and repository-approved built-ins only
 
 #### Scenario: .env loading
@@ -161,7 +161,7 @@ Direct `claude-deepseek.mjs` invocation SHALL continue to forward caller argumen
 
 #### Scenario: arguments forwarded
 
-- **WHEN** the launcher is invoked as `node DPT_FRAMEWORK/host_tools/claude-deepseek.mjs -p "hello" --verbose`
+- **WHEN** the launcher is invoked as `node DEEP_RESEARCH_HARNESS/host_tools/claude-deepseek.mjs -p "hello" --verbose`
 - **THEN** direct `claude` invocation receives the arguments `-p`, `hello`, `--verbose`
 
 #### Scenario: exit code preserved
@@ -268,7 +268,7 @@ Host-tool documentation SHALL retain the generic launcher's setup/check/transpar
 
 #### Scenario: README is present
 
-- **WHEN** a user or Agent navigates to `DPT_FRAMEWORK/host_tools/`
+- **WHEN** a user or Agent navigates to `DEEP_RESEARCH_HARNESS/host_tools/`
 - **THEN** `README.md` explains copying root `.env.example` to root `.env`, configuring the three required values, running `--check`, then passing normal Claude arguments
 
 #### Scenario: README documents agent transparency

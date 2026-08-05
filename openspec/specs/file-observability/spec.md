@@ -44,7 +44,7 @@ Current file-observability playbooks and fixtures SHALL use current work-unit or
 
 ### Requirement: Agent explanations SHALL be recorded as diagnostic trace/log entries
 
-The system SHALL extend `DPT_FRAMEWORK/cli/log-event.mjs` with an Agent-facing diagnostic mode for file explanations. The command SHALL be invokable without inline JavaScript and SHALL write a non-verdict diagnostic event to `rb_trace.jsonl` plus a human-readable line to `_logs/run.log`.
+The system SHALL extend `DEEP_RESEARCH_HARNESS/cli/log-event.mjs` with an Agent-facing diagnostic mode for file explanations. The command SHALL be invokable without inline JavaScript and SHALL write a non-verdict diagnostic event to `rb_trace.jsonl` plus a human-readable line to `_logs/run.log`.
 
 Each explanation SHALL include `path`, `phase`, `reason`, and `authority_status`. It MAY include `work_id`, `topic_slug`, and `related_rerun_action`.
 
@@ -106,7 +106,7 @@ Mixed-provenance diagnostics MAY name old delegated artifact families only to ex
 
 ### Requirement: Root bundle map files SHALL follow canonical map policy
 
-File observability SHALL classify `BUNDLE_MAP.md` as the expected current root bundle map file for active bundles. It SHALL NOT require `START_FROM_HERE.md` for new-bundle root-control-file expectations.
+File observability SHALL classify `BUNDLE_MAP.md` as the expected current root bundle map file for current run bundles. It SHALL NOT require `START_FROM_HERE.md` for new-bundle root-control-file expectations.
 
 If `START_FROM_HERE.md` appears without `BUNDLE_MAP.md`, file observability SHALL report it as legacy deprecated compatibility. If both files appear, file observability SHALL prefer `BUNDLE_MAP.md` and report `START_FROM_HERE.md` as deprecated compatibility debris or a non-authoritative legacy file.
 

@@ -52,10 +52,10 @@ verdict_judge: deterministic
 ```bash
 REPO_ROOT=$(pwd)
 B=$(node experiments_env/shared/new-disposable-bundle.mjs s2s --case case-202 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "Bundle: $B"
 
-node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs $B
 
 # topic_registry 由 HITL1 写入，Agent 只读不写。
 # slug 含 NN_ 前缀（如 01_topic-a），id 承载编号。
@@ -105,16 +105,16 @@ echo "=== Status ===" && cat $B/rb_status.json
 ## Step 2: Setup-ready gate → next = phase-seed-topics
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 REPO_ROOT=$(pwd)
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate setup-ready -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 echo "setup-ready: passed=$PASSED next=$NEXT"
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'setup-ready',passed:$PASSED,expected:true,detail:'real setup-ready Gate'}))"
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-202-enter-seed-topics.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to setup_ready > "$B/case-202-advance-setup.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-202-enter-seed-topics.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to setup_ready > "$B/case-202-advance-setup.json"
 node --input-type=module - "$B" <<'JS'
 import { appendFileSync, readFileSync } from 'node:fs'; import { join } from 'node:path';
 const [bundle]=process.argv.slice(2); const status=JSON.parse(readFileSync(join(bundle,'rb_status.json'))); const passed=status.current_node==='phases/phase-seed-topics.md'&&status.current_gate==='setup_ready'&&status.next_gate==='seed_topics_ready';
@@ -129,7 +129,7 @@ JS
 按 registry 创建 seed_topics/<slug>.md。status 保持 `setup_ready → seed_topics_ready`，seed-topics-ready gate 检查时需要 current_gate == setup_ready（handoff 来源 gate）。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # 物化：文件名 = slug.md，frontmatter slug == 文件名 stem == registry slug
 mkdir -p $B/seed_topics
 cat > $B/seed_topics/01_topic-a.md << 'EOF'
@@ -154,17 +154,17 @@ echo "=== seed_topics/ ===" && ls -la $B/seed_topics/
 ## Step 4: Seed-topics-ready gate → pass，然后推进 status
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 REPO_ROOT=$(pwd)
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate seed-topics-ready -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 echo "seed-topics-ready: passed=$PASSED next=$NEXT"
 
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,expected:true,detail:'setup→seed-topics transition, next=wave0'})})"
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-202-enter-wave0.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to seed_topics_ready > "$B/case-202-advance-seed-topics.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-202-enter-wave0.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to seed_topics_ready > "$B/case-202-advance-seed-topics.json"
 ```
 
 预期：`passed: true`，`next: phases/phase-wave0.md`。
@@ -172,8 +172,8 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to seed_topics_ready >
 ## Step 5: 裁决
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 6: 结果解读

@@ -11,17 +11,17 @@ import {
 import {
   applyCanonicalTopicState,
   renderSeedProjectionAppendix,
-} from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
-import { tryLoadGateDefinition } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
-import { evaluateSeedTopicProjectionReadiness } from '../../../DPT_FRAMEWORK/engine/helpers/return-map.mjs';
-import { buildCanonicalTopicRegistryFact } from '../../../DPT_FRAMEWORK/engine/helpers/topic-registry-fact.mjs';
-import { evaluateWave0Contract } from '../../../DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs';
-import { collectSubmittedWave0ContributionProjection } from '../../../DPT_FRAMEWORK/engine/work-unit-projection.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { tryLoadGateDefinition } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
+import { evaluateSeedTopicProjectionReadiness } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/return-map.mjs';
+import { buildCanonicalTopicRegistryFact } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/topic-registry-fact.mjs';
+import { evaluateWave0Contract } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs';
+import { collectSubmittedWave0ContributionProjection } from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-projection.mjs';
 
 const REPO_ROOT = process.cwd();
-const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs');
-const INSPECT_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-wave0-output.mjs');
-const OPERATE_WORK_UNIT_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-work-unit.mjs');
+const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs');
+const INSPECT_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/inspect-wave0-output.mjs');
+const OPERATE_WORK_UNIT_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
@@ -53,7 +53,7 @@ function submittedMaterializationHint(output) {
 }
 
 async function evaluateDirect(input) {
-  const { evaluateDirectOutputTarget } = await import('../../../DPT_FRAMEWORK/engine/helpers/direct-output-contract.mjs');
+  const { evaluateDirectOutputTarget } = await import('../../../DEEP_RESEARCH_HARNESS/engine/helpers/direct-output-contract.mjs');
   return evaluateDirectOutputTarget(input);
 }
 

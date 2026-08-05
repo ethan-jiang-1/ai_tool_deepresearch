@@ -11,7 +11,7 @@ const REPO_ROOT = execFileSync('git', ['rev-parse', '--show-toplevel'], { encodi
 
 function runAdvance(bundlePath, toGate) {
   try {
-    const out = execFileSync('node', ['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', bundlePath, '--to', toGate], {
+    const out = execFileSync('node', ['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundlePath, '--to', toGate], {
       cwd: REPO_ROOT,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -96,7 +96,7 @@ describe('advance-status CLI', { concurrency: false }, () => {
 
   it('serves standalone help and rejects malformed invocation before status or trace access', () => {
     const before = readFileSync(statusPath, 'utf8');
-    const help = spawnSync('node', ['DPT_FRAMEWORK/cli/advance-status.mjs', '--help'], {
+    const help = spawnSync('node', ['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--help'], {
       cwd: REPO_ROOT,
       encoding: 'utf8',
     });
@@ -105,7 +105,7 @@ describe('advance-status CLI', { concurrency: false }, () => {
     assert.equal(readFileSync(statusPath, 'utf8'), before);
     assert.equal(existsSync(tracePath), false);
 
-    const malformed = spawnSync('node', ['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', dir], {
+    const malformed = spawnSync('node', ['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', dir], {
       cwd: REPO_ROOT,
       encoding: 'utf8',
     });

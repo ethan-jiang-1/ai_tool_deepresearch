@@ -30,13 +30,13 @@ This deterministic fixture case proves profile and Gate mechanics only. Its synt
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_cv --case case-105 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 ```
 
 ## Step 2 - Write the fixed profile and run the real Gate
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 cat > "$B/rb_profile.yaml" <<'YAML'
 plan_basename: wff_cv
 research_profile: claim_verification
@@ -51,21 +51,21 @@ human_decision_checkpoints:
   hitl1: { status: recorded, recorded_at: "2026-06-21T15:00:00.000Z" }
   hitl2: { status: not_started, answerability_class: not_assessed, user_decision: not_started, final_report_view: not_started }
 YAML
-GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle "$B" --current-node phases/phase-hitl1.md)
+GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl1-recorded -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs --bundle "$B" --current-node phases/phase-hitl1.md)
 printf '%s\n' "$GATE" > "$B/case-105-gate.json"
 ```
 
 ## Step 3 - Record strict checks and finalize
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { appendFileSync, readFileSync } from 'node:fs'; import { join } from 'node:path'; import { parse as parseYaml } from 'yaml';
 const [bundle] = process.argv.slice(2); const profile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'))); const gate = JSON.parse(readFileSync(join(bundle, 'case-105-gate.json')));
 const checks = [['profile-claim-verification', profile.research_profile === 'claim_verification' && profile.root_must_answer_set.length === 1], ['hitl1-recorded', gate.check?.passed === true && gate.check?.next === 'phases/phase-setup.md']];
 for (const [id, passed] of checks) appendFileSync(join(bundle, 'rb_trace.jsonl'), `${JSON.stringify({ ts:new Date().toISOString(), event:'check', source:'playbook', gate:id, passed, expected:true })}\n`); if (checks.some(([,passed]) => !passed)) process.exit(1);
 JS
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Standard health, audit, preservation, and optional clean-PASS cleanup.

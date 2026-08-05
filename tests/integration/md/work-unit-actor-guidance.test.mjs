@@ -8,7 +8,7 @@ const read = (file) => readFileSync(file, 'utf-8');
 
 describe('work-unit actor guidance', () => {
   it('keeps one helper-oriented role-bound decision loop', () => {
-    const shared = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md');
+    const shared = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md');
     assert.match(shared, /one small real native probe for that exact role/i);
     assert.match(shared, /Phase Agent executes exactly that one task\/beacon itself/i);
     assert.match(shared, /human-directed.*not availability evidence or fallback permission/i);
@@ -21,9 +21,9 @@ describe('work-unit actor guidance', () => {
 
   it('keeps every active wave claim explicit and role matching', () => {
     for (const [file, role] of [
-      ['DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md', 'dpt-source-intake'],
-      ['DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md', 'dpt-evidence-extractor'],
-      ['DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md', 'dpt-topic-scout'],
+      ['DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md', 'dpt-source-intake'],
+      ['DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md', 'dpt-evidence-extractor'],
+      ['DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave2.md', 'dpt-topic-scout'],
     ]) {
       const content = read(file);
       assert.match(content, new RegExp(`--actor-role-key ${role}`));
@@ -35,9 +35,9 @@ describe('work-unit actor guidance', () => {
 
   it('guards simplicity scope against a parallel availability control plane', () => {
     const sources = [
-      read('DPT_FRAMEWORK/engine/work-unit-actor.mjs'),
-      read('DPT_FRAMEWORK/engine/work-unit-lifecycle.mjs'),
-      read('DPT_FRAMEWORK/cli/operate-work-unit.mjs'),
+      read('DEEP_RESEARCH_HARNESS/engine/work-unit-actor.mjs'),
+      read('DEEP_RESEARCH_HARNESS/engine/work-unit-lifecycle.mjs'),
+      read('DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs'),
     ].join('\n');
     for (const prohibited of ['host_report', 'actor_ttl', 'availability_db', 'fallback_queue', 'probe_token', 'auto_fallback']) assert.doesNotMatch(sources, new RegExp(prohibited));
   });

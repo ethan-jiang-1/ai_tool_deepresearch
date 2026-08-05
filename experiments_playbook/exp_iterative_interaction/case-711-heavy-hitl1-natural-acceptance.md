@@ -48,7 +48,7 @@ The Playbook Agent may create the setup, deliver the fixed utterance, preserve t
 
 ```bash
 B=$(node experiments_env/shared/prepare-iterative-interaction-case.mjs 711 --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -87,7 +87,7 @@ Run the shared subject adapter. It uses the fixed Codex-only settings file, writ
 If the adapter cannot start or complete the independent authenticated Subject Agent session, this block records the unavailable state. The Playbook Agent skips the observer work and reaches the one finalizer boundary.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
 node experiments_env/shared/run-iterative-interaction-subject.mjs 711 --bundle "$B"
 SUBJECT_STATUS=$?
@@ -116,7 +116,7 @@ If the independent Subject session or its real tool events were unavailable, Ste
 Immediately after the complete subject stream is saved:
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 EXTRA_ARGS=()
 if [ -f "$B/case-711-subject-unavailable.txt" ]; then
   EXTRA_ARGS+=(--not-run-reason "independent Subject Agent or required real tools unavailable")
@@ -125,7 +125,7 @@ else
   node experiments_env/shared/observe-iterative-interaction-case.mjs 711 verdict --bundle "$B" --transcript "$B/case-711-transcript.jsonl"
   EXTRA_ARGS+=(--evidence "subject_prompt=$B/case-711-subject-prompt.json" --evidence "subject_transcript=$B/case-711-transcript.jsonl" --evidence "subject_result=$B/case-711-subject-result.json")
 fi
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
 PASS requires the recommendation before the exact user event, no second confirmation afterward, subject-owned existing-owner writes, and one honest real probe/Gate branch. Available must include real search, successful fetch of the first usable URL, Gate pass and Setup entry. Honest unavailable must include the direct unavailable observation, Gate failure and no Setup entry.

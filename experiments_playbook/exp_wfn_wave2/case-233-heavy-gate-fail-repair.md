@@ -53,7 +53,7 @@ Fixture-backed Engine repair case. Controlled targeted evidence content may be w
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_gate_refill_repair --case case-233 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -135,9 +135,9 @@ JS
 ## Step 2: [MAIN/SHELL] First Gate Must Fail
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
-node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md > "$B/case-233-gate-before-repair.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md > "$B/case-233-gate-before-repair.json"
 GATE_STATUS=$?
 set -e
 node - "$B" "$GATE_STATUS" <<'JS'
@@ -154,8 +154,8 @@ Expected: gate rejects the direct cross-reference as non-authoritative.
 ## Step 3: [MAIN/SHELL] Open Repair Batch And Submit Targeted Evidence
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs open-batch "$B" --phase wave2 --reason gate_failure_refill > "$B/case-233-open-batch.json"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs open-batch "$B" --phase wave2 --reason gate_failure_refill > "$B/case-233-open-batch.json"
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync } from 'node:fs';
 import {
@@ -165,7 +165,7 @@ import {
   submitWorkUnitViaCli,
   writeFixtureResultForWorkUnit
 } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { loadWorkUnitIndex } from './DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import { spawnSync } from 'node:child_process';
 
 const bundle = process.argv[2];
@@ -176,7 +176,7 @@ enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
   title: 'Repair targeted evidence for W2F-001',
   priority_class: 'P1_state_or_gate_repair'
 }), { fileName: 'case233-targeted-repair.json' });
-const claim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave2'], { encoding: 'utf8' }).stdout);
+const claim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave2'], { encoding: 'utf8' }).stdout);
 const workId = claim.claimed_work_ids[0];
 const fixture = writeFixtureResultForWorkUnit(bundle, {
   work_id: workId,
@@ -201,11 +201,11 @@ JS
 ## Step 4: [MAIN/SHELL] Rerun Gate And Verdict
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md > "$B/case-233-gate-after-repair.json"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md > "$B/case-233-gate-after-repair.json"
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
-import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { loadWorkUnitIndex } from './DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import { readTrace, recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const bundle = process.argv[2];
@@ -226,8 +226,8 @@ JS
 ## Step 5: [MAIN/SHELL] Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Heavy health, audit, preservation, and optional clean-PASS cleanup.

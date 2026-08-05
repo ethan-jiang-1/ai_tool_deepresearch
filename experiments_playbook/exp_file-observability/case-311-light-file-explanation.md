@@ -44,7 +44,7 @@ verdict_judge: deterministic
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs explain --case case-311 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 
 cat > "$B/rb_status.json" << 'JSON'
 {"bundle":"explain","current_mode":"execution","state":"in_progress","current_gate":"wave1_complete","next_gate":"wave2_complete"}
@@ -88,9 +88,9 @@ echo "B=$B"
 ## Step 2: 验证未解释 → orphan
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
-import { auditFileObservability } from './DPT_FRAMEWORK/engine/helpers/file-observability.mjs';
+import { auditFileObservability } from './DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const __dirname = process.argv[2];
@@ -125,9 +125,9 @@ JS
 ## Step 3: 记录解释并验证分类变化
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # Agent 通过 log-event.mjs 记录解释
-node DPT_FRAMEWORK/cli/log-event.mjs \
+node DEEP_RESEARCH_HARNESS/cli/log-event.mjs \
   --bundle "$B" \
   --explain-file "reference/topic-a-extra.md" \
   --status "explained_non_authoritative" \
@@ -139,7 +139,7 @@ echo "Explanation recorded"
 
 # 验证 trace 含 file_explanation
 node --input-type=module - "$B" <<'JS'
-import { auditFileObservability } from './DPT_FRAMEWORK/engine/helpers/file-observability.mjs';
+import { auditFileObservability } from './DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const __dirname = process.argv[2];
@@ -211,9 +211,9 @@ JS
 ## Step 4: 验证拒绝无效 status
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # declared_authoritative 不允许 Agent 写入（应静默拒绝）
-node DPT_FRAMEWORK/cli/log-event.mjs \
+node DEEP_RESEARCH_HARNESS/cli/log-event.mjs \
   --bundle "$B" \
   --explain-file "reference/bad.md" \
   --status "declared_authoritative" \
@@ -251,8 +251,8 @@ JS
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

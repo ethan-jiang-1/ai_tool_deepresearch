@@ -2,7 +2,7 @@
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -59,7 +59,7 @@ describe('new-disposable-bundle.mjs integration', () => {
 
     assert.equal(result.status, 0, result.stderr);
     const bundle = result.stdout.trim();
-    assert.equal(dirname(bundle), target);
+    assert.equal(dirname(bundle), realpathSync(target));
     assert.match(bundle, /dpt_disp_case-123_literal_name_[0-9a-f]$/);
     assert.ok(readdirSync(join(bundle, 'exp', 'nodes')).length > 0, 'node source should be copied');
     assert.match(result.stderr, /validate-bundle passed/);
@@ -79,27 +79,28 @@ describe('new-disposable-bundle.mjs integration', () => {
     const result = runCreator(name, '--case', caseId, '--force', `--target-dir=${root}`);
     assert.equal(result.status, 0, result.stderr);
     const bundle = result.stdout.trim();
-    assert.equal(dirname(bundle), root);
+    assert.equal(dirname(bundle), realpathSync(root));
     assert.equal(existsSync(join(bundle, 'marker.txt')), false, 'selected collision must be replaced');
     assert.equal(existsSync(join(bundle, 'rb_status.json')), true);
   });
 
-  it('renders RUN_BUNDLE.md entry point for a non-sibling target directory (BUM-005, EXS-004)', () => {
+  it('renders BUNDLE_ENTRY.md with canonical Harness coordinates for a non-sibling target directory (BUM-005, EXS-004)', () => {
     const root = trackRoot('disposable-continuation-');
     const target = join(root, 'external-runs');
     const result = runCreator('continuation_card', '--case=case-804', `--target-dir=${target}`);
 
     assert.equal(result.status, 0, result.stderr);
     const bundle = result.stdout.trim();
-    const frameworkRelative = relative(bundle, join(REPO_ROOT, 'DPT_FRAMEWORK')) || '.';
-    const repoRelative = relative(bundle, REPO_ROOT) || '.';
+    const frameworkRelative = relative(bundle, realpathSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS'))) || '.';
+    const repoRelative = relative(bundle, realpathSync(REPO_ROOT)) || '.';
 
-    // RUN_BUNDLE.md exists and has no unreplaced placeholders
-    const runBundle = readFileSync(join(bundle, 'RUN_BUNDLE.md'), 'utf-8');
-    assert.match(runBundle, /^# /);
-    assert.match(runBundle, /BUNDLE_MAP\.md/);
-    assert.match(runBundle, /COMMANDS\.md/);
-    assert.doesNotMatch(runBundle, /\{\{[^}]+\}\}/);
+    const entry = readFileSync(join(bundle, 'BUNDLE_ENTRY.md'), 'utf-8');
+    assert.match(entry, /^# /);
+    assert.ok(entry.includes(`Deep Research Harness: \`${frameworkRelative}\``));
+    assert.match(entry, /BUNDLE_MAP\.md/);
+    assert.match(entry, /COMMANDS\.md/);
+    assert.doesNotMatch(entry, /\{\{[^}]+\}\}/);
+    assert.equal(existsSync(join(bundle, 'RUN_BUNDLE.md')), false);
 
     // BUNDLE_MAP.md is a pure passive map — no continuation section
     const map = readFileSync(join(bundle, 'BUNDLE_MAP.md'), 'utf-8');
@@ -109,6 +110,21 @@ describe('new-disposable-bundle.mjs integration', () => {
     assert.doesNotMatch(map, /\{\{[^}]+\}\}/);
     assert.equal(existsSync(join(bundle, 'AGENTS.md')), false);
     assert.equal(existsSync(join(bundle, 'CLAUDE.md')), false);
+  });
+
+  it('prints a canonical absolute current-run-bundle root for a relative target', () => {
+    const root = trackRoot('disposable-relative-');
+    const target = join(root, 'relative-target');
+    const relativeTarget = relative(REPO_ROOT, target);
+    const result = runCreator('relative_card', '--case=case-805', `--target-dir=${relativeTarget}`);
+
+    assert.equal(result.status, 0, result.stderr);
+    const bundle = result.stdout.trim();
+    assert.equal(bundle, realpathSync(bundle));
+    assert.match(bundle, /dpt_disp_case-805_relative_card_[0-9a-f]$/);
+    const entry = readFileSync(join(bundle, 'BUNDLE_ENTRY.md'), 'utf-8');
+    const frameworkRelative = relative(bundle, realpathSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS'))) || '.';
+    assert.ok(entry.includes(`Deep Research Harness: \`${frameworkRelative}\``));
   });
 });
 

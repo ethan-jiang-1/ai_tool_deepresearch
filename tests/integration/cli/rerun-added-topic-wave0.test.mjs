@@ -20,17 +20,17 @@ import {
   enqueue,
   loadQueue,
   saveQueue,
-} from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import {
   claimWorkUnits,
   drySubmitWorkUnit,
   loadWorkUnitIndex,
   submitWorkUnit,
-} from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import {
   applyCanonicalTopicState,
   renderSeedProjectionAppendix,
-} from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
 import {
   setStatusWindow,
   witnessedHandoffEvents,
@@ -39,7 +39,7 @@ import {
 
 const REPO_ROOT = process.cwd();
 const NEW_BUNDLE = path.join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
-const GATE_CLI = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs');
+const GATE_CLI = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs');
 const BUNDLES_DIR = path.join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
 
@@ -199,13 +199,13 @@ function materializeSubmittedWave0Reference(bundleDir, topic, record, sourceUrl,
   })}\n\n## Submitted Backing\n- source_identity: ${record.work_id}/1\n- source_yaml_ref: artifacts/wave0/${topic.slug}/source.yaml\n- cache_trail_ref: ${cacheTrail}\n- result_ref: ${record.paths.result_ref}\n- work_unit_ref: ${record.paths.work_unit_dir}\n`);
 
   const persisted = spawnSync('node', [
-    path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs'),
+    path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs'),
     'persist', '--bundle', bundleDir, '--source', stagedPath, '--target', referencePath, '--expect-absent',
   ], { encoding: 'utf8', timeout: 10000 });
   assert.equal(persisted.status, 0, persisted.stderr || persisted.stdout);
 
   const indexed = spawnSync('node', [
-    path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/sync-reference-index.mjs'), '--bundle', bundleDir,
+    path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/sync-reference-index.mjs'), '--bundle', bundleDir,
   ], { encoding: 'utf8', timeout: 10000 });
   assert.equal(indexed.status, 0, indexed.stderr || indexed.stdout);
   return referencePath;
@@ -407,12 +407,12 @@ describe('rerun-added Topic follows the normal Wave0 producer', () => {
 
   it('has no rerun-only Wave0 contract or evaluator branch', () => {
     const normalOwners = [
-      'DPT_FRAMEWORK/engine/work-unit-constants.mjs',
-      'DPT_FRAMEWORK/engine/work-unit-lifecycle.mjs',
-      'DPT_FRAMEWORK/engine/work-unit-envelope.mjs',
-      'DPT_FRAMEWORK/engine/work-unit-submit.mjs',
-      'DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs',
-      'DPT_FRAMEWORK/schema/gate_definitions/gate-wave0-complete.definition.json',
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-constants.mjs',
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-lifecycle.mjs',
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-envelope.mjs',
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs',
+      'DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs',
+      'DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-wave0-complete.definition.json',
     ].map((file) => readFileSync(path.join(REPO_ROOT, file), 'utf8')).join('\n');
 
     assert.doesNotMatch(normalOwners, /rerun[-_ ]only|rerun[-_ ]specific|rerun[-_ ]separate/i);

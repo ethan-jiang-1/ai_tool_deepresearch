@@ -12,16 +12,16 @@ import {
 import {
   applyCanonicalTopicState,
   renderSeedProjectionAppendix,
-} from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
-import { buildCanonicalTopicRegistryFact } from '../../../DPT_FRAMEWORK/engine/helpers/topic-registry-fact.mjs';
-import { collectEligibleWorkUnitProjection } from '../../../DPT_FRAMEWORK/engine/work-unit-projection.mjs';
-import { tryLoadGateDefinition } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
-import { evaluateWave1Contract } from '../../../DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs';
-import { canonicalWave1ReferencePath } from '../../../DPT_FRAMEWORK/engine/helpers/wave1-reference-convergence.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { buildCanonicalTopicRegistryFact } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/topic-registry-fact.mjs';
+import { collectEligibleWorkUnitProjection } from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-projection.mjs';
+import { tryLoadGateDefinition } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
+import { evaluateWave1Contract } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs';
+import { canonicalWave1ReferencePath } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs';
 
 const REPO_ROOT = process.cwd();
-const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs');
-const INSPECT_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-wave1-output.mjs');
+const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs');
+const INSPECT_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/inspect-wave1-output.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
@@ -49,7 +49,7 @@ function runInspect(bundlePath) {
 }
 
 async function evaluateDirect(input) {
-  const { evaluateDirectOutputTarget } = await import('../../../DPT_FRAMEWORK/engine/helpers/direct-output-contract.mjs');
+  const { evaluateDirectOutputTarget } = await import('../../../DEEP_RESEARCH_HARNESS/engine/helpers/direct-output-contract.mjs');
   return evaluateDirectOutputTarget(input);
 }
 
@@ -687,7 +687,7 @@ function wave1ParityProjection(entry) {
     depth_fields: Object.keys(entry.target.depth).sort(),
     depth_dimension_fields: Object.keys(entry.target.depth.depth_dimensions).sort(),
     has_copied_ledger_truth: ['source_claims', 'accepted_source_urls', 'cache_trail_refs', 'new_source_urls', 'new_source_floor'].some((field) => Object.hasOwn(entry.target.depth, field)),
-    template_required: readFileSync(join(REPO_ROOT, 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md'), 'utf8').includes('templates/seed-topic-template'),
+    template_required: readFileSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md'), 'utf8').includes('templates/seed-topic-template'),
     gate: {
       passed: entry.gate.check.passed,
       failed_rule_ids: entry.gate.check.failed_rule_ids,

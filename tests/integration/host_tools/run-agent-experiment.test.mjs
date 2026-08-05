@@ -8,8 +8,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 
-import { formatPlaybookManifest, sha256Bytes } from '../../../DPT_FRAMEWORK/host_tools/lib/agent-experiment-contract.mjs';
-import { runSupervisor } from '../../../DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs';
+import { formatPlaybookManifest, sha256Bytes } from '../../../DEEP_RESEARCH_HARNESS/host_tools/lib/agent-experiment-contract.mjs';
+import { runSupervisor } from '../../../DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs';
 
 const REAL_REPO = path.resolve(new URL('../../..', import.meta.url).pathname);
 const roots = [];
@@ -29,7 +29,7 @@ describe('run-agent-experiment deterministic host lifecycle', () => {
   });
 
   it('rejects missing total budget and a per-case cap without total before launch', () => {
-    const cli = path.join(REAL_REPO, 'DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs');
+    const cli = path.join(REAL_REPO, 'DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs');
     for (const args of [
       ['--case', 'case-41-light-minimal-path', '--json'],
       ['--dry-run', '--max-case-budget-usd', '0.1', '--json'],
@@ -217,7 +217,7 @@ describe('run-agent-experiment deterministic host lifecycle', () => {
     assert.ok(capture.argv.includes('bypassPermissions'));
     assert.ok(capture.argv.includes('--no-session-persistence'));
     assert.equal(capture.argv[capture.argv.indexOf('--max-budget-usd') + 1], '1');
-    assert.equal(existsSync(path.join(result.run_root, 'DPT_FRAMEWORK')), false);
+    assert.equal(existsSync(path.join(result.run_root, 'DEEP_RESEARCH_HARNESS')), false);
     assert.equal(existsSync(path.join(result.run_root, 'experiments_env')), false);
     const stderr = readFileSync(result.logs.stderr.path, 'utf8');
     assert.doesNotMatch(stderr, /fixture-secret/);
@@ -558,7 +558,7 @@ function makeProject({ fixtureMode = 'success', writeEnv = true, healthStatus = 
   mkdirSync(path.join(root, 'experiments_playbook/exp_fixture'), { recursive: true });
   mkdirSync(path.join(root, 'experiments_env/shared'), { recursive: true });
   mkdirSync(path.join(root, 'tests'), { recursive: true });
-  symlinkSync(path.join(REAL_REPO, 'DPT_FRAMEWORK'), path.join(root, 'DPT_FRAMEWORK'), 'dir');
+  symlinkSync(path.join(REAL_REPO, 'DEEP_RESEARCH_HARNESS'), path.join(root, 'DEEP_RESEARCH_HARNESS'), 'dir');
   if (writeEnv) writeFileSync(path.join(root, '.env'), [
     'DEEPSEEK_API_KEY=fixture-secret',
     'DEEPSEEK_ANTHROPIC_BASE_URL=https://example.test/anthropic',
@@ -591,7 +591,7 @@ verdict_judge: deterministic
 
 \`\`\`bash
 echo {{CASE_RUN_ROOT_SH}}
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}}
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}}
 \`\`\`
 `);
   writeFileSync(path.join(root, 'experiments_playbook/PLAYBOOK_MANIFEST.md'), formatPlaybookManifest([playbookPath]));
@@ -682,7 +682,7 @@ function execute() {
   for (const spec of bundles) {
     mkdirSync(spec.path);
     if (spec.trace !== null) writeFileSync(join(spec.path, 'rb_trace.jsonl'), spec.trace);
-    const state = spawnSync(process.execPath, [join(process.cwd(), 'DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs'), 'register-bundle', '--context', identity.run_context_path, '--role', spec.role, '--path', spec.path], {encoding:'utf8'});
+    const state = spawnSync(process.execPath, [join(process.cwd(), 'DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs'), 'register-bundle', '--context', identity.run_context_path, '--role', spec.role, '--path', spec.path], {encoding:'utf8'});
     if (state.status !== 0) { process.stderr.write(state.stderr); process.exit(8); }
   }
   const bundle = bundles.find((spec) => spec.role === 'verdict').path;
@@ -690,7 +690,7 @@ function execute() {
   if (mode === 'malformed-completion') {
     writeFileSync(join(context.case_run_root, 'agent-experiment-completion.json'), '{not-json');
   } else if (!['missing-completion', 'heavy-generic-no-completion'].includes(mode)) {
-    const finalArgs = [join(process.cwd(), 'DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs'), '--context', identity.run_context_path];
+    const finalArgs = [join(process.cwd(), 'DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs'), '--context', identity.run_context_path];
     for (const spec of bundles) finalArgs.push('--bundle', spec.role + '=' + spec.path);
     if (mode === 'not-run') finalArgs.push('--not-run-reason', 'required Subject actor unavailable');
     if (mode === 'agent-evidence') {

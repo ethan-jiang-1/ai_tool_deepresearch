@@ -9,17 +9,17 @@ import {
   enqueue,
   makeItem,
   saveQueue,
-} from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import {
   loadWorkUnitIndex,
   readWorkUnitLedgerRows,
-} from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import { referenceContent } from '../../engine/work-unit-test-helpers.mjs';
 import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
 
 const REPO_ROOT = process.cwd();
-const WORK_UNIT_CLI = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-work-unit.mjs');
-const GATE_CLI = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs');
+const WORK_UNIT_CLI = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs');
+const GATE_CLI = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs');
 const NEW_BUNDLE = path.join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = path.join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];

@@ -14,7 +14,7 @@ import { claimAndSubmitWorkUnit } from '../../engine/work-unit-test-helpers.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-reentry-tmp');
-const CLI = join(__dirname, '..', '..', '..', 'DPT_FRAMEWORK', 'cli', 'check-reentry.mjs');
+const CLI = join(__dirname, '..', '..', '..', 'DEEP_RESEARCH_HARNESS', 'cli', 'check-reentry.mjs');
 
 after(() => {
   if (existsSync(TMP)) rmSync(TMP, { recursive: true, force: true });

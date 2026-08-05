@@ -34,7 +34,7 @@ PASS requires the Subject execution evidence, at least one real WebSearch tool u
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_real_finding_triage --case case-232 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave2Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -47,7 +47,7 @@ writeWave2Scaffold(process.argv[2], {
   ]
 });
 JS
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$B"
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
 const status = JSON.parse(readFileSync(`${process.argv[2]}/rb_status.json`, 'utf8'));
@@ -60,7 +60,7 @@ JS
 The adapter gives the independent Subject Agent the current production Wave2 surface and direct bundle path. The Subject must inspect both Wave1 topic surfaces, make bounded real external calls, write the Wave2 artifact triplet and seed backfill, and route any targeted evidence through work-unit claim/submit authority.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
 node experiments_env/shared/run-iterative-interaction-subject.mjs 232 --bundle "$B"
 SUBJECT_STATUS=$?
@@ -75,8 +75,8 @@ fi
 Skip this step when `case-232-subject-unavailable.txt` exists.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md > "$B/case-232-gate.json"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md > "$B/case-232-gate.json"
 node --input-type=module - "$B" <<'JS'
 import { readFileSync, statSync } from 'node:fs';
 import { parse as parseYaml } from 'yaml';
@@ -110,7 +110,7 @@ JS
 ## Step 4: [MAIN/SHELL] Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 EXTRA_ARGS=()
 if [ -f "$B/case-232-subject-unavailable.txt" ]; then
   EXTRA_ARGS+=(--not-run-reason "independent Subject Agent runtime or real external search unavailable")
@@ -121,7 +121,7 @@ else
     --evidence "subject_result=$B/case-232-subject-result.json"
   )
 fi
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Heavy health, durable Subject-evidence export, audit, preservation, and optional clean-PASS cleanup.

@@ -7,7 +7,7 @@ import assert from 'node:assert';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import * as gateHelpers from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import * as gateHelpers from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 import {
   extractSection,
   parseMarkdownSemanticSections,
@@ -20,7 +20,7 @@ import {
   checkReferenceIndexCoverage,
   checkCacheCoverage,
   classifyReferenceAuthority,
-} from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 import {
   claimAndSubmitWorkUnit,
   cleanupWorkUnitBundle,

@@ -1,4 +1,4 @@
-// @impl CMI-004, BUM-003: new-bundle.mjs — Create a disposable DPT run bundle at repo root
+// @impl CMI-004, BUM-003, EXS-004: new-bundle.mjs — Create a disposable run bundle at repo root
 // @impl EXS-002, EXS-003: Canonical location experiments_env/shared/new-disposable-bundle.mjs
 // Usage: node new-bundle.mjs <bundleName> [--nodes <dir>] [--force]
 // Always creates the bundle at $REPO_ROOT/dpt_disp_<name>/
@@ -9,8 +9,8 @@
 // Exit: 0 = created/reused, 1 = FAIL
 
 import { execFileSync, execSync } from 'node:child_process';
-import { mkdirSync, writeFileSync, readFileSync, existsSync, cpSync, rmSync, readdirSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { mkdirSync, writeFileSync, readFileSync, existsSync, cpSync, realpathSync, rmSync, readdirSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
 import { randomInt } from 'node:crypto';
 import { parseArgs } from 'node:util';
 import {
@@ -18,10 +18,10 @@ import {
   QueueSchema,
   ProfileSchema,
   PlanSchema,
-} from '../../DPT_FRAMEWORK/schema/index.mjs';
-import { parseMdFrontmatter } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
-import { createTrace } from '../../DPT_FRAMEWORK/engine/trace.mjs';
-import { logToRun } from '../../DPT_FRAMEWORK/engine/logger.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/schema/index.mjs';
+import { parseMdFrontmatter } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
+import { createTrace } from '../../DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { logToRun } from '../../DEEP_RESEARCH_HARNESS/engine/logger.mjs';
 
 const G = '\x1b[32m', R = '\x1b[31m', B = '\x1b[0m';
 
@@ -119,10 +119,7 @@ const dirName = caseId
   : `dpt_disp_${bundleName}_${hexSuffix}`;
 const baseDir = targetDir ?? repoRoot;
 mkdirSync(baseDir, { recursive: true });
-const bundleDir = join(baseDir, dirName);
-const frameworkRoot = join(repoRoot, 'DPT_FRAMEWORK');
-const frameworkRootRelative = relative(bundleDir, frameworkRoot) || '.';
-const repoCommandRootRelative = relative(bundleDir, repoRoot) || '.';
+const bundleDir = resolve(baseDir, dirName);
 
 if (existsSync(bundleDir)) {
   if (force) {
@@ -136,7 +133,7 @@ if (existsSync(bundleDir)) {
         cpSync(srcNodes, targetNodes, { recursive: true, force: true });
       }
     }
-    console.log(bundleDir);
+    console.log(realpathSync(bundleDir));
     process.exit(0);
   }
 }
@@ -146,6 +143,11 @@ const dirs = ['seed_topics', 'reference', 'artifacts/wave0', 'artifacts/wave1', 
 for (const d of dirs) {
   mkdirSync(join(bundleDir, d), { recursive: true });
 }
+
+const currentRunBundleRoot = realpathSync(bundleDir);
+const frameworkRoot = realpathSync(join(repoRoot, 'DEEP_RESEARCH_HARNESS'));
+const frameworkRootRelative = relative(currentRunBundleRoot, frameworkRoot) || '.';
+const repoCommandRootRelative = relative(currentRunBundleRoot, repoRoot) || '.';
 
 // ── Generate + validate control files from live schemas ──
 // If any of these fail, the schema has changed and this tool needs updating.
@@ -217,7 +219,7 @@ const basename = caseId ? strippedName : bundleName;
 
 // Generate rb_plan.md from template (single source of truth for plan structure).
 // Template placeholders like (待填充…) become the FAIL triggers for setup-ready gate.
-const planTmplPath = join(repoRoot, 'DPT_FRAMEWORK', 'rb_templates', 'rb_plan.md.tmpl');
+const planTmplPath = join(frameworkRoot, 'rb_templates', 'rb_plan.md.tmpl');
 const planTmpl = readFileSync(planTmplPath, 'utf-8');
 const planMd = planTmpl.replace(/\{\{name\}\}/g, basename);
 
@@ -235,13 +237,13 @@ writeFileSync(join(bundleDir, 'rb_plan.md'), planMd);
 // These are expected by inspect-bundle and by gates that check for artifact existence.
 const scaffoldTemplates = [
   { tmpl: 'BUNDLE_MAP.md.tmpl', dest: 'BUNDLE_MAP.md' },
-  { tmpl: 'RUN_BUNDLE.md.tmpl', dest: 'RUN_BUNDLE.md' },
+  { tmpl: 'BUNDLE_ENTRY.md.tmpl', dest: 'BUNDLE_ENTRY.md' },
   { tmpl: 'reference/_INDEX.md.tmpl', dest: 'reference/_INDEX.md' },
   { tmpl: 'reference/README.md.tmpl', dest: 'reference/README.md' },
   { tmpl: 'artifacts/README.md.tmpl',    dest: 'artifacts/README.md' },
 ];
 for (const s of scaffoldTemplates) {
-  const tmplPath = join(repoRoot, 'DPT_FRAMEWORK', 'rb_templates', s.tmpl);
+  const tmplPath = join(frameworkRoot, 'rb_templates', s.tmpl);
   if (existsSync(tmplPath)) {
     let content = readFileSync(tmplPath, 'utf-8');
     content = content.replace(/\{\{name\}\}/g, basename);
@@ -257,8 +259,8 @@ trace.traceInit(basename, { source: 'new-disposable-bundle' });
 logToRun(bundleDir, 'info', 'run_start', { source: 'new-disposable-bundle' });
 
 // ── Validate + inspect (same as production) ──
-const validatePath = join(repoRoot, 'DPT_FRAMEWORK', 'cli', 'validate-bundle.mjs');
-const inspectPath = join(repoRoot, 'DPT_FRAMEWORK', 'cli', 'inspect-bundle.mjs');
+const validatePath = join(frameworkRoot, 'cli', 'validate-bundle.mjs');
+const inspectPath = join(frameworkRoot, 'cli', 'inspect-bundle.mjs');
 try {
   execFileSync(process.execPath, [validatePath, bundleDir], { stdio: 'pipe' });
   process.stderr.write(`${G}✓ validate-bundle passed${B}\n`);
@@ -284,5 +286,5 @@ if (nodesDir) {
   }
 }
 
-// Print absolute path for shell consumption
-console.log(bundleDir);
+// Print the resolved current-run-bundle root for Agent/CLI handoff.
+console.log(currentRunBundleRoot);

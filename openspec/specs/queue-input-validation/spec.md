@@ -211,15 +211,15 @@ Top-level `--help` or `-h` SHALL print usage and exit 0. Subcommand help such as
 
 #### Scenario: top-level help has no runtime side effect
 
-- **WHEN** `node DPT_FRAMEWORK/cli/operate-queue.mjs --help` is invoked
-- **OR** `node DPT_FRAMEWORK/cli/operate-work-unit.mjs --help` is invoked
+- **WHEN** `node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs --help` is invoked
+- **OR** `node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs --help` is invoked
 - **THEN** the CLI SHALL print usage and exit 0
 - **AND** it SHALL NOT create a `--help/` directory or any bundle-like runtime files
 
 #### Scenario: subcommand help is not treated as bundle path
 
-- **WHEN** `node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue --help` is invoked
-- **OR** `node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim --help` is invoked
+- **WHEN** `node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs enqueue --help` is invoked
+- **OR** `node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim --help` is invoked
 - **THEN** the CLI SHALL print usage or a clear argument error matching its local convention
 - **AND** it SHALL NOT load queue/work-unit state from `--help`
 - **AND** it SHALL NOT create a `--help/` directory

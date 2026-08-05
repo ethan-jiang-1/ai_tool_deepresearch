@@ -130,7 +130,7 @@ This directory cannot decide:
 
 ## Boundary Of This Index
 
-This index intentionally does not carry a current/target/proposed repository manifest. Current operational paths, commands, active bundles, and capability contracts belong to the selected work context after the reader leaves this constitutional route. Keeping them out prevents an index from silently becoming a competing source of runtime truth.
+This index intentionally does not carry a current/target/proposed repository manifest. Current operational paths, commands, current run bundles, and capability contracts belong to the selected work context after the reader leaves this constitutional route. Keeping them out prevents an index from silently becoming a competing source of runtime truth.
 
 ## Suite Contract
 
@@ -172,9 +172,9 @@ Each file has frontmatter declaring its role, scope, authority level, and same-l
 | Witnessing | Engine-written evidence binding a deterministic gate route to later handoff entry, such as `gate_attempt(passed=true,next=...)` plus route-bound `load_complete`. |
 | Autonomous continuation | Non-terminal `stop: no` behavior where the Agent continues silently through gate-driven work and handoff rather than surfacing, waiting, or delivering early chat output. |
 | Runtime context | Conceptual run or disposable experiment context containing current control files, evidence, receipts, trace, and artifacts. In the current filesystem convention this is a bundle. |
-| Bundle / active bundle root | Current project convention for a runtime context, such as `dpt_rb_*` or `dpt_disp_*`. When selected for a run, CLI invocation, task card, or playbook, it is the root for all bare runtime paths, including `rb_queue.json`, `reference/`, `artifacts/`, `_cache/`, `_logs/`, and `_work_units/...`. |
-| Repo command root | Repository root used to invoke `node DPT_FRAMEWORK/...`; it is a command location, not runtime truth. |
-| Framework root | `DPT_FRAMEWORK/`, the read-only reusable framework asset root. |
+| Bundle / current run bundle root | Current project convention for a runtime context, such as `dpt_rb_*` or `dpt_disp_*`. When selected for a run, CLI invocation, task card, or playbook, it is the root for all bare runtime paths, including `rb_queue.json`, `reference/`, `artifacts/`, `_cache/`, `_logs/`, and `_work_units/...`. |
+| Repo command root | Repository root used to invoke `node DEEP_RESEARCH_HARNESS/...`; it is a command location, not runtime truth. |
+| Framework root | `DEEP_RESEARCH_HARNESS/`, the read-only reusable framework asset root. |
 | Prototype | Experiment-specific fixtures, notes, or proof scaffold; not the production Engine source. |
-| Playbook | Agent-readable Markdown experiment or command under `DPT_FRAMEWORK/`. |
+| Playbook | Agent-readable Markdown experiment or command under `DEEP_RESEARCH_HARNESS/`. |
 | Source of Record | The one authoritative surface for a class of truth. |

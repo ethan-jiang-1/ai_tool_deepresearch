@@ -2,24 +2,24 @@
 
 ## Purpose
 
-定义 DPT_FRAMEWORK 入口文件 `RUN.md` 的行为规范：版本标识宣告、内置 research shortcut 覆盖指令、以及关联 agent 行为文件（CLAUDE.md / AGENTS.md / README.md）的同步一致性。
+定义 DEEP_RESEARCH_HARNESS 入口文件 `RUN.md` 的行为规范：版本标识宣告、内置 research shortcut 覆盖指令、以及关联 agent 行为文件（CLAUDE.md / AGENTS.md / README.md）的同步一致性。
 ## Requirements
 ### Requirement: Entry point announces version
 
 The RUN.md entry point SHALL display the framework version as a banner immediately after the title, before any behavioral instructions.
 
-The version banner format SHALL be `> **DPT_FRAMEWORK v<major>.<minor>**`. The concrete version in this banner SHALL match the latest repo-root `CHANGELOG.md` entry as required by `version-management` VEM-003. Historical change-specific target versions SHALL remain in archived proposals/changelog entries, not as a permanent current-version assertion in the accepted requirement.
+The version banner format SHALL be `> **DEEP_RESEARCH_HARNESS v<major>.<minor>**`. The concrete version in this banner SHALL match the latest repo-root `CHANGELOG.md` entry as required by `version-management` VEM-003. Historical change-specific target versions SHALL remain in archived proposals/changelog entries, not as a permanent current-version assertion in the accepted requirement.
 
 #### Scenario: Agent reads RUN.md and sees current version
 
-- **WHEN** an Agent reads `DPT_FRAMEWORK/RUN.md`
-- **THEN** the first content after the title SHALL be a blockquote banner in the format `DPT_FRAMEWORK v<major>.<minor>`
+- **WHEN** an Agent reads `DEEP_RESEARCH_HARNESS/RUN.md`
+- **THEN** the first content after the title SHALL be a blockquote banner in the format `DEEP_RESEARCH_HARNESS v<major>.<minor>`
 - **AND** the banner version SHALL equal the latest repo-root `CHANGELOG.md` entry
 - **AND** the banner SHALL appear before the trigger-context blockquote and Section 0
 
 ### Requirement: Entry point instructs agents not to use built-in research shortcuts
 
-The RUN.md entry point SHALL contain an explicit instruction block that tells the Agent that reading `DPT_FRAMEWORK/RUN.md` selects the DPT framework entry for that request. The Agent SHALL NOT invoke a built-in `research` or `deep-research` skill, an equivalent one-shot research shortcut, direct request-specific WebSearch/WebFetch, or manual evidence collection/synthesis as a substitute for the selected DPT flow.
+The RUN.md entry point SHALL contain an explicit instruction block that tells the Agent that reading `DEEP_RESEARCH_HARNESS/RUN.md` selects the DPT framework entry for that request. The Agent SHALL NOT invoke a built-in `research` or `deep-research` skill, an equivalent one-shot research shortcut, direct request-specific WebSearch/WebFetch, or manual evidence collection/synthesis as a substitute for the selected DPT flow.
 
 The instruction SHALL:
 - Appear as `## 0. 禁用内置捷径（最高优先）` after the version banner and before the original trigger-context blockquote and "确认引擎" section (Section 1)
@@ -29,42 +29,42 @@ The instruction SHALL:
 
 #### Scenario: Agent reads RUN.md with generic research surfaces available
 
-- **WHEN** an Agent whose tool list includes `research`, `deep-research`, an equivalent one-shot shortcut, or atomic search/fetch tools reads `DPT_FRAMEWORK/RUN.md` for a selected request
+- **WHEN** an Agent whose tool list includes `research`, `deep-research`, an equivalent one-shot shortcut, or atomic search/fetch tools reads `DEEP_RESEARCH_HARNESS/RUN.md` for a selected request
 - **THEN** Section 0 SHALL direct the Agent not to use those surfaces as a substitute for the DPT flow
-- **AND** it SHALL direct the Agent to proceed with the DPT_FRAMEWORK flow described in Section 2
+- **AND** it SHALL direct the Agent to proceed with the DEEP_RESEARCH_HARNESS flow described in Section 2
 - **AND** it SHALL not prohibit a capability probe or research action that a later entered phase explicitly authorizes
 
 #### Scenario: Agent reads RUN.md without a generic research shortcut
 
-- **WHEN** an Agent without a built-in research shortcut reads `DPT_FRAMEWORK/RUN.md` for a selected request
+- **WHEN** an Agent without a built-in research shortcut reads `DEEP_RESEARCH_HARNESS/RUN.md` for a selected request
 - **THEN** the shortcut-specific portion of Section 0 SHALL be a no-op
-- **AND** the DPT_FRAMEWORK flow described in Section 2 SHALL remain the next execution path
+- **AND** the DEEP_RESEARCH_HARNESS flow described in Section 2 SHALL remain the next execution path
 
 ### Requirement: Agent behavior files stay synchronized on skill override
 
-When the entry-priority directive in RUN.md is updated, the same directive SHALL be reflected consistently across repo-root `CLAUDE.md`, repo-root `AGENTS.md`, `DPT_FRAMEWORK/CLAUDE.md`, `DPT_FRAMEWORK/AGENTS.md`, and `DPT_FRAMEWORK/README.md`.
+When the entry-priority directive in RUN.md is updated, the same directive SHALL be reflected consistently across repo-root `CLAUDE.md`, repo-root `AGENTS.md`, `DEEP_RESEARCH_HARNESS/CLAUDE.md`, `DEEP_RESEARCH_HARNESS/AGENTS.md`, and `DEEP_RESEARCH_HARNESS/README.md`.
 
-Repo-root behavior files SHALL contain a short high-priority rule: when the user expresses research, deep-research, investigation, or report intent and this repo's `DPT_FRAMEWORK/` is the selected entry path, the Agent SHALL first read the selected entry surface. It SHALL NOT invoke generic `research` / `deep-research` / equivalent one-shot shortcuts, direct request-specific WebSearch/WebFetch, or manual evidence collection/synthesis before that entry routing is complete. The framework-local surfaces SHALL express the same priority while retaining their local pointers to the selected entry document.
+Repo-root behavior files SHALL contain a short high-priority rule: when the user expresses research, deep-research, investigation, or report intent and this repo's `DEEP_RESEARCH_HARNESS/` is the selected entry path, the Agent SHALL first read the selected entry surface. It SHALL NOT invoke generic `research` / `deep-research` / equivalent one-shot shortcuts, direct request-specific WebSearch/WebFetch, or manual evidence collection/synthesis before that entry routing is complete. The framework-local surfaces SHALL express the same priority while retaining their local pointers to the selected entry document.
 
 #### Scenario: Entry-priority language stays consistent
 
 - **WHEN** RUN.md Section 0 is updated with an entry-priority directive
 - **THEN** repo-root `CLAUDE.md` and repo-root `AGENTS.md` SHALL contain equivalent repo-level routing language
-- **AND** `DPT_FRAMEWORK/CLAUDE.md` and `DPT_FRAMEWORK/AGENTS.md` SHALL contain equivalent framework-local directive language
-- **AND** `DPT_FRAMEWORK/README.md` SHALL reference the directive and selected-entry route
+- **AND** `DEEP_RESEARCH_HARNESS/CLAUDE.md` and `DEEP_RESEARCH_HARNESS/AGENTS.md` SHALL contain equivalent framework-local directive language
+- **AND** `DEEP_RESEARCH_HARNESS/README.md` SHALL reference the directive and selected-entry route
 
 #### Scenario: Root behavior files route before framework-local files load
 
-- **WHEN** a fresh Agent session loads repo-root behavior files before reading `DPT_FRAMEWORK/RUN.md`
-- **AND** the user expresses research intent with `DPT_FRAMEWORK/` selected or relevant
+- **WHEN** a fresh Agent session loads repo-root behavior files before reading `DEEP_RESEARCH_HARNESS/RUN.md`
+- **AND** the user expresses research intent with `DEEP_RESEARCH_HARNESS/` selected or relevant
 - **THEN** the root behavior files SHALL direct the Agent to the selected DPT entry before any request-specific generic shortcut or direct research action
 - **AND** they SHALL not present a generic research skill as an equivalent route
 
 ### Requirement: Entry trigger hands control to Agent-run framework execution
 
-The `RUN.md` entry surface SHALL frame dragging, pasting, or otherwise providing `DPT_FRAMEWORK/RUN.md` as a one-time pre-pipeline trigger that selects the DPT_FRAMEWORK entry path and transfers control to the Agent.
+The `RUN.md` entry surface SHALL frame dragging, pasting, or otherwise providing `DEEP_RESEARCH_HARNESS/RUN.md` as a one-time pre-pipeline trigger that selects the DEEP_RESEARCH_HARNESS entry path and transfers control to the Agent.
 
-After that user-initiated entry trigger has selected the path, `RUN.md` SHALL direct the Agent to proceed with framework execution rather than asking whether to use DPT_FRAMEWORK, a built-in research shortcut, or another route. The entry trigger SHALL NOT create another framework-initiated clarification/wait point. Research-goal, scope and effort clarification belongs to HITL1; host setup/permission failure remains a narrow external prerequisite boundary rather than a conversational lifecycle checkpoint.
+After that user-initiated entry trigger has selected the path, `RUN.md` SHALL direct the Agent to proceed with framework execution rather than asking whether to use DEEP_RESEARCH_HARNESS, a built-in research shortcut, or another route. The entry trigger SHALL NOT create another framework-initiated clarification/wait point. Research-goal, scope and effort clarification belongs to HITL1; host setup/permission failure remains a narrow external prerequisite boundary rather than a conversational lifecycle checkpoint.
 
 The entry surface and synchronized framework entry docs SHALL present the default collaboration rhythm as:
 
@@ -77,12 +77,12 @@ HITL1: align research goal, scope and effort
 
 HITL1 and HITL2 SHALL be the only framework-initiated points where the framework invites and waits for a semantic decision. During the autonomous middle, the framework SHALL NOT initiate progress, ordinary-error, idle, acknowledgement, or continuation messages. A user-initiated normal conversation turn SHALL be answered, but the answer SHALL NOT create a third HITL, permission, mutation/reentry authority, pause/interrupt lifecycle, or promise that arbitrary mid-run intent is persisted or applied. Final SHALL remain terminal delivery rather than a third decision interaction point.
 
-Entry positioning SHALL describe DPT_FRAMEWORK as iterative research that preserves history/provenance while allowing current judgments to be revised, downgraded, or superseded. It SHALL NOT promise unlimited reruns, guarantee every rerun is purely incremental, or claim that all historical conclusions remain currently valid.
+Entry positioning SHALL describe DEEP_RESEARCH_HARNESS as iterative research that preserves history/provenance while allowing current judgments to be revised, downgraded, or superseded. It SHALL NOT promise unlimited reruns, guarantee every rerun is purely incremental, or claim that all historical conclusions remain currently valid.
 
-#### Scenario: Reading RUN.md means DPT_FRAMEWORK was selected
+#### Scenario: Reading RUN.md means DEEP_RESEARCH_HARNESS was selected
 
-- **WHEN** the Agent reads `DPT_FRAMEWORK/RUN.md` as the run entry
-- **THEN** the entry docs SHALL state that DPT_FRAMEWORK has been selected for this run
+- **WHEN** the Agent reads `DEEP_RESEARCH_HARNESS/RUN.md` as the run entry
+- **THEN** the entry docs SHALL state that DEEP_RESEARCH_HARNESS has been selected for this run
 - **AND** subsequent command execution SHALL be assigned to the Agent
 - **AND** the docs SHALL NOT ask the user to confirm whether to use the framework
 
@@ -90,7 +90,7 @@ Entry positioning SHALL describe DPT_FRAMEWORK as iterative research that preser
 
 > **@deprecated name** — Retained as the historical scenario anchor. The target behavior removes the former route-clarification exception.
 
-- **WHEN** the user provides or opens `RUN.md` and thereby selects DPT_FRAMEWORK
+- **WHEN** the user provides or opens `RUN.md` and thereby selects DEEP_RESEARCH_HARNESS
 - **THEN** entry docs SHALL direct the Agent into framework execution without another route-selection question
 - **AND** research semantics that still need clarification SHALL be handled at HITL1
 - **AND** host setup or permission failure SHALL be reported only as the smallest external prerequisite, not a third lifecycle interaction point
@@ -137,7 +137,7 @@ permission, mutation, or rerun authority.
 
 #### Scenario: Selected new research starts at RUN.md
 
-- **WHEN** a user makes a selected DPT research request without an explicitly supplied, reachable existing bundle
+- **WHEN** a user makes a selected Deep Research Harness research request without an explicitly supplied, reachable existing bundle
 - **THEN** root/framework routing SHALL direct the Agent to read `RUN.md` before `start-research`, a generic shortcut, or request-specific direct research work
 - **AND** `RUN.md` SHALL remain free to delegate to its existing workflow instructions
 

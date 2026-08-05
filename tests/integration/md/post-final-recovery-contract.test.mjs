@@ -5,11 +5,11 @@ import { readFileSync } from 'node:fs';
 function read(path) { return readFileSync(path, 'utf8'); }
 
 describe('post-final recovery Agent-facing contract', () => {
-  const commands = read('DPT_FRAMEWORK/COMMANDS.md');
-  const playbook = read('DPT_FRAMEWORK/command_playbook/post-final-recovery.md');
-  const finalPhase = read('DPT_FRAMEWORK/workflows/nodes/phases/phase-final.md');
-  const rerunPhase = read('DPT_FRAMEWORK/workflows/nodes/phases/phase-rerun.md');
-  const transitions = JSON.parse(read('DPT_FRAMEWORK/workflows/transitions.chain.json'));
+  const commands = read('DEEP_RESEARCH_HARNESS/COMMANDS.md');
+  const playbook = read('DEEP_RESEARCH_HARNESS/command_playbook/post-final-recovery.md');
+  const finalPhase = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-final.md');
+  const rerunPhase = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-rerun.md');
+  const transitions = JSON.parse(read('DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json'));
 
   it('keeps Final terminal and exposes one copyable audited rerun chain', () => {
     assert.equal(Object.hasOwn(transitions, 'phases/phase-final.md'), false);
@@ -36,7 +36,7 @@ describe('post-final recovery Agent-facing contract', () => {
   });
 
   it('does not publish force-style permission flags or a human co-runner flow', () => {
-    const commandLines = playbook.split('\n').filter((line) => line.trim().startsWith('node DPT_FRAMEWORK/'));
+    const commandLines = playbook.split('\n').filter((line) => line.trim().startsWith('node DEEP_RESEARCH_HARNESS/'));
     assert.doesNotMatch(commandLines.join('\n'), /--human-directed|--override|--force/);
     assert.doesNotMatch(playbook, /ask the user to run|用户运行.*命令/i);
     assert.match(commands, /不是verified identity、permission token、`--human-directed`、`--override` 或 `--force`/);

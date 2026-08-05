@@ -9,17 +9,17 @@ import {
   loadQueue,
   makeItem,
   saveQueue,
-} from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import {
   claimWorkUnits,
   loadWorkUnitIndex,
   saveWorkUnitIndex,
   submitWorkUnit,
   writeWorkUnitEnvelope,
-} from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import {
   LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
-} from '../../DPT_FRAMEWORK/schema/contracts/work-unit.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/schema/contracts/work-unit.mjs';
 
 export function tempWorkUnitBundle(prefix = 'wu-helper-') {
   return mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -328,7 +328,13 @@ export function claimAndSubmitWorkUnit(dir, {
   else seedDelegatedQueue(dir, [queueItem]);
   const claim = claimWorkUnits(dir, { phase, count: 1, ...actorDecision });
   const workId = claim.claimed_work_ids?.[0];
-  if (!workId) throw new Error(`test helper failed to claim a work unit for ${phase}`);
+  if (!workId) {
+    throw new Error(`test helper failed to claim a work unit for ${phase}: ${JSON.stringify({
+      admission: claim.admission,
+      actor_preflight: claim.actor_preflight,
+      blocked_by_queue_item_id: claim.blocked_by_queue_item_id,
+    })}`);
+  }
   let record = loadWorkUnitIndex(dir).work_units[workId];
 
   const manifestPath = path.join(dir, record.paths.manifest_ref);

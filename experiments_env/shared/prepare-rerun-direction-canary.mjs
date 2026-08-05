@@ -7,7 +7,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import { renderSeedProjectionCard, projectionSlotsForWave } from '../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
+import { renderSeedProjectionCard, projectionSlotsForWave } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
 
 import { claimAndSubmitFixtureWorkUnit } from './work-unit-playbook-utils.mjs';
 
@@ -58,18 +58,18 @@ function runGate(bundle, gate, currentNode) {
     '--gate', gate,
     '--',
     process.execPath,
-    join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'gates', `check-gate-${gate}.mjs`),
+    join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'gates', `check-gate-${gate}.mjs`),
     '--bundle', bundle,
     '--current-node', currentNode,
   ]));
 }
 
 function enterPhase(bundle, node) {
-  runNode([join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'enter-phase.mjs'), '--bundle', bundle, '--node', node]);
+  runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'enter-phase.mjs'), '--bundle', bundle, '--node', node]);
 }
 
 function advanceStatus(bundle, gate) {
-  runNode([join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'advance-status.mjs'), '--bundle', bundle, '--to', gate]);
+  runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'advance-status.mjs'), '--bundle', bundle, '--to', gate]);
 }
 
 function passAndEnter(bundle, gate, node, statusGate, stageNext) {
@@ -82,7 +82,7 @@ function passAndEnter(bundle, gate, node, statusGate, stageNext) {
 }
 
 function logCompletion(bundle, event) {
-  runNode([join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'log-event.mjs'), '--bundle', bundle, '--event', event]);
+  runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'log-event.mjs'), '--bundle', bundle, '--event', event]);
 }
 
 function ensureIndexRow(bundle, row) {
@@ -297,7 +297,7 @@ function stageHitl2Decision(bundle) {
 
 const stem = `rerun-direction-recovery-${randomUUID().slice(0, 8)}`;
 const created = runNode([
-  join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'instantiate-run-bundle.mjs'),
+  join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'instantiate-run-bundle.mjs'),
   stem,
   '--target-dir', TARGET_DIR,
 ]).stdout.trim();

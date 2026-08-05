@@ -42,7 +42,7 @@ verdict_judge: deterministic
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs orphan --case case-310 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 
 cat > "$B/rb_status.json" << 'JSON'
 {"bundle":"orphan","current_mode":"execution","state":"in_progress","current_gate":"wave1_complete","next_gate":"wave2_complete"}
@@ -111,8 +111,8 @@ cat > "$B/_tmp/declared-task.json" << 'JSON'
 }
 JSON
 
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue "$B" --task "$B/_tmp/declared-task.json" >/dev/null
-CLAIM=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave1 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-evidence-extractor --actor-reason probe_succeeded --execution-actor delegated_subagent)
+node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs enqueue "$B" --task "$B/_tmp/declared-task.json" >/dev/null
+CLAIM=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim "$B" --phase wave1 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-evidence-extractor --actor-reason probe_succeeded --execution-actor delegated_subagent)
 WORK_ID=$(node -e 'const j=JSON.parse(process.argv[1]); console.log(j.claimed_work_ids[0]);' "$CLAIM")
 
 cat > "$B/_tmp/write-submit-result.mjs" << 'JS'
@@ -192,7 +192,7 @@ writeFileSync(resultPath, `${JSON.stringify({
 console.log(resultPath);
 JS
 RESULT_PATH=$(node "$B/_tmp/write-submit-result.mjs" "$B" "$WORK_ID")
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$RESULT_PATH" >/dev/null
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$RESULT_PATH" >/dev/null
 
 # 未声明的 orphan reference（不在 submitted work-unit ledger 中）
 cat > "$B/reference/topic-a-orphan.md" << 'MD'
@@ -228,7 +228,7 @@ echo "B=$B"
 ## Step 2: 验证 orphan 检测
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # 直接调用 auditFileObservability
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync } from 'node:fs';
@@ -237,8 +237,8 @@ import { pathToFileURL } from 'node:url';
 
 const bundle = process.argv[2];
 const repoRoot = process.cwd();
-const { auditFileObservability } = await import(pathToFileURL(join(repoRoot, 'DPT_FRAMEWORK/engine/helpers/file-observability.mjs')).href);
-const { readOutputDeclarations } = await import(pathToFileURL(join(repoRoot, 'DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs')).href);
+const { auditFileObservability } = await import(pathToFileURL(join(repoRoot, 'DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs')).href);
+const { readOutputDeclarations } = await import(pathToFileURL(join(repoRoot, 'DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs')).href);
 const ledger = readOutputDeclarations(bundle);
 const decls = ledger.map(l => ({ ...l, declared_at: l.declared_at || '', work_id: l.work_id || '', output_files: l.output_files || [] }));
 
@@ -290,7 +290,7 @@ console.log(JSON.stringify(checks.map(c => ({ gate: c.gate, passed: c.passed }))
 // Also verify via check-reentry (integration)
 const { spawnSync } = await import('node:child_process');
 const reentry = spawnSync('node', [
-  'DPT_FRAMEWORK/cli/check-reentry.mjs',
+  'DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs',
   '--bundle', bundle,
   '--at', 'wave1_complete',
 ], { encoding: 'utf-8', cwd: process.cwd() });
@@ -318,8 +318,8 @@ JS
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

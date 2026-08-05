@@ -42,7 +42,7 @@ Light controlled playbook. The runner uses a real disposable bundle and real fra
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs arh_continuation_cues --case case-606 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 mkdir -p "$B/seed_topics"
 
 # Write representative output files with expected continuation-cue shapes.
@@ -109,7 +109,7 @@ echo "BUNDLE=$B"
 ## Step 2: Write Claim Fixture
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # Write representative claim output with continuation cue
 node -e "
 require('fs').writeFileSync('$B/case-606-claim.json', JSON.stringify({
@@ -122,7 +122,7 @@ require('fs').writeFileSync('$B/case-606-claim.json', JSON.stringify({
 ## Step 3: Verdict Checks
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -189,7 +189,7 @@ recordCheck(tracePath, {
 });
 JS
 
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Light health, audit, preservation, and optional clean-PASS cleanup.

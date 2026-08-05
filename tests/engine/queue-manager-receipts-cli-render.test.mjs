@@ -14,8 +14,8 @@ import {
   render,
   loadQueue,
   saveQueue,
-} from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
-import { QueueSchema } from '../../DPT_FRAMEWORK/schema/contracts/queue.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
+import { QueueSchema } from '../../DEEP_RESEARCH_HARNESS/schema/contracts/queue.mjs';
 import { cleanup, item, tempBundle } from './queue-manager-fixtures.mjs';
 
 describe('Receipts, projection, and CLI (AGQ-004, AGQ-005, AGQ-006)', () => {

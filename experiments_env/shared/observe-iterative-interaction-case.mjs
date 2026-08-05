@@ -7,8 +7,8 @@ import { basename, join, relative } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parse as parseYaml } from 'yaml';
 
-import { createTrace } from '../../DPT_FRAMEWORK/engine/trace.mjs';
-import { validateSelectedAdapterSameUrlBinding } from '../../DPT_FRAMEWORK/host_tools/lib/research-access-adapter.mjs';
+import { createTrace } from '../../DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { validateSelectedAdapterSameUrlBinding } from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/research-access-adapter.mjs';
 import { recordCheck } from './wff-playbook-utils.mjs';
 
 const [caseId, action, ...rest] = process.argv.slice(2);
@@ -237,11 +237,11 @@ function transitionFinal() {
   const before = JSON.parse(readFileSync(join(bundle, 'case-713-authority-B.json'), 'utf8'));
   const gate = parseJsonOutput(runNode([
     'experiments_env/shared/run-gate-with-monitor.mjs', '--bundle', bundle, '--gate', 'readiness-passed', '--',
-    process.execPath, 'DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs', '--bundle', bundle, '--current-node', 'phases/phase-readiness.md',
+    process.execPath, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-readiness-passed.mjs', '--bundle', bundle, '--current-node', 'phases/phase-readiness.md',
   ]));
   if (gate.check?.passed !== true || gate.check?.next !== 'phases/phase-final.md') throw new Error(`readiness Gate did not authorize Final: ${JSON.stringify(gate)}`);
-  runNode(['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', bundle, '--node', gate.check.next]);
-  runNode(['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', bundle, '--to', 'readiness_passed']);
+  runNode(['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', bundle, '--node', gate.check.next]);
+  runNode(['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundle, '--to', 'readiness_passed']);
   const after = inventory();
   const changed = changedPaths(before.files, after.files);
   const allowed = changed.every((path) => path === 'rb_status.json'

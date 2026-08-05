@@ -8,8 +8,8 @@ const root = process.cwd();
 const bundles = join(root, 'tests', '.test-bundles');
 const created = [];
 const instantiate = join(root, 'experiments_env/shared/new-disposable-bundle.mjs');
-const gate = join(root, 'DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs');
-const enter = join(root, 'DPT_FRAMEWORK/cli/enter-phase.mjs');
+const gate = join(root, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs');
+const enter = join(root, 'DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs');
 
 function run(script, args) {
   return spawnSync('node', [script, ...args], { encoding: 'utf8', timeout: 15000, maxBuffer: 1024 * 1024 });

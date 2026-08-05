@@ -7,7 +7,7 @@ import {
   QueueDemandItemSchema,
   QueueSchema,
   TargetSpecSchema,
-} from '../../../DPT_FRAMEWORK/schema/contracts/queue.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/queue.mjs';
 
 function demand(overrides = {}) {
   return {

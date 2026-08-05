@@ -5,13 +5,13 @@
 Bundle 实例化命令 playbook、rb_templates 模板文件、validate-bundle.mjs/inspect-bundle.mjs 校验脚本的契约。
 ## Requirements
 ### Requirement: Command playbook guides agent to produce a complete bundle
-The `DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md` playbook SHALL instruct the agent to create `dpt_rb_{name}/` at project root, containing `BUNDLE_MAP.md`, five `rb_*` control files, `seed_topics/`, `reference/`, `artifacts/`, `_cache/`, `final/`, and `_work_units/`.
+The `DEEP_RESEARCH_HARNESS/command_playbook/instantiate-run-bundle.md` playbook SHALL instruct the agent to create `dpt_rb_{name}/` at project root, containing `BUNDLE_MAP.md`, five `rb_*` control files, `seed_topics/`, `reference/`, `artifacts/`, `_cache/`, `final/`, and `_work_units/`.
 
 The playbook SHALL describe `BUNDLE_MAP.md` as a passive bundle map and SHALL NOT treat it as a lifecycle phase node or replacement for `RUN.md`, command playbooks, or phase Markdown.
 
 #### Scenario: Agent follows playbook for fresh bundle
-- **WHEN** Agent reads `DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md` and is given name "ai-safety"
-- **THEN** Agent creates `dpt_rb_ai-safety/` as a peer of `DPT_FRAMEWORK/` with `BUNDLE_MAP.md`, all required control files, and all required directories
+- **WHEN** Agent reads `DEEP_RESEARCH_HARNESS/command_playbook/instantiate-run-bundle.md` and is given name "ai-safety"
+- **THEN** Agent creates `dpt_rb_ai-safety/` as a peer of `DEEP_RESEARCH_HARNESS/` with `BUNDLE_MAP.md`, all required control files, and all required directories
 
 #### Scenario: Bundle name collision
 - **WHEN** `dpt_rb_ai-safety/` already exists
@@ -19,27 +19,27 @@ The playbook SHALL describe `BUNDLE_MAP.md` as a passive bundle map and SHALL NO
 
 ### Requirement: Template files define minimal valid content
 
-The `DPT_FRAMEWORK/rb_templates/` directory SHALL contain template files with `{{name}}` placeholders. The Agent SHALL replace `{{name}}` with the bundle name during instantiation. The `rb_queue.json` template SHALL use the queue v2 shape with `schema_version`, ordered `active_window`, ordered `refill_pool`, `delegated_in_flight`, and `terminal_history`.
+The `DEEP_RESEARCH_HARNESS/rb_templates/` directory SHALL contain template files with `{{name}}` placeholders. The Agent SHALL replace `{{name}}` with the bundle name during instantiation. The `rb_queue.json` template SHALL use the queue v2 shape with `schema_version`, ordered `active_window`, ordered `refill_pool`, `delegated_in_flight`, and `terminal_history`.
 
 The template set SHALL include `BUNDLE_MAP.md.tmpl` and SHALL NOT use `START_FROM_HERE.md.tmpl` as the primary map template for new bundles.
 
 #### Scenario: Template for rb_queue.json
 
-- **WHEN** `DPT_FRAMEWORK/rb_templates/rb_queue.json.tmpl` is read
+- **WHEN** `DEEP_RESEARCH_HARNESS/rb_templates/rb_queue.json.tmpl` is read
 - **THEN** it SHALL contain valid queue v2 JSON
 - **AND** it SHALL NOT expose the legacy top-level delegated queue shape as production queue authority
 
 #### Scenario: Template for BUNDLE_MAP.md
 
-- **WHEN** `DPT_FRAMEWORK/rb_templates/BUNDLE_MAP.md.tmpl` is read
+- **WHEN** `DEEP_RESEARCH_HARNESS/rb_templates/BUNDLE_MAP.md.tmpl` is read
 - **THEN** it SHALL contain the passive bundle map sections required by `bundle-map`
 - **AND** it SHALL use `{{name}}` for bundle-specific naming where needed
 
 ### Requirement: JS helper validate-bundle.mjs validates all control files
-The `DPT_FRAMEWORK/cli/validate-bundle.mjs` script SHALL read each control file, validate against its Zod schema, and exit with code 0 (PASS) or 1 (FAIL). The agent SHALL call it via `node DPT_FRAMEWORK/cli/validate-bundle.mjs <bundleDir>`.
+The `DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs` script SHALL read each control file, validate against its Zod schema, and exit with code 0 (PASS) or 1 (FAIL). The agent SHALL call it via `node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs <bundleDir>`.
 
 #### Scenario: validate-bundle.mjs passes on valid bundle
-- **WHEN** `node DPT_FRAMEWORK/cli/validate-bundle.mjs dpt_rb_ai-safety/` is called and all files are valid
+- **WHEN** `node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs dpt_rb_ai-safety/` is called and all files are valid
 - **THEN** exit code is 0 and output lists each file with ✓
 
 #### Scenario: validate-bundle.mjs fails on invalid bundle
@@ -47,7 +47,7 @@ The `DPT_FRAMEWORK/cli/validate-bundle.mjs` script SHALL read each control file,
 - **THEN** exit code is 1 and output shows ✗ with the Zod error detail
 
 ### Requirement: JS helper inspect-bundle.mjs validates directory structure
-The `DPT_FRAMEWORK/cli/inspect-bundle.mjs` script SHALL check all required files and directories exist, and exit with code 0 (PASS) or 1 (FAIL). The agent SHALL call it via `node DPT_FRAMEWORK/cli/inspect-bundle.mjs <bundleDir>`.
+The `DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs` script SHALL check all required files and directories exist, and exit with code 0 (PASS) or 1 (FAIL). The agent SHALL call it via `node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs <bundleDir>`.
 
 For current new bundles, the required root map file SHALL be `BUNDLE_MAP.md`. For legacy bundles that contain `START_FROM_HERE.md` but not `BUNDLE_MAP.md`, inspect SHALL exit 0 with a deprecation warning if all other required surfaces are present.
 
@@ -149,7 +149,7 @@ Any code path that rewrites `rb_plan.md` after creation (for example a rerun `ad
 
 ### Requirement: Production bundle creator SHALL reject invalid invocation before filesystem side effects
 
-`DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs` SHALL parse its complete argv before resolving a repo root, creating a target directory, reading/writing templates, creating trace/log files, or invoking bundle validation. Its accepted invocation shape is `instantiate-run-bundle.mjs <name> [--target-dir <dir>|--target-dir=<dir>]`; it SHALL accept exactly one positional name and only the declared options. The parser SHALL also recognize `--force` solely to preserve its existing explicit no-overwrite rejection; it is not a successful invocation option. A standalone `--help` option before any `--` end-of-options delimiter SHALL take precedence over other argv validation, print usage, and exit 0 without filesystem side effects. A `--help` text after that delimiter SHALL remain a positional name and fail the name grammar. Without a preceding help option, every declared option MAY occur at most once across its separated and `=` presentations; unknown, repeated, or missing-valued options SHALL fail before filesystem side effects.
+`DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs` SHALL parse its complete argv before resolving a repo root, creating a target directory, reading/writing templates, creating trace/log files, or invoking bundle validation. Its accepted invocation shape is `instantiate-run-bundle.mjs <name> [--target-dir <dir>|--target-dir=<dir>]`; it SHALL accept exactly one positional name and only the declared options. The parser SHALL also recognize `--force` solely to preserve its existing explicit no-overwrite rejection; it is not a successful invocation option. A standalone `--help` option before any `--` end-of-options delimiter SHALL take precedence over other argv validation, print usage, and exit 0 without filesystem side effects. A `--help` text after that delimiter SHALL remain a positional name and fail the name grammar. Without a preceding help option, every declared option MAY occur at most once across its separated and `=` presentations; unknown, repeated, or missing-valued options SHALL fail before filesystem side effects.
 
 The production `<name>` SHALL match `^[a-z0-9][a-z0-9-]*$`. A flag token, unknown option, missing option value, additional positional, empty/whitespace name, or name containing a path separator, traversal segment, leading `-`, underscore, or another disallowed character SHALL fail before any filesystem side effect, with nonzero exit and one diagnostic that names the accepted invocation or name shape. The creator SHALL not normalize an invalid name into a new production identity.
 
@@ -189,7 +189,7 @@ After successful parsing and validation, existing production collision/no-overwr
 When production `instantiate-run-bundle.mjs` creates a bundle, it SHALL render
 `RUN_BUNDLE.md` with the bundle name and framework-root relative path calculated
 from the actual framework location used by the creator. It SHALL NOT assume the
-bundle is a sibling of `DPT_FRAMEWORK/` merely because that is the default
+bundle is a sibling of `DEEP_RESEARCH_HARNESS/` merely because that is the default
 target layout.
 
 The rendered coordinates are static navigation text, not runtime authority or
@@ -202,4 +202,4 @@ schema, and no-overwrite contracts remain unchanged.
   directory outside the framework's sibling layout
 - **THEN** its `RUN_BUNDLE.md` SHALL contain a framework path that resolves
   from that bundle to the actual framework root used by the creator
-- **AND** it SHALL NOT contain a fixed `../DPT_FRAMEWORK/` assumption
+- **AND** it SHALL NOT contain a fixed `../DEEP_RESEARCH_HARNESS/` assumption

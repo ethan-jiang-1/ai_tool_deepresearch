@@ -6,17 +6,17 @@ import assert from 'node:assert/strict';
 const REPO_ROOT = join(import.meta.dirname, '../../..');
 
 const TARGETS = [
-  'DPT_FRAMEWORK/workflows/nodes/shared/shared-repair-guidance.md',
-  'DPT_FRAMEWORK/workflows/nodes/shared/shared-gate-rules.md',
-  'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md',
-  'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md',
-  'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md',
-  'DPT_FRAMEWORK/schema/gate_definitions/gate-wave0-complete.definition.json',
-  'DPT_FRAMEWORK/schema/gate_definitions/gate-wave1-complete.definition.json',
-  'DPT_FRAMEWORK/schema/gate_definitions/gate-wave2-complete.definition.json',
-  'DPT_FRAMEWORK/engine/helpers/gate-helpers-core.mjs',
-  'DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs',
-  'DPT_FRAMEWORK/engine/helpers/gate-helpers-checks.mjs',
+  'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-repair-guidance.md',
+  'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-gate-rules.md',
+  'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md',
+  'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md',
+  'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave2.md',
+  'DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-wave0-complete.definition.json',
+  'DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-wave1-complete.definition.json',
+  'DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-wave2-complete.definition.json',
+  'DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-core.mjs',
+  'DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-provenance.mjs',
+  'DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs',
 ];
 
 const FORBIDDEN_POSITIVE_ADVICE = [
@@ -73,7 +73,7 @@ describe('RWG-016 gate guidance does not advise phase bypass or surfacing', () =
 
 describe('SWE silent execution degraded handoff guidance', () => {
   it('requires legal degraded handoff or silent hold without final shortcut', () => {
-    const text = readFileSync(join(REPO_ROOT, 'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md'), 'utf-8');
+    const text = readFileSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-silent-execution.md'), 'utf-8');
     assert.match(text, /check\.degraded: true/);
     assert.match(text, /check\.next/);
     assert.match(text, /enter-phase\.mjs --bundle <path> --node <check\.next>/);

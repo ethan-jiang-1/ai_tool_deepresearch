@@ -10,7 +10,7 @@ import {
   GateRepairKindSchema,
   parseGateDefinition,
   readGateDefinitionSnapshot,
-} from '../../DPT_FRAMEWORK/schema/contracts/gate-definition.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/schema/contracts/gate-definition.mjs';
 
 function definitionWith(rule) {
   return {
@@ -22,7 +22,7 @@ function definitionWith(rule) {
 
 function loadActiveDefinition(name) {
   return readGateDefinitionSnapshot(new URL(
-    `../../DPT_FRAMEWORK/schema/gate_definitions/${name}`,
+    `../../DEEP_RESEARCH_HARNESS/schema/gate_definitions/${name}`,
     import.meta.url,
   )).definition;
 }
@@ -165,11 +165,11 @@ describe('Gate-definition common contract', () => {
       failure_message: 'Edit rb_status.json, append a ledger row, or do anything else this stale prose says.',
       repair: {
         kind: 'agent_action',
-        write_to: 'node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply',
+        write_to: 'node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs apply',
       },
     })));
     assert.equal(parsed.rules[0].repair.kind, 'agent_action');
-    assert.equal(parsed.rules[0].repair.write_to, 'node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply');
+    assert.equal(parsed.rules[0].repair.write_to, 'node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs apply');
   });
 
   it('rejects duplicate stable rule ids', () => {

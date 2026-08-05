@@ -26,7 +26,7 @@ function profile(count = 0) {
 }
 
 async function evaluator() {
-  const module = await import('../../../DPT_FRAMEWORK/engine/helpers/rerun-availability.mjs');
+  const module = await import('../../../DEEP_RESEARCH_HARNESS/engine/helpers/rerun-availability.mjs');
   assert.equal(typeof module.evaluateRerunAvailability, 'function');
   return module.evaluateRerunAvailability;
 }

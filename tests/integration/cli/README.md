@@ -1,6 +1,6 @@
 # CLI Integration Tests
 
-This directory tests shipped CLI entry points under `DPT_FRAMEWORK/cli/`.
+This directory tests shipped CLI entry points under `DEEP_RESEARCH_HARNESS/cli/`.
 
 Run the whole CLI integration layer with:
 
@@ -14,4 +14,4 @@ Command-contract hardening coverage is split deliberately:
 - `exit-code-convention.test.mjs` keeps the shipped CLI inventory honest and samples safe invocations for every current top-level CLI.
 - Individual `check-gate-*.test.mjs` files continue to cover each gate's domain behavior.
 
-Do not put CLI fixtures or tests under `DPT_FRAMEWORK/`; use disposable paths under `tests/` instead.
+Do not put CLI fixtures or tests under `DEEP_RESEARCH_HARNESS/`; use disposable paths under `tests/` instead.

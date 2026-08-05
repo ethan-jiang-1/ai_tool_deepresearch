@@ -46,14 +46,14 @@ verdict_judge: deterministic
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs log_simple --case case-71 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 # new-disposable-bundle creates minimal structure — create scaffold files
 touch "$B/reference/_INDEX.md" "$B/reference/README.md"
 mkdir -p "$B/artifacts/wave0"
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$B"
 # inspect-bundle requires _logs/run.log — it gets created on first log write
 # For now, verify structure minus log
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B" || true
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "$B" || true
 
 echo "B=$B"
 
@@ -64,7 +64,7 @@ import { join } from 'node:path';
 const __dirname = process.argv[2];
 
 // Verify run_start in trace
-const trace = await import('./DPT_FRAMEWORK/engine/trace.mjs');
+const trace = await import('./DEEP_RESEARCH_HARNESS/engine/trace.mjs');
 const t = trace.createTrace(join(__dirname, 'rb_trace.jsonl'), { consoleEcho: false });
 const summary = t.traceSummary();
 const hasRunStart = summary.events.some(e => e.event === 'run_start');
@@ -99,7 +99,7 @@ JS
 ## Step 2: 跑 gate CLI（验证 writeGateAttempt）
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # Copy minimal gate definition for testing
 mkdir -p "$B/_gates"
 
@@ -116,7 +116,7 @@ const gates = [
 ];
 
 for (const g of gates) {
-  const cmd = `node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate ${g.name} -- node DPT_FRAMEWORK/cli/gates/check-gate-${g.name}.mjs --bundle "${__dirname}" --current-node "${g.node}"`;
+  const cmd = `node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate ${g.name} -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-${g.name}.mjs --bundle "${__dirname}" --current-node "${g.node}"`;
   try {
     const stdout = execSync(cmd, { encoding: 'utf-8', stdio: 'pipe' });
     const result = JSON.parse(stdout);
@@ -163,14 +163,14 @@ JS
 ## Step 3: Agent 通过 log-event.mjs CLI 写日志
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # Simulate Agent writing phase START/END log entries
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --level info --msg "phase:setup START"
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --level info --msg "phase:setup END — gate PASS"
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --level warn --msg "repair" --detail '{"slot":"03","reason":"test"}'
+node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle "$B" --level info --msg "phase:setup START"
+node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle "$B" --level info --msg "phase:setup END — gate PASS"
+node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle "$B" --level warn --msg "repair" --detail '{"slot":"03","reason":"test"}'
 
 # Verify log-event exits 0 even with bad input
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle /nonexistent --level info --msg "should not crash"
+node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle /nonexistent --level info --msg "should not crash"
 echo "log-event resilience: OK"
 ```
 
@@ -181,7 +181,7 @@ echo "log-event resilience: OK"
 ## Step 4: 验证 _logs/run.log 统一信封格式
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -246,7 +246,7 @@ JS
 ## Step 5: 验证 rb_trace.jsonl 含 bundle 字段
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -286,9 +286,9 @@ JS
 ## Step 6: inspect-bundle --timeline 缝合验证
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # Run timeline and verify it stitches correctly
-TIMELINE=$(node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B" --timeline 2>&1)
+TIMELINE=$(node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "$B" --timeline 2>&1)
 echo "$TIMELINE"
 
 # Verify timeline contains entries from both log and trace
@@ -298,7 +298,7 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const __dirname = process.argv[2];
 
-const stdout = execSync(`node DPT_FRAMEWORK/cli/inspect-bundle.mjs "${__dirname}" --timeline`, { encoding: 'utf-8', stdio: 'pipe' });
+const stdout = execSync(`node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "${__dirname}" --timeline`, { encoding: 'utf-8', stdio: 'pipe' });
 
 const hasTrace = stdout.includes('[trace]');
 const hasLog = stdout.includes('[log]');
@@ -326,13 +326,13 @@ JS
 ## Step 7: inspect-bundle --summary + --log
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 echo "=== SUMMARY ==="
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B" --summary
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "$B" --summary
 
 echo ""
 echo "=== LOG ==="
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B" --log
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "$B" --log
 
 # Verify --summary exits 0 and includes expected info
 node --input-type=module - "$B" <<'JS'
@@ -341,7 +341,7 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const __dirname = process.argv[2];
 
-const stdout = execSync(`node DPT_FRAMEWORK/cli/inspect-bundle.mjs "${__dirname}" --summary`, { encoding: 'utf-8', stdio: 'pipe' });
+const stdout = execSync(`node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "${__dirname}" --summary`, { encoding: 'utf-8', stdio: 'pipe' });
 
 const hasPassed = stdout.includes('passed');
 const hasFailed = stdout.includes('failed');
@@ -370,8 +370,8 @@ JS
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 9: 结果解读

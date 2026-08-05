@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import {
   parseOperationInvocation,
   validateBundleDirectory,
-} from '../../../DPT_FRAMEWORK/engine/helpers/cli-operation-contract.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/cli-operation-contract.mjs';
 
 const dirs = [];
 

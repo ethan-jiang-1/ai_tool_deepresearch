@@ -14,7 +14,7 @@ function read(relPath) {
 
 describe('work-unit timeout terminalization static guard', () => {
   it('public timeout-capable lifecycle path imports and gates on timeout preflight', () => {
-    const lifecycle = read('DPT_FRAMEWORK/engine/work-unit-lifecycle.mjs');
+    const lifecycle = read('DEEP_RESEARCH_HARNESS/engine/work-unit-lifecycle.mjs');
     assert.match(lifecycle, /timeoutPreflightWorkUnit/);
     assert.match(lifecycle, /status === 'timed_out'[\s\S]*timeoutPreflightWorkUnit/);
     assert.match(lifecycle, /status === 'timed_out' && !force && !timeoutPreflight\.timeout_eligible/);
@@ -23,7 +23,7 @@ describe('work-unit timeout terminalization static guard', () => {
   });
 
   it('CLI timeout routes through closeWorkUnitAttempt and exposes explicit force only on timeout', () => {
-    const cli = read('DPT_FRAMEWORK/cli/operate-work-unit.mjs');
+    const cli = read('DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs');
     assert.match(cli, /timeout-preflight/);
     assert.match(cli, /timeoutPreflightWorkUnit/);
     assert.match(cli, /closeWorkUnitAttempt/);
@@ -32,7 +32,7 @@ describe('work-unit timeout terminalization static guard', () => {
   });
 
   it('work-unit core exports preflight beside the guarded lifecycle API', () => {
-    const core = read('DPT_FRAMEWORK/engine/work-unit-core.mjs');
+    const core = read('DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs');
     assert.match(core, /closeWorkUnitAttempt/);
     assert.match(core, /timeoutPreflightWorkUnit/);
     assert.match(core, /from '\.\/work-unit-timeout-preflight\.mjs'/);

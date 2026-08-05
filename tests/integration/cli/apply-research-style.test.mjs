@@ -8,7 +8,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 const ROOT = process.cwd();
 const NEW_BUNDLE = join(ROOT, 'experiments_env', 'shared', 'new-disposable-bundle.mjs');
-const APPLY_STYLE = join(ROOT, 'DPT_FRAMEWORK', 'cli', 'apply-research-style.mjs');
+const APPLY_STYLE = join(ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'apply-research-style.mjs');
 const BUNDLES_DIR = join(ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
 

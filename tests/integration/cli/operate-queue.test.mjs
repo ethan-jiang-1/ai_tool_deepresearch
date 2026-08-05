@@ -8,7 +8,7 @@ import { existsSync, readFileSync, writeFileSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
 import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
-const FIXTURE_FW = join(process.cwd(), 'DPT_FRAMEWORK');
+const FIXTURE_FW = join(process.cwd(), 'DEEP_RESEARCH_HARNESS');
 const CLI = join(FIXTURE_FW, 'cli', 'operate-queue.mjs');
 
 function makeTask(overrides = {}) {
@@ -60,7 +60,7 @@ describe('operate-queue.mjs integration', () => {
     bundleDir = createTempDir('operate-queue');
     writeFileSync(join(bundleDir, 'rb_queue.json'), JSON.stringify(makeEmptyQueue(), null, 2));
     writeFileSync(join(bundleDir, 'BUNDLE_MAP.md'), '# Queue Test\n');
-    cpSync(FIXTURE_FW, join(bundleDir, 'DPT_FRAMEWORK'), { recursive: true });
+    cpSync(FIXTURE_FW, join(bundleDir, 'DEEP_RESEARCH_HARNESS'), { recursive: true });
   });
 
   after(cleanupAll);
@@ -146,7 +146,7 @@ describe('operate-queue.mjs integration', () => {
     });
     writeFileSync(join(countDir, 'rb_queue.json'), JSON.stringify(testQueue, null, 2));
     writeFileSync(join(countDir, 'BUNDLE_MAP.md'), '# Count\n');
-    cpSync(FIXTURE_FW, join(countDir, 'DPT_FRAMEWORK'), { recursive: true });
+    cpSync(FIXTURE_FW, join(countDir, 'DEEP_RESEARCH_HARNESS'), { recursive: true });
 
     const r = spawnSync('node', [CLI, 'count', countDir], { encoding: 'utf-8', timeout: 5000 });
     assert.strictEqual(r.status, 0, `Expected exit 0, got ${r.status}. stderr: ${r.stderr?.slice(0, 500)}`);
@@ -175,7 +175,7 @@ describe('operate-queue.mjs integration', () => {
     const freshDir = createTempDir('operate-queue-fresh');
     writeFileSync(join(freshDir, 'rb_queue.json'), JSON.stringify(makeEmptyQueue(), null, 2));
     writeFileSync(join(freshDir, 'BUNDLE_MAP.md'), '# Fresh\n');
-    cpSync(FIXTURE_FW, join(freshDir, 'DPT_FRAMEWORK'), { recursive: true });
+    cpSync(FIXTURE_FW, join(freshDir, 'DEEP_RESEARCH_HARNESS'), { recursive: true });
 
     const r = spawnSync('node', [CLI, 'claim', freshDir, '--actor', 'main-agent'],
       { encoding: 'utf-8', timeout: 5000 });

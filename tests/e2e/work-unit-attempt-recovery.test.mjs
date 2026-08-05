@@ -19,15 +19,15 @@ import {
   resolveWorkUnitSupersessionLineage,
   submitWorkUnit,
   supersedeWorkUnitAttempt,
-} from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
-import { loadQueue, queueItemSnapshotHash } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
-import { enqueue, saveQueue } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
+import { loadQueue, queueItemSnapshotHash } from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
+import { enqueue, saveQueue } from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import {
   checkSubmittedDeclarationRecovery,
   checkWorkUnitLedgerExists,
   checkWorkUnitOutputCoverage,
   checkWorkUnitSubmissionPresence,
-} from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-provenance.mjs';
 import {
   availableActorDecision,
   claimAndSubmitWorkUnit,

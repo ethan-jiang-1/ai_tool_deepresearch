@@ -48,7 +48,7 @@ function writeTarget(bundleDir, target, content) {
 
 async function evaluate(input) {
   const { evaluateDirectOutputTarget } = await import(
-    '../../../DPT_FRAMEWORK/engine/helpers/direct-output-contract.mjs'
+    '../../../DEEP_RESEARCH_HARNESS/engine/helpers/direct-output-contract.mjs'
   );
   return evaluateDirectOutputTarget(input);
 }

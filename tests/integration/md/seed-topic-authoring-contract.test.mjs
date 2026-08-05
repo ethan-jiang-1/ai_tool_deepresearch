@@ -5,9 +5,9 @@ import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
 const read = (path) => readFileSync(path, 'utf8');
-const seedTemplate = read('DPT_FRAMEWORK/workflows/nodes/templates/seed-topic-template.md');
-const workUnitEnvelope = read('DPT_FRAMEWORK/engine/work-unit-envelope.mjs');
-const phase = (name) => read(`DPT_FRAMEWORK/workflows/nodes/phases/${name}.md`);
+const seedTemplate = read('DEEP_RESEARCH_HARNESS/workflows/nodes/templates/seed-topic-template.md');
+const workUnitEnvelope = read('DEEP_RESEARCH_HARNESS/engine/work-unit-envelope.mjs');
+const phase = (name) => read(`DEEP_RESEARCH_HARNESS/workflows/nodes/phases/${name}.md`);
 const returnFields = ['evidence_meaning', 'relationship', 'refs', 'status', 'next_hop'];
 
 function requires(node, key) {
@@ -37,7 +37,7 @@ describe('Seed Topic template and command contracts', () => {
       ['wave0', phase('phase-wave0')],
       ['wave1', phase('phase-wave1')],
       ['wave2', phase('phase-wave2')],
-      ['schemas', read('DPT_FRAMEWORK/workflows/nodes/shared/shared-schemas.md')],
+      ['schemas', read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-schemas.md')],
     ];
     const counts = Object.fromEntries(surfaces.map(([name, content]) => [name, [...content.matchAll(completeExample)].length]));
     assert.equal(counts.template, 1, JSON.stringify(counts));
@@ -51,7 +51,7 @@ describe('Seed Topic template and command contracts', () => {
       assert.doesNotMatch(frontmatter, /templates\/seed-topic-template/);
       assert.match(role, /return-map|return map|evidence_meaning/i);
     }
-    const result = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/validate-workflow-package.mjs'], { encoding: 'utf8' });
+    const result = spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/validate-workflow-package.mjs'], { encoding: 'utf8' });
     assert.equal(result.status, 0, result.stdout + result.stderr);
   });
 
@@ -63,7 +63,7 @@ describe('Seed Topic template and command contracts', () => {
 
   it('keeps document shape and packet mechanics in their separate homes', () => {
     const seedPhase = phase('phase-seed-topics');
-    const playbook = read('DPT_FRAMEWORK/command_playbook/operate-topic-state.md');
+    const playbook = read('DEEP_RESEARCH_HARNESS/command_playbook/operate-topic-state.md');
     for (const surface of [seedPhase, playbook]) {
       assert.match(surface, /enrich_seed/);
       assert.match(surface, /operate-topic-state(?:\.mjs)? apply/);

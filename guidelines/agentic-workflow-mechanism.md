@@ -6,7 +6,7 @@ status: effective
 created: 2026-06-23
 revised: 2026-07-25
 role: normative mechanism description of the Agent-driven dynamic-loading workflow loop
-scope: all Agent-driven workflow execution across DPT_FRAMEWORK/, dpt_rb_*/, and dpt_disp_*/
+scope: all Agent-driven workflow execution across DEEP_RESEARCH_HARNESS/, dpt_rb_*/, and dpt_disp_*/
 authority: guidance
 defers_to:
   - guidelines/project-charter.md
@@ -119,7 +119,7 @@ Agent 驱动的 workflow 不是 JS engine 跑循环。它是一个 **Phase Agent
 
 ### MD Phase Node — Controller
 
-每个 `DPT_FRAMEWORK/workflows/nodes/phases/phase-*.md` 是一个独立的 controller surface。它的 frontmatter 声明元数据（`phase`、`gate`、`stop`），它的 body 包含完整的执行指令。Phase Agent 读它，照它说的做。
+每个 `DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-*.md` 是一个独立的 controller surface。它的 frontmatter 声明元数据（`phase`、`gate`、`stop`），它的 body 包含完整的执行指令。Phase Agent 读它，照它说的做。
 
 - **MUST**：每个 phase node 的 body 定义该阶段的完整控制面（目标、动作、gate 命令、pass/fail 处理）。
 - **MUST**：Phase Agent 执行完毕后跑 gate CLI，读取 `check.next`，再通过 accepted handoff loader/check 消费该 node。
@@ -127,7 +127,7 @@ Agent 驱动的 workflow 不是 JS engine 跑循环。它是一个 **Phase Agent
 
 ### transitions.chain.json — Passive Routing Table
 
-`DPT_FRAMEWORK/workflows/transitions.chain.json` 是唯一的路由数据源。它是一个纯静态映射：给定当前 node fileRef 和 gate outcome，返回下一个 node fileRef。
+`DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json` 是唯一的路由数据源。它是一个纯静态映射：给定当前 node fileRef 和 gate outcome，返回下一个 node fileRef。
 
 - **MUST**：chain 编码**确定性出口**（outcome 有固定、上下文无关的 next-node 目标，如 `passed` 和 `rerun`）。不确定 branch（`request_view_revision`、`repair`、`stop_blocked`）归 Agent 判断，不进入 chain。
 - **MUST**：chain 的 key 和 value 都是 node fileRef（如 `phases/phase-wave0.md`），不是 gate key 或 phase key。
@@ -210,7 +210,7 @@ The gate CLI is the only mechanism that queries the chain and produces `check.ne
 
 ### MD Node Availability
 
-Every `fileRef` in `transitions.chain.json` must resolve to a readable Markdown file in `DPT_FRAMEWORK/workflows/nodes/`. A chain entry pointing to a missing or unreadable file produces a load failure that stops the loop. Node files are the Phase Agent's sole source of phase-level instruction; if one is missing, there is no fallback.
+Every `fileRef` in `transitions.chain.json` must resolve to a readable Markdown file in `DEEP_RESEARCH_HARNESS/workflows/nodes/`. A chain entry pointing to a missing or unreadable file produces a load failure that stops the loop. Node files are the Phase Agent's sole source of phase-level instruction; if one is missing, there is no fallback.
 
 ---
 

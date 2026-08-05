@@ -5,18 +5,18 @@ import { resolve } from 'node:path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ResearchStyleParamsSchema } from '../../../DPT_FRAMEWORK/schema/index.mjs';
+import { ResearchStyleParamsSchema } from '../../../DEEP_RESEARCH_HARNESS/schema/index.mjs';
 import {
   buildResearchStyleApplyCommand,
   evaluateResearchStyleProjectionFreshness,
   readResearchStyleDefinition,
-} from '../../../DPT_FRAMEWORK/engine/helpers/research-style-projection.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/research-style-projection.mjs';
 
-const STYLE_ROOT = resolve('DPT_FRAMEWORK/schema/research-styles');
+const STYLE_ROOT = resolve('DEEP_RESEARCH_HARNESS/schema/research-styles');
 const STYLE_NAMES = ['debug', 'quick_factual', 'exploratory_map', 'claim_verification'];
 
 async function computation() {
-  const module = await import('../../../DPT_FRAMEWORK/engine/helpers/research-style-params.mjs');
+  const module = await import('../../../DEEP_RESEARCH_HARNESS/engine/helpers/research-style-params.mjs');
   assert.equal(typeof module.computeResearchStyleParams, 'function');
   return module.computeResearchStyleParams;
 }
@@ -122,7 +122,7 @@ describe('evaluateResearchStyleProjectionFreshness', () => {
 
     assert.deepEqual({ passed: freshness.passed, state: freshness.state }, { passed: false, state: 'stale_or_wrong_profile' });
     assert.ok(freshness.differing_fields.length > 0);
-    assert.match(command, /^node DPT_FRAMEWORK\/cli\/apply-research-style\.mjs --bundle /);
+    assert.match(command, /^node DEEP_RESEARCH_HARNESS\/cli\/apply-research-style\.mjs --bundle /);
     assert.match(command, /--style quick_factual$/);
   });
 });

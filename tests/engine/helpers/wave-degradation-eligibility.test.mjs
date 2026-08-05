@@ -3,13 +3,13 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-import { parseGateDefinition } from '../../../DPT_FRAMEWORK/schema/contracts/gate-definition.mjs';
-import { evaluateWaveDegradationEligibility } from '../../../DPT_FRAMEWORK/engine/helpers/wave-degradation-eligibility.mjs';
+import { parseGateDefinition } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/gate-definition.mjs';
+import { evaluateWaveDegradationEligibility } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-degradation-eligibility.mjs';
 import {
   buildContractEvaluation,
   makeContractFinding,
   projectInspectContract,
-} from '../../../DPT_FRAMEWORK/engine/helpers/wave-contract-findings.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-findings.mjs';
 
 function definitionWith(rules) {
   return parseGateDefinition({
@@ -148,7 +148,7 @@ describe('Wave degradation eligibility', () => {
       observed: 'one queued card',
       missingFact: 'The Wave queue still has one queued card.',
       repairKind: 'engine_operation',
-      writeTo: 'node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect',
+      writeTo: 'node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs inspect',
       repair: 'Inspect the queued work unit.',
     });
     const evaluation = buildContractEvaluation({
@@ -158,7 +158,7 @@ describe('Wave degradation eligibility', () => {
     const projected = projectInspectContract({
       wave: 'wave1',
       evaluation,
-      checkpointCommand: 'node DPT_FRAMEWORK/cli/inspect-wave1-output.mjs --bundle /tmp/test-bundle',
+      checkpointCommand: 'node DEEP_RESEARCH_HARNESS/cli/inspect-wave1-output.mjs --bundle /tmp/test-bundle',
     });
 
     assert.deepEqual(evaluation.failed_rule_ids, ['depth_review_contract', 'phase_queue_drained']);

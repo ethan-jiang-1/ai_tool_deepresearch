@@ -10,7 +10,7 @@ cd ai_tool_deepresearch
 npm install
 ```
 
-Before triggering `DPT_FRAMEWORK/RUN.md`, complete the human preflight in [`SETUP.md`](SETUP.md) so Node dependencies and Coding Agent permissions are chosen deliberately.
+Before triggering `DEEP_RESEARCH_HARNESS/RUN.md`, complete the human preflight in [`SETUP.md`](SETUP.md) so Node dependencies and Coding Agent permissions are chosen deliberately.
 
 ## Start Here
 
@@ -26,7 +26,7 @@ Before triggering `DPT_FRAMEWORK/RUN.md`, complete the human preflight in [`SETU
 | `guidelines/` | 项目原则、层级边界与操作指引 |
 | `openspec/` | Spec-driven development：规则、changes、specs 与 governance |
 | `docs/adr/` | 按需查阅的持久架构决策 |
-| `DPT_FRAMEWORK/` | 可发行框架与 Agent-facing playbooks |
+| `DEEP_RESEARCH_HARNESS/` | 可发行框架与 Agent-facing playbooks |
 | `tests/` | JS-led verification |
 | `experiments_playbook/` | Coding-Agent/Markdown-led experiments |
 | `experiments_env/` | 已冻结原型与实验 fixture |
@@ -61,4 +61,4 @@ Classification and proof permissions are defined by the accepted `verification-r
 - Everything else uses Node built-ins.
 - Tests use `node:test` + `node:assert`.
 - `_original_*` directories are archives; read them only when explicitly requested.
-- `DPT_FRAMEWORK/` is read-only until a change reaches `/opsx:apply`.
+- `DEEP_RESEARCH_HARNESS/` is read-only until a change reaches `/opsx:apply`.

@@ -41,25 +41,25 @@ The manifest owns only registered paths and order. Selected V2 frontmatter owns 
 Headless non-dry-run requires an explicit total USD budget:
 
 ```bash
-node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --case case-41-light-minimal-path --max-total-budget-usd 1
-node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --group agentic-queue --tier light --max-total-budget-usd 5 --max-case-budget-usd 1
-node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --all --max-total-budget-usd 20 --cleanup-pass
-node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --run-profile calibration --max-predicted-duration-ms 600000 --max-total-budget-usd 5 --max-case-budget-usd 1
+node DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs --case case-41-light-minimal-path --max-total-budget-usd 1
+node DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs --group agentic-queue --tier light --max-total-budget-usd 5 --max-case-budget-usd 1
+node DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs --all --max-total-budget-usd 20 --cleanup-pass
+node DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs --run-profile calibration --max-predicted-duration-ms 600000 --max-total-budget-usd 5 --max-case-budget-usd 1
 ```
 
 Inspect selection without credentials, Agent launch, run roots, or mutation:
 
 ```bash
-node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --tier light --dry-run
-node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --group agentic-queue --tier standard --dry-run --json
-node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --run-profile discovery --max-predicted-duration-ms 900000 --dry-run --json
-node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --run-profile regression --max-predicted-duration-ms 480000 --dry-run --json
+node DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs --tier light --dry-run
+node DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs --group agentic-queue --tier standard --dry-run --json
+node DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs --run-profile discovery --max-predicted-duration-ms 900000 --dry-run --json
+node DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs --run-profile regression --max-predicted-duration-ms 480000 --dry-run --json
 ```
 
 Interactive replay is exactly one case, user-present, and always preserved:
 
 ```bash
-node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --interactive --case case-901-heavy-topic-rewrite-agent
+node DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs --interactive --case case-901-heavy-topic-rewrite-agent
 ```
 
 The optional per-case cap cannot exceed the total budget. The Supervisor passes the current cap to the Agent CLI, accumulates only a valid final cost, and stops further launch if cost becomes unknown or the batch budget is exhausted. Cost never changes native PASS/FAIL/NOT_RUN.
@@ -75,14 +75,14 @@ The maximum envelope is a `480000` ms selection forecast, `$3.00` total budget, 
 Inspect normal membership without credentials or mutation:
 
 ```bash
-node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
+node DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs \
   --run-profile regression --max-predicted-duration-ms 480000 --dry-run --json
 ```
 
 Run the currently qualified fast members with an explicit bounded timeout:
 
 ```bash
-node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
+node DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs \
   --run-profile regression --max-predicted-duration-ms 480000 \
   --max-total-budget-usd 3 --timeout 120000 --health-timeout 60000
 ```
@@ -90,7 +90,7 @@ node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
 When a fast source-matching historical observation lacks a matching v2 execution surface or carries a stale one, normal regression reports `needs_qualification` and does not launch it. Only the explicit qualification path may run that candidate under the same envelope:
 
 ```bash
-node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
+node DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs \
   --run-profile regression --regression-qualification \
   --max-predicted-duration-ms 480000 --max-total-budget-usd 3 \
   --timeout 120000 --health-timeout 60000
@@ -104,7 +104,7 @@ node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
 - Every verdict-affecting fact must be a strict playbook-owned `event: "check"` in bundle-root `rb_trace.jsonl`, with stable `gate` plus explicit boolean `passed` and `expected`.
 - The playbook invokes the deterministic finalizer exactly once. The finalizer enforces V2 required checks and `all|last` semantics and publishes one native completion. The Supervisor never derives PASS from arbitrary partial checks or console prose.
 - Every case gets one Supervisor-owned case run root under `.exp-bundles/runs/`; its direct-child `dpt_disp_*|dpt_rb_*` directories are bundle roots. Dynamic paths cross tool calls only through the explicit context-bound bundle registry.
-- `.exp-bundles/` contains run-owned state, logs, evidence, audit, and reports. It never contains a copied, symlinked, or hardlinked `DPT_FRAMEWORK/`, `experiments_env/`, or `tests/` tree. Framework/source remains at repo root.
+- `.exp-bundles/` contains run-owned state, logs, evidence, audit, and reports. It never contains a copied, symlinked, or hardlinked `DEEP_RESEARCH_HARNESS/`, `experiments_env/`, or `tests/` tree. Framework/source remains at repo root.
 - The Playbook Agent stops after native finalization. Health and cleanup are Supervisor work.
 
 ## Outcome, health, and cleanup

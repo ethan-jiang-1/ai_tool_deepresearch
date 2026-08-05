@@ -30,7 +30,7 @@ verdict_judge: deterministic
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs artifact_persistence --case case-314 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -41,7 +41,7 @@ import {
   ArtifactPersistenceCrashError,
   persistBundleFile,
   sha256File,
-} from './DPT_FRAMEWORK/engine/helpers/artifact-persistence.mjs';
+} from './DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs';
 
 const bundle = resolve(process.argv[2]);
 for (const directory of ['reference', 'artifacts/wave0', 'final', '_cache/source', '_logs', '_work_units']) mkdirSync(join(bundle, directory), { recursive: true });
@@ -58,7 +58,7 @@ writeFileSync(join(bundle, 'rb_trace.jsonl'), '');
 const controlSnapshot = () => Object.fromEntries(Object.keys(controls).map((relative) => [relative, createHash('sha256').update(readFileSync(join(bundle, relative))).digest('hex')]));
 const beforeControls = controlSnapshot();
 const cli = (...args) => {
-  const result = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs', ...args], { encoding: 'utf8' });
+  const result = spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs', ...args], { encoding: 'utf8' });
   return { status: result.status, json: JSON.parse(result.stdout) };
 };
 const stage = (name, content) => {
@@ -121,8 +121,8 @@ JS
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

@@ -1,6 +1,6 @@
 # Engine Helper Tests
 
-This directory tests helper modules under `DPT_FRAMEWORK/engine/helpers/`.
+This directory tests helper modules under `DEEP_RESEARCH_HARNESS/engine/helpers/`.
 
 Run with:
 

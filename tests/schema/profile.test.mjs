@@ -3,7 +3,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { ProfileSchema } from '../../DPT_FRAMEWORK/schema/index.mjs';
+import { ProfileSchema } from '../../DEEP_RESEARCH_HARNESS/schema/index.mjs';
 
 const VALID_HITL2_BASE = {
   plan_basename: 'test-profile',

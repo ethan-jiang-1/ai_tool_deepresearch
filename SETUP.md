@@ -1,8 +1,8 @@
 # SETUP.md
 
-Human preflight for running `DPT_FRAMEWORK`.
+Human preflight for running `DEEP_RESEARCH_HARNESS`.
 
-This file is for the human before selecting the framework entry path. After you drag or paste `DPT_FRAMEWORK/RUN.md` into an Agent conversation, the framework flow is Agent-run. Do not use this setup guide as a mid-pipeline instruction sheet.
+This file is for the human before selecting the framework entry path. After you drag or paste `DEEP_RESEARCH_HARNESS/RUN.md` into an Agent conversation, the framework flow is Agent-run. Do not use this setup guide as a mid-pipeline instruction sheet.
 
 ## 1. Install
 
@@ -18,7 +18,7 @@ Quick local checks:
 ```bash
 node --version
 node -e "await import('zod'); await import('yaml'); console.log('dependencies ok')"
-node DPT_FRAMEWORK/cli/validate-workflow-package.mjs
+node DEEP_RESEARCH_HARNESS/cli/validate-workflow-package.mjs
 ```
 
 The repository uses only the approved npm dependencies `zod` and `yaml`; everything else should come from Node.js built-ins.
@@ -78,7 +78,7 @@ Useful pre-trigger checks:
 ```bash
 npm install
 node -e "await import('zod'); await import('yaml'); console.log('dependencies ok')"
-node DPT_FRAMEWORK/cli/validate-workflow-package.mjs
+node DEEP_RESEARCH_HARNESS/cli/validate-workflow-package.mjs
 ```
 
 `operate-work-unit dry-submit` is only a work-unit submit contract preflight. It checks a claimed work unit's candidate result before formal submit; it does not validate network access, shell access, file-write permission, web fetch permission, approval policy, or host sandbox settings.
@@ -90,11 +90,11 @@ There is no gate `--non-interactive` flag. If a setup guide or memory suggests o
 After install and permission preflight are complete, select the framework by dragging or pasting:
 
 ```text
-DPT_FRAMEWORK/RUN.md
+DEEP_RESEARCH_HARNESS/RUN.md
 ```
 
 At that point, `RUN.md` is the entry path and command execution belongs to the Agent. HITL1 and HITL2 are the only interactive in-run checkpoints; non-terminal `stop: no` phases should not become permission-setup conversations.
 
 ## 7. Host Tools: DeepSeek Claude Code Launcher
 
-An optional pre-trigger launcher lives at `DPT_FRAMEWORK/host_tools/`. It launches Claude Code connected to a DeepSeek Anthropic-compatible endpoint. See `DPT_FRAMEWORK/host_tools/README.md` for setup and usage.
+An optional pre-trigger launcher lives at `DEEP_RESEARCH_HARNESS/host_tools/`. It launches Claude Code connected to a DeepSeek Anthropic-compatible endpoint. See `DEEP_RESEARCH_HARNESS/host_tools/README.md` for setup and usage.

@@ -5,13 +5,13 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import { applyCanonicalTopicState, recoverCanonicalTopicState } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
-import { auditPhaseStatus } from '../../../DPT_FRAMEWORK/engine/helpers/phase-status-audit.mjs';
-import { inspectPostFinalRecovery } from '../../../DPT_FRAMEWORK/engine/helpers/post-final-recovery.mjs';
+import { applyCanonicalTopicState, recoverCanonicalTopicState } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { auditPhaseStatus } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs';
+import { inspectPostFinalRecovery } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs';
 import { createTerminalFinalBundle, requestFromInspection } from './post-final-recovery-fixture.mjs';
 
 const REPO_ROOT = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
-const CLI = join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'operate-post-final-recovery.mjs');
+const CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'operate-post-final-recovery.mjs');
 
 function runNode(args, { expect = 0 } = {}) {
   const result = spawnSync('node', args, { cwd: REPO_ROOT, encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
@@ -49,14 +49,14 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     writeFileSync(inputPath, JSON.stringify(requestFromInspection(inspection)));
     runJson([CLI, 'apply', '--bundle', bundle, '--input', inputPath]);
     assert.equal(auditPhaseStatus(bundle).outcome, 'post_final_reentry_pending_load');
-    runNode(['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md']);
+    runNode(['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md']);
     assert.equal(auditPhaseStatus(bundle).outcome, 'post_final_reentry_pending_status_sync');
-    const first = runJson(['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
+    const first = runJson(['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
     assert.equal(first.source_handoff_kind, 'post_final_reentry');
     assert.equal(JSON.parse(readFileSync(join(bundle, 'rb_status.json'), 'utf8')).state, 'completed');
     assert.equal(auditPhaseStatus(bundle).outcome, 'passed');
     const before = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8');
-    const second = runJson(['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
+    const second = runJson(['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
     assert.equal(second.idempotent, true);
     assert.equal(readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8'), before);
     const events = before.trim().split('\n').map(JSON.parse);
@@ -73,8 +73,8 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     const inputPath = join(root, 'topic-request.json');
     writeFileSync(inputPath, JSON.stringify(requestFromInspection(inspection)));
     runJson([CLI, 'apply', '--bundle', bundle, '--input', inputPath]);
-    runNode(['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md']);
-    runJson(['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
+    runNode(['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md']);
+    runJson(['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
     const result = applyCanonicalTopicState({
       bundlePath: bundle,
       input: {
@@ -93,8 +93,8 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     const inputPath = join(root, 'topic-recover-request.json');
     writeFileSync(inputPath, JSON.stringify(requestFromInspection(inspection)));
     runJson([CLI, 'apply', '--bundle', bundle, '--input', inputPath]);
-    runNode(['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md']);
-    runJson(['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
+    runNode(['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md']);
+    runJson(['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
     assert.throws(() => applyCanonicalTopicState({
       bundlePath: bundle,
       crashAt: 'after_prepared',
@@ -122,14 +122,14 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     const inputPath = join(root, 'count-request.json');
     writeFileSync(inputPath, JSON.stringify(requestFromInspection(inspection)));
     runJson([CLI, 'apply', '--bundle', bundle, '--input', inputPath]);
-    runNode(['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md']);
-    runJson(['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
+    runNode(['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md']);
+    runJson(['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
     const profilePath = join(bundle, 'rb_profile.yaml');
     const profile = parseYaml(readFileSync(profilePath, 'utf8'));
     profile.human_decision_checkpoints.hitl2.rerun_count = 1;
     writeFileSync(profilePath, `${stringifyYaml(profile).trimEnd()}\n`);
     assert.equal(inspectPostFinalRecovery({ bundlePath: bundle }).stage, 'synchronized_count_incremented');
-    const gate = runJson(['DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs', '--bundle', bundle, '--current-node', 'phases/phase-rerun.md']);
+    const gate = runJson(['DEEP_RESEARCH_HARNESS/cli/gates/check-gate-rerun-ready.mjs', '--bundle', bundle, '--current-node', 'phases/phase-rerun.md']);
     assert.equal(gate.check.passed, true);
     assert.equal(inspectPostFinalRecovery({ bundlePath: bundle }).stage, 'descendant_pipeline');
   });
@@ -140,13 +140,13 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     const inputPath = join(root, 'reentry-request.json');
     writeFileSync(inputPath, JSON.stringify(requestFromInspection(inspection)));
     runJson([CLI, 'apply', '--bundle', bundle, '--input', inputPath]);
-    const eventStage = runJson(['DPT_FRAMEWORK/cli/check-reentry.mjs', '--bundle', bundle, '--at', 'readiness_passed']);
+    const eventStage = runJson(['DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs', '--bundle', bundle, '--at', 'readiness_passed']);
     assert.equal(eventStage.post_final_recovery.next_action.kind, 'enter_phase');
-    runNode(['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md']);
-    const loadStage = runJson(['DPT_FRAMEWORK/cli/check-reentry.mjs', '--bundle', bundle, '--at', 'readiness_passed']);
+    runNode(['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md']);
+    const loadStage = runJson(['DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs', '--bundle', bundle, '--at', 'readiness_passed']);
     assert.equal(loadStage.post_final_recovery.next_action.kind, 'advance_status');
-    runJson(['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
-    const synced = runJson(['DPT_FRAMEWORK/cli/check-reentry.mjs', '--bundle', bundle, '--at', 'hitl2_recorded']);
+    runJson(['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
+    const synced = runJson(['DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs', '--bundle', bundle, '--at', 'hitl2_recorded']);
     assert.equal(synced.post_final_recovery.next_action.kind, 'topic_state');
     assert.equal(synced.normalized_target.status_gate, 'hitl2_recorded');
     assert.equal(existsSync(join(bundle, '_diagnostics', 'post-final-recovery')), true);

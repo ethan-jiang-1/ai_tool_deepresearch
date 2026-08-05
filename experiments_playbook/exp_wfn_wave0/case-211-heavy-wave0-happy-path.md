@@ -58,7 +58,7 @@ Without a real Agent result, this case records `NOT_RUN` and exits `2`. `NOT_RUN
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs w0_real_agent_work_unit --case case-211 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -119,7 +119,7 @@ human_decision_checkpoints:
     final_report_view: not_started
 `);
 JS
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$B"
 echo "BUNDLE=$B"
 ```
 
@@ -128,8 +128,8 @@ Expected: the bundle has no fixture-authored `seed-topics-ready`, `load_complete
 ## Step 2: [MAIN/SHELL] Establish Setup-Ready -> Seed Topics Through Existing Commands
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-SETUP_GATE_JSON=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle "$B" --current-node phases/phase-setup.md)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+SETUP_GATE_JSON=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate setup-ready -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs --bundle "$B" --current-node phases/phase-setup.md)
 printf '%s\n' "$SETUP_GATE_JSON" > "$B/case-211-setup-gate.json"
 NEXT=$(printf '%s\n' "$SETUP_GATE_JSON" | node experiments_env/shared/extract-field.mjs check.next)
 node - "$B/case-211-setup-gate.json" <<'JS'
@@ -138,8 +138,8 @@ const gate = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 console.log(JSON.stringify({ passed: gate.check?.passed, next: gate.check?.next, inspect: gate.inspect || [] }, null, 2));
 process.exit(gate.check?.passed === true && gate.check?.next === 'phases/phase-seed-topics.md' ? 0 : 1);
 JS
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-211-enter-seed-topics.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to setup_ready > "$B/case-211-advance-setup.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-211-enter-seed-topics.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to setup_ready > "$B/case-211-advance-setup.json"
 ```
 
 Expected: the setup Gate and `enter-phase` create the route-bound predecessor evidence for Seed Topics; no trace/status is hand-authored as a substitute.
@@ -147,7 +147,7 @@ Expected: the setup Gate and `enter-phase` create the route-bound predecessor ev
 ## Step 3: [MAIN/SHELL] Materialize Seed Topic, Pass Seed-Topics-Ready, And Enter Wave0
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { renameSync } from 'node:fs';
 import { join } from 'node:path';
@@ -159,7 +159,7 @@ renameSync(
 );
 JS
 
-SEED_GATE_JSON=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle "$B" --current-node phases/phase-seed-topics.md)
+SEED_GATE_JSON=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate seed-topics-ready -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-seed-topics-ready.mjs --bundle "$B" --current-node phases/phase-seed-topics.md)
 printf '%s\n' "$SEED_GATE_JSON" > "$B/case-211-seed-gate.json"
 NEXT=$(printf '%s\n' "$SEED_GATE_JSON" | node experiments_env/shared/extract-field.mjs check.next)
 node - "$B/case-211-seed-gate.json" <<'JS'
@@ -168,8 +168,8 @@ const gate = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 console.log(JSON.stringify({ passed: gate.check?.passed, next: gate.check?.next, inspect: gate.inspect || [] }, null, 2));
 process.exit(gate.check?.passed === true && gate.check?.next === 'phases/phase-wave0.md' ? 0 : 1);
 JS
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-211-enter-wave0.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to seed_topics_ready > "$B/case-211-advance-seed-topics.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-211-enter-wave0.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to seed_topics_ready > "$B/case-211-advance-seed-topics.json"
 ```
 
 Expected: only the existing gate/entry/status operations establish the Wave0 window required by Wave Projection authorization and handoff preflight. This deterministic predecessor remains setup-only evidence.
@@ -177,7 +177,7 @@ Expected: only the existing gate/entry/status operations establish the Wave0 win
 ## Step 4: [MAIN/SHELL] Enqueue And Claim The Real Source-Intake Work Unit
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { enqueueWorkUnitTask, queueItemForWorkUnit } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -203,7 +203,7 @@ const enqueue = enqueueWorkUnitTask(bundle, task, { fileName: 'case211-real-task
 console.log(JSON.stringify(enqueue, null, 2));
 JS
 
-CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
+CLAIM_JSON=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_JSON" > "$B/case-211-claim.json"
 WORK_ID=$(printf '%s\n' "$CLAIM_JSON" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.claimed_work_ids[0]);')
 printf '%s\n' "$CLAIM_JSON" | node -e '
@@ -241,12 +241,12 @@ If no real result exists, use the unavailable marker described above. Native com
 Run only after Step 5 has produced a real Agent result file.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 REAL_RESULT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.result)' "$B/case-211-subagent-evidence.json")
 WORK_ID=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.claimed_work_ids[0])' "$B/case-211-claim.json")
 
 set +e
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit "$B" --work-id "$WORK_ID" --result "$REAL_RESULT" > "$B/case-211-dry-submit.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs dry-submit "$B" --work-id "$WORK_ID" --result "$REAL_RESULT" > "$B/case-211-dry-submit.json"
 DRY_SUBMIT_STATUS=$?
 set -e
 node - "$B/case-211-dry-submit.json" "$DRY_SUBMIT_STATUS" <<'JS'
@@ -257,7 +257,7 @@ console.log(JSON.stringify({ status: Number(status), ok: dry.ok, expected_submit
 process.exit(Number(status) === 0 && dry.ok === true && dry.expected_submit === 'pass' && dry.recommended_action === 'submit' ? 0 : 1);
 JS
 
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$REAL_RESULT" > "$B/case-211-submit.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$REAL_RESULT" > "$B/case-211-submit.json"
 node - "$B/case-211-submit.json" <<'JS'
 const fs = require('fs');
 const submit = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
@@ -265,12 +265,12 @@ console.log(JSON.stringify({ ok: submit.ok, status: submit.status, work_id: subm
 process.exit(submit.ok === true ? 0 : 1);
 JS
 
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect "$B" --eligible-rows --phase wave0 > "$B/case-211-inspect.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs inspect "$B" --eligible-rows --phase wave0 > "$B/case-211-inspect.json"
 set +e
-node DPT_FRAMEWORK/cli/inspect-wave0-output.mjs --bundle "$B" > "$B/case-211-wave0-pre-projection-inspect.json"
+node DEEP_RESEARCH_HARNESS/cli/inspect-wave0-output.mjs --bundle "$B" > "$B/case-211-wave0-pre-projection-inspect.json"
 PRE_PROJECTION_INSPECT_STATUS=$?
 set -e
-node DPT_FRAMEWORK/cli/operate-topic-state.mjs schema --context wave_projection > "$B/case-211-wave0-projection-schema.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs schema --context wave_projection > "$B/case-211-wave0-projection-schema.json"
 node - "$B/case-211-inspect.json" "$B/case-211-wave0-pre-projection-inspect.json" "$B/case-211-wave0-projection-schema.json" "$WORK_ID" "$PRE_PROJECTION_INSPECT_STATUS" <<'JS'
 const fs = require('fs');
 const [inspectPath, wave0InspectPath, schemaPath, workId, wave0InspectStatus] = process.argv.slice(2);
@@ -294,10 +294,10 @@ The packet must use the submitted row's canonical `topic_uid`, the submitted `wo
 ## Step 9: [MAIN/SHELL -> AGENT] Apply The Packet And Inspect Wave0 Output
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle "$B" --input "$B/case-211-wave0-projection.json" > "$B/case-211-wave0-projection-apply.json"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs apply --bundle "$B" --input "$B/case-211-wave0-projection.json" > "$B/case-211-wave0-projection-apply.json"
 set +e
-node DPT_FRAMEWORK/cli/inspect-wave0-output.mjs --bundle "$B" > "$B/case-211-wave0-inspect.json"
+node DEEP_RESEARCH_HARNESS/cli/inspect-wave0-output.mjs --bundle "$B" > "$B/case-211-wave0-inspect.json"
 WAVE0_INSPECT_STATUS=$?
 set -e
 node - "$B/case-211-wave0-inspect.json" "$WAVE0_INSPECT_STATUS" <<'JS'
@@ -314,11 +314,11 @@ If the inspect names an omitted current candidate, repair only the retained pack
 ## Step 10: [MAIN/SHELL] Log Actual Completion And Run The Monitored Wave0 Gate
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --event wave0_completion --detail '{"source":"case-211-phase-closeout"}'
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle "$B" --event wave0_completion --detail '{"source":"case-211-phase-closeout"}'
 
 set +e
-node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate wave0-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-211-wave0-gate-stdout.json"
+node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate wave0-complete -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-211-wave0-gate-stdout.json"
 GATE_STATUS=$?
 set -e
 GATE_MONITOR_PATH=$(find "$B/_observability/gates" -type f -name '*-wave0-complete.json' | sort | tail -n 1)
@@ -332,7 +332,7 @@ Expected: monitor-owned Gate evidence is retained under `_observability/gates/`;
 ## Step 11: [MAIN/SHELL] Record Native Verdict Checks From Real Evidence
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 WORK_ID=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.claimed_work_ids[0])' "$B/case-211-claim.json")
 node --input-type=module - "$B" "$WORK_ID" <<'JS'
 import { existsSync, readFileSync } from 'node:fs';
@@ -392,7 +392,7 @@ Expected: PASS only with a real Agent result submitted through the work-unit bou
 ## Step 12: [MAIN/SHELL] Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 EXTRA_ARGS=()
 if [ -f "$B/case-211-subject-unavailable.txt" ]; then
   EXTRA_ARGS+=(--not-run-reason "native dpt-source-intake Sub-agent or required real search/fetch capability unavailable")
@@ -403,7 +403,7 @@ else
   OUTPUT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.reference_output)' "$B/case-211-subagent-evidence.json")
   EXTRA_ARGS+=(--evidence "subject_task=$TASK" --evidence "subject_result=$RESULT" --evidence "subject_receipt=$RECEIPT" --evidence "subject_output=$OUTPUT")
 fi
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Heavy health, durable Subject-evidence export, audit, preservation, and optional clean-PASS cleanup.

@@ -39,13 +39,13 @@ The Headless Playbook Agent executes the explicit auto branch and does not wait 
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_manual --case case-114 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 ```
 
 ## Step 2 - Execute all six visible auto vectors
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
 node --input-type=module - "$B" "$STATE" <<'JS'
 import { appendFileSync, writeFileSync } from 'node:fs';
@@ -54,7 +54,7 @@ import { spawnSync } from 'node:child_process';
 import { stringify as stringifyYaml } from 'yaml';
 
 const [bundle, state] = process.argv.slice(2);
-const gateCli = 'DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs';
+const gateCli = 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs';
 const vectors = [
   { id: 'A', profile: 'quick_factual', questions: ['What are the key differences in AI regulation?', 'Which approach has the strongest enforcement?'], hitl1: 'recorded', expected: true },
   { id: 'B', profile: 'exploratory_map', questions: ['What is the global AI governance landscape?', 'Which jurisdictions plan legislation?', 'How do philosophies affect innovation?'], hitl1: 'recorded', expected: true },
@@ -108,8 +108,8 @@ JS
 ## Step 3 - Native completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Heavy health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

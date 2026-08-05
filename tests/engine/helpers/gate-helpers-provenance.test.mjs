@@ -8,17 +8,17 @@ import {
   enqueue,
   makeItem,
   saveQueue,
-} from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import {
   claimWorkUnits,
   closeWorkUnitAttempt,
   lateSubmitWorkUnit,
   loadWorkUnitIndex,
-} from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import {
   checkReferenceIndexCoverage,
   classifyReferenceAuthority,
-} from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers-checks.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs';
 import {
   checkDelegatedBypassSuspected,
   checkSubmittedDeclarationRecovery,
@@ -28,7 +28,7 @@ import {
   detectDelegatedBypassSuspicion,
   emitDelegatedBypassDiagnostic,
   scanDelegatedBypassSuspicion,
-} from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-provenance.mjs';
 import {
   availableActorDecision,
   claimAndSubmitWorkUnit,

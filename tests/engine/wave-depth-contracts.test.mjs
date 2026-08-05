@@ -10,7 +10,7 @@ import {
   checkWave2FindingIndexContract,
   deriveWave1NewSourceFloor,
   evaluateWave2PairFacts,
-} from '../../DPT_FRAMEWORK/engine/helpers/wave-depth-contracts.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-depth-contracts.mjs';
 import {
   claimAndSubmitWorkUnit,
   referenceContent,
@@ -427,7 +427,7 @@ describe('wave depth contract helpers', () => {
     assert.match(result.inspect.join('\n'), /observed 0 new accepted source URL\(s\), required 1/);
     assert.doesNotMatch(result.inspect.join('\n'), /marks Wave0 URL as new/);
 
-    const helperSource = readFileSync('DPT_FRAMEWORK/engine/helpers/wave-depth-contracts.mjs', 'utf-8');
+    const helperSource = readFileSync('DEEP_RESEARCH_HARNESS/engine/helpers/wave-depth-contracts.mjs', 'utf-8');
     assert.doesNotMatch(helperSource, /jaccard|homepage|path[-_ ]depth|self[-_ ]reference|content_dedup/i);
   });
 

@@ -21,21 +21,21 @@ function escapeRegExp(value) {
 describe('work-unit attempt-recovery implementation inventory', () => {
   it('routes every work-unit authority mutation through an exact-target v2 transaction', () => {
     const callers = {
-      'DPT_FRAMEWORK/engine/work-unit-lifecycle.mjs': [
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-lifecycle.mjs': [
         "'create_work_unit'",
         "'open_work_unit_batch'",
         "'claim_work_units'",
         "'work_unit_replace'",
         '`work_unit_${status}`',
       ],
-      'DPT_FRAMEWORK/engine/work-unit-submit.mjs': [
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs': [
         "'reject_work_unit_submit'",
         "'late_submit_work_unit'",
         "'recover_work_unit_declaration'",
         "'submit_work_unit'",
       ],
-      'DPT_FRAMEWORK/engine/work-unit-supersession.mjs': ["'supersede_work_unit'"],
-      'DPT_FRAMEWORK/engine/work-unit-transaction.mjs': ["'recover_work_unit_transaction'"],
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs': ["'supersede_work_unit'"],
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs': ["'recover_work_unit_transaction'"],
     };
 
     for (const [relativePath, operations] of Object.entries(callers)) {
@@ -53,7 +53,7 @@ describe('work-unit attempt-recovery implementation inventory', () => {
   });
 
   it('keeps transaction metadata outside rollback targets and releases the lock last', () => {
-    const transaction = source('DPT_FRAMEWORK/engine/work-unit-transaction.mjs');
+    const transaction = source('DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs');
     assert.match(transaction, /requires at least one exact mutation target/);
     assert.match(transaction, /The lock is ours but has no owner yet/);
     assert.match(transaction, /Final action: no transaction-owned target or audit write may follow this release\.\s*rmSync\(ownerDir/s);
@@ -67,7 +67,7 @@ describe('work-unit attempt-recovery implementation inventory', () => {
   });
 
   it('keeps marked current hashes ledger-first while preserving one explicit legacy writer branch', () => {
-    const submit = source('DPT_FRAMEWORK/engine/work-unit-submit.mjs');
+    const submit = source('DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs');
     const writerStart = submit.indexOf('function writeSubmittedStatusAndHashes');
     const writerEnd = submit.indexOf('function verifySubmitDurablePostcondition');
     const writer = submit.slice(writerStart, writerEnd);
@@ -80,14 +80,14 @@ describe('work-unit attempt-recovery implementation inventory', () => {
   });
 
   it('keeps submit-integrity preflight out of Phase Gate evaluators', () => {
-    const integrity = source('DPT_FRAMEWORK/engine/work-unit-submit-integrity.mjs');
+    const integrity = source('DEEP_RESEARCH_HARNESS/engine/work-unit-submit-integrity.mjs');
     const importRefs = [...integrity.matchAll(/from\s+['"]([^'"]+)['"]/g)].map((match) => match[1]);
     assert.equal(importRefs.some((ref) => /gate/i.test(ref)), false);
     assert.doesNotMatch(integrity, /evaluateGate|checkGate|work_unit_output_coverage|cross_work_unit/i);
     assert.match(integrity, /submit_owned_only:\s*true/);
     assert.match(integrity, /gate_evaluated:\s*false/);
 
-    const submit = source('DPT_FRAMEWORK/engine/work-unit-submit.mjs');
+    const submit = source('DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs');
     assert.ok((submit.match(/evaluateWorkUnitSubmitIntegrity\(/g) || []).length >= 3);
     assert.match(submit, /outerIntegrity[\s\S]{0,2400}withWorkUnitTransaction[\s\S]{0,3200}lockedIntegrity/);
   });

@@ -23,13 +23,13 @@ import {
   assessNode,
   createState,
   createWorkflowRuntime,
-} from '../../DPT_FRAMEWORK/engine/workflow-chain.mjs';
-import { SELECTED_RESEARCH_ACCESS_ADAPTER_PATH } from '../../DPT_FRAMEWORK/host_tools/lib/research-access-adapter.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/workflow-chain.mjs';
+import { SELECTED_RESEARCH_ACCESS_ADAPTER_PATH } from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/research-access-adapter.mjs';
 import { buildIterativeInteractionSubjectInvocation } from './iterative-interaction-subject-launch.mjs';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const LAUNCHER = join(REPO_ROOT, 'DPT_FRAMEWORK', 'host_tools', 'claude-deepseek.mjs');
-const NODES_DIR = join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows', 'nodes');
+const LAUNCHER = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'host_tools', 'claude-deepseek.mjs');
+const NODES_DIR = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'workflows', 'nodes');
 const SUBJECT_TIMEOUT_MS = 3 * 60 * 1000;
 const SETTINGS_PATH = join(
   homedir(),
@@ -106,7 +106,7 @@ const SUBJECTS = {
     transcript: 'case-318-subject-transcript.jsonl',
     system: 'You are the independent Subject Agent for case 318, distinct from the Playbook Agent. Work only in the exact bundle path provided by the runner. Execute the injected current production rerun surface against direct bundle facts.',
     messages: [
-      'Execute the rerun phase only through the sanctioned direction-only candidate: read the accepted HITL2 rationale, current rerun_count, canonical topic_uid, and loaded shared seed-authoring contract; compute target_rerun_count=1; write a retained JSON input for `set_rerun_direction` with that exact topic_uid, `action: supplement`, and non-empty cost/failure-mode dimensions, depth, guardrails, and rationale excerpt; then invoke `node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle <bundle> --input <retained-json>`. Verify the production apply result. Stop before changing rb_profile.yaml, running rerun-ready, entering another phase, advancing status, or direct-editing the seed direction/Engine-owned authority.',
+      'Execute the rerun phase only through the sanctioned direction-only candidate: read the accepted HITL2 rationale, current rerun_count, canonical topic_uid, and loaded shared seed-authoring contract; compute target_rerun_count=1; write a retained JSON input for `set_rerun_direction` with that exact topic_uid, `action: supplement`, and non-empty cost/failure-mode dimensions, depth, guardrails, and rationale excerpt; then invoke `node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs apply --bundle <bundle> --input <retained-json>`. Verify the production apply result. Stop before changing rb_profile.yaml, running rerun-ready, entering another phase, advancing status, or direct-editing the seed direction/Engine-owned authority.',
       'Resume from the current bundle facts. Recognize the existing direction/profile mismatch as the documented crash window. Preserve the accepted direction bytes; perform only the existing profile-count owner update to that existing target, then complete the sanctioned rerun-ready Gate plus immediate enter-phase and source-gate status synchronization. Consume structured feedback if the same Gate fails. Do not invoke topic-state apply again or directly edit the seed direction. Stop after the immediate seed-topics handoff.',
     ],
     tools: 'Bash,Edit,Glob,Grep,Read,Write',
@@ -124,7 +124,7 @@ const SUBJECTS = {
   '714': {
     bundlePrefix: 'dpt_disp_case-714_',
     transcript: 'case-714-transcript.jsonl',
-    system: `You are the independent subject Agent for case 714. Work only in the exact bundle path provided by the runner. Load the bundle's current production lifecycle surface and direct facts. Respond to the user's current turn, then follow that production surface for subsequent turns in this same session. Framework commands are executable from ${REPO_ROOT}; use that absolute root when a production instruction names a relative DPT_FRAMEWORK or experiments_env command, without inspecting unrelated framework source.`,
+    system: `You are the independent subject Agent for case 714. Work only in the exact bundle path provided by the runner. Load the bundle's current production lifecycle surface and direct facts. Respond to the user's current turn, then follow that production surface for subsequent turns in this same session. Framework commands are executable from ${REPO_ROOT}; use that absolute root when a production instruction names a relative DEEP_RESEARCH_HARNESS or experiments_env command, without inspecting unrelated framework source.`,
     messages: ['请根据当前研究请求给出一个简洁的研究建议，只保留验证本次交互所需的最小范围。', '按建议开始。本轮只使用一手来源；不要把媒体转述当作证据。报告最后单列无法用一手来源验证的结论。'],
     tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
     boundary: 'Complete the minimum work owned by the current phase. Capture the supplied research controls only in the production host-file snapshot, then stop after its Gate and immediate legal handoff before executing the newly loaded phase.',
@@ -419,12 +419,12 @@ function loadMinimalSeedAuthoringSurface(bundle) {
     text: [
       '<!-- DPT_SUBJECT_MINIMAL_RUNBOOK case=204 -->',
       'This is a legal Seed Topics lifecycle window with exactly one queued main-agent card. Use these production commands in order.',
-      `1. Claim: node DPT_FRAMEWORK/cli/operate-queue.mjs claim ${bundle} --actor main-agent`,
+      `1. Claim: node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs claim ${bundle} --actor main-agent`,
       `2. Edit only ${seedPath} after its frontmatter. Do not edit its canonical frontmatter fields.`,
       `3. Write ${inputPath} with exactly this shape and non-empty values you choose: {"context":"seed_topics","action":"enrich_seed","topic_uid":"${uid}","enrichment":{"hypothesis":"...","in_scope":"...","out_of_scope":"...","search_guardrails":{"required_terms":["..."],"forbidden_broadening":["..."]},"evidence_route":{"preferred_sources":["..."],"noise_to_avoid":["..."]}}}.`,
-      `4. Apply: node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle ${bundle} --input ${inputPath}`,
-      `5. Write ${resultPath} with queue_item_id "case-204-seed", receipt "file:seed_topics/01_canonical-seed.md", summary, and writes ["seed_topics/01_canonical-seed.md"]; then run node DPT_FRAMEWORK/cli/operate-queue.mjs complete ${bundle} --result ${resultPath}.`,
-      `6. Gate: node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle ${bundle} --current-node phases/phase-seed-topics.md`,
+      `4. Apply: node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs apply --bundle ${bundle} --input ${inputPath}`,
+      `5. Write ${resultPath} with queue_item_id "case-204-seed", receipt "file:seed_topics/01_canonical-seed.md", summary, and writes ["seed_topics/01_canonical-seed.md"]; then run node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs complete ${bundle} --result ${resultPath}.`,
+      `6. Gate: node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-seed-topics-ready.mjs --bundle ${bundle} --current-node phases/phase-seed-topics.md`,
       'If any command fails, stop and report its exact output. Do not hand-edit queue, trace, status, or canonical YAML.',
       '<!-- DPT_SUBJECT_MINIMAL_RUNBOOK_END -->',
     ].join('\n\n'),

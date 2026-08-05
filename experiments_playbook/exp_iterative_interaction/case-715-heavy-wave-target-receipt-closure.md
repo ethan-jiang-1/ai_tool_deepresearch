@@ -64,7 +64,7 @@ if [ -z "$B" ] || [ ! -d "$B" ]; then
   mkdir -p "$B"
   printf '%s\n' 'case-715 infrastructure not ready: prepare helper does not support case 715' > "$B/case-715-infra-unavailable.txt"
 fi
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 ```
 
 ## Step 2: [SUBJECT AGENT] Wave1 Depth Review With Carried Targets
@@ -78,7 +78,7 @@ You are the independent subject Agent for case 715 Wave1. Work only in the exact
 ```
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 if [ -f "$B/case-715-infra-unavailable.txt" ]; then
   printf '%s\n' 'case-715 infrastructure not ready — skipping Subject execution' > "$B/case-715-subject-unavailable.txt"
 else
@@ -97,7 +97,7 @@ fi
 After the Wave1 Gate passes and projects the carried_target_receipt, run a second independent Subject session for Wave2 synthesis. If the first Subject session was unavailable, skip.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 if [ ! -f "$B/case-715-subject-unavailable.txt" ] && [ ! -f "$B/case-715-infra-unavailable.txt" ]; then
   set +e
   node experiments_env/shared/run-iterative-interaction-subject.mjs 715-wave2 --bundle "$B" 2>/dev/null
@@ -112,14 +112,14 @@ fi
 ## Step 4: [OBSERVER] Hash And Derive Native Verdict
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 EXTRA_ARGS=()
 if [ -f "$B/case-715-subject-unavailable.txt" ]; then
   EXTRA_ARGS+=(--not-run-reason "$(cat "$B/case-715-subject-unavailable.txt")")
 elif [ -f "$B/case-715-infra-unavailable.txt" ]; then
   EXTRA_ARGS+=(--not-run-reason "$(cat "$B/case-715-infra-unavailable.txt")")
 fi
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
 PASS requires deterministic inspection of the real bundle and raw Subject transcripts showing explicit carried targets, receipt projection, receipt-bound findings, closure coverage, and no fabricated path. When the infrastructure or Subject Agent is unavailable, the case produces an honest NOT_RUN through the single native finalizer boundary.

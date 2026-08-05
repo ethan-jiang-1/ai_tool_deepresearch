@@ -31,10 +31,10 @@ verdict_judge: deterministic
 ```bash
 REPO_ROOT=$(pwd)
 B=$(node experiments_env/shared/new-disposable-bundle.mjs indet --case case-305 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 OK=true
 for o in request_view_revision repair stop_blocked; do
-  R=$(node -e "import('$REPO_ROOT/DPT_FRAMEWORK/engine/ask-next.mjs').then(async m=>{const r=m.resolveNodeTransitionDetailed('$REPO_ROOT/DPT_FRAMEWORK/workflows/transitions.chain.json','phases/phase-hitl2.md','$o');console.log(JSON.stringify(r));})" 2>/dev/null)
+  R=$(node -e "import('$REPO_ROOT/DEEP_RESEARCH_HARNESS/engine/ask-next.mjs').then(async m=>{const r=m.resolveNodeTransitionDetailed('$REPO_ROOT/DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json','phases/phase-hitl2.md','$o');console.log(JSON.stringify(r));})" 2>/dev/null)
   K=$(echo "$R" | node experiments_env/shared/extract-field.mjs kind)
   echo "$o → kind=$K"
   [ "$K" != "invalid_input" ] && OK=false
@@ -42,9 +42,9 @@ done
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'chain-indeterminate-all',passed:$OK,detail:'indeterminate → invalid_input'})})"
 
 echo "Chain keys:"
-node -e "import('$REPO_ROOT/DPT_FRAMEWORK/engine/transition-chain.mjs').then(m=>{const c=m.loadChain('$REPO_ROOT/DPT_FRAMEWORK/workflows/transitions.chain.json');console.log(Object.keys(c['phases/phase-hitl2.md']).join(', '))})"
+node -e "import('$REPO_ROOT/DEEP_RESEARCH_HARNESS/engine/transition-chain.mjs').then(m=>{const c=m.loadChain('$REPO_ROOT/DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json');console.log(Object.keys(c['phases/phase-hitl2.md']).join(', '))})"
 
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## 结果解读

@@ -16,7 +16,7 @@ function read(relPath) {
 
 describe('user-facing language guidance docs', () => {
   it('HITL UX guidance covers dynamic user-visible content and preserves canonical tokens', () => {
-    const text = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-agent-ux-guidance.md');
+    const text = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-agent-ux-guidance.md');
 
     for (const marker of [
       '一个明确推荐',
@@ -31,7 +31,7 @@ describe('user-facing language guidance docs', () => {
   });
 
   it('Final phase prefers Chinese only on legal terminal delivery surfaces', () => {
-    const text = read('DPT_FRAMEWORK/workflows/nodes/phases/phase-final.md');
+    const text = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-final.md');
 
     assert.ok(text.includes('用户未指定其他输出语言时'));
     assert.ok(text.includes('final report narrative'));
@@ -51,7 +51,7 @@ describe('user-facing language guidance docs', () => {
   });
 
   it('silent guidance rejects language-driven surfacing but answers user-initiated turns without authority', () => {
-    const text = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md');
+    const text = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-silent-execution.md');
 
     assert.ok(text.includes('Language preference is not surfacing permission'));
     assert.ok(text.includes('never authorizes status replies, acknowledgements, progress, partial delivery'));
@@ -70,9 +70,9 @@ describe('user-facing language guidance docs', () => {
 
   it('does not introduce locale fields or language detectors into framework surfaces', () => {
     for (const relPath of [
-      'DPT_FRAMEWORK/workflows/nodes/shared/shared-agent-ux-guidance.md',
-      'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md',
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-final.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-agent-ux-guidance.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-silent-execution.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-final.md',
     ]) {
       const text = read(relPath);
       assert.doesNotMatch(text, /\breport_locale\b|\blocale\b|\blanguage_detector\b|语言检测/);
@@ -82,14 +82,14 @@ describe('user-facing language guidance docs', () => {
 
   it('keeps wave, gate, and routing instruction bodies out of the language polish scope', () => {
     for (const relPath of [
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-setup.md',
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-seed-topics.md',
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md',
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md',
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md',
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-readiness.md',
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-rerun.md',
-      'DPT_FRAMEWORK/workflows/transitions.chain.json',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-setup.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-seed-topics.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave2.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-readiness.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-rerun.md',
+      'DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json',
     ]) {
       const text = read(relPath);
       assert.doesNotMatch(text, /prefer Chinese|prefer-Chinese|用户未指定其他输出语言|language preference/i, `${relPath} should not receive language polish`);

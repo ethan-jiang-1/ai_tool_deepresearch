@@ -8,7 +8,7 @@ import {
   currentIntentSha256,
   isValidCarriedTargetReceipt,
   selectWave1CarriedTargetReceipt,
-} from '../../DPT_FRAMEWORK/engine/helpers/wave-carried-target-receipts.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-carried-target-receipts.mjs';
 
 const dirs = [];
 

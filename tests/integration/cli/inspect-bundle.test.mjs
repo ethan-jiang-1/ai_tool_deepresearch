@@ -5,10 +5,10 @@ import { writeFileSync, mkdirSync, cpSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
-const FIXTURE = join(process.cwd(), 'tests/fixtures/DPT_FRAMEWORK');
+const FIXTURE = join(process.cwd(), 'tests/fixtures/DEEP_RESEARCH_HARNESS');
 const INSPECT = join(FIXTURE, 'cli/inspect-bundle.mjs');
 
-function makeBundle(baseDir, name, { traceEntries = [], logLines = [], map = 'current' } = {}) {
+function makeBundle(baseDir, name, { traceEntries = [], logLines = [], map = 'current', entry = 'current' } = {}) {
   const bundleDir = join(baseDir, `dpt_rb_${name}`);
   mkdirSync(bundleDir, { recursive: true });
   const dirs = ['seed_topics', 'reference', 'artifacts/wave0', 'artifacts/wave1', 'artifacts/wave2', '_cache', 'final', '_logs', '_work_units'];
@@ -17,6 +17,8 @@ function makeBundle(baseDir, name, { traceEntries = [], logLines = [], map = 'cu
   for (const f of topFiles) writeFileSync(join(bundleDir, f), '');
   if (map === 'current' || map === 'both') writeFileSync(join(bundleDir, 'BUNDLE_MAP.md'), '# Bundle Map\n');
   if (map === 'legacy' || map === 'both') writeFileSync(join(bundleDir, 'START_FROM_HERE.md'), '# Legacy Map\n');
+  if (entry === 'current') writeFileSync(join(bundleDir, 'BUNDLE_ENTRY.md'), '# Bundle Entry\n');
+  if (entry === 'legacy') writeFileSync(join(bundleDir, 'RUN_BUNDLE.md'), '# Legacy Bundle Entry\n');
   writeFileSync(join(bundleDir, '_logs', 'run.log'), '');
   writeFileSync(join(bundleDir, 'reference/_INDEX.md'), '');
   writeFileSync(join(bundleDir, 'reference/README.md'), '');
@@ -34,7 +36,7 @@ describe('inspect-bundle.mjs integration', () => {
 
   before(() => {
     tmpDir = createTempDir('inspect-bundle');
-    cpSync(FIXTURE, join(tmpDir, 'DPT_FRAMEWORK'), { recursive: true });
+    cpSync(FIXTURE, join(tmpDir, 'DEEP_RESEARCH_HARNESS'), { recursive: true });
   });
 
   after(cleanupAll);
@@ -46,6 +48,14 @@ describe('inspect-bundle.mjs integration', () => {
     const result = spawnSync('node', [INSPECT, bundleDir], { encoding: 'utf-8', timeout: 5000 });
     if (result.status !== 0) throw new Error(`Expected exit 0, got ${result.status}\n${result.stdout}`);
     if (result.stdout.includes('START_FROM_HERE.md')) throw new Error(`Current bundle should not require START_FROM_HERE.md\n${result.stdout}`);
+    if (result.stdout.includes('RUN_BUNDLE.md not found')) throw new Error(`Fresh BUNDLE_ENTRY.md bundle must not receive a stale legacy-entry warning\n${result.stdout}`);
+  });
+
+  it('accepts legacy RUN_BUNDLE.md as bounded entry compatibility', () => {
+    const bundleDir = makeBundle(tmpDir, 'legacy-entry', { entry: 'legacy' });
+    const result = spawnSync('node', [INSPECT, bundleDir], { encoding: 'utf-8', timeout: 5000 });
+    if (result.status !== 0) throw new Error(`Expected legacy entry compatibility to exit 0, got ${result.status}\n${result.stdout}`);
+    if (result.stdout.includes('BUNDLE_ENTRY.md not found')) throw new Error(`Legacy RUN_BUNDLE.md must satisfy entry compatibility\n${result.stdout}`);
   });
 
   it('accepts legacy-only START_FROM_HERE.md with deprecation advice', () => {
@@ -78,7 +88,7 @@ describe('inspect-bundle.mjs integration', () => {
     if (result.status !== 1) throw new Error(`Expected exit 1, got ${result.status}\n${result.stdout}`);
   });
 
-  it('reports unassociated repo-root runtime debris without blocking active bundle', () => {
+  it('reports unassociated repo-root runtime debris without blocking current run bundle', () => {
     const bundleDir = makeBundle(tmpDir, 'cleanup-debris');
     mkdirSync(join(tmpDir, '_cache', 'old-run'), { recursive: true });
     const result = spawnSync('node', [INSPECT, bundleDir], { encoding: 'utf-8', timeout: 5000 });

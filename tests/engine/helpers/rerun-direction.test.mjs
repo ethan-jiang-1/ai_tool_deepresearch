@@ -1,7 +1,7 @@
 // @impl RTI-007
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluateRerunDirection } from '../../../DPT_FRAMEWORK/engine/helpers/rerun-direction.mjs';
+import { evaluateRerunDirection } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/rerun-direction.mjs';
 
 const complete = ({ count = 2, action = 'supplement', extra = '' } = {}) => `## 本轮重跑方向\n- rerun_count: ${count}\n- action: ${action}\n- new_search_dimensions: cost and failure modes\n- adjusted_depth: compare operating models\n- search_guardrails: retain primary sources\n- rationale_excerpt: user requested the additional comparison\n${extra}`;
 

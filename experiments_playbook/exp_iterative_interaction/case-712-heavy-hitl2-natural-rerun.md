@@ -47,7 +47,7 @@ The independent real Subject Agent is required evidence. If its runtime is unava
 
 ```bash
 B=$(node experiments_env/shared/prepare-iterative-interaction-case.mjs 712 --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -88,7 +88,7 @@ The shared adapter sends the second event only after the first successful Subjec
 If the adapter cannot start or complete the independent authenticated session, record the unavailable state and continue only to the one finalizer boundary:
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
 node experiments_env/shared/run-iterative-interaction-subject.mjs 712 --bundle "$B"
 SUBJECT_STATUS=$?
@@ -101,7 +101,7 @@ fi
 ## Step 3 - Observe direct facts and finalize native outcome
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 EXTRA_ARGS=()
 if [ -f "$B/case-712-subject-unavailable.txt" ]; then
   EXTRA_ARGS+=(--not-run-reason "independent authenticated Subject Agent runtime unavailable")
@@ -110,7 +110,7 @@ else
   node experiments_env/shared/observe-iterative-interaction-case.mjs 712 verdict --bundle "$B" --transcript "$B/case-712-transcript.jsonl"
   EXTRA_ARGS+=(--evidence "subject_prompt=$B/case-712-subject-prompt.json" --evidence "subject_transcript=$B/case-712-transcript.jsonl" --evidence "subject_result=$B/case-712-subject-result.json")
 fi
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
 PASS requires exactly one review and one available recommendation before the fixed user event, natural-language mapping to the existing rerun decision/rationale, a real `hitl2-recorded` pass and route-bound rerun load, no second user response, and no canonical enum in user-facing assistant blocks.

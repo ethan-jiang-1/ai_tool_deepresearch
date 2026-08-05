@@ -6,7 +6,7 @@ import assert from 'node:assert';
 import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundleProfile } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { readBundleProfile } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-read-bundle-profile-tmp');

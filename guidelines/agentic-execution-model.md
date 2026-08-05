@@ -44,7 +44,7 @@ The surviving actor is the **Sub-agent**. The retired delegated transport is no 
 2. **Queue**: phase 内 demand 编排。Queue records say what work is needed and where each demand lives.
 3. **Work Unit**: delegated attempt execution。The Engine claims a queue demand into bundle-root `_work_units/waveN/{work_id}/`, a bounded Sub-agent performs the task, and `operate-work-unit submit` is the normal successful completion boundary. Explicit audited `late-submit` is the only terminal exception accepted by current specs.
 
-All bare runtime paths in this execution model are active bundle-root relative. `_work_units/...`, `rb_queue.json`, `rb_output_declarations.jsonl`, `_cache/...`, and `_logs/...` refer to the selected `dpt_rb_*` or `dpt_disp_*` bundle, not repo root or `DPT_FRAMEWORK/`.
+All bare runtime paths in this execution model are current run bundle-root relative. `_work_units/...`, `rb_queue.json`, `rb_output_declarations.jsonl`, `_cache/...`, and `_logs/...` refer to the selected `dpt_rb_*` or `dpt_disp_*` bundle, not repo root or `DEEP_RESEARCH_HARNESS/`.
 
 This document answers the cross-layer questions:
 
@@ -190,7 +190,7 @@ Project Charter defines authority type:
 | Research judgment, search choices, synthesis, repair reasoning | Agent |
 | Agent Flow and operating instructions | Markdown |
 | Deterministic schemas, transitions, receipts, ledgers, gates | JS Engine/CLI |
-| Durable runtime truth | JSON/JSONL/files in the active bundle |
+| Durable runtime truth | JSON/JSONL/files in the current run bundle |
 
 This execution model defines granularity:
 

@@ -7,14 +7,14 @@ import assert from 'node:assert/strict';
 import { appendFileSync, existsSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { createQueue } from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { createQueue } from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import {
   claimWorkUnits,
   closeWorkUnitAttempt,
   loadWorkUnitIndex,
   saveWorkUnitIndex,
   submitWorkUnit,
-} from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import {
   availableActorDecision,
   claimAndSubmitWorkUnit,
@@ -25,7 +25,7 @@ import {
 const __dirname = new URL('.', import.meta.url).pathname;
 const ROOT = process.cwd();
 const VERIFIER = join(ROOT, 'experiments_env', 'shared', 'verify-bundle-health.mjs');
-const INSTANTIATE = join(ROOT, 'DPT_FRAMEWORK', 'cli', 'instantiate-run-bundle.mjs');
+const INSTANTIATE = join(ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'instantiate-run-bundle.mjs');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Synthetic Bundle Fixture Helpers

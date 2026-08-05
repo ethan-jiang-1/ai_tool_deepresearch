@@ -57,7 +57,7 @@ Fixture-backed Engine case, no Agent actor, no external calls. Fixture outputs m
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs w0_multi_work_unit --case case-213 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave0Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -80,7 +80,7 @@ Expected: bundle has topic registry for `topic-a`, `topic-b`, and `topic-c`.
 ## Step 2: [MAIN/SHELL] Enqueue And Claim Three Work Units
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
 node --input-type=module - "$B" <<'JS'
 import { enqueueWorkUnitTask, queueItemForWorkUnit } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -99,7 +99,7 @@ for (const topic of topics) {
 }
 JS
 
-CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 3 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
+CLAIM_JSON=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 3 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_JSON" > "$B/case-213-multi-claim.json"
 printf '%s\n' "$CLAIM_JSON" | node -e '
 const j = JSON.parse(require("fs").readFileSync(0, "utf8"));
@@ -114,7 +114,7 @@ Expected: one Engine transaction claims three contiguous delegated queue-front i
 ## Step 3: [MAIN/SHELL] Submit Three Fixture Results
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import {
@@ -153,8 +153,8 @@ Expected: all three submits return `ok: true` and append exactly three submitted
 ## Step 4: [MAIN/SHELL] Gate Pass From Ledger Coverage
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
-node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-213-gate-multi-happy.json"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-213-gate-multi-happy.json"
 node - "$B" <<'JS'
 const fs = require('fs');
 const bundle = process.argv[2];
@@ -171,7 +171,7 @@ Expected: gate passes from submitted work-unit ledger coverage, not filesystem-o
 Run two fresh claimed work units and prove submit rejects without ledger rows.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -215,7 +215,7 @@ for (const scenario of scenarios) {
   const workId = claim.claimed_work_ids[0];
   const fixture = writeFixtureResultForWorkUnit(bundle, { work_id: workId, source_url: `https://research-source.test/${scenario.label}/article`, source_slug: scenario.label });
   scenario.mutate(fixture);
-  const submit = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], {
+  const submit = spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], {
     cwd: repo,
     encoding: 'utf8',
     maxBuffer: 10 * 1024 * 1024
@@ -239,7 +239,7 @@ Expected: missing receipt returns `reason_code: "missing_receipt"`, invalid resu
 ## Step 6: [MAIN/SHELL] No-Progress Timeout Retry Checkpoint
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync } from 'node:fs';
 import {
@@ -249,7 +249,7 @@ import {
   expireClaimedWorkUnit,
   queueItemForWorkUnit
 } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { loadWorkUnitIndex } from './DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 
 const bundle = process.argv[2];
 enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
@@ -279,9 +279,9 @@ Expected: after explicitly aging the no-progress claim past its idle lease, time
 Use a separate bundle so the earlier successful Wave0 gate handoff does not mask the orphan-output provenance check.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
 OB=$(node experiments_env/shared/new-disposable-bundle.mjs w0_orphan_output --case case-213 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role orphan-output --path "$OB"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role orphan-output --path "$OB"
 node --input-type=module - "$OB" <<'JS'
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -301,7 +301,7 @@ writeFileSync(path.join(bundle, 'artifacts/wave0/topic-orphan/source.yaml'), sou
 }));
 JS
 set +e
-node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$OB" --current-node phases/phase-wave0.md > "$B/case-213-gate-orphan-output.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs --bundle "$OB" --current-node phases/phase-wave0.md > "$B/case-213-gate-orphan-output.json"
 ORPHAN_GATE_STATUS=$?
 set -e
 printf '%s\n' "$ORPHAN_GATE_STATUS" > "$B/case-213-gate-orphan-output.status"
@@ -312,10 +312,10 @@ Expected: orphan bundle gate rejects because direct source output lacks submitte
 ## Step 8: [MAIN/SHELL] Record Verdict Checks
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
-import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { loadWorkUnitIndex } from './DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import { readWorkUnitLedgerRows, recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const bundle = process.argv[2];
@@ -354,7 +354,7 @@ PASS means Wave0 work-unit coverage supports multi-claim/multi-submit gate pass,
 ## Step 10: [MAIN/SHELL] Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
-OB=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role orphan-output)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "multi-work-unit-verdict=$B" --bundle "orphan-output=$OB"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
+OB=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role orphan-output)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "multi-work-unit-verdict=$B" --bundle "orphan-output=$OB"
 ```

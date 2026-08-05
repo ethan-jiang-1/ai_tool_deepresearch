@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import {
   extractExecutionBrief,
   renderPhaseEntryPresentation,
-} from '../../../DPT_FRAMEWORK/engine/helpers/phase-entry-presentation.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/phase-entry-presentation.mjs';
 
 const target = [
   '---',
@@ -59,7 +59,7 @@ describe('phase entry presentation', () => {
         next_action: 'execute_loaded_node',
         node_ref: 'phases/phase-wave1.md',
       },
-      status_sync_command: 'node DPT_FRAMEWORK/cli/advance-status.mjs --bundle /tmp/bundle --to wave0_complete',
+      status_sync_command: 'node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle /tmp/bundle --to wave0_complete',
       action_core: actionCore,
       load_plan: ['shared/shared-profile.md', 'phases/phase-wave1.md'],
       target_node: 'phases/phase-wave1.md',

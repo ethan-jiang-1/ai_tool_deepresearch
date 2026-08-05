@@ -8,7 +8,7 @@ Define research style profiles that control deep research depth and breadth para
 ## Requirements
 ### Requirement: Research style JSON files define per-style parameters
 
-The system SHALL provide one JSON file per research style under `DPT_FRAMEWORK/schema/research-styles/`. Each file SHALL be consumed exclusively by JS (`apply-research-style.mjs` CLI) - Agent and MD SHALL NOT read these files. Adding a new style SHALL require only adding a new JSON file.
+The system SHALL provide one JSON file per research style under `DEEP_RESEARCH_HARNESS/schema/research-styles/`. Each file SHALL be consumed exclusively by JS (`apply-research-style.mjs` CLI) - Agent and MD SHALL NOT read these files. Adding a new style SHALL require only adding a new JSON file.
 
 Each style file SHALL contain at minimum:
 - `user_visible`: boolean
@@ -30,7 +30,7 @@ One side-effect-free `computeResearchStyleParams({ styleDefinition, topicCount }
 
 #### Scenario: JS reads style parameters via CLI
 - **WHEN** `apply-research-style.mjs --bundle <path> --style claim_verification` executes
-- **THEN** it SHALL read `DPT_FRAMEWORK/schema/research-styles/claim_verification.json`, read `topic_registry` length from `rb_plan.md`, call the shared pure computation, compute `wave0_shared_ref_total = base + per_topic * topic_count`, and write all parameters to `rb_profile.yaml#/research_style_params`
+- **THEN** it SHALL read `DEEP_RESEARCH_HARNESS/schema/research-styles/claim_verification.json`, read `topic_registry` length from `rb_plan.md`, call the shared pure computation, compute `wave0_shared_ref_total = base + per_topic * topic_count`, and write all parameters to `rb_profile.yaml#/research_style_params`
 
 #### Scenario: Agent applies style parameters via CLI
 - **WHEN** phase-hitl1.md instructs the Agent to apply a research style

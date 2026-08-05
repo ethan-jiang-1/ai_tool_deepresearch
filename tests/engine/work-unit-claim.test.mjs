@@ -13,10 +13,10 @@ import {
   loadQueue,
   makeItem,
   saveQueue,
-} from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import {
   WORK_UNIT_SUBMISSION_CONTRACT_VERSION,
-} from '../../DPT_FRAMEWORK/schema/contracts/work-unit.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/schema/contracts/work-unit.mjs';
 import {
   claimWorkUnits,
   closeWorkUnitAttempt,
@@ -24,7 +24,7 @@ import {
   openWorkUnitBatch,
   transactionDir,
   workUnitIndexPath,
-} from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 
 function tempBundle() {
   return mkdtempSync(path.join(os.tmpdir(), 'wu-claim-'));

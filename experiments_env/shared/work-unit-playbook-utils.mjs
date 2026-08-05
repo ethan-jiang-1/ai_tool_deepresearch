@@ -14,14 +14,14 @@ import {
   WORK_UNIT_OUTPUT_LEDGER,
   loadWorkUnitIndex,
   workUnitIndexPath,
-} from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import { finalizeAgentExperiment } from './wff-playbook-utils.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(HERE, '..', '..');
 const NODE = process.execPath;
-const OPERATE_QUEUE = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-queue.mjs');
-const OPERATE_WORK_UNIT = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-work-unit.mjs');
+const OPERATE_QUEUE = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs');
+const OPERATE_WORK_UNIT = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs');
 
 export function runJsonCli(args, { expectStatus = 0 } = {}) {
   const result = spawnSync(NODE, args, { cwd: REPO_ROOT, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 });
@@ -982,7 +982,7 @@ export function recordNotRun(bundleDir, { gate, reason }) {
 }
 
 export function validateBundleViaCli(bundleDir) {
-  execFileSync(NODE, [path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/validate-bundle.mjs'), bundleDir], {
+  execFileSync(NODE, [path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs'), bundleDir], {
     cwd: REPO_ROOT,
     encoding: 'utf-8',
     stdio: 'pipe',

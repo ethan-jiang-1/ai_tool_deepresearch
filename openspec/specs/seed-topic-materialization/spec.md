@@ -28,7 +28,7 @@ claim. It SHALL not hand-author registry-owned YAML fields or use direct seed
 frontmatter mutation except for the exact existing syntax-repair boundary.
 
 `phase-seed-topics.md` SHALL load `templates/seed-topic-template` through its
-actual `requires` chain. `DPT_FRAMEWORK/workflows/nodes/templates/` is the
+actual `requires` chain. `DEEP_RESEARCH_HARNESS/workflows/nodes/templates/` is the
 namespace for reusable, instantiable document templates. This Seed Topic
 template defines only initialization body/frontmatter, appendix slot map,
 canonical five-field Projection Entry presentation shape, token lifecycle, and
@@ -208,7 +208,7 @@ must never contain duplicate initialization skeletons.
 
 ### Requirement: Seed topics ready gate rule set
 
-`DPT_FRAMEWORK/schema/gate_definitions/gate-seed-topics-ready.definition.json` SHALL 定义当前 contract 下的 deterministic rules。
+`DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-seed-topics-ready.definition.json` SHALL 定义当前 contract 下的 deterministic rules。
 
 规则 SHALL 覆盖（全部 deterministic，无语义判断）：
 - `seed_topics/` 目录非空（至少 1 个 `.md` 文件）
@@ -266,7 +266,7 @@ prose or treat the body as a second canonical registry.
 
 ### Requirement: Seed topics gate CLI implementation
 
-`DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs` SHALL 使用 `gate-helpers.mjs` standard pipeline（`parseGateCliArgs` → `loadGateDefinition` → `validateNodeGateBinding` → iterate rules → `resolveRouting` → `buildGateResult` → `emitGateResult`），延续 `wff-pre-research` / `wff-research-waves` 的 gate CLI 模式。
+`DEEP_RESEARCH_HARNESS/cli/gates/check-gate-seed-topics-ready.mjs` SHALL 使用 `gate-helpers.mjs` standard pipeline（`parseGateCliArgs` → `loadGateDefinition` → `validateNodeGateBinding` → iterate rules → `resolveRouting` → `buildGateResult` → `emitGateResult`），延续 `wff-pre-research` / `wff-research-waves` 的 gate CLI 模式。
 
 CLI SHALL 支持 `trace_event_present`（由 `wff-research-waves` 引入的 `readTraceEvents` helper）。
 
@@ -289,9 +289,9 @@ CLI SHALL 延续 double trace 约定：gate attempt 写入 `rb_trace.jsonl`。
 ### Requirement: Workflow registration of seed-topics phase
 
 Workflow registration surface SHALL 同步插入 seed-topics 阶段，保持 transition 一致性：
-- `DPT_FRAMEWORK/workflows/manifest.json`：phases 数组在 setup 与 wave0 之间插入 `{ "key": "seed-topics", "node": "phases/phase-seed-topics.md", "gate": "seed-topics-ready" }`
-- `DPT_FRAMEWORK/workflows/transitions.chain.json`：`phase-setup.md` 的 `passed` 改指向 `phase-seed-topics.md`；新增 `phase-seed-topics.md` → `passed` → `phase-wave0.md`
-- `DPT_FRAMEWORK/schema/enums.mjs` 的 `CurrentGate`：新增 `seed_topics_ready`（位于 `setup_ready` 与 `wave0_complete` 之间）
+- `DEEP_RESEARCH_HARNESS/workflows/manifest.json`：phases 数组在 setup 与 wave0 之间插入 `{ "key": "seed-topics", "node": "phases/phase-seed-topics.md", "gate": "seed-topics-ready" }`
+- `DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json`：`phase-setup.md` 的 `passed` 改指向 `phase-seed-topics.md`；新增 `phase-seed-topics.md` → `passed` → `phase-wave0.md`
+- `DEEP_RESEARCH_HARNESS/schema/enums.mjs` 的 `CurrentGate`：新增 `seed_topics_ready`（位于 `setup_ready` 与 `wave0_complete` 之间）
 
 `rb_status.json` 模板（`rb_templates/`）的 `current_gate`/`next_gate` 初始值 SHALL 直接反映新阶段：`current_gate` SHALL 为 `setup_ready`，`next_gate` SHALL 为 `seed_topics_ready`。
 

@@ -16,15 +16,15 @@ import {
   SEED_TOPIC_PROJECTION_CARD_LABEL,
   SEED_TOPIC_PROJECTION_SLOTS,
   TopicApplyPlanSchema,
-} from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
-import { SEED_TOPIC_INITIALIZATION } from '../../../DPT_FRAMEWORK/engine/helpers/seed-topic-authoring-evaluator.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { SEED_TOPIC_INITIALIZATION } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/seed-topic-authoring-evaluator.mjs';
 import {
   parseProjectionEntryArea,
   upsertProjectionEntryArea,
-} from '../../../DPT_FRAMEWORK/engine/helpers/projection-entry-contract.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/projection-entry-contract.mjs';
 import { diffSnapshots, snapshotTree } from '../../helpers/authority-snapshot.mjs';
 import { claimAndSubmitWorkUnit } from '../work-unit-test-helpers.mjs';
-import { writeGateAttempt } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { writeGateAttempt } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 
 const dirs = [];
 after(() => dirs.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
@@ -59,7 +59,7 @@ function authorizeSeedTopics(dir) {
     routing: { kind: 'next', next: 'phases/phase-seed-topics.md' },
     inspect: [], advice: [],
   }, { setupReadyStaged: true });
-  const entered = spawnSync('node', ['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', dir, '--node', 'phases/phase-seed-topics.md'], { encoding: 'utf8' });
+  const entered = spawnSync('node', ['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', dir, '--node', 'phases/phase-seed-topics.md'], { encoding: 'utf8' });
   assert.equal(entered.status, 0, entered.stderr);
 }
 const input = { context: 'hitl1', actions: [{ action: 'add_topic', title: 'Topic A', slug_stem: 'topic-a', must_answer: ['What?'], scope_role: 'primary', depends_on_topic_uids: [] }] };
@@ -190,7 +190,7 @@ describe('canonical topic state', () => {
     assert.equal(added.verdict, 'committed');
     assert.deepEqual(added.style_projection?.checkpoint, { gate: 'hitl1-recorded', current_node: 'phases/phase-hitl1.md' });
     assert.equal(added.style_projection?.status, 'refresh_required');
-    assert.equal(added.style_projection?.owner, 'DPT_FRAMEWORK/cli/apply-research-style.mjs');
+    assert.equal(added.style_projection?.owner, 'DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs');
     assert.equal(added.style_projection?.selected_profile, 'quick_factual');
     assert.equal(added.style_projection?.committed_topic_count, 1);
     assert.match(added.style_projection?.command || '', /apply-research-style\.mjs/);
@@ -230,7 +230,7 @@ describe('canonical topic state', () => {
     const dir = bundle('topic-seed-shared-parity');
     applyCanonicalTopicState({ bundlePath: dir, input });
     const rendered = seedBody(readFileSync(join(dir, 'seed_topics/01_topic-a.md'), 'utf8'));
-    const contract = readFileSync('DPT_FRAMEWORK/workflows/nodes/templates/seed-topic-template.md', 'utf8');
+    const contract = readFileSync('DEEP_RESEARCH_HARNESS/workflows/nodes/templates/seed-topic-template.md', 'utf8');
     const initialization = contract.slice(contract.indexOf('## Initialization Skeleton'), contract.indexOf('## Appendix Slot Map'));
     const appendix = contract.slice(contract.indexOf('## Appendix Slot Map'));
     const headings = appendix.split(/\r?\n/)

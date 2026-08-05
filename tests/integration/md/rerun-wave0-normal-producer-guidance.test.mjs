@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-const wave0 = readFileSync('DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md', 'utf8');
-const shared = readFileSync('DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md', 'utf8');
+const wave0 = readFileSync('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md', 'utf8');
+const shared = readFileSync('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md', 'utf8');
 
 describe('rerun-added Topic Wave0 uses the normal producer contract', () => {
   it('classifies direct facts into reuse, normal new-topic demand, or normal supplement', () => {

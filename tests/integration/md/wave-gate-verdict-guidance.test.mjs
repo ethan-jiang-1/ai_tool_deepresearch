@@ -8,7 +8,7 @@ const PHASES = ['wave0', 'wave1', 'wave2'];
 describe('Wave Gate verdict handoff guidance', () => {
   for (const wave of PHASES) {
     it(`requires ${wave} to inspect degradation before consuming check.next`, () => {
-      const text = readFileSync(`DPT_FRAMEWORK/workflows/nodes/phases/phase-${wave}.md`, 'utf8');
+      const text = readFileSync(`DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-${wave}.md`, 'utf8');
       const section = text.match(/## 6\. On Gate Pass\n\n([\s\S]*?)(?=\n## 7\.|$)/)?.[1] || '';
       const degradedIndex = section.indexOf('check.degraded');
       const nextIndex = section.indexOf('check.next');

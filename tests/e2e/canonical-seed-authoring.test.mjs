@@ -4,14 +4,14 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { writeGateAttempt } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { writeGateAttempt } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 
 const root = process.cwd();
 const created = [];
-const topicState = join(root, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs');
-const queue = join(root, 'DPT_FRAMEWORK/cli/operate-queue.mjs');
-const gate = join(root, 'DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs');
-const enter = join(root, 'DPT_FRAMEWORK/cli/enter-phase.mjs');
+const topicState = join(root, 'DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs');
+const queue = join(root, 'DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs');
+const gate = join(root, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-seed-topics-ready.mjs');
+const enter = join(root, 'DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs');
 const topics = [
   { topic_uid: 'tp_123e4567-e89b-42d3-a456-426614174000', id: '01', slug: '01_alpha', title: 'Alpha', must_answer: ['Alpha?'], scope_role: 'primary', depends_on_topic_uids: [] },
   { topic_uid: 'tp_123e4567-e89b-42d3-a456-426614174001', id: '02', slug: '02_beta', title: 'Beta', must_answer: ['Beta?'], scope_role: 'comparison', depends_on_topic_uids: [] },

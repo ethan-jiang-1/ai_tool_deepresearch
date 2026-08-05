@@ -9,8 +9,8 @@ import { claimAndSubmitFixtureWorkUnit } from '../../experiments_env/shared/work
 import {
   applyCanonicalTopicState,
   renderSeedProjectionAppendix,
-} from '../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
-import { canonicalWave1ReferencePath } from '../../DPT_FRAMEWORK/engine/helpers/wave1-reference-convergence.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { canonicalWave1ReferencePath } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs';
 import {
   advanceStatus, authoritySnapshot, cleanupRoot, createTempRoot,
   enterPhase, instantiateBundle, parseJsonOutput, readStatus, readTrace, REPO_ROOT, restoreBundle, runGate, runNode, snapshotBundle,
@@ -55,7 +55,7 @@ function stageSeed(bundle, rerunCount, { action = 'supplement', directionCount =
 }
 
 function logCompletion(bundle, event) {
-  runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/log-event.mjs'), '--bundle', bundle, '--event', event]);
+  runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/log-event.mjs'), '--bundle', bundle, '--event', event]);
 }
 
 function ensureIndexRow(bundle, row) {
@@ -73,13 +73,13 @@ function persistPhaseReference(bundle, refPath, content) {
   mkdirSync(join(bundle, '_tmp'), { recursive: true });
   writeFileSync(stagingPath, content);
   const persisted = parseJsonOutput(runNode([
-    join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs'),
+    join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs'),
     'persist', '--bundle', bundle, '--source', stagingPath, '--target', refPath,
     '--expect-absent',
   ]));
   assert.equal(persisted.verdict, 'committed', JSON.stringify(persisted));
   const indexed = parseJsonOutput(runNode([
-    join(REPO_ROOT, 'DPT_FRAMEWORK/cli/sync-reference-index.mjs'), '--bundle', bundle,
+    join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/sync-reference-index.mjs'), '--bundle', bundle,
   ]));
   assert.ok(['committed', 'unchanged'].includes(indexed.verdict), JSON.stringify(indexed));
 }
@@ -274,7 +274,7 @@ function directionSection(bytes) {
 
 function inspectEligible(bundle, phase) {
   const result = runNode([
-    join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-work-unit.mjs'),
+    join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs'),
     'inspect', bundle, '--eligible-rows', '--phase', phase,
   ], { expectedStatus: 0 });
   return { process: result, output: parseJsonOutput(result) };
@@ -282,7 +282,7 @@ function inspectEligible(bundle, phase) {
 
 function inspectEligibleFailure(bundle, phase) {
   const result = runNode([
-    join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-work-unit.mjs'),
+    join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs'),
     'inspect', bundle, '--eligible-rows', '--phase', phase,
   ], { expectedStatus: 1 });
   return { process: result, output: parseJsonOutput(result) };
@@ -389,7 +389,7 @@ describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
         { action: 'add_topic', title: 'Topic B', slug_stem: 'topic-b', must_answer: ['What new comparison is required?'], scope_role: 'comparison', depends_on_topic_uids: [initialTopic.topic_uid], direction: directionCandidate({ action: 'add' }) },
       ],
     }, null, 2));
-    const applied = parseJsonOutput(runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs'), 'apply', '--bundle', bundle, '--input', candidatePath]));
+    const applied = parseJsonOutput(runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs'), 'apply', '--bundle', bundle, '--input', candidatePath]));
     assert.equal(applied.verdict, 'committed');
     const registry = parseYaml(readFileSync(join(bundle, 'rb_plan.md'), 'utf8').match(/^---\n([\s\S]*?)\n---/)[1]).topic_registry;
     const added = registry.find((topic) => topic.slug.endsWith('_topic-b'));
@@ -398,16 +398,16 @@ describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
     const directionOnly = { context: 'rerun', actions: [{ action: 'set_rerun_direction', topic_uid: initialTopic.topic_uid, direction: { ...directionCandidate(), adjusted_depth: 'compare the revised operational mechanisms' } }] };
     const beforeDirection = directionSection(readFileSync(join(bundle, 'seed_topics', initialTopic.slug + '.md'), 'utf8'));
     assert.throws(() => applyCanonicalTopicState({ bundlePath: bundle, input: directionOnly, crashAt: 'after_prepared' }), /simulated crash/);
-    const blocked = parseJsonOutput(runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs'), 'inspect', '--bundle', bundle], { expectedStatus: 1 }));
-    const recovered = parseJsonOutput(runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs'), 'recover', '--bundle', bundle, '--operation-id', blocked.blockers[0].operation_id]));
+    const blocked = parseJsonOutput(runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs'), 'inspect', '--bundle', bundle], { expectedStatus: 1 }));
+    const recovered = parseJsonOutput(runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs'), 'recover', '--bundle', bundle, '--operation-id', blocked.blockers[0].operation_id]));
     assert.equal(recovered.verdict, 'committed');
     const recoveredDirection = directionSection(readFileSync(join(bundle, 'seed_topics', initialTopic.slug + '.md'), 'utf8'));
     assert.notEqual(recoveredDirection, beforeDirection);
 
-    const layout = parseJsonOutput(runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs'), 'inspect', '--bundle', bundle])).layout_baseline;
+    const layout = parseJsonOutput(runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs'), 'inspect', '--bundle', bundle])).layout_baseline;
     layout.topics[0].title = 'Topic A layout-only label';
     writeFileSync(candidatePath, JSON.stringify(layout, null, 2));
-    const laidOut = parseJsonOutput(runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs'), 'apply', '--bundle', bundle, '--input', candidatePath]));
+    const laidOut = parseJsonOutput(runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs'), 'apply', '--bundle', bundle, '--input', candidatePath]));
     assert.equal(laidOut.verdict, 'committed');
     const laidOutTopic = parseYaml(readFileSync(join(bundle, 'rb_plan.md'), 'utf8').match(/^---\n([\s\S]*?)\n---/)[1]).topic_registry.find((topic) => topic.topic_uid === initialTopic.topic_uid);
     assert.equal(directionSection(readFileSync(join(bundle, 'seed_topics', laidOutTopic.slug + '.md'), 'utf8')), recoveredDirection);
@@ -559,7 +559,7 @@ describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
       ledger: readFileSync(join(bundle, 'rb_output_declarations.jsonl')),
       manifest: readFileSync(manifestPath),
     };
-    const inspectCli = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-wave1-output.mjs');
+    const inspectCli = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/inspect-wave1-output.mjs');
     const failedProcess = runNode([inspectCli, '--bundle', bundle], { expectedStatus: 1 });
     const failed = parseJsonOutput(failedProcess);
     assert.match(failed.inspect.join('\n'), new RegExp(`return_map_current_row_omission.*${submitted.record.work_id}`));

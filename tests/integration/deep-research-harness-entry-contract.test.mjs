@@ -1,0 +1,137 @@
+// @impl ACR-001, ACR-002, ACS-005, BUM-005, CMI-009, EXS-004, RUE-006, WDC-004
+// Static and CLI-bound contract for Harness identity, bundle entry succession,
+// and explicitly supplied current-run-bundle roots.
+
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import {
+  after,
+  describe,
+  it,
+} from 'node:test';
+import {
+  existsSync,
+  lstatSync,
+  mkdtempSync,
+  readFileSync,
+  readlinkSync,
+  realpathSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+const REPO_ROOT = process.cwd();
+const HARNESS_ROOT = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS');
+const LEGACY_ROOT = join(REPO_ROOT, 'DPT_FRAMEWORK');
+const INSTANTIATE = join(HARNESS_ROOT, 'cli', 'instantiate-run-bundle.mjs');
+const INSPECT = join(HARNESS_ROOT, 'cli', 'inspect-bundle.mjs');
+const roots = new Set();
+
+function run(script, args) {
+  return spawnSync(process.execPath, [script, ...args], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    timeout: 20000,
+  });
+}
+
+function trackRoot(prefix) {
+  const root = mkdtempSync(join(tmpdir(), prefix));
+  roots.add(root);
+  return root;
+}
+
+function uniqueName(label) {
+  return `harness-entry-${label}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+describe('Deep Research Harness entry contract', () => {
+  after(() => {
+    for (const root of roots) rmSync(root, { recursive: true, force: true });
+  });
+
+  it('keeps one physical Harness source tree and canonical static entry routes', () => {
+    assert.equal(lstatSync(LEGACY_ROOT).isSymbolicLink(), true, 'legacy root must remain a symlink');
+    assert.equal(readlinkSync(LEGACY_ROOT), 'DEEP_RESEARCH_HARNESS');
+    assert.equal(realpathSync(LEGACY_ROOT), realpathSync(HARNESS_ROOT));
+
+    const adr = readFileSync(join(REPO_ROOT, 'docs', 'adr', '0002-name-the-reusable-surface-deep-research-harness.md'), 'utf8');
+    assert.match(adr, /`DEEP_RESEARCH_HARNESS\/` as the physical source\s+root/);
+    assert.match(adr, /`DPT_FRAMEWORK\/` is a relative compatibility symlink/);
+
+    const entryTemplate = readFileSync(join(HARNESS_ROOT, 'rb_templates', 'BUNDLE_ENTRY.md.tmpl'), 'utf8');
+    assert.match(entryTemplate, /^# \{\{name\}\}$/m);
+    assert.match(entryTemplate, /Deep Research Harness: `\{\{framework_root_relpath\}\}`/);
+    assert.match(entryTemplate, /BUNDLE_MAP\.md/);
+    assert.match(entryTemplate, /COMMANDS\.md/);
+    assert.doesNotMatch(entryTemplate, /current_node|current_gate|node .*cli|gate authority/i);
+
+    const routeFiles = [
+      'AGENTS.md',
+      'CLAUDE.md',
+      'DEEP_RESEARCH_HARNESS/AGENTS.md',
+      'DEEP_RESEARCH_HARNESS/CLAUDE.md',
+      'DEEP_RESEARCH_HARNESS/README.md',
+      'DEEP_RESEARCH_HARNESS/RUN.md',
+    ];
+    for (const relativePath of routeFiles) {
+      const text = readFileSync(join(REPO_ROOT, relativePath), 'utf8');
+      assert.match(text, /BUNDLE_ENTRY\.md/, `${relativePath} must name the new entry card`);
+      assert.match(text, /RUN_BUNDLE\.md/, `${relativePath} must name legacy entry compatibility`);
+      assert.match(text, /BUNDLE_MAP\.md/, `${relativePath} must name map fallback`);
+      assert.match(text, /current run bundle root/i, `${relativePath} must name the explicit runtime coordinate`);
+    }
+
+    const continuation = readFileSync(join(HARNESS_ROOT, 'command_playbook', 'continue-run-bundle.md'), 'utf8');
+    assert.ok(
+      continuation.indexOf('BUNDLE_ENTRY.md') < continuation.indexOf('RUN_BUNDLE.md') &&
+      continuation.indexOf('RUN_BUNDLE.md') < continuation.indexOf('BUNDLE_MAP.md'),
+      'continuation guidance must state BUNDLE_ENTRY.md -> RUN_BUNDLE.md -> BUNDLE_MAP.md precedence',
+    );
+    assert.match(continuation, /Do not select a bundle by scanning, a bare filename, chat memory, chronology/i);
+    assert.match(continuation, /If all three are absent,\s*report the entry boundary and stop/i);
+  });
+
+  it('renders a new entry card and retains bounded legacy entry and map compatibility', () => {
+    const root = trackRoot('deep-research-harness-entry-');
+    const target = join(root, 'bundles');
+    const name = uniqueName('entry');
+    const result = run(INSTANTIATE, [name, '--target-dir', target]);
+    const bundle = join(target, `dpt_rb_${name}`);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), realpathSync(bundle));
+    assert.equal(existsSync(join(bundle, 'BUNDLE_ENTRY.md')), true);
+    assert.equal(existsSync(join(bundle, 'RUN_BUNDLE.md')), false);
+
+    const entry = readFileSync(join(bundle, 'BUNDLE_ENTRY.md'), 'utf8');
+    assert.match(entry, new RegExp(`^# ${name}$`, 'm'));
+    assert.match(entry, /Deep Research Harness:/);
+    assert.match(entry, /BUNDLE_MAP\.md/);
+    assert.match(entry, /COMMANDS\.md/);
+    assert.doesNotMatch(entry, /\{\{[^}]+\}\}/);
+
+    const freshInspection = run(INSPECT, [bundle]);
+    assert.equal(freshInspection.status, 0, freshInspection.stdout);
+    assert.doesNotMatch(freshInspection.stdout, /RUN_BUNDLE\.md not found/);
+
+    writeFileSync(join(bundle, 'RUN_BUNDLE.md'), '# Legacy entry\n');
+    const bothInspection = run(INSPECT, [bundle]);
+    assert.equal(bothInspection.status, 0, bothInspection.stdout);
+    assert.match(bothInspection.stdout, /BUNDLE_ENTRY\.md is current/);
+
+    unlinkSync(join(bundle, 'BUNDLE_ENTRY.md'));
+    const legacyInspection = run(INSPECT, [bundle]);
+    assert.equal(legacyInspection.status, 0, legacyInspection.stdout);
+    assert.doesNotMatch(legacyInspection.stdout, /BUNDLE_ENTRY\.md not found/);
+
+    unlinkSync(join(bundle, 'RUN_BUNDLE.md'));
+    const mapOnlyInspection = run(INSPECT, [bundle]);
+    assert.equal(mapOnlyInspection.status, 0, mapOnlyInspection.stdout);
+    assert.match(mapOnlyInspection.stdout, /BUNDLE_ENTRY\.md not found/);
+    assert.match(mapOnlyInspection.stdout, /BUNDLE_MAP\.md remains passive navigation only/);
+  });
+});

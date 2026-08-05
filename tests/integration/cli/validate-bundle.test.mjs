@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync, mkdirSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
 import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
-const FIXTURE = join(process.cwd(), 'tests/fixtures/DPT_FRAMEWORK');
+const FIXTURE = join(process.cwd(), 'tests/fixtures/DEEP_RESEARCH_HARNESS');
 const VALIDATE = join(FIXTURE, 'cli/validate-bundle.mjs');
 
 describe('validate-bundle.mjs integration', () => {
@@ -14,7 +14,7 @@ describe('validate-bundle.mjs integration', () => {
 
   before(() => {
     tmpDir = createTempDir('validate-bundle');
-    cpSync(FIXTURE, join(tmpDir, 'DPT_FRAMEWORK'), { recursive: true });
+    cpSync(FIXTURE, join(tmpDir, 'DEEP_RESEARCH_HARNESS'), { recursive: true });
   });
 
   after(cleanupAll);

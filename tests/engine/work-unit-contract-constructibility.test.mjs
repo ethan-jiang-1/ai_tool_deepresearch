@@ -8,16 +8,16 @@ import {
   ActorObservationContractProjectionSchema,
   actorObservationContractProjection,
   describeActorObservationInputIssues,
-} from '../../DPT_FRAMEWORK/engine/work-unit-actor.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-actor.mjs';
 import {
   describeDirectOutputAuthoringProjection,
-} from '../../DPT_FRAMEWORK/engine/helpers/direct-output-contract.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/direct-output-contract.mjs';
 import {
   describeCacheLeafAuthoringProjection,
-} from '../../DPT_FRAMEWORK/engine/helpers/cache-leaf-contract.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/cache-leaf-contract.mjs';
 import {
   deriveWorkUnitCandidateProjection,
-} from '../../DPT_FRAMEWORK/engine/work-unit-candidate-projection.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-candidate-projection.mjs';
 
 describe('DEW-021 delegated-work contract constructibility', () => {
   it('derives the exact seven legal observation tuples and structured malformed issues without choosing a probe result', () => {

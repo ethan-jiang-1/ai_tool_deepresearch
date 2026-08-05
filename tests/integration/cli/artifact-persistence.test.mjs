@@ -20,7 +20,7 @@ import {
   ArtifactPersistenceCrashError,
   persistBundleFile,
   sha256File,
-} from '../../../DPT_FRAMEWORK/engine/helpers/artifact-persistence.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs';
 import {
   claimAndSubmitFixtureWorkUnit,
   sourceYamlContent,
@@ -28,7 +28,7 @@ import {
 } from '../../../experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const repoRoot = path.resolve(import.meta.dirname, '../../..');
-const cliPath = path.join(repoRoot, 'DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs');
+const cliPath = path.join(repoRoot, 'DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs');
 const roots = [];
 
 function createBundle() {

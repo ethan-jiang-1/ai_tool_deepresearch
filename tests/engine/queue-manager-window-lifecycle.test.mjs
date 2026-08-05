@@ -15,7 +15,7 @@ import {
   fail,
   preempt,
   pendingCount,
-} from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import { cleanup, item, tempBundle } from './queue-manager-fixtures.mjs';
 
 describe('Enqueue and claim (AGQ-002)', () => {

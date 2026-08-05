@@ -16,7 +16,7 @@ import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
-const WORKFLOW_DIR = path.join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows', 'nodes');
+const WORKFLOW_DIR = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'workflows', 'nodes');
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -60,7 +60,7 @@ export function checkStopDeclared(parsed) {
 
 // ── Cross-node consistency checks ────────────────────────────────────
 
-const GATE_DEFS_DIR = path.join(REPO_ROOT, 'DPT_FRAMEWORK', 'schema', 'gate_definitions');
+const GATE_DEFS_DIR = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'schema', 'gate_definitions');
 
 export function checkGateDefinitionExists(parsed) {
   const gateFile = path.join(GATE_DEFS_DIR, `gate-${parsed.gate}.definition.json`);
@@ -77,8 +77,8 @@ export function checkGateDefinitionExists(parsed) {
  * longer consulted.
  */
 
-const MANIFEST_PATH = path.join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows', 'manifest.json');
-const CHAIN_PATH = path.join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows', 'transitions.chain.json');
+const MANIFEST_PATH = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'workflows', 'manifest.json');
+const CHAIN_PATH = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'workflows', 'transitions.chain.json');
 
 function loadManifestForChecks() {
   const raw = readFileSync(MANIFEST_PATH, 'utf-8');

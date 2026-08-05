@@ -36,7 +36,7 @@ describe('enter-phase CLI', { concurrency: false }, () => {
 
   function run(args, expectFailure = false) {
     try {
-      return execFileSync('node', ['DPT_FRAMEWORK/cli/enter-phase.mjs', ...args], {
+      return execFileSync('node', ['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', ...args], {
         cwd: REPO_ROOT,
         encoding: 'utf8',
         maxBuffer: 20 * 1024 * 1024,
@@ -126,14 +126,14 @@ describe('enter-phase CLI', { concurrency: false }, () => {
     const tracePath = join(dir, 'rb_trace.jsonl');
     const beforeStatus = readFileSync(statusPath, 'utf8');
     const beforeTrace = readFileSync(tracePath, 'utf8');
-    const help = spawnSync('node', ['DPT_FRAMEWORK/cli/enter-phase.mjs', '--help'], {
+    const help = spawnSync('node', ['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--help'], {
       cwd: REPO_ROOT,
       encoding: 'utf8',
     });
     assert.equal(help.status, 0, help.stderr || help.stdout);
     assert.match(help.stdout, /Usage:/);
 
-    const malformed = spawnSync('node', ['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', dir, '--node'], {
+    const malformed = spawnSync('node', ['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', dir, '--node'], {
       cwd: REPO_ROOT,
       encoding: 'utf8',
     });
@@ -146,12 +146,12 @@ describe('enter-phase CLI', { concurrency: false }, () => {
 
   it('rejects malformed target action-core configuration before loader or entry-witness writes', () => {
     const frameworkRoot = mkdtempSync(join(tmpdir(), 'dpt-enter-phase-framework-'));
-    const framework = join(frameworkRoot, 'DPT_FRAMEWORK');
+    const framework = join(frameworkRoot, 'DEEP_RESEARCH_HARNESS');
     const statusPath = join(dir, 'rb_status.json');
     const tracePath = join(dir, 'rb_trace.jsonl');
     const beforeStatus = readFileSync(statusPath, 'utf8');
     const beforeTrace = readFileSync(tracePath, 'utf8');
-    cpSync(join(REPO_ROOT, 'DPT_FRAMEWORK'), framework, { recursive: true });
+    cpSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS'), framework, { recursive: true });
     symlinkSync(join(REPO_ROOT, 'node_modules'), join(frameworkRoot, 'node_modules'), 'dir');
     writeFileSync(join(framework, 'workflows/nodes/phases/phase-wave1.md'), '# Invalid Wave1 Configuration\n');
     try {

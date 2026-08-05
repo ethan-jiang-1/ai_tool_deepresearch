@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import {
   GATE_TRANSITIONS, GATE_MACHINE_STATES,
   validateTransitions, isValidTransition,
-} from '../../DPT_FRAMEWORK/schema/index.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/schema/index.mjs';
 
 describe('GateTransitionTable', () => {
   it('has 8 states', () => {

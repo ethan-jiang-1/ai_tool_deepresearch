@@ -60,8 +60,8 @@ function wrapGateCall(line) {
   // Skip if already wrapped
   if (line.includes('run-gate-with-monitor.mjs')) return line;
 
-  // Pattern: <prefix>node DPT_FRAMEWORK/cli/gates/check-gate-<name>.mjs <args><suffix>
-  const re = /^(.*?)node\s+(DPT_FRAMEWORK\/cli\/gates\/check-gate-.+?\.mjs)(\s+--bundle\s+\S+.*?)(\s*\|\|\s*true)?(\s*\)?\s*)$/;
+  // Pattern: <prefix>node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-<name>.mjs <args><suffix>
+  const re = /^(.*?)node\s+(DEEP_RESEARCH_HARNESS\/cli\/gates\/check-gate-.+?\.mjs)(\s+--bundle\s+\S+.*?)(\s*\|\|\s*true)?(\s*\)?\s*)$/;
   const m = line.match(re);
   if (!m) return line;
 
@@ -87,7 +87,7 @@ function processWrapper(filePath) {
 
   for (const line of lines) {
     // Only wrap lines containing gate CLI paths
-    if (line.includes('DPT_FRAMEWORK/cli/gates/check-gate-') && !line.includes('run-gate-with-monitor')) {
+    if (line.includes('DEEP_RESEARCH_HARNESS/cli/gates/check-gate-') && !line.includes('run-gate-with-monitor')) {
       const wrapped = wrapGateCall(line);
       if (wrapped !== line) {
         newLines.push(wrapped);

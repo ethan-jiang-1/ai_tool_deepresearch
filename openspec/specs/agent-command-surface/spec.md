@@ -49,7 +49,7 @@ Agent-facing framework docs SHALL NOT use `Agent/operator` or equivalent slash w
 
 #### Scenario: Command index declares Agent audience
 
-- **WHEN** the Phase Agent reads `DPT_FRAMEWORK/COMMANDS.md`
+- **WHEN** the Phase Agent reads `DEEP_RESEARCH_HARNESS/COMMANDS.md`
 - **THEN** it SHALL see a top-level audience statement before the first command table
 - **AND** that statement SHALL identify commands as Agent-facing
 - **AND** it SHALL assign ordinary authorized commands and reversible mechanical repair to the Agent
@@ -135,13 +135,13 @@ Agent-facing framework docs SHALL NOT use `Agent/operator` or equivalent slash w
 
 The framework entry docs SHALL distinguish the human's one-time trigger action from the subsequent Agent-run command execution.
 
-Before that trigger, root entry documentation SHALL expose a human-facing setup path that covers the existing Node/npm installation baseline, Coding Agent permission preparation for supported Claude Code and Codex surfaces, configuration verification, and the DPT_FRAMEWORK trigger. Permission preparation SHALL be framed as a pre-pipeline human decision with explicit risk and opt-in boundaries, not as a command that the Agent can grant to itself.
+Before that trigger, root entry documentation SHALL expose a human-facing setup path that covers the existing Node/npm installation baseline, Coding Agent permission preparation for supported Claude Code and Codex surfaces, configuration verification, and the DEEP_RESEARCH_HARNESS trigger. Permission preparation SHALL be framed as a pre-pipeline human decision with explicit risk and opt-in boundaries, not as a command that the Agent can grant to itself.
 
-Human-facing permission setup SHALL remain outside `DPT_FRAMEWORK/command_playbook/`. Agent-facing `RUN.md` MAY name the setup prerequisite and its location, but after `RUN.md` selects the DPT_FRAMEWORK entry path it SHALL NOT ask the human to become a permission or command co-runner during a non-HITL lifecycle phase.
+Human-facing permission setup SHALL remain outside `DEEP_RESEARCH_HARNESS/command_playbook/`. Agent-facing `RUN.md` MAY name the setup prerequisite and its location, but after `RUN.md` selects the DEEP_RESEARCH_HARNESS entry path it SHALL NOT ask the human to become a permission or command co-runner during a non-HITL lifecycle phase.
 
 The setup path SHALL distinguish reviewed/interactive posture from explicitly opted-in autonomous research posture. It SHALL NOT copy ignored local permission history into a committed allowlist, silently expand committed project configuration, represent unrestricted/full-access permissions as risk-free defaults, or imply that `dry-submit` or a nonexistent gate `--non-interactive` flag grants host permissions.
 
-Dragging or pasting `RUN.md` into a conversation SHALL be framed as selecting the DPT_FRAMEWORK entry path and handing control to the Agent. It SHALL NOT imply that a human remains present to choose commands, run commands, answer mid-pipeline confirmations, receive progress updates, or decide whether partial output is enough.
+Dragging or pasting `RUN.md` into a conversation SHALL be framed as selecting the DEEP_RESEARCH_HARNESS entry path and handing control to the Agent. It SHALL NOT imply that a human remains present to choose commands, run commands, answer mid-pipeline confirmations, receive progress updates, or decide whether partial output is enough.
 
 Any pre-pipeline clarification outside HITL1/HITL2 SHALL be explicitly labeled as a pre-pipeline routing exception and SHALL NOT appear inside `stop: no` lifecycle phase instructions. If the entry path has already been selected by reading `RUN.md`, the default instruction SHALL be to proceed with the framework, not to ask whether to use it.
 
@@ -149,7 +149,7 @@ Bundle naming instructions SHALL frame naming as an Agent-derived or already-sup
 
 #### Scenario: Human setup is discoverable before the trigger
 
-- **WHEN** a human reads the root entry documentation before selecting DPT_FRAMEWORK
+- **WHEN** a human reads the root entry documentation before selecting DEEP_RESEARCH_HARNESS
 - **THEN** the documentation SHALL provide a discoverable setup path for installation and Coding Agent permissions
 - **AND** it SHALL distinguish reviewed approval posture from any explicitly opted-in autonomous research posture
 - **AND** it SHALL direct the human to complete and verify permission setup before the framework trigger
@@ -157,10 +157,10 @@ Bundle naming instructions SHALL frame naming as an Agent-derived or already-sup
 
 #### Scenario: Permission setup does not create a human pipeline co-runner
 
-- **WHEN** the Agent reads `DPT_FRAMEWORK/RUN.md` after entry selection
+- **WHEN** the Agent reads `DEEP_RESEARCH_HARNESS/RUN.md` after entry selection
 - **THEN** any permission prerequisite SHALL be described as pre-trigger setup
 - **AND** the Agent SHALL NOT ask the human to approve ordinary lifecycle commands or reconfigure the host during non-HITL `stop: no` execution
-- **AND** human-facing permission instructions SHALL NOT be placed in `DPT_FRAMEWORK/command_playbook/`
+- **AND** human-facing permission instructions SHALL NOT be placed in `DEEP_RESEARCH_HARNESS/command_playbook/`
 
 #### Scenario: Permission preflight does not overclaim validation tools
 
@@ -171,20 +171,20 @@ Bundle naming instructions SHALL frame naming as an Agent-derived or already-sup
 
 #### Scenario: Drag trigger hands control to the Agent
 
-- **WHEN** the Agent reads `DPT_FRAMEWORK/RUN.md` or `DPT_FRAMEWORK/README.md`
-- **THEN** drag-trigger wording SHALL identify the action as selecting the DPT_FRAMEWORK entry path
+- **WHEN** the Agent reads `DEEP_RESEARCH_HARNESS/RUN.md` or `DEEP_RESEARCH_HARNESS/README.md`
+- **THEN** drag-trigger wording SHALL identify the action as selecting the DEEP_RESEARCH_HARNESS entry path
 - **AND** subsequent command execution SHALL be assigned to the Agent
 - **AND** the docs SHALL NOT imply mid-pipeline human command execution
 
 #### Scenario: Pre-pipeline question is explicit or absent
 
-- **WHEN** static validation scans `DPT_FRAMEWORK/RUN.md`
-- **THEN** any instruction to ask the user before starting SHALL be either absent after DPT_FRAMEWORK entry selection or explicitly labeled as pre-pipeline routing outside the autonomous lifecycle
+- **WHEN** static validation scans `DEEP_RESEARCH_HARNESS/RUN.md`
+- **THEN** any instruction to ask the user before starting SHALL be either absent after DEEP_RESEARCH_HARNESS entry selection or explicitly labeled as pre-pipeline routing outside the autonomous lifecycle
 - **AND** it SHALL NOT weaken the HITL1/HITL2-only interactive in-run boundary
 
 #### Scenario: Bundle name is not a mid-pipeline user dependency
 
-- **WHEN** the Agent reads `DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md`
+- **WHEN** the Agent reads `DEEP_RESEARCH_HARNESS/command_playbook/instantiate-run-bundle.md`
 - **THEN** naming instructions SHALL describe an Agent-derived or already-provided `<name>` input
 - **AND** they SHALL NOT require the user to provide a bundle name during autonomous execution
 
@@ -194,14 +194,14 @@ The project SHALL include regression coverage or a static validator that checks 
 
 The validator SHALL scan at least:
 
-- `DPT_FRAMEWORK/COMMANDS.md`
-- `DPT_FRAMEWORK/RUN.md`
-- `DPT_FRAMEWORK/README.md`
-- `DPT_FRAMEWORK/cli/README.md`
-- `DPT_FRAMEWORK/command_playbook/*.md`
+- `DEEP_RESEARCH_HARNESS/COMMANDS.md`
+- `DEEP_RESEARCH_HARNESS/RUN.md`
+- `DEEP_RESEARCH_HARNESS/README.md`
+- `DEEP_RESEARCH_HARNESS/cli/README.md`
+- `DEEP_RESEARCH_HARNESS/command_playbook/*.md`
 - lifecycle and shared workflow Markdown touched by this change
 
-For `DPT_FRAMEWORK/COMMANDS.md`, it SHALL keep the existing audience/HITL/Final/trigger markers and add only three stable helper-oriented marker groups:
+For `DEEP_RESEARCH_HARNESS/COMMANDS.md`, it SHALL keep the existing audience/HITL/Final/trigger markers and add only three stable helper-oriented marker groups:
 
 - ordinary authorized command execution and reversible mechanical repair remain Agent-owned;
 - human-directed identifies the decision source without transferring the command-runner role or creating host permission/Engine capability; and
@@ -221,7 +221,7 @@ The validator SHALL reuse the existing command-contract documentation regression
 
 #### Scenario: Static validation requires a small stable helper contract
 
-- **WHEN** `DPT_FRAMEWORK/COMMANDS.md` omits one of the three helper-oriented marker groups
+- **WHEN** `DEEP_RESEARCH_HARNESS/COMMANDS.md` omits one of the three helper-oriented marker groups
 - **THEN** the existing command-contract documentation regression SHALL fail
 - **AND** the failure SHALL name the missing stable marker
 - **AND** individual command playbooks SHALL NOT be required to duplicate the full top-level audience statement
@@ -247,7 +247,7 @@ The terminology canon SHALL define:
 
 The docs SHALL state that `enter-phase` / `load_complete` proves entry into the target node, not target-phase work completion. Existing machine names such as `phase_transition`, `advance-status`, `enter-phase`, `load_complete`, `stop: no`, and capability names SHALL remain stable unless a separate migration changes them.
 
-Agent-facing resume guidance, including command playbooks for an already-existing active bundle, SHALL prefer non-null `rb_status.json.current_node` as the phase Markdown coordinate. It SHALL NOT tell the Agent to infer the active phase from `current_gate` alone. If `current_node` is `null` or absent, guidance SHALL direct the Agent to existing `BUNDLE_MAP.md`, trace, and reentry diagnostics rather than guessing the phase from the gate window. Legacy `START_FROM_HERE.md` SHALL be named only as deprecated fallback for old bundles.
+Agent-facing resume guidance, including command playbooks for an already-existing current run bundle, SHALL prefer non-null `rb_status.json.current_node` as the phase Markdown coordinate. It SHALL NOT tell the Agent to infer the active phase from `current_gate` alone. If `current_node` is `null` or absent, guidance SHALL direct the Agent to existing `BUNDLE_MAP.md`, trace, and reentry diagnostics rather than guessing the phase from the gate window. Legacy `START_FROM_HERE.md` SHALL be named only as deprecated fallback for old bundles.
 
 #### Scenario: Terminology canon names the boundary layers
 
@@ -261,7 +261,7 @@ Agent-facing resume guidance, including command playbooks for an already-existin
 - **THEN** they SHALL describe it as consuming `check.next` and witnessing entry/loading of the next control surface
 - **AND** they SHALL NOT describe it as completing the target phase's work
 
-#### Scenario: Existing active bundle guidance uses current node
+#### Scenario: Existing current run bundle guidance uses current node
 
 - **WHEN** an Agent-facing command playbook describes resuming an already-existing bundle
 - **THEN** it SHALL tell the Agent to use non-null `rb_status.json.current_node` as the preferred phase Markdown coordinate
@@ -285,7 +285,7 @@ The playbook's procedure SHALL be: read `RUN_BUNDLE.md` from the supplied bundle
 root (if not exist, fallback to `BUNDLE_MAP.md`); resolve the framework relative
 path from the file (if not reachable, report the boundary and stop); if the entry
 was `RUN_BUNDLE.md`, read `BUNDLE_MAP.md` for the full directory layout; read
-`DPT_FRAMEWORK/COMMANDS.md`; select and execute the command matching the user's
+`DEEP_RESEARCH_HARNESS/COMMANDS.md`; select and execute the command matching the user's
 stated intent.
 
 The playbook SHALL NOT duplicate lifecycle branching logic, reentry diagnostic

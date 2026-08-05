@@ -6,17 +6,17 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { makeItem } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { makeItem } from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import {
   WorkUnitBeaconSchema,
   WorkUnitManifestSchema,
   WorkUnitResultSchema,
-} from '../../DPT_FRAMEWORK/schema/contracts/work-unit.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/schema/contracts/work-unit.mjs';
 import {
   createWorkUnit,
   loadWorkUnitIndex,
   saveWorkUnitIndex,
-} from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 
 function tempBundle() {
   return mkdtempSync(path.join(os.tmpdir(), 'wu-'));
@@ -261,7 +261,7 @@ describe('work-unit index and envelope', () => {
     const dir = tempBundle();
     try {
       const { record, manifest, spawn_prompt } = createWorkUnit(dir, { queueItem: queueItem(), wave: 0 });
-      assert.ok(spawn_prompt.includes(`Active bundle_dir: ${path.resolve(dir)}`));
+      assert.ok(spawn_prompt.includes(`Current run bundle_dir: ${path.resolve(dir)}`));
       assert.match(spawn_prompt, new RegExp(record.work_id));
       assert.match(spawn_prompt, new RegExp(dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
       assert.match(spawn_prompt, new RegExp(manifest.paths.task_ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));

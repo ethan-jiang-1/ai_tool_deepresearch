@@ -8,7 +8,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
-const CLI = join(process.cwd(), 'DPT_FRAMEWORK', 'cli', 'validate-workflow-package.mjs');
+const CLI = join(process.cwd(), 'DEEP_RESEARCH_HARNESS', 'cli', 'validate-workflow-package.mjs');
 
 describe('validate-workflow-package.mjs integration', () => {
   let tmpRoot;

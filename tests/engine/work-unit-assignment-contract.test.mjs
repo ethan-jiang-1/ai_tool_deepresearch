@@ -5,8 +5,8 @@ import { describe, it } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { queueItemSnapshotHash } from '../../DPT_FRAMEWORK/engine/queue-manager-core.mjs';
-import { readWorkUnitLedgerRows } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { queueItemSnapshotHash } from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager-core.mjs';
+import { readWorkUnitLedgerRows } from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import { claimAndSubmitWorkUnit, cleanupWorkUnitBundle, delegatedQueueItem, tempWorkUnitBundle } from './work-unit-test-helpers.mjs';
 
 const VERSION = 'work-unit.assignment.v2';
@@ -49,7 +49,7 @@ async function resolve(input) {
   let resolveWorkUnitAssignmentContract;
   try {
     ({ resolveWorkUnitAssignmentContract } = await import(
-      '../../DPT_FRAMEWORK/engine/work-unit-assignment-contract.mjs'
+      '../../DEEP_RESEARCH_HARNESS/engine/work-unit-assignment-contract.mjs'
     ));
   } catch (error) {
     if (error?.code === 'ERR_MODULE_NOT_FOUND') throw new Error('resolver module is not implemented');

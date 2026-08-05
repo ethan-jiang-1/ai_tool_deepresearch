@@ -14,8 +14,8 @@ import {
   enqueue,
   makeItem,
   queueItemSnapshotHash,
-} from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
-import { TargetSpecSchema } from '../../DPT_FRAMEWORK/schema/contracts/queue.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
+import { TargetSpecSchema } from '../../DEEP_RESEARCH_HARNESS/schema/contracts/queue.mjs';
 import { item } from './queue-manager-fixtures.mjs';
 
 describe('Queue item schema (AGQ-001)', () => {

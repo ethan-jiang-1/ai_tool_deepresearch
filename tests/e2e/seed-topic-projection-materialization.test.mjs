@@ -37,7 +37,7 @@ function advanceToWave0(bundle, stageNext = null) {
 
 function inspectWave(bundle, wave, expectedStatus = 0) {
   const result = runNode([
-    join(REPO_ROOT, 'DPT_FRAMEWORK/cli', `inspect-${wave}-output.mjs`),
+    join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli', `inspect-${wave}-output.mjs`),
     '--bundle', bundle,
   ], { expectedStatus });
   return parseJsonOutput(result);
@@ -92,7 +92,7 @@ describe('seed-topic projection materialization E2E', () => {
     recordWaveCompletion(bundle, 'wave0');
 
     const result = runNode([
-      join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs'),
+      join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs'),
       '--bundle', bundle,
       '--current-node', 'phases/phase-wave0.md',
       '--attempt', '3',

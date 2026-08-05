@@ -31,7 +31,7 @@ Wave2 pass is a declared direct-predecessor fixture. Both tested gates are real;
 ```bash
 REPO_ROOT=$(pwd)
 B=$(node experiments_env/shared/new-disposable-bundle.mjs rerun_node --case case-302 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 mkdir -p "$B/artifacts/hitl2"
 printf '# Decision Brief\nRerun.\n' > "$B/artifacts/hitl2/decision-brief.md"
 cat > "$B/rb_profile.yaml" <<'YAML'
@@ -51,23 +51,23 @@ human_decision_checkpoints:
     rationale: "Add economic impact analysis."
 YAML
 node --input-type=module - "$B" <<'JS'
-import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { writeGateAttempt } from './DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
 const bundle=process.argv[2];
 writeGateAttempt(bundle,{check:{gate:'wave2-complete',passed:true,currentNodeRef:'phases/phase-wave2.md',next:'phases/phase-hitl2.md'},routing:{kind:'next',next:'phases/phase-hitl2.md'},inspect:[],advice:[]});
 recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'wave2-complete',passed:true,expected:true,detail:'declared direct-predecessor fixture'});
 JS
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-302-enter-hitl2.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-302-advance-wave2.json"
-H2=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-302-enter-hitl2.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-302-advance-wave2.json"
+H2=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
 H2_NEXT=$(printf '%s\n' "$H2" | node experiments_env/shared/extract-field.mjs check.next)
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$H2_NEXT" > "$B/case-302-enter-rerun.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-302-advance-hitl2.json"
-RR=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate rerun-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle "$B" --current-node phases/phase-rerun.md)
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$H2_NEXT" > "$B/case-302-enter-rerun.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-302-advance-hitl2.json"
+RR=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate rerun-ready -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-rerun-ready.mjs --bundle "$B" --current-node phases/phase-rerun.md)
 RR_P=$(printf '%s\n' "$RR" | node experiments_env/shared/extract-field.mjs check.passed)
 RR_NEXT=$(printf '%s\n' "$RR" | node experiments_env/shared/extract-field.mjs check.next)
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$RR_NEXT" > "$B/case-302-enter-seed-topics.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to rerun_ready > "$B/case-302-advance-rerun.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$RR_NEXT" > "$B/case-302-enter-seed-topics.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to rerun_ready > "$B/case-302-advance-rerun.json"
 node --input-type=module - "$B" "$H2_NEXT" "$RR_P" "$RR_NEXT" <<'JS'
 import { readFileSync } from 'node:fs';
 import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
@@ -75,7 +75,7 @@ const [bundle,h2Next,rrPassed,rrNext]=process.argv.slice(2);
 const status=JSON.parse(readFileSync(`${bundle}/rb_status.json`,'utf8'));
 recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'case-302-rerun-mechanism',passed:h2Next==='phases/phase-rerun.md'&&rrPassed==='true'&&rrNext==='phases/phase-seed-topics.md'&&status.current_gate==='rerun_ready'&&status.current_node==='phases/phase-seed-topics.md',detail:'real rerun gates and witnessed status path'});
 JS
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 2: 结果解读

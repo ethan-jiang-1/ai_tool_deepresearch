@@ -11,11 +11,11 @@ import {
   WorkUnitSubmissionV1StatusFileSchema,
   WorkUnitSupersessionRelationSchema,
   WorkUnitSupersessionRootSchema,
-} from '../../../DPT_FRAMEWORK/schema/contracts/work-unit.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/work-unit.mjs';
 import {
   QueueDemandItemSchema,
   WorkUnitSupersessionQueueLineageSchema,
-} from '../../../DPT_FRAMEWORK/schema/contracts/queue.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/queue.mjs';
 import {
   WORK_UNIT_TRANSACTION_LOCK_SCHEMA_VERSION,
   WORK_UNIT_TRANSACTION_V1_SCHEMA_VERSION,
@@ -27,7 +27,7 @@ import {
   WorkUnitTransactionProjectionSchema,
   WorkUnitTransactionV1JournalSchema,
   WorkUnitTransactionV2JournalSchema,
-} from '../../../DPT_FRAMEWORK/schema/contracts/work-unit-transaction.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/work-unit-transaction.mjs';
 
 const WORK_ID = 'wu-w0-b000-src-i0001';
 const QUEUE_ITEM_ID = 'queue-a';
@@ -151,7 +151,7 @@ function beacon(overrides = {}) {
     result_schema_ref: paths().result_schema_ref,
     result_ref: paths().result_ref,
     runtime_receipt_ref: paths().runtime_receipt_ref,
-    log_cli: 'node DPT_FRAMEWORK/cli/log-work-unit-event.mjs',
+    log_cli: 'node DEEP_RESEARCH_HARNESS/cli/log-work-unit-event.mjs',
     output_contract: {},
     cache_policy: {},
     required_receipt_fields: ['work_id', 'queue_item_id', 'kind', 'receipt_nonce'],

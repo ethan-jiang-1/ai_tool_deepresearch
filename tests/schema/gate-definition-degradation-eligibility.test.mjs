@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {
   parseGateDefinition,
   readGateDefinitionSnapshot,
-} from '../../DPT_FRAMEWORK/schema/contracts/gate-definition.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/schema/contracts/gate-definition.mjs';
 
 function definitionWith(rule) {
   return {
@@ -35,7 +35,7 @@ function floorRule(overrides = {}) {
 
 function activeDefinition(filename) {
   return readGateDefinitionSnapshot(new URL(
-    `../../DPT_FRAMEWORK/schema/gate_definitions/${filename}`,
+    `../../DEEP_RESEARCH_HARNESS/schema/gate_definitions/${filename}`,
     import.meta.url,
   )).definition;
 }

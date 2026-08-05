@@ -12,7 +12,7 @@ import {
   tempWorkUnitBundle,
 } from '../../engine/work-unit-test-helpers.mjs';
 
-const CLI = path.resolve('DPT_FRAMEWORK/cli/operate-work-unit.mjs');
+const CLI = path.resolve('DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs');
 const TOPIC_UID = 'tp_123e4567-e89b-42d3-a456-426614174010';
 const bundles = [];
 

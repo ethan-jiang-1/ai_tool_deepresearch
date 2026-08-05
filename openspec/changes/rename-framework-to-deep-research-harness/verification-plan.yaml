@@ -1,0 +1,157 @@
+schema_version: verification-routing/v1
+change: rename-framework-to-deep-research-harness
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Root-file observability changes in one in-process deterministic helper:
+      it must distinguish the new static entry card from bounded legacy entry
+      compatibility without claiming runtime or Agent behavior.
+  integration:
+    status: selected
+    rationale: >-
+      A focused node:test can inspect the actual canonical root, compatibility
+      alias, entry-card precedence, and rendered creator output without
+      claiming Agent behavior or executing a workflow-scale lifecycle.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      A temporary-bundle chain must exercise the production creator and
+      inspection/continuation boundaries through both canonical and legacy
+      Harness paths to prove compatibility without a real Agent actor.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change preserves Markdown Agent flow and does not claim that a real
+      Agent performs research, judgment, repair, or delivery differently.
+claims:
+  - id: harness-entry-and-root-contract
+    statement: >-
+      ACR-001, ACR-002, BUM-005, RUE-006, CMI-009, ACS-005, EXS-004, and
+      WDC-004: the canonical Deep Research Harness root and its single legacy
+      alias remain distinguishable; new production and disposable bundles emit
+      BUNDLE_ENTRY.md; explicitly supplied existing bundles resolve
+      BUNDLE_ENTRY.md then legacy RUN_BUNDLE.md then BUNDLE_MAP.md; and the
+      supplied resolved directory is the only current run bundle root.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/deep-research-harness-entry-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: production-creator-coordinate-contract
+    statement: >-
+      BUM-005, CMI-009, and WDC-004: the production creator emits
+      BUNDLE_ENTRY.md rather than RUN_BUNDLE.md, resolves its rendered
+      Harness coordinate to the physical canonical source root even through
+      the legacy command path, and emits a canonical absolute current-run-
+      bundle-root handoff when --target-dir is relative.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/instantiate-run-bundle.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: disposable-creator-coordinate-contract
+    statement: >-
+      BUM-005, EXS-004, and WDC-004: the disposable creator emits the same
+      BUNDLE_ENTRY.md contract, renders physical canonical-Harness
+      coordinates, and emits a canonical absolute dpt_disp_* root when
+      --target-dir is relative.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/experiments_env/new-disposable-bundle.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: bundle-entry-reader-contract
+    statement: >-
+      BUM-005: deterministic inspection recognizes a fresh BUNDLE_ENTRY.md
+      bundle without a stale missing-RUN_BUNDLE.md warning while preserving
+      the bounded legacy entry/map compatibility cases.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/inspect-bundle.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: existing-bundle-routing-contract
+    statement: >-
+      ACS-005, RUE-006, and WDC-004: current Agent-facing continuation
+      guidance selects only an explicitly supplied reachable bundle, resolves
+      its root before handoff, and reads BUNDLE_ENTRY.md then legacy
+      RUN_BUNDLE.md then BUNDLE_MAP.md without discovery or lifecycle
+      authority.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/continue-run-bundle-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: bundle-entry-observability-contract
+    statement: >-
+      BUM-005: root-file observability classifies BUNDLE_ENTRY.md as the
+      expected static entry and legacy RUN_BUNDLE.md as non-authoritative
+      compatibility rather than an unexplained runtime artifact.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/file-observability.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: harness-migration-cli-compatibility
+    statement: >-
+      FRE-001, WDC-001 through WDC-005, EXA-002, TEF-001, and VEM-001 through
+      VEM-004: a temporary bundle created and inspected through the canonical
+      Harness source tree retains one shared source identity when addressed by
+      the legacy alias, routes mutable state only under its explicit bundle
+      root, emits canonical absolute creator handoffs from relative targets,
+      and keeps the release banner aligned with v0.73.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/deep-research-harness-migration.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

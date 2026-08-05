@@ -64,13 +64,13 @@ Create a disposable bundle, then add only the minimal Wave0 scaffold required fo
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_full_work_unit --case case-401 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave0Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 writeWave0Scaffold(process.argv[2], { planBasename: 'eb_full_work_unit' });
 JS
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "$B"
 echo "BUNDLE=$B"
 ```
 
@@ -93,7 +93,7 @@ const result = enqueueWorkUnitTask(bundle, task, { fileName: 'case401-topic-a.js
 console.log(JSON.stringify(result, null, 2));
 JS
 
-CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
+CLAIM_JSON=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_JSON" > "$B/case-401-claim.json"
 printf '%s\n' "$CLAIM_JSON" | node -e '
 const j = JSON.parse(require("fs").readFileSync(0, "utf8"));
@@ -132,7 +132,7 @@ console.log(fixture.resultPath);
 JS
 )
 
-SUBMIT_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$RESULT_PATH")
+SUBMIT_JSON=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$RESULT_PATH")
 printf '%s\n' "$SUBMIT_JSON" > "$B/case-401-submit.json"
 printf '%s\n' "$SUBMIT_JSON" | node -e '
 const j = JSON.parse(require("fs").readFileSync(0, "utf8"));
@@ -150,11 +150,11 @@ Run each deterministic checkpoint separately and keep its JSON/stdout available 
 
 ```bash
 set +e
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B" > "$B/case-401-validate.txt" 2>&1
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$B" > "$B/case-401-validate.txt" 2>&1
 VALIDATE_STATUS=$?
-node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-401-gate.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-401-gate.json"
 GATE_STATUS=$?
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect "$B" > "$B/case-401-inspect.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs inspect "$B" > "$B/case-401-inspect.json"
 INSPECT_STATUS=$?
 set -e
 
@@ -217,8 +217,8 @@ PASS means the fixture entered the production delegated path at the earliest exe
 ## Native completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Heavy health, audit, preservation, and optional clean-PASS cleanup.

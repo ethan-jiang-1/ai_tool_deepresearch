@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { parse as parseYaml } from 'yaml';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '../../..');
-const WORKFLOWS_DIR = path.join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows');
+const WORKFLOWS_DIR = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'workflows');
 const NODES_DIR = path.join(WORKFLOWS_DIR, 'nodes');
 const manifest = JSON.parse(readFileSync(path.join(WORKFLOWS_DIR, 'manifest.json'), 'utf-8'));
 

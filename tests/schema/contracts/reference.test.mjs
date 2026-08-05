@@ -1,10 +1,10 @@
-// tests/schema/contracts/reference.test.mjs — 1:1 for DPT_FRAMEWORK/schema/contracts/reference.mjs
+// tests/schema/contracts/reference.test.mjs — 1:1 for DEEP_RESEARCH_HARNESS/schema/contracts/reference.mjs
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ReferenceMetadataSchema,
   ReferenceMetadataArraySchema,
-} from '../../../DPT_FRAMEWORK/schema/contracts/reference.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/reference.mjs';
 
 const validEntry = { url: 'https://example.com', title: 'Example', retrieved_date: '2026-01-15', topic_tag: 'topic-a' };
 

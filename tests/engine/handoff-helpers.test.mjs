@@ -8,7 +8,7 @@ import {
   validateEnterPhaseTarget,
   validateSourceGateStatusSync,
   checkPhaseHandoffPreflight,
-} from '../../DPT_FRAMEWORK/engine/helpers/handoff-helpers.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs';
 
 describe('handoff helpers', () => {
   let dir;

@@ -22,7 +22,7 @@ verdict_judge: deterministic
 
 ## Execution Contract
 
-由 coding agent 在真实 `dpt_disp_*` disposable bundle 中执行。所有 gate CLI 调用走生产路径 `DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs`，stdout JSON 被捕获、解析、转为 trace `check` event 后由 trace 裁决。禁止 mock 返回、手写假 result、用 console.log 代替 trace 裁决。
+由 coding agent 在真实 `dpt_disp_*` disposable bundle 中执行。所有 gate CLI 调用走生产路径 `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs`，stdout JSON 被捕获、解析、转为 trace `check` event 后由 trace 裁决。禁止 mock 返回、手写假 result、用 console.log 代替 trace 裁决。
 
 **本 case 不测试 Agent 行为。** `--attempt` 值由 playbook 直接传入 CLI，不经过 Agent loop。fatigue signal 被 Agent 消费并改变行为这一闭环不在本 case 范围内——那需要 heavy case + 真实 Agent loop。
 
@@ -31,7 +31,7 @@ verdict_judge: deterministic
 | Distance Type | Declaration |
 |---------------|-------------|
 | Runtime context | disposable scaffold bundle (`new-disposable-bundle.mjs`)，gate 对其 fail（缺失 wave0 产出） |
-| Framework path | `DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs`，生产 gate CLI |
+| Framework path | `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs`，生产 gate CLI |
 | Fixture input — fail case | 无 fixture；scaffold bundle 天然缺 wave0 产出，gate fail 是真实的 |
 | Fixture input — pass case | 手填 topic_registry、reference file（含 4 quality threshold 字段）、source.yaml、rb_status.json、rb_output_declarations.jsonl、cache trail 文件。这些 fixture 只证明 gate 的 pass-suppress 分支，不证明 Agent 能产出这些文件 |
 | Agent actor | **无**。`--attempt` 值由 shell 传入，非 Agent 上报。case_goal 中 "Agent-reported" 指 advice 文案措辞，非 Agent 实际参与 |
@@ -67,7 +67,7 @@ verdict_judge: deterministic
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs fatigue --case case-78 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "B=$B"
 
 # Write initial trace check: bundle created
@@ -95,9 +95,9 @@ JS
 ## Step 2: Fail + high attempt → fatigue_warning + step_back
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # Run gate with --attempt 3 on scaffold bundle (guaranteed fail — no wave0 output)
-STDOUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs \
+STDOUT=$(node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs \
   --bundle "$B" \
   --current-node phases/phase-wave0.md \
   --attempt 3 2>&1) || true
@@ -173,8 +173,8 @@ process.stdin.on('end', () => {
 ## Step 3: Fail + low attempt → no fatigue
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-STDOUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs \
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+STDOUT=$(node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs \
   --bundle "$B" \
   --current-node phases/phase-wave0.md \
   --attempt 1 2>&1) || true
@@ -231,7 +231,7 @@ process.stdin.on('end', () => {
 先用 fixture 填充 bundle 使 gate pass，再以 `--attempt 5` 运行，验证 fatigue 被 pass 抑制。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # ── Populate bundle for gate pass ──
 # reference file meeting all 4 isCountable quality thresholds
 # (metadata before first ## section, acceptance_status=accepted,
@@ -323,7 +323,7 @@ cat > "$B/_cache/fatigue-mayo/meta.json" << 'METAEOF'
 METAEOF
 
 # ── Run gate with --attempt 5 (should PASS, fatigue suppressed) ──
-STDOUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs \
+STDOUT=$(node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs \
   --bundle "$B" \
   --current-node phases/phase-wave0.md \
   --attempt 5 2>&1) || true
@@ -389,13 +389,13 @@ process.stdin.on('end', () => {
 测试 `--attempt` 的各种边界值不会导致 gate CLI 崩溃，始终产出合法 JSON。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { execSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const B = process.argv[2];
-const gateScript = 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs';
+const gateScript = 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs';
 
 const cases = [
   { label: '--attempt 5',       args: '--attempt 5',       expectParse: 'valid' },
@@ -479,8 +479,8 @@ JS
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

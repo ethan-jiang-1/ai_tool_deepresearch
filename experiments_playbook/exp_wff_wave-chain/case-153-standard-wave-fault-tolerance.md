@@ -57,7 +57,7 @@ Fixture-backed Engine fault-tolerance case. Each scenario uses a real disposable
 
 ```bash
 B_INVALID=$(node experiments_env/shared/new-disposable-bundle.mjs wft_invalid_submit --case case-153 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role invalid-submit-verdict --path "$B_INVALID"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role invalid-submit-verdict --path "$B_INVALID"
 node --input-type=module - "$B_INVALID" <<'JS'
 import { rmSync, readFileSync, writeFileSync } from 'node:fs';
 import {
@@ -70,11 +70,11 @@ const bundle = process.argv[2];
 
 async function one(label, mutate) {
   enqueueWorkUnitTask(bundle, queueItemForWorkUnit({ queue_item_id: `case153-${label}`, topic_slug: 'topic-a' }), { fileName: `${label}.json` });
-  const claim = JSON.parse((await import('node:child_process')).spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+  const claim = JSON.parse((await import('node:child_process')).spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
   const workId = claim.claimed_work_ids[0];
   const fixture = writeFixtureResultForWorkUnit(bundle, { work_id: workId, source_slug: label });
   mutate(fixture);
-  const submit = (await import('node:child_process')).spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], { encoding: 'utf8' });
+  const submit = (await import('node:child_process')).spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], { encoding: 'utf8' });
   writeFileSync(`${bundle}/case-153-${label}-submit.json`, submit.stdout);
 }
 
@@ -100,7 +100,7 @@ JS
 
 ```bash
 B_FAIL=$(node experiments_env/shared/new-disposable-bundle.mjs wft_fail_late --case case-153 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role fail-late-submit --path "$B_FAIL"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role fail-late-submit --path "$B_FAIL"
 node --input-type=module - "$B_FAIL" <<'JS'
 import { writeFileSync, readFileSync } from 'node:fs';
 import {
@@ -112,11 +112,11 @@ import { spawnSync } from 'node:child_process';
 
 const bundle = process.argv[2];
 enqueueWorkUnitTask(bundle, queueItemForWorkUnit({ queue_item_id: 'case153-fail-late', topic_slug: 'topic-a' }), { fileName: 'fail-late.json' });
-const claim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const claim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
 const workId = claim.claimed_work_ids[0];
 const fixture = writeFixtureResultForWorkUnit(bundle, { work_id: workId, source_slug: 'fail-late' });
-const failed = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'fail', bundle, '--work-id', workId, '--reason', 'sub-agent-error'], { encoding: 'utf8' });
-const late = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], { encoding: 'utf8' });
+const failed = spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'fail', bundle, '--work-id', workId, '--reason', 'sub-agent-error'], { encoding: 'utf8' });
+const late = spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], { encoding: 'utf8' });
 writeFileSync(`${bundle}/case-153-fail.json`, failed.stdout);
 writeFileSync(`${bundle}/case-153-late-submit.json`, late.stdout);
 const trace = readFileSync(`${bundle}/rb_trace.jsonl`, 'utf8');
@@ -129,7 +129,7 @@ JS
 
 ```bash
 B_AUDITED=$(node experiments_env/shared/new-disposable-bundle.mjs wft_audited_late_submit --case case-153 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role audited-late-submit --path "$B_AUDITED"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role audited-late-submit --path "$B_AUDITED"
 node --input-type=module - "$B_AUDITED" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -146,10 +146,10 @@ import {
 const bundle = process.argv[2];
 writeWave0Scaffold(bundle, { planBasename: 'wft_audited_late_submit' });
 enqueueWorkUnitTask(bundle, queueItemForWorkUnit({ queue_item_id: 'case153-audited-late', topic_slug: 'topic-a' }), { fileName: 'audited-late.json' });
-const claim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const claim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
 const workId = claim.claimed_work_ids[0];
 expireClaimedWorkUnit(bundle, workId);
-const timedOut = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'timeout', bundle, '--work-id', workId, '--reason', 'deadline-expired-before-result-arrived'], { encoding: 'utf8' }).stdout);
+const timedOut = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'timeout', bundle, '--work-id', workId, '--reason', 'deadline-expired-before-result-arrived'], { encoding: 'utf8' }).stdout);
 const fixture = writeFixtureResultForWorkUnit(bundle, {
   work_id: workId,
   output_path: 'reference/00-shared-topic-a.md',
@@ -159,9 +159,9 @@ const fixture = writeFixtureResultForWorkUnit(bundle, {
     sourceYamlExtra('topic-a', 'https://research-source.test/topic-a/audited-late', 'Audited Late Topic A Source')
   ]
 });
-const normal = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], { encoding: 'utf8' });
-const late = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'late-submit', bundle, '--work-id', workId, '--result', fixture.resultPath, '--reason', 'late result arrived after timeout before retry submitted'], { encoding: 'utf8' });
-const gate = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs', '--bundle', bundle, '--current-node', 'phases/phase-wave0.md'], { encoding: 'utf8' });
+const normal = spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], { encoding: 'utf8' });
+const late = spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'late-submit', bundle, '--work-id', workId, '--result', fixture.resultPath, '--reason', 'late result arrived after timeout before retry submitted'], { encoding: 'utf8' });
+const gate = spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs', '--bundle', bundle, '--current-node', 'phases/phase-wave0.md'], { encoding: 'utf8' });
 writeFileSync(`${bundle}/case-153-gate-audited-late.json`, gate.stdout);
 const rows = readWorkUnitLedgerRows(bundle);
 const queue = JSON.parse(readFileSync(`${bundle}/rb_queue.json`, 'utf8'));
@@ -176,7 +176,7 @@ JS
 
 ```bash
 B_CLAIMED_RETRY=$(node experiments_env/shared/new-disposable-bundle.mjs wft_claimed_retry_cleanup --case case-153 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role claimed-retry-cleanup --path "$B_CLAIMED_RETRY"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role claimed-retry-cleanup --path "$B_CLAIMED_RETRY"
 node --input-type=module - "$B_CLAIMED_RETRY" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -189,16 +189,16 @@ import {
   writeFixtureResultForWorkUnit,
   writeWave0Scaffold
 } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { loadWorkUnitIndex } from './DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 
 const bundle = process.argv[2];
 writeWave0Scaffold(bundle, { planBasename: 'wft_claimed_retry_cleanup' });
 enqueueWorkUnitTask(bundle, queueItemForWorkUnit({ queue_item_id: 'case153-claimed-retry-cleanup', topic_slug: 'topic-a' }), { fileName: 'claimed-retry-cleanup.json' });
-const firstClaim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const firstClaim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
 const targetWorkId = firstClaim.claimed_work_ids[0];
 expireClaimedWorkUnit(bundle, targetWorkId);
-const timedOut = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'timeout', bundle, '--work-id', targetWorkId, '--reason', 'deadline-expired-before-claimed-retry'], { encoding: 'utf8' }).stdout);
-const retryClaim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const timedOut = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'timeout', bundle, '--work-id', targetWorkId, '--reason', 'deadline-expired-before-claimed-retry'], { encoding: 'utf8' }).stdout);
+const retryClaim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
 const retryWorkId = retryClaim.claimed_work_ids[0];
 const fixture = writeFixtureResultForWorkUnit(bundle, {
   work_id: targetWorkId,
@@ -209,7 +209,7 @@ const fixture = writeFixtureResultForWorkUnit(bundle, {
     sourceYamlExtra('topic-a', 'https://research-source.test/topic-a/claimed-retry-cleanup', 'Claimed Retry Cleanup Topic A Source')
   ]
 });
-const late = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'late-submit', bundle, '--work-id', targetWorkId, '--result', fixture.resultPath, '--reason', 'late result supersedes unsubmitted claimed retry'], { encoding: 'utf8' }).stdout);
+const late = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'late-submit', bundle, '--work-id', targetWorkId, '--result', fixture.resultPath, '--reason', 'late result supersedes unsubmitted claimed retry'], { encoding: 'utf8' }).stdout);
 const index = loadWorkUnitIndex(bundle);
 const queue = JSON.parse(readFileSync(`${bundle}/rb_queue.json`, 'utf8'));
 const rows = readWorkUnitLedgerRows(bundle);
@@ -224,7 +224,7 @@ JS
 
 ```bash
 B_REPLACEMENT=$(node experiments_env/shared/new-disposable-bundle.mjs wft_replacement_blocks_late --case case-153 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role replacement-blocks-late --path "$B_REPLACEMENT"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role replacement-blocks-late --path "$B_REPLACEMENT"
 node --input-type=module - "$B_REPLACEMENT" <<'JS'
 import { writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -242,11 +242,11 @@ import {
 const bundle = process.argv[2];
 writeWave0Scaffold(bundle, { planBasename: 'wft_replacement_blocks_late' });
 enqueueWorkUnitTask(bundle, queueItemForWorkUnit({ queue_item_id: 'case153-replacement-blocks-late', topic_slug: 'topic-a' }), { fileName: 'replacement-blocks-late.json' });
-const firstClaim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const firstClaim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
 const targetWorkId = firstClaim.claimed_work_ids[0];
 expireClaimedWorkUnit(bundle, targetWorkId);
-const timedOut = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'timeout', bundle, '--work-id', targetWorkId, '--reason', 'deadline-expired-before-replacement'], { encoding: 'utf8' }).stdout);
-const retryClaim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const timedOut = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'timeout', bundle, '--work-id', targetWorkId, '--reason', 'deadline-expired-before-replacement'], { encoding: 'utf8' }).stdout);
+const retryClaim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
 const replacementWorkId = retryClaim.claimed_work_ids[0];
 const replacementFixture = writeFixtureResultForWorkUnit(bundle, {
   work_id: replacementWorkId,
@@ -264,7 +264,7 @@ const lateTargetFixture = writeFixtureResultForWorkUnit(bundle, {
   source_url: 'https://research-source.test/topic-a/late-target-after-replacement',
   source_slug: 'late-target-after-replacement'
 });
-const late = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'late-submit', bundle, '--work-id', targetWorkId, '--result', lateTargetFixture.resultPath, '--reason', 'late result arrived after replacement submitted'], { encoding: 'utf8' });
+const late = spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'late-submit', bundle, '--work-id', targetWorkId, '--result', lateTargetFixture.resultPath, '--reason', 'late result arrived after replacement submitted'], { encoding: 'utf8' });
 const rows = readWorkUnitLedgerRows(bundle);
 const out = { timedOut, replacementWorkId, replacementSubmit, late: JSON.parse(late.stdout), rows };
 writeFileSync(`${bundle}/case-153-replacement-blocks-late.json`, `${JSON.stringify(out, null, 2)}\n`);
@@ -277,22 +277,22 @@ JS
 
 ```bash
 B_TIMEOUT=$(node experiments_env/shared/new-disposable-bundle.mjs wft_timeout_retry --case case-153 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role timeout-retry --path "$B_TIMEOUT"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role timeout-retry --path "$B_TIMEOUT"
 node --input-type=module - "$B_TIMEOUT" <<'JS'
 import { writeFileSync } from 'node:fs';
 import {
   enqueueWorkUnitTask,
   queueItemForWorkUnit
 } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { loadWorkUnitIndex } from './DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import { spawnSync } from 'node:child_process';
 
 const bundle = process.argv[2];
 enqueueWorkUnitTask(bundle, queueItemForWorkUnit({ queue_item_id: 'case153-timeout-retry', topic_slug: 'topic-a' }), { fileName: 'timeout-retry.json' });
-const firstClaim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const firstClaim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
 const firstWorkId = firstClaim.claimed_work_ids[0];
-const timedOut = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'timeout', bundle, '--work-id', firstWorkId, '--reason', 'deadline-expired'], { encoding: 'utf8' }).stdout);
-const retryClaim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const timedOut = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'timeout', bundle, '--work-id', firstWorkId, '--reason', 'deadline-expired'], { encoding: 'utf8' }).stdout);
+const retryClaim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
 const retryWorkId = retryClaim.claimed_work_ids[0];
 const retryRecord = loadWorkUnitIndex(bundle).work_units[retryWorkId];
 writeFileSync(`${bundle}/case-153-timeout-retry.json`, `${JSON.stringify({ firstWorkId, retryWorkId, timedOut, retryRecord }, null, 2)}\n`);
@@ -305,7 +305,7 @@ JS
 
 ```bash
 B_ABANDON=$(node experiments_env/shared/new-disposable-bundle.mjs wft_abandon --case case-153 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role abandon --path "$B_ABANDON"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role abandon --path "$B_ABANDON"
 node --input-type=module - "$B_ABANDON" <<'JS'
 import { writeFileSync } from 'node:fs';
 import { enqueueWorkUnitTask, queueItemForWorkUnit } from './experiments_env/shared/work-unit-playbook-utils.mjs';
@@ -313,11 +313,11 @@ import { spawnSync } from 'node:child_process';
 
 const bundle = process.argv[2];
 enqueueWorkUnitTask(bundle, queueItemForWorkUnit({ queue_item_id: 'case153-abandon', topic_slug: 'topic-a' }), { fileName: 'abandon.json' });
-const claim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const claim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
 const workId = claim.claimed_work_ids[0];
-const abandoned = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'abandon', bundle, '--work-id', workId, '--reason', 'operator-cancelled'], { encoding: 'utf8' }).stdout);
-const duplicate = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'abandon', bundle, '--work-id', workId, '--reason', 'operator-cancelled'], { encoding: 'utf8' }).stdout);
-const mismatch = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'fail', bundle, '--work-id', workId, '--reason', 'operator-cancelled'], { encoding: 'utf8' }).stdout);
+const abandoned = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'abandon', bundle, '--work-id', workId, '--reason', 'operator-cancelled'], { encoding: 'utf8' }).stdout);
+const duplicate = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'abandon', bundle, '--work-id', workId, '--reason', 'operator-cancelled'], { encoding: 'utf8' }).stdout);
+const mismatch = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'fail', bundle, '--work-id', workId, '--reason', 'operator-cancelled'], { encoding: 'utf8' }).stdout);
 writeFileSync(`${bundle}/case-153-abandon.json`, `${JSON.stringify({ abandoned, duplicate, mismatch }, null, 2)}\n`);
 console.log(JSON.stringify({ abandoned, duplicate, mismatch }, null, 2));
 process.exit(abandoned.status === 'abandoned' && duplicate.duplicate === true && mismatch.ok === false ? 0 : 1);
@@ -328,7 +328,7 @@ JS
 
 ```bash
 B_DUP=$(node experiments_env/shared/new-disposable-bundle.mjs wft_duplicate_submit --case case-153 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role duplicate-submit --path "$B_DUP"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role duplicate-submit --path "$B_DUP"
 node --input-type=module - "$B_DUP" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import {
@@ -342,7 +342,7 @@ import { spawnSync } from 'node:child_process';
 
 const bundle = process.argv[2];
 enqueueWorkUnitTask(bundle, queueItemForWorkUnit({ queue_item_id: 'case153-duplicate', topic_slug: 'topic-a' }), { fileName: 'duplicate.json' });
-const claim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const claim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
 const workId = claim.claimed_work_ids[0];
 const fixture = writeFixtureResultForWorkUnit(bundle, { work_id: workId, source_slug: 'duplicate' });
 const first = submitWorkUnitViaCli(bundle, { work_id: workId, resultPath: fixture.resultPath });
@@ -350,7 +350,7 @@ const duplicate = submitWorkUnitViaCli(bundle, { work_id: workId, resultPath: fi
 const changed = JSON.parse(readFileSync(fixture.resultPath, 'utf8'));
 changed.summary = 'changed duplicate content';
 writeFileSync(fixture.resultPath, `${JSON.stringify(changed, null, 2)}\n`);
-const mismatch = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], { encoding: 'utf8' }).stdout);
+const mismatch = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], { encoding: 'utf8' }).stdout);
 const rows = readWorkUnitLedgerRows(bundle);
 writeFileSync(`${bundle}/case-153-duplicate-submit.json`, `${JSON.stringify({ first, duplicate, mismatch, rows: rows.length }, null, 2)}\n`);
 console.log(JSON.stringify({ first, duplicate, mismatch, rows: rows.length }, null, 2));
@@ -362,7 +362,7 @@ JS
 
 ```bash
 B_STALE=$(node experiments_env/shared/new-disposable-bundle.mjs wft_stale_binding --case case-153 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role stale-binding --path "$B_STALE"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role stale-binding --path "$B_STALE"
 node --input-type=module - "$B_STALE" <<'JS'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
@@ -371,19 +371,19 @@ import {
   queueItemForWorkUnit,
   writeFixtureResultForWorkUnit
 } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { loadWorkUnitIndex } from './DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import { spawnSync } from 'node:child_process';
 
 const bundle = process.argv[2];
 enqueueWorkUnitTask(bundle, queueItemForWorkUnit({ queue_item_id: 'case153-stale', topic_slug: 'topic-a' }), { fileName: 'stale.json' });
-const claim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const claim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
 const workId = claim.claimed_work_ids[0];
 const fixture = writeFixtureResultForWorkUnit(bundle, { work_id: workId, source_slug: 'stale' });
 const manifestPath = path.join(bundle, fixture.record.paths.manifest_ref);
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 manifest.queue_item.title = 'Changed after claim';
 writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-const submit = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], { encoding: 'utf8' }).stdout);
+const submit = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], { encoding: 'utf8' }).stdout);
 const index = loadWorkUnitIndex(bundle);
 writeFileSync(`${bundle}/case-153-stale-binding.json`, `${JSON.stringify({ reason: submit.last_submit_rejection?.reason_code, status: index.work_units[workId].status, ledgerExists: existsSync(`${bundle}/rb_output_declarations.jsonl`) }, null, 2)}\n`);
 console.log(JSON.stringify({ reason: submit.last_submit_rejection?.reason_code, status: index.work_units[workId].status, ledgerExists: existsSync(`${bundle}/rb_output_declarations.jsonl`) }, null, 2));
@@ -395,7 +395,7 @@ JS
 
 ```bash
 B_MIXED=$(node experiments_env/shared/new-disposable-bundle.mjs wft_mixed_provenance --case case-153 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role mixed-provenance --path "$B_MIXED"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role mixed-provenance --path "$B_MIXED"
 node --input-type=module - "$B_MIXED" <<'JS'
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -420,7 +420,7 @@ writeWave1Scaffold(bundle, {
   ]
 });
 enqueueWorkUnitTask(bundle, queueItemForWorkUnit({ phase: 'wave1', queue_item_id: 'wave1-deepen-topic-a', topic_slug: 'topic-a' }), { fileName: 'topic-a.json' });
-const claim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave1'], { encoding: 'utf8' }).stdout);
+const claim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave1'], { encoding: 'utf8' }).stdout);
 const workId = claim.claimed_work_ids[0];
 writeWave1TopicArtifacts(bundle, { id: 't1', topic_slug: 'topic-a', title: 'Topic A', source_url: 'https://research-source.test/topic-a/submitted' });
 const fixture = writeFixtureResultForWorkUnit(bundle, {
@@ -446,7 +446,7 @@ writeFileSync(path.join(bundle, 'reference/01-topic-orphan-direct.md'), referenc
 appendTrace(bundle, { event: 'wave1_completion', source: 'case-153-mixed-provenance' });
 JS
 set +e
-node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$B_MIXED" --current-node phases/phase-wave1.md > "$B_MIXED/case-153-gate-mixed-provenance.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs --bundle "$B_MIXED" --current-node phases/phase-wave1.md > "$B_MIXED/case-153-gate-mixed-provenance.json"
 MIXED_GATE_STATUS=$?
 set -e
 node - "$B_MIXED/case-153-gate-mixed-provenance.json" "$MIXED_GATE_STATUS" <<'JS'
@@ -461,16 +461,16 @@ JS
 ## Step 11: [MAIN/SHELL] Record Aggregated Verdict
 
 ```bash
-B_INVALID=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role invalid-submit-verdict)
-B_FAIL=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role fail-late-submit)
-B_AUDITED=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role audited-late-submit)
-B_CLAIMED_RETRY=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role claimed-retry-cleanup)
-B_REPLACEMENT=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role replacement-blocks-late)
-B_TIMEOUT=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role timeout-retry)
-B_ABANDON=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role abandon)
-B_DUP=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role duplicate-submit)
-B_STALE=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role stale-binding)
-B_MIXED=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role mixed-provenance)
+B_INVALID=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role invalid-submit-verdict)
+B_FAIL=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role fail-late-submit)
+B_AUDITED=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role audited-late-submit)
+B_CLAIMED_RETRY=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role claimed-retry-cleanup)
+B_REPLACEMENT=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role replacement-blocks-late)
+B_TIMEOUT=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role timeout-retry)
+B_ABANDON=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role abandon)
+B_DUP=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role duplicate-submit)
+B_STALE=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role stale-binding)
+B_MIXED=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role mixed-provenance)
 node --input-type=module - "$B_INVALID" "$B_FAIL" "$B_AUDITED" "$B_CLAIMED_RETRY" "$B_REPLACEMENT" "$B_TIMEOUT" "$B_ABANDON" "$B_DUP" "$B_STALE" "$B_MIXED" <<'JS'
 import { readFileSync } from 'node:fs';
 import { recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
@@ -507,17 +507,17 @@ JS
 ## Step 12: [MAIN/SHELL] Native Completion
 
 ```bash
-B_INVALID=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role invalid-submit-verdict)
-B_FAIL=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role fail-late-submit)
-B_AUDITED=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role audited-late-submit)
-B_CLAIMED_RETRY=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role claimed-retry-cleanup)
-B_REPLACEMENT=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role replacement-blocks-late)
-B_TIMEOUT=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role timeout-retry)
-B_ABANDON=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role abandon)
-B_DUP=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role duplicate-submit)
-B_STALE=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role stale-binding)
-B_MIXED=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role mixed-provenance)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs \
+B_INVALID=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role invalid-submit-verdict)
+B_FAIL=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role fail-late-submit)
+B_AUDITED=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role audited-late-submit)
+B_CLAIMED_RETRY=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role claimed-retry-cleanup)
+B_REPLACEMENT=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role replacement-blocks-late)
+B_TIMEOUT=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role timeout-retry)
+B_ABANDON=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role abandon)
+B_DUP=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role duplicate-submit)
+B_STALE=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role stale-binding)
+B_MIXED=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role mixed-provenance)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs \
   --context {{RUN_CONTEXT_SH}} \
   --bundle "invalid-submit-verdict=$B_INVALID" \
   --bundle "fail-late-submit=$B_FAIL" \

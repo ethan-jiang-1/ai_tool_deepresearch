@@ -10,10 +10,10 @@ import { spawnSync } from 'node:child_process';
 import {
   readTraceEvents,
   writeGateAttempt,
-} from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
-import { evaluateWave1Contract } from '../../DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs';
-import { tryLoadGateDefinition } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers-core.mjs';
-import { checkWave2FindingIndexContract } from '../../DPT_FRAMEWORK/engine/helpers/wave-depth-contracts.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
+import { evaluateWave1Contract } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs';
+import { tryLoadGateDefinition } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-core.mjs';
+import { checkWave2FindingIndexContract } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-depth-contracts.mjs';
 import {
   claimAndSubmitWorkUnit,
   referenceContent,

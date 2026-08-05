@@ -53,7 +53,7 @@ Fixture-backed Engine repair case. The repair content is controlled fixture data
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs w1_gate_refill_repair --case case-222 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import {
   enqueueWorkUnitTask,
@@ -79,7 +79,7 @@ enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
   topic_slug: 'topic-a',
   title: 'Wave1 deepening for Topic A'
 }), { fileName: 'case222-topic-a.json' });
-const claim = JSON.parse((await import('node:child_process')).spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave1'], { encoding: 'utf8' }).stdout);
+const claim = JSON.parse((await import('node:child_process')).spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave1'], { encoding: 'utf8' }).stdout);
 const workId = claim.claimed_work_ids[0];
 writeWave1TopicArtifacts(bundle, { id: 't1', topic_slug: 'topic-a', title: 'Topic A', source_url: 'https://research-source.test/topic-a/repair/a' });
 const fixture = writeFixtureResultForWorkUnit(bundle, {
@@ -104,9 +104,9 @@ echo "BUNDLE=$B"
 ## Step 2: [MAIN/SHELL] First Gate Must Fail
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
-node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-222-gate-before-repair.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-222-gate-before-repair.json"
 GATE_STATUS=$?
 set -e
 node - "$B" "$GATE_STATUS" <<'JS'
@@ -123,8 +123,8 @@ Expected: gate fails with missing `topic-b` coverage.
 ## Step 3: [MAIN/SHELL] Open Repair Batch And Submit Repair
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs open-batch "$B" --phase wave1 --reason gate_failure_refill > "$B/case-222-open-batch.json"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs open-batch "$B" --phase wave1 --reason gate_failure_refill > "$B/case-222-open-batch.json"
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
 import {
@@ -135,7 +135,7 @@ import {
   submitWorkUnitViaCli,
   referenceContent
 } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { loadWorkUnitIndex } from './DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import { spawnSync } from 'node:child_process';
 
 const bundle = process.argv[2];
@@ -145,7 +145,7 @@ enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
   topic_slug: 'topic-b',
   title: 'Repair Wave1 deepening for Topic B'
 }), { fileName: 'case222-topic-b-repair.json' });
-const claim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave1'], { encoding: 'utf8' }).stdout);
+const claim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave1'], { encoding: 'utf8' }).stdout);
 const workId = claim.claimed_work_ids[0];
 writeWave1TopicArtifacts(bundle, { id: 't2', topic_slug: 'topic-b', title: 'Topic B', source_url: 'https://research-source.test/topic-b/repair/b' });
 const fixture = writeFixtureResultForWorkUnit(bundle, {
@@ -177,16 +177,16 @@ JS
 ## Step 4: [MAIN/SHELL] Rerun Gate And Record Verdict
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { appendTrace } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 appendTrace(process.argv[2], { event: 'wave1_completion', source: 'case-222-repair' });
 JS
-node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-222-gate-after-repair.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-222-gate-after-repair.json"
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
 import { recordPlaybookCheck, readTrace } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { loadWorkUnitIndex } from './DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 
 const bundle = process.argv[2];
 const before = JSON.parse(readFileSync(`${bundle}/case-222-gate-before-repair.json`, 'utf8'));
@@ -201,5 +201,5 @@ recordPlaybookCheck(bundle, { gate: 'wave1-repaired-gate-passes', passed: after.
 recordPlaybookCheck(bundle, { gate: 'wave1-gate-fail-then-pass', passed: gateAttempts.some((event) => event.passed === false) && gateAttempts.some((event) => event.passed === true), detail: `${gateAttempts.length} gate_attempt event(s)` });
 console.log('Recorded native checks; Supervisor finalizer is authoritative.');
 JS
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```

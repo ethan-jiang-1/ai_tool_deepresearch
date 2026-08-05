@@ -9,7 +9,7 @@ import {
   drySubmitWorkUnit,
   inspectWorkUnits,
   supersedeWorkUnitAttempt,
-} from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import {
   claimAndSubmitWorkUnit,
   cleanupWorkUnitBundle,

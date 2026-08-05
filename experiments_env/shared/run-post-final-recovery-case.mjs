@@ -24,7 +24,7 @@ mkdirSync(targetDir, { recursive: true });
 const hex = randomBytes(4).toString('hex');
 const bundle = join(targetDir, `dpt_disp_case-317_post-final-recovery_${hex}`);
 const logicalName = 'post-final-recovery';
-const stateCli = resolve('DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs');
+const stateCli = resolve('DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs');
 
 function run(args, expected = 0) {
   const result = spawnSync('node', args, { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
@@ -55,32 +55,32 @@ try {
   writeFileSync(join(bundle, '_logs', 'run.log'), '');
   writeFileSync(join(bundle, 'BUNDLE_MAP.md'), '# Bundle Map\n');
 
-  const inspection = runJson(['DPT_FRAMEWORK/cli/operate-post-final-recovery.mjs', 'inspect', '--bundle', bundle]);
+  const inspection = runJson(['DEEP_RESEARCH_HARNESS/cli/operate-post-final-recovery.mjs', 'inspect', '--bundle', bundle]);
   if (inspection.verdict !== 'eligible') throw new Error(`expected eligible, got ${inspection.verdict}`);
   const requestPath = join(bundle, '_diagnostics-request.json');
   const request = { schema_version: '1.0.0', action: 'post_final_rerun', reason: 'Add a controlled comparison', requested_scope: 'Materialize one canonical comparison topic', ...inspection.facts.request_bindings };
   writeFileSync(requestPath, `${JSON.stringify(request, null, 2)}\n`);
-  const applied = runJson(['DPT_FRAMEWORK/cli/operate-post-final-recovery.mjs', 'apply', '--bundle', bundle, '--input', requestPath]);
-  run(['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md']);
-  runJson(['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
-  const reentry = runJson(['DPT_FRAMEWORK/cli/check-reentry.mjs', '--bundle', bundle, '--at', 'hitl2_recorded']);
+  const applied = runJson(['DEEP_RESEARCH_HARNESS/cli/operate-post-final-recovery.mjs', 'apply', '--bundle', bundle, '--input', requestPath]);
+  run(['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md']);
+  runJson(['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
+  const reentry = runJson(['DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs', '--bundle', bundle, '--at', 'hitl2_recorded']);
   if (reentry.post_final_recovery?.stage !== 'synchronized_initial_profile') throw new Error('reentry did not expose synchronized initial C5 stage');
 
   const topicInput = join(bundle, '_topic-input.json');
   writeFileSync(topicInput, `${JSON.stringify({ context: 'rerun', actions: [{ action: 'add_topic', title: 'Controlled Comparison', slug_stem: 'controlled-comparison', must_answer: ['What changed?'], scope_role: 'comparison', depends_on_topic_uids: [], direction: { rerun_count: 1, action: 'add', new_search_dimensions: 'Controlled comparison topic for post-final recovery rerun', adjusted_depth: 'standard', search_guardrails: 'standard', rationale_excerpt: 'Post-final recovery adding comparison topic' } }] }, null, 2)}\n`);
-  const topic = runJson(['DPT_FRAMEWORK/cli/operate-topic-state.mjs', 'apply', '--bundle', bundle, '--input', topicInput]);
+  const topic = runJson(['DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs', 'apply', '--bundle', bundle, '--input', topicInput]);
   if (topic.verdict !== 'committed') throw new Error(`topic-state apply failed: ${topic.reason_code || topic.verdict}`);
 
   const profilePath = join(bundle, 'rb_profile.yaml');
   const profile = parseYaml(readFileSync(profilePath, 'utf8'));
   profile.human_decision_checkpoints.hitl2.rerun_count = 1;
   writeFileSync(profilePath, `${stringifyYaml(profile).trimEnd()}\n`);
-  run(['DPT_FRAMEWORK/cli/apply-research-style.mjs', '--bundle', bundle, '--style', 'quick_factual']);
-  const gate = runJson(['DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs', '--bundle', bundle, '--current-node', 'phases/phase-rerun.md']);
+  run(['DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs', '--bundle', bundle, '--style', 'quick_factual']);
+  const gate = runJson(['DEEP_RESEARCH_HARNESS/cli/gates/check-gate-rerun-ready.mjs', '--bundle', bundle, '--current-node', 'phases/phase-rerun.md']);
   if (!gate.check?.passed || gate.check.next !== 'phases/phase-seed-topics.md') throw new Error('rerun-ready did not pass with expected next');
-  run(['DPT_FRAMEWORK/cli/enter-phase.mjs', '--bundle', bundle, '--node', gate.check.next]);
-  runJson(['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', bundle, '--to', 'rerun_ready']);
-  const repeat = runJson(['DPT_FRAMEWORK/cli/operate-post-final-recovery.mjs', 'apply', '--bundle', bundle, '--input', requestPath]);
+  run(['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', bundle, '--node', gate.check.next]);
+  runJson(['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundle, '--to', 'rerun_ready']);
+  const repeat = runJson(['DEEP_RESEARCH_HARNESS/cli/operate-post-final-recovery.mjs', 'apply', '--bundle', bundle, '--input', requestPath]);
 
   const trace = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
   const recoveryEvents = trace.filter((event) => event.event === 'post_final_reentry');

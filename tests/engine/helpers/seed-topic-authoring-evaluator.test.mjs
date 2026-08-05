@@ -6,7 +6,7 @@ import {
   evaluateSeedTopicAuthoring,
   renderSeedInitializationRegion,
   SEED_TOPIC_INITIALIZATION,
-} from '../../../DPT_FRAMEWORK/engine/helpers/seed-topic-authoring-evaluator.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/seed-topic-authoring-evaluator.mjs';
 
 const topic = Object.freeze({
   topic_uid: 'tp_123e4567-e89b-42d3-a456-426614174000',

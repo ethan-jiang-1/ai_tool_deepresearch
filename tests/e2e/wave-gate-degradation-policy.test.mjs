@@ -6,12 +6,12 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { readGateDefinitionSnapshot } from '../../DPT_FRAMEWORK/schema/contracts/gate-definition.mjs';
+import { readGateDefinitionSnapshot } from '../../DEEP_RESEARCH_HARNESS/schema/contracts/gate-definition.mjs';
 import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from '../integration/cli/handoff-fixtures.mjs';
 
 const REPO_ROOT = process.cwd();
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
-const WAVE2_GATE = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs');
+const WAVE2_GATE = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
 
@@ -48,7 +48,7 @@ describe('Wave degradation policy', () => {
 
   it('keeps active Wave2 authority and structural failures fail-closed after fatigue threshold', () => {
     const definition = readGateDefinitionSnapshot(new URL(
-      '../../DPT_FRAMEWORK/schema/gate_definitions/gate-wave2-complete.definition.json',
+      '../../DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-wave2-complete.definition.json',
       import.meta.url,
     )).definition;
     assert.equal(definition.rules.some((rule) => rule.degradation_eligible === true), false);

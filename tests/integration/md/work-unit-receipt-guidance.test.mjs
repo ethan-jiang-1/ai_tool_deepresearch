@@ -4,8 +4,8 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { createWorkUnit } from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
-import { makeItem } from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { createWorkUnit } from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
+import { makeItem } from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 const created = [];
 function tempBundle() {
@@ -41,12 +41,12 @@ describe('work-unit receipt guidance boundary', () => {
   });
 
   it('keeps shared protocol and every active work-unit role consistent', () => {
-    const phases = path.join(process.cwd(), 'DPT_FRAMEWORK/workflows/nodes/phases');
+    const phases = path.join(process.cwd(), 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases');
     const files = readdirSync(phases).filter((name) => /^subagent-dpt-.*\.md$/.test(name)).sort();
     assert.ok(files.length > 0);
     for (const file of files) assertReceiptBoundary(readFileSync(path.join(phases, file), 'utf8'), file);
 
-    const shared = readFileSync(path.join(process.cwd(), 'DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md'), 'utf8');
+    const shared = readFileSync(path.join(process.cwd(), 'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md'), 'utf8');
     assertReceiptBoundary(shared, 'shared protocol');
     assert.match(shared, /Agent runs dry-submit itself|Agent rerun that same dry-submit/i);
     assert.match(shared, /Do not ask the user to operate the pipeline/i);

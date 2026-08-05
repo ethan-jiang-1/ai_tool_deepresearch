@@ -50,7 +50,7 @@ Shared node SHALL NOT 声明 `phase`、`gate`、`next` 或 `stop` 字段。
 
 ### Requirement: Phase manifest structure
 
-`DPT_FRAMEWORK/workflows/manifest.json` SHALL 定义完整的 lifecycle inventory/index：
+`DEEP_RESEARCH_HARNESS/workflows/manifest.json` SHALL 定义完整的 lifecycle inventory/index：
 
 - `phases` 数组 MUST 包含 11 个元素，按 `instantiation → hitl1 → setup → seed-topics → wave0 → wave1 → wave2 → hitl2 → readiness → rerun → final` 顺序排列
 - 每个 phase entry MUST 包含 `key`、`node`（相对 manifest 的路径）、`gate` 字段
@@ -213,8 +213,8 @@ The On Gate Pass section SHALL require this sequence:
 1. read the gate CLI JSON output;
 2. verify `check.passed === true`;
 3. read `check.next`;
-4. call `node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>` and capture the rendered Markdown as the next Agent control surface;
-5. before executing any work from that rendered next phase, call `node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to <this phase's gate enum>` to synchronize the just-passed source gate after the target node load witness exists;
+4. call `node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle <path> --node <check.next>` and capture the rendered Markdown as the next Agent control surface;
+5. before executing any work from that rendered next phase, call `node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to <this phase's gate enum>` to synchronize the just-passed source gate after the target node load witness exists;
 6. continue from the Markdown captured in step 4.
 
 The phase body SHALL NOT frame `advance-status` as the action that enters the next phase. `advance-status` is status synchronization and SHALL NOT substitute for `enter-phase`. `enter-phase` itself SHALL also be framed as a deterministic loader/check, not as a JS lifecycle walker or executor of the next phase.

@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-const wave0 = readFileSync('DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md', 'utf8');
-const wave1 = readFileSync('DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md', 'utf8');
+const wave0 = readFileSync('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md', 'utf8');
+const wave1 = readFileSync('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md', 'utf8');
 
 describe('Wave terminal replacement guidance', () => {
   it('keeps Wave0 and Wave1 at the Engine replacement and normal claim boundaries', () => {

@@ -40,9 +40,9 @@ Markdown control surface 承载步骤指令。每一步由 Phase Agent 读取 MD
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs wc_medium --case case-32 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
-node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs $B
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs $B
 ```
 
 → 预期：validate/inspect 通过。
@@ -56,10 +56,10 @@ MD 指令：「加载 chain.entry.md。」
 chain.entry.md 依赖 chain-policy.dep.md 和 chain-context.dep.md。Engine 必须先解析并加载依赖，再加载 entry。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime, createState, assessNode } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { createWorkflowRuntime, createState, assessNode } from './DEEP_RESEARCH_HARNESS/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
@@ -108,10 +108,10 @@ repeat-1 依赖 shared-lib.dep.md。Engine 首次碰到 shared-lib → file_read
 **关键**：Phase Agent 通过 Markdown control surface 把 session 状态（contentCache keys、state）序列化成 JSON 写入 `_session.json`——这是 MD controller mode 的核心能力：跨 step 持久化 runtime 状态。
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime, createState, assessNode } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { createWorkflowRuntime, createState, assessNode } from './DEEP_RESEARCH_HARNESS/engine/workflow-chain.mjs';
 import { writeFileSync } from 'node:fs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
@@ -173,12 +173,12 @@ MD 指令：「从上一步的 session 恢复 runtime。加载 repeat-2.entry.md
 MD 读 `_session.json` → 用 `readMarkdownFile(key, runtime, trace=null)` 把缓存文件预加载进 contentCache（trace=null 不产生 trace event——这是恢复，不是新读）。然后调 `assessNode('repeat-2.entry.md', ...)` → Engine 在 contentCache 中找到 shared-lib → cache_hit！
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
-import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createTrace } from './DEEP_RESEARCH_HARNESS/engine/trace.mjs';
 import {
   createWorkflowRuntime, createState, assessNode, readMarkdownFile
-} from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
+} from './DEEP_RESEARCH_HARNESS/engine/workflow-chain.mjs';
 import { readFileSync } from 'node:fs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
@@ -250,8 +250,8 @@ console.log('MD裁决: Step 2.3 — session 恢复 + cache_hit 验证 ✅');
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 3: 结果解读

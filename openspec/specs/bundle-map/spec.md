@@ -24,7 +24,7 @@ New runtime bundles SHALL contain `BUNDLE_MAP.md` at bundle root as the canonica
 #### Scenario: Bundle map is not machine authority
 
 - **WHEN** an Agent needs current runtime truth
-- **THEN** `BUNDLE_MAP.md` SHALL direct it to active bundle control files and diagnostics
+- **THEN** `BUNDLE_MAP.md` SHALL direct it to current run bundle control files and diagnostics
 - **AND** it SHALL NOT tell the Agent to infer gate pass, queue drain, submitted evidence coverage, or phase completion from the map text itself
 
 ### Requirement: Bundle map content is organized as maps
@@ -38,7 +38,7 @@ It SHALL include:
 - Diagnostics Map for `_logs/`, `_diagnostics/`, `_checkpoints/`, and rebuildable diagnostic cache/projection areas when present.
 - Reentry Pointers explaining that non-null `rb_status.json.current_node` is the current loaded lifecycle Markdown coordinate, while trace/reentry diagnostics are used when that field is absent.
 
-The map can point to `DPT_FRAMEWORK/RUN.md`, command playbooks, phase nodes, and accepted diagnostics. It SHALL NOT duplicate detailed lifecycle commands that belong in those control surfaces.
+The map can point to `DEEP_RESEARCH_HARNESS/RUN.md`, command playbooks, phase nodes, and accepted diagnostics. It SHALL NOT duplicate detailed lifecycle commands that belong in those control surfaces.
 
 #### Scenario: Reader finds research artifacts
 
@@ -72,7 +72,7 @@ Framework docs, phase docs, instantiation gates, inspect output, reentry advice,
 
 ### Requirement: Legacy START_FROM_HERE.md is diagnostic compatibility only
 
-Existing historical or active bundles can contain `START_FROM_HERE.md` without `BUNDLE_MAP.md`. Framework inspection and reentry guidance SHALL treat such bundles as legacy compatibility when all other required bundle surfaces are present, and SHALL report deprecation advice.
+Existing historical or current run bundles can contain `START_FROM_HERE.md` without `BUNDLE_MAP.md`. Framework inspection and reentry guidance SHALL treat such bundles as legacy compatibility when all other required bundle surfaces are present, and SHALL report deprecation advice.
 
 Legacy compatibility SHALL NOT make `START_FROM_HERE.md` the primary file for newly instantiated bundles. If both `BUNDLE_MAP.md` and `START_FROM_HERE.md` exist, tooling SHALL prefer `BUNDLE_MAP.md` as the current map and SHALL report the legacy file as deprecated compatibility debris with removal or migration advice.
 
@@ -97,7 +97,7 @@ the bundle name as a top-level heading; a creator-rendered relative path to the
 framework root used at creation; and a delegation statement directing the reader
 to bring the file (or its containing directory) to an Agent, and instructing the
 Agent to first read `BUNDLE_MAP.md` (in the same directory) for the full
-directory layout, then read `DPT_FRAMEWORK/COMMANDS.md` for available operations.
+directory layout, then read `DEEP_RESEARCH_HARNESS/COMMANDS.md` for available operations.
 
 `RUN_BUNDLE.md` SHALL NOT contain lifecycle state, phase/gate values, CLI
 commands, route selectors, mutable fields, or copies of framework documentation.

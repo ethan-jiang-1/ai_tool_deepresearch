@@ -1,10 +1,10 @@
-import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, join, relative } from 'node:path';
+import { basename, dirname, join, relative } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 export const REPO_ROOT = process.cwd();
-const INSTANTIATE = join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'instantiate-run-bundle.mjs');
+const INSTANTIATE = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'instantiate-run-bundle.mjs');
 
 export function runNode(args, { expectedStatus = 0, timeout = 30000 } = {}) {
   const result = spawnSync(process.execPath, args, {
@@ -37,7 +37,10 @@ export function instantiateBundle(root, label) {
   const name = `det-e2e-${label}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const result = runNode([INSTANTIATE, name, '--target-dir', root], { timeout: 30000 });
   const bundle = result.stdout.trim();
-  if (!bundle.startsWith(root) || basename(bundle) !== `dpt_rb_${name}`) throw new Error(`unexpected instantiated bundle path: ${bundle}`);
+  const currentRunBundleRoot = realpathSync(root);
+  if (dirname(bundle) !== currentRunBundleRoot || basename(bundle) !== `dpt_rb_${name}`) {
+    throw new Error(`unexpected instantiated bundle path: ${bundle}`);
+  }
   return bundle;
 }
 
@@ -55,7 +58,7 @@ export function restoreBundle(snapshot, target) {
 
 export function runGate(bundle, gate, currentNode, { expectedStatus = 0 } = {}) {
   const result = runNode([
-    join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'gates', `check-gate-${gate}.mjs`),
+    join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'gates', `check-gate-${gate}.mjs`),
     '--bundle', bundle,
     '--current-node', currentNode,
   ], { expectedStatus });
@@ -63,11 +66,11 @@ export function runGate(bundle, gate, currentNode, { expectedStatus = 0 } = {}) 
 }
 
 export function enterPhase(bundle, node, { expectedStatus = 0 } = {}) {
-  return runNode([join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'enter-phase.mjs'), '--bundle', bundle, '--node', node], { expectedStatus });
+  return runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'enter-phase.mjs'), '--bundle', bundle, '--node', node], { expectedStatus });
 }
 
 export function advanceStatus(bundle, gate, { expectedStatus = 0 } = {}) {
-  const result = runNode([join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'advance-status.mjs'), '--bundle', bundle, '--to', gate], { expectedStatus });
+  const result = runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'advance-status.mjs'), '--bundle', bundle, '--to', gate], { expectedStatus });
   return { process: result, output: parseJsonOutput(result) };
 }
 

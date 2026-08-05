@@ -10,10 +10,10 @@ import { fileURLToPath } from 'node:url';
 import {
   AgentExperimentCompletionSchema,
   loadRunContext,
-} from '../../DPT_FRAMEWORK/host_tools/lib/agent-experiment-contract.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/agent-experiment-contract.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const FINALIZER = path.join(REPO_ROOT, 'DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs');
+const FINALIZER = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs');
 
 /**
  * Append one strict playbook-owned verdict fact to bundle-root rb_trace.jsonl.

@@ -43,7 +43,7 @@ verdict_judge: deterministic
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs reentry_clean --case case-307 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 
 # 写 rb_status.json — wave1 完成状态
 cat > "$B/rb_status.json" << 'JSON'
@@ -98,7 +98,7 @@ echo "# Evidence Summary B" > "$B/artifacts/wave1/topic-b/evidence-summary.md"
 echo "# Question List B" > "$B/artifacts/wave1/topic-b/question-list.md"
 
 # 验证 bundle 结构
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B" || true
+node DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs "$B" || true
 
 echo "B=$B"
 ```
@@ -110,8 +110,8 @@ echo "B=$B"
 ## Step 2: 跑 check-reentry CLI
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-RESULT=$(node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "$B" --at wave1_complete)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+RESULT=$(node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle "$B" --at wave1_complete)
 EXIT=$?
 
 echo "Exit code: $EXIT"
@@ -200,17 +200,17 @@ JS
 ## Step 3: 验证 target normalization 多种形式
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # 测试三种 target 写法
 for TARGET in "wave1_complete" "phase-wave1" "wave1"; do
-  RESULT=$(node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "$B" --at "$TARGET")
+  RESULT=$(node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle "$B" --at "$TARGET")
   EXIT=$?
   echo "--- $TARGET (exit=$EXIT) ---"
   echo "$RESULT" | grep -E '"input"|"kind"|"phase_key"'
 done
 
 # 测试 unknown target
-RESULT=$(node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "$B" --at "nonexistent" 2>&1)
+RESULT=$(node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle "$B" --at "nonexistent" 2>&1)
 EXIT=$?
 echo "--- nonexistent (exit=$EXIT) ---"
 
@@ -223,7 +223,7 @@ const __dirname = process.argv[2];
 const checks = [];
 
 // Test underscore form
-const r1 = JSON.parse(execSync(`node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "${__dirname}" --at wave1_complete`, { encoding: 'utf-8' }));
+const r1 = JSON.parse(execSync(`node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle "${__dirname}" --at wave1_complete`, { encoding: 'utf-8' }));
 checks.push({
   ts: new Date().toISOString(), event: 'check',
   source: 'playbook',
@@ -232,7 +232,7 @@ checks.push({
 });
 
 // Test phase-name form
-const r2 = JSON.parse(execSync(`node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "${__dirname}" --at phase-wave1`, { encoding: 'utf-8' }));
+const r2 = JSON.parse(execSync(`node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle "${__dirname}" --at phase-wave1`, { encoding: 'utf-8' }));
 checks.push({
   ts: new Date().toISOString(), event: 'check',
   source: 'playbook',
@@ -241,7 +241,7 @@ checks.push({
 });
 
 // Test phase key form
-const r3 = JSON.parse(execSync(`node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "${__dirname}" --at wave1`, { encoding: 'utf-8' }));
+const r3 = JSON.parse(execSync(`node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle "${__dirname}" --at wave1`, { encoding: 'utf-8' }));
 checks.push({
   ts: new Date().toISOString(), event: 'check',
   source: 'playbook',
@@ -250,7 +250,7 @@ checks.push({
 });
 
 // Test node ref form
-const r4 = JSON.parse(execSync(`node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "${__dirname}" --at phases/phase-wave1.md`, { encoding: 'utf-8' }));
+const r4 = JSON.parse(execSync(`node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle "${__dirname}" --at phases/phase-wave1.md`, { encoding: 'utf-8' }));
 checks.push({
   ts: new Date().toISOString(), event: 'check',
   source: 'playbook',
@@ -260,7 +260,7 @@ checks.push({
 
 // Test unknown target → exit 2
 try {
-  execSync(`node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "${__dirname}" --at nonexistent-gate`, { encoding: 'utf-8' });
+  execSync(`node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle "${__dirname}" --at nonexistent-gate`, { encoding: 'utf-8' });
   checks.push({ ts: new Date().toISOString(), event: 'check', source: 'playbook', gate: 'target-unknown-exit', passed: false, expected: true, detail: 'Should exit 2' });
 } catch (e) {
   checks.push({ ts: new Date().toISOString(), event: 'check', source: 'playbook', gate: 'target-unknown-exit', passed: e.status === 2, expected: true, detail: `Exit ${e.status} for unknown target` });
@@ -279,8 +279,8 @@ JS
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

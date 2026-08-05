@@ -5,11 +5,11 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ResearchStyleParamsSchema, ProfileSchema } from '../../DPT_FRAMEWORK/schema/index.mjs';
-import { readGateDefinitionSnapshot } from '../../DPT_FRAMEWORK/schema/contracts/gate-definition.mjs';
+import { ResearchStyleParamsSchema, ProfileSchema } from '../../DEEP_RESEARCH_HARNESS/schema/index.mjs';
+import { readGateDefinitionSnapshot } from '../../DEEP_RESEARCH_HARNESS/schema/contracts/gate-definition.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DEFS_DIR = join(__dirname, '..', '..', 'DPT_FRAMEWORK', 'schema', 'gate_definitions');
+const DEFS_DIR = join(__dirname, '..', '..', 'DEEP_RESEARCH_HARNESS', 'schema', 'gate_definitions');
 
 function loadDef(filename) {
   return readGateDefinitionSnapshot(join(DEFS_DIR, filename)).definition;

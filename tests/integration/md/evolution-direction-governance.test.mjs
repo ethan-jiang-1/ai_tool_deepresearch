@@ -19,7 +19,7 @@ const SCAN_ROOTS = [
   '_backlog/plans',
   '_backlog/bugs',
   'openspec/changes',
-  'DPT_FRAMEWORK',
+  'DEEP_RESEARCH_HARNESS',
   'tests',
 ];
 const SCANNED_EXTENSIONS = new Set(['.md', '.mjs', '.js', '.json', '.yaml', '.yml']);
@@ -95,7 +95,7 @@ function assertSameLayerNavigation(relativePath, source, heading) {
     /AGENTS\.md/,
     /openspec\/config\.yaml/,
     /openspec\/specs\//,
-    /DPT_FRAMEWORK\//,
+    /DEEP_RESEARCH_HARNESS\//,
     /experiments_(?:env|playbook)\//,
     /dpt_(?:rb|disp)_/,
   ]) assert.doesNotMatch(content, forbidden, `${relativePath} ${heading} must stay inside guidelines/`);

@@ -55,7 +55,7 @@ Fixture-backed Engine case, no Agent actor, no external calls. Fixture content m
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs w1_happy_and_fail --case case-224 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave1Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -67,7 +67,7 @@ writeWave1Scaffold(process.argv[2], {
   ]
 });
 JS
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$B"
 echo "BUNDLE=$B"
 ```
 
@@ -76,7 +76,7 @@ Expected: validate passes and `rb_trace.jsonl` contains a witnessed handoff into
 ## Step 2: [MAIN/SHELL] Enqueue And Claim Two Work Units
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
 node --input-type=module - "$B" <<'JS'
 import { enqueueWorkUnitTask, queueItemForWorkUnit } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -94,7 +94,7 @@ for (const topic of [
 }
 JS
 
-CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave1 --count 2 --actor-outcome available --actor-source native_probe --actor-role-key dpt-evidence-extractor --actor-reason probe_succeeded --execution-actor delegated_subagent)
+CLAIM_JSON=$(node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim "$B" --phase wave1 --count 2 --actor-outcome available --actor-source native_probe --actor-role-key dpt-evidence-extractor --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_JSON" > "$B/case-224-claim.json"
 printf '%s\n' "$CLAIM_JSON" | node -e '
 const j = JSON.parse(require("fs").readFileSync(0, "utf8"));
@@ -109,7 +109,7 @@ Expected: `claimed_count=2` and the work IDs are Wave1 `wave1_topic_deepening` a
 ## Step 3: [MAIN/SHELL] Submit In Reverse Order And Backfill
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import {
@@ -175,12 +175,12 @@ Expected: both submits succeed, and the first submitted work ID is the second cl
 ## Step 4: [MAIN/SHELL] Gate Pass From Submitted Coverage
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
 node --input-type=module - "$B" <<'JS'
 import { appendTrace } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 appendTrace(process.argv[2], { event: 'wave1_completion', source: 'case-224-visible-path' });
 JS
-node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-224-gate-happy.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-224-gate-happy.json"
 node - "$B" <<'JS'
 const fs = require('fs');
 const gate = JSON.parse(fs.readFileSync(`${process.argv[2]}/case-224-gate-happy.json`, 'utf8'));
@@ -194,7 +194,7 @@ Expected: Wave1 gate passes from submitted work-unit rows covering both topics.
 ## Step 5: [MAIN/SHELL] Invalid Submit And Three Negative Bundles
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
 node --input-type=module - "$B" <<'JS'
 import { rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -214,7 +214,7 @@ enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
   topic_slug: 'topic-a',
   title: 'Wave1 invalid submit proof'
 }), { fileName: 'case224-invalid-submit.json' });
-const claim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave1'], { encoding: 'utf8' }).stdout);
+const claim = JSON.parse(spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave1'], { encoding: 'utf8' }).stdout);
 const workId = claim.claimed_work_ids[0];
 const fixture = writeFixtureResultForWorkUnit(bundle, {
   work_id: workId,
@@ -225,7 +225,7 @@ const fixture = writeFixtureResultForWorkUnit(bundle, {
   cache_trails: ['_cache/wave1/primary/topic-a/invalid-submit']
 });
 rmSync(path.join(bundle, fixture.record.paths.runtime_receipt_ref), { force: true });
-const submit = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], { encoding: 'utf8' });
+const submit = spawnSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], { encoding: 'utf8' });
 const rejectedRows = readWorkUnitLedgerRows(bundle).filter((row) => row.work_id === workId);
 const outcome = { status: submit.status, submit: submit.stdout.trim() ? JSON.parse(submit.stdout) : null, rejectedRows: rejectedRows.length };
 writeFileSync(`${bundle}/case-224-invalid-submit.json`, `${JSON.stringify(outcome, null, 2)}\n`);
@@ -234,7 +234,7 @@ process.exit(outcome.status === 1 && outcome.submit?.last_submit_rejection?.reas
 JS
 
 BO=$(node experiments_env/shared/new-disposable-bundle.mjs w1_orphan_output --case case-224 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role orphan-output --path "$BO"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role orphan-output --path "$BO"
 node --input-type=module - "$BO" <<'JS'
 import { appendTrace, writeWave1Scaffold, writeWave1TopicArtifacts } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 const bundle = process.argv[2];
@@ -251,7 +251,7 @@ writeWave1TopicArtifacts(bundle, {
 appendTrace(bundle, { event: 'wave1_completion', source: 'case-224-orphan' });
 JS
 set +e
-node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$BO" --current-node phases/phase-wave1.md > "$BO/case-224-gate-orphan.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs --bundle "$BO" --current-node phases/phase-wave1.md > "$BO/case-224-gate-orphan.json"
 ORPHAN_STATUS=$?
 set -e
 node - "$BO" "$ORPHAN_STATUS" <<'JS'
@@ -263,7 +263,7 @@ process.exit(Number(status) === 1 && gate.check?.passed === false && JSON.string
 JS
 
 BS=$(node experiments_env/shared/new-disposable-bundle.mjs w1_shallow_depth_review --case case-224 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role shallow-depth-review --path "$BS"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role shallow-depth-review --path "$BS"
 node --input-type=module - "$BS" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import {
@@ -300,12 +300,12 @@ import { appendTrace } from './experiments_env/shared/work-unit-playbook-utils.m
 appendTrace(process.argv[2], { event: 'wave1_completion', source: 'case-224-shallow' });
 JS
 set +e
-node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$BS" --current-node phases/phase-wave1.md > "$BS/case-224-gate-shallow.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs --bundle "$BS" --current-node phases/phase-wave1.md > "$BS/case-224-gate-shallow.json"
 SHALLOW_STATUS=$?
 set -e
 
 BC=$(node experiments_env/shared/new-disposable-bundle.mjs w1_cache_thin --case case-224 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role cache-thin --path "$BC"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role cache-thin --path "$BC"
 node --input-type=module - "$BC" <<'JS'
 import { writeFileSync } from 'node:fs';
 import {
@@ -334,7 +334,7 @@ import { appendTrace } from './experiments_env/shared/work-unit-playbook-utils.m
 appendTrace(process.argv[2], { event: 'wave1_completion', source: 'case-224-cache-thin' });
 JS
 set +e
-node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$BC" --current-node phases/phase-wave1.md > "$BC/case-224-gate-cache-thin.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs --bundle "$BC" --current-node phases/phase-wave1.md > "$BC/case-224-gate-cache-thin.json"
 CACHE_STATUS=$?
 set -e
 printf '%s\n' "$SHALLOW_STATUS" > "$BS/case-224-gate-status.txt"
@@ -346,10 +346,10 @@ Expected: invalid submit is non-terminal and appends no ledger row; orphan, shal
 ## Step 6: [MAIN/SHELL] Record Trace Checks
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
-BO=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role orphan-output)
-BS=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role shallow-depth-review)
-BC=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role cache-thin)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
+BO=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role orphan-output)
+BS=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role shallow-depth-review)
+BC=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role cache-thin)
 node --input-type=module - "$B" "$BO" "$BS" "$BC" <<'JS'
 import { readFileSync } from 'node:fs';
 import { readWorkUnitLedgerRows, recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
@@ -381,11 +381,11 @@ JS
 ## Step 7: [MAIN/SHELL] Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
-BO=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role orphan-output)
-BS=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role shallow-depth-review)
-BC=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role cache-thin)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} \
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
+BO=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role orphan-output)
+BS=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role shallow-depth-review)
+BC=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role cache-thin)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} \
   --bundle "happy-verdict=$B" --bundle "orphan-output=$BO" \
   --bundle "shallow-depth-review=$BS" --bundle "cache-thin=$BC"
 ```

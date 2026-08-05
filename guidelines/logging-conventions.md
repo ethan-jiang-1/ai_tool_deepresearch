@@ -6,7 +6,7 @@ status: effective
 created: 2026-06-26
 revised: 2026-07-25
 role: system-level logging conventions for .mjs and .md diagnostic recording
-scope: DPT_FRAMEWORK/engine/logger.mjs, DPT_FRAMEWORK/engine/trace.mjs, DPT_FRAMEWORK/cli/log-event.mjs, DPT_FRAMEWORK/cli/inspect-bundle.mjs, DPT_FRAMEWORK/workflows/nodes/phases/*.md
+scope: DEEP_RESEARCH_HARNESS/engine/logger.mjs, DEEP_RESEARCH_HARNESS/engine/trace.mjs, DEEP_RESEARCH_HARNESS/cli/log-event.mjs, DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs, DEEP_RESEARCH_HARNESS/workflows/nodes/phases/*.md
 authority: guidance
 defers_to:
   - guidelines/project-charter.md
@@ -25,7 +25,7 @@ siblings:
 
 # Guideline: logging_conventions — Current Guidance
 
-> 状态: 生效 | 创建: 2026-06-26 | 修订: 2026-07-25 | 适用于: `DPT_FRAMEWORK/engine/`, `DPT_FRAMEWORK/cli/`, `DPT_FRAMEWORK/workflows/nodes/phases/`
+> 状态: 生效 | 创建: 2026-06-26 | 修订: 2026-07-25 | 适用于: `DEEP_RESEARCH_HARNESS/engine/`, `DEEP_RESEARCH_HARNESS/cli/`, `DEEP_RESEARCH_HARNESS/workflows/nodes/phases/`
 
 ## Purpose
 
@@ -38,7 +38,7 @@ siblings:
 | Log | 诊断解释，人读 | 自由文本（统一信封） | `_logs/run.log` |
 | Trace | 审计真相，机器校验 | JSONL | `rb_trace.jsonl` |
 
-Both files are active bundle-root relative. `_logs/run.log` and `rb_trace.jsonl` refer to the selected `dpt_rb_*` or `dpt_disp_*` bundle for the current run or experiment, not repo root and not `DPT_FRAMEWORK/`.
+Both files are current run bundle-root relative. `_logs/run.log` and `rb_trace.jsonl` refer to the selected `dpt_rb_*` or `dpt_disp_*` bundle for the current run or experiment, not repo root and not `DEEP_RESEARCH_HARNESS/`.
 
 **Trace 是真相，Log 是解释。** 裁决（pass/fail）只能从 trace JSONL 来，log 自由文本不参与裁决。两个通道通过 `bundle` 字段缝合为单一时间线。
 
@@ -65,7 +65,7 @@ Logging follows [`evolution-simple-reliable-control.md`](evolution-simple-reliab
 ### Agent (`.md` phase node)
 
 ```bash
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --level <LEVEL> --msg "<message>" [--detail '<json>']
+node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle <path> --level <LEVEL> --msg "<message>" [--detail '<json>']
 ```
 
 Agent 从 `## Log` 段复制命令，不需要知道文件路径或格式。

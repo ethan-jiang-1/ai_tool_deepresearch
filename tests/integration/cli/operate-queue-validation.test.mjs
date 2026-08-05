@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 
 const REPO_ROOT = process.cwd();
-const OPERATE_QUEUE = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-queue.mjs');
+const OPERATE_QUEUE = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
@@ -509,7 +509,7 @@ describe('AGQ-013 Wave1 assignment-mode admission and repair', () => {
       repair_kind: 'agent_action',
       repair_surface: 'retained_unqueued_task_card',
     });
-    assert.equal(output.rerun, `node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue ${JSON.stringify(dir)} --task ${JSON.stringify(taskPath)}`);
+    assert.equal(output.rerun, `node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs enqueue ${JSON.stringify(dir)} --task ${JSON.stringify(taskPath)}`);
     assert.match(output.recommended_action, /task card/i);
     assert.match(output.recommended_action, /do not edit.*rb_queue\.json/i);
     assert.doesNotMatch(output.rerun, /rb_queue\.json/);

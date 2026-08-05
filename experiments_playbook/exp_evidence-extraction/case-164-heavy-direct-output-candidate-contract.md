@@ -54,7 +54,7 @@ Create and register one disposable bundle. The setup helper below writes only th
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs eex_direct_output_candidate --case case-164 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -145,7 +145,7 @@ The adapter sends all three turns to one session and runs the read-only Step 3/S
 Launch the adapter as one detached host process so a single Agent Bash-tool timeout cannot kill Turn 3. The detached wrapper writes one atomic status file only after the adapter exits. It does not restart or resume the Subject.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 CASE164_BUNDLE="$B" nohup /bin/sh -c '
   node experiments_env/shared/run-iterative-interaction-subject.mjs 164 --bundle "$CASE164_BUNDLE" > "$CASE164_BUNDLE/case-164-subject-adapter.stdout" 2> "$CASE164_BUNDLE/case-164-subject-adapter.stderr"
   code=$?
@@ -159,7 +159,7 @@ printf '%s\n' "$!" > "$B/case-164-subject-adapter.pid"
 Poll with separate short Bash calls. While this prints `RUNNING`, wait and run the same poll again; do not read private child transcript files, delete evidence, restart setup, launch another Subject, or edit actor/Engine surfaces.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 if [ -f "$B/case-164-subject-adapter-status.json" ]; then
   cat "$B/case-164-subject-adapter-status.json"
 elif kill -0 "$(cat "$B/case-164-subject-adapter.pid")" 2>/dev/null; then
@@ -173,11 +173,11 @@ fi
 When the atomic status appears, require `exit_code: 0` before Step 6. A nonzero status is an unavailable/incomplete Subject boundary: write the non-empty marker, invoke the native finalizer with `--not-run-reason`, and stop the playbook immediately. Never repair or restart the case after a nonzero adapter status.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 SUBJECT_STATUS=$(node -e 'process.stdout.write(String(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).exit_code))' "$B/case-164-subject-adapter-status.json")
 if [ "$SUBJECT_STATUS" -ne 0 ]; then
   printf '%s\n' 'independent Subject/child Agent or real search/fetch capability unavailable' > "$B/case-164-subject-unavailable.txt"
-  node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" --not-run-reason "independent Subject/child Agent or real search/fetch capability unavailable"
+  node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" --not-run-reason "independent Subject/child Agent or real search/fetch capability unavailable"
 fi
 ```
 
@@ -210,7 +210,7 @@ If the same child identity is reused, independent search/fetch evidence is absen
 The deterministic postcheck reads native Subject/child evidence, queue/index/status/ledger facts, dry-submit/formal-submit JSON, and the retained hashes. It may append only the five case-owned `check` events below. It must not invent dry-submit output, work-unit lifecycle events, actor receipts, queue transitions, or submitted rows.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 EXTRA_ARGS=()
 if [ -f "$B/case-164-subject-unavailable.txt" ]; then
   EXTRA_ARGS+=(--not-run-reason "independent Subject/child Agent or real search/fetch capability unavailable")
@@ -218,7 +218,7 @@ else
   node --input-type=module - "$B" <<'JS'
 import { appendFileSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { WorkUnitResultSchema } from './DPT_FRAMEWORK/schema/contracts/work-unit.mjs';
+import { WorkUnitResultSchema } from './DEEP_RESEARCH_HARNESS/schema/contracts/work-unit.mjs';
 const [bundle] = process.argv.slice(2);
 const readJson = (ref) => JSON.parse(readFileSync(resolve(bundle, ref), 'utf8'));
 const first = readJson('case-164-first-child-evidence.json');
@@ -270,7 +270,7 @@ JS
     --evidence "output_hashes=$B/case-164-output-hashes.json"
   )
 fi
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
 PASS requires all five current-run checks. It proves only that this Subject followed the explicit post-`work_done` semantic replacement procedure with two real child executions. A missing or unavailable Subject/child/search/fetch surface is native `NOT_RUN`; a fixture, parent-authored substitute, or incomplete evidence set cannot become PASS. Stop after native completion. The Autorun Supervisor owns declared health, durable evidence export, audit, preservation, and optional clean-PASS cleanup.

@@ -50,14 +50,14 @@ the documented code-`2` path.
 
 #### Scenario: Top-level commands document exit code convention
 
-- **WHEN** the Phase Agent reads `DPT_FRAMEWORK/COMMANDS.md`
+- **WHEN** the Phase Agent reads `DEEP_RESEARCH_HARNESS/COMMANDS.md`
 - **THEN** it SHALL see a top-level exit-code convention section before or near command tables
 - **AND** that section SHALL list codes `0`, `1`, and `2`
 - **AND** it SHALL state that structured stdout carries actionable details
 
 #### Scenario: CLI README matches top-level convention
 
-- **WHEN** a maintainer reads `DPT_FRAMEWORK/cli/README.md`
+- **WHEN** a maintainer reads `DEEP_RESEARCH_HARNESS/cli/README.md`
 - **THEN** its exit-code section SHALL be consistent with the top-level command index
 - **AND** it SHALL preserve gate-specific details such as `routing.kind` handling without contradicting the broader convention
 
@@ -153,7 +153,7 @@ The regression SHALL be deterministic, use Node.js built-ins plus existing appro
 
 #### Scenario: Regression detects missing top-level contract
 
-- **WHEN** `DPT_FRAMEWORK/COMMANDS.md` no longer contains the exit-code convention
+- **WHEN** `DEEP_RESEARCH_HARNESS/COMMANDS.md` no longer contains the exit-code convention
 - **THEN** the regression SHALL fail
 - **AND** the failure SHALL identify the missing documented contract
 

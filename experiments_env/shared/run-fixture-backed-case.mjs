@@ -20,15 +20,15 @@ import {
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { TargetSpecSchema } from '../../DPT_FRAMEWORK/schema/contracts/queue.mjs';
-import { renderSeedProjectionCard, SEED_TOPIC_PROJECTION_SLOTS } from '../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
-import { auditFileObservability, FILE_CLASSIFICATIONS } from '../../DPT_FRAMEWORK/engine/helpers/file-observability.mjs';
-import { checkCacheCoverage } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers-checks.mjs';
-import { readOutputDeclarations, readSubmittedWorkUnitDeclarations } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers-readers.mjs';
-import { countReferences } from '../../DPT_FRAMEWORK/engine/helpers/ref-count.mjs';
-import { createTrace } from '../../DPT_FRAMEWORK/engine/trace.mjs';
-import { logToRun } from '../../DPT_FRAMEWORK/engine/logger.mjs';
-import { loadWorkUnitIndex } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { TargetSpecSchema } from '../../DEEP_RESEARCH_HARNESS/schema/contracts/queue.mjs';
+import { renderSeedProjectionCard, SEED_TOPIC_PROJECTION_SLOTS } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { auditFileObservability, FILE_CLASSIFICATIONS } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs';
+import { checkCacheCoverage } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs';
+import { readOutputDeclarations, readSubmittedWorkUnitDeclarations } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-readers.mjs';
+import { countReferences } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/ref-count.mjs';
+import { createTrace } from '../../DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { logToRun } from '../../DEEP_RESEARCH_HARNESS/engine/logger.mjs';
+import { loadWorkUnitIndex } from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import {
   claimAndSubmitFixtureWorkUnit,
   claimWorkUnitsViaCli,
@@ -55,21 +55,21 @@ import {
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '..', '..');
 const NEW_BUNDLE = path.join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
-const VALIDATE_BUNDLE = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/validate-bundle.mjs');
-const OPERATE_QUEUE = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-queue.mjs');
-const OPERATE_WORK_UNIT = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-work-unit.mjs');
-const CHECK_REENTRY = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/check-reentry.mjs');
+const VALIDATE_BUNDLE = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs');
+const OPERATE_QUEUE = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs');
+const OPERATE_WORK_UNIT = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs');
+const CHECK_REENTRY = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs');
 const VERIFY_BUNDLE_HEALTH = path.join(REPO_ROOT, 'experiments_env/shared/verify-bundle-health.mjs');
-const ENTER_PHASE = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/enter-phase.mjs');
-const ADVANCE_STATUS = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/advance-status.mjs');
-const AGENT_EXPERIMENT_STATE = path.join(REPO_ROOT, 'DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs');
-const GATE_SETUP = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs');
-const GATE_SEED = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs');
-const GATE_WAVE0 = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs');
-const GATE_WAVE1 = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs');
-const GATE_WAVE2 = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs');
+const ENTER_PHASE = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs');
+const ADVANCE_STATUS = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/advance-status.mjs');
+const AGENT_EXPERIMENT_STATE = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs');
+const GATE_SETUP = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs');
+const GATE_SEED = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-seed-topics-ready.mjs');
+const GATE_WAVE0 = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs');
+const GATE_WAVE1 = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs');
+const GATE_WAVE2 = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs');
 const GATE_MONITOR = path.join(REPO_ROOT, 'experiments_env/shared/run-gate-with-monitor.mjs');
-const INSPECT_BUNDLE = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-bundle.mjs');
+const INSPECT_BUNDLE = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs');
 
 function parseArgs(argv) {
   const opts = { cleanupPass: false, force: true };
@@ -1462,7 +1462,7 @@ const REAL_SUBAGENT_CASES = {
   },
   'case-605': {
     caseId: 'case-605', suffix: 'arh_bundle_containment', topicSlug: 'bundle-containment-sources', topicTitle: 'Bundle containment sources',
-    taskTitle: 'Real Sub-agent bundle-containment source intake', action: 'Use real search and fetch and write every assigned output, receipt, result, and cache byte under the active bundle only.',
+    taskTitle: 'Real Sub-agent bundle-containment source intake', action: 'Use real search and fetch and write every assigned output, receipt, result, and cache byte under the current run bundle only.',
     notRunReason: 'Native dpt-source-intake Sub-agent or required search/fetch capability is unavailable.',
     requiredChecks: ['real-subagent-submit-succeeded', 'inspect-bundle-no-active-leak', 'repo-root-no-runtime-leak'],
   },

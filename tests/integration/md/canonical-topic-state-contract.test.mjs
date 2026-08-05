@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(path, 'utf8');
-const helper = read('DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs');
-const resolver = read('DPT_FRAMEWORK/engine/helpers/topic-layout.mjs');
-const cli = read('DPT_FRAMEWORK/cli/operate-topic-state.mjs');
-const commands = read('DPT_FRAMEWORK/COMMANDS.md');
-const hitl1 = read('DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl1.md');
-const rerun = read('DPT_FRAMEWORK/workflows/nodes/phases/phase-rerun.md');
-const seedGate = read('DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs');
-const workUnitSchema = read('DPT_FRAMEWORK/schema/contracts/work-unit.mjs');
+const helper = read('DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs');
+const resolver = read('DEEP_RESEARCH_HARNESS/engine/helpers/topic-layout.mjs');
+const cli = read('DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs');
+const commands = read('DEEP_RESEARCH_HARNESS/COMMANDS.md');
+const hitl1 = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl1.md');
+const rerun = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-rerun.md');
+const seedGate = read('DEEP_RESEARCH_HARNESS/cli/gates/check-gate-seed-topics-ready.mjs');
+const workUnitSchema = read('DEEP_RESEARCH_HARNESS/schema/contracts/work-unit.mjs');
 
 describe('canonical topic-state scope', () => {
   it('keeps one helper, one CLI, one workspace and three operations', () => {
@@ -54,7 +54,7 @@ describe('canonical topic-state scope', () => {
     // Preservation is automatic via three properties — this is a regression guard.
     // If any change (e.g. tightening CanonicalPlanSchema to .strict(), or rebuilding
     // frontmatter from a fixed key set), this test fails before the stamp is silently dropped.
-    const planSchema = read('DPT_FRAMEWORK/schema/contracts/plan.mjs');
+    const planSchema = read('DEEP_RESEARCH_HARNESS/schema/contracts/plan.mjs');
     assert.match(planSchema, /export const CanonicalPlanSchema[\s\S]*?\.passthrough\(\)/);
     assert.match(helper, /function renderPlan\(frontmatter, body\)[\s\S]{0,120}stringifyYaml\(frontmatter\)/);
     assert.match(helper, /const current = structuredClone\(parsedPlan\);/);

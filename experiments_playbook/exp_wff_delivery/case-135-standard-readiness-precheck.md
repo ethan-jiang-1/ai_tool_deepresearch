@@ -31,7 +31,7 @@ verdict_judge: deterministic
 ```bash
 REPO_ROOT=$(pwd)
 B=$(node experiments_env/shared/new-disposable-bundle.mjs ready --case case-135 --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role readiness-verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role readiness-verdict --path "$B"
 mkdir -p "$B/artifacts/hitl2" "$B/artifacts/wave2" "$B/seed_topics"
 printf '# Topic A\n' > "$B/seed_topics/topic-a.md"
 printf '# Reference Index\n' > "$B/reference/_INDEX.md"
@@ -62,7 +62,7 @@ human_decision_checkpoints:
 YAML
 
 node --input-type=module - "$B" <<'JS'
-import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { writeGateAttempt } from './DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 const bundle = process.argv[2];
 const fixtures = [
   ['instantiation-complete', 'phases/phase-instantiation.md', 'phases/phase-hitl1.md'],
@@ -77,20 +77,20 @@ for (const [gate, currentNodeRef, next] of fixtures) {
   writeGateAttempt(bundle, { check: { gate, passed: true, currentNodeRef, next }, routing: { kind: 'next', next, detail: 'declared direct-predecessor fixture' }, inspect: [], advice: [] });
 }
 JS
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-135-enter-hitl2.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-135-advance-wave2.json"
-HITL2=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-135-enter-hitl2.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-135-advance-wave2.json"
+HITL2=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
 HITL2_NEXT=$(printf '%s\n' "$HITL2" | node experiments_env/shared/extract-field.mjs check.next)
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$HITL2_NEXT" > "$B/case-135-enter-readiness.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-135-advance-hitl2.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$HITL2_NEXT" > "$B/case-135-enter-readiness.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-135-advance-hitl2.json"
 ```
 
 ## Step 2: 主 bundle direct negative cases 与最终 pass
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role readiness-verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role readiness-verdict)
 run_ready() {
-  node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle "$B" --current-node phases/phase-readiness.md 2>/dev/null || true
+  node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate readiness-passed -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-readiness-passed.mjs --bundle "$B" --current-node phases/phase-readiness.md 2>/dev/null || true
 }
 
 rm "$B/artifacts/wave2/synthesis.md"
@@ -102,7 +102,7 @@ node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.rec
 printf '# Synthesis\nRepaired.\n' > "$B/artifacts/wave2/synthesis.md"
 
 Q=$(node experiments_env/shared/new-disposable-bundle.mjs ready_missing_prior --case case-135 --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role missing-prior-gate --path "$Q"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role missing-prior-gate --path "$Q"
 cp -R "$B/." "$Q/"
 node --input-type=module - "$Q" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -116,7 +116,7 @@ const mutated = lines.map((line) => {
 writeFileSync(`${bundle}/rb_trace.jsonl`, `${mutated.join('\n')}\n`);
 JS
 set +e
-OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$Q" --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle "$Q" --current-node phases/phase-readiness.md 2>/dev/null)
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$Q" --gate readiness-passed -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-readiness-passed.mjs --bundle "$Q" --current-node phases/phase-readiness.md 2>/dev/null)
 Q_STATUS=$?
 set -e
 ALL=$(printf '%s\n' "$OUT" | grep -c 'instantiation-complete' || true)
@@ -132,7 +132,7 @@ OK=false; [ "$P" = "false" ] && [ "$Y" -gt 0 ] && OK=true
 node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-135-invalid-yaml',passed:$OK,detail:'unparseable profile fails directly'}))"
 mv "$B/rb_profile.yaml.good" "$B/rb_profile.yaml"
 
-OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle "$B" --current-node phases/phase-readiness.md)
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate readiness-passed -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-readiness-passed.mjs --bundle "$B" --current-node phases/phase-readiness.md)
 P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
 N=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.next)
 OK=false; [ "$P" = "true" ] && [ "$N" = "phases/phase-final.md" ] && OK=true
@@ -142,9 +142,9 @@ node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.rec
 ## Step 3: Auxiliary corrupt JSONL probe
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role readiness-verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role readiness-verdict)
 P=$(node experiments_env/shared/new-disposable-bundle.mjs ready_corrupt --case case-135 --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role corrupt-trace --path "$P"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role corrupt-trace --path "$P"
 cp "$B/rb_profile.yaml" "$P/rb_profile.yaml"
 mkdir -p "$P/artifacts/hitl2" "$P/artifacts/wave2" "$P/seed_topics"
 printf '# Topic A\n' > "$P/seed_topics/topic-a.md"
@@ -153,7 +153,7 @@ printf '# Synthesis\nReady.\n' > "$P/artifacts/wave2/synthesis.md"
 printf '# Decision Brief\nProceed.\n' > "$P/artifacts/hitl2/decision-brief.md"
 printf 'not-json\n' >> "$P/rb_trace.jsonl"
 set +e
-OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$P" --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle "$P" --current-node phases/phase-readiness.md 2>/dev/null)
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$P" --gate readiness-passed -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-readiness-passed.mjs --bundle "$P" --current-node phases/phase-readiness.md 2>/dev/null)
 STATUS=$?
 set -e
 HAS=$(printf '%s\n' "$OUT" | grep -ci 'not valid JSON\|unparseable' || true)
@@ -164,10 +164,10 @@ node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.rec
 ## Step 4: Native completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role readiness-verdict)
-Q=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role missing-prior-gate)
-P=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role corrupt-trace)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "readiness-verdict=$B" --bundle "missing-prior-gate=$Q" --bundle "corrupt-trace=$P"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role readiness-verdict)
+Q=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role missing-prior-gate)
+P=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role corrupt-trace)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "readiness-verdict=$B" --bundle "missing-prior-gate=$Q" --bundle "corrupt-trace=$P"
 ```
 
 ## Step 5: 结果解读

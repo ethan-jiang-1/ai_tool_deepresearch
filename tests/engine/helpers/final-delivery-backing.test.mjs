@@ -12,7 +12,7 @@ import {
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { evaluateFinalDeliveryBacking } from '../../../DPT_FRAMEWORK/engine/helpers/final-delivery-backing.mjs';
+import { evaluateFinalDeliveryBacking } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/final-delivery-backing.mjs';
 import {
   claimAndSubmitFixtureWorkUnit,
   claimWorkUnitsViaCli,

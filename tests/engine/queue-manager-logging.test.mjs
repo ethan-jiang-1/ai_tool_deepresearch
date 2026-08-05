@@ -17,7 +17,7 @@ import {
   loadQueue,
   saveQueue,
   makeItem,
-} from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 describe('LOG-006 accident-grade diagnostics', () => {
   it('loadQueue writes load attempt/done events', () => {

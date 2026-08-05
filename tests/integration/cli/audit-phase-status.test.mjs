@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
 const REPO_ROOT = process.cwd();
-const CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/audit-phase-status.mjs');
+const CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs');
 
 after(cleanupAll);
 

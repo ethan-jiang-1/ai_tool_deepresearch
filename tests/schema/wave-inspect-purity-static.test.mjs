@@ -4,10 +4,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const FILES = [
-  'DPT_FRAMEWORK/cli/inspect-wave0-output.mjs',
-  'DPT_FRAMEWORK/cli/inspect-wave1-output.mjs',
-  'DPT_FRAMEWORK/cli/inspect-wave2-output.mjs',
-  'DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs',
+  'DEEP_RESEARCH_HARNESS/cli/inspect-wave0-output.mjs',
+  'DEEP_RESEARCH_HARNESS/cli/inspect-wave1-output.mjs',
+  'DEEP_RESEARCH_HARNESS/cli/inspect-wave2-output.mjs',
+  'DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs',
 ];
 
 const FORBIDDEN_DURABILITY_IDENTIFIERS = [
@@ -39,7 +39,7 @@ describe('wave inspect purity static guard', () => {
   }
 
   it('shared evaluator imports the pure bypass scanner but not the formal emitter', () => {
-    const content = readFileSync('DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs', 'utf8');
+    const content = readFileSync('DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs', 'utf8');
     assert.match(content, /scanDelegatedBypassSuspicion/);
     assert.doesNotMatch(content, /emitDelegatedBypassDiagnostic/);
   });

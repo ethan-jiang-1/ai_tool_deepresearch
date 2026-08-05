@@ -7,7 +7,7 @@ import {
   resolveReferenceTopicBinding,
   resolveStructuredTopicBinding,
   resolveTopicLayout,
-} from '../../../DPT_FRAMEWORK/engine/helpers/topic-layout.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/topic-layout.mjs';
 
 const topics = [
   {

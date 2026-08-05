@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import os from 'node:os';
 import path from 'node:path';
 
-import { checkPhaseQueueDrained } from '../../../DPT_FRAMEWORK/engine/helpers/phase-queue-drain.mjs';
+import { checkPhaseQueueDrained } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/phase-queue-drain.mjs';
 
 const created = [];
 function tempBundle() {

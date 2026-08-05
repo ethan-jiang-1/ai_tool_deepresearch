@@ -40,7 +40,7 @@ node experiments_env/shared/run-post-final-recovery-case.mjs \
 ## Step 2 - Record the exact case-owned checks
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
 node --input-type=module - "$B" "$STATE/case317-result.json" <<'JS'
 import { appendFileSync, readFileSync } from 'node:fs';
@@ -67,8 +67,8 @@ JS
 ## Step 3 - Native completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Light health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

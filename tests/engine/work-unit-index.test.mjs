@@ -6,7 +6,7 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { makeItem } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { makeItem } from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import {
   createWorkUnit,
   loadWorkUnitIndex,
@@ -14,7 +14,7 @@ import {
   validateWorkIdBinding,
   workUnitIndexPath,
   workUnitsRoot,
-} from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 
 function tempBundle() {
   return mkdtempSync(path.join(os.tmpdir(), 'wu-'));

@@ -9,15 +9,15 @@ function read(path) {
   return readFileSync(path, 'utf8');
 }
 
-const HITL1_BRIEF = 'DPT_FRAMEWORK/workflows/nodes/brief/hitl1.md';
-const HITL2_BRIEF = 'DPT_FRAMEWORK/workflows/nodes/brief/hitl2.md';
-const HITL1_PHASE = 'DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl1.md';
-const HITL2_PHASE = 'DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl2.md';
-const FINAL_PHASE = 'DPT_FRAMEWORK/workflows/nodes/phases/phase-final.md';
-const SEED_PHASE = 'DPT_FRAMEWORK/workflows/nodes/phases/phase-seed-topics.md';
-const UX = 'DPT_FRAMEWORK/workflows/nodes/shared/shared-agent-ux-guidance.md';
-const SILENT = 'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md';
-const CHAIN = 'DPT_FRAMEWORK/engine/workflow-chain.mjs';
+const HITL1_BRIEF = 'DEEP_RESEARCH_HARNESS/workflows/nodes/brief/hitl1.md';
+const HITL2_BRIEF = 'DEEP_RESEARCH_HARNESS/workflows/nodes/brief/hitl2.md';
+const HITL1_PHASE = 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl1.md';
+const HITL2_PHASE = 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl2.md';
+const FINAL_PHASE = 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-final.md';
+const SEED_PHASE = 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-seed-topics.md';
+const UX = 'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-agent-ux-guidance.md';
+const SILENT = 'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-silent-execution.md';
+const CHAIN = 'DEEP_RESEARCH_HARNESS/engine/workflow-chain.mjs';
 
 describe('iterative research interaction contract', () => {
   it('makes HITL1 recommendation-first with concrete must-answer and natural-language acceptance', () => {

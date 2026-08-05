@@ -8,11 +8,11 @@ import assert from 'node:assert/strict';
 const REPO_ROOT = join(import.meta.dirname, '../../..');
 
 const DOCS = {
-  sourceIntake: 'DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-source-intake.md',
-  evidenceExtractor: 'DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-evidence-extractor.md',
-  sharedFetch: 'DPT_FRAMEWORK/workflows/nodes/shared/shared-page-fetch-guidance.md',
-  wave0: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md',
-  wave1: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md',
+  sourceIntake: 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/subagent-dpt-source-intake.md',
+  evidenceExtractor: 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/subagent-dpt-evidence-extractor.md',
+  sharedFetch: 'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-page-fetch-guidance.md',
+  wave0: 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md',
+  wave1: 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md',
 };
 
 function read(relPath) {

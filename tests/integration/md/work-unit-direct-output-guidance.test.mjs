@@ -6,16 +6,16 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { makeItem } from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
-import { createWorkUnit } from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { makeItem } from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
+import { createWorkUnit } from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 
 const ROOT = process.cwd();
 const WHITELIST = [
-  'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md',
-  'DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md',
-  'DPT_FRAMEWORK/workflows/nodes/shared/shared-schemas.md',
-  'DPT_FRAMEWORK/COMMANDS.md',
-  'DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-evidence-extractor.md',
+  'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md',
+  'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md',
+  'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-schemas.md',
+  'DEEP_RESEARCH_HARNESS/COMMANDS.md',
+  'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/subagent-dpt-evidence-extractor.md',
 ];
 
 function text(relativePath) {
@@ -104,12 +104,12 @@ describe('approved production Markdown owners', () => {
 describe('direct-contract inventory whitelist', () => {
   it('keeps every other phase, role, and shared node free of duplicated closed inventory outside the canonical rich Wave1 role template', async () => {
     const { readdir } = await import('node:fs/promises');
-    const nodeRoot = path.join(ROOT, 'DPT_FRAMEWORK/workflows/nodes');
+    const nodeRoot = path.join(ROOT, 'DEEP_RESEARCH_HARNESS/workflows/nodes');
     const files = await readdir(nodeRoot, { recursive: true });
     const forbidden = /assignment_contract_version|required_outputs|direct_contract|set-assignment-mode|wave0\.source-metadata-array\.v1|wave1\.evidence-summary\.v1|wave1\.question-list\.v1/;
     const violations = files
       .filter((file) => file.endsWith('.md'))
-      .map((file) => path.join('DPT_FRAMEWORK/workflows/nodes', file))
+      .map((file) => path.join('DEEP_RESEARCH_HARNESS/workflows/nodes', file))
       .filter((file) => !WHITELIST.includes(file))
       .filter((file) => forbidden.test(text(file)));
     assert.deepEqual(violations, []);

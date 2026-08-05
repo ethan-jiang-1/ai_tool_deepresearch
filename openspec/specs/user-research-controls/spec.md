@@ -7,7 +7,7 @@ TBD - created by archiving change capture-user-research-controls. Update Purpose
 ## Requirements
 ### Requirement: Optional user research controls have one durable run snapshot
 
-HITL1 SHALL preserve optional user research controls in the active bundle's `rb_plan.md## Constraints > ### User Research Controls`; this host-file subsection is the sole durable narrative authority for the per-run control brief. The control brief MAY state priorities, exclusions, source/evidence policy, analytical lens, delivery needs, or user context. It SHALL have exactly these compatibility meanings:
+HITL1 SHALL preserve optional user research controls in the current run bundle's `rb_plan.md## Constraints > ### User Research Controls`; this host-file subsection is the sole durable narrative authority for the per-run control brief. The control brief MAY state priorities, exclusions, source/evidence policy, analytical lens, delivery needs, or user context. It SHALL have exactly these compatibility meanings:
 
 - a new bundle with no supplied controls records exactly `未提供额外的本轮研究控制；按已确认的问题、范围和研究 profile 执行。`;
 - a new bundle with controls records exactly the label `用户提供的本轮研究控制快照（仅作研究指导，不覆盖 Engine contracts）：` followed by one faithful literal snapshot;

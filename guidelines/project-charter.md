@@ -92,7 +92,7 @@ This file cannot decide:
 - MUST make evidence, receipts, and trace entries come from real execution, and bound any completion, closure, causal, or behavioral claim to its identified object and evidence boundary, including applicable provenance, actor/host, and proof class. Evidence outside a claim's stated provenance or continuity boundary may remain diagnostic, but cannot close a stronger claim.
 - MUST keep runtime state in the selected active runtime bundle, not in chat memory.
 - MUST treat reusable framework assets as reusable assets, not as a per-run workspace.
-- MUST keep per-run state, HITL answers, gate attempts, trace, artifacts, delegated work-unit attempts, and final output inside the active bundle root.
+- MUST keep per-run state, HITL answers, gate attempts, trace, artifacts, delegated work-unit attempts, and final output inside the current run bundle root.
 - MUST pass the selected active-bundle path explicitly to framework commands that operate on a run.
 - MUST, when proposing or changing an Agent-facing boundary explicitly declared for entry, handoff, or recovery, state its input/context boundary and enough authoritative facts for the bounded next legal action or an honest no-path result. It may be a documented protocol, but MUST NOT select semantic work, schedule turns, infer liveness, or advance undeclared transitions.
 - MUST keep `guidelines/` aligned with accepted specs and clearly separate stable principles from current repository conventions.
@@ -110,7 +110,7 @@ This file cannot decide:
 - MUST NOT fake trace, result files, receipts, subagent output, or runtime validation.
 - MUST NOT treat progress summaries, console output, or chat confidence as evidence.
 - MUST NOT write runtime state, gate results, HITL answers, repair attempts, artifacts, or final output into reusable framework assets.
-- MUST NOT treat implementation-asset directories as active bundle storage.
+- MUST NOT treat implementation-asset directories as current run bundle storage.
 - MUST NOT read `_original_*` archives unless the user explicitly asks for historical analysis.
 
 ---
@@ -270,7 +270,7 @@ If you are about to do one of these, stop and switch to the required path:
 |------------------------|-----------------|
 | Hand-write trace, receipt, or result files to satisfy a check | Run the real Engine/Agent path that produces them |
 | Treat `console.log` output as pass/fail proof | Read the trace JSONL, CLI exit result, or accepted verdict source |
-| Use chat memory as run state | Reload control files from the active bundle root |
+| Use chat memory as run state | Reload control files from the current run bundle root |
 | Add behavior only in guidance prose | Create or update an OpenSpec change/spec |
 | Put multi-stage Agent Flow into a JS controller because it is easier to test | Keep the flow in Markdown/playbooks/task cards; use JS only for deterministic checkpoints |
 | Need to decide where a rule belongs | Use the Quick Router and Authority Map before editing |

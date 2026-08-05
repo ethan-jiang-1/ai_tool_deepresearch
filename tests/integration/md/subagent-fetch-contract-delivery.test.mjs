@@ -6,7 +6,7 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import { parse as parseYaml } from 'yaml';
 
-const frameworkRoot = path.resolve('DPT_FRAMEWORK');
+const frameworkRoot = path.resolve('DEEP_RESEARCH_HARNESS');
 const sharedRef = 'workflows/nodes/shared/shared-page-fetch-guidance.md';
 const roleRefs = [
   'workflows/nodes/phases/subagent-dpt-source-intake.md',

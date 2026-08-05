@@ -4,13 +4,13 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { writeGateAttempt } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { writeGateAttempt } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 import { setStatusWindow } from './handoff-fixtures.mjs';
 
 const REPO_ROOT = process.cwd();
-const OPERATE_QUEUE = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/operate-queue.mjs');
-const SEED_GATE = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs');
-const ENTER_PHASE = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/enter-phase.mjs');
+const OPERATE_QUEUE = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs');
+const SEED_GATE = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-seed-topics-ready.mjs');
+const ENTER_PHASE = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];

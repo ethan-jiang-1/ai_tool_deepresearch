@@ -12,14 +12,14 @@
 
 Section 内容要求：
 - **Stage Goal**: 创建 bundle 和 canonical scaffold，不替代后续 HITL / setup / wave
-- **Required Inputs**: 用户原始 research question（用于命名）和 `DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs`
+- **Required Inputs**: 用户原始 research question（用于命名）和 `DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs`
 - **Allowed Actions**:
   - 生成合适的 bundle 名
-  - 调用 `node DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs <name>`
+  - 调用 `node DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs <name>`
   - 读取 CLI 返回的 bundle 路径
   - reload 新建 bundle 的 control files 和目录结构
 - **Expected Artifacts**: 新建 bundle 目录、`BUNDLE_MAP.md`、5 个 `rb_*` control files、canonical scaffold dirs
-- **Gate Command**: `node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle <path> --current-node phases/phase-instantiation.md`
+- **Gate Command**: `node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-instantiation-complete.mjs --bundle <path> --current-node phases/phase-instantiation.md`
 - **On Gate Pass**: 读取 `check.next`
 - **On Gate Fail**: 读取 `inspect` / `advice`，修复缺失或漂移的 instantiation surface，rerun same gate（默认最多 3 次）
 - **Stop Behavior**: `stop: no`
@@ -205,7 +205,7 @@ Initial topic-state apply SHALL run only after `enter-phase` has populated `rb_s
 
 Section 内容要求：
 - **Stage Goal**: 验证 bundle 在进入 wave0 前的 structural consistency
-- **Required Inputs**: active bundle、`shared-profile.md`、`shared-schemas.md`
+- **Required Inputs**: current run bundle、`shared-profile.md`、`shared-schemas.md`
 - **Allowed Actions**:
   - 检查 control files 是否存在且可解析
   - 检查 scaffold dirs 是否存在
@@ -213,7 +213,7 @@ Section 内容要求：
   - 检查 `rb_status.json` 仍然是 `current_gate: setup_ready` / `next_gate: seed_topics_ready`
   - 按 accepted normalization 规则检查 bundle dir basename、`rb_plan.md` frontmatter `plan_basename`、`rb_profile.yaml` `plan_basename` 一致
 - **Expected Artifacts**: 一致的 pre-wave0 bundle surface
-- **Gate Command**: `node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle <path> --current-node phases/phase-setup.md`
+- **Gate Command**: `node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs --bundle <path> --current-node phases/phase-setup.md`
 - **On Gate Pass**: 读取 `check.next`
 - **On Gate Fail**: 读取 `inspect` / `advice`，修复后 rerun
 - **Stop Behavior**: `stop: no`

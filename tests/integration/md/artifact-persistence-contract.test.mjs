@@ -9,16 +9,16 @@ function read(relativePath) {
 }
 
 describe('artifact persistence contract stays small and Agent-facing', () => {
-  const helper = read('DPT_FRAMEWORK/engine/helpers/artifact-persistence.mjs');
-  const cli = read('DPT_FRAMEWORK/cli/operate-artifact-persistence.mjs');
-  const commands = read('DPT_FRAMEWORK/COMMANDS.md');
-  const playbook = read('DPT_FRAMEWORK/command_playbook/persist-artifact.md');
-  const phaseFinal = read('DPT_FRAMEWORK/workflows/nodes/phases/phase-final.md');
+  const helper = read('DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs');
+  const cli = read('DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs');
+  const commands = read('DEEP_RESEARCH_HARNESS/COMMANDS.md');
+  const playbook = read('DEEP_RESEARCH_HARNESS/command_playbook/persist-artifact.md');
+  const phaseFinal = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-final.md');
   const context = read('CONTEXT.md');
   const changelog = read('CHANGELOG.md');
-  const run = read('DPT_FRAMEWORK/RUN.md');
-  const subagent = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md');
-  const antiCheating = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-anti-cheating-rules.md');
+  const run = read('DEEP_RESEARCH_HARNESS/RUN.md');
+  const subagent = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md');
+  const antiCheating = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-anti-cheating-rules.md');
 
   it('exposes one workspace, three operations, supported roots, and excluded authority surfaces', () => {
     assert.match(helper, /ARTIFACT_PERSISTENCE_ROOT = '_diagnostics\/artifact-persistence'/);
@@ -70,7 +70,7 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
     assert.match(changelog, /structural path\/provenance feedback only/);
     assert.match(changelog, /## v0\.71/);
     assert.match(changelog, /no aliases,\n  automatic repair, Queue edit path, or Actor-behavior proof/);
-    assert.match(run, /DPT_FRAMEWORK v0\.71/);
+    assert.match(run, /DEEP_RESEARCH_HARNESS v0\.71/);
     assert.match(run, /Current Release: v0\.71/);
     assert.match(run, /non-persisted Engine feedback projections only/);
     assert.match(run, /structural path\/provenance admission only/);

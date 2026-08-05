@@ -7,15 +7,15 @@
 The real subagent path requires project-level agent definitions before the native Codex / Claude Code experiments run. A DPT command playbook prepares those definitions without running the experiments.
 ## Requirements
 ### Requirement: Command playbook prepares real subagent environment
-The `DPT_FRAMEWORK/command_playbook/setup-real-subagents.md` playbook SHALL instruct an agent to create or update project-local Codex and Claude Code role-agent definitions for the DPT real subagent taxonomy.
+The `DEEP_RESEARCH_HARNESS/command_playbook/setup-real-subagents.md` playbook SHALL instruct an agent to create or update project-local Codex and Claude Code role-agent definitions for the DPT real subagent taxonomy.
 
 #### Scenario: Agent follows setup playbook
-- **WHEN** an agent reads `DPT_FRAMEWORK/command_playbook/setup-real-subagents.md`
+- **WHEN** an agent reads `DEEP_RESEARCH_HARNESS/command_playbook/setup-real-subagents.md`
 - **THEN** it creates `.claude/agents/` and `.codex/agents/` if missing
 - **AND** it prepares role-agent definitions for `dpt-source-intake`, `dpt-source-diagnostic`, `dpt-claim-verifier`, `dpt-evidence-extractor`, `dpt-topic-scout`, and `dpt-synthesis-reviewer`
 
 #### Scenario: Command index lists setup playbook
-- **WHEN** a developer reads `DPT_FRAMEWORK/COMMANDS.md`
+- **WHEN** a developer reads `DEEP_RESEARCH_HARNESS/COMMANDS.md`
 - **THEN** `setup-real-subagents` is listed under command playbooks
 
 ### Requirement: Setup writes both Claude Code and Codex project agent definitions

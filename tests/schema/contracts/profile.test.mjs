@@ -1,7 +1,7 @@
-// tests/schema/contracts/profile.test.mjs — 1:1 for DPT_FRAMEWORK/schema/contracts/profile.mjs
+// tests/schema/contracts/profile.test.mjs — 1:1 for DEEP_RESEARCH_HARNESS/schema/contracts/profile.mjs
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ProfileSchema } from '../../../DPT_FRAMEWORK/schema/contracts/profile.mjs';
+import { ProfileSchema } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/profile.mjs';
 
 const valid = {
   plan_basename: 'test',

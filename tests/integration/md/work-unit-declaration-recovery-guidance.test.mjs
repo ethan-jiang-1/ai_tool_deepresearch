@@ -7,9 +7,9 @@ function read(relativePath) {
 }
 
 describe('work-unit declaration recovery guidance', () => {
-  const commands = read('DPT_FRAMEWORK/COMMANDS.md');
-  const protocol = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md');
-  const forensics = read('DPT_FRAMEWORK/command_playbook/provenance-forensics-guide.md');
+  const commands = read('DEEP_RESEARCH_HARNESS/COMMANDS.md');
+  const protocol = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md');
+  const forensics = read('DEEP_RESEARCH_HARNESS/command_playbook/provenance-forensics-guide.md');
 
   it('documents one existing-owner command without a result argument', () => {
     for (const text of [commands, protocol, forensics]) {

@@ -19,7 +19,7 @@ function around(text, pattern) {
 
 describe('parallel delegated phase execution guidance', () => {
   it('shared protocol teaches bounded top-up batch claiming and drain-before-gate order', () => {
-    const text = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md');
+    const text = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md');
     assert.match(text, /bounded top-up/i);
     assert.match(text, /--count <claim-count>/);
     assert.match(text, /accepted\/default cap/i);
@@ -30,7 +30,7 @@ describe('parallel delegated phase execution guidance', () => {
   });
 
   it('silent execution treats notifications as hints and requires active poll-submit-repair-terminalize', () => {
-    const text = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md');
+    const text = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-silent-execution.md');
     assert.match(text, /active poll-submit-repair-terminalize loop/i);
     assert.match(text, /notifications? are hints only/i);
     assert.match(text, /operate-work-unit(?:\.mjs)? inspect/i);
@@ -41,8 +41,8 @@ describe('parallel delegated phase execution guidance', () => {
 
   it('Wave0 and Wave1 phase docs claim independent work in bounded top-up batches', () => {
     for (const relPath of [
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md',
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md',
     ]) {
       const text = read(relPath);
       assert.match(text, /bounded top-up/i, relPath);
@@ -57,9 +57,9 @@ describe('parallel delegated phase execution guidance', () => {
 
   it('Wave phases route terminal timeout through timeout-preflight advice', () => {
     for (const relPath of [
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md',
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md',
-      'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave2.md',
     ]) {
       const text = read(relPath);
       assert.match(text, /timeout-preflight/i, relPath);
@@ -74,7 +74,7 @@ describe('parallel delegated phase execution guidance', () => {
   });
 
   it('shared protocol keeps timeout-preflight before terminal timeout and force exceptional', () => {
-    const text = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md');
+    const text = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md');
     assert.match(text, /timeout-preflight/i);
     assert.match(text, /recommended_action/i);
     assert.match(text, /submit[\s\S]*repair[\s\S]*wait[\s\S]*inspect[\s\S]*block[\s\S]*timeout/i);
@@ -86,9 +86,9 @@ describe('parallel delegated phase execution guidance', () => {
 describe('Sub-agent observable progress guidance', () => {
   it('active sub-agent roles emit batch-level progress and keep it diagnostic-only', () => {
     for (const relPath of [
-      'DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-source-intake.md',
-      'DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-evidence-extractor.md',
-      'DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-topic-scout.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/subagent-dpt-source-intake.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/subagent-dpt-evidence-extractor.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/subagent-dpt-topic-scout.md',
     ]) {
       const text = read(relPath);
       for (const eventName of [
@@ -110,7 +110,7 @@ describe('Sub-agent observable progress guidance', () => {
   });
 
   it('shared protocol describes progress receipts as timeout-preflight diagnostics only', () => {
-    const text = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md');
+    const text = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md');
     assert.match(text, /batch-level progress/i);
     assert.match(text, /timeout preflight distinguish no progress from slow progress/i);
     assert.match(text, /do not append ledger rows, satisfy source claims, count gate coverage, or replace formal `operate-work-unit submit`/i);
@@ -120,7 +120,7 @@ describe('Sub-agent observable progress guidance', () => {
 
 describe('Phase-owned reference materialization guidance', () => {
   it('anti-cheating and reference template distinguish projections from delegated authority', () => {
-    const anti = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-anti-cheating-rules.md');
+    const anti = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-anti-cheating-rules.md');
     assert.match(anti, /Phase-owned consumer reference projection/i);
     assert.match(anti, /submitted source claims/i);
     assert.match(anti, /filesystem-only/i);
@@ -128,7 +128,7 @@ describe('Phase-owned reference materialization guidance', () => {
     assert.match(anti, /source_layer.*not.*authority/i);
     assert.match(anti, /script|template/i);
 
-    const template = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-reference-template.md');
+    const template = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-reference-template.md');
     assert.match(template, /Phase-owned materialization/i);
     assert.match(template, /submitted source claims/i);
     assert.match(template, /body refs/i);
@@ -137,7 +137,7 @@ describe('Phase-owned reference materialization guidance', () => {
   });
 
   it('Wave1 assigns topic reference materialization to the Phase Agent after submit', () => {
-    const text = read('DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md');
+    const text = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md');
     assert.match(text, /Phase Agent materializes/i);
     assert.match(text, /reference\/\{topic\.slug\}-<source-slug>\.md/i);
     assert.match(text, /submitted source_claims\[\]/i);
@@ -148,7 +148,7 @@ describe('Phase-owned reference materialization guidance', () => {
   });
 
   it('Wave2 splits existing-backed 00-cross projections from new targeted evidence', () => {
-    const text = read('DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md');
+    const text = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave2.md');
     assert.match(text, /existing-backed/i);
     assert.match(text, /reference\/00-cross-\*\.md/i);
     assert.match(text, /W2F-xxx/i);
@@ -161,7 +161,7 @@ describe('Phase-owned reference materialization guidance', () => {
 
 describe('Sub-agent role contracts return source substrate', () => {
   it('dpt-evidence-extractor returns source backing, not canonical topic reference presentation', () => {
-    const text = read('DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-evidence-extractor.md');
+    const text = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/subagent-dpt-evidence-extractor.md');
     assert.match(text, /source_claims\[\]/);
     assert.match(text, /accepted_source_urls\[\]/);
     assert.match(text, /cache_trails\[\]/);
@@ -173,7 +173,7 @@ describe('Sub-agent role contracts return source substrate', () => {
   });
 
   it('dpt-topic-scout returns bounded targeted evidence and leaves authority files to the Phase Agent', () => {
-    const text = read('DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-topic-scout.md');
+    const text = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/subagent-dpt-topic-scout.md');
     assert.match(text, /source_urls/i);
     assert.match(text, /cache_trails\[\]/);
     assert.match(text, /fills_gap/i);

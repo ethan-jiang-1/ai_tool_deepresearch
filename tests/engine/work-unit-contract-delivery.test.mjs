@@ -10,10 +10,10 @@ import {
   describeDirectOutputContract,
   directOutputContractIds,
   evaluateDirectOutputTarget,
-} from '../../DPT_FRAMEWORK/engine/helpers/direct-output-contract.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/direct-output-contract.mjs';
 import {
   resolveWorkUnitRoleGuidanceForTest,
-} from '../../DPT_FRAMEWORK/engine/helpers/work-unit-role-guidance.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/work-unit-role-guidance.mjs';
 
 function temporaryFrameworkRoot() {
   return mkdtempSync(path.join(os.tmpdir(), 'work-unit-role-guidance-'));

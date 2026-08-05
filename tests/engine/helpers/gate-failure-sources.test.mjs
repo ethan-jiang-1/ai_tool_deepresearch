@@ -12,9 +12,9 @@ import {
   resolveRouting,
   tryLoadGateDefinition,
   writeGateAttempt,
-} from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers-core.mjs';
-import { checkPhaseHandoffPreflight } from '../../../DPT_FRAMEWORK/engine/helpers/handoff-helpers.mjs';
-import { inspectCanonicalTopicState } from '../../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-core.mjs';
+import { checkPhaseHandoffPreflight } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs';
+import { inspectCanonicalTopicState } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
 
 const originalArgv = [...process.argv];
 const tempRoots = [];

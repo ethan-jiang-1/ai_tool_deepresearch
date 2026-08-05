@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { makeItem } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { makeItem } from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 
 export function tempBundle() {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'agq-'));

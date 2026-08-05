@@ -48,9 +48,9 @@ When multiple checkpoint manifests exist, reentry tooling SHALL select the lates
 
 ### Requirement: Reentry check SHALL validate runtime consistency for a target node
 
-The system SHALL provide `DPT_FRAMEWORK/cli/check-reentry.mjs --bundle <path> --at <target>`.
+The system SHALL provide `DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle <path> --at <target>`.
 
-The `--at` target vocabulary SHALL be closed and deterministic. Target normalization SHALL be derived from `DPT_FRAMEWORK/workflows/manifest.json` whenever possible, using each phase entry's `key`, `node`, and `gate`. Implementations SHALL NOT maintain a second hand-written phase/gate mapping that can drift from the manifest.
+The `--at` target vocabulary SHALL be closed and deterministic. Target normalization SHALL be derived from `DEEP_RESEARCH_HARNESS/workflows/manifest.json` whenever possible, using each phase entry's `key`, `node`, and `gate`. Implementations SHALL NOT maintain a second hand-written phase/gate mapping that can drift from the manifest.
 
 The checker SHALL normalize targets into one of:
 - `kind: "gate"`: a gate or lifecycle checkpoint value comparable to `rb_status.json#/current_gate`, such as `wave1_complete` or `hitl2_recorded`
@@ -136,7 +136,7 @@ The CLI SHALL NOT mutate runtime files.
 - **THEN** output SHALL include `normalized_target.kind = "phase"`
 - **AND** output SHALL include `normalized_target.node_ref = "phases/phase-wave1.md"`
 - **AND** output SHALL include the mapped reentry gate/checkpoint for wave1
-- **AND** the mapping SHALL be derived from `DPT_FRAMEWORK/workflows/manifest.json`
+- **AND** the mapping SHALL be derived from `DEEP_RESEARCH_HARNESS/workflows/manifest.json`
 
 #### Scenario: Unknown target fails closed
 
@@ -320,7 +320,7 @@ The recovery summary SHALL be validated by an Engine-owned Zod schema. Per-root 
 
 Blocking canonical primary findings SHALL participate in the existing reentry verdict: they SHALL make `check.passed` false and produce exit code `1`. Warning/info canonical findings SHALL remain non-blocking. The projection SHALL reuse the same canonical finding or post-final eligibility result rather than reimplementing the audit condition in the CLI.
 
-Reentry diagnostics SHALL derive these facts from active bundle files and existing deterministic transition/handoff/recovery helpers. They SHALL NOT rely on chat memory and SHALL NOT mutate runtime authority.
+Reentry diagnostics SHALL derive these facts from current run bundle files and existing deterministic transition/handoff/recovery helpers. They SHALL NOT rely on chat memory and SHALL NOT mutate runtime authority.
 
 Immediately after legal post-final `enter-phase` and existing `advance-status --to hitl2_recorded` synchronization, Agent-facing postcondition guidance SHALL invoke `check-reentry --at hitl2_recorded`, because that is the current source-gate checkpoint. Before status sync, the only action SHALL be that exact `advance-status` command. It SHALL NOT recommend `--at phase-rerun` / `rerun_ready` until the rerun-ready gate has actually passed.
 

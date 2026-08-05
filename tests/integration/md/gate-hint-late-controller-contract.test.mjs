@@ -14,7 +14,7 @@ const PHASES = [
 ];
 
 function readPhase(name) {
-  return readFileSync(new URL(`../../../DPT_FRAMEWORK/workflows/nodes/phases/${name}`, import.meta.url), 'utf8');
+  return readFileSync(new URL(`../../../DEEP_RESEARCH_HARNESS/workflows/nodes/phases/${name}`, import.meta.url), 'utf8');
 }
 
 function gateFailSection(markdown) {

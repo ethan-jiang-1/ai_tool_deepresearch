@@ -104,7 +104,7 @@ describe('wave inspect output and purity', () => {
     it(`${cli} preserves structured fields and writes nothing`, () => {
       const bundle = writeBundle();
       const before = snapshot(bundle);
-      const result = spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli', cli), '--bundle', bundle], { encoding: 'utf8', timeout: 10000 });
+      const result = spawnSync('node', [join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli', cli), '--bundle', bundle], { encoding: 'utf8', timeout: 10000 });
       assert.ok([0, 1].includes(result.status), result.stderr || result.stdout);
       const output = JSON.parse(result.stdout);
       assert.equal(typeof output.check.passed, 'boolean');
@@ -134,7 +134,7 @@ describe('wave inspect output and purity', () => {
     });
 
     it(`${cli} uses exit code 2 when --bundle has no value`, () => {
-      const result = spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli', cli), '--bundle'], { encoding: 'utf8' });
+      const result = spawnSync('node', [join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli', cli), '--bundle'], { encoding: 'utf8' });
       assert.equal(result.status, 2);
       const output = JSON.parse(result.stdout);
       assert.equal(output.check.passed, false);
@@ -147,12 +147,12 @@ describe('wave inspect output and purity', () => {
     it(`${cli} treats standalone help and malformed bundle grammar as side-effect-free invocation handling`, () => {
       const bundle = writeBundle();
       const before = snapshot(bundle);
-      const help = spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli', cli), '--help'], { encoding: 'utf8', timeout: 10000 });
+      const help = spawnSync('node', [join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli', cli), '--help'], { encoding: 'utf8', timeout: 10000 });
       assert.equal(help.status, 0, help.stderr || help.stdout);
       assert.match(help.stdout, /Usage:/);
       assert.deepEqual(snapshot(bundle), before);
 
-      const bare = spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli', cli), bundle], { encoding: 'utf8', timeout: 10000 });
+      const bare = spawnSync('node', [join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli', cli), bundle], { encoding: 'utf8', timeout: 10000 });
       assert.equal(bare.status, 2, bare.stderr || bare.stdout);
       const output = JSON.parse(bare.stdout);
       assert.equal(output.check.passed, false);
@@ -166,7 +166,7 @@ describe('wave inspect output and purity', () => {
   it('Wave0 inspect accepts UID-only shared-reference binding without legacy-field advice', () => {
     const bundle = writeBundle();
     writeFileSync(join(bundle, 'reference/00-shared-topic-a.md'), completeReference(`- related_topic_uid: ${TOPIC_UID}`));
-    const result = spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-wave0-output.mjs'), '--bundle', bundle], { encoding: 'utf8', timeout: 10000 });
+    const result = spawnSync('node', [join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/inspect-wave0-output.mjs'), '--bundle', bundle], { encoding: 'utf8', timeout: 10000 });
     assert.ok([0, 1].includes(result.status), result.stderr || result.stdout);
     const output = JSON.parse(result.stdout);
     assert.equal(output.inspect.some((line) => line.includes("missing required key 'related_topic'")), false, JSON.stringify(output));
@@ -175,7 +175,7 @@ describe('wave inspect output and purity', () => {
   it('Wave2 inspect accepts UID-only cross-reference binding without legacy-field advice', () => {
     const bundle = writeBundle();
     writeFileSync(join(bundle, 'reference/00-cross-topic-a.md'), completeReference(`- related_topic_uid: ${TOPIC_UID}`));
-    const result = spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-wave2-output.mjs'), '--bundle', bundle], { encoding: 'utf8', timeout: 10000 });
+    const result = spawnSync('node', [join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/inspect-wave2-output.mjs'), '--bundle', bundle], { encoding: 'utf8', timeout: 10000 });
     assert.ok([0, 1].includes(result.status), result.stderr || result.stdout);
     const output = JSON.parse(result.stdout);
     assert.equal(output.inspect.some((line) => line.includes("missing expected key 'related_topic'")), false, JSON.stringify(output));

@@ -25,7 +25,7 @@ const {
   loadMarkdownFile,
   executeLoadPlan,
   assessNode,
-} = await import('../../DPT_FRAMEWORK/engine/workflow-chain.mjs');
+} = await import('../../DEEP_RESEARCH_HARNESS/engine/workflow-chain.mjs');
 
 const TMP_DIR = join(__dirname, '.test-tmp');
 

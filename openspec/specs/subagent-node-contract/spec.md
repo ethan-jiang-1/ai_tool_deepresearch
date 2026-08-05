@@ -78,7 +78,7 @@ The directive SHALL route completion back through work-unit submit and SHALL NOT
 
 ### Requirement: Sub-agent role specs SHALL require beacon-first absolute path resolution and file existence verification before return
 
-Sub-agent role specs, shared sub-agent protocol, generated work-unit task Markdown, and Phase Agent spawn prompts SHALL require the sub-agent to read the assigned `_beacon.json` before writing runtime files, extract `bundle_dir`, and resolve all runtime output paths against that active bundle root. Spawn prompts SHALL also inline the exact identity block (`work_id`, `queue_item_id`, `kind`, `receipt_nonce`, `bundle_dir`, key refs) so the sub-agent does not invent identity fields or rely on ambiguous relative paths.
+Sub-agent role specs, shared sub-agent protocol, generated work-unit task Markdown, and Phase Agent spawn prompts SHALL require the sub-agent to read the assigned `_beacon.json` before writing runtime files, extract `bundle_dir`, and resolve all runtime output paths against that current run bundle root. Spawn prompts SHALL also inline the exact identity block (`work_id`, `queue_item_id`, `kind`, `receipt_nonce`, `bundle_dir`, key refs) so the sub-agent does not invent identity fields or rely on ambiguous relative paths.
 
 Before returning success, the sub-agent SHALL verify required output files exist and are non-empty where applicable. Failure to write or verify files SHALL be reported as work-unit failure.
 
@@ -101,14 +101,14 @@ Current work-unit sub-agent roles SHALL NOT produce terminal `final/` report art
 
 #### Scenario: Repo-root writes are invalid sub-agent output
 
-- **WHEN** a sub-agent writes `_work_units/...`, `artifacts/...`, or `_cache/...` relative to repo root instead of active bundle root
+- **WHEN** a sub-agent writes `_work_units/...`, `artifacts/...`, or `_cache/...` relative to repo root instead of current run bundle root
 - **THEN** submit or inspection SHALL reject or diagnose the output as a bundle-root violation
 - **AND** the leaked repo-root files SHALL NOT count as work-unit completion
 
 #### Scenario: File existence verification is part of successful return
 
 - **WHEN** a work-unit task declares output files and cache trails
-- **THEN** the sub-agent SHALL verify those files under active bundle root before returning success
+- **THEN** the sub-agent SHALL verify those files under current run bundle root before returning success
 - **AND** if verification fails it SHALL return a failure summary rather than only content findings
 
 #### Scenario: Write-producing role declares filesystem write capability
@@ -373,7 +373,7 @@ For each completed fetch tier, guidance SHALL require an actor-written existing 
 
 ### Requirement: Sub-agent slow work SHALL emit observable progress before timeout risk
 
-Sub-agent role guidance and generated work-unit task guidance SHALL instruct Sub-agents performing slow search, fetch, extraction, output, or cache work to emit concise lifecycle progress around bounded batches. Progress events SHALL preserve the assigned `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`, and SHALL write to the assigned work-unit runtime receipt or logging surface under the active bundle root.
+Sub-agent role guidance and generated work-unit task guidance SHALL instruct Sub-agents performing slow search, fetch, extraction, output, or cache work to emit concise lifecycle progress around bounded batches. Progress events SHALL preserve the assigned `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`, and SHALL write to the assigned work-unit runtime receipt or logging surface under the current run bundle root.
 
 Progress guidance SHALL be batch-level rather than noisy per-token or private-reasoning output. Suitable progress points include work start, search batch start/done, fetch batch start/done, cache write, result draft write, output verification, and work done. If a Sub-agent cannot write a progress receipt/log before a long operation, guidance SHALL instruct it to keep the long operation bounded and to write progress as soon as the bundle-root write surface is available.
 

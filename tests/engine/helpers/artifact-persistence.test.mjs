@@ -25,7 +25,7 @@ import {
   persistBundleFile,
   sha256File,
   sweepPendingArtifactWrites,
-} from '../../../DPT_FRAMEWORK/engine/helpers/artifact-persistence.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs';
 
 const roots = [];
 

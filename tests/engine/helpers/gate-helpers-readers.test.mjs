@@ -15,7 +15,7 @@ import {
   readOutputDeclarations,
   readNormalizedSubmittedWorkUnitDeclarations,
   readSubmittedWorkUnitDeclarations,
-} from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 import {
   availableActorDecision,
   claimAndSubmitWorkUnit,
@@ -27,7 +27,7 @@ import {
   enqueue,
   makeItem,
   saveQueue,
-} from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import {
   claimWorkUnits,
   closeWorkUnitAttempt,
@@ -37,7 +37,7 @@ import {
   readWorkUnitLedgerRows,
   saveWorkUnitIndex,
   submitWorkUnit,
-} from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-gate-helpers-readers-tmp');

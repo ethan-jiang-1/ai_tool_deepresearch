@@ -7,7 +7,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const REPO_ROOT = path.resolve(new URL('../../..', import.meta.url).pathname);
-const CLI = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/validate-work-unit-hygiene.mjs');
+const CLI = path.join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/validate-work-unit-hygiene.mjs');
 const TMP_PARENT = mkdtempSync(path.join(os.tmpdir(), 'wu-hygiene-'));
 
 after(() => rmSync(TMP_PARENT, { recursive: true, force: true }));
@@ -36,33 +36,33 @@ function writeMinimalWiring(root) {
     'export function scanDelegatedBypassSuspicion() {}',
     'export function emitDelegatedBypassDiagnostic() {}',
   ].join('\n');
-  writeFixture(root, 'DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs', helper);
+  writeFixture(root, 'DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-provenance.mjs', helper);
   const evaluator = [
     'checkWorkUnitLedgerExists();',
     'checkWorkUnitOutputCoverage();',
     'checkWorkUnitSubmissionPresence();',
     'scanDelegatedBypassSuspicion();',
   ].join('\n');
-  writeFixture(root, 'DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs', evaluator);
+  writeFixture(root, 'DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs', evaluator);
   for (const wave of ['wave0', 'wave1', 'wave2']) {
     const evaluatorName = `evaluate${wave[0].toUpperCase()}${wave.slice(1)}Contract`;
-    writeFixture(root, `DPT_FRAMEWORK/cli/gates/check-gate-${wave}-complete.mjs`, `${evaluatorName}();\nemitDelegatedBypassDiagnostic();\n`);
+    writeFixture(root, `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-${wave}-complete.mjs`, `${evaluatorName}();\nemitDelegatedBypassDiagnostic();\n`);
   }
-  writeFixture(root, 'DPT_FRAMEWORK/cli/operate-work-unit.mjs', [
+  writeFixture(root, 'DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs', [
     'claimWorkUnits();',
     'submitWorkUnit();',
     'closeWorkUnitAttempt();',
     'openWorkUnitBatch();',
     'inspectWorkUnits();',
   ].join('\n'));
-  writeFixture(root, 'DPT_FRAMEWORK/rb_templates/rb_queue.json.tmpl', JSON.stringify({
+  writeFixture(root, 'DEEP_RESEARCH_HARNESS/rb_templates/rb_queue.json.tmpl', JSON.stringify({
     schema_version: 'queue.v2',
     active_window: [],
     refill_pool: [],
     delegated_in_flight: {},
     terminal_history: [],
   }, null, 2));
-  mkdirSync(path.join(root, 'DPT_FRAMEWORK/schema/gate_definitions'), { recursive: true });
+  mkdirSync(path.join(root, 'DEEP_RESEARCH_HARNESS/schema/gate_definitions'), { recursive: true });
 }
 
 function queueTaskCard(overrides = {}) {
@@ -92,7 +92,7 @@ function writePhaseExample(root, name, taskCard, result = {
   summary: 'done',
   writes: ['seed_topics/topic-a.md'],
 }) {
-  writeFixture(root, `DPT_FRAMEWORK/workflows/nodes/phases/${name}.md`, [
+  writeFixture(root, `DEEP_RESEARCH_HARNESS/workflows/nodes/phases/${name}.md`, [
     '# Phase Example',
     '',
     '```json',
@@ -129,8 +129,8 @@ describe('validate-work-unit-hygiene CLI', () => {
 
   it('requires Wave gates to route provenance through the shared evaluator', () => {
     const root = cleanRepo('shared-evaluator-wiring');
-    writeFixture(root, 'DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs', 'checkWorkUnitLedgerExists();\nemitDelegatedBypassDiagnostic();\n');
-    writeFixture(root, 'DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs', 'checkWorkUnitLedgerExists();\n');
+    writeFixture(root, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs', 'checkWorkUnitLedgerExists();\nemitDelegatedBypassDiagnostic();\n');
+    writeFixture(root, 'DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs', 'checkWorkUnitLedgerExists();\n');
 
     const result = run(root);
     assert.equal(result.status, 1);
@@ -141,9 +141,9 @@ describe('validate-work-unit-hygiene CLI', () => {
 
   it('fails closed on removed authority tokens, old gate checks, and old queue shape', () => {
     const root = cleanRepo('bad-current');
-    writeFixture(root, 'DPT_FRAMEWORK/cli/bad-driver-doc.mjs', 'const bad = "drive-relay-slot";\n');
+    writeFixture(root, 'DEEP_RESEARCH_HARNESS/cli/bad-driver-doc.mjs', 'const bad = "drive-relay-slot";\n');
     writeFixture(root, 'experiments_env/shared/bad-run-log-helper.mjs', 'const detail = { slotKey: "old" };\nconst event = "relay_commit_missing";\n');
-    writeFixture(root, 'DPT_FRAMEWORK/schema/gate_definitions/gate-wave0-complete.definition.json', JSON.stringify({
+    writeFixture(root, 'DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-wave0-complete.definition.json', JSON.stringify({
       gate: 'wave0-complete',
       description: 'Schema-valid negative fixture for a removed provenance check.',
       rules: [{
@@ -154,7 +154,7 @@ describe('validate-work-unit-hygiene CLI', () => {
         finding: { source: 'checker' },
       }],
     }));
-    writeFixture(root, 'DPT_FRAMEWORK/rb_templates/rb_queue.json.tmpl', JSON.stringify({
+    writeFixture(root, 'DEEP_RESEARCH_HARNESS/rb_templates/rb_queue.json.tmpl', JSON.stringify({
       slot_1_current: { work_id: 'old-demand' },
       refill_pool: [],
     }, null, 2));
@@ -198,13 +198,13 @@ describe('validate-work-unit-hygiene CLI', () => {
   it('allows deprecated registry, checker self-reference, cleanup-control, negative, release-history, past-failure, and current work-unit contexts', () => {
     const root = cleanRepo('allowed-contexts');
     writeFixture(root, 'openspec/governance/req-registry.yaml', 'SRD-001: subagent-relay-driver — Old delegated driver removed [DEPRECATED]\n');
-    writeFixture(root, 'DPT_FRAMEWORK/cli/validate-work-unit-hygiene.mjs', 'const pattern = /drive-relay-slot|slot_result_ref/;\n');
+    writeFixture(root, 'DEEP_RESEARCH_HARNESS/cli/validate-work-unit-hygiene.mjs', 'const pattern = /drive-relay-slot|slot_result_ref/;\n');
     writeFixture(root, 'tests/integration/cli/validate-work-unit-hygiene.test.mjs', 'const bad = "slot_1_current";\n');
     writeFixture(root, 'openspec/changes/clean-delegated-work-surfaces/tasks.md', '- remove drive-relay-slot and _subagents/ current wording\n');
     writeFixture(root, 'tests/schema/negative.test.mjs', 'assert rejects old _subagents/wave_00 path as non-authoritative diagnostic only;\n');
-    writeFixture(root, 'DPT_FRAMEWORK/CHANGELOG.md', '## v0.3\nPreviously drive-relay-slot was replaced and retired.\n');
+    writeFixture(root, 'DEEP_RESEARCH_HARNESS/CHANGELOG.md', '## v0.3\nPreviously drive-relay-slot was replaced and retired.\n');
     writeFixture(root, '_backlog/bugs/BUG-old.md', 'Historical failure analysis: old drive-relay-slot path was removed and is no longer current.\n');
-    writeFixture(root, 'DPT_FRAMEWORK/engine/work-unit-example.mjs', 'const row = { runtime_receipt_ref: "_work_units/wave0/wu-w0-b000-src-i0001/runtime-receipt.jsonl", receipt_nonce: "nonce" };\nconst receiptNonce = row.receipt_nonce;\n');
+    writeFixture(root, 'DEEP_RESEARCH_HARNESS/engine/work-unit-example.mjs', 'const row = { runtime_receipt_ref: "_work_units/wave0/wu-w0-b000-src-i0001/runtime-receipt.jsonl", receipt_nonce: "nonce" };\nconst receiptNonce = row.receipt_nonce;\n');
 
     const result = run(root);
     assert.equal(result.status, 0, result.stdout || result.stderr);
@@ -263,7 +263,7 @@ describe('validate-work-unit-hygiene CLI', () => {
 
   it('fails context-sensitive fields when paired with retired delegated examples', () => {
     const root = cleanRepo('context-sensitive-bad');
-    writeFixture(root, 'DPT_FRAMEWORK/workflows/bad.md', 'Current example: _subagents/wave_00/slot_00/runtime-receipt.jsonl includes receiptNonce and runtime_receipt_ref.\n');
+    writeFixture(root, 'DEEP_RESEARCH_HARNESS/workflows/bad.md', 'Current example: _subagents/wave_00/slot_00/runtime-receipt.jsonl includes receiptNonce and runtime_receipt_ref.\n');
 
     const result = run(root);
     assert.equal(result.status, 1);

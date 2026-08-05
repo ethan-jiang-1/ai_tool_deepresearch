@@ -70,15 +70,15 @@ describe('case-211 Wave0 fixture contract', () => {
     assert.match(playbook, /case-211-wave0-gate-monitor\.path/);
     assert.match(playbook, /monitor\.parsed_json/);
     assert.match(playbook, /const subjectBound = Boolean\(/);
-    assert.doesNotMatch(playbook, /^node DPT_FRAMEWORK\/cli\/gates\/check-gate-wave0-complete\.mjs/m);
+    assert.doesNotMatch(playbook, /^node DEEP_RESEARCH_HARNESS\/cli\/gates\/check-gate-wave0-complete\.mjs/m);
 
     assertBefore(playbook, 'operate-work-unit.mjs dry-submit "$B"', 'operate-work-unit.mjs submit "$B"');
     assertBefore(playbook, 'operate-work-unit.mjs submit "$B"', 'operate-work-unit.mjs inspect "$B" --eligible-rows --phase wave0');
     assertBefore(playbook, 'operate-work-unit.mjs inspect "$B" --eligible-rows --phase wave0', 'case-211-wave0-pre-projection-inspect.json');
     assertBefore(playbook, 'case-211-wave0-pre-projection-inspect.json', 'operate-topic-state.mjs schema --context wave_projection');
     assertBefore(playbook, 'operate-topic-state.mjs schema --context wave_projection', 'operate-topic-state.mjs apply --bundle "$B"');
-    assertBefore(playbook, 'operate-topic-state.mjs apply --bundle "$B"', 'node DPT_FRAMEWORK/cli/inspect-wave0-output.mjs --bundle "$B" > "$B/case-211-wave0-inspect.json"');
-    assertBefore(playbook, 'node DPT_FRAMEWORK/cli/inspect-wave0-output.mjs --bundle "$B" > "$B/case-211-wave0-inspect.json"', 'log-event.mjs --bundle "$B" --event wave0_completion');
+    assertBefore(playbook, 'operate-topic-state.mjs apply --bundle "$B"', 'node DEEP_RESEARCH_HARNESS/cli/inspect-wave0-output.mjs --bundle "$B" > "$B/case-211-wave0-inspect.json"');
+    assertBefore(playbook, 'node DEEP_RESEARCH_HARNESS/cli/inspect-wave0-output.mjs --bundle "$B" > "$B/case-211-wave0-inspect.json"', 'log-event.mjs --bundle "$B" --event wave0_completion');
     assertBefore(playbook, 'log-event.mjs --bundle "$B" --event wave0_completion', 'run-gate-with-monitor.mjs --bundle "$B" --gate wave0-complete');
   });
 });

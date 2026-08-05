@@ -25,15 +25,15 @@ import {
   COVERED_ENTRY_TARGET_NODES,
   COVERED_PREFLIGHT_TARGET_NODES,
   COVERED_SOURCE_NODES,
-} from '../../../DPT_FRAMEWORK/engine/helpers/handoff-helpers.mjs';
-import { readGateDefinitionSnapshot } from '../../../DPT_FRAMEWORK/schema/contracts/gate-definition.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs';
+import { readGateDefinitionSnapshot } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/gate-definition.mjs';
 
 const __dirname = join(fileURLToPath(import.meta.url), '..');
 const REPO_ROOT = join(__dirname, '..', '..', '..');
 
-const WORKFLOWS_DIR = join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows');
-const GATE_DEFS_DIR = join(REPO_ROOT, 'DPT_FRAMEWORK', 'schema', 'gate_definitions');
-const PHASES_DIR = join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows', 'nodes', 'phases');
+const WORKFLOWS_DIR = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'workflows');
+const GATE_DEFS_DIR = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'schema', 'gate_definitions');
+const PHASES_DIR = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'workflows', 'nodes', 'phases');
 
 // ── Helpers: reproduce advance-status algorithm ──────────────────────
 
@@ -74,7 +74,7 @@ function loadGateDefs() {
 
 function loadEnums() {
   // We only need CurrentGate values — parse them from the source
-  const raw = readFileSync(join(REPO_ROOT, 'DPT_FRAMEWORK', 'schema', 'enums.mjs'), 'utf-8');
+  const raw = readFileSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'schema', 'enums.mjs'), 'utf-8');
   const m = raw.match(/CurrentGate = z\.enum\(\[([\s\S]*?)\]\)/);
   if (!m) throw new Error('Cannot parse CurrentGate enum');
   const values = [];
@@ -238,7 +238,7 @@ describe('Layer 2 — Gate definition and wiring integrity', () => {
 
   it('applicable covered gate CLIs invoke the shared handoff preflight helper', () => {
     for (const gateKey of coveredTargetGateKeys) {
-      const cliPath = join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'gates', `check-gate-${gateKey}.mjs`);
+      const cliPath = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'gates', `check-gate-${gateKey}.mjs`);
       assert.ok(existsSync(cliPath), `missing gate CLI for covered gate "${gateKey}"`);
       const raw = readFileSync(cliPath, 'utf-8');
       assert.ok(raw.includes('checkPhaseHandoffPreflight(args.bundle, args.currentNode)'),
@@ -318,7 +318,7 @@ describe('Layer 3 — Source-gate status-window derivation', () => {
 
   it('Final node preserves readiness_passed/none terminal status wording', () => {
     const body = readPhaseBody('phase-final.md');
-    const workflowChain = readFileSync(join(REPO_ROOT, 'DPT_FRAMEWORK', 'engine', 'workflow-chain.mjs'), 'utf-8');
+    const workflowChain = readFileSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'engine', 'workflow-chain.mjs'), 'utf-8');
     assert.ok(body.includes('current_gate: readiness_passed'));
     assert.ok(body.includes('next_gate: none'));
     assert.ok(workflowChain.includes('current_gate: readiness_passed'));
@@ -365,7 +365,7 @@ describe('Layer 3b — Agent-facing handoff wording', () => {
       const body = readPhaseBody(phaseFile);
       const beforeGatePass = body.split('## 6. On Gate Pass')[0] || body;
       const forbidden = [
-        `node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to ${sourceGate}`,
+        `node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to ${sourceGate}`,
       ];
       for (const phrase of forbidden) {
         assert.ok(!beforeGatePass.includes(phrase),
@@ -376,7 +376,7 @@ describe('Layer 3b — Agent-facing handoff wording', () => {
 
   it('shared silent execution names autonomous continuation and enter-phase handoff', () => {
     const body = readFileSync(
-      join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows', 'nodes', 'shared', 'shared-silent-execution.md'),
+      join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'workflows', 'nodes', 'shared', 'shared-silent-execution.md'),
       'utf-8',
     );
     assert.ok(body.includes('## Autonomous Work Loop'));
@@ -524,7 +524,7 @@ describe('Layer 4 — Full chain walk', () => {
 
     // Also verify the template file actually has this value
     const tmpl = JSON.parse(readFileSync(
-      join(REPO_ROOT, 'DPT_FRAMEWORK', 'rb_templates', 'rb_status.json.tmpl'), 'utf-8'));
+      join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'rb_templates', 'rb_status.json.tmpl'), 'utf-8'));
     assert.equal(tmpl.current_gate, 'setup_ready');
     assert.equal(tmpl.next_gate, 'seed_topics_ready');
   });

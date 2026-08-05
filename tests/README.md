@@ -27,4 +27,4 @@ For this command-surface hardening work, `tests/engine/command-contract-docs.tes
 ## Placement
 
 - JS-led tests live under `tests/` and use `node:test` plus `node:assert`; routing semantics are defined by the accepted `verification-routing` spec.
-- Do not put tests, fixtures, or experiment playbooks under `DPT_FRAMEWORK/`; it is the distributable framework surface.
+- Do not put tests, fixtures, or experiment playbooks under `DEEP_RESEARCH_HARNESS/`; it is the distributable framework surface.

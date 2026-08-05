@@ -4,14 +4,14 @@ import { it } from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { QUEUE } from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
-import { QueueSchema } from '../../../DPT_FRAMEWORK/schema/contracts/queue.mjs';
+import { QUEUE } from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
+import { QueueSchema } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/queue.mjs';
 import { cleanup, item, tempBundle } from '../../engine/queue-manager-fixtures.mjs';
 
 it('production queue CLI enqueues, claims, completes, preempts, renders, and checks real files', () => {
   const dir = tempBundle();
   try {
-    const cli = path.resolve('DPT_FRAMEWORK/cli/operate-queue.mjs');
+    const cli = path.resolve('DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs');
     const task1 = path.join(dir, 'task1.json');
     const task2 = path.join(dir, 'task2.json');
     const urgent = path.join(dir, 'urgent.json');

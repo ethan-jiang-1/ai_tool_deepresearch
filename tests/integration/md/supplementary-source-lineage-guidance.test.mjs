@@ -4,11 +4,11 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { DEFAULT_KIND_CONTRACTS } from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { DEFAULT_KIND_CONTRACTS } from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 
-const phase = readFileSync('DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md', 'utf8');
-const actor = readFileSync('DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-evidence-extractor.md', 'utf8');
-const shared = readFileSync('DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md', 'utf8');
+const phase = readFileSync('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md', 'utf8');
+const actor = readFileSync('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/subagent-dpt-evidence-extractor.md', 'utf8');
+const shared = readFileSync('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md', 'utf8');
 
 describe('supplementary Wave1 source-ref lineage guidance', () => {
   it('agrees with the kind contract on the only authorized prior role', () => {

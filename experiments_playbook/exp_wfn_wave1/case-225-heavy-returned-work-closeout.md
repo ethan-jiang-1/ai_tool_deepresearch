@@ -49,7 +49,7 @@ PASS requires retained Subject evidence, a delegated-subagent work-unit record, 
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs wave1_returned_work_closeout --case case-225 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -85,7 +85,7 @@ if (!queue.active_window.some((item) => item.queue_item_id === 'case-225-primary
   throw new Error('case-225 setup crossed the pre-claim boundary');
 }
 JS
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
+node DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs "$B"
 ```
 
 ## Step 2: [PLAYBOOK AGENT -> SUBJECT AGENT] Execute One Returned-Work Loop
@@ -93,7 +93,7 @@ node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
 The adapter injects the current production Wave1 surface and exact bundle path. The Subject Agent, not the Playbook Agent, claims the queued work, invokes the real child, and performs every verdict-affecting Phase action after return.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
 node experiments_env/shared/run-iterative-interaction-subject.mjs 225 --bundle "$B"
 SUBJECT_STATUS=$?
@@ -108,7 +108,7 @@ fi
 Skip this step when `case-225-subject-unavailable.txt` exists. This observer is read-only over Subject, child, and Engine authority until it appends the four case-owned checks.
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -148,7 +148,7 @@ JS
 ## Step 4: [PLAYBOOK AGENT] Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 EXTRA_ARGS=()
 if [ -f "$B/case-225-subject-unavailable.txt" ]; then
   EXTRA_ARGS+=(--not-run-reason "independent Phase Agent, child actor, real search/fetch, or required Engine operation unavailable")
@@ -164,7 +164,7 @@ else
     --evidence "inspect=$B/case-225-inspect.json"
   )
 fi
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
 Stop after native completion. The Autorun Supervisor owns health, audit, preservation, and optional clean-PASS cleanup.

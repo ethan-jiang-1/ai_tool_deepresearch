@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-logger-tmp');
 
-const { createLogger, logToRun, createRunLogger, readBundleName } = await import('../../DPT_FRAMEWORK/engine/logger.mjs');
+const { createLogger, logToRun, createRunLogger, readBundleName } = await import('../../DEEP_RESEARCH_HARNESS/engine/logger.mjs');
 
 after(() => {
   if (existsSync(TMP)) rmSync(TMP, { recursive: true, force: true });

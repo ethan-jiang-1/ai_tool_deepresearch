@@ -14,7 +14,7 @@ describe('case-51 fixture Markdown contract', () => {
 
   it('uses the Engine writer with a selected receipt for the Wave1 fixture', () => {
     assert.match(playbook, /schema: command-experiment\/v2/);
-    assert.match(proceedFixture, /import \{ selectWave1CarriedTargetReceipt \} from '\.\/DPT_FRAMEWORK\/engine\/helpers\/wave-carried-target-receipts\.mjs';/);
+    assert.match(proceedFixture, /import \{ selectWave1CarriedTargetReceipt \} from '\.\/DEEP_RESEARCH_HARNESS\/engine\/helpers\/wave-carried-target-receipts\.mjs';/);
     assert.match(proceedFixture, /const carriedTargetSelection = selectWave1CarriedTargetReceipt\(bundle\);/);
     assert.match(proceedFixture, /if \(!carriedTargetSelection\.ok\) throw new Error/);
     assert.match(proceedFixture, /if \(gate === 'wave1-complete'\) \{\s*writeGateAttempt\(bundle, result, \{ carriedTargetReceipt: carriedTargetSelection\.receipt, strictTrace: true \}\);/s);

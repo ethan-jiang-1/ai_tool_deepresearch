@@ -43,7 +43,7 @@ verdict_judge: deterministic
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs drift --case case-309 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 
 # 写 wave1 完成状态
 cat > "$B/rb_status.json" << 'JSON'
@@ -85,7 +85,7 @@ echo "# Questions A" > "$B/artifacts/wave1/topic-a/question-list.md"
 node --input-type=module - "$B" <<'JS'
 import { appendFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { writeCheckpointManifest, buildGateResult } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { writeCheckpointManifest, buildGateResult } from './DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 
 const result = buildGateResult({
   passed: true,
@@ -115,7 +115,7 @@ ls "$B/_checkpoints/"
 ## Step 2: 修改 control file 并检测 drift
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # 修改 rb_status.json — change current_gate
 cat > "$B/rb_status.json" << 'JSON'
 {"bundle":"drift","current_mode":"execution","state":"blocked","current_gate":"wave2_complete","next_gate":"hitl2_recorded"}
@@ -124,7 +124,7 @@ JSON
 # 也追加一行 trace（cursor drift 应该是 info）
 echo '{"ts":"2026-06-01T00:00:00.000Z","event":"test","detail":"post-checkpoint"}' >> "$B/rb_trace.jsonl"
 
-RESULT=$(node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "$B" --at wave1_complete 2>&1)
+RESULT=$(node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle "$B" --at wave1_complete 2>&1)
 EXIT=$?
 
 echo "Exit: $EXIT"
@@ -188,8 +188,8 @@ JS
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

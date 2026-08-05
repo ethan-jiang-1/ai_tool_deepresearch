@@ -42,7 +42,7 @@ verdict_judge: deterministic
 ```bash
 REPO_ROOT=$(pwd)
 B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_rwd --case case-182 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "Bundle: $B"
 ```
 
@@ -60,7 +60,7 @@ echo "Bundle: $B"
 ## Step 3: 轻量整理（遵循 "可直接使用 + 轻量整理" 路径）
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 
 # Preserve template frontmatter and every Engine-owned coordinate. Only replace
 # the fixture-owned semantic Goal section.
@@ -112,7 +112,7 @@ grep -c 'Agent 未添加的维度' "$B/rb_plan.md" && echo "OK: no new dimension
 ## Step 4: 记录 HITL1 profile
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 
 # Synthetic research_access keeps this deterministic topic-rewrite case focused
 # on gate mechanics; it does not prove real Agent capability.
@@ -142,23 +142,23 @@ YAML
 ## Step 5: 建立 canonical topic state 并应用 returned style handoff
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
 
-node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle "$B" --current-node phases/phase-instantiation.md > "$STATE/case-182-instantiation.json"
+node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-instantiation-complete.mjs --bundle "$B" --current-node phases/phase-instantiation.md > "$STATE/case-182-instantiation.json"
 NEXT=$(node experiments_env/shared/extract-field.mjs check.next < "$STATE/case-182-instantiation.json")
 if [ "$NEXT" != "phases/phase-hitl1.md" ]; then
   echo "Unexpected instantiation handoff: $NEXT"
   exit 1
 fi
-node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$STATE/case-182-enter-hitl1.md"
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl1_recorded > "$STATE/case-182-status.json"
+node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$STATE/case-182-enter-hitl1.md"
+node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle "$B" --to hitl1_recorded > "$STATE/case-182-status.json"
 
 cat > "$STATE/case-182-topic-input.json" <<'JSON'
 {"context":"hitl1","actions":[{"action":"add_topic","title":"EU AI Act SME Compliance Cost","slug_stem":"eu-ai-act-sme-compliance-cost","must_answer":["What resources do SMEs need for AI Act compliance in 2025-2026?"],"scope_role":"primary","depends_on_topic_uids":[]},{"action":"add_topic","title":"EU AI Act SME Exemptions","slug_stem":"eu-ai-act-sme-exemptions","must_answer":["Which SME exemptions and simplified procedures apply under the AI Act?"],"scope_role":"supporting","depends_on_topic_uids":[]},{"action":"add_topic","title":"EU AI Act SME Competitive Impact","slug_stem":"eu-ai-act-sme-competitive-impact","must_answer":["Do AI Act requirements create a competitive advantage for larger companies?"],"scope_role":"comparison","depends_on_topic_uids":[]}]}
 JSON
 
-node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle "$B" --input "$STATE/case-182-topic-input.json" > "$STATE/case-182-topic-apply.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs apply --bundle "$B" --input "$STATE/case-182-topic-input.json" > "$STATE/case-182-topic-apply.json"
 
 # The committed writer result, rather than fixture-authored parameters, decides
 # whether a style projection is required and supplies the only command to run.
@@ -185,20 +185,20 @@ if (style.applied !== handoff.selected_profile || style.topic_count !== handoff.
   throw new Error(`style output disagrees with committed handoff: ${JSON.stringify({ handoff, style })}`);
 }
 JS
-node DPT_FRAMEWORK/cli/operate-topic-state.mjs inspect --bundle "$B" > "$STATE/case-182-topic-inspect.json"
+node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs inspect --bundle "$B" > "$STATE/case-182-topic-inspect.json"
 ```
 
 ## Step 6: 运行 `hitl1-recorded` Gate 并记录 case checks
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 
-GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle "$B" --current-node phases/phase-hitl1.md || true)
+GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl1-recorded -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs --bundle "$B" --current-node phases/phase-hitl1.md || true)
 echo "$GATE" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('next:',j.check.next)})"
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
 node --input-type=module - "$B" "$PASSED" <<'JS'
 import { readFileSync } from 'node:fs';
-import { parseMdFrontmatter } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { parseMdFrontmatter } from './DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs';
 import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
 
 const [bundle, passed] = process.argv.slice(2);
@@ -226,8 +226,8 @@ JS
 ## Step 7: Native completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns Light health, audit, preservation, and optional clean-PASS cleanup.

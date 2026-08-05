@@ -10,7 +10,7 @@ import { execSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-log-event-tmp');
-const LOG_EVENT_CLI = join(__dirname, '../../../DPT_FRAMEWORK/cli/log-event.mjs');
+const LOG_EVENT_CLI = join(__dirname, '../../../DEEP_RESEARCH_HARNESS/cli/log-event.mjs');
 
 after(() => {
   if (existsSync(TMP)) rmSync(TMP, { recursive: true, force: true });

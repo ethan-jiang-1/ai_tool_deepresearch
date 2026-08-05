@@ -78,7 +78,7 @@ function fixture() {
   write(root, 'tests/governance/parser.test.mjs', '// fixture asset\n');
   write(root, 'experiments_playbook/exp_example/case-11-light-example.md', PLAYBOOK);
   write(root, 'experiments_playbook/PLAYBOOK_MANIFEST.md', manifest(['exp_example/case-11-light-example.md']));
-  symlinkSync(join(REPO, 'DPT_FRAMEWORK'), join(root, 'DPT_FRAMEWORK'), 'dir');
+  symlinkSync(join(REPO, 'DEEP_RESEARCH_HARNESS'), join(root, 'DEEP_RESEARCH_HARNESS'), 'dir');
   return root;
 }
 

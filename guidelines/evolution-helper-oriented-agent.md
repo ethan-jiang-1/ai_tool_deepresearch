@@ -6,7 +6,7 @@ status: effective
 created: 2026-07-12
 revised: 2026-07-25
 role: charter-companion evolution direction for Agent/user action responsibility
-scope: openspec/changes/, DPT_FRAMEWORK/COMMANDS.md, DPT_FRAMEWORK/workflows/, DPT_FRAMEWORK/command_playbook/
+scope: openspec/changes/, DEEP_RESEARCH_HARNESS/COMMANDS.md, DEEP_RESEARCH_HARNESS/workflows/, DEEP_RESEARCH_HARNESS/command_playbook/
 authority: guidance
 defers_to:
   - guidelines/project-charter.md

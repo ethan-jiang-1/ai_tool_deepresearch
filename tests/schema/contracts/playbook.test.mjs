@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 // @impl AGT-005, AGT-006, AGT-007, EXA-004, PLR-001, VER-006
 import assert from 'node:assert/strict';
-import { PlaybookFrontmatterSchema } from '../../../DPT_FRAMEWORK/schema/contracts/playbook.mjs';
+import { PlaybookFrontmatterSchema } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/playbook.mjs';
 
 const VALID = {
   schema: 'command-experiment/v2',

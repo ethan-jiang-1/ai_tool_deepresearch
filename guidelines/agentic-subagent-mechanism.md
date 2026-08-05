@@ -57,7 +57,7 @@ Phase Agent context is scarce. Web search, page fetching, source diagnostics, cl
 
 The Engine protects provenance by turning delegated work into work units. The Phase Agent may spawn a native sub-agent, but the Engine alone allocates `work_id`, records attempt state, validates submit, completes the bound queue demand, and appends delegated ledger coverage.
 
-All bare runtime paths in this guideline are active bundle-root relative. `_work_units/...`, `rb_output_declarations.jsonl`, `_cache/...`, and `_logs/...` refer to the selected `dpt_rb_*` or `dpt_disp_*` bundle, not repo root or `DPT_FRAMEWORK/`.
+All bare runtime paths in this guideline are current run bundle-root relative. `_work_units/...`, `rb_output_declarations.jsonl`, `_cache/...`, and `_logs/...` refer to the selected `dpt_rb_*` or `dpt_disp_*` bundle, not repo root or `DEEP_RESEARCH_HARNESS/`.
 
 ---
 
@@ -180,9 +180,9 @@ Invalid submit is non-terminal. It leaves the attempt claimed, records rejection
 Terminal attempt closure is explicit:
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs fail <bundle> --work-id <id> --reason "<reason>"
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --reason "<reason>"
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs abandon <bundle> --work-id <id> --reason "<reason>"
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs fail <bundle> --work-id <id> --reason "<reason>"
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --reason "<reason>"
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs abandon <bundle> --work-id <id> --reason "<reason>"
 ```
 
 Retry normally allocates a new `work_id`. Normal `submit` against any terminal attempt fails closed.
@@ -190,7 +190,7 @@ Retry normally allocates a new `work_id`. Normal `submit` against any terminal a
 The only terminal completion exception is explicit audited:
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs late-submit <bundle> --work-id <timed_out_id> --result <result.json> --reason "<reason>"
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs late-submit <bundle> --work-id <timed_out_id> --result <result.json> --reason "<reason>"
 ```
 
 `late-submit` targets one eligible `timed_out` attempt, reuses normal submit validation, rejects `failed`/`abandoned` attempts and submitted replacement coverage, and cleans up only the conflicting non-submitted retry state required by the accepted contract. It must not grow into automatic late acceptance, lineage guessing, or a general terminal recovery controller.

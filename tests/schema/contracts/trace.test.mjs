@@ -1,7 +1,7 @@
-// tests/schema/contracts/trace.test.mjs — 1:1 for DPT_FRAMEWORK/schema/contracts/trace.mjs
+// tests/schema/contracts/trace.test.mjs — 1:1 for DEEP_RESEARCH_HARNESS/schema/contracts/trace.mjs
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { TraceEntrySchema, TraceSchema } from '../../../DPT_FRAMEWORK/schema/contracts/trace.mjs';
+import { TraceEntrySchema, TraceSchema } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/trace.mjs';
 
 describe('TraceEntrySchema', () => {
   it('accepts valid entry with ts + event', () => {

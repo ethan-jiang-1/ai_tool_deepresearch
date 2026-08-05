@@ -12,8 +12,8 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import {
   applyCanonicalTopicState,
   renderSeedProjectionAppendix,
-} from '../../DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs';
-import { canonicalWave1ReferencePath } from '../../DPT_FRAMEWORK/engine/helpers/wave1-reference-convergence.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { canonicalWave1ReferencePath } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs';
 import {
   claimAndSubmitFixtureWorkUnit,
   referenceContent,
@@ -65,7 +65,7 @@ function parseJson(result) {
 
 function gate(bundle, name, node, { attempt } = {}) {
   const args = [
-    join(REPO_ROOT, `DPT_FRAMEWORK/cli/gates/check-gate-${name}.mjs`),
+    join(REPO_ROOT, `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-${name}.mjs`),
     '--bundle', bundle, '--current-node', node,
   ];
   if (attempt !== undefined) args.push('--attempt', String(attempt));
@@ -73,16 +73,16 @@ function gate(bundle, name, node, { attempt } = {}) {
 }
 
 function enter(bundle, node, retainedName) {
-  const output = runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/enter-phase.mjs'), '--bundle', bundle, '--node', node]);
+  const output = runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs'), '--bundle', bundle, '--node', node]);
   writeFileSync(join(bundle, retainedName), output.stdout);
 }
 
 function advance(bundle, sourceGate) {
-  return parseJson(runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/advance-status.mjs'), '--bundle', bundle, '--to', sourceGate]));
+  return parseJson(runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/advance-status.mjs'), '--bundle', bundle, '--to', sourceGate]));
 }
 
 function logCompletion(bundle, event) {
-  runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/log-event.mjs'), '--bundle', bundle, '--event', event]);
+  runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/log-event.mjs'), '--bundle', bundle, '--event', event]);
 }
 
 function passAndEnter(bundle, gateName, currentNode, sourceGate, retainedPrefix, options) {
@@ -98,7 +98,7 @@ function passAndEnter(bundle, gateName, currentNode, sourceGate, retainedPrefix,
 function instantiate() {
   const stem = `case-154-${randomUUID().slice(0, 8)}`;
   const created = runNode([
-    join(REPO_ROOT, 'DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs'), stem, '--target-dir', TARGET_DIR,
+    join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs'), stem, '--target-dir', TARGET_DIR,
   ]).stdout.trim();
   const bundle = join(TARGET_DIR, `dpt_disp_case-154_${stem}_${randomUUID().slice(0, 6)}`);
   renameSync(created, bundle);
@@ -245,7 +245,7 @@ function stageWave1Predecessor(bundle) {
       relationship: 'supports', refs: [ref], status: 'supported', next_hop: 'cross-topic comparison in Wave2.',
     }]);
   }
-  runNode([join(REPO_ROOT, 'DPT_FRAMEWORK/cli/sync-reference-index.mjs'), '--bundle', bundle]);
+  runNode([join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/sync-reference-index.mjs'), '--bundle', bundle]);
   logCompletion(bundle, 'wave1_completion');
 }
 

@@ -24,7 +24,7 @@ const TOPIC_UID = 'tp_123e4567-e89b-42d3-a456-426614174010';
 after(cleanupAll);
 
 function runInspect(cli, bundle) {
-  const result = spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', cli), '--bundle', bundle], {
+  const result = spawnSync('node', [join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', cli), '--bundle', bundle], {
     cwd: REPO_ROOT,
     encoding: 'utf-8',
     timeout: 10000,

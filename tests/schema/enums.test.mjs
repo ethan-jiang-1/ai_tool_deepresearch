@@ -6,7 +6,7 @@ import {
   RunState, ResearchProfile, GateResult,
   HumanCheckpointStatus, AnswerabilityClass,
   HITL2UserDecision, FinalReportView,
-} from '../../DPT_FRAMEWORK/schema/index.mjs';
+} from '../../DEEP_RESEARCH_HARNESS/schema/index.mjs';
 
 describe('CurrentGate', () => {
   it('accepts all 11 valid values', () => {

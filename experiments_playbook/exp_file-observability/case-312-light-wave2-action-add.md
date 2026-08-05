@@ -42,7 +42,7 @@ verdict_judge: deterministic
 
 ```bash
 B=$(node experiments_env/shared/new-disposable-bundle.mjs wave2_add --case case-312 --force --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 
 cat > "$B/rb_status.json" << 'JSON'
 {"bundle":"wave2_add","current_mode":"execution","state":"in_progress","current_gate":"wave1_complete","next_gate":"wave2_complete","current_node":"phases/phase-wave2.md"}
@@ -111,7 +111,7 @@ echo "B=$B"
 ## Step 2: Delta Synthesis → FAIL
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # 写 Delta Synthesis（action:add 场景不允许）
 cat > "$B/artifacts/wave2/synthesis.md" << 'MD'
 # Cross-Topic Synthesis
@@ -147,7 +147,7 @@ MD
 echo "findings: []" > "$B/artifacts/wave2/finding-index.yaml"
 
 # 跑 wave2 gate
-RESULT1=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md 2>&1)
+RESULT1=$(node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md 2>&1)
 EXIT1=$?
 echo "Delta Synthesis result (exit=$EXIT1):"
 echo "$RESULT1" | grep -E '"passed"|"rerun_add"|"Delta"' | head -5
@@ -161,7 +161,7 @@ const __dirname = process.argv[2];
 const checks = [];
 function runWave2Gate() {
   const result = spawnSync('node', [
-    'DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs',
+    'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs',
     '--bundle', __dirname,
     '--current-node', 'phases/phase-wave2.md',
   ], { encoding: 'utf-8', cwd: process.cwd() });
@@ -230,8 +230,8 @@ JS
 ## Native Completion
 
 ```bash
-B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

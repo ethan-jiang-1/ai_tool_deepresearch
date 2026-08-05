@@ -6,10 +6,10 @@ import {
   WorkUnitLateAcceptContextSchema,
   WorkUnitLedgerRecordSchema,
   WorkUnitRuntimeReceiptEventSchema,
-} from '../../../DPT_FRAMEWORK/schema/contracts/work-unit.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/work-unit.mjs';
 import {
   computeWorkUnitLedgerRecordHash,
-} from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 
 function baseLedgerRow(overrides = {}) {
   const row = {
@@ -251,7 +251,7 @@ describe('WorkUnitLedgerRecordSchema', () => {
 });
 
 async function currentAssignmentSchemas() {
-  const module = await import('../../../DPT_FRAMEWORK/schema/contracts/work-unit.mjs');
+  const module = await import('../../../DEEP_RESEARCH_HARNESS/schema/contracts/work-unit.mjs');
   return {
     WorkUnitRequiredOutputSchema: module.WorkUnitRequiredOutputSchema,
     WorkUnitOutputContractSchema: module.WorkUnitOutputContractSchema,

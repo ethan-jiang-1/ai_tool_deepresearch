@@ -5,7 +5,7 @@ import assert from 'node:assert';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
-import { esmDirname } from '../../DPT_FRAMEWORK/engine/esm-dirname.mjs';
+import { esmDirname } from '../../DEEP_RESEARCH_HARNESS/engine/esm-dirname.mjs';
 
 describe('esmDirname', () => {
   it('returns an absolute path', () => {

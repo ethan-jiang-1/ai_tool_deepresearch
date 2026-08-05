@@ -17,64 +17,64 @@ function read(relPath) {
 }
 
 function listCommandPlaybooks() {
-  const dir = join(REPO_ROOT, 'DPT_FRAMEWORK', 'command_playbook');
+  const dir = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'command_playbook');
   return readdirSync(dir)
     .filter((name) => name.endsWith('.md'))
-    .map((name) => `DPT_FRAMEWORK/command_playbook/${name}`)
+    .map((name) => `DEEP_RESEARCH_HARNESS/command_playbook/${name}`)
     .sort();
 }
 
 const SCAN_SURFACES = [
-  'DPT_FRAMEWORK/COMMANDS.md',
-  'DPT_FRAMEWORK/RUN.md',
-  'DPT_FRAMEWORK/README.md',
-  'DPT_FRAMEWORK/cli/README.md',
+  'DEEP_RESEARCH_HARNESS/COMMANDS.md',
+  'DEEP_RESEARCH_HARNESS/RUN.md',
+  'DEEP_RESEARCH_HARNESS/README.md',
+  'DEEP_RESEARCH_HARNESS/cli/README.md',
   ...listCommandPlaybooks(),
-  'DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl2.md',
-  'DPT_FRAMEWORK/workflows/nodes/shared/shared-profile.md',
-  'DPT_FRAMEWORK/workflows/nodes/shared/shared-gate-rules.md',
-  'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md',
+  'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl2.md',
+  'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-profile.md',
+  'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-gate-rules.md',
+  'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-silent-execution.md',
 ];
 
 const ALLOWLIST = [
   {
-    file: 'DPT_FRAMEWORK/COMMANDS.md',
+    file: 'DEEP_RESEARCH_HARNESS/COMMANDS.md',
     phraseClass: 'progress-report-framing',
     allowedContext: /不是第三个交互 checkpoint、progress report、confirmation loop|not a third interaction checkpoint, progress report, confirmation loop/i,
     reason: 'COMMANDS forbids treating Final as a progress report.',
   },
   {
-    file: 'DPT_FRAMEWORK/COMMANDS.md',
+    file: 'DEEP_RESEARCH_HARNESS/COMMANDS.md',
     phraseClass: 'advance-status-overclaims-entry',
     allowedContext: /advance-status.*does not enter, load, or execute/i,
     reason: 'COMMANDS explicitly says advance-status is not entry/loading/execution.',
   },
   {
-    file: 'DPT_FRAMEWORK/COMMANDS.md',
+    file: 'DEEP_RESEARCH_HARNESS/COMMANDS.md',
     phraseClass: 'enter-phase-overclaims-completion',
     allowedContext: /enter-phase.*not target phase work completion|enter-phase.*not target-phase work completion/i,
     reason: 'COMMANDS explicitly says enter-phase/load_complete are not target work completion.',
   },
   {
-    file: 'DPT_FRAMEWORK/RUN.md',
+    file: 'DEEP_RESEARCH_HARNESS/RUN.md',
     phraseClass: 'enter-phase-overclaims-completion',
     allowedContext: /enter-phase.*不证明 target phase work completion/,
     reason: 'RUN.md explicitly says enter-phase/load_complete are not target work completion.',
   },
   {
-    file: 'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md',
+    file: 'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-silent-execution.md',
     phraseClass: 'progress-report-framing',
     allowedContext: /SHALL NOT initiate.*progress report/i,
     reason: 'Shared silent execution prohibits framework-initiated progress reports.',
   },
   {
-    file: 'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md',
+    file: 'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-silent-execution.md',
     phraseClass: 'enter-phase-overclaims-completion',
     allowedContext: /enter-phase.*they do not prove target-phase work completion/i,
     reason: 'Shared silent execution explicitly says entry witnesses are not target work completion.',
   },
   {
-    file: 'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md',
+    file: 'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-silent-execution.md',
     phraseClass: 'advance-status-overclaims-entry',
     allowedContext: /Do NOT use `advance-status` as a substitute for `enter-phase`/i,
     reason: 'Shared silent execution forbids using advance-status as entry/loading.',
@@ -149,20 +149,20 @@ function collectForbiddenPhraseViolations() {
 
 describe('Agent-facing command contract docs', () => {
   it('scans the required command and workflow documentation surfaces', () => {
-    assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/COMMANDS.md'));
-    assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/RUN.md'));
-    assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/README.md'));
-    assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/cli/README.md'));
-    assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md'));
-    assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/command_playbook/start-research.md'));
-    assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl2.md'));
-    assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/workflows/nodes/shared/shared-profile.md'));
-    assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/workflows/nodes/shared/shared-gate-rules.md'));
-    assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md'));
+    assert.ok(SCAN_SURFACES.includes('DEEP_RESEARCH_HARNESS/COMMANDS.md'));
+    assert.ok(SCAN_SURFACES.includes('DEEP_RESEARCH_HARNESS/RUN.md'));
+    assert.ok(SCAN_SURFACES.includes('DEEP_RESEARCH_HARNESS/README.md'));
+    assert.ok(SCAN_SURFACES.includes('DEEP_RESEARCH_HARNESS/cli/README.md'));
+    assert.ok(SCAN_SURFACES.includes('DEEP_RESEARCH_HARNESS/command_playbook/instantiate-run-bundle.md'));
+    assert.ok(SCAN_SURFACES.includes('DEEP_RESEARCH_HARNESS/command_playbook/start-research.md'));
+    assert.ok(SCAN_SURFACES.includes('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl2.md'));
+    assert.ok(SCAN_SURFACES.includes('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-profile.md'));
+    assert.ok(SCAN_SURFACES.includes('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-gate-rules.md'));
+    assert.ok(SCAN_SURFACES.includes('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-silent-execution.md'));
   });
 
   it('COMMANDS.md exposes Agent audience, HITL boundary, Final boundary, trigger framing, and terminology', () => {
-    const commands = read('DPT_FRAMEWORK/COMMANDS.md');
+    const commands = read('DEEP_RESEARCH_HARNESS/COMMANDS.md');
 
     for (const marker of [
       'Agent-facing operating surfaces',
@@ -187,17 +187,17 @@ describe('Agent-facing command contract docs', () => {
     }
   });
 
-  it('RUN.md treats reading the entry file as DPT_FRAMEWORK selection', () => {
-    const run = read('DPT_FRAMEWORK/RUN.md');
-    assert.ok(run.includes('DPT_FRAMEWORK 已经被选为本次研究的 entry path'));
-    assert.ok(run.includes('不要再问用户是否改用内置捷径或是否使用 DPT_FRAMEWORK'));
+  it('RUN.md treats reading the entry file as DEEP_RESEARCH_HARNESS selection', () => {
+    const run = read('DEEP_RESEARCH_HARNESS/RUN.md');
+    assert.ok(run.includes('DEEP_RESEARCH_HARNESS 已经被选为本次研究的 entry path'));
+    assert.ok(run.includes('不要再问用户是否改用内置捷径或是否使用 DEEP_RESEARCH_HARNESS'));
     assert.ok(run.includes('pre-pipeline routing exception'));
     assert.ok(run.includes('HITL1/HITL2-only interactive in-run boundary'));
   });
 
   it('bundle naming is Agent-derived or already supplied before framework execution', () => {
-    const instantiate = read('DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md');
-    const start = read('DPT_FRAMEWORK/command_playbook/start-research.md');
+    const instantiate = read('DEEP_RESEARCH_HARNESS/command_playbook/instantiate-run-bundle.md');
+    const start = read('DEEP_RESEARCH_HARNESS/command_playbook/start-research.md');
 
     assert.ok(instantiate.includes('Agent 从 research request 派生稳定的 kebab-case bundle 名称'));
     assert.ok(instantiate.includes('framework execution 开始前已提供的名称'));
@@ -206,10 +206,10 @@ describe('Agent-facing command contract docs', () => {
     assert.ok(start.includes('不要把 bundle naming 变成 autonomous execution 中的 mid-pipeline dependency'));
   });
 
-  it('active bundle resume guidance prefers current_node over current_gate-only inference', () => {
-    const start = read('DPT_FRAMEWORK/command_playbook/start-research.md');
-    const run = read('DPT_FRAMEWORK/RUN.md');
-    const bundleMap = read('DPT_FRAMEWORK/rb_templates/BUNDLE_MAP.md.tmpl');
+  it('current run bundle resume guidance prefers current_node over current_gate-only inference', () => {
+    const start = read('DEEP_RESEARCH_HARNESS/command_playbook/start-research.md');
+    const run = read('DEEP_RESEARCH_HARNESS/RUN.md');
+    const bundleMap = read('DEEP_RESEARCH_HARNESS/rb_templates/BUNDLE_MAP.md.tmpl');
 
     for (const [label, text] of [
       ['start-research', start],
@@ -223,7 +223,7 @@ describe('Agent-facing command contract docs', () => {
   });
 
   it('generic gate-pass guidance enters, synchronizes the source gate, then executes the loaded phase', () => {
-    const start = read('DPT_FRAMEWORK/command_playbook/start-research.md');
+    const start = read('DEEP_RESEARCH_HARNESS/command_playbook/start-research.md');
     const enter = 'enter-phase --bundle <path> --node <check.next>';
     const sync = 'advance-status --bundle <path> --to <source_gate_enum>';
     const execute = '只有两步都成功后，才执行已加载的 target phase';
@@ -238,10 +238,11 @@ describe('Agent-facing command contract docs', () => {
     assert.match(start, /两者都不证明 target phase work completion/);
   });
 
-  it('new bundle map docs treat BUNDLE_MAP.md as passive navigation', () => {
-    const template = read('DPT_FRAMEWORK/rb_templates/BUNDLE_MAP.md.tmpl');
-    const instantiate = read('DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md');
-    const readme = read('DPT_FRAMEWORK/README.md');
+  it('new bundle entry and map docs preserve static entry and passive navigation roles', () => {
+    const entryTemplate = read('DEEP_RESEARCH_HARNESS/rb_templates/BUNDLE_ENTRY.md.tmpl');
+    const template = read('DEEP_RESEARCH_HARNESS/rb_templates/BUNDLE_MAP.md.tmpl');
+    const instantiate = read('DEEP_RESEARCH_HARNESS/command_playbook/instantiate-run-bundle.md');
+    const readme = read('DEEP_RESEARCH_HARNESS/README.md');
 
     for (const marker of [
       'Research Content Map',
@@ -253,14 +254,18 @@ describe('Agent-facing command contract docs', () => {
     ]) {
       assert.ok(template.includes(marker), `BUNDLE_MAP.md.tmpl missing marker: ${marker}`);
     }
+    assert.ok(entryTemplate.includes('Deep Research Harness:'), 'BUNDLE_ENTRY.md.tmpl must render the Harness coordinate');
+    assert.ok(entryTemplate.includes('BUNDLE_MAP.md'), 'BUNDLE_ENTRY.md.tmpl must delegate layout to the map');
+    assert.ok(entryTemplate.includes('COMMANDS.md'), 'BUNDLE_ENTRY.md.tmpl must delegate operations to COMMANDS.md');
     assert.ok(instantiate.includes('BUNDLE_MAP.md'));
+    assert.ok(instantiate.includes('BUNDLE_ENTRY.md'));
     assert.ok(instantiate.includes('passive bundle map'));
     assert.ok(readme.includes('BUNDLE_MAP.md'));
     assert.ok(readme.includes('passive map'));
   });
 
   it('CLI exit-code convention and exception inventory are discoverable', () => {
-    for (const file of ['DPT_FRAMEWORK/COMMANDS.md', 'DPT_FRAMEWORK/cli/README.md']) {
+    for (const file of ['DEEP_RESEARCH_HARNESS/COMMANDS.md', 'DEEP_RESEARCH_HARNESS/cli/README.md']) {
       const text = read(file);
       for (const marker of [
         'Exit-Code Convention',
@@ -283,8 +288,8 @@ describe('Agent-facing command contract docs', () => {
   });
 
   it('documents the selected operation grammar and direct feedback boundary without normalizing utilities', () => {
-    const commands = read('DPT_FRAMEWORK/COMMANDS.md');
-    const cliReadme = read('DPT_FRAMEWORK/cli/README.md');
+    const commands = read('DEEP_RESEARCH_HARNESS/COMMANDS.md');
+    const cliReadme = read('DEEP_RESEARCH_HARNESS/cli/README.md');
 
     for (const text of [commands, cliReadme]) {
       for (const marker of [
@@ -317,8 +322,8 @@ describe('Agent-facing command contract docs', () => {
   });
 
   it('keeps topic-state schema discovery and controls rendering on their existing owner boundaries', () => {
-    const topicState = read('DPT_FRAMEWORK/command_playbook/operate-topic-state.md');
-    const controls = read('DPT_FRAMEWORK/command_playbook/plan-hostfile-sections.md');
+    const topicState = read('DEEP_RESEARCH_HARNESS/command_playbook/operate-topic-state.md');
+    const controls = read('DEEP_RESEARCH_HARNESS/command_playbook/plan-hostfile-sections.md');
 
     for (const marker of [
       'Discover The Accepted Input Before Apply',
@@ -365,7 +370,7 @@ describe('Agent-facing command contract docs', () => {
 
 describe('Phase-boundary terminology docs', () => {
   it('shared silent execution distinguishes handoff, status synchronization, and target work completion', () => {
-    const rel = 'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md';
+    const rel = 'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-silent-execution.md';
     const text = read(rel);
     assert.ok(text.includes('Phase Handoff Comes ONLY from Gate CLI and `enter-phase`'));
     assert.ok(text.includes('phase handoff'));
@@ -382,7 +387,7 @@ describe('Phase-boundary terminology docs', () => {
     ];
 
     for (const [file, sourceGate, wave] of cases) {
-      const text = read(`DPT_FRAMEWORK/workflows/nodes/phases/${file}`);
+      const text = read(`DEEP_RESEARCH_HARNESS/workflows/nodes/phases/${file}`);
       const core = text.slice(text.indexOf('## 0. Execution Brief'), text.indexOf('\n## 1. Stage Goal'));
       const prerequisite = `advance-status.mjs --bundle <path> --to ${sourceGate}`;
 
@@ -394,7 +399,7 @@ describe('Phase-boundary terminology docs', () => {
   });
 
   it('keeps claim and timeout vocabulary aligned across the shared protocol and Wave guidance', () => {
-    const shared = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md');
+    const shared = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md');
     for (const marker of [
       'actor_observation_feedback',
       'planned_role_key',
@@ -409,7 +414,7 @@ describe('Phase-boundary terminology docs', () => {
     }
 
     for (const file of ['phase-wave0.md', 'phase-wave1.md', 'phase-wave2.md']) {
-      const text = read(`DPT_FRAMEWORK/workflows/nodes/phases/${file}`);
+      const text = read(`DEEP_RESEARCH_HARNESS/workflows/nodes/phases/${file}`);
       assert.ok(text.includes('actor_observation_feedback'), `${file} must surface claim feedback`);
       assert.ok(text.includes('recommendation_basis'), `${file} must surface timeout basis`);
       assert.match(text, /actor\/candidate vocabulary|actor\/candidate terms/);

@@ -12,7 +12,7 @@ import {
 } from '../../engine/work-unit-test-helpers.mjs';
 
 const REPO_ROOT = process.cwd();
-const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs');
+const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
@@ -498,7 +498,7 @@ Continue.
     // GSK-012: writeGateAttempt validates receipt before persisting; a null receipt
     // on a routed Wave1 pass throws, and the CLI wrapper converts that into a
     // failed envelope without emitting the original passed result.
-    const { writeGateAttempt } = await import('../../../DPT_FRAMEWORK/engine/helpers/gate-helpers-core.mjs');
+    const { writeGateAttempt } = await import('../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-core.mjs');
     const dir = createBundle(unique('strict-fail'));
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
@@ -567,7 +567,7 @@ Continue.
     });
     writeFileSync(join(dir, 'rb_trace.jsonl'), events.map((e) => JSON.stringify(e)).join('\n') + '\n');
 
-    const { selectWave1CarriedTargetReceiptForWave2 } = await import('../../../DPT_FRAMEWORK/engine/helpers/wave-carried-target-receipts.mjs');
+    const { selectWave1CarriedTargetReceiptForWave2 } = await import('../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-carried-target-receipts.mjs');
     const selected = selectWave1CarriedTargetReceiptForWave2(dir);
     assert.equal(selected.kind, 'legacy', `Expected legacy kind, got ${selected.kind}${selected.findings.length ? ': ' + selected.findings.map(f => f.detail).join('; ') : ''}`);
     assert.deepEqual(selected.findings, []);
@@ -605,7 +605,7 @@ Continue.
     });
     writeFileSync(join(dir, 'rb_trace.jsonl'), events.map((e) => JSON.stringify(e)).join('\n') + '\n');
 
-    const { selectWave1CarriedTargetReceiptForWave2 } = await import('../../../DPT_FRAMEWORK/engine/helpers/wave-carried-target-receipts.mjs');
+    const { selectWave1CarriedTargetReceiptForWave2 } = await import('../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-carried-target-receipts.mjs');
     const selected = selectWave1CarriedTargetReceiptForWave2(dir);
     assert.equal(selected.kind, 'invalid', `Expected invalid kind, got ${selected.kind}${selected.findings.length ? ': ' + selected.findings.map(f => f.detail).join('; ') : ''}`);
     assert.ok(selected.findings.length > 0);
@@ -665,7 +665,7 @@ Continue.
     });
     writeFileSync(join(dir, 'rb_trace.jsonl'), events.map((e) => JSON.stringify(e)).join('\n') + '\n');
 
-    const { selectWave1CarriedTargetReceiptForWave2 } = await import('../../../DPT_FRAMEWORK/engine/helpers/wave-carried-target-receipts.mjs');
+    const { selectWave1CarriedTargetReceiptForWave2 } = await import('../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-carried-target-receipts.mjs');
     const selected = selectWave1CarriedTargetReceiptForWave2(dir);
     assert.equal(selected.kind, 'intent_drift', `Expected intent_drift kind, got ${selected.kind}${selected.findings.length ? ': ' + selected.findings.map(f => f.detail).join('; ') : ''}`);
     assert.ok(selected.findings.length > 0);
@@ -683,7 +683,7 @@ Continue.
     // Write only wave1_completion, no gate_attempt handoff with next/currentNodeRef
     writeTraceEvents(dir, [{ event: 'wave1_completion', ts: new Date().toISOString() }]);
 
-    const { selectWave1CarriedTargetReceiptForWave2 } = await import('../../../DPT_FRAMEWORK/engine/helpers/wave-carried-target-receipts.mjs');
+    const { selectWave1CarriedTargetReceiptForWave2 } = await import('../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-carried-target-receipts.mjs');
     const selected = selectWave1CarriedTargetReceiptForWave2(dir);
     assert.equal(selected.kind, 'unavailable');
     assert.deepEqual(selected.findings, []);

@@ -137,7 +137,7 @@ The visible review checklist SHALL cover at least reference URL/title reality, d
 
 ### Requirement: Wave experiment playbook writes wave{N}_completion before gate (RWE-010, 横切约束)
 
-Every current manifest-registered Wave0/Wave1/Wave2 case that invokes `check-gate-wave{0,1,2}-complete.mjs` SHALL first use `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <B> --event wave{N}_completion` to write the documented phase completion event to that bundle's `rb_trace.jsonl`. This is a Markdown-flow obligation executed by the Headless or Interactive Playbook Agent for the phase role; the gate and Engine SHALL only validate it and SHALL NOT emit the event to satisfy their own rule. Repair/rerun of the same gate MAY reuse the one already-recorded phase-completion event.
+Every current manifest-registered Wave0/Wave1/Wave2 case that invokes `check-gate-wave{0,1,2}-complete.mjs` SHALL first use `node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle <B> --event wave{N}_completion` to write the documented phase completion event to that bundle's `rb_trace.jsonl`. This is a Markdown-flow obligation executed by the Headless or Interactive Playbook Agent for the phase role; the gate and Engine SHALL only validate it and SHALL NOT emit the event to satisfy their own rule. Repair/rerun of the same gate MAY reuse the one already-recorded phase-completion event.
 
 #### Scenario: Wave playbook passes gate after writing completion event
 

@@ -11,8 +11,8 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-gate-rerun-ready-tmp');
-const STYLE_CLI = join(__dirname, '..', '..', '..', 'DPT_FRAMEWORK', 'cli', 'apply-research-style.mjs');
-const DEFINITION = JSON.parse(readFileSync(join(__dirname, '..', '..', '..', 'DPT_FRAMEWORK', 'schema', 'gate_definitions', 'gate-rerun-ready.definition.json'), 'utf8'));
+const STYLE_CLI = join(__dirname, '..', '..', '..', 'DEEP_RESEARCH_HARNESS', 'cli', 'apply-research-style.mjs');
+const DEFINITION = JSON.parse(readFileSync(join(__dirname, '..', '..', '..', 'DEEP_RESEARCH_HARNESS', 'schema', 'gate_definitions', 'gate-rerun-ready.definition.json'), 'utf8'));
 const COUNT_RULE = DEFINITION.rules.find((rule) => rule.id === 'rerun_count_valid' && rule.check === 'rerun_count_limit');
 assert.equal(COUNT_RULE?.operator, 'less_than');
 assert.ok(Number.isInteger(COUNT_RULE?.value) && COUNT_RULE.value > 0);
@@ -21,7 +21,7 @@ const EXCLUSIVE_LIMIT = COUNT_RULE.value;
 function runGate(bundlePath, currentNode = 'phases/phase-rerun.md') {
   try {
     const result = execFileSync(process.execPath, [
-      join(__dirname, '..', '..', '..', 'DPT_FRAMEWORK', 'cli', 'gates', 'check-gate-rerun-ready.mjs'),
+      join(__dirname, '..', '..', '..', 'DEEP_RESEARCH_HARNESS', 'cli', 'gates', 'check-gate-rerun-ready.mjs'),
       '--bundle', bundlePath,
       '--current-node', currentNode,
     ], { encoding: 'utf-8', timeout: 10000 });

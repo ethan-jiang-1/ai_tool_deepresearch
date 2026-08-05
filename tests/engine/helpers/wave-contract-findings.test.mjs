@@ -9,7 +9,7 @@ import {
   makeContractFinding,
   makeDefinitionRuleFinding,
   projectInspectContract,
-} from '../../../DPT_FRAMEWORK/engine/helpers/wave-contract-findings.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-findings.mjs';
 
 describe('wave contract finding projection', () => {
   it('classifies blockers without letting advisory or diagnostic findings fail', () => {
@@ -274,7 +274,7 @@ describe('wave contract finding projection', () => {
   });
 
   it('imports basis and repair-kind validation instead of declaring duplicate enum sources', () => {
-    const source = readFileSync(new URL('../../../DPT_FRAMEWORK/engine/helpers/wave-contract-findings.mjs', import.meta.url), 'utf8');
+    const source = readFileSync(new URL('../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-findings.mjs', import.meta.url), 'utf8');
     assert.match(source, /GateBlockingBasisSchema/);
     assert.match(source, /GateRepairKindSchema/);
     assert.doesNotMatch(source, /const\s+BLOCKING_BASES\s*=/);

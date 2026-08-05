@@ -60,7 +60,7 @@ function createCompleteChange() {
   createdRoots.push(root);
   run('openspec', ['init', root, '--tools', 'none', '--no-animation']);
   symlinkSync(join(PROJECT_ROOT, 'node_modules'), join(root, 'node_modules'), 'dir');
-  symlinkSync(join(PROJECT_ROOT, 'DPT_FRAMEWORK'), join(root, 'DPT_FRAMEWORK'), 'dir');
+  symlinkSync(join(PROJECT_ROOT, 'DEEP_RESEARCH_HARNESS'), join(root, 'DEEP_RESEARCH_HARNESS'), 'dir');
   copyGovernanceScripts(root);
   run('openspec', ['new', 'change', CHANGE, '--json'], { cwd: root });
 

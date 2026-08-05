@@ -12,8 +12,8 @@ import {
   renderNoControls,
   renderSuppliedControls,
   stripSuppliedControlsForTemplateScan,
-} from '../../../DPT_FRAMEWORK/engine/helpers/plan-hostfile-sections.mjs';
-import { writePlanProgress } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers-core.mjs';
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/plan-hostfile-sections.mjs';
+import { writePlanProgress } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-core.mjs';
 
 const dirs = [];
 function bundle() {

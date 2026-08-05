@@ -6,8 +6,8 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const REPO_ROOT = process.cwd();
-const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs');
-const STYLE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/apply-research-style.mjs');
+const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs');
+const STYLE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
@@ -24,7 +24,7 @@ function writeProfileYaml(bundleDir, yaml) {
 }
 
 function advanceHitl1(bundleDir) {
-  return spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli/advance-status.mjs'), '--bundle', bundleDir, '--to', 'hitl1_recorded'], { encoding: 'utf-8', timeout: 10000 });
+  return spawnSync('node', [join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/advance-status.mjs'), '--bundle', bundleDir, '--to', 'hitl1_recorded'], { encoding: 'utf-8', timeout: 10000 });
 }
 
 function applyStyle(bundleDir, style = 'quick_factual') {

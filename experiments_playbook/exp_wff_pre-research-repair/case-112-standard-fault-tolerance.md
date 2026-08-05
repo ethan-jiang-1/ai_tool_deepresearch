@@ -29,17 +29,17 @@ The `bad-json` auxiliary retains the malformed-state site but is not a health ta
 ```bash
 BAD=$(node experiments_env/shared/new-disposable-bundle.mjs wff_fault_bad_json --case case-112 --target-dir {{CASE_RUN_ROOT_SH}})
 VERDICT=$(node experiments_env/shared/new-disposable-bundle.mjs wff_fault_repair --case case-112 --target-dir {{CASE_RUN_ROOT_SH}})
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role bad-json --path "$BAD"
-node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role repair-verdict --path "$VERDICT"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role bad-json --path "$BAD"
+node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role repair-verdict --path "$VERDICT"
 ```
 
 ## Step 2: Malformed JSON returns structured failure without becoming verdict authority
 
 ```bash
-BAD=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role bad-json)
-VERDICT=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role repair-verdict)
+BAD=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role bad-json)
+VERDICT=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role repair-verdict)
 echo 'this is not valid json {{{' > "$BAD/rb_status.json"
-OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$BAD" --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle "$BAD" --current-node phases/phase-setup.md || true)
+OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$BAD" --gate setup-ready -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs --bundle "$BAD" --current-node phases/phase-setup.md || true)
 echo "$OUTPUT"
 node --input-type=module - "$VERDICT" "$OUTPUT" <<'JS'
 import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
@@ -54,10 +54,10 @@ JS
 ## Step 3: Produce the multi-rule failure in the verdict bundle
 
 ```bash
-VERDICT=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role repair-verdict)
+VERDICT=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role repair-verdict)
 rm "$VERDICT/rb_plan.md"
 rm -rf "$VERDICT/final"
-OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$VERDICT" --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle "$VERDICT" --current-node phases/phase-setup.md || true)
+OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$VERDICT" --gate setup-ready -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs --bundle "$VERDICT" --current-node phases/phase-setup.md || true)
 echo "$OUTPUT"
 PASSED=$(echo "$OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node --input-type=module - "$VERDICT" "$PASSED" <<'JS'
@@ -69,7 +69,7 @@ JS
 Read the inspect/advice and repair only the named missing surfaces:
 
 ```bash
-VERDICT=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role repair-verdict)
+VERDICT=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role repair-verdict)
 cat > "$VERDICT/rb_plan.md" <<'PLAN'
 ---
 {"plan_basename":"wff_fault_repair","derived_topic_count":0,"topic_registry":[]}
@@ -98,8 +98,8 @@ STATUS
 ## Step 4: Rerun the same gate and bind the repair pair
 
 ```bash
-VERDICT=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role repair-verdict)
-OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$VERDICT" --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle "$VERDICT" --current-node phases/phase-setup.md || true)
+VERDICT=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role repair-verdict)
+OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$VERDICT" --gate setup-ready -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs --bundle "$VERDICT" --current-node phases/phase-setup.md || true)
 echo "$OUTPUT"
 PASSED=$(echo "$OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node --input-type=module - "$VERDICT" "$PASSED" <<'JS'
@@ -116,9 +116,9 @@ JS
 ## Step 5: Missing bundle failure stays structured
 
 ```bash
-VERDICT=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role repair-verdict)
+VERDICT=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role repair-verdict)
 MISSING=$(node -e "const p=require('node:path'); console.log(p.join(process.argv[1],'dpt_disp_missing_bundle'))" {{CASE_RUN_ROOT_SH}})
-OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$VERDICT" --gate instantiation-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle "$MISSING" --current-node phases/phase-instantiation.md || true)
+OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$VERDICT" --gate instantiation-complete -- node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-instantiation-complete.mjs --bundle "$MISSING" --current-node phases/phase-instantiation.md || true)
 echo "$OUTPUT"
 node --input-type=module - "$VERDICT" "$OUTPUT" <<'JS'
 import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
@@ -130,9 +130,9 @@ JS
 ## Step 6: Publish native completion
 
 ```bash
-BAD=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role bad-json)
-VERDICT=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role repair-verdict)
-node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "bad-json=$BAD" --bundle "repair-verdict=$VERDICT"
+BAD=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role bad-json)
+VERDICT=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role repair-verdict)
+node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "bad-json=$BAD" --bundle "repair-verdict=$VERDICT"
 ```
 
 Stop after native completion. The Supervisor health-checks only `repair-verdict`; both bundles remain declared and auditable.

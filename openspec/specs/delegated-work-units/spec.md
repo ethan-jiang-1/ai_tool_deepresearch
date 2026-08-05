@@ -13,7 +13,7 @@ Define the Engine-owned work-unit lifecycle for delegated work inside the active
 ## Requirements
 ### Requirement: Work-unit pipeline SHALL be the sole production delegated-work path
 
-Production delegated work SHALL use the path `queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate` inside the active runtime bundle root. A work unit SHALL mean one Engine-allocated delegated execution attempt for one queue demand item. A wave, phase, queue item, runtime thread, or filesystem artifact SHALL NOT be called a work unit unless it is the Engine-allocated attempt envelope. Bare work-unit paths such as `_work_units/waveN/{work_id}/` SHALL resolve under the active bundle root.
+Production delegated work SHALL use the path `queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate` inside the active runtime bundle root. A work unit SHALL mean one Engine-allocated delegated execution attempt for one queue demand item. A wave, phase, queue item, runtime thread, or filesystem artifact SHALL NOT be called a work unit unless it is the Engine-allocated attempt envelope. Bare work-unit paths such as `_work_units/waveN/{work_id}/` SHALL resolve under the current run bundle root.
 
 Current production-facing surfaces outside `openspec/changes/archive/` SHALL NOT describe retired delegated transport mechanisms, old delegated ledger rows, or invalid old queue position shapes as active delegated-work paths. This applies to active main specs, active change deltas, framework docs, runtime docs, tests, guidelines, current runner surfaces, and runnable experiment playbooks. Archived OpenSpec changes are historical record and SHALL NOT be cleaned or treated as current drift.
 
@@ -599,7 +599,7 @@ Explicit audited `late-submit` MAY recover only a command-targeted `timed_out` a
 The work-unit CLI SHALL provide:
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs replace <bundle> --work-id <failed_or_abandoned_id>
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs replace <bundle> --work-id <failed_or_abandoned_id>
 ```
 
 `replace` SHALL create at most one ordinary replacement queue demand from one terminal parent attempt. It SHALL accept only a `failed` or `abandoned` index record with one matching queue `terminal_history` row and an exact matching immutable queue-item snapshot across the record, manifest, and terminal row. It SHALL derive a fresh queue-demand identity from the parent `work_id`, preserve the recorded assignment facts, and add only auditable parent-attempt lineage plus ordinary queue timestamps/status. It SHALL admit that demand through the existing queue admission path.
@@ -657,7 +657,7 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs replace <bundle> --work-id <failed_
 The work-unit CLI SHALL provide:
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs late-submit <bundle> --work-id <timed_out_id> --result <result.json> --reason <reason>
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs late-submit <bundle> --work-id <timed_out_id> --result <result.json> --reason <reason>
 ```
 
 `late-submit` SHALL require a non-empty reason. It SHALL mutate authority surfaces only for the command-targeted work-unit record whose current status is `timed_out`. It SHALL validate the candidate result through the normal submit authority for that targeted record's identity, runtime receipt, output files, cache trails, source claims, hashes, manifest, beacon, status file, queue binding evidence, and nonce.
@@ -751,13 +751,13 @@ Current specs, docs, tests, and playbooks SHALL NOT present retired delegated fi
 
 ### Requirement: Work-unit tasks SHALL expose bundle-root absolute paths and write-before-return verification
 
-Generated work-unit task Markdown and any Agent-facing claim/spawn output SHALL include the active bundle root normalized by the Engine as one canonical absolute `bundle_dir`, the exact work-unit identity fields, bundle-relative canonical refs, and absolute paths for files the sub-agent must read or write. The immutable Engine-owned `_beacon.json`, generated task, spawn/claim output, and generated work-unit CLI examples SHALL agree on that same absolute root. `bundle_dir` SHALL NOT be repo-relative, current-working-directory-relative, or only the bundle basename.
+Generated work-unit task Markdown and any Agent-facing claim/spawn output SHALL include the current run bundle root normalized by the Engine as one canonical absolute `bundle_dir`, the exact work-unit identity fields, bundle-relative canonical refs, and absolute paths for files the sub-agent must read or write. The immutable Engine-owned `_beacon.json`, generated task, spawn/claim output, and generated work-unit CLI examples SHALL agree on that same absolute root. `bundle_dir` SHALL NOT be repo-relative, current-working-directory-relative, or only the bundle basename.
 
 The task SHALL instruct the actor to use supplied absolute paths directly and to resolve each bundle-relative runtime ref under canonical `bundle_dir` exactly once. The actor SHALL NOT prefix a ref with the bundle basename before resolution, reinterpret an absolute path as bundle-relative, or treat a nested `<bundle>/<bundle>/...` path as a compatible runtime root. Every generated work-unit CLI command SHALL pass the canonical absolute root rather than depend on the actor's current working directory.
 
 The beacon SHALL remain a read-only binding surface for the actor. The actor SHALL NOT overwrite, supplement, or manually repair it. Inspect, dry-submit, and formal submit SHALL reuse one beacon-binding evaluator that compares `bundle_dir` with the current Engine-resolved bundle root and compares the remaining beacon content with the index, manifest, and contract-derived expected binding. Relative `bundle_dir`, root mismatch, or other beacon drift SHALL fail closed before ledger, queue, assigned result, receipt, cache, trace, log, or transaction success writes.
 
-Existing-authority reads SHALL validate their prerequisite before creating work-unit directories. A work-unit index load with `createIfMissing: false`, and inspect/dry-submit/submit or rejection handling built on that read, SHALL NOT create `_work_units`, `_work_units/_transactions`, a lock, trace, log, or other runtime surface when the resolved bundle root has no existing work-unit authority. Explicit create/claim paths MAY initialize work-unit directories only after the active bundle root itself has been validated.
+Existing-authority reads SHALL validate their prerequisite before creating work-unit directories. A work-unit index load with `createIfMissing: false`, and inspect/dry-submit/submit or rejection handling built on that read, SHALL NOT create `_work_units`, `_work_units/_transactions`, a lock, trace, log, or other runtime surface when the resolved bundle root has no existing work-unit authority. Explicit create/claim paths MAY initialize work-unit directories only after the current run bundle root itself has been validated.
 
 The required verification SHALL cover declared `writes_to` outputs, `result.json`, `runtime-receipt.jsonl`, cache leaf files required by the work-unit cache policy, unchanged beacon binding, and absence of a same-name nested bundle root created by the actor. A sub-agent that cannot write or verify the files SHALL report work-unit failure rather than returning only research text.
 
@@ -775,7 +775,7 @@ Canonical role/shared guidance SHALL describe capabilities and rich authoring be
 
 #### Scenario: Claimed task contains one canonical absolute runtime root
 
-- **WHEN** `operate-work-unit claim` creates a work unit for active bundle `/repo/dpt_rb_aidlc-investigation`
+- **WHEN** `operate-work-unit claim` creates a work unit for current run bundle `/repo/dpt_rb_aidlc-investigation`
 - **THEN** the generated beacon, task, spawn/claim output, and CLI examples SHALL use `bundle_dir: /repo/dpt_rb_aidlc-investigation`
 - **AND** the task SHALL include absolute paths for `_beacon.json`, `result.json`, `runtime-receipt.jsonl`, declared output files, and required cache leaf directories
 - **AND** bundle-relative paths SHALL remain clearly labeled as refs relative to `bundle_dir`
@@ -788,7 +788,7 @@ Canonical role/shared guidance SHALL describe capabilities and rich authoring be
 
 #### Scenario: Beacon root drift blocks submit
 
-- **WHEN** an actor overwrites the assigned beacon so `bundle_dir` is relative or differs from the current Engine-resolved active bundle root
+- **WHEN** an actor overwrites the assigned beacon so `bundle_dir` is relative or differs from the current Engine-resolved current run bundle root
 - **THEN** inspect, dry-submit, and formal submit SHALL report beacon binding failure from the shared evaluator
 - **AND** no ledger row, queue completion, assigned result normalization, transaction success, or provenance SHALL be written
 - **AND** guidance SHALL NOT tell the actor to hand-write a replacement beacon
@@ -804,7 +804,7 @@ Canonical role/shared guidance SHALL describe capabilities and rich authoring be
 #### Scenario: Sub-agent must verify writes before returning
 
 - **WHEN** a sub-agent completes a work-unit task
-- **THEN** the task contract SHALL require it to verify every declared output file exists under the exact active bundle root
+- **THEN** the task contract SHALL require it to verify every declared output file exists under the exact current run bundle root
 - **AND** it SHALL require `result.json` and `runtime-receipt.jsonl` to contain the exact `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`
 - **AND** it SHALL require cache trail leaves to contain required files before the sub-agent returns success
 - **AND** it SHALL verify that beacon binding is unchanged and no same-name nested bundle root was created
@@ -817,7 +817,7 @@ Canonical role/shared guidance SHALL describe capabilities and rich authoring be
 
 #### Scenario: Claimed task contains absolute runtime paths
 
-- **WHEN** `operate-work-unit claim` creates a work unit for active bundle `/repo/dpt_rb_aidlc-investigation`
+- **WHEN** `operate-work-unit claim` creates a work unit for current run bundle `/repo/dpt_rb_aidlc-investigation`
 - **THEN** the generated task SHALL include `bundle_dir: /repo/dpt_rb_aidlc-investigation`
 - **AND** it SHALL include absolute paths for `_beacon.json`, `result.json`, `runtime-receipt.jsonl`, declared output files, and required cache leaf directories
 - **AND** bundle-relative paths SHALL remain clearly labeled as refs relative to `bundle_dir`
@@ -1296,7 +1296,7 @@ Generated actor guidance SHALL expose the exact direct contract and require the 
 
 The work-unit CLI SHALL provide a timeout preflight for claimed work units. Timeout preflight SHALL determine whether it is safe to terminalize a claimed work-unit attempt as `timed_out` by evaluating Engine-observed progress, candidate result state, dry-submit-equivalent diagnostics, queue binding, and effective idle lease state.
 
-Timeout preflight SHALL accept an explicit active bundle path, `work_id`, and optional candidate `result` path. When no candidate result path is supplied, preflight SHALL inspect the assigned result path from the work-unit record. When a candidate result path is supplied, preflight SHALL evaluate it under submit/dry-submit-equivalent candidate path rules. A supplied candidate result path outside the assigned work-unit directory SHALL be a validation input only: its mtime SHALL NOT extend the work-unit idle lease by itself, though dry-submit-equivalent validation MAY still recommend `submit` or `repair`. It SHALL fail closed for missing or invalid work-unit index records, non-claimed attempts, missing manifests, missing queue in-flight binding, or binding drift. It SHALL return structured JSON for both timeout-eligible and timeout-ineligible cases. The output SHALL include the checked `work_id`, `queue_item_id`, current status, `timeout_eligible`, `check`, `recommended_action`, nullable `candidate_projection`, progress summary, `initial_deadline_at`, `lease_anchor_at`, `idle_timeout_ms`, `effective_timeout_at`, `inspect[]`, and repair-oriented `advice[]`.
+Timeout preflight SHALL accept an explicit current run bundle path, `work_id`, and optional candidate `result` path. When no candidate result path is supplied, preflight SHALL inspect the assigned result path from the work-unit record. When a candidate result path is supplied, preflight SHALL evaluate it under submit/dry-submit-equivalent candidate path rules. A supplied candidate result path outside the assigned work-unit directory SHALL be a validation input only: its mtime SHALL NOT extend the work-unit idle lease by itself, though dry-submit-equivalent validation MAY still recommend `submit` or `repair`. It SHALL fail closed for missing or invalid work-unit index records, non-claimed attempts, missing manifests, missing queue in-flight binding, or binding drift. It SHALL return structured JSON for both timeout-eligible and timeout-ineligible cases. The output SHALL include the checked `work_id`, `queue_item_id`, current status, `timeout_eligible`, `check`, `recommended_action`, nullable `candidate_projection`, progress summary, `initial_deadline_at`, `lease_anchor_at`, `idle_timeout_ms`, `effective_timeout_at`, `inspect[]`, and repair-oriented `advice[]`.
 
 `recommended_action` SHALL be a closed value: `submit`, `repair`, `wait`, `timeout`, `inspect`, or `block`. Timeout-preflight CLI exit status SHALL follow `timeout_eligible`: exit success only when timeout is currently safe, and exit non-zero when timeout is unsafe or the work-unit state is invalid. When the work-unit context can be loaded, non-zero preflight outcomes SHALL still emit structured JSON for Agent feedback.
 
@@ -1306,7 +1306,7 @@ The timeout-preflight helper/API SHALL accept an injectable clock for tests, whi
 
 Timeout eligibility SHALL be progress-aware. The existing `deadline_at` SHALL remain an initial lease hint, but terminal timeout eligibility SHALL use an effective idle lease derived from `lease_anchor_at + idle_timeout_ms`. `latest_engine_observed_progress_at` SHALL mean actual Engine-observed progress and SHALL NOT be populated from `claimed_at` merely to support timeout arithmetic. `lease_anchor_at` SHALL be the latest Engine-observed progress time when progress exists, or `claimed_at` when no progress exists. The default idle timeout window SHALL be the work-unit `timeout_ms` unless an accepted explicit runtime/profile surface provides a narrower value. If there is no observed progress after claim, effective timeout eligibility SHALL fall back to `claimed_at + idle_timeout_ms`, which matches the existing `claimed_at + timeout_ms` behavior when the default idle timeout is used.
 
-Engine-observed progress SHALL come from deterministic bundle-root surfaces such as assigned candidate result files, runtime receipt/log content and mtime tied to the same identity, declared output/cache files under active bundle root, assigned work-unit refs, and Engine trace/log events tied to the same `work_id`. Undeclared random files, path-escape refs, and identity-mismatched surfaces SHALL NOT extend the idle lease. Agent-authored receipt timestamps SHALL NOT be the sole authority for progress freshness. Progress diagnostics SHALL identify the source type, observed timestamp when available, path or event ref when available, whether work-unit identity was verified, whether the source extended the idle lease, and whether a suspicious timestamp was detected.
+Engine-observed progress SHALL come from deterministic bundle-root surfaces such as assigned candidate result files, runtime receipt/log content and mtime tied to the same identity, declared output/cache files under current run bundle root, assigned work-unit refs, and Engine trace/log events tied to the same `work_id`. Undeclared random files, path-escape refs, and identity-mismatched surfaces SHALL NOT extend the idle lease. Agent-authored receipt timestamps SHALL NOT be the sole authority for progress freshness. Progress diagnostics SHALL identify the source type, observed timestamp when available, path or event ref when available, whether work-unit identity was verified, whether the source extended the idle lease, and whether a suspicious timestamp was detected.
 
 Timeout preflight SHALL be read-only by default. It SHALL NOT update work-unit index records, queue state, work-unit status files, submitted ledger rows, terminal history, retry demand, transaction directories, trace/log files, candidate result files, runtime receipts, cache aliases, or gate-consumable outputs. Any future persisted observation surface such as `last_observed_at` SHALL require explicit design/spec update and no-authority side-effect proof before implementation relies on it.
 

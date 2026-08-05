@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildTopicLayoutTarget } from '../../../DPT_FRAMEWORK/engine/helpers/topic-layout.mjs';
+import { buildTopicLayoutTarget } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/topic-layout.mjs';
 
 const uidA = 'tp_123e4567-e89b-12d3-a456-426614174000';
 const uidB = 'tp_123e4567-e89b-12d3-a456-426614174001';

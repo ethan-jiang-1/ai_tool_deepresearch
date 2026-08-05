@@ -10,11 +10,11 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 const ROOT = process.cwd();
 const BUNDLES = join(ROOT, 'tests', '.test-bundles');
 const NEW_BUNDLE = join(ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
-const ADVANCE = join(ROOT, 'DPT_FRAMEWORK/cli/advance-status.mjs');
-const TOPIC_STATE = join(ROOT, 'DPT_FRAMEWORK/cli/operate-topic-state.mjs');
-const STYLE = join(ROOT, 'DPT_FRAMEWORK/cli/apply-research-style.mjs');
-const QUEUE = join(ROOT, 'DPT_FRAMEWORK/cli/operate-queue.mjs');
-const ENTER = join(ROOT, 'DPT_FRAMEWORK/cli/enter-phase.mjs');
+const ADVANCE = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/advance-status.mjs');
+const TOPIC_STATE = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs');
+const STYLE = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs');
+const QUEUE = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs');
+const ENTER = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs');
 const dirs = [];
 
 function run(script, args, expected = 0) {
@@ -30,7 +30,7 @@ function runRaw(script, args, expected = 0) {
 }
 
 function gate(bundle, name, node) {
-  return run(join(ROOT, `DPT_FRAMEWORK/cli/gates/check-gate-${name}.mjs`), ['--bundle', bundle, '--current-node', node]);
+  return run(join(ROOT, `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-${name}.mjs`), ['--bundle', bundle, '--current-node', node]);
 }
 
 function createBundle() {

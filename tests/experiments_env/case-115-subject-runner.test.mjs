@@ -25,9 +25,9 @@ describe('case-115 Subject runner invocation', () => {
     assert.ok(!invocation.claude_args.some((argument) => argument.includes('skip-permissions') || argument.includes('bypassPermissions')));
     assert.deepEqual(invocation.adapter_invocation, {
       adapter_id: 'claude-deepseek-websearch-webfetch/v1',
-      adapter_contract: 'DPT_FRAMEWORK/host_tools/research-access-adapter.md',
+      adapter_contract: 'DEEP_RESEARCH_HARNESS/host_tools/research-access-adapter.md',
       host_owner: 'selected Claude CLI host runtime',
-      launcher_entry: 'DPT_FRAMEWORK/host_tools/claude-deepseek.mjs',
+      launcher_entry: 'DEEP_RESEARCH_HARNESS/host_tools/claude-deepseek.mjs',
       launcher_routing: 'deepseek_anthropic_compatible',
       permission_mode: 'generic_non_bypass',
       caller_supplied_permission_bypass: false,
