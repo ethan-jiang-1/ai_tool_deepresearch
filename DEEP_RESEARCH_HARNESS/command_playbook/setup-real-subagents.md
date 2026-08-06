@@ -1,6 +1,6 @@
 # setup-real-subagents
 
-Agent command: set up project-local real LLM sub-agent definitions for DPT work-unit execution.
+Agent command: set up project-local real LLM sub-agent definitions for Deep Research Harness work-unit execution.
 
 ## Purpose
 
@@ -35,7 +35,7 @@ V1.5 agents must be installed as stable definitions but not invoked by the v1 re
 
 Every generated agent definition MUST include these constraints:
 
-- You are a bounded DPT subagent role.
+- You are a bounded Deep Research Harness subagent role.
 - Read the work-unit `task.md`, `_beacon.json`, and `result.schema.json` when the parent prompt gives paths.
 - Treat the Engine-written `actor_execution` route plus exact `work_id` and `receipt_nonce` as the logical attempt binding. A delegated role authors only its assigned candidate/result and receipt coordinates; a Phase Agent may submit the returned candidate but must not author substitute content under that same delegated binding.
 - Treat this binding as Agent Flow guidance only. It does not authenticate a physical writer, prove host/sub-agent liveness, or authorize a same-ID retry.
@@ -67,7 +67,7 @@ For each role, write `.codex/agents/<role>.toml` by filling this template:
 DEEP_RESEARCH_HARNESS/command_playbook/subagent_templates/codex-agent.toml.tmpl
 ```
 
-Codex and Claude Code use the same DPT role-agent taxonomy. If a Codex surface needs an adapter, preserve the role key and work-unit prompt contract; do not replace the role with generic fallback semantics.
+Codex and Claude Code use the same Deep Research Harness role-agent taxonomy. If a Codex surface needs an adapter, preserve the role key and work-unit prompt contract; do not replace the role with generic fallback semantics.
 
 ## Template Substitution
 

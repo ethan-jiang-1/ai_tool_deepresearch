@@ -1,4 +1,4 @@
-# DPT Real Subagent Roles
+# Deep Research Harness Real Subagent Roles
 
 Use these six stable role agents for the real subagent environment.
 

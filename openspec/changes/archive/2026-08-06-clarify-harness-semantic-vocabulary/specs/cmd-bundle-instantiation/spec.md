@@ -12,13 +12,14 @@
 
 ### Requirement: Bundle does NOT contain a Harness copy
 
-The production process SHALL NOT copy reusable Harness files into the bundle.
+The production process SHALL NOT copy any reusable Harness files into the
+bundle.
 
 #### Scenario: No Harness copy in bundle
 
 - **WHEN** a bundle is instantiated
-- **THEN** no copy of `DEEP_RESEARCH_HARNESS/` or another reusable Harness asset
-  tree exists inside the bundle
+- **THEN** no copy of `DEEP_RESEARCH_HARNESS/`, a legacy `_framework/`
+  directory, or any other reusable Harness asset exists inside the bundle
 
 ### Requirement: Bundle naming is not a mid-pipeline user dependency
 

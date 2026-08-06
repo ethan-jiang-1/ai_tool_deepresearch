@@ -16,7 +16,7 @@ Two bundles (`dpt_rb_{name}`) SHALL coexist at project root, each with its own i
 - **THEN** `bundleB.status.current_gate` remains unchanged
 
 ### Requirement: Each bundle has its own data directories
-Every bundle SHALL own its own `reference/` and `artifacts/` directories, never sharing them with other bundles or the framework.
+Every bundle SHALL own its own `reference/` and `artifacts/` directories, never sharing them with other bundles or the Harness.
 
 #### Scenario: Bundle A references don't appear in Bundle B
 - **WHEN** a reference file is written to `dpt_rb_a/reference/`
@@ -24,9 +24,9 @@ Every bundle SHALL own its own `reference/` and `artifacts/` directories, never 
 
 ### Requirement: Runtime output paths SHALL stay under current run bundle root and repo-root leaks SHALL be diagnosed
 
-Runtime output paths including `_work_units/`, `artifacts/`, `_cache/`, `reference/`, `_logs/`, `final/`, `rb_status.json`, `rb_queue.json`, `rb_trace.jsonl`, and `rb_output_declarations.jsonl` SHALL resolve under the active runtime bundle root. When a framework command or inspection has an explicit current run bundle path, repo-root runtime-looking directories or files SHALL be reported as bundle isolation diagnostics unless they are the selected current run bundle root itself.
+Runtime output paths including `_work_units/`, `artifacts/`, `_cache/`, `reference/`, `_logs/`, `final/`, `rb_status.json`, `rb_queue.json`, `rb_trace.jsonl`, and `rb_output_declarations.jsonl` SHALL resolve under the current run bundle root. When a Harness command or inspection has an explicit current run bundle path, repo-root runtime-looking directories or files SHALL be reported as bundle isolation diagnostics unless they are the selected current run bundle root itself.
 
-`DEEP_RESEARCH_HARNESS/` SHALL remain reusable framework assets and SHALL NOT be treated as runtime truth. Repo-root execution location SHALL NOT change the base for runtime writes.
+`DEEP_RESEARCH_HARNESS/` SHALL remain reusable Harness assets and SHALL NOT be treated as runtime truth. Repo-root execution location SHALL NOT change the base for runtime writes.
 
 Repo-root leak diagnostics SHALL distinguish severity. A leak MAY be reported as cleanup or historical debris when it cannot be associated with the current run bundle. It SHALL become an active-bundle blocker when the leaked path can be associated with the current bundle, current work unit, declared output, cache trail, status, trace, queue, or output ledger surface.
 
@@ -49,8 +49,8 @@ Repo-root leak diagnostics SHALL distinguish severity. A leak MAY be reported as
 - **THEN** inspection MAY report the path as cleanup debris
 - **AND** it SHALL NOT block the current run bundle solely because the old path exists
 
-#### Scenario: Framework root is not runtime truth
+#### Scenario: Harness root is not runtime truth
 
-- **WHEN** a framework command is launched from repo root and references `DEEP_RESEARCH_HARNESS/`
+- **WHEN** a Harness command is launched from repo root and references `DEEP_RESEARCH_HARNESS/`
 - **THEN** the command SHALL still require or derive an explicit current run bundle root for runtime state
 - **AND** it SHALL NOT write run outputs into `DEEP_RESEARCH_HARNESS/` or repo-root runtime directories

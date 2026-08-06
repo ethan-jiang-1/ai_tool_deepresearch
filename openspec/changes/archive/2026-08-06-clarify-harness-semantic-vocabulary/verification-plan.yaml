@@ -28,11 +28,11 @@ claims:
     statement: >-
       RUE-001, RUE-004, RUE-005, ACS-001, ACS-002, CMI-004, CMI-005,
       CMI-007, CMI-009, CSE-001, BUI-001, BUI-002, SWE-004, and WDC-001:
-      the selected current reader-facing Harness sources and accepted
-      requirements distinguish the reusable Deep Research Harness, its source
-      directory, a research run, and the selected current run bundle root;
-      human-readable role taxonomy uses Harness wording while stable protocol
-      identifiers remain unchanged.
+      the exact reader-facing Harness source rows in the semantic vocabulary
+      ledger and the seven accepted target requirements distinguish the
+      reusable Deep Research Harness, its source directory, a research run,
+      and the selected current run bundle root; human-readable role taxonomy
+      uses Harness wording while stable protocol identifiers remain unchanged.
     test_class: integration
     proof_subject: deterministic_contract
     asset:

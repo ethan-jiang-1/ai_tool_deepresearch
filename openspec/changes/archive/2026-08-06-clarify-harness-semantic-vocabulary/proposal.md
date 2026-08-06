@@ -42,8 +42,9 @@ None.
   Deep Research Harness，而不引入新的 entry 或交互点。
 - `agent-command-surface`: Harness command/playbook 的受众、责任和 continuation
   叙述 SHALL 使用已判定的领域术语。
-- `cmd-bundle-instantiation`: bundle creator 的自然语言导航说明 SHALL 区分 Harness
-  与 run bundle，同时保留已有结构化字段和 bundle grammar。
+- `cmd-bundle-instantiation`: bundle creator 的自然语言导航与既有的“bundle 不含可复用
+  系统副本”说明 SHALL 区分 Harness 与 run bundle，同时保留已有结构化字段和 bundle
+  grammar。
 - `cmd-subagent-environment`: real-subagent setup 的人类可读 taxonomy SHALL 指向
   Deep Research Harness；其已接受 marker 与 role-key 协议不变。
 - `bundle-data-isolation`: reusable Harness assets 与 current run bundle runtime truth

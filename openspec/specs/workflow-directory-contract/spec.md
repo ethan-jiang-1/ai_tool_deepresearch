@@ -4,11 +4,11 @@
 
 ## Purpose
 
-定义 Workflow Foundation 所有 artifact 的目录归属、命名约定、runtime coordinate vocabulary、active runtime bundle root 和禁止混放规则。该能力固定两条边界：`DEEP_RESEARCH_HARNESS/` 是可复用 read-only framework assets；当前 run 或实验的 runtime truth 只存在于明确选中的 current run bundle root（production `dpt_rb_*` 或 disposable `dpt_disp_*`）。
+定义 Workflow Foundation 所有 artifact 的目录归属、命名约定、runtime coordinate vocabulary、active runtime bundle root 和禁止混放规则。该能力固定两条边界：`DEEP_RESEARCH_HARNESS/` 是可复用 read-only Harness assets；当前 run 或实验的 runtime truth 只存在于明确选中的 current run bundle root（production `dpt_rb_*` 或 disposable `dpt_disp_*`）。
 
-Current run bundle root 是所有裸 runtime path 的解析锚点。Specs、workflow nodes、playbooks 或 prompts 中出现的 `rb_queue.json`、`rb_trace.jsonl`、`reference/`、`artifacts/`、`_cache/`、`_logs/`、`final/`、`_work_units/...` 等 runtime path，除非显式写成 `DEEP_RESEARCH_HARNESS/...`，都必须理解为 current run bundle-root relative，而不是 repo-root 或 framework-relative。
+Current run bundle root 是所有裸 runtime path 的解析锚点。Specs、workflow nodes、playbooks 或 prompts 中出现的 `rb_queue.json`、`rb_trace.jsonl`、`reference/`、`artifacts/`、`_cache/`、`_logs/`、`final/`、`_work_units/...` 等 runtime path，除非显式写成 `DEEP_RESEARCH_HARNESS/...`，都必须理解为 current run bundle-root relative，而不是 repo-root 或 Harness-relative。
 ## Requirements
-### Requirement: Read-only framework assets boundary
+### Requirement: Read-only Harness assets boundary
 
 `DEEP_RESEARCH_HARNESS/` SHALL be the sole read-only reusable Harness assets
 directory. Runtime user input, gate attempts, pass/fail results, repair

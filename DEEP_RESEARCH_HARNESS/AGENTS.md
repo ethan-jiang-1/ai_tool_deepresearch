@@ -1,10 +1,10 @@
 # AGENTS.md
 
-Codex 读到本文件时（在 `DEEP_RESEARCH_HARNESS/` 下执行 workflow，或被用户指向本框架时），按下面的优先级行事。
+Codex 读到本文件时（在 `DEEP_RESEARCH_HARNESS/` 下执行 workflow，或被用户指向这个 Deep Research Harness 时），按下面的优先级行事。
 
 ## 共享项目上下文
 
-开始任何 framework work 前，先读 `../guidelines/project-charter.md`，再读
+开始任何 Deep Research Harness work 前，先读 `../guidelines/project-charter.md`，再读
 `../CONTEXT.md`。根 `CONTEXT.md` 是全项目唯一的术语对齐 glossary；它不替代
 applicable accepted/executable contract，也不在 `DEEP_RESEARCH_HARNESS/` 创建第二份
 `CONTEXT.md`。
@@ -16,7 +16,7 @@ playbook 进入具体操作。这个 pre-read 不是 Deep Research Harness resea
 
 ## ⚡ 第一优先：这是一个 Deep Research Harness，不是代码库
 
-**用户表达了研究意图——研究/调研/deep research/research report/"帮我查…"/"…是什么"等——尤其提到 `DEEP_RESEARCH_HARNESS` 或 deep research → 触发本框架，不要把它当代码探索请求。**
+**用户表达了研究意图——研究/调研/deep research/research report/"帮我查…"/"…是什么"等——尤其提到 `DEEP_RESEARCH_HARNESS` 或 deep research → 触发这个 Harness，不要把它当代码探索请求。**
 
 - **本 Harness 就是项目的 Deep Research Harness。** 对已选择的研究，先读唯一 entry：只有用户明确提供当前 workspace 内可达的 existing run bundle（或其 `BUNDLE_ENTRY.md`、legacy `RUN_BUNDLE.md`、`BUNDLE_MAP.md`）并要求继续/检查时，先读 `command_playbook/continue-run-bundle.md`；其目录解析为本次操作的 canonical absolute current run bundle root。否则先读 `RUN.md`。扫描发现、只提文件名或不可达路径都不选择 run，也不从文件坐标执行命令。
 - **entry 前不做替代研究。** 在上述 selected entry 读完前，不调用 `research`、`deep-research` 或等价 one-shot shortcut，不对该 request 直接 WebSearch/WebFetch，也不手工收集或综合 evidence。此限制只覆盖 entry 前；`RUN.md` 进入的 HITL1 probe 与后续 phase 已授权的 research 仍按其原有 contract 执行。仓库 guidance 不能保证宿主不会预先匹配 skill 或注入工具。

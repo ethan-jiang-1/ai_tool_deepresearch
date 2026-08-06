@@ -2,11 +2,11 @@
 
 Deep Research Harness (`DEEP_RESEARCH_HARNESS/`) 的运行时入口说明。
 
-框架采用 recommendation-first 的两点交互节奏：HITL1 对齐，静默自主研究，HITL2 审阅，Final 交付；用户主动问答不会自动变成新的 checkpoint 或运行权力。
+Harness 采用 recommendation-first 的两点交互节奏：HITL1 对齐，静默自主研究，HITL2 审阅，Final 交付；用户主动问答不会自动变成新的 checkpoint 或运行权力。
 
 ## 共享项目上下文
 
-开始 framework work 前，先读 [Project Charter](../guidelines/project-charter.md)，再读
+开始 Deep Research Harness work 前，先读 [Project Charter](../guidelines/project-charter.md)，再读
 [root `CONTEXT.md`](../CONTEXT.md)。根 `CONTEXT.md` 是全项目唯一的术语对齐
 glossary；它不替代 applicable accepted/executable contract，也不在
 `DEEP_RESEARCH_HARNESS/` 创建第二份 `CONTEXT.md`。
@@ -16,11 +16,11 @@ research；它不改变随后 `continue-run-bundle.md` / `RUN.md` 的 existing s
 完成这个 pre-read 后，再按本文的触发规则、`COMMANDS.md` 和 selected playbook
 进入具体操作。
 
-> **最快触发**：把本目录下的 `RUN.md` 拖进对话——文件内容会直接进上下文，触发本框架，绕开"要不要进目录"的判断。
+> **最快触发**：把本目录下的 `RUN.md` 拖进对话——文件内容会直接进上下文，触发本 Harness，绕开"要不要进目录"的判断。
 
 ## 触发规则（最高优先）
 
-**用户有研究意图 → 触发本框架。** 这是 Deep Research 触发信号，不是代码探索请求。触发信号包括但不限于：
+**用户有研究意图 → 触发本 Harness。** 这是 Deep Research 触发信号，不是代码探索请求。触发信号包括但不限于：
 
 - 用户提到 `DEEP_RESEARCH_HARNESS`——**哪怕只是贴出本目录的路径**——并带一个问题；
 - 用户说"研究/调研/deep research/research report/帮我查…/…是什么"等研究意图；
@@ -38,9 +38,9 @@ research；它不改变随后 `continue-run-bundle.md` / `RUN.md` 的 existing s
 
 ## 目录性质
 
-`DEEP_RESEARCH_HARNESS/` 是 reusable framework assets，不是某一次 run 的工作目录。
+`DEEP_RESEARCH_HARNESS/` 是 reusable Harness assets，不是某一次 run 的工作目录。
 
-- `DEEP_RESEARCH_HARNESS/` 在 workflow 执行期间视为 read-only framework surface。
+- `DEEP_RESEARCH_HARNESS/` 在 workflow 执行期间视为 read-only Harness surface。
 - 同一套 `DEEP_RESEARCH_HARNESS/` 可以服务多个 `dpt_rb_*` production run bundle 或 `dpt_disp_*` disposable experiment bundle。
 - 当前 research run 的 runtime truth 只来自 current run bundle root，不来自 chat memory，也不写回 Harness。
 - “单主 workflow” 指 v1 只有一个 canonical Deep Research workflow package；不表示只能有一个 run bundle。
@@ -72,7 +72,7 @@ Current run bundle root 是本次 research run、CLI invocation、task card 或�
 这些 surface 当前已经存在，可直接使用：
 
 - `COMMANDS.md`：命令索引。
-- `cli/`：当前 framework-level CLI，包括 `instantiate-run-bundle.mjs`、`validate-bundle.mjs`、`inspect-bundle.mjs`、`operate-queue.mjs`。
+- `cli/`：当前 Harness-level CLI，包括 `instantiate-run-bundle.mjs`、`validate-bundle.mjs`、`inspect-bundle.mjs`、`operate-queue.mjs`。
 - `schema/contracts/`：当前 executable schema contracts，包括 `gate.mjs`、`plan.mjs`、`profile.mjs`、`queue.mjs`、`status.mjs`、`trace.mjs`。
 - `engine/`：当前 deterministic engine code 和 trace utility。
 - `rb_templates/`：实例化 run bundle 时 materialize 的初始模板。
@@ -96,7 +96,7 @@ Production run bundle 位于 repo root，当前命名形态：
 dpt_rb_<name>/
 ```
 
-- 当前 production 实例化入口接收显式 `<name>`，创建 `dpt_rb_<name>/`；Agent-facing playbooks derive this name from the research request unless a name was already supplied before framework execution.
+- 当前 production 实例化入口接收显式 `<name>`，创建 `dpt_rb_<name>/`；Agent-facing playbooks derive this name from the research request unless a name was already supplied before Harness execution.
 - 如果目标目录已存在，必须报错停止；不能覆盖或复用旧 bundle。
 - 自动英文 slug 和 collision suffix 是 workflow-foundation target，不是当前 production CLI 行为。
 - Disposable experiment bundle 使用 `dpt_disp_*`，也是 mutable runtime bundle root when selected.

@@ -76,18 +76,22 @@ For current new bundles, the required root map file SHALL be `BUNDLE_MAP.md`. Fo
 - **AND** output SHALL identify `BUNDLE_MAP.md` as the current root map
 - **AND** output SHALL identify `START_FROM_HERE.md` as deprecated compatibility debris or cleanup advice
 
-### Requirement: Bundle does NOT contain a framework copy
-The production process SHALL NOT copy any framework files into the bundle.
+### Requirement: Bundle does NOT contain a Harness copy
 
-#### Scenario: No _framework/ in bundle
-- **WHEN** bundle is instantiated
-- **THEN** no `_framework/` directory exists inside the bundle
+The production process SHALL NOT copy any reusable Harness files into the
+bundle.
+
+#### Scenario: No Harness copy in bundle
+
+- **WHEN** a bundle is instantiated
+- **THEN** no copy of `DEEP_RESEARCH_HARNESS/`, a legacy `_framework/`
+  directory, or any other reusable Harness asset exists inside the bundle
 
 ### Requirement: Bundle naming is not a mid-pipeline user dependency
 
 Bundle instantiation docs and playbooks SHALL frame the bundle `<name>` as an Agent-derived or already-supplied command input.
 
-The Agent MAY derive a kebab-case bundle name from the research request, use a name explicitly supplied before framework execution begins, or repair collisions deterministically according to existing bundle-instantiation behavior. The playbook SHALL NOT instruct the Agent to ask the user for a bundle name during autonomous execution, and SHALL NOT make bundle creation depend on a mid-pipeline user response.
+The Agent MAY derive a kebab-case bundle name from the research request, use a name explicitly supplied before Harness execution begins, or repair collisions deterministically according to existing bundle-instantiation behavior. The playbook SHALL NOT instruct the Agent to ask the user for a bundle name during autonomous execution, and SHALL NOT make bundle creation depend on a mid-pipeline user response.
 
 #### Scenario: Agent derives bundle name from research request
 
@@ -97,9 +101,9 @@ The Agent MAY derive a kebab-case bundle name from the research request, use a n
 
 #### Scenario: Already-supplied name is accepted
 
-- **WHEN** a bundle name was supplied before framework execution begins
+- **WHEN** a bundle name was supplied before Harness execution begins
 - **THEN** the playbook MAY use that name as the command input
-- **AND** it SHALL still treat subsequent instantiation commands as Agent-run framework commands
+- **AND** it SHALL still treat subsequent instantiation commands as Agent-run Harness commands
 
 ### Requirement: rb_status template SHALL include current_node
 
@@ -119,19 +123,19 @@ The initial value SHALL be `null`, meaning no lifecycle node has yet been loaded
 - **THEN** status validation SHALL remain backward compatible
 - **AND** the next successful `enter-phase` SHALL populate `current_node`
 
-### Requirement: rb_plan template SHALL stamp the framework version at bundle creation
+### Requirement: rb_plan template SHALL stamp the Harness version at bundle creation
 
 > req: CMI-007
 
-Bundle instantiation templates SHALL stamp `framework_version` into `rb_plan.md` frontmatter at bundle creation, alongside the existing `topic_registry_version` schema stamp. The value SHALL be the current framework version, sourced from the latest `CHANGELOG.md` version entry — the version-history source of truth established by `version-management` (VEM-001) — so that a bundle records the irreplaceable fact of which framework version created it.
+Bundle instantiation templates SHALL stamp `framework_version` into `rb_plan.md` frontmatter at bundle creation, alongside the existing `topic_registry_version` schema stamp. The value SHALL be the current Harness version, sourced from the latest `CHANGELOG.md` version entry — the version-history source of truth established by `version-management` (VEM-001) — so that a bundle records the irreplaceable fact of which Harness version created it.
 
 The `framework_version` field SHALL NOT introduce a competing version-string authority; it records a creation-time fact derived from the single CHANGELOG authority.
 
 Any code path that rewrites `rb_plan.md` after creation (for example a rerun `add_topic` appending to `topic_registry`) SHALL preserve the existing `framework_version`.
 
-#### Scenario: A newly created bundle stamps the current framework version
+#### Scenario: A newly created bundle stamps the current Harness version
 
-- **WHEN** `instantiate-run-bundle` creates a bundle under framework v0.30
+- **WHEN** `instantiate-run-bundle` creates a bundle under Harness v0.30
 - **THEN** `rb_plan.md` frontmatter SHALL contain `framework_version` set to v0.30, next to `topic_registry_version`
 - **AND** that value SHALL equal the latest `CHANGELOG.md` version entry
 
@@ -139,13 +143,13 @@ Any code path that rewrites `rb_plan.md` after creation (for example a rerun `ad
 
 - **WHEN** a rerun `add_topic` rewrites `rb_plan.md` to append a topic to `topic_registry`
 - **THEN** the pre-existing `framework_version` SHALL remain unchanged
-- **AND** it SHALL still reflect the framework version the bundle was originally created under
+- **AND** it SHALL still reflect the Harness version the bundle was originally created under
 
 #### Scenario: The stamp does not create a second version authority
 
-- **WHEN** a developer looks for the framework version string
+- **WHEN** a developer looks for the Harness version string
 - **THEN** the bundle stamp and the RUN.md banner SHALL both derive from the same CHANGELOG authority
-- **AND** no competing framework-version constant SHALL be introduced by this requirement
+- **AND** no competing Harness-version constant SHALL be introduced by this requirement
 
 ### Requirement: Production bundle creator SHALL reject invalid invocation before filesystem side effects
 
@@ -190,8 +194,8 @@ When production `instantiate-run-bundle.mjs` creates a bundle, it SHALL
 resolve the created bundle directory and the physical
 `DEEP_RESEARCH_HARNESS/` source root before rendering coordinates. It SHALL
 render `BUNDLE_ENTRY.md` with the bundle name and a canonical-Harness-root
-relative path calculated from those resolved locations. Any framework-root
-coordinate rendered in `BUNDLE_ENTRY.md` or `BUNDLE_MAP.md` SHALL point to the
+relative path calculated from those resolved locations. Any coordinate for the
+Harness root rendered in `BUNDLE_ENTRY.md` or `BUNDLE_MAP.md` SHALL point to the
 canonical physical Harness root. The production creator SHALL be supported
 only from its canonical Harness command location; it SHALL not expose an
 alternate source-root invocation or rendered source coordinate. It SHALL NOT

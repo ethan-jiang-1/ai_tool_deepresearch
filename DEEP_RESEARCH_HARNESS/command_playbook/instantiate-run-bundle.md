@@ -11,7 +11,7 @@ Agent 命令：从 Deep Research Harness 生产一个新的 run bundle。
 ## 步骤
 
 ### 1. 定名
-Agent 从 research request 派生稳定的 kebab-case bundle 名称，或使用 framework execution 开始前已提供的名称（如 `ai-safety`）。不要在 autonomous execution 中要求用户提供名称。目标目录: `dpt_rb_<name>/`。
+Agent 从 research request 派生稳定的 kebab-case bundle 名称，或使用 Harness execution 开始前已提供的名称（如 `ai-safety`）。不要在 autonomous execution 中要求用户提供名称。目标目录: `dpt_rb_<name>/`。
 
 ### 2. 创建 Bundle
 ```bash

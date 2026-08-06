@@ -21,7 +21,7 @@
 - That result is not a Gate verdict: silent autonomous execution is announced
   only after the existing HITL1 Gate passes. Unavailable access preserves the
   recorded choice and follows the same external-boundary/probe/Gate path.
-- This is framework Markdown communication only. It does not suppress or prove
+- This is Harness Markdown communication only. It does not suppress or prove
   selected-host-native tool/error rendering or real Agent behavior; the focused
   static integration test proves only the text and ordering contract.
 
@@ -134,9 +134,9 @@
 
 当前 agent 可能有内置的"快速研究/搜索"捷径（Claude Code：`deep-research` skill；Codex / Cursor / Windsurf 等：各自的内置搜索/research）——它们通用、一次性、无 gate、无证据包。`DEEP_RESEARCH_HARNESS` 是本项目的 Deep Research Harness：证据可追溯、多轮、gate 门控、产出可校验的 run bundle。此 guidance 不声称能阻止宿主预先匹配 skill 或注入工具；它只规定 Agent 在本 entry 已选定后的下一步。
 
-读到本文件时不要再问用户是否改用内置捷径或是否使用 DEEP_RESEARCH_HARNESS。一次性 trigger 已选择本入口；继续执行 Section 2 的 Agent-run framework flow。Section 2 及其进入的 HITL1/phase instructions 才单独授权 capability probe 和后续研究工作。若 bundle 尚未创建，唯一允许的前置澄清是 pre-pipeline routing exception，必须发生在 autonomous lifecycle 开始前，且不得削弱 HITL1/HITL2-only interactive in-run boundary。
+读到本文件时不要再问用户是否改用内置捷径或是否使用 DEEP_RESEARCH_HARNESS。一次性 trigger 已选择本入口；继续执行 Section 2 的 Agent-run Harness flow。Section 2 及其进入的 HITL1/phase instructions 才单独授权 capability probe 和后续研究工作。若 bundle 尚未创建，唯一允许的前置澄清是 pre-pipeline routing exception，必须发生在 autonomous lifecycle 开始前，且不得削弱 HITL1/HITL2-only interactive in-run boundary。
 
-## 2. 开跑（框架）
+## 2. 开跑（Harness）
 完整步骤见 `command_playbook/start-research.md`，一句话版：
 
 1. 定名（Agent 从 research request 派生 kebab-case，或使用 entry 前已提供的名称）
@@ -148,7 +148,7 @@
 
 At decision points, read any emitted `continuation` cue immediately: gate pass/fail, successful `enter-phase`, covered `advance-status`, and successful `operate-work-unit claim` now restate one next action. A cue is feedback projection only; it never replaces `check.next`, `load_complete`, `rb_status.current_node`, work-unit submit, gate pass, or Final delivery evidence.
 
-Interactive in-run checkpoints 只有 `hitl1`（Agent 基于已知事实给一个推荐，用户定方向 / profile / topics）和 `hitl2`（Agent 总结当前研究并给一个推荐，用户决定交付或合法 rerun/repair）。两点之间及之后的非终端 `stop: no` phase 静默自主推进：框架不主动提问、确认、汇报进度或等待 acknowledgement；若用户主动发来的消息已经是当前 conversation turn，Agent 直接回答当前事实或最小能力边界，但该回答不创建 checkpoint、permission、route、mutation/reentry authority 或持久 mid-run intent，原有 autonomous next action 不变。Final 是 terminal delivery，不是第三个交互 checkpoint；它在 artifacts 存在后交付，明确 post-final rerun 才通过 accepted recovery 重新进入。
+Interactive in-run checkpoints 只有 `hitl1`（Agent 基于已知事实给一个推荐，用户定方向 / profile / topics）和 `hitl2`（Agent 总结当前研究并给一个推荐，用户决定交付或合法 rerun/repair）。两点之间及之后的非终端 `stop: no` phase 静默自主推进：Harness 不主动提问、确认、汇报进度或等待 acknowledgement；若用户主动发来的消息已经是当前 conversation turn，Agent 直接回答当前事实或最小能力边界，但该回答不创建 checkpoint、permission、route、mutation/reentry authority 或持久 mid-run intent，原有 autonomous next action 不变。Final 是 terminal delivery，不是第三个交互 checkpoint；它在 artifacts 存在后交付，明确 post-final rerun 才通过 accepted recovery 重新进入。
 
 Delegated sub-agent work uses the Engine-mediated work-unit path only: queue demand item -> `operate-work-unit claim` -> sub-agent task under bundle-root `_work_units/` -> verified files/cache/result/receipt under the selected current run bundle root -> `operate-work-unit submit` -> submitted ledger row -> gate. Normal `submit` accepts claimed attempts only and rejects terminal attempts. The only terminal recovery exception is explicit audited `operate-work-unit late-submit` for eligible `timed_out` attempts when no replacement has submitted. Do not use queue completion as delegated success; `operate-queue complete` is for non-delegated queue work. Bare runtime paths such as `_work_units/...`, `rb_queue.json`, `reference/`, `artifacts/`, `_cache/`, and `_logs/` resolve under the current run bundle root selected above, not repo root or `DEEP_RESEARCH_HARNESS/`.
 

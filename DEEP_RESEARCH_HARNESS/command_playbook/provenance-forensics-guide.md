@@ -6,7 +6,7 @@
 
 ## 0. Prerequisite - Confirm The Current Mechanism
 
-Before judging provenance, confirm the bundle/framework is using the work-unit mechanism:
+Before judging provenance, confirm the run bundle and Harness use the work-unit mechanism:
 
 - Delegated task allocation is driven by `DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim`.
 - Delegated task acceptance is driven by `DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs submit`.

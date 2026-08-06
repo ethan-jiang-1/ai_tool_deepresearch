@@ -73,6 +73,12 @@ HMD-001 through HMD-014 and SPC-001 through SPC-009 are candidates for this
 change. Any other current occurrence is recorded as deferred or proposed in a
 later change rather than folded into this implementation opportunistically.
 
+Within the exact HMD source set, the ledger classifies every current generic
+reader-facing system reference: it is either a `rewrite` row or an explicitly
+preserved protocol literal. That closed review boundary is limited to those
+source files; it is not a claim that every occurrence beneath either selected
+directory has been semantically reviewed.
+
 The pair `AGENTS.md` / `CLAUDE.md` remains synchronized. The ordinary
 `framework` word is rendered as `Deep Research Harness` on first or
 potentially ambiguous reference and `Harness` only where the surrounding
@@ -99,6 +105,13 @@ readers, existing bundles, and test fixtures.
 They need a dedicated breaking design that owns delta specification migration,
 registry changes, archival compatibility, code consumers, and old-bundle
 behavior.
+
+The `cmd-bundle-instantiation` delta retains CMI-004 as the inherited
+capability-header trace for its pre-existing bundle requirement block. The
+registry's short CMI-004 label names template files, rather than providing a
+per-heading map for that older spec; this change therefore only rewrites the
+existing no-copy wording and does not use CMI-004 to introduce new behavior or
+allocate a new requirement ID.
 
 Alternatives considered:
 

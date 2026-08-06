@@ -14,7 +14,7 @@ Agent 命令：从零开始一次完整的 Deep Research。
 
 ### 1. 定名
 
-从 research question 生成 kebab-case bundle name，或使用 framework execution 开始前已提供的 `--name`：
+从 research question 生成 kebab-case bundle name，或使用 Harness execution 开始前已提供的 `--name`：
 
 - 取英文前 6 个词
 - 去除非字母数字，空格替换为 `-`
