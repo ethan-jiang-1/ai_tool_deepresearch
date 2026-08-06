@@ -3,7 +3,10 @@
 > req: PHS-001, PHS-002, PHS-003, PHS-004, PHS-005, PHS-006, PHS-007, PHS-008
 
 ## Purpose
-TBD - created by archiving change plan-hostfile-sections. Update Purpose after archive.
+
+`plan-hostfile-sections` defines the `rb_plan.md` host-file template,
+human-readable sections and projections, Engine progress presentation, and
+minimum setup-ready body checks without replacing structured runtime authority.
 ## Requirements
 ### Requirement: Plan template uses YAML frontmatter with structured body sections
 

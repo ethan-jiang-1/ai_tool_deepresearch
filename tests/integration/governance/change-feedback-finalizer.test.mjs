@@ -81,6 +81,8 @@ function copyGovernanceScripts(root) {
   for (const script of [
     'check-project-reqs.mjs',
     'check-project-specs.mjs',
+    'check-capability-taxonomy.mjs',
+    'check-capability-discovery.mjs',
     'check-verification-routing.mjs',
     'verification-routing-contract.mjs',
   ]) {
@@ -135,7 +137,7 @@ function createGovernanceFixture() {
     '- Archive the fixture change.',
     '',
   ].join('\n'));
-  write(root, 'openspec/changes/demo-change/specs/demo-capability/spec.md', [
+  write(root, 'openspec/changes/demo-change/specs/governance/demo-capability/spec.md', [
     '> req: ABC-001',
     '',
     '## Purpose',
@@ -154,6 +156,7 @@ function createGovernanceFixture() {
     '- **THEN** the selected checker reports its direct root',
     '',
   ].join('\n'));
+  write(root, 'openspec/specs/governance/demo-capability/spec.md', '> req: ABC-001\n');
   write(root, 'openspec/changes/demo-change/tasks.md', [
     '- [x] 0.1 Plan review (openspec-feedback:plan-review).',
     '- [x] 1.1 Prepare governance fixture.',
@@ -232,15 +235,15 @@ describe('change feedback finalizer integration', () => {
       'openspec_status', 'artifacts', 'tasks', 'strict_validation',
     ]);
 
-    write(root, 'openspec/governance/req-registry.yaml', 'ABC-001: demo-capability - fixture requirement\n');
-    write(root, 'openspec/specs/demo-capability/spec.md', '> req: ABC-001\n');
+    write(root, 'openspec/governance/req-registry.yaml', 'prefixes:\n  ABC: governance/demo-capability\n\nABC-001: demo-capability - fixture requirement\n');
+    write(root, 'openspec/specs/governance/demo-capability/spec.md', '> req: ABC-001\n');
     const mainSpecs = runFinalizer(root);
     assert.equal(mainSpecs.root.code, 'main_spec_governance_failed');
     assert.deepEqual(mainSpecs.checks.map((check) => check.id), [
       'openspec_status', 'artifacts', 'tasks', 'strict_validation', 'requirement_governance',
     ]);
 
-    write(root, 'openspec/specs/demo-capability/spec.md', [
+    write(root, 'openspec/specs/governance/demo-capability/spec.md', [
       '> req: ABC-001',
       '',
       '## Purpose',
@@ -254,11 +257,62 @@ describe('change feedback finalizer integration', () => {
       'The fixture SHALL reach the routing boundary.',
       '',
     ].join('\n'));
+    const taxonomy = runFinalizer(root);
+    assert.equal(taxonomy.root.code, 'capability_taxonomy_failed');
+    assert.deepEqual(taxonomy.checks.map((check) => check.id), [
+      'openspec_status', 'artifacts', 'tasks', 'strict_validation',
+      'requirement_governance', 'main_spec_governance',
+    ]);
+
+    write(root, 'openspec/specs/README.md', [
+      '# Capability Catalog',
+      '',
+      'Main specs remain the behavior authority.',
+      '',
+      '| Capability path | Purpose | Keywords | Boundaries / neighbors | Related entries | Agent/Markdown owns | Engine/Node owns |',
+      '| --- | --- | --- | --- | --- | --- | --- |',
+      '| governance/demo-capability | Fixture governance capability. | fixture | Finalizer fixture only. | none | Select semantic work. | Validate deterministic structure. |',
+      '',
+    ].join('\n'));
+    const discovery = runFinalizer(root);
+    assert.equal(discovery.root.code, 'capability_discovery_failed');
+    assert.deepEqual(discovery.checks.map((check) => check.id), [
+      'openspec_status', 'artifacts', 'tasks', 'strict_validation',
+      'requirement_governance', 'main_spec_governance', 'capability_taxonomy',
+    ]);
+
+    write(root, 'openspec/changes/demo-change/proposal.md', [
+      '## Why',
+      '',
+      'Exercise each governance checker through the production finalizer CLI.',
+      '',
+      '## What Changes',
+      '',
+      '- Temporary fixture only.',
+      '',
+      '## Capability Discovery',
+      '',
+      '| Candidate path | Evidence read | Decision | Reason |',
+      '| --- | --- | --- | --- |',
+      '| `governance/demo-capability` | Fixture main spec | Modify | The fixture changes this capability. |',
+      '',
+      '## Capabilities',
+      '',
+      '### Modified Capabilities',
+      '',
+      '- governance/demo-capability.',
+      '',
+      '## Impact',
+      '',
+      '- Temporary fixture only.',
+      '',
+    ].join('\n'));
     const routing = runFinalizer(root);
     assert.equal(routing.root.code, 'verification_routing_failed');
     assert.deepEqual(routing.checks.map((check) => check.id), [
       'openspec_status', 'artifacts', 'tasks', 'strict_validation',
-      'requirement_governance', 'main_spec_governance',
+      'requirement_governance', 'main_spec_governance', 'capability_taxonomy',
+      'capability_discovery',
     ]);
   });
 

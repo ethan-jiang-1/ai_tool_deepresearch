@@ -13,6 +13,74 @@ const CHECK_REQS = join(ROOT, 'openspec/governance/check-project-reqs.mjs');
 const CHECK_SPECS = join(ROOT, 'openspec/governance/check-project-specs.mjs');
 
 describe('project governance checks', () => {
+  it('accepts a complete nested live prefix target', () => {
+    const tmpDir = mkdtempSync(join(TMP, 'dpt_rb_test_'));
+    try {
+      seedGovernanceFixture(tmpDir);
+      const result = spawnSync('node', [CHECK_REQS, tmpDir], { encoding: 'utf-8' });
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a flat live prefix target', () => {
+    const tmpDir = mkdtempSync(join(TMP, 'dpt_rb_test_'));
+    try {
+      seedGovernanceFixture(tmpDir);
+      writeFileSync(
+        join(tmpDir, 'openspec/governance/req-registry.yaml'),
+        'prefixes:\n  ABC: demo-capability\n\nABC-001: demo capability\n',
+      );
+      const result = spawnSync('node', [CHECK_REQS, tmpDir], { encoding: 'utf-8' });
+      assert.equal(result.status, 1, result.stdout + result.stderr);
+      assert.match(result.stderr, /Invalid live prefix targets/);
+      assert.match(result.stderr, /ABC: demo-capability is not a two-level canonical path/);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a live prefix target without a main spec', () => {
+    const tmpDir = mkdtempSync(join(TMP, 'dpt_rb_test_'));
+    try {
+      seedGovernanceFixture(tmpDir);
+      writeFileSync(
+        join(tmpDir, 'openspec/governance/req-registry.yaml'),
+        'prefixes:\n  ABC: agent/missing-capability\n\nABC-001: demo capability\n',
+      );
+      const result = spawnSync('node', [CHECK_REQS, tmpDir], { encoding: 'utf-8' });
+      assert.equal(result.status, 1, result.stdout + result.stderr);
+      assert.match(result.stderr, /ABC: agent\/missing-capability does not resolve/);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('accepts documented sub-prefix and retired-prefix exceptions', () => {
+    const tmpDir = mkdtempSync(join(TMP, 'dpt_rb_test_'));
+    try {
+      seedGovernanceFixture(tmpDir);
+      writeFileSync(
+        join(tmpDir, 'openspec/governance/req-registry.yaml'),
+        [
+          'prefixes:',
+          '  ABC: agent/demo-capability',
+          '  SOR: agent/demo-capability # sub-prefix of ABC',
+          '  OLD: retired-capability # all entries deprecated; no spec directory',
+          '',
+          'ABC-001: demo capability',
+          'OLD-001: retired capability [DEPRECATED]',
+          '',
+        ].join('\n'),
+      );
+      const result = spawnSync('node', [CHECK_REQS, tmpDir], { encoding: 'utf-8' });
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it('ignores requirement IDs inside fenced code blocks', () => {
     const tmpDir = mkdtempSync(join(TMP, 'dpt_rb_test_'));
     try {
@@ -33,7 +101,7 @@ describe('project governance checks', () => {
       mkdirSync(join(tmpDir, 'openspec/specs/other-capability'), { recursive: true });
       writeFileSync(
         join(tmpDir, 'openspec/governance/req-registry.yaml'),
-        'ABC-001: demo capability\nABC-002: other capability\n',
+        'prefixes:\n  ABC: agent/demo-capability\n\nABC-001: demo capability\nABC-002: other capability\n',
       );
       writeFileSync(
         join(tmpDir, 'openspec/specs/other-capability/spec.md'),
@@ -135,7 +203,7 @@ describe('project governance checks', () => {
       seedGovernanceFixture(tmpDir);
       writeFileSync(
         join(tmpDir, 'openspec/governance/req-registry.yaml'),
-        'ABC-001: demo capability\nZZZ-001: lost capability\n',
+        'prefixes:\n  ABC: agent/demo-capability\n\nABC-001: demo capability\nZZZ-001: lost capability\n',
       );
 
       const result = spawnSync('node', [CHECK_REQS, tmpDir], { encoding: 'utf-8' });
@@ -178,16 +246,16 @@ describe('project governance checks', () => {
 
 function seedGovernanceFixture(tmpDir, options = {}) {
   mkdirSync(join(tmpDir, 'openspec/governance'), { recursive: true });
-  mkdirSync(join(tmpDir, 'openspec/specs/demo-capability'), { recursive: true });
-  mkdirSync(join(tmpDir, 'openspec/changes/demo-change/specs/demo-capability'), { recursive: true });
+  mkdirSync(join(tmpDir, 'openspec/specs/agent/demo-capability'), { recursive: true });
+  mkdirSync(join(tmpDir, 'openspec/changes/demo-change/specs/agent/demo-capability'), { recursive: true });
 
   writeFileSync(
     join(tmpDir, 'openspec/governance/req-registry.yaml'),
-    'ABC-001: demo capability\n',
+    'prefixes:\n  ABC: agent/demo-capability\n\nABC-001: demo capability\n',
   );
 
   writeFileSync(
-    join(tmpDir, 'openspec/specs/demo-capability/spec.md'),
+    join(tmpDir, 'openspec/specs/agent/demo-capability/spec.md'),
     options.specContent ?? [
       '# Demo Specification',
       '> req: ABC-001',
@@ -207,7 +275,7 @@ function seedGovernanceFixture(tmpDir, options = {}) {
   );
 
   writeFileSync(
-    join(tmpDir, 'openspec/changes/demo-change/specs/demo-capability/spec.md'),
+    join(tmpDir, 'openspec/changes/demo-change/specs/agent/demo-capability/spec.md'),
     [
       '# Demo Delta',
       '',

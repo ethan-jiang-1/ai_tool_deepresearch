@@ -3,7 +3,11 @@
 > req: EXA-001, EXA-002, EXA-003, EXA-004, EXA-005, EXA-006, EXA-007, EXA-008, EXA-009
 
 ## Purpose
-TBD - created by archiving change experiment-auto-runner. Update Purpose after archive.
+
+`experiment-agent-autorun` defines the deterministic Autorun Supervisor and
+real Playbook Agent execution contract for bounded command-experiment cases,
+including canonical vocabulary, selection, lifecycle, native completion,
+health, audit, and cleanup boundaries.
 ## Requirements
 ### Requirement: Agent Experiment Autorun has one precise execution vocabulary
 

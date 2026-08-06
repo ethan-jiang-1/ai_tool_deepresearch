@@ -33,8 +33,9 @@ capability `engine`; that domain is for capabilities whose primary contract is
 general Engine machinery. The Capability Catalog records secondary
 relationships; a capability does not receive multiple canonical paths.
 
-Until the focused OpenSpec migration is applied, the current flat directories
-remain the repository's current state.
+The focused OpenSpec migration has applied this identity to all live main specs
+and active deltas. Archived changes retain their historical paths as history,
+not as compatibility coordinates.
 
 ## Consequences
 

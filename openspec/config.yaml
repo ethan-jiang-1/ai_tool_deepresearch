@@ -76,6 +76,17 @@ context: |
     - task 描述: 引用 requirement ID (如 "实现 SCO-001: CurrentGate enum")
     - 每次 change 完成前必须更新 registry 并运行 openspec/governance/check-project-reqs.mjs
 
+  Capability discovery:
+    Before a proposal declares a New or Modified capability, first read
+    openspec/specs/README.md (or obtain `openspec list --specs --json`), then
+    inspect the candidate main specs. The catalog is navigation only; the
+    candidate main spec remains behavior authority. Record every considered
+    complete `domain/capability` path in proposal.md under `## Capability
+    Discovery`, with evidence read, decision, and reason. Reuse or modify an
+    inspected existing capability before declaring New; a New decision explains
+    why no candidate owns the observable behavior. Live main specs and active
+    deltas use exactly `domain/capability`, never a flat leaf name.
+
   治理工具 (openspec/governance/):
     需求追踪的工具支撑集中在此目录（与 DEEP_RESEARCH_HARNESS/ 解耦，属于项目级 OpenSpec 治理扩展）:
     - req-registry.yaml        — Requirement ID 唯一登记处（只增不删）
@@ -83,11 +94,11 @@ context: |
     - check-project-specs.mjs  — main spec 结构检查（deltaHeaderInMain / missingPurpose / missingRequirements / missingReqHeader）
     每次 change 归档前两个 check 脚本都必须 PASS，详见下方 rules.tasks。
 
-    Registry 组织约定（强制性，所有 change 遵守）:
-    - `# <capability-name>` 组头与 `openspec/specs/<capability-name>/` 目录一一对应——不存在合成组头（将多个 capability 归入人造标题）
+  Registry 组织约定（强制性，所有 change 遵守）:
+    - live `# <domain>/<capability>` 组头与 `openspec/specs/<domain>/<capability>/` 目录一一对应；retired group 保留 historical label 与 `no spec directory` 注解——不存在合成组头（将多个 capability 归入人造标题）
     - `prefixes:` 映射块是缩写→capability 全称的唯一自文档化来源（位于 req-registry.yaml 头部注释后、第一个 ID 组之前）
-    - ID 按 capability 分组，组按字母序排列，组内 ID 按数字序排列
-    - Delta 段（如 `# schema-core (delta)`）不允许——新增 ID SHALL 直接归入对应 capability 组，不另开 delta 组头
+    - ID 按 complete capability path 分组，live 组按完整路径字母序排列，组内 ID 按数字序排列
+    - Delta 段（如 `# engine/schema-core (delta)`）不允许——新增 ID SHALL 直接归入对应 capability 组，不另开 delta 组头
     - 废弃 ID SHALL 保留在原 capability 组内数字序的正常位置，值末尾标注 `[DEPRECATED]`；整个 capability 废弃时组头标 `— all entries deprecated; no spec directory`，放在文件末尾
 
   Verification routing:
@@ -187,6 +198,13 @@ rules:
   proposal:
     - 用中文写 proposal，明确这个 change 产出什么、不产出什么
     - 引用原始需求时注明来源文件
+    - |
+      在声明 New 或 Modified capability 前，先读 `openspec/specs/README.md`（或取得
+      `openspec list --specs --json`）并检查相关 main spec。proposal.md 必须有
+      `## Capability Discovery` 表，列出完整 `domain/capability` candidate path、
+      Evidence read、Modify|Verify-only|Excluded|New decision 与 reason；New 必须说明
+      没有已检查 contract 拥有该 observable behavior。`skip_specs: true` 仍须明确
+      delta-spec 不适用的原因。Catalog 只用于导航，main spec 仍是 behavior authority。
     - 为新 capability 分配 3 字母缩写并提前登记到 openspec/governance/req-registry.yaml (先查历史，避免冲突，别随意发挥)
     - 说明 direct Source of Record、最短合法闭环与 net simplification impact，明确删除、合并或避免的 control complexity
     - 对新增或实质改变的具名 state、projection、status、concept、Module、command 或 reader-facing view，先写简短的 semantic-precision reflection：明确读者/有界问题、必须保留的区别与正常推理停止点（或明确 unknown）
@@ -234,13 +252,13 @@ rules:
       owner、smallest repair 与 independently observable done condition。marker 不证明 semantic quality、
       test success、delta/main equivalence 或 archive completion。
   specs:
-    - Capability 用 kebab-case 命名，目录名即分类
+    - Capability identity 用完整 `domain/capability`（两段均为 kebab-case）；leaf name 不是 live identity，approved domain 由 catalog/governance 约束
     - Spec 文件是 Zod schema 的人类可读投影
     - |
-      OpenSpec main spec (`openspec/specs/<capability>/spec.md`):
+      OpenSpec main spec (`openspec/specs/<domain>/<capability>/spec.md`):
       必须有 `## Purpose` + `## Requirements`。
       Delta 头 (`## ADDED|MODIFIED|REMOVED|RENAMED Requirements`) 只在
-      `openspec/changes/<name>/specs/<capability>/spec.md` 合法 ——
+      `openspec/changes/<name>/specs/<domain>/<capability>/spec.md` 合法 ——
       由 `openspec/governance/check-project-specs.mjs` 强制执行。
     - |
       每个 main spec 文件必须有 `> req: XXX-001` 行标注涉及的 requirement ID
@@ -255,7 +273,7 @@ rules:
     - 实现代码中用 `// @impl <REQ-ID>` 标注, MD 文件用 frontmatter `req:` 标注
     - |
       Capability 边界测试（新增 capability 时 SHALL 通过以下检查。满足任一条件则应为独立 capability，建独立 spec）:
-        1. 约束条件不同 — 行为契约的约束条件与其他 capability 正交（如 `hitl-ux` 约束 "用户在场时的对话"，`silent-wave-execution` 约束 "用户缺席时的自律"）
+        1. 约束条件不同 — 行为契约的约束条件与其他 capability 正交（如 `agent/hitl-ux` 约束 "用户在场时的对话"，`workflow/silent-wave-execution` 约束 "用户缺席时的自律"）
         2. 独立 requires 链 — 被不同的 phase node 以独立的 `requires` 链加载
         3. 独立 gate 检查 — 有独立的 gate 检查，或 gate rule 的 target 语义与现有 capability 不重叠
         4. 不同 Engine 模块 — 涉及不同的 schema contract、CLI、或 trace event 族

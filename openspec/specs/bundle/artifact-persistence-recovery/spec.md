@@ -3,7 +3,10 @@
 > req: ARP-001, ARP-002, ARP-003, ARP-004
 
 ## Purpose
-TBD - created by archiving change make-artifact-persistence-crash-safe. Update Purpose after archive.
+
+`artifact-persistence-recovery` defines Engine-owned crash-safe persistence and
+recovery for content-bearing run-bundle artifacts, including durable staging,
+atomic publication, sweep, and submitted-backing admission for Final Markdown.
 ## Requirements
 ### Requirement: Content-bearing bundle files SHALL use one crash-safe persistence workspace
 

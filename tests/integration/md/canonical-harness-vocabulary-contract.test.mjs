@@ -21,13 +21,13 @@ const harnessDocs = Object.fromEntries([
 ].map(([name, path]) => [name, read(path)]));
 
 const specs = Object.fromEntries([
-  ['runEntry', 'openspec/specs/run-entry/spec.md'],
-  ['agentCommand', 'openspec/specs/agent-command-surface/spec.md'],
-  ['bundleInstantiation', 'openspec/specs/cmd-bundle-instantiation/spec.md'],
-  ['subagentEnvironment', 'openspec/specs/cmd-subagent-environment/spec.md'],
-  ['bundleIsolation', 'openspec/specs/bundle-data-isolation/spec.md'],
-  ['silentExecution', 'openspec/specs/silent-wave-execution/spec.md'],
-  ['workflowDirectory', 'openspec/specs/workflow-directory-contract/spec.md'],
+  ['runEntry', 'openspec/specs/bundle/run-entry/spec.md'],
+  ['agentCommand', 'openspec/specs/agent/agent-command-surface/spec.md'],
+  ['bundleInstantiation', 'openspec/specs/bundle/cmd-bundle-instantiation/spec.md'],
+  ['subagentEnvironment', 'openspec/specs/agent/cmd-subagent-environment/spec.md'],
+  ['bundleIsolation', 'openspec/specs/bundle/bundle-data-isolation/spec.md'],
+  ['silentExecution', 'openspec/specs/workflow/silent-wave-execution/spec.md'],
+  ['workflowDirectory', 'openspec/specs/workflow/workflow-directory-contract/spec.md'],
 ].map(([name, path]) => [name, read(path)]));
 
 const localEntryDirective = (contents) => contents

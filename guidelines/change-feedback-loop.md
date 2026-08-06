@@ -9,7 +9,7 @@ scope: OpenSpec change artifacts and project lifecycle entry guidance
 authority: guidance
 defers_to:
   - guidelines/project-charter.md
-  - openspec/specs/change-feedback-loop/spec.md
+  - openspec/specs/governance/change-feedback-loop/spec.md
   - openspec/governance/finalize-change-archive.mjs
 ---
 

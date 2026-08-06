@@ -42,6 +42,8 @@ const RootCodeSchema = z.enum([
   'strict_validation_failed',
   'requirement_governance_failed',
   'main_spec_governance_failed',
+  'capability_taxonomy_failed',
+  'capability_discovery_failed',
   'verification_routing_failed',
   'native_archive_failed',
   'native_archive_invalid',
@@ -68,6 +70,8 @@ const CheckSchema = z.object({
     'strict_validation',
     'requirement_governance',
     'main_spec_governance',
+    'capability_taxonomy',
+    'capability_discovery',
     'verification_routing',
     'native_archive',
   ]),
@@ -338,6 +342,28 @@ export async function finalizeChangeArchive({
       return makeBlocked(selectedChange, checks, 'main_spec_governance_failed', summarizeProcess(specCheck), 'openspec/governance/check-project-specs.mjs');
     }
     addCheck(checks, 'main_spec_governance');
+
+    const taxonomyCheck = await runStep(
+      runCommand,
+      process.execPath,
+      [join(planningRoot, 'openspec/governance/check-capability-taxonomy.mjs'), planningRoot],
+      planningRoot,
+    );
+    if (taxonomyCheck.status !== 0) {
+      return makeBlocked(selectedChange, checks, 'capability_taxonomy_failed', summarizeProcess(taxonomyCheck), 'openspec/governance/check-capability-taxonomy.mjs');
+    }
+    addCheck(checks, 'capability_taxonomy');
+
+    const discoveryCheck = await runStep(
+      runCommand,
+      process.execPath,
+      [join(planningRoot, 'openspec/governance/check-capability-discovery.mjs'), '--change', selectedChange],
+      planningRoot,
+    );
+    if (discoveryCheck.status !== 0) {
+      return makeBlocked(selectedChange, checks, 'capability_discovery_failed', summarizeProcess(discoveryCheck), 'openspec/governance/check-capability-discovery.mjs');
+    }
+    addCheck(checks, 'capability_discovery');
 
     const routingCheck = await runStep(
       runCommand,

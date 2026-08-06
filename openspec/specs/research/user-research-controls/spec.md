@@ -3,7 +3,10 @@
 > req: URC-001, URC-002, URC-003
 
 ## Purpose
-TBD - created by archiving change capture-user-research-controls. Update Purpose after archive.
+
+`user-research-controls` defines how optional user research controls are
+captured once in `rb_plan.md` to guide Agent judgment while preserving existing
+Engine, Gate, and runtime-authority boundaries.
 ## Requirements
 ### Requirement: Optional user research controls have one durable run snapshot
 

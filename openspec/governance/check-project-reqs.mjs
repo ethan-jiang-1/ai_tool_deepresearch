@@ -7,11 +7,12 @@
 //   pending — 出现在 openspec/changes/<active>/specs/ (未归档 change 的 delta)
 //   retired — 在 openspec/governance/req-registry.yaml 该行标记 [DEPRECATED] (合法废弃, id 占位永不复用)
 //
-// 四项检查:
+// 五项检查:
 //   1. duplicate      — 同一 id 被 ≥2 个不同的 main spec 文件 **声明** (归属冲突)
 //   2. unregistered   — 出现在 specs/delta 但 registry 没有 (BUG-\d+ 是 bug ID, 不是 req ID, 不参与)
 //   3. orphan         — registry 有, 但三态都不是 (静默丢失探测器)
 //   4. reusedRetired  — 未归档 change **声明** 了已 [DEPRECATED] 的 id (禁止旧 id 指新语义)
+//   5. prefixPath     — 活跃 prefix 必须指向存在的完整 canonical main-spec path
 //
 // 声明 vs 引用: 只有 `> req: XXX-001, ...` 头部行算"声明"(归属)。正文 prose 里的
 // 交叉引用 (如 "see GSK-002"、"per WNC-009") 只算"引用"——引用参与 unregistered/orphan
@@ -31,13 +32,100 @@ if (!existsSync(registryPath)) {
   process.exit(1);
 }
 
-const registry = parseYaml(readFileSync(registryPath, 'utf-8'));
+const registryText = readFileSync(registryPath, 'utf-8');
+const registry = parseYaml(registryText);
 const ID_RE = /^[A-Z]{3}-\d{3}$/;
+const PREFIX_RE = /^[A-Z]{3}$/;
+const CAPABILITY_PATH_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const allEntries = Object.entries(registry).filter(([k]) => ID_RE.test(k));
 const retired = new Set(
   allEntries.filter(([, v]) => String(v).toUpperCase().includes('DEPRECATED')).map(([k]) => k),
 );
 const registered = new Set(allEntries.map(([k]) => k));
+
+function prefixMetadata(content) {
+  const metadata = new Map();
+  let inPrefixes = false;
+
+  for (const line of content.replace(/\r\n?/g, '\n').split('\n')) {
+    if (!inPrefixes) {
+      if (/^prefixes:\s*$/.test(line)) inPrefixes = true;
+      continue;
+    }
+    if (/^\S/.test(line) && !line.startsWith('#')) break;
+    const match = line.match(/^ {2}([A-Z]{3}):\s*([^#]+?)(?:\s+#\s*(.*))?\s*$/);
+    if (!match) continue;
+    metadata.set(match[1], {
+      value: match[2].trim(),
+      comment: (match[3] ?? '').trim(),
+    });
+  }
+
+  return metadata;
+}
+
+function validatePrefixTargets(registryValue, metadata, mainSpecsRoot) {
+  const failures = [];
+  if (!registryValue || typeof registryValue !== 'object' || Array.isArray(registryValue)) {
+    return ['prefixes: must be a mapping'];
+  }
+
+  const liveEntries = [];
+  for (const [prefix, rawPath] of Object.entries(registryValue)) {
+    if (!PREFIX_RE.test(prefix)) {
+      failures.push(`${prefix}: key must be a three-letter prefix`);
+      continue;
+    }
+
+    const path = String(rawPath).trim();
+    const note = metadata.get(prefix)?.comment ?? '';
+    const subPrefixMatch = note.match(/\bsub-prefix of ([A-Z]{3})\b/);
+    if (note.includes('no spec directory')) continue;
+
+    if (!CAPABILITY_PATH_RE.test(path)) {
+      failures.push(`${prefix}: ${path || '(empty)'} is not a two-level canonical path`);
+      continue;
+    }
+
+    const target = join(mainSpecsRoot, ...path.split('/'), 'spec.md');
+    if (!existsSync(target)) {
+      failures.push(`${prefix}: ${path} does not resolve to openspec/specs/${path}/spec.md`);
+      continue;
+    }
+
+    if (subPrefixMatch) {
+      const owner = subPrefixMatch[1];
+      const ownerPath = registryValue[owner];
+      if (!ownerPath) {
+        failures.push(`${prefix}: documented sub-prefix owner ${owner} is missing`);
+      } else if (String(ownerPath).trim() !== path) {
+        failures.push(`${prefix}: documented sub-prefix owner ${owner} maps to ${ownerPath}, not ${path}`);
+      }
+    }
+    liveEntries.push({ prefix, path, subPrefixMatch });
+  }
+
+  const ownersByPath = new Map();
+  for (const entry of liveEntries) {
+    if (!ownersByPath.has(entry.path)) ownersByPath.set(entry.path, []);
+    ownersByPath.get(entry.path).push(entry);
+  }
+  for (const [path, entries] of ownersByPath) {
+    if (entries.length < 2) continue;
+    const primaryOwners = entries.filter(({ subPrefixMatch }) => !subPrefixMatch);
+    if (primaryOwners.length !== 1 || entries.some(({ subPrefixMatch }) => !subPrefixMatch && primaryOwners.length !== 1)) {
+      failures.push(`${path}: multiple live prefixes require one owner and documented sub-prefix aliases`);
+    }
+  }
+
+  return failures;
+}
+
+const prefixFailures = validatePrefixTargets(
+  registry.prefixes,
+  prefixMetadata(registryText),
+  specsDir,
+);
 
 function stripFencedCodeBlocks(content) {
   const lines = content.replace(/\r\n?/g, '\n').split('\n');
@@ -154,6 +242,11 @@ if (orphans.length > 0) {
 }
 if (reusedRetired.length > 0) {
   console.error('Reused retired IDs (active change re-adds a [DEPRECATED] id):', reusedRetired.join(', '));
+  failed = true;
+}
+if (prefixFailures.length > 0) {
+  console.error('Invalid live prefix targets:');
+  for (const failure of prefixFailures) console.error(`  ${failure}`);
   failed = true;
 }
 if (failed) process.exit(1);

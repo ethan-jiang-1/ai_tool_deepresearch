@@ -68,7 +68,7 @@ Live group headings SHALL satisfy all of the following:
 
 - **WHEN** a later change adds a requirement to `engine/schema-core`
 - **THEN** its ID is inserted in numeric order under `# engine/schema-core`
-- **AND** no `# schema-core (delta)` or second group is created
+- **AND** no `# engine/schema-core (delta)` or second group is created
 
 #### Scenario: Group headings follow canonical identity
 
@@ -140,7 +140,7 @@ optional guidance rather than a project dependency.
 
 新增 capability 时 SHALL 通过边界测试——满足以下任一条件则应为独立 capability，建独立 spec：
 
-1. **约束条件不同**：行为契约的约束条件与其他 capability 正交（如 `hitl-ux` 约束 "用户在场时的对话"，`silent-wave-execution` 约束 "用户缺席时的自律"）
+1. **约束条件不同**：行为契约的约束条件与其他 capability 正交（如 `agent/hitl-ux` 约束 "用户在场时的对话"，`workflow/silent-wave-execution` 约束 "用户缺席时的自律"）
 2. **独立 requires 链**：被不同的 phase node 以独立的 `requires` 链加载
 3. **独立 gate 检查**：有独立的 gate 检查，或 gate rule 的 target 语义与现有 capability 不重叠
 4. **不同 Engine 模块**：涉及不同的 schema contract、CLI、或 trace event 族
@@ -178,12 +178,12 @@ SHALL NOT 以主题标签（如 "UX 相关"、"性能相关"）作为 capability
 - **THEN** project validation still evaluates the row's project-local facts
 - **AND** the unavailable skill is not reported as a missing product dependency
 
-#### Scenario: Recognizing silent-wave-execution as separate capability
+#### Scenario: Recognizing workflow/silent-wave-execution as separate capability
 
 - **WHEN** 静默阶段的行为契约（绝不浮出水面、遇错降级、不设 blocked state）被提出
-- **THEN** 边界测试条件 1 触发——约束条件是 "用户缺席"，与 `hitl-ux` 的 "用户在场" 正交
+- **THEN** 边界测试条件 1 触发——约束条件是 "用户缺席"，与 `agent/hitl-ux` 的 "用户在场" 正交
 - **AND** 条件 2 触发——静默纪律由 wave phase MD 加载，HITL 环由 hitl phase MD 加载，requires 链不同
-- **AND** SHALL 创建独立的 `silent-wave-execution` spec，而非并入 `hitl-ux`
+- **AND** SHALL 创建独立的 `workflow/silent-wave-execution` spec，而非并入 `agent/hitl-ux`
 
 #### Scenario: Rejecting theme-tag grouping
 

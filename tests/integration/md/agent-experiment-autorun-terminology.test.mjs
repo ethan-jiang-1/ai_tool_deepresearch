@@ -31,24 +31,31 @@ const STATIC_KNOWLEDGE_SURFACES = [
   'DEEP_RESEARCH_HARNESS/host_tools/README.md',
 ];
 const SPEC_SENTINELS = {
-  'agent-testing': 'native completion',
-  'agentic-queue': 'native completion',
-  'experiment-agent-autorun': 'Autorun Supervisor',
-  'experiment-observability': 'Autorun',
-  'local-deepseek-claude-launcher': 'Agent Experiment Autorun',
-  'playbook-runner': 'Autorun',
-  'pre-research-experiments': 'native completion',
-  'pre-research-gate-implementation': 'native completion',
-  'research-wave-experiments': 'native completion',
-  'research-wave-gate-implementation': 'native completion',
-  'seed-topic-materialization': 'native completion',
-  'trace-writer': 'native completion',
-  'verification-routing': 'Agent Experiment Autorun',
+  'agent/agent-testing': 'native completion',
+  'agent/agentic-queue': 'native completion',
+  'verification/experiment-agent-autorun': 'Autorun Supervisor',
+  'verification/experiment-observability': 'Autorun',
+  'agent/local-deepseek-claude-launcher': 'Agent Experiment Autorun',
+  'workflow/playbook-runner': 'Autorun',
+  'research/pre-research-experiments': 'native completion',
+  'research/pre-research-gate-implementation': 'native completion',
+  'research/research-wave-experiments': 'native completion',
+  'research/research-wave-gate-implementation': 'native completion',
+  'research/seed-topic-materialization': 'native completion',
+  'engine/trace-writer': 'native completion',
+  'verification/verification-routing': 'Agent Experiment Autorun',
 };
 
 function testSources(path = 'tests') {
   const files = [];
-  for (const entry of readdirSync(path, { withFileTypes: true })) {
+  let entries;
+  try {
+    entries = readdirSync(path, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === 'ENOENT') return files;
+    throw error;
+  }
+  for (const entry of entries) {
     const child = `${path}/${entry.name}`;
     if (entry.isDirectory()) files.push(...testSources(child));
     else if (entry.isFile() && entry.name.endsWith('.mjs')) files.push(child);
@@ -121,8 +128,8 @@ describe('Agent Experiment Autorun terminology knowledge surfaces', () => {
       }
     }
 
-    const archivedPaths = capabilitySpecPaths('agent-testing', []);
-    assert.deepEqual(archivedPaths, ['openspec/specs/agent-testing/spec.md']);
+    const archivedPaths = capabilitySpecPaths('agent/agent-testing', []);
+    assert.deepEqual(archivedPaths, ['openspec/specs/agent/agent-testing/spec.md']);
   });
 
   it('documents virtual bounded run profiles without reviving filename-Light normal launch', () => {

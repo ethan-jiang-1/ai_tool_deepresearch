@@ -2,9 +2,9 @@
 // Usage: node check-project-specs.mjs [projectRoot]
 //
 // 对齐 @fission-ai/openspec 1.3.1:
-//   - openspec/specs/<capability>/spec.md 是 main spec，必须有 ## Purpose 和 ## Requirements
+//   - openspec/specs/<domain>/<capability>/spec.md 是 main spec，必须有 ## Purpose 和 ## Requirements
 //   - delta headers (## ADDED/MODIFIED/REMOVED/RENAMED Requirements) 只对
-//     openspec/changes/<name>/specs/<capability>/spec.md 合法
+//     openspec/changes/<name>/specs/<domain>/<capability>/spec.md 合法
 //   - main spec 的 requirement blocks 只在 ## Requirements 内被 parse/list/show
 //   - archive/apply-specs 更新既有 main spec 前会用 spec-structure.js 拒绝 delta header
 //
