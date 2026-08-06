@@ -22,6 +22,17 @@ project governance. A domain classifies the Coding Agent's primary task
 question and discovery entry, not the source directory, execution layer, or
 team that owns implementation.
 
+The approved domains are `agent`, `engine`, `bundle`, `research`, `workflow`,
+`verification`, and `governance`. Adding another domain requires a deliberate
+governance decision rather than an ad hoc directory.
+
+For a cross-domain capability, its primary task question and semantic subject
+choose the path; the direct contract or authority boundary breaks only a
+remaining tie. A deterministic enforcement surface alone does not make a
+capability `engine`; that domain is for capabilities whose primary contract is
+general Engine machinery. The Capability Catalog records secondary
+relationships; a capability does not receive multiple canonical paths.
+
 Until the focused OpenSpec migration is applied, the current flat directories
 remain the repository's current state.
 

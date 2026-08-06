@@ -1,0 +1,264 @@
+schema_version: capability-taxonomy-map/v1
+change: rebaseline-capability-taxonomy
+expected_main_spec_count: 84
+approved_domains:
+  - agent
+  - engine
+  - bundle
+  - research
+  - workflow
+  - verification
+  - governance
+capabilities:
+  - legacy: agent-command-surface
+    path: agent/agent-command-surface
+    prefix: ACS
+  - legacy: agent-context-routing
+    path: agent/agent-context-routing
+    prefix: ACR
+  - legacy: agent-output-declaration
+    path: agent/agent-output-declaration
+    prefix: AGO
+  - legacy: agent-testing
+    path: agent/agent-testing
+    prefix: AGT
+  - legacy: agentic-queue
+    path: agent/agentic-queue
+    prefix: AGQ
+  - legacy: cmd-subagent-environment
+    path: agent/cmd-subagent-environment
+    prefix: CSE
+  - legacy: delegated-work-units
+    path: agent/delegated-work-units
+    prefix: DEW
+  - legacy: hitl-ux
+    path: agent/hitl-ux
+    prefix: HIU
+  - legacy: local-deepseek-claude-launcher
+    path: agent/local-deepseek-claude-launcher
+    prefix: LDC
+  - legacy: queue-input-validation
+    path: agent/queue-input-validation
+    prefix: QIV
+  - legacy: subagent-directory-contract
+    path: agent/subagent-directory-contract
+    prefix: SDC
+  - legacy: subagent-dispatch
+    path: agent/subagent-dispatch
+    prefix: SUD
+  - legacy: subagent-node-contract
+    path: agent/subagent-node-contract
+    prefix: SNC
+  - legacy: subagent-runtime-logging
+    path: agent/subagent-runtime-logging
+    prefix: SRL
+  - legacy: work-unit-provenance-gate
+    path: agent/work-unit-provenance-gate
+    prefix: WPG
+  - legacy: check-inspect-feedback
+    path: engine/check-inspect-feedback
+    prefix: CHI
+  - legacy: cli-exit-code-conventions
+    path: engine/cli-exit-code-conventions
+    prefix: CLE
+  - legacy: cli-inspect-output-conventions
+    path: engine/cli-inspect-output-conventions
+    prefix: IOC
+  - legacy: cli-phase-transition
+    path: engine/cli-phase-transition
+    prefix: CPT
+  - legacy: framework-engine
+    path: engine/framework-engine
+    prefix: FRE
+  - legacy: gate-content-dedup
+    path: engine/gate-content-dedup
+    prefix: GAC
+  - legacy: gate-fork-router
+    path: engine/gate-fork-router
+    prefix: GAF
+  - legacy: gate-skeleton
+    path: engine/gate-skeleton
+    prefix: GSK
+  - legacy: gate-state-machine
+    path: engine/gate-state-machine
+    prefix: GAS
+  - legacy: logger
+    path: engine/logger
+    prefix: LOG
+  - legacy: logging-conventions
+    path: engine/logging-conventions
+    prefix: LOC
+  - legacy: runtime-reentry-debuggability
+    path: engine/runtime-reentry-debuggability
+    prefix: RRD
+  - legacy: schema-core
+    path: engine/schema-core
+    prefix: SCO
+  - legacy: trace-writer
+    path: engine/trace-writer
+    prefix: TRW
+  - legacy: transition-table
+    path: engine/transition-table
+    prefix: TRT
+  - legacy: artifact-persistence-recovery
+    path: bundle/artifact-persistence-recovery
+    prefix: ARP
+  - legacy: bundle-data-isolation
+    path: bundle/bundle-data-isolation
+    prefix: BUI
+  - legacy: bundle-map
+    path: bundle/bundle-map
+    prefix: BUM
+  - legacy: bundle-start-from-here
+    path: bundle/bundle-start-from-here
+    prefix: BUS
+  - legacy: cache-raw-web-content
+    path: bundle/cache-raw-web-content
+    prefix: CRC
+  - legacy: cmd-bundle-instantiation
+    path: bundle/cmd-bundle-instantiation
+    prefix: CMI
+  - legacy: file-observability
+    path: bundle/file-observability
+    prefix: FIO
+  - legacy: reference-flat-format
+    path: bundle/reference-flat-format
+    prefix: REF
+  - legacy: run-entry
+    path: bundle/run-entry
+    prefix: RUE
+  - legacy: canonical-topic-state
+    path: research/canonical-topic-state
+    prefix: CTS
+  - legacy: content-delivery-experiments
+    path: research/content-delivery-experiments
+    prefix: CDE
+  - legacy: content-delivery-gate-implementation
+    path: research/content-delivery-gate-implementation
+    prefix: CDG
+  - legacy: content-delivery-phase-content
+    path: research/content-delivery-phase-content
+    prefix: CDP
+  - legacy: evidence-extraction
+    path: research/evidence-extraction
+    prefix: EEX
+  - legacy: final-delivery-backing
+    path: research/final-delivery-backing
+    prefix: FDB
+  - legacy: plan-hostfile-sections
+    path: research/plan-hostfile-sections
+    prefix: PHS
+  - legacy: post-final-recovery
+    path: research/post-final-recovery
+    prefix: POF
+  - legacy: pre-research-experiments
+    path: research/pre-research-experiments
+    prefix: PRE
+  - legacy: pre-research-gate-implementation
+    path: research/pre-research-gate-implementation
+    prefix: PRG
+  - legacy: pre-research-phase-content
+    path: research/pre-research-phase-content
+    prefix: PRP
+  - legacy: research-access-adapter
+    path: research/research-access-adapter
+    prefix: REA
+  - legacy: research-return-map
+    path: research/research-return-map
+    prefix: RRM
+  - legacy: research-styles
+    path: research/research-styles
+    prefix: RES
+  - legacy: research-wave-experiments
+    path: research/research-wave-experiments
+    prefix: RWE
+  - legacy: research-wave-gate-implementation
+    path: research/research-wave-gate-implementation
+    prefix: RWG
+  - legacy: research-wave-phase-content
+    path: research/research-wave-phase-content
+    prefix: RWP
+  - legacy: seed-topic-materialization
+    path: research/seed-topic-materialization
+    prefix: STM
+  - legacy: user-research-controls
+    path: research/user-research-controls
+    prefix: URC
+  - legacy: wave0-artifacts-directory
+    path: research/wave0-artifacts-directory
+    prefix: WAD
+  - legacy: wave1-intake
+    path: research/wave1-intake
+    prefix: WAI
+  - legacy: wave2-synthesis
+    path: research/wave2-synthesis
+    prefix: WTS
+  - legacy: experiment-agent-autorun
+    path: verification/experiment-agent-autorun
+    prefix: EXA
+  - legacy: experiment-observability
+    path: verification/experiment-observability
+    prefix: EXO
+  - legacy: experiment-ref-integrity
+    path: verification/experiment-ref-integrity
+    prefix: EXR
+  - legacy: experiment-run-strategy
+    path: verification/experiment-run-strategy
+    prefix: ERS
+  - legacy: experiment-shared-infra
+    path: verification/experiment-shared-infra
+    prefix: EXS
+  - legacy: integration-tests
+    path: verification/integration-tests
+    prefix: INT
+  - legacy: test-fixtures
+    path: verification/test-fixtures
+    prefix: TEF
+  - legacy: verification-routing
+    path: verification/verification-routing
+    prefix: VER
+  - legacy: conditional-nodes
+    path: workflow/conditional-nodes
+    prefix: COS
+  - legacy: dynamic-node-loading
+    path: workflow/dynamic-node-loading
+    prefix: DYS
+  - legacy: fork-repair-converge
+    path: workflow/fork-repair-converge
+    prefix: FOR
+  - legacy: playbook-runner
+    path: workflow/playbook-runner
+    prefix: PLR
+  - legacy: repair-loop
+    path: workflow/repair-loop
+    prefix: REL
+  - legacy: rerun-incremental-node
+    path: workflow/rerun-incremental-node
+    prefix: REI
+  - legacy: rerun-topic-integration
+    path: workflow/rerun-topic-integration
+    prefix: RTI
+  - legacy: shared-node-content
+    path: workflow/shared-node-content
+    prefix: SHC
+  - legacy: silent-wave-execution
+    path: workflow/silent-wave-execution
+    prefix: SWE
+  - legacy: workflow-directory-contract
+    path: workflow/workflow-directory-contract
+    prefix: WDC
+  - legacy: workflow-node-contract
+    path: workflow/workflow-node-contract
+    prefix: WNC
+  - legacy: change-feedback-loop
+    path: governance/change-feedback-loop
+    prefix: CHF
+  - legacy: guidance-constitution
+    path: governance/guidance-constitution
+    prefix: GCO
+  - legacy: requirement-traceability
+    path: governance/requirement-traceability
+    prefix: RET
+  - legacy: version-management
+    path: governance/version-management
+    prefix: VEM

@@ -1,9 +1,10 @@
 ---
 title: Capability Taxonomy and Coding-Agent Discovery Rebaseline
-status: research-backed plan
+status: proposal-ready; implementation pending
 created: 2026-08-06
 updated: 2026-08-06
 decision: proceed through a dedicated OpenSpec governance change
+proposal: openspec/changes/rebaseline-capability-taxonomy/
 ---
 
 # Capability Taxonomy and Coding-Agent Discovery Rebaseline
@@ -21,7 +22,7 @@ The completed shape is:
 ```text
 capability path identity  -> OpenSpec runtime address and archive target
 main spec                 -> behavior source of truth
-thin catalog              -> navigation and candidate selection
+thin catalog              -> navigation, candidate selection, and typed related-entry links
 config rules              -> require the Coding Agent to use that navigation
 taxonomy checker          -> prevent a return to flat or unapproved paths
 ```
@@ -29,6 +30,30 @@ taxonomy checker          -> prevent a return to flat or unapproved paths
 The directory migration is necessary, but it is only the first layer. The
 catalog and proposal-time discovery protocol are what directly solve the
 actual problem: helping an Agent find and reuse the appropriate capability.
+
+## Alignment Record
+
+The following project decisions were confirmed during the 2026-08-06
+`grill-with-docs` review. They refine the research-backed plan; they do not
+claim that the migration has already been applied.
+
+| Decision | Confirmed position |
+|---|---|
+| Object boundary | An **OpenSpec capability** is a behavior contract. An **execution surface** is the Markdown, Engine/CLI, or Harness surface that carries it out or enforces it. An **operation skill** and a **workflow entry** are Agent procedures, not behavior contracts. |
+| Primary outcome | A Coding Agent must search for and reuse the correct existing capability before creating a new one, then quickly reach its related execution surfaces, skills, and workflow entries. |
+| Control placement | Markdown/Agent owns semantic work and Agent Flow; Node/CLI owns schemas, deterministic transitions, receipts, trace, and checks. A Node implementation must not replace Agent semantic judgment merely because it is easier to program or test. |
+| Catalog authority | The Capability Catalog is a non-authoritative discovery projection. It recommends candidates and next reading; the main spec remains behavior authority. |
+| Catalog minimum row | Exact path, concise Purpose, task-language keywords, boundaries/neighbors, and typed links to relevant execution surfaces, operation skills, and workflow entries. |
+| Cross-system links | The catalog header and `config.yaml` carry generic OpenSpec lifecycle guidance once. Rows contain only capability-specific related entries; project-local coordinates may be checked, while GRILLME skills remain optional environment guidance. |
+| Control placement discovery | Every catalog row states its Agent/Markdown work and Engine/Node work. It may explicitly have only one side, but cannot hide the distinction behind `mixed`; the checker validates presence, not semantic correctness. |
+| Proposal evidence | A proposal that creates a capability must record candidates searched and why existing capabilities cannot be reused or extended. |
+| Proposal structure | `proposal.md` uses a required `## Capability Discovery` table. A thin checker validates its heading, table shape, full-path syntax, and disposition vocabulary; a genuinely no-spec-change `skip_specs` change records explicit non-applicability. This rebaseline is not such a change: it modifies the existing governance contracts below. |
+| Identity | Every live main spec and active delta uses exactly `domain/capability`; the full path, not its leaf, is identity. |
+| Domain rule | Domains are discovery entries for the Coding Agent's primary task question, not source folders, implementation layers, or team ownership. The allowlist is `agent`, `engine`, `bundle`, `research`, `workflow`, `verification`, and `governance`. |
+| Cross-domain tie-break | Choose one canonical domain by primary task question and semantic subject; only a remaining tie uses the direct contract or authority boundary. A deterministic enforcement surface alone does not make a capability `engine`. Link secondary relationships in the catalog rather than duplicate the capability. |
+| Resolved cross-domain placement | `work-unit-provenance-gate` belongs at `agent/work-unit-provenance-gate`: its subject is Sub-agent delegated work; its Gate and submitted-ledger verification are linked Engine execution surfaces. |
+| Resolved cross-domain placement | `hitl-ux` belongs at `agent/hitl-ux`: its subject is Agent/user interaction and decision prompts; governance policy remains a catalog relationship. |
+| Governance ownership | Reuse the existing recursive spec and requirement governance checks. Extend the requirement checker for registry-prefix resolution; add one thin taxonomy/catalog checker; wire that checker into the existing archive finalizer. |
 
 ## Goal
 
@@ -61,6 +86,24 @@ The goals are:
    catalog, validation, and archive.
 5. Preserve every existing requirement ID and requirement body during the
    structural move.
+
+### Proposal Correctness Reassessment
+
+The initial hypothesis that this could use `skip_specs: true` was rejected
+during proposal construction. The current accepted
+`requirement-traceability` spec directly owns registry path identity, group
+headings, and hard governance checks (RET-001, RET-002, RET-006); the current
+`change-feedback-loop` spec directly owns the finalizer's ordered check set
+(CHF-003). Two-level paths, catalog-led discovery, and archive taxonomy/
+discovery checks therefore change accepted governance behavior even though they
+do not change Harness runtime behavior.
+
+The correct implementation reuses those existing capabilities with nested
+deltas at `governance/requirement-traceability` and
+`governance/change-feedback-loop`. It adds RET-007 for catalog-led,
+reuse-first discovery and modifies CHF-003 for the two new direct finalizer
+checks. It does not create a duplicate `capability-taxonomy` capability or a
+new capability prefix.
 
 ## Non-Goals
 
@@ -166,6 +209,23 @@ has 22 because it remains a coherent first retrieval domain; splitting it only
 to meet a count would make Agent discovery worse. The catalog provides the
 second filtering step.
 
+### Resolve cross-domain capability placement by semantic subject
+
+Some capabilities involve more than one domain. A deterministic Gate can
+protect Agent delegation; an Engine loader can serve Markdown workflow; a HITL
+interaction can be both Agent-facing and governed. Do not classify them by the
+implementation language alone or create duplicate spec paths.
+
+First use the Coding Agent's primary task question and the capability's
+semantic subject or primary reader. A supporting deterministic Gate does not
+erase an Agent/delegation, research, or workflow subject. Only if that still
+leaves a tie, place the capability with the direct contract or authority
+boundary it maintains, then make every secondary relationship discoverable in
+the catalog. `engine` is for general reusable deterministic machinery as the
+primary contract, not for every capability with a Node or Gate implementation.
+For example, `work-unit-provenance-gate` belongs with `agent` because delegated
+Sub-agent work is its subject; the catalog links its Gate and ledger surfaces.
+
 ### Preserve leaf names now
 
 Every migration is mechanically:
@@ -189,10 +249,46 @@ requirements. Each row contains only:
 | `Purpose` | One concise navigation summary aligned with the main spec. |
 | `keywords` | Terms that help an Agent form candidates. |
 | `boundary / neighbors` | What it does not own and likely adjacent paths. |
+| `related entries` | Typed links to the relevant execution surfaces, operation skills, and workflow entries. |
+| `control boundary` | Concise `Agent/Markdown owns` and `Engine/Node owns` statements; an absent side is explicit, never hidden behind `mixed`. |
 
 The catalog must never duplicate requirement blocks, scenarios, delta history,
 or implementation plans. If it conflicts with a main `spec.md`, the main spec
 wins and the catalog is repaired in the same review.
+
+### Link global operating flow once; keep rows capability-specific
+
+The catalog header and `config.yaml` carry the universal OpenSpec lifecycle and
+reuse-first protocol once. Do not repeat `openspec-propose`,
+`openspec-apply-change`, or other generic phase entries in all 84 rows.
+
+Each row lists only the related entries that materially help the Coding Agent
+act on that capability:
+
+- A Harness execution surface uses a project-local, durable path or command
+  coordinate.
+- A project-local OpenSpec workflow entry may be linked when it is specific to
+  the capability rather than a universal lifecycle step.
+- A GRILLME skill uses its qualified skill name as optional Agent guidance. It
+  is not a project dependency and is never treated as installed simply because
+  the catalog mentions it.
+
+The taxonomy checker validates declared project-local coordinates where the
+catalog format can resolve them. It does not validate external skill
+availability or decide whether a suggested skill is semantically ideal.
+
+### Make the control boundary visible before implementation
+
+Every catalog row carries a nonempty `control boundary` field. It states the
+capability's Agent/Markdown work and Engine/Node work separately. A capability
+that has only one of the two must write that absence explicitly; `mixed` is not
+an acceptable substitute for the boundary.
+
+This field solves a discovery problem: it gives the Coding Agent a short
+placement cue before it opens implementation files. It does not replace the
+main spec, grant mutation authority, or let a checker make a semantic
+implementation judgment. The taxonomy checker verifies that the field is
+present; review checks whether the ownership statement is true.
 
 `README.md` is deliberately safe at the `openspec/specs/` root: OpenSpec only
 discovers files named `spec.md` below a capability directory. Do not put a
@@ -215,7 +311,8 @@ proposal declares a New or Modified capability.
 8. Declare New only after recording why no existing candidate owns the behavior.
 ```
 
-The proposal must include a small discovery table:
+The proposal must include a `## Capability Discovery` section with this small
+table:
 
 | candidate full path | evidence read | decision | reason |
 |---|---|---|---|
@@ -225,15 +322,20 @@ The proposal must include a small discovery table:
 
 The table is not a second machine authority. It gives a reviewer enough
 evidence to challenge an unnecessary new capability before it becomes an
-accepted main spec.
+accepted main spec. The allowed dispositions are `Modify`, `Verify-only`,
+`Excluded`, and `New`. A `skip_specs: true` governance change writes an
+explicit `Not applicable` statement and reason instead of inventing a
+capability candidate.
 
-## Final Taxonomy Mapping
+## Current Taxonomy Mapping
 
-This mapping is the intended content of the future change-local
-`taxonomy-map.yaml`. The plan is readable design material; the change-local
-YAML is the authoritative execution input for the batch `git mv` command.
+This mapping is materialized in
+`openspec/changes/rebaseline-capability-taxonomy/taxonomy-map.yaml`. This plan
+remains readable decision material; the change-local YAML is the authoritative
+execution input for the batch `git mv` command.
+It follows the approved seven-domain allowlist and cross-domain tie-break.
 
-### `agent` - Agent execution, delegation, queue, and host entry (14)
+### `agent` - Agent execution, delegation, queue, and host entry (15)
 
 | Existing leaf | Prefix | New full path |
 |---|---|---|
@@ -244,6 +346,7 @@ YAML is the authoritative execution input for the batch `git mv` command.
 | `agentic-queue` | AGQ | `agent/agentic-queue` |
 | `cmd-subagent-environment` | CSE | `agent/cmd-subagent-environment` |
 | `delegated-work-units` | DEW | `agent/delegated-work-units` |
+| `hitl-ux` | HIU | `agent/hitl-ux` |
 | `local-deepseek-claude-launcher` | LDC | `agent/local-deepseek-claude-launcher` |
 | `queue-input-validation` | QIV | `agent/queue-input-validation` |
 | `subagent-directory-contract` | SDC | `agent/subagent-directory-contract` |
@@ -352,18 +455,16 @@ behavior stays in `research` beside its phase content.
 | `workflow-directory-contract` | WDC | `workflow/workflow-directory-contract` |
 | `workflow-node-contract` | WNC | `workflow/workflow-node-contract` |
 
-### `governance` - Project lifecycle, policy, and accepted conventions (5)
+### `governance` - Project lifecycle, policy, and accepted conventions (4)
 
 | Existing leaf | Prefix | New full path |
 |---|---|---|
 | `change-feedback-loop` | CHF | `governance/change-feedback-loop` |
 | `guidance-constitution` | GCO | `governance/guidance-constitution` |
-| `hitl-ux` | HIU | `governance/hitl-ux` |
 | `requirement-traceability` | RET | `governance/requirement-traceability` |
 | `version-management` | VEM | `governance/version-management` |
 
-The mapping totals **14 + 15 + 9 + 22 + 8 + 11 + 5 = 84**. It corrects the
-old plan's inconsistent category counts.
+The mapping totals **15 + 15 + 9 + 22 + 8 + 11 + 4 = 84**.
 
 ## `config.yaml` Contract Changes
 
@@ -380,7 +481,8 @@ context: |
   Capability IDs use the project convention <domain>/<capability>.
   The full path is stable identity: main specs and change deltas use the same
   path. Main specs are behavior truth; openspec/specs/README.md is navigation
-  only.
+  only. A capability is a behavior contract; execution surfaces, operation
+  skills, and workflow entries are related navigation targets, not aliases.
 
 rules:
   proposal:
@@ -388,6 +490,8 @@ rules:
       `openspec list --specs --json`, then inspect relevant existing main specs.
     - Record full-path candidates, what was read, and why each is Modify,
       Verify-only, Excluded, or genuinely New. Prefer an existing contract.
+    - A New decision records why neither reuse nor extension of an existing
+      candidate owns the requested observable behavior.
   specs:
     - Every main or delta spec path is exactly
       `<domain>/<capability>/spec.md`; each segment uses kebab-case.
@@ -446,10 +550,18 @@ instead of treating it as incidental wording cleanup.
 ## Deterministic Guardrails
 
 Configuration directs the Agent; it cannot enforce this taxonomy. Extend the
-project governance surface with one focused `check-capability-taxonomy.mjs`
-and matching `node:test` coverage under `tests/integration/governance/`.
+project governance surface in three focused places:
 
-It must check only these direct facts:
+- Extend `check-project-reqs.mjs`, which already owns the requirement registry,
+  to ensure each live `prefixes:` target resolves to its complete main-spec
+  path.
+- Add `check-capability-taxonomy.mjs` and matching `node:test` coverage under
+  `tests/integration/governance/` for the path and catalog facts below.
+- Add `check-capability-discovery.mjs --change <change>` and matching
+  `node:test` coverage. It reads the existing `proposal.md` rather than adding
+  a second proposal artifact.
+
+The new taxonomy checker must check only these direct facts:
 
 1. Every live main spec is exactly
    `openspec/specs/<approved-domain>/<kebab-case-leaf>/spec.md`.
@@ -459,19 +571,32 @@ It must check only these direct facts:
    unapproved domain.
 4. Every live main spec has exactly one catalog row, and every catalog row
    resolves to a live main spec.
-5. Each live `prefixes:` target resolves to the same full main-spec path.
+5. Every declared project-local catalog relation resolves to its current
+   repository coordinate.
+6. Every catalog row has a nonempty control-boundary statement that explicitly
+   distinguishes Agent/Markdown and Engine/Node ownership or explicit absence.
 
 This checker deliberately does **not** judge whether a domain is semantically
-ideal, whether a catalog keyword is good, or whether an Agent's proposal
-reasoning is sound. Those are human/Agent judgments. It gives an immediate,
-honest failure when the durable path contract or navigation inventory drifts.
+ideal, whether a catalog keyword is good, whether an external skill is
+available, whether the control-boundary wording is semantically correct, or
+whether an Agent's proposal reasoning is sound. Those are human/Agent
+judgments. It gives an immediate, honest failure when the durable path contract
+or navigation inventory drifts.
 
-Add it to the existing closeout verification rules alongside:
+The discovery-record checker must check only whether a proposal has the
+required heading/table, valid full-path syntax, an allowed disposition, and a
+reason. A `skip_specs` proposal must instead state its explicit
+non-applicability reason. It does not decide whether the candidates were
+complete or the reasoning was sound.
+
+Wire both new checkers into the existing archive finalizer after the existing
+requirement/main-spec checks. The closeout verification rules then include:
 
 ```text
 node openspec/governance/check-project-reqs.mjs
 node openspec/governance/check-project-specs.mjs
 node openspec/governance/check-capability-taxonomy.mjs
+node openspec/governance/check-capability-discovery.mjs --change <change>
 ```
 
 ## Real Impact Surface
@@ -484,8 +609,11 @@ incorrect. Treat every occurrence according to its role:
 | `openspec/specs/` | Move every one of the 84 directories via the approved mapping. Preserve leaf content and requirement IDs. |
 | `openspec/config.yaml` | Update flat-path wording, registry convention wording, and add the discovery protocol. |
 | `openspec/governance/req-registry.yaml` | Update live prefix targets and group headings to complete paths. |
+| `openspec/governance/check-project-reqs.mjs` | Keep recursive requirement scanning and add live-prefix target resolution. |
 | `openspec/governance/check-project-specs.mjs` | Update flat-layout comments; keep recursive structural validation. |
-| New taxonomy checker and tests | Add the only deterministic enforcement for this project's two-segment convention and catalog completeness. |
+| New taxonomy checker and tests | Add the single deterministic enforcement for the two-segment path convention, approved domains, and catalog completeness. |
+| New discovery-record checker and tests | Validate the existing proposal's required `Capability Discovery` structure without judging semantic fit. |
+| `openspec/governance/finalize-change-archive.mjs` | Add taxonomy and discovery-record checks to the existing ordered governance closeout gates. |
 | `guidelines/change-feedback-loop.md` | Update its canonical accepted-spec link to the new governance path. |
 | `tests/integration/md/canonical-harness-vocabulary-contract.test.mjs` | Update its seven concrete accepted-spec paths. |
 | `tests/integration/md/agent-experiment-autorun-terminology.test.mjs` | Replace leaf-only path construction and its flat expected path with the full-path mapping. |
@@ -495,8 +623,9 @@ incorrect. Treat every occurrence according to its role:
 
 `git status` cannot be used to assert that *all* changes are renames: this
 change intentionally modifies configuration, registry, guidance, catalog,
-checker, and tests. Instead verify that the 84 main spec contents are mapped
-one-to-one and that no content rewrite was hidden inside a move.
+checker, tests, and the two accepted governance deltas. Instead verify that the
+84 main spec contents are mapped one-to-one and that no content rewrite was
+hidden inside a move.
 
 ## Migration Plan
 
@@ -505,22 +634,27 @@ direct worktree operation. It changes the project control-plane contract used
 by every future proposal and delta, even though it changes no Harness runtime
 behavior.
 
-The change should set `.openspec.yaml` to `skip_specs: true`: it has no new or
-modified behavioral requirement delta of its own. That marker does not move
-main specs automatically; the controlled rebaseline remains explicit apply
-work in the approved task list.
+The change SHALL NOT set `.openspec.yaml` to `skip_specs: true`. It has no new
+Harness runtime capability, but it modifies two existing accepted governance
+capabilities. Its nested deltas make those behavior changes reviewable; the
+controlled rebaseline remains explicit apply work in the approved task list.
 
 ### 1. Propose and freeze the identity boundary
 
 1. Create a dedicated change, for example
    `rebaseline-capability-taxonomy`.
-2. Record the full mapping above as
-   `openspec/changes/<change>/taxonomy-map.yaml`, not as a script input in
-   `_backlog/`. This makes it part of the review and apply audit surface.
-3. Re-run `openspec list --json`. If any active change now touches an old or
+2. Use the required `## Capability Discovery` section to record why
+   `governance/requirement-traceability` and
+   `governance/change-feedback-loop` are modified rather than creating a new
+   taxonomy behavior capability.
+3. Keep the full mapping in
+   `openspec/changes/rebaseline-capability-taxonomy/taxonomy-map.yaml`, not as
+   a script input in `_backlog/`. This makes it part of the review and apply
+   audit surface.
+4. Re-run `openspec list --json`. If any active change now touches an old or
    target path, either archive/cancel it before the move or explicitly rebase
    its delta to the exact new full path in the same review.
-4. Capture a before snapshot of the 84 paths, their requirement counts, and
+5. Capture a before snapshot of the 84 paths, their requirement counts, and
    their requirement-ID headers. The migration preserves these facts.
 
 ### 2. Establish the navigation contract before moving files
@@ -560,7 +694,9 @@ openspec validate --specs --strict
 node openspec/governance/check-project-specs.mjs
 node openspec/governance/check-project-reqs.mjs
 node openspec/governance/check-capability-taxonomy.mjs
+node openspec/governance/check-capability-discovery.mjs --change <change-name>
 node --test tests/integration/governance/check-capability-taxonomy.test.mjs
+node --test tests/integration/governance/check-capability-discovery.test.mjs
 node --test tests/integration/md/canonical-harness-vocabulary-contract.test.mjs
 node --test tests/integration/md/agent-experiment-autorun-terminology.test.mjs
 ```
@@ -586,6 +722,7 @@ The before/after evidence must show:
 |---|---|
 | A flat active delta recreates an old capability after archive. | Freeze/rebase active changes before the move; checker rejects a flat active delta. |
 | An Agent follows the upstream flat template. | Explicit `proposal` and `specs` rules plus a path checker. |
+| An Agent declares a new capability without considering a reusable one. | Required proposal discovery record and a structure-only checker; reviewer judges semantic sufficiency. |
 | The catalog becomes a second stale specification. | Keep it thin, make main spec authoritative, and check path completeness only. |
 | A new domain becomes a casual bucket. | Checker permits only the approved seven; adding a domain requires a deliberate governance change. |
 | Mechanical moves hide accidental spec edits. | Preserve a mapping/before snapshot and review main-spec diffs independently of config/test changes. |

@@ -32,6 +32,17 @@ thin catalog        -> navigation and candidate selection
 config rules        -> make the Coding Agent run the discovery protocol
 ```
 
+### Local Proposal Classification Note
+
+The upstream `skip_specs` rule is conditional: it is appropriate only when a
+change does not alter an accepted behavior contract. A local audit performed
+while constructing `rebaseline-capability-taxonomy` found that the current
+accepted `requirement-traceability` spec owns the affected registry/path/check
+behavior and `change-feedback-loop` owns the finalizer check set. Therefore
+this repository change uses nested deltas for those existing capabilities; it
+does not use `skip_specs: true`. This is a local contract conclusion, not an
+upstream OpenSpec claim.
+
 The strongest practical recommendation is therefore:
 
 1. Preserve each current leaf name during this migration, yielding paths such
@@ -322,3 +333,69 @@ the full path string and whose human value is faster candidate selection.
 - A structural migration is a controlled rebaseline with an explicit mapping,
   active-change handling, `git mv`, and verification; do not expect ordinary
   archive to rename or retire the old path.
+
+## Local Project Governance Findings
+
+This section records repository facts observed on 2026-08-06. It is separate
+from the upstream OpenSpec evidence above.
+
+- `openspec/governance/check-project-specs.mjs` recursively discovers every
+  `spec.md` below `openspec/specs/`; nested capability paths therefore retain
+  existing structural and requirement-header validation.
+- `openspec/governance/check-project-reqs.mjs` recursively scans main specs and
+  active change deltas. It currently parses `req-registry.yaml` for IDs but
+  ignores its `prefixes:` map, so full-path prefix resolution is a focused
+  extension of its existing ownership.
+- `openspec/governance/finalize-change-archive.mjs` already runs the
+  requirement checker and main-spec checker before verification routing and
+  native archive. A taxonomy/catalog checker can join that same ordered
+  fail-closed closeout path.
+- The current project checks passed: 84 main specs; 630 registered requirement
+  IDs; 53 retired IDs; and no orphan IDs.
+
+## Alignment Outcomes
+
+These are confirmed project decisions derived from the evidence, not claims
+about upstream OpenSpec behavior. The full maintained decision record is in
+[the companion plan](two-level-specs-categorization.md),
+[`CONTEXT.md`](../../CONTEXT.md), and ADRs 0004 and 0005.
+
+- Capability is the OpenSpec behavior contract; execution surface, operation
+  skill, and workflow entry are distinct navigable objects.
+- Catalog is a reuse-first, non-authoritative discovery projection. It links a
+  candidate capability to its main spec and relevant related entries, but it
+  never replaces the main spec's behavior authority.
+- New capability proposals must record the searched candidates and why reuse
+  or extension does not fit.
+- The project convention is an exact two-segment capability path with the
+  approved domains `agent`, `engine`, `bundle`, `research`, `workflow`,
+  `verification`, and `governance`.
+- Cross-domain capabilities have one path, selected by primary task question
+  and semantic subject, then direct contract/authority boundary only for a
+  remaining tie. A deterministic enforcement surface alone does not make a
+  capability `engine`; secondary relationships belong in the catalog.
+- Existing recursive governance checks are reused. Registry-prefix resolution
+  belongs in the requirement checker; two-level paths, allowed domains, and
+  catalog completeness belong in one thin taxonomy checker.
+- Generic OpenSpec lifecycle guidance belongs in the catalog header and project
+  configuration, not in every row. Capability-specific project-local relations
+  can be checked; GRILLME skill names remain optional environment guidance.
+- Every catalog row exposes its Agent/Markdown and Engine/Node control boundary
+  without a vague `mixed` classification. Field presence is deterministic;
+  semantic placement remains human/Agent review.
+- Every proposal that adds or materially changes a capability contains a
+  `## Capability Discovery` record. A thin checker verifies its structure and
+  explicit `skip_specs` non-applicability without pretending to judge the
+  search's semantic quality.
+
+### Resolved Cross-Domain Placement
+
+The original migration map placed `work-unit-provenance-gate` under `agent`.
+Although it has an Engine-owned Gate and submitted-ledger verification surface,
+its semantic subject is Sub-agent delegated work. Its confirmed path is
+`agent/work-unit-provenance-gate`; the Capability Catalog preserves links to
+the Gate, ledger, and Agentic Queue surfaces.
+
+`hitl-ux` likewise belongs at `agent/hitl-ux`: its semantic subject is the
+Agent/user conversational and decision contract, while governance policy is a
+secondary relationship.

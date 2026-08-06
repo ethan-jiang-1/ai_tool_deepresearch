@@ -56,6 +56,26 @@ quickly discoverable. It proposes candidates and next sources to inspect; main
 specs remain behavior authority.
 _Avoid_: behavior authority, automatic decision-maker, implementation index
 
+**Catalog relation**:
+A typed navigation pointer from a capability to a related execution surface,
+operation skill, or workflow entry. Project-local targets can be checked for
+existence; an environment-provided operation skill is optional guidance, not a
+project dependency or behavior authority.
+_Avoid_: required external dependency, behavior contract, duplicate spec
+
+**Capability control boundary**:
+The Catalog's concise statement of the Agent/Markdown work and Engine/Node
+work associated with one capability. It guides discovery and placement; it is
+not a behavior authority, permission grant, or substitute for the main spec.
+_Avoid_: mixed, implementation ownership alone, behavior authority
+
+**Capability Discovery record**:
+The required `proposal.md` evidence that shows which existing capability paths
+were considered, what was read, and why each was reused, excluded, or extended
+before a new capability is declared. A `skip_specs` governance change states
+why the record is not applicable.
+_Avoid_: chat-only search claim, unreviewed new capability, behavior authority
+
 **Capability reuse**:
 Routing requested work to an existing OpenSpec capability and its relevant
 execution surfaces before creating a new capability. It is not implementation
@@ -73,6 +93,21 @@ The controlled two-level classification of OpenSpec capabilities by the Coding
 Agent's primary task question and discovery entry. It does not determine
 behavior ownership, code placement, or team ownership.
 _Avoid_: execution architecture, implementation tree, topic tag
+
+**Approved domain**:
+One of `agent`, `engine`, `bundle`, `research`, `workflow`, `verification`, or
+`governance`, used as the first segment of a live capability path. Adding a
+domain is a governance decision, not an ad hoc directory creation.
+_Avoid_: source directory, implementation layer, unapproved bucket
+
+**Cross-domain capability**:
+An OpenSpec capability with relevant concerns in more than one discovery
+domain. It has one canonical path selected first by the primary task question
+and semantic subject; only a remaining tie uses the direct contract or
+authority boundary. A deterministic enforcement surface alone does not make it
+an `engine` capability; the catalog links secondary relationships rather than
+creating duplicate capabilities.
+_Avoid_: duplicate capability, implementation-layer classification, multiple canonical paths
 
 ## System and Runtime
 

@@ -1,0 +1,130 @@
+schema_version: verification-routing/v1
+change: rebaseline-capability-taxonomy
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The new checkers operate over repository paths, active change artifacts,
+      and cross-file catalog data. Their smallest honest proof boundary is an
+      integration fixture, not an isolated production helper.
+  integration:
+    status: selected
+    rationale: >-
+      Temporary OpenSpec roots and repository-facing Markdown contracts can
+      prove the nested-path, registry, catalog, discovery-record, and ordered
+      finalizer behaviors without claiming Harness runtime or Agent judgment.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      The change introduces no runtime workflow-scale Engine transition, Gate,
+      receipt, or bundle-state behavior.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      Catalog lookup and proposal reasoning remain Agent semantic work, but
+      this change makes no claim about a real Agent run or its behavior.
+claims:
+  - id: taxonomy-path-and-catalog-contract
+    statement: >-
+      The taxonomy governance checker accepts a complete two-level catalog and
+      reports direct failures for flat or over-deep paths, unapproved domains,
+      inventory drift, unresolved project-local relations, and missing explicit
+      control-boundary fields.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/check-capability-taxonomy.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: discovery-record-structure-contract
+    statement: >-
+      The capability-discovery checker validates only the required proposal
+      heading/table fields, full-path syntax, disposition vocabulary, reason,
+      and explicit skip-specs non-applicability branch without approving
+      semantic candidate reasoning.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/check-capability-discovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: registry-prefix-full-path-contract
+    statement: >-
+      Requirement governance preserves ID consistency while separately
+      resolving live prefix owners to full canonical main-spec paths and
+      retaining documented retired or sub-prefix exceptions.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/check-project.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: finalizer-taxonomy-and-discovery-order
+    statement: >-
+      The production finalizer short-circuits taxonomy and discovery-record
+      failures after existing requirement/main-spec checks and before routing
+      or native archive, with typed direct repair ownership.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/change-feedback-finalizer.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-accepted-spec-path-knowledge
+    statement: >-
+      Current Markdown knowledge surfaces refer to canonical nested accepted
+      spec paths and do not teach the retired flat coordinates as live
+      navigation.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/canonical-harness-vocabulary-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: agent-autorun-path-knowledge
+    statement: >-
+      The Agent Experiment Autorun terminology contract obtains current
+      accepted-spec paths from the canonical taxonomy rather than composing
+      leaf-only flat locations.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-experiment-autorun-terminology.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
