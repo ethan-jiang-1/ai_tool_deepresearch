@@ -23,6 +23,57 @@ and [ADR 0003](docs/adr/0003-retire-legacy-harness-source-alias.md).
 They are optional rationale, not mandatory pre-task reads, behavior authority,
 or replacements for the Charter.
 
+## Capability Discovery
+
+**OpenSpec capability**:
+A named behavior contract managed through the OpenSpec lifecycle. Its main spec
+is the behavior authority; it is not an execution surface, operation skill, or
+command.
+_Avoid_: execution surface, skill, command
+
+**Execution surface**:
+A concrete Markdown control surface, Engine/CLI surface, or reusable Harness
+surface through which an OpenSpec capability is carried out or enforced. It
+does not itself define the behavior contract.
+_Avoid_: OpenSpec capability, operation skill, behavior authority
+
+**Operation skill**:
+A reusable Agent procedure or technique, including a GRILLME skill, used to
+perform work. It does not establish product behavior or identify an OpenSpec
+capability.
+_Avoid_: OpenSpec capability, execution surface, behavior contract
+
+**Workflow entry**:
+A named lifecycle entry, such as an OpenSpec phase command or Harness playbook,
+that selects an operating procedure. It is not the behavior contract being
+changed or reused.
+_Avoid_: OpenSpec capability, operation skill, execution surface
+
+**Capability Catalog**:
+An Agent-facing navigation projection that makes existing OpenSpec capabilities
+and their related execution surfaces, operation skills, and workflow entries
+quickly discoverable. It proposes candidates and next sources to inspect; main
+specs remain behavior authority.
+_Avoid_: behavior authority, automatic decision-maker, implementation index
+
+**Capability reuse**:
+Routing requested work to an existing OpenSpec capability and its relevant
+execution surfaces before creating a new capability. It is not implementation
+reuse alone or a decision made without inspecting the main spec.
+_Avoid_: code reuse, automatic selection, new capability by default
+
+**Capability path**:
+The complete `domain/capability` identifier of an OpenSpec capability. It is
+the canonical identity across main specs, active deltas, registry mappings, and
+catalog entries; a leaf name alone is not unique.
+_Avoid_: leaf name, code path, execution path
+
+**Capability taxonomy**:
+The controlled two-level classification of OpenSpec capabilities by the Coding
+Agent's primary task question and discovery entry. It does not determine
+behavior ownership, code placement, or team ownership.
+_Avoid_: execution architecture, implementation tree, topic tag
+
 ## System and Runtime
 
 **Deep Research Tool project**:

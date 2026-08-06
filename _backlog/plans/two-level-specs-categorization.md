@@ -1,265 +1,611 @@
 ---
-title: Two-Level Specs Categorization
-status: draft
+title: Capability Taxonomy and Coding-Agent Discovery Rebaseline
+status: research-backed plan
 created: 2026-08-06
+updated: 2026-08-06
+decision: proceed through a dedicated OpenSpec governance change
 ---
 
-# Two-Level Specs Categorization
+# Capability Taxonomy and Coding-Agent Discovery Rebaseline
 
-## Problem
+## Decision
 
-`openspec/specs/` 目前有 84 个 capability，全部平铺在一级目录下：
+**Do this.** The repository has reached the point where 84 flat capability
+names are no longer a reliable discovery surface for a Coding Agent. The
+right change is not a cosmetic directory cleanup. It is a controlled
+rebaseline that makes reuse of the correct existing behavior contract the
+default path before an Agent creates a new capability.
 
+The completed shape is:
+
+```text
+capability path identity  -> OpenSpec runtime address and archive target
+main spec                 -> behavior source of truth
+thin catalog              -> navigation and candidate selection
+config rules              -> require the Coding Agent to use that navigation
+taxonomy checker          -> prevent a return to flat or unapproved paths
 ```
-openspec/specs/agent-command-surface/spec.md
-openspec/specs/agent-context-routing/spec.md
-...
-openspec/specs/workflow-node-contract/spec.md
+
+The directory migration is necessary, but it is only the first layer. The
+catalog and proposal-time discovery protocol are what directly solve the
+actual problem: helping an Agent find and reuse the appropriate capability.
+
+## Goal
+
+Move all accepted main specs from:
+
+```text
+openspec/specs/<leaf>/spec.md
 ```
 
-`openspec/config.yaml` 本身已经声明 `目录名即分类`，但还是单层扁平结构。随着 capability 数量持续增长（已从早期的 30+ 增长到 84），平铺结构让 Agent 和人都难以快速定位相关 spec。
+to the project convention:
 
-目标：引入二级目录分类 —— `openspec/specs/<category>/<capability>/spec.md`，大类套小类，今后新增 capability 归入已有或新增大类即可。
+```text
+openspec/specs/<domain>/<existing-leaf>/spec.md
+openspec/changes/<change>/specs/<domain>/<existing-leaf>/spec.md
+```
 
-## 分类方案
+The full path, for example `agent/agent-command-surface`, becomes the
+capability's stable OpenSpec identity. A domain is a navigation namespace; it
+is not a parent spec, a behavior aggregate, an inheritance mechanism, or an
+automatic dependency graph.
 
-大类不应过多（目标 6-8 个），每个大类下 5-20 个 capability，语义内聚。
+The goals are:
 
-### 1. `agent` — Agent 基础设施与契约 (12)
+1. Let a Coding Agent narrow an unfamiliar task to a small, reviewable set of
+   existing behavior contracts.
+2. Make modifying an existing capability the normal outcome when its contract
+   already covers the requested behavior.
+3. Make a genuinely new capability an explicit, evidence-backed decision.
+4. Keep the full path consistent across proposal, delta, main spec, registry,
+   catalog, validation, and archive.
+5. Preserve every existing requirement ID and requirement body during the
+   structural move.
 
-Agent actor、sub-agent dispatch、work unit、queue 等 Agent 侧运行时契约。
+## Non-Goals
 
-| capability | 前缀 | 说明 |
-|---|---|---|
-| agent-command-surface | ACS | Agent 命令表面与受众契约 |
-| agent-context-routing | ACR | Agent 上下文路由 |
-| agent-output-declaration | AGO | Agent 输出声明 ledger |
-| agent-testing | AGT | Agent 辅助测试 playbook |
-| agentic-queue | AGQ | 结构化队列与任务卡 |
-| cmd-subagent-environment | CSE | Sub-agent 环境搭建 playbook |
-| delegated-work-units | DEW | 委托工作单元 pipeline |
-| subagent-directory-contract | SDC | Sub-agent 目录契约 |
-| subagent-dispatch | SUD | Sub-agent 分发 |
-| subagent-node-contract | SNC | Sub-agent 角色契约 |
-| subagent-runtime-logging | SRL | Sub-agent 运行时日志 |
-| work-unit-provenance-gate | WPG | 工作单元溯源 gate |
+- Do not change accepted Harness behavior, requirement semantics, or
+  requirement IDs merely because a spec moves.
+- Do not shorten leaf names in this migration. `agent/command-surface` may be
+  prettier than `agent/agent-command-surface`, but it creates a second,
+  unnecessary identity rewrite.
+- Do not create `spec.md` files for domains just to provide an overview. A
+  domain `spec.md` is an independent capability to OpenSpec.
+- Do not copy all 84 specs or a large catalog into `config.yaml` context.
+- Do not expect an ordinary `archive` operation or `RENAMED Requirements` to
+  rename a capability path.
 
-### 2. `cli-engine` — CLI 与确定性引擎 (12)
+## Facts Established by Research
 
-Engine、schema、logger、trace、CLI 约定等确定性 JS 侧基础设施。
+### OpenSpec support is already present
 
-| capability | 前缀 | 说明 |
-|---|---|---|
-| check-inspect-feedback | CHI | C&I 反馈闭环 |
-| cli-exit-code-conventions | CLE | CLI 退出码约定 |
-| cli-inspect-output-conventions | IOC | inspect CLI 输出约定 |
-| cli-phase-transition | CPT | 阶段状态推进 CLI |
-| framework-engine | FRE | 框架 engine 模块布局 |
-| logger | LOG | Logger 零配置用法 |
-| logging-conventions | LOC | 日志约定 |
-| queue-input-validation | QIV | 队列输入校验 |
-| runtime-reentry-debuggability | RRD | 运行时重入诊断 |
-| schema-core | SCO | 核心 schema 枚举与合约 |
-| trace-writer | TRW | 追加式 JSONL trace |
-| transition-table | TRT | 显式状态转换表 |
+The installed CLI is `openspec 1.7.0`. That version fully supports nested main
+specs and nested deltas in normal `list`, `show`, `validate`, parse,
+apply/archive flows. No OpenSpec upgrade is required for this work.
 
-### 3. `bundle` — Bundle 生命周期与文件系统 (10)
+`discoverSpecFiles()` recursively derives an ID from every directory segment
+below `specs/`; it produces `segments.join('/')`, not the leaf directory name.
+`findSpecUpdates()` writes a delta to `mainSpecsDir/<id>/spec.md`. Therefore
+the two locations below are different IDs, not aliases:
 
-Bundle 创建、隔离、持久化、缓存、文件可观测性等运行时目录契约。
+```text
+agent/agent-command-surface
+workflow/agent-command-surface
+```
 
-| capability | 前缀 | 说明 |
-|---|---|---|
-| artifact-persistence-recovery | ARP | 崩溃安全持久化工作区 |
-| bundle-data-isolation | BUI | 多 bundle 共存隔离 |
-| bundle-map | BUM | 被动 bundle map |
-| bundle-start-from-here | BUS | 旧版入口（已废弃） |
-| cache-raw-web-content | CRC | 标准化 _cache/ 目录 |
-| cmd-bundle-instantiation | CMI | Bundle 生产 playbook |
-| file-observability | FIO | 文件可观测性审计 |
-| reference-flat-format | REF | 扁平 reference 目录格式 |
-| run-entry | RUE | RUN.md 入口 |
-| version-management | VEM | 版本管理与 CHANGELOG |
+The operational consequence is non-negotiable:
 
-### 4. `research` — 研究阶段与门控 (22)
+```text
+main:  openspec/specs/agent/agent-command-surface/spec.md
+delta: openspec/changes/<change>/specs/agent/agent-command-surface/spec.md
+                                                |
+                                                v
+archive target: openspec/specs/agent/agent-command-surface/spec.md
+```
 
-Pre-research、Wave0/1/2、种子话题、证据提取、内容交付、最终报告等研究生命周期。
+An active delta left at `specs/agent-command-surface/spec.md` continues to
+target the old flat capability and can recreate it after migration.
 
-| capability | 前缀 | 说明 |
-|---|---|---|
-| canonical-topic-state | CTS | 正典话题状态 |
-| content-delivery-experiments | CDE | 内容交付实验 |
-| content-delivery-gate-implementation | CDG | HITL2/readiness gate |
-| content-delivery-phase-content | CDP | HITL2/readiness/final phase body |
-| evidence-extraction | EEX | 证据计数与 ref 提取 |
-| final-delivery-backing | FDB | 最终报告证据 backing |
-| plan-hostfile-sections | PHS | rb_plan.md 结构与节 |
-| post-final-recovery | POF | 最终后恢复路径 |
-| pre-research-experiments | PRE | Pre-research 实验 |
-| pre-research-gate-implementation | PRG | Pre-research gate 规则 |
-| pre-research-phase-content | PRP | Pre-research phase body |
-| research-access-adapter | REA | 研究访问适配器 |
-| research-return-map | RRM | 证据-声明 map |
-| research-styles | RES | 研究风格参数 |
-| research-wave-experiments | RWE | Wave 实验 |
-| research-wave-gate-implementation | RWG | Wave gate 规则 |
-| research-wave-phase-content | RWP | Wave phase body |
-| seed-topic-materialization | STM | 种子话题物化 |
-| user-research-controls | URC | 用户研究控制 |
-| wave0-artifacts-directory | WAD | Wave0 产物目录 |
-| wave1-intake | WAI | Wave1 摄入阶段 |
-| wave2-synthesis | WTS | Wave2 综合阶段 |
+`RENAMED Requirements` renames a requirement header within one spec ID. It
+does not rename, split, merge, alias, or retire a capability path.
 
-### 5. `experiment` — 实验基础设施 (5)
+### Native discovery still has an Agent-use gap
 
-Autorun、可观测性、ref 完整性、运行策略、共享基础设施。
+`openspec list --specs --json` returns an inventory of `{ id,
+requirementCount }`; it does not return Purpose, keywords, boundaries, or a
+semantic ranking. `openspec show <id>` requires an already-known exact ID.
+Nested folders improve scanability but do not automatically select the right
+specification for an Agent.
 
-| capability | 前缀 | 说明 |
-|---|---|---|
-| experiment-agent-autorun | EXA | Agent 实验 Autorun |
-| experiment-observability | EXO | 实验运行后健康报告 |
-| experiment-ref-integrity | EXR | 实验 ref 完整性 |
-| experiment-run-strategy | ERS | 实验运行策略 |
-| experiment-shared-infra | EXS | 实验共享基础设施 |
+The bundled `spec-driven` schema still teaches flat examples such as
+`specs/<capability>/spec.md`. The runtime supports nested paths, but the
+default authoring guidance will not infer this project's convention. Project
+rules must make the convention explicit.
 
-### 6. `gate` — Gate 基础设施 (4)
+### Current repository baseline
 
-Gate skeleton、状态机、fork 路由、内容去重等 gate 相关独立能力。
+At research time:
 
-| capability | 前缀 | 说明 |
-|---|---|---|
-| gate-content-dedup | GAC | 内容去重 gate（全系废弃） |
-| gate-fork-router | GAF | Gate 分支分类与解析 |
-| gate-skeleton | GSK | Gate 定义骨架与 CLI |
-| gate-state-machine | GAS | Gate 检查点反馈与转换 |
+- `openspec list --specs --json` reported exactly **84** main specs.
+- `openspec validate --specs --strict` passed all 84 specs.
+- `node openspec/governance/check-project-specs.mjs` passed.
+- `node openspec/governance/check-project-reqs.mjs` passed with 630 registered
+  IDs, 53 retired IDs, and no orphan IDs.
+- `openspec list --json` reported no active changes. This is the right
+  migration window, but the check must be repeated immediately before apply.
+- `openspec/config.yaml` currently has 13,304 bytes of injected context and
+  has flat-path wording in its `specs` rules.
+- There is no main-spec catalog today.
+- Four accepted main specs still have a placeholder Purpose and cannot seed a
+  useful catalog row verbatim: `artifact-persistence-recovery`,
+  `experiment-agent-autorun`, `plan-hostfile-sections`, and
+  `user-research-controls`.
 
-### 7. `workflow` — 工作流结构与节点 (10)
+## Design Principles
 
-Workflow 目录契约、节点元数据、动态加载、条件节点、静默执行、修复循环等。
+### Use domains for the first retrieval question
 
-| capability | 前缀 | 说明 |
-|---|---|---|
-| conditional-nodes | COS | 确定性分支检查点 |
-| dynamic-node-loading | DYS | 显式 fileRef Markdown 加载 |
-| fork-repair-converge | FOR | 多失败共享修复检查点收敛 |
-| playbook-runner | PLR | Playbook Agent 入口 |
-| repair-loop | REL | 修复检查点回环 |
-| rerun-incremental-node | REI | 阶段重跑节点 |
-| rerun-topic-integration | RTI | 重跑话题集成 |
-| shared-node-content | SHC | 共享节点内容 |
-| silent-wave-execution | SWE | 静默 wave 执行 |
-| workflow-directory-contract | WDC | Workflow 目录契约 |
-| workflow-node-contract | WNC | Workflow 节点契约 |
+The right top-level namespace answers: "Where should a Coding Agent look
+first for this kind of change?" It must not mirror arbitrary source folders or
+turn implementation layers into behavior contracts.
 
-### 8. `governance` — 项目治理与元规范 (9)
+The selected domains are:
 
-需求追踪、变更反馈、guidance 宪章、HITL UX、测试分类、验证路由等跨横切关注点。
+| Domain | First retrieval question | Count |
+|---|---|---:|
+| `agent` | Is this about Agent execution, delegation, command entry, queue, or provider launch? | 14 |
+| `engine` | Is this about deterministic validation, schema, trace, CLI, or general Gate machinery? | 15 |
+| `bundle` | Is this about durable run-bundle lifecycle, files, cache, or entry creation? | 9 |
+| `research` | Is this research lifecycle, topic/evidence, phase content, or delivery behavior? | 22 |
+| `verification` | Is this experiment execution, test fixtures, proof routing, or test infrastructure? | 8 |
+| `workflow` | Is this Markdown phase/node routing, shared node content, rerun, or repair flow? | 11 |
+| `governance` | Is this project policy, requirement traceability, versioning, feedback lifecycle, or HITL policy? | 5 |
 
-| capability | 前缀 | 说明 |
-|---|---|---|
-| change-feedback-loop | CHF | Change 反馈生命周期 |
-| guidance-constitution | GCO | Guidance 宪章 |
-| hitl-ux | HIU | HITL 对话循环模型 |
-| integration-tests | INT | 集成测试 |
-| local-deepseek-claude-launcher | LDC | 本地 Launcher |
-| requirement-traceability | RET | 需求追踪 |
-| test-fixtures | TEF | 测试 Fixture 框架 |
-| verification-routing | VER | 验证路由四类分类 |
+The desired 5-20 range is a review heuristic, not a runtime rule. `research`
+has 22 because it remains a coherent first retrieval domain; splitting it only
+to meet a count would make Agent discovery worse. The catalog provides the
+second filtering step.
 
-总计: 12+12+10+22+5+4+11+9 = 85（含 `local-deepseek-claude-launcher` 计数微调；部分 capability 如 `local-deepseek-claude-launcher` 本质是 host 工具，放在 governance 或独立分类均可，后续讨论确定）
+### Preserve leaf names now
 
-## 影响面
+Every migration is mechanically:
 
-### 需要修改的文件
+```text
+<old-leaf> -> <domain>/<old-leaf>
+```
 
-| 文件 | 变更内容 |
+This preserves familiar names, requirement prefixes, and the reviewable
+old-to-new correspondence. Future changes may improve a misleading leaf name,
+but that must be a separately justified capability-identity rebaseline.
+
+### Main specs remain truth; the catalog is only navigation
+
+`openspec/specs/README.md` will be a thin catalog, not another source of
+requirements. Each row contains only:
+
+| field | purpose |
 |---|---|
-| `openspec/config.yaml` | L237 `specs/<capability>/spec.md` → `specs/<category>/<capability>/spec.md` |
-| `openspec/governance/req-registry.yaml` | `prefixes:` 映射和组头注释可能需要标注 category，但不强制 |
-| 84 个 spec 目录 | `git mv openspec/specs/<cap> openspec/specs/<category>/<cap>` |
+| `path` | Exact full capability ID used by OpenSpec. |
+| `Purpose` | One concise navigation summary aligned with the main spec. |
+| `keywords` | Terms that help an Agent form candidates. |
+| `boundary / neighbors` | What it does not own and likely adjacent paths. |
 
-### 不需要修改的文件（已验证兼容）
+The catalog must never duplicate requirement blocks, scenarios, delta history,
+or implementation plans. If it conflicts with a main `spec.md`, the main spec
+wins and the catalog is repaired in the same review.
 
-| 文件 | 原因 |
-|---|---|
-| `openspec/governance/check-project-specs.mjs` | 已递归扫描 `specsDir`，自动适配任意嵌套深度 |
-| `openspec/governance/check-project-reqs.mjs` | 扫描 `specs/` 和 `changes/`，不依赖目录深度 |
-| `openspec/changes/archive/*` | 历史归档，不修改 |
-| `tests/` 下的测试文件 | 不直接引用 spec 路径；通过 OpenSpec 工具间接访问 |
-| `DEEP_RESEARCH_HARNESS/` | 不引用 spec 路径 |
+`README.md` is deliberately safe at the `openspec/specs/` root: OpenSpec only
+discovers files named `spec.md` below a capability directory. Do not put a
+catalog or arbitrary note below an active change's `specs/` directory; that can
+conflict with `skip_specs: true`.
 
-### config.yaml 措辞调整
+## Coding-Agent Discovery Protocol
 
-当前 L237:
+This protocol is the primary behavioral improvement. It applies before a
+proposal declares a New or Modified capability.
+
+```text
+1. Read the short project convention in openspec/config.yaml.
+2. Read openspec/specs/README.md and run openspec list --specs --json.
+3. Use task terms and code facts to form a small candidate set of full paths.
+4. Search those main specs by Purpose and requirement title.
+5. Use openspec show <full-path> --type spec --json --requirements.
+6. Read a complete requirement/scenario block only when it may be changed.
+7. Record why each retained candidate is Modify, Verify-only, or Excluded.
+8. Declare New only after recording why no existing candidate owns the behavior.
 ```
-Capability 用 kebab-case 命名，目录名即分类
+
+The proposal must include a small discovery table:
+
+| candidate full path | evidence read | decision | reason |
+|---|---|---|---|
+| `agent/agentic-queue` | Purpose plus AGQ requirement titles | Modify | Existing queue admission behavior owns the change. |
+| `engine/schema-core` | Purpose plus SCO requirement titles | Verify-only | Schema compatibility may be affected but no contract changes. |
+| `agent/new-capability` | Catalog and neighboring specs searched | New | No existing behavior contract covers the observable obligation. |
+
+The table is not a second machine authority. It gives a reviewer enough
+evidence to challenge an unnecessary new capability before it becomes an
+accepted main spec.
+
+## Final Taxonomy Mapping
+
+This mapping is the intended content of the future change-local
+`taxonomy-map.yaml`. The plan is readable design material; the change-local
+YAML is the authoritative execution input for the batch `git mv` command.
+
+### `agent` - Agent execution, delegation, queue, and host entry (14)
+
+| Existing leaf | Prefix | New full path |
+|---|---|---|
+| `agent-command-surface` | ACS | `agent/agent-command-surface` |
+| `agent-context-routing` | ACR | `agent/agent-context-routing` |
+| `agent-output-declaration` | AGO | `agent/agent-output-declaration` |
+| `agent-testing` | AGT | `agent/agent-testing` |
+| `agentic-queue` | AGQ | `agent/agentic-queue` |
+| `cmd-subagent-environment` | CSE | `agent/cmd-subagent-environment` |
+| `delegated-work-units` | DEW | `agent/delegated-work-units` |
+| `local-deepseek-claude-launcher` | LDC | `agent/local-deepseek-claude-launcher` |
+| `queue-input-validation` | QIV | `agent/queue-input-validation` |
+| `subagent-directory-contract` | SDC | `agent/subagent-directory-contract` |
+| `subagent-dispatch` | SUD | `agent/subagent-dispatch` |
+| `subagent-node-contract` | SNC | `agent/subagent-node-contract` |
+| `subagent-runtime-logging` | SRL | `agent/subagent-runtime-logging` |
+| `work-unit-provenance-gate` | WPG | `agent/work-unit-provenance-gate` |
+
+`local-deepseek-claude-launcher` remains a pre-trigger host tool by behavior;
+it belongs under `agent` because an Agent/provider-launch concern is its
+strongest discovery route. `queue-input-validation` moves here because its
+primary reader question is queue admission, not the JavaScript layer that
+implements validation.
+
+### `engine` - Deterministic engine, CLI, schema, trace, and shared Gates (15)
+
+| Existing leaf | Prefix | New full path |
+|---|---|---|
+| `check-inspect-feedback` | CHI | `engine/check-inspect-feedback` |
+| `cli-exit-code-conventions` | CLE | `engine/cli-exit-code-conventions` |
+| `cli-inspect-output-conventions` | IOC | `engine/cli-inspect-output-conventions` |
+| `cli-phase-transition` | CPT | `engine/cli-phase-transition` |
+| `framework-engine` | FRE | `engine/framework-engine` |
+| `gate-content-dedup` | GAC | `engine/gate-content-dedup` |
+| `gate-fork-router` | GAF | `engine/gate-fork-router` |
+| `gate-skeleton` | GSK | `engine/gate-skeleton` |
+| `gate-state-machine` | GAS | `engine/gate-state-machine` |
+| `logger` | LOG | `engine/logger` |
+| `logging-conventions` | LOC | `engine/logging-conventions` |
+| `runtime-reentry-debuggability` | RRD | `engine/runtime-reentry-debuggability` |
+| `schema-core` | SCO | `engine/schema-core` |
+| `trace-writer` | TRW | `engine/trace-writer` |
+| `transition-table` | TRT | `engine/transition-table` |
+
+The old four-item `gate` bucket is intentionally folded into `engine`.
+General Gate machinery is deterministic infrastructure; phase-specific gate
+behavior stays in `research` beside its phase content.
+
+### `bundle` - Run-bundle lifecycle and filesystem contracts (9)
+
+| Existing leaf | Prefix | New full path |
+|---|---|---|
+| `artifact-persistence-recovery` | ARP | `bundle/artifact-persistence-recovery` |
+| `bundle-data-isolation` | BUI | `bundle/bundle-data-isolation` |
+| `bundle-map` | BUM | `bundle/bundle-map` |
+| `bundle-start-from-here` | BUS | `bundle/bundle-start-from-here` |
+| `cache-raw-web-content` | CRC | `bundle/cache-raw-web-content` |
+| `cmd-bundle-instantiation` | CMI | `bundle/cmd-bundle-instantiation` |
+| `file-observability` | FIO | `bundle/file-observability` |
+| `reference-flat-format` | REF | `bundle/reference-flat-format` |
+| `run-entry` | RUE | `bundle/run-entry` |
+
+### `research` - Research lifecycle, content, evidence, and delivery (22)
+
+| Existing leaf | Prefix | New full path |
+|---|---|---|
+| `canonical-topic-state` | CTS | `research/canonical-topic-state` |
+| `content-delivery-experiments` | CDE | `research/content-delivery-experiments` |
+| `content-delivery-gate-implementation` | CDG | `research/content-delivery-gate-implementation` |
+| `content-delivery-phase-content` | CDP | `research/content-delivery-phase-content` |
+| `evidence-extraction` | EEX | `research/evidence-extraction` |
+| `final-delivery-backing` | FDB | `research/final-delivery-backing` |
+| `plan-hostfile-sections` | PHS | `research/plan-hostfile-sections` |
+| `post-final-recovery` | POF | `research/post-final-recovery` |
+| `pre-research-experiments` | PRE | `research/pre-research-experiments` |
+| `pre-research-gate-implementation` | PRG | `research/pre-research-gate-implementation` |
+| `pre-research-phase-content` | PRP | `research/pre-research-phase-content` |
+| `research-access-adapter` | REA | `research/research-access-adapter` |
+| `research-return-map` | RRM | `research/research-return-map` |
+| `research-styles` | RES | `research/research-styles` |
+| `research-wave-experiments` | RWE | `research/research-wave-experiments` |
+| `research-wave-gate-implementation` | RWG | `research/research-wave-gate-implementation` |
+| `research-wave-phase-content` | RWP | `research/research-wave-phase-content` |
+| `seed-topic-materialization` | STM | `research/seed-topic-materialization` |
+| `user-research-controls` | URC | `research/user-research-controls` |
+| `wave0-artifacts-directory` | WAD | `research/wave0-artifacts-directory` |
+| `wave1-intake` | WAI | `research/wave1-intake` |
+| `wave2-synthesis` | WTS | `research/wave2-synthesis` |
+
+### `verification` - Experiments, test infrastructure, and proof routing (8)
+
+| Existing leaf | Prefix | New full path |
+|---|---|---|
+| `experiment-agent-autorun` | EXA | `verification/experiment-agent-autorun` |
+| `experiment-observability` | EXO | `verification/experiment-observability` |
+| `experiment-ref-integrity` | EXR | `verification/experiment-ref-integrity` |
+| `experiment-run-strategy` | ERS | `verification/experiment-run-strategy` |
+| `experiment-shared-infra` | EXS | `verification/experiment-shared-infra` |
+| `integration-tests` | INT | `verification/integration-tests` |
+| `test-fixtures` | TEF | `verification/test-fixtures` |
+| `verification-routing` | VER | `verification/verification-routing` |
+
+### `workflow` - Markdown workflow structure, phase routing, and repair (11)
+
+| Existing leaf | Prefix | New full path |
+|---|---|---|
+| `conditional-nodes` | COS | `workflow/conditional-nodes` |
+| `dynamic-node-loading` | DYS | `workflow/dynamic-node-loading` |
+| `fork-repair-converge` | FOR | `workflow/fork-repair-converge` |
+| `playbook-runner` | PLR | `workflow/playbook-runner` |
+| `repair-loop` | REL | `workflow/repair-loop` |
+| `rerun-incremental-node` | REI | `workflow/rerun-incremental-node` |
+| `rerun-topic-integration` | RTI | `workflow/rerun-topic-integration` |
+| `shared-node-content` | SHC | `workflow/shared-node-content` |
+| `silent-wave-execution` | SWE | `workflow/silent-wave-execution` |
+| `workflow-directory-contract` | WDC | `workflow/workflow-directory-contract` |
+| `workflow-node-contract` | WNC | `workflow/workflow-node-contract` |
+
+### `governance` - Project lifecycle, policy, and accepted conventions (5)
+
+| Existing leaf | Prefix | New full path |
+|---|---|---|
+| `change-feedback-loop` | CHF | `governance/change-feedback-loop` |
+| `guidance-constitution` | GCO | `governance/guidance-constitution` |
+| `hitl-ux` | HIU | `governance/hitl-ux` |
+| `requirement-traceability` | RET | `governance/requirement-traceability` |
+| `version-management` | VEM | `governance/version-management` |
+
+The mapping totals **14 + 15 + 9 + 22 + 8 + 11 + 5 = 84**. It corrects the
+old plan's inconsistent category counts.
+
+## `config.yaml` Contract Changes
+
+`openspec/config.yaml` is valuable because it injects context and
+artifact-specific rules into future agent instructions. It is not a runtime
+validator, and its `context` is already a 13 KB recurring prompt. The catalog
+and full specifications must stay outside it.
+
+Merge the following intent into the existing context and rules; do not replace
+the project's current broader operating constraints.
+
+```yaml
+context: |
+  Capability IDs use the project convention <domain>/<capability>.
+  The full path is stable identity: main specs and change deltas use the same
+  path. Main specs are behavior truth; openspec/specs/README.md is navigation
+  only.
+
+rules:
+  proposal:
+    - Before declaring a New or Modified capability, read the catalog or run
+      `openspec list --specs --json`, then inspect relevant existing main specs.
+    - Record full-path candidates, what was read, and why each is Modify,
+      Verify-only, Excluded, or genuinely New. Prefer an existing contract.
+  specs:
+    - Every main or delta spec path is exactly
+      `<domain>/<capability>/spec.md`; each segment uses kebab-case.
+    - A delta uses the exact full capability path declared in the proposal and
+      matching the main spec. Do not create a near-duplicate without catalog
+      and candidate-spec evidence.
 ```
 
-改为:
-```
-Capability 用 kebab-case 命名，二级目录结构：<category>/<capability>/spec.md
-Category（大类）用于粗粒度分组（如 agent、research、bundle），capability（小类）是行为契约的最小单元
-```
+The existing flat examples in `rules.specs` must be replaced, including both:
 
-L240:
-```
+```text
 openspec/specs/<capability>/spec.md
+openspec/changes/<name>/specs/<capability>/spec.md
 ```
 
-改为:
+The proposal rule is intentionally more specific than the default OpenSpec
+instruction. It operationalizes "research existing specs first" into a
+reviewable reuse-first decision.
+
+Do not fork the built-in `spec-driven` schema in this migration. Precise
+project rules plus a deterministic checker are the smaller control loop. A
+project-local schema is a future option only if agents repeatedly ignore these
+rules despite the checker feedback.
+
+## Registry and Catalog Changes
+
+### `openspec/governance/req-registry.yaml`
+
+Requirement IDs and their prefixes remain stable. Update the registry's
+self-documenting ownership coordinates for live capabilities:
+
+- `prefixes:` values become full paths, for example
+  `ACS: agent/agent-command-surface`.
+- Each live capability group heading becomes its full path, for example
+  `# agent/agent-command-surface`.
+- The registry's explanatory comments and the matching `config.yaml` rule use
+  "capability path", not a bare `capability-name` directory.
+- Retired prefixes that intentionally have no spec directory retain their
+  historical label and explicit retired/no-directory explanation; do not invent
+  a new path for them.
+- Do not bulk-rewrite ordinary requirement prose merely to repeat the path.
+  Keep that diff narrow unless a line asserts an old physical path.
+
+### `openspec/specs/README.md`
+
+Create the catalog in the same change. It must have one row for every live
+main spec and no stale flat paths. Use domain headings and the exact full
+paths from the mapping above. Before authoring a row, repair the four `TBD`
+Purposes listed in the baseline so the catalog never has to invent an
+untraceable description.
+
+Purpose repair is a targeted main-spec hygiene task: it must describe the
+existing requirement body without changing its behavior. Review it explicitly
+instead of treating it as incidental wording cleanup.
+
+## Deterministic Guardrails
+
+Configuration directs the Agent; it cannot enforce this taxonomy. Extend the
+project governance surface with one focused `check-capability-taxonomy.mjs`
+and matching `node:test` coverage under `tests/integration/governance/`.
+
+It must check only these direct facts:
+
+1. Every live main spec is exactly
+   `openspec/specs/<approved-domain>/<kebab-case-leaf>/spec.md`.
+2. Every non-archived delta spec is exactly
+   `openspec/changes/<change>/specs/<approved-domain>/<kebab-case-leaf>/spec.md`.
+3. No active main or delta path is flat, deeper than two segments, or in an
+   unapproved domain.
+4. Every live main spec has exactly one catalog row, and every catalog row
+   resolves to a live main spec.
+5. Each live `prefixes:` target resolves to the same full main-spec path.
+
+This checker deliberately does **not** judge whether a domain is semantically
+ideal, whether a catalog keyword is good, or whether an Agent's proposal
+reasoning is sound. Those are human/Agent judgments. It gives an immediate,
+honest failure when the durable path contract or navigation inventory drifts.
+
+Add it to the existing closeout verification rules alongside:
+
+```text
+node openspec/governance/check-project-reqs.mjs
+node openspec/governance/check-project-specs.mjs
+node openspec/governance/check-capability-taxonomy.mjs
 ```
-openspec/specs/<category>/<capability>/spec.md
-```
 
-## 迁移策略
+## Real Impact Surface
 
-### Phase 1: 确定分类
+The earlier assertion that only `config.yaml` contains direct path knowledge is
+incorrect. Treat every occurrence according to its role:
 
-1. 以本 plan 的分类方案为起点
-2. 逐个 capability review，确保归属合理
-3. 对归属模糊的 capability（如 `local-deepseek-claude-launcher`、`fork-repair-converge`、`queue-input-validation`），讨论后确定
-4. 输出最终 mapping（YAML 或 CSV，放入 `_backlog/plans/` 作为迁移脚本输入）
+| Surface | Required handling |
+|---|---|
+| `openspec/specs/` | Move every one of the 84 directories via the approved mapping. Preserve leaf content and requirement IDs. |
+| `openspec/config.yaml` | Update flat-path wording, registry convention wording, and add the discovery protocol. |
+| `openspec/governance/req-registry.yaml` | Update live prefix targets and group headings to complete paths. |
+| `openspec/governance/check-project-specs.mjs` | Update flat-layout comments; keep recursive structural validation. |
+| New taxonomy checker and tests | Add the only deterministic enforcement for this project's two-segment convention and catalog completeness. |
+| `guidelines/change-feedback-loop.md` | Update its canonical accepted-spec link to the new governance path. |
+| `tests/integration/md/canonical-harness-vocabulary-contract.test.mjs` | Update its seven concrete accepted-spec paths. |
+| `tests/integration/md/agent-experiment-autorun-terminology.test.mjs` | Replace leaf-only path construction and its flat expected path with the full-path mapping. |
+| Governance test fixtures | Retain deliberately flat fixture paths where they test generic recursive behavior; add nested taxonomy cases rather than globally rewriting fixtures. |
+| `openspec/changes/archive/` | Do not rewrite historical changes. They describe the old identity truthfully. |
+| `DEEP_RESEARCH_HARNESS/` | No path migration is currently required by the focused reference scan; keep it out of scope unless a concrete reference is discovered during apply. |
 
-### Phase 2: 执行迁移
+`git status` cannot be used to assert that *all* changes are renames: this
+change intentionally modifies configuration, registry, guidance, catalog,
+checker, and tests. Instead verify that the 84 main spec contents are mapped
+one-to-one and that no content rewrite was hidden inside a move.
+
+## Migration Plan
+
+This must be implemented as a dedicated OpenSpec governance change, not as a
+direct worktree operation. It changes the project control-plane contract used
+by every future proposal and delta, even though it changes no Harness runtime
+behavior.
+
+The change should set `.openspec.yaml` to `skip_specs: true`: it has no new or
+modified behavioral requirement delta of its own. That marker does not move
+main specs automatically; the controlled rebaseline remains explicit apply
+work in the approved task list.
+
+### 1. Propose and freeze the identity boundary
+
+1. Create a dedicated change, for example
+   `rebaseline-capability-taxonomy`.
+2. Record the full mapping above as
+   `openspec/changes/<change>/taxonomy-map.yaml`, not as a script input in
+   `_backlog/`. This makes it part of the review and apply audit surface.
+3. Re-run `openspec list --json`. If any active change now touches an old or
+   target path, either archive/cancel it before the move or explicitly rebase
+   its delta to the exact new full path in the same review.
+4. Capture a before snapshot of the 84 paths, their requirement counts, and
+   their requirement-ID headers. The migration preserves these facts.
+
+### 2. Establish the navigation contract before moving files
+
+1. Finalize the domain map and approved-domain list in the checker.
+2. Repair the four `TBD` Purpose sections against their existing requirement
+   bodies, with no requirement semantic change.
+3. Build `openspec/specs/README.md` from the reviewed mapping and Purpose
+   summaries. Add keywords/boundaries only as navigation metadata.
+4. Update `config.yaml`, the registry, guidance, literal references, and
+   affected tests to the new full-path convention.
+
+### 3. Move main specs and active deltas
+
+1. Use the approved map to run one `git mv` per main-spec directory, for
+   example:
+
+   ```bash
+   git mv openspec/specs/agent-command-surface \
+     openspec/specs/agent/agent-command-surface
+   ```
+
+2. If an active change exists, move/rewrite its delta to the exact matching
+   nested location before that change can archive.
+3. Do not leave a flat compatibility copy, symlink, alias spec, or empty
+   placeholder behind. A compatibility copy is a second capability ID, not an
+   alias.
+
+### 4. Validate the rebaseline
+
+Run all of these against the final worktree:
 
 ```bash
-# 为每个 category 创建目录
-mkdir -p openspec/specs/{agent,cli-engine,bundle,research,experiment,gate,workflow,governance}
-
-# 逐个 git mv
-git mv openspec/specs/agent-command-surface openspec/specs/agent/agent-command-surface
-# ... (批量执行)
+openspec list --specs --json
+openspec show agent/agent-command-surface --type spec --json --requirements
+openspec validate --specs --strict
+node openspec/governance/check-project-specs.mjs
+node openspec/governance/check-project-reqs.mjs
+node openspec/governance/check-capability-taxonomy.mjs
+node --test tests/integration/governance/check-capability-taxonomy.test.mjs
+node --test tests/integration/md/canonical-harness-vocabulary-contract.test.mjs
+node --test tests/integration/md/agent-experiment-autorun-terminology.test.mjs
 ```
 
-迁移脚本从 mapping 文件读取，自动化执行全部 `git mv`。
+For every active change remaining after the migration, also run:
 
-### Phase 3: 更新引用
+```bash
+openspec validate <change-name> --type change --strict
+```
 
-1. 更新 `openspec/config.yaml` 路径描述
-2. 运行 `node openspec/governance/check-project-specs.mjs` 确认 PASS
-3. 运行 `node openspec/governance/check-project-reqs.mjs` 确认 PASS
-4. 运行 `openspec validate` 确认 PASS（如果 OpenSpec 工具支持二级目录）
+The before/after evidence must show:
 
-### Phase 4: 验证
+- exactly 84 live full-path capability IDs;
+- one mapped successor for every old leaf and no flat main-spec IDs;
+- unchanged requirement count and `> req:` header set per moved spec, except
+  the explicitly reviewed Purpose hygiene edits;
+- one catalog row and one live registry owner per main spec;
+- no active delta capable of recreating an old flat path.
 
-- `git status` 确认所有变更都是 `renamed:` 操作
-- 两个 governance check 脚本 PASS
-- 抽样检查几个 spec 的 `> req:` 头完整
+## Risks and Controls
 
-## 风险与注意事项
+| Risk | Control |
+|---|---|
+| A flat active delta recreates an old capability after archive. | Freeze/rebase active changes before the move; checker rejects a flat active delta. |
+| An Agent follows the upstream flat template. | Explicit `proposal` and `specs` rules plus a path checker. |
+| The catalog becomes a second stale specification. | Keep it thin, make main spec authoritative, and check path completeness only. |
+| A new domain becomes a casual bucket. | Checker permits only the approved seven; adding a domain requires a deliberate governance change. |
+| Mechanical moves hide accidental spec edits. | Preserve a mapping/before snapshot and review main-spec diffs independently of config/test changes. |
+| Large `config.context` dilutes attention. | Put only stable path/discovery rules in context; leave catalog and spec content on demand. |
+| `TBD` Purpose rows make discovery unreliable. | Repair the four placeholders before catalog publication. |
+| Historical records become false. | Leave archived changes untouched. |
 
-1. **OpenSpec 工具兼容性**: 当前使用的 `@fission-ai/openspec` 版本是否原生支持二级目录需要验证。如果不支持，可能需要先升级 OpenSpec 工具链。
-2. **Active changes 的中断**: 迁移时如果有 active change 引用了 spec 路径（delta spec 放在 `openspec/changes/<name>/specs/<capability>/spec.md`），delta 路径不需要改动 —— delta spec 保持与 main spec 相同的 `<capability>` 叶子名即可，OpenSpec archive 时自动同步到正确位置。
-3. **Config.yaml 是唯一硬编码路径的地方**: 其余工具均为递归扫描，天然兼容深层目录。这是好消息。
-4. **大类命名**: `cli-engine` vs `engine`、`research` 囊括了 22 个 capability（是否需要拆分？）、`governance` 是否语义准确 —— 这些都需要讨论后敲定。
-5. **git history**: `git mv` 保留文件历史，但 `git log --follow` 跨目录重命名可能需要 `--follow` 参数。
+## Sources
 
-## 决策待定
+The complete primary-source research record is retained in
+[two-level-specs-categorization.primary-sources.md](two-level-specs-categorization.primary-sources.md).
+The decisive upstream sources are:
 
-- [ ] 大类命名最终确定
-- [ ] `research` 是否拆分为 `research-phase` + `research-delivery`（22 个偏多）
-- [ ] `local-deepseek-claude-launcher` 归属（host 工具，放在 governance 或独立 `host` 类？）
-- [ ] `queue-input-validation` 归属（bundle 还是 cli-engine？）
-- [ ] `fork-repair-converge` 归属（workflow 还是 gate？）
-- [ ] `integration-tests` 和 `test-fixtures` 是否合并为 `testing` 大类
-- [ ] 迁移时机：是否有 active change 正在进行中，需要等归档后再迁移
-- [ ] 是否作为 OpenSpec change 走 `/opsx:propose → apply → archive` 流程，还是直接执行（因为不涉及 `DEEP_RESEARCH_HARNESS/` 代码变更）
+- [Recursive capability discovery](https://github.com/Fission-AI/OpenSpec/blob/v1.7.0/src/utils/spec-discovery.ts#L11-L62)
+- [Delta-to-main same-path mapping](https://github.com/Fission-AI/OpenSpec/blob/v1.7.0/src/core/specs-apply.ts#L48-L77)
+- [Nested delta parsing](https://github.com/Fission-AI/OpenSpec/blob/v1.7.0/src/core/parsers/change-parser.ts#L57-L75)
+- [List output shape](https://github.com/Fission-AI/OpenSpec/blob/v1.7.0/src/core/list.ts#L167-L218)
+- [Exact-ID show resolution](https://github.com/Fission-AI/OpenSpec/blob/v1.7.0/src/commands/spec.ts#L81-L123)
+- [Requirement-only `RENAMED` grammar](https://github.com/Fission-AI/OpenSpec/blob/v1.7.0/src/core/parsers/change-parser.ts#L151-L193)
+- [Default flat authoring guidance](https://github.com/Fission-AI/OpenSpec/blob/v1.7.0/schemas/spec-driven/schema.yaml#L15-L22)
+- [Official domain organization guidance](https://github.com/Fission-AI/OpenSpec/blob/v1.7.0/docs/existing-projects.md#L103-L119)
+- [Current project configuration](../../openspec/config.yaml)
+- [Current requirement registry](../../openspec/governance/req-registry.yaml)
