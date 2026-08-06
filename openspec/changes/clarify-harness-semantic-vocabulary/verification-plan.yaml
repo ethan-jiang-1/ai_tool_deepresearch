@@ -1,0 +1,47 @@
+schema_version: verification-routing/v1
+change: clarify-harness-semantic-vocabulary
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      This change modifies no isolated computation or helper. Its bounded
+      reader contract is established more directly by reading the selected
+      current documents and accepted specifications together.
+  integration:
+    status: selected
+    rationale: >-
+      One JS-led source contract can verify the approved high-signal Harness
+      entry, command, role-taxonomy, and accepted-spec statements together
+      without claiming real-Agent behavior or changing runtime state.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No bundle lifecycle, Engine transition, CLI invocation, schema, or
+      mutable runtime behavior changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change makes no claim that a real Agent performs research, judgment,
+      repair, or delivery differently.
+claims:
+  - id: semantic-harness-reader-contract
+    statement: >-
+      RUE-001, RUE-004, RUE-005, ACS-001, ACS-002, CMI-004, CMI-005,
+      CMI-007, CMI-009, CSE-001, BUI-001, BUI-002, SWE-004, and WDC-001:
+      the selected current reader-facing Harness sources and accepted
+      requirements distinguish the reusable Deep Research Harness, its source
+      directory, a research run, and the selected current run bundle root;
+      human-readable role taxonomy uses Harness wording while stable protocol
+      identifiers remain unchanged.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/canonical-harness-vocabulary-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
