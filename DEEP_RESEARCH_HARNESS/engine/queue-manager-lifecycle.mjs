@@ -129,7 +129,7 @@ export function createQueue(queueId = 'agentic-queue') {
  * Load queue from a bundle directory. Auto-creates an empty queue if the
  * file doesn't exist yet. `rb_queue.json` is the only queue state file.
  *
- * @param {string} bundleDir — path to the DPT run bundle
+ * @param {string} bundleDir — path to the run bundle
  * @returns {object} QueueState — parsed and validated
  */
 export function loadQueue(bundleDir) {
@@ -163,7 +163,7 @@ export function loadQueueReadOnly(bundleDir) {
 /**
  * Persist queue state to disk. Validates before writing.
  *
- * @param {string} bundleDir — path to the DPT run bundle
+ * @param {string} bundleDir — path to the run bundle
  * @param {object} queue — QueueState to persist
  * @returns {object} QueueState — the validated, saved queue
  */

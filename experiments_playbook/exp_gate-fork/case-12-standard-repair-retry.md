@@ -30,7 +30,7 @@ verdict_judge: deterministic
 
 ## Expected Runtime Path
 
-1. 创建 DPT run bundle，validate + inspect
+1. 创建 run bundle，validate + inspect
 2. 初始化 trace
 3. Branch match → MD executes
 4. No-branch → MD repair → retry → pass

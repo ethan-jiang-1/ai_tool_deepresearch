@@ -30,7 +30,7 @@ verdict_judge: deterministic
 
 ## Expected Runtime Path
 
-1. 创建 DPT run bundle，validate + inspect
+1. 创建 run bundle，validate + inspect
 2. 初始化 trace
 3. PDCA: check fail → MD repair → retry → pass
 4. PDCA: schema fail → MD fix field → retry → pass

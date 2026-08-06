@@ -91,9 +91,9 @@ A user request SHALL NOT by itself expand host permission, override an Engine ve
 #### Scenario: Background workflow is not a continuation dependency
 
 - **WHEN** the Agent is inside a non-terminal `stop: no` phase
-- **AND** an unrelated dynamic workflow or harness waiting message exists outside DPT framework authority
+- **AND** an unrelated dynamic workflow or harness waiting message exists outside Deep Research Harness authority
 - **THEN** the Agent SHALL NOT wait for it as a phase continuation condition
-- **AND** it SHALL continue, repair, degrade, or hold silently according to DPT runtime truth
+- **AND** it SHALL continue, repair, degrade, or hold silently according to runtime truth in the current run bundle
 
 #### Scenario: Language preference does not authorize a silent-phase reply
 

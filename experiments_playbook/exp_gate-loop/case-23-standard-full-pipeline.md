@@ -30,7 +30,7 @@ verdict_judge: deterministic
 
 ## Expected Runtime Path
 
-1. 创建 DPT run bundle，validate + inspect
+1. 创建 run bundle，validate + inspect
 2. 初始化 trace
 3. 规则优先级：schema > blocked > low_refs
 4. Schema fail → MD fix → retry → check fail → MD repair → pass

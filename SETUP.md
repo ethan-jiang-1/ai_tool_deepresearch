@@ -25,14 +25,14 @@ The repository uses only the approved npm dependencies `zod` and `yaml`; everyth
 
 ## 2. Choose A Permission Posture
 
-Deep Research runs are long and include non-terminal `stop: no` phases. If the host Coding Agent keeps asking for shell, file-write, fetch, or network approval during those phases, the run can stall even though the DPT framework itself is ready.
+Deep Research runs are long and include non-terminal `stop: no` phases. If the host Coding Agent keeps asking for shell, file-write, fetch, or network approval during those phases, the run can stall even though the Deep Research Harness itself is ready.
 
 Choose one posture before the trigger:
 
 | Posture | Use when | Trade-off |
 |---|---|---|
 | reviewed / interactive | First setup, development, or a run where you want to approve actions manually | Safer, but approvals may appear during long autonomous phases |
-| autonomous research opt-in | Disposable or trusted workspace where you accept the host-tool risk for a full DPT run | Less interruption, but broader local authority if configured too widely |
+| autonomous research opt-in | Disposable or trusted workspace where you accept the host-tool risk for a full research run through the Deep Research Harness | Less interruption, but broader local authority if configured too widely |
 
 Autonomous research is opt-in. Do not treat unrestricted file access, broad shell allowlists, network access, or approval bypass as risk-free defaults.
 

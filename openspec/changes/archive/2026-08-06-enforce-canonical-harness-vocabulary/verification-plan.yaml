@@ -1,0 +1,46 @@
+schema_version: verification-routing/v1
+change: enforce-canonical-harness-vocabulary
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      This change has no isolated computation or helper whose behavior is more
+      directly established by a unit test than reading the current source
+      documents together.
+  integration:
+    status: selected
+    rationale: >-
+      One JS-led source contract can read the actual setup guide, accepted
+      specifications, source-code documentation, and selected experiment
+      playbooks together, proving the canonical reader-facing vocabulary
+      without claiming real-Agent behavior.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No bundle lifecycle, Engine transition, CLI invocation, or runtime state
+      behavior changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change does not claim that a real Agent's research, judgment, repair,
+      or delivery behavior changes.
+claims:
+  - id: canonical-current-harness-vocabulary
+    statement: >-
+      RUE-002, RUE-004, and SWE-004: current setup, entry, and execution-path
+      wording consistently names the Deep Research Harness; runtime truth is
+      scoped to the current run bundle; and matching source-code documentation
+      and selected experiment playbooks use canonical run-bundle wording while
+      retaining the existing routing and silent-execution meaning.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/canonical-harness-vocabulary-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
