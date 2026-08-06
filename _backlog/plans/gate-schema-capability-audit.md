@@ -1,10 +1,18 @@
 ---
 title: Gate Schema Capability Audit
-status: draft
+status: active; reopened 2026-08-07
 created: 2026-08-06
+updated: 2026-08-07
 ---
 
 # Gate Schema Capability Audit — 让 Engine 真能拦住，而不是黑盒乱发挥
+
+> **重开处置（2026-08-07）**：本计划曾因 BUG-201/202/204 的确定性闭环收敛到
+> [`bug-200-204-gate-and-queue-remediation.md`](bug-200-204-gate-and-queue-remediation.md)
+> 的 `harden-gate-and-recovery-contracts`（只保留
+> `producer -> authority -> checker -> legal repair -> regression` 的有限核对）
+> 而归档；但 per-gate gap map 与语义质量审计并未完成，重新作为活跃 plan。
+> 其余内容质量 concerns 仍由 Agent/HITL 判断，审计方向与优先级见下文。
 
 ## 问题诊断
 

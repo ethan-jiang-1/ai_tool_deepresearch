@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-05 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-06 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,11 +17,19 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `experiment-progressive-follow-up-plan` | 已完成 progressive-run round 的条件性后续入口：selected-host research access、case-211/406 fresh real-actor requalification，以及 profile-led diagnostic/calibration refresh。每次必须重新获得 fresh selection 和独立预算；不自动运行。 | dormant intake（无 active run） |
-| `silent-autonomous-execution` | 承接 `BUG-099/104/106` 的历史 stop/context observation。已与现行 Chain/Queue/Work Unit swarm 对齐：silent poll-submit loop、actor probe/fallback 与 continuation cues 是既有 contract；三次 real-actor canary 仍为 host-scoped `NOT_RUN`。没有 current-head Phase-Agent reproduction，也没有 active OpenSpec change；仅在新的可审计 `agent_flow_e2e` observation 出现后重开。 | deferred observation（无固定 OpenSpec change） |
-| `rename-framework-to-deep-research-harness` | 将 reusable system 定名为 Deep Research Harness，规定 canonical root、单一 legacy alias、`BUNDLE_ENTRY.md` 新 bundle entry、existing-bundle fallback 与 explicit current run bundle root；实现由同名 OpenSpec change 承载。 | active OpenSpec proposal（未 apply） |
+| `bug-200-204-gate-and-queue-remediation` | BUG-200--204 的收敛分诊：关闭 current-head 已覆盖的 BUG-200；以两个 OpenSpec change 分别修 Gate/recovery contract 与递归 queue repair；不将 gate audit 拆为独立生命周期，也不让无 submitted evidence 的 topic 伪造完成。 | ready for OpenSpec proposals |
+| `gate-schema-capability-audit` | 全面 Gate quality audit（重开 2026-08-07）：per-gate gap map 与语义质量审计未完成；BUG-201/202/204 的确定性闭环已由 `bug-200-204-gate-and-queue-remediation` change 1 收敛，其余内容质量 concerns 仍待审计。 | active（审计未闭环） |
 
 ---
+
+## 最近关闭 (2026-08-06)
+
+| Plan | 关闭依据 |
+|------|----------|
+| `experiment-progressive-follow-up-plan` | CLS-052：仅等待 future selected-host capability、fresh profile selection 和新预算；没有当前可执行的 Harness change，归档为 external re-entry record。 |
+| `silent-autonomous-execution` | CLS-053：没有 fresh current-head `agent_flow_e2e` reproduction 或 deterministic root；taxonomy rebaseline 后更新 canonical Harness link，归档为 external-reproduction record。 |
+| `rename-framework-to-deep-research-harness` | CLS-049：reusable system 定为 Deep Research Harness（`DEEP_RESEARCH_HARNESS/`），单一 legacy `DPT_FRAMEWORK` alias、`BUNDLE_ENTRY.md` entry precedence 与 explicit current run bundle root 均由同名 OpenSpec change 交付（apply `27f307332`、archive `e73ba1790`）。 |
+| `two-level-specs-categorization` | CLS-050：84 主 spec 迁移到七域嵌套路径 + `openspec/specs/README.md` catalog + config 契约 + taxonomy/discovery 两个 checker，经 `rebaseline-capability-taxonomy` change archive（2026-08-06）；primary-sources 研究底稿随行。 |
 
 ## 最近关闭 (2026-08-05)
 

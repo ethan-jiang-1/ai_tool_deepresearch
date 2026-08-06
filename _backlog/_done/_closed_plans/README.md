@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-08-05 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-08-06 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -70,5 +70,9 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-046 | 2026-08-03 | experiment-progressive-run-strategy.md + experiment-progressive-run-strategy/ | Phase 0 的历史测量与 57 个报告附件；静态 Wave/tier 路线已被 CLS-045 的 profile-driven completed round 取代，保留为证据而非活跃执行指令。 |
 | CLS-047 | 2026-08-05 | bug-187-199-systemic-remediation-plan.md | C1-C4 OpenSpec routes archived; E1 host UX and E2 current-head Actor tracks classified as bounded host/Actor residuals. Case-164 native checks passed while its Supervisor timeout remained separate; case-232 honestly finalized NOT_RUN for missing host search capability. |
 | CLS-048 | 2026-08-05 | residual-bug-systemic-remediation.md | C1 and C2 archived; BUG-195--197 closed from retained native current-playbook-matched evidence; BUG-188/193 host-owned; C2 selection omission left C3 unadmitted and BUG-192/198 unobserved. |
+| CLS-049 | 2026-08-06 | rename-framework-to-deep-research-harness.md | Reusable system fixed as Deep Research Harness at `DEEP_RESEARCH_HARNESS/`; single legacy `DPT_FRAMEWORK` alias, `BUNDLE_ENTRY.md` entry precedence, and explicit current run bundle root delivered via the same-named OpenSpec change (apply `27f307332`, archive `e73ba1790`). |
+| CLS-050 | 2026-08-06 | two-level-specs-categorization.md + two-level-specs-categorization.primary-sources.md | 84 个主 spec 迁移到七域嵌套 capability path（agent/engine/bundle/research/verification/workflow/governance），`openspec/specs/README.md` catalog + config 契约 + taxonomy/discovery 两个 checker 落地；经 `rebaseline-capability-taxonomy` change archive（2026-08-06）。primary-sources 为 OpenSpec v1.7.0 capability-path 研究底稿。 |
+| CLS-052 | 2026-08-06 | experiment-progressive-follow-up-plan.md | Closed as an external re-entry record: future host capability, fresh profile selection, objective, and budget are required before a new bounded plan may exist. |
+| CLS-053 | 2026-08-06 | silent-autonomous-execution.md | Closed as a current-head reproduction record: no deterministic root or fresh `agent_flow_e2e` observation supports a change; canonical Harness links updated after rebaseline. |
 
-**Next available plan ID: CLS-049**
+**Next available plan ID: CLS-054**

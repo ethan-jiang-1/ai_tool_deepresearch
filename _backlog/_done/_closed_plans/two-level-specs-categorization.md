@@ -1,10 +1,10 @@
 ---
 title: Capability Taxonomy and Coding-Agent Discovery Rebaseline
-status: proposal-ready; implementation pending
+status: applied; archived 2026-08-06
 created: 2026-08-06
 updated: 2026-08-06
-decision: proceed through a dedicated OpenSpec governance change
-proposal: openspec/changes/rebaseline-capability-taxonomy/
+decision: applied through the dedicated OpenSpec governance change
+proposal: openspec/changes/archive/2026-08-06-rebaseline-capability-taxonomy/
 ---
 
 # Capability Taxonomy and Coding-Agent Discovery Rebaseline

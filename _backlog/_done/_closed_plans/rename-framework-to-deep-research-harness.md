@@ -1,8 +1,9 @@
 ---
 title: Rename Framework to Deep Research Harness
-status: active_openspec_change
+status: closed_2026-08-06
 created: 2026-08-05
 change: rename-framework-to-deep-research-harness
+archived: e73ba1790
 ---
 
 # Rename Framework to Deep Research Harness

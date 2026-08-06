@@ -1,19 +1,26 @@
 ---
 title: Silent autonomous execution
-status: deferred_current_head_observation__no_active_openspec_change
+status: closed_current_head_observation__external_reproduction_required
 created: 2026-07-24
 revised: 2026-08-01
+closed: 2026-08-06
 source_bugs: BUG-099, BUG-104, BUG-106
 current_execution_model: chain_queue_work_unit
 ---
 
 # Silent Autonomous Execution
 
+> **归档处置（2026-08-06）**：capability taxonomy rebaseline 只迁移了 contract
+> identity，不产生新的 Phase-Agent 行为证据。当前没有 deterministic root，也没有
+> fresh `agent_flow_e2e` reproduction，因此本文件不能贡献给 BUG-200--204 的两个
+> change。它保留为 future reproduction 的证据门槛；满足门槛时新建一个有界 proposal，
+> 不恢复本计划或从旧 incident 推导 host-liveness 结论。
+
 ## 1. Current Decision
 
 这份计划只保留 `BUG-099`、`BUG-104` 与 `BUG-106` 的**当前 swarm 残余观察边界**。它不再承接一个 phase-handoff implementation candidate，也不预设新的 OpenSpec change。
 
-当前生产执行模型是 [Chain / Queue / Work Unit](../../guidelines/agentic-execution-model.md)：
+当前生产执行模型是 [Chain / Queue / Work Unit](../../../guidelines/agentic-execution-model.md)：
 
 ```text
 gate -> chain handoff -> phase-local queue demand
@@ -26,20 +33,20 @@ BUG-103 的 handoff guidance 缺口已由 archived `align-phase-handoff-status-s
 
 ## 2. Current Swarm Contract
 
-- `stop: no` 的 Phase Agent 不主动把进度、问题、确认或 continuation request 浮出给用户；它按 [shared silent-execution contract](../../DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md) repair、换策略、消费合法 handoff 或 silent hold。
+- `stop: no` 的 Phase Agent 不主动把进度、问题、确认或 continuation request 浮出给用户；它按 [shared silent-execution contract](../../../DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-silent-execution.md) repair、换策略、消费合法 handoff 或 silent hold。
 - delegated phase 采用 active poll-submit-repair-terminalize loop：从 bundle truth 重建 in-flight work，使用 `operate-work-unit inspect`，不等待 task notification、用户续跑或外部 workflow 状态。
-- 每次 delegated claim 先有 exact-role native probe，再在 `delegated_subagent` 与明确的 `phase_agent_fallback` 之间作已接受的选择。这个 execution actor 绑定 authorship 与 submit 边界，不证明物理 actor 身份或 host/sub-agent liveness；见 [actor decision loop](../../DPT_FRAMEWORK/command_playbook/work-unit-actor-decision.md)。
+- 每次 delegated claim 先有 exact-role native probe，再在 `delegated_subagent` 与明确的 `phase_agent_fallback` 之间作已接受的选择。这个 execution actor 绑定 authorship 与 submit 边界，不证明物理 actor 身份或 host/sub-agent liveness；见 [actor decision loop](../../../DEEP_RESEARCH_HARNESS/command_playbook/work-unit-actor-decision.md)。
 - continuation cue 是现有确定性反馈，不是 scheduler。`case-606` 只证明 cue 在真实 CLI 输出中可见，明确不证明 Agent behavior。
 
 ## 3. Evidence Boundary
 
-已归档的 framework-contract remediation 已把 current deterministic contracts 和 real-actor canary checkpoint 对齐；它没有把 actor behavior 改写成 PASS。2026-07-31 的三次真实 Actor canary（case-406、case-604、case-221）都未产生 native completion，因此是 host-scoped `NOT_RUN`，不是成功、失败或 DPT host-liveness defect。见 [CLS-042 closure record](../_done/_closed_plans/framework-contract-remediation-openspec-sequence.md)。
+已归档的 framework-contract remediation 已把 current deterministic contracts 和 real-actor canary checkpoint 对齐；它没有把 actor behavior 改写成 PASS。2026-07-31 的三次真实 Actor canary（case-406、case-604、case-221）都未产生 native completion，因此是 host-scoped `NOT_RUN`，不是成功、失败或 Harness host-liveness defect。见 [CLS-042 closure record](framework-contract-remediation-openspec-sequence.md)。
 
 因此，目前没有下列任何一种结论：
 
 - 没有 current-head Phase Agent observation 证明 BUG-099/106 的旧 stop/report 行为仍会在完整 handoff 后复现。
 - 没有证据把旧 incident 的 stop 归因于 repeated `enter-phase` rendering、某个 byte count、模型状态或单句 Markdown。
-- 没有可移植的 DPT authority 能启动 host 的下一 turn，或保证 Sub-agent/Phase Agent 会完成。
+- 没有可移植的 Harness authority 能启动 host 的下一 turn，或保证 Sub-agent/Phase Agent 会完成。
 
 旧的 `make-phase-handoff-entry-direct` / `consume-phase-handoff` 方案、entry-core projection、session-level loaded-file cache 与 host-specific continuation research 都不再是本计划的当前方向。
 

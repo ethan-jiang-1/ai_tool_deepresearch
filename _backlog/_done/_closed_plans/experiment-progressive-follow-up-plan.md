@@ -1,13 +1,20 @@
 # Experiment Progressive Follow-up Intake Plan
 
-> Status: dormant intake; no active run, budget, or retry authorization.
+> Status: closed external re-entry record; no active run, budget, or retry authorization.
 > Created: 2026-08-03.
+> Closed: 2026-08-06.
 >
-> Predecessor: [Experiment Progressive Run Plan](../_done/_closed_plans/experiment-progressive-run-plan.md).
+> Predecessor: [Experiment Progressive Run Plan](experiment-progressive-run-plan.md).
 >
 > This is planning/routing only. Current selection, runtime truth, and budget remain
 > owned by a fresh profile dry-run, retained runtime evidence, and an explicit future
 > authorization.
+
+> **归档处置（2026-08-06）**：taxonomy rebaseline 没有改变 selected host 的真实
+> 工具暴露、fresh real-actor completion 或预算事实，因此没有可以并入
+> BUG-200--204 的确定性工程任务。这个文件保存重开证据条件，不再代表活跃
+> backlog 计划。只有未来有新的 objective、预算和 profile selection 时，才从
+> 这里的 activation protocol 新建一个短期计划；不得恢复本计划为常驻 retry。
 
 ## Purpose
 
@@ -39,8 +46,8 @@ consume budget.
 - No profile/SLO/timeout/budget semantic change based on one unavailable host, one budget breach, or one case-local fixture result.
 - No conversion of deterministic fixture proof, configured tool names, or partial native completion into real Agent-behavior availability evidence.
 
-## Dormant State
+## Re-entry Boundary
 
-This plan is intentionally dormant until a trigger above is met. Each authorized
-activation is self-contained and ends at its first terminal result; it does not leave
-this plan running or make the completed progressive-run round active again.
+This archived record is not an active intake. Each future authorized activation is
+self-contained and ends at its first terminal result; it creates a fresh short-lived
+plan and does not reactivate the completed progressive-run round.
