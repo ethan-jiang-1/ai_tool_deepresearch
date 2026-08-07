@@ -61,6 +61,7 @@ ${topics}
 
 function submitWave1Source(dir, {
   topic = 'topic-a',
+  topicUid = 'tp_123e4567-e89b-12d3-a456-426614174000',
   sourceUrl = 'https://example.com/topic-a/new-source',
   cacheTrail = `_cache/wave1/primary/${topic}/new-source`,
   degraded = false,
@@ -79,6 +80,14 @@ function submitWave1Source(dir, {
   const { record, submitted } = claimAndSubmitWorkUnit(dir, {
     phase: 'wave1',
     queueItemId: topic,
+    queueItemOverrides: {
+      payload: {
+        topic_uid: topicUid,
+        topic_slug: topic,
+        wave: 1,
+        assignment_mode: 'primary',
+      },
+    },
     outputs: [
       {
         path: referencePath,
@@ -365,6 +374,38 @@ describe('wave depth contract helpers', () => {
     assert.match((missing.diagnostics || []).join('\n'), /canonicalized/);
     assert.doesNotMatch(missing.inspect.join('\n'), /source_claim_cache_mapping|source_novelty_floor|observed .*required/);
     assert.equal(missing.findings.filter((finding) => /reviewed_work_unit_refs/.test(finding.id)).length, 1);
+  });
+
+  it('rejects a submitted reviewed ref that is bound to another current Topic before dependent checks', () => {
+    const dir = setupBundle({ topicCount: 2 });
+    const otherTopic = submitWave1Source(dir, {
+      topic: 'topic-b',
+      topicUid: 'tp_123e4567-e89b-12d3-a456-426614174001',
+      sourceUrl: 'https://example.com/topic-b/not-topic-a',
+    });
+    writeDepthReview(dir, {
+      topic: 'topic-a',
+      record: otherTopic.record,
+    });
+
+    const result = checkWave1DepthReviewContract(dir, { topic: 'topic-a' });
+    assert.equal(result.passed, false);
+    assert.equal(result.findings.length, 1, result.inspect.join('\n'));
+    const binding = result.findings[0];
+    assert.equal(binding.id, 'per_topic_depth_review_contract:topic-a:reviewed_work_unit_refs_binding');
+    assert.equal(binding.observed.binding_root, 'manifest_topic_binding_invalid');
+    assert.match(binding.missing_fact, /manifest_topic_binding_invalid/);
+    assert.equal(binding.repair_kind, 'missing_contract');
+    assert.match(binding.write_to, /current-topic backing\/replacement owner boundary/i);
+    assert.match(binding.repair, /do not invent reviewed_work_unit_refs/i);
+    assert.doesNotMatch(binding.repair, /replace reviewed_work_unit_refs/i);
+    assert.doesNotMatch(binding.repair, /claim\/submit/i);
+    assert.doesNotMatch(result.inspect.join('\n'), /source_claim_cache_mapping|source_novelty_floor|new_source_floor_comparison/);
+    assert.deepEqual(result.masked_rule_ids.sort(), [
+      'new_source_floor_comparison',
+      'source_claim_cache_mapping',
+      'source_novelty_floor',
+    ]);
   });
 
   it('fails missing required keys, non-closed decisions, and missing profile parameters', () => {

@@ -92,11 +92,15 @@
     },
     {
       "id": "question_list_has_four_sections",
-      "check": "pattern_match",
+      "check": "semantic_sections",
       "target": "artifacts/wave1/{topic}/question-list.md",
-      "pattern": "## Topic Investigation Targets[\\s\\S]*## Question Reconciliation[\\s\\S]*## Emergent Question Protocol[\\s\\S]*## Exploration\\s*/\\s*Exploitation Decision",
-      "negate": false,
-      "failure_message": "question-list.md for {topic} must contain all four sections in order: Topic Investigation Targets, Question Reconciliation, Emergent Question Protocol, Exploration / Exploitation Decision.",
+      "required_sections": [
+        "Topic Investigation Targets",
+        "Question Reconciliation",
+        "Emergent Question Protocol",
+        "Exploration / Exploitation Decision"
+      ],
+      "failure_message": "question-list.md for {topic} must contain non-empty Topic Investigation Targets, Question Reconciliation, Emergent Question Protocol, and Exploration / Exploitation Decision sections.",
       "finding": { "source": "checker" }
     },
     {

@@ -17,7 +17,10 @@ import {
   ReferenceMetadataArraySchema,
   referenceMetadataAuthoringFields,
 } from '../../schema/contracts/reference.mjs';
-import { parseMarkdownSemanticSections } from './markdown-semantic-sections.mjs';
+import {
+  normalizeMarkdownSemanticHeading,
+  parseMarkdownSemanticSections,
+} from './markdown-semantic-sections.mjs';
 import { hashValue } from '../work-unit-utils.mjs';
 
 const MAX_BYTES = 4 * 1024 * 1024;
@@ -272,19 +275,22 @@ function evaluateEvidenceSummary(content, common, snapshotMeta) {
   return { passed: true, snapshot_meta: snapshotMeta, roots: [] };
 }
 
-function evaluateQuestionList(content, common, snapshotMeta) {
+const DEFAULT_QUESTION_LIST_SECTIONS = Object.freeze([
+  'Topic Investigation Targets',
+  'Question Reconciliation',
+  'Emergent Question Protocol',
+  'Exploration / Exploitation Decision',
+]);
+
+function evaluateQuestionList(content, common, snapshotMeta, { requiredSections = null } = {}) {
   const sections = parseMarkdownSemanticSections(content);
-  const required = [
-    'topic investigation targets',
-    'question reconciliation',
-    'emergent question protocol',
-    'exploration / exploitation decision',
-  ];
+  const required = (requiredSections || DEFAULT_QUESTION_LIST_SECTIONS)
+    .map((section) => normalizeMarkdownSemanticHeading(section));
   const missing = required.filter((section) => !(sections.get(section) || '').trim());
   if (missing.length > 0) {
     return failure(common, {
       code: 'question_list_sections_missing_or_empty',
-      expected: 'All four required question-list semantic sections are non-empty.',
+      expected: 'All required question-list semantic sections are non-empty.',
       observed: `Missing or empty semantic section(s): ${missing.join(', ')}.`,
       rootClass: 'semantic_content',
     }, snapshotMeta);
@@ -355,7 +361,7 @@ export function describeDirectOutputAuthoringProjection(contractId) {
   });
 }
 
-export function evaluateDirectOutputTarget({ bundleDir, target, contractId } = {}) {
+export function evaluateDirectOutputTarget({ bundleDir, target, contractId, requiredSections = null } = {}) {
   const common = { contractId, coordinate: typeof target === 'string' ? target : String(target ?? '') };
   const definition = DIRECT_OUTPUT_CONTRACTS[contractId];
   if (!definition) {
@@ -370,5 +376,5 @@ export function evaluateDirectOutputTarget({ bundleDir, target, contractId } = {
   if (snapshot.roots) return snapshot;
   const decoded = decodeSnapshot(snapshot.bytes, common, snapshot.snapshotMeta);
   if (decoded.roots) return decoded;
-  return definition.evaluate(decoded.content, common, snapshot.snapshotMeta);
+  return definition.evaluate(decoded.content, common, snapshot.snapshotMeta, { requiredSections });
 }

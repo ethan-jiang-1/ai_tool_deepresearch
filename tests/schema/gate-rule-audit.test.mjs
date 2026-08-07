@@ -89,6 +89,19 @@ describe('derived active Gate audit', () => {
     }
   });
 
+  it('derives typed semantic-section descriptor facts from active definitions', () => {
+    const typedRules = activeDefinitions().flatMap((snapshot) => snapshot.definition.rules)
+      .filter((rule) => rule.check === 'semantic_sections');
+    assert.ok(typedRules.length > 0);
+    for (const rule of typedRules) {
+      assert.ok(Array.isArray(rule.required_sections));
+      assert.ok(rule.required_sections.length > 0);
+      assert.equal(new Set(rule.required_sections).size, rule.required_sections.length);
+      assert.equal(Object.hasOwn(rule, 'pattern'), false);
+      assert.equal(Object.hasOwn(rule, 'negate'), false);
+    }
+  });
+
   it('routes every production Gate-definition semantic read through the shared reader', () => {
     const productionFiles = walk(FRAMEWORK_ROOT).filter((file) => file.endsWith('.mjs'));
     const consumers = productionFiles.filter((file) => readFileSync(file, 'utf8').includes('gate_definitions'));

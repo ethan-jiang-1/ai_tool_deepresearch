@@ -1,13 +1,35 @@
 # RUN.md — DEEP_RESEARCH_HARNESS 入口
 
-> **DEEP_RESEARCH_HARNESS v0.74**
+> **DEEP_RESEARCH_HARNESS v0.76**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DEEP_RESEARCH_HARNESS 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.74
+## Current Release: v0.76
+
+- Wave1 question-list requirements now come from the active typed semantic
+  section descriptor. Equivalent heading order, case, level, spacing, and list
+  style remain non-blocking; a missing or empty declared section stays a direct
+  Gate/inspect root.
+- Gate audit evidence is derived from parsed descriptors and focused evaluator
+  behavior, not a parallel per-rule catalog. A missing current-Topic submitted
+  backing masks its reference-floor derivative and returns the same checkpoint
+  with an honest `missing_contract` no-path rather than authorizing a fabricated
+  reviewed ref.
+- Terminal late-submit and timeout-preflight fixtures derive their candidate
+  output tuple from the claimed assignment. Current Wave0 evidence contributes
+  only assigned `source_yaml`; output-role, receipt, hash, snapshot, and
+  submitted-provenance validation remain unchanged.
+
+- Generic `operate-queue fail` now accepts only a current queue item ID and a
+  non-empty reason. A non-delegated failure records a terminal
+  `terminal_no_successor` row rather than creating a repair card; a delegated
+  failure remains on the existing work-unit terminal/replacement boundary.
+- Queue inspect, projection, Wave inspect, and the formal queue-drain Gate
+  expose that same direct no-successor root. Do not hand-author a repair card
+  or edit Queue authority to bypass it.
 
 - The reusable system is the Deep Research Harness at
   `DEEP_RESEARCH_HARNESS/`, its sole source and command coordinate.

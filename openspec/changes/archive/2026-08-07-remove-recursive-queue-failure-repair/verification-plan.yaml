@@ -1,0 +1,106 @@
+schema_version: verification-routing/v1
+change: remove-recursive-queue-failure-repair
+test_classes:
+  unit:
+    status: selected
+    rationale: Queue failure admission, terminal-history disposition, finite lifecycle transition, and terminal-root projection are bounded deterministic contracts with direct schema and helper seams.
+  integration:
+    status: selected
+    rationale: Production Queue and Gate CLIs must agree over a temporary bundle on rejection-before-mutation, durable terminal history, rendered inspection, and the shared queue-drain result.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The change terminates one local Queue operation and returns to an existing checkpoint; a workflow-scale chain would add unrelated phase routing without strengthening finite failure proof.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: This change proves an Engine-owned queue transition and feedback projection, not that a Subject Agent chooses content, reads guidance, or performs a recovery action.
+claims:
+  - id: queue-failure-schema-rejects-successor-payload
+    statement: >-
+      AGQ-019: Queue failure admission accepts only a current queue item ID and non-empty reason, rejects caller-authored repair or successor payloads before mutation, and accepts legacy terminal rows without a failure disposition while restricting a new terminal_no_successor disposition to failed non-delegated terminal history.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/contracts/queue.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: non-delegated-queue-failure-is-terminal-and-finite
+    statement: >-
+      AGQ-019: A current non-delegated Queue demand becomes one durable failed terminal-history row with terminal_no_successor, promotes only already-admitted demand, creates no repair or repair-repair descendant, and rejects delegated or stale-front failure without changing Queue authority.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/queue-manager-window-lifecycle.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: queue-terminal-no-successor-root-is-pure
+    statement: >-
+      GSK-008: A schema-valid terminal_no_successor row is read without authority mutation as one direct Queue root with the original queue item ID, terminal reason, missing-contract boundary, and same-checkpoint rerun; an empty active window cannot erase it.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/phase-queue-drain.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: queue-inspect-and-projection-share-terminal-root
+    statement: >-
+      AGQ-019 and GSK-008: Queue inspect and the rendered Markdown projection consume the same pure terminal_no_successor reader, identify the exact failed queue item and no-path boundary, and do not change Queue authority while rendering or inspecting.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/queue-manager-receipts-cli-render.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: operate-queue-failure-preserves-rejection-boundaries
+    statement: >-
+      AGQ-019: The public operate-queue failure path accepts a valid generic terminalization, reports structured no-path feedback, and leaves active, refill, delegated, terminal-history, and projection authority bytes unchanged for invalid successor payload, delegated, or stale-front input.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-queue-validation.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: queue-inspect-and-gate-share-terminal-root
+    statement: >-
+      AGQ-019 and GSK-008: In a temporary bundle, Queue inspection, rendered projection, Wave inspect, and the formal queue-drain Gate expose the same terminal_no_successor root and no-path boundary rather than treating empty active, refill, and in-flight containers as drain.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave-queue-drain.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

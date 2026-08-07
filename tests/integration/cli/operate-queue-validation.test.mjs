@@ -416,6 +416,87 @@ describe('AGQ-001/004 completion_receipt null', () => {
   });
 });
 
+describe('AGQ-019 generic Queue failure terminalization', () => {
+  after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+
+  function enqueueMainAgentDemand(dir, id = 'wave0-source-topic-a', topicSlug = 'topic-a') {
+    const taskPath = join(dir, `${id}.json`);
+    writeTaskFile(taskPath, { queue_item_id: id, payload: { topic_slug: topicSlug } });
+    const admitted = runOq(dir, 'enqueue', '--task', taskPath);
+    assert.equal(admitted.status, 0, admitted.stderr || admitted.stdout);
+    return taskPath;
+  }
+
+  it('records one no-successor terminal row and no repair demand through the public CLI', () => {
+    const dir = createBundle(unique('terminal-no-successor'));
+    const id = 'wave0-source-topic-a';
+    enqueueMainAgentDemand(dir, id);
+    const failurePath = join(dir, 'failure.json');
+    writeFileSync(failurePath, JSON.stringify({ queue_item_id: id, reason: 'cannot proceed' }));
+    const result = runOq(dir, 'fail', '--failure', failurePath);
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.ok, true);
+    const persisted = JSON.parse(readFileSync(join(dir, 'rb_queue.json'), 'utf8'));
+    assert.deepEqual(persisted.terminal_history.map((row) => ({
+      queue_item_id: row.queue_item_id,
+      terminal_status: row.terminal_status,
+      failure_disposition: row.failure_disposition,
+    })), [{
+      queue_item_id: id,
+      terminal_status: 'failed',
+      failure_disposition: 'terminal_no_successor',
+    }]);
+    assert.equal(persisted.active_window.some((entry) => entry.queue_item_id.startsWith('repair-')), false);
+  });
+
+  it('rejects caller repair payload and delegated demand without Queue-byte mutation', () => {
+    const payloadDir = createBundle(unique('failure-payload'));
+    const id = 'wave0-source-topic-a';
+    enqueueMainAgentDemand(payloadDir, id);
+    const payloadPath = join(payloadDir, 'failure.json');
+    writeFileSync(payloadPath, JSON.stringify({ queue_item_id: id, reason: 'bad payload', repair: {} }));
+    const payloadBefore = readFileSync(join(payloadDir, 'rb_queue.json'), 'utf8');
+    const payloadResult = runOq(payloadDir, 'fail', '--failure', payloadPath);
+    assert.equal(payloadResult.status, 1);
+    assert.match(payloadResult.stderr, /repair/i);
+    assert.equal(readFileSync(join(payloadDir, 'rb_queue.json'), 'utf8'), payloadBefore);
+
+    const delegatedDir = createBundle(unique('failure-delegated'));
+    enqueueMainAgentDemand(delegatedDir, id);
+    const queuePath = join(delegatedDir, 'rb_queue.json');
+    const queue = JSON.parse(readFileSync(queuePath, 'utf8'));
+    queue.active_window[0].targets = {
+      controller: 'main-agent',
+      delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 },
+    };
+    writeFileSync(queuePath, JSON.stringify(queue, null, 2));
+    const delegatedPath = join(delegatedDir, 'failure.json');
+    writeFileSync(delegatedPath, JSON.stringify({ queue_item_id: id, reason: 'delegated failure' }));
+    const delegatedBefore = readFileSync(queuePath, 'utf8');
+    const delegatedResult = runOq(delegatedDir, 'fail', '--failure', delegatedPath);
+    assert.equal(delegatedResult.status, 1);
+    assert.match(delegatedResult.stderr, /operate-work-unit/i);
+    assert.equal(readFileSync(queuePath, 'utf8'), delegatedBefore);
+  });
+
+  it('rejects a stale-front failure without Queue-byte mutation', () => {
+    const dir = createBundle(unique('failure-stale-front'));
+    const frontId = 'wave0-source-topic-a';
+    const staleId = 'wave0-source-topic-b';
+    enqueueMainAgentDemand(dir, frontId, 'topic-a');
+    enqueueMainAgentDemand(dir, staleId, 'topic-b');
+    const failurePath = join(dir, 'failure.json');
+    writeFileSync(failurePath, JSON.stringify({ queue_item_id: staleId, reason: 'not the current front' }));
+    const queuePath = join(dir, 'rb_queue.json');
+    const before = readFileSync(queuePath, 'utf8');
+    const result = runOq(dir, 'fail', '--failure', failurePath);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /expected current queue_item_id/i);
+    assert.equal(readFileSync(queuePath, 'utf8'), before);
+  });
+});
+
 describe('AGQ-013 Wave1 assignment-mode admission and repair', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
 

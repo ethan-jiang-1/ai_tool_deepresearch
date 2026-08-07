@@ -132,18 +132,20 @@ function backingRoot(code, detail) {
   return { ok: false, candidates: [], root: { code, detail } };
 }
 
-export function resolveReviewedWave1SubmittedBacking(bundlePath, { topic, topicRegistryFact } = {}) {
+export function resolveReviewedWave1SubmittedBacking(bundlePath, { topic, topicRegistryFact, review: suppliedReview = undefined } = {}) {
   const layouts = topicRegistryFact?.layouts;
   const topicBinding = resolveTopicLayout(layouts, { topic_slug: topic }, { currentOnly: true });
   if (!topicBinding.ok) return backingRoot('wave1_reference_topic_invalid', `Current Topic binding is invalid: ${topicBinding.reason_code}`);
 
   const reviewPath = join(bundlePath, 'artifacts', 'wave1', topicBinding.current_slug, 'depth-review.yaml');
   if (!existsSync(reviewPath)) return backingRoot('reviewed_work_unit_refs_missing', `Missing ${join('artifacts', 'wave1', topicBinding.current_slug, 'depth-review.yaml')}.`);
-  let review;
-  try {
-    review = parseYaml(readFileSync(reviewPath, 'utf8'));
-  } catch (error) {
-    return backingRoot('reviewed_work_unit_refs_invalid', `Cannot parse depth review: ${error.message}`);
+  let review = suppliedReview;
+  if (review === undefined) {
+    try {
+      review = parseYaml(readFileSync(reviewPath, 'utf8'));
+    } catch (error) {
+      return backingRoot('reviewed_work_unit_refs_invalid', `Cannot parse depth review: ${error.message}`);
+    }
   }
   if (!review || !Array.isArray(review.reviewed_work_unit_refs) || review.reviewed_work_unit_refs.length === 0) {
     return backingRoot('reviewed_work_unit_refs_invalid', 'depth-review.yaml must contain non-empty reviewed_work_unit_refs[].');

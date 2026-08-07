@@ -6,6 +6,7 @@ import {
   QUEUE_SCHEMA_VERSION,
   QueueDemandItemSchema,
   QueueSchema,
+  QueueTerminalHistoryRecordSchema,
   TargetSpecSchema,
 } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/queue.mjs';
 
@@ -185,5 +186,45 @@ describe('QueueSchema', () => {
       slot_1_current: demand({ queue_item_id: 'queue-old' }),
     });
     assert.equal(parsed.success, false);
+  });
+});
+
+describe('Queue terminal failure disposition', () => {
+  function terminal(overrides = {}) {
+    return {
+      queue_item_id: 'terminal-001',
+      terminal_status: 'failed',
+      reason: 'no successor',
+      item: demand({ queue_item_id: 'terminal-001', status: 'failed' }),
+      failure_disposition: 'terminal_no_successor',
+      ...overrides,
+    };
+  }
+
+  it('accepts the closed no-successor disposition only for a stored non-delegated failed item', () => {
+    assert.equal(QueueTerminalHistoryRecordSchema.safeParse(terminal()).success, true);
+
+    for (const invalid of [
+      terminal({ failure_disposition: 'retry_later' }),
+      terminal({ terminal_status: 'done' }),
+      terminal({ item: undefined }),
+      terminal({ reason: '' }),
+      terminal({ item: demand({ queue_item_id: 'terminal-001', status: 'queued' }) }),
+      terminal({ item: demand({
+        queue_item_id: 'terminal-001',
+        status: 'failed',
+        targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
+      }) }),
+    ]) {
+      assert.equal(QueueTerminalHistoryRecordSchema.safeParse(invalid).success, false);
+    }
+  });
+
+  it('keeps legacy terminal rows without a failure disposition readable', () => {
+    assert.equal(QueueTerminalHistoryRecordSchema.safeParse({
+      queue_item_id: 'legacy-failed',
+      terminal_status: 'failed',
+      reason: 'legacy failure',
+    }).success, true);
   });
 });

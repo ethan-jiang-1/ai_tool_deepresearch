@@ -1,8 +1,10 @@
+// @impl GSK-008
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { QueueSchema } from '../../schema/contracts/queue.mjs';
 import { makeContractFinding } from './wave-contract-findings.mjs';
+import { readTerminalNoSuccessor } from './queue-terminal-failure.mjs';
 
 function queueFinding(bundlePath, {
   suffix,
@@ -66,9 +68,23 @@ export function checkPhaseQueueDrained(bundlePath, { phase = 'wave' } = {}) {
     return { passed: false, inspect: [finding.detail], advice: [finding.repair], findings: [finding] };
   }
   const queue = validated.data;
+  const terminalFailure = readTerminalNoSuccessor(queue);
   const inFlight = Object.values(queue.delegated_in_flight);
   let finding = null;
-  if (inFlight.length > 0) {
+  if (terminalFailure) {
+    finding = queueFinding(bundlePath, {
+      suffix: terminalFailure.root_id,
+      observed: {
+        queue_item_id: terminalFailure.queue_item_id,
+        terminal_reason: terminalFailure.terminal_reason,
+        failure_disposition: terminalFailure.failure_disposition,
+      },
+      missingFact: terminalFailure.missing_fact,
+      repairKind: terminalFailure.repair_kind,
+      writeTo: terminalFailure.write_to,
+      repair: `${terminalFailure.repair} Rerun the ${phase} checkpoint after that boundary is resolved.`,
+    });
+  } else if (inFlight.length > 0) {
     finding = queueFinding(bundlePath, {
       suffix: 'delegated_in_flight', observed: inFlight.map(({ work_id, queue_item_id }) => ({ work_id, queue_item_id })),
       missingFact: `delegated_in_flight still contains ${inFlight.length} work-unit attempt(s).`,

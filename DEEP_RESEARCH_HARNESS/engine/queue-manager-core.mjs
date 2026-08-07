@@ -83,7 +83,6 @@ export const QueueResultSchema = z.object({
 export const QueueFailureSchema = z.object({
   queue_item_id: z.string().min(1),
   reason: z.string().min(1),
-  repair: QueueItemSchema.optional(),
 }).strict();
 
 export function now() { return new Date().toISOString(); }

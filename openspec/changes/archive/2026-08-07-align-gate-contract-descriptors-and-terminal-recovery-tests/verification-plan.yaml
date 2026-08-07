@@ -1,0 +1,106 @@
+schema_version: verification-routing/v1
+change: align-gate-contract-descriptors-and-terminal-recovery-tests
+test_classes:
+  unit:
+    status: selected
+    rationale: Typed Gate-definition parsing, derived audit behavior, direct semantic-section evaluation, root-first submitted-evidence selection, and assignment-derived terminal candidate construction are bounded in-process deterministic contracts.
+  integration:
+    status: selected
+    rationale: A temporary bundle is required to prove that production Wave1 inspect/formal Gate and terminal preflight/late-submit entrypoints consume the descriptor, submitted authority, and current claimed assignment consistently.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The changed obligations each return to an existing local Gate or terminal checkpoint; a multi-wave state-chain would add unrelated routing and lifecycle behavior without increasing confidence in descriptor or fixture parity.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: This change proves Engine definition, provenance, and test-candidate contracts only. It does not claim that a real Subject Agent writes sections, reads feedback, or makes a research decision.
+claims:
+  - id: semantic-sections-descriptor-is-closed-and-audited
+    statement: >-
+      GSK-011 and RWG-005: Gate-definition parsing accepts a non-empty unique required_sections array only for the semantic_sections descriptor, rejects incompatible pattern or negate fields, and the executable audit derives its rule contract from parsed definitions plus focused evaluator behavior without requiring a second per-rule catalog.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/gate-definition.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: gate-rule-audit-uses-derived-definition-contract
+    statement: >-
+      GSK-011: The active Gate audit reads current production definitions through the shared parser, verifies supported typed descriptor dispatch and behavioral coverage, and never requires a permanent producer, evaluator, repair, or test catalog row for each rule.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/gate-rule-audit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-depth-root-stays-submitted-evidence-first
+    statement: >-
+      RWG-005: A depth review with no reviewed ref resolving to a submitted current-topic Wave1 work unit returns one submitted-evidence or binding root and masks dependent source-claim, novelty, comparison, and depth symptoms without fabricating reviewed_work_unit_refs or accepting filesystem-only evidence.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/wave-depth-contracts.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: terminal-candidates-follow-the-claimed-assignment
+    statement: >-
+      RWG-005 and DEW-006: Terminal late-submit and timeout-preflight candidates derive their required output path and role from the claimed attempt's immutable assignment, so current Wave0 source-intake cases submit the assigned source_yaml tuple and leave output-role, hash, snapshot, receipt, and provenance protections strict.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-terminal.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-gate-and-inspect-share-semantic-and-depth-roots
+    statement: >-
+      RWG-005: In a temporary bundle, the typed question-list descriptor accepts equivalent case, order, heading level, spacing, and list presentation; a missing or empty named section yields exactly one direct root, and the exact no-submitted depth case remains one submitted-evidence root in both inspect and formal Gate output.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave1-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: terminal-preflight-and-late-submit-use-real-assignment-candidate
+    statement: >-
+      DEW-006 and RWG-005: Current terminal recovery cases build candidates from the production assignment contract, then exercise real timeout-preflight and late-submit behavior; all six former role-drift failures pass or expose a remaining narrower Engine counterexample without a test-only schema bypass.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

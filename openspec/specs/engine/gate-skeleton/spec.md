@@ -616,6 +616,17 @@ Primary Gate hints SHALL be projected only from the smallest independent blockin
 
 Repeated failure/fatigue output SHALL not replace the direct hint with generic encouragement, tell the user to run ordinary commands, or recommend multiple competing repair strategies. When an authorized mechanical path exists, the Agent SHALL perform it and rerun the named Gate. Only new semantics, risk/permission, external action, or `missing_contract` MAY form an escalation boundary.
 
+For the shared `phase_queue_drained` check, a schema-valid terminal-history
+row with `failure_disposition: terminal_no_successor` SHALL be projected as its
+own direct Queue terminal root. It SHALL name the original `queue_item_id` and
+terminal reason, use `repair_kind: missing_contract`, and state that generic
+Queue failure has no sanctioned successor. It SHALL not be hidden merely
+because `active_window`, `refill_pool`, and `delegated_in_flight` are empty;
+nor may it manufacture a repair command, ask for a direct Queue edit, or
+reinterpret a delegated work-unit replacement relation as generic Queue
+failure. Inspect and formal Gate consume the same direct finding and differ
+only in their invoked rerun checkpoint.
+
 #### Scenario: Fatigue does not erase the direct repair
 
 - **WHEN** a Gate fails after the fatigue threshold
@@ -634,6 +645,15 @@ Repeated failure/fatigue output SHALL not replace the direct hint with generic e
 - **THEN** inspect SHALL identify cache coverage as the root cause
 - **AND** downstream provenance symptoms SHALL be marked as symptoms or cascade details
 - **AND** advice SHALL give one Engine-mediated repair target rather than separate manual edits for every symptom
+
+#### Scenario: terminal Queue failure cannot masquerade as drain
+
+- **WHEN** `rb_queue.json` has no active, refill, or delegated-in-flight demand
+  but retains one `terminal_no_successor` row
+- **THEN** Wave inspect and formal Gate SHALL both fail `phase_queue_drained`
+  with that terminal Queue root
+- **AND** the result SHALL not offer repair-card creation, direct JSON editing,
+  or a competing Queue transition
 
 ### Requirement: Gate CLI exit-code behavior aligns with framework convention
 
@@ -747,6 +767,12 @@ The active Gate audit SHALL automatically enumerate schema-parsed active definit
 
 The audit SHALL NOT require or maintain a second rule-id-granular catalog of producer instructions, artifact categories, runtime authorities, checker routes, root bases, repair routes, diagnostic surfaces, classifications, non-Agent-produced exemptions, or test-guard paths. Checked authority SHALL come from the parsed rule descriptor; definition-owned root contract SHALL come from parsed metadata; checker-owned root contract SHALL come from the detecting finding; active Gate rules are blocking by definition; diagnostic projection SHALL come from the shared finding/result builder.
 
+For a definition-owned typed descriptor, the audit SHALL validate its
+type-specific parsed fields and prove the corresponding evaluator behavior
+through a focused current-definition regression. The descriptor and evaluator
+test are the complete audit evidence for that direct rule contract; a separate
+human-maintained per-rule closure or artifact catalog SHALL NOT be introduced.
+
 Checker support SHALL be proved behaviorally through current-definition Gate pass regressions, evaluator-family unknown-check and checker-owned missing-root-contract fail-closed tests, and focused regression for each changed checker/root class. Shared Wave evaluator versus formal-only behavior SHALL be verified at the evaluator/detecting-helper class boundary rather than copied into every rule row. Agent producer guidance SHALL receive focused Markdown contract coverage when this Change modifies an Agent-owned output surface; `engine_operation`, `user_decision`, `external_action`, and `missing_contract` roots SHALL NOT require a per-rule exemption or root catalog.
 
 Distinct failure-source classes outside the definition rule loop, including invalid invocation, definition/config load, node/gate binding, lifecycle handoff/status preflight, canonical topic-state or gate-specific prerequisite, routing, and durable handoff trace failure, SHALL each have representative structured-finding and hint-projection coverage. The audit SHALL not require a Cartesian product of every Gate and every shared failure class, and SHALL not use source-code prose or object-literal regexes as an architecture verdict.
@@ -769,6 +795,13 @@ When this Change removes or downgrades a blocking rule, its known checker branch
 - **WHEN** an active rule is added with valid schema metadata and supported execution
 - **THEN** the audit SHALL derive checked authority, definition/checker root lineage, classification, and diagnostic projection from the production contract path
 - **AND** it SHALL NOT require a second producer/authority/checker/basis/repair/diagnostic/test inventory row
+
+#### Scenario: Typed descriptor is audited from definition and behavior
+
+- **WHEN** an active definition changes a typed direct-output descriptor
+- **THEN** the audit SHALL validate that descriptor from the parsed definition
+- **AND** focused evaluator/Gate coverage SHALL prove its pass and direct
+  failure behavior without a parallel catalog row
 
 #### Scenario: Wrapper preflight failure stays helper-owned
 
@@ -793,24 +826,6 @@ When this Change removes or downgrades a blocking rule, its known checker branch
 - **WHEN** an active gate definition contains `check: "removed_check_name"`
 - **THEN** the audit SHALL fail
 - **AND** diagnostics SHALL name the gate file, rule id, and check value
-
-#### Scenario: artifact contract inventory is required
-
-- **WHEN** an active gate rule id exists
-- **THEN** the audit or companion test SHALL be able to identify its artifact contract category
-- **AND** missing inventory SHALL fail with a diagnostic that asks for design/apply evidence or maintained mapping update
-
-#### Scenario: closure inventory is required for blocking rules
-
-- **WHEN** an active rule contributes to gate pass/fail
-- **THEN** the audit or companion mapping SHALL identify producer instruction, runtime authority, checker implementation route, diagnostic/advice surface, pass/fail classification, and test guard
-- **AND** missing closure inventory SHALL fail unless the row records an explicit non-Agent-produced exemption
-
-#### Scenario: grouped design rows expand to rule-id inventory
-
-- **WHEN** design evidence groups several active rule ids under one shared helper or artifact shape
-- **THEN** apply evidence or maintained audit mapping SHALL still enumerate each active rule id
-- **AND** the static audit SHALL fail if a rule id is missing producer/diagnostic/pass-fail inventory without an explicit non-Agent-produced exemption
 
 #### Scenario: archives are not audited
 

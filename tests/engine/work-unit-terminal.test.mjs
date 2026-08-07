@@ -141,12 +141,20 @@ function writeMismatchedReceipt(dir, record, { observedMs = Date.parse(record.cl
 }
 
 function writeSubmitReadyCandidate(dir, record, { resultPath = path.join(dir, record.paths.result_ref), observedMs = Date.parse(record.claimed_at) + 1000 } = {}) {
-  const outputPath = `reference/${record.work_id}.md`;
-  mkdirSync(path.join(dir, 'reference'), { recursive: true });
-  writeFileSync(path.join(dir, outputPath), '# Source\n\nKey facts from a real fetched page.\n');
-  const sourcePath = 'artifacts/wave0/topic-a/source.yaml';
-  mkdirSync(path.join(dir, 'artifacts/wave0/topic-a'), { recursive: true });
-  writeFileSync(path.join(dir, sourcePath), '- url: https://example.com/source\n  title: Source\n  retrieved_date: 2026-07-20\n  topic_tag: topic-a\n');
+  const manifest = JSON.parse(readFileSync(path.join(dir, record.paths.manifest_ref), 'utf-8'));
+  const requiredOutputs = manifest.output_contract?.required_outputs;
+  if (!Array.isArray(requiredOutputs) || requiredOutputs.length === 0) {
+    throw new Error(`claimed work unit ${record.work_id} has no assigned required_outputs`);
+  }
+  const topicSlug = manifest.queue_item?.payload?.topic_slug || 'topic-a';
+  const outputFiles = requiredOutputs.map((output) => {
+    if (output.role !== 'source_yaml') {
+      throw new Error(`terminal fixture only supports the current Wave0 source_yaml assignment, got ${output.role}`);
+    }
+    mkdirSync(path.dirname(path.join(dir, output.path)), { recursive: true });
+    writeFileSync(path.join(dir, output.path), `- url: https://example.com/source\n  title: Source\n  retrieved_date: 2026-07-20\n  topic_tag: ${topicSlug}\n`);
+    return { path: output.path, role: output.role };
+  });
 
   const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
   mkdirSync(path.join(dir, cacheTrail), { recursive: true });
@@ -165,10 +173,7 @@ function writeSubmitReadyCandidate(dir, record, { resultPath = path.join(dir, re
     actor_contract_version: record.actor_contract_version,
     execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'ready',
-    output_files: [
-      { path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' },
-      { path: sourcePath, role: 'source_yaml' },
-    ],
+    output_files: outputFiles,
     cache_trails: [cacheTrail],
   }, null, 2)}\n`);
   setFileMtime(resultPath, observedMs);
@@ -254,6 +259,28 @@ function writeLateResult(dir, record) {
 }
 
 describe('work-unit terminal attempts', () => {
+  it('builds a submit-ready candidate from the claimed assignment tuple only', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const manifest = JSON.parse(readFileSync(path.join(dir, record.paths.manifest_ref), 'utf-8'));
+      const resultPath = writeSubmitReadyCandidate(dir, record);
+      const result = JSON.parse(readFileSync(resultPath, 'utf-8'));
+
+      assert.deepEqual(
+        result.output_files.map(({ path: outputPath, role }) => ({ path: outputPath, role })),
+        manifest.output_contract.required_outputs.map(({ path: outputPath, role }) => ({ path: outputPath, role })),
+      );
+      assert.deepEqual(result.output_files.map((output) => output.role), ['source_yaml']);
+      assert.equal(existsSync(path.join(dir, 'reference', `${record.work_id}.md`)), false);
+      assert.equal(submitWorkUnit(dir, { work_id: record.work_id, resultPath }).ok, true);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('fail closes an attempt without queue completion or ledger coverage and rejects late submit', () => {
     const dir = tempBundle();
     try {

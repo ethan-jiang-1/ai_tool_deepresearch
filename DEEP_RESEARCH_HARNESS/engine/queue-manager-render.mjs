@@ -9,9 +9,11 @@ import {
   traceEntry,
   validateQueue,
 } from './queue-manager-core.mjs';
+import { readTerminalNoSuccessor } from './helpers/queue-terminal-failure.mjs';
 
 export function render(queue, bundleDir = process.cwd()) {
   const q = validateQueue(queue);
+  const terminalFailure = readTerminalNoSuccessor(q);
   const outputPath = bundlePath(bundleDir, q.projection_path);
   mkdirSync(path.dirname(outputPath), { recursive: true });
   const lines = [
@@ -58,6 +60,21 @@ export function render(queue, bundleDir = process.cwd()) {
   lines.push('', '## Refill Pool', '');
   for (const item of q.refill_pool) lines.push(`- \`${item.queue_item_id}\` ${item.title} (${item.priority_class}, restore=${item.restore_priority})`);
   if (q.refill_pool.length === 0) lines.push('- empty');
+  lines.push('', '## Terminal No-Successor');
+  if (!terminalFailure) {
+    lines.push('', '- none');
+  } else {
+    lines.push(
+      '',
+      `- queue_item_id: \`${terminalFailure.queue_item_id}\``,
+      `- failure_disposition: \`${terminalFailure.failure_disposition}\``,
+      `- terminal_reason: ${terminalFailure.terminal_reason}`,
+      `- repair_kind: \`${terminalFailure.repair_kind}\``,
+      `- missing_fact: ${terminalFailure.missing_fact}`,
+      `- write_to: ${terminalFailure.write_to}`,
+      `- boundary: ${terminalFailure.repair}`,
+    );
+  }
   writeFileSync(outputPath, `${lines.join('\n')}\n`);
   traceEntry('projection_rendered', { source: 'agq-projection', path: q.projection_path });
   return outputPath;

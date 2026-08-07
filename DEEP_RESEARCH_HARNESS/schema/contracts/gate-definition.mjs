@@ -63,6 +63,7 @@ const GateDefinitionRuleBaseSchema = z.object({
   targets: z.array(DescriptorEntrySchema).min(1).optional(),
   fields: z.array(DescriptorEntrySchema).min(1).optional(),
   sources: z.array(DescriptorEntrySchema).min(1).optional(),
+  required_sections: z.array(NonEmptyStringSchema).min(1).optional(),
   finding: GateFindingSourceSchema,
   repair: GateDefinitionRepairSchema.optional(),
   degradation_eligible: z.boolean().default(false),
@@ -114,6 +115,37 @@ export const GateDefinitionRuleSchema = GateDefinitionRuleBaseSchema.superRefine
     for (const value of collectDescriptorStrings(rule[key])) {
       validateRegisteredPlaceholders(value, ctx, [key]);
     }
+  }
+
+  if (rule.check === 'semantic_sections') {
+    if (rule.required_sections === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['required_sections'],
+        message: 'semantic_sections Gate rules require a non-empty required_sections list',
+      });
+    } else if (new Set(rule.required_sections).size !== rule.required_sections.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['required_sections'],
+        message: 'semantic_sections required_sections entries must be unique',
+      });
+    }
+    for (const field of ['pattern', 'negate']) {
+      if (rule[field] !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: `semantic_sections Gate rules must not declare ${field}`,
+        });
+      }
+    }
+  } else if (rule.required_sections !== undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['required_sections'],
+      message: 'required_sections is valid only for semantic_sections Gate rules',
+    });
   }
 
   if (rule.finding.source === 'checker') {

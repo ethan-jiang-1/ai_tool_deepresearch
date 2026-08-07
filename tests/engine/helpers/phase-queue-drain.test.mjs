@@ -86,6 +86,32 @@ describe('phase queue drain', () => {
     assert.deepEqual(readFileSync(file), before);
   });
 
+  it('reports a terminal no-successor row before empty-container drain', () => {
+    const dir = tempBundle();
+    const failed = item('generic-failure');
+    failed.status = 'failed';
+    const file = writeQueue(dir, queue({
+      terminal_history: [{
+        queue_item_id: failed.queue_item_id,
+        terminal_status: 'failed',
+        completed_at: '2026-08-07T00:00:00.000Z',
+        reason: 'no legal generic successor',
+        failure_disposition: 'terminal_no_successor',
+        item: failed,
+      }],
+    }));
+    const before = readFileSync(file);
+    const result = checkPhaseQueueDrained(dir, { phase: 'wave1' });
+    assert.equal(result.passed, false);
+    assert.equal(result.findings.length, 1);
+    assert.equal(result.findings[0].id, 'phase_queue_drained:terminal_no_successor');
+    assert.equal(result.findings[0].repair_kind, 'missing_contract');
+    assert.match(result.findings[0].missing_fact, /generic-failure/);
+    assert.match(result.findings[0].write_to, /queue failure successor contract/);
+    assert.match(result.findings[0].repair, /do not create a repair card/i);
+    assert.deepEqual(readFileSync(file), before);
+  });
+
   it('routes active-front demand only from direct targets and does not infer future phase', () => {
     for (const testCase of [
       { value: item('delegated', { delegated: true }), owner: /operate-work-unit.*claim/ },

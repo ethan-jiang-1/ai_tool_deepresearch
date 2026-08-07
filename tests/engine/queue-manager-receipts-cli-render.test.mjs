@@ -11,6 +11,8 @@ import {
   createQueue,
   enqueue,
   checkReceipts,
+  fail,
+  inspect,
   render,
   loadQueue,
   saveQueue,
@@ -38,6 +40,36 @@ describe('Receipts, projection, and CLI (AGQ-004, AGQ-005, AGQ-006)', () => {
       const after = JSON.stringify(queue);
       assert.equal(after, before);
       assert.equal(queue.active_window[0].queue_item_id, 'queue-1');
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('renders and inspects the same terminal no-successor root', () => {
+    const dir = tempBundle();
+    try {
+      let queue = createQueue('terminal-projection-test');
+      queue = enqueue(queue, item(1));
+      queue = fail(queue, { queue_item_id: 'queue-1', reason: 'no legal successor' }, dir);
+      const projection = render(queue, dir);
+      const contents = readFileSync(projection, 'utf8');
+      const feedback = inspect(queue, dir);
+      assert.equal(feedback.passed, false);
+      assert.deepEqual({
+        queue_item_id: feedback.findings[0].queue_item_id,
+        repair_kind: feedback.findings[0].repair_kind,
+        missing_fact: feedback.findings[0].missing_fact,
+        write_to: feedback.findings[0].write_to,
+      }, {
+        queue_item_id: 'queue-1',
+        repair_kind: 'missing_contract',
+        missing_fact: 'Generic Queue failure for queue-1 is terminal with no sanctioned Queue successor: no legal successor',
+        write_to: 'queue failure successor contract',
+      });
+      assert.match(contents, /## Terminal No-Successor/);
+      assert.match(contents, /queue_item_id: `queue-1`/);
+      assert.match(contents, /failure_disposition: `terminal_no_successor`/);
+      assert.match(contents, /queue failure successor contract/);
     } finally {
       cleanup(dir);
     }

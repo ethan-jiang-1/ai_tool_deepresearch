@@ -4,6 +4,7 @@
 
 > delta-synced: add-audited-late-accept-for-timed-out-work-units (AGQ-018, AGQ-019)
 > delta-synced: make-work-unit-attempt-recovery-explicit (AGQ-026)
+> delta-synced: remove-recursive-queue-failure-repair (AGQ-019)
 
 ## Purpose
 
@@ -168,6 +169,25 @@ For audited late-submit success, the completed `queue_item_id` SHALL appear in e
 
 An Engine-created terminal replacement demand SHALL use a fresh `queue_item_id` and retain its parent relation only in the ordinary queue item's `lineage`. It SHALL preserve the source snapshot's `kind`, `targets`, `action`, `producer_rule`, `priority_class`, `required_receipts`, `done_condition`, `verification`, `writes_to`, `status_sync`, `completion_receipt`, `failure_route`, and `payload`. That lineage SHALL include `replacement_of_work_id`, `replacement_of_queue_item_id`, `replacement_terminal_status`, `replacement_terminal_reason`, and `replacement_queue_item_snapshot_hash`, populated from the parent terminal authority. It SHALL not put a work ID on the queue-demand identity, alter the parent's terminal-history row, or create a queue location outside the existing active window, refill pool, delegated in-flight, and terminal history model.
 
+Generic Queue `fail` input SHALL contain only the current `queue_item_id` and a
+non-empty failure reason. It SHALL reject an arbitrary `repair` Queue item or
+any other successor payload before mutation. When the current active-front
+demand is non-delegated, `fail` SHALL append its existing `failed`
+terminal-history row with closed `failure_disposition:
+terminal_no_successor`; it SHALL then promote/refill only existing lawful
+demands and SHALL NOT enqueue, preempt, construct, or infer a repair successor.
+Legacy terminal-history rows without `failure_disposition` remain readable.
+
+`terminal_no_successor` answers only whether this generic Queue operation has a
+Queue-owned successor now. It SHALL not be used for a delegated attempt,
+replacement lineage, retry, ledger coverage, receipt, success status, or
+workflow routing. A generic Queue `fail` directed at a delegated demand SHALL
+fail closed without Queue mutation and direct the caller to the existing
+work-unit terminal/replacement authority. Queue inspect and the rendered
+projection SHALL expose the exact terminal item and its no-successor boundary
+from `terminal_history`; neither may infer a repair card from `failure_route`
+prose or an absent active item.
+
 #### Scenario: late-submit leaves one queue location
 
 - **WHEN** late-submit accepts a targeted timed-out work unit
@@ -195,6 +215,40 @@ An Engine-created terminal replacement demand SHALL use a fresh `queue_item_id` 
 - **AND** each required replacement lineage field SHALL equal the matching parent terminal authority fact
 - **AND** it SHALL appear in exactly one ordinary queue location before claim
 - **AND** no work ID, queue completion, or modification of the parent terminal-history record SHALL occur
+
+#### Scenario: generic Queue failure has no repair descendant
+
+- **WHEN** `operate-queue fail` terminalizes a current non-delegated demand
+- **THEN** its terminal-history row SHALL have `terminal_status: failed` and
+  `failure_disposition: terminal_no_successor`
+- **AND** no `repair-*` or `repair-repair-*` queue demand SHALL be inserted
+- **AND** repeated failure input cannot create a successor from that terminal
+  row
+
+#### Scenario: arbitrary repair payload fails before mutation
+
+- **WHEN** a generic Queue failure payload contains `repair` or another
+  caller-authored successor field
+- **THEN** schema admission SHALL reject the input
+- **AND** active-window, refill-pool, delegated-in-flight, terminal-history and
+  projection authority SHALL remain unchanged
+
+#### Scenario: delegated failure retains work-unit authority
+
+- **WHEN** the current Queue demand is delegated and a caller invokes generic
+  `operate-queue fail`
+- **THEN** the operation SHALL reject without terminalizing the Queue demand or
+  creating a successor
+- **AND** feedback SHALL name the existing work-unit terminal/replacement
+  owner rather than a generic Queue repair route
+
+#### Scenario: projection reports the durable no-successor boundary
+
+- **WHEN** a schema-valid Queue has a `terminal_no_successor` row
+- **THEN** Queue inspect and its rendered projection SHALL identify that exact
+  `queue_item_id` and terminal reason
+- **AND** neither surface SHALL treat an empty active window as proof that the
+  terminal failure was repaired
 
 ### Requirement: Producer rule source_intake_fan_in
 

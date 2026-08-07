@@ -432,22 +432,24 @@ function submitWave1WorkUnit(dir, {
 
 function writeDepthReview(dir, {
   submission,
+  topic = 'topic-a',
   wave0Urls = ['https://example.com/news/wave0-foundation'],
   decision = 'accept',
   supplementary = [],
   reviewedRefs = null,
 } = {}) {
-  const wave0Dir = join(dir, 'artifacts/wave0/topic-a');
+  const wave0Dir = join(dir, 'artifacts/wave0', topic);
   mkdirSync(wave0Dir, { recursive: true });
   writeFileSync(join(wave0Dir, 'source.yaml'), wave0Urls.map((url) => [
     `- url: ${url}`,
     '  title: Wave0 source',
     '  retrieved_date: 2026-07-14',
-    '  topic_tag: topic-a',
+    `  topic_tag: ${topic}`,
   ].join('\n')).join('\n'));
-  writeFileSync(join(dir, 'artifacts/wave1/topic-a/depth-review.yaml'), `${JSON.stringify({
+  mkdirSync(join(dir, 'artifacts', 'wave1', topic), { recursive: true });
+  writeFileSync(join(dir, 'artifacts/wave1', topic, 'depth-review.yaml'), `${JSON.stringify({
     version: 'depth-review.v1',
-    topic_slug: 'topic-a',
+    topic_slug: topic,
     reviewed_work_unit_refs: reviewedRefs || [submission.record.paths.work_unit_dir],
     depth_dimensions: {
       mechanism: { status: 'covered', refs: [submission.record.paths.result_ref] },
@@ -859,8 +861,13 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
     submitAndReviewWave1WorkUnit(dir);
     writeWave1Trace(dir);
-    const output = JSON.parse(runGate(dir).stdout);
-    assert.equal(output.check.passed, true, output.inspect.join('\n'));
+    for (const output of [
+      JSON.parse(runInspect(dir).stdout),
+      JSON.parse(runGate(dir).stdout),
+    ]) {
+      assert.equal(output.check.passed, true, output.inspect.join('\n'));
+      assert.equal(output.check.failed_rule_ids.some((id) => id.startsWith('question_list_has_four_sections')), false);
+    }
   });
 
   it('1g. accepts UID-only reference metadata through the canonical topic resolver', () => {
@@ -921,11 +928,19 @@ describe('check-gate-wave1-complete', () => {
     submitAndReviewWave1WorkUnit(dir);
     writeWave1Trace(dir);
 
-    const output = JSON.parse(runGate(dir).stdout);
-    assert.equal(output.check.passed, false);
-    assert.equal(output.check.failed_rule_ids.some((id) => id.startsWith('question_list_has_four_sections')), true);
-    assert.equal(output.hints.filter((hint) => hint.rule_id === 'question_list_has_four_sections').length, 1);
-    assert.match(output.hints.find((hint) => hint.rule_id === 'question_list_has_four_sections').missing_fact, /question reconciliation/i);
+    const outputs = [
+      JSON.parse(runInspect(dir).stdout),
+      JSON.parse(runGate(dir).stdout),
+    ];
+    const hints = outputs.map((output) => {
+      assert.equal(output.check.passed, false);
+      assert.equal(output.check.failed_rule_ids.some((id) => id.startsWith('question_list_has_four_sections')), true);
+      assert.equal(output.hints.filter((hint) => hint.rule_id === 'question_list_has_four_sections').length, 1);
+      const hint = output.hints.find((entry) => entry.rule_id === 'question_list_has_four_sections');
+      assert.match(hint.missing_fact, /question reconciliation/i);
+      return hint;
+    });
+    assert.deepEqual({ ...hints[0], rerun: null }, { ...hints[1], rerun: null });
   });
 
   it('1a. passes when Wave1 required outputs were submitted as other and normalized before ledger coverage', () => {
@@ -1180,6 +1195,53 @@ describe('check-gate-wave1-complete', () => {
     );
   });
 
+  it('11a. gives inspect and Gate one current-topic submitted-backing root without fabrication advice', () => {
+    const dir = createParityBundle(unique('wrong-topic-depth-backing'), [PARITY_HISTORICAL_TOPIC, PARITY_TARGET_TOPIC]);
+    const otherTopic = submitParityTopic(dir, PARITY_TARGET_TOPIC);
+    writeDepthReview(dir, {
+      topic: PARITY_HISTORICAL_TOPIC.slug,
+      submission: otherTopic.submission,
+    });
+    writeWave1Trace(dir, { materialize: false });
+
+    const gate = JSON.parse(runGate(dir).stdout);
+    const inspect = JSON.parse(runInspect(dir).stdout);
+    const rootHints = [gate, inspect].map((output) => output.hints.filter((hint) => (
+      hint.rule_id === 'per_topic_depth_review_contract'
+      && /manifest_topic_binding_invalid/.test(hint.missing_fact)
+    )));
+    assert.equal(rootHints[0].length, 1, JSON.stringify(gate.inspect));
+    assert.equal(rootHints[1].length, 1, JSON.stringify(inspect.inspect));
+
+    const [gateRoot] = rootHints[0];
+    const [inspectRoot] = rootHints[1];
+    assert.equal(gateRoot.repair_kind, 'missing_contract');
+    assert.match(gateRoot.write_to, /current-topic backing\/replacement owner boundary/i);
+    assert.deepEqual(
+      {
+        rule_id: gateRoot.rule_id,
+        repair_kind: gateRoot.repair_kind,
+        missing_fact: gateRoot.missing_fact,
+        write_to: gateRoot.write_to,
+      },
+      {
+        rule_id: inspectRoot.rule_id,
+        repair_kind: inspectRoot.repair_kind,
+        missing_fact: inspectRoot.missing_fact,
+        write_to: inspectRoot.write_to,
+      },
+    );
+    assert.notEqual(gateRoot.rerun, inspectRoot.rerun);
+    for (const output of [gate, inspect]) {
+      assert.equal(output.check.failed_rule_ids.some((id) => id.startsWith('per_topic_ref_md_count_floor:historical-topic')), false);
+      assert.equal(output.check.masked_rule_ids.includes('per_topic_ref_md_count_floor:historical-topic'), true);
+      assert.equal(output.inspect.some((line) => /source_claim_cache_mapping|source_novelty_floor|new_source_floor_comparison/.test(line)), false);
+      assert.equal(output.advice.some((line) => /replace reviewed_work_unit_refs/i.test(line)), false);
+      assert.equal(output.advice.some((line) => /claim\/submit/i.test(line)), false);
+      assert.ok(output.advice.some((line) => /do not invent reviewed_work_unit_refs/i.test(line)));
+    }
+  });
+
   it('12. fails when depth review has too few exact-new source URLs', () => {
     const dir = createBundle(unique('shallow'));
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
@@ -1286,5 +1348,32 @@ describe('RWG-018 Wave1 direct adapter parity', () => {
     const wave = evaluateWave1Contract(dir, definition);
     assert.ok(wave.failed_rule_ids.includes('source_url_present'));
     assert.equal(wave.failed_rule_ids.includes('key_findings_non_empty'), false);
+  });
+
+  it('0c. evaluates a parsed semantic descriptor without reusing a target-only default result', () => {
+    const dir = createBundle(unique('descriptor-cache'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), '## Descriptor-Owned Section\n\nPresent.\n');
+    const { definition } = tryLoadGateDefinition('wave1-complete', null);
+    const descriptorDefinition = {
+      ...definition,
+      rules: definition.rules.map((rule) => rule.id === 'question_list_has_four_sections'
+        ? {
+            ...rule,
+            id: 'descriptor_owned_sections',
+            check: 'semantic_sections',
+            required_sections: ['Descriptor-Owned Section'],
+          }
+        : rule),
+    };
+
+    const passing = evaluateWave1Contract(dir, descriptorDefinition);
+    assert.equal(passing.failed_rule_ids.includes('descriptor_owned_sections'), false);
+
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), '## Different Section\n\nPresent.\n');
+    const failing = evaluateWave1Contract(dir, descriptorDefinition);
+    assert.equal(failing.failed_rule_ids.includes('descriptor_owned_sections'), true);
+    const finding = failing.findings.find((entry) => entry.rule_id === 'descriptor_owned_sections');
+    assert.match(finding.missing_fact, /descriptor-owned section/i);
   });
 });

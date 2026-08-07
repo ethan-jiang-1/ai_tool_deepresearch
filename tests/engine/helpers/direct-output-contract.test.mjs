@@ -274,6 +274,36 @@ describe('evaluateDirectOutputTarget direct facts', () => {
     }
   });
 
+  it('uses declared question-section names when the caller supplies a semantic descriptor', async () => {
+    const bundleDir = tempBundle();
+    const target = 'artifacts/wave1/topic-a/question-list.md';
+    try {
+      writeTarget(bundleDir, target, '### Descriptor-Owned Section\n\nPresent.\n');
+      const declared = await evaluate({
+        bundleDir,
+        target,
+        contractId: 'wave1.question-list.v1',
+        requiredSections: ['Descriptor-Owned Section'],
+      });
+      assert.equal(declared.passed, true);
+
+      const missing = await evaluate({
+        bundleDir,
+        target,
+        contractId: 'wave1.question-list.v1',
+        requiredSections: ['Missing Descriptor-Owned Section'],
+      });
+      assertSingleRoot(missing, {
+        rootClass: 'semantic_content',
+        contractId: 'wave1.question-list.v1',
+        coordinate: target,
+      });
+      assert.match(missing.roots[0].observed, /missing descriptor-owned section/i);
+    } finally {
+      rmSync(bundleDir, { recursive: true, force: true });
+    }
+  });
+
   it('reports one semantic root for a missing target or missing dependent sections', async () => {
     const bundleDir = tempBundle();
     try {

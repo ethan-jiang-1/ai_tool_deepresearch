@@ -1,10 +1,10 @@
 ---
-title: Get Sigma Progressive Gate, Schema, Queue, and Bug Remediation
-status: active; planning baseline refreshed 2026-08-07
+title: Gate Schema Progressive Gate, Schema, Queue, and Bug Remediation
+status: active; Change A v0.75 and Change B v0.76 archived 2026-08-07; Phase 3 observation pending
 created: 2026-08-07
 ---
 
-# Get Sigma: Progressive Gate / Schema / Queue Remediation
+# Gate Schema: Progressive Gate / Schema / Queue Remediation
 
 > Long-horizon coordination plan for turning the Gate / Schema / Queue audit
 > into bounded OpenSpec changes. This plan is an execution map, not behavior
@@ -96,22 +96,40 @@ hand-written runtime snapshot.
 
 **Goal:** establish the smallest trustworthy baseline before target edits.
 
-- [ ] Record the Gate-audit authority meta-contract conflict and select its
+- [x] Record the Gate-audit authority meta-contract conflict and select its
   disposition. The default candidate is the existing derived audit branch:
   schema-parsed definitions plus behavioral evaluator tests, with no permanent
-  second per-rule catalog.
-- [ ] Build consumer matrices for the four obligations touched below: Queue
+  second per-rule catalog. The candidate is captured in Change B's proposal,
+  design, and `GSK-011` delta; it becomes accepted only through that change's
+  apply/archive lifecycle.
+- [x] Build consumer matrices for the four obligations touched below: Queue
   failure successor, Wave1 semantic-section contract, submitted evidence / depth
-  review, and terminal late-submit / timeout preflight.
-- [ ] Keep static delivery, deterministic Engine behavior, and real Agent flow
-  as separate proof fields in each observation.
-- [ ] Create two capability-discovery records in their OpenSpec proposals;
+  review, and terminal late-submit / timeout preflight. The two proposals and
+  designs now name direct authority, producer, evaluator consumers, and legal
+  repair/no-path for their in-scope obligations.
+- [x] Keep static delivery, deterministic Engine behavior, and real Agent flow
+  as separate proof fields in each observation. Both change-owned verification
+  plans select deterministic proof only and explicitly exclude Agent-flow
+  claims; Phase 3 retains the real-Actor observation obligation.
+- [x] Create two capability-discovery records in their OpenSpec proposals;
   discovery must confirm final capability deltas rather than trusting this
   document's names.
 
 **Exit condition:** the change proposals can name direct authority, producer,
 all relevant evaluator consumers, current legal repair/no-path, and a focused
 regression for each touched obligation.
+
+### Change Execution Record (2026-08-07)
+
+| Ordered change | Archive result | Next lifecycle boundary |
+| --- | --- | --- |
+| `remove-recursive-queue-failure-repair` | archived as `2026-08-07-remove-recursive-queue-failure-repair`; `v0.75` | retain as accepted Queue terminal boundary; proceed to Phase 3 observation |
+| `align-gate-contract-descriptors-and-terminal-recovery-tests` | archived as `2026-08-07-align-gate-contract-descriptors-and-terminal-recovery-tests`; `v0.76` | retain accepted descriptor/audit/depth/terminal behavior; proceed to Phase 3 observation |
+
+Both change task ledgers, delta/main-spec synchronization, feedback closeout,
+and governed archive transitions are complete. This tracker still does not
+authorize target-code edits; a third implementation change remains subject to
+the trigger below.
 
 ### Change A: `remove-recursive-queue-failure-repair`
 
@@ -137,14 +155,14 @@ side effect can obscure or multiply later Gate/recovery failures.
 
 **Required red/green regressions:**
 
-- [ ] failure of an ordinary unclaimable/non-delegated item terminates without a
+- [x] failure of an ordinary unclaimable/non-delegated item terminates without a
   recursive successor;
-- [ ] a repair item that fails again has no `repair-repair-*` descendant;
-- [ ] a delegated failure retains its existing audited replacement/terminal
+- [x] a repair item that fails again has no `repair-repair-*` descendant;
+- [x] a delegated failure retains its existing audited replacement/terminal
   route;
-- [ ] queue inspection, rendered projection, and Gate-facing diagnostic agree
+- [x] queue inspection, rendered projection, and Gate-facing diagnostic agree
   on the resulting root and legal next action;
-- [ ] no mutation occurs when successor admission is invalid.
+- [x] no mutation occurs when successor admission is invalid.
 
 **Exit condition:** repeated `fail` calls have a deterministic finite bound,
 with no competing repair authority or provenance bypass.
@@ -162,23 +180,23 @@ not presume that production schema/hash behavior is wrong.
 
 **Work items:**
 
-- [ ] Reconcile the mutually exclusive Gate-audit clauses in the accepted
+- [x] Reconcile the mutually exclusive Gate-audit clauses in the accepted
   `gate-skeleton` spec with the chosen derived-audit model and executable test.
-- [ ] Align `question_list_has_four_sections` definition metadata with the
+- [x] Align `question_list_has_four_sections` definition metadata with the
   existing direct semantic evaluator. The chosen representation must remove the
   rule-ID/old-regex ambiguity rather than add a duplicate parser. A typed
   direct-output-contract descriptor is acceptable only if it replaces the
   special case and has a clear schema/evaluator meaning.
-- [ ] Lock BUG-201 with a real Gate-path regression: equivalent heading case,
+- [x] Lock BUG-201 with a real Gate-path regression: equivalent heading case,
   order, level, and spacing pass; a missing or empty required section fails
   once with the direct semantic root.
-- [ ] Add the exact BUG-202 case where no submitted work unit can supply a
+- [x] Add the exact BUG-202 case where no submitted work unit can supply a
   review reference. It remains fail-closed and reports submitted-evidence or
   legal replacement/no-path before depth-review derivative symptoms.
-- [ ] Make terminal test candidates derive their allowed output roles from the
+- [x] Make terminal test candidates derive their allowed output roles from the
   current attempt contract. For current Wave0 attempts this means the assigned
   `source_yaml` contribution, not an unassigned `reference` output.
-- [ ] Rerun the six previously red late-submit / timeout-preflight tests. Only
+- [x] Rerun the six previously red late-submit / timeout-preflight tests. Only
   a remaining red result may justify examining terminal snapshot, full hash, or
   schema behavior.
 
@@ -191,6 +209,9 @@ story; valid presentation remains tolerated and provenance remains fail-closed.
 After both changes, continue the six-obligation observation program from the
 audit rather than treating implementation completion as proof of Agent
 adherence.
+
+**Current status:** deterministic Engine evidence for Changes A/B is complete;
+real Agent-flow observation remains unrun and is the next long-horizon work.
 
 - [ ] Record static delivery, deterministic Engine behavior, and real Agent
   flow separately for every sampled obligation.
@@ -219,10 +240,10 @@ BUG-202 workaround and requires its own HITL/provenance proposal.
 | Bug | Current disposition | Closing evidence required |
 |---|---|---|
 | BUG-200 | current-head covered / no new change | retain existing projection regression evidence |
-| BUG-201 | runtime symptom no longer reproduces; G2 metadata drift remains | real Gate tolerant-presentation regression plus descriptor parity |
-| BUG-202 | root-first behavior partly covered; closure pending exact no-submitted case | fail-closed root-first regression with legal replacement/no-path |
-| BUG-203 | confirmed current P0 | finite `fail` lifecycle regressions in Change A |
-| BUG-204 | reclassified from presumed hash/schema conflict to stale terminal fixture contract drift | contract-derived fixture makes terminal suite green, or a remaining real Engine counterexample identifies a narrower root |
+| BUG-201 | closed in Change B / `v0.76` | typed descriptor, tolerant-presentation, missing/empty-section Gate and inspect regressions |
+| BUG-202 | closed in Change B / `v0.76` | one current-Topic submitted-backing root, masked floor derivative, `missing_contract` no-path regression |
+| BUG-203 | closed in Change A / `v0.75` | finite `fail` lifecycle, terminal no-successor, and no-mutation regressions |
+| BUG-204 | reclassified and closed in Change B / `v0.76` as stale terminal fixture contract drift | assignment-derived candidate makes the former terminal role-drift cases pass while strict Engine protections remain |
 
 ## OpenSpec Operation Order
 
@@ -253,4 +274,3 @@ This plan can move to `_done/_closed_plans/` only when:
   accounting; and
 - any residual Agent/host uncertainty is honestly retained as `NOT_RUN` or
   `UNOBSERVED`, not claimed as fixed.
-

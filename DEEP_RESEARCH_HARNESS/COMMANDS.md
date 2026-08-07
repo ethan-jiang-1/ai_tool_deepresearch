@@ -106,6 +106,14 @@ node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs replace <bundle> --work-id 
 
 `replace` exits `0` for a newly created demand or an idempotent live successor and emits exactly one JSON document on stdout. A new or queued successor names the ordinary exact-role `claim` checkpoint and has no newly allocated work ID. An already in-flight idempotent successor reports only its existing allocated work ID for reconstruction/polling; it does not authorize another claim. A timed-out, submitted, claimed, mismatched, conflicting, or terminal-successor request emits structured stdout with non-zero exit and does not mutate queue, work-unit, receipt, result, cache, ledger, or parent terminal authority. Invocation and runtime faults use stderr.
 
+Generic `operate-queue.mjs fail <bundle> --failure <failure.json>` accepts only
+`queue_item_id` and `reason`. For a current non-delegated demand it records a
+terminal `terminal_no_successor` row and creates no repair demand. A delegated
+demand is rejected at the Queue boundary; use its existing work-unit
+terminal/replacement authority. Queue inspect, projection, and the relevant
+Wave Gate surface the same no-successor boundary. Do not hand-author a repair
+card or edit `rb_queue.json` to bypass it.
+
 Already-submitted declaration fault 的唯一 existing-owner operation：
 
 ```bash

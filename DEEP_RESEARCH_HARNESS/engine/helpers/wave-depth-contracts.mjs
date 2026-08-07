@@ -1,5 +1,5 @@
 // wave-depth-contracts.mjs — deterministic Wave1/Wave2 depth-adjacent checks
-// @impl WAI-005, WAI-008, RWG-002, RWG-003, RWG-017, WTS-004, WTS-008, WTS-009, WTS-010, CRC-007, WPG-003, WPG-005, WPG-012
+// @impl WAI-005, WAI-008, RWG-002, RWG-003, RWG-005, RWG-017, WTS-004, WTS-008, WTS-009, WTS-010, CRC-007, WPG-003, WPG-005, WPG-012
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, join, resolve as resolvePath } from 'node:path';
@@ -12,9 +12,11 @@ import {
 } from './gate-helpers-readers.mjs';
 import { inspectCacheLeaf } from './cache-leaf-contract.mjs';
 import { evaluateTopicLayouts } from './topic-layout.mjs';
+import { buildCanonicalTopicRegistryFact } from './topic-registry-fact.mjs';
 import { makeContractFinding } from './wave-contract-findings.mjs';
 import { selectWave1CarriedTargetReceiptForWave2 } from './wave-carried-target-receipts.mjs';
 import { normalizeWave1ReferenceUrl } from './reference-url.mjs';
+import { resolveReviewedWave1SubmittedBacking } from './wave1-reference-convergence.mjs';
 
 const DEPTH_DECISIONS = new Set(['accept', 'supplement_required', 'blocked_contract']);
 const ACCEPTED_SOURCE_STATUSES = new Set(['accepted', 'countable', 'accepted_countable']);
@@ -273,7 +275,7 @@ function profileCheckSatisfied(value, required) {
   return COVERED_STATUSES.has(status) && Array.isArray(value.refs);
 }
 
-export function checkWave1DepthReviewContract(bundlePath, { topic, rule = null }) {
+export function checkWave1DepthReviewContract(bundlePath, { topic, rule = null, topicRegistryFact = null }) {
   const relPath = join('artifacts', 'wave1', topic, 'depth-review.yaml');
   const filePath = join(bundlePath, relPath);
   const inspect = [];
@@ -354,6 +356,7 @@ export function checkWave1DepthReviewContract(bundlePath, { topic, rule = null }
   let profileDecisionIssue = false;
   let submittedBindingIssue = false;
   let reviewedBindingIssue = false;
+  let reviewedBindingRoot = null;
   let supplementaryWorkIssue = false;
 
   const requiredKeys = ['version', 'topic_slug', 'reviewed_work_unit_refs', 'depth_dimensions', 'profile_checks', 'decision', 'supplementary_queue_item_ids'];
@@ -476,6 +479,30 @@ export function checkWave1DepthReviewContract(bundlePath, { topic, rule = null }
     }
   }
 
+  if (!submittedBindingIssue && !reviewedBindingIssue && refsUsable) {
+    let resolvedTopicRegistryFact = topicRegistryFact;
+    try {
+      if (!resolvedTopicRegistryFact?.layouts) resolvedTopicRegistryFact = buildCanonicalTopicRegistryFact(bundlePath);
+    } catch (error) {
+      reviewedBindingRoot = {
+        code: 'wave1_reference_topic_invalid',
+        detail: `Current Topic binding is invalid: ${error.message}`,
+      };
+    }
+    if (!reviewedBindingRoot) {
+      const resolvedBacking = resolveReviewedWave1SubmittedBacking(bundlePath, {
+        topic,
+        topicRegistryFact: resolvedTopicRegistryFact,
+        review,
+      });
+      if (!resolvedBacking.ok) reviewedBindingRoot = resolvedBacking.root;
+    }
+    if (reviewedBindingRoot) {
+      inspect.push(`[depth_review_contract] FAIL: ${relPath} submitted current-topic binding failed [${reviewedBindingRoot.code}]: ${reviewedBindingRoot.detail}`);
+      reviewedBindingIssue = true;
+    }
+  }
+
   if (reviewedBindingIssue) {
     maskedRuleIds.push('source_claim_cache_mapping', 'source_novelty_floor', 'new_source_floor_comparison');
   } else if (!submittedBindingIssue && reviewedRows.length > 0) {
@@ -530,13 +557,20 @@ export function checkWave1DepthReviewContract(bundlePath, { topic, rule = null }
     id: `${rule?.id || 'per_topic_depth_review_contract'}:${topic}:reviewed_work_unit_refs_binding`,
     blockingBasis: 'binding_integrity',
     surface: filePath,
-    expected: 'reviewed_work_unit_refs[] resolves to hash-valid submitted Wave1 declaration rows.',
-    observed: { reviewed_work_unit_refs: refs },
-    missingFact: `${relPath} has an unsafe, empty, or unresolved reviewed_work_unit_refs[] binding; derived source/cache/novelty checks were not run.`,
-    repairKind: 'agent_action',
-    writeTo: `${filePath}#reviewed_work_unit_refs`,
-    repair: `Replace reviewed_work_unit_refs[] with exact submitted work-unit refs for ${topic}, then rerun Wave1 inspect.`,
-    detail: inspect.filter((line) => /reviewed work-unit ref|reviewed_work_unit_refs/.test(line)).join('; '),
+    expected: 'reviewed_work_unit_refs[] resolves to hash-valid submitted Wave1 rows whose immutable manifest binds the current Topic.',
+    observed: {
+      reviewed_work_unit_refs: refs,
+      binding_root: reviewedBindingRoot?.code || null,
+    },
+    missingFact: reviewedBindingRoot
+      ? `${relPath} cannot use its reviewed work-unit refs for ${topic}: [${reviewedBindingRoot.code}] ${reviewedBindingRoot.detail}`
+      : `${relPath} has an unsafe, empty, or unresolved reviewed_work_unit_refs[] binding; derived source/cache/novelty checks were not run.`,
+    repairKind: 'missing_contract',
+    writeTo: `Submitted Wave1 current-topic backing/replacement owner boundary for ${topic}`,
+    repair: `Do not invent reviewed_work_unit_refs[]. No existing legal submitted-work or replacement owner is established by this failure path; preserve the no-path and rerun Wave1 inspect only after one becomes available.`,
+    detail: reviewedBindingRoot
+      ? `[${reviewedBindingRoot.code}] ${reviewedBindingRoot.detail}`
+      : inspect.filter((line) => /reviewed work-unit ref|reviewed_work_unit_refs/.test(line)).join('; '),
   }));
   if (profileDecisionIssue) findings.push(depthFinding(rule, {
     defaultRuleId: 'per_topic_depth_review_contract',

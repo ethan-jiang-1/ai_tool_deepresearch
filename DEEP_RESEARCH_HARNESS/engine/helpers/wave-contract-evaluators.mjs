@@ -1,4 +1,4 @@
-// @impl IOC-001, IOC-002, IOC-003, CHI-001, RWG-018
+// @impl IOC-001, IOC-002, IOC-003, CHI-001, RWG-005, RWG-018
 
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join, resolve as resolvePath } from 'node:path';
@@ -58,6 +58,13 @@ function safeMessage(error) {
 
 function scopedRuleId(ruleId, topic) {
   return topic ? `${ruleId}:${topic}` : ruleId;
+}
+
+function blocksWave1ReferenceFloor(depthCheck) {
+  return (depthCheck?.findings || []).some((finding) => (
+    finding.id?.endsWith(':reviewed_work_unit_refs_binding')
+    || finding.id?.endsWith(':submitted_ledger')
+  ));
 }
 
 function failureFinding(bundlePath, rule, {
@@ -741,6 +748,18 @@ export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFac
     : scanDelegatedBypassSuspicion(bundlePath, 'wave1');
   const carriedTargetSelection = selectWave1CarriedTargetReceipt(bundlePath);
   findings.push(...carriedTargetSelection.findings);
+  const depthContractChecks = new Map();
+  const depthContractRule = definition.rules.find((rule) => (
+    rule.check === 'depth_review_contract' && String(rule.target || '').includes('{topic}')
+  ));
+  const getDepthContractCheck = (topic, rule = depthContractRule) => {
+    if (!rule) return null;
+    const cacheKey = scopedRuleId(rule.id, topic);
+    if (!depthContractChecks.has(cacheKey)) {
+      depthContractChecks.set(cacheKey, checkWave1DepthReviewContract(bundlePath, { topic, rule, topicRegistryFact }));
+    }
+    return depthContractChecks.get(cacheKey);
+  };
   let checksRun = 0;
 
   for (const rule of definition.rules) {
@@ -749,9 +768,14 @@ export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFac
     const targets = expandRuleTargets(bundlePath, rule, layouts);
 
     for (const expandedTarget of targets) {
-      const target = { ...expandedTarget, resolved: ['file_exists', 'dir_exists', 'depth_review_contract', 'count_floor', 'pattern_match'].includes(rule.check) ? firstExistingTarget(bundlePath, expandedTarget, { directory: rule.check === 'dir_exists' }) : expandedTarget.resolved };
+      const target = { ...expandedTarget, resolved: ['file_exists', 'dir_exists', 'depth_review_contract', 'count_floor', 'pattern_match', 'semantic_sections'].includes(rule.check) ? firstExistingTarget(bundlePath, expandedTarget, { directory: rule.check === 'dir_exists' }) : expandedTarget.resolved };
       const id = scopedRuleId(rule.id, target.topic);
-      if (rule.check === 'pattern_match' && missingFiles.has(target.resolved)) {
+      if (['pattern_match', 'semantic_sections'].includes(rule.check) && missingFiles.has(target.resolved)) {
+        maskedRuleIds.push(id);
+        continue;
+      }
+      if (rule.id === 'per_topic_ref_md_count_floor' && target.topic
+        && blocksWave1ReferenceFloor(getDepthContractCheck(target.topic))) {
         maskedRuleIds.push(id);
         continue;
       }
@@ -781,8 +805,24 @@ export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFac
           if (!result.passed) result.detail = `Missing directory: ${target.resolved}`;
         } else if (['field_value', 'field_non_empty', 'status_value'].includes(rule.check)) {
           result = evaluateStatusRule(bundlePath, rule);
+        } else if (rule.check === 'semantic_sections') {
+          const contractId = directContractForWave1Target(target.resolved);
+          if (!contractId) {
+            result = { passed: false, findings: [configurationFinding(bundlePath, rule, `semantic_sections requires a supported direct-output target: ${target.resolved}`)] };
+          } else {
+            // A semantic descriptor must evaluate its own parsed section list, not a target-only cached default.
+            const direct = evaluateDirectOutputTarget({
+              bundleDir: bundlePath,
+              target: target.resolved,
+              contractId,
+              requiredSections: rule.required_sections,
+            });
+            result = direct.passed
+              ? { passed: true }
+              : { passed: false, findings: [directRootFinding(bundlePath, rule, target, direct.roots[0])] };
+          }
         } else if (rule.check === 'pattern_match') {
-          if (['question_list_has_four_sections', 'source_url_present', 'key_findings_non_empty'].includes(rule.id)) {
+          if (['source_url_present', 'key_findings_non_empty'].includes(rule.id)) {
             if (rule.id === 'source_url_present') {
               const content = readFileSync(join(bundlePath, target.resolved), 'utf8');
               result = checkSourceUrlMarker(content);
@@ -858,7 +898,7 @@ export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFac
           result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'depth_review_contract') {
           const topic = topicSlugFromDepthReviewTarget(target.resolved) || target.topic || rule.topic;
-          const check = checkWave1DepthReviewContract(bundlePath, { topic, rule });
+          const check = getDepthContractCheck(topic, rule);
           maskedRuleIds.push(...(check.masked_rule_ids || []).map((masked) => scopedRuleId(rule.id, `${topic}:${masked}`)));
           result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
           (check.diagnostics || []).forEach((line, index) => findings.push(advisoryFinding(rule, line, index)));

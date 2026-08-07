@@ -233,12 +233,24 @@ For an unmet definition-owned `shared_ref_count_floor`, the structured repair co
 
 ### Requirement: Gate CLI evaluates wave1 rules from definition
 
-The Wave1 gate CLI SHALL evaluate work-unit provenance rule types and Wave1
-depth-contract rule types from the active gate definition. It SHALL use
-work-unit helper diagnostics for ledger/index/manifest/result/receipt/beacon/
-hash/cache mismatches and deterministic readers for `depth-review.yaml`, Wave0
-source URL sets, structured source claims, submitted cache-trail mappings,
-canonical reference Topic binding, and the reference-index table.
+The Wave1 gate CLI SHALL evaluate work-unit provenance rule types, Wave1
+depth-contract rule types, and definition-owned direct output-contract
+descriptors from the active gate definition. It SHALL use work-unit helper
+diagnostics for ledger/index/manifest/result/receipt/beacon/hash/cache
+mismatches and deterministic readers for `depth-review.yaml`, Wave0 source URL
+sets, structured source claims, submitted cache-trail mappings, canonical
+reference Topic binding, and the reference-index table.
+
+`question_list_has_four_sections` SHALL use a typed
+`semantic_sections` descriptor whose parsed `required_sections` names Topic
+Investigation Targets, Question Reconciliation, Emergent Question Protocol,
+and Exploration / Exploitation Decision. Its evaluator SHALL dispatch on that
+descriptor type, normalize only equivalent heading presentation, and require
+each named section to be present and non-empty. It SHALL not dispatch by the
+rule ID, use an ordered regex, require `pattern`/`negate`, or make case,
+heading level, spacing, list style, or section order a blocking fact. Other
+active `pattern_match` rules retain their existing independently declared
+semantics.
 
 Formal gate and side-effect-free Wave1 inspect SHALL consume the same pure
 Wave1 reference-convergence result for current Topic identity, submitted
@@ -287,6 +299,17 @@ a parent root. A filename, index row, reference body, unbound submitted row, or
 raw filesystem scan SHALL not be treated as materializable backing or as proof
 that backing is exhausted.
 
+When no submitted work-unit row can supply a reviewed ref, the depth contract
+SHALL return one submitted-evidence/binding root before source-claim mapping,
+source novelty, new-source comparison, `per_topic_ref_md_count_floor`, depth
+derivative, or provenance symptoms. The same Topic's reference-floor branch
+SHALL be masked rather than project a second submitted-backing root. It SHALL
+not advise the Agent to invent `reviewed_work_unit_refs[]`, treat a bare
+work-unit directory as submitted, or present an unassigned output as evidence.
+Feedback may name only an existing legal submitted-work or replacement owner;
+without one it SHALL state `missing_contract`/no-path and the same Wave1
+checkpoint.
+
 An invalid/missing index table SHALL produce exactly one
 `reference_index_table_invalid` parent root and mask row symptoms. A
 materializable projection, legacy/misnamed current projection, invalid index,
@@ -306,12 +329,11 @@ compatibility but SHALL NOT be the sole repair information.
 
 Wave1 semantic Markdown checks SHALL protect section/content availability while
 tolerating equivalent presentation. `question_list_has_four_sections` SHALL
-require the four named semantic sections without fixed order, case, heading
-level, spacing, or list style. `source_url_present` SHALL accept a parseable
-bare HTTP(S) URL or Markdown link. `key_findings_non_empty` SHALL accept common
-bullet, numbered, or non-empty paragraph content under the semantic Key
-Findings section. These tolerant evaluators, not historical regex
-presentation, SHALL own the blocking result.
+use its definition-owned semantic-section descriptor. `source_url_present`
+SHALL accept a parseable bare HTTP(S) URL or Markdown link.
+`key_findings_non_empty` SHALL accept common bullet, numbered, or non-empty
+paragraph content under the semantic Key Findings section. These tolerant
+evaluators, not historical regex presentation, SHALL own the blocking result.
 
 #### Scenario: Inspect and gate share reference evaluation
 
@@ -387,12 +409,34 @@ presentation, SHALL own the blocking result.
 - **AND** they SHALL mask dependent missing-output, cache-mapping, count-floor,
   and delegated-bypass symptoms
 
-#### Scenario: Question-list order is not blocking authority
+#### Scenario: no submitted work can satisfy a depth review
+
+- **WHEN** a Wave1 depth review has no reviewed ref that resolves to a
+  submitted work-unit row for its current Topic
+- **THEN** inspect and Gate SHALL return one submitted-evidence/binding root
+- **AND** they SHALL mask source-claim mapping, source novelty, new-source
+  comparison, `per_topic_ref_md_count_floor`, and dependent depth-review
+  symptoms
+- **AND** feedback SHALL not authorize fabrication of a reviewed ref or an
+  unassigned output role, and SHALL return `missing_contract`/no-path when no
+  existing submitted-work or replacement owner is established
+
+#### Scenario: Question-list descriptor tolerates equivalent presentation
 
 - **WHEN** all four required question-list semantic sections are present and
-  non-empty in an equivalent order or harmless heading presentation
-- **THEN** the shared evaluator SHALL accept the structure
-- **AND** historical ordered-regex presentation SHALL NOT fail Wave1
+  non-empty in an equivalent order, case, heading level, spacing, or list style
+- **THEN** the shared evaluator SHALL accept the structure through its parsed
+  semantic-section descriptor
+- **AND** the historical ordered regex SHALL not participate in the result
+
+#### Scenario: Question-list semantic section is missing or empty
+
+- **WHEN** one declared question-list semantic section is absent or has no
+  meaningful content
+- **THEN** the shared evaluator SHALL return one
+  `question_list_has_four_sections` direct root naming that section
+- **AND** Gate and inspect SHALL not add a second regex-derived failure for the
+  same artifact
 
 ### Requirement: Gate CLI evaluates wave2 rules from definition
 

@@ -1,4 +1,4 @@
-// @impl AGQ-001, AGQ-005, AGQ-017, AGQ-020, AGQ-026, SCO-009
+// @impl AGQ-001, AGQ-005, AGQ-017, AGQ-019, AGQ-020, AGQ-026, SCO-009
 import { z } from 'zod';
 import { QueueHealth, StopAuthorizationState } from '../enums.mjs';
 import {
@@ -168,7 +168,43 @@ export const QueueTerminalHistoryRecordSchema = z.object({
   work_id: z.string().min(1).optional(),
   reason: z.string().optional(),
   item: QueueDemandItemSchema.optional(),
-}).passthrough();
+  failure_disposition: z.enum(['terminal_no_successor']).optional(),
+}).passthrough().superRefine((record, ctx) => {
+  if (record.failure_disposition === undefined) return;
+  if (record.terminal_status !== 'failed') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['terminal_status'],
+      message: 'failure_disposition is valid only for failed terminal-history rows',
+    });
+  }
+  if (!record.item) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['item'],
+      message: 'failure_disposition requires the stored original Queue item',
+    });
+  } else if (record.item.targets?.delegates?.to === 'sub-agent') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['item', 'targets', 'delegates'],
+      message: 'failure_disposition is not valid for delegated Queue demand',
+    });
+  } else if (record.item.status !== 'failed') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['item', 'status'],
+      message: 'failure_disposition requires the stored Queue item to be failed',
+    });
+  }
+  if (typeof record.reason !== 'string' || record.reason.trim() === '') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['reason'],
+      message: 'failure_disposition requires a non-empty terminal reason',
+    });
+  }
+});
 
 function collectQueueLocations(data) {
   const locations = [];

@@ -1,4 +1,4 @@
-// @impl FRE-005
+// @impl AGQ-019, FRE-005
 // Queue Manager lifecycle API: create/load/save, enqueue/claim/complete/fail, inspect, and receipts.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -27,6 +27,7 @@ import {
 } from './queue-manager-core.mjs';
 import { firstOpenPosition, promote, refill, preempt, sortPool } from './queue-manager-window.mjs';
 import { render } from './queue-manager-render.mjs';
+import { readTerminalNoSuccessor } from './helpers/queue-terminal-failure.mjs';
 import { readBundlePlan } from './helpers/gate-helpers-readers.mjs';
 import {
   admitSeedTopicMaterializeDeclaration,
@@ -81,26 +82,6 @@ export function checkReceipts(queue, item, bundleDir = process.cwd()) {
   traceEntry('receipt_checked', { source: 'agq-receipt', queue_item_id: parsed.queue_item_id, passed, receipts });
   return passed ? check(true, 'All receipts passed')
     : { passed: false, check: false, inspect, advice: 'Add missing receipt or queue repair work before continuing.' };
-}
-
-// ============================================================
-// Internal: repair item factory
-// ============================================================
-
-function makeRepairItem(failure) {
-  const ts = now();
-  return QueueItemSchema.parse({
-    queue_item_id: `repair-${failure.queue_item_id}-${Date.now()}`, title: `Repair ${failure.queue_item_id}`,
-    targets: { controller: 'main-agent' }, action: `Repair failed queue work: ${failure.reason}`,
-    producer_rule: 'failed_receipt_repair', lineage: { failed_queue_item_id: failure.queue_item_id, reason: failure.reason },
-    priority_class: 'P1_state_or_gate_repair', required_receipts: ['none'],
-    done_condition: 'Repair work records a corrected artifact or a concrete blocker.',
-    verification: { engine: [], agent: ['Repair addresses the recorded failure.'] },
-    writes_to: [], status_sync: [], completion_receipt: 'none',
-    failure_route: 'record blocker or escalate repair', status: 'queued',
-    restore_priority: 'normal',
-    created_at: ts, updated_at: ts, payload: { failure },
-  });
 }
 
 // ============================================================
@@ -465,13 +446,14 @@ export function complete(queue, result, bundleDir = process.cwd()) {
 }
 
 /**
- * Fail the current queue-front item. Creates a repair item,
- * promotes the window, inserts the repair work, refills, and renders.
+ * Fail the current non-delegated queue-front item. The failure remains
+ * terminal history with no Queue-owned successor; already-admitted demand may
+ * still promote/refill normally.
  *
  * @param {object} queue — current QueueState
- * @param {object} failure — { queue_item_id, reason, repair?: QueueItem }
+ * @param {object} failure — { queue_item_id, reason }
  * @param {string} [bundleDir] — for projection render (defaults to cwd)
- * @returns {object} QueueState — mutated queue with repair item inserted
+ * @returns {object} QueueState — mutated queue with terminal failure recorded
  */
 export function fail(queue, failure, bundleDir = process.cwd()) {
   ensureTrace(bundleDir);
@@ -491,6 +473,11 @@ export function fail(queue, failure, bundleDir = process.cwd()) {
     logEvent('error', 'queue_fail_exception', { kind: 'queue_fail', queue_item_id: parsedFailure.queue_item_id, reason: `queue_item_id mismatch: expected ${current?.queue_item_id || 'none'}, got ${parsedFailure.queue_item_id}` });
     throw new Error(`fail expected current queue_item_id ${current?.queue_item_id || 'none'}, got ${parsedFailure.queue_item_id}`);
   }
+  if (current.targets?.delegates?.to === 'sub-agent') {
+    const reason = `Generic Queue fail cannot terminalize delegated demand ${current.queue_item_id}; use the existing operate-work-unit terminal/replacement authority for its current work unit.`;
+    logEvent('error', 'queue_fail_exception', { kind: 'queue_fail', queue_item_id: current.queue_item_id, reason });
+    throw new Error(reason);
+  }
   current.status = 'failed';
   current.updated_at = now();
   q = promote(q);
@@ -499,14 +486,11 @@ export function fail(queue, failure, bundleDir = process.cwd()) {
     terminal_status: 'failed',
     completed_at: now(),
     reason: parsedFailure.reason,
+    failure_disposition: 'terminal_no_successor',
     item: current,
   });
   traceEntry('queue_failed', { source: 'agq-fail', queue_item_id: current.queue_item_id, reason: parsedFailure.reason });
   traceEntry('check', { source: 'agq-fail', step: 'fail', passed: true, queue_item_id: current.queue_item_id, reason: parsedFailure.reason });
-  const repair = withTimestamps(parsedFailure.repair || makeRepairItem(parsedFailure));
-  q = q.active_window.length > 0
-    ? preempt(q, repair, { reason: 'failure_repair' })
-    : enqueue(q, repair, { mode: 'auto' });
   q = refill(q);
   render(q, bundleDir);
   logEvent('warn', 'queue_fail_done', { kind: 'queue_fail', queue_item_id: current.queue_item_id, reason: parsedFailure.reason });
@@ -523,6 +507,17 @@ export function fail(queue, failure, bundleDir = process.cwd()) {
  */
 export function inspect(queue, bundleDir = process.cwd()) {
   const q = validateQueue(queue);
+  const terminalFailure = readTerminalNoSuccessor(q);
+  if (terminalFailure) {
+    const rerun = `node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs check ${path.resolve(bundleDir)}`;
+    return {
+      passed: false,
+      check: false,
+      inspect: [terminalFailure.missing_fact],
+      advice: `${terminalFailure.repair} Rerun ${rerun} after that boundary is resolved.`,
+      findings: [{ ...terminalFailure, rerun }],
+    };
+  }
   const issues = [];
   const current = q.active_window[0];
   const inFlight = Object.values(q.delegated_in_flight || {});

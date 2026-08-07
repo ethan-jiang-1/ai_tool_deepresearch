@@ -102,4 +102,39 @@ describe('Wave queue quiescence Gate integration', () => {
       assert.deepEqual(readFileSync(queuePath), before);
     });
   }
+
+  for (const wave of Object.keys(routes)) {
+    it(`${wave} inspect and formal Gate expose the terminal no-successor root without mutation`, () => {
+      const failed = item('generic-terminal');
+      failed.status = 'failed';
+      const dir = createBundle(wave, {
+        terminal_history: [{
+          queue_item_id: failed.queue_item_id,
+          terminal_status: 'failed',
+          completed_at: '2026-08-07T00:00:00.000Z',
+          reason: 'no legal generic successor',
+          failure_disposition: 'terminal_no_successor',
+          item: failed,
+        }],
+      });
+      const queuePath = join(dir, 'rb_queue.json');
+      const before = readFileSync(queuePath);
+      const inspect = run(wave, 'inspect', dir);
+      const gate = run(wave, 'gate', dir);
+      const inspectHint = inspect.hints.find((hint) => hint.rule_id === 'phase_queue_drained');
+      const gateHint = gate.hints.find((hint) => hint.rule_id === 'phase_queue_drained');
+      assert.ok(inspectHint, JSON.stringify(inspect));
+      assert.ok(gateHint, JSON.stringify(gate));
+      assert.deepEqual(
+        { rule_id: inspectHint.rule_id, repair_kind: inspectHint.repair_kind, missing_fact: inspectHint.missing_fact, write_to: inspectHint.write_to },
+        { rule_id: gateHint.rule_id, repair_kind: gateHint.repair_kind, missing_fact: gateHint.missing_fact, write_to: gateHint.write_to },
+      );
+      assert.equal(inspectHint.repair_kind, 'missing_contract');
+      assert.match(inspectHint.missing_fact, /generic-terminal/);
+      assert.match(inspectHint.write_to, /queue failure successor contract/);
+      assert.doesNotMatch(inspectHint.write_to, /operate-queue|rb_queue\.json/i);
+      assert.doesNotMatch(gateHint.write_to, /operate-queue|rb_queue\.json/i);
+      assert.deepEqual(readFileSync(queuePath), before);
+    });
+  }
 });

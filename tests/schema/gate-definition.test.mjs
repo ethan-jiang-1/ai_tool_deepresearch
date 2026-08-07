@@ -89,6 +89,30 @@ describe('Gate-definition common contract', () => {
     assert.equal(GateDefinitionSchema.safeParse(definitionWith(rule)).success, true);
   });
 
+  it('admits only a non-empty unique semantic_sections descriptor without pattern fields', () => {
+    const semanticRule = {
+      id: 'semantic_section_fixture',
+      check: 'semantic_sections',
+      target: 'artifacts/wave1/{topic}/question-list.md',
+      required_sections: ['First Required Section', 'Second Required Section'],
+      failure_message: 'Compatibility diagnostic.',
+      finding: { source: 'checker' },
+    };
+    const parsed = parseGateDefinition(definitionWith(semanticRule));
+    assert.deepEqual(parsed.rules[0].required_sections, semanticRule.required_sections);
+
+    for (const overrides of [
+      { required_sections: undefined },
+      { required_sections: [] },
+      { required_sections: ['Repeated', 'Repeated'] },
+      { pattern: '## First Required Section' },
+      { negate: false },
+      { check: 'pattern_match' },
+    ]) {
+      assert.equal(GateDefinitionSchema.safeParse(definitionWith({ ...semanticRule, ...overrides })).success, false);
+    }
+  });
+
   it('exports one closed blocking-basis and repair-kind contract', () => {
     assert.deepEqual(GateBlockingBasisSchema.options, [...GATE_BLOCKING_BASES]);
     assert.deepEqual(GateRepairKindSchema.options, [...GATE_REPAIR_KINDS]);
@@ -223,12 +247,12 @@ describe('instantiation/setup finding-source admission', () => {
 });
 
 describe('HITL1/seed-topics finding-source admission', () => {
-  it('schema-parses all 13 rules', () => {
+  it('schema-parses all 14 rules', () => {
     const hitl1 = parseGateDefinition(loadActiveDefinition('gate-hitl1-recorded.definition.json'));
     const seed = parseGateDefinition(loadActiveDefinition('gate-seed-topics-ready.definition.json'));
     assert.equal(hitl1.rules.length, 9);
-    assert.equal(seed.rules.length, 4);
-    assert.equal(hitl1.rules.length + seed.rules.length, 13);
+    assert.equal(seed.rules.length, 5);
+    assert.equal(hitl1.rules.length + seed.rules.length, 14);
   });
 
   it('keeps HITL decisions distinct from Agent artifact repair', () => {
@@ -428,6 +452,20 @@ describe('Wave1 finding-source admission', () => {
       assert.equal(rule.finding.source, 'checker');
       assert.equal(rule.repair, undefined);
     }
+  });
+
+  it('parses the Wave1 question-list contract as one typed semantic descriptor', () => {
+    const wave1 = parseGateDefinition(loadActiveDefinition('gate-wave1-complete.definition.json'));
+    const rule = wave1.rules.find((candidate) => candidate.id === 'question_list_has_four_sections');
+    assert.equal(rule.check, 'semantic_sections');
+    assert.deepEqual(rule.required_sections, [
+      'Topic Investigation Targets',
+      'Question Reconciliation',
+      'Emergent Question Protocol',
+      'Exploration / Exploitation Decision',
+    ]);
+    assert.equal(Object.hasOwn(rule, 'pattern'), false);
+    assert.equal(Object.hasOwn(rule, 'negate'), false);
   });
 
   it('does not assign a temporary required-structure basis to presentation-sensitive rules', () => {

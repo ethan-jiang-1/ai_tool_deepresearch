@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.76
+
+- Wave1 question-list checks now declare their required semantic sections in
+  the active Gate definition. The shared evaluator accepts equivalent heading
+  presentation while rejecting a missing or empty declared section directly.
+- The Gate audit now validates typed definition descriptors plus their focused
+  evaluator/Gate behavior, without a second per-rule catalog. Wave1 submitted
+  backing failures expose one root and an honest `missing_contract` no-path
+  before dependent reference-floor symptoms.
+- Terminal late-submit and timeout-preflight fixtures now derive their output
+  tuple from the claimed assignment contract; current Wave0 coverage submits
+  only its assigned `source_yaml` output while role, hash, snapshot, receipt,
+  and provenance protections remain strict.
+
+## v0.75
+
+- Breaking: generic `operate-queue fail` accepts only a current
+  `queue_item_id` and non-empty reason. It records a durable
+  `terminal_no_successor` failure instead of manufacturing `repair-*` demand;
+  delegated failures remain on the existing work-unit terminal/replacement
+  boundary.
+- Queue inspect, rendered projection, Wave inspect, and the formal
+  `phase_queue_drained` Gate now expose the same terminal no-successor root, so
+  an otherwise empty Queue cannot masquerade as drained.
+
 ## v0.74
 
 - Breaking: `DEEP_RESEARCH_HARNESS/` is the sole reusable Harness source and

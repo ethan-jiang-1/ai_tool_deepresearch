@@ -155,16 +155,68 @@ describe('Complete, promote, refill, and fail (AGQ-002, AGQ-004)', () => {
     }
   });
 
-  it('fail creates repair work instead of chat progress', () => {
+  it('terminalizes generic failure without a repair successor or preemption', () => {
     const dir = tempBundle();
     try {
       let queue = createQueue('fail-test');
       queue = enqueue(queue, item(1));
       queue = enqueue(queue, item(2));
       queue = fail(queue, { queue_item_id: 'queue-1', reason: 'receipt missing' }, dir);
-      assert.match(queue.active_window[0].queue_item_id, /^repair-queue-1-/);
-      assert.equal(queue.active_window[0].priority_class, 'P1_state_or_gate_repair');
-      assert.equal(queue.active_window[1].queue_item_id, 'queue-2');
+      assert.equal(queue.active_window[0].queue_item_id, 'queue-2');
+      assert.equal(queue.active_window.some((entry) => entry.queue_item_id.startsWith('repair-')), false);
+      assert.deepEqual(queue.terminal_history.at(-1), {
+        queue_item_id: 'queue-1',
+        terminal_status: 'failed',
+        completed_at: queue.terminal_history.at(-1).completed_at,
+        reason: 'receipt missing',
+        failure_disposition: 'terminal_no_successor',
+        item: queue.terminal_history.at(-1).item,
+      });
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('rejects arbitrary repair payload and delegated failure before queue mutation', () => {
+    const dir = tempBundle();
+    try {
+      let ordinary = createQueue('fail-input-test');
+      ordinary = enqueue(ordinary, item(1));
+      const ordinaryBefore = structuredClone(ordinary);
+      assert.throws(
+        () => fail(ordinary, {
+          queue_item_id: 'queue-1',
+          reason: 'caller supplied successor',
+          repair: item('injected'),
+        }, dir),
+        /repair/i,
+      );
+      assert.deepEqual(ordinary, ordinaryBefore);
+
+      let delegated = createQueue('delegated-fail-test');
+      delegated = enqueue(delegated, item(1, {
+        kind: 'wave0_source_intake',
+        targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
+      }));
+      const delegatedBefore = structuredClone(delegated);
+      assert.throws(
+        () => fail(delegated, { queue_item_id: 'queue-1', reason: 'delegated failure' }, dir),
+        /operate-work-unit/i,
+      );
+      assert.deepEqual(delegated, delegatedBefore);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('cannot turn a failed repair-named demand into a repair-repair descendant', () => {
+    const dir = tempBundle();
+    try {
+      let queue = createQueue('repair-descendant-test');
+      queue = enqueue(queue, item('repair-original'));
+      queue = fail(queue, { queue_item_id: 'queue-repair-original', reason: 'second failure' }, dir);
+      assert.equal(queue.terminal_history.at(-1).failure_disposition, 'terminal_no_successor');
+      assert.equal(queue.active_window.some((entry) => entry.queue_item_id.startsWith('repair-repair-')), false);
     } finally {
       cleanup(dir);
     }
