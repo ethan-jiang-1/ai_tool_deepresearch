@@ -1,10 +1,29 @@
 ---
 title: BUG-200--204 Gate and Queue Contract Remediation
-status: ready_for_openspec_proposals
+status: closed; superseded by the archived remediation execution record 2026-08-07
 created: 2026-08-06
+updated: 2026-08-07
 ---
 
 # BUG-200--204：以两个 Change 收敛 Gate、Recovery 与 Queue 问题
+
+## Closure Record（2026-08-07）
+
+本计划已完成，不再是 OpenSpec proposal 入口。其实施结果和最终证据由同目录的
+[Gate Schema Progressive Gate, Schema, Queue, and Bug Remediation](gate-schema-progressive-gate-schema-queue-remediation.md)
+保留：
+
+- BUG-200 已由 current-head projection regression 覆盖，无需 change；
+- BUG-201 与 BUG-202 已在归档 Change B
+  `align-gate-contract-descriptors-and-terminal-recovery-tests` / `v0.76` 关闭；
+- BUG-203 已在归档 Change A `remove-recursive-queue-failure-repair` / `v0.75` 关闭；
+- BUG-204 已重分类为陈旧 terminal fixture contract drift，并在 Change B / `v0.76` 关闭。
+
+本页保留为历史决策记录。计划中使用的 `harden-gate-and-recovery-contracts` 是早期候选名称；
+实际执行并归档的 Change B 以上述 `align-gate-contract-descriptors-and-terminal-recovery-tests`
+为准。当前没有第三个 product implementation change 的触发条件；只有明确的产品决定让无
+submitted evidence 的 topic 合法进入 Wave2 或 Final，才可能另行提出
+`explicit-deferred-topic-closure`。
 
 ## 决策
 

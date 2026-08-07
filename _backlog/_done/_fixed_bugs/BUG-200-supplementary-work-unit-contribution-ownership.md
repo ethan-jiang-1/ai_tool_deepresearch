@@ -1,12 +1,20 @@
 ---
 bug_id: BUG-200
-status: open
+status: closed; current-head covered without a new change 2026-08-07
 discovered: 2026-08-05
 phase: wave0
 severity: P1_gate_blocker
 ---
 
 # Supplementary Work-Unit Contribution Ownership Not Recognized by Projection Writer
+
+## Closure (2026-08-07)
+
+Current projection writer behavior and its regression already recognize the
+submitted contribution interval for supplementary work units. The historical
+projection rejection is therefore closed as current-head covered; no new
+product change was required. The final disposition is recorded in the
+[closed remediation ledger](../_closed_plans/gate-schema-progressive-gate-schema-queue-remediation.md).
 
 ## Symptoms
 

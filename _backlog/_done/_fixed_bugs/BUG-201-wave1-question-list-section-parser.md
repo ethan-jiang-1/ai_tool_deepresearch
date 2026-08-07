@@ -1,12 +1,20 @@
 ---
 bug_id: BUG-201
-status: open
+status: closed; Change B v0.76 2026-08-07
 discovered: 2026-08-05
 phase: wave1
 severity: P2_validation_false_negative
 ---
 
 # Wave1 Question-List Semantic Section Parser — False Negative
+
+## Closure (2026-08-07)
+
+Archived Change B `align-gate-contract-descriptors-and-terminal-recovery-tests`
+aligned descriptor metadata with the shared semantic-section evaluator. Its
+Gate-path regressions accept equivalent heading case, order, level, and spacing
+while rejecting a missing or empty required section. See the
+[closed remediation ledger](../_closed_plans/gate-schema-progressive-gate-schema-queue-remediation.md).
 
 ## Symptom
 

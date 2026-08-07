@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-08-05 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-08-07 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -15,7 +15,7 @@
 
 ## 活跃列表
 
-> **当前优先级：Wave1 closeout 发现多个当前-head 观察到的候选 framework defect（BUG-200–204）。**
+> BUG-200--204 已按 current-head evidence 和归档 remediation changes 结案。
 > BUG-099/104/106 仍是旧 swarm incident 留下的 residual observation，等待 fresh current-head Phase-Agent `agent_flow_e2e`；当前 real-actor
 > canary 是 host-scoped `NOT_RUN`，不能替代这一观察。BUG-175 等待 exploratory_map 质量阈值的政策决定。它们都不能替代新的 bundle direct root。
 
@@ -25,11 +25,17 @@
 | [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | historical repeated-rendering/context-pressure hypothesis；尚无 current-head causal evidence |
 | [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P2 | wave0→wave1 | historical report-instead-of-execute observation；无 current-head Phase-Agent reproduction |
 | [BUG-175](BUG-175-count-floors-as-absolute-gate-blockers.md) | P2 | wave0 | `exploratory_map` per-topic=10、shared=`4 + 1 * topic_count`；count-floor-only Gate failure 可在 fatigue threshold 后 degraded handoff，剩余问题是默认阈值校准 |
-| [BUG-200](BUG-200-supplementary-work-unit-contribution-ownership.md) | P1 | wave0 | 补充 WU（`wave0-supp-*`）提交的 source 通过 `per_topic_count_floor` 但 `apply_seed_projection` 不认其 ordinal 所有权，return_map 随之失败（Topics 04/05/07） |
-| [BUG-201](BUG-201-wave1-question-list-section-parser.md) | P2 | wave1 | `question_list_has_four_sections` 对已存在的 `## exploration / exploitation decision log` 报 missing/empty 假阴性（Topic 03，5+ 次修复失败） |
-| [BUG-202](BUG-202-wave1-depth-review-requires-submitted-wu.md) | P1 | wave1 | `per_topic_depth_review_contract` 要求所有 topic 的 depth-review refs 必须指向 submitted WU；无 submitted WU 的 failed topic 形成 deadlock（Topics 02/03） |
-| [BUG-203](BUG-203-queue-fail-creates-repair-cascade.md) | P1 | wave1 | `operate-queue.mjs fail` 无限生成 `repair-repair-*` 级联，队列永久阻塞；仅 `preempt --unsafe-current` 可逃逸（Topics 02/03） |
-| [BUG-204](BUG-204-terminal-snapshot-hash-vs-schema-conflict.md) | P0 | wave1 | 重建的 terminal_history 中 `hashValue(manifest.queue_item) === hashValue(terminal.item)` 要求 byte-identical，但 queue_item 的 runtime 字段被 ledger schema 拒绝；hash 与 schema 要求互斥（`work-unit-supersession.mjs:200-203`） |
+
+## 最近关闭 (2026-08-07)
+
+以下记录已移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)：
+
+| Bug | 结案依据 |
+|-----|----------|
+| BUG-200 | current-head supplementary contribution projection 已覆盖；无需新 change。 |
+| BUG-201 / BUG-202 | `align-gate-contract-descriptors-and-terminal-recovery-tests` 已归档为 `v0.76`。 |
+| BUG-203 | `remove-recursive-queue-failure-repair` 已归档为 `v0.75`。 |
+| BUG-204 | 已重分类为陈旧 terminal fixture contract drift，并在 Change B / `v0.76` 关闭。 |
 
 ## 最近关闭 (2026-07-31)
 

@@ -1,12 +1,21 @@
 ---
 bug_id: BUG-204
-status: open
+status: closed; reclassified as stale terminal fixture contract drift in Change B v0.76 2026-08-07
 discovered: 2026-08-05
 phase: wave1
 severity: P0_gate_blocker
 ---
 
 # Terminal Snapshot Hash vs Schema Conflict
+
+## Closure (2026-08-07)
+
+The reported hash/schema conflict did not reproduce on a current Engine path.
+The shared red baseline was a stale fixture selecting an unassigned `reference`
+output where the current Wave0 attempt contract requires `source_yaml`.
+Archived Change B derives the candidate from that contract while retaining
+strict schema, snapshot, and hash protections. See the
+[closed remediation ledger](../_closed_plans/gate-schema-progressive-gate-schema-queue-remediation.md).
 
 ## Symptom
 

@@ -1,12 +1,20 @@
 ---
 bug_id: BUG-202
-status: open
+status: closed; Change B v0.76 preserves fail-closed provenance 2026-08-07
 discovered: 2026-08-05
 phase: wave1
 severity: P1_gate_blocker
 ---
 
 # Depth-Review Gate Requires Submitted WU for All Topics — Failed Topics Create Deadlock
+
+## Closure (2026-08-07)
+
+Archived Change B added the exact no-submitted-work-unit path: it remains
+fail-closed, reports the submitted-evidence or legal replacement/no-path root
+before derived depth-review symptoms, and does not fabricate
+`reviewed_work_unit_refs[]`. See the
+[closed remediation ledger](../_closed_plans/gate-schema-progressive-gate-schema-queue-remediation.md).
 
 ## Symptom
 

@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-08-05 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-08-07 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -189,6 +189,11 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-197 | 2026-08-05 | Current-head no-reproduction: retained case-164 records a failed primary followed by one submitted fresh-primary replacement |
 | BUG-198 | 2026-08-05 | Current-head unobserved behavior: C2 stopped at Supervisor selection; no C3 admission or compliance claim |
 | BUG-199 | 2026-08-03 | Final synthesis claims evidence-backed findings but cites zero evidence files |
+| BUG-200 | 2026-08-07 | Current-head supplementary work-unit contribution projection coverage; no new change required |
+| BUG-201 | 2026-08-07 | Wave1 semantic-section descriptor and evaluator parity (`v0.76`) |
+| BUG-202 | 2026-08-07 | Missing submitted-work-unit root-first fail-closed feedback (`v0.76`) |
+| BUG-203 | 2026-08-07 | Queue failure terminates without recursive generic repair successors (`v0.75`) |
+| BUG-204 | 2026-08-07 | Closed as stale terminal fixture contract drift; strict snapshot/hash protections retained (`v0.76`) |
 
 **Next available bug ID: BUG-205**
 
