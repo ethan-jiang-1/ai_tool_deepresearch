@@ -1,6 +1,6 @@
 ---
 title: Gate Schema Capability Audit
-status: active; reframed 2026-08-07
+status: closed; audit and remediation ledger completed 2026-08-07
 created: 2026-08-06
 updated: 2026-08-07
 ---
@@ -8,38 +8,35 @@ updated: 2026-08-07
 # Gate / Schema / Queue 能力审计
 
 > 这是 overall 决策与导航页。它把
-> [BUG-200--204 remediation](bug-200-204-gate-and-queue-remediation.md) 与近期
+> 已关闭的 [Gate/schema/Queue remediation ledger](gate-schema-progressive-gate-schema-queue-remediation.md) 与近期
 > Gate、schema、Queue、handoff、feedback incident 放进同一个系统模型，但不吞并两个既定
 > change，也不授权一次性重写所有 Gate。详细证据、假设和观测方法已拆入
 > [gate-schema-capability-audit/](gate-schema-capability-audit/evidence-base.md)。
 
-## Current Handoff State（2026-08-07）
+## Audit Closure Record（2026-08-07）
 
-本轮已经完成研究重定性、current-head 事实核对和文档拆分；**尚未**执行六类 observation、
-创建新的 OpenSpec change 或修改 Harness/tests。下一个 Agent 不需要从聊天记录重建推理，按下面顺序读取：
-
-1. 本 overall 页：结论、范围、ownership 与完成条件；
-2. [evidence-base.md](gate-schema-capability-audit/evidence-base.md)：直接事实与证据限制；
-3. [hypotheses-and-prompt-feedback.md](gate-schema-capability-audit/hypotheses-and-prompt-feedback.md)：
-   H1-H4、反证和 prompt/control-surface 含义；
-4. [observation-protocol.md](gate-schema-capability-audit/observation-protocol.md)：下一步 record、metrics 与 priority；
-5. [BUG-200--204 remediation](bug-200-204-gate-and-queue-remediation.md)：两个既定 change 的实施 ownership。
-
-当前进度与首个续接动作：
+本审计的研究、整改和有界 observation accounting 均已完成，并由已关闭的
+[Gate/schema/Queue remediation ledger](gate-schema-progressive-gate-schema-queue-remediation.md)
+保留最终事实、六类 obligation consumer/proof matrix、BUG-200--204 disposition 和可复核的
+验证边界。
 
 - [x] 最近窗口 81 条结案记录已按证据等级筛选，不能当作 defect frequency；
 - [x] Top 3 gaps、H1-H4、六类 obligation 和三类 proof 已确定；
 - [x] current Gate metadata/runtime 反例、Gate-audit authority 冲突及 BUG-203 路径已核实；
-- [ ] **首先**按 observation protocol 为 Gate-audit authority 冲突建立 meta-contract record 并明确 disposition；
-- [ ] 再为六类 blocking obligation 建 current-head consumer matrices；
-- [ ] real Agent adherence 没有被静态测试证明；缺 host/tool evidence 时继续诚实记为 `NOT_RUN` / `UNOBSERVED`。
+- [x] Gate-audit authority meta-contract conflict 已记录并在接受的 Gate contract 中 disposition；
+- [x] 六类 blocking obligation 已有 current-head consumer matrices 和独立的 static、deterministic、real-Agent proof accounting；
+- [x] 未被真实 Agent/host 观察支持的 claims 保留为 `NOT_RUN` / `UNOBSERVED`，不以静态或 deterministic 测试替代。
 
-续接时仍受 OpenSpec phase gate 约束：本 note 是 observation/research 入口，不是 target-code 授权。
-BUG-201/204 必须先有真实 Engine-path counterexample；BUG-203 实施仍归既定 change 2；没有满足
-P0/P1 + current-head evidence + accepted-contract uncovered 三个条件时，不新增第三个 change。
+本审计并未证明 H1-H4。它们是保留的 **unresolved** 研究结论：现有证据只支持各自明确的
+局部 Engine 或有界运行事实。Case 224/225 已因超过两分钟的运行形态被隔离为 `extreme slow`；
+其未来 refactor-or-remove 决策是独立工作，不是本审计的待办，也不授权重跑。
 
-本轮验证基线见子目录 [HANDOFF.md](gate-schema-capability-audit/HANDOFF.md)；workspace 只变更
-本 overall 页及该 audit 子目录，未修改 Harness/tests。
+所有产品整改 change 已完成 OpenSpec 生命周期。没有建立第三个 product implementation change
+的触发条件；未来只有在 current-head P0/P1 direct evidence、accepted-contract 缺口和可 red 的
+focused deterministic Engine regression 同时成立时，才可另行提出 change。
+
+本页及 [audit detail](gate-schema-capability-audit/evidence-base.md) 现为历史审计记录；
+[HANDOFF.md](gate-schema-capability-audit/HANDOFF.md) 仅保留其结案、证据和边界说明。
 
 ## Overall 结论
 

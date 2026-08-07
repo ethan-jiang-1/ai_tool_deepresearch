@@ -85,11 +85,11 @@ If the recommended action itself is illegal, it remains an Engine contract defec
 
 Static text tests prove delivery, not behavior:
 
-- [BUG-187](../../_done/_fixed_bugs/BUG-187-hitl1-capability-probe-opaque-to-user.md) can prove
+- [BUG-187](../../../_done/_fixed_bugs/BUG-187-hitl1-capability-probe-opaque-to-user.md) can prove
   wording/order while real host completion remains `NOT_RUN`;
-- [BUG-192](../../_done/_fixed_bugs/BUG-192-degraded-gate-triggers-de-facto-hitl.md) stopped before
+- [BUG-192](../../../_done/_fixed_bugs/BUG-192-degraded-gate-triggers-de-facto-hitl.md) stopped before
   launch and cannot establish compliance;
-- [BUG-198](../../_done/_fixed_bugs/BUG-198-phase-agent-direct-search-no-subagent.md) had no callable
+- [BUG-198](../../../_done/_fixed_bugs/BUG-198-phase-agent-direct-search-no-subagent.md) had no callable
   search surface or observed behavior and cannot establish direct-search compliance.
 
 Real observation must retain transcript, tool calls, first return, first-read surface, next action, and
@@ -97,7 +97,7 @@ the convergence trace.
 
 ## Control-Surface Target Shape
 
-Current [Wave1 phase guidance](../../../DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md)
+Current [Wave1 phase guidance](../../../../DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md)
 already shows parts of the target shape: entry prerequisites, concrete task-card payload, dry-submit
 beside submit, and structured Gate hints consumed first. The next question is whether these surfaces
 actually control real decisions, not whether the same paragraphs can be copied elsewhere.

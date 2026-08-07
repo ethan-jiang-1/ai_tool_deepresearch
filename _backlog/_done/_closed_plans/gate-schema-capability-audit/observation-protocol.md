@@ -101,7 +101,7 @@ length, and apparent semantic weakness only help select a sample.
 
 ## Existing Remediation Ownership
 
-[`bug-200-204-gate-and-queue-remediation.md`](../bug-200-204-gate-and-queue-remediation.md) retains
+the [closed remediation ledger](../gate-schema-progressive-gate-schema-queue-remediation.md) retains
 implementation ownership:
 
 | Existing change | Observation contribution | Boundary |
