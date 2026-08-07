@@ -1,4 +1,4 @@
-<!-- @impl ERS-001, EXA-002, EXA-004, EXA-009, PLR-001, PLR-004 -->
+<!-- @impl ERS-001, EXA-002, EXA-004, EXA-009, EXA-010, PLR-001, PLR-004 -->
 
 # Agent Experiment Playbook Manifest
 
@@ -69,8 +69,6 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 | `exp_wfn_wave1/case-221-heavy-batch-subagent.md` |
 | `exp_wfn_wave1/case-222-heavy-gate-fail-repair.md` |
 | `exp_wfn_wave1/case-223-heavy-subagent-failure.md` |
-| `exp_wfn_wave1/case-224-light-happy-and-fail.md` |
-| `exp_wfn_wave1/case-225-heavy-returned-work-closeout.md` |
 | `exp_wfn_wave2/case-231-heavy-synthesis-happy-path.md` |
 | `exp_wfn_wave2/case-232-heavy-finding-triage.md` |
 | `exp_wfn_wave2/case-233-heavy-gate-fail-repair.md` |
@@ -115,5 +113,14 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 | `exph_workflow-foundation/case-901-heavy-topic-rewrite-agent.md` |
 | `exph_workflow-foundation/case-951-heavy-topic-rewrite-ai-judge.md` |
 <!-- /agent-experiment-manifest -->
+
+## Extreme-slow quarantine
+
+`exp_extrem_slow/` is outside the active runnable corpus. It is not a fourth filename cost tier, a selector fallback, or an Autorun/Interactive execution surface.
+
+- `exp_extrem_slow/case-224-extreme-slow-happy-and-fail.md`
+- `exp_extrem_slow/case-225-extreme-slow-returned-work-closeout.md`
+
+These playbooks are quarantined because their observed runs were excessively slow. Do not run them. Refactor a quarantined playbook, move it to a normal `light`, `standard`, or `heavy` runnable path, and explicitly register it in the machine table before reactivation; otherwise remove it.
 
 Selection preserves this order. Every Headless launch supplies an exact `--case`, `--group` with optional filename `--tier`, `--tier`, `--all`, or an explicit bounded run profile. Filename cost is a creation-time estimate and compatibility filter only; it does not classify current duration, coverage, proof, or health. Cases 901-949 require bounded Interactive execution and actual human judgment; their co-located +50 AI-judge pairs remain separate evidence.

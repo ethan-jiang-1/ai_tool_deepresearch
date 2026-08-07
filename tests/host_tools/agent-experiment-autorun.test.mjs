@@ -1,4 +1,4 @@
-// @impl EXA-004, EXA-005, EXA-006, EXA-007, EXA-009, PLR-001, PLR-003
+// @impl EXA-004, EXA-005, EXA-006, EXA-007, EXA-009, EXA-010, PLR-001, PLR-003
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -17,6 +17,7 @@ import {
   parsePlaybookManifest,
   renderRuntimeTokens,
   readAndValidateManifest,
+  collectRunnablePlaybooks,
   sha256Bytes,
   traceBinding,
   validateCaseCompatibilityLedger,
@@ -108,6 +109,39 @@ describe('Agent Experiment manifest contract', () => {
       symlinkSync(join(playbooks, 'exp_sample', 'case-1-light-sample.md'), join(playbooks, 'exp_sample', 'case-2-light-other.md'));
       writeFileSync(join(playbooks, 'PLAYBOOK_MANIFEST.md'), formatPlaybookManifest(['exp_sample/case-2-light-other.md']));
       assert.throws(() => readAndValidateManifest({ repoRoot: root, requireExactCorpus: false }), /non-symlink/);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it('excludes extreme-slow quarantine from the runnable corpus and rejects its registration', () => {
+    const root = mkdtempSync(join(tmpdir(), 'agent-experiment-manifest-'));
+    try {
+      const playbooks = join(root, 'experiments_playbook');
+      mkdirSync(join(playbooks, 'exp_sample'), { recursive: true });
+      mkdirSync(join(playbooks, 'exp_extrem_slow'), { recursive: true });
+      writeFileSync(join(playbooks, 'exp_sample', 'case-1-light-sample.md'), VALID_FRONTMATTER);
+      writeFileSync(
+        join(playbooks, 'exp_extrem_slow', 'case-2-light-quarantined.md'),
+        VALID_FRONTMATTER.replaceAll('case-1-light-sample', 'case-2-light-quarantined'),
+      );
+      writeFileSync(join(playbooks, 'PLAYBOOK_MANIFEST.md'), formatPlaybookManifest(['exp_sample/case-1-light-sample.md']));
+
+      assert.deepEqual(collectRunnablePlaybooks(playbooks), ['exp_sample/case-1-light-sample.md']);
+      assert.equal(readAndValidateManifest({ repoRoot: root }).entries.length, 1);
+
+      writeFileSync(
+        join(playbooks, 'PLAYBOOK_MANIFEST.md'),
+        [
+          '# Playbook Manifest',
+          '',
+          '<!-- agent-experiment-manifest:v1 -->',
+          '| Path |',
+          '|---|',
+          '| `exp_extrem_slow/case-2-light-quarantined.md` |',
+          '<!-- /agent-experiment-manifest -->',
+          '',
+        ].join('\n'),
+      );
+      assert.throws(() => readAndValidateManifest({ repoRoot: root }), /quarantined|extreme-slow/i);
     } finally { rmSync(root, { recursive: true, force: true }); }
   });
 });

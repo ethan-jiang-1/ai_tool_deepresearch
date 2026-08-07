@@ -1,0 +1,38 @@
+schema_version: verification-routing/v1
+change: align-case-225-child-unavailability-not-run
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The change reads a registered Markdown playbook boundary and no
+      isolated production module behavior changes.
+  integration:
+    status: selected
+    rationale: The existing JS-led Case 225 contract test is the smallest
+      static boundary that can guard its direct actor-record classification.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No JS-led workflow-scale Engine lifecycle behavior changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: Case 225 is quarantined as extreme-slow and must not launch.
+      Its post-repair native NOT_RUN boundary remains unobserved; a static
+      contract does not substitute for Agent behavior.
+claims:
+  - id: case-225-required-child-unavailability-classification-contract
+    statement: >-
+      The focused Case 225 integration contract verifies that Step 2 reads the
+      Engine-recorded required-child unavailable fallback tuple and uses the
+      existing NOT_RUN marker, without treating phase_agent_fallback as a
+      delegated child.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/case-225-returned-work-closeout-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

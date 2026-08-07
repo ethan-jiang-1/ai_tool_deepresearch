@@ -1,0 +1,56 @@
+schema_version: verification-routing/v1
+change: align-case-225-wave1-topic-binding
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The changed behavior is a Markdown producer binding read with its
+      registered case contract; no isolated production module changes.
+  integration:
+    status: selected
+    rationale: The existing JS-led test reads the registered Case 225 Markdown
+      and asserts the direct setup-to-queue identity binding before Subject
+      launch.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No JS-led workflow-scale state chain or Engine lifecycle
+      transition changes.
+  agent_flow_e2e:
+    status: selected
+    rationale: The registered Case 225 Markdown playbook is the required real
+      Subject-Agent evidence surface after the setup-only producer correction.
+claims:
+  - id: case-225-custom-topic-binding-contract
+    statement: >-
+      The focused Case 225 integration contract verifies that its canonical
+      custom Topic UID is passed to the one queued Wave1 demand, preventing a
+      helper-default mismatch before Subject-Agent launch.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/case-225-returned-work-closeout-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: case-225-real-returned-work-closeout
+    statement: >-
+      The registered Case 225 playbook may prove one independent real Wave1
+      Phase Agent consumes its canonical queued demand through the declared
+      child, submission, closeout, inspect, and native-completion evidence
+      boundary.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wfn_wave1/case-225-heavy-returned-work-closeout.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

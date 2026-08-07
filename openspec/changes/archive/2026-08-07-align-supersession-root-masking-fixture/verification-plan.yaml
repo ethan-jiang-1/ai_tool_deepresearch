@@ -1,0 +1,35 @@
+schema_version: verification-routing/v1
+change: align-supersession-root-masking-fixture
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The regression requires a work-unit lifecycle and malformed supersession relation in a temporary bundle; an in-process unit test would not exercise the real provenance reader boundary.
+  integration:
+    status: not_applicable
+    rationale: The selected E2E test already drives the complete local work-unit submit, supersession, and provenance-check sequence without an additional CLI boundary.
+  deterministic_e2e:
+    status: selected
+    rationale: The existing Node test creates a temporary bundle, drives the real Engine lifecycle, and proves only deterministic root-first provenance behavior.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: This test-fixture alignment makes no claim about a real Agent, Sub-agent, host, or external tool behavior.
+claims:
+  - id: malformed-supersession-root-masking-follows-claimed-output-assignment
+    statement: >-
+      The malformed supersession-relation E2E scenario derives its applicable
+      Wave0 output path and role from the claimed manifest's required_outputs
+      tuple. Output coverage, submission presence, and inspect then fail closed
+      on one ledger-integrity root rather than treating a retired output glob as
+      an inapplicable passing rule.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

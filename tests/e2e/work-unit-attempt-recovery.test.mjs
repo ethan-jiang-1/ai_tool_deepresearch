@@ -833,6 +833,19 @@ describe('submitted work-unit supersession', () => {
     const bundleDir = tempWorkUnitBundle('wu-supersede-malformed-relation-');
     try {
       const { record } = claimAndSubmitWorkUnit(bundleDir);
+      const manifest = JSON.parse(readFileSync(path.join(bundleDir, record.paths.manifest_ref), 'utf8'));
+      assert.equal(manifest.assignment_contract_version, 'work-unit.assignment.v2');
+      const requiredOutputs = manifest.output_contract.required_outputs;
+      assert.ok(Array.isArray(requiredOutputs));
+      assert.ok(requiredOutputs.length > 0);
+      assert.ok(requiredOutputs.every(({ path: outputPath, role }) => (
+        typeof outputPath === 'string' && outputPath.length > 0
+        && typeof role === 'string' && role.length > 0
+      )));
+      const outputSelectors = {
+        glob: requiredOutputs.map(({ path: outputPath }) => outputPath),
+        roles: requiredOutputs.map(({ role }) => role),
+      };
       const resultPath = path.join(bundleDir, record.paths.result_ref);
       const result = JSON.parse(readFileSync(resultPath, 'utf8'));
       result.summary = 'drift before malformed relation';
@@ -849,7 +862,7 @@ describe('submitted work-unit supersession', () => {
       const output = checkWorkUnitOutputCoverage(bundleDir, {
         id: 'wave0_work_unit_output_coverage',
         wave: 'wave0',
-        output_selectors: { glob: 'reference/*.md', roles: ['reference'] },
+        output_selectors: outputSelectors,
       });
       const presence = checkWorkUnitSubmissionPresence(bundleDir, {
         id: 'wave0_work_unit_submission_presence',
@@ -864,7 +877,11 @@ describe('submitted work-unit supersession', () => {
       const inspected = inspectWorkUnits(bundleDir);
       assert.equal(inspected.passed, false);
       assert.match(inspected.inspect.join('\n'), /supersession_relation|tx_id/);
-      assert.equal(output.orphans.length, 1);
+      assert.equal(output.orphans.length, requiredOutputs.length);
+      assert.deepEqual(
+        output.orphans.sort(),
+        requiredOutputs.map(({ path: outputPath }) => outputPath).sort(),
+      );
       assert.equal(typeof output.orphans[0], 'string');
       assert.doesNotMatch(output.findings[0].id, /output:/);
     } finally {

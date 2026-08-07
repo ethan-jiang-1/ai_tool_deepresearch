@@ -1,0 +1,52 @@
+schema_version: verification-routing/v1
+change: quarantine-over-two-minute-playbooks
+test_classes:
+  unit:
+    status: selected
+    rationale: The shared manifest-contract reader can be covered with a
+      temporary filesystem fixture and no Agent runtime.
+  integration:
+    status: selected
+    rationale: The Case 225 Markdown contract must retain its static evidence
+      boundary while proving it is quarantined rather than actively registered.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: This change does not alter an Engine workflow lifecycle.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: Quarantined cases must not be launched; static tests cannot and
+      do not claim Subject-Agent behavior.
+claims:
+  - id: extreme-slow-manifest-quarantine-unit
+    statement: >-
+      The manifest reader excludes the extreme-slow directory from active
+      corpus drift checks and rejects an attempt to register a quarantined path
+      before a launch can be prepared.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/host_tools/agent-experiment-autorun.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: case-225-quarantine-static-contract
+    statement: >-
+      The Case 225 static contract resolves the quarantined asset and verifies
+      that it has no active manifest registration or runnable recovery claim.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/case-225-returned-work-closeout-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

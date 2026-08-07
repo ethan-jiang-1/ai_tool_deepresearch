@@ -1,0 +1,37 @@
+schema_version: verification-routing/v1
+change: align-case-225-closeout-summary-contract
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The change aligns one registered Subject instruction and one
+      Markdown observer; no isolated production module behavior changes.
+  integration:
+    status: selected
+    rationale: The existing JS-led Case 225 contract is the smallest static
+      boundary for literal producer keys and Engine-anchored reader identity.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No JS-led workflow-scale Engine lifecycle behavior changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: Case 225 is quarantined as extreme-slow and must not launch.
+      The static producer/reader contract does not establish post-repair
+      real-child behavior or native completion.
+claims:
+  - id: case-225-summary-contract-integration
+    statement: >-
+      The focused Case 225 integration contract verifies exact Subject index
+      keys and Engine-index identity binding without treating a static result
+      as real child behavior.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/case-225-returned-work-closeout-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

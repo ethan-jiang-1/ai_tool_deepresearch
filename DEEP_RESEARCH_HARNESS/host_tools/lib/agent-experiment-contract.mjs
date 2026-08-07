@@ -12,6 +12,8 @@ import { parseMdFrontmatter } from '../../engine/helpers/gate-helpers.mjs';
 export const MANIFEST_START = '<!-- agent-experiment-manifest:v1 -->';
 export const MANIFEST_END = '<!-- /agent-experiment-manifest -->';
 export const MANIFEST_RELATIVE_PATH = 'experiments_playbook/PLAYBOOK_MANIFEST.md';
+// @impl EXA-010
+export const EXTREME_SLOW_PLAYBOOK_DIRECTORY = 'exp_extrem_slow';
 export const RUN_CONTEXT_FILENAME = 'agent-experiment-run.json';
 export const COMPLETION_FILENAME = 'agent-experiment-completion.json';
 export const BUNDLE_REGISTRY_RELATIVE = '_playbook_state/bundles.json';
@@ -543,6 +545,9 @@ function assertSafeManifestPath(value) {
   if (!value || isAbsolute(value) || value.includes('\\')) fail(`unsafe manifest path: ${value}`);
   const segments = value.split('/');
   if (segments.some((part) => part === '' || part === '.' || part === '..')) fail(`unsafe manifest path: ${value}`);
+  if (segments[0] === EXTREME_SLOW_PLAYBOOK_DIRECTORY) {
+    fail(`quarantined extreme-slow playbook cannot be registered: ${value}`);
+  }
   if (!/^exp(?:h)?_[a-z0-9_-]+\/case-\d+-(?:light|standard|heavy)-[a-z0-9-]+\.md$/.test(value)) {
     fail(`invalid manifest playbook path: ${value}`);
   }
@@ -599,6 +604,7 @@ export function collectRunnablePlaybooks(playbookRoot) {
   const results = [];
   for (const entry of readdirSync(playbookRoot, { withFileTypes: true })) {
     if (!entry.isDirectory() || !/^exp(?:h)?_/.test(entry.name)) continue;
+    if (entry.name === EXTREME_SLOW_PLAYBOOK_DIRECTORY) continue;
     walkRunnable(join(playbookRoot, entry.name), playbookRoot, results);
   }
   return results.sort();

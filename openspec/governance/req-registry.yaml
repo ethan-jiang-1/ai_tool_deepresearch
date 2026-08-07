@@ -769,6 +769,7 @@ EXA-006: experiment-agent-autorun — Supervisor-owned case roots bind explicit 
 EXA-007: experiment-agent-autorun — Native outcome, health, durable audit evidence and explicit containment-safe cleanup remain orthogonal
 EXA-008: experiment-agent-autorun — Human and AI judge bands, Agent runtime budget and ordinary-CI proof boundaries remain explicit
 EXA-009: experiment-agent-autorun — Autorun exposes bounded explicit run-profile selection without becoming a controller
+EXA-010: experiment-agent-autorun — Extreme-slow quarantine paths remain outside the active runnable corpus and cannot be registered for Autorun
 
 # verification/experiment-observability
 EXO-001: experiment-observability — Stable post-run bundle health report contract

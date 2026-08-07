@@ -2,9 +2,9 @@
 schema: command-experiment/v2
 experiment: agentic-queue
 case: case-43-standard-failure-repair
-case_goal: "验证 queue v2 invalid task、missing receipt、unsafe-current guard、failure repair 和 empty queue blocker。"
+case_goal: "验证 queue v2 invalid task、missing receipt、unsafe-current guard、generic failure terminal no-successor 和 empty queue blocker。"
 verdict_mode: all
-required_checks: [empty_queue_blocker, failure_creates_repair, invalid_task_rejected, missing_receipt_blocks, unsafe_current_explicit, unsafe_current_guard]
+required_checks: [empty_queue_blocker, failure_terminal_no_successor, invalid_task_rejected, missing_receipt_blocks, unsafe_current_explicit, unsafe_current_guard]
 bundle_roles: [verdict]
 verdict_role: verdict
 health_roles: [verdict]
@@ -48,7 +48,7 @@ req: AGQ-006, AGQ-019
 3. Missing receipt：缺文件阻止 complete，front item 保持不变
 4. Unsafe-current guard：无显式标志则拒绝替换 running front
 5. Unsafe-current explicit：显式标志允许替换 front，旧 front 进入 pool
-6. Failure repair：fail 产生 repair work 并插入 active window front
+6. Generic failure：fail 记录 terminal no-successor，既有 next item 正常推进
 7. Empty queue：claim 返回 blocker
 8. 从 trace 裁决
 9. PASS 后清理
@@ -198,9 +198,9 @@ JS
 
 -> 预期：urgent 在 ordered window front，旧 front 在 pool。
 
-## Step 2.5: Failure Repair
+## Step 2.5: Generic Failure Terminal Boundary
 
-创建新 queue，fail front item 后 repair work 应进入 active window front，原 next item 后移。
+创建新 queue，fail front item 后不应生成 Queue-owned repair successor；原 next item 正常推进。
 
 ```bash
 B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
@@ -211,23 +211,38 @@ import { createQueue, enqueue, fail, saveQueue, makeItem } from './DEEP_RESEARCH
 const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 
-let repairQueue = createQueue('agq-repair-failure');
-repairQueue = enqueue(repairQueue, makeItem({ queue_item_id: 'queue-repair-fail' }));
-repairQueue = enqueue(repairQueue, makeItem({ queue_item_id: 'queue-repair-after-fail' }));
-repairQueue = fail(repairQueue, { queue_item_id: 'queue-repair-fail', reason: 'deterministic receipt failed' }, __dirname);
-saveQueue(__dirname, repairQueue);
+let terminalQueue = createQueue('agq-repair-failure');
+terminalQueue = enqueue(terminalQueue, makeItem({ queue_item_id: 'queue-repair-fail' }));
+terminalQueue = enqueue(terminalQueue, makeItem({ queue_item_id: 'queue-repair-after-fail' }));
+terminalQueue = fail(terminalQueue, { queue_item_id: 'queue-repair-fail', reason: 'deterministic receipt failed' }, __dirname);
+saveQueue(__dirname, terminalQueue);
+
+const terminal = terminalQueue.terminal_history.at(-1);
+const liveItems = [
+  ...terminalQueue.active_window,
+  ...terminalQueue.refill_pool,
+  ...Object.values(terminalQueue.delegated_in_flight),
+];
+const hasRepairDescendant = liveItems.some((item) => (
+  typeof item?.queue_item_id === 'string'
+  && (item.queue_item_id.startsWith('repair-') || item.queue_item_id.startsWith('repair-repair-'))
+));
 
 trace.traceEntry('check', {
   source: 'playbook',
-  gate: 'failure_creates_repair',
+  gate: 'failure_terminal_no_successor',
   expected: true,
-  passed: repairQueue.active_window[0].queue_item_id.startsWith('repair-queue-repair-fail-')
-    && repairQueue.active_window[1].queue_item_id === 'queue-repair-after-fail',
+  passed: terminal?.queue_item_id === 'queue-repair-fail'
+    && terminal.terminal_status === 'failed'
+    && terminal.reason === 'deterministic receipt failed'
+    && terminal.failure_disposition === 'terminal_no_successor'
+    && terminalQueue.active_window[0]?.queue_item_id === 'queue-repair-after-fail'
+    && hasRepairDescendant === false,
 });
 JS
 ```
 
--> 预期：repair work 插到 front，原 next item 后移。
+-> 预期：失败项以 terminal no-successor 终结，原 next item 推进，且没有 repair descendant。
 
 ## Step 2.6: Empty Queue
 

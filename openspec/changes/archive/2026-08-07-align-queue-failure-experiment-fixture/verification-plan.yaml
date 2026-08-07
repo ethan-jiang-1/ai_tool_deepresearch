@@ -1,0 +1,35 @@
+schema_version: verification-routing/v1
+change: align-queue-failure-experiment-fixture
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The change updates a registered Markdown playbook and must retain its native trace-completion boundary; an in-process unit test would not execute that control surface.
+  integration:
+    status: not_applicable
+    rationale: No production CLI or component contract changes; the target asset itself owns the complete disposable Queue observation.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The assertion is executed by a Playbook Agent from a registered Markdown asset, so the canonical route is agent_flow_e2e rather than a JS-driven E2E test.
+  agent_flow_e2e:
+    status: selected
+    rationale: The existing Markdown playbook creates a disposable bundle, invokes the real Queue lifecycle, writes strict trace checks, and reaches native completion under the Autorun Supervisor.
+claims:
+  - id: generic-queue-failure-playbook-observes-terminal-no-successor
+    statement: >-
+      The registered Queue failure-repair playbook invokes the current generic
+      Queue fail operation for a non-delegated front demand and records one
+      trace-bound deterministic check that the returned Queue terminalizes the
+      original demand with terminal_no_successor, creates no Queue-owned repair
+      descendant, and promotes only the pre-existing next demand.
+    test_class: agent_flow_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_agentic-queue/case-43-standard-failure-repair.md
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

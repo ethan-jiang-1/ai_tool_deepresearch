@@ -1,7 +1,7 @@
 ---
 schema: command-experiment/v2
 experiment: wfn-wave1
-case: case-224-light-happy-and-fail
+case: case-224-extreme-slow-happy-and-fail
 case_goal: "Verify Wave1 depth contracts through work-unit claim/submit: out-of-order submit, depth-review pass, shallow/cache-thin failures, invalid-submit rejection, and non-work-unit artifact gate rejection."
 verdict_mode: all
 required_checks: [wave1-gate-pass, wave1-invalid-submit-rejects, wave1-ledger-rows, wave1-multi-claim, wave1-orphan-output-rejects, wave1-out-of-order-submit]
@@ -19,7 +19,9 @@ verdict_judge: deterministic
 req: RWE-001, RWE-002, WAI-006
 ---
 
-<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
+<!-- @impl EXA-005, EXA-006, EXA-007, EXA-010, PLR-003 -->
+
+> **QUARANTINED - EXTREME SLOW.** Do not run this playbook through Autorun or Interactive. Refactor it, move it back to a normal `light`, `standard`, or `heavy` runnable path, and explicitly re-register it before reactivation; otherwise remove it.
 
 ## Execution Contract
 
@@ -37,7 +39,7 @@ Fixture-backed Engine case, no Agent actor, no external calls. Fixture content m
 | Verdict source | Trace JSONL checks, submit JSON, gate JSON, work-unit ledger/index state |
 | Does not prove | Agent search, evidence judgment, or deepening quality |
 
-# case-224-light-happy-and-fail
+# case-224-extreme-slow-happy-and-fail
 
 ## Expected Runtime Path
 

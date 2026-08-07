@@ -1,0 +1,37 @@
+schema_version: verification-routing/v1
+change: align-case-225-closeout-reference-index
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The change reads a registered Markdown observer and preserves no
+      isolated production module behavior.
+  integration:
+    status: selected
+    rationale: The existing JS-led Case 225 contract test is the smallest
+      static boundary that can guard its closeout-index reader field.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No JS-led workflow-scale lifecycle or Engine transition changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: Case 225 is quarantined as extreme-slow and must not launch.
+      The retained native FAIL is historical diagnosis, not a new real
+      Subject-Agent PASS claim.
+claims:
+  - id: case-225-materialized-reference-index-contract
+    statement: >-
+      The focused Case 225 integration contract verifies that its closeout
+      observer reads materialized_reference_refs and rejects the retired
+      reference_refs field before a real Subject-Agent run.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/case-225-returned-work-closeout-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

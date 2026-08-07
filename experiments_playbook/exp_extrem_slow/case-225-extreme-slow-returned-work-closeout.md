@@ -1,7 +1,7 @@
 ---
 schema: command-experiment/v2
 experiment: wfn-wave1
-case: case-225-heavy-returned-work-closeout
+case: case-225-extreme-slow-returned-work-closeout
 case_goal: "Prove that an independent real Wave1 Phase Agent consumes one real child return through dry-submit, formal submit, submitted-backed closeout, and inspect."
 verdict_mode: all
 required_checks: [case-225-real-phase-agent, case-225-native-dry-submit-before-formal-submit, case-225-submitted-closeout, case-225-inspect-ran]
@@ -20,7 +20,9 @@ req: RWP-002
 not_run_if: "The independent real Phase Agent, its required real child actor, real search/fetch, or required Engine operation is unavailable."
 ---
 
-<!-- @impl EXA-003, EXA-005, EXA-006, EXA-007, EXA-008, RWP-002, VER-006 -->
+<!-- @impl EXA-003, EXA-005, EXA-006, EXA-007, EXA-008, EXA-010, RWP-002, VER-006 -->
+
+> **QUARANTINED - EXTREME SLOW.** Do not run this playbook through Autorun or Interactive. Refactor it, move it back to a normal `light`, `standard`, or `heavy` runnable path, and explicitly re-register it before reactivation; otherwise remove it.
 
 ## Execution Contract
 
@@ -43,7 +45,7 @@ PASS requires retained Subject evidence, a delegated-subagent work-unit record, 
 | Verdict authority | Four case-owned deterministic `check` events appended to native `rb_trace.jsonl` |
 | Does not prove | Universal Agent compliance, Wave-wide completion, or research quality |
 
-# case-225-heavy-returned-work-closeout
+# case-225-extreme-slow-returned-work-closeout
 
 ## Step 1: [PLAYBOOK AGENT] Establish A Setup-Only Wave1 Boundary
 
@@ -75,6 +77,7 @@ writeFileSync(join(bundle, 'seed_topics', `${topic.slug}.md`), [
 enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
   phase: 'wave1',
   queue_item_id: 'case-225-primary-1',
+  topic_uid: topic.topic_uid,
   topic_slug: topic.slug,
   title: 'Real Wave1 returned-work closeout canary',
 }), { fileName: 'case-225-primary-1.json' });
@@ -98,6 +101,29 @@ set +e
 node experiments_env/shared/run-iterative-interaction-subject.mjs 225 --bundle "$B"
 SUBJECT_STATUS=$?
 set -e
+if [ "$SUBJECT_STATUS" -eq 0 ]; then
+node --input-type=module - "$B" <<'JS'
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const bundle = process.argv[2];
+const index = JSON.parse(readFileSync(join(bundle, '_work_units', '_index.json'), 'utf8'));
+const work = Object.values(index.work_units || {}).find(
+  (candidate) => candidate.queue_item_id === 'case-225-primary-1',
+);
+const actorExecution = work?.actor_execution;
+const requiredChildUnavailable = actorExecution?.execution_actor_class === 'phase_agent_fallback'
+  && actorExecution?.fallback_from === 'delegated_subagent'
+  && actorExecution?.delegated_role_key === 'dpt-evidence-extractor'
+  && actorExecution?.observation?.outcome === 'unavailable';
+if (requiredChildUnavailable) {
+  writeFileSync(
+    join(bundle, 'case-225-subject-unavailable.txt'),
+    'independent Phase Agent, child actor, real search/fetch, or required Engine operation unavailable\n',
+  );
+}
+JS
+fi
 if [ "$SUBJECT_STATUS" -ne 0 ]; then
   printf '%s\n' 'independent Phase Agent, child actor, real search/fetch, or required Engine operation unavailable' > "$B/case-225-subject-unavailable.txt"
 fi
@@ -126,21 +152,30 @@ const transcript = readFileSync(resolve(bundle, 'case-225-subject-transcript.jso
 const index = readJson('_work_units/_index.json');
 const ledger = readFileSync(resolve(bundle, 'rb_output_declarations.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse);
 const projection = dry.candidate_projection || dry;
-const work = index.work_units?.[child.work_id];
-const paths = [...(closeout.reference_refs || []), closeout.depth_review_ref, closeout.seed_ref, closeout.inspect_ref]
+const work = Object.values(index.work_units || {}).find(
+  (candidate) => candidate.queue_item_id === 'case-225-primary-1',
+);
+const childMatchesWork = Boolean(work?.work_id)
+  && child.work_id === work.work_id
+  && child.queue_item_id === work.queue_item_id;
+const closeoutMatchesWork = Boolean(work?.work_id)
+  && closeout.submitted_work_id === work.work_id
+  && closeout.queue_item_id === work.queue_item_id;
+const paths = [...(closeout.materialized_reference_refs || []), closeout.depth_review_ref, closeout.seed_ref, closeout.inspect_ref]
   .filter(Boolean)
   .map((ref) => resolve(bundle, ref));
-const submitted = formal.ok === true && ledger.some((row) => row.work_id === child.work_id);
+const submitted = formal.ok === true && work?.status === 'submitted'
+  && ledger.some((row) => row.work_id === work?.work_id);
 const subjectRan = subject.status === 'completed' && subject.subject === '225' && subject.completed_turns === 1
   && subject.result_events?.every((event) => event.subtype === 'success' && event.is_error !== true)
   && /Task/.test(transcript);
-const closeoutExists = closeout.submitted_work_id === child.work_id && paths.length >= 4
+const closeoutExists = closeoutMatchesWork && paths.length >= 4
   && paths.every((target) => existsSync(target) && statSync(target).isFile());
 const seed = readFileSync(resolve(bundle, closeout.seed_ref), 'utf8');
 const backfilled = !/__BACKFILL_WAVE1_(MECHANISMS|TRENDS)__|__BACKFILL_PENDING_QUESTIONS__/.test(seed);
-recordPlaybookCheck(bundle, { gate: 'case-225-real-phase-agent', passed: subjectRan && work?.actor_execution?.execution_actor_class === 'delegated_subagent', detail: JSON.stringify({ work_id: child.work_id, subject_turns: subject.completed_turns }) });
+recordPlaybookCheck(bundle, { gate: 'case-225-real-phase-agent', passed: subjectRan && childMatchesWork && work?.actor_execution?.execution_actor_class === 'delegated_subagent', detail: JSON.stringify({ work_id: work?.work_id ?? null, child_matches_work: childMatchesWork, subject_turns: subject.completed_turns }) });
 recordPlaybookCheck(bundle, { gate: 'case-225-native-dry-submit-before-formal-submit', passed: projection.recommended_action === 'submit' && formal.ok === true, detail: JSON.stringify({ dry_action: projection.recommended_action, formal_ok: formal.ok === true }) });
-recordPlaybookCheck(bundle, { gate: 'case-225-submitted-closeout', passed: submitted && closeoutExists && backfilled, detail: JSON.stringify({ submitted, closeout_paths: paths.length, backfilled }) });
+recordPlaybookCheck(bundle, { gate: 'case-225-submitted-closeout', passed: submitted && childMatchesWork && closeoutExists && backfilled, detail: JSON.stringify({ submitted, child_matches_work: childMatchesWork, closeout_paths: paths.length, backfilled }) });
 recordPlaybookCheck(bundle, { gate: 'case-225-inspect-ran', passed: inspect && typeof inspect === 'object' && closeout.inspect_ref === 'case-225-inspect.json', detail: JSON.stringify({ passed: inspect.passed ?? null, inspect_count: inspect.inspect?.length ?? null }) });
 JS
 ```

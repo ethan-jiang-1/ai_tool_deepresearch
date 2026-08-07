@@ -32,9 +32,16 @@ experiments_playbook/
   RUN_AGENT_AUTORUN_EXPS.md     # injected one-case Headless Playbook Agent contract
   RUN_INTERACTIVE_EXPS.md       # injected one-case manual debug/judgment contract
   exp_*/ and exph_*/            # case-<id>-<light|standard|heavy>-<role>.md
+  exp_extrem_slow/              # quarantined case-<id>-extreme-slow-<role>.md; never runnable
 ```
 
 The manifest owns only registered paths and order. Selected V2 frontmatter owns case/group, native verdict/check policy, stable bundle/verdict/health roles, health profile, and proof profile. Filename grammar owns execution cost. Native completion owns this run's actual role-to-path binding and outcome.
+
+## Extreme-slow quarantine
+
+`exp_extrem_slow/` holds cases that have shown an unacceptable observed runtime. It is not a fourth `light|standard|heavy` tier, is excluded from the active manifest corpus, and must never be selected by Autorun or Interactive replay.
+
+To reactivate one, first refactor the playbook, move it to a normal runnable `exp_*/` or `exph_*/` location with a supported `light`, `standard`, or `heavy` filename cost, and explicitly register it in `PLAYBOOK_MANIFEST.md`. Otherwise remove it. Current quarantined cases are Case 224 and Case 225.
 
 ## Normal commands
 

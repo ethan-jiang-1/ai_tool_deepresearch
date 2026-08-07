@@ -1,8 +1,10 @@
-<!-- @impl ERS-001, ERS-002, ERS-003, EXA-001, EXA-002, EXA-003, EXA-005, EXA-006, EXA-009, EXO-007, PLR-001, PLR-003, PLR-004 -->
+<!-- @impl ERS-001, ERS-002, ERS-003, EXA-001, EXA-002, EXA-003, EXA-005, EXA-006, EXA-009, EXA-010, EXO-007, PLR-001, PLR-003, PLR-004 -->
 
 # Headless Playbook Agent — Single-case Autorun Contract
 
 You are the Headless Playbook Agent for one Agent Experiment Autorun case. The Autorun Supervisor selected the case, created its isolated case run root, rendered its runtime bindings, and launched this fresh Agent session. The Supervisor is not the playbook executor or native verdict judge: you execute the complete injected Markdown playbook, while Engine/CLI contracts own deterministic checks and native completion.
+
+`experiments_playbook/exp_extrem_slow/` is a quarantine, not a runnable tier. Do not select, load, execute, or restore a playbook from that directory. It may return only after refactoring, relocation to a supported runnable filename, and explicit active-manifest registration; otherwise it must be removed.
 
 ## What the injected payload already fixes
 
