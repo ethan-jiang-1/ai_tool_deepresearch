@@ -1,161 +1,171 @@
 ---
 title: Gate Schema Capability Audit
-status: active; reopened 2026-08-07
+status: active; reframed 2026-08-07
 created: 2026-08-06
 updated: 2026-08-07
 ---
 
-# Gate Schema Capability Audit — 让 Engine 真能拦住，而不是黑盒乱发挥
+# Gate / Schema / Queue 能力审计
 
-> **重开处置（2026-08-07）**：本计划曾因 BUG-201/202/204 的确定性闭环收敛到
-> [`bug-200-204-gate-and-queue-remediation.md`](bug-200-204-gate-and-queue-remediation.md)
-> 的 `harden-gate-and-recovery-contracts`（只保留
-> `producer -> authority -> checker -> legal repair -> regression` 的有限核对）
-> 而归档；但 per-gate gap map 与语义质量审计并未完成，重新作为活跃 plan。
-> 其余内容质量 concerns 仍由 Agent/HITL 判断，审计方向与优先级见下文。
+> 这是 overall 决策与导航页。它把
+> [BUG-200--204 remediation](bug-200-204-gate-and-queue-remediation.md) 与近期
+> Gate、schema、Queue、handoff、feedback incident 放进同一个系统模型，但不吞并两个既定
+> change，也不授权一次性重写所有 Gate。详细证据、假设和观测方法已拆入
+> [gate-schema-capability-audit/](gate-schema-capability-audit/evidence-base.md)。
 
-## 问题诊断
+## Current Handoff State（2026-08-07）
 
-修 bug 修个没完，根因不在 bug 本身——在于 **Gate 的 schema/rule 层没有能力真的拦住 Agent 的乱发挥**。
+本轮已经完成研究重定性、current-head 事实核对和文档拆分；**尚未**执行六类 observation、
+创建新的 OpenSpec change 或修改 Harness/tests。下一个 Agent 不需要从聊天记录重建推理，按下面顺序读取：
 
-当前 10 个 gate、100+ 条 rule，大部分只做**结构检查**（文件在不在、字段空不空、regex 匹不匹配），没做到**语义验证**（内容对不对、证据真不真、claim 有没有 backing）。Agent 产出一个 `evidence-summary.md`，gate 只检查 "## Key Findings 下面有编号列表" 和 "有一个 Markdown 链接"——至于那个链接是不是指向 example.com、那个 finding 是不是幻觉，gate 不管。
+1. 本 overall 页：结论、范围、ownership 与完成条件；
+2. [evidence-base.md](gate-schema-capability-audit/evidence-base.md)：直接事实与证据限制；
+3. [hypotheses-and-prompt-feedback.md](gate-schema-capability-audit/hypotheses-and-prompt-feedback.md)：
+   H1-H4、反证和 prompt/control-surface 含义；
+4. [observation-protocol.md](gate-schema-capability-audit/observation-protocol.md)：下一步 record、metrics 与 priority；
+5. [BUG-200--204 remediation](bug-200-204-gate-and-queue-remediation.md)：两个既定 change 的实施 ownership。
 
-结果就是：Agent 产出 → gate 放行 → 下游发现内容有问题 → 回头修 Agent prompt/phase MD → Agent 产出稍好一点但仍然有 gap → gate 还是放行 → 继续修。**无限循环。**
+当前进度与首个续接动作：
 
-项目的核心哲学说 "Engine (JavaScript) 是校验者，Agent (LLM) 是执行者"，但实际上 Engine 的校验能力远弱于 Agent 的犯错能力。这个 gap 不关，黑盒永远乱发挥。
+- [x] 最近窗口 81 条结案记录已按证据等级筛选，不能当作 defect frequency；
+- [x] Top 3 gaps、H1-H4、六类 obligation 和三类 proof 已确定；
+- [x] current Gate metadata/runtime 反例、Gate-audit authority 冲突及 BUG-203 路径已核实；
+- [ ] **首先**按 observation protocol 为 Gate-audit authority 冲突建立 meta-contract record 并明确 disposition；
+- [ ] 再为六类 blocking obligation 建 current-head consumer matrices；
+- [ ] real Agent adherence 没有被静态测试证明；缺 host/tool evidence 时继续诚实记为 `NOT_RUN` / `UNOBSERVED`。
 
-## 当前 Gate 体系的 check 类型一览
+续接时仍受 OpenSpec phase gate 约束：本 note 是 observation/research 入口，不是 target-code 授权。
+BUG-201/204 必须先有真实 Engine-path counterexample；BUG-203 实施仍归既定 change 2；没有满足
+P0/P1 + current-head evidence + accepted-contract uncovered 三个条件时，不新增第三个 change。
 
-### 结构层（已充分覆盖）
+本轮验证基线见子目录 [HANDOFF.md](gate-schema-capability-audit/HANDOFF.md)；workspace 只变更
+本 overall 页及该 audit 子目录，未修改 Harness/tests。
 
-| check 类型 | 能力 | 覆盖度 |
+## Overall 结论
+
+原诊断“结构检查太弱，所以 Engine 需要更深的语义 Gate”不够准确，也会把 Engine 推向内容裁判
+职责。近期 incident 更稳定地指向三个系统闭环缺口：
+
+| Top gap | 要回答的问题 | 反复出现的结果 |
 |---|---|---|
-| `file_exists` | 文件存在 | 完善 |
-| `dir_exists` | 目录存在 | 完善 |
-| `field_non_empty` | 文件体非空 | 完善 |
-| `field_value` | YAML 字段精确值 | 完善 |
-| `status_value` | rb_status 字段值 | 完善 |
-| `schema_valid` | Zod schema 校验 | 只用在一小部分 target 上 |
-| `yaml_parse` | YAML 可解析 | 完善 |
+| **G1：义务可构造性 / producer closure** | Agent 在真正 authoring / submit / transition 时，是否拿到当前 attempt 的完整可执行 contract？ | 猜 schema、查 Engine source、整批返工、末端才发现格式错误 |
+| **G2：解释一致性 / one-truth-path closure** | accepted authority、definition、schema、admission、inspect、Gate、projection 是否表达同一 contract 并复用同一 evaluator？ | checkpoint verdict 漂移、writer/parser 冲突、陈旧 metadata 或 authority 误导 |
+| **G3：恢复与反馈闭环 / recovery closure** | 失败后是否只有一个当前合法且有限的最近动作，或诚实 no-path？ | root 被症状淹没、建议自身非法、手改 authority、repair 递归制造 repair |
 
-### 模式层（部分覆盖，有 gap）
+共同审计单元不是一个 Gate 或 check type，而是**一个阻断性的 Agent↔Engine 义务**：
 
-| check 类型 | 能力 | 问题 |
-|---|---|---|
-| `pattern_match` | regex 匹配/否定 | 极易空洞通过。regex 不是 parser，匹配了格式不等于内容有意义 |
-| `cross_field` | 跨文件字段比对 | 只用于 basename 一致性和 markdown link 解析，覆盖面窄 |
-| `count_floor` | 文件/条目数下限 | 数够了不代表质量够了；degradation_eligible 可被绕过 |
+1. **可构造吗？** Agent 在 owning decision point 能否构造合法输入？
+2. **同义吗？** 所有消费者是否解释同一权威事实？
+3. **可收敛吗？** failure 是否通向一个 legal action + same-check rerun，或 honest no-path？
 
-### 溯源层（关键防线，但覆盖面不够）
-
-| check 类型 | 能力 | 问题 |
-|---|---|---|
-| `work_unit_ledger_exists` | 有 submitted work-unit 行 | 只验证有提交记录，不验证记录内容 |
-| `work_unit_output_coverage` | 产物被 work-unit 覆盖 | 覆盖面不均——Wave0/1 有，Wave2 部分有 |
-| `work_unit_submission_presence` | 跨表面完整性 | 检查 index/manifest/result/receipt/beacon/output/cache/hash，但很多文件根本不过这个检查 |
-| `delegated_bypass_suspected` | 检测绕过 work-unit 的产物 | 依赖文件系统扫描，非声明式 |
-| `cache_coverage` | cache trail 映射验证 | 只验证 trail 目录和文件存在，不验证抓取内容质量 |
-| `reference_ledger_coverage` | reference 的 submitted backing | Wave1 有，但分类逻辑复杂（Phase-owned projection vs delegated） |
-| `reference_format` | reference 元数据+节 | 检查 8 个必填字段+5 个语义节，但不验证字段内容的真实性 |
-| `reference_source_url_parseable` | source_url 是合法 URL | 不验证 URL 是否可达 |
-| `reference_index_coverage` | _INDEX.md 导航行 | 只验证行存在+source_layer 标签，纯导航 |
-
-### 合约层（最深但只有少数 gate 有）
-
-| check 类型 | 能力 | 问题 |
-|---|---|---|
-| `depth_review_contract` | Wave1 深度审查合约 | 只在 wave1-complete 用 |
-| `finding_index_contract` | Wave2 finding index 合约 | 只在 wave2-complete 用 |
-| `rerun_add_full_synthesis` | rerun 全量合成检查 | 只在 wave2-complete 用 |
-| `phase_queue_drained` | 队列全局静默 | 只在 wave0/1/2-complete 用 |
-
-## 核心 Gap：结构检查密集，语义验证稀疏
-
-具体看几个关键 gate 的"最弱环节"：
-
-### gate-wave0-complete（14 条 rule）
-
-最强的语义防线是 `schema_valid`（ReferenceMetadataArraySchema）+ `cache_coverage` + work-unit 溯源三道。但：
-
-- **Gap**: `source.yaml` 的 ReferenceMetadataArraySchema 校验了 `url`、`title`、`retrieved_date`、`topic_tag` 四个字段——但 `url` 是否可达、`title` 是否真实、`retrieved_date` 是否合理，schema 不管。
-- **Gap**: `pattern_match` 检查 `example.com` 是手动枚举的，Agent 随便换一个 placeholder domain 就能绕过。
-
-### gate-wave1-complete（20 条 rule）
-
-最强的防线是 `depth_review_contract` + `reference_ledger_coverage`。但：
-
-- **Gap**: `evidence-summary.md` 的检查全是 pattern_match：有链接、有 Key Findings 节、有四个 section。一个全是 "TODO: more research needed" 的文件只要能匹配 regex 就能过。
-- **Gap**: `question-list.md` 的四个 section 检查是单一 regex——section 顺序对了但内容可以全是废话。
-- **Gap**: `reference_format` 检查 8 个元数据字段+5 个语义节**存在**，但不验证**内容**。`source_url: "https://en.wikipedia.org"` 能过；`key_facts: "Various facts about the topic."` 也能过。
-
-### gate-wave2-complete（18 条 rule）
-
-- **Gap**: `synthesis.md` 检查了非空、有 W2F-xxx ref、有 wave1 link——但没有检查 synthesis 的 claim 是否真的被 evidence 支持。
-- **Gap**: `finding-index.yaml` 的 `finding_index_contract` 是最深的结构合约，但它的"coverage"检查是结构性的（15 个字段全不全），不是证据性的。
-- **Gap**: `cross-topic-ledger.md` 的 6 个 section 检查是 tolerant pattern_match（大小写、空格容错），容易空洞通过。
-
-### gate-setup-ready（21 条 rule）
-
-大量 `file_exists`/`dir_exists`/`schema_valid`——这是最成熟的 gate，因为有明确的 Zod schema 做后盾。但它保护的只是"脚手架完整"，不涉及任何研究内容质量。
-
-## 建议的审计方向
-
-不是要一次性全部修好——那又回到无限修 bug 的模式。而是**系统地过一遍每个 gate，问三个问题，标出最弱的点，排优先级**：
-
-### 对每个 gate 的三个问题
-
-1. **这个 gate 要拦住的最坏情况是什么？** Agent 在这里最可能怎么乱发挥？（幻觉 claim、假引用、空壳文件、跳过步骤、伪造 trace...）
-
-2. **当前 rule 集能拦住吗？** 一条一条过：这条 rule 是最优防线吗？还是说有个更深的 check 类型应该存在但还没写？
-
-3. **如果拦不住，下游会怎样？** 这个 gate 的漏网之鱼会在哪个 phase 爆雷？修那个雷的成本 vs 在这个 gate 加强的成本？
-
-### 优先级排序原则
-
-- **P0**: 放行后会在下游造成不可逆污染的 gate（Wave0 的 source 是假的 → 整个研究建立在假证据上）
-- **P1**: 放行后会浪费大量 Agent token 的 gate（Wave1 的 evidence-summary 是空的 → Wave2 拿空输入做 synthesis → 白跑一遍）
-- **P2**: 放行后只在同级可检测、不会污染下游的 gate
-
-### 具体审计维度
-
-1. **`pattern_match` rule 审计** — 逐条检查：这条 regex 真的能区分"有意义的输出"和"Agent 敷衍的空壳"吗？如果不能，需要什么替代方案？
-
-2. **`schema_valid` 扩展机会** — 哪些 target 目前用 pattern_match/field_non_empty，但其实可以定义一个 Zod schema 做更深的验证？
-
-3. **work-unit 溯源覆盖率缺口** — 哪些 phase 的产物目前**不经过** work_unit_output_coverage/work_unit_submission_presence 检查？为什么？应该加吗？
-
-4. **degradation_eligible 审计** — 哪些 `count_floor` rule 标了 degradation_eligible？降级后会不会造成语义空洞？
-
-5. **checker-owned rule 的代码审计** — `source: 'checker'` 的 rule 其验证逻辑在代码里，不在 definition JSON 里。这些 checker 的实现是否和 definition 声明的 contract 一致？有没有 checker 实际上比 definition 弱的情况？
-
-## 产出
-
-不做一次性大修。产出是一份 **per-gate gap map**，格式：
-
-```
-gate: wave1-complete
-  最坏情况: Agent 跳过真实搜索，用 LLM 知识编造 evidence-summary
-  当前最强防线: depth_review_contract + reference_ledger_coverage
-  剩余 gap:
-    - evidence-summary 内容空洞 → pattern_match 太弱
-    - question-list 可以是模板填充 → 没有内容质量检查
-    - reference 的 source_url 可能是 LLM 编的 → 没有 URL 可达性验证
-  建议:
-    - [P1] evidence-summary 加 content quality contract（类似 depth_review_contract 的模式）
-    - [P2] source_url 可达性留到 Wave2 cross-reference resolution 时验证（那边已经有 markdown_link_resolution 的基础设施）
+```text
+incident -> direct fact -> accepted authority -> producer projection
+         -> all consumers/evaluators -> smallest root
+         -> one legal action or honest no-path -> proof class
 ```
 
-每个 gate 一份，放在 `_backlog/plans/gate-schema-audit/` 下。
+只统计 122 条 rule、继续加 prompt prose，或者让 Gate 判断 claim/source 真假，都没有回答这三个问题。
 
-## 与已有 memory 的关联
+## 当前最重要的信号
 
-- [[agent-workflow-governance-loop]] — 核心理念一致：errors are data，但要靠 structured trace 才能 downstream detect and repair。本 audit 的重点是让 gate 产生足够 structured 的 failure signal。
-- [[review-verify-claims-against-code]] — 对 checker-owned rule 的代码审计方法
-- [[triage-weak-model-run-bugs]] — 区分"gate 本身的 schema gap"（本 audit 的范围）和"weak model 执行失败"（应该 suspend 到 backlog）
+- 2026-07-24 至 2026-08-05 的 81 条结案记录只是机制筛选池，其中混有真实修复、
+  no-reproduction、external residual 和 unobserved；不能把它们写成 81 个当前同类 bug。
+- 当前 10 个 Gate / 122 条 rule 的静态 metadata 不是 capability map。Wave1
+  question_list_has_four_sections 虽声明为 regex，实际 dispatch 已进入共享 semantic-section
+  evaluator；BUG-201 必须由真实 Gate-path regression 裁决。
+- accepted gate-skeleton spec 当前同时保留“禁止第二份 rule catalog”和“必须维护逐 rule
+  inventory”两组互斥 clauses；现有 audit test 只实现前者。实现通过不能替代 authority reconciliation。
+- current queue fail() 对每个合法 failure 都选取 caller repair 或创建 generic repair，并无条件
+  插回队列；现有测试只证明一次创建，没有证明 repeated failure 有限终止。
 
-## 不做什么
+这些信号的逐条出处、历史 analogues 与 accepted contract 见
+[evidence-base.md](gate-schema-capability-audit/evidence-base.md)。
 
-- 不给 Agent 加更多 prompt 约束——那是 symptom 修复，不是 root cause
-- 不加新 gate——当前 10 个 gate 够用，问题是每个 gate 的深度不够
-- 不加新依赖——用现有 Zod + node 内置能力
-- 不追求"完美防线"——目标是让每个 gate 的**最弱环节**至少比 Agent 的最强犯错能力高一个级别
+## 可证伪假设
+
+| Hypothesis | 要验证的判断 | 主要反证 |
+|---|---|---|
+| **H1 / Constructibility** | current-attempt authority 生成且紧邻决策点的 projection，会提高首轮可构造性并减少查源码/整批返工 | Agent 已先读完整 projection，仍稳定产生同类错误 |
+| **H2 / Parity** | authority 内部一致、最早 owning admission 拒绝、所有 checkpoint 共用 evaluator，会降低 late rejection 和 verdict drift | evaluator 已复用且 facts 相同，verdict 仍因 identity/snapshot/binding 漂移 |
+| **H3 / Recovery** | prerequisite-aware root + 每 root 一个 legal action / honest no-path，会降低 repair turns、手改 authority 和递归 descendants | structured root/action 完整但 operation 自身仍非法或 recovery 不收敛 |
+| **H4 / Adherence** | 行为失败主要集中在 degraded/recovery/handoff 等 authority 变化点；proximity 和实际 next action 比 substring 更有解释力 | 保留的真实运行显示 happy path 同样失败，或 decision-point delivery 与行为无相关性 |
+
+完整指标、削弱条件和 prompt/control-surface 含义见
+[hypotheses-and-prompt-feedback.md](gate-schema-capability-audit/hypotheses-and-prompt-feedback.md)。
+
+## 下一步系统性观察
+
+先做一个 **G2 meta-contract precheck**：记录 accepted Gate-audit clauses 的冲突及 current
+disposition。它不是第七个 Agent↔Engine obligation，也不自动产生 implementation change。
+
+随后观察六类高价值 blocking obligations，每类至少覆盖一次正常路径和一次 failure/recovery：
+
+| Obligation | 主要 gap | 关键 consumers / decision points |
+|---|---|---|
+| work-unit direct output + dry-submit | G1, G2 | claim projection, authoring, dry-submit, formal submit |
+| Queue payload executable demand | G1, G2 | enqueue, check/inspect, claim, stale repair |
+| Wave1 semantic-section contract | G2 | definition, dispatch, evaluator, Gate feedback |
+| submitted evidence + depth review | G2, G3 | provenance, derived checks, root masking, replacement |
+| terminal failure / repair successor | G3 | fail, successor insertion, inspect/Gate, repeated failure |
+| Final selected-finding backing | proof boundary, G1 | Agent selection, submitted backing, semantic review |
+
+每个样本必须把三类 proof 分开：
+
+1. **Static delivery**：Agent surface 是否交付 current-attempt contract。
+2. **Deterministic Engine**：相同 facts 是否在真实 owning paths 得到同 verdict/root/action。
+3. **Real agent flow**：真实首次返回、读取面、tool calls、下一动作和收敛轨迹。
+
+详细 consumer matrix、统一 metrics、YAML observation record、P0-P2 判定和完成条件见
+[observation-protocol.md](gate-schema-capability-audit/observation-protocol.md)。
+
+## 给 Note / Prompt Engineering 的 Overall 反馈
+
+Prompt 侧缺的不是更多静态约束文本，而是：
+
+- 从 current authority 生成、放在 owning decision point 的 action core；
+- 明确 producer owner、合法 writable surface、done condition；
+- submit 前调用同一 evaluator 的 dry-run / dry-submit；
+- failure 先消费 structured root，并给出一个精确 write_to + same-check rerun；
+- 用真实 Agent transcript/next action 证明 adherence，而不是用 substring test 代替行为。
+
+## 非协商边界
+
+Engine 可以验证 schema、状态、identity、hash、receipt、submitted provenance 和声明的 backing
+绑定；source 是否可信、claim 是否真实、证据是否充分、backing 是否语义支持 finding，仍由
+Agent/HITL 判断。在线 URL 可达性也不是稳定 truth Gate。
+
+因此本审计：
+
+- 不建立第二份静态 per-Gate/per-rule capability catalog；
+- 不新增 generic repair controller、隐式 completion state 或手工 authority 修复路线；
+- 不把 fixture、prompt substring、mock transcript 当真实 Agent behavior proof；
+- 不一次性修改 10 个 Gate 或 122 条 rule；
+- 不自动产生“统一 prompt 重写”或第三个 implementation change。
+
+## 与既定 Remediation 的边界
+
+| Existing change | 继续拥有的实施 | 本 audit 只补充什么 |
+|---|---|---|
+| harden-gate-and-recovery-contracts | BUG-201/202/204 的 Gate 与 terminal-recovery contract | 真实 dispatch/evaluator parity、root-first/no-path observation |
+| remove-recursive-queue-failure-repair | BUG-203 的 queue failure transition | successor legality、descendant depth、finite terminal observation |
+
+只有 H1-H4 获得 current-head direct evidence、达到 P0/P1、且现有 accepted contract 无法覆盖时，
+才沿正常 OpenSpec propose -> explore -> apply -> archive 路径提出后续 change。
+
+## Overall 完成条件
+
+- Gate-audit authority 冲突有 current-head observation 和明确 disposition；
+- 六类 obligation 都有 consumer matrix 与 H1-H4 判断；
+- static delivery、deterministic Engine、real agent flow 三类 proof 分开记账；
+- prompt 侧收到 decision-point/adherence 反馈，只有未被 accepted contract 覆盖的 P0/P1 机制进入提案。
+
+## Detail Index
+
+- [HANDOFF.md](gate-schema-capability-audit/HANDOFF.md)：下一位 Agent 的续接入口、当前状态、
+  read order、guardrails 与 suggested skills。
+- [evidence-base.md](gate-schema-capability-audit/evidence-base.md)：evidence discipline、current-head
+  facts、历史 incident chains、deterministic/semantic boundary。
+- [hypotheses-and-prompt-feedback.md](gate-schema-capability-audit/hypotheses-and-prompt-feedback.md)：
+  H1-H4、falsifiers、prompt/control-surface feedback。
+- [observation-protocol.md](gate-schema-capability-audit/observation-protocol.md)：sample matrix、
+  proof classes、metrics、record template、priority、completion conditions。
