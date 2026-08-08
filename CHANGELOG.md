@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.81
+
+- sync-reference-index now refreshes a deterministic Reference Evidence Map
+  in reference/README.md alongside the existing _INDEX.md inventory. The map
+  separates reference relationships (shared, Topic-specific, cross-Topic, or
+  unknown) from each canonical Topic's current focus status.
+- Both reader targets use their existing independent compare-and-swap
+  persistence boundaries. A partial projection reports its committed and
+  blocked targets and converges by rerunning the same synchronizer; it does
+  not promise an atomic rollback, merge, new Gate rule, or evidence authority.
+- Wave1 refreshes this derived projection after a legal current
+  focus_coverage update. The deterministic tests cover projection and CLI
+  behavior only; they do not claim Subject-Agent research or Agent-flow proof.
+
 ## v0.80
 
 - Wave1 depth reviews may now retain an optional, Phase-owned

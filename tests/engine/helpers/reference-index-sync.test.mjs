@@ -81,4 +81,34 @@ describe('reference index synchronization', () => {
     assert.match(result.reason_code, /target_mismatch/);
     assert.equal(readFileSync(target, 'utf8'), 'concurrent target bytes');
   });
+
+  it('reports and converges a later README CAS block without rollback or merge', () => {
+    const dir = bundle();
+    writeReference(dir, '00-shared-foundation.md', { related_topic: 'all' });
+    const indexTarget = join(dir, 'reference/_INDEX.md');
+    const readmeTarget = join(dir, 'reference/README.md');
+    let payloadFsyncs = 0;
+
+    const blocked = syncReferenceIndex(dir, {
+      syncDate: '2026-07-28',
+      persistenceHooks: {
+        afterPayloadFsync: () => {
+          payloadFsyncs += 1;
+          if (payloadFsyncs === 2) writeFileSync(readmeTarget, 'concurrent README bytes');
+        },
+      },
+    });
+
+    assert.equal(blocked.verdict, 'blocked');
+    assert.match(blocked.reason_code, /target_mismatch/);
+    assert.equal(blocked.blocked_target, 'reference/README.md');
+    assert.deepEqual(blocked.committed_targets, ['reference/_INDEX.md']);
+    assert.equal(readFileSync(readmeTarget, 'utf8'), 'concurrent README bytes');
+    assert.match(readFileSync(indexTarget, 'utf8'), /Reference count:\*\* 1/);
+
+    const retried = syncReferenceIndex(dir, { syncDate: '2026-07-28' });
+    assert.equal(retried.verdict, 'committed');
+    assert.deepEqual(retried.committed_targets, ['reference/README.md']);
+    assert.match(readFileSync(readmeTarget, 'utf8'), /## Reference Evidence Map/);
+  });
 });

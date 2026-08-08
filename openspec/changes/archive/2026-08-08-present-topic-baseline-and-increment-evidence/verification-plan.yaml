@@ -1,0 +1,118 @@
+schema_version: verification-routing/v1
+change: present-topic-baseline-and-increment-evidence
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Reference-relationship classification, current-focus status projection,
+      direct-coordinate rendering, and per-target synchronization verdicts are
+      focused deterministic helper behavior.
+  integration:
+    status: selected
+    rationale: >-
+      The production CLI persists paired navigation targets through the
+      artifact-persistence boundary, and Wave1 Markdown must direct the
+      existing command after one legal focus-coverage update.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      A rerun-shaped temporary bundle must preserve historical focus context
+      separately from a current Topic-level focus declaration through the real
+      synchronizer without a hand-written projection.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      P3 only projects already accepted deterministic facts and adds one
+      mechanical Phase refresh instruction; it neither changes Subject-Agent
+      research, commitment selection, semantic judgment, nor evidence creation.
+claims:
+  - id: reference-evidence-map-direct-fact-rendering
+    statement: >-
+      The renderer classifies flat references only as shared, Topic-specific,
+      cross-Topic, or unknown from the accepted path/metadata/canonical Topic
+      facts, and reports each current Topic's valid focus outcome, no
+      declaration, historical context only for a bound earlier round, or
+      unknown without per-reference increment attribution.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/reference-evidence-map.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: reference-navigation-paired-cas-contract
+    statement: >-
+      The synchronizer retains existing index behavior, updates only changed
+      derived targets through their independent CAS preconditions, reports an
+      explicit blocked partial projection when a later target drifts, and
+      converges on the next same-command retry without merge or rollback.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/reference-index-sync.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: reference-evidence-map-cli-persistence
+    statement: >-
+      The production sync-reference-index CLI creates or refreshes the paired
+      reader navigation projection from an isolated bundle and exposes its
+      committed, unchanged, or blocked machine result without altering
+      submitted evidence or Gate state.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/reference-evidence-map.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-focus-projection-refresh-guidance
+    statement: >-
+      Wave1 guidance tells the Phase Agent to run the existing synchronizer
+      after a legal current focus-coverage update and prohibits manual README
+      or index edits and a focus-specific route.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/wave1-reference-evidence-map-guidance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: reference-evidence-map-rerun-continuity
+    statement: >-
+      A real synchronizer run over a temporary rerun-shaped bundle keeps an
+      earlier focus declaration as historical context, renders a valid current
+      Topic-level increment separately, and does not attribute that increment
+      to individual reference files.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/reference-evidence-map-rerun.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

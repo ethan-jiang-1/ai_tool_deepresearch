@@ -82,8 +82,10 @@ reference only from submitted backing; stage/persist that reference through the
 existing artifact-persistence boundary; run `sync-reference-index`; refresh the
 affected Seed Topic's concrete reference navigation only through the existing
 Projection Packet / `operate-topic-state apply` writer when it changed; and
-rerun the same Wave1 inspect. It SHALL not hand-edit a seed, index, ledger,
-receipt, cache trail, declaration, or trace. A successful submit alone does not
+rerun the same Wave1 inspect. The synchronizer refreshes only its derived
+`_INDEX.md` and README navigation projections; the Phase Agent SHALL not hand
+write either projection. It SHALL not hand-edit a seed, index, ledger, receipt,
+cache trail, declaration, or trace. A successful submit alone does not
 authorize a broad filename choice, direct Seed mutation, or an invented source.
 
 For an index-sync root, the Phase Agent SHALL run the narrow synchronizer and
@@ -107,6 +109,16 @@ reference-count authority. The reference-floor deficit may be cited as a
 read-only queue objective when the existing supplementary decision records that
 queue ID, but depth review shall not create, certify, or recompute it.
 
+When the Phase Agent legally writes or updates a valid current
+`focus_coverage` block in that depth review, it SHALL run the same existing
+`sync-reference-index` operation before rerunning the named Wave1 inspect. The
+operation only refreshes the derived reader projection from direct facts; it
+does not make focus coverage a reference-file attribute, evidence authority,
+or new closeout transition. A blocked synchronization remains its own
+Engine-operation root: the Agent SHALL rerun the same operation from current
+bytes and SHALL not hand-edit README, `_INDEX.md`, focus coverage, or a Gate
+result to make the map appear current.
+
 At each affected inspect/gate/submit failure, Phase guidance SHALL consume the
 Engine-provided `repair_kind`, `missing_fact`, `write_to`, and `rerun` fields.
 When `repair_kind` is `agent_action|engine_operation`, `write_to` is an already
@@ -121,8 +133,9 @@ classifications shall not themselves authorize a user-facing wait or escalation.
 - **WHEN** a Wave1 work unit formally submits accepted backing that lacks its
   current canonical consumer projection
 - **THEN** phase guidance SHALL direct the Phase Agent to materialize the
-  canonical reference, synchronize the index, refresh an affected Seed Topic
-  ref through the existing packet writer, and rerun Wave1 inspect
+  canonical reference, synchronize the navigation projection, refresh an
+  affected Seed Topic ref through the existing packet writer, and rerun Wave1
+  inspect
 - **AND** it SHALL not require the Sub-agent to write a consumer reference or
   the user to run a persistence/index/packet command
 
@@ -180,6 +193,15 @@ classifications shall not themselves authorize a user-facing wait or escalation.
 - **THEN** it SHALL record reviewed work-unit refs and Phase-owned judgments
 - **AND** it SHALL not make copied source/cache/URL or derived-floor arrays a
   second deterministic authority
+
+#### Scenario: valid focus update refreshes only the derived reader map
+
+- **WHEN** the Phase Agent legally writes or updates valid current focus
+  coverage for one Topic
+- **THEN** guidance SHALL direct the existing `sync-reference-index` operation
+  before the same Wave1 inspect
+- **AND** it SHALL not make the focus declaration a reference-file label, Gate
+  route, or manual README/index editing task
 
 #### Scenario: Agent performs authorized same-check repair
 

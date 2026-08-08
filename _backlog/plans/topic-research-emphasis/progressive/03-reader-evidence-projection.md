@@ -1,22 +1,23 @@
 # P3: Reader Evidence Projection
 
-> Proposed OpenSpec change name: `present-topic-baseline-and-increment-evidence`
-> Status: not created; P0 reader-model decision and P2 archive are complete;
-> remaining discovery is required before proposal
-> Dependencies: P0 complete, P2 archived as
-> `2026-08-08-add-traceable-topic-focus-coverage`
+> OpenSpec change: present-topic-baseline-and-increment-evidence
+> Status: archived as 2026-08-08-present-topic-baseline-and-increment-evidence
+> Dependencies: P0 complete; P2 archived as
+> 2026-08-08-add-traceable-topic-focus-coverage; P3 finalizer checks passed.
 
 ## Goal
 
 Give a report reader a compact, provenance-backed way to distinguish:
 
 1. shared foundation, Topic-specific evidence, and cross-Topic synthesis; and
-2. the common baseline from an accepted focus-driven increment of a later
-   rerun.
+2. each current canonical Topic focus outcome from its direct profile and
+   depth-review facts.
 
-The projection answers those reader questions without asking them to infer
-research allocation from `reference/` filename prefixes, file counts, byte
-counts, or a seed-navigation shortcut.
+The projection deliberately keeps those questions separate. It does not
+attribute a baseline or current focus increment to an individual reference
+file without a separate accepted direct binding, and it never asks readers
+to infer allocation from filename prefixes, file counts, byte counts, or a
+seed-navigation shortcut.
 
 ## Authority Boundary
 
@@ -36,9 +37,9 @@ In scope:
 
 - present the P0-approved reader model using direct provenance-backed
   coordinates from the actual accepted evidence and rerun records;
-- distinguish evidence relationship (`shared`, `Topic-specific`, or
-  `cross-Topic`) from work era (`baseline`, current focus-driven increment,
-  or historical context) where the Source of Record supports that statement;
+- distinguish evidence relationship (shared, Topic-specific, cross-Topic,
+  or unknown) from one separate Topic-level current focus outcome, without
+  inferring a per-reference work era;
 - visibly preserve no-new-increment, partial, blocked, and unknown/absent
   cases rather than treating them as successful additional research;
 - make a small, reader-oriented entry point that remains compatible with the
@@ -75,77 +76,77 @@ and actual P2 output. Current planning candidates are:
   presentation distinctions that must remain visible.
 - [x] P2 is archived and its actual focus-coverage/rerun coordinates are
   known; P3 does not invent labels for facts P2 did not establish.
-- [ ] The supplied-bundle ambiguity is reproduced from the current accepted
+- [x] The supplied-bundle ambiguity is reproduced from the current accepted
   projection or a documented compatibility equivalent, with the direct
   Source-of-Record coordinates recorded beside it.
-- [ ] Current candidate main specs and any active overlap have been read and
+- [x] Current candidate main specs and any active overlap have been read and
   the proposal records a complete capability-discovery table.
-- [ ] The proposal can state why one derived projection is sufficient and why
+- [x] The proposal can state why one derived projection is sufficient and why
   a second ledger, reader score, or new file hierarchy is unnecessary.
 
 ## Progressive Checklist
 
 ### Proposal and design
 
-- [ ] Create a Chinese proposal that names the reader question, direct Source
+- [x] Create a Chinese proposal that names the reader question, direct Source
   of Record, non-goals, version-bump assessment, and the parent-plan/evidence
   coordinates.
-- [ ] Re-run capability discovery and classify every candidate as Modify,
+- [x] Re-run capability discovery and classify every candidate as Modify,
   Verify-only, Excluded, or New. Declare a new capability only when inspected
   contracts leave no current owner for an observable behavior.
-- [ ] Write the semantic-precision reflection for the projection: which reader
+- [x] Write the semantic-precision reflection for the projection: which reader
   can answer which bounded question, which relationship and era distinctions
   remain visible, and how the reader reaches a normal answer or explicit
   unknown without examining raw paths.
-- [ ] Specify the shortest direct-fact control loop: accepted evidence/rerun
+- [x] Specify the shortest direct-fact control loop: accepted evidence/rerun
   coordinate -> derived entry -> direct navigation/diagnostic. Keep the
   presentation out of Gate authority and avoid a parallel reconciliation loop.
-- [ ] Specify treatment for shared, Topic-specific, cross-Topic, baseline,
+- [x] Specify treatment for shared, Topic-specific, cross-Topic, baseline,
   current increment, historical context, absent increment, `partial`, and
   `blocked` only where authoritative facts support each label.
-- [ ] Create a closed `verification-plan.yaml` and `tasks.md` with requirement
+- [x] Create a closed `verification-plan.yaml` and `tasks.md` with requirement
   IDs, independent done conditions, and the required plan-review/closeout
   feedback markers.
 
 ### Apply and evidence
 
-- [ ] Complete plan review before any target edit.
-- [ ] Implement the smallest selected projection and its direct navigation
+- [x] Complete plan review before any target edit.
+- [x] Implement the smallest selected projection and its direct navigation
   links; retain the original submitted evidence coordinates and do not make
   presentation files writable runtime truth.
-- [ ] Add routed deterministic verification that each displayed classification
+- [x] Add routed deterministic verification that each displayed classification
   resolves to an accepted direct fact, and that a missing/incomplete increment
   is not rendered as coverage.
-- [ ] Add a focused reader-path proof against real-shaped accepted evidence
+- [x] Add a focused reader-path proof against real-shaped accepted evidence
   facts: shared, Topic-specific, and cross-Topic material must remain
   distinguishable even when existing filenames would group them misleadingly.
-- [ ] Add a rerun-shaped proof that historical baseline evidence and the
+- [x] Add a rerun-shaped proof that historical baseline evidence and the
   current increment remain separately attributable. Do not use a file-count
   assertion as evidence of either quality or effort.
-- [ ] Run an `agent_flow_e2e` only if the selected change actually modifies an
+- [x] Run an `agent_flow_e2e` only if the selected change actually modifies an
   Agent-owned producing surface; otherwise document why deterministic routing
   is sufficient for this derived-reader view.
-- [ ] Record real commands, outputs, direct projection coordinates, and
+- [x] Record real commands, outputs, direct projection coordinates, and
   residual reader risks in the change rather than treating rendered Markdown
   as proof by itself.
 
 ### Closeout
 
-- [ ] Run the verification selected by the accepted routing plan, strict
+- [x] Run the verification selected by the accepted routing plan, strict
   OpenSpec validation, requirement-traceability, main-spec, and
   verification-routing checks.
-- [ ] Conduct closeout review; turn every actionable finding into an ordinary
+- [x] Conduct closeout review; turn every actionable finding into an ordinary
   unchecked repair task before archive.
-- [ ] Sync/re-compare accepted delta behavior with main specs where applicable,
+- [x] Sync/re-compare accepted delta behavior with main specs where applicable,
   then archive through the governed finalizer.
 
 ## Exit Check
 
-P3 is complete only when the selected reader can tell what kind of accepted
-material they are viewing and whether it belongs to the common baseline or a
-specific current increment, while following each displayed claim to its direct
-Source of Record. A reader must also be able to see an absent, partial, or
-blocked increment without mistaking it for completed focus work.
+P3 is complete. The selected reader can distinguish a reference relationship
+and see each current Topic focus status with direct coordinates. The
+projection makes absent, partial, blocked, historical, and unknown outcomes
+visible without mistaking them for completed focus work; it does not invent
+a per-reference baseline or increment label.
 
 No P4 is assumed. Resume planning only when real run evidence reveals a
 separate unresolved reader question or a compatibility constraint that this

@@ -1,9 +1,10 @@
 # Progressive Delivery Plan
 
-> Status: active / P1 and P2 archived; P3 unblocked for discovery
+> Status: complete / P1, P2, and P3 archived; no active change
 > Observed OpenSpec state: 2026-08-08, no active change. P1 archived as
-> `2026-08-08-align-topic-focus-and-rerun-guidance`; P2 archived as
-> `2026-08-08-add-traceable-topic-focus-coverage`.
+> 2026-08-08-align-topic-focus-and-rerun-guidance; P2 archived as
+> 2026-08-08-add-traceable-topic-focus-coverage; and P3 archived as
+> 2026-08-08-present-topic-baseline-and-increment-evidence.
 > Scope: turn the confirmed Topic research-emphasis policy into small,
 > reviewable OpenSpec changes without prematurely changing Harness behavior.
 
@@ -103,17 +104,20 @@ launched, so it supplies no current Agent-behavior outcome.
 
 ### P3 - Reader evidence projection
 
-- [x] Confirm P2's actual output coordinates and reader evidence needs.
-- [ ] Create one focused proposal from
-  [03-reader-evidence-projection.md](03-reader-evidence-projection.md).
-- [ ] Complete all required planning artifacts, then run
-  `$polish-openspec-change <P3-change>` until it returns `ready for apply`.
-- [ ] Enter `/opsx:apply` only after that outcome; apply, prove, close out,
-  and archive the change.
+- [x] Confirm P2 direct-fact boundaries and reader evidence needs.
+- [x] Create, polish, and validate the focused
+  present-topic-baseline-and-increment-evidence proposal.
+- [x] Apply, prove, close out, sync accepted requirements, and archive
+  through the governed finalizer.
 
-P3 addresses the original `reference/` presentation problem. It presents
-provenance-backed views; it does not relabel reference file count as research
-quality.
+P3 archived as 2026-08-08-present-topic-baseline-and-increment-evidence.
+It adds a derived Reference Evidence Map to reference/README.md alongside
+the existing index: every flat reference is shown only as shared,
+Topic-specific, cross-Topic, or unknown, while focus status is one separate
+current-Topic view. The map does not attribute an individual reference to
+a focus increment without an accepted direct binding. The finalizer passed
+all archive checks; the selected deterministic tests prove projection and
+persistence behavior, not Subject-Agent research or semantic usefulness.
 
 ## Per-Change Lifecycle Checklist
 

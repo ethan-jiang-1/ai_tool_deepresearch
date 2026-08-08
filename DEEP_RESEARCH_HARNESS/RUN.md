@@ -1,13 +1,25 @@
 # RUN.md — DEEP_RESEARCH_HARNESS 入口
 
-> **DEEP_RESEARCH_HARNESS v0.80**
+> **DEEP_RESEARCH_HARNESS v0.81**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DEEP_RESEARCH_HARNESS 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.80
+## Current Release: v0.81
+
+- reference/README.md now receives a Reference Evidence Map from the same
+  sync-reference-index operation that refreshes _INDEX.md. It presents derived
+  reference relationships separately from each canonical Topic's current focus
+  status and links back to direct bundle coordinates.
+- README and index persistence remain independent compare-and-swap operations:
+  a blocked later target reports the partial projection and reruns the same
+  command from current bytes. The map is navigation only; it neither proves
+  submitted backing nor changes Gate, queue, lifecycle, or evidence authority.
+- Wave1 refreshes the map after a legal current focus_coverage update before
+  the same inspect. The release has deterministic projection evidence only,
+  not Subject-Agent research or Agent-flow proof.
 
 - A Wave1 Phase Agent may record the smallest current focus commitments in the
   optional `focus_coverage` block of the existing depth review. Covered
