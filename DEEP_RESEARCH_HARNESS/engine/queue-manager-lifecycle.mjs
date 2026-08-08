@@ -522,14 +522,24 @@ export function inspect(queue, bundleDir = process.cwd()) {
   const current = q.active_window[0];
   const inFlight = Object.values(q.delegated_in_flight || {});
   const expired = inFlight.filter((entry) => entry.deadline_at && Date.parse(entry.deadline_at) < Date.now());
-  if (!current && inFlight.length === 0) issues.push('active_window is empty and no delegated work units are in flight');
+  if (!current && inFlight.length === 0) {
+    // Fully drained: no front demand and no in-flight work. Distinct verdict,
+    // distinguishable from both passed (healthy work) and a real failure (AGQ-027).
+    return {
+      passed: false,
+      check: false,
+      drained: true,
+      inspect: ['active_window is empty and no delegated work units are in flight'],
+      advice: 'Queue is drained; no in-flight work. Run the drain gate when required.',
+    };
+  }
   for (const entry of expired) issues.push(`delegated work unit expired: ${entry.work_id} for ${entry.queue_item_id}`);
   if (current && !current.targets?.delegates) {
     const receipts = checkReceipts(q, current, bundleDir);
     if (!receipts.passed) issues.push(...receipts.inspect);
   }
   return issues.length === 0 ? check(true, 'Queue is executable')
-    : { passed: false, check: false, inspect: issues, advice: 'Refill queue, add missing receipts, or record a blocker.' };
+    : { passed: false, check: false, drained: false, inspect: issues, advice: 'Refill queue, add missing receipts, or record a blocker.' };
 }
 
 export function pendingCount(queue) {

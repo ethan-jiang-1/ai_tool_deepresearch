@@ -1,5 +1,5 @@
 # Check & Inspect Feedback Loop
-> req: CHI-001, CHI-002, CHI-003, CHI-004
+> req: CHI-001, CHI-002, CHI-003, CHI-004, CHI-005
 
 > delta-synced: make-work-unit-attempt-recovery-explicit (CHI-004)
 

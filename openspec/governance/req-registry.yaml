@@ -184,6 +184,7 @@ AGQ-023: agentic-queue — Phase task-card examples preserve queue_item_id as qu
 AGQ-024: agentic-queue — Actor preflight no-claim preserves queue demand and lifecycle semantics
 AGQ-025: agentic-queue — New topic-scoped queue demand binds canonical topic UID and current slug
 AGQ-026: agentic-queue — Submitted predecessors with immutable supersession relations create a fresh queue successor without reactivation
+AGQ-027: agentic-queue — operate-queue check reports a distinct drained conclusion when the queue is fully drained
 
 # agent/cmd-subagent-environment
 CSE-001: cmd-subagent-environment — Command playbook for project-level real subagent setup
@@ -751,6 +752,7 @@ WAI-007: wave1-intake — Wave1 batch parallel sub-agent execution protocol via 
 WAI-008: wave1-intake — Wave1 topic references are Phase-owned materializations after successful submit
 WAI-009: wave1-intake — Reference-floor-deficit feedback names the depth-review sync for supplementary work units
 WAI-010: wave1-intake — Wave1 reference-floor inspect surfaces canonical reference targets
+WAI-011: wave1-intake — Evidence-summary Key Findings semantic section includes nested descendant subsection content
 
 # research/wave2-synthesis
 WTS-001: wave2-synthesis — Wave2 phase queue-driven three-stage execution

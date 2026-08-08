@@ -1,6 +1,6 @@
 # Agentic Queue
 
-> req: AGQ-001, AGQ-002, AGQ-003, AGQ-004, AGQ-005, AGQ-006, AGQ-007, AGQ-008, AGQ-009, AGQ-010, AGQ-011, AGQ-012, AGQ-013, AGQ-014, AGQ-015, AGQ-016, AGQ-017, AGQ-018, AGQ-019, AGQ-020, AGQ-021, AGQ-022, AGQ-023, AGQ-024, AGQ-025, AGQ-026
+> req: AGQ-001, AGQ-002, AGQ-003, AGQ-004, AGQ-005, AGQ-006, AGQ-007, AGQ-008, AGQ-009, AGQ-010, AGQ-011, AGQ-012, AGQ-013, AGQ-014, AGQ-015, AGQ-016, AGQ-017, AGQ-018, AGQ-019, AGQ-020, AGQ-021, AGQ-022, AGQ-023, AGQ-024, AGQ-025, AGQ-026, AGQ-027
 
 > delta-synced: add-audited-late-accept-for-timed-out-work-units (AGQ-018, AGQ-019)
 > delta-synced: make-work-unit-attempt-recovery-explicit (AGQ-026)
@@ -1005,3 +1005,30 @@ SHALL not reopen.
 - **AND** it SHALL not select by greatest `attempt_index`, count an abandoned retry as a sibling branch, or
   reopen the superseded predecessor
 - **AND** an already submitted retry SHALL continue to block late-submit and remain the only current leaf
+
+### Requirement: `operate-queue check` SHALL report a distinct drained conclusion for a fully drained queue
+
+When a queue has an empty `active_window`, an empty `refill_pool`, and no
+`delegated_in_flight` work, `operate-queue check` SHALL report a distinct `drained`
+conclusion rather than `passed: false`. The `drained` conclusion SHALL be
+distinguishable from both `passed: true` (work is available and healthy) and
+`passed: false` (a blocker or missing receipt), and SHALL NOT advise the Agent to
+refill or record a blocker.
+
+#### Scenario: a fully drained queue reports drained
+
+- **WHEN** `active_window`, `refill_pool`, and `delegated_in_flight` are all empty
+- **THEN** `operate-queue check` SHALL return a `drained` conclusion
+- **AND** the output SHALL NOT instruct the Agent to refill or record a blocker
+
+#### Scenario: a healthy queue with work reports passed
+
+- **WHEN** the active window contains work and the queue is healthy
+- **THEN** `operate-queue check` SHALL return `passed: true`
+- **AND** the `drained` conclusion is not used
+
+#### Scenario: a blocker or missing receipt still fails
+
+- **WHEN** the queue has a blocked item or a missing receipt
+- **THEN** `operate-queue check` SHALL return `passed: false`
+- **AND** the `drained` conclusion is not used for a non-drained failure

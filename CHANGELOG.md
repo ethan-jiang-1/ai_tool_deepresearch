@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.78
+
+- Markdown semantic sections now include nested descendant subsection content: a
+  `## Key Findings` whose findings live under `###` subsections is no longer judged
+  empty by the evidence-summary evaluator (WAI-011).
+- `operate-queue check` reports a distinct `drained: true` conclusion when the
+  queue is fully drained (empty active window, refill pool, and in-flight work),
+  instead of reporting `passed: false` with a refill/blocker advice (AGQ-027).
+
 ## v0.77
 
 - Reference frontmatter failures now name the offending key/value and the YAML

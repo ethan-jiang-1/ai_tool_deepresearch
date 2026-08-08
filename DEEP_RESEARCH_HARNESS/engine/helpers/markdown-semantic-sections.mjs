@@ -10,14 +10,29 @@ export function normalizeMarkdownSemanticHeading(value) {
 
 export function markdownSemanticSectionEntries(mdContent) {
   const content = String(mdContent || '');
-  const matches = [...content.matchAll(/^[ \t]{0,3}#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*$/gm)];
-  return matches.map((match, index) => ({
-    name: normalizeMarkdownSemanticHeading(match[1]),
-    body: content.slice(
-      match.index + match[0].length,
-      matches[index + 1]?.index ?? content.length,
-    ).trim(),
+  const matches = [...content.matchAll(/^[ \t]{0,3}(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$/gm)];
+  const parsed = matches.map((match) => ({
+    level: match[1].length,
+    start: match.index,
+    end: match.index + match[0].length,
+    name: normalizeMarkdownSemanticHeading(match[2]),
   }));
+  // A section body extends from its own heading until the next heading of the
+  // SAME or HIGHER level (fewer or equal `#`). Lower-level descendant headings
+  // (e.g. `###` under `##`) are part of the parent section body (WAI-011).
+  return parsed.map((entry, index) => {
+    let bodyEnd = content.length;
+    for (let next = index + 1; next < parsed.length; next++) {
+      if (parsed[next].level <= entry.level) {
+        bodyEnd = parsed[next].start;
+        break;
+      }
+    }
+    return {
+      name: entry.name,
+      body: content.slice(entry.end, bodyEnd).trim(),
+    };
+  });
 }
 
 /** Parse Markdown sections by semantic heading, independent of level, case, spacing, or order. */

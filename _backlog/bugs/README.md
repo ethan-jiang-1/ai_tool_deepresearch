@@ -25,7 +25,6 @@
 | [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | historical repeated-rendering/context-pressure hypothesis；尚无 current-head causal evidence |
 | [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P2 | wave0→wave1 | historical report-instead-of-execute observation；无 current-head Phase-Agent reproduction |
 | [BUG-175](BUG-175-count-floors-as-absolute-gate-blockers.md) | P2 | wave0 | `exploratory_map` per-topic=10、shared=`4 + 1 * topic_count`；count-floor-only Gate failure 可在 fatigue threshold 后 degraded handoff，剩余问题是默认阈值校准 |
-| [BUG-205](BUG-205-markdown-semantic-sections-collapse-nested-headings.md) | P2 | wave1 | semantic-section parser 把 `###` 子节当边界，`## Key Findings` 下只有 `###` 子节时被 `key_findings_missing_or_empty` 拒绝（本 run 2/5 topic 命中） |
 
 ## 新增 (2026-08-08)
 
@@ -43,10 +42,8 @@ current-head 观察，附复现路径。source: CCDS4 (Claude Code + DeepSeek v4
 | BUG-208 | 同 change：finding currentness 文档化 + apply 反馈点名缺失事实（WTS-012）。 |
 | BUG-210 | 同 change：reference-floor-deficit 反馈点名 depth-review 同步（WAI-009）。 |
 | BUG-211 | 同 change：canonical Wave1 locator 推导文档化 + inspect 输出 canonical target（REF-011/WAI-010）。 |
-
-BUG-205（semantic-section parser）与 BUG-209（queue check drain 语义）仍活跃，归
-`_backlog/plans/bug-205-211-feedback-and-evaluator-remediation.md` 的 Change 2
-（evaluator/CLI 行为修正）。
+| BUG-205 | OpenSpec change `make-evaluator-and-cli-behavior-direct`（v0.78）：semantic-section parser 把 `###` 子节并入父 body，`## Key Findings` 下 `###` 子节不再判空（WAI-011）。 |
+| BUG-209 | 同 change：`operate-queue check` 对已 drain queue 返回显式 `drained: true`，不再 `passed:false` + refill 建议（AGQ-027）。 |
 
 ## 最近关闭 (2026-08-07)
 

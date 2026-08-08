@@ -1,0 +1,59 @@
+schema_version: verification-routing/v1
+change: make-evaluator-and-cli-behavior-direct
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      parseMarkdownSemanticSections nesting and the queue check drained-verdict
+      logic are isolated deterministic functions; focused node:test cases verify
+      the section-body and verdict semantics without a runtime bundle.
+  integration:
+    status: selected
+    rationale: >-
+      The wave1 evidence-summary dry-submit behavior and the operate-queue check
+      CLI conclusion cross evaluator/CLI boundaries; JS-led integration tests
+      exercise them over fixture state.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale lifecycle behavior changes; corrected semantics are
+      covered at unit/integration boundary.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      These are deterministic evaluator/CLI semantics; a real Phase-Agent run is
+      not required, and no host-level behavior claim is made.
+claims:
+  - id: nested-key-findings-section-nonempty
+    statement: >-
+      parseMarkdownSemanticSections includes descendant subsection content in a
+      parent section body, so a Key Findings section whose findings live under
+      ### subsections is not judged empty; a truly empty section still is.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/markdown-semantic-sections.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: queue-check-drained-verdict
+    statement: >-
+      operate-queue check returns a distinct drained conclusion for a fully
+      drained queue and does not advise refill or blocker for the drained state.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/queue-check-drained-verdict.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
