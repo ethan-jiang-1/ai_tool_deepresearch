@@ -74,5 +74,6 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-050 | 2026-08-06 | two-level-specs-categorization.md + two-level-specs-categorization.primary-sources.md | 84 个主 spec 迁移到七域嵌套 capability path（agent/engine/bundle/research/verification/workflow/governance），`openspec/specs/README.md` catalog + config 契约 + taxonomy/discovery 两个 checker 落地；经 `rebaseline-capability-taxonomy` change archive（2026-08-06）。primary-sources 为 OpenSpec v1.7.0 capability-path 研究底稿。 |
 | CLS-052 | 2026-08-06 | experiment-progressive-follow-up-plan.md | Closed as an external re-entry record: future host capability, fresh profile selection, objective, and budget are required before a new bounded plan may exist. |
 | CLS-053 | 2026-08-06 | silent-autonomous-execution.md | Closed as a current-head reproduction record: no deterministic root or fresh `agent_flow_e2e` observation supports a change; canonical Harness links updated after rebaseline. |
+| CLS-055 | 2026-08-08 | bug-205-211-feedback-and-evaluator-remediation.md | 一次完整 real-actor run 暴露的 7 个确定性摩擦点（BUG-205..211）；两个 OpenSpec change 归档（v0.77 `make-feedback-name-contract-roots` + v0.78 `make-evaluator-and-cli-behavior-direct`）后全部 fixed。 |
 
-**Next available plan ID: CLS-054**
+**Next available plan ID: CLS-056**

@@ -3,7 +3,7 @@ bug_id: BUG-208
 title: Wave2 finding-index currentness requirements (`W2F-[0-9]{3,}` id + `created_in_rerun_count`) are not surfaced by feedback
 severity: P3
 phase: wave2
-status: open
+status: fixed
 source: CCDS4 (Claude Code + DeepSeek v4, 2026-08-07)
 surfaced_at: 2026-08-07
 ---

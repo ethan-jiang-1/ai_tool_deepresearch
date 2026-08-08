@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-08-07 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-08-08 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -142,6 +142,7 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-134 | 2026-07-28 | Wave2 synthesis and ledger artifacts no longer enter the Seed Topic return-map parser; their independent contracts retain ownership |
 | BUG-135 | 2026-07-28 | Normal readiness-to-Final status transaction now commits the authoritative completed lifecycle state while preserving rollback and post-final recovery |
 | BUG-103 | 2026-07-28 | `start-research` now delivers the accepted `enter-phase -> source-gate advance-status -> execute` handoff order; lifecycle writers remain intentionally separate |
+| BUG-104 | 2026-08-08 | Current-head no-reproduction: default `enter-phase` emits a bounded presentation; complete closure requires explicit `--full` |
 | BUG-139 | 2026-07-29 | DPT-selected research entry contract now explicitly routes before generic research shortcuts; host-level matcher suppression remains residual |
 | BUG-140 | 2026-07-29 | DPT-selected research entry contract now prohibits pre-entry ad-hoc search/fetch/synthesis; host tool availability remains residual |
 | BUG-141 | 2026-07-29 | Wave Gate public verdict is mutually exclusive across blocking failure, clean pass, and degraded handoff |
@@ -194,8 +195,15 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-202 | 2026-08-07 | Missing submitted-work-unit root-first fail-closed feedback (`v0.76`) |
 | BUG-203 | 2026-08-07 | Queue failure terminates without recursive generic repair successors (`v0.75`) |
 | BUG-204 | 2026-08-07 | Closed as stale terminal fixture contract drift; strict snapshot/hash protections retained (`v0.76`) |
+| BUG-205 | 2026-08-08 | Semantic-section parser no longer treats nested `###` as section boundary; Key Findings organized in subsections is non-empty (`v0.78` WAI-011) |
+| BUG-206 | 2026-08-08 | Reference `acceptance_status: accepted :warning:` quoting documented; frontmatter failure names offending value (`v0.77` REF-010) |
+| BUG-207 | 2026-08-08 | `operate-topic-state schema` exposes wave-dependent source_identity forms + wave_rules (`v0.77` CTS-010) |
+| BUG-208 | 2026-08-08 | Wave2 finding currentness (`W2F-\d{3}`, `created_in_rerun_count`) documented; apply feedback names missing fact (`v0.77` WTS-012) |
+| BUG-209 | 2026-08-08 | `operate-queue check` reports distinct `drained: true` for a fully drained queue (`v0.78` AGQ-027) |
+| BUG-210 | 2026-08-08 | Wave1 reference-floor-deficit feedback names depth-review `reviewed_work_unit_refs` sync (`v0.77` WAI-009) |
+| BUG-211 | 2026-08-08 | Canonical Wave1 locator derivation documented + inspect surfaces canonical target (`v0.77` REF-011/WAI-010) |
 
-**Next available bug ID: BUG-205**
+**Next available bug ID: BUG-212**
 
 ---
 

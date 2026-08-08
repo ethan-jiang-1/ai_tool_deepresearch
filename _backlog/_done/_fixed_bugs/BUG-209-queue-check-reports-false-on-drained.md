@@ -3,7 +3,7 @@ bug_id: BUG-209
 title: `operate-queue check` returns `passed:false` when the queue is fully drained
 severity: P3
 phase: wave0
-status: open
+status: fixed
 source: CCDS4 (Claude Code + DeepSeek v4, 2026-08-07)
 surfaced_at: 2026-08-07
 ---

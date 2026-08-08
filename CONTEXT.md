@@ -200,6 +200,47 @@ only who decides that class of facts; it does not by itself grant authority,
 capability, permission, liveness, or evidence.
 _Avoid_: projection, chat summary, guidance prose
 
+## Research Design
+
+**Topic research emphasis**:
+An optional, user-readable planning decision that asks for additional research
+on one Topic after every Topic has met the common delivery baseline. It guides
+incremental research selection, including a later rerun; it is not currently a
+profile field, Gate rule, runtime authority, quality score, or permission to
+reduce another Topic below its baseline.
+It may be captured optionally during the existing HITL1 decision and revised
+when HITL2 records a legal rerun rationale; the later silent rerun phase only
+consumes that decision. It does not create another interactive checkpoint.
+_Avoid_: topic weight, per-Topic quality score, scope role, source-count floor
+
+**Minimal independent topic map**:
+A user-approved set of canonical Topics that preserves the independent research
+questions needed for a run, without splitting a single answer merely to reach a
+target count. A runnable map has at least one Topic, while its upper size is
+not preset; the Agent recommends grouping or consolidation when that makes the
+map easier to review. It is a semantic decomposition, not a workload queue,
+source-count calculation, or research-emphasis score.
+_Avoid_: fixed 3-5 topic target, work-unit count, topic weight, scope-role count
+
+**Research focus brief**:
+An optional natural-language explanation of what additional understanding a
+user wants from one Topic, with any relevant source, scope, comparison, or
+delivery constraints. It is the user-facing expression of Topic research
+emphasis; the Agent may turn it into a readable research direction, but it is
+not a numeric formula, a profile override, a Gate verdict, or Engine-owned
+research judgment.
+_Avoid_: weight form, source-floor override, Wave command, queue instruction
+
+**Traceable focus coverage**:
+A future deterministic planning/checkpoint boundary for an emphasized Topic:
+every approved focus commitment must have submitted evidence backing or an
+explicit, visible limitation. Its compact outcome may be `covered`, `partial`,
+or `blocked`; it proves traceability of incremental work, not that arbitrary
+natural-language intent was semantically answered correctly. Semantic
+usefulness remains a User/Agent review question at HITL2. This is a confirmed
+design direction, not a current Gate, schema field, or Engine verdict.
+_Avoid_: semantic-quality score, LLM self-rating, source-count quota, HITL2 replacement
+
 ## Deterministic Checkpoints
 
 **Gate**:

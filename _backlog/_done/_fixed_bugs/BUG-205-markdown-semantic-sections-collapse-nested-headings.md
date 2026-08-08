@@ -3,7 +3,7 @@ bug_id: BUG-205
 title: markdown semantic-section parser treats nested headings as boundaries, making `## Key Findings` with `###` subsections appear empty
 severity: P2
 phase: wave1
-status: open
+status: fixed
 source: CCDS4 (Claude Code + DeepSeek v4, 2026-08-07)
 surfaced_at: 2026-08-07
 ---

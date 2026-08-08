@@ -3,7 +3,7 @@ bug_id: BUG-210
 title: Wave1 supplementary work units are not auto-included in depth-review, and the floor-deficit feedback does not point there
 severity: P2
 phase: wave1
-status: open
+status: fixed
 source: CCDS4 (Claude Code + DeepSeek v4, 2026-08-07)
 surfaced_at: 2026-08-07
 ---

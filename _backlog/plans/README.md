@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-07 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-08 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,10 +17,10 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
+| `topic-research-emphasis/` | 研究主题共同基线之上的差异化追加投入：第一层 UX、重跑语义、可解释性与 Engine/Agent 边界已收敛；读者证据视图与最小 OpenSpec 范围留待后续。 | active（first-order design settled） |
 | `gate-schema-progressive-gate-schema-queue-remediation` | 长程执行总线：两个有界 OpenSpec change 已归档为 `v0.75` / `v0.76`；后续保留 audit observation 和严格的第三-change 触发条件。 | active（Phase 3 observation pending） |
 | `bug-200-204-gate-and-queue-remediation` | BUG-200--204 的收敛分诊：关闭 current-head 已覆盖的 BUG-200；以两个 OpenSpec change 分别修 Gate/recovery contract 与递归 queue repair；不将 gate audit 拆为独立生命周期，也不让无 submitted evidence 的 topic 伪造完成。 | ready for OpenSpec proposals |
 | `gate-schema-capability-audit` | 全面 Gate quality audit（重开 2026-08-07）：per-gate gap map 与语义质量审计未完成；BUG-201/202/204 的确定性闭环已由 `bug-200-204-gate-and-queue-remediation` change 1 收敛，其余内容质量 concerns 仍待审计。 | active（审计未闭环） |
-| `bug-205-211-feedback-and-evaluator-remediation` | 一次完整 real-actor run 暴露的 7 个确定性摩擦点（BUG-205..211）。两个 OpenSpec change 均已完成归档：`make-feedback-name-contract-roots`（v0.77，206/207/208/210/211）+ `make-evaluator-and-cli-behavior-direct`（v0.78，205/209）。7 个 bug 全部 fixed。 | completed（待移入 _done/_closed_plans/） |
 
 ---
 

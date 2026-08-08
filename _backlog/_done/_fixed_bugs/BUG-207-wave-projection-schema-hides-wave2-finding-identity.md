@@ -3,7 +3,7 @@ bug_id: BUG-207
 title: `operate-topic-state schema --context wave_projection` shows `source_identity.kind` closed to `submitted_work`, but wave2_judgment entries require `finding`
 severity: P2
 phase: wave2
-status: open
+status: fixed
 source: CCDS4 (Claude Code + DeepSeek v4, 2026-08-07)
 surfaced_at: 2026-08-07
 ---

@@ -3,7 +3,7 @@ bug_id: BUG-206
 title: reference `acceptance_status: accepted :warning:` is invalid as unquoted YAML but the template documents it as a plain value
 severity: P2
 phase: wave0
-status: open
+status: fixed
 source: CCDS4 (Claude Code + DeepSeek v4, 2026-08-07)
 surfaced_at: 2026-08-07
 ---

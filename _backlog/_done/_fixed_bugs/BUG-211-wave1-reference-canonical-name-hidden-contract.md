@@ -3,7 +3,7 @@ bug_id: BUG-211
 title: Wave1 canonical reference filename is a hidden deterministic contract (token + 12-hex digest)
 severity: P3
 phase: wave1
-status: open
+status: fixed
 source: CCDS4 (Claude Code + DeepSeek v4, 2026-08-07)
 surfaced_at: 2026-08-07
 ---

@@ -1,7 +1,10 @@
 # Plan: BUG-205--211 Feedback & Evaluator Remediation
 
 > 完整 real-actor Deep Research run 暴露的 7 个确定性摩擦点的收敛计划。
-> 状态: **ready for OpenSpec proposals** | 创建: 2026-08-08 | source: CCDS4 (Claude Code + DeepSeek v4)
+> 状态: **closed (CLS-055)** | 创建: 2026-08-08 | closed: 2026-08-08 | source: CCDS4 (Claude Code + DeepSeek v4)
+>
+> 两个 OpenSpec change 均已归档：`make-feedback-name-contract-roots`（v0.77，BUG-206/207/208/210/211）
+> + `make-evaluator-and-cli-behavior-direct`（v0.78，BUG-205/209）。7 个 bug 全部 fixed。
 
 ## 背景
 

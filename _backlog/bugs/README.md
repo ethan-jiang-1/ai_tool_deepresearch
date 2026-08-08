@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-08-07 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-08-08 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -16,15 +16,11 @@
 ## 活跃列表
 
 > BUG-200--204 已按 current-head evidence 和归档 remediation changes 结案。
-> BUG-099/104/106 仍是旧 swarm incident 留下的 residual observation，等待 fresh current-head Phase-Agent `agent_flow_e2e`；当前 real-actor
-> canary 是 host-scoped `NOT_RUN`，不能替代这一观察。BUG-175 等待 exploratory_map 质量阈值的政策决定。它们都不能替代新的 bundle direct root。
+> BUG-099/106 已按 2026-08-08 分诊移入 [`../_done/_suspened_bugs/`](../_done/_suspened_bugs/)（弱模型执行产物，非确定性框架缺陷）。
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
-| [BUG-099](BUG-099-stop-no-agent-halted-at-wave0.md) | P2 | wave0 | historical `stop: no` halt observation；无 current-head Phase-Agent reproduction，real-actor canary 为 `NOT_RUN` |
-| [BUG-104](BUG-104-enter-phase-context-pollution.md) | P2 | 跨 phase | historical repeated-rendering/context-pressure hypothesis；尚无 current-head causal evidence |
-| [BUG-106](BUG-106-stop-no-violation-repeats-agent-reports-instead-of-executes.md) | P2 | wave0→wave1 | historical report-instead-of-execute observation；无 current-head Phase-Agent reproduction |
-| [BUG-175](BUG-175-count-floors-as-absolute-gate-blockers.md) | P2 | wave0 | `exploratory_map` per-topic=10、shared=`4 + 1 * topic_count`；count-floor-only Gate failure 可在 fatigue threshold 后 degraded handoff，剩余问题是默认阈值校准 |
+| （当前无活跃 bug） | — | — | BUG-175 已按 2026-08-08 triage 移入 [`../_done/_suspened_bugs/`](../_done/_suspened_bugs/)；原 Engine defect 已在 current head 不成立，只有真实运行证据触发的产品政策决定才可重开。 |
 
 ## 新增 (2026-08-08)
 
@@ -35,15 +31,9 @@ current-head 观察，附复现路径。source: CCDS4 (Claude Code + DeepSeek v4
 
 ## 已修复 (2026-08-08)
 
-| Bug | 结案依据 |
-|-----|----------|
-| BUG-206 | OpenSpec change `make-feedback-name-contract-roots`（v0.77）：frontmatter 错误点名 key/value + 引号约束文档化（REF-010）。 |
-| BUG-207 | 同 change：`operate-topic-state schema` 暴露两种 source_identity forms + wave_rules（CTS-010）。 |
-| BUG-208 | 同 change：finding currentness 文档化 + apply 反馈点名缺失事实（WTS-012）。 |
-| BUG-210 | 同 change：reference-floor-deficit 反馈点名 depth-review 同步（WAI-009）。 |
-| BUG-211 | 同 change：canonical Wave1 locator 推导文档化 + inspect 输出 canonical target（REF-011/WAI-010）。 |
-| BUG-205 | OpenSpec change `make-evaluator-and-cli-behavior-direct`（v0.78）：semantic-section parser 把 `###` 子节并入父 body，`## Key Findings` 下 `###` 子节不再判空（WAI-011）。 |
-| BUG-209 | 同 change：`operate-queue check` 对已 drain queue 返回显式 `drained: true`，不再 `passed:false` + refill 建议（AGQ-027）。 |
+BUG-205..211 已移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)（编号 BUG-205..211，保留原编号）。
+7 个 bug 全部 fixed，归属两个归档 change：`make-feedback-name-contract-roots`（v0.77，
+BUG-206/207/208/210/211）+ `make-evaluator-and-cli-behavior-direct`（v0.78，BUG-205/209）。
 
 ## 最近关闭 (2026-08-07)
 
@@ -108,7 +98,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 | BUG-159 | P3 文档契约 | advance-status 前置条件未写入 phase §5 |
 | BUG-160 | P3 CLI 可用性 | operate-topic-state/queue 无 --help |
 
-> BUG-099/104/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspened_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
+> BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspened_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
 **Next available bug ID: BUG-205**
 
