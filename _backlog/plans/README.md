@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-08 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-09 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,6 +17,8 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
+| `semantic-fact-closure-openspec-governance` | 防止 Engine 同一确定性事实被多处各自解释：建立可增长的事实家族目录、每 change 的 closure record、OpenSpec apply/archive checker 闭环；CI 当前明确不在范围内。 | active（共同理解完成，ready to propose Change A） |
+| `seven-topic-seven-subagent-concurrency-investigation` | 7 topic 一次并发 7 个 sub-agent 的可行性调查：Engine 无 cap（可一次 claim 7），cap 5 仅文档层保守默认，无结构化配置位。 | active（调查完成，cap 配置位待 OpenSpec） |
 | `topic-research-emphasis/` | 研究主题共同基线之上的差异化追加投入：P1 已归档，确认既有 carrier 与 rerun guidance；`progressive/` 将 P2 的可追溯覆盖和后续读者投影拆成独立 OpenSpec slice。 | active（P2 ready to propose） |
 | `gate-schema-progressive-gate-schema-queue-remediation` | 长程执行总线：两个有界 OpenSpec change 已归档为 `v0.75` / `v0.76`；后续保留 audit observation 和严格的第三-change 触发条件。 | active（Phase 3 observation pending） |
 | `bug-200-204-gate-and-queue-remediation` | BUG-200--204 的收敛分诊：关闭 current-head 已覆盖的 BUG-200；以两个 OpenSpec change 分别修 Gate/recovery contract 与递归 queue repair；不将 gate audit 拆为独立生命周期，也不让无 submitted evidence 的 topic 伪造完成。 | ready for OpenSpec proposals |

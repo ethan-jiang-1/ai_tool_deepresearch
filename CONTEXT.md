@@ -200,6 +200,24 @@ only who decides that class of facts; it does not by itself grant authority,
 capability, permission, liveness, or evidence.
 _Avoid_: projection, chat summary, guidance prose
 
+**Deterministic fact family**:
+A bounded category of Engine-owned facts with one semantic authority, whose
+truth can independently change a legal Submit, Gate, handoff, or Final-admission
+outcome. It is not an individual field, schema file, helper, or reader projection.
+_Avoid_: schema contract, individual field, validator, module
+
+**Semantic fact catalog**:
+A project-governed, machine-readable directory of deterministic fact families
+used to classify a change's semantic impact. It is not a runtime schema, a
+change-local record, or a Gate.
+_Avoid_: schema registry, change checklist, runtime contract
+
+**Semantic resolver**:
+The Engine-owned interface that turns raw records into the deterministic
+conclusion for one fact family. A raw reader may supply data to it but does not
+itself establish that conclusion.
+_Avoid_: raw reader, Gate, schema validator
+
 ## Research Design
 
 **Topic research emphasis**:

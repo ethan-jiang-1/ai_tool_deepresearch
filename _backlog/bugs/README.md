@@ -20,7 +20,9 @@
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
-| （当前无活跃 bug） | — | — | BUG-175 已按 2026-08-08 triage 移入 [`../_done/_suspened_bugs/`](../_done/_suspened_bugs/)；原 Engine defect 已在 current head 不成立，只有真实运行证据触发的产品政策决定才可重开。 |
+| [`BUG-212`](BUG-212-supersede-predecessor-bypass-misreport.md) | P1 | wave1 | supersede 后 predecessor 声明 rows 被 `delegated_bypass_suspected` 误报，gate 硬阻塞（违反 work-unit-provenance-gate §81-87 "historical only"） |
+| [`BUG-213`](BUG-213-depth-review-rejects-authorized-prior-source-ref.md) | P1 | wave1 | `validateSubmittedClaimBacking` 拒绝合法 prior submitted source_ref，违反 subagent-node-contract §169 / Scenario 184-189 |
+| [`BUG-214`](BUG-214-supplementary-empty-output-files-vs-dry-submit-contract.md) | P2 | wave1 | supplementary task.md 允许空 `output_files[]`，但 dry-submit 强制非空，supplementary 首次提交必被拒 |
 
 ## 新增 (2026-08-08)
 
@@ -100,7 +102,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 
 > BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspened_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
-**Next available bug ID: BUG-205**
+**Next available bug ID: BUG-215**
 
 ## BUG-132–137 接手地图
 
