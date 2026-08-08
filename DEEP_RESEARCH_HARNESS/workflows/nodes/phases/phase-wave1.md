@@ -205,6 +205,8 @@ The Sub-agent does not write reference/index materialization, depth review, or s
 
 After each successful Wave1 submit, the Phase Agent materializes `reference/{topic.slug}-<source-slug>.md` for every accepted submitted source suitable for consumer navigation, then updates `reference/_INDEX.md`.
 
+**Canonical filename (REF-011)**: `<source-slug>` is NOT an Agent-chosen label. The canonical Wave1 locator derives it deterministically from the normalized submitted backing URL as `{topic.slug}-{host+path-token}-{12-hex}.md`, where the token is a safe lowercase human-readable token of `hostname + pathname` (non-alphanumerics → `-`, truncated) and the digest is the first 12 hex chars of the URL's SHA-256. Only a file whose relPath equals that exact computed path can close the candidate; a plausible Agent-chosen filename is a `misnamed_current` repair input, not a second locator. When the Wave1 inspect reports "materialize_projection", it emits the exact canonical target path and submitted backing per candidate — read those coordinates from the inspect feedback instead of deriving the filename by hand.
+
 Write each complete projection to a retained staging file, commit it with `operate-artifact-persistence.mjs persist` using compare-and-swap, consume `committed|blocked`, and update `_INDEX.md` only after commit. Persistence is durability only; submitted `source_claims[]`, `accepted_source_urls[]`, cache trails, and work-unit rows remain the authority.
 
 Each Phase-owned reference must:

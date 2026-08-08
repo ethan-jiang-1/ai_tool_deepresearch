@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.77
+
+- Reference frontmatter failures now name the offending key/value and the YAML
+  quoting rule (for example `acceptance_status: "accepted :warning:"`); the
+  reference template documents the quoting constraint.
+- `operate-topic-state schema --context wave_projection` exposes all
+  `source_identity` forms (Wave0/1 `submitted_work`, Wave2 `finding`) plus
+  per-wave `entry_id` rules, so a valid packet can be authored from the schema
+  output alone.
+- Wave2 finding-index currentness is documented (`W2F-\d{3}` id,
+  `created_in_rerun_count`), and `wave2_judgment` apply feedback names the
+  missing/mismatched currentness fact instead of a generic "not current".
+- Wave1 reference-floor-deficit feedback names the `depth-review.yaml`
+  `reviewed_work_unit_refs` sync when a submitted supplementary work unit is
+  missing from it, and the canonical Wave1 locator derivation is documented in
+  Agent-facing guidance.
+
 ## v0.76
 
 - Wave1 question-list checks now declare their required semantic sections in

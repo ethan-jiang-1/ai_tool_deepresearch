@@ -356,6 +356,8 @@ REF-006: reference-flat-format — Wave1 sub-agent reference file format specifi
 REF-007: reference-flat-format — Agent-facing source.yaml and reference metadata formats are complete and parser-aligned
 REF-008: reference-flat-format — Phase-owned reference materializations preserve submitted source backing
 REF-009: reference-flat-format — Wave0 Phase-owned shared references preserve exact submitted source backing
+REF-010: reference-flat-format — Reference metadata values are writable as valid YAML and frontmatter failures name the offending value
+REF-011: reference-flat-format — Canonical Wave1 locator derivation is visible to the Agent in guidance and inspect feedback
 
 # bundle/run-entry
 RUE-001: run-entry — RUN.md entry point announces the framework version banner
@@ -370,6 +372,7 @@ CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop
 CHI-002: check-inspect-feedback — C&I feedback loop for fork variant (topicReadiness validation)
 CHI-003: check-inspect-feedback — Recovery advice identifies one reachable nearest legal action per independent root
 CHI-004: check-inspect-feedback — Attempt recovery feedback exposes one ownership-safe legal action
+CHI-005: check-inspect-feedback — Generic parse/validation failures name the exact missing or offending contract fact with write surface and same-checkpoint rerun
 
 # engine/cli-exit-code-conventions
 CLE-001: cli-exit-code-conventions — Discoverable framework CLI exit-code contract in top-level command docs
@@ -544,6 +547,7 @@ CTS-006: canonical-topic-state — Complete layout target commits through the ex
 CTS-007: canonical-topic-state — One pure resolver maps current and historical slug bindings to canonical UID without moving provenance paths
 CTS-008: canonical-topic-state — Wave1 depth-review selection resolves one canonical topic UID and current intent binding before receipt projection
 CTS-009: canonical-topic-state — Wave0 deferred-contribution packets atomically expand exact current source identities
+CTS-010: canonical-topic-state — operate-topic-state schema projection exposes wave-dependent source-identity forms
 
 # research/content-delivery-experiments
 CDE-001: content-delivery-experiments — case-132 uses real HITL2 gate output for valid decisions, direct negative facts, sentinel rejection, and non-blocking diagnostic-event absence
@@ -745,6 +749,8 @@ WAI-005: wave1-intake — Wave1 gate checks deepening artifacts and backfill tok
 WAI-006: wave1-intake — Wave1 queue-loop playbooks verify deepening end-to-end
 WAI-007: wave1-intake — Wave1 batch parallel sub-agent execution protocol via work-unit claim and submit
 WAI-008: wave1-intake — Wave1 topic references are Phase-owned materializations after successful submit
+WAI-009: wave1-intake — Reference-floor-deficit feedback names the depth-review sync for supplementary work units
+WAI-010: wave1-intake — Wave1 reference-floor inspect surfaces canonical reference targets
 
 # research/wave2-synthesis
 WTS-001: wave2-synthesis — Wave2 phase queue-driven three-stage execution
@@ -758,6 +764,7 @@ WTS-008: wave2-synthesis — Finding taxonomy with explicit types, decisions, an
 WTS-009: wave2-synthesis — Cross-topic scan matrix as process evidence surface
 WTS-010: wave2-synthesis — Wave2 materializes existing-backed cross references without weakening targeted evidence provenance
 WTS-011: wave2-synthesis — Finding index binds declared Wave1 carried targets to the exact routed handoff receipt without overloading artifact origin refs
+WTS-012: wave2-synthesis — Finding-index currentness contract (W2F-\d{3} id and created_in_rerun_count) is documented and named in apply feedback
 
 # verification/experiment-agent-autorun
 EXA-001: experiment-agent-autorun — Canonical Agent Experiment Autorun vocabulary separates Supervisor, Launcher, Playbook Agent and Subject Agent

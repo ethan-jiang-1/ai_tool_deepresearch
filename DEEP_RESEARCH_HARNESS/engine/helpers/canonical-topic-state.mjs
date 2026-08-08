@@ -339,7 +339,7 @@ function projectionSourceIdentityRuleForWave(wave) {
 
 const ProjectionSourceIdentitySchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('submitted_work'), work_id: z.string().regex(/^wu-w[0-9]+-b[0-9]{3}-[a-z][a-z0-9]{1,7}-i[0-9]{4}$/) }).strict(),
-  z.object({ kind: z.literal('finding'), finding_id: z.string().regex(/^W2F-[0-9]{3,}$/) }).strict(),
+  z.object({ kind: z.literal('finding'), finding_id: z.string().regex(/^W2F-[0-9]{3,}$/, 'finding_id must match W2F-\\d{3} (three or more digits after W2F-)') }).strict(),
 ]);
 const ProjectionEntrySchema = z.object({
   source_identity: ProjectionSourceIdentitySchema,
@@ -620,6 +620,24 @@ function collectTopicSchemaFields(schema, state, fields, pathParts = [], require
   } else if (type === TOPIC_SCHEMA_TYPES.ZodArray) {
     collectTopicSchemaFields(schema._def.type, state, fields, [...pathParts, 0], required);
   } else if (type === TOPIC_SCHEMA_TYPES.ZodDiscriminatedUnion || type === TOPIC_SCHEMA_TYPES.ZodUnion) {
+    if (topicSchemaType(schema) === TOPIC_SCHEMA_TYPES.ZodDiscriminatedUnion && schema._def.discriminator && schema._def.discriminator !== 'action') {
+      // Aggregate every discriminator literal so the authoring view exposes all
+      // source-identity forms instead of only the first option (CTS-010).
+      const discriminator = schema._def.discriminator;
+      const kinds = [];
+      for (const option of schema._def.options || []) {
+        const discSchema = topicSchemaShape(option)[discriminator];
+        const values = topicSchemaClosedValues(discSchema);
+        if (values) kinds.push(...values);
+      }
+      collectTopicSchemaFields(schema._def.options[0], state, fields, pathParts, required);
+      if (kinds.length) {
+        const kindPath = `${topicSchemaFieldPath(pathParts)}.${discriminator}`;
+        const field = fields.find((candidate) => candidate.path === kindPath);
+        if (field) field.allowed_values = [...new Set(kinds)];
+      }
+      return;
+    }
     collectTopicSchemaFields(topicSchemaUnionOption(schema, state, pathParts), state, fields, pathParts, required);
   }
 }
@@ -630,7 +648,7 @@ function topicSchemaForm(branch, context, action, index) {
   const fields = [];
   collectTopicSchemaFields(branch, { context, action }, fields);
   const uniqueFields = [...new Map(fields.map((field) => [field.path, field])).values()];
-  return {
+  const form = {
     id: `${context}:${action}:${index + 1}`,
     action,
     required_fields: uniqueFields.filter((field) => field.required).map((field) => field.path),
@@ -639,6 +657,14 @@ function topicSchemaForm(branch, context, action, index) {
     value_shapes: Object.fromEntries(uniqueFields.map((field) => [field.path, field.shape])),
     template,
   };
+  if (action === 'apply_seed_projection') {
+    form.wave_rules = {
+      wave0: { source_identity_kind: ['submitted_work'], entry_id_rule: '<source work_id>/<positive ordinal>' },
+      wave1: { source_identity_kind: ['submitted_work'], entry_id_rule: '<source work_id>/<positive ordinal>' },
+      wave2: { source_identity_kind: ['finding'], entry_id_rule: 'entry_id === finding_id (W2F-\\d{3})' },
+    };
+  }
+  return form;
 }
 
 /**
@@ -1081,12 +1107,20 @@ function validateWave2ProjectionAuthority(bundle, topicRegistryFact, topicUid, e
   for (const entry of entries) {
     const findingId = entry.source_identity.finding_id;
     const finding = findingById.get(findingId);
-    if (!finding) throw projectionError('wave2_finding_not_found', `Wave2 finding ${findingId} is absent from the current finding index.`);
+    if (!finding) {
+      const formatInvalid = !/^W2F-[0-9]{3,}$/.test(findingId);
+      throw projectionError('wave2_finding_not_found', formatInvalid
+        ? `Wave2 finding ${findingId} is absent from the current finding index and its id does not match the required W2F-\\d{3} format (three or more digits after W2F-).`
+        : `Wave2 finding ${findingId} is absent from the current finding index.`);
+    }
     if (!Array.isArray(finding.affected_topics) || finding.affected_topics.length === 0) {
       throw projectionError('wave2_finding_affected_topics_invalid', `Wave2 finding ${findingId} has no usable affected_topics authority.`);
     }
-    if (!Object.hasOwn(finding, 'created_in_rerun_count') || finding.created_in_rerun_count !== round) {
-      throw projectionError('wave2_finding_not_current', `Wave2 finding ${findingId} is not current for rerun_count ${round}.`);
+    if (!Object.hasOwn(finding, 'created_in_rerun_count')) {
+      throw projectionError('wave2_finding_not_current', `Wave2 finding ${findingId} is missing created_in_rerun_count; a current finding must carry created_in_rerun_count equal to the current rerun_count ${round}.`);
+    }
+    if (finding.created_in_rerun_count !== round) {
+      throw projectionError('wave2_finding_not_current', `Wave2 finding ${findingId} created_in_rerun_count is ${finding.created_in_rerun_count}, not the current round ${round}; update created_in_rerun_count or the finding id.`);
     }
     const affected = resolveWave2AffectedTopics(topicRegistryFact.layouts, finding.affected_topics);
     if (!affected.has(topicUid)) {

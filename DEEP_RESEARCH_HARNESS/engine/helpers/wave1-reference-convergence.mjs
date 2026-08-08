@@ -332,21 +332,77 @@ export function evaluateWave1ReferenceTopic(bundlePath, {
   const resolvedIndex = index
     ? index
     : { valid: indexCheck.passed, stale: !indexCheck.passed, check: indexCheck };
+  const result = evaluateWave1ReferenceConvergence({
+    topic: submittedBacking.ok ? submittedBacking.topic : null,
+    requiredFloor,
+    submittedBacking,
+    projections,
+    index: resolvedIndex,
+    liveSupplementaryDemand: resolvedDemand,
+    observedCount: numeric.count,
+  });
+  if (result.outcome === 'reference_floor_deficit' && submittedBacking.ok) {
+    const unreviewed = unreviewedSubmittedSupplementaryRows(bundlePath, submittedBacking.topic, topicRegistryFact);
+    if (unreviewed.ok && unreviewed.rows.length > 0) result.unreviewed_rows = unreviewed.rows;
+  }
   return {
     submitted_backing: submittedBacking,
     projections,
     numeric,
     index: resolvedIndex,
-    result: evaluateWave1ReferenceConvergence({
-      topic: submittedBacking.ok ? submittedBacking.topic : null,
-      requiredFloor,
-      submittedBacking,
-      projections,
-      index: resolvedIndex,
-      liveSupplementaryDemand: resolvedDemand,
-      observedCount: numeric.count,
-    }),
+    result,
   };
+}
+
+/**
+ * Detect submitted Wave1 `wave1_topic_deepening` rows for a current Topic that
+ * are NOT yet listed in the topic's `depth-review.yaml#reviewed_work_unit_refs`.
+ * A supplementary submit that the review never picks up silently leaves the
+ * reference floor at the old deficit; naming that sync is WAI-009.
+ * @impl WAI-009
+ */
+export function unreviewedSubmittedSupplementaryRows(bundlePath, topic, topicRegistryFact) {
+  const layouts = topicRegistryFact?.layouts;
+  const topicBinding = resolveTopicLayout(layouts, { topic_slug: topic }, { currentOnly: true });
+  if (!topicBinding.ok) return { ok: false, root: { code: 'wave1_reference_topic_invalid', detail: `Current Topic binding is invalid: ${topicBinding.reason_code}` } };
+
+  const reviewPath = join(bundlePath, 'artifacts', 'wave1', topicBinding.current_slug, 'depth-review.yaml');
+  const reviewed = new Set();
+  if (existsSync(reviewPath)) {
+    try {
+      const review = parseYaml(readFileSync(reviewPath, 'utf8'));
+      if (Array.isArray(review?.reviewed_work_unit_refs)) {
+        for (const ref of review.reviewed_work_unit_refs) {
+          if (typeof ref === 'string' && ref) reviewed.add(ref.replace(/\/+$/g, ''));
+        }
+      }
+    } catch { /* an unreadable depth review is a separate root */ }
+  }
+
+  let normalized;
+  try {
+    normalized = readNormalizedSubmittedWorkUnitDeclarations(bundlePath);
+  } catch (error) {
+    return { ok: false, root: { code: 'submitted_backing_ledger_invalid', detail: error.message } };
+  }
+  const unreviewed = [];
+  for (const fact of normalized.facts) {
+    const { ledger_row: row, index_record: record } = fact;
+    if (record.wave !== 1 || record.kind !== 'wave1_topic_deepening' || record.status !== 'submitted') continue;
+    const ref = String(row.work_unit_ref || row.work_id || '').replace(/\/+$/g, '');
+    if (reviewed.has(ref)) continue; // already reviewed via depth-review
+    let manifest;
+    try {
+      manifest = readAndValidateManifest(bundlePath, { kind_registry: normalized.kind_registry }, record);
+    } catch {
+      continue; // manifest-invalid rows surface through their own owner
+    }
+    const binding = resolveStructuredTopicBinding(layouts, manifest, { currentOnly: true });
+    if (binding.ok && binding.topic_uid === topicBinding.topic_uid && binding.current_slug === topicBinding.current_slug) {
+      unreviewed.push({ work_id: row.work_id, work_unit_ref: row.work_unit_ref, ref: `_work_units/wave1/${row.work_id}` });
+    }
+  }
+  return { ok: true, rows: unreviewed };
 }
 
 function findLiveSupplementaryDemand(bundlePath, topic) {

@@ -142,7 +142,7 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string | W2F-xxx |
+| `id` | string | W2F-xxx（**3 位及以上数字**，`W2F-\d{3}`） |
 | `type` | enum | `wave1_legacy_question` / `cross_topic_resolution` / `cross_topic_emergent_question` |
 | `priority` | enum | `p0` / `p1` / `p2` |
 | `status` | enum | `resolved` / `partial` / `open` / `deferred` |
@@ -157,6 +157,13 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 | `confidence` | enum | `high` / `medium` / `low` / `uncertain` |
 | `independent_backing_refs` | array | Independent evidence refs for confidence/backing checks |
 | `gap_status` | enum | `no_gap` / `needs_search` / `search_submitted` / `deferred_hitl2` / `requires_internal_data` / `record_only` |
+
+**Currentness（WTS-012）**：可投影进 `wave2_judgment` 的 finding 还必须满足：
+- `id` 匹配 `W2F-\d{3}`（`W2F-` 后 3 位及以上数字，如 `W2F-001`）；
+- 携带 `created_in_rerun_count` 且等于当前 `rerun_count`。
+
+缺失/不匹配时 `wave2_judgment` apply 会点名缺失的 currentness 事实（id 格式 /
+缺 `created_in_rerun_count` / 错误 round），不再只报泛化 "not current"。
 
 `synthesis_eligibility` records `pure_synthesis_eligible`, `scan_matrix_present`, `scan_topic_pair_coverage`, `unresolved_search_required_count`, `targeted_search_required_count`, `targeted_search_submitted_count`, `explicit_deferral_count`, `profile_params_read[]`, and `ineligibility_reasons[]`.
 

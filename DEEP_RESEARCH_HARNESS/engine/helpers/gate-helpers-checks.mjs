@@ -432,6 +432,27 @@ function legacyReferenceMetadata(mdContent) {
 // The shared reader keeps writer presentation separate from metadata semantics:
 // new references use an opening YAML mapping, while legacy bullet metadata
 // remains a read-only compatibility input for all existing consumers.
+/**
+ * Build a frontmatter parse diagnostic that names the offending line.
+ * The `yaml` parser message carries "at line N, column M"; extract line N and
+ * echo the corresponding frontmatter line so the Agent can see the exact value
+ * that broke serialization instead of only a generic "YAML parse failed".
+ * @impl REF-010
+ */
+function frontmatterParseReason(content, error) {
+  const message = String(error?.message || 'YAML parse error');
+  const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  const lines = fm ? fm[1].split(/\r?\n/) : [];
+  const lineMatch = message.match(/at line (\d+)/);
+  const lineNo = lineMatch ? Number(lineMatch[1]) : 0;
+  const offending = lineNo > 0 && lineNo <= lines.length ? lines[lineNo - 1] : lines[lines.length - 1];
+  const hint = String(offending || '').trim();
+  const detail = hint
+    ? `YAML parse failed: ${message}. Offending frontmatter line ${lineNo || lines.length}: "${hint}". Repair the opening YAML frontmatter mapping; quote YAML-sensitive values (for example "accepted :warning:").`
+    : `YAML parse failed: ${message}. Repair the opening YAML frontmatter mapping; quote YAML-sensitive values.`;
+  return detail;
+}
+
 export function readReferenceMetadata(mdContent) {
   const content = String(mdContent || '');
   if (!/^---(?:\r?\n|$)/.test(content)) {
@@ -458,7 +479,7 @@ export function readReferenceMetadata(mdContent) {
       presentation: 'frontmatter',
       error: {
         code: 'reference_metadata_frontmatter_invalid',
-        reason: `YAML parse failed: ${error.message}`,
+        reason: frontmatterParseReason(content, error),
       },
     };
   }

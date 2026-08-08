@@ -1,0 +1,114 @@
+schema_version: verification-routing/v1
+change: make-feedback-name-contract-roots
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Feedback-naming helpers, schema-output derivation, and frontmatter error
+      naming are isolated deterministic functions. Focused node:test cases
+      verify the exact missing-fact/offending-value/write-surface/rerun fields
+      and the wave-aware source_identity forms without a runtime bundle.
+  integration:
+    status: selected
+    rationale: >-
+      Reference-floor-deficit depth-review sync feedback, canonical Wave1
+      locator target surfacing, and wave2_judgment apply currentness feedback
+      cross Engine evaluator/writer boundaries; JS-led integration tests
+      exercise those contracts over fixture bundle state.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale Engine lifecycle behavior changes in this change; the
+      corrected behaviors are covered at unit/integration boundary.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      These are deterministic feedback/schema/guidance corrections; a real
+      Phase-Agent run is not required to prove the contract, and no host-level
+      behavior claim is made.
+claims:
+  - id: feedback-names-missing-contract-fact
+    statement: >-
+      Generic parse/validation/evaluator failures emit feedback naming the exact
+      missing or offending contract fact, its authorized write surface, and the
+      same-checkpoint rerun.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/feedback-contract-naming.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: reference-frontmatter-quoting-and-naming
+    statement: >-
+      Reference acceptance_status warning-marker values are documented as
+      quoted YAML, and frontmatter parse failure names the offending key/value.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/feedback-contract-naming.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: schema-projection-exposes-wave-source-identity
+    statement: >-
+      operate-topic-state schema --context wave_projection exposes the
+      wave-dependent source_identity forms so a valid apply packet can be
+      constructed from schema output alone.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/topic-state-schema-wave-identity.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-floor-feedback-names-depth-review-sync
+    statement: >-
+      Wave1 reference-floor-deficit feedback names the depth-review
+      reviewed_work_unit_refs update when a submitted supplementary work unit is
+      missing from it, and surfacing canonical reference targets lets the Agent
+      materialize from feedback alone.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/wave1-floor-feedback-names-depth-review.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave2-finding-currentness-feedback
+    statement: >-
+      wave2_judgment apply feedback names the missing/mismatched currentness
+      fact (id format, created_in_rerun_count, or round) rather than a generic
+      not-current message.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/wave2-finding-currentness-feedback.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

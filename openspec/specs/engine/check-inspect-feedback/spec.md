@@ -234,3 +234,12 @@ lock-deletion, or cleanup advice.
 - **WHEN** timeout-preflight finds a valid active v2 `started` journal whose target set contains the checked work ID
 - **THEN** feedback SHALL identify the same-attempt transaction fact and same timeout-preflight rerun
 - **AND** it SHALL not offer default timeout, forced timeout, journal recovery, or lock deletion
+
+### Requirement: Generic parse/validation failures SHALL name the exact contract fact
+
+When a deterministic parse, validation, schema, or evaluator step fails for a
+reason the Agent cannot directly read from the message alone (for example a
+generic "YAML parse failed", "Value violates a declared cross-field constraint",
+or "wave2_finding_not_current"), the Engine feedback SHALL name the exact
+missing or offending contract fact — the specific key, value, field, enum, or
+format rule — together with its authori

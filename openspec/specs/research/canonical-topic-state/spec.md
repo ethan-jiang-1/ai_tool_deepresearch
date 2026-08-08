@@ -841,3 +841,26 @@ An identifier-only layout change MAY reuse one unambiguous UID-bound review only
 - **WHEN** the review resolves to the same UID but its current registry intent binding differs
 - **THEN** the Wave1 declaration is not current and the Gate directs repair to that depth review
 - **AND** Wave2 SHALL not consume an old receipt as coverage for the changed intent
+
+### Requirement: `operate-topic-state schema --context wave_projection` SHALL expose wave-dependent source-identity forms
+
+The read-only `operate-topic-state schema --context wave_projection` authoring
+projection SHALL expose the allowed `source_identity` form per wave: Wave0/Wave1
+entries use `{ kind: "submitted_work", work_id }`, and Wave2 `wave2_judgment`
+entries use `{ kind: "finding", finding_id }` with `entry_id` equal to the
+finding id. An author SHALL be able to construct a valid `apply_seed_projection`
+packet from the schema output alone, without reading Engine source.
+
+#### Scenario: schema output shows the wave2 finding identity form
+
+- **WHEN** an Agent requests the `wave_projection` schema context
+- **THEN** the output shows both allowed `source_identity` forms and the slot or
+  wave to which each applies
+- **AND** the Wave2 `entry_id === finding_id` rule is visible
+
+#### Scenario: a packet built from schema output is accepted
+
+- **WHEN** an Agent builds a `wave2_judgment` entry using
+  `{ kind: "finding", finding_id: "W2F-001" }` with `entry_id: "W2F-001"` per the
+  schema projection
+- **THEN** the apply is not rejected for a hidden `source_identity` constraint

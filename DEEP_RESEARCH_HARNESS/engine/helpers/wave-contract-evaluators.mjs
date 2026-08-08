@@ -189,13 +189,17 @@ function materializationWriteTo(topic, candidates) {
 
 function wave1ReferenceConvergenceFinding(bundlePath, rule, topic, outcome) {
   const root = outcome.root?.code || outcome.outcome;
+  const unreviewed = Array.isArray(outcome.unreviewed_rows) ? outcome.unreviewed_rows : [];
+  const unreviewedNote = unreviewed.length > 0
+    ? ` Submitted supplementary work unit(s) ${unreviewed.map((row) => row.ref).join(', ')} are missing from ${topic}/depth-review.yaml#reviewed_work_unit_refs; add them to the depth review and rerun this checkpoint before treating the floor as a true deficit.`
+    : '';
   const detail = outcome.root?.detail
     || (outcome.outcome === 'materialize_projection'
       ? `Current Topic ${topic} has ${outcome.candidates.length} submitted backing candidate(s) without a closed canonical projection.`
       : outcome.outcome === 'sync_reference_index'
         ? 'Canonical Wave1 projections are complete but reference navigation is stale or invalid.'
         : outcome.outcome === 'reference_floor_deficit'
-          ? `Current canonical reference floor is ${outcome.observed}/${outcome.required}; deficit ${outcome.deficit}.`
+          ? `Current canonical reference floor is ${outcome.observed}/${outcome.required}; deficit ${outcome.deficit}.${unreviewedNote}`
           : `Wave1 reference convergence requires ${root}.`);
   const isFloor = outcome.outcome === 'reference_floor_deficit';
   const isExistingSupplementary = outcome.outcome === 'existing_supplementary';

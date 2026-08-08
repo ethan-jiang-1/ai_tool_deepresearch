@@ -67,6 +67,11 @@ This opening mapping is the canonical writer contract. `readReferenceMetadata()`
 
 可选字段（建议填写）：`source_file`、`source_family`、`topic_unique_status`、`source_date_scope`、`related_entities`、`captured_excerpt`、`supports_claims`、`risks_or_limitations`、`excluded_reason`。
 
+**YAML 引号规则（REF-010）**：`acceptance_status` 取 `accepted :warning:`（带内联 marker）时
+**必须加引号**写为 `acceptance_status: "accepted :warning:"`。裸写 `accepted :warning:` 里
+的 `: ` 是 YAML mapping 指示符，会导致 frontmatter 解析失败。其余 YAML 敏感值（含 `:`、
+`#`、`-` 起始等）同样建议加引号；frontmatter 解析失败时，Engine 反馈会点名出错行。
+
 ### Part 2: Required Semantic Sections
 
 Each file must contain all five semantic sections; every section is required and non-empty：
