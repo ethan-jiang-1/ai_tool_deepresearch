@@ -1,6 +1,6 @@
 # Topic Research Emphasis
 
-> Status: active / first-order design settled; detailed design deferred
+> Status: active / P1 archived; P2 traceable-coverage proposal is next
 > Started: 2026-08-08
 > Scope: future research-planning policy and UX. This is not an approved
 > OpenSpec change, implementation contract, Gate rule, or bundle mutation.
@@ -35,9 +35,19 @@ implementation detail prematurely:
   structure is proposed.
 - A future Gate can prove traceable focus coverage, while HITL2 remains the
   place to judge semantic usefulness.
-- The remaining product-scale questions are rerun/history UX and reader-facing
-  evidence presentation. Detailed commitment taxonomy, fields, thresholds, and
-  implementation are deliberately deferred until those are settled.
+- The first product-order decisions are closed. Detailed commitment taxonomy,
+  fields, thresholds, exact rerun presentation, and implementation remain
+  deliberately deferred to their smallest compatible OpenSpec slices.
+
+## Progressive Delivery
+
+The confirmed design now has a staged delivery route rather than one large,
+premature OpenSpec change. The runnable control surface is
+[progressive/README.md](progressive/README.md): it records each pre-change
+decision, proposed change slice, entry/exit check, verification evidence, and
+OpenSpec lifecycle checklist. P1,
+`align-topic-focus-and-rerun-guidance`, archived on 2026-08-08; P2 is the next
+focused planning slice.
 
 ## Confirmed Decisions
 
@@ -121,7 +131,8 @@ Confirmed by the user on 2026-08-08.
 The first design must preserve the current run-bundle and Topic structure.
 It should embed the `research focus brief` into existing HITL1, HITL2, and
 legal rerun-direction records instead of first introducing a new canonical
-Topic field, parallel settings object, Gate, or interaction step.
+Topic field, parallel settings object, separate lifecycle Gate, or interaction
+step.
 
 - Keep the user's literal natural-language request distinct from the Agent's
   concise, editable interpretation of the research direction.
@@ -149,6 +160,11 @@ natural-language intent was substantively answered correctly.
 - The Gate's user-readable result should be a compact coverage state such as
   `covered`, `partial`, or `blocked`, rather than a source-count score,
   weight, or LLM self-rating.
+- This is a future check within an existing Wave completion boundary, not a
+  third HITL checkpoint or a separate lifecycle branch. A structurally valid
+  `partial` or `blocked` result is a visible degraded handoff; malformed,
+  unbound, or still-repairable focus coverage remains an ordinary current-Wave
+  failure.
 - Existing common-baseline and provenance Gates remain in force. Focus
   coverage is an incremental proof boundary, never a way to relax them.
 - HITL2 remains the place where the user and Agent decide whether the result
@@ -190,6 +206,63 @@ evidence visibly attributable to the new increment.
   or rewrite old references.
 - Future reader-facing evidence presentation must make the baseline/historical
   material and the focus-driven increment distinguishable.
+
+### D-009: Readers use a two-axis evidence map, not reference-file counts
+
+Confirmed by the user on 2026-08-08.
+
+The existing `reference/README.md` is the future human-facing home for a small
+`research evidence map`. Its one bounded reader question is: for a selected
+Topic, what accepted material is shared foundation, Topic-specific work, or
+cross-Topic synthesis, and has a later focus produced a current incremental
+result?
+
+- The map presents two independent distinctions: evidence relationship and
+  work era (common baseline, current focus-driven increment, or historical
+  context). Cross-Topic material appears once rather than being copied into
+  every Topic.
+- It links to the existing `reference/_INDEX.md`, return-map entries, and
+  submitted evidence/rerun coordinates as applicable. Those surfaces retain
+  their existing authority; the map is neither a second ledger nor a Gate
+  input.
+- A filename prefix, an index row, file size, or file count alone cannot prove
+  that material semantically covers a Topic. When direct records cannot
+  establish the relationship for historical material, the map says that its
+  scope is unclassified rather than guessing.
+- A Topic with no focus request or no rerun shows that absence explicitly. A
+  future `partial` or `blocked` increment remains visibly distinct from
+  completed focus coverage.
+
+This is the reader model for P3, not permission to alter the current
+`reference/README.md`, `_INDEX.md`, or evidence contracts without an OpenSpec
+change.
+
+### D-010: Focus coverage uses existing clean, degraded, and failed Wave outcomes
+
+Confirmed by the user on 2026-08-08.
+
+Focus coverage does not create a new lifecycle route. It is an additional
+structured result within the existing Wave completion boundary:
+
+- `covered` means every declared focus commitment has valid submitted evidence
+  backing, so the existing Wave Gate may make its normal clean pass.
+- `partial` means an increment has traceable evidence but not every declared
+  commitment could be covered; each remaining gap has an explicit durable
+  limitation. It continues only as an existing degraded handoff, never as a
+  clean `covered` result.
+- `blocked` means the current focus produced no honest declarable increment,
+  but the blocker is explicit and durable rather than silently omitted. It
+  also continues only as an existing degraded handoff, so HITL2 can decide
+  whether a later legal rerun is worthwhile.
+- Invalid coverage structure, missing direct bindings, or work that still has
+  a legal current-Wave repair action is not `partial` or `blocked`. It remains
+  a normal failed Gate result and follows the existing repair / explicit
+  missing-contract boundary.
+
+The Agent authors commitments and limitation explanations; the Engine verifies
+only their structured direct facts and preserves the existing Wave result
+shape. The user and Agent at HITL2 retain the semantic usefulness decision.
+This is a future P2 contract, not an implemented Gate behavior.
 
 ## Current Evidence
 
@@ -242,19 +315,17 @@ Gate-verifiable.
 The first-order policy is deliberately paused here. Resume these only when
 the product work returns to this plan, one decision at a time:
 
-1. What reader-facing evidence view distinguishes shared, Topic-specific, and
-   cross-Topic material, and makes incremental effort inspectable?
-2. What exact rerun presentation lets a user revise, remove, or add focus
-   without treating historical work as current incremental coverage?
-3. Which parts, if any, later need a canonical Topic field, an Agent-facing
+1. Which parts, if any, later need a canonical Topic field, an Agent-facing
    Markdown control, or an Engine-enforced contract?
-4. If an OpenSpec change is proposed, what is the smallest compatible scope
+2. If an OpenSpec change is proposed, what is the smallest compatible scope
    that realizes the confirmed design without overloading current Gates?
 
 ## Document Layout
 
 - `README.md`: durable scope, confirmed decisions, and open design questions.
 - `evidence/`: reproducible observations from real completed bundles.
+- `progressive/`: a staged delivery roadmap, including pre-change decision
+  closure and one proposed OpenSpec slice at a time.
 - Add a decision record or an ADR only after a hard-to-reverse trade-off is
   actually settled. An OpenSpec proposal is deferred until this design reaches
   a coherent, bounded behavioral change.

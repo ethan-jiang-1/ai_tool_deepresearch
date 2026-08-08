@@ -73,7 +73,10 @@ The Engine could then deterministically verify direct facts: a focus topic has
 a current direction, every declared commitment has a legal status, `covered`
 items point to valid submitted backing, and unresolved items are visible
 instead of silently counted as success. It can expose a compact coverage
-range, rather than a false binary semantic verdict.
+range, rather than a false binary semantic verdict. Whether `partial` or
+`blocked` blocks an existing Wave completion, passes with a visible limitation,
+or triggers another existing legal route is not yet decided; this design does
+not create a new lifecycle branch.
 
 This is only a design candidate. It needs an OpenSpec change because it adds
 new accepted fields and a Gate behavior. It should not be implemented by

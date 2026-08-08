@@ -9,11 +9,11 @@
 
 Can a natural-language research focus brief be retained and used across an
 initial run and a later rerun without first adding a canonical Topic field,
-parallel settings object, Gate, or another HITL checkpoint?
+parallel settings object, separate lifecycle Gate, or another HITL checkpoint?
 
 ## Finding
 
-The current structure already has two complementary, durable surfaces:
+The current structure already has three complementary, durable carriers:
 
 | Moment | Existing carrier | What it preserves | Boundary |
 | --- | --- | --- | --- |
