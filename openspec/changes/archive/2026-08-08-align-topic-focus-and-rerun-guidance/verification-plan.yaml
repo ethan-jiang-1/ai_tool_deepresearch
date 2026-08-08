@@ -1,0 +1,124 @@
+schema_version: verification-routing/v1
+change: align-topic-focus-and-rerun-guidance
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      This change adds no Engine helper, schema, parser, or other isolated
+      deterministic unit. Its deterministic obligations are cross-file
+      Markdown and bundle-carrier contracts.
+  integration:
+    status: selected
+    rationale: >-
+      Focused integration tests can prove the existing literal controls
+      carrier, Markdown ordering, no-cap guidance, and rerun-history boundary
+      without claiming an Agent understood natural language.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No Engine lifecycle transition, Gate, receipt, schema, or workflow-scale
+      deterministic chain changes in this slice. Existing chains remain their
+      current authority.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      Natural-language acceptance, correction, and rerun interpretation are
+      Agent behavior. Real disposable-bundle playbooks are the smallest honest
+      proof boundary; unavailable Agent/tool conditions remain NOT_RUN.
+claims:
+  - id: hitl1-topic-map-and-focus-static-contract
+    statement: >-
+      The HITL1 brief and phase require a minimum independent Topic map with
+      one-or-more proposed Topics and no preset upper cap; after user approval,
+      the existing lower bound remains the only runnable-map cardinality
+      contract. They expose an
+      optional natural-language focus brief and a visible, correctable Agent
+      interpretation without a weight, new checkpoint, profile field, Gate,
+      or parser.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/topic-research-emphasis-guidance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: focus-snapshot-durability-contract
+    statement: >-
+      A supplied literal controls snapshot containing the user's focus wording
+      and a separately labelled Agent interpretation survives existing
+      canonical topic-state apply/recovery, remains readable at the existing
+      host-file coordinate, and is not copied into profile, queue, Gate, or
+      another structured authority.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/user-research-controls-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rerun-focus-history-static-contract
+    statement: >-
+      HITL2 and phase-rerun retain accepted user focus wording and Agent
+      interpretation through the existing rationale/direction carriers, apply
+      it only to the current legal rerun increment, and do not create a new
+      route or describe historical evidence as new focus coverage.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/topic-research-emphasis-rerun-guidance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl1-no-focus-compatibility-observation
+    statement: >-
+      A real Subject Agent can accept the existing recommendation in a legal
+      HITL1 boundary without supplying a focus, take one honest existing
+      probe/Gate branch, and consume only the current handoff. This observes
+      compatibility and does not claim a generic focus interpretation result.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_iterative_interaction/case-711-heavy-hitl1-natural-acceptance.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
+  - id: hitl1-topic-focus-correction-observation
+    statement: >-
+      From a legal HITL1 boundary with a semantically broad research request,
+      a real Subject Agent presents a reviewable no-cap Topic map, receives a
+      natural-language focus correction, preserves the user's wording and a
+      separately labelled current interpretation in the existing literal
+      snapshot, and takes only the existing legal handoff. A missing Subject
+      runtime or required tool records NOT_RUN rather than fixture PASS.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_iterative_interaction/case-716-heavy-hitl1-topic-focus.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

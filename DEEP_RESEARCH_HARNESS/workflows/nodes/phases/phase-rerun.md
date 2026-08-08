@@ -42,7 +42,7 @@ HITL2 `user_decision: rerun` 后，Agent 用正常 HITL2 gate handoff或唯一ac
 
 ### Stage 1: 读输入
 
-1. 读取 HITL2 rationale——理解用户想要什么改变（"加经济影响分析"、"去掉不可靠的来源维度"等）
+1. 读取 HITL2 rationale——理解用户想要什么改变（"加经济影响分析"、"去掉不可靠的来源维度"等）。若 rationale 含 `用户的重点原话（逐字保留）` 与 `Agent 对本轮额外研究方向的理解（可由用户修正）`，它们共同说明本轮新的或修订的 focus increment：原话保留用户语义，理解只提供当前可读 direction，不是 parser、profile/Topic field、Gate input 或新的 mutation authority。
 2. 读取 `rerun_count`——若字段缺失则按既有 profile owner 的默认值处理，若已有值则计算 `target_rerun_count = current_rerun_count + 1`。
 3. 先运行 `operate-topic-state inspect`。若存在 accepted workspace，只能执行它的 exact `recover`；不存在 accepted workspace 时，旧 matching/stale direction 只是历史/现状事实，不能成为本轮 retained input 或跳过 apply 的收据。
 4. 从 canonical `topic_registry` 解析当前 topic，并读取它们 UID-bound current seed 的 frontmatter/body 了解：
@@ -54,7 +54,7 @@ HITL2 `user_decision: rerun` 后，Agent 用正常 HITL2 gate handoff或唯一ac
 
 ### Stage 2: 对比推断 — 产出 topic 调整方案
 
-将 HITL2 rationale（用户意图）与 seed_topics 现状对比，推演出具体行动。已有 topic 的 `## 本轮重跑方向` section 中 `rerun_count` 不等于 `target_rerun_count` 的视为陈旧——忽略其 action，仅作为历史参考：
+将 HITL2 rationale（用户意图）与 seed_topics 现状对比，推演出具体行动。接受的 focus 只影响受影响 Topic 的本轮 candidate：把新的 search dimensions、调整深度、guardrails 和 rationale excerpt 写入既有 `## 本轮重跑方向` guidance。已有 topic 的 `## 本轮重跑方向` section 中 `rerun_count` 不等于 `target_rerun_count` 的视为陈旧——忽略其 action，仅作为历史参考；旧 direction、submitted evidence、artifacts、reference paths 与 output history 不得被描述为新 focus work 或满足新的/修订 focus。
 
 | 场景 | action | 含义 |
 |------|--------|------|

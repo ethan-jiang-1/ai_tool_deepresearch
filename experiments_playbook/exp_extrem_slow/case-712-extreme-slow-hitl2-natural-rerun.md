@@ -1,7 +1,7 @@
 ---
 schema: command-experiment/v2
 experiment: iterative-interaction
-case: case-712-heavy-hitl2-natural-rerun
+case: case-712-extreme-slow-hitl2-natural-rerun
 case_goal: "A real Subject Agent generates the production HITL2 review and one recommendation, maps one natural-language follow-up into the existing rerun path, and consumes the real Gate handoff."
 verdict_mode: all
 required_checks: [case-712-review-and-one-recommendation, case-712-natural-language-mapping, case-712-user-facing-contract]
@@ -21,6 +21,12 @@ not_run_if: "The independent authenticated Subject Agent runtime is unavailable.
 ---
 
 <!-- @impl EXA-003, EXA-005, EXA-006, EXA-007, EXA-008, PLR-003 -->
+
+> **QUARANTINED - EXTREME SLOW.** The retained native completion for the
+> previously active case was `FAIL` after `446042 ms` at `$2.190943`. Do not
+> run this playbook through Autorun or Interactive. Refactor it, move it back
+> to a normal `light`, `standard`, or `heavy` runnable path, and explicitly
+> re-register it before reactivation; otherwise remove it.
 
 # Case 712 - Natural-Language HITL2 Rerun
 
@@ -80,7 +86,7 @@ Its two exact user turns are:
 ```
 
 ```text
-{"role":"user","event":"message","content":"资本约束这部分还不够，再补一下"}
+{"role":"user","event":"message","content":"资本约束这部分还不够，再补一下；这次请特别比较租赁、购买与推迟决策在现金流压力下的差异。"}
 ```
 
 The shared adapter sends the second event only after the first successful Subject result. It preserves the raw stream byte-for-byte and retains the exact injected prompt plus actual result events. It uses a 180-second hard timeout and does not add expected enums, commands, no-confirmation rules, next actions, or verdict hints. No third user response is allowed after the fixed follow-up.

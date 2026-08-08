@@ -11,11 +11,16 @@ const observer = read('experiments_env/shared/observe-iterative-interaction-case
 const subjectRunner = read('experiments_env/shared/run-iterative-interaction-subject.mjs');
 const subjectLauncher = read('experiments_env/shared/iterative-interaction-subject-launch.mjs');
 const registry = read('experiments_playbook/PLAYBOOK_MANIFEST.md');
+const activeManifest = registry.slice(
+  registry.indexOf('<!-- agent-experiment-manifest:v1 -->'),
+  registry.indexOf('<!-- /agent-experiment-manifest -->'),
+);
 const cases = {
   711: read('experiments_playbook/exp_iterative_interaction/case-711-heavy-hitl1-natural-acceptance.md'),
-  712: read('experiments_playbook/exp_iterative_interaction/case-712-heavy-hitl2-natural-rerun.md'),
   713: read('experiments_playbook/exp_iterative_interaction/case-713-heavy-user-initiated-turn.md'),
+  716: read('experiments_playbook/exp_iterative_interaction/case-716-heavy-hitl1-topic-focus.md'),
 };
+const quarantined712 = read('experiments_playbook/exp_extrem_slow/case-712-extreme-slow-hitl2-natural-rerun.md');
 
 function subjectInstructions(playbook) {
   return [...playbook.matchAll(/```text\n(You are the independent subject Agent[\s\S]*?)\n```/g)].map((match) => match[1]).join('\n');
@@ -53,8 +58,8 @@ describe('iterative interaction real-Agent playbooks', () => {
 
   it('locks the exact user utterances and conversation counts', () => {
     assert.match(cases[711], /"content":"按这个开始"/);
-    assert.match(cases[712], /"content":"资本约束这部分还不够，再补一下"/);
-    assert.match(cases[712], /No third user response is allowed after the fixed follow-up/);
+    assert.match(cases[716], /case-716-broad-reviewable-topic-map/);
+    assert.match(cases[716], /NOT_RUN/);
     assert.match(cases[713], /现在是不是已经全部完成，可以直接拿最终报告了？/);
     assert.match(cases[713], /最终报告文件现在已经生成了吗？/);
     assert.match(cases[713], /two fresh independent real Agent turns/i);
@@ -88,15 +93,14 @@ describe('iterative interaction real-Agent playbooks', () => {
     assert.match(subjectRunner, /forcedAfterResult/);
     assert.doesNotMatch(subjectRunner, /createTrace|traceEntry/);
     assert.match(subjectRunner, /event\.type !== 'result'/);
-    assert.match(subjectRunner, /if \(turnIndex < subject\.messages\.length\) \{\s*sendTurn\(turnIndex\)/);
+    assert.match(subjectRunner, /if \(turnIndex < turnMessages\.length\) \{\s*sendTurn\(turnIndex\)/);
     assert.match(cases[711], /run-iterative-interaction-subject\.mjs 711 --bundle/);
-    assert.match(cases[712], /run-iterative-interaction-subject\.mjs 712 --bundle/);
+    assert.match(cases[716], /run-iterative-interaction-subject\.mjs 716 --bundle/);
     assert.match(cases[713], /run-iterative-interaction-subject\.mjs 713-readiness --bundle/);
     assert.match(cases[713], /run-iterative-interaction-subject\.mjs 713-final --bundle/);
     assert.doesNotMatch(cases[711], /verify-bundle-health\.mjs/);
     assert.match(cases[711], /Autorun Supervisor validates the completion, runs Light health/);
     assert.match(cases[711], /180-second hard timeout/i);
-    assert.match(cases[712], /180-second hard timeout/i);
     assert.match(cases[713], /180-second hard timeout/i);
   });
 
@@ -114,9 +118,17 @@ describe('iterative interaction real-Agent playbooks', () => {
   });
 
   it('registers every case exactly once in the active runner manifest', () => {
-    for (const id of ['711', '712', '713']) {
-      const path = `exp_iterative_interaction/case-${id}-heavy-${id === '711' ? 'hitl1-natural-acceptance' : id === '712' ? 'hitl2-natural-rerun' : 'user-initiated-turn'}.md`;
-      assert.equal(registry.split(path).length - 1, 1, path);
+    for (const [id, role] of [['711', 'hitl1-natural-acceptance'], ['713', 'user-initiated-turn'], ['716', 'hitl1-topic-focus']]) {
+      const path = `exp_iterative_interaction/case-${id}-heavy-${role}.md`;
+      assert.equal(activeManifest.split(path).length - 1, 1, path);
     }
+  });
+
+  it('keeps the observed slow HITL2 canary quarantined, not selectable', () => {
+    assert.match(quarantined712, /QUARANTINED - EXTREME SLOW/);
+    assert.match(quarantined712, /446042 ms/);
+    assert.match(quarantined712, /\$2\.190943/);
+    assert.doesNotMatch(activeManifest, /case-712-/);
+    assert.match(registry, /exp_extrem_slow\/case-712-extreme-slow-hitl2-natural-rerun\.md/);
   });
 });

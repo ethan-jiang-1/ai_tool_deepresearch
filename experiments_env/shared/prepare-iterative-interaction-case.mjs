@@ -14,12 +14,12 @@ const REPO_ROOT = process.cwd();
 const CASE_ID = process.argv[2];
 const targetIndex = process.argv.indexOf('--target-dir');
 const TARGET_DIR = targetIndex >= 0 && process.argv[targetIndex + 1] ? resolve(process.argv[targetIndex + 1]) : REPO_ROOT;
-if (!['711', '712', '713', '714'].includes(CASE_ID)) {
-  console.error('Usage: node experiments_env/shared/prepare-iterative-interaction-case.mjs <711|712|713|714> [--target-dir <dir>]');
+if (!['711', '712', '713', '714', '716'].includes(CASE_ID)) {
+  console.error('Usage: node experiments_env/shared/prepare-iterative-interaction-case.mjs <711|712|713|714|716> [--target-dir <dir>]');
   process.exit(2);
 }
 if (process.argv.length !== (targetIndex >= 0 ? 5 : 3)) {
-  console.error('Usage: node experiments_env/shared/prepare-iterative-interaction-case.mjs <711|712|713|714> [--target-dir <dir>]');
+  console.error('Usage: node experiments_env/shared/prepare-iterative-interaction-case.mjs <711|712|713|714|716> [--target-dir <dir>]');
   process.exit(2);
 }
 
@@ -165,14 +165,14 @@ function ensureIndexRow(bundle, row) {
   writeFileSync(indexPath, content);
 }
 
-function submitFixture(bundle, phase, queueId, outputPath, content, extras = []) {
+function submitFixture(bundle, phase, queueId, outputPath, content, extras = [], { role = 'reference' } = {}) {
   const result = claimAndSubmitFixtureWorkUnit(bundle, {
     phase,
     queue_item_id: queueId,
     topic_slug: TOPIC.slug,
     title: `${phase} setup-only predecessor`,
     output_path: outputPath,
-    role: 'reference',
+    role,
     source_url: `https://research.example.org/iterative/${queueId}`,
     source_slug: queueId,
     output_content: content,
@@ -193,8 +193,9 @@ function stageWave0(bundle) {
   ensureIndexRow(bundle, `| ${refPath} | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-17 |`);
   const fixture = submitFixture(bundle, 'wave0', 'iterative-wave0', refPath, ref, [
     { path: 'artifacts/wave0/capital-constraints/source.yaml', role: 'source_yaml', content: source },
-  ]);
+  ], { role: 'source_yaml' });
   const workId = fixture.record?.work_id || 'iterative-wave0/1';
+  appendFileSync(join(bundle, refPath), `\n## Backing References\n- source_identity: ${workId}/1\n- source_yaml: artifacts/wave0/capital-constraints/source.yaml\n- cache_trail: _cache/wave0/primary/iterative-wave0/iterative-wave0\n- result_ref: _work_units/wave0/${workId}/result.json\n- work_unit_ref: _work_units/wave0/${workId}\n`);
   appendFileSync(join(bundle, 'seed_topics/capital-constraints.md'), `\n## 本轮新增证据\n- **entry_id**: ${workId}/1\n  - **evidence_meaning**: Capital constraints affect feasible choices and timing; evidence establishes direction without magnitude.\n  - **relationship**: supports\n  - **refs**: ${refPath}\n  - **status**: supported\n  - **next_hop**: deepen magnitude in wave1\n`);
   logCompletion(bundle, 'wave0_completion');
 }
@@ -310,7 +311,10 @@ function prepareHitl1(caseId) {
   assert.equal(profile.research_access.status, 'unprobed');
   assert.equal(profile.research_profile, 'not_selected');
   assert.equal(profile.human_decision_checkpoints.hitl1.status, 'not_started');
-  writeFileSync(join(bundle, `case-${caseId}-research-request.txt`), 'Research whether a cash-constrained small company should buy one piece of equipment now or defer; keep the scope compact and decision-focused.\n');
+  const request = caseId === '716'
+    ? 'Research how a multinational manufacturer should adapt its capital-investment strategy under fragmented regulation, financing constraints, supply-chain risk, technology change, workforce impacts, and varying regional demand; preserve each independent decision question.\n'
+    : 'Research whether a cash-constrained small company should buy one piece of equipment now or defer; keep the scope compact and decision-focused.\n';
+  writeFileSync(join(bundle, `case-${caseId}-research-request.txt`), request);
   writeFileSync(join(bundle, `case-${caseId}-setup.json`), `${JSON.stringify({
     fixture: 'setup_only',
     legal_boundary: { current_node: status.current_node, current_gate: status.current_gate, next_gate: status.next_gate },
@@ -370,4 +374,4 @@ function prepare713() {
   return bundle;
 }
 
-console.log(CASE_ID === '711' || CASE_ID === '714' ? prepareHitl1(CASE_ID) : CASE_ID === '712' ? prepare712() : prepare713());
+console.log(CASE_ID === '711' || CASE_ID === '714' || CASE_ID === '716' ? prepareHitl1(CASE_ID) : CASE_ID === '712' ? prepare712() : prepare713());

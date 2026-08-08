@@ -129,11 +129,19 @@ const SUBJECTS = {
     tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
     boundary: 'Complete the minimum work owned by the current phase. Capture the supplied research controls only in the production host-file snapshot, then stop after its Gate and immediate legal handoff before executing the newly loaded phase.',
   },
+  '716': {
+    bundlePrefix: 'dpt_disp_case-716_',
+    transcript: 'case-716-transcript.jsonl',
+    system: `You are the independent subject Agent for case 716. Work only in the exact bundle path provided by the runner. Load the bundle's current production lifecycle surface and direct facts. Respond to the user's current turn, then follow that production surface for subsequent turns in this same session. Framework commands are executable from ${REPO_ROOT}; use that absolute root when a production instruction names a relative DEEP_RESEARCH_HARNESS or experiments_env command, without inspecting unrelated framework source.`,
+    messages: ['请针对当前跨国制造企业研究请求给出建议。保留所有确实需要独立回答的决策问题，并把相近问题按可审阅的研究线程归组。', '按建议开始；其中资本投资这个话题请额外比较租赁、购买与推迟决策在不同地区融资约束下的现金流、风险和适用条件。'],
+    tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
+    boundary: 'Complete the minimum work owned by the current phase. Preserve the accepted focus only in the production host-file controls snapshot, then stop after its Gate and immediate legal handoff before executing the newly loaded phase.',
+  },
   '712': {
     bundlePrefix: 'dpt_disp_case-712_',
     transcript: 'case-712-transcript.jsonl',
     system: 'You are the independent subject Agent for case 712. Work only in the exact bundle path provided by the runner. Load the bundle\'s current production lifecycle surface and direct facts. Respond to the user\'s current turn, then follow that production surface for subsequent turns in this same session.',
-    messages: ['请简要审阅当前研究，只告诉我一个最值得做的下一步。', '资本约束这部分还不够，再补一下'],
+    messages: ['请简要审阅当前研究，只告诉我一个最值得做的下一步。', '资本约束这部分还不够，再补一下；这次请特别比较租赁、购买与推迟决策在现金流压力下的差异。'],
     tools: 'Bash,Edit,Glob,Grep,Read,Write',
     boundary: 'Complete the minimum work owned by the current phase. After its Gate and immediate legal handoff, stop before executing the newly loaded phase.',
   },
@@ -180,7 +188,7 @@ const SUBJECTS = {
 };
 
 function usage() {
-  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <154|204|115|164|225|227|232|318|711|712|713-readiness|713-final|714|901|951|951-judge> --bundle <path>');
+  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <154|204|115|164|225|227|232|318|711|712|713-readiness|713-final|714|716|901|951|951-judge> --bundle <path>');
   process.exit(2);
 }
 

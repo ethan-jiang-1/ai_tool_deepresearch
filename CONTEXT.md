@@ -238,7 +238,8 @@ explicit, visible limitation. Its compact outcome may be `covered`, `partial`,
 or `blocked`; it proves traceability of incremental work, not that arbitrary
 natural-language intent was semantically answered correctly. Semantic
 usefulness remains a User/Agent review question at HITL2. This is a confirmed
-design direction, not a current Gate, schema field, or Engine verdict.
+design direction, not a current Gate, schema field, Engine verdict, or routing
+rule for `partial`/`blocked`.
 _Avoid_: semantic-quality score, LLM self-rating, source-count quota, HITL2 replacement
 
 ## Deterministic Checkpoints

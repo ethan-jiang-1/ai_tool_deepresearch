@@ -47,7 +47,7 @@ suggested_context:
 **Topic rewrite 步骤（一句话场景）：**
 1. 将一句话展开为 structured original topic，覆盖：背景（这个领域为什么重要）、研究范围（边界在哪）、关键维度（从哪些角度切入）、已知前提（已有的共识）、不确定项（需要 research 回答的 open questions）
 2. 将 original topic 写入 `rb_plan.md` 的 `## Goal` section。至少填写 `### Purpose`（一段话概述研究目标）。`### Research Questions` 和 `### Scope` 按 HITL1 用户提供的信息填写——信息不足时标注 `(待 HITL2 确认)`，不编造。
-3. 从 original topic 推导初始 topic preview（3-5 个可独立研究的子话题），用户确认前不直接写 `topic_registry` 或 seed 文件
+3. 从 original topic 推导最小独立 Topic map：保留需要分别回答的问题、证据路径或交付价值；preview 至少有一个 proposed Topic、没有预设上限。一个 Topic 足够时不得为凑数拆分；较大 map 按可审阅的研究线程分组并说明拆分理由。用户确认前不直接写 `topic_registry` 或 seed 文件
 4. 将 original topic + seed topics + 建议的 `research_profile` 一起展示给用户
 
 **Slug 命名约定：** 每个 topic 的 `slug` 格式为 `NN_<descriptive-name>`，`NN` 为该 topic 在 `topic_registry` 数组中的 1-based 位置（两位零填充），**不是** `id` 字段的值。`id` SHOULD 与 NN 一致（如 `"01"`），gate 不校验 id 格式——这是 convention 层面的统一。
@@ -82,7 +82,7 @@ topic_registry:
 2. 填入动态部分：
    - `{DYNAMIC: grounded_goal_and_scope}` → 从原始问题与 §3a topic rewrite 提取目标和边界
    - `{DYNAMIC: proposed_must_answer_questions}` → 基于原始问题提出具体问题
-   - `{DYNAMIC: seed_topics_preview}` → 从 `rb_plan.md` topic_registry 生成简短预览
+   - `{DYNAMIC: seed_topics_preview}` → 从 §3a 的 proposed minimum independent Topic map 生成简短预览
    - `{DYNAMIC: recommended_profile_description}` → 一个用户可理解的深度/广度推荐
    - `{DYNAMIC: recommendation_reason_and_effort}` → 推荐理由与大致投入影响
 3. 向用户展示完整的入口 prompt
@@ -100,11 +100,13 @@ topic_registry:
 
 ### 3b.1 Optional User Research Controls Snapshot
 
-用户可提供优先级、明确排除、来源/证据偏好、分析视角、交付要求或相关业务背景。它们是本轮研究指导，不是 profile、Gate、来源 floor、receipt、lifecycle 或 schema override。
+用户可提供优先级、明确排除、来源/证据偏好、分析视角、交付要求、相关业务背景，或一个 optional `research focus brief`。focus 以普通语言说明某个 Topic 还要额外理解什么；它只在所有 Topic 的共同基线之上指导本轮研究，不降低其他 Topic 的既有基线。所有这些内容都是研究指导，不是 profile、Topic field、Gate、来源 floor、receipt、lifecycle 或 schema override。
 
-在用户决定和任何 material conflict 已澄清后，Agent 先运行纯 renderer，读取 stdout，再只在已有的 `rb_plan.md## Constraints > ### User Research Controls` coordinate 写入返回的精确 section，随后才创建 retained topic-state input：无额外控制时运行 `node DEEP_RESEARCH_HARNESS/cli/plan-hostfile-sections.mjs render-no-controls`；有控制时把已解析的本 run snapshot 放在显式 UTF-8 input path，运行 `node DEEP_RESEARCH_HARNESS/cli/plan-hostfile-sections.mjs render-supplied-controls --input <snapshot-path>`。renderer 不寻找 bundle、不写 host file，也不取得新的 writer authority。若 renderer 缺失或返回 code `2` invocation/configuration root，只修正该调用或报告缺失 contract；不得手写较短 fence、发明 alternate rendering protocol，或绕过已有 host-file owner。
+若用户表达 focus，Agent 先在当前 HITL1 loop 用简短语言反映理解，并允许用户修正；接受后 supplied-controls literal snapshot 必须保留两个清楚标注的叙事部分：`用户的重点原话（逐字保留）` 与 `Agent 对本轮额外研究方向的理解（可由用户修正）`。前者逐字保留，后者只表达当前理解；两者不被 renderer、Engine、Gate 或后续 consumer 解析为结构化 authority。没有 focus 时，不创建空 focus record，维持已有 no-controls/ordinary-controls form。
 
-用户明确授权读本地文件时，只读取一次并只摘取本 run 适用、可分享的控制到 snapshot；不得保留路径、以后重读、递归读取链接、复制无关内容或形成同步协议。若控制与 profile、must-answer 或 style 有 material conflict，先在本 HITL1 取得最小用户决定并更新既有 structured owner；不得让 silent phase 私自选择赢家。文件不可读、意图不清或控制过宽时，只问最小澄清或 host prerequisite，绝不虚构 snapshot。topic-state apply/recover 后继续读取已 durable 的 host-file snapshot，不从 chat 或外部路径重建。
+在用户决定和任何 material conflict 已澄清后，Agent 先运行纯 renderer，读取 stdout，再只在已有的 `rb_plan.md## Constraints > ### User Research Controls` coordinate 写入返回的精确 section，随后才创建 retained topic-state input：无额外控制时运行 `node DEEP_RESEARCH_HARNESS/cli/plan-hostfile-sections.mjs render-no-controls`；有控制时把包含上述 labelled focus narrative（如有）的已解析本 run literal snapshot 放在显式 UTF-8 input path，运行 `node DEEP_RESEARCH_HARNESS/cli/plan-hostfile-sections.mjs render-supplied-controls --input <snapshot-path>`。renderer 不寻找 bundle、不写 host file，也不取得新的 writer authority。若 renderer 缺失或返回 code `2` invocation/configuration root，只修正该调用或报告缺失 contract；不得手写较短 fence、发明 alternate rendering protocol，或绕过已有 host-file owner。
+
+用户明确授权读本地文件时，只读取一次并只摘取本 run 适用、可分享的控制到 snapshot；不得保留路径、以后重读、递归读取链接、复制无关内容或形成同步协议。若控制或 focus 与 profile、must-answer、style 或 proposed Topic map 有 material conflict，先在本 HITL1 取得最小用户决定并更新既有 structured owner；不得让 silent phase 私自选择赢家。文件不可读、意图不清或控制过宽时，只问最小澄清或 host prerequisite，绝不虚构 snapshot。topic-state apply/recover 后继续读取已 durable 的 host-file snapshot，不从 chat 或外部路径重建。
 
 ### 3c. Research Style Projection Handoff（研究风格参数投影）
 

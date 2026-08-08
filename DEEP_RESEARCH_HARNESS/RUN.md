@@ -1,13 +1,24 @@
 # RUN.md — DEEP_RESEARCH_HARNESS 入口
 
-> **DEEP_RESEARCH_HARNESS v0.78**
+> **DEEP_RESEARCH_HARNESS v0.79**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DEEP_RESEARCH_HARNESS 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.78
+## Current Release: v0.79
+
+- HITL1 now presents the minimum independent Topic map: one or more proposed
+  Topics, no preset upper cap, and reviewable research-thread grouping for a
+  large map. The existing approved-Topic lower bound is unchanged.
+- A user may optionally name a research focus in ordinary language. HITL1
+  keeps the wording and a separately labelled, user-correctable Agent
+  interpretation in the existing literal controls snapshot; HITL2 uses the
+  same narrative distinction in its existing rerun rationale.
+- A recorded rerun focus guides only the current per-Topic increment through
+  the existing direction path. It adds no parser, profile/Topic field, Gate,
+  route, checkpoint, source quota, or historical-evidence coverage claim.
 
 - Wave1 question-list requirements now come from the active typed semantic
   section descriptor. Equivalent heading order, case, level, spacing, and list

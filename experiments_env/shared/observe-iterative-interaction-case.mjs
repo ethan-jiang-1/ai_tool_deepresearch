@@ -14,8 +14,8 @@ import { recordCheck } from './wff-playbook-utils.mjs';
 const [caseId, action, ...rest] = process.argv.slice(2);
 const bundleIndex = rest.indexOf('--bundle');
 const bundle = bundleIndex >= 0 ? rest[bundleIndex + 1] : null;
-if (!['115', '711', '712', '713', '714'].includes(caseId) || !action || !bundle) {
-  console.error('Usage: node experiments_env/shared/observe-iterative-interaction-case.mjs <115|711|712|713|714> <hash|snapshot|transition-final|verdict> --bundle <path> [--label A] [--transcript <path>]');
+if (!['115', '711', '712', '713', '714', '716'].includes(caseId) || !action || !bundle) {
+  console.error('Usage: node experiments_env/shared/observe-iterative-interaction-case.mjs <115|711|712|713|714|716> <hash|snapshot|transition-final|verdict> --bundle <path> [--label A] [--transcript <path>]');
   process.exit(2);
 }
 
@@ -303,6 +303,27 @@ function record714(events) {
   recordCheck(tracePath, { gate: 'case-714-existing-handoff', passed: available ? gatePass && setupLoad : unavailable && gateFail && !setupLoad, detail: `available=${available} unavailable=${unavailable} gate_pass=${gatePass} gate_fail=${gateFail} setup_load=${setupLoad}` });
 }
 
+function record716(events) {
+  const marker = userMarkerIndexes(events, '按建议开始；其中资本投资这个话题请额外比较租赁、购买与推迟决策在不同地区融资约束下的现金流、风险和适用条件。');
+  const split = marker[0] ?? events.length;
+  const beforeText = assistantText(events.slice(0, split));
+  const planText = readFileSync(join(bundle, 'rb_plan.md'), 'utf8');
+  const profileText = readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8');
+  const profile = parseYaml(profileText);
+  const trace = traceEvents();
+  const seedCount = readdirSync(join(bundle, 'seed_topics')).filter((name) => name.endsWith('.md')).length;
+  const controls = /用户提供的本轮研究控制快照（仅作研究指导，不覆盖 Engine contracts）：[\s\S]*用户的重点原话（逐字保留）[\s\S]*租赁、购买与推迟[\s\S]*Agent 对本轮额外研究方向的理解（可由用户修正）/.test(planText);
+  const available = profile.research_access?.status === 'available';
+  const unavailable = profile.research_access?.status === 'unavailable';
+  const gatePass = trace.some((event) => event.event === 'gate_attempt' && event.gate === 'hitl1-recorded' && event.passed === true);
+  const gateFail = trace.some((event) => event.event === 'gate_attempt' && event.gate === 'hitl1-recorded' && event.passed === false);
+  const setupLoad = trace.some((event) => event.event === 'load_complete' && event.entry === 'phases/phase-setup.md');
+  const reviewableMap = seedCount > 5 && /研究线程|线程|分组/.test(beforeText);
+  recordCheck(tracePath, { gate: 'case-716-broad-reviewable-topic-map', passed: marker.length === 1 && reviewableMap, detail: `user_markers=${marker.length} seeds=${seedCount}` });
+  recordCheck(tracePath, { gate: 'case-716-labelled-focus-snapshot', passed: controls && profile.human_decision_checkpoints?.hitl1?.status === 'recorded' && !/重点原话|额外研究方向|租赁、购买/.test(profileText), detail: `controls=${controls} profile_has_focus=${/重点原话|额外研究方向|租赁、购买/.test(profileText)}` });
+  recordCheck(tracePath, { gate: 'case-716-existing-handoff', passed: available ? gatePass && setupLoad : unavailable && gateFail && !setupLoad, detail: `available=${available} unavailable=${unavailable} gate_pass=${gatePass} gate_fail=${gateFail} setup_load=${setupLoad}` });
+}
+
 function record115(events) {
   const tools = publicToolExchanges(events);
   const searchUses = tools.uses.filter((use) => use.value.name === 'WebSearch');
@@ -429,7 +450,7 @@ function record712(events) {
   const hasOpenBoundary = /不足|缺口|谨慎|空缺|未知|gap/i.test(beforeText);
   const hasOneNextStep = /推荐|建议|下一步/i.test(beforeText);
   recordCheck(tracePath, { gate: 'case-712-review-and-one-recommendation', passed: marker.length === 1 && /证据|研究/.test(beforeText) && hasOpenBoundary && hasOneNextStep, detail: `user_markers=${marker.length}` });
-  recordCheck(tracePath, { gate: 'case-712-natural-language-mapping', passed: hitl2.status === 'recorded' && hitl2.user_decision === 'rerun' && /资本约束/.test(hitl2.rationale || '') && gatePass && rerunLoad && /rb_profile\.yaml|hitl2-recorded|enter-phase/.test(tools.serialized), detail: JSON.stringify({ status: hitl2.status, decision: hitl2.user_decision, rationale: hitl2.rationale, gatePass, rerunLoad }) });
+  recordCheck(tracePath, { gate: 'case-712-natural-language-mapping', passed: hitl2.status === 'recorded' && hitl2.user_decision === 'rerun' && /资本约束/.test(hitl2.rationale || '') && /用户的重点原话（逐字保留）/.test(hitl2.rationale || '') && /Agent 对本轮额外研究方向的理解（可由用户修正）/.test(hitl2.rationale || '') && gatePass && rerunLoad && /rb_profile\.yaml|hitl2-recorded|enter-phase/.test(tools.serialized), detail: JSON.stringify({ status: hitl2.status, decision: hitl2.user_decision, rationale: hitl2.rationale, gatePass, rerunLoad }) });
   recordCheck(tracePath, { gate: 'case-712-user-facing-contract', passed: !/(proceed_to_readiness|request_view_revision|stop_blocked|quick_factual|exploratory_map|claim_verification)/.test(allAssistant) && !/(是否确认|确定吗|再确认|请确认)/.test(assistantText(events.slice(split + 1))), detail: allAssistant.slice(0, 400) });
 }
 
@@ -444,7 +465,7 @@ function record713() {
 }
 
 function verdict() {
-  if (caseId === '115' || caseId === '711' || caseId === '712' || caseId === '714') {
+  if (caseId === '115' || caseId === '711' || caseId === '712' || caseId === '714' || caseId === '716') {
     const path = option('--transcript') || join(bundle, `case-${caseId}-transcript.jsonl`);
     const events = transcriptEvents(path);
     if (!events) {
@@ -453,7 +474,8 @@ function verdict() {
     if (caseId === '115') record115(events);
     else if (caseId === '711') record711(events);
     else if (caseId === '712') record712(events);
-    else record714(events);
+    else if (caseId === '714') record714(events);
+    else record716(events);
   } else {
     const readiness = join(bundle, 'case-713-readiness-transcript.jsonl');
     const final = join(bundle, 'case-713-final-transcript.jsonl');

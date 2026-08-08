@@ -68,7 +68,7 @@ node --input-type=module -e "import { loadGateDefinition, readBundleProfile, eva
 - 将用户 decision 写入 `rb_profile.yaml#/human_decision_checkpoints/hitl2`：
   - `status: recorded`
   - `user_decision`: 见下方枚举
-  - `rationale`: 自由文本
+  - `rationale`: 自由文本；若 legal `rerun` 含新的或修订的 focus，保留 `用户的重点原话（逐字保留）` 与 `Agent 对本轮额外研究方向的理解（可由用户修正）` 两个 labelled narrative parts。Agent 必须在同一 HITL2 loop 允许修正后才记录；它们不改变 enum、availability evaluator、Gate、route、profile field 或 Topic field。没有 focus 的 rerun 继续使用原有 rationale form
   - `final_report_view`: 用户期望的 final report 视角（可选）
   - `custom_slug`: 自定义 identifier（可选）
 

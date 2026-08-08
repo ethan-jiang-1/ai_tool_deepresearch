@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.79
+
+- HITL1 now frames its initial preview as the minimum independent Topic map:
+  one or more proposed Topics, no preset upper cap, and reviewable research
+  threads when the map is large. The existing approved-Topic lower bound is
+  unchanged.
+- Users may optionally express a research focus in ordinary language. HITL1
+  retains the user's wording and a separately labelled, correctable Agent
+  interpretation in the existing literal controls snapshot; HITL2 retains the
+  same narrative distinction in its existing rerun rationale.
+- A rerun focus guides only the current per-Topic increment through the
+  existing direction path. It adds no parser, profile/Topic field, Gate, route,
+  checkpoint, source quota, or claim that historical evidence satisfies the
+  new focus.
+
 ## v0.78
 
 - Markdown semantic sections now include nested descendant subsection content: a

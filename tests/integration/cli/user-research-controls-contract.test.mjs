@@ -1,9 +1,9 @@
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { applyCanonicalTopicState } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { applyCanonicalTopicState, recoverCanonicalTopicState } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
 import { renderNoControls, renderSuppliedControls } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/plan-hostfile-sections.mjs';
 import { kindContractForQueueItem } from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-utils.mjs';
 
@@ -76,5 +76,35 @@ describe('user research controls contract', () => {
     assert.equal(help.status, 0, help.stderr || help.stdout);
     assert.match(help.stdout, /render-supplied-controls --input/);
     assert.equal(readFileSync(planPath, 'utf8'), before);
+  });
+
+  it('preserves a labelled focus literal across prepared-operation recovery without creating structured authority', () => {
+    const path = bundle();
+    const planPath = join(path, 'rb_plan.md');
+    const focus = [
+      '用户的重点原话（逐字保留）：资本约束这个话题，请多比较租赁、购买与推迟决策的现金流影响。',
+      'Agent 对本轮额外研究方向的理解（可由用户修正）：比较三种融资路径在现金流压力下的成本、风险与适用条件。',
+    ].join('\n\n');
+    const snapshot = renderSuppliedControls(focus);
+    writeFileSync(planPath, readFileSync(planPath, 'utf8').replace(/### User Research Controls[\s\S]*?\n\n未提供额外的本轮研究控制；按已确认的问题、范围和研究 profile 执行。/, snapshot));
+    writeFileSync(join(path, 'rb_status.json'), JSON.stringify({
+      bundle: 'controls', current_mode: 'execution', state: 'in_progress',
+      current_node: 'phases/phase-hitl1.md', current_gate: 'hitl1_recorded', next_gate: 'setup_ready',
+    }));
+
+    const input = {
+      context: 'hitl1',
+      actions: [{ action: 'add_topic', title: 'Capital Constraints', slug_stem: 'capital-constraints', must_answer: ['How does capital pressure affect a decision?'], scope_role: 'primary', depends_on_topic_uids: [] }],
+    };
+    assert.throws(() => applyCanonicalTopicState({ bundlePath: path, input, crashAt: 'after_prepared' }), /simulated crash/);
+    const operationId = readdirSync(join(path, '_diagnostics', 'topic-state'))[0];
+    assert.equal(recoverCanonicalTopicState({ bundlePath: path, operationId }).verdict, 'committed');
+
+    const plan = readFileSync(planPath, 'utf8');
+    const profile = readFileSync(join(path, 'rb_profile.yaml'), 'utf8');
+    const queue = readFileSync(join(path, 'rb_queue.json'), 'utf8');
+    assert.ok(plan.includes(focus));
+    assert.doesNotMatch(profile, /重点原话|额外研究方向|租赁、购买/);
+    assert.doesNotMatch(queue, /重点原话|额外研究方向|租赁、购买/);
   });
 });

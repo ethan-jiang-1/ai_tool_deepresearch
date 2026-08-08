@@ -106,10 +106,10 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 | `exp_autonomous-research-hardening/case-605-heavy-bundle-containment-real-subagent.md` |
 | `exp_autonomous-research-hardening/case-606-light-continuation-cues.md` |
 | `exp_iterative_interaction/case-711-heavy-hitl1-natural-acceptance.md` |
-| `exp_iterative_interaction/case-712-heavy-hitl2-natural-rerun.md` |
 | `exp_iterative_interaction/case-713-heavy-user-initiated-turn.md` |
 | `exp_iterative_interaction/case-714-heavy-user-research-controls.md` |
 | `exp_iterative_interaction/case-715-heavy-wave-target-receipt-closure.md` |
+| `exp_iterative_interaction/case-716-heavy-hitl1-topic-focus.md` |
 | `exph_workflow-foundation/case-901-heavy-topic-rewrite-agent.md` |
 | `exph_workflow-foundation/case-951-heavy-topic-rewrite-ai-judge.md` |
 <!-- /agent-experiment-manifest -->
@@ -120,6 +120,7 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 
 - `exp_extrem_slow/case-224-extreme-slow-happy-and-fail.md`
 - `exp_extrem_slow/case-225-extreme-slow-returned-work-closeout.md`
+- `exp_extrem_slow/case-712-extreme-slow-hitl2-natural-rerun.md`
 
 These playbooks are quarantined because their observed runs were excessively slow. Do not run them. Refactor a quarantined playbook, move it to a normal `light`, `standard`, or `heavy` runnable path, and explicitly register it in the machine table before reactivation; otherwise remove it.
 
