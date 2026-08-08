@@ -1,0 +1,116 @@
+schema_version: verification-routing/v1
+change: add-traceable-topic-focus-coverage
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The optional focus-coverage structure, current-round submitted binding,
+      outcome matrix, and direct diagnostic roots are isolated Engine behavior.
+  integration:
+    status: selected
+    rationale: >-
+      Wave1 depth-review, submitted authority, Gate definition, and formal
+      versus inspect verdict partition meet at a cross-file boundary.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      A rerun-shaped Wave1 chain must show that historical submitted evidence
+      cannot satisfy a current focus commitment through the normal checkpoint.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      Choosing commitments from accepted natural-language focus context and
+      producing real incremental work are Agent behavior requiring an
+      independent real Subject Agent and native completion authority.
+claims:
+  - id: focus-coverage-direct-binding-contract
+    statement: >-
+      The Wave1 depth evaluator accepts only optional, structurally valid
+      exact focus-coverage declarations whose covered commitments bind to current,
+      reviewed, submitted rows for the same canonical Topic with an explicit
+      matching index rerun_count. It rejects invalid outcome matrices,
+      mismatched rounds, legacy-unbound or unknown refs, and historical backing
+      without evaluating natural-language usefulness.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/wave-depth-focus-coverage.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: focus-coverage-limit-eligibility-contract
+    statement: >-
+      Only a structurally valid partial or blocked focus-coverage result
+      produces the definition-owned, required-floor focus_coverage_limit
+      finding eligible for the existing Wave degradation predicate; malformed
+      or repairable coverage remains a masked, ineligible depth-contract root.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/wave-degradation-eligibility.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-focus-coverage-verdict-partition
+    statement: >-
+      The Wave1 formal Gate and inspect share one focus-coverage result:
+      covered adds no focus failure; partial or blocked retains explicit
+      limitation and can only use existing degraded policy; invalid or
+      repairable coverage remains an ordinary failed root.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/wave1-focus-coverage-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rerun-focus-coverage-current-increment
+    statement: >-
+      A normal Wave1 rerun chain rejects prior-round submitted backing for a
+      current focus declaration, accepts current-round binding when otherwise
+      valid, and uses no alternate route or hand-written runtime truth.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/wave1-focus-coverage-rerun.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: focus-coverage-real-increment-observation
+    statement: >-
+      Starting from accepted focus context, one independent real Subject Agent
+      performs legal current Wave1 incremental work and reaches a native
+      coverage result or an honest visible limitation. Unavailable Agent or
+      tools finalizes only NOT_RUN and never fixture PASS.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wff_wave-gates/case-125-heavy-wave1-focus-coverage.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
