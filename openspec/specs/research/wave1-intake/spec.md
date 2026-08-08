@@ -221,6 +221,74 @@ manually.
 - **THEN** the direct cache/source mapping contract SHALL fail
 - **AND** neither a reference file nor an index row SHALL repair that authority
 
+A depth review SHALL permit one optional `focus_coverage` process-evidence
+block. Its presence is the Phase Agent's declaration that a bounded focus
+commitment is being claimed for this Topic and current round; absence SHALL
+remain the no-focus path and SHALL NOT be interpreted as a missing user request.
+The block SHALL contain exactly `topic_uid`, `rerun_count`, `outcome`, and
+`commitments`; bind the current canonical Topic and current `rerun_count`; and
+contain a non-empty unique commitment set. A `covered` commitment SHALL contain
+exactly `id`, `statement`, `state`, and non-empty `submitted_work_unit_refs`; a
+`limited` commitment SHALL contain exactly `id`, `statement`, `state`, non-empty
+`limitation`, and `boundary_kind` of `external_action`, `user_decision`, or
+`missing_contract`, while omitting `submitted_work_unit_refs`. It SHALL
+distinguish `covered`, `partial`, and `blocked` without creating a
+semantic-quality score.
+
+For a `covered` commitment, every listed ref SHALL resolve through the same
+reviewed, hash-valid, Topic-bound submitted Wave1 authority already used by the
+depth contract. Its paired work-unit index record SHALL carry an explicit
+`rerun_count` equal to the depth-review block and current profile count; a row
+from another count or a legacy row without that field SHALL NOT satisfy the
+current commitment, including when the current count is `0`. A limited
+commitment SHALL retain a non-empty limitation and an explicit existing-boundary
+kind; it SHALL NOT carry invented submitted refs. `partial` SHALL retain at
+least one covered commitment and at least one limited commitment; `blocked`
+SHALL retain no covered commitment and at least one limited commitment;
+`covered` SHALL retain only covered commitments. The block SHALL not copy source
+claims, URLs, cache trails, receipts, profile floors, queue state, or a parsed
+user-focus field into a second authority.
+
+#### Scenario: Current submitted backing covers a declared commitment
+
+- **WHEN** one current Topic's focus coverage declares a covered commitment
+  with reviewed submitted Wave1 refs bound to the same Topic and current rerun
+  count
+- **THEN** the depth-review contract SHALL accept that commitment's binding
+- **AND** it SHALL not require copied source/cache facts or infer coverage from
+  historical artifacts
+
+#### Scenario: Historical backing cannot satisfy a current focus commitment
+
+- **WHEN** a focus-coverage commitment for rerun count 2 names a submitted row
+  from rerun count 1
+- **THEN** the depth-review contract SHALL reject that commitment binding
+- **AND** it SHALL not relabel the historical row as current coverage
+
+#### Scenario: Explicit initial-round binding is required
+
+- **WHEN** the profile and focus-coverage block both have rerun count 0
+- **THEN** only a covered ref whose paired submitted index row explicitly has
+  `rerun_count: 0` SHALL satisfy the commitment
+- **AND** an otherwise valid legacy submitted row without that field SHALL
+  remain historical context, not current focus backing
+
+#### Scenario: Visible limitation remains distinct from covered backing
+
+- **WHEN** a declared commitment has no acceptable current submitted backing
+  but has an explicit limitation and existing-boundary kind
+- **THEN** the depth-review contract SHALL retain it only as a limited
+  commitment
+- **AND** it SHALL not report that commitment as covered or create a new repair
+  route
+
+#### Scenario: No focus declaration preserves the common baseline path
+
+- **WHEN** a valid depth review has no focus-coverage block
+- **THEN** existing Wave1 baseline checks SHALL continue unchanged
+- **AND** the Engine SHALL not infer an omitted focus from HITL prose,
+  filenames, or source counts
+
 ### Requirement: Wave1 queue-loop playbook verifies deepening end-to-end
 
 Wave1 playbook SHALL verify deepening end to end through work-unit claim, sub-agent execution, submit, ledger, Phase Agent depth review, supplementary refill when shallow, backfill, and gate.

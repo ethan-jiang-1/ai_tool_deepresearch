@@ -1,8 +1,10 @@
 # P3: Reader Evidence Projection
 
 > Proposed OpenSpec change name: `present-topic-baseline-and-increment-evidence`
-> Status: not created; P0 reader-model decision and P2 archive are required
-> Dependencies: P0 complete, P2 archived
+> Status: not created; P0 reader-model decision and P2 archive are complete;
+> remaining discovery is required before proposal
+> Dependencies: P0 complete, P2 archived as
+> `2026-08-08-add-traceable-topic-focus-coverage`
 
 ## Goal
 
@@ -69,9 +71,9 @@ and actual P2 output. Current planning candidates are:
 
 ## Definition of Ready
 
-- [ ] P0 records the selected reader, their bounded question, and the
+- [x] P0 records the selected reader, their bounded question, and the
   presentation distinctions that must remain visible.
-- [ ] P2 is archived and its actual focus-coverage/rerun coordinates are
+- [x] P2 is archived and its actual focus-coverage/rerun coordinates are
   known; P3 does not invent labels for facts P2 did not establish.
 - [ ] The supplied-bundle ambiguity is reproduced from the current accepted
   projection or a documented compatibility equivalent, with the direct

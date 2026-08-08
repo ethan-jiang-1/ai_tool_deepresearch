@@ -44,6 +44,7 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 | `exp_wff_pre-research-repair/case-115-heavy-hitl1-research-access-probe.md` |
 | `exp_wff_wave-gates/case-123-standard-wave2-synthesis.md` |
 | `exp_wff_wave-gates/case-124-standard-seed-topics-boundary.md` |
+| `exp_wff_wave-gates/case-125-heavy-wave1-focus-coverage.md` |
 | `exp_wff_delivery/case-131-standard-delivery-full-chain.md` |
 | `exp_wff_delivery/case-132-standard-hitl2-decision.md` |
 | `exp_wff_delivery/case-133-standard-hitl2-rerun.md` |

@@ -67,6 +67,42 @@ function blocksWave1ReferenceFloor(depthCheck) {
   ));
 }
 
+function focusCoverageLimitFinding(bundlePath, rule, topic, focusCoverage) {
+  const limitations = focusCoverage.limitations || [];
+  const boundaryKinds = [...new Set(limitations.map((item) => item.boundary_kind).filter(Boolean))].sort();
+  const boundaryKind = boundaryKinds.length === 1 ? boundaryKinds[0] : 'missing_contract';
+  const relPath = join('artifacts', 'wave1', topic, 'depth-review.yaml');
+  const coordinate = boundaryKind === 'user_decision'
+    ? `Existing HITL2 decision boundary for focus coverage in ${relPath}`
+    : boundaryKind === 'external_action'
+      ? `External action boundary declared by focus coverage in ${relPath}`
+      : `Focus coverage limitation boundary in ${relPath}`;
+  return makeContractFinding({
+    id: `${rule.id}:${topic}`,
+    ruleId: rule.id,
+    findingSource: rule.finding.source,
+    classification: 'blocking',
+    blockingBasis: rule.finding.blocking_basis,
+    surface: join(bundlePath, relPath),
+    expected: 'All declared focus commitments are covered by current reviewed submitted Wave1 work, or the existing degradation policy accepts the declared limitation.',
+    observed: {
+      outcome: focusCoverage.outcome,
+      limitations: limitations.map(({ id, boundary_kind: kind }) => ({ id, boundary_kind: kind })),
+    },
+    missingFact: `Topic ${topic} has valid focus coverage outcome ${focusCoverage.outcome} with ${limitations.length} declared limitation(s).`,
+    repairKind: boundaryKind,
+    writeTo: coordinate,
+    repair: `Preserve the declared focus limitation at ${relPath} and use the existing Wave1 checkpoint/degradation policy; do not invent a focus-specific route.`,
+    detail: `[focus_coverage_limit] ${topic} outcome=${focusCoverage.outcome}; limitation boundary kind(s): ${boundaryKinds.join(', ')}.`,
+    checkpointContext: {
+      focus_coverage: {
+        outcome: focusCoverage.outcome,
+        limitations: limitations.map(({ id, boundary_kind: kind }) => ({ id, boundary_kind: kind })),
+      },
+    },
+  });
+}
+
 function failureFinding(bundlePath, rule, {
   topic = null,
   surface = null,
@@ -772,7 +808,7 @@ export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFac
     const targets = expandRuleTargets(bundlePath, rule, layouts);
 
     for (const expandedTarget of targets) {
-      const target = { ...expandedTarget, resolved: ['file_exists', 'dir_exists', 'depth_review_contract', 'count_floor', 'pattern_match', 'semantic_sections'].includes(rule.check) ? firstExistingTarget(bundlePath, expandedTarget, { directory: rule.check === 'dir_exists' }) : expandedTarget.resolved };
+      const target = { ...expandedTarget, resolved: ['file_exists', 'dir_exists', 'depth_review_contract', 'focus_coverage_limit', 'count_floor', 'pattern_match', 'semantic_sections'].includes(rule.check) ? firstExistingTarget(bundlePath, expandedTarget, { directory: rule.check === 'dir_exists' }) : expandedTarget.resolved };
       const id = scopedRuleId(rule.id, target.topic);
       if (['pattern_match', 'semantic_sections'].includes(rule.check) && missingFiles.has(target.resolved)) {
         maskedRuleIds.push(id);
@@ -906,6 +942,23 @@ export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFac
           maskedRuleIds.push(...(check.masked_rule_ids || []).map((masked) => scopedRuleId(rule.id, `${topic}:${masked}`)));
           result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
           (check.diagnostics || []).forEach((line, index) => findings.push(advisoryFinding(rule, line, index)));
+        } else if (rule.check === 'focus_coverage_limit') {
+          const topic = topicSlugFromDepthReviewTarget(target.resolved) || target.topic || rule.topic;
+          const check = getDepthContractCheck(topic, depthContractRule);
+          const focusCoverage = check?.focus_coverage;
+          if (!check || !focusCoverage || !check.passed || !focusCoverage.passed) {
+            // Direct depth-review structure, authority, and repair roots are non-degradable and mask any limit.
+            maskedRuleIds.push(scopedRuleId(rule.id, topic));
+            result = { passed: true };
+          } else if (focusCoverage.status === 'limited') {
+            result = {
+              passed: false,
+              detail: `Topic ${topic} has valid focus coverage outcome ${focusCoverage.outcome}.`,
+              findings: [focusCoverageLimitFinding(bundlePath, rule, topic, focusCoverage)],
+            };
+          } else {
+            result = { passed: true };
+          }
         } else if (rule.check === 'work_unit_ledger_exists') {
           const check = checkWorkUnitLedgerExists(bundlePath, rule);
           result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };

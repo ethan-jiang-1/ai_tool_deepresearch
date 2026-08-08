@@ -1,9 +1,14 @@
 # P2: Traceable Focus Coverage
 
 > Proposed OpenSpec change name: `add-traceable-topic-focus-coverage`
-> Status: ready to propose; P0 complete and P1 archived
+> Status: completed; archived as `2026-08-08-add-traceable-topic-focus-coverage`
 > Dependencies: P0 complete, P1 archived as
 > `2026-08-08-align-topic-focus-and-rerun-guidance`
+
+> Archive outcome: the governed finalizer passed all archive checks on
+> 2026-08-08. Deterministic unit, integration, and rerun-chain evidence passed.
+> Case 125 remains a registered, unlaunched real Agent-flow surface; no native
+> PASS, FAIL, ERROR, or NOT_RUN outcome is claimed for it.
 
 ## Goal
 
@@ -63,54 +68,57 @@ Out of scope:
 - [x] P1 is archived with deterministic carrier contracts verified and no
   unresolved conflict in the relevant active specs. Its retained Agent-flow
   attempts are explicitly not semantic-success evidence.
-- [ ] The proposal names the one reader question that focus coverage answers
+- [x] The proposal names the one reader question that focus coverage answers
   and the exact direct source records the Engine may inspect.
-- [ ] The design proves why one optional extension to depth review is simpler
+- [x] The design proves why one optional extension to depth review is simpler
   than a new ledger, controller, or canonical Topic field.
-- [ ] The verification plan includes a real focus-driven incremental run, not
+- [x] The verification plan includes a real focus-driven incremental run, not
   only hand-authored YAML that pretends to be research evidence.
 
 ## Progressive Checklist
 
 ### Proposal and design
 
-- [ ] Re-run capability discovery and determine whether each candidate is
+- [x] Re-run capability discovery and determine whether each candidate is
   Modify, Verify-only, Excluded, or New; register new requirement IDs only if
   a genuinely new capability is required.
-- [ ] Write semantic-precision reasoning for the coverage view: reader,
+- [x] Write semantic-precision reasoning for the coverage view: reader,
   bounded question, retained differences, and normal stop/unknown result.
-- [ ] Write the shortest direct-fact control loop: submitted evidence/direction
+- [x] Write the shortest direct-fact control loop: submitted evidence/direction
   -> coverage check -> minimal diagnostic -> existing legal repair or honest
   boundary -> same checkpoint re-evaluation.
-- [ ] Specify all allowed statuses, required backing/limitation coordinates,
+- [x] Specify all allowed statuses, required backing/limitation coordinates,
   and the P0-approved behavior of `partial` and `blocked`.
-- [ ] Scope-lock the change against any semantic-quality verdict or new
+- [x] Scope-lock the change against any semantic-quality verdict or new
   lifecycle/checkpoint authority.
 
 ### Apply and evidence
 
-- [ ] Complete plan review before target edits.
-- [ ] Implement schema/parser/checker changes together with the Phase-owned
+- [x] Complete plan review before target edits.
+- [x] Implement schema/parser/checker changes together with the Phase-owned
   producer guidance; do not validate a field no legal writer can establish.
-- [ ] Add unit proof for status/binding validation and diagnostics.
-- [ ] Add integration proof using real submitted work-unit facts, cache/provenance
+- [x] Add unit proof for status/binding validation and diagnostics.
+- [x] Add integration proof using real submitted work-unit facts, cache/provenance
   mapping, and depth-review coordinates.
-- [ ] Add deterministic E2E proof that historical evidence cannot satisfy a
+- [x] Add deterministic E2E proof that historical evidence cannot satisfy a
   current focus commitment after rerun.
-- [ ] Add or update a real `agent_flow_e2e` case that starts from a natural
+- [x] Add or update a real `agent_flow_e2e` case that starts from a natural
   focus, performs real incremental work, and produces a trace-backed coverage
   outcome or honest limitation.
 
 ### Closeout
 
-- [ ] Run the selected verification evidence and preserve actual Gate/trace
-  results rather than a chat claim of success.
-- [ ] Run all required governance and verification-routing checks.
-- [ ] Close out, sync/re-compare, and archive through the governed lifecycle.
+- [x] Run the selected deterministic verification evidence and preserve actual
+  Gate results rather than a chat claim of success. Case 125 was not launched,
+  so no native Agent-flow trace result is asserted.
+- [x] Run all required governance and verification-routing checks.
+- [x] Close out, sync/re-compare, and archive through the governed lifecycle.
 
 ## Exit Check and Handoff
 
-P2 is complete only when the Engine can explain, from direct facts, why every
+P2 is complete. The Engine can explain, from direct facts, why every declared
 focus commitment is covered, partial, or blocked, and the user can still use
-HITL2 to judge whether the result is useful. P3 receives stable, provenance
-backed increment coordinates; it must not infer them from file names or counts.
+HITL2 to judge whether the result is useful. P3 receives stable,
+provenance-backed increment coordinates from the archived change's main-spec
+requirements and implementation evidence; it must not infer them from file
+names or counts.

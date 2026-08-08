@@ -218,6 +218,63 @@ classifications shall not themselves authorize a user-facing wait or escalation.
   `wave1_topic_deepening` loop
 - **AND** it SHALL not lower the floor or fabricate depth closure
 
+When accepted current focus context calls for additional work, the Phase Agent
+SHALL derive the smallest readable commitment set and record it only in the
+optional focus-coverage block of the existing depth review. It SHALL bind the
+declaration to the current canonical Topic and current rerun count; record a
+covered commitment with non-empty submitted-work refs, or a limited commitment
+with one visible limitation and an `external_action`, `user_decision`, or
+`missing_contract` boundary kind while omitting submitted refs; use existing
+`wave1_topic_deepening` demand, claim, dry-submit, submit, and depth-review
+update paths for evidence work; and read the same Wave1 inspect after each
+legal repair. The Agent SHALL preserve a commitment as a visible limitation
+only when the existing feedback exposes an external, decision, or
+missing-contract boundary with no currently authorized Wave1 repair; it SHALL
+not declare `partial` or `blocked` merely to bypass available supplementary
+work.
+
+The Phase Agent SHALL treat user focus wording and its interpretation as
+semantic context, not as a command for the Engine. It SHALL not invent a new
+focus queue kind, direct-search path, retry controller, Gate command, user
+checkpoint, profile field, canonical Topic identity, or historical evidence
+label. For an initial run, the coverage declaration binds round 0; for a
+rerun, it binds the current accepted rerun count and leaves earlier direction
+and submitted evidence as history.
+
+#### Scenario: Phase Agent turns current focus context into bounded commitments
+
+- **WHEN** accepted current focus context calls for additional Wave1 work for
+  one Topic
+- **THEN** the Phase Agent SHALL record the smallest readable commitment set in
+  that Topic's depth review and bind it to the current Topic and round
+- **AND** it SHALL not ask the user to choose a source quota, queue kind, or
+  coverage enum
+
+#### Scenario: Repairable commitment uses existing supplementary work
+
+- **WHEN** Wave1 inspect returns an existing legal supplementary repair for an
+  uncovered commitment
+- **THEN** the Phase Agent SHALL use the existing queue/work-unit path and
+  rerun the same inspect
+- **AND** it SHALL not record partial or blocked as a bypass
+
+#### Scenario: No legal repair records an honest limitation
+
+- **WHEN** current Wave1 feedback identifies an external, user-decision, or
+  missing-contract boundary and no authorized Wave1 repair remains
+- **THEN** the Phase Agent SHALL retain the explicit limitation in focus
+  coverage and consume only the existing degraded/no-path behavior
+- **AND** it SHALL not auto-rerun, create a new route, or claim the focus is
+  semantically satisfied
+
+#### Scenario: Rerun coverage does not consume historical work as current
+
+- **WHEN** a rerun writes focus coverage for its current round
+- **THEN** the Phase Agent SHALL bind covered commitments only to current-round
+  submitted work
+- **AND** it SHALL preserve earlier submitted evidence and direction as history
+  rather than current focus coverage
+
 ### Requirement: Wave2 phase body completeness
 
 Wave2 phase body SHALL describe pure synthesis as main-agent work and targeted evidence search as optional delegated work-unit kind `wave2_targeted_evidence`.

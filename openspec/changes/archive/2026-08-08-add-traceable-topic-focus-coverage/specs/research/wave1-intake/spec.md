@@ -1,6 +1,6 @@
 # Wave1 Intake Delta
 
-> req: WAI-004
+> req: WAI-005
 
 ## MODIFIED Requirements
 

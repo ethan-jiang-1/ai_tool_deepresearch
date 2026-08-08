@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.80
+
+- Wave1 depth reviews may now retain an optional, Phase-owned
+  `focus_coverage` declaration for the smallest current focus commitments.
+  Covered commitments bind only to reviewed, hash-valid current-round submitted
+  Wave1 work for the same canonical Topic; visible limitations remain distinct
+  from submitted backing.
+- Wave1 evaluates `covered`, `partial`, and `blocked` coverage through its
+  existing depth contract and Gate path. Malformed or repairable declarations
+  remain ordinary depth-contract failures, while a valid limitation uses the
+  existing degradation partition through the definition-owned
+  `focus_coverage_limit` rule, without a new route, status, or controller.
+
 ## v0.79
 
 - HITL1 now frames its initial preview as the minimum independent Topic map:

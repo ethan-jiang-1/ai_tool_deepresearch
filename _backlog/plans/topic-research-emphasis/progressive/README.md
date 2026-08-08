@@ -1,8 +1,9 @@
 # Progressive Delivery Plan
 
-> Status: active / P1 archived; P2 ready to propose
+> Status: active / P1 and P2 archived; P3 unblocked for discovery
 > Observed OpenSpec state: 2026-08-08, no active change. P1 archived as
-> `2026-08-08-align-topic-focus-and-rerun-guidance`.
+> `2026-08-08-align-topic-focus-and-rerun-guidance`; P2 archived as
+> `2026-08-08-add-traceable-topic-focus-coverage`.
 > Scope: turn the confirmed Topic research-emphasis policy into small,
 > reviewable OpenSpec changes without prematurely changing Harness behavior.
 
@@ -86,19 +87,23 @@ P1 does not add focus-specific Gate behavior.
 
 - [x] Confirm P0 routing decision and P1 archived evidence. P2 must retain
   P1's real-Agent evidence boundary and cannot treat it as semantic success.
-- [ ] Create one focused proposal from
+- [x] Create one focused proposal from
   [02-traceable-focus-coverage.md](02-traceable-focus-coverage.md).
-- [ ] Complete all required planning artifacts, then run
+- [x] Complete all required planning artifacts, then run
   `$polish-openspec-change <P2-change>` until it returns `ready for apply`.
-- [ ] Enter `/opsx:apply` only after that outcome; apply, prove, close out,
+- [x] Enter `/opsx:apply` only after that outcome; apply, prove, close out,
   and archive the change before P3 begins.
 
 P2 proves that a declared focus has submitted evidence backing or a visible
-limitation. It does not claim semantic correctness or create a third HITL.
+limitation. It does not claim semantic correctness or create a third HITL. It
+archived as `2026-08-08-add-traceable-topic-focus-coverage` after the governed
+finalizer passed all archive checks. The deterministic tests prove the Engine
+contract; Case 125 is registered as the real Agent-flow surface but was not
+launched, so it supplies no current Agent-behavior outcome.
 
 ### P3 - Reader evidence projection
 
-- [ ] Confirm P2's actual output coordinates and reader evidence needs.
+- [x] Confirm P2's actual output coordinates and reader evidence needs.
 - [ ] Create one focused proposal from
   [03-reader-evidence-projection.md](03-reader-evidence-projection.md).
 - [ ] Complete all required planning artifacts, then run

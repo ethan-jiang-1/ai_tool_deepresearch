@@ -39,6 +39,15 @@ const SETTINGS_PATH = join(
 );
 
 const SUBJECTS = {
+  '125': {
+    bundlePrefix: 'dpt_disp_case-125_',
+    transcript: 'case-125-subject-transcript.jsonl',
+    system: 'You are the independent Subject Agent for case 125, distinct from the Playbook Agent. Act as the Wave1 Phase Agent only inside the exact bundle path provided by the runner. Load the current production Wave1 surface and direct bundle facts before acting.',
+    messages: ['Read the accepted natural-language focus in the existing literal controls snapshot and choose the smallest readable current commitment for the one queued Wave1 demand. Use only the existing wave1_topic_deepening availability, claim, delegated dpt-evidence-extractor, dry-submit, formal submit, reference/index, seed projection, depth-review, and inspect operations. The child must independently perform bounded real WebSearch and WebFetch and write its own result, receipt, source claims, cache trail, and assigned outputs. After a successful current submitted increment, write focus_coverage in the current depth review using the canonical topic UID, the current profile rerun_count, and only the reviewed current submitted work-unit refs. If the same inspect exposes an external_action, user_decision, or missing_contract boundary with no authorized Wave1 repair, retain a visible limited commitment instead; do not use partial or blocked to bypass repair. Save native dry-submit/formal-submit/inspect JSON as case-125-dry-submit.json, case-125-formal-submit.json, and case-125-inspect.json. Write case-125-subject-evidence.json with exactly focus_context_ref, queue_item_id, work_id, child_evidence_ref, formal_submit_ref, depth_review_ref, and inspect_ref. Do not append playbook verdict checks, native completion, health output, cleanup, or hand-write child-owned source, cache, result, or receipt facts.'],
+    tools: 'Task,Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
+    boundary: 'Use one bounded Subject turn and one real child actor. A missing independent actor, real search/fetch capability, or legal Engine operation is unavailable, not a limitation; fail honestly so the Playbook finalizes NOT_RUN. Preserve child and Engine facts before Phase closeout.',
+    timeoutMs: 12 * 60 * 1000,
+  },
   '204': {
     bundlePrefix: 'dpt_disp_case-204_',
     transcript: 'case-204-subject-transcript.jsonl',
@@ -188,7 +197,7 @@ const SUBJECTS = {
 };
 
 function usage() {
-  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <154|204|115|164|225|227|232|318|711|712|713-readiness|713-final|714|716|901|951|951-judge> --bundle <path>');
+  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <125|154|204|115|164|225|227|232|318|711|712|713-readiness|713-final|714|716|901|951|951-judge> --bundle <path>');
   process.exit(2);
 }
 

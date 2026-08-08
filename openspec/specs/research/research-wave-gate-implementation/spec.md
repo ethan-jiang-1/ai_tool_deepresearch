@@ -175,6 +175,65 @@ authorities and are not replaced by reference-floor convergence.
 - **AND** per-reference missing-row failures SHALL remain masked until the
   parent table is valid
 
+When a current Topic declares the optional focus-coverage block, the Wave1
+complete gate SHALL evaluate that block through the same direct depth-review,
+canonical Topic, submitted-row, and current-round facts used by the Wave1 depth
+contract. It SHALL fail normally for malformed coverage structure,
+absent/mismatched current binding, an unresolved submitted ref, an impossible
+outcome/commitment combination, or a commitment for which the existing Wave1
+path still returns a legal repair root. It SHALL not parse HITL wording, rerun
+rationale prose, or historical evidence to decide whether a declaration was
+required or semantically useful.
+
+A structurally valid `covered` result contributes no focus-specific failure. A
+structurally valid `partial` or `blocked` result SHALL expose its durable
+limitations through one definition-owned `focus_coverage_limit` rule whose
+`finding` is `definition/required_floor` and whose `degradation_eligible` is
+`true`. That rule SHALL be emitted only after focus-coverage structure,
+Topic/round binding, submitted backing, and the outcome matrix pass; those
+invalid or repairable direct facts remain findings of the existing
+non-degradation-eligible depth-contract rule and SHALL mask
+`focus_coverage_limit`. The existing Wave eligibility predicate SHALL therefore
+consume the limit without a new exception: it is never a clean coverage result,
+never a new transition, and can reach a handoff only through the existing
+degradation-eligible policy after all non-eligible roots are absent. The formal
+Gate, inspect, gate-attempt, enter-phase, and advance-status consumers SHALL
+retain the existing `degraded`, `degraded_reason`, and `degraded_rules` facts
+rather than inventing a focus-specific status, trace event, or routing branch.
+
+#### Scenario: Covered focus preserves a clean Wave1 result
+
+- **WHEN** every declared focus commitment has current submitted backing and
+  all existing Wave1 rules pass
+- **THEN** Wave1 SHALL retain its existing clean pass behavior
+- **AND** it SHALL not emit a focus-specific degraded result
+
+#### Scenario: Partial focus uses only the existing degraded partition
+
+- **WHEN** a structurally valid focus-coverage block is partial, every limited
+  commitment has a visible limitation, and no non-eligible Wave1 root remains
+- **THEN** Wave1 SHALL expose the existing degraded-handoff facts only when the
+  existing degradation policy permits it
+- **AND** it SHALL not treat partial coverage as clean pass or select a new
+  route
+
+#### Scenario: Blocked focus remains visible without faking coverage
+
+- **WHEN** a structurally valid focus-coverage block is blocked with explicit
+  limitations and no covered commitment
+- **THEN** Wave1 SHALL retain the blocked limitation in its direct diagnostic
+  context
+- **AND** it SHALL not synthesize submitted backing, erase the limitation, or
+  report covered
+
+#### Scenario: Invalid coverage remains a normal repair failure
+
+- **WHEN** a focus-coverage block has a missing current binding, unknown
+  submitted ref, or an invalid outcome/commitment combination
+- **THEN** Wave1 SHALL return a normal failed Gate root naming that direct fact
+- **AND** it SHALL mask `focus_coverage_limit`, not make the invalid structure
+  degradation-eligible, or ask for a new HITL decision
+
 ### Requirement: Wave2 complete gate rule set
 
 The Wave2 complete gate definition SHALL distinguish pure main-agent synthesis from delegated targeted evidence search. Delegated Wave2 targeted evidence outputs SHALL require submitted work-unit ledger rows; pure synthesis artifact checks SHALL continue to use synthesis artifact rules.

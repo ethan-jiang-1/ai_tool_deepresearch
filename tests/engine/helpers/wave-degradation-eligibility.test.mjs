@@ -50,6 +50,24 @@ function finding(overrides = {}) {
   };
 }
 
+function focusCoverageLimitRule() {
+  return {
+    id: 'focus_coverage_limit',
+    check: 'focus_coverage_limit',
+    target: 'artifacts/wave1/{topic}/depth-review.yaml',
+    failure_message: 'A declared focus limitation remains.',
+    finding: {
+      source: 'definition',
+      blocking_basis: 'required_floor',
+    },
+    repair: {
+      kind: 'missing_contract',
+      write_to: 'artifacts/wave1/{topic}/depth-review.yaml',
+    },
+    degradation_eligible: true,
+  };
+}
+
 describe('Wave degradation eligibility', () => {
   it('accepts an unmasked topic-scoped quality floor through its exact stable rule_id', () => {
     const result = evaluateWaveDegradationEligibility({
@@ -60,6 +78,24 @@ describe('Wave degradation eligibility', () => {
     assert.deepEqual(result, {
       eligible: true,
       eligible_rule_ids: ['per_topic_ref_md_count_floor'],
+      ineligible_rule_ids: [],
+    });
+  });
+
+  it('accepts a valid definition-owned focus coverage limit without widening eligibility', () => {
+    const result = evaluateWaveDegradationEligibility({
+      definition: definitionWith([focusCoverageLimitRule()]),
+      ruleEvaluation: {
+        findings: [finding({
+          id: 'focus_coverage_limit:topic-a',
+          rule_id: 'focus_coverage_limit',
+        })],
+      },
+    });
+
+    assert.deepEqual(result, {
+      eligible: true,
+      eligible_rule_ids: ['focus_coverage_limit'],
       ineligible_rule_ids: [],
     });
   });

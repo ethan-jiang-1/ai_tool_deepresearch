@@ -41,6 +41,15 @@
       "finding": { "source": "checker" }
     },
     {
+      "id": "focus_coverage_limit",
+      "check": "focus_coverage_limit",
+      "target": "artifacts/wave1/{topic}/depth-review.yaml",
+      "failure_message": "Topic {topic} has a valid partial or blocked focus-coverage limitation. Preserve the declared boundary and use the existing Wave1 degradation policy; do not create a focus-specific route.",
+      "finding": { "source": "definition", "blocking_basis": "required_floor" },
+      "repair": { "kind": "missing_contract", "write_to": "artifacts/wave1/{topic}/depth-review.yaml" },
+      "degradation_eligible": true
+    },
+    {
       "id": "per_topic_ref_md_count_floor",
       "check": "count_floor",
       "target": "reference/*{topic}*.md",

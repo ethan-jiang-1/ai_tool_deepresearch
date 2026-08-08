@@ -228,6 +228,10 @@ Do not copy or retype submitted `source_claims[]`, `accepted_source_urls[]`, cac
 
 Novelty is therefore an Engine-owned exact comparison: accepted claim URLs from the reviewed submitted rows minus current Wave0 source URLs. Cache mapping is valid only when the same reviewed rows declare the claim and cache/degraded trail and the referenced cache leaf remains valid. Filesystem-only cache, prose links, and review-only claims do not create source coverage.
 
+When accepted current focus context calls for additional work, derive the smallest readable set of current commitments and add the optional `focus_coverage` block to this same review. Bind it to the current canonical Topic UID and current profile rerun count. A covered commitment names one or more current reviewed submitted Wave1 work-unit refs. A limited commitment names one visible limitation and exactly one existing `external_action`, `user_decision`, or `missing_contract` boundary; omit submitted refs for that commitment. Do not infer focus from filenames, HITL rationale, prior rounds, source counts, or the profile.
+
+For a repairable focus commitment, use only the existing `wave1_topic_deepening` queue, claim, dry-submit, submit, depth-review update, and Wave1 inspect loop. Record a limitation only after the same inspect exposes an external, user-decision, or missing-contract boundary with no authorized Wave1 repair. A valid `partial` or `blocked` declaration remains an existing Gate limitation, never a clean pass, new queue kind, direct-search path, auto-rerun, status, trace event, or direct HITL2 route.
+
 Minimum shape:
 
 ```yaml
@@ -245,6 +249,25 @@ profile_checks:
 decision: "accept"
 supplementary_queue_item_ids: []
 carried_targets: []
+```
+
+Optional current focus declaration:
+
+```yaml
+focus_coverage:
+  topic_uid: "{topic.topic_uid}"
+  rerun_count: 0
+  outcome: partial
+  commitments:
+    - id: "focus-1"
+      statement: "Bounded current focus commitment."
+      state: covered
+      submitted_work_unit_refs: ["_work_units/wave1/<work_id>"]
+    - id: "focus-2"
+      statement: "Bounded current limitation."
+      state: limited
+      limitation: "Visible reason no current backing can be established."
+      boundary_kind: external_action
 ```
 
 `carried_targets` is the bounded semantic handoff to Wave2. It is always explicit, may be `[]`, and each selected entry is exactly `{ target_id, target_text }`. Select only material questions that remain worth carrying after the existing depth review passes; do not turn every question-list line, prose mention, or slug-looking string into a target. This declaration does not relax `decision: accept`, submitted-evidence, source-floor, cache, depth-dimension, or profile requirements.
