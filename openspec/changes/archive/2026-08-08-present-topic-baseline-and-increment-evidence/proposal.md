@@ -106,6 +106,6 @@ and no display outcome changes lifecycle authority.
 - This changes reusable Harness reader-visible behavior and requires a version
   bump to `v0.81` during apply.
 - Product decisions and P2 direct-fact/evidence boundaries are recorded in
-  `_backlog/plans/topic-research-emphasis/progressive/03-reader-evidence-projection.md`
+  `_backlog/_done/_closed_plans/topic-research-emphasis/progressive/03-reader-evidence-projection.md`
   and archived change
   `2026-08-08-add-traceable-topic-focus-coverage`.

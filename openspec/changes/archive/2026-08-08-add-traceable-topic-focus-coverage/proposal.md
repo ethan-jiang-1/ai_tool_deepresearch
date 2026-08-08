@@ -109,5 +109,5 @@ semantically satisfied.
 - The change modifies reusable Harness behavior and therefore targets the
   next release banner and changelog version, `v0.80`, during apply.
 - Original product decisions and P1 evidence are recorded in
-  `_backlog/plans/topic-research-emphasis/progressive/02-traceable-focus-coverage.md`
+  `_backlog/_done/_closed_plans/topic-research-emphasis/progressive/02-traceable-focus-coverage.md`
   and archived change `2026-08-08-align-topic-focus-and-rerun-guidance`.

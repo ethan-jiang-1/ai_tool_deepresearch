@@ -1,10 +1,14 @@
 # Progressive Delivery Plan
 
-> Status: complete / P1, P2, and P3 archived; no active change
+> Status: complete / P1, P2, and P3 archived; real-bundle reader validation
+> and P3 projection migration complete; no active change
 > Observed OpenSpec state: 2026-08-08, no active change. P1 archived as
 > 2026-08-08-align-topic-focus-and-rerun-guidance; P2 archived as
 > 2026-08-08-add-traceable-topic-focus-coverage; and P3 archived as
-> 2026-08-08-present-topic-baseline-and-increment-evidence.
+> 2026-08-08-present-topic-baseline-and-increment-evidence. The reachable
+> `dpt_rb_enterprise-ai-harness-platforms` validation migrated its derived
+> Reference Evidence Map through the accepted synchronizer and found no
+> P4-worthy reader or compatibility gap.
 > Scope: turn the confirmed Topic research-emphasis policy into small,
 > reviewable OpenSpec changes without prematurely changing Harness behavior.
 
@@ -118,6 +122,44 @@ current-Topic view. The map does not attribute an individual reference to
 a focus increment without an accepted direct binding. The finalizer passed
 all archive checks; the selected deterministic tests prove projection and
 persistence behavior, not Subject-Agent research or semantic usefulness.
+
+## Next Decision
+
+P1 through P3 are complete and archived. The delivered projection answers the
+currently defined reader question without creating a second evidence authority.
+
+### Completed Reader Validation - 2026-08-08
+
+- [x] Confirm P1, P2, and P3 are archived, and OpenSpec has no active change.
+- [x] Select the reachable real run bundle
+  `/Users/bowhead/ai_tool_deepresearch/dpt_rb_enterprise-ai-harness-platforms`.
+- [x] Verify its six runtime control files with `validate-bundle.mjs`: 6 passed,
+  0 failed; its canonical Topic-state inspect reports five complete Topics.
+- [x] Migrate the pre-P3 derived navigation with
+  `sync-reference-index.mjs --bundle <bundle>`: both `reference/_INDEX.md` and
+  `reference/README.md` committed through their independent CAS boundaries,
+  with 74 reference rows.
+- [x] Record the bounded reader question: can a reader distinguish each
+  reference relationship and each current Topic focus outcome without
+  reconstructing the run from raw files? The reviewed coordinates are
+  `reference/README.md#reference-relationships` and
+  `reference/README.md#current-focus-increments`.
+- [x] Verify the answer: the map shows shared, Topic-specific, and cross-Topic
+  relationships with direct coordinates; all five Topics honestly show `not
+  declared`, because their current depth reviews lack `focus_coverage` blocks.
+- [x] Decide the P3 relationship-plus-focus-status split answers the bounded
+  question without inferring research quality, work allocation, or semantic
+  correctness from presentation metadata.
+- [x] Record no P4-worthy gap: the old README's missing map was a compatible
+  derived-projection migration that the accepted synchronizer resolved, not a
+  new reader question or an unsupported bundle constraint.
+
+### Future Trigger
+
+- [ ] Start a new focused proposal only when a later real run-bundle review
+  identifies an unanswered reader question or a projection-specific supported
+  bundle constraint with direct evidence/rerun coordinates and a named
+  accepted-spec owner.
 
 ## Per-Change Lifecycle Checklist
 

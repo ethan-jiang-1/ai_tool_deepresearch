@@ -11,8 +11,8 @@ Agent 的理解。这会让新手面对不必要的数量/方法选择，也让 
 复用载体。本 change 是该策略的最小第一步，先让输入、解释和 rerun
 guidance 对齐，后续的可追溯 coverage Gate 与读者证据投影仍分别留给 P2/P3。
 原始需求与已确认决定位于
-`_backlog/plans/topic-research-emphasis/README.md` 和
-`_backlog/plans/topic-research-emphasis/progressive/`。
+`_backlog/_done/_closed_plans/topic-research-emphasis/README.md` 和
+`_backlog/_done/_closed_plans/topic-research-emphasis/progressive/`。
 
 ## What Changes
 
