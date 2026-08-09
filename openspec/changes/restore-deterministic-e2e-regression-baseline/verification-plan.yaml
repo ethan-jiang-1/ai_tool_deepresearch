@@ -1,0 +1,58 @@
+schema_version: verification-routing/v1
+change: restore-deterministic-e2e-regression-baseline
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: This change has no isolated in-process helper or schema contract to alter.
+  integration:
+    status: selected
+    rationale: The native finalizer proof invokes one production CLI across its governance component boundary from an isolated temporary project, not a current run bundle.
+  deterministic_e2e:
+    status: selected
+    rationale: The Harness migration and post-final rerun assets traverse temporary run-bundle lifecycle chains through multiple production checkpoints.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change asserts deterministic test alignment only and makes no claim about Subject-Agent behavior in a real disposable runtime.
+claims:
+  - id: native-finalizer-fixture-dependency-closure
+    statement: The production finalizer can complete its full governed archive sequence, including its complete ordered check list, from an isolated temporary project fixture with its required current governance dependencies and records.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/change-feedback-loop-archive.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: harness-release-coordinate-alignment
+    statement: Canonical temporary-bundle operations leave runtime state outside the Harness source; the two current Harness entry release declarations agree; and their matching release-history section is non-empty.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/deep-research-harness-migration.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: post-final-style-compatibility-and-gate-freshness
+    statement: C5 accepts its event-bound compatible lineage through the recorded count increment while the formal rerun Gate requires the current style projection and passes only after the existing writer runs.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/post-final-rerun-lineage-continuity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

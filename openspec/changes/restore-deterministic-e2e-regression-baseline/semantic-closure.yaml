@@ -1,0 +1,4 @@
+schema_version: semantic-closure/v1
+change: restore-deterministic-e2e-regression-baseline
+status: not_applicable
+reason: Test-only fixture and expectation repairs do not modify an Engine-owned deterministic fact, its resolver, an authority-establishing surface, or a verdict consumer.
