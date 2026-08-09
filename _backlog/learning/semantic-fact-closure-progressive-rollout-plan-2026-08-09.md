@@ -1,8 +1,8 @@
 # Semantic Fact Closure 渐进落地与追踪计划
 
 > 创建：2026-08-09  
-> 最近更新：2026-08-09  
-> 状态：已采用的 tracking baseline；user-directed focused governance calibration、verification-only deterministic regression baseline repair 与 REF-009/REF-010 spec-scenario repairs 均已归档；唯一全局 spec debt 为 CHI-006，且这些纯规格修复均不属于 affected-dogfood rollout
+> 最近更新：2026-08-10
+> 状态：已采用的 tracking baseline；user-directed focused governance calibration、verification-only deterministic regression baseline repair 与 REF-009/REF-010/CHI-005 spec-scenario repairs 均已 governed archive；当前没有 active change；这些纯规格修复均不属于 affected-dogfood rollout
 > 采用决定：2026-08-09，用户明确选择按本计划推进
 > 性质：渐进落地计划，不是 accepted spec、implementation permission、runtime authority 或 Gate verdict  
 > 依据：[设计理解与可靠性评估](semantic-fact-closure-design-assessment-2026-08-09.md)
@@ -55,18 +55,17 @@ one bounded deterministic question
 | 计划采用 | 1 | 1 | complete |
 | 已落地的 v1 基线 | 6 | 6 | complete |
 | 本轮调查与文档 | 6 | 6 | complete |
-| 已 propose change 的 mandatory polish | 2 | 2 | complete：`tighten-semantic-closure-review-honesty` 已 ready for Apply；REF-010 repair 已完成 three-pass polish，诚实保留 all-specs-green baseline 的 `not ready` boundary |
+| 已 propose change 的 mandatory polish | 3 | 3 | complete：`tighten-semantic-closure-review-honesty`、REF-010 repair 与 `repair-check-inspect-feedback-scenario-coverage` 均已完成至少两轮不同 review pass；CHI-005 repair 的 clean final pass 是 `ready for apply`，不等同 target-edit permission |
 | Focused governance calibration Apply / Archive | 13 | 13 | complete：governed finalizer 已归档 `2026-08-09-tighten-semantic-closure-review-honesty` |
 | Verification-only deterministic regression baseline repair | 10 | 10 | complete：governed finalizer 已归档 `2026-08-09-restore-deterministic-e2e-regression-baseline`；不计入 runtime dogfood |
-| Named spec-scenario debt repairs（不计入 rollout） | 2 | 3 | REF-009、REF-010 均已 governed archive；CHI-006 是唯一剩余全局 spec debt，仍 deferred |
-| 推荐核心 rollout（Phase 2-5） | 0 | 29 | 仍未开始；当前 active REF-010 spec-scenario repair 不影响 Harness deterministic fact family，等待下一个真实 affected runtime change，本次 calibration 与 scenario repair 均不计入 runtime dogfood |
+| Named spec-scenario debt repairs（不计入 rollout） | 3 | 3 | REF-009、REF-010 与第六个已解析 requirement `CHI-005` 均已 governed archive |
+| 推荐核心 rollout（Phase 2-5） | 0 | 29 | 仍未开始；没有 active change，下一步是筛选真实 outcome-changing Harness runtime change；本次 calibration 与 scenario repairs 均不计入 runtime dogfood |
 | 条件性 v2 / 后续扩展 | 0 | 7 | deferred；不计入核心 rollout |
 
 核心 rollout 的 `29` 项中，`27` 项由 Agent 执行，`2` 项是用户语义决定（`2.9`、`5.5`）。用户不承担 proposal 文件编写、polish、命令执行、测试、repair、spec sync 或 archive 操作。
 
-**当前唯一 next action：** 当用户选择继续这条独立 spec-hygiene 路径时，创建并推进
-`repair-check-inspect-feedback-scenario-coverage`，仅修复 CHI-006 的 main-spec Scenario coverage。它仍不能勾选
-Phase 2 rollout；没有真实 affected Harness runtime change 时，不制造 runtime dogfood。
+**当前唯一 next action：** 执行 Phase 2 的 `2.1`：从当前 outcome-changing Harness runtime defect 或已授权需求中筛选
+一个真实 affected change。当前没有 active change；若没有可验证的候选，保持等待，不能为推进计数制造 synthetic dogfood。
 
 - [x] `A.1` `[User decision]` 已采用本文件作为后续 Semantic Fact Closure 演进的 tracking baseline；完成证据是 2026-08-09 的用户明确指示。该决定采用流程，不预先批准任何尚未触发的 OpenSpec change 或 target edit。
 - [x] `A.2` `[Agent]` 已对 active change `tighten-semantic-closure-review-honesty` 执行 mandatory
@@ -114,26 +113,40 @@ Phase 2 rollout；没有真实 affected Harness runtime change 时，不制造 r
   routing plan、semantic-closure plan 与 `git diff --check` 均退出 `0`；active delta 与 archived recovery block
   精确匹配且有两个 Scenario，focused Engine regression `3/3` 通过。`polish.md` 的三轮审查没有发现可由既有事实
   修复的 scope/coherence 问题；其诚实 outcome 是 `not ready` for an all-specs-green baseline，因为当前 target
-  仍是 REF-010 root，且 CHI-006 是独立全局 root。没有 target edit、Harness/runtime edit 或 task checkbox 被提前
+  仍是 REF-010 root，且第六个已解析 requirement `CHI-005` 是独立全局 root。没有 target edit、Harness/runtime edit 或 task checkbox 被提前
   执行；这项离开 planning 的唯一入口是用户明确 Apply。
 - [x] `A.8` `[Agent]` 已在用户明确 Apply 后完成并归档 `repair-reference-flat-format-requirement-9-scenario-coverage`：plan
   review、四项 plan gate、main-spec restoration、delta/main exact comparison 与 target validation 均完成。target command
   返回 `bundle/reference-flat-format` valid（`1/1`，`0` failed）；global `openspec validate --specs --json` 从 `83/85`
-  收敛为 `84/85`，唯一失败是已命名的 `engine/check-inspect-feedback` `requirements.6.scenarios`。closeout 发现并修复
+  收敛为 `84/85`，唯一失败是已命名的 `engine/check-inspect-feedback` `requirements.6.scenarios`（第六个已解析 requirement，`CHI-005`）。closeout 发现并修复
   2.3/3.3 的 tracker/finalizer completion-order 矛盾；随后
   `node openspec/governance/finalize-change-archive.mjs --change repair-reference-flat-format-requirement-9-scenario-coverage`
   返回 `outcome: archived`，通过 `11` 项 checks，归档至
   `openspec/changes/archive/2026-08-09-repair-reference-flat-format-requirement-9-scenario-coverage`。该 evidence 只证明
   OpenSpec grammar repair、tracker lifecycle 与 archive transition，不证明 Harness runtime behavior，也不计入 affected
   Semantic Fact Closure dogfood。
+- [x] `A.9` `[Agent]` 已为 `repair-check-inspect-feedback-scenario-coverage` 完成完整 proposal、CHI-005
+  `MODIFIED` delta、design、12 项可追踪 Apply/closeout tasks、`verification-plan.yaml`、`semantic-closure.yaml` 与 mandatory
+  `polish-openspec-change`。planning evidence：strict change、requirements plan、main-spec governance、verification
+  routing plan、semantic-closure plan 与 `git diff --check` 均退出 `0`；active delta 和 archived recovery block
+  精确匹配，双方均有三个 Scenario。`polish.md` 的 whole-change coherence、risk-led recovery/proof-boundary 与 final
+  readiness passes 修正了 proposal 的中文规则偏差，未发现其余 fact-settled planning defect，并得出 `ready for apply`。
+  该结论仅证明 planning artifacts。随后在用户明确 Apply 后，`0.1`–`2.3` 已完成：只恢复了 CHI-005
+  main-spec tail 和三个 Scenario；active delta/main exact comparison 通过；target validation 为 `1/1`、`0`
+  failed，global inventory 为 `85/85`。首次 finalizer 如实暴露 proposal Capability Discovery 表头与当前 checker
+  contract 不符；Agent 将该 root 记为 task `3.1a`，只修复稳定表头、重新 closeout 并重跑 checks。最终
+  `node openspec/governance/finalize-change-archive.mjs --change repair-check-inspect-feedback-scenario-coverage`
+  返回 `outcome: archived`、11 项 checks passed，归档至
+  `openspec/changes/archive/2026-08-10-repair-check-inspect-feedback-scenario-coverage`。这些是 OpenSpec grammar、
+  governance 与 archive-transition evidence，不证明 Harness runtime behavior 或 Semantic Fact Closure dogfood。
 
 ### Named Debt Ledger
 
 | debt_name | planned_change_name | state | authority evidence | completion / reactivation boundary |
 | --- | --- | --- | --- | --- |
 | `reference-flat-format-requirement-8-scenario` | `repair-reference-flat-format-scenario-coverage` | archived 2026-08-09; outside Semantic Fact Closure rollout | The REF-009 heading changed only from `+###` to `###`; targeted validation no longer reports `requirements.8.scenarios`, and the governed finalizer returned `outcome: archived` with 11 passed checks | Closed by `openspec/changes/archive/2026-08-09-repair-reference-flat-format-scenario-coverage/`; its newly exposed REF-010 root is independently tracked and does not reopen this debt. |
-| `reference-flat-format-requirement-9-scenario` | `repair-reference-flat-format-requirement-9-scenario-coverage` | archived 2026-08-09; outside Semantic Fact Closure rollout | Apply restored the accepted REF-010 block from exact archived recovery evidence; target validation is `1/1` passed, global inventory is `84/85` with only CHI-006 remaining, and the governed finalizer returned `outcome: archived` with 11 passed checks. | Closed by `openspec/changes/archive/2026-08-09-repair-reference-flat-format-requirement-9-scenario-coverage/`; CHI-006 remains independently tracked and does not reopen this debt. |
-| `check-inspect-feedback-requirement-6-scenario` | `repair-check-inspect-feedback-scenario-coverage` | deferred; outside Semantic Fact Closure rollout | `openspec validate --specs` reports requirement 6 in `engine/check-inspect-feedback` has no scenario | Start this exact named change when spec-scenario repair is selected; complete only after the main spec validates and its change is governedly archived. |
+| `reference-flat-format-requirement-9-scenario` | `repair-reference-flat-format-requirement-9-scenario-coverage` | archived 2026-08-09; outside Semantic Fact Closure rollout | Apply restored the accepted REF-010 block from exact archived recovery evidence; target validation is `1/1` passed, global inventory is `84/85` with only the sixth parsed requirement, `CHI-005`, remaining, and the governed finalizer returned `outcome: archived` with 11 passed checks. | Closed by `openspec/changes/archive/2026-08-09-repair-reference-flat-format-requirement-9-scenario-coverage/`; the sixth parsed requirement, `CHI-005`, remains independently tracked and does not reopen this debt. |
+| `check-inspect-feedback-requirement-6-scenario` | `repair-check-inspect-feedback-scenario-coverage` | archived 2026-08-10; outside Semantic Fact Closure rollout | Apply restored only the truncated CHI-005 tail from exact archived recovery evidence. Delta/main comparison is exact with three Scenarios; target validation is `1/1` passed, global inventory is `85/85`, and the governed finalizer returned `outcome: archived` with 11 passed checks. | Closed by `openspec/changes/archive/2026-08-10-repair-check-inspect-feedback-scenario-coverage/`; it does not establish a Harness runtime fact family or reopen Phase 2. |
 
 These debts are named independently of Phase 2. They do not alter a Harness runtime deterministic fact family and therefore cannot be counted as affected-runtime dogfood unless a later scoped change independently changes that boundary.
 
@@ -288,7 +301,7 @@ Phase 5 Gate：保持 v1，或只为已触发问题进入一个 focused OpenSpec
 | focused change Apply / Archive：`tighten-semantic-closure-review-honesty` | plan review + three plan checks passed；delivery test 的 intended red 与 final `7/7` green；eight adapters route through central guidance；two delta blocks synced exactly；finalizer `11` checks passed，归档为 `2026-08-09-tighten-semantic-closure-review-honesty` | deterministic guidance/entry delivery、scoped governance evidence 与归档转换；不证明 runtime semantic closure 或 future Agent compliance |
 | verification-only baseline repair：`restore-deterministic-e2e-regression-baseline`，commit `59192f0e5` | `npm test` exit `0`；finalizer `11` checks passed，归档为 `2026-08-09-restore-deterministic-e2e-regression-baseline` | deterministic regression proof/fixture alignment 与 archive transition；不证明 Harness runtime semantic closure，不能作为新增 affected dogfood |
 | 2026-08-09 归档后推进核对 | `openspec list --changes --json` 返回 `changes: []`；`git status --short` 无输出 | 证明当前没有 active OpenSpec change 或未提交工作；不证明没有未来 runtime defect，亦不构成 Phase 2 entry |
-| archived REF-009 repair and current named scenario debts | REF-009 `requirements.8.scenarios` is repaired and its 11-check governed archive is recorded; current `openspec validate --specs` now exposes exactly REF-010 `requirements.9.scenarios` and check/inspect `requirements.6.scenarios`, each with a planned change name in the ledger | scoped spec hygiene and archive transition only; neither successor debt is Semantic Fact Closure dogfood or evidence of a completed repair |
+| archived REF-009/REF-010/CHI-005 scenario repairs | REF-009, REF-010 and CHI-005 repairs are governedly archived; CHI-005 target validation is `1/1`, `openspec validate --specs` is `85/85`, and its finalizer returned `outcome: archived` with 11 passed checks. | scoped grammar restoration, validation, and archive transition only; none is Semantic Fact Closure dogfood |
 
 ## 14. 下一次更新模板
 
