@@ -1,0 +1,71 @@
+schema_version: semantic-closure/v1
+change: close-work-unit-semantic-contract-drift
+status: affected
+catalog_additions: []
+affected:
+  - family: work-unit.assignment-output-obligation
+    fact: >-
+      Whether a version-selected work-unit assignment requires a non-empty
+      output_files declaration, independently of the content contract for any
+      required output; v3 changes only the explicit supplementary Wave1 case.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-assignment-contract.mjs#resolveWorkUnitAssignmentContract
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-lifecycle.mjs#claimWorkUnit
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-envelope.mjs#buildWorkUnitEnvelope
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs#validateOutputFiles
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs#evaluateCandidate
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/direct-output-contract.mjs#evaluateDirectOutput
+        relation: derived
+        detail: >-
+      Direct-output evaluation consumes the already-derived required output
+      set and evaluates content; it does not decide whether the versioned
+      assignment requires a declaration in the first place.
+    verification:
+      truth_table: tests/engine/work-unit-assignment-contract.test.mjs
+      cross_surface: tests/integration/cli/operate-work-unit.test.mjs
+  - family: work-unit.source-claim-provenance
+    fact: >-
+      Whether an accepted current source_ref is a current declared output or one
+      exact contract-authorized prior submitted output for the bound Topic,
+      wave, kind, and role.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs#resolveAcceptedSourceRefAuthorization
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs#submitWorkUnit
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs#validateSourceClaims
+      - DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs#validateSubmittedClaimBacking
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/work-unit-envelope.mjs#buildWorkUnitEnvelope
+        relation: derived
+        detail: >-
+          Generated task and result-schema lineage guidance is an Agent-facing
+          projection of the resolver and cannot grant source authority itself.
+    verification:
+      truth_table: tests/engine/work-unit-submit.test.mjs
+      cross_surface: tests/integration/cli/wave1-reference-convergence.test.mjs
+  - family: work-unit.submission-ledger-and-supersession
+    fact: >-
+      Whether a submitted declaration is current coverage, validated historical
+      supersession evidence, or a raw-only/malformed bypass candidate.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs#evaluateNormalizedSubmittedWorkUnitLedger
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs#submitWorkUnit
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs#supersedeWorkUnit
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-readers.mjs#readNormalizedSubmittedWorkUnitDeclarations
+      - DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-provenance.mjs#scanDelegatedBypassSuspicion
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-readers.mjs#readOutputDeclarations
+        relation: authoritative
+        detail: >-
+          The raw JSONL reader exposes ledger evidence for diagnostics, but the
+          current-versus-historical conclusion is authoritative only after the
+          normalized ledger resolver validates lineage.
+    verification:
+      truth_table: tests/engine/helpers/gate-helpers-provenance.test.mjs
+      cross_surface: tests/integration/cli/check-gate-wave1-complete.test.mjs

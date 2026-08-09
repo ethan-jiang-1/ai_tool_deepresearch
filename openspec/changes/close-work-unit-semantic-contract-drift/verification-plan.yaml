@@ -1,0 +1,130 @@
+schema_version: verification-routing/v1
+change: close-work-unit-semantic-contract-drift
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Assignment obligation, source-ref authorization, and normalized
+      current-versus-historical classification are pure deterministic facts
+      with focused positive and negative truth tables.
+  integration:
+    status: selected
+    rationale: >-
+      The regression must prove existing Engine command consumers agree across
+      dry-submit/formal submit, Wave1 reviewed backing, and the Wave1 Gate.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale lifecycle behavior, command, or cross-check sequence is
+      introduced; the smallest real proof boundary is the existing CLI suites.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change modifies deterministic Engine contracts only and makes no
+      claim about Subject-Agent research behavior or a Markdown playbook flow.
+claims:
+  - id: assignment-output-obligation
+    statement: >-
+      New v3 assignment resolution derives Wave1 output_files requiredness from
+      the same required_outputs obligation: primary required outputs remain
+      exact, while an explicit supplementary assignment can legally have an
+      empty declaration without becoming a different assignment mode or
+      reinterpreting v1/v2 or Wave2 contracts.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-assignment-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: source-ref-authorization
+    statement: >-
+      One source-ref authorization resolver accepts current outputs or exactly
+      authorized prior submitted outputs and rejects filesystem-only,
+      cross-topic, wrong-role, wrong-kind/wave, ambiguous, and invalid-lineage
+      alternatives without creating a second authority.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-submit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: supersession-bypass-classification
+    statement: >-
+      Bypass classification uses the normalized ledger historical conclusion so
+      a valid superseded predecessor is not reported as raw-row bypass evidence,
+      while a genuinely raw-only declaration remains blocking evidence.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/gate-helpers-provenance.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: supplementary-empty-output-submit
+    statement: >-
+      The operate-work-unit CLI dry-submit and formal submit paths both accept
+      a valid supplementary Wave1 result with empty output_files and still
+      reject missing required primary output declarations.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: prior-source-ref-depth-review
+    statement: >-
+      Wave1 inspected reviewed backing accepts the same authorized prior source
+      reference accepted by formal submit, but rejects an invalid current cache
+      or degraded-capture binding for that claim.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/wave1-reference-convergence.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: superseded-predecessor-wave1-gate
+    statement: >-
+      A Wave1 Gate with a valid superseded predecessor and accepted successor
+      does not emit delegated_bypass_suspected for historical evidence, while a
+      genuine unsubmitted delegated declaration remains a failing bypass root.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave1-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
