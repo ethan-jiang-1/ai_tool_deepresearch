@@ -1,0 +1,16 @@
+schema_version: verification-routing/v1
+change: repair-reference-flat-format-requirement-9-scenario-coverage
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: No JavaScript helper, schema, or deterministic runtime contract changes; the OpenSpec validator directly checks the restored Markdown grammar.
+  integration:
+    status: not_applicable
+    rationale: No production CLI, filesystem-runtime boundary, or cross-module behavior changes.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No workflow-scale lifecycle, Gate, state-transition, or Engine behavior changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: No Agent-facing workflow, Subject-Agent behavior, or disposable-runtime evidence claim changes.
+claims: []

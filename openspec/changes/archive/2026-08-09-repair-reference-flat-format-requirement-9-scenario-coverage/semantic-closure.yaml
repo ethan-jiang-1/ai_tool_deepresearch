@@ -1,0 +1,4 @@
+schema_version: semantic-closure/v1
+change: repair-reference-flat-format-requirement-9-scenario-coverage
+status: not_applicable
+reason: The change restores an existing accepted Markdown requirement block and its scenarios only; it changes no Harness deterministic fact resolver, authority-establishing surface, or verdict consumer.
