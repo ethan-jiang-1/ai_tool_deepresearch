@@ -2,7 +2,7 @@
 
 > 创建：2026-08-09  
 > 最近更新：2026-08-09  
-> 状态：已采用的 tracking baseline；user-directed focused governance calibration 已归档；截至 2026-08-09 归档后核对，没有 active eligible runtime change，affected-dogfood rollout 尚未开始
+> 状态：已采用的 tracking baseline；user-directed focused governance calibration 与 verification-only deterministic regression baseline repair 均已归档；截至 2026-08-09 核对，没有 active eligible runtime change，affected-dogfood rollout 尚未开始
 > 采用决定：2026-08-09，用户明确选择按本计划推进
 > 性质：渐进落地计划，不是 accepted spec、implementation permission、runtime authority 或 Gate verdict  
 > 依据：[设计理解与可靠性评估](semantic-fact-closure-design-assessment-2026-08-09.md)
@@ -47,6 +47,7 @@ one bounded deterministic question
 | 本轮调查与文档 | 6 | 6 | complete |
 | 已 propose change 的 mandatory polish | 1 | 1 | complete：`tighten-semantic-closure-review-honesty` 已 ready for Apply |
 | Focused governance calibration Apply / Archive | 13 | 13 | complete：governed finalizer 已归档 `2026-08-09-tighten-semantic-closure-review-honesty` |
+| Verification-only deterministic regression baseline repair | 10 | 10 | complete：governed finalizer 已归档 `2026-08-09-restore-deterministic-e2e-regression-baseline`；不计入 runtime dogfood |
 | 推荐核心 rollout（Phase 2-5） | 0 | 29 | 仍未开始；归档后 `openspec list --changes --json` 返回 0 个 active change，等待下一个真实 affected runtime change，本次 calibration 不计入 runtime dogfood |
 | 条件性 v2 / 后续扩展 | 0 | 7 | deferred；不计入核心 rollout |
 
@@ -54,7 +55,7 @@ one bounded deterministic question
 
 **当前唯一 next action：** 正常开发中一旦出现真实影响 Harness deterministic fact family 的 defect/change，立即以它为
 `2.1` 的候选，先确认其 outcome-changing boundary；到达 Phase 2 entry condition 前不制造 standalone runtime
-dogfood，也不把本次 governance calibration 计入新增 affected sample。
+dogfood，也不把本次 governance calibration 或 verification-only baseline repair 计入新增 affected sample。
 
 - [x] `A.1` `[User decision]` 已采用本文件作为后续 Semantic Fact Closure 演进的 tracking baseline；完成证据是 2026-08-09 的用户明确指示。该决定采用流程，不预先批准任何尚未触发的 OpenSpec change 或 target edit。
 - [x] `A.2` `[Agent]` 已对 active change `tighten-semantic-closure-review-honesty` 执行 mandatory
@@ -80,6 +81,14 @@ dogfood，也不把本次 governance calibration 计入新增 affected sample。
 - [x] `A.4` `[Agent]` 已完成归档后推进核对：`openspec list --changes --json` 返回空 `changes`，`git status --short`
   无输出。当前没有可合法计入 Phase 2 的 active runtime change；因此保持 `2.1`–`6.7` 未勾选，下一步等待真实
   outcome-changing boundary，而不以 tracker 进度制造 synthetic dogfood。
+- [x] `A.5` `[Agent]` 已完成并归档 `restore-deterministic-e2e-regression-baseline`：它把单个 production-finalizer
+  proof 正确归类为 integration，补齐隔离 fixture 的 current governance closure，并让两项 Harness lifecycle
+  assertions 对齐现有 release/style contracts。`npm test` 退出 `0`；closeout 后 governed finalizer 返回
+  `outcome: archived` 并通过 `11` 项 checks，归档至
+  `openspec/changes/archive/2026-08-09-restore-deterministic-e2e-regression-baseline`，提交为 `59192f0e5`。
+  该 change 未修改 Harness runtime resolver、authority-establishing surface、verdict consumer、family catalog 或
+  semantic-closure mechanics，故其 record 合法地保持 `not_applicable`，不计作 `2.1`–`6.7` 的新增 affected runtime
+  dogfood。归档后 `openspec list --json` 仍返回空 `changes`，因此保持 Phase 2 未开始。
 
 ### Focused Calibration Boundary
 
@@ -230,6 +239,7 @@ Phase 5 Gate：保持 v1，或只为已触发问题进入一个 focused OpenSpec
 | linked assessment 的 primary-source section | 校准 abstraction、module boundary、schema/test/checker proof limits | 支持设计推论，不替代 repo authority |
 | active change polish：`tighten-semantic-closure-review-honesty` | two distinct review passes 加 final clean pass；planning artifact scope、verification route、task/finalizer ordering 已收敛 | 只证明 Apply-ready planning artifacts；不证明 implementation、native selected test 或 future Agent semantic review 已通过 |
 | focused change Apply / Archive：`tighten-semantic-closure-review-honesty` | plan review + three plan checks passed；delivery test 的 intended red 与 final `7/7` green；eight adapters route through central guidance；two delta blocks synced exactly；finalizer `11` checks passed，归档为 `2026-08-09-tighten-semantic-closure-review-honesty` | deterministic guidance/entry delivery、scoped governance evidence 与归档转换；不证明 runtime semantic closure 或 future Agent compliance |
+| verification-only baseline repair：`restore-deterministic-e2e-regression-baseline`，commit `59192f0e5` | `npm test` exit `0`；finalizer `11` checks passed，归档为 `2026-08-09-restore-deterministic-e2e-regression-baseline` | deterministic regression proof/fixture alignment 与 archive transition；不证明 Harness runtime semantic closure，不能作为新增 affected dogfood |
 | 2026-08-09 归档后推进核对 | `openspec list --changes --json` 返回 `changes: []`；`git status --short` 无输出 | 证明当前没有 active OpenSpec change 或未提交工作；不证明没有未来 runtime defect，亦不构成 Phase 2 entry |
 | full `openspec validate --specs` during focused change Apply | `83` passed / `2` unrelated failures，均为未触及 spec 的 missing scenario | diagnostic baseline，不得计为本 change 成功或失败的 semantic evidence |
 
