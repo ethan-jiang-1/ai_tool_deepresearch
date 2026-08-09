@@ -80,6 +80,7 @@ function write(root, relativePath, content) {
 function copyGovernanceScripts(root) {
   for (const script of [
     'check-project-reqs.mjs',
+    'requirement-reservation-contract.mjs',
     'check-project-specs.mjs',
     'check-capability-taxonomy.mjs',
     'check-capability-discovery.mjs',
@@ -183,6 +184,9 @@ after(() => {
 describe('change feedback finalizer integration', () => {
   it('delivers feedback marker task instructions and operation guidance for a fresh change', () => {
     const root = createGeneratedFeedbackChange();
+    const proposal = JSON.parse(run('openspec', [
+      'instructions', 'proposal', '--change', 'generated-feedback-change', '--json',
+    ], { cwd: root }));
     const taskInstructions = JSON.parse(run('openspec', [
       'instructions', 'tasks', '--change', 'generated-feedback-change', '--json',
     ], { cwd: root }));
@@ -191,6 +195,11 @@ describe('change feedback finalizer integration', () => {
     assert.match(markerRules[0], /openspec-feedback:plan-review/);
     assert.match(markerRules[0], /openspec-feedback:closeout-review/);
     assert.match(markerRules[0], /初始为 `- \[ \]`/);
+    assert.ok(proposal.rules.some((rule) => (
+      rule.includes('requirement-reservation.yaml')
+      && rule.includes('check-project-reqs.mjs --mode plan')
+      && rule.includes('不得预登记')
+    )));
 
     const apply = JSON.parse(run('openspec', [
       'instructions', 'apply', '--change', 'generated-feedback-change', '--json',
@@ -199,6 +208,11 @@ describe('change feedback finalizer integration', () => {
       'instructions', 'archive', '--change', 'generated-feedback-change', '--json',
     ], { cwd: root }));
     assert.ok(apply.operationGuidance.some((entry) => entry.startsWith('change-feedback-loop/apply:')));
+    assert.ok(apply.operationGuidance.some((entry) => (
+      entry.startsWith('requirement-reservation/apply:')
+      && entry.includes('check-project-reqs.mjs --mode plan')
+      && entry.includes('Only during Apply')
+    )));
     assert.ok(archive.operationGuidance.some((entry) => entry.startsWith('change-feedback-loop/archive:')));
   });
 
@@ -316,7 +330,79 @@ describe('change feedback finalizer integration', () => {
     ]);
   });
 
+  it('requires the selected reservation transition while accepting another complete pending reservation', () => {
+    const root = createGovernanceFixture();
+    rmSync(join(root, 'openspec/specs/governance/demo-capability'), { recursive: true, force: true });
+    write(root, 'openspec/changes/demo-change/requirement-reservation.yaml', [
+      'schema_version: requirement-reservation/v1',
+      'change: demo-change',
+      'reservations:',
+      '  - capability_path: governance/demo-capability',
+      '    prefix: ABC',
+      '    requirements:',
+      '      - ABC-001',
+      '',
+    ].join('\n'));
+
+    const pending = runFinalizer(root);
+    assert.equal(pending.root.code, 'requirement_governance_failed');
+    assert.match(pending.root.observed, /remains pending/);
+    assert.deepEqual(pending.checks.map((check) => check.id), [
+      'openspec_status', 'artifacts', 'tasks', 'strict_validation',
+    ]);
+
+    write(root, 'openspec/governance/req-registry.yaml', [
+      'prefixes:',
+      '  ABC: governance/demo-capability',
+      '',
+      'ABC-001: demo-capability - fixture requirement',
+      '',
+    ].join('\n'));
+    write(root, 'openspec/specs/governance/demo-capability/spec.md', '> req: ABC-001\n');
+    write(root, 'openspec/changes/other-change/specs/governance/other-capability/spec.md', [
+      '> req: OTH-001',
+      '',
+      '## ADDED Requirements',
+      '',
+      '### Requirement: Other pending capability',
+      '',
+      'The fixture SHALL keep an independent pending reservation.',
+      '',
+    ].join('\n'));
+    write(root, 'openspec/changes/other-change/requirement-reservation.yaml', [
+      'schema_version: requirement-reservation/v1',
+      'change: other-change',
+      'reservations:',
+      '  - capability_path: governance/other-capability',
+      '    prefix: OTH',
+      '    requirements:',
+      '      - OTH-001',
+      '',
+    ].join('\n'));
+
+    const otherPending = runFinalizer(root);
+    assert.equal(otherPending.root.code, 'main_spec_governance_failed');
+    assert.deepEqual(otherPending.checks.map((check) => check.id), [
+      'openspec_status', 'artifacts', 'tasks', 'strict_validation', 'requirement_governance',
+    ]);
+  });
+
   it('keeps every declared entry on the guidance and finalizer route', () => {
+    assert.deepEqual(SUPPORTED_ENTRY_SURFACES, {
+      apply: [
+        '.agents/skills/openspec-apply-change/SKILL.md',
+        '.agents/skills/source-command-opsx-apply/SKILL.md',
+        '.claude/skills/openspec-apply-change/SKILL.md',
+        '.claude/commands/opsx/apply.md',
+      ],
+      archive: [
+        '.agents/skills/openspec-archive-change/SKILL.md',
+        '.agents/skills/source-command-opsx-archive/SKILL.md',
+        '.claude/skills/openspec-archive-change/SKILL.md',
+        '.claude/commands/opsx/archive.md',
+      ],
+    });
+
     for (const path of SUPPORTED_ENTRY_SURFACES.apply) {
       const source = readFileSync(join(ROOT, path), 'utf8');
       assert.match(source, /openspec instructions apply --change/);
@@ -333,10 +419,18 @@ describe('change feedback finalizer integration', () => {
       assert.doesNotMatch(source, /\bmv\s+/);
       assert.doesNotMatch(source, /\bopenspec archive\b/);
     }
+
     for (const path of ['AGENTS.md', 'CLAUDE.md']) {
       const source = readFileSync(join(ROOT, path), 'utf8');
       assert.match(source, /openspec-feedback:/);
       assert.match(source, /node openspec\/governance\/finalize-change-archive\.mjs --change/);
     }
+  });
+
+  it('turns named reservation guidance into an Apply plan-check boundary', () => {
+    const source = readFileSync(join(ROOT, '.agents/skills/source-command-opsx-apply/SKILL.md'), 'utf8');
+    assert.match(source, /requirement-reservation\/apply:/);
+    assert.match(source, /node openspec\/governance\/check-project-reqs\.mjs --mode plan/);
+    assert.match(source, /non-zero[\s\S]{0,120}stops apply|stops apply[\s\S]{0,120}non-zero/i);
   });
 });

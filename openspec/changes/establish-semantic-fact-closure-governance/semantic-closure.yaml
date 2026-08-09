@@ -1,0 +1,8 @@
+schema_version: semantic-closure/v1
+change: establish-semantic-fact-closure-governance
+status: not_applicable
+reason: >-
+  This bootstrap establishes project change-governance assets only. It does not
+  change a cataloged Deep Research Harness runtime deterministic fact family or
+  runtime verdict consumer; OpenSpec governance lifecycle verdicts are outside
+  the runtime catalog scope. It will dogfood this record after the checker exists.

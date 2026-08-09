@@ -15,5 +15,10 @@ reported with the same instruction command as the rerun coordinate. Read
 `guidelines/change-feedback-loop.md`, complete the plan-review marker before target edits, and
 write every actionable finding as an ordinary pending task. Guidance is not completion proof.
 
+When returned `operationGuidance` contains `requirement-reservation/apply:`, run
+`node openspec/governance/check-project-reqs.mjs --mode plan` before target edits. A non-zero
+result stops apply and uses that command as the rerun coordinate. A passing plan check does not
+grant target-edit or archive permission.
+
 Implement approved tasks in dependency order, preserve the selected change identity, and mark a
 task complete only after its independently observable done condition is satisfied.

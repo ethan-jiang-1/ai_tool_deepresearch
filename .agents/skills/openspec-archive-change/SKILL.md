@@ -1,41 +1,70 @@
 ---
 name: openspec-archive-change
-description: Archive a completed OpenSpec feedback-lifecycle change.
+description: Archive a completed OpenSpec change through the governed finalizer.
+allowed-tools: Bash(openspec:*)
 license: MIT
-compatibility: Requires OpenSpec CLI and the project governance finalizer.
+compatibility: Requires openspec CLI.
 metadata:
   author: openspec
   version: "1.0"
-  generatedBy: "1.7.0"
+  generatedBy: "1.8.0"
 ---
 
-# Archive an OpenSpec Change
+Archive a completed change through the project's governed finalizer.
 
-1. Select an active change from explicit input, current context, or the sole active change. If
-   selection remains ambiguous, run `openspec list --json` and ask the user. Announce the selected
-   change and keep its identity unchanged through every step.
-2. Run `openspec status --change "<name>" --json`, then run
-   `openspec instructions archive --change "<name>" --json` with the same root selection. Read
-   current context, artifact paths, task path, and all returned guidance.
-3. When the resolved task list contains `openspec-feedback:`, require valid JSON with an
-   `operationGuidance` array containing an entry beginning `change-feedback-loop/archive:`. If
-   lookup fails, JSON is invalid, or that entry is absent, stop before finalization, report the
-   instruction-lookup boundary, and rerun
-   `openspec instructions archive --change "<name>" --json` after the existing configuration or
-   instruction surface is repaired. An unmarked change is outside this feedback-lifecycle entry.
-4. Read `guidelines/change-feedback-loop.md` and perform the Agent-owned closeout review of the
-   selected change-scoped actual diff, artifacts, and selected verification evidence. When a
-   finding exists, add an ordinary unchecked task, leave the closeout marker open, and return to
-   apply. Do not treat the marker or guidance as semantic proof.
-5. For every delta spec, perform the Agent-owned sync and re-comparison before finalization. If
-   the change cannot be scoped against unrelated local work or a delta/main comparison remains
-   unresolved, stop at that boundary.
-6. Only after all tasks are complete, make this final mechanical call:
+**Store selection:** If the work lives in a registered standalone OpenSpec store,
+run `openspec store list --json` and preserve the selected `--store <id>` flag on
+all later OpenSpec commands. Otherwise use the nearest local `openspec/` root.
+
+**Input:** Optionally specify a change name (for example,
+`/openspec-archive-change add-auth`). If it is absent, infer it from the current
+conversation, auto-select the sole active change, or ask the user to choose among
+active changes.
+
+## Steps
+
+1. **Select one active change**
+
+   Announce `Using change: <name>` and preserve that identity through review and
+   finalization. Do not substitute a different active change after review begins.
+
+2. **Load archive inputs**
+
+   Run both commands before finalization:
+
+   ```bash
+   openspec status --change "<name>" --json
+   openspec instructions archive --change "<name>" --json
+   ```
+
+   Read the returned context and every applicable operation-guidance entry. When
+   `tasks.md` contains `openspec-feedback:`, require valid operation guidance
+   containing `change-feedback-loop/archive:`. A failed or missing instruction
+   lookup stops before finalization and uses the instruction command as the rerun
+   coordinate.
+
+3. **Close the Agent-owned work**
+
+   Read `guidelines/change-feedback-loop.md`. Review the selected change-scoped
+   actual diff, artifacts, and selected verification evidence. Record each
+   actionable finding as an ordinary pending task and keep the closeout marker
+   incomplete until no finding remains. Where delta specs exist, complete the
+   Agent-owned delta/main sync and re-comparison before finalization. All task and
+   review markers must be complete.
+
+4. **Run the sole final mechanical transition**
 
    ```bash
    node openspec/governance/finalize-change-archive.mjs --change "<name>"
    ```
 
-   Read its structured result. On `blocked`, repair only the named legal root and rerun the same
-   command. Do not perform a raw move, invoke a separate native success path, or add a retry or
-   rollback procedure.
+   On a blocked result, repair its named legal root and rerun that command. The
+   finalizer owns the deterministic completion checks and the repository archive
+   transition; this entry does not provide an alternate success path.
+
+## Guardrails
+
+- Keep the selected change identity stable.
+- Do not treat guidance as completion proof.
+- Do not finalize while a review marker or ordinary task is pending.
+- Do not bypass the governed finalizer.

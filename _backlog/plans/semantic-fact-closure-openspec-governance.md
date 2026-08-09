@@ -1,6 +1,10 @@
 # Semantic Fact Closure：OpenSpec 治理共同理解与 proposal 路线
 
-> 共同理解: 2026-08-09 | 状态: ready to propose；尚未创建 OpenSpec change
+> 共同理解: 2026-08-09 | 状态: Change A 已提出；尚未 apply
+>
+> Change A: `openspec/changes/establish-semantic-fact-closure-governance/`
+> （proposal、delta specs、design、tasks、verification plan 与 bootstrap
+> semantic-closure record 已就绪）。Change B 仍未提出。
 >
 > 本文是 plan/共同理解记录，不是 accepted spec、`semantic-closure.yaml`、
 > OpenSpec proposal 或实现证据。它不授权修改 `openspec/config.yaml`、

@@ -184,6 +184,13 @@ operations:
         guidelines/change-feedback-loop.md, preserve any pending feedback task, and convert an
         actionable finding into an ordinary unchecked task. This guidance is not proof of review
         completion or a deterministic verdict.
+      - >-
+        requirement-reservation/apply: Before the first target edit, run
+        node openspec/governance/check-project-reqs.mjs --mode plan. A change whose delta adds a
+        New capability must own a valid same-change requirement-reservation.yaml. A passing plan
+        check is not target-edit or archive permission. Only during Apply, after the canonical main
+        spec exists through approved work, synchronize its live prefix and requirement IDs into
+        req-registry.yaml; the governed finalizer supplies selected archive scope.
   archive:
     guidance:
       - >-
@@ -205,7 +212,14 @@ rules:
       Evidence read、Modify|Verify-only|Excluded|New decision 与 reason；New 必须说明
       没有已检查 contract 拥有该 observable behavior。`skip_specs: true` 仍须明确
       delta-spec 不适用的原因。Catalog 只用于导航，main spec 仍是 behavior authority。
-    - 为新 capability 分配 3 字母缩写并提前登记到 openspec/governance/req-registry.yaml (先查历史，避免冲突，别随意发挥)
+    - |
+      对 New capability，先检查 live `openspec/governance/req-registry.yaml` 与所有 active
+      change 根目录的 `requirement-reservation.yaml`，确认完整 capability path、3 字母 prefix
+      和 requirement ID 都不冲突。在生成该 capability 的 delta 时，必须在同一 change 根目录创建
+      严格的 `requirement-reservation.yaml`，并在对应 `> req:` header 就绪后运行
+      `node openspec/governance/check-project-reqs.mjs --mode plan`。proposal/explore 不得预登记
+      live prefix 或新 capability ID，也不得创建 canonical main spec；这些 live facts 仅可在 Apply
+      创建 canonical main spec 后同步到 registry。
     - 说明 direct Source of Record、最短合法闭环与 net simplification impact，明确删除、合并或避免的 control complexity
     - 对新增或实质改变的具名 state、projection、status、concept、Module、command 或 reader-facing view，先写简短的 semantic-precision reflection：明确读者/有界问题、必须保留的区别与正常推理停止点（或明确 unknown）
     - 说明 user decision / Agent execution / Engine verdict 的责任边界，不得用 human-directed 创造 permission 或 capability
@@ -233,8 +247,9 @@ rules:
     - "Task 描述中引用它实现的 requirement ID (如 \"实现 SCO-001: CurrentGate enum\")"
     - |
       每个 change 的 tasks 必含两条收尾检查 task, 归档前硬性 done condition:
-        1. 运行 `node openspec/governance/check-project-reqs.mjs` 必须 PASS
-           (0 duplicate / 0 orphan / 0 unregistered / 0 reusedRetired)
+        1. 运行 `node openspec/governance/check-project-reqs.mjs --mode archive --change <change>`
+           必须 PASS (0 duplicate / 0 orphan / 0 unregistered / 0 reusedRetired，且 selected
+           reservation 已 transition 为 live identity)
         2. 运行 `node openspec/governance/check-project-specs.mjs` 必须 PASS
            (0 deltaHeaderInMain / 0 missingPurpose / 0 missingRequirements / 0 missingReqHeader)
       收尾检查固化进每个 change 生命周期——防止 requirement ID 堆叠/漏标/被覆盖，

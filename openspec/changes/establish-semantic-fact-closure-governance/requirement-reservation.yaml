@@ -1,0 +1,10 @@
+schema_version: requirement-reservation/v1
+change: establish-semantic-fact-closure-governance
+reservations:
+  - capability_path: governance/semantic-fact-closure
+    prefix: SEF
+    requirements:
+      - SEF-001
+      - SEF-002
+      - SEF-003
+      - SEF-004

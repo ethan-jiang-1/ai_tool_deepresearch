@@ -1,0 +1,98 @@
+schema_version: verification-routing/v1
+change: add-change-local-requirement-reservations
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The strict reservation parser/evaluator and the finalizer's exact
+      selected-change invocation are focused deterministic governance contracts.
+  integration:
+    status: selected
+    rationale: >-
+      Reservation lifecycle evaluation, generated OpenSpec instruction guidance,
+      and finalizer wiring require isolated filesystem changes and the production
+      checker/finalizer CLIs.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      This change does not alter a workflow-scale runtime chain; its full
+      boundary is the project governance CLI and finalization interface.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change creates no Subject-Agent task, Markdown playbook behavior, or
+      native runtime evidence claim.
+claims:
+  - id: requirement-reservation-contract
+    statement: >-
+      RET-001: strict parsing accepts only the closed change-local reservation
+      form, preserves path/prefix/ID ownership, distinguishes complete pending
+      and transitioned forms from mixed state, and exposes direct structural
+      failures without creating a live registry fact.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/requirement-reservation-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: requirement-reservation-finalizer-scope
+    statement: >-
+      CHF-003: the governed finalizer passes the resolved project root, archive
+      mode, and its exact selected change to the existing requirement checker,
+      preserving the requirement-governance root and first-failure ordering.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/change-feedback-finalizer.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: requirement-reservation-project-checker
+    statement: >-
+      RET-001 and RET-006: the production project checker accepts only
+      same-change pending ownership in plan mode, rejects malformed/colliding
+      or unowned identity, requires selected archive transition, tolerates other
+      active complete forms, and makes no filesystem mutation.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/check-project.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: requirement-reservation-entry-wiring
+    statement: >-
+      RET-001, RET-006, CHF-002, and CHF-003: generated proposal/apply guidance
+      requires a new capability's change-local reservation route; all eight
+      current supported entry surfaces deliver the existing feedback route, the
+      current `/opsx` Apply entry has the plan-check boundary, and the
+      production finalizer invokes the scoped archive check with no alternate
+      archive success path.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/change-feedback-finalizer.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

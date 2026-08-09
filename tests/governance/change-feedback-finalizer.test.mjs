@@ -239,6 +239,14 @@ describe('change feedback archive finalizer', () => {
     assert.equal(requirementsResult.root.code, 'requirement_governance_failed');
     assert.deepEqual(requirements.calls.map((call) => call.args[0]), ['status', 'validate', requirements.calls[2].args[0]]);
     assert.match(requirements.calls[2].args[0], /check-project-reqs\.mjs$/);
+    assert.deepEqual(requirements.calls[2].args, [
+      `${ROOT}/openspec/governance/check-project-reqs.mjs`,
+      ROOT,
+      '--mode',
+      'archive',
+      '--change',
+      CHANGE,
+    ]);
 
     const mainSpecs = runner({ failAt: 'specs' });
     const mainSpecsResult = await finalizeChangeArchive({
@@ -250,7 +258,8 @@ describe('change feedback archive finalizer', () => {
     assert.equal(mainSpecsResult.root.code, 'main_spec_governance_failed');
     assert.equal(mainSpecs.calls.length, 4);
     assert.match(mainSpecs.calls.at(-1).args[0], /check-project-specs\.mjs$/);
-    assert.doesNotMatch(mainSpecs.calls.map((call) => call.args.join(' ')).join('\n'), /check-capability-taxonomy\.mjs|check-capability-discovery\.mjs|check-verification-routing\.mjs|archive/);
+    assert.doesNotMatch(mainSpecs.calls.map((call) => call.args.join(' ')).join('\n'), /check-capability-taxonomy\.mjs|check-capability-discovery\.mjs|check-verification-routing\.mjs/);
+    assert.equal(mainSpecs.calls.some((call) => call.command === 'openspec' && call.args[0] === 'archive'), false);
 
     const taxonomy = runner({ failAt: 'taxonomy' });
     const taxonomyResult = await finalizeChangeArchive({
@@ -262,7 +271,8 @@ describe('change feedback archive finalizer', () => {
     assert.equal(taxonomyResult.root.code, 'capability_taxonomy_failed');
     assert.equal(taxonomy.calls.length, 5);
     assert.match(taxonomy.calls.at(-1).args[0], /check-capability-taxonomy\.mjs$/);
-    assert.doesNotMatch(taxonomy.calls.map((call) => call.args.join(' ')).join('\n'), /check-capability-discovery\.mjs|check-verification-routing\.mjs|archive/);
+    assert.doesNotMatch(taxonomy.calls.map((call) => call.args.join(' ')).join('\n'), /check-capability-discovery\.mjs|check-verification-routing\.mjs/);
+    assert.equal(taxonomy.calls.some((call) => call.command === 'openspec' && call.args[0] === 'archive'), false);
 
     const discovery = runner({ failAt: 'discovery' });
     const discoveryResult = await finalizeChangeArchive({
@@ -274,7 +284,8 @@ describe('change feedback archive finalizer', () => {
     assert.equal(discoveryResult.root.code, 'capability_discovery_failed');
     assert.equal(discovery.calls.length, 6);
     assert.match(discovery.calls.at(-1).args[0], /check-capability-discovery\.mjs$/);
-    assert.doesNotMatch(discovery.calls.map((call) => call.args.join(' ')).join('\n'), /check-verification-routing\.mjs|archive/);
+    assert.doesNotMatch(discovery.calls.map((call) => call.args.join(' ')).join('\n'), /check-verification-routing\.mjs/);
+    assert.equal(discovery.calls.some((call) => call.command === 'openspec' && call.args[0] === 'archive'), false);
 
     const routing = runner({ failAt: 'routing' });
     const routingResult = await finalizeChangeArchive({
@@ -286,7 +297,7 @@ describe('change feedback archive finalizer', () => {
     assert.equal(routingResult.root.code, 'verification_routing_failed');
     assert.equal(routing.calls.length, 7);
     assert.match(routing.calls.at(-1).args[0], /check-verification-routing\.mjs$/);
-    assert.doesNotMatch(routing.calls.map((call) => call.args.join(' ')).join('\n'), /archive/);
+    assert.equal(routing.calls.some((call) => call.command === 'openspec' && call.args[0] === 'archive'), false);
   });
 
   it('reports invalid native output without inventing archive success', async () => {

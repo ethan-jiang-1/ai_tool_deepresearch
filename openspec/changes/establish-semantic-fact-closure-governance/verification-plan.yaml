@@ -1,0 +1,103 @@
+schema_version: verification-routing/v1
+change: establish-semantic-fact-closure-governance
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Strict catalog/closure parsing and root-first finalizer ordering are
+      focused deterministic governance contracts.
+  integration:
+    status: selected
+    rationale: >-
+      The checker CLI and supported OpenSpec lifecycle surfaces must operate
+      against isolated filesystem changes and real operation guidance.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      This change does not alter a multi-checkpoint runtime workflow chain; its
+      lifecycle integration is covered at the governance CLI boundary.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change adds no Subject-Agent semantic work, Markdown playbook
+      behavior, or disposable-run verdict claim.
+claims:
+  - id: semantic-fact-closure-contract
+    statement: >-
+      Strict parsing accepts only the closed catalog and closure-record forms,
+      including the assignment-derived output-obligation family distinct from
+      direct-output content fulfillment; it requires one coherent status branch
+      and preserves the family and coordinate distinctions needed for root-first
+      feedback.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/semantic-fact-closure-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: semantic-closure-finalizer-order
+    statement: >-
+      The governed finalizer invokes semantic-closure assets only after the
+      existing verification-routing assets root and stops before native archive
+      at the first semantic-closure failure, exposing the matching strict
+      result-schema root and passed-check entries.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/change-feedback-finalizer.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: semantic-closure-checker-cli
+    statement: >-
+      The production checker distinguishes plan from assets, validates
+      a catalog addition as absent before Apply and as matching the global
+      catalog after Apply, validates selected verification assets, rejects
+      unsafe or missing coordinates, and remains read-only.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/check-semantic-closure.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: semantic-closure-supported-entry-wiring
+    statement: >-
+      Proposal guidance identifies the global family catalog and both strict
+      closure-record branches without choosing one, while change-feedback
+      guidance returns the affected-record authority/consumer review question
+      to the Agent without manufacturing semantic proof; the finalizer-owned
+      `.agents` / `.claude` entry inventory then makes each current supported
+      apply entry run verification-routing followed by semantic-closure plan
+      checks for marked and unmarked selected changes before target edits; each
+      current supported archive entry blocks unmarked changes rather than use a
+      native bypass, while the governed finalizer exposes the same structural
+      archive boundary.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/change-feedback-finalizer.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

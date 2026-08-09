@@ -80,8 +80,9 @@ selected active feedback-lifecycle change. It SHALL resolve authoritative
 change and planning paths from OpenSpec, verify required artifacts, verify
 exactly one completed plan-review marker and one completed closeout-review
 marker with no other incomplete task, run strict OpenSpec validation, and then
-run requirement-traceability, main-spec, capability-taxonomy,
-capability-discovery, and verification-routing asset checks in that order.
+run requirement-traceability in `--mode archive --change <selected-change>`,
+main-spec, capability-taxonomy, capability-discovery, and verification-routing
+asset checks in that order.
 
 Only after those direct facts pass, and only after the Agent has completed any required semantic delta/main sync
 and re-comparison, the finalizer SHALL invoke the native OpenSpec archive transition in its no-spec-write mode.
@@ -90,6 +91,11 @@ first unmet direct prerequisite it SHALL return a structured root with the obser
 legal repair coordinate when an accepted operation exists, and the same finalizer rerun coordinate. It SHALL
 not implement its own spec merge, archive naming, directory move, rollback, test runner, semantic review
 verdict, or persistent lifecycle state.
+
+The finalizer SHALL pass the exact selected active change to the
+requirement-traceability archive check. It SHALL not use a no-scope invocation,
+infer that another active change is ready, or turn another change's valid
+plan-stage reservation into a selected-change archive failure.
 
 #### Scenario: incomplete feedback task blocks before native archive
 
@@ -103,6 +109,15 @@ verdict, or persistent lifecycle state.
   taxonomy, discovery record, or verification-routing assets fail
 - **THEN** finalization SHALL report the earliest failing direct check before native archive
 - **AND** it SHALL not perform a directory move, write main specs, or infer test success
+
+#### Scenario: Pending reservation blocks selected finalization
+
+- **WHEN** the selected change's reservation has not yet become a live prefix,
+  live requirement-ID entries, and canonical main-spec declarations
+- **THEN** finalization SHALL return its requirement-traceability root before
+  main-spec, taxonomy, discovery, verification-routing, or native archive
+- **AND** it SHALL preserve the selected change in the requirement-check rerun
+  coordinate
 
 #### Scenario: successful finalization delegates the canonical move
 

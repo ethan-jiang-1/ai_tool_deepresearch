@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @impl CHF-003, CHF-004
+// @impl CHF-002, CHF-003, CHF-004
 import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
@@ -15,16 +15,16 @@ export const FEEDBACK_MARKERS = Object.freeze({
 });
 export const SUPPORTED_ENTRY_SURFACES = Object.freeze({
   apply: Object.freeze([
-    '.codex/skills/openspec-apply-change/SKILL.md',
     '.agents/skills/openspec-apply-change/SKILL.md',
     '.agents/skills/source-command-opsx-apply/SKILL.md',
-    '.codex/prompts/opsx-apply.md',
+    '.claude/skills/openspec-apply-change/SKILL.md',
+    '.claude/commands/opsx/apply.md',
   ]),
   archive: Object.freeze([
-    '.codex/skills/openspec-archive-change/SKILL.md',
     '.agents/skills/openspec-archive-change/SKILL.md',
     '.agents/skills/source-command-opsx-archive/SKILL.md',
-    '.codex/prompts/opsx-archive.md',
+    '.claude/skills/openspec-archive-change/SKILL.md',
+    '.claude/commands/opsx/archive.md',
   ]),
 });
 
@@ -331,7 +331,19 @@ export async function finalizeChangeArchive({
     }
     addCheck(checks, 'strict_validation');
 
-    const reqCheck = await runStep(runCommand, process.execPath, [join(planningRoot, 'openspec/governance/check-project-reqs.mjs'), planningRoot], planningRoot);
+    const reqCheck = await runStep(
+      runCommand,
+      process.execPath,
+      [
+        join(planningRoot, 'openspec/governance/check-project-reqs.mjs'),
+        planningRoot,
+        '--mode',
+        'archive',
+        '--change',
+        selectedChange,
+      ],
+      planningRoot,
+    );
     if (reqCheck.status !== 0) {
       return makeBlocked(selectedChange, checks, 'requirement_governance_failed', summarizeProcess(reqCheck), 'openspec/governance/check-project-reqs.mjs');
     }
