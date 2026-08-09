@@ -50,6 +50,26 @@ function sourceRuntimeState() {
   return paths.map((path) => [path, existsSync(path)]);
 }
 
+function currentReleaseIdentity(runEntry) {
+  const banner = runEntry.match(/^> \*\*DEEP_RESEARCH_HARNESS (v\d+(?:\.\d+)+)\*\*$/m);
+  const currentRelease = runEntry.match(/^## Current Release: (v\d+(?:\.\d+)+)$/m);
+  assert.ok(banner, 'RUN.md must declare a Harness release banner');
+  assert.ok(currentRelease, 'RUN.md must declare a current release heading');
+  assert.equal(banner[1], currentRelease[1], 'RUN.md release declarations must agree');
+  return banner[1];
+}
+
+function matchingReleaseSection(changelog, releaseIdentity) {
+  const heading = `## ${releaseIdentity}`;
+  const start = changelog.indexOf(`${heading}\n`);
+  assert.notEqual(start, -1, `top-level CHANGELOG.md is missing ${heading}`);
+  const end = changelog.indexOf('\n## ', start + heading.length);
+  const section = changelog.slice(start, end === -1 ? undefined : end);
+  assert.ok(section.startsWith(`${heading}\n`));
+  assert.match(section, /^- \S/m, `${heading} must contain a release entry`);
+  return section;
+}
+
 describe('Deep Research Harness migration', () => {
   after(() => {
     for (const root of roots) rmSync(root, { recursive: true, force: true });
@@ -96,13 +116,8 @@ describe('Deep Research Harness migration', () => {
 
     const changelog = readFileSync(join(REPO_ROOT, 'CHANGELOG.md'), 'utf8');
     const runEntry = readFileSync(join(HARNESS_ROOT, 'RUN.md'), 'utf8');
-    const releaseEnd = changelog.indexOf('\n## ', changelog.indexOf('## v0.74') + 1);
-    const release = changelog.slice(0, releaseEnd === -1 ? undefined : releaseEnd);
-    assert.match(release, /^## v0\.74$/m);
-    assert.match(release, /Breaking:/);
-    assert.match(release, /sole reusable Harness source/);
-    assert.match(runEntry, /> \*\*DEEP_RESEARCH_HARNESS v0\.74\*\*/);
-    assert.match(runEntry, /## Current Release: v0\.74/);
+    const releaseIdentity = currentReleaseIdentity(runEntry);
+    matchingReleaseSection(changelog, releaseIdentity);
     assert.equal(existsSync(join(HARNESS_ROOT, 'CHANGELOG.md')), false);
   });
 });

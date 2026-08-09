@@ -22,6 +22,19 @@ import { dirname, join } from 'node:path';
 const PROJECT_ROOT = process.cwd();
 const CHANGE = 'demo-change';
 const createdRoots = [];
+const FINALIZER_CHECKS = [
+  'openspec_status',
+  'artifacts',
+  'tasks',
+  'strict_validation',
+  'requirement_governance',
+  'main_spec_governance',
+  'capability_taxonomy',
+  'capability_discovery',
+  'verification_routing',
+  'semantic_closure',
+  'native_archive',
+];
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -40,36 +53,49 @@ function write(root, relativePath, content) {
   return target;
 }
 
-function copyGovernanceScripts(root) {
-  const scripts = [
+function copyGovernanceClosure(root) {
+  const files = [
     'finalize-change-archive.mjs',
     'check-project-reqs.mjs',
+    'requirement-reservation-contract.mjs',
     'check-project-specs.mjs',
+    'check-capability-taxonomy.mjs',
+    'check-capability-discovery.mjs',
     'check-verification-routing.mjs',
     'verification-routing-contract.mjs',
+    'check-semantic-closure.mjs',
+    'semantic-fact-closure-contract.mjs',
   ];
-  for (const script of scripts) {
-    const destination = join(root, 'openspec/governance', script);
+  for (const file of files) {
+    const destination = join(root, 'openspec/governance', file);
     mkdirSync(dirname(destination), { recursive: true });
-    copyFileSync(join(PROJECT_ROOT, 'openspec/governance', script), destination);
+    copyFileSync(join(PROJECT_ROOT, 'openspec/governance', file), destination);
   }
+  copyFileSync(
+    join(PROJECT_ROOT, 'openspec/governance/semantic-fact-families.yaml'),
+    join(root, 'openspec/governance/semantic-fact-families.yaml'),
+  );
 }
 
 function createCompleteChange() {
-  const root = mkdtempSync(join(tmpdir(), 'change-feedback-e2e-'));
+  const root = mkdtempSync(join(tmpdir(), 'change-feedback-integration-'));
   createdRoots.push(root);
   run('openspec', ['init', root, '--tools', 'none', '--no-animation']);
   symlinkSync(join(PROJECT_ROOT, 'node_modules'), join(root, 'node_modules'), 'dir');
   symlinkSync(join(PROJECT_ROOT, 'DEEP_RESEARCH_HARNESS'), join(root, 'DEEP_RESEARCH_HARNESS'), 'dir');
-  copyGovernanceScripts(root);
+  copyGovernanceClosure(root);
   run('openspec', ['new', 'change', CHANGE, '--json'], { cwd: root });
 
   write(root, 'openspec/governance/req-registry.yaml', [
     '# Fixture registry for the native archive finalization chain.',
-    'ABC-001: demo-capability - finalizer archive boundary',
+    'prefixes:',
+    '  ABC: governance/demo-archive-boundary',
+    '',
+    '# governance/demo-archive-boundary',
+    'ABC-001: demo-archive-boundary - finalizer archive boundary',
     '',
   ].join('\n'));
-  const mainSpec = write(root, 'openspec/specs/demo-capability/spec.md', [
+  const mainSpec = write(root, 'openspec/specs/governance/demo-archive-boundary/spec.md', [
     '> req: ABC-001',
     '',
     '## Purpose',
@@ -84,7 +110,21 @@ function createCompleteChange() {
     '',
   ].join('\n'));
   const mainSpecBefore = readFileSync(mainSpec, 'utf8');
+  write(root, 'openspec/specs/README.md', [
+    '# Fixture Capability Catalog',
+    '',
+    '| Capability path | Purpose | Keywords | Boundaries / neighbors | Related entries | Agent/Markdown owns | Engine/Node owns |',
+    '| --- | --- | --- | --- | --- | --- | --- |',
+    '| governance/demo-archive-boundary | Fixture archive boundary. | archive, fixture | Isolated finalizer fixture only. | none | Reviews fixture intent. | Enforces archive prerequisites. |',
+    '',
+  ].join('\n'));
 
+  write(root, `openspec/changes/${CHANGE}/.openspec.yaml`, [
+    'schema: spec-driven',
+    'created: 2026-08-09',
+    'skip_specs: true',
+    '',
+  ].join('\n'));
   write(root, `openspec/changes/${CHANGE}/proposal.md`, [
     '## Why',
     '',
@@ -93,6 +133,14 @@ function createCompleteChange() {
     '## What Changes',
     '',
     '- Adds no production behavior; the fixture starts with synchronized specs.',
+    '',
+    '## Capability Discovery',
+    '',
+    '| Candidate path | Evidence read | Decision | Reason |',
+    '| --- | --- | --- | --- |',
+    '| `governance/demo-archive-boundary` | Fixture main spec | Verify-only | The fixture starts synchronized. |',
+    '',
+    'skip_specs: true - the fixture changes no accepted behavior and needs no delta spec.',
     '',
     '## Capabilities',
     '',
@@ -121,21 +169,6 @@ function createCompleteChange() {
     '- Do not write main specs during finalization.',
     '',
   ].join('\n'));
-  write(root, `openspec/changes/${CHANGE}/specs/demo-capability/spec.md`, [
-    '> req: ABC-001',
-    '',
-    '## ADDED Requirements',
-    '',
-    '### Requirement: Demo archive boundary',
-    '',
-    'The fixture system SHALL preserve the native archive boundary.',
-    '',
-    '#### Scenario: native archive is eligible',
-    '',
-    '- **WHEN** all finalizer prerequisites are complete',
-    '- **THEN** the native archive transition may move the active change',
-    '',
-  ].join('\n'));
   write(root, `openspec/changes/${CHANGE}/tasks.md`, [
     '- [x] 0.1 Plan review (openspec-feedback:plan-review).',
     '- [x] 1.1 Supply synchronized fixture artifacts.',
@@ -148,34 +181,41 @@ function createCompleteChange() {
     'test_classes:',
     '  unit:',
     '    status: not_applicable',
-    '    rationale: Fixture archive proof is workflow-scale.',
+    '    rationale: Fixture archive proof crosses a production CLI boundary.',
     '  integration:',
-    '    status: not_applicable',
-    '    rationale: Fixture archive proof spans the native lifecycle.',
-    '  deterministic_e2e:',
     '    status: selected',
-    '    rationale: The finalizer invokes the native archive transition.',
+    '    rationale: The finalizer runs one isolated project governance boundary.',
+    '  deterministic_e2e:',
+    '    status: not_applicable',
+    '    rationale: The fixture does not traverse a current run bundle lifecycle.',
     '  agent_flow_e2e:',
     '    status: not_applicable',
     '    rationale: The fixture claims only deterministic behavior.',
     'claims:',
     '  - id: native-archive-fixture',
-    '    statement: Native archive moves the selected complete fixture change.',
-    '    test_class: deterministic_e2e',
+    '    statement: The production finalizer archives the selected complete fixture change.',
+    '    test_class: integration',
     '    proof_subject: deterministic_contract',
     '    asset:',
     '      kind: node_test',
-    '      path: tests/e2e/native-archive-fixture.test.mjs',
+    '      path: tests/integration/governance/native-archive-fixture.test.mjs',
     '    execution_profile:',
     '      fixture: fixture_backed',
-    '      subject_execution: simulated_agent_actions',
-    '      runtime: temporary_bundle',
+    '      subject_execution: none',
+    '      runtime: none',
     '      external_calls: none',
     '      verdict_judge: deterministic',
     '    verdict_authority: node_test_exit',
     '',
   ].join('\n'));
-  write(root, 'tests/e2e/native-archive-fixture.test.mjs', '// fixture asset\n');
+  write(root, `openspec/changes/${CHANGE}/semantic-closure.yaml`, [
+    'schema_version: semantic-closure/v1',
+    `change: ${CHANGE}`,
+    'status: not_applicable',
+    'reason: The fixture change alters no Engine-owned deterministic fact.',
+    '',
+  ].join('\n'));
+  write(root, 'tests/integration/governance/native-archive-fixture.test.mjs', '// fixture asset\n');
   write(root, 'experiments_playbook/PLAYBOOK_MANIFEST.md', [
     '# Fixture Playbook Manifest',
     '',
@@ -215,6 +255,7 @@ describe('change feedback loop native archive', () => {
     const output = JSON.parse(result.stdout);
     assert.equal(output.outcome, 'archived');
     assert.equal(output.change, CHANGE);
+    assert.deepEqual(output.checks.map((check) => check.id), FINALIZER_CHECKS);
     assert.equal(output.archive.specs_updated, false);
     assert.equal(existsSync(fixture.changeRoot), false);
     assert.equal(existsSync(output.archive.path), true);

@@ -119,6 +119,16 @@ function passThroughDescendant(bundle) {
   assert.equal(shared.owner.kind, 'current_owner');
 }
 
+function assertStaleStyleGate(bundle) {
+  const rerun = runGate(bundle, 'rerun-ready', 'phases/phase-rerun.md', { expectedStatus: 1 });
+  assert.equal(rerun.output.check.passed, false);
+  assert.deepEqual(rerun.output.check.failed_rule_ids, ['style_projection_freshness']);
+  assert.equal(rerun.output.hints.length, 1);
+  assert.equal(rerun.output.hints[0].rule_id, 'style_projection_freshness');
+  assert.match(rerun.output.hints[0].write_to, /apply-research-style\.mjs/);
+  assert.match(rerun.output.hints[0].rerun, /check-gate-rerun-ready\.mjs/);
+}
+
 before(() => {
   root = createTempRoot();
   baseline = buildTerminalFinalBaseline(root, 'post-final-lineage');
@@ -159,6 +169,8 @@ describe('post-final rerun lineage continuity from a production terminal chain',
     incrementCount(bundle);
     assert.deepEqual(parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8')).research_style_params, retained);
     assert.equal(inspectPostFinalRecovery({ bundlePath: bundle }).stage, 'synchronized_count_incremented');
+    assertStaleStyleGate(bundle);
+    applyStyle(bundle);
     passThroughDescendant(bundle);
   });
 });

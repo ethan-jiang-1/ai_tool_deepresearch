@@ -20,7 +20,7 @@ baseline red and weakens confidence in subsequent Harness changes.
 
 ## Capability Discovery
 
-| Candidate | Evidence read | Decision | Reason |
+| Candidate path | Evidence read | Decision | Reason |
 | --- | --- | --- | --- |
 | `verification/test-fixtures` | `openspec/specs/verification/test-fixtures/spec.md` | Verify-only | The temporary finalizer fixture is test-only and this change alters no stated fixture capability behavior. |
 | `verification/integration-tests` | `openspec/specs/verification/integration-tests/spec.md` | Verify-only | The test repairs restore executable coverage but do not change the contract for bundle validation or inspection. |
