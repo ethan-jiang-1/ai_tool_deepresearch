@@ -4,8 +4,9 @@
 >
 > Change A 已完成 Apply，并已通过受治理 finalizer 归档为
 > `openspec/changes/archive/2026-08-09-establish-semantic-fact-closure-governance/`
-> （commit `8d8c29747`）。Change B 已完成 OpenSpec proposal/specs/design/tasks
-> planning set，尚未 Apply；三个源 bug 仍为 `open`。
+> （commit `8d8c29747`）。Change B 已完成 Apply、spec sync 与受治理归档为
+> `openspec/changes/archive/2026-08-09-close-work-unit-semantic-contract-drift/`
+> （commit `ea02a29af`）；BUG-212、BUG-213、BUG-214 的三个闭合点均已完成。
 >
 > 本文是 plan/共同理解记录，不是 accepted spec、`semantic-closure.yaml`、
 > OpenSpec proposal 或实现证据。它不授权修改 `openspec/config.yaml`、
@@ -207,7 +208,7 @@ OpenSpec change；proposal 的 Capability Discovery 可以在有明确理由时�
      taxonomy/discovery、verification-routing assets、semantic-closure assets 和 native
      archive 均通过。
 
-2. **[ ] Change B — `close-work-unit-semantic-contract-drift`**
+2. **[x] Change B — `close-work-unit-semantic-contract-drift`**
    - 依赖 Change A。
    - 它自己的 `semantic-closure.yaml` 至少点名 BUG-214 的 assignment/direct-output
      义务、BUG-213 的 source-ref authority、BUG-212 的 submitted lineage/current-vs-
@@ -215,6 +216,8 @@ OpenSpec change；proposal 的 Capability Discovery 可以在有明确理由时�
    - 建立/收敛相应 resolver，迁移 formal submit、depth review、bypass diagnostic，
      加 truth-table 与真实跨 surface regression。
    - 不借修复之机审计/重构其余 10 家族。
+   - 已于 2026-08-09 归档；v0.82、主 spec sync、19/19 tasks、selected regression、
+     plan/assets checks、closeout review 和 governed finalizer 均已完成。
 
 “第一版”指 Change A + Change B 的有序闭环，不要求单一 change 同时治理整个
 framework 和所有历史 Engine consumer。
@@ -228,7 +231,7 @@ Change A 的治理目标已完成。Change B 的 proposal/specs/design/tasks 已
   `check-semantic-closure.mjs`、lifecycle integration 与 focused governance tests。
 - [x] `openspec/config.yaml`、supported `/opsx:apply` entries 和 governed archive
   finalizer 的 semantic-closure plan/assets 接点。
-- [ ] Change B 的 relevant Engine resolver/consumer/spec/test surfaces，解决
+- [x] Change B 的 relevant Engine resolver/consumer/spec/test surfaces 已解决
   BUG-212、BUG-213、BUG-214。
 
 CI 当前明确不在范围内。未来若项目决定建立 CI，可复用同一个 checker 在 merge
@@ -240,7 +243,7 @@ boundary 运行；不会改变本方案的 authority 分配。
 - 不让 Node checker 自动修复或替 Agent 选择新的语义。
 - 不让 Engine 接管多阶段 Agent Flow。
 - 不用 global schema registry 或通用 raw-field linter 取代小而深的 semantic resolver。
-- 本文 tracker 不授权任何修改；Change B proposal 已完成，仍须等待明确 Apply 再进入实现。
+- 本文 tracker 不授权任何修改；两项 change 均已完成并归档。
 - 真实 bug 是 contract-class probe：修复一个 concrete gap 时横向审计其必要 authority
   faces，但只修改关闭该 contract 所必需的 surface。
 
@@ -258,7 +261,7 @@ change 的 accepted spec 和 task list 为准。
   semantic review。
 - [x] 同步 accepted main specs、通过完整治理检查、关闭审查并归档 Change A。
 
-### Change B 待办
+### Change B 完成记录
 
 - [x] **Capability Discovery 与 proposal**：已复读 BUG-212/213/214、当前
   `agent/delegated-work-units`、`agent/subagent-node-contract`、
@@ -273,9 +276,10 @@ change 的 accepted spec 和 task list 为准。
   resolver 和 current-versus-historical normalized ledger resolver 分别指定为唯一 verdict
   authority；formal submit、dry-submit、depth review、Gate/bypass diagnostic 的消费边界和
   保留的拒绝条件均已写入 four delta specs、design 和 verification plan。
-- [ ] **Apply、验证与归档**：在明确 Apply 后实现三个闭合点和 v0.82 version update，运行
-  focused truth-table 与真实 cross-surface regression，完成 plan/assets、review、spec-sync 与
-  governed finalizer 路径。不得在同一 change 里审计或重构其余十个事实家族，也不需要先引入 CI。
+- [x] **Apply、验证与归档**：已实现三个闭合点和 v0.82 version update，运行 focused
+  truth-table 与真实 cross-surface regression，完成 plan/assets、review、spec-sync 与
+  governed finalizer 路径。未在同一 change 中审计或重构其余十个事实家族，亦未引入 CI。
 
-**现在应做什么：** 审阅 Change B planning set；确认后以明确 `/opsx:apply` 进入实现。它是
-Change A 已解除阻塞后的下一个最小闭环，不需要在这一轮扩大到其余十个事实家族。
+**本路线已结束：** Change A 建立治理闭环，Change B 使用该闭环完成 BUG-212、BUG-213、
+BUG-214 的最小修复并归档。后续只有在新的 OpenSpec change 影响既有事实家族，或需要新增
+一个有界事实家族时，才按已建立的 proposal/apply/archive 路径重新进入；本计划没有待办。

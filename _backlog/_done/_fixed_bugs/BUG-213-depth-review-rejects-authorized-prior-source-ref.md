@@ -3,12 +3,22 @@ bug_id: BUG-213
 title: depth-review 的 validateSubmittedClaimBacking 拒绝合法的 prior submitted source_ref，违反 subagent-node-contract §169
 severity: P1
 phase: wave1
-status: open
+status: closed
 source: CCDS4 (Claude Code + DeepSeek v4, 2026-08-09)
 surfaced_at: 2026-08-09
+resolved_at: 2026-08-09
+resolved_by: close-work-unit-semantic-contract-drift (v0.82, ea02a29af)
 ---
 
 # BUG-213: `validateSubmittedClaimBacking` 硬性要求 `source_ref` 在当前 `output_files[]`
+
+## Resolution
+
+已由 `close-work-unit-semantic-contract-drift` 归档修复。formal/dry-submit 与 Wave1
+reviewed backing 现在共用 current-or-authorized-prior source-ref resolver；合法的同
+Topic/wave/kind/role prior `evidence_summary` 无需重复进入当前 `output_files[]`，但当前
+accepted URL、cache/degraded mapping 和物理 projection 仍分别 fail closed。submit 与
+reference-convergence regression 均已通过。
 
 ## Observation
 

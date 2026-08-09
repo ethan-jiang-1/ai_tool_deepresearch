@@ -1,6 +1,6 @@
 # Active Todos — 活跃 todo + 依赖链 + 执行顺序
 
-> 最后更新: 2026-08-05 | `_backlog/todos/` — 活跃 todo 在此，做完移入 [`../_done/_done_todos/`](../_done/_done_todos/)。
+> 最后更新: 2026-08-09 | `_backlog/todos/` — 活跃 todo 在此，做完移入 [`../_done/_done_todos/`](../_done/_done_todos/)。
 >
 > **本文件是所有活跃工作的中枢。** todo 没有编号，文件名即标识。完成后文件名不变，位置即状态。
 >
@@ -29,7 +29,6 @@
 | 2 | `todo-helper-not-tool.md` | **北星 / 实施延后** | 同事人格层 | 等问题闭环与 recovery 经真实 run 稳定后再抬 |
 | 3 | `todo-hooks-deferral.md` | **延后 / parked** | workflow boundary hooks | 仅在现有 Gate/inspect/reentry 有真实直接缺口时重启 |
 | 4 | `todo-context-reground.md` | **parked** | head re-ground | recovery 已 DONE；仅在现有 reload 不足的真实 case 下重启 |
-| 5 | `todo-topic-specific-research-effort.md` | **parked / policy exploration** | Topic 级 Wave0 evidence floor 与后续研究强度 | 先以真实 bundle 校准；不得把 `scope_role` 或全局 profile projection 偷作权重 |
 
 ### 本轮已移出活跃
 
@@ -40,6 +39,7 @@
 | `todo-evidence-quality.md` | → **archived as absorbed input**（非已实现）— 不再独立建设语义 source score / semantic countability；并入活跃 `research-question-closure-and-evidence-judgment` plan |
 | `todo-explore-exploit.md` | → **archived as absorbed input**（非已实现）— 不再独立建设 WaveStats / strategy projection；并入同一活跃 plan |
 | `todo-user-knowledge-hang.md` | → **archived as absorbed input**（非已实现）— 用户的 per-run「找/鉴/写」控制并入同一活跃 plan；采用 host-file snapshot，而非外部 live knowledge-pack contract |
+| `todo-topic-specific-research-effort.md` | → **archived as absorbed input**（非已实现）— 政策探索已由 `topic-research-emphasis` plan（2026-08-08 用户确认 D-001~D-010）闭环：emphasis 是公共基线之后的增量自然语言 focus，不是 per-Topic source-count floor；全局 `wave0_per_topic_source_floor` 未改动，未建 override 字段 |
 | BUG-069（外部） | ✅ **已修复** — 移入 `_done/_fixed_bugs/`；P2 降级，5/6 failure point 已修；gate hints + contract lineage 系统性解决契约漂移 |
 | `todo-coding-agent-setup-ux` | ✅ **已关闭** — 移入 `_done/_closed_plans/ux-coding-agent-permissions-setup.md` |
 

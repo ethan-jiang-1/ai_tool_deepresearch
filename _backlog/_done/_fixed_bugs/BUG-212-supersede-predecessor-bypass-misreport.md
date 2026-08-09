@@ -3,12 +3,22 @@ bug_id: BUG-212
 title: supersede 后 predecessor 声明 rows 被 delegated_bypass 误报，gate 硬阻塞
 severity: P1
 phase: wave1
-status: open
+status: closed
 source: CCDS4 (Claude Code + DeepSeek v4, 2026-08-09)
 surfaced_at: 2026-08-09
+resolved_at: 2026-08-09
+resolved_by: close-work-unit-semantic-contract-drift (v0.82, ea02a29af)
 ---
 
 # BUG-212: `scanDelegatedBypassSuspicion` 不排除 supersession_relation predecessor
+
+## Resolution
+
+已由 `close-work-unit-semantic-contract-drift` 归档修复。bypass scanner 现在仅在 raw
+row 的 `(work_id, ledger_record_hash)` 精确匹配同一 validated relation/lineage 的
+`hash_valid_historical` predecessor 时将其作为历史上下文抑制；raw-only、malformed 和
+hash-drift rows 仍为 blocking bypass evidence。focused helper 与 Wave1 Gate regression
+均已通过。
 
 ## Observation
 

@@ -3,12 +3,22 @@ bug_id: BUG-214
 title: supplementary task.md 允许空 output_files[]，但 dry-submit 强制非空，supplementary 首次提交必被拒
 severity: P2
 phase: wave1
-status: open
+status: closed
 source: CCDS4 (Claude Code + DeepSeek v4, 2026-08-09)
 surfaced_at: 2026-08-09
+resolved_at: 2026-08-09
+resolved_by: close-work-unit-semantic-contract-drift (v0.82, ea02a29af)
 ---
 
 # BUG-214: supplementary `wave1_topic_deepening` 的 task.md 与 dry-submit validator 对 `output_files[]` 要求矛盾
+
+## Resolution
+
+已由 `close-work-unit-semantic-contract-drift` 归档修复。新 claim 使用
+`work-unit.assignment.v3`：supplementary Wave1 的空 direct-output assignment 将
+`output_files.required` 解析为 false；formal/dry-submit 使用同一版本选定 contract。
+已 claim 的 v1/v2 与 Wave2 继续保留各自 immutable declaration semantics。assignment、
+submit 和 CLI regression 均已通过。
 
 ## Observation
 

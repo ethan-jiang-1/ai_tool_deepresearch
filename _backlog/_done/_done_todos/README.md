@@ -1,6 +1,6 @@
 # Archived Todos Index — 已完成 todo 与已吸收设计输入
 
-> 最后更新: 2026-07-24 | `_backlog/_done/_done_todos/` — 已完成 todo 与已吸收 standalone TODO 的归档目录。
+> 最后更新: 2026-08-09 | `_backlog/_done/_done_todos/` — 已完成 todo 与已吸收 standalone TODO 的归档目录。
 > 接收来自 [`../../todos/`](../../todos/) 的 todo。`_` 前缀 = coding agent 默认忽略。
 >
 > **实施完成的 todo** 移入时分配 `DONE-NNN` 序号，按完成时间递增。被活跃 plan 吸收的 standalone TODO 也可在此保留历史原文，但不占 DONE 编号，也不代表能力已实现。
@@ -50,5 +50,6 @@ todo 完成后从 `_backlog/todos/` 通过 `git mv` 移入本目录：
 | 2026-07-22 | todo-evidence-quality.md | [`research-question-closure-and-evidence-judgment`（已关闭, CLS-034）](../_closed_plans/research-question-closure-and-evidence-judgment/research-question-closure-and-evidence-judgment.md) | The source-score / semantic-countability proposal was folded into question-level model judgment; no standalone capability was implemented. |
 | 2026-07-22 | todo-explore-exploit.md | [`research-question-closure-and-evidence-judgment`（已关闭, CLS-034）](../_closed_plans/research-question-closure-and-evidence-judgment/research-question-closure-and-evidence-judgment.md) | The WaveStats/strategy-projection proposal was folded into the same question-closure plan; no standalone capability was implemented. |
 | 2026-07-22 | todo-user-knowledge-hang.md | [`research-question-closure-and-evidence-judgment`（已关闭, CLS-034）](../_closed_plans/research-question-closure-and-evidence-judgment/research-question-closure-and-evidence-judgment.md) | Per-run user controls were folded into the same plan as a host-file snapshot, replacing the proposed external live knowledge-pack contract; no standalone capability was implemented. |
+| 2026-08-09 | todo-topic-specific-research-effort.md | [`topic-research-emphasis`（已归档, `2c3a4b732`）](../_closed_plans/topic-research-emphasis/README.md) | The per-Topic Wave0 source-count-floor proposal was resolved by user-confirmed decisions D-001/D-004/D-007: emphasis is incremental natural-language research focus after a common delivery baseline, not a per-Topic count floor or weight; the global `wave0_per_topic_source_floor` scalar is unchanged and no override field was built. |
 
 **Next available DONE ID: DONE-017**
