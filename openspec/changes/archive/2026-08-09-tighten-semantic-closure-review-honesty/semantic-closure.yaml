@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: tighten-semantic-closure-review-honesty
+status: not_applicable
+reason: >-
+  This change modifies only project-level OpenSpec governance authoring and
+  Agent-owned review guidance, accepted governance requirements, and their
+  deterministic delivery test. It does not change or create a Deep Research
+  Harness runtime semantic resolver or verdict consumer for any cataloged fact
+  family; project governance lifecycle verdicts remain outside the runtime
+  semantic fact catalog.

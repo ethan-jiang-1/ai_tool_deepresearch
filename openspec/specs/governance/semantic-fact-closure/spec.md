@@ -117,6 +117,16 @@ not choose a branch or claim that the declaration is semantically complete; the
 supported apply entry's plan check remains the deterministic stop for a missing
 or structurally invalid record.
 
+Project proposal instructions SHALL also make the record's coordinate and role
+boundaries explicit. A repository-relative base file is the machine-checked
+coordinate identity. An optional `#fragment` is only a human-facing navigation
+hint: when present, the author SHALL be able to identify it as an actual symbol
+or document anchor in the revision being described. When no stable anchor can
+be named, or its identity is unknown, the author SHALL use the bare file
+coordinate and explain the intended surface in existing prose such as `fact`,
+`overlap[].detail`, design, or review evidence. The author SHALL NOT invent a
+plausible fragment to make a file coordinate appear more precise.
+
 An affected entry SHALL state the bounded fact, its one semantic resolver
 coordinate, the surfaces that legally establish or change the authority, every
 verdict consumer whose conclusion can be affected by the change, the relation to any overlapping
@@ -130,6 +140,18 @@ SHALL be present in the catalog with the same identifier and bounded question.
 A change SHALL reference an already cataloged family directly rather than
 re-add it.
 
+The affected entry's roles SHALL be classified relative to the family's bounded
+conclusion. `consumers` SHALL contain only surfaces that use that conclusion to
+authorize, reject, pass, fail, block, or otherwise establish a verdict. An
+Agent-facing task, schema, starter, prompt, or other projection that only
+presents the resolved contract SHALL be represented through an applicable
+`overlap` relation, using `derived` when it is projected from the conclusion;
+it SHALL NOT be listed as a verdict consumer merely because it reads or displays
+the fact. Likewise, a raw or diagnostic reader SHALL NOT become a verdict
+consumer merely because it exposes an input or historical row. The existing
+semantic resolver and `established_by` roles remain distinct from both
+projection and verdict consumption.
+
 An affected record with a catalog addition SHALL have an approved task that
 writes that addition to the global catalog before the first target edit relying
 on its family. A structurally valid plan-mode declaration is not a substitute
@@ -139,6 +161,13 @@ The semantic-closure checker SHALL obtain selected verification assets through
 the canonical `verification-routing-contract.mjs` parser. It SHALL not define a
 second `verification-plan.yaml` schema, route taxonomy, or asset-boundary
 interpretation.
+
+The checker SHALL validate only the existing structural and referential
+coordinate boundary. It SHALL NOT treat a `#fragment` as machine proof of a
+symbol declaration or semantic role, scan arbitrary source tokens or callsites
+to infer that proof, or report an affected entry's role inventory as
+semantically complete. Fragment truth and role classification remain explicit
+plan and closeout review obligations.
 
 The affected entry's `overlap` list SHALL be non-empty. Each real overlap SHALL
 provide a safe projection/legacy-field coordinate, one relation of
@@ -179,8 +208,27 @@ affected sequence, or a field from the other branch.
   and require a change-root `semantic-closure.yaml`
 - **AND** they SHALL distinguish the `not_applicable` and `affected` starter
   forms without deciding which one the change requires
+- **AND** they SHALL explain the actual-fragment-or-bare-path boundary and the
+  verdict-consumer versus derived-projection classification
 - **AND** they SHALL direct a missing or malformed record to the plan-mode
   checker before target edits rather than presenting guidance as a verdict
+
+#### Scenario: Actual symbol or honest bare path
+
+- **WHEN** an affected surface has no stable symbol or document anchor that the
+  author can identify in the revision being described
+- **THEN** its coordinate SHALL use the bare repository-relative file path and
+  the existing prose surfaces SHALL explain the intended role
+- **AND** the author SHALL NOT add a guessed `#fragment` merely to imply symbol
+  precision
+
+#### Scenario: Agent-facing projection is not a verdict consumer
+
+- **WHEN** a generated task, schema, starter, or prompt only projects a family
+  conclusion for an Agent and does not authorize, reject, pass, fail, or block
+- **THEN** the affected entry SHALL classify it as an applicable overlap,
+  including `derived` when it is projected from that conclusion
+- **AND** it SHALL NOT list that projection in `consumers`
 
 #### Scenario: Prior-output authorization is affected once per family
 
@@ -231,6 +279,14 @@ affected sequence, or a field from the other branch.
 - **THEN** its record SHALL contain one explanatory `relation: none` overlap
   entry and no real-overlap coordinate
 - **AND** plan mode SHALL reject mixing `none` with a real overlap
+
+#### Scenario: Fragment existence is not checker proof
+
+- **WHEN** plan or assets mode accepts an affected coordinate whose base file is
+  safe and otherwise satisfies the structural contract
+- **THEN** the checker SHALL report only structural and referential validity
+- **AND** it SHALL NOT claim that an optional fragment names an actual symbol or
+  that the declared surface performs its stated semantic role
 
 ### Requirement: A fact family SHALL converge on one semantic resolver
 

@@ -1,4 +1,4 @@
-// @impl CHF-002, CHF-003, CHF-004
+// @impl SEF-002, CHF-002, CHF-003, CHF-004
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
 import {
@@ -272,6 +272,11 @@ describe('change feedback finalizer integration', () => {
     assert.match(closureRule, /status: affected/);
     assert.match(closureRule, /catalog_additions/);
     assert.match(closureRule, /target edit/);
+    assert.match(closureRule, /actual symbol or document anchor/);
+    assert.match(closureRule, /bare file coordinate/);
+    assert.match(closureRule, /verdict consumers/);
+    assert.match(closureRule, /overlap: derived/);
+    assert.match(closureRule, /does not validate fragment\/role semantics/);
 
     const apply = JSON.parse(run('openspec', [
       'instructions', 'apply', '--change', 'generated-feedback-change', '--json',
@@ -279,7 +284,13 @@ describe('change feedback finalizer integration', () => {
     const archive = JSON.parse(run('openspec', [
       'instructions', 'archive', '--change', 'generated-feedback-change', '--json',
     ], { cwd: root }));
-    assert.ok(apply.operationGuidance.some((entry) => entry.startsWith('change-feedback-loop/apply:')));
+    const applyFeedback = apply.operationGuidance.find((entry) => entry.startsWith('change-feedback-loop/apply:'));
+    assert.ok(applyFeedback);
+    assert.match(applyFeedback, /actual symbol or document anchor/);
+    assert.match(applyFeedback, /bare file coordinate/);
+    assert.match(applyFeedback, /verdict consumers/);
+    assert.match(applyFeedback, /overlap: derived/);
+    assert.match(applyFeedback, /does not validate fragment\/role semantics/);
     assert.ok(apply.operationGuidance.some((entry) => (
       entry.startsWith('requirement-reservation/apply:')
       && entry.includes('check-project-reqs.mjs --mode plan')
@@ -289,12 +300,28 @@ describe('change feedback finalizer integration', () => {
     assert.ok(closureGuidance);
     assert.ok(closureGuidance.indexOf('check-verification-routing.mjs') < closureGuidance.indexOf('check-semantic-closure.mjs'));
     assert.match(closureGuidance, /missing-command fallback/);
-    assert.ok(archive.operationGuidance.some((entry) => entry.startsWith('change-feedback-loop/archive:')));
+    const archiveFeedback = archive.operationGuidance.find((entry) => entry.startsWith('change-feedback-loop/archive:'));
+    assert.ok(archiveFeedback);
+    assert.match(archiveFeedback, /actual symbol or document anchor/);
+    assert.match(archiveFeedback, /bare file coordinate/);
+    assert.match(archiveFeedback, /verdict consumers/);
+    assert.match(archiveFeedback, /overlap: derived/);
+    assert.match(archiveFeedback, /does not validate fragment\/role semantics/);
 
     const guideline = readFileSync(join(ROOT, 'guidelines/change-feedback-loop.md'), 'utf8');
     assert.match(guideline, /semantic-closure\.yaml/);
-    assert.match(guideline, /structural semantic-closure checker result does not answer either question/);
-    assert.match(guideline, /structural checker PASS is not semantic completeness/);
+    const [applyReview, afterApplyReview] = guideline.split('## Closeout Review');
+    assert.ok(afterApplyReview);
+    const [closeoutReview] = afterApplyReview.split('## Findings And Boundaries');
+    for (const review of [applyReview, closeoutReview]) {
+      assert.match(review, /actual symbol or document anchor/);
+      assert.match(review, /bare file coordinate/);
+      assert.match(review, /verdict consumers/);
+      assert.match(review, /overlap: derived/);
+      assert.match(review, /unknown/);
+      assert.match(review, /ordinary unchecked task/);
+      assert.match(review, /does not validate fragment\/role semantics/);
+    }
   });
 
   it('receives current operation guidance from a temporary OpenSpec root', () => {
@@ -497,6 +524,7 @@ describe('change feedback finalizer integration', () => {
     for (const path of SUPPORTED_ENTRY_SURFACES.apply) {
       const source = readFileSync(join(ROOT, path), 'utf8');
       assert.match(source, /openspec instructions apply --change/);
+      assert.match(source, /guidelines\/change-feedback-loop\.md/);
       assert.match(source, /openspec-feedback:/);
       assert.match(source, /change-feedback-loop\/apply:/);
       assert.match(source, /stop[\s\S]{0,120}target edit|target edit[\s\S]{0,120}stop/i);
@@ -510,6 +538,7 @@ describe('change feedback finalizer integration', () => {
     for (const path of SUPPORTED_ENTRY_SURFACES.archive) {
       const source = readFileSync(join(ROOT, path), 'utf8');
       assert.match(source, /openspec instructions archive --change/);
+      assert.match(source, /guidelines\/change-feedback-loop\.md/);
       assert.match(source, /openspec-feedback:/);
       assert.match(source, /change-feedback-loop\/archive:/);
       assert.match(source, /node openspec\/governance\/finalize-change-archive\.mjs --change/);

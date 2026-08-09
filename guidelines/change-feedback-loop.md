@@ -4,6 +4,7 @@ suite: deep-research-guidelines
 title: Change Feedback Loop
 status: effective
 created: 2026-07-31
+revised: 2026-08-09
 role: advisory review posture for OpenSpec apply and archive operations
 scope: OpenSpec change artifacts and project lifecycle entry guidance
 authority: guidance
@@ -42,6 +43,17 @@ risks actually introduced by its touched surfaces:
   fact, resolver, `established_by` surfaces, verdict consumers, and overlap declaration cover the
   planned changed surfaces? For `not_applicable`, does its reason still hold for those surfaces?
   A structural semantic-closure checker result does not answer either question.
+- For an `affected` record, inspect each `#fragment` against the planned revision. It is valid only
+  when it identifies an actual symbol or document anchor; otherwise use a bare file coordinate and
+  explain the intended surface in existing prose. Classify roles relative to the family conclusion:
+  `consumers` contains only verdict consumers, while an Agent-facing task, schema, starter, or prompt
+  that only presents the conclusion uses the applicable `overlap: derived` relation.
+- When a fragment or role cannot be established, preserve explicit `unknown` rather than guessing a
+  more precise coordinate or forcing a surface into the nearest role. Record false precision,
+  projection/consumer misclassification, or unknown as an ordinary unchecked task with the affected
+  family or reader question, authoritative owner, smallest repair, and independently observable done
+  condition. A structural checker result does not validate fragment/role semantics or complete this
+  semantic review.
 
 Complete `openspec-feedback:plan-review` only after this scoped review. A completed marker says
 the review step occurred; it does not prove the design, implementation, tests, or future archive
@@ -63,6 +75,19 @@ reassess the bounded fact, resolver, `established_by` surfaces, verdict consumer
 against the implemented surfaces. For `not_applicable`, reassess the reason against the actual
 surfaces. A structural checker PASS is not semantic completeness; record any omission as an
 ordinary pending task and repair it through Apply.
+
+For an `affected` record, inspect each `#fragment` against the actual revision. It is valid only
+when it identifies an actual symbol or document anchor; otherwise use a bare file coordinate and
+explain the intended surface in existing prose. Classify roles relative to the family conclusion:
+`consumers` contains only verdict consumers, while an Agent-facing task, schema, starter, or prompt
+that only presents the conclusion uses the applicable `overlap: derived` relation.
+
+When a fragment or role cannot be established, preserve explicit `unknown` rather than guessing a
+more precise coordinate or forcing a surface into the nearest role. Record false precision,
+projection/consumer misclassification, or unknown as an ordinary unchecked task with the affected
+family or reader question, authoritative owner, smallest repair, and independently observable done
+condition. A structural checker result does not validate fragment/role semantics or complete this
+semantic review.
 
 Complete `openspec-feedback:closeout-review` only when the current scoped review has no open
 finding and all ordinary repair work is complete. After every task is complete, use the governed

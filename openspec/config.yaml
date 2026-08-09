@@ -182,8 +182,12 @@ operations:
         change-feedback-loop/apply: For a feedback-lifecycle change, complete the durable
         openspec-feedback:plan-review before the first target edit. Read
         guidelines/change-feedback-loop.md, preserve any pending feedback task, and convert an
-        actionable finding into an ordinary unchecked task. This guidance is not proof of review
-        completion or a deterministic verdict.
+        actionable finding into an ordinary unchecked task. For an affected semantic-closure
+        record, use a `#fragment` only for an actual symbol or document anchor; otherwise use a
+        bare file coordinate with existing prose. Classify `consumers` as verdict consumers only
+        and an Agent-facing projection as `overlap: derived`. The structural checker does not
+        validate fragment/role semantics. This guidance is not proof of review completion or a
+        deterministic verdict.
       - >-
         requirement-reservation/apply: Before the first target edit, run
         node openspec/governance/check-project-reqs.mjs --mode plan. A change whose delta adds a
@@ -205,6 +209,11 @@ operations:
         change-feedback-loop/archive: For a feedback-lifecycle change, review the selected
         change-scoped actual diff, artifacts, and selected verification evidence; leave a
         finding as an ordinary unchecked task and keep openspec-feedback:closeout-review open.
+        For an affected semantic-closure record, use a `#fragment` only for an actual symbol or
+        document anchor; otherwise use a bare file coordinate with existing prose. Classify
+        `consumers` as verdict consumers only and an Agent-facing projection as `overlap: derived`.
+        The structural checker does not validate fragment/role semantics. Read
+        guidelines/change-feedback-loop.md for the full closeout rubric.
         After Agent-owned delta/main sync and re-comparison when applicable, complete all tasks
         and use node openspec/governance/finalize-change-archive.mjs --change <name> as the only
         supported final mechanical transition. Guidance is not archive permission.
@@ -242,7 +251,15 @@ rules:
       family 的 target edit 前将它写入 global catalog。缺少或 malformed record 的唯一
       repair boundary 是 target edit 前的
       `node openspec/governance/check-semantic-closure.mjs --change <change> --mode plan`；
-      该指导不是 semantic verdict。
+      该指导不是 semantic verdict。repository-relative base file 是 machine-checked coordinate
+      identity；可选 `#fragment` 只是 human-facing navigation hint，只有 author 能在所述 revision
+      中识别 actual symbol or document anchor 时才可使用。无法稳定命名或 identity unknown 时，使用
+      bare file coordinate，并在 `fact`、`overlap[].detail`、design 或 review evidence 的 existing
+      prose 中说明 surface，不能猜测 fragment 来制造 false precision。roles 必须相对于 family
+      conclusion 分类：`consumers` 只放 verdict consumers；仅展示 resolved contract 的 Agent-facing
+      task、schema、starter 或 prompt 使用适用的 `overlap: derived`，不能因读取或展示事实而成为
+      consumer。structural checker does not validate fragment/role semantics；fragment truth 与 role
+      classification 仍由 plan/closeout review 负责。
     - 说明 direct Source of Record、最短合法闭环与 net simplification impact，明确删除、合并或避免的 control complexity
     - 对新增或实质改变的具名 state、projection、status、concept、Module、command 或 reader-facing view，先写简短的 semantic-precision reflection：明确读者/有界问题、必须保留的区别与正常推理停止点（或明确 unknown）
     - 说明 user decision / Agent execution / Engine verdict 的责任边界，不得用 human-directed 创造 permission 或 capability

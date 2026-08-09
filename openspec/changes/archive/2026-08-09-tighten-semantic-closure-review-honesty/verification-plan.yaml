@@ -1,0 +1,45 @@
+schema_version: verification-routing/v1
+change: tighten-semantic-closure-review-honesty
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      This change does not alter an in-process parser, schema, helper, or other
+      focused executable contract.
+  integration:
+    status: selected
+    rationale: >-
+      The observable contract crosses production OpenSpec configuration,
+      generated proposal/apply/archive instructions, the central review
+      guideline, and the supported lifecycle-entry inventory.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No multi-checkpoint runtime workflow or deterministic lifecycle state
+      chain changes in this governance-guidance-only change.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change makes no claim about Subject-Agent semantic compliance or
+      behavior in a real disposable runtime bundle.
+claims:
+  - id: semantic-closure-honesty-guidance-delivery
+    statement: >-
+      Production proposal, Apply, and Archive instructions plus the current
+      feedback-lifecycle review route deliver the actual-fragment-or-bare-path
+      boundary, keep verdict consumers distinct from derived Agent-facing
+      projections, turn false-precision or role findings into ordinary pending
+      work, and preserve the structural checker's non-semantic proof boundary
+      while every supported entry surface reaches that current guidance route.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/change-feedback-finalizer.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
