@@ -17,6 +17,7 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
+| `centralize-project-guidance-under-openspec` | 将根 `guidelines/` 纳入 OpenSpec 治理罩，按 constitution、guidance models、operations 拆分；根 Agent/Context 文件保留为薄 discovery adapters，并以两个 change 分离原子路径迁移与后续内容瘦身/自动化。 | active（结构探索完成，ready to propose Change A） |
 | `semantic-fact-closure-openspec-governance` | 防止 Engine 同一确定性事实被多处各自解释：建立可增长的事实家族目录、每 change 的 closure record、OpenSpec apply/archive checker 闭环；CI 当前明确不在范围内。 | active（共同理解完成，ready to propose Change A） |
 | `seven-topic-seven-subagent-concurrency-investigation` | 7 topic 一次并发 7 个 sub-agent 的可行性调查：Engine 无 cap（可一次 claim 7），cap 5 仅文档层保守默认，无结构化配置位。 | active（调查完成，cap 配置位待 OpenSpec） |
 | `topic-research-emphasis/` | 研究主题共同基线之上的差异化追加投入：P1 已归档，确认既有 carrier 与 rerun guidance；`progressive/` 将 P2 的可追溯覆盖和后续读者投影拆成独立 OpenSpec slice。 | active（P2 ready to propose） |
