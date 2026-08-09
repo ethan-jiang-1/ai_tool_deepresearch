@@ -7,6 +7,7 @@ import { join, basename, resolve as resolvePath } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import {
   readOutputDeclarations,
+  readNormalizedSubmittedWorkUnitDeclarations,
   readSubmittedWorkUnitDeclarations,
   readBundlePlan,
   listMatchingBundleFiles,
@@ -214,11 +215,42 @@ function isReferenceArtifact(filePath) {
   return typeof filePath === 'string' && /^reference\/[^/]+\.md$/.test(filePath);
 }
 
-function nonSubmittedDeclarationRows(rawDeclarations, submittedDeclarations, phase) {
-  const submittedKeys = new Set(submittedDeclarations.map((row) => `${row.work_id}:${row.ledger_record_hash}`));
+function exactHashValidHistoricalKeys(normalized) {
+  const keys = new Set();
+  for (const historical of normalized?.historical || []) {
+    const row = historical?.ledger_row;
+    const relation = historical?.relation;
+    const lineage = historical?.lineage;
+    if (historical?.ledger_disposition !== 'hash_valid_historical'
+      || !row?.work_id
+      || !row?.ledger_record_hash
+      || relation?.predecessor_work_id !== row.work_id
+      || relation?.accepted_ledger_record_hash !== row.ledger_record_hash
+      || lineage?.predecessor_work_id !== row.work_id
+      || !Array.isArray(lineage.edges)
+      || !lineage.edges.some((edge) => (
+        edge?.kind === 'supersession'
+        && edge.predecessor_work_id === row.work_id
+        && edge.successor_queue_item_id === relation.successor_queue_item_id
+        && edge.relation?.accepted_ledger_record_hash === row.ledger_record_hash
+      ))) {
+      continue;
+    }
+    keys.add(`${row.work_id}:${row.ledger_record_hash}`);
+  }
+  return keys;
+}
+
+function nonSubmittedDeclarationRows(rawDeclarations, normalizedDeclarations, phase) {
+  const submittedKeys = new Set((normalizedDeclarations?.facts || [])
+    .map(({ ledger_row: row }) => `${row.work_id}:${row.ledger_record_hash}`));
+  const historicalKeys = exactHashValidHistoricalKeys(normalizedDeclarations);
   return rawDeclarations
     .filter((row) => outputDeclarationTouchesWave(row, phase))
-    .filter((row) => !submittedKeys.has(`${row.work_id || '<no-work-id>'}:${row.ledger_record_hash || '<no-ledger-hash>'}`));
+    .filter((row) => {
+      const key = `${row.work_id || '<no-work-id>'}:${row.ledger_record_hash || '<no-ledger-hash>'}`;
+      return !submittedKeys.has(key) && !historicalKeys.has(key);
+    });
 }
 
 export function checkWorkUnitLedgerExists(bundlePath, rule) {
@@ -459,10 +491,11 @@ export function scanDelegatedBypassSuspicion(bundlePath, phase) {
       try { return readOutputDeclarations(bundlePath); } catch { return []; }
     })();
 
-    const declarations = (() => {
-      try { return readSubmittedWorkUnitDeclarations(bundlePath); } catch { return []; }
+    const normalizedDeclarations = (() => {
+      try { return readNormalizedSubmittedWorkUnitDeclarations(bundlePath); } catch { return { facts: [], historical: [] }; }
     })();
-    const handWrittenDeclarations = nonSubmittedDeclarationRows(rawDeclarations, declarations, phase);
+    const declarations = normalizedDeclarations.facts.map(({ ledger_row: row }) => row);
+    const handWrittenDeclarations = nonSubmittedDeclarationRows(rawDeclarations, normalizedDeclarations, phase);
     if (handWrittenDeclarations.length > 0) {
       artifactsFound.push(...handWrittenDeclarations.map((row) => `rb_output_declarations.jsonl:${row.work_id || '<no-work-id>'}`));
       provenanceMissing.push(`${handWrittenDeclarations.length} output declaration row(s) are not submitted work-unit ledger rows for ${phase}`);

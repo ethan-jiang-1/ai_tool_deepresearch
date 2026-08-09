@@ -19,7 +19,10 @@ import { countReferences, isCountable } from './ref-count.mjs';
 import { resolveStructuredTopicBinding, resolveTopicLayout } from './topic-layout.mjs';
 import { queueItemSnapshotHash } from '../queue-manager-core.mjs';
 import { loadQueueReadOnly } from '../queue-manager-lifecycle.mjs';
-import { readAndValidateManifest } from '../work-unit-validation.mjs';
+import {
+  readAndValidateManifest,
+  resolveAcceptedSourceRefAuthorization,
+} from '../work-unit-validation.mjs';
 
 function safeTopicSlug(value) {
   return typeof value === 'string' && /^[a-z0-9]+(?:[_-][a-z0-9]+)*$/.test(value);
@@ -101,19 +104,33 @@ function inspectSubmittedCacheLeaf(bundlePath, trail, normalizedUrl, degradedCap
   return { ok: true };
 }
 
-function validateSubmittedClaimBacking(bundlePath, row, claim, normalizedUrl) {
-  if (!safeRelPath(claim.source_ref)
-    || !row.output_files?.some((output) => output.path === claim.source_ref)
-    || !existsSync(join(bundlePath, claim.source_ref))) {
-    return { ok: false, reason: 'accepted source claim lacks a submitted source output' };
+function validateSubmittedClaimBacking(bundlePath, row, manifest, claim, normalizedUrl) {
+  const authorization = resolveAcceptedSourceRefAuthorization(bundlePath, {
+    manifest,
+    currentOutputPaths: (row.output_files || []).map((output) => output.path),
+    sourceRef: claim.source_ref,
+  });
+  if (!authorization.ok) {
+    return {
+      ok: false,
+      code: 'submitted_backing_source_ref_invalid',
+      reason: `accepted source claim source_ref is not authorized (${authorization.reason_code})`,
+    };
+  }
+  if (!existsSync(join(bundlePath, claim.source_ref))) {
+    return {
+      ok: false,
+      code: 'submitted_backing_source_projection_unavailable',
+      reason: 'authorized source_ref is unavailable for reference projection',
+    };
   }
   const cacheRefs = Array.isArray(claim.cache_trail_refs) ? claim.cache_trail_refs.filter(Boolean) : [];
   const allTrails = [...cacheRefs, ...(claim.degraded_capture_ref ? [claim.degraded_capture_ref] : [])];
-  if (allTrails.length === 0) return { ok: false, reason: 'accepted source claim lacks cache or degraded coordinates' };
+  if (allTrails.length === 0) return { ok: false, code: 'submitted_backing_cache_mapping_invalid', reason: 'accepted source claim lacks cache or degraded coordinates' };
   for (const trail of allTrails) {
-    if (!row.cache_trails?.includes(trail)) return { ok: false, reason: 'cache trail is absent from submitted work-unit output' };
+    if (!row.cache_trails?.includes(trail)) return { ok: false, code: 'submitted_backing_cache_mapping_invalid', reason: 'cache trail is absent from submitted work-unit output' };
     const checked = inspectSubmittedCacheLeaf(bundlePath, trail, normalizedUrl, trail === claim.degraded_capture_ref);
-    if (!checked.ok) return checked;
+    if (!checked.ok) return { ...checked, code: 'submitted_backing_cache_mapping_invalid' };
   }
   return { ok: true };
 }
@@ -193,9 +210,9 @@ export function resolveReviewedWave1SubmittedBacking(bundlePath, { topic, topicR
       if (!acceptedUrls.has(normalizedUrl)) {
         return backingRoot('submitted_backing_url_unaccepted', `Accepted source claim URL is absent from accepted_source_urls for ${record.work_id}.`);
       }
-      const checkedBacking = validateSubmittedClaimBacking(bundlePath, row, claim, normalizedUrl);
+      const checkedBacking = validateSubmittedClaimBacking(bundlePath, row, manifest, claim, normalizedUrl);
       if (!checkedBacking.ok) {
-        return backingRoot('submitted_backing_cache_mapping_invalid', `Accepted source claim backing is invalid for ${record.work_id}: ${checkedBacking.reason}.`);
+        return backingRoot(checkedBacking.code || 'submitted_backing_cache_mapping_invalid', `Accepted source claim backing is invalid for ${record.work_id}: ${checkedBacking.reason}.`);
       }
       const cacheTrailRefs = [
         ...(Array.isArray(claim.cache_trail_refs) ? claim.cache_trail_refs.filter(Boolean) : []),

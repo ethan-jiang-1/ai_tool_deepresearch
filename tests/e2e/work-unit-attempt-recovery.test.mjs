@@ -834,7 +834,7 @@ describe('submitted work-unit supersession', () => {
     try {
       const { record } = claimAndSubmitWorkUnit(bundleDir);
       const manifest = JSON.parse(readFileSync(path.join(bundleDir, record.paths.manifest_ref), 'utf8'));
-      assert.equal(manifest.assignment_contract_version, 'work-unit.assignment.v2');
+      assert.equal(manifest.assignment_contract_version, 'work-unit.assignment.v3');
       const requiredOutputs = manifest.output_contract.required_outputs;
       assert.ok(Array.isArray(requiredOutputs));
       assert.ok(requiredOutputs.length > 0);

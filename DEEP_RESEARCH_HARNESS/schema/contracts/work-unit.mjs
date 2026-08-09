@@ -9,12 +9,14 @@ export const WORK_UNIT_STATUS_SCHEMA_VERSION = 'work-unit.status.v1';
 export const WORK_UNIT_AGENT_SCHEMA_VERSION = 'work-unit.agent.v1';
 export const WORK_UNIT_RECEIPT_EVENT_SCHEMA_VERSION = 'work-unit.receipt-event.v1';
 export const WORK_UNIT_ACTOR_CONTRACT_VERSION = 'work-unit.actor.v1';
-// v2 is the contract emitted for new claims. v1 remains parseable because a
-// submitted work unit must retain the output interpretation it was assigned.
+// v3 is the contract emitted for new claims. v1 and v2 remain parseable because
+// a submitted work unit must retain the output interpretation it was assigned.
 export const LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION = 'work-unit.assignment.v1';
-export const WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION = 'work-unit.assignment.v2';
+export const PREVIOUS_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION = 'work-unit.assignment.v2';
+export const WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION = 'work-unit.assignment.v3';
 export const WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS = Object.freeze([
   LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+  PREVIOUS_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
   WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
 ]);
 export const WorkUnitAssignmentContractVersionSchema = z.enum(WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS);

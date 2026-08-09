@@ -20,9 +20,9 @@ affected:
       - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/direct-output-contract.mjs#evaluateDirectOutput
         relation: derived
         detail: >-
-      Direct-output evaluation consumes the already-derived required output
-      set and evaluates content; it does not decide whether the versioned
-      assignment requires a declaration in the first place.
+          Direct-output evaluation consumes the already-derived required output
+          set and evaluates content; it does not decide whether the versioned
+          assignment requires a declaration in the first place.
     verification:
       truth_table: tests/engine/work-unit-assignment-contract.test.mjs
       cross_surface: tests/integration/cli/operate-work-unit.test.mjs
@@ -49,8 +49,9 @@ affected:
       cross_surface: tests/integration/cli/wave1-reference-convergence.test.mjs
   - family: work-unit.submission-ledger-and-supersession
     fact: >-
-      Whether a submitted declaration is current coverage, validated historical
-      supersession evidence, or a raw-only/malformed bypass candidate.
+      Whether a submitted declaration is current coverage, exact hash-valid
+      historical supersession evidence, or a raw-only/malformed bypass
+      candidate.
     authority:
       resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs#evaluateNormalizedSubmittedWorkUnitLedger
     established_by:

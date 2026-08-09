@@ -9,8 +9,9 @@ import { queueItemSnapshotHash } from '../../DEEP_RESEARCH_HARNESS/engine/queue-
 import { readWorkUnitLedgerRows } from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import { claimAndSubmitWorkUnit, cleanupWorkUnitBundle, delegatedQueueItem, tempWorkUnitBundle } from './work-unit-test-helpers.mjs';
 
-const VERSION = 'work-unit.assignment.v2';
+const VERSION = 'work-unit.assignment.v3';
 const LEGACY_VERSION = 'work-unit.assignment.v1';
+const PREVIOUS_VERSION = 'work-unit.assignment.v2';
 
 const topic = {
   topic_uid: 'tp_00000001-0000-4000-8000-000000000000',
@@ -111,7 +112,7 @@ describe('resolveWorkUnitAssignmentContract', () => {
     ]);
   });
 
-  it('resolves supplementary Wave1 and Wave2 assignments to no required outputs', async () => {
+  it('derives v3 supplementary Wave1 declaration requiredness from its empty assignment only', async () => {
     const supplementary = await resolve({
       kind: 'wave1_topic_deepening',
       queueItem: queueItem('wave1_topic_deepening', {
@@ -125,6 +126,23 @@ describe('resolveWorkUnitAssignmentContract', () => {
     });
     assert.deepEqual(requiredOutputs(supplementary), []);
     assert.deepEqual(requiredOutputs(wave2), []);
+    assert.equal(supplementary.output_files.required, false);
+    assert.equal(wave2.output_files.required, true);
+  });
+
+  it('preserves v1 and v2 supplementary declaration requiredness from their bound contracts', async () => {
+    for (const assignmentContractVersion of [LEGACY_VERSION, PREVIOUS_VERSION]) {
+      const contract = await resolve({
+        assignmentContractVersion,
+        kind: 'wave1_topic_deepening',
+        queueItem: queueItem('wave1_topic_deepening', {
+          payload: { ...queueItem('wave1_topic_deepening').payload, assignment_mode: 'supplementary' },
+          required_receipts: [],
+        }),
+      });
+      assert.deepEqual(requiredOutputs(contract), [], assignmentContractVersion);
+      assert.equal(contract.output_files.required, true, assignmentContractVersion);
+    }
   });
 
   it('accepts only a positive supplementary Wave1 reference-floor objective', async () => {
@@ -249,7 +267,7 @@ describe('resolveWorkUnitAssignmentContract', () => {
     assert.equal(requiredOutputs(contract).length, 1);
   });
 
-  it('keeps an immutable v1 Wave0 rich-reference contract separate from v2 defaults', async () => {
+  it('keeps an immutable v1 Wave0 rich-reference contract separate from current defaults', async () => {
     const contract = await resolve({
       assignmentContractVersion: LEGACY_VERSION,
       kind: 'wave0_source_intake',
@@ -265,9 +283,9 @@ describe('resolveWorkUnitAssignmentContract', () => {
     }]);
   });
 
-  it('accepts a recorded v1 rich reference while rejecting that extra output from a current v2 attempt', () => {
+  it('accepts a recorded v1 rich reference while rejecting that extra output from a current v3 attempt', () => {
     const legacyDir = tempWorkUnitBundle('wave0-v1-reference-');
-    const currentDir = tempWorkUnitBundle('wave0-v2-reference-');
+    const currentDir = tempWorkUnitBundle('wave0-v3-reference-');
     const referenceOutput = {
       path: 'reference/00-shared-legacy.md',
       role: 'reference',

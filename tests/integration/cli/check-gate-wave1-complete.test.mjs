@@ -7,8 +7,15 @@ import { join } from 'node:path';
 import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
 import {
   claimAndSubmitWorkUnit,
+  availableActorDecision,
   referenceContent,
 } from '../../engine/work-unit-test-helpers.mjs';
+import {
+  claimWorkUnits,
+  loadWorkUnitIndex,
+  submitWorkUnit,
+  supersedeWorkUnitAttempt,
+} from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import {
   applyCanonicalTopicState,
   renderSeedProjectionAppendix,
@@ -494,6 +501,64 @@ function materializeCanonicalFixtureProjection(dir, submission, { sourceUrl, cac
   return locator.path;
 }
 
+function submitSupersessionSuccessor(dir, predecessor) {
+  claimWorkUnits(dir, { phase: 'wave1', count: 1, ...availableActorDecision('wave1_topic_deepening') });
+  const successor = Object.values(loadWorkUnitIndex(dir).work_units)
+    .find((record) => record.status === 'claimed' && record.work_id !== predecessor.record.work_id);
+  assert.ok(successor, 'supersession successor should be claimed');
+  const predecessorResult = JSON.parse(readFileSync(predecessor.resultPath, 'utf8'));
+  const result = {
+    ...predecessorResult,
+    work_id: successor.work_id,
+    queue_item_id: successor.queue_item_id,
+    receipt_nonce: successor.receipt_nonce,
+    actor_contract_version: successor.actor_contract_version,
+    execution_actor_class: successor.actor_execution.execution_actor_class,
+  };
+  const resultPath = join(dir, '_tmp', `${successor.work_id}.result.json`);
+  mkdirSync(join(dir, '_tmp'), { recursive: true });
+  writeFileSync(resultPath, `${JSON.stringify(result, null, 2)}\n`);
+  writeFileSync(join(dir, successor.paths.runtime_receipt_ref), `${JSON.stringify({
+    event: 'work_done',
+    work_id: successor.work_id,
+    queue_item_id: successor.queue_item_id,
+    kind: successor.kind,
+    receipt_nonce: successor.receipt_nonce,
+    actor_contract_version: successor.actor_contract_version,
+    execution_actor_class: successor.actor_execution.execution_actor_class,
+    ts: '2026-08-09T00:00:00.000Z',
+  })}\n`);
+  const submitted = submitWorkUnit(dir, { work_id: successor.work_id, resultPath });
+  assert.equal(submitted.ok, true, submitted.inspect?.join('\n'));
+  return { record: successor, resultPath };
+}
+
+function prepareSupersededWave1GateBundle() {
+  const dir = createBundle(unique('superseded-predecessor'));
+  writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+  writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+  writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+  const predecessor = submitAndReviewWave1WorkUnit(dir);
+  const submittedResultPath = join(dir, predecessor.record.paths.result_ref);
+  const submittedResult = JSON.parse(readFileSync(submittedResultPath, 'utf8'));
+  submittedResult.summary = 'drifted after formal submit';
+  writeFileSync(submittedResultPath, `${JSON.stringify(submittedResult, null, 2)}\n`);
+
+  const superseded = supersedeWorkUnitAttempt(dir, {
+    work_id: predecessor.record.work_id,
+    reason: 'correct submitted output drift through a successor attempt',
+  });
+  assert.equal(superseded.ok, true, superseded.missing_fact);
+  const successor = submitSupersessionSuccessor(dir, predecessor);
+  writeDepthReview(dir, { submission: successor });
+  materializeCanonicalFixtureProjection(dir, successor, {
+    sourceUrl: 'https://example.com/news/deepening-topic-a',
+    cacheTrail: '_cache/wave1/primary/topic-a/deepening-topic-a',
+  });
+  writeWave1Trace(dir);
+  return { dir, predecessor };
+}
+
 function writeParityPlan(dir, name, topics) {
   writeFileSync(join(dir, 'rb_plan.md'), `---\n${JSON.stringify({
     plan_basename: name,
@@ -751,6 +816,28 @@ describe('check-gate-wave1-complete', () => {
     const attempt = attempts.find((event) => event.event === 'gate_attempt' && event.gate === 'wave1-complete');
     assert.equal(attempt.carried_target_receipt.contract_version, 'wave1-carried-targets/v1');
     assert.deepEqual(attempt.carried_target_receipt.targets, []);
+  });
+
+  it('1h. treats an exact hash-valid superseded predecessor as historical rather than delegated bypass', () => {
+    const historicalFixture = prepareSupersededWave1GateBundle();
+
+    const historical = JSON.parse(runGate(historicalFixture.dir).stdout);
+    assert.equal(historical.check.passed, true, historical.inspect.join('\n'));
+    assert.equal(historical.check.failed_rule_ids.includes('wave1_delegated_bypass_suspected'), false);
+
+    const rawOnlyFixture = prepareSupersededWave1GateBundle();
+    const ledgerPath = join(rawOnlyFixture.dir, 'rb_output_declarations.jsonl');
+    const rows = readFileSync(ledgerPath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    rows.push({
+      declared_at: '2026-08-09T00:00:00.000Z',
+      wave: 1,
+      output_files: [{ path: 'artifacts/wave1/topic-a/evidence-summary.md', role: 'evidence_summary' }],
+    });
+    writeFileSync(ledgerPath, `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`);
+
+    const rawOnly = JSON.parse(runGate(rawOnlyFixture.dir).stdout);
+    assert.equal(rawOnly.check.passed, false);
+    assert.equal(rawOnly.check.failed_rule_ids.includes('wave1_delegated_bypass_suspected'), true);
   });
 
   it('1j. rejects a malformed carried target declaration at the existing depth-review coordinate', () => {

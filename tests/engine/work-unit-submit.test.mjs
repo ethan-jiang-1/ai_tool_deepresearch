@@ -258,6 +258,26 @@ function downgradeAssignmentToLegacy(dir, record, { stripTopicBinding = false } 
   return loadWorkUnitIndex(dir).work_units[record.work_id];
 }
 
+function downgradeAssignmentToV2(dir, record) {
+  const index = loadWorkUnitIndex(dir);
+  const nextRecord = index.work_units[record.work_id];
+  const manifestPath = path.join(dir, nextRecord.paths.manifest_ref);
+  const beaconPath = path.join(dir, nextRecord.paths.beacon_ref);
+  const manifest = readResult(manifestPath);
+  const beacon = readResult(beaconPath);
+
+  nextRecord.assignment_contract_version = 'work-unit.assignment.v2';
+  manifest.assignment_contract_version = 'work-unit.assignment.v2';
+  beacon.assignment_contract_version = 'work-unit.assignment.v2';
+  manifest.output_contract.output_files.required = true;
+  beacon.output_contract.output_files.required = true;
+
+  saveWorkUnitIndex(dir, index);
+  writeResult(manifestPath, manifest);
+  writeResult(beaconPath, beacon);
+  return loadWorkUnitIndex(dir).work_units[record.work_id];
+}
+
 const CURRENT_TOPIC = {
   topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
   topic_slug: 'topic-a',
@@ -503,11 +523,8 @@ function writeValidWave2SubmitFiles(dir, record, {
 function writeSupplementaryWave1SubmitFiles(dir, record, {
   sourceRef,
   sourceUrl = 'https://example.com/wave1-supplementary-source',
+  includeAcceptedSourceClaim = true,
 } = {}) {
-  const outputPath = `artifacts/wave1/${record.queue_item_id}/supplementary-notes.md`;
-  mkdirSync(path.dirname(path.join(dir, outputPath)), { recursive: true });
-  writeFileSync(path.join(dir, outputPath), '# Supplementary notes\n\nNew source analysis for the claimed attempt.\n');
-
   const cacheTrail = `_cache/wave1/primary/${record.queue_item_id}/supplementary-source`;
   mkdirSync(path.join(dir, cacheTrail), { recursive: true });
   writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
@@ -536,15 +553,17 @@ function writeSupplementaryWave1SubmitFiles(dir, record, {
     actor_contract_version: record.actor_contract_version,
     execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'supplementary Wave1 source complete',
-    output_files: [{ path: outputPath, role: 'other' }],
-    source_claims: [{
-      url: sourceUrl,
-      source_ref: sourceRef,
-      acceptance_status: 'accepted',
-      is_new_vs_wave0: true,
-      cache_trail_refs: [cacheTrail],
-    }],
-    accepted_source_urls: [sourceUrl],
+    output_files: [],
+    ...(includeAcceptedSourceClaim ? {
+      source_claims: [{
+        url: sourceUrl,
+        source_ref: sourceRef,
+        acceptance_status: 'accepted',
+        is_new_vs_wave0: true,
+        cache_trail_refs: [cacheTrail],
+      }],
+      accepted_source_urls: [sourceUrl],
+    } : {}),
     cache_trails: [cacheTrail],
   }, null, 2)}\n`);
   return resultPath;
@@ -621,7 +640,7 @@ describe('submitWorkUnit', () => {
     try {
       const record = claimCurrentWave0(dir);
       const { resultPath, sourcePath } = writeCurrentWave0SubmitFiles(dir, record);
-      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v2');
+      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v3');
 
       const firstDry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
       assert.equal(firstDry.ok, true, JSON.stringify(firstDry.violations));
@@ -774,7 +793,7 @@ describe('submitWorkUnit', () => {
       writeResult(resultPath, result);
 
       const dry = drySubmitWorkUnit(currentDir, { work_id: record.work_id, resultPath });
-      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v2');
+      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v3');
       assert.equal(dry.ok, false);
       assert.ok(dry.violations.some((violation) => violation.repair_scope === 'mechanical'));
       assert.equal(dry.normalizations.some((entry) => entry.kind === 'wave1_required_output_role_normalized'), false);
@@ -2060,7 +2079,7 @@ describe('submitWorkUnit', () => {
       claimWorkUnits(dir, { phase: 'wave1', count: 1 });
       const supplementary = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0002'];
       const supplementaryManifest = readResult(path.join(dir, supplementary.paths.manifest_ref));
-      assert.equal(supplementary.assignment_contract_version, 'work-unit.assignment.v2');
+      assert.equal(supplementary.assignment_contract_version, 'work-unit.assignment.v3');
       assert.deepEqual(supplementaryManifest.output_contract.required_outputs, []);
       const supplementaryTask = readFileSync(path.join(dir, supplementary.paths.task_ref), 'utf8');
       assert.match(supplementaryTask, /### Cache And Source Facts/);
@@ -2073,7 +2092,31 @@ describe('submitWorkUnit', () => {
       const submitted = submitWorkUnit(dir, { work_id: supplementary.work_id, resultPath: supplementaryResultPath });
       assert.equal(submitted.ok, true, submitted.inspect?.join('\n'));
       assert.equal(ledgerRows(dir).length, 2);
-      assert.equal(assignedResult(dir, supplementary).output_files.some((entry) => entry.path === priorEvidencePath), false);
+      assert.deepEqual(assignedResult(dir, supplementary).output_files, []);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('retains a claimed v2 supplementary output declaration requirement', () => {
+    const dir = tempBundle();
+    try {
+      writeCanonicalPlan(dir);
+      saveSeedQueue(dir, [delegatedWave1('wave1-v2-supplement', 'topic-a', {
+        payload: { ...CURRENT_TOPIC, wave: 1, assignment_mode: 'supplementary' },
+        required_receipts: [],
+      })]);
+      claimWorkUnits(dir, { phase: 'wave1', count: 1 });
+      const currentRecord = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
+      const record = downgradeAssignmentToV2(dir, currentRecord);
+      const resultPath = writeSupplementaryWave1SubmitFiles(dir, record, { includeAcceptedSourceClaim: false });
+
+      const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(dry.ok, false);
+      assert.ok(dry.violations.some((violation) => (
+        violation.phase === 'output_files' && /output_files\[\] is required/.test(violation.message)
+      )));
+      assert.equal(dry.violations.some((violation) => /manifest assignment output_contract drift/.test(violation.message)), false);
     } finally {
       cleanup(dir);
     }

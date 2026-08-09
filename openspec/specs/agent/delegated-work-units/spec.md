@@ -185,23 +185,23 @@ all other unknown payload keys rather than interpreting naming or prose as a
 selector; Markdown and actors SHALL NOT supply contract selection.
 
 New claims SHALL record
-`assignment_contract_version: "work-unit.assignment.v2"` on the
+`assignment_contract_version: "work-unit.assignment.v3"` on the
 Engine-owned work-unit index record and copy it into manifest and beacon binding
-surfaces. A marked v1 envelope SHALL retain its recorded version-selected
-interpretation, and a markerless historical envelope SHALL retain its existing
-legacy compatibility path without path, filename, or current-default inference.
-`assignment_contract_version` SHALL remain the only resolver-semantics version
-marker; no separate resolver_version field SHALL be created. The index SHALL
-NOT copy the resolved contract. The manifest and beacon output_contract SHALL
-carry one strict required_outputs array whose entries contain one concrete
-bundle-relative path, one canonical role, and one closed direct_contract
-identity. Claim SHALL reject unknown versions or IDs, unsafe or duplicate
-normalized paths, conflicting roles, unsupported required-receipt sets,
-unresolved Topic bindings, invalid reference-floor-deficit shape, and
-queue-authored direct selectors before work-ID allocation, queue mutation, or
-envelope writes.
+surfaces. Marked v1 and v2 envelopes SHALL retain their recorded
+version-selected interpretation, and a markerless historical envelope SHALL
+retain its existing legacy compatibility path without path, filename, or
+current-default inference. `assignment_contract_version` SHALL remain the only
+resolver-semantics version marker; no separate resolver_version field SHALL be
+created. The index SHALL NOT copy the resolved contract. The manifest and
+beacon output_contract SHALL carry one strict required_outputs array whose
+entries contain one concrete bundle-relative path, one canonical role, and one
+closed direct_contract identity. Claim SHALL reject unknown versions or IDs,
+unsafe or duplicate normalized paths, conflicting roles, unsupported
+required-receipt sets, unresolved Topic bindings, invalid reference-floor-
+deficit shape, and queue-authored direct selectors before work-ID allocation,
+queue mutation, or envelope writes.
 
-The current v2 resolver SHALL support these direct-output bindings:
+The v3 resolver SHALL support these direct-output bindings:
 
 - `wave0_source_intake` with the exact canonical source.yaml file receipt
   resolves role `source_yaml` and direct contract
@@ -209,12 +209,14 @@ The current v2 resolver SHALL support these direct-output bindings:
 - `wave1_topic_deepening` with the exact paired evidence-summary and
   question-list receipts resolves roles `evidence_summary` and `question_list`
   with direct contracts `wave1.evidence-summary.v1` and
-  `wave1.question-list.v1`;
+  `wave1.question-list.v1`, and requires their declarations;
 - explicit `assignment_mode: supplementary` `wave1_topic_deepening` with an
-  empty required-receipt set resolves no current required direct output and
-  continues to use contract-authorized prior submitted evidence lineage;
+  empty required-receipt set resolves no current required direct output, sets
+  `output_files.required: false`, and continues to use contract-authorized
+  prior submitted evidence lineage;
 - `wave2_targeted_evidence` with its existing empty required-receipt shape
-  resolves no direct content blocker in v2.
+  resolves no direct content blocker while retaining its existing base
+  output-declaration behavior.
 
 A primary mode without the exact pair, a supplementary mode with non-empty
 receipts, a missing mode, a partial paired set, a receipt for a different
@@ -222,16 +224,18 @@ recorded Topic coordinate, or any other unsupported set SHALL fail closed
 rather than be inferred from receipt shape, prose, queue ID suffixes, actor
 roles, `writes_to`, or a floor objective. A mode-absent unclaimed card SHALL
 return to AGQ-013 explicit assignment-mode repair and pass current admission
-before claim; only an already-claimed attempt's genuinely absent index marker
-may select legacy submit compatibility. The queue-item snapshot hash SHALL bind
+before claim. A marked v1 or v2 attempt SHALL retain its recorded output
+contract; only an already-claimed attempt with a genuinely absent index marker
+may select markerless legacy submit compatibility. The queue-item snapshot hash SHALL bind
 every resolver input except the closed resolver version, which is bound by
 assignment_contract_version. A rendered task objective SHALL be derived from
 that same snapshot but SHALL not alter the resolver hash input set. Submit-side
 readers SHALL first recheck the hash and version, rebuild the expected output
 contract from the recorded snapshot coordinates, and require exact equality
-with manifest and beacon. Current mutable plan presentation or current
-framework defaults SHALL NOT silently remap the attempt's recorded output
-paths.
+with manifest and beacon. v1/v2 reconstruction SHALL retain the contract bound
+in the immutable envelope and SHALL NOT receive the v3 supplementary exception.
+Current mutable plan presentation or current framework defaults SHALL NOT
+silently remap the attempt's recorded output paths or declaration requiredness.
 
 The existing default or snapshot-bound customized kind result/cache/source
 contract and the resolved required_outputs SHALL be merged into one strict
@@ -292,15 +296,32 @@ diagnostic but SHALL NOT leave any partial claim authority.
 - **AND** Phase-owned reference materialization and any explicitly authorized
   extra output SHALL not enter required_outputs
 
-#### Scenario: supplementary Wave1 has no forced paired rewrite
+#### Scenario: v3 supplementary Wave1 has no forced paired rewrite
 
-- **WHEN** a supplementary `wave1_topic_deepening` snapshot has assignment_mode
-  supplementary, no required file receipt, and the existing kind contract
-  authorizes prior submitted evidence_summary lineage
-- **THEN** required_outputs SHALL be empty for that attempt
+- **WHEN** a v3 supplementary `wave1_topic_deepening` snapshot has
+  assignment_mode supplementary, no required file receipt, and the existing
+  kind contract authorizes prior submitted evidence_summary lineage
+- **THEN** required_outputs SHALL be empty and `output_files.required` SHALL be
+  false for that attempt
 - **AND** generated guidance and submit validation SHALL not require the
   candidate to redeclare or overwrite the prior evidence-summary or
   question-list
+
+#### Scenario: v1 and v2 attempts retain their assignment interpretation
+
+- **WHEN** dry-submit or formal submit reads an already-claimed v1 or v2
+  attempt whose manifest and beacon carry a hash-valid bound output contract
+- **THEN** it SHALL reconstruct and compare that version-selected contract
+  without applying the v3 supplementary rule
+- **AND** it SHALL not rewrite the manifest, beacon, candidate, or queue item
+  merely because the current claim marker is v3
+
+#### Scenario: Wave2 empty required outputs retain its base declaration rule
+
+- **WHEN** a v3 `wave2_targeted_evidence` snapshot has its established empty
+  required-output shape and a base contract that requires `output_files[]`
+- **THEN** its resolved contract SHALL retain that declaration requirement
+- **AND** it SHALL not inherit supplementary Wave1 empty-output semantics
 
 #### Scenario: objective cannot become a direct-contract selector
 
@@ -366,7 +387,7 @@ diagnostic but SHALL NOT leave any partial claim authority.
   canonical source.yaml file receipt for its recorded Topic slug
 - **THEN** claim SHALL resolve one source_yaml required output with direct
   contract `wave0.source-metadata-array.v1`
-- **AND** index, manifest and beacon SHALL bind `work-unit.assignment.v1`
+- **AND** index, manifest and beacon SHALL bind `work-unit.assignment.v3`
   before the actor receives the envelope
 
 #### Scenario: unsupported assignment fails before claim mutation
@@ -422,7 +443,7 @@ diagnostic but SHALL NOT leave any partial claim authority.
 - **AND** missing, unknown, or drifting contract surfaces SHALL fail closed
   without falling back to path guessing
 
-+### Requirement: Current Wave0 work-unit contracts SHALL expose submitted source contributions without a competing rich-reference route
+### Requirement: Current Wave0 work-unit contracts SHALL expose submitted source contributions without a competing rich-reference route
 
 For a newly claimed `wave0_source_intake` work unit, the Engine-owned assignment contract SHALL describe exactly the assigned `source_yaml` output and its existing required cache/receipt facts. Its generated `task.md`, spawn projection, result-schema guidance, and accepted current-version output declarations SHALL describe that result as a submitted Wave0 source contribution after formal submit. They SHALL NOT advertise, require, or accept a rich `reference/00-shared-*.md` output as a second delegated completion or shared-reference-floor route.
 
@@ -1083,6 +1104,8 @@ This requirement SHALL NOT remove the existing ability to submit a candidate `re
 
 The work-unit CLI SHALL provide a dry-submit preflight for claimed work units. Dry-submit SHALL read a candidate result and evaluate the same deterministic submit contract used by formal `operate-work-unit submit` wherever possible, including work-unit identity, queue binding, manifest/index consistency, result schema, runtime receipt, nonce, output files, source claims, cache trails, and kind output contract constraints.
 
+Dry-submit and formal submit SHALL obtain `output_files` requiredness from the immutable version-selected assignment output contract, together with its `required_outputs[]`, rather than retain an independent generic non-empty-output rule. A snapshot-bound `work-unit.assignment.v3` supplementary `wave1_topic_deepening` assignment with empty required_outputs SHALL accept `output_files: []`; it SHALL still validate all applicable result schema, identity, receipt, source-claim, accepted-URL, cache/degraded-capture, queue and provenance facts. A v3 assignment with one or more required outputs SHALL continue to require and validate those exact path/role declarations. Empty required_outputs alone SHALL not select supplementary semantics or weaken another kind's existing output contract, and v1/v2 attempts SHALL retain their recorded contract interpretation.
+
 Dry-submit SHALL be read-only. It SHALL NOT append `rb_output_declarations.jsonl`, complete queue demand, mutate `rb_queue.json`, change work-unit terminal/claimed status, write canonical result/receipt/cache files, record `last_submit_rejection`, create `_work_units/_transactions/` entries, write submit trace/log side effects, or emit success authority that gates may consume. Formal submit remains the only successful delegated completion transition.
 
 Dry-submit output SHALL be structured enough for Agent repair. It SHALL report whether formal submit is expected to pass, the checked `work_id`, reason codes or violation codes, repair-targeted diagnostics, and any narrow normalizations formal submit would perform. Every primary independently evaluable violation SHALL include `repair_kind`, `missing_fact`, `write_to`, and `rerun`; dependent checks blocked by an earlier prerequisite SHALL be masked or marked dependent instead of being presented as additional repair tasks. Failed dry-submit SHALL still return structured preflight JSON rather than only throwing a stderr error. Normalization reporting SHALL NOT persist those normalizations during dry-submit.
@@ -1129,6 +1152,27 @@ Generated actor guidance SHALL expose the exact direct contract and require the 
 - **AND** the Agent runs `operate-work-unit dry-submit`
 - **THEN** dry-submit SHALL return `ok: true` or equivalent pass status
 - **AND** `rb_output_declarations.jsonl`, `rb_queue.json`, work-unit status, assigned `result.json`, runtime receipt files, `_work_units/_transactions/`, trace/log files, and existing cache leaf files SHALL remain unchanged
+
+#### Scenario: supplementary empty-output preflight matches its assignment
+
+- **WHEN** a snapshot-bound supplementary `wave1_topic_deepening` attempt has empty required_outputs and a result with `output_files: []` plus valid required source/cache/receipt facts
+- **THEN** dry-submit and formal submit SHALL not return `output_files[] is required`
+- **AND** its generated task/result starter and submit verdict SHALL expose the same empty-output obligation
+
+#### Scenario: primary direct-output obligation remains required
+
+- **WHEN** a primary Wave1 assignment has its canonical required evidence-summary and question-list outputs but the candidate omits their declarations
+- **THEN** dry-submit SHALL reject the omitted required path/role declarations
+- **AND** it SHALL not reinterpret the primary assignment as supplementary
+
+#### Scenario: empty direct outputs do not relax a different kind
+
+- **WHEN** a current `wave2_targeted_evidence` assignment has its established
+  empty required-output set but its bound base output contract requires an
+  `output_files` declaration
+- **THEN** dry-submit and formal submit SHALL preserve that existing
+  declaration requirement
+- **AND** they SHALL not infer supplementary Wave1 behavior from the empty set
 
 #### Scenario: dry-submit reports multiple repairable violations
 

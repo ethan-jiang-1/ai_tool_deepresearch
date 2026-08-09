@@ -31,7 +31,7 @@ import {
   validateWorkIdBinding,
 } from './work-unit-index.mjs';
 import {
-  LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+  WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
   WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS,
   WORK_UNIT_RECEIPT_EVENT_SCHEMA_VERSION,
   WORK_UNIT_SUBMISSION_CONTRACT_VERSION,
@@ -87,13 +87,13 @@ export function readAndValidateManifest(bundleDir, index, record) {
     if (observedSnapshotHash !== record.queue_item_snapshot_hash) {
       throw new Error(`embedded queue snapshot hash mismatch for ${record.work_id}`);
     }
-    const boundV1BaseOutputContract = recordAssignmentVersion === LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION
+    const boundHistoricalBaseOutputContract = recordAssignmentVersion !== WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION
       ? (() => {
         const { required_outputs: _requiredOutputs, ...boundBase } = manifest.output_contract;
         return boundBase;
       })()
       : null;
-    const baseOutputContract = boundV1BaseOutputContract
+    const baseOutputContract = boundHistoricalBaseOutputContract
       || kindContractForQueueItem(manifest.queue_item, record.kind).output_contract;
     const expectedOutputContract = resolveWorkUnitAssignmentContract({
       assignmentContractVersion: recordAssignmentVersion,
@@ -643,6 +643,77 @@ export function buildSourceRefLineage(bundleDir, currentManifest) {
   return result;
 }
 
+export function resolveAcceptedSourceRefAuthorization(bundleDir, {
+  manifest = null,
+  currentOutputPaths = [],
+  sourceRef,
+} = {}) {
+  if (!isSafeBundleRelative(sourceRef)) {
+    return {
+      ok: false,
+      authorization: null,
+      reason_code: 'source_ref_unsafe',
+      source_ref: sourceRef,
+      source_ref_lineage: null,
+    };
+  }
+
+  const outputPaths = new Set(Array.isArray(currentOutputPaths) ? currentOutputPaths : []);
+  if (outputPaths.has(sourceRef)) {
+    return {
+      ok: true,
+      authorization: 'current',
+      source_ref: sourceRef,
+      source_ref_lineage: null,
+      prior_output: null,
+    };
+  }
+
+  if (!manifest) {
+    return {
+      ok: false,
+      authorization: null,
+      reason_code: 'source_ref_prior_authority_invalid',
+      source_ref: sourceRef,
+      source_ref_lineage: null,
+      authority_error: 'current work-unit manifest is required for prior submitted source-ref authorization',
+    };
+  }
+
+  const sourceRefLineage = buildSourceRefLineage(bundleDir, manifest);
+  if (sourceRefLineage.authority_error) {
+    return {
+      ok: false,
+      authorization: null,
+      reason_code: 'source_ref_prior_authority_invalid',
+      source_ref: sourceRef,
+      source_ref_lineage: sourceRefLineage,
+      authority_error: sourceRefLineage.authority_error,
+    };
+  }
+
+  const eligiblePrior = sourceRefLineage.eligible_prior_outputs.filter((entry) => entry.path === sourceRef);
+  if (eligiblePrior.length === 1) {
+    return {
+      ok: true,
+      authorization: 'prior',
+      source_ref: sourceRef,
+      source_ref_lineage: sourceRefLineage,
+      prior_output: eligiblePrior[0],
+    };
+  }
+
+  return {
+    ok: false,
+    authorization: null,
+    reason_code: eligiblePrior.length > 1 ? 'source_ref_prior_ambiguous' : 'source_ref_not_authorized',
+    source_ref: sourceRef,
+    source_ref_lineage: sourceRefLineage,
+    observed_prior_outputs: sourceRefLineage.observed_prior_outputs.filter((entry) => entry.path === sourceRef),
+    eligible_prior_outputs: eligiblePrior,
+  };
+}
+
 export function cacheTrailMapping(bundleDir, trail, { virtualCachePages = new Map() } = {}) {
   const cacheDir = path.join(bundleDir, trail);
   const pageText = virtualCachePages.has(trail)
@@ -670,10 +741,6 @@ export function validateSourceClaims(bundleDir, result, outputContract, {
     throw new Error('source_claims[] / accepted_source_urls[] are not allowed by this work-unit output contract');
   }
 
-  const outputPaths = new Set((result.output_files || []).map((entry) => entry.path));
-  const sourceRefLineage = manifest
-    ? buildSourceRefLineage(bundleDir, manifest)
-    : { eligible_prior_outputs: [], observed_prior_outputs: [], prior_submitted_output_roles: [] };
   const cacheTrails = new Set(result.cache_trails || []);
   const acceptedClaimUrls = new Set();
 
@@ -681,15 +748,19 @@ export function validateSourceClaims(bundleDir, result, outputContract, {
     if (!acceptedClaimStatus(claim.acceptance_status)) continue;
     acceptedClaimUrls.add(claim.url);
 
-    if (!isSafeBundleRelative(claim.source_ref)) {
+    const authorization = resolveAcceptedSourceRefAuthorization(bundleDir, {
+      manifest,
+      currentOutputPaths: (result.output_files || []).map((entry) => entry.path),
+      sourceRef: claim.source_ref,
+    });
+    if (authorization.reason_code === 'source_ref_unsafe') {
       throw validationRepairError(`accepted source claim has unsafe source_ref: ${claim.source_ref}`, {
         repair_kind: 'agent_action',
         json_pointer: `/source_claims/${claimIndex}/source_ref`,
       });
     }
-    const eligiblePrior = sourceRefLineage.eligible_prior_outputs.filter((entry) => entry.path === claim.source_ref);
-    if (!outputPaths.has(claim.source_ref) && sourceRefLineage.authority_error) {
-      throw validationRepairError(`prior submitted source-ref authority is unavailable while resolving '${claim.source_ref}': ${sourceRefLineage.authority_error}`, {
+    if (authorization.reason_code === 'source_ref_prior_authority_invalid') {
+      throw validationRepairError(`prior submitted source-ref authority is unavailable while resolving '${claim.source_ref}': ${authorization.authority_error}`, {
         code: 'source_ref_prior_authority_invalid',
         repair_kind: 'missing_contract',
         write_to: 'work-unit submitted-output lineage boundary: ledger/index/manifest/queue authority',
@@ -697,19 +768,20 @@ export function validateSourceClaims(bundleDir, result, outputContract, {
           candidate_source_ref: claim.source_ref,
           searched_current_outputs: true,
           searched_prior_submitted_outputs: false,
-          authority_error: sourceRefLineage.authority_error,
+          authority_error: authorization.authority_error,
         },
       });
     }
-    if (!outputPaths.has(claim.source_ref) && eligiblePrior.length !== 1) {
-      const observedPrior = sourceRefLineage.observed_prior_outputs.filter((entry) => entry.path === claim.source_ref);
-      const allowedRoles = sourceRefLineage.prior_submitted_output_roles || [];
+    if (!authorization.ok) {
+      const sourceRefLineage = authorization.source_ref_lineage;
+      const observedPrior = authorization.observed_prior_outputs || [];
+      const allowedRoles = sourceRefLineage?.prior_submitted_output_roles || [];
       const priorDetail = observedPrior.length === 0
         ? 'none'
-        : observedPrior.map((entry) => `work_id=${entry.work_id}, topic_uid=${entry.topic_uid || '<unbound>'}, wave=${entry.wave}, kind=${entry.kind}, role=${entry.role}, reason=${entry.reason_code || (eligiblePrior.length > 1 ? 'ambiguous_exact_path' : 'eligible')}`).join('; ');
+        : observedPrior.map((entry) => `work_id=${entry.work_id}, topic_uid=${entry.topic_uid || '<unbound>'}, wave=${entry.wave}, kind=${entry.kind}, role=${entry.role}, reason=${entry.reason_code || (authorization.reason_code === 'source_ref_prior_ambiguous' ? 'ambiguous_exact_path' : 'eligible')}`).join('; ');
       const message = `accepted source claim source_ref '${claim.source_ref}' was searched in current outputs (not found) and prior submitted outputs (${observedPrior.length} exact match(es)); expected a current assigned output or one exact same-topic wave=${manifest?.wave ?? '<wave>'} kind=${manifest?.kind || '<kind>'} prior output with authorized role [${allowedRoles.join(', ')}]. Prior candidates: ${priorDetail}`;
       throw validationRepairError(message, {
-        code: eligiblePrior.length > 1 ? 'source_ref_prior_ambiguous' : 'source_ref_not_authorized',
+        code: authorization.reason_code,
         repair_kind: 'agent_action',
         json_pointer: `/source_claims/${claimIndex}/source_ref`,
         details: {

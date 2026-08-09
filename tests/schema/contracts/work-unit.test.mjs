@@ -260,11 +260,14 @@ async function currentAssignmentSchemas() {
 }
 
 describe('current assignment contract schemas', () => {
-  it('accepts the current v2 marker and a readable v1 marker while retaining genuine legacy absence', () => {
+  it('accepts the current v3 marker plus readable v1/v2 markers while retaining genuine legacy absence', () => {
     assert.ok(WorkUnitIndexRecordSchema.safeParse(baseIndexRecord()).success, 'marker absence remains legacy');
     assert.ok(WorkUnitIndexRecordSchema.safeParse(baseIndexRecord({
-      assignment_contract_version: 'work-unit.assignment.v2',
+      assignment_contract_version: 'work-unit.assignment.v3',
     })).success, 'current marker is accepted');
+    assert.ok(WorkUnitIndexRecordSchema.safeParse(baseIndexRecord({
+      assignment_contract_version: 'work-unit.assignment.v2',
+    })).success, 'immutable v2 marker remains readable');
     assert.ok(WorkUnitIndexRecordSchema.safeParse(baseIndexRecord({
       assignment_contract_version: 'work-unit.assignment.v1',
     })).success, 'immutable v1 marker remains readable');

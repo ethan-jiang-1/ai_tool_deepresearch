@@ -2,6 +2,7 @@
 
 import {
   LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+  WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
   WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS,
   WorkUnitOutputContractSchema,
 } from '../schema/contracts/work-unit.mjs';
@@ -150,23 +151,37 @@ function requiredOutputsFor({ kind, queueItem, topicBinding }) {
   throw new Error(`unsupported work-unit assignment kind ${kind}`);
 }
 
-function baseOutputContractForVersion({ assignmentContractVersion, kind, baseOutputContract }) {
+function baseOutputContractForVersion({ assignmentContractVersion, kind, queueItem, baseOutputContract }) {
   const outputContract = clone(baseOutputContract);
-  if (kind !== 'wave0_source_intake') return outputContract;
-
   if (assignmentContractVersion === LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION) {
     // The caller supplies the bound v1 base from the manifest when validating
-    // history, so a later v2 default cannot narrow an immutable v1 contract.
+    // history, so a later current default cannot narrow an immutable v1 contract.
     return outputContract;
   }
 
-  return {
-    ...outputContract,
-    output_files: {
-      required: true,
-      allowed_roles: ['source_yaml'],
-    },
-  };
+  if (kind === 'wave0_source_intake') {
+    return {
+      ...outputContract,
+      output_files: {
+        required: true,
+        allowed_roles: ['source_yaml'],
+      },
+    };
+  }
+
+  if (assignmentContractVersion === WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION
+    && kind === 'wave1_topic_deepening'
+    && queueItem?.payload?.assignment_mode === 'supplementary') {
+    return {
+      ...outputContract,
+      output_files: {
+        ...outputContract.output_files,
+        required: false,
+      },
+    };
+  }
+
+  return outputContract;
 }
 
 export function resolveWorkUnitAssignmentContract({
@@ -186,7 +201,7 @@ export function resolveWorkUnitAssignmentContract({
   validateReferenceFloorDeficit(kind, queueItem);
   const requiredOutputs = requiredOutputsFor({ kind, queueItem, topicBinding });
   return WorkUnitOutputContractSchema.parse({
-    ...baseOutputContractForVersion({ assignmentContractVersion, kind, baseOutputContract }),
+    ...baseOutputContractForVersion({ assignmentContractVersion, kind, queueItem, baseOutputContract }),
     required_outputs: requiredOutputs,
   });
 }

@@ -36,11 +36,14 @@ outcome-changing consumer 使用其已有的 semantic resolver。
   prior branch 继续要求 hash-valid ledger、同 canonical Topic UID、同 wave/kind、
   authorized role、无歧义的 exact path，并继续拒绝 filesystem-only、cross-topic、wrong
   role/wave/kind 或损坏 authority。depth review 只消费这个结论及当前 row 的 cache
-  binding，不再从 `row.output_files[]` 另写一条较窄的准入规则。
+  binding，不再从 `row.output_files[]` 另写一条较窄的准入规则。它保留现有
+  source path 的物理可用性检查，作为 reference projection 的独立 backing root，
+  而非另一种 current/prior authorization。
 - 让 delegated-bypass diagnostic 以 normalized submitted-ledger/supersession
   conclusion 判断 current 与 historical。raw `rb_output_declarations.jsonl` reader 可继续
   用于显示历史或定位真正未提交的 row，但一个有效 superseded predecessor 不得单凭 raw
-  存在而成为 bypass evidence；真正缺失、损坏或手写的 current declaration 仍 fail closed。
+  存在而成为 bypass evidence；只有与 `hash_valid_historical` entry 精确匹配的 raw row
+  才可排除，真正缺失、损坏或手写的 current declaration 仍 fail closed。
 - 为三个闭合点添加 focused truth-table proofs 及真实 CLI cross-surface regression：
   supplementary empty-output dry/formal submit、authorized prior `source_ref` 经过 submit
   与 depth review、以及 supersede 后 Wave1 Gate 不报 bypass；相邻的非法 case 保持拒绝。

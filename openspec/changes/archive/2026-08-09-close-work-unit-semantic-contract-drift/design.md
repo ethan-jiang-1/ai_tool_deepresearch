@@ -96,6 +96,13 @@ accepted URL and current cache/degraded bindings. Cache validation remains local
 to the reviewed row because a legal prior source output does not authorize a
 prior cache trail for a newly accepted claim.
 
+The reviewed-backing reader will retain its existing physical source-path
+availability check after authorization because a later canonical reference
+projection cites that path. That check SHALL report a projection/backing root,
+not reclassify a legal prior path as "not current output" or reimplement
+current-or-prior authorization. Formal submit's acceptance provenance and the
+reader's later projection availability remain separate facts.
+
 Alternative considered: have depth review call submit validation wholesale.
 Rejected because it would couple a read-only consumer to candidate-result and
 receipt checks it does not own. The shared resolver is the smallest direct fact:
@@ -106,8 +113,11 @@ whether this `source_ref` has legal current or prior provenance.
 `scanDelegatedBypassSuspicion` will obtain the complete result of
 `evaluateNormalizedSubmittedWorkUnitLedger`, not merely its current declaration
 rows. The raw declaration comparison will exclude a row only when the
-normalized evaluation names it in `historical` with its validated immutable
-supersession relation and lineage. All other raw-only rows remain suspected.
+normalized evaluation names the exact raw work-id/hash pair in `historical`
+with `ledger_disposition: hash_valid_historical`, its validated immutable
+supersession relation, and matching successor lineage. All other raw-only rows
+remain suspected. In particular, a historical entry with missing or
+attributable-drift ledger evidence is not bypass suppression authority.
 
 This deliberately does not hide malformed predecessors: if the normalized
 evaluator cannot establish historical status, it fails its existing integrity
@@ -129,15 +139,16 @@ Focused unit tests will prove:
 - source-ref authorization accepts exactly one lawful prior source and rejects
   filesystem-only, cross-topic, wrong-role, wrong-kind/wave, and ambiguous
   alternatives;
-- normalized historical predecessors do not appear as bypass rows while real
-  raw-only declarations do.
+- normalized hash-valid historical predecessors do not appear as bypass rows
+  while raw-only and hash-drift declarations do.
 
 CLI integration tests will prove the user-visible boundaries:
 
 - `operate-work-unit dry-submit` and formal submit accept a valid
   supplementary empty-output result;
 - Wave1 inspect/convergence accepts the same submitted prior `source_ref` that
-  submit accepts but still rejects bad current cache mapping;
+  submit accepts but still rejects bad current cache mapping and a missing
+  physical source backing through its distinct projection root;
 - a Wave1 Gate after valid supersession does not emit
   `delegated_bypass_suspected` for its predecessor and still rejects a genuine
   bypass.
@@ -159,9 +170,10 @@ fixture-backed CLI proof and no new workflow-scale sequence is introduced.
 - [Changing v2 reinterprets an in-flight attempt] -> v3 is the only new-claim
   marker; v1/v2 reconstruction uses their immutable bound output contract and
   the regression matrix includes an already-claimed v2 supplementary attempt.
-- [Historical suppression masks corrupted ledger state] -> Only the normalized
-  evaluator's validated `historical` entries suppress raw-row suspicion; its
-  malformed/invalid relation behavior remains a primary integrity failure.
+- [Historical suppression masks corrupted ledger state] -> Only a normalized
+  `hash_valid_historical` entry matching the raw id/hash pair suppresses
+  suspicion; missing or attributable-drift historical evidence remains a
+  primary integrity failure.
 - [Consumers drift again later] -> The semantic-closure record names all three
   resolver/consumer pairs and binds them to distinct focused and cross-surface
   proof assets; future changes must revisit those entries before Apply.

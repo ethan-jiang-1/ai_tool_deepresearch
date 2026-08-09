@@ -1,7 +1,7 @@
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
@@ -54,6 +54,38 @@ function submitReviewedCandidate(dir, topic) {
   return submitted.record;
 }
 
+function submitSupplementaryPriorCandidate(dir, topic, priorEvidencePath) {
+  const sourceUrl = 'https://example.com/research/supplementary-source';
+  const submitted = claimAndSubmitWorkUnit(dir, {
+    phase: 'wave1',
+    queueItemId: 'topic-a-supplementary',
+    preserveQueue: true,
+    queueItemOverrides: {
+      payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug, wave: 1, assignment_mode: 'supplementary' },
+      required_receipts: [],
+      writes_to: [],
+    },
+    outputs: [],
+    cacheTrails: [{ path: '_cache/wave1/primary/topic-a-supplementary/source', url: sourceUrl }],
+    resultOverrides: {
+      source_claims: [{
+        url: sourceUrl, source_ref: priorEvidencePath, acceptance_status: 'accepted', is_new_vs_wave0: true,
+        cache_trail_refs: ['_cache/wave1/primary/topic-a-supplementary/source'],
+      }],
+      accepted_source_urls: [sourceUrl],
+    },
+  });
+  assert.equal(submitted.submitted.ok, true, submitted.submitted.inspect?.join('\n'));
+  return submitted.record;
+}
+
+function writeDepthReview(dir, topic, records) {
+  mkdirSync(join(dir, 'artifacts/wave1', topic.slug), { recursive: true });
+  writeFileSync(join(dir, 'artifacts/wave1', topic.slug, 'depth-review.yaml'), `${JSON.stringify({
+    version: 'depth-review.v1', topic_slug: topic.slug, reviewed_work_unit_refs: records.map((record) => record.paths.work_unit_dir),
+  }, null, 2)}\n`);
+}
+
 function sync(dir) {
   const result = spawnSync('node', [join(root, 'DEEP_RESEARCH_HARNESS/cli/sync-reference-index.mjs'), '--bundle', dir], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -97,5 +129,28 @@ describe('Wave1 reference convergence commands', () => {
     assert.equal(sync(dir).verdict, 'committed');
     const result = evaluateWave1ReferenceTopic(dir, { topic: topic.slug, topicRegistryFact: buildCanonicalTopicRegistryFact(dir), requiredFloor: 1 });
     assert.equal(result.result.outcome, 'materialize_projection');
+  });
+
+  it('uses the same authorized prior source ref as submit while retaining cache and projection roots', () => {
+    const { dir, topic } = bundle();
+    submitReviewedCandidate(dir, topic);
+    const priorEvidencePath = `artifacts/wave1/${topic.slug}/evidence-summary.md`;
+    const supplementary = submitSupplementaryPriorCandidate(dir, topic, priorEvidencePath);
+    writeDepthReview(dir, topic, [supplementary]);
+    const registry = buildCanonicalTopicRegistryFact(dir);
+
+    assert.equal(resolveReviewedWave1SubmittedBacking(dir, { topic: topic.slug, topicRegistryFact: registry }).ok, true);
+
+    const cacheMeta = join(dir, '_cache/wave1/primary/topic-a-supplementary/source/meta.json');
+    writeFileSync(cacheMeta, '{"url":"https://example.com/not-the-submitted-url"}\n');
+    const badCache = resolveReviewedWave1SubmittedBacking(dir, { topic: topic.slug, topicRegistryFact: registry });
+    assert.equal(badCache.ok, false);
+    assert.equal(badCache.root.code, 'submitted_backing_cache_mapping_invalid');
+
+    writeFileSync(cacheMeta, '{"url":"https://example.com/research/supplementary-source"}\n');
+    rmSync(join(dir, priorEvidencePath));
+    const missingProjection = resolveReviewedWave1SubmittedBacking(dir, { topic: topic.slug, topicRegistryFact: registry });
+    assert.equal(missingProjection.ok, false);
+    assert.equal(missingProjection.root.code, 'submitted_backing_source_projection_unavailable');
   });
 });

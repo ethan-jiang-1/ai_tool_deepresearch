@@ -1,13 +1,22 @@
 # RUN.md — DEEP_RESEARCH_HARNESS 入口
 
-> **DEEP_RESEARCH_HARNESS v0.81**
+> **DEEP_RESEARCH_HARNESS v0.82**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DEEP_RESEARCH_HARNESS 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.81
+## Current Release: v0.82
+
+- New work-unit claims use `work-unit.assignment.v3`: supplementary Wave1 work
+  may submit source/cache evidence without re-declaring prior direct artifacts,
+  while v1/v2 and Wave2 preserve their immutable contracts.
+- Submit and Wave1 reviewed backing share one exact current-or-authorized-prior
+  source-ref authorization rule; cache/degraded and physical projection remain
+  independent checks.
+- Gate treats an exact hash-valid superseded predecessor as historical context;
+  raw-only or hash-drift declarations remain blocking bypass evidence.
 
 - reference/README.md now receives a Reference Evidence Map from the same
   sync-reference-index operation that refreshes _INDEX.md. It presents derived

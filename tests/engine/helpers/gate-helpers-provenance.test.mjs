@@ -14,6 +14,8 @@ import {
   closeWorkUnitAttempt,
   lateSubmitWorkUnit,
   loadWorkUnitIndex,
+  submitWorkUnit,
+  supersedeWorkUnitAttempt,
 } from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import {
   checkReferenceIndexCoverage,
@@ -183,6 +185,39 @@ function writeIndex(dir, rows) {
   ].join('\n') + '\n');
 }
 
+function submitSupersessionSuccessor(dir, predecessor) {
+  claimWorkUnits(dir, { phase: 'wave0', count: 1, ...availableActorDecision('wave0_source_intake') });
+  const successor = Object.values(loadWorkUnitIndex(dir).work_units)
+    .find((record) => record.status === 'claimed' && record.work_id !== predecessor.work_id);
+  assert.ok(successor, 'supersession successor should be claimed');
+
+  const predecessorResult = JSON.parse(readFileSync(predecessor.resultPath, 'utf8'));
+  const result = {
+    ...predecessorResult,
+    work_id: successor.work_id,
+    queue_item_id: successor.queue_item_id,
+    receipt_nonce: successor.receipt_nonce,
+    actor_contract_version: successor.actor_contract_version,
+    execution_actor_class: successor.actor_execution.execution_actor_class,
+  };
+  const resultPath = join(dir, '_tmp', `${successor.work_id}.result.json`);
+  mkdirSync(join(dir, '_tmp'), { recursive: true });
+  writeFileSync(resultPath, `${JSON.stringify(result, null, 2)}\n`);
+  writeFileSync(join(dir, successor.paths.runtime_receipt_ref), `${JSON.stringify({
+    event: 'work_done',
+    work_id: successor.work_id,
+    queue_item_id: successor.queue_item_id,
+    kind: successor.kind,
+    receipt_nonce: successor.receipt_nonce,
+    actor_contract_version: successor.actor_contract_version,
+    execution_actor_class: successor.actor_execution.execution_actor_class,
+    ts: '2026-08-09T00:00:00.000Z',
+  })}\n`);
+  const submitted = submitWorkUnit(dir, { work_id: successor.work_id, resultPath });
+  assert.equal(submitted.ok, true, submitted.inspect?.join('\n'));
+  return successor;
+}
+
 describe('work-unit provenance gate helpers', () => {
   it('accepts only submitted work-unit ledger rows for scoped source-output existence', () => {
     const dir = tempDir('wpg-ledger-');
@@ -204,7 +239,7 @@ describe('work-unit provenance gate helpers', () => {
     seedWave0Queue(dir);
     claimWorkUnits(dir, { phase: 'wave0', count: 1, ...availableActorDecision('wave0_source_intake') });
     const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
-    assert.equal(record.assignment_contract_version, 'work-unit.assignment.v2');
+    assert.equal(record.assignment_contract_version, 'work-unit.assignment.v3');
     closeWorkUnitAttempt(dir, {
       work_id: record.work_id,
       status: 'timed_out',
@@ -388,6 +423,37 @@ describe('work-unit provenance gate helpers', () => {
     assert.equal(result.suspected, true);
     assert.equal(check.passed, false);
     assert.match(check.inspect.join('\n'), /delegated_bypass_suspected/);
+  });
+
+  it('treats only an exact hash-valid superseded predecessor as historical bypass context', () => {
+    const dir = tempDir('wpg-superseded-bypass-');
+    const predecessor = claimAndSubmitWorkUnit(dir, { phase: 'wave0', queueItemId: 'queue-superseded' });
+    writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), [
+      '- url: https://example.com/research/article',
+      '  title: Corrected source capture',
+      '  retrieved_date: 2026-07-20',
+      '  topic_tag: topic-a',
+      '',
+    ].join('\n'));
+    const superseded = supersedeWorkUnitAttempt(dir, {
+      work_id: predecessor.record.work_id,
+      reason: 're-submit accepted source under a successor attempt',
+    });
+    assert.equal(superseded.ok, true, superseded.missing_fact);
+    submitSupersessionSuccessor(dir, predecessor);
+
+    const historical = scanDelegatedBypassSuspicion(dir, 'wave0');
+    assert.equal(historical.suspected, false, historical.provenanceMissing?.join('; '));
+
+    const ledgerPath = join(dir, 'rb_output_declarations.jsonl');
+    const rows = readFileSync(ledgerPath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    const predecessorRow = rows.find((row) => row.work_id === predecessor.record.work_id);
+    predecessorRow.ledger_record_hash = '0'.repeat(64);
+    writeFileSync(ledgerPath, `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`);
+
+    const drifted = scanDelegatedBypassSuspicion(dir, 'wave0');
+    assert.equal(drifted.suspected, true);
+    assert.match(drifted.provenanceMissing.join('\n'), /not submitted work-unit ledger rows/);
   });
 
   it('keeps bypass scanning pure and emits durable diagnostics only when asked', () => {

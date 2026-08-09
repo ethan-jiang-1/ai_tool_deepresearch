@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.82
+
+- New work-unit claims use the immutable `work-unit.assignment.v3` contract:
+  supplementary Wave1 work may submit source/cache evidence without a forced
+  empty direct-output declaration, while v1/v2 and Wave2 retain their recorded
+  interpretation.
+- Submit and Wave1 reviewed backing now share exact current-or-authorized-prior
+  source-ref authorization; accepted prior evidence retains separate current
+  cache/degraded and physical-projection checks.
+- Wave1 provenance Gate treats only exact hash-valid superseded predecessors as
+  historical context. Raw-only or hash-drift declarations remain blocking
+  delegated-bypass evidence.
+
 ## v0.81
 
 - sync-reference-index now refreshes a deterministic Reference Evidence Map

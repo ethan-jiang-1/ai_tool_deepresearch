@@ -12,7 +12,7 @@ Submitted work-unit rows remain the single direct authority for structured `sour
 
 The reference-convergence evaluator SHALL use those submitted backing facts and the current canonical Topic identity, committed consumer reference projections, index table, profile reference floor, and existing supplementary queue demand to determine the next Wave1 reference action. It SHALL short-circuit unusable submitted authority first; then require canonical materialization/index repair before a true positive floor deficit; and preserve the existing depth/new-source checks as separate direct contracts. A valid depth review SHALL not prove reference-floor closure, and a reference-floor deficit SHALL not cause copied depth-review fields to become source authority.
 
-For a current Topic, candidate backing SHALL be resolved only from its reviewed hash-valid submitted `wave1_topic_deepening` rows after the manifest's embedded queue snapshot binds the same canonical Topic UID/current slug. The shared reader SHALL call the same current-or-authorized-prior source-ref resolver used by dry-submit and formal submit before it evaluates a reviewed accepted claim's cache/degraded binding. It SHALL accept a prior path only when that resolver returns one exact legal same-Topic/wave/kind/role submitted output; it SHALL not require that legal prior path to appear in the reviewed row's current `output_files[]`. The reviewed row's accepted URL and current cache/degraded trail declarations remain independently required. The reader SHALL reuse accepted source-claim/URL/cache/degraded facts and normalize URLs once; it SHALL not borrow an unbound row, infer a source from a file or index, or use missing candidates as a deficit proof until those direct facts are valid. A candidate must have a closed canonical projection before the reference floor can be evaluated.
+For a current Topic, candidate backing SHALL be resolved only from its reviewed hash-valid submitted `wave1_topic_deepening` rows after the manifest's embedded queue snapshot binds the same canonical Topic UID/current slug. The shared reader SHALL call the same current-or-authorized-prior source-ref resolver used by dry-submit and formal submit before it evaluates a reviewed accepted claim's cache/degraded binding. It SHALL accept a prior path only when that resolver returns one exact legal same-Topic/wave/kind/role submitted output; it SHALL not require that legal prior path to appear in the reviewed row's current `output_files[]`. The reviewed row's accepted URL and current cache/degraded trail declarations remain independently required. After authorization, the reader MAY retain its existing physical source-path availability check only as a distinct reference-projection backing root; it SHALL not use that check to recreate a current-output-only source-ref rule. The reader SHALL reuse accepted source-claim/URL/cache/degraded facts and normalize URLs once; it SHALL not borrow an unbound row, infer a source from a file or index, or use missing candidates as a deficit proof until those direct facts are valid. A candidate must have a closed canonical projection before the reference floor can be evaluated.
 
 When a true reference-floor deficit remains, the existing supplementary `wave1_topic_deepening` loop SHALL own new evidence acquisition. The Phase Agent may persist the exact positive deficit as the queue card's optional snapshot-bound objective and record the queue item in the existing depth-review decision surface. The queued objective SHALL not be a result requirement, source-acceptance assertion, or direct proof that later gate closure has occurred.
 
@@ -77,6 +77,14 @@ The gate SHALL validate deterministic depth-adjacent facts only: reviewed submit
 - **WHEN** a reviewed accepted claim names a filesystem-only, cross-Topic, wrong-role, wrong-wave/kind, ambiguous, or invalid prior output
 - **THEN** the shared reviewed-backing reader SHALL fail the submitted-backing root
 - **AND** it SHALL not relabel that path as current output or reference-floor coverage
+
+#### Scenario: Authorized source path must still be materializable
+
+- **WHEN** a reviewed accepted claim's source_ref is authorized by the shared
+  current-or-prior resolver but the referenced physical source path is absent
+- **THEN** the reader SHALL fail its distinct projection/backing root
+- **AND** it SHALL not report the failure as a missing current output or an
+  unauthorized prior source ref
 
 #### Scenario: Missing profile parameter remains blocking
 

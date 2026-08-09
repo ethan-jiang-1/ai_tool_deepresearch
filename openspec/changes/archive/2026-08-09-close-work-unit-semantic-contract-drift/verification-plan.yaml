@@ -62,9 +62,10 @@ claims:
     verdict_authority: node_test_exit
   - id: supersession-bypass-classification
     statement: >-
-      Bypass classification uses the normalized ledger historical conclusion so
-      a valid superseded predecessor is not reported as raw-row bypass evidence,
-      while a genuinely raw-only declaration remains blocking evidence.
+      Bypass classification uses the normalized ledger's exact hash-valid
+      historical conclusion so a valid superseded predecessor is not reported
+      as raw-row bypass evidence, while raw-only or hash-drift declarations
+      remain blocking evidence.
     test_class: unit
     proof_subject: deterministic_contract
     asset:
@@ -98,7 +99,8 @@ claims:
     statement: >-
       Wave1 inspected reviewed backing accepts the same authorized prior source
       reference accepted by formal submit, but rejects an invalid current cache
-      or degraded-capture binding for that claim.
+      or degraded-capture binding and a missing physical source path through
+      their distinct projection-backing roots.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -113,9 +115,10 @@ claims:
     verdict_authority: node_test_exit
   - id: superseded-predecessor-wave1-gate
     statement: >-
-      A Wave1 Gate with a valid superseded predecessor and accepted successor
-      does not emit delegated_bypass_suspected for historical evidence, while a
-      genuine unsubmitted delegated declaration remains a failing bypass root.
+      A Wave1 Gate with an exact hash-valid superseded predecessor and accepted
+      successor does not emit delegated_bypass_suspected for historical
+      evidence, while a genuine unsubmitted or hash-drift declaration remains a
+      failing bypass root.
     test_class: integration
     proof_subject: deterministic_contract
     asset:

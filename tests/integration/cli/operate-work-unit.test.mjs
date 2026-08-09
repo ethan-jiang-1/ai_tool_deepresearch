@@ -123,6 +123,25 @@ function queueItem(overrides = {}) {
   });
 }
 
+function supplementaryWave1QueueItem(overrides = {}) {
+  return makeItem({
+    queue_item_id: 'queue-wave1-supplementary',
+    title: 'Supplementary Wave1 topic deepening',
+    targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-evidence-extractor', timeout_ms: 600000 } },
+    kind: 'wave1_topic_deepening',
+    producer_rule: 'topic_deepening',
+    payload: {
+      wave: 1,
+      topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+      topic_slug: 'topic-a',
+      assignment_mode: 'supplementary',
+    },
+    required_receipts: [],
+    writes_to: [],
+    ...overrides,
+  });
+}
+
 function writeCanonicalPlan(dir) {
   writeFileSync(path.join(dir, 'rb_plan.md'), `---
 plan_basename: test
@@ -335,7 +354,7 @@ describe('operate-work-unit inspect', () => {
       const output = JSON.parse(result.stdout);
       const record = loadWorkUnitIndex(dir).work_units[output.claimed_work_ids[0]];
       const manifest = JSON.parse(readFileSync(path.join(dir, record.paths.manifest_ref), 'utf8'));
-      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v2');
+      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v3');
       assert.ok(manifest.output_contract.required_result_fields.includes('summary'));
       assert.deepEqual(manifest.output_contract.required_outputs, [{
         path: 'artifacts/wave0/topic-a/source.yaml',
@@ -726,6 +745,75 @@ describe('operate-work-unit inspect', () => {
       assert.deepEqual(out.submit_integrity.roots, []);
       assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
       assert.equal(loadWorkUnitIndex(dir).work_units[workId].status, 'claimed');
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('dry-submits and formally submits a v3 supplementary Wave1 result with empty output_files', () => {
+    const dir = tempBundle();
+    try {
+      writeCanonicalPlan(dir);
+      saveQueueWith(dir, [supplementaryWave1QueueItem()]);
+      const claim = spawnSync(process.execPath, [
+        CLI,
+        'claim',
+        dir,
+        '--phase', 'wave1',
+        '--actor-outcome', 'available',
+        '--actor-source', 'native_probe',
+        '--actor-role-key', 'dpt-evidence-extractor',
+        '--actor-reason', 'probe_succeeded',
+        '--execution-actor', 'delegated_subagent',
+      ], { encoding: 'utf-8', timeout: 5000 });
+      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
+      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+      assert.equal(record.assignment_contract_version, 'work-unit.assignment.v3');
+
+      writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
+        event: 'work_done',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        kind: record.kind,
+        receipt_nonce: record.receipt_nonce,
+        actor_contract_version: record.actor_contract_version,
+        execution_actor_class: record.actor_execution.execution_actor_class,
+        ts: '2026-08-09T00:00:00.000Z',
+      })}\n`);
+      const cacheTrail = `_cache/wave1/primary/${record.queue_item_id}/supplementary-source`;
+      mkdirSync(path.join(dir, cacheTrail), { recursive: true });
+      writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
+      writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nSupplementary source capture.\n');
+      writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://example.com/supplementary"}\n');
+      const resultPath = path.join(dir, '_tmp', `${workId}.result.json`);
+      mkdirSync(path.dirname(resultPath), { recursive: true });
+      writeFileSync(resultPath, `${JSON.stringify({
+        schema_version: 'work-unit.result.v1',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        kind: record.kind,
+        receipt_nonce: record.receipt_nonce,
+        actor_contract_version: record.actor_contract_version,
+        execution_actor_class: record.actor_execution.execution_actor_class,
+        summary: 'supplementary result with no direct output',
+        output_files: [],
+        cache_trails: [cacheTrail],
+      }, null, 2)}\n`);
+
+      const dry = spawnSync(process.execPath, [CLI, 'dry-submit', dir, '--work-id', workId, '--result', resultPath], {
+        encoding: 'utf-8', timeout: 5000,
+      });
+      assert.equal(dry.status, 0, dry.stderr || dry.stdout);
+      assert.equal(JSON.parse(dry.stdout).ok, true);
+      assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
+
+      const submit = spawnSync(process.execPath, [CLI, 'submit', dir, '--work-id', workId, '--result', resultPath], {
+        encoding: 'utf-8', timeout: 5000,
+      });
+      assert.equal(submit.status, 0, submit.stderr || submit.stdout);
+      assert.equal(JSON.parse(submit.stdout).ok, true);
+      assert.equal(readFileSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER), 'utf-8').split(/\r?\n/).filter(Boolean).length, 1);
     } finally {
       cleanup(dir);
     }
