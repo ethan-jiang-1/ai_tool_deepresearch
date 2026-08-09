@@ -695,7 +695,7 @@ contributes to a current Wave1 floor.
 - **AND** it SHALL not satisfy evidence authority, consumer-floor coverage, or
   delegated-output coverage
 
-+### Requirement: Wave0 Phase-owned shared references SHALL preserve exact submitted source backing
+### Requirement: Wave0 Phase-owned shared references SHALL preserve exact submitted source backing
 
 A current Wave0 `reference/00-shared-*.md` may be a Phase-owned consumer projection only after formal submit. Its normal metadata `source_url` and scannable body backing SHALL together bind to one exact retained submitted Wave0 source identity, `<work_id>/<ordinal>`, and to the authenticated source YAML, source URL, cache, result, and work-unit coordinates returned by the existing submitted-backing reader. For one current direct source array with retained prefix contributions, that reader SHALL preserve ledger-ordered accepted source-contribution ownership across prior and current rerun submissions; generic current-round work-unit eligibility SHALL NOT make a later append re-own an earlier ordinal. The body SHALL carry that exact coordinate with the returned backing refs; `source_url` alone is not a source selector. A compatible historical delegated reference continues to use its own submitted output declaration and need not be rewritten as a Phase-owned projection.
 

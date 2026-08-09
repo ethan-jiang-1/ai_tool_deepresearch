@@ -38,6 +38,16 @@ one bounded deterministic question
   proposal 当作 Phase Gate 或 Apply-ready 的证据。
 - 不回写或“修正”已归档 change 来制造历史闭合；归档记录只作为历史证据，新行为通过新的 OpenSpec change 落地。
 
+### 债务命名与 Change 对齐
+
+- 每一条未结、需要未来工程动作的债务都必须在本文件的 **Named Debt Ledger** 有唯一的
+  `debt_name`（lower kebab-case）和 `planned_change_name`。不再用“后续处理”“暂缓一下”或聊天上下文代替名称。
+- `planned_change_name` 是该债务获准进入 OpenSpec 后必须使用的 change name；若合并、拆分或改名，先在
+  ledger 写出 successor name 和理由，再创建/修改 change，避免 tracker、proposal、tasks 与 archive 失去对应关系。
+- `state: deferred` 表示已有名称、范围和重开条件但尚未获准进入 change；它不等于已完成，也不自动成为
+  Semantic Fact Closure Phase 2 的 dogfood。`state: none` 只适用于已核实没有未结工程动作的类别。
+- 一个新发现若尚不能命名、不能给出 authority evidence 或不能说明最小完成条件，就先记为 discovery，不能伪装成 debt 或 change 候选。
+
 ## 3. Progress 快照
 
 | Track | 完成 | 总数 | 当前状态 |
@@ -89,6 +99,24 @@ dogfood，也不把本次 governance calibration 或 verification-only baseline 
   该 change 未修改 Harness runtime resolver、authority-establishing surface、verdict consumer、family catalog 或
   semantic-closure mechanics，故其 record 合法地保持 `not_applicable`，不计作 `2.1`–`6.7` 的新增 affected runtime
   dogfood。归档后 `openspec list --json` 仍返回空 `changes`，因此保持 Phase 2 未开始。
+- [x] `A.6` `[Agent]` 已完成并归档 `repair-reference-flat-format-scenario-coverage`：只移除了 REF-009
+  Wave0 requirement 标题的一个前导 `+`，其完整 requirement 与四个既有 Scenario 同 approved delta 精确同步。定向
+  validation 不再报告 `requirements.8.scenarios`；它如实暴露了下一条 REF-010 的
+  `requirements.9.scenarios` root，已在 ledger 命名为独立 successor debt。governed finalizer 返回
+  `outcome: archived` 并通过 `11` 项 checks，归档至
+  `openspec/changes/archive/2026-08-09-repair-reference-flat-format-scenario-coverage`。该 change 不修改 Harness
+  runtime resolver、authority-establishing surface、verdict consumer、family catalog 或 semantic-closure mechanics，故
+  其 record 合法地保持 `not_applicable`，不计作 `2.1`–`6.7` 的新增 affected runtime dogfood。
+
+### Named Debt Ledger
+
+| debt_name | planned_change_name | state | authority evidence | completion / reactivation boundary |
+| --- | --- | --- | --- | --- |
+| `reference-flat-format-requirement-8-scenario` | `repair-reference-flat-format-scenario-coverage` | archived 2026-08-09; outside Semantic Fact Closure rollout | The REF-009 heading changed only from `+###` to `###`; targeted validation no longer reports `requirements.8.scenarios`, and the governed finalizer returned `outcome: archived` with 11 passed checks | Closed by `openspec/changes/archive/2026-08-09-repair-reference-flat-format-scenario-coverage/`; its newly exposed REF-010 root is independently tracked and does not reopen this debt. |
+| `reference-flat-format-requirement-9-scenario` | `repair-reference-flat-format-requirement-9-scenario-coverage` | next to propose; outside Semantic Fact Closure rollout | After the REF-009 repair, `openspec validate bundle/reference-flat-format --type spec --json` reports `requirements.9.scenarios` empty for REF-010, `Reference metadata values SHALL be writable as valid YAML and frontmatter failures SHALL name the offending value` | REF-009 is now archived, so this exact successor change is the next named spec-scenario action; complete only after REF-010 has its own scoped validation and archive evidence. |
+| `check-inspect-feedback-requirement-6-scenario` | `repair-check-inspect-feedback-scenario-coverage` | deferred; outside Semantic Fact Closure rollout | `openspec validate --specs` reports requirement 6 in `engine/check-inspect-feedback` has no scenario | Start this exact named change when spec-scenario repair is selected; complete only after the main spec validates and its change is governedly archived. |
+
+These debts are named independently of Phase 2. They do not alter a Harness runtime deterministic fact family and therefore cannot be counted as affected-runtime dogfood unless a later scoped change independently changes that boundary.
 
 ### Focused Calibration Boundary
 
@@ -241,7 +269,7 @@ Phase 5 Gate：保持 v1，或只为已触发问题进入一个 focused OpenSpec
 | focused change Apply / Archive：`tighten-semantic-closure-review-honesty` | plan review + three plan checks passed；delivery test 的 intended red 与 final `7/7` green；eight adapters route through central guidance；two delta blocks synced exactly；finalizer `11` checks passed，归档为 `2026-08-09-tighten-semantic-closure-review-honesty` | deterministic guidance/entry delivery、scoped governance evidence 与归档转换；不证明 runtime semantic closure 或 future Agent compliance |
 | verification-only baseline repair：`restore-deterministic-e2e-regression-baseline`，commit `59192f0e5` | `npm test` exit `0`；finalizer `11` checks passed，归档为 `2026-08-09-restore-deterministic-e2e-regression-baseline` | deterministic regression proof/fixture alignment 与 archive transition；不证明 Harness runtime semantic closure，不能作为新增 affected dogfood |
 | 2026-08-09 归档后推进核对 | `openspec list --changes --json` 返回 `changes: []`；`git status --short` 无输出 | 证明当前没有 active OpenSpec change 或未提交工作；不证明没有未来 runtime defect，亦不构成 Phase 2 entry |
-| full `openspec validate --specs` during focused change Apply | `83` passed / `2` unrelated failures，均为未触及 spec 的 missing scenario | diagnostic baseline，不得计为本 change 成功或失败的 semantic evidence |
+| archived REF-009 repair and current named scenario debts | REF-009 `requirements.8.scenarios` is repaired and its 11-check governed archive is recorded; current `openspec validate --specs` now exposes exactly REF-010 `requirements.9.scenarios` and check/inspect `requirements.6.scenarios`, each with a planned change name in the ledger | scoped spec hygiene and archive transition only; neither successor debt is Semantic Fact Closure dogfood or evidence of a completed repair |
 
 ## 14. 下一次更新模板
 
