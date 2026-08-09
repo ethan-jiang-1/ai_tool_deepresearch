@@ -137,6 +137,11 @@ legal repair coordinate when an accepted operation exists, and the same finalize
 not implement its own spec merge, archive naming, directory move, rollback, test runner, semantic review
 verdict, or persistent lifecycle state.
 
+The finalizer SHALL pass the exact selected active change to the
+requirement-traceability archive check. It SHALL not use a no-scope invocation,
+infer that another active change is ready, or turn another change's valid
+plan-stage reservation into a selected-change archive failure.
+
 #### Scenario: incomplete feedback task blocks before native archive
 
 - **WHEN** a selected change has an incomplete task or an incomplete/missing required review marker
@@ -150,6 +155,16 @@ verdict, or persistent lifecycle state.
   assets fail
 - **THEN** finalization SHALL report the earliest failing direct check before native archive
 - **AND** it SHALL not perform a directory move, write main specs, or infer test success
+
+#### Scenario: Pending reservation blocks selected finalization
+
+- **WHEN** the selected change's reservation has not yet become a live prefix,
+  live requirement-ID entries, and canonical main-spec declarations
+- **THEN** finalization SHALL return its requirement-traceability root before
+  main-spec, taxonomy, discovery, verification-routing, semantic-closure, or
+  native archive
+- **AND** it SHALL preserve the selected change in the requirement-check rerun
+  coordinate
 
 #### Scenario: semantic closure assets fail after verification routing
 

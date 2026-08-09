@@ -93,6 +93,7 @@ prefixes:
   RWP: research/research-wave-phase-content
   SCO: engine/schema-core
   SDC: agent/subagent-directory-contract
+  SEF: governance/semantic-fact-closure
   SEG: seg2node                    # all entries deprecated; no spec directory
   SHC: workflow/shared-node-content
   SNC: agent/subagent-node-contract
@@ -531,6 +532,12 @@ RET-003: requirement-traceability — Capability boundary test (4 conditions) pr
 RET-004: requirement-traceability — Alphabetical ordering of groups and numeric ordering within groups
 RET-005: requirement-traceability — Deprecation without deletion (IDs never reused)
 RET-006: requirement-traceability — Check script compliance as hard gate for archive
+
+# governance/semantic-fact-closure
+SEF-001: semantic-fact-closure — Semantic fact catalog provides a bounded shared vocabulary
+SEF-002: semantic-fact-closure — Each governed change declares semantic closure applicability
+SEF-003: semantic-fact-closure — A fact family converges on one semantic resolver
+SEF-004: semantic-fact-closure — Semantic closure checking remains structural and root-first
 
 # governance/version-management
 VEM-001: version-management — CHANGELOG is concise and human-readable at project root

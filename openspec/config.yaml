@@ -191,6 +191,14 @@ operations:
         check is not target-edit or archive permission. Only during Apply, after the canonical main
         spec exists through approved work, synchronize its live prefix and requirement IDs into
         req-registry.yaml; the governed finalizer supplies selected archive scope.
+      - >-
+        semantic-fact-closure/apply: Before every first target edit, run
+        node openspec/governance/check-verification-routing.mjs --change <name> --mode plan and then
+        node openspec/governance/check-semantic-closure.mjs --change <name> --mode plan. A
+        feedback-lifecycle change runs both after its durable plan review. A missing or non-zero
+        semantic-closure check stops Apply at the reported repair coordinate and the same rerun
+        command; it has no missing-command fallback. Passing structure does not prove semantic
+        completeness or grant archive permission.
   archive:
     guidance:
       - >-
@@ -220,6 +228,21 @@ rules:
       `node openspec/governance/check-project-reqs.mjs --mode plan`。proposal/explore 不得预登记
       live prefix 或新 capability ID，也不得创建 canonical main spec；这些 live facts 仅可在 Apply
       创建 canonical main spec 后同步到 registry。
+    - |
+      在 planning artifacts 完整之前，读取
+      `openspec/governance/semantic-fact-families.yaml` 作为唯一可用的 deterministic fact
+      family vocabulary，并在 change 根目录创建严格的 `semantic-closure.yaml`。选择其一，但
+      不要由本规则替 Agent 决定：
+      `not_applicable` starter 为
+      `schema_version: semantic-closure/v1`, `change: <change>`,
+      `status: not_applicable`, `reason: <non-empty reason>`；`affected` starter 为
+      `schema_version: semantic-closure/v1`, `change: <change>`, `status: affected`,
+      `catalog_additions: []`, `affected: [<one entry per family>]`。若需要尚未 cataloged 的
+      family，在同一 record 的 `catalog_additions` 声明精确 ID/question，并在第一个依赖该
+      family 的 target edit 前将它写入 global catalog。缺少或 malformed record 的唯一
+      repair boundary 是 target edit 前的
+      `node openspec/governance/check-semantic-closure.mjs --change <change> --mode plan`；
+      该指导不是 semantic verdict。
     - 说明 direct Source of Record、最短合法闭环与 net simplification impact，明确删除、合并或避免的 control complexity
     - 对新增或实质改变的具名 state、projection、status、concept、Module、command 或 reader-facing view，先写简短的 semantic-precision reflection：明确读者/有界问题、必须保留的区别与正常推理停止点（或明确 unknown）
     - 说明 user decision / Agent execution / Engine verdict 的责任边界，不得用 human-directed 创造 permission 或 capability

@@ -84,6 +84,9 @@ function runner({ failAt, nativeOutput, statusOutput } = {}) {
       if (command === process.execPath && args[0].endsWith('check-verification-routing.mjs')) {
         return failAt === 'routing' ? { status: 1, stdout: '', stderr: 'routing failure' } : { status: 0, stdout: 'ok', stderr: '' };
       }
+      if (command === process.execPath && args[0].endsWith('check-semantic-closure.mjs')) {
+        return failAt === 'semantic' ? { status: 1, stdout: '', stderr: 'semantic closure failure' } : { status: 0, stdout: 'ok', stderr: '' };
+      }
       if (command === 'openspec' && args[0] === 'archive') {
         return {
           status: failAt === 'archive' ? 1 : 0,
@@ -258,7 +261,7 @@ describe('change feedback archive finalizer', () => {
     assert.equal(mainSpecsResult.root.code, 'main_spec_governance_failed');
     assert.equal(mainSpecs.calls.length, 4);
     assert.match(mainSpecs.calls.at(-1).args[0], /check-project-specs\.mjs$/);
-    assert.doesNotMatch(mainSpecs.calls.map((call) => call.args.join(' ')).join('\n'), /check-capability-taxonomy\.mjs|check-capability-discovery\.mjs|check-verification-routing\.mjs/);
+    assert.doesNotMatch(mainSpecs.calls.map((call) => call.args.join(' ')).join('\n'), /check-capability-taxonomy\.mjs|check-capability-discovery\.mjs|check-verification-routing\.mjs|check-semantic-closure\.mjs/);
     assert.equal(mainSpecs.calls.some((call) => call.command === 'openspec' && call.args[0] === 'archive'), false);
 
     const taxonomy = runner({ failAt: 'taxonomy' });
@@ -271,7 +274,7 @@ describe('change feedback archive finalizer', () => {
     assert.equal(taxonomyResult.root.code, 'capability_taxonomy_failed');
     assert.equal(taxonomy.calls.length, 5);
     assert.match(taxonomy.calls.at(-1).args[0], /check-capability-taxonomy\.mjs$/);
-    assert.doesNotMatch(taxonomy.calls.map((call) => call.args.join(' ')).join('\n'), /check-capability-discovery\.mjs|check-verification-routing\.mjs/);
+    assert.doesNotMatch(taxonomy.calls.map((call) => call.args.join(' ')).join('\n'), /check-capability-discovery\.mjs|check-verification-routing\.mjs|check-semantic-closure\.mjs/);
     assert.equal(taxonomy.calls.some((call) => call.command === 'openspec' && call.args[0] === 'archive'), false);
 
     const discovery = runner({ failAt: 'discovery' });
@@ -284,7 +287,7 @@ describe('change feedback archive finalizer', () => {
     assert.equal(discoveryResult.root.code, 'capability_discovery_failed');
     assert.equal(discovery.calls.length, 6);
     assert.match(discovery.calls.at(-1).args[0], /check-capability-discovery\.mjs$/);
-    assert.doesNotMatch(discovery.calls.map((call) => call.args.join(' ')).join('\n'), /check-verification-routing\.mjs/);
+    assert.doesNotMatch(discovery.calls.map((call) => call.args.join(' ')).join('\n'), /check-verification-routing\.mjs|check-semantic-closure\.mjs/);
     assert.equal(discovery.calls.some((call) => call.command === 'openspec' && call.args[0] === 'archive'), false);
 
     const routing = runner({ failAt: 'routing' });
@@ -298,6 +301,20 @@ describe('change feedback archive finalizer', () => {
     assert.equal(routing.calls.length, 7);
     assert.match(routing.calls.at(-1).args[0], /check-verification-routing\.mjs$/);
     assert.equal(routing.calls.some((call) => call.command === 'openspec' && call.args[0] === 'archive'), false);
+
+    const semantic = runner({ failAt: 'semantic' });
+    const semanticResult = await finalizeChangeArchive({
+      change: CHANGE,
+      projectRoot: ROOT,
+      runCommand: semantic.run,
+      fsApi: fakeFs(completeTasks()),
+    });
+    assert.equal(semanticResult.root.code, 'semantic_closure_failed');
+    assert.equal(FinalizationResultSchema.safeParse(semanticResult).success, true);
+    assert.equal(semantic.calls.length, 8);
+    assert.match(semantic.calls.at(-1).args[0], /check-semantic-closure\.mjs$/);
+    assert.deepEqual(semantic.calls.at(-1).args.slice(1), ['--change', CHANGE, '--mode', 'assets']);
+    assert.equal(semantic.calls.some((call) => call.command === 'openspec' && call.args[0] === 'archive'), false);
   });
 
   it('reports invalid native output without inventing archive success', async () => {
@@ -340,6 +357,9 @@ describe('change feedback archive finalizer', () => {
     assert.equal(result.outcome, 'archived');
     assert.equal(result.archive.path, ARCHIVE_PATH);
     assert.equal(result.archive.specs_updated, false);
+    assert.deepEqual(result.checks.map((check) => check.id).slice(-3), [
+      'verification_routing', 'semantic_closure', 'native_archive',
+    ]);
     assert.equal(commands.calls.at(-1).args.join(' '), `archive ${CHANGE} --json --skip-specs`);
     assert.equal(FinalizationResultSchema.safeParse(result).success, true);
   });

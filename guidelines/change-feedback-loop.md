@@ -38,6 +38,10 @@ risks actually introduced by its touched surfaces:
   than recreate semantic judgment or a recovery controller?
 - Does selected verification prove exactly its deterministic claim without converting fixtures,
   configuration, or instruction text into behavioral evidence?
+- Read the selected change's `semantic-closure.yaml`. For an `affected` record, do its bounded
+  fact, resolver, `established_by` surfaces, verdict consumers, and overlap declaration cover the
+  planned changed surfaces? For `not_applicable`, does its reason still hold for those surfaces?
+  A structural semantic-closure checker result does not answer either question.
 
 Complete `openspec-feedback:plan-review` only after this scoped review. A completed marker says
 the review step occurred; it does not prove the design, implementation, tests, or future archive
@@ -53,6 +57,12 @@ the whole worktree as reviewed.
 For a change with delta specs, complete the Agent-owned sync and re-comparison before mechanical
 finalization. The comparison remains semantic Agent work: the finalizer neither chooses a merge
 nor claims delta/main equivalence.
+
+Review the selected `semantic-closure.yaml` against the actual diff. For an `affected` record,
+reassess the bounded fact, resolver, `established_by` surfaces, verdict consumers, and overlap
+against the implemented surfaces. For `not_applicable`, reassess the reason against the actual
+surfaces. A structural checker PASS is not semantic completeness; record any omission as an
+ordinary pending task and repair it through Apply.
 
 Complete `openspec-feedback:closeout-review` only when the current scoped review has no open
 finding and all ordinary repair work is complete. After every task is complete, use the governed

@@ -32,11 +32,14 @@ auto-select the sole active change, or ask the user to choose among active chang
    openspec instructions archive --change "<name>" --json
    ```
 
-   Read the returned context and every applicable operation-guidance entry. When
-   `tasks.md` contains `openspec-feedback:`, require valid operation guidance
-   containing `change-feedback-loop/archive:`. A failed or missing instruction
-   lookup stops before finalization and uses the instruction command as the rerun
-   coordinate.
+   Read the returned context and every applicable operation-guidance entry. Require
+   valid operation guidance containing `change-feedback-loop/archive:`. A failed or
+   missing instruction lookup stops before finalization and uses the instruction
+   command as the rerun coordinate. Before finalization, require exactly one
+   `openspec-feedback:plan-review` task and one
+   `openspec-feedback:closeout-review` task. An unmarked or malformed selected
+   change stops here: add the existing review-marker tasks, then resume Apply; do
+   not invoke the finalizer or a native archive command.
 
 3. **Close the Agent-owned work**
 
@@ -45,7 +48,10 @@ auto-select the sole active change, or ask the user to choose among active chang
    actionable finding as an ordinary pending task and keep the closeout marker
    incomplete until no finding remains. Where delta specs exist, complete the
    Agent-owned delta/main sync and re-comparison before finalization. All task and
-   review markers must be complete.
+   review markers must be complete. Review `semantic-closure.yaml` against the
+   actual changed surfaces: for `affected`, assess the bounded fact, resolver,
+   `established_by`, consumers, and overlap; for `not_applicable`, assess the
+   reason. A structural checker result is not semantic-completeness proof.
 
 4. **Run the sole final mechanical transition**
 

@@ -86,6 +86,8 @@ function copyGovernanceScripts(root) {
     'check-capability-discovery.mjs',
     'check-verification-routing.mjs',
     'verification-routing-contract.mjs',
+    'check-semantic-closure.mjs',
+    'semantic-fact-closure-contract.mjs',
   ]) {
     const target = join(root, 'openspec/governance', script);
     mkdirSync(dirname(target), { recursive: true });
@@ -167,6 +169,69 @@ function createGovernanceFixture() {
   return root;
 }
 
+function writeRoutingAndClosureFixture(root, { catalog = true } = {}) {
+  write(root, 'openspec/changes/demo-change/verification-plan.yaml', [
+    'schema_version: verification-routing/v1',
+    'change: demo-change',
+    'test_classes:',
+    '  unit:',
+    '    status: selected',
+    '    rationale: Focused finalizer fixture proof.',
+    '  integration:',
+    '    status: not_applicable',
+    '    rationale: No integration route for this fixture.',
+    '  deterministic_e2e:',
+    '    status: not_applicable',
+    '    rationale: No workflow route for this fixture.',
+    '  agent_flow_e2e:',
+    '    status: not_applicable',
+    '    rationale: No Agent route for this fixture.',
+    'claims:',
+    '  - id: finalizer-unit',
+    '    statement: Exercise the finalizer route.',
+    '    test_class: unit',
+    '    proof_subject: deterministic_contract',
+    '    asset:',
+    '      kind: node_test',
+    '      path: tests/governance/finalizer-route.test.mjs',
+    '    execution_profile:',
+    '      fixture: none',
+    '      subject_execution: none',
+    '      runtime: none',
+    '      external_calls: none',
+    '      verdict_judge: deterministic',
+    '    verdict_authority: node_test_exit',
+    '',
+  ].join('\n'));
+  write(root, 'tests/governance/finalizer-route.test.mjs', '// fixture proof asset\n');
+  write(root, 'experiments_playbook/PLAYBOOK_MANIFEST.md', [
+    '# Playbook Manifest',
+    '',
+    '<!-- agent-experiment-manifest:v1 -->',
+    '| Path |',
+    '|---|',
+    '| `exp_fixture/case-1-light-finalizer.md` |',
+    '<!-- /agent-experiment-manifest -->',
+    '',
+  ].join('\n'));
+  write(root, 'openspec/changes/demo-change/semantic-closure.yaml', [
+    'schema_version: semantic-closure/v1',
+    'change: demo-change',
+    'status: not_applicable',
+    'reason: This fixture changes only OpenSpec governance checks.',
+    '',
+  ].join('\n'));
+  if (catalog) {
+    write(root, 'openspec/governance/semantic-fact-families.yaml', [
+      'schema_version: semantic-fact-families/v1',
+      'families:',
+      '  - id: work-unit.source-claim-provenance',
+      '    bounded_question: Does a source claim have legal provenance?',
+      '',
+    ].join('\n'));
+  }
+}
+
 function runFinalizer(root) {
   const result = spawnSync(process.execPath, [FINALIZER, '--change', 'demo-change'], {
     cwd: root,
@@ -200,6 +265,13 @@ describe('change feedback finalizer integration', () => {
       && rule.includes('check-project-reqs.mjs --mode plan')
       && rule.includes('不得预登记')
     )));
+    const closureRule = proposal.rules.find((rule) => rule.includes('semantic-fact-families.yaml'));
+    assert.ok(closureRule);
+    assert.match(closureRule, /semantic-closure\.yaml/);
+    assert.match(closureRule, /not_applicable/);
+    assert.match(closureRule, /status: affected/);
+    assert.match(closureRule, /catalog_additions/);
+    assert.match(closureRule, /target edit/);
 
     const apply = JSON.parse(run('openspec', [
       'instructions', 'apply', '--change', 'generated-feedback-change', '--json',
@@ -213,7 +285,16 @@ describe('change feedback finalizer integration', () => {
       && entry.includes('check-project-reqs.mjs --mode plan')
       && entry.includes('Only during Apply')
     )));
+    const closureGuidance = apply.operationGuidance.find((entry) => entry.startsWith('semantic-fact-closure/apply:'));
+    assert.ok(closureGuidance);
+    assert.ok(closureGuidance.indexOf('check-verification-routing.mjs') < closureGuidance.indexOf('check-semantic-closure.mjs'));
+    assert.match(closureGuidance, /missing-command fallback/);
     assert.ok(archive.operationGuidance.some((entry) => entry.startsWith('change-feedback-loop/archive:')));
+
+    const guideline = readFileSync(join(ROOT, 'guidelines/change-feedback-loop.md'), 'utf8');
+    assert.match(guideline, /semantic-closure\.yaml/);
+    assert.match(guideline, /structural semantic-closure checker result does not answer either question/);
+    assert.match(guideline, /structural checker PASS is not semantic completeness/);
   });
 
   it('receives current operation guidance from a temporary OpenSpec root', () => {
@@ -328,6 +409,16 @@ describe('change feedback finalizer integration', () => {
       'requirement_governance', 'main_spec_governance', 'capability_taxonomy',
       'capability_discovery',
     ]);
+
+    writeRoutingAndClosureFixture(root, { catalog: false });
+    const semantic = runFinalizer(root);
+    assert.equal(semantic.root.code, 'semantic_closure_failed');
+    assert.deepEqual(semantic.checks.map((check) => check.id), [
+      'openspec_status', 'artifacts', 'tasks', 'strict_validation',
+      'requirement_governance', 'main_spec_governance', 'capability_taxonomy',
+      'capability_discovery', 'verification_routing',
+    ]);
+    assert.match(semantic.root.owner, /check-semantic-closure\.mjs/);
   });
 
   it('requires the selected reservation transition while accepting another complete pending reservation', () => {
@@ -409,6 +500,12 @@ describe('change feedback finalizer integration', () => {
       assert.match(source, /openspec-feedback:/);
       assert.match(source, /change-feedback-loop\/apply:/);
       assert.match(source, /stop[\s\S]{0,120}target edit|target edit[\s\S]{0,120}stop/i);
+      const routing = source.indexOf('check-verification-routing.mjs');
+      const closure = source.indexOf('check-semantic-closure.mjs');
+      assert.ok(routing >= 0 && closure > routing, `${path} must run routing before semantic closure`);
+      assert.match(source, /every selected change/i);
+      assert.match(source, /missing-command fallback|missing semantic-closure command/i);
+      assert.match(source, /semantic-closure\.yaml|semantic-closure command/i);
     }
     for (const path of SUPPORTED_ENTRY_SURFACES.archive) {
       const source = readFileSync(join(ROOT, path), 'utf8');
@@ -416,9 +513,16 @@ describe('change feedback finalizer integration', () => {
       assert.match(source, /openspec-feedback:/);
       assert.match(source, /change-feedback-loop\/archive:/);
       assert.match(source, /node openspec\/governance\/finalize-change-archive\.mjs --change/);
+      assert.match(source, /unmarked|marker tasks/i);
+      assert.match(source, /resume\s+Apply/i);
+      assert.match(source, /semantic-closure\.yaml/);
       assert.doesNotMatch(source, /\bmv\s+/);
       assert.doesNotMatch(source, /\bopenspec archive\b/);
     }
+
+    const finalizerSource = readFileSync(FINALIZER, 'utf8');
+    assert.ok(finalizerSource.indexOf('check-verification-routing.mjs') < finalizerSource.indexOf('check-semantic-closure.mjs'));
+    assert.ok(finalizerSource.indexOf('check-semantic-closure.mjs') < finalizerSource.indexOf("['archive', selectedChange"));
 
     for (const path of ['AGENTS.md', 'CLAUDE.md']) {
       const source = readFileSync(join(ROOT, path), 'utf8');

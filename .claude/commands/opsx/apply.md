@@ -67,7 +67,7 @@ Implement tasks from an OpenSpec change.
    conflicts with those controlling inputs, do not follow it and explain why.
    These are prompt-level behavior contracts, not enforceable checks.
 
-4. **Apply feedback-lifecycle boundary**
+4. **Apply lifecycle boundaries**
 
    When `tasks.md` contains `openspec-feedback:`, require valid
    `operationGuidance` containing `change-feedback-loop/apply:`. A failed or
@@ -75,7 +75,29 @@ Implement tasks from an OpenSpec change.
    `openspec instructions apply --change "<name>" --json` as its rerun coordinate.
    Read `guidelines/change-feedback-loop.md`, complete the plan-review marker
    before target edits, and record each actionable finding as an ordinary pending
-   task. Guidance is not completion proof.
+   task. That review must inspect `semantic-closure.yaml` by the current
+   guideline; a structural checker result is not semantic-completeness proof.
+   Guidance is not completion proof.
+
+   When returned `operationGuidance` contains `requirement-reservation/apply:`, run
+   `node openspec/governance/check-project-reqs.mjs --mode plan` before target
+   edits. A non-zero result stops apply and uses that command as the rerun
+   coordinate. A passing plan check does not grant target-edit or archive
+   permission.
+
+   For every selected change, after any required plan review and before every
+   target edit, run these checks in this order:
+
+   ```bash
+   node openspec/governance/check-verification-routing.mjs --change "<name>" --mode plan
+   node openspec/governance/check-semantic-closure.mjs --change "<name>" --mode plan
+   ```
+
+   A non-zero result from either check stops apply before other target edits.
+   Return its repair coordinate and rerun command to the Agent. Do not treat a
+   missing semantic-closure command, an absent feedback marker, or a passing
+   structural check as an exception, semantic-completeness verdict, or archive
+   permission.
 
 5. **Read context files**
 
