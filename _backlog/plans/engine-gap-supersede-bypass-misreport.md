@@ -1,6 +1,10 @@
 # Engine Gap: supersede 后 predecessor 声明 rows 被 delegated_bypass 误报
 
 > 记录: 2026-08-09 | 来源: `dpt_rb_mature-open-source-deep-research-harness` run
+>
+> 当前状态: `historical_resolved`（2026-08-10）。两项 Engine 缺陷曾存在，已由
+> `ea02a29af` 修复；当前 HEAD 不再存在该 gap。核验记录见
+> [`engine-gap-supersede-bypass-misreport.md`](../../openspec/changes/archive/2026-08-09-close-work-unit-semantic-contract-drift/evidence/engine-gap-supersede-bypass-misreport.md)。
 
 ## 症状
 
@@ -39,3 +43,13 @@ Wave1 补 reference floor 时，supplementary `wave1_topic_deepening` work units
 ## 用户处置
 
 不能手改 `rb_output_declarations.jsonl`（硬规则 + spec 禁止）。supersede 不可逆。需 Engine 修复或用户决策（接受 degraded / 修 Engine / 撤销 supersede 的声明影响）。
+
+## 当前处置
+
+- `validateSubmittedClaimBacking` 现已使用 current-or-prior authorization；同 topic/wave/kind 的
+  hash-valid prior submitted evidence summary 不再需要在当前 `output_files[]` 重复声明。
+- `scanDelegatedBypassSuspicion` 现仅将 exact hash-valid、supersession relation 完整且 successor
+  lineage 匹配的 predecessor 视为 historical context；hash drift 仍 fail-closed。
+- 因此 BUG-212 与 BUG-213 不应再作为当前 implementation backlog 或新 OpenSpec change 的依据。
+- 本计划中的 reference-floor、queue、depth-review 与唯一 Gate 阻塞描述没有可达的当前 run bundle
+  可供复核，保留为历史 incident context，不作为当前 runtime truth。
