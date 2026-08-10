@@ -1,0 +1,4 @@
+schema_version: semantic-closure/v1
+change: restore-wave1-wave2-receipt-closure-e2e-baseline
+status: not_applicable
+reason: Test-fixture alignment changes no Engine-owned deterministic fact, semantic resolver, authority-establishing surface, or verdict consumer.

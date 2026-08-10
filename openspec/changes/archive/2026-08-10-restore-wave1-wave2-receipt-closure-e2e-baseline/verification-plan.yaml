@@ -1,0 +1,35 @@
+schema_version: verification-routing/v1
+change: restore-wave1-wave2-receipt-closure-e2e-baseline
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The change alters no isolated production helper or schema contract.
+  integration:
+    status: not_applicable
+    rationale: The test continues to exercise a workflow-scale temporary-bundle chain rather than a bounded component boundary.
+  deterministic_e2e:
+    status: selected
+    rationale: The JS-led receipt-closure test drives a temporary run bundle through existing Wave1 and Wave2 checkpoints.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: This fixture repair makes no claim about a real Subject Agent's search, judgment, writing, repair, or synthesis behavior.
+claims:
+  - id: receipt-closure-fixture-canonical-alignment
+    statement: >-
+      The Wave1-to-Wave2 receipt-closure deterministic E2E supplies seed frontmatter
+      that exactly derives from its canonical Topic fixture and materializes submitted
+      Wave1 backing through the existing projection operation, allowing its eight existing
+      receipt-closure scenarios to exercise the current production canonical admission,
+      reference-convergence, and carried-target binding contract.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/wave1-target-receipt-wave2-closure.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

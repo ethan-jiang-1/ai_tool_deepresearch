@@ -14,6 +14,12 @@ import {
 import { evaluateWave1Contract } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs';
 import { tryLoadGateDefinition } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-core.mjs';
 import { checkWave2FindingIndexContract } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-depth-contracts.mjs';
+import { buildCanonicalTopicRegistryFact } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/topic-registry-fact.mjs';
+import {
+  applyCanonicalTopicState,
+  renderSeedProjectionAppendix,
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { canonicalWave1ReferencePath } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs';
 import {
   claimAndSubmitWorkUnit,
   referenceContent,
@@ -44,8 +50,6 @@ function createBundle(name, topics) {
   // Status window
   const statusPath = join(dir, 'rb_status.json');
   const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
-  status.current_gate = 'wave1_complete';
-  status.next_gate = 'wave2_complete';
   writeFileSync(statusPath, JSON.stringify(status));
 
   // Plan with topic registry
@@ -72,7 +76,26 @@ human_decision_checkpoints:
   return dir;
 }
 
-function scaffoldTopic(dir, { uid, slug, id, title, sourceUrl }) {
+function scaffoldTopic(dir, topic, { sourceUrl }) {
+  const {
+    topic_uid: uid,
+    id,
+    slug,
+    title,
+    must_answer,
+    scope_role,
+    depends_on_topic_uids,
+  } = topic;
+  const seedFrontmatter = {
+    topic_uid: uid,
+    id,
+    slug,
+    title,
+    must_answer,
+    scope_role,
+    depends_on_topic_uids,
+  };
+
   mkdirSync(join(dir, 'artifacts', 'wave1', slug), { recursive: true });
   mkdirSync(join(dir, 'artifacts', 'wave0', slug), { recursive: true });
   mkdirSync(join(dir, 'seed_topics'), { recursive: true });
@@ -110,34 +133,12 @@ Continue.
   writeFileSync(join(dir, 'artifacts', 'wave0', slug, 'source.yaml'), `- url: ${sourceUrl}-wave0\n  title: Wave0 ${slug}\n  retrieved_date: 2026-07-14\n  topic_tag: ${slug}\n`);
 
   writeFileSync(join(dir, 'seed_topics', `${slug}.md`), `---
-topic_uid: ${uid}
-id: "${id}"
-slug: ${slug}
-title: ${title}
-must_answer:
-  - ${title} question?
-scope_role: primary
-depends_on_topic_uids: []
+${Object.entries(seedFrontmatter).map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join('\n')}
 ---
 
 # ${title}
 
-## 本轮新增机制理解
-- evidence_meaning: Evidence for ${title}.
-  relationship: supports
-  refs: reference/${id}-${slug}-deepening.md
-  status: accepted
-  next_hop: wave2
-
-## 本轮新增趋势与难点
-- evidence_meaning: Trend for ${title}.
-  relationship: supports
-  refs: reference/${id}-${slug}-deepening.md
-  status: accepted
-  next_hop: wave2
-
-## 待验证问题
-1. [部分解答] ${title} question?
+${renderSeedProjectionAppendix()}
 `);
 
   // Reference
@@ -156,6 +157,8 @@ depends_on_topic_uids: []
 }
 
 function submitAndReview(dir, { slug, topicUid, sourceUrl, queueItemId, id = '01' }) {
+  const sourceRef = `reference/${id}-${slug}-deepening.md`;
+  const cacheTrail = `_cache/wave1/primary/${slug}/deepening`;
   const submission = claimAndSubmitWorkUnit(dir, {
     phase: 'wave1',
     queueItemId,
@@ -165,18 +168,18 @@ function submitAndReview(dir, { slug, topicUid, sourceUrl, queueItemId, id = '01
       lineage: { topic_uid: topicUid, topic_slug: slug, phase: 'wave1' },
     },
     outputs: [
-      { path: `reference/${id}-${slug}-deepening.md`, role: 'reference', source_url: sourceUrl, source_slug: `${slug}-deepening` },
+      { path: sourceRef, role: 'reference', source_url: sourceUrl, source_slug: `${slug}-deepening` },
       { path: `artifacts/wave1/${slug}/evidence-summary.md`, role: 'evidence_summary' },
       { path: `artifacts/wave1/${slug}/question-list.md`, role: 'question_list' },
     ],
-    cacheTrails: [{ path: `_cache/wave1/primary/${slug}/deepening`, url: sourceUrl }],
+    cacheTrails: [{ path: cacheTrail, url: sourceUrl }],
     resultOverrides: {
       source_claims: [{
         url: sourceUrl,
-        source_ref: `reference/${id}-${slug}-deepening.md`,
+        source_ref: sourceRef,
         acceptance_status: 'accepted',
         is_new_vs_wave0: true,
-        cache_trail_refs: [`_cache/wave1/primary/${slug}/deepening`],
+        cache_trail_refs: [cacheTrail],
       }],
       accepted_source_urls: [sourceUrl],
     },
@@ -200,7 +203,7 @@ function submitAndReview(dir, { slug, topicUid, sourceUrl, queueItemId, id = '01
     supplementary_queue_item_ids: [],
     carried_targets: [],
   }, null, 2)}\n`);
-  return submission;
+  return { submission, sourceRef, cacheTrail, sourceUrl };
 }
 
 function setCarriedTargets(dir, slug, targets) {
@@ -218,12 +221,68 @@ function writeWave0Handoff(dir) {
     { ts, event: 'wave1_completion' },
   ];
   writeFileSync(join(dir, 'rb_trace.jsonl'), events.map((e) => JSON.stringify(e)).join('\n') + '\n');
+  const statusPath = join(dir, 'rb_status.json');
+  const status = JSON.parse(readFileSync(statusPath, 'utf8'));
+  status.current_node = 'phases/phase-wave1.md';
+  status.current_gate = 'wave0_complete';
+  status.next_gate = 'wave1_complete';
+  writeFileSync(statusPath, JSON.stringify(status));
 }
 
-function wave1PassAndProject(dir) {
+function materializeWave1Projection(dir, topic, { submission, sourceRef, cacheTrail, sourceUrl }) {
+  const canonical = canonicalWave1ReferencePath({ topicSlug: topic.slug, sourceUrl });
+  assert.equal(canonical.ok, true, JSON.stringify(canonical));
+  const stagingPath = join(dir, '_tmp', `${topic.slug}-wave1-projection.md`);
+  const reference = `${referenceContent({
+    source_url: sourceUrl,
+    related_topic: topic.slug,
+    accessed_at: '2026-07-14',
+    evidence_role: 'deepening_reference',
+  })}\n## Submitted Backing\n- source_ref: ${sourceRef}\n- cache_trail_ref: ${cacheTrail}\n- result_ref: ${submission.record.paths.result_ref}\n- work_unit_ref: ${submission.record.paths.work_unit_dir}\n`;
+  mkdirSync(join(dir, '_tmp'), { recursive: true });
+  writeFileSync(stagingPath, reference);
+  const persisted = spawnSync('node', [
+    'DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs',
+    'persist', '--bundle', dir, '--source', stagingPath, '--target', canonical.path,
+    '--expect-absent',
+  ], { cwd: REPO_ROOT, encoding: 'utf8', timeout: 10000 });
+  assert.equal(persisted.status, 0, persisted.stderr || persisted.stdout);
+  assert.equal(JSON.parse(persisted.stdout).verdict, 'committed', persisted.stdout);
+  const indexed = spawnSync('node', [
+    'DEEP_RESEARCH_HARNESS/cli/sync-reference-index.mjs', '--bundle', dir,
+  ], { cwd: REPO_ROOT, encoding: 'utf8', timeout: 10000 });
+  assert.equal(indexed.status, 0, indexed.stderr || indexed.stdout);
+  assert.ok(['committed', 'unchanged'].includes(JSON.parse(indexed.stdout).verdict), indexed.stdout);
+
+  const entry = (ordinal, evidenceMeaning) => ({
+    source_identity: { kind: 'submitted_work', work_id: submission.record.work_id },
+    entry_id: `${submission.record.work_id}/${ordinal}`,
+    evidence_meaning: evidenceMeaning,
+    relationship: 'supports',
+    refs: [canonical.path],
+    status: 'supported',
+    next_hop: 'Read the submitted Wave1 reference before Wave2 synthesis.',
+  });
+  const projected = applyCanonicalTopicState({
+    bundlePath: dir,
+    input: {
+      context: 'wave_projection', action: 'apply_seed_projection', topic_uid: topic.topic_uid, wave: 'wave1',
+      updates: [
+        { slot_id: 'wave1_mechanisms', entries: [entry(1, 'Submitted Wave1 evidence explains the target mechanism.')] },
+        { slot_id: 'wave1_trends', entries: [entry(2, 'Submitted Wave1 evidence records the target limitation.')] },
+        { slot_id: 'pending_questions', entries: [entry(3, 'Submitted Wave1 evidence preserves the target question.')] },
+      ],
+    },
+  });
+  assert.equal(projected.verdict, 'committed', JSON.stringify(projected));
+}
+
+function wave1PassAndProject(dir, topic, submitted) {
+  materializeWave1Projection(dir, topic, submitted);
   const { definition, error } = tryLoadGateDefinition('wave1-complete', 'phases/phase-wave1.md');
   if (error) throw new Error(`Cannot load wave1 definition: ${JSON.stringify(error)}`);
-  const evaluation = evaluateWave1Contract(dir, definition);
+  const topicRegistryFact = buildCanonicalTopicRegistryFact(dir);
+  const evaluation = evaluateWave1Contract(dir, definition, { topicRegistryFact });
   const passed = evaluation.passed && evaluation.failed_rule_ids.length === 0;
   const result = {
     check: {
@@ -245,6 +304,13 @@ function wave1PassAndProject(dir) {
     strictTrace: passed && result.check.next != null,
     ...(passed && result.check.next != null && receipt ? { carriedTargetReceipt: receipt } : {}),
   });
+  if (passed) {
+    const statusPath = join(dir, 'rb_status.json');
+    const status = JSON.parse(readFileSync(statusPath, 'utf8'));
+    status.current_gate = 'wave1_complete';
+    status.next_gate = 'wave2_complete';
+    writeFileSync(statusPath, JSON.stringify(status));
+  }
   return { passed, receipt, result };
 }
 
@@ -315,12 +381,12 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
   it('passes closure when all receipt targets have valid finding bindings', () => {
     const topicA = { topic_uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('valid'), [topicA]);
-    scaffoldTopic(dir, { uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', slug: 'topic-a', id: '01', title: 'Topic A', sourceUrl: 'https://example.com/topic-a' });
-    submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', [{ target_id: 'q1', target_text: 'What is the evidence for X?' }]);
 
     writeWave0Handoff(dir);
-    const { passed, receipt } = wave1PassAndProject(dir);
+    const { passed, receipt } = wave1PassAndProject(dir, topicA, submitted);
     assert.equal(passed, true);
     assert.ok(receipt);
     assert.equal(receipt.targets.length, 1);
@@ -349,12 +415,12 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
   it('passes with empty receipt (no carried targets declared)', () => {
     const topicA = { topic_uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('empty'), [topicA]);
-    scaffoldTopic(dir, { uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', slug: 'topic-a', id: '01', title: 'Topic A', sourceUrl: 'https://example.com/topic-a' });
-    submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', []);
 
     writeWave0Handoff(dir);
-    const { passed, receipt } = wave1PassAndProject(dir);
+    const { passed, receipt } = wave1PassAndProject(dir, topicA, submitted);
     assert.equal(passed, true);
     assert.deepEqual(receipt.targets, []);
     writeLoadComplete(dir);
@@ -369,12 +435,12 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
   it('reports uncovered targets when no finding binds them', () => {
     const topicA = { topic_uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('uncovered'), [topicA]);
-    scaffoldTopic(dir, { uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', slug: 'topic-a', id: '01', title: 'Topic A', sourceUrl: 'https://example.com/topic-a' });
-    submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', [{ target_id: 'q1', target_text: 'What is the evidence for X?' }]);
 
     writeWave0Handoff(dir);
-    const { passed, receipt } = wave1PassAndProject(dir);
+    const { passed, receipt } = wave1PassAndProject(dir, topicA, submitted);
     assert.equal(passed, true);
     writeLoadComplete(dir);
 
@@ -389,12 +455,12 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
   it('rejects stale bindings (wrong receipt_sha256)', () => {
     const topicA = { topic_uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('stale'), [topicA]);
-    scaffoldTopic(dir, { uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', slug: 'topic-a', id: '01', title: 'Topic A', sourceUrl: 'https://example.com/topic-a' });
-    submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', [{ target_id: 'q1', target_text: 'What is the evidence for X?' }]);
 
     writeWave0Handoff(dir);
-    const { passed, receipt } = wave1PassAndProject(dir);
+    const { passed, receipt } = wave1PassAndProject(dir, topicA, submitted);
     assert.equal(passed, true);
     writeLoadComplete(dir);
 
@@ -420,12 +486,12 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
   it('does not count same-topic origin_refs as target coverage', () => {
     const topicA = { topic_uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('origin-only'), [topicA]);
-    scaffoldTopic(dir, { uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', slug: 'topic-a', id: '01', title: 'Topic A', sourceUrl: 'https://example.com/topic-a' });
-    submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', [{ target_id: 'q1', target_text: 'What is the evidence for X?' }]);
 
     writeWave0Handoff(dir);
-    const { passed } = wave1PassAndProject(dir);
+    const { passed } = wave1PassAndProject(dir, topicA, submitted);
     assert.equal(passed, true);
     writeLoadComplete(dir);
 
@@ -444,12 +510,12 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
   it('short-circuits on intent drift before coverage check', () => {
     const topicA = { topic_uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('drift-e2e'), [topicA]);
-    scaffoldTopic(dir, { uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', slug: 'topic-a', id: '01', title: 'Topic A', sourceUrl: 'https://example.com/topic-a' });
-    submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', [{ target_id: 'q1', target_text: 'What is the evidence for X?' }]);
 
     writeWave0Handoff(dir);
-    const { passed } = wave1PassAndProject(dir);
+    const { passed } = wave1PassAndProject(dir, topicA, submitted);
     assert.equal(passed, true);
     writeLoadComplete(dir);
 
@@ -486,12 +552,12 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
     // This e2e test verifies the finding-index path still works with a valid receipt.
     const topicA = { topic_uid: 'tp_123e4567-e89b-4bbb-a456-426614174001', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('layout-reuse'), [topicA]);
-    scaffoldTopic(dir, { uid: 'tp_123e4567-e89b-4bbb-a456-426614174001', slug: 'topic-a', id: '01', title: 'Topic A', sourceUrl: 'https://example.com/topic-a' });
-    submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4bbb-a456-426614174001', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4bbb-a456-426614174001', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', [{ target_id: 'q1', target_text: 'What is the evidence?' }]);
 
     writeWave0Handoff(dir);
-    const { passed, receipt } = wave1PassAndProject(dir);
+    const { passed, receipt } = wave1PassAndProject(dir, topicA, submitted);
     assert.equal(passed, true);
     assert.ok(receipt);
     writeLoadComplete(dir);
@@ -513,12 +579,12 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
   it('requires at least one binding to have a legal decision and gap_status route for coverage', () => {
     const topicA = { topic_uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('no-route'), [topicA]);
-    scaffoldTopic(dir, { uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', slug: 'topic-a', id: '01', title: 'Topic A', sourceUrl: 'https://example.com/topic-a' });
-    submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', [{ target_id: 'q1', target_text: 'What is the evidence for X?' }]);
 
     writeWave0Handoff(dir);
-    const { passed, receipt } = wave1PassAndProject(dir);
+    const { passed, receipt } = wave1PassAndProject(dir, topicA, submitted);
     assert.equal(passed, true);
     writeLoadComplete(dir);
 

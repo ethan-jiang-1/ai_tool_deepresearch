@@ -2,7 +2,7 @@
 
 > 创建：2026-08-09  
 > 最近更新：2026-08-10
-> 状态：已采用的 tracking baseline；user-directed focused governance calibration、verification-only deterministic regression baseline repair 与 REF-009/REF-010/CHI-005 spec-scenario repairs 均已 governed archive；当前没有 active change；这些纯规格修复均不属于 affected-dogfood rollout
+> 状态：已采用的 tracking baseline；user-directed focused governance calibration、verification-only deterministic regression baseline repair、receipt-closure E2E fixture repair 与 REF-009/REF-010/CHI-005 spec-scenario repairs 均已 governed archive；当前没有 active change；这些纯规格/fixture 修复均不属于 affected-dogfood rollout
 > 采用决定：2026-08-09，用户明确选择按本计划推进
 > 性质：渐进落地计划，不是 accepted spec、implementation permission、runtime authority 或 Gate verdict  
 > 依据：[设计理解与可靠性评估](semantic-fact-closure-design-assessment-2026-08-09.md)
@@ -55,17 +55,19 @@ one bounded deterministic question
 | 计划采用 | 1 | 1 | complete |
 | 已落地的 v1 基线 | 6 | 6 | complete |
 | 本轮调查与文档 | 6 | 6 | complete |
-| 已 propose change 的 mandatory polish | 3 | 3 | complete：`tighten-semantic-closure-review-honesty`、REF-010 repair 与 `repair-check-inspect-feedback-scenario-coverage` 均已完成至少两轮不同 review pass；CHI-005 repair 的 clean final pass 是 `ready for apply`，不等同 target-edit permission |
+| 已 propose change 的 mandatory polish | 4 | 4 | complete：`tighten-semantic-closure-review-honesty`、REF-010 repair、`repair-check-inspect-feedback-scenario-coverage` 与 `restore-wave1-wave2-receipt-closure-e2e-baseline` 均已完成至少两轮不同 review pass；每份 `ready for apply` 都不等同 target-edit permission |
 | Focused governance calibration Apply / Archive | 13 | 13 | complete：governed finalizer 已归档 `2026-08-09-tighten-semantic-closure-review-honesty` |
 | Verification-only deterministic regression baseline repair | 10 | 10 | complete：governed finalizer 已归档 `2026-08-09-restore-deterministic-e2e-regression-baseline`；不计入 runtime dogfood |
+| 新发现的 verification-only baseline debt | 1 | 1 | `wave1-wave2-receipt-closure-e2e-fixture-baseline` 已 governed archive；不计入 runtime dogfood |
 | Named spec-scenario debt repairs（不计入 rollout） | 3 | 3 | REF-009、REF-010 与第六个已解析 requirement `CHI-005` 均已 governed archive |
-| 推荐核心 rollout（Phase 2-5） | 0 | 29 | 仍未开始；没有 active change，下一步是筛选真实 outcome-changing Harness runtime change；本次 calibration 与 scenario repairs 均不计入 runtime dogfood |
+| 推荐核心 rollout（Phase 2-5） | 0 | 29 | 仍未开始；当前没有 active change；receipt-closure fixture repair 已归档，下一步继续筛选真实 outcome-changing Harness runtime change |
 | 条件性 v2 / 后续扩展 | 0 | 7 | deferred；不计入核心 rollout |
 
 核心 rollout 的 `29` 项中，`27` 项由 Agent 执行，`2` 项是用户语义决定（`2.9`、`5.5`）。用户不承担 proposal 文件编写、polish、命令执行、测试、repair、spec sync 或 archive 操作。
 
-**当前唯一 next action：** 执行 Phase 2 的 `2.1`：从当前 outcome-changing Harness runtime defect 或已授权需求中筛选
-一个真实 affected change。当前没有 active change；若没有可验证的候选，保持等待，不能为推进计数制造 synthetic dogfood。
+**当前唯一 next action：** 提交当前 receipt-closure fixture repair 的已归档工作树；提交后继续执行 Phase 2 的
+`2.1`，只从真实 outcome-changing Harness runtime defect 或已授权需求中筛选候选。该已归档
+verification-only repair 不勾选 Phase 2。
 
 - [x] `A.1` `[User decision]` 已采用本文件作为后续 Semantic Fact Closure 演进的 tracking baseline；完成证据是 2026-08-09 的用户明确指示。该决定采用流程，不预先批准任何尚未触发的 OpenSpec change 或 target edit。
 - [x] `A.2` `[Agent]` 已对 active change `tighten-semantic-closure-review-honesty` 执行 mandatory
@@ -139,6 +141,37 @@ one bounded deterministic question
   返回 `outcome: archived`、11 项 checks passed，归档至
   `openspec/changes/archive/2026-08-10-repair-check-inspect-feedback-scenario-coverage`。这些是 OpenSpec grammar、
   governance 与 archive-transition evidence，不证明 Harness runtime behavior 或 Semantic Fact Closure dogfood。
+- [x] `A.10` `[Agent]` 已完成归档后的候选筛选，并确认 `wave1-wave2-receipt-closure-e2e-fixture-baseline` 是一个
+  独立、verification-only 的回归基线 debt：`npm test` 为 `2705` pass、`41` fail；其最小 deterministic repro 是
+  `node --test --test-name-pattern='passes closure when all receipt targets have valid finding bindings' tests/e2e/wave1-target-receipt-wave2-closure.test.mjs`，约 `0.4s`，稳定在 Wave1 admission 处失败。production
+  `evaluateSeedTopicAuthoring` 对 fixture 的 `must_answer: ["Topic A question?"]` 返回
+  `canonical_binding_mismatch`，并要求 canonical plan 的 `["Q?"]`；同一 probe 使用 `["Q?"]` 返回 passed。
+  这说明 test fixture 已漂移、目标 receipt-closure path 未被执行，不证明生产 runtime defect，也不计入
+  `2.1`–`6.7`。
+- [x] `A.11` `[Agent]` 已完成 `restore-wave1-wave2-receipt-closure-e2e-baseline` 的 proposal、skip-specs
+  design、13 项可追踪 Apply/closeout tasks、`verification-plan.yaml`、`semantic-closure.yaml` 与 mandatory
+  `polish-openspec-change`。polish 的 whole-change pass 以当前 evaluator 的七个 binding fields 和 accepted
+  parsed-value equality 为准，将 fixture 写法收敛为从完整 Topic 派生的 JSON-compatible YAML；risk-led pass
+  确认八个场景仍覆盖 valid/empty/uncovered/stale/origin-only/intent-drift/layout-only/invalid-route 的现有边界；
+  final pass 确认 proposal、design、tasks、route 与 closure record 一致。`openspec status` 为 planning complete、
+  `0/13` task；strict change、requirements plan（`644` registered、`53` retired、`0` orphan、`745`
+  occurrences）、`85` main-spec governance、verification-routing plan（`1` claim）、semantic-closure plan 与
+  `git diff --check` 均退出 `0`。它的唯一下一步是用户明确 Apply；没有 target edit、native E2E verdict、full-suite
+  rerun、archive 或 Phase 2 进度被提前宣称。
+- [x] `A.12` `[Agent]` 已对 `restore-wave1-wave2-receipt-closure-e2e-baseline` 完成 Apply 与归档前 closeout。
+  Fixture 现从完整 canonical Topic 生成七个 binding fields，沿用 production Wave1 Gate 的 registry fact、artifact
+  persistence/reference-index sync、canonical projection writer 与其合法 lifecycle window；Apply 期间暴露的
+  `uidByAnySlug`、`materialize_projection` 与 `writer_postcondition_failed` 前置条件都已作为 `1.1a`、`1.1b`、`1.1c`
+  记录并通过现有 owner 修复。focused `node --test tests/e2e/wave1-target-receipt-wave2-closure.test.mjs` 为 `8/8`
+  pass；两次 `npm test` 都是 exit `1`、`2713` pass、`33` fail、`0` skip，目标 suite 两次均通过，33 项失败属于
+  19 个无关既有 suite。assets routing/closure、strict change、`git diff --check`、archive requirements 与 main-spec
+  governance 全部通过。这些事实证明 scoped fixture repair 与治理结构，不证明全局 green、Harness runtime behavior
+  或 Semantic Fact Closure Phase 2 dogfood；governed archive 仍未执行。
+- [x] `A.13` `[Agent]` 已完成 `restore-wave1-wave2-receipt-closure-e2e-baseline` 的 governed archive。
+  `node openspec/governance/finalize-change-archive.mjs --change restore-wave1-wave2-receipt-closure-e2e-baseline`
+  返回 `outcome: archived`，归档为
+  `openspec/changes/archive/2026-08-10-restore-wave1-wave2-receipt-closure-e2e-baseline`，并通过 11 项 finalizer
+  checks（status、artifacts、tasks、strict validation、requirements、main specs、taxonomy、discovery、routing、closure、native archive）。这证明 archive transition，不把 33 项全局测试失败重写为成功，也不建立 runtime dogfood。
 
 ### Named Debt Ledger
 
@@ -147,6 +180,7 @@ one bounded deterministic question
 | `reference-flat-format-requirement-8-scenario` | `repair-reference-flat-format-scenario-coverage` | archived 2026-08-09; outside Semantic Fact Closure rollout | The REF-009 heading changed only from `+###` to `###`; targeted validation no longer reports `requirements.8.scenarios`, and the governed finalizer returned `outcome: archived` with 11 passed checks | Closed by `openspec/changes/archive/2026-08-09-repair-reference-flat-format-scenario-coverage/`; its newly exposed REF-010 root is independently tracked and does not reopen this debt. |
 | `reference-flat-format-requirement-9-scenario` | `repair-reference-flat-format-requirement-9-scenario-coverage` | archived 2026-08-09; outside Semantic Fact Closure rollout | Apply restored the accepted REF-010 block from exact archived recovery evidence; target validation is `1/1` passed, global inventory is `84/85` with only the sixth parsed requirement, `CHI-005`, remaining, and the governed finalizer returned `outcome: archived` with 11 passed checks. | Closed by `openspec/changes/archive/2026-08-09-repair-reference-flat-format-requirement-9-scenario-coverage/`; the sixth parsed requirement, `CHI-005`, remains independently tracked and does not reopen this debt. |
 | `check-inspect-feedback-requirement-6-scenario` | `repair-check-inspect-feedback-scenario-coverage` | archived 2026-08-10; outside Semantic Fact Closure rollout | Apply restored only the truncated CHI-005 tail from exact archived recovery evidence. Delta/main comparison is exact with three Scenarios; target validation is `1/1` passed, global inventory is `85/85`, and the governed finalizer returned `outcome: archived` with 11 passed checks. | Closed by `openspec/changes/archive/2026-08-10-repair-check-inspect-feedback-scenario-coverage/`; it does not establish a Harness runtime fact family or reopen Phase 2. |
+| `wave1-wave2-receipt-closure-e2e-fixture-baseline` | `restore-wave1-wave2-receipt-closure-e2e-baseline` | archived 2026-08-10; outside Semantic Fact Closure rollout | The initial 0.4s failure was canonical seed drift. The repaired E2E uses the complete Topic, canonical registry fact, canonical Wave1 projection/reference path, and canonical seed appendix; focused suite is 8/8 pass. Two full-suite runs are 2713 pass / 33 unrelated fail. The governed finalizer archived the change with 11 passed checks. | Closed by `openspec/changes/archive/2026-08-10-restore-wave1-wave2-receipt-closure-e2e-baseline/`; it does not establish an affected runtime fact family or advance Phase 2. |
 
 These debts are named independently of Phase 2. They do not alter a Harness runtime deterministic fact family and therefore cannot be counted as affected-runtime dogfood unless a later scoped change independently changes that boundary.
 
@@ -300,6 +334,8 @@ Phase 5 Gate：保持 v1，或只为已触发问题进入一个 focused OpenSpec
 | active change polish：`tighten-semantic-closure-review-honesty` | two distinct review passes 加 final clean pass；planning artifact scope、verification route、task/finalizer ordering 已收敛 | 只证明 Apply-ready planning artifacts；不证明 implementation、native selected test 或 future Agent semantic review 已通过 |
 | focused change Apply / Archive：`tighten-semantic-closure-review-honesty` | plan review + three plan checks passed；delivery test 的 intended red 与 final `7/7` green；eight adapters route through central guidance；two delta blocks synced exactly；finalizer `11` checks passed，归档为 `2026-08-09-tighten-semantic-closure-review-honesty` | deterministic guidance/entry delivery、scoped governance evidence 与归档转换；不证明 runtime semantic closure 或 future Agent compliance |
 | verification-only baseline repair：`restore-deterministic-e2e-regression-baseline`，commit `59192f0e5` | `npm test` exit `0`；finalizer `11` checks passed，归档为 `2026-08-09-restore-deterministic-e2e-regression-baseline` | deterministic regression proof/fixture alignment 与 archive transition；不证明 Harness runtime semantic closure，不能作为新增 affected dogfood |
+| pre-Apply receipt-closure baseline diagnosis | Full `npm test` was `2705` pass / `41` fail; the first isolated receipt-closure scenario was a deterministic 0.4s red loop caused by `must_answer` fixture drift against the current canonical seed evaluator. | establishes a verification fixture repair candidate and its direct owner boundary; it did not show a production runtime failure or Semantic Fact Closure dogfood |
+| receipt-closure fixture Apply and governed archive | `restore-wave1-wave2-receipt-closure-e2e-baseline` completed 16/16 tasks: focused E2E is 8/8 pass; two full inventories are 2713/2746 pass with 33 unrelated failures; routing/closure assets, strict, archive requirements, main-spec governance, whitespace checks, and the 11-check governed finalizer all pass. | proves the scoped fixture repair and archive transition only; it does not prove a globally green suite, production runtime behavior, or Semantic Fact Closure dogfood |
 | 2026-08-09 归档后推进核对 | `openspec list --changes --json` 返回 `changes: []`；`git status --short` 无输出 | 证明当前没有 active OpenSpec change 或未提交工作；不证明没有未来 runtime defect，亦不构成 Phase 2 entry |
 | archived REF-009/REF-010/CHI-005 scenario repairs | REF-009, REF-010 and CHI-005 repairs are governedly archived; CHI-005 target validation is `1/1`, `openspec validate --specs` is `85/85`, and its finalizer returned `outcome: archived` with 11 passed checks. | scoped grammar restoration, validation, and archive transition only; none is Semantic Fact Closure dogfood |
 
