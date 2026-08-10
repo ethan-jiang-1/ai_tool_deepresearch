@@ -1,0 +1,8 @@
+schema_version: semantic-closure/v1
+change: repair-deterministic-regression-fixtures
+status: not_applicable
+reason: >-
+  This change repairs test-owned fixtures, assertions, and verification
+  routing against already accepted executable contracts. It introduces no
+  Harness runtime fact family, resolver, authority-establishing surface, or
+  deterministic production behavior.

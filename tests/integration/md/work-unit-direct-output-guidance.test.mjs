@@ -45,7 +45,7 @@ describe('generated direct-output guidance', () => {
       });
       const { manifest } = createWorkUnit(dir, { queueItem, wave: 0 });
       const task = readFileSync(path.join(dir, manifest.paths.task_ref), 'utf8');
-      assert.match(task, /assignment_contract_version:\s*`?work-unit\.assignment\.v2/);
+      assert.match(task, /assignment_contract_version:\s*`?work-unit\.assignment\.v3/);
       assert.match(task, /artifacts\/wave0\/topic-a\/source\.yaml/);
       assert.match(task, /source_yaml/);
       assert.match(task, /wave0\.source-metadata-array\.v1/);

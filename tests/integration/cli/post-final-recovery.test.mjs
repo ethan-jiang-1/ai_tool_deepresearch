@@ -128,6 +128,7 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     const profile = parseYaml(readFileSync(profilePath, 'utf8'));
     profile.human_decision_checkpoints.hitl2.rerun_count = 1;
     writeFileSync(profilePath, `${stringifyYaml(profile).trimEnd()}\n`);
+    runNode(['DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs', '--bundle', bundle, '--style', 'quick_factual']);
     assert.equal(inspectPostFinalRecovery({ bundlePath: bundle }).stage, 'synchronized_count_incremented');
     const gate = runJson(['DEEP_RESEARCH_HARNESS/cli/gates/check-gate-rerun-ready.mjs', '--bundle', bundle, '--current-node', 'phases/phase-rerun.md']);
     assert.equal(gate.check.passed, true);

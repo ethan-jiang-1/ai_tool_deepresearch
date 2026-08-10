@@ -188,6 +188,7 @@ human_decision_checkpoints:
     final_report_view: not_started
 `;
     writeFileSync(join(bundlePath, 'rb_profile.yaml'), profile);
+    run(`node DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs --bundle "${bundlePath}" --style quick_factual`);
   });
 
   // ── Gate 1: instantiation-complete ──

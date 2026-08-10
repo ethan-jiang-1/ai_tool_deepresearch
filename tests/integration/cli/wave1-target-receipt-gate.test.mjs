@@ -6,6 +6,8 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
+import { applyCanonicalTopicState, renderSeedProjectionAppendix } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { canonicalWave1ReferencePath } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs';
 import {
   claimAndSubmitWorkUnit,
   referenceContent,
@@ -14,6 +16,8 @@ import {
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
+const ARTIFACT_PERSISTENCE = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs');
+const SYNC_REFERENCE_INDEX = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/sync-reference-index.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
 
@@ -95,22 +99,7 @@ depends_on_topic_uids: []
 
 # Topic A
 
-## 本轮新增机制理解
-- evidence_meaning: AI alignment shows promising results in scalable oversight.
-  relationship: supports
-  refs: reference/01-topic-a-deepening.md
-  status: accepted
-  next_hop: wave2
-
-## 本轮新增趋势与难点
-- evidence_meaning: Increased regulatory attention and measurement difficulty.
-  relationship: supports
-  refs: reference/01-topic-a-deepening.md
-  status: accepted
-  next_hop: wave2
-
-## 待验证问题
-1. [部分解答] How to measure alignment?
+${renderSeedProjectionAppendix()}
 `;
 
 const SECOND_TOPIC = `---
@@ -126,22 +115,7 @@ depends_on_topic_uids: []
 
 # Topic B
 
-## 本轮新增机制理解
-- evidence_meaning: Cross-domain patterns require additional search.
-  relationship: supports
-  refs: reference/02-topic-b-deepening.md
-  status: accepted
-  next_hop: wave2
-
-## 本轮新增趋势与难点
-- evidence_meaning: Multi-domain integration trends.
-  relationship: supports
-  refs: reference/02-topic-b-deepening.md
-  status: accepted
-  next_hop: wave2
-
-## 待验证问题
-1. [部分解答] What cross-domain evidence is needed?
+${renderSeedProjectionAppendix()}
 `;
 
 /** Create a bundle with one or more canonical topics. */
@@ -150,6 +124,16 @@ function createBundle(name, { extraTopics = [] } = {}) {
   const dir = track(r.stdout.trim());
 
   setStatusWindow(dir, 'wave0_complete', 'wave1_complete');
+  const statusPath = join(dir, 'rb_status.json');
+  const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
+  status.current_node = 'phases/phase-wave1.md';
+  writeFileSync(statusPath, JSON.stringify(status));
+  writeTraceEvents(dir, witnessedHandoffEvents({
+    sourceGate: 'wave0-complete',
+    phase: 'wave0',
+    sourceNode: 'phases/phase-wave0.md',
+    targetNode: 'phases/phase-wave1.md',
+  }));
 
   const topics = [{
     topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
@@ -235,6 +219,7 @@ function submitAndReviewWorkUnit(dir, { slug = 'topic-a', topicUid = 'tp_123e456
     phase: 'wave1',
     queueItemId,
     legacyAssignment: true,
+    preserveQueue: true,
     queueItemOverrides: {
       payload: { topic_uid: topicUid, topic_slug: slug, wave: 1 },
       lineage: { topic_uid: topicUid, topic_slug: slug, phase: 'wave1' },
@@ -248,7 +233,7 @@ function submitAndReviewWorkUnit(dir, { slug = 'topic-a', topicUid = 'tp_123e456
     resultOverrides: {
       source_claims: [{
         url: sourceUrl,
-        source_ref: `reference/${id}-${slug}-deepening.md`,
+        source_ref: `artifacts/wave1/${slug}/evidence-summary.md`,
         acceptance_status: 'accepted',
         is_new_vs_wave0: true,
         cache_trail_refs: [cacheTrail],
@@ -274,7 +259,62 @@ function submitAndReviewWorkUnit(dir, { slug = 'topic-a', topicUid = 'tp_123e456
     supplementary_queue_item_ids: [],
     carried_targets: [],
   }, null, 2)}\n`);
+  materializeSubmittedWave1Projection(dir, { submission, slug, topicUid, sourceUrl, cacheTrail, id });
   return submission;
+}
+
+function materializeSubmittedWave1Projection(dir, {
+  submission,
+  slug,
+  topicUid,
+  sourceUrl,
+  cacheTrail,
+  id,
+}) {
+  const referencePath = `reference/${id}-${slug}-deepening.md`;
+  const sourceRef = `artifacts/wave1/${slug}/evidence-summary.md`;
+  const canonical = canonicalWave1ReferencePath({ topicSlug: slug, sourceUrl });
+  assert.equal(canonical.ok, true, JSON.stringify(canonical));
+  const stagingPath = join(dir, '_tmp', `${submission.record.work_id}.wave1-reference.md`);
+  mkdirSync(join(dir, '_tmp'), { recursive: true });
+  writeFileSync(stagingPath, `${referenceContent({
+    source_url: sourceUrl,
+    related_topic: slug,
+  })}\n## Submitted Backing\n- source_ref: ${sourceRef}\n- cache_trail_ref: ${cacheTrail}\n- result_ref: ${submission.record.paths.result_ref}\n- work_unit_ref: ${submission.record.paths.work_unit_dir}\n`);
+  const persisted = spawnSync('node', [
+    ARTIFACT_PERSISTENCE,
+    'persist', '--bundle', dir, '--source', stagingPath, '--target', canonical.path,
+    '--expect-absent',
+  ], { encoding: 'utf-8', timeout: 10000 });
+  assert.equal(persisted.status, 0, persisted.stderr || persisted.stdout);
+  assert.equal(JSON.parse(persisted.stdout).verdict, 'committed', persisted.stdout);
+  const indexed = spawnSync('node', [SYNC_REFERENCE_INDEX, '--bundle', dir], { encoding: 'utf-8', timeout: 10000 });
+  assert.equal(indexed.status, 0, indexed.stderr || indexed.stdout);
+  assert.ok(['committed', 'unchanged'].includes(JSON.parse(indexed.stdout).verdict), indexed.stdout);
+  const entry = (ordinal, evidenceMeaning) => ({
+    source_identity: { kind: 'submitted_work', work_id: submission.record.work_id },
+    entry_id: `${submission.record.work_id}/${ordinal}`,
+    evidence_meaning: evidenceMeaning,
+    relationship: 'supports',
+    refs: [canonical.path],
+    status: 'supported',
+    next_hop: 'Read the submitted Wave1 reference before Wave2 synthesis.',
+  });
+  const projected = applyCanonicalTopicState({
+    bundlePath: dir,
+    input: {
+      context: 'wave_projection',
+      action: 'apply_seed_projection',
+      topic_uid: topicUid,
+      wave: 'wave1',
+      updates: [
+        { slot_id: 'wave1_mechanisms', entries: [entry(1, 'Submitted Wave1 evidence explains the target mechanism.')] },
+        { slot_id: 'wave1_trends', entries: [entry(2, 'Submitted Wave1 evidence records the target limitation.')] },
+        { slot_id: 'pending_questions', entries: [entry(3, 'Submitted Wave1 evidence preserves the target question.')] },
+      ],
+    },
+  });
+  assert.ok(['committed', 'unchanged'].includes(projected.verdict), JSON.stringify(projected));
 }
 
 function traceEvents(bundlePath) {

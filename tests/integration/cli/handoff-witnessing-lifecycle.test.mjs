@@ -21,6 +21,11 @@ import {
   claimAndSubmitFixtureWorkUnit,
   readWorkUnitLedgerRows,
 } from '../../../experiments_env/shared/work-unit-playbook-utils.mjs';
+import {
+  applyCanonicalTopicState,
+  renderSeedProjectionAppendix,
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import { canonicalWave1ReferencePath } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs';
 
 const REPO_ROOT = process.cwd();
 const bundles = [];
@@ -242,6 +247,11 @@ human_decision_checkpoints:
     recorded_at: "2026-07-05T00:00:00.000Z"
 `);
 
+  runNode([
+    'DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs',
+    '--bundle', bundle,
+    '--style', 'quick_factual',
+  ]);
   stageSeedTopic(bundle);
 }
 
@@ -347,6 +357,8 @@ depends_on_topic_uids: []
 
 ## Background
 This seed topic is deterministic fixture content for gate validation.
+
+${renderSeedProjectionAppendix()}
 `);
 }
 
@@ -359,6 +371,7 @@ function wave0SourceYamlContent() {
 }
 
 function ensureWave0Scaffold(bundle) {
+  if (readWorkUnitLedgerRows(bundle).some((row) => row.queue_item_id === 'wave0-source-topic-a')) return;
   mkdirSync(join(bundle, 'artifacts/wave0/topic-a'), { recursive: true });
   writeFileSync(join(bundle, 'reference/_INDEX.md'),
     '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |\n' +
@@ -388,7 +401,7 @@ function ensureWave0Scaffold(bundle) {
     '## Risks And Limitations\n- Fixture evidence only.\n');
 
   writeFileSync(join(bundle, 'artifacts/wave0/topic-a/source.yaml'), wave0SourceYamlContent());
-  submitExistingFixtureWorkUnitOnce(bundle, {
+  const submitted = submitExistingFixtureWorkUnitOnce(bundle, {
     phase: 'wave0',
     queue_item_id: 'wave0-source-topic-a',
     topic_slug: 'topic-a',
@@ -400,6 +413,33 @@ function ensureWave0Scaffold(bundle) {
       { path: 'artifacts/wave0/topic-a/source.yaml', role: 'source_yaml' },
     ],
   });
+  if (!submitted) return;
+  const referencePath = 'reference/00-shared-handoff.md';
+  writeFileSync(join(bundle, referencePath), `${readFileSync(join(bundle, referencePath), 'utf8').trimEnd()}\n\n## Submitted Backing\n- source_identity: ${submitted.record.work_id}/1\n- source_yaml_ref: artifacts/wave0/topic-a/source.yaml\n- cache_trail_ref: ${submitted.cache_trails[0]}\n- result_ref: ${submitted.record.paths.result_ref}\n- work_unit_ref: ${submitted.record.paths.work_unit_dir}\n\n## Navigation Return Map\n- evidence_meaning: Submitted Wave0 evidence supplies the handoff witnessing foundation.\n  relationship: supports\n  refs: artifacts/wave0/topic-a/source.yaml\n  status: supported\n  next_hop: Read the submitted source before Wave1 deepening.\n`);
+  const projected = applyCanonicalTopicState({
+    bundlePath: bundle,
+    input: {
+      context: 'wave_projection',
+      action: 'apply_seed_projection',
+      topic_uid: 'tp_11111111-1111-4111-8111-111111111111',
+      wave: 'wave0',
+      updates: [{
+        slot_id: 'wave0_evidence',
+        entries: [{
+          source_identity: { kind: 'submitted_work', work_id: submitted.record.work_id },
+          entry_id: `${submitted.record.work_id}/1`,
+          evidence_meaning: 'Submitted Wave0 evidence supplies the handoff witnessing foundation.',
+          relationship: 'supports',
+          refs: [referencePath],
+          status: 'supported',
+          next_hop: 'Read the submitted source before Wave1 deepening.',
+        }],
+      }],
+    },
+  });
+  if (!['committed', 'unchanged'].includes(projected.verdict)) {
+    throw new Error(`wave0 projection fixture failed: ${JSON.stringify(projected)}`);
+  }
 }
 
 function stageWave0ParseFailure(bundle) {
@@ -482,14 +522,7 @@ depends_on_topic_uids: []
 
 # Topic A
 
-## 本轮新增机制理解
-1. Handoff witnessing requires trace-bound source and target evidence.
-
-## 本轮新增趋势与难点
-- Trend: deterministic checkpoints expose status laundering.
-
-## 待验证问题
-1. [部分解答] How can stale handoffs be detected?
+${renderSeedProjectionAppendix()}
 `);
   const submitted = submitExistingFixtureWorkUnitOnce(bundle, {
     phase: 'wave1',
@@ -512,6 +545,47 @@ depends_on_topic_uids: []
   }];
   writeFileSync(depthPath, `${JSON.stringify(depth, null, 2)}\n`);
   if (!submitted) throw new Error('Wave1 fixture must create its submitted work-unit before depth review');
+  const sourceUrl = 'https://research.example.org/articles/topic-a-deepening-analysis-2026';
+  const sourceRef = 'artifacts/wave1/topic-a/evidence-summary.md';
+  const canonical = canonicalWave1ReferencePath({ topicSlug: 'topic-a', sourceUrl });
+  if (!canonical.ok) throw new Error(`Wave1 canonical reference path failed: ${JSON.stringify(canonical)}`);
+  const stagingPath = join(bundle, '_tmp', `${submitted.record.work_id}.wave1-reference.md`);
+  mkdirSync(join(bundle, '_tmp'), { recursive: true });
+  writeFileSync(stagingPath, `${readFileSync(join(bundle, 'reference/topic-a-deepening.md'), 'utf8').trimEnd()}\n\n## Submitted Backing\n- source_ref: ${sourceRef}\n- cache_trail_ref: ${submitted.cache_trails[0]}\n- result_ref: ${submitted.record.paths.result_ref}\n- work_unit_ref: ${submitted.record.paths.work_unit_dir}\n`);
+  const persisted = parseJsonObject(runNode([
+    'DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs',
+    'persist', '--bundle', bundle, '--source', stagingPath, '--target', canonical.path,
+    '--expect-absent',
+  ]).stdout);
+  if (persisted.verdict !== 'committed') throw new Error(`Wave1 canonical reference persistence failed: ${JSON.stringify(persisted)}`);
+  const indexed = parseJsonObject(runNode([
+    'DEEP_RESEARCH_HARNESS/cli/sync-reference-index.mjs', '--bundle', bundle,
+  ]).stdout);
+  if (!['committed', 'unchanged'].includes(indexed.verdict)) throw new Error(`Wave1 reference index sync failed: ${JSON.stringify(indexed)}`);
+  const entry = (ordinal, evidenceMeaning) => ({
+    source_identity: { kind: 'submitted_work', work_id: submitted.record.work_id },
+    entry_id: `${submitted.record.work_id}/${ordinal}`,
+    evidence_meaning: evidenceMeaning,
+    relationship: 'supports',
+    refs: [canonical.path],
+    status: 'supported',
+    next_hop: 'Read the submitted Wave1 reference before Wave2 synthesis.',
+  });
+  const projected = applyCanonicalTopicState({
+    bundlePath: bundle,
+    input: {
+      context: 'wave_projection',
+      action: 'apply_seed_projection',
+      topic_uid: 'tp_11111111-1111-4111-8111-111111111111',
+      wave: 'wave1',
+      updates: [
+        { slot_id: 'wave1_mechanisms', entries: [entry(1, 'Submitted Wave1 evidence explains handoff witnessing.')] },
+        { slot_id: 'wave1_trends', entries: [entry(2, 'Submitted Wave1 evidence records the handoff risk.')] },
+        { slot_id: 'pending_questions', entries: [entry(3, 'Submitted Wave1 evidence preserves the open handoff question.')] },
+      ],
+    },
+  });
+  if (!['committed', 'unchanged'].includes(projected.verdict)) throw new Error(`Wave1 projection fixture failed: ${JSON.stringify(projected)}`);
   appendTrace(bundle, { event: 'wave1_completion', source: 'playbook-fixture' });
 }
 

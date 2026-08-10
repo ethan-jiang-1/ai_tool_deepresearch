@@ -46,7 +46,6 @@ describe('work-unit playbook utils', () => {
       assert.equal(rows[0].queue_item_id, 'wave0-source-topic-a');
       assert.deepEqual(rows[0].output_files.map((entry) => entry.path).sort(), [
         'artifacts/wave0/topic-a/source.yaml',
-        'reference/00-shared-playbook-fixture.md',
       ]);
       assert.equal(rows[0].result_hash, result.submit.result_hash);
       assert.equal(inspectWorkUnitsViaCli(dir).passed, true);

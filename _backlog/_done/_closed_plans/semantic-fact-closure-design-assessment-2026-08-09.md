@@ -691,3 +691,13 @@ Semantic Fact Closure 不是多余的流程负担，它抓住了这个项目真�
 8. Node.js Project, [*Test runner*](https://nodejs.org/api/test.html#test-runner), 官方 API 文档（真实 test failure 将 process exit code 设为 1；TODO/skip/filter 的边界）。
 9. in-toto Project, [*in-toto Specification v1.0*](https://github.com/in-toto/specification/blob/master/in-toto-spec.md#311-supply-chain-layout), 2023, §§3.1.1-3.1.2（layout 规定预期步骤，link metadata 陈述步骤实际执行）。
 10. Roy T. Fielding, Mark Nottingham, Julian Reschke, IETF, [*HTTP Caching*](https://www.rfc-editor.org/rfc/rfc9111.html#section-4.2), RFC 9111, 2022, §§4.2-4.3（freshness calculation 与 validation）。
+
+## 16. 2026-08-10 当前状态澄清
+
+第 2 节所述“只有两份归档 record”是本学习记录当时的时间快照，不能再用来描述当前仓库。2026-08-10 复核时共有八份归档 `semantic-closure.yaml`：一份 `affected`（`close-work-unit-semantic-contract-drift`，覆盖 `work-unit.assignment-output-obligation`、`work-unit.source-claim-provenance`、`work-unit.submission-ledger-and-supersession` 三个 family）和七份有具体理由的 `not_applicable` record。因而，真实 affected dogfood 的样本数仍是一份，不应把 record 总数误写成八次 runtime closure 证据。
+
+在原评估后归档的 `tighten-semantic-closure-review-honesty` 已把第 7.2/7.3 节的使用层问题写入 accepted contract 和 apply/archive guidance：`#fragment` 必须是作者能识别的真实 symbol/document anchor，否则使用 bare path；`consumers` 只列 verdict consumer，单纯展示 resolved contract 的 Agent-facing projection 使用 `overlap: derived`。这降低了首个 dogfood 所暴露的 false precision 和角色混用再次发生的风险，但还没有第二份 affected runtime record 来证明该新指导在实际 semantic change 中被正确执行。
+
+因此，结论需要按 mechanism role 区分：catalog 的 `id + bounded_question` 信息对于其唯一声称的“可增长、有界 family vocabulary”是充分且刻意最小的；它不应被要求承担 current resolver/consumer topology 或 semantic-completeness proof。`semantic-closure/v1` 对原始 concern 已形成足够的正常生命周期护栏：每个 change 必须作 applicability 声明，affected record 必须声明 resolver、authority-establishing surface、verdict consumers、overlap 和两个 selected verification assets，Apply plan check 与 archive assets check 都 fail closed。它仍不是自动 closure 证明：applicability 的诚实性、consumer inventory、fragment/role 的语义正确性和测试是否真正覆盖/执行仍由 plan/closeout review 与 native verification 承担；直接绕过 governed lifecycle 的 mutation 也不在 checker 的拦截能力内。
+
+更新后的信心判断是：对 catalog 的声明角色为高；对 v1 作为原始 producer/consumer drift concern 的变更治理机制为中等偏高；对它自动发现所有漏列 consumer 或证明全 Harness 已闭合为低，且这不是 v1 的承诺。其余十个尚未进入 affected record 的 initial family 仍须在首次真实使用时通过“一 resolver / 一张 coherent truth table”粒度审查，而不是预先扩大 catalog 或 checker。

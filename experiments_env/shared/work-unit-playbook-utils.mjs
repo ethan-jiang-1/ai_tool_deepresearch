@@ -417,7 +417,7 @@ export function queueItemForWorkUnit({
   timeout_ms = 600000,
   priority_class = 'P5_new_reference_intake',
   action = `Fixture-backed controlled work-unit task for ${queue_item_id}.`,
-  writes_to = ['reference/work-unit-fixture.md'],
+  writes_to = [],
   task_brief,
 } = {}) {
   const payload = finding_id
@@ -796,7 +796,7 @@ export function sourceYamlExtra(topicSlug, sourceUrl, title = 'Fixture Source') 
 export function writeFixtureResultForWorkUnit(bundleDir, {
   work_id,
   output_path,
-  role = 'reference',
+  role,
   source_url = 'https://research-source.test/research/article',
   source_slug = 's01_source',
   output_content,
@@ -808,11 +808,22 @@ export function writeFixtureResultForWorkUnit(bundleDir, {
   const record = loadWorkUnitIndex(bundleDir).work_units[work_id];
   if (!record) throw new Error(`No work unit in index: ${work_id}`);
 
-  const outputPath = output_path || `reference/${record.work_id}.md`;
+  const manifest = JSON.parse(readFileSync(path.join(bundleDir, record.paths.manifest_ref), 'utf8'));
+  const requiredOutputs = manifest.output_contract?.required_outputs || [];
+  const primaryRequired = requiredOutputs[0];
+  const outputPath = output_path || primaryRequired?.path || `reference/${record.work_id}.md`;
+  const matchingRequired = requiredOutputs.find((required) => required.path === outputPath);
+  const requestedRole = role || matchingRequired?.role || 'reference';
   mkdirSync(path.join(bundleDir, path.dirname(outputPath)), { recursive: true });
-  writeFileSync(path.join(bundleDir, outputPath), output_content || referenceContent({ source_url, topic_slug: record.queue_item_id }));
+  const outputContent = output_content || (matchingRequired?.direct_contract === 'wave0.source-metadata-array.v1'
+    ? sourceYamlContent({ source_url, topic_slug: manifest.queue_item.payload.topic_slug })
+    : referenceContent({ source_url, topic_slug: record.queue_item_id }));
+  writeFileSync(path.join(bundleDir, outputPath), outputContent);
 
-  const outputFiles = [{ path: outputPath, role, source_url, source_slug }];
+  const allowedRoles = new Set(requiredOutputs.map((required) => required.role));
+  const outputFiles = allowedRoles.has(requestedRole)
+    ? [{ path: outputPath, role: requestedRole, source_url, source_slug }]
+    : [];
   for (const extra of extra_output_files) {
     mkdirSync(path.join(bundleDir, path.dirname(extra.path)), { recursive: true });
     const extraPath = path.join(bundleDir, extra.path);
@@ -822,8 +833,7 @@ export function writeFixtureResultForWorkUnit(bundleDir, {
     const { content: _content, ...declaration } = extra;
     outputFiles.push(declaration);
   }
-  const manifest = JSON.parse(readFileSync(path.join(bundleDir, record.paths.manifest_ref), 'utf8'));
-  for (const required of manifest.output_contract?.required_outputs || []) {
+  for (const required of requiredOutputs) {
     if (outputFiles.some((entry) => entry.path === required.path)) continue;
     const requiredPath = path.join(bundleDir, required.path);
     mkdirSync(path.dirname(requiredPath), { recursive: true });
@@ -857,11 +867,13 @@ export function writeFixtureResultForWorkUnit(bundleDir, {
 
   const isWave1Deepening = record.kind === 'wave1_topic_deepening';
   const topicSlug = inferTopicSlug({ record, outputPath, extraOutputFiles: extra_output_files });
+  const wave1EvidenceSummaryPath = requiredOutputs.find(({ role: outputRole }) => outputRole === 'evidence_summary')?.path;
+  const wave1SourceRef = wave1EvidenceSummaryPath || outputPath;
   const wave1SourceClaims = isWave1Deepening
     ? {
         source_claims: [{
           url: source_url,
-          source_ref: outputPath,
+          source_ref: wave1SourceRef,
           acceptance_status: 'accepted',
           is_new_vs_wave0: true,
           cache_trail_refs: trailPaths,
@@ -894,7 +906,7 @@ export function writeFixtureResultForWorkUnit(bundleDir, {
       topic_slug: topicSlug,
       work_unit_ref: record.paths.work_unit_dir,
       result_ref: record.paths.result_ref,
-      source_ref: outputPath,
+      source_ref: wave1SourceRef,
       source_url,
       cache_trails: trailPaths,
     });

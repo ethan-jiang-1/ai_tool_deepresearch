@@ -108,7 +108,7 @@ describe('operate-topic-state direction candidates', () => {
     authorizeRerun(dir);
     const current = topic(dir);
     const hitl1 = run('apply', '--bundle', dir, '--input', writeInput(dir, 'invalid-hitl1.json', { context: 'hitl1', actions: [{ action: 'set_rerun_direction', topic_uid: current.topic_uid, direction: direction() }] }));
-    assert.equal(hitl1.status, 2);
+    assert.equal(hitl1.status, 1);
 
     writeFileSync(join(dir, 'rb_queue.json'), JSON.stringify({ active_window: [{ queue_item_id: 'queued-topic', status: 'queued', payload: { topic_uid: current.topic_uid, topic_slug: current.slug } }], refill_pool: [] }));
     const blocked = run('apply', '--bundle', dir, '--input', writeInput(dir, 'blocked.json', updateInput(current.topic_uid)));

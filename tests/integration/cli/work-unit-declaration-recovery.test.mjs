@@ -153,7 +153,6 @@ function prepareCandidate(dir, sourceUrl, record) {
     execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'Wave0 source intake complete',
     output_files: [
-      { path: 'reference/00-shared-topic-a.md', role: 'reference', source_url: sourceUrl, source_slug: 'wave0-source' },
       { path: 'artifacts/wave0/topic-a/source.yaml', role: 'source_yaml' },
     ],
     cache_trails: [cacheTrail],

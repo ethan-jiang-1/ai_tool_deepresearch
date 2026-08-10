@@ -1,0 +1,76 @@
+schema_version: verification-routing/v1
+change: repair-deterministic-regression-fixtures
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Current gate-definition and generated-contract assertions are focused
+      deterministic source-of-record checks that need no runtime lifecycle.
+  integration:
+    status: selected
+    rationale: >-
+      The repaired fixture inputs cross real CLI, filesystem, Gate, submitted
+      ledger, and documentation boundaries over isolated temporary bundles.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      Existing current-contract lifecycle tests prove that the repaired
+      fixtures did not change production workflow behavior.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change repairs deterministic test inputs and assertions only; it
+      makes no claim about real Agent or Subject-Agent behavior.
+claims:
+  - id: current-gate-definition-assertion
+    statement: >-
+      RWG-005: the active Wave1 Gate definition remains the source of truth
+      for its current parsed rule count, without adding or removing a rule to
+      satisfy a historical test expectation.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/gate-definition.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-fixture-contract-alignment
+    statement: >-
+      DEW-013, DEW-025, PRG-002, RES-003, CTS-008, GSK-012, TRW-006, and
+      WPG-013: integration fixtures use only current accepted prerequisite
+      facts and canonical outputs, so the asserted CLI/Gate outcomes reach
+      their intended contract root without changing production behavior.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/gate-chain-consistency.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-production-path-regression
+    statement: >-
+      POF-001 and PRG-002: current production-path deterministic lifecycle
+      tests remain green after fixture repair, without a test-only freshness
+      exception or any Harness behavior edit.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/post-final-rerun-lineage-continuity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
