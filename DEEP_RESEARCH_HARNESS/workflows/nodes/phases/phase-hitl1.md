@@ -10,6 +10,7 @@ execution_contract:
 requires:
   - shared/shared-profile
   - shared/shared-agent-ux-guidance
+  - shared/shared-hitl1-capability-probe
 suggested_context:
   - brief/hitl1
 ---
@@ -20,13 +21,13 @@ suggested_context:
 
 - **Objective**: Collect the user's research profile, root must-answer set, optional per-run research controls, and HITL1 constraints, then confirm current research access before silent execution.
 - **Start here**: Read `brief/hitl1.md`, the original question, `rb_plan.md`, and `rb_profile.yaml`.
-- **Path to pass**: Present the HITL1 prompt, wait for the user's answer, capture the optional controls snapshot before applying approved canonical topics and UID-bound seeds, write profile/style decisions, run one bounded real research-access probe, then run the HITL1 gate.
+- **Path to pass**: Present the HITL1 prompt, wait for the user's answer, capture the optional controls snapshot before applying approved canonical topics and UID-bound seeds, write profile/style decisions, spawn one bounded isolated research-access probe, then run the HITL1 gate.
 - **Completion check**: User input and a schema-valid available research-access observation are recorded in `rb_profile.yaml`, and `check-gate-hitl1-recorded.mjs` passes.
 - **Failure posture**: Consume top-level `hints[]` first. Ask only for a genuine missing HITL decision; execute authorized mechanical repair yourself and rerun the exact same Gate.
 
 ## 1. Stage Goal
 
-向用户提出结构化问题，收集 research profile、root must-answer set 和用户约束。结构化决定仍写入 current run bundle 的 `rb_profile.yaml`；可选研究控制只写入 `rb_plan.md## Constraints > ### User Research Controls`，并在进入 silent waves 前确认当前 Agent 环境具备一次真实 search + fetch 能力。
+向用户提出结构化问题，收集 research profile、root must-answer set 和用户约束。结构化决定仍写入 current run bundle 的 `rb_profile.yaml`；可选研究控制只写入 `rb_plan.md## Constraints > ### User Research Controls`，并在进入 silent waves 前由一个隔离 probe agent 确认 selected host 的一次真实 search + fetch 能力。
 
 ## 2. Required Inputs
 
@@ -123,74 +124,23 @@ topic_registry:
 
 ### 3d. Research Access Probe（进入 silent waves 前的能力确认）
 
-开始本节前，Agent MUST 读取 `DEEP_RESEARCH_HARNESS/host_tools/research-access-adapter.md`。当前唯一选择是
-`claude-deepseek.mjs` 启动的 Claude CLI / `deepseek_anthropic_compatible` host；该 contract 的
-generic invocation 没有 caller-supplied permission bypass。它声明 Agent 已可使用的 native
-`WebSearch` / `WebFetch` surface，而不是让 Agent 在 bundle 内启动 launcher、选择另一个 provider、
-把 launcher `--check` 当 capability proof，或向用户索要 pipeline command。用户的 HITL1 semantic
-decision 已记录且 declared native operation 可用时，Agent 直接执行本节 probe，不再请求第二次确认。
+开始本节前，Phase Agent MUST 读取 `DEEP_RESEARCH_HARNESS/host_tools/research-access-adapter.md`
+和 `shared/shared-hitl1-capability-probe.md`。当前唯一选择是 `claude-deepseek.mjs` 启动的
+Claude CLI / `deepseek_anthropic_compatible` host；generic invocation 没有 caller-supplied
+permission bypass。用户的 HITL1 semantic decision 已记录且 required style handoff 完成后，Phase
+无需第二次确认。
 
-已提交 topic-state 的 required style handoff 完成后，Agent MUST 使用当前环境的实际 search/fetch surfaces 执行一个短而固定的 capability probe。`execution_contract.search_policy: capability_probe_only` 只授权这个 probe；它不授权 research evidence collection、work-unit delegation 或 Wave work。
-
-**用户可见沟通：**在调用任何 native search/fetch surface 前，Agent MUST 从
-`brief/hitl1.md` 的「能力检查沟通 > 探测前提示」读取并原样输出模板。这个提示说明
-probe 是中性能力检查、不是当前研究内容、也不需要新的用户决定。它和本节稍后的结果
-模板都是 framework Markdown 消息：不得承诺隐藏、替代、重述为成功，或以其他方式控制
-selected-host-native 的工具调用、policy failure、transport/security error 或 permitted shell
-output。
+`execution_contract.search_policy: capability_probe_only` 只授权一次隔离 probe，不授权 Phase
+直接 search/fetch、research evidence collection、work-unit delegation 或 Wave work。
 
 **固定顺序：**
 
 1. 从 `brief/hitl1.md` 的「能力检查沟通 > 探测前提示」读取并原样输出模板。不得在这个已记录的 HITL1 decision 后再请求确认或新的研究决定。
-2. 使用实际 search surface 发起**至多一次 neutral capability-only search**，且 query 必须精确为 `site:wikipedia.org "Internet protocol suite"`。Query 只用于确认工具可用，不用于当前 research topic 的证据收集。
-3. 按 search surface returned order 取**最多前三个 syntactically eligible actual HTTP(S) candidates**。Eligible URL 不含 raw single quote、ASCII whitespace/control 或 URL credentials，且不指向 `localhost`/`.localhost`、loopback、literal private 或 link-local target。不得使用用户/模型构造或替换的 URL。Resolved/redirected destination 的 DNS/network policy 仍由 host 强制。
-4. 对 candidate 1 开始 serial probe。每个 candidate 使用 runtime 的实际 native fetch surface 发起**至多一次 native fetch**；native 返回真实 page content 时立即结束整个 probe，不得再调用 `curl` 或考察后续 candidate。
-5. 仅当当前 candidate 的 native surface 在调用前不存在，或 native 没有返回真实 page content（blocked / unavailable / failed），且 independently configured host shell/network permission 已允许 exact command 和 target 时，Agent 对当前 candidate 执行下面**至多一次、同一 URL、standalone** fallback：
+2. 使用 `shared/shared-hitl1-capability-probe.md` 的完整指令生成 prompt，并**恰好一次** Spawn 一个 isolated probe agent。prompt 不得包含 bundle path、profile/status/Gate 指令、work-unit 身份、文件写入义务或当前 research topic。Phase Agent SHALL NOT 直接调用 native search 或 fetch。
+3. 等待该 agent 的一个 final return。只接受 guide 所列的 existing `research_access` available/unavailable branch；Phase Agent 是 `rb_profile.yaml#/research_access` 的唯一 writer，并将 valid return 原样写入。spawn 失败、没有 return、非单一 `research_access` object、malformed 或 contradictory return 时，Phase 写一个既有 unavailable branch：`probed_at` 为当前 ISO timestamp、`fetch_outcome: not_attempted`、`eligible_candidate_count: 0`，以及以 `probe_agent_spawn_failed:` 或 `probe_agent_return_invalid:` 开头的 direct non-empty `reason`。不得伪造 available、添加 status/Gate/retry state 或自动再 spawn。
+4. profile write 后、运行 `hitl1-recorded` Gate 前，按写入的 direct observation status 原样输出 `brief/hitl1.md` 的对应模板：`available` 输出「能力检查沟通 > 访问可用」；`unavailable` 输出「能力检查沟通 > 访问不可用」。结果不是 Gate verdict；`available` 不得提前发送「出口语」或宣布已经进入静默执行，`unavailable` 不得要求用户重复 HITL1 choices。随后运行同一个 Gate。
 
-   ```bash
-   curl --fail --silent --show-error --location --max-time 15 --max-redirs 5 --proto '=http,https' --proto-redir '=http,https' --globoff -- '<same-url>'
-   ```
-
-   URL 必须作为 single-quoted（单引号）单一 argument 传入。命令不得包含 prefix assignment、pipe、redirection、command substitution、shell chaining 或 trailing command；`--globoff` 禁止 `{}` / `[]` URL expansion，redirect 至多五次且只能使用 HTTP(S)。
-6. 当前 candidate 的 native 或 permitted exact same-URL fallback 返回 requested real page content 时，立即写一个 final `available` observation 并结束整个 probe。仅在当前 candidate 已完成其合法 bounded sequence 且没有真实内容时，才考察下一 candidate：candidate 2 只在 candidate 1 不能返回真实内容后考察；candidate 3 只在 candidate 2 不能返回真实内容后考察。任何 permission/no-legal-path boundary 都在当前 candidate 停止，不得跳至后续 candidate。至多三个 candidates 都无真实内容时，写一个 final `unavailable` observation。Command exit success、空 body、search snippet、HTTP error/challenge shell 或手写文本都不能证明 access available。
-7. 写入 final `research_access` observation 后、运行 `hitl1-recorded` Gate 前，按 observation 原样输出 `brief/hitl1.md` 的对应模板：`status: available` 输出「能力检查沟通 > 访问可用」；`status: unavailable` 输出「能力检查沟通 > 访问不可用」。这条结果只说明 direct research-access observation，不是 Gate verdict；`available` 不得提前发送「出口语」或宣布已经进入静默执行，`unavailable` 不得要求用户重复 HITL1 choices。随后运行同一个 `hitl1-recorded` Gate。
-
-**Observation branches：**
-
-- Search surface 缺失、search 调用失败/被阻止、没有 syntactically eligible actual HTTP(S) candidate，且没有 fetch invocation：
-  ```yaml
-  research_access:
-    status: unavailable
-    probed_at: <ISO 8601 timestamp>
-    fetch_outcome: not_attempted
-    reason: <direct non-empty reason>
-    eligible_candidate_count: 0
-  ```
-  当 selected adapter 没有 callable `WebSearch` / `WebFetch` 时，`reason` MUST 以
-  `surface_absent:` 开头；当 selected host policy 拒绝 declared operation 时，`reason` MUST 以
-  `permission_required:` 开头。两个 prefix 都只是在 existing direct reason 内暴露 external root，
-  不增加 profile field、Gate 或 retry authority。
-- 当前 candidate 在 native fetch 返回 requested real page content：
-  ```yaml
-  research_access:
-    status: available
-    probed_at: <ISO 8601 timestamp>
-    result_url: <final considered HTTP(S) URL from this search>
-    fetch_outcome: success
-    fetch_surface: <actual native surface>
-    eligible_candidate_count: <1..3>
-    final_candidate_ordinal: <1..eligible_candidate_count>
-  ```
-- 当前 candidate 的 native 无真实内容后，exact fallback 返回 requested real page content：写同一个 available shape，并写 `fetch_surface: curl`。Fallback success 必须记录 `fetch_surface: curl`。
-- 当前 candidate 尚未调用 native，且没有 legal fetch surface 或 independently permitted fallback：写 `status: unavailable`、该 candidate `result_url`、`fetch_outcome: not_attempted`、positive `eligible_candidate_count` / `final_candidate_ordinal`，以及直接 no legal path reason；不得改选后续 candidate。
-- Native 已调用但唯一 fallback 没有 legal path：写 `status: unavailable`、该 candidate `result_url`、actual native `fetch_outcome: failed | blocked`、native `fetch_surface`、positive `eligible_candidate_count` / `final_candidate_ordinal`，以及直接 no legal path reason；不得将 attempted native outcome 改写为 `not_attempted` 或改选后续 candidate。
-- 至多三个 candidates 的 permitted sequences 都没有返回真实内容：写 `status: unavailable`、最终 considered `result_url`、final non-success `fetch_outcome`、已知时的 final `fetch_surface`、positive `eligible_candidate_count` / `final_candidate_ordinal`，以及一个 bounded direct `reason`；不得增加 query、URL、attempt-history fields。
-
-`search_surface` / `fetch_surface` 在 `ProfileSchema` 中 remains optional，existing Gate does not independently enforce these audit labels；但 v0.39 HITL1 writer 对当前 successful probe 必须记录 actual successful `fetch_surface`。不要记录 query history、response body、HTTP status matrix、retry list 或 derived gate verdict。
-
-**权限边界：** Native failure does not authorize shell/network access，也不授权绕过 policy。已独立配置的 host permission 足够时，fallback/write/Gate 是 Agent-owned mechanics：不得要求用户运行 `curl`、确认继续或代跑 pipeline，也不得静默扩大 committed project config。若 `curl`/network permission 缺失、target 不合格、binary 不存在或 fallback 失败，先记录 honest unavailable，只暴露最小 permission/external-environment prerequisite；用户同意本身不能把失败或缺失的 page content 变成 success。
-
-**Unavailable recovery：** 保留已记录的 `research_profile`、`root_must_answer_set`、style params 和 `hitl1.status: recorded`。`surface_absent:` 指向 selected Claude host 的 callable tool surface，`permission_required:` 指向 selected host policy；两者都由当前 adapter contract 解释。第 7 步已经输出「访问不可用」模板；最小外部前置条件解决后，由 Agent 重跑本节同一 bounded probe 和同一 gate，不要求用户重复回答 HITL1 choices，也不要求用户运行 `curl` 或手改 profile。在 probe 与 gate 成功前不得进入 Setup。
+**Unavailable recovery：** 保留已记录的 `research_profile`、`root_must_answer_set`、style params 和 `hitl1.status: recorded`。`surface_absent:` 指向 selected Claude host 的 callable tool surface，`permission_required:` 指向 selected host policy；两者都由当前 adapter contract 解释。最小外部前置条件解决后，由 Phase Agent 重跑本节同一 isolated probe 和同一 Gate，不要求用户重复回答 HITL1 choices、运行 `curl` 或手改 profile。在 probe 与 Gate 成功前不得进入 Setup。
 
 **Evidence boundary：** Probe URL、page content 和 tool output SHALL NOT 写入或计入 `reference/`、`_cache/`、`artifacts/`、work-unit output/result/receipt、`rb_work_unit_ledger.jsonl`、`rb_output_declarations.jsonl` 或任何 Wave coverage/count floor。
 
@@ -215,7 +165,7 @@ output。
 | `hitl1.status` | `rb_profile.yaml#/human_decision_checkpoints/hitl1/status` | = `recorded` |
 | `hitl1.recorded_at` | `rb_profile.yaml#/human_decision_checkpoints/hitl1/recorded_at` | 非空 ISO 8601 timestamp |
 
-`research_access.search_surface` / `fetch_surface` 在 schema 中保持 optional audit labels，不是 gate-required facts；v0.39 current successful writer 仍记录 actual `fetch_surface`。该 checklist 是 review surface；`ProfileSchema` 和 Gate definition 仍是 machine authority。
+`rb_profile.yaml#/research_access` 只由 Phase Agent 写入；isolated probe agent 只返回 transient observation，绝不写 bundle state 或运行 Gate。`research_access.search_surface` / `fetch_surface` 在 schema 中保持 optional audit labels，不是 gate-required facts；v0.39 current successful writer 仍记录 actual `fetch_surface`。该 checklist 是 review surface；`ProfileSchema` 和 Gate definition 仍是 machine authority。
 
 ## 5. Gate Command
 

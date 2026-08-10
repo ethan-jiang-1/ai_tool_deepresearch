@@ -3,6 +3,8 @@
 
 import { buildSelectedResearchAccessAdapterInvocation } from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/research-access-adapter.mjs';
 
+const CASE_115_TOOLS = 'Bash,WebFetch,WebSearch';
+
 export function buildIterativeInteractionSubjectInvocation({
   subjectId,
   launcherPath,
@@ -11,6 +13,10 @@ export function buildIterativeInteractionSubjectInvocation({
   sessionId,
   systemPrompt,
 }) {
+  if (subjectId === '115' && tools !== CASE_115_TOOLS) {
+    throw new Error(`case 115 requires isolated probe tools: ${CASE_115_TOOLS}`);
+  }
+
   const claudeArgs = [
     '--settings', settingsPath,
     '--setting-sources', '',

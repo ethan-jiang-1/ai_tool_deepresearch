@@ -53,14 +53,15 @@ writer、state、checker、retry loop、provider path 或 host controller。用�
 
 ## Capability Discovery
 
-| Candidate | Evidence read | Decision | Reason |
+| Candidate path | Evidence read | Decision | Reason |
 | --- | --- | --- | --- |
 | `research/pre-research-phase-content` | `openspec/specs/research/pre-research-phase-content/spec.md` (PRP-002, PRP-005) | Modify | HITL1 从 Phase 直接 probe 改为 spawn、返回 observation、Phase 写入和同 Gate 的行为变化。 |
 | `research/research-access-adapter` | `openspec/specs/research/research-access-adapter/spec.md` (REA-002, REA-003) | Modify | REA-002 当前明确要求 Phase Agent 亲自建立 search-to-fetch binding；新 contract 将外部执行交给受限 probe agent，并收紧真实 canary 的证明对象。 |
 | `agent/hitl-ux` | `openspec/specs/agent/hitl-ux/spec.md` (HIU-002) | Modify | HITL1 probe 前后 exact-text UX 改为已确定的小白中文，且仍要保留 observation/Gate 的时间和责任区别。 |
 | `research/pre-research-experiments` | `openspec/specs/research/pre-research-experiments/spec.md` | Verify-only | case-115 是 REA 的 provider-scoped evidence asset；该 capability 没有把 case-115 的 actor 或 profile writer 规定为独立行为。 |
 | `research/pre-research-gate-implementation` | `openspec/specs/research/pre-research-gate-implementation/spec.md` | Verify-only | Profile schema 和 `hitl1-recorded` Gate 规则不变。 |
-| `agent/subagent-node-contract` and `agent/subagent-directory-contract` | corresponding accepted specs | Excluded | 两者只拥有 Engine-claimed work-unit subagent 的 beacon/receipt/submit contract；probe agent 明确不进入该路径。 |
+| `agent/subagent-node-contract` | accepted `agent/subagent-node-contract` spec | Excluded | 该 capability 只拥有 Engine-claimed work-unit subagent 的 beacon/receipt/submit contract；probe agent 明确不进入该路径。 |
+| `agent/subagent-directory-contract` | accepted `agent/subagent-directory-contract` spec | Excluded | 该 capability 只拥有 Engine-claimed work-unit subagent 的 directory contract；probe agent 明确不进入该路径。 |
 | `verification/verification-routing` | `openspec/specs/verification/verification-routing/spec.md` | Verify-only | 该 capability 只决定证明分类，不改变其 requirement。 |
 
 ### New Capabilities

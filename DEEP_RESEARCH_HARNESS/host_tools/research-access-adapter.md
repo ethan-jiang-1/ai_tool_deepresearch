@@ -25,27 +25,33 @@ This is the one selected HITL1 adapter. Its host is the Claude CLI started throu
 `deepseek_anthropic_compatible`. The selected invocation is the generic launcher
 mode. It does not add, accept, or rely on a caller-supplied permission-bypass option.
 
-The Phase Agent, not this host bridge, performs the bounded probe. It may invoke one
+The Phase Agent, not this host bridge, spawns one isolated probe agent after the
+recorded HITL1 decision. That agent performs the bounded probe: it may invoke one
 native `WebSearch`, use only returned eligible HTTP(S) URLs in provider order, and
 invoke native `WebFetch` for the current returned URL. A native fetch that does not
-return requested page content may use the existing phase-defined exact same-URL curl
-fallback only when the host independently permits that fallback. The bridge does not
-choose a query or candidate, run search/fetch, mutate a bundle, create retries, or
-write a profile observation.
+return requested page content may use the existing guide-defined exact same-URL curl
+fallback only when the host independently permits that fallback. The Phase Agent
+remains the sole `rb_profile.yaml#/research_access` writer and reruns the existing
+HITL1 Gate from the returned observation. The bridge does not choose a query or
+candidate, run search/fetch in place of the isolated agent, mutate a bundle, create
+retries, or write a profile observation.
 
-The direct result is ephemeral until the Phase Agent writes the existing
-`rb_profile.yaml#/research_access` observation. An available observation requires a
-real requested-page-content result for the same URL returned by this probe's search.
-Tool names, launcher `--check`, a shell executable, command exit status, a search
-snippet, or a deterministic fixture are not evidence of available research access.
+The isolated agent returns only the existing compact `research_access` observation;
+it has no bundle, filesystem, profile, status, trace, receipt, ledger, evidence, or
+Gate authority. Its direct result is ephemeral until the Phase Agent writes the
+existing `rb_profile.yaml#/research_access` observation. An available observation
+requires a real requested-page-content result for the same URL returned by this
+probe's search. Tool names, launcher `--check`, a shell executable, command exit
+status, a search snippet, or a deterministic fixture are not evidence of available
+research access.
 
-When native search/fetch surfaces are absent, write the existing unavailable branch
-with a reason beginning `surface_absent:`. When selected-host policy denies a declared
-operation, write the existing unavailable branch with a reason beginning
-`permission_required:`. Both preserve HITL1 choices and direct the Agent to rerun the
-same bounded probe and existing Gate after the external boundary is resolved. Neither
-root grants a fallback provider, permission escalation, user-run command, or profile
-hand edit.
+When native search/fetch surfaces are absent, the probe agent returns the existing
+unavailable branch with a reason beginning `surface_absent:`. When selected-host policy
+denies a declared operation, it returns that branch with a reason beginning
+`permission_required:`. The Phase Agent alone writes either returned branch. Both roots
+preserve HITL1 choices and direct the Phase Agent to rerun the same bounded probe and
+existing Gate after the external boundary is resolved. Neither root grants a fallback
+provider, permission escalation, user-run command, or profile hand edit.
 
 Only the retained case-115 Subject trace can support the selected host's available
 claim. It must show `WebSearch`, a returned eligible URL, and native `WebFetch` or the

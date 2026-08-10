@@ -12,7 +12,7 @@ function build(subjectId) {
     subjectId,
     launcherPath: '/tmp/claude-deepseek.mjs',
     settingsPath: '/tmp/subject-settings.json',
-    tools: 'Bash,Read,WebFetch,WebSearch,Write',
+    tools: subjectId === '115' ? 'Bash,WebFetch,WebSearch' : 'Bash,Read,WebFetch,WebSearch,Write',
     sessionId: 'test-session',
     systemPrompt: 'test prompt',
   });
@@ -42,6 +42,29 @@ describe('case-115 Subject runner invocation', () => {
     assert.match(runner, /codex-only-dpt-iterative-subject-deepseek-v2\.settings\.json/);
     assert.match(runner, /ENABLE_TOOL_SEARCH: 'true'/);
     assert.match(runner, /settings\?\.env\?\.ENABLE_TOOL_SEARCH !== 'true'/);
+  });
+
+  it('limits case 115 to an isolated probe prompt and tool surface', () => {
+    const runner = readFileSync(RUNNER, 'utf8');
+
+    assert.match(runner, /tools: 'Bash,WebFetch,WebSearch'/);
+    assert.match(runner, /surface: 'isolated_hitl1_capability_probe'/);
+    assert.match(runner, /loadIsolatedHitl1CapabilityProbeSurface/);
+    assert.match(runner, /does not provide a bundle path or any filesystem obligation/);
+    assert.match(runner, /DPT_ISOLATED_HITL1_CAPABILITY_PROBE_GUIDE_START/);
+    assert.doesNotMatch(runner, /case 115\. Work only in the exact bundle path/);
+    assert.doesNotMatch(runner, /case-115.*write a.*research_access.*Gate/is);
+  });
+
+  it('rejects broader case-115 tool authority before launch', () => {
+    assert.throws(() => buildIterativeInteractionSubjectInvocation({
+      subjectId: '115',
+      launcherPath: '/tmp/claude-deepseek.mjs',
+      settingsPath: '/tmp/subject-settings.json',
+      tools: 'Bash,Read,WebFetch,WebSearch,Write',
+      sessionId: 'test-session',
+      systemPrompt: 'test prompt',
+    }), /requires isolated probe tools/);
   });
 
   it('does not alter legacy non-selected Subject invocation policy', () => {

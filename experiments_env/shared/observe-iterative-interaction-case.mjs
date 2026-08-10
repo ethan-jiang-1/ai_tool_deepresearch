@@ -8,7 +8,6 @@ import { spawnSync } from 'node:child_process';
 import { parse as parseYaml } from 'yaml';
 
 import { createTrace } from '../../DEEP_RESEARCH_HARNESS/engine/trace.mjs';
-import { validateSelectedAdapterSameUrlBinding } from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/research-access-adapter.mjs';
 import { recordCheck } from './wff-playbook-utils.mjs';
 
 const [caseId, action, ...rest] = process.argv.slice(2);
@@ -324,115 +323,198 @@ function record716(events) {
   recordCheck(tracePath, { gate: 'case-716-existing-handoff', passed: available ? gatePass && setupLoad : unavailable && gateFail && !setupLoad, detail: `available=${available} unavailable=${unavailable} gate_pass=${gatePass} gate_fail=${gateFail} setup_load=${setupLoad}` });
 }
 
+function case115ResultText(event) {
+  if (typeof event?.result === 'string') return event.result.trim();
+  if (typeof event?.output === 'string') return event.output.trim();
+  const text = collectText(event, []).join('\n').trim();
+  return text || null;
+}
+
+function parseCase115Return(events) {
+  const resultPath = join(bundle, 'case-115-subject-result.json');
+  let resultEvents = events.filter((event) => event?.type === 'result');
+  if (existsSync(resultPath)) {
+    let retained;
+    try { retained = JSON.parse(readFileSync(resultPath, 'utf8')); } catch { notRun('malformed retained case-115 Subject result'); }
+    if (retained.status !== 'completed' || !Array.isArray(retained.result_events)) {
+      notRun('case-115 Subject did not retain one completed final result');
+    }
+    resultEvents = retained.result_events;
+  }
+
+  if (resultEvents.length !== 1) notRun('case-115 requires exactly one final Subject result event');
+  const text = case115ResultText(resultEvents[0]);
+  if (!text || !/^research_access:\s*\n/.test(text) || /```/.test(text)) {
+    notRun('case-115 final Subject result is not the required compact YAML return map');
+  }
+
+  let returned;
+  try { returned = parseYaml(text); } catch { notRun('case-115 final Subject return map is malformed YAML'); }
+  if (!returned || typeof returned !== 'object' || Array.isArray(returned)
+    || Object.keys(returned).length !== 1 || !returned.research_access
+    || typeof returned.research_access !== 'object' || Array.isArray(returned.research_access)) {
+    notRun('case-115 final Subject return must contain exactly one research_access object');
+  }
+  return returned.research_access;
+}
+
+function validateCase115Access(access) {
+  const allowed = new Set([
+    'status', 'probed_at', 'result_url', 'fetch_outcome', 'reason',
+    'search_surface', 'fetch_surface', 'eligible_candidate_count', 'final_candidate_ordinal',
+  ]);
+  if (Object.keys(access).some((key) => !allowed.has(key))) return 'return map contains a non-profile observation field';
+  if (!['available', 'unavailable'].includes(access.status)) return 'return map has an invalid status';
+  if (typeof access.probed_at !== 'string' || Number.isNaN(Date.parse(access.probed_at))) return 'return map lacks an ISO timestamp';
+  if (!Number.isInteger(access.eligible_candidate_count) || access.eligible_candidate_count < 0 || access.eligible_candidate_count > 3) return 'return map has invalid candidate count';
+  if (access.search_surface !== undefined && access.search_surface !== 'WebSearch') return 'return map search surface contradicts public tool facts';
+  if (access.eligible_candidate_count === 0) {
+    if (access.status !== 'unavailable' || access.fetch_outcome !== 'not_attempted' || typeof access.reason !== 'string' || !access.reason.trim()
+      || access.final_candidate_ordinal !== undefined || access.result_url !== undefined || access.fetch_surface !== undefined) return 'zero-candidate return map contradicts the unavailable branch';
+    return null;
+  }
+  if (!Number.isInteger(access.final_candidate_ordinal) || access.final_candidate_ordinal !== access.eligible_candidate_count
+    || typeof access.result_url !== 'string' || !eligibleProbeUrl(access.result_url)) return 'positive-count return map lacks the final returned candidate';
+  if (access.status === 'available') {
+    if (access.fetch_outcome !== 'success' || !['WebFetch', 'curl'].includes(access.fetch_surface)) return 'available return map contradicts its fetch result';
+    return null;
+  }
+  if (!['failed', 'blocked', 'not_attempted'].includes(access.fetch_outcome) || typeof access.reason !== 'string' || !access.reason.trim()) {
+    return 'unavailable return map lacks a direct failed observation';
+  }
+  return null;
+}
+
 function record115(events) {
   const tools = publicToolExchanges(events);
+  const disallowed = tools.uses.filter((use) => use.value.name !== 'WebSearch'
+    && use.value.name !== 'WebFetch'
+    && (use.value.name !== 'Bash' || !isCurlAttempt(use.value.input.command)));
+  if (disallowed.length > 0) notRun(`case-115 isolated probe used an unauthorized public tool: ${disallowed[0].value.name}`);
+
   const searchUses = tools.uses.filter((use) => use.value.name === 'WebSearch');
   const nativeUses = tools.uses.filter((use) => use.value.name === 'WebFetch');
-  const curlUses = tools.uses.filter((use) => use.value.name === 'Bash' && isCurlAttempt(use.value.input.command));
+  const curlUses = tools.uses.filter((use) => use.value.name === 'Bash');
+  if (searchUses.length !== 1) notRun('case-115 requires exactly one public WebSearch tool_use');
   const search = searchUses[0];
-  if (!search) notRun('missing public WebSearch tool_use');
+  if (search.value.input.query !== 'site:wikipedia.org "Internet protocol suite"') {
+    notRun('case-115 WebSearch query is not the fixed neutral capability query');
+  }
   const searchResult = tools.resultFor(search);
   if (!searchResult) notRun('missing public WebSearch tool_result');
+  if (nativeUses.some((use) => use.index <= searchResult.index) || curlUses.some((use) => use.index <= searchResult.index)) {
+    notRun('case-115 fetch attempt preceded the public WebSearch result');
+  }
   const links = searchResult.value.is_error ? [] : structuredSearchLinks(searchResult.value.content);
   const candidates = links.map((link) => link.url).filter(eligibleProbeUrl).slice(0, 3);
-  const nativeResults = nativeUses.map((use) => tools.resultFor(use));
-  const curlResults = curlUses.map((use) => tools.resultFor(use));
-  if (nativeResults.some((result) => !result)) notRun('missing public WebFetch tool_result');
-  if (curlResults.some((result) => !result)) notRun('missing public curl Bash tool_result');
+  const access = parseCase115Return(events);
+  const shapeError = validateCase115Access(access);
+  if (shapeError) notRun(shapeError);
 
-  const profile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'));
-  const access = profile.research_access;
-  if (!access || typeof access !== 'object') notRun('missing direct rb_profile.yaml research_access observation');
   const count = access.eligible_candidate_count;
   const ordinal = access.final_candidate_ordinal;
-  if (!Number.isInteger(count) || count < 0 || count > 3) {
-    notRun('research_access is missing current eligible_candidate_count metadata');
-  }
   if (count === 0) {
-    if (ordinal !== undefined || access.result_url !== undefined || access.fetch_outcome !== 'not_attempted') {
-      notRun('no-candidate research_access metadata contradicts the current profile contract');
+    if (candidates.length !== 0 || nativeUses.length !== 0 || curlUses.length !== 0) {
+      notRun('zero-candidate return contradicts public search or fetch events');
     }
-  } else if (!Number.isInteger(ordinal) || ordinal !== count || ordinal > candidates.length || access.result_url !== candidates[ordinal - 1]) {
-    notRun('research_access final candidate metadata contradicts the public returned candidate order');
+    recordCheck(tracePath, { gate: 'hitl1-research-access-probe', passed: true, detail: 'isolated no-candidate unavailable return' });
+    recordCheck(tracePath, { gate: 'probe-evidence-boundary', passed: true, detail: 'no bundle, profile, or Gate actor claim observed' });
+    return;
   }
-  const trace = traceEvents();
-  const attempt = trace.filter((event) => event.event === 'gate_attempt' && event.gate === 'hitl1-recorded').at(-1);
-  const setupLoad = trace.some((event) => event.event === 'load_complete' && event.entry === 'phases/phase-setup.md' && event.handoff_source_gate === 'hitl1-recorded');
-  const walk = (path) => !existsSync(path) ? [] : statSync(path).isFile() ? [path] : readdirSync(path).flatMap((name) => walk(join(path, name)));
-  const surfaces = ['reference', '_cache', 'artifacts', '_work_units', 'rb_output_declarations.jsonl'];
-  const leaks = surfaces.flatMap((surface) => walk(join(bundle, surface)))
-    .filter((file) => access?.result_url && readFileSync(file, 'utf8').includes(access.result_url))
-    .map((file) => relative(bundle, file));
 
-  const oneSearch = searchUses.length === 1;
-  const hasRealContent = (result) => Boolean(result && !result.value.is_error && result.value.content.trim());
+  if (ordinal !== count || count > candidates.length || access.result_url !== candidates[ordinal - 1]) {
+    notRun('return map final candidate metadata contradicts public returned candidate order');
+  }
+  if (nativeUses.length !== count && nativeUses.length !== count - 1) {
+    notRun('public native fetch count contradicts the bounded returned observation');
+  }
   const nativeToCurl = new Map();
-  let sequenceValid = oneSearch && nativeUses.length <= count && curlUses.length <= nativeUses.length;
-  if (count === 0) sequenceValid &&= nativeUses.length === 0 && curlUses.length === 0;
-  if (count > 0) sequenceValid &&= nativeUses.length === count || nativeUses.length === count - 1;
+  const hasRealContent = (result) => Boolean(result && !result.value.is_error && result.value.content.trim());
 
   for (const [index, native] of nativeUses.entries()) {
-    const nativeResult = nativeResults[index];
+    const nativeResult = tools.resultFor(native);
     const nextNative = nativeUses[index + 1];
-    const curlsForNative = curlUses.filter((curl) => curl.index > nativeResult.index && (!nextNative || curl.index < nextNative.index));
-    if (native.index <= searchResult.index || native.value.input.url !== candidates[index] || curlsForNative.length > 1) sequenceValid = false;
-    const curl = curlsForNative[0];
+    if (!nativeResult || native.value.input.url !== candidates[index]) {
+      notRun('public native fetch target or result contradicts the returned candidate order');
+    }
+    const curls = curlUses.filter((curl) => curl.index > nativeResult.index && (!nextNative || curl.index < nextNative.index));
+    if (curls.length > 1) notRun('more than one curl fallback followed a native fetch');
+    const curl = curls[0];
     if (curl) {
       const curlResult = tools.resultFor(curl);
-      const curlUrl = exactCurlUrl(curl.value.input.command);
-      if (!nativeResult || !curlResult || !nativeResult.value.is_error && nativeResult.value.content.trim()
-        || curlUrl !== candidates[index]) sequenceValid = false;
+      if (!curlResult || hasRealContent(nativeResult) || exactCurlUrl(curl.value.input.command) !== candidates[index]) {
+        notRun('public curl fallback is not an exact same-URL native-failure fallback');
+      }
       nativeToCurl.set(index, { use: curl, result: curlResult });
     }
-    if (hasRealContent(nativeResult) && (index !== nativeUses.length - 1 || curl || index !== count - 1)) sequenceValid = false;
-    if (curl && hasRealContent(tools.resultFor(curl)) && (index !== nativeUses.length - 1 || index !== count - 1)) sequenceValid = false;
-  }
-  if (curlUses.some((curl) => ![...nativeToCurl.values()].some((value) => value.use.id === curl.id))) sequenceValid = false;
-
-  const noCandidate = count === 0;
-  const finalNativeIndex = count - 1;
-  const finalNative = nativeUses[finalNativeIndex];
-  const finalNativeResult = nativeResults[finalNativeIndex];
-  const finalCurl = nativeToCurl.get(finalNativeIndex);
-  const selectedBinding = !noCandidate && finalNative
-    ? validateSelectedAdapterSameUrlBinding({
-      candidateUrl: candidates[finalNativeIndex],
-      fetchTargetUrl: finalNative.value.input.url,
-      resultUrl: access.result_url,
-    })
-    : null;
-  const availableNative = !noCandidate && sequenceValid && nativeUses.length === count && hasRealContent(finalNativeResult)
-    && access.status === 'available' && access.fetch_outcome === 'success' && typeof access.fetch_surface === 'string' && access.fetch_surface !== 'curl'
-    && selectedBinding?.same_url_bound === true && attempt?.passed === true && setupLoad;
-  const availableCurl = !noCandidate && sequenceValid && nativeUses.length === count && !hasRealContent(finalNativeResult)
-    && finalCurl && hasRealContent(finalCurl.result) && access.status === 'available' && access.fetch_outcome === 'success'
-    && access.fetch_surface === 'curl' && selectedBinding?.same_url_bound === true && attempt?.passed === true && setupLoad;
-  const unavailableSearch = noCandidate && sequenceValid && access.status === 'unavailable' && access.reason
-    && attempt?.passed === false && !setupLoad;
-  const unavailableNoFetch = !noCandidate && sequenceValid && nativeUses.length === count - 1
-    && access.status === 'unavailable' && access.reason && access.fetch_outcome === 'not_attempted'
-    && attempt?.passed === false && !setupLoad;
-  const unavailableCurl = !noCandidate && sequenceValid && nativeUses.length === count && !hasRealContent(finalNativeResult)
-    && finalCurl && !hasRealContent(finalCurl.result) && access.status === 'unavailable' && access.reason && access.fetch_outcome !== 'success'
-    && attempt?.passed === false && !setupLoad;
-  const unavailableNoCurl = !noCandidate && sequenceValid && nativeUses.length === count && !hasRealContent(finalNativeResult)
-    && !finalCurl && access.status === 'unavailable' && access.reason && access.fetch_outcome !== 'success'
-    && attempt?.passed === false && !setupLoad;
-
-  recordCheck(tracePath, {
-    gate: 'hitl1-research-access-probe',
-    passed: Boolean(availableNative || availableCurl || unavailableSearch || unavailableNoFetch || unavailableCurl || unavailableNoCurl),
-    detail: JSON.stringify({ availableNative, availableCurl, unavailableSearch, unavailableNoFetch, unavailableCurl, unavailableNoCurl, selectedBinding }),
-  });
-  recordCheck(tracePath, { gate: 'probe-evidence-boundary', passed: leaks.length === 0, detail: JSON.stringify(leaks) });
-
-  if (curlUses.length > 0) {
-    const fallbackStructure = sequenceValid && curlUses.length === 1 && nativeToCurl.size === 1;
-    if (!fallbackStructure) {
-      recordCheck(tracePath, { gate: 'hitl1-native-to-curl-fallback', passed: false, detail: 'curl order, count, grammar, or same-URL contract mismatch' });
-    } else if (hasRealContent(curlResults[0])) {
-      recordCheck(tracePath, { gate: 'hitl1-native-to-curl-fallback', passed: availableCurl && leaks.length === 0, detail: JSON.stringify({ availableCurl, leaks }) });
+    if (hasRealContent(nativeResult) && (index !== count - 1 || curl)) {
+      notRun('probe continued after native real page content');
     }
+    if (curl && hasRealContent(nativeToCurl.get(index).result) && index !== count - 1) {
+      notRun('probe continued after fallback real page content');
+    }
+    if (index < count - 1 && (!curl || hasRealContent(nativeToCurl.get(index).result))) {
+      notRun('probe considered a later candidate without exhausting the current permitted sequence');
+    }
+  }
+  const finalIndex = count - 1;
+  const finalNative = nativeUses[finalIndex];
+  const unboundCurls = curlUses.filter((curl) => ![...nativeToCurl.values()].some((entry) => entry.use.id === curl.id));
+  let absentNativeFinalCurl = null;
+  if (!finalNative && unboundCurls.length === 1) {
+    const curl = unboundCurls[0];
+    const curlResult = tools.resultFor(curl);
+    if (!curlResult || exactCurlUrl(curl.value.input.command) !== candidates[finalIndex]) {
+      notRun('public curl fallback is not an exact same-URL native-absent fallback');
+    }
+    absentNativeFinalCurl = { use: curl, result: curlResult };
+  } else if (unboundCurls.length > 0) {
+    notRun('public curl fallback has no preceding native fetch');
+  }
+
+  const finalNativeResult = finalNative ? tools.resultFor(finalNative) : null;
+  const finalCurl = nativeToCurl.get(finalIndex) || absentNativeFinalCurl;
+  let branch = null;
+  if (!finalNative) {
+    if (!finalCurl && (access.status !== 'unavailable' || access.fetch_outcome !== 'not_attempted')) {
+      notRun('no-legal-fetch return contradicts public tool facts');
+    }
+    if (finalCurl && hasRealContent(finalCurl.result)) {
+      if (access.status !== 'available' || access.fetch_outcome !== 'success' || access.fetch_surface !== 'curl') {
+        notRun('available curl return contradicts public same-URL native-absent fallback content');
+      }
+      branch = 'available-curl';
+    } else if (finalCurl) {
+      if (access.status !== 'unavailable' || access.fetch_outcome === 'success' || access.fetch_surface !== 'curl') {
+        notRun('unavailable native-absent fallback return contradicts public fetch facts');
+      }
+      branch = 'unavailable-curl';
+    } else {
+      branch = 'unavailable-no-native-surface';
+    }
+  } else if (hasRealContent(finalNativeResult)) {
+    if (access.status !== 'available' || access.fetch_outcome !== 'success' || access.fetch_surface !== 'WebFetch') {
+      notRun('available native return contradicts public fetch content');
+    }
+    branch = 'available-native';
+  } else if (finalCurl && hasRealContent(finalCurl.result)) {
+    if (access.status !== 'available' || access.fetch_outcome !== 'success' || access.fetch_surface !== 'curl') {
+      notRun('available curl return contradicts public same-URL fallback content');
+    }
+    branch = 'available-curl';
+  } else {
+    if (access.status !== 'unavailable' || access.fetch_outcome === 'success') {
+      notRun('unavailable return contradicts public non-success fetch facts');
+    }
+    if (finalCurl && access.fetch_surface !== 'curl') notRun('unavailable fallback return has the wrong final fetch surface');
+    if (!finalCurl && access.fetch_surface !== undefined && access.fetch_surface !== 'WebFetch') notRun('unavailable native return has the wrong fetch surface');
+    branch = finalCurl ? 'unavailable-curl' : 'unavailable-native';
+  }
+
+  recordCheck(tracePath, { gate: 'hitl1-research-access-probe', passed: true, detail: `isolated ${branch} return matched public events` });
+  recordCheck(tracePath, { gate: 'probe-evidence-boundary', passed: true, detail: 'probe return is compact; observer attributes no profile write or Gate execution' });
+  if (branch === 'available-curl') {
+    recordCheck(tracePath, { gate: 'hitl1-native-to-curl-fallback', passed: true, detail: 'public permitted same-URL curl return matched' });
   }
 }
 

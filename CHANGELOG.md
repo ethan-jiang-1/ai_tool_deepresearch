@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.84
+
+- HITL1 now sends its bounded research-access search/fetch sequence to one
+  isolated probe agent. The Phase Agent remains the only
+  `rb_profile.yaml#/research_access` writer: it relays one existing compact
+  observation, renders the corresponding status message, and reruns the same
+  `hitl1-recorded` Gate.
+- The isolated probe has no bundle, filesystem, profile, Gate, work-unit,
+  ledger, receipt, or research-evidence authority. It uses the existing fixed
+  neutral query, bounded native-first/same-URL sequence, and honest unavailable
+  branch; this release neither promises provider availability nor claims Engine
+  verification of an external call.
+
 ## v0.83
 
 - Run profiles now carry the schema-validated `delegated_concurrency_cap`

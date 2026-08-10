@@ -51,7 +51,7 @@ authority: exact-text
 
 <!-- TEMPLATE START -->
 
-在进入静默研究前，我会做一次快速的中性能力检查，确认搜索和网页抓取是否可用。这不是当前研究内容，也不需要你作出新的决定。
+开始研究前，系统先快速检查一下联网搜索能力，大概几秒钟，请稍候。
 
 <!-- TEMPLATE END -->
 
@@ -59,7 +59,7 @@ authority: exact-text
 
 <!-- TEMPLATE START -->
 
-研究访问能力已确认。我会先完成现有 HITL1 检查；通过后将进入静默自主执行。
+联网能力正常，开始准备研究。
 
 <!-- TEMPLATE END -->
 
@@ -67,11 +67,11 @@ authority: exact-text
 
 <!-- TEMPLATE START -->
 
-当前环境尚不能完成搜索和网页抓取能力检查。已记录的 HITL1 选择仍然有效；这不是新的研究决定。
+联网检查没通过。多数是网络问题——请检查网络连接后重试；网络正常的话稍后再试也行。你刚才的选择不会丢。
 
 <!-- TEMPLATE END -->
 
-这些模板只描述 framework 的用户消息。它们不得承诺隐藏、替代、重述为成功，或以其他方式控制 selected-host-native 的工具调用、policy failure、transport/security error 或 permitted shell output。
+这些模板只描述 framework 的用户消息。它们不得承诺隐藏、替代、重述为成功，或以其他方式控制 selected-host-native 的工具调用、policy failure、transport/security error 或 permitted shell output；也不得承诺 host permission、provider success、automatic retry，或将“大概几秒钟”解释为精确时长保证。
 
 ## 出口语
 

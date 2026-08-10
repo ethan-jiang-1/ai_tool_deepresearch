@@ -30,6 +30,7 @@ import { buildIterativeInteractionSubjectInvocation } from './iterative-interact
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const LAUNCHER = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'host_tools', 'claude-deepseek.mjs');
 const NODES_DIR = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'workflows', 'nodes');
+const HITL1_CAPABILITY_PROBE_GUIDE_PATH = join(NODES_DIR, 'shared', 'shared-hitl1-capability-probe.md');
 const SUBJECT_TIMEOUT_MS = 3 * 60 * 1000;
 const SETTINGS_PATH = join(
   homedir(),
@@ -61,10 +62,11 @@ const SUBJECTS = {
   '115': {
     bundlePrefix: 'dpt_disp_case-115_',
     transcript: 'case-115-subject-transcript.jsonl',
-    system: 'You are the independent Subject Agent for case 115. Work only in the exact bundle path provided by the runner. Load the current production HITL1 surface and direct bundle facts, then execute only that current phase boundary.',
-    messages: ['请执行当前 HITL1 的最小真实 research-access probe：一次 neutral search，按返回顺序最多处理三条满足当前 eligible contract 的实际 HTTP(S) candidates。每条先用 native WebFetch；只有 native 未返回真实 page content 且当前 host permission 已独立允许时，才对同一 URL 执行 production surface 指定的唯一 exact standalone curl fallback。第一条真实内容立即停止；当前 candidate 没有 legal path 时停止，不得跳到后续 candidate。按当前 production surface 写一条最终直接观察（含 candidate count/final ordinal）并运行同一 Gate；完成 immediate handoff 或诚实的 unavailable 分支后停止。'],
-    tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
-    boundary: 'Use one neutral search and process at most the first three actual eligible HTTP(S) results in returned order. For each candidate, use at most one native WebFetch and, only after no real content and with independently sufficient host permission, at most one exact standalone same-URL curl fallback from the loaded production surface. The first real content ends the entire probe; a permission or no-legal-path boundary stops at the current candidate. Never use a second fallback tier or hand an already authorized command to the user. Do not turn probe URL or bytes into research evidence. Stop after the same HITL1 Gate and its immediate legal handoff or honest unavailable failure.',
+    system: 'You are the independent isolated probe agent for case 115. Your entire authority is the injected adapter contract and one injected HITL1 capability-probe guide. You have no run bundle, filesystem, profile, status, Gate, work-unit, receipt, ledger, evidence, or user-decision authority.',
+    messages: ['Execute the injected one-shot HITL1 capability probe. Return only the guide-defined compact YAML `research_access` observation.'],
+    tools: 'Bash,WebFetch,WebSearch',
+    boundary: 'The runner owns retained experiment storage and does not disclose its path. Use exactly the fixed bounded sequence in the injected guide. Do not use any tool other than the guide-permitted native surfaces and exact fallback. Return no prose, page bytes, candidate list, transcript, analysis, receipt, or Gate claim.',
+    surface: 'isolated_hitl1_capability_probe',
   },
   '164': {
     bundlePrefix: 'dpt_disp_case-164_',
@@ -448,6 +450,20 @@ function loadMinimalSeedAuthoringSurface(bundle) {
   };
 }
 
+function loadIsolatedHitl1CapabilityProbeSurface() {
+  if (!existsSync(HITL1_CAPABILITY_PROBE_GUIDE_PATH)) {
+    throw new Error(`case 115 probe guide is missing: ${HITL1_CAPABILITY_PROBE_GUIDE_PATH}`);
+  }
+  return {
+    nodeRef: 'shared/shared-hitl1-capability-probe.md',
+    text: [
+      '<!-- DPT_ISOLATED_HITL1_CAPABILITY_PROBE_GUIDE_START -->',
+      readFileSync(HITL1_CAPABILITY_PROBE_GUIDE_PATH, 'utf8').trimEnd(),
+      '<!-- DPT_ISOLATED_HITL1_CAPABILITY_PROBE_GUIDE_END -->',
+    ].join('\n\n'),
+  };
+}
+
 const [subjectId, ...args] = process.argv.slice(2);
 const bundleIndex = args.indexOf('--bundle');
 const subject = SUBJECTS[subjectId];
@@ -461,13 +477,20 @@ if (!existsSync(LAUNCHER)) throw new Error(`launcher is missing: ${LAUNCHER}`);
 
 const settingsStatus = ensureUniqueSettings();
 const transcriptPath = join(bundle, subject.transcript);
-const productionSurface = subject.surface === 'minimal_seed_authoring'
+const productionSurface = subject.surface === 'isolated_hitl1_capability_probe'
+  ? loadIsolatedHitl1CapabilityProbeSurface()
+  : subject.surface === 'minimal_seed_authoring'
   ? loadMinimalSeedAuthoringSurface(bundle)
   : loadProductionSurface(bundle);
+const isIsolatedProbe = subject.surface === 'isolated_hitl1_capability_probe';
 const systemPrompt = [
   subject.system,
-  `The exact bundle path provided by the runner is: ${bundle}`,
-  'The runner loaded the current production required closure plus the interaction brief below, read-only from the framework. Use it as the current Agent-facing control surface and inspect only direct bundle facts needed for the current turn.',
+  isIsolatedProbe
+    ? 'The runner retains prompt, transcript, and final result outside your authority. It does not provide a bundle path or any filesystem obligation.'
+    : `The exact bundle path provided by the runner is: ${bundle}`,
+  isIsolatedProbe
+    ? 'The adapter contract and probe guide below are your complete Agent-facing control surface. Do not inspect framework source, filesystem state, or unrelated guidance.'
+    : 'The runner loaded the current production required closure plus the interaction brief below, read-only from the framework. Use it as the current Agent-facing control surface and inspect only direct bundle facts needed for the current turn.',
   `This is a bounded smoke proof. ${subject.boundary} Do not inspect framework source or unrelated repository guidance outside the injected surface.`,
   subjectId === '115'
     ? `<!-- DPT_SELECTED_RESEARCH_ACCESS_ADAPTER_START -->\n\n${readFileSync(SELECTED_RESEARCH_ACCESS_ADAPTER_PATH, 'utf8').trimEnd()}\n\n<!-- DPT_SELECTED_RESEARCH_ACCESS_ADAPTER_END -->`
