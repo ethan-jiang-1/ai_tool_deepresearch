@@ -5,21 +5,11 @@ title: Agentic Subagent Mechanism
 status: effective
 created: 2026-06-24
 revised: 2026-07-25
-role: mechanism guidance for work-unit-mediated sub-agent execution
+role: non-authoritative system-understanding model for work-unit-mediated sub-agent execution
 scope: Sub-agent actor behavior through Engine-allocated work units, noise isolation, and submit provenance
 authority: guidance
 defers_to:
-  - guidelines/project-charter.md
-siblings:
-  - guidelines/project-charter.md
-  - guidelines/evolution-abstraction-semantic-precision.md
-  - guidelines/evolution-simple-reliable-control.md
-  - guidelines/evolution-helper-oriented-agent.md
-  - guidelines/framework-runtime-boundary.md
-  - guidelines/command-experiments.md
-  - guidelines/agentic-execution-model.md
-  - guidelines/agentic-workflow-mechanism.md
-  - guidelines/agentic-queue-mechanism.md
+  - openspec/constitution/project-charter.md
 ---
 
 # Agentic Subagent Mechanism
@@ -80,7 +70,7 @@ This file cannot decide:
 
 ## Simple Work-Unit Posture
 
-This mechanism follows [`evolution-simple-reliable-control.md`](evolution-simple-reliable-control.md). Delegated reliability comes from one bounded path, not from a tree of retries, fallbacks, watchers, and inferred completion states.
+This mechanism follows [`evolution-simple-reliable-control.md`](../../constitution/evolution/simple-reliable-control.md). Delegated reliability comes from one bounded path, not from a tree of retries, fallbacks, watchers, and inferred completion states.
 
 ```text
 queue demand -> one Engine-allocated attempt -> bounded Sub-agent work -> one submit check -> submitted ledger or explicit terminal closure
@@ -246,13 +236,13 @@ General rule: accepted specs and executable contracts win over this guideline. I
 
 ## Related Guidance
 
-- [Guidelines Index](README.md) - guidance suite index and reading order.
-- [Project Charter](project-charter.md) - repo-wide charter and authority map.
-- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) - establish a precise bounded work-unit question before introducing a new delegated distinction.
+- [OpenSpec Control Map](../../README.md) - guidance roles and reading routes.
+- [Project Charter](../../constitution/project-charter.md) - repo-wide charter and authority map.
+- [Abstraction as Semantic Precision](../../constitution/evolution/abstraction-semantic-precision.md) - establish a precise bounded work-unit question before introducing a new delegated distinction.
 - [Agentic Execution Model](agentic-execution-model.md) - global execution model and terminology canon.
-- [Simple Reliable Control](evolution-simple-reliable-control.md) - short delegated paths, direct checks, and smallest actionable root-cause feedback.
-- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) - action responsibility and minimal escalation for delegated work.
+- [Simple Reliable Control](../../constitution/evolution/simple-reliable-control.md) - short delegated paths, direct checks, and smallest actionable root-cause feedback.
+- [Helper-Oriented Agent](../../constitution/evolution/helper-oriented-agent.md) - action responsibility and minimal escalation for delegated work.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) - queue demand and phase-local drain.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) - gate, chain, and phase handoff.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) - framework assets versus runtime bundles.
-- [Command Experiments](command-experiments.md) - experiment convergence and verdict boundaries.
+- [Command Experiments](../../operations/command-experiments.md) - experiment convergence and verdict boundaries.

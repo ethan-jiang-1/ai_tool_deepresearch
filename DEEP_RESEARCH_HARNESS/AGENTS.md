@@ -4,7 +4,7 @@ Codex 读到本文件时（在 `DEEP_RESEARCH_HARNESS/` 下执行 workflow，或
 
 ## 共享项目上下文
 
-开始任何 Deep Research Harness work 前，先读 `../guidelines/project-charter.md`，再读
+开始任何 Deep Research Harness work 前，先读 `../openspec/constitution/project-charter.md`，再读
 `../CONTEXT.md`。根 `CONTEXT.md` 是全项目唯一的术语对齐 glossary；它不替代
 applicable accepted/executable contract，也不在 `DEEP_RESEARCH_HARNESS/` 创建第二份
 `CONTEXT.md`。

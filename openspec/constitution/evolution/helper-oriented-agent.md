@@ -9,18 +9,11 @@ role: charter-companion evolution direction for Agent/user action responsibility
 scope: openspec/changes/, DEEP_RESEARCH_HARNESS/COMMANDS.md, DEEP_RESEARCH_HARNESS/workflows/, DEEP_RESEARCH_HARNESS/command_playbook/
 authority: guidance
 defers_to:
-  - guidelines/project-charter.md
+  - openspec/constitution/project-charter.md
 siblings:
-  - guidelines/project-charter.md
-  - guidelines/evolution-abstraction-semantic-precision.md
-  - guidelines/evolution-simple-reliable-control.md
-  - guidelines/framework-runtime-boundary.md
-  - guidelines/logging-conventions.md
-  - guidelines/command-experiments.md
-  - guidelines/agentic-execution-model.md
-  - guidelines/agentic-queue-mechanism.md
-  - guidelines/agentic-workflow-mechanism.md
-  - guidelines/agentic-subagent-mechanism.md
+  - openspec/constitution/project-charter.md
+  - openspec/constitution/evolution/abstraction-semantic-precision.md
+  - openspec/constitution/evolution/simple-reliable-control.md
 ---
 
 # Evolution Direction: Helper-Oriented Agent
@@ -54,9 +47,9 @@ Agent inspects and acts within existing authority
 ```text
 authoritative behavior contract + executable contract + runtime truth
   -> project-charter.md 的 authority/layer boundary
-  -> evolution-abstraction-semantic-precision.md 的 semantic-level discipline
-  -> evolution-simple-reliable-control.md 的 system-shape discipline
-  -> evolution-helper-oriented-agent.md 的 action-responsibility direction
+  -> abstraction-semantic-precision.md 的 semantic-level discipline
+  -> simple-reliable-control.md 的 system-shape discipline
+  -> helper-oriented-agent.md 的 action-responsibility direction
   -> mechanism guideline 的领域说明
 ```
 
@@ -117,7 +110,7 @@ authoritative behavior contract + executable contract + runtime truth
 
 - Markdown/Agent Flow SHOULD 给 Agent direct facts、clear objective、smallest blocker 和一个最近动作，保留其理解、判断、修复与执行空间。Direct facts 包含 Engine 能从其静态 contract lineage 提供的信息：缺失事实属于哪个 schema；若 accepted legal repair path 存在，应写到哪个已授权 surface、修复后重跑哪个 checkpoint；否则 contract 已知的 owner 或 terminal/missing-contract boundary 是什么。Engine 保留这些静态知识即剥夺 Agent 在合法边界内执行机械修复的能力——这与 helper posture 矛盾。
 - Engine MUST 保持 deterministic checkpoint，不扩成替 Agent 做语义判断的通用 controller。
-- Helper-oriented design MUST 在先完成 `evolution-abstraction-semantic-precision.md` 的语义层审视、再完成 `evolution-simple-reliable-control.md` 的控制形状审视后进行，避免用更多状态、条件和 fallback 模拟协作能力。
+- Helper-oriented design MUST 在先完成 `abstraction-semantic-precision.md` 的语义层审视、再完成 `simple-reliable-control.md` 的控制形状审视后进行，避免用更多状态、条件和 fallback 模拟协作能力。
 
 ## Gradual Convergence
 
@@ -155,7 +148,6 @@ Helper 不是越权。Helper 是在合法边界内多做执行，把真正需要
 
 ## Related Guidance
 
-- [Project Charter](project-charter.md) — layer and authority boundary.
-- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — establish the justified semantic level before choosing control or action responsibility.
-- [Simple Reliable Control](evolution-simple-reliable-control.md) — choose the minimum correct control shape before assigning legal execution.
-- [Guidelines Index](README.md) — suite entrypoint and reading order.
+- [Project Charter](../project-charter.md) — layer and authority boundary.
+- [Abstraction as Semantic Precision](abstraction-semantic-precision.md) — establish the justified semantic level before choosing control or action responsibility.
+- [Simple Reliable Control](simple-reliable-control.md) — choose the minimum correct control shape before assigning legal execution.

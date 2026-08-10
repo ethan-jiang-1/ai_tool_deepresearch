@@ -12,8 +12,8 @@ const POINTER_SURFACES = [
   'tests/README.md',
   'tests/integration/README.md',
   'experiments_playbook/README.md',
-  'guidelines/project-charter.md',
-  'guidelines/command-experiments.md',
+  'openspec/constitution/project-charter.md',
+  'openspec/operations/command-experiments.md',
 ];
 
 function read(path) { return readFileSync(path, 'utf8'); }

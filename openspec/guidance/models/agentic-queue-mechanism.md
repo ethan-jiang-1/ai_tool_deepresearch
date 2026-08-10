@@ -5,21 +5,11 @@ title: Agentic Queue Mechanism
 status: effective
 created: 2026-06-17
 revised: 2026-07-25
-role: mechanism guidance for queue-driven phase execution
+role: non-authoritative system-understanding model for queue-driven phase execution
 scope: Agentic Queue (AGQ) — queue engine operations and loop-engineering architectural principles
 authority: guidance
 defers_to:
-  - guidelines/project-charter.md
-siblings:
-  - guidelines/project-charter.md
-  - guidelines/evolution-abstraction-semantic-precision.md
-  - guidelines/evolution-simple-reliable-control.md
-  - guidelines/evolution-helper-oriented-agent.md
-  - guidelines/framework-runtime-boundary.md
-  - guidelines/command-experiments.md
-  - guidelines/agentic-execution-model.md
-  - guidelines/agentic-workflow-mechanism.md
-  - guidelines/agentic-subagent-mechanism.md
+  - openspec/constitution/project-charter.md
 ---
 
 # Agentic Queue Mechanism
@@ -82,7 +72,7 @@ This file cannot decide:
 
 ## Simple Queue Control Posture
 
-This Tier 2 mechanism follows [`evolution-simple-reliable-control.md`](evolution-simple-reliable-control.md). Queue reliability comes from direct queue/work-unit facts and explicit operations, not from hiding failures behind more loop machinery.
+This Tier 2 mechanism follows [`evolution-simple-reliable-control.md`](../../constitution/evolution/simple-reliable-control.md). Queue reliability comes from direct queue/work-unit facts and explicit operations, not from hiding failures behind more loop machinery.
 
 ```text
 queue demand fact -> one claim/complete/submit check -> one repair or terminal action -> rerun the same visible operation
@@ -320,13 +310,13 @@ General rule: when this guideline conflicts with an accepted spec or executable 
 
 ## Related Guidance
 
-- [Guidelines Index](README.md) — guidance suite index and reading order.
-- [Project Charter](project-charter.md) — repo-wide charter and authority map.
-- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — establish the semantic level before adding a queue state, view, or loop distinction.
-- [Simple Reliable Control](evolution-simple-reliable-control.md) — complexity brake for direct queue facts, explicit recovery, and minimal diagnostics.
-- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) — action responsibility after the semantic level and control shape are clear.
+- [OpenSpec Control Map](../../README.md) — guidance roles and reading routes.
+- [Project Charter](../../constitution/project-charter.md) — repo-wide charter and authority map.
+- [Abstraction as Semantic Precision](../../constitution/evolution/abstraction-semantic-precision.md) — establish the semantic level before adding a queue state, view, or loop distinction.
+- [Simple Reliable Control](../../constitution/evolution/simple-reliable-control.md) — complexity brake for direct queue facts, explicit recovery, and minimal diagnostics.
+- [Helper-Oriented Agent](../../constitution/evolution/helper-oriented-agent.md) — action responsibility after the semantic level and control shape are clear.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; this file's parent document.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — Tier 1 (Chain): the outer loop this inner loop nests inside.
 - [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — mechanism guidance for work-unit-mediated Sub-agent execution.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for framework assets versus runtime bundles.
-- [Command Experiments](command-experiments.md) — how to prove mechanisms with real runtime contexts.
+- [Command Experiments](../../operations/command-experiments.md) — how to prove mechanisms with real runtime contexts.

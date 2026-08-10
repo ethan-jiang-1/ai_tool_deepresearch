@@ -8,9 +8,9 @@ executable contracts, or runtime truth.
 
 `CONTEXT.md` is a vocabulary-alignment surface: it gives a short shared
 language, not a behavior specification, executable contract, Gate verdict, or
-runtime projection. Read the [Project Charter](guidelines/project-charter.md)
-for project authority boundaries, the [Guidelines Index](guidelines/README.md)
-for the guidance suite, and the [Agentic Execution Model](guidelines/agentic-execution-model.md)
+runtime projection. Read the [Project Charter](openspec/constitution/project-charter.md)
+for project authority boundaries, the [OpenSpec Control Map](openspec/README.md)
+for the guidance topology, and the [Agentic Execution Model](openspec/guidance/models/agentic-execution-model.md)
 for the execution terminology canon. The complete Phase Agent, Sub-agent, Queue
 demand item, Work unit, and Submit vocabulary stays in that execution-model
 canon; the entries here are compressed orientation only.

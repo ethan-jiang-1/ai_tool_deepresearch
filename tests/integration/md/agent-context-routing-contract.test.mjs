@@ -59,7 +59,7 @@ describe('agent context routing contract', () => {
       const text = read(path);
       const preRead = section(text, 'Before Anything Else', path);
 
-      assertOrdered(preRead, path, ['guidelines/project-charter.md', 'CONTEXT.md']);
+      assertOrdered(preRead, path, ['openspec/constitution/project-charter.md', 'CONTEXT.md']);
       assertOrdered(text, path, ['## Before Anything Else', 'CONTEXT.md', '## Deep Research Routing']);
       assert.match(preRead, /normal instruction-discovery\s+behavior/);
       assert.match(preRead, /task-specific authoritative sources/);
@@ -77,7 +77,7 @@ describe('agent context routing contract', () => {
 
     assertOrdered(text, path, [
       '## Start Here',
-      'guidelines/project-charter.md',
+      'openspec/constitution/project-charter.md',
       'CONTEXT.md',
       'Start from the repository root',
       '## Directory Map',
@@ -95,7 +95,7 @@ describe('agent context routing contract', () => {
 
       assertOrdered(text, path, [
         '## 共享项目上下文',
-        '../guidelines/project-charter.md',
+        '../openspec/constitution/project-charter.md',
         '../CONTEXT.md',
         '## ⚡ 第一优先',
         '## Must Read',
@@ -120,7 +120,7 @@ describe('agent context routing contract', () => {
 
     assertOrdered(text, path, [
       '## 共享项目上下文',
-      '../guidelines/project-charter.md',
+      '../openspec/constitution/project-charter.md',
       '../CONTEXT.md',
       '> **最快触发**',
       '## 触发规则（最高优先）',
@@ -136,9 +136,9 @@ describe('agent context routing contract', () => {
     const text = read(path);
 
     assert.match(text, /## Terminology Sources and Authority Boundary/);
-    assert.match(text, /\[Project Charter\]\(guidelines\/project-charter\.md\)/);
-    assert.match(text, /\[Guidelines Index\]\(guidelines\/README\.md\)/);
-    assert.match(text, /\[Agentic Execution Model\]\(guidelines\/agentic-execution-model\.md\)/);
+    assert.match(text, /\[Project Charter\]\(openspec\/constitution\/project-charter\.md\)/);
+    assert.match(text, /\[OpenSpec Control Map\]\(openspec\/README\.md\)/);
+    assert.match(text, /\[Agentic Execution Model\]\(openspec\/guidance\/models\/agentic-execution-model\.md\)/);
     assert.match(text, /\[ADR 0001\]\(docs\/adr\/0001-keep-agent-flow-markdown-driven-and-engine-gated\.md\)/);
     assert.match(text, /\[ADR 0002\]\(docs\/adr\/0002-name-the-reusable-surface-deep-research-harness\.md\)/);
     assert.match(text, /\[ADR 0003\]\(docs\/adr\/0003-retire-legacy-harness-source-alias\.md\)/);

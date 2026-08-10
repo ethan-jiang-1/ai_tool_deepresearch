@@ -10,9 +10,9 @@ Core split: the LLM Agent searches, reads, writes evidence, and synthesizes. The
 
 ## Before Anything Else
 
-**This is not a traditional program.** Read `guidelines/project-charter.md` — it explains the project's nature, principles, and why mock/make-believe testing has no place here.
+**This is not a traditional program.** Read `openspec/constitution/project-charter.md` — it explains the project's nature, principles, and why mock/make-believe testing has no place here.
 
-Use `guidelines/` when the right direction, layer boundary, or experiment path is unclear. Start with `guidelines/project-charter.md`.
+Use the OpenSpec guidance topology when the right direction, layer boundary, or experiment path is unclear. Start with `openspec/constitution/project-charter.md`.
 
 For every substantive repository task, after the required Project Charter read,
 read root `CONTEXT.md` to align terminology and ownership boundaries.
@@ -29,7 +29,9 @@ For selected Deep Research Harness research, choose and read exactly one entry b
 
 Start from the repository root and choose only the top-level surface relevant to the task. Do not pre-read every root file or recursively scan directories; follow the Coding Agent's normal instruction-discovery behavior and the task context. Once inside a surface, read only what the task needs.
 
-- `guidelines/` — project principles and operating guidance
+- `openspec/constitution/` — enduring project principles and evolution directions
+- `openspec/guidance/models/` — non-authoritative system-understanding models
+- `openspec/operations/` — current Agent-facing operating guidance
 - `openspec/` — project rules, active changes, accepted specs, and governance
 - `docs/adr/` — on-demand durable architecture decisions
 - `DEEP_RESEARCH_HARNESS/` — distributable framework and Agent-facing playbooks

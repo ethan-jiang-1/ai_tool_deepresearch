@@ -5,21 +5,11 @@ title: Agentic Workflow Mechanism
 status: effective
 created: 2026-06-23
 revised: 2026-07-25
-role: normative mechanism description of the Agent-driven dynamic-loading workflow loop
+role: non-authoritative system-understanding model of the Agent-driven dynamic-loading workflow loop
 scope: all Agent-driven workflow execution across DEEP_RESEARCH_HARNESS/, dpt_rb_*/, and dpt_disp_*/
 authority: guidance
 defers_to:
-  - guidelines/project-charter.md
-siblings:
-  - guidelines/project-charter.md
-  - guidelines/evolution-abstraction-semantic-precision.md
-  - guidelines/evolution-simple-reliable-control.md
-  - guidelines/evolution-helper-oriented-agent.md
-  - guidelines/framework-runtime-boundary.md
-  - guidelines/command-experiments.md
-  - guidelines/agentic-execution-model.md
-  - guidelines/agentic-queue-mechanism.md
-  - guidelines/agentic-subagent-mechanism.md
+  - openspec/constitution/project-charter.md
 ---
 
 # Agentic Workflow Mechanism
@@ -54,7 +44,7 @@ This file cannot decide:
 
 ## Simple Control Posture
 
-This Tier 1 mechanism follows [`evolution-simple-reliable-control.md`](evolution-simple-reliable-control.md): Chain reliability comes from a short explicit handoff, not from adding a smarter workflow controller.
+This Tier 1 mechanism follows [`evolution-simple-reliable-control.md`](../../constitution/evolution/simple-reliable-control.md): Chain reliability comes from a short explicit handoff, not from adding a smarter workflow controller.
 
 The preferred path stays one hop at each boundary:
 
@@ -216,16 +206,16 @@ Every `fileRef` in `transitions.chain.json` must resolve to a readable Markdown 
 
 ## Related Guidance
 
-- [Guidelines Index](README.md) — guidance suite index and reading order.
-- [Project Charter](project-charter.md) — repo-wide charter and authority map.
-- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — establish the semantic level before adding a phase, route, or handoff distinction.
-- [Simple Reliable Control](evolution-simple-reliable-control.md) — short decision chains, root-cause short-circuiting, and quality-control complexity limits.
-- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) — action responsibility after the semantic level and control shape are clear.
+- [OpenSpec Control Map](../../README.md) — guidance roles and reading routes.
+- [Project Charter](../../constitution/project-charter.md) — repo-wide charter and authority map.
+- [Abstraction as Semantic Precision](../../constitution/evolution/abstraction-semantic-precision.md) — establish the semantic level before adding a phase, route, or handoff distinction.
+- [Simple Reliable Control](../../constitution/evolution/simple-reliable-control.md) — short decision chains, root-cause short-circuiting, and quality-control complexity limits.
+- [Helper-Oriented Agent](../../constitution/evolution/helper-oriented-agent.md) — action responsibility after the semantic level and control shape are clear.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; this file's parent document.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for framework assets versus runtime bundles.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Tier 2 (Queue) for within-phase task execution; defines the inner loop that nests inside this file's outer loop.
 - [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — work-unit-mediated Sub-agent execution within the current execution model.
-- [Command Experiments](command-experiments.md) — how to prove mechanisms with real runtime contexts.
+- [Command Experiments](../../operations/command-experiments.md) — how to prove mechanisms with real runtime contexts.
 
 ## Relationship to Other Guidelines
 

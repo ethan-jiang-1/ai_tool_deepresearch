@@ -26,7 +26,7 @@ const RETIRED_PATHS = [
 ];
 const STATIC_KNOWLEDGE_SURFACES = [
   'openspec/config.yaml',
-  'guidelines/command-experiments.md',
+  'openspec/operations/command-experiments.md',
   'experiments_playbook/README.md',
   'DEEP_RESEARCH_HARNESS/host_tools/README.md',
 ];
@@ -78,7 +78,7 @@ function capabilitySpecPaths(capability, activeDeltaPaths = activeDeltaSpecPaths
 describe('Agent Experiment Autorun terminology knowledge surfaces', () => {
   it('keeps the canonical glossary in the guideline and experiment entry README', () => {
     for (const file of [
-      'guidelines/command-experiments.md',
+      'openspec/operations/command-experiments.md',
       'experiments_playbook/README.md',
     ]) {
       const content = read(file);
@@ -106,7 +106,7 @@ describe('Agent Experiment Autorun terminology knowledge surfaces', () => {
   });
 
   it('keeps ordinary CI and deterministic fixtures outside Agent-flow proof authority', () => {
-    assert.match(read('guidelines/command-experiments.md'), /Ordinary CI and `node:test` cannot execute `agent_flow_e2e` by themselves/);
+    assert.match(read('openspec/operations/command-experiments.md'), /Ordinary CI and `node:test` cannot execute `agent_flow_e2e` by themselves/);
     assert.match(read('experiments_playbook/README.md'), /Supervisor or `node:test` fixtures can prove host mechanics, but cannot substitute/);
     assert.match(read('DEEP_RESEARCH_HARNESS/host_tools/README.md'), /`node:test`, CI, or test-owned Claude executable fixtures prove only Autorun Supervisor mechanics/);
     assert.match(read('openspec/config.yaml'), /普通 CI\/`node:test` fixture 只能证明 deterministic Supervisor mechanics/);
@@ -156,7 +156,7 @@ describe('Agent Experiment Autorun terminology knowledge surfaces', () => {
   it('does not revive retired autorun instruction or host-entry names', () => {
     const surfaces = [
       'openspec/config.yaml',
-      'guidelines/command-experiments.md',
+      'openspec/operations/command-experiments.md',
       'experiments_playbook/README.md',
       'DEEP_RESEARCH_HARNESS/host_tools/README.md',
       'experiments_playbook/RUN_AGENT_AUTORUN_EXPS.md',

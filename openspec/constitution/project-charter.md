@@ -9,16 +9,9 @@ role: repo-wide charter and entrypoint
 scope: all work in this repository
 authority: guidance
 siblings:
-  - guidelines/evolution-abstraction-semantic-precision.md
-  - guidelines/evolution-simple-reliable-control.md
-  - guidelines/evolution-helper-oriented-agent.md
-  - guidelines/framework-runtime-boundary.md
-  - guidelines/logging-conventions.md
-  - guidelines/command-experiments.md
-  - guidelines/agentic-execution-model.md
-  - guidelines/agentic-queue-mechanism.md
-  - guidelines/agentic-workflow-mechanism.md
-  - guidelines/agentic-subagent-mechanism.md
+  - openspec/constitution/evolution/abstraction-semantic-precision.md
+  - openspec/constitution/evolution/simple-reliable-control.md
+  - openspec/constitution/evolution/helper-oriented-agent.md
 ---
 
 # Project Charter
@@ -33,7 +26,7 @@ siblings:
 
 本项目完全靠 OpenSpec 推进工程变更。OpenSpec 不是旁路文档或事后记录，而是 proposal、spec、tasks、apply、archive 的执行主干：它把要做什么、为什么做、按什么顺序做、怎样验证、完成后如何并入 main specs 固化下来。
 
-本项目的开发模式是 spec-driven development。所有能力、行为、schema、状态机、deterministic checkpoint、receipt、trace 相关迭代都必须严格遵循 OpenSpec：先 proposal/spec/tasks，再实现、验证、归档。`guidelines/` 只能解释和指路，不能绕过 OpenSpec 直接定义新行为。
+本项目的开发模式是 spec-driven development。所有能力、行为、schema、状态机、deterministic checkpoint、receipt、trace 相关迭代都必须严格遵循 OpenSpec：先 proposal/spec/tasks，再实现、验证、归档。project guidance 只能解释和指路，不能绕过 OpenSpec 直接定义新行为。
 
 核心分工固定不变：
 
@@ -52,7 +45,7 @@ JSON/YAML/JSONL  -> 持久化 runtime state、证据、receipt、trace，让上�
 
 Before adding a named state, status, projection, Module, command, or reader-facing view, first ask whether it creates a semantic level on which a reader can reason more precisely. Dijkstra's point was not that abstraction permits vagueness: finite reasoning can cover many cases only when it creates a new level at which the relevant distinctions are precise.
 
-Read [Evolution Direction: Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) before choosing the control mechanism. That companion retains the complete EWD 340 Argument Four source paragraph and a clearly separate project interpretation; this Charter retains only the entry-point context.
+Read [Evolution Direction: Abstraction as Semantic Precision](evolution/abstraction-semantic-precision.md) before choosing the control mechanism. That companion retains the complete EWD 340 Argument Four source paragraph and a clearly separate project interpretation; this Charter retains only the entry-point context.
 
 ## File Position
 
@@ -77,14 +70,14 @@ This file cannot decide:
 - MUST treat JS/CLI/schema/trace as the trust root for deterministic state.
 - MUST follow the project's spec-driven change lifecycle for project evolution.
 - MUST use accepted behavior contracts for capability behavior.
-- MUST, before introducing or materially changing a named state, projection, status, concept, Module, or reader-facing view, review whether it gives a defined reader a precise bounded question, preserves the distinctions that change that answer, and provides a normal reasoning stop point. Use `guidelines/evolution-abstraction-semantic-precision.md` for this review.
+- MUST, before introducing or materially changing a named state, projection, status, concept, Module, or reader-facing view, review whether it gives a defined reader a precise bounded question, preserves the distinctions that change that answer, and provides a normal reasoning stop point. Use `openspec/constitution/evolution/abstraction-semantic-precision.md` for this review.
 - MUST keep Markdown as the primary LLM-facing operating/control surface, not as a machine verifier or authority for state transitions.
 - MUST keep multi-stage agentic flow in Markdown, playbooks, or task cards by default.
 - MUST read JS/CLI feedback back into the conversation context before the next Markdown-driven action.
 - MUST treat check / inspect / advice outputs as structured JS/CLI feedback, not as chat noise.
-- MUST prefer the shortest correct control loop: direct runtime fact -> deterministic check -> smallest actionable root cause -> one clear next action. Use `guidelines/evolution-simple-reliable-control.md` as the design-review complexity brake.
+- MUST prefer the shortest correct control loop: direct runtime fact -> deterministic check -> smallest actionable root cause -> one clear next action. Use `openspec/constitution/evolution/simple-reliable-control.md` as the design-review complexity brake.
 - MUST, when proposing or changing a cross-boundary deterministic obligation used to block advancement or establish a deterministic closure condition, make its authoritative fact, owning boundary, legal establishment/change path, or honest owner/terminal/missing-contract boundary reviewable. This review does not itself require a witness, receipt, consumer, writer, retry, state, or controller unless an accepted contract independently requires one.
-- MUST treat the Agent as the executor of ordinary authorized commands and reversible mechanical repair when a live Agent turn has required permission, an accepted legal operation, and the facts that operation requires; ask the user only for new semantics, risk/permission decisions, or a genuinely non-delegable action. Use `guidelines/evolution-helper-oriented-agent.md` for the action-responsibility review.
+- MUST treat the Agent as the executor of ordinary authorized commands and reversible mechanical repair when a live Agent turn has required permission, an accepted legal operation, and the facts that operation requires; ask the user only for new semantics, risk/permission decisions, or a genuinely non-delegable action. Use `openspec/constitution/evolution/helper-oriented-agent.md` for the action-responsibility review.
 - MUST distinguish autonomous execution, human-directed decisions inside HITL1/HITL2, and out-of-band maintenance/debug without inventing a new lifecycle state or mutation authority.
 - MUST keep the iterative research posture simple: HITL1 aligns the work, silent autonomy executes ordinary legal work, HITL2 reviews it, and Final delivers it. This is responsibility allocation, not a promise that a host or model will continue, invoke a tool, retain context, or succeed externally. A normal user-initiated turn may be answered without becoming another checkpoint or authority. Retaining prior decisions, artifacts, and trace as history does not make every historical value permanently current; accepted specs and current runtime truth define behavior.
 - MUST treat quality-control complexity as safety-critical: a checker, gate, recovery path, or diagnostic chain must be easier to reason about and test than the work it validates.
@@ -95,7 +88,7 @@ This file cannot decide:
 - MUST keep per-run state, HITL answers, gate attempts, trace, artifacts, delegated work-unit attempts, and final output inside the current run bundle root.
 - MUST pass the selected active-bundle path explicitly to framework commands that operate on a run.
 - MUST, when proposing or changing an Agent-facing boundary explicitly declared for entry, handoff, or recovery, state its input/context boundary and enough authoritative facts for the bounded next legal action or an honest no-path result. It may be a documented protocol, but MUST NOT select semantic work, schedule turns, infer liveness, or advance undeclared transitions.
-- MUST keep `guidelines/` aligned with accepted specs and clearly separate stable principles from current repository conventions.
+- MUST keep current project guidance aligned with accepted specs and clearly separate stable principles from current repository conventions.
 
 ### MUST NOT
 
@@ -131,13 +124,13 @@ authority boundary.
 | Runtime/run state | the selected active runtime bundle | 每个 run 或实验自己的当前控制文件和数据 |
 | Human/Agent guidance | this Charter and its guidance suite | 项目宪章、复杂度纪律、操作规范、机制指导、阅读路线 |
 
-`guidelines/` 的作用是降低理解成本，不做新的 Source of Record。需要新增或改变系统行为时，离开宪章导航层，按项目变更生命周期进入相应的 authoritative surface；本文件不把那些下游位置编入阅读路线。
+project guidance 的作用是降低理解成本，不做新的 Source of Record。需要新增或改变系统行为时，离开宪章导航层，按项目变更生命周期进入相应的 authoritative surface；本文件不把那些下游位置编入阅读路线。
 
 Source of Record 只回答哪个 surface 裁决某类事实。Authority、capability、permission、responsibility、liveness 和 evidence 是不同问题；除非 accepted contract 明确规定，任何一个都不自动推出另一个。
 
 ### Guidance Conflict Resolution
 
-当 `guidelines/` 内部出现历史机制表述与新原则的张力时：
+当 project guidance 内部出现历史机制表述与新原则的张力时：
 
 1. 适用于该事实的 accepted behavior contract、可执行 contract 和 runtime truth 决定当前行为；不能用新 prose 越权修改。
 2. 本 Charter 决定 Agent / Markdown / Engine / runtime state 的 ownership boundary。
@@ -158,17 +151,17 @@ When deciding where something belongs, route by authority:
 | Semantic judgment, evidence choice, synthesis, or repair reasoning | LLM Agent |
 | Schema, state transition, deterministic checkpoint, receipt, trace, or deterministic verdict | the applicable executable contract |
 | Current run state, queue contents, profile, evidence files, work-unit attempts, or trace history | the selected active runtime bundle |
-| A new or materially changed named state, projection, status, concept, Module, command, or reader-facing view | `guidelines/evolution-abstraction-semantic-precision.md`, then leave the constitutional route through the approved change lifecycle |
+| A new or materially changed named state, projection, status, concept, Module, command, or reader-facing view | `openspec/constitution/evolution/abstraction-semantic-precision.md`, then leave the constitutional route through the approved change lifecycle |
 | New or changed accepted behavior | the approved change lifecycle before implementation |
-| Future mechanism direction | `guidelines/` as design guidance only |
-| Control-loop or quality-check complexity | `guidelines/evolution-simple-reliable-control.md` |
-| Agent/user action responsibility, escalation, or maintenance/debug posture | `guidelines/evolution-helper-oriented-agent.md` |
+| Future mechanism direction | the applicable OpenSpec model or operation guidance, as design guidance only |
+| Control-loop or quality-check complexity | `openspec/constitution/evolution/simple-reliable-control.md` |
+| Agent/user action responsibility, escalation, or maintenance/debug posture | `openspec/constitution/evolution/helper-oriented-agent.md` |
 
 ---
 
 ## Framework Runtime Boundary
 
-可复用的 framework assets 与某一次 run 的 mutable truth 必须分开：前者可以服务多个 run，后者只属于被明确选中的那个 runtime bundle。具体目录、命令和文件路由不属于本宪章；它们由同层的 [Framework Runtime Boundary](framework-runtime-boundary.md) 说明。本 Charter 只固定不可反转的原则：不能把当前运行事实写回可复用资产，也不能把 chat memory、console 或 projection 当作 active runtime truth。
+可复用的 framework assets 与某一次 run 的 mutable truth 必须分开：前者可以服务多个 run，后者只属于被明确选中的那个 runtime bundle。具体目录、命令和文件路由不属于本宪章；它们由 framework/runtime boundary model 说明。本 Charter 只固定不可反转的原则：不能把当前运行事实写回可复用资产，也不能把 chat memory、console 或 projection 当作 active runtime truth。
 
 ---
 
@@ -348,23 +341,16 @@ Explore / design
 
 新 Agent 或新维护者按这个顺序读：
 
-1. `guidelines/project-charter.md`：稳定原则和权威边界。
-2. `guidelines/evolution-abstraction-semantic-precision.md`：Dijkstra 的原文语境、何种新概念形成可精确推理的语义层，以及引入新东西前的退后一步。
-3. `guidelines/evolution-simple-reliable-control.md`：短判断链、简单质量控制、最小根因反馈和复杂度刹车。
-4. `guidelines/evolution-helper-oriented-agent.md`：用户决定、Agent 执行、Engine 裁决的 helper-oriented 责任边界。
-5. `guidelines/framework-runtime-boundary.md`：framework 只读资产与 run bundle 可变状态的目录和权威边界。
-6. `guidelines/logging-conventions.md`：runtime continuity、trace/log 的 authority boundary 与诊断记录。
-7. `guidelines/agentic-execution-model.md`：统一执行模型与术语正典——Chain、Queue、Work Unit 如何组成当前执行系统。
-8. `guidelines/agentic-workflow-mechanism.md`：Tier 1 (Chain) —— phase 间路由与三层权威架构。
-9. `guidelines/agentic-queue-mechanism.md`：Tier 2 (Queue) —— phase 内 task 编排，两层嵌套循环。
-10. `guidelines/agentic-subagent-mechanism.md`：Work-unit-mediated Sub-agent execution —— bounded sub-agent 任务、噪声隔离、submit provenance。
-11. `guidelines/command-experiments.md`：如何写和运行实验 playbook。
+1. `openspec/constitution/project-charter.md`：稳定原则和权威边界。
+2. `openspec/constitution/evolution/abstraction-semantic-precision.md`：Dijkstra 的原文语境、何种新概念形成可精确推理的语义层，以及引入新东西前的退后一步。
+3. `openspec/constitution/evolution/simple-reliable-control.md`：短判断链、简单质量控制、最小根因反馈和复杂度刹车。
+4. `openspec/constitution/evolution/helper-oriented-agent.md`：用户决定、Agent 执行、Engine 裁决的 helper-oriented 责任边界。
 
 ---
 
 ## Guideline Change Checklist
 
-Before changing any file in `guidelines/`, check:
+Before changing project guidance, check:
 
 - Does this stay within the Charter's ownership boundary rather than duplicating an authoritative behavioral contract?
 - Does this preserve the Charter-only `defers_to` hierarchy and same-layer constitutional navigation?
@@ -377,9 +363,9 @@ Before changing any file in `guidelines/`, check:
 - Does this duplicate a definition that should instead live in `README.md` glossary or this project charter?
 - Does this add enough `MUST` / `MUST NOT` clarity for an Agent to act safely?
 - For a proposed durable constitutional invariant, does it remain valid without current incident or mechanism names and have a meaningful counterexample; and does any new or changed blocking or declared public boundary keep its legal/no-path, non-implication, and proof scope explicit without pre-approving a mechanism?
-- Has the change first applied `evolution-abstraction-semantic-precision.md`, so the semantic level is justified before choosing a control shape or allocating action responsibility?
-- Has the change passed the two-question `Simplicity Admission Test` in `evolution-simple-reliable-control.md`?
-- Has it passed the two-question `Helper Direction Review` in `evolution-helper-oriented-agent.md`, so only necessary decisions remain with the user and legal execution returns to the Agent?
+- Has the change first applied `evolution/abstraction-semantic-precision.md`, so the semantic level is justified before choosing a control shape or allocating action responsibility?
+- Has the change passed the two-question `Simplicity Admission Test` in `evolution/simple-reliable-control.md`?
+- Has it passed the two-question `Helper Direction Review` in `evolution/helper-oriented-agent.md`, so only necessary decisions remain with the user and legal execution returns to the Agent?
 - If it names recovery, stop, context, or validation obligations, does it avoid pre-approving a complex mechanism?
 - Does it preserve current accepted behavior while giving future work a focused convergence path?
 - Should this be an OpenSpec change instead of guidance prose?
@@ -388,14 +374,6 @@ Before changing any file in `guidelines/`, check:
 
 ## Related Guidance
 
-- [Guidelines Index](README.md) — guidance suite index and reading order.
-- [Evolution Direction: Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — Dijkstra's original context, precise bounded semantic levels, and the reflection to apply before introducing a new concept.
-- [Evolution Direction: Simple Reliable Control](evolution-simple-reliable-control.md) — short decision chains, direct Source-of-Record checks, root-cause short-circuiting, and quality-control complexity limits.
-- [Evolution Direction: Helper-Oriented Agent](evolution-helper-oriented-agent.md) — user decision, Agent execution, Engine authority, and minimal escalation boundaries.
-- [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for read-only framework assets versus mutable runtime bundles.
-- [Logging Conventions](logging-conventions.md) — runtime continuity, trace/log authority boundaries, and diagnostic log usage.
-- [Command Experiments](command-experiments.md) — target guidance for durable command experiment shape and boundaries.
-- [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; defines Chain, Queue, and Work Units.
-- [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — Tier 1 (Chain): phase-to-phase routing and Three-Authority Architecture.
-- [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Tier 2 (Queue): within-phase task execution; queue engine (AGQ-001~006) is implemented runtime, and seed-topics/wave0/wave1/wave2 queue integrations are accepted/current.
-- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — mechanism guidance for work-unit-mediated Sub-agent execution and noise-isolation principles.
+- [Evolution Direction: Abstraction as Semantic Precision](evolution/abstraction-semantic-precision.md) — Dijkstra's original context, precise bounded semantic levels, and the reflection to apply before introducing a new concept.
+- [Evolution Direction: Simple Reliable Control](evolution/simple-reliable-control.md) — short decision chains, direct Source-of-Record checks, root-cause short-circuiting, and quality-control complexity limits.
+- [Evolution Direction: Helper-Oriented Agent](evolution/helper-oriented-agent.md) — user decision, Agent execution, Engine authority, and minimal escalation boundaries.

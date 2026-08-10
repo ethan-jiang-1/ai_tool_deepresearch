@@ -6,19 +6,14 @@ status: effective
 created: 2026-07-25
 revised: 2026-07-25
 role: charter-companion evolution direction for justified semantic levels and precise bounded reasoning
-scope: openspec/changes/, guidelines/, DEEP_RESEARCH_HARNESS/, tests/, experiments_playbook/
+scope: openspec/changes/, openspec/constitution/, DEEP_RESEARCH_HARNESS/, tests/, experiments_playbook/
 authority: guidance
 defers_to:
-  - guidelines/project-charter.md
+  - openspec/constitution/project-charter.md
 siblings:
-  - guidelines/project-charter.md
-  - guidelines/evolution-simple-reliable-control.md
-  - guidelines/evolution-helper-oriented-agent.md
-  - guidelines/framework-runtime-boundary.md
-  - guidelines/agentic-execution-model.md
-  - guidelines/agentic-workflow-mechanism.md
-  - guidelines/agentic-queue-mechanism.md
-  - guidelines/agentic-subagent-mechanism.md
+  - openspec/constitution/project-charter.md
+  - openspec/constitution/evolution/simple-reliable-control.md
+  - openspec/constitution/evolution/helper-oriented-agent.md
 ---
 
 # Evolution Direction: Abstraction as Semantic Precision
@@ -156,7 +151,6 @@ Edsger W. Dijkstra 在 1972 年图灵奖演讲《The Humble Programmer》的 EWD
 
 ## Related Guidance
 
-- [Project Charter](project-charter.md) — repo-wide authority and layer boundaries.
-- [Simple Reliable Control](evolution-simple-reliable-control.md) — minimum correct control shape after the semantic level is clear.
-- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) — decision, legal execution, and deterministic-judgment responsibility after the control shape is clear.
-- [Guidelines Index](README.md) — suite entrypoint and reading order.
+- [Project Charter](../project-charter.md) — repo-wide authority and layer boundaries.
+- [Simple Reliable Control](simple-reliable-control.md) — minimum correct control shape after the semantic level is clear.
+- [Helper-Oriented Agent](helper-oriented-agent.md) — decision, legal execution, and deterministic-judgment responsibility after the control shape is clear.

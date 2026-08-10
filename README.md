@@ -14,7 +14,7 @@ Before triggering `DEEP_RESEARCH_HARNESS/RUN.md`, complete the human preflight i
 
 ## Start Here
 
-- **⚠️ This is an agent engineering project, not a traditional program.** For every substantive task, read `guidelines/project-charter.md` first, especially when direction or layer ownership is unclear.
+- **⚠️ This is an agent engineering project, not a traditional program.** For every substantive task, read `openspec/constitution/project-charter.md` first, especially when direction or layer ownership is unclear.
 - Then read [`CONTEXT.md`](CONTEXT.md) to align terminology and ownership boundaries. It is a non-authoritative glossary; normal instruction discovery and task-specific authoritative sources still apply.
 - For a durable architecture rationale, consult [`docs/adr/`](docs/adr/) on demand. It is not another mandatory pre-task read.
 - Start from the repository root and choose the top-level surface relevant to the task. Do not pre-read every root document or recursively scan directories; use the Coding Agent's normal instruction-discovery behavior and the task context.
@@ -23,7 +23,9 @@ Before triggering `DEEP_RESEARCH_HARNESS/RUN.md`, complete the human preflight i
 
 | Directory | What it is |
 |-----------|------------|
-| `guidelines/` | 项目原则、层级边界与操作指引 |
+| `openspec/constitution/` | 持久项目原则与 Evolution Directions |
+| `openspec/guidance/models/` | 非权威的系统理解模型 |
+| `openspec/operations/` | 当前 Agent-facing 操作指引 |
 | `openspec/` | Spec-driven development：规则、changes、specs 与 governance |
 | `docs/adr/` | 按需查阅的持久架构决策 |
 | `DEEP_RESEARCH_HARNESS/` | 可发行框架与 Agent-facing playbooks |

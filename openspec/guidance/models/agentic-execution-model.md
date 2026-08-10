@@ -5,21 +5,11 @@ title: Agentic Execution Model
 status: effective
 created: 2026-06-24
 revised: 2026-07-25
-role: unified execution model and terminology canon for the agentic execution system
+role: non-authoritative system-understanding terminology model for the agentic execution system
 scope: the complete agentic execution loop, including Chain, Queue, and Work Unit execution
 authority: guidance
 defers_to:
-  - guidelines/project-charter.md
-siblings:
-  - guidelines/project-charter.md
-  - guidelines/evolution-abstraction-semantic-precision.md
-  - guidelines/evolution-simple-reliable-control.md
-  - guidelines/evolution-helper-oriented-agent.md
-  - guidelines/framework-runtime-boundary.md
-  - guidelines/command-experiments.md
-  - guidelines/agentic-workflow-mechanism.md
-  - guidelines/agentic-queue-mechanism.md
-  - guidelines/agentic-subagent-mechanism.md
+  - openspec/constitution/project-charter.md
 ---
 
 # Agentic Execution Model
@@ -72,7 +62,7 @@ This file cannot decide:
 
 ## Reliability Posture Across Tiers
 
-The three-tier model follows [`evolution-simple-reliable-control.md`](evolution-simple-reliable-control.md). Each tier should expose one direct authority and each boundary crossing should be one explicit operation.
+The three-tier model follows [`evolution-simple-reliable-control.md`](../../constitution/evolution/simple-reliable-control.md). Each tier should expose one direct authority and each boundary crossing should be one explicit operation.
 
 ```text
 Chain: gate verdict -> route lookup
@@ -234,13 +224,13 @@ Both axes must agree. A Markdown instruction can tell the Phase Agent to claim w
 
 ## Related Guidance
 
-- [Guidelines Index](README.md) - guidance suite index and reading order.
-- [Project Charter](project-charter.md) - repo-wide charter and authority map.
-- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) - establish the semantic level before assigning a tier or a term.
-- [Simple Reliable Control](evolution-simple-reliable-control.md) - complexity posture for short tier boundaries and reliable quality-control feedback.
-- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) - action responsibility after the model and control shape are clear.
+- [OpenSpec Control Map](../../README.md) - guidance roles and reading routes.
+- [Project Charter](../../constitution/project-charter.md) - repo-wide charter and authority map.
+- [Abstraction as Semantic Precision](../../constitution/evolution/abstraction-semantic-precision.md) - establish the semantic level before assigning a tier or a term.
+- [Simple Reliable Control](../../constitution/evolution/simple-reliable-control.md) - complexity posture for short tier boundaries and reliable quality-control feedback.
+- [Helper-Oriented Agent](../../constitution/evolution/helper-oriented-agent.md) - action responsibility after the model and control shape are clear.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) - Chain and phase handoff.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) - queue demand and phase-local drain.
 - [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) - work-unit-mediated Sub-agent execution.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) - directory and authority boundary for framework assets versus runtime bundles.
-- [Command Experiments](command-experiments.md) - how to prove mechanisms with real runtime contexts.
+- [Command Experiments](../../operations/command-experiments.md) - how to prove mechanisms with real runtime contexts.

@@ -286,6 +286,7 @@ describe('change feedback finalizer integration', () => {
     ], { cwd: root }));
     const applyFeedback = apply.operationGuidance.find((entry) => entry.startsWith('change-feedback-loop/apply:'));
     assert.ok(applyFeedback);
+    assert.match(applyFeedback, /openspec\/operations\/change-feedback-loop\.md/);
     assert.match(applyFeedback, /actual symbol or document anchor/);
     assert.match(applyFeedback, /bare file coordinate/);
     assert.match(applyFeedback, /verdict consumers/);
@@ -302,13 +303,14 @@ describe('change feedback finalizer integration', () => {
     assert.match(closureGuidance, /missing-command fallback/);
     const archiveFeedback = archive.operationGuidance.find((entry) => entry.startsWith('change-feedback-loop/archive:'));
     assert.ok(archiveFeedback);
+    assert.match(archiveFeedback, /openspec\/operations\/change-feedback-loop\.md/);
     assert.match(archiveFeedback, /actual symbol or document anchor/);
     assert.match(archiveFeedback, /bare file coordinate/);
     assert.match(archiveFeedback, /verdict consumers/);
     assert.match(archiveFeedback, /overlap: derived/);
     assert.match(archiveFeedback, /does not validate fragment\/role semantics/);
 
-    const guideline = readFileSync(join(ROOT, 'guidelines/change-feedback-loop.md'), 'utf8');
+    const guideline = readFileSync(join(ROOT, 'openspec/operations/change-feedback-loop.md'), 'utf8');
     assert.match(guideline, /semantic-closure\.yaml/);
     const [applyReview, afterApplyReview] = guideline.split('## Closeout Review');
     assert.ok(afterApplyReview);
@@ -505,7 +507,7 @@ describe('change feedback finalizer integration', () => {
     ]);
   });
 
-  it('keeps every declared entry on the guidance and finalizer route', () => {
+  it('keeps every declared entry on the instruction and finalizer route', () => {
     assert.deepEqual(SUPPORTED_ENTRY_SURFACES, {
       apply: [
         '.agents/skills/openspec-apply-change/SKILL.md',
@@ -524,7 +526,6 @@ describe('change feedback finalizer integration', () => {
     for (const path of SUPPORTED_ENTRY_SURFACES.apply) {
       const source = readFileSync(join(ROOT, path), 'utf8');
       assert.match(source, /openspec instructions apply --change/);
-      assert.match(source, /guidelines\/change-feedback-loop\.md/);
       assert.match(source, /openspec-feedback:/);
       assert.match(source, /change-feedback-loop\/apply:/);
       assert.match(source, /stop[\s\S]{0,120}target edit|target edit[\s\S]{0,120}stop/i);
@@ -538,7 +539,6 @@ describe('change feedback finalizer integration', () => {
     for (const path of SUPPORTED_ENTRY_SURFACES.archive) {
       const source = readFileSync(join(ROOT, path), 'utf8');
       assert.match(source, /openspec instructions archive --change/);
-      assert.match(source, /guidelines\/change-feedback-loop\.md/);
       assert.match(source, /openspec-feedback:/);
       assert.match(source, /change-feedback-loop\/archive:/);
       assert.match(source, /node openspec\/governance\/finalize-change-archive\.mjs --change/);

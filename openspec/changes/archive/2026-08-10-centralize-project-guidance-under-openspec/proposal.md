@@ -22,8 +22,9 @@ test fixture mismatch（`c93189aca`，2026-08-10）；本 change 不把该已关
 - 让 constitution hierarchy 只检查 constitution documents；models 与 operations 由各自的 role-aware
   navigation/operation contract 保护。尤其保留 operation guidance 对 accepted spec 和 governed finalizer
   的真实 defer route。
-- 更新 root/Harness entry routes、OpenSpec config、supported Apply/Archive adapters、accepted path
-  contracts 和 focused regressions，使它们收敛到新路径。
+- 更新 root/Harness entry routes、OpenSpec config、accepted path contracts 和 focused regressions，使它们
+  收敛到新路径。既有 Apply/Archive skill 与 command adapter 通过 `openspec instructions` 获取
+  project-owned guidance；本 change 不改写这些既有 source assets 来承载项目路径。
 - Change A 只做 topology、路径和必要的 role-coordinate repair。`openspec/README.md` 在此 change 中
   仅承担可用的 control map；mandatory context 瘦身、glossary 去重、文件重命名与新的 topology automation
   留给后续 `prune-and-automate-project-guidance` change。
@@ -57,6 +58,7 @@ test fixture mismatch（`c93189aca`，2026-08-10）；本 change 不把该已关
 ## Impact
 
 - Current guidance documents, their frontmatter, their internal links, and `openspec/README.md` control map.
-- Root and Harness discovery/entry documents, root glossary links, `openspec/config.yaml`, and the eight supported lifecycle adapters.
+- Root and Harness discovery/entry documents, root glossary links, and `openspec/config.yaml`; the eight
+  supported lifecycle adapters remain stable consumers of configuration-delivered operation guidance.
 - Focused `node:test` regressions for constitution hierarchy, context routing plus preserved research-entry selection, feedback finalization, verification knowledge surfaces, and experiment terminology.
 - No dependencies added and no runtime bundle, Harness behavior, or archive content changed.

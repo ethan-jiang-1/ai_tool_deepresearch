@@ -35,8 +35,8 @@ context: |
     LLM 负责信息加工，JS 负责质量保证。验证失败 → 反馈 → 反思 → 纠正，不静默通过。
 
     JS/MD 边界判断:
-      遇到"这段逻辑该放 JS 还是 MD"拿不准时，读 guidelines/project-charter.md 的
-      "Operating Model" 节和 guidelines/framework-runtime-boundary.md 的
+      遇到"这段逻辑该放 JS 还是 MD"拿不准时，读 openspec/constitution/project-charter.md 的
+      "Operating Model" 节和 openspec/guidance/models/framework-runtime-boundary.md 的
       "Agent-Engine Communication" 节。速判口诀：
         MD/Agent 侧：多阶段流程编排、修复策略选择、语义判断、branch 路由决策
         JS/Engine 侧：schema 校验、状态转移查询 (askNext)、receipt 检查、trace 写入
@@ -49,13 +49,13 @@ context: |
     定期打扫卫生是好习惯，在设计和上下文里多琢磨。
 
   Evolution Directions（proposal/design 必须按当前顺序 review）:
-    - guidelines/evolution-abstraction-semantic-precision.md：在新增或实质改变具名 state、projection、status、concept、Module、command 或 reader-facing view 前，
+    - openspec/constitution/evolution/abstraction-semantic-precision.md：在新增或实质改变具名 state、projection、status、concept、Module、command 或 reader-facing view 前，
       留下一小段连贯的语义反思：它服务哪个明确读者的哪个有界问题、哪些区别必须保留、以及读者如何能在此层得出精确结论或明确 unknown，
       而不必沿正常路径回到底层重建。不要把这变成固定表格或 Engine verdict。
-    - guidelines/evolution-simple-reliable-control.md：在语义层已说明后，优先 direct Source of Record 和最短合法闭环；
+    - openspec/constitution/evolution/simple-reliable-control.md：在语义层已说明后，优先 direct Source of Record 和最短合法闭环；
       新增 state/check/validator/fallback/retry/recovery 必须说明净简化（net simplification），以及删除、合并或避免了什么复杂度，
       不得仅以“更可靠”为由继续堆叠控制层。
-    - guidelines/evolution-helper-oriented-agent.md：在语义层与控制形状均已说明后，用户负责新的语义、风险与权限决定；
+    - openspec/constitution/evolution/helper-oriented-agent.md：在语义层与控制形状均已说明后，用户负责新的语义、风险与权限决定；
       Agent 负责已授权的机械执行与可逆修复；Engine 负责确定性 verdict。
       human-directed 只说明决定来源，不创造 permission、override 或缺失 runtime capability。
 
@@ -120,7 +120,7 @@ context: |
     tests/fixtures/: 最小测试框架（symlink 到 DEEP_RESEARCH_HARNESS/），为 tests/ 提供 fixture。
 
   实验体系 (Experiments):
-    正典术语与责任边界见 `guidelines/command-experiments.md`；当前操作入口见
+    正典术语与责任边界见 `openspec/operations/command-experiments.md`；当前操作入口见
     `experiments_playbook/README.md` 与 `DEEP_RESEARCH_HARNESS/host_tools/README.md`。本文件只保留高频路由:
     - Agent Experiment Autorun 是正常 unattended launch model，不是传统 CLI test runner。
     - Autorun Supervisor 选择、启动、监督、验证 native completion、运行 health、审计和清理；不执行 Markdown 或重判 verdict。
@@ -141,7 +141,7 @@ context: |
   根目录约定 (Framework ↔ Bundle 同级, 不拷贝):
     docs/                       — 架构文档 (architect/)
     experiments_playbook/        — Agent 测试 playbook (见实验体系)
-      exp_{component}/            # 每个机制一个子目录；命名与格式详见 guidelines/command-experiments.md
+      exp_{component}/            # 每个机制一个子目录；命名与格式详见 openspec/operations/command-experiments.md
     experiments_env/                — 原型实验 (理想化, 冻结, 见实验体系)
     openspec/                   — OpenSpec spec-driven development
       changes/                  — change proposals (deltas) + archive
@@ -181,7 +181,7 @@ operations:
       - >-
         change-feedback-loop/apply: For a feedback-lifecycle change, complete the durable
         openspec-feedback:plan-review before the first target edit. Read
-        guidelines/change-feedback-loop.md, preserve any pending feedback task, and convert an
+        openspec/operations/change-feedback-loop.md, preserve any pending feedback task, and convert an
         actionable finding into an ordinary unchecked task. For an affected semantic-closure
         record, use a `#fragment` only for an actual symbol or document anchor; otherwise use a
         bare file coordinate with existing prose. Classify `consumers` as verdict consumers only
@@ -213,7 +213,7 @@ operations:
         document anchor; otherwise use a bare file coordinate with existing prose. Classify
         `consumers` as verdict consumers only and an Agent-facing projection as `overlap: derived`.
         The structural checker does not validate fragment/role semantics. Read
-        guidelines/change-feedback-loop.md for the full closeout rubric.
+        openspec/operations/change-feedback-loop.md for the full closeout rubric.
         After Agent-owned delta/main sync and re-comparison when applicable, complete all tasks
         and use node openspec/governance/finalize-change-archive.mjs --change <name> as the only
         supported final mechanical transition. Guidance is not archive permission.
@@ -275,9 +275,9 @@ rules:
       architecture、recovery、mutation、Agent/user responsibility 或具名概念/状态/view 变更，
       必须按顺序考虑 semantic precision → simple reliable control → helper-oriented responsibility。
       对实际新增或实质改变的层，阅读并应用
-      guidelines/evolution-abstraction-semantic-precision.md、
-      guidelines/evolution-simple-reliable-control.md、
-      guidelines/evolution-helper-oriented-agent.md；在 design.md 的相应设计论证中简短记录
+      openspec/constitution/evolution/abstraction-semantic-precision.md、
+      openspec/constitution/evolution/simple-reliable-control.md、
+      openspec/constitution/evolution/helper-oriented-agent.md；在 design.md 的相应设计论证中简短记录
       语义边界、direct Source of Record / 最短合法闭环 / net simplification，以及
       user decision / authorized Agent execution / Engine verdict 的边界。未改变的层可说明不适用。
   tasks:

@@ -101,7 +101,7 @@ not become a research entry, run selection, or authorization for request-specifi
 and it SHALL not change the existing Harness entry selection. Current root and Harness guidance
 SHALL expose `DEEP_RESEARCH_HARNESS/` as the only reusable Harness source coordinate. They SHALL
 not preserve a secondary filesystem alias, source-root compatibility route, local glossary, or
-`guidelines/` compatibility route.
+retired project-guidance compatibility route.
 
 The pre-read SHALL not select, replace, or change the precedence between the existing Harness
 research entry alternatives. After it, the accepted explicit existing-bundle route and new-research
@@ -162,9 +162,9 @@ that `DEEP_RESEARCH_HARNESS/CONTEXT.md` is absent; and that the repository root 
 filesystem entry resolving to the canonical Harness assets.
 
 This focused regression SHALL additionally fail when one of its inspected current entry documents
-presents a second supported Harness source coordinate, preserves a `guidelines/` path as a current
-Charter/model source, or the repository root exposes an alternate filesystem entry resolving to the
-canonical Harness assets. It SHALL not encode the retired source-root vocabulary as a live test
+preserves a retired project-guidance path as a current Charter/model source, or the repository root
+exposes an alternate filesystem entry resolving to the canonical Harness assets. It SHALL not encode
+the retired source-root vocabulary as a live test
 fixture. Historical Git records and archived OpenSpec artifacts are outside this topology assertion.
 
 This focused regression SHALL not duplicate the accepted selected-entry and pre-entry-research
@@ -178,8 +178,8 @@ claim real Agent behavior.
 #### Scenario: Required entry route is removed, reversed, or gains a second root
 
 - **WHEN** any root or canonical Harness Agent behavior file or README entry document omits the
-  required glossary route, places `CONTEXT.md` before the Charter, retains a current `guidelines/`
-  Charter/model source, the root drops its normal instruction-discovery/task-specific-authority or
+required glossary route, places `CONTEXT.md` before the Charter, retains a current retired
+project-guidance Charter/model source, the root drops its normal instruction-discovery/task-specific-authority or
   scoped-reading boundary, moves its Context route outside `## Before Anything Else`, or lets the
   pre-read fall after an existing root routing block, Harness first-priority routing, `最快触发`
   callout, or Harness trigger block, either behavior-file pair drifts in its required synchronized

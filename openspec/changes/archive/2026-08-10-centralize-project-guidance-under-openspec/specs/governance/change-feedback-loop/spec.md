@@ -5,17 +5,19 @@
 ### Requirement: Change lifecycle operations SHALL deliver current review guidance
 
 Supported project apply and archive entry surfaces SHALL obtain the current OpenSpec operation guidance for the
-selected change from `openspec/operations/change-feedback-loop.md` and present the corresponding
-feedback-lifecycle action before target implementation or final archive transition. Apply guidance SHALL direct
-the Agent to the plan-review obligation and pending feedback tasks. Archive guidance SHALL direct the Agent to
-the change-scoped closeout review, Agent-driven delta/main sync and re-comparison when applicable, and the
-governed finalizer after those semantic steps are complete.
+selected change through `openspec instructions apply|archive --change <name> --json` and present the
+corresponding feedback-lifecycle action before target implementation or final archive transition. The
+project-owned `openspec/config.yaml` operation guidance SHALL name
+`openspec/operations/change-feedback-loop.md` as the canonical full rubric. Apply guidance SHALL direct the
+Agent to the plan-review obligation and pending feedback tasks. Archive guidance SHALL direct the Agent to the
+change-scoped closeout review, Agent-driven delta/main sync and re-comparison when applicable, and the governed
+finalizer after those semantic steps are complete.
 
 `openspec/operations/change-feedback-loop.md` is an Agent-facing delivery surface only. It SHALL defer to the
 Project Charter, accepted `governance/change-feedback-loop` behavior, and
 `openspec/governance/finalize-change-archive.mjs`; it SHALL NOT become a lifecycle state machine, archive
-authority, permission grant, or duplicate review authority. `guidelines/change-feedback-loop.md` SHALL NOT
-remain a current supported fallback or compatibility route.
+authority, permission grant, or duplicate review authority. The retired pre-migration feedback coordinate SHALL
+NOT remain a project-owned current supported fallback or compatibility route.
 
 `SUPPORTED_ENTRY_SURFACES` in `openspec/governance/finalize-change-archive.mjs` SHALL be the one
 project-owned inventory of supported entry surfaces. It SHALL list exactly:
@@ -32,6 +34,11 @@ project-owned inventory of supported entry surfaces. It SHALL list exactly:
 Deleted `.codex` skill and prompt paths SHALL not be represented as supported entry surfaces. Tests for
 lifecycle delivery SHALL consume this inventory rather than maintain a divergent entry list.
 
+The listed `.agents/` and `.claude/` entry source assets are stable consumers, not project-owned guidance
+delivery surfaces. A guidance-topology migration SHALL NOT alter them to hardcode a project path. Conformance
+SHALL instead verify that they obtain operation guidance and that the selected operation's
+`openspec/config.yaml` guidance resolves to the canonical operation coordinate.
+
 After `governance/semantic-fact-closure` is accepted, the current plan and closeout review guidance SHALL also
 direct the Agent to inspect the selected change's `semantic-closure.yaml`. For an `affected` record, review
 SHALL assess whether its bounded fact, resolver, establishing surfaces, verdict consumers, and overlap relation
@@ -47,10 +54,10 @@ the revision under review:
   an Agent-facing projection uses the applicable overlap relation, including `derived` when projected from that
   conclusion.
 
-The current Apply and Archive operation guidance SHALL name those two review checks and direct the Agent to
-`openspec/operations/change-feedback-loop.md` for their full plan/closeout rubric. Supported entry adapters
-SHALL continue to deliver that current guidance rather than independently copying the full rubric into each
-adapter.
+The configuration-delivered Apply and Archive operation guidance SHALL name those two review checks and direct
+the Agent to `openspec/operations/change-feedback-loop.md` for their full plan/closeout rubric. Supported entry
+adapters SHALL continue to obtain that current guidance rather than independently copying the full rubric or a
+project path into each adapter.
 
 A structural checker result SHALL not be reported as either semantic judgment. If plan or closeout review finds
 a guessed or inaccurate fragment, a projection or diagnostic reader misclassified as a verdict consumer, or a
@@ -80,9 +87,17 @@ coordinate.
 #### Scenario: Apply entry delivers the canonical plan-review action
 
 - **WHEN** an Agent starts or resumes apply for a feedback-lifecycle change
-- **THEN** the supported entry surface SHALL present the current plan-review and pending-task context from
-  `openspec/operations/change-feedback-loop.md`
+- **THEN** its `openspec instructions apply` response SHALL present current plan-review and pending-task context
+  from configuration-delivered guidance that names `openspec/operations/change-feedback-loop.md`
 - **AND** it SHALL not claim that guidance itself completes the review
+
+#### Scenario: Existing entry sources remain configuration-neutral
+
+- **WHEN** the project relocates an operation guidance document
+- **THEN** the stable listed skill and command source assets SHALL continue to obtain guidance through
+  `openspec instructions` without a migration-specific source edit
+- **AND** the selected operation's `openspec/config.yaml` guidance SHALL be the asserted canonical-path delivery
+  surface
 
 #### Scenario: Current entry inventory excludes retired paths
 

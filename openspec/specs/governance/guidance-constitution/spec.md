@@ -80,7 +80,7 @@ Evidence outside a claim's stated provenance or continuity boundary MAY remain d
 
 ### Requirement: Abstraction direction makes semantic precision reviewable
 
-The guidance suite SHALL maintain guidelines/evolution-abstraction-semantic-precision.md as a Charter-companion Evolution Direction. It SHALL reproduce the complete EWD 340 Argument Four paragraph that contains the canonical sentence, retain its primary-source link, and immediately follow the source text with a clearly separate project-context interpretation. The source paragraph and interpretation together SHALL explain that abstraction lets finite reasoning cover many cases by creating a semantic level at which reasoning can be precise; the interpretation SHALL NOT be presented as Dijkstra's own wording.
+The guidance suite SHALL maintain `openspec/constitution/evolution/abstraction-semantic-precision.md` as a Charter-companion Evolution Direction. It SHALL reproduce the complete EWD 340 Argument Four paragraph that contains the canonical sentence, retain its primary-source link, and immediately follow the source text with a clearly separate project-context interpretation. The source paragraph and interpretation together SHALL explain that abstraction lets finite reasoning cover many cases by creating a semantic level at which reasoning can be precise; the interpretation SHALL NOT be presented as Dijkstra's own wording.
 
 When a relevant design introduces or materially changes a named state, projection, status, concept, Module, or reader-facing view, it SHALL first make reviewable:
 
@@ -114,37 +114,76 @@ The direction SHALL NOT use guidance prose to create runtime authority, make a p
 
 ### Requirement: Current evolution directions route relevant design through ordered reviews
 
-The Project Charter, Guidelines Index, OpenSpec proposal/design context, and the three charter-companion Evolution Directions SHALL route relevant future design through the current ordered triad:
+The Project Charter, OpenSpec control map, OpenSpec proposal/design context, and the three
+Charter-companion Evolution Directions SHALL route relevant future design through the current
+ordered triad:
 
 1. abstraction as semantic precision;
 2. simple reliable control; then
 3. helper-oriented action responsibility.
 
-The route SHALL preserve their distinct ownership: semantic precision decides whether an introduced concept yields a precise, bounded reasoning level; simple reliable control limits the necessary control shape; helper-oriented guidance assigns decision and legal mechanical execution responsibility. The route SHALL make guidelines/evolution-abstraction-semantic-precision.md discoverable beside the existing two companions.
+The route SHALL preserve their distinct ownership: semantic precision decides whether an
+introduced concept yields a precise, bounded reasoning level; simple reliable control limits the
+necessary control shape; helper-oriented guidance assigns decision and legal mechanical execution
+responsibility. The route SHALL make
+`openspec/constitution/evolution/abstraction-semantic-precision.md` discoverable beside the
+existing two companions.
 
-The route SHALL NOT claim that every historical artifact was retroactively reviewed, require every mechanism guideline to repeat the whole triad, or treat the current count of directions as a permanent numerical invariant.
+The route SHALL NOT claim that every historical artifact was retroactively reviewed, require every
+mechanism model or operation document to repeat the whole triad, or treat the current count of
+directions as a permanent numerical invariant.
 
-Project Charter SHALL carry no `defers_to` dependency. Every other effective Markdown guideline under `guidelines/` SHALL have exactly one `defers_to` entry, `guidelines/project-charter.md`. Charter SHALL present the current triad in semantic precision → simple reliable control → helper-oriented action responsibility order. Every other guideline SHALL place Charter before its applicable charter companions in `siblings`, and SHALL preserve that triad order among those companions.
+The canonical project-guidance topology SHALL contain exactly these current role roots:
 
-Constitutional navigation—frontmatter, Reading Order, and Related Guidance—SHALL stay within `guidelines/`. It SHALL NOT route readers to AGENTS.md, openspec/config.yaml, downstream capability specs, framework files, experiments, or runtime bundles. This restriction does not erase necessary factual mechanism prose or a primary source embedded as source context; it constrains hierarchy and navigation, not the subject matter a focused guideline explains.
+- `openspec/constitution/` for the Project Charter and constitutional Evolution Directions;
+- `openspec/guidance/models/` for non-authoritative system-understanding models; and
+- `openspec/operations/` for current Agent-facing procedures with their explicit authority limits.
+
+`openspec/constitution/project-charter.md` SHALL carry no `defers_to` dependency. Every other
+effective constitution Markdown document under `openspec/constitution/` SHALL have exactly one
+`defers_to` entry, `openspec/constitution/project-charter.md`. Charter SHALL present the current
+triad in semantic precision -> simple reliable control -> helper-oriented action responsibility
+order. Constitution companions SHALL place Charter before their applicable companions in
+`siblings`, and SHALL preserve that triad order among those companions.
+
+Model navigation SHALL identify its canonical model role without representing model documents as
+Charter companions. Operation guidance SHALL declare every real external authority needed by its
+procedure and SHALL NOT be forced into the constitution peer set. In particular,
+`openspec/operations/change-feedback-loop.md` SHALL continue to defer to the Charter, accepted
+`governance/change-feedback-loop` behavior, and the governed archive finalizer. No current
+supported document may retain the retired project-guidance root as a second root, mirror, or
+compatibility route.
+
+Constitutional navigation--frontmatter, Reading Order, and Related Guidance--SHALL stay within
+`openspec/constitution/`. It SHALL NOT route readers to root adapters, `openspec/config.yaml`,
+downstream capability specs, framework files, experiments, or runtime bundles. This restriction
+does not erase necessary factual mechanism prose, an operation document's explicit authority
+coordinate, or a primary source embedded as source context; it constrains constitutional hierarchy
+and navigation, not the subject matter a focused document explains.
 
 #### Scenario: A future relevant design receives the ordered route
 
-- **WHEN** an author starts an architecture, recovery, mutation, Agent-facing, state, projection, interface, or workflow-concept design
-- **THEN** openspec/config.yaml directs the author to consider semantic precision before simplicity and helper responsibility
-- **AND** Project Charter and Guidelines Index expose the same current ordered triad
+- **WHEN** an author starts an architecture, recovery, mutation, Agent-facing, state, projection,
+  interface, or workflow-concept design
+- **THEN** `openspec/config.yaml` directs the author to consider semantic precision before
+  simplicity and helper responsibility
+- **AND** Project Charter and the OpenSpec control map expose the same current ordered triad
 
-#### Scenario: Every active guideline has one Charter root
+#### Scenario: Constitution and operations retain distinct authority routes
 
-- **WHEN** the effective Markdown files under `guidelines/` are audited
-- **THEN** Project Charter has no `defers_to`
-- **AND** every other file has only `guidelines/project-charter.md` under `defers_to`
-- **AND** its sibling route exposes Charter and the applicable current triad in semantic → simple → helper order
-- **AND** a focused mechanism document need not restate the triad in its substantive mechanism prose
+- **WHEN** current project guidance is audited after the topology migration
+- **THEN** the Charter has no `defers_to`, every non-Charter constitution document defers only to
+  the canonical Charter, and its sibling route exposes the applicable triad in semantic -> simple
+  -> helper order
+- **AND** model documents are not classified as constitutional peers
+- **AND** operation guidance with an accepted-spec or finalizer dependency retains that explicit
+  external authority instead of being forced into a Charter-only dependency set
 
 #### Scenario: Charter reading does not descend into implementation surfaces
 
-- **WHEN** Project Charter is updated with the current evolution-direction route
-- **THEN** its frontmatter has no defers_to and its Reading Order routes readers through same-layer guidance only
-- **AND** every other effective guideline defers only to Project Charter
-- **AND** constitutional navigation does not list AGENTS.md, openspec/config.yaml, downstream capability specs, framework/experiment surfaces, or active runtime bundles as targets
+- **WHEN** the Project Charter is updated with the current evolution-direction route
+- **THEN** its frontmatter has no `defers_to` and its Reading Order routes readers through the
+  constitutional surface only
+- **AND** constitutional navigation does not list root adapters, `openspec/config.yaml`, downstream
+  capability specs, framework/experiment surfaces, or active runtime bundles as targets
+- **AND** the repository exposes no current supported retired guidance root or duplicate Charter

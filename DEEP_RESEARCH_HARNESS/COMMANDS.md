@@ -21,7 +21,7 @@ Post-final feedback 不自动创造能力：supported rerun走上述audited oper
 
 ## Phase Boundary Terms
 
-Short operating note only; deeper terminology canon lives in `guidelines/agentic-execution-model.md` and accepted OpenSpec specs.
+Short operating note only; deeper terminology canon lives in `../openspec/guidance/models/agentic-execution-model.md` and accepted OpenSpec specs.
 
 - `phase transition`: runtime status synchronization, such as `rb_status.json` current/next gate updates and `phase_transition` trace.
 - `phase handoff`: Phase Agent consumes gate CLI `check.next` through `enter-phase` or another accepted loader/check path and receives the next Markdown control surface.

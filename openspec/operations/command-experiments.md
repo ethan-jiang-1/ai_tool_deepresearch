@@ -5,19 +5,11 @@ title: Command Experiments Guideline
 status: effective
 created: 2026-06-17
 revised: 2026-07-25
-role: constitutional guidance for Agent-driven command experiments
+role: current Agent-facing operation guidance for command experiments
 scope: experiments_playbook/*, experiments
 authority: guidance
 defers_to:
-  - guidelines/project-charter.md
-siblings:
-  - guidelines/project-charter.md
-  - guidelines/evolution-abstraction-semantic-precision.md
-  - guidelines/evolution-simple-reliable-control.md
-  - guidelines/evolution-helper-oriented-agent.md
-  - guidelines/framework-runtime-boundary.md
-  - guidelines/agentic-execution-model.md
-  - guidelines/agentic-subagent-mechanism.md
+  - openspec/constitution/project-charter.md
 ---
 
 # Command Experiments
@@ -163,9 +155,9 @@ If these answers are unclear, the case is not apply-ready.
 
 ## Related Guidance
 
-- [Project Charter](project-charter.md) — project-level authority boundary.
-- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — establish the bounded mechanism question before adding an experiment surface or verdict concept.
-- [Simple Reliable Control](evolution-simple-reliable-control.md) — keep the proof path shorter and simpler than the behavior it validates.
-- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) — keep ordinary legal execution with the Agent and escalate only true decisions.
-- [Framework Runtime Boundary](framework-runtime-boundary.md) — framework assets versus mutable run truth.
-- [Guidelines Index](README.md) — suite entrypoint and reading order.
+- [Project Charter](../constitution/project-charter.md) — project-level authority boundary.
+- [Abstraction as Semantic Precision](../constitution/evolution/abstraction-semantic-precision.md) — establish the bounded mechanism question before adding an experiment surface or verdict concept.
+- [Simple Reliable Control](../constitution/evolution/simple-reliable-control.md) — keep the proof path shorter and simpler than the behavior it validates.
+- [Helper-Oriented Agent](../constitution/evolution/helper-oriented-agent.md) — keep ordinary legal execution with the Agent and escalate only true decisions.
+- [Framework Runtime Boundary](../guidance/models/framework-runtime-boundary.md) — framework assets versus mutable run truth.
+- [OpenSpec Control Map](../README.md) — guidance roles and reading routes.

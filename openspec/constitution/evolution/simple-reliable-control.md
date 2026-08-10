@@ -9,18 +9,11 @@ role: charter-companion evolution direction for control-loop complexity and net 
 scope: openspec/changes/, DEEP_RESEARCH_HARNESS/workflows/, DEEP_RESEARCH_HARNESS/cli/, DEEP_RESEARCH_HARNESS/engine/, tests/, experiments_playbook/
 authority: guidance
 defers_to:
-  - guidelines/project-charter.md
+  - openspec/constitution/project-charter.md
 siblings:
-  - guidelines/project-charter.md
-  - guidelines/evolution-abstraction-semantic-precision.md
-  - guidelines/evolution-helper-oriented-agent.md
-  - guidelines/framework-runtime-boundary.md
-  - guidelines/logging-conventions.md
-  - guidelines/command-experiments.md
-  - guidelines/agentic-execution-model.md
-  - guidelines/agentic-queue-mechanism.md
-  - guidelines/agentic-workflow-mechanism.md
-  - guidelines/agentic-subagent-mechanism.md
+  - openspec/constitution/project-charter.md
+  - openspec/constitution/evolution/abstraction-semantic-precision.md
+  - openspec/constitution/evolution/helper-oriented-agent.md
 ---
 
 # Evolution Direction: Simple Reliable Control
@@ -41,9 +34,9 @@ siblings:
 
 本 guideline 只定义设计姿态和评审标准。具体 schema、CLI、gate rule、状态字段和 trace contract 仍必须通过 OpenSpec 与 executable contracts 定义。
 
-本文件是 `project-charter.md` 的宪章伴随原则：Project Charter 定义层级和权威边界，本文件定义这些边界内允许采用怎样的控制复杂度。它不是运行时 spec，但在 `guidelines/` 内部遇到“是否应该再加一层 check、状态、fallback、retry 或 recovery”时，应优先用本文件裁决设计姿态。
+本文件是 `project-charter.md` 的宪章伴随原则：Project Charter 定义层级和权威边界，本文件定义这些边界内允许采用怎样的控制复杂度。它不是运行时 spec，但在 project guidance 中遇到“是否应该再加一层 check、状态、fallback、retry 或 recovery”时，应优先用本文件裁决设计姿态。
 
-它不先决定“要抽象什么”。在审查控制形状前，先读 [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md)，确认新的概念、状态或 view 已经让一个明确读者能就一个有界问题精确推理；本文件才问围绕这个语义层还需要多少确定性控制。
+它不先决定“要抽象什么”。在审查控制形状前，先读 [Abstraction as Semantic Precision](abstraction-semantic-precision.md)，确认新的概念、状态或 view 已经让一个明确读者能就一个有界问题精确推理；本文件才问围绕这个语义层还需要多少确定性控制。
 
 ## Standing And Precedence
 
@@ -57,8 +50,8 @@ siblings:
 ```text
 authoritative behavior contract + executable contract + runtime truth
   -> project-charter.md 的层级与权威边界
-  -> evolution-abstraction-semantic-precision.md 的语义层审视
-  -> evolution-simple-reliable-control.md 的复杂度姿态
+  -> abstraction-semantic-precision.md 的语义层审视
+  -> simple-reliable-control.md 的复杂度姿态
   -> 各 mechanism guideline 的领域说明
 ```
 
@@ -350,7 +343,6 @@ OpenSpec proposal/design/tasks 在进入 apply 前，先留下 Abstraction as Se
 
 ## Related Guidance
 
-- [Project Charter](project-charter.md) — layer and authority boundary.
-- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — establish the justified semantic level before choosing the control shape.
-- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) — allocate action responsibility after the semantic level and control shape are clear.
-- [Guidelines Index](README.md) — suite entrypoint and reading order.
+- [Project Charter](../project-charter.md) — layer and authority boundary.
+- [Abstraction as Semantic Precision](abstraction-semantic-precision.md) — establish the justified semantic level before choosing the control shape.
+- [Helper-Oriented Agent](helper-oriented-agent.md) — allocate action responsibility after the semantic level and control shape are clear.

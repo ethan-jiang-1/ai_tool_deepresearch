@@ -6,7 +6,7 @@ Harness 采用 recommendation-first 的两点交互节奏：HITL1 对齐，静�
 
 ## 共享项目上下文
 
-开始 Deep Research Harness work 前，先读 [Project Charter](../guidelines/project-charter.md)，再读
+开始 Deep Research Harness work 前，先读 [Project Charter](../openspec/constitution/project-charter.md)，再读
 [root `CONTEXT.md`](../CONTEXT.md)。根 `CONTEXT.md` 是全项目唯一的术语对齐
 glossary；它不替代 applicable accepted/executable contract，也不在
 `DEEP_RESEARCH_HARNESS/` 创建第二份 `CONTEXT.md`。

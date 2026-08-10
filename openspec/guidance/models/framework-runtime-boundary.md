@@ -5,22 +5,11 @@ title: Framework Runtime Boundary
 status: effective
 created: 2026-06-19
 revised: 2026-07-25
-role: directory and authority boundary for framework assets versus run bundle runtime state
+role: non-authoritative system-understanding model for framework assets versus run bundle runtime state
 scope: DEEP_RESEARCH_HARNESS/, dpt_rb_*/, dpt_disp_*/
 authority: guidance
 defers_to:
-  - guidelines/project-charter.md
-siblings:
-  - guidelines/project-charter.md
-  - guidelines/evolution-abstraction-semantic-precision.md
-  - guidelines/evolution-simple-reliable-control.md
-  - guidelines/evolution-helper-oriented-agent.md
-  - guidelines/logging-conventions.md
-  - guidelines/command-experiments.md
-  - guidelines/agentic-execution-model.md
-  - guidelines/agentic-queue-mechanism.md
-  - guidelines/agentic-workflow-mechanism.md
-  - guidelines/agentic-subagent-mechanism.md
+  - openspec/constitution/project-charter.md
 ---
 
 # Framework Runtime Boundary
@@ -73,7 +62,7 @@ This file cannot decide:
 
 ## Authority Path Simplicity
 
-This boundary follows [`evolution-simple-reliable-control.md`](evolution-simple-reliable-control.md). Directory separation is valuable because it keeps the truth path short:
+This boundary follows [`evolution-simple-reliable-control.md`](../../constitution/evolution/simple-reliable-control.md). Directory separation is valuable because it keeps the truth path short:
 
 ```text
 framework definition -> explicit CLI/check -> current run bundle authority -> Agent-facing feedback
@@ -250,7 +239,7 @@ Markdown（playbook、task card、node）是 Agent Flow 的编织者。它告诉
 
 术语上，这里的 "controller" 指 **Markdown control surface / controller role**：Markdown 承载流程、约束和反馈入口。它不是一个 Agent 身份；执行 phase-level Markdown、调用 Engine 并做运行时判断的是 **Phase Agent**，其使用的模式在术语正典中称为 **MD controller mode**。
 
-完整的运行时循环机制（谁驱动、谁路由、谁验证、三层权威架构）见 `guidelines/agentic-workflow-mechanism.md`。
+完整的运行时循环机制（谁驱动、谁路由、谁验证、三层权威架构）见 `openspec/guidance/models/agentic-workflow-mechanism.md`。
 
 - **MUST**：多阶段 Agent Flow 保持在 Markdown/playbook 中，JS/CLI 只做确定性 checkpoint。
 - **MUST NOT**：将 Agent Flow 藏入 JS controller。JS 控制的是校验节点，不是整条流程。
@@ -299,7 +288,7 @@ Gate CLI 是纯确定性检查器——遍历 rules、执行 check、返回结�
 - **MUST**：trace check event 记录 gate 的完整回答（passed + next + inspect + advice），不止 passed/failed。
 - **MUST NOT**：用 `console.log` 替代 trace 做 pass/fail 裁决。
 
-Runtime continuity and logging details live in `guidelines/logging-conventions.md`: after context loss, recover from current run bundle control files and `rb_trace.jsonl`; use `_logs/run.log` only for diagnosis.
+Runtime continuity and logging details live in `openspec/operations/logging-conventions.md`: after context loss, recover from current run bundle control files and `rb_trace.jsonl`; use `_logs/run.log` only for diagnosis.
 
 ---
 
@@ -356,14 +345,14 @@ Runtime continuity and logging details live in `guidelines/logging-conventions.m
 
 ## Related Guidance
 
-- [Guidelines Index](README.md) — guidance suite index and reading order.
-- [Project Charter](project-charter.md) — repo-wide charter and authority map.
-- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — establish the reader's bounded question before adding another directory, projection, or runtime distinction.
-- [Simple Reliable Control](evolution-simple-reliable-control.md) — direct authority paths and limits on projection/state complexity.
-- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) — action responsibility after the boundary and control shape are clear.
-- [Logging Conventions](logging-conventions.md) — runtime continuity, trace/log authority boundaries, and diagnostic log usage.
+- [OpenSpec Control Map](../../README.md) — guidance roles and reading routes.
+- [Project Charter](../../constitution/project-charter.md) — repo-wide charter and authority map.
+- [Abstraction as Semantic Precision](../../constitution/evolution/abstraction-semantic-precision.md) — establish the reader's bounded question before adding another directory, projection, or runtime distinction.
+- [Simple Reliable Control](../../constitution/evolution/simple-reliable-control.md) — direct authority paths and limits on projection/state complexity.
+- [Helper-Oriented Agent](../../constitution/evolution/helper-oriented-agent.md) — action responsibility after the boundary and control shape are clear.
+- [Logging Conventions](../../operations/logging-conventions.md) — runtime continuity, trace/log authority boundaries, and diagnostic log usage.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; defines the three-tier execution system.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — outer loop (Chain) that phase routing depends on.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Tier 2 (Queue) for within-phase task execution.
 - [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — work-unit-mediated Sub-agent execution and submit provenance.
-- [Command Experiments](command-experiments.md) — how to prove mechanisms with real runtime contexts.
+- [Command Experiments](../../operations/command-experiments.md) — how to prove mechanisms with real runtime contexts.

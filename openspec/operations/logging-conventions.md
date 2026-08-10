@@ -5,22 +5,11 @@ title: Logging Conventions
 status: effective
 created: 2026-06-26
 revised: 2026-07-25
-role: system-level logging conventions for .mjs and .md diagnostic recording
+role: current operation guidance for .mjs and .md diagnostic recording
 scope: DEEP_RESEARCH_HARNESS/engine/logger.mjs, DEEP_RESEARCH_HARNESS/engine/trace.mjs, DEEP_RESEARCH_HARNESS/cli/log-event.mjs, DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs, DEEP_RESEARCH_HARNESS/workflows/nodes/phases/*.md
 authority: guidance
 defers_to:
-  - guidelines/project-charter.md
-siblings:
-  - guidelines/project-charter.md
-  - guidelines/evolution-abstraction-semantic-precision.md
-  - guidelines/evolution-simple-reliable-control.md
-  - guidelines/evolution-helper-oriented-agent.md
-  - guidelines/framework-runtime-boundary.md
-  - guidelines/agentic-execution-model.md
-  - guidelines/agentic-queue-mechanism.md
-  - guidelines/agentic-workflow-mechanism.md
-  - guidelines/agentic-subagent-mechanism.md
-  - guidelines/command-experiments.md
+  - openspec/constitution/project-charter.md
 ---
 
 # Guideline: logging_conventions — Current Guidance
@@ -44,7 +33,7 @@ Both files are current run bundle-root relative. `_logs/run.log` and `rb_trace.j
 
 ## Simple Observability Posture
 
-Logging follows [`evolution-simple-reliable-control.md`](evolution-simple-reliable-control.md). Observability must shorten diagnosis, not become another controller or authority layer.
+Logging follows [`evolution-simple-reliable-control.md`](../constitution/evolution/simple-reliable-control.md). Observability must shorten diagnosis, not become another controller or authority layer.
 
 - One external operation should emit the smallest useful success/failure/rejection/exception facts; internal helper chatter stays out of log by default.
 - Trace records accepted machine-verifiable events; log explains incidents. Do not require log + trace + cache projection to agree before a valid operation can pass.
@@ -128,10 +117,10 @@ Engine 模块的 log 输出遵循事故级诊断原则：**每个对外入口函
 
 ## Related Guidance
 
-- [Guidelines Index](README.md)
-- [Project Charter](project-charter.md)
-- [Abstraction as Semantic Precision](evolution-abstraction-semantic-precision.md) — distinguish the reader-facing diagnostic question before adding a log or projection category.
-- [Simple Reliable Control](evolution-simple-reliable-control.md)
-- [Helper-Oriented Agent](evolution-helper-oriented-agent.md) — preserve the boundary between a decision request and ordinary Agent execution.
-- [Framework Runtime Boundary](framework-runtime-boundary.md) — "Trace 是真相，Log 是解释"
+- [OpenSpec Control Map](../README.md)
+- [Project Charter](../constitution/project-charter.md)
+- [Abstraction as Semantic Precision](../constitution/evolution/abstraction-semantic-precision.md) — distinguish the reader-facing diagnostic question before adding a log or projection category.
+- [Simple Reliable Control](../constitution/evolution/simple-reliable-control.md)
+- [Helper-Oriented Agent](../constitution/evolution/helper-oriented-agent.md) — preserve the boundary between a decision request and ordinary Agent execution.
+- [Framework Runtime Boundary](../guidance/models/framework-runtime-boundary.md) — "Trace 是真相，Log 是解释"
 - [Command Experiments](command-experiments.md)
