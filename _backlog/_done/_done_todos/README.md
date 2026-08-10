@@ -1,9 +1,9 @@
-# Archived Todos Index — 已完成 todo 与已吸收设计输入
+# Archived Todos Index — 已完成 todo、已吸收与已替代设计输入
 
-> 最后更新: 2026-08-09 | `_backlog/_done/_done_todos/` — 已完成 todo 与已吸收 standalone TODO 的归档目录。
+> 最后更新: 2026-08-11 | `_backlog/_done/_done_todos/` — 已完成 todo、已吸收与已替代 standalone TODO 的归档目录。
 > 接收来自 [`../../todos/`](../../todos/) 的 todo。`_` 前缀 = coding agent 默认忽略。
 >
-> **实施完成的 todo** 移入时分配 `DONE-NNN` 序号，按完成时间递增。被活跃 plan 吸收的 standalone TODO 也可在此保留历史原文，但不占 DONE 编号，也不代表能力已实现。
+> **实施完成的 todo** 移入时分配 `DONE-NNN` 序号，按完成时间递增。被活跃 plan 吸收、或经审计被现行 accepted contracts 替代/退役的 standalone TODO 也可在此保留历史原文，但不占 DONE 编号，也不代表能力已实现。
 
 ## 接收一个实施完成的 todo
 
@@ -19,6 +19,13 @@ todo 完成后从 `_backlog/todos/` 通过 `git mv` 移入本目录：
 2. 在“已吸收的 Standalone TODO（非已实现）”表加一行，写 active replacement 和 closure reason。
 3. 更新 `../../todos/README.md`，从活跃列表移除并说明吸收关系。
 4. 更新 `../README.md` 的已吸收输入数量；不分配 `DONE-NNN`，不改变 Next available DONE ID。
+
+## 接收一个被现行契约替代/退役的 TODO
+
+1. 从 `_backlog/todos/` 用 `git mv` 移入本目录，保留原文。
+2. 在“已替代/退役的 Standalone TODO（非已实现）”表加一行，写明 closure basis 与仍未实现部分的重启条件。
+3. 更新 `../../todos/README.md`，从活跃列表移除，并删去只依赖该 TODO 的推荐顺序或依赖图节点。
+4. 更新 `../README.md` 的非实现设计输入数量；不分配 `DONE-NNN`，不改变 Next available DONE ID。
 
 ---
 
@@ -51,5 +58,11 @@ todo 完成后从 `_backlog/todos/` 通过 `git mv` 移入本目录：
 | 2026-07-22 | todo-explore-exploit.md | [`research-question-closure-and-evidence-judgment`（已关闭, CLS-034）](../_closed_plans/research-question-closure-and-evidence-judgment/research-question-closure-and-evidence-judgment.md) | The WaveStats/strategy-projection proposal was folded into the same question-closure plan; no standalone capability was implemented. |
 | 2026-07-22 | todo-user-knowledge-hang.md | [`research-question-closure-and-evidence-judgment`（已关闭, CLS-034）](../_closed_plans/research-question-closure-and-evidence-judgment/research-question-closure-and-evidence-judgment.md) | Per-run user controls were folded into the same plan as a host-file snapshot, replacing the proposed external live knowledge-pack contract; no standalone capability was implemented. |
 | 2026-08-09 | todo-topic-specific-research-effort.md | [`topic-research-emphasis`（已归档, `2c3a4b732`）](../_closed_plans/topic-research-emphasis/README.md) | The per-Topic Wave0 source-count-floor proposal was resolved by user-confirmed decisions D-001/D-004/D-007: emphasis is incremental natural-language research focus after a common delivery baseline, not a per-Topic count floor or weight; the global `wave0_per_topic_source_floor` scalar is unchanged and no override field was built. |
+
+## 已替代/退役的 Standalone TODO（非已实现）
+
+| Date | File | Closure basis | Restart condition |
+|------|------|---------------|-------------------|
+| 2026-08-11 | todo-helper-not-tool.md | HITL conversational UX, per-run user controls, silent autonomous execution, Final Chinese preference, and helper-oriented responsibility are now covered by accepted contracts. | Reopen only when a real run demonstrates a user value that current HITL/recovery guidance cannot express; cross-run memory then needs a fresh, separately scoped OpenSpec exploration. |
 
 **Next available DONE ID: DONE-017**

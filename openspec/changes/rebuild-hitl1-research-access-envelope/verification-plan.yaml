@@ -1,0 +1,147 @@
+schema_version: verification-routing/v1
+change: rebuild-hitl1-research-access-envelope
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Envelope shape validation, the two classification axes, owner-to-repair-kind
+      derivation, and the explicitly-unclassified conclusion are pure
+      deterministic facts with focused positive and negative truth tables.
+  integration:
+    status: selected
+    rationale: >-
+      The regression must prove the HITL1 Gate consumer agrees with the resolver
+      across admission, adapter-owned feedback projection, the Agent-owned
+      probe_relay route, and legacy free-text observations.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      Partial-reachability admission and the preserved unavailable recovery loop
+      cross Phase write, Gate evaluation, and retained HITL1 choices; the
+      existing bundle-scale suite is the smallest boundary that proves the loop
+      does not leak probe material or advance Setup illegally.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change modifies deterministic Engine contracts and Agent-facing static
+      guidance only. It makes no claim about real provider reachability or Subject
+      Agent research behavior; accepted research-access-adapter guidance already
+      states fixtures cannot prove provider availability.
+claims:
+  - id: envelope-shape-fixed-width
+    statement: >-
+      ProfileSchema accepts a fixed-width access envelope carrying one closed
+      enumerated result per declared source class, and rejects a matrix-shaped
+      observation that grows with attempts (query text or history, candidate URL
+      list, retry list, or HTTP status matrix), while legacy observations without
+      an envelope remain schema-readable.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/contracts/profile.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: two-axis-classification-and-repair-derivation
+    statement: >-
+      The resolver maps each boundary-location root (host_surface, host_policy,
+      network_path, probe_relay) to exactly one owner and derives its repair kind
+      from that owner, so probe_relay yields agent_action while the three external
+      roots yield external_action; it reports scope as universal or class_scoped;
+      and an observation establishing no routeable owner resolves to an explicit
+      unclassified conclusion rather than being normalized into any root. No
+      classification is derived from prose position or prefix.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/host_tools/research-access-adapter.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: gate-admission-and-feedback-projection
+    statement: >-
+      The HITL1 Gate admits when at least one declared source class returned real
+      requested page content, blocks when none did, and projects one direct
+      owner-specific finding per root: the three external roots name the selected
+      adapter contract and its owning boundary, probe_relay routes to the Agent as
+      agent_action, and an unclassified observation surfaces that fact explicitly
+      instead of degrading to a generic retry message.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-hitl1-recorded.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: adapter-contract-declaration-integrity
+    statement: >-
+      The selected adapter contract declares both classification axes and its
+      declared identity, launcher routing, permission mode, and operation surfaces
+      remain bound to the resolver, so a taxonomy or declaration drift fails
+      loudly rather than silently disabling classification.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/hitl1-research-access-adapter.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: static-guidance-branch-coverage
+    statement: >-
+      The static HITL1 guidance requires the same classification vocabulary on
+      every unavailable branch, including the positive-candidate fetch-side branch
+      that previously required only a free-text reason, presents the declared
+      source-class ladder, and carries the exact partial-reachability disclosure
+      rendered only alongside the available result when the recorded observation
+      reports unreachable classes, without adding a second HITL decision point.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/phase-hitl1-research-access.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: partial-reachability-admission-loop
+    statement: >-
+      A run whose envelope records some reachable and some unreachable classes
+      advances past HITL1 while retaining the recorded classification, a run with
+      no reachable class stays blocked with its HITL1 choices preserved, and
+      neither path writes probe material into reference, cache, artifacts,
+      receipts, ledger, or coverage floors.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/hitl1-research-access-adapter.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
