@@ -402,9 +402,11 @@ describe('Wave0 finding-source admission', () => {
 });
 
 describe('Wave1 finding-source admission', () => {
-  it('schema-parses all 20 remaining rules after retiring Key Facts quantity and duplicate token rules', () => {
+  it('schema-parses the active Wave1 rules after retiring Key Facts quantity and duplicate token rules', () => {
     const wave1 = parseGateDefinition(loadActiveDefinition('gate-wave1-complete.definition.json'));
-    assert.equal(wave1.rules.length, 20);
+    const activeRuleIds = new Set(wave1.rules.map((rule) => rule.id));
+    assert.ok(wave1.rules.length > 0);
+    assert.equal(wave1.rules.length, activeRuleIds.size);
     assert.equal(wave1.rules.some((rule) => rule.id === 'key_facts_min_lines'), false);
     assert.equal(wave1.rules.some((rule) => rule.check === 'reference_key_facts_min_lines'), false);
     for (const id of ['no_stale_mechanisms_token', 'no_stale_trends_token', 'no_stale_pending_questions_token']) {

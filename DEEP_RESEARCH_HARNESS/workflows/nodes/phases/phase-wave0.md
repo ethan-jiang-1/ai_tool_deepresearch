@@ -30,6 +30,7 @@ suggested_context:
 - **Start here**: load `rb_queue.json`, `rb_plan.md` topic registry and, when present, `## Constraints > User Research Controls`, seed topic files, profile thresholds, and `dpt-source-intake` role guidance.
 - **Entry prerequisite**: after `enter-phase` loads this node, run `node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to seed_topics_ready` before Wave0 work or its Gate; this synchronizes the passed source gate and does not prove Wave0 completion.
 - **Delegated path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit dry-submit` repair loop -> formal `operate-work-unit submit` -> submitted Wave0 contribution -> Phase materialization or deferred projection -> same inspect -> gate.
+- **Canonical closeout loop**: packet -> writer -> same inspect -> gate.
 - **Completion check**: side-effect-free `inspect-wave0-output.mjs` passes first, then `check-gate-wave0-complete.mjs` passes for `phases/phase-wave0.md`.
 - **Failure posture**: do not direct-search from the Phase Agent as a substitute for delegated evidence. Use submit rejection, terminal attempt closure, refill, and gate feedback.
 
@@ -249,7 +250,8 @@ work ID and owns only its returned ordinal interval; do not recalculate
 historical ownership from a mutable full array or treat `result_hash` as a
 source-byte snapshot.
 
-Use the complete `wave_projection/apply_seed_projection` packet, authorization,
+Use the existing contribution-aware Wave0 inspection/preflight result together
+with the complete `wave_projection/apply_seed_projection` packet, authorization,
 and repair protocol in `command_playbook/operate-topic-state.md`, then invoke
 `operate-topic-state apply` in this loaded Wave0 window. After every packet
 apply, rerun the same `inspect-wave0-output.mjs`. A missing writer window,

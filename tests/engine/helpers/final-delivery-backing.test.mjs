@@ -72,7 +72,11 @@ function submittedWave1Bundle() {
     role: 'reference',
     source_url: sourceUrl,
     source_slug: 'final-backing-deepening',
-    output_content: referenceContent({ source_url: sourceUrl, topic_slug: 'topic-a' }),
+    output_content: referenceContent({
+      source_url: sourceUrl,
+      topic_slug: 'topic-a',
+      core_content: `This Phase-owned reference projects the submitted evidence summary at ${evidencePath}.`,
+    }),
     extra_output_files: [{
       path: evidencePath,
       role: 'evidence_summary',

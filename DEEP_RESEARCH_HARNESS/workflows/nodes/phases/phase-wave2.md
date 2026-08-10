@@ -217,6 +217,8 @@ Wave2 gate fails if targeted evidence/reference outputs exist without submitted 
 
 Never edit a seed, heading, card, or token. `templates/seed-topic-template` gives the Wave2 slot/card and rendered-entry shape. Read current-round usable W2F findings from `finding-index.yaml`, resolve each `affected_topics` token to its current canonical topic, and use the complete packet, authorization and repair protocol in `command_playbook/operate-topic-state.md` to retain one `wave_projection/apply_seed_projection` packet per affected topic. Each entry has `entry_id` equal to its exact current-round `W2F-*` source identity. The packet always updates `wave2_judgment` and may append/upsert only that W2F entry in `pending_questions`; it never overwrites a Wave1 question entry.
 
+The template placeholders `__BACKFILL_WAVE2_JUDGMENT__` and `__BACKFILL_PENDING_QUESTIONS__` are replaced only by the existing projection writer; they are documentation tokens, not Agent-edit targets.
+
 Use concrete existing `reference/00-cross-*.md` consumer navigation for evidence-bearing findings, with ledger/index and prior source surfaces only as secondary provenance. An identity-bound `defers` / `deferred` entry may keep `refs: [none]` only with an explicit limitation in `next_hop`. Historical W2F refs remain read-compatible but never authorize a new packet. Missing current finding authority, topic binding, or writer window is a direct owner boundary, not permission to patch a legacy seed.
 
 ### 3.3 Closeout + Gate Readiness

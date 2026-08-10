@@ -119,6 +119,10 @@ This file cannot decide:
 
 指导文档不能替代规格、schema、实现或 runtime 状态。遇到冲突时，先判断“这是什么类型的事实”，再按对应 Source of Record 处理：
 
+Verification test classes and proof permissions are defined by the accepted
+`verification-routing` spec; this Charter only provides the project-wide
+authority boundary.
+
 | Truth Type | Source of Record | Role |
 |------------|------------------|------|
 | Project rules and constraints | the project's governing operating contract | 技术栈、spec-driven 纪律、repo-wide hard rules |

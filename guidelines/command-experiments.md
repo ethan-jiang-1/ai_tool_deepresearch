@@ -24,7 +24,7 @@ siblings:
 
 Command experiments prove Agent-facing mechanisms in real disposable runtime state. Markdown remains the Agent Flow control surface; Agent intelligence performs semantic work; Engine/CLI supplies deterministic checkpoints and durable facts.
 
-This guideline fixes the experiment constitution. It does not define concrete frontmatter fields, CLI flags, schema shapes, case inventories, or report fields. Those belong to accepted specs and executable contracts.
+This guideline fixes the experiment constitution. It does not define concrete frontmatter fields, CLI flags, schema shapes, case inventories, or report fields. Those belong to accepted specs and executable contracts. Verification routing and proof permissions remain with the accepted `verification-routing` spec.
 
 ## Position
 

@@ -6,7 +6,7 @@
 //   - §3 has three-stage structure (§3.1 Filling, §3.2 Execution Loop, §3.3 Closeout+Gate)
 //   - §3.1 contains synthesis task card template with producer_rule cross_topic_synthesis
 //     and required_receipts covering three artifacts
-//   - §3.1 contains backfill task card template with producer_rule seed_topic_backfill_wave2
+//   - Wave2 backfill uses the canonical seed-projection packet/writer, not a queue card
 //   - Task card priority_class values are from QueueWorkUnitSchema enums
 //   - Task card required_receipts use only queue-engine-supported prefixes
 //   - §3.2 contains finding triage loop protocol (classify → decision → spawn → JS feedback)
@@ -94,8 +94,11 @@ describe('§3 Allowed Actions — three-stage queue-driven structure', () => {
     assert.ok(body.includes('cross_topic_synthesis'), 'missing cross_topic_synthesis producer_rule');
   });
 
-  it('§3.1 references producer_rule seed_topic_backfill_wave2', () => {
-    assert.ok(body.includes('seed_topic_backfill_wave2'), 'missing seed_topic_backfill_wave2 producer_rule');
+  it('uses the canonical seed-projection writer for Wave2 backfill rather than a retired queue rule', () => {
+    assert.match(body, /wave_projection\/apply_seed_projection/);
+    assert.match(body, /operate-topic-state\.md/);
+    assert.match(body, /__BACKFILL_WAVE2_JUDGMENT__/);
+    assert.doesNotMatch(body, /seed_topic_backfill_wave2/);
   });
 
   it('synthesis task card required_receipts covers three artifacts', () => {
@@ -103,10 +106,10 @@ describe('§3 Allowed Actions — three-stage queue-driven structure', () => {
       'missing three-artifact references in required_receipts');
   });
 
-  it('priority_class values are valid QueueWorkUnitSchema enums', () => {
-    // P2_close_open_loop and P4_progressive_artifact_or_seed_backfill
+  it('queue task priority_class values remain within the active producer set', () => {
     assert.ok(body.includes('P2_close_open_loop'), 'missing P2_close_open_loop');
-    assert.ok(body.includes('P4_progressive_artifact_or_seed_backfill'), 'missing P4_progressive_artifact_or_seed_backfill');
+    assert.ok(body.includes('P1_state_or_gate_repair'), 'missing P1_state_or_gate_repair');
+    assert.doesNotMatch(body, /P4_progressive_artifact_or_seed_backfill/);
   });
 
   it('required_receipts use file: prefix (engine-supported)', () => {

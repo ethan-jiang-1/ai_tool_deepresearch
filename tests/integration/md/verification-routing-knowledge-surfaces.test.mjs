@@ -31,7 +31,7 @@ describe('verification routing knowledge surfaces', () => {
 
   it('governance summaries use canonical identifiers rather than the retired method model', () => {
     const registry = read('openspec/governance/req-registry.yaml');
-    const section = registry.match(/# verification-routing[\s\S]*?(?=\n# |$)/)?.[0] || '';
+    const section = registry.match(/# verification\/verification-routing[\s\S]*?(?=\n# |$)/)?.[0] || '';
     assert.match(section, /four canonical test classes/);
     assert.match(section, /claim-to-test_class/);
     assert.doesNotMatch(section, /exactly three methods|all three methods|tests_e2e fourth layer|Verification method taxonomy/);

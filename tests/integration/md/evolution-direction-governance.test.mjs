@@ -12,6 +12,12 @@ const SIMPLE = 'guidelines/evolution-simple-reliable-control.md';
 const HELPER = 'guidelines/evolution-helper-oriented-agent.md';
 const TRIAD = [SEMANTIC, SIMPLE, HELPER];
 const RETIRED_PATH = 'guidelines/simple-reliable-control.md';
+const EXTERNAL_DEFERRED_AUTHORITIES = new Map([
+  ['guidelines/change-feedback-loop.md', [
+    'openspec/specs/governance/change-feedback-loop/spec.md',
+    'openspec/governance/finalize-change-archive.mjs',
+  ]],
+]);
 const CURRENT_CHANGE = 'openspec/changes/add-semantic-precision-evolution-direction';
 const SELF = 'tests/integration/md/evolution-direction-governance.test.mjs';
 const SCAN_ROOTS = [
@@ -137,7 +143,12 @@ describe('Evolution Direction governance', () => {
 
     for (const path of paths.filter((path) => path !== CHARTER)) {
       const { frontmatter } = readGuideline(path);
-      assert.deepEqual(frontmatter.defers_to, [CHARTER], `${path} must defer only to Project Charter`);
+      const expectedDefersTo = [CHARTER, ...(EXTERNAL_DEFERRED_AUTHORITIES.get(path) || [])];
+      assert.deepEqual(frontmatter.defers_to, expectedDefersTo, `${path} must defer only to its declared authorities`);
+      if (EXTERNAL_DEFERRED_AUTHORITIES.has(path)) {
+        assert.equal(Object.hasOwn(frontmatter, 'siblings'), false, `${path} is an external lifecycle route, not a companion guideline`);
+        continue;
+      }
       assert.equal(frontmatter.siblings[0], CHARTER, `${path} must put Project Charter first in siblings`);
       assertOrdered(
         frontmatter.siblings,

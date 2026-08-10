@@ -19,6 +19,7 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
   const run = read('DEEP_RESEARCH_HARNESS/RUN.md');
   const subagent = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md');
   const antiCheating = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-anti-cheating-rules.md');
+  const currentRelease = changelog.match(/^## (v\d+\.\d+)$/m)?.[1];
 
   it('exposes one workspace, three operations, supported roots, and excluded authority surfaces', () => {
     assert.match(helper, /ARTIFACT_PERSISTENCE_ROOT = '_diagnostics\/artifact-persistence'/);
@@ -70,8 +71,9 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
     assert.match(changelog, /structural path\/provenance feedback only/);
     assert.match(changelog, /## v0\.71/);
     assert.match(changelog, /no aliases,\n  automatic repair, Queue edit path, or Actor-behavior proof/);
-    assert.match(run, /DEEP_RESEARCH_HARNESS v0\.71/);
-    assert.match(run, /Current Release: v0\.71/);
+    assert.ok(currentRelease, 'CHANGELOG.md must declare a current release heading');
+    assert.match(run, new RegExp(`DEEP_RESEARCH_HARNESS ${currentRelease}`));
+    assert.match(run, new RegExp(`Current Release: ${currentRelease}`));
     assert.match(run, /non-persisted Engine feedback projections only/);
     assert.match(run, /structural path\/provenance admission only/);
   });

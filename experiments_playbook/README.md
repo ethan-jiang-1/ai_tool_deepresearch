@@ -37,6 +37,8 @@ experiments_playbook/
 
 The manifest owns only registered paths and order. Selected V2 frontmatter owns case/group, native verdict/check policy, stable bundle/verdict/health roles, health profile, and proof profile. Filename grammar owns execution cost. Native completion owns this run's actual role-to-path binding and outcome.
 
+Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cost does not itself establish a Subject-behavior claim.
+
 ## Extreme-slow quarantine
 
 `exp_extrem_slow/` holds cases that have shown an unacceptable observed runtime. It is not a fourth `light|standard|heavy` tier, is excluded from the active manifest corpus, and must never be selected by Autorun or Interactive replay.

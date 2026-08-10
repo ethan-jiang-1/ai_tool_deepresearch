@@ -200,7 +200,7 @@ describe('Agent-facing command contract docs', () => {
     const start = read('DEEP_RESEARCH_HARNESS/command_playbook/start-research.md');
 
     assert.ok(instantiate.includes('Agent 从 research request 派生稳定的 kebab-case bundle 名称'));
-    assert.ok(instantiate.includes('framework execution 开始前已提供的名称'));
+    assert.ok(instantiate.includes('Harness execution 开始前已提供的名称'));
     assert.ok(instantiate.includes('不要在 autonomous execution 中要求用户提供名称'));
     assert.ok(start.includes('从 research question 生成 kebab-case bundle name'));
     assert.ok(start.includes('不要把 bundle naming 变成 autonomous execution 中的 mid-pipeline dependency'));

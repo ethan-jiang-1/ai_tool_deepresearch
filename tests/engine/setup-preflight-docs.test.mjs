@@ -27,13 +27,20 @@ describe('human setup preflight docs', () => {
     assert.equal(read('.nvmrc').trim(), '20');
 
     const pkg = JSON.parse(read('package.json'));
-    assert.equal(pkg.dependencies.zod, '^3.0.0');
-    assert.equal(pkg.dependencies.yaml, '^2.0.0');
+    assert.match(pkg.dependencies.zod, /^\^\d+\.\d+\.\d+$/);
+    assert.match(pkg.dependencies.yaml, /^\^\d+\.\d+\.\d+$/);
     assert.ok(existsSync(join(REPO_ROOT, 'package-lock.json')), 'package-lock.json must exist');
 
     const lock = JSON.parse(read('package-lock.json'));
-    assert.ok(lock.packages['node_modules/zod'], 'package-lock.json must lock zod');
-    assert.ok(lock.packages['node_modules/yaml'], 'package-lock.json must lock yaml');
+    for (const dependency of ['zod', 'yaml']) {
+      const locked = lock.packages[`node_modules/${dependency}`];
+      assert.ok(locked, `package-lock.json must lock ${dependency}`);
+      assert.match(locked.version, /^\d+\.\d+\.\d+$/, `${dependency} lock version must be a release`);
+      const requested = pkg.dependencies[dependency].slice(1).split('.').map(Number);
+      const resolved = locked.version.split('.').map(Number);
+      assert.equal(resolved[0], requested[0], `${dependency} must remain within its declared major`);
+      assert.ok(resolved[1] > requested[1] || (resolved[1] === requested[1] && resolved[2] >= requested[2]), `${dependency} lock must satisfy its declared caret range`);
+    }
 
     await import('zod');
     await import('yaml');

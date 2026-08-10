@@ -458,6 +458,21 @@ function stageWave0Pass(bundle) {
   appendTrace(bundle, { event: 'wave0_completion', source: 'playbook-fixture' });
 }
 
+function wave1ReferenceContent(sourceUrl) {
+  return '- source_url: ' + sourceUrl + '\n' +
+    '- acceptance_status: accepted\n' +
+    '- source_type: secondary\n' +
+    '- tier: Tier 2\n' +
+    '- evidence_role: deepening_reference\n' +
+    '- trust_level: practitioner\n' +
+    '- why_it_matters: Deepening evidence.\n' +
+    '- accessed_at: 2026-07-05\n' +
+    '- related_topic: topic-a\n\n' +
+    '## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n' +
+    '## Core Content Capture\nThis section is long enough to satisfy the reference quality gate and describes how route-bound witnesses connect source gate outputs to target phase entry.\n' +
+    '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- witness\n## Risks And Limitations\n- Fixture.\n';
+}
+
 function stageWave1Pass(bundle) {
   mkdirSync(join(bundle, 'artifacts/wave1/topic-a'), { recursive: true });
   writeFileSync(join(bundle, 'artifacts/wave1/topic-a/evidence-summary.md'), `# Evidence Summary: Topic A
@@ -491,24 +506,6 @@ function stageWave1Pass(bundle) {
 
 - decision: continue
 `);
-  writeFileSync(join(bundle, 'reference/topic-a-deepening.md'),
-    '- source_url: https://research.example.org/articles/topic-a-deepening-analysis-2026\n' +
-    '- acceptance_status: accepted\n' +
-    '- source_type: secondary\n' +
-    '- tier: Tier 2\n' +
-    '- evidence_role: deepening_reference\n' +
-    '- trust_level: practitioner\n' +
-    '- why_it_matters: Deepening evidence.\n' +
-    '- accessed_at: 2026-07-05\n' +
-    '- related_topic: topic-a\n\n' +
-    '## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n' +
-    '## Core Content Capture\nThis section is long enough to satisfy the reference quality gate and describes how route-bound witnesses connect source gate outputs to target phase entry.\n' +
-    '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- witness\n## Risks And Limitations\n- Fixture.\n');
-  writeFileSync(join(bundle, 'reference/_INDEX.md'),
-    '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |\n' +
-    '| --- | --- | --- | --- | --- | --- | --- | --- |\n' +
-    '| 00-shared-handoff.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-05 |\n' +
-    '| topic-a-deepening.md | secondary | practitioner | Tier 2 | topic-a | wave1_topic | accepted | 2026-07-05 |\n');
   writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `---
 topic_uid: tp_11111111-1111-4111-8111-111111111111
 id: t1
@@ -524,53 +521,71 @@ depends_on_topic_uids: []
 
 ${renderSeedProjectionAppendix()}
 `);
-  const submitted = submitExistingFixtureWorkUnitOnce(bundle, {
-    phase: 'wave1',
-    queue_item_id: 'wave1-deepening-topic-a',
-    topic_slug: 'topic-a',
-    title: 'Handoff witnessing Wave1 topic deepening',
-    output_path: 'reference/topic-a-deepening.md',
-    source_url: 'https://research.example.org/articles/topic-a-deepening-analysis-2026',
-    source_slug: 'topic-a-deepening-analysis',
-    extra_output_files: [
-      { path: 'artifacts/wave1/topic-a/evidence-summary.md', role: 'evidence_summary' },
-      { path: 'artifacts/wave1/topic-a/question-list.md', role: 'question_list' },
-    ],
+  const sourceRef = 'artifacts/wave1/topic-a/evidence-summary.md';
+  const wave1Sources = Array.from({ length: 5 }, (_, index) => {
+    const ordinal = index + 1;
+    const sourceUrl = ordinal === 1
+      ? 'https://research.example.org/articles/topic-a-deepening-analysis-2026'
+      : `https://research.example.org/articles/topic-a-deepening-analysis-${ordinal}-2026`;
+    return {
+      sourceUrl,
+      sourceSlug: `topic-a-deepening-analysis-${ordinal}`,
+      outputPath: ordinal === 1
+        ? 'reference/topic-a-deepening.md'
+        : `reference/topic-a-deepening-${ordinal}.md`,
+    };
   });
+  const submissions = [];
+  for (const source of wave1Sources) {
+    writeFileSync(join(bundle, source.outputPath), wave1ReferenceContent(source.sourceUrl));
+    const submitted = submitExistingFixtureWorkUnitOnce(bundle, {
+      phase: 'wave1',
+      queue_item_id: `wave1-deepening-topic-a-${source.sourceSlug}`,
+      topic_slug: 'topic-a',
+      title: 'Handoff witnessing Wave1 topic deepening',
+      output_path: source.outputPath,
+      source_url: source.sourceUrl,
+      source_slug: source.sourceSlug,
+      extra_output_files: [
+        { path: sourceRef, role: 'evidence_summary' },
+        { path: 'artifacts/wave1/topic-a/question-list.md', role: 'question_list' },
+      ],
+    });
+    if (!submitted) throw new Error(`Wave1 fixture must submit ${source.outputPath}`);
+    const canonical = canonicalWave1ReferencePath({ topicSlug: 'topic-a', sourceUrl: source.sourceUrl });
+    if (!canonical.ok) throw new Error(`Wave1 canonical reference path failed: ${JSON.stringify(canonical)}`);
+    const submittedBacking = `\n## Submitted Backing\n- source_ref: ${sourceRef}\n- cache_trail_ref: ${submitted.cache_trails[0]}\n- result_ref: ${submitted.record.paths.result_ref}\n- work_unit_ref: ${submitted.record.paths.work_unit_dir}\n`;
+    writeFileSync(join(bundle, source.outputPath), `${readFileSync(join(bundle, source.outputPath), 'utf8').trimEnd()}${submittedBacking}`);
+    const stagingPath = join(bundle, '_tmp', `${submitted.record.work_id}.wave1-reference.md`);
+    mkdirSync(join(bundle, '_tmp'), { recursive: true });
+    writeFileSync(stagingPath, `${readFileSync(join(bundle, source.outputPath), 'utf8').trimEnd()}${submittedBacking}`);
+    const persisted = parseJsonObject(runNode([
+      'DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs',
+      'persist', '--bundle', bundle, '--source', stagingPath, '--target', canonical.path,
+      '--expect-absent',
+    ]).stdout);
+    if (persisted.verdict !== 'committed') throw new Error(`Wave1 canonical reference persistence failed: ${JSON.stringify(persisted)}`);
+    submissions.push({ submitted, canonicalPath: canonical.path });
+  }
   const depthPath = join(bundle, 'artifacts/wave1/topic-a/depth-review.yaml');
   const depth = JSON.parse(readFileSync(depthPath, 'utf8'));
+  depth.reviewed_work_unit_refs = submissions.map(({ submitted }) => submitted.record.paths.work_unit_dir);
   depth.carried_targets = [{
     target_id: 'handoff-integrity',
     target_text: 'How can stale handoffs be detected?',
   }];
   writeFileSync(depthPath, `${JSON.stringify(depth, null, 2)}\n`);
-  if (!submitted) throw new Error('Wave1 fixture must create its submitted work-unit before depth review');
-  const sourceUrl = 'https://research.example.org/articles/topic-a-deepening-analysis-2026';
-  const sourceRef = 'artifacts/wave1/topic-a/evidence-summary.md';
-  const canonical = canonicalWave1ReferencePath({ topicSlug: 'topic-a', sourceUrl });
-  if (!canonical.ok) throw new Error(`Wave1 canonical reference path failed: ${JSON.stringify(canonical)}`);
-  const stagingPath = join(bundle, '_tmp', `${submitted.record.work_id}.wave1-reference.md`);
-  mkdirSync(join(bundle, '_tmp'), { recursive: true });
-  writeFileSync(stagingPath, `${readFileSync(join(bundle, 'reference/topic-a-deepening.md'), 'utf8').trimEnd()}\n\n## Submitted Backing\n- source_ref: ${sourceRef}\n- cache_trail_ref: ${submitted.cache_trails[0]}\n- result_ref: ${submitted.record.paths.result_ref}\n- work_unit_ref: ${submitted.record.paths.work_unit_dir}\n`);
-  const persisted = parseJsonObject(runNode([
-    'DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs',
-    'persist', '--bundle', bundle, '--source', stagingPath, '--target', canonical.path,
-    '--expect-absent',
-  ]).stdout);
-  if (persisted.verdict !== 'committed') throw new Error(`Wave1 canonical reference persistence failed: ${JSON.stringify(persisted)}`);
   const indexed = parseJsonObject(runNode([
     'DEEP_RESEARCH_HARNESS/cli/sync-reference-index.mjs', '--bundle', bundle,
   ]).stdout);
   if (!['committed', 'unchanged'].includes(indexed.verdict)) throw new Error(`Wave1 reference index sync failed: ${JSON.stringify(indexed)}`);
-  const entry = (ordinal, evidenceMeaning) => ({
+  const entries = submissions.map(({ submitted, canonicalPath }, index) => ({
     source_identity: { kind: 'submitted_work', work_id: submitted.record.work_id },
-    entry_id: `${submitted.record.work_id}/${ordinal}`,
-    evidence_meaning: evidenceMeaning,
-    relationship: 'supports',
-    refs: [canonical.path],
-    status: 'supported',
+    entry_id: `${submitted.record.work_id}/${index + 1}`,
+    evidence_meaning: 'Submitted Wave1 evidence supports handoff witnessing.',
+    relationship: 'supports', refs: [canonicalPath], status: 'supported',
     next_hop: 'Read the submitted Wave1 reference before Wave2 synthesis.',
-  });
+  }));
   const projected = applyCanonicalTopicState({
     bundlePath: bundle,
     input: {
@@ -579,9 +594,9 @@ ${renderSeedProjectionAppendix()}
       topic_uid: 'tp_11111111-1111-4111-8111-111111111111',
       wave: 'wave1',
       updates: [
-        { slot_id: 'wave1_mechanisms', entries: [entry(1, 'Submitted Wave1 evidence explains handoff witnessing.')] },
-        { slot_id: 'wave1_trends', entries: [entry(2, 'Submitted Wave1 evidence records the handoff risk.')] },
-        { slot_id: 'pending_questions', entries: [entry(3, 'Submitted Wave1 evidence preserves the open handoff question.')] },
+        { slot_id: 'wave1_mechanisms', entries },
+        { slot_id: 'wave1_trends', entries },
+        { slot_id: 'pending_questions', entries },
       ],
     },
   });
