@@ -2,11 +2,25 @@
 
 > 计划记录: 2026-08-09
 > Plan ID: `centralize-project-guidance-under-openspec`
-> 状态: active，结构探索完成，等待进入 OpenSpec propose
+> 状态: active；Change A 已归档，Change B proposal 已完成，等待 Agent-owned plan review
 > 目标 change 候选名: `centralize-project-guidance-under-openspec`
 > Progressive tracker: [`centralize-project-guidance-under-openspec-progressive-plan.md`](centralize-project-guidance-under-openspec-progressive-plan.md)
 
 ## 1. 结论先行
+
+### 交付状态（2026-08-10）
+
+Change A `centralize-project-guidance-under-openspec` 已通过受治理的 finalizer 归档至
+[`openspec/changes/archive/2026-08-10-centralize-project-guidance-under-openspec/`](../../openspec/changes/archive/2026-08-10-centralize-project-guidance-under-openspec/)。
+它完成了 guidance 拓扑迁移，并将 feedback-lifecycle 的项目特定 operation guidance 保留在
+`openspec/config.yaml` 的 `operations` 配置中；既有 `.agents/skills/**` 与 `.claude/skills/**`
+未被作为迁移目标或改写。
+
+迁移后的观察表明，固定 Charter + Context 入口仍为 866 行 / 6,194 词，且
+`openspec/README.md` 仍同时充当阅读清单和 glossary。因此 P5 对
+`prune-and-automate-project-guidance` 记录 `go`：它只收敛内容 ownership、入口路由和可确定性
+检查，不重做已关闭的路径迁移或修改既有 skill 资产。详见 progressive tracker 的 `E-009`、`E-010`
+和 `D-009`、`D-010`。
 
 本计划建议把当前根目录 `guidelines/` 纳入 `openspec/`，但不做简单的
 `guidelines/ -> openspec/guidelines/` 平移。真正目标是让 `openspec/` 成为项目治理的

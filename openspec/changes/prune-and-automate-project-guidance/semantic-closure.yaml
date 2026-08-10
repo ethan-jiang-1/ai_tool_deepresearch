@@ -1,0 +1,4 @@
+schema_version: semantic-closure/v1
+change: prune-and-automate-project-guidance
+status: not_applicable
+reason: This change narrows project guidance, entry routing, and static topology checks only; it changes no catalogued deterministic runtime fact family, resolver, producer, verdict consumer, or runtime verification authority.
