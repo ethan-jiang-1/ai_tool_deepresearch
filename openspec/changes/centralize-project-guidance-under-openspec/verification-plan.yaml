@@ -1,0 +1,100 @@
+schema_version: verification-routing/v1
+change: centralize-project-guidance-under-openspec
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: This change adds no isolated JavaScript behavior outside the selected documentation contracts.
+  integration:
+    status: selected
+    rationale: Current entry routes, role-aware guidance hierarchy, supported operation paths, and knowledge pointers are cross-surface deterministic contracts.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The migration does not execute a workflow-scale deterministic runtime chain.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: No real Agent behavior claim changes; this plan proves repository topology, not actual document-reading behavior.
+claims:
+  - id: constitution-role-topology
+    statement: Canonical constitution paths, triad order, role-aware hierarchy, and absence of a current duplicate guidance root are protected.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/evolution-direction-governance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: charter-context-entry-route
+    statement: Root and Harness entry documents preserve the new canonical Charter -> Context route and selected-entry boundaries.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-context-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: research-entry-routing-preservation
+    statement: The shared project-context pre-read leaves explicit-existing-bundle versus new-research entry selection and pre-entry restrictions unchanged.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/dpt-research-entry-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: feedback-operation-coordinate
+    statement: Every supported lifecycle entry obtains the canonical feedback operation guidance without bypassing governed finalization.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/change-feedback-finalizer.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: verification-knowledge-pointers
+    statement: High-frequency verification knowledge surfaces retain canonical test-class vocabulary after their guidance paths move.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/verification-routing-knowledge-surfaces.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: experiment-operation-pointer
+    statement: Experiment terminology surfaces retain the canonical operation-guidance coordinate and vocabulary.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-experiment-autorun-terminology.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

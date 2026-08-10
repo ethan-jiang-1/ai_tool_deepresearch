@@ -1,0 +1,4 @@
+schema_version: semantic-closure/v1
+change: centralize-project-guidance-under-openspec
+status: not_applicable
+reason: This change relocates project guidance and path contracts only; it changes no catalogued deterministic runtime fact family, resolver, producer, verdict consumer, or runtime verification authority.
