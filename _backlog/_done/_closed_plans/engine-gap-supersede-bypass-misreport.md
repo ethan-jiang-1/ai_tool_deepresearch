@@ -4,7 +4,7 @@
 >
 > 当前状态: `historical_resolved`（2026-08-10）。两项 Engine 缺陷曾存在，已由
 > `ea02a29af` 修复；当前 HEAD 不再存在该 gap。核验记录见
-> [`engine-gap-supersede-bypass-misreport.md`](../../openspec/changes/archive/2026-08-09-close-work-unit-semantic-contract-drift/evidence/engine-gap-supersede-bypass-misreport.md)。
+> [`engine-gap-supersede-bypass-misreport.md`](../../../openspec/changes/archive/2026-08-09-close-work-unit-semantic-contract-drift/evidence/engine-gap-supersede-bypass-misreport.md)。
 
 ## 症状
 
