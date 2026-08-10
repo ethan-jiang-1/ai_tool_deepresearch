@@ -1,0 +1,97 @@
+schema_version: verification-routing/v1
+change: isolate-hitl1-capability-probe
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The selected Subject invocation is a pure deterministic construction;
+      its fixture cannot demonstrate an external provider call.
+  integration:
+    status: selected
+    rationale: >-
+      Phase/guidance/brief ordering and observer event-to-return-map rejection
+      are deterministic integration contracts; neither starts an Agent runtime
+      or network call.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      The existing lifecycle transition, profile schema, Gate definition, and
+      status handoff remain unchanged; this change supplies no new Engine chain.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      The changed external-actor claim requires a retained real isolated
+      probe-agent execution. Its native experiment evidence, not fixtures,
+      is authoritative; unavailable host/runtime conditions are NOT_RUN.
+claims:
+  - id: isolated-probe-phase-contract
+    statement: >-
+      PRP-002, PRP-005, REA-002, and HIU-002: HITL1 renders the exact notice,
+      spawns one guidance-bound probe agent rather than direct-searching, makes
+      the Phase the sole profile writer, relays only existing observation
+      branches to the same Gate, and preserves exact UX/Gate ordering.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/phase-hitl1-research-access.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: isolated-probe-runner-contract
+    statement: >-
+      REA-002 and REA-003: case-115's deterministic runner starts an isolated,
+      generic-non-bypass Subject without a bundle path, write obligation, or
+      Phase/Gate claim.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/experiments_env/case-115-subject-runner.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: isolated-probe-observer-contract
+    statement: >-
+      REA-002 and REA-003: case-115's deterministic observer rejects a probe
+      return map inconsistent with retained public native tool events and does
+      not attribute profile writes or HITL1 Gate execution to that probe agent.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/experiments_env/hitl1-fetch-fallback-observer.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: real-isolated-probe-observation
+    statement: >-
+      REA-002 and REA-003: case-115 retains an authenticated isolated probe
+      agent's public one-search, returned-URL, native-first/same-URL sequence
+      and final honest return-map. It proves neither Phase profile writing nor
+      Gate execution; unavailable or missing native evidence is NOT_RUN for an
+      available-path claim.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wff_pre-research-repair/case-115-heavy-hitl1-research-access-probe.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl

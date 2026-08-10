@@ -1,0 +1,8 @@
+schema_version: semantic-closure/v1
+change: isolate-hitl1-capability-probe
+status: not_applicable
+reason: >-
+  This change changes only the Agent-facing executor of an external capability
+  observation. It preserves the existing profile schema and owner, Gate,
+  status/trace handoff, and every catalogued deterministic fact family; no new
+  deterministic fact, resolver, or verdict consumer is introduced.
