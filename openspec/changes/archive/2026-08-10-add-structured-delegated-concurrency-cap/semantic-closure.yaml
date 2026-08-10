@@ -1,0 +1,9 @@
+schema_version: semantic-closure/v1
+change: add-structured-delegated-concurrency-cap
+status: not_applicable
+reason: >-
+  This change adds a schema-validated run-profile policy input and Agent-facing
+  claim guidance but creates no Engine deterministic verdict/resolver, no
+  runtime-fact consumer, and no changed Gate conclusion. The profile value
+  bounds an Agent-proposed count; existing claim/admission/actor/lifecycle
+  fact families retain their current authorities.

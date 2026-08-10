@@ -75,4 +75,13 @@ describe('body — 9-section structure', () => {
     const missing = checkSections(body, 'phase-wave0');
     assert.deepEqual(missing, [], missing.join('\n'));
   });
+
+  it('uses the profile-owned delegated concurrency cap for normal top-ups', () => {
+    assert.match(body, /rb_profile\.yaml#\/delegated_concurrency_cap/);
+    assert.match(body, /claim_count = min\(eligible_independent_demand, effective_delegated_concurrency_cap, remaining_free_capacity\)/);
+    assert.match(body, /already reaches the effective cap/i);
+    assert.match(body, /fallback.*exactly one work unit.*regardless of the profile cap/i);
+    assert.match(body, /not proof that a host started, kept live, or physically ran/i);
+    assert.doesNotMatch(body, /no higher than 5|<= 5/);
+  });
 });

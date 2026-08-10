@@ -176,12 +176,22 @@ Newly fetched evidence follows the other authority path: it is not accepted unti
 
 #### 3.2.2 Targeted Evidence
 
-For any finding with `decision=exploit_search` or `decision=explore_search`, enqueue and drain targeted evidence work units. Compute a bounded top-up `claim-count` from independent eligible findings, accepted/default cap, and remaining free delegated in-flight capacity; reconstruct in-flight Wave2 work before claiming.
+For any finding with `decision=exploit_search` or `decision=explore_search`, enqueue and drain targeted evidence work units. Reconstruct normal delegated in-flight Wave2 work before claiming, then read the `ProfileSchema`-parsed `rb_profile.yaml#/delegated_concurrency_cap` as `effective_delegated_concurrency_cap`. It is the only run-level cap input and is `12` when omitted; do not add a CLI, environment, queue, or host-capacity override.
+
+For a normal delegated top-up, compute:
+
+```text
+claim_count = min(eligible_independent_demand, effective_delegated_concurrency_cap, remaining_free_capacity)
+```
+
+Here `eligible_independent_demand` is the queue-front count of independent eligible targeted-evidence findings, and `remaining_free_capacity` is the effective cap minus reconstructed normal delegated in-flight work. If reconstructed normal delegated in-flight work already reaches the effective cap, poll, submit, repair, or terminalize those attempts before claiming more. Use `--count 1` only for a single remaining item, dependency-blocked front item, effective cap of 1, or a narrow repair.
+
+This bounded prompt count is a Phase-Agent policy choice, not proof that a host started, kept live, or physically ran that number of native sub-agents concurrently. When the Engine admits `phase_agent_fallback`, claim exactly one work unit regardless of the profile cap.
 
 ```bash
 First inspect the queue-front planned role and perform one bounded real `dpt-topic-scout` native probe. Do not claim a batch to test availability or reuse this observation for another role.
 
-node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim <bundle> --phase wave2 --count <claim-count> --actor-outcome <available|unavailable|unknown> --actor-source <native_probe|not_observed> --actor-role-key dpt-topic-scout --actor-reason <normalized-reason> --execution-actor <delegated_subagent|phase_agent_fallback>
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim <bundle> --phase wave2 --count <claim_count> --actor-outcome <available|unavailable|unknown> --actor-source <native_probe|not_observed> --actor-role-key dpt-topic-scout --actor-reason <normalized-reason> --execution-actor <delegated_subagent|phase_agent_fallback>
 node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs inspect <bundle>
 node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
 ```

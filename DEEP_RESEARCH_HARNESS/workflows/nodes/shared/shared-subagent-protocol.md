@@ -61,12 +61,18 @@ For delegated queue demand:
 
 0. Reconstruct delegated in-flight work from bundle truth before claiming: `operate-work-unit inspect <bundle>`, queue delegated-in-flight state, `_work_units/waveN/*/_status.json`, work-unit manifests, and submitted ledger rows. A scratch list from chat is convenience only.
 1. Read the queue-front delegated `role_key`, then perform one small real native probe for that exact role. The probe does not search, write evidence, allocate a work ID, or authorize a different role. Normalize only direct results as `available/probe_succeeded`, a classified `unavailable` reason, or `unknown/probe_inconclusive`; missing observation is `unknown/not_observed/observation_required`.
-2. Compute a bounded top-up `claim-count` for independent eligible demand. Bound it by the independent eligible demand count, the accepted/default cap, and the remaining free delegated in-flight capacity for that wave. Use an explicit profile/runtime cap when accepted; otherwise use the documented conservative default cap for the phase, no higher than 5.
-3. If reconstructed in-flight work already reaches the accepted/default cap, poll/submit/terminalize existing attempts before claiming more. `--count 1` is legal for a single remaining item, dependency-blocked front item, accepted cap of 1, or a narrow repair; it is not the normal actor drain strategy for independent demand.
-4. Submit the observation and explicit actor choice to the same claim checkpoint. Available actors use `delegated_subagent`; classified unavailable actors may use one `phase_agent_fallback` only when the Engine kind policy allows it:
+2. Read the `ProfileSchema`-parsed `rb_profile.yaml#/delegated_concurrency_cap` as `effective_delegated_concurrency_cap`. It is the only run-level cap input and is `12` when omitted; no CLI, environment, queue, slot, or host-capacity source overrides it.
+3. For a normal delegated top-up, compute:
+
+   ```text
+   claim_count = min(eligible_independent_demand, effective_delegated_concurrency_cap, remaining_free_capacity)
+   ```
+
+   `eligible_independent_demand` is the queue-front count of independent eligible demand for the phase, and `remaining_free_capacity` is the effective cap minus reconstructed normal delegated in-flight work. If reconstructed normal delegated in-flight work already reaches the effective cap, poll, submit, repair, or terminalize existing attempts before claiming more. `--count 1` is legal for a single remaining item, dependency-blocked front item, effective cap of 1, or a narrow repair; it is not the normal actor drain strategy for independent demand.
+4. This bounded work-unit prompt count is a Phase-Agent policy choice, not proof that a host started, kept live, or physically ran that number of native sub-agents concurrently. Submit the observation and explicit actor choice to the same claim checkpoint. Available actors use `delegated_subagent`; classified unavailable actors may use `phase_agent_fallback` only when the Engine kind policy allows it, and fallback always claims exactly one work unit regardless of the profile cap:
 
 ```bash
-node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim <bundle> --phase waveN --count <claim-count> \
+node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim <bundle> --phase waveN --count <claim_count> \
   --actor-outcome <available|unavailable|unknown> --actor-source <native_probe|not_observed> \
   --actor-role-key <queue-front-role> --actor-reason <normalized-reason> \
   --execution-actor <delegated_subagent|phase_agent_fallback>

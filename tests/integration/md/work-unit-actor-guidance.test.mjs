@@ -33,6 +33,16 @@ describe('work-unit actor guidance', () => {
     }
   });
 
+  it('keeps the profile cap as Agent guidance instead of a host or Engine scheduler', () => {
+    const shared = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md');
+    assert.match(shared, /rb_profile\.yaml#\/delegated_concurrency_cap/);
+    assert.match(shared, /claim_count = min\(eligible_independent_demand, effective_delegated_concurrency_cap, remaining_free_capacity\)/);
+    assert.match(shared, /remaining_free_capacity.*effective cap minus reconstructed normal delegated in-flight work/i);
+    assert.match(shared, /fallback always claims exactly one work unit regardless of the profile cap/i);
+    assert.match(shared, /not proof that a host started, kept live, or physically ran/i);
+    assert.doesNotMatch(shared, /no higher than 5|<= 5/);
+  });
+
   it('guards simplicity scope against a parallel availability control plane', () => {
     const sources = [
       read('DEEP_RESEARCH_HARNESS/engine/work-unit-actor.mjs'),

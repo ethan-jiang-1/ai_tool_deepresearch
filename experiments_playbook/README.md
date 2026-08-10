@@ -43,7 +43,7 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 
 `exp_extrem_slow/` holds cases that have shown an unacceptable observed runtime. It is not a fourth `light|standard|heavy` tier, is excluded from the active manifest corpus, and must never be selected by Autorun or Interactive replay.
 
-To reactivate one, first refactor the playbook, move it to a normal runnable `exp_*/` or `exph_*/` location with a supported `light`, `standard`, or `heavy` filename cost, and explicitly register it in `PLAYBOOK_MANIFEST.md`. Otherwise remove it. Current quarantined cases are Case 224, Case 225, and Case 712.
+To reactivate one, first refactor the playbook, move it to a normal runnable `exp_*/` or `exph_*/` location with a supported `light`, `standard`, or `heavy` filename cost, and explicitly register it in `PLAYBOOK_MANIFEST.md`. Otherwise remove it. Current quarantined cases are Case 221, Case 224, Case 225, and Case 712.
 
 ## Normal commands
 

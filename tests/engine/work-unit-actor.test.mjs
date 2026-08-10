@@ -58,17 +58,18 @@ describe('work-unit actor decision', () => {
     }
   });
 
-  it('claims exactly one explicit fallback and records actor authority', () => {
+  it('claims exactly one explicit fallback from seven eligible demands and records actor authority', () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'wu-actor-fallback-'));
     try {
-      seedDelegatedQueue(dir, [delegatedQueueItem('queue-a'), delegatedQueueItem('queue-b')]);
-      const result = claimWorkUnits(dir, { phase: 'wave0', count: 5, actorObservation: unavailable, executionActorClass: 'phase_agent_fallback' });
+      seedDelegatedQueue(dir, Array.from({ length: 7 }, (_, index) => delegatedQueueItem(`queue-${index + 1}`)));
+      const result = claimWorkUnits(dir, { phase: 'wave0', count: 7, actorObservation: unavailable, executionActorClass: 'phase_agent_fallback' });
       assert.equal(result.claimed_count, 1);
       const record = loadWorkUnitIndex(dir).work_units[result.claimed_work_ids[0]];
       assert.equal(record.actor_contract_version, 'work-unit.actor.v1');
       assert.equal(record.actor_execution.execution_actor_class, 'phase_agent_fallback');
       assert.equal(record.actor_execution.fallback_from, 'delegated_subagent');
-      assert.equal(loadQueue(dir).active_window[0].queue_item_id, 'queue-b');
+      assert.equal(loadQueue(dir).active_window[0].queue_item_id, 'queue-2');
+      assert.equal(Object.keys(loadQueue(dir).delegated_in_flight).length, 1);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

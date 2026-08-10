@@ -83,6 +83,7 @@ export const ProfileSchema = z.object({
   plan_basename: z.string(),
   research_profile: ResearchProfile,
   root_must_answer_set: z.array(z.string()),
+  delegated_concurrency_cap: z.number().int().min(1).max(20).default(12),
   research_style_params: ResearchStyleParamsSchema.nullable().optional(),
   research_access: ResearchAccessSchema.optional(),
   human_decision_checkpoints: z.object({

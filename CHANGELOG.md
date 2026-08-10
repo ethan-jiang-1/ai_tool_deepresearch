@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.83
+
+- Run profiles now carry the schema-validated `delegated_concurrency_cap`
+  policy input (default `12`, accepted range `1..20`) for normal delegated
+  work-unit prompt fan-out.
+- The Phase Agent uses that profile policy with existing in-flight demand;
+  Engine work-unit allocation, actor preflight, queue admission, transactions,
+  and fallback authority are unchanged. The value does not claim host capacity
+  or physical concurrency.
+
 ## v0.82
 
 - New work-unit claims use the immutable `work-unit.assignment.v3` contract:

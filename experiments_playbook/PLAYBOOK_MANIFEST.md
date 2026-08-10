@@ -67,7 +67,6 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 | `exp_wfn_wave0/case-212-heavy-gate-fail-repair.md` |
 | `exp_wfn_wave0/case-213-light-happy-and-fail.md` |
 | `exp_wfn_wave0/case-214-light-timeout-progress-lease.md` |
-| `exp_wfn_wave1/case-221-heavy-batch-subagent.md` |
 | `exp_wfn_wave1/case-222-heavy-gate-fail-repair.md` |
 | `exp_wfn_wave1/case-223-heavy-subagent-failure.md` |
 | `exp_wfn_wave2/case-231-heavy-synthesis-happy-path.md` |
@@ -119,6 +118,7 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 
 `exp_extrem_slow/` is outside the active runnable corpus. It is not a fourth filename cost tier, a selector fallback, or an Autorun/Interactive execution surface.
 
+- `exp_extrem_slow/case-221-extreme-slow-batch-subagent.md`
 - `exp_extrem_slow/case-224-extreme-slow-happy-and-fail.md`
 - `exp_extrem_slow/case-225-extreme-slow-returned-work-closeout.md`
 - `exp_extrem_slow/case-712-extreme-slow-hitl2-natural-rerun.md`

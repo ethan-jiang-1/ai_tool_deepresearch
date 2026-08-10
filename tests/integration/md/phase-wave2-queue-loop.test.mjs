@@ -148,3 +148,14 @@ describe('Anti-Cheating Rules', () => {
       `expected at least 10 anti-cheating rules, found ${rules ? rules.length : 0}`);
   });
 });
+
+describe('delegated concurrency guidance', () => {
+  it('uses the profile-owned cap formula without host-capacity authority', () => {
+    assert.match(body, /rb_profile\.yaml#\/delegated_concurrency_cap/);
+    assert.match(body, /claim_count = min\(eligible_independent_demand, effective_delegated_concurrency_cap, remaining_free_capacity\)/);
+    assert.match(body, /already reaches the effective cap/i);
+    assert.match(body, /fallback.*exactly one work unit.*regardless of the profile cap/i);
+    assert.match(body, /not proof that a host started, kept live, or physically ran/i);
+    assert.doesNotMatch(body, /no higher than 5|<= 5/);
+  });
+});

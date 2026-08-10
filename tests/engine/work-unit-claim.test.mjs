@@ -152,6 +152,21 @@ describe('claimWorkUnits', () => {
     }
   });
 
+  it('claims seven eligible normal demands without a cap scheduler', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, Array.from({ length: 7 }, (_, index) => delegated(`queue-${index + 1}`)));
+      const result = claimWorkUnits(dir, { phase: 'wave0', count: 7, ...availableSourceActor });
+      assert.equal(result.claimed_count, 7);
+      assert.equal(result.in_flight_count, 7);
+      assert.equal(result.unclaimed_delegated_count, 0);
+      assert.equal(new Set(result.claimed_work_ids).size, 7);
+      assert.equal(Object.keys(loadWorkUnitIndex(dir).work_units).length, 7);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('stops at the first non-delegated blocker after partial success', () => {
     const dir = tempBundle();
     try {

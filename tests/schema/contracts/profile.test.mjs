@@ -18,6 +18,26 @@ describe('ProfileSchema', () => {
     assert.ok(ProfileSchema.safeParse(valid).success);
   });
 
+  it('defaults a legacy profile without delegated_concurrency_cap to 12', () => {
+    const result = ProfileSchema.parse(valid);
+    assert.equal(result.delegated_concurrency_cap, 12);
+  });
+
+  it('accepts explicit delegated_concurrency_cap bounds', () => {
+    for (const delegated_concurrency_cap of [1, 12, 20]) {
+      const result = ProfileSchema.safeParse({ ...valid, delegated_concurrency_cap });
+      assert.equal(result.success, true, `expected ${delegated_concurrency_cap} to parse`);
+      assert.equal(result.data.delegated_concurrency_cap, delegated_concurrency_cap);
+    }
+  });
+
+  it('rejects invalid delegated_concurrency_cap values', () => {
+    for (const delegated_concurrency_cap of [0, -1, 1.5, 20.5, 21]) {
+      const result = ProfileSchema.safeParse({ ...valid, delegated_concurrency_cap });
+      assert.equal(result.success, false, `expected ${delegated_concurrency_cap} to fail`);
+    }
+  });
+
   it('rejects invalid research_profile', () => {
     assert.ok(!ProfileSchema.safeParse({ ...valid, research_profile: 'invalid_mode' }).success);
   });

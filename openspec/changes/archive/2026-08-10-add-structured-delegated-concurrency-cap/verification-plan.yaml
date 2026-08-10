@@ -1,0 +1,142 @@
+schema_version: verification-routing/v1
+change: add-structured-delegated-concurrency-cap
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Profile default/bounds and existing Engine claim/fallback boundaries are
+      deterministic contracts that can be exercised without a runtime bundle or
+      Subject-Agent work.
+  integration:
+    status: selected
+    rationale: >-
+      Profile templates and Agent-facing Wave/shared guidance must agree on the
+      same control and formula without presenting deterministic guidance or
+      claim coverage as proof of host capacity or physical concurrency.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      This change does not add a lifecycle transition, Gate path, or full
+      deterministic phase-chain behavior. A synthetic chain would not prove
+      physical actor fan-out and would duplicate existing claim coverage.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      No active bounded playbook can make the seven-real-actor claim. The only
+      such case, case-221, is quarantined in exp_extrem_slow and excluded from
+      Autorun and Interactive; a lighter case would not be equivalent evidence.
+claims:
+  - id: profile-cap-default-and-bounds
+    statement: >-
+      AGQ-022 and SUD-003: ProfileSchema defaults a missing
+      delegated_concurrency_cap to 12 and rejects non-integer, zero, negative,
+      and greater-than-20 values.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/contracts/profile.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: seven-normal-claim-remains-an-engine-boundary
+    statement: >-
+      AGQ-022 and SUD-003: the existing claim path accepts seven eligible
+      normal demands without a new cap checker or scheduler.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-claim.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: fallback-one-remains-an-engine-boundary
+    statement: >-
+      AGQ-022 and SUD-003: phase_agent_fallback retains its existing
+      single-work-unit result regardless of the profile-guidance cap.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-actor.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-guidance-uses-the-profile-cap-formula
+    statement: >-
+      AGQ-022: Wave0 guidance uses the one profile cap and common top-up
+      formula while retaining the existing Engine and fallback boundaries.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/phase-wave0-queue-loop.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: profile-template-and-wave-guidance-share-one-cap-control
+    statement: >-
+      AGQ-022: the profile template, Wave0/Wave1/Wave2, and shared protocol
+      name the one profile cap, formula, top-up boundary, unchanged Engine
+      authority, and fallback=1 distinction.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/phase-wave1-queue-loop.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave2-guidance-uses-the-profile-cap-formula
+    statement: >-
+      AGQ-022: Wave2 guidance uses the one profile cap and common top-up
+      formula while retaining its existing role, finding, and actor boundaries.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/phase-wave2-queue-loop.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: shared-protocol-preserves-cap-and-actor-boundaries
+    statement: >-
+      AGQ-022 and SUD-003: shared sub-agent guidance projects the profile cap
+      and common formula without creating host, slot, or allocation authority.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/work-unit-actor-guidance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
