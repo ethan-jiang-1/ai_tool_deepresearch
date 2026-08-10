@@ -161,6 +161,23 @@ does not erase necessary factual mechanism prose, an operation document's explic
 coordinate, or a primary source embedded as source context; it constrains constitutional hierarchy
 and navigation, not the subject matter a focused document explains.
 
+`openspec/README.md` SHALL be a demand-driven control map: it SHALL route a reader from a stated
+task or uncertainty to the smallest applicable constitution, model, operation, accepted-spec, or
+runtime-truth surface. It SHALL distinguish role navigation from authority, but SHALL NOT require a
+reader to follow a complete sequential guidance list, reproduce a complete terminology glossary,
+or cache current runtime/capability behavior. A role pointer may provide a compressed orientation;
+the canonical owner SHALL retain the full definition or procedure. This contract does not impose a
+fixed word or line limit, and it does not turn a prose-quality judgment into a deterministic
+verdict.
+
+The repository SHALL retain focused deterministic coverage for the topology facts that do not
+require semantic judgment: canonical current role paths, required role frontmatter/authority
+coordinates, current internal Markdown-link resolution, root/Harness route ordering and required
+synchronized blocks, absence of a duplicate guidance root or mirror, and bounded current old-path
+references. Those checks SHALL identify their owned repair surface. They SHALL NOT decide whether a
+model answers a valuable question, whether a constitutional invariant is well-written, or whether
+research judgment is semantically sufficient.
+
 #### Scenario: A future relevant design receives the ordered route
 
 - **WHEN** an author starts an architecture, recovery, mutation, Agent-facing, state, projection,
@@ -187,3 +204,18 @@ and navigation, not the subject matter a focused document explains.
 - **AND** constitutional navigation does not list root adapters, `openspec/config.yaml`, downstream
   capability specs, framework/experiment surfaces, or active runtime bundles as targets
 - **AND** the repository exposes no current supported retired guidance root or duplicate Charter
+
+#### Scenario: Control map routes by trigger without becoming a second glossary
+
+- **WHEN** a reader opens `openspec/README.md` to decide what to read next
+- **THEN** it can select the smallest role-specific surface from its task or uncertainty
+- **AND** it is not told to read every model or operation document in sequence
+- **AND** it is directed to the canonical owner rather than a second full terminology or behavior definition
+
+#### Scenario: Deterministic topology checks leave semantic review to the Agent
+
+- **WHEN** a current guidance path, role coordinate, internal link, mirror, old-path reference, or
+  synchronized entry-route block drifts
+- **THEN** the focused topology regression fails at the owned repair surface
+- **AND** the regression does not pass or fail a judgment about abstraction value, prose quality,
+  or research evidence sufficiency

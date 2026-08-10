@@ -142,16 +142,23 @@ interpretation layer.
 
 ## Migration Plan
 
-1. Record current measurements and a duplication/ownership map before target edits.
-2. Apply the Charter admission review, then narrow Context, control map, config, models, and
+1. After proposal artifacts are complete and before the feedback plan review or any Apply work,
+   perform the required `polish-openspec-change` pass for this selected change when that workflow
+   is available. Otherwise perform and record an equivalent scoped artifact-polish review. Persist
+   every actionable finding as an ordinary repair task, finish the repairs, and rerun each affected
+   planning validation/governance check. This review does not authorize edits to `.agents/skills/**`
+   or `.claude/skills/**`.
+2. Record current measurements and a duplication/ownership map before target edits.
+3. Apply the Charter admission review, then narrow Context, control map, config, models, and
    operations according to the mapped owner decisions.
-3. Repair links and route pointers while preserving all Change A canonical paths and root/Harness
+4. Repair links and route pointers while preserving all Change A canonical paths and root/Harness
    entry behavior.
-4. Implement focused static topology coverage and update only the tests whose owned assertions
+5. Implement focused static topology coverage and update only the tests whose owned assertions
    change.
-5. Run selected integration regressions, project governance checks, semantic closeout review, delta
-   sync, and the governed archive finalizer. Rollback is the selected change diff; do not restore a
-   duplicate guidance tree or alter stable skill sources as a workaround.
+6. Run selected integration regressions, project governance checks, semantic closeout review,
+   delta/main sync, and the governed archive finalizer. Rollback is the
+   selected change diff; do not restore a duplicate guidance tree or alter stable skill sources as a
+   workaround.
 
 ## Open Questions
 

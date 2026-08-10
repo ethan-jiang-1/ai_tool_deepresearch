@@ -2,7 +2,7 @@
 
 > 计划记录: 2026-08-09
 > Plan ID: `centralize-project-guidance-under-openspec`
-> 状态: active；Change A 已归档，Change B proposal 已完成，等待 Agent-owned plan review
+> 状态: done；Change A 与 Change B 均已归档，计划索引与归档移动已完成
 > 目标 change 候选名: `centralize-project-guidance-under-openspec`
 > Progressive tracker: [`centralize-project-guidance-under-openspec-progressive-plan.md`](centralize-project-guidance-under-openspec-progressive-plan.md)
 
@@ -11,7 +11,7 @@
 ### 交付状态（2026-08-10）
 
 Change A `centralize-project-guidance-under-openspec` 已通过受治理的 finalizer 归档至
-[`openspec/changes/archive/2026-08-10-centralize-project-guidance-under-openspec/`](../../openspec/changes/archive/2026-08-10-centralize-project-guidance-under-openspec/)。
+[`openspec/changes/archive/2026-08-10-centralize-project-guidance-under-openspec/`](../../../openspec/changes/archive/2026-08-10-centralize-project-guidance-under-openspec/)。
 它完成了 guidance 拓扑迁移，并将 feedback-lifecycle 的项目特定 operation guidance 保留在
 `openspec/config.yaml` 的 `operations` 配置中；既有 `.agents/skills/**` 与 `.claude/skills/**`
 未被作为迁移目标或改写。
@@ -21,6 +21,13 @@ Change A `centralize-project-guidance-under-openspec` 已通过受治理的 fina
 `prune-and-automate-project-guidance` 记录 `go`：它只收敛内容 ownership、入口路由和可确定性
 检查，不重做已关闭的路径迁移或修改既有 skill 资产。详见 progressive tracker 的 `E-009`、`E-010`
 和 `D-009`、`D-010`。
+
+**最终交付（2026-08-10）：** Change B 已由受治理 finalizer 归档至
+`openspec/changes/archive/2026-08-10-prune-and-automate-project-guidance/`。它将 Charter、Context
+和控制图分别缩减至 100/74/52 行，保留 `openspec/config.yaml` 的 operation delivery，新增了仅
+覆盖当前 guidance topology 的静态契约，并通过 39/39 个选定 integration 测试及全部 finalizer
+检查。两个 change 都没有修改 `.agents/skills/**` 或 `.claude/skills/**`；详细证据分别位于两个
+OpenSpec archive 及 progressive tracker 的 E-009、E-015、E-016。
 
 本计划建议把当前根目录 `guidelines/` 纳入 `openspec/`，但不做简单的
 `guidelines/ -> openspec/guidelines/` 平移。真正目标是让 `openspec/` 成为项目治理的
@@ -693,46 +700,46 @@ accepted spec/finalizer routes，不能仅从 active scan 中删掉该文件。
 
 ### Topology
 
-- [ ] `openspec/constitution/` 存在并拥有唯一 Project Charter。
-- [ ] 三个 evolution directions 位于 constitution 的明确子层。
-- [ ] 系统模型位于 `openspec/guidance/models/`。
-- [ ] operation guidance 位于 `openspec/operations/`。
-- [ ] 根 `guidelines/` 不再是 current supported surface。
-- [ ] 不存在 duplicate/symlink mirror。
+- [x] `openspec/constitution/` 存在并拥有唯一 Project Charter。
+- [x] 三个 evolution directions 位于 constitution 的明确子层。
+- [x] 系统模型位于 `openspec/guidance/models/`。
+- [x] operation guidance 位于 `openspec/operations/`。
+- [x] 根 `guidelines/` 不再是 current supported surface。
+- [x] 不存在 duplicate/symlink mirror。
 
 ### Authority
 
-- [ ] Charter 仍明确 defer accepted specs、executable contracts 和 runtime truth。
-- [ ] Operations 不被 constitution peer invariant 误分类。
-- [ ] `change-feedback-loop` 仍能路由 accepted spec 和 finalizer。
-- [ ] Logging behavior 仍由 accepted spec/executable contract 拥有。
-- [ ] Root Context 仍明确是 glossary，不是 behavior authority。
+- [x] Charter 仍明确 defer accepted specs、executable contracts 和 runtime truth。
+- [x] Operations 不被 constitution peer invariant 误分类。
+- [x] `change-feedback-loop` 仍能路由 accepted spec 和 finalizer。
+- [x] Logging behavior 仍由 accepted spec/executable contract 拥有。
+- [x] Root Context 仍明确是 glossary，不是 behavior authority。
 
 ### Entry routing
 
-- [ ] Root Agent entries 先读新 Charter，再读 root Context。
-- [ ] Harness Agent entries 通过父路径读同一 Charter 和 Context。
-- [ ] Harness research entry selection 未改变。
-- [ ] Apply/archive supported entries 使用新 operation guidance 路径。
-- [ ] Root/Harness paired files 保持其 accepted synchronization requirements。
+- [x] Root Agent entries 先读新 Charter，再读 root Context。
+- [x] Harness Agent entries 通过父路径读同一 Charter 和 Context。
+- [x] Harness research entry selection 未改变。
+- [x] Apply/archive supported entries 使用新 operation guidance 路径。
+- [x] Root/Harness paired files 保持其 accepted synchronization requirements。
 
 ### Verification
 
-- [ ] Current baseline hierarchy failure 已以 role-aware contract 正确关闭。
-- [ ] Focused context-routing regression 通过。
-- [ ] Focused constitution/evolution regression 通过。
-- [ ] Feedback finalizer/entry conformance regressions 通过。
-- [ ] Experiment and verification knowledge-surface regressions 通过。
-- [ ] OpenSpec validation 和适用 project governance checks 通过。
-- [ ] current/live scan 无旧 `guidelines/` 路径。
-- [ ] archive paths 没有被修改以制造假 clean scan。
+- [x] Current baseline hierarchy failure 已以 role-aware contract 正确关闭。
+- [x] Focused context-routing regression 通过。
+- [x] Focused constitution/evolution regression 通过。
+- [x] Feedback finalizer/entry conformance regressions 通过。
+- [x] Experiment and verification knowledge-surface regressions 通过。
+- [x] OpenSpec validation 和适用 project governance checks 通过。
+- [x] current/live scan 无旧 `guidelines/` 路径。
+- [x] archive paths 没有被修改以制造假 clean scan。
 
 ### Documentation quality
 
-- [ ] `openspec/README.md` 是 router，不是第二 glossary。
-- [ ] 每个 target directory 的 README 或 entry text 说明 reader、trigger、role 和 authority limit。
-- [ ] Change B 有固定上下文负载的 before/after 记录。
-- [ ] 删除或下沉的内容都有新的 canonical owner，不靠聊天记忆补足。
+- [x] `openspec/README.md` 是 router，不是第二 glossary。
+- [x] 每个 target directory 的 README 或 entry text 说明 reader、trigger、role 和 authority limit。
+- [x] Change B 有固定上下文负载的 before/after 记录。
+- [x] 删除或下沉的内容都有新的 canonical owner，不靠聊天记忆补足。
 
 ## 18. Rollout 和恢复
 
@@ -762,9 +769,8 @@ accepted spec/finalizer routes，不能仅从 active scan 中删掉该文件。
 > preserve root files as discovery adapters, and relocate current guidance into explicit
 > constitution, model, and operation roles without changing Harness runtime behavior.
 
-## 20. 下一步
+## 20. 关闭结果
 
-进入实现前的唯一合法下一步是通过 `/opsx:propose` 或对应 `openspec-propose` skill 创建
-`centralize-project-guidance-under-openspec` change，并让 proposal/design/spec/tasks 对本计划重新
-做 capability discovery 和范围审查。本文件是充分的上游规划材料，但不是 accepted spec、Apply
-授权或完成证据。
+本计划的两个有界 OpenSpec change 都已通过 governed finalizer archive。未来若要改变 guidance
+topology、ownership、operation delivery 或 static topology coverage，必须以新的有界 plan/change
+重新完成 capability discovery 和范围审查；本文件不再是 active Apply 授权或当前工作入口。

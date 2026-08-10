@@ -131,7 +131,7 @@ describe('agent context routing contract', () => {
     assertNonEntryBoundary(preRead, path);
   });
 
-  it('keeps one root glossary with canon links and authority-sensitive distinctions', () => {
+  it('keeps a compact root vocabulary orientation with canon links and authority-sensitive distinctions', () => {
     const path = 'CONTEXT.md';
     const text = read(path);
 
@@ -142,18 +142,15 @@ describe('agent context routing contract', () => {
     assert.match(text, /\[ADR 0001\]\(docs\/adr\/0001-keep-agent-flow-markdown-driven-and-engine-gated\.md\)/);
     assert.match(text, /\[ADR 0002\]\(docs\/adr\/0002-name-the-reusable-surface-deep-research-harness\.md\)/);
     assert.match(text, /\[ADR 0003\]\(docs\/adr\/0003-retire-legacy-harness-source-alias\.md\)/);
-    assert.match(text, /vocabulary-alignment surface/);
-    assert.match(text, /not a behavior specification, executable contract, Gate verdict, or\s+runtime projection/);
-    assert.match(text, /complete Phase Agent, Sub-agent, Queue\s+demand item, Work unit, and Submit vocabulary/);
-    assert.match(text, /production research run or\s+disposable\s+experiment/);
+    assert.match(text, /mandatory vocabulary orientation/);
+    assert.match(text, /not\s+a behavior specification, executable contract, Gate verdict, or\s+runtime projection/);
+    assert.match(text, /For complete Phase Agent, Sub-agent, Queue\s+demand item, Work unit, and Submit\s+vocabulary/);
+    assert.match(text, /Current run bundle root/);
+    assert.match(text, /does not itself grant authority,\s+capability, permission, liveness,\s+or evidence/);
     assert.match(text, /does not itself select the next Chain phase/);
-    assert.match(text, /Chain uses accepted\s+transition authority to select the next phase/);
-    assert.match(text, /does not by itself grant authority,\s+capability, permission, liveness, or evidence/);
-    assert.match(text, /\*\*Deep Research Harness\*\*:/);
-    assert.match(text, /\*\*Run bundle\*\*:/);
-    assert.match(text, /\*\*Research run\*\*:/);
-    assert.match(text, /\*\*Current run bundle\*\*:/);
-    assert.match(text, /\*\*Current run bundle root\*\*:/);
+    for (const term of ['Deep Research Tool project', 'Deep Research Harness', 'Run bundle', 'Current run bundle root']) {
+      assert.match(text, new RegExp(term), `CONTEXT.md must retain the compact ${term} distinction`);
+    }
     assert.equal(existsSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/CONTEXT.md')), false, 'framework must not gain a local glossary');
   });
 

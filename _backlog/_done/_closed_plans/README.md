@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-08-06 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-08-10 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -75,5 +75,7 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-052 | 2026-08-06 | experiment-progressive-follow-up-plan.md | Closed as an external re-entry record: future host capability, fresh profile selection, objective, and budget are required before a new bounded plan may exist. |
 | CLS-053 | 2026-08-06 | silent-autonomous-execution.md | Closed as a current-head reproduction record: no deterministic root or fresh `agent_flow_e2e` observation supports a change; canonical Harness links updated after rebaseline. |
 | CLS-055 | 2026-08-08 | bug-205-211-feedback-and-evaluator-remediation.md | 一次完整 real-actor run 暴露的 7 个确定性摩擦点（BUG-205..211）；两个 OpenSpec change 归档（v0.77 `make-feedback-name-contract-roots` + v0.78 `make-evaluator-and-cli-behavior-direct`）后全部 fixed。 |
+| CLS-056 | 2026-08-10 | centralize-project-guidance-under-openspec.md | 两个受治理 OpenSpec change 完成 canonical guidance topology、root adapters、ownership pruning 和静态 topology coverage；stable skill assets 未修改。 |
+| CLS-057 | 2026-08-10 | centralize-project-guidance-under-openspec-progressive-plan.md | Change A/Change B archive、P5 observation、proposal polish、Apply/closeout evidence 与 backlog closure tracker。 |
 
-**Next available plan ID: CLS-056**
+**Next available plan ID: CLS-058**

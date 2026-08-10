@@ -1,179 +1,61 @@
 schema: spec-driven
 
 context: |
-  Deep Research Tool — 将宽泛研究问题转化为证据支撑、多波次、带门控的研究报告。
+  Deep Research Tool turns broad questions into evidence-backed, multi-wave,
+  gated research reports. It is an agentic framework: Agent judgment and
+  Markdown Agent Flow remain distinct from Engine-owned deterministic facts.
 
-  项目定位:
-    这是一个 agentic framework。目录即约定，不依赖额外配置文件。
-    Agent (LLM) 是执行者 (搜索、阅读、写作、综合、决策)，
-    Engine (JavaScript) 是校验者 (Schema 验证、Gate 审计、Receipt 检查)，
-    Markdown/JSON/YAML 文件是持久化状态。
+  Authority boundary:
+    - Agent: research, writing, semantic judgment, and authorized repair.
+    - Markdown: Agent-readable flow, constraints, and feedback context.
+    - Engine/JS: schemas, deterministic transitions, receipts, trace, and
+      check/inspect/advice verdicts; it does not orchestrate semantic work.
+    - Current runtime truth: the explicitly selected current run bundle, never
+      chat memory or reusable framework assets.
+    - Accepted behavior: the applicable accepted OpenSpec spec and executable
+      contract. Guidance routes work; it does not override those owners.
 
-  核心原则:
-    - Engine (JavaScript) 强制执行规则 (schemas, state machines, receipts)
-    - Agent (LLM) 生产内容 (搜索、阅读、写作、综合)
-    - Markdown 控制 Agent Flow，JS/CLI 控制确定性 checkpoint
-    - JS/CLI 的输出 (check/inspect/advice) 必须回到 conversation context，让 MD 读后继续行动
-    - JS/CLI 不编排多阶段流程、不做语义判断、不替 Agent 选修复策略
-    - Gate 不持有路由——Transition table 负责 Node 间转移，Gate 只问不猜
-    - 禁止用环境变量传递跨 tool-call 的实验/runtime state——Coding Agent 每个 tool call 是独立 shell。
-      这不禁止 Agent CLI Launcher 在自己拥有的 child env 中携带 host provider 凭据与路由；
-      case context、bundle role 和 verdict authority 仍必须通过显式文件、CLI flag 或函数参数传递
+  Required design review order:
+    - openspec/constitution/evolution/abstraction-semantic-precision.md:
+      establish the reader's bounded question, essential distinctions, and a
+      normal reasoning stop before naming a new concept/state/view.
+    - openspec/constitution/evolution/simple-reliable-control.md:
+      prefer a direct Source of Record and shortest legal loop; describe net
+      simplification before adding a check, state, fallback, retry, or recovery.
+    - openspec/constitution/evolution/helper-oriented-agent.md:
+      keep semantic/risk/permission decisions with the user, ordinary legal
+      mechanical work with the Agent, and deterministic verdicts with the Engine.
 
-  技术栈:
-    Node.js ≥20, 纯 JavaScript (ESM, .mjs)。不使用 TypeScript。
-    仅 2 个批准的 npm 依赖 (不可新增): zod (schema 校验), yaml (YAML 文件解析)。
-    其余全部 Node.js 内置: node:util.parseArgs, node:fs/promises, node:test + node:assert, node:path。
-    状态机: 显式转换表 (Map/object), 不用 XState。
-    Markdown frontmatter: 正则提取 + JSON.parse(), 不用 gray-matter。
+  Read the smallest owner for the task:
+    - openspec/constitution/project-charter.md: universal project boundary.
+    - CONTEXT.md: concise vocabulary alignment.
+    - openspec/README.md: demand-driven role router.
+    - openspec/guidance/models/: complete system-understanding terminology.
+    - openspec/operations/: current Agent-facing procedures.
+    - openspec/specs/: accepted capability behavior.
+    - selected current run bundle: current runtime fact.
 
-  LLM-JS 协作原则 (Check & Inspect):
-    长程 Agent 任务中 LLM 易受噪声干扰产生幻觉。
-    采用 C (Check 硬性验证) + I (Inspect 审视诊断) 双保险:
-    - Check: JavaScript/Zod 在写入前校验 Schema、不变量、Receipt — 不通过则拒绝写入
-    - Inspect: CLI 诊断工具事后审视 Gate 审计、交叉引用、证据质量 — 发现问题反馈给 LLM 反思纠正
-    LLM 负责信息加工，JS 负责质量保证。验证失败 → 反馈 → 反思 → 纠正，不静默通过。
+  Engineering constraints:
+    Node.js >=20, pure ESM JavaScript, no TypeScript, and no dependencies beyond
+    zod and yaml. Use node:test + node:assert for JS-led tests. Do not fabricate
+    trace, receipts, runtime results, or completion claims.
 
-    JS/MD 边界判断:
-      遇到"这段逻辑该放 JS 还是 MD"拿不准时，读 openspec/constitution/project-charter.md 的
-      "Operating Model" 节和 openspec/guidance/models/framework-runtime-boundary.md 的
-      "Agent-Engine Communication" 节。速判口诀：
-        MD/Agent 侧：多阶段流程编排、修复策略选择、语义判断、branch 路由决策
-        JS/Engine 侧：schema 校验、状态转移查询 (askNext)、receipt 检查、trace 写入
-      Engine 提供注入点（函数参数），MD/Agent 提供实际逻辑。
-      Engine 永远不替 Agent 做决策——它只回答 "为什么没过"、"缺什么"、"下一步是谁"。
+  Requirement and verification routes:
+    The requirement registry and its governance checks own requirement identity.
+    The accepted `verification-routing` spec owns proof permission and exactly
+    four test classes: `unit`, `integration`, `deterministic_e2e`, and
+    `agent_flow_e2e`. A change-root verification plan selects evidence; it is not
+    an OpenSpec-native artifact gate.
 
-  迭代习惯:
-    AI Coding 容易堆叠代码。不能只往上摞——要时不时停下来思考结构的合理性，
-    该重构就重构，该清理就清理，让结构适应新要求同时兼顾老的东西。
-    定期打扫卫生是好习惯，在设计和上下文里多琢磨。
-
-  Evolution Directions（proposal/design 必须按当前顺序 review）:
-    - openspec/constitution/evolution/abstraction-semantic-precision.md：在新增或实质改变具名 state、projection、status、concept、Module、command 或 reader-facing view 前，
-      留下一小段连贯的语义反思：它服务哪个明确读者的哪个有界问题、哪些区别必须保留、以及读者如何能在此层得出精确结论或明确 unknown，
-      而不必沿正常路径回到底层重建。不要把这变成固定表格或 Engine verdict。
-    - openspec/constitution/evolution/simple-reliable-control.md：在语义层已说明后，优先 direct Source of Record 和最短合法闭环；
-      新增 state/check/validator/fallback/retry/recovery 必须说明净简化（net simplification），以及删除、合并或避免了什么复杂度，
-      不得仅以“更可靠”为由继续堆叠控制层。
-    - openspec/constitution/evolution/helper-oriented-agent.md：在语义层与控制形状均已说明后，用户负责新的语义、风险与权限决定；
-      Agent 负责已授权的机械执行与可逆修复；Engine 负责确定性 verdict。
-      human-directed 只说明决定来源，不创造 permission、override 或缺失 runtime capability。
-
-  命名规范:
-    - 枚举 snake_case, 用户界面中文, 内部字段名/路径英文
-    - Capability 前缀: cmd-* = Agent 读的 Markdown 命令 playbook; cli-* = JS 脚本
-    - Disposable Bundle: dpt_disp_{prefix}_{name}/ — case run root 内的实验 bundle；是否清理由 Supervisor outcome/health/audit policy 决定
-
-  需求追踪 (Requirement Traceability):
-    所有 capability 可追踪，强制性纪律，不可跳过。
-    - 唯一登记处: openspec/governance/req-registry.yaml (只增不删，分配前先查)
-    - 合规检查: openspec/governance/check-project-reqs.mjs (扫描项目级 main specs 和 active change deltas, 检查重复/未注册/orphan)
-    - 每个 capability 分配 3 字母缩写 (首单词前 2 + 次单词首字母), 如 schema-core → SCO
-    - 每个 requirement 分配全局唯一 ID: `{PREFIX}-{NNN}`, 如 SCO-001
-    - spec 文件开头标注: `> req: XXX-001, XXX-002`
-    - Requirement 标题只写稳定语义名，不写 requirement ID；不要写成 `### Requirement: Foo (SCO-001)`
-    - 代码实现: `// @impl SCO-001, SCO-002` 注释
-    - task 描述: 引用 requirement ID (如 "实现 SCO-001: CurrentGate enum")
-    - 每次 change 完成前必须更新 registry 并运行 openspec/governance/check-project-reqs.mjs
-
-  Capability discovery:
-    Before a proposal declares a New or Modified capability, first read
-    openspec/specs/README.md (or obtain `openspec list --specs --json`), then
-    inspect the candidate main specs. The catalog is navigation only; the
-    candidate main spec remains behavior authority. Record every considered
-    complete `domain/capability` path in proposal.md under `## Capability
-    Discovery`, with evidence read, decision, and reason. Reuse or modify an
-    inspected existing capability before declaring New; a New decision explains
-    why no candidate owns the observable behavior. Live main specs and active
-    deltas use exactly `domain/capability`, never a flat leaf name.
-
-  治理工具 (openspec/governance/):
-    需求追踪的工具支撑集中在此目录（与 DEEP_RESEARCH_HARNESS/ 解耦，属于项目级 OpenSpec 治理扩展）:
-    - req-registry.yaml        — Requirement ID 唯一登记处（只增不删）
-    - check-project-reqs.mjs   — registry 一致性扫描（duplicate / unregistered / orphan / reusedRetired）
-    - check-project-specs.mjs  — main spec 结构检查（deltaHeaderInMain / missingPurpose / missingRequirements / missingReqHeader）
-    每次 change 归档前两个 check 脚本都必须 PASS，详见下方 rules.tasks。
-
-  Registry 组织约定（强制性，所有 change 遵守）:
-    - live `# <domain>/<capability>` 组头与 `openspec/specs/<domain>/<capability>/` 目录一一对应；retired group 保留 historical label 与 `no spec directory` 注解——不存在合成组头（将多个 capability 归入人造标题）
-    - `prefixes:` 映射块是缩写→capability 全称的唯一自文档化来源（位于 req-registry.yaml 头部注释后、第一个 ID 组之前）
-    - ID 按 complete capability path 分组，live 组按完整路径字母序排列，组内 ID 按数字序排列
-    - Delta 段（如 `# engine/schema-core (delta)`）不允许——新增 ID SHALL 直接归入对应 capability 组，不另开 delta 组头
-    - 废弃 ID SHALL 保留在原 capability 组内数字序的正常位置，值末尾标注 `[DEPRECATED]`；整个 capability 废弃时组头标 `— all entries deprecated; no spec directory`，放在文件末尾
-
-  Verification routing:
-    项目使用 exactly four canonical `test_class` identifiers。完整分类与 proof permission 由 accepted
-    `verification-routing` spec 定义；本文件只拥有 change lifecycle 与 asset placement 规则。
-    - `unit`: focused JS-led `node:test` under `tests/`, outside `tests/integration/` and `tests/e2e/`
-    - `integration`: JS-led boundary tests under `tests/integration/`
-    - `deterministic_e2e`: JS-led workflow-scale deterministic chains under `tests/e2e/`
-    - `agent_flow_e2e`: Headless/Interactive Playbook Agent 执行 `experiments_playbook/` Markdown，使用真实 disposable runtime
-    `regression`, cost, actor, judge, fixture distance, and runtime bundle type are not peer test classes.
-    Autorun Supervisor 与 Agent CLI Launcher 是 host/lifecycle surface，不是新的 test class 或 proof subject。
-    普通 CI/`node:test` fixture 只能证明 deterministic Supervisor mechanics；只有 CI 显式提供真实 Agent CLI、
-    model credentials 和所需 tools 时，才可作为 host 发起 `agent_flow_e2e`，native runtime evidence 仍是 authority。
-    New changes SHALL create change-root `verification-plan.yaml`; apply tasks SHALL run
-    `check-verification-routing.mjs --mode plan` before target edits and `--mode assets` before archive.
-    This is repo lifecycle discipline, not an OpenSpec-native artifact gate: `openspec status/validate`
-    does not parse or validate the custom plan.
-
-    tests/fixtures/: 最小测试框架（symlink 到 DEEP_RESEARCH_HARNESS/），为 tests/ 提供 fixture。
-
-  实验体系 (Experiments):
-    正典术语与责任边界见 `openspec/operations/command-experiments.md`；当前操作入口见
-    `experiments_playbook/README.md` 与 `DEEP_RESEARCH_HARNESS/host_tools/README.md`。本文件只保留高频路由:
-    - Agent Experiment Autorun 是正常 unattended launch model，不是传统 CLI test runner。
-    - Autorun Supervisor 选择、启动、监督、验证 native completion、运行 health、审计和清理；不执行 Markdown 或重判 verdict。
-    - Agent CLI Launcher 只启动 Coding Agent runtime。
-    - Headless/Interactive Playbook Agent 执行完整 Markdown；Interactive 仅用于单 case 诊断、replay 或真人 judgment。
-    - Subject Agent/Sub-agent 是 case-owned 独立智能 actor；Playbook Agent 参与不能冒充 Subject evidence。
-    - Headless chain: host → Autorun Supervisor → Agent CLI Launcher → Headless Playbook Agent → Markdown/Engine → native completion → Supervisor health/audit/report/cleanup。
-      Interactive chain 使用同一 contract，但以 Interactive Playbook Agent 执行单 case 并保留 run root。
-    - Engine/CLI 拥有 deterministic checkpoint、receipt、trace 与 native completion contract。
-    - `PLAYBOOK_MANIFEST.md` 只拥有 active path/order；V2 frontmatter 拥有 case policy；filename 拥有 cost；native completion 是唯一 case outcome authority。
-    - Current surfaces: `experiments_playbook/PLAYBOOK_MANIFEST.md`、`RUN_AGENT_AUTORUN_EXPS.md`、`RUN_INTERACTIVE_EXPS.md` 与
-      `DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs`; detailed behavior remains in accepted specs and executable contracts.
-    - 每个 case 使用显式 Supervisor-owned run root；`.exp-bundles/` 只含 run-owned state/log/evidence/audit/report，
-      不复制或链接 repo-root `DEEP_RESEARCH_HARNESS/`、`experiments_env/`、`tests/`。
-    - native outcome、host lifecycle、Agent process、health 与 cleanup 分离；playbook finalization 后停止，health/cleanup 由 Supervisor 负责。
-    - `experiments_env/shared/` 只提供薄 setup/fact helper；不得成为隐藏 Playbook Agent、第二 verdict 或 cleanup owner。
-
-  根目录约定 (Framework ↔ Bundle 同级, 不拷贝):
-    docs/                       — 架构文档 (architect/)
-    experiments_playbook/        — Agent 测试 playbook (见实验体系)
-      exp_{component}/            # 每个机制一个子目录；命名与格式详见 openspec/operations/command-experiments.md
-    experiments_env/                — 原型实验 (理想化, 冻结, 见实验体系)
-    openspec/                   — OpenSpec spec-driven development
-      changes/                  — change proposals (deltas) + archive
-      config.yaml               — OpenSpec 配置文件（本文件）
-      governance/               — 项目级治理扩展（非 OpenSpec 原生），详见 context「治理工具」节
-      specs/                    — main specs（capability requirements, source of truth）
-    tests/                      — 回归测试 (随代码演进)
-
-    Framework — 唯一共享框架目录:
-      DEEP_RESEARCH_HARNESS/              — reusable framework assets；运行时只读，不保存 run state
-        README.md                 — framework runtime guide
-        COMMANDS.md               — 命令索引
-        cli/                      — 当前 framework-level CLI，如 instantiate/validate/inspect/operate queue
-        command_playbook/         — Agent/operator 可读命令说明
-        engine/                   — deterministic engine code 与 trace utility
-        schema/                   — Zod enums、index、contracts/{gate,plan,profile,queue,status,trace}.mjs
-        rb_templates/             — 实例化 run bundle 的初始模板
-        workflows/                — workflow-foundation target；v1 单主 workflow，不是多 workflow namespace
-
-    Bundle — 可多个、彼此隔离的运行时目录:
-      dpt_rb_{name}/              — production Runtime Bundle，通过 ../DEEP_RESEARCH_HARNESS/ 引用同一套 framework
-        BUNDLE_MAP.md            — passive bundle map
-        rb_plan.md                — 话题设计 (Markdown + JSON frontmatter)
-        rb_profile.yaml           — 用户意图 / HITL profile
-        rb_status.json            — phase/gate 状态摘要
-        rb_queue.json             — 执行队列
-        rb_trace.jsonl            — append-only 诊断日志
-        seed_topics/              — 种子话题文件
-        reference/                — 本地证据
-        artifacts/                — 阶段产物，如 wave1/、wave2/
-        final/                    — 最终报告
-        _cache/                   — 可重建缓存/projection，不是 authority
+  Experiment route:
+    Agent Experiment Autorun is the unattended launch model. The Autorun Supervisor owns host lifecycle, health, audit, and cleanup; the Agent CLI
+    Launcher starts the coding-agent runtime; Playbook Agents execute Markdown;
+    Engine/CLI owns deterministic checkpoints and native completion facts.
+    普通 CI/`node:test` fixture 只能证明 deterministic Supervisor mechanics；只有 CI 显式提供真实
+    Agent CLI、model credentials 和所需 tools 时，才可作为 host 发起 `agent_flow_e2e`，native
+    runtime evidence 仍是 authority。详细术语和程序由
+    openspec/operations/command-experiments.md 与 selected accepted/executable
+    contracts 拥有。
 
 operations:
   apply:

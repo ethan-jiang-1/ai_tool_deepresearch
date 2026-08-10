@@ -4,10 +4,10 @@
 > Parent plan: [`centralize-project-guidance-under-openspec.md`](centralize-project-guidance-under-openspec.md)
 > Created: 2026-08-09
 > Last updated: 2026-08-10
-> Overall status: `change_b_proposal_ready_for_review`
-> Active checkpoint: `P6 - Change B: Prune And Automate Project Guidance`
+> Overall status: `done`
+> Active checkpoint: none
 > Current blocker: none
-> Next legal action: complete the Agent-owned Change B plan review and record every finding before any target edit
+> Next legal action: none; this plan is closed.
 
 ## 1. Tracker Purpose
 
@@ -61,33 +61,51 @@ Before ending any work session:
 6. Add one Progress Log row explaining what changed during the session.
 7. Ensure exactly one unfinished checkpoint is marked `in_progress`, unless the whole plan is blocked or done.
 
+### 2.4 Proposal-polish rule
+
+For every change represented by this tracker, immediately after its proposal artifacts are complete and
+before its Agent-owned plan review or any Apply work:
+
+1. Add and perform a selected-change `polish-openspec-change` pass in the active change's formal task
+   list.
+2. Use the named workflow when it is available at execution time; otherwise perform and record an
+   equivalent scoped artifact-polish review.
+3. Convert every actionable finding into an ordinary unchecked repair task, complete those repairs, and
+   rerun the affected planning validation/governance checks before the plan-review marker can close.
+4. Keep `.agents/skills/**` and `.claude/skills/**` out of polish scope unless the user separately
+   authorizes a change there.
+
+This rule is prospective for already archived changes: do not backfill or claim a polish pass that was
+not recorded in the historical change. It supplements the required actual-diff closeout review; it does
+not replace it.
+
 ## 3. Current Position
 
 ```yaml
 plan: centralize-project-guidance-under-openspec
-overall_status: change_b_proposal_ready_for_review
-active_checkpoint: P6
-active_checkpoint_name: Change B: Prune And Automate Project Guidance
-last_completed_checkpoint: P5
+overall_status: done
+active_checkpoint: null
+active_checkpoint_name: null
+last_completed_checkpoint: P7
 current_blocker: null
-next_legal_action: complete the Agent-owned Change B plan review and record every finding before any target edit
+next_legal_action: none; this plan is closed
 target_change_a: centralize-project-guidance-under-openspec
 change_a_archive: openspec/changes/archive/2026-08-10-centralize-project-guidance-under-openspec/
 target_change_b: prune-and-automate-project-guidance
-target_edits_authorized: false
-archive_authorized: false
+change_b_archive: openspec/changes/archive/2026-08-10-prune-and-automate-project-guidance/
+proposal_polish_rule: required_after_proposal_before_plan_review
+change_a_polish_status: historical_not_claimed
+change_b_polish_status: completed_equivalent_scoped_review
+plan_preflight_passed: true
+apply_entry_requested: true
+target_edits_authorized: true
+archive_status: archived
 ```
 
 ### Resume coordinate
 
-A later Agent resumes here:
-
-1. Read the Project Charter and root `CONTEXT.md` required by repository instructions.
-2. Read the parent plan.
-3. Read this tracker from `Current Position` through the active checkpoint.
-4. Run `openspec list --json` to refresh active-change truth; do not trust this file for current OpenSpec state.
-5. Confirm Change A remains at its archive coordinate, then resolve Change B with `openspec status --change "prune-and-automate-project-guidance" --json` after it is scaffolded.
-6. Continue only the first unchecked legal task in the active checkpoint.
+No resume coordinate remains. Future guidance work begins with a new bounded
+plan/change and current OpenSpec status, not by reopening this closed tracker.
 
 ## 4. Progressive Checkpoint Board
 
@@ -99,8 +117,8 @@ A later Agent resumes here:
 | P3 | Guidance topology and all current consumers are migrated | `done` | 33/35 + 2 skipped | Change A archive and current role-aware regressions |
 | P4 | Change A is verified, synced, finalized, and archived | `done` | 20/20 | Governed finalizer success at the canonical archive location |
 | P5 | Change A is observed and Change B receives a go/no-go decision | `done` | 9/9 | E-010 and D-010 |
-| P6 | Change B prunes duplication and automates deterministic topology checks | `in_progress` | 4/31 | Change B proposal artifacts, plan review, and subsequent governed archive |
-| P7 | Backlog plans are closed with durable completion evidence | `pending` | 0/10 | Both plan files moved to closed plans and indexes updated |
+| P6 | Change B prunes duplication and automates deterministic topology checks | `done` | 32/32 | Governed finalizer archived Change B at its canonical archive location |
+| P7 | Backlog plans are closed with durable completion evidence | `done` | 10/10 | Both plans moved, indexes updated, and no active pointer remains |
 
 Progress counts are manual navigation aids. They are not completion authority. Update them whenever task
 checkboxes change.
@@ -451,7 +469,7 @@ decision for content pruning and deterministic topology automation.
 
 ## 11. P6 - Change B: Prune And Automate Project Guidance
 
-**Status:** `in_progress`
+**Status:** `done`
 
 **Bounded outcome:** Mandatory context is materially smaller, duplicate truth is removed, role-specific documents
 are sharper, and deterministic topology facts are protected by focused checks without turning semantic
@@ -459,7 +477,7 @@ judgment into machine verdicts.
 
 **Entry condition:** P5 records `go`.
 
-### 11.1 Propose and review Change B
+### 11.1 Propose, polish, and review Change B
 
 - [x] **P6-01** Scaffold `prune-and-automate-project-guidance` through OpenSpec CLI.
   - Change root: `openspec/changes/prune-and-automate-project-guidance/`. Evidence: `E-011`.
@@ -472,85 +490,109 @@ judgment into machine verdicts.
 - [x] **P6-04** Define numeric before/after measurements without treating line count alone as quality.
   - Design requires before/after entry measurements plus ownership, route-preservation, and semantic-review
     evidence; it rejects a fixed word-count verdict. Evidence: `E-011`.
-- [ ] **P6-05** Complete Agent-owned plan review and persist findings as tasks.
-- [ ] **P6-06** Pass verification-routing and semantic-closure plan preflight.
+- [x] **P6-05** Perform the required selected-change proposal-polish pass immediately after Change B
+  proposal artifacts are complete and before its Agent-owned plan review.
+  - Completion: use `polish-openspec-change` when it is available at execution time; otherwise perform
+    and record an equivalent scoped artifact-polish review. Convert every actionable finding into an
+    ordinary unchecked repair task, complete those repairs, and rerun each affected planning
+    validation/governance check.
+  - Boundary: polish must not edit `.agents/skills/**` or `.claude/skills/**`; it supplements rather
+    than replaces the plan and closeout reviews.
+  - Evidence: `E-013`.
+- [x] **P6-06** Complete Agent-owned plan review and persist findings as tasks.
+  - Completion: no remaining actionable planning finding; the `openspec-feedback:plan-review` marker is
+    complete exactly once. Evidence: `E-014`.
+- [x] **P6-07** Pass verification-routing and semantic-closure plan preflight.
+  - Completion: requirements, verification-routing plan, and semantic-closure plan checks pass after the
+    completed review. Evidence: `E-014`.
 
 ### 11.2 Shrink mandatory surfaces
 
-- [ ] **P6-07** Apply the constitutional admission test to every Charter section.
-- [ ] **P6-08** Retain the minimal mandatory core: project nature, authority split, evidence honesty, OpenSpec
+- [x] **P6-08** Apply the constitutional admission test to every Charter section.
+- [x] **P6-09** Retain the minimal mandatory core: project nature, authority split, evidence honesty, OpenSpec
   lifecycle, and trigger router.
-- [ ] **P6-09** Move task-specific reference behind precise context pointers.
-- [ ] **P6-10** Reduce `openspec/README.md` to a role/trigger router.
-- [ ] **P6-11** Preserve root adapter behavior while removing repeated body text.
+- [x] **P6-10** Move task-specific reference behind precise context pointers.
+- [x] **P6-11** Reduce `openspec/README.md` to a role/trigger router.
+- [x] **P6-12** Preserve root adapter behavior while removing repeated body text.
 
 ### 11.3 Deduplicate Context, config, models, and specs
 
-- [ ] **P6-12** Build a duplication map for Charter, Context, OpenSpec config, model canon, operations, and specs.
-- [ ] **P6-13** Assign one canonical owner to every repeated definition or rule.
-- [ ] **P6-14** Keep only compressed orientation or a trigger pointer at non-owning surfaces.
-- [ ] **P6-15** Remove directory/API facts that are cheap to inspect from the environment.
-- [ ] **P6-16** Preserve rationale only where config/code cannot explain why.
+- [x] **P6-13** Build a duplication map for Charter, Context, OpenSpec config, model canon, operations, and specs.
+- [x] **P6-14** Assign one canonical owner to every repeated definition or rule.
+- [x] **P6-15** Keep only compressed orientation or a trigger pointer at non-owning surfaces.
+- [x] **P6-16** Remove directory/API facts that are cheap to inspect from the environment.
+- [x] **P6-17** Preserve rationale only where config/code cannot explain why.
 
 ### 11.4 Deepen model and operation documents
 
-- [ ] **P6-17** Ensure each model answers one bounded reader question and has a normal reasoning stop point.
-- [ ] **P6-18** Evaluate Chain/Queue/Work Unit names and perform only justified semantic renames.
-- [ ] **P6-19** Separate logging behavior contracts from runtime-observability procedure.
-- [ ] **P6-20** Delete an operation/model document if its remaining interface provides no leverage.
-- [ ] **P6-21** Ensure every retained operation has trigger, ordered steps, completion criteria, and authority limit.
+- [x] **P6-18** Ensure each model answers one bounded reader question and has a normal reasoning stop point.
+- [x] **P6-19** Evaluate Chain/Queue/Work Unit names and perform only justified semantic renames.
+- [x] **P6-20** Separate logging behavior contracts from runtime-observability procedure.
+- [x] **P6-21** Delete an operation/model document if its remaining interface provides no leverage.
+- [x] **P6-22** Ensure every retained operation has trigger, ordered steps, completion criteria, and authority limit.
 
 ### 11.5 Automate deterministic topology facts
 
-- [ ] **P6-22** Check canonical path uniqueness.
-- [ ] **P6-23** Check role-specific frontmatter.
-- [ ] **P6-24** Check current internal links.
-- [ ] **P6-25** Check root/Harness adapter route order and synchronized blocks.
-- [ ] **P6-26** Check forbidden duplicate mirrors.
-- [ ] **P6-27** Check bounded current/live old-path references.
-- [ ] **P6-28** Confirm semantic quality, abstraction value, and research judgment remain Agent/human reviews.
+- [x] **P6-23** Check canonical path uniqueness.
+- [x] **P6-24** Check role-specific frontmatter.
+- [x] **P6-25** Check current internal links.
+- [x] **P6-26** Check root/Harness adapter route order and synchronized blocks.
+- [x] **P6-27** Check forbidden duplicate mirrors.
+- [x] **P6-28** Check bounded current/live old-path references.
+- [x] **P6-29** Confirm semantic quality, abstraction value, and research judgment remain Agent/human reviews.
 
 ### 11.6 Verify and archive Change B
 
-- [ ] **P6-29** Record before/after entry-load measurements and deleted duplicate meanings.
-- [ ] **P6-30** Complete focused tests, governance checks, closeout review, sync, and governed finalization.
-- [ ] **P6-31** Record residual risks and future triggers without keeping Change B artificially active.
+- [x] **P6-30** Record before/after entry-load measurements and deleted duplicate meanings.
+  - Evidence: `E-015` and archived Change B `apply-evidence.md` record the entry measurements, owner map,
+    deleted duplicate meaning, and residual boundary.
+- [x] **P6-31** Complete focused tests, governance checks, closeout review, and sync.
+  - Evidence: Change B archived evidence records 39/39 selected integration tests, strict/asset/archive
+    governance passes, a fresh no-finding closeout review, and delta/main re-comparison.
+- [x] **P6-32** Complete governed finalization and record residual risks and future triggers without keeping
+  Change B artificially active.
+  - Evidence: `E-016`; residual semantic usefulness remains an Agent/human review boundary, and future
+    guidance changes require a new bounded OpenSpec change.
 
 ### P6 exit check
 
-- [ ] Change B is archived, or a P5 no-go/blocked decision honestly closes this checkpoint.
-- [ ] Mandatory entry load is smaller without losing required route behavior.
-- [ ] Deterministic topology rules have executable protection.
-- [ ] Semantic design review has not been converted into a checkbox-only or Engine verdict system.
+- [x] Change B is archived through the governed finalizer.
+- [x] Mandatory entry load is smaller without losing required route behavior.
+- [x] Deterministic topology rules have executable protection.
+- [x] Semantic design review has not been converted into a checkbox-only or Engine verdict system.
 
 ## 12. P7 - Close The Backlog Plan
 
-**Status:** `pending`
+**Status:** `done`
 
 **Bounded outcome:** The planning records accurately state what shipped, what did not ship, and where durable
 authority/evidence now lives; active plan indexes no longer claim unfinished work.
 
 ### Tasks
 
-- [ ] **P7-01** Confirm Change A archive evidence is linked in both parent and progressive plans.
-- [ ] **P7-02** Confirm Change B is either archived or has an explicit no-go/blocked closure with re-entry trigger.
-- [ ] **P7-03** Reconcile every unchecked task: complete it, record a deliberate skip, or carry it into a named
+- [x] **P7-01** Confirm Change A archive evidence is linked in both parent and progressive plans.
+- [x] **P7-02** Confirm Change B is either archived or has an explicit no-go/blocked closure with re-entry trigger.
+- [x] **P7-03** Reconcile every unchecked task: complete it, record a deliberate skip, or carry it into a named
   new plan/change.
-- [ ] **P7-04** Write a concise final outcome summary in the parent plan.
-- [ ] **P7-05** Set this tracker's header to `done`, with no active checkpoint or blocker.
-- [ ] **P7-06** Move the parent plan to `_backlog/_done/_closed_plans/` without renaming it.
-- [ ] **P7-07** Move this progressive plan to `_backlog/_done/_closed_plans/` without renaming it.
-- [ ] **P7-08** Remove the active entry from `_backlog/plans/README.md`.
-- [ ] **P7-09** Add closure entries to `_backlog/_done/_closed_plans/README.md` and update the done index/count
+  - Completed work has no unchecked ordinary task. P3-31 and P3-32 remain explicitly `skipped` under D-009
+    because stable `.agents` and `.claude` entries are intentionally not edit targets; the P5 no-go branch
+    remains explicitly `skipped` under D-010 because the recorded decision was `go`.
+- [x] **P7-04** Write a concise final outcome summary in the parent plan.
+- [x] **P7-05** Set this tracker's header to `done`, with no active checkpoint or blocker.
+- [x] **P7-06** Move the parent plan to `_backlog/_done/_closed_plans/` without renaming it.
+- [x] **P7-07** Move this progressive plan to `_backlog/_done/_closed_plans/` without renaming it.
+- [x] **P7-08** Remove the active entry from `_backlog/plans/README.md`.
+- [x] **P7-09** Add closure entries to `_backlog/_done/_closed_plans/README.md` and update the done index/count
   required by backlog conventions.
-- [ ] **P7-10** Verify no active plan points to the old active locations as current state.
+- [x] **P7-10** Verify no active plan points to the old active locations as current state.
 
 ### P7 exit check
 
-- [ ] Active plan index no longer lists this work.
-- [ ] Closed-plan indexes identify the completion or honest terminal boundary.
-- [ ] No unfinished task exists only in chat.
-- [ ] Current behavior claims are limited to archived changes and recorded verification evidence.
+- [x] Active plan index no longer lists this work.
+- [x] Closed-plan indexes identify the completion or honest terminal boundary.
+- [x] No unfinished task exists only in chat; P3-31/P3-32 and the P5 no-go line are explicit skipped branches
+  under D-009/D-010.
+- [x] Current behavior claims are limited to archived changes and recorded verification evidence.
 
 ## 13. File-Move Tracking Matrix
 
@@ -610,6 +652,11 @@ path changes, update the parent plan, this matrix, delta specs, tasks, and consu
 | E-009 | 2026-08-10 | Change A archive | Governed finalizer / archived task record | `openspec/changes/archive/2026-08-10-centralize-project-guidance-under-openspec/`; all archive task checkboxes complete |
 | E-010 | 2026-08-10 | Post-Change-A observation | Current live entry/config/control-map files plus focused route regressions | Charter 379/3,165; Charter + Context 866/6,194; current six-entry route regression 11/11 pass; Change B `go` basis |
 | E-011 | 2026-08-10 | Change B proposal | Active change planning artifacts and plan-mode governance | `openspec/changes/prune-and-automate-project-guidance/`; OpenSpec 4/4 complete, strict validation, requirements plan, discovery, taxonomy, verification-routing plan, and semantic-closure plan PASS |
+| E-012 | 2026-08-10 | Change B tracker and planning-artifact update | User-directed proposal-polish policy | Every future tracker change schedules polish after proposal and before plan review; Change B has the formal task/design sequence, while no historical Change A polish is claimed |
+| E-013 | 2026-08-10 | Change B proposal polish | Equivalent scoped artifact-polish review because the named workflow was unavailable | Reviewed proposal, GCO-008 delta, design, tasks, verification plan, semantic-closure record, and feedback guidance; repaired the polish ordering, then strict validation, requirements plan, discovery, taxonomy, verification-routing plan, and semantic-closure plan PASS |
+| E-014 | 2026-08-10 | Change B plan review and preflight | Selected planning artifacts, current configuration-delivered Apply guidance, worktree boundary, and plan-mode checks | No open actionable planning finding; exactly one plan-review marker is complete; strict validation, requirements plan, discovery, taxonomy, verification-routing plan, and semantic-closure plan PASS; only tracker/design/tasks are modified |
+| E-015 | 2026-08-10 | Change B Apply simplification and topology regression | Selected target guidance, root/Harness entries, and seven selected integration suites | Charter 379/3,165 -> 100/621; Context 487/3,029 -> 74/629; control map 165/2,160 -> 52/535; config 335/2,233 -> 217/1,473; config-delivered operation guidance remains valid; 39/39 selected integration tests PASS; see `apply-evidence.md` |
+| E-016 | 2026-08-10 | Change B governed archive | `finalize-change-archive.mjs` structured result | Archived as `2026-08-10-prune-and-automate-project-guidance` at `openspec/changes/archive/2026-08-10-prune-and-automate-project-guidance/`; all 11 finalizer checks passed |
 
 Add future evidence with a stable ID. For command evidence, record the exact selected change/object, command,
 exit result, and artifact path. Do not paste an unbounded console transcript when a concise result and durable
@@ -629,6 +676,9 @@ artifact coordinate are sufficient.
 | D-008 | 2026-08-09 | Preserve filenames during Change A where possible | planning default | Correct path semantics or collision requires an approved rename |
 | D-009 | 2026-08-10 | Preserve `.agents/skills/**` and `.claude/skills/**` unchanged; deliver project-specific feedback lifecycle guidance through `openspec/config.yaml` | implemented in Change A | A supported entry contract requires a distinct source change |
 | D-010 | 2026-08-10 | P5 records `go` for bounded Change B `prune-and-automate-project-guidance` | active | OpenSpec proposal discovery finds no viable bounded scope or accepted-spec ownership blocks the change |
+| D-011 | 2026-08-10 | Every tracker change requires a selected-change polish pass after proposal completion and before plan review or Apply | active | A future proposal is completed without a formal polish task, or the named workflow and an equivalent scoped review are both unavailable |
+| D-012 | 2026-08-10 | Retain the detailed models and operation procedures as their bounded canonical owners; simplify mandatory entry surfaces and make those owners demand-driven instead | implemented in Change B Apply | A future reader-boundary review shows a document lacks a bounded question, normal stop, or authority limit |
+| D-013 | 2026-08-10 | Close the two-change guidance-centralization plan after both governed archives and indexed plan closure | implemented | A future guidance, topology, or ownership change needs a new bounded plan/change |
 
 Planning defaults guide proposal authoring but are not accepted behavior. Change A artifacts must make the
 authoritative scoped decisions.
@@ -656,7 +706,14 @@ When blocked:
 | 2026-08-09 | P0 -> P1 | Created progressive tracker, checkpoint board, ledgers, and resume protocol | E-008 | Scaffold Change A through OpenSpec CLI |
 | 2026-08-10 | P1 -> P4 | Change A planned, applied, verified, synced, and finalized; a closeout repair retained existing lifecycle skill sources and moved project-specific operation delivery to config | E-009 | Observe migration before deciding Change B |
 | 2026-08-10 | P5 -> P6 | Measured current entry load and routes; recorded `go` for bounded content pruning and deterministic topology automation | E-010, D-010 | P6-01: scaffold Change B through OpenSpec CLI |
-| 2026-08-10 | P6 proposal | Scaffolded Change B and completed proposal, GCO-008 delta, design, tasks, verification plan, and semantic-closure record; plan-mode structure checks pass | E-011 | P6-05: Agent-owned plan review before any target edit |
+| 2026-08-10 | P6 proposal | Scaffolded Change B and completed proposal, GCO-008 delta, design, tasks, verification plan, and semantic-closure record; plan-mode structure checks pass | E-011 | P6-05: proposal polish before plan review or target edits |
+| 2026-08-10 | P6 tracker | Established the mandatory post-proposal polish rule and moved Change B polish ahead of plan review; no historical Change A polish is claimed | E-012, D-011 | P6-05: proposal polish before plan review or target edits |
+| 2026-08-10 | P6 proposal polish | Completed an equivalent scoped artifact-polish review, repaired the task/design sequence, and reran affected planning checks | E-013 | P6-06: Agent-owned plan review before any target edit |
+| 2026-08-10 | P6 plan review | Completed the feedback-lifecycle plan review and all plan preflight checks with no open finding; Apply has not been requested | E-014 | Await explicit Apply entry, then P6-08 |
+| 2026-08-10 | P6 Apply | Narrowed Charter/Context/control-map/config prompt context, retained model/operation owners, added topology coverage, and passed all selected integration regressions | E-015, D-012 | P6-30: record final measurements and begin governance/closeout/sync |
+| 2026-08-10 | P6 -> P7 | Synced GCO-008, closed the finalizer-task self-block, passed fresh closeout and archive checks, and archived Change B through the governed finalizer | E-016, D-013 | P7-06: move both completed plans and update backlog indexes |
+| 2026-08-10 | P7 closure | Moved both completed plans to `_closed_plans/`, removed the active-plan row, and added CLS-056/CLS-057 with updated done count | E-016, D-013 | P7-10: verify no active pointer remains |
+| 2026-08-10 | P7 done | Verified both new closed-plan paths, their local links, the closed/done indexes, and the absence of an active-plan pointer | E-016, D-013 | none; plan closed |
 
 ## 19. Session Update Template
 
