@@ -47,14 +47,14 @@ suggested_context:
 ### `research_access`
 
 - **类型**：optional discriminated object，`status` 为 `unprobed`、`available` 或 `unavailable`
-- **填写时机**：HITL1 bounded capability probe 后写入；旧 bundle 可以缺失
+- **填写时机**：HITL1 isolated direct-sample probe 后写入；旧 bundle 可以缺失
 - **分支字段**：
   - `unprobed`：仅 `status`
-  - `available`：`probed_at`、HTTP(S) `result_url`、`fetch_outcome: success`，可选 `search_surface` / `fetch_surface`
-  - `unavailable`：`probed_at`、`fetch_outcome: failed|blocked|not_attempted`、非空 `reason`，可选 `result_url` / surface fields
-- **authority**：只记录直接 probe observation，不是研究 evidence，也不证明未来 invocation 永远可用
-- **access envelope**：`available` 与 `unavailable` 可带静态受限的 `source_class_reachability` entries；每个 declared source class 至多一条闭合 reachability 值，不记录 query、URL/attempt history、HTTP status 或 response。当前 writer 由独立 controller 输出完整 declared ladder；旧 profile 可省略该 optional field。
-- **access boundary**：optional `access_boundary` 是完整的 `{ location, extent }` pair，不从 `reason` prose 或前缀推断。`unavailable` 的 classified pair 为 `universal`；available 的 partial-reachability pair 为 `class_scoped`。整个 pair 缺失是合法的 explicitly unclassified observation，不默认任何 owner。
+  - current direct-sample observation（当前 HITL1 writer）：`probed_at`、`sample_observations`（每个 controller declared sample 恰好一条：fixed `sample_id` + 匹配 `source_group` + 一个 closed terminal `outcome`；仅 `content` 可带 `retrieval_surface`）、`status: available|unavailable`；`unavailable` 必带非空 `reason`
+  - legacy observation（只读兼容，当前 writer 不再生成）：旧 `result_url` / `fetch_outcome` / `search_surface` / `fetch_surface` / `source_class_reachability` / `access_boundary` 形式保持可读，不与 current direct-sample format 混写
+- **authority**：只记录一次 compact direct observation，不是研究 evidence，也不证明未来网络或 provider 可用
+- **terminal outcomes**：closed 值集为 `content`、`login_required`、`challenge`、`http_denied`、`rate_limited`、`transport_inconclusive`、`failed`、`round_budget_not_attempted`，另加 whole-probe `not_attempted`。`content` 要求真实请求页内容；命令退出、空 body、搜索摘要、登录页、错误页或 challenge shell 都不是 `content`。`not_attempted` 只能用于整个 probe 未开始任何请求（relay 失败或无合法直接表面），此时每个 sample 都是 `not_attempted`；单个已知样本在预算到期前未启动用 `round_budget_not_attempted`。两者都不声称网站不可达。
+- **access boundary**：仅 legacy observation 可带 optional `access_boundary`（完整 `{ location, extent }` pair，不从 reason prose 推断）。current observation 不推断、不携带 boundary。样本 outcome 是 Phase 的语义判断输入，不是 Engine 网络诊断。
 
 ### `research_style_params`
 

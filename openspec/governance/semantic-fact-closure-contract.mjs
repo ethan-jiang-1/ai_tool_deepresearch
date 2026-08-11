@@ -18,6 +18,10 @@ export const INITIAL_SEMANTIC_FACT_FAMILIES = Object.freeze([
     bounded_question: 'What are the current scope, canonical Topic, and rerun intent?',
   }),
   Object.freeze({
+    id: 'research.host-access-envelope',
+    bounded_question: "What does the latest bounded direct-page observation say about the fixed China and overseas samples — each sample's compact terminal outcome, whether any non-diagnostic core sample returned real content, and the observation time — and does an already validated legacy access_boundary own any unavailable part? Current sample outcomes are a Phase semantic-input fact, not an Engine-owned network diagnosis.",
+  }),
+  Object.freeze({
     id: 'queue.demand-lifecycle',
     bounded_question: 'What is the legal lifecycle of queue demand, terminal history, and replacement?',
   }),

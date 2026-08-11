@@ -1,4 +1,4 @@
-// @impl PRP-002, PRP-005, REA-002, REA-003
+// @impl REA-002, REA-003, PRP-002, PRP-005
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -12,10 +12,18 @@ const OBSERVER = 'experiments_env/shared/observe-iterative-interaction-case.mjs'
 const PLAYBOOK = 'experiments_playbook/exp_wff_pre-research-repair/case-115-heavy-hitl1-research-access-probe.md';
 const RUNNER = 'experiments_env/shared/run-iterative-interaction-subject.mjs';
 const MANIFEST = 'experiments_playbook/PLAYBOOK_MANIFEST.md';
-const RESULT_URL = 'https://example.com/research-access';
-const OTHER_URL = 'https://example.net/second-candidate';
-const QUERY = 'site:wikipedia.org "Internet protocol suite"';
-const CURL_COMMAND = `curl --fail --silent --show-error --location --max-time 15 --max-redirs 5 --proto '=http,https' --proto-redir '=http,https' --globoff -- '${RESULT_URL}'`;
+
+const FIXED_SAMPLES = [
+  { sample_id: 'gov_cn', group: 'china', url: 'https://www.gov.cn/' },
+  { sample_id: 'gitee', group: 'china', url: 'https://gitee.com/' },
+  { sample_id: 'xinhuanet', group: 'china', url: 'https://www.news.cn/' },
+  { sample_id: 'cnki_catalog', group: 'china', url: 'https://www.cnki.net/' },
+  { sample_id: 'wikipedia', group: 'overseas', url: 'https://www.wikipedia.org/' },
+  { sample_id: 'github', group: 'overseas', url: 'https://github.com/' },
+  { sample_id: 'iana', group: 'overseas', url: 'https://www.iana.org/domains/reserved' },
+  { sample_id: 'arxiv', group: 'overseas', url: 'https://arxiv.org/' },
+  { sample_id: 'rfc_editor', group: 'overseas', url: 'https://www.rfc-editor.org/' },
+];
 
 function message(role, content) {
   return { type: role, message: { role, content: [content] } };
@@ -38,63 +46,40 @@ function resultEvent(access) {
   };
 }
 
-function searchResult(links = [
-  { title: 'Example', url: RESULT_URL },
-  { title: 'Other', url: OTHER_URL },
-]) {
-  return `Web search results for query: "${QUERY}"\n\nLinks: ${JSON.stringify(links)}`;
-}
-
-function probeEvents({ nativeSuccess = false, curlCommand = CURL_COMMAND, curlContent = '<html><body>Example research access</body></html>', curlError = false } = {}) {
-  const rows = [
-    toolUse('search-1', 'WebSearch', { query: QUERY }),
-    toolResult('search-1', searchResult()),
-    toolUse('native-1', 'WebFetch', { url: RESULT_URL, prompt: 'Return the requested page content.' }),
-    toolResult('native-1', nativeSuccess ? '<html><body>Native page</body></html>' : 'Unable to verify if domain is safe to fetch.', !nativeSuccess),
-  ];
-  if (!nativeSuccess && curlCommand !== null) {
-    rows.push(toolUse('curl-1', 'Bash', { command: curlCommand, description: 'Run the bounded same-URL fallback' }));
-    rows.push(toolResult('curl-1', curlContent, curlError));
+function fetchEvents({ withCurl = false } = {}) {
+  const rows = [];
+  for (const [index, sample] of FIXED_SAMPLES.entries()) {
+    const use = toolUse(`fetch-${index}`, 'WebFetch', { url: sample.url, prompt: 'Return the requested page content.' });
+    rows.push(use);
+    rows.push(toolResult(`fetch-${index}`, '<html><body>Public sample page</body></html>'));
+    if (withCurl && index === 0) {
+      rows.push(toolUse(`curl-0`, 'Bash', { command: `curl --fail --silent --show-error --location --max-time 15 --max-redirs 5 --proto '=http,https' --proto-redir '=http,https' --globoff -- '${sample.url}'` }));
+      rows.push(toolResult(`curl-0`, '<html><body>Reserve sample page</body></html>'));
+    }
   }
   return rows;
 }
 
-function availableAccess(fetchSurface = 'curl', { resultUrl = RESULT_URL, count = 1 } = {}) {
-  return {
-    status: 'available',
+function directObservation({ available = true, noRequest = false } = {}) {
+  const observations = FIXED_SAMPLES.map((sample) => {
+    const entry = { sample_id: sample.sample_id, source_group: sample.group };
+    if (noRequest) {
+      entry.outcome = 'not_attempted';
+    } else if (available) {
+      entry.outcome = 'content';
+      entry.retrieval_surface = 'native';
+    } else {
+      entry.outcome = 'transport_inconclusive';
+    }
+    return entry;
+  });
+  const access = {
+    status: noRequest ? 'unavailable' : available ? 'available' : 'unavailable',
     probed_at: '2026-08-10T00:00:00.000Z',
-    result_url: resultUrl,
-    fetch_outcome: 'success',
-    search_surface: 'WebSearch',
-    fetch_surface: fetchSurface,
-    eligible_candidate_count: count,
-    final_candidate_ordinal: count,
+    sample_observations: observations,
   };
-}
-
-function unavailableAccess({ resultUrl = RESULT_URL, count = 1, outcome = 'failed', fetchSurface = 'curl' } = {}) {
-  return {
-    status: 'unavailable',
-    probed_at: '2026-08-10T00:00:00.000Z',
-    result_url: resultUrl,
-    fetch_outcome: outcome,
-    reason: 'The current candidate could not return real requested page content.',
-    search_surface: 'WebSearch',
-    ...(fetchSurface ? { fetch_surface: fetchSurface } : {}),
-    eligible_candidate_count: count,
-    final_candidate_ordinal: count,
-  };
-}
-
-function unavailableSearchAccess(reason = 'Search returned no eligible HTTP(S) result.') {
-  return {
-    status: 'unavailable',
-    probed_at: '2026-08-10T00:00:00.000Z',
-    fetch_outcome: 'not_attempted',
-    reason,
-    search_surface: 'WebSearch',
-    eligible_candidate_count: 0,
-  };
+  if (!available || noRequest) access.reason = noRequest ? 'Relay failed before any page request.' : 'No core sample returned real content this round.';
+  return access;
 }
 
 function createCase({ events, access, includeReturn = true }) {
@@ -135,99 +120,49 @@ function remove(caseRoot) {
   rmSync(caseRoot.bundle, { recursive: true, force: true });
 }
 
-describe('case-115 isolated HITL1 probe observer', () => {
-  it('binds the existing manifest case to an isolated runner and final-return observer', () => {
+describe('case-115 isolated HITL1 direct-sample probe observer', () => {
+  it('binds the existing manifest case to an isolated direct-sample runner and observer', () => {
     const playbook = readFileSync(join(ROOT, PLAYBOOK), 'utf8');
     const runner = readFileSync(join(ROOT, RUNNER), 'utf8');
     const manifest = readFileSync(join(ROOT, MANIFEST), 'utf8');
     const observer = readFileSync(join(ROOT, OBSERVER), 'utf8');
     assert.match(manifest, /case-115-heavy-hitl1-research-access-probe\.md/);
     assert.match(runner, /surface: 'isolated_hitl1_capability_probe'/);
-    assert.match(runner, /tools: 'Bash,WebFetch,WebSearch'/);
+    assert.match(runner, /tools: 'Bash,WebFetch'/);
     assert.match(runner, /does not provide a bundle path or any filesystem obligation/);
     assert.match(playbook, /observe-iterative-interaction-case\.mjs 115 hash/);
     assert.match(playbook, /observe-iterative-interaction-case\.mjs 115 verdict/);
     assert.match(playbook, /case-115-NOT-RUN\.json/);
     assert.match(observer, /parseCase115Return/);
     assert.match(observer, /no profile write or Gate execution/);
+    assert.match(playbook, /fixed direct-sample suite/);
+    assert.doesNotMatch(playbook, /one literal neutral `WebSearch`/);
   });
 
-  it('accepts a retained public native-failure same-URL fallback and compact available return', () => {
-    const caseRoot = createCase({ events: probeEvents(), access: availableAccess() });
+  it('accepts a retained fixed direct-sample available return over both groups', () => {
+    const caseRoot = createCase({ events: fetchEvents(), access: directObservation({ available: true }) });
     try {
       const result = runObserver(caseRoot);
       assert.equal(result.status, 0, result.stderr || result.stdout);
       assert.equal(checkFor(caseRoot.bundle, 'hitl1-research-access-probe')?.passed, true);
       assert.equal(checkFor(caseRoot.bundle, 'probe-evidence-boundary')?.passed, true);
-      assert.equal(checkFor(caseRoot.bundle, 'hitl1-native-to-curl-fallback')?.passed, true);
-    } finally { remove(caseRoot); }
-  });
-
-  it('accepts a native available return without claiming a Phase write or Gate attempt', () => {
-    const caseRoot = createCase({ events: probeEvents({ nativeSuccess: true }), access: availableAccess('WebFetch') });
-    try {
-      const result = runObserver(caseRoot);
-      assert.equal(result.status, 0, result.stderr || result.stdout);
-      assert.equal(checkFor(caseRoot.bundle, 'hitl1-research-access-probe')?.passed, true);
-      assert.equal(checkFor(caseRoot.bundle, 'hitl1-native-to-curl-fallback'), undefined);
       assert.equal(readFileSync(join(caseRoot.bundle, 'rb_trace.jsonl'), 'utf8').includes('gate_attempt'), false);
     } finally { remove(caseRoot); }
   });
 
-  it('accepts the permitted same-URL fallback when native fetch is absent before invocation', () => {
-    const events = [
-      toolUse('search-1', 'WebSearch', { query: QUERY }),
-      toolResult('search-1', searchResult()),
-      toolUse('curl-1', 'Bash', { command: CURL_COMMAND, description: 'Run the bounded same-URL fallback' }),
-      toolResult('curl-1', '<html><body>Fallback page</body></html>'),
-    ];
-    const caseRoot = createCase({ events, access: availableAccess('curl') });
+  it('accepts an honest unavailable direct-sample return without a Phase write or Gate attempt', () => {
+    const caseRoot = createCase({ events: fetchEvents(), access: directObservation({ available: false }) });
     try {
       const result = runObserver(caseRoot);
       assert.equal(result.status, 0, result.stderr || result.stdout);
       assert.equal(checkFor(caseRoot.bundle, 'hitl1-research-access-probe')?.passed, true);
-      assert.equal(checkFor(caseRoot.bundle, 'hitl1-native-to-curl-fallback')?.passed, true);
+      assert.equal(checkFor(caseRoot.bundle, 'probe-evidence-boundary')?.passed, true);
+      assert.equal(readFileSync(join(caseRoot.bundle, 'rb_trace.jsonl'), 'utf8').includes('gate_attempt'), false);
     } finally { remove(caseRoot); }
   });
 
-  it('accepts an honest unavailable fallback return', () => {
-    const caseRoot = createCase({
-      events: probeEvents({ curlContent: 'Exit code 28', curlError: true }),
-      access: unavailableAccess(),
-    });
-    try {
-      const result = runObserver(caseRoot);
-      assert.equal(result.status, 0, result.stderr || result.stdout);
-      assert.equal(checkFor(caseRoot.bundle, 'hitl1-research-access-probe')?.passed, true);
-    } finally { remove(caseRoot); }
-  });
-
-  it('accepts an honest no-candidate return without a fetch event', () => {
-    const events = [
-      toolUse('search-1', 'WebSearch', { query: QUERY }),
-      toolResult('search-1', 'Web search results\n\nLinks: []'),
-    ];
-    const caseRoot = createCase({ events, access: unavailableSearchAccess() });
-    try {
-      const result = runObserver(caseRoot);
-      assert.equal(result.status, 0, result.stderr || result.stdout);
-      assert.equal(checkFor(caseRoot.bundle, 'hitl1-research-access-probe')?.passed, true);
-    } finally { remove(caseRoot); }
-  });
-
-  it('allows a second candidate only after the first exact fallback cannot return content', () => {
-    const firstCurl = CURL_COMMAND;
-    const events = [
-      toolUse('search-1', 'WebSearch', { query: QUERY }),
-      toolResult('search-1', searchResult()),
-      toolUse('native-1', 'WebFetch', { url: RESULT_URL, prompt: 'Return the requested page content.' }),
-      toolResult('native-1', 'Unable to fetch.', true),
-      toolUse('curl-1', 'Bash', { command: firstCurl }),
-      toolResult('curl-1', 'Exit code 28', true),
-      toolUse('native-2', 'WebFetch', { url: OTHER_URL, prompt: 'Return the requested page content.' }),
-      toolResult('native-2', '<html><body>Second candidate page</body></html>'),
-    ];
-    const caseRoot = createCase({ events, access: availableAccess('WebFetch', { resultUrl: OTHER_URL, count: 2 }) });
+  it('accepts an honest whole no-request relay return with no retrieval events', () => {
+    const caseRoot = createCase({ events: [], access: directObservation({ noRequest: true }) });
     try {
       const result = runObserver(caseRoot);
       assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -236,35 +171,41 @@ describe('case-115 isolated HITL1 probe observer', () => {
   });
 
   it('uses NOT_RUN when the final compact return is absent', () => {
-    const caseRoot = createCase({ events: probeEvents({ nativeSuccess: true }), access: availableAccess('WebFetch'), includeReturn: false });
+    const caseRoot = createCase({ events: fetchEvents(), access: directObservation({ available: true }), includeReturn: false });
     try { expectNotRun(caseRoot, /exactly one final Subject result|compact YAML return/i); } finally { remove(caseRoot); }
   });
 
-  it('uses NOT_RUN when the public search query or return target contradicts the fixed sequence', () => {
-    const wrongQuery = probeEvents({ nativeSuccess: true });
-    wrongQuery[0] = toolUse('search-1', 'WebSearch', { query: 'other query' });
-    const queryCase = createCase({ events: wrongQuery, access: availableAccess('WebFetch') });
-    const wrongTarget = createCase({ events: probeEvents({ nativeSuccess: true }), access: availableAccess('WebFetch', { resultUrl: OTHER_URL }) });
-    try {
-      expectNotRun(queryCase, /fixed neutral capability query/i);
-      expectNotRun(wrongTarget, /candidate metadata|candidate order/i);
-    } finally {
-      remove(queryCase);
-      remove(wrongTarget);
-    }
+  it('uses NOT_RUN when the probe omits one declared source group (short-circuit)', () => {
+    const overseasOnly = fetchEvents().filter((event) => {
+      const input = event.message?.content?.[0];
+      if (input?.type !== 'tool_use') return true;
+      return input.name !== 'WebFetch' || FIXED_SAMPLES.find((sample) => sample.url === input.input.url)?.group !== 'china';
+    });
+    const caseRoot = createCase({ events: overseasOnly, access: directObservation({ available: true }) });
+    try { expectNotRun(caseRoot, /did not observe both declared source groups/i); } finally { remove(caseRoot); }
   });
 
-  it('uses NOT_RUN for an unauthorized public tool or wrong-URL curl fallback', () => {
-    const unauthorized = [...probeEvents({ nativeSuccess: true }), toolUse('write-1', 'Write', { file_path: 'rb_profile.yaml', content: 'bad' })];
-    const unauthorizedCase = createCase({ events: unauthorized, access: availableAccess('WebFetch') });
-    const wrongCurl = CURL_COMMAND.replace(RESULT_URL, OTHER_URL);
-    const curlCase = createCase({ events: probeEvents({ curlCommand: wrongCurl }), access: availableAccess() });
+  it('uses NOT_RUN when the probe returns content without a public direct retrieval event', () => {
+    const access = directObservation({ available: true });
+    access.sample_observations[0].outcome = 'content';
+    access.sample_observations[0].retrieval_surface = 'native';
+    const caseRoot = createCase({ events: fetchEvents().slice(2), access });
+    try { expectNotRun(caseRoot, /without a public retrieval event|without a public direct retrieval|did not observe both declared source groups/i); } finally { remove(caseRoot); }
+  });
+
+  it('uses NOT_RUN for an unauthorized public tool or a non-declared sample URL', () => {
+    const unauthorized = [...fetchEvents(), toolUse('search-1', 'WebSearch', { query: 'other query' }), toolResult('search-1', 'links')];
+    const unauthorizedCase = createCase({ events: unauthorized, access: directObservation({ available: true }) });
+    const wrongUrl = fetchEvents();
+    wrongUrl[0] = toolUse('fetch-0', 'WebFetch', { url: 'https://example.com/not-declared' });
+    wrongUrl[1] = toolResult('fetch-0', '<html><body>x</body></html>');
+    const urlCase = createCase({ events: wrongUrl, access: directObservation({ available: true }) });
     try {
       expectNotRun(unauthorizedCase, /unauthorized public tool/i);
-      expectNotRun(curlCase, /same-URL/i);
+      expectNotRun(urlCase, /outside the fixed declared sample suite/i);
     } finally {
       remove(unauthorizedCase);
-      remove(curlCase);
+      remove(urlCase);
     }
   });
 });

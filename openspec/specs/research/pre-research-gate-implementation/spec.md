@@ -70,31 +70,28 @@ The instantiation gate SHALL require `BUNDLE_MAP.md` for newly instantiated bund
 
 ### Requirement: HITL1 recorded gate rule set
 
-`gate-hitl1-recorded.definition.json` SHALL define HITL1 rules based on `rb_profile.yaml`.
+`gate-hitl1-recorded.definition.json` SHALL retain its existing ProfileSchema,
+profile-selection, must-answer, recorded-HITL1, canonical-topic-state, and style
+projection rules. It SHALL require a schema-valid completed `research_access`
+observation rather than an absent or `unprobed` observation.
 
-Rules SHALL cover:
+The Gate SHALL not treat `research_access.status: available` as a capability
+admission threshold. A schema-valid final `available` or `unavailable` direct-sample
+observation may satisfy the recorded-observation rule after the Phase Agent has
+completed the HITL1 access-alignment flow. The Gate does not receive the original
+question, source constraints, Topic map, or user intent, so it SHALL NOT determine
+whether an observed China/overseas limitation is material, whether a user must adjust
+their environment, or whether the user accepted the current research scope.
 
-- `rb_profile.yaml` exists and passes `ProfileSchema`;
-- `research_profile` is not `not_selected`;
-- `root_must_answer_set` is non-empty;
-- `human_decision_checkpoints.hitl1.status == recorded`;
-- `human_decision_checkpoints.hitl1.recorded_at` is non-empty;
-- `research_access.status == available` through the existing `field_value` check type.
-
-The admission line SHALL be partial reachability rather than total reachability. An
-`available` observation established by at least one declared source class returning
-real requested page content SHALL satisfy the existing `research_access_available`
-rule, even when the recorded envelope also carries unreachable declared classes. An
-observation with no reachable declared class SHALL fail closed at HITL1. The Gate
-SHALL NOT require every declared source class to be reachable, and SHALL NOT
-introduce a partial-coverage degraded pass, a per-class rule, or a second admission
-threshold.
-
-The gate SHALL rely on `ProfileSchema` as the single validator for available-branch timestamp, HTTP(S) URL, fetch-success consistency, envelope shape, and `access_boundary` pairing. An available class-scoped access boundary is disclosure-only and SHALL NOT be a Gate input. It SHALL NOT add a dedicated research-access check type, duplicate cross-field validator, inspect command, degraded pass, or alternate Setup route.
+ProfileSchema remains the sole validator for the direct-sample data shape and its
+status/content invariant. The Gate SHALL not add a per-group or per-sample threshold,
+availability score, degraded pass, new check type, alternate Setup route, retry
+counter, VPN verdict, or future-access promise. A Phase that has not resolved a
+material access gap SHALL remain at HITL1 and SHALL not invoke the Gate as a shortcut.
 
 After the existing canonical topic-state prerequisite has established a current committed registry and the selected profile is usable, this Gate SHALL call the shared side-effect-free style-projection freshness evaluator over `research_style_params`, that selected profile, and the committed registry length. Absent, partial, wrong-profile, or stale parameters SHALL produce one direct `style_projection_freshness` root. Its feedback SHALL name the selected profile, committed count, the existing `apply-research-style.mjs` command, and rerun of this same Gate. A malformed profile, unavailable research access, or canonical topic-state prerequisite failure SHALL retain its earlier root and mask the dependent freshness result. The Gate SHALL not write profile fields, select a style, mutate canonical topic state, add a generic style controller, or create another HITL decision.
 
-Missing `research_access`, `unprobed`, and `unavailable` SHALL fail with deterministic advice that directs the Phase Agent to the boundary that owns the failure and rerun of the same HITL1 probe and gate. The gate SHALL NOT authorize Setup or any silent wave while research access is not available.
+Missing, unprobed, or malformed research access SHALL fail with deterministic advice that directs the Phase Agent to the same bounded direct-sample probe and rerun of the same HITL1 gate. The Gate SHALL NOT authorize Setup or any silent wave while the recorded observation is not a completed schema-valid direct-sample observation.
 
 #### Scenario: Stale style projection blocks HITL1 at its existing owner
 
@@ -117,42 +114,32 @@ Missing `research_access`, `unprobed`, and `unavailable` SHALL fail with determi
 - **AND** feedback SHALL retain that prerequisite's existing owner and rerun
   boundary without proposing a profile write first
 
-#### Scenario: All HITL1 rules pass with available access
+#### Scenario: Final constrained observation can reach the existing Gate
 
-- **WHEN** profile fields are complete and `research_access.status` is `available` with a schema-valid direct observation
-- **THEN** `check-gate-hitl1-recorded.mjs` SHALL return `passed: true`
+- **WHEN** the Phase has completed the user-led access-alignment flow and records a
+  schema-valid unavailable direct-sample observation
+- **THEN** the existing recorded-observation rule SHALL not reject it solely because
+  no sample returned content
+- **AND** all independent existing HITL1 rules retain their own verdict authority
 
-#### Scenario: Partial class reachability admits research
+#### Scenario: Unprobed access remains incomplete
 
-- **WHEN** an available observation records at least one reachable declared source
-  class alongside one or more unreachable declared classes
-- **THEN** the existing `research_access_available` rule SHALL pass without a degraded
-  pass, a per-class rule, or a second admission threshold
-- **AND** the recorded unreachable classes SHALL remain readable rather than being
-  cleared, downgraded, or converted into a blocking root
+- **WHEN** `research_access` is absent or has `status: unprobed`
+- **THEN** the Gate SHALL fail at HITL1 with the existing structural observation
+  repair boundary
+- **AND** it SHALL not authorize Setup or silent research
 
-#### Scenario: No reachable class stays blocked
+#### Scenario: Gate does not judge source relevance
 
-- **WHEN** an unavailable observation records no reachable declared source class
-- **THEN** the Gate SHALL return `passed: false` and routing SHALL remain at HITL1
-- **AND** it SHALL NOT authorize Setup or any silent wave
-
-#### Scenario: Unprobed access fails through existing field-value routing
-
-- **WHEN** `research_access` is missing or has `status: unprobed`
-- **THEN** the gate SHALL return `passed: false`
-- **AND** advice SHALL direct the Phase Agent to run the real HITL1 search/fetch probe
-
-#### Scenario: Unavailable access stays at HITL1
-
-- **WHEN** `research_access.status` is `unavailable` with a schema-valid reason
-- **THEN** the gate SHALL return `passed: false`
-- **AND** advice SHALL point to the owning boundary and the same-probe repair path
-- **AND** routing SHALL NOT authorize Setup or any silent wave
+- **WHEN** a recorded observation contains mixed China and overseas terminal outcomes
+- **THEN** the Gate SHALL validate only its schema-valid completed shape
+- **AND** it SHALL not infer user intent from language, geography, sample group, or
+  a source/tool name
 
 #### Scenario: Fake available observation fails schema
 
-- **WHEN** status is `available` but probe timestamp is invalid, result URL is not HTTP(S), or fetch outcome is not success
+- **WHEN** status is `available` but the direct-sample observation is malformed,
+  the probe timestamp is invalid, or a non-content sample carries a surface category
 - **THEN** ProfileSchema/gate validation SHALL fail closed
 
 #### Scenario: Gate audit uses the existing checker route
@@ -334,60 +321,62 @@ Bundle-root `rb_trace.jsonl` SHALL be the sole trace sink. Gate-owned `gate_atte
 
 ### Requirement: HITL1 Gate feedback exposes the adapter-owned unavailable root
 
-When the existing `research_access_available` rule fails because the recorded
-observation is absent, unprobed, or unavailable, HITL1 Gate feedback SHALL retain the
-existing field-value and ProfileSchema authority path. For an unavailable observation
-with `access_boundary`, it SHALL project one direct root determined by that validated
-value; absent or unprobed observations retain their existing Agent-actionable root.
-The Gate SHALL NOT derive rule identity, owner, or repair lineage from the reason
-prose, its position, or a textual prefix.
+When the recorded research-access observation is absent, unprobed, malformed, or a
+legacy branch establishes a validated `access_boundary`, HITL1 Gate feedback SHALL
+retain the existing ProfileSchema and field-value authority path. The resolver may
+project only a validated boundary location; it SHALL not derive identity, ownership,
+or repair lineage from reason prose, sample outcome, tool name, provider identity,
+or user language. This feedback remains the existing Gate CLI's native completion
+verdict contract: the checker derives the blocking root from the schema-validated
+observation and binds it to the same `check-gate-hitl1-recorded` rerun, and never
+from the reason prose or a provider name.
 
-Each boundary-location value SHALL resolve to exactly one owner, and the projected
-repair kind SHALL be derived from that owner. The three boundary locations owned
-outside the Agent SHALL name the selected adapter contract, that owning
-host/provider/network boundary, and rerun of the same bounded probe followed by the
-same Gate. The probe-relay boundary location SHALL be owned by the Agent, SHALL
-project an Agent-actionable repair, and SHALL NOT present an external prerequisite
-for the user to resolve.
+For a completed current direct-sample observation, the Gate SHALL not produce a
+blocking unavailable-root feedback message. Its China/overseas outcome is a Phase
+Agent access-alignment input, not a deterministic defect or an external prerequisite
+that the user can acknowledge away. The Gate SHALL not discover providers, validate
+credentials, launch an adapter, write the observation, choose a network change, or
+create a second user decision path.
 
-When the recorded unavailable observation carries no `access_boundary`, the Gate SHALL
+Each legacy boundary-location value SHALL resolve to exactly one owner, and the
+projected repair kind SHALL be derived from that owner. The boundary locations owned
+outside the Agent SHALL name the owning host/provider/network boundary and rerun of
+the same bounded probe followed by the same Gate. The probe-relay boundary location
+SHALL be owned by the Agent, SHALL project an Agent-actionable repair, and SHALL NOT
+present an external prerequisite for the user to resolve.
+
+When a legacy unavailable observation carries no `access_boundary`, the Gate SHALL
 state that direct fact explicitly in its feedback rather than degrading to a generic
 retry message or inferring a boundary. An unclassified observation SHALL remain
 blocking and SHALL retain the same-probe rerun boundary.
 
-The Gate SHALL NOT discover providers, validate provider credentials, launch an
-adapter, write the profile observation, add a research-access check type, create an
-alternate Setup route, or reinterpret launcher preflight as available access.
+#### Scenario: Current unavailable outcome is not misreported as a missing adapter
 
-#### Scenario: Selected adapter surface is surfaced directly
+- **WHEN** a schema-valid current observation has `status: unavailable`
+- **THEN** the Gate SHALL not identify a Claude adapter, `WebSearch`, `WebFetch`, or
+  provider-specific missing surface as its root cause
+- **AND** the Phase retains responsibility for any required user alignment before it
+  invokes the Gate
 
-- **WHEN** a schema-valid unavailable profile observation records the absent-surface
-  `access_boundary` location
-- **THEN** the Gate SHALL return the existing blocking `research_access_available`
-  rule with feedback identifying the selected adapter surface and same-probe rerun
-- **AND** routing SHALL remain at HITL1
+#### Scenario: Legacy classified boundary remains precise
 
-#### Scenario: Network-path boundary names the network owner
-
-- **WHEN** a schema-valid unavailable observation records the network-path `access_boundary`
-  location
-- **THEN** feedback SHALL name that network boundary as the owner rather than an
-  absent host surface or a host policy denial
-- **AND** its projected repair kind SHALL be the external-action kind derived from
-  that owner
+- **WHEN** a schema-valid legacy unavailable observation carries `access_boundary`
+- **THEN** feedback SHALL use only that validated boundary's owner and same-check
+  repair coordinate
+- **AND** it SHALL not invent a current direct-sample group diagnosis
 
 #### Scenario: Probe-relay failure routes to the Agent
 
-- **WHEN** a schema-valid unavailable observation records the probe-relay `access_boundary`
-  location
+- **WHEN** a schema-valid legacy unavailable observation records the probe-relay
+  `access_boundary` location
 - **THEN** the projected repair kind SHALL be the Agent-action kind derived from that
   owner
 - **AND** feedback SHALL NOT present an external prerequisite for the user to resolve
 
-#### Scenario: Unclassified observation is exposed rather than degraded
+#### Scenario: Unclassified legacy observation is exposed rather than degraded
 
-- **WHEN** a schema-valid unavailable observation carries a non-empty reason and no
-  `access_boundary`
+- **WHEN** a schema-valid legacy unavailable observation carries a non-empty reason
+  and no `access_boundary`
 - **THEN** feedback SHALL state directly that the observation carries no routeable
   boundary
 - **AND** it SHALL NOT parse the reason prose or emit a generic retry message in place
@@ -395,14 +384,14 @@ alternate Setup route, or reinterpret launcher preflight as available access.
 
 #### Scenario: Existing available observation retains its Gate path
 
-- **WHEN** the profile has an existing schema-valid available observation produced
-  by a selected adapter
+- **WHEN** the profile has an existing schema-valid available observation
 - **THEN** the Gate SHALL retain its existing successful field-value evaluation
 - **AND** it SHALL not require a second adapter checker or provider preflight
 
-#### Scenario: Available class-scoped boundary remains disclosure-only
+#### Scenario: Available class-scoped legacy boundary remains disclosure-only
 
-- **WHEN** a schema-valid available observation carries a class-scoped `access_boundary`
-- **THEN** the Gate SHALL retain its successful existing field-value evaluation without
-  invoking the unavailable-boundary resolver
+- **WHEN** a schema-valid legacy available observation carries a class-scoped
+  `access_boundary`
+- **THEN** the Gate SHALL retain its successful existing field-value evaluation
+  without invoking the unavailable-boundary resolver
 - **AND** the Phase-owned HITL1 disclosure remains the only consumer in this change

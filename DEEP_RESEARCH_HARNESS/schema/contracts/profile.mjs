@@ -10,13 +10,21 @@ import {
   SourceClassReachability,
   ResearchAccessBoundaryLocation,
   ResearchAccessBoundaryExtent,
+  ResearchAccessSourceGroup,
+  ResearchAccessSampleId,
+  ResearchAccessSampleOutcome,
+  ResearchAccessRetrievalSurface,
 } from '../enums.mjs';
 
 const TrimmedNonEmptyString = z.string().trim().min(1);
 const IsoTimestamp = z.string().datetime({ offset: true });
 const HttpUrl = z.string().url().refine((value) => {
-  const protocol = new URL(value).protocol;
-  return protocol === 'http:' || protocol === 'https:';
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
 }, 'Expected an HTTP(S) URL');
 
 const CandidateMetadata = {
@@ -39,10 +47,11 @@ const ResearchAccessEnvelope = {
   }).strict().optional(),
 };
 
-const ResearchAccessSchema = z.discriminatedUnion('status', [
-  z.object({
-    status: z.literal('unprobed'),
-  }).strict(),
+const UnprobedResearchAccessSchema = z.object({
+  status: z.literal('unprobed'),
+}).strict();
+
+const LegacyResearchAccessSchema = z.discriminatedUnion('status', [
   z.object({
     status: z.literal('available'),
     probed_at: IsoTimestamp,
@@ -65,7 +74,6 @@ const ResearchAccessSchema = z.discriminatedUnion('status', [
     ...ResearchAccessEnvelope,
   }).strict(),
 ]).superRefine((value, ctx) => {
-  if (value.status === 'unprobed') return;
   const envelope = value.source_class_reachability;
   const reachable = envelope?.filter((entry) => entry.reachability === 'reachable') ?? [];
   const unreachable = envelope?.filter((entry) => entry.reachability === 'unreachable') ?? [];
@@ -142,6 +150,132 @@ const ResearchAccessSchema = z.discriminatedUnion('status', [
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Positive candidate count requires the final result URL.' });
   }
 });
+
+const DirectSampleGroupById = Object.freeze({
+  gov_cn: 'china',
+  gitee: 'china',
+  xinhuanet: 'china',
+  cnki_catalog: 'china',
+  wikipedia: 'overseas',
+  github: 'overseas',
+  iana: 'overseas',
+  arxiv: 'overseas',
+  rfc_editor: 'overseas',
+});
+
+const CoreDirectSampleIds = new Set([
+  'gov_cn',
+  'gitee',
+  'xinhuanet',
+  'wikipedia',
+  'github',
+  'iana',
+  'arxiv',
+]);
+
+const DirectSampleObservationSchema = z.discriminatedUnion('outcome', [
+  z.object({
+    sample_id: ResearchAccessSampleId,
+    source_group: ResearchAccessSourceGroup,
+    outcome: z.literal('content'),
+    retrieval_surface: ResearchAccessRetrievalSurface,
+  }).strict(),
+  ...ResearchAccessSampleOutcome.options
+    .filter((outcome) => outcome !== 'content')
+    .map((outcome) => z.object({
+      sample_id: ResearchAccessSampleId,
+      source_group: ResearchAccessSourceGroup,
+      outcome: z.literal(outcome),
+    }).strict()),
+]);
+
+const CurrentDirectObservationBase = z.object({
+  probed_at: IsoTimestamp,
+  sample_observations: z.array(DirectSampleObservationSchema)
+    .length(ResearchAccessSampleId.options.length),
+});
+
+const CurrentDirectObservationSchema = z.union([
+  CurrentDirectObservationBase.extend({
+    status: z.literal('available'),
+  }).strict(),
+  CurrentDirectObservationBase.extend({
+    status: z.literal('unavailable'),
+    reason: TrimmedNonEmptyString,
+  }).strict(),
+]).superRefine((value, ctx) => {
+  const seen = new Set();
+  let hasCoreContent = false;
+  let notAttemptedCount = 0;
+
+  for (const [index, observation] of value.sample_observations.entries()) {
+    if (seen.has(observation.sample_id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['sample_observations', index, 'sample_id'],
+        message: 'Direct-sample observation cannot contain duplicate sample IDs.',
+      });
+    }
+    seen.add(observation.sample_id);
+
+    if (DirectSampleGroupById[observation.sample_id] !== observation.source_group) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['sample_observations', index, 'source_group'],
+        message: 'Direct-sample observation source group must match its declared sample ID.',
+      });
+    }
+    if (observation.outcome === 'content' && CoreDirectSampleIds.has(observation.sample_id)) {
+      hasCoreContent = true;
+    }
+    if (observation.outcome === 'not_attempted') notAttemptedCount += 1;
+  }
+
+  for (const sampleId of ResearchAccessSampleId.options) {
+    if (!seen.has(sampleId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['sample_observations'],
+        message: `Direct-sample observation must include declared sample '${sampleId}'.`,
+      });
+    }
+  }
+
+  if (value.status === 'available' && !hasCoreContent) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['status'],
+      message: 'Available direct observation requires content from a non-diagnostic core sample.',
+    });
+  }
+  if (value.status === 'unavailable' && hasCoreContent) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['status'],
+      message: 'Unavailable direct observation cannot contain content from a non-diagnostic core sample.',
+    });
+  }
+  if (notAttemptedCount > 0 && notAttemptedCount !== ResearchAccessSampleId.options.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['sample_observations'],
+      message: 'not_attempted is reserved for a whole probe that started no direct page request.',
+    });
+  }
+  if (notAttemptedCount === ResearchAccessSampleId.options.length && value.status !== 'unavailable') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['status'],
+      message: 'A whole no-request direct observation must be unavailable.',
+    });
+  }
+});
+
+const ResearchAccessSchema = z.union([
+  UnprobedResearchAccessSchema,
+  CurrentDirectObservationSchema,
+  LegacyResearchAccessSchema,
+]);
 
 // @impl RES-002: Research style params schema (13 fields)
 export const ResearchStyleParamsSchema = z.object({

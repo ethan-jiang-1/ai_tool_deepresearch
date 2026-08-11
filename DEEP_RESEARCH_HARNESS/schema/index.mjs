@@ -14,6 +14,10 @@ export {
   SourceClassReachability,
   ResearchAccessBoundaryLocation,
   ResearchAccessBoundaryExtent,
+  ResearchAccessSourceGroup,
+  ResearchAccessSampleId,
+  ResearchAccessSampleOutcome,
+  ResearchAccessRetrievalSurface,
 } from './enums.mjs';
 
 export { StatusSchema } from './contracts/status.mjs';

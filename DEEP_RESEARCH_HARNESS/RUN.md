@@ -1,26 +1,40 @@
 # RUN.md — DEEP_RESEARCH_HARNESS 入口
 
-> **DEEP_RESEARCH_HARNESS v0.85**
+> **DEEP_RESEARCH_HARNESS v0.86**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DEEP_RESEARCH_HARNESS 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.85
+## Current Release: v0.86
 
 - After HITL1 records the user's decision and completes any required style
-  handoff, the Phase Agent actor-delivers one independent research-access-envelope
-  controller with selected-host operation facts to one isolated probe. The Phase
-  never directly searches or fetches: it remains the sole
-  `rb_profile.yaml#/research_access` writer, renders the returned status result,
-  and reruns the existing `hitl1-recorded` Gate.
-- `research_access` is a statically bounded source-class envelope. A reachable
-  class admits the existing Gate path; unreachable classes in an available
-  observation are disclosed without a second HITL decision. Classified unavailable
-  boundaries use a closed location/extent pair; an absent pair is explicitly
-  unclassified and never inferred from reason prose. This remains bounded guidance
-  and validation, not a provider-availability or coverage guarantee.
+  handoff, the Phase Agent actor-delivers the generic capability-probe guide and
+  one independent research-access-envelope controller to one isolated probe. The
+  Phase never directly retrieves a page: it remains the sole
+  `rb_profile.yaml#/research_access` writer and reruns the existing
+  `hitl1-recorded` Gate.
+- `research_access` is now a fixed, executor-neutral direct-sample observation.
+  The controller declares a closed China and overseas public sample suite; the
+  probe directly retrieves each declared URL on the current executor's already-
+  permitted surface, uses no search, and records one compact terminal outcome
+  per sample with a surface category only on real content.
+- A completed schema-valid observation — available or unavailable — satisfies
+  the recorded-observation rule; the Gate no longer treats `status: available`
+  as an admission threshold. Absent, unprobed, or malformed access still blocks.
+  A material China/overseas limitation is resolved in the same HITL1
+  conversation: the user may adjust their environment and request a fresh round,
+  revise source semantics, or accept the current scope. The Agent neither
+  verifies nor records any network change, and a fresh round replaces the prior
+  observation rather than forming history.
+- The retained Claude CLI launcher is executor-scoped canary metadata only; it
+  is not a production HITL1 operation prerequisite and does not select an
+  operation for any other Coding Agent. Boundary resolution projects only a
+  schema-validated legacy `access_boundary` owner; current sample outcomes are
+  Phase semantic input, never an Engine network diagnosis. This remains bounded
+  guidance and validation, not a provider-support, network-location, coverage,
+  or future-availability guarantee.
 
 - `rb_profile.yaml` now owns the schema-validated
   `delegated_concurrency_cap` policy input (default `12`, range `1..20`) for
@@ -99,10 +113,10 @@
 - New run bundles begin with `BUNDLE_ENTRY.md`. Existing bundles continue
   through `BUNDLE_ENTRY.md`, legacy `RUN_BUNDLE.md`, then `BUNDLE_MAP.md`.
 
-- HITL1 presents its exact availability result only after the direct
-  `research_access` observation. Partial reachability adds an available-only
-  disclosure and no new decision point; silent autonomous execution is still
-  announced only after the existing HITL1 Gate passes.
+- HITL1 renders the current direct-sample observation and, only after the Phase
+  Agent judges a China/overseas limitation material, the bounded user decision
+  boundary. No material gap adds no user question; silent autonomous execution is
+  still announced only after the existing HITL1 Gate passes.
 - This is Harness Markdown communication only. It does not suppress or prove
   selected-host-native tool/error rendering or real Agent behavior; deterministic
   checks cover the declared profile, feedback, and static-guidance contracts only.
@@ -138,9 +152,10 @@
 
 - The selected DeepSeek/Claude launcher enables its owned tool-discovery setting for
   direct, supervised, and fresh independent-Subject launches. That makes the
-  declared native research surface requestable for the existing bounded probe; it is
-  not proof that the provider can execute search/fetch or that `research_access` is
-  available.
+  current executor's direct retrieval surface requestable for the existing bounded
+  probe; it is executor-scoped canary metadata only and never a production HITL1
+  prerequisite. It is not proof that the provider can execute search/fetch or that
+  `research_access` is available.
 
 - Agent Experiment Autorun now has a bounded fast `regression` profile. Normal runs select
   only current matching-v2 deterministic PASS+CLEAN results within the fixed `480000` ms /
@@ -155,11 +170,12 @@
   documentation-only release edit does not invalidate a qualified result while relevant helper
   drift remains explicit.
 
-- HITL1 uses one selected Claude CLI / `deepseek_anthropic_compatible`
-  research-access adapter. The adapter declares only selected-host operations; the
-  separate controller owns the isolated probe's bounded sequence. The Phase owns the
-  single spawn, profile write, and same-Gate rerun. A configured launcher or
-  deterministic fixture is not proof that provider access is available.
+- HITL1 uses an execution-neutral direct-page retrieval boundary. The retained
+  Claude CLI / `deepseek_anthropic_compatible` launcher is executor-scoped canary
+  metadata only; the separate controller owns the isolated probe's fixed sample
+  suite and bounds. The Phase owns the single spawn, profile write, and same-Gate
+  rerun. A configured launcher or deterministic fixture is not proof that provider
+  access is available.
 
 - Work-unit inspect and submit preflight now expose one derived attempt disposition from the exact logical actor, work/queue IDs, receipt nonce, assigned result/receipt coordinates, transaction fact, and ledger-first coverage relation. The binding guides Agent Flow; it does not authenticate a physical writer or prove host/sub-agent liveness.
 

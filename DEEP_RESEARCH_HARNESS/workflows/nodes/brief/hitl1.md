@@ -51,23 +51,23 @@ authority: exact-text
 
 <!-- TEMPLATE START -->
 
-开始研究前，系统先快速检查一下联网搜索能力，大概几秒钟，请稍候。
+开始研究前，我先直接检查当前环境对中国和海外公开页面的实际取用情况，请稍候。
 
 <!-- TEMPLATE END -->
 
-### 访问可用
+### 已记录观察
 
 <!-- TEMPLATE START -->
 
-联网能力正常，开始准备研究。
+当前环境的直接取用观察已经记录。它只反映这一次探测，不保证后续网络保持不变。
 
 <!-- TEMPLATE END -->
 
-### 部分来源不可达
+### 相关来源存在取用限制
 
 <!-- TEMPLATE START -->
 
-联网能力正常，不过有部分来源这次够不着（<不可达来源类别>），研究会继续，用够得着的来源做。
+这次探测显示，和本轮研究相关的<来源范围或约束>目前存在直接取用限制（<当前观察>）。你可以调整网络后让我重新完整探测、修改来源范围，或明确“按当前取用范围继续”。
 
 <!-- TEMPLATE END -->
 
@@ -75,11 +75,11 @@ authority: exact-text
 
 <!-- TEMPLATE START -->
 
-联网检查没通过。多数是网络问题——请检查网络连接后重试；网络正常的话稍后再试也行。你刚才的选择不会丢。
+当前环境无法开始任何直接取用探测（<直接原因>）。这不是对网站是否可达的判定。你刚才的选择不会丢。
 
 <!-- TEMPLATE END -->
 
-这些模板只描述 framework 的用户消息。它们不得承诺隐藏、替代、重述为成功，或以其他方式控制 selected-host-native 的工具调用、policy failure、transport/security error 或 permitted shell output；也不得承诺 host permission、provider success、automatic retry，或将“大概几秒钟”解释为精确时长保证。
+这些模板只描述 framework 的用户消息。它们不得用中文 UI、用户语言、假定国家、VPN 状态或工具/provider 名称作为来源相关性的证据；不得承诺恢复、覆盖、固定时长、provider 结果、自动重试或未来稳定性；也不得请求非 material 的决定，或把接受当前范围描述为访问恢复成功。材料限制的用户决定边界只在 Agent 已确认 material gap 后出现；没有 material gap 时只渲染「已记录观察」而不提问。
 
 ## 出口语
 

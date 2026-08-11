@@ -52,7 +52,10 @@ legacy branch establishes a validated `access_boundary`, HITL1 Gate feedback SHA
 retain the existing ProfileSchema and field-value authority path. The resolver may
 project only a validated boundary location; it SHALL not derive identity, ownership,
 or repair lineage from reason prose, sample outcome, tool name, provider identity,
-or user language.
+or user language. This feedback remains the existing Gate CLI's native completion
+verdict contract: the checker derives the blocking root from the schema-validated
+observation and binds it to the same `check-gate-hitl1-recorded` rerun, and never
+from the reason prose or a provider name.
 
 For a completed current direct-sample observation, the Gate SHALL not produce a
 blocking unavailable-root feedback message. Its China/overseas outcome is a Phase

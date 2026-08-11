@@ -24,6 +24,8 @@
 | [`BUG-213`](BUG-213-depth-review-rejects-authorized-prior-source-ref.md) | P1 | wave1 | `validateSubmittedClaimBacking` 拒绝合法 prior submitted source_ref，违反 subagent-node-contract §169 / Scenario 184-189 |
 | [`BUG-214`](BUG-214-supplementary-empty-output-files-vs-dry-submit-contract.md) | P2 | wave1 | supplementary task.md 允许空 `output_files[]`，但 dry-submit 强制非空，supplementary 首次提交必被拒 |
 | [`BUG-215`](BUG-215-hitl1-probe-unavailable-reason-prefix-classification-lost.md) | P2 | hitl1 | HITL1 probe 持续 unavailable：reason 前缀词汇未强制使 gate 根因分类静默失效，host 能搜不能抓时 run 卡死无前进路径 |
+| [`BUG-216`](BUG-216-context-final-vocabulary-terms-missing.md) | P2 | cross | `CONTEXT.md` 缺少 `Final key-finding declaration` / `Final Evidence Map` / `Final backing` 加粗术语，`artifact-persistence-contract` 测试失败（HEAD 前即存在） |
+| [`BUG-217`](BUG-217-bounded-top-up-vocabulary-missing.md) | P2 | wave0/1 | `shared-subagent-protocol.md` / `phase-wave0.md` / `phase-wave1.md` 缺少 `bounded top-up` 措辞，`parallel-delegated` 测试失败（HEAD 前即存在） |
 
 ## 新增 (2026-08-08)
 

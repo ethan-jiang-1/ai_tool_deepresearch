@@ -24,7 +24,7 @@
       "target": "rb_profile.yaml#/research_access/status",
       "operator": "equal",
       "value": "available",
-      "failure_message": "research_access.status is not 'available'. If research_access.reason exists, read it; repair or switch the environment, then rerun the same real HITL1 search/fetch probe and this gate. Do not enter Setup.",
+      "failure_message": "research_access is absent, unprobed, malformed, or a legacy unavailable observation without a validated boundary. Record a schema-valid completed direct-sample observation through the Phase, then rerun this same gate. Do not enter Setup.",
       "finding": { "source": "checker" }
     },
     {

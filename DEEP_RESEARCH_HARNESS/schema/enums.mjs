@@ -95,3 +95,40 @@ export const ResearchAccessBoundaryExtent = z.enum([
   'universal',
   'class_scoped',
 ]);
+
+// @impl SCO-001: closed vocabulary for the current HITL1 direct-sample observation
+export const ResearchAccessSourceGroup = z.enum([
+  'china',
+  'overseas',
+]);
+
+export const ResearchAccessSampleId = z.enum([
+  'gov_cn',
+  'gitee',
+  'xinhuanet',
+  'cnki_catalog',
+  'wikipedia',
+  'github',
+  'iana',
+  'arxiv',
+  'rfc_editor',
+]);
+
+export const ResearchAccessSampleOutcome = z.enum([
+  'content',
+  'login_required',
+  'challenge',
+  'http_denied',
+  'rate_limited',
+  'transport_inconclusive',
+  'failed',
+  'not_attempted',
+  'round_budget_not_attempted',
+]);
+
+export const ResearchAccessRetrievalSurface = z.enum([
+  'native',
+  'browser',
+  'node_fetch',
+  'curl',
+]);

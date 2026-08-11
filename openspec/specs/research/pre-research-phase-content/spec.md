@@ -41,132 +41,98 @@ Section 内容要求：
 
 ### Requirement: Phase HITL1 body completeness and stop semantics
 
-`phase-hitl1.md` SHALL contain the complete 9-section body, retain `stop: yes`,
-and declare `execution_contract.search_policy: capability_probe_only`.
+`phase-hitl1.md` SHALL retain its complete nine-section body, `stop: yes`, recorded
+HITL1 decision, canonical Topic-state, style-handoff, profile-write, Gate, and
+silent-execution boundaries. After the existing semantic decision and style handoff,
+the Phase Agent SHALL actor-deliver exactly one isolated probe with the generic
+capability-probe safety guide and the separately required
+`shared-hitl1-research-access-envelope.md` controller. The Phase itself SHALL not
+directly retrieve a sample page.
 
-Its Stage Goal, Required Inputs, topic recommendation, natural-language HITL1
-mapping, status synchronization, canonical topic-state apply, style handoff,
-Expected Artifacts, Gate Command, Gate pass/fail handling, Stop Behavior, and
-Anti-Cheating Rules SHALL retain the accepted behavior. A clear user decision
-still returns ordinary apply/style/probe/Gate mechanics to the Phase Agent;
-ordinary later chat SHALL not become HITL1 intent or mutation authority.
+The controller SHALL own the entire direct-sample experiment: fixed China and
+overseas sample suite, diagnostic-only samples, small-batch concurrency cap, primary
+deadline, same-URL transport confirmation, reserve-sample condition, round budget,
+terminal classification, and one compact return map. It SHALL not use search,
+candidate traversal, provider-specific operation names, a run-bundle path, user
+topic facts, or runtime/Gate authority. The general guide and Phase body SHALL not
+duplicate controller sample, timeout, concurrency, retry, or return-map content.
 
-After the required style handoff, the Phase Agent SHALL render HIU-002's exact
-pre-probe notice, load the general capability-probe guide plus the separate required
-`shared-hitl1-research-access-envelope.md` controller, and spawn one bounded probe
-agent with those two guidance surfaces. The Phase Agent SHALL NOT directly invoke
-search or fetch. The controller SHALL carry the declared source-class ladder in
-order, the classification vocabulary, the candidate eligibility and native-first/same-
-URL fallback bounds, and one compact return-map contract. The Phase body and general
-probe guide SHALL not duplicate that controller content. The controller is a
-one-spawn Agent-facing projection only: it SHALL NOT become a run-bundle record,
-evidence surface, renderer, runtime verdict, or a second Source of Record.
-The probe agent SHALL not read or write a run bundle, profile, status, trace,
-receipt, ledger, work-unit output, cache, artifact, reference, or Gate.
+The Phase Agent SHALL write one returned schema-valid observation unchanged. A spawn
+failure, absent return, or invalid return SHALL be written as the controller's
+complete honest unavailable relay form, not as a fabricated success. Probe material
+does not enter evidence, cache, receipts, ledger, artifacts, references, or coverage
+input.
 
-The return map SHALL be exactly one existing `research_access` observation
-branch. The Phase Agent remains the only writer of `rb_profile.yaml` and SHALL
-write a returned valid observation unchanged before rendering the corresponding
-HIU-002 result and running the existing `check-gate-hitl1-recorded.mjs`.
-Spawn failure, no return, or a return that does not satisfy an existing branch
-SHALL produce an honest `unavailable` observation with a direct non-empty
-reason carrying the `access_boundary` probe-relay location and its universal extent,
-plus one `unreachable` envelope entry for every declared source class, so
-that the recorded owner is the Agent rather than an external prerequisite. This
-path preserves recorded choices, remains at HITL1, and returns to the same
-probe/Gate retry boundary; it SHALL not add a retry tree, second writer, status
-tree, Gate, provider path, receipt, ledger, or evidence surface.
+After each completed observation, the Phase Agent SHALL use the original question,
+accepted must-answer set, Topic map, explicit source constraints, and the current
+controls snapshot to judge whether a China/overseas limitation is material. Chinese
+UI language, user language, presumed egress location, and VPN presence are not
+semantic evidence of that relevance. When a material gap exists, the Agent SHALL
+remain in the same HITL1 conversation and present the smallest decision boundary:
+the user may adjust their environment and request a fresh complete probe, revise
+their explicit source constraints, or accept research under the currently observed
+source-access scope. There is no automatic retry, fixed retry count, polling, VPN
+operation, permission bypass, or new HITL checkpoint.
 
-When the written observation is `available` and its envelope records one or more
-unreachable declared source classes, the Phase Agent SHALL disclose in the existing
-HITL1 communication surface which declared source classes are unreachable, and then
-continue through the same Gate. That disclosure is information transfer only: it
-SHALL NOT create a new HITL decision point, ask the user for instructions, block
-advance, or become permission or capability.
+Each user-requested environment retry SHALL start a fresh full dual-group round and
+replace the current observation; it SHALL not merge old attempts into a history or
+claim that access is durable. The user's new retry request is sufficient: the Agent
+SHALL NOT verify, retain, or infer their network adjustment. On a clear final
+acceptance, the Agent SHALL retain the user's literal access-scope decision in the
+existing controls snapshot, preserve any unrelaxed hard source constraint, then run
+the existing Gate. When no material gap exists, the Phase may make the same existing
+Gate handoff without creating a user question. A user who neither resolves a material
+gap nor requests a new round remains in the existing HITL1 loop.
 
-All accepted PRP-002 behavior not explicitly replaced below remains normative:
-the topic recommendation/clear-decision mapping, status-before-topic-state
-apply, atomic canonical registry and UID-bound seed materialization, style
-handoff freshness repair, payload fields, selected adapter boundary, on-Gate
-pass/failed-hint handling, and HITL1 stop semantics. In particular, the
-delegation change neither authorizes a status hand edit nor changes setup
-advance, canonical Topic ownership, user-control snapshots, profile fields, or
-the Gate's prerequisites.
+#### Scenario: Probe is direct and executor-neutral
 
-The controller SHALL direct exactly one search per attempted declared source class,
-using that class's neutral query; at most three eligible returned HTTP(S) candidates
-in provider order; native-first plus one independently permitted same-URL fallback;
-and first-success stop across the declared ladder. It SHALL define the three existing
-observation branches, one reachability result per declared class (marking classes
-after an available first-success as `not_attempted`), the paired
-`access_boundary` location/extent when one owner is established, and explicit honest
-unclassified return when it is not. It SHALL prohibit prose-prefix classification,
-attempt history, query/URL history, response bodies, retries, evidence persistence,
-or a new interaction checkpoint. The selected adapter retains authority for which
-host operations are permitted; the controller does not create shell permission or a
-bypass.
+- **WHEN** HITL1 has recorded the ordinary semantic decision
+- **THEN** the Phase SHALL spawn one isolated probe with the independent controller
+  and safety guidance
+- **AND** neither the Phase nor controller SHALL require `WebSearch`, `WebFetch`, a
+  Claude launcher, or a provider selection
 
-Only real fetched page content permits `available`; command exit success, an empty
-body, search snippets, or HTTP error/challenge shells do not. The Phase Agent SHALL
-use only the direct returned observation status to choose HIU-002's result; that
-result is rendered after the write and before the same Gate, is not a Gate verdict,
-and shall not announce silent execution. Probe URL/content and tool output SHALL not
-become production evidence, cache, submitted output, receipt, Gate coverage, or a
-new interaction checkpoint.
+#### Scenario: Both source groups are observed before semantic judgment
 
-#### Scenario: Phase delegates the fixed probe after the recorded decision
+- **WHEN** one China or overseas core sample returns content before another group is
+  complete
+- **THEN** the controller SHALL continue its bounded work for the other group
+- **AND** the Phase SHALL judge relevance only from the completed compact observation
 
-- **WHEN** HITL1 has completed topic-state and style prerequisites
-- **THEN** the Phase Agent SHALL render the pre-probe notice and spawn exactly one
-  probe agent using the dedicated guidance and the declared source-class ladder
-- **AND** the Phase Agent SHALL not itself invoke native search or fetch
+#### Scenario: User-led network retry replaces the observation
 
-#### Scenario: Phase retains the existing write and Gate owners
+- **WHEN** the Agent explains a material access gap and the user requests another
+  round after managing their own environment
+- **THEN** the Agent SHALL run one new complete probe round and replace the prior
+  `research_access` observation
+- **AND** it SHALL not retain a URL/attempt matrix, retry counter, or prediction of
+  later stability, or verify the reported environment change
 
-- **WHEN** the probe agent returns an existing schema-valid available or unavailable observation
-- **THEN** the Phase Agent SHALL write that observation to `rb_profile.yaml`, render
-  the matching result, and run the same HITL1 Gate
-- **AND** the probe agent SHALL not write bundle state or run the Gate
+#### Scenario: Accepted current scope resumes the existing path
 
-#### Scenario: Invalid delegation result is honest unavailable
+- **WHEN** the user clearly accepts research under the final observed limitations
+- **THEN** the Agent SHALL record that literal semantic decision in existing controls,
+  retain the truthful observation, run the existing Gate, and follow its existing
+  pass path
+- **AND** it SHALL not relabel unavailable samples as reachable or silently relax a
+  hard source constraint
+
+#### Scenario: Invalid delegation result is honest no-request unavailable
 
 - **WHEN** probe-agent spawn fails, returns nothing, or returns an invalid observation
-- **THEN** the Phase Agent SHALL write one honest unavailable branch with a direct
-  reason and the probe-relay boundary location
+- **THEN** the Phase Agent SHALL write the controller's complete honest no-request
+  unavailable relay form with a direct reason
 - **AND** it SHALL preserve recorded choices and expose the same probe/Gate path without
   an automatic retry or an invented success
 
-#### Scenario: Fetch-side unavailable branch carries the same classification vocabulary
+#### Scenario: Partial material gap is not silently relaxed
 
-- **WHEN** search returns eligible candidates for a declared class but no legal fetch
-  sequence returns real requested page content
-- **THEN** that positive-count unavailable branch SHALL carry the same
-  access-boundary location/extent vocabulary required of the search-side branch
-- **AND** it SHALL NOT be satisfied by a free-text reason alone
-
-#### Scenario: Returned native success has the accepted shape
-
-- **WHEN** a probe agent fetches real page content from the first eligible returned candidate
-- **THEN** it SHALL return `available` with count and ordinal `1`, that candidate URL,
-  `fetch_outcome: success`, and its actual native surface
-- **AND** it SHALL not invoke curl, consider another candidate, consider a later declared
-  class, or retain page content
-
-#### Scenario: Returned fallback and unavailable branches retain existing bounds
-
-- **WHEN** native fetch cannot return real content
-- **THEN** the probe agent SHALL use at most one independently permitted same-URL curl
-  fallback and otherwise return the truthful unavailable branch
-- **AND** it SHALL not change URLs, skip a no-legal-path candidate, add a tier, or ask the
-  user to operate the pipeline
-
-#### Scenario: Partial reachability is disclosed without a new decision point
-
-- **WHEN** the written available observation records one or more unreachable declared
-  source classes
-- **THEN** the Phase Agent SHALL disclose those unreachable classes in the existing HITL1
-  communication surface and continue to the same Gate
-- **AND** it SHALL NOT add a HITL checkpoint, request user instructions, or block advance
+- **WHEN** an observed group limitation is material to the recorded research semantics
+  and the user has not yet given a final decision
+- **THEN** the Agent SHALL remain in the same HITL1 conversation and present the
+  smallest user decision boundary
+- **AND** it SHALL NOT start silent research, request a non-material decision, or
+  turn acceptance into a false access-success claim
 
 #### Scenario: Direct result remains distinct from Gate verdict
 
@@ -224,25 +190,26 @@ Section 内容要求：
 
 `phase-hitl1.md` SHALL expose the existing minimum write checklist:
 `research_profile`, `root_must_answer_set`, `research_style_params`,
-`research_access.status`, candidate count/ordinal, the source-class envelope, the
-`access_boundary` location/extent pair, available and unavailable
-branch fields, and `human_decision_checkpoints.hitl1.status`/`.recorded_at`.
-The list remains an alignment/review surface rather than schema authority.
+`research_access.status`, one terminal entry per declared direct sample,
+the content-only surface category rule, the unavailable summary reason,
+and `human_decision_checkpoints.hitl1.status`/`.recorded_at`. The list remains an
+alignment/review surface rather than schema authority.
 
 The checklist SHALL identify `rb_profile.yaml#/research_access` as Phase-owned:
-the probe agent returns no persisted artifact, and optional `search_surface` /
-`fetch_surface` labels remain non-Gate-required audit labels. A no-candidate
-unavailable observation alone may have count zero without ordinal or URL; every
-positive-count observation retains the final considered URL. The checklist SHALL
-show the `access_boundary` pair as present-together-or-absent-together and SHALL show an
-absent pair as an explicitly unclassified observation rather than a defaulted one.
+the probe agent returns no persisted artifact, and the current observation is a
+compact final snapshot with no URL, body, header, status code, candidate, query, raw
+tool label, retry, VPN, geolocation, IP, or provider field. A whole no-request relay
+observation SHALL be shown as unavailable with every declared sample `not_attempted`
+and no surface; a per-sample budget-expired entry uses `round_budget_not_attempted`.
+The checklist SHALL note that legacy observations remain readable but are not mixed
+with the current direct-sample format.
 
 #### Scenario: Human can audit the isolated observation handoff
 
 - **WHEN** a human reviewer reads `phase-hitl1.md`
-- **THEN** the reviewer SHALL see the complete existing observation fields, the envelope
-and `access_boundary` pair, and that
-  the Phase Agent, not the probe agent, writes the profile
+- **THEN** the reviewer SHALL see the complete current direct-sample fields, the
+  content-only surface rule, and that the Phase Agent, not the probe agent, writes
+  the profile
 - **AND** review SHALL not require reconstructing a parallel receipt or status protocol
 
 ### Requirement: Instantiation scope boundary enforcement
@@ -413,40 +380,32 @@ user to repeat a decision whose snapshot remains readable.
 
 ### Requirement: HITL1 uses the selected semantic research-access adapter
 
-After the user has supplied or confirmed HITL1 research semantics, the HITL1 phase
-body SHALL direct the Agent to read the one selected research-access adapter contract
-before the existing bounded probe. When that contract supplies an already authorized
-operation, the Phase Agent SHALL deliver its operation facts with the separate
-controller to the isolated probe agent; the probe performs the bounded search/fetch
-mechanics and returns the existing direct profile observation for the Phase to record.
-When it supplies no legal operation, the isolated probe SHALL return the honest
-unavailable branch; the Phase SHALL retain recorded user semantics, write it, and
-expose only the adapter's direct external boundary before rerunning the same probe and
-Gate.
+HITL1 SHALL use the current executor's already available and permitted
+direct-page-retrieval surface for the isolated controller-declared sample URLs. This
+is an execution fact, not a selected provider adapter. The selected Claude adapter
+may remain an executor-scoped experiment contract but SHALL not be a production
+HITL1 dependency, a condition for Codex, or an authority to permit a retrieval.
 
-The phase body SHALL take selected-host operations from that adapter contract, while
-it takes the source-class ladder, classification axes, and return map only from the
-separate actor-delivered access-envelope controller. It SHALL load both guidance
-surfaces for the isolated probe without restating controller content in phase prose,
-so a controller revision does not require a second edit to stay consistent.
+The Phase SHALL deliver only the generic isolated-probe guide and the independent
+controller to the probe. The probe may use a native/built-in, browser, Node, or
+independently permitted shell retrieval surface according to the controller's
+bounded rules and actual current host permission. Missing permission or an unavailable
+surface is recorded honestly; it does not direct the user to run commands or create
+a fallback beyond the controller.
 
 This phase content SHALL NOT grant provider permission, ask the user to run the
 pipeline, hand-edit `research_access`, add a HITL checkpoint, or write a parallel
 adapter/status record. It SHALL keep probe output outside research evidence surfaces.
 
-#### Scenario: Isolated probe executes an already authorized adapter operation
+#### Scenario: Current executor has a legal direct surface
 
-- **WHEN** the selected adapter declares a legal search and same-URL fetch surface
-- **THEN** the Phase Agent SHALL actor-deliver that adapter's facts and the controller
-  to the isolated probe after the existing HITL1 semantic decision without seeking a
-  second user confirmation
-- **AND** the probe SHALL execute the bounded operation while the Phase alone records
-  the direct result and reruns the existing HITL1 Gate
+- **WHEN** the current Coding Agent can legally retrieve one declared sample URL
+- **THEN** the isolated probe SHALL use that direct surface under the controller
+- **AND** the Phase retains the only profile-write and Gate-run authority
 
-#### Scenario: Selected adapter is absent
+#### Scenario: Current executor has no legal direct surface
 
-- **WHEN** the selected adapter has no callable search/fetch surface in the current host
-- **THEN** the isolated probe SHALL return the absent-surface boundary location and the
-  Phase SHALL record it without asking the user to fabricate profile data or execute
-  `curl`
-- **AND** it SHALL preserve the current HITL1 user decision and remain at HITL1
+- **WHEN** every permitted direct retrieval surface is unavailable or denied
+- **THEN** the controller SHALL return its bounded current observation honestly
+- **AND** the Phase SHALL use the ordinary material-gap conversation rather than
+  asking the user to fabricate data, run a command, or select another provider

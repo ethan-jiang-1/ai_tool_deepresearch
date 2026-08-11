@@ -2,7 +2,7 @@
 schema: command-experiment/v2
 experiment: wff-pre-research-repair
 case: case-115-heavy-hitl1-research-access-probe
-case_goal: "An independent isolated probe agent performs the bounded native-first, same-URL search/fetch sequence and returns one honest compact research_access observation."
+case_goal: "An independent isolated probe agent directly retrieves the controller-declared fixed China and overseas public samples on the current executor's already-permitted surface and returns one honest compact current research_access observation."
 verdict_mode: all
 required_checks: [hitl1-research-access-probe, probe-evidence-boundary]
 bundle_roles: [verdict]
@@ -22,7 +22,7 @@ not_run_if: "The independent authenticated isolated probe runtime, its final com
 
 <!-- @impl EXA-003, EXA-005, EXA-006, EXA-007, EXA-008, PLR-003 -->
 
-# Case 115 - Isolated HITL1 Capability Probe
+# Case 115 - Isolated HITL1 Direct-Sample Capability Probe
 
 ## Execution Contract
 
@@ -30,30 +30,36 @@ This is an agent-flow canary for the isolated probe actor alone. The Playbook
 Agent creates a disposable experiment root and invokes the selected generic
 non-bypass Subject launcher. The runner owns prompt/transcript/result retention
 at that root, but does not disclose its path to the Subject. The Subject receives
-only the selected adapter contract and
-`shared/shared-hitl1-capability-probe.md`; it receives no production phase,
-bundle path, profile/state facts, or filesystem obligation.
+only the retained executor-scoped adapter contract and
+`shared/shared-hitl1-capability-probe.md` plus the separate
+`shared-hitl1-research-access-envelope.md` controller; it receives no production
+phase, bundle path, profile/state facts, or filesystem obligation.
 
-The Subject makes one literal neutral `WebSearch`, considers at most the first
-three eligible returned HTTP(S) URLs in order, uses native `WebFetch` first,
-and uses the exact same-URL standalone `curl` fallback only under the guide's
-existing permission condition. It returns exactly one compact YAML object rooted
-at `research_access`. The object is an existing honest `available` or
-`unavailable` observation only. It includes no page bytes, candidate list, raw
-tool output, transcript, analysis, receipt, or verdict.
+The Subject follows the independent controller's fixed direct-sample suite: the
+seven core China/overseas public samples (plus the `cnki_catalog` and
+`rfc_editor` reserves only under the controller's transport-inconclusive
+condition). It directly retrieves each declared URL on the current executor's
+already-permitted surface, uses no search, and returns exactly one compact YAML
+object rooted at `research_access`. The object is an honest current `available`
+or `unavailable` observation with one terminal entry per declared sample and
+no URL, body, header, candidate, query, retry, VPN, or provider field.
 
-The deterministic observer reads retained public `WebSearch`, `WebFetch`, and
-optional exact `curl` events plus that final return. It verifies the fixed query,
-candidate order, native-first/same-URL sequence, compact return shape, and the
-truthfulness of the returned status. It proves neither a Phase profile write nor
-a HITL1 Gate execution. Those Phase relay mechanics are covered only by the
-deterministic Markdown integration test.
+The deterministic observer reads retained public `WebFetch` and optional exact
+`curl` events plus that final return. It verifies that only controller-declared
+sample URLs were directly retrieved, that both source groups were observed
+without a core-success short-circuit, and that the returned compact shape is
+consistent with the public events. It derives any operation-event predicate only
+from this canary's retained adapter contract and never treats that predicate as
+a production controller, profile, or Gate prerequisite. It proves neither a Phase
+profile write nor a HITL1 Gate execution. Those Phase relay mechanics are covered
+only by the deterministic Markdown integration test.
 
 The selected invocation is `claude-deepseek.mjs` /
 `deepseek_anthropic_compatible` generic mode with no caller-supplied
 permission-bypass option. Missing, malformed, or contradictory public evidence
-is `NOT_RUN`; an honest observed unavailable return remains a valid broad canary
-outcome, but cannot prove an available-path claim.
+is `NOT_RUN`; an honest observed unavailable return and a whole no-request relay
+return remain valid non-generalizing canary outcomes, but cannot prove an
+available-path claim.
 
 ## Step 1 - Prepare runner-owned evidence storage
 

@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.86
+
+- HITL1 research access is now a fixed, executor-neutral direct-sample
+  observation. The isolated probe directly retrieves the controller-declared
+  China and overseas public sample URLs on the current executor's already-
+  permitted surface; it uses no search, query, candidate, or provider-selected
+  adapter, and no single group's success short-circuits the other.
+- A completed schema-valid observation — available or unavailable — records one
+  compact terminal outcome per declared sample and satisfies the recorded-
+  observation rule. The HITL1 Gate no longer treats `status: available` as an
+  admission threshold; absent, unprobed, or malformed access still blocks. A
+  material China/overseas limitation is resolved by the Phase in the same HITL1
+  conversation: the user may adjust their environment and request a fresh round,
+  revise source semantics, or accept the current scope, and the Agent neither
+  verifies nor records any network change.
+- The Claude CLI launcher is retained only as executor-scoped canary metadata;
+  it is not a production HITL1 operation prerequisite and does not select an
+  operation for any other Coding Agent. Boundary resolution projects only a
+  schema-validated legacy `access_boundary` owner; current sample outcomes are
+  Phase semantic input, never an Engine network diagnosis.
+- This release makes no provider-support, network-location, coverage, or
+  future-availability promise. A fresh probe replaces the prior observation;
+  old legacy observations stay readable without migration.
+
 ## v0.85
 
 - HITL1 research access is now recorded as a statically bounded source-class

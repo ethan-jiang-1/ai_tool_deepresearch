@@ -213,7 +213,7 @@ function researchAccessFinding(rule, failure) {
     missingFact: failure.missingFact,
     repairKind: 'agent_action',
     writeTo: profileCoordinate,
-    repair: 'Run the real HITL1 search/fetch probe, record its direct result, and rerun this Gate.',
+    repair: 'Run the bounded HITL1 direct-sample probe, record its direct result, and rerun this Gate.',
     detail: `[${rule.id}] ${failure.detail}`,
     maskedByRuleId: failure.maskedByRuleId || null,
   });
@@ -402,6 +402,15 @@ for (const rule of definition.rules) {
           };
         } else {
           const value = resolveObjectPath(profile.value, jsonPath);
+          // PRG-002/PRG-010: a schema-valid completed current direct-sample
+          // observation satisfies the recorded-observation rule regardless of
+          // available/unavailable status. `profile_schema_valid` already enforces
+          // the current-format shape and content/status invariant, so the Gate
+          // applies no availability threshold to current-format observations.
+          if (rule.id === 'research_access_available'
+            && Array.isArray(profile.value.research_access?.sample_observations)) {
+            continue;
+          }
           if (rule.check === 'field_non_empty') {
             const empty = value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0);
             if (empty) {

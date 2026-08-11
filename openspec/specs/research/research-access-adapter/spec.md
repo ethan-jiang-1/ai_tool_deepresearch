@@ -11,126 +11,134 @@ page fetch 区分可用能力、host 权限边界与不诚实的成功声明。
 
 ### Requirement: Selected adapter declares semantic capability boundary
 
-The system SHALL expose one selected HITL1 research-access adapter through an
-Agent-readable contract. The selected adapter is the Claude CLI launched by
-`claude-deepseek.mjs` with `deepseek_anthropic_compatible` routing. That contract
-SHALL name its host owner, generic non-bypass launcher invocation, Agent-native
-`WebSearch` and `WebFetch` invocation surfaces, the provider-scoped evidence form
-that binds the two operations, and the launcher routing fact that identifies the
-selected host runtime.
+Production HITL1 SHALL expose an Agent-readable, execution-neutral direct-page
+retrieval boundary. The direct observation asks only whether the current executor
+can obtain real content for one controller-declared public URL using a surface that
+is already available and permitted in that executor. The current executor's tool
+list, host policy, and network policy are the Source of Record for whether an
+operation is callable; a framework Markdown file, launcher check, shell executable,
+or chat text SHALL NOT establish that permission or availability.
 
-The selected adapter contract SHALL own only selected-host invocation facts. It
-SHALL NOT carry source-class declarations, neutral queries, boundary axes, reason
-prefix taxonomy, first-success control flow, or the probe return map. Those
-isolated-sub-agent constraints SHALL live in the actor-delivered
-`shared-hitl1-research-access-envelope.md` controller, distinct from this host
-adapter contract and from the Phase body. The controller is Agent-readable guidance
-only; it does not change host permission, selected operation, runtime truth, or Gate
-authority.
+The isolated `shared-hitl1-research-access-envelope.md` controller SHALL be
+physically separate from that boundary and from the Phase body. It alone owns fixed
+sample IDs and URLs, group ordering, bounded concurrency, timeout/confirmation
+rules, classification, and the compact return map. It SHALL mention neither a
+provider-specific tool name nor a provider selection rule. It does not change host
+permission, runtime truth, or Gate authority.
 
-The adapter resolver implementation SHALL map only a schema-validated recorded
-unavailable `access_boundary` location to its owning selected-host or Agent boundary
-and derive the repair kind from that owner. It SHALL NOT parse reason prose, its
-position, or a textual prefix to reconstruct classification. An observation that
-establishes no owning boundary SHALL remain honest and explicitly unclassified. An
-available class-scoped access boundary is not a resolver or Gate input.
+The existing Claude CLI / `claude-deepseek.mjs` adapter remains a contract for that
+launcher's own non-bypass invocation and optional executor-scoped experiment. It
+SHALL NOT be delivered as a production HITL1 operation prerequisite, select an
+operation for Codex or another Coding Agent, or claim that one executor's tools are
+available in another. The system SHALL NOT introduce a provider registry, adapter
+priority list, environment-variable selection protocol, background capability
+controller, or caller-supplied permission bypass.
 
-The selected adapter contract is the Source of Record for what the Agent may invoke;
-launcher `--check`, a shell executable, and chat text SHALL NOT establish research
-access or tool permission. The system SHALL NOT introduce a provider registry, adapter
-priority list, environment-variable selection protocol, or background capability
-controller. The adapter SHALL NOT add or pass a caller-supplied permission-bypass
-option; that is a separate host/user authorization decision.
+The boundary resolver SHALL map only a schema-validated recorded boundary location
+to its owner and derive its repair kind from that owner. It SHALL NOT parse reason
+prose, tool names, user language, VPN state, IP/geography, or a provider identity to
+reconstruct classification. A direct observation that establishes no owner remains
+explicitly unclassified.
 
-#### Scenario: Dedicated controller remains separate from selected adapter
+#### Scenario: Codex and Claude use the same semantic controller
 
-- **WHEN** the Phase Agent loads the selected adapter for one bounded probe
-- **THEN** the adapter contract SHALL provide only host/launcher/operation facts
-- **AND** the separate actor-delivered controller SHALL provide source-class,
-  classification, and return-map guidance without becoming adapter or Gate authority
+- **WHEN** Codex and a Claude runtime each run the HITL1 isolated probe
+- **THEN** each MAY use only its own already permitted direct-page retrieval surface
+- **AND** both SHALL follow the identical controller-declared samples, bounds, and
+  compact return contract without requiring `WebSearch` or `WebFetch`
 
-#### Scenario: Selected generic invocation has no bypass
+#### Scenario: Claude launcher is not a production selector
 
-- **WHEN** the selected adapter launches its native Claude runtime
-- **THEN** it SHALL use the generic `claude-deepseek.mjs` invocation without a
-  caller-supplied permission-bypass option
-- **AND** it SHALL report the host-policy boundary location rather than escalate that
-  option when the host declines the operation
+- **WHEN** the current HITL1 executor is not the Claude CLI launcher
+- **THEN** absence of that launcher SHALL NOT make the probe unavailable or prevent
+  direct retrieval through the current executor's legal surface
+- **AND** no adapter registry or fallback provider selection is consulted
+
+#### Scenario: A host policy denial remains external
+
+- **WHEN** the current executor declines a direct retrieval operation by policy
+- **THEN** the returned observation SHALL retain only its honest terminal outcome and
+  required direct summary reason; it SHALL not invent a current `access_boundary`
+  owner from that outcome
+- **AND** the controller, Agent, and user SHALL NOT create permission by choosing a
+  shell fallback or approving an otherwise unavailable operation
 
 ### Requirement: Adapter probe binds search result to fetch target
 
-The Phase Agent SHALL spawn one bounded isolated probe after the recorded HITL1
-decision. The dedicated actor-delivered controller directs its neutral source-class
-sequence and compact return map; this adapter contract supplies the selected host's
-search/fetch operation facts used by that sequence. The probe agent's search operation
-returns actual candidate HTTP(S) URLs in provider order and its fetch operation
-receives only the currently selected URL returned by that search. The Phase Agent
-SHALL establish the accepted profile write and same Gate path from the returned
-existing `research_access` observation.
+After the recorded HITL1 research decision, the Phase Agent SHALL spawn one bounded
+isolated probe and actor-deliver the dedicated controller plus the generic isolated
+probe safety guidance. The probe SHALL directly retrieve only controller-declared
+fixed public sample URLs. It SHALL NOT run a search, generate or retain search
+queries/candidates, bind a fetch to a search result, substitute a URL, or infer a
+sample from the user's topic.
 
-A thin host bridge MAY launch or normalize the selected native probe-agent
-runtime, but SHALL NOT choose a query/candidate, perform search/fetch in place
-of that agent, mutate a bundle, write an observation, or retry. The probe agent
-does not read or write bundle state. The controller retains one search per declared
-source class, at most the first three syntactically eligible candidates in order for
-that class, native-first and one permitted same-URL fallback. It SHALL not use
-model-invented URLs, snippets, out-of-contract redirects, challenge shells, or
-command success as content.
+For every requested URL, real requested-page content is the only direct-success
+fact. Command exit, a search snippet, an empty body, a login page, a CAPTCHA or
+challenge shell, and an HTTP error response are not content. The controller MAY
+allow one same-URL extended confirmation solely after a transport-inconclusive
+primary attempt and one same-group reserve sample under its declared round budget.
+It SHALL prohibit automatic permission widening, unbounded retry, user-controlled
+network mutation, a second full round without a new user response, and persistence
+of probe material as research evidence.
 
-#### Scenario: Probe-agent search and fetch establish available access
+The Phase Agent remains the only writer of the returned `research_access`
+observation and remains the only actor that invokes the existing HITL1 Gate. A thin
+host bridge MAY start an executor-specific experiment, but SHALL NOT perform the
+probe, choose samples, mutate a bundle, write an observation, or retry on behalf of
+the isolated probe.
 
-- **WHEN** the selected adapter returns an eligible candidate and the isolated probe
-  agent fetches real requested-page content for that exact URL
-- **THEN** its return SHALL contain the existing schema-valid available branch with
-  actual surface labels
-- **AND** the Phase Agent SHALL write it and rerun the existing HITL1 Gate without
-  a new transition
+#### Scenario: Direct content establishes a sample success
 
-#### Scenario: Controller drives the bounded source-class sequence
+- **WHEN** the isolated probe obtains real content from a controller-declared sample
+  URL through an already permitted current-executor surface
+- **THEN** it SHALL return only the schema-valid compact sample terminal outcome and
+  its truthful surface category
+- **AND** the Phase Agent SHALL write that observation unchanged before applying the
+  HITL1 access-alignment flow
 
-- **WHEN** the probe receives the required access-envelope controller with the
-  selected adapter operation facts
-- **THEN** it SHALL follow the controller's declared class order and first-success
-  boundary while using only host operations declared by this adapter
-- **AND** this adapter contract SHALL not duplicate the controller's class/query or
-  return-map content
+#### Scenario: Search is unavailable or irrelevant
 
-#### Scenario: Fetch cannot use a different URL
+- **WHEN** the current executor has no search surface, or a search surface returns
+  unrelated candidates
+- **THEN** the probe SHALL still perform its controller-declared direct URL samples
+- **AND** neither condition is a failure of the direct-page access observation
 
-- **WHEN** provider-scoped execution evidence cannot establish that a probe-agent
-  fetch target was the current search-returned candidate
-- **THEN** the probe agent SHALL return an honest unavailable direct failure
-- **AND** the Phase Agent SHALL not write available access or continue to Setup
+#### Scenario: Transport confirmation stays bounded
+
+- **WHEN** a primary sample attempt ends in a transport-inconclusive outcome
+- **THEN** the probe MAY make exactly one controller-authorized extended confirmation
+  for that same URL within the shared round budget
+- **AND** it SHALL not repeat login, challenge, denied, or rate-limited outcomes
 
 ### Requirement: Adapter evidence is bounded to the observed provider runtime
 
-The direct production profile observation remains distinct from external
-provider evidence. Production HITL1 SHALL retain no query text, candidate lists,
-page bytes, credentials, or raw provider transcripts. The selected real
-agent-flow case SHALL retain only its declared isolated probe-agent prompt,
-transcript, and result at the experiment run root. That evidence proves the
-provider-scoped search/fetch/return-map claim only; it SHALL not enter the
-production bundle or claim that the probe agent wrote profile state or ran a
-Gate. Engine validation continues to validate only the direct profile observation.
+The production profile observation SHALL retain no page bytes, raw URLs, headers,
+credentials, query/candidate history, HTTP matrix, retry history, transcript, or
+claim that the current network will remain usable. It may retain only the fixed
+sample IDs, their final compact outcomes, and the surface category of actual content
+successes. Engine validation continues to validate structural observation facts only.
 
-The broad real canary MAY pass an honest unavailable branch, but it SHALL not
-satisfy an available-path claim without retained evidence of an available
-same-URL branch. It SHALL use the selected generic non-bypass invocation; an
-explicit permission-bypass run is not availability evidence. Deterministic
-fixtures may prove Phase relay, profile/Gate mechanics, adapter shape, or
-unavailable routing, but never provider availability or real Agent behavior.
+An executor-scoped real canary MAY retain the prompt, transcript, and result that its
+own experiment contract requires, including that executor's operation-event names
+when its observer needs them. Such names are canary-only metadata and SHALL NOT be
+copied into the production controller, Phase prerequisite, profile observation, or
+Gate predicate. The canary proves only that executor's observed direct retrieval
+protocol and never a universal Coding-Agent capability, a production profile write, a
+HITL1 Gate run, future access, or research coverage. `NOT_RUN` and an honest
+unavailable result remain valid canary outcomes. Deterministic fixtures may prove
+controller projection, schema, Phase relay, and Gate mechanics, but never actual
+network reachability.
 
-#### Scenario: Isolated canary does not impersonate Phase ownership
+#### Scenario: Canary does not generalize across executors
 
-- **WHEN** case-115 observes a real probe agent
-- **THEN** it SHALL assess public search/fetch events and the returned observation
-  against the selected adapter bounds
-- **AND** it SHALL not attribute `rb_profile.yaml` writes or HITL1 Gate execution to
-  that isolated agent
+- **WHEN** a Claude or Codex canary retains a direct-retrieval observation
+- **THEN** its retained evidence SHALL be labelled as that executor's one observed
+  run
+- **AND** it SHALL not prove the other executor's tools, permission, or access
 
-#### Scenario: Production probe excludes raw provider material
+#### Scenario: Production observation excludes raw material
 
-- **WHEN** the Phase Agent records a returned available or unavailable observation
-- **THEN** only accepted direct `research_access` fields SHALL enter the run bundle
-- **AND** query, candidate list, page bytes, credentials, and transcript remain outside
-  research evidence and control surfaces
+- **WHEN** the Phase Agent records a completed direct-sample observation
+- **THEN** only accepted compact `research_access` fields enter the run bundle
+- **AND** raw sample URLs, content, tool output, credentials, and transcript remain
+  outside research evidence and control surfaces

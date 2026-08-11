@@ -73,6 +73,41 @@ const PARTIAL_AVAILABLE_ACCESS = `research_access:
     extent: class_scoped
 `;
 
+function currentDirectAccessYaml(status, { content = false, reason } = {}) {
+  const outcomes = {
+    gov_cn: content ? 'content' : 'transport_inconclusive',
+    gitee: content ? 'content' : 'http_denied',
+    xinhuanet: content ? 'content' : 'failed',
+    cnki_catalog: content ? 'content' : 'rate_limited',
+    wikipedia: content ? 'content' : 'transport_inconclusive',
+    github: content ? 'content' : 'challenge',
+    iana: content ? 'content' : 'failed',
+    arxiv: content ? 'content' : 'http_denied',
+    rfc_editor: content ? 'content' : 'transport_inconclusive',
+  };
+  const group = {
+    gov_cn: 'china', gitee: 'china', xinhuanet: 'china', cnki_catalog: 'china',
+    wikipedia: 'overseas', github: 'overseas', iana: 'overseas', arxiv: 'overseas',
+    rfc_editor: 'overseas',
+  };
+  const entries = Object.entries(outcomes).map(([sample_id, outcome]) => {
+    const surface = outcome === 'content' ? '\n      retrieval_surface: native' : '';
+    return `    - sample_id: ${sample_id}\n      source_group: ${group[sample_id]}\n      outcome: ${outcome}${surface}`;
+  }).join('\n');
+  const reasonLine = reason ? `\n  reason: "${reason}"` : '';
+  return `research_access:
+  status: ${status}
+  probed_at: "2026-08-11T00:00:00.000Z"
+  sample_observations:
+${entries}${reasonLine}
+`;
+}
+
+const CURRENT_AVAILABLE_ACCESS = currentDirectAccessYaml('available', { content: true });
+const CURRENT_UNAVAILABLE_ACCESS = currentDirectAccessYaml('unavailable', {
+  reason: 'No core sample returned real content this round.',
+});
+
 const VALID_PROFILE = `plan_basename: test
 research_profile: quick_factual
 root_must_answer_set:
@@ -320,7 +355,7 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     assert.match(hint.write_to, /rb_profile\.yaml#\/human_decision_checkpoints\/hitl1\/recorded_at$/);
   });
 
-  it('fails legacy profile without research_access and points to the real probe', () => {
+  it('fails absent research_access and points to the bounded direct-sample probe', () => {
     const name = unique('legacy-access');
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
@@ -334,7 +369,7 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     assert.equal(output.check.next, null);
     assert.equal(output.continuation, undefined);
     assert.ok(output.inspect.some((message) => message.includes('research_access/status')));
-    assert.ok(output.advice.some((message) => message.includes('real HITL1 search/fetch probe')));
+    assert.ok(output.advice.some((message) => message.includes('bounded HITL1 direct-sample probe')));
     const hint = output.hints.find((candidate) => candidate.rule_id === 'research_access_available');
     assertCompleteHint(hint);
     assert.equal(hint.repair_kind, 'agent_action');
@@ -357,6 +392,61 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     const hint = output.hints.find((candidate) => candidate.rule_id === 'research_access_available');
     assertCompleteHint(hint);
     assert.equal(hint.repair_kind, 'agent_action');
+  });
+
+  it('admits a completed available current direct-sample observation through the same Gate path', () => {
+    const name = unique('current-available');
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+    const bundleDir = track(r.stdout.trim());
+    writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, CURRENT_AVAILABLE_ACCESS));
+    materializeCanonicalTopic(bundleDir);
+    applyStyle(bundleDir);
+    advanceHitl1(bundleDir);
+
+    const output = JSON.parse(runGate(bundleDir).stdout);
+
+    assert.equal(output.check.passed, true, JSON.stringify(output.inspect));
+    assert.deepEqual(output.hints, []);
+    assert.equal(output.check.next, 'phases/phase-setup.md');
+    // A current observation never yields Claude/Search/Fetch feedback.
+    assert.equal(output.hints.some((candidate) => /Claude|WebSearch|WebFetch/i.test(candidate.missing_fact || '')), false);
+  });
+
+  it('admits a completed unavailable current direct-sample observation through the same Gate path', () => {
+    const name = unique('current-unavailable');
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+    const bundleDir = track(r.stdout.trim());
+    writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, CURRENT_UNAVAILABLE_ACCESS));
+    materializeCanonicalTopic(bundleDir);
+    applyStyle(bundleDir);
+    advanceHitl1(bundleDir);
+
+    const output = JSON.parse(runGate(bundleDir).stdout);
+
+    assert.equal(output.check.passed, true, JSON.stringify(output.inspect));
+    assert.deepEqual(output.hints, []);
+    assert.equal(output.check.next, 'phases/phase-setup.md');
+  });
+
+  it('never produces current-observation provider or network feedback for a completed observation', () => {
+    const name = unique('current-neutral');
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+    const bundleDir = track(r.stdout.trim());
+    writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, CURRENT_UNAVAILABLE_ACCESS));
+    materializeCanonicalTopic(bundleDir);
+    applyStyle(bundleDir);
+    advanceHitl1(bundleDir);
+
+    const output = JSON.parse(runGate(bundleDir).stdout);
+
+    for (const hint of output.hints) {
+      assert.equal(/Claude|WebSearch|WebFetch|selected adapter/i.test(hint.missing_fact || ''), false);
+      assert.equal(/VPN|network path|network environment/i.test(hint.missing_fact || ''), false);
+      assert.equal(/China|overseas|source group|sample_group/i.test(hint.missing_fact || ''), false);
+    }
+    for (const message of output.advice) {
+      assert.equal(/Claude|WebSearch|WebFetch/i.test(message), false);
+    }
   });
 
   it('exposes an unavailable observation without a boundary as explicitly unclassified', () => {

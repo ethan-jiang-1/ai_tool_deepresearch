@@ -321,7 +321,7 @@ export function validateWorkflowPackage(opts = {}) {
   // Lifecycle inventory of nodes that SHALL have execution_contract
   const LIFECYCLE_INVENTORY = [
     { node: 'phases/phase-instantiation.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
-    { node: 'phases/phase-hitl1.md', surface: 'phase-agent', search_policy: 'capability_probe_only', relay_capable: false },
+    { node: 'phases/phase-hitl1.md', surface: 'phase-agent', search_policy: 'direct_retrieval_probe_only', relay_capable: false },
     { node: 'phases/phase-setup.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
     { node: 'phases/phase-seed-topics.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
     { node: 'phases/phase-wave0.md', surface: 'phase-agent', search_policy: 'work_unit_required', work_unit_capable: true },
@@ -381,7 +381,7 @@ export function validateWorkflowPackage(opts = {}) {
   const registeredRoleKeys = new Set(Object.values(DEFAULT_KIND_CONTRACTS).map((contract) => contract.actor_policy.delegated_role_key));
 
   const VALID_SURFACES = ['phase-agent', 'work-unit-subagent-role', 'shared-guidance', 'shared-work-unit-subagent-protocol'];
-  const VALID_SEARCH_POLICIES = ['no_search', 'capability_probe_only', 'work_unit_required', 'work_unit_required_for_new_evidence', 'subagent_performs_search'];
+  const VALID_SEARCH_POLICIES = ['no_search', 'capability_probe_only', 'direct_retrieval_probe_only', 'work_unit_required', 'work_unit_required_for_new_evidence', 'subagent_performs_search'];
   const DEFAULT_PHASE_BODY_SECTIONS = [
     '## 1. Stage Goal',
     '## 2. Required Inputs',

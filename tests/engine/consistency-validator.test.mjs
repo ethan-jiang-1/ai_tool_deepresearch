@@ -308,7 +308,7 @@ describe('ValidateWorkflowPackage — happy path', () => {
     cleanup();
   });
 
-  it('accepts capability_probe_only as the expected HITL1 search policy', () => {
+  it('accepts direct_retrieval_probe_only as the expected HITL1 search policy', () => {
     scaffold({
       manifest: {
         phases: [
@@ -318,7 +318,7 @@ describe('ValidateWorkflowPackage — happy path', () => {
         shared: [],
       },
       nodes: {
-        'phases/phase-hitl1.md': { node_type: 'phase', id: 'phase-hitl1', phase: 'hitl1', gate: 'hitl1-recorded', stop: 'yes', execution_contract: { surface: 'phase-agent', search_policy: 'capability_probe_only' }, requires: [], suggested_context: [] },
+        'phases/phase-hitl1.md': { node_type: 'phase', id: 'phase-hitl1', phase: 'hitl1', gate: 'hitl1-recorded', stop: 'yes', execution_contract: { surface: 'phase-agent', search_policy: 'direct_retrieval_probe_only' }, requires: [], suggested_context: [] },
         'phases/phase-final.md': { node_type: 'phase', id: 'phase-final', phase: 'final', gate: null, stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: [], suggested_context: [] },
       },
       gateDefs: {
@@ -359,7 +359,7 @@ describe('ValidateWorkflowPackage — happy path', () => {
       gateDefsDir: join(TMP, 'gate_defs'),
     });
 
-    assert.ok(report.issues.some((issue) => issue.class === 'execution_contract_search_policy_mismatch' && issue.detail.includes('capability_probe_only')));
+    assert.ok(report.issues.some((issue) => issue.class === 'execution_contract_search_policy_mismatch' && issue.detail.includes('direct_retrieval_probe_only')));
     cleanup();
   });
 });

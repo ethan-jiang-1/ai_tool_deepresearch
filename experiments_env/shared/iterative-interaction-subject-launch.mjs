@@ -3,7 +3,7 @@
 
 import { buildSelectedResearchAccessAdapterInvocation } from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/research-access-adapter.mjs';
 
-const CASE_115_TOOLS = 'Bash,WebFetch,WebSearch';
+const CASE_115_TOOLS = 'Bash,WebFetch';
 
 export function buildIterativeInteractionSubjectInvocation({
   subjectId,

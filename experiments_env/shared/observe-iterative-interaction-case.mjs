@@ -120,7 +120,7 @@ function publicToolExchanges(events) {
     }
   }
   for (const use of uses.values()) {
-    if (['WebSearch', 'WebFetch', 'Bash'].includes(use.value.name) && !results.has(use.id)) {
+    if (['WebFetch', 'Bash'].includes(use.value.name) && !results.has(use.id)) {
       notRun(`missing public tool_result for ${use.value.name} identity ${use.id}`);
     }
   }
@@ -128,19 +128,6 @@ function publicToolExchanges(events) {
     uses: [...uses.values()].sort((a, b) => a.index - b.index),
     resultFor: (use) => results.get(use.id),
   };
-}
-
-function structuredSearchLinks(content) {
-  const marker = 'Links: ';
-  const start = content.indexOf(marker);
-  if (start < 0) notRun('WebSearch result is missing the public structured Links payload');
-  const row = content.slice(start + marker.length).split(/\r?\n/, 1)[0].trim();
-  let links;
-  try { links = JSON.parse(row); } catch { notRun('WebSearch public Links payload is malformed'); }
-  if (!Array.isArray(links) || links.some((entry) => !entry || typeof entry.url !== 'string')) {
-    notRun('WebSearch public Links payload has an unsupported shape');
-  }
-  return links;
 }
 
 function eligibleProbeUrl(value) {
@@ -358,164 +345,124 @@ function parseCase115Return(events) {
   return returned.research_access;
 }
 
+const FIXED_DIRECT_SAMPLES = Object.freeze([
+  { sample_id: 'gov_cn', group: 'china', core: true, url: 'https://www.gov.cn/' },
+  { sample_id: 'gitee', group: 'china', core: true, url: 'https://gitee.com/' },
+  { sample_id: 'xinhuanet', group: 'china', core: true, url: 'https://www.news.cn/' },
+  { sample_id: 'cnki_catalog', group: 'china', core: false, url: 'https://www.cnki.net/' },
+  { sample_id: 'wikipedia', group: 'overseas', core: true, url: 'https://www.wikipedia.org/' },
+  { sample_id: 'github', group: 'overseas', core: true, url: 'https://github.com/' },
+  { sample_id: 'iana', group: 'overseas', core: true, url: 'https://www.iana.org/domains/reserved' },
+  { sample_id: 'arxiv', group: 'overseas', core: true, url: 'https://arxiv.org/' },
+  { sample_id: 'rfc_editor', group: 'overseas', core: false, url: 'https://www.rfc-editor.org/' },
+]);
+
+const FIXED_SAMPLE_BY_ID = new Map(FIXED_DIRECT_SAMPLES.map((sample) => [sample.sample_id, sample]));
+const FIXED_SAMPLE_BY_URL = new Map(FIXED_DIRECT_SAMPLES.map((sample) => [sample.url, sample]));
+const DIRECT_OUTCOMES = new Set([
+  'content', 'login_required', 'challenge', 'http_denied', 'rate_limited',
+  'transport_inconclusive', 'failed', 'not_attempted', 'round_budget_not_attempted',
+]);
+const DIRECT_SURFACES = new Set(['native', 'browser', 'node_fetch', 'curl']);
+
 function validateCase115Access(access) {
-  const allowed = new Set([
-    'status', 'probed_at', 'result_url', 'fetch_outcome', 'reason',
-    'search_surface', 'fetch_surface', 'eligible_candidate_count', 'final_candidate_ordinal',
-  ]);
+  const allowed = new Set(['status', 'probed_at', 'reason', 'sample_observations']);
   if (Object.keys(access).some((key) => !allowed.has(key))) return 'return map contains a non-profile observation field';
   if (!['available', 'unavailable'].includes(access.status)) return 'return map has an invalid status';
   if (typeof access.probed_at !== 'string' || Number.isNaN(Date.parse(access.probed_at))) return 'return map lacks an ISO timestamp';
-  if (!Number.isInteger(access.eligible_candidate_count) || access.eligible_candidate_count < 0 || access.eligible_candidate_count > 3) return 'return map has invalid candidate count';
-  if (access.search_surface !== undefined && access.search_surface !== 'WebSearch') return 'return map search surface contradicts public tool facts';
-  if (access.eligible_candidate_count === 0) {
-    if (access.status !== 'unavailable' || access.fetch_outcome !== 'not_attempted' || typeof access.reason !== 'string' || !access.reason.trim()
-      || access.final_candidate_ordinal !== undefined || access.result_url !== undefined || access.fetch_surface !== undefined) return 'zero-candidate return map contradicts the unavailable branch';
-    return null;
+  if (!Array.isArray(access.sample_observations)) return 'return map lacks sample_observations';
+  if (access.sample_observations.length !== FIXED_DIRECT_SAMPLES.length) return 'return map must include every declared sample exactly once';
+
+  const seen = new Set();
+  let coreContent = false;
+  let notAttemptedCount = 0;
+  for (const entry of access.sample_observations) {
+    if (!entry || typeof entry !== 'object' || typeof entry.sample_id !== 'string') return 'sample entry lacks a sample_id';
+    if (seen.has(entry.sample_id)) return 'return map contains a duplicate sample_id';
+    seen.add(entry.sample_id);
+    const declared = FIXED_SAMPLE_BY_ID.get(entry.sample_id);
+    if (!declared) return 'return map names an undeclared sample';
+    if (entry.source_group !== declared.group) return 'sample source_group contradicts the declared pairing';
+    if (!DIRECT_OUTCOMES.has(entry.outcome)) return 'sample entry has an invalid terminal outcome';
+    if (entry.outcome === 'content') {
+      if (!DIRECT_SURFACES.has(entry.retrieval_surface)) return 'content sample lacks a truthful executor-neutral surface category';
+      if (declared.core) coreContent = true;
+    } else if (entry.retrieval_surface !== undefined) {
+      return 'non-content sample carries a retrieval surface';
+    }
+    if (entry.outcome === 'not_attempted') notAttemptedCount += 1;
   }
-  if (!Number.isInteger(access.final_candidate_ordinal) || access.final_candidate_ordinal !== access.eligible_candidate_count
-    || typeof access.result_url !== 'string' || !eligibleProbeUrl(access.result_url)) return 'positive-count return map lacks the final returned candidate';
-  if (access.status === 'available') {
-    if (access.fetch_outcome !== 'success' || !['WebFetch', 'curl'].includes(access.fetch_surface)) return 'available return map contradicts its fetch result';
-    return null;
+  if (seen.size !== FIXED_DIRECT_SAMPLES.length) return 'return map must include every declared sample exactly once';
+
+  if (access.status === 'available' && !coreContent) return 'available return requires content from a non-diagnostic core sample';
+  if (access.status === 'unavailable') {
+    if (coreContent) return 'unavailable return cannot contain core sample content';
+    if (typeof access.reason !== 'string' || !access.reason.trim()) return 'unavailable return lacks a direct summary reason';
   }
-  if (!['failed', 'blocked', 'not_attempted'].includes(access.fetch_outcome) || typeof access.reason !== 'string' || !access.reason.trim()) {
-    return 'unavailable return map lacks a direct failed observation';
+  if (notAttemptedCount > 0 && notAttemptedCount !== FIXED_DIRECT_SAMPLES.length) {
+    return 'not_attempted is reserved for a whole probe that started no request';
+  }
+  if (notAttemptedCount === FIXED_DIRECT_SAMPLES.length && access.status !== 'unavailable') {
+    return 'a whole no-request return must be unavailable';
   }
   return null;
 }
 
 function record115(events) {
   const tools = publicToolExchanges(events);
-  const disallowed = tools.uses.filter((use) => use.value.name !== 'WebSearch'
-    && use.value.name !== 'WebFetch'
+  const disallowed = tools.uses.filter((use) => use.value.name !== 'WebFetch'
     && (use.value.name !== 'Bash' || !isCurlAttempt(use.value.input.command)));
   if (disallowed.length > 0) notRun(`case-115 isolated probe used an unauthorized public tool: ${disallowed[0].value.name}`);
 
-  const searchUses = tools.uses.filter((use) => use.value.name === 'WebSearch');
-  const nativeUses = tools.uses.filter((use) => use.value.name === 'WebFetch');
+  const fetchUses = tools.uses.filter((use) => use.value.name === 'WebFetch');
   const curlUses = tools.uses.filter((use) => use.value.name === 'Bash');
-  if (searchUses.length !== 1) notRun('case-115 requires exactly one public WebSearch tool_use');
-  const search = searchUses[0];
-  if (search.value.input.query !== 'site:wikipedia.org "Internet protocol suite"') {
-    notRun('case-115 WebSearch query is not the fixed neutral capability query');
+
+  const accessed = new Map();
+  const accessSampleId = (use) => {
+    const url = use.value.name === 'WebFetch' ? use.value.input.url : exactCurlUrl(use.value.input.command);
+    return FIXED_SAMPLE_BY_URL.get(url)?.sample_id ?? null;
+  };
+  for (const use of [...fetchUses, ...curlUses]) {
+    const sampleId = accessSampleId(use);
+    if (!sampleId) notRun('case-115 direct retrieval targeted a URL outside the fixed declared sample suite');
+    if (accessed.has(sampleId) && accessed.get(sampleId) === 'content') {
+      notRun('case-115 probed a sample that already returned real content');
+    }
+    accessed.set(sampleId, accessed.has(sampleId) ? 'confirmed' : 'attempted');
+    if (use.value.name === 'Bash' && exactCurlUrl(use.value.input.command) === null) {
+      notRun('case-115 curl fallback is not an exact fixed sample URL');
+    }
   }
-  const searchResult = tools.resultFor(search);
-  if (!searchResult) notRun('missing public WebSearch tool_result');
-  if (nativeUses.some((use) => use.index <= searchResult.index) || curlUses.some((use) => use.index <= searchResult.index)) {
-    notRun('case-115 fetch attempt preceded the public WebSearch result');
-  }
-  const links = searchResult.value.is_error ? [] : structuredSearchLinks(searchResult.value.content);
-  const candidates = links.map((link) => link.url).filter(eligibleProbeUrl).slice(0, 3);
+
   const access = parseCase115Return(events);
   const shapeError = validateCase115Access(access);
   if (shapeError) notRun(shapeError);
 
-  const count = access.eligible_candidate_count;
-  const ordinal = access.final_candidate_ordinal;
-  if (count === 0) {
-    if (candidates.length !== 0 || nativeUses.length !== 0 || curlUses.length !== 0) {
-      notRun('zero-candidate return contradicts public search or fetch events');
-    }
-    recordCheck(tracePath, { gate: 'hitl1-research-access-probe', passed: true, detail: 'isolated no-candidate unavailable return' });
-    recordCheck(tracePath, { gate: 'probe-evidence-boundary', passed: true, detail: 'no bundle, profile, or Gate actor claim observed' });
+  const wholeNoRequest = access.sample_observations.every((entry) => entry.outcome === 'not_attempted');
+  if (wholeNoRequest) {
+    if (accessed.size !== 0) notRun('whole no-request return contradicts public retrieval events');
+    recordCheck(tracePath, { gate: 'hitl1-research-access-probe', passed: true, detail: 'isolated honest no-request relay return' });
+    recordCheck(tracePath, { gate: 'probe-evidence-boundary', passed: true, detail: 'probe return is compact; observer attributes no profile write or Gate execution' });
     return;
   }
 
-  if (ordinal !== count || count > candidates.length || access.result_url !== candidates[ordinal - 1]) {
-    notRun('return map final candidate metadata contradicts public returned candidate order');
+  // Both source groups must be observed without a core-success short-circuit:
+  // a content outcome in one group never stops the other group's declared work.
+  const groupsObserved = new Set([...accessed.keys()].map((sampleId) => FIXED_SAMPLE_BY_ID.get(sampleId).group));
+  if (!groupsObserved.has('china') || !groupsObserved.has('overseas')) {
+    notRun('case-115 probe did not observe both declared source groups');
   }
-  if (nativeUses.length !== count && nativeUses.length !== count - 1) {
-    notRun('public native fetch count contradicts the bounded returned observation');
-  }
-  const nativeToCurl = new Map();
-  const hasRealContent = (result) => Boolean(result && !result.value.is_error && result.value.content.trim());
-
-  for (const [index, native] of nativeUses.entries()) {
-    const nativeResult = tools.resultFor(native);
-    const nextNative = nativeUses[index + 1];
-    if (!nativeResult || native.value.input.url !== candidates[index]) {
-      notRun('public native fetch target or result contradicts the returned candidate order');
+  for (const entry of access.sample_observations) {
+    if (entry.outcome !== 'not_attempted' && !accessed.has(entry.sample_id)) {
+      notRun(`case-115 return declares sample outcome without a public retrieval event for ${entry.sample_id}`);
     }
-    const curls = curlUses.filter((curl) => curl.index > nativeResult.index && (!nextNative || curl.index < nextNative.index));
-    if (curls.length > 1) notRun('more than one curl fallback followed a native fetch');
-    const curl = curls[0];
-    if (curl) {
-      const curlResult = tools.resultFor(curl);
-      if (!curlResult || hasRealContent(nativeResult) || exactCurlUrl(curl.value.input.command) !== candidates[index]) {
-        notRun('public curl fallback is not an exact same-URL native-failure fallback');
-      }
-      nativeToCurl.set(index, { use: curl, result: curlResult });
+    if (entry.outcome === 'content' && accessed.get(entry.sample_id) !== 'attempted' && accessed.get(entry.sample_id) !== 'confirmed') {
+      notRun(`case-115 return declares content without a public direct retrieval for ${entry.sample_id}`);
     }
-    if (hasRealContent(nativeResult) && (index !== count - 1 || curl)) {
-      notRun('probe continued after native real page content');
-    }
-    if (curl && hasRealContent(nativeToCurl.get(index).result) && index !== count - 1) {
-      notRun('probe continued after fallback real page content');
-    }
-    if (index < count - 1 && (!curl || hasRealContent(nativeToCurl.get(index).result))) {
-      notRun('probe considered a later candidate without exhausting the current permitted sequence');
-    }
-  }
-  const finalIndex = count - 1;
-  const finalNative = nativeUses[finalIndex];
-  const unboundCurls = curlUses.filter((curl) => ![...nativeToCurl.values()].some((entry) => entry.use.id === curl.id));
-  let absentNativeFinalCurl = null;
-  if (!finalNative && unboundCurls.length === 1) {
-    const curl = unboundCurls[0];
-    const curlResult = tools.resultFor(curl);
-    if (!curlResult || exactCurlUrl(curl.value.input.command) !== candidates[finalIndex]) {
-      notRun('public curl fallback is not an exact same-URL native-absent fallback');
-    }
-    absentNativeFinalCurl = { use: curl, result: curlResult };
-  } else if (unboundCurls.length > 0) {
-    notRun('public curl fallback has no preceding native fetch');
   }
 
-  const finalNativeResult = finalNative ? tools.resultFor(finalNative) : null;
-  const finalCurl = nativeToCurl.get(finalIndex) || absentNativeFinalCurl;
-  let branch = null;
-  if (!finalNative) {
-    if (!finalCurl && (access.status !== 'unavailable' || access.fetch_outcome !== 'not_attempted')) {
-      notRun('no-legal-fetch return contradicts public tool facts');
-    }
-    if (finalCurl && hasRealContent(finalCurl.result)) {
-      if (access.status !== 'available' || access.fetch_outcome !== 'success' || access.fetch_surface !== 'curl') {
-        notRun('available curl return contradicts public same-URL native-absent fallback content');
-      }
-      branch = 'available-curl';
-    } else if (finalCurl) {
-      if (access.status !== 'unavailable' || access.fetch_outcome === 'success' || access.fetch_surface !== 'curl') {
-        notRun('unavailable native-absent fallback return contradicts public fetch facts');
-      }
-      branch = 'unavailable-curl';
-    } else {
-      branch = 'unavailable-no-native-surface';
-    }
-  } else if (hasRealContent(finalNativeResult)) {
-    if (access.status !== 'available' || access.fetch_outcome !== 'success' || access.fetch_surface !== 'WebFetch') {
-      notRun('available native return contradicts public fetch content');
-    }
-    branch = 'available-native';
-  } else if (finalCurl && hasRealContent(finalCurl.result)) {
-    if (access.status !== 'available' || access.fetch_outcome !== 'success' || access.fetch_surface !== 'curl') {
-      notRun('available curl return contradicts public same-URL fallback content');
-    }
-    branch = 'available-curl';
-  } else {
-    if (access.status !== 'unavailable' || access.fetch_outcome === 'success') {
-      notRun('unavailable return contradicts public non-success fetch facts');
-    }
-    if (finalCurl && access.fetch_surface !== 'curl') notRun('unavailable fallback return has the wrong final fetch surface');
-    if (!finalCurl && access.fetch_surface !== undefined && access.fetch_surface !== 'WebFetch') notRun('unavailable native return has the wrong fetch surface');
-    branch = finalCurl ? 'unavailable-curl' : 'unavailable-native';
-  }
-
-  recordCheck(tracePath, { gate: 'hitl1-research-access-probe', passed: true, detail: `isolated ${branch} return matched public events` });
+  recordCheck(tracePath, { gate: 'hitl1-research-access-probe', passed: true, detail: 'isolated fixed direct-sample return matched public events' });
   recordCheck(tracePath, { gate: 'probe-evidence-boundary', passed: true, detail: 'probe return is compact; observer attributes no profile write or Gate execution' });
-  if (branch === 'available-curl') {
-    recordCheck(tracePath, { gate: 'hitl1-native-to-curl-fallback', passed: true, detail: 'public permitted same-URL curl return matched' });
-  }
 }
 
 function record712(events) {

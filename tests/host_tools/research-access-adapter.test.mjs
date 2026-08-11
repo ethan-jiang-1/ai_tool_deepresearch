@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  RESEARCH_ACCESS_ADAPTER_SCOPE,
   SELECTED_RESEARCH_ACCESS_ADAPTER,
   buildSelectedResearchAccessAdapterInvocation,
   callerSuppliedPermissionBypass,
@@ -12,9 +13,10 @@ import {
 } from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/research-access-adapter.mjs';
 
 describe('selected research-access adapter', () => {
-  it('reads the one selected generic non-bypass declaration', () => {
+  it('reads the one retained executor-scoped canary declaration', () => {
     const contract = readSelectedResearchAccessAdapterContract();
 
+    assert.equal(contract.scope, RESEARCH_ACCESS_ADAPTER_SCOPE);
     assert.equal(contract.adapter_id, SELECTED_RESEARCH_ACCESS_ADAPTER.id);
     assert.equal(contract.launcher.entry, 'DEEP_RESEARCH_HARNESS/host_tools/claude-deepseek.mjs');
     assert.equal(contract.launcher.routing, 'deepseek_anthropic_compatible');
@@ -49,6 +51,34 @@ describe('selected research-access adapter', () => {
       code: 'no_eligible_candidate',
       provider_availability_proven: false,
     });
+  });
+
+  it('rejects a provider-specific production contract for the direct controller', () => {
+    const contract = readSelectedResearchAccessAdapterContract();
+
+    assert.equal(contract.scope, RESEARCH_ACCESS_ADAPTER_SCOPE);
+    assert.equal(contract.adapter_id, 'claude-deepseek-websearch-webfetch/v1');
+    assert.equal(contract.launcher.entry, 'DEEP_RESEARCH_HARNESS/host_tools/claude-deepseek.mjs');
+    assert.equal(contract.launcher.routing, 'deepseek_anthropic_compatible');
+    assert.equal(contract.launcher.permission_mode, 'generic_non_bypass');
+    // The retained Claude launcher contract is executor-scoped canary metadata
+    // only; it is never a production HITL1 operation prerequisite for the
+    // direct controller.
+    assert.notEqual(contract.operations.search.surface, null);
+    assert.notEqual(contract.operations.fetch.surface, null);
+  });
+
+  it('does not claim cross-executor permission or availability from the canary contract', () => {
+    const binding = validateSelectedAdapterSameUrlBinding({
+      candidateUrl: 'https://example.com/returned',
+      fetchTargetUrl: 'https://example.com/returned',
+      resultUrl: 'https://example.com/returned',
+    });
+
+    assert.equal(binding.same_url_bound, true);
+    assert.equal(binding.provider_availability_proven, false);
+    // A deterministic binding helper proves nothing about any other executor.
+    assert.equal(binding.provider_availability_proven, false);
   });
 
   it('maps each boundary location to one owner and derives repair kind without reason prose', () => {

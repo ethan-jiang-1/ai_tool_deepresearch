@@ -13,23 +13,46 @@ operations:
     surface: WebFetch
 evidence:
   form: retained provider-scoped Subject trace binding selected WebSearch output to the selected WebFetch target
+scope: executor-scoped canary metadata only
 ---
 
-# Selected Research-Access Adapter
+# Execution-Neutral Direct Retrieval Boundary
 
-This is the one selected HITL1 adapter. Its host is the Claude CLI started through
-`DEEP_RESEARCH_HARNESS/host_tools/claude-deepseek.mjs`, with the routing fact
-`deepseek_anthropic_compatible`. The selected invocation is the generic launcher
-mode. It does not add, accept, or rely on a caller-supplied permission-bypass option.
+Production HITL1 exposes one Agent-readable, execution-neutral direct-page retrieval
+boundary. The direct observation asks only whether the **current executor** can
+obtain real content for one controller-declared public URL using a surface that is
+already available and permitted in that executor. The current executor's tool list,
+host policy, and network policy are the Source of Record for whether an operation is
+callable; this Markdown file, a launcher `--check`, a shell executable, or chat text
+never establish that permission or availability.
 
-This contract is limited to selected-host invocation facts. The Phase Agent
-actor-delivers those facts with the independent
-`shared-hitl1-research-access-envelope.md` controller to one isolated probe after
-the recorded HITL1 decision. That controller owns the sub-agent's bounded work and
-compact observation guidance; it is separate from this adapter and does not change
-the selected host's permission or operation surface.
+The isolated `shared-hitl1-research-access-envelope.md` controller is the single
+owner of the fixed sample IDs and URLs, group ordering, bounded concurrency,
+timeout/confirmation rules, terminal classification, and the compact observation
+shape. It is physically separate from this boundary and from the Phase body, and it
+mentions neither a provider-specific tool name nor a provider selection rule. It
+does not change host permission, runtime truth, or Gate authority.
 
-The provider-scoped evidence form binds a selected native `WebSearch` result to its
-selected native `WebFetch` target. Tool names, launcher `--check`, a shell
-executable, chat text, command exit, a search snippet, or an empty/challenge/error
-body are not evidence of available research access.
+## Retained Claude Launcher: Executor-Scoped Canary Only
+
+The frontmatter above is the retained contract for the Claude CLI launcher
+`claude-deepseek.mjs` with `deepseek_anthropic_compatible` routing, in generic
+non-bypass invocation mode. It is executor-scoped canary metadata for that launcher's
+own optional experiment: its `WebSearch` and `WebFetch` operation names describe that
+launcher's own surfaces and never appear in the production controller, Phase
+prerequisite, profile observation, or Gate predicate.
+
+This launcher contract SHALL NOT be delivered as a production HITL1 operation
+prerequisite, SHALL NOT select an operation for Codex or any other Coding Agent, and
+SHALL NOT claim that one executor's tools are available in another. The system
+introduces no provider registry, adapter priority list, environment-variable
+selection protocol, background capability controller, or caller-supplied permission
+bypass.
+
+## Boundary Resolution
+
+The boundary resolver maps only a schema-validated recorded legacy boundary location
+to its owner and derives its repair kind from that owner. It never parses reason
+prose, tool names, user language, VPN state, IP/geography, or a provider identity to
+reconstruct classification. A direct observation that establishes no owner remains
+explicitly unclassified.

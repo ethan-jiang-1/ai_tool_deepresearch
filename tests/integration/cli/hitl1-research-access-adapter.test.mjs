@@ -122,7 +122,9 @@ describe('HITL1 selected research-access adapter integration', () => {
     const phase = readFileSync(PHASE, 'utf8');
     const adapter = readFileSync(ADAPTER, 'utf8');
 
-    assert.match(phase, /research-access-adapter\.md/);
+    // The Phase delivers only the generic guide and the independent controller;
+    // the executor-scoped adapter/canary contract is not a Phase prerequisite.
+    assert.doesNotMatch(phase, /research-access-adapter\.md/);
     assert.match(phase, /shared-hitl1-research-access-envelope\.md/);
     assert.match(phase, /不要求用户重复回答 HITL1 choices、运行 `curl` 或手改 profile/);
     for (const forbidden of [
@@ -143,5 +145,11 @@ describe('HITL1 selected research-access adapter integration', () => {
     assert.match(adapter, /deepseek_anthropic_compatible/);
     assert.match(adapter, /WebSearch/);
     assert.match(adapter, /WebFetch/);
+    assert.match(adapter, /executor-scoped canary metadata only/);
+    assert.match(adapter, /SHALL NOT be delivered as a production HITL1 operation/);
+    // The retained Claude launcher must not be a production prerequisite for the
+    // direct controller; it is executor-scoped canary metadata only.
+    assert.doesNotMatch(adapter, /the one selected HITL1 adapter/);
+    assert.doesNotMatch(adapter, /is the production HITL1 adapter/);
   });
 });

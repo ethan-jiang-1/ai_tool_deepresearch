@@ -1,5 +1,8 @@
 // @impl REA-001, REA-002, REA-003
-// Deterministic declaration and binding helpers for the selected Agent-owned probe.
+// Executor-scoped Claude canary launcher metadata and legacy boundary-owner
+// resolver. Production HITL1 direct retrieval is execution-neutral and owned by
+// the isolated controller; nothing here is a production WebSearch/WebFetch/Claude
+// prerequisite for that controller.
 
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -8,9 +11,13 @@ import { parse as parseYaml } from 'yaml';
 
 const HOST_TOOLS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
 
+export const RESEARCH_ACCESS_ADAPTER_SCOPE = 'executor-scoped canary metadata only';
 export const SELECTED_RESEARCH_ACCESS_ADAPTER_REFERENCE = 'DEEP_RESEARCH_HARNESS/host_tools/research-access-adapter.md';
 export const SELECTED_RESEARCH_ACCESS_ADAPTER_PATH = join(HOST_TOOLS_DIR, 'research-access-adapter.md');
 
+// Retained executor-scoped canary contract for the Claude CLI launcher only.
+// These facts describe that launcher's own non-bypass invocation and optional
+// experiment; they do not select a production operation for any Coding Agent.
 export const SELECTED_RESEARCH_ACCESS_ADAPTER = Object.freeze({
   id: 'claude-deepseek-websearch-webfetch/v1',
   host_owner: 'selected Claude CLI host runtime',
@@ -21,21 +28,25 @@ export const SELECTED_RESEARCH_ACCESS_ADAPTER = Object.freeze({
   fetch_surface: 'WebFetch',
 });
 
+// Legacy-only boundary projection. These facts are mapped only from a
+// schema-validated recorded legacy `access_boundary` location; they never
+// infer a current direct-sample diagnosis, provider, relevance, or tool
+// permission from reason prose or sample data.
 const UNAVAILABLE_FACTS = Object.freeze({
   host_surface: Object.freeze({
     owner: 'selected Claude CLI host runtime',
     actor: 'external',
-    repair: 'Restore a callable selected WebSearch/WebFetch surface, then let the Agent rerun the same bounded probe and Gate.',
+    repair: 'Resolve the recorded legacy host-surface boundary, then let the Agent rerun the same bounded probe and Gate.',
   }),
   host_policy: Object.freeze({
     owner: 'selected Claude CLI host policy',
     actor: 'external',
-    repair: 'Resolve the selected host permission boundary, then let the Agent rerun the same bounded probe and Gate.',
+    repair: 'Resolve the recorded legacy host-policy boundary, then let the Agent rerun the same bounded probe and Gate.',
   }),
   network_path: Object.freeze({
     owner: 'network environment',
     actor: 'external',
-    repair: 'Resolve the recorded network-path boundary, then let the Agent rerun the same bounded probe and Gate.',
+    repair: 'Resolve the recorded legacy network-path boundary, then let the Agent rerun the same bounded probe and Gate.',
   }),
   probe_relay: Object.freeze({
     owner: 'Agent',
@@ -53,6 +64,7 @@ function frontmatter(text) {
 export function readSelectedResearchAccessAdapterContract() {
   const contract = frontmatter(readFileSync(SELECTED_RESEARCH_ACCESS_ADAPTER_PATH, 'utf8'));
   if (contract?.schema !== 'research-access-adapter/v1') throw new Error('selected research-access adapter has an unsupported schema');
+  if (contract?.scope !== RESEARCH_ACCESS_ADAPTER_SCOPE) throw new Error('selected research-access adapter is not executor-scoped canary metadata');
   if (contract?.adapter_id !== SELECTED_RESEARCH_ACCESS_ADAPTER.id) throw new Error('selected research-access adapter identity drifted');
   if (contract?.launcher?.entry !== SELECTED_RESEARCH_ACCESS_ADAPTER.launcher_entry
     || contract?.launcher?.routing !== SELECTED_RESEARCH_ACCESS_ADAPTER.launcher_routing

@@ -114,80 +114,84 @@ retired-search-preference behavior, honest host-rendering residual, and the
 full existing post-Gate silent-phase expectation.
 
 After the recorded decision, `brief/hitl1.md` SHALL own these exact user-facing
-capability-check messages:
+current-observation messages:
 
-> 开始研究前，系统先快速检查一下联网搜索能力，大概几秒钟，请稍候。
+> 开始研究前，我先直接检查当前环境对中国和海外公开页面的实际取用情况，请稍候。
 
-> 联网能力正常，开始准备研究。
+> 当前环境的直接取用观察已经记录。它只反映这一次探测，不保证后续网络保持不变。
 
-> 联网检查没通过。多数是网络问题——请检查网络连接后重试；网络正常的话稍后再试也行。你刚才的选择不会丢。
+When the Phase Agent judges an observed group limitation material to the user's
+explicit research semantics, it SHALL render this bounded Chinese prompt with the
+bracketed values grounded only in the current observation and the already recorded
+research semantics:
 
-`brief/hitl1.md` SHALL additionally own one exact partial-reachability
-disclosure rendered only alongside the available result when the recorded
-observation reports one or more unreachable declared source classes:
+> 这次探测显示，和本轮研究相关的<来源范围或约束>目前存在直接取用限制（<当前观察>）。你可以调整网络后让我重新完整探测、修改来源范围，或明确“按当前取用范围继续”。
 
-> 联网能力正常，不过有部分来源这次够不着（<不可达来源类别>），研究会继续，用够得着的来源做。
+The prompt SHALL not use Chinese UI, user language, presumed country, VPN state, or
+tool/provider name as evidence of source relevance. It SHALL not promise restoration,
+coverage, a fixed duration, a provider result, automatic retry, or future stability.
+It offers a user decision only when the Agent has established a material gap. A clear
+request to retry after the user manages their own environment or to proceed under the
+current scope is a normal HITL1 loop response, not a new checkpoint or a blanket
+confirmation. The Agent does not verify, store, or infer the network change.
 
-The bracketed segment SHALL be filled from the recorded observation's unreachable
-declared source classes and nothing else. This disclosure is information transfer
-only: it SHALL NOT create a HITL checkpoint, ask the user for instructions, offer
-options, block advance, or become permission or capability. It SHALL NOT be
-rendered when every attempted declared source class was reachable.
+If no material gap exists, the Phase SHALL render the recorded-observation message
+without asking the user another question. If a material gap exists, the Agent SHALL
+not render a “normal access” claim or begin silent research before a clear resolution
+and the existing Gate pass. Accepting current scope records a research limitation; it
+does not assert that an unreachable source became available or erase a hard source
+constraint.
 
 PRP-002 controls their timing. The Phase Agent renders the first notice before
 spawning the one isolated probe agent. It renders the second only after the
-Phase has recorded the returned `available` observation, and the third only
-after it has recorded `unavailable`; either result precedes the existing HITL1
-Gate. The partial-reachability disclosure accompanies the second message and
-does not replace it or move the Gate. “开始准备研究” is an observation message,
-not a claim that the Gate has
-passed or that silent execution has started. The unavailable message preserves
-the recorded decision and same probe/Gate recovery path, creates no new HITL
-checkpoint, and does not ask for the choices again.
+Phase has recorded a completed observation, and the bounded material-gap prompt
+only after it has judged a limitation material. Either result precedes the
+existing HITL1 Gate. “当前环境的直接取用观察已经记录” is an observation message,
+not a claim that the Gate has passed or that silent execution has started.
 
 These templates are framework Markdown only. They SHALL NOT promise to hide,
 suppress, replace, or reinterpret selected-host-native tool calls, policy
 failures, transport/security errors, or permitted fallback output. They SHALL
 not promise a duration, host permission, provider success, or automatic retry.
-The partial-reachability disclosure SHALL NOT promise that an unreachable class
-will become reachable, that coverage is complete, or that the user can restore it.
 
 #### Scenario: Recorded decision is followed by an explained non-decision check
 
 - **WHEN** the user has made and the Agent has recorded a valid HITL1 decision
 - **THEN** the Agent SHALL present the exact first message before spawning the
-  isolated research-access probe
+  isolated direct-sample probe
 - **AND** it SHALL state no new research decision is needed
 
-#### Scenario: Direct available result is not a Gate verdict
+#### Scenario: Completed observation is reported without a questionnaire
 
-- **WHEN** the Phase Agent records returned `research_access.status: available`
-- **THEN** it SHALL present the exact second message before the existing HITL1 Gate
-- **AND** it SHALL not announce silent autonomous execution until that Gate passes
+- **WHEN** the Phase Agent records a completed current direct-sample observation
+  and judges no material gap
+- **THEN** it SHALL present the exact recorded-observation message before the
+  existing HITL1 Gate
+- **AND** it SHALL not ask the user to approve a non-material network fact
 
-#### Scenario: Partial reachability is disclosed without a decision point
+#### Scenario: Material overseas limitation receives one bounded choice
 
-- **WHEN** the recorded available observation reports one or more unreachable
-  declared source classes
-- **THEN** the Agent SHALL present the exact partial-reachability disclosure naming
-  only those recorded unreachable classes and continue to the existing Gate
-- **AND** it SHALL not offer options, request instructions, add a checkpoint, or
-  pause the run
+- **WHEN** the current observation limits overseas samples and the user's recorded
+  must-answer set or explicit source constraint makes that limitation material
+- **THEN** the Agent SHALL render the bounded access-alignment prompt in Chinese
+- **AND** it SHALL allow a fresh probe after user-managed environment adjustment, a
+  source-semantics revision, or clear acceptance of the current scope
 
-#### Scenario: Full reachability renders no disclosure
+#### Scenario: Non-material limitation does not create a questionnaire
 
-- **WHEN** the recorded available observation reports no unreachable declared
-  source class
-- **THEN** the Agent SHALL present only the exact second message
-- **AND** it SHALL not render the partial-reachability disclosure with an empty or
-  invented class list
+- **WHEN** a completed observation has a limitation that the Agent judges unrelated
+  to the recorded question, must-answer set, Topic map, and controls
+- **THEN** the Agent SHALL state only the current-observation message and continue
+  through the existing Gate path
+- **AND** it SHALL not ask the user to approve a non-material network fact
 
-#### Scenario: Unavailable access does not reopen HITL1 semantics
+#### Scenario: Accepted limitation is not a false success claim
 
-- **WHEN** the Phase Agent records returned `research_access.status: unavailable`
-- **THEN** it SHALL present the exact third message and preserve recorded choices
-- **AND** it SHALL retain the same probe/Gate path rather than create a decision,
-  checkpoint, retry tree, or repeated-choice prompt
+- **WHEN** the user says to proceed under the current access scope
+- **THEN** the Agent SHALL retain the limitation in the controls snapshot and the
+  truthful direct observation
+- **AND** it SHALL not promise source completeness, restored access, or future
+  network stability
 
 #### Scenario: Selected-host-native rendering remains an honest residual
 

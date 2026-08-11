@@ -60,7 +60,7 @@ describe('semantic-fact-families/v1 contract', () => {
 
     assert.equal(parsed.ok, true);
     assert.deepEqual(parsed.catalog.families, INITIAL_SEMANTIC_FACT_FAMILIES);
-    assert.equal(parsed.catalog.families.length, 13);
+    assert.equal(parsed.catalog.families.length, 14);
     assert.deepEqual(
       parsed.catalog.families.find((family) => family.id === 'work-unit.assignment-output-obligation'),
       {

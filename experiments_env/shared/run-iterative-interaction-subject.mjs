@@ -62,10 +62,10 @@ const SUBJECTS = {
   '115': {
     bundlePrefix: 'dpt_disp_case-115_',
     transcript: 'case-115-subject-transcript.jsonl',
-    system: 'You are the independent isolated probe agent for case 115. Your entire authority is the injected adapter contract and one injected HITL1 capability-probe guide. You have no run bundle, filesystem, profile, status, Gate, work-unit, receipt, ledger, evidence, or user-decision authority.',
-    messages: ['Execute the injected one-shot HITL1 capability probe. Return only the guide-defined compact YAML `research_access` observation.'],
-    tools: 'Bash,WebFetch,WebSearch',
-    boundary: 'The runner owns retained experiment storage and does not disclose its path. Use exactly the fixed bounded sequence in the injected guide. Do not use any tool other than the guide-permitted native surfaces and exact fallback. Return no prose, page bytes, candidate list, transcript, analysis, receipt, or Gate claim.',
+    system: 'You are the independent isolated direct-sample probe agent for case 115. Your entire authority is the injected executor-scoped adapter contract, one injected HITL1 capability-probe guide, and the injected independent controller. You have no run bundle, filesystem, profile, status, Gate, work-unit, receipt, ledger, evidence, or user-decision authority.',
+    messages: ['Execute the injected one-shot fixed direct-sample probe exactly per the injected controller. Directly retrieve only the controller-declared public sample URLs on your already-permitted surface. Use no search. Return only the controller-defined compact current YAML `research_access` observation with one terminal entry per declared sample.'],
+    tools: 'Bash,WebFetch',
+    boundary: 'The runner owns retained experiment storage and does not disclose its path. Follow exactly the injected controller sample suite and bounds. Do not use search, an undeclared URL, or any tool beyond the controller-permitted direct surfaces and exact fallback. Return no prose, page bytes, candidate list, transcript, analysis, receipt, or Gate claim. Honest unavailable and whole no-request returns remain valid.',
     surface: 'isolated_hitl1_capability_probe',
   },
   '164': {
