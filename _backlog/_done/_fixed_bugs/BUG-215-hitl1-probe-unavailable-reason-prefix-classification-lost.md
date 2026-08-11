@@ -3,12 +3,27 @@ bug_id: BUG-215
 title: HITL1 探测持续 unavailable 时 reason 前缀词汇未强制，gate 的 surface_absent/permission_required 根因分类静默失效；host 能搜不能抓时 run 无前进路径
 severity: P2
 phase: hitl1
-status: open
+status: fixed
 source: CCDS4 (Claude Code + DeepSeek v4, 2026-08-11)
 surfaced_at: 2026-08-11
+resolved_at: 2026-08-11
+resolved_by: rebuild-hitl1-source-access-alignment (v0.86, 10b42247c)
 ---
 
 # BUG-215: HITL1 research-access 持续 unavailable 时，根因分类被弱模型 reason 丢失，且无诊断前进路径
+
+## Resolution
+
+已由 `rebuild-hitl1-source-access-alignment`（v0.86，`10b42247c`）修复。
+当前 HITL1 使用固定的中外 direct-sample suite；schema-valid completed
+`unavailable` observation 不再以自由文本 `reason` 前缀决定 Gate 是否阻塞。
+Phase 在同一 HITL1 conversation 判断来源限制是否 material，并让用户选择重探、
+修改显式来源约束，或按当前范围继续；之后该 completed observation 走既有 Gate
+路径。legacy `access_boundary` 仍使用已校验的结构化 location 路由，未分类 legacy
+observation 会被显式说明，而不是退化成泛化重试消息。
+
+回归验证：`check-gate-hitl1-recorded`、`hitl1-research-access-adapter` 和
+`phase-hitl1-research-access` 当前共 27 项确定性测试通过。
 
 ## Observation
 

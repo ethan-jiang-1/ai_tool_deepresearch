@@ -1,5 +1,12 @@
 # Research Finding: BUG-215 HITL1 Unavailable Classification and Capability Scope
 
+> Historical note: this investigation describes the pre-v0.86 search-first,
+> reason-prefix Gate behavior. It was superseded by
+> `rebuild-hitl1-source-access-alignment` (v0.86, `10b42247c`), which records a
+> fixed China/overseas direct-sample observation and keeps material access
+> alignment in the existing HITL1 conversation. See the paired BUG-215 card for
+> the resolution and current regression evidence.
+
 - Date: 2026-08-11
 - Scope: Primary-source review of the supplied BUG-215 card, accepted OpenSpec specifications, current Harness guidance and JavaScript, and existing tests. No provider run bundle or external network result was inspected.
 - Question: What is the current meaning of HITL1 `research_access` unavailable reasons, where is adapter-root classification lost, and what would a robust fix need to preserve?
