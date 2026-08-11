@@ -1,6 +1,16 @@
 // @impl SCO-002, SCO-008: ProfileSchema for rb_profile.yaml
 import { z } from 'zod';
-import { ResearchProfile, HumanCheckpointStatus, AnswerabilityClass, HITL2UserDecision, FinalReportView } from '../enums.mjs';
+import {
+  ResearchProfile,
+  HumanCheckpointStatus,
+  AnswerabilityClass,
+  HITL2UserDecision,
+  FinalReportView,
+  SourceClass,
+  SourceClassReachability,
+  ResearchAccessBoundaryLocation,
+  ResearchAccessBoundaryExtent,
+} from '../enums.mjs';
 
 const TrimmedNonEmptyString = z.string().trim().min(1);
 const IsoTimestamp = z.string().datetime({ offset: true });
@@ -12,6 +22,21 @@ const HttpUrl = z.string().url().refine((value) => {
 const CandidateMetadata = {
   eligible_candidate_count: z.number().int().min(0).max(3).optional(),
   final_candidate_ordinal: z.number().int().min(1).max(3).optional(),
+};
+
+const SourceClassReachabilityEntry = z.object({
+  source_class: SourceClass,
+  reachability: SourceClassReachability,
+}).strict();
+
+const ResearchAccessEnvelope = {
+  source_class_reachability: z.array(SourceClassReachabilityEntry)
+    .max(SourceClass.options.length)
+    .optional(),
+  access_boundary: z.object({
+    location: ResearchAccessBoundaryLocation,
+    extent: ResearchAccessBoundaryExtent,
+  }).strict().optional(),
 };
 
 const ResearchAccessSchema = z.discriminatedUnion('status', [
@@ -26,6 +51,7 @@ const ResearchAccessSchema = z.discriminatedUnion('status', [
     search_surface: TrimmedNonEmptyString.optional(),
     fetch_surface: TrimmedNonEmptyString.optional(),
     ...CandidateMetadata,
+    ...ResearchAccessEnvelope,
   }).strict(),
   z.object({
     status: z.literal('unavailable'),
@@ -36,9 +62,67 @@ const ResearchAccessSchema = z.discriminatedUnion('status', [
     search_surface: TrimmedNonEmptyString.optional(),
     fetch_surface: TrimmedNonEmptyString.optional(),
     ...CandidateMetadata,
+    ...ResearchAccessEnvelope,
   }).strict(),
 ]).superRefine((value, ctx) => {
   if (value.status === 'unprobed') return;
+  const envelope = value.source_class_reachability;
+  const reachable = envelope?.filter((entry) => entry.reachability === 'reachable') ?? [];
+  const unreachable = envelope?.filter((entry) => entry.reachability === 'unreachable') ?? [];
+  if (envelope) {
+    const seen = new Set();
+    for (const entry of envelope) {
+      if (seen.has(entry.source_class)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['source_class_reachability'],
+          message: 'Source-class envelope cannot contain duplicate classes.',
+        });
+        break;
+      }
+      seen.add(entry.source_class);
+    }
+    if (value.status === 'available' && reachable.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['source_class_reachability'],
+        message: 'Available observation requires a reachable source class.',
+      });
+    }
+    if (value.status === 'unavailable' && reachable.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['source_class_reachability'],
+        message: 'Unavailable observation cannot contain a reachable source class.',
+      });
+    }
+  }
+
+  if (value.access_boundary) {
+    if (value.status === 'available') {
+      if (value.access_boundary.extent !== 'class_scoped') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['access_boundary', 'extent'],
+          message: 'Available access boundary must be class_scoped.',
+        });
+      }
+      if (reachable.length === 0 || unreachable.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['access_boundary'],
+          message: 'Available class-scoped boundary requires reachable and unreachable source classes.',
+        });
+      }
+    } else if (value.access_boundary.extent !== 'universal') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['access_boundary', 'extent'],
+        message: 'Unavailable access boundary must be universal.',
+      });
+    }
+  }
+
   const hasCount = value.eligible_candidate_count !== undefined;
   const hasOrdinal = value.final_candidate_ordinal !== undefined;
   if (!hasCount && !hasOrdinal) return;

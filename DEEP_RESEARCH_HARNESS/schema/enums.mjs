@@ -1,4 +1,4 @@
-// @impl SCO-001, SCO-005, SCO-006, SCO-007: 10 domain enums
+// @impl SCO-001, SCO-005, SCO-006, SCO-007: 14 domain enums
 import { z } from 'zod';
 
 export const CurrentGate = z.enum([
@@ -69,4 +69,29 @@ export const FinalReportView = z.enum([
   'claim_judgment',
   'technical_deep_dive',
   'custom',
+]);
+
+// @impl SCO-001: bounded HITL1 research-access envelope vocabulary
+export const SourceClass = z.enum([
+  'encyclopedia',
+  'code_host',
+  'general_web',
+]);
+
+export const SourceClassReachability = z.enum([
+  'reachable',
+  'unreachable',
+  'not_attempted',
+]);
+
+export const ResearchAccessBoundaryLocation = z.enum([
+  'host_surface',
+  'host_policy',
+  'network_path',
+  'probe_relay',
+]);
+
+export const ResearchAccessBoundaryExtent = z.enum([
+  'universal',
+  'class_scoped',
 ]);

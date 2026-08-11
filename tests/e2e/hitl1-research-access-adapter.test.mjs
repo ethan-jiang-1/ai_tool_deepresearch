@@ -1,4 +1,4 @@
-// @impl REA-002, REA-003, PRP-015, PRG-010
+// @impl REA-002, PRG-010
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -12,6 +12,7 @@ const NEW_BUNDLE = join(ROOT, 'experiments_env/shared/new-disposable-bundle.mjs'
 const STYLE = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs');
 const ADVANCE = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/advance-status.mjs');
 const GATE = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs');
+const SENTINEL = 'https://fixture.test/hitl1-probe-sentinel';
 
 function command(script, args, { allowFailure = false } = {}) {
   const result = spawnSync(process.execPath, [script, ...args], { cwd: ROOT, encoding: 'utf8', timeout: 10000 });
@@ -28,69 +29,96 @@ function materializeTopic(bundle) {
 }
 
 function filesUnder(path) {
+  if (!existsSync(path)) return [];
   if (!statSync(path).isDirectory()) return [path];
   return readdirSync(path).flatMap((name) => filesUnder(join(path, name)));
 }
 
-describe('HITL1 selected adapter unavailable loop', () => {
-  it('retains HITL1 semantics and records only the direct unavailable observation', () => {
-    const root = mkdtempSync(join(tmpdir(), 'hitl1-adapter-e2e-'));
-    const bundle = command(NEW_BUNDLE, ['adapter-e2e', '--force', '--target-dir', root]);
-    const access = {
+function profile(access) {
+  return {
+    plan_basename: 'adapter-e2e',
+    research_profile: 'quick_factual',
+    root_must_answer_set: ['Can research access run?'],
+    research_access: access,
+    human_decision_checkpoints: {
+      hitl1: { status: 'recorded', recorded_at: '2026-07-31T00:00:00.000Z' },
+      hitl2: {
+        status: 'not_started',
+        answerability_class: 'not_assessed',
+        user_decision: 'not_started',
+        final_report_view: 'not_started',
+      },
+    },
+  };
+}
+
+function evaluateFixture(access) {
+  const root = mkdtempSync(join(tmpdir(), 'hitl1-adapter-e2e-'));
+  const bundle = command(NEW_BUNDLE, ['adapter-e2e', '--force', '--target-dir', root]);
+  const input = profile(access);
+  writeFileSync(join(bundle, 'rb_profile.yaml'), stringifyYaml(input));
+  materializeTopic(bundle);
+  command(STYLE, ['--bundle', bundle, '--style', 'quick_factual']);
+  command(ADVANCE, ['--bundle', bundle, '--to', 'hitl1_recorded']);
+  const gate = JSON.parse(command(GATE, ['--bundle', bundle, '--current-node', 'phases/phase-hitl1.md'], { allowFailure: true }));
+  return { root, bundle, input, gate };
+}
+
+describe('HITL1 research-access envelope deterministic loop', () => {
+  it('evaluates test-controlled partial and zero-reachability profiles without persisting probe material', () => {
+    const partial = evaluateFixture({
+      status: 'available',
+      probed_at: '2026-07-31T00:00:00.000Z',
+      result_url: SENTINEL,
+      fetch_outcome: 'success',
+      source_class_reachability: [
+        { source_class: 'encyclopedia', reachability: 'unreachable' },
+        { source_class: 'code_host', reachability: 'reachable' },
+        { source_class: 'general_web', reachability: 'not_attempted' },
+      ],
+      access_boundary: { location: 'network_path', extent: 'class_scoped' },
+    });
+    const zero = evaluateFixture({
       status: 'unavailable',
       probed_at: '2026-07-31T00:00:00.000Z',
-      fetch_outcome: 'not_attempted',
-      reason: 'surface_absent: WebSearch is not callable in the selected host.',
-      eligible_candidate_count: 0,
-    };
-    const profile = {
-      plan_basename: 'adapter-e2e',
-      research_profile: 'quick_factual',
-      root_must_answer_set: ['Can research access run?'],
-      research_access: access,
-      human_decision_checkpoints: {
-        hitl1: { status: 'recorded', recorded_at: '2026-07-31T00:00:00.000Z' },
-        hitl2: {
-          status: 'not_started',
-          answerability_class: 'not_assessed',
-          user_decision: 'not_started',
-          final_report_view: 'not_started',
-        },
-      },
-    };
+      fetch_outcome: 'blocked',
+      reason: 'Fixture has no reachable declared source class.',
+      source_class_reachability: [
+        { source_class: 'encyclopedia', reachability: 'unreachable' },
+        { source_class: 'code_host', reachability: 'unreachable' },
+        { source_class: 'general_web', reachability: 'unreachable' },
+      ],
+      access_boundary: { location: 'network_path', extent: 'universal' },
+    });
 
     try {
-      writeFileSync(join(bundle, 'rb_profile.yaml'), stringifyYaml(profile));
-      materializeTopic(bundle);
-      command(STYLE, ['--bundle', bundle, '--style', 'quick_factual']);
-      command(ADVANCE, ['--bundle', bundle, '--to', 'hitl1_recorded']);
+      assert.equal(partial.gate.check.passed, true);
+      assert.equal(partial.gate.check.next, 'phases/phase-setup.md');
+      assert.deepEqual(parseYaml(readFileSync(join(partial.bundle, 'rb_profile.yaml'), 'utf8')).research_access, partial.input.research_access);
 
-      const gate = JSON.parse(command(GATE, ['--bundle', bundle, '--current-node', 'phases/phase-hitl1.md'], { allowFailure: true }));
-      const retained = awaitProfile(bundle);
-      const trace = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8');
+      assert.equal(zero.gate.check.passed, false);
+      assert.equal(zero.gate.check.next, null);
+      assert.equal(zero.gate.hints.find((hint) => hint.rule_id === 'research_access_available')?.repair_kind, 'external_action');
+      assert.deepEqual(parseYaml(readFileSync(join(zero.bundle, 'rb_profile.yaml'), 'utf8')).research_access, zero.input.research_access);
+      assert.deepEqual(parseYaml(readFileSync(join(zero.bundle, 'rb_profile.yaml'), 'utf8')).human_decision_checkpoints.hitl1, zero.input.human_decision_checkpoints.hitl1);
 
-      assert.equal(gate.check.passed, false);
-      assert.equal(gate.check.next, null);
-      assert.equal(gate.hints.find((hint) => hint.rule_id === 'research_access_available')?.repair_kind, 'external_action');
-      assert.deepEqual(retained.human_decision_checkpoints.hitl1, profile.human_decision_checkpoints.hitl1);
-      assert.equal(retained.research_profile, profile.research_profile);
-      assert.deepEqual(retained.root_must_answer_set, profile.root_must_answer_set);
-      assert.deepEqual(retained.research_access, access);
-      assert.ok(!trace.includes('phases/phase-setup.md'));
-
-      for (const surface of ['reference', '_cache', 'artifacts', '_work_units']) {
-        for (const file of filesUnder(join(bundle, surface))) {
-          assert.ok(!readFileSync(file, 'utf8').includes('surface_absent:'), `${surface} leaked probe output into ${file}`);
+      for (const run of [partial, zero]) {
+        for (const surface of [
+          'reference',
+          '_cache',
+          'artifacts',
+          '_work_units',
+          'rb_work_unit_ledger.jsonl',
+          'rb_output_declarations.jsonl',
+        ]) {
+          for (const file of filesUnder(join(run.bundle, surface))) {
+            assert.ok(!readFileSync(file, 'utf8').includes(SENTINEL), `${surface} leaked test-controlled probe material into ${file}`);
+          }
         }
       }
-      const declarations = join(bundle, 'rb_output_declarations.jsonl');
-      assert.ok(!existsSync(declarations) || !readFileSync(declarations, 'utf8').includes('surface_absent:'));
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      rmSync(partial.root, { recursive: true, force: true });
+      rmSync(zero.root, { recursive: true, force: true });
     }
   });
 });
-
-function awaitProfile(bundle) {
-  return parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'));
-}

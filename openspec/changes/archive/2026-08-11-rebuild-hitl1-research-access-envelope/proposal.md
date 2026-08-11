@@ -10,9 +10,9 @@ BUG-215（`_backlog/bugs/BUG-215-hitl1-probe-unavailable-reason-prefix-classific
 
 ### 1. 数据模型：事件 → 状态（**BREAKING**：observation 形状变更）
 
-`research_access` 重建为 access envelope：一组**有界的、静态声明的 source class**，每个 class 携带一个闭合枚举结果。
+`research_access` 重建为 access envelope：一组**有界的、静态声明的 source class**，每个 entry 携带一个闭合枚举结果；当前 writer 为每个 declared class 输出一条 entry，legacy envelope 仍可省略未来新增的 class。
 
-关键边界：**定宽，不是矩阵**。`engine/schema-core` 现禁止存储 "derived gate verdict, response body, query text or history, candidate URL list, retry list, or HTTP status matrix"——被禁的共同特征是**随尝试次数增长**。class 列表是静态框架资产，class 数固定，每 class 一个 enum，不留 URL、不留 HTTP 状态码、不留 query 文本。此边界在 delta spec 中正面论证，不夹带。
+关键边界：**静态最大宽度受限，不是矩阵**。`engine/schema-core` 现禁止存储 "derived gate verdict, response body, query text or history, candidate URL list, retry list, or HTTP status matrix"——被禁的共同特征是**随尝试次数增长**。class 列表是静态框架资产，array 至多每 class 一个 enum，不留 URL、不留 HTTP 状态码、不留 query 文本；当前 writer 输出完整 ladder，schema 允许旧 envelope 缺少未来新增 class。此边界在 delta spec 中正面论证，不夹带。
 
 ### 2. 分类法：一维列表 → 两根正交轴
 

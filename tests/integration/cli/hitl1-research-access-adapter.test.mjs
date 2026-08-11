@@ -13,6 +13,7 @@ const STYLE = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs');
 const ADVANCE = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/advance-status.mjs');
 const GATE = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs');
 const PHASE = join(ROOT, 'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl1.md');
+const ADAPTER = join(ROOT, 'DEEP_RESEARCH_HARNESS/host_tools/research-access-adapter.md');
 
 function command(script, args, { allowFailure = false } = {}) {
   const result = spawnSync(process.execPath, [script, ...args], { cwd: ROOT, encoding: 'utf8', timeout: 10000 });
@@ -62,17 +63,20 @@ function gate(bundle) {
 }
 
 describe('HITL1 selected research-access adapter integration', () => {
-  it('projects direct selected-adapter unavailable roots without authorizing Setup', () => {
-    for (const [reason, owner] of [
-      ['surface_absent: WebSearch is not callable in the selected host.', 'selected Claude CLI host runtime'],
-      ['permission_required: WebSearch is denied by selected host policy.', 'selected Claude CLI host policy'],
+  it('projects classified selected-adapter boundaries without authorizing Setup', () => {
+    for (const [location, owner, repairKind] of [
+      ['host_surface', 'selected Claude CLI host runtime', 'external_action'],
+      ['host_policy', 'selected Claude CLI host policy', 'external_action'],
+      ['network_path', 'network environment', 'external_action'],
+      ['probe_relay', 'Agent', 'agent_action'],
     ]) {
       const run = preparedBundle({
         status: 'unavailable',
         probed_at: '2026-07-31T00:00:00.000Z',
         fetch_outcome: 'not_attempted',
-        reason,
+        reason: 'Direct fixture observation.',
         eligible_candidate_count: 0,
+        access_boundary: { location, extent: 'universal' },
       });
       try {
         const output = gate(run.bundle);
@@ -81,7 +85,7 @@ describe('HITL1 selected research-access adapter integration', () => {
         assert.equal(output.check.passed, false);
         assert.equal(output.check.next, null);
         assert.notEqual(output.routing.kind, 'next');
-        assert.equal(hint.repair_kind, 'external_action');
+        assert.equal(hint.repair_kind, repairKind);
         assert.match(hint.missing_fact, /Selected research-access adapter recorded/);
         assert.match(hint.write_to, /research-access-adapter\.md/);
         assert.match(hint.write_to, new RegExp(owner));
@@ -114,12 +118,30 @@ describe('HITL1 selected research-access adapter integration', () => {
     }
   });
 
-  it('keeps the production phase guidance on the adapter-owned Agent path', () => {
+  it('keeps controller content out of the selected adapter contract', () => {
     const phase = readFileSync(PHASE, 'utf8');
+    const adapter = readFileSync(ADAPTER, 'utf8');
 
     assert.match(phase, /research-access-adapter\.md/);
-    assert.match(phase, /surface_absent:/);
-    assert.match(phase, /permission_required:/);
-    assert.match(phase, /不要求用户运行 `curl` 或手改 profile/);
+    assert.match(phase, /shared-hitl1-research-access-envelope\.md/);
+    assert.match(phase, /不要求用户重复回答 HITL1 choices、运行 `curl` 或手改 profile/);
+    for (const forbidden of [
+      /unavailable_roots/,
+      /source_class_reachability/,
+      /encyclopedia/,
+      /code_host/,
+      /general_web/,
+      /Internet protocol suite/,
+      /Hello World/,
+      /access_boundary/,
+      /first-success/i,
+      /return map/i,
+      /curl --fail/,
+    ]) {
+      assert.doesNotMatch(adapter, forbidden);
+    }
+    assert.match(adapter, /deepseek_anthropic_compatible/);
+    assert.match(adapter, /WebSearch/);
+    assert.match(adapter, /WebFetch/);
   });
 });

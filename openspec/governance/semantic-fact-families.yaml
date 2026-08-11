@@ -2,6 +2,10 @@ schema_version: semantic-fact-families/v1
 families:
   - id: research.scope-and-rerun-intent
     bounded_question: What are the current scope, canonical Topic, and rerun intent?
+  - id: research.host-access-envelope
+    bounded_question: >-
+      What research access does this run currently have, which boundary owns any
+      unreachable part, and is that boundary universal or class-scoped?
   - id: queue.demand-lifecycle
     bounded_question: What is the legal lifecycle of queue demand, terminal history, and replacement?
   - id: work-unit.attempt-identity-and-actor

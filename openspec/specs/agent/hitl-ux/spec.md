@@ -122,11 +122,25 @@ capability-check messages:
 
 > 联网检查没通过。多数是网络问题——请检查网络连接后重试；网络正常的话稍后再试也行。你刚才的选择不会丢。
 
+`brief/hitl1.md` SHALL additionally own one exact partial-reachability
+disclosure rendered only alongside the available result when the recorded
+observation reports one or more unreachable declared source classes:
+
+> 联网能力正常，不过有部分来源这次够不着（<不可达来源类别>），研究会继续，用够得着的来源做。
+
+The bracketed segment SHALL be filled from the recorded observation's unreachable
+declared source classes and nothing else. This disclosure is information transfer
+only: it SHALL NOT create a HITL checkpoint, ask the user for instructions, offer
+options, block advance, or become permission or capability. It SHALL NOT be
+rendered when every attempted declared source class was reachable.
+
 PRP-002 controls their timing. The Phase Agent renders the first notice before
 spawning the one isolated probe agent. It renders the second only after the
 Phase has recorded the returned `available` observation, and the third only
 after it has recorded `unavailable`; either result precedes the existing HITL1
-Gate. “开始准备研究” is an observation message, not a claim that the Gate has
+Gate. The partial-reachability disclosure accompanies the second message and
+does not replace it or move the Gate. “开始准备研究” is an observation message,
+not a claim that the Gate has
 passed or that silent execution has started. The unavailable message preserves
 the recorded decision and same probe/Gate recovery path, creates no new HITL
 checkpoint, and does not ask for the choices again.
@@ -135,6 +149,8 @@ These templates are framework Markdown only. They SHALL NOT promise to hide,
 suppress, replace, or reinterpret selected-host-native tool calls, policy
 failures, transport/security errors, or permitted fallback output. They SHALL
 not promise a duration, host permission, provider success, or automatic retry.
+The partial-reachability disclosure SHALL NOT promise that an unreachable class
+will become reachable, that coverage is complete, or that the user can restore it.
 
 #### Scenario: Recorded decision is followed by an explained non-decision check
 
@@ -148,6 +164,23 @@ not promise a duration, host permission, provider success, or automatic retry.
 - **WHEN** the Phase Agent records returned `research_access.status: available`
 - **THEN** it SHALL present the exact second message before the existing HITL1 Gate
 - **AND** it SHALL not announce silent autonomous execution until that Gate passes
+
+#### Scenario: Partial reachability is disclosed without a decision point
+
+- **WHEN** the recorded available observation reports one or more unreachable
+  declared source classes
+- **THEN** the Agent SHALL present the exact partial-reachability disclosure naming
+  only those recorded unreachable classes and continue to the existing Gate
+- **AND** it SHALL not offer options, request instructions, add a checkpoint, or
+  pause the run
+
+#### Scenario: Full reachability renders no disclosure
+
+- **WHEN** the recorded available observation reports no unreachable declared
+  source class
+- **THEN** the Agent SHALL present only the exact second message
+- **AND** it SHALL not render the partial-reachability disclosure with an empty or
+  invented class list
 
 #### Scenario: Unavailable access does not reopen HITL1 semantics
 

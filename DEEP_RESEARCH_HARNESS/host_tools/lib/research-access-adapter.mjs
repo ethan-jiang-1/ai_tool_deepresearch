@@ -22,15 +22,25 @@ export const SELECTED_RESEARCH_ACCESS_ADAPTER = Object.freeze({
 });
 
 const UNAVAILABLE_FACTS = Object.freeze({
-  surface_absent: Object.freeze({
-    root: 'surface_absent',
+  host_surface: Object.freeze({
     owner: 'selected Claude CLI host runtime',
+    actor: 'external',
     repair: 'Restore a callable selected WebSearch/WebFetch surface, then let the Agent rerun the same bounded probe and Gate.',
   }),
-  permission_required: Object.freeze({
-    root: 'permission_required',
+  host_policy: Object.freeze({
     owner: 'selected Claude CLI host policy',
+    actor: 'external',
     repair: 'Resolve the selected host permission boundary, then let the Agent rerun the same bounded probe and Gate.',
+  }),
+  network_path: Object.freeze({
+    owner: 'network environment',
+    actor: 'external',
+    repair: 'Resolve the recorded network-path boundary, then let the Agent rerun the same bounded probe and Gate.',
+  }),
+  probe_relay: Object.freeze({
+    owner: 'Agent',
+    actor: 'agent',
+    repair: 'Rerun the same bounded probe through the Phase Agent, record its direct result, and rerun the same Gate.',
   }),
 });
 
@@ -119,12 +129,14 @@ export function validateSelectedAdapterSameUrlBinding({ candidateUrl, fetchTarge
   return { same_url_bound: true, code: null, provider_availability_proven: false };
 }
 
-export function selectedAdapterUnavailableFact(root) {
-  return UNAVAILABLE_FACTS[root] ?? null;
-}
-
-export function selectedAdapterUnavailableRoot(reason) {
-  if (typeof reason !== 'string') return null;
-  const prefix = reason.split(':', 1)[0].trim();
-  return selectedAdapterUnavailableFact(prefix) ? prefix : null;
+export function selectedAdapterBoundaryFact(location) {
+  const fact = UNAVAILABLE_FACTS[location];
+  if (!fact) return null;
+  return {
+    location,
+    owner: fact.owner,
+    actor: fact.actor,
+    repair_kind: fact.actor === 'agent' ? 'agent_action' : 'external_action',
+    repair: fact.repair,
+  };
 }

@@ -53,7 +53,8 @@ suggested_context:
   - `available`：`probed_at`、HTTP(S) `result_url`、`fetch_outcome: success`，可选 `search_surface` / `fetch_surface`
   - `unavailable`：`probed_at`、`fetch_outcome: failed|blocked|not_attempted`、非空 `reason`，可选 `result_url` / surface fields
 - **authority**：只记录直接 probe observation，不是研究 evidence，也不证明未来 invocation 永远可用
-- **selected adapter roots**：当前 HITL1 adapter 由 `DEEP_RESEARCH_HARNESS/host_tools/research-access-adapter.md` 声明。该 adapter 无 callable native surface 时，`reason` 以 `surface_absent:` 开头；selected host policy 拒绝时，`reason` 以 `permission_required:` 开头。它们仍是现有 `reason` 的直接 observation，不是新 field、provider selection、permission grant 或 Gate authority。
+- **access envelope**：`available` 与 `unavailable` 可带静态受限的 `source_class_reachability` entries；每个 declared source class 至多一条闭合 reachability 值，不记录 query、URL/attempt history、HTTP status 或 response。当前 writer 由独立 controller 输出完整 declared ladder；旧 profile 可省略该 optional field。
+- **access boundary**：optional `access_boundary` 是完整的 `{ location, extent }` pair，不从 `reason` prose 或前缀推断。`unavailable` 的 classified pair 为 `universal`；available 的 partial-reachability pair 为 `class_scoped`。整个 pair 缺失是合法的 explicitly unclassified observation，不默认任何 owner。
 
 ### `research_style_params`
 

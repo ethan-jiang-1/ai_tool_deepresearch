@@ -63,6 +63,14 @@ authority: exact-text
 
 <!-- TEMPLATE END -->
 
+### 部分来源不可达
+
+<!-- TEMPLATE START -->
+
+联网能力正常，不过有部分来源这次够不着（<不可达来源类别>），研究会继续，用够得着的来源做。
+
+<!-- TEMPLATE END -->
+
 ### 访问不可用
 
 <!-- TEMPLATE START -->

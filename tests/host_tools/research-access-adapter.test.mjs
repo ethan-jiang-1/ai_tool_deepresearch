@@ -7,8 +7,7 @@ import {
   buildSelectedResearchAccessAdapterInvocation,
   callerSuppliedPermissionBypass,
   readSelectedResearchAccessAdapterContract,
-  selectedAdapterUnavailableFact,
-  selectedAdapterUnavailableRoot,
+  selectedAdapterBoundaryFact,
   validateSelectedAdapterSameUrlBinding,
 } from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/research-access-adapter.mjs';
 
@@ -52,14 +51,25 @@ describe('selected research-access adapter', () => {
     });
   });
 
-  it('normalizes only the selected adapter unavailable roots', () => {
-    assert.equal(selectedAdapterUnavailableRoot('permission_required: WebSearch is denied by host policy.'), 'permission_required');
-    assert.deepEqual(selectedAdapterUnavailableFact('permission_required'), {
-      root: 'permission_required',
-      owner: 'selected Claude CLI host policy',
-      repair: 'Resolve the selected host permission boundary, then let the Agent rerun the same bounded probe and Gate.',
-    });
-    assert.equal(selectedAdapterUnavailableRoot('network_error: temporary upstream failure'), null);
+  it('maps each boundary location to one owner and derives repair kind without reason prose', () => {
+    const expected = new Map([
+      ['host_surface', ['selected Claude CLI host runtime', 'external', 'external_action']],
+      ['host_policy', ['selected Claude CLI host policy', 'external', 'external_action']],
+      ['network_path', ['network environment', 'external', 'external_action']],
+      ['probe_relay', ['Agent', 'agent', 'agent_action']],
+    ]);
+
+    for (const [location, [owner, actor, repairKind]] of expected) {
+      const fact = selectedAdapterBoundaryFact(location);
+      assert.equal(fact.location, location);
+      assert.equal(fact.owner, owner);
+      assert.equal(fact.actor, actor);
+      assert.equal(fact.repair_kind, repairKind);
+      assert.ok(fact.repair.includes('same bounded probe'));
+    }
+
+    assert.equal(selectedAdapterBoundaryFact('permission_required'), null);
+    assert.equal(selectedAdapterBoundaryFact('network_error: temporary upstream failure'), null);
   });
 
   it('rejects caller-supplied permission bypass options for the selected invocation', () => {

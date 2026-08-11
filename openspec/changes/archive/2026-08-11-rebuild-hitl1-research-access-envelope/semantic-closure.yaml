@@ -1,11 +1,7 @@
 schema_version: semantic-closure/v1
 change: rebuild-hitl1-research-access-envelope
 status: affected
-catalog_additions:
-  - id: research.host-access-envelope
-    bounded_question: >-
-      What research access does this run currently have, which boundary owns any
-      unreachable part, and is that boundary universal or class-scoped?
+catalog_additions: []
 affected:
   - family: research.host-access-envelope
     fact: >-

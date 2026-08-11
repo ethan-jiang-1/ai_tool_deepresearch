@@ -1,25 +1,26 @@
 # RUN.md — DEEP_RESEARCH_HARNESS 入口
 
-> **DEEP_RESEARCH_HARNESS v0.84**
+> **DEEP_RESEARCH_HARNESS v0.85**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DEEP_RESEARCH_HARNESS 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.84
+## Current Release: v0.85
 
 - After HITL1 records the user's decision and completes any required style
-  handoff, the Phase Agent renders the bounded connectivity notice and spawns
-  one isolated research-access probe agent. The Phase never directly searches
-  or fetches: it remains the sole `rb_profile.yaml#/research_access` writer,
-  renders the returned status result, and reruns the existing
-  `hitl1-recorded` Gate.
-- The isolated probe receives no bundle path or filesystem/profile/Gate,
-  work-unit, receipt, ledger, or research-evidence authority. Its one fixed
-  neutral search and native-first/same-URL fetch sequence return only the
-  existing compact observation. This is an Agent-facing boundary, not a
-  provider-availability promise or Engine verification of external calls.
+  handoff, the Phase Agent actor-delivers one independent research-access-envelope
+  controller with selected-host operation facts to one isolated probe. The Phase
+  never directly searches or fetches: it remains the sole
+  `rb_profile.yaml#/research_access` writer, renders the returned status result,
+  and reruns the existing `hitl1-recorded` Gate.
+- `research_access` is a statically bounded source-class envelope. A reachable
+  class admits the existing Gate path; unreachable classes in an available
+  observation are disclosed without a second HITL decision. Classified unavailable
+  boundaries use a closed location/extent pair; an absent pair is explicitly
+  unclassified and never inferred from reason prose. This remains bounded guidance
+  and validation, not a provider-availability or coverage guarantee.
 
 - `rb_profile.yaml` now owns the schema-validated
   `delegated_concurrency_cap` policy input (default `12`, range `1..20`) for
@@ -98,16 +99,13 @@
 - New run bundles begin with `BUNDLE_ENTRY.md`. Existing bundles continue
   through `BUNDLE_ENTRY.md`, legacy `RUN_BUNDLE.md`, then `BUNDLE_MAP.md`.
 
-- HITL1 now explains its existing bounded research-access probe before it runs,
-  uses the fixed neutral query `site:wikipedia.org "Internet protocol suite"`,
-  and presents an exact Chinese available/unavailable result after the direct
-  `research_access` observation.
-- That result is not a Gate verdict: silent autonomous execution is announced
-  only after the existing HITL1 Gate passes. Unavailable access preserves the
-  recorded choice and follows the same external-boundary/probe/Gate path.
+- HITL1 presents its exact availability result only after the direct
+  `research_access` observation. Partial reachability adds an available-only
+  disclosure and no new decision point; silent autonomous execution is still
+  announced only after the existing HITL1 Gate passes.
 - This is Harness Markdown communication only. It does not suppress or prove
-  selected-host-native tool/error rendering or real Agent behavior; the focused
-  static integration test proves only the text and ordering contract.
+  selected-host-native tool/error rendering or real Agent behavior; deterministic
+  checks cover the declared profile, feedback, and static-guidance contracts only.
 
 - A rejected Wave projection now reports the exact `source_identity.kind` JSON
   Pointer, raw schema discriminator vocabulary, and the one value legal for
@@ -157,15 +155,11 @@
   documentation-only release edit does not invalidate a qualified result while relevant helper
   drift remains explicit.
 
-- HITL1 now uses one selected Claude CLI / `deepseek_anthropic_compatible`
-  research-access adapter. One isolated probe agent owns the bounded native
-  `WebSearch` -> returned URL -> same-URL `WebFetch` sequence; the Phase Agent
-  owns the single spawn, existing profile write, and same-Gate rerun. The generic
-  host bridge remains non-bypass and does not act as a research controller.
-- `surface_absent:` and `permission_required:` are existing unavailable profile
-  observations whose Gate feedback names the selected external host boundary, then
-  returns to the same probe and Gate. A configured launcher or deterministic fixture
-  is not proof that provider access is available.
+- HITL1 uses one selected Claude CLI / `deepseek_anthropic_compatible`
+  research-access adapter. The adapter declares only selected-host operations; the
+  separate controller owns the isolated probe's bounded sequence. The Phase owns the
+  single spawn, profile write, and same-Gate rerun. A configured launcher or
+  deterministic fixture is not proof that provider access is available.
 
 - Work-unit inspect and submit preflight now expose one derived attempt disposition from the exact logical actor, work/queue IDs, receipt nonce, assigned result/receipt coordinates, transaction fact, and ledger-first coverage relation. The binding guides Agent Flow; it does not authenticate a physical writer or prove host/sub-agent liveness.
 

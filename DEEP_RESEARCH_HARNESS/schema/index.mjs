@@ -10,6 +10,10 @@ export {
   AnswerabilityClass,
   HITL2UserDecision,
   FinalReportView,
+  SourceClass,
+  SourceClassReachability,
+  ResearchAccessBoundaryLocation,
+  ResearchAccessBoundaryExtent,
 } from './enums.mjs';
 
 export { StatusSchema } from './contracts/status.mjs';

@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.85
+
+- HITL1 research access is now recorded as a statically bounded source-class
+  envelope. A schema-valid available observation requires at least one reachable
+  declared class; partial reachability remains available and is disclosed without a
+  second HITL decision. Legacy observations without the optional envelope or boundary
+  remain readable.
+- The isolated probe receives a separate actor-delivered research-access-envelope
+  controller. The selected adapter retains only host/launcher/operation facts, while
+  structured boundary location and extent replace reason-prefix routing. The Gate
+  keeps its existing status admission rule, surfaces classified owners directly, and
+  reports an absent boundary as explicitly unclassified.
+- This release makes no provider-availability or coverage guarantee. The controller,
+  adapter, and deterministic tests define only bounded guidance and validation.
+
 ## v0.84
 
 - HITL1 now sends its bounded research-access search/fetch sequence to one

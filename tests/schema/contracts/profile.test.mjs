@@ -3,6 +3,12 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ProfileSchema } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/profile.mjs';
 
+const sourceClassReachability = [
+  { source_class: 'encyclopedia', reachability: 'unreachable' },
+  { source_class: 'code_host', reachability: 'reachable' },
+  { source_class: 'general_web', reachability: 'not_attempted' },
+];
+
 const valid = {
   plan_basename: 'test',
   research_profile: 'quick_factual',
@@ -242,6 +248,104 @@ describe('ProfileSchema', () => {
       },
       { status: 'unprobed', eligible_candidate_count: 1, final_candidate_ordinal: 1 },
     ];
+    for (const research_access of invalid) {
+      assert.equal(ProfileSchema.safeParse({ ...valid, research_access }).success, false, JSON.stringify(research_access));
+    }
+  });
+
+  it('accepts a statically bounded partial-reachability envelope', () => {
+    const result = ProfileSchema.safeParse({
+      ...valid,
+      research_access: {
+        status: 'available',
+        probed_at: '2026-08-11T00:00:00.000Z',
+        result_url: 'https://example.com/returned',
+        fetch_outcome: 'success',
+        source_class_reachability: sourceClassReachability,
+        access_boundary: { location: 'network_path', extent: 'class_scoped' },
+      },
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('accepts an unavailable universal boundary without defaulting unclassified observations', () => {
+    const universal = ProfileSchema.safeParse({
+      ...valid,
+      research_access: {
+        status: 'unavailable',
+        probed_at: '2026-08-11T00:00:00.000Z',
+        fetch_outcome: 'not_attempted',
+        reason: 'The isolated probe could not start.',
+        source_class_reachability: sourceClassReachability.map((entry) => ({ ...entry, reachability: 'unreachable' })),
+        access_boundary: { location: 'probe_relay', extent: 'universal' },
+      },
+    });
+    const unclassified = ProfileSchema.safeParse({
+      ...valid,
+      research_access: {
+        status: 'unavailable',
+        probed_at: '2026-08-11T00:00:00.000Z',
+        fetch_outcome: 'failed',
+        reason: 'Different attempted classes exposed unrelated failures.',
+        source_class_reachability: sourceClassReachability.map((entry) => ({ ...entry, reachability: 'unreachable' })),
+      },
+    });
+
+    assert.equal(universal.success, true);
+    assert.equal(unclassified.success, true);
+    assert.equal(unclassified.data.research_access.access_boundary, undefined);
+  });
+
+  it('rejects malformed source-class envelopes and boundary combinations', () => {
+    const available = {
+      status: 'available',
+      probed_at: '2026-08-11T00:00:00.000Z',
+      result_url: 'https://example.com/returned',
+      fetch_outcome: 'success',
+    };
+    const unavailable = {
+      status: 'unavailable',
+      probed_at: '2026-08-11T00:00:00.000Z',
+      fetch_outcome: 'failed',
+      reason: 'No declared class was reachable.',
+    };
+    const invalid = [
+      { ...available, source_class_reachability: [{ source_class: 'encyclopedia', reachability: 'unreachable' }] },
+      { ...unavailable, source_class_reachability: sourceClassReachability },
+      {
+        ...available,
+        source_class_reachability: [
+          ...sourceClassReachability,
+          { source_class: 'encyclopedia', reachability: 'reachable' },
+        ],
+      },
+      { ...available, source_class_reachability: [{ source_class: 'unknown', reachability: 'reachable' }] },
+      {
+        ...available,
+        source_class_reachability: sourceClassReachability,
+        access_boundary: { location: 'network_path', extent: 'universal' },
+      },
+      {
+        ...available,
+        source_class_reachability: [{ source_class: 'code_host', reachability: 'reachable' }],
+        access_boundary: { location: 'network_path', extent: 'class_scoped' },
+      },
+      {
+        ...unavailable,
+        source_class_reachability: sourceClassReachability.map((entry) => ({ ...entry, reachability: 'unreachable' })),
+        access_boundary: { location: 'network_path', extent: 'class_scoped' },
+      },
+      {
+        status: 'unprobed',
+        source_class_reachability: [{ source_class: 'encyclopedia', reachability: 'not_attempted' }],
+      },
+      {
+        status: 'unprobed',
+        access_boundary: { location: 'probe_relay', extent: 'universal' },
+      },
+    ];
+
     for (const research_access of invalid) {
       assert.equal(ProfileSchema.safeParse({ ...valid, research_access }).success, false, JSON.stringify(research_access));
     }
