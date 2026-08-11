@@ -26,6 +26,8 @@
 | [`BUG-215`](BUG-215-hitl1-probe-unavailable-reason-prefix-classification-lost.md) | P2 | hitl1 | HITL1 probe 持续 unavailable：reason 前缀词汇未强制使 gate 根因分类静默失效，host 能搜不能抓时 run 卡死无前进路径 |
 | [`BUG-216`](BUG-216-context-final-vocabulary-terms-missing.md) | P2 | cross | `CONTEXT.md` 缺少 `Final key-finding declaration` / `Final Evidence Map` / `Final backing` 加粗术语，`artifact-persistence-contract` 测试失败（HEAD 前即存在） |
 | [`BUG-217`](BUG-217-bounded-top-up-vocabulary-missing.md) | P2 | wave0/1 | `shared-subagent-protocol.md` / `phase-wave0.md` / `phase-wave1.md` 缺少 `bounded top-up` 措辞，`parallel-delegated` 测试失败（HEAD 前即存在） |
+| [`BUG-218`](BUG-218-wave-projection-schema-finding-source-identity-mismatch.md) | P2 | wave2 | `operate-topic-state schema --context wave_projection` 对 `kind: finding` 只暴露 `work_id`，validator 却要求 `finding_id`——按 schema 构造必然 input_invalid |
+| [`BUG-219`](BUG-219-reference-format-validator-no-html-pollution-check.md) | P2 | wave1 | `checkReferenceFormatFiles` 不检测 Key Facts 的原始 HTML 污染，物化脚本从 `page.md` 截句会产出肉眼不可读 reference 且 wave1/wave2 gate 通过 |
 
 ## 新增 (2026-08-08)
 
