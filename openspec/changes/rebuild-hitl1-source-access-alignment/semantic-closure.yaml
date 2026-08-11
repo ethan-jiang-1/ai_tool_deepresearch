@@ -1,0 +1,77 @@
+schema_version: semantic-closure/v1
+change: rebuild-hitl1-source-access-alignment
+status: affected
+catalog_additions: []
+affected:
+  - family: research.host-access-envelope
+    fact: >-
+      What the current run's latest bounded direct-page observation says about the
+      fixed China and overseas public samples: every sample's compact terminal
+      outcome, whether any non-diagnostic core sample returned real content, and
+      the current observation time. A fresh user-requested round replaces the
+      observation rather than forming history. The Phase Agent uses this direct fact
+      with separately owned user research semantics to decide materiality; this fact
+      neither contains an accepted scope nor turns an unavailable sample into
+      available access or a future-access claim.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/schema/contracts/profile.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl1.md
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/schema/enums.mjs
+        relation: authoritative
+        detail: >-
+          Closed source-group, sample-ID, terminal-outcome, and semantic retrieval
+          surface vocabulary prevent a dynamic per-attempt or provider-specific
+          matrix. The enums neither infer source relevance nor grant a host action.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-hitl1-research-access-envelope.md
+        relation: derived
+        detail: >-
+          The isolated controller provides one bounded, executor-neutral direct
+          retrieval experiment: fixed samples, small-batch concurrency, timeout and
+          confirmation rules, and a compact return map. It is not a bundle record,
+          a provider selector, a permission grant, evidence, or a Gate authority.
+          Its static URLs and execution bounds never persist as URL/content/history
+          data in the runtime profile.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-hitl1-capability-probe.md
+        relation: derived
+        detail: >-
+          The generic probe guide supplies only isolation and safety constraints. It
+          actor-delivers no sample, timeout, retry, classification, or return-map
+          logic and does not persist or consume the runtime fact.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/brief/hitl1.md
+        relation: derived
+        detail: >-
+          HITL1 renders the Phase-established observation and, only after the
+          Agent's semantic relevance judgment, presents the smallest user decision
+          boundary. The brief does not classify access, authorise tools, or decide
+          Gate admission.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-profile.md
+        relation: derived
+        detail: >-
+          Profile guidance explains the direct snapshot and legacy readability. It
+          is an Agent-facing projection, not a writer, validator, or provider fact.
+      - coordinate: DEEP_RESEARCH_HARNESS/host_tools/research-access-adapter.md
+        relation: derived
+        detail: >-
+          The retained Claude launcher/canary contract is executor-scoped only. It
+          does not select a production direct retrieval operation or generalize one
+          executor's tools to another.
+      - coordinate: DEEP_RESEARCH_HARNESS/host_tools/lib/research-access-adapter.mjs
+        relation: derived
+        detail: >-
+          The resolver retains only validated legacy boundary-owner projection. It
+          does not infer a current sample outcome, relevance, network state, or
+          provider choice.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl1.md
+        relation: derived
+        detail: >-
+          The Phase is the only profile writer and semantic relevance judge. It
+          initiates a new round only after the user's new request and finalizes a
+          clear access-scope decision in existing controls without verifying or
+          retaining a network adjustment.
+    verification:
+      truth_table: tests/schema/contracts/profile.test.mjs
+      cross_surface: tests/integration/cli/check-gate-hitl1-recorded.test.mjs

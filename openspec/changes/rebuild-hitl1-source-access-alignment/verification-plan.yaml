@@ -1,0 +1,148 @@
+schema_version: verification-routing/v1
+change: rebuild-hitl1-source-access-alignment
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Closed direct-sample vocabulary, exact sample/group membership, content-only
+      surface recording, current status invariants, and legacy branch readability
+      are pure ProfileSchema and resolver truth tables.
+  integration:
+    status: selected
+    rationale: >-
+      The HITL1 Gate, static controller/Phase/brief boundaries, control-snapshot
+      amendment, and existing Claude canary adapter projection need cross-file
+      deterministic checks without real network calls.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      Temporary bundles prove that a completed available or unavailable final
+      observation follows the retained Gate path only after the Phase-level user
+      resolution, while unprobed access stays blocked and no probe material leaks.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      Case 115 is refocused as an executor-scoped real isolated-probe canary. It
+      can only prove its retained current executor/network run, may end NOT_RUN or
+      unavailable honestly, and makes no cross-executor availability claim.
+claims:
+  - id: direct-sample-observation-shape
+    statement: >-
+      ProfileSchema accepts exactly one final compact result for each fixed China
+      and overseas sample, accepts only closed terminal outcomes and content-only
+      retrieval surfaces, derives available/unavailable only from non-diagnostic
+      core content, distinguishes a complete whole-probe no-request observation from
+      individual round-budget expiry, rejects dynamic/provider-specific probe
+      material, and retains legacy search-derived observations without mixing
+      formats.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/contracts/profile.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: legacy-boundary-projection-remains-bounded
+    statement: >-
+      The access-boundary resolver continues to project only a schema-validated
+      legacy boundary owner and never infers a current direct-sample diagnosis,
+      provider, source relevance, or tool permission from prose or sample data.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/host_tools/research-access-adapter.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: gate-requires-observation-not-access-score
+    statement: >-
+      The HITL1 Gate rejects absent or unprobed research access, accepts a completed
+      schema-valid final direct-sample observation without creating a China/overseas
+      threshold or Claude-specific feedback, and leaves source relevance and user
+      acceptance outside deterministic verdict logic.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-hitl1-recorded.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: execution-neutral-static-guidance
+    statement: >-
+      The controller alone declares the fixed direct sample suite, batch/timeout/
+      confirmation limits and compact return shape; production Phase, brief,
+      generic probe guide, and profile guidance neither name search/fetch provider
+      tools nor duplicate controller mechanics. The executor-scoped adapter/canary
+      may retain its own operation labels but cannot make them a production
+      prerequisite. The Chinese material-gap prompt preserves no-auto-retry,
+      no-network-change verification, and no-false-success boundaries. Existing
+      HITL1 controls retain a final literal accepted-access-scope or source-semantics
+      decision without parsing it as Engine state, copying raw probe data, appending
+      interim retries, or weakening a hard source constraint.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/phase-hitl1-research-access.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: final-observation-gate-loop
+    statement: >-
+      Fixture-backed temporary bundles retain a completed current available or
+      unavailable observation across the existing HITL1 Gate path, retain recorded
+      controls and choices, reject unprobed access, and gain no evidence/cache/
+      receipt/ledger/coverage data from Gate evaluation. This does not claim the
+      Phase Agent ran or that either group is currently reachable.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/hitl1-research-access-adapter.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: executor-scoped-direct-probe-canary
+    statement: >-
+      A retained case-115 real isolated-probe run, when its current executor can
+      lawfully run, observes controller-declared direct sample retrieval and one
+      compact final observation without a production search prerequisite, bundle
+      mutation, or Gate impersonation. Its observer may use only that canary's
+      retained executor-specific operation metadata. PASS proves only that observed
+      executor/network run; NOT_RUN and honest unavailable remain legal
+      non-generalizing outcomes.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wff_pre-research-repair/case-115-heavy-hitl1-research-access-probe.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
