@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.88
+
+- `operate-topic-state schema --context wave_projection` now includes one
+  conditional source-identity form for each legal Wave/kind pair. Each form
+  exposes its condition, branch fields, and a packet template accepted by the
+  existing top-level schema; it does not add a validator or authorize apply.
+- Required reference sections now reject a bounded set of raw document-markup
+  signatures outside fenced code through the existing `reference_format`
+  feedback route. The rule does not score research quality, sanitize content,
+  rewrite evidence/reference bytes, or add a Gate route.
+
 ## v0.87
 
 - HITL1 now presents a bounded Chinese research-alignment draft before canonical

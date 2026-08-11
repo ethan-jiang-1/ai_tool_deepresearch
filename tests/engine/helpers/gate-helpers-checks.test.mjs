@@ -313,6 +313,75 @@ describe('reference file gate helpers', () => {
     }
   });
 
+  it('rejects bounded raw document markup without rewriting reference content', () => {
+    const dir = join(__dirname, '.test-gh-ref-document-markup');
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    const signatures = {
+      doctype: '<!DOCTYPE html>',
+      html_open: '<html lang="en">',
+      html_close: '</html>',
+      head: '<head>',
+      body: '<body class="page">',
+      script: '<script src="app.js">',
+      style: '</style>',
+      iframe: '<iframe src="https://example.com/embed">',
+    };
+    try {
+      for (const [name, signature] of Object.entries(signatures)) {
+        const fileName = `topic-a-${name}.md`;
+        const path = join(dir, 'reference', fileName);
+        const content = canonicalReferenceFrontmatter({
+          sourceUrl: `https://example.com/document/${name}`,
+          coreContent: `Interpreted fact placeholder.\n${signature}`,
+        });
+        writeFileSync(path, content);
+
+        const result = checkReferenceFormatFiles([{ relPath: `reference/${fileName}`, absPath: path }]);
+        const markupFindings = result.findings.filter((finding) => finding.id.endsWith(':document_markup'));
+        assert.equal(result.passed, false, name);
+        assert.equal(markupFindings.length, 1, `${name}: ${result.inspect.join('\n')}`);
+        assert.equal(markupFindings[0].rule_id, 'reference_format');
+        assert.equal(markupFindings[0].surface, path);
+        assert.equal(markupFindings[0].write_to, `${path}#section:Core Content Capture`);
+        assert.equal(readFileSync(path, 'utf8'), content, `${name} must not rewrite source bytes`);
+      }
+
+      for (const [name, content] of Object.entries({
+        backtick_fence: canonicalReferenceFrontmatter({
+          coreContent: 'Interpreted fact.\n```html\n<html><body>literal example</body></html>\n```',
+        }),
+        tilde_fence: canonicalReferenceFrontmatter({
+          coreContent: 'Interpreted fact.\n~~~html\n<script>literal example</script>\n~~~',
+        }),
+        ordinary_inline_html: canonicalReferenceFrontmatter({
+          coreContent: 'A <span class="term">bounded inline presentation</span> remains ordinary Markdown.',
+        }),
+        near_tag_name: canonicalReferenceFrontmatter({
+          coreContent: 'The literal <htmlish> is not one of the named document tags.',
+        }),
+      })) {
+        const path = join(dir, 'reference', `topic-a-${name}.md`);
+        writeFileSync(path, content);
+        const result = checkReferenceFormatFiles([{ relPath: `reference/topic-a-${name}.md`, absPath: path }]);
+        assert.equal(result.passed, true, `${name}: ${result.inspect.join('\n')}`);
+        assert.equal(readFileSync(path, 'utf8'), content, `${name} must not rewrite source bytes`);
+      }
+
+      const missingPath = join(dir, 'reference', 'topic-a-missing-core.md');
+      const missingContent = canonicalReferenceFrontmatter({
+        coreContent: '',
+      }).replace('## Key Facts\nFact.', '## Key Facts\n<html>Copied document payload.</html>');
+      writeFileSync(missingPath, missingContent);
+      const missing = checkReferenceFormatFiles([{ relPath: 'reference/topic-a-missing-core.md', absPath: missingPath }]);
+      assert.equal(missing.findings.filter((finding) => finding.id.includes(':section:Core Content Capture')).length, 1);
+      assert.equal(missing.findings.some((finding) => finding.id.includes(':section:Core Content Capture:document_markup')), false);
+      assert.equal(missing.findings.filter((finding) => finding.id.endsWith(':document_markup')).length, 1);
+      assert.equal(readFileSync(missingPath, 'utf8'), missingContent, 'missing-section precedence must not rewrite source bytes');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('accepts homepage-looking source URLs when URL-parseable', () => {
     const dir = join(__dirname, '.test-gh-ref-parseable-url');
     mkdirSync(join(dir, 'reference'), { recursive: true });

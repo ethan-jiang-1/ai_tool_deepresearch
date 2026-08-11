@@ -531,6 +531,10 @@ function topicSchemaUnionOption(schema, state, pathParts) {
     const selected = options.find((option) => topicSchemaClosedValues(topicSchemaShape(option).action)?.includes(state.action));
     if (selected) return selected;
   }
+  if (topicSchemaType(schema) === TOPIC_SCHEMA_TYPES.ZodDiscriminatedUnion && schema._def.discriminator === 'kind' && state.sourceIdentityKind) {
+    const selected = options.find((option) => topicSchemaClosedValues(topicSchemaShape(option).kind)?.includes(state.sourceIdentityKind));
+    if (selected) return selected;
+  }
   return options[0];
 }
 
@@ -558,6 +562,7 @@ function topicSchemaExample(schema, state, pathParts = []) {
   if (type === TOPIC_SCHEMA_TYPES.ZodLiteral) return schema._def.value;
   if (type === TOPIC_SCHEMA_TYPES.ZodEnum) {
     if (topicSchemaPath(pathParts) === 'context') return state.context;
+    if (topicSchemaPath(pathParts) === 'wave' && state.wave) return state.wave;
     if (isFormActionPath(pathParts) && state.action) return state.action;
     return schema._def.values[Math.min(state.enumIndex, schema._def.values.length - 1)];
   }
@@ -567,11 +572,41 @@ function topicSchemaExample(schema, state, pathParts = []) {
   throw new Error(`unsupported topic-state schema node: ${type || 'unknown'}`);
 }
 
-function parseableTopicSchemaTemplate(branch, context, action) {
+function topicSchemaProjectionTemplateForWave(template, wave) {
+  if (!wave || template.context !== 'wave_projection' || template.action !== 'apply_seed_projection') return template;
+  const entry = template.updates?.[0]?.entries?.[0];
+  if (!entry) return template;
+  const slotIds = wave === 'wave2'
+    ? ['wave2_judgment']
+    : projectionSlotsForWave(wave).map((slot) => slot.slotId);
+  if (!slotIds.length) return template;
+  return {
+    ...template,
+    updates: slotIds.map((slotId, index) => ({
+      slot_id: slotId,
+      entries: [{
+        ...entry,
+        entry_id: entry.source_identity.kind === 'submitted_work'
+          ? `${entry.source_identity.work_id}/${index + 1}`
+          : entry.source_identity.finding_id,
+      }],
+    })),
+  };
+}
+
+function parseableTopicSchemaTemplate(branch, context, action, state = {}) {
   for (const includeOptional of [false, true]) {
     for (const enumIndex of [0, 1]) {
       for (const entryId of ['example', 'wu-w0-b001-a1-i0001/1', 'W2F-001']) {
-        const template = topicSchemaExample(branch, { context, action, includeOptional, enumIndex, entryId });
+        const generated = topicSchemaExample(branch, {
+          context,
+          action,
+          includeOptional,
+          enumIndex,
+          entryId,
+          ...state,
+        });
+        const template = topicSchemaProjectionTemplateForWave(generated, state.wave);
         if (TopicApplyPlanSchema.safeParse(template).success) return template;
       }
     }
@@ -620,6 +655,12 @@ function collectTopicSchemaFields(schema, state, fields, pathParts = [], require
   } else if (type === TOPIC_SCHEMA_TYPES.ZodArray) {
     collectTopicSchemaFields(schema._def.type, state, fields, [...pathParts, 0], required);
   } else if (type === TOPIC_SCHEMA_TYPES.ZodDiscriminatedUnion || type === TOPIC_SCHEMA_TYPES.ZodUnion) {
+    if (topicSchemaType(schema) === TOPIC_SCHEMA_TYPES.ZodDiscriminatedUnion
+      && schema._def.discriminator === 'kind'
+      && state.sourceIdentityKind) {
+      collectTopicSchemaFields(topicSchemaUnionOption(schema, state, pathParts), state, fields, pathParts, required);
+      return;
+    }
     if (topicSchemaType(schema) === TOPIC_SCHEMA_TYPES.ZodDiscriminatedUnion && schema._def.discriminator && schema._def.discriminator !== 'action') {
       // Aggregate every discriminator literal so the authoring view exposes all
       // source-identity forms instead of only the first option (CTS-010).
@@ -658,6 +699,25 @@ function topicSchemaForm(branch, context, action, index) {
     template,
   };
   if (action === 'apply_seed_projection') {
+    form.conditional_forms = [
+      ['wave0', 'submitted_work'],
+      ['wave1', 'submitted_work'],
+      ['wave2', 'finding'],
+    ].map(([wave, sourceIdentityKind]) => {
+      const state = { wave, sourceIdentityKind };
+      const conditionalTemplate = parseableTopicSchemaTemplate(branch, context, action, state);
+      if (!conditionalTemplate) throw new Error(`no parseable ${wave}/${sourceIdentityKind} topic-state schema form`);
+      const conditionalFields = [];
+      collectTopicSchemaFields(branch, { context, action, ...state }, conditionalFields);
+      const uniqueConditionalFields = [...new Map(conditionalFields.map((field) => [field.path, field])).values()];
+      return {
+        condition: { wave, source_identity_kind: sourceIdentityKind },
+        required_fields: uniqueConditionalFields.filter((field) => field.required).map((field) => field.path),
+        closed_values: Object.fromEntries(uniqueConditionalFields.filter((field) => field.allowed_values).map((field) => [field.path, field.allowed_values])),
+        value_shapes: Object.fromEntries(uniqueConditionalFields.map((field) => [field.path, field.shape])),
+        template: conditionalTemplate,
+      };
+    });
     form.wave_rules = {
       wave0: { source_identity_kind: ['submitted_work'], entry_id_rule: '<source work_id>/<positive ordinal>' },
       wave1: { source_identity_kind: ['submitted_work'], entry_id_rule: '<source work_id>/<positive ordinal>' },

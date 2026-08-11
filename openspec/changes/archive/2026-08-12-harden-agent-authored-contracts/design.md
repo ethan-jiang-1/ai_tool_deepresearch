@@ -27,8 +27,10 @@ Neither `schema` output nor extractor Markdown becomes a second authority.
   required reference section and expose the existing `reference_format` repair
   route with the exact reference/section coordinate.
 - Preserve projection purity, packet-validator singularity, inspect/Gate
-  routing, presentation tolerance, no-mutation inspection, and release
-  coherence at `v0.88`.
+  routing, presentation tolerance, side-effect-free inspection, and release
+  coherence at `v0.88`. The formal Gate may retain its existing accepted
+  gate-attempt/trace side effects; this change adds no reference repair
+  mutation, cleanup, or Gate route.
 
 **Non-Goals:**
 
@@ -44,11 +46,12 @@ Neither `schema` output nor extractor Markdown becomes a second authority.
 ### 1. Add Zod-derived conditional forms to the existing projection
 
 Keep the existing top-level form fields for compatibility. For
-`apply_seed_projection`, add a backward-compatible conditional-form collection
-whose entries identify the selected Wave and `source_identity.kind`, expose
-that branch's required paths/value shapes, and provide a complete illustrative
-packet template. The Wave2 entry must visibly contain
-`{ kind: "finding", finding_id: "W2F-001" }` and a matching `entry_id`.
+`apply_seed_projection`, add a backward-compatible `conditional_forms`
+collection. Each entry contains a `condition` with the selected `wave` and
+`source_identity_kind`, plus that branch's `required_fields`, `closed_values`,
+`value_shapes`, and a complete illustrative `template`. The Wave2 entry must
+visibly contain `{ kind: "finding", finding_id: "W2F-001" }` and a matching
+`entry_id`.
 
 The projection builder will inspect the existing discriminated-union branches
 rather than hand-maintaining a second field schema. It may use the current
@@ -75,8 +78,10 @@ parser, remove fenced-code spans for the purpose of this check only. Apply one
 case-insensitive, bounded signature matcher for `<!doctype` and `html`,
 `head`, `body`, `script`, `style`, or `iframe` tags. A match emits one existing
 `checkerFinding` with the current rule ID, reference relative path, and section
-repair coordinate; a section that is already missing remains its existing
-missing-section root rather than adding a dependent markup symptom.
+repair coordinate. The matcher recognizes opening or closing tags only at an
+exact tag-name boundary; it does not infer document markup from arbitrary angle
+brackets. A section that is already missing remains its existing missing-section
+root rather than adding a dependent markup symptom.
 
 The predicate belongs inside `checkReferenceFormatFiles`, so every existing
 Wave evaluator and inspect/Gate consumer receives the same outcome. It does
@@ -104,9 +109,11 @@ finding-authority checks.
 
 The reference helper unit test will cover a blocker for each bounded signature
 class, fenced-code exclusion, ordinary non-document inline presentation, exact
-path/section feedback, and no source mutation. A Wave1 or Wave2 inspect/Gate
-integration test will prove the same `reference_format` finding travels through
-the existing evaluator to Agent-facing feedback. Existing history fixtures stay
+path/section feedback, and no source mutation. A Wave1 inspect/Gate integration
+test will prove the same `reference_format` finding travels through the existing
+evaluator to Agent-facing feedback: inspect remains read-only, while the formal
+Gate may retain its existing gate-attempt/trace side effect. Neither path adds a
+reference repair mutation or a new format route. Existing history fixtures stay
 unmodified; a future inspection may report their actual format state.
 
 ### 4. Release behavior as v0.88 without a migration

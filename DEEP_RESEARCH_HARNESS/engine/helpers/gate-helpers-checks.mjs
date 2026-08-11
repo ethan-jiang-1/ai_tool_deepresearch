@@ -406,6 +406,33 @@ export const REQUIRED_REFERENCE_SECTIONS = [
   'Risks And Limitations',
 ];
 
+const RAW_DOCUMENT_MARKUP_SIGNATURE = /<!doctype\b|<\/?(?:html|head|body|script|style|iframe)(?=[\s/>])/i;
+
+function nonFencedMarkdown(content) {
+  const visible = [];
+  let fence = null;
+  for (const line of String(content || '').split(/\r?\n/)) {
+    if (!fence) {
+      const opening = line.match(/^[ \t]{0,3}(`{3,}|~{3,})/);
+      if (opening) {
+        fence = { marker: opening[1][0], length: opening[1].length };
+        visible.push('');
+        continue;
+      }
+      visible.push(line);
+      continue;
+    }
+    const closing = line.match(/^[ \t]{0,3}(`{3,}|~{3,})[ \t]*$/);
+    if (closing && closing[1][0] === fence.marker && closing[1].length >= fence.length) fence = null;
+    visible.push('');
+  }
+  return visible.join('\n');
+}
+
+function hasRawDocumentMarkup(content) {
+  return RAW_DOCUMENT_MARKUP_SIGNATURE.test(nonFencedMarkdown(content));
+}
+
 function metadataValueToString(value) {
   if (value === null || value === undefined) return '';
   if (Array.isArray(value)) return value.map(metadataValueToString).filter(Boolean).join('; ');
@@ -601,7 +628,8 @@ export function checkReferenceFormatFiles(files, { rule = null, bundlePath = nul
     }
     }
     for (const section of REQUIRED_REFERENCE_SECTIONS) {
-      if (!extractSection(content, section)) {
+      const sectionContent = extractSection(content, section);
+      if (!sectionContent) {
         const detail = `Missing or empty section "## ${section}" in ${file.relPath}`;
         inspect.push(detail);
         findings.push(checkerFinding(rule, {
@@ -615,6 +643,22 @@ export function checkReferenceFormatFiles(files, { rule = null, bundlePath = nul
           repairKind: 'agent_action',
           writeTo: `${file.absPath}#section:${section}`,
           repair: `Add non-empty semantic section '${section}' to ${file.relPath}.`,
+          detail,
+        }));
+      } else if (hasRawDocumentMarkup(sectionContent)) {
+        const detail = `Raw document markup in section "${section}" in ${file.relPath}`;
+        inspect.push(detail);
+        findings.push(checkerFinding(rule, {
+          defaultRuleId: 'reference_format',
+          id: `${rule?.id || 'reference_format'}:${file.relPath}:section:${section}:document_markup`,
+          blockingBasis: 'required_structure',
+          surface: file.absPath,
+          expected: `Interpreted Markdown facts without raw document-markup signatures in semantic section '${section}'.`,
+          observed: 'raw document-markup signature',
+          missingFact: `${file.relPath} section '${section}' contains copied raw document markup.`,
+          repairKind: 'agent_action',
+          writeTo: `${file.absPath}#section:${section}`,
+          repair: `Replace copied document markup in ${file.relPath} section '${section}' with interpreted Markdown facts, then rerun this checkpoint.`,
           detail,
         }));
       }

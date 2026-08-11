@@ -16,7 +16,7 @@ affected:
     established_by:
       - DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs
     consumers:
-      - DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs#applyCanonicalTopicState
     overlap:
       - coordinate: openspec/specs/research/canonical-topic-state/spec.md
         relation: authoritative

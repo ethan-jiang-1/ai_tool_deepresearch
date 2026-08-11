@@ -210,7 +210,9 @@ Rules:
 - All five semantic sections are required and non-empty. Use the canonical headings when convenient; heading case, level, spacing, order, and list presentation may vary without changing the contract.
 - `source_url` must be present, URL-parseable, and recoverable through submitted cache/source trails.
 - `Key Facts` must contain concrete facts from the fetched page, while `Core Content Capture` must separately preserve a non-empty narrative capture; no fixed fact count is required.
+- Interpret fetched page content into Markdown facts and narrative. Do not copy raw document markup (`<!doctype` or `html`, `head`, `body`, `script`, `style`, or `iframe` tags) into a required semantic-section body; when literal syntax itself must be discussed, keep it in fenced code and still provide the interpreted facts.
 - If a check reports `reference_metadata_frontmatter_invalid`, repair the opening YAML mapping; if it names a required metadata field, repair that field in the valid mapping and rerun the same checkpoint.
+- This guidance does not decide reference-format acceptance; use the existing checkpoint feedback as the format verdict.
 
 **Output serialization:** All structured output files MUST be written via standard library serialization, never hand-concatenated:
 

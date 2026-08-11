@@ -142,7 +142,23 @@ roots.
    - `## Quotable Terms / Concepts`（可用于最终报告的引述或概念）
    - `## Risks And Limitations`（诚实声明：此 source 不能支持什么）
 
-The five semantic sections SHALL remain required and non-empty, but the shared parser SHALL identify them tolerantly across harmless heading case, heading level, surrounding spacing, and section order differences. Exact `##` level, a fixed section order, a fixed prose character count, and a fixed number of `Key Facts` bullets SHALL NOT be blocking authority. `Key Facts` count or prose-richness feedback MAY remain advisory; `Core Content Capture` SHALL remain a distinct narrative semantic section rather than being inferred from the Key Facts list.
+The five semantic sections SHALL remain required and non-empty. In the
+fenced-code-excluded body of each required section, the shared reference-format
+evaluator SHALL reject a raw document-markup signature: `<!doctype` or an
+opening or closing `html`, `head`, `body`, `script`, `style`, or `iframe` tag,
+case-insensitively. This is a bounded structural format rule for copied
+document payloads, not an HTML sanitizer or research-quality judgment. It
+SHALL ignore the same literal inside fenced code and SHALL continue to tolerate
+harmless heading case, heading level, surrounding spacing, section order,
+prose length, Key Facts bullet count, and ordinary Markdown or non-document
+inline HTML presentation. A contaminated section SHALL report one
+`reference_format` root that names the reference coordinate and section and
+directs the Agent to replace the copied document markup with interpreted
+Markdown facts before rerunning the same checkpoint. The evaluator SHALL not
+automatically strip, rewrite, or migrate existing reference/cache/evidence
+bytes. `Key Facts` count or prose-richness feedback MAY remain advisory; `Core
+Content Capture` SHALL remain a distinct narrative semantic section rather than
+being inferred from the Key Facts list.
 
 #### Scenario: Reference file has complete canonical metadata
 
@@ -185,9 +201,26 @@ The five semantic sections SHALL remain required and non-empty, but the shared p
 - **WHEN** Agent 创建 reference `.md` 文件
 - **THEN** 文件 SHALL 包含可识别且非空的 `Key Facts`、`Core Content Capture`、`Relevance To This Research`、`Quotable Terms / Concepts`、`Risks And Limitations` 五个 semantic section
 
+#### Scenario: Raw document markup in a required section is one format root
+
+- **WHEN** a non-code body of one required semantic section contains
+  `<!doctype` or an `html`, `head`, `body`, `script`, `style`, or `iframe` tag
+- **THEN** the shared reference-format evaluator SHALL return one blocking
+  `reference_format` root naming that reference and section
+- **AND** the repair SHALL direct the Agent to replace the copied document
+  markup with interpreted Markdown facts and rerun the same checkpoint
+
+#### Scenario: Fenced document-markup literal remains reference content
+
+- **WHEN** one required semantic section contains one of the bounded document
+  markup signatures only inside a fenced code block and is otherwise non-empty
+- **THEN** the reference-format evaluator SHALL not report document-markup
+  format pollution for that section
+- **AND** it SHALL not strip or rewrite the fenced literal
+
 #### Scenario: Harmless Markdown presentation does not block
 
-- **WHEN** a reference exposes all five semantic sections but differs only in heading case, heading level, whitespace, ordering, prose length, or Key Facts bullet count
+- **WHEN** a reference exposes all five semantic sections but differs only in heading case, heading level, whitespace, ordering, prose length, Key Facts bullet count, ordinary Markdown, or non-document inline HTML presentation
 - **THEN** reference-format parsing SHALL accept the equivalent semantic structure or emit advisory feedback
 - **AND** presentation differences alone SHALL NOT fail the reference or reduce its numeric count eligibility
 

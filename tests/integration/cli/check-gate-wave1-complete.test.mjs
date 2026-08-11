@@ -980,6 +980,48 @@ describe('check-gate-wave1-complete', () => {
     assert.equal(inspectOutput.check.failed_rule_ids.some((id) => id.startsWith('reference_format')), false);
   });
 
+  it('1j. routes raw document markup through the existing Gate and side-effect-free inspect repair', () => {
+    const dir = createBundle(unique('raw-document-markup'));
+    const referencePath = join(dir, 'reference/01-topic-a-deepening.md');
+    const contaminated = readFileSync(referencePath, 'utf8').replace(
+      'This is a substantive core content capture section that provides meaningful analysis of the topic being researched. It exceeds one hundred characters to satisfy the minimum quality threshold for reference counting.',
+      '<html><body>Copied raw document payload.</body></html>',
+    );
+    writeFileSync(referencePath, contaminated);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitAndReviewWave1WorkUnit(dir);
+    writeWave1Trace(dir);
+
+    const traceBeforeInspect = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8');
+    const inspectOutput = JSON.parse(runInspect(dir).stdout);
+    assert.equal(inspectOutput.check.passed, false);
+    assert.equal(readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8'), traceBeforeInspect);
+    assert.equal(readFileSync(referencePath, 'utf8'), contaminated);
+
+    const gateOutput = JSON.parse(runGate(dir).stdout);
+    assert.equal(gateOutput.check.passed, false);
+    assert.equal(readFileSync(referencePath, 'utf8'), contaminated);
+
+    const formatRepair = (output) => {
+      const hint = output.hints.find((candidate) => candidate.rule_id === 'reference_format');
+      assert.ok(hint, JSON.stringify(output.hints));
+      return {
+        rule_id: hint.rule_id,
+        repair_kind: hint.repair_kind,
+        write_to: hint.write_to,
+      };
+    };
+    const expectedRepair = {
+      rule_id: 'reference_format',
+      repair_kind: 'agent_action',
+      write_to: `${referencePath}#section:Core Content Capture`,
+    };
+    assert.deepEqual(formatRepair(inspectOutput), expectedRepair);
+    assert.deepEqual(formatRepair(gateOutput), expectedRepair);
+  });
+
   it('1e. fewer Key Facts does not affect numeric count or revive the retired quantity blocker', () => {
     const dir = createBundle(unique('degraded'));
     const referencePath = join(dir, 'reference/01-topic-a-deepening.md');

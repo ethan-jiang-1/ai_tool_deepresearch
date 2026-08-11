@@ -9,6 +9,15 @@ import { parse as parseYaml } from 'yaml';
 import { createTempDir } from '../../helpers/temp-dirs.mjs';
 import { applyCanonicalTopicState } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
 import { claimAndSubmitWorkUnit, referenceContent } from '../../engine/work-unit-test-helpers.mjs';
+import { instantiateBundle } from '../../e2e/helpers/deterministic-chain-harness.mjs';
+import {
+  PRIMARY_TOPIC,
+  passAndEnter,
+  stageWave0,
+  stageWave1,
+  stageWave2,
+  writePlanAndProfile,
+} from '../../e2e/helpers/research-chain-fixture.mjs';
 
 const REPO_ROOT = process.cwd();
 const CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs');
@@ -220,6 +229,16 @@ function runApply(bundle, input) {
   return { ...result, output: JSON.parse(result.stdout) };
 }
 
+function runSchema() {
+  const result = spawnSync('node', [CLI, 'schema', '--context', 'wave_projection'], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    timeout: 10000,
+    maxBuffer: 1024 * 1024,
+  });
+  return { ...result, output: JSON.parse(result.stdout) };
+}
+
 function runInspect(bundle) {
   const result = spawnSync('node', [INSPECT_CLI, '--bundle', bundle], {
     cwd: REPO_ROOT,
@@ -257,6 +276,34 @@ function topicStateMutationSnapshot(bundle, topic) {
 }
 
 describe('operate-topic-state projection packets', () => {
+  it('submits the public Wave2 conditional template without a hidden source-identity rejection', () => {
+    const root = createTempDir('operate-projection-wave2-schema');
+    dirs.push(root);
+    const bundle = instantiateBundle(root, 'wave2-schema');
+    writePlanAndProfile(bundle);
+    passAndEnter(bundle, 'instantiation-complete', 'phases/phase-instantiation.md', 'hitl1_recorded');
+    passAndEnter(bundle, 'hitl1-recorded', 'phases/phase-hitl1.md', 'setup_ready');
+    passAndEnter(bundle, 'setup-ready', 'phases/phase-setup.md', 'setup_ready');
+    passAndEnter(bundle, 'seed-topics-ready', 'phases/phase-seed-topics.md', 'seed_topics_ready', () => stageWave0(bundle));
+    passAndEnter(bundle, 'wave0-complete', 'phases/phase-wave0.md', 'wave0_complete', () => stageWave1(bundle));
+    passAndEnter(bundle, 'wave1-complete', 'phases/phase-wave1.md', 'wave1_complete', () => stageWave2(bundle, { project: false, completion: false }));
+
+    const schema = runSchema();
+    assert.equal(schema.status, 0, schema.stderr || schema.stdout);
+    const form = schema.output.forms.find((candidate) => candidate.action === 'apply_seed_projection');
+    const wave2 = form?.conditional_forms?.find((candidate) => candidate.condition.wave === 'wave2');
+    assert.ok(wave2, JSON.stringify(schema.output));
+
+    const input = structuredClone(wave2.template);
+    input.topic_uid = PRIMARY_TOPIC.topic_uid;
+    input.updates[0].entries[0].refs = ['reference/topic-a-r1-deepening.md'];
+    const result = runApply(bundle, input);
+
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.notEqual(result.output.reason_code, 'input_invalid');
+    assert.equal(result.output.verdict, 'committed');
+  });
+
   it('materializes a current submitted Wave0 entry through the public CLI only in its loaded window', () => {
     const { bundle, topic } = makeBundle('operate-projection-legal');
     const authority = submitWave0Authority(bundle, topic);

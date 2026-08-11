@@ -1,13 +1,22 @@
 # RUN.md — DEEP_RESEARCH_HARNESS 入口
 
-> **DEEP_RESEARCH_HARNESS v0.87**
+> **DEEP_RESEARCH_HARNESS v0.88**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DEEP_RESEARCH_HARNESS 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.87
+## Current Release: v0.88
+
+- `operate-topic-state schema --context wave_projection` now includes one
+  conditional source-identity form for each legal Wave/kind pair. Each form
+  exposes its condition, branch fields, and a packet template accepted by the
+  existing top-level schema; it does not add a validator or authorize apply.
+- Required reference sections now reject a bounded set of raw document-markup
+  signatures outside fenced code through the existing `reference_format`
+  feedback route. The rule does not score research quality, sanitize content,
+  rewrite evidence/reference bytes, or add a Gate route.
 
 - HITL1 now presents a bounded Chinese research-alignment draft before canonical
   writes. When currently answerable, independent material forks would change an

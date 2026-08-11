@@ -37,11 +37,16 @@ const invocation = parseOperationInvocation(process.argv.slice(2), {
 });
 
 function emit(value) {
-  process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+  return new Promise((resolve, reject) => {
+    process.stdout.write(`${JSON.stringify(value, null, 2)}\n`, (error) => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
 }
 
-function fail(reason, operation = null, extra = {}) {
-  emit({
+async function fail(reason, operation = null, extra = {}) {
+  await emit({
     schema_version: TOPIC_STATE_SCHEMA_VERSION,
     ...invocationError({ command: 'operate-topic-state', operation, reason, usage }),
     ...extra,
@@ -50,10 +55,15 @@ function fail(reason, operation = null, extra = {}) {
 }
 
 if (invocation.kind === 'help') {
-  process.stdout.write(`${usage}\n`);
+  await new Promise((resolve, reject) => {
+    process.stdout.write(`${usage}\n`, (error) => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
   process.exit(0);
 }
-if (invocation.kind === 'invalid') fail(invocation.reason);
+if (invocation.kind === 'invalid') await fail(invocation.reason);
 
 const operation = invocation.form.id;
 const values = invocation.values;
@@ -61,30 +71,30 @@ const values = invocation.values;
 if (operation === 'schema') {
   const projection = describeTopicApplyPlanSchema(values.context);
   if (!projection.ok) {
-    fail(projection.reason, operation, {
+    await fail(projection.reason, operation, {
       reason_code: projection.reason_code,
       ...(projection.supported_contexts ? { supported_contexts: projection.supported_contexts } : {}),
     });
   }
-  emit(projection);
+  await emit(projection);
   process.exit(0);
 }
 
 if (operation === 'recover' && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(values['operation-id'])) {
-  fail('operation-id must be one topic-state workspace UUID', operation, { coordinate: '<operation-id>' });
+  await fail('operation-id must be one topic-state workspace UUID', operation, { coordinate: '<operation-id>' });
 }
 
 const bundle = validateBundleDirectory(values.bundle);
-if (!bundle.ok) fail(bundle.reason, operation, { coordinate: bundle.coordinate });
+if (!bundle.ok) await fail(bundle.reason, operation, { coordinate: bundle.coordinate });
 
 let input = null;
 if (operation === 'apply') {
   const inputFile = validateReadableRegularFile(values.input, '<input-path>');
-  if (!inputFile.ok) fail(inputFile.reason, operation, { coordinate: inputFile.coordinate });
+  if (!inputFile.ok) await fail(inputFile.reason, operation, { coordinate: inputFile.coordinate });
   try {
     input = JSON.parse(readFileSync(inputFile.path, 'utf8'));
   } catch {
-    fail('input must contain valid JSON', operation, { coordinate: '<input-path>' });
+    await fail('input must contain valid JSON', operation, { coordinate: '<input-path>' });
   }
 }
 
@@ -93,10 +103,10 @@ try {
   if (operation === 'inspect') result = inspectCanonicalTopicState({ bundlePath: bundle.path });
   else if (operation === 'apply') result = applyCanonicalTopicState({ bundlePath: bundle.path, input });
   else result = recoverCanonicalTopicState({ bundlePath: bundle.path, operationId: values['operation-id'] });
-  emit(result);
+  await emit(result);
   process.exit(result.verdict === 'blocked' || result.passed === false ? 1 : 0);
 } catch (error) {
-  emit({
+  await emit({
     schema_version: TOPIC_STATE_SCHEMA_VERSION,
     operation,
     error: 'operation_failed',

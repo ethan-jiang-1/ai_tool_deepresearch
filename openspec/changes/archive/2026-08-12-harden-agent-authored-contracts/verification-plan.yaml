@@ -28,8 +28,9 @@ claims:
     statement: >-
       CTS-010: the public wave_projection authoring output exposes the existing
       Wave2 finding/finding_id conditional source-identity form, matching entry
-      ID rule, required paths/value shape, and a top-level-schema-valid packet
-      template without making every union-branch field globally required.
+      ID rule, `condition`, branch required paths/value shapes, and a
+      top-level-schema-valid packet template without making every union-branch
+      field globally required.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -82,8 +83,10 @@ claims:
   - id: document-markup-reaches-wave-feedback
     statement: >-
       REF-002: a contaminated reference reaches the existing Wave1 Gate and
-      inspect path as the same blocking reference_format root, with its
-      Agent-owned repair surface and no new Gate route or mutation.
+      side-effect-free inspect path as equivalent blocking reference_format
+      repairs with the same Agent-owned repair surface. The formal Gate may
+      retain its existing gate-attempt/trace side effect; the change adds no
+      reference repair mutation or new Gate route.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
