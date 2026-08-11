@@ -1,0 +1,106 @@
+schema_version: verification-routing/v1
+change: strengthen-hitl1-bounded-clarification
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The change adds no pure Engine module, schema, enum, or evaluator. Its
+      deterministic assertions cross Markdown/template, CLI, and temporary
+      bundle boundaries.
+  integration:
+    status: selected
+    rationale: >-
+      HITL1 prompt/Phase/template wording, the existing setup-ready CLI marker
+      scan, and Topic-state preservation are cross-surface deterministic
+      contracts. They require no Agent runtime or external call.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      The setup-ready route must bind the final template-filled host-file bytes
+      before the existing legal phase handoff. A temporary bundle proves that
+      deterministic lifecycle boundary without claiming an Agent ran.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change does not add a registered real-Agent experiment or make an
+      acceptance claim about clarification quality; static fixtures cannot be
+      recast as proof of Agent semantic judgment.
+claims:
+  - id: bounded-hitl1-alignment-static-contract
+    statement: >-
+      HIU-002 and PRP-002: the HITL1 brief, shared guidance, and Phase present
+      a Chinese alignment draft before canonical writes; allow at most three
+      independent, currently answerable material frontier questions with a
+      recommendation/default and stated impact; defer dependent/non-material
+      questions; retain direct acceptance, natural-language correction, and
+      explicit delegation; leave an earlier alignment snapshot as narrative
+      context if a later canonical write fails; and add no new HITL, state,
+      counter, queue, or semantic Gate authority.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/iterative-interaction-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: alignment-template-marker-remains-existing-gate-input
+    statement: >-
+      PHS-002 and PHS-005: a new bundle template places the HITL1 Alignment
+      Snapshot under Goal with an ordinary required-fill marker; leaving that
+      marker blocks only the existing setup-ready marker rule, while filling it
+      permits the same rule to proceed without a named-heading parser, prose
+      quality check, or extra Gate rule.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-setup-ready.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: alignment-snapshot-survives-canonical-topic-state
+    statement: >-
+      PRP-012 and PHS-002: after HITL1 writes the separate alignment narrative
+      and the existing controls snapshot, canonical Topic-state apply/recovery
+      refreshes Topic Registry presentation while preserving both host-file
+      snapshots and does not copy either into profile, Topic identity, queue,
+      or other Engine authority.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/user-research-controls-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: setup-ready-handoff-binds-alignment-filled-plan
+    statement: >-
+      PHS-005 and PRP-012: after the new template's ordinary required-fill
+      markers are replaced, the existing setup-ready Gate binds the final
+      rb_plan.md bytes into its checkpoint/trace and only then authorizes the
+      existing legal phase handoff; later plan-byte drift remains rejected.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/setup-ready-hostfile-handoff.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

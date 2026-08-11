@@ -1,0 +1,36 @@
+schema_version: semantic-closure/v1
+change: strengthen-hitl1-bounded-clarification
+status: affected
+catalog_additions: []
+affected:
+  - family: lifecycle.gate-status-trace-handoff
+    fact: >-
+      Whether setup-ready's existing required-fill marker scan admits the final
+      rb_plan.md body after a valid controls literal is excluded, including a
+      new template-owned HITL1 Alignment Snapshot marker, so the existing
+      setup-ready Gate can stage its current checkpoint/trace-backed handoff.
+      The marker is an omission signal only; it does not establish the snapshot
+      heading, non-empty replacement, or semantic fidelity of alignment prose.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/rb_templates/rb_plan.md.tmpl
+      - DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl1.md
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-setup-ready.definition.json
+        relation: authoritative
+        detail: >-
+          The existing plan_body_no_unfilled_marker rule defines the sole
+          deterministic marker condition. This change does not add a rule,
+          heading lookup, parser, or prose-quality verdict.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/brief/hitl1.md
+        relation: derived
+        detail: >-
+          The HITL1 brief projects the Agent-facing alignment conversation and
+          direct exits. It neither reads a Gate result nor authorizes lifecycle
+          handoff.
+    verification:
+      truth_table: tests/integration/cli/check-gate-setup-ready.test.mjs
+      cross_surface: tests/e2e/setup-ready-hostfile-handoff.test.mjs
