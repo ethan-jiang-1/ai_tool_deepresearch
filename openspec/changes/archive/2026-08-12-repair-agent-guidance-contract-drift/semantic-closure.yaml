@@ -1,0 +1,8 @@
+schema_version: semantic-closure/v1
+change: repair-agent-guidance-contract-drift
+status: not_applicable
+reason: >-
+  This change repairs static test assertions and existing Agent-facing wording
+  only. It changes no Harness runtime fact family, resolver,
+  authority-establishing surface, deterministic verdict, or production
+  behavior.

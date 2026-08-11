@@ -19,7 +19,7 @@ describe('topic research emphasis HITL1 guidance', () => {
   });
 
   it('keeps focus optional, correctable, and inside the existing literal controls snapshot', () => {
-    const controls = phase.slice(phase.indexOf('### 3b.1 Optional User Research Controls Snapshot'), phase.indexOf('### 3c. Research Style Projection Handoff'));
+    const controls = phase.slice(phase.indexOf('### 3b.2 Optional User Research Controls Snapshot'), phase.indexOf('### 3c. Research Style Projection Handoff'));
     assert.match(brief, /某个话题额外多研究什么/);
     assert.match(controls, /optional `research focus brief`/);
     assert.match(controls, /用户的重点原话（逐字保留）/);
@@ -30,7 +30,7 @@ describe('topic research emphasis HITL1 guidance', () => {
   });
 
   it('retains existing Engine and lifecycle authority boundaries', () => {
-    const controls = phase.slice(phase.indexOf('### 3b.1 Optional User Research Controls Snapshot'), phase.indexOf('### 3c. Research Style Projection Handoff'));
+    const controls = phase.slice(phase.indexOf('### 3b.2 Optional User Research Controls Snapshot'), phase.indexOf('### 3c. Research Style Projection Handoff'));
     for (const forbiddenAuthority of ['profile、Topic field、Gate', 'renderer、Engine、Gate', 'schema override']) {
       assert.ok(controls.includes(forbiddenAuthority), `missing boundary: ${forbiddenAuthority}`);
     }

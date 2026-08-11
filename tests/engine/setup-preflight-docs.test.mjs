@@ -24,7 +24,7 @@ function listCommandPlaybooks() {
 
 describe('human setup preflight docs', () => {
   it('keeps the installation baseline discoverable and loadable', async () => {
-    assert.equal(read('.nvmrc').trim(), '20');
+    assert.equal(read('.nvmrc').trim(), '22');
 
     const pkg = JSON.parse(read('package.json'));
     assert.match(pkg.dependencies.zod, /^\^\d+\.\d+\.\d+$/);

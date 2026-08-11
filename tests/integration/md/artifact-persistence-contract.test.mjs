@@ -14,7 +14,6 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
   const commands = read('DEEP_RESEARCH_HARNESS/COMMANDS.md');
   const playbook = read('DEEP_RESEARCH_HARNESS/command_playbook/persist-artifact.md');
   const phaseFinal = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-final.md');
-  const context = read('CONTEXT.md');
   const changelog = read('CHANGELOG.md');
   const run = read('DEEP_RESEARCH_HARNESS/RUN.md');
   const subagent = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md');
@@ -63,10 +62,7 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
     assert.match(commands, /three-operation durability command/);
   });
 
-  it('keeps Final-backing vocabulary and current release scopes bounded', () => {
-    for (const term of ['Final key-finding declaration', 'Final Evidence Map', 'Final backing']) {
-      assert.match(context, new RegExp(`\\*\\*${term}\\*\\*`));
-    }
+  it('keeps current release scopes bounded', () => {
     assert.match(changelog, /## v0\.70/);
     assert.match(changelog, /structural path\/provenance feedback only/);
     assert.match(changelog, /## v0\.71/);

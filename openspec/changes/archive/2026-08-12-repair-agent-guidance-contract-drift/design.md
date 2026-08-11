@@ -1,13 +1,15 @@
 ## Context
 
 See `proposal.md` for motivation. The affected suites are static `integration`
-Markdown contracts, not runtime executions. Their two failures have different
-ownership errors:
+Markdown contracts plus one static `unit` setup-preflight contract, not runtime
+executions. Their four failures have different ownership errors:
 
 | Surface | Current fact | Repair boundary |
 | --- | --- | --- |
 | `artifact-persistence-contract.test.mjs` | It reads `CONTEXT.md` and requires three bold Final terms despite `CONTEXT.md` routing those behavior terms to their accepted owner. | Remove the Context read and its glossary loop; retain command, release, and `RUN.md` assertions. |
 | shared/Wave0/Wave1 delegated guidance | It already carries the current formula and concrete `<claim_count>` command placeholder, but omits the accepted conceptual batch-claim labels asserted by the static contract. | Add one concise mapping sentence to each existing top-up section; do not rewrite the formula or command. |
+| `setup-preflight-docs.test.mjs` | It still asserts `.nvmrc` is 20 although committed baseline `a5ba8d5cd` makes it 22. | Change only that expected literal to 22; do not modify `.nvmrc`, dependencies, setup docs, or permission behavior. |
+| `topic-research-emphasis-guidance.test.mjs` | It slices controls from the former `3b.1` heading after `1cf476119` moved them to `3b.2`, producing an empty subject despite current guidance being correct. | Change only both slice-start literals to the current `3b.2` heading; do not modify the phase document or its authority assertions. |
 
 The direct Sources of Record are `research/final-delivery-backing` for
 FDB-001/FDB-002 and `agent/agentic-queue` plus
@@ -21,6 +23,10 @@ contracts.
 
 - Restore the two focused static contracts as accurate evidence of existing
   Final-backing and bounded-batch guidance.
+- Keep the setup-preflight test aligned with the current committed Node
+  baseline without changing that baseline.
+- Keep the HITL1 controls static selector aligned with its current section
+  coordinate without changing guidance.
 - Keep the current concrete bounded-claim formula and command understandable
   alongside the accepted conceptual vocabulary.
 - Preserve the direct authority path, with no new control state or fallback.
@@ -30,7 +36,7 @@ contracts.
 - No `CONTEXT.md` expansion, Final lifecycle change, or new Final glossary.
 - No Queue, profile, work-unit, actor-preflight, scheduler, CLI, Gate, or
   runtime-bundle edit.
-- No test-regex weakening, extra test class, dependency, version bump, or
+- No test-regex weakening, extra test class, dependency, further version bump, or
   `CHANGELOG.md`/`RUN.md` release update.
 
 ## Decisions
@@ -64,11 +70,12 @@ contracts.
    without adding Queue behavior. The test's existing timeout, progress, and
    reference-materialization assertions are left unchanged.
 
-4. **Use only deterministic integration evidence.**
-   The two changed/selected suites live under `tests/integration/md/`; their
-   native verdict is the `node:test` process exit. No real Agent, Subject
-   Agent, external call, temporary bundle, or runtime claim is needed. Run
-   both focused files first and then `npm test` to catch cross-document drift.
+4. **Use only deterministic static evidence.**
+   The three changed/selected Markdown suites live under `tests/integration/md/`
+   and the Node-baseline suite lives under `tests/engine/`; their native verdict
+   is the `node:test` process exit. No real Agent, Subject Agent, external call,
+   temporary bundle, or runtime claim is needed. Run all four focused files
+   first and then `npm test` to catch cross-document drift.
 
 ### Constitutional Review
 
@@ -96,12 +103,18 @@ contracts.
 - [Risk] A broad Markdown update could disturb unrelated timeout/progress
   guidance. -> Limit each edit to the normal top-up paragraph and leave the
   existing strict static suite unchanged.
+- [Risk] A test edit could silently reintroduce a Node-version policy. -> Change
+  only the stale expected literal to the committed `.nvmrc` value and leave the
+  baseline file and dependency declarations untouched.
+- [Risk] A controls-test repair could mask a missing guidance section. -> Use
+  the exact current `3b.2` heading as the selector and retain every existing
+  content and authority-boundary assertion.
 
 ## Migration Plan
 
 Before target edits, run the change-local verification-routing and semantic-
-closure plan checks. Apply the test-owner repair and the three wording edits as
-separate small task groups, updating `tasks.md` after each verified task. Run
-the two focused suites, then `npm test`, plus the governed asset/closeout checks
-before archive. Rollback is a normal git revert; there is no runtime data,
-schema, configuration, or bundle migration.
+closure plan checks. Apply the two test-owner repairs and the three wording
+edits as separate small task groups, updating `tasks.md` after each verified
+task. Run the four focused suites, then `npm test`, plus the governed
+asset/closeout checks before archive. Rollback is a normal git revert; there is
+no runtime data, schema, configuration, or bundle migration.

@@ -2,10 +2,11 @@ schema_version: verification-routing/v1
 change: repair-agent-guidance-contract-drift
 test_classes:
   unit:
-    status: not_applicable
+    status: selected
     rationale: >-
-      The change does not alter an in-process JavaScript module, schema, or
-      helper contract.
+      The setup-preflight test directly reads the committed Node baseline and
+      related static setup surfaces without invoking a production CLI or
+      exercising a runtime bundle.
   integration:
     status: selected
     rationale: >-
@@ -23,6 +24,40 @@ test_classes:
       The change makes no claim about real Playbook-Agent or Subject-Agent
       behavior and does not run a real Agent experiment.
 claims:
+  - id: node-baseline-test-drift
+    statement: >-
+      ACS-002: the setup-preflight static test follows the committed Node 22
+      `.nvmrc` baseline without changing the setup path, dependencies, or host
+      permission behavior.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/setup-preflight-docs.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl1-controls-selector-drift
+    statement: >-
+      HIU-002, URC-001, PRP-012, and PRP-014: the HITL1 controls static test
+      reads the current 3b.2 controls section and retains its existing content
+      and authority-boundary assertions without changing phase guidance.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/topic-research-emphasis-guidance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
   - id: final-backing-authority-drift
     statement: >-
       FDB-001 and FDB-002: the artifact-persistence Markdown contract keeps

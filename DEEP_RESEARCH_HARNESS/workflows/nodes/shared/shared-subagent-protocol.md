@@ -68,6 +68,8 @@ For delegated queue demand:
    claim_count = min(eligible_independent_demand, effective_delegated_concurrency_cap, remaining_free_capacity)
    ```
 
+   This is the accepted bounded top-up batch-claim posture: conceptual `--count <claim-count>` names the computed `claim_count`, bounded by independent eligible demand, the accepted/default cap (`effective_delegated_concurrency_cap` parsed from the profile), and remaining free delegated in-flight capacity (`remaining_free_capacity`).
+
    `eligible_independent_demand` is the queue-front count of independent eligible demand for the phase, and `remaining_free_capacity` is the effective cap minus reconstructed normal delegated in-flight work. If reconstructed normal delegated in-flight work already reaches the effective cap, poll, submit, repair, or terminalize existing attempts before claiming more. `--count 1` is legal for a single remaining item, dependency-blocked front item, effective cap of 1, or a narrow repair; it is not the normal actor drain strategy for independent demand.
 4. This bounded work-unit prompt count is a Phase-Agent policy choice, not proof that a host started, kept live, or physically ran that number of native sub-agents concurrently. Submit the observation and explicit actor choice to the same claim checkpoint. Available actors use `delegated_subagent`; classified unavailable actors may use `phase_agent_fallback` only when the Engine kind policy allows it, and fallback always claims exactly one work unit regardless of the profile cap:
 

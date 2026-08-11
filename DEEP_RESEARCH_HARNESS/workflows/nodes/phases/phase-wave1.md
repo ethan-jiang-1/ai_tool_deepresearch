@@ -142,6 +142,8 @@ For a normal delegated top-up, compute:
 claim_count = min(eligible_independent_demand, effective_delegated_concurrency_cap, remaining_free_capacity)
 ```
 
+This is the accepted bounded top-up batch-claim posture: conceptual `--count <claim-count>` names the computed `claim_count`, bounded by independent eligible demand, the accepted/default cap (`effective_delegated_concurrency_cap` parsed from the profile), and remaining free delegated in-flight capacity (`remaining_free_capacity`).
+
 Here `eligible_independent_demand` is the queue-front count of independent eligible Wave1 topic-deepening demand, and `remaining_free_capacity` is the effective cap minus reconstructed normal delegated in-flight work. If reconstructed normal delegated in-flight work already reaches the effective cap, poll, submit, repair, or terminalize those attempts before claiming more. Use `--count 1` only for a single remaining item, dependency-blocked front item, effective cap of 1, or a narrow repair.
 
 This bounded prompt count is a Phase-Agent policy choice, not proof that a host started, kept live, or physically ran that number of native sub-agents concurrently. When the Engine admits `phase_agent_fallback`, claim exactly one work unit regardless of the profile cap.
