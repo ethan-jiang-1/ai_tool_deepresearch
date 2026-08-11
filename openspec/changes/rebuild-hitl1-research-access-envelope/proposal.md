@@ -29,7 +29,7 @@ BUG-215（`_backlog/bugs/BUG-215-hitl1-probe-unavailable-reason-prefix-classific
 
 `network_path` 是 BUG-215 缺失的那根：宿主 surface 在、policy 不是障碍、但目标在网络层不可达。`probe_relay` 修正现有误路由——`check-gate-hitl1-recorded.mjs:179` 对所有 unavailable 一律 `external_action`，包括 Phase 自己写的 `probe_agent_spawn_failed:` / `probe_agent_return_invalid:`，那是 Agent 侧问题却告诉用户去解决外部前置条件。owner→repair_kind 接成推导关系后，此类误路由在结构上不再可能。
 
-**轴二「边界多大」** — `universal`（所有已声明 class 同样失败）vs `class_scoped`（部分 class 可达）。这根轴不需额外机制，有了声明式 class 阶梯即自动落出。两轴必须同时引入：只补 `network_path` 而无范围轴，仍分不清"整个出站断了"与"某类目标被挡"。
+**轴二「边界多大」** — `universal`（所有已声明 class 同样失败）vs `class_scoped`（部分 class 可达）。该对由中性的 `access_boundary` 对象承载：`unavailable` 只能记录 `universal`；`available` 只能记录 `class_scoped`，并且必须同时有 reachable 与 unreachable class。后者只服务于 HITL1 的如实告知，不是 Gate 输入。这根轴不需额外机制，有了声明式 class 阶梯即自动落出。两轴必须同时引入：只补 `network_path` 而无范围轴，仍分不清"整个出站断了"与"某类目标被挡"。
 
 ### 3. 准入语义：形状不变，保真度提升
 
@@ -49,9 +49,17 @@ Gate 保持二元、保持 fail-closed。准入条件从"那一个固定 URL 抓
 
 `shared-hitl1-capability-probe.md:46-51` 仅在 search 失败/零候选分支要求 root 词汇；正候选 unavailable 分支（116-123）只要求 "one direct non-empty reason"，完全未提。而 adapter contract（`research-access-adapter.md:48-51`）是**不分 search/fetch** 地要求的。BUG-215 那次 run 全程失败在 fetch 侧，走的正是未要求分类的那条分支——**probe 忠实执行了 guide**。这是 contract→prompt 的投影漂移，是确定性框架缺陷而非弱模型执行纪律问题。
 
-### 6. class 阶梯作为静态框架声明资产
+### 6. class 阶梯作为独立 sub-agent 控制 Markdown
 
-class 列表落为一张**静态声明表**，不硬编码进 probe prompt。具体站点选择需真实网络环境实测标定；届时是**改数据不是改架构**，因此不阻塞本 change。
+class 阶梯、两轴词汇、first-success 约束和紧凑 return map 落为一份独立的
+`workflows/nodes/shared/shared-hitl1-research-access-envelope.md`。它是
+`actor_delivery: required` 的 shared Markdown：HITL1 只在 spawn isolated probe 时连同
+通用 probe guide 一起交付它；它不写 run bundle、不成为 Gate authority，也不混入 selected
+adapter contract、Phase 正文或既有 probe guide。初始中性 query 固定为 `encyclopedia` 的
+`site:wikipedia.org "Internet protocol suite"`（沿用现有 probe 目标）、`code_host` 的
+`site:github.com "Hello World"`，以及 `general_web` 的 `"Internet protocol suite"`。它们
+不涉及用户研究主题，也不承诺站点、provider 或未来 research coverage；未来若要调整，只改这份
+controller 的 query 数据，不动 enum、schema、Gate 或 adapter。
 
 ### 7. HITL1 如实告知，不新增决策点
 
@@ -65,7 +73,6 @@ envelope 自第一天按"被读三次"设计（准入 / wave 执行期避坑 / �
 
 - **不开 partial coverage → degraded pass 的口子。** `research/research-wave-gate-implementation` 的降级机制只允许 quality-only roots 降级，structural / provenance / queue / receipt / lifecycle / configuration / routing / checker-owned roots 保持 blocking。开这个口要动 Wave 准入契约，不该由一个 HITL1 缺陷顺带完成。
 - **不实现 wave 侧消费与 claim 归因**（区分"我够不着" vs "它不存在"）。要动 Wave 准入/降级契约，单独立项。
-- **不选定具体探测站点。** 见第 6 点，需实测标定。
 - **不改 Gate 的二元性、不改 fail-closed、不新增 HITL 停点、不新增 retry/fallback provider/permission 逃逸。**
 
 ## Capability Discovery
@@ -73,7 +80,7 @@ envelope 自第一天按"被读三次"设计（准入 / wave 执行期避坑 / �
 | Candidate path | Evidence read | Decision | Reason |
 |---|---|---|---|
 | `engine/schema-core` | `spec.md:55-80`（Six Zod contracts 中 Profile contract 段落，含 `research_access` 状态分支与禁止清单） | Modify | observation 形状由此拥有；envelope class 集合与两轴 root 字段改变其 requirement |
-| `research/research-access-adapter` | `spec.md:12-105`（三条 requirement：capability boundary / probe binds search to fetch / evidence bounded），`REA-001..003` | Modify | `unavailable_roots` taxonomy 与 available 判定的 owner |
+| `research/research-access-adapter` | `spec.md:12-105`（三条 requirement：capability boundary / probe binds search to fetch / evidence bounded），`REA-001..003` | Modify | host adapter 移除分类/prompt 控制内容，只保留 selected-host operation boundary；owner/repair resolver 仍由其 implementation surface 拥有 |
 | `research/pre-research-gate-implementation` | `spec.md:71-90`（HITL1 rule set）、`spec.md:311-330`（HITL1 Gate feedback exposes the adapter-owned unavailable root） | Modify | Gate 准入条件与 adapter-owned feedback 投影由此拥有 |
 | `research/pre-research-phase-content` | `spec.md:405+`（HITL1 uses the selected semantic research-access adapter）、`spec.md:42-130`（body completeness、payload checklist） | Modify | Phase 写入义务、probe 分支覆盖、HITL1 告知模板由此拥有 |
 | `engine/gate-skeleton` | `spec.md`（"SHALL NOT ... deriving rule identity or repair lineage from prose position/prefix"；`GATE_REPAIR_KINDS` 投影规则） | Verify-only | 本 change 使实现**更加**符合该既有 requirement；未改其 behavior |
@@ -93,10 +100,10 @@ envelope 自第一天按"被读三次"设计（准入 / wave 执行期避坑 / �
 
 ### Modified Capabilities
 
-- `engine/schema-core`: Profile contract 的 `research_access` 从单次探测 observation 改为定宽 access envelope（有界 class 集合 + 每 class 闭合枚举结果 + 两轴 root 字段）；显式重申并扩展"不得成为矩阵"的禁止边界。
-- `research/research-access-adapter`: `unavailable_roots` 从一维两值改为两根正交轴（边界位置四值 + 边界范围二值）；owner→repair_kind 由推导关系确立；available 判定从单目标改为多 class any-success。
+- `engine/schema-core`: Profile contract 的 `research_access` 从单次探测 observation 改为有界 access envelope（有界 class 集合 + 每 class 闭合枚举结果 + `access_boundary` 两轴字段）；显式重申并扩展"不得成为矩阵"的禁止边界。
+- `research/research-access-adapter`: 移除 `unavailable_roots` 前缀和 sub-agent 分类/prompt 控制内容；selected-host operation facts 仍归 adapter，owner→repair_kind 由 resolver 推导；多 class any-success 由独立 controller 驱动。
 - `research/pre-research-gate-implementation`: HITL1 准入条件改为"至少一个已声明 class 可达"；Gate feedback 从 prose 前缀解析改为枚举字段路由；新增"无可路由 root 时必须显式暴露"的 requirement，取消静默降级。
-- `research/pre-research-phase-content`: probe 分支覆盖修正（正候选 unavailable 分支须同样携带分类）；Phase 写入 envelope 的义务；部分不可达时的 HITL1 如实告知义务（不新增决策点）。
+- `research/pre-research-phase-content`: 新增独立、actor-delivered access-envelope controller 的交付关系；probe 分支覆盖修正（正候选 unavailable 分支须同样携带分类）；Phase 写入 envelope 的义务；部分不可达时的 HITL1 如实告知义务（不新增决策点）。
 - `agent/hitl-ux`: `brief/hitl1.md` 新增一条 exact 部分不可达告知文案，只在 available 且存在不可达 class 时随第二条消息一并呈现；不新增 HITL 停点、不提供选项、不索取指示。
 
 ## Impact
@@ -106,12 +113,12 @@ envelope 自第一天按"被读三次"设计（准入 / wave 执行期避坑 / �
 **框架代码**（Apply 阶段才修改）：
 - `DEEP_RESEARCH_HARNESS/schema/contracts/profile.mjs` — `ResearchAccessSchema` 重建
 - `DEEP_RESEARCH_HARNESS/host_tools/lib/research-access-adapter.mjs` — 删除前缀解析，改枚举路由，owner→repair_kind 推导
-- `DEEP_RESEARCH_HARNESS/host_tools/research-access-adapter.md` — frontmatter taxonomy 与正文
+- `DEEP_RESEARCH_HARNESS/host_tools/research-access-adapter.md` — 移除前缀/taxonomy/controller 内容，保留 selected-host operation contract
 - `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs` — 准入条件、feedback 投影、显式 unclassified 路径
-- `DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-hitl1-capability-probe.md` — class 阶梯、分支覆盖修正、返回形状
-- `DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl1.md` — §3d 写入义务、payload checklist、告知模板引用
+- `DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-hitl1-research-access-envelope.md`（新增）— isolated probe 的独立 class 阶梯、两轴、first-success 与 return-map controller
+- `DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-hitl1-capability-probe.md` — 通用操作安全边界、分支覆盖修正与对独立 controller 的依赖
+- `DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl1.md` — controller actor delivery、§3d 写入义务、payload checklist、告知模板引用
 - `DEEP_RESEARCH_HARNESS/workflows/nodes/brief/hitl1.md` — 部分不可达告知文案
-- 新增静态 class 阶梯声明资产（位置在 design.md 定夺）
 
 **测试**（`tests/` 下，约 6 个文件）：`tests/schema/contracts/profile.test.mjs`、`tests/host_tools/research-access-adapter.test.mjs`、`tests/integration/cli/check-gate-hitl1-recorded.test.mjs`、`tests/integration/cli/hitl1-research-access-adapter.test.mjs`、`tests/integration/md/phase-hitl1-research-access.test.mjs`、`tests/e2e/hitl1-research-access-adapter.test.mjs`。
 
@@ -125,9 +132,9 @@ envelope 自第一天按"被读三次"设计（准入 / wave 执行期避坑 / �
 
 - **User decision**：解决外部前置条件（网络、host 权限）。本 change 不新增任何需要用户决策的停点；部分不可达时只告知，不索取指示。
 - **Agent execution**：spawn 隔离 probe、把返回的 observation 写入 profile（Phase Agent 仍是 `rb_profile.yaml#/research_access` 唯一 writer）、按 Gate feedback 重跑同一 probe 与同一 Gate。
-- **Engine verdict**：schema 校验、准入判定、owner→repair_kind 推导、feedback 投影、trace 写入。Engine 不发现 provider、不验证凭据、不启动 adapter、不写 profile observation、不创建 alternate Setup route。
+- **Engine verdict**：schema 校验、准入判定、owner→repair_kind 推导、unavailable feedback 投影、trace 写入。`available` 的 `class_scoped` access boundary 只由 Phase 用于既有 HITL1 告知。Engine 不发现 provider、不验证凭据、不启动 adapter、不写 profile observation、不创建 alternate Setup route。
 
-告知用户"某类来源够不着"是**信息传递，不创造 permission 或 capability**；access envelope 是 Engine 可读的 direct fact，不是 Agent 的自述。
+告知用户"某类来源够不着"是**信息传递，不创造 permission 或 capability**；独立 controller 是 Agent 的一次性工作约束，不是 runtime truth；access envelope 才是 Engine 可读的 direct fact。
 
 ## Semantic-precision reflection
 
@@ -135,5 +142,5 @@ envelope 自第一天按"被读三次"设计（准入 / wave 执行期避坑 / �
 
 - **读者与有界问题**：Phase Agent 与 Gate checker 问的是"本 run 现在够得着什么"，而非"上一次探测发生了什么"。
 - **必须保留的区别**：(a)「宿主没有能力」vs「宿主被策略拒绝」vs「网络够不着目标」vs「probe 自己没跑起来」——四者 owner 不同，因而 repair 不同；(b)「全都够不着」vs「部分够不着」——前者阻断，后者放行并告知。
-- **正常推理停止点**：读到 envelope 即可直接判定准入与 owner，无需解析散文、无需推断、无需追溯探测过程。
+- **正常推理停止点**：读到 envelope 即可直接判定准入；仅在 unavailable Gate feedback 需要路由时，读取 `access_boundary` 判定 owner。部分可达的 boundary 只告知用户，无需解析散文、无需推断、无需追溯探测过程。
 - **净简化**：删除一条 prose 解析路径（`selectedAdapterUnavailableRoot`）与一条静默降级分支；新增字段均为闭合枚举。控制复杂度净减，Source of Record 从"散文 reason"变为"结构化字段"，反馈闭环长度不变。

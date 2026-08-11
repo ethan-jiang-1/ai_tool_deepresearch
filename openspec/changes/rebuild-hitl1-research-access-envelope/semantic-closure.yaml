@@ -11,10 +11,10 @@ affected:
     fact: >-
       Whether the recorded run access envelope admits research at all (at least
       one declared source class returned real requested page content), and for
-      any unreachable part, which single boundary owns it (host_surface,
+      any unreachable part, which single `access_boundary` owns it (host_surface,
       host_policy, network_path, or probe_relay) and whether that boundary is
-      universal or class_scoped. Owner determines the projected repair kind by
-      derivation, not by a parallel declared field; an observation that
+      universal or class_scoped. An unavailable boundary owner determines the
+      projected repair kind by derivation, not by a parallel declared field; an observation that
       establishes no routeable owner is legal but must be reported as
       explicitly unclassified rather than silently generalized.
     authority:
@@ -28,23 +28,34 @@ affected:
         relation: authoritative
         detail: >-
           ProfileSchema owns the durable shape and closed enumerations of the
-          recorded envelope, including the fixed-width source-class set. It
+          recorded envelope, including the statically bounded source-class set. It
           validates structure and rejects a matrix-shaped observation; it does
-          not decide admission or select the owning boundary.
+          not decide admission or select the owning boundary. An available
+          class-scoped boundary is disclosure-only; the Gate consumes only an
+          unavailable boundary.
       - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-hitl1-capability-probe.md
         relation: derived
         detail: >-
-          The isolated probe guide is an Agent-facing prompt that presents the
-          declared source-class ladder and the classification vocabulary it must
-          return. It produces a transient observation and holds no bundle,
-          profile, or Gate authority; the Phase Agent alone persists it.
+          The isolated probe guide is an Agent-facing generic operating-safety prompt.
+          It receives the separate controller but does not own or restate its class
+          ladder, classification, traversal bounds, or return map. It produces a transient observation
+          and holds no bundle, profile, or Gate authority; the Phase Agent alone
+          persists it.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-hitl1-research-access-envelope.md
+        relation: derived
+        detail: >-
+          This actor-delivered shared Markdown is the isolated probe's separate
+          controller for class order, neutral queries, classification vocabulary,
+          traversal/fetch bounds, first-success, and return-map constraints. It is a one-spawn Agent-facing
+          projection, not runtime state, schema authority, a Gate verdict, or a
+          persisted evidence surface.
       - coordinate: DEEP_RESEARCH_HARNESS/host_tools/research-access-adapter.md
         relation: derived
         detail: >-
-          The selected adapter contract declares the two classification axes and
-          the owning host/policy boundaries that the resolver reads. It is a
-          static declaration surface, not the runtime resolver of a recorded
-          observation.
+          The selected adapter contract declares selected-host launcher and operation
+          facts only. It does not contain the sub-agent controller's class/query,
+          taxonomy, or return-map content and is not the runtime resolver of a
+          recorded observation.
     verification:
       truth_table: tests/host_tools/research-access-adapter.test.mjs
       cross_surface: tests/integration/cli/check-gate-hitl1-recorded.test.mjs

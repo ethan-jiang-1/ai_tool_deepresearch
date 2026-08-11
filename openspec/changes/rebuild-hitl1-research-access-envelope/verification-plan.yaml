@@ -16,10 +16,10 @@ test_classes:
   deterministic_e2e:
     status: selected
     rationale: >-
-      Partial-reachability admission and the preserved unavailable recovery loop
-      cross Phase write, Gate evaluation, and retained HITL1 choices; the
-      existing bundle-scale suite is the smallest boundary that proves the loop
-      does not leak probe material or advance Setup illegally.
+      Fixture-backed temporary bundles exercise the existing HITL1 Gate with
+      partial and zero reachability plus retained HITL1 choices. This proves the
+      deterministic Gate boundary and its side effects; it does not execute the
+      Phase Agent or probe, nor claim real provider reachability or Agent behavior.
   agent_flow_e2e:
     status: not_applicable
     rationale: >-
@@ -28,10 +28,11 @@ test_classes:
       Agent research behavior; accepted research-access-adapter guidance already
       states fixtures cannot prove provider availability.
 claims:
-  - id: envelope-shape-fixed-width
+  - id: envelope-shape-statically-bounded
     statement: >-
-      ProfileSchema accepts a fixed-width access envelope carrying one closed
-      enumerated result per declared source class, and rejects a matrix-shaped
+      ProfileSchema accepts a statically bounded access envelope carrying at most one
+      closed enumerated result per declared source class, enforces the paired
+      available/class-scoped and unavailable/universal access-boundary rules, and rejects a matrix-shaped
       observation that grows with attempts (query text or history, candidate URL
       list, retry list, or HTTP status matrix), while legacy observations without
       an envelope remain schema-readable.
@@ -49,11 +50,10 @@ claims:
     verdict_authority: node_test_exit
   - id: two-axis-classification-and-repair-derivation
     statement: >-
-      The resolver maps each boundary-location root (host_surface, host_policy,
+      The resolver maps each unavailable access-boundary location (host_surface, host_policy,
       network_path, probe_relay) to exactly one owner and derives its repair kind
       from that owner, so probe_relay yields agent_action while the three external
-      roots yield external_action; it reports scope as universal or class_scoped;
-      and an observation establishing no routeable owner resolves to an explicit
+      roots yield external_action; an observation establishing no routeable owner resolves to an explicit
       unclassified conclusion rather than being normalized into any root. No
       classification is derived from prose position or prefix.
     test_class: unit
@@ -90,10 +90,10 @@ claims:
     verdict_authority: node_test_exit
   - id: adapter-contract-declaration-integrity
     statement: >-
-      The selected adapter contract declares both classification axes and its
-      declared identity, launcher routing, permission mode, and operation surfaces
-      remain bound to the resolver, so a taxonomy or declaration drift fails
-      loudly rather than silently disabling classification.
+      The selected adapter contract retains only its declared identity, launcher
+      routing, permission mode, and operation surfaces; it contains no source-class,
+      query, taxonomy, or return-map controller content. Its retained bindings stay
+      deterministic while the independent controller owns the sub-agent guidance.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -110,10 +110,15 @@ claims:
     statement: >-
       The static HITL1 guidance requires the same classification vocabulary on
       every unavailable branch, including the positive-candidate fetch-side branch
-      that previously required only a free-text reason, presents the declared
-      source-class ladder, and carries the exact partial-reachability disclosure
-      rendered only alongside the available result when the recorded observation
-      reports unreachable classes, without adding a second HITL decision point.
+      that previously required only a free-text reason. The isolated probe receives
+      an independent actor-delivered access-envelope controller whose declared source
+      classes and axes match the closed schema enums and its three initial neutral queries
+      are exact; the adapter contract, Phase body, and general probe guide do not duplicate
+      its control content. The static guidance
+      carries the exact partial-reachability disclosure rendered only alongside the
+      available result when the recorded observation reports unreachable classes,
+      prohibits persistence of probe material to research-evidence surfaces, and does
+      not add a second HITL decision point.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -128,11 +133,12 @@ claims:
     verdict_authority: node_test_exit
   - id: partial-reachability-admission-loop
     statement: >-
-      A run whose envelope records some reachable and some unreachable classes
-      advances past HITL1 while retaining the recorded classification, a run with
-      no reachable class stays blocked with its HITL1 choices preserved, and
-      neither path writes probe material into reference, cache, artifacts,
-      receipts, ledger, or coverage floors.
+      The existing HITL1 Gate evaluates a fixture-backed temporary bundle whose
+      recorded envelope has reachable and unreachable classes as passing without
+      clearing that classification, evaluates one with no reachable class as
+      blocked while retaining HITL1 choices, and does not itself add fixture
+      probe material to reference, cache, artifacts, receipts, ledger, or
+      coverage floors. This does not claim that a Phase Agent or probe ran.
     test_class: deterministic_e2e
     proof_subject: deterministic_contract
     asset:

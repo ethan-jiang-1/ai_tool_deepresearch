@@ -9,16 +9,16 @@
 - `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs:162-193` — `researchAccessFinding()`，第 179 行对所有 unavailable 一律 `external_action`。
 - `DEEP_RESEARCH_HARNESS/host_tools/research-access-adapter.md` frontmatter `unavailable_roots: [surface_absent, permission_required]`，正文 48-54 行不分 search/fetch 地要求两个前缀；而 `workflows/nodes/shared/shared-hitl1-capability-probe.md:46-51` 只在 search 分支要求，116-123 的正候选分支只要求 "one direct non-empty reason"。
 
-约束：`readSelectedResearchAccessAdapterContract()` 已有的 drift-check 机制（46-55 行 throw）是本 change 唯一可用的「声明一致性」执行点；Gate 契约禁止新增 research-access check type、degraded pass、alternate Setup route；schema-core 禁止存储随尝试次数增长的结构。
+约束：`readSelectedResearchAccessAdapterContract()` 已有的 drift-check 机制（46-55 行 throw）只负责 selected-host binding 的一致性；controller 与 schema enum 的发布一致性由静态 MD integration test 检查，二者都不成为运行时 verdict。Gate 契约禁止新增 research-access check type、degraded pass、alternate Setup route；schema-core 禁止存储随尝试次数增长的结构。
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- 定宽 access envelope 的持久化形状，且「定宽」由 schema 结构保证而非靠约定。
+- 最大宽度静态受限的 access envelope 持久化形状，且该上界由 schema 结构保证而非靠约定。
 - 两根轴的**结构化配对**：boundary location 与 extent 不可能只出现一半。
 - owner → repair_kind 为**推导**关系，误路由在结构上不可表达。
-- 声明式 source-class 阶梯有唯一 Source of Record，adapter contract、probe prompt、schema 三处不可能各自漂移。
+- source-class 阶梯、两轴词汇和 return-map 约束放在一个独立、actor-delivered 的 probe controller Markdown；adapter contract、shared probe guide、phase body 不再各自承载这段 sub-agent 控制内容。
 - 删除 prose 前缀解析路径，且删除后无等价替代路径残留。
 
 **Non-Goals（design 层，proposal 的排除项不重复）：**
@@ -29,17 +29,33 @@
 
 ## Decisions
 
-### D1. source-class 闭合集合归 `schema/enums.mjs`，阶梯数据归 adapter contract frontmatter
+### D1. source-class 闭合集合归 `schema/enums.mjs`，sub-agent 控制数据归独立 shared Markdown
 
-**决定**：`SourceClass` 作为第 11 个 domain enum 落在 `DEEP_RESEARCH_HARNESS/schema/enums.mjs`；**枚举数组的顺序即声明的阶梯顺序**。adapter contract frontmatter 新增 `source_classes:`，每项携带该 class 的中性 query 等可标定数据；`readSelectedResearchAccessAdapterContract()` 扩展 drift-check，断言 frontmatter 的 class 集合与 enum **恰好相等且同序**，不等即 throw。
+**决定**：`SourceClass`、`ResearchAccessBoundaryLocation` 和 `ResearchAccessBoundaryExtent` 作为第 11-13 个 domain enum 落在 `DEEP_RESEARCH_HARNESS/schema/enums.mjs`；`SourceClass` 数组的顺序即 machine-accepted class 顺序。新建 `DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-hitl1-research-access-envelope.md`，以 `node_type: shared`、`shared_scope: hitl1-research-access-envelope`、`authority: guidance-only` 和 `actor_delivery: required` 标记。这个独立 MD 是 isolated probe 的唯一控制面：它声明每个 class 的中性 query、两轴词汇、完整 traversal/fetch 界限、first-success 边界和紧凑 return map；`shared-hitl1-capability-probe.md` 只保留通用操作安全与 authority boundary，不保留候选、fetch、fallback 或 traversal 限制。
 
 **为什么不是反过来**：schema 层需要闭合枚举来校验 envelope。若集合的 Source of Record 在 `host_tools/*.md`，`schema/contracts/profile.mjs` 就要反向依赖 `host_tools/` 读 Markdown frontmatter——层级倒置，且把 schema 校验挂在文件 I/O 上。
 
-**为什么不是新建独立声明文件**：会产生第三个坐标和第三条 drift 边。现有两个坐标已各自有强制机制（Zod 编译期闭合 / frontmatter throw），复用即可。这是净减而非净增。
+**为什么是独立 shared Markdown，而不是 adapter contract 的 frontmatter**：用户要求这段 sub-agent controller 不与已存在 host adapter 内容揉在一起。现有 `shared-page-fetch-guidance.md` 已证明 `actor_delivery: required` 的独立 shared 节点是本框架的既有交付模式。新文件替换而非新增 adapter 里的 source-class / taxonomy 控制段，因此 host adapter 只保留 selected-host、launcher 与 operation facts，Phase 和 probe guide 也不复制这段内容。静态 MD integration test 比较 controller 的声明集合和 schema enum；这检查发布一致性，但不让 Markdown 成为 runtime verdict。
 
-**class 集合与站点选择的分工**：enum 值是**语义类别**（架构），frontmatter 的 query 是**具体目标**（数据）。proposal §6 说的「实测标定后改数据不改架构」由此落实——标定改 frontmatter query，不动 enum、不动轴、不动准入规则。
+**class 集合与站点选择的分工**：enum 值是 machine-accepted **语义类别**（架构）；controller 前言按相同顺序发布 controller-owned query 数据。初始值固定为：`encyclopedia` → `site:wikipedia.org "Internet protocol suite"`，`code_host` → `site:github.com "Hello World"`，`general_web` → `"Internet protocol suite"`。三者均为 capability-only、非用户主题 query；它们不承诺结果或 coverage。后续 controller query 调整不动 enum、不动轴、不动准入规则。
 
-初始声明三类，按此顺序：`encyclopedia`（保留现有 Wikipedia 行为为第一级，happy path 零变化）、`code_host`、`general_web`。选三不选五：三类已经足以让 `universal` 与 `class_scoped` 两个 extent 值都可达（第三类 `general_web` 不带 `site:` 过滤，是「到底还能不能抓到任何东西」的诚实兜底）；width 是可修订的声明数据，宁可从窄开始。
+controller 的 frontmatter 采用以下静态交付形状；MD integration test 解析它并与 enums 精确比较。该测试只检查发布时 guidance drift，不参与 run-time validation 或 Gate verdict：
+
+```yaml
+source_classes:
+  - source_class: encyclopedia
+    neutral_query: 'site:wikipedia.org "Internet protocol suite"'
+  - source_class: code_host
+    neutral_query: 'site:github.com "Hello World"'
+  - source_class: general_web
+    neutral_query: '"Internet protocol suite"'
+boundary_locations: [host_surface, host_policy, network_path, probe_relay]
+boundary_extents: [universal, class_scoped]
+```
+
+**controller 到 probe 的交付路径**：`phase-hitl1.md` 在 `requires` 中直接加载该 controller，并在 spawn isolated probe 时与 `shared-hitl1-capability-probe.md` 一同交付。probe 不读取框架文件，controller 也不写入 run bundle 或任何 evidence surface。MD 只在这一次 sub-agent 任务中给出 Agent-facing work constraints；ProfileSchema 和 Gate 保持机器事实与 verdict 的唯一 owner。
+
+初始声明三类，按此顺序：`encyclopedia`（保留现有 Wikipedia 行为为第一级，happy path 零变化）、`code_host`、`general_web`。选三不选五：三类已经足以让 `universal` 与 `class_scoped` 两个 extent 值都可达（第三类 `general_web` 不带 `site:` 过滤，是「到底还能不能抓到任何东西」的诚实兜底）；envelope 的最大宽度由这个闭合集合限制，宁可从窄开始。
 
 ### D2. envelope 用数组 + refine，不用 record
 
@@ -52,28 +68,28 @@ source_class_reachability: z.array(z.object({
 })).max(SOURCE_CLASSES.length).optional()
 ```
 
-配 `.superRefine()`：class 不重复；`available` 至少一个 `reachable`；`unavailable` 零个 `reachable`。
+配 `.superRefine()`：class 不重复；`available` 至少一个 `reachable`；`unavailable` 零个 `reachable`。schema 接受唯一 entry 的任意子集，以便旧 envelope 在未来新增 class 后仍可读；当前 controller/writer 则返回每个已声明 class 的一条 entry，在 first-success 后把未尝试 class 标为 `not_attempted`。因此持久化形状有静态最大宽度，但不把未来 enum 扩展变成历史 bundle 的迁移前置条件。
 
 **替代方案 A（`z.record`）**：键开放，undeclared class 只能靠 refine 挡，且 YAML 里一个拼错的键会静默通过到 refine 才报——诊断更差。
 
 **替代方案 B（`z.object` 每 class 一个 optional 字段）**：加 class 就改 object 形状，与 D1 的「改数据不改架构」冲突。
 
-数组版本天然表达 spec 里「at most one entry per declared source class」和「not attempted 不是 unreachable」两条区别，`.max()` 把定宽写进类型而不是写进注释。这条是**「定宽不是矩阵」在实现层的正面兑现**：每 entry 恰好两个标量字段，schema 层就没有 URL、HTTP 码、query 的容身处。
+数组版本天然表达 spec 里「at most one entry per declared source class」和「not attempted 不是 unreachable」两条区别，`.max()` 把最大宽度写进类型而不是写进注释。这条是**「有界而不是矩阵」在实现层的正面兑现**：每 entry 恰好两个标量字段，schema 层就没有 URL、HTTP 码、query 的容身处。
 
-### D3. 两轴用嵌套对象承载，配对性是结构而非 refine
+### D3. 两轴用 `access_boundary` 嵌套对象承载，配对性是结构而非 refine
 
 **决定**：
 
 ```js
-unavailable_boundary: z.object({
-  location: z.enum(['host_surface', 'host_policy', 'network_path', 'probe_relay']),
-  extent: z.enum(['universal', 'class_scoped']),
+access_boundary: z.object({
+  location: ResearchAccessBoundaryLocation,
+  extent: ResearchAccessBoundaryExtent,
 }).strict().optional()
 ```
 
 **替代方案（两个平级 optional 字段 + refine 校验配对）**：被否。refine 是事后检查，「只写了 location」这个非法状态在类型上仍可表达，只是被拦下；嵌套对象让它**根本不可表达**。spec 要求的「present together or absent together」因此不需要一条 refine 规则去守。
 
-字段整体 optional 即 spec 的 honest-unclassified：缺失是合法状态、不是缺陷。`.strict()` 防止未来有人往里塞第三个轴而不走 spec。
+字段整体 optional 即 spec 的 honest-unclassified：缺失是合法状态、不是缺陷。该对象可出现在 `available` 或 `unavailable` branch，但 cross-field rules 使含义唯一：`available` 仅可带 `class_scoped`，且 envelope 同时有 reachable 与 unreachable class；`unavailable` 仅可带 `universal`；`unprobed` 一律拒绝。这样 `class_scoped` 有可表达的 partial-reachability 状态，而 `unavailable` 不会错误宣称部分可达。多根、互不相关或无法确立的边界必须省略对象并显式 unclassified。`.strict()` 防止未来有人往里塞第三个轴而不走 spec。
 
 ### D4. owner → repair_kind 推导，而非并列字段
 
@@ -85,11 +101,13 @@ unavailable_boundary: z.object({
 
 ### D5. Gate 读结构化字段，unclassified 走显式分支
 
-**决定**：`researchAccessFinding()` 改为三分支——
+**决定**：`researchAccessFinding()` 改为三个 blocking 分支，且不读取 `available.access_boundary`：
 
-1. `unavailable_boundary` 存在 → `selectedAdapterBoundaryFact(location)` → finding 携带该 owner、推导出的 repair_kind、同 probe/同 Gate 的 rerun 边界，并在 feedback 中带上 extent（`class_scoped` 时说明是部分来源而非全部）。
-2. `unavailable_boundary` 缺失且 status 为 `unavailable` → 显式 finding：「该观察未携带可路由 boundary」这个 direct fact + 记录的 reason 原文 + 同 probe rerun。repair_kind 为 `agent_action`（Agent 应重跑 probe 并按 guide 携带分类），不是 `external_action`——把无分类当外部前置条件正是被修的误路由之一。
+1. `unavailable.access_boundary` 存在 → `selectedAdapterBoundaryFact(location)` → finding 携带该 owner、推导出的 repair_kind、同 probe/同 Gate 的 rerun 边界，并在 feedback 中带上 `universal` extent。
+2. `access_boundary` 缺失且 status 为 `unavailable` → 显式 finding：「该观察未携带可路由 boundary」这个 direct fact + 记录的 reason 原文 + 同 probe rerun。repair_kind 为 `agent_action`（Agent 应重跑 probe 并按 controller 携带分类），不是 `external_action`——把无分类当外部前置条件正是被修的误路由之一。
 3. `unprobed` / 缺失 → 保持既有 `agent_action` 路径不变。
+
+`available.class_scoped access_boundary` 是 Phase 的既有 HITL1 disclosure 输入；status 已通过时 Gate 不生成 finding、不调用 resolver，也不把它升级为 Gate root。
 
 第 179 行的一律 `external_action` 随之消失。
 
@@ -107,7 +125,7 @@ unavailable_boundary: z.object({
 
 ### 设计论证（按 constitution 顺序）
 
-**Semantic precision** — 新增具名概念是 access envelope 与两根轴。读者的有界问题：Phase Agent 与 Gate checker 问「本 run 现在够得着什么、够不着的那部分归谁」。必须保留的区别有二：owner 四分（宿主没能力 / 宿主拒绝 / 网络够不着 / probe 没跑起来，四者 repair 不同）与 extent 二分（全不可达阻断 vs 部分不可达放行）。正常推理停止点：读到 `status` 判准入，读到 `unavailable_boundary` 判 owner，两步到底，无需解析散文、无需回溯探测过程。D2/D3 保证这两步读到的都是校验过的闭合值。
+**Semantic precision** — 新增具名概念是 access envelope 与两根轴。读者的有界问题：Phase Agent 与 Gate checker 问「本 run 现在够得着什么、够不着的那部分归谁」。必须保留的区别有二：owner 四分（宿主没能力 / 宿主拒绝 / 网络够不着 / probe 没跑起来，四者 repair 不同）与 extent 二分（全不可达阻断 vs 部分不可达放行）。正常推理停止点：读到 `status` 判准入；仅 status 为 unavailable 时读 `access_boundary` 判 owner。available 的 class-scoped boundary 到 Phase disclosure 即止，无需解析散文、无需回溯探测过程。D2/D3 保证这些分支读到的都是校验过的闭合值。
 
 **Simple reliable control** — direct Source of Record 从「reason 散文」迁到结构化字段（D3/D4/D5）；最短合法闭环长度不变，仍是「重跑同一 probe → 重跑同一 Gate」，未新增 state、Gate、retry、recovery 路径。净简化账：删除 `selectedAdapterUnavailableRoot()` 一条解析路径、删除一条静默降级分支、Gate 规则集零新增（D6）；新增的全是闭合枚举字段与一处推导函数。加法项（阶梯遍历）以 D7 的静态上界买单，且不落在 happy path 上。
 
@@ -117,13 +135,13 @@ unavailable_boundary: z.object({
 
 - **any-success 准入确实更容易通过，可能放行一个真实来源大面积不可达的 run** → 这是有意的（假阴性才是被修的缺陷），但代价真实。缓解：envelope 完整保留每 class 结果并在 HITL1 如实告知；wave 侧消费与 limitation 声明共用这同一数据模型，届时不改 schema 即可接上（proposal §8）。
 - **模型为了满足词汇要求而猜一个 boundary** → guide 与 spec 都明写「不得为满足词汇而猜」，且 unclassified 是合法返回；D5 分支 2 让 unclassified 有明确出口而非惩罚，去掉猜的动机。测试须正面覆盖 unclassified 分支（`verification-plan.yaml` claim `two-axis-classification-and-repair-derivation`）。
-- **未来加 class 会让旧 observation 的 envelope「不完整」** → envelope 是 per-class optional entry 列表，缺项就是缺项，既不等于 `unreachable` 也不触发校验失败；旧 observation 无 envelope 时整体 optional，走既有 legacy 可读路径。
-- **enum 与 frontmatter 双坐标仍可能漂移** → D1 的 drift-check 在读取时 throw，且 `verification-plan.yaml` claim `adapter-contract-declaration-integrity` 把它变成失败可见的测试，而非静默失效。
+- **未来加 class 会让旧 observation 的 envelope「不完整」** → envelope 是以当前闭合集合为上界的可选 entry 列表；缺项就是缺项，既不等于 `unreachable` 也不触发校验失败。旧 observation 无 envelope 时整体 optional，走既有 legacy 可读路径。
+- **enum 与 controller 双坐标仍可能漂移** → D1 的静态 MD integration test 比较二者的 class 集合和顺序；它在发布验证时使 drift 可见，但不把 Markdown 解析变成 run-time validator 或 Gate authority。
 - **删除导出函数是破坏性的** → `selectedAdapterUnavailableRoot()` 仅 Gate 一个调用点，同一 change 内一并改；它不属于 bundle 数据契约，不影响任何已有 bundle 字节。
 
 ## Migration Plan
 
-无 bundle 迁移。envelope 与 boundary 均为 optional，旧 `rb_profile.yaml` 原样通过校验，走 D5 分支 2 的显式 unclassified 路径；不重写、不默认填充、不重解释为任一 boundary。
+无 bundle 迁移。envelope 与 `access_boundary` 均为 optional，旧 `rb_profile.yaml` 原样通过校验：legacy unavailable 走 D5 分支 2 的显式 unclassified 路径，legacy available 保留既有成功 Gate 路径；不重写、不默认填充、不重解释为任一 boundary。
 
 当前 writer 侧一次性生效：本 change 之后写出的每个 observation 都带 envelope，unavailable 分支在能确立 boundary 时带两轴。
 
