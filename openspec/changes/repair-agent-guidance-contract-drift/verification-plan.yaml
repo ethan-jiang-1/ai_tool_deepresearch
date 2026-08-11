@@ -1,0 +1,61 @@
+schema_version: verification-routing/v1
+change: repair-agent-guidance-contract-drift
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The change does not alter an in-process JavaScript module, schema, or
+      helper contract.
+  integration:
+    status: selected
+    rationale: >-
+      The affected tests read independently owned Markdown and release
+      surfaces, making them deterministic integration contracts with native
+      node:test exit verdicts.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale runtime lifecycle, temporary bundle, or production
+      checkpoint behavior changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change makes no claim about real Playbook-Agent or Subject-Agent
+      behavior and does not run a real Agent experiment.
+claims:
+  - id: final-backing-authority-drift
+    statement: >-
+      FDB-001 and FDB-002: the artifact-persistence Markdown contract keeps
+      Final command, persistence, release, and RUN consistency coverage at
+      their real owners without requiring the non-authoritative CONTEXT.md to
+      duplicate Final-backing vocabulary.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/artifact-persistence-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: bounded-batch-guidance-drift
+    statement: >-
+      AGQ-022 and RWP-015: shared, Wave0, and Wave1 guidance expose the
+      existing bounded top-up batch-claim distinctions while retaining the
+      current profile cap, claim-count formula, active drain loop, and
+      no-serial-default boundary.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/parallel-delegated-reference-materialization.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
