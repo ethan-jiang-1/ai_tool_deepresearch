@@ -1,6 +1,12 @@
 # BUG-217: parallel-delegated work-unit guidance 缺少 bounded top-up 措辞
 
-> 状态: 活跃 | 优先级: P2 | 严重度: P2 | 更新: 2026-08-11 | source: `npm test` 全量回归
+> 状态: 已修复 | 优先级: P2 | 严重度: P2 | 更新: 2026-08-12 | source: `npm test` 全量回归
+
+## Resolution
+
+已由 `repair-agent-guidance-contract-drift`（`65fdb829a`）修复：shared、Wave0 与
+Wave1 guidance 明确既有 bounded top-up、cap/capacity 与 drain-before-gate 顺序。
+focused `parallel-delegated-reference-materialization` 12/12 与全量 suite 均通过。
 
 ## Why
 

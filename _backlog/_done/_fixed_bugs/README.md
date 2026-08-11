@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-08-08 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-08-12 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -202,8 +202,12 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-209 | 2026-08-08 | `operate-queue check` reports distinct `drained: true` for a fully drained queue (`v0.78` AGQ-027) |
 | BUG-210 | 2026-08-08 | Wave1 reference-floor-deficit feedback names depth-review `reviewed_work_unit_refs` sync (`v0.77` WAI-009) |
 | BUG-211 | 2026-08-08 | Canonical Wave1 locator derivation documented + inspect surfaces canonical target (`v0.77` REF-011/WAI-010) |
+| BUG-216 | 2026-08-12 | Final vocabulary static-contract drift repaired by `repair-agent-guidance-contract-drift` (`65fdb829a`) |
+| BUG-217 | 2026-08-12 | Bounded top-up guidance vocabulary drift repaired by `repair-agent-guidance-contract-drift` (`65fdb829a`) |
+| BUG-218 | 2026-08-12 | Public Wave2 finding source-identity form repaired by `harden-agent-authored-contracts` (`ab2f17c49`, v0.88) |
+| BUG-219 | 2026-08-12 | Raw document-markup reference-format false pass repaired by `harden-agent-authored-contracts` (`ab2f17c49`, v0.88) |
 
-**Next available bug ID: BUG-212**
+**Next available bug ID: BUG-220**
 
 ---
 

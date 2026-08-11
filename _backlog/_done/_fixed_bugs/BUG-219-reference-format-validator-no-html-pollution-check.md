@@ -1,6 +1,13 @@
 # BUG-219: reference format 校验不检测 HTML 污染，物化脚本可产出肉眼不可读的 Key Facts 且 gate 通过
 
-> 状态: 活跃 | 优先级: P2 | 严重度: P2 | 更新: 2026-08-11 | source: 真实 run 执行（enterprise-ai-harness-adoption-open-source wave1）
+> 状态: 已修复 | 优先级: P2 | 严重度: P2 | 更新: 2026-08-12 | source: 真实 run 执行（enterprise-ai-harness-adoption-open-source wave1）
+
+## Resolution
+
+已由 `harden-agent-authored-contracts`（`ab2f17c49`，v0.88）修复：REF-002 现在只在
+required semantic section 的非 fenced-code 内容中识别有限 raw document-markup
+signature，并返回既有 `reference_format` repair。focused helper 24/24、Wave CLI
+integration 33/33 与全量 suite 均通过。
 
 ## Why
 

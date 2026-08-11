@@ -1,6 +1,12 @@
 # BUG-216: CONTEXT.md 缺少 Final-backing 词汇锚点
 
-> 状态: 活跃 | 优先级: P2 | 严重度: P2 | 更新: 2026-08-11 | source: `npm test` 全量回归
+> 状态: 已修复 | 优先级: P2 | 严重度: P2 | 更新: 2026-08-12 | source: `npm test` 全量回归
+
+## Resolution
+
+已由 `repair-agent-guidance-contract-drift`（`65fdb829a`）修复：测试不再把
+`CONTEXT.md` 当作 Final 词汇 owner，保留真实 Final command/release/RUN 契约覆盖。
+focused `artifact-persistence-contract` 6/6 与全量 suite 均通过。
 
 ## Why
 

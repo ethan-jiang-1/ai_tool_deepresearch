@@ -1,6 +1,13 @@
 # BUG-218: operate-topic-state wave_projection schema 对 finding source_identity 字段说明与 validator 不一致
 
-> 状态: 活跃 | 优先级: P2 | 严重度: P2 | 更新: 2026-08-11 | source: 真实 run 执行（enterprise-ai-harness-adoption-open-source wave2）
+> 状态: 已修复 | 优先级: P2 | 严重度: P2 | 更新: 2026-08-12 | source: 真实 run 执行（enterprise-ai-harness-adoption-open-source wave2）
+
+## Resolution
+
+已由 `harden-agent-authored-contracts`（`ab2f17c49`，v0.88）修复：schema projection
+公开按 kind 区分的 `source_identity` forms，Wave2 finding 直接提供可解析的
+`finding_id` template。focused `topic-state-schema-wave-identity` 3/3、CLI integration
+15/15 与全量 suite 均通过。
 
 ## Why
 

@@ -1,6 +1,6 @@
 # 活跃 Bug 系统性修复研究与 OpenSpec 路线
 
-> 状态：Change A 已归档并提交；Change B 已提案，ready for review / Apply
+> 状态：Change A 与 Change B 均已归档并提交；BUG-216--219 的当前回归已复验通过，计划结案。
 > 
 > 范围：仅核验当前 `_backlog/bugs/`、已接受 OpenSpec spec、现行实现和可执行测试；不把历史 run snapshot 或聊天结论当作行为证据。
 
@@ -15,23 +15,28 @@
 
 Change A 已于 2026-08-12 通过受治理流程归档为
 `2026-08-12-repair-agent-guidance-contract-drift`，并以 commit `65fdb829a`
-提交。BUG-216/217 的目标范围已完成；它们的 backlog 卡片和 README 索引仍按本计划
-的 backlog-hygiene 边界留待单独处置。当前待推进的产品修复范围是 BUG-218/219。
+提交。Change B 已于同日归档为
+`2026-08-12-harden-agent-authored-contracts`，并以 commit `ab2f17c49`
+提交。BUG-216--219 的目标范围均已完成；本次 backlog hygiene 将把四张卡和本计划
+移入对应的完成目录，并清除 active README 的陈旧链接。
 
 对 BUG-219，本计划作出有界产品决定：**原始 HTML 文档标记出现在 required semantic section 的非代码内容中，是 reference 格式污染，不是研究内容质量判断。** 规则只识别有限的 document-like signatures（例如 `<!doctype`、`<html>`、`<head>`、`<body>`、`<script>`、`<style>`、`<iframe>`），忽略 fenced code，且不自动清洗、改写或判断事实是否正确。这样它能拦住真实 page dump，而不会升级为通用 Markdown linter 或语义 Gate。
 
-## 活跃卡与索引
+## 结案卡与索引
 
 `rg --files _backlog/bugs` 在本次核验时只返回以下四张卡：
 
-| Card | 当前分类 | 结论 |
+| Card | 最终分类 | 结论 |
 | --- | --- | --- |
 | BUG-216 | 已修复：static test 的 authority drift | Change A 移除了错误的 `CONTEXT.md` Final glossary 所有权断言，保留真实 Final command/release/RUN 覆盖；focused suite 6/6 和全量 suite 通过。 |
 | BUG-217 | 已修复：guidance/test 词汇 drift | Change A 在 shared/Wave0/Wave1 正常 top-up 处补上既有 batch/cap/capacity 术语映射，保留公式、fallback 与 drain 顺序；focused suite 12/12 和全量 suite 通过。 |
-| BUG-218 | 已确认：公开 schema projection 行为缺陷 | schema 输出不能构造 Wave2 finding packet，违反 accepted spec。 |
-| BUG-219 | 已确认：reference-format enforcement gap | raw document markup 当前通过；计划以 narrow REF-002 extension 将其变成结构性 format failure。 |
+| BUG-218 | 已修复：公开 schema projection 行为缺陷 | Change B 的 conditional forms 公开 Wave2 `finding_id` shape 和可解析 template；focused suite 3/3、CLI integration 15/15 与全量 suite 通过。 |
+| BUG-219 | 已修复：reference-format enforcement gap | Change B 以 bounded fenced-code-excluded document-markup predicate 返回既有 `reference_format` repair；focused helper 24/24、Wave CLI integration 33/33 与全量 suite 通过。 |
 
-`_backlog/bugs/README.md:23-26` 仍链接 BUG-212--215，但这些文件不在当前活跃目录；其中 BUG-215 已在本次工作区移动，故该四个 README 链接是陈旧索引。不要在任一 OpenSpec Apply 中顺手移动卡或修改 README；在每张卡获得明确 disposition 后，按 README 自己的归档步骤单独做 backlog hygiene。
+`_backlog/bugs/README.md:23-26` 仍链接 BUG-212--215，但这些文件已在
+`_done/_fixed_bugs/`，故该四个 README 链接是陈旧索引。所有四张实际活跃卡现已
+获得明确 disposition；本次独立 backlog hygiene 将按 README 的归档步骤同步索引、计数
+和卡片位置。
 
 ## 逐卡证据与处置
 
@@ -77,7 +82,7 @@ accepted spec 明确要求 schema 是由真实 Zod contract 导出的 authoring 
 | 顺序 | 建议 change 名 | 覆盖 | Delta spec | 版本含义 |
 | --- | --- | --- | --- | --- |
 | A | `repair-agent-guidance-contract-drift` | BUG-216、BUG-217 | `skip_specs: true`：两个 accepted behavior owner 已完整；只修测试 owner 和三份 guidance wording。Capability Discovery 已将 `research/final-delivery-backing` 与 `research/research-wave-phase-content` 列为 Verify-only。 | 已完成：2026-08-12 受治理归档为 `2026-08-12-repair-agent-guidance-contract-drift`，提交 `65fdb829a`；无版本 bump。 |
-| B | `harden-agent-authored-contracts` | BUG-218、BUG-219 | `research/canonical-topic-state` 是 Verify-only（CTS-010 已要求可构造 Wave2 form）；`bundle/reference-flat-format` 修改既有 REF-002，加入有限 raw-document-markup prohibition；`workflow/shared-node-content` 为 Verify-only guidance consumer。 | 公共 `schema` CLI 和 reference-format Gate 行为收敛，target `v0.88`；需 changelog、RUN banner、semantic closure 和 feedback-lifecycle review。 |
+| B | `harden-agent-authored-contracts` | BUG-218、BUG-219 | `research/canonical-topic-state` 是 Verify-only（CTS-010 已要求可构造 Wave2 form）；`bundle/reference-flat-format` 修改既有 REF-002，加入有限 raw-document-markup prohibition；`workflow/shared-node-content` 为 Verify-only guidance consumer。 | 已完成：`v0.88` public schema/reference-format 收敛，CHANGELOG/RUN、semantic closure、feedback review 和 governed archive 均通过；归档 `2026-08-12-harden-agent-authored-contracts`，提交 `ab2f17c49`。 |
 
 因此最小 change 数是 **2**。A 合并 216/217 是因为两者均是 Agent-readable static-document contract repair，且都不触碰 runtime truth、queue ownership 或 Final delivery transaction。B 合并 218/219 是因为两者都保护同一个 Authoring boundary：Agent 无需读 Engine source 即可构造合格 packet，并不会把 raw fetched document bytes 当作合格 reference body。B 的 direct Sources of Record 仍独立：`TopicApplyPlanSchema` / `ProjectionSourceIdentitySchema` 决定 packet form，`checkReferenceFormatFiles` 决定 reference-format verdict；change 不能让其中一者替代另一者。
 
@@ -115,10 +120,8 @@ npm test
 ## 执行顺序
 
 1. **完成 A**：已完成 Explore/Propose/Polish/Apply/Archive；Change A 的 tasks 持续记录了验证证据，归档最终器全部通过。
-2. **Propose B（已完成）**：已生成 `harden-agent-authored-contracts` 的 proposal/design/REF-002 delta/tasks、verification plan 与 semantic closure；proposal 声明 `v0.88`、BUG-218/219 合并理由和 no-go，严格 OpenSpec 与 plan-level governance checks 均已通过。
-3. **Review/Polish B（下一步）**：审阅 schema projection 的 conditional-form presentation，确认 REF-002 的 narrow markup predicate / fenced-code exclusion / feedback shape；保持 `TopicApplyPlanSchema` 是唯一 validator，`checkReferenceFormatFiles` 是唯一 format verdict owner。
-4. **Apply B**：仅按批准 tasks 落实 code/test，更新 `CHANGELOG.md`、`RUN.md` 与 tasks.md；完成 semantic closeout 和 spec sync 后，通过受治理 archive route 归档。
-5. 在两张已修复卡和 BUG-218/219 都获得明确 disposition 后，再单独清理 backlog README 的 stale links/卡片位置。
+2. **完成 B**：`harden-agent-authored-contracts` 已完成 Review/Polish/Apply、REF-002 主规范同步、v0.88 release 对齐与 feedback closeout；全量 2,776 tests / 484 suites 通过，governed finalizer 归档成功。
+3. **完成 backlog hygiene**：四张卡的 focused 回归重验通过，BUG-212--215 stale active links 将移除；BUG-216--219 与本计划移入 completed archive，且更新 fixed-bug / done 索引计数。
 
 ## 本次复现记录
 

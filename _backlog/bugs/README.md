@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-08-08 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-08-12 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -20,14 +20,16 @@
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
-| [`BUG-212`](BUG-212-supersede-predecessor-bypass-misreport.md) | P1 | wave1 | supersede 后 predecessor 声明 rows 被 `delegated_bypass_suspected` 误报，gate 硬阻塞（违反 work-unit-provenance-gate §81-87 "historical only"） |
-| [`BUG-213`](BUG-213-depth-review-rejects-authorized-prior-source-ref.md) | P1 | wave1 | `validateSubmittedClaimBacking` 拒绝合法 prior submitted source_ref，违反 subagent-node-contract §169 / Scenario 184-189 |
-| [`BUG-214`](BUG-214-supplementary-empty-output-files-vs-dry-submit-contract.md) | P2 | wave1 | supplementary task.md 允许空 `output_files[]`，但 dry-submit 强制非空，supplementary 首次提交必被拒 |
-| [`BUG-215`](BUG-215-hitl1-probe-unavailable-reason-prefix-classification-lost.md) | P2 | hitl1 | HITL1 probe 持续 unavailable：reason 前缀词汇未强制使 gate 根因分类静默失效，host 能搜不能抓时 run 卡死无前进路径 |
-| [`BUG-216`](BUG-216-context-final-vocabulary-terms-missing.md) | P2 | cross | `CONTEXT.md` 缺少 `Final key-finding declaration` / `Final Evidence Map` / `Final backing` 加粗术语，`artifact-persistence-contract` 测试失败（HEAD 前即存在） |
-| [`BUG-217`](BUG-217-bounded-top-up-vocabulary-missing.md) | P2 | wave0/1 | `shared-subagent-protocol.md` / `phase-wave0.md` / `phase-wave1.md` 缺少 `bounded top-up` 措辞，`parallel-delegated` 测试失败（HEAD 前即存在） |
-| [`BUG-218`](BUG-218-wave-projection-schema-finding-source-identity-mismatch.md) | P2 | wave2 | `operate-topic-state schema --context wave_projection` 对 `kind: finding` 只暴露 `work_id`，validator 却要求 `finding_id`——按 schema 构造必然 input_invalid |
-| [`BUG-219`](BUG-219-reference-format-validator-no-html-pollution-check.md) | P2 | wave1 | `checkReferenceFormatFiles` 不检测 Key Facts 的原始 HTML 污染，物化脚本从 `page.md` 截句会产出肉眼不可读 reference 且 wave1/wave2 gate 通过 |
+| [BUG-220](BUG-220-wave2-finding-packet-validation-error-misleading.md) | P2 | wave2 | Wave2 finding 投影包 `source_identity` 字段名错误时，Zod union 回退产生误导性验证信息（指向 `wave0_evidence` 而非 `finding_id`） |
+| [BUG-221](BUG-221-canonical-wave1-filename-algorithm-undocumented-and-inspect-single-candidate.md) | P2 | wave1 | REF-011 canonical 文件名算法未完整文档化（token 48 字符截断 + normalized-URL digest），且 `materialize_projection` 只暴露每 topic 首个候选 |
+| [BUG-222](BUG-222-wave1-missing-depth-review-masks-real-root-behind-topic-invalid.md) | P2 | wave1 | depth-review 缺失时 reference convergence 报误导性 `wave1_reference_topic_invalid`，掩盖真实根因 `reviewed_work_unit_refs_missing`（guard 顺序） |
+| [BUG-223](BUG-223-unreviewed-supplementary-rows-note-never-surfaces-type-mismatch.md) | P2 | wave1 | `unreviewedSubmittedSupplementaryRows` 收到 topic 对象而非 slug 字符串，`resolveTopicLayout` 恒失败，unreviewed-supplementary 提示永不浮出 |
+| [BUG-224](BUG-224-wave0-multi-contribution-deferred-contribution-not-expressible.md) | P2 | wave0 | Wave0 投影包无法表达"多个 work-unit 贡献各自 whole-contribution deferred"（`deferred_contribution` 单数 + slot_id 每包一次的组合限制，playbook 未说明） |
+
+> 5 个 bug（BUG-220..224）来自一次完整 real-actor Deep Research run
+> （`dpt_rb_enterprise-safe-ai-harness`，HITL1→Wave0→Wave1→Wave2→HITL2→Final，
+> 2026-08-12）中 Phase Agent 实际遇到的确定性框架缺陷，附代码锚点与复现路径。
+> BUG-212--219 已在 `_done/_fixed_bugs/`。
 
 ## 新增 (2026-08-08)
 
@@ -107,7 +109,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 
 > BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspened_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
-**Next available bug ID: BUG-216**
+**Next available bug ID: BUG-220**
 
 ## BUG-132–137 接手地图
 
