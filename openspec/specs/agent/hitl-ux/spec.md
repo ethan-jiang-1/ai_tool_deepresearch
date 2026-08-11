@@ -106,12 +106,41 @@ existing single HITL1 semantic decision boundary. The brief remains the
 exact-text owner; accepted focus remains in the existing literal controls
 snapshot, not a profile/Topic/Gate/parser field. Clear decisions still avoid a
 blanket second confirmation, and the existing Gate-pass-only exit still states
-the silent phase expectation. This change preserves every other HIU-002
-requirement and scenario: one-or-more independent Topic maps without a numeric
-target, reviewable larger maps, natural-language and letter selection, minimal
-ambiguity clarification, uncertainty handling, focus capture, no-focus and
-retired-search-preference behavior, honest host-rendering residual, and the
-full existing post-Gate silent-phase expectation.
+the silent phase expectation. This requirement preserves every other HIU-002
+behavior and scenario: one-or-more independent Topic maps without a numeric
+target, reviewable larger maps, natural-language and letter selection,
+uncertainty handling, focus capture, no-focus and retired-search-preference
+behavior, honest host-rendering residual, and the full existing post-Gate
+silent-phase expectation.
+
+Before the Agent writes the accepted `research_profile`, accepted
+`root_must_answer_set`, canonical Topic state, or HITL1 status, the brief SHALL
+render a concise Chinese **研究对齐草案**. The draft SHALL state the Agent's
+current understanding of the user's goal, research object, decision or delivery
+use, and scope; it SHALL show the recommended must-answer set, proposed minimum
+independent Topic map, and recommended profile. These are recommendations, not
+new structured state or a second decision boundary.
+
+When the Agent judges that a currently answerable answer would materially change
+one or more existing structured decisions -- the must-answer set, proposed Topic
+map, research profile, explicit scope exclusion, source/evidence constraint, or
+delivery emphasis -- it MAY present a bounded first batch of at most three
+independent frontier questions. Each question SHALL state a recommendation or
+transparent default and the structured decision it would change. A question that
+depends on an unresolved answer SHALL wait for a later HITL1 turn. The batch is a
+presentation shape, not a round counter: HITL1 SHALL NOT persist a question count,
+queue, `clarification_mode`, sentinel, or hard maximum number of conversation
+rounds.
+
+This HITL1-specific qualification applies before the user has accepted the draft
+and does not weaken HIU-001's minimum-confirmation rule for one already-expressed
+ambiguous decision. Details that the Agent can handle with a transparent default,
+or that do not change the research route, SHALL NOT create a proactive question.
+The user MAY answer only part of a batch, directly accept the recommendation, make
+a natural-language correction, or explicitly delegate remaining decisions to the
+Agent. A clear acceptance, correction, or delegation SHALL use the existing HITL1
+exit semantics; the Agent SHALL restate the resolved understanding and SHALL NOT
+ask a blanket second confirmation.
 
 After the recorded decision, `brief/hitl1.md` SHALL own these exact user-facing
 current-observation messages:
@@ -153,6 +182,30 @@ These templates are framework Markdown only. They SHALL NOT promise to hide,
 suppress, replace, or reinterpret selected-host-native tool calls, policy
 failures, transport/security errors, or permitted fallback output. They SHALL
 not promise a duration, host permission, provider success, or automatic retry.
+
+#### Scenario: Independent material forks use one bounded first presentation
+
+- **WHEN** the draft contains two independent, currently answerable interpretations
+  whose answers would change different existing research decisions
+- **THEN** HITL1 MAY present both questions in the same first batch, with one
+  recommendation/default and stated impact for each
+- **AND** it SHALL present no more than three independent questions in that batch
+- **AND** it SHALL not create a counter, queue, state, or new checkpoint
+
+#### Scenario: Dependent or non-material details do not make a questionnaire
+
+- **WHEN** a candidate question depends on an unresolved answer, or its answer can
+  be handled by a transparent default without changing the research route
+- **THEN** HITL1 SHALL defer or omit that question
+- **AND** it SHALL retain the direct acceptance, correction, and delegation exits
+
+#### Scenario: Delegation resolves the existing HITL1 boundary
+
+- **WHEN** the user says to proceed according to the displayed recommendation or
+  delegates unresolved material decisions to the Agent
+- **THEN** the Agent SHALL restate the resulting research understanding and use the
+  existing accepted-owner and Gate path
+- **AND** it SHALL not request a blanket second confirmation or create a new HITL
 
 #### Scenario: Recorded decision is followed by an explained non-decision check
 

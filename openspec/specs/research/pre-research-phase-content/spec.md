@@ -43,11 +43,34 @@ Section 内容要求：
 
 `phase-hitl1.md` SHALL retain its complete nine-section body, `stop: yes`, recorded
 HITL1 decision, canonical Topic-state, style-handoff, profile-write, Gate, and
-silent-execution boundaries. After the existing semantic decision and style handoff,
-the Phase Agent SHALL actor-deliver exactly one isolated probe with the generic
+silent-execution boundaries. Before the Agent writes the accepted profile, canonical
+Topic state, or HITL1 status, it SHALL use HIU-002's research alignment draft to
+obtain the smallest required semantic resolution. The Phase MAY construct proposed
+must-answer questions and a proposed Topic map for that draft, but SHALL NOT treat
+them as canonical Topic state or profile facts until the existing HITL1 decision is
+resolved.
+
+Once the user clearly accepts, corrects, or delegates the draft, the Phase Agent
+SHALL write a concise `rb_plan.md## Goal > ### HITL1 Alignment Snapshot` before the
+existing profile/status/topic-state path. The snapshot SHALL record the confirmed or
+delegated goal, the Agent's resolved understanding of object/use/scope, material
+forks and transparent defaults, and their relationship to the accepted
+must-answer/profile/Topic decisions. It SHALL be narrative context, not a profile
+field, Topic identity, Gate input, parser target, conversation transcript, or
+lifecycle authority. The Phase then continues the existing semantic decision and
+style-handoff path. After the existing semantic decision and style handoff, the
+Phase Agent SHALL actor-deliver exactly one isolated probe with the generic
 capability-probe safety guide and the separately required
 `shared-hitl1-research-access-envelope.md` controller. The Phase itself SHALL not
 directly retrieve a sample page.
+
+If a later existing profile, status, or Topic-state operation blocks or fails, the
+already-written snapshot remains readable narrative context only. It SHALL NOT be
+treated as evidence that any profile/status/Topic fact was recorded, as permission
+to advance, or as a substitute for the existing repair/recovery owner. The Agent
+SHALL use that existing owner and same legal path; it MAY replace the snapshot only
+when a new resolved user decision changes its narrative, without creating a separate
+snapshot recovery state.
 
 The controller SHALL own the entire direct-sample experiment: fixed China and
 overseas sample suite, diagnostic-only samples, small-batch concurrency cap, primary
@@ -83,6 +106,32 @@ existing controls snapshot, preserve any unrelaxed hard source constraint, then 
 the existing Gate. When no material gap exists, the Phase may make the same existing
 Gate handoff without creating a user question. A user who neither resolves a material
 gap nor requests a new round remains in the existing HITL1 loop.
+
+#### Scenario: Alignment snapshot precedes canonical HITL1 writes
+
+- **WHEN** the user accepts, corrects, or delegates a resolved alignment draft
+- **THEN** the Phase SHALL write the required alignment snapshot before it writes
+  the accepted profile, HITL1 status, or retained topic-state input
+- **AND** it SHALL not create a profile field, Topic identity, Gate input, or
+  lifecycle state from the snapshot prose
+
+#### Scenario: Proposed draft data is not canonical state
+
+- **WHEN** the Agent prepares a recommendation and one or more frontier questions
+- **THEN** proposed must-answer questions and Topic map entries remain reviewable
+  draft content until the existing HITL1 decision resolves
+- **AND** the Phase SHALL not run canonical topic-state apply or write a recorded
+  HITL1 status merely because a draft was displayed
+
+#### Scenario: Snapshot does not cover a later canonical-write failure
+
+- **WHEN** the alignment snapshot is durable but a later profile, status, or
+  canonical Topic-state operation blocks or fails
+- **THEN** the snapshot SHALL remain narrative context and SHALL NOT establish a
+  recorded profile/status/Topic fact or authorize a Gate/phase advance
+- **AND** the Agent SHALL use the existing owner and same repair/recovery path
+  without asking the user to repeat a still-readable decision or creating a
+  snapshot-specific state
 
 #### Scenario: Probe is direct and executor-neutral
 
@@ -347,36 +396,44 @@ Seed Topics, Wave0, Wave1, Wave2 and Final guidance SHALL tell the Agent to read
 
 ### Requirement: HITL1 capture precedes canonical topic-state replacement
 
-After the user decision and any material-conflict resolution are complete,
-HITL1 SHALL write the exact URC-001 no-controls or supplied-controls form to
-`rb_plan.md` before it creates the retained input for `operate-topic-state
-apply`. When a focus is accepted, that form includes the existing literal
-user-wording and Agent-interpretation convention. The existing canonical
-topic-state transaction SHALL then preserve that current host-file body while
-refreshing its frontmatter and Topic Registry presentation. The controls
-snapshot SHALL NOT be copied into the topic-state input schema, Topic identity,
-seed identity, profile, Gate, or Engine authority fields.
+After the alignment draft and any material-conflict resolution are complete, HITL1
+SHALL write the required alignment snapshot and the exact URC-001 no-controls or
+supplied-controls form to `rb_plan.md` before it creates the retained input for
+`operate-topic-state apply`. When a focus is accepted, that form includes the
+existing literal user-wording and Agent-interpretation convention. The alignment
+snapshot remains a separate template-owned Goal subsection; it SHALL NOT be folded
+into, or alter the compatibility meaning of, `### User Research Controls`.
 
-If topic-state apply returns an accepted workspace or recovery boundary, the
-Agent SHALL use its existing exact inspect/recover/apply operation. It SHALL
-retain and read the already-durable host-file snapshot; it SHALL NOT reconstruct
-controls/focus from chat memory, reread an external source path, or ask the
-user to repeat a decision whose snapshot remains readable.
+The existing canonical topic-state transaction SHALL then preserve that current
+host-file body while refreshing its frontmatter and Topic Registry presentation.
+Neither the alignment snapshot nor controls snapshot SHALL be copied into the
+topic-state input schema, Topic identity, seed identity, profile, Gate, or Engine
+authority fields.
 
-#### Scenario: canonical topic-state apply preserves captured controls
-- **WHEN** HITL1 captures a valid supplied-controls snapshot containing an
-  accepted focus and then applies approved canonical topics
-- **THEN** the committed `rb_plan.md` retains the exact controls form while its
-  Topic Registry is refreshed
-- **AND** the snapshot does not appear in topic-state input, profile, seed
-  identity, or Engine authority fields
+If topic-state apply returns an accepted workspace or recovery boundary, the Agent
+SHALL use its existing exact inspect/recover/apply operation. It SHALL retain and
+read the already-durable host-file snapshots; it SHALL NOT reconstruct alignment,
+controls, or focus from chat memory, reread an external source path, or ask the user
+to repeat a decision whose snapshot remains readable. A legacy bundle without the
+new template-owned alignment subsection remains readable; this requirement creates
+no migration or inferred historical intent.
 
-#### Scenario: topic-state recovery does not lose a snapshot
-- **WHEN** topic-state apply leaves an accepted recovery workspace after
-  controls/focus were captured
+#### Scenario: canonical topic-state apply preserves captured snapshots
+
+- **WHEN** HITL1 captures an alignment snapshot and a valid supplied-controls
+  snapshot containing an accepted focus, then applies approved canonical topics
+- **THEN** the committed `rb_plan.md` retains the alignment snapshot and exact
+  controls form while its Topic Registry is refreshed
+- **AND** neither snapshot appears in topic-state input, profile, seed identity, or
+  Engine authority fields
+
+#### Scenario: topic-state recovery does not lose snapshots
+
+- **WHEN** topic-state apply leaves an accepted recovery workspace after alignment,
+  controls, or focus were captured
 - **THEN** recovery uses the existing workspace owner
-- **AND** the active or recovered host file retains the durable controls
-  snapshot without an external-path reread or repeated user decision
+- **AND** the active or recovered host file retains the durable snapshots without an
+  external-path reread or repeated user decision
 
 ### Requirement: HITL1 uses the selected semantic research-access adapter
 

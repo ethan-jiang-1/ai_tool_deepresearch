@@ -1,13 +1,28 @@
 # RUN.md — DEEP_RESEARCH_HARNESS 入口
 
-> **DEEP_RESEARCH_HARNESS v0.86**
+> **DEEP_RESEARCH_HARNESS v0.87**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DEEP_RESEARCH_HARNESS 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.86
+## Current Release: v0.87
+
+- HITL1 now presents a bounded Chinese research-alignment draft before canonical
+  writes. When currently answerable, independent material forks would change an
+  existing research decision, the first presentation may contain at most three
+  questions, each with a recommendation/default and stated impact; direct
+  acceptance, natural-language correction, and explicit delegation retain the
+  existing HITL1 exit.
+- New run templates retain the resolved goal, object/use/scope understanding,
+  material forks/defaults, and links to the accepted profile, must-answer, and
+  Topic decisions in `## Goal > ### HITL1 Alignment Snapshot`. It is narrative
+  reload context only and is written before the existing profile/status/topic
+  path; a later canonical-write failure does not make it advancement authority.
+- The Engine, PlanSchema, Gate rules, transition chain, controls literal form,
+  and legacy-bundle behavior are unchanged. The existing marker scan only finds
+  leftover required-fill markers; it does not validate alignment prose.
 
 - After HITL1 records the user's decision and completes any required style
   handoff, the Phase Agent actor-delivers the generic capability-probe guide and

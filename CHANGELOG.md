@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.87
+
+- HITL1 now presents a bounded Chinese research-alignment draft before canonical
+  writes. When currently answerable, independent material forks would change an
+  existing research decision, the first presentation may contain at most three
+  questions, each with a recommendation/default and stated impact; direct
+  acceptance, natural-language correction, and explicit delegation retain the
+  existing HITL1 exit.
+- New run templates retain the resolved goal, object/use/scope understanding,
+  material forks/defaults, and links to the accepted profile, must-answer, and
+  Topic decisions in `## Goal > ### HITL1 Alignment Snapshot`. It is narrative
+  reload context only and is written before the existing profile/status/topic
+  path; a later canonical-write failure does not make it advancement authority.
+- The Engine, PlanSchema, Gate rules, transition chain, controls literal form,
+  and legacy-bundle behavior are unchanged. The existing marker scan only finds
+  leftover required-fill markers; it does not validate alignment prose.
+
 ## v0.86
 
 - HITL1 research access is now a fixed, executor-neutral direct-sample

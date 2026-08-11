@@ -1,12 +1,14 @@
-// gate-setup-ready integration tests (PRG-003, PRG-006)
+// gate-setup-ready integration tests (PRG-003, PRG-006, PHS-002, PHS-005)
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { renderSuppliedControls } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/plan-hostfile-sections.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs');
+const GATE_DEFINITION = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-setup-ready.definition.json');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
@@ -98,6 +100,48 @@ describe('check-gate-setup-ready', () => {
     const output = JSON.parse(result.stdout);
 
     assert.equal(output.check.passed, true, `Expected disposable normalization pass, got: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('uses the existing required-fill rule for the HITL1 alignment placeholder', () => {
+    const name = unique('alignment');
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+    assert.equal(r.status, 0, r.stderr);
+    const bundleDir = track(r.stdout.trim());
+    writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE.replace('plan_basename: test', `plan_basename: ${name}`));
+
+    const planPath = join(bundleDir, 'rb_plan.md');
+    const templatePlan = readFileSync(planPath, 'utf-8');
+    const alignment = templatePlan.match(/### HITL1 Alignment Snapshot\n(\(待填充[^)]*\))/);
+    assert.ok(alignment, 'Expected the new template-owned alignment marker');
+
+    fillPlanBody(bundleDir);
+    let plan = readFileSync(planPath, 'utf-8').replace(
+      /### HITL1 Alignment Snapshot\n\(filled\)/,
+      `### HITL1 Alignment Snapshot\n${alignment[1]}`,
+    );
+    const opaqueControls = renderSuppliedControls('(待填充 — opaque controls literal)');
+    plan = plan.replace(
+      /### User Research Controls[\s\S]*?\n\n未提供额外的本轮研究控制；按已确认的问题、范围和研究 profile 执行。/,
+      opaqueControls,
+    );
+    writeFileSync(planPath, plan);
+
+    const blocked = JSON.parse(runGate(bundleDir).stdout);
+    assert.equal(blocked.check.passed, false);
+    assert.ok(blocked.hints.some((hint) => hint.rule_id === 'plan_body_no_unfilled_marker'));
+
+    const definition = JSON.parse(readFileSync(GATE_DEFINITION, 'utf-8'));
+    assert.deepEqual(
+      definition.rules.filter((rule) => rule.id.startsWith('plan_body_')).map((rule) => rule.id),
+      ['plan_body_non_empty', 'plan_body_no_unfilled_marker'],
+    );
+    assert.doesNotMatch(readFileSync(GATE_CLI, 'utf-8'), /HITL1 Alignment Snapshot/);
+    assert.equal(definition.rules.some((rule) => /alignment|snapshot|quality/i.test(`${rule.id} ${rule.check}`)), false);
+
+    writeFileSync(planPath, readFileSync(planPath, 'utf-8').replace(alignment[1], '已记录：按确认的目标、范围与默认研究路径继续。'));
+    const passed = JSON.parse(runGate(bundleDir).stdout);
+    assert.equal(passed.check.passed, true, `Expected the same marker rule to pass: ${JSON.stringify(passed.inspect)}`);
+    assert.deepEqual(passed.hints, []);
   });
 
   it('fails when a scaffold directory is missing', () => {

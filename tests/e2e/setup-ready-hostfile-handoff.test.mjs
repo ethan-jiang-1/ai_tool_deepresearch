@@ -1,8 +1,10 @@
+// @impl PHS-005, PRP-012
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 const root = process.cwd();
 const bundles = join(root, 'tests', '.test-bundles');
@@ -10,6 +12,7 @@ const created = [];
 const instantiate = join(root, 'experiments_env/shared/new-disposable-bundle.mjs');
 const gate = join(root, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs');
 const enter = join(root, 'DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs');
+const ALIGNMENT_SNAPSHOT = '已记录：按确认的研究目标、对象、用途、范围和透明默认值继续。';
 
 function run(script, args) {
   return spawnSync('node', [script, ...args], { encoding: 'utf8', timeout: 15000, maxBuffer: 1024 * 1024 });
@@ -44,7 +47,11 @@ function createBundle(label) {
   ].join('\n');
   writeFileSync(join(bundle, 'rb_profile.yaml'), profile);
   const planPath = join(bundle, 'rb_plan.md');
-  writeFileSync(planPath, readFileSync(planPath, 'utf8')
+  const withAlignment = readFileSync(planPath, 'utf8').replace(
+    /### HITL1 Alignment Snapshot\n\(待填充[^)]*\)/,
+    `### HITL1 Alignment Snapshot\n${ALIGNMENT_SNAPSHOT}`,
+  );
+  writeFileSync(planPath, withAlignment
     .replace(/\(待填充[^)]*\)/g, '(filled)')
     .replace(/\(尚无话题[^)]*\)/g, '(filled)'));
   return bundle;
@@ -55,6 +62,7 @@ describe('setup-ready host-file handoff', () => {
 
   it('binds actual final plan bytes before legal Seed Topics entry', () => {
     const bundle = createBundle('pass');
+    assert.match(readFileSync(join(bundle, 'rb_plan.md'), 'utf8'), new RegExp(`### HITL1 Alignment Snapshot\\n${ALIGNMENT_SNAPSHOT}`));
     const result = run(gate, ['--bundle', bundle, '--current-node', 'phases/phase-setup.md']);
     assert.equal(result.status, 0, result.stderr);
     const output = JSON.parse(result.stdout);
@@ -68,6 +76,9 @@ describe('setup-ready host-file handoff', () => {
     assert.equal(checkpoint.route_state, 'pending');
     assert.equal(checkpoint.gate_attempt_id, attempt.gate_attempt_id);
     assert.equal(checkpoint.hashes['rb_plan.md'].sha256, attempt.plan_sha256);
+    const boundPlanBytes = readFileSync(join(bundle, 'rb_plan.md'), 'utf8');
+    assert.match(boundPlanBytes, new RegExp(`### HITL1 Alignment Snapshot\\n${ALIGNMENT_SNAPSHOT}`));
+    assert.equal(attempt.plan_sha256, createHash('sha256').update(boundPlanBytes).digest('hex'));
 
     const entered = run(enter, ['--bundle', bundle, '--node', output.check.next]);
     assert.equal(entered.status, 0, entered.stdout + entered.stderr);

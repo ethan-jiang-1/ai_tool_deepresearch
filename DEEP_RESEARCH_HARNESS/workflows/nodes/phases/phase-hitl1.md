@@ -20,15 +20,15 @@ suggested_context:
 
 ## 0. Execution Brief
 
-- **Objective**: Collect the user's research profile, root must-answer set, optional per-run research controls, and HITL1 constraints, then confirm current direct research access before silent execution.
+- **Objective**: Resolve the user's research alignment, then collect the accepted research profile, root must-answer set, optional per-run research controls, and HITL1 constraints before confirming current direct research access for silent execution.
 - **Start here**: Read `brief/hitl1.md`, the original question, `rb_plan.md`, and `rb_profile.yaml`.
-- **Path to pass**: Present the HITL1 prompt, wait for the user's answer, capture the optional controls snapshot before applying approved canonical topics and UID-bound seeds, write profile/style decisions, spawn one bounded isolated direct-sample probe, then run the HITL1 gate.
+- **Path to pass**: Present the HITL1 alignment draft, wait for the user's answer, write its narrative snapshot before accepted profile/status/topic-state writes, capture the separately rendered optional controls snapshot, apply approved canonical topics and UID-bound seeds, write profile/style decisions, spawn one bounded isolated direct-sample probe, then run the HITL1 gate.
 - **Completion check**: User input and a schema-valid completed research-access observation are recorded in `rb_profile.yaml`, and `check-gate-hitl1-recorded.mjs` passes.
 - **Failure posture**: Consume top-level `hints[]` first. Ask only for a genuine missing HITL decision; execute authorized mechanical repair yourself and rerun the exact same Gate.
 
 ## 1. Stage Goal
 
-向用户提出结构化问题，收集 research profile、root must-answer set 和用户约束。结构化决定仍写入 current run bundle 的 `rb_profile.yaml`；可选研究控制只写入 `rb_plan.md## Constraints > ### User Research Controls`，并在进入 silent waves 前由一个隔离 probe agent 在当前执行器已获许可的表面上直接观察中国与海外固定公开样本的真实取用情况。
+向用户展示研究对齐草案，收集 research profile、root must-answer set 和用户约束。草案中的 profile、must-answer 和 Topic map 在既有 HITL1 决定解决前都不是 canonical state。解决后，Agent 先把已确认或明确委托的研究理解写入 `rb_plan.md## Goal > ### HITL1 Alignment Snapshot`；结构化决定仍写入 current run bundle 的 `rb_profile.yaml`，可选研究控制仍只写入 `rb_plan.md## Constraints > ### User Research Controls`。随后在进入 silent waves 前，由一个隔离 probe agent 在当前执行器已获许可的表面上直接观察中国与海外固定公开样本的真实取用情况。
 
 ## 2. Required Inputs
 
@@ -49,7 +49,7 @@ suggested_context:
 **Topic rewrite 步骤（一句话场景）：**
 1. 将一句话展开为 structured original topic，覆盖：背景（这个领域为什么重要）、研究范围（边界在哪）、关键维度（从哪些角度切入）、已知前提（已有的共识）、不确定项（需要 research 回答的 open questions）
 2. 将 original topic 写入 `rb_plan.md` 的 `## Goal` section。至少填写 `### Purpose`（一段话概述研究目标）。`### Research Questions` 和 `### Scope` 按 HITL1 用户提供的信息填写——信息不足时标注 `(待 HITL2 确认)`，不编造。
-3. 从 original topic 推导最小独立 Topic map：保留需要分别回答的问题、证据路径或交付价值；preview 至少有一个 proposed Topic、没有预设上限。一个 Topic 足够时不得为凑数拆分；较大 map 按可审阅的研究线程分组并说明拆分理由。用户确认前不直接写 `topic_registry` 或 seed 文件
+3. 从 original topic 推导最小独立 Topic map：保留需要分别回答的问题、证据路径或交付价值；preview 至少有一个 proposed Topic、没有预设上限。一个 Topic 足够时不得为凑数拆分；较大 map 按可审阅的研究线程分组并说明拆分理由。用户确认前，proposed must-answer、Topic map 和 research profile 都只作草案展示；不得直接写 `topic_registry`、seed 文件、accepted profile 或 HITL1 status
 4. 将 original topic + seed topics + 建议的 `research_profile` 一起展示给用户
 
 **Slug 命名约定：** 每个 topic 的 `slug` 格式为 `NN_<descriptive-name>`，`NN` 为该 topic 在 `topic_registry` 数组中的 1-based 位置（两位零填充），**不是** `id` 字段的值。`id` SHOULD 与 NN 一致（如 `"01"`），gate 不校验 id 格式——这是 convention 层面的统一。
@@ -71,7 +71,7 @@ topic_registry:
 
 `NN` 取自数组位置（第 1 个 topic → `01_`，第 2 个 → `02_`，以此类推），与 `id` 字段值无关。如果 `id` 字段写作 `t1`/`t2`，slug 仍用数组位置 `01_`/`02_`。
 
-用户确认后，Agent 先把完整 approved topic set 写入 caller-owned retained JSON。只有在 §3b 已通过既有 status synchronization 后，才运行一次 `operate-topic-state.mjs apply`。Engine 在 legal HITL1 current-node/status window 中分配 immutable UID/ordinal/slug，并用一个 prepared manifest 提交最终 registry 与全部 UID-bound seed skeletons。若返回 accepted workspace，Agent 运行 exact recover command 后重试；不得直接编辑 registry/seed。提交成功后立刻读取结果；只有结果返回的 `style_projection` handoff 才决定后续是否需要 style writer。
+用户接受、修正或明确委托后，Agent 只有在 §3b.1 已写入 alignment snapshot、§3b.2 已写入 separately rendered controls snapshot，且既有 status synchronization 已成功后，才把完整 approved topic set 写入 caller-owned retained JSON 并运行一次 `operate-topic-state.mjs apply`。Engine 在 legal HITL1 current-node/status window 中分配 immutable UID/ordinal/slug，并用一个 prepared manifest 提交最终 registry 与全部 UID-bound seed skeletons。若返回 accepted workspace，Agent 运行 exact recover command 后重试；不得直接编辑 registry/seed。提交成功后立刻读取结果；只有结果返回的 `style_projection` handoff 才决定后续是否需要 style writer。
 
 **Gate 不判断 rewrite 质量。** 人类审查 topic semantics；Engine 验证 canonical identity/intent、UID-bound seed projection、workspace completion 与既有 profile/access contract。
 
@@ -82,31 +82,40 @@ topic_registry:
 **操作步骤**：
 1. 读取 `brief/hitl1.md` 的「入口 Prompt」节
 2. 填入动态部分：
-   - `{DYNAMIC: grounded_goal_and_scope}` → 从原始问题与 §3a topic rewrite 提取目标和边界
+   - `{DYNAMIC: grounded_goal_and_scope}` → 从原始问题与 §3a topic rewrite 提取目标、研究对象、决策/交付用途和边界
    - `{DYNAMIC: proposed_must_answer_questions}` → 基于原始问题提出具体问题
    - `{DYNAMIC: seed_topics_preview}` → 从 §3a 的 proposed minimum independent Topic map 生成简短预览
    - `{DYNAMIC: recommended_profile_description}` → 一个用户可理解的深度/广度推荐
    - `{DYNAMIC: recommendation_reason_and_effort}` → 推荐理由与大致投入影响
+   - `{DYNAMIC: material_frontier_questions_or_none}` → 仅当当前可回答的答案会实质改变既有研究决定时，列出首轮最多三个彼此独立的问题；每项写明推荐或透明默认值及受影响的既有决定。依赖未决答案的问题留到后续；没有这类问题时明确说明当前无须主动澄清
 3. 向用户展示完整的入口 prompt
 4. 遵循 `shared-agent-ux-guidance.md`：用户可直接接受、自然语言修正、选可选字母或继续提问
-5. 用户清楚接受或修正后，该表达本身就是决定；只有实质歧义、真实成本/权限或不可逆风险才问最小确认。随后：
+5. 在用户清楚接受、修正或明确委托前，入口中展示的 profile、must-answer 和 Topic map 都保持为 reviewable draft；不得写 accepted profile、HITL1 status 或 canonical Topic state。
+6. 用户清楚接受、修正或明确委托后，该表达本身就是决定；先简短重述已解决的研究理解，只有实质歧义、真实成本/权限或不可逆风险才问最小确认，不得要求笼统的第二次确认。随后：
+   - 按 §3b.1 先写 alignment snapshot；它是叙事上下文，不是 profile、Topic、Gate 或 lifecycle authority
    - 将 `research_profile` 写入 `rb_profile.yaml`（字母→canonical enum 翻译）
    - 将用户接受或修正后的具体问题写入 `root_must_answer_set`
    - 将 `human_decision_checkpoints.hitl1.status` 设为 `recorded`
    - 将 `human_decision_checkpoints.hitl1.recorded_at` 设为当前 ISO 8601 timestamp
-   - 先写 controls snapshot，再运行既有 status synchronization：
+   - 按 §3b.2 保持 separately rendered controls snapshot，再运行既有 status synchronization：
      ```bash
      node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to hitl1_recorded
      ```
      读取并消费成功 stdout 后，才写 retained topic-state input 并运行 `operate-topic-state apply`。读取 committed apply/recover JSON 后按 §3c 消费其中的 style handoff，再做 probe 与 HITL1 Gate。同步失败时 canonical topic state 不变；Agent 只遵循返回的既有 legal operation 或 no-path boundary，不手写 `rb_status.json`、不用 force/context bypass，也不先跑 HITL1 Gate 来发现顺序。普通 apply/recover 命令由 Agent 执行，不要求用户共同运行；普通 status 命令同样由 Agent 执行。
 
-### 3b.1 Optional User Research Controls Snapshot
+### 3b.1 HITL1 Alignment Snapshot
+
+用户清楚接受、修正或明确委托后，在写 accepted profile、HITL1 status 或 retained topic-state input 前，Agent 必须在 `rb_plan.md## Goal > ### HITL1 Alignment Snapshot` 替换 template-owned required-fill marker。快照用简短叙事记录：已确认或明确委托的目标、最终的研究对象/用途/范围理解、material forks 与透明默认值，以及它们和 accepted must-answer、Topic、profile 决定的关系。它不是 conversation transcript，不复用或改变 `### User Research Controls` 的 literal form，也不得被解析、复制或反向推断为 profile field、Topic identity、Gate input 或 lifecycle authority。
+
+若稍后的 profile、status 或 canonical Topic-state operation 阻塞或失败，已经写入的 snapshot 仍是可读叙事上下文，不证明任何 profile/status/Topic fact 已记录，也不允许推进 Gate 或 phase。Agent 必须使用返回的既有 inspect/recover/apply 或 no-path owner；snapshot 仍可读时不得从 chat 重建决定或要求用户重复决定。只有新的已解决用户决定改变其叙事时，才替换 snapshot；不得创建 snapshot-specific recovery state。
+
+### 3b.2 Optional User Research Controls Snapshot
 
 用户可提供优先级、明确排除、来源/证据偏好、分析视角、交付要求、相关业务背景，或一个 optional `research focus brief`。focus 以普通语言说明某个 Topic 还要额外理解什么；它只在所有 Topic 的共同基线之上指导本轮研究，不降低其他 Topic 的既有基线。所有这些内容都是研究指导，不是 profile、Topic field、Gate、来源 floor、receipt、lifecycle 或 schema override。
 
 若用户表达 focus，Agent 先在当前 HITL1 loop 用简短语言反映理解，并允许用户修正；接受后 supplied-controls literal snapshot 必须保留两个清楚标注的叙事部分：`用户的重点原话（逐字保留）` 与 `Agent 对本轮额外研究方向的理解（可由用户修正）`。前者逐字保留，后者只表达当前理解；两者不被 renderer、Engine、Gate 或后续 consumer 解析为结构化 authority。没有 focus 时，不创建空 focus record，维持已有 no-controls/ordinary-controls form。
 
-在用户决定和任何 material conflict 已澄清后，Agent 先运行纯 renderer，读取 stdout，再只在已有的 `rb_plan.md## Constraints > ### User Research Controls` coordinate 写入返回的精确 section，随后才创建 retained topic-state input：无额外控制时运行 `node DEEP_RESEARCH_HARNESS/cli/plan-hostfile-sections.mjs render-no-controls`；有控制时把包含上述 labelled focus narrative（如有）的已解析本 run literal snapshot 放在显式 UTF-8 input path，运行 `node DEEP_RESEARCH_HARNESS/cli/plan-hostfile-sections.mjs render-supplied-controls --input <snapshot-path>`。renderer 不寻找 bundle、不写 host file，也不取得新的 writer authority。若 renderer 缺失或返回 code `2` invocation/configuration root，只修正该调用或报告缺失 contract；不得手写较短 fence、发明 alternate rendering protocol，或绕过已有 host-file owner。
+在用户决定和任何 material conflict 已澄清、且 §3b.1 alignment snapshot 已写入后，Agent 先运行纯 renderer，读取 stdout，再只在已有的 `rb_plan.md## Constraints > ### User Research Controls` coordinate 写入返回的精确 section，随后才创建 retained topic-state input：无额外控制时运行 `node DEEP_RESEARCH_HARNESS/cli/plan-hostfile-sections.mjs render-no-controls`；有控制时把包含上述 labelled focus narrative（如有）的已解析本 run literal snapshot 放在显式 UTF-8 input path，运行 `node DEEP_RESEARCH_HARNESS/cli/plan-hostfile-sections.mjs render-supplied-controls --input <snapshot-path>`。renderer 不寻找 bundle、不写 host file，也不取得新的 writer authority。若 renderer 缺失或返回 code `2` invocation/configuration root，只修正该调用或报告缺失 contract；不得手写较短 fence、发明 alternate rendering protocol，或绕过已有 host-file owner。
 
 用户明确授权读本地文件时，只读取一次并只摘取本 run 适用、可分享的控制到 snapshot；不得保留路径、以后重读、递归读取链接、复制无关内容或形成同步协议。若控制或 focus 与 profile、must-answer、style 或 proposed Topic map 有 material conflict，先在本 HITL1 取得最小用户决定并更新既有 structured owner；不得让 silent phase 私自选择赢家。文件不可读、意图不清或控制过宽时，只问最小澄清或 host prerequisite，绝不虚构 snapshot。topic-state apply/recover 后继续读取已 durable 的 host-file snapshot，不从 chat 或外部路径重建。
 
@@ -148,6 +157,8 @@ Phase 直接检索页面、research evidence collection、work-unit delegation �
 **Evidence boundary：** Probe URL、page content 和 tool output SHALL NOT 写入或计入 `reference/`、`_cache/`、`artifacts/`、work-unit output/result/receipt、`rb_work_unit_ledger.jsonl`、`rb_output_declarations.jsonl` 或任何 Wave coverage/count floor。
 
 ## 4. Expected Artifacts
+
+`rb_plan.md## Goal > ### HITL1 Alignment Snapshot` 已在 accepted profile、HITL1 status 与 canonical Topic-state apply 前写入，保留用户确认或明确委托的研究理解及其与 structured decisions 的关系。它只作叙事 reload context，不是任何 Engine、profile、Topic、Gate 或 lifecycle authority。
 
 `rb_profile.yaml` 中以下字段已写入：
 
