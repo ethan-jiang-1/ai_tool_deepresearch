@@ -56,8 +56,11 @@ dpt_disp_*/
 dpt_disp_temp*/
 dpt_val_*/
 dpt_rb_*/
+# ===== Test-generated temp dirs =====
+# Dot-prefixed, convention-named (.test*) scratch/artifact dirs produced by tests under tests/.
 tests/.test-tmp/
 tests/.test-bundles/
+tests/**/.test*/
 
 # ===== Claude Code =====
 .claude/settings.local.json
