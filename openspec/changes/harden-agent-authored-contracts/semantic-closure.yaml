@@ -1,0 +1,64 @@
+schema_version: semantic-closure/v1
+change: harden-agent-authored-contracts
+status: affected
+catalog_additions: []
+affected:
+  - family: wave2.finding-and-target-authority
+    fact: >-
+      Whether the public wave_projection authoring view exposes the existing
+      Wave-dependent source identity required to name a current Wave2 finding:
+      Wave0/Wave1 retain submitted_work/work_id, while Wave2 retains
+      finding/finding_id and entry_id equal to that finding ID. The projection
+      is read-only and derived from the existing TopicApplyPlanSchema; it does
+      not establish finding authority or authorize apply.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs
+    overlap:
+      - coordinate: openspec/specs/research/canonical-topic-state/spec.md
+        relation: authoritative
+        detail: >-
+          CTS-010 owns the existing Wave-dependent authoring outcome. The
+          schema command is its derived public presentation, not a validator or
+          mutation authority.
+      - coordinate: DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs
+        relation: derived
+        detail: >-
+          The CLI presents the resolver's schema output and later invokes the
+          unchanged validator for apply; it does not consume a finding verdict.
+    verification:
+      truth_table: tests/integration/topic-state-schema-wave-identity.test.mjs
+      cross_surface: tests/integration/cli/operate-topic-state-projection.test.mjs
+  - family: wave.submitted-reference-convergence
+    fact: >-
+      Whether each required semantic section of a materialized reference has
+      content eligible for the existing reference-format contract: a bounded
+      raw document-markup signature in non-code content is format pollution,
+      while the same literal in fenced code and ordinary Markdown remain
+      non-blocking. This is structural format truth only, not a factual-quality
+      or readability conclusion.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs
+    overlap:
+      - coordinate: openspec/specs/bundle/reference-flat-format/spec.md
+        relation: authoritative
+        detail: >-
+          REF-002 owns the required semantic-section format contract. This
+          change adds a bounded markup exclusion without turning the evaluator
+          into a research-quality or cleanup authority.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/subagent-dpt-evidence-extractor.md
+        relation: derived
+        detail: >-
+          The extractor guidance tells the Agent to write interpreted Markdown
+          from fetched pages. It neither resolves the format fact nor consumes
+          a reference-format verdict.
+    verification:
+      truth_table: tests/engine/helpers/gate-helpers-checks.test.mjs
+      cross_surface: tests/integration/cli/check-gate-wave1-complete.test.mjs

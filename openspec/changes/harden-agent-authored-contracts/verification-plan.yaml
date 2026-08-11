@@ -1,0 +1,98 @@
+schema_version: verification-routing/v1
+change: harden-agent-authored-contracts
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The bounded document-markup predicate is an in-process shared helper
+      contract. Its focused test exercises direct section-body inputs and
+      checker findings without invoking a production CLI.
+  integration:
+    status: selected
+    rationale: >-
+      Public schema output and Wave inspect/Gate feedback cross production
+      module/CLI and temporary-bundle boundaries, so their deterministic
+      contracts require integration coverage.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      This change preserves the existing lifecycle chain and Gate transitions;
+      it adds no workflow-scale deterministic state chain to prove.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change makes no claim about real Agent research, judgment, or writing
+      behavior. Deterministic schema and format evidence cannot prove it.
+claims:
+  - id: wave2-schema-conditional-form
+    statement: >-
+      CTS-010: the public wave_projection authoring output exposes the existing
+      Wave2 finding/finding_id conditional source-identity form, matching entry
+      ID rule, required paths/value shape, and a top-level-schema-valid packet
+      template without making every union-branch field globally required.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/topic-state-schema-wave-identity.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave2-schema-public-cli-authoring
+    statement: >-
+      CTS-010: an Agent can select the Wave2 conditional template from the
+      public schema CLI output and submit it through the existing apply CLI in
+      a legal disposable Wave2 context without an input_invalid rejection for a
+      hidden source-identity shape.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-projection.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: required-section-document-markup-check
+    statement: >-
+      REF-002: the shared reference-format evaluator rejects each bounded raw
+      document signature in a required non-code section with one exact
+      reference/section repair, while fenced literals and ordinary
+      non-document presentation stay non-blocking and checker evaluation makes
+      no mutation.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/gate-helpers-checks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: document-markup-reaches-wave-feedback
+    statement: >-
+      REF-002: a contaminated reference reaches the existing Wave1 Gate and
+      inspect path as the same blocking reference_format root, with its
+      Agent-owned repair surface and no new Gate route or mutation.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave1-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
