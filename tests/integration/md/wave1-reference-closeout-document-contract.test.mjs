@@ -20,4 +20,18 @@ describe('Wave1 reference closeout guidance', () => {
     assert.match(index, /sync-reference-index/);
     assert.doesNotMatch(index, /appends one row/);
   });
+
+  it('places valid depth review before inspect and consumes the inspect target without locator derivation', () => {
+    const phase = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md');
+    const decision = phase.match(/### 3\.2\.1 Returned Work Decision\n([\s\S]*?)(?=\n### 3\.2\.2 )/);
+
+    assert.ok(decision, 'Wave1 returned-work decision is present');
+    const text = decision[1];
+    const review = text.indexOf('valid current depth review');
+    const inspect = text.indexOf('reference-convergence inspect');
+    assert.ok(review >= 0 && inspect > review, text);
+    assert.match(text, /exact target returned by that inspect/i);
+    assert.doesNotMatch(phase, /\{12-hex\}/);
+    assert.doesNotMatch(phase, /first 12 hex chars/i);
+  });
 });

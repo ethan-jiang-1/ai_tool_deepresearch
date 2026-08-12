@@ -122,6 +122,11 @@ relationship, refs, status, file path, raw Markdown, or a combined explicit
 entry in this form. Equivalent replay remains an existing writer recovery
 operation, not a second coverage claim.
 
+One update may contain multiple explicit entries. The deferred form selects one
+contribution per packet; multiple deferred contributions require sequential
+applies. This does not add an inspect between sequential applies or change the
+existing packet grammar.
+
 Wave0 is authorized only in `seed_topics_ready -> wave0_complete` and owns
 `wave0_evidence`. Wave1 is authorized only in
 `wave0_complete -> wave1_complete` and must atomically include

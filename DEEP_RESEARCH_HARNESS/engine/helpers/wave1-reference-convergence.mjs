@@ -359,7 +359,7 @@ export function evaluateWave1ReferenceTopic(bundlePath, {
     observedCount: numeric.count,
   });
   if (result.outcome === 'reference_floor_deficit' && submittedBacking.ok) {
-    const unreviewed = unreviewedSubmittedSupplementaryRows(bundlePath, submittedBacking.topic, topicRegistryFact);
+    const unreviewed = unreviewedSubmittedSupplementaryRows(bundlePath, submittedBacking.topic.topic_slug, topicRegistryFact);
     if (unreviewed.ok && unreviewed.rows.length > 0) result.unreviewed_rows = unreviewed.rows;
   }
   return {
@@ -406,15 +406,19 @@ export function unreviewedSubmittedSupplementaryRows(bundlePath, topic, topicReg
   for (const fact of normalized.facts) {
     const { ledger_row: row, index_record: record } = fact;
     if (record.wave !== 1 || record.kind !== 'wave1_topic_deepening' || record.status !== 'submitted') continue;
-    const ref = String(row.work_unit_ref || row.work_id || '').replace(/\/+$/g, '');
-    if (reviewed.has(ref)) continue; // already reviewed via depth-review
     let manifest;
     try {
       manifest = readAndValidateManifest(bundlePath, { kind_registry: normalized.kind_registry }, record);
+      if (queueItemSnapshotHash(manifest.queue_item) !== record.queue_item_snapshot_hash) continue;
     } catch {
       continue; // manifest-invalid rows surface through their own owner
     }
+    if (manifest.queue_item?.payload?.assignment_mode !== 'supplementary') continue;
     const binding = resolveStructuredTopicBinding(layouts, manifest, { currentOnly: true });
+    const submittedRefs = [row.work_id, row.work_unit_ref, row.result_ref]
+      .filter((ref) => typeof ref === 'string' && ref)
+      .map((ref) => ref.replace(/\/+$/g, ''));
+    if (submittedRefs.some((ref) => reviewed.has(ref))) continue;
     if (binding.ok && binding.topic_uid === topicBinding.topic_uid && binding.current_slug === topicBinding.current_slug) {
       unreviewed.push({ work_id: row.work_id, work_unit_ref: row.work_unit_ref, ref: `_work_units/wave1/${row.work_id}` });
     }
@@ -440,6 +444,9 @@ function findLiveSupplementaryDemand(bundlePath, topic) {
 }
 
 export function evaluateWave1ReferenceConvergence({ topic, requiredFloor, submittedBacking, projections = [], index = { valid: true, stale: false }, liveSupplementaryDemand = null, observedCount = null } = {}) {
+  if (submittedBacking?.ok === false && submittedBacking.root) {
+    return { outcome: 'parent_root', root: submittedBacking.root };
+  }
   if (!topic?.topic_uid || !topic?.topic_slug) return { outcome: 'parent_root', root: { code: 'wave1_reference_topic_invalid', detail: 'Current canonical Topic fact is unavailable.' } };
   if (!Number.isInteger(requiredFloor) || requiredFloor < 1) return { outcome: 'parent_root', root: { code: 'missing_profile_parameter', detail: 'Wave1 reference floor must be a positive integer.' } };
   if (!submittedBacking?.ok) return { outcome: 'parent_root', root: submittedBacking?.root || { code: 'submitted_backing_invalid', detail: 'Submitted backing authority is unavailable.' } };

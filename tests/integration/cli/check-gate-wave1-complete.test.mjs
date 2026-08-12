@@ -388,6 +388,9 @@ function submitWave1WorkUnit(dir, {
   sourceUrl = 'https://example.com/news/deepening-topic-a',
   isNewVsWave0 = true,
   cacheTrail = `_cache/wave1/primary/${queueItemId}/deepening-topic-a`,
+  assignmentMode = 'primary',
+  referenceFloorDeficit = undefined,
+  preserveQueue = false,
   evidenceRole = 'evidence_summary',
   questionRole = 'question_list',
   includeEvidenceOutput = true,
@@ -418,7 +421,14 @@ function submitWave1WorkUnit(dir, {
   return claimAndSubmitWorkUnit(dir, {
     phase: 'wave1',
     queueItemId,
-    legacyAssignment: true,
+    legacyAssignment: assignmentMode === 'primary',
+    queueItemOverrides: {
+      payload: {
+        assignment_mode: assignmentMode,
+        ...(referenceFloorDeficit === undefined ? {} : { reference_floor_deficit: referenceFloorDeficit }),
+      },
+    },
+    preserveQueue,
     outputs,
     cacheTrails: [{
       path: cacheTrail,
@@ -800,6 +810,50 @@ describe('check-gate-wave1-complete', () => {
     assert.equal(hints[0].write_to, hints[1].write_to);
   });
 
+  it('keeps the floor outcome while making omitted supplementary review sync the primary inspect and Gate repair', () => {
+    const dir = createBundle(unique('supplementary-review-sync'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    const primary = submitAndReviewWave1WorkUnit(dir);
+    writeWave1Trace(dir);
+    const supplementary = submitWave1WorkUnit(dir, {
+      queueItemId: 'topic-a-supplementary',
+      sourceUrl: 'https://example.com/news/deepening-topic-a-supplementary',
+      cacheTrail: '_cache/wave1/primary/topic-a-supplementary/deepening-topic-a',
+      assignmentMode: 'supplementary',
+      referenceFloorDeficit: 1,
+      preserveQueue: true,
+    });
+    assert.equal(supplementary.submitted.ok, true, JSON.stringify(supplementary.submitted));
+    writeDepthReview(dir, { submission: primary });
+    materializeCanonicalFixtureProjection(dir, primary, {
+      sourceUrl: 'https://example.com/news/deepening-topic-a',
+      cacheTrail: '_cache/wave1/primary/topic-a/deepening-topic-a',
+    });
+    const profilePath = join(dir, 'rb_profile.yaml');
+    writeFileSync(profilePath, readFileSync(profilePath, 'utf8').replace('wave1_per_topic_ref_floor: 1', 'wave1_per_topic_ref_floor: 2'));
+
+    const outputs = [
+      JSON.parse(runInspect(dir).stdout),
+      JSON.parse(runGate(dir).stdout),
+    ];
+    const hints = outputs.map((output) => output.hints.find((hint) => (
+      hint.rule_id === 'per_topic_ref_md_count_floor'
+      && /Current canonical reference floor/.test(hint.missing_fact)
+    )));
+
+    for (const hint of hints) {
+      assert.ok(hint, JSON.stringify(outputs));
+      assert.match(hint.write_to, /artifacts\/wave1\/topic-a\/depth-review\.yaml#reviewed_work_unit_refs/);
+      assert.match(hint.missing_fact, /add them to the depth review/i);
+      assert.match(hint.missing_fact, new RegExp(supplementary.record.work_id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      assert.doesNotMatch(hint.write_to, /enqueue/i);
+      assert.doesNotMatch(hint.missing_fact, /enqueue/i);
+    }
+    assert.equal(hints[0].write_to, hints[1].write_to);
+  });
+
   it('1. happy path: evidence-summary with source URL + key findings passes', () => {
     const dir = createBundle(unique('happy'));
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
@@ -911,7 +965,7 @@ describe('check-gate-wave1-complete', () => {
     );
   });
 
-  it('1a. does not let a historical Wave1 binding satisfy the current Topic canonical projection', () => {
+  it('1a. keeps a historical Wave1 binding as the direct current-topic root before count-floor evaluation', () => {
     const dir = createBundle(unique('historical-layout'));
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
@@ -926,10 +980,12 @@ describe('check-gate-wave1-complete', () => {
     const output = JSON.parse(runGate(dir).stdout);
     const inspected = JSON.parse(runInspect(dir).stdout);
     assert.equal(output.check.passed, false);
-    assert.equal(output.check.failed_rule_ids.some((id) => id.startsWith('per_topic_ref_md_count_floor')), true);
+    assert.equal(output.check.failed_rule_ids.includes('per_topic_depth_review_contract'), true, JSON.stringify(output, null, 2));
+    assert.equal(output.check.failed_rule_ids.some((id) => id.startsWith('per_topic_ref_md_count_floor')), false);
+    assert.equal(output.check.masked_rule_ids.includes('per_topic_ref_md_count_floor:topic-a-new'), true);
     assert.ok(output.inspect.some((line) => /wave1_reference_topic_invalid/.test(line)), output.inspect.join('\n'));
-    const gateHint = output.hints.find((hint) => hint.rule_id === 'per_topic_ref_md_count_floor');
-    const inspectHint = inspected.hints.find((hint) => hint.rule_id === 'per_topic_ref_md_count_floor');
+    const gateHint = output.hints.find((hint) => hint.rule_id === 'per_topic_depth_review_contract');
+    const inspectHint = inspected.hints.find((hint) => hint.rule_id === 'per_topic_depth_review_contract');
     assert.ok(gateHint && inspectHint);
     assert.deepEqual({ ...gateHint, rerun: null }, { ...inspectHint, rerun: null });
   });

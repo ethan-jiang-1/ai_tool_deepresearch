@@ -51,7 +51,7 @@ function writeDepthReview(dir, topicSlug, refs) {
   }, null, 2)}\n`);
 }
 
-function submitSupplementaryWave1(dir, { queueItemId, topicUid, topicSlug, sourceUrl }) {
+function submitWave1(dir, { queueItemId, topicUid, topicSlug, sourceUrl, assignmentMode = 'supplementary' }) {
   const sourceRef = `reference/${queueItemId}-submitted-source.md`;
   const cacheTrail = `_cache/wave1/primary/${queueItemId}/source`;
   const claim = {
@@ -65,7 +65,7 @@ function submitSupplementaryWave1(dir, { queueItemId, topicUid, topicSlug, sourc
     phase: 'wave1',
     queueItemId,
     queueItemOverrides: {
-      payload: { topic_uid: topicUid, topic_slug: topicSlug, wave: 1, assignment_mode: 'supplementary' },
+      payload: { topic_uid: topicUid, topic_slug: topicSlug, wave: 1, assignment_mode: assignmentMode },
     },
     outputs: [{
       path: sourceRef,
@@ -94,7 +94,7 @@ describe('unreviewed submitted supplementary Wave1 rows (WAI-009)', () => {
     createdBundles.push(dir);
     const topicA = topic('tp_123e4567-e89b-12d3-a456-426614174000', '01', 'topic-a');
     writePlan(dir, [topicA]);
-    const submitted = submitSupplementaryWave1(dir, {
+    const submitted = submitWave1(dir, {
       queueItemId: 'topic-a-supp',
       topicUid: topicA.topic_uid,
       topicSlug: topicA.slug,
@@ -116,7 +116,7 @@ describe('unreviewed submitted supplementary Wave1 rows (WAI-009)', () => {
     createdBundles.push(dir);
     const topicA = topic('tp_123e4567-e89b-12d3-a456-426614174001', '01', 'topic-a');
     writePlan(dir, [topicA]);
-    const submitted = submitSupplementaryWave1(dir, {
+    const submitted = submitWave1(dir, {
       queueItemId: 'topic-a-supp2',
       topicUid: topicA.topic_uid,
       topicSlug: topicA.slug,
@@ -128,5 +128,44 @@ describe('unreviewed submitted supplementary Wave1 rows (WAI-009)', () => {
 
     assert.equal(result.ok, true);
     assert.equal(result.rows.length, 0);
+  });
+
+  it('excludes an omitted primary row from the supplementary review-sync signal', () => {
+    const dir = tempWorkUnitBundle('wave1-floor-sync-');
+    createdBundles.push(dir);
+    const topicA = topic('tp_123e4567-e89b-12d3-a456-426614174000', '01', 'topic-a');
+    writePlan(dir, [topicA]);
+    submitWave1(dir, {
+      queueItemId: 'topic-a-primary',
+      topicUid: topicA.topic_uid,
+      topicSlug: topicA.slug,
+      sourceUrl: 'https://example.com/primary/article',
+      assignmentMode: 'primary',
+    });
+    writeDepthReview(dir, topicA.slug, []);
+
+    const result = unreviewedSubmittedSupplementaryRows(dir, topicA.slug, registryFact(dir));
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.rows, []);
+  });
+
+  it('recognizes an alternate accepted supplementary coordinate with trailing slash as reviewed', () => {
+    const dir = tempWorkUnitBundle('wave1-floor-sync-');
+    createdBundles.push(dir);
+    const topicA = topic('tp_123e4567-e89b-12d3-a456-426614174000', '01', 'topic-a');
+    writePlan(dir, [topicA]);
+    const submitted = submitWave1(dir, {
+      queueItemId: 'topic-a-supp-alternate-ref',
+      topicUid: topicA.topic_uid,
+      topicSlug: topicA.slug,
+      sourceUrl: 'https://example.com/supplement/alternate-coordinate',
+    });
+    writeDepthReview(dir, topicA.slug, [`${submitted.work_id}/`]);
+
+    const result = unreviewedSubmittedSupplementaryRows(dir, topicA.slug, registryFact(dir));
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.rows, []);
   });
 });

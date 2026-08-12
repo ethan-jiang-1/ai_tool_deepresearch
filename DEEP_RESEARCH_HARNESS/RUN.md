@@ -1,13 +1,21 @@
 # RUN.md — DEEP_RESEARCH_HARNESS 入口
 
-> **DEEP_RESEARCH_HARNESS v0.88**
+> **DEEP_RESEARCH_HARNESS v0.89**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DEEP_RESEARCH_HARNESS 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.88
+## Current Release: v0.89
+
+- Wave1 post-submit closeout now completes the valid current depth review before
+  reference-convergence inspect, consumes its exact materialization target,
+  performs existing index/Seed sync, and reruns that same inspect.
+- Existing convergence feedback keeps a concrete submitted-backing root ahead
+  of synthetic symptoms and names the current depth-review update first when a
+  submitted supplementary row is omitted. This adds no state, queue, Gate, or
+  validator.
 
 - `operate-topic-state schema --context wave_projection` now includes one
   conditional source-identity form for each legal Wave/kind pair. Each form

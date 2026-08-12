@@ -54,6 +54,10 @@ describe('Wave producer contract guidance', () => {
     assert.match(template, /only the Phase Agent may materialize `00-shared-<slug>\.md`/);
     assert.match(topicState, /deferred_contribution/);
     assert.match(topicState, /selects one submitted contribution; it is not a\s+persisted source identity or aggregate coverage/);
+    assert.match(topicState, /one update may contain multiple explicit entries/i);
+    assert.match(topicState, /deferred form selects one\s+contribution per packet/i);
+    assert.match(topicState, /multiple deferred contributions require sequential\s+applies/i);
+    assert.match(topicState, /does not add an inspect between sequential\s+applies/i);
   });
 
   it('places Wave1 dry-submit and existing dispositions before formal submit', () => {
@@ -80,11 +84,13 @@ describe('Wave producer contract guidance', () => {
     const text = decision[1];
     for (const required of [
       'successful formal submit',
-      'reference/index materialization',
-      'depth review',
-      'seed return-map backfill',
-      'full-drain Wave inspect',
+      'valid current depth review',
+      'reference-convergence inspect',
+      'exact target returned by that inspect',
+      'index/Seed sync',
+      'same inspect',
     ]) assert.match(text, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'));
+    assert.ok(text.indexOf('valid current depth review') < text.indexOf('reference-convergence inspect'));
     assert.match(text, /Sub-agent.*(?:not|shall not).*?(?:reference|depth|seed)/i);
   });
 });

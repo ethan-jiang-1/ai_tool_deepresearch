@@ -572,19 +572,32 @@ infer a successor queue ID, discover a work ID from the filesystem, rewrite
 terminal status, or bypass ordinary claim.
 
 Wave0 and Wave1 phase bodies SHALL not present `claim --count 1` as the normal
-strategy for independent Topics. Wave1's post-submit loop SHALL teach one
-ordered closeout decision, supplied by convergence rather than a second
-controller: canonical materialize/persist only from the primary hint's exact
-submitted backing; then sync the flat index; then update only affected Seed
-Topic navigation through the existing packet writer; then rerun Wave1 inspect.
-It SHALL defer only the closeout evaluator's un-emitted later index/floor
-outcomes until that rerun, and SHALL keep separately evaluated primary findings
-visible rather than using them to claim, supplement, or edit delegated
-authority. If no projection/index repair exists, the loop either continues a
-disclosed existing supplementary demand or forms one ordinary supplementary
-demand for a true floor deficit before returning to claim/poll/submit. Wave2
-retains its existing backed-pure-synthesis versus targeted-evidence
-materialization split.
+strategy for independent Topics. After each successful Wave1 submit, the Phase
+Agent SHALL first complete or repair the valid current Phase-owned depth review
+bound to the submitted work-unit rows, then run the current Topic's
+reference-convergence inspect. It SHALL consume the exact target returned by
+that inspect rather than deriving a filename. Wave1's post-review closeout loop
+SHALL teach one ordered convergence decision rather than a second controller:
+canonical materialize/persist only from the primary hint's exact submitted
+backing; then sync the flat index; then update only affected Seed Topic
+navigation through the existing packet writer; then rerun the same Wave1
+inspect. It SHALL defer only the closeout evaluator's un-emitted later
+index/floor outcomes until that rerun, and SHALL keep separately evaluated
+primary findings visible rather than using them to claim, supplement, or edit
+delegated authority. If no depth-review, projection, or index repair exists,
+the loop either continues a disclosed existing supplementary demand or forms
+one ordinary supplementary demand for a true floor deficit before returning to
+claim/poll/submit. Wave2 retains its existing backed-pure-synthesis versus
+targeted-evidence materialization split.
+
+#### Scenario: Wave1 post-submit loop completes depth review before ordered closeout
+
+- **WHEN** a Wave1 Phase Agent completes a successful submit with accepted backing
+- **THEN** the phase body SHALL direct it to complete or repair the valid current
+  depth review before its first reference-convergence inspect
+- **AND** it SHALL not direct materialization, index synchronization, Seed
+  navigation mutation, or supplementary acquisition as a substitute for that
+  review
 
 #### Scenario: Wave1 post-submit loop follows ordered closeout
 
@@ -609,8 +622,9 @@ materialization split.
 
 - **WHEN** a Wave1 work unit submits evidence summary, question list, and
   accepted source/cache/degraded-capture backing successfully
-- **THEN** the Wave1 phase body SHALL instruct the Phase Agent to invoke the
-  convergence-guided Phase-owned reference closeout before gate
+- **THEN** the Wave1 phase body SHALL instruct the Phase Agent to complete valid
+  depth review and invoke the convergence-guided Phase-owned reference closeout
+  before gate
 - **AND** it SHALL not require a Sub-agent to be the canonical producer of
   consumer reference files
 

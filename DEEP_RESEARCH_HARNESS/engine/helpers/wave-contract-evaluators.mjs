@@ -64,6 +64,7 @@ function blocksWave1ReferenceFloor(depthCheck) {
   return (depthCheck?.findings || []).some((finding) => (
     finding.id?.endsWith(':reviewed_work_unit_refs_binding')
     || finding.id?.endsWith(':submitted_ledger')
+    || finding.detail?.includes('[depth_review_contract] FAIL: missing ')
   ));
 }
 
@@ -226,6 +227,7 @@ function materializationWriteTo(topic, candidates) {
 function wave1ReferenceConvergenceFinding(bundlePath, rule, topic, outcome) {
   const root = outcome.root?.code || outcome.outcome;
   const unreviewed = Array.isArray(outcome.unreviewed_rows) ? outcome.unreviewed_rows : [];
+  const unreviewedReviewWriteTo = `artifacts/wave1/${topic}/depth-review.yaml#reviewed_work_unit_refs`;
   const unreviewedNote = unreviewed.length > 0
     ? ` Submitted supplementary work unit(s) ${unreviewed.map((row) => row.ref).join(', ')} are missing from ${topic}/depth-review.yaml#reviewed_work_unit_refs; add them to the depth review and rerun this checkpoint before treating the floor as a true deficit.`
     : '';
@@ -261,14 +263,18 @@ function wave1ReferenceConvergenceFinding(bundlePath, rule, topic, outcome) {
     writeTo: isIndex
       ? 'node DEEP_RESEARCH_HARNESS/cli/sync-reference-index.mjs --bundle <bundle-path>'
       : isFloor || isExistingSupplementary
-        ? (isExistingSupplementary ? `existing supplementary demand ${outcome.demand.queue_item_id}` : 'enqueue one supplementary wave1_topic_deepening demand with the returned payload')
+        ? (isFloor && unreviewed.length > 0
+          ? unreviewedReviewWriteTo
+          : isExistingSupplementary ? `existing supplementary demand ${outcome.demand.queue_item_id}` : 'enqueue one supplementary wave1_topic_deepening demand with the returned payload')
         : isMaterialize
           ? materializationWriteTo(topic, outcome.candidates)
           : 'reference/',
     repair: isIndex
       ? 'Synchronize reference/_INDEX.md, then rerun the same Wave1 checkpoint.'
       : isFloor || isExistingSupplementary
-        ? (isExistingSupplementary ? 'Execute the existing supplementary Wave1 demand, then rerun this checkpoint.' : 'Enqueue one bounded supplementary Wave1 demand with the returned payload, then rerun this checkpoint.')
+        ? (isFloor && unreviewed.length > 0
+          ? `Add submitted supplementary work unit ref(s) ${unreviewed.map((row) => row.ref).join(', ')} to ${unreviewedReviewWriteTo}, then rerun this checkpoint before any acquisition work.`
+          : isExistingSupplementary ? 'Execute the existing supplementary Wave1 demand, then rerun this checkpoint.' : 'Enqueue one bounded supplementary Wave1 demand with the returned payload, then rerun this checkpoint.')
         : 'Materialize the indicated canonical reference projection from its submitted backing, then rerun this checkpoint.',
     detail: `[${root}] ${detail}`,
   });

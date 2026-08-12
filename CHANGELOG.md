@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.89
+
+- Wave1 post-submit closeout now completes the valid current depth review before
+  consuming reference-convergence inspect, then uses the inspect-provided exact
+  materialization target, existing index/Seed sync, and the same inspect rerun.
+- Existing Wave1 convergence feedback now preserves a concrete submitted-backing
+  root ahead of synthetic symptoms and directs an omitted submitted
+  supplementary row to `depth-review.yaml#reviewed_work_unit_refs` before
+  treating the reference floor as new acquisition work. No new state, queue,
+  Gate, or validator is introduced.
+
 ## v0.88
 
 - `operate-topic-state schema --context wave_projection` now includes one

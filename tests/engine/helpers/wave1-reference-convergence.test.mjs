@@ -130,6 +130,20 @@ describe('Wave1 reference identity', () => {
   it('rejects a non-http submitted backing URL', () => {
     assert.equal(canonicalWave1ReferencePath({ topicSlug: '01_topic', sourceUrl: 'mailto:team@example.com' }).ok, false);
   });
+
+  it('keeps the current normalized long-URL locator stable as an implementation regression', () => {
+    const locator = canonicalWave1ReferencePath({
+      topicSlug: 'topic-a',
+      sourceUrl: 'HTTPS://EXAMPLE.COM/a-very-long-path-segment-with-many-words-and-unicode-like-characters---plus-query?ignored=1#fragment',
+    });
+
+    assert.deepEqual(locator, {
+      ok: true,
+      normalized_url: 'https://example.com/a-very-long-path-segment-with-many-words-and-unicode-like-characters---plus-query?ignored=1',
+      qualifier: 'example-com-a-very-long-path-segment-with-many-w-f4d8b6306a70',
+      path: 'reference/topic-a-example-com-a-very-long-path-segment-with-many-w-f4d8b6306a70.md',
+    });
+  });
 });
 
 describe('reviewed Wave1 submitted backing', () => {
@@ -268,6 +282,34 @@ describe('Wave1 reference convergence priority', () => {
     });
     assert.equal(result.outcome, 'materialize_projection');
     assert.deepEqual(result.candidates.map((candidate) => candidate.normalized_url), ['https://example.com/b']);
+  });
+
+  it('keeps a concrete unusable submitted-backing root ahead of synthetic guards', () => {
+    const result = evaluateWave1ReferenceConvergence({
+      topic: null,
+      requiredFloor: null,
+      submittedBacking: {
+        ok: false,
+        root: { code: 'reviewed_work_unit_refs_missing', detail: 'Missing current depth review.' },
+      },
+    });
+
+    assert.equal(result.outcome, 'parent_root');
+    assert.deepEqual(result.root, {
+      code: 'reviewed_work_unit_refs_missing',
+      detail: 'Missing current depth review.',
+    });
+  });
+
+  it('keeps an unrelated canonical Topic root direct when submitted backing is valid', () => {
+    const result = evaluateWave1ReferenceConvergence({
+      topic: null,
+      requiredFloor: 1,
+      submittedBacking: backing,
+    });
+
+    assert.equal(result.outcome, 'parent_root');
+    assert.equal(result.root.code, 'wave1_reference_topic_invalid');
   });
 
   it('does not let legacy or misnamed current paths count as closed coverage', () => {

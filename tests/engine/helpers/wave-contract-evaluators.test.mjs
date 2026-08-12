@@ -48,6 +48,18 @@ const WAVE1_REFERENCE_RULES = {
   ],
 };
 
+const WAVE1_MISSING_REVIEW_RULES = {
+  rules: [
+    {
+      id: 'per_topic_depth_review_contract',
+      check: 'depth_review_contract',
+      target: 'artifacts/wave1/{topic}/depth-review.yaml',
+      finding: { source: 'checker' },
+    },
+    WAVE1_REFERENCE_RULES.rules[0],
+  ],
+};
+
 function bundle() {
   const dir = tempWorkUnitBundle('wave-contract-evaluators-');
   bundles.push(dir);
@@ -116,6 +128,21 @@ function materializationFinding(dir) {
 after(() => bundles.splice(0).forEach(cleanupWorkUnitBundle));
 
 describe('Wave1 convergence feedback projection', () => {
+  it('keeps missing depth review as the one direct root before reference-floor evaluation', () => {
+    const dir = bundle();
+    const evaluation = evaluateWave1Contract(dir, WAVE1_MISSING_REVIEW_RULES, {
+      topicRegistryFact: buildCanonicalTopicRegistryFact(dir),
+    });
+
+    const direct = evaluation.findings.filter((entry) => (
+      entry.id === 'per_topic_depth_review_contract:topic-a:missing'
+    ));
+    assert.equal(direct.length, 1, JSON.stringify(evaluation.findings, null, 2));
+    assert.match(direct[0].id, /:missing$/);
+    assert.equal(evaluation.findings.some((entry) => entry.rule_id === 'per_topic_ref_md_count_floor'), false);
+    assert.equal(evaluation.masked_rule_ids.includes('per_topic_ref_md_count_floor:topic-a'), true);
+  });
+
   it('projects stable canonical targets and submitted backing coordinates for materialization', () => {
     const dir = bundle();
     const { sourceUrl, record } = submitReviewedCandidate(dir);

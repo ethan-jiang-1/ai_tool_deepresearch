@@ -764,4 +764,32 @@ describe('canonical topic state', () => {
     const ordinaryFeedback = projectTopicApplyValidationErrors(ordinaryEnum.error.issues);
     assert.deepEqual(ordinaryFeedback.validation_errors[0].allowed_values, ['primary', 'synthesis', 'comparison', 'supporting']);
   });
+
+  it('keeps a malformed Wave2 finding packet focused on the missing finding_id coordinate', () => {
+    const input = {
+      context: 'wave_projection',
+      action: 'apply_seed_projection',
+      topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+      wave: 'wave2',
+      updates: [{
+        slot_id: 'wave2_judgment',
+        entries: [{
+          source_identity: { kind: 'finding' },
+          entry_id: 'W2F-001',
+          evidence_meaning: 'The packet is intentionally malformed only at its finding identity.',
+          relationship: 'supports',
+          refs: ['reference/topic-a.md'],
+          status: 'supported',
+          next_hop: 'Read the retained reference before synthesis.',
+        }],
+      }],
+    };
+    const parsed = TopicApplyPlanSchema.safeParse(input);
+
+    assert.equal(parsed.success, false);
+    const feedback = projectTopicApplyValidationErrors(parsed.error.issues, { input });
+    assert.equal(feedback.primary_validation_path, 'updates[0].entries[0].source_identity.finding_id');
+    assert.equal(feedback.validation_errors[0].path, 'updates[0].entries[0].source_identity.finding_id');
+    assert.equal(feedback.validation_errors.some((entry) => /wave0_evidence|deferred_contribution/.test(entry.path)), false);
+  });
 });
