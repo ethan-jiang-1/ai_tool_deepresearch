@@ -1,0 +1,41 @@
+schema_version: verification-routing/v1
+change: correct-retired-content-dedup-catalog
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      No unit-owned module, schema, or executable behavior changes.
+  integration:
+    status: selected
+    rationale: >-
+      The existing hygiene test jointly reads current framework and
+      Agent-facing guidance surfaces to ensure retired content heuristics do
+      not regain active authority.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale runtime lifecycle, temporary bundle, or production
+      checkpoint behavior changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change makes no claim about real Playbook-Agent or Subject-Agent
+      behavior and does not run a real Agent experiment.
+claims:
+  - id: retired-content-heuristic-remains-inactive
+    statement: >-
+      GAC-001 through GAC-009 remain retired: correcting the catalog navigation
+      row does not restore content-dedup heuristics to current implementation
+      or runtime guidance authority.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/retired-content-heuristic-hygiene.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

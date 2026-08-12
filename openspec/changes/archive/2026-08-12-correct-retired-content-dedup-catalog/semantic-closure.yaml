@@ -1,0 +1,7 @@
+schema_version: semantic-closure/v1
+change: correct-retired-content-dedup-catalog
+status: not_applicable
+reason: >-
+  This change corrects one non-authoritative Capability Catalog navigation row.
+  It changes no Harness runtime fact family, resolver, authority-establishing
+  surface, deterministic verdict, or production behavior.
