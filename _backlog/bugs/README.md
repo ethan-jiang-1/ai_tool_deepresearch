@@ -20,16 +20,22 @@
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
-| [BUG-220](BUG-220-wave2-finding-packet-validation-error-misleading.md) | P2 | wave2 | Wave2 finding 投影包 `source_identity` 字段名错误时，Zod union 回退产生误导性验证信息（指向 `wave0_evidence` 而非 `finding_id`） |
-| [BUG-221](BUG-221-canonical-wave1-filename-algorithm-undocumented-and-inspect-single-candidate.md) | P2 | wave1 | REF-011 canonical 文件名算法未完整文档化（token 48 字符截断 + normalized-URL digest），且 `materialize_projection` 只暴露每 topic 首个候选 |
-| [BUG-222](BUG-222-wave1-missing-depth-review-masks-real-root-behind-topic-invalid.md) | P2 | wave1 | depth-review 缺失时 reference convergence 报误导性 `wave1_reference_topic_invalid`，掩盖真实根因 `reviewed_work_unit_refs_missing`（guard 顺序） |
-| [BUG-223](BUG-223-unreviewed-supplementary-rows-note-never-surfaces-type-mismatch.md) | P2 | wave1 | `unreviewedSubmittedSupplementaryRows` 收到 topic 对象而非 slug 字符串，`resolveTopicLayout` 恒失败，unreviewed-supplementary 提示永不浮出 |
-| [BUG-224](BUG-224-wave0-multi-contribution-deferred-contribution-not-expressible.md) | P2 | wave0 | Wave0 投影包无法表达"多个 work-unit 贡献各自 whole-contribution deferred"（`deferred_contribution` 单数 + slot_id 每包一次的组合限制，playbook 未说明） |
 
-> 5 个 bug（BUG-220..224）来自一次完整 real-actor Deep Research run
-> （`dpt_rb_enterprise-safe-ai-harness`，HITL1→Wave0→Wave1→Wave2→HITL2→Final，
-> 2026-08-12）中 Phase Agent 实际遇到的确定性框架缺陷，附代码锚点与复现路径。
-> BUG-212--219 已在 `_done/_fixed_bugs/`。
+当前没有活跃 bug。
+
+> BUG-220..224 来自 `dpt_rb_enterprise-safe-ai-harness` 的原始 real-actor 观察，
+> 已由 `repair-wave1-reference-closeout-feedback`（`v0.89`，提交 `5503cc37b`）完成闭环，
+> 并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。BUG-212--219 也已归档。
+
+## 最近关闭 (2026-08-12)
+
+| Bug | 结案依据 |
+|-----|----------|
+| BUG-220 | Current field-level Wave2 `finding_id` feedback 加入 exact regression；不需要 runtime change。 |
+| BUG-221 | `v0.89` 将 Wave1 submit 后 guidance 收敛为 valid depth review -> inspect -> exact-target closeout；不公开 locator implementation constants。 |
+| BUG-222 | `v0.89` 使具体 submitted-backing/depth-review root 优先于 synthetic Topic guard，并遮蔽派生 floor symptom。 |
+| BUG-223 | `v0.89` 修复 supplementary-row 分类与 public depth-review primary repair 投影。 |
+| BUG-224 | `v0.89` 保留 accepted single-contribution packet grammar，并澄清 multiple explicit entries 和 sequential deferred applies。 |
 
 ## 新增 (2026-08-08)
 
@@ -109,7 +115,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 
 > BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspened_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
-**Next available bug ID: BUG-220**
+**Next available bug ID: BUG-225**
 
 ## BUG-132–137 接手地图
 

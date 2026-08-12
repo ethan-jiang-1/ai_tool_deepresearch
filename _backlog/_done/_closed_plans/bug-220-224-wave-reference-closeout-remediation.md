@@ -1,8 +1,27 @@
 # BUG-220--224 Wave Reference Closeout Remediation
 
-> 状态: research complete, ready to propose one bounded OpenSpec change | 更新: 2026-08-12
+> 状态: completed and archived | 更新: 2026-08-12 | 实现提交: `5503cc37b`
 >
 > 证据底稿: [active-bugs-220-224-primary-source-research.md](active-bugs-220-224-primary-source-research.md)
+
+## Closeout (2026-08-12)
+
+`repair-wave1-reference-closeout-feedback` 已完成 apply、RWP-015 主规范同步和受治理归档，
+归档目录为 `openspec/changes/archive/2026-08-12-repair-wave1-reference-closeout-feedback/`。
+它保持一个 convergence resolver、一个 verdict consumer 和一个 derived Phase projection，
+没有新增 controller、state、queue、Gate 或第二套 validator。
+
+| Bug | Closeout basis |
+| --- | --- |
+| BUG-220 | 当前 field-level `finding_id` feedback 保持不变，并加入精确 regression；无 runtime change。 |
+| BUG-221 | Phase guidance 已改为 valid depth review -> inspect -> exact-target closeout；locator 细节仍为 implementation regression，不成为 Agent contract。 |
+| BUG-222 | submitted-backing root 现在优先于 synthetic null Topic/profile guards，缺失 depth review 保留直接可修复 root。 |
+| BUG-223 | supplementary detector 使用 current hash-valid supplementary assignment，遗漏 review 时 public repair 直接指向 `depth-review.yaml#reviewed_work_unit_refs`。 |
+| BUG-224 | accepted one-contribution deferred grammar 未改变；playbook 明确 multiple explicit entries、one deferred contribution per packet 和 sequential applies。 |
+
+验证：选定 native unit/integration evidence 通过；`npm test` 以 exit 0 完成，
+`2,786` tests / `484` suites 通过、`0` failures；strict validation、semantic closure、
+requirements/spec governance 与 archive finalizer 均通过。
 
 ## 决策
 

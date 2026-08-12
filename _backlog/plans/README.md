@@ -17,6 +17,7 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
+| `current-contract-signal-cleanup` | 以 current-only policy 清理 Harness/main specs/context 的旧入口、旧 schema、alias、migration 和无生产 owner surface；八张 change card 已标出实际 consumer、影响面、风险和 OpenSpec evidence gate。 | active（baseline/card 完成，待决定 C1a 最小 slice） |
 | `hitl1-bounded-clarification-alignment` | 在既有 HITL1 内加入可选、有限的主动反问与对齐快照：保留“你先研究”的自主出口，不新增 checkpoint、状态机或语义 Gate。 | active（设计验证待开始） |
 | `semantic-fact-closure-openspec-governance` | 防止 Engine 同一确定性事实被多处各自解释：建立可增长的事实家族目录、每 change 的 closure record、OpenSpec apply/archive checker 闭环；CI 当前明确不在范围内。 | active（共同理解完成，ready to propose Change A） |
 | `seven-topic-seven-subagent-concurrency-investigation` | delegated concurrency control：当前无结构化 cap owner；下一步以 single ceiling（候选 12）使批量 claim 按当前独立可执行 demand、余量和上限计算。 | active（调查完成，ready to propose） |
@@ -24,9 +25,14 @@
 | `gate-schema-progressive-gate-schema-queue-remediation` | 长程执行总线：两个有界 OpenSpec change 已归档为 `v0.75` / `v0.76`；后续保留 audit observation 和严格的第三-change 触发条件。 | active（Phase 3 observation pending） |
 | `bug-200-204-gate-and-queue-remediation` | BUG-200--204 的收敛分诊：关闭 current-head 已覆盖的 BUG-200；以两个 OpenSpec change 分别修 Gate/recovery contract 与递归 queue repair；不将 gate audit 拆为独立生命周期，也不让无 submitted evidence 的 topic 伪造完成。 | ready for OpenSpec proposals |
 | `gate-schema-capability-audit` | 全面 Gate quality audit（重开 2026-08-07）：per-gate gap map 与语义质量审计未完成；BUG-201/202/204 的确定性闭环已由 `bug-200-204-gate-and-queue-remediation` change 1 收敛，其余内容质量 concerns 仍待审计。 | active（审计未闭环） |
-| `bug-220-224-wave-reference-closeout-remediation` | BUG-220--224 current-head 分诊：220 已覆盖、224 是 accepted packet grammar；以一个 Wave1 closeout/feedback change 修复 221--223 的 depth-review 顺序、root-first feedback、supplementary sync note 与 locator contract。 | ready to propose |
 
 ---
+
+## 最近关闭 (2026-08-12)
+
+| Plan | 关闭依据 |
+|------|----------|
+| `active-bugs-220-224-primary-source-research` + `bug-220-224-wave-reference-closeout-remediation` | CLS-060/CLS-061：`repair-wave1-reference-closeout-feedback` 已 archive（提交 `5503cc37b`，`v0.89`）；BUG-220 回归保护、BUG-221--223 Wave1 closeout repairs、BUG-224 accepted-grammar 澄清均已完成。 |
 
 ## 最近关闭 (2026-08-06)
 

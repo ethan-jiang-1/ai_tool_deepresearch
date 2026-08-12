@@ -206,8 +206,13 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-217 | 2026-08-12 | Bounded top-up guidance vocabulary drift repaired by `repair-agent-guidance-contract-drift` (`65fdb829a`) |
 | BUG-218 | 2026-08-12 | Public Wave2 finding source-identity form repaired by `harden-agent-authored-contracts` (`ab2f17c49`, v0.88) |
 | BUG-219 | 2026-08-12 | Raw document-markup reference-format false pass repaired by `harden-agent-authored-contracts` (`ab2f17c49`, v0.88) |
+| BUG-220 | 2026-08-12 | Current Wave2 `finding_id` feedback retained and protected by an exact regression in `repair-wave1-reference-closeout-feedback` (`5503cc37b`, v0.89); no runtime change required |
+| BUG-221 | 2026-08-12 | Wave1 post-submit guidance now completes valid depth review before inspect and consumes inspect-provided exact target; locator constants remain implementation-only (`5503cc37b`, v0.89) |
+| BUG-222 | 2026-08-12 | Concrete unusable submitted-backing/depth-review roots now precede synthetic Topic guards, with direct prerequisite masking (`5503cc37b`, v0.89) |
+| BUG-223 | 2026-08-12 | Current hash-valid supplementary-row classification and depth-review primary repair projection fixed (`5503cc37b`, v0.89) |
+| BUG-224 | 2026-08-12 | Accepted one-contribution deferred grammar retained; playbook clarifies explicit entries and sequential deferred applies (`5503cc37b`, v0.89) |
 
-**Next available bug ID: BUG-220**
+**Next available bug ID: BUG-225**
 
 ---
 

@@ -79,5 +79,7 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-057 | 2026-08-10 | centralize-project-guidance-under-openspec-progressive-plan.md | Change A/Change B archive、P5 observation、proposal polish、Apply/closeout evidence 与 backlog closure tracker。 |
 | CLS-058 | 2026-08-10 | engine-gap-supersede-bypass-misreport.md | BUG-212/213 为已修复的历史 Engine 缺陷；`2026-08-09-close-work-unit-semantic-contract-drift`（`ea02a29af`）已关闭两项 gap，run-state 描述保留为未复核的 incident context。 |
 | CLS-059 | 2026-08-12 | systemic-active-bug-remediation.md | BUG-216--219 经两项最小 OpenSpec change 全部修复：guidance/test drift 由 `repair-agent-guidance-contract-drift`（`65fdb829a`）关闭，public schema/reference-format contract 由 `harden-agent-authored-contracts`（`ab2f17c49`，v0.88）关闭。 |
+| CLS-060 | 2026-08-12 | active-bugs-220-224-primary-source-research.md | BUG-220--224 的 current-head primary-source 分诊已由后续有界 change 验证并完成：220 保留 exact regression，221--223 修复，224 作为 accepted grammar 澄清。 |
+| CLS-061 | 2026-08-12 | bug-220-224-wave-reference-closeout-remediation.md | `repair-wave1-reference-closeout-feedback`（`5503cc37b`，v0.89）已 archive；完成 Wave1 depth-review-first closeout、root-first feedback、supplementary review sync，并保留一个 resolver/consumer/derived projection 形状。 |
 
-**Next available plan ID: CLS-060**
+**Next available plan ID: CLS-062**
