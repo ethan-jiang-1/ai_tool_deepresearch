@@ -1,0 +1,43 @@
+> Apply discipline: after each completed target-edit or verification task,
+> update its checkbox and append concise, directly observed command evidence to
+> that task line. A planned command is not completion evidence.
+
+## 0. Feedback Review
+
+- [ ] 0.1 `openspec-feedback:plan-review` - Before the first target edit, obtain the current apply-operation guidance and review `proposal.md`, delta, `design.md`, `tasks.md`, `verification-plan.yaml`, and `semantic-closure.yaml` against RWP-015, WAI-005/WAI-009/WAI-010, RWG-017/RWG-021, and REF-011. Done when the one affected convergence family, resolver, established-by surface, consumer, and derived Markdown overlap remain coherent; every actionable finding is an ordinary unchecked task with its authoritative owner, smallest repair, and independently observable done condition.
+
+## 1. Pre-Edit Governance
+
+- [ ] 1.1 @impl RWP-015, VER-002, VER-003, SEF-002, SEF-004: Before target edits, run `openspec validate repair-wave1-reference-closeout-feedback --strict`, `node openspec/governance/check-verification-routing.mjs --change repair-wave1-reference-closeout-feedback --mode plan`, and `node openspec/governance/check-semantic-closure.mjs --change repair-wave1-reference-closeout-feedback --mode plan`. Done when all pass and no Harness, test, or release target changed before that evidence.
+
+## 2. Focused Regression Evidence
+
+- [ ] 2.1 @impl WAI-005, REF-011: Extend `tests/engine/helpers/wave1-reference-convergence.test.mjs` to prove concrete unusable submitted-backing roots win before synthetic null Topic/profile guards, unrelated canonical-Topic failure retains its own root, and a normalization-sensitive long URL pins current locator behavior as an implementation regression only. Done when no assertion requires Agent-facing `48`/`12` wording.
+- [ ] 2.2 @impl WAI-005, RWG-017: Extend `tests/engine/helpers/wave-contract-evaluators.test.mjs` to prove the existing depth-review prerequisite masking yields one direct public root rather than a generic topic-invalid or count-floor sibling. Done when the test asserts existing rule/finding structures and introduces no second prerequisite evaluator.
+- [ ] 2.3 @impl canonical-topic-state: Add the exact malformed Wave2 finding packet regression to `tests/engine/helpers/canonical-topic-state.test.mjs`. Done when missing `source_identity.finding_id` is the primary safe coordinate and no Wave0 union branch/slot coordinate becomes primary.
+- [ ] 2.4 @impl WAI-009, RWG-021: Extend `tests/integration/wave1-floor-feedback-names-depth-review.test.mjs` to prove the detector selects only a current hash-valid submitted supplementary assignment omitted from review, excludes an omitted primary row, and recognizes a reviewed supplementary row through an accepted alternate submitted coordinate with trailing-slash canonicalization; extend `tests/integration/cli/check-gate-wave1-complete.test.mjs` to prove inspect and formal Gate preserve `reference_floor_deficit` while naming the existing review update before acquisition work. Done when detector classification and public inspect/Gate feedback are independently covered without a duplicate validator.
+- [ ] 2.5 @impl RWP-015, WAI-010, canonical-topic-state: Extend `tests/integration/md/wave1-reference-closeout-document-contract.test.mjs` and `tests/integration/md/wave-producer-contract-guidance.test.mjs` for valid-review-before-inspect, exact inspect-target consumption, and the Wave0 one-contribution deferred explanation. Keep `tests/integration/cli/operate-topic-state-projection.test.mjs` as the grammar guard for two sequential applies and final inspect. Done when no test claims an inspect between those applies or a new deferred packet form.
+
+## 3. Existing Closeout Repair
+
+- [ ] 3.1 @impl WAI-005, WAI-009: In `DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs`, give concrete unusable submitted-backing roots precedence, pass `submittedBacking.topic.topic_slug` to the existing supplementary detector, and filter its results to current hash-valid submitted supplementary assignments. Resolve a reviewed row through the existing `work_id`/`work_unit_ref`/`result_ref` equivalence with trailing-slash canonicalization, rather than a second review validator. Done when no new resolver, outcome, locator API, queue, or state is introduced.
+- [ ] 3.2 @impl RWG-017, RWG-021: In `DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs`, extend existing depth-review prerequisite masking and project an omitted supplementary row as the primary existing depth-review `write_to`/repair while retaining `reference_floor_deficit` and its rule identity. Done when inspect/Gate consumers receive one direct missing-review root or the existing floor outcome, never a duplicate validator or generic sibling symptom.
+
+## 4. Phase Guidance And Release
+
+- [ ] 4.1 @impl RWP-015, WAI-010: Update `DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md` to state the post-submit sequence `submit -> complete valid depth review -> inspect -> exact-target materialization -> index/seed sync -> same inspect`. Done when guidance names the existing authorized operations, consumes inspect output, and neither derives locator bytes nor invents a controller, queue, Gate, or writer.
+- [ ] 4.2 @impl canonical-topic-state: Update `DEEP_RESEARCH_HARNESS/command_playbook/operate-topic-state.md` with the bounded Wave0 clarification: multiple explicit entries may share one update; deferred form selects one contribution per packet; multiple deferred contributions require sequential applies. Done when writer grammar, slot uniqueness, collision, idempotency, and interval semantics are unchanged.
+- [ ] 4.3 @impl version-management: Update `CHANGELOG.md` for `v0.89`, then synchronize `DEEP_RESEARCH_HARNESS/RUN.md` banner and latest release note. Done when both identify the same version and summarize only the bounded Wave1 closeout/feedback repair.
+
+## 5. Verification And Semantic Sync
+
+- [ ] 5.1 @impl VER-001: Run the selected unit/integration evidence from `verification-plan.yaml`, including Wave1 convergence/evaluator, canonical-topic-state, Wave1 inspect/Gate, Wave1 supplementary feedback, Wave1/Wave0 Markdown, and Wave0 projection grammar assets. Done when every selected native `node:test` verdict passes and the recorded result makes no Agent-flow claim.
+- [ ] 5.2 @impl VER-001: Run `npm test` after focused verification. Done when the task records the actual complete result and separately names any unrelated baseline failure rather than claiming a green suite without evidence.
+- [ ] 5.3 @impl RWP-015: Synchronize the accepted RWP-015 delta into `openspec/specs/research/research-wave-phase-content/spec.md`, then reread and compare the resulting main requirement with this change's intended valid-review-before-convergence behavior. Done when the main spec contains the accepted behavior without delta syntax and no planned requirement is lost.
+- [ ] 5.4 @impl VER-001, VER-002, VER-003, SEF-002, SEF-004: Run `git diff --check`, `openspec validate repair-wave1-reference-closeout-feedback --strict`, `node openspec/governance/check-verification-routing.mjs --change repair-wave1-reference-closeout-feedback --mode assets`, and `node openspec/governance/check-semantic-closure.mjs --change repair-wave1-reference-closeout-feedback --mode assets`. Done when all pass and structural route/closure validity is not presented as a native test verdict.
+
+## 6. Archive Preconditions
+
+- [ ] 6.1 @impl RET-006: Run `node openspec/governance/check-project-reqs.mjs --mode archive --change repair-wave1-reference-closeout-feedback`. Done when it passes with zero duplicate, orphan, unregistered, and reused-retired requirement IDs; no reservation is required because this change modifies RWP-015 and introduces no new requirement ID.
+- [ ] 6.2 @impl RET-006: Run `node openspec/governance/check-project-specs.mjs`. Done when it passes with zero delta-header, missing-purpose, missing-requirements, and missing-requirement-header findings.
+- [ ] 6.3 `openspec-feedback:closeout-review` - Before archive, obtain current archive-operation guidance and review the actual scoped diff, selected native results, full-suite result, semantic closure record, and synchronized RWP-015 main spec. Done when no actionable closeout finding remains; if one exists, it is an ordinary incomplete task with authoritative owner, smallest repair, and observable done condition. After all tasks are complete, use `node openspec/governance/finalize-change-archive.mjs --change repair-wave1-reference-closeout-feedback` as the only archive transition.

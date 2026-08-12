@@ -1,0 +1,31 @@
+schema_version: semantic-closure/v1
+change: repair-wave1-reference-closeout-feedback
+status: affected
+catalog_additions: []
+affected:
+  - family: wave.submitted-reference-convergence
+    fact: >-
+      For a current Wave1 Topic, the existing convergence resolver determines
+      whether valid reviewed submitted backing first requires a direct
+      depth-review repair, canonical reference materialization, index sync, or
+      the unchanged true reference-floor supplementary action.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs
+    overlap:
+      - coordinate: openspec/specs/research/research-wave-phase-content/spec.md
+        relation: authoritative
+        detail: >-
+          RWP-015 defines the Agent-facing prerequisite and same-inspect
+          consumption of this existing convergence conclusion.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md
+        relation: derived
+        detail: >-
+          The Phase document projects the resolved repair action for an Agent;
+          it neither establishes submitted backing nor authorizes a verdict.
+    verification:
+      truth_table: tests/engine/helpers/wave1-reference-convergence.test.mjs
+      cross_surface: tests/integration/cli/check-gate-wave1-complete.test.mjs

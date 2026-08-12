@@ -1,0 +1,195 @@
+schema_version: verification-routing/v1
+change: repair-wave1-reference-closeout-feedback
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Root precedence, supplementary-row classification, locator constants,
+      and Wave2 missing-finding feedback are bounded deterministic projections
+      over controlled facts.
+  integration:
+    status: selected
+    rationale: >-
+      Production CLI and Markdown contract tests prove public inspect/Gate
+      feedback and Agent-facing ordering across independently owned surfaces.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      The change does not alter a workflow-scale transition or require a full
+      multi-phase run to establish its deterministic closeout behavior.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The claims concern deterministic resolver, feedback, and documentation
+      contracts, not real Agent research or semantic authoring behavior.
+claims:
+  - id: wave1-backing-root-precedence
+    statement: >-
+      WAI-005 and RWG-017: an unusable submitted-backing root wins before
+      synthetic null Topic/profile guards, while unrelated canonical Topic
+      failure retains its own root.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/wave1-reference-convergence.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-locator-implementation-regression
+    statement: >-
+      REF-011: normalization-sensitive input and a long token retain the
+      current canonical locator behavior without publishing truncation or
+      digest lengths as an Agent-facing contract.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/wave1-reference-convergence.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-missing-review-prerequisite-masking
+    statement: >-
+      WAI-005 and RWG-017: the existing evaluator exposes one direct
+      depth-review prerequisite root and masks only its derived Topic-invalid
+      and count-floor symptoms.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/wave-contract-evaluators.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave2-finding-id-feedback-regression
+    statement: >-
+      Canonical topic-state Wave2 packet validation reports the exact missing
+      `source_identity.finding_id` coordinate rather than a Wave0 union branch.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/canonical-topic-state.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-missing-review-public-root
+    statement: >-
+      WAI-005 and RWG-017: a temporary bundle missing the current depth review
+      makes inspect and formal Gate expose one direct reviewed-backing root,
+      without a generic Topic-invalid or count-floor sibling.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave1-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-supplementary-review-sync-primary-repair
+    statement: >-
+      WAI-009 and RWG-021: an omitted current hash-valid submitted supplementary
+      row preserves `reference_floor_deficit` but makes its exact depth-review
+      update the primary repair.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave1-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-supplementary-review-sync-classification
+    statement: >-
+      WAI-009: the direct detector selects a current hash-valid submitted
+      supplementary assignment omitted from depth review and excludes an
+      omitted primary assignment, while an accepted alternate submitted review
+      coordinate (including its trailing-slash form) remains reviewed.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/wave1-floor-feedback-names-depth-review.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-closeout-order-and-exact-target-guidance
+    statement: >-
+      RWP-015 and WAI-010: Wave1 Markdown orders valid depth review before
+      inspect, consumes the exact inspect target, then uses the existing
+      materialize/index/Seed/same-inspect loop without locator derivation.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/wave1-reference-closeout-document-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-single-contribution-deferred-guidance
+    statement: >-
+      Canonical topic-state Wave0 authoring guidance distinguishes multiple
+      explicit entries in one update from one deferred contribution per packet
+      and does not claim an intermediate inspect between sequential applies.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/wave-producer-contract-guidance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-single-contribution-deferred-grammar
+    statement: >-
+      Canonical topic-state keeps the accepted one-contribution deferred packet
+      grammar: separate sequential applies are accepted and final inspection
+      succeeds, without expanding a packet to multiple deferred contributions.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-projection.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
