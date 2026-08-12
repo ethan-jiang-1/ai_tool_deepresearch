@@ -14,11 +14,8 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
   const commands = read('DEEP_RESEARCH_HARNESS/COMMANDS.md');
   const playbook = read('DEEP_RESEARCH_HARNESS/command_playbook/persist-artifact.md');
   const phaseFinal = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-final.md');
-  const changelog = read('CHANGELOG.md');
-  const run = read('DEEP_RESEARCH_HARNESS/RUN.md');
   const subagent = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md');
   const antiCheating = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-anti-cheating-rules.md');
-  const currentRelease = changelog.match(/^## (v\d+\.\d+)$/m)?.[1];
 
   it('exposes one workspace, three operations, supported roots, and excluded authority surfaces', () => {
     assert.match(helper, /ARTIFACT_PERSISTENCE_ROOT = '_diagnostics\/artifact-persistence'/);
@@ -60,18 +57,6 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
     assert.match(phaseFinal, /没有 gate CLI/);
     assert.match(playbook, /Generic `persist` intentionally rejects safe Final Markdown targets/);
     assert.match(commands, /three-operation durability command/);
-  });
-
-  it('keeps current release scopes bounded', () => {
-    assert.match(changelog, /## v0\.70/);
-    assert.match(changelog, /structural path\/provenance feedback only/);
-    assert.match(changelog, /## v0\.71/);
-    assert.match(changelog, /no aliases,\n  automatic repair, Queue edit path, or Actor-behavior proof/);
-    assert.ok(currentRelease, 'CHANGELOG.md must declare a current release heading');
-    assert.match(run, new RegExp(`DEEP_RESEARCH_HARNESS ${currentRelease}`));
-    assert.match(run, new RegExp(`Current Release: ${currentRelease}`));
-    assert.match(run, /non-persisted Engine feedback projections only/);
-    assert.match(run, /structural path\/provenance admission only/);
   });
 
   it('does not grow recovery controllers or destructive branches', () => {

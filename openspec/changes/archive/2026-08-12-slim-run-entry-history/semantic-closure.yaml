@@ -1,0 +1,8 @@
+schema_version: semantic-closure/v1
+change: slim-run-entry-history
+status: not_applicable
+reason: >-
+  This change restores the existing RUN.md entry ordering and removes a
+  duplicate release-history projection. It changes no Harness runtime fact
+  family, resolver, authority-establishing surface, deterministic verdict, or
+  production behavior.

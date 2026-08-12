@@ -32,15 +32,12 @@ describe('framework version management', () => {
     assert.ok(latest.body.trim().length > 0, 'latest changelog entry body must not be empty');
   });
 
-  it('keeps both RUN.md version references aligned to the latest changelog entry', () => {
+  it('keeps the single RUN.md version banner aligned to the latest changelog entry', () => {
     const latest = latestChangelogEntry(read('CHANGELOG.md'));
     const run = read('DEEP_RESEARCH_HARNESS/RUN.md');
+    const banners = run.match(/^> \*\*DEEP_RESEARCH_HARNESS (v\d+\.\d+)\*\*$/gm) ?? [];
 
-    assert.ok(run.includes(`> **DEEP_RESEARCH_HARNESS ${latest.version}**`),
-      `RUN.md banner should include "DEEP_RESEARCH_HARNESS ${latest.version}"`);
-    assert.ok(run.includes(`## Current Release: ${latest.version}`),
-      `RUN.md current-release section should include "${latest.version}"`);
-    assert.doesNotMatch(run, /v0\.5 work-unit path/);
+    assert.deepEqual(banners, [`> **DEEP_RESEARCH_HARNESS ${latest.version}**`]);
   });
 
   it('keeps accepted version semantics generic while retaining historical scenario names', () => {

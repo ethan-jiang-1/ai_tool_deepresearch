@@ -1,0 +1,94 @@
+schema_version: verification-routing/v1
+change: slim-run-entry-history
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The version-management static test directly reads the root changelog and
+      RUN.md banner without invoking a production CLI or runtime bundle.
+  integration:
+    status: selected
+    rationale: >-
+      The entry-routing and artifact-persistence static contracts read
+      independently owned Markdown and governance surfaces; their node:test
+      verdicts validate those cross-surface document boundaries.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      The existing migration test creates and inspects a temporary bundle via
+      production CLIs while retaining the current banner/changelog relation.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change makes no claim that a real Playbook Agent or Subject Agent
+      follows the entry guidance and does not run a real Agent experiment.
+claims:
+  - id: single-run-banner-aligns-with-changelog
+    statement: >-
+      VEM-001 and VEM-003: RUN.md retains one current Harness version banner
+      that equals the latest repo-root CHANGELOG.md entry, without a duplicate
+      Current Release heading.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/version-management.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: entry-route-precedes-release-history
+    statement: >-
+      RUE-001 and RUE-002: the selected new-research entry presents the current
+      version banner, then Section 0 and its existing shortcut prohibition,
+      before the trigger-context block; a duplicated Current Release heading is
+      absent.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/dpt-research-entry-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: persistence-test-stays-with-persistence-owner
+    statement: >-
+      ARP-001 through ARP-004: artifact-persistence static coverage retains its
+      own Final and durability assertions without treating unrelated RUN.md
+      release-history prose as an artifact-persistence contract.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/artifact-persistence-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: migration-keeps-one-banner-version-identity
+    statement: >-
+      RUE-001 and VEM-003: the canonical instantiate-and-inspect migration
+      path remains bundle-root isolated while its release consistency assertion
+      consumes only the one RUN.md banner and root changelog entry.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/deep-research-harness-migration.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

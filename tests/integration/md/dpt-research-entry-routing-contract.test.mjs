@@ -59,8 +59,15 @@ describe('Deep Research Harness research entry routing contract', () => {
     const readme = read(README);
     const commands = read(COMMANDS);
     const start = read(START);
+    const banner = run.match(/^> \*\*DEEP_RESEARCH_HARNESS v\d+\.\d+\*\*$/m)?.[0];
+    const section0 = '## 0. 禁用内置捷径（最高优先）';
+    const trigger = '>**这个文件在对话中即触发**';
 
-    assert.match(run, /## 0\. 禁用内置捷径（最高优先）/);
+    assert.ok(banner, 'RUN.md must retain one Harness version banner');
+    assert.equal(run.match(/^> \*\*DEEP_RESEARCH_HARNESS v\d+\.\d+\*\*$/gm)?.length, 1);
+    assert.ok(run.indexOf(banner) < run.indexOf(section0), 'banner must precede Section 0');
+    assert.ok(run.indexOf(section0) < run.indexOf(trigger), 'Section 0 must precede trigger context');
+    assert.doesNotMatch(run, /^## Current Release:/m);
     assert.match(run, /`research`、`deep-research` skill/);
     assert.match(run, /直接 WebSearch\/WebFetch/);
     assert.match(run, /而不是直接搜索、抓取、收集 evidence 或手工综合/);

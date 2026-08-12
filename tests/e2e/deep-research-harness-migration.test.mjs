@@ -50,13 +50,10 @@ function sourceRuntimeState() {
   return paths.map((path) => [path, existsSync(path)]);
 }
 
-function currentReleaseIdentity(runEntry) {
-  const banner = runEntry.match(/^> \*\*DEEP_RESEARCH_HARNESS (v\d+(?:\.\d+)+)\*\*$/m);
-  const currentRelease = runEntry.match(/^## Current Release: (v\d+(?:\.\d+)+)$/m);
-  assert.ok(banner, 'RUN.md must declare a Harness release banner');
-  assert.ok(currentRelease, 'RUN.md must declare a current release heading');
-  assert.equal(banner[1], currentRelease[1], 'RUN.md release declarations must agree');
-  return banner[1];
+function runBannerIdentity(runEntry) {
+  const banners = [...runEntry.matchAll(/^> \*\*DEEP_RESEARCH_HARNESS (v\d+(?:\.\d+)+)\*\*$/gm)];
+  assert.equal(banners.length, 1, 'RUN.md must declare exactly one Harness release banner');
+  return banners[0][1];
 }
 
 function matchingReleaseSection(changelog, releaseIdentity) {
@@ -116,7 +113,7 @@ describe('Deep Research Harness migration', () => {
 
     const changelog = readFileSync(join(REPO_ROOT, 'CHANGELOG.md'), 'utf8');
     const runEntry = readFileSync(join(HARNESS_ROOT, 'RUN.md'), 'utf8');
-    const releaseIdentity = currentReleaseIdentity(runEntry);
+    const releaseIdentity = runBannerIdentity(runEntry);
     matchingReleaseSection(changelog, releaseIdentity);
     assert.equal(existsSync(join(HARNESS_ROOT, 'CHANGELOG.md')), false);
   });
