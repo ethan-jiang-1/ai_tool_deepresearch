@@ -1,0 +1,79 @@
+# C5b: Decide Retained Experiment History Policy
+
+> Candidate change: `decide-retained-experiment-history-policy`
+>
+> Status: decision ready, but actual history prevalence is not authorized for inspection
+>
+> Risk: L4
+
+## One question
+
+Should v1 retained experiment reports/audit events remain input to the current
+Supervisor's prediction and regression-qualification decisions?
+
+## Verified boundary
+
+New writers emit:
+
+- `agent-experiment-batch-report/v2`
+- `agent-experiment-audit-event/v2`
+- `agent-experiment-selection-observation/v2`
+
+Readers accept v1 and v2. `readRetainedExperimentObservations()` reads reports
+and audit history, turns valid v1 records into retained observations without an
+execution surface, and turns malformed retained files into diagnostics rather
+than launch failure.
+
+Those records are active inputs today:
+
+- Historical duration/cost affect forecasts.
+- Source-matching v1 `PASS+CLEAN` may become `needs_qualification`.
+- Explicit qualification may select that candidate under the fast envelope.
+
+The accepted experiment strategy spec explicitly describes this v1
+qualification behavior. It is not merely a leftover parser.
+
+## Choices
+
+| Choice | Current Supervisor behavior | Effect |
+|---|---|---|
+| A. Retain as selection input | Current behavior continues | No signal cleanup in this branch, but no selection change |
+| B. Diagnostic/prediction only | v1 may inform visibility or conservative forecasts, but never admission/qualification | New intermediate policy must be fully specified; avoids a v1-driven launch |
+| C. Human-only / ignored (recommended for strict current-only) | v1 reports remain readable but do not affect Supervisor predictions, qualification, or selection | Clean boundary; may reduce available forecasts and qualification candidates |
+
+## Risk and side effects
+
+Removing v1 input can make a previously qualifying historical case appear as
+`no_retained_result` or otherwise ineligible. That can change fast regression
+coverage and no-launch reasons. A malformed history must stay non-fatal unless
+a deliberately new contract says otherwise; old history should not become a
+launch blocker simply because it is old.
+
+Actual repository prevalence is unknown because `.exp-bundles/` was not
+authorized for inspection. The proposal must not claim that no v1 records
+exist; it must define behavior independently of prevalence.
+
+## Protected current behavior
+
+- Current v2 writer and v2 matching-execution-surface admission.
+- Current singleton schemas such as completion v1, health v1, run-context v1,
+  and manifest marker v1. Their name alone is not evidence of a compatibility
+  reader.
+- Malformed-history diagnostics/no-launch safety, unless an approved proposal
+  intentionally changes that separate contract.
+
+## Proposal gate
+
+- [x] v1 reader fanout and selection effect mapped.
+- [x] Current v1 qualification behavior confirmed in accepted spec and tests.
+- [ ] User selects A, B, or C.
+- [ ] If useful, user authorizes inspection of a concrete retained-history path; absence of this evidence does not postpone defining the policy.
+- [ ] Proposal specifies exact selection, prediction, diagnostics, and no-launch behavior for the selected option.
+
+## Expected verification
+
+```bash
+node --test tests/integration/host_tools/run-agent-experiment.test.mjs
+node openspec/governance/check-project-specs.mjs
+node DEEP_RESEARCH_HARNESS/cli/validate-workflow-package.mjs
+```

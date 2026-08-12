@@ -28,10 +28,10 @@
 | ID | 候选 OpenSpec change | 当前判断 | 风险 | 解释卡 |
 |---|---|---|---|---|
 | C1 | `retire-inactive-contract-surfaces` | 应拆成“安全 tombstone 清理”与“仍有活跃实验 consumer 的 gate utilities”两个判断 | L1-L3 | [C1](changes/C1-retire-inactive-contract-surfaces.md) |
-| C2 | `remove-internal-versioning-and-slim-entry` | 很可能是低耦合降噪，但 `framework_version` 的历史 artifact 语义需先定 | L2 | [C2](changes/C2-remove-internal-versioning-and-slim-entry.md) |
-| C3 | `drop-legacy-bundle-entry-compatibility` | current guidance/CLI 仍显式接受旧入口；是明确的 compatibility removal | L3 | [C3](changes/C3-drop-legacy-bundle-entry-compatibility.md) |
-| C4 | `drop-legacy-profile-and-topic-compatibility` | 必须拆开：profile access shape 是 L3；topic migration/previous layouts 是 L4 | L3-L4 | [C4](changes/C4-drop-legacy-profile-and-topic-compatibility.md) |
-| C5 | `drop-legacy-reference-and-experiment-formats` | reference topic binding 和 experiment retained-history reader 是不同问题，必须拆开 | L3-L4 | [C5](changes/C5-drop-legacy-reference-and-experiment-formats.md) |
+| C2 | `remove-internal-versioning-and-slim-entry` | C2a 已 archived；C2b stamp 与 C2c governance 都有完整调查，但仍须逐项决定 | L2-L3 | [C2](changes/C2-remove-internal-versioning-and-slim-entry.md) |
+| C3 | `drop-legacy-bundle-entry-compatibility` | current guidance/CLI 仍显式接受旧入口；唯一未决点是 old-only bundle 的 inspect policy | L3 | [C3](changes/C3-drop-legacy-bundle-entry-compatibility.md) |
+| C4 | `drop-legacy-profile-and-topic-compatibility` | C4a profile access 为 L3；C4b 仅指 LegacyPlan migration，`previous_layouts` 是 current lineage，必须保留 | L3-L4 | [C4](changes/C4-drop-legacy-profile-and-topic-compatibility.md) |
+| C5 | `drop-legacy-reference-and-experiment-formats` | C5a 先改 current authoring 为 UID-only，再决定 historic reader；C5b 是 retained-history selection policy | L3-L4 | [C5](changes/C5-drop-legacy-reference-and-experiment-formats.md) |
 | C6 | `drop-legacy-work-unit-contracts` | 当前 accepted contract 明确保留 legacy read-only branch；最高风险，尚不能假定删除 | L4 | [C6](changes/C6-drop-legacy-work-unit-contracts.md) |
 | C7 | `rewrite-main-specs-as-current-state` | 需要在运行面收敛后做，避免用纯文案掩盖仍存在的兼容分支 | L2-L3 | [C7](changes/C7-rewrite-main-specs-as-current-state.md) |
 | C8 | `sharpen-context-and-routing` | 最后做，主要是 Agent 阅读路径和脆弱文案测试降噪 | L1-L2 | [C8](changes/C8-sharpen-context-and-routing.md) |
@@ -46,12 +46,15 @@ C1 (先分辨 dead surface / current experiment surface)
  |                                       +--> C6 (work-unit; only after explicit decision)
  +--> C7 (main specs current-state rewrite) --> C8 (context/routing)
 
-C4a (profile access) ----> C5a (reference binding)
-C4b (topic migration) ---> C5a / C6  [L4, independent decision gates]
+C2c (version governance) --> C2b (framework stamp) --> C3 (bundle entry)
+
+C4a (profile access)                  [L3, independent decision gate]
+C4b (legacy plan migration) ---> C5a / C6  [L4, independent decision gates]
+C5a-1 (UID-only authoring) --> C5a-2 (historic reference reader) [L3 -> L4]
 C5b (experiment retained history)     [L4, independent of reference]
 ```
 
-`C4a/C4b` 与 `C5a/C5b` 是 proposal 时应拆出的 bounded changes，不是已经创建的 OpenSpec changes。
+`C2b/C2c`、`C4a/C4b`、`C5a-1/C5a-2` 与 `C5b` 都是 proposal 时应拆出的 bounded changes，不是已经创建的 OpenSpec changes。C2-C5 的完整调查地图已先完成；某一张卡只有在用户批准其 policy 且自身 Go / No-go 完整后，才可单独 proposal，不必等待其他未决卡。
 
 ## 维护规则
 

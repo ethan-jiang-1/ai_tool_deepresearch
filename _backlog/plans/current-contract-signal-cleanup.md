@@ -1,10 +1,10 @@
 # Current-contract signal cleanup
 
-> 状态：active
+> 状态：C2-C5 首轮调查完成；逐项决策审查中
 >
 > 建立日期：2026-08-12
 >
-> 下一动作：完成 C1a/C1b 范围决策，再 proposal `retire-inactive-contract-surfaces` 的最小安全 slice
+> 下一动作：只讨论 C2c 的版本治理决策；C2-C5 调查地图已完整，只有获逐项批准且自身 Go / No-go 完整的 slice 才可 proposal
 >
 > 目标：让 Agent 看到的 Harness、accepted main specs 和 `CONTEXT.md` 只描述当前可执行系统。旧格式、旧入口、旧 schema、旧 alias、旧 migration 和仅为历史兼容存在的 fallback 默认删除，不再让未知消费者成为永久兼容理由。
 
@@ -19,6 +19,22 @@
 本 plan 采纳的工作方式是：先定义唯一的当前 contract，再按 artifact family 小步删除兼容面；每一步都同时处理实现、成功路径测试、Agent-facing guidance 和 main specs，不建立一个永久的“legacy inventory”来继续养旧行为。
 
 每个候选 change 的具体解释、实际 consumers、风险、影响面和 proposal 前证据门在 [change cards](current-contract-signal-cleanup/README.md) 中维护。总 plan 只保留全局政策、顺序和进度；不要在两处复制同一份 implementation scope。
+
+## 本轮 Proposal Barrier
+
+这次清理暴露出一个过程问题：不应在某个局部刚看清时就创建
+proposal，随后才发现它与另一个 legacy reader、retained artifact 或治理规则耦合。
+从现在开始，这组清理遵守下面的门：
+
+- [x] C2-C5 的 producer / reader / caller / guidance / spec / test 首轮调查已完成，并写入对应 change card。
+- [x] 当前语义与历史兼容已分开；`previous_layouts`、current direct-sample statuses、`related_topic_uid: all` 等不因名字像旧格式而进入删除候选。
+- [ ] 用户按风险队列逐项确认 C2c、C2b、C3、C4a、C4b、C5a-1、C5a-2、C5b 的 policy decision；一次只讨论一项。
+- [ ] 某个 slice 只有在本轮完整调查已存在、该 slice 获用户批准、且它自己的 Go / No-go 完整时，才可创建独立 OpenSpec proposal。
+
+这个 barrier 不追溯已归档的 C1a/C2a；它禁止的是为尚未完成全局调查的
+C2b-C5 抢先创建 proposal。它不要求 C2 等待 C5 的业务决策：每个获准 slice
+仍单独走 `propose -> explore/refine -> apply -> sync -> archive`，不会把 C2-C5
+合并成一个大 change。
 
 ## 目标状态
 
@@ -68,7 +84,7 @@
 - [x] requirement registry 有 53 个 retired ID；13 个 retired ID 仍出现在 main specs。
 - [x] 两份 main spec 全部由 retired requirements 构成：`bundle/bundle-start-from-here`、`engine/gate-content-dedup`。
 - [x] `RUN.md` 在真正 Section 0 前约有 243 行、19 KB release/history 内容。
-- [x] repo `CHANGELOG.md` 有 88 个内部版本记录；package 为 private `0.0.0`，Git tag 只有 `v0.0.1`、`v0.1.1`，不存在与 `v0.89` 对应的分发 release。
+- [x] repo `CHANGELOG.md` 有 89 个内部版本记录；package 为 private `0.0.0`，Git tag 只有 `v0.0.1`、`v0.1.1`、`v0.11`，不存在与 `v0.89` 对应的分发 release。
 - [x] `framework_version` 会写入 bundle，但未发现 runtime reader 据此拒绝、迁移或选择执行路径。
 - [x] 已识别 profile、bundle entry、reference/experiment、work-unit 等多组 legacy success paths。
 - [x] baseline verification 全部通过：workflow package、project specs、project requirements plan mode，以及 context/entry/version focused tests。
@@ -92,11 +108,11 @@
 | 顺序 | OpenSpec change | 状态 | 依赖 | 完成后主要收益 |
 |---|---|---|---|---|
 | 0 | Baseline and policy | complete | 无 | current-only 原则和审计基线明确 |
-| 1 | `retire-inactive-contract-surfaces` | needs split decision | 0 | 先删除 pure tombstone/dead surface；gate utilities/return-map 有 current consumer，另行决定 |
-| 2 | `remove-internal-versioning-and-slim-entry` | pending | 1 | 让真正入口靠前，停止内部版本号伪装成发行兼容体系 |
-| 3 | `drop-legacy-bundle-entry-compatibility` | pending | 2 | bundle 只剩一个入口 contract |
-| 4 | `drop-legacy-profile-and-topic-compatibility` | must split | 3 | profile access 与 topic migration/identity 是不同风险族 |
-| 5 | `drop-legacy-reference-and-experiment-formats` | must split | 4 | reference binding 与 experiment retained history 是不同 contract |
+| 1 | `retire-inactive-contract-surfaces` | C1a catalog-only slice archived; remaining C1 candidates need separate review | 0 | 已停止 catalog 将 retired dedup 表述为 current capability；gate utilities/return-map 等仍未决定 |
+| 2 | `remove-internal-versioning-and-slim-entry` | C2a archived；C2b/C2c 调查完成、policy decision pending | 1 | 让真正入口靠前，并决定是否停止内部版本号/横幅 choreography |
+| 3 | `drop-legacy-bundle-entry-compatibility` | 调查完成；inspection policy decision pending | 2 | bundle 只剩一个可执行 entry contract |
+| 4 | `drop-legacy-profile-and-topic-compatibility` | 已拆 C4a/C4b；调查完成、决策 pending | 3 | profile access 与 legacy plan migration 是不同风险族；current layout lineage 保留 |
+| 5 | `drop-legacy-reference-and-experiment-formats` | 已拆 C5a/C5b；调查完成、决策 pending | 4 | current UID authoring、historic reference reader、experiment retained history 分别决策 |
 | 6 | `drop-legacy-work-unit-contracts` | blocked by product decision | 3-5 | 历史 work-unit artifact 是否仍由 current Engine 读取须先决定 |
 | 7 | `rewrite-main-specs-as-current-state` | pending | 1-6 | accepted specs 不再充当 change history |
 | 8 | `sharpen-context-and-routing` | pending | 7 | 最后压缩 glossary/routing，减少脆弱措辞测试 |
@@ -149,9 +165,11 @@ Archive 时按当前 change 运行 archive-mode requirement check 和 governed f
 
 当前排程要点：
 
-- [ ] C1 先拆成 C1a pure tombstone/dead-surface cleanup 与 C1b gate utility/playbook positioning；C1a 才是可逐步提案的最小 slice。
-- [ ] C2、C3 保持顺序推进，分别处理入口噪声和 legacy bundle entry 成功路径。
-- [ ] C4 与 C5 先拆分 contract family；profile/topic、reference/experiment 不能混在一个 apply。
+- [x] C1a 已按更小的 catalog-only slice archive：`2026-08-12-correct-retired-content-dedup-catalog` 只更正 retired `gate-content-dedup` 的 catalog 投影；其余 C1 dead-surface 与 C1b gate utility/playbook 判断仍须单独审查。
+- [x] C2a `slim-run-entry-history` 已 governed archive：`RUN.md` 仅保留一个 banner，Section 0 回到第 5 行；`framework_version`（C2b）与版本治理（C2c）未纳入该 change。
+- [x] C2b/C2c、C3、C4a/C4b、C5a/C5b 的 discovery cards 已先收口；没有为它们创建 active OpenSpec change。
+- [ ] 决策队列从 C2c 开始：先决定未来是否继续 version-bump / root changelog / `RUN.md` banner choreography；再决定 C2b stamp 和 C3 entry policy。
+- [ ] C4a、C4b、C5a、C5b 各保留独立 decision gate；profile/topic、reference/experiment 不得混入同一个 apply。
 - [ ] C6 在用户决定历史 work-unit artifacts 的 Engine policy 前保持 blocked。
 - [ ] C7、C8 只在 runtime behavior 收敛后再开始，防止 docs/specs 领先真实行为。
 
@@ -162,7 +180,8 @@ Archive 时按当前 change 运行 archive-mode requirement check 和 governed f
 | Date | Change | Harness LOC | Main specs / LOC | Requirements / scenarios | Legacy success branches removed | Historical-language hits | Verification | Evidence |
 |---|---|---:|---:|---:|---:|---:|---|---|
 | 2026-08-12 | baseline | 56,867 | 85 / 26,757 | 623 / 2,580 | 0 | 46 specs contain candidate wording | PASS | initial audit |
-| TBD | Change 1 |  |  |  |  |  |  |  |
+| 2026-08-12 | C1a catalog-only | unchanged | 85 / unchanged | unchanged | 0 | 1 misleading active catalog row corrected | PASS | governed archive `2026-08-12-correct-retired-content-dedup-catalog`; taxonomy + retired-heuristic hygiene passed |
+| 2026-08-12 | C2a slim entry history | -246 (`RUN.md` 299 -> 53) | unchanged | unchanged | 0 runtime branches; 1 duplicate history projection removed | `RUN.md` no longer has `Current Release` dump | PASS | governed archive `2026-08-12-slim-run-entry-history`; 32 focused tests + package/governance checks passed |
 | TBD | Change 2 |  |  |  |  |  |  |  |
 | TBD | Change 3 |  |  |  |  |  |  |  |
 | TBD | Change 4 |  |  |  |  |  |  |  |

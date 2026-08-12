@@ -2,7 +2,7 @@
 
 > 候选 change：`retire-inactive-contract-surfaces`
 >
-> 状态：needs split decision
+> 状态：partially completed; remaining candidates need split decisions
 >
 > 风险：L1 for tombstones; L3 for gate utilities with current experiment consumers
 
@@ -14,7 +14,7 @@
 
 | Surface | 现状 | 当前 consumer 证据 | 初步结论 |
 |---|---|---|---|
-| `engine/gate-content-dedup` spec | 所有 `GAC-*` 已 retired；spec 本身说是 tombstone | `openspec/specs/README.md` 却仍把它列为当前 capability | catalog/spec 可作为 L1 清理候选 |
+| `engine/gate-content-dedup` spec | 所有 `GAC-*` 已 retired；spec 本身说是 tombstone | catalog wording 修正已由 `2026-08-12-correct-retired-content-dedup-catalog` archive；保持 tombstone spec/registry | **已完成的 L1 catalog-only slice**；不代表其余 C1 surface 已处理 |
 | `bundle/bundle-start-from-here` spec | 全部 `BUS-*` 已 retired；spec 只描述旧文件 | legacy entry 仍有 current CLI/guidance success support | 不能单独删 spec 后假装兼容已消失；与 C3 绑定决策 |
 | `schema/contracts/gate.mjs` | 文件开头明确声明 runtime 不使用；仅 barrel export 和专门 test import | `schema/index.mjs`、README、`shared-schemas.md` 仍展示它为 current transition contract | 需要先修正 current guidance；L1-L2 deletion candidate |
 | `engine/gate-loop.mjs` / `gate-fork.mjs` | 未发现 Harness production import | 活跃 `experiments_playbook/exp_gate-loop/*`、`exp_gate-fork/*` 直接 import，并自称 production path | **不是无消费者；不可按 dead code 删除** |
@@ -47,7 +47,7 @@
 
 ## Proposal 前的 Go / No-go
 
-- [ ] 将 C1 拆为至少两个 scope：`C1a` tombstone/dead-surface cleanup，`C1b` gate utility/playbook decision；不要把它们放在一个 Apply。
+- [x] 首个 C1a slice 已进一步收窄为 catalog-only：`2026-08-12-correct-retired-content-dedup-catalog` 已 archive；剩余 dead-surface 候选与 C1b 不在该 change 内。
 - [ ] 对 `gate.mjs` 运行 repo-wide import and export inventory，确认没有 package consumers、generated assets 或 dynamic import。
 - [ ] 决定 gate-loop/fork 的产品定位：保留为 experiment-only supported helper，或另立迁移/retire change；未决定则 C1a 不触碰它们。
 - [ ] 给 `shared-return-map-authoring` 的 non-pointer rule 指定 owner，并证明 phase `requires` 链在删除/迁移后仍提供同等指引。
@@ -70,7 +70,7 @@ proposal 还应选择对应 Markdown/experiment tests；若移除 `gate.mjs`，�
 
 ## 何时算完成
 
-- [ ] current catalog 不再把 retired `gate-content-dedup` 当可用 capability。
+- [x] current catalog 不再把 retired `gate-content-dedup` 当可用 capability。完成于 `2026-08-12-correct-retired-content-dedup-catalog` archive。
 - [ ] no-implementation spec 不再宣称不存在的 API/repair loop。
 - [ ] dead surface 已删或有明确 owner；仍有 current consumer 的 surface 没有被伪称 dead。
 - [ ] C1a archived，并在总计划登记 C1b 的独立决策结果。
