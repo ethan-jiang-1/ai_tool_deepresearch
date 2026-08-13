@@ -2,7 +2,7 @@
 
 > Candidate change: `retire-legacy-research-access-envelope`
 >
-> Status: known-surface classification closed; policy decision pending; no proposal created
+> Status: field-optional policy confirmed; legacy-envelope rejection owner/taxonomy remains the one pending decision; no proposal created
 >
 > Risk: L3
 
@@ -54,11 +54,13 @@ checkpoint?
 
 | Choice | Effect | Risk |
 |---|---|---|
-| A. Keep field optional globally; HITL1 requires a recorded current observation when it needs one (recommended) | Preserves current generic profile parsing and pre-HITL lifecycle; avoids broad mutation/read failures | Some non-HITL profile reads still accept absence, as they do today |
+| A. Keep field optional globally; HITL1 requires a recorded current observation when it needs one (confirmed) | Preserves current generic profile parsing and pre-HITL lifecycle; avoids broad mutation/read failures | Some non-HITL profile reads still accept absence, as they do today |
 | B. Make field globally required | Every profile reader/mutator rejects absence immediately | Wider breakage surface; turns a legacy cleanup into a new global lifecycle invariant |
 
-Recommendation: **A**. It removes the old shape without smuggling in a new
-global state requirement.
+The user confirmed **A** on 2026-08-13. It removes the old shape without
+smuggling in a new global state requirement: absence remains schema-valid
+outside HITL1, while HITL1 continues to reject it through its existing
+recorded-observation rule.
 
 ## Expected effect and side effects
 
@@ -86,7 +88,8 @@ global state requirement.
   field; HITL1 is the legacy-envelope semantic reader; generic validators are
   shared rejection consumers.
 - [x] Current status values identified as protected.
-- [ ] User selects A or B.
+- [x] User selected A: `research_access` remains globally optional; only HITL1
+  rejects absence when a recorded current observation is required.
 - [ ] Proposal selects one rejection owner/taxonomy for a legacy envelope.
 - [x] Current direct-sample preservation, absent/unprobed failure, adapter
   boundary, and style-preservation evidence passed: 64 focused tests, 0 fail.

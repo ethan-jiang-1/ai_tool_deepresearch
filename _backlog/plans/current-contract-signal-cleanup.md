@@ -1,12 +1,12 @@
 # Current-contract signal cleanup
 
-> 状态：全域覆盖审计已完成；C2a/C2b/C2c/C3 均已 governed-archived；下一项为 C4a 的独立 policy decision
+> 状态：全域覆盖审计已完成；C2a/C2b/C2c/C3 均已 governed-archived；C4a field-optional policy 已确认，下一项为其 legacy-envelope rejection owner 决策
 >
 > 建立日期：2026-08-12
 >
-> 当前阶段：C3 `drop-legacy-bundle-entry-compatibility` 已完成 Apply、main-spec sync、验证和 governed archive；C4a `research_access` legacy envelope 的 product/rejection policy 尚待逐项确认。
+> 当前阶段：C3 `drop-legacy-bundle-entry-compatibility` 已完成 Apply、main-spec sync、验证和 governed archive；C4a 已确认字段保持 optional，legacy envelope 的 rejection owner/taxonomy 尚待逐项确认。
 >
-> 下一动作：只讨论 C4a：移除 legacy `research_access` envelope 后，缺失字段应在何处成为失败；确认后才建立独立 OpenSpec proposal。
+> 下一动作：只讨论 C4a：legacy `research_access` envelope 应复用 `profile_schema_valid` 失败，还是建立新的 unsupported-current-contract 结果；确认后才建立独立 OpenSpec proposal。
 >
 > 目标：让 Agent 看到的 Harness、accepted main specs 和 `CONTEXT.md` 只描述当前可执行系统。旧格式、旧入口、旧 schema、旧 alias、旧 migration 和仅为历史兼容存在的 fallback 默认删除，不再让未知消费者成为永久兼容理由。
 
@@ -127,7 +127,7 @@ policy decision。
 | 1 | `retire-inactive-contract-surfaces` | C1 known-surface inventory closed; C1b-C1f are split candidates awaiting their own approval | 0 | 已停止 catalog 将 retired dedup 表述为 current capability；gate utilities/return-map 已归类为 current，五个实际候选不再混在一起 |
 | 2 | `remove-internal-versioning-and-slim-entry` | C2a/C2b/C2c 均 archived；C3 也已完成并归档，下一步是 C4a 的单项 policy decision | 1 | 让真正入口靠前，并停止内部版本号/横幅 choreography |
 | 3 | `drop-legacy-bundle-entry-compatibility` | applied, synced, verified, governed-archived (`2026-08-13-drop-legacy-bundle-entry-compatibility`) | 2 | bundle 只剩一个可执行 entry contract |
-| 4 | `drop-legacy-profile-and-topic-compatibility` | 已知 surface classification closed：C4a/C4b 各自 policy pending；current profile statuses 与 layout lineage 已有 focused regression evidence | 3 | profile access 与 legacy plan migration 是不同风险族；current layout lineage 保留 |
+| 4 | `drop-legacy-profile-and-topic-compatibility` | 已知 surface classification closed：C4a 已确认 field-optional policy、仍待 rejection-owner decision；C4b policy pending；current profile statuses 与 layout lineage 已有 focused regression evidence | 3 | profile access 与 legacy plan migration 是不同风险族；current layout lineage 保留 |
 | 5 | `drop-legacy-reference-and-experiment-formats` | known-surface classification closed；C5a-1b 已证实 Wave2 selected-subset 是 current output，但其无损 metadata form 与 historic-reader policy 仍待单独决策 | 4 | current one/all/subset binding、historic reference reader、experiment retained history 分别决策 |
 | 6 | `drop-legacy-work-unit-contracts` | C6a-C6d 已按 explicit assignment、markerless submission、actor provenance、transaction v1 拆卡；reader fanout 已完成；每项仍为 L4 且等待逐项决策 | 3-5 | 不再把四种历史 work-unit 语义误当成一个可安全删除的版本分支 |
 | 7 | `rewrite-main-specs-as-current-state` | pending | 1-6 | accepted specs 不再充当 change history |
@@ -208,6 +208,7 @@ Archive 时按当前 change 运行 archive-mode requirement check 和 governed f
 - [x] C2b stamp policy 已通过 governed archive：`2026-08-13-retire-framework-version-stamp` 删除新 bundle stamp writer、CMI-007 与正向 assertions；60 个 focused tests、package 与 governance checks 通过。
 - [x] C2c 的 A policy 已由用户确认；`retire-internal-version-choreography` 已完成 proposal/design/delta-spec/tasks planning validation、Apply、sync、closeout review 与 governed archive。
 - [x] C3 的 A policy 已由用户确认并落地：only `RUN_BUNDLE.md`、only `BUNDLE_MAP.md`、only `START_FROM_HERE.md` 的历史 bundle 不得进入 current `continue` / `inspect` / reentry 正向路径；人仍可直接阅读历史 Markdown。`drop-legacy-bundle-entry-compatibility` 已完成 12 份 delta 的 sync、shared predicate、closeout repairs、unit `27/27`、integration `49/49`、deterministic E2E `2/2`、package validation、治理检查和 governed archive（`2026-08-13-drop-legacy-bundle-entry-compatibility`）。
+- [x] C4a 的 field-optional policy 已确认：移除 legacy `research_access` envelope 不把字段升级为全局必填；缺失字段继续只在 HITL1 recorded-observation rule 处阻断。下一项只决定 legacy envelope 的 rejection owner/taxonomy。
 - [ ] C4a、C4b、C5a、C5b 各保留独立 decision gate；profile/topic、reference/experiment 不得混入同一个 apply。
 - [ ] C6a-C6d 按 explicit assignment、markerless submission、actor provenance、transaction v1 各自单独讨论并决定；不得用一个总的历史-artifact policy 覆盖四种后果。
 - [ ] C7、C8 只在 runtime behavior 收敛后再开始，防止 docs/specs 领先真实行为。
