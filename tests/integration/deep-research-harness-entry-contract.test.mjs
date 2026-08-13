@@ -95,20 +95,17 @@ describe('Deep Research Harness entry contract', () => {
     ];
     for (const relativePath of routeFiles) {
       const text = readFileSync(join(REPO_ROOT, relativePath), 'utf8');
-      assert.match(text, /BUNDLE_ENTRY\.md/, `${relativePath} must name the new entry card`);
-      assert.match(text, /RUN_BUNDLE\.md/, `${relativePath} must name legacy entry compatibility`);
-      assert.match(text, /BUNDLE_MAP\.md/, `${relativePath} must name map fallback`);
+      assert.match(text, /BUNDLE_ENTRY\.md/, `${relativePath} must name the current entry card`);
+      assert.match(text, /BUNDLE_MAP\.md/, `${relativePath} must name the current map`);
+      assert.match(text, /unsupported_current_entry_contract/, `${relativePath} must name incomplete-candidate rejection`);
       assert.match(text, /current run bundle root/i, `${relativePath} must name the explicit runtime coordinate`);
     }
 
     const continuation = readFileSync(join(HARNESS_ROOT, 'command_playbook', 'continue-run-bundle.md'), 'utf8');
-    assert.ok(
-      continuation.indexOf('BUNDLE_ENTRY.md') < continuation.indexOf('RUN_BUNDLE.md') &&
-      continuation.indexOf('RUN_BUNDLE.md') < continuation.indexOf('BUNDLE_MAP.md'),
-      'continuation guidance must state BUNDLE_ENTRY.md -> RUN_BUNDLE.md -> BUNDLE_MAP.md precedence',
-    );
+    assert.match(continuation, /Verify the same root contains both `BUNDLE_ENTRY\.md` and `BUNDLE_MAP\.md`/);
+    assert.match(continuation, /unsupported_current_entry_contract/);
+    assert.doesNotMatch(continuation, /otherwise read legacy|legacy `RUN_BUNDLE\.md`|deprecated fallback/);
     assert.match(continuation, /Do not select a bundle by scanning, a bare filename, chat memory, chronology/i);
-    assert.match(continuation, /If all three are absent,\s*report the entry boundary and stop/i);
     assert.match(continuation, /report the selected Harness context as unavailable/i);
     assert.match(continuation, /stop\s+before executing any bundle-provided command/i);
     assert.match(continuation, /Do not rewrite the bundle/i);
@@ -117,7 +114,7 @@ describe('Deep Research Harness entry contract', () => {
     assert.match(continuation, /infer a replacement\s+coordinate/i);
   });
 
-  it('renders a new entry card and retains bounded legacy entry and map compatibility', () => {
+  it('renders a new entry card and rejects incomplete current pairs', () => {
     const root = trackRoot('deep-research-harness-entry-');
     const target = join(root, 'bundles');
     const name = uniqueName('entry');
@@ -143,17 +140,18 @@ describe('Deep Research Harness entry contract', () => {
     writeFileSync(join(bundle, 'RUN_BUNDLE.md'), '# Legacy entry\n');
     const bothInspection = run(INSPECT, [bundle]);
     assert.equal(bothInspection.status, 0, bothInspection.stdout);
-    assert.match(bothInspection.stdout, /BUNDLE_ENTRY\.md is current/);
+    assert.doesNotMatch(bothInspection.stdout, /compatibility|deprecated/i);
 
     unlinkSync(join(bundle, 'BUNDLE_ENTRY.md'));
     const legacyInspection = run(INSPECT, [bundle]);
-    assert.equal(legacyInspection.status, 0, legacyInspection.stdout);
-    assert.doesNotMatch(legacyInspection.stdout, /BUNDLE_ENTRY\.md not found/);
+    assert.equal(legacyInspection.status, 1, legacyInspection.stdout);
+    assert.match(legacyInspection.stdout, /unsupported_current_entry_contract/);
+    assert.match(legacyInspection.stdout, /BUNDLE_ENTRY\.md/);
 
     unlinkSync(join(bundle, 'RUN_BUNDLE.md'));
     const mapOnlyInspection = run(INSPECT, [bundle]);
-    assert.equal(mapOnlyInspection.status, 0, mapOnlyInspection.stdout);
-    assert.match(mapOnlyInspection.stdout, /BUNDLE_ENTRY\.md not found/);
-    assert.match(mapOnlyInspection.stdout, /BUNDLE_MAP\.md remains passive navigation only/);
+    assert.equal(mapOnlyInspection.status, 1, mapOnlyInspection.stdout);
+    assert.match(mapOnlyInspection.stdout, /unsupported_current_entry_contract/);
+    assert.match(mapOnlyInspection.stdout, /BUNDLE_ENTRY\.md/);
   });
 });

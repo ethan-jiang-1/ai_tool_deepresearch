@@ -66,6 +66,8 @@ The normalized target object SHALL include:
 
 Unknown targets SHALL fail as a configuration error with inspect/advice listing accepted target examples. The checker SHALL include the normalized target in its JSON output when normalization succeeds.
 
+After arguments and a known target are established, but before checkpoint selection, status/queue/artifact diagnosis, file observability, or recovery projection, the checker SHALL evaluate the selected root through the shared current-entry predicate. The predicate passes only when `BUNDLE_ENTRY.md` and `BUNDLE_MAP.md` both exist at that root. A failed predicate SHALL return the existing structured JSON envelope with `check.passed: false`, one blocking `unsupported_current_entry_contract` finding, and exit code `1`. It SHALL not call the shape `invalid_input`, `missing_contract`, or a caller/configuration failure, and it SHALL not read or project historical runtime data from the rejected directory.
+
 The CLI SHALL emit JSON with at least:
 - `schema_version`
 - `check`: `{ passed, target, exit_code }`
@@ -91,13 +93,7 @@ The CLI SHALL return check/inspect/advice JSON and SHALL validate:
 - latest checkpoint manifest is present when available and reports drift against current files
 - unresolved blocking unplanned files are reported
 
-The reentry reference audit SHALL reuse the existing pure
-reference-authority classifier rather than maintain a direct-ledger-only scan.
-A valid Phase-owned projection SHALL not be instructed to gain a synthetic
-delegated reference declaration. A genuinely unbacked, unsafe, or
-delegated-bypass reference SHALL remain blocking and SHALL report the
-classifier's direct missing backing fact and existing legal repair or
-missing-contract boundary.
+The reentry reference audit SHALL reuse the existing pure reference-authority classifier rather than maintain a direct-ledger-only scan. A valid Phase-owned projection SHALL not be instructed to gain a synthetic delegated reference declaration. A genuinely unbacked, unsafe, or delegated-bypass reference SHALL remain blocking and SHALL report the classifier's direct missing backing fact and existing legal repair or missing-contract boundary.
 
 When a valid newer `post_final_reentry` event, its exact current after-profile, route-bound rerun load and exceptional `phase_transition` explain the immediate legal profile/current-node/status-window evolution after an older HITL2 checkpoint, the checker SHALL use the event's bound before/after profile facts plus the event/load/phase-transition/current rerun window as the current baseline for those control changes. It SHALL preserve the older checkpoint as historical context but SHALL NOT report its superseded profile/status hashes as unexplained blocker drift. Before initial topic-state authorization, a current profile that no longer matches the event-bound after-profile SHALL remain blocker drift.
 
@@ -111,12 +107,19 @@ The CLI SHALL NOT mutate runtime files.
 
 #### Scenario: Reentry pass at wave1_complete
 
-- **WHEN** a bundle has `rb_status.json#/current_gate = wave1_complete`
+- **WHEN** a current-pair bundle has `rb_status.json#/current_gate = wave1_complete`
 - **AND** required wave1 artifacts and ledger-covered references exist
 - **THEN** `check-reentry --at wave1_complete` SHALL return `check.passed: true`
 - **AND** process exit code SHALL be `0`
 - **AND** output SHALL include `normalized_target.status_gate = "wave1_complete"`
 - **AND** output SHALL include `normalized_target.gate_key = "wave1-complete"`
+
+#### Scenario: Incomplete current entry blocks reentry before runtime diagnosis
+
+- **WHEN** a supplied bundle lacks `BUNDLE_ENTRY.md` or `BUNDLE_MAP.md`, including an only-`RUN_BUNDLE.md`, only-`START_FROM_HERE.md`, or map-only directory
+- **THEN** `check-reentry` SHALL return one `unsupported_current_entry_contract` blocker with exit code `1`
+- **AND** it SHALL not emit historical status, queue, checkpoint, file-observability, drift, or recovery data
+- **AND** it SHALL not report `invalid_input` or `missing_contract`
 
 #### Scenario: Phase-owned reference has the normal authority interpretation
 
@@ -132,7 +135,7 @@ The CLI SHALL NOT mutate runtime files.
 
 #### Scenario: Phase alias normalizes to canonical node
 
-- **WHEN** `check-reentry --at phase-wave1` is executed
+- **WHEN** `check-reentry --at phase-wave1` is executed for a current-pair bundle
 - **THEN** output SHALL include `normalized_target.kind = "phase"`
 - **AND** output SHALL include `normalized_target.node_ref = "phases/phase-wave1.md"`
 - **AND** output SHALL include the mapped reentry gate/checkpoint for wave1
@@ -253,12 +256,18 @@ The trace SHALL remain compact but SHALL contain a non-verdict diagnostic event 
 
 ### Requirement: Reentry tooling SHALL not rely on chat memory
 
-Reentry tooling SHALL derive all facts from bundle files, framework specs, and deterministic helpers. It SHALL NOT require terminal scrollback, previous chat messages, or free-text run summaries.
+Reentry tooling SHALL derive all facts from bundle files, framework specs, and deterministic helpers. It SHALL NOT require terminal scrollback, previous chat messages, or free-text run summaries. The shared current-entry predicate is the first root-shape fact for a supplied bundle; it reads only same-root `BUNDLE_ENTRY.md` and `BUNDLE_MAP.md` existence and does not infer currentness from legacy Markdown, process memory, or chat.
 
 #### Scenario: Reentry checker uses bundle truth
 
-- **WHEN** `check-reentry` is run in a fresh process
-- **THEN** it SHALL decide pass/fail from `rb_status.json`, `rb_queue.json`, `rb_trace.jsonl`, ledger, checkpoints, and artifacts only
+- **WHEN** `check-reentry` is run in a fresh process for a bundle with the current pair
+- **THEN** it SHALL decide pass/fail from the pair, `rb_status.json`, `rb_queue.json`, `rb_trace.jsonl`, ledger, checkpoints, and artifacts only
+
+#### Scenario: Reentry checker does not reconstruct a legacy entry route
+
+- **WHEN** `check-reentry` is run in a fresh process for a directory without the current pair
+- **THEN** it SHALL report the unsupported-current-entry-contract blocker from direct root facts
+- **AND** it SHALL not consult chat, terminal history, `RUN_BUNDLE.md`, or `START_FROM_HERE.md` to continue diagnosis
 
 ### Requirement: Reentry CLI exit-code semantics align with convention
 
@@ -267,10 +276,10 @@ Runtime reentry checking SHALL be documented as a non-gate CLI class that aligns
 For `check-reentry.mjs`, structured stdout SHALL be the primary decision surface. Numeric exit code SHALL be interpreted as:
 
 - `0` when the requested reentry target is consistent and passes;
-- `1` when the target is known but runtime state or artifacts fail the reentry check; and
+- `1` when the target is known but the bundle fails the current-entry contract, runtime state, or artifacts fail the reentry check; and
 - `2` when the target, arguments, configuration, or caller request is invalid.
 
-The command's code `2` semantics SHALL be documented as caller/configuration error, not gate-rule failure and not morale signal. Any drift between header docs and emitted codes SHALL be recorded in the CLI exception/drift inventory rather than hidden.
+The command's code `2` semantics SHALL be documented as caller/configuration error, not gate-rule failure and not morale signal. A known bundle missing `BUNDLE_ENTRY.md` or `BUNDLE_MAP.md` is a deterministic current-entry validation failure and SHALL use code `1`, not `2`, `invalid_input`, or `missing_contract`. Any drift between header docs and emitted codes SHALL be recorded in the CLI exception/drift inventory rather than hidden.
 
 #### Scenario: Unknown reentry target is caller/config error
 
@@ -278,9 +287,15 @@ The command's code `2` semantics SHALL be documented as caller/configuration err
 - **THEN** it SHALL return structured inspect/advice naming valid target examples
 - **AND** numeric code `2` SHALL be documented as caller/config error
 
+#### Scenario: Incomplete current entry is a known-bundle blocker
+
+- **WHEN** `check-reentry.mjs` receives a known target and a selected directory that lacks the current pair
+- **THEN** structured stdout SHALL name `unsupported_current_entry_contract`
+- **AND** numeric code SHALL be `1`
+
 #### Scenario: Reentry drift remains structured detail
 
-- **WHEN** a known target fails because runtime files drifted
+- **WHEN** a known current-pair target fails because runtime files drifted
 - **THEN** stdout SHALL describe the drift severity and repair direction
 - **AND** the numeric exit code SHALL remain a coarse branch signal only
 
@@ -288,29 +303,30 @@ The command's code `2` semantics SHALL be documented as caller/configuration err
 
 Runtime reentry and diagnostic tooling SHALL treat `rb_status.json#/current_node`, when present, as the current loaded lifecycle phase node coordinate. This coordinate SHALL be used to explain where an Agent resumes reading Markdown, while existing gate/checkpoint validation remains responsible for deciding whether the runtime state is consistent.
 
-If `current_node` is `null` or absent in a legacy or initial bundle, reentry tooling SHALL report that status lacks a populated current phase coordinate and SHALL use existing trace/checkpoint inference where available. Advice SHALL point the Agent to `BUNDLE_MAP.md`, trace, and reentry diagnostics. If only legacy `START_FROM_HERE.md` exists, advice SHALL mention it as deprecated bundle-map compatibility and SHALL recommend migration to `BUNDLE_MAP.md`.
+For a current-pair bundle, if `current_node` is `null` or absent in an initial bundle, reentry tooling SHALL report that status lacks a populated current phase coordinate and SHALL use existing trace/checkpoint inference where available. Advice SHALL point the Agent to `BUNDLE_MAP.md`, trace, and reentry diagnostics. A directory without the pair fails earlier at the unsupported-current-entry-contract boundary; reentry SHALL not name `START_FROM_HERE.md` as a compatibility fallback or recommend migration.
 
 #### Scenario: Reentry reports current loaded phase
 
-- **WHEN** `rb_status.json` contains `current_node: "phases/phase-hitl2.md"`
+- **WHEN** a current-pair bundle's `rb_status.json` contains `current_node: "phases/phase-hitl2.md"`
 - **AND** reentry or audit tooling reports the current runtime position
 - **THEN** the output SHALL include `current_node: "phases/phase-hitl2.md"` or equivalent current phase coordinate
 - **AND** it SHALL distinguish this from `current_gate` and `next_gate`
 
 #### Scenario: Legacy or initial bundle without populated current node remains readable
 
-- **WHEN** `rb_status.json` has no `current_node` or has `current_node: null`
+- **WHEN** a current-pair bundle's `rb_status.json` has no `current_node` or has `current_node: null`
 - **THEN** reentry tooling SHALL NOT fail solely for that absence
 - **AND** diagnostics SHALL advise that the next successful `enter-phase` will populate `current_node`
 - **AND** diagnostics SHALL point to `BUNDLE_MAP.md`, trace, and reentry diagnostics rather than `current_gate` guessing
 
 #### Scenario: Legacy START_FROM_HERE fallback is deprecated
 
-- **WHEN** reentry tooling finds `START_FROM_HERE.md` but no `BUNDLE_MAP.md`
-- **AND** all other required bundle surfaces are present
-- **THEN** diagnostics SHALL keep the old bundle readable
-- **AND** diagnostics SHALL identify `START_FROM_HERE.md` as deprecated compatibility rather than current bundle map
-- **AND** diagnostics SHALL recommend migration to `BUNDLE_MAP.md`
+> **@deprecated scenario name** — Retained solely as the established Scenario
+> anchor. The current behavior rejects the former legacy-map fallback.
+
+- **WHEN** reentry tooling finds `START_FROM_HERE.md` but the selected root lacks `BUNDLE_ENTRY.md` or `BUNDLE_MAP.md`
+- **THEN** it SHALL return the unsupported-current-entry-contract blocker before runtime diagnostics
+- **AND** it SHALL not keep the directory readable through a deprecated compatibility path or recommend migration
 
 ### Requirement: Reentry diagnostics SHALL summarize incident-shaped recovery truth
 

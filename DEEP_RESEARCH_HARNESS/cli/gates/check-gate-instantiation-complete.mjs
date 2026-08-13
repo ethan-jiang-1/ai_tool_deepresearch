@@ -20,6 +20,7 @@ import {
   makeContractFinding,
   makeDefinitionRuleFinding,
 } from '../../engine/helpers/wave-contract-findings.mjs';
+import { checkCurrentEntryContract } from '../../engine/helpers/current-entry-contract.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
@@ -68,6 +69,7 @@ const bundlePath = args.bundle;
 const findings = [];
 const prerequisiteRoots = new Map();
 let checksRun = 0;
+const currentEntry = checkCurrentEntryContract(bundlePath);
 
 function targetFile(target) {
   return typeof target === 'string' ? target.split('#/')[0] : null;
@@ -101,7 +103,11 @@ for (const rule of definition.rules) {
   try {
     if (rule.check === 'file_exists') {
       const targetPath = join(bundlePath, rule.target);
-      if (!existsSync(targetPath)) {
+      const currentEntryFile = ['BUNDLE_ENTRY.md', 'BUNDLE_MAP.md'].includes(rule.target);
+      const exists = currentEntryFile
+        ? !currentEntry.missing_files.includes(rule.target)
+        : existsSync(targetPath);
+      if (!exists) {
         failure = {
           surface: rule.target,
           expected: 'Required file exists.',

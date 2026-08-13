@@ -34,3 +34,5 @@ families:
     bounded_question: Do Gate, status, trace, and handoff receipt constitute legal lifecycle evidence?
   - id: final.submitted-backing-admission
     bounded_question: Does each Final Evidence Map link have legal submitted backing?
+  - id: bundle.current-entry-contract
+    bounded_question: May an explicitly selected bundle root enter a current Harness operation under the same-root BUNDLE_ENTRY.md plus BUNDLE_MAP.md contract?

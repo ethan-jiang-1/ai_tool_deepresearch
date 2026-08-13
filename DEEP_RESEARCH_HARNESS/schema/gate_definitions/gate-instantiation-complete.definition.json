@@ -11,6 +11,14 @@
       "repair": { "kind": "engine_operation", "write_to": "node DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs" }
     },
     {
+      "id": "bundle_entry_exists",
+      "check": "file_exists",
+      "target": "BUNDLE_ENTRY.md",
+      "failure_message": "Missing BUNDLE_ENTRY.md. Create it from the template.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "engine_operation", "write_to": "node DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs" }
+    },
+    {
       "id": "bundle_map_exists",
       "check": "file_exists",
       "target": "BUNDLE_MAP.md",

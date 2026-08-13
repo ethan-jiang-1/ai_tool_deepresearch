@@ -1,0 +1,44 @@
+schema_version: semantic-closure/v1
+change: drop-legacy-bundle-entry-compatibility
+status: affected
+catalog_additions:
+  - id: bundle.current-entry-contract
+    bounded_question: May an explicitly selected bundle root enter a current Harness operation under the same-root BUNDLE_ENTRY.md plus BUNDLE_MAP.md contract?
+affected:
+  - family: bundle.current-entry-contract
+    fact: >-
+      Whether an explicitly selected bundle root is current for Harness
+      operation: only a same-root BUNDLE_ENTRY.md plus BUNDLE_MAP.md pair is
+      admissible; every incomplete or legacy-only shape is an
+      unsupported_current_entry_contract rejection, while extra legacy files
+      beside the pair are non-authoritative historical debris.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/current-entry-contract.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/current-entry-contract.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs
+      - DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-instantiation-complete.mjs
+    overlap:
+      - coordinate: openspec/specs/bundle/run-entry/spec.md
+        relation: authoritative
+        detail: >-
+          RUE-006 owns Agent-facing selection of an explicitly supplied existing
+          bundle and requires the pair before continuation command selection.
+      - coordinate: DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md
+        relation: derived
+        detail: >-
+          The playbook projects the pair preflight for Agent navigation; it does
+          not resolve the deterministic admission verdict or create lifecycle
+          authority.
+      - coordinate: openspec/specs/agent/agent-command-surface/spec.md
+        relation: derived
+        detail: >-
+          ACS-004 and ACS-005 project current-pair admission into Agent
+          resume and continuation guidance; they do not resolve the
+          deterministic admission verdict.
+    verification:
+      truth_table: tests/engine/helpers/current-entry-contract.test.mjs
+      cross_surface: tests/integration/cli/inspect-bundle.test.mjs

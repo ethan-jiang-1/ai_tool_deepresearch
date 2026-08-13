@@ -66,6 +66,7 @@ export function createTerminalFinalBundle(root, name, { rerunCount = 0, topicReg
   for (const directory of ['final', 'seed_topics', 'reference', 'artifacts', '_logs']) mkdirSync(join(bundle, directory), { recursive: true });
   writeFileSync(join(bundle, 'final', 'report.md'), '# Delivered Final\n');
   writeFileSync(join(bundle, '_logs', 'run.log'), '');
+  writeFileSync(join(bundle, 'BUNDLE_ENTRY.md'), '# Bundle Entry\n');
   writeFileSync(join(bundle, 'BUNDLE_MAP.md'), '# Bundle Map\n');
   for (const topic of topicRegistry) {
     writeFileSync(join(bundle, 'seed_topics', `${topic.slug}.md`), [

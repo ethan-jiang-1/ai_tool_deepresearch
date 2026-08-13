@@ -106,29 +106,49 @@ Mixed-provenance diagnostics MAY name old delegated artifact families only to ex
 
 ### Requirement: Root bundle map files SHALL follow canonical map policy
 
-File observability SHALL classify `BUNDLE_MAP.md` as the expected current root bundle map file for current run bundles. It SHALL NOT require `START_FROM_HERE.md` for new-bundle root-control-file expectations.
+File observability SHALL consume the shared current-entry predicate for the
+bundle root. The predicate passes only when `BUNDLE_ENTRY.md` and
+`BUNDLE_MAP.md` both exist at the same root. For a passing root, file
+observability SHALL classify both pair members as expected static control
+surfaces and SHALL not require `RUN_BUNDLE.md` or `START_FROM_HERE.md`.
 
-If `START_FROM_HERE.md` appears without `BUNDLE_MAP.md`, file observability SHALL report it as legacy deprecated compatibility. If both files appear, file observability SHALL prefer `BUNDLE_MAP.md` and report `START_FROM_HERE.md` as deprecated compatibility debris or a non-authoritative legacy file.
+For a root missing either current member, file observability SHALL expose the
+same unsupported-current-entry-contract conclusion as a deterministic blocking
+root. It SHALL not classify `RUN_BUNDLE.md`, `START_FROM_HERE.md`, or a
+map-only root as compatibility, expected control, or a repairable migration
+path. Extra legacy files beside a passing pair are non-authoritative historical
+debris only.
 
-This classification SHALL NOT affect gate pass authority for research artifacts, submitted work-unit ledger coverage, or queue state. It is a file-observability diagnostic about root map naming only.
+This classification SHALL NOT affect gate pass authority for research
+artifacts, submitted work-unit ledger coverage, or queue state. It answers only
+whether the selected root can enter current Harness operations.
 
 #### Scenario: Current bundle map is expected
 
-- **WHEN** file observability audits a bundle containing `BUNDLE_MAP.md`
-- **THEN** it SHALL classify `BUNDLE_MAP.md` as an expected root map file
-- **AND** it SHALL NOT require `START_FROM_HERE.md`
+- **WHEN** file observability audits a bundle containing both current root
+  files
+- **THEN** it SHALL classify `BUNDLE_ENTRY.md` and `BUNDLE_MAP.md` as expected
+  static root surfaces
+- **AND** it SHALL not require a legacy root file
 
 #### Scenario: Legacy map is diagnostic compatibility
 
-- **WHEN** file observability audits a bundle containing `START_FROM_HERE.md` but no `BUNDLE_MAP.md`
-- **THEN** it SHALL report a legacy compatibility diagnostic
-- **AND** it SHALL NOT treat the legacy file as submitted evidence, gate authority, or current primary map
+> **@deprecated scenario name** — Retained solely as the established Scenario
+> anchor. The current behavior rejects the former legacy-map diagnostic route.
+
+- **WHEN** file observability audits a bundle missing `BUNDLE_ENTRY.md` or
+  `BUNDLE_MAP.md`
+- **THEN** it SHALL return a blocking
+  `unsupported_current_entry_contract` conclusion
+- **AND** it SHALL not describe any legacy root file as expected or
+  compatibility-success behavior
 
 #### Scenario: Both map names do not create two authorities
 
-- **WHEN** file observability audits a bundle containing both `BUNDLE_MAP.md` and `START_FROM_HERE.md`
-- **THEN** `BUNDLE_MAP.md` SHALL be the current expected map
-- **AND** `START_FROM_HERE.md` SHALL be reported as deprecated compatibility or cleanup advice
+- **WHEN** file observability audits a bundle containing the current pair and
+  `RUN_BUNDLE.md` or `START_FROM_HERE.md`
+- **THEN** the pair SHALL remain the only expected operational entry conclusion
+- **AND** each legacy file SHALL be non-authoritative historical debris
 
 ### Requirement: File observability SHALL detect canonical topic footprint drift
 

@@ -5,13 +5,14 @@
 //   node inspect-bundle.mjs <bundleDir> --summary     → pass/fail table + log health
 //   node inspect-bundle.mjs <bundleDir> --timeline    → cross-sink stitched timeline
 //   node inspect-bundle.mjs <bundleDir> --log         → tail _logs/run.log
-// Exit: 0 = PASS, 1 = FAIL (structural check only; --summary/--timeline/--log always exit 0)
+// Exit: 0 = PASS, 1 = FAIL (including current-entry rejection)
 
 const G = '\x1b[32m', R = '\x1b[31m', Y = '\x1b[33m', C = '\x1b[36m', B = '\x1b[0m';
 
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { checkCurrentEntryContract } from '../engine/helpers/current-entry-contract.mjs';
 
 const REQUIRED = [
   'rb_plan.md', 'rb_profile.yaml',
@@ -43,6 +44,12 @@ const bundleDir = args.find(a => !a.startsWith('--'));
 
 if (!bundleDir) {
   console.error('Usage: node inspect-bundle.mjs <bundleDir> [--summary|--timeline|--log]');
+  process.exit(1);
+}
+
+const currentEntry = checkCurrentEntryContract(bundleDir);
+if (!currentEntry.passed) {
+  console.log(`unsupported_current_entry_contract: missing ${currentEntry.missing_files.join(', ')}`);
   process.exit(1);
 }
 
@@ -287,11 +294,6 @@ if (flag === '--summary') {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const missing = REQUIRED.filter(f => !existsSync(join(bundleDir, f)));
-const hasBundleMap = existsSync(join(bundleDir, 'BUNDLE_MAP.md'));
-const hasLegacyStartHere = existsSync(join(bundleDir, 'START_FROM_HERE.md'));
-if (!hasBundleMap && !hasLegacyStartHere) {
-  missing.unshift('BUNDLE_MAP.md');
-}
 const leakDiagnostics = repoRootRuntimeLeakDiagnostics(bundleDir);
 const activeLeakDiagnostics = leakDiagnostics.filter((diag) => diag.severity === 'active_bundle_blocker');
 if (missing.length > 0) {
@@ -307,18 +309,6 @@ if (leakDiagnostics.length > 0) {
 if (activeLeakDiagnostics.length > 0) {
   console.log(`${R}Inspect bundle: repo-root runtime leak associated with current run bundle${B}`);
   process.exit(1);
-}
-const hasBundleEntry = existsSync(join(bundleDir, 'BUNDLE_ENTRY.md'));
-const hasRunBundle = existsSync(join(bundleDir, 'RUN_BUNDLE.md'));
-if (!hasBundleEntry && !hasRunBundle) {
-  console.log(`${Y}Inspect bundle: BUNDLE_ENTRY.md not found; legacy RUN_BUNDLE.md is also absent, so BUNDLE_MAP.md remains passive navigation only.${B}`);
-} else if (hasBundleEntry && hasRunBundle) {
-  console.log(`${Y}Inspect bundle: BUNDLE_ENTRY.md is current; RUN_BUNDLE.md is bounded legacy entry compatibility.${B}`);
-}
-if (hasBundleMap && hasLegacyStartHere) {
-  console.log(`${Y}Inspect bundle: BUNDLE_MAP.md is current; START_FROM_HERE.md is deprecated compatibility debris.${B}`);
-} else if (!hasBundleMap && hasLegacyStartHere) {
-  console.log(`${Y}Inspect bundle: START_FROM_HERE.md is deprecated legacy compatibility; new bundles use BUNDLE_MAP.md.${B}`);
 }
 console.log(`${G}Inspect bundle: directory structure complete${B}`);
 

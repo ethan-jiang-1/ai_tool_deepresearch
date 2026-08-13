@@ -77,9 +77,9 @@ This selected contract does not normalize unrelated utilities. Their documented 
 | run（drag-trigger） | RUN.md | 把本文件拖进对话即触发框架的前门入口 |
 | instantiate-run-bundle | command_playbook/instantiate-run-bundle.md | 生产新的 Runtime Bundle |
 | start-research | command_playbook/start-research.md | `RUN.md` 选定新研究 entry 后的下游 playbook：创建 bundle → 写问题 → 加载第一个 phase |
-| continue-run-bundle | command_playbook/continue-run-bundle.md | 用户明确提供可达 existing run bundle（或其 `BUNDLE_ENTRY.md`、legacy `RUN_BUNDLE.md`、`BUNDLE_MAP.md`）时 reload；不从扫描/裸文件名选择 run |
+| continue-run-bundle | command_playbook/continue-run-bundle.md | 用户明确提供可达 existing bundle candidate（目录或其中的文件）且同根 `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md` pair 通过时 reload；不从扫描/裸文件名选择 run |
 
-Existing run-bundle reload resolves the supplied directory to the current run bundle root, then reads `BUNDLE_ENTRY.md`, legacy `RUN_BUNDLE.md`, or `BUNDLE_MAP.md` in that order. It resolves the Harness coordinate and delegates to `COMMANDS.md` for all operations. Legacy `START_FROM_HERE.md` is deprecated fallback only.
+Existing run-bundle reload resolves the supplied directory to the current run bundle root, verifies the same-root `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md` pair before reading either file, then resolves the Harness coordinate and delegates to `COMMANDS.md` for all operations. A supplied incomplete candidate is `unsupported_current_entry_contract` and stops without a legacy fallback, `RUN.md`, new bundle, migration, or upgrade route.
 
 ## Subagent 环境
 | 命令 | 文件 | 说明 |

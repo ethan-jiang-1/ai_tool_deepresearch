@@ -6,8 +6,8 @@ Gate, receipt, trace, permission, or mutation authority.
 
 ## Preconditions
 
-- The user explicitly supplied/opened a reachable existing run bundle directory
-  (or its `BUNDLE_ENTRY.md`, legacy `RUN_BUNDLE.md`, or `BUNDLE_MAP.md`) in
+- The user explicitly supplied/opened a reachable existing bundle candidate
+  (a directory or a file within it) in
   the selected Deep Research Harness workspace and requested continuation or
   inspection.
 - The bundle's creation-time Harness coordinate is navigation text only. Use
@@ -25,14 +25,16 @@ coordinate.
 1. Resolve the user-supplied directory (or the containing directory of the
    supplied entry file) to its canonical absolute path. This is the current
    run bundle root for this operation.
-2. Read `BUNDLE_ENTRY.md` when it exists; otherwise read legacy
-   `RUN_BUNDLE.md`; otherwise read `BUNDLE_MAP.md`. If all three are absent,
-   report the entry boundary and stop.
-3. Resolve the rendered Harness relative path from the selected entry. If the
+2. Verify the same root contains both `BUNDLE_ENTRY.md` and `BUNDLE_MAP.md`
+   before reading either file. If either is absent, report
+   `unsupported_current_entry_contract` and stop. Do not read legacy Markdown,
+   fall back to `RUN.md`, create or select another bundle, migrate, upgrade, or
+   offer a human-only Harness command.
+3. Read `BUNDLE_ENTRY.md`, then resolve the rendered Harness relative path from
+   that entry. If the
    Harness is not reachable in the selected workspace, report the boundary and
    stop.
-4. When the selected entry is `BUNDLE_ENTRY.md` or legacy `RUN_BUNDLE.md`,
-   read `BUNDLE_MAP.md` in the same current run bundle root for the full
+4. Read `BUNDLE_MAP.md` in the same current run bundle root for the full
    directory layout.
 5. Read `DEEP_RESEARCH_HARNESS/COMMANDS.md` and select the command matching
    the user's stated intent.
@@ -47,5 +49,6 @@ target selection, or post-final recovery; those decisions belong to
 
 The user's continuation wording supplies semantic intent only. It does not
 create a third HITL, expand host permission, override an Engine verdict, or
-authorize a rerun. `BUNDLE_ENTRY.md`, legacy `RUN_BUNDLE.md`, and
-`BUNDLE_MAP.md` do not themselves select lifecycle work or runtime authority.
+authorize a rerun. `BUNDLE_ENTRY.md` and `BUNDLE_MAP.md` do not themselves
+select lifecycle work or runtime authority. Historical Markdown may be read
+directly by a human outside this Harness operational contract.

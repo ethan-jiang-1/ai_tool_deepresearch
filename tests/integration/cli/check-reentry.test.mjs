@@ -64,6 +64,7 @@ function setupBundle(name, statusOverrides = {}, queueOverrides = {}, extraFiles
 
   writeFileSync(join(dir, 'rb_profile.yaml'), 'research_style: quick_factual\n');
   writeFileSync(join(dir, 'rb_trace.jsonl'), '');
+  writeFileSync(join(dir, 'BUNDLE_ENTRY.md'), '# Bundle Entry\n');
   writeFileSync(join(dir, 'BUNDLE_MAP.md'), '# Bundle Map\n');
   mkdirSync(join(dir, '_logs'), { recursive: true });
   writeFileSync(join(dir, '_logs', 'run.log'), '');
@@ -263,17 +264,22 @@ describe('check-reentry CLI', () => {
       assert.strictEqual(res.stdout.runtime_position.current_node_status, 'absent');
     });
 
-    it('uses legacy START_FROM_HERE.md only as deprecated fallback advice', () => {
+    it('rejects an incomplete current entry before runtime diagnosis', () => {
       const dir = setupBundle('rt-legacy-start-here', { current_node: null });
       rmSync(join(dir, 'BUNDLE_MAP.md'));
       writeFileSync(join(dir, 'START_FROM_HERE.md'), '# Legacy Map\n');
 
       const res = runCliJson(dir, 'wave1_complete');
 
-      assert.strictEqual(res.exitCode, 0);
-      assert.ok(res.stdout.advice.some(a => a.includes('legacy START_FROM_HERE.md')));
-      assert.ok(res.stdout.advice.some(a => a.includes('deprecated')));
-      assert.ok(res.stdout.advice.some(a => a.includes('BUNDLE_MAP.md')));
+      assert.strictEqual(res.exitCode, 1);
+      assert.strictEqual(res.stdout.blockers.length, 1);
+      assert.strictEqual(res.stdout.blockers[0].check, 'unsupported_current_entry_contract');
+      assert.deepStrictEqual(res.stdout.warnings, []);
+      assert.deepStrictEqual(res.stdout.drift, []);
+      assert.deepStrictEqual(res.stdout.findings, []);
+      assert.equal(Object.hasOwn(res.stdout, 'recovery'), false);
+      assert.ok(!res.stdout.advice.some(a => a.includes('START_FROM_HERE.md')));
+      assert.ok(!res.stdout.advice.some(a => a.includes('migrat')));
     });
   });
 

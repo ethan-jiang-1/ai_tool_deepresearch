@@ -26,7 +26,7 @@ research；它不改变随后 `continue-run-bundle.md` / `RUN.md` 的 existing s
 - 用户说"研究/调研/deep research/research report/帮我查…/…是什么"等研究意图；
 - 任何"我要就某个话题得到一份有来源、可核查的研究报告"的需求。
 
-**本 Harness 就是项目的 Deep Research Harness。** 已选择研究时，先选择并读一个 entry：用户明确提供当前 workspace 内可达 existing run bundle（或其 `BUNDLE_ENTRY.md`、legacy `RUN_BUNDLE.md`、`BUNDLE_MAP.md`）并要求继续/检查时，先走 `command_playbook/continue-run-bundle.md`，并将该目录解析为本次操作的 canonical absolute current run bundle root；扫描发现、只提文件名或不可达路径不选择 run。否则先读 `RUN.md`。
+**本 Harness 就是项目的 Deep Research Harness。** 已选择研究时，用户明确提供当前 workspace 内可达 existing bundle candidate（目录或其中的文件）并要求继续/检查，先验证同根 `BUNDLE_ENTRY.md` 与 `BUNDLE_MAP.md`；只有完整 pair 才走 `command_playbook/continue-run-bundle.md`，并将该目录解析为本次操作的 canonical absolute current run bundle root。显式 candidate 缺少任一文件即以 `unsupported_current_entry_contract` 停止，不读 legacy entry、不回落 `RUN.md`、不新建/另选 bundle、不迁移/upgrade、也不提供 human-only Harness command。扫描发现、只提文件名或不可达路径不选择 run。没有 explicit existing candidate 才读 `RUN.md`；人仍可在 Harness operational contract 外直接阅读历史 Markdown。
 
 在 selected entry 读完前，**不要**调用 `research`、`deep-research` 或等价 one-shot shortcut，不对该 request 直接 WebSearch/WebFetch，也不手工收集或综合 evidence。`RUN.md` 的 Section 2 随后进入 `command_playbook/start-research.md` 创建新 run 并加载第一个 phase node；HITL1 probe 和后续 phase research 仍由各自进入后的既有 contract 授权。本 guidance 不保证宿主不会预先匹配 skill 或注入工具。
 
@@ -34,7 +34,7 @@ research；它不改变随后 `continue-run-bundle.md` / `RUN.md` 的 existing s
 
 **想做什么事？打开 `COMMANDS.md` 找到对应的命令。** 不要凭记忆工作。
 
-运行具体 run bundle 时，先打开 current run bundle root 里的 `BUNDLE_ENTRY.md`；旧 bundle 依次 fallback 到 legacy `RUN_BUNDLE.md` 和 `BUNDLE_MAP.md`，再读取控制文件。旧 bundle 只有 `START_FROM_HERE.md` 时，把它当作 deprecated fallback。
+运行具体 run bundle 时，先验证 current run bundle root 同时包含 `BUNDLE_ENTRY.md` 和 `BUNDLE_MAP.md`，然后读取 `BUNDLE_ENTRY.md`、`BUNDLE_MAP.md` 与控制文件。缺少任一 pair member 的目录不进入 Harness operation；legacy Markdown 不构成 fallback。
 
 ## 目录性质
 
@@ -129,7 +129,7 @@ dpt_rb_<name>/
 
 `_cache/gate-results/` 和 `_cache/projections/` 是 workflow-foundation target/cache convention，不是当前 `inspect-bundle.mjs` required shape。
 
-运行时优先读取 current run bundle root 里的 `BUNDLE_ENTRY.md`，旧 bundle 依次 fallback 到 legacy `RUN_BUNDLE.md` 和 `BUNDLE_MAP.md`；旧 `START_FROM_HERE.md` 只作 deprecated fallback。`BUNDLE_ENTRY.md` 是极简入口，`BUNDLE_MAP.md` 是 passive map，都不是 phase node、command playbook 或 Gate authority。`rb_profile.yaml` 承载 HITL/user decisions；`rb_status.json` 承载 phase/gate 状态摘要；`rb_trace.jsonl` 是 append-only audit。
+运行时只在 current run bundle root 同时包含 `BUNDLE_ENTRY.md` 与 `BUNDLE_MAP.md` 时进入 Harness operation。`BUNDLE_ENTRY.md` 是极简入口，`BUNDLE_MAP.md` 是 passive map，都不是 phase node、command playbook 或 Gate authority；`RUN_BUNDLE.md` 与 `START_FROM_HERE.md` 即使并存也只是 non-authoritative historical debris。`rb_profile.yaml` 承载 HITL/user decisions；`rb_status.json` 承载 phase/gate 状态摘要；`rb_trace.jsonl` 是 append-only audit。
 
 ## 执行模式
 

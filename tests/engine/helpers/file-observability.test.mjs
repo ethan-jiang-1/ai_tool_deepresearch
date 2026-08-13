@@ -117,7 +117,7 @@ describe('file observability', () => {
     assert.strictEqual(rbStatus.severity, 'info');
   });
 
-  it('classifies legacy RUN_BUNDLE.md as non-authoritative entry compatibility', () => {
+  it('classifies legacy RUN_BUNDLE.md beside a current pair as non-authoritative historical debris', () => {
     const dir = setupBundle('fo-legacy-entry', {
       'RUN_BUNDLE.md': '# Legacy Bundle Entry\n',
     });
@@ -126,24 +126,23 @@ describe('file observability', () => {
     const legacy = result.findings.find(f => f.path === 'RUN_BUNDLE.md');
 
     assert.ok(legacy, 'RUN_BUNDLE.md should be found');
-    assert.strictEqual(legacy.classification, 'expected');
+    assert.strictEqual(legacy.classification, 'unplanned_nonblocking');
     assert.strictEqual(legacy.authority_status, 'none');
-    assert.match(legacy.reason, /Legacy non-authoritative bundle entry compatibility/);
+    assert.match(legacy.reason, /historical bundle-entry debris/);
   });
 
-  it('reports legacy START_FROM_HERE.md as diagnostic compatibility only', () => {
+  it('returns a blocking current-entry conclusion before auditing an incomplete root', () => {
     const dir = setupBundle('fo-legacy-map');
     rmSync(join(dir, 'BUNDLE_MAP.md'));
     writeFileSync(join(dir, 'START_FROM_HERE.md'), '# Legacy Map\n');
 
     const result = auditFileObservability(dir, { topicSlugs: ['topic-a'] });
 
-    const legacy = result.findings.find(f => f.path === 'START_FROM_HERE.md');
-    assert.ok(legacy, 'START_FROM_HERE.md should be found');
-    assert.strictEqual(legacy.classification, 'unplanned_nonblocking');
-    assert.strictEqual(legacy.authority_status, 'none');
-    assert.ok(result.inspect.some(i => i.includes('legacy_bundle_map')));
-    assert.ok(result.advice.some(a => a.includes('BUNDLE_MAP.md')));
+    assert.deepStrictEqual(result.findings, []);
+    assert.strictEqual(result.canonical_findings.length, 1);
+    assert.strictEqual(result.canonical_findings[0].rule_id, 'unsupported_current_entry_contract');
+    assert.ok(result.inspect.some(line => line.includes('unsupported_current_entry_contract')));
+    assert.ok(!result.advice.some(line => line.includes('migrat')));
   });
 
   it('does not create two map authorities when both map names exist', () => {
@@ -161,7 +160,7 @@ describe('file observability', () => {
     assert.strictEqual(legacy.classification, 'unplanned_nonblocking');
     assert.strictEqual(bundleMap.authority_status, 'none');
     assert.strictEqual(legacy.authority_status, 'none');
-    assert.ok(result.inspect.some(i => i.includes('deprecated compatibility debris')));
+    assert.ok(!result.inspect.some(i => i.includes('compatibility')));
   });
 
   it('classifies ledger-declared files as declared_authoritative', () => {

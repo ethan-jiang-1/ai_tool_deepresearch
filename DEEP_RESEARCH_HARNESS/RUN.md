@@ -39,13 +39,13 @@ If status or terminal output looks suspicious, run `node DEEP_RESEARCH_HARNESS/c
 
 For bundle recovery, run `node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle <path> --at <target>`. Read `recovery.root_findings[]` before acting: a `reachable` root carries at most one sanctioned nearest action; `missing_contract` is a direct stop boundary, not permission to retry a known-rejected predecessor, hand-edit status/trace, or create an addendum namespace; `not_applicable` leaves semantic reconciliation to the Agent without granting mutation authority.
 
-若用户明确提供当前 workspace 内可达 existing run bundle（或其 `BUNDLE_ENTRY.md`、legacy `RUN_BUNDLE.md`、`BUNDLE_MAP.md`），别重建；改读 `command_playbook/continue-run-bundle.md`。它将该目录解析为 canonical absolute current run bundle root，再按 `BUNDLE_ENTRY.md`、legacy `RUN_BUNDLE.md`、`BUNDLE_MAP.md` 的顺序读取入口，解析 Harness 坐标后进入 `COMMANDS.md` 的命令体系。扫描发现、只提文件名或不可达路径不选择 run。旧 bundle 只有 `START_FROM_HERE.md` 时，它只作 deprecated fallback。
+若用户明确提供当前 workspace 内可达 existing bundle candidate（目录或其中的文件），别重建；先验证同根 `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md`。只有完整 pair 才改读 `command_playbook/continue-run-bundle.md`，将该目录解析为 canonical absolute current run bundle root，读取 pair 后进入 `COMMANDS.md` 的命令体系。显式 candidate 缺少任一文件即报告 `unsupported_current_entry_contract` 并停止：不读 legacy entry、不回落此 `RUN.md`、不创建/另选 bundle、不迁移或 upgrade。扫描发现、只提文件名或不可达路径不选择 run；人仍可在 Harness operation 外直接读历史 Markdown。
 
 ## 3. 规则与边界在哪
 - 触发规则、运行时边界：`README.md`
 - 命令索引：`COMMANDS.md`
 - 行为规则：`CLAUDE.md`（Claude Code）/ `AGENTS.md`（Codex、Cursor、Windsurf 等读 `AGENTS.md` 的 agent）
 
-跑某 run bundle 时，以该 current run bundle root 的 `BUNDLE_ENTRY.md`（legacy `RUN_BUNDLE.md`，再 fallback `BUNDLE_MAP.md`）+ `rb_status.json` + `rb_trace.jsonl` 为 reload context，旧 `START_FROM_HERE.md` 只作 deprecated fallback；别靠 chat memory。
+跑某 run bundle 时，以该 current run bundle root 的 verified `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md` + `rb_status.json` + `rb_trace.jsonl` 为 reload context；legacy Markdown 不构成 fallback。别靠 chat memory。
 
 恢复时，`rb_status.current_node` 是已加载的 phase coordinate；`current_gate` 只记录最近 gate/status 事实。不要只凭 `current_gate` 推断当前应加载哪个 phase，按 `current_node` 和已有 route-bound witness 进入对应 control surface。

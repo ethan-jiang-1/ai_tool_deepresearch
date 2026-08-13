@@ -33,7 +33,7 @@ prefixes:
   ARP: bundle/artifact-persistence-recovery
   BUI: bundle/bundle-data-isolation
   BUM: bundle/bundle-map
-  BUS: bundle/bundle-start-from-here
+  BUS: bundle-start-from-here        # all entries deprecated; no spec directory
   CDE: research/content-delivery-experiments
   CDG: research/content-delivery-gate-implementation
   CDP: research/content-delivery-phase-content

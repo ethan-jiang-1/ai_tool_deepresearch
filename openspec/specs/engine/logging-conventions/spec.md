@@ -121,33 +121,83 @@ Gate CLIs SHALL use `writeGateAttempt()` as the only gate logging entrypoint for
 
 ### Requirement: Inspect-bundle observable extension
 
-`inspect-bundle.mjs` SHALL 支持三级视图：
+`inspect-bundle.mjs` SHALL evaluate the selected root through the shared
+current-entry predicate before every view. The predicate passes only when both
+`BUNDLE_ENTRY.md` and `BUNDLE_MAP.md` exist at that root.
 
-1. **默认（无 flag）**：保持现有行为——验证 15 个必需文件/目录存在性（含新增的 `_logs/run.log`）
-2. **`--summary`**：读取 `rb_trace.jsonl`，调用 `traceSummary()`，输出 `{ events: N, passed: N, failed: N }` 及每个 gate 的 pass/fail 表。额外输出 `_logs/run.log` 的行数统计（`log: N lines (M info / K warn / E error / D debug)`）；若行数为 0，输出 `[warning] _logs/run.log is empty — logging may be silently failing` 提示（不改变 exit code）
-3. **`--timeline`**：读取全部 4 个 sink 文件，按 `bundle` + `ts` 缝合为单一时间线输出
-4. **`--log`**：输出 `_logs/run.log` 全部内容（类 tail）
+After a passing preflight, the supported views are:
 
-所有新 flag SHALL 不影响默认行为的 exit code 语义（0 = bundle 完整）。
+1. **default (no flag)**: validate required files/directories and report the
+   structural result;
+2. **`--summary`**: read `rb_trace.jsonl`, call `traceSummary()`, output
+   `{ events: N, passed: N, failed: N }`, each gate pass/fail row, and
+   `_logs/run.log` health;
+3. **`--timeline`**: read the sink files and output one time-ordered timeline;
+   and
+4. **`--log`**: output `_logs/run.log` content.
+
+If the pair is absent, every mode SHALL exit `1` with the scoped
+`unsupported_current_entry_contract` rejection and SHALL emit no log content,
+timeline entries, summary data, or other historical inspection data. The
+rejection is a known selected-root validation failure; it does not provide a
+legacy inspection, migration, or compatibility route.
+
+After a passing preflight, observable modes preserve their existing
+mode-specific output semantics. A complete pair plus legacy Markdown files
+passes; the extra files are historical debris, not another entry path.
+
+#### Scenario: Summary does not bypass current-entry admission
+
+- **WHEN** `inspect-bundle <bundle> --summary` is called on a directory missing
+  either current root file
+- **THEN** it SHALL exit `1` with `unsupported_current_entry_contract`
+- **AND** stdout SHALL not contain gate summary or log-health data from that
+  directory
 
 #### Scenario: Summary flag prints pass/fail table with log health
 
-- **WHEN** `inspect-bundle <bundle> --summary` 被调用
-- **THEN** stdout SHALL 输出每个 gate_attempt 事件的 gate 名称、pass/fail、时间戳
-- **AND** SHALL 输出汇总行 `{ events: N, passed: N, failed: N }`
-- **AND** SHALL 输出 `_logs/run.log` 行数统计（`log: N lines`）
-- **AND** 若行数为 0，SHALL 输出 `[warning]` 提示日志可能静默失败（不改变 exit code）
+- **WHEN** `inspect-bundle <bundle> --summary` is called for a current-pair
+  bundle
+- **THEN** stdout SHALL output each `gate_attempt` event's gate name,
+  pass/fail, and timestamp
+- **AND** SHALL output `{ events: N, passed: N, failed: N }` plus
+  `_logs/run.log` line health
+- **AND** an empty log SHALL yield its existing warning without changing the
+  successful current-pair exit behavior
+
+#### Scenario: Timeline does not bypass current-entry admission
+
+- **WHEN** `inspect-bundle <bundle> --timeline` is called on a directory
+  missing either current root file
+- **THEN** it SHALL exit `1` with `unsupported_current_entry_contract`
+- **AND** stdout SHALL not contain timeline entries from that directory
 
 #### Scenario: Timeline flag stitches all sinks
 
-- **WHEN** `inspect-bundle <bundle> --timeline` 被调用
-- **THEN** stdout SHALL 输出按时间戳排序的所有 sink 入口
-- **AND** 每行 SHALL 标注来源 sink（trace/log/subagent/queue）
+- **WHEN** `inspect-bundle <bundle> --timeline` is called for a current-pair
+  bundle
+- **THEN** stdout SHALL output timestamp-ordered sink entries
+- **AND** each row SHALL identify its source sink
+
+#### Scenario: Log view does not bypass current-entry admission
+
+- **WHEN** `inspect-bundle <bundle> --log` is called on a directory missing
+  either current root file
+- **THEN** it SHALL exit `1` with `unsupported_current_entry_contract`
+- **AND** stdout SHALL not contain `_logs/run.log` content from that directory
 
 #### Scenario: Log flag prints run.log content
 
-- **WHEN** `inspect-bundle <bundle> --log` 被调用
-- **THEN** stdout SHALL 输出 `_logs/run.log` 的全部内容
+- **WHEN** `inspect-bundle <bundle> --log` is called for a current-pair bundle
+- **THEN** stdout SHALL output `_logs/run.log` content
+
+#### Scenario: Observable views retain current-pair behavior
+
+- **WHEN** an inspected bundle contains the current pair and the requested
+  observable data
+- **THEN** each selected view SHALL emit its existing mode-specific output
+- **AND** an extra legacy entry or map file SHALL not alter the successful
+  current-pair conclusion
 
 ### Requirement: Long-running phases SHALL leave enough log and diagnostic evidence for post-mortem debugging
 
@@ -178,4 +228,3 @@ This exception SHALL NOT authorize hand-writing trace, faking load-bearing gate 
 - **WHEN** the Agent reads the framework CLI exit-code convention
 - **THEN** it SHALL see `log-event.mjs` listed as an always-zero diagnostic exception
 - **AND** the docs SHALL distinguish that exception from gate, handoff, and status synchronization evidence
-

@@ -1,0 +1,86 @@
+schema_version: verification-routing/v1
+change: drop-legacy-bundle-entry-compatibility
+test_classes:
+  unit:
+    status: selected
+    rationale: The new pure current-entry predicate has direct filesystem truth-table behavior that is best isolated from CLI, Gate, and guidance consumers.
+  integration:
+    status: selected
+    rationale: Public inspector modes, reentry's structured blocker, instantiation Gate, file observability, canonical-source-linked fixture behavior, and Markdown routing cross module and filesystem boundaries.
+  deterministic_e2e:
+    status: selected
+    rationale: A fresh temporary bundle must still be instantiated through the canonical writer and admitted by the public inspector as a workflow-scale current-path regression.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change makes no real-Agent research, semantic-judgment, external-tool, or trace-backed Agent-behavior claim.
+claims:
+  - id: current-entry-predicate-truth-table
+    statement: The pure predicate accepts exactly the same-root BUNDLE_ENTRY.md plus BUNDLE_MAP.md pair and distinguishes missing pair members without treating legacy names as substitutes.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/current-entry-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: inspector-public-current-entry-boundary
+    statement: The public inspector rejects every incomplete or legacy-only entry shape before default, summary, timeline, or log output and accepts a complete pair with extra legacy debris.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/inspect-bundle.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: reentry-gate-observability-current-entry-consumers
+    statement: Reentry, instantiation Gate, and file observability consume the shared current-entry conclusion without legacy success or migration branches.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-reentry.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-entry-guidance-and-fixture-contract
+    statement: Current entry-routing guidance and the canonical-source-linked fixture inspector describe only the verified pair as operational and do not retain legacy-positive entry precedence.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/continue-run-bundle-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: fresh-bundle-current-entry-e2e
+    statement: The canonical writer creates a fresh temporary current pair that the public inspector admits without a legacy-entry requirement.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/deep-research-harness-migration.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

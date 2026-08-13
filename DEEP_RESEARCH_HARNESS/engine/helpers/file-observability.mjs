@@ -34,6 +34,7 @@ import {
   cacheLeafMapping,
   normalizeCacheMappingUrl,
 } from './cache-leaf-contract.mjs';
+import { checkCurrentEntryContract } from './current-entry-contract.mjs';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Constants
@@ -62,9 +63,7 @@ const ROOT_CONTROL_FILES = new Set([
   'rb_output_declarations.jsonl',
 ]);
 
-const LEGACY_BUNDLE_ENTRY_FILES = new Set([
-  'RUN_BUNDLE.md',
-]);
+const LEGACY_BUNDLE_ENTRY_FILES = new Set(['RUN_BUNDLE.md']);
 
 // Known diagnostic/engine directories — contents expected
 const KNOWN_ENGINE_DIRS = new Set([
@@ -288,9 +287,7 @@ function classifyFile(relPath, ctx) {
     return {
       classification: 'unplanned_nonblocking',
       severity: 'info',
-      reason: existsSync(join(bundlePath, 'BUNDLE_MAP.md'))
-        ? 'Deprecated legacy bundle map compatibility debris; BUNDLE_MAP.md is current'
-        : 'Deprecated legacy bundle map compatibility; migrate old bundles to BUNDLE_MAP.md',
+      reason: 'Non-authoritative historical bundle-map debris beside the current entry pair',
       authority_status: 'none',
       phase: null,
     };
@@ -298,9 +295,9 @@ function classifyFile(relPath, ctx) {
 
   if (LEGACY_BUNDLE_ENTRY_FILES.has(relPath)) {
     return {
-      classification: 'expected',
+      classification: 'unplanned_nonblocking',
       severity: 'info',
-      reason: 'Legacy non-authoritative bundle entry compatibility',
+      reason: 'Non-authoritative historical bundle-entry debris beside the current entry pair',
       authority_status: 'none',
       phase: null,
     };
@@ -679,6 +676,24 @@ export function auditFileObservability(bundlePath, {
     };
   }
 
+  const currentEntry = checkCurrentEntryContract(bundlePath);
+  if (!currentEntry.passed) {
+    return {
+      findings: [],
+      canonical_findings: [{
+        id: 'unsupported_current_entry_contract',
+        rule_id: 'unsupported_current_entry_contract',
+        classification: 'blocking',
+        topic_identity: null,
+        primary_surface: currentEntry.missing_files.join(', '),
+        supporting_details: currentEntry.missing_files,
+        repair_kind: 'current_entry_contract',
+      }],
+      inspect: [`[unsupported_current_entry_contract] Missing current bundle entry file(s): ${currentEntry.missing_files.join(', ')}`],
+      advice: ['Current Harness operations require both BUNDLE_ENTRY.md and BUNDLE_MAP.md at the selected bundle root.'],
+    };
+  }
+
   const topicStateRoot = join(bundlePath, '_diagnostics', 'topic-state');
   const acceptedOperation = existsSync(topicStateRoot)
     ? readdirSync(topicStateRoot).sort().find((name) => existsSync(join(topicStateRoot, name, 'prepared.json')))
@@ -714,8 +729,6 @@ export function auditFileObservability(bundlePath, {
     try { rawDeclarations = readOutputDeclarations(bundlePath); } catch { rawDeclarations = []; }
   }
   const nonSubmittedRows = nonSubmittedDeclarations(rawDeclarations || [], submittedDeclarations);
-  const hasBundleMap = existsSync(join(bundlePath, 'BUNDLE_MAP.md'));
-  const hasLegacyStartHere = existsSync(join(bundlePath, 'START_FROM_HERE.md'));
   const canonicalFindings = auditCanonicalTopicFootprint(bundlePath, {
     topics,
     topicSlugs,
@@ -723,14 +736,6 @@ export function auditFileObservability(bundlePath, {
     ledgerDeclarations: submittedDeclarations,
     targetPhase,
   });
-
-  if (hasLegacyStartHere && !hasBundleMap) {
-    inspect.push('[legacy_bundle_map] START_FROM_HERE.md is deprecated compatibility; new bundles use BUNDLE_MAP.md.');
-    advice.push('Migrate legacy bundle root map to BUNDLE_MAP.md; do not treat START_FROM_HERE.md as current authority.');
-  } else if (hasLegacyStartHere && hasBundleMap) {
-    inspect.push('[legacy_bundle_map] START_FROM_HERE.md is deprecated compatibility debris; BUNDLE_MAP.md is the current map.');
-    advice.push('Remove START_FROM_HERE.md after confirming BUNDLE_MAP.md covers passive navigation needs.');
-  }
 
   if (submittedLedgerError) {
     inspect.push(`[work_unit_ledger_invalid] ${submittedLedgerError.message}`);

@@ -1,7 +1,8 @@
 // @impl INT-001, LOC-005: inspect-bundle.mjs integration test
 import { describe, it, before, after } from 'node:test';
+import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { writeFileSync, mkdirSync, cpSync, rmSync } from 'node:fs';
+import { writeFileSync, mkdirSync, cpSync, lstatSync, realpathSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
@@ -41,6 +42,15 @@ describe('inspect-bundle.mjs integration', () => {
 
   after(cleanupAll);
 
+  it('uses the tracked fixture CLI source link to the canonical inspector', () => {
+    const fixtureCli = join(FIXTURE, 'cli');
+    assert.equal(lstatSync(fixtureCli).isSymbolicLink(), true);
+    assert.equal(
+      realpathSync(join(fixtureCli, 'inspect-bundle.mjs')),
+      realpathSync(join(process.cwd(), 'DEEP_RESEARCH_HARNESS', 'cli', 'inspect-bundle.mjs')),
+    );
+  });
+
   // ── Default behavior (unchanged) ──
 
   it('passes on complete bundle', () => {
@@ -51,34 +61,36 @@ describe('inspect-bundle.mjs integration', () => {
     if (result.stdout.includes('RUN_BUNDLE.md not found')) throw new Error(`Fresh BUNDLE_ENTRY.md bundle must not receive a stale legacy-entry warning\n${result.stdout}`);
   });
 
-  it('accepts legacy RUN_BUNDLE.md as bounded entry compatibility', () => {
-    const bundleDir = makeBundle(tmpDir, 'legacy-entry', { entry: 'legacy' });
-    const result = spawnSync('node', [INSPECT, bundleDir], { encoding: 'utf-8', timeout: 5000 });
-    if (result.status !== 0) throw new Error(`Expected legacy entry compatibility to exit 0, got ${result.status}\n${result.stdout}`);
-    if (result.stdout.includes('BUNDLE_ENTRY.md not found')) throw new Error(`Legacy RUN_BUNDLE.md must satisfy entry compatibility\n${result.stdout}`);
+  it('rejects every incomplete or legacy-only root before every public view', () => {
+    const shapes = [
+      { name: 'run-bundle-only', options: { map: 'none', entry: 'legacy' } },
+      { name: 'start-here-only', options: { map: 'legacy', entry: 'none' } },
+      { name: 'map-only', options: { map: 'current', entry: 'none' } },
+      { name: 'missing-map', options: { map: 'none', entry: 'current' } },
+    ];
+    const views = [[], ['--summary'], ['--timeline'], ['--log']];
+
+    for (const { name, options } of shapes) {
+      const bundleDir = makeBundle(tmpDir, name, options);
+      writeFileSync(join(bundleDir, 'rb_trace.jsonl'), '{"ts":"2026-01-01T00:00:00.000Z","event":"historical-trace"}\n');
+      writeFileSync(join(bundleDir, '_logs', 'run.log'), '[2026-01-01T00:00:00.000Z] INFO historical-log bundle=test\n');
+      for (const view of views) {
+        const result = spawnSync('node', [INSPECT, bundleDir, ...view], { encoding: 'utf-8', timeout: 5000 });
+        if (result.status !== 1) throw new Error(`${name} ${view.join(' ') || 'default'} should reject\n${result.stdout}`);
+        if (!result.stdout.includes('unsupported_current_entry_contract')) throw new Error(`Expected scoped rejection\n${result.stdout}`);
+        if (result.stdout.includes('historical-trace') || result.stdout.includes('historical-log') || result.stdout.includes('Run Summary') || result.stdout.includes('Timeline')) {
+          throw new Error(`Rejected root leaked data for ${name} ${view.join(' ')}\n${result.stdout}`);
+        }
+      }
+    }
   });
 
-  it('accepts legacy-only START_FROM_HERE.md with deprecation advice', () => {
-    const bundleDir = makeBundle(tmpDir, 'legacy-only', { map: 'legacy' });
+  it('accepts a complete pair with legacy historical debris', () => {
+    const bundleDir = makeBundle(tmpDir, 'pair-plus-debris', { map: 'both' });
+    writeFileSync(join(bundleDir, 'RUN_BUNDLE.md'), '# Historic Entry\n');
     const result = spawnSync('node', [INSPECT, bundleDir], { encoding: 'utf-8', timeout: 5000 });
-    if (result.status !== 0) throw new Error(`Expected legacy map compatibility to exit 0, got ${result.status}\n${result.stdout}`);
-    if (!result.stdout.includes('deprecated legacy compatibility')) throw new Error(`Expected legacy deprecation advice\n${result.stdout}`);
-    if (!result.stdout.includes('BUNDLE_MAP.md')) throw new Error(`Expected advice to name BUNDLE_MAP.md\n${result.stdout}`);
-  });
-
-  it('reports both map files with BUNDLE_MAP.md current', () => {
-    const bundleDir = makeBundle(tmpDir, 'both-maps', { map: 'both' });
-    const result = spawnSync('node', [INSPECT, bundleDir], { encoding: 'utf-8', timeout: 5000 });
-    if (result.status !== 0) throw new Error(`Expected both map names to exit 0, got ${result.status}\n${result.stdout}`);
-    if (!result.stdout.includes('BUNDLE_MAP.md is current')) throw new Error(`Expected current-map diagnostic\n${result.stdout}`);
-    if (!result.stdout.includes('deprecated compatibility debris')) throw new Error(`Expected legacy debris diagnostic\n${result.stdout}`);
-  });
-
-  it('fails when neither current nor legacy map exists', () => {
-    const bundleDir = makeBundle(tmpDir, 'missing-map', { map: 'none' });
-    const result = spawnSync('node', [INSPECT, bundleDir], { encoding: 'utf-8', timeout: 5000 });
-    if (result.status !== 1) throw new Error(`Expected missing map to exit 1, got ${result.status}\n${result.stdout}`);
-    if (!result.stdout.includes('BUNDLE_MAP.md')) throw new Error(`Expected missing BUNDLE_MAP.md diagnostic\n${result.stdout}`);
+    if (result.status !== 0) throw new Error(`Expected current pair to pass, got ${result.status}\n${result.stdout}`);
+    if (result.stdout.includes('compatibility') || result.stdout.includes('deprecated')) throw new Error(`Historical debris must not become a success path\n${result.stdout}`);
   });
 
   it('fails on missing directory', () => {

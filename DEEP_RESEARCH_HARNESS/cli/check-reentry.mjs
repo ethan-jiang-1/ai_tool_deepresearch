@@ -26,6 +26,7 @@ import {
   parseMdFrontmatter,
   classifyReferenceAuthority,
 } from '../engine/helpers/gate-helpers.mjs';
+import { checkCurrentEntryContract } from '../engine/helpers/current-entry-contract.mjs';
 import { auditFileObservability } from '../engine/helpers/file-observability.mjs';
 import { buildRecoverySummary } from '../engine/helpers/recovery-contract.mjs';
 import { inspectCanonicalTopicState } from '../engine/helpers/canonical-topic-state.mjs';
@@ -173,6 +174,34 @@ if (!target) {
     findings: [],
     inspect: [`Unknown target: "${rawTarget}". Must be a gate or phase from the manifest.`],
     advice: [`Examples of valid targets: ${examples.join(', ')}`],
+  });
+}
+
+const currentEntry = checkCurrentEntryContract(bundlePath);
+if (!currentEntry.passed) {
+  const blocker = {
+    severity: 'blocker',
+    check: 'unsupported_current_entry_contract',
+    message: `Current Harness operation requires ${currentEntry.missing_files.join(' and ')} at the selected bundle root.`,
+    detail: { missing_files: currentEntry.missing_files },
+  };
+  emitAndExit({
+    schema_version: SCHEMA_VERSION,
+    check: { passed: false, target: target.input, exit_code: 1 },
+    normalized_target: {
+      input: target.input,
+      kind: target.kind,
+      status_gate: target.status_gate,
+      gate_key: target.gate_key,
+      node_ref: target.node_ref,
+      phase_key: target.phase_key,
+    },
+    blockers: [blocker],
+    warnings: [],
+    drift: [],
+    findings: [],
+    inspect: [`[unsupported_current_entry_contract] ${blocker.message}`],
+    advice: ['Select a bundle root containing both BUNDLE_ENTRY.md and BUNDLE_MAP.md before requesting reentry diagnostics.'],
   });
 }
 
@@ -791,14 +820,7 @@ if (statusPosition.current_node_status === 'null' || statusPosition.current_node
     message: 'rb_status.json lacks a populated current_node; falling back to target/status/trace diagnostics.',
     detail: { current_node_status: statusPosition.current_node_status },
   });
-  const hasBundleMap = existsSync(join(bundlePath, 'BUNDLE_MAP.md'));
-  const hasLegacyStartHere = existsSync(join(bundlePath, 'START_FROM_HERE.md'));
-  const mapAdvice = hasBundleMap
-    ? 'use BUNDLE_MAP.md, trace, and reentry diagnostics'
-    : hasLegacyStartHere
-      ? 'use legacy START_FROM_HERE.md only as deprecated bundle-map compatibility, then migrate to BUNDLE_MAP.md; also use trace and reentry diagnostics'
-      : 'restore BUNDLE_MAP.md, then use trace and reentry diagnostics';
-  allAdvice.push(`rb_status.json.current_node is not populated; the next successful enter-phase will populate it. Until then, ${mapAdvice} rather than guessing from current_gate alone.`);
+  allAdvice.push('rb_status.json.current_node is not populated; the next successful enter-phase will populate it. Until then, use BUNDLE_MAP.md, trace, and reentry diagnostics rather than guessing from current_gate alone.');
 }
 
 // 7. File observability

@@ -183,10 +183,14 @@ as its work-unit runtime tree. Bundle-root `_work_units/_index.json` SHALL be
 Engine-owned allocation and attempt-state truth, while submitted delegated
 output coverage SHALL remain in bundle-root `rb_output_declarations.jsonl`.
 
-Legacy bundles can contain `RUN_BUNDLE.md` and/or `START_FROM_HERE.md`; these
-files SHALL be treated as bounded entry/map compatibility, not new-bundle
-canonical runtime surfaces. Their presence SHALL not establish a missing
-Harness source context or authorize a source-root fallback.
+A current operational bundle root SHALL contain both `BUNDLE_ENTRY.md` and
+`BUNDLE_MAP.md`. A root missing either file, including one containing
+`RUN_BUNDLE.md`, `START_FROM_HERE.md`, or only `BUNDLE_MAP.md`, is not a current
+run bundle root for continue, inspect, reentry, or Engine operation. Those
+legacy files are historical Markdown only; they SHALL not establish a Harness
+source context, authorize a source-root fallback, migration, or compatibility
+path. Extra legacy files beside the complete pair are non-authoritative
+historical debris.
 
 Runtime choices and runtime data SHALL be persisted under the current run
 bundle root. Harness definitions, schemas, workflow nodes, CLIs, reusable
@@ -232,13 +236,21 @@ Harness root and SHALL NOT become per-run storage.
 - **AND** `<current-run-bundle-root>/_work_units/_index.json` SHALL contain
   the corresponding allocation record
 
+#### Scenario: Incomplete legacy root is not a current bundle root
+
+- **WHEN** a supplied directory lacks `BUNDLE_ENTRY.md` or `BUNDLE_MAP.md`
+- **THEN** it SHALL not be selected as a current run bundle root for Harness
+  continuation, inspection, reentry, or Engine operations
+- **AND** legacy Markdown at that root SHALL not create a fallback or migration
+  route
+
 #### Scenario: Bundle entry and map are canonical root surfaces
 
 - **WHEN** a new bundle is instantiated
 - **THEN** `BUNDLE_ENTRY.md` and `BUNDLE_MAP.md` SHALL be part of the canonical
   bundle-root surface
-- **AND** `RUN_BUNDLE.md` and `START_FROM_HERE.md` SHALL NOT be required as
-  current canonical surfaces
+- **AND** `RUN_BUNDLE.md` and `START_FROM_HERE.md` SHALL NOT be required or
+  accepted as current canonical entry surfaces
 
 #### Scenario: Work-unit path expands under selected bundle
 

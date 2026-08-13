@@ -87,6 +87,23 @@ describe('check-gate-instantiation-complete', () => {
     assert.match(hint.missing_fact, /BUNDLE_MAP\.md/);
   });
 
+  it('fails when BUNDLE_ENTRY.md is missing even if RUN_BUNDLE.md exists', () => {
+    const name = unique('missing-entry');
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+    const bundleDir = track(r.stdout.trim());
+
+    rmSync(join(bundleDir, 'BUNDLE_ENTRY.md'));
+    writeFileSync(join(bundleDir, 'RUN_BUNDLE.md'), '# Legacy only\n');
+
+    const result = runGate(bundleDir);
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(output.check.passed, false);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'bundle_entry_exists');
+    assertCompleteHint(hint);
+    assert.match(hint.missing_fact, /BUNDLE_ENTRY\.md/);
+  });
+
   it('fails on illegal bundle name (spaces)', () => {
     const illegalName = join(BUNDLES_DIR, 'dpt_rb_bad name');
     const bundleDir = track(illegalName);
