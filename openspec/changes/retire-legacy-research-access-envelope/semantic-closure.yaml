@@ -1,0 +1,36 @@
+schema_version: semantic-closure/v1
+change: retire-legacy-research-access-envelope
+status: affected
+catalog_additions: []
+affected:
+  - family: research.host-access-envelope
+    fact: >-
+      What the latest completed current direct-page observation records: the
+      fixed China and overseas sample terminal outcomes, whether any
+      non-diagnostic core sample returned real content, the observation time,
+      and any required direct summary reason. A retired URL/fetch/search/
+      source-class/access-boundary envelope is ProfileSchema-invalid and has no
+      current owner mapping, migration, or Engine-derived diagnosis.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/schema/contracts/profile.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/schema/contracts/profile.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-rerun-ready.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs
+      - DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs
+    overlap:
+      - coordinate: openspec/specs/engine/schema-core/spec.md
+        relation: authoritative
+        detail: SCO-002/SCO-008 own the legal optional/current-only profile shape.
+      - coordinate: openspec/specs/research/pre-research-gate-implementation/spec.md
+        relation: authoritative
+        detail: PRG-002/PRG-010 own the HITL1 schema-root and recorded-observation verdict boundaries.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl1.md
+        relation: derived
+        detail: The Phase explains the Agent's authorized current observation write and same-Gate rerun; it does not resolve schema validity.
+    verification:
+      truth_table: tests/schema/contracts/profile.test.mjs
+      cross_surface: tests/integration/cli/check-gate-hitl1-recorded.test.mjs

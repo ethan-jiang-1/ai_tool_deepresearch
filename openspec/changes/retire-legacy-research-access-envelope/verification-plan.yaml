@@ -1,0 +1,86 @@
+schema_version: verification-routing/v1
+change: retire-legacy-research-access-envelope
+test_classes:
+  unit:
+    status: selected
+    rationale: ProfileSchema directly owns the strict current-only shape and needs an isolated current-versus-retired truth table.
+  integration:
+    status: selected
+    rationale: HITL1, the selected adapter, style writer, Setup, rerun-ready, validate-bundle, and post-final recovery expose cross-module schema-consumer behavior.
+  deterministic_e2e:
+    status: selected
+    rationale: The production HITL1 direct-sample flow must continue to admit current available and unavailable observations across a fresh temporary bundle workflow.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change claims deterministic schema and CLI behavior only; it makes no real-Agent or external-tool behavior claim.
+claims:
+  - id: profile-current-only-access-shape
+    statement: ProfileSchema accepts only absent, unprobed, and complete current direct-sample research_access shapes and rejects every retired envelope field family without conversion.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/contracts/profile.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl1-schema-root-and-adapter-removal
+    statement: HITL1 emits one existing ProfileSchema root for a retired envelope, retains current direct-sample success paths, and does not project an adapter owner or provider diagnosis.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-hitl1-recorded.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-adapter-and-style-preservation
+    statement: Retained selected-adapter canary protections and style preservation apply only to current direct observations, with no legacy envelope resolver or positive preservation path.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/hitl1-research-access-adapter.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: shared-profile-readers-fail-closed
+    statement: Setup, rerun-ready, validate-bundle, and post-final recovery consume the existing ProfileSchema rejection without translation, while their current direct-sample fixtures remain valid.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-setup-ready.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-hitl1-direct-sample-e2e
+    statement: A fresh temporary bundle can record either complete current direct-sample outcome and proceed through the production HITL1 Gate without legacy access data.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/hitl1-research-access-adapter.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

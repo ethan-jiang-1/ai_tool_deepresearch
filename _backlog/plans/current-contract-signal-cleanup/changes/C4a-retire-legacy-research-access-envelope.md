@@ -2,7 +2,7 @@
 
 > Candidate change: `retire-legacy-research-access-envelope`
 >
-> Status: field-optional policy confirmed; legacy-envelope rejection owner/taxonomy remains the one pending decision; no proposal created
+> Status: standalone proposal complete and governance-validated; awaiting explicit Apply authorization
 >
 > Risk: L3
 
@@ -74,6 +74,25 @@ recorded-observation rule.
 - Current `unavailable` stays meaningful: it is not an old format merely
   because the word appears in both schemas.
 
+## Rejection-owner decision (confirmed)
+
+The user confirmed that a retired envelope SHALL reuse the existing
+`ProfileSchema` rejection boundary, not add an
+`unsupported_current_profile_contract` taxonomy.
+
+- HITL1 exposes its existing `profile_schema_valid` root with its existing
+  `missing_contract` repair semantics and suppresses later field rules.
+- Setup, rerun-ready, post-final recovery, and `validate-bundle` retain their
+  existing shared profile-schema boundaries; they do not classify or migrate an
+  old envelope specially.
+- No reader keeps an envelope detector, no migration/upgrade is added, and no
+  current direct observation is inferred from old URL, fetch, reason, or
+  boundary data.
+
+This is the shortest honest loop: the Schema is the Source of Record for the
+current shape, while the Agent uses the owning HITL/profile flow to create a
+new observation when appropriate.
+
 ## Protected current behavior
 
 - Direct sample IDs, source groups, outcomes, and `unprobed` state.
@@ -90,11 +109,16 @@ recorded-observation rule.
 - [x] Current status values identified as protected.
 - [x] User selected A: `research_access` remains globally optional; only HITL1
   rejects absence when a recorded current observation is required.
-- [ ] Proposal selects one rejection owner/taxonomy for a legacy envelope.
+- [x] User selected the existing `ProfileSchema` boundary: HITL1 reuses
+  `profile_schema_valid` / `missing_contract`; shared readers fail only through
+  their existing schema boundaries, with no legacy-specific taxonomy or reader.
 - [x] Current direct-sample preservation, absent/unprobed failure, adapter
   boundary, and style-preservation evidence passed: 64 focused tests, 0 fail.
-- [ ] Proposal specifies one unsupported-legacy boundary test and removes all
-  positive legacy fixtures/tests/guidance together.
+- [x] Proposal `retire-legacy-research-access-envelope` specifies one schema-root
+  legacy rejection boundary per affected reader class and removes all positive
+  legacy fixtures/tests/guidance together; strict OpenSpec, requirement registry,
+  capability discovery, verification routing, and semantic closure plan-mode
+  validation passed on 2026-08-13.
 
 ## Expected verification
 
