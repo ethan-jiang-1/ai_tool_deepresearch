@@ -17,6 +17,22 @@ const QUEUE = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs');
 const ENTER = join(ROOT, 'DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs');
 const dirs = [];
 
+function currentAvailableResearchAccess() {
+  const samples = [
+    ['gov_cn', 'china'], ['gitee', 'china'], ['xinhuanet', 'china'], ['cnki_catalog', 'china'],
+    ['wikipedia', 'overseas'], ['github', 'overseas'], ['iana', 'overseas'], ['arxiv', 'overseas'],
+    ['rfc_editor', 'overseas'],
+  ];
+  return {
+    status: 'available', probed_at: '2026-08-11T00:00:00.000Z',
+    sample_observations: samples.map(([sample_id, source_group], index) => (
+      index === 0
+        ? { sample_id, source_group, outcome: 'content', retrieval_surface: 'native' }
+        : { sample_id, source_group, outcome: 'failed' }
+    )),
+  };
+}
+
 function run(script, args, expected = 0) {
   const result = spawnSync('node', [script, ...args], { encoding: 'utf8', timeout: 15000 });
   assert.equal(result.status, expected, result.stderr || result.stdout);
@@ -72,7 +88,7 @@ describe('pre-Wave readiness', () => {
     const profilePath = join(bundle, 'rb_profile.yaml');
     const profile = parseYaml(readFileSync(profilePath, 'utf8'));
     profile.root_must_answer_set = ['What does the deterministic chain prove?'];
-    profile.research_access = { status: 'available', probed_at: '2026-07-24T00:00:00.000Z', result_url: 'https://example.com/simulated-probe', fetch_outcome: 'success', eligible_candidate_count: 1, final_candidate_ordinal: 1 };
+    profile.research_access = currentAvailableResearchAccess();
     profile.human_decision_checkpoints = {
       ...profile.human_decision_checkpoints,
       hitl1: { status: 'recorded', recorded_at: '2026-07-24T00:00:00.000Z' },

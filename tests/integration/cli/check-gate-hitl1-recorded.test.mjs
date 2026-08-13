@@ -49,30 +49,6 @@ function materializeCanonicalTopic(bundleDir) {
   writeFileSync(join(bundleDir, 'seed_topics/01_topic-a.md'), '---\ntopic_uid: tp_123e4567-e89b-12d3-a456-426614174000\nid: "01"\nslug: 01_topic-a\ntitle: Topic A\nmust_answer: ["What is the answer?"]\nscope_role: primary\ndepends_on_topic_uids: []\n---\n# Topic A\n');
 }
 
-const AVAILABLE_ACCESS = `research_access:
-  status: available
-  probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/"
-  fetch_outcome: success
-`;
-
-const PARTIAL_AVAILABLE_ACCESS = `research_access:
-  status: available
-  probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/"
-  fetch_outcome: success
-  source_class_reachability:
-    - source_class: encyclopedia
-      reachability: unreachable
-    - source_class: code_host
-      reachability: reachable
-    - source_class: general_web
-      reachability: not_attempted
-  access_boundary:
-    location: network_path
-    extent: class_scoped
-`;
-
 function currentDirectAccessYaml(status, { content = false, reason } = {}) {
   const outcomes = {
     gov_cn: content ? 'content' : 'transport_inconclusive',
@@ -112,7 +88,7 @@ const VALID_PROFILE = `plan_basename: test
 research_profile: quick_factual
 root_must_answer_set:
   - "What is the answer?"
-${AVAILABLE_ACCESS}human_decision_checkpoints:
+${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
   hitl1:
     status: recorded
     recorded_at: "2026-06-21T00:00:00.000Z"
@@ -142,21 +118,6 @@ describe('check-gate-hitl1-recorded', () => {
 
     assert.equal(output.check.passed, true, `Expected pass, got: ${JSON.stringify(output.inspect)}`);
     assert.deepEqual(output.hints, []);
-  });
-
-  it('admits a schema-valid partial-reachability envelope without a per-class Gate rule', () => {
-    const name = unique('partial-access');
-    const created = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(created.stdout.trim());
-    writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, PARTIAL_AVAILABLE_ACCESS));
-    materializeCanonicalTopic(bundleDir);
-    applyStyle(bundleDir);
-    advanceHitl1(bundleDir);
-
-    const output = JSON.parse(runGate(bundleDir).stdout);
-
-    assert.equal(output.check.passed, true);
-    assert.equal(output.hints.length, 0);
   });
 
   it('rejects a valid but stale style projection through the existing style writer', () => {
@@ -269,7 +230,7 @@ describe('check-gate-hitl1-recorded', () => {
     writeProfileYaml(bundleDir, `plan_basename: test
 research_profile: exploratory_map
 root_must_answer_set: []
-${AVAILABLE_ACCESS}human_decision_checkpoints:
+${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
   hitl1:
     status: recorded
     recorded_at: "2026-06-21T00:00:00.000Z"
@@ -300,7 +261,7 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
 research_profile: claim_verification
 root_must_answer_set:
   - "Q"
-${AVAILABLE_ACCESS}human_decision_checkpoints:
+${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
   hitl1:
     status: pending_user
   hitl2:
@@ -332,7 +293,7 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
 research_profile: quick_factual
 root_must_answer_set:
   - "Q"
-${AVAILABLE_ACCESS}human_decision_checkpoints:
+${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
   hitl1:
     status: recorded
   hitl2:
@@ -359,7 +320,7 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     const name = unique('legacy-access');
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
-    writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, ''));
+    writeProfileYaml(bundleDir, VALID_PROFILE.replace(CURRENT_AVAILABLE_ACCESS, ''));
     materializeCanonicalTopic(bundleDir);
     advanceHitl1(bundleDir);
 
@@ -380,7 +341,7 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     const name = unique('unprobed-access');
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
-    writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, 'research_access:\n  status: unprobed\n'));
+    writeProfileYaml(bundleDir, VALID_PROFILE.replace(CURRENT_AVAILABLE_ACCESS, 'research_access:\n  status: unprobed\n'));
     materializeCanonicalTopic(bundleDir);
     advanceHitl1(bundleDir);
 
@@ -398,7 +359,7 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     const name = unique('current-available');
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
-    writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, CURRENT_AVAILABLE_ACCESS));
+    writeProfileYaml(bundleDir, VALID_PROFILE);
     materializeCanonicalTopic(bundleDir);
     applyStyle(bundleDir);
     advanceHitl1(bundleDir);
@@ -416,7 +377,7 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     const name = unique('current-unavailable');
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
-    writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, CURRENT_UNAVAILABLE_ACCESS));
+    writeProfileYaml(bundleDir, VALID_PROFILE.replace(CURRENT_AVAILABLE_ACCESS, CURRENT_UNAVAILABLE_ACCESS));
     materializeCanonicalTopic(bundleDir);
     applyStyle(bundleDir);
     advanceHitl1(bundleDir);
@@ -432,7 +393,7 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     const name = unique('current-neutral');
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
-    writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, CURRENT_UNAVAILABLE_ACCESS));
+    writeProfileYaml(bundleDir, VALID_PROFILE.replace(CURRENT_AVAILABLE_ACCESS, CURRENT_UNAVAILABLE_ACCESS));
     materializeCanonicalTopic(bundleDir);
     applyStyle(bundleDir);
     advanceHitl1(bundleDir);
@@ -449,74 +410,16 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     }
   });
 
-  it('exposes an unavailable observation without a boundary as explicitly unclassified', () => {
-    const name = unique('unavailable-access');
+  it('rejects a retired access envelope through the single ProfileSchema root', () => {
+    const name = unique('legacy-envelope');
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
-    writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, `research_access:
-  status: unavailable
+    writeProfileYaml(bundleDir, VALID_PROFILE.replace(CURRENT_AVAILABLE_ACCESS, `research_access:
+  status: available
   probed_at: "2026-07-10T00:00:00.000Z"
-  fetch_outcome: blocked
-  reason: "Fetch surface blocked"
+  result_url: "https://example.com/"
+  fetch_outcome: success
 `));
-    materializeCanonicalTopic(bundleDir);
-    advanceHitl1(bundleDir);
-
-    const output = JSON.parse(runGate(bundleDir).stdout);
-
-    assert.equal(output.check.passed, false);
-    assert.equal(output.check.next, null);
-    const hint = output.hints.find((candidate) => candidate.rule_id === 'research_access_available');
-    assertCompleteHint(hint);
-    assert.equal(hint.repair_kind, 'agent_action');
-    assert.match(hint.missing_fact, /no routeable boundary/);
-    assert.match(hint.missing_fact, /Fetch surface blocked/);
-    assert.match(hint.write_to, /rb_profile\.yaml#\/research_access$/);
-    assert.equal(output.hints.some((candidate) => candidate.rule_id === 'style_projection_freshness'), false);
-    assert.ok(output.check.masked_rule_ids.includes('style_projection_freshness'));
-  });
-
-  it('projects one direct finding for every recorded unavailable boundary location', () => {
-    for (const [location, owner, repairKind] of [
-      ['host_surface', 'selected Claude CLI host runtime', 'external_action'],
-      ['host_policy', 'selected Claude CLI host policy', 'external_action'],
-      ['network_path', 'network environment', 'external_action'],
-      ['probe_relay', 'Agent', 'agent_action'],
-    ]) {
-      const name = unique(`boundary-${location}`);
-      const created = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-      const bundleDir = track(created.stdout.trim());
-      writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, `research_access:
-  status: unavailable
-  probed_at: "2026-07-10T00:00:00.000Z"
-  fetch_outcome: blocked
-  reason: "Direct recorded boundary for fixture."
-  access_boundary:
-    location: ${location}
-    extent: universal
-`));
-      materializeCanonicalTopic(bundleDir);
-      applyStyle(bundleDir);
-      advanceHitl1(bundleDir);
-
-      const output = JSON.parse(runGate(bundleDir).stdout);
-      const hint = output.hints.find((candidate) => candidate.rule_id === 'research_access_available');
-
-      assert.equal(output.check.passed, false, location);
-      assertCompleteHint(hint);
-      assert.equal(hint.repair_kind, repairKind, location);
-      assert.match(hint.missing_fact, new RegExp(`${location} with universal extent`));
-      assert.match(hint.write_to, new RegExp(owner));
-      assert.match(hint.write_to, /research_access\/access_boundary/);
-      assert.match(hint.rerun, /check-gate-hitl1-recorded/);
-    }
-  });
-
-  it('fails fake available research_access through ProfileSchema', () => {
-    const name = unique('fake-available');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
-    writeProfileYaml(bundleDir, VALID_PROFILE.replace('https://example.com/', 'ftp://example.com/file'));
     materializeCanonicalTopic(bundleDir);
     advanceHitl1(bundleDir);
 
@@ -529,5 +432,8 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     assertCompleteHint(hint);
     assert.equal(hint.repair_kind, 'missing_contract');
     assert.equal(output.hints.some((candidate) => candidate.rule_id === 'research_access_available'), false);
+    assert.equal(output.hints.some((candidate) => candidate.repair_kind === 'external_action'), false);
+    assert.equal(output.hints.some((candidate) => /adapter|provider|WebSearch|WebFetch/i.test(candidate.missing_fact || '')), false);
+    assert.ok(output.check.masked_rule_ids.includes('research_access_available'));
   });
 });

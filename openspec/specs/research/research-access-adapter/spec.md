@@ -34,11 +34,11 @@ available in another. The system SHALL NOT introduce a provider registry, adapte
 priority list, environment-variable selection protocol, background capability
 controller, or caller-supplied permission bypass.
 
-The boundary resolver SHALL map only a schema-validated recorded boundary location
-to its owner and derive its repair kind from that owner. It SHALL NOT parse reason
-prose, tool names, user language, VPN state, IP/geography, or a provider identity to
-reconstruct classification. A direct observation that establishes no owner remains
-explicitly unclassified.
+The adapter SHALL NOT map an old profile field, URL/fetch/search record,
+source-class envelope, access-boundary location, reason prose, tool name, user
+language, VPN state, IP/geography, or provider identity to a current repair owner
+or classification. Unsupported profile shapes remain owned by the ProfileSchema
+boundary; a current direct observation establishes no adapter owner.
 
 #### Scenario: Codex and Claude use the same semantic controller
 
@@ -62,6 +62,13 @@ explicitly unclassified.
   owner from that outcome
 - **AND** the controller, Agent, and user SHALL NOT create permission by choosing a
   shell fallback or approving an otherwise unavailable operation
+
+#### Scenario: Historical profile fields do not route an adapter repair
+
+- **WHEN** a profile contains a historical boundary/location or other retired
+  access-envelope field
+- **THEN** the adapter SHALL not return an owner or repair action from it
+- **AND** ProfileSchema validation remains the only current rejection boundary
 
 ### Requirement: Adapter probe binds search result to fetch target
 

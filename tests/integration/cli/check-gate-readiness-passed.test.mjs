@@ -14,6 +14,21 @@ const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
 
+const CURRENT_AVAILABLE_ACCESS = `research_access:
+  status: available
+  probed_at: "2026-08-11T00:00:00.000Z"
+  sample_observations:
+    - { sample_id: gov_cn, source_group: china, outcome: content, retrieval_surface: native }
+    - { sample_id: gitee, source_group: china, outcome: failed }
+    - { sample_id: xinhuanet, source_group: china, outcome: failed }
+    - { sample_id: cnki_catalog, source_group: china, outcome: failed }
+    - { sample_id: wikipedia, source_group: overseas, outcome: failed }
+    - { sample_id: github, source_group: overseas, outcome: failed }
+    - { sample_id: iana, source_group: overseas, outcome: failed }
+    - { sample_id: arxiv, source_group: overseas, outcome: failed }
+    - { sample_id: rfc_editor, source_group: overseas, outcome: failed }
+`;
+
 function track(dir) { createdDirs.push(dir); return dir; }
 function unique(prefix) { return `rt_rd_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
 
@@ -55,12 +70,7 @@ function createPreflightBundle(name, {
 }
 
 const VALID_PROFILE = `
-research_access:
-  status: available
-  probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/readiness-fixture"
-  fetch_outcome: success
-human_decision_checkpoints:
+${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
   hitl1:
     status: recorded
     recorded_at: "2026-06-15T10:00:00Z"

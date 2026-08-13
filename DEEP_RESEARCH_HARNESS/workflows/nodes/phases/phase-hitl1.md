@@ -152,7 +152,7 @@ Phase 直接检索页面、research evidence collection、work-unit delegation �
 
 **Material-gap 对齐 loop：** 当 Agent 判断某个已观察来源组/样本限制与用户明确研究语义相关时，才渲染 `brief/hitl1.md` 的有界中文 prompt（值只来自当前 observation 与已记录研究语义）。用户可：(a) 自行调整网络后请求一次新的完整探测；(b) 修改显式 source constraints；或 (c) 明确「按当前取用范围继续」。没有自动 retry、固定 retry 次数、轮询、VPN 操作、permission bypass 或新的 HITL checkpoint。Agent 不验证、不保留、不推断用户是否实际改变网络；用户的新的 retry 请求本身即充分。每次用户请求的新 round 都从固定双组样本开始一轮完整探测并**替换**当前 observation，不累积 attempt history 或声称 access durable。用户明确接受当前范围时，把其逐字决定只追加到既有 controls snapshot，保留未放宽的硬 source constraint，然后运行同一个 Gate。用户既未解决 material gap 也未请求新 round 时，继续留在既有 HITL1 loop。
 
-**Unavailable recovery：** 保留已记录的 `research_profile`、`root_must_answer_set`、style params 和 `hitl1.status: recorded`。对 schema-valid completed current observation，Gate 不产生 blocking unavailable-root feedback；任何来源限制的 materiality 由 Phase 负责在调用 Gate 前完成用户对齐。legacy `access_boundary` 的 owner 投影仅适用于 schema-valid legacy observation，不从当前 observation 或 reason prose 推断外部 route。完成既有 direct repair 后，由 Phase Agent 重跑本节同一 isolated probe 和同一 Gate，不要求用户重复回答 HITL1 choices、运行 `curl` 或手改 profile。在 probe 与 Gate 成功前不得进入 Setup。
+**Unavailable recovery：** 保留已记录的 `research_profile`、`root_must_answer_set`、style params 和 `hitl1.status: recorded`。对 schema-valid completed current observation，Gate 不产生 blocking unavailable-root feedback；任何来源限制的 materiality 由 Phase 负责在调用 Gate 前完成用户对齐。不从当前 observation 或 reason prose 推断外部 route。完成既有 direct repair 后，由 Phase Agent 重跑本节同一 isolated probe 和同一 Gate，不要求用户重复回答 HITL1 choices、运行 `curl` 或手改 profile。在 probe 与 Gate 成功前不得进入 Setup。
 
 **Evidence boundary：** Probe URL、page content 和 tool output SHALL NOT 写入或计入 `reference/`、`_cache/`、`artifacts/`、work-unit output/result/receipt、`rb_work_unit_ledger.jsonl`、`rb_output_declarations.jsonl` 或任何 Wave coverage/count floor。
 
@@ -178,7 +178,7 @@ Phase 直接检索页面、research evidence collection、work-unit delegation �
 | `hitl1.status` | `rb_profile.yaml#/human_decision_checkpoints/hitl1/status` | = `recorded` |
 | `hitl1.recorded_at` | `rb_profile.yaml#/human_decision_checkpoints/hitl1/recorded_at` | 非空 ISO 8601 timestamp |
 
-`rb_profile.yaml#/research_access` 只由 Phase Agent 写入；isolated probe agent 只返回 transient observation，绝不写 bundle state 或运行 Gate。当前 observation 是 compact final snapshot，不含 URL/body/header/status code/candidate/query/raw tool label/retry/VPN/geolocation/IP/provider 字段；legacy observation 保持可读但不与 current format 混写。该 checklist 是 review surface；`ProfileSchema` 和 Gate definition 仍是 machine authority。
+`rb_profile.yaml#/research_access` 只由 Phase Agent 写入；isolated probe agent 只返回 transient observation，绝不写 bundle state 或运行 Gate。当前 observation 是 compact final snapshot，不含 URL/body/header/status code/candidate/query/raw tool label/retry/VPN/geolocation/IP/provider 字段。该 checklist 是 review surface；`ProfileSchema` 和 Gate definition 仍是 machine authority。
 
 ## 5. Gate Command
 
@@ -198,12 +198,11 @@ node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs --bundle <pat
 1. `repair_kind: user_decision`：只向用户询问 `missing_fact` 指出的真实 HITL1 语义，例如尚未选择的 `research_profile`、缺失的 must-answer 问题或未确认的 Topic intent。不得要求用户运行普通命令，也不得重复询问已经记录的 choice。
 2. `repair_kind: agent_action`：在用户决定已经存在、且 `write_to` 是 authorized mutable surface 时，由 Agent 写入或修正 exact field/file；不得借机械 repair 发明新的用户语义或伪造 probe success。
 3. `repair_kind: engine_operation`：由 Agent 运行 `write_to` 指向的 existing legal operation，例如 style apply、topic-state inspect/recover/apply 或其他 exact command；不得让用户代跑，也不得直接编辑 Engine-owned authority。
-4. `repair_kind: external_action`：只暴露 schema-valid **legacy** `access_boundary` 已建立的边界 owner；当前 completed observation 不产生 blocking unavailable-root feedback，其来源限制由 Phase 在调用 Gate 前完成用户对齐。
-5. `repair_kind: missing_contract`：报告 exact unavailable capability/contract boundary，不手写 status、trace、receipt、provenance 或平行成功状态。
+4. `repair_kind: missing_contract`：报告 exact unavailable capability/contract boundary，不手写 status、trace、receipt、provenance 或平行成功状态。
 
 Hint 不创造 permission。用户决定或外部前置条件满足后，后续机械步骤立即回到 Agent；完成可执行动作后 Agent MUST 运行 hint 的 exact `rerun`，回到同一个 `hitl1-recorded` checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 猜 blocking repair；按 `missing_contract` 暴露最小边界。
 
-常见 root 仍按上述责任分类：`research_style_params` 通过 `apply-research-style.mjs`；canonical topic-state workspace/binding 通过返回的 exact operation；`research_access: unprobed` 或 absent 运行 §3d 真实 bounded probe；completed current observation 的来源限制走 material-gap 对齐（用户调整环境后重探、修改来源约束或接受当前范围）；legacy `unavailable` 服从 structured hint（classified legacy boundary 或 unclassified/probe-relay Agent repair）。只有用户决定真实存在且已持久化后，才可记录 `hitl1.status: recorded`；`recorded_at` 缺失属于随后可执行的机械修复。
+常见 root 仍按上述责任分类：`research_style_params` 通过 `apply-research-style.mjs`；canonical topic-state workspace/binding 通过返回的 exact operation；`research_access: unprobed` 或 absent 运行 §3d 真实 bounded probe；completed current observation 的来源限制走 material-gap 对齐（用户调整环境后重探、修改来源约束或接受当前范围）。只有用户决定真实存在且已持久化后，才可记录 `hitl1.status: recorded`；`recorded_at` 缺失属于随后可执行的机械修复。
 
 ## 8. Stop Behavior
 

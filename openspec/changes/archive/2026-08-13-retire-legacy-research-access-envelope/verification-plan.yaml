@@ -28,6 +28,20 @@ claims:
       external_calls: none
       verdict_judge: deterministic
     verdict_authority: node_test_exit
+  - id: selected-adapter-canary-survives-resolver-removal
+    statement: The selected adapter retains its own canary contract parsing, launcher behavior, and permission-bypass protection after its legacy boundary resolver is removed.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/host_tools/research-access-adapter.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
   - id: hitl1-schema-root-and-adapter-removal
     statement: HITL1 emits one existing ProfileSchema root for a retired envelope, retains current direct-sample success paths, and does not project an adapter owner or provider diagnosis.
     test_class: integration

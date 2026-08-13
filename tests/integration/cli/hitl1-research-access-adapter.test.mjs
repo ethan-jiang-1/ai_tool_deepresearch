@@ -47,6 +47,23 @@ function profile(access) {
   };
 }
 
+function currentAvailableAccess() {
+  const samples = [
+    ['gov_cn', 'china'], ['gitee', 'china'], ['xinhuanet', 'china'], ['cnki_catalog', 'china'],
+    ['wikipedia', 'overseas'], ['github', 'overseas'], ['iana', 'overseas'], ['arxiv', 'overseas'],
+    ['rfc_editor', 'overseas'],
+  ];
+  return {
+    status: 'available',
+    probed_at: '2026-08-11T00:00:00.000Z',
+    sample_observations: samples.map(([sample_id, source_group], index) => (
+      index === 0
+        ? { sample_id, source_group, outcome: 'content', retrieval_surface: 'native' }
+        : { sample_id, source_group, outcome: 'failed' }
+    )),
+  };
+}
+
 function preparedBundle(access) {
   const root = mkdtempSync(join(tmpdir(), 'hitl1-adapter-integration-'));
   const bundle = command(NEW_BUNDLE, ['adapter', '--force', '--target-dir', root]);
@@ -63,50 +80,8 @@ function gate(bundle) {
 }
 
 describe('HITL1 selected research-access adapter integration', () => {
-  it('projects classified selected-adapter boundaries without authorizing Setup', () => {
-    for (const [location, owner, repairKind] of [
-      ['host_surface', 'selected Claude CLI host runtime', 'external_action'],
-      ['host_policy', 'selected Claude CLI host policy', 'external_action'],
-      ['network_path', 'network environment', 'external_action'],
-      ['probe_relay', 'Agent', 'agent_action'],
-    ]) {
-      const run = preparedBundle({
-        status: 'unavailable',
-        probed_at: '2026-07-31T00:00:00.000Z',
-        fetch_outcome: 'not_attempted',
-        reason: 'Direct fixture observation.',
-        eligible_candidate_count: 0,
-        access_boundary: { location, extent: 'universal' },
-      });
-      try {
-        const output = gate(run.bundle);
-        const hint = output.hints.find((candidate) => candidate.rule_id === 'research_access_available');
-
-        assert.equal(output.check.passed, false);
-        assert.equal(output.check.next, null);
-        assert.notEqual(output.routing.kind, 'next');
-        assert.equal(hint.repair_kind, repairKind);
-        assert.match(hint.missing_fact, /Selected research-access adapter recorded/);
-        assert.match(hint.write_to, /research-access-adapter\.md/);
-        assert.match(hint.write_to, new RegExp(owner));
-        assert.match(hint.rerun, /check-gate-hitl1-recorded/);
-      } finally {
-        rmSync(run.root, { recursive: true, force: true });
-      }
-    }
-  });
-
-  it('keeps the existing available observation Gate path unchanged', () => {
-    const run = preparedBundle({
-      status: 'available',
-      probed_at: '2026-07-31T00:00:00.000Z',
-      result_url: 'https://example.com/returned',
-      fetch_outcome: 'success',
-      search_surface: 'WebSearch',
-      fetch_surface: 'WebFetch',
-      eligible_candidate_count: 1,
-      final_candidate_ordinal: 1,
-    });
+  it('keeps a current direct-sample observation Gate path free of provider diagnosis', () => {
+    const run = preparedBundle(currentAvailableAccess());
     try {
       const output = gate(run.bundle);
 

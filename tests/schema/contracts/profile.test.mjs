@@ -3,12 +3,6 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ProfileSchema } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/profile.mjs';
 
-const sourceClassReachability = [
-  { source_class: 'encyclopedia', reachability: 'unreachable' },
-  { source_class: 'code_host', reachability: 'reachable' },
-  { source_class: 'general_web', reachability: 'not_attempted' },
-];
-
 const valid = {
   plan_basename: 'test',
   research_profile: 'quick_factual',
@@ -58,7 +52,7 @@ describe('ProfileSchema', () => {
     assert.ok(ProfileSchema.safeParse(valid).success);
   });
 
-  it('defaults a legacy profile without delegated_concurrency_cap to 12', () => {
+  it('defaults a profile without delegated_concurrency_cap to 12', () => {
     const result = ProfileSchema.parse(valid);
     assert.equal(result.delegated_concurrency_cap, 12);
   });
@@ -111,7 +105,7 @@ describe('ProfileSchema', () => {
     assert.ok(ProfileSchema.safeParse(withSlug).success);
   });
 
-  it('accepts legacy profile without research_access', () => {
+  it('accepts a profile without optional research_access', () => {
     assert.ok(ProfileSchema.safeParse(valid).success);
   });
 
@@ -119,269 +113,21 @@ describe('ProfileSchema', () => {
     assert.ok(ProfileSchema.safeParse({ ...valid, research_access: { status: 'unprobed' } }).success);
   });
 
-  it('rejects unprobed research_access with success facts', () => {
-    const result = ProfileSchema.safeParse({
-      ...valid,
-      research_access: {
-        status: 'unprobed',
-        probed_at: '2026-07-10T00:00:00.000Z',
-        result_url: 'https://example.com/',
-        fetch_outcome: 'success',
-      },
-    });
-    assert.equal(result.success, false);
-  });
-
-  it('accepts valid available research_access', () => {
-    const result = ProfileSchema.safeParse({
-      ...valid,
-      research_access: {
-        status: 'available',
-        probed_at: '2026-07-10T00:00:00.000Z',
-        result_url: 'https://example.com/',
-        fetch_outcome: 'success',
-        search_surface: 'WebSearch',
-        fetch_surface: 'WebFetch',
-      },
-    });
-    assert.equal(result.success, true);
-  });
-
-  it('rejects available research_access with invalid timestamp', () => {
-    const result = ProfileSchema.safeParse({
-      ...valid,
-      research_access: {
-        status: 'available',
-        probed_at: 'not-a-timestamp',
-        result_url: 'https://example.com/',
-        fetch_outcome: 'success',
-      },
-    });
-    assert.equal(result.success, false);
-  });
-
-  it('rejects available research_access with non-HTTP URL', () => {
-    const result = ProfileSchema.safeParse({
-      ...valid,
-      research_access: {
-        status: 'available',
-        probed_at: '2026-07-10T00:00:00.000Z',
-        result_url: 'ftp://example.com/file',
-        fetch_outcome: 'success',
-      },
-    });
-    assert.equal(result.success, false);
-  });
-
-  it('rejects available research_access with non-success outcome', () => {
-    const result = ProfileSchema.safeParse({
-      ...valid,
-      research_access: {
-        status: 'available',
-        probed_at: '2026-07-10T00:00:00.000Z',
-        result_url: 'https://example.com/',
-        fetch_outcome: 'failed',
-      },
-    });
-    assert.equal(result.success, false);
-  });
-
-  it('accepts valid unavailable research_access', () => {
-    const result = ProfileSchema.safeParse({
-      ...valid,
-      research_access: {
-        status: 'unavailable',
-        probed_at: '2026-07-10T00:00:00.000Z',
-        fetch_outcome: 'blocked',
-        reason: 'Fetch surface is blocked in this environment',
-        result_url: 'https://example.com/',
-      },
-    });
-    assert.equal(result.success, true);
-  });
-
-  it('rejects unavailable research_access without reason', () => {
-    const result = ProfileSchema.safeParse({
-      ...valid,
-      research_access: {
-        status: 'unavailable',
-        probed_at: '2026-07-10T00:00:00.000Z',
-        fetch_outcome: 'not_attempted',
-      },
-    });
-    assert.equal(result.success, false);
-  });
-
-  it('rejects unavailable research_access claiming success', () => {
-    const result = ProfileSchema.safeParse({
-      ...valid,
-      research_access: {
-        status: 'unavailable',
-        probed_at: '2026-07-10T00:00:00.000Z',
-        fetch_outcome: 'success',
-        reason: 'Contradictory success claim',
-      },
-    });
-    assert.equal(result.success, false);
-  });
-
-  it('accepts current bounded candidate metadata without changing legacy readability', () => {
-    const noCandidate = ProfileSchema.safeParse({
-      ...valid,
-      research_access: {
-        status: 'unavailable',
-        probed_at: '2026-07-10T00:00:00.000Z',
-        fetch_outcome: 'not_attempted',
-        reason: 'Search returned no eligible HTTP(S) candidate',
-        eligible_candidate_count: 0,
-      },
-    });
-    const attempted = ProfileSchema.safeParse({
-      ...valid,
-      research_access: {
-        status: 'unavailable',
-        probed_at: '2026-07-10T00:00:00.000Z',
-        fetch_outcome: 'failed',
-        reason: 'Native fetch did not return requested page content',
-        result_url: 'https://example.com/',
-        eligible_candidate_count: 2,
-        final_candidate_ordinal: 2,
-      },
-    });
-    const available = ProfileSchema.safeParse({
-      ...valid,
-      research_access: {
-        status: 'available',
-        probed_at: '2026-07-10T00:00:00.000Z',
-        result_url: 'https://example.com/',
-        fetch_outcome: 'success',
-        eligible_candidate_count: 1,
-        final_candidate_ordinal: 1,
-      },
-    });
-    assert.equal(noCandidate.success, true);
-    assert.equal(attempted.success, true);
-    assert.equal(available.success, true);
-  });
-
-  it('rejects contradictory candidate metadata', () => {
-    const baseUnavailable = {
-      status: 'unavailable',
-      probed_at: '2026-07-10T00:00:00.000Z',
-      fetch_outcome: 'not_attempted',
-      reason: 'No legal fetch surface',
-    };
-    const invalid = [
-      { ...baseUnavailable, eligible_candidate_count: 0, final_candidate_ordinal: 1 },
-      { ...baseUnavailable, eligible_candidate_count: 1 },
-      { ...baseUnavailable, eligible_candidate_count: 4, final_candidate_ordinal: 1, result_url: 'https://example.com/' },
-      { ...baseUnavailable, eligible_candidate_count: 2, final_candidate_ordinal: 3, result_url: 'https://example.com/' },
-      { ...baseUnavailable, eligible_candidate_count: 1, final_candidate_ordinal: 1 },
-      {
-        status: 'available', probed_at: '2026-07-10T00:00:00.000Z', result_url: 'https://example.com/', fetch_outcome: 'success', eligible_candidate_count: 0,
-      },
-      { status: 'unprobed', eligible_candidate_count: 1, final_candidate_ordinal: 1 },
-    ];
-    for (const research_access of invalid) {
-      assert.equal(ProfileSchema.safeParse({ ...valid, research_access }).success, false, JSON.stringify(research_access));
-    }
-  });
-
-  it('accepts a statically bounded partial-reachability envelope', () => {
-    const result = ProfileSchema.safeParse({
-      ...valid,
-      research_access: {
-        status: 'available',
-        probed_at: '2026-08-11T00:00:00.000Z',
-        result_url: 'https://example.com/returned',
-        fetch_outcome: 'success',
-        source_class_reachability: sourceClassReachability,
-        access_boundary: { location: 'network_path', extent: 'class_scoped' },
-      },
-    });
-
-    assert.equal(result.success, true);
-  });
-
-  it('accepts an unavailable universal boundary without defaulting unclassified observations', () => {
-    const universal = ProfileSchema.safeParse({
-      ...valid,
-      research_access: {
-        status: 'unavailable',
-        probed_at: '2026-08-11T00:00:00.000Z',
-        fetch_outcome: 'not_attempted',
-        reason: 'The isolated probe could not start.',
-        source_class_reachability: sourceClassReachability.map((entry) => ({ ...entry, reachability: 'unreachable' })),
-        access_boundary: { location: 'probe_relay', extent: 'universal' },
-      },
-    });
-    const unclassified = ProfileSchema.safeParse({
-      ...valid,
-      research_access: {
-        status: 'unavailable',
-        probed_at: '2026-08-11T00:00:00.000Z',
-        fetch_outcome: 'failed',
-        reason: 'Different attempted classes exposed unrelated failures.',
-        source_class_reachability: sourceClassReachability.map((entry) => ({ ...entry, reachability: 'unreachable' })),
-      },
-    });
-
-    assert.equal(universal.success, true);
-    assert.equal(unclassified.success, true);
-    assert.equal(unclassified.data.research_access.access_boundary, undefined);
-  });
-
-  it('rejects malformed source-class envelopes and boundary combinations', () => {
-    const available = {
-      status: 'available',
-      probed_at: '2026-08-11T00:00:00.000Z',
-      result_url: 'https://example.com/returned',
-      fetch_outcome: 'success',
-    };
-    const unavailable = {
-      status: 'unavailable',
-      probed_at: '2026-08-11T00:00:00.000Z',
-      fetch_outcome: 'failed',
-      reason: 'No declared class was reachable.',
-    };
-    const invalid = [
-      { ...available, source_class_reachability: [{ source_class: 'encyclopedia', reachability: 'unreachable' }] },
-      { ...unavailable, source_class_reachability: sourceClassReachability },
-      {
-        ...available,
-        source_class_reachability: [
-          ...sourceClassReachability,
-          { source_class: 'encyclopedia', reachability: 'reachable' },
-        ],
-      },
-      { ...available, source_class_reachability: [{ source_class: 'unknown', reachability: 'reachable' }] },
-      {
-        ...available,
-        source_class_reachability: sourceClassReachability,
-        access_boundary: { location: 'network_path', extent: 'universal' },
-      },
-      {
-        ...available,
-        source_class_reachability: [{ source_class: 'code_host', reachability: 'reachable' }],
-        access_boundary: { location: 'network_path', extent: 'class_scoped' },
-      },
-      {
-        ...unavailable,
-        source_class_reachability: sourceClassReachability.map((entry) => ({ ...entry, reachability: 'unreachable' })),
-        access_boundary: { location: 'network_path', extent: 'class_scoped' },
-      },
-      {
-        status: 'unprobed',
-        source_class_reachability: [{ source_class: 'encyclopedia', reachability: 'not_attempted' }],
-      },
-      {
-        status: 'unprobed',
-        access_boundary: { location: 'probe_relay', extent: 'universal' },
-      },
+  it('rejects every retired access-envelope field family', () => {
+    const legacyFields = [
+      ['result_url', 'https://example.com/returned'],
+      ['fetch_outcome', 'success'],
+      ['search_surface', 'WebSearch'],
+      ['fetch_surface', 'WebFetch'],
+      ['eligible_candidate_count', 1],
+      ['final_candidate_ordinal', 1],
+      ['source_class_reachability', [{ source_class: 'encyclopedia', reachability: 'reachable' }]],
+      ['access_boundary', { location: 'network_path', extent: 'universal' }],
     ];
 
-    for (const research_access of invalid) {
-      assert.equal(ProfileSchema.safeParse({ ...valid, research_access }).success, false, JSON.stringify(research_access));
+    for (const [field, value] of legacyFields) {
+      const research_access = currentDirectAccess({ [field]: value });
+      assert.equal(ProfileSchema.safeParse({ ...valid, research_access }).success, false, field);
     }
   });
 

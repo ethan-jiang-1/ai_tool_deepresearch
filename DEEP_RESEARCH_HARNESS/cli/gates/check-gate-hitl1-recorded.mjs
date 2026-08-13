@@ -29,7 +29,6 @@ import {
   hasOnlyResearchStyleProjectionIssues,
   readResearchStyleDefinition,
 } from '../../engine/helpers/research-style-projection.mjs';
-import { selectedAdapterBoundaryFact } from '../../host_tools/lib/research-access-adapter.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
@@ -161,46 +160,6 @@ function profileSchemaFinding(rule, failure) {
 
 function researchAccessFinding(rule, failure) {
   const profileCoordinate = `${resolveFsPath(bundlePath, 'rb_profile.yaml')}#/research_access`;
-  const unavailable = failure.accessStatus === 'unavailable';
-  const adapterFact = unavailable && failure.accessBoundary
-    ? selectedAdapterBoundaryFact(failure.accessBoundary.location)
-    : null;
-  if (adapterFact) {
-    return makeContractFinding({
-      id: rule.id,
-      ruleId: rule.id,
-      findingSource: 'checker',
-      classification: 'blocking',
-      blockingBasis: 'required_structure',
-      surface: exactTarget(rule.target),
-      expected: failure.expected,
-      observed: failure.observed,
-      missingFact: `Selected research-access adapter recorded ${adapterFact.location} with universal extent at ${profileCoordinate}/access_boundary.`,
-      repairKind: adapterFact.repair_kind,
-      writeTo: `Selected adapter contract DEEP_RESEARCH_HARNESS/host_tools/research-access-adapter.md (${adapterFact.owner}); direct fact at ${profileCoordinate}/access_boundary`,
-      repair: adapterFact.repair,
-      detail: `[${rule.id}] ${failure.detail}`,
-      maskedByRuleId: failure.maskedByRuleId || null,
-    });
-  }
-  if (unavailable) {
-    return makeContractFinding({
-      id: rule.id,
-      ruleId: rule.id,
-      findingSource: 'checker',
-      classification: 'blocking',
-      blockingBasis: 'required_structure',
-      surface: exactTarget(rule.target),
-      expected: failure.expected,
-      observed: failure.observed,
-      missingFact: `The unavailable research-access observation carries no routeable boundary at ${profileCoordinate}/access_boundary; recorded reason: ${failure.accessReason ?? '(absent)'}.`,
-      repairKind: 'agent_action',
-      writeTo: profileCoordinate,
-      repair: 'Rerun the same bounded probe, record its direct classified or honestly unclassified result, and rerun this Gate.',
-      detail: `[${rule.id}] ${failure.detail}`,
-      maskedByRuleId: failure.maskedByRuleId || null,
-    });
-  }
   return makeContractFinding({
     id: rule.id,
     ruleId: rule.id,
@@ -402,6 +361,10 @@ for (const rule of definition.rules) {
           };
         } else {
           const value = resolveObjectPath(profile.value, jsonPath);
+          if (rule.id === 'research_access_available' && parentRoot === 'profile_schema_valid') {
+            maskedRuleIds.add(rule.id);
+            continue;
+          }
           // PRG-002/PRG-010: a schema-valid completed current direct-sample
           // observation satisfies the recorded-observation rule regardless of
           // available/unavailable status. `profile_schema_valid` already enforces
@@ -437,13 +400,6 @@ for (const rule of definition.rules) {
                 missingFact: `${rule.target} must equal '${rule.value}', but the observed value is '${value}'.`,
                 detail: `${rule.target}: expected "${rule.value}", got "${value}"`,
                 maskedByRuleId: parentRoot,
-                accessStatus: rule.id === 'research_access_available' ? value : null,
-                accessReason: rule.id === 'research_access_available' && typeof profile.value.research_access?.reason === 'string'
-                  ? profile.value.research_access.reason
-                  : null,
-                accessBoundary: rule.id === 'research_access_available'
-                  ? profile.value.research_access?.access_boundary ?? null
-                  : null,
               };
               if (rule.id === 'hitl1_status_recorded') maskedRuleIds.add('hitl1_recorded_at_non_empty');
             }

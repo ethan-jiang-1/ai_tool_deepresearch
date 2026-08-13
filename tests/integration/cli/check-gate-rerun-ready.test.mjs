@@ -56,6 +56,23 @@ function updateProfile(bundlePath, mutate) {
   writeFileSync(profilePath, stringifyYaml(profile));
 }
 
+function currentAvailableResearchAccess() {
+  const samples = [
+    ['gov_cn', 'china'], ['gitee', 'china'], ['xinhuanet', 'china'], ['cnki_catalog', 'china'],
+    ['wikipedia', 'overseas'], ['github', 'overseas'], ['iana', 'overseas'], ['arxiv', 'overseas'],
+    ['rfc_editor', 'overseas'],
+  ];
+  return {
+    status: 'available',
+    probed_at: '2026-08-11T00:00:00.000Z',
+    sample_observations: samples.map(([sample_id, source_group], index) => (
+      index === 0
+        ? { sample_id, source_group, outcome: 'content', retrieval_surface: 'native' }
+        : { sample_id, source_group, outcome: 'failed' }
+    )),
+  };
+}
+
 /** Extract the complete multi-line JSON object from optional leading output. */
 function extractJsonBlock(text) {
   const lines = text.trim().split('\n');
@@ -79,12 +96,7 @@ function setupBundle(name, overrides = {}) {
     plan_basename: name,
     research_profile: 'quick_factual',
     root_must_answer_set: ['test question'],
-    research_access: {
-      status: 'available',
-      probed_at: '2026-07-10T00:00:00.000Z',
-      result_url: 'https://example.com/rerun-ready-fixture',
-      fetch_outcome: 'success',
-    },
+    research_access: currentAvailableResearchAccess(),
     human_decision_checkpoints: {
       hitl1: { status: 'recorded' },
       hitl2: {
@@ -99,35 +111,7 @@ function setupBundle(name, overrides = {}) {
     },
   };
 
-  // Use single quotes to avoid shell escaping issues with JSON in YAML
-  const yamlContent = [
-    `plan_basename: ${profile.plan_basename}`,
-    `research_profile: ${profile.research_profile}`,
-    'root_must_answer_set:',
-    ...profile.root_must_answer_set.map(s => `  - "${s}"`),
-    'research_access:',
-    `  status: ${profile.research_access.status}`,
-    `  probed_at: "${profile.research_access.probed_at}"`,
-    `  result_url: "${profile.research_access.result_url}"`,
-    `  fetch_outcome: ${profile.research_access.fetch_outcome}`,
-    'human_decision_checkpoints:',
-    '  hitl1:',
-    `    status: ${profile.human_decision_checkpoints.hitl1.status}`,
-    '  hitl2:',
-    `    status: ${profile.human_decision_checkpoints.hitl2.status}`,
-    `    answerability_class: ${profile.human_decision_checkpoints.hitl2.answerability_class}`,
-    `    user_decision: ${profile.human_decision_checkpoints.hitl2.user_decision}`,
-    `    final_report_view: ${profile.human_decision_checkpoints.hitl2.final_report_view}`,
-  ];
-
-  if (profile.human_decision_checkpoints.hitl2.rerun_count !== undefined) {
-    yamlContent.push(`    rerun_count: ${profile.human_decision_checkpoints.hitl2.rerun_count}`);
-  }
-  if (profile.human_decision_checkpoints.hitl2.rationale !== undefined) {
-    yamlContent.push(`    rationale: "${profile.human_decision_checkpoints.hitl2.rationale}"`);
-  }
-
-  writeFileSync(join(dir, 'rb_profile.yaml'), yamlContent.join('\n') + '\n');
+  writeFileSync(join(dir, 'rb_profile.yaml'), `${stringifyYaml(profile).trimEnd()}\n`);
 
   // rb_status.json: before rerun-ready passes, the active status window is the
   // witnessed predecessor source gate (HITL2) and the current rerun gate.
@@ -406,6 +390,25 @@ describe('gate-rerun-ready — default count', () => {
     assert.deepStrictEqual(result.hints.map((candidate) => candidate.rule_id), ['rerun_profile_prerequisite']);
     assert.ok(result.check.masked_rule_ids.includes('rerun_rationale_present'));
     assert.ok(result.check.masked_rule_ids.includes('rerun_count_valid'));
+  });
+
+  it('rejects a retired access envelope through its ProfileSchema boundary', () => {
+    const bundle = setupBundle('legacy-access');
+    updateProfile(bundle, (profile) => {
+      profile.research_access = {
+        status: 'available',
+        probed_at: '2026-07-10T00:00:00.000Z',
+        result_url: 'https://example.com/old-envelope',
+        fetch_outcome: 'success',
+      };
+    });
+
+    const result = runGate(bundle);
+    const hint = result.hints.find((candidate) => candidate.rule_id === 'rerun_profile_prerequisite');
+
+    assert.strictEqual(result.check.passed, false);
+    assertCompleteHint(hint);
+    assert.strictEqual(hint.repair_kind, 'missing_contract');
   });
 });
 

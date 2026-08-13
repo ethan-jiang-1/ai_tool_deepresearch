@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { parseMdFrontmatter } from '../engine/helpers/gate-helpers.mjs';
 import { computeResearchStyleParams } from '../engine/helpers/research-style-params.mjs';
+import { ProfileSchema } from '../schema/index.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -79,6 +80,11 @@ const raw = readFileSync(profilePath, 'utf-8');
 const profile = parseYaml(raw);
 profile.research_profile = styleName;
 profile.research_style_params = params;
+const parsedProfile = ProfileSchema.safeParse(profile);
+if (!parsedProfile.success) {
+  console.error(`Error: rb_profile.yaml fails ProfileSchema: ${parsedProfile.error.issues.map((issue) => issue.message).join('; ')}`);
+  process.exit(1);
+}
 writeFileSync(profilePath, stringifyYaml(profile));
 
 // ── 5. Output result ──

@@ -12,6 +12,24 @@ const APPLY_STYLE = join(ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'apply-research-s
 const BUNDLES_DIR = join(ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
 
+function currentDirectAccess(status = 'available') {
+  const samples = [
+    ['gov_cn', 'china'], ['gitee', 'china'], ['xinhuanet', 'china'], ['cnki_catalog', 'china'],
+    ['wikipedia', 'overseas'], ['github', 'overseas'], ['iana', 'overseas'], ['arxiv', 'overseas'],
+    ['rfc_editor', 'overseas'],
+  ];
+  return {
+    status,
+    probed_at: '2026-08-11T00:00:00.000Z',
+    sample_observations: samples.map(([sample_id, source_group], index) => (
+      status === 'available' && index === 0
+        ? { sample_id, source_group, outcome: 'content', retrieval_surface: 'native' }
+        : { sample_id, source_group, outcome: 'failed' }
+    )),
+    ...(status === 'unavailable' ? { reason: 'No core sample returned content.' } : {}),
+  };
+}
+
 function unique() { return `rt_style_test_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
 function createBundleWithTopics(topicCount) {
   const result = spawnSync(process.execPath, [NEW_BUNDLE, unique(), '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf8', timeout: 10000 });
@@ -63,7 +81,7 @@ describe('apply-research-style.mjs CLI integration', () => {
     profile.human_decision_checkpoints.hitl1 = { status: 'recorded', recorded_at: '2026-07-10T00:00:00.000Z' };
     profile.human_decision_checkpoints.hitl2.rerun_count = 2;
     profile.human_decision_checkpoints.hitl2.rationale = 'Preserve rerun context';
-    profile.research_access = { status: 'available', probed_at: '2026-07-10T00:00:00.000Z', result_url: 'https://example.com/', fetch_outcome: 'success', search_surface: 'WebSearch', fetch_surface: 'WebFetch' };
+    profile.research_access = currentDirectAccess('available');
     writeFileSync(profilePath, stringifyYaml(profile));
     assert.equal(runApply(dir, 'quick_factual').status, 0);
     const topics = Array.from({ length: 4 }, (_, index) => ({ id: String(index + 1), slug: `${String(index + 1).padStart(2, '0')}_topic-${index + 1}`, title: `Topic ${index + 1}` }));
@@ -80,10 +98,29 @@ describe('apply-research-style.mjs CLI integration', () => {
     const dir = createBundleWithTopics(1);
     const profilePath = join(dir, 'rb_profile.yaml');
     const profile = parseYaml(readFileSync(profilePath, 'utf8'));
-    profile.research_access = { status: 'unavailable', probed_at: '2026-07-10T00:00:00.000Z', fetch_outcome: 'not_attempted', reason: 'Search surface is unavailable' };
+    profile.research_access = currentDirectAccess('unavailable');
     writeFileSync(profilePath, stringifyYaml(profile));
     const result = runApply(dir, 'claim_verification');
     assert.equal(result.status, 0, result.stderr);
     assert.deepEqual(parseYaml(readFileSync(profilePath, 'utf8')).research_access, profile.research_access);
+  });
+
+  it('rejects a retired access envelope without writing a style projection', () => {
+    const dir = createBundleWithTopics(1);
+    const profilePath = join(dir, 'rb_profile.yaml');
+    const profile = parseYaml(readFileSync(profilePath, 'utf8'));
+    profile.research_access = {
+      status: 'available',
+      probed_at: '2026-07-10T00:00:00.000Z',
+      result_url: 'https://example.com/old-envelope',
+      fetch_outcome: 'success',
+    };
+    writeFileSync(profilePath, stringifyYaml(profile));
+
+    const result = runApply(dir, 'quick_factual');
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /ProfileSchema/);
+    assert.equal(parseYaml(readFileSync(profilePath, 'utf8')).research_style_params, undefined);
   });
 });

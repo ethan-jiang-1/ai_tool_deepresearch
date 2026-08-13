@@ -41,6 +41,24 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     assert.equal(JSON.parse(invalid.stdout).error, 'invalid_invocation');
   });
 
+  it('rejects a retired access envelope at the post-final ProfileSchema reader', () => {
+    const bundle = createTerminalFinalBundle(root, 'legacy-access');
+    const profilePath = join(bundle, 'rb_profile.yaml');
+    const profile = parseYaml(readFileSync(profilePath, 'utf8'));
+    profile.research_access = {
+      status: 'available',
+      probed_at: '2026-07-10T00:00:00.000Z',
+      result_url: 'https://example.com/old-envelope',
+      fetch_outcome: 'success',
+    };
+    writeFileSync(profilePath, `${stringifyYaml(profile).trimEnd()}\n`);
+
+    const inspection = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.equal(inspection.verdict, 'blocked');
+    assert.equal(inspection.reason_code, 'fresh_final_ineligible');
+    assert.match(inspection.reason, /Unrecognized key|sample_observations/);
+  });
+
   it('drives event to enter-phase to idempotent advance-status without a synthetic gate attempt', () => {
     const bundle = createTerminalFinalBundle(root, 'entry');
     assert.equal(JSON.parse(readFileSync(join(bundle, 'rb_status.json'), 'utf8')).state, 'completed');

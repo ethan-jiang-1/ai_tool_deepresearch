@@ -131,11 +131,11 @@ describe('HITL1 research-access static guidance', () => {
     ]) {
       assert.doesNotMatch(guide, forbidden);
     }
-    // The profile guidance may name legacy fields only to document readability;
-    // it never makes them a current writer fact.
+    // Current profile guidance exposes no retired envelope vocabulary.
     assert.doesNotMatch(profile, /WebSearch/);
     assert.doesNotMatch(profile, /WebFetch/);
     assert.doesNotMatch(profile, /curl --fail/);
+    assert.doesNotMatch(profile, /result_url|fetch_outcome|source_class_reachability|access_boundary|legacy observation/);
     assert.match(adapter, /executor-scoped canary metadata only/);
     assert.match(adapter, /deepseek_anthropic_compatible/);
     assert.match(adapter, /WebSearch/);
@@ -158,13 +158,13 @@ describe('HITL1 research-access static guidance', () => {
     assert.match(probe, /没有自动 retry、固定 retry 次数、轮询、VPN 操作、permission bypass 或新的 HITL checkpoint/);
   });
 
-  it('keeps profile guidance to the direct snapshot and legacy readability without provider facts', () => {
+  it('keeps profile guidance to the current direct snapshot without provider facts', () => {
     assert.match(profile, /sample_observations/);
     assert.match(profile, /`retrieval_surface`/);
     assert.match(profile, /`round_budget_not_attempted`/);
     assert.match(profile, /`not_attempted`/);
-    assert.match(profile, /legacy observation（只读兼容/);
     assert.doesNotMatch(profile, /WebSearch/);
     assert.doesNotMatch(profile, /WebFetch/);
+    assert.doesNotMatch(profile, /result_url|fetch_outcome|source_class_reachability|access_boundary|legacy observation/);
   });
 });

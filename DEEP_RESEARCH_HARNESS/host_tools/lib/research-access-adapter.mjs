@@ -1,8 +1,7 @@
 // @impl REA-001, REA-002, REA-003
-// Executor-scoped Claude canary launcher metadata and legacy boundary-owner
-// resolver. Production HITL1 direct retrieval is execution-neutral and owned by
-// the isolated controller; nothing here is a production WebSearch/WebFetch/Claude
-// prerequisite for that controller.
+// Executor-scoped Claude canary launcher metadata. Production HITL1 direct
+// retrieval is execution-neutral and owned by the isolated controller; nothing
+// here is a production WebSearch/WebFetch/Claude prerequisite for that controller.
 
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -26,33 +25,6 @@ export const SELECTED_RESEARCH_ACCESS_ADAPTER = Object.freeze({
   permission_mode: 'generic_non_bypass',
   search_surface: 'WebSearch',
   fetch_surface: 'WebFetch',
-});
-
-// Legacy-only boundary projection. These facts are mapped only from a
-// schema-validated recorded legacy `access_boundary` location; they never
-// infer a current direct-sample diagnosis, provider, relevance, or tool
-// permission from reason prose or sample data.
-const UNAVAILABLE_FACTS = Object.freeze({
-  host_surface: Object.freeze({
-    owner: 'selected Claude CLI host runtime',
-    actor: 'external',
-    repair: 'Resolve the recorded legacy host-surface boundary, then let the Agent rerun the same bounded probe and Gate.',
-  }),
-  host_policy: Object.freeze({
-    owner: 'selected Claude CLI host policy',
-    actor: 'external',
-    repair: 'Resolve the recorded legacy host-policy boundary, then let the Agent rerun the same bounded probe and Gate.',
-  }),
-  network_path: Object.freeze({
-    owner: 'network environment',
-    actor: 'external',
-    repair: 'Resolve the recorded legacy network-path boundary, then let the Agent rerun the same bounded probe and Gate.',
-  }),
-  probe_relay: Object.freeze({
-    owner: 'Agent',
-    actor: 'agent',
-    repair: 'Rerun the same bounded probe through the Phase Agent, record its direct result, and rerun the same Gate.',
-  }),
 });
 
 function frontmatter(text) {
@@ -139,16 +111,4 @@ export function validateSelectedAdapterSameUrlBinding({ candidateUrl, fetchTarge
     return { same_url_bound: false, code: 'same_url_mismatch', provider_availability_proven: false };
   }
   return { same_url_bound: true, code: null, provider_availability_proven: false };
-}
-
-export function selectedAdapterBoundaryFact(location) {
-  const fact = UNAVAILABLE_FACTS[location];
-  if (!fact) return null;
-  return {
-    location,
-    owner: fact.owner,
-    actor: fact.actor,
-    repair_kind: fact.actor === 'agent' ? 'agent_action' : 'external_action',
-    repair: fact.repair,
-  };
 }

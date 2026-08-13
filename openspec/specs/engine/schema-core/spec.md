@@ -13,9 +13,8 @@ The schema SHALL retain the current lifecycle and HITL/profile Zod enums, includ
 the six-value `HITL2UserDecision` set. It SHALL additionally define closed
 research-access vocabulary for `china` and `overseas` source groups, the declared
 fixed sample IDs, compact sample terminal outcomes, and executor-neutral direct
-retrieval surface categories. The existing source-class and candidate vocabulary
-remains readable only for legacy observations; it SHALL NOT constrain the current
-direct-sample writer.
+retrieval surface categories. Retired source-class, candidate, and access-boundary
+vocabulary SHALL NOT remain a current enum or profile contract surface.
 
 The new access vocabulary SHALL distinguish real content, login-required,
 challenge, HTTP-denied, rate-limited, transport-inconclusive, other failed,
@@ -39,13 +38,6 @@ The presence of the `not_started` schema sentinel SHALL NOT make it a gate-pass 
 - **THEN** it SHALL accept only declared source groups, sample IDs, outcome values,
   and surface categories
 - **AND** it SHALL reject an undeclared sample, provider name, or status-code field
-
-#### Scenario: Legacy vocabulary remains readable
-
-- **WHEN** a legacy profile contains the previous source-class envelope or bounded
-  candidate metadata
-- **THEN** the existing legacy schema branch SHALL remain readable
-- **AND** the current HITL1 writer SHALL not emit those search-derived fields
 
 #### Scenario: HumanCheckpointStatus has 5 values
 
@@ -85,15 +77,15 @@ The presence of the `not_started` schema sentinel SHALL NOT make it a gate-pass 
 
 ### Requirement: Six Zod contracts
 
-The system SHALL retain Zod contracts for bundle control file validation, including the Queue contract's queue-v2 demand and work-unit distinctions. The Profile contract SHALL retain optional legacy-compatible `research_access`; new bundle templates initialize it as `status: unprobed`, and a legacy profile without the field remains readable as unprobed.
+The system SHALL retain Zod contracts for bundle control file validation, including the Queue contract's queue-v2 demand and work-unit distinctions. The Profile contract SHALL keep `research_access` optional: new bundle templates initialize it as `status: unprobed`, while a profile without the field remains schema-valid outside a checkpoint that explicitly requires a completed observation.
 
 `unprobed` SHALL contain only `status: unprobed`. A completed current observation SHALL be strict and status-discriminated, require an ISO 8601 `probed_at`, and carry one complete statically bounded direct-sample observation for every controller declared sample. Each sample entry SHALL contain its fixed sample ID, matching source group, and one terminal outcome; only a `content` outcome MAY carry one truthful executor-neutral surface category. No field may carry a URL, body, header, credential, query, candidate, response status, retry/attempt history, or provider identity.
 
 The current writer SHALL set `status: available` only when at least one non- diagnostic core sample returned real content. It SHALL set `status: unavailable` when no core sample returned real content. An unavailable current observation SHALL also retain one non-empty direct summary reason. A current observation may include a transport-inconclusive or round-budget-not-attempted sample terminal outcome without claiming a network owner. The profile schema validates the declared data shape and the status/content invariant; it SHALL NOT infer source relevance, choose a repair, decide whether the user may proceed, or predict later network availability.
 
-The whole-probe no-request branch SHALL be `status: unavailable`, carry the required direct summary reason, contain every declared sample exactly once with `outcome: not_attempted`, and carry no retrieval surface. It SHALL not be used for a sample that was skipped after the round began; that sample uses `round_budget_not_attempted`. Neither no-attempt branch asserts that its sample is unreachable or establishes an `access_boundary`.
+The whole-probe no-request branch SHALL be `status: unavailable`, carry the required direct summary reason, contain every declared sample exactly once with `outcome: not_attempted`, and carry no retrieval surface. It SHALL not be used for a sample that was skipped after the round began; that sample uses `round_budget_not_attempted`. Neither no-attempt branch asserts that its sample is unreachable or establishes a host, network, or owner boundary.
 
-Legacy available and unavailable observations with their HTTP(S) result URL, search/fetch labels, candidate metadata, source-class envelope, and optional paired access-boundary fields SHALL remain readable without migration. The current direct-sample format and the legacy search-derived format SHALL NOT be mixed in one observation. The optional legacy `access_boundary` continues to be paired and closed when present; the new per-sample outcomes do not fabricate a boundary classification.
+An earlier URL/fetch/search/candidate/source-class/access-boundary research-access envelope SHALL fail ProfileSchema as an unsupported current shape. The schema SHALL NOT default, convert, migrate, upgrade, retain a discriminator for, or infer a direct-sample observation from that envelope.
 
 The Profile contract SHALL NOT store a derived gate verdict, response body, query text or history, candidate URL list, retry list, or HTTP status matrix for this observation. The statically bounded direct-sample set SHALL NOT become such a matrix: it SHALL retain at most one closed-enumeration result per declared sample and SHALL NOT retain per-attempt records, response bodies, HTTP status codes, query text, or candidate URL lists for any sample.
 
@@ -125,18 +117,10 @@ The Profile contract SHALL NOT store a derived gate verdict, response body, quer
 - **THEN** `status: unavailable` with a non-empty direct summary reason SHALL be
   valid and `status: available` SHALL fail
 
-#### Scenario: Legacy observations remain readable
-
-- **WHEN** an earlier `research_access` observation uses its existing URL,
-  candidate, source-class, or paired-boundary form
-- **THEN** ProfileSchema SHALL accept it under the legacy branch without defaulting
-  it into the new direct-sample format
-- **AND** the new writer requirement SHALL not rewrite existing bundle bytes
-
 #### Scenario: Unprobed cannot claim probe material
 
 - **WHEN** `research_access.status` is `unprobed` with a timestamp, direct-sample
-  entries, legacy URL/candidate metadata, reason, surface, or boundary fields
+  entries, URL/candidate metadata, reason, surface, or boundary fields
 - **THEN** ProfileSchema SHALL fail rather than silently accepting contradictory data
 
 #### Scenario: No-request relay fact is distinct from a spent round budget
@@ -147,36 +131,6 @@ The Profile contract SHALL NOT store a derived gate verdict, response body, quer
   `not_attempted` form with a direct summary reason
 - **AND** it SHALL reject using `round_budget_not_attempted` as a relay substitute,
   or mixing the whole-probe no-request outcome with attempted sample results
-
-#### Scenario: source-class envelope stays statically bounded
-
-- **WHEN** a legacy observation records unique closed-enumeration reachability results for declared source classes
-- **THEN** ProfileSchema SHALL accept it when its status-specific facts are otherwise valid
-- **AND** it SHALL reject a duplicate class entry, an undeclared class entry, an available observation with no reachable class, an unavailable observation with a reachable class, and any per-class attempt list, response body, HTTP status code, query text, or candidate URL list
-
-#### Scenario: access boundary is paired, closed, and status-consistent
-
-- **WHEN** a legacy available or unavailable observation records a boundary-location and boundary-extent value
-- **THEN** ProfileSchema SHALL accept only values inside the two closed enumerations
-- **AND** it SHALL reject a boundary location without its extent, an extent without its location, `available` with universal extent or without both reachable and unreachable classes, `unavailable` with class-scoped extent, and either value on unprobed observation
-
-#### Scenario: unclassified legacy observation remains valid
-
-- **WHEN** a legacy available or unavailable observation has no `access_boundary` value (and an unavailable branch carries its required non-empty reason)
-- **THEN** ProfileSchema SHALL accept the observation
-- **AND** it SHALL NOT infer, default, or normalize a boundary value from the reason text
-
-#### Scenario: bounded candidate metadata is internally consistent
-
-- **WHEN** a legacy available observation records `eligible_candidate_count: 3` and `final_candidate_ordinal: 3`, or a legacy unavailable no-candidate observation records `eligible_candidate_count: 0` without an ordinal
-- **THEN** ProfileSchema SHALL accept the observation when its status-specific facts are otherwise valid
-- **AND** it SHALL reject an ordinal without a positive count, an ordinal greater than the count, a count outside `0..3`, an ordinal on a zero-count observation, an available observation with zero candidate count, or a metadata-bearing positive-count observation without its final `result_url`
-
-#### Scenario: legacy profile is unprobed rather than available
-
-- **WHEN** an existing profile has no `research_access` field
-- **THEN** ProfileSchema SHALL remain readable for compatibility
-- **AND** HITL1 checks SHALL treat the capability as unprobed
 
 ### Requirement: Rerun tracking field in HITL2 profile
 

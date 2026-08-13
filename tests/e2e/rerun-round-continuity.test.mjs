@@ -21,13 +21,29 @@ let baseline;
 let snapshot;
 const TOPIC = { topic_uid: 'tp_11111111-1111-4111-8111-111111111111', id: 't1', slug: 'topic-a', title: 'Topic A', must_answer: ['How does rerun continuity preserve authority?'], scope_role: 'primary', depends_on_topic_uids: [] };
 
+function currentAvailableResearchAccess() {
+  const samples = [
+    ['gov_cn', 'china'], ['gitee', 'china'], ['xinhuanet', 'china'], ['cnki_catalog', 'china'],
+    ['wikipedia', 'overseas'], ['github', 'overseas'], ['iana', 'overseas'], ['arxiv', 'overseas'],
+    ['rfc_editor', 'overseas'],
+  ];
+  return {
+    status: 'available', probed_at: '2026-08-11T00:00:00.000Z',
+    sample_observations: samples.map(([sample_id, source_group], index) => (
+      index === 0
+        ? { sample_id, source_group, outcome: 'content', retrieval_surface: 'native' }
+        : { sample_id, source_group, outcome: 'failed' }
+    )),
+  };
+}
+
 function writePlanAndProfile(bundle, { decision = 'not_started', rerunCount = 0 } = {}) {
   const planBasename = basename(bundle).replace(/^dpt_rb_/, '');
   writeFileSync(join(bundle, 'rb_plan.md'), `---\n${JSON.stringify({ plan_basename: planBasename, topic_registry_version: '2', derived_topic_count: 1, topic_registry: [TOPIC] }, null, 2)}\n---\n# Deterministic rerun plan\n`);
   writeFileSync(join(bundle, 'rb_profile.yaml'), stringifyYaml({
     plan_basename: planBasename, research_profile: 'debug', root_must_answer_set: TOPIC.must_answer,
     research_style_params: { user_visible: false, wave0_per_topic_source_floor: 1, wave0_shared_ref_total: 1, wave1_per_topic_ref_floor: 1, topic_unique_ratio: 0, counterexample_search: false, cross_verification: false, p0p1_independent_backing: 1, quality_min_tier: 'tier_4', quality_min_substance: 'none', wave2_cross_topic_depth: 0, wave2_emergent_search_rounds: 0 },
-    research_access: { status: 'available', probed_at: '2026-07-15T00:00:00.000Z', result_url: 'https://research.example.org/probe', fetch_outcome: 'success' },
+    research_access: currentAvailableResearchAccess(),
     human_decision_checkpoints: {
       hitl1: { status: 'recorded', recorded_at: '2026-07-15T00:00:00.000Z', research_profile: 'debug', root_must_answer_set: TOPIC.must_answer, answerability_class: 'ready_substantive' },
       hitl2: { status: decision === 'not_started' ? 'not_started' : 'recorded', answerability_class: 'not_assessed', user_decision: decision, final_report_view: 'profile_default', rationale: decision === 'rerun' ? 'Test another controlled rerun direction.' : '', rerun_count: rerunCount, recorded_at: '2026-07-15T00:00:00.000Z' },

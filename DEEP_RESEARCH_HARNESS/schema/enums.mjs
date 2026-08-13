@@ -71,31 +71,6 @@ export const FinalReportView = z.enum([
   'custom',
 ]);
 
-// @impl SCO-001: bounded HITL1 research-access envelope vocabulary
-export const SourceClass = z.enum([
-  'encyclopedia',
-  'code_host',
-  'general_web',
-]);
-
-export const SourceClassReachability = z.enum([
-  'reachable',
-  'unreachable',
-  'not_attempted',
-]);
-
-export const ResearchAccessBoundaryLocation = z.enum([
-  'host_surface',
-  'host_policy',
-  'network_path',
-  'probe_relay',
-]);
-
-export const ResearchAccessBoundaryExtent = z.enum([
-  'universal',
-  'class_scoped',
-]);
-
 // @impl SCO-001: closed vocabulary for the current HITL1 direct-sample observation
 export const ResearchAccessSourceGroup = z.enum([
   'china',

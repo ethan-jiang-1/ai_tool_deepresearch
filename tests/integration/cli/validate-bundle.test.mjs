@@ -4,10 +4,13 @@ import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, mkdirSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
 const FIXTURE = join(process.cwd(), 'tests/fixtures/DEEP_RESEARCH_HARNESS');
 const VALIDATE = join(FIXTURE, 'cli/validate-bundle.mjs');
+const PRODUCTION_VALIDATE = join(process.cwd(), 'DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs');
+const NEW_BUNDLE = join(process.cwd(), 'experiments_env/shared/new-disposable-bundle.mjs');
 
 describe('validate-bundle.mjs integration', () => {
   let tmpDir;
@@ -64,6 +67,27 @@ describe('validate-bundle.mjs integration', () => {
     writeFileSync(join(bundleDir, 'rb_status.json'), JSON.stringify({ current_mode: 'execution', state: 'not_started', current_gate: 'invalid_value', next_gate: 'seed_topics_ready' }));
     const result = spawnSync('node', [VALIDATE, bundleDir], { encoding: 'utf-8', timeout: 5000 });
     if (result.status !== 1) throw new Error(`Expected exit 1, got ${result.status}\n${result.stdout}`);
+  });
+
+  it('rejects a retired access envelope through the production ProfileSchema reader', () => {
+    const bundlesRoot = join(tmpDir, 'production-bundles');
+    const created = spawnSync('node', [NEW_BUNDLE, 'legacy-access', '--force', '--target-dir', bundlesRoot], { encoding: 'utf-8', timeout: 10000 });
+    assert.equal(created.status, 0, created.stderr);
+    const bundleDir = created.stdout.trim();
+    const profilePath = join(bundleDir, 'rb_profile.yaml');
+    const profile = parseYaml(readFileSync(profilePath, 'utf-8'));
+    profile.research_access = {
+      status: 'available',
+      probed_at: '2026-07-10T00:00:00.000Z',
+      result_url: 'https://example.com/old-envelope',
+      fetch_outcome: 'success',
+    };
+    writeFileSync(profilePath, stringifyYaml(profile));
+
+    const result = spawnSync('node', [PRODUCTION_VALIDATE, bundleDir], { encoding: 'utf-8', timeout: 5000 });
+
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /rb_profile\.yaml/);
   });
 });
 
