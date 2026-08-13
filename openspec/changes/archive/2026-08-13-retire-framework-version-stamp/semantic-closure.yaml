@@ -1,0 +1,9 @@
+schema_version: semantic-closure/v1
+change: retire-framework-version-stamp
+status: not_applicable
+reason: >-
+  This change removes a creation-time metadata projection with no current
+  decision reader. It changes no selected-run-bundle semantic fact family,
+  resolver, schema discriminator, Gate, receipt, trace, lifecycle authority,
+  or deterministic Engine verdict. Existing generic unknown-frontmatter
+  preservation is characterized but not materially changed.

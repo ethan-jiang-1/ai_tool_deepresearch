@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @impl CMI-004, CMI-007, CMI-008, CMI-009, FRE-003: instantiate-run-bundle.mjs — Create a production run bundle at repo root
+// @impl CMI-004, CMI-008, CMI-009, FRE-003: instantiate-run-bundle.mjs — Create a production run bundle at repo root
 // Usage: node instantiate-run-bundle.mjs <name>
 // Creates dpt_rb_<name>/ from DEEP_RESEARCH_HARNESS/rb_templates/.
 // Prints absolute bundle path to stdout for shell consumption.
@@ -17,7 +17,6 @@ import {
   PlanSchema,
 } from '../schema/index.mjs';
 import { parseMdFrontmatter } from '../engine/helpers/gate-helpers.mjs';
-import { readFrameworkVersion } from '../engine/helpers/framework-version.mjs';
 import { createTrace } from '../engine/trace.mjs';
 import { logToRun } from '../engine/logger.mjs';
 
@@ -106,9 +105,6 @@ try {
   process.exit(1);
 }
 
-// CMI-007: framework version this bundle is created under (CHANGELOG authority, VEM-001).
-const frameworkVersion = readFrameworkVersion({ repoRoot });
-
 const baseDir = targetDir ?? repoRoot;
 mkdirSync(baseDir, { recursive: true });
 const bundleDir = resolve(baseDir, `dpt_rb_${bundleName}`);
@@ -159,7 +155,6 @@ for (const t of templates) {
 
   let content = readFileSync(tmplPath, 'utf-8');
   content = content.replace(/\{\{name\}\}/g, bundleName);
-  content = content.replace(/\{\{framework_version\}\}/g, frameworkVersion);
   content = content.replace(/\{\{framework_root_relpath\}\}/g, frameworkRootRelative);
   content = content.replace(/\{\{repo_command_root_relpath\}\}/g, repoCommandRootRelative);
 

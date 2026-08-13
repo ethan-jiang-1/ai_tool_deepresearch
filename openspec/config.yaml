@@ -145,9 +145,6 @@ rules:
     - 说明 direct Source of Record、最短合法闭环与 net simplification impact，明确删除、合并或避免的 control complexity
     - 对新增或实质改变的具名 state、projection、status、concept、Module、command 或 reader-facing view，先写简短的 semantic-precision reflection：明确读者/有界问题、必须保留的区别与正常推理停止点（或明确 unknown）
     - 说明 user decision / Agent execution / Engine verdict 的责任边界，不得用 human-directed 创造 permission 或 capability
-    - |
-      修改 `DEEP_RESEARCH_HARNESS/` 行为的 change 必须在 proposal 中声明是否需要 version bump；
-      需要时声明 target version（如 `v0.2`），作为 implementation 阶段 CHANGELOG 和 RUN.md banner 更新的依据。
   design:
     - "数据结构用 Zod schema 定义（`.refine()` 做跨字段校验）"
     - 状态机用显式转换表 (Map/object)，不允许隐藏在 prose 里
@@ -176,10 +173,6 @@ rules:
            (0 deltaHeaderInMain / 0 missingPurpose / 0 missingRequirements / 0 missingReqHeader)
       收尾检查固化进每个 change 生命周期——防止 requirement ID 堆叠/漏标/被覆盖，
       以及 delta 格式污染 OpenSpec main spec 而无人发现。
-    - |
-      修改 `DEEP_RESEARCH_HARNESS/` 行为且 proposal 声明了 version bump 的 change，
-      其 tasks 必须包含两步：(a) 更新 `CHANGELOG.md`（简洁格式：版本号 + 一两句说清改了什么）；
-      (b) 同步 `DEEP_RESEARCH_HARNESS/RUN.md` 版本横幅与 CHANGELOG 最新条目一致。
     - |
       使用 feedback lifecycle 的 change 必须在 tasks.md 中生成两个 first-class checkbox task：
       一个先于首次 target edit 的 plan review，任务行恰含 `openspec-feedback:plan-review`；

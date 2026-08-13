@@ -28,7 +28,7 @@
 | ID | 候选 OpenSpec change | 当前判断 | 风险 | 解释卡 |
 |---|---|---|---|---|
 | C1 | `retire-inactive-contract-surfaces` | 应拆成“安全 tombstone 清理”与“仍有活跃实验 consumer 的 gate utilities”两个判断 | L1-L3 | [C1](changes/C1-retire-inactive-contract-surfaces.md) |
-| C2 | `remove-internal-versioning-and-slim-entry` | C2a 已 archived；C2b stamp 与 C2c governance 都有完整调查，但仍须逐项决定 | L2-L3 | [C2](changes/C2-remove-internal-versioning-and-slim-entry.md) |
+| C2 | `remove-internal-versioning-and-slim-entry` | C2a/C2b/C2c 均已 governed-archived；下一项是 C3 的单项 policy decision | L2-L3 | [C2](changes/C2-remove-internal-versioning-and-slim-entry.md) |
 | C3 | `drop-legacy-bundle-entry-compatibility` | current guidance/CLI 仍显式接受旧入口；唯一未决点是 old-only bundle 的 inspect policy | L3 | [C3](changes/C3-drop-legacy-bundle-entry-compatibility.md) |
 | C4 | `drop-legacy-profile-and-topic-compatibility` | C4a profile access 为 L3；C4b 仅指 LegacyPlan migration，`previous_layouts` 是 current lineage，必须保留 | L3-L4 | [C4](changes/C4-drop-legacy-profile-and-topic-compatibility.md) |
 | C5 | `drop-legacy-reference-and-experiment-formats` | C5a 先改 current authoring 为 UID-only，再决定 historic reader；C5b 是 retained-history selection policy | L3-L4 | [C5](changes/C5-drop-legacy-reference-and-experiment-formats.md) |
@@ -46,7 +46,7 @@ C1 (先分辨 dead surface / current experiment surface)
  |                                       +--> C6 (work-unit; only after explicit decision)
  +--> C7 (main specs current-state rewrite) --> C8 (context/routing)
 
-C2c (version governance) --> C2b (framework stamp) --> C3 (bundle entry)
+C2c policy approved --> C2b archive --> C2c archive --> C3 policy decision (bundle entry)
 
 C4a (profile access)                  [L3, independent decision gate]
 C4b (legacy plan migration) ---> C5a / C6  [L4, independent decision gates]

@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: retire-internal-version-choreography
+status: not_applicable
+reason: >-
+  This change removes internal release-history projections and their governance
+  choreography from the selected Harness entry. It changes no selected-run
+  bundle runtime fact family, deterministic resolver, schema, Gate, receipt,
+  trace, or Engine verdict. C2b separately owns the framework_version artifact
+  writer and must complete before this change applies its final governance
+  state.

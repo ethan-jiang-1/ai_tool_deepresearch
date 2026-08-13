@@ -1,0 +1,97 @@
+schema_version: verification-routing/v1
+change: retire-framework-version-stamp
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The canonical topic-state helper test executes the existing mutation
+      path against a temporary fixture and proves that generic unknown plan
+      frontmatter survives without making the retired stamp a special case.
+  integration:
+    status: selected
+    rationale: >-
+      Production bundle instantiation and the static cross-surface contracts
+      jointly prove fresh-output absence and removal of stale current
+      vocabulary from the affected Harness/spec/test boundaries.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      The change neither alters a workflow-scale lifecycle nor makes a claim
+      about a complete simulated research run; the production creator and
+      plan-mutation boundaries are directly covered at unit/integration scope.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change makes no claim about a real Agent's research behavior and
+      does not require a real disposable run or external research tools.
+claims:
+  - id: arbitrary-unknown-plan-frontmatter-survives-current-mutation
+    statement: >-
+      The existing canonical plan-mutation path preserves an arbitrary
+      pre-existing unknown frontmatter key through a real normal mutation;
+      this is generic current behavior, not a framework_version-specific
+      compatibility rule.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/canonical-topic-state.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: fresh-bundle-omits-retired-framework-version-stamp
+    statement: >-
+      CMI-004, CMI-008, and CMI-009: production bundle instantiation creates a
+      schema-valid temporary bundle whose rb_plan.md frontmatter omits
+      framework_version and does not read a root changelog value to populate it.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/instantiate-run-bundle.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-contract-vocabulary-excludes-retired-stamp
+    statement: >-
+      The accepted bundle-instantiation and canonical topic-state static
+      contract surfaces no longer present framework_version or CMI-007 as a
+      current positive artifact requirement while retaining their owned current
+      boundaries.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/canonical-harness-vocabulary-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: static-topic-state-contract-keeps-preservation-generic
+    statement: >-
+      Current canonical topic-state documentation/tests retain the generic
+      passthrough-clone-render preservation boundary without naming a retired
+      bundle stamp as its positive contract.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/canonical-topic-state-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

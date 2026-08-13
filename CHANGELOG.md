@@ -1,5 +1,13 @@
 # Changelog
 
+> Historical note: the `v0.x` headings below are retained human change history,
+> not a current Harness version, package or Git release, runtime compatibility
+> selector, or execution Source of Record.
+
+## v0.90
+
+- New run bundles no longer record an internal framework-version stamp in plan frontmatter.
+
 ## v0.89
 
 - Wave1 post-submit closeout now completes the valid current depth review before

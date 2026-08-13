@@ -2,7 +2,7 @@
 
 > Candidate change: `retire-framework-version-stamp`
 >
-> Status: decision ready; no proposal created
+> Status: governed-archived as `2026-08-13-retire-framework-version-stamp`; C2c's target-edit precondition is satisfied
 >
 > Risk: L2
 
@@ -59,10 +59,11 @@ compatibility selector when it is not.
 - **User-visible historic effect:** a human opening a newly created bundle no
   longer sees the internal version stamp. Old bundles retain whatever they
   already recorded.
-- **Dependency:** if C2c retires changelog/version choreography, C2b should
-  ensure no new bundle can stamp a stale version afterwards.
+- **Dependency:** C2c has selected option A, which removes changelog/version
+  authority. C2b must therefore Apply, sync, and governed-archive before C2c
+  begins target edits, so no new bundle can stamp a stale historical heading.
 
-## Policy decision needed
+## Decision record
 
 Recommended: approve the proposed result above. It removes a writer-only
 release stamp while preserving current artifact readability and avoiding any
@@ -73,19 +74,15 @@ migration scheme.
 - [x] Current writer chain mapped.
 - [x] No current decision reader found.
 - [x] Generic old-frontmatter preservation identified as protected current behavior.
-- [ ] C2c/C2b ordering recorded in the eventual proposal and tasks.
-- [ ] User approves this bounded policy after C2c is decided.
+- [x] C2c has selected option A; the required target-edit order is C2b
+  proposal -> Apply -> sync -> archive, then C2c Apply. C2b's eventual
+  proposal and tasks must carry that precondition.
+- [x] User approved this bounded policy on 2026-08-13; the OpenSpec change is planning-complete and its plan validation passed.
+- [x] Apply, delta/main sync, focused verification, closeout review, and governed archive completed on 2026-08-13 as `2026-08-13-retire-framework-version-stamp`.
 
-## Expected verification
+## Verification record
 
-```bash
-node --test tests/engine/framework-version.test.mjs \
-  tests/integration/cli/instantiate-run-bundle.test.mjs \
-  tests/integration/md/canonical-topic-state-contract.test.mjs
-node DEEP_RESEARCH_HARNESS/cli/validate-workflow-package.mjs
-node openspec/governance/check-project-specs.mjs
-```
-
-The eventual change needs a boundary test that proves an old arbitrary
+The governed archive recorded 60 focused passing tests plus workflow-package
+and governance checks. Its boundary regression proves that an old arbitrary
 frontmatter key still round-trips, without naming `framework_version` as a
 current positive contract.

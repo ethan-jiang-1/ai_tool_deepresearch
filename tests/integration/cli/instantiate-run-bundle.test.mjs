@@ -106,18 +106,13 @@ describe('instantiate-run-bundle.mjs integration', () => {
     assert.equal(existsSync(join(dir, 'rb_status.json')), false);
   });
 
-  it('stamps framework_version in rb_plan.md frontmatter (CMI-007)', () => {
+  it('omits retired framework_version from rb_plan.md frontmatter', () => {
     const name = uniqueName('fwver');
     const dir = trackBundle(name);
     const result = runInstantiate(name);
     assert.equal(result.status, 0, result.stderr);
     const fm = parseFrontmatter(readFileSync(join(dir, 'rb_plan.md'), 'utf-8'));
-    assert.equal(typeof fm.framework_version, 'string');
-    assert.ok(fm.framework_version.length > 0, 'framework_version must be non-empty');
-    const changelog = readFileSync(join(REPO_ROOT, 'CHANGELOG.md'), 'utf-8');
-    const match = changelog.match(/^##\s+(v?\d+\.\d+(?:\.\d+)?)\s*$/m);
-    assert.ok(match, 'CHANGELOG must have a version heading');
-    assert.equal(fm.framework_version, match[1]);
+    assert.equal(Object.hasOwn(fm, 'framework_version'), false);
   });
 
   it('returns standalone help before argv validation without creating a target', () => {

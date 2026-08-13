@@ -335,7 +335,7 @@ CMI-003: cmd-bundle-instantiation — JS helper inspect-bundle.mjs (structure ch
 CMI-004: cmd-bundle-instantiation — Template files (rb_templates/)
 CMI-005: cmd-bundle-instantiation — Bundle naming is Agent-derived or already-supplied, not a mid-pipeline user dependency
 CMI-006: cmd-bundle-instantiation — rb_status.json template includes current_node reentry coordinate
-CMI-007: cmd-bundle-instantiation — rb_plan.md template stamps framework_version at creation (CHANGELOG/VEM-001 authority)
+CMI-007: "cmd-bundle-instantiation — retired framework_version creation stamp; never reuse [DEPRECATED]"
 CMI-008: cmd-bundle-instantiation — Production creator rejects malformed argv before filesystem side effects
 CMI-009: cmd-bundle-instantiation — Bundle creators render actual framework navigation coordinates
 
@@ -362,8 +362,8 @@ REF-010: reference-flat-format — Reference metadata values are writable as val
 REF-011: reference-flat-format — Canonical Wave1 locator derivation is visible to the Agent in guidance and inspect feedback
 
 # bundle/run-entry
-RUE-001: run-entry — RUN.md entry point announces the framework version banner
-RUE-002: run-entry — RUN.md Section 0 instructs agents not to use built-in research shortcuts
+RUE-001: run-entry — RUN.md excludes an internal version projection
+RUE-002: run-entry — RUN.md Section 0 immediately follows the title and instructs agents not to use built-in research shortcuts
 RUE-003: run-entry — Project changelog records version history and known limitations [DEPRECATED]
 RUE-004: run-entry — Agent behavior files stay synchronized on the research shortcut override
 RUE-005: run-entry — RUN.md frames drag/paste trigger as one-time handoff into Agent-run framework execution
@@ -540,10 +540,10 @@ SEF-003: semantic-fact-closure — A fact family converges on one semantic resol
 SEF-004: semantic-fact-closure — Semantic closure checking remains structural and root-first
 
 # governance/version-management
-VEM-001: version-management — CHANGELOG is concise and human-readable at project root
-VEM-002: version-management — Every DEEP_RESEARCH_HARNESS behavior change updates CHANGELOG
-VEM-003: version-management — RUN.md version banner matches latest CHANGELOG entry
-VEM-004: version-management — Proposal declares the target version and apply uses it without pinning a historical current version
+VEM-001: version-management — CHANGELOG is concise non-authoritative human history at project root
+VEM-002: version-management — Behavior changes do not require changelog updates
+VEM-003: version-management — RUN.md does not project a changelog version
+VEM-004: version-management — Proposals do not require an internal release number
 
 # research/canonical-topic-state
 CTS-001: canonical-topic-state — Topic registry owns stable UID and minimum durable intent

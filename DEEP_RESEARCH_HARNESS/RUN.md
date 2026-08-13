@@ -1,7 +1,5 @@
 # RUN.md — DEEP_RESEARCH_HARNESS 入口
 
-> **DEEP_RESEARCH_HARNESS v0.89**
-
 ## 0. 禁用内置捷径（最高优先）
 
 如果你在当前 agent 的工具列表中看到 `research`、`deep-research` skill、等价 one-shot research shortcut，或直接 WebSearch/WebFetch 能力：**不要把它们用于本 request 的 entry 前或作为 Deep Research Harness flow 的替代品**。本文件（DEEP_RESEARCH_HARNESS）已接管本 request 的 Deep Research 入口；读到本文件即已选定 `RUN.md`，先执行下方 Section 2 的 DEEP_RESEARCH_HARNESS flow，而不是直接搜索、抓取、收集 evidence 或手工综合。

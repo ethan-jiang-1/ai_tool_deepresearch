@@ -1,0 +1,98 @@
+schema_version: verification-routing/v1
+change: retire-internal-version-choreography
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The version-management static test directly verifies the root changelog's
+      non-authoritative role and the removal of forced version/banner guidance.
+  integration:
+    status: selected
+    rationale: >-
+      The entry-routing and static-vocabulary contracts read the real
+      Agent-facing routing, accepted-spec, and catalog surfaces and prove that
+      current entry/history projections no longer present an internal release
+      projection.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      The existing temporary-bundle migration test proves that removing release
+      projection checks does not change canonical instantiation, inspection,
+      trace placement, or source-tree isolation.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change alters static governance and Agent-facing entry documentation;
+      it makes no claim about a real Agent's research execution or native
+      experiment outcome.
+claims:
+  - id: non-authoritative-version-history
+    statement: >-
+      VEM-001 through VEM-004: root CHANGELOG.md remains concise human history,
+      but no Harness behavior change requires an internal v0.x target,
+      changelog entry, or synchronized RUN.md banner.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/version-management.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-entry-without-version-projection
+    statement: >-
+      RUE-001 and RUE-002: selected new-research entry starts from RUN.md's
+      current Section 0 route, contains no internal version banner, and retains
+      the bounded pre-entry shortcut prohibition.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/dpt-research-entry-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: catalog-and-static-vocabulary-without-version-projection
+    statement: >-
+      VEM-001, VEM-003, and RUE-001: the current catalog and static-vocabulary
+      projection retain their entry/history ownership boundaries without
+      presenting a version banner, required changelog update, or banner
+      consistency as a current contract.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/canonical-harness-vocabulary-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: bundle-behavior-is-independent-of-release-projection
+    statement: >-
+      CMI-001 through CMI-004 and CMI-009: canonical temporary bundle creation,
+      inspection, trace placement, and source-tree isolation remain unchanged
+      when migration coverage no longer treats RUN.md or CHANGELOG.md as a
+      release-identity pair.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/deep-research-harness-migration.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

@@ -1,11 +1,20 @@
 > req: VEM-001, VEM-002, VEM-003, VEM-004
 
-## Purpose
+## RENAMED Requirements
 
-定义 DEEP_RESEARCH_HARNESS 项目的非权威人类历史边界：root CHANGELOG 的
-可选历史角色，以及不把内部 release/version 投影进 proposal、Apply 或 RUN.md。
+- FROM: `### Requirement: CHANGELOG is concise and human-readable`
+- TO: `### Requirement: CHANGELOG is concise non-authoritative human history`
 
-## Requirements
+- FROM: `### Requirement: Every behavior change updates CHANGELOG`
+- TO: `### Requirement: Behavior changes do not require changelog updates`
+
+- FROM: `### Requirement: RUN.md banner matches CHANGELOG`
+- TO: `### Requirement: RUN.md does not project a changelog version`
+
+- FROM: `### Requirement: Version number decided at proposal time`
+- TO: `### Requirement: Proposals do not require an internal release number`
+
+## MODIFIED Requirements
 
 ### Requirement: CHANGELOG is concise non-authoritative human history
 

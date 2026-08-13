@@ -1,4 +1,4 @@
-// @impl RUE-001, RUE-004, RUE-005, ACS-001, ACS-002, CMI-004, CMI-005, CMI-007, CMI-009, CSE-001, BUI-001, BUI-002, SWE-004, WDC-001
+// @impl RUE-001, RUE-004, RUE-005, VEM-001, VEM-003, ACS-001, ACS-002, CMI-004, CMI-005, CMI-009, CSE-001, BUI-001, BUI-002, SWE-004, WDC-001
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -22,6 +22,8 @@ const harnessDocs = Object.fromEntries([
 
 const specs = Object.fromEntries([
   ['runEntry', 'openspec/specs/bundle/run-entry/spec.md'],
+  ['versionManagement', 'openspec/specs/governance/version-management/spec.md'],
+  ['catalog', 'openspec/specs/README.md'],
   ['agentCommand', 'openspec/specs/agent/agent-command-surface/spec.md'],
   ['bundleInstantiation', 'openspec/specs/bundle/cmd-bundle-instantiation/spec.md'],
   ['subagentEnvironment', 'openspec/specs/agent/cmd-subagent-environment/spec.md'],
@@ -29,6 +31,12 @@ const specs = Object.fromEntries([
   ['silentExecution', 'openspec/specs/workflow/silent-wave-execution/spec.md'],
   ['workflowDirectory', 'openspec/specs/workflow/workflow-directory-contract/spec.md'],
 ].map(([name, path]) => [name, read(path)]));
+
+function catalogRow(capabilityPath) {
+  const row = specs.catalog.match(new RegExp(`^\\| ${capabilityPath} \\|.*$`, 'm'))?.[0];
+  assert.ok(row, `catalog must include ${capabilityPath}`);
+  return row;
+}
 
 const localEntryDirective = (contents) => contents
   .slice(0, contents.indexOf('## Must Read'))
@@ -49,9 +57,25 @@ describe('canonical Deep Research Harness vocabulary', () => {
       assert.match(contents, /触发这个 Harness/);
     }
 
-    assert.match(specs.runEntry, /Entry point announces Harness version/);
     assert.match(specs.runEntry, /Harness-local\s+directive language/);
     assert.match(specs.runEntry, /Entry trigger hands control to Agent-run Harness execution/);
+  });
+
+  it('keeps catalog and current static vocabulary free of internal version projection', () => {
+    const runEntryRow = catalogRow('bundle/run-entry');
+    const versionManagementRow = catalogRow('governance/version-management');
+
+    assert.match(runEntryRow, /current-entry contract/);
+    assert.doesNotMatch(runEntryRow, /version banner/i);
+    assert.match(versionManagementRow, /non-authoritative root changelog history/);
+    assert.doesNotMatch(versionManagementRow, /required version updates|version-banner consistency/i);
+
+    assert.match(specs.runEntry, /Entry point excludes internal version projection/);
+    assert.doesNotMatch(specs.runEntry, /Entry point announces Harness version/);
+    assert.match(specs.versionManagement, /CHANGELOG is concise non-authoritative human history/);
+    assert.match(specs.versionManagement, /RUN\.md does not project a changelog version/);
+    assert.doesNotMatch(specs.versionManagement, /Every behavior change updates CHANGELOG/);
+    assert.doesNotMatch(specs.versionManagement, /RUN\.md banner matches CHANGELOG/);
   });
 
   it('distinguishes Harness assets from current run bundle runtime truth', () => {
@@ -100,7 +124,8 @@ describe('canonical Deep Research Harness vocabulary', () => {
 
     assert.match(specs.subagentEnvironment, /Deep Research Harness real subagent taxonomy/);
     assert.match(specs.subagentEnvironment, /marker `DPT managed: real-subagent`/);
-    assert.match(specs.bundleInstantiation, /`framework_version`/);
+    assert.doesNotMatch(specs.bundleInstantiation, /`framework_version`/);
+    assert.doesNotMatch(specs.bundleInstantiation, /CMI-007/);
     assert.match(specs.workflowDirectory, /`framework_root`/);
   });
 
@@ -108,7 +133,6 @@ describe('canonical Deep Research Harness vocabulary', () => {
     assert.match(specs.bundleInstantiation, /Bundle does NOT contain a Harness copy/);
     assert.match(specs.bundleInstantiation, /no copy of `DEEP_RESEARCH_HARNESS\/`, a legacy `_framework\/`/);
     assert.match(specs.bundleInstantiation, /before Harness execution begins/);
-    assert.match(specs.bundleInstantiation, /current Harness version/);
     assert.match(specs.bundleInstantiation, /canonical physical Harness root/);
   });
 });

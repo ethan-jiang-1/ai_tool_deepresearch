@@ -1,4 +1,4 @@
-// @impl RUE-002, RUE-004, RUE-006
+// @impl RUE-001, RUE-002, RUE-004, RUE-006
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
@@ -59,14 +59,17 @@ describe('Deep Research Harness research entry routing contract', () => {
     const readme = read(README);
     const commands = read(COMMANDS);
     const start = read(START);
-    const banner = run.match(/^> \*\*DEEP_RESEARCH_HARNESS v\d+\.\d+\*\*$/m)?.[0];
+    const title = '# RUN.md — DEEP_RESEARCH_HARNESS 入口';
     const section0 = '## 0. 禁用内置捷径（最高优先）';
     const trigger = '>**这个文件在对话中即触发**';
+    const titleIndex = run.indexOf(title);
+    const section0Index = run.indexOf(section0);
+    const triggerIndex = run.indexOf(trigger);
 
-    assert.ok(banner, 'RUN.md must retain one Harness version banner');
-    assert.equal(run.match(/^> \*\*DEEP_RESEARCH_HARNESS v\d+\.\d+\*\*$/gm)?.length, 1);
-    assert.ok(run.indexOf(banner) < run.indexOf(section0), 'banner must precede Section 0');
-    assert.ok(run.indexOf(section0) < run.indexOf(trigger), 'Section 0 must precede trigger context');
+    assert.equal(titleIndex, 0, 'RUN.md must begin with its title');
+    assert.equal(section0Index, title.length + 2, 'Section 0 must immediately follow the title');
+    assert.doesNotMatch(run, /^> \*\*DEEP_RESEARCH_HARNESS v\d+\.\d+\*\*$/m);
+    assert.ok(section0Index < triggerIndex, 'Section 0 must precede trigger context');
     assert.doesNotMatch(run, /^## Current Release:/m);
     assert.match(run, /`research`、`deep-research` skill/);
     assert.match(run, /直接 WebSearch\/WebFetch/);

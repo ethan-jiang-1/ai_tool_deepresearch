@@ -1,4 +1,4 @@
-// @impl FRE-001, WDC-001, WDC-004, WDC-005, EXA-002, TEF-001, VEM-001, VEM-003
+// @impl FRE-001, WDC-001, WDC-004, WDC-005, EXA-002, TEF-001
 // Deterministic migration chain only. It does not claim Agent research behavior.
 
 import assert from 'node:assert/strict';
@@ -50,23 +50,6 @@ function sourceRuntimeState() {
   return paths.map((path) => [path, existsSync(path)]);
 }
 
-function runBannerIdentity(runEntry) {
-  const banners = [...runEntry.matchAll(/^> \*\*DEEP_RESEARCH_HARNESS (v\d+(?:\.\d+)+)\*\*$/gm)];
-  assert.equal(banners.length, 1, 'RUN.md must declare exactly one Harness release banner');
-  return banners[0][1];
-}
-
-function matchingReleaseSection(changelog, releaseIdentity) {
-  const heading = `## ${releaseIdentity}`;
-  const start = changelog.indexOf(`${heading}\n`);
-  assert.notEqual(start, -1, `top-level CHANGELOG.md is missing ${heading}`);
-  const end = changelog.indexOf('\n## ', start + heading.length);
-  const section = changelog.slice(start, end === -1 ? undefined : end);
-  assert.ok(section.startsWith(`${heading}\n`));
-  assert.match(section, /^- \S/m, `${heading} must contain a release entry`);
-  return section;
-}
-
 describe('Deep Research Harness migration', () => {
   after(() => {
     for (const root of roots) rmSync(root, { recursive: true, force: true });
@@ -93,7 +76,7 @@ describe('Deep Research Harness migration', () => {
     assert.equal(existsSync(join(bundle, 'RUN_BUNDLE.md')), false);
   });
 
-  it('keeps runtime writes under the supplied bundle root and release paths aligned', () => {
+  it('keeps runtime writes under the supplied bundle root', () => {
     const root = makeRoot();
     const target = join(root, 'runtime-target');
     const name = uniqueName('runtime');
@@ -111,10 +94,6 @@ describe('Deep Research Harness migration', () => {
     assert.match(afterTrace, /harness_migration/);
     assert.deepEqual(sourceRuntimeState(), sourceBefore, 'Harness source tree must not receive run state');
 
-    const changelog = readFileSync(join(REPO_ROOT, 'CHANGELOG.md'), 'utf8');
-    const runEntry = readFileSync(join(HARNESS_ROOT, 'RUN.md'), 'utf8');
-    const releaseIdentity = runBannerIdentity(runEntry);
-    matchingReleaseSection(changelog, releaseIdentity);
     assert.equal(existsSync(join(HARNESS_ROOT, 'CHANGELOG.md')), false);
   });
 });

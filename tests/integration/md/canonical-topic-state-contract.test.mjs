@@ -50,10 +50,10 @@ describe('canonical topic-state scope', () => {
     }
   });
 
-  it('preserves arbitrary rb_plan frontmatter keys so framework_version survives add_topic (CMI-007)', () => {
+  it('keeps generic rb_plan frontmatter preservation separate from retired metadata names', () => {
     // Preservation is automatic via three properties — this is a regression guard.
-    // If any change (e.g. tightening CanonicalPlanSchema to .strict(), or rebuilding
-    // frontmatter from a fixed key set), this test fails before the stamp is silently dropped.
+    // If any change tightens CanonicalPlanSchema to .strict() or rebuilds
+    // frontmatter from a fixed key set, the focused mutation test catches it.
     const planSchema = read('DEEP_RESEARCH_HARNESS/schema/contracts/plan.mjs');
     assert.match(planSchema, /export const CanonicalPlanSchema[\s\S]*?\.passthrough\(\)/);
     assert.match(helper, /function renderPlan\(frontmatter, body\)[\s\S]{0,120}stringifyYaml\(frontmatter\)/);

@@ -180,6 +180,18 @@ describe('canonical topic state', () => {
     assert.match(inspected.plan_sha256, /^[0-9a-f]{64}$/);
     assert.deepEqual(inspected.layout_baseline.topics[0], { topic_uid: inspected.topics[0].topic_uid, title: 'Topic A', slug_stem: 'topic-a' });
   });
+  it('preserves an arbitrary existing unknown plan key through a normal mutation', () => {
+    const dir = bundle('topic-plan-unknown-frontmatter');
+    const planPath = join(dir, 'rb_plan.md');
+    writeFileSync(planPath, readFileSync(planPath, 'utf8').replace(
+      'derived_topic_count: 0',
+      'legacy_metadata: retain-me\nderived_topic_count: 0',
+    ));
+
+    assert.equal(applyCanonicalTopicState({ bundlePath: dir, input }).verdict, 'committed');
+    const frontmatter = parseYaml(readFileSync(planPath, 'utf8').match(/^---\n([\s\S]*?)\n---/)[1]);
+    assert.equal(frontmatter.legacy_metadata, 'retain-me');
+  });
   it('returns the existing style writer handoff only for a committed registry-length change', () => {
     const dir = bundle('topic-style-handoff-add');
     writeSelectedResearchProfile(dir);
