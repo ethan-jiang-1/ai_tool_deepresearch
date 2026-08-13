@@ -1,0 +1,42 @@
+schema_version: semantic-closure/v1
+change: retire-legacy-plan-migration
+status: affected
+catalog_additions: []
+affected:
+  - family: research.scope-and-rerun-intent
+    fact: >-
+      Whether the selected rb_plan.md is the one schema-valid canonical mutable
+      topic registry, and therefore may supply current UID/current-layout/rerun
+      intent. A historical mutable plan establishes no current Engine migration,
+      adoption, upgrade, or write authority; current previous_layouts[] remains
+      a canonical lineage fact.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/schema/contracts/plan.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/schema/contracts/plan.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/validate-bundle.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs
+      - DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs
+      - DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs
+      - DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-seed-topics-ready.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs
+    overlap:
+      - coordinate: openspec/specs/engine/schema-core/spec.md
+        relation: authoritative
+        detail: SCO-013/SCO-014 own current canonical plan shape and layout lineage.
+      - coordinate: openspec/specs/research/canonical-topic-state/spec.md
+        relation: authoritative
+        detail: CTS-001/CTS-002 own read-only topic-state inspection and canonical mutation authority.
+      - coordinate: openspec/specs/engine/runtime-reentry-debuggability/spec.md
+        relation: authoritative
+        detail: RRD-009 owns reentry's read-only consumption of the shared canonical topic-state verdict.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-rerun.md
+        relation: derived
+        detail: The Phase explains legal current rerun inputs; it does not resolve plan validity or grant mutation authority.
+    verification:
+      truth_table: tests/schema/contracts/plan.test.mjs
+      cross_surface: tests/integration/cli/operate-topic-state-projection.test.mjs

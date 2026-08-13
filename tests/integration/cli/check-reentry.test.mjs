@@ -35,16 +35,27 @@ function setupBundle(name, statusOverrides = {}, queueOverrides = {}, extraFiles
   };
   writeFileSync(join(dir, 'rb_status.json'), JSON.stringify(status));
 
-  // Plan with topic registry
+  // Current canonical plan with topic registry
   writeFileSync(join(dir, 'rb_plan.md'), [
     '---',
+    `plan_basename: ${name}`,
+    'derived_topic_count: 2',
+    'topic_registry_version: "2"',
     `topic_registry:`,
-    '  - id: T01',
+    '  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174000',
+    '    id: T01',
     '    slug: topic-a',
     '    title: Topic A',
-    '  - id: T02',
+    '    must_answer: ["What matters for topic A?"]',
+    '    scope_role: primary',
+    '    depends_on_topic_uids: []',
+    '  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174001',
+    '    id: T02',
     '    slug: topic-b',
     '    title: Topic B',
+    '    must_answer: ["What matters for topic B?"]',
+    '    scope_role: supporting',
+    '    depends_on_topic_uids: []',
     '---',
     '# Plan',
   ].join('\n'));
@@ -76,8 +87,30 @@ function setupBundle(name, statusOverrides = {}, queueOverrides = {}, extraFiles
   mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-b'), { recursive: true });
   mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-a'), { recursive: true });
   mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-b'), { recursive: true });
-  writeFileSync(join(dir, 'seed_topics', 'topic-a.md'), '# Topic A\n');
-  writeFileSync(join(dir, 'seed_topics', 'topic-b.md'), '# Topic B\n');
+  writeFileSync(join(dir, 'seed_topics', 'topic-a.md'), [
+    '---',
+    'topic_uid: tp_123e4567-e89b-12d3-a456-426614174000',
+    'id: T01',
+    'slug: topic-a',
+    'title: Topic A',
+    'must_answer: ["What matters for topic A?"]',
+    'scope_role: primary',
+    'depends_on_topic_uids: []',
+    '---',
+    '# Topic A',
+  ].join('\n'));
+  writeFileSync(join(dir, 'seed_topics', 'topic-b.md'), [
+    '---',
+    'topic_uid: tp_123e4567-e89b-12d3-a456-426614174001',
+    'id: T02',
+    'slug: topic-b',
+    'title: Topic B',
+    'must_answer: ["What matters for topic B?"]',
+    'scope_role: supporting',
+    'depends_on_topic_uids: []',
+    '---',
+    '# Topic B',
+  ].join('\n'));
   writeFileSync(join(dir, 'artifacts', 'wave0', 'topic-a', 'source.yaml'), '[]\n');
   writeFileSync(join(dir, 'artifacts', 'wave0', 'topic-b', 'source.yaml'), '[]\n');
   writeFileSync(join(dir, 'artifacts', 'wave1', 'topic-a', 'evidence-summary.md'), '# Evidence\n');
@@ -217,6 +250,17 @@ describe('check-reentry CLI', () => {
     it('exits 2 when bundle not found', () => {
       const res = runCliJson('/nonexistent/path', 'wave1_complete');
       assert.strictEqual(res.exitCode, 2);
+    });
+
+    it('fails closed for an old mutable plan without suggesting migration', () => {
+      const dir = setupBundle('rt-old-plan');
+      writeFileSync(join(dir, 'rb_plan.md'), '---\nplan_basename: old\nderived_topic_count: 1\ntopic_registry:\n  - id: T01\n    slug: topic-a\n    title: Topic A\n---\n# Historical plan\n');
+      const before = readFileSync(join(dir, 'rb_plan.md'), 'utf8');
+      const res = runCliJson(dir, 'wave1_complete');
+      assert.strictEqual(res.exitCode, 1);
+      assert.ok(res.stdout.blockers.some((blocker) => blocker.check === 'canonical_topic_state'));
+      assert.ok(!JSON.stringify(res.stdout).match(/migrat|adopt|upgrade|convert/i));
+      assert.strictEqual(readFileSync(join(dir, 'rb_plan.md'), 'utf8'), before);
     });
   });
 
@@ -433,6 +477,11 @@ describe('check-reentry CLI', () => {
       rmSync(join(dir, 'seed_topics', 'topic-b.md'));
       rmSync(join(dir, 'artifacts', 'wave0', 'topic-b'), { recursive: true, force: true });
       rmSync(join(dir, 'artifacts', 'wave1', 'topic-b'), { recursive: true, force: true });
+      const planPath = join(dir, 'rb_plan.md');
+      const singleTopicPlan = readFileSync(planPath, 'utf8')
+        .replace('derived_topic_count: 2', 'derived_topic_count: 1')
+        .replace(/  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174001\n    id: T02\n    slug: topic-b\n    title: Topic B\n    must_answer: \["What matters for topic B\?"\]\n    scope_role: supporting\n    depends_on_topic_uids: \[\]\n/, '');
+      writeFileSync(planPath, singleTopicPlan);
       const submitted = claimAndSubmitWorkUnit(dir, {
         phase: 'wave1',
         queueItemId: 'topic-a',

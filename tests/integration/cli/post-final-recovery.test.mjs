@@ -105,6 +105,28 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     assert.match(plan, /Additional comparison/);
   });
 
+  it('does not turn post-final reentry into old-plan migration or topic adoption authority', () => {
+    const bundle = createTerminalFinalBundle(root, 'old-plan', {
+      topicRegistry: [{ topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: 'What matters?' }],
+    });
+    writeFileSync(join(bundle, 'rb_plan.md'), '---\nplan_basename: old-plan\nderived_topic_count: 1\ntopic_registry:\n  - id: "01"\n    slug: topic-a\n    title: Topic A\n---\n# Historical plan\n');
+    const planBefore = readFileSync(join(bundle, 'rb_plan.md'), 'utf8');
+    const inspection = inspectPostFinalRecovery({ bundlePath: bundle });
+    const inputPath = join(root, 'old-plan-request.json');
+    writeFileSync(inputPath, JSON.stringify(requestFromInspection(inspection)));
+    runJson([CLI, 'apply', '--bundle', bundle, '--input', inputPath]);
+    runNode(['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md']);
+    runJson(['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
+    const result = applyCanonicalTopicState({
+      bundlePath: bundle,
+      input: { context: 'rerun', actions: [{ action: 'add_topic', title: 'Blocked topic', slug_stem: 'blocked', must_answer: ['What is blocked?'], scope_role: 'supporting', depends_on_topic_uids: [], direction: { rerun_count: 1, action: 'add', new_search_dimensions: 'blocked path', adjusted_depth: 'none', search_guardrails: 'preserve current plan', rationale_excerpt: 'recorded rerun rationale' } }] },
+    });
+    assert.equal(result.reason_code, 'plan_invalid');
+    assert.equal(readFileSync(join(bundle, 'rb_plan.md'), 'utf8'), planBefore);
+    assert.equal(existsSync(join(bundle, '_diagnostics', 'topic-state')), false);
+    assert.doesNotMatch(JSON.stringify(result), /migrat|adopt|upgrade|convert/i);
+  });
+
   it('binds a prepared C3 operation to the complete original exceptional witness and recovers after lifecycle drift', () => {
     const bundle = createTerminalFinalBundle(root, 'topic-recover');
     const inspection = inspectPostFinalRecovery({ bundlePath: bundle });

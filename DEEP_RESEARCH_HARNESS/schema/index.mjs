@@ -27,7 +27,7 @@ export {
   WorkUnitSupersessionQueueLineageSchema,
 } from './contracts/queue.mjs';
 export { ProfileSchema, ResearchStyleParamsSchema } from './contracts/profile.mjs';
-export { CanonicalPlanSchema, CanonicalTopicEntrySchema, PreviousTopicLayoutSchema, LegacyPlanSchema, LegacyTopicEntrySchema, PlanSchema } from './contracts/plan.mjs';
+export { CanonicalPlanSchema, CanonicalTopicEntrySchema, PreviousTopicLayoutSchema, PlanSchema } from './contracts/plan.mjs';
 export { ReferenceMetadataSchema, ReferenceMetadataArraySchema, validateIndexMD } from './contracts/reference.mjs';
 export { TraceEntrySchema, TraceSchema } from './contracts/trace.mjs';
 export {

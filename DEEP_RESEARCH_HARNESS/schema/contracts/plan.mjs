@@ -6,12 +6,6 @@ const PlanBaseSchema = z.object({
   derived_topic_count: z.number().min(0),
 });
 
-export const LegacyTopicEntrySchema = z.object({
-  id: z.string(),
-  slug: z.string(),
-  title: z.string(),
-}).passthrough();
-
 export const PreviousTopicLayoutSchema = z.object({
   id: z.string(),
   slug: z.string(),
@@ -27,15 +21,6 @@ export const CanonicalTopicEntrySchema = z.object({
   depends_on_topic_uids: z.array(z.string()).refine((items) => new Set(items).size === items.length, 'dependency UIDs must be unique'),
   previous_layouts: z.array(PreviousTopicLayoutSchema).default([]),
 }).strict();
-
-export const LegacyPlanSchema = PlanBaseSchema.extend({
-  topic_registry_version: z.string().optional().refine((value) => value !== '2', 'legacy plan cannot use canonical version marker'),
-  topic_registry: z.array(LegacyTopicEntrySchema),
-}).passthrough().superRefine((plan, context) => {
-  if (plan.derived_topic_count !== plan.topic_registry.length) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ['derived_topic_count'], message: 'derived_topic_count must equal topic_registry length' });
-  }
-});
 
 export const CanonicalPlanSchema = PlanBaseSchema.extend({
   topic_registry_version: z.literal('2'),
@@ -63,4 +48,4 @@ export const CanonicalPlanSchema = PlanBaseSchema.extend({
   });
 });
 
-export const PlanSchema = z.union([CanonicalPlanSchema, LegacyPlanSchema]);
+export const PlanSchema = CanonicalPlanSchema;

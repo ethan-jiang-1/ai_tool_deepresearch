@@ -1,0 +1,51 @@
+schema_version: verification-routing/v1
+change: retire-legacy-plan-migration
+test_classes:
+  unit:
+    status: selected
+    rationale: PlanSchema and canonical-topic-state own the current-only plan contract and migration removal.
+  integration:
+    status: selected
+    rationale: Shared readers expose independent schema/inspect/reentry/queue/Seed Topics/post-final boundaries.
+  deterministic_e2e:
+    status: selected
+    rationale: Canonical rerun continuity and current layout/provenance must survive the compatibility removal.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: This change claims deterministic schema, CLI, and Markdown contract behavior only.
+claims:
+  - id: plan-schema-current-only
+    statement: PlanSchema accepts canonical current plans and rejects the historical mutable plan shape without conversion.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/schema/contracts/plan.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: none, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit
+  - id: topic-state-has-no-migration-writer
+    statement: Inspect and apply reject old plans/migrate_legacy before workspace or authority mutation while current canonical mutation and recovery retain their behavior.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/integration/cli/operate-topic-state-projection.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: temporary_bundle, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit
+  - id: shared-plan-readers-fail-closed
+    statement: validate-bundle, Setup, HITL1, Seed Topics, reentry, queue admission, and post-final recovery reject an old mutable plan through their existing current-plan boundary.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/integration/cli/validate-bundle.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: temporary_bundle, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit
+  - id: rerun-guidance-current-only
+    statement: Phase-rerun and Seed Topics guidance/tests name only canonical current apply forms and no migration reconciliation.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/integration/md/topic-rewrite-fixtures-contract.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: none, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit
+  - id: current-layout-and-rerun-continuity
+    statement: Canonical UID/current-plus-previous layout lineage and rerun continuity remain valid after removing the legacy mutable-plan path.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/e2e/rerun-round-continuity.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: simulated_agent_actions, runtime: temporary_bundle, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit

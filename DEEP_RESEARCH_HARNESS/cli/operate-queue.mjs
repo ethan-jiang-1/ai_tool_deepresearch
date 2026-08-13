@@ -261,7 +261,7 @@ function validateTopicSlug(taskCard, bundleDir) {
   if (topicState.mode !== 'canonical') {
     return {
       valid: false,
-      error: `topic-scoped work cannot enqueue while topic state is ${topicState.mode}; enter sanctioned rerun for migration first.`,
+      error: `topic-scoped work cannot enqueue while topic state is ${topicState.mode}; resolve the existing current plan/topic-state boundary first.`,
       reason_code: 'canonical_topic_state_required',
     };
   }

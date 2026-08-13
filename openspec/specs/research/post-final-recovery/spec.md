@@ -294,7 +294,7 @@ The event SHALL authorize only the existing rerun phase and existing C3 mutation
 
 - **WHEN** the historical bundle contains registry-external addendum content
 - **THEN** C5 SHALL only establish the rerun window
-- **AND** explicit existing C3 `migrate_legacy` SHALL remain required before those topics gain canonical identity
+- **AND** that content SHALL not gain canonical identity through migration, adoption, upgrade, or another current Engine action
 
 #### Scenario: Unsupported maintenance remains unavailable
 

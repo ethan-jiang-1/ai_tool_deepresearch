@@ -228,6 +228,20 @@ describe('check-gate-setup-ready', () => {
     assert.equal(hint.repair_kind, 'missing_contract');
   });
 
+  it('rejects an old mutable plan through its existing PlanSchema prerequisite', () => {
+    const name = unique('old-plan');
+    const created = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+    const bundleDir = track(created.stdout.trim());
+    writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE.replace('plan_basename: test', `plan_basename: ${name}`));
+    writeFileSync(join(bundleDir, 'rb_plan.md'), '---\nplan_basename: old-plan\nderived_topic_count: 1\ntopic_registry:\n  - id: "01"\n    slug: topic-a\n    title: Topic A\n---\n# Historical plan\n');
+    const output = JSON.parse(runGate(bundleDir).stdout);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'plan_schema_valid');
+    assert.equal(output.check.passed, false);
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'missing_contract');
+    assert.doesNotMatch(JSON.stringify(output), /migrat|adopt|upgrade|convert/i);
+  });
+
   it('fails on unparseable status', () => {
     const name = unique('badstatus');
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });

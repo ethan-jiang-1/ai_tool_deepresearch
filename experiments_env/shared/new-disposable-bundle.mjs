@@ -212,6 +212,7 @@ writeFileSync(join(bundleDir, 'rb_profile.yaml'), yamlLines.join('\n') + '\n');
 const planDefault = {
   plan_basename: caseId ? strippedName : bundleName,
   derived_topic_count: 0,
+  topic_registry_version: '2',
   topic_registry: [],
 };
 PlanSchema.parse(planDefault);

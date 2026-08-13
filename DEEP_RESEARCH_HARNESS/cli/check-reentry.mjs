@@ -874,8 +874,14 @@ if (topicStateInspection.mode === 'blocked') {
   for (const blocker of topicStateInspection.blockers || []) {
     allBlockers.push({ severity: 'blocker', check: 'canonical_topic_state', message: `${blocker.reason_code}: ${blocker.slug || blocker.topic_uid || 'topic'}`, detail: blocker });
   }
-} else if (topicStateInspection.mode === 'legacy' && statusPosition.current_node === 'phases/phase-final.md') {
-  allBlockers.push({ severity: 'blocker', check: 'canonical_topic_state', message: postFinalInspection.verdict === 'eligible' ? 'post-final legacy topic migration requires accepted C5 rerun entry first' : postFinalInspection.reason, detail: { reason_code: 'post_final_c5_required', post_final_verdict: postFinalInspection.verdict } });
+} else {
+  const blocker = topicStateInspection.blockers?.[0];
+  allBlockers.push({
+    severity: 'blocker',
+    check: 'canonical_topic_state',
+    message: `${blocker?.reason_code || 'canonical_topic_state_required'}: ${blocker?.reason || 'current canonical topic state is unavailable'}`,
+    detail: blocker || { reason_code: 'canonical_topic_state_required' },
+  });
 }
 
 // Merge inspect/advice from audits

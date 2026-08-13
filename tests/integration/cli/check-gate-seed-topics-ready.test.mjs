@@ -206,4 +206,17 @@ describe('check-gate-seed-topics-ready', () => {
     assert.equal(output.check.passed, true, JSON.stringify(output.inspect));
     assert.equal(output.hints.some((hint) => hint.rule_id === 'seed_initialization_structure'), false);
   });
+
+  it('fails closed for an old mutable plan without advertising migration', () => {
+    const bundlePath = createBundle('old-plan');
+    writeCanonicalPlan(bundlePath, [TOPIC]);
+    writeFileSync(join(bundlePath, 'rb_plan.md'), '---\nplan_basename: old-plan\nderived_topic_count: 1\ntopic_registry:\n  - id: "01"\n    slug: 01_topic-a\n    title: Topic A\n---\n# Historical plan\n');
+    const result = runGate(bundlePath);
+    const output = JSON.parse(result.stdout);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'handoff_witness_missing');
+    assert.equal(result.status, 1, result.stderr);
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'missing_contract');
+    assert.doesNotMatch(JSON.stringify(output), /migrat|adopt|upgrade|convert/i);
+  });
 });

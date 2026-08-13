@@ -8,7 +8,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { z } from 'zod';
-import { CanonicalPlanSchema, LegacyPlanSchema } from '../../schema/contracts/plan.mjs';
+import { CanonicalPlanSchema } from '../../schema/contracts/plan.mjs';
 import { WorkUnitManifestSchema } from '../../schema/contracts/work-unit.mjs';
 import { checkPhaseHandoffPreflight } from './handoff-helpers.mjs';
 import { readSubmittedWorkUnitDeclarations } from './gate-helpers-readers.mjs';
@@ -268,12 +268,6 @@ const UpdateActionSchema = z.object({
 const SetRerunDirectionActionSchema = z.object({
   action: z.literal('set_rerun_direction'), topic_uid: z.string().min(1), direction: RerunDirectionCandidateSchema,
 }).strict();
-const MigrationEntrySchema = z.object({
-  source: z.enum(['registry', 'adopt']), id: z.string(), slug: z.string(), title: z.string().min(1),
-  must_answer: z.array(z.string().min(1)).min(1), scope_role: ScopeRoleSchema,
-  depends_on_slugs: z.array(z.string()).default([]), seed_binding: z.enum(['existing', 'new']),
-}).strict();
-const MigrationPlanSchema = z.object({ context: z.enum(['hitl1', 'rerun']), action: z.literal('migrate_legacy'), entries: z.array(MigrationEntrySchema).min(1) }).strict();
 const MutationPlanSchema = z.object({
   context: z.enum(['hitl1', 'rerun']),
   actions: z.array(z.discriminatedUnion('action', [AddActionSchema, UpdateActionSchema, SetRerunDirectionActionSchema])).min(1),
@@ -426,7 +420,7 @@ const ProjectionPacketSchema = z.object({
     issue.addIssue({ code: z.ZodIssueCode.custom, path: ['updates'], message: 'Wave2 Projection Packet must update wave2_judgment and may additionally update pending_questions' });
   }
 });
-export const TopicApplyPlanSchema = z.union([MigrationPlanSchema, MutationPlanSchema, LayoutPlanSchema, SeedEnrichmentPlanSchema, ProjectionPacketSchema]);
+export const TopicApplyPlanSchema = z.union([MutationPlanSchema, LayoutPlanSchema, SeedEnrichmentPlanSchema, ProjectionPacketSchema]);
 
 const TOPIC_SCHEMA_OMIT = Symbol('topic-schema-omit');
 const TOPIC_SCHEMA_TYPES = z.ZodFirstPartyTypeKind;
@@ -1665,14 +1659,13 @@ function topicStateBlockerFinding(bundlePath, blocker) {
   const reasonCode = blocker.reason_code || 'topic_state_prerequisite_invalid';
   const recommended = blocker.recommended_action || null;
   const engineCommand = typeof recommended === 'string' && recommended.startsWith('node ');
-  const userDecision = reasonCode === 'legacy_migration_required';
   const basis = reasonCode.includes('binding') || reasonCode.includes('mismatch')
     ? 'binding_integrity'
     : (reasonCode.includes('submitted') || reasonCode === 'artifact_without_submitted_fact' ? 'authority_integrity' : 'required_structure');
-  const repairKind = engineCommand ? 'engine_operation' : (userDecision ? 'user_decision' : 'missing_contract');
+  const repairKind = engineCommand ? 'engine_operation' : 'missing_contract';
   const writeTo = engineCommand
     ? recommended
-    : (userDecision ? 'phases/phase-rerun.md' : `Canonical topic-state prerequisite boundary '${reasonCode}'`);
+    : `Canonical topic-state prerequisite boundary '${reasonCode}'`;
   const observed = {
     reason_code: reasonCode,
     reason: blocker.reason || null,
@@ -1690,9 +1683,7 @@ function topicStateBlockerFinding(bundlePath, blocker) {
     repairKind,
     writeTo,
     detail: `Canonical topic-state prerequisite failed: ${reasonCode}`,
-    repair: recommended || (userDecision
-      ? 'The existing rerun owner must record explicit migration semantics before canonical topic-state apply can continue.'
-      : 'Use the owning topic-state/work-unit boundary; no direct authority edit is currently authorized.'),
+    repair: recommended || 'Use the owning topic-state/work-unit boundary; no direct authority edit is currently authorized.',
   });
 }
 
@@ -1722,8 +1713,7 @@ export function inspectCanonicalTopicState({ bundlePath }) {
   }
   const canonical = CanonicalPlanSchema.safeParse(plan);
   if (!canonical.success) {
-    const legacy = LegacyPlanSchema.safeParse(plan);
-    return withTopicStateFindings({ schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'inspect', passed: legacy.success, mode: legacy.success ? 'legacy' : 'invalid', blockers: legacy.success ? [{ reason_code: 'legacy_migration_required', recommended_action: 'Enter sanctioned rerun and prepare explicit migrate_legacy input.' }] : [{ reason_code: 'plan_invalid', reason: canonical.error.message }], topics: [] }, bundlePath);
+    return withTopicStateFindings({ schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'inspect', passed: false, mode: 'invalid', blockers: [{ reason_code: 'plan_invalid', reason: canonical.error.message }], topics: [] }, bundlePath);
   }
   const bindings = evaluateCanonicalSeedBindings(bundle, canonical.data);
   const progress = progressRows(bundle, canonical.data, bindings);
@@ -1804,52 +1794,30 @@ function buildMutation(bundle, parsedPlan, input, { profileRerunCount = null } =
     CanonicalPlanSchema.parse(current);
     return { plan: current, touched, cleanup_files: cleanupFiles, affected_topic_uids: target.affected_topic_uids };
   }
-  if ('action' in input) {
-    const existingSlugs = new Set(current.topic_registry.map((topic) => topic.slug));
-    const inputSlugs = new Set(input.entries.filter((entry) => entry.source === 'registry').map((entry) => entry.slug));
-    if (current.topic_registry.some((topic) => !inputSlugs.has(topic.slug))) throw new Error('migration input must account for every legacy registry slug');
-    const seedDir = path.join(bundle, 'seed_topics');
-    const externalSeeds = existsSync(seedDir) ? readdirSync(seedDir).filter((name) => name.endsWith('.md')).map((name) => name.slice(0, -3)).filter((slug) => !existingSlugs.has(slug)) : [];
-    const adopted = new Set(input.entries.filter((entry) => entry.source === 'adopt').map((entry) => entry.slug));
-    const unaccounted = externalSeeds.filter((slug) => !adopted.has(slug));
-    if (unaccounted.length > 0) throw new Error(`registry-external seed requires explicit adopt: ${unaccounted.join(', ')}`);
-    const uidBySlug = new Map(input.entries.map((entry) => [entry.slug, `tp_${randomUUID()}`]));
-    current.topic_registry = input.entries.map((entry) => ({ topic_uid: uidBySlug.get(entry.slug), id: entry.id, slug: entry.slug, title: entry.title, must_answer: entry.must_answer, scope_role: entry.scope_role, depends_on_topic_uids: entry.depends_on_slugs.map((slug) => { if (!uidBySlug.has(slug)) throw new Error(`unknown dependency slug: ${slug}`); return uidBySlug.get(slug); }) }));
-    if (new Set(current.topic_registry.map((topic) => topic.slug)).size !== current.topic_registry.length) throw new Error('migration slugs must be unique');
-    for (const topic of current.topic_registry) {
-      const entry = input.entries.find((item) => item.slug === topic.slug);
-      const seed = readSeed(bundle, topic.slug);
-      if (entry.source === 'adopt' && existingSlugs.has(topic.slug)) throw new Error(`adopt slug already exists in registry: ${topic.slug}`);
-      if (entry.seed_binding === 'existing' && !seed.exists) throw new Error(`existing seed binding missing: ${topic.slug}`);
-      touched.set(topic.slug, renderSeed(topic, seed));
+  const canonical = CanonicalPlanSchema.parse(current);
+  const byUid = new Map(canonical.topic_registry.map((topic) => [topic.topic_uid, topic]));
+  const targetUids = input.actions.filter((action) => action.action !== 'add_topic').map((action) => action.topic_uid);
+  if (new Set(targetUids).size !== targetUids.length) throw new Error('duplicate update target');
+  let nextOrdinal = canonical.topic_registry.reduce((max, topic) => Math.max(max, Number(topic.id) || 0), 0);
+  for (const action of input.actions) {
+    if (action.action === 'add_topic') {
+      nextOrdinal += 1;
+      const id = String(nextOrdinal).padStart(2, '0');
+      const slug = `${id}_${action.slug_stem}`;
+      if (canonical.topic_registry.some((topic) => topic.slug === slug)) throw new Error(`duplicate slug: ${slug}`);
+      const topic = { topic_uid: `tp_${randomUUID()}`, id, slug, title: action.title, must_answer: action.must_answer, scope_role: action.scope_role, depends_on_topic_uids: action.depends_on_topic_uids };
+      canonical.topic_registry.push(topic); byUid.set(topic.topic_uid, topic); touched.set(slug, renderSeed(topic, null, action.direction || null));
+    } else if (action.action === 'update_intent') {
+      const topic = byUid.get(action.topic_uid); if (!topic) throw new Error(`unknown topic_uid: ${action.topic_uid}`);
+      Object.assign(topic, { title: action.title, must_answer: action.must_answer, scope_role: action.scope_role, depends_on_topic_uids: action.depends_on_topic_uids });
+      const seed = readSeed(bundle, topic.slug); touched.set(topic.slug, renderSeed(topic, seed, action.direction || null));
+    } else {
+      const topic = byUid.get(action.topic_uid); if (!topic) throw new Error(`unknown topic_uid: ${action.topic_uid}`);
+      const seed = readSeed(bundle, topic.slug); if (!seed.exists) throw new Error(`current seed missing for ${topic.slug}`);
+      touched.set(topic.slug, renderSeed(topic, seed, action.direction));
     }
-    current.topic_registry_version = '2';
-  } else {
-    const canonical = CanonicalPlanSchema.parse(current);
-    const byUid = new Map(canonical.topic_registry.map((topic) => [topic.topic_uid, topic]));
-    const targetUids = input.actions.filter((action) => action.action !== 'add_topic').map((action) => action.topic_uid);
-    if (new Set(targetUids).size !== targetUids.length) throw new Error('duplicate update target');
-    let nextOrdinal = canonical.topic_registry.reduce((max, topic) => Math.max(max, Number(topic.id) || 0), 0);
-    for (const action of input.actions) {
-      if (action.action === 'add_topic') {
-        nextOrdinal += 1;
-        const id = String(nextOrdinal).padStart(2, '0');
-        const slug = `${id}_${action.slug_stem}`;
-        if (canonical.topic_registry.some((topic) => topic.slug === slug)) throw new Error(`duplicate slug: ${slug}`);
-        const topic = { topic_uid: `tp_${randomUUID()}`, id, slug, title: action.title, must_answer: action.must_answer, scope_role: action.scope_role, depends_on_topic_uids: action.depends_on_topic_uids };
-        canonical.topic_registry.push(topic); byUid.set(topic.topic_uid, topic); touched.set(slug, renderSeed(topic, null, action.direction || null));
-      } else if (action.action === 'update_intent') {
-        const topic = byUid.get(action.topic_uid); if (!topic) throw new Error(`unknown topic_uid: ${action.topic_uid}`);
-        Object.assign(topic, { title: action.title, must_answer: action.must_answer, scope_role: action.scope_role, depends_on_topic_uids: action.depends_on_topic_uids });
-        const seed = readSeed(bundle, topic.slug); touched.set(topic.slug, renderSeed(topic, seed, action.direction || null));
-      } else {
-        const topic = byUid.get(action.topic_uid); if (!topic) throw new Error(`unknown topic_uid: ${action.topic_uid}`);
-        const seed = readSeed(bundle, topic.slug); if (!seed.exists) throw new Error(`current seed missing for ${topic.slug}`);
-        touched.set(topic.slug, renderSeed(topic, seed, action.direction));
-      }
-    }
-    current.topic_registry = canonical.topic_registry;
   }
+  current.topic_registry = canonical.topic_registry;
   current.derived_topic_count = current.topic_registry.length;
   CanonicalPlanSchema.parse(current);
   return { plan: current, touched, cleanup_files: [], affected_topic_uids: [...touched.keys()].map((slug) => current.topic_registry.find((topic) => topic.slug === slug)?.topic_uid).filter(Boolean) };
@@ -1888,6 +1856,45 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
     };
   }
   const parsedInput = parsed.data;
+  const planPath = path.join(bundle, 'rb_plan.md');
+  if (!existsSync(planPath) || lstatSync(planPath).isSymbolicLink() || !lstatSync(planPath).isFile()) {
+    return {
+      schema_version: TOPIC_STATE_SCHEMA_VERSION,
+      operation: 'apply',
+      verdict: 'blocked',
+      reason_code: 'plan_invalid',
+      repair_kind: 'missing_contract',
+      reason: 'rb_plan.md must be a non-symlink regular file',
+      recommended_action: 'Restore a current canonical rb_plan.md through its owning lifecycle path, then rerun this same apply checkpoint.',
+    };
+  }
+  const oldRaw = readFileSync(planPath, 'utf8');
+  let split;
+  try {
+    split = splitPlan(oldRaw);
+  } catch (error) {
+    return {
+      schema_version: TOPIC_STATE_SCHEMA_VERSION,
+      operation: 'apply',
+      verdict: 'blocked',
+      reason_code: 'plan_invalid',
+      repair_kind: 'missing_contract',
+      reason: error.message,
+      recommended_action: 'Restore a current canonical rb_plan.md through its owning lifecycle path, then rerun this same apply checkpoint.',
+    };
+  }
+  const oldCanonical = CanonicalPlanSchema.safeParse(split.frontmatter);
+  if (!oldCanonical.success) {
+    return {
+      schema_version: TOPIC_STATE_SCHEMA_VERSION,
+      operation: 'apply',
+      verdict: 'blocked',
+      reason_code: 'plan_invalid',
+      repair_kind: 'missing_contract',
+      reason: oldCanonical.error.message,
+      recommended_action: 'Restore a current canonical rb_plan.md through its owning lifecycle path, then rerun this same apply checkpoint.',
+    };
+  }
   const accepted = acceptedWorkspaces(bundle);
   if (accepted.length) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'accepted_workspace', recommended_action: `recover --operation-id ${accepted[0].operation_id}` };
   const authorization = lifecycleAuthorization(bundle, parsedInput.context, parsedInput.wave || null);
@@ -1896,16 +1903,11 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
     ? currentProfileRerunCount(bundle)
     : null;
   validateRerunDirectionCounts(parsedInput, profileRerunCount);
-  if ('action' in parsedInput && parsedInput.action === 'migrate_legacy' && parsedInput.context !== 'rerun') return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'migration_requires_rerun' };
-  const planPath = path.join(bundle, 'rb_plan.md');
   const seedRoot = path.join(bundle, 'seed_topics');
-  if (lstatSync(planPath).isSymbolicLink() || !lstatSync(planPath).isFile()) throw new Error('rb_plan.md must be a non-symlink regular file');
   if (!existsSync(seedRoot) || lstatSync(seedRoot).isSymbolicLink() || !lstatSync(seedRoot).isDirectory()) throw new Error('seed_topics must be a real directory');
-  const oldRaw = readFileSync(planPath, 'utf8');
   if (parsedInput.action === 'mutate_layout' && hashBytes(oldRaw) !== parsedInput.expected_plan_sha256) {
     return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'plan_hash_mismatch', recommended_action: 'Rerun inspect and resubmit the complete layout baseline.' };
   }
-  const split = splitPlan(oldRaw);
   let mutation;
   try {
     mutation = buildMutation(bundle, split.frontmatter, parsedInput, { profileRerunCount });
@@ -1931,7 +1933,6 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
     };
     throw error;
   }
-  const oldCanonical = CanonicalPlanSchema.safeParse(split.frontmatter);
   if (parsedInput.action === 'mutate_layout') {
     const removeBlocker = safeRemoveBlocker(bundle, oldCanonical.data, parsedInput.remove_topic_uids);
     if (removeBlocker) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', ...removeBlocker, recommended_action: 'Preserve the topic and its history; only an unstarted dependency-free topic can be removed.' };

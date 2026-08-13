@@ -89,6 +89,18 @@ describe('validate-bundle.mjs integration', () => {
     assert.equal(result.status, 1);
     assert.match(result.stdout, /rb_profile\.yaml/);
   });
+
+  it('rejects an old mutable plan through the existing PlanSchema reader', () => {
+    const bundlesRoot = join(tmpDir, 'old-plan-bundles');
+    const created = spawnSync('node', [NEW_BUNDLE, 'old-plan', '--force', '--target-dir', bundlesRoot], { encoding: 'utf-8', timeout: 10000 });
+    assert.equal(created.status, 0, created.stderr);
+    const bundleDir = created.stdout.trim();
+    writeFileSync(join(bundleDir, 'rb_plan.md'), '---\nplan_basename: old-plan\nderived_topic_count: 1\ntopic_registry:\n  - id: "01"\n    slug: topic-a\n    title: Topic A\n---\n# Historical plan\n');
+    const result = spawnSync('node', [PRODUCTION_VALIDATE, bundleDir], { encoding: 'utf-8', timeout: 5000 });
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /rb_plan\.md/);
+    assert.doesNotMatch(result.stdout, /migrat|adopt|upgrade|convert/i);
+  });
 });
 
 function copyTemplates(bundleDir, prefix) {

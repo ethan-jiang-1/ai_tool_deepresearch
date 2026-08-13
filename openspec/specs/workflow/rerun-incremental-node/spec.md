@@ -60,9 +60,7 @@ The phase SHALL prepare exactly one existing explicit topic-state apply form:
    Topic without changing canonical intent;
 3. layout mutation uses one complete `mutate_layout` target with
    `expected_plan_sha256`, ordered retained UID/title/slug-stem entries and
-   explicit remove UIDs; and
-4. migrate-legacy remains its own complete reconciliation and SHALL NOT mix
-   with either form.
+   explicit remove UIDs.
 
 For every successfully added, refined, or direction-adjusted Topic, the
 existing UID-bound seed `## 本轮重跑方向` section SHALL contain the current
@@ -129,7 +127,8 @@ question from this `stop: no` phase.
 
 #### Scenario: Route-bound rerun entry authorizes topic apply
 - **WHEN** HITL2 emitted the rerun target, `enter-phase` recorded the matching route-bound load witness, and the incoming rerun status window is current
-- **THEN** rerun topic-state apply MAY migrate legacy state, add/refine canonical intent, set current direction, or apply one complete layout target
+- **THEN** rerun topic-state apply MAY add/refine canonical intent, set current direction, or apply one complete layout target
+- **AND** a noncanonical historical plan SHALL stop at the current schema/topic-state boundary without a migration or upgrade route
 
 #### Scenario: Route-bound post-final recovery entry authorizes the same topic apply
 - **WHEN** accepted post-final recovery selected and loaded `phase-rerun.md`,
@@ -219,6 +218,12 @@ question from this `stop: no` phase.
 - **AND** if Engine history, dependency, quiescence, or lifecycle checks reject
   that target, the layout SHALL remain unchanged and the Agent SHALL follow
   the single returned owner/boundary action
+
+
+#### Scenario: Rerun does not prepare historical migration
+- **WHEN** inspect reports a noncanonical historical mutable plan
+- **THEN** phase-rerun SHALL preserve it as human-readable history and stop at the returned current plan-contract boundary
+- **AND** it SHALL not prepare, describe, or authorize migration, adoption, upgrade, or direct multi-file conversion
 
 ### Requirement: Rerun-ready gate validates legal rerun state
 

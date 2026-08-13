@@ -260,15 +260,6 @@ describe('canonical topic state', () => {
     for (const token of tokens) assert.equal(rendered.split(token).length - 1, 1, token);
     assert.equal((contract.match(new RegExp(SEED_TOPIC_PROJECTION_CARD_LABEL, 'g')) || []).length, SEED_TOPIC_PROJECTION_SLOTS.length);
   });
-  it('renders the same complete skeleton for migrate_legacy seed_binding:new', () => {
-    const dir = rerunBundle('topic-seed-migration', true);
-    const migration = { context: 'rerun', action: 'migrate_legacy', entries: [{
-      source: 'registry', id: '01', slug: '01_old', title: 'Old', must_answer: ['Old?'],
-      scope_role: 'primary', depends_on_slugs: [], seed_binding: 'new',
-    }] };
-    assert.equal(applyCanonicalTopicState({ bundlePath: dir, input: migration }).verdict, 'committed');
-    assertCompleteSeedSkeleton(readFileSync(join(dir, 'seed_topics/01_old.md'), 'utf8'));
-  });
   it('preserves existing enrichment frontmatter and body while canonical intent changes', () => {
     const dir = bundle('topic-seed-preserve');
     applyCanonicalTopicState({ bundlePath: dir, input });
@@ -365,16 +356,19 @@ describe('canonical topic state', () => {
     const dir = bundle(); try { applyCanonicalTopicState({ bundlePath: dir, input, crashAt: 'before_prepared' }); } catch {}
     assert.equal(inspectCanonicalTopicState({ bundlePath: dir }).mode, 'canonical');
   });
-  it('authorizes explicit rerun migration and external adoption', () => {
+  it('rejects old plans and migrate_legacy input without creating a workspace or changing bytes', () => {
     const dir = rerunBundle('topic-migrate', true);
-    writeFileSync(join(dir, 'seed_topics/01_old.md'), '---\nid: "01"\nslug: 01_old\ntitle: Old\n---\n# Old\n');
-    writeFileSync(join(dir, 'seed_topics/02_external.md'), '---\nid: "02"\nslug: 02_external\ntitle: External\n---\n# External\n');
-    const migration = { context: 'rerun', action: 'migrate_legacy', entries: [
-      { source: 'registry', id: '01', slug: '01_old', title: 'Old', must_answer: ['Old?'], scope_role: 'primary', depends_on_slugs: [], seed_binding: 'existing' },
-      { source: 'adopt', id: '02', slug: '02_external', title: 'External', must_answer: ['External?'], scope_role: 'supporting', depends_on_slugs: ['01_old'], seed_binding: 'existing' },
-    ] };
-    assert.equal(applyCanonicalTopicState({ bundlePath: dir, input: migration }).verdict, 'committed');
-    const inspected = inspectCanonicalTopicState({ bundlePath: dir }); assert.equal(inspected.mode, 'canonical'); assert.equal(inspected.topics.length, 2);
+    const before = snapshotTree(dir);
+    const inspected = inspectCanonicalTopicState({ bundlePath: dir });
+    assert.equal(inspected.mode, 'invalid');
+    assert.equal(inspected.blockers[0].reason_code, 'plan_invalid');
+
+    const canonicalInput = { context: 'rerun', actions: [{ ...input.actions[0], direction: directionCandidate({ action: 'add' }) }] };
+    const planResult = applyCanonicalTopicState({ bundlePath: dir, input: canonicalInput });
+    assert.equal(planResult.reason_code, 'plan_invalid');
+    const migrationResult = applyCanonicalTopicState({ bundlePath: dir, input: { context: 'rerun', action: 'migrate_legacy', entries: [] } });
+    assert.equal(migrationResult.reason_code, 'input_invalid');
+    assert.deepEqual(diffSnapshots(before, snapshotTree(dir)), []);
   });
   it('blocks missing rerun witness and post-final fresh apply', () => {
     const rerun = rerunBundle('topic-no-witness'); writeFileSync(join(rerun, 'rb_trace.jsonl'), ''); writeRerunProfile(rerun);
@@ -603,11 +597,6 @@ describe('canonical topic state', () => {
     assert.equal(inspected.blockers.length, 1);
     assert.equal(inspected.blockers[0].reason_code, 'submitted_topic_binding_unresolved');
   });
-  it('requires explicit adoption for registry-external legacy seed', () => {
-    const dir = rerunBundle('topic-unaccounted', true); writeFileSync(join(dir, 'seed_topics/01_old.md'), '---\nid: "01"\nslug: 01_old\ntitle: Old\n---\n'); writeFileSync(join(dir, 'seed_topics/02_external.md'), '---\nid: "02"\nslug: 02_external\ntitle: External\n---\n');
-    const migration = { context: 'rerun', action: 'migrate_legacy', entries: [{ source: 'registry', id: '01', slug: '01_old', title: 'Old', must_answer: ['Old?'], scope_role: 'primary', depends_on_slugs: [], seed_binding: 'existing' }] };
-    assert.throws(() => applyCanonicalTopicState({ bundlePath: dir, input: migration }), /explicit adopt/);
-  });
   it('recovers partial multi-seed and cleanup interruption', () => {
     const multi = bundle('topic-multi'); const multiInput = { context: 'hitl1', actions: [input.actions[0], { ...input.actions[0], title: 'Topic B', slug_stem: 'topic-b', must_answer: ['B?'] }] };
     try { applyCanonicalTopicState({ bundlePath: multi, input: multiInput, crashAt: 'after_first_seed' }); } catch {}
@@ -677,6 +666,8 @@ describe('canonical topic state', () => {
       }
     }
     assert.ok(discoveredActions.get('rerun').includes('set_rerun_direction'), 'effect-wrapped rerun form must be verified by the top-level schema');
+    assert.equal(discoveredActions.get('rerun').includes('migrate_legacy'), false);
+    assert.equal([...discoveredActions.values()].flat().some((action) => /migrat|adopt|convert|upgrade/.test(action)), false);
     assert.ok(discoveredActions.get('wave_projection').includes('apply_seed_projection'));
     const unknown = describeTopicApplyPlanSchema('not-a-declared-context');
     assert.equal(unknown.ok, false);

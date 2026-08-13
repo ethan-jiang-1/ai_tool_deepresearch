@@ -24,6 +24,11 @@ const CASES = [
   },
 ];
 
+const CURRENT_TOPIC_GUIDANCE = [
+  new URL('../../../DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-rerun.md', import.meta.url),
+  new URL('../../../DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-seed-topics.md', import.meta.url),
+];
+
 function source(entry) {
   return readFileSync(entry.path, 'utf8');
 }
@@ -116,5 +121,18 @@ describe('topic-rewrite fixture contracts', () => {
       assert.match(markdown, new RegExp(`fm\\.derived_topic_count === ${entry.expectedTopics} && fm\\.topic_registry\\?\\.length === ${entry.expectedTopics}`), entry.name);
       for (const token of entry.semanticTokens) assert.ok(markdown.includes(token), `${entry.name}: ${token}`);
     }
+  });
+
+  it('names only canonical topic-state paths for current rerun and Seed Topics work', () => {
+    for (const path of CURRENT_TOPIC_GUIDANCE) {
+      const markdown = readFileSync(path, 'utf8');
+      assert.doesNotMatch(markdown, /migrate_legacy|slug-only compatibility|sanctioned rerun migration/i, String(path));
+      assert.doesNotMatch(markdown, /legacy.*(?:migration|adoption|upgrade)|(?:migration|adoption|upgrade).*legacy/i, String(path));
+    }
+    const rerun = readFileSync(CURRENT_TOPIC_GUIDANCE[0], 'utf8');
+    const seedTopics = readFileSync(CURRENT_TOPIC_GUIDANCE[1], 'utf8');
+    assert.match(rerun, /mutate_layout/);
+    assert.match(rerun, /previous_layouts/);
+    assert.match(seedTopics, /UID-bound/);
   });
 });

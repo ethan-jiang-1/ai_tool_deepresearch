@@ -436,4 +436,19 @@ ${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
     assert.equal(output.hints.some((candidate) => /adapter|provider|WebSearch|WebFetch/i.test(candidate.missing_fact || '')), false);
     assert.ok(output.check.masked_rule_ids.includes('research_access_available'));
   });
+
+  it('rejects an old mutable plan through the existing canonical topic-state prerequisite', () => {
+    const name = unique('old-plan');
+    const created = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+    const bundleDir = track(created.stdout.trim());
+    writeProfileYaml(bundleDir, VALID_PROFILE);
+    writeFileSync(join(bundleDir, 'rb_plan.md'), '---\nplan_basename: old-plan\nderived_topic_count: 1\ntopic_registry:\n  - id: "01"\n    slug: topic-a\n    title: Topic A\n---\n# Historical plan\n');
+    advanceHitl1(bundleDir);
+    const output = JSON.parse(runGate(bundleDir).stdout);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'canonical_topic_state_prerequisite');
+    assert.equal(output.check.passed, false);
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'missing_contract');
+    assert.doesNotMatch(JSON.stringify(output), /migrat|adopt|upgrade|convert/i);
+  });
 });

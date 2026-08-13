@@ -102,6 +102,20 @@ describe('operate-queue delegated demand admission', () => {
     assert.equal(readFileSync(join(dir, 'rb_queue.json'), 'utf8'), before);
   });
 
+  it('rejects an old mutable plan through the current topic-state boundary without queue mutation', () => {
+    const dir = createTempDir('queue-admission-old-plan');
+    writeBundle(dir);
+    writeFileSync(join(dir, 'rb_plan.md'), '---\nplan_basename: old\nderived_topic_count: 1\ntopic_registry:\n  - id: "01"\n    slug: topic-a\n    title: Topic A\n---\n# Plan\n');
+    const taskPath = join(dir, 'task.json');
+    writeFileSync(taskPath, JSON.stringify(delegated('wave0-source-old-plan')));
+    const before = readFileSync(join(dir, 'rb_queue.json'), 'utf8');
+    const result = run(QUEUE_CLI, 'enqueue', dir, '--task', taskPath);
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /canonical topic state|required/);
+    assert.doesNotMatch(`${result.stdout}\n${result.stderr}`, /migrat|adopt|upgrade|convert/i);
+    assert.equal(readFileSync(join(dir, 'rb_queue.json'), 'utf8'), before);
+  });
+
   it('diagnoses rejected demand in check without queue mutation', () => {
     const dir = createTempDir('queue-admission-check');
     writeBundle(dir);

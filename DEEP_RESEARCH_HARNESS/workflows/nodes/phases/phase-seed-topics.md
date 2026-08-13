@@ -29,7 +29,7 @@ suggested_context:
 
 ## 1. Stage Goal
 
-Canonical new runs arrive with `topic_registry` and one UID-bound `seed_topics/{slug}.md` skeleton already committed together by HITL1 topic-state apply. 本 phase 验证并丰富 projection，不再是 approved intent 的首次 durable writer。Legacy resumed bundle 在 sanctioned rerun migration 前保留既有 slug-only compatibility path，但不得从 seed filename/prose 推断 UID、新 topic 或 mutation authority。
+Canonical new runs arrive with `topic_registry` and one UID-bound `seed_topics/{slug}.md` skeleton already committed together by HITL1 topic-state apply. 本 phase 验证并丰富 projection，不再是 approved intent 的首次 durable writer。A plan that fails the current canonical contract stops at its existing plan/topic-state prerequisite; seed filename or prose never supplies UID, new-topic, mutation, migration, adoption, or upgrade authority.
 
 每个 topic 一个 `{slug}.md`（文件名 = `topic.slug` + `.md`）。`slug` 为 `NN_` 编号前缀 + 描述性短名。Canonical frontmatter carries topic_uid/id/slug/title/must_answer/scope_role/depends_on_topic_uids plus Agent-facing enrichment fields。
 

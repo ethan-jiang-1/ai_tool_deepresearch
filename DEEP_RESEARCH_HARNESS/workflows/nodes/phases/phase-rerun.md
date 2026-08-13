@@ -89,7 +89,7 @@ HITL2 `user_decision: rerun` 后，Agent 用正常 HITL2 gate handoff或唯一ac
 node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs apply --bundle <bundle> --input <retained-candidate.json>
 ```
 
-The Engine validates the route-bound HITL2 witness plus count/action/required fields and atomically stages only the plan plus explicitly touched current seed bytes. Legacy bundle使用完整显式 `migrate_legacy` reconciliation；rename/reorder/renumber/safe-remove使用inspect返回的一个完整`mutate_layout` target。用户决定title/order/remove语义；Agent自行处理queued/claimed blocker、重跑同一input、exact recover、returned style handoff与inspect/audit。历史artifact/reference/output path保持原位。不得用direct multi-file edit或`human-directed`绕过；也不得 direct-edit seed direction 或 registry。
+The Engine validates the route-bound HITL2 witness plus count/action/required fields and atomically stages only the plan plus explicitly touched current seed bytes. A plan that fails the current canonical contract stops at the returned plan/topic-state boundary; it has no migration, adoption, upgrade, or direct conversion form. Canonical `previous_layouts[]` remains current lineage for prior coordinates, not a historical mutable-plan compatibility path. Rename/reorder/renumber/safe-remove使用inspect返回的一个完整`mutate_layout` target。用户决定title/order/remove语义；Agent自行处理queued/claimed blocker、重跑同一input、exact recover、returned style handoff与inspect/audit。历史artifact/reference/output path保持原位。不得用direct multi-file edit或`human-directed`绕过；也不得 direct-edit seed direction 或 registry。
 
 1c. **只消费 returned style handoff**：读取 committed apply/recover JSON。
 
