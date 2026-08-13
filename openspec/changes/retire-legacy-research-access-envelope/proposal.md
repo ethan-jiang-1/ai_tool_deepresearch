@@ -52,9 +52,13 @@ envelope 仅通过既有 `ProfileSchema` invalid boundary 拒绝，HITL1 复用
 
 ## Impact
 
-- Target code: `schema/contracts/profile.mjs`, HITL1 Gate checker and its
-  definition/guidance only where it mentions legacy envelope behavior.
-- Verification: schema, HITL1, style-preservation, shared-validator and recovery
-  regressions; one explicit legacy rejection boundary per affected reader class.
+- Target code: `schema/contracts/profile.mjs`, the legacy-only source-class and
+  access-boundary enums/exports, HITL1 Gate checker, selected-adapter resolver,
+  and their definition/guidance only where they mention legacy envelope behavior.
+- Verification: schema, HITL1, selected-adapter, style-preservation, Setup,
+  rerun-ready, `validate-bundle`, post-final recovery, and every current-success
+  lifecycle/E2E fixture that currently writes the retired envelope. Each reader
+  keeps a current direct-sample success path; only its existing schema boundary
+  covers a retired envelope rejection.
 - No new dependencies, commands, state, migration, profile writer, provider
   selection, permission, or topic-plan behavior.

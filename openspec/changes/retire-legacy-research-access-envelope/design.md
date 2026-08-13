@@ -70,6 +70,18 @@ current executor-neutral controller relationship remain. Only the
 `access_boundary` -> owner/repair mapping and its imports/tests/guidance leave.
 The adapter cannot infer a current repair from reason prose or historical fields.
 
+### Retire legacy vocabulary with its only contract consumer
+
+`SourceClass`, `SourceClassReachability`, `ResearchAccessBoundaryLocation`, and
+`ResearchAccessBoundaryExtent` have no consumer outside the legacy ProfileSchema
+branch and its barrel exports. Apply removes those declarations and exports with
+that branch. Current `ResearchAccessSourceGroup`, sample ID, sample outcome, and
+retrieval-surface enums remain the direct-sample vocabulary.
+
+This is not a generic enum cleanup: it is required to ensure that source-class
+and access-boundary forms cannot remain an apparently supported current schema
+vocabulary after their sole contract reader is removed.
+
 ### Constitutional review
 
 Semantic precision: readers need answer only whether a profile has a current
@@ -98,6 +110,10 @@ No hint creates host permission, migration authority, or a new user checkpoint.
 - Style writer may have preserved an old envelope -> it must no longer treat an
   invalid profile as a successful style-write input; retain only preservation of
   valid current observations.
+- Current-success fixtures across downstream gates and E2E chains still write the
+  retired form -> enumerate and convert them in the same Apply; a fixture may not
+  keep an old envelope merely because its owning Gate does not inspect access
+  fields semantically.
 
 ## Migration Plan
 

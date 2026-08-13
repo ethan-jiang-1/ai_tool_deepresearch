@@ -6,10 +6,10 @@ test_classes:
     rationale: ProfileSchema directly owns the strict current-only shape and needs an isolated current-versus-retired truth table.
   integration:
     status: selected
-    rationale: HITL1, the selected adapter, style writer, Setup, rerun-ready, validate-bundle, and post-final recovery expose cross-module schema-consumer behavior.
+    rationale: HITL1, the selected adapter, style writer, Setup, rerun-ready, validate-bundle, and post-final recovery expose distinct cross-module schema-consumer boundaries.
   deterministic_e2e:
     status: selected
-    rationale: The production HITL1 direct-sample flow must continue to admit current available and unavailable observations across a fresh temporary bundle workflow.
+    rationale: Current direct-sample fixtures must remain valid across fresh HITL1, Setup, and rerun lifecycle chains after every legacy-success fixture is converted.
   agent_flow_e2e:
     status: not_applicable
     rationale: The change claims deterministic schema and CLI behavior only; it makes no real-Agent or external-tool behavior claim.
@@ -56,13 +56,55 @@ claims:
       external_calls: none
       verdict_judge: deterministic
     verdict_authority: node_test_exit
-  - id: shared-profile-readers-fail-closed
-    statement: Setup, rerun-ready, validate-bundle, and post-final recovery consume the existing ProfileSchema rejection without translation, while their current direct-sample fixtures remain valid.
+  - id: setup-profile-reader-fails-closed
+    statement: Setup consumes an invalid retired envelope through its existing ProfileSchema boundary and continues to accept its current direct-sample fixture.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
       kind: node_test
       path: tests/integration/cli/check-gate-setup-ready.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rerun-profile-reader-fails-closed
+    statement: Rerun-ready consumes an invalid retired envelope through its existing profile prerequisite and continues to accept its current direct-sample fixture.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-rerun-ready.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: bundle-validation-profile-reader-fails-closed
+    statement: validate-bundle rejects a retired envelope through its existing ProfileSchema boundary without translating it or requiring the field globally.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/validate-bundle.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: post-final-profile-reader-fails-closed
+    statement: Post-final recovery rejects a retired envelope through its existing ProfileSchema parse boundary while retaining its current unprobed terminal fixture.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/post-final-recovery.test.mjs
     execution_profile:
       fixture: fixture_backed
       subject_execution: none
@@ -80,6 +122,48 @@ claims:
     execution_profile:
       fixture: none
       subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-pre-wave-fixture-e2e
+    statement: The pre-wave readiness chain accepts a converted current direct-sample profile without legacy envelope data.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/pre-wave-readiness.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-rerun-fixture-e2e
+    statement: The deterministic rerun continuity chain accepts a converted current direct-sample profile without legacy envelope data.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/rerun-round-continuity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-setup-handoff-fixture-e2e
+    statement: The Setup hostfile handoff chain accepts a converted current direct-sample profile without legacy envelope data.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/setup-ready-hostfile-handoff.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
       runtime: temporary_bundle
       external_calls: none
       verdict_judge: deterministic
