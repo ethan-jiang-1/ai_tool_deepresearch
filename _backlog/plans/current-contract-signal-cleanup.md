@@ -1,10 +1,12 @@
 # Current-contract signal cleanup
 
-> 状态：全域覆盖审计已完成；C2a/C2b/C2c 均已 governed-archived；下一项为 C3 的单项 policy decision
+> 状态：全域覆盖审计已完成；C2a/C2b/C2c/C3 均已 governed-archived；下一项为 C4a 的独立 policy decision
 >
 > 建立日期：2026-08-12
 >
-> 下一动作：只讨论 C3 `drop-legacy-bundle-entry-compatibility` 的旧入口 inspect/rejection policy；未获批准前不创建 proposal、不改 target
+> 当前阶段：C3 `drop-legacy-bundle-entry-compatibility` 已完成 Apply、main-spec sync、验证和 governed archive；C4a `research_access` legacy envelope 的 product/rejection policy 尚待逐项确认。
+>
+> 下一动作：只讨论 C4a：移除 legacy `research_access` envelope 后，缺失字段应在何处成为失败；确认后才建立独立 OpenSpec proposal。
 >
 > 目标：让 Agent 看到的 Harness、accepted main specs 和 `CONTEXT.md` 只描述当前可执行系统。旧格式、旧入口、旧 schema、旧 alias、旧 migration 和仅为历史兼容存在的 fallback 默认删除，不再让未知消费者成为永久兼容理由。
 
@@ -18,23 +20,37 @@
 
 本 plan 采纳的工作方式是：先定义唯一的当前 contract，再按 artifact family 小步删除兼容面；每一步都同时处理实现、成功路径测试、Agent-facing guidance 和 main specs，不建立一个永久的“legacy inventory”来继续养旧行为。
 
-每个候选 change 的具体解释、实际 consumers、风险、影响面和 proposal 前证据门在 [change cards](current-contract-signal-cleanup/README.md) 中维护。总 plan 只保留全局政策、顺序和进度；不要在两处复制同一份 implementation scope。
+每个候选 change 的具体解释、实际 consumers、风险、影响面和 proposal 前证据门在 [change cards](current-contract-signal-cleanup/README.md) 中维护；全范围是否真的已覆盖由 [coverage ledger](current-contract-signal-cleanup/coverage-ledger.md) 证明。总 plan 只保留全局政策、顺序和进度；不要在两处复制同一份 implementation scope。
 
-## 本轮 Proposal Barrier
+## 全域 Coverage / Proposal Gate
 
-这次清理暴露出一个过程问题：不应在某个局部刚看清时就创建
-proposal，随后才发现它与另一个 legacy reader、retained artifact 或治理规则耦合。
-从现在开始，这组清理遵守下面的门：
+这次清理暴露出一个过程问题：不能因为某个局部刚看清，就创建
+proposal，随后才发现另一个 legacy reader、retained artifact、accepted spec 或治理规则耦合其中。卡片存在、或某一组做过 grep，都不等于全范围已经扫描完成。
 
+从现在开始，任何新的 cleanup proposal 都受以下全域门约束：
+
+- [x] C1 的已知 surface 已完成 producer / reader / caller / guidance / spec / test 归类；其五个候选动作已拆成独立卡。
 - [x] C2-C5 的 producer / reader / caller / guidance / spec / test 首轮调查已完成，并写入对应 change card。
 - [x] 当前语义与历史兼容已分开；`previous_layouts`、current direct-sample statuses、`related_topic_uid: all` 等不因名字像旧格式而进入删除候选。
-- [ ] 用户按风险队列逐项确认 C2c、C2b、C3、C4a、C4b、C5a-1、C5a-2、C5b 的 policy decision；一次只讨论一项。
-- [ ] 某个 slice 只有在本轮完整调查已存在、该 slice 获用户批准、且它自己的 Go / No-go 完整时，才可创建独立 OpenSpec proposal。
+- [x] `DEEP_RESEARCH_HARNESS/` 的 227 个 tracked files 已盘点；222 个 non-empty asset 与 5 个空模板/placeholder 均已有 owner-based classification，broad-scan candidate clusters 已归入 audit family 或标为 protected/rejection/false positive。
+- [x] 85 份 accepted main specs 均已有逐份 classification；机械 keyword hit 没有被当作完成证据。
+- [x] `CONTEXT.md`、直接相关 root routing/guidance、以及被候选变更触及的 tests/playbooks 均已有 owner-based classification。
+- [x] 每个候选都有明确 owner、风险等级和下一动作；C6 的 reader fanout 已按 C6a-C6d 分开，任何后续发现仍须进入 coverage ledger，不在聊天中隐式扩张。
+- [x] coverage ledger 的 `unclassified candidate count` 为 `0`。
+- [ ] 用户按风险队列逐项确认需要 product / compatibility policy 的动作；一次只讨论一项。
+- [ ] 只有上述全域门已满足、该 slice 获用户批准、且它自己的 Go / No-go 完整时，才可创建独立 OpenSpec proposal。
 
-这个 barrier 不追溯已归档的 C1a/C2a；它禁止的是为尚未完成全局调查的
-C2b-C5 抢先创建 proposal。它不要求 C2 等待 C5 的业务决策：每个获准 slice
-仍单独走 `propose -> explore/refine -> apply -> sync -> archive`，不会把 C2-C5
-合并成一个大 change。
+已记录的例外：C2c 已于 2026-08-13 选择 A（保留可选、非权威的人类
+`CHANGELOG.md`；取消内部 `v0.x` authority、proposal-time bump 和 `RUN.md`
+banner choreography）。C2b 先独立 Apply、sync 并通过 governed archive
+（`2026-08-13-retire-framework-version-stamp`）；随后 C2c 以其 archive record
+为硬前置，独立 Apply、sync 并通过 governed archive
+（`2026-08-13-retire-internal-version-choreography`）。随后 C3 以独立 change
+完成 Apply、sync、验证和 governed archive
+（`2026-08-13-drop-legacy-bundle-entry-compatibility`）；下一步是 C4a 的单项
+policy decision。
+
+这个 gate 不追溯已归档的 C1a/C2a；全域调查现已完成。它仍要求每个获准 slice 单独走 `propose -> explore/refine -> apply -> sync -> archive`，不会把不同 artifact family 合并成一个大 change。
 
 ## 目标状态
 
@@ -108,12 +124,12 @@ C2b-C5 抢先创建 proposal。它不要求 C2 等待 C5 的业务决策：每�
 | 顺序 | OpenSpec change | 状态 | 依赖 | 完成后主要收益 |
 |---|---|---|---|---|
 | 0 | Baseline and policy | complete | 无 | current-only 原则和审计基线明确 |
-| 1 | `retire-inactive-contract-surfaces` | C1a catalog-only slice archived; remaining C1 candidates need separate review | 0 | 已停止 catalog 将 retired dedup 表述为 current capability；gate utilities/return-map 等仍未决定 |
-| 2 | `remove-internal-versioning-and-slim-entry` | C2a/C2b/C2c 均 archived；C3 的单项 policy decision 是下一步 | 1 | 让真正入口靠前，并停止内部版本号/横幅 choreography |
-| 3 | `drop-legacy-bundle-entry-compatibility` | 调查完成；inspection policy decision pending | 2 | bundle 只剩一个可执行 entry contract |
-| 4 | `drop-legacy-profile-and-topic-compatibility` | 已拆 C4a/C4b；调查完成、决策 pending | 3 | profile access 与 legacy plan migration 是不同风险族；current layout lineage 保留 |
-| 5 | `drop-legacy-reference-and-experiment-formats` | 已拆 C5a/C5b；调查完成、决策 pending | 4 | current UID authoring、historic reference reader、experiment retained history 分别决策 |
-| 6 | `drop-legacy-work-unit-contracts` | blocked by product decision | 3-5 | 历史 work-unit artifact 是否仍由 current Engine 读取须先决定 |
+| 1 | `retire-inactive-contract-surfaces` | C1 known-surface inventory closed; C1b-C1f are split candidates awaiting their own approval | 0 | 已停止 catalog 将 retired dedup 表述为 current capability；gate utilities/return-map 已归类为 current，五个实际候选不再混在一起 |
+| 2 | `remove-internal-versioning-and-slim-entry` | C2a/C2b/C2c 均 archived；C3 也已完成并归档，下一步是 C4a 的单项 policy decision | 1 | 让真正入口靠前，并停止内部版本号/横幅 choreography |
+| 3 | `drop-legacy-bundle-entry-compatibility` | applied, synced, verified, governed-archived (`2026-08-13-drop-legacy-bundle-entry-compatibility`) | 2 | bundle 只剩一个可执行 entry contract |
+| 4 | `drop-legacy-profile-and-topic-compatibility` | 已知 surface classification closed：C4a/C4b 各自 policy pending；current profile statuses 与 layout lineage 已有 focused regression evidence | 3 | profile access 与 legacy plan migration 是不同风险族；current layout lineage 保留 |
+| 5 | `drop-legacy-reference-and-experiment-formats` | known-surface classification closed；C5a-1b 已证实 Wave2 selected-subset 是 current output，但其无损 metadata form 与 historic-reader policy 仍待单独决策 | 4 | current one/all/subset binding、historic reference reader、experiment retained history 分别决策 |
+| 6 | `drop-legacy-work-unit-contracts` | C6a-C6d 已按 explicit assignment、markerless submission、actor provenance、transaction v1 拆卡；reader fanout 已完成；每项仍为 L4 且等待逐项决策 | 3-5 | 不再把四种历史 work-unit 语义误当成一个可安全删除的版本分支 |
 | 7 | `rewrite-main-specs-as-current-state` | pending | 1-6 | accepted specs 不再充当 change history |
 | 8 | `sharpen-context-and-routing` | pending | 7 | 最后压缩 glossary/routing，减少脆弱措辞测试 |
 
@@ -132,8 +148,9 @@ governed archive 设为硬前置条件；实际执行顺序如下：
 3. C2c 已完成 plan review、C2b archive evidence、governance checks 和
    current-consumer scan，随后完成 own targets、sync 与 governed archive
    （`2026-08-13-retire-internal-version-choreography`）。
-4. 现在才回到 C3 的单独 policy decision；C3 尚未获得 proposal 或 target-edit
-   授权。
+4. C3 已获授权并完成 Apply、main-spec sync、selected verification、closeout
+   review 与 governed archive（`2026-08-13-drop-legacy-bundle-entry-compatibility`）。
+   因此下一个未决 policy gate 是 C4a，而不是重新打开 C3。
 
 这样 C2b 在当时有效的 VEM choreography 下完成自己的旧规则收尾；C2c 随后
 只移除那套 choreography，没有让新 bundle 在二者之间继续写入一个已失去
@@ -187,11 +204,12 @@ Archive 时按当前 change 运行 archive-mode requirement check 和 governed f
 
 - [x] C1a 已按更小的 catalog-only slice archive：`2026-08-12-correct-retired-content-dedup-catalog` 只更正 retired `gate-content-dedup` 的 catalog 投影；其余 C1 dead-surface 与 C1b gate utility/playbook 判断仍须单独审查。
 - [x] C2a `slim-run-entry-history` 已 governed archive：`RUN.md` 仅保留一个 banner，Section 0 回到第 5 行；`framework_version`（C2b）与版本治理（C2c）未纳入该 change。
-- [x] C2b/C2c、C3、C4a/C4b、C5a/C5b 的 discovery cards 已先收口；没有为它们创建 active OpenSpec change。
+- [x] C2b/C2c、C3、C4a/C4b、C5b 的 discovery cards 已先收口；C5a 的 Wave1 handoff 已证实，C5a-1b 也已证实 selected-subset Wave2 reference 是 current output，但其 binding design 仍须独立用户决策。
 - [x] C2b stamp policy 已通过 governed archive：`2026-08-13-retire-framework-version-stamp` 删除新 bundle stamp writer、CMI-007 与正向 assertions；60 个 focused tests、package 与 governance checks 通过。
-- [x] C2c 的 A policy 已由用户确认；`retire-internal-version-choreography` 已完成 proposal/design/delta-spec/tasks planning validation、Apply、sync、closeout review 与 governed archive。C3 现在才进入单独 policy decision，尚未获 proposal 或 target-edit 授权。
+- [x] C2c 的 A policy 已由用户确认；`retire-internal-version-choreography` 已完成 proposal/design/delta-spec/tasks planning validation、Apply、sync、closeout review 与 governed archive。
+- [x] C3 的 A policy 已由用户确认并落地：only `RUN_BUNDLE.md`、only `BUNDLE_MAP.md`、only `START_FROM_HERE.md` 的历史 bundle 不得进入 current `continue` / `inspect` / reentry 正向路径；人仍可直接阅读历史 Markdown。`drop-legacy-bundle-entry-compatibility` 已完成 12 份 delta 的 sync、shared predicate、closeout repairs、unit `27/27`、integration `49/49`、deterministic E2E `2/2`、package validation、治理检查和 governed archive（`2026-08-13-drop-legacy-bundle-entry-compatibility`）。
 - [ ] C4a、C4b、C5a、C5b 各保留独立 decision gate；profile/topic、reference/experiment 不得混入同一个 apply。
-- [ ] C6 在用户决定历史 work-unit artifacts 的 Engine policy 前保持 blocked。
+- [ ] C6a-C6d 按 explicit assignment、markerless submission、actor provenance、transaction v1 各自单独讨论并决定；不得用一个总的历史-artifact policy 覆盖四种后果。
 - [ ] C7、C8 只在 runtime behavior 收敛后再开始，防止 docs/specs 领先真实行为。
 
 ## Metrics ledger
@@ -205,7 +223,7 @@ Archive 时按当前 change 运行 archive-mode requirement check 和 governed f
 | 2026-08-12 | C2a slim entry history | -246 (`RUN.md` 299 -> 53) | unchanged | unchanged | 0 runtime branches; 1 duplicate history projection removed | `RUN.md` no longer has `Current Release` dump | PASS | governed archive `2026-08-12-slim-run-entry-history`; 32 focused tests + package/governance checks passed |
 | 2026-08-13 | C2b retire framework stamp | -36 | -1 requirement / -3 scenarios | CMI-007 retired | 1 new-bundle writer chain | new output/specs no longer present `framework_version` as current contract | PASS | governed archive `2026-08-13-retire-framework-version-stamp`; 60 focused tests + package/governance checks passed |
 | 2026-08-13 | C2c retire internal version choreography | -2 (`RUN.md` banner) | 2 current specs rewritten | 6 current requirements rewritten | 3 forced projections: internal target, changelog task, entry banner | no positive current entry/version contract | PASS | governed archive `2026-08-13-retire-internal-version-choreography`; 15 tests / 4 suites + package/governance checks passed |
-| TBD | Change 3 |  |  |  |  |  |  |  |
+| 2026-08-13 | C3 legacy bundle entry | not remeasured | 84 / not remeasured | 18 modified requirement blocks synchronized | 3 legacy-only entry paths; incomplete current pairs reject | scoped scan found no positive legacy-entry, fallback, or migration route | PASS | governed archive `2026-08-13-drop-legacy-bundle-entry-compatibility`; unit 27/27, integration 49/49, deterministic E2E 2/2, package and archive governance checks passed |
 | TBD | Change 4 |  |  |  |  |  |  |  |
 | TBD | Change 5 |  |  |  |  |  |  |  |
 | TBD | Change 6 |  |  |  |  |  |  |  |
@@ -218,7 +236,10 @@ Archive 时按当前 change 运行 archive-mode requirement check 和 governed f
 
 后续任何发现先写成 checkbox，再分派到一个 bounded change；没有 owner 的发现不得静默扩张当前 apply scope。
 
-- [ ] 在 Change 1 proposal 时建立首次完整 producer/reader/caller inventory，并把遗漏项加到对应 change。
+- [x] 已完成每个 audit family 的 ledger 更新；不因“已有 change card”推断覆盖，而是以 inventory 和 owner classification 为证据。
+- [x] Harness broad scan 的每个 candidate cluster 已归入 C1-C9 或 `protected current semantic` / `current rejection boundary` / `false positive`；无 owner 的 hit 为零。
+- [x] C6 的四种已知历史 work-unit shape 已拆为 C6a-C6d，且 reader fanout 已分别映射；这不等于任何 L4 结果已获批准。
+- [x] 已为 85 份 main spec 建立逐份 inventory，记录 current behavior owner、classification 和 action。
 - [ ] 在每次 archive 后重跑 legacy-token scan，将新的正向 success hit 归入后续 change。
 - [ ] 若发现真实外部 current consumer，只记录可复现证据和需要保留的最小 contract；不因此恢复整个旧版本族。
 - [ ] 若某 change 同时涉及两个可独立验证的 artifact family，拆成两个 change 并更新全局进度表。
@@ -228,6 +249,7 @@ Archive 时按当前 change 运行 archive-mode requirement check 和 governed f
 只有以下条件全部满足，才把本文件移入 `_backlog/_done/_closed_plans/`：
 
 - [ ] Changes 1-8 均 archived，或经有证据的 decision 明确判定不需要并记录原因。
+- [ ] coverage ledger 的每一项均已分类，且 `unclassified candidate count = 0`。
 - [ ] Harness 的每个受审计 artifact family 只有一个 current positive contract。
 - [ ] current docs/specs/tests 不再把旧格式或旧入口展示为成功用法。
 - [ ] historical bundles 保持可人工查看，但 current Engine 不迁移、不执行。

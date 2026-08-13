@@ -2,7 +2,7 @@
 
 > 候选 change：`drop-legacy-bundle-entry-compatibility`
 >
-> 状态：audit coverage closed; current-only reject policy confirmed; rejection-owner design enters proposal planning
+> 状态：applied, main-spec synced, verified, and governed-archived as `2026-08-13-drop-legacy-bundle-entry-compatibility`
 >
 > 风险：L3
 
@@ -107,8 +107,22 @@ does not create an OpenSpec proposal until the user chooses its policy.
 - [x] Fixture matrix is closed: current complete, only `RUN_BUNDLE.md`, only `START_FROM_HERE.md`, and only `BUNDLE_MAP.md` all touch a compatibility path; a future proposal must turn the latter three into explicit boundary tests.
 - [x] Enforcement gap is identified: the current instantiation gate requires `BUNDLE_MAP.md` but not `BUNDLE_ENTRY.md`; inspector/reentry do not share a current-entry predicate.
 - [x] User chose A: legacy-only bundle shapes are current-contract rejects; direct human Markdown reading remains outside the operational contract.
-- [ ] Proposal identifies one direct rejection owner and a bounded diagnostic shape; do not misuse existing `missing_contract` or `invalid_input`, and do not create divergent legacy outcomes across continue/inspect/reentry.
-- [ ] Proposal synchronizes `bundle-start-from-here` and all affected accepted specs with the actual behavior, including the copied inspector fixture, rather than leaving a tombstone that still promises success.
+- [x] Proposal identifies `inspect-bundle.mjs` as the direct public rejection owner and a bounded diagnostic shape: `unsupported_current_entry_contract`, exit `1`, and no historical mode output. Reentry retains its JSON envelope with one blocker rather than using `missing_contract` or `invalid_input`; Gate, observability, and continuation reuse the planned pure predicate.
+- [x] Proposal synchronizes `bundle-start-from-here` and all affected accepted specs with the actual behavior, including the copied inspector fixture: the plan names 12 delta specs and a manual whole-capability retirement that removes the current BUS spec/catalog row while retaining retired registry identity.
+
+## OpenSpec Execution And Archive (Complete)
+
+- [x] Created the proposal with 12 delta specs, design, and a 27-task Apply checklist. The scope excluded migration, auto-upgrade, version routing, compatibility adapters, legacy markers, and human-only Harness inspection.
+- [x] Created `verification-plan.yaml`: unit predicate coverage; integration coverage for inspector/reentry/Gate/observability/guidance/fixture; deterministic E2E fresh-pair coverage; `agent_flow_e2e: not_applicable`.
+- [x] Created affected `semantic-closure.yaml` for `bundle.current-entry-contract`; after Apply it names `engine/helpers/current-entry-contract.mjs` as the resolver, with inspector, reentry, Gate, and file observability as consumers.
+- [x] Planning validation passed on 2026-08-13: `openspec validate drop-legacy-bundle-entry-compatibility --strict`, plan-mode requirement registry, capability discovery, verification routing, semantic closure, and `git diff --check` all exited `0`.
+- [x] Apply added the shared predicate and changed its listed Harness/test consumers; the 12 delta specs were synchronized into accepted main specs, `bundle-start-from-here` was retired from the catalog, and the complete change was governed-archived at `openspec/changes/archive/2026-08-13-drop-legacy-bundle-entry-compatibility/`.
+
+## Apply And Archive Evidence
+
+- [x] User explicitly authorized Apply; all 27 tasks, including plan review and closeout-review markers, are complete in the archive record.
+- [x] The finalizer archived the change after the archive-mode requirements check, project-spec check, semantic closure, capability discovery, verification routing, and strict change validation passed.
+- [x] Closeout repaired the stale ACS-004 `START_FROM_HERE.md` fallback wording and strengthened the fixture assertion to compare the inspected source file's `realpath` directly.
 
 ## 验证
 
@@ -119,9 +133,13 @@ node --test tests/integration/md/continue-run-bundle-contract.test.mjs
 node DEEP_RESEARCH_HARNESS/cli/validate-workflow-package.mjs
 ```
 
+The recorded Apply result is unit `27/27`, integration `49/49`, deterministic
+E2E `2/2`, package validation, exact 18-block delta/main comparison, and
+governed archive checks. No skipped or cancelled test was treated as proof.
+
 ## 何时算完成
 
-- [ ] New and continued current bundles use one documented entry topology.
-- [ ] legacy-only bundle cannot enter a positive Engine/continue path.
-- [ ] one owner-defined rejection boundary replaces all legacy fallback advice without inventing a second operational entry.
-- [ ] current docs/tests no longer demonstrate legacy entry as a success case.
+- [x] New and continued current bundles use one documented entry topology.
+- [x] legacy-only bundle cannot enter a positive Engine/continue path.
+- [x] one owner-defined rejection boundary replaces all legacy fallback advice without inventing a second operational entry.
+- [x] current docs/tests no longer demonstrate legacy entry as a success case.
