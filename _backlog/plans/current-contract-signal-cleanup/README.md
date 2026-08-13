@@ -1,6 +1,6 @@
 # Current-Contract Signal Cleanup: Change Cards
 
-本目录是 [`../current-contract-signal-cleanup.md`](../current-contract-signal-cleanup.md) 的解释层。总计划回答“按什么顺序推进”；本目录回答“这一项实际改什么、影响谁、哪里会出事、什么证据不足时不能动”。
+本目录是 [`../current-contract-signal-cleanup.md`](../current-contract-signal-cleanup.md) 的解释层。总计划回答“按什么顺序推进”；本目录回答“这一项实际改什么、影响谁、哪里会出事、什么证据不足时不能动”。[coverage ledger](coverage-ledger.md) 单独证明全范围是否已审完；有卡片不等于该 family 或全项目已经全覆盖。
 
 它不是 OpenSpec change，也不授权 target edit。每张卡片在对应 change `proposal.md` 创建后，必须把已确认的结论转入该 change 的 proposal/design/tasks；这里保留跨 change 的审计判断和推进记录。
 
@@ -27,12 +27,12 @@
 
 | ID | 候选 OpenSpec change | 当前判断 | 风险 | 解释卡 |
 |---|---|---|---|---|
-| C1 | `retire-inactive-contract-surfaces` | 应拆成“安全 tombstone 清理”与“仍有活跃实验 consumer 的 gate utilities”两个判断 | L1-L3 | [C1](changes/C1-retire-inactive-contract-surfaces.md) |
+| C1 | `retire-inactive-contract-surfaces` | 已知 surface 已归类：五个候选已拆卡；gate utilities 和 return-map 是 current semantic，bundle entry 归 C3 | L1-L2 | [C1](changes/C1-retire-inactive-contract-surfaces.md) |
 | C2 | `remove-internal-versioning-and-slim-entry` | C2a/C2b/C2c 均已 governed-archived；下一项是 C3 的单项 policy decision | L2-L3 | [C2](changes/C2-remove-internal-versioning-and-slim-entry.md) |
-| C3 | `drop-legacy-bundle-entry-compatibility` | current guidance/CLI 仍显式接受旧入口；唯一未决点是 old-only bundle 的 inspect policy | L3 | [C3](changes/C3-drop-legacy-bundle-entry-compatibility.md) |
-| C4 | `drop-legacy-profile-and-topic-compatibility` | C4a profile access 为 L3；C4b 仅指 LegacyPlan migration，`previous_layouts` 是 current lineage，必须保留 | L3-L4 | [C4](changes/C4-drop-legacy-profile-and-topic-compatibility.md) |
-| C5 | `drop-legacy-reference-and-experiment-formats` | C5a 先改 current authoring 为 UID-only，再决定 historic reader；C5b 是 retained-history selection policy | L3-L4 | [C5](changes/C5-drop-legacy-reference-and-experiment-formats.md) |
-| C6 | `drop-legacy-work-unit-contracts` | 当前 accepted contract 明确保留 legacy read-only branch；最高风险，尚不能假定删除 | L4 | [C6](changes/C6-drop-legacy-work-unit-contracts.md) |
+| C3 | `drop-legacy-bundle-entry-compatibility` | 新 writer 只有 entry+map；旧 entry、map-only、old map 仍是 current positive/non-blocking path，且尚无共享 entry predicate | L3 | [C3](changes/C3-drop-legacy-bundle-entry-compatibility.md) |
+| C4 | `drop-legacy-profile-and-topic-compatibility` | 已知 surface 已归类：C4a 无 current legacy-envelope writer，C4b 只涉及 LegacyPlan migration；`previous_layouts` 是 current lineage，必须保留 | L3-L4 | [C4](changes/C4-drop-legacy-profile-and-topic-compatibility.md) |
+| C5 | `drop-legacy-reference-and-experiment-formats` | Wave1 UID handoff 已证实；shared/cross Topic subset 需要先定义 lossless current binding，之后才可移除 legacy writer/readers；C5b 是 retained-history selection policy | L3-L4 | [C5](changes/C5-drop-legacy-reference-and-experiment-formats.md) |
+| C6 | `drop-legacy-work-unit-contracts` | 已拆为 C6a explicit assignment、C6b markerless submission、C6c actor provenance、C6d transaction v1；每项都仍有独立历史 reader 后果，不能总括为一个删除决定 | L4 | [C6](changes/C6-drop-legacy-work-unit-contracts.md) |
 | C7 | `rewrite-main-specs-as-current-state` | 需要在运行面收敛后做，避免用纯文案掩盖仍存在的兼容分支 | L2-L3 | [C7](changes/C7-rewrite-main-specs-as-current-state.md) |
 | C8 | `sharpen-context-and-routing` | 最后做，主要是 Agent 阅读路径和脆弱文案测试降噪 | L1-L2 | [C8](changes/C8-sharpen-context-and-routing.md) |
 
@@ -50,11 +50,16 @@ C2c policy approved --> C2b archive --> C2c archive --> C3 policy decision (bund
 
 C4a (profile access)                  [L3, independent decision gate]
 C4b (legacy plan migration) ---> C5a / C6  [L4, independent decision gates]
-C5a-1 (UID-only authoring) --> C5a-2 (historic reference reader) [L3 -> L4]
+C5a-1b (shared/cross binding shape) --> C5a-1 (UID-only authoring) --> C5a-2 (historic reference reader) [L4 -> L3 -> L4]
 C5b (experiment retained history)     [L4, independent of reference]
+
+C6a (marked assignment v1/v2)         [L4, assignment interpretation]
+C6b (markerless submission)            [L4, recovery/provenance]
+C6c (unrecorded actor)                 [L4, provenance only]
+C6d (transaction v1)                   [L4, mutation safety + historic proof]
 ```
 
-`C2b/C2c`、`C4a/C4b`、`C5a-1/C5a-2` 与 `C5b` 都是 proposal 时应拆出的 bounded changes，不是已经创建的 OpenSpec changes。C2-C5 的完整调查地图已先完成；某一张卡只有在用户批准其 policy 且自身 Go / No-go 完整后，才可单独 proposal，不必等待其他未决卡。
+`C1b-C1f`、`C4a/C4b`、`C5a-1/C5a-2`、`C5b` 与 `C6a-C6d` 都是 proposal 时应拆出的 bounded changes，不是已经创建的 OpenSpec changes。C2b 与 C2c 是已完成的例外：`retire-framework-version-stamp` 和 `retire-internal-version-choreography` 均已于 2026-08-13 governed-archived，且严格按 C2b archive 在先的依赖执行。全域 Coverage Gate 已由 coverage ledger 的完整 Harness/spec/supporting-surface inventories 关闭；这只表示没有未分类的审计候选，不批准任何行为改变。下一项只讨论 C3 的 policy/副作用，获逐项批准并满足自身 Go / No-go 后才能单独 proposal。C6a-C6d 之间还没有预设 apply 顺序：一份旧 artifact 可同时命中多张卡，须在各自 proposal 中显式处理边界。
 
 ## 维护规则
 

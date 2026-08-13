@@ -1,36 +1,42 @@
-# C5a-1: Make Current Reference Authoring UID-Only
+# C5a-1: Make Per-Topic Current Reference Authoring UID-Only
 
 > Candidate change: `make-current-reference-authoring-uid-only`
 >
-> Status: investigation mostly complete; one handoff proof remains before proposal
+> Status: Wave1 handoff proof complete; blocked by C5a-1b shared/cross Topic binding shape
 >
 > Risk: L3
 
 ## One question
 
-Can every new rich reference use only exact `related_topic_uid` (or the shared
-sentinel `all`), so current authoring stops emitting or teaching the
-slug/id-based `related_topic` compatibility form?
+Can every new rich reference use a lossless current binding form, so current
+authoring stops emitting or teaching the slug/id-based `related_topic`
+compatibility form? The per-Topic Wave1 answer is now known; the shared/cross
+Topic answer belongs to C5a-1b.
 
 ## Verified boundary
 
 - Current Markdown reference reader accepts both fields through
   `topic-layout.mjs`; this card does **not** remove that reader.
-- The evidence-extractor template still writes
-  `related_topic: "{topic.slug}"`.
-- Shared reference guidance explicitly permits either exact UID or compatible
-  `related_topic`, and its example writes `related_topic: all`.
-- Current phase and queue context routinely contains both
-  `{topic.topic_uid}` and `{topic.slug}`. This makes the desired writer change
-  plausible but does not alone prove every rich-reference authoring handoff
-  supplies a UID at the point of write.
+- The optional evidence-extractor rich-reference template still writes
+  `related_topic: "{topic.slug}"`; normal Wave1 evidence extraction does not
+  write rich reference Markdown.
+- Wave1 `phase-wave1.md` loads the shared reference template and owns actual
+  materialization after formal submit. Its queue payload contains
+  `{topic.topic_uid}` and `{topic.topic_slug}`, and the submitted-backing
+  result returns the same canonical pair before the materialization decision.
+- Wave0 shared reference materialization can use `related_topic_uid: all`.
+- The shared template also governs Wave2 `00-cross-*` projections. A scalar
+  UID or `all` cannot express an exact multi-Topic subset, while legacy
+  `related_topic` can. No current canonical multi-UID writer form exists yet.
 
 ## Proposed current-only result
 
-- New per-topic rich references write one exact `related_topic_uid`.
-- New shared rich references write `related_topic_uid: all`.
+- Once C5a-1b resolves the shared/cross shape, new per-topic Wave1 rich
+  references write one exact `related_topic_uid`.
+- New true shared references write `related_topic_uid: all`; this does not
+  authorize treating a selected cross-Topic subset as globally shared.
 - Current guidance/templates no longer offer `related_topic` as a new-output
-  choice.
+  choice only after every writer form has a lossless replacement.
 - The reader remains temporarily unchanged. C5a-2 separately decides what to
   do with historical reference files that still use the old key.
 
@@ -41,9 +47,11 @@ is bound directly to UID. The immediate compatibility surface becomes
 writer-free, but old reference reading remains unchanged until a later explicit
 decision.
 
-The main risk is operational: a sub-agent task that lacks the canonical UID
-could write an empty/wrong binding. The proposal must trace the actual task
-card/extractor handoff, not assume a nearby phase file proves it.
+The Wave1 UID source is no longer hypothetical. The remaining risk is semantic:
+removing the legacy field from the shared template before C5a-1b would either
+make cross-reference subsets unrepresentable or silently broaden them to
+`all`. An optional future delegated rich-reference task also needs the selected
+binding fact projected into its task before it can be included.
 
 ## Protected current behavior
 
@@ -56,9 +64,11 @@ card/extractor handoff, not assume a nearby phase file proves it.
 ## Proposal gate
 
 - [x] Current legacy-key writer/guidance discovered.
-- [x] UID exists in current phase/queue context.
-- [ ] Trace the exact evidence-extractor task handoff and prove it carries one canonical UID or `all` at authoring time.
-- [ ] Add Wave0/Wave1 current-output characterization tests.
+- [x] Wave1 actual Phase-owned materialization handoff carries exact UID and slug through queue and submitted-backing facts.
+- [x] Wave0 shared materialization has the `all` sentinel available.
+- [ ] C5a-1b defines a lossless current binding for selected cross-Topic subsets.
+- [ ] Decide whether an explicitly assigned future delegated rich-reference task must receive the selected binding in its generated task contract; no current normal task assigns such output.
+- [ ] Add Wave0/Wave1/Wave2 current-output characterization tests for the selected writer forms.
 - [ ] User approves this writer-only slice after the overall policy queue reaches C5a.
 
 ## Expected verification

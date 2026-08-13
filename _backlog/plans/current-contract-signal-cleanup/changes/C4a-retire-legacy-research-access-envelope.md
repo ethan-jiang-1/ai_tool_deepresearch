@@ -2,7 +2,7 @@
 
 > Candidate change: `retire-legacy-research-access-envelope`
 >
-> Status: decision ready; no proposal created
+> Status: known-surface classification closed; policy decision pending; no proposal created
 >
 > Risk: L3
 
@@ -30,6 +30,12 @@ schema-validated legacy `access_boundary`; the selected research-access adapter
 itself is still current executor-scoped canary metadata and must not be deleted
 because it contains the word "legacy" in a comment. `apply-research-style` does
 not own this field; it passively preserves it while writing style parameters.
+
+The current writer has no legacy branch: the profile template writes only
+`unprobed`, and the HITL1 Phase writes only one complete direct-sample result.
+`validate-bundle`, Setup, rerun-ready, and post-final recovery parse the shared
+profile schema, so removal makes historical envelopes invalid at those general
+boundaries too. They do not otherwise interpret URL/fetch/boundary fields.
 
 ## Proposed current-only result
 
@@ -60,6 +66,9 @@ global state requirement.
   access-boundary routing path.
 - A historical bundle with that envelope cannot pass current HITL1 without a
   new current direct-sample record. Humans can still inspect its YAML.
+- The old adapter-specific owner hint disappears with the positive legacy
+  branch. The replacement must be one owned rejection result, not a generic
+  YAML parser error or a fabricated direct observation.
 - Current `unavailable` stays meaningful: it is not an old format merely
   because the word appears in both schemas.
 
@@ -73,10 +82,16 @@ global state requirement.
 ## Proposal gate
 
 - [x] Current/legacy profile shapes distinguished.
-- [x] HITL1 and adapter feedback dependency mapped.
+- [x] Producer/reader trace mapped: only the current template/HITL1 write the
+  field; HITL1 is the legacy-envelope semantic reader; generic validators are
+  shared rejection consumers.
 - [x] Current status values identified as protected.
 - [ ] User selects A or B.
-- [ ] Current direct-sample characterization and unsupported-legacy boundary tests are specified in the proposal.
+- [ ] Proposal selects one rejection owner/taxonomy for a legacy envelope.
+- [x] Current direct-sample preservation, absent/unprobed failure, adapter
+  boundary, and style-preservation evidence passed: 64 focused tests, 0 fail.
+- [ ] Proposal specifies one unsupported-legacy boundary test and removes all
+  positive legacy fixtures/tests/guidance together.
 
 ## Expected verification
 

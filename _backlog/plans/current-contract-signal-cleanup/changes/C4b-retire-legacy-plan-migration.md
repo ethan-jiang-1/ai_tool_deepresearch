@@ -2,7 +2,7 @@
 
 > Candidate change: `retire-legacy-plan-migration`
 >
-> Status: decision ready; no proposal created
+> Status: known-surface classification closed; policy decision pending; no proposal created
 >
 > Risk: L4
 
@@ -32,6 +32,14 @@ The lower path is current behavior. Rename/reorder/renumber/safe-remove write
 the prior layouts; UID-bound references, provenance, receipt checks, and safe
 rerun operations use that lineage. Removing it would damage the current
 contract, not retire history.
+
+New bundle templates already emit only canonical plans. The compatibility union
+remains reachable through `validate-bundle` and Setup validation, while active
+topic execution (queue admission, work-unit validation, registry fact, and
+ordinary topic-state mutation) already requires a canonical plan. `check-reentry`
+only blocks legacy state explicitly in Final; elsewhere inspect can still offer
+the sanctioned migration route. This means removal needs one explicit old-plan
+rejection owner across inspect/reentry/apply, not a partial loss of support.
 
 ## Proposed current-only result
 
@@ -74,7 +82,12 @@ loss of re-entry is acceptable.
 - [x] Legacy migration path mapped.
 - [x] Current layout lineage separated from legacy plan compatibility.
 - [ ] User chooses A or B.
-- [ ] If A, characterization covers canonical rerun, added-topic, existing evidence, and explicit legacy rejection.
+- [x] Current canonical preservation evidence passed: 103 focused tests, 0
+  fail, including layout lineage, added-topic, reentry, and full rerun
+  continuity.
+- [ ] If A, proposal adds explicit legacy rejection coverage and fixes one
+  rejection owner across inspect/reentry/apply while retaining that canonical
+  regression set.
 - [ ] Historic artifact policy is written without widening scope into C5a/C6.
 
 ## Expected verification

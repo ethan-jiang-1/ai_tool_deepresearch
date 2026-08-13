@@ -2,7 +2,7 @@
 
 > Candidate change: `decide-retained-experiment-history-policy`
 >
-> Status: decision ready, but actual history prevalence is not authorized for inspection
+> Status: audit coverage closed; policy decision pending
 >
 > Risk: L4
 
@@ -28,7 +28,9 @@ Those records are active inputs today:
 
 - Historical duration/cost affect forecasts.
 - Source-matching v1 `PASS+CLEAN` may become `needs_qualification`.
-- Explicit qualification may select that candidate under the fast envelope.
+- Normal regression refuses that candidate; explicit qualification may select
+  and launch it under the fast envelope with prediction basis
+  `observed_source_matching_history`.
 
 The accepted experiment strategy spec explicitly describes this v1
 qualification behavior. It is not merely a leftover parser.
@@ -50,8 +52,9 @@ a deliberately new contract says otherwise; old history should not become a
 launch blocker simply because it is old.
 
 Actual repository prevalence is unknown because `.exp-bundles/` was not
-authorized for inspection. The proposal must not claim that no v1 records
-exist; it must define behavior independently of prevalence.
+authorized for inspection. The focused deterministic host-tool test constructs
+one v1 report and proves the normal/qualification distinction; a proposal must
+not claim that no real v1 records exist or make its policy depend on prevalence.
 
 ## Protected current behavior
 
@@ -64,7 +67,7 @@ exist; it must define behavior independently of prevalence.
 
 ## Proposal gate
 
-- [x] v1 reader fanout and selection effect mapped.
+- [x] v1 writer -> reader -> prediction/admission/selection fanout mapped.
 - [x] Current v1 qualification behavior confirmed in accepted spec and tests.
 - [ ] User selects A, B, or C.
 - [ ] If useful, user authorizes inspection of a concrete retained-history path; absence of this evidence does not postpone defining the policy.
