@@ -3,10 +3,9 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { existsSync, linkSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { linkSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { parse as parseYaml } from 'yaml';
 import {
   formatPlaybookManifest,
   AgentExperimentCompletionSchema,
@@ -20,7 +19,6 @@ import {
   collectRunnablePlaybooks,
   sha256Bytes,
   traceBinding,
-  validateCaseCompatibilityLedger,
 } from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/agent-experiment-contract.mjs';
 import {
   assertExpBundlesSourceIsolation,
@@ -35,18 +33,6 @@ import {
 const REPO_ROOT = resolve(new URL('../..', import.meta.url).pathname);
 const STATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs');
 const FINALIZER = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs');
-const CHANGE_NAME = 'experiment-auto-runner';
-
-function changeArtifactPath(name) {
-  const activePath = join(REPO_ROOT, 'openspec/changes', CHANGE_NAME, name);
-  if (existsSync(activePath)) return activePath;
-  const archiveRoot = join(REPO_ROOT, 'openspec/changes/archive');
-  const archives = readdirSync(archiveRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && entry.name.endsWith(`-${CHANGE_NAME}`));
-  if (archives.length !== 1) throw new Error(`Expected one archived ${CHANGE_NAME} change, found ${archives.length}`);
-  return join(archiveRoot, archives[0].name, name);
-}
-
 const VALID_FRONTMATTER = `---
 schema: command-experiment/v2
 experiment: sample
@@ -143,13 +129,6 @@ describe('Agent Experiment manifest contract', () => {
       );
       assert.throws(() => readAndValidateManifest({ repoRoot: root }), /quarantined|extreme-slow/i);
     } finally { rmSync(root, { recursive: true, force: true }); }
-  });
-});
-
-describe('case compatibility ledger contract', () => {
-  it('locks the checked 97-case baseline', () => {
-    const ledger = parseYaml(readFileSync(changeArtifactPath('case-compatibility-ledger.yaml'), 'utf8'));
-    assert.deepEqual(validateCaseCompatibilityLedger(ledger), { cases: 97, requiredChecks: 502, agentBehaviorCases: 16 });
   });
 });
 

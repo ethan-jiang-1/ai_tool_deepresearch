@@ -1,0 +1,11 @@
+schema_version: semantic-closure/v1
+change: retire-archived-case-ledger-helper
+status: not_applicable
+reason: >-
+  This change removes an archive-only migration-ledger helper cluster and its
+  dedicated test projection. It changes no current deterministic runtime fact,
+  resolver, established-by surface, verdict consumer, or derived runtime
+  projection: PLAYBOOK_MANIFEST.md remains the runnable-corpus Source of
+  Record; readAndValidateManifest(), V2 frontmatter validation, Supervisor
+  selection, lifecycle, native completion, health, audit, cleanup, bundle
+  state, and Agent flow remain unchanged.

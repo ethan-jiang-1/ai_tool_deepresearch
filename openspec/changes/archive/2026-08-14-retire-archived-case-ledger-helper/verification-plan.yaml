@@ -1,0 +1,60 @@
+schema_version: verification-routing/v1
+change: retire-archived-case-ledger-helper
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The focused host-tool suite directly exercises the protected current
+      manifest/V2 and host-contract surfaces after the archive-only test is
+      removed.
+  integration:
+    status: selected
+    rationale: >-
+      The existing Supervisor integration suite exercises current selection,
+      lifecycle, native-completion, health, audit, and cleanup behavior through
+      production host-tool boundaries.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      The change removes no workflow-scale state chain, lifecycle transition,
+      run-bundle format, or end-to-end result.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change makes no claim about Playbook-Agent or Subject-Agent behavior,
+      tool use, judgment, writing, or trace-backed Agent evidence.
+claims:
+  - id: current-autorun-host-contract-remains-current
+    statement: >-
+      The focused host-tool suite continues to exercise the current manifest,
+      V2 playbook, runtime-token, native-completion, health, audit, and
+      Supervisor contract after the archive-only ledger projection is removed.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/host_tools/agent-experiment-autorun.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-supervisor-lifecycle-remains-current
+    statement: >-
+      Current Supervisor selection, lifecycle, native completion, health,
+      audit, and cleanup behavior remains covered at its production host-tool
+      boundary after the archive-only helper cluster is removed.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/host_tools/run-agent-experiment.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

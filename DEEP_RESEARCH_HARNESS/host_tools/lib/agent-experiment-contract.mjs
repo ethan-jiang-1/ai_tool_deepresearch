@@ -1,10 +1,9 @@
 // @impl ERS-001, EXA-004, EXA-005, EXA-006, EXO-007, PLR-001, PLR-003
-// Pure Agent Experiment Autorun manifest, V2 and migration-ledger contracts.
+// Pure Agent Experiment Autorun manifest and V2 contracts.
 
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 import { PlaybookFrontmatterSchema, PlaybookPolicySchema, PLAYBOOK_BUNDLE_ROLE_RE, PLAYBOOK_CHECK_ID_RE, PLAYBOOK_EVIDENCE_ROLE_RE } from '../../schema/contracts/playbook.mjs';
 import { parseMdFrontmatter } from '../../engine/helpers/gate-helpers.mjs';
@@ -672,90 +671,6 @@ export function readAndValidateManifest({ repoRoot, manifestPath = join(repoRoot
     }
   }
   return { manifestPath, playbookRoot, paths, entries };
-}
-
-function countBy(values, key) {
-  const result = Object.create(null);
-  for (const value of values) result[value[key]] = (result[value[key]] ?? 0) + 1;
-  return result;
-}
-
-export function normalizeLedgerBundlePlan(row, defaults) {
-  const plan = row.bundle_plan;
-  if (plan?.roles) {
-    return { roles: plan.roles, verdictRole: plan.verdict_role, healthRoles: plan.health_roles };
-  }
-  if (plan?.bundles === 1 && plan?.verdict === 'dpt_disp' && plan?.health_targets === 1 && Array.isArray(plan?.aux) && plan.aux.length === 0) {
-    const source = defaults.single_bundle_roles;
-    return { roles: source.roles, verdictRole: source.verdict_role, healthRoles: source.health_roles };
-  }
-  fail(`unsupported bundle plan for ${row.case}`);
-}
-
-export function validateCaseCompatibilityLedger(ledger) {
-  if (ledger?.schema_version !== 'agent-experiment-case-ledger/v1') fail('invalid ledger schema_version');
-  if (ledger?.target_active_count !== 97 || !Array.isArray(ledger?.cases) || ledger.cases.length !== 97) fail('ledger target count must be 97');
-  const cases = new Set();
-  const paths = new Set();
-  const numericIds = [];
-  let checkCount = 0;
-  let agentBehaviorCount = 0;
-  const agentRoleMinima = new Map();
-  for (const id of [115, 232, 318, 711, 712, 713]) agentRoleMinima.set(id, ['subject_prompt', 'subject_transcript', 'subject_result']);
-  for (const id of [901, 951]) agentRoleMinima.set(id, ['subject_prompt', 'subject_transcript', 'subject_result', 'judge_record']);
-  for (const id of [163, 211, 221, 223, 234, 406, 604, 605]) agentRoleMinima.set(id, ['subject_task', 'subject_result', 'subject_receipt', 'subject_output']);
-
-  for (const row of ledger.cases) {
-    if (cases.has(row.case) || paths.has(row.path)) fail(`duplicate ledger case/path: ${row.case}`);
-    cases.add(row.case);
-    paths.add(row.path);
-    const id = Number(row.case.match(/^case-(\d+)-/)?.[1]);
-    if (!Number.isInteger(id)) fail(`invalid ledger case identity: ${row.case}`);
-    numericIds.push(id);
-    if (!Array.isArray(row.required_checks) || row.required_checks.length === 0 || new Set(row.required_checks).size !== row.required_checks.length) fail(`invalid required checks: ${row.case}`);
-    if (row.required_checks.some((value) => !PLAYBOOK_CHECK_ID_RE.test(value))) fail(`invalid required check grammar: ${row.case}`);
-    checkCount += row.required_checks.length;
-    const plan = normalizeLedgerBundlePlan(row, ledger.defaults);
-    if (new Set(plan.roles).size !== plan.roles.length || plan.roles.some((role) => !PLAYBOOK_BUNDLE_ROLE_RE.test(role))) fail(`invalid bundle roles: ${row.case}`);
-    if (!plan.roles.includes(plan.verdictRole) || !plan.healthRoles.includes(plan.verdictRole) || plan.healthRoles.some((role) => !plan.roles.includes(role))) fail(`invalid verdict/health roles: ${row.case}`);
-    if (!Array.isArray(row.durable_evidence_roles) || new Set(row.durable_evidence_roles).size !== row.durable_evidence_roles.length || row.durable_evidence_roles.some((role) => !PLAYBOOK_EVIDENCE_ROLE_RE.test(role))) fail(`invalid evidence roles: ${row.case}`);
-    if (row.proof?.subject === 'agent_behavior') {
-      agentBehaviorCount += 1;
-      if (row.durable_evidence_roles.length === 0 || !['real_agent', 'real_subagent'].includes(row.proof.execution)) fail(`invalid Agent-behavior row: ${row.case}`);
-      const expectedRoles = agentRoleMinima.get(id);
-      if (!expectedRoles || JSON.stringify(row.durable_evidence_roles) !== JSON.stringify(expectedRoles)) fail(`Agent-behavior evidence roles drifted: ${row.case}`);
-      if (id === 901 ? row.not_run !== null : row.not_run !== 'actor-unavailable') fail(`Agent-behavior NOT_RUN policy drifted: ${row.case}`);
-    } else {
-      if (row.durable_evidence_roles.length !== 0) fail(`deterministic row has evidence roles: ${row.case}`);
-      if (row.proof?.execution !== 'none' || row.proof?.external !== 'none' || row.proof?.judge !== 'deterministic') fail(`deterministic proof profile drifted: ${row.case}`);
-    }
-    if (!Array.isArray(row.migration) || !['upgrade-v2', 'render-runtime-paths', 'add-native-finalizer'].every((flag) => row.migration.includes(flag))) fail(`base migration flags missing: ${row.case}`);
-    if (row.current?.cleanup && !row.migration.includes('remove-local-cleanup')) fail(`cleanup migration flag missing: ${row.case}`);
-    if (row.current?.health && !row.migration.includes('remove-local-health')) fail(`health migration flag missing: ${row.case}`);
-    if (row.current?.tmp && !row.migration.includes('move-cross-block-state')) fail(`state migration flag missing: ${row.case}`);
-    if (row.current?.optional_smoke && !row.migration.includes('remove-optional-smoke-authority')) fail(`optional-smoke migration flag missing: ${row.case}`);
-  }
-
-  if (numericIds.includes(316) || !numericIds.includes(901)) fail('ledger must retire 316 and restore 901');
-  if (checkCount !== 502 || agentBehaviorCount !== 16) fail('ledger check/Agent-behavior counts drifted');
-  const expectedCounts = {
-    cost: { light: 39, standard: 37, heavy: 21 },
-    health_profile: { light: 43, standard: 26, heavy: 28 },
-    family: { wff_shared: 39, fixture_shared: 23, custom: 31, prose_actor: 2, actor_pair: 2 },
-  };
-  for (const [key, expected] of Object.entries(expectedCounts)) {
-    const actual = countBy(ledger.cases, key);
-    if (Object.keys(expected).some((value) => actual[value] !== expected[value]) || Object.keys(actual).some((value) => !(value in expected))) {
-      fail(`ledger ${key} counts drifted`);
-    }
-  }
-  const batched = Object.values(ledger.task_batches ?? {}).flat();
-  if (batched.length !== 97 || new Set(batched).size !== 97 || numericIds.some((id) => !batched.includes(id))) fail('ledger task batch union drifted');
-  return { cases: 97, requiredChecks: checkCount, agentBehaviorCases: agentBehaviorCount };
-}
-
-export function readCaseCompatibilityLedger(pathValue) {
-  return parseYaml(readFileSync(pathValue, 'utf8'));
 }
 
 export function sha256Bytes(bytes) {
