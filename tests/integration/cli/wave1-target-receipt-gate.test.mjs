@@ -218,7 +218,6 @@ function submitAndReviewWorkUnit(dir, { slug = 'topic-a', topicUid = 'tp_123e456
   const submission = claimAndSubmitWorkUnit(dir, {
     phase: 'wave1',
     queueItemId,
-    legacyAssignment: true,
     preserveQueue: true,
     queueItemOverrides: {
       payload: { topic_uid: topicUid, topic_slug: slug, wave: 1 },

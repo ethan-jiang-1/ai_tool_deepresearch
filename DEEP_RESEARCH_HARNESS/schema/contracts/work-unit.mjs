@@ -9,17 +9,15 @@ export const WORK_UNIT_STATUS_SCHEMA_VERSION = 'work-unit.status.v1';
 export const WORK_UNIT_AGENT_SCHEMA_VERSION = 'work-unit.agent.v1';
 export const WORK_UNIT_RECEIPT_EVENT_SCHEMA_VERSION = 'work-unit.receipt-event.v1';
 export const WORK_UNIT_ACTOR_CONTRACT_VERSION = 'work-unit.actor.v1';
-// v3 is the contract emitted for new claims. v1 and v2 remain parseable because
-// a submitted work unit must retain the output interpretation it was assigned.
-export const LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION = 'work-unit.assignment.v1';
-export const PREVIOUS_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION = 'work-unit.assignment.v2';
 export const WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION = 'work-unit.assignment.v3';
-export const WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS = Object.freeze([
-  LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
-  PREVIOUS_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
+export const WorkUnitAssignmentContractVersionSchema = z.literal(WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION);
+// Index decoding retains retired marker literals only long enough for the
+// current-profile boundary to report one stable rejection.
+const StoredWorkUnitAssignmentMarkerSchema = z.enum([
+  'work-unit.assignment.v1',
+  'work-unit.assignment.v2',
   WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
 ]);
-export const WorkUnitAssignmentContractVersionSchema = z.enum(WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS);
 export const WORK_UNIT_SUBMISSION_CONTRACT_VERSION = 'work-unit.submission.v1';
 export const WORK_UNIT_SUPERSESSION_SCHEMA_VERSION = 'work-unit.supersession.v1';
 
@@ -287,20 +285,6 @@ export const ActorExecutionSchema = z.object({
   if (data.execution_actor_class === 'delegated_subagent' && (data.policy_decision !== 'normal_allowed' || data.fallback_from !== null)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'delegated_subagent actor binding is invalid' });
   if (data.execution_actor_class === 'phase_agent_fallback' && (data.policy_decision !== 'fallback_allowed' || data.fallback_from !== 'delegated_subagent')) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'phase_agent_fallback actor binding is invalid' });
 });
-export const LegacyActorExecutionSchema = z.object({
-  execution_actor_class: z.literal('legacy_unrecorded'),
-  delegated_role_key: z.string().min(1).nullable(),
-  observation: z.object({
-    outcome: z.literal('unknown'),
-    source: z.literal('legacy_claim'),
-    reason_code: z.literal('legacy_actor_unrecorded'),
-    recorded_at: z.string().datetime().nullable(),
-  }).strict(),
-  policy_decision: z.literal('legacy_compatibility'),
-  fallback_from: z.null(),
-}).strict();
-export const LedgerActorExecutionSchema = z.union([ActorExecutionSchema, LegacyActorExecutionSchema]);
-
 export const RuntimeRefsSchema = z.object({
   platform: z.string().min(1).optional(),
   runtime_agent_id: z.string().min(1).optional(),
@@ -459,7 +443,7 @@ export const WorkUnitIndexRecordSchema = z.object({
   claimed_at: z.string().datetime(),
   timeout_ms: z.number().int().positive(),
   deadline_at: z.string().datetime(),
-  assignment_contract_version: WorkUnitAssignmentContractVersionSchema.optional(),
+  assignment_contract_version: StoredWorkUnitAssignmentMarkerSchema.optional(),
   submission_contract_version: z.literal(WORK_UNIT_SUBMISSION_CONTRACT_VERSION).optional(),
   last_observed_at: z.string().datetime().optional(),
   runtime_refs: RuntimeRefsSchema,
@@ -690,7 +674,7 @@ export const WorkUnitLedgerRecordSchema = z.object({
   result_hash: z.string().min(1),
   source_contribution: SourceContributionSchema.optional(),
   actor_contract_version: z.literal(WORK_UNIT_ACTOR_CONTRACT_VERSION).optional(),
-  actor_execution: LedgerActorExecutionSchema.optional(),
+  actor_execution: ActorExecutionSchema.optional(),
   late_accept: z.literal(true).optional(),
   late_accept_reason: z.string().trim().min(1).optional(),
   terminal_status_before_accept: z.literal('timed_out').optional(),

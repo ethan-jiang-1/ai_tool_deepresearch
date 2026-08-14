@@ -22,9 +22,10 @@ import {
 const PHASE_WAVES = Object.freeze({ wave0: 0, wave1: 1, wave2: 2 });
 
 function authorityRoot(message) {
+  const unsupported = /unsupported current work-unit contract/i.test(message);
   return makeContractFinding({
-    id: 'submitted_projection_authority',
-    ruleId: 'submitted_projection_authority',
+    id: unsupported ? 'unsupported_current_contract' : 'submitted_projection_authority',
+    ruleId: unsupported ? 'unsupported_current_contract' : 'submitted_projection_authority',
     findingSource: 'checker',
     classification: 'blocking',
     blockingBasis: 'authority_integrity',
@@ -34,7 +35,7 @@ function authorityRoot(message) {
     repairKind: 'missing_contract',
     missingFact: message,
     writeTo: 'Engine-owned submitted work-unit authority recovery boundary',
-    detail: `[submitted_projection_authority] ${message}`,
+    detail: `[${unsupported ? 'unsupported_current_contract' : 'submitted_projection_authority'}] ${message}`,
   });
 }
 
@@ -162,15 +163,10 @@ function collectSubmittedWorkUnitProjectionFacts(bundleDir, {
   if (normalized.facts.length === 0) return { passed: true, facts: [], root_findings: [], warnings: [] };
 
   const facts = [];
-  let legacyCount = 0;
   for (const { ledger_row: ledgerRow, index_record: record } of normalized.facts) {
     if (record.status !== 'submitted' || record.wave !== wave) continue;
     if (kind && record.kind !== kind) continue;
     if (roundScope === 'current') {
-      if (record.rerun_count === undefined || record.rerun_count === null) {
-        legacyCount += 1;
-        continue;
-      }
       if (record.rerun_count !== rerunCount) continue;
     } else if (record.rerun_count !== undefined && record.rerun_count !== null && record.rerun_count > rerunCount) {
       continue;
@@ -207,10 +203,7 @@ function collectSubmittedWorkUnitProjectionFacts(bundleDir, {
     }
   }
 
-  const warnings = roundScope === 'current' && legacyCount > 0
-    ? [`eligible_rows: ${legacyCount} legacy submitted row(s) without rerun_count excluded (not current-round authority)`]
-    : [];
-  return { passed: true, facts, root_findings: [], warnings };
+  return { passed: true, facts, root_findings: [], warnings: [] };
 }
 
 export function collectEligibleWorkUnitProjection(bundleDir, options = {}) {

@@ -30,7 +30,6 @@ import {
 } from './work-unit-index.mjs';
 import {
   acceptedLedgerRecordHashFor,
-  isMarkedWorkUnitSubmission,
   readSubmittedLedgerDocument,
   readSubmittedStatusFile,
   validateCurrentSubmittedLedgerFact,
@@ -42,6 +41,7 @@ import {
   validateCacheTrails,
   validateOutputFiles,
   validateSubmitRuntimeReceipt,
+  assertCompleteCurrentWorkUnitProfile,
 } from './work-unit-validation.mjs';
 import { inspectWorkUnitDeclarationRecovery } from './work-unit-submit.mjs';
 import { inspectWorkUnitTransaction } from './work-unit-transaction.mjs';
@@ -170,8 +170,9 @@ export function validateSubmittedPredecessorAuthority(bundleDir, index, record, 
   if (!record || record.status !== 'submitted') {
     throw new Error(`supersession requires a submitted predecessor, got ${record?.status || '<missing>'}`);
   }
+  assertCompleteCurrentWorkUnitProfile(bundleDir, record);
   const acceptedHash = acceptedLedgerRecordHashFor(record);
-  if (!acceptedHash) throw new Error(`submitted predecessor ${record.work_id} lacks version-applicable acceptance evidence`);
+  if (!acceptedHash) throw new Error(`submitted predecessor ${record.work_id} lacks accepted ledger evidence`);
   const status = readSubmittedStatusFile(bundleDir, record);
   if (status.work_id !== record.work_id || status.status !== 'submitted') {
     throw new Error(`submitted status binding mismatch for ${record.work_id}`);
@@ -179,11 +180,6 @@ export function validateSubmittedPredecessorAuthority(bundleDir, index, record, 
   if (!record.terminal_at || status.updated_at !== record.terminal_at) {
     throw new Error(`submitted index/status terminal timestamp mismatch for ${record.work_id}`);
   }
-  if (!isMarkedWorkUnitSubmission(record)
-    && (status.result_hash !== record.result_hash || status.ledger_record_hash !== record.ledger_record_hash)) {
-    throw new Error(`legacy submitted status/hash mirrors disagree for ${record.work_id}`);
-  }
-
   const manifest = readAndValidateManifest(bundleDir, index, record);
   readAndValidateBeacon(bundleDir, record, manifest);
   const queueView = queue || loadQueueReadOnly(bundleDir);
@@ -203,39 +199,6 @@ export function validateSubmittedPredecessorAuthority(bundleDir, index, record, 
     throw new Error(`submitted predecessor queue snapshot drift for ${record.work_id}`);
   }
   return { accepted_hash: acceptedHash, status, manifest, queue: queueView, terminal };
-}
-
-function validateLegacyAcceptanceTuple(bundleDir, index, record, parent, acceptedHash) {
-  if (isMarkedWorkUnitSubmission(record)) return originalAcceptanceEvidence(bundleDir, record, acceptedHash);
-  if (!record.result_hash || !record.ledger_record_hash || record.ledger_record_hash !== acceptedHash) {
-    throw new Error(`legacy acceptance mirrors are incomplete for ${record.work_id}`);
-  }
-  const normalizations = [];
-  const result = readAndValidateResult(bundleDir, path.join(bundleDir, record.paths.result_ref), record, {
-    normalizations,
-    outputContract: parent.manifest.output_contract,
-  });
-  if (normalizations.length > 0 || hashValue(result) !== record.result_hash) {
-    throw new Error(`legacy accepted result binding is not exact for ${record.work_id}`);
-  }
-  const receiptNormalizations = [];
-  const receipt = validateSubmitRuntimeReceipt(bundleDir, record, {
-    normalizations: receiptNormalizations,
-    allowNonceNormalization: false,
-  });
-  if (receiptNormalizations.length > 0 || !receipt.events.some((entry) => entry.event === 'work_done')) {
-    throw new Error(`legacy accepted runtime receipt binding is not exact for ${record.work_id}`);
-  }
-  validateOutputFiles(bundleDir, result, parent.manifest.output_contract);
-  const cache = validateCacheTrails(bundleDir, result, parent.manifest.cache_policy, {
-    record,
-    normalizations: [],
-    writeCanonicalCache: false,
-  });
-  if (cache.virtualCachePages.size > 0) {
-    throw new Error(`legacy accepted cache binding requires canonicalization for ${record.work_id}`);
-  }
-  return originalAcceptanceEvidence(bundleDir, record, acceptedHash);
 }
 
 function collectDirectDriftRoots(bundleDir, index, record, row, parent) {
@@ -716,6 +679,12 @@ export function evaluateWorkUnitSupersessionEligibility(bundleDir, {
   const record = index.work_units[work_id];
   if (!record) return failure(bundleDir, null, 'unknown_work_id', `No work-unit record exists for ${work_id}.`);
 
+  try {
+    assertCompleteCurrentWorkUnitProfile(bundleDir, record);
+  } catch (error) {
+    return failure(bundleDir, record, error.reason_code || 'unsupported_current_contract', error.message || String(error));
+  }
+
   const rerun = supersedeCommand(bundleDir, record.work_id, reason || '<audit-reason>');
   const transaction = inspectWorkUnitTransaction(bundleDir, {
     operation: 'supersede_work_unit',
@@ -768,7 +737,7 @@ export function evaluateWorkUnitSupersessionEligibility(bundleDir, {
     try {
       validateCurrentSubmittedLedgerFact({ record, row: currentRow, status: parent.status });
     } catch (error) {
-      if (['submitted_acceptance_fingerprint_mismatch', 'submitted_legacy_hash_mismatch'].includes(error.reason_code)) {
+      if (error.reason_code === 'submitted_acceptance_fingerprint_mismatch') {
         observed.push({ code: 'submitted_declaration_drift', surface: 'rb_output_declarations.jsonl', detail: error.message || String(error) });
       } else {
         return failure(bundleDir, record, error.reason_code || 'submitted_ledger_invalid', error.message || String(error));
@@ -792,7 +761,7 @@ export function evaluateWorkUnitSupersessionEligibility(bundleDir, {
     }
     let acceptance;
     try {
-      acceptance = validateLegacyAcceptanceTuple(bundleDir, index, record, parent, parent.accepted_hash);
+      acceptance = originalAcceptanceEvidence(bundleDir, record, parent.accepted_hash);
     } catch (error) {
       return failure(bundleDir, record, 'missing_contract', `Durable acceptance evidence is incomplete for ${record.work_id}: ${error.message || String(error)}`, {
         observedRoots: observed,
@@ -991,7 +960,7 @@ export function evaluateNormalizedSubmittedWorkUnitLedger(bundleDir) {
       }
     }
     if (rowDisposition !== 'hash_valid_historical') {
-      validateLegacyAcceptanceTuple(bundleDir, index, record, parent, parent.accepted_hash);
+      originalAcceptanceEvidence(bundleDir, record, parent.accepted_hash);
     }
     const lineage = resolveWorkUnitSupersessionLineage(bundleDir, {
       predecessorWorkId: record.work_id,

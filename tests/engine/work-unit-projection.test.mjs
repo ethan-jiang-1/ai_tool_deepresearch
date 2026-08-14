@@ -131,13 +131,11 @@ function submitWave0(dir, {
   queueItemId = 'queue-wave0',
   sourceContent = DUPLICATE_SOURCE_YAML,
   cacheTrails = null,
-  legacyAssignment = false,
 } = {}) {
   return claimAndSubmitWorkUnit(dir, {
     phase: 'wave0',
     queueItemId,
     preserveQueue: true,
-    legacyAssignment,
     queueItemOverrides: {
       payload: { topic_uid: TOPIC_UID, topic_slug: slug },
       lineage: { topic_uid: TOPIC_UID, topic_slug: slug, phase: 'wave0' },
@@ -149,6 +147,20 @@ function submitWave0(dir, {
     }],
     cacheTrails,
   });
+}
+
+function retireAssignmentProfile(dir, record) {
+  const indexPath = path.join(dir, '_work_units', '_index.json');
+  const index = JSON.parse(readFileSync(indexPath, 'utf8'));
+  const current = index.work_units[record.work_id];
+  current.assignment_contract_version = 'work-unit.assignment.v1';
+  for (const ref of [current.paths.manifest_ref, current.paths.beacon_ref]) {
+    const target = path.join(dir, ref);
+    const surface = JSON.parse(readFileSync(target, 'utf8'));
+    surface.assignment_contract_version = 'work-unit.assignment.v1';
+    writeFileSync(target, `${JSON.stringify(surface, null, 2)}\n`);
+  }
+  writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
 }
 
 function collectWave0Candidates(dir, options = {}) {
@@ -377,7 +389,7 @@ describe('eligible work-unit projection', () => {
     );
   });
 
-  it('keeps one legacy source row readable without inventing an unsubmitted suffix boundary', () => {
+  it('keeps one current row without a recorded contribution distinct from an unsubmitted suffix', () => {
     const dir = bundle();
     const submitted = submitWave0(dir, { sourceContent: sourceArray(2) });
     removeRecordedSourceContribution(dir, submitted.record.work_id);
@@ -391,7 +403,7 @@ describe('eligible work-unit projection', () => {
     );
   });
 
-  it('rejects mixed and multi-row legacy source groups without inferring an ordinal split', () => {
+  it('rejects mixed and multi-row missing-contribution groups without inferring an ordinal split', () => {
     const mixed = bundle();
     const initial = submitWave0(mixed, { queueItemId: 'queue-wave0-initial', sourceContent: sourceArray(2) });
     submitWave0(mixed, { queueItemId: 'queue-wave0-supplement', sourceContent: sourceArray(3) });
@@ -401,13 +413,13 @@ describe('eligible work-unit projection', () => {
       'submitted_source_contribution_missing_boundary',
     );
 
-    const legacy = bundle();
-    const first = submitWave0(legacy, { queueItemId: 'queue-wave0-legacy-first', sourceContent: sourceArray(2) });
-    const second = submitWave0(legacy, { queueItemId: 'queue-wave0-legacy-second', sourceContent: sourceArray(3) });
-    removeRecordedSourceContribution(legacy, first.record.work_id);
-    removeRecordedSourceContribution(legacy, second.record.work_id);
+    const missing = bundle();
+    const first = submitWave0(missing, { queueItemId: 'queue-wave0-missing-first', sourceContent: sourceArray(2) });
+    const second = submitWave0(missing, { queueItemId: 'queue-wave0-missing-second', sourceContent: sourceArray(3) });
+    removeRecordedSourceContribution(missing, first.record.work_id);
+    removeRecordedSourceContribution(missing, second.record.work_id);
     assertContributionRoot(
-      collectWave0Candidates(legacy),
+      collectWave0Candidates(missing),
       'submitted_source_contribution_missing_boundary',
     );
   });
@@ -512,12 +524,13 @@ describe('eligible work-unit projection', () => {
     assert.match(hashFailure.root_findings[0].missing_fact, /result hash mismatch/);
 
     const tupleDir = bundle();
-    submitWave0(tupleDir, { legacyAssignment: true });
+    const tupleSubmitted = submitWave0(tupleDir);
+    retireAssignmentProfile(tupleDir, tupleSubmitted.record);
     const tupleFailure = collectWave0Candidates(tupleDir);
     assert.equal(tupleFailure.passed, false);
     assert.deepEqual(tupleFailure.candidates, []);
     assert.equal(tupleFailure.root_findings.length, 1);
-    assert.match(tupleFailure.root_findings[0].missing_fact, /exactly one source_yaml direct-output tuple/);
+    assert.equal(tupleFailure.root_findings[0].rule_id, 'unsupported_current_contract');
 
     const directDir = bundle();
     submitWave0(directDir);

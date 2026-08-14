@@ -13,14 +13,8 @@ import {
 import {
   claimWorkUnits,
   loadWorkUnitIndex,
-  saveWorkUnitIndex,
   submitWorkUnit,
-  writeWorkUnitEnvelope,
 } from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
-import {
-  LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
-} from '../../DEEP_RESEARCH_HARNESS/schema/contracts/work-unit.mjs';
-
 export function tempWorkUnitBundle(prefix = 'wu-helper-') {
   return mkdtempSync(path.join(os.tmpdir(), prefix));
 }
@@ -262,17 +256,9 @@ export function claimAndSubmitWorkUnit(dir, {
   receiptOverrides = {},
   actorDecision = availableActorDecision(kind),
   preserveQueue = false,
-  legacyAssignment = false,
-  legacyV1Assignment = false,
   submit = true,
   submitOptions = {},
 } = {}) {
-  if (legacyAssignment && legacyV1Assignment) {
-    throw new Error('legacyAssignment and legacyV1Assignment are mutually exclusive test fixtures');
-  }
-  if (legacyV1Assignment && kind !== 'wave0_source_intake') {
-    throw new Error('legacyV1Assignment only models historical Wave0 source intake');
-  }
   const queueItem = delegatedQueueItem(queueItemId, {
     phase,
     kind,
@@ -344,41 +330,10 @@ export function claimAndSubmitWorkUnit(dir, {
       blocked_by_queue_item_id: claim.blocked_by_queue_item_id,
     })}`);
   }
-  let record = loadWorkUnitIndex(dir).work_units[workId];
+  const record = loadWorkUnitIndex(dir).work_units[workId];
+  const manifest = JSON.parse(readFileSync(path.join(dir, record.paths.manifest_ref), 'utf8'));
 
-  const manifestPath = path.join(dir, record.paths.manifest_ref);
-  let manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  if (legacyAssignment) {
-    const index = loadWorkUnitIndex(dir);
-    delete index.work_units[workId].assignment_contract_version;
-    delete manifest.assignment_contract_version;
-    delete manifest.output_contract.required_outputs;
-    const beaconPath = path.join(dir, record.paths.beacon_ref);
-    const beacon = JSON.parse(readFileSync(beaconPath, 'utf8'));
-    delete beacon.assignment_contract_version;
-    delete beacon.output_contract.required_outputs;
-    saveWorkUnitIndex(dir, index);
-    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-    writeFileSync(beaconPath, `${JSON.stringify(beacon, null, 2)}\n`);
-    record = loadWorkUnitIndex(dir).work_units[workId];
-  } else if (legacyV1Assignment) {
-    const index = loadWorkUnitIndex(dir);
-    manifest.assignment_contract_version = LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION;
-    manifest.output_contract = {
-      ...manifest.output_contract,
-      output_files: {
-        required: true,
-        allowed_roles: ['reference', 'source_yaml', 'other'],
-        reference_requires_source_url: true,
-      },
-    };
-    index.work_units[workId].assignment_contract_version = LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION;
-    saveWorkUnitIndex(dir, index);
-    writeWorkUnitEnvelope(dir, manifest);
-    record = loadWorkUnitIndex(dir).work_units[workId];
-  }
-
-  const requiredOutputs = legacyAssignment ? [] : (manifest.output_contract.required_outputs || []);
+  const requiredOutputs = manifest.output_contract.required_outputs || [];
   const effectiveOutputs = [...requestedOutputs];
   for (const required of requiredOutputs) {
     if (effectiveOutputs.some((output) => output.path === required.path)) continue;

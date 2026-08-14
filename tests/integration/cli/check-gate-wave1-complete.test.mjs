@@ -421,7 +421,6 @@ function submitWave1WorkUnit(dir, {
   return claimAndSubmitWorkUnit(dir, {
     phase: 'wave1',
     queueItemId,
-    legacyAssignment: assignmentMode === 'primary',
     queueItemOverrides: {
       payload: {
         assignment_mode: assignmentMode,

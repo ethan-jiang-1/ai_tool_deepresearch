@@ -13,7 +13,7 @@ import {
   WorkUnitResultSchema,
 } from '../../DEEP_RESEARCH_HARNESS/schema/contracts/work-unit.mjs';
 import {
-  createWorkUnit,
+  createWorkUnit as createWorkUnitProduction,
   loadWorkUnitIndex,
   saveWorkUnitIndex,
 } from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
@@ -27,14 +27,44 @@ function cleanup(dir) {
 }
 
 function queueItem(overrides = {}) {
-  return makeItem({
+  const base = {
     queue_item_id: 'queue-source-topic-a',
     title: 'Source intake topic A',
     targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
     kind: 'wave0_source_intake',
     producer_rule: 'source_intake_fan_in',
-    payload: { topic_slug: 'topic-a' },
+    payload: {
+      topic_uid: 'tp_00000001-0000-4000-8000-000000000000',
+      topic_slug: 'topic-a',
+      wave: 0,
+    },
+    required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+    writes_to: ['artifacts/wave0/topic-a/source.yaml'],
+  };
+  return makeItem({
+    ...base,
     ...overrides,
+    payload: { ...base.payload, ...overrides.payload },
+  });
+}
+
+function createWorkUnit(bundleDir, options = {}) {
+  const roleKey = options.queueItem?.targets?.delegates?.role_key;
+  return createWorkUnitProduction(bundleDir, {
+    ...options,
+    actor_execution: options.actor_execution || {
+      execution_actor_class: 'delegated_subagent',
+      delegated_role_key: roleKey,
+      observation: {
+        outcome: 'available',
+        source: 'native_probe',
+        role_key: roleKey,
+        reason_code: 'probe_succeeded',
+        recorded_at: '2026-08-14T00:00:00.000Z',
+      },
+      policy_decision: 'normal_allowed',
+      fallback_from: null,
+    },
   });
 }
 
@@ -50,25 +80,43 @@ function resultStarterFromTask(task) {
 
 function queueItemForKind(kind, overrides = {}) {
   if (kind === 'wave1_topic_deepening') {
-    return queueItem({
+    const base = {
       queue_item_id: 'wave1-topic-a',
       title: 'Deepen topic A',
       targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-evidence-extractor', timeout_ms: 600000 } },
       kind,
       producer_rule: 'topic_deepening',
-      payload: { topic_slug: 'topic-a', wave: 1 },
+      payload: {
+        topic_uid: 'tp_00000001-0000-4000-8000-000000000000',
+        topic_slug: 'topic-a',
+        wave: 1,
+        assignment_mode: 'primary',
+      },
+      required_receipts: [
+        'file:artifacts/wave1/topic-a/evidence-summary.md',
+        'file:artifacts/wave1/topic-a/question-list.md',
+      ],
+    };
+    return queueItem({
+      ...base,
       ...overrides,
+      payload: { ...base.payload, ...overrides.payload },
     });
   }
   if (kind === 'wave2_targeted_evidence') {
-    return queueItem({
+    const base = {
       queue_item_id: 'wave2-targeted-finding-a',
       title: 'Targeted evidence finding A',
       targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-topic-scout', timeout_ms: 600000 } },
       kind,
       producer_rule: 'targeted_evidence_search',
       payload: { finding_id: 'W2F-001', wave: 2 },
+      required_receipts: [],
+    };
+    return queueItem({
+      ...base,
       ...overrides,
+      payload: { ...base.payload, ...overrides.payload },
     });
   }
   return queueItem(overrides);
@@ -158,7 +206,7 @@ describe('work-unit index and envelope', () => {
     }
   });
 
-  it('accepts genuine legacy marker absence but rejects partial or unknown current bindings', () => {
+  it('structurally decodes historical marker absence while rejecting partial or unknown current bindings', () => {
     const dir = tempBundle();
     try {
       const { manifest } = createWorkUnit(dir, {
@@ -330,7 +378,11 @@ describe('work-unit index and envelope', () => {
         assert.equal(schema.properties.queue_item_id.const, record.queue_item_id, testCase.kind);
         assert.equal(schema.properties.kind.const, record.kind, testCase.kind);
         assert.equal(schema.properties.receipt_nonce.const, record.receipt_nonce, testCase.kind);
-        assert.deepEqual(schema.required, manifest.output_contract.required_result_fields, testCase.kind);
+        assert.deepEqual(schema.required, [
+          ...manifest.output_contract.required_result_fields,
+          'actor_contract_version',
+          'execution_actor_class',
+        ], testCase.kind);
         assert.equal(schema.required.includes('summary'), false, testCase.kind);
         assert.equal(schema.properties.summary.default, '', testCase.kind);
 
@@ -441,7 +493,7 @@ describe('work-unit index and envelope', () => {
           },
         }),
         wave: 0,
-      }), /output contract|unknown_result_field|allowed_roles/i);
+      }), /output contract|unknown_result_field|allowed_roles|required_result_fields/i);
       assert.equal(existsSync(path.join(dir, '_work_units', 'wave0')), false);
     } finally {
       cleanup(dir);
@@ -484,7 +536,7 @@ describe('work-unit index and envelope', () => {
               },
             }),
             wave: 1,
-          }), new RegExp(`prior_submitted_output_roles|${label}`, 'i'));
+          }), new RegExp(`prior_submitted_output_roles|source[- ]claims|${label}`, 'i'));
           assert.equal(existsSync(path.join(dir, '_work_units', 'wave1')), false, label);
         } finally {
           cleanup(dir);

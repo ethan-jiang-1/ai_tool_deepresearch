@@ -215,7 +215,6 @@ function actorClaimRepair({ bundleDir, phase, requestedCount, decision, actorPol
     repairKind = 'agent_action';
     missingFact = `A current role-bound actor observation is required for '${observation.role_key}' before claim; observed ${reasonCode}.`;
   }
-
   const rerunObservation = observation.outcome === 'unknown'
     ? {
       outcome: '<available|unavailable>',

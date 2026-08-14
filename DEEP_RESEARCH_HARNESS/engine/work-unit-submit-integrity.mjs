@@ -7,6 +7,7 @@ import { inspectWorkUnitTransaction } from './work-unit-transaction.mjs';
 import { loadCurrentSubmittedLedgerFact } from './work-unit-submitted-ledger.mjs';
 import { readWorkUnitLedgerRows } from './work-unit-utils.mjs';
 import { readAndValidateBeacon, readAndValidateManifest } from './work-unit-validation.mjs';
+import { classifyCompleteCurrentWorkUnitProfile } from './work-unit-current-profile.mjs';
 import { loadQueueReadOnly } from './queue-manager-lifecycle.mjs';
 import { queueItemSnapshotHash } from './queue-manager-core.mjs';
 
@@ -33,6 +34,28 @@ export function evaluateWorkUnitSubmitIntegrity(bundleDir, {
   currentTxId = null,
 } = {}) {
   const rerun = submitRerun(bundleDir, record, resultPath, operation);
+  const profile = classifyCompleteCurrentWorkUnitProfile(bundleDir, record);
+  if (!profile.ok) {
+    const selectedPrimary = root(
+      profile.reason_code,
+      `unsupported current work-unit contract for ${record.work_id}: ${profile.unsupported_discriminator}`,
+      'missing_contract',
+      null,
+      rerun,
+    );
+    return {
+      ok: false,
+      work_id: record.work_id,
+      queue_item_id: record.queue_item_id,
+      submit_owned_only: true,
+      gate_evaluated: false,
+      transaction: null,
+      ledger: { disposition: 'not_evaluated', row_count: 0 },
+      queue: { disposition: 'not_evaluated', location: null },
+      roots: [selectedPrimary],
+      selected_primary: selectedPrimary,
+    };
+  }
   const transaction = inspectWorkUnitTransaction(bundleDir, {
     operation,
     targetWorkIds: [record.work_id],

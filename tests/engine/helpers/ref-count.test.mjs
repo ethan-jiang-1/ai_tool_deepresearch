@@ -291,7 +291,7 @@ describe('countReferences', () => {
     const dir = tempWorkUnitBundle('cr-mixed-');
     try {
       claimAndSubmitWorkUnit(dir, {
-        legacyV1Assignment: true,
+        phase: 'wave1',
         outputs: [
           {
             path: 'reference/countable-1.md',
@@ -328,7 +328,7 @@ describe('countReferences', () => {
     const dir = tempWorkUnitBundle('cr-orphan-');
     try {
       claimAndSubmitWorkUnit(dir, {
-        legacyV1Assignment: true,
+        phase: 'wave1',
         outputs: [{
           path: 'reference/00-shared-declared.md',
           role: 'reference',
@@ -445,7 +445,7 @@ describe('countReferences', () => {
     const dir = tempWorkUnitBundle('cr-glob-');
     try {
       claimAndSubmitWorkUnit(dir, {
-        legacyV1Assignment: true,
+        phase: 'wave1',
         outputs: [
           {
             path: 'reference/00-shared-foundation.md',
@@ -475,7 +475,7 @@ describe('countReferences', () => {
     const dir = tempWorkUnitBundle('cr-scoped-');
     try {
       claimAndSubmitWorkUnit(dir, {
-        legacyV1Assignment: true,
+        phase: 'wave1',
         outputs: [
           {
             path: 'reference/topic-a-source.md',
@@ -510,7 +510,7 @@ describe('countReferences', () => {
     const dir = tempWorkUnitBundle('cr-audit-');
     try {
       claimAndSubmitWorkUnit(dir, {
-        legacyV1Assignment: true,
+        phase: 'wave1',
         outputs: [
           {
             path: 'reference/good.md',

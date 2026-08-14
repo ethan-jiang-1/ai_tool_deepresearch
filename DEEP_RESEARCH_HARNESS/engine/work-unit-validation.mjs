@@ -32,7 +32,7 @@ import {
 } from './work-unit-index.mjs';
 import {
   WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
-  WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS,
+  WORK_UNIT_ACTOR_CONTRACT_VERSION,
   WORK_UNIT_RECEIPT_EVENT_SCHEMA_VERSION,
   WORK_UNIT_SUBMISSION_CONTRACT_VERSION,
   WorkUnitBeaconSchema,
@@ -49,6 +49,16 @@ import { kindContractForQueueItem } from './work-unit-utils.mjs';
 import { resolveWorkUnitAssignmentContract } from './work-unit-assignment-contract.mjs';
 import { loadCurrentSubmittedLedgerFact } from './work-unit-submitted-ledger.mjs';
 import {
+  assertCompleteCurrentWorkUnitProfile,
+  classifyCompleteCurrentWorkUnitProfile,
+  UNSUPPORTED_CURRENT_CONTRACT,
+} from './work-unit-current-profile.mjs';
+export {
+  assertCompleteCurrentWorkUnitProfile,
+  classifyCompleteCurrentWorkUnitProfile,
+  UNSUPPORTED_CURRENT_CONTRACT,
+} from './work-unit-current-profile.mjs';
+import {
   cacheLeafMapping,
   resolveCacheLeafContract,
 } from './helpers/cache-leaf-contract.mjs';
@@ -61,6 +71,7 @@ function validationRepairError(message, repair = {}) {
 }
 
 export function readAndValidateManifest(bundleDir, index, record) {
+  assertCompleteCurrentWorkUnitProfile(bundleDir, record);
   const manifestPath = path.join(bundleDir, record.paths.manifest_ref);
   if (!existsSync(manifestPath)) throw new Error(`Missing manifest: ${record.paths.manifest_ref}`);
   const manifest = WorkUnitManifestSchema.parse(readJson(manifestPath));
@@ -68,52 +79,37 @@ export function readAndValidateManifest(bundleDir, index, record) {
   for (const field of ['work_id', 'queue_item_id', 'wave', 'kind', 'kind_code', 'receipt_nonce', 'queue_item_snapshot_hash']) {
     if (manifest[field] !== record[field]) throw new Error(`manifest/index mismatch for ${record.work_id}: ${field}`);
   }
-  const recordSubmissionVersion = record.submission_contract_version;
-  const manifestSubmissionVersion = manifest.submission_contract_version;
-  if (recordSubmissionVersion || manifestSubmissionVersion) {
-    if (recordSubmissionVersion !== WORK_UNIT_SUBMISSION_CONTRACT_VERSION
-      || manifestSubmissionVersion !== recordSubmissionVersion) {
-      throw new Error(`manifest/index mismatch for ${record.work_id}: submission_contract_version`);
-    }
+  if (record.submission_contract_version !== WORK_UNIT_SUBMISSION_CONTRACT_VERSION
+    || manifest.submission_contract_version !== record.submission_contract_version) {
+    throw new Error(`manifest/index mismatch for ${record.work_id}: submission_contract_version`);
   }
-  const recordAssignmentVersion = record.assignment_contract_version;
-  const manifestAssignmentVersion = manifest.assignment_contract_version;
-  if (recordAssignmentVersion || manifestAssignmentVersion) {
-    if (!WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS.includes(recordAssignmentVersion)
-      || manifestAssignmentVersion !== recordAssignmentVersion) {
-      throw new Error(`manifest/index mismatch for ${record.work_id}: assignment_contract_version`);
-    }
-    const observedSnapshotHash = queueItemSnapshotHash(manifest.queue_item);
-    if (observedSnapshotHash !== record.queue_item_snapshot_hash) {
-      throw new Error(`embedded queue snapshot hash mismatch for ${record.work_id}`);
-    }
-    const boundHistoricalBaseOutputContract = recordAssignmentVersion !== WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION
-      ? (() => {
-        const { required_outputs: _requiredOutputs, ...boundBase } = manifest.output_contract;
-        return boundBase;
-      })()
-      : null;
-    const baseOutputContract = boundHistoricalBaseOutputContract
-      || kindContractForQueueItem(manifest.queue_item, record.kind).output_contract;
-    const expectedOutputContract = resolveWorkUnitAssignmentContract({
-      assignmentContractVersion: recordAssignmentVersion,
-      kind: record.kind,
-      queueItem: manifest.queue_item,
-      topicBinding: {
-        topic_uid: manifest.queue_item.payload?.topic_uid,
-        topic_slug: manifest.queue_item.payload?.topic_slug,
-      },
-      baseOutputContract,
-    });
-    if (hashValue(manifest.output_contract) !== hashValue(expectedOutputContract)) {
-      throw new Error(`manifest assignment output_contract drift for ${record.work_id}`);
-    }
-  } else if (Object.hasOwn(manifest.output_contract, 'required_outputs')) {
-    throw new Error(`legacy manifest unexpectedly carries required_outputs for ${record.work_id}`);
+  if (record.assignment_contract_version !== WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION
+    || manifest.assignment_contract_version !== record.assignment_contract_version) {
+    throw new Error(`manifest/index mismatch for ${record.work_id}: assignment_contract_version`);
   }
-  if (record.actor_contract_version || manifest.actor_contract_version) {
-    if (record.actor_contract_version !== 'work-unit.actor.v1' || manifest.actor_contract_version !== record.actor_contract_version) throw new Error(`manifest/index mismatch for ${record.work_id}: actor_contract_version`);
-    if (JSON.stringify(manifest.actor_execution) !== JSON.stringify(record.actor_execution)) throw new Error(`manifest/index mismatch for ${record.work_id}: actor_execution`);
+  const observedSnapshotHash = queueItemSnapshotHash(manifest.queue_item);
+  if (observedSnapshotHash !== record.queue_item_snapshot_hash) {
+    throw new Error(`embedded queue snapshot hash mismatch for ${record.work_id}`);
+  }
+  const expectedOutputContract = resolveWorkUnitAssignmentContract({
+    assignmentContractVersion: record.assignment_contract_version,
+    kind: record.kind,
+    queueItem: manifest.queue_item,
+    topicBinding: {
+      topic_uid: manifest.queue_item.payload?.topic_uid,
+      topic_slug: manifest.queue_item.payload?.topic_slug,
+    },
+    baseOutputContract: kindContractForQueueItem(manifest.queue_item, record.kind).output_contract,
+  });
+  if (hashValue(manifest.output_contract) !== hashValue(expectedOutputContract)) {
+    throw new Error(`manifest assignment output_contract drift for ${record.work_id}`);
+  }
+  if (record.actor_contract_version !== WORK_UNIT_ACTOR_CONTRACT_VERSION
+    || manifest.actor_contract_version !== record.actor_contract_version) {
+    throw new Error(`manifest/index mismatch for ${record.work_id}: actor_contract_version`);
+  }
+  if (JSON.stringify(manifest.actor_execution) !== JSON.stringify(record.actor_execution)) {
+    throw new Error(`manifest/index mismatch for ${record.work_id}: actor_execution`);
   }
   return manifest;
 }
@@ -139,6 +135,7 @@ export function validateManifestTopicBinding(bundleDir, manifest) {
 }
 
 export function readAndValidateBeacon(bundleDir, record, manifest) {
+  assertCompleteCurrentWorkUnitProfile(bundleDir, record);
   const beaconPath = path.join(bundleDir, record.paths.beacon_ref);
   if (!existsSync(beaconPath)) throw new Error(`Missing beacon: ${record.paths.beacon_ref}`);
   const beacon = WorkUnitBeaconSchema.parse(readJson(beaconPath));
@@ -163,14 +160,21 @@ export function readAndValidateBeacon(bundleDir, record, manifest) {
   }
   if (beacon.result_schema_ref !== manifest.paths.result_schema_ref) throw new Error(`beacon/manifest mismatch for ${record.work_id}: result_schema_ref`);
   if (beacon.runtime_receipt_ref !== manifest.paths.runtime_receipt_ref) throw new Error(`beacon/manifest mismatch for ${record.work_id}: runtime_receipt_ref`);
-  if (record.actor_contract_version || beacon.actor_contract_version) {
-    if (beacon.actor_contract_version !== record.actor_contract_version) throw new Error(`beacon/index mismatch for ${record.work_id}: actor_contract_version`);
-    if (JSON.stringify(beacon.actor_execution) !== JSON.stringify(record.actor_execution)) throw new Error(`beacon/index mismatch for ${record.work_id}: actor_execution`);
+  if (beacon.assignment_contract_version !== record.assignment_contract_version
+    || beacon.submission_contract_version !== record.submission_contract_version) {
+    throw new Error(`beacon/index mismatch for ${record.work_id}: current contract version`);
+  }
+  if (beacon.actor_contract_version !== record.actor_contract_version) {
+    throw new Error(`beacon/index mismatch for ${record.work_id}: actor_contract_version`);
+  }
+  if (JSON.stringify(beacon.actor_execution) !== JSON.stringify(record.actor_execution)) {
+    throw new Error(`beacon/index mismatch for ${record.work_id}: actor_execution`);
   }
   return beacon;
 }
 
 export function readAndValidateResult(bundleDir, resultPath, record, { normalizations = [], outputContract = null } = {}) {
+  assertCompleteCurrentWorkUnitProfile(bundleDir, record);
   if (!resultPath) throw new Error('--result is required');
   if (!existsSync(resultPath)) throw new Error(`Result file not found: ${resultPath}`);
   const raw = readJson(resultPath);
@@ -269,31 +273,19 @@ export function readAndValidateResult(bundleDir, resultPath, record, { normaliza
     }
   }
 
-  if (record.actor_contract_version) {
-    if (normalized.actor_contract_version !== record.actor_contract_version) {
-      validationIssues.push({
-        code: 'result_binding_mismatch',
-        path: ['actor_contract_version'],
-        message: `result/index mismatch for ${record.work_id}: actor_contract_version; expected ${record.actor_contract_version} got ${normalized.actor_contract_version ?? '<missing>'}`,
-      });
-    }
-    if (normalized.execution_actor_class !== record.actor_execution.execution_actor_class) {
-      validationIssues.push({
-        code: 'result_binding_mismatch',
-        path: ['execution_actor_class'],
-        message: `result/index mismatch for ${record.work_id}: execution_actor_class; expected ${record.actor_execution.execution_actor_class} got ${normalized.execution_actor_class ?? '<missing>'}`,
-      });
-    }
-  } else if (normalized.actor_contract_version || normalized.execution_actor_class) {
-    for (const field of ['actor_contract_version', 'execution_actor_class']) {
-      if (normalized[field] !== undefined) {
-        validationIssues.push({
-          code: 'legacy_result_actor_binding_forbidden',
-          path: [field],
-          message: `legacy result for ${record.work_id} must not invent ${field}`,
-        });
-      }
-    }
+  if (normalized.actor_contract_version !== record.actor_contract_version) {
+    validationIssues.push({
+      code: 'result_binding_mismatch',
+      path: ['actor_contract_version'],
+      message: `result/index mismatch for ${record.work_id}: actor_contract_version; expected ${record.actor_contract_version} got ${normalized.actor_contract_version ?? '<missing>'}`,
+    });
+  }
+  if (normalized.execution_actor_class !== record.actor_execution.execution_actor_class) {
+    validationIssues.push({
+      code: 'result_binding_mismatch',
+      path: ['execution_actor_class'],
+      message: `result/index mismatch for ${record.work_id}: execution_actor_class; expected ${record.actor_execution.execution_actor_class} got ${normalized.execution_actor_class ?? '<missing>'}`,
+    });
   }
 
   if (validationIssues.length > 0) {
@@ -306,6 +298,7 @@ export function readAndValidateResult(bundleDir, resultPath, record, { normaliza
 }
 
 export function validateSubmitRuntimeReceipt(bundleDir, record, { normalizations = [], allowNonceNormalization = false } = {}) {
+  assertCompleteCurrentWorkUnitProfile(bundleDir, record);
   const receiptPath = path.join(bundleDir, record.paths.runtime_receipt_ref);
   if (!existsSync(receiptPath)) throw new Error(`Missing runtime receipt: ${record.paths.runtime_receipt_ref}`);
   const raw = readFileSync(receiptPath, 'utf-8');
@@ -395,12 +388,8 @@ export function validateSubmitRuntimeReceipt(bundleDir, record, { normalizations
     for (const field of WORK_UNIT_REQUIRED_RECEIPT_FIELDS) {
       if (event[field] !== record[field]) throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: ${field}`);
     }
-    if (record.actor_contract_version) {
-      if (event.actor_contract_version !== record.actor_contract_version) throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: actor_contract_version`);
-      if (event.execution_actor_class !== record.actor_execution.execution_actor_class) throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: execution_actor_class`);
-    } else if (event.actor_contract_version || event.execution_actor_class) {
-      throw new Error(`legacy runtime receipt for ${record.work_id} must not invent actor binding`);
-    }
+    if (event.actor_contract_version !== record.actor_contract_version) throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: actor_contract_version`);
+    if (event.execution_actor_class !== record.actor_execution.execution_actor_class) throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: execution_actor_class`);
     events.push(event);
   });
   return {

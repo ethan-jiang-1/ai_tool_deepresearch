@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -182,6 +182,39 @@ function runGate(dir) {
   return run(GATE_CLI, ['--bundle', dir, '--current-node', 'phases/phase-wave0.md']);
 }
 
+function retireAssignmentProfile(dir, record) {
+  const indexPath = path.join(dir, '_work_units', '_index.json');
+  const index = JSON.parse(readFileSync(indexPath, 'utf-8'));
+  const current = index.work_units[record.work_id];
+  const manifestPath = path.join(dir, current.paths.manifest_ref);
+  const beaconPath = path.join(dir, current.paths.beacon_ref);
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  const beacon = JSON.parse(readFileSync(beaconPath, 'utf-8'));
+  for (const surface of [current, manifest, beacon]) {
+    surface.assignment_contract_version = 'work-unit.assignment.v2';
+  }
+  writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  writeFileSync(beaconPath, `${JSON.stringify(beacon, null, 2)}\n`);
+}
+
+function recoveryAuthoritySnapshot(dir, record) {
+  const refs = [
+    '_work_units/_index.json',
+    'rb_queue.json',
+    'rb_output_declarations.jsonl',
+    record.paths.manifest_ref,
+    record.paths.beacon_ref,
+    record.paths.status_ref,
+    record.paths.result_ref,
+    record.paths.runtime_receipt_ref,
+  ];
+  return Object.fromEntries(refs.map((ref) => {
+    const target = path.join(dir, ref);
+    return [ref, existsSync(target) ? readFileSync(target, 'base64') : null];
+  }));
+}
+
 describe('BUG-088 declaration fault recovery through real CLI', () => {
   after(() => {
     for (const dir of createdDirs) rmSync(dir, { recursive: true, force: true });
@@ -219,4 +252,20 @@ describe('BUG-088 declaration fault recovery through real CLI', () => {
       assert.equal(recoveredGateOutput.check.failed_rule_ids.includes('submitted_projection_authority'), false);
     });
   }
+
+  it('rejects a retired profile through declaration recovery without authority mutation', () => {
+    const { dir, sourceUrl } = createBundle('retired-profile');
+    const submitted = submitThroughCli(dir, sourceUrl, { late: false });
+    const ledgerPath = path.join(dir, 'rb_output_declarations.jsonl');
+    rmSync(ledgerPath);
+    retireAssignmentProfile(dir, submitted.record);
+    const before = recoveryAuthoritySnapshot(dir, submitted.record);
+
+    const rejected = run(WORK_UNIT_CLI, ['recover-declaration', dir, '--work-id', submitted.record.work_id]);
+    assert.equal(rejected.status, 1, rejected.stderr || rejected.stdout);
+    const output = JSON.parse(rejected.stdout);
+    assert.equal(output.ok, false);
+    assert.equal(output.reason_code, 'unsupported_current_contract');
+    assert.deepEqual(recoveryAuthoritySnapshot(dir, submitted.record), before);
+  });
 });

@@ -19,6 +19,7 @@ import {
 } from './work-unit-index.mjs';
 import {
   readAndValidateManifest,
+  assertCompleteCurrentWorkUnitProfile,
 } from './work-unit-validation.mjs';
 import {
   drySubmitWorkUnit,
@@ -385,6 +386,17 @@ export function timeoutPreflightWorkUnit(bundleDir, { work_id, resultPath = null
   const base = basePreflight({ work_id, record });
   base.idle_timeout_ms = idleTimeoutMs;
   base.initial_deadline_at = record.deadline_at || null;
+
+  try {
+    assertCompleteCurrentWorkUnitProfile(bundleDir, record);
+  } catch (error) {
+    return finalizePreflight({
+      ...base,
+      recommended_action: 'block',
+      inspect: [error.message || String(error)],
+      advice: ['This attempt does not carry the complete current work-unit profile; do not inspect progress or timeout it.'],
+    });
+  }
 
   if (record.status !== 'claimed') {
     return finalizePreflight({

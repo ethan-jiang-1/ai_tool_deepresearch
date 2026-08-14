@@ -331,7 +331,6 @@ describe('Gate dynamic threshold — wave1', () => {
         const submission = claimAndSubmitWorkUnit(dir, {
           phase: 'wave1',
           queueItemId: `dynamic-${topic.slug}-${ordinal}`,
-          legacyAssignment: true,
           preserveQueue: true,
           queueItemOverrides: {
             payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug, wave: 1 },

@@ -5,7 +5,6 @@ import path from 'node:path';
 import {
   WORK_UNIT_SUBMISSION_CONTRACT_VERSION,
   WorkUnitLedgerRecordSchema,
-  WorkUnitStatusFileSchema,
   WorkUnitSubmissionV1StatusFileSchema,
 } from '../schema/contracts/work-unit.mjs';
 import {
@@ -14,6 +13,7 @@ import {
   readWorkUnitLedgerRows,
 } from './work-unit-utils.mjs';
 import { WORK_UNIT_OUTPUT_LEDGER } from './work-unit-constants.mjs';
+import { assertCompleteCurrentWorkUnitProfile } from './work-unit-current-profile.mjs';
 
 function integrityError(reasonCode, message) {
   const error = new Error(message);
@@ -98,9 +98,7 @@ export function readSubmittedLedgerDocument(bundleDir) {
 }
 
 export function acceptedLedgerRecordHashFor(record) {
-  return isMarkedWorkUnitSubmission(record)
-    ? record.accepted_ledger_record_hash || null
-    : record.ledger_record_hash || null;
+  return record?.accepted_ledger_record_hash || null;
 }
 
 export function readSubmittedStatusFile(bundleDir, record) {
@@ -109,9 +107,7 @@ export function readSubmittedStatusFile(bundleDir, record) {
     throw integrityError('submitted_status_missing', `submitted status file is missing: ${record.paths.status_ref}`);
   }
   const statusBytes = readJson(statusPath);
-  return isMarkedWorkUnitSubmission(record)
-    ? WorkUnitSubmissionV1StatusFileSchema.parse(statusBytes)
-    : WorkUnitStatusFileSchema.parse(statusBytes);
+  return WorkUnitSubmissionV1StatusFileSchema.parse(statusBytes);
 }
 
 export function validateCurrentSubmittedLedgerFact({ record, row, status }) {
@@ -135,49 +131,31 @@ export function validateCurrentSubmittedLedgerFact({ record, row, status }) {
     throw integrityError('submitted_ledger_binding_invalid', `ledger/index path binding mismatch for ${record.work_id}`);
   }
 
-  if (isMarkedWorkUnitSubmission(record)) {
-    if (record.result_hash !== undefined || record.ledger_record_hash !== undefined) {
-      throw integrityError('submitted_representation_mixed', `marked submitted index record ${record.work_id} carries legacy current hash mirrors`);
-    }
-    if (status.result_hash !== undefined || status.ledger_record_hash !== undefined) {
-      throw integrityError('submitted_representation_mixed', `marked submitted status ${record.work_id} carries legacy current hash mirrors`);
-    }
-    if (record.accepted_ledger_record_hash !== row.ledger_record_hash) {
-      throw integrityError('submitted_acceptance_fingerprint_mismatch', `marked acceptance fingerprint mismatch for ${record.work_id}`);
-    }
-    return {
-      branch: 'work-unit.submission.v1',
-      record,
-      row,
-      status,
-      result_hash: row.result_hash,
-      ledger_record_hash: row.ledger_record_hash,
-      accepted_ledger_record_hash: record.accepted_ledger_record_hash,
-    };
+  if (!isMarkedWorkUnitSubmission(record)) {
+    throw integrityError('unsupported_current_contract', `unsupported current work-unit contract for ${record.work_id}: submission_contract_version`);
   }
-
-  if (record.accepted_ledger_record_hash !== undefined) {
-    throw integrityError('submitted_representation_mixed', `legacy submitted index record ${record.work_id} carries a marked acceptance fingerprint`);
+  if (record.result_hash !== undefined || record.ledger_record_hash !== undefined) {
+    throw integrityError('submitted_representation_mixed', `marked submitted index record ${record.work_id} carries legacy current hash mirrors`);
   }
-  if (!record.result_hash || !record.ledger_record_hash
-    || record.result_hash !== row.result_hash
-    || record.ledger_record_hash !== row.ledger_record_hash
-    || status.result_hash !== row.result_hash
-    || status.ledger_record_hash !== row.ledger_record_hash) {
-    throw integrityError('submitted_legacy_hash_mismatch', `legacy submitted hash mirrors disagree for ${record.work_id}`);
+  if (status.result_hash !== undefined || status.ledger_record_hash !== undefined) {
+    throw integrityError('submitted_representation_mixed', `marked submitted status ${record.work_id} carries legacy current hash mirrors`);
+  }
+  if (record.accepted_ledger_record_hash !== row.ledger_record_hash) {
+    throw integrityError('submitted_acceptance_fingerprint_mismatch', `marked acceptance fingerprint mismatch for ${record.work_id}`);
   }
   return {
-    branch: 'legacy',
+    branch: 'work-unit.submission.v1',
     record,
     row,
     status,
     result_hash: row.result_hash,
     ledger_record_hash: row.ledger_record_hash,
-    accepted_ledger_record_hash: row.ledger_record_hash,
+    accepted_ledger_record_hash: record.accepted_ledger_record_hash,
   };
 }
 
 export function loadCurrentSubmittedLedgerFact(bundleDir, record, { ledgerRows = null } = {}) {
+  assertCompleteCurrentWorkUnitProfile(bundleDir, record);
   const rows = ledgerRows || readWorkUnitLedgerRows(bundleDir);
   const matches = rows.filter((row) => row.work_id === record.work_id);
   if (matches.length === 0) {

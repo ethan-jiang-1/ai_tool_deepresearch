@@ -11,31 +11,47 @@ Define the work-unit provenance gate contract. Gates verify delegated output cov
 ## Requirements
 ### Requirement: Gate SHALL verify submitted work-unit ledger rows
 
-Work-unit provenance gates SHALL continue to read schema-valid, hash-valid Engine-written rows in bundle-root
-`rb_output_declarations.jsonl` as current delegated coverage authority. Reconstructable
-index/result/status/queue facts, bounded late-accept context, immutable acceptance fingerprints, and
-supersession relations SHALL NOT count directly as coverage.
+Work-unit provenance gates SHALL use schema-valid, hash-valid Engine-written
+rows in bundle-root `rb_output_declarations.jsonl` as current delegated
+coverage authority only after the associated attempt has passed the complete
+current profile boundary. The index record is the attempt-entry Source of
+Record, manifest and beacon cross-check its profile, and the accepted ledger
+fingerprint remains the submitted current acceptance representation.
 
-When `_work_units/_index.json` contains a submitted attempt with no supersession relation but its ledger row
-is absent, gate/inspect SHALL classify one `submitted_declaration_missing` root, determine whether exact or
-audited legacy `recover-declaration` is reachable through the existing work-unit owner, and mask dependent
-output/cache/count symptoms. The gate SHALL remain failed until that operation restores a normal valid row;
-reconstruction facts alone SHALL not become coverage.
+An attempt with v1/v2 assignment, absent marked submission, legacy hash-mirror
+representation, absent actor provenance, partial profile, or profile drift
+SHALL produce one `unsupported_current_contract` root before Gate/inspect
+counts coverage, evaluates a missing declaration, reconstructs a row, resolves
+a supersession relation, or projects actor provenance. The Gate SHALL not
+derive a current or historical acceptance conclusion from its row, path,
+result, receipt, cache, status mirrors, runtime refs, or another record.
 
-When a submitted predecessor has a complete `work-unit.supersession.v1` relation and exactly matching
-successor lineage, it SHALL remain historical acceptance but SHALL not be a current coverage candidate. Its
-target ledger row MAY be missing or work-ID-attributable-but-drifted only when its version-applicable accepted
-hash evidence and full `DEW-024` acceptance tuple validate: the marked immutable fingerprint for
-`work-unit.submission.v1`, or the mutually compatible full legacy tuple and relation-frozen original hash for a
-markerless predecessor. This bounded historical exception SHALL not accept
-duplicate, unparseable, or unattributable JSONL corruption and SHALL not make the predecessor row current.
-The gate SHALL remain failed for that obligation until the initial successor or its unique acyclic current
-lineage leaf has a normal schema-valid, hash-valid submitted row with no valid relation making it historical.
+`legacy_non_work_unit_rows`, duplicate/unparseable/unattributable JSONL
+corruption, and a malformed complete-current attempt remain their existing
+distinct diagnostics. This change SHALL not suppress, delete, or reinterpret
+those rows as current work-unit acceptance.
+
+#### Scenario: Legacy work-unit row cannot count
+
+- **WHEN** a hash-valid ledger row names an attempt without the complete
+  current profile
+- **THEN** provenance evaluation SHALL report
+  `unsupported_current_contract` for that attempt before coverage computation
+- **AND** the row SHALL not count as current coverage or historical accepted
+  predecessor evidence
+
+#### Scenario: Current row continues to count through ledger authority
+
+- **WHEN** a complete current submitted attempt has matching current bindings
+  and an immutable-fingerprint-valid ledger row
+- **THEN** Gate SHALL retain the existing normal coverage evaluation
+- **AND** it SHALL not require a second legacy representation or fallback
 
 #### Scenario: Hand-written ledger row is rejected
 
-- **WHEN** a current candidate row lacks a valid `ledger_record_hash`, its version-applicable marked
-  acceptance fingerprint or legacy mirror evidence, or the required result/receipt/output/cache/queue bindings
+- **WHEN** a current candidate row lacks a valid `ledger_record_hash`, its
+  immutable current acceptance fingerprint, or the required
+  result/receipt/output/cache/queue bindings
 - **THEN** it SHALL not count as coverage
 
 #### Scenario: Missing submitted declaration is one root
@@ -80,8 +96,9 @@ lineage leaf has a normal schema-valid, hash-valid submitted row with no valid r
 
 #### Scenario: superseded missing predecessor row is historical only
 
-- **WHEN** a predecessor has one valid immutable supersession relation, matching successor lineage, and the
-  required durable acceptance tuple, but its exact ledger row is missing
+- **WHEN** a complete current predecessor has one valid immutable supersession
+  relation, matching successor lineage, and the required durable acceptance
+  tuple, but its exact ledger row is missing
 - **THEN** Gate MAY report historical acceptance without reconstructing or counting that predecessor
 - **AND** current coverage SHALL remain absent until the successor's unique current lineage leaf has a
   hash-valid row through the existing normal-submit or audited-late-submit contract
@@ -94,18 +111,34 @@ lineage leaf has a normal schema-valid, hash-valid submitted row with no valid r
 
 ### Requirement: Gate SHALL verify work-unit submission presence
 
-For each counted current ledger row, gates SHALL continue to verify submitted index, manifest, canonical
-result, runtime receipt, beacon, nonce, outputs, cache/source claims, queue binding, and hashes. A
-`work-unit.submission.v1` current row SHALL resolve current hashes ledger-first and verify the immutable index
-acceptance fingerprint; markerless legacy rows SHALL use their explicit mirror compatibility branch.
+For a complete current submitted attempt, submission-presence evaluation SHALL
+continue to verify the submitted index, manifest, canonical result, runtime
+receipt, beacon, nonce, outputs, cache/source claims, queue binding, hashes,
+and ledger-first immutable acceptance fingerprint. A missing current ledger row
+without a supersession relation SHALL retain the existing bounded declaration
+recovery diagnosis, and a complete current superseded predecessor shall retain
+the existing current-lineage rules.
 
-For a missing current row without a supersession relation, the submission-presence evaluator SHALL inspect
-only enough independent submitted surfaces to classify exact declaration recovery eligibility. It SHALL not
-report successful submission presence or coverage before the row is restored. For a historical predecessor,
-the evaluator SHALL instead verify the complete supersession relation, exact direct successor lineage,
-one-successor cardinality, a unique acyclic chain through any accepted ordinary later edges, and the durable
-`DEW-024` acceptance tuple. A broken relation, chain, or acceptance tuple SHALL remain the primary integrity
-root and SHALL not be converted into a declaration-recovery or successor guess.
+Markerless legacy rows SHALL not use a mirror-compatibility branch. Before
+submission-presence evaluation gathers recovery or supersession facts, an old
+or missing discriminator SHALL return `unsupported_current_contract` and SHALL
+not offer recovery, supersession, or an inferred current form.
+
+#### Scenario: Current missing declaration retains its bounded diagnosis
+
+- **WHEN** a complete current submitted attempt lacks its ledger row and its
+  existing direct recovery facts are available
+- **THEN** inspect SHALL retain the existing exact recovery eligibility
+  diagnosis
+- **AND** it SHALL not offer supersession in parallel
+
+#### Scenario: Markerless attempt has no recovery branch
+
+- **WHEN** a submitted-looking attempt uses status/index hash mirrors without
+  `work-unit.submission.v1`
+- **THEN** submission-presence evaluation SHALL return
+  `unsupported_current_contract` before comparing those mirrors
+- **AND** it SHALL not classify a declaration as recoverable or historical
 
 #### Scenario: Deterministic recovery eligibility is diagnosed
 
@@ -114,14 +147,14 @@ root and SHALL not be converted into a declaration-recovery or successor guess.
 - **THEN** inspect SHALL report `recover-declaration` as reachable and provide one exact command target
 - **AND** it SHALL not offer supersession in parallel
 
-#### Scenario: Legacy recovery requires full original-hash evidence
+#### Scenario: Legacy recovery is rejected before original-hash evaluation
 
-- **WHEN** a legacy pre-unified-timestamp/pre-context current submitted attempt lacks its row
-- **THEN** recovery eligibility SHALL require matching index/status/result/receipt/beacon/output/cache, queue
-  terminal history and original submit/transaction evidence sufficient to reproduce the recorded hash
-- **AND** any missing fact SHALL be named as the direct blocker
-- **AND** if exact recovery is unavailable, supersession SHALL be considered only by the separate full
-  `DEW-024` eligibility contract; otherwise the result SHALL remain `missing_contract`
+- **WHEN** an old or markerless submitted-looking attempt lacks its row
+- **THEN** recovery evaluation SHALL return `unsupported_current_contract`
+  before original-hash, status, receipt, beacon, output, cache, queue, or
+  transaction evidence is compared
+- **AND** it SHALL not offer recovery, supersession, or `missing_contract` as
+  an alternate interpretation of that attempt
 
 #### Scenario: Conflicting submitted surfaces block recovery
 
@@ -238,9 +271,26 @@ Gate CLI rule evaluation SHALL dispatch to work-unit provenance checks through t
 
 ### Requirement: Gate SHALL detect delegated bypass by phase
 
-Work-unit provenance gates SHALL detect suspected delegated bypass by phase using the check name `delegated_bypass_suspected`. It SHALL report direct/orphan outputs, non-work-unit delegated artifacts, and hand-written declarations that lack submitted work-unit coverage.
+Delegated-bypass diagnostics SHALL continue to identify direct/orphan outputs,
+non-work-unit delegated artifacts, hand-written declarations, and current
+work-unit rows through the shared normalized ledger conclusion. A complete
+current superseded predecessor may remain historical context only under its
+existing immutable relation and current-lineage requirements.
 
-The bypass diagnostic SHALL determine whether a declaration is current, historical, missing, malformed, or unsubmitted through the same normalized submitted-ledger and immutable-supersession conclusion used by provenance coverage. A raw `rb_output_declarations.jsonl` reader MAY display or locate historical rows, but SHALL NOT independently infer that a row is bypass evidence by comparing raw history with a current normalized set. It MAY suppress a raw row only when its exact work-id/hash pair matches a normalized `hash_valid_historical` predecessor with one complete immutable supersession relation and matching successor lineage. That row is historical context, not a hand-written declaration or a current coverage candidate. A missing, attributable-drift, malformed, unattributable, invalid, or genuinely unsubmitted declaration SHALL remain bypass evidence and SHALL fail closed.
+An old or incomplete work-unit attempt SHALL be surfaced through the same
+`unsupported_current_contract` boundary before a bypass reader classifies it
+as current, historical, missing, malformed, or unsubmitted. The reader SHALL
+not use raw history to create a compatibility conclusion or hide a real bypass.
+`legacy_non_work_unit_rows` remain diagnostic-only rows outside this attempt
+profile decision.
+
+#### Scenario: Unsupported work-unit input is not hidden as historical
+
+- **WHEN** a raw declaration points at an attempt with an unsupported current
+  profile
+- **THEN** the bypass diagnostic SHALL return
+  `unsupported_current_contract` for that attempt
+- **AND** it SHALL not suppress the row as a compatible historical predecessor
 
 #### Scenario: bypass diagnostic is failure evidence
 
@@ -250,7 +300,9 @@ The bypass diagnostic SHALL determine whether a declaration is current, historic
 
 #### Scenario: superseded predecessor is historical rather than bypass evidence
 
-- **WHEN** a raw declaration reader exposes a submitted predecessor with one valid immutable supersession relation and matching successor lineage
+- **WHEN** a raw declaration reader exposes a complete current submitted
+  predecessor with one valid immutable supersession relation and matching
+  successor lineage
 - **THEN** `delegated_bypass_suspected` SHALL not report that predecessor as a hand-written or non-submitted declaration
 - **AND** the Gate SHALL continue to evaluate the successor's current submitted coverage through the normal normalized-ledger path
 
@@ -409,17 +461,17 @@ If a reference cannot be deterministically classified as either backed Phase-own
 - **THEN** provenance SHALL fail closed or report blocking backing drift
 - **AND** the reference SHALL NOT count as accepted evidence until repaired
 
-+### Requirement: Wave0 provenance SHALL distinguish legacy delegated references from submitted-backed Phase-owned projections
+### Requirement: Wave0 provenance SHALL distinguish legacy delegated references from submitted-backed Phase-owned projections
 
-Wave0 provenance evaluation SHALL classify a shared reference by the authority it actually claims. A legacy delegated shared reference is valid only when its exact reference output is recorded by a successfully submitted historical Wave0 work-unit row. A current Phase-owned shared reference is valid only when deterministic backing resolves its normal `source_url` and scannable body to one exact retained submitted Wave0 source identity, written as `<work_id>/<ordinal>`, together with the authenticated source YAML, source URL, cache, result, and work-unit facts needed by the existing backing contract. For a retained direct source array, that exact identity stays with its ledger-ordered accepted contribution across a later rerun append; a generic current-round eligibility filter does not reassign it. URL equality or a work ID without the exact ordinal SHALL not select a source identity.
+Wave0 provenance evaluation SHALL classify a shared reference by the authority it actually claims. A current Phase-owned shared reference is valid only when deterministic backing resolves its normal `source_url` and scannable body to one exact retained complete-current submitted Wave0 source identity, written as `<work_id>/<ordinal>`, together with the authenticated source YAML, source URL, cache, result, and work-unit facts needed by the existing backing contract. For a retained direct source array, that exact identity stays with its ledger-ordered accepted contribution across a later rerun append; a generic current-round eligibility filter does not reassign it. URL equality or a work ID without the exact ordinal SHALL not select a source identity.
 
 A Phase-owned reference SHALL NOT require its own path in delegated `output_files[]`; it is a consumer projection after submit, not a second delegated attempt. Conversely, a matching URL, source layer, `_INDEX.md` row, filename, source YAML on disk, bare `work_id`, or unsubmitted candidate SHALL NOT establish that backing. Ambiguous, malformed, superseded, or unsubmitted backing SHALL fail closed with the nearest submitted-backing root rather than being labeled a valid projection or delegated reference.
 
-#### Scenario: valid legacy delegated Wave0 reference stays valid
+#### Scenario: Legacy Wave0 rich-reference has no projection authority
 
-- **WHEN** a historical submitted Wave0 ledger row records a shared-reference output that passes its recorded output and provenance checks
-- **THEN** the provenance gate SHALL classify it as submitted delegated fetched evidence
-- **AND** it SHALL not require a new Phase-owned backing form or a rewritten historical file
+- **WHEN** a submitted Wave0 ledger row records a shared-reference output under a v1/v2 or markerless attempt profile
+- **THEN** the provenance gate SHALL return `unsupported_current_contract` before classifying it as delegated evidence or Phase-owned backing
+- **AND** it SHALL not require a rewritten historical file or infer a current source identity
 
 #### Scenario: exact submitted backing authorizes a Phase-owned Wave0 reference
 
@@ -438,7 +490,6 @@ A Phase-owned reference SHALL NOT require its own path in delegated `output_file
 - **WHEN** a Wave0 shared-reference file or index row has a legal name and format but cannot resolve to one exact submitted source identity
 - **THEN** provenance SHALL return a blocking submitted-backing diagnostic
 - **AND** it SHALL not count the file as delegated evidence or a Phase-owned projection
-
 
 ### Requirement: Wave1 output coverage SHALL bind required paths to canonical roles
 
@@ -511,36 +562,37 @@ Consumers that need round identification (inspect authority checks, eligible-row
 
 ### Requirement: Provenance gates SHALL derive current submitted coverage from immutable supersession relations
 
-Work-unit provenance gates SHALL continue to require a schema-valid, hash-valid Engine-written submitted
-ledger row for delegated coverage. A submitted predecessor with an Engine-audited immutable supersession
-relation SHALL retain `status: submitted` and remain readable historical acceptance evidence, but SHALL not
-count as current delegated coverage. The gate SHALL follow only a unique acyclic chain through valid direct
-successor, ordinary retry/replacement, and later supersession edges, and SHALL require the current lineage
-leaf's hash-valid row accepted through the existing normal submit or audited late-submit contract before
-restored current coverage is counted; it SHALL not invent a
-supersession-specific success branch.
+Provenance gates SHALL continue to require a schema-valid, hash-valid,
+Engine-written submitted ledger row for complete current delegated coverage.
+A complete current predecessor with a valid Engine-audited immutable
+supersession relation remains historical acceptance and cannot count until its
+unique current lineage leaf has a normal current ledger row.
 
-Current content hashes and coverage SHALL resolve from the ledger first. Gate/inspect SHALL verify the
-strict predecessor index relation's exact `schema_version`, `predecessor_work_id`,
-`predecessor_queue_item_id`, `accepted_ledger_record_hash`, closed `root_code`, non-empty `reason`,
-`recorded_at`, `tx_id`, and `successor_queue_item_id` fields. It SHALL require
-`schema_version: work-unit.supersession.v1`, verify the five direct-parent queue lineage fields against their
-predecessor work/queue ID, accepted hash, root, and transaction counterparts, and require the named successor
-queue-item ID to match the actual successor demand. Relation cardinality and an acyclic one-leaf continuation
-are also binding facts. When the predecessor ledger is missing or
-work-ID-attributable-but-drifted, the historical relation is usable only with the version-applicable accepted
-hash evidence and full durable acceptance tuple required by `DEW-024`; it still cannot count as current
-coverage. Duplicate, unparseable, or
-unattributable ledger corruption SHALL remain a ledger-integrity root and SHALL not be isolated as
-historical. Gate/inspect SHALL root-first mask downstream coverage symptoms under a broken relation or
-suspect transaction disposition. It SHALL separate a current artifact-content failure from ledger authority:
-submit-owned preflight may assess direct integrity, while the formal Gate retains its existing content,
-coverage, and cross-work-unit verdict.
+The Gate SHALL not validate a version-applicable legacy accepted hash tuple for
+an old/markerless/unrecorded attempt. Its direct profile failure is
+`unsupported_current_contract`; it is neither a new supersession root nor a
+request to migrate, repair, or rewrite the predecessor. Broken relation or
+current ledger integrity remain their existing fail-closed roots.
+
+#### Scenario: Current lineage leaf remains the only coverage path
+
+- **WHEN** a complete current predecessor has a valid immutable supersession
+  relation and its unique current successor leaf has a valid ledger row
+- **THEN** the successor leaf MAY satisfy normal current delegated coverage
+- **AND** the predecessor SHALL remain historical only
+
+#### Scenario: Legacy predecessor cannot become historical acceptance
+
+- **WHEN** a purported superseded predecessor lacks any current attempt
+  discriminator
+- **THEN** Gate/inspect SHALL return `unsupported_current_contract` before
+  relation or legacy-tuple evaluation
+- **AND** it SHALL not treat that predecessor as accepted historical evidence
 
 #### Scenario: submitted predecessor relation is auditable but not current coverage
 
-- **WHEN** a submitted predecessor retains `status: submitted` and has one valid Engine-audited immutable
-  supersession relation
+- **WHEN** a complete current submitted predecessor retains `status: submitted`
+  and has one valid Engine-audited immutable supersession relation
 - **THEN** Gate diagnostics MAY show its validated acceptance tuple as historical submitted evidence
 - **AND** the row SHALL not satisfy current delegated coverage until its unique current lineage leaf has a
   hash-valid row through the existing normal-submit or audited-late-submit contract

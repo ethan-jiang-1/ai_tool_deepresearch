@@ -199,10 +199,8 @@ function resultSchemaDocument(manifest) {
     queue_item_id: { const: manifest.queue_item_id },
     kind: { const: manifest.kind },
     receipt_nonce: { const: manifest.receipt_nonce },
-    ...(manifest.actor_contract_version ? {
-      actor_contract_version: { const: manifest.actor_contract_version },
-      execution_actor_class: { const: manifest.actor_execution.execution_actor_class },
-    } : {}),
+    actor_contract_version: { const: manifest.actor_contract_version },
+    execution_actor_class: { const: manifest.actor_execution.execution_actor_class },
     summary: { type: 'string', default: '' },
     output_files: outputFilesSchema(outputContract),
     cache_trails: { type: 'array', items: { type: 'string', minLength: 1 }, default: [] },
@@ -218,7 +216,8 @@ function resultSchemaDocument(manifest) {
     type: 'object',
     required: [
       ...requiredResultFields(outputContract),
-      ...(manifest.actor_contract_version ? ['actor_contract_version', 'execution_actor_class'] : []),
+      'actor_contract_version',
+      'execution_actor_class',
     ],
     properties,
     additionalProperties: false,
@@ -364,7 +363,6 @@ function actorGuidanceSpawnLines(actorDelivery) {
 }
 
 function logicalAttemptGuidanceLines(manifest, abs) {
-  if (!manifest.actor_execution) return [];
   const actorClass = manifest.actor_execution.execution_actor_class;
   const common = [
     `- Logical actor route: \`${actorClass}\`; exact attempt: work_id \`${manifest.work_id}\`, receipt_nonce \`${manifest.receipt_nonce}\`.`,
@@ -391,10 +389,8 @@ function lifecycleReceiptExample(manifest, event) {
     queue_item_id: manifest.queue_item_id,
     kind: manifest.kind,
     receipt_nonce: manifest.receipt_nonce,
-    ...(manifest.actor_contract_version ? {
-      actor_contract_version: manifest.actor_contract_version,
-      execution_actor_class: manifest.actor_execution.execution_actor_class,
-    } : {}),
+    actor_contract_version: manifest.actor_contract_version,
+    execution_actor_class: manifest.actor_execution.execution_actor_class,
     ts: '<ISO8601>',
   };
 }
@@ -434,8 +430,8 @@ function taskMarkdown(manifest, bundleDir, resultSchema, actorDelivery) {
     '### Binding And Result',
     '',
     `- work_id: \`${manifest.work_id}\`; queue_item_id: \`${manifest.queue_item_id}\`; kind: \`${manifest.kind}\`; receipt_nonce: \`${manifest.receipt_nonce}\`.`,
-    ...(manifest.assignment_contract_version ? [`- assignment_contract_version: \`${manifest.assignment_contract_version}\`.`] : []),
-    ...(manifest.actor_contract_version ? [`- execution_actor_class: \`${manifest.actor_execution.execution_actor_class}\`; delegated_role_key: \`${manifest.actor_execution.delegated_role_key}\`.`] : []),
+    `- assignment_contract_version: \`${manifest.assignment_contract_version}\`.`,
+    `- execution_actor_class: \`${manifest.actor_execution.execution_actor_class}\`; delegated_role_key: \`${manifest.actor_execution.delegated_role_key}\`.`,
     ...logicalAttemptGuidanceLines(manifest, abs),
     `- bundle_dir: \`${path.resolve(bundleDir)}\`; work_unit_dir: \`${manifest.paths.work_unit_dir}\`.`,
     `- Authority refs: manifest \`${manifest.paths.manifest_ref}\`; beacon \`${manifest.paths.beacon_ref}\`; result schema \`${manifest.paths.result_schema_ref}\`; result \`${manifest.paths.result_ref}\`; runtime receipt \`${manifest.paths.runtime_receipt_ref}\`.`,
@@ -522,7 +518,7 @@ export function spawnPromptForWorkUnit(manifest, bundleDir = null, { actorDelive
   const absTask = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.task_ref) : parsed.paths.task_ref;
   const actorInstruction = parsed.actor_execution?.execution_actor_class === 'phase_agent_fallback'
     ? `You are the Phase Agent executing explicit fallback work unit ${parsed.work_id}.`
-    : `You are executing delegated work unit ${parsed.work_id} as role ${parsed.actor_execution?.delegated_role_key || '<legacy-unrecorded>'}.`;
+    : `You are executing delegated work unit ${parsed.work_id} as role ${parsed.actor_execution.delegated_role_key}.`;
   const routeBoundary = parsed.actor_execution?.execution_actor_class === 'phase_agent_fallback'
     ? `Author only this exact fallback attempt (${parsed.work_id}, receipt_nonce ${parsed.receipt_nonce}); this grants no authority over another delegated attempt.`
     : `Only this delegated route authors candidate content for ${parsed.work_id}; the Phase Agent may inspect or submit the returned candidate but must not author substitute content under the same binding.`;
@@ -542,6 +538,12 @@ export function spawnPromptForWorkUnit(manifest, bundleDir = null, { actorDelive
 
 export function writeWorkUnitEnvelope(bundleDir, manifest, { actorDelivery } = {}) {
   const parsed = WorkUnitManifestSchema.parse(manifest);
+  if (parsed.assignment_contract_version !== 'work-unit.assignment.v3'
+    || parsed.submission_contract_version !== 'work-unit.submission.v1'
+    || parsed.actor_contract_version !== 'work-unit.actor.v1'
+    || !parsed.actor_execution) {
+    throw new Error(`unsupported current work-unit contract for ${parsed.work_id}: envelope profile`);
+  }
   const normalizedActorDelivery = normalizeActorDelivery(parsed, actorDelivery);
   const resultSchema = resultSchemaDocument(parsed);
   const dir = path.join(bundleDir, parsed.paths.work_unit_dir);
@@ -558,8 +560,8 @@ export function writeWorkUnitEnvelope(bundleDir, manifest, { actorDelivery } = {
     bundle_dir: path.resolve(bundleDir),
     receipt_nonce: parsed.receipt_nonce,
     deadline_at: parsed.deadline_at,
-    ...(parsed.assignment_contract_version ? { assignment_contract_version: parsed.assignment_contract_version } : {}),
-    ...(parsed.submission_contract_version ? { submission_contract_version: parsed.submission_contract_version } : {}),
+    assignment_contract_version: parsed.assignment_contract_version,
+    submission_contract_version: parsed.submission_contract_version,
     work_unit_dir: parsed.paths.work_unit_dir,
     manifest_ref: parsed.paths.manifest_ref,
     task_ref: parsed.paths.task_ref,
@@ -572,10 +574,8 @@ export function writeWorkUnitEnvelope(bundleDir, manifest, { actorDelivery } = {
     required_receipt_fields: [...WORK_UNIT_REQUIRED_RECEIPT_FIELDS],
     runtime_refs: parsed.runtime_refs || {},
     runtime_refs_authority: 'diagnostic_only',
-    ...(parsed.actor_contract_version ? {
-      actor_contract_version: parsed.actor_contract_version,
-      actor_execution: parsed.actor_execution,
-    } : {}),
+    actor_contract_version: parsed.actor_contract_version,
+    actor_execution: parsed.actor_execution,
   }));
   writeFileSync(path.join(bundleDir, parsed.paths.runtime_receipt_ref), '');
   writeJson(path.join(bundleDir, parsed.paths.status_ref), WorkUnitStatusFileSchema.parse({

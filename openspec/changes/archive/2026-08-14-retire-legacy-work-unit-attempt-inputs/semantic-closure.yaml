@@ -1,0 +1,85 @@
+schema_version: semantic-closure/v1
+change: retire-legacy-work-unit-attempt-inputs
+status: affected
+catalog_additions: []
+affected:
+  - family: work-unit.attempt-identity-and-actor
+    fact: >-
+      Whether an Engine-read work-unit attempt has the complete current
+      assignment, submission, and actor profile before current computation, and
+      whether its exact delegated or authorized fallback actor binding is
+      consistent across bound surfaces.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-current-profile.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-lifecycle.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-inspect.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-attempt-disposition.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submit-integrity.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-timeout-preflight.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submitted-ledger.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-readers.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/work-unit-envelope.mjs
+        relation: derived
+        detail: >-
+          Task, starter, schema and beacon surfaces project the resolved current
+          profile for an Agent but cannot establish or repair attempt identity.
+    verification:
+      truth_table: tests/engine/work-unit-actor-submit.test.mjs
+      cross_surface: tests/integration/cli/operate-work-unit.test.mjs
+  - family: work-unit.assignment-output-obligation
+    fact: >-
+      Whether only a current v3 assignment can enter direct-output obligation
+      reconstruction, while marked v1/v2 or absent assignment facts stop at the
+      unsupported-current-contract boundary without output interpretation.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-current-profile.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-lifecycle.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-projection.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/work-unit-envelope.mjs
+        relation: derived
+        detail: >-
+          Generated task/result projections expose an already resolved current
+          obligation and do not select an assignment interpretation.
+    verification:
+      truth_table: tests/engine/work-unit-projection.test.mjs
+      cross_surface: tests/integration/cli/check-gate-wave0-complete.test.mjs
+  - family: work-unit.submission-ledger-and-supersession
+    fact: >-
+      Whether only a complete current marked submission uses the ledger-first
+      immutable acceptance fingerprint for declaration recovery, supersession,
+      provenance and current coverage, while legacy hash mirrors stop at the
+      unsupported-current-contract boundary.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-submitted-ledger.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-inspect.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-readers.mjs
+        relation: derived
+        detail: >-
+          The canonical Gate declaration reader returns the normalized
+          submitted-ledger conclusion but cannot interpret or repair an
+          unsupported attempt profile.
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-provenance.mjs
+        relation: authoritative
+        detail: >-
+          Gate provenance consumes the normalized submitted-ledger conclusion;
+          raw non-work-unit JSONL diagnostics remain outside the current attempt
+          profile decision.
+    verification:
+      truth_table: tests/engine/work-unit-attempt-recovery.test.mjs
+      cross_surface: tests/e2e/work-unit-attempt-recovery.test.mjs

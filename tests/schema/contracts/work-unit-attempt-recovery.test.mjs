@@ -203,7 +203,7 @@ function supersessionLineage(overrides = {}) {
 }
 
 describe('attempt-bound submission and supersession schemas', () => {
-  it('keeps markerless records legacy and binds the known marker at claim surfaces', () => {
+  it('structurally decodes markerless records for rejection and binds the current marker at claim surfaces', () => {
     assert.ok(WorkUnitIndexRecordSchema.safeParse(legacyIndex()).success);
     assert.ok(WorkUnitManifestSchema.safeParse(manifest()).success);
     assert.ok(WorkUnitBeaconSchema.safeParse(beacon()).success);
@@ -228,7 +228,7 @@ describe('attempt-bound submission and supersession schemas', () => {
     }
   });
 
-  it('enforces the ledger-first marked index/status branch without changing legacy bytes', () => {
+  it('enforces the ledger-first current index/status branch while leaving historical bytes structurally decodable', () => {
     const legacy = legacyIndex();
     const marked = markedIndex();
     const legacyBytes = JSON.stringify(legacy);
@@ -281,7 +281,7 @@ describe('attempt-bound submission and supersession schemas', () => {
     }
   });
 
-  it('binds a complete relation to its containing marked or legacy predecessor', () => {
+  it('structurally binds a complete relation to its containing marked or historical predecessor', () => {
     assert.ok(WorkUnitIndexRecordSchema.safeParse(markedIndex({ supersession_relation: relation() })).success);
     assert.ok(WorkUnitIndexRecordSchema.safeParse(legacyIndex({ supersession_relation: relation() })).success);
     for (const invalid of [

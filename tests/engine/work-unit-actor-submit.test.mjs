@@ -37,7 +37,7 @@ describe('work-unit actor provenance', () => {
     }
   });
 
-  it('submits a legacy claimed attempt without fabricating delegated execution', () => {
+  it('rejects an actor-unrecorded attempt before ledger or actor projection mutation', () => {
     const dir = tempWorkUnitBundle('wu-actor-legacy-');
     try {
       seedDelegatedQueue(dir, [delegatedQueueItem('queue-a')]);
@@ -79,9 +79,14 @@ describe('work-unit actor provenance', () => {
       const resultPath = path.join(dir, '_tmp', 'legacy-result.json');
       mkdirSync(path.dirname(resultPath), { recursive: true });
       writeFileSync(resultPath, `${JSON.stringify({ schema_version: 'work-unit.result.v1', work_id: workId, queue_item_id: 'queue-a', kind: legacyRecord.kind, receipt_nonce: legacyRecord.receipt_nonce, summary: 'legacy', output_files: [{ path: outputPath, role: 'reference', source_url: 'https://example.com/legacy' }], cache_trails: [cacheTrail] })}\n`);
-      assert.equal(submitWorkUnit(dir, { work_id: workId, resultPath }).ok, true);
-      assert.equal(readWorkUnitLedgerRows(dir)[0].actor_execution.execution_actor_class, 'legacy_unrecorded');
-      assert.equal(inspectWorkUnits(dir).actor_projection[0].execution_actor_class, 'legacy_unrecorded');
+      const rejected = submitWorkUnit(dir, { work_id: workId, resultPath });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.reason_code, 'unsupported_current_contract');
+      assert.equal(readWorkUnitLedgerRows(dir).length, 0);
+      assert.equal(loadWorkUnitIndex(dir).work_units[workId].status, 'claimed');
+      const inspected = inspectWorkUnits(dir);
+      assert.equal(inspected.actor_projection.length, 0);
+      assert.match(inspected.inspect.join('\n'), /unsupported current work-unit contract/);
     } finally {
       cleanupWorkUnitBundle(dir);
     }

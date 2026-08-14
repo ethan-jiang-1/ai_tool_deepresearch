@@ -419,6 +419,19 @@ describe('work-unit transaction v2', () => {
       injectedRollback(createDir, 'create_work_unit', (transactionHooks) => createWorkUnit(createDir, {
         queueItem,
         wave: 0,
+        actor_execution: {
+          execution_actor_class: 'delegated_subagent',
+          delegated_role_key: 'dpt-source-intake',
+          observation: {
+            outcome: 'available',
+            source: 'native_probe',
+            role_key: 'dpt-source-intake',
+            reason_code: 'probe_succeeded',
+            recorded_at: '2026-08-14T00:00:00.000Z',
+          },
+          policy_decision: 'normal_allowed',
+          fallback_from: null,
+        },
         transactionHooks,
       }));
     } finally {

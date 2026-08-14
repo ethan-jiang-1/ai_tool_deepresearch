@@ -1,0 +1,213 @@
+schema_version: verification-routing/v1
+change: retire-legacy-work-unit-attempt-inputs
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Complete-profile classification, no-write rejection, actor binding,
+      submit/recovery, and normalized current ledger conclusions are focused
+      deterministic Engine facts.
+  integration:
+    status: selected
+    rationale: >-
+      The actual operate-work-unit and declaration-recovery CLI boundaries must
+      agree on rejection and preserved current behavior in temporary bundles.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      Attempt recovery and supersession require a deterministic multi-surface
+      lineage proof beyond an in-process reader assertion.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change alters deterministic current-contract interpretation only; it
+      makes no claim about Agent research, judgment, writing, or tool behavior.
+claims:
+  - id: current-profile-rejection-truth-table
+    statement: >-
+      Explicit assignment v1/v2 including a rich-reference Wave0 output,
+      markerless submission, actor-unrecorded, and partial profiles yield one
+      deterministic unsupported-current-contract boundary before current submit
+      or provenance authority mutation, while a complete current profile remains
+      valid.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-submit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-actor-binding-survives
+    statement: >-
+      Current delegated-subagent and authorized Phase Agent fallback execution
+      retain their exact actor-v1 binding through formal submit and inspection,
+      while no actor-unrecorded input is projected as a real or legacy actor.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-actor-submit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: derived-reader-profile-boundary
+    statement: >-
+      The normalized Gate declaration reader and attempt-disposition projection
+      return unsupported-current-contract for an old, markerless, or
+      actor-unrecorded work-unit attempt before they create actor, current,
+      historical, or submitted-authority projections.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/gate-helpers-readers.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: timeout-preflight-profile-boundary
+    statement: >-
+      Timeout preflight rejects an old, markerless, or actor-unrecorded
+      attempt at unsupported-current-contract before it calculates progress,
+      lease eligibility, or a timeout/submit/repair action, while a complete
+      current claimed attempt retains the existing timeout-preflight behavior.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-terminal.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-assignment-obligation-survives
+    statement: >-
+      Current v3 assignment resolution retains its exact output obligations and
+      supplementary behavior without interpreting marked v1/v2 attempts.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-assignment-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: legacy-wave0-reference-has-no-projection-authority
+    statement: >-
+      A v1/v2 or markerless Wave0 rich-reference attempt returns
+      unsupported-current-contract before source-contribution, reference-backing,
+      count, or Gate authority, while a complete-current Wave0 source
+      contribution retains its existing projection behavior.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-projection.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-recovery-and-supersession-survive
+    statement: >-
+      Complete-current declaration recovery and supersession remain legal while
+      a legacy hash-mirror predecessor cannot establish recovery or historical
+      acceptance.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: cli-profile-boundary
+    statement: >-
+      The operate-work-unit CLI rejects unsupported profiles without authority
+      mutation and preserves normal complete-current claim/submit behavior.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: cli-current-declaration-recovery
+    statement: >-
+      The declaration-recovery CLI restores only a complete-current submitted
+      attempt and leaves legacy-profile attempts outside recovery authority.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/work-unit-declaration-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: gate-current-wave0-backing
+    statement: >-
+      Wave0 Gate evaluation rejects legacy rich-reference attempt authority and
+      retains the existing complete-current submitted-source backing path.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave0-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: e2e-current-attempt-lineage
+    statement: >-
+      The deterministic attempt-recovery flow retains current ledger-first
+      recovery and supersession lineage while unsupported historical profiles
+      cannot become current or historical acceptance authority.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

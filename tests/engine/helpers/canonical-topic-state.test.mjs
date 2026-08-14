@@ -522,8 +522,8 @@ describe('canonical topic state', () => {
     const dir = bundle('topic-layout-incident'); applyCanonicalTopicState({ bundlePath: dir, input });
     let inspected = inspectCanonicalTopicState({ bundlePath: dir }); const topic = inspected.topics[0];
     const historical = claimAndSubmitWorkUnit(dir, {
+      phase: 'wave1',
       queueItemId: 'q-history',
-      legacyV1Assignment: true,
       queueItemOverrides: { payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug } },
       outputs: [{ path: `reference/${topic.slug}-source.md`, role: 'reference', source_url: 'https://example.com/history', source_slug: 'history', content: '# Historical source\n' }],
     });

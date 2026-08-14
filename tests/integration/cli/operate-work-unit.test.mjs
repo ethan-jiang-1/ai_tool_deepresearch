@@ -33,6 +33,22 @@ import {
 const CLI = path.resolve('DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs');
 const AVAILABLE_ACTOR_ARGS = ['--actor-outcome', 'available', '--actor-source', 'native_probe', '--actor-role-key', 'dpt-source-intake', '--actor-reason', 'probe_succeeded', '--execution-actor', 'delegated_subagent'];
 
+function delegatedActorExecution(roleKey = 'dpt-source-intake') {
+  return {
+    execution_actor_class: 'delegated_subagent',
+    delegated_role_key: roleKey,
+    observation: {
+      outcome: 'available',
+      source: 'native_probe',
+      role_key: roleKey,
+      reason_code: 'probe_succeeded',
+      recorded_at: '2026-08-14T00:00:00.000Z',
+    },
+    policy_decision: 'normal_allowed',
+    fallback_from: null,
+  };
+}
+
 function withExplicitActor(args) {
   if (args[0] === CLI && args[1] === 'claim' && args[2] && !String(args[2]).startsWith('-') && !args.includes('--actor-outcome')) return [...args, ...AVAILABLE_ACTOR_ARGS];
   return args;
@@ -103,6 +119,22 @@ function recursiveSnapshot(rootDir) {
   }
   visit(rootDir);
   return entries;
+}
+
+function retireAssignmentProfile(dir, record) {
+  const indexPath = workUnitIndexPath(dir);
+  const index = JSON.parse(readFileSync(indexPath, 'utf-8'));
+  const current = index.work_units[record.work_id];
+  const manifestPath = path.join(dir, current.paths.manifest_ref);
+  const beaconPath = path.join(dir, current.paths.beacon_ref);
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  const beacon = JSON.parse(readFileSync(beaconPath, 'utf-8'));
+  for (const surface of [current, manifest, beacon]) {
+    surface.assignment_contract_version = 'work-unit.assignment.v2';
+  }
+  writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  writeFileSync(beaconPath, `${JSON.stringify(beacon, null, 2)}\n`);
 }
 
 function queueItem(overrides = {}) {
@@ -686,7 +718,7 @@ describe('operate-work-unit inspect', () => {
   it('passes for a consistent work-unit index and envelope', () => {
     const dir = tempBundle();
     try {
-      createWorkUnit(dir, { queueItem: queueItem(), wave: 0 });
+      createWorkUnit(dir, { queueItem: queueItem(), wave: 0, actor_execution: delegatedActorExecution() });
       const stdout = execFileSync(process.execPath, [CLI, 'inspect', dir], { encoding: 'utf-8' });
       const out = JSON.parse(stdout);
       assert.equal(out.passed, true);
@@ -715,6 +747,30 @@ describe('operate-work-unit inspect', () => {
       assert.equal(rows.length, 1);
       assert.equal(rows[0].work_id, workId);
       assert.equal(rows[0].queue_item_id, record.queue_item_id);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('rejects a retired assignment profile through the CLI before authority mutation', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const claim = JSON.parse(execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' }));
+      const record = loadWorkUnitIndex(dir).work_units[claim.claimed_work_ids[0]];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      retireAssignmentProfile(dir, record);
+      const before = recursiveSnapshot(dir);
+
+      const rejected = spawnSync(process.execPath, [CLI, 'submit', dir, '--work-id', record.work_id, '--result', resultPath], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(rejected.status, 1, rejected.stderr || rejected.stdout);
+      const output = JSON.parse(rejected.stdout);
+      assert.equal(output.ok, false);
+      assert.equal(output.reason_code, 'unsupported_current_contract');
+      assert.deepEqual(recursiveSnapshot(dir), before);
     } finally {
       cleanup(dir);
     }
@@ -1277,7 +1333,7 @@ describe('operate-work-unit inspect', () => {
   it('fails closed for index drift', () => {
     const dir = tempBundle();
     try {
-      createWorkUnit(dir, { queueItem: queueItem(), wave: 0 });
+      createWorkUnit(dir, { queueItem: queueItem(), wave: 0, actor_execution: delegatedActorExecution() });
       const index = loadWorkUnitIndex(dir);
       index.status_counts.claimed = 99;
       writeFileSync(workUnitIndexPath(dir), `${JSON.stringify(index, null, 2)}\n`);
@@ -1323,7 +1379,7 @@ describe('operate-work-unit inspect', () => {
   it('logs transaction mismatch diagnostics for uncommitted transaction journals', () => {
     const dir = tempBundle();
     try {
-      createWorkUnit(dir, { queueItem: queueItem(), wave: 0 });
+      createWorkUnit(dir, { queueItem: queueItem(), wave: 0, actor_execution: delegatedActorExecution() });
       mkdirSync(transactionDir(dir), { recursive: true });
       writeFileSync(path.join(transactionDir(dir), 'tx-stale.json'), JSON.stringify({
         schema_version: 'work-unit.transaction.v1',

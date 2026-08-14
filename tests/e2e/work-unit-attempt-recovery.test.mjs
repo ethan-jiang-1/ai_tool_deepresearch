@@ -695,36 +695,25 @@ describe('submitted work-unit supersession', () => {
     }
   });
 
-  it('uses the complete markerless acceptance tuple without adding marked hash authority', () => {
+  it('rejects a markerless acceptance tuple before submit or supersession mutation', () => {
     const bundleDir = tempWorkUnitBundle('wu-supersede-legacy-');
     try {
       const prepared = claimAndSubmitWorkUnit(bundleDir, { submit: false });
       const record = downgradeSubmissionContractToLegacy(bundleDir, prepared.record);
+      const before = coreAuthoritySnapshot(bundleDir);
       const submitted = submitWorkUnit(bundleDir, {
         work_id: record.work_id,
         resultPath: prepared.resultPath,
       });
-      assert.equal(submitted.ok, true, JSON.stringify(submitted, null, 2));
-      const accepted = loadWorkUnitIndex(bundleDir).work_units[record.work_id];
-      assert.equal(accepted.submission_contract_version, undefined);
-      assert.equal(accepted.accepted_ledger_record_hash, undefined);
-      assert.equal(accepted.ledger_record_hash, submitted.ledger_record_hash);
-
-      const resultPath = path.join(bundleDir, accepted.paths.result_ref);
-      const result = JSON.parse(readFileSync(resultPath, 'utf8'));
-      result.summary = 'legacy accepted result drifted';
-      writeFileSync(resultPath, `${JSON.stringify(result, null, 2)}\n`);
+      assert.equal(submitted.ok, false);
+      assert.equal(submitted.reason_code, 'unsupported_current_contract');
       const superseded = supersedeWorkUnitAttempt(bundleDir, {
-        work_id: accepted.work_id,
-        reason: 'legacy result drift with full acceptance tuple',
+        work_id: record.work_id,
+        reason: 'retired markerless submission profile',
       });
-      assert.equal(superseded.ok, true, JSON.stringify(superseded, null, 2));
-      assert.equal(superseded.relation.accepted_ledger_record_hash, submitted.ledger_record_hash);
-      const historicalRecord = loadWorkUnitIndex(bundleDir).work_units[accepted.work_id];
-      assert.equal(historicalRecord.accepted_ledger_record_hash, undefined);
-      assert.equal(historicalRecord.result_hash, accepted.result_hash);
-      assert.equal(historicalRecord.ledger_record_hash, accepted.ledger_record_hash);
-      assert.equal(evaluateNormalizedSubmittedWorkUnitLedger(bundleDir).historical[0].ledger_disposition, 'hash_valid_historical');
+      assert.equal(superseded.ok, false);
+      assert.equal(superseded.reason_code, 'unsupported_current_contract');
+      assert.deepEqual(coreAuthoritySnapshot(bundleDir), before);
     } finally {
       cleanupWorkUnitBundle(bundleDir);
     }

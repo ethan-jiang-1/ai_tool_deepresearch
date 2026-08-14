@@ -150,13 +150,7 @@ function createHeavyProvenanceBundle(name, { validLedger = true, validWorkUnit =
   const { record, submitted } = claimAndSubmitWorkUnit(dir, {
     phase: 'wave0',
     queueItemId: 'topic-a',
-    legacyV1Assignment: true,
     outputs: [{
-      path: 'reference/01_topic-source.md',
-      role: 'reference',
-      source_url: 'https://example.com/article',
-      source_slug: 's01_source',
-    }, {
       path: 'artifacts/wave0/topic-a/source.yaml',
       role: 'source_yaml',
       content: [

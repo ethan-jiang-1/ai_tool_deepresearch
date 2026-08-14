@@ -118,146 +118,74 @@ Sub-agents execute bounded work-unit tasks as content-producing actors only. A s
 
 ### Requirement: Work-unit envelope SHALL carry binding surfaces
 
-Each work-unit envelope SHALL include the manifest, task, result schema,
-beacon, runtime receipt path, status, result surfaces, and optional runtime
-refs needed to validate submit and diagnose execution. The Engine SHALL
-generate an opaque `receipt_nonce` and require the nonce to agree across index,
-manifest, beacon, task, runtime receipt, result, and ledger.
+Each work-unit envelope SHALL include the Engine-owned index record, manifest,
+task, result schema, beacon, runtime receipt path, status, result surfaces and
+optional diagnostic runtime refs required for current validation. The Engine
+SHALL generate an opaque `receipt_nonce` and require its exact binding across
+the current index, manifest, beacon, task, runtime receipt, result and ledger
+surfaces. Runtime refs and `_agent.json` remain diagnostic-only and SHALL NOT
+establish attempt identity, actor provenance, or a compatibility exception.
 
-The generated `task.md` SHALL also include one copy-ready Result JSON Starter
-and one concise pre-submit checklist derived from the same manifest, output
-contract and cache policy that generate `result.schema.json`. The starter SHALL
-project the exact result schema version, work-unit identity, receipt nonce,
-actor contract version and execution actor class when present, plus the allowed
-result fields for that kind. For a source-claim-capable kind, the same output
-contract SHALL expose any `source_claims.prior_submitted_output_roles[]`;
-Wave1 default guidance SHALL identify prior `evidence_summary` as allowed and
-SHALL NOT imply that prior `question_list`, `reference`, or `other` outputs are
-compatible. The starter SHALL NOT include `actor_execution` or other fields
-that the result schema rejects.
+Every new claim SHALL write one complete current profile: top-level
+`assignment_contract_version: "work-unit.assignment.v3"`,
+`submission_contract_version: "work-unit.submission.v1"`, and
+`actor_contract_version: "work-unit.actor.v1"` with its one legal
+`actor_execution` object. The index is the attempt-entry Source of Record;
+manifest and beacon SHALL bind exactly the same profile and assigned output
+contract. A submitted current attempt SHALL additionally use the existing
+ledger-first immutable acceptance fingerprint and actor/result/receipt binding.
 
-The checklist SHALL identify the assigned immutable envelope files, required
-actor-bound receipt fields, allowed output roles and required path-role pairs,
-cache leaf directory shape, and any required URL binding between declared
-outputs/source claims and `meta.json`. It SHALL direct the actor to write the
-assigned result and direct the Phase Agent to run dry-submit before formal
-submit or after repairing a rejected candidate. The starter and checklist SHALL
-be read-only guidance projections; they SHALL NOT pre-create `result.json`,
-count as actor output, satisfy a receipt, append provenance, or weaken submit
-validation.
+Every Engine reader of a claimed, submitted, timed-out, or superseded attempt
+SHALL first classify that complete profile before assignment/output
+interpretation, submit, inspection, declaration recovery, late-submit,
+supersession, provenance, or a derived attempt projection. An explicit
+assignment v1/v2, absent submission marker, legacy hash-mirror representation,
+absent actor contract/execution, partial profile, or cross-surface profile drift
+SHALL return one `unsupported_current_contract` result identifying the direct
+unsupported discriminator. The reader SHALL NOT infer, default, migrate,
+normalize, relabel, or silently drop the attempt using a path, current default,
+hash mirror, runtime ref, historical guidance, or another profile field.
 
-For a snapshot-bound supplementary `wave1_topic_deepening` item with a valid
-positive `payload.reference_floor_deficit`, generated `task.md` SHALL render
-one read-only acquisition objective that states the exact remaining countable
-current-canonical-reference gap for the bound Topic. It SHALL identify the
-value as an objective from the queue snapshot, not as a source-acceptance
-claim, required output, result-schema field, receipt condition, or promise that
-completion will satisfy the Wave1 gate. The envelope SHALL render no such
-objective for primary cards or for supplementary cards without the field. The
-task renderer SHALL consume the validated snapshot value only; it SHALL not
-recompute floors, inspect references, select a direct contract, or read mutable
-Phase prose to invent the objective.
+Generated task, starter, checklist and result-schema projections SHALL continue
+to expose the current read-only assignment and actor bindings, but SHALL NOT
+offer a legacy interpretation or an actor-selected profile. They remain
+guidance projections and SHALL NOT pre-create result bytes, satisfy a receipt,
+or weaken submit validation.
 
-Generated task, spawn prompt, shared protocol and role guidance SHALL
-distinguish two surfaces explicitly: lifecycle evidence is appended as JSONL to
-the assigned `runtime-receipt.jsonl`; `log-event.mjs` emits optional diagnostic
-log/trace events and SHALL NOT satisfy or replace runtime receipt evidence.
-Guidance SHALL NOT require the user to run dry-submit, submit, receipt repair,
-or other ordinary pipeline commands.
+#### Scenario: New claim writes the complete current profile
 
-For every new claim, the Engine SHALL resolve one closed assignment contract
-before mutation. The resolver input SHALL be the registered work-unit kind, the
-canonical Topic UID plus recorded current slug in the queue-item snapshot when
-the kind is topic-scoped, the snapshot-bound closed `payload.assignment_mode`
-when required by that producer, and canonical `file:` entries in
-snapshot-bound `required_receipts`. `assignment_mode` SHALL express only
-`primary|supplementary` assignment intent and SHALL NOT select roles or
-direct-contract IDs. `reference_floor_deficit` SHALL remain a non-selector
-task-context fact and SHALL not be a resolver input. `writes_to` SHALL remain
-an allowed write surface and SHALL NOT make optional, pattern, or
-prior-submitted outputs required. Existing queue/payload kind-contract
-customization MAY retain strictly valid result-field, allowed-role, source-claim
-and cache-policy semantics. Queue items SHALL reject the closed reserved keys
-`required_outputs`, `direct_contract`, `direct_contract_id`,
-`assignment_contract_version`, `resolver_version`, and `contract_id` at the
-root or recursively under payload/output_contract. The resolver SHALL ignore
-all other unknown payload keys rather than interpreting naming or prose as a
-selector; Markdown and actors SHALL NOT supply contract selection.
+- **WHEN** the Engine claims a current queue demand
+- **THEN** index, manifest and beacon SHALL carry matching v3 assignment,
+  marked submission and actor-v1 bindings before the attempt becomes usable
+- **AND** the generated projections SHALL not offer a v1/v2, markerless, or
+  unrecorded-actor alternative
 
-New claims SHALL record
-`assignment_contract_version: "work-unit.assignment.v3"` on the
-Engine-owned work-unit index record and copy it into manifest and beacon binding
-surfaces. Marked v1 and v2 envelopes SHALL retain their recorded
-version-selected interpretation, and a markerless historical envelope SHALL
-retain its existing legacy compatibility path without path, filename, or
-current-default inference. `assignment_contract_version` SHALL remain the only
-resolver-semantics version marker; no separate resolver_version field SHALL be
-created. The index SHALL NOT copy the resolved contract. The manifest and
-beacon output_contract SHALL carry one strict required_outputs array whose
-entries contain one concrete bundle-relative path, one canonical role, and one
-closed direct_contract identity. Claim SHALL reject unknown versions or IDs,
-unsafe or duplicate normalized paths, conflicting roles, unsupported
-required-receipt sets, unresolved Topic bindings, invalid reference-floor-
-deficit shape, and queue-authored direct selectors before work-ID allocation,
-queue mutation, or envelope writes.
+#### Scenario: Explicit old assignment is rejected before interpretation
 
-The v3 resolver SHALL support these direct-output bindings:
+- **WHEN** an Engine reader encounters an attempt marked
+  `work-unit.assignment.v1` or `work-unit.assignment.v2`
+- **THEN** it SHALL return `unsupported_current_contract` before interpreting
+  its recorded output contract
+- **AND** it SHALL not reinterpret that attempt as v3 or mutate historical
+  envelope, result, receipt, ledger, cache, or trace bytes
 
-- `wave0_source_intake` with the exact canonical source.yaml file receipt
-  resolves role `source_yaml` and direct contract
-  `wave0.source-metadata-array.v1`;
-- `wave1_topic_deepening` with the exact paired evidence-summary and
-  question-list receipts resolves roles `evidence_summary` and `question_list`
-  with direct contracts `wave1.evidence-summary.v1` and
-  `wave1.question-list.v1`, and requires their declarations;
-- explicit `assignment_mode: supplementary` `wave1_topic_deepening` with an
-  empty required-receipt set resolves no current required direct output, sets
-  `output_files.required: false`, and continues to use contract-authorized
-  prior submitted evidence lineage;
-- `wave2_targeted_evidence` with its existing empty required-receipt shape
-  resolves no direct content blocker while retaining its existing base
-  output-declaration behavior.
+#### Scenario: Partial historical profile is rejected at one boundary
 
-A primary mode without the exact pair, a supplementary mode with non-empty
-receipts, a missing mode, a partial paired set, a receipt for a different
-recorded Topic coordinate, or any other unsupported set SHALL fail closed
-rather than be inferred from receipt shape, prose, queue ID suffixes, actor
-roles, `writes_to`, or a floor objective. A mode-absent unclaimed card SHALL
-return to AGQ-013 explicit assignment-mode repair and pass current admission
-before claim. A marked v1 or v2 attempt SHALL retain its recorded output
-contract; only an already-claimed attempt with a genuinely absent index marker
-may select markerless legacy submit compatibility. The queue-item snapshot hash SHALL bind
-every resolver input except the closed resolver version, which is bound by
-assignment_contract_version. A rendered task objective SHALL be derived from
-that same snapshot but SHALL not alter the resolver hash input set. Submit-side
-readers SHALL first recheck the hash and version, rebuild the expected output
-contract from the recorded snapshot coordinates, and require exact equality
-with manifest and beacon. v1/v2 reconstruction SHALL retain the contract bound
-in the immutable envelope and SHALL NOT receive the v3 supplementary exception.
-Current mutable plan presentation or current framework defaults SHALL NOT
-silently remap the attempt's recorded output paths or declaration requiredness.
+- **WHEN** an attempt lacks the marked submission discriminator or its actor
+  contract/execution while other historical fields appear mutually consistent
+- **THEN** the reader SHALL return `unsupported_current_contract` with the
+  direct missing or unsupported profile fact
+- **AND** it SHALL not derive acceptance from legacy index/status hash mirrors
+  or project `legacy_unrecorded`
 
-The existing default or snapshot-bound customized kind result/cache/source
-contract and the resolved required_outputs SHALL be merged into one strict
-Zod-validated output_contract. Cross-field refinements SHALL require unique
-path-role-contract tuples, closed compatible IDs, and required roles compatible
-with allowed roles. Submit reconstruction SHALL reuse the same validated base
-customization from the hash-bound snapshot; generated task, starter, checklist
-and result schema SHALL be projections from this validated merged contract, not
-additional acceptance voters.
+#### Scenario: Current actor paths remain distinct
 
-Claim SHALL preflight the resolver and merged contract for every item in the
-planned contiguous batch on side-effect-free queue/index views before creating
-the first work-unit record or entering the work-unit transaction. If any
-candidate has missing/mismatched assignment mode, invalid Topic/receipt or
-floor-objective shape, direct selector, or invalid merged kind contract, the
-entire planned batch SHALL reject without creating a work-unit lock/transaction
-record and with zero work-ID, batch, queue, index, envelope, trace-success, or
-delegated-in-flight mutation. A non-authoritative rejection diagnostic MAY be
-emitted. After the transaction starts, claim SHALL reload queue/index and
-verify the exact planned prefix identities and snapshot hashes before its first
-claim mutation; concurrent drift MAY leave the existing failed-transaction
-diagnostic but SHALL NOT leave any partial claim authority.
+- **WHEN** a current claim records an available delegated role or an authorized
+  unavailable-role fallback
+- **THEN** the complete profile SHALL retain respectively
+  `delegated_subagent` or `phase_agent_fallback` under the existing actor rules
+- **AND** neither class SHALL be inferred for an attempt with absent actor
+  provenance
 
 #### Scenario: supplementary task renders a read-only floor objective
 
@@ -307,14 +235,17 @@ diagnostic but SHALL NOT leave any partial claim authority.
   candidate to redeclare or overwrite the prior evidence-summary or
   question-list
 
-#### Scenario: v1 and v2 attempts retain their assignment interpretation
+#### Scenario: v1 and v2 attempts are rejected before assignment interpretation
+
+> The historical scenario name is retained only as the OpenSpec delta-sync key.
+> The behavior below now rejects the old attempt before interpretation.
 
 - **WHEN** dry-submit or formal submit reads an already-claimed v1 or v2
   attempt whose manifest and beacon carry a hash-valid bound output contract
-- **THEN** it SHALL reconstruct and compare that version-selected contract
-  without applying the v3 supplementary rule
-- **AND** it SHALL not rewrite the manifest, beacon, candidate, or queue item
-  merely because the current claim marker is v3
+- **THEN** it SHALL return `unsupported_current_contract` before reconstructing
+  or comparing that version-selected contract
+- **AND** it SHALL neither apply v3 supplementary semantics nor rewrite the
+  manifest, beacon, candidate, or queue item
 
 #### Scenario: Wave2 empty required outputs retain its base declaration rule
 
@@ -445,60 +376,115 @@ diagnostic but SHALL NOT leave any partial claim authority.
 
 ### Requirement: Current Wave0 work-unit contracts SHALL expose submitted source contributions without a competing rich-reference route
 
-For a newly claimed `wave0_source_intake` work unit, the Engine-owned assignment contract SHALL describe exactly the assigned `source_yaml` output and its existing required cache/receipt facts. Its generated `task.md`, spawn projection, result-schema guidance, and accepted current-version output declarations SHALL describe that result as a submitted Wave0 source contribution after formal submit. They SHALL NOT advertise, require, or accept a rich `reference/00-shared-*.md` output as a second delegated completion or shared-reference-floor route.
+For a newly claimed `wave0_source_intake` work unit, the Engine-owned
+assignment contract SHALL describe exactly the assigned `source_yaml` output
+and its existing required cache/receipt facts. Its generated task, spawn
+projection, result-schema guidance, and current output declarations SHALL
+describe that result as a submitted Wave0 source contribution after formal
+submit. They SHALL NOT advertise, require, or accept a rich
+`reference/00-shared-*.md` output as a second delegated completion or
+shared-reference-floor route.
 
-Formal submit remains the only transaction that creates a submitted ledger row. A claimed, dry-submitted, filesystem-only, or chat-returned source artifact SHALL NOT unlock a Phase-owned reference projection. Queue payload, actor prose, and a reference filename SHALL NOT enlarge the current assignment contract.
+Formal submit remains the only transaction that creates a submitted ledger row.
+A claimed, dry-submitted, filesystem-only, or chat-returned source artifact
+SHALL NOT unlock a Phase-owned reference projection. Queue payload, actor
+prose, and a reference filename SHALL NOT enlarge the current assignment
+contract.
 
-This requirement is forward-looking. A successfully submitted legacy Wave0 work unit whose immutable bound assignment/result legitimately declared a rich reference output SHALL remain readable and eligible under its recorded contract. A marked `work-unit.assignment.v1` envelope SHALL use its recorded version-selected interpretation; a markerless historical envelope SHALL retain its existing legacy compatibility path and SHALL NOT be inferred to be v1 or v2 from a path, filename, or current default. The Engine SHALL NOT rewrite its manifest, result, ledger row, or output path merely to conform it to the current source-contribution contract.
+A rich-reference output attached to an old or markerless Wave0 attempt SHALL
+return `unsupported_current_contract` before its recorded output contract,
+reference role, submitted row, or historical guidance is interpreted. The
+Engine SHALL NOT rewrite historical bytes, but SHALL NOT treat them as current
+or historical submitted-reference authority, nor use them for a count or a
+Phase-owned reference backing conclusion.
 
 #### Scenario: new Wave0 attempt has one source contribution contract
 
 - **WHEN** the Engine claims a new `wave0_source_intake` work unit
-- **THEN** its required output contract SHALL contain the exact assigned `source_yaml` tuple and existing cache/receipt obligations
-- **AND** its actor-facing task and result guidance SHALL not present a `reference` output as an assigned completion or floor-repair route
+- **THEN** its required output contract SHALL contain the exact assigned
+  `source_yaml` tuple and existing cache/receipt obligations
+- **AND** its actor-facing task and result guidance SHALL not present a
+  `reference` output as an assigned completion or floor-repair route
 
 #### Scenario: current submit does not promote an extra reference output
 
-- **WHEN** a current Wave0 candidate declares a `reference/00-shared-*.md` output that was not assigned by its bound contract
-- **THEN** submit validation SHALL reject or ignore that declaration according to the existing strict output-contract boundary
-- **AND** the file SHALL not become delegated evidence authority or shared-reference coverage
+- **WHEN** a complete current Wave0 candidate declares a
+  `reference/00-shared-*.md` output that was not assigned by its bound contract
+- **THEN** submit validation SHALL reject or ignore that declaration according
+  to the existing strict output-contract boundary
+- **AND** the file SHALL not become delegated evidence authority or
+  shared-reference coverage
 
-#### Scenario: legacy submitted reference remains compatible
+#### Scenario: Legacy submitted reference has no current authority
 
-- **WHEN** an already submitted historical Wave0 row records a valid declared rich-reference output under its immutable legacy assignment
-- **THEN** provenance and count readers SHALL continue to recognize that row through its recorded submit authority
-- **AND** current claims SHALL not be retroactively changed or required to reproduce that output
+> The historical scenario name is retained only as the OpenSpec delta-sync key.
+> The behavior below now rejects that row as current authority.
 
-#### Scenario: markerless historical attempts are not reclassified by current defaults
+- **WHEN** an already submitted Wave0 row declares a rich-reference output
+  under a v1/v2 or markerless attempt profile
+- **THEN** every current reader SHALL return `unsupported_current_contract`
+  before interpreting that output or row as a reference authority
+- **AND** current claims SHALL not be retroactively changed or required to
+  reproduce that output
 
-- **WHEN** a historical Wave0 envelope lacks an assignment-contract marker but remains valid through the existing legacy compatibility path
-- **THEN** its reader SHALL preserve that legacy interpretation without reconstructing it through current v2 defaults
-- **AND** a path, filename, or reference role SHALL NOT be used to infer a missing v1 or v2 marker
+#### Scenario: Markerless input is rejected before current defaults
 
+- **WHEN** a Wave0 envelope lacks an assignment-contract marker
+- **THEN** its reader SHALL return `unsupported_current_contract` before a
+  current default, path, filename, or reference role is considered
+- **AND** it SHALL not infer a missing v1 or v2 marker or preserve a
+  compatibility interpretation
 
 ### Requirement: Submit SHALL be the only successful delegated completion transition
 
-Normal `submit` and the existing audited `late-submit` SHALL remain the only operations that convert an eligible delegated attempt into successful completion, complete queue demand, and create submitted coverage. The narrow `recover-declaration` operation introduced for an already-submitted attempt SHALL NOT be a completion transition: it SHALL accept no new result, perform no research, allocate no work unit, change no queue outcome, and create no new actor provenance. It SHALL restore a missing bundle declaration row only when existing durable facts can prove one hash-identical historical row; it SHALL not synthesize a missing Wave0 contribution witness.
+Normal `submit` and the existing audited `late-submit` remain the only
+operations that convert a complete current attempt into successful completion,
+complete queue demand, and create submitted coverage. `recover-declaration`
+remains a non-completion operation for an already submitted complete current
+attempt: it accepts no new result, allocates no work, changes no queue outcome,
+and restores a missing declaration only when its existing durable current facts
+prove the exact recorded row.
 
-For a current-version claimed attempt, normal first submit and eligible first late-submit SHALL evaluate every resolved required output through the shared direct-output evaluator before any successful queue, index, status, result, receipt, cache, transaction, or ledger mutation. Each acceptance invocation SHALL obtain its own fresh bounded byte snapshot; a previous dry-submit PASS, prior bytes, mtime, or cached evaluator result SHALL NOT authorize formal acceptance. Formal submit remains the only normal first-acceptance authority.
+Before a positive submit, duplicate replay, late-submit, or declaration
+recovery path reads candidate output or computes reconstruction facts, its
+attempt SHALL pass the current-profile boundary. A rejected legacy attempt
+SHALL not append a ledger row, complete queue demand, recover a declaration,
+become a current source contribution, or obtain a replacement/supersession
+decision. The rejection is an Engine-owned missing-contract boundary, not a
+legal instruction to hand-edit, upgrade, or rebuild the old attempt.
 
-For each accepted `wave0_source_intake` required output with direct contract
-`wave0.source-metadata-array.v1`, the Engine SHALL derive one
-`source_contribution` declaration from that same passed snapshot before writing
-the submitted ledger row. The declaration SHALL contain only the exact
-bundle-relative target, direct-contract ID, validated array length, and a
-deterministic semantic digest of the ordered validated array. It SHALL be
-Engine-generated, included in the ledger-record hash, and unavailable as a
-caller-supplied result field. It answers only which prefix of the current
-declared source array this accepted work unit observed; it is not a general
-artifact-history service, an evidence ledger, a new receipt, or permission to
-rewrite source bytes.
+For a complete current attempt, the submit owner SHALL preserve the existing
+fresh direct-output evaluation, hash-bound queue snapshot, exact
+manifest/beacon output-contract reconstruction, nonce/actor result and receipt
+binding, transaction rollback, current Wave0 source contribution, and durable
+queue postconditions. Current normal and audited late submit SHALL keep their
+existing idempotence and fail-closed behavior.
 
-The submit owner SHALL verify the index-bound assignment_contract_version, hash-bound queue snapshot, canonical recorded Topic coordinates, and exact reconstructed manifest/beacon output contract before reading candidate output content. Missing or unknown current contract facts SHALL fail closed. An attempt with no assignment_contract_version SHALL use only the explicitly defined legacy submit semantics and SHALL NOT be upgraded by current framework or bundle version inference.
+#### Scenario: Markerless hash mirrors do not submit
 
-Same-content duplicate normal submit, audited late-submit replay, and recover-declaration are historical postcondition operations rather than new candidate acceptance. They SHALL validate their existing result_hash, ledger_record_hash, submitted index/status/queue postconditions, and original reconstruction facts without making historical success depend on current mutable artifact bytes. Duplicate and late-submit replay SHALL retain an already-recorded `source_contribution` declaration verbatim. `recover-declaration` SHALL not invoke the live direct-output evaluator or create a new content acceptance: an already-present row remains idempotent, and an absent row may be restored only if the no-contribution historical row shape reproduces its stored hash exactly. If an absent row's stored hash requires `source_contribution`, the contribution fact is not durable anywhere outside that row; recovery SHALL fail closed with one `missing_contract` / no-legal-recovery boundary, SHALL NOT reread current `source.yaml` to infer it, and SHALL NOT append a ledger row. Wave inspect/Gate SHALL continue to evaluate current post-submit artifact content.
+- **WHEN** a claimed or submitted attempt lacks
+  `work-unit.submission.v1` and presents matching legacy result/ledger hashes
+- **THEN** submit, replay, recovery and late-submit SHALL return
+  `unsupported_current_contract` before a legacy acceptance tuple is evaluated
+- **AND** no ledger, queue, status, result, receipt, trace-success, or
+  transaction authority mutation SHALL occur
 
-The normal direct-output verdict still proves only that the snapshot read at first acceptance satisfied its contract. `result_hash` and the general `ledger_record_hash` SHALL NOT be described as global immutable artifact-byte claims. The narrow Wave0 `source_contribution` declaration is the sole exception: it binds only the semantic array prefix needed for later candidate ownership evaluation. This requirement SHALL NOT add an artifact hash, immutable-content claim, generic ledger field, or atomic byte-commit guarantee.
+#### Scenario: Current submission remains ledger-first
+
+- **WHEN** a complete current attempt passes normal submit or eligible
+  late-submit
+- **THEN** its accepted ledger row and immutable accepted ledger fingerprint
+  SHALL remain the only current acceptance representation
+- **AND** index/status hash mirrors SHALL not be introduced as an alternate
+  current representation
+
+#### Scenario: Current declaration recovery remains available
+
+- **WHEN** a complete current submitted attempt has a missing declaration row
+  and its existing exact recovery prerequisites hold
+- **THEN** `recover-declaration` SHALL retain its existing legal recovery path
+- **AND** a rejected historical attempt SHALL not be offered as a parallel
+  recovery or repair candidate
 
 #### Scenario: Declaration recovery is not delegated completion
 
@@ -568,8 +554,8 @@ The normal direct-output verdict still proves only that the snapshot read at fir
 
 #### Scenario: declaration recovery does not reaccept candidate content
 
-- **WHEN** recover-declaration restores an exact-reconstructable historical row
-  for an already-submitted work ID
+- **WHEN** recover-declaration restores an exact-reconstructable complete-current
+  row for an already-submitted work ID
 - **THEN** it SHALL reconstruct the original hash-identical row without
   rereading live required-output content for a new verdict
 - **AND** recovery SHALL not advertise a new direct-contract acceptance time or
@@ -593,6 +579,7 @@ The normal direct-output verdict still proves only that the snapshot read at fir
 - **AND** it SHALL not derive a replacement contribution from current source
   bytes, result data, index/status hash values, queue history, trace, or
   transaction metadata
+
 #### Scenario: Non-Wave0 outputs do not gain general artifact immutability
 
 - **WHEN** first submit accepts a required output other than
@@ -675,27 +662,33 @@ node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs replace <bundle> --work-id 
 
 ### Requirement: Audited late-submit SHALL recover eligible timed-out work units
 
-The work-unit CLI SHALL provide:
+The existing audited late-submit operation SHALL remain available only to a
+complete current timed-out attempt that satisfies its existing nonce, queue,
+receipt, direct-output, transaction, and replacement-lineage prerequisites.
+It SHALL retain the current reason requirement, one-time acceptance semantics,
+rollback behavior, and protection against an already submitted replacement.
 
-```bash
-node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs late-submit <bundle> --work-id <timed_out_id> --result <result.json> --reason <reason>
-```
+A timed-out attempt with explicit assignment v1/v2, markerless submission
+representation, absent actor provenance, or another incomplete current profile
+SHALL return `unsupported_current_contract` before late-submit reconstructs
+output obligations, legacy timestamps/context, hash mirrors, or supersession
+facts. It SHALL not become current by current-default inference.
 
-`late-submit` SHALL require a non-empty reason. It SHALL mutate authority surfaces only for the command-targeted work-unit record whose current status is `timed_out`. It SHALL validate the candidate result through the normal submit authority for that targeted record's identity, runtime receipt, output files, cache trails, source claims, hashes, manifest, beacon, status file, queue binding evidence, and nonce.
+#### Scenario: Complete current timed-out attempt may late-submit
 
-If the target work unit is already `submitted`, `late-submit` MAY return idempotent success only when the existing submitted ledger row is valid, has `late_accept: true`, the candidate result hash matches the existing submitted result hash, and durable late-submit postconditions still hold. Normal submitted rows SHALL reject explicit `late-submit`.
+- **WHEN** a complete current timed-out attempt satisfies the existing audited
+  late-submit prerequisites
+- **THEN** the Engine SHALL retain the existing eligible late acceptance path
+- **AND** it SHALL preserve the normal current ledger-first and queue cleanup
+  postconditions
 
-Accepted late-submit SHALL preserve the targeted record's `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`. It SHALL NOT rewrite old output into a retry work-unit identity.
+#### Scenario: Historical timed-out attempt cannot enter late-submit
 
-Before success, late-submit SHALL reject if another work unit for the same `queue_item_id` is already submitted or already has a submitted ledger row. If retry demand for the same queue item is still queued, late-submit SHALL remove it. If a retry attempt for the same queue item is claimed but not submitted, late-submit SHALL mark that retry work unit `abandoned` with `terminal_reason: "superseded_by_late_accept"` and clear `delegated_in_flight`. If the retry/queue state cannot be understood safely, late-submit SHALL reject without authority mutation. Rejected late-submit validation SHALL NOT rewrite result, receipt, cache, queue, index, status, or ledger authority; diagnostic trace/log entries MAY be written.
-
-Accepted late-submit SHALL mark the targeted work unit `submitted`, append exactly one Engine-written submitted ledger row for the targeted `work_id`, and write exactly one queue terminal-history `done` row for the targeted `queue_item_id` / `work_id`. The ledger row SHALL include `late_accept: true`, `late_accept_reason`, `terminal_status_before_accept: "timed_out"`, and `superseded_retry_work_ids`; these fields SHALL be part of the ledger hash. Normal rows SHALL NOT carry half-audit metadata. Late-accept audit fields SHALL require a trimmed non-empty reason, prior terminal status `timed_out`, and unique non-self `superseded_retry_work_ids`.
-
-An eligible first late-submit for a timed-out attempt carrying the current assignment_contract_version SHALL rebuild the attempt-owned expected output contract and acquire fresh bounded snapshots through the same target-level operation used by normal first submit. A dry-submit or timeout-preflight verdict from an earlier invocation SHALL not authorize late acceptance.
-
-A timed-out attempt that genuinely predates assignment_contract_version SHALL remain on the bounded legacy submit contract recorded by marker absence. It SHALL NOT acquire the current direct-content blocker or exact-role semantics merely because the framework was upgraded. Unknown, conflicting, or partially removed markers SHALL fail closed and SHALL not select legacy compatibility.
-
-A repeated audited late-submit that is already idempotently submitted SHALL remain a replay. It SHALL validate recorded hashes and durable late-submit postconditions without rereading live artifact content for a new acceptance verdict. Current file drift remains visible to Wave inspect/Gate.
+- **WHEN** a timed-out attempt lacks any required current discriminator
+- **THEN** late-submit SHALL return `unsupported_current_contract` before
+  evaluating historical recovery evidence
+- **AND** it SHALL not repair or mutate the historical attempt into a current
+  shape
 
 #### Scenario: eligible timed-out targeted work unit is accepted
 
@@ -740,11 +733,17 @@ A repeated audited late-submit that is already idempotently submitted SHALL rema
 - **THEN** late-submit SHALL rebuild its expected contract and evaluate fresh required-output snapshots before authority mutation
 - **AND** an earlier dry-submit or timeout-preflight PASS SHALL not be reused
 
-#### Scenario: pre-contract timed-out attempt stays legacy
+#### Scenario: Pre-contract timed-out attempt is rejected
 
-- **WHEN** a timed-out attempt was claimed before assignment_contract_version existed and all other legacy late-submit facts are valid
-- **THEN** first late-submit SHALL use that attempt's bounded legacy candidate semantics
-- **AND** it SHALL not infer the current contract from framework version, bundle metadata, or path shape
+> The historical scenario name is retained only as the OpenSpec delta-sync key.
+> The behavior below now rejects the old attempt before timeout or submit work.
+
+- **WHEN** a timed-out attempt was claimed before assignment_contract_version
+  existed and all other historical late-submit facts appear valid
+- **THEN** first late-submit SHALL return `unsupported_current_contract` before
+  evaluating those facts
+- **AND** it SHALL not infer, migrate, or mutate a current contract from
+  framework version, bundle metadata, or path shape
 
 #### Scenario: repeated late-submit does not reread current output content
 
@@ -786,7 +785,7 @@ For a current-version work unit, index, manifest and beacon SHALL carry top-leve
 
 For a current actor-bound production claim, the Engine SHALL derive one canonical role-guidance ref from the existing registered kind's closed delegated_role_key. It SHALL pass the existing claim-resolved kind and actor policy into the projection and require that policy's delegated role key to match, rather than reconstructing a second kind lookup from queue payload. It SHALL parse that canonical role's direct requires[] exactly one level, resolve each direct shared dependency as a contained regular shipped file, and project only dependencies whose own frontmatter declares actor_delivery: required; exactly one SHALL be the canonical page-fetch node with its closed id/scope identity. Role requires[] SHALL remain the dependency fact and shared-node frontmatter SHALL remain the delivery classification/identity fact rather than a role-to-shared allowlist in the projection helper. These refs SHALL be ephemeral task/spawn projections: they SHALL NOT be supplied by queue payload, Phase Agent or actor, persisted in index/manifest/beacon/result, discovered by directory scan or recursive loading, or added to the workflow manifest's always-loaded shared set. Generated task/spawn SHALL expose the same repo-relative refs plus resolved absolute read paths and require the actor to read them before search, fetch or output authoring.
 
-For each non-empty required_outputs[] entry, generated task and spawn guidance SHALL display a bounded minimum authoring projection obtained from the same direct-output contract definition that dispatches fresh-byte evaluation. The projection SHALL name required structural or semantic content without returning raw validator code, regexes or an actor-fillable selector. Formal production claim SHALL preserve the existing actor-decision order: queue/assignment/actor-policy preview and actor decision occur first; a no-claim/invalid decision SHALL return through its existing repair without requiring delivery assets. Only an allow_claim decision SHALL resolve role/shared refs and every required descriptor during read-only delivery preflight before entering the write transaction, removing queue demand, allocating a work ID or publishing an envelope. Unknown role, missing/escaping guidance, invalid actor-delivery classification, unknown contract identity or missing projection SHALL therefore leave queue, index and envelope unchanged; kind/role mismatch remains the existing actor-decision root. The internal/test envelope constructor MAY preserve legacy envelopes with no actor binding and SHALL NOT fabricate a role to satisfy this current-claim projection. This preflight guarantee SHALL NOT be described as generic filesystem rollback for an I/O failure after mutation begins. All projections SHALL be generated from the validated assignment/manifest contract and SHALL not maintain a second artifact-field or heading inventory; shared evaluator remains verdict authority and existing role guidance remains the rich Agent-facing explanation.
+For each non-empty required_outputs[] entry, generated task and spawn guidance SHALL display a bounded minimum authoring projection obtained from the same direct-output contract definition that dispatches fresh-byte evaluation. The projection SHALL name required structural or semantic content without returning raw validator code, regexes or an actor-fillable selector. Formal production claim SHALL preserve the existing actor-decision order: queue/assignment/actor-policy preview and actor decision occur first; a no-claim/invalid decision SHALL return through its existing repair without requiring delivery assets. Only an allow_claim decision SHALL resolve role/shared refs and every required descriptor during read-only delivery preflight before entering the write transaction, removing queue demand, allocating a work ID or publishing an envelope. Unknown role, missing/escaping guidance, invalid actor-delivery classification, unknown contract identity or missing projection SHALL therefore leave queue, index and envelope unchanged; kind/role mismatch remains the existing actor-decision root. The internal/test envelope constructor SHALL require the same complete current profile and reject an absent actor binding as `unsupported_current_contract` before publishing an envelope or fabricating a role. This preflight guarantee SHALL NOT be described as generic filesystem rollback for an I/O failure after mutation begins. All projections SHALL be generated from the validated assignment/manifest contract and SHALL not maintain a second artifact-field or heading inventory; shared evaluator remains verdict authority and existing role guidance remains the rich Agent-facing explanation.
 
 The generated task SHALL require the actor to write and verify every assigned required output before returning work_done. The Phase Agent SHALL run the predictive dry-submit after the actor returns and before formal submit. It MAY repair only a mechanical parseable-candidate declaration: an absent/defaultable identity/schema field with one unambiguous value from the verified envelope, or an omitted/misdeclared required path/role when the exact assigned target passes its direct contract. It SHALL NOT overwrite a conflicting supplied identity or edit artifact, receipt, source or cache facts under that scope. A missing/unparseable candidate, missing target, YAML parse/top-level/schema failure, missing receipt/source/cache/finding/question/enum/semantic fact, or any repair requiring actor-owned fact changes SHALL be semantic_content. Before work_done, the selected actor owns semantic repair. After work_done, the Phase Agent SHALL run `operate-work-unit fail` with normalized reason `semantic_contract:<primary_root_code>` using the Engine-derived field, explicitly enqueue replacement demand under a fresh queue ID preserving the same canonical Topic and assignment_mode/receipt obligation, and obtain a replacement work ID for real actor execution. The reason SHALL NOT use `actor_spawn_unavailable:` or another accepted automatic-retry trigger. The Phase Agent SHALL NOT weaken a failed primary pair into supplementary mode or offer abandon as a competing normal semantic-replacement route.
 
@@ -869,12 +868,11 @@ Canonical role/shared guidance SHALL describe capabilities and rich authoring be
 - **THEN** claim SHALL return its existing actor-policy repair without reading role/shared delivery files or direct actor descriptors
 - **AND** missing delivery assets SHALL not replace the nearer actor decision root for an attempt that was never authorized
 
-#### Scenario: legacy envelope construction does not invent an actor
+#### Scenario: Incomplete actor profile cannot construct an envelope
 
-- **WHEN** an internal compatibility/test path constructs an envelope without current `actor_execution` binding
-- **THEN** it SHALL remain outside production role-delivery claims and SHALL not infer or fabricate a delegated role
-- **AND** formal `operate-work-unit claim` SHALL remain the production path that emits current actor-bound role/direct-contract guidance
-
+- **WHEN** an attempted envelope lacks the current actor-v1 contract or its legal `actor_execution` binding
+- **THEN** the Engine SHALL reject it as `unsupported_current_contract` before publishing manifest, beacon, task, result schema, or actor guidance
+- **AND** it SHALL not infer, fabricate, or project a delegated role from a legacy envelope
 #### Scenario: accepted Phase Agent fallback receives the same authoring guidance
 
 - **WHEN** the existing actor decision authorizes one `phase_agent_fallback` claim for a registered kind
@@ -905,42 +903,84 @@ Canonical role/shared guidance SHALL describe capabilities and rich authoring be
 - **THEN** claim parity tests or submit contract checks SHALL fail
 - **AND** runtime acceptance SHALL not use the projection to outvote the Engine-resolved contract
 
+
 ### Requirement: Submitted result and ledger hashes SHALL detect post-submit drift before gate pass
 
-Submitted result and ledger hashes SHALL remain fail-closed binding authority. Normal and late submit SHALL create one Engine submission timestamp inside the commit transaction, build the final ledger row/hash from it, and use it consistently across ledger `declared_at`, index `terminal_at`, status `updated_at`, and queue `completed_at`. Pre-transaction validation and dry-submit SHALL return only side-effect-free candidate validation facts, SHALL NOT produce a final ledger row/hash, SHALL NOT pass a precomputed declaration hash into commit, and SHALL NOT write queue-load trace/log, normalized result/receipt, canonical cache pages, transaction artifacts or authority state. The final rejection recorder MAY retain its existing diagnostic trace/log ownership. The locked transaction SHALL reload/revalidate mutable index, queue, replacement and terminal facts, then apply canonicalization writes before final row construction. Normal rows SHALL require no additional recovery state. Late-submit SHALL preserve only irreducible late-accept context on the existing index record: reason, prior terminal status, and superseded retry IDs. Gates SHALL never count reconstructable index/result/queue facts directly. A recovery evaluator SHALL rebuild from current canonical result hash, index/status, manifest, beacon, runtime receipt, output/source/cache declarations, terminal queue facts and bounded late-accept context before any append.
+Submitted result and ledger hashes SHALL remain fail-closed binding authority.
+Normal and late submit SHALL create one Engine submission timestamp inside the
+commit transaction, build the final ledger row/hash from it, and use it
+consistently across ledger `declared_at`, index `terminal_at`, status
+`updated_at`, and queue `completed_at`. Pre-transaction validation and
+dry-submit SHALL return only side-effect-free candidate validation facts, SHALL
+NOT produce a final ledger row/hash, SHALL NOT pass a precomputed declaration
+hash into commit, and SHALL NOT write queue-load trace/log, normalized
+result/receipt, canonical cache pages, transaction artifacts or authority
+state. The final rejection recorder MAY retain its existing diagnostic trace/log
+ownership. The locked transaction SHALL reload/revalidate mutable index, queue,
+replacement and terminal facts, then apply canonicalization writes before final
+row construction. Normal rows SHALL require no additional recovery state.
+Late-submit SHALL preserve only irreducible late-accept context on the existing
+index record: reason, prior terminal status, and superseded retry IDs. Gates
+SHALL never count reconstructable index/result/queue facts directly. A recovery
+evaluator SHALL rebuild from current canonical result hash, index/status,
+manifest, beacon, runtime receipt, output/source/cache declarations, terminal
+queue facts and bounded late-accept context before any append.
 
-For legacy pre-unified-timestamp/pre-context attempts, reconstruction MAY occur only when the complete remaining submitted surfaces plus original submit/transaction evidence reproduce one unique row whose hash equals the already recorded index/status hash. Recovery audit SHALL live in transaction/trace/log evidence outside the restored row. Missing or conflicting facts SHALL fail closed with `repair_kind`, `missing_fact`, `write_to`, and `rerun`; diagnostics SHALL never instruct hand-written hash/ledger edits or rebind index/status to a newly invented row.
+Before reconstruction, declaration recovery SHALL require the complete current
+profile. An assignment v1/v2, markerless submission/hash-mirror, absent actor
+binding, or profile drift SHALL return `unsupported_current_contract` before it
+reads historical submit/transaction evidence, reconstructs a row, or mutates
+the ledger. The rejection SHALL not offer a hand edit, migration, adapter, or
+alternate recovery path.
 
 #### Scenario: Reconstructable facts restore the same hash-valid row
 
-- **WHEN** an already-submitted work unit loses only its bundle ledger row and retains all required direct reconstruction facts
-- **THEN** Engine recovery SHALL restore the hash-identical row without changing result, receipt, output/cache, actor, queue, or original hashes
+- **WHEN** a complete-current already-submitted work unit loses only its bundle
+  ledger row and retains all required direct reconstruction facts
+- **THEN** Engine recovery SHALL restore the hash-identical row without changing
+  result, receipt, output/cache, actor, queue, or original hashes
 - **AND** the next gate SHALL consume it through the normal ledger path
+
+#### Scenario: Historical attempt cannot use declaration reconstruction
+
+- **WHEN** an already-submitted-looking attempt has an old assignment,
+  markerless submission representation, absent actor binding, or profile drift
+- **THEN** declaration recovery SHALL return `unsupported_current_contract`
+  before row reconstruction or ledger mutation
+- **AND** it SHALL not interpret legacy submit or transaction evidence as an
+  acceptance authority
 
 #### Scenario: Reconstruction cannot hide drift
 
-- **WHEN** current result, receipt, beacon, output/cache, index/status, queue history, or late-accept context conflicts
+- **WHEN** current result, receipt, beacon, output/cache, index/status, queue
+  history, or late-accept context conflicts
 - **THEN** recovery SHALL fail before ledger mutation
-- **AND** primary feedback SHALL identify the earliest conflicting fact and one legal next checkpoint
+- **AND** primary feedback SHALL identify the earliest conflicting fact and one
+  legal next checkpoint
 
 #### Scenario: Post-submit result mutation fails gate coverage
 
 - **WHEN** a work unit has a submitted ledger row with `result_hash`
-- **AND** the current `result.json` content no longer matches the submitted `result_hash`
+- **AND** the current `result.json` content no longer matches the submitted
+  `result_hash`
 - **THEN** delegated gate coverage for that work unit SHALL fail
 - **AND** diagnostics SHALL name the affected `work_id` and hash drift surface
 
 #### Scenario: Ledger row remains the delegated authority
 
-- **WHEN** a work-unit output file exists but the submitted ledger row is missing or fails binding cross-check
+- **WHEN** a work-unit output file exists but the submitted ledger row is
+  missing or fails binding cross-check
 - **THEN** the output SHALL NOT count as delegated gate coverage
-- **AND** diagnostics MAY report the file as cleanup, bypass, or drift evidence only
+- **AND** diagnostics MAY report the file as cleanup, bypass, or drift evidence
+  only
 
 #### Scenario: Hash drift repair avoids hand-written ledger mutation
 
 - **WHEN** a gate reports submitted result hash mismatch
-- **THEN** advice SHALL direct repair through a valid work-unit retry, replacement submit, or explicit terminal/retry operation
-- **AND** advice SHALL NOT tell the Agent to edit `rb_output_declarations.jsonl` by hand
+- **THEN** advice SHALL direct repair through a valid work-unit retry,
+  replacement submit, or explicit terminal/retry operation
+- **AND** advice SHALL NOT tell the Agent to edit `rb_output_declarations.jsonl`
+  by hand
 
 ### Requirement: Successful work-unit submit SHALL verify durable queue postconditions
 
@@ -1104,7 +1144,7 @@ This requirement SHALL NOT remove the existing ability to submit a candidate `re
 
 The work-unit CLI SHALL provide a dry-submit preflight for claimed work units. Dry-submit SHALL read a candidate result and evaluate the same deterministic submit contract used by formal `operate-work-unit submit` wherever possible, including work-unit identity, queue binding, manifest/index consistency, result schema, runtime receipt, nonce, output files, source claims, cache trails, and kind output contract constraints.
 
-Dry-submit and formal submit SHALL obtain `output_files` requiredness from the immutable version-selected assignment output contract, together with its `required_outputs[]`, rather than retain an independent generic non-empty-output rule. A snapshot-bound `work-unit.assignment.v3` supplementary `wave1_topic_deepening` assignment with empty required_outputs SHALL accept `output_files: []`; it SHALL still validate all applicable result schema, identity, receipt, source-claim, accepted-URL, cache/degraded-capture, queue and provenance facts. A v3 assignment with one or more required outputs SHALL continue to require and validate those exact path/role declarations. Empty required_outputs alone SHALL not select supplementary semantics or weaken another kind's existing output contract, and v1/v2 attempts SHALL retain their recorded contract interpretation.
+Dry-submit and formal submit SHALL obtain `output_files` requiredness from the immutable current assignment output contract, together with its `required_outputs[]`, rather than retain an independent generic non-empty-output rule. A snapshot-bound `work-unit.assignment.v3` supplementary `wave1_topic_deepening` assignment with empty required_outputs SHALL accept `output_files: []`; it SHALL still validate all applicable result schema, identity, receipt, source-claim, accepted-URL, cache/degraded-capture, queue and provenance facts. A v3 assignment with one or more required outputs SHALL continue to require and validate those exact path/role declarations. Empty required_outputs alone SHALL not select supplementary semantics or weaken another kind's existing output contract. An attempt with v1/v2 assignment, a missing marker, markerless submission, or missing actor binding SHALL return `unsupported_current_contract` before dry-submit derives an output contract, validates a candidate, or reports a repair action.
 
 Dry-submit SHALL be read-only. It SHALL NOT append `rb_output_declarations.jsonl`, complete queue demand, mutate `rb_queue.json`, change work-unit terminal/claimed status, write canonical result/receipt/cache files, record `last_submit_rejection`, create `_work_units/_transactions/` entries, write submit trace/log side effects, or emit success authority that gates may consume. Formal submit remains the only successful delegated completion transition.
 
@@ -1335,7 +1375,6 @@ Generated actor guidance SHALL expose the exact direct contract and require the 
 - **WHEN** post-return dry-submit reports repair_scope semantic_content and the receipt records work_done
 - **THEN** recommended_action and Phase Agent guidance SHALL direct `operate-work-unit fail` with reason `semantic_contract:<primary_root_code>` using the Engine-derived field, explicit same-obligation enqueue under a fresh queue ID, and a replacement work-unit claim with a new work ID
 - **AND** it SHALL not direct the Phase Agent to author the missing research content under the returned actor provenance
-
 ### Requirement: Timeout terminalization SHALL be guarded by progress-aware preflight
 
 The work-unit CLI SHALL provide a timeout preflight for claimed work units. Timeout preflight SHALL determine whether it is safe to terminalize a claimed work-unit attempt as `timed_out` by evaluating Engine-observed progress, candidate result state, dry-submit-equivalent diagnostics, queue binding, and effective idle lease state.
@@ -1690,11 +1729,38 @@ Fallback SHALL begin before the bounded evidence work it claims. It SHALL NOT be
 
 ### Requirement: Work-unit provenance SHALL bind execution actor class
 
-New claims SHALL use one explicit discriminated actor sub-contract `actor_contract_version: "work-unit.actor.v1"`. The actor-aware manifest and index record SHALL be the transaction-bound direct authority for one full `actor_execution` object, and beacon SHALL project that object for the assigned actor. Generated result and runtime receipt event schemas SHALL require only the actor contract version and exact `execution_actor_class` identity binding; they SHALL NOT duplicate the availability observation. The submitted ledger row SHALL retain the full actor execution snapshot for audit. Inspect output and submit diagnostics SHALL derive from these direct surfaces and SHALL agree on actor class. `_agent.json` and runtime refs SHALL remain diagnostic-only, SHALL NOT be actor authority, and SHALL NOT make submit pass or fail. Secrets, raw account balance text, credentials, opaque host error bodies, and a duplicate free-form actor surface SHALL NOT be persisted.
+New claims SHALL use the existing explicit actor sub-contract
+`actor_contract_version: "work-unit.actor.v1"`. The transaction-bound index
+record, matching manifest and beacon, current result/receipt bindings, and
+submitted ledger SHALL retain one legal `actor_execution` snapshot. Inspect and
+submit diagnostics SHALL derive the same actor class from those direct
+surfaces; diagnostic runtime refs, `_agent.json`, host text, and guidance SHALL
+not be actor authority.
 
-Formal submit SHALL derive the authoritative ledger actor class from the claimed Engine record, SHALL reject conflicting result or receipt actor class, and SHALL never allow `_agent.json` or runtime refs to substitute for, override, or invalidate actor class.
+The only legal current execution classes remain `delegated_subagent` after an
+available role observation and `phase_agent_fallback` after the existing
+authorized unavailable-role decision. An attempt lacking the actor contract or
+execution SHALL be rejected as `unsupported_current_contract` before ledger-row
+construction, inspect projection, recovery, supersession, or Gate provenance.
+It SHALL not create a `legacy_unrecorded` projection, a legacy schema-union
+value, or an inferred real actor class.
 
-Legacy work units/index records and submitted ledger rows created before this contract MAY remain readable through explicit legacy/actor-aware schema unions and the projection `execution_actor_class: legacy_unrecorded`, `source: legacy_claim`, `outcome: unknown`. A pre-v0.25 claimed attempt MAY submit under its legacy receipt/result contract, but the new ledger row SHALL truthfully carry `actor_contract_version: "work-unit.actor.v1"` with `legacy_unrecorded`; the Engine SHALL NOT infer native delegated execution from work-unit existence, runtime refs, `_agent.json`, or historical guidance. Inspect and no-claim SHALL NOT rewrite legacy bytes, and no bundle-wide/index-version migration SHALL be introduced. `legacy_unrecorded` SHALL be read/submit compatibility only and SHALL NOT be accepted for new claims or fallback.
+#### Scenario: Current actor provenance is durable
+
+- **WHEN** a complete current attempt is formally submitted
+- **THEN** its ledger and inspect projection SHALL retain the exact current
+  delegated or authorized fallback actor class
+- **AND** conflicting candidate result or receipt actor binding SHALL continue
+  to fail before authority mutation
+
+#### Scenario: Unrecorded actor is not a provenance projection
+
+- **WHEN** an otherwise historical-looking attempt lacks actor contract or
+  actor execution fields
+- **THEN** every current Engine computation SHALL return
+  `unsupported_current_contract`
+- **AND** it SHALL neither project `legacy_unrecorded` nor default an actor
+  identity
 
 #### Scenario: Normal submit records delegated actor provenance
 
@@ -1721,8 +1787,10 @@ Legacy work units/index records and submitted ledger rows created before this co
 #### Scenario: Historical ledger does not fabricate actor provenance
 
 - **WHEN** a pre-v0.25 submitted ledger row has no actor field
-- **THEN** readers and inspect SHALL project `execution_actor_class: legacy_unrecorded`
-- **AND** they SHALL NOT label it `delegated_subagent` based only on its work-unit identity or runtime refs
+- **THEN** readers and inspect SHALL return `unsupported_current_contract`
+  before actor projection or provenance computation
+- **AND** they SHALL neither project `legacy_unrecorded` nor label it
+  `delegated_subagent` based on work-unit identity or runtime refs
 
 #### Scenario: New claim writes the actor sub-contract
 
@@ -2020,86 +2088,38 @@ or manual deletion advice is authorized by this requirement.
 
 ### Requirement: Submitted correction SHALL use audited supersession and one fresh successor
 
-An Engine operation `operate-work-unit supersede <bundle> --work-id <submitted_id> --reason <reason>`
-SHALL be the sole correction/rework path for a current submitted attempt whose post-submit integrity check
-finds an eligible attributable result/receipt/output/cache or ledger-row drift. Eligibility SHALL require an
-exact submitted predecessor index/status binding, exactly one matching terminal-history `done` record with
-the original queue snapshot, no existing conflicting successor, and no transaction-integrity root.
-Index/status/terminal-queue drift, duplicate target rows, a malformed existing supersession relation, or
-ledger corruption that cannot be attributed to the targeted work ID SHALL return `missing_contract` rather
-than authorize supersession. `supersede` SHALL rerun the direct check itself; a caller-supplied reason is
-audit context and SHALL not convert a merely better, late, or semantically preferred candidate into
-correction eligibility.
+For a complete current submitted predecessor, submitted correction SHALL retain
+the existing immutable `work-unit.supersession.v1` relation, one fresh
+successor, exact direct-parent lineage, transaction binding, and rule that only
+the unique current lineage leaf with a normal current ledger row can provide
+current coverage. A predecessor remains historical only after that current
+relation validates; it never supplies a second current success path.
 
-Every new claim SHALL bind `submission_contract_version: work-unit.submission.v1` in index, manifest, and
-beacon before actor work. Submit/readers SHALL select ledger-first behavior from that attempt-bound marker,
-not current framework or bundle version; partial, unknown, or conflicting markers SHALL fail closed. At
-original formal acceptance, a marked submitted index record SHALL retain exactly one immutable
-`accepted_ledger_record_hash` relation to its accepted ledger row and its status file SHALL retain no current
-`result_hash` or `ledger_record_hash` mirror. The accepted fingerprint is historical acceptance evidence, not
-a second mutable current hash authority.
+Supersession, historical-predecessor inspection, and replacement planning SHALL
+first require the complete current profile. They SHALL not validate a
+markerless predecessor through a legacy acceptance tuple, accept v1/v2 output
+interpretation, or reconstruct actor provenance for an unrecorded attempt. The
+Engine SHALL return `unsupported_current_contract` rather than creating a
+successor, recovering a declaration, or treating such an attempt as historical
+acceptance.
 
-For a readable hash-valid current ledger row, that row remains the source used to verify direct drift. If the
-target row is missing or is parseable/attributable to the work ID but fails row-hash/fingerprint integrity,
-the existing declaration-recovery evaluator SHALL run first. When it can reproduce one exact hash-identical
-row, `recover-declaration` SHALL be the sole nearest operation and `supersede` SHALL not mutate. Otherwise a
-marked record MAY rely on its immutable fingerprint only together with exact submitted index/status,
-terminal-queue, committed original submit transaction, and submit-trace binding. A legacy record MAY rely
-only on the existing submission-presence evaluator's mutually compatible index, status, manifest, receipt,
-terminal-queue, original submit transaction, and trace evidence; a lone legacy hash mirror, result file,
-terminal row, trace event, or caller hash SHALL be insufficient. All other missing/drifted-ledger cases SHALL
-return `missing_contract`.
+#### Scenario: Complete current predecessor retains correction path
 
-Accepted supersession SHALL preserve every existing predecessor ledger byte, its `status: submitted`, any
-marked index acceptance fingerprint, result/receipt/output/cache bytes, and terminal history. If the row is missing or
-drifted, the operation SHALL not describe or reconstruct it as hash-valid history. It SHALL write exactly one
-strict relation on that submitted index record containing exactly `schema_version:
-work-unit.supersession.v1`, `predecessor_work_id`, `predecessor_queue_item_id`,
-`accepted_ledger_record_hash`, `root_code`, `reason`, `recorded_at`, `tx_id`, and
-`successor_queue_item_id`. The identity/hash fields SHALL bind the verified predecessor acceptance and the one
-fresh successor, `reason` SHALL be trimmed and non-empty, `recorded_at` SHALL be an ISO 8601 timestamp, and
-`tx_id` SHALL bind the committing supersession transaction. In the same transaction it SHALL create
-one terminal-snapshot-derived ordinary successor demand whose direct-parent supersession lineage exactly
-cross-checks that index relation. Gate/inspect SHALL derive historical non-current coverage only after both
-sides match. The operation SHALL
-create no new result, receipt, cache, ledger row, Gate pass, actor provenance, work ID, or queue completion;
-its successor SHALL proceed only through current actor observation, ordinary claim, and the existing normal
-submit or audited late-submit contract. Any
-later timeout/replacement/supersession SHALL use only its existing ordinary owner and form one validated
-acyclic lineage; only the unique current leaf's hash-valid existing submit/late-submit row SHALL establish
-current coverage. Within a timeout-retry chain, the existing audited late-submit cleanup contract SHALL select
-an eligible late-accepted timed-out attempt rather than greatest `attempt_index`; removed queued retry or an
-abandoned claimed retry SHALL not become a sibling leaf, while a submitted retry SHALL block late-submit.
+- **WHEN** a complete current submitted predecessor has one eligible direct
+  correction root
+- **THEN** Engine supersession SHALL retain its existing audited successor and
+  rollback behavior
+- **AND** the predecessor SHALL remain historical rather than current coverage
+  after a valid relation is committed
 
-For a markerless legacy predecessor, the relation's `accepted_ledger_record_hash` SHALL be the original hash
-established by the complete mutually compatible legacy acceptance tuple. Supersession SHALL NOT add the
-standalone marked fingerprint, remove or rewrite legacy mirrors, or derive the relation field from one mirror,
-one trace event, or caller input.
+#### Scenario: Historical predecessor cannot establish supersession facts
 
-The v1 `root_code` SHALL be one of `submitted_declaration_missing`, `submitted_declaration_drift`,
-`submitted_result_drift`, `submitted_runtime_receipt_drift`, `submitted_output_drift`, or
-`submitted_cache_drift`. When more than one eligible surface is observed, the evaluator SHALL select the first
-code in that order for the immutable relation while retaining all observed surfaces as diagnostics.
-`submitted_declaration_missing` and `submitted_declaration_drift` SHALL first run the exact declaration-recovery
-check described above; an ineligible authority conflict SHALL not be made eligible by root ordering.
-
-After a complete relation and exact successor commit, every later `supersede` request for that predecessor
-SHALL return the original relation and the successor's current ordinary location without mutation. A newly
-supplied audit reason SHALL neither change the immutable `reason`, `recorded_at`, `tx_id`, root, or successor
-nor create a conflicting relation. A partial/malformed relation or mismatching/missing successor SHALL fail on
-relation integrity rather than complete, replace, or fork it. The operation itself SHALL perform no direct
-reactivation of the parent queue item, rewrite of
-terminal history, late-submit transition, index-from-ledger sync, ledger hash recomputation, or in-place result
-replacement. When no direct
-post-submit integrity drift exists, the operation SHALL reject with the existing semantic/supplementary
-work boundary rather than treating richer late-arriving content as authority to replace a valid attempt.
-
-For new current-version attempts, submitted hashes and delegated coverage SHALL be ledger-first: the
-submitted ledger row is the only source for current `result_hash`, `ledger_record_hash`, and coverage. The
-marked index retains the immutable `accepted_ledger_record_hash` relation and, when applicable, the immutable
-supersession relation; marked index/status records SHALL not retain legacy current hash mirrors. Neither
-relation is a current hash source. Markerless legacy duplicated hash fields remain fail-closed compatibility
-evidence and SHALL not be rewritten by a general sync or recompute operation.
+- **WHEN** a candidate predecessor uses an old assignment, markerless
+  submission, or unrecorded actor representation
+- **THEN** supersession SHALL return `unsupported_current_contract` before
+  validating a predecessor acceptance tuple
+- **AND** it SHALL not create a successor or reinterpret the predecessor as a
+  valid historical relation
 
 #### Scenario: readable hash drift creates one audited successor relation
 
@@ -2139,12 +2159,14 @@ evidence and SHALL not be rewritten by a general sync or recompute operation.
 
 #### Scenario: legacy missing ledger without the full acceptance tuple fails closed
 
-- **WHEN** a legacy submitted work unit's ledger row is missing or attributable-but-drifted
-- **AND** its existing submission-presence index/status/manifest/receipt/terminal-queue/transaction/trace
-  evidence is absent or incompatible
-- **THEN** `supersede`, submit preflight, Gate, and inspect SHALL return `missing_contract`
-- **AND** they SHALL not infer acceptance from one result file, hash mirror, terminal row, trace event, or a
-  caller-supplied hash
+- **WHEN** a historical submitted work unit's ledger row is missing or
+  attributable-but-drifted
+- **AND** its old submission-presence facts are absent, compatible, or
+  incompatible
+- **THEN** `supersede`, submit preflight, Gate, and inspect SHALL return
+  `unsupported_current_contract` before evaluating an acceptance tuple
+- **AND** they SHALL not infer acceptance, create a successor, or mutate the
+  historical record
 
 #### Scenario: unattributable ledger corruption cannot be isolated as historical
 
@@ -2170,16 +2192,19 @@ evidence and SHALL not be rewritten by a general sync or recompute operation.
 
 #### Scenario: legacy hash drift is not silently synchronized
 
-- **WHEN** a legacy index hash mirror disagrees with a submitted ledger row
-- **THEN** submit/Gate/inspect SHALL fail closed on the direct mismatch
-- **AND** they SHALL not offer a recompute-hashes or sync-index command
-- **AND** the incompatible mirrors SHALL prevent the full legacy acceptance tuple, so `supersede` SHALL return
-  `missing_contract` rather than select either hash as the original acceptance
+- **WHEN** a historical index hash mirror disagrees with a submitted ledger row
+- **THEN** submit/Gate/inspect SHALL return `unsupported_current_contract`
+  before comparing the mirrors
+- **AND** they SHALL not offer a recompute-hashes, sync-index, or supersession
+  command for that attempt
 
 #### Scenario: markerless and marked hash representations do not mix
 
 - **WHEN** a new claim carries `work-unit.submission.v1`
 - **THEN** formal submit SHALL write one index acceptance fingerprint and no index/status current hash mirrors
-- **AND** a markerless legacy attempt SHALL retain its existing compatibility representation
-- **AND** a partial, unknown, or conflicting marker/mirror combination SHALL fail closed rather than select a
-  branch from current framework version
+- **AND** a markerless historical attempt SHALL return
+  `unsupported_current_contract` rather than retain a compatibility
+  representation
+- **AND** a partial, unknown, or conflicting marker/mirror combination SHALL
+  fail at the same boundary rather than select a branch from current framework
+  version

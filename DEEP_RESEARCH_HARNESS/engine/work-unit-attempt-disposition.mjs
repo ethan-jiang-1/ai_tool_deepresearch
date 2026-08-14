@@ -9,6 +9,7 @@ import {
   evaluateWorkUnitSupersessionEligibility,
   resolveWorkUnitSupersessionLineage,
 } from './work-unit-supersession.mjs';
+import { classifyCompleteCurrentWorkUnitProfile } from './work-unit-current-profile.mjs';
 
 function submitRerun(bundleDir, record) {
   return `node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs dry-submit ${JSON.stringify(path.resolve(bundleDir))} --work-id ${JSON.stringify(record.work_id)} --result ${JSON.stringify(path.join(path.resolve(bundleDir), record.paths.result_ref))}`;
@@ -18,13 +19,11 @@ export function projectWorkUnitAttemptDisposition(bundleDir, record, {
   operation = 'submit_work_unit',
   rerun = null,
 } = {}) {
-  const logicalActorClass = record.actor_execution?.execution_actor_class || 'legacy_unrecorded';
+  const profile = classifyCompleteCurrentWorkUnitProfile(bundleDir, record);
   const identity = {
     work_id: record.work_id,
     queue_item_id: record.queue_item_id,
     receipt_nonce: record.receipt_nonce,
-    execution_actor_class: logicalActorClass,
-    delegated_role_key: record.actor_execution?.delegated_role_key || null,
     result_ref: record.paths.result_ref,
     result_path: path.join(path.resolve(bundleDir), record.paths.result_ref),
     runtime_receipt_ref: record.paths.runtime_receipt_ref,
@@ -32,6 +31,29 @@ export function projectWorkUnitAttemptDisposition(bundleDir, record, {
     physical_actor_authenticated: false,
     liveness_proven: false,
   };
+  if (!profile.ok) {
+    const missingFact = `unsupported current work-unit contract for ${record.work_id}: ${profile.unsupported_discriminator}`;
+    return {
+      identity,
+      transaction: null,
+      coverage: {
+        disposition: 'unsupported_current_contract',
+        ledger_record_hash: null,
+        supersession_relation: null,
+        root_code: profile.reason_code,
+        missing_fact: missingFact,
+      },
+      next: {
+        repair_kind: 'missing_contract',
+        missing_fact: missingFact,
+        write_to: null,
+        rerun: rerun || submitRerun(bundleDir, record),
+      },
+    };
+  }
+  const logicalActorClass = record.actor_execution.execution_actor_class;
+  identity.execution_actor_class = logicalActorClass;
+  identity.delegated_role_key = record.actor_execution.delegated_role_key;
   const transaction = inspectWorkUnitTransaction(bundleDir, {
     operation,
     targetWorkIds: [record.work_id],

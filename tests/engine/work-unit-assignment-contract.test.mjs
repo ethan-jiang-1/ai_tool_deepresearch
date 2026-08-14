@@ -6,7 +6,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { queueItemSnapshotHash } from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager-core.mjs';
-import { readWorkUnitLedgerRows } from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import { claimAndSubmitWorkUnit, cleanupWorkUnitBundle, delegatedQueueItem, tempWorkUnitBundle } from './work-unit-test-helpers.mjs';
 
 const VERSION = 'work-unit.assignment.v3';
@@ -130,18 +129,16 @@ describe('resolveWorkUnitAssignmentContract', () => {
     assert.equal(wave2.output_files.required, true);
   });
 
-  it('preserves v1 and v2 supplementary declaration requiredness from their bound contracts', async () => {
+  it('rejects retired v1 and v2 assignment markers before resolving output contracts', async () => {
     for (const assignmentContractVersion of [LEGACY_VERSION, PREVIOUS_VERSION]) {
-      const contract = await resolve({
+      await assert.rejects(() => resolve({
         assignmentContractVersion,
         kind: 'wave1_topic_deepening',
         queueItem: queueItem('wave1_topic_deepening', {
           payload: { ...queueItem('wave1_topic_deepening').payload, assignment_mode: 'supplementary' },
           required_receipts: [],
         }),
-      });
-      assert.deepEqual(requiredOutputs(contract), [], assignmentContractVersion);
-      assert.equal(contract.output_files.required, true, assignmentContractVersion);
+      }), /unsupported assignment contract version/);
     }
   });
 
@@ -267,24 +264,7 @@ describe('resolveWorkUnitAssignmentContract', () => {
     assert.equal(requiredOutputs(contract).length, 1);
   });
 
-  it('keeps an immutable v1 Wave0 rich-reference contract separate from current defaults', async () => {
-    const contract = await resolve({
-      assignmentContractVersion: LEGACY_VERSION,
-      kind: 'wave0_source_intake',
-      queueItem: queueItem('wave0_source_intake', {
-        required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
-      }),
-    });
-    assert.deepEqual(contract.output_files, baseOutputContract.output_files);
-    assert.deepEqual(requiredOutputs(contract), [{
-      path: 'artifacts/wave0/topic-a/source.yaml',
-      role: 'source_yaml',
-      direct_contract: 'wave0.source-metadata-array.v1',
-    }]);
-  });
-
-  it('accepts a recorded v1 rich reference while rejecting that extra output from a current v3 attempt', () => {
-    const legacyDir = tempWorkUnitBundle('wave0-v1-reference-');
+  it('does not permit a current Wave0 reference extra to become submit authority', () => {
     const currentDir = tempWorkUnitBundle('wave0-v3-reference-');
     const referenceOutput = {
       path: 'reference/00-shared-legacy.md',
@@ -294,16 +274,6 @@ describe('resolveWorkUnitAssignmentContract', () => {
       content: '# Legacy shared reference\n\nCaptured evidence.\n',
     };
     try {
-      const legacy = claimAndSubmitWorkUnit(legacyDir, {
-        legacyV1Assignment: true,
-        outputs: [referenceOutput],
-      });
-      assert.equal(legacy.record.assignment_contract_version, LEGACY_VERSION);
-      assert.equal(legacy.submitted.ok, true, legacy.submitted.inspect?.join('\n'));
-      const legacyManifest = JSON.parse(readFileSync(join(legacyDir, legacy.record.paths.manifest_ref), 'utf8'));
-      assert.equal(legacyManifest.assignment_contract_version, LEGACY_VERSION);
-      assert.ok(readWorkUnitLedgerRows(legacyDir)[0].output_files.some((output) => output.path === referenceOutput.path && output.role === 'reference'));
-
       const current = claimAndSubmitWorkUnit(currentDir, {
         outputs: [referenceOutput],
       });
@@ -311,7 +281,6 @@ describe('resolveWorkUnitAssignmentContract', () => {
       assert.equal(current.submitted.ok, false);
       assert.match(current.submitted.inspect.join('\n'), /role 'reference'.*source_yaml/i);
     } finally {
-      cleanupWorkUnitBundle(legacyDir);
       cleanupWorkUnitBundle(currentDir);
     }
   });

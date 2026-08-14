@@ -151,30 +151,42 @@ When a Sub-agent is explicitly assigned a fetched-source reference output, norma
 
 ### Requirement: Generated result schema and submit enforcement SHALL match kind contract
 
-Generated work-unit `result.schema.json` SHALL be an Agent-facing projection of the same result contract enforced by submit and the assigned kind output contract. Manifest, task, spawn prompt, beacon, result schema and submit validation SHALL agree on identity, required fields, source-claim capability, output roles and cache expectations.
+For a current-version claim, `assignment_contract_version` SHALL be the
+Engine-owned literal `work-unit.assignment.v3` on index, manifest and beacon.
+The assigned output contract SHALL remain one strict Zod-validated object with
+the existing `required_outputs[]`, result/cache/source-claim rules, exact
+paths, canonical roles, and closed direct-contract identities. Generated task,
+checklist and result-schema projections SHALL retain the existing current
+required-output and actor-binding behavior, and formal dry-submit/submit remain
+the authoritative exact-set validators.
 
-For a source-claim-capable work unit, `source_claims[]` SHALL retain the strict item shape `url`, `source_ref`, `acceptance_status`, `is_new_vs_wave0`, `cache_trail_refs`, and optional nullable `degraded_capture_ref`. The schema/task SHALL explain that `source_ref` is a submitted evidence reference, not necessarily a file newly written by the current attempt.
+Generated current work-unit task/result surfaces SHALL only describe the
+complete current attempt profile: v3 assignment, marked
+`work-unit.submission.v1`, and actor-v1 execution binding. They SHALL not offer
+an actor-fillable profile selector, a marked v1/v2 recorded interpretation, a
+markerless compatibility interpretation, or an unrecorded-actor fallback.
 
-The kind output contract SHALL explicitly declare `source_claims.prior_submitted_output_roles[]`. Values SHALL be unique non-empty role strings and a subset of the same contract's `output_files.allowed_roles[]`; if `source_claims.allowed` is not true, the prior-role list SHALL be absent or empty. For `wave1_topic_deepening`, the default SHALL be exactly `['evidence_summary']`; absence or an empty list SHALL mean that prior submitted outputs are not accepted for that kind. This field SHALL be projected consistently into manifest, generated task/checklist, result-schema guidance, dry-submit and formal submit validation.
+An Engine reader of an existing attempt that lacks that complete profile SHALL
+return `unsupported_current_contract` before reconstructing an output contract,
+normalizing a result role, or evaluating candidate content. It SHALL not apply
+v3 supplementary behavior to v1/v2 bytes, use filenames or current defaults to
+infer missing markers, or alter the immutable historical envelope/result.
 
-An accepted claim's `source_ref` SHALL be valid when it is either:
+#### Scenario: Current generated contract is closed
 
-1. declared in the current result's `output_files[]`; or
-2. declared by a hash-valid previously submitted work-unit row whose canonical topic UID, wave and kind equal the current attempt, and whose exact output role is listed in the current kind contract's `source_claims.prior_submitted_output_roles[]`.
+- **WHEN** the Engine generates a task and result schema for a new work unit
+- **THEN** they SHALL project only its matching current v3 assignment,
+  submission-v1 and actor-v1 bindings
+- **AND** the actor SHALL receive no legacy contract or compatibility selector
 
-The validator SHALL resolve prior submitted outputs through one in-memory submitted-output index derived from the existing hash-valid bundle ledger row, its bound work-unit index/manifest/queue-item topic payload, and the canonical topic resolver. The Engine SHALL expose the current-or-prior authorization conclusion through one pure source-ref resolver. Dry-submit, formal submit, Wave1 reviewed submitted-backing/depth review, and any later consumer that permits or rejects an accepted source claim SHALL consume that conclusion rather than recreate a current-output-only predicate. The resolver SHALL return the relevant safe/current/prior/ambiguous/invalid authority outcome without persisting a new authority. It SHALL NOT infer Topic identity from output filename or queue-id text. It SHALL NOT accept filesystem presence alone, an unresolved/ambiguous topic binding, a different topic's output, a different wave/kind, an output role absent from `prior_submitted_output_roles[]`, an unsubmitted/invalid row, or free-text path similarity. Current-attempt cache/degraded refs SHALL still be declared and validated through the current result unless the active contract explicitly allows a prior submitted cache ref.
+#### Scenario: Old assignment cannot be reconstructed as current
 
-Generated task/checklist guidance SHALL expose both legal source-ref forms and the exact current/prior submitted paths available for the claimed topic where bounded. It SHALL not instruct supplementary work to redeclare or overwrite an existing evidence file merely to satisfy a single-attempt assumption.
-
-Submit/dry-submit diagnostics for a source-ref failure SHALL return a stable code, the candidate `source_ref`, whether it was searched in current outputs and prior submitted outputs, any conflicting declaring `work_id`/topic, and contract-lineage repair coordinates: `repair_kind: agent_action`, `missing_fact`, `write_to` naming the exact `result.json#/source_claims/<index>/source_ref`, and `rerun` naming the same dry-submit command. When the prior path is valid, submit SHALL accept it without requiring duplicate `output_files[]` declaration. A downstream review consumer SHALL preserve the same authorization decision while continuing to validate the reviewed row's own accepted URL and current cache/degraded bindings.
-
-For a current-version claim, `assignment_contract_version` SHALL be the top-level Engine-owned literal `work-unit.assignment.v3` on index, manifest and beacon, while the assigned output contract SHALL be one strict Zod-validated object containing `required_outputs[]` in addition to existing result/cache/source-claim rules. Each required output SHALL contain one concrete bundle-relative path, one canonical role, and one closed direct_contract identity. Cross-field validation SHALL reject unknown IDs, duplicate normalized paths, conflicting roles, unsafe or pattern paths, kind-incompatible direct contracts, and any queue/payload direct selector before generation. Existing strictly valid non-selector kind customization MAY remain as the base contract and SHALL be reconstructed from the hash-bound queue snapshot. Marked v1/v2 attempts SHALL retain their recorded version-selected output-contract interpretation rather than acquire v3 supplementary behavior.
-
-Manifest and beacon SHALL carry the same top-level marker and validated output contract. Generated task/checklist SHALL show the marker plus each required path, absolute path, role and contract ID. For every current required output, generated `result.schema.json` SHALL add an `output_files` `contains` constraint with the exact path and canonical role and `minContains: 1`, `maxContains: 1`; it SHALL also constrain any item declaring that required path to the canonical role. Thus omission, duplication, or `other`/wrong-role declaration for a required path SHALL not be advertised as schema-valid. Optional contract-authorized outputs MAY still be declared under the existing item schema. The `output_files` schema default and generated Result JSON Starter SHALL contain each exact required path/role pair once for a current non-empty contract, so structural projection tests and the candidate-result Zod shape accept those declarations before the actor adds submit-required receipt/cache/source facts; an empty required_outputs contract SHALL default/start with `[]`. The starter SHALL NOT be described as submit-ready until those actor-owned facts pass dry-submit. The schema MAY carry non-fillable annotations for assignment context, but SHALL NOT add assignment_contract_version or direct_contract as actor result properties. Formal dry-submit/submit SHALL remain the authoritative normalized-path exact-set validator and SHALL reject duplicate/conflicting declarations even if a consumer ignores unsupported JSON Schema keywords. The projection SHALL not expose a contract selector to the actor.
-
-A v3 supplementary Wave1 contract with snapshot-bound `payload.assignment_mode: supplementary` and empty required_outputs SHALL continue to expose eligible prior submitted evidence_summary lineage and SHALL not require current declarations for the paired artifacts. Empty required_outputs alone SHALL NOT select supplementary behavior. Wave2 targeted evidence remains on its existing result/cache/source contract with no v3 direct content blocker when required_outputs is empty.
-
-Generated guidance SHALL require the actor to author and verify assigned outputs before work_done and SHALL tell the Phase Agent to run dry-submit after return. V1 SHALL not require native actors to execute the Engine CLI. Guidance SHALL consume the Engine-derived recommended_action rather than infer from prose: repair_same_candidate changes only an unambiguous envelope-derived candidate declaration or required path/role after the assigned target passes; return_to_actor preserves pre-work_done actor ownership for receipt/source/cache/output meaning; fail_and_replace preserves assignment mode/receipts after work_done; inspect_contract stays at the Engine-owned surface. It SHALL not direct Phase Agent receipt/source/cache fabrication, semantic authorship, weakened supplementary work, abandon as a competing normal route, or a user-operated pipeline.
+- **WHEN** dry-submit or submit reads an attempt marked assignment v1/v2 or
+  lacking a required current discriminator
+- **THEN** it SHALL return `unsupported_current_contract` before output-contract
+  reconstruction or result-role normalization
+- **AND** it SHALL neither infer v3 supplementary semantics nor mutate the old
+  result, task, manifest, beacon, or ledger bytes
 
 #### Scenario: Current output remains a valid source ref
 
@@ -319,7 +331,6 @@ Generated guidance SHALL require the actor to author and verify assigned outputs
 - **WHEN** Phase Agent dry-submit observes repair_scope semantic_content after work_done
 - **THEN** recommended_action SHALL be fail_and_replace and generated/shared guidance SHALL direct fail plus a same-obligation replacement under a fresh queue ID and new work ID
 - **AND** it SHALL not tell the Phase Agent or user to fill missing research meaning under the original actor provenance
-
 ### Requirement: Sub-agent fetch guidance SHALL distinguish per-URL fallback, multi-URL batching, and JS/Node-first fetch tiers
 
 Wave0, Wave1 and external-evidence Wave2 Sub-agent role guidance SHALL describe page fetching through one canonical shared Agent-facing guidance surface, delivered to registered work-unit actors through Engine-derived ephemeral role/shared guidance refs. The shared fetch file SHALL be an explicit direct role dependency with closed identity `id: shared-page-fetch-guidance`, `shared_scope: subagent-fetch`, `authority: guidance-only` and `actor_delivery: required`; unrelated direct dependencies SHALL not be projected. It SHALL not be a workflow-manifest always-loaded shared node or persisted work-unit field. Role files SHALL retain role-specific search goals and evidence/cache obligations but SHALL NOT restate an independent fallback chain. Active auxiliary claim-verifier/source-diagnostic role docs MAY reference the same shared owner without becoming registered kind roles.

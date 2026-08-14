@@ -11,7 +11,6 @@ import {
   enqueue,
   loadQueue,
   makeItem,
-  queueItemSnapshotHash,
   saveQueue,
 } from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import {
@@ -34,6 +33,7 @@ import {
 import {
   readSubmittedWorkUnitDeclarations,
 } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-readers.mjs';
+import { timeoutPreflightWorkUnit } from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-timeout-preflight.mjs';
 
 function tempBundle() {
   return mkdtempSync(path.join(os.tmpdir(), 'wu-submit-'));
@@ -214,7 +214,7 @@ function claimOneWave0(dir, queueItemId = 'queue-a') {
   return loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
 }
 
-function downgradeAssignmentToLegacy(dir, record, { stripTopicBinding = false } = {}) {
+function retireCurrentProfile(dir, record, shape) {
   const index = loadWorkUnitIndex(dir);
   const nextRecord = index.work_units[record.work_id];
   const manifestPath = path.join(dir, nextRecord.paths.manifest_ref);
@@ -222,55 +222,22 @@ function downgradeAssignmentToLegacy(dir, record, { stripTopicBinding = false } 
   const manifest = readResult(manifestPath);
   const beacon = readResult(beaconPath);
 
-  delete nextRecord.assignment_contract_version;
-  delete nextRecord.submission_contract_version;
-  delete manifest.assignment_contract_version;
-  delete manifest.submission_contract_version;
-  delete manifest.output_contract.required_outputs;
-  delete beacon.assignment_contract_version;
-  delete beacon.submission_contract_version;
-  delete beacon.output_contract.required_outputs;
-
-  if (nextRecord.wave === 0 && nextRecord.kind === 'wave0_source_intake') {
-    const legacyOutputFiles = {
-      required: true,
-      allowed_roles: ['reference', 'source_yaml', 'other'],
-      reference_requires_source_url: true,
-    };
-    manifest.output_contract.output_files = legacyOutputFiles;
-    beacon.output_contract.output_files = legacyOutputFiles;
+  const surfaces = [nextRecord, manifest, beacon];
+  if (shape === 'assignment-v1' || shape === 'assignment-v2') {
+    const version = shape === 'assignment-v1'
+      ? 'work-unit.assignment.v1'
+      : 'work-unit.assignment.v2';
+    for (const surface of surfaces) surface.assignment_contract_version = version;
+  } else if (shape === 'markerless-submission') {
+    for (const surface of surfaces) delete surface.submission_contract_version;
+  } else if (shape === 'actor-unrecorded') {
+    for (const surface of surfaces) {
+      delete surface.actor_contract_version;
+      delete surface.actor_execution;
+    }
+  } else {
+    throw new Error(`unknown retired profile fixture: ${shape}`);
   }
-
-  if (stripTopicBinding) {
-    delete manifest.queue_item.payload.topic_uid;
-    delete manifest.queue_item.payload.topic_slug;
-    const snapshotHash = queueItemSnapshotHash(manifest.queue_item);
-    nextRecord.queue_item_snapshot_hash = snapshotHash;
-    manifest.queue_item_snapshot_hash = snapshotHash;
-    const queue = loadQueue(dir);
-    queue.delegated_in_flight[nextRecord.queue_item_id].queue_item_snapshot_hash = snapshotHash;
-    saveQueue(dir, queue);
-  }
-
-  saveWorkUnitIndex(dir, index);
-  writeResult(manifestPath, manifest);
-  writeResult(beaconPath, beacon);
-  return loadWorkUnitIndex(dir).work_units[record.work_id];
-}
-
-function downgradeAssignmentToV2(dir, record) {
-  const index = loadWorkUnitIndex(dir);
-  const nextRecord = index.work_units[record.work_id];
-  const manifestPath = path.join(dir, nextRecord.paths.manifest_ref);
-  const beaconPath = path.join(dir, nextRecord.paths.beacon_ref);
-  const manifest = readResult(manifestPath);
-  const beacon = readResult(beaconPath);
-
-  nextRecord.assignment_contract_version = 'work-unit.assignment.v2';
-  manifest.assignment_contract_version = 'work-unit.assignment.v2';
-  beacon.assignment_contract_version = 'work-unit.assignment.v2';
-  manifest.output_contract.output_files.required = true;
-  beacon.output_contract.output_files.required = true;
 
   saveWorkUnitIndex(dir, index);
   writeResult(manifestPath, manifest);
@@ -771,7 +738,7 @@ describe('submitWorkUnit', () => {
     }
   });
 
-  it('rejects current Wave1 required roles exactly while retaining marker-absent legacy normalization', () => {
+  it('rejects invalid current Wave1 required roles without a legacy normalizer', () => {
     const currentDir = tempBundle();
     try {
       writeCanonicalPlan(currentDir);
@@ -898,24 +865,22 @@ describe('submitWorkUnit', () => {
     }
   });
 
-  it('recovers an exact legacy no-contribution declaration without reading changed source bytes', () => {
+  it('rejects an old assignment before submit or declaration recovery can mutate authority', () => {
     const dir = tempBundle();
     try {
-      const record = downgradeAssignmentToLegacy(dir, claimOneWave0(dir));
+      const record = retireCurrentProfile(dir, claimOneWave0(dir), 'assignment-v1');
       const resultPath = writeValidSubmitFiles(dir, record);
-      const sourcePath = path.join(dir, 'artifacts/wave0/topic-a/source.yaml');
-      mkdirSync(path.dirname(sourcePath), { recursive: true });
-      writeFileSync(sourcePath, VALID_CURRENT_SOURCE_YAML);
-      assert.equal(submitWorkUnit(dir, { work_id: record.work_id, resultPath }).ok, true);
-      const [originalRow] = readWorkUnitLedgerRows(dir);
-      assert.equal(Object.hasOwn(originalRow, 'source_contribution'), false);
-
-      writeFileSync(sourcePath, 'changed: legacy source bytes\n');
-      rmSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER));
+      const before = authoritySnapshot(dir, record);
+      const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(dry.ok, false);
+      assert.deepEqual(dry.violations.map((violation) => violation.code), ['unsupported_current_contract']);
+      const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, false);
+      assert.equal(submitted.reason_code, 'unsupported_current_contract');
       const recovered = recoverWorkUnitDeclaration(dir, { work_id: record.work_id });
-      assert.equal(recovered.ok, true);
-      assert.equal(recovered.changed, true);
-      assert.deepEqual(readWorkUnitLedgerRows(dir), [originalRow]);
+      assert.equal(recovered.ok, false);
+      assert.equal(recovered.reason_code, 'unsupported_current_contract');
+      assertSnapshotEqual(authoritySnapshot(dir, record), before);
     } finally {
       cleanup(dir);
     }
@@ -2098,7 +2063,7 @@ describe('submitWorkUnit', () => {
     }
   });
 
-  it('retains a claimed v2 supplementary output declaration requirement', () => {
+  it('rejects a v2 supplementary attempt before output declaration interpretation', () => {
     const dir = tempBundle();
     try {
       writeCanonicalPlan(dir);
@@ -2108,15 +2073,17 @@ describe('submitWorkUnit', () => {
       })]);
       claimWorkUnits(dir, { phase: 'wave1', count: 1 });
       const currentRecord = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
-      const record = downgradeAssignmentToV2(dir, currentRecord);
+      const record = retireCurrentProfile(dir, currentRecord, 'assignment-v2');
       const resultPath = writeSupplementaryWave1SubmitFiles(dir, record, { includeAcceptedSourceClaim: false });
+      const before = authoritySnapshot(dir, record);
 
       const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
       assert.equal(dry.ok, false);
-      assert.ok(dry.violations.some((violation) => (
-        violation.phase === 'output_files' && /output_files\[\] is required/.test(violation.message)
-      )));
-      assert.equal(dry.violations.some((violation) => /manifest assignment output_contract drift/.test(violation.message)), false);
+      assert.deepEqual(dry.violations.map((violation) => violation.code), ['unsupported_current_contract']);
+      const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, false);
+      assert.equal(submitted.reason_code, 'unsupported_current_contract');
+      assertSnapshotEqual(authoritySnapshot(dir, record), before);
     } finally {
       cleanup(dir);
     }
@@ -2199,9 +2166,7 @@ describe('submitWorkUnit', () => {
     const cases = [
       { label: 'filesystem-only', prior: null, currentTopic: 'topic-a', expected: /current outputs.*prior submitted outputs/i },
       { label: 'cross-topic', prior: { wave: 1, topic: 'topic-b', role: 'evidence_summary' }, currentTopic: 'topic-a', expected: /topic/i },
-      { label: 'wrong-role', prior: { wave: 1, topic: 'topic-a', role: 'question_list' }, currentTopic: 'topic-a', expected: /role|evidence_summary/i },
       { label: 'wrong-wave-kind', prior: { wave: 2, topic: 'topic-a', role: 'evidence_summary' }, currentTopic: 'topic-a', expected: /wave|kind/i },
-      { label: 'path-derived-topic', prior: { wave: 1, topic: null, role: 'evidence_summary' }, currentTopic: 'topic-a', expected: /binding|topic/i },
     ];
 
     for (const testCase of cases) {
@@ -2215,15 +2180,11 @@ describe('submitWorkUnit', () => {
         if (testCase.prior?.wave === 1) {
           saveSeedQueue(dir, [delegatedWave1('wave1-prior', testCase.prior.topic || 'topic-a')]);
           claimWorkUnits(dir, { phase: 'wave1', count: 1 });
-          let prior = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
-          if (!testCase.prior.topic || testCase.prior.role !== 'evidence_summary') {
-            prior = downgradeAssignmentToLegacy(dir, prior, { stripTopicBinding: !testCase.prior.topic });
-          }
-          const priorResultPath = writeValidWave1SubmitFiles(dir, prior, { topicSlug: testCase.prior.topic || 'topic-a' });
+          const prior = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
+          const priorResultPath = writeValidWave1SubmitFiles(dir, prior, { topicSlug: testCase.prior.topic });
           const priorResult = readResult(priorResultPath);
           const evidence = priorResult.output_files.find((entry) => entry.role === 'evidence_summary');
           evidence.path = sourceRef;
-          evidence.role = testCase.prior.role;
           writeResult(priorResultPath, priorResult);
           assert.equal(submitWorkUnit(dir, { work_id: prior.work_id, resultPath: priorResultPath }).ok, true, testCase.label);
         } else if (testCase.prior?.wave === 2) {
@@ -2265,13 +2226,13 @@ describe('submitWorkUnit', () => {
     }
   });
 
-  it('normalizes Wave1 required output roles before ledger append while preserving extra other outputs', () => {
+  it('rejects a markerless Wave1 record before legacy role normalization', () => {
     const dir = tempBundle();
     try {
       saveSeedQueue(dir, [delegatedWave1('wave1-topic-a')]);
       claimWorkUnits(dir, { phase: 'wave1', count: 1 });
       let record = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
-      record = downgradeAssignmentToLegacy(dir, record);
+      record = retireCurrentProfile(dir, record, 'markerless-submission');
       const resultPath = writeValidWave1SubmitFiles(dir, record);
       const extraPath = 'artifacts/wave1/topic-a/notes.md';
       mkdirSync(path.dirname(path.join(dir, extraPath)), { recursive: true });
@@ -2287,22 +2248,11 @@ describe('submitWorkUnit', () => {
       result.output_files.push({ path: extraPath, role: 'other' });
       writeResult(resultPath, result);
 
+      const before = authoritySnapshot(dir, record);
       const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
-      assert.equal(submitted.ok, true);
-      const roleNormalizations = submitted.normalizations.filter((item) => item.kind === 'wave1_required_output_role_normalized');
-      assert.equal(roleNormalizations.length, 2);
-      assert.deepEqual(roleNormalizations.map((item) => item.to).sort(), ['evidence_summary', 'question_list']);
-      assert.ok(roleNormalizations.every((item) => item.from === 'other' && item.surface_ref.startsWith('artifacts/wave1/topic-a/')));
-
-      const [row] = ledgerRows(dir);
-      assert.deepEqual(row.output_files.map((entry) => entry.role), ['reference', 'evidence_summary', 'question_list', 'other']);
-      assert.deepEqual(assignedResult(dir, record).output_files.map((entry) => entry.role), ['reference', 'evidence_summary', 'question_list', 'other']);
-
-      const duplicate = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
-      assert.equal(duplicate.ok, true);
-      assert.equal(duplicate.duplicate, true);
-      assert.equal(duplicate.result_hash, submitted.result_hash);
-      assert.equal(ledgerRows(dir).length, 1);
+      assert.equal(submitted.ok, false);
+      assert.equal(submitted.reason_code, 'unsupported_current_contract');
+      assertSnapshotEqual(authoritySnapshot(dir, record), before);
     } finally {
       cleanup(dir);
     }
@@ -2599,191 +2549,65 @@ describe('submitWorkUnit', () => {
     }
   });
 
-  it('recovers hash-identical normal and late declarations without rebinding submitted authority', () => {
+  it('rejects markerless normal and late attempts before recovery authority', () => {
     for (const late of [false, true]) {
       const dir = tempBundle();
       try {
-        const record = downgradeAssignmentToLegacy(dir, claimOneWave0(dir));
+        const record = retireCurrentProfile(dir, claimOneWave0(dir), 'markerless-submission');
         const resultPath = writeValidSubmitFiles(dir, record);
+        const before = authoritySnapshot(dir, record);
         const submitted = late
-          ? (forceTimeout(dir, record), lateSubmitWorkUnit(dir, {
+          ? lateSubmitWorkUnit(dir, {
             work_id: record.work_id,
             resultPath,
-            reason: 'late declaration recovery context',
-          }))
+            reason: 'retired submission profile',
+          })
           : submitWorkUnit(dir, { work_id: record.work_id, resultPath });
-        assert.equal(submitted.ok, true);
-
-        const [originalRow] = readWorkUnitLedgerRows(dir);
-        assert.equal(Object.hasOwn(originalRow, 'source_contribution'), false);
-        const indexBefore = readFileSync(workUnitIndexPath(dir));
-        const statusBefore = readFileSync(path.join(dir, record.paths.status_ref));
-        const queueBefore = readFileSync(path.join(dir, 'rb_queue.json'));
-        rmSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER));
-
+        assert.equal(submitted.ok, false);
+        assert.equal(submitted.reason_code, 'unsupported_current_contract');
         const recovered = recoverWorkUnitDeclaration(dir, { work_id: record.work_id });
-        assert.equal(recovered.ok, true);
-        assert.equal(recovered.recovered, true);
-        assert.equal(recovered.changed, true);
-        assert.equal(recovered.ledger_record_hash, submitted.ledger_record_hash);
-        assert.deepEqual(readWorkUnitLedgerRows(dir), [originalRow]);
-        assert.deepEqual(readFileSync(workUnitIndexPath(dir)), indexBefore);
-        assert.deepEqual(readFileSync(path.join(dir, record.paths.status_ref)), statusBefore);
-        assert.deepEqual(readFileSync(path.join(dir, 'rb_queue.json')), queueBefore);
-        const trace = readFileSync(path.join(dir, 'rb_trace.jsonl'), 'utf-8');
-        assert.match(trace, /work_unit_declaration_recovered/);
-        const runLog = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
-        assert.match(runLog, /work_unit_declaration_recovered/);
-        const recoveryTransactions = readdirSync(transactionDir(dir))
-          .map((name) => JSON.parse(readFileSync(path.join(transactionDir(dir), name), 'utf-8')))
-          .filter((tx) => tx.operation === 'recover_work_unit_declaration');
-        assert.equal(recoveryTransactions.length, 1);
-        assert.equal(recoveryTransactions[0].status, 'committed');
-        assert.equal(Object.hasOwn(originalRow, 'recovery'), false);
-        assert.equal(Object.hasOwn(originalRow, 'recovered_at'), false);
-
-        const unchanged = recoverWorkUnitDeclaration(dir, { work_id: record.work_id });
-        assert.equal(unchanged.ok, true);
-        assert.equal(unchanged.recovered, true);
-        assert.equal(unchanged.changed, false);
-        assert.equal(unchanged.idempotent, true);
-        assert.deepEqual(readWorkUnitLedgerRows(dir), [originalRow]);
+        assert.equal(recovered.ok, false);
+        assert.equal(recovered.reason_code, 'unsupported_current_contract');
+        assertSnapshotEqual(authoritySnapshot(dir, record), before);
       } finally {
         cleanup(dir);
       }
     }
   });
 
-  it('recovers legacy timestamp/context rows only from unique original submit evidence', () => {
-    const normalDir = tempBundle();
-    const lateDir = tempBundle();
+  it('rejects an unrecorded actor before timeout or recovery interpretation', () => {
+    const dir = tempBundle();
     try {
-      const normalRecord = downgradeAssignmentToLegacy(normalDir, claimOneWave0(normalDir));
-      const normalResultPath = writeValidSubmitFiles(normalDir, normalRecord);
-      const normalSubmitted = submitWorkUnit(normalDir, { work_id: normalRecord.work_id, resultPath: normalResultPath });
-      assert.equal(normalSubmitted.ok, true);
-      const [normalRow] = readWorkUnitLedgerRows(normalDir);
-      const statusPath = path.join(normalDir, normalRecord.paths.status_ref);
-      const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
-      status.updated_at = new Date(Date.parse(status.updated_at) + 1000).toISOString();
-      writeFileSync(statusPath, `${JSON.stringify(status, null, 2)}\n`);
-      const queuePath = path.join(normalDir, 'rb_queue.json');
-      const queue = JSON.parse(readFileSync(queuePath, 'utf-8'));
-      queue.terminal_history[0].completed_at = new Date(Date.parse(queue.terminal_history[0].completed_at) + 2000).toISOString();
-      writeFileSync(queuePath, `${JSON.stringify(queue, null, 2)}\n`);
-      rmSync(path.join(normalDir, WORK_UNIT_OUTPUT_LEDGER));
-
-      const normalRecovered = recoverWorkUnitDeclaration(normalDir, { work_id: normalRecord.work_id });
-      assert.equal(normalRecovered.ok, true);
-      assert.equal(normalRecovered.legacy_reconstruction, true);
-      assert.deepEqual(readWorkUnitLedgerRows(normalDir), [normalRow]);
-
-      const lateRecord = downgradeAssignmentToLegacy(lateDir, claimOneWave0(lateDir));
-      const lateResultPath = writeValidSubmitFiles(lateDir, lateRecord);
-      forceTimeout(lateDir, lateRecord);
-      const lateSubmitted = lateSubmitWorkUnit(lateDir, {
-        work_id: lateRecord.work_id,
-        resultPath: lateResultPath,
-        reason: 'legacy late context from original trace',
-      });
-      assert.equal(lateSubmitted.ok, true);
-      const [lateRow] = readWorkUnitLedgerRows(lateDir);
-      const lateIndex = loadWorkUnitIndex(lateDir);
-      delete lateIndex.work_units[lateRecord.work_id].late_accept_context;
-      writeFileSync(workUnitIndexPath(lateDir), `${JSON.stringify(lateIndex, null, 2)}\n`);
-      rmSync(path.join(lateDir, WORK_UNIT_OUTPUT_LEDGER));
-
-      const lateRecovered = recoverWorkUnitDeclaration(lateDir, { work_id: lateRecord.work_id });
-      assert.equal(lateRecovered.ok, true);
-      assert.equal(lateRecovered.reconstruction_source, 'legacy_late_submit_evidence');
-      assert.deepEqual(readWorkUnitLedgerRows(lateDir), [lateRow]);
+      const current = claimOneWave0(dir);
+      const resultPath = writeValidSubmitFiles(dir, current);
+      const record = retireCurrentProfile(dir, current, 'actor-unrecorded');
+      const before = authoritySnapshot(dir, record);
+      const preflight = timeoutPreflightWorkUnit(dir, { work_id: record.work_id });
+      assert.equal(preflight.recommended_action, 'block');
+      assert.match(preflight.inspect.join('\n'), /unsupported current work-unit contract/);
+      const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, false);
+      assert.equal(submitted.reason_code, 'unsupported_current_contract');
+      const recovered = recoverWorkUnitDeclaration(dir, { work_id: record.work_id });
+      assert.equal(recovered.ok, false);
+      assert.equal(recovered.reason_code, 'unsupported_current_contract');
+      assertSnapshotEqual(authoritySnapshot(dir, record), before);
     } finally {
-      cleanup(normalDir);
-      cleanup(lateDir);
+      cleanup(dir);
     }
   });
 
-  it('blocks irreproducible, hash-drifted, and unsubmitted recovery without authority mutation', () => {
-    const missingEvidenceDir = tempBundle();
-    const hashDriftDir = tempBundle();
-    const conflictDir = tempBundle();
-    const unsubmittedDir = tempBundle();
+  it('keeps an unsubmitted complete-current attempt outside declaration recovery', () => {
+    const dir = tempBundle();
     try {
-      const missingRecord = downgradeAssignmentToLegacy(missingEvidenceDir, claimOneWave0(missingEvidenceDir));
-      const missingResult = writeValidSubmitFiles(missingEvidenceDir, missingRecord);
-      assert.equal(submitWorkUnit(missingEvidenceDir, { work_id: missingRecord.work_id, resultPath: missingResult }).ok, true);
-      rmSync(path.join(missingEvidenceDir, WORK_UNIT_OUTPUT_LEDGER));
-      rmSync(path.join(missingEvidenceDir, 'rb_trace.jsonl'));
-      rmSync(transactionDir(missingEvidenceDir), { recursive: true, force: true });
-      const missingStatusPath = path.join(missingEvidenceDir, missingRecord.paths.status_ref);
-      const missingStatus = JSON.parse(readFileSync(missingStatusPath, 'utf-8'));
-      missingStatus.updated_at = new Date(Date.parse(missingStatus.updated_at) + 1000).toISOString();
-      writeFileSync(missingStatusPath, `${JSON.stringify(missingStatus, null, 2)}\n`);
-      const missingBefore = {
-        index: readFileSync(workUnitIndexPath(missingEvidenceDir)),
-        queue: readFileSync(path.join(missingEvidenceDir, 'rb_queue.json')),
-        status: readFileSync(missingStatusPath),
-        result: readFileSync(path.join(missingEvidenceDir, missingRecord.paths.result_ref)),
-      };
-      const missing = recoverWorkUnitDeclaration(missingEvidenceDir, { work_id: missingRecord.work_id });
-      assert.equal(missing.ok, false);
-      assert.equal(missing.repair_kind, 'missing_contract');
-      assert.match(missing.missing_fact, /original submit\/transaction evidence/);
-      assert.doesNotMatch(`${missing.write_to}\n${missing.advice}`, /backup|hand-write|new attempt/i);
-      assert.equal(existsSync(path.join(missingEvidenceDir, WORK_UNIT_OUTPUT_LEDGER)), false);
-      assert.deepEqual(readFileSync(workUnitIndexPath(missingEvidenceDir)), missingBefore.index);
-      assert.deepEqual(readFileSync(path.join(missingEvidenceDir, 'rb_queue.json')), missingBefore.queue);
-      assert.deepEqual(readFileSync(missingStatusPath), missingBefore.status);
-
-      const driftRecord = downgradeAssignmentToLegacy(hashDriftDir, claimOneWave0(hashDriftDir));
-      const driftResult = writeValidSubmitFiles(hashDriftDir, driftRecord);
-      assert.equal(submitWorkUnit(hashDriftDir, { work_id: driftRecord.work_id, resultPath: driftResult }).ok, true);
-      rmSync(path.join(hashDriftDir, WORK_UNIT_OUTPUT_LEDGER));
-      const driftIndex = loadWorkUnitIndex(hashDriftDir);
-      driftIndex.work_units[driftRecord.work_id].ledger_record_hash = 'forged-recorded-hash';
-      writeFileSync(workUnitIndexPath(hashDriftDir), `${JSON.stringify(driftIndex, null, 2)}\n`);
-      const driftStatusPath = path.join(hashDriftDir, driftRecord.paths.status_ref);
-      const driftStatus = JSON.parse(readFileSync(driftStatusPath, 'utf-8'));
-      driftStatus.ledger_record_hash = 'forged-recorded-hash';
-      writeFileSync(driftStatusPath, `${JSON.stringify(driftStatus, null, 2)}\n`);
-      const driftBefore = readFileSync(workUnitIndexPath(hashDriftDir));
-      const drifted = recoverWorkUnitDeclaration(hashDriftDir, { work_id: driftRecord.work_id });
-      assert.equal(drifted.ok, false);
-      assert.equal(drifted.repair_kind, 'missing_contract');
-      assert.match(drifted.missing_fact, /no legal recovery can reproduce.*source_contribution/i);
-      assert.equal(existsSync(path.join(hashDriftDir, WORK_UNIT_OUTPUT_LEDGER)), false);
-      assert.deepEqual(readFileSync(workUnitIndexPath(hashDriftDir)), driftBefore);
-
-      const conflictRecord = downgradeAssignmentToLegacy(conflictDir, claimOneWave0(conflictDir));
-      const conflictResult = writeValidSubmitFiles(conflictDir, conflictRecord);
-      assert.equal(submitWorkUnit(conflictDir, { work_id: conflictRecord.work_id, resultPath: conflictResult }).ok, true);
-      rmSync(path.join(conflictDir, WORK_UNIT_OUTPUT_LEDGER));
-      const conflictIndex = loadWorkUnitIndex(conflictDir);
-      conflictIndex.work_units['wu-w0-b000-src-i0002'] = {
-        ...conflictIndex.work_units[conflictRecord.work_id],
-        work_id: 'wu-w0-b000-src-i0002',
-        claim_index: 2,
-        attempt_index: 2,
-      };
-      writeFileSync(workUnitIndexPath(conflictDir), `${JSON.stringify(conflictIndex, null, 2)}\n`);
-      const conflictBefore = readFileSync(workUnitIndexPath(conflictDir));
-      const conflict = recoverWorkUnitDeclaration(conflictDir, { work_id: conflictRecord.work_id });
-      assert.equal(conflict.ok, false);
-      assert.match(conflict.missing_fact, /submitted replacement conflict/);
-      assert.equal(existsSync(path.join(conflictDir, WORK_UNIT_OUTPUT_LEDGER)), false);
-      assert.deepEqual(readFileSync(workUnitIndexPath(conflictDir)), conflictBefore);
-
-      const claimed = claimOneWave0(unsubmittedDir);
-      const unsubmittedBefore = authoritySnapshot(unsubmittedDir, claimed);
-      const unsubmitted = recoverWorkUnitDeclaration(unsubmittedDir, { work_id: claimed.work_id });
-      assert.equal(unsubmitted.ok, false);
-      assert.match(unsubmitted.missing_fact, /requires an already-submitted attempt/);
-      assertSnapshotEqual(authoritySnapshot(unsubmittedDir, claimed), unsubmittedBefore);
+      const record = claimOneWave0(dir);
+      const before = authoritySnapshot(dir, record);
+      const recovered = recoverWorkUnitDeclaration(dir, { work_id: record.work_id });
+      assert.equal(recovered.ok, false);
+      assert.match(recovered.missing_fact, /requires an already-submitted attempt/);
+      assertSnapshotEqual(authoritySnapshot(dir, record), before);
     } finally {
-      cleanup(missingEvidenceDir);
-      cleanup(hashDriftDir);
-      cleanup(conflictDir);
-      cleanup(unsubmittedDir);
+      cleanup(dir);
     }
   });
 

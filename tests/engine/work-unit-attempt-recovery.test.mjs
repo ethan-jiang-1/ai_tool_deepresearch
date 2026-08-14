@@ -66,17 +66,17 @@ describe('work-unit attempt-recovery implementation inventory', () => {
     assert.doesNotMatch(helper.slice(release), /writeJson\(|writeFileSync\(|restoreMutationTargets\(/);
   });
 
-  it('keeps marked current hashes ledger-first while preserving one explicit legacy writer branch', () => {
+  it('writes submitted hashes only through the ledger-first current profile', () => {
     const submit = source('DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs');
     const writerStart = submit.indexOf('function writeSubmittedStatusAndHashes');
     const writerEnd = submit.indexOf('function verifySubmitDurablePostcondition');
     const writer = submit.slice(writerStart, writerEnd);
 
-    assert.match(writer, /isMarkedWorkUnitSubmission\(record\)/);
     assert.match(writer, /delete record\.result_hash/);
     assert.match(writer, /delete record\.ledger_record_hash/);
     assert.match(writer, /record\.accepted_ledger_record_hash = ledgerRecordHash/);
-    assert.match(writer, /WorkUnitStatusFileSchema\.parse\([\s\S]*result_hash: resultHash[\s\S]*ledger_record_hash: ledgerRecordHash/);
+    assert.match(writer, /WorkUnitSubmissionV1StatusFileSchema\.parse/);
+    assert.doesNotMatch(writer, /result_hash:\s*resultHash|ledger_record_hash:\s*ledgerRecordHash/);
   });
 
   it('keeps submit-integrity preflight out of Phase Gate evaluators', () => {

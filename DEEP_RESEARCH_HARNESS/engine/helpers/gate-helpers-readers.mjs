@@ -18,6 +18,7 @@ import {
   readSubmittedStatusFile,
   validateCurrentSubmittedLedgerFact,
 } from '../work-unit-submitted-ledger.mjs';
+import { assertCompleteCurrentWorkUnitProfile } from '../work-unit-current-profile.mjs';
 import { evaluateNormalizedSubmittedWorkUnitLedger } from '../work-unit-supersession.mjs';
 import { z } from 'zod';
 
@@ -303,6 +304,7 @@ function collectWorkUnitLedgerRowIssues(bundlePath, row, index) {
     if (ledgerRow.result_ref !== indexRecord.paths.result_ref) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: result_ref`);
     if (ledgerRow.runtime_receipt_ref !== indexRecord.paths.runtime_receipt_ref) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: runtime_receipt_ref`);
     try {
+      assertCompleteCurrentWorkUnitProfile(bundlePath, indexRecord);
       const status = readSubmittedStatusFile(bundlePath, indexRecord);
       validateCurrentSubmittedLedgerFact({ record: indexRecord, row: ledgerRow, status });
     } catch (error) {

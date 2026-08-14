@@ -563,29 +563,9 @@ describe('reference file gate helpers', () => {
     }
   });
 
-  it('preserves a submitted legacy Wave0 reference and accepts an exact Phase-owned projection', () => {
-    const legacyDir = tempWorkUnitBundle('gh-ref-wave0-legacy-');
+  it('accepts an exact current Phase-owned Wave0 projection', () => {
     const projectionDir = tempWorkUnitBundle('gh-ref-wave0-backed-');
     try {
-      const legacyUrl = 'https://example.com/research/wave0-legacy';
-      claimAndSubmitWorkUnit(legacyDir, {
-        legacyV1Assignment: true,
-        outputs: [{
-          path: 'reference/00-shared-legacy.md',
-          role: 'reference',
-          source_url: legacyUrl,
-          source_slug: 'legacy',
-          content: canonicalReferenceFrontmatter({ sourceUrl: legacyUrl, relatedTopicUid: 'all' }),
-        }],
-        cacheTrails: [{
-          path: '_cache/wave0/primary/queue-a/legacy',
-          url: legacyUrl,
-        }],
-      });
-      const legacy = classifyReferenceAuthority(legacyDir, 'reference/00-shared-legacy.md');
-      assert.equal(legacy.passed, true, legacy.reason);
-      assert.equal(legacy.authority, 'delegated_fetched_evidence');
-
       writeWave0ProjectionProfile(projectionDir);
       const sourceUrl = 'https://example.com/research/wave0-duplicate';
       const sourceYamlRef = 'artifacts/wave0/topic-a/source.yaml';
@@ -615,7 +595,6 @@ describe('reference file gate helpers', () => {
         source_ordinal: 2,
       });
     } finally {
-      cleanupWorkUnitBundle(legacyDir);
       cleanupWorkUnitBundle(projectionDir);
     }
   });
@@ -758,7 +737,7 @@ describe('cache coverage work-unit authority', () => {
     const dir = tempWorkUnitBundle('gh-cache-pass-');
     try {
       claimAndSubmitWorkUnit(dir, {
-        legacyV1Assignment: true,
+        phase: 'wave1',
         outputs: [{
           path: 'reference/topic-a-source.md',
           role: 'reference',
@@ -799,7 +778,7 @@ describe('cache coverage work-unit authority', () => {
     const dir = tempWorkUnitBundle('gh-cache-drift-');
     try {
       claimAndSubmitWorkUnit(dir, {
-        legacyV1Assignment: true,
+        phase: 'wave1',
         outputs: [{
           path: 'reference/topic-a-source.md',
           role: 'reference',
@@ -825,7 +804,7 @@ describe('cache coverage work-unit authority', () => {
     const dir = tempWorkUnitBundle('gh-cache-placeholder-');
     try {
       claimAndSubmitWorkUnit(dir, {
-        legacyV1Assignment: true,
+        phase: 'wave1',
         outputs: [{
           path: 'reference/topic-a-source.md',
           role: 'reference',
@@ -852,7 +831,7 @@ describe('cache coverage work-unit authority', () => {
     const dir = tempWorkUnitBundle('gh-cache-map-');
     try {
       claimAndSubmitWorkUnit(dir, {
-        legacyV1Assignment: true,
+        phase: 'wave1',
         outputs: [{
           path: 'reference/topic-a-source.md',
           role: 'reference',

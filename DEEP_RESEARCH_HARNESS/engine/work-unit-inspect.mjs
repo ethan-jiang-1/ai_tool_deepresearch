@@ -38,6 +38,7 @@ import {
   WorkUnitRuntimeReceiptEventSchema,
 } from '../schema/contracts/work-unit.mjs';
 import { readAndValidateBeacon } from './work-unit-validation.mjs';
+import { classifyCompleteCurrentWorkUnitProfile } from './work-unit-current-profile.mjs';
 import { loadCurrentSubmittedLedgerFact } from './work-unit-submitted-ledger.mjs';
 import { projectWorkUnitAttemptDisposition } from './work-unit-attempt-disposition.mjs';
 import { evaluateNormalizedSubmittedWorkUnitLedger } from './work-unit-supersession.mjs';
@@ -130,8 +131,8 @@ function ledgerIssues(bundleDir, index) {
     const row = fact.ledger_row;
     const record = fact.index_record;
     const workId = record.work_id;
-    const expectedActorClass = record.actor_execution?.execution_actor_class || 'legacy_unrecorded';
-    const ledgerActorClass = row.actor_execution?.execution_actor_class || 'legacy_unrecorded';
+    const expectedActorClass = record.actor_execution.execution_actor_class;
+    const ledgerActorClass = row.actor_execution?.execution_actor_class;
     if (ledgerActorClass !== expectedActorClass) issues.push(`ledger/index mismatch for ${workId}: execution_actor_class`);
 
     const resultPath = path.join(bundleDir, record.paths.result_ref);
@@ -141,7 +142,7 @@ function ledgerIssues(bundleDir, index) {
       try {
         const result = WorkUnitResultSchema.parse(readJson(resultPath));
         if (hashValue(result) !== row.result_hash) issues.push(`submitted result hash mismatch: ${workId}`);
-        if (record.actor_contract_version && result.execution_actor_class !== expectedActorClass) issues.push(`result/index mismatch for ${workId}: execution_actor_class`);
+        if (result.execution_actor_class !== expectedActorClass) issues.push(`result/index mismatch for ${workId}: execution_actor_class`);
       } catch (error) {
         issues.push(`submitted result invalid for ${workId}: ${error.message}`);
       }
@@ -216,18 +217,24 @@ export function inspectWorkUnits(bundleDir, {
     nowMs,
     lateSubmitRejections: countTraceEvents(bundleDir, 'work_unit_late_submit_rejected'),
   });
-  const actor_projection = Object.values(index.work_units).map((record) => ({
-    work_id: record.work_id,
-    queue_item_id: record.queue_item_id,
-    intended_delegated_role_key: record.actor_execution?.delegated_role_key || null,
-    execution_actor_class: record.actor_execution?.execution_actor_class || 'legacy_unrecorded',
-    actor_observation: record.actor_execution?.observation || {
-      outcome: 'unknown',
-      source: 'legacy_claim',
-      reason_code: 'legacy_actor_unrecorded',
-      recorded_at: null,
-    },
-  }));
+  const profiles = new Map(Object.values(index.work_units).map((record) => [
+    record.work_id,
+    classifyCompleteCurrentWorkUnitProfile(bundleDir, record),
+  ]));
+  for (const profile of profiles.values()) {
+    if (!profile.ok) {
+      issues.push(`unsupported current work-unit contract for ${profile.work_id || '<unknown>'}: ${profile.unsupported_discriminator}`);
+    }
+  }
+  const actor_projection = Object.values(index.work_units)
+    .filter((record) => profiles.get(record.work_id).ok)
+    .map((record) => ({
+      work_id: record.work_id,
+      queue_item_id: record.queue_item_id,
+      intended_delegated_role_key: record.actor_execution.delegated_role_key,
+      execution_actor_class: record.actor_execution.execution_actor_class,
+      actor_observation: record.actor_execution.observation,
+    }));
   const attempt_disposition = Object.values(index.work_units).map((record) => ({
     work_id: record.work_id,
     ...projectWorkUnitAttemptDisposition(bundleDir, record, { operation: 'submit_work_unit' }),
@@ -255,6 +262,7 @@ export function inspectWorkUnits(bundleDir, {
       issues.push(error.message);
     }
     indexedDirs.add(record.paths.work_unit_dir);
+    if (!profiles.get(record.work_id).ok) continue;
     if (record.status === 'claimed') {
       const existing = nonterminalByQueueItem.get(record.queue_item_id);
       if (existing) issues.push(`duplicate non-terminal queue binding for ${record.queue_item_id}: ${existing} and ${workId}`);

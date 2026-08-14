@@ -162,7 +162,6 @@ function submitAndReview(dir, { slug, topicUid, sourceUrl, queueItemId, id = '01
   const submission = claimAndSubmitWorkUnit(dir, {
     phase: 'wave1',
     queueItemId,
-    legacyAssignment: true,
     queueItemOverrides: {
       payload: { topic_uid: topicUid, topic_slug: slug, wave: 1 },
       lineage: { topic_uid: topicUid, topic_slug: slug, phase: 'wave1' },

@@ -1,9 +1,7 @@
 // @impl AGQ-013, DEW-004, DEW-009
 
 import {
-  LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
   WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,
-  WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS,
   WorkUnitOutputContractSchema,
 } from '../schema/contracts/work-unit.mjs';
 
@@ -153,12 +151,6 @@ function requiredOutputsFor({ kind, queueItem, topicBinding }) {
 
 function baseOutputContractForVersion({ assignmentContractVersion, kind, queueItem, baseOutputContract }) {
   const outputContract = clone(baseOutputContract);
-  if (assignmentContractVersion === LEGACY_WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION) {
-    // The caller supplies the bound v1 base from the manifest when validating
-    // history, so a later current default cannot narrow an immutable v1 contract.
-    return outputContract;
-  }
-
   if (kind === 'wave0_source_intake') {
     return {
       ...outputContract,
@@ -191,7 +183,7 @@ export function resolveWorkUnitAssignmentContract({
   topicBinding,
   baseOutputContract,
 } = {}) {
-  if (!WORK_UNIT_ASSIGNMENT_CONTRACT_VERSIONS.includes(assignmentContractVersion)) {
+  if (assignmentContractVersion !== WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION) {
     throw new Error(`unsupported assignment contract version ${assignmentContractVersion ?? '<missing>'}`);
   }
   if (!queueItem || typeof queueItem !== 'object') throw new Error('queueItem is required for assignment resolution');
