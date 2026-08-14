@@ -109,7 +109,7 @@ finalizer required by current operation guidance.
 
 ## Program Close Conditions
 
-- [ ] Dashboard items 01-14 are archived or explicitly closed as unnecessary with evidence.
+- [ ] Dashboard items 01-18 are archived or explicitly closed as unnecessary with evidence.
 - [ ] Coverage ledger remains complete with zero unclassified candidates.
 - [ ] Each audited artifact family exposes one current positive contract.
 - [ ] Current docs/specs/tests do not teach old input as a success path.

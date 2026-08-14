@@ -2,9 +2,9 @@
 
 > Candidate change: `retire-archived-case-ledger-helper`
 >
-> Planned execution batch: dashboard item 11 `retire-legacy-experiment-history-inputs`, conditional on C5b policy alignment
+> Planned execution batch: dashboard item 14 `retire-archived-case-ledger-helper` (standalone; C5b merge gate failed)
 >
-> Status: decision card; current-invariant versus migration-record decision pending
+> Status: governed-archived as `2026-08-14-retire-archived-case-ledger-helper`; implementation/archive commit `374d86c33`
 >
 > Risk: L2
 
@@ -30,6 +30,22 @@ The pair is `validateCaseCompatibilityLedger()` and
   migration manifest and **not** a runtime verdict authority. Current runtime
   selection is owned by the active playbook manifest and Autorun contract.
 
+## Fresh Decision Evidence (2026-08-14)
+
+- An exact current-surface scan finds the two helper symbols only at their
+  definitions and in the one dedicated ledger-baseline test. No accepted main
+  spec, active Supervisor path, manifest reader, or playbook consumes them.
+- The accepted Autorun spec names `PLAYBOOK_MANIFEST.md` as the single runnable
+  selection authority. It requires the manifest to register every active
+  runnable path exactly once, but specifies no fixed `97 / 502 / 16` corpus.
+- The archived feasibility audit calls the checked ledger a migration baseline
+  that supplied V2 roles during apply and explicitly says archived change data
+  is never runtime authority.
+- `node --test tests/host_tools/agent-experiment-autorun.test.mjs` currently
+  passes 43 / 43, including the archive-path baseline test. That proves the
+  existing test still runs; it does not establish the archived count as a
+  current product invariant.
+
 ## Candidate policy
 
 The likely cleanup is to remove the unused reader export, the archived-ledger
@@ -53,10 +69,11 @@ selection, native completion, and Supervisor behavior.
 - [x] Runtime-versus-migration authority distinction is verified in the
   archived design.
 - [x] Global Coverage Gate is closed.
-- [ ] User decides whether exact corpus cardinality is a current invariant or
-  only a completed migration record.
-- [ ] Proposal names the current owner for any invariant retained after the
-  archive-path test is removed.
+- [x] User decided the exact corpus cardinality is a completed migration
+  record, not a current invariant.
+- [x] No current invariant is retained, so no new current owner is needed.
+- [x] Create, review, apply, and governed-archive the standalone
+  `retire-archived-case-ledger-helper` change.
 
 ## Expected verification
 
@@ -66,3 +83,15 @@ node --test tests/host_tools/agent-experiment-autorun.test.mjs \
   tests/integration/host_tools/run-agent-experiment.test.mjs
 node DEEP_RESEARCH_HARNESS/cli/validate-workflow-package.mjs
 ```
+
+## Completion Record
+
+- Removed the complete archive-only helper cluster:
+  `normalizeLedgerBundlePlan()`, `validateCaseCompatibilityLedger()`, and
+  `readCaseCompatibilityLedger()`.
+- Removed only the dedicated archive-path test, its lookup helper, and imports
+  made unused by that test. Current manifest/V2/Supervisor behavior, current
+  playbooks, and the `yaml` package dependency remain unchanged.
+- Selected host-tool and Supervisor integration regression, workflow-package
+  validation, zero-reference/protected-surface review, strict OpenSpec/archive
+  governance, and the governed finalizer passed before archive.

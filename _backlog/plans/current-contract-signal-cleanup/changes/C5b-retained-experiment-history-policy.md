@@ -2,9 +2,9 @@
 
 > Candidate change: `decide-retained-experiment-history-policy`
 >
-> Planned execution batch: dashboard item 11 `retire-legacy-experiment-history-inputs`, conditional on C1f policy alignment
+> Planned execution batch: dashboard item 15 `decide-retained-experiment-history-policy` (standalone; C1f merge gate failed)
 >
-> Status: decision card; retained-history prediction/admission/selection policy pending
+> Status: standalone OpenSpec proposal complete on 2026-08-14; awaiting user `APPLY`
 >
 > Risk: L4
 
@@ -43,7 +43,7 @@ qualification behavior. It is not merely a leftover parser.
 |---|---|---|
 | A. Retain as selection input | Current behavior continues | No signal cleanup in this branch, but no selection change |
 | B. Diagnostic/prediction only | v1 may inform visibility or conservative forecasts, but never admission/qualification | New intermediate policy must be fully specified; avoids a v1-driven launch |
-| C. Human-only / ignored (recommended for strict current-only) | v1 reports remain readable but do not affect Supervisor predictions, qualification, or selection | Clean boundary; may reduce available forecasts and qualification candidates |
+| C. Human-only / ignored (selected) | v1 reports remain readable but do not affect Supervisor predictions, qualification, or selection | Clean boundary; may reduce available forecasts and qualification candidates |
 
 ## Risk and side effects
 
@@ -71,14 +71,19 @@ not claim that no real v1 records exist or make its policy depend on prevalence.
 
 - [x] v1 writer -> reader -> prediction/admission/selection fanout mapped.
 - [x] Current v1 qualification behavior confirmed in accepted spec and tests.
-- [ ] User selects A, B, or C.
-- [ ] If useful, user authorizes inspection of a concrete retained-history path; absence of this evidence does not postpone defining the policy.
-- [ ] Proposal specifies exact selection, prediction, diagnostics, and no-launch behavior for the selected option.
+- [x] User selected C: retained v1 history is human-readable/diagnostic-only and is not current Supervisor input.
+- [x] Concrete retained-history inspection is not required: the policy must not depend on prevalence, and `.exp-bundles/` remains out of scope.
+- [x] `decide-retained-experiment-history-policy` specifies exact selection, prediction, diagnostics, current-v2-only qualification, and no-launch behavior; its strict OpenSpec, requirement/project-spec, capability taxonomy/discovery, verification-routing, and semantic-closure plan checks pass.
 
 ## Expected verification
 
 ```bash
-node --test tests/integration/host_tools/run-agent-experiment.test.mjs
+node --test tests/host_tools/experiment-run-strategy.test.mjs \
+  tests/integration/host_tools/run-agent-experiment.test.mjs \
+  tests/integration/md/agent-experiment-autorun-terminology.test.mjs
 node openspec/governance/check-project-specs.mjs
-node DEEP_RESEARCH_HARNESS/cli/validate-workflow-package.mjs
+node openspec/governance/check-verification-routing.mjs \
+  --change decide-retained-experiment-history-policy --mode assets
+node openspec/governance/check-semantic-closure.mjs \
+  --change decide-retained-experiment-history-policy --mode assets
 ```

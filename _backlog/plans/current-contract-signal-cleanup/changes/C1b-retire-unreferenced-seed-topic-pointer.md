@@ -2,9 +2,9 @@
 
 > Candidate change: `retire-unreferenced-seed-topic-pointer`
 >
-> Planned execution batch: dashboard item 10 `retire-inactive-contract-surfaces`
+> Planned execution batch: dashboard item 12 `retire-unreferenced-seed-topic-pointer`
 >
-> Status: decision card; fresh zero-caller scan pending before the grouped proposal
+> Status: governed-archived on 2026-08-14 as `2026-08-14-retire-unreferenced-seed-topic-pointer`; implementation/archive commit `530a25cff`
 >
 > Risk: L1
 
@@ -45,8 +45,8 @@ guidance: `templates/seed-topic-template.md` and
 - [x] Explicit manifest/dependency/dynamic-discovery evidence is absent.
 - [x] Current template and command-playbook owners are named.
 - [x] Global Coverage Gate is complete.
-- [ ] A fresh repository-wide reference check remains zero immediately before proposal.
-- [ ] Proposal keeps the work to this file plus directly necessary routing/spec/test cleanup only.
+- [x] A fresh repository-wide reference check remains zero immediately before proposal: exact pointer file/id/scope references are absent outside the pointer itself and historical planning/archive records; manifest and every phase `requires` / `suggested_context` omit it; `validate-workflow-package.mjs` passes.
+- [x] Proposal keeps the work to this file plus directly necessary verification only: it deletes the pointer, protects the current manifest/dependency/template/playbook/return-map surfaces, and records `skip_specs: true` because no accepted behavior changes.
 
 ## Expected Verification
 
@@ -55,3 +55,14 @@ node DEEP_RESEARCH_HARNESS/cli/validate-workflow-package.mjs
 node openspec/governance/check-project-specs.mjs
 node openspec/governance/check-project-reqs.mjs --mode plan
 ```
+
+## Completed Result
+
+- [x] Repeated the exact current-surface scan immediately before deletion: no
+  caller remained, and manifest/phase dependency closure did not name the
+  pointer.
+- [x] Deleted only `shared-seed-topic-authoring.md`; the current return-map,
+  template, playbook, Engine, Gate, and bundle surfaces remained unchanged.
+- [x] `validate-workflow-package.mjs`, strict OpenSpec validation, archive
+  governance, and governed finalization passed. The archived change is
+  [`2026-08-14-retire-unreferenced-seed-topic-pointer`](../../../../openspec/changes/archive/2026-08-14-retire-unreferenced-seed-topic-pointer/).
