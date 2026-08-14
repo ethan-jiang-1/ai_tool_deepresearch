@@ -149,21 +149,21 @@ The Autorun Supervisor MAY aggregate these facts, but its report is a projection
 
 Every newly written Autorun per-case audit event and retained batch report SHALL include a versioned execution-surface identity and the selection observation that caused the case to be selected. The identity SHALL bind the current selected source playbook, injected instruction, manifest entry, and the named framework/host helper bytes that participate in preparation, launch, completion validation, health, audit, and report production. The selection observation SHALL identify exact selector or run profile, prediction basis, and selection reason without inventing a result.
 
-For this change, the existing outer `agent-experiment-batch-report/v2` and v2 audit-event contracts remain the durable result envelopes. Newly written selection observations SHALL use a versioned v2 form that records `regression_intent` as `normal` or `qualification` only when `profile` is `regression`, and as null otherwise. Readers SHALL continue to accept v1 selection observations and all retained v1/v2 report envelopes; a historical v1 report remains a historical observation with unknown execution-surface relation, not a regression membership claim.
+The outer `agent-experiment-batch-report/v2` and v2 audit-event contracts are the sole retained envelopes that may establish current Supervisor observation facts. Their selection observations SHALL use the v2 form, recording `regression_intent` as `normal` or `qualification` only when `profile` is `regression`, and as null otherwise. A retained v1 report, v1 audit event, or v2 envelope carrying a v1 selection observation SHALL remain readable historical material but SHALL NOT establish current observation, prediction, admission, qualification, group-gap, or selection facts. Readers SHALL report such old or malformed records as non-fatal diagnostics and SHALL NOT let them block dry-run or launch.
 
 Outcome, lifecycle, Agent process, health, cleanup, duration, and cost SHALL remain orthogonal report facts. In particular, a regression selection observation or later admission comparison SHALL NOT turn PASS plus ISSUES into FAIL, turn FAIL into diagnostic-only success, suppress a native/lifecycle result, or itself authorize cleanup.
 
 #### Scenario: Qualification intent remains auditable without becoming an outcome
 
-- **WHEN** an explicitly qualified regression case writes a v2 audit event or retained report
-- **THEN** its selection observation identifies `profile: regression` and `regression_intent: qualification`
+- **WHEN** an explicitly qualified current-v2 regression case writes a v2 audit event or retained report
+- **THEN** its v2 selection observation identifies `profile: regression` and `regression_intent: qualification`
 - **AND** native outcome, health, duration, and cost remain separate runtime facts
 
 #### Scenario: Earlier selection observations remain readable
 
-- **WHEN** a retained v2 report carries the pre-existing v1 selection observation form
-- **THEN** the reader accepts it as a valid retained observation
-- **AND** it does not manufacture regression intent for that historical result
+- **WHEN** a retained record is a v1 envelope or a retained v2 report carries the pre-existing v1 selection observation form
+- **THEN** the reader records a non-fatal diagnostic without accepting it as a current retained observation
+- **AND** it does not manufacture regression intent, prediction, admission, qualification, or launch selection from that historical result
 
 #### Scenario: A regression health breach remains an observation, not a rewritten verdict
 
