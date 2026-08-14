@@ -87,13 +87,16 @@ describe('REF-007 parser-aligned Agent guidance', () => {
     assert.doesNotMatch(`${phase}\n${template}\n${extractor}`, /at least five key facts|at least 5 concrete bullet facts|顺序固定|大小写敏感/i);
   });
 
-  it('reference guidance exposes one UID-or-legacy topic binding contract', () => {
+  it('current reference guidance exposes UID cardinality forms and confines legacy binding to readers', () => {
     const template = readNode('shared/shared-reference-template.md');
     const extractor = readNode('phases/subagent-dpt-evidence-extractor.md');
     const combined = `${template}\n${extractor}`;
 
     assert.match(combined, /related_topic_uid/);
-    assert.match(combined, /related_topic/);
-    assert.match(combined, /both are present, they must resolve identically|两种形式同时出现时必须解析一致/i);
+    assert.match(combined, /related_topic_uids/);
+    assert.match(combined, /related_topic_uid:\s*all/);
+    assert.match(combined, /legacy.*reader|historical.*reader|reader.*historical/i);
+    assert.doesNotMatch(template, /related_topic:\s*all/);
+    assert.doesNotMatch(extractor, /related_topic:\s*"\{topic\.slug\}"/);
   });
 });

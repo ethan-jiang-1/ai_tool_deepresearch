@@ -50,7 +50,7 @@ New files begin with one `---`-delimited YAML mapping, before the Markdown title
 
 This opening mapping is the canonical writer contract. `readReferenceMetadata()` supplies its semantic values to format, URL, index, count, and backing consumers. Existing legacy `- key: value` lines before the first semantic section remain read-compatible only; do not choose that retired presentation for a new file. Do not use a `sources:` wrapper or a non-mapping YAML root. If inspect reports `reference_metadata_frontmatter_invalid`, repair the opening mapping itself; if a valid mapping is missing one required key, repair that named key and rerun the same checkpoint.
 
-**必填 contract facts**（inspect CLI 会检查这些 key 是否存在且非空）：八个 common metadata fields，加一个可解析的 Topic binding。Topic binding 可以使用 exact registered `related_topic_uid`（或 `all`），也可以兼容使用 `related_topic` 的 exact current/previous id、slug、逗号列表（或 `all`）。两种形式同时出现时必须解析一致。
+**必填 contract facts**（inspect CLI 会检查这些 key 是否存在且非空）：八个 common metadata fields，加一个可解析的 Topic binding。新文件只能选择一个 current UID form：一个 exact registered `related_topic_uid`、genuinely all-Topic 的 `related_topic_uid: all`，或 exact selected subset 的非空去重 `related_topic_uids` YAML array。不得为新文件写 `related_topic`。历史文件中的 `related_topic` 仍可被 reader 兼容解析；它不是新输出选项，也不需要重写。
 
 | Key | 类型 | 说明 |
 |-----|------|------|
@@ -63,7 +63,7 @@ This opening mapping is the canonical writer contract. `readReferenceMetadata()`
 | **why_it_matters** | 一句话 | 为什么跟本次研究相关 |
 | **accessed_at** | YYYY-MM-DD | 访问日期 |
 | **related_topic_uid** | UID / `all` | Canonical binding：一个 exact registered Topic UID 或 `all` |
-| **related_topic** | id / slug 列表 / `all` | Compatibility binding：exact current/previous id 或 slug，多个用逗号分隔 |
+| **related_topic_uids** | UID YAML array | Canonical binding：exact selected subset 的非空、去重、exact registered UID array；只在 subset 时使用 |
 
 可选字段（建议填写）：`source_file`、`source_family`、`topic_unique_status`、`source_date_scope`、`related_entities`、`captured_excerpt`、`supports_claims`、`risks_or_limitations`、`excluded_reason`。
 
@@ -96,7 +96,7 @@ evidence_role: foundation
 trust_level: practitioner
 why_it_matters: "All topics use AI agent language; shared taxonomy enables cross-topic comparison."
 accessed_at: "2026-06-26"
-related_topic: all
+related_topic_uid: all
 ---
 
 # AI Agent Taxonomy & Enterprise Deployment 2025-2026

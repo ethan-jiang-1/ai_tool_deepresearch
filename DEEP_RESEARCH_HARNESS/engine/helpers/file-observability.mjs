@@ -530,7 +530,7 @@ export function auditCanonicalTopicFootprint(bundlePath, {
       continue;
     }
 
-    if (['reference_topic_uid_unknown', 'reference_topic_binding_unknown'].includes(binding.reason_code) && binding.value) {
+    if (['reference_topic_uid_unknown', 'reference_topic_uids_unknown', 'reference_topic_binding_unknown'].includes(binding.reason_code) && binding.value) {
       addFact(binding.value, {
         kind: binding.reason_code,
         surface: relPath,
@@ -547,7 +547,9 @@ export function auditCanonicalTopicFootprint(bundlePath, {
       topic_identity: null,
       primary_surface: relPath,
       supporting_details: [
-        metadata.get('related_topic_uid')
+        metadata.has('related_topic_uids')
+          ? { kind: 'related_topic_uids', surface: `${relPath}#metadata.related_topic_uids` }
+          : metadata.get('related_topic_uid')
           ? { kind: 'related_topic_uid', surface: `${relPath}#metadata.related_topic_uid` }
           : null,
         metadata.get('related_topic')

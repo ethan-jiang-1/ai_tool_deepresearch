@@ -179,6 +179,25 @@ describe('retired content heuristics', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('reference file gate helpers', () => {
+  it('preserves related_topic_uids frontmatter arrays at the binding boundary', () => {
+    const metadata = readReferenceMetadata([
+      '---',
+      'source_url: https://example.com/news/a',
+      'related_topic_uids:',
+      '  - tp_123e4567-e89b-12d3-a456-426614174000',
+      '  - tp_123e4567-e89b-12d3-a456-426614174001',
+      'related_entities:',
+      '  - one',
+      '  - two',
+      '---',
+    ].join('\n'));
+    assert.deepEqual(metadata.metadata.get('related_topic_uids'), [
+      'tp_123e4567-e89b-12d3-a456-426614174000',
+      'tp_123e4567-e89b-12d3-a456-426614174001',
+    ]);
+    assert.equal(metadata.metadata.get('related_entities'), 'one; two');
+  });
+
   it('accepts exact UID-only reference topic binding against canonical registry', () => {
     const dir = join(__dirname, '.test-gh-ref-uid-binding');
     const topicUid = 'tp_123e4567-e89b-12d3-a456-426614174000';

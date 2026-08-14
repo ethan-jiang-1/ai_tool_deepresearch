@@ -838,6 +838,33 @@ Accepted historical topic-bearing paths and reference metadata SHALL resolve to 
 - **THEN** resolver consumers SHALL return one ambiguous-binding blocker
 - **AND** SHALL NOT guess from serialized free text
 
+### Requirement: Canonical reference binding SHALL resolve exact UID subsets
+
+The shared Reference Markdown binding adapter SHALL resolve one scalar current
+UID, the `all` sentinel, or a non-empty duplicate-free `related_topic_uids`
+array of current registered UIDs into one canonical Topic-set conclusion. UID
+array members SHALL be exact registered UIDs; unknown, duplicate, empty,
+non-array, and conflicting simultaneous current binding forms SHALL fail with
+one direct binding diagnostic.
+
+Legacy `related_topic` SHALL remain a separately compatible historical-reader
+input pending its own policy change. It SHALL not be required for, inferred
+from, or emitted beside a valid new UID-array form.
+
+#### Scenario: Exact UID subset resolves through the common adapter
+
+- **WHEN** reference metadata contains `related_topic_uids` with two distinct
+  registered current UIDs
+- **THEN** the adapter SHALL resolve exactly those two canonical Topics
+- **AND** it SHALL not require a slug, id, `all`, or legacy field
+
+#### Scenario: Duplicate UID subset fails at one direct boundary
+
+- **WHEN** `related_topic_uids` repeats a registered UID
+- **THEN** the adapter SHALL reject the reference binding with one duplicate
+  binding result
+- **AND** it SHALL not broaden or silently deduplicate the declared scope
+
 ### Requirement: Wave1 review selection SHALL bind canonical topic identity and current intent
 
 Before a Wave1 carried-target declaration can be normalized, the Engine SHALL select the existing `artifacts/wave1/{layout}/depth-review.yaml` through accepted topic-layout facts and resolve it to exactly one current canonical `topic_uid`. It SHALL derive an intent binding from the current registry title, must-answer set, scope role, and dependencies. A current/previous-layout filename fallback alone SHALL NOT establish this binding.

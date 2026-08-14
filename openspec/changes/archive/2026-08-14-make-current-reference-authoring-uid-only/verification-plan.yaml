@@ -1,0 +1,44 @@
+schema_version: verification-routing/v1
+change: make-current-reference-authoring-uid-only
+test_classes:
+  unit:
+    status: selected
+    rationale: The metadata reader and canonical binding adapter own the structured UID-array acceptance and direct rejection contract.
+  integration:
+    status: selected
+    rationale: Gate/inspect, file observability, index rendering, and Wave materialization guidance consume one shared binding conclusion.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The change does not claim an end-to-end lifecycle transition beyond deterministic metadata/reader behavior.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change does not claim real Agent execution or semantic research output.
+claims:
+  - id: uid-subset-binding-is-exact
+    statement: The common reference-binding adapter accepts a structured exact UID subset and rejects empty, duplicate, unknown, or conflicting forms without scope inference.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/engine/helpers/topic-layout.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: none, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit
+  - id: metadata-array-retains-binding-shape
+    statement: YAML frontmatter preserves related_topic_uids as an array at the binding boundary while current scalar metadata behavior remains stable.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/engine/helpers/gate-helpers-checks.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: none, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit
+  - id: reader-consumers-preserve-exact-subset
+    statement: File observability, index synchronization, and Wave2 inspect consume a valid selected UID subset without an unrelated Topic footprint or legacy-field advice.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/integration/cli/check-gate-wave2-complete.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: temporary_bundle, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit
+  - id: current-writers-use-uid-cardinality
+    statement: Current Wave0/Wave1/Wave2 templates and Phase guidance specify all, scalar UID, and exact UID subset forms without offering related_topic as new output.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/integration/md/parser-aligned-guidance.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: none, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit

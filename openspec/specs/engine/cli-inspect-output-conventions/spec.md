@@ -162,6 +162,21 @@ Inspect SHALL preserve `{ check, inspect, advice, hints }`, exit code `0/1/2`, n
 - **THEN** primary inspect output SHALL report that parent failure
 - **AND** dependent novelty, cache mapping, profile, floor, and decision rules SHALL be listed as masked or omitted from primary failures
 
+### Requirement: Wave inspect SHALL report canonical UID subset binding
+
+Wave inspect output SHALL use the common reference-binding adapter for a
+`related_topic_uids` current metadata array. A valid exact subset SHALL satisfy
+the topic-binding prerequisite without legacy-field advice. An invalid subset
+SHALL expose one adapter-owned binding root with the affected array coordinate;
+inspect SHALL not add per-UID or dependent metadata noise.
+
+#### Scenario: Wave2 inspect accepts a selected cross-Topic subset
+
+- **WHEN** an optional `00-cross-*` reference has valid common metadata,
+  semantic sections, and a valid selected UID subset
+- **THEN** Wave2 inspect SHALL accept its topic-binding form
+- **AND** it SHALL not advise `related_topic` or convert the subset to `all`
+
 ### Requirement: inspect-wave2-output.mjs structural checks
 
 `inspect-wave2-output.mjs` SHALL evaluate Wave2 triple artifacts, finding-index contract, semantic ledger sections, synthesis references, backfill, reference index/backing, cross-reference authority, and submitted targeted-evidence provenance through the same pure evaluator result used by `wave2-complete`. It SHALL continue to inspect the existing Wave2-only conventions:

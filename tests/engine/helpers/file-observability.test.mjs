@@ -479,6 +479,32 @@ describe('file observability', () => {
     assert.equal(result.canonical_findings.some((finding) => finding.primary_surface === 'reference/uid-only.md'), false);
   });
 
+  it('attaches a UID-array reference footprint to the selected Topics only', () => {
+    const topicA = 'tp_11111111-1111-4111-8111-111111111111';
+    const topicB = 'tp_22222222-2222-4222-8222-222222222222';
+    const topicC = 'tp_33333333-3333-4333-8333-333333333333';
+    const dir = setupBundle('fo-topic-uid-subset', {
+      'reference/00-cross-selected.md': [
+        '---',
+        'related_topic_uids:',
+        `  - ${topicB}`,
+        `  - ${topicA}`,
+        '---',
+        '',
+        '## Key Facts', '- Fact',
+      ].join('\n'),
+    });
+    const result = auditFileObservability(dir, {
+      topics: [
+        { topic_uid: topicA, id: 'T01', slug: 'topic-a' },
+        { topic_uid: topicB, id: 'T02', slug: 'topic-b' },
+        { topic_uid: topicC, id: 'T03', slug: 'topic-c' },
+      ],
+    });
+    assert.equal(result.canonical_findings.some((finding) => finding.primary_surface === 'reference/00-cross-selected.md'), false);
+    assert.equal(result.canonical_findings.some((finding) => finding.topic_identity === topicC), false);
+  });
+
   it('reports an unknown UID-only reference as one unregistered durable topic', () => {
     const unknownUid = 'tp_99999999-9999-4999-8999-999999999999';
     const dir = setupBundle('fo-topic-uid-unknown', {

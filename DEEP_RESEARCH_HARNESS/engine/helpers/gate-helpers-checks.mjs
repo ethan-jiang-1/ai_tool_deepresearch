@@ -396,7 +396,7 @@ export const REQUIRED_REFERENCE_METADATA_FIELDS = [
   'accessed_at',
 ];
 
-export const REFERENCE_TOPIC_BINDING_FIELDS = ['related_topic_uid', 'related_topic'];
+export const REFERENCE_TOPIC_BINDING_FIELDS = ['related_topic_uid', 'related_topic_uids', 'related_topic'];
 
 export const REQUIRED_REFERENCE_SECTIONS = [
   'Key Facts',
@@ -523,7 +523,10 @@ export function readReferenceMetadata(mdContent) {
   }
 
   return {
-    metadata: new Map(Object.entries(parsed).map(([key, value]) => [key, metadataValueToString(value)])),
+    metadata: new Map(Object.entries(parsed).map(([key, value]) => [
+      key,
+      key === 'related_topic_uids' && Array.isArray(value) ? value : metadataValueToString(value),
+    ])),
     presentation: 'frontmatter',
     error: null,
   };
@@ -601,7 +604,9 @@ export function checkReferenceFormatFiles(files, { rule = null, bundlePath = nul
       const reason = binding.reason_code || 'reference_topic_binding_invalid';
       const detail = `Invalid reference topic binding in ${file.relPath}: ${reason}`;
       const writeField = reason === 'reference_topic_binding_conflict'
-        ? 'related_topic_uid,related_topic'
+        ? 'related_topic_uid,related_topic_uids,related_topic'
+        : metadata.has('related_topic_uids')
+          ? 'related_topic_uids'
         : metadata.get('related_topic_uid')
           ? 'related_topic_uid'
           : 'related_topic';
@@ -611,9 +616,10 @@ export function checkReferenceFormatFiles(files, { rule = null, bundlePath = nul
         id: `${rule?.id || 'reference_format'}:${file.relPath}:topic_binding:${reason}`,
         blockingBasis: 'binding_integrity',
         surface: file.absPath,
-        expected: 'One resolvable reference topic binding: exact registered related_topic_uid or compatible exact related_topic id/slug list; dual forms must agree.',
+        expected: 'One resolvable reference topic binding: exact registered related_topic_uid, all sentinel, non-empty exact related_topic_uids array, or compatible historical related_topic; simultaneous forms must agree.',
         observed: {
           related_topic_uid: metadata.get('related_topic_uid') || null,
+          related_topic_uids: metadata.get('related_topic_uids') || null,
           related_topic: metadata.get('related_topic') || null,
           reason_code: reason,
         },
@@ -622,7 +628,7 @@ export function checkReferenceFormatFiles(files, { rule = null, bundlePath = nul
           : `${file.relPath} topic binding is not resolvable: ${reason}.`,
         repairKind: 'agent_action',
         writeTo: `${file.absPath}#metadata.${writeField}`,
-        repair: `Repair the reference topic binding in ${file.relPath} to one exact registered UID or compatible current/previous id or slug, then rerun this checkpoint.`,
+        repair: `Repair the reference topic binding in ${file.relPath} to one exact registered UID, all sentinel, exact UID array, or compatible current/previous id or slug, then rerun this checkpoint.`,
         detail,
       }));
     }

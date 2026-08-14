@@ -28,7 +28,7 @@ suggested_context:
 
 HITL2 `user_decision: rerun` 后，Agent 用正常 HITL2 gate handoff或唯一accepted `post_final_reentry` exceptional handoff进入本 phase。后者已经记录同一HITL2 rerun decision，不重复询问用户，也不代表post-Final HITL2 gate曾运行。核心工作仍是将 HITL2 rationale（用户意图）与 canonical plan/current seed 现状做**对比推断**，形成 retained topic-state candidate（保留、新增、补充 intent 或补充 direction），由既有 transaction 原子提交；若提交改变 registry length，则先消费其 returned style handoff，随后才递增 rerun_count 并运行同一个 gate。
 
-本 phase 是分析层——不做搜索、不写 reference、不动 artifacts。只做对比分析和方向标记。
+本 phase 是分析层——不做搜索、不写 reference、不动 artifacts。只做对比分析和方向标记。后续 Wave materialization 写新 reference 时仍采用 shared template 的 current UID forms（Wave0 `all`、Wave1 scalar UID、Wave2 exact UID subset）；本 phase 不创建 legacy `related_topic` writer fallback。
 
 ## 2. Required Inputs
 

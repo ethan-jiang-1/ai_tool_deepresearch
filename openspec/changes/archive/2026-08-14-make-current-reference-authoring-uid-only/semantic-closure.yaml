@@ -1,0 +1,52 @@
+schema_version: semantic-closure/v1
+change: make-current-reference-authoring-uid-only
+status: affected
+catalog_additions: []
+affected:
+  - family: wave.submitted-reference-convergence
+    fact: >-
+      Which canonical Topic set a rich reference declares: exactly one current
+      UID, the all-Topic sentinel, or an exact non-empty deduplicated set of
+      current UIDs. New current writers use only these UID forms; legacy
+      related_topic remains a historical-reader input pending C5a-2 and does
+      not become a new-output choice.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/topic-layout.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs#readReferenceMetadata
+      - DEEP_RESEARCH_HARNESS/engine/helpers/topic-layout.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/reference-index-sync.mjs
+      - DEEP_RESEARCH_HARNESS/cli/inspect-wave0-output.mjs
+      - DEEP_RESEARCH_HARNESS/cli/inspect-wave1-output.mjs
+      - DEEP_RESEARCH_HARNESS/cli/inspect-wave2-output.mjs
+    overlap:
+      - coordinate: openspec/specs/bundle/reference-flat-format/spec.md
+        relation: authoritative
+        detail: REF owns rich-reference metadata and index navigation contracts.
+      - coordinate: openspec/specs/research/canonical-topic-state/spec.md
+        relation: authoritative
+        detail: CTS owns the one canonical layout resolver and historical binding boundary.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-reference-template.md
+        relation: derived
+        detail: The template presents the resolved current writer forms; it does not resolve identity.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/subagent-dpt-evidence-extractor.md
+        relation: derived
+        detail: The optional rich-reference example presents the current writer form; it does not resolve identity.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md
+        relation: derived
+        detail: Wave0 guidance selects the all-Topic form for genuinely shared output; it does not resolve identity.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md
+        relation: derived
+        detail: Wave1 guidance presents the submitted-backed scalar UID form; it does not resolve identity.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave2.md
+        relation: derived
+        detail: Wave2 guidance selects the exact subset from its authoritative finding facts; it does not validate binding syntax.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-rerun.md
+        relation: derived
+        detail: Rerun guidance routes later materialization to the same current UID forms; it does not resolve identity.
+    verification:
+      truth_table: tests/engine/helpers/topic-layout.test.mjs
+      cross_surface: tests/integration/cli/check-gate-wave2-complete.test.mjs

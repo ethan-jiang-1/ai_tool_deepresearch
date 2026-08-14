@@ -105,4 +105,28 @@ describe('topic layout resolver', () => {
     assert.equal(ambiguous.ok, false);
     assert.equal(ambiguous.reason_code, 'reference_topic_binding_ambiguous');
   });
+
+  it('resolves an exact UID subset without inferring all Topics', () => {
+    const binding = resolveReferenceTopicBinding(layouts, new Map([
+      ['related_topic_uids', [topics[1].topic_uid, topics[0].topic_uid]],
+    ]));
+    assert.equal(binding.ok, true);
+    assert.equal(binding.all, false);
+    assert.deepEqual(binding.topic_uids, [topics[0].topic_uid, topics[1].topic_uid]);
+  });
+
+  it('rejects invalid and conflicting UID-array forms at one binding boundary', () => {
+    const cases = [
+      [new Map([['related_topic_uids', []]]), 'reference_topic_uids_empty'],
+      [new Map([['related_topic_uids', [topics[0].topic_uid, topics[0].topic_uid]]]), 'reference_topic_uids_duplicate'],
+      [new Map([['related_topic_uids', ['tp_unknown']]]), 'reference_topic_uids_unknown'],
+      [new Map([['related_topic_uids', topics[0].topic_uid]]), 'reference_topic_uids_invalid'],
+      [new Map([['related_topic_uid', topics[0].topic_uid], ['related_topic_uids', [topics[1].topic_uid]]]), 'reference_topic_binding_conflict'],
+    ];
+    for (const [metadata, reasonCode] of cases) {
+      const binding = resolveReferenceTopicBinding(layouts, metadata);
+      assert.equal(binding.ok, false);
+      assert.equal(binding.reason_code, reasonCode);
+    }
+  });
 });

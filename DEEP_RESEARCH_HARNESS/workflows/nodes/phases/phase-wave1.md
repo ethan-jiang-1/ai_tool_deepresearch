@@ -391,6 +391,10 @@ Hint 不创造 permission、controller 或 lifecycle。完成可执行动作后 
 3. If profile/runtime authority is missing, follow only the hint's legal owner operation or `missing_contract`; never invent a local default.
 4. Materialize only from submitted backing, then run the hint's exact `rerun`.
 
+Every newly materialized Wave1 reference writes only the submitted current
+Topic's exact `related_topic_uid`. It does not select `related_topic`, even
+when a historical reference still uses that reader-compatible field.
+
 Gate repair/refill handles remaining floor gaps. Do not treat the planning margin as pass authority, do not silently lower floors, and do not create a new numeric threshold outside the accepted profile/runtime surfaces.
 
 ## 8. Stop Behavior

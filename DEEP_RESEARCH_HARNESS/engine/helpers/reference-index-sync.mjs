@@ -60,10 +60,17 @@ function existingDates(bundlePath) {
 }
 
 function sourceLayer(relPath, metadata, layouts) {
-  if (/^reference\/00-shared-[^/]+\.md$/.test(relPath)) return { ok: true, source_layer: 'wave0_foundation' };
-  if (/^reference\/00-cross-[^/]+\.md$/.test(relPath)) return { ok: true, source_layer: 'wave2_cross' };
   const binding = resolveReferenceTopicBinding(layouts, metadata);
-  if (!binding.ok || binding.all || binding.topic_uids.length !== 1) {
+  if (!binding.ok) {
+    return {
+      ok: false,
+      reason_code: 'reference_index_layer_unclassifiable',
+      reason: `${relPath} has no resolvable canonical or accepted historical Topic binding.`,
+    };
+  }
+  if (/^reference\/00-shared-[^/]+\.md$/.test(relPath)) return { ok: true, source_layer: 'wave0_foundation', binding };
+  if (/^reference\/00-cross-[^/]+\.md$/.test(relPath)) return { ok: true, source_layer: 'wave2_cross', binding };
+  if (binding.all || binding.topic_uids.length !== 1) {
     return {
       ok: false,
       reason_code: 'reference_index_layer_unclassifiable',
@@ -71,6 +78,11 @@ function sourceLayer(relPath, metadata, layouts) {
     };
   }
   return { ok: true, source_layer: 'wave1_topic', binding };
+}
+
+function bindingNavigationLabel(binding, layouts) {
+  if (binding.all) return 'all';
+  return binding.topic_uids.map((topicUid) => layouts.currentByUid.get(topicUid)?.current.slug || topicUid).join(', ');
 }
 
 function loadReferenceFacts(bundlePath) {
@@ -119,7 +131,7 @@ function renderReferenceIndexFromFacts(bundlePath, facts, { syncDate } = {}) {
       source_type: reference.metadata.get('source_type') || '',
       trust_level: reference.metadata.get('trust_level') || '',
       tier: reference.metadata.get('tier') || '',
-      related_topic: reference.metadata.get('related_topic') || reference.metadata.get('related_topic_uid') || '',
+      related_topic: bindingNavigationLabel(reference.classification.binding, facts.layouts),
       source_layer: reference.classification.source_layer,
       acceptance_status: reference.metadata.get('acceptance_status') || '',
       date_landed: dates.get(reference.relPath) || syncDate,

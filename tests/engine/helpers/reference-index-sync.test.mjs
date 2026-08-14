@@ -29,6 +29,31 @@ function writeReference(dir, name, options) {
   writeFileSync(join(dir, 'reference', name), referenceContent(options));
 }
 
+function uidSubsetReference(uids) {
+  return [
+    '---',
+    'source_url: https://example.com/research/cross-topic',
+    'acceptance_status: accepted',
+    'source_type: mixed',
+    'tier: "Tier 2"',
+    'evidence_role: foundation',
+    'trust_level: practitioner',
+    'why_it_matters: "Relevant to the selected Topics."',
+    'accessed_at: "2026-07-28"',
+    'related_topic_uids:',
+    ...uids.map((uid) => `  - ${uid}`),
+    '---',
+    '',
+    '# Cross-Topic Reference',
+    '',
+    '## Key Facts', 'Fact.', '',
+    '## Core Content Capture', 'Narrative.', '',
+    '## Relevance To This Research', 'Relevant.', '',
+    '## Quotable Terms / Concepts', 'Term.', '',
+    '## Risks And Limitations', 'Risk.',
+  ].join('\n');
+}
+
 describe('reference index synchronization', () => {
   it('renders every flat reference family in stable order and retains a valid prior date', () => {
     const dir = bundle();
@@ -62,6 +87,22 @@ describe('reference index synchronization', () => {
     assert.equal(result.verdict, 'blocked');
     assert.equal(result.reason_code, 'reference_index_layer_unclassifiable');
     assert.equal(readFileSync(target, 'utf8'), 'keep these bytes');
+  });
+
+  it('renders a cross-reference UID subset as a navigation label without broadening it', () => {
+    const dir = bundle();
+    const topics = [
+      { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['A'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] },
+      { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174001', id: '02', slug: 'topic-b', title: 'Topic B', must_answer: ['B'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] },
+      { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174002', id: '03', slug: 'topic-c', title: 'Topic C', must_answer: ['C'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] },
+    ];
+    writeFileSync(join(dir, 'rb_plan.md'), `---\n${JSON.stringify({ plan_basename: 'index-sync-test', derived_topic_count: 3, topic_registry_version: '2', topic_registry: topics }, null, 2)}\n---\n# Plan\n`);
+    writeFileSync(join(dir, 'reference', '00-cross-selected.md'), uidSubsetReference([topics[1].topic_uid, topics[0].topic_uid]));
+
+    const rendered = renderReferenceIndex(dir, { syncDate: '2026-07-28' });
+    assert.equal(rendered.ok, true);
+    assert.equal(rendered.rows[0].related_topic, 'topic-a, topic-b');
+    assert.doesNotMatch(rendered.rows[0].related_topic, /topic-c|all/);
   });
 
   it('returns a CAS block without merging concurrent index drift', () => {

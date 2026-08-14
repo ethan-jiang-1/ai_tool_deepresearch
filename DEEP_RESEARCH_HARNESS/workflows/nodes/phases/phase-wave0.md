@@ -40,6 +40,10 @@ Create `artifacts/wave0/{topic}/source.yaml` for each topic. After formal submit
 the Phase Agent may materialize backed shared foundation consumer projections at
 `reference/00-shared-*.md`.
 
+Each new shared projection uses `related_topic_uid: all` in the shared reference
+metadata template. Do not select the historical `related_topic` field for a
+new Wave0 file.
+
 Wave0 is foundation evidence collection, not comprehensive research. Exact floors come from `rb_profile.yaml#/research_style_params`, especially `wave0_per_topic_source_floor` and `wave0_shared_ref_total`.
 
 For each delegated source-intake task, derive the initial candidate URL/source target from explicit profile/runtime floors plus a conservative small margin. Use `wave0_per_topic_source_floor` as the per-topic floor basis and `wave0_shared_ref_total` or other accepted shared-reference target surfaces when planning shared references. The margin is only a planning buffer for inaccessible pages, duplicates, and non-countable sources; it is not a gate threshold, profile field, quality override, or permission to lower coverage.

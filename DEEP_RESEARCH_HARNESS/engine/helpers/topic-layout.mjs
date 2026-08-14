@@ -76,6 +76,11 @@ function referenceMetadataValue(metadata, key) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function referenceMetadataArray(metadata, key) {
+  const value = metadata instanceof Map ? metadata.get(key) : metadata?.[key];
+  return Array.isArray(value) ? value : null;
+}
+
 function referenceBindingResult(layouts) {
   const unique = uniqueReferenceLayouts(layouts);
   return {
@@ -97,6 +102,30 @@ function resolveReferenceUidForm(layouts, rawValue) {
     return { ok: false, reason_code: 'reference_topic_uid_unknown', value: rawValue };
   }
   return referenceBindingResult([layouts.currentByUid.get(resolved.topic_uid)]);
+}
+
+function resolveReferenceUidSubsetForm(layouts, rawValue) {
+  if (rawValue === null) return null;
+  if (rawValue.length === 0) return { ok: false, reason_code: 'reference_topic_uids_empty' };
+
+  const seen = new Set();
+  const resolvedLayouts = [];
+  for (const value of rawValue) {
+    if (typeof value !== 'string' || !value.trim()) {
+      return { ok: false, reason_code: 'reference_topic_uids_invalid', value };
+    }
+    const topicUid = value.trim();
+    if (seen.has(topicUid)) {
+      return { ok: false, reason_code: 'reference_topic_uids_duplicate', value: topicUid };
+    }
+    seen.add(topicUid);
+    const resolved = resolveTopicLayout(layouts, { topic_uid: topicUid });
+    if (!resolved.ok) {
+      return { ok: false, reason_code: 'reference_topic_uids_unknown', value: topicUid };
+    }
+    resolvedLayouts.push(layouts.currentByUid.get(resolved.topic_uid));
+  }
+  return referenceBindingResult(resolvedLayouts);
 }
 
 function referenceIdCandidates(layouts, token) {
@@ -140,27 +169,47 @@ function resolveReferenceLegacyForm(layouts, rawValue) {
 /** Resolve reference Markdown's UID and legacy topic-binding compatibility fields through the shared layout facts. */
 export function resolveReferenceTopicBinding(layouts, metadata) {
   const uidValue = referenceMetadataValue(metadata, 'related_topic_uid');
+  const uidValues = referenceMetadataArray(metadata, 'related_topic_uids');
   const legacyValue = referenceMetadataValue(metadata, 'related_topic');
-  if (!uidValue && !legacyValue) return { ok: false, reason_code: 'reference_topic_binding_missing' };
+  const hasUidArray = metadata instanceof Map
+    ? metadata.has('related_topic_uids')
+    : Object.hasOwn(metadata || {}, 'related_topic_uids');
+  if (!uidValue && !hasUidArray && !legacyValue) return { ok: false, reason_code: 'reference_topic_binding_missing' };
 
   const uidResult = resolveReferenceUidForm(layouts, uidValue);
+  const uidSubsetResult = hasUidArray
+    ? uidValues === null
+      ? { ok: false, reason_code: 'reference_topic_uids_invalid' }
+      : resolveReferenceUidSubsetForm(layouts, uidValues)
+    : null;
   const legacyResult = resolveReferenceLegacyForm(layouts, legacyValue);
-  const invalid = [uidResult, legacyResult].find((result) => result && !result.ok);
+  const invalid = [uidResult, uidSubsetResult, legacyResult].find((result) => result && !result.ok);
   if (invalid) return invalid;
 
-  if (uidResult && legacyResult) {
-    const uidSignature = uidResult.all ? 'all' : uidResult.topic_keys.join(',');
+  if (uidResult && uidSubsetResult) {
+    return {
+      ok: false,
+      reason_code: 'reference_topic_binding_conflict',
+      related_topic_uid: uidValue,
+      related_topic_uids: uidValues,
+    };
+  }
+
+  const currentResult = uidResult || uidSubsetResult;
+  if (currentResult && legacyResult) {
+    const uidSignature = currentResult.all ? 'all' : currentResult.topic_keys.join(',');
     const legacySignature = legacyResult.all ? 'all' : legacyResult.topic_keys.join(',');
     if (uidSignature !== legacySignature) {
       return {
         ok: false,
         reason_code: 'reference_topic_binding_conflict',
         related_topic_uid: uidValue,
+        related_topic_uids: uidValues,
         related_topic: legacyValue,
       };
     }
   }
-  return uidResult || legacyResult;
+  return currentResult || legacyResult;
 }
 
 export function resolveTopicLayout(layouts, { topic_uid: topicUid, topic_slug: topicSlug } = {}, { currentOnly = false } = {}) {

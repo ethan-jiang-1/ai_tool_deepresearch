@@ -74,7 +74,9 @@ function createBundle(name) {
 plan_basename: test
 derived_topic_count: 1
 topic_registry:
-  - slug: topic-a
+  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
+    id: "01"
+    slug: topic-a
     label: Topic A
 ---
 # Plan
@@ -346,12 +348,26 @@ function submitWave2CrossReference(dir) {
       role: 'reference',
       source_url: 'https://example.com/research/market-shift',
       source_slug: 'market-shift',
-      content: referenceContent({
-        source_url: 'https://example.com/research/market-shift',
-        related_topic: 'cross-topic',
-        evidence_role: 'targeted_evidence',
-        coreContent: 'W2F-001 targeted evidence was submitted through wave2_targeted_evidence and is backed by the work-unit cache trail for market-shift.',
-      }),
+      content: [
+        '---',
+        'source_url: "https://example.com/research/market-shift"',
+        'acceptance_status: accepted',
+        'source_type: primary',
+        'tier: "Tier 2"',
+        'trust_level: expert',
+        'evidence_role: targeted_evidence',
+        'why_it_matters: "Relevant source for this research."',
+        'accessed_at: "2026-07-06"',
+        'related_topic_uids:',
+        '  - tp_123e4567-e89b-12d3-a456-426614174000',
+        '---',
+        '',
+        '## Key Facts', '- Fact one.', '',
+        '## Core Content Capture', 'W2F-001 targeted evidence was submitted through wave2_targeted_evidence and is backed by the work-unit cache trail for market-shift.', '',
+        '## Relevance To This Research', 'Relevant context.', '',
+        '## Quotable Terms / Concepts', '- Term', '',
+        '## Risks And Limitations', 'Some limitations.',
+      ].join('\n'),
     }],
     cacheTrails: [{
       path: '_cache/wave2/primary/cross-market/market-shift',
