@@ -1,0 +1,36 @@
+schema_version: verification-routing/v1
+change: retire-gate-content-dedup-tombstone
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: No unit-owned module, schema, or executable behavior changes.
+  integration:
+    status: selected
+    rationale: >-
+      Existing integration hygiene reads current implementation and runtime
+      guidance surfaces to prove retired content-dedup heuristics do not regain
+      positive authority while the live spec/catalog entry is removed.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No workflow-scale deterministic lifecycle or temporary-bundle behavior changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change makes no claim about real Agent research, judgment, or writing behavior.
+claims:
+  - id: retired-content-dedup-has-no-live-contract
+    statement: >-
+      Current implementation and runtime-guidance surfaces do not regain a
+      positive content-dedup heuristic authority while the retired GAC
+      discovery entry is removed through separately checked governance.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/retired-content-heuristic-hygiene.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

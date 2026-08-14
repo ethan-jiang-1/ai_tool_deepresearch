@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: retire-gate-content-dedup-tombstone
+status: not_applicable
+reason: >-
+  This change removes only a retired accepted-spec/catalog discovery entry and
+  changes registry metadata to retain its immutable historical identity. It
+  changes no current deterministic runtime fact, resolver, establishing
+  surface, verdict consumer, or derived runtime projection; all active quality
+  and provenance owners are explicitly verify-only and outside target-edit
+  scope.

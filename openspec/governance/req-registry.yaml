@@ -58,7 +58,7 @@ prefixes:
   FOR: fork-repair-converge        # all entries deprecated; no spec directory
   FRE: engine/framework-engine
   FIO: bundle/file-observability
-  GAC: engine/gate-content-dedup
+  GAC: gate-content-dedup      # all entries deprecated; no spec directory
   GAF: engine/gate-fork-router
   GAS: engine/gate-state-machine
   GCO: governance/guidance-constitution
@@ -405,17 +405,6 @@ FRE-002: framework-engine — workflow-fsm standalone pure FSM transition resolv
 FRE-003: framework-engine — Gate helpers shared parseMdFrontmatter and readBundlePlan for YAML 1.2 frontmatter parsing
 FRE-004: framework-engine — Framework internal module layout and release hygiene for delegated-work engine replacement
 FRE-005: framework-engine — Queue Manager internal module layout + companion regression split (5 flat sub-modules + barrel, zero behavior change)
-
-# engine/gate-content-dedup
-GAC-001: gate-content-dedup — content_dedup reads reference inputs from declaration ledger [DEPRECATED]
-GAC-002: gate-content-dedup — Jaccard similarity detects near-duplicate reference content [DEPRECATED]
-GAC-003: gate-content-dedup — URL dedup detects duplicate source URLs [DEPRECATED]
-GAC-004: gate-content-dedup — Homepage URL detection flags root-domain-only references [DEPRECATED]
-GAC-005: gate-content-dedup — Self-referential language detection and standard gate check result [DEPRECATED]
-GAC-006: gate-content-dedup — Reference declaration coverage prevents filesystem orphan pass-through [DEPRECATED]
-GAC-007: gate-content-dedup — Homepage URL detection includes shallow path heuristic and empty URL failure [DEPRECATED]
-GAC-008: gate-content-dedup — Ledger coverage rule detects filesystem reference files missing from declaration ledger [DEPRECATED]
-GAC-009: gate-content-dedup — Orphan reference diagnostics are durable in trace/log and diagnostic artifacts [DEPRECATED]
 
 # engine/gate-fork-router
 GAF-001: gate-fork-router — Gate branch classification and explicit resolver
@@ -904,6 +893,17 @@ WNC-008: workflow-node-contract — Autonomous contract header injection in asse
 WNC-009: workflow-node-contract — Universal silent execution dependency (every stop:no phase SHALL require shared/shared-silent-execution)
 WNC-010: workflow-node-contract — Lifecycle phase handoff wiring consumes check.next through enter-phase
 WNC-011: workflow-node-contract — Lifecycle node wording uses canonical phase-boundary terminology and does not overclaim entry as completion
+
+# gate-content-dedup — all entries deprecated; no spec directory
+GAC-001: gate-content-dedup — content_dedup reads reference inputs from declaration ledger [DEPRECATED]
+GAC-002: gate-content-dedup — Jaccard similarity detects near-duplicate reference content [DEPRECATED]
+GAC-003: gate-content-dedup — URL dedup detects duplicate source URLs [DEPRECATED]
+GAC-004: gate-content-dedup — Homepage URL detection flags root-domain-only references [DEPRECATED]
+GAC-005: gate-content-dedup — Self-referential language detection and standard gate check result [DEPRECATED]
+GAC-006: gate-content-dedup — Reference declaration coverage prevents filesystem orphan pass-through [DEPRECATED]
+GAC-007: gate-content-dedup — Homepage URL detection includes shallow path heuristic and empty URL failure [DEPRECATED]
+GAC-008: gate-content-dedup — Ledger coverage rule detects filesystem reference files missing from declaration ledger [DEPRECATED]
+GAC-009: gate-content-dedup — Orphan reference diagnostics are durable in trace/log and diagnostic artifacts [DEPRECATED]
 
 # lifecycle-walker — all entries deprecated; no spec directory
 LFW-001: lifecycle-walker — Walker reads manifest and walks lifecycle (--bundle required, --manifest optional, 9 phases) [DEPRECATED]
