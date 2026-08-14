@@ -15,6 +15,7 @@ import {
   buildExecutionSurfaces,
   planExperimentRun,
   projectExperimentCases,
+  readRetainedExperimentObservations,
 } from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/experiment-run-strategy.mjs';
 
 function digest(value) {
@@ -87,6 +88,89 @@ function retained({ entry: entryValue, generatedAt = '2026-08-01T00:00:00.000Z',
   };
 }
 
+function selectionObservationV2() {
+  return {
+    schema_version: 'agent-experiment-selection-observation/v2',
+    mode: 'profile',
+    exact_selector: null,
+    profile: 'calibration',
+    regression_intent: null,
+    prediction_basis: 'observed_matching',
+    predicted_duration_ms: 100,
+    predicted_cost_usd: 0.1,
+    reserved_cost_usd: 0.1,
+    selection_reason: ['fixture'],
+  };
+}
+
+function retainedBatchReportV2({ entry: entryValue, executionSurface, selectionObservation = selectionObservationV2() }) {
+  return {
+    schema_version: 'agent-experiment-batch-report/v2',
+    batch_id: '00000000-0000-4000-8000-000000000002',
+    generated_at: '2026-08-02T00:00:00.000Z',
+    runner: 'run-agent-experiment.mjs',
+    execution_mode: 'headless_agent',
+    proof_boundary: {
+      deterministic_fixture_proves: 'fixture mechanics',
+      agent_flow_proof_requires: ['real Playbook Agent'],
+    },
+    cleanup_requested: false,
+    max_total_budget_usd: 1,
+    max_case_budget_usd: 0.1,
+    accumulated_cost_usd: 0.1,
+    summary: { total: 1, PASS: 1, FAIL: 0, NOT_RUN: 0, HUMAN: 0, ERROR: 0, CANCELLED: 0 },
+    results: [{
+      case: entryValue.frontmatter.case,
+      experiment: entryValue.frontmatter.experiment,
+      playbook_path: entryValue.path,
+      native_outcome: 'PASS',
+      lifecycle_outcome: null,
+      effective_outcome: 'PASS',
+      agent_process: 'fixture',
+      health: 'CLEAN',
+      health_reports: [],
+      reason: null,
+      duration_ms: 100,
+      cost_usd: 0.1,
+      accumulated_cost_usd: 0.1,
+      run_root: null,
+      run_root_available: false,
+      cleanup_requested: false,
+      cleanup_eligible: false,
+      cleanup_status: 'not_attempted',
+      completion: null,
+      logs: { prompt: null, stdout: null, stderr: null },
+      evidence: null,
+      execution_surface: executionSurface,
+      selection_observation: selectionObservation,
+    }],
+    report_path: '/tmp/retained-v2-report.json',
+  };
+}
+
+function retainedBatchReportV1({ entry: entryValue, executionSurface }) {
+  return {
+    schema_version: 'agent-experiment-batch-report/v1',
+    batch_id: '00000000-0000-4000-8000-000000000003',
+    generated_at: '2026-08-01T00:00:00.000Z',
+    results: [{
+      case: entryValue.frontmatter.case,
+      experiment: entryValue.frontmatter.experiment,
+      playbook_path: entryValue.path,
+      native_outcome: 'PASS',
+      lifecycle_outcome: null,
+      effective_outcome: 'PASS',
+      health: 'CLEAN',
+      duration_ms: 100,
+      cost_usd: 0.1,
+      completion: {
+        source_playbook_sha256: executionSurface.source_playbook_sha256,
+        outcome: 'PASS',
+      },
+    }],
+  };
+}
+
 function surfacesFor(entries, options = new Map()) {
   return new Map(entries.map((entryValue) => [entryValue.frontmatter.case, surface(entryValue, options.get(entryValue.frontmatter.case))]));
 }
@@ -99,7 +183,7 @@ function writeFixtureFile(repoRoot, relativePath, contents) {
 }
 
 describe('Experiment Run Strategy', () => {
-  it('keeps v1 selection observations readable while constraining v2 regression intent', () => {
+  it('accepts only v2 selection observations and constrains regression intent', () => {
     const profileSelection = {
       mode: 'profile',
       exact_selector: null,
@@ -110,10 +194,10 @@ describe('Experiment Run Strategy', () => {
       reserved_cost_usd: 0.1,
       selection_reason: ['fixture'],
     };
-    assert.equal(ExperimentSelectionObservationSchema.parse({
+    assert.equal(ExperimentSelectionObservationSchema.safeParse({
       schema_version: 'agent-experiment-selection-observation/v1',
       ...profileSelection,
-    }).schema_version, 'agent-experiment-selection-observation/v1');
+    }).success, false);
     assert.equal(ExperimentSelectionObservationSchema.parse({
       schema_version: 'agent-experiment-selection-observation/v2',
       ...profileSelection,
@@ -132,19 +216,9 @@ describe('Experiment Run Strategy', () => {
     }).success);
   });
 
-  it('keeps v1 observations useful while reporting unknown, matching, and stale current relations separately', () => {
+  it('keeps current v2 observations matching and stale relations separately', () => {
     const current = entry({ caseId: 'case-1-light-history' });
     const currentSurface = surface(current);
-    const v1 = retained({ entry: current, executionSurface: null, source: currentSurface.source_playbook_sha256 });
-    const v1Observation = projectExperimentCases({
-      entries: [current],
-      retainedObservations: [v1],
-      executionSurfaces: new Map([[current.frontmatter.case, currentSurface]]),
-    })[0].observation;
-    assert.equal(v1Observation.source_relation, 'matching');
-    assert.equal(v1Observation.execution_surface_relation, 'unknown');
-    assert.equal(v1Observation.observed_duration_ms, 100);
-
     const matching = retained({ entry: current, executionSurface: currentSurface });
     const matchingObservation = projectExperimentCases({
       entries: [current],
@@ -163,6 +237,95 @@ describe('Experiment Run Strategy', () => {
     assert.equal(staleObservation.source_relation, 'stale');
     assert.equal(staleObservation.execution_surface_relation, 'stale');
     assert.equal(staleObservation.observed_cost_usd, 0.1);
+  });
+
+  it('keeps v1 retained material diagnostic-only while admitting complete v2 observations', () => {
+    const legacy = entry({ caseId: 'case-2-light-legacy', experiment: 'legacy' });
+    const current = entry({ caseId: 'case-3-light-current', experiment: 'current' });
+    const entries = [legacy, current];
+    const executionSurfaces = surfacesFor(entries);
+    const expBundlesRoot = mkdtempSync(join(tmpdir(), 'retained-history-'));
+    try {
+      const reportsRoot = join(expBundlesRoot, '_reports');
+      const auditRoot = join(expBundlesRoot, '_audit');
+      mkdirSync(reportsRoot, { recursive: true });
+      mkdirSync(auditRoot, { recursive: true });
+      writeFileSync(join(reportsRoot, 'current-v2.json'), `${JSON.stringify(retainedBatchReportV2({
+        entry: current,
+        executionSurface: executionSurfaces.get(current.frontmatter.case),
+      }))}\n`);
+      writeFileSync(join(reportsRoot, 'historical-v1.json'), `${JSON.stringify(retainedBatchReportV1({
+        entry: legacy,
+        executionSurface: executionSurfaces.get(legacy.frontmatter.case),
+      }))}\n`);
+      writeFileSync(join(reportsRoot, 'v2-with-v1-selection.json'), `${JSON.stringify(retainedBatchReportV2({
+        entry: legacy,
+        executionSurface: executionSurfaces.get(legacy.frontmatter.case),
+        selectionObservation: {
+          schema_version: 'agent-experiment-selection-observation/v1',
+          mode: 'profile',
+          exact_selector: null,
+          profile: 'calibration',
+          prediction_basis: 'observed_matching',
+          predicted_duration_ms: 100,
+          predicted_cost_usd: 0.1,
+          reserved_cost_usd: 0.1,
+          selection_reason: ['fixture'],
+        },
+      }))}\n`);
+      writeFileSync(join(auditRoot, 'agent-experiment-runs.jsonl'), `${JSON.stringify({
+        schema_version: 'agent-experiment-audit-event/v1',
+        event: 'case_result',
+      })}\n`);
+
+      const retainedHistory = readRetainedExperimentObservations({ expBundlesRoot });
+      assert.deepEqual(retainedHistory.observations.map((item) => item.case), [current.frontmatter.case]);
+      assert.deepEqual(retainedHistory.diagnostics, [
+        'retained_report_invalid:historical-v1.json',
+        'retained_report_invalid:v2-with-v1-selection.json',
+        'retained_audit_invalid:1',
+      ]);
+
+      const normal = planExperimentRun({
+        entries,
+        executionSurfaces,
+        retainedObservations: retainedHistory.observations,
+        retainedObservationDiagnostics: retainedHistory.diagnostics,
+        profileRequest: {
+          profile: 'regression',
+          selector: null,
+          max_predicted_duration_ms: 480_000,
+          max_total_budget_usd: 3,
+          max_case_budget_usd: 0.60,
+          agent_behavior_fresh_after_ms: 604_800_000,
+          now: '2026-08-03T00:00:00.000Z',
+        },
+      });
+      const normalAdmissions = new Map(normal.selection.regression.admissions.map((item) => [item.case, item]));
+      assert.equal(normalAdmissions.get(legacy.frontmatter.case).status, 'ineligible');
+      assert.ok(normalAdmissions.get(legacy.frontmatter.case).reasons.includes('no_retained_result'));
+      assert.equal(normalAdmissions.get(current.frontmatter.case).status, 'eligible');
+
+      const qualification = planExperimentRun({
+        entries,
+        executionSurfaces,
+        retainedObservations: retainedHistory.observations,
+        retainedObservationDiagnostics: retainedHistory.diagnostics,
+        profileRequest: {
+          profile: 'regression',
+          regression_intent: 'qualification',
+          selector: null,
+          max_predicted_duration_ms: 480_000,
+          max_total_budget_usd: 3,
+          max_case_budget_usd: 0.60,
+          agent_behavior_fresh_after_ms: 604_800_000,
+          now: '2026-08-03T00:00:00.000Z',
+        },
+      });
+      assert.deepEqual(qualification.selection.selected, []);
+    } finally {
+      rmSync(expBundlesRoot, { recursive: true, force: true });
+    }
   });
 
   it('hashes participating runtime helpers without treating framework documentation as execution surface', () => {
@@ -362,7 +525,7 @@ describe('Experiment Run Strategy', () => {
     assert.deepEqual(plan.selection.regression.group_gaps.map((item) => item.experiment), ['beta', 'gamma', 'delta', 'epsilon']);
   });
 
-  it('keeps fast v1 history qualification-only and never stitches facts across retained records', () => {
+  it('keeps incomplete retained observations ineligible and never stitches facts across records', () => {
     const qualifying = entry({ caseId: 'case-12-light-qualification', experiment: 'alpha' });
     const stitched = entry({ caseId: 'case-13-light-stitched', experiment: 'beta' });
     const entries = [qualifying, stitched];
@@ -388,7 +551,8 @@ describe('Experiment Run Strategy', () => {
     });
     assert.equal(normal.selection.selected.length, 0);
     const normalAdmissions = new Map(normal.selection.regression.admissions.map((item) => [item.case, item]));
-    assert.equal(normalAdmissions.get('case-12-light-qualification').status, 'needs_qualification');
+    assert.equal(normalAdmissions.get('case-12-light-qualification').status, 'ineligible');
+    assert.ok(normalAdmissions.get('case-12-light-qualification').reasons.includes('execution_surface_relation_unknown'));
     assert.equal(normalAdmissions.get('case-13-light-stitched').status, 'ineligible');
     assert.ok(normalAdmissions.get('case-13-light-stitched').reasons.includes('cost_missing'));
 
@@ -407,10 +571,7 @@ describe('Experiment Run Strategy', () => {
         now: '2026-08-02T00:00:00.000Z',
       },
     });
-    assert.deepEqual(qualification.selection.selected.map((item) => item.case), ['case-12-light-qualification']);
-    assert.equal(qualification.selection.selected[0].selection_observation.schema_version, 'agent-experiment-selection-observation/v2');
-    assert.equal(qualification.selection.selected[0].selection_observation.regression_intent, 'qualification');
-    assert.equal(qualification.selection.selected[0].selection_observation.prediction_basis, 'observed_source_matching_history');
+    assert.deepEqual(qualification.selection.selected, []);
   });
 
   it('requires explicit qualification after execution-surface drift while source drift stays ineligible', () => {

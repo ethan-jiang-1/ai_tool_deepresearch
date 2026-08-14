@@ -1,0 +1,98 @@
+schema_version: verification-routing/v1
+change: decide-retained-experiment-history-policy
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The strict retained schemas, diagnostic-only reader behavior, virtual
+      observation projection, and current-v2 qualification admission are pure
+      deterministic strategy facts.
+  integration:
+    status: selected
+    rationale: >-
+      The Supervisor fixture proves that diagnostic-only retained history cannot
+      create a run root, while the terminology test keeps the two user-facing
+      normal Autorun READMEs aligned with the same rule.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      This change neither changes a research workflow chain nor adds a runtime
+      lifecycle transition; the focused Supervisor integration exercises the
+      complete changed selection-to-launch boundary.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change makes no claim about real Playbook-Agent behavior. Fixture
+      evidence proves only deterministic schema, selection, and launch
+      prevention mechanics, and real retained history is deliberately out of
+      scope.
+claims:
+  - id: current-v2-retained-reader-only
+    statement: >-
+      ERS-001 and EXO-007: v1 retained batch/audit envelopes and v2 envelopes
+      carrying a v1 selection observation produce only non-fatal diagnostics,
+      while complete v2 observations remain current strategy input.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/host_tools/experiment-run-strategy.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-v2-qualification-remains-explicit
+    statement: >-
+      ERS-002 and EXO-007: only a fast, source-matching current-v2 result with
+      execution-surface drift is `needs_qualification`; normal regression
+      excludes it and explicit qualification may select it without combining
+      records or admitting v1 history.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/host_tools/experiment-run-strategy.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: supervisor-never-launches-v1-history
+    statement: >-
+      EXA-009, ERS-002, and EXO-007: a retained-v1-only regression dry-run
+      reports no current retained result plus a non-fatal diagnostic, and both
+      normal regression and explicit qualification leave no run root.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/host_tools/run-agent-experiment.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-v2-only-qualification-guidance
+    statement: >-
+      PLR-004: current normal Autorun guidance says retained v1 history is
+      human-readable/diagnostic-only and reserves the explicit qualification
+      command for the current-v2 execution-surface-drift path.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-experiment-autorun-terminology.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

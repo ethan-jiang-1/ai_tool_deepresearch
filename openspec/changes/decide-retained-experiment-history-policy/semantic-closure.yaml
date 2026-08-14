@@ -1,0 +1,48 @@
+schema_version: semantic-closure/v1
+change: decide-retained-experiment-history-policy
+status: affected
+catalog_additions:
+  - id: verification.autorun-current-retained-observation
+    bounded_question: >-
+      Which retained Autorun report/audit records may establish current
+      prediction, admission, qualification, group-selection, or launch facts,
+      and which records are diagnostic-only historical material?
+affected:
+  - family: verification.autorun-current-retained-observation
+    fact: >-
+      Only a complete retained v2 batch report or v2 audit case-result carrying
+      a v2 selection observation establishes current Supervisor strategy facts.
+      Retained v1 envelopes, v2 envelopes carrying a v1 selection observation,
+      and malformed retained records remain non-fatal diagnostics and establish
+      no current prediction, admission, qualification, group gap, selection, or
+      launch fact.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/host_tools/lib/experiment-run-strategy.mjs#readRetainedExperimentObservations
+    established_by:
+      - DEEP_RESEARCH_HARNESS/host_tools/lib/agent-experiment-contract.mjs#ExperimentSelectionObservationSchema
+      - DEEP_RESEARCH_HARNESS/host_tools/lib/experiment-run-strategy.mjs#readRetainedExperimentObservations
+    consumers:
+      - DEEP_RESEARCH_HARNESS/host_tools/lib/experiment-run-strategy.mjs#planExperimentRun
+      - DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs#runSupervisor
+    overlap:
+      - coordinate: openspec/specs/verification/experiment-run-strategy/spec.md
+        relation: authoritative
+        detail: ERS-001 and ERS-002 own the current retained observation and regression-admission rule.
+      - coordinate: openspec/specs/verification/experiment-agent-autorun/spec.md
+        relation: authoritative
+        detail: EXA-009 owns the Supervisor's bounded launch consequence for strategy selection.
+      - coordinate: openspec/specs/verification/experiment-observability/spec.md
+        relation: authoritative
+        detail: EXO-007 owns the retained v2 envelope and selection-observation contract.
+      - coordinate: openspec/specs/workflow/playbook-runner/spec.md
+        relation: authoritative
+        detail: PLR-004 owns normal operator guidance for current-v2 qualification.
+      - coordinate: DEEP_RESEARCH_HARNESS/host_tools/README.md
+        relation: derived
+        detail: The host-tool README explains the resolved current-only selection rule but does not establish it.
+      - coordinate: experiments_playbook/README.md
+        relation: derived
+        detail: The playbook README presents the current qualification command but does not establish admission facts.
+    verification:
+      truth_table: tests/host_tools/experiment-run-strategy.test.mjs
+      cross_surface: tests/integration/host_tools/run-agent-experiment.test.mjs

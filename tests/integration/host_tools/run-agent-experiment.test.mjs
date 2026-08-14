@@ -128,9 +128,11 @@ describe('run-agent-experiment deterministic host lifecycle', () => {
     assert.equal(Object.hasOwn(normalContext.policy, 'regression_recommendation'), false);
     assert.equal(Object.hasOwn(normalContext.policy, 'regression_retry_safety'), false);
 
-    const qualificationFixture = makeProject();
-    writeHistoricalV1Report(qualificationFixture);
-    const normalDryRun = await runSupervisor(baseOptions({
+    const v2QualificationFixture = makeProject();
+    await runSupervisor(baseOptions(), { repoRoot: v2QualificationFixture.root, executable: v2QualificationFixture.executable });
+    const healthHelper = path.join(v2QualificationFixture.root, 'experiments_env/shared/verify-bundle-health.mjs');
+    writeFileSync(healthHelper, `${readFileSync(healthHelper, 'utf8')}\n// execution surface drift\n`);
+    const v2NormalDryRun = await runSupervisor(baseOptions({
       caseId: null,
       runProfile: 'regression',
       maxPredictedDurationMs: 480_000,
@@ -138,12 +140,12 @@ describe('run-agent-experiment deterministic host lifecycle', () => {
       maxCaseBudgetUsd: null,
       timeoutExplicit: false,
       dryRun: true,
-    }), { repoRoot: qualificationFixture.root, executable: qualificationFixture.executable });
-    assert.equal(normalDryRun.selected_count, 0);
-    assert.equal(normalDryRun.selection.regression.admissions[0].status, 'needs_qualification');
-    assert.equal(existsSync(path.join(qualificationFixture.root, '.exp-bundles/runs')), false);
+    }), { repoRoot: v2QualificationFixture.root, executable: v2QualificationFixture.executable });
+    assert.equal(v2NormalDryRun.selected_count, 0);
+    assert.equal(v2NormalDryRun.selection.regression.admissions[0].status, 'needs_qualification');
+    assert.equal(existsSync(path.join(v2QualificationFixture.root, '.exp-bundles/runs')), true);
 
-    const qualification = await runSupervisor(baseOptions({
+    const v2Qualification = await runSupervisor(baseOptions({
       caseId: null,
       runProfile: 'regression',
       regressionQualification: true,
@@ -153,11 +155,41 @@ describe('run-agent-experiment deterministic host lifecycle', () => {
       timeoutMs: 120_000,
       timeoutExplicit: true,
       healthTimeoutMs: 60_000,
-    }), { repoRoot: qualificationFixture.root, executable: qualificationFixture.executable });
-    assert.equal(qualification.results[0].selection_observation.regression_intent, 'qualification');
-    assert.equal(qualification.results[0].selection_observation.prediction_basis, 'observed_source_matching_history');
-    assert.equal(qualification.results[0].native_outcome, 'PASS');
-    assert.equal(qualification.results[0].health, 'CLEAN');
+    }), { repoRoot: v2QualificationFixture.root, executable: v2QualificationFixture.executable });
+    assert.equal(v2Qualification.results[0].selection_observation.regression_intent, 'qualification');
+    assert.equal(v2Qualification.results[0].selection_observation.prediction_basis, 'observed_source_matching_history');
+    assert.equal(v2Qualification.results[0].native_outcome, 'PASS');
+    assert.equal(v2Qualification.results[0].health, 'CLEAN');
+
+    const historicalFixture = makeProject();
+    writeHistoricalV1Report(historicalFixture);
+    const historicalDryRun = await runSupervisor(baseOptions({
+      caseId: null,
+      runProfile: 'regression',
+      maxPredictedDurationMs: 480_000,
+      maxTotalBudgetUsd: null,
+      maxCaseBudgetUsd: null,
+      timeoutExplicit: false,
+      dryRun: true,
+    }), { repoRoot: historicalFixture.root, executable: historicalFixture.executable });
+    assert.equal(historicalDryRun.selected_count, 0);
+    assert.equal(historicalDryRun.selection.regression.admissions[0].status, 'ineligible');
+    assert.ok(historicalDryRun.selection.regression.admissions[0].reasons.includes('no_retained_result'));
+    assert.ok(historicalDryRun.selection.retained_observation_diagnostics.includes('retained_report_invalid:historical-v1.json'));
+    assert.equal(existsSync(path.join(historicalFixture.root, '.exp-bundles/runs')), false);
+
+    await assert.rejects(() => runSupervisor(baseOptions({
+      caseId: null,
+      runProfile: 'regression',
+      regressionQualification: true,
+      maxPredictedDurationMs: 480_000,
+      maxTotalBudgetUsd: 3,
+      maxCaseBudgetUsd: null,
+      timeoutMs: 120_000,
+      timeoutExplicit: true,
+      healthTimeoutMs: 60_000,
+    }), { repoRoot: historicalFixture.root, executable: historicalFixture.executable }), /selected no runnable cases/);
+    assert.equal(existsSync(path.join(historicalFixture.root, '.exp-bundles/runs')), false);
   });
 
   it('preserves legacy filename-tier selection as an explicit compatibility filter', async () => {

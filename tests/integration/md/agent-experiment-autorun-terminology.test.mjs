@@ -149,8 +149,11 @@ describe('Agent Experiment Autorun terminology knowledge surfaces', () => {
     assert.match(surfaces, /regression-qualification/);
     assert.match(surfaces, /480000/);
     assert.match(surfaces, /regression_recommendation/);
+    assert.match(surfaces, /Retained v1 history is human-readable\/diagnostic-only/);
+    assert.match(surfaces, /current-v2 fast PASS\+CLEAN/);
     assert.doesNotMatch(surfaces, /No filter selects autorun-compatible Light cases/);
     assert.doesNotMatch(surfaces, /No filter defaults to autorun-compatible Light cases/);
+    assert.doesNotMatch(surfaces, /source-matching historical(?: fast)? result/);
   });
 
   it('does not revive retired autorun instruction or host-entry names', () => {

@@ -91,9 +91,7 @@ export function executionSurfaceFingerprint(surface) {
   })));
 }
 
-const SelectionObservationV1ProfileSchema = z.enum(['calibration', 'discovery', 'diagnostic', 'assurance']);
 const SelectionObservationV2ProfileSchema = z.enum(['calibration', 'discovery', 'diagnostic', 'assurance', 'regression']);
-const SelectionObservationV1PredictionBasisSchema = z.enum(['explicit_selector', 'observed_matching', 'observed_stale', 'filename_initial_estimate', 'unavailable']);
 const SelectionObservationV2PredictionBasisSchema = z.enum(['explicit_selector', 'observed_matching', 'observed_stale', 'observed_source_matching_history', 'filename_initial_estimate', 'unavailable']);
 
 function selectionObservationShape({ schemaVersion, profile, predictionBasis }) {
@@ -131,12 +129,6 @@ function refineSelectionObservation(value, ctx) {
   }
 }
 
-export const ExperimentSelectionObservationV1Schema = z.object(selectionObservationShape({
-  schemaVersion: 'agent-experiment-selection-observation/v1',
-  profile: SelectionObservationV1ProfileSchema,
-  predictionBasis: SelectionObservationV1PredictionBasisSchema,
-})).strict().superRefine(refineSelectionObservation);
-
 export const ExperimentSelectionObservationV2Schema = z.object({
   ...selectionObservationShape({
     schemaVersion: 'agent-experiment-selection-observation/v2',
@@ -155,32 +147,13 @@ export const ExperimentSelectionObservationV2Schema = z.object({
   }
 });
 
-export const ExperimentSelectionObservationSchema = z.union([
-  ExperimentSelectionObservationV1Schema,
-  ExperimentSelectionObservationV2Schema,
-]);
+export const ExperimentSelectionObservationSchema = ExperimentSelectionObservationV2Schema;
 
 const OutcomeSchema = z.enum(['PASS', 'FAIL', 'NOT_RUN']).nullable();
 const LifecycleOutcomeSchema = z.enum(['ERROR', 'CANCELLED']).nullable();
 const EffectiveOutcomeSchema = z.enum(['PASS', 'FAIL', 'NOT_RUN', 'HUMAN', 'ERROR', 'CANCELLED']);
 const HealthSchema = z.enum(['CLEAN', 'ISSUES', 'ERROR']).nullable();
 const LogReferenceSchema = z.object({ path: absolutePath, bytes: z.number().int().nonnegative(), sha256 }).strict();
-const ReportResultV1Schema = z.object({
-  case: caseIdentity,
-  experiment: z.string().trim().min(1),
-  playbook_path: manifestEntryPath,
-  native_outcome: OutcomeSchema,
-  lifecycle_outcome: LifecycleOutcomeSchema,
-  effective_outcome: EffectiveOutcomeSchema,
-  health: HealthSchema,
-  duration_ms: z.number().int().nonnegative(),
-  cost_usd: finiteNonnegative.nullable(),
-  completion: z.object({
-    source_playbook_sha256: sha256,
-    outcome: z.enum(['PASS', 'FAIL', 'NOT_RUN']),
-  }).passthrough().nullable(),
-}).passthrough();
-
 const ReportResultV2Schema = z.object({
   case: caseIdentity,
   experiment: z.string().trim().min(1),
@@ -225,13 +198,6 @@ const ProofBoundarySchema = z.object({
   agent_flow_proof_requires: z.array(z.string().trim().min(1)),
 }).strict();
 
-export const AgentExperimentBatchReportV1Schema = z.object({
-  schema_version: z.literal('agent-experiment-batch-report/v1'),
-  batch_id: z.string().uuid(),
-  generated_at: z.string().datetime(),
-  results: z.array(ReportResultV1Schema),
-}).passthrough();
-
 export const AgentExperimentBatchReportV2Schema = z.object({
   schema_version: z.literal('agent-experiment-batch-report/v2'),
   batch_id: z.string().uuid(),
@@ -248,10 +214,7 @@ export const AgentExperimentBatchReportV2Schema = z.object({
   report_path: absolutePath,
 }).strict();
 
-export const AgentExperimentBatchReportSchema = z.discriminatedUnion('schema_version', [
-  AgentExperimentBatchReportV1Schema,
-  AgentExperimentBatchReportV2Schema,
-]);
+export const AgentExperimentBatchReportSchema = AgentExperimentBatchReportV2Schema;
 
 const AuditRunContextSchema = z.object({
   path: absolutePath,
@@ -319,18 +282,11 @@ const AuditCleanupResultV2Schema = z.object({
   selection_observation: ExperimentSelectionObservationSchema,
 }).strict();
 
-export const AgentExperimentAuditEventV1Schema = z.object({
-  schema_version: z.literal('agent-experiment-audit-event/v1'),
-  event: z.string().trim().min(1),
-}).passthrough();
 export const AgentExperimentAuditEventV2Schema = z.discriminatedUnion('event', [
   AuditCaseResultV2Schema,
   AuditCleanupResultV2Schema,
 ]);
-export const AgentExperimentAuditEventSchema = z.union([
-  AgentExperimentAuditEventV1Schema,
-  AgentExperimentAuditEventV2Schema,
-]);
+export const AgentExperimentAuditEventSchema = AgentExperimentAuditEventV2Schema;
 
 export const AgentExperimentRunContextSchema = z.object({
   schema_version: z.literal('agent-experiment-run/v1'),

@@ -96,7 +96,7 @@ node DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs \
   --max-total-budget-usd 3 --timeout 120000 --health-timeout 60000
 ```
 
-When a fast source-matching historical observation lacks a matching v2 execution surface or carries a stale one, normal regression reports `needs_qualification` and does not launch it. Only the explicit qualification path may run that candidate under the same envelope:
+Retained v1 history is human-readable/diagnostic-only and cannot supply current prediction, admission, qualification, or selection facts. When a fast current-v2 PASS+CLEAN observation has a matching source but a stale execution surface, normal regression reports `needs_qualification` and does not launch it. Only the explicit qualification path may run that candidate under the same envelope:
 
 ```bash
 node DEEP_RESEARCH_HARNESS/host_tools/run-agent-experiment.mjs \

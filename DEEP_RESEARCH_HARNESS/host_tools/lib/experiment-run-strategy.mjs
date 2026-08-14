@@ -374,14 +374,11 @@ export function readRetainedExperimentObservations({ expBundlesRoot }) {
         }
         const report = parsed.data;
         for (const result of report.results) {
-          const executionSurface = report.schema_version === 'agent-experiment-batch-report/v2'
-            ? result.execution_surface
-            : null;
           observations.push(normalizeRetainedResult({
             batchId: report.batch_id,
             generatedAt: report.generated_at,
             result,
-            executionSurface,
+            executionSurface: result.execution_surface,
             origin: 'report',
           }));
           reportKeys.add(`${report.batch_id}:${result.case}`);
@@ -409,7 +406,7 @@ export function readRetainedExperimentObservations({ expBundlesRoot }) {
             batchId: event.batch_id,
             generatedAt: event.ts,
             result: event,
-            executionSurface: event.schema_version === 'agent-experiment-audit-event/v2' ? event.execution_surface : null,
+            executionSurface: event.execution_surface,
             origin: 'audit',
           }));
         } catch (error) {
@@ -615,7 +612,7 @@ function regressionAdmission(item) {
     && hasV2ExecutionSurface
     && executionRelation === 'stale';
   if (sourceRelation !== 'matching') reasons.push(`source_relation_${sourceRelation}`);
-  if (hasV2ExecutionSurface && executionRelation !== 'matching' && !requiresExecutionSurfaceQualification) {
+  if (!hasV2ExecutionSurface || (executionRelation !== 'matching' && !requiresExecutionSurfaceQualification)) {
     reasons.push(`execution_surface_relation_${executionRelation}`);
   }
 
@@ -635,18 +632,16 @@ function regressionAdmission(item) {
 
   const predictionBasis = sourceRelation === 'matching' && hasV2ExecutionSurface && executionRelation === 'matching'
     ? 'observed_matching'
-    : sourceRelation === 'matching' && (!hasV2ExecutionSurface || requiresExecutionSurfaceQualification)
+    : sourceRelation === 'matching' && requiresExecutionSurfaceQualification
       ? 'observed_source_matching_history'
       : 'unavailable';
   let status = 'ineligible';
   if (reasons.length === 0 && hasV2ExecutionSurface && executionRelation === 'matching') {
     status = 'eligible';
     reasons.push('matching_v2_pass_clean_within_fast_slo');
-  } else if (reasons.length === 0 && (!hasV2ExecutionSurface || requiresExecutionSurfaceQualification)) {
+  } else if (reasons.length === 0 && requiresExecutionSurfaceQualification) {
     status = 'needs_qualification';
-    reasons.push(requiresExecutionSurfaceQualification
-      ? 'matching_source_history_requires_execution_surface_qualification'
-      : 'matching_source_history_requires_v2_qualification');
+    reasons.push('matching_source_history_requires_execution_surface_qualification');
   }
 
   return RegressionAdmissionSchema.parse({
