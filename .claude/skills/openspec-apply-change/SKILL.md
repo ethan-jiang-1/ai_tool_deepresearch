@@ -7,12 +7,12 @@ compatibility: Requires openspec CLI.
 metadata:
   author: openspec
   version: "1.0"
-  generatedBy: "1.8.0"
+  generatedBy: "1.9.0"
 ---
 
 Implement tasks from an OpenSpec change.
 
-**Store selection:** If the user names a store (a store is a standalone OpenSpec repo registered on this machine) or the work lives in one, run `openspec store list --json` to discover registered store ids, then pass `--store <id>` on the commands that read or write specs and changes (`new change`, `status`, `instructions`, `list`, `show`, `validate`, `archive`, `doctor`, `context`, `view`). Once selected, treat `--store <id>` as sticky for the rest of the workflow. Every unscoped example of those commands below is shorthand: before running it, append the flag. For example, run `openspec status --change "<name>" --json --store "<id>"`, not the unscoped form shown below. Other commands do not take the flag. Hints printed by commands already carry the flag; keep it on follow-ups. Without a store, commands act on the nearest local `openspec/` root.
+**Store selection:** If the user names a store (a store is a standalone OpenSpec repo registered on this machine) or the work lives in one, run `openspec store list --json` to discover registered store ids, then pass `--store <id>` on the commands that read or write specs and changes (`new change`, `status`, `instructions`, `list`, `show`, `validate`, `archive`, `doctor`, `context`, `schemas`, `view`). Once selected, treat `--store <id>` as sticky for the rest of the workflow. Every unscoped example of those commands below is shorthand: before running it, append the flag. For example, run `openspec status --change "<name>" --json --store "<id>"`, not the unscoped form shown below. Other commands do not take the flag. Hints printed by commands already carry the flag; keep it on follow-ups. Without a store, commands act on the nearest local `openspec/` root.
 
 **Input**: Optionally specify a change name (e.g., `/opsx:apply add-auth`). If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
 
@@ -57,8 +57,7 @@ Implement tasks from an OpenSpec change.
 
    Treat `context` as a required prompt-level input. Read and consider it, and
    apply relevant project facts, conventions, and constraints while implementing.
-   Treat `operationGuidance` as optional additive advice unless the feedback-lifecycle
-   boundary below applies. Read and consider every
+   Treat `operationGuidance` as optional additive advice. Read and consider every
    entry, and follow entries that are applicable and compatible with the built-in
    workflow.
 
@@ -71,39 +70,7 @@ Implement tasks from an OpenSpec change.
    conflicts with those controlling inputs, do not follow it and explain why.
    These are prompt-level behavior contracts, not enforceable checks.
 
-4. **Apply lifecycle boundaries**
-
-   When `tasks.md` contains `openspec-feedback:`, require valid
-   `operationGuidance` containing `change-feedback-loop/apply:`. A failed or
-   missing instruction lookup stops apply before target edits and uses
-   `openspec instructions apply --change "<name>" --json` as its rerun coordinate.
-   Read `guidelines/change-feedback-loop.md`, complete the plan-review marker
-   before target edits, and record each actionable finding as an ordinary pending
-   task. That review must inspect `semantic-closure.yaml` by the current
-   guideline; a structural checker result is not semantic-completeness proof.
-   Guidance is not completion proof.
-
-   When returned `operationGuidance` contains `requirement-reservation/apply:`, run
-   `node openspec/governance/check-project-reqs.mjs --mode plan` before target
-   edits. A non-zero result stops apply and uses that command as the rerun
-   coordinate. A passing plan check does not grant target-edit or archive
-   permission.
-
-   For every selected change, after any required plan review and before every
-   target edit, run these checks in this order:
-
-   ```bash
-   node openspec/governance/check-verification-routing.mjs --change "<name>" --mode plan
-   node openspec/governance/check-semantic-closure.mjs --change "<name>" --mode plan
-   ```
-
-   A non-zero result from either check stops apply before other target edits.
-   Return its repair coordinate and rerun command to the Agent. Do not treat a
-   missing semantic-closure command, an absent feedback marker, or a passing
-   structural check as an exception, semantic-completeness verdict, or archive
-   permission.
-
-5. **Read context files**
+4. **Read context files**
 
    Read every file path listed under `contextFiles` from the apply instructions output.
    The files depend on the schema being used:
@@ -113,7 +80,7 @@ Implement tasks from an OpenSpec change.
    Do not copy `context` or `operationGuidance` verbatim into implementation
    files or planning artifacts unless the user separately asks for that content.
 
-6. **Show current progress**
+5. **Show current progress**
 
    Display:
    - Schema being used
@@ -121,7 +88,7 @@ Implement tasks from an OpenSpec change.
    - Remaining tasks overview
    - Dynamic instruction from CLI
 
-7. **Implement tasks (loop until done or blocked)**
+6. **Implement tasks (loop until done or blocked)**
 
    For each pending task:
    - Show which task is being worked on
@@ -133,10 +100,11 @@ Implement tasks from an OpenSpec change.
    **Pause if:**
    - Task is unclear → ask for clarification
    - Implementation reveals a design issue → suggest updating artifacts
+   - A task needs work beyond what the spec and tasks describe, or you are tempted to drop, narrow, defer, or accept exceptions to specified behavior to make it fit → surface the added scope and ask; do not absorb it silently
    - Error or blocker encountered → report and wait for guidance
    - User interrupts
 
-8. **On completion or pause, show status**
+7. **On completion or pause, show status**
 
    Display:
    - Tasks completed this session
@@ -203,6 +171,8 @@ What would you like to do?
 - Keep code changes minimal and scoped to each task
 - Update task checkbox immediately after completing each task
 - Pause on errors, blockers, or unclear requirements - don't guess
+- When a task needs work beyond what the spec describes, surface the added scope and pause - never silently narrow, defer, or simplify away specified behavior
+- Only mark a task `- [x]` when its specified behavior is fully implemented, not when it is partially done or deferred
 - Use contextFiles from CLI output, don't assume specific file names
 - Do not use context or operation guidance as proof that a task is complete
 - Apply relevant project context; report conflicts with controlling workflow inputs
