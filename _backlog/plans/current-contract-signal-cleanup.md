@@ -2,10 +2,10 @@
 
 > **唯一进度入口：每次回来只看下面这张总清单。**
 >
-> 总进度：`[##################-]` **18 / 19 个执行项已归档或明确关闭；还剩 1 个（19）**
-> 当前位置：**19 / `C8`；C7 已 governed-archived 并提交，C8 尚未创建 proposal。**
-> 眼前一步：**先为 C8 逐项确认：哪些 Markdown test 在保护真正的 routing/authority behavior，哪些只是过期 literal；并为两个 guidance fixture 确认最小 complete-current actor profile。确认前不创建 proposal，也不修改 target docs/tests/fixtures。**
-> 修改权限：**C7 已归档并提交（`b0e7d4e96`）。C8 现在仅有调查与 decision-card/backlog 更新权限；`DEEP_RESEARCH_HARNESS/`、accepted main specs、routing docs 与 tests 保持只读，直至完成独立 proposal、checks、polish 并获用户 `APPLY`。**
+> 总进度：`[###################]` **19 / 19 个执行批次均已 governed-archived 并提交；本计划已完成。**
+> 当前位置：**完成；C8 已归档为 [`2026-08-15-align-current-guidance-contract-guards`](../../openspec/changes/archive/2026-08-15-align-current-guidance-contract-guards/)，implementation/archive commit 为 `9030fa785`，`tasks.md` 为 20 / 20。**
+> 眼前一步：**没有下一项 change。只有发现新的、能指向现行 Source of Record 的噪声时，才新建独立 decision card 和 OpenSpec proposal。**
+> 修改权限：**本 cleanup plan 不再授权任何 target 修改；后续工作回到正常 OpenSpec change lifecycle。**
 >
 > Proposal gate：**每个新 OpenSpec proposal 完成 planning checks 后，必须紧接着运行 `polish-openspec-change`；只有 checks 与 polish 都通过，才可进入 review / `APPLY`。**
 
@@ -141,9 +141,17 @@
   - [x] 完成 hygiene integration（1 / 1）、workflow-package、strict OpenSpec、archive requirement/project-spec/taxonomy/discovery、verification-routing/semantic-closure 与 delta/main re-comparison。
   - [x] 完成 closeout review 与 governed archive（全部 finalizer checks passed）；commit implementation/archive（`b0e7d4e96`）。
   - [x] 回填本看板、execution ledger、coverage ledger 与 C7/C8 decision cards。
-- [ ] 19 `C8`：对齐 current context/routing Markdown guards（唯一剩余项，独立决定）
-  - C8 不可与 C7 合并：它涵盖 C3 后过期 routing literal assertions、C4a/C5a-2 policy 后的旧断言、RUN.md actor/liveness guidance 漏项，以及两个缺 complete-current-work-unit profile 的 guidance fixtures。
-  - 先确认两个 fixture 的最小 current profile input，再逐项区分「test 旧断言」与「current doc 漏掉事实」；不得借 C7 删除/弱化这些 behavior guards。
+- [x] 19 `C8`：对齐 current context/routing Markdown guards（已归档并提交）
+  - OpenSpec archive: [`2026-08-15-align-current-guidance-contract-guards`](../../openspec/changes/archive/2026-08-15-align-current-guidance-contract-guards/)
+  - C8 不可与 C7 合并：C7 的 Source of Record 是 retired accepted-spec/registry identity；C8 的 Source of Record 是 existing current routing/feedback/reference/work-unit contracts 与它们的 docs/tests projection。
+  - [x] 完成全量 current-surface 复核：先确认 10 个 drift，分别是 3 个 routing literal assertions、1 个 HITL1 retired repair-kind assertion、1 个 historical reference-reader assertion、1 处 `RUN.md` logical-actor/liveness 漏项、2 个缺 actor-v1 的 generated-guidance fixtures、1 个错误保留 legacy-unbound envelope 成功路径的 actor-delivery test、以及 1 个缺 current assignment/actor fixture 的 work-ID unit test；Apply 时另发现 direct-output guard 的 1 个跨文档误匹配，已作为 1.6a 修复，所以最终范围为 11 个 drift。
+  - [x] 对全部 8 个直接调用 `createWorkUnit` 的测试文件做验证：4 个已具备完整 current profile；上述 4 个是唯一仍失败/漂移的文件。不得借 C8 删除或弱化 Engine 的 current envelope rejection。
+  - [x] 创建独立 proposal（现已归档为 [`2026-08-15-align-current-guidance-contract-guards`](../../openspec/changes/archive/2026-08-15-align-current-guidance-contract-guards/)）：`skip_specs: true`，不改 runtime、schema、accepted specs、registry 或任何 historical success/compatibility path。
+  - [x] 完成 strict OpenSpec、requirements、project-specs、capability discovery、verification routing（8 claims：1 unit + 7 integration）、semantic closure 和 diff checks；完成两轮 risk-led `polish-openspec-change`。
+  - [x] 用户明确授权 `APPLY`；完成 feedback plan review 后只改 1 处 `RUN.md`、8 个列名测试资产与 1 个 test helper。selected suite 两次均为 36 / 36；workflow-package、protected-surface、strict OpenSpec、requirement/project-spec/taxonomy/discovery、verification-routing、semantic-closure 与 archive preconditions 全部通过。
+  - [x] 完成 closeout review；发现并收口 actor-delivery negative fixture 的 artifact-boundary 缺口：允许 transaction audit，但禁止 index、manifest、beacon、task、result-schema 与 actor-guidance publication。
+  - [x] 运行 governed finalizer，归档为 `2026-08-15-align-current-guidance-contract-guards`；OpenSpec status、artifacts、20 / 20 tasks、strict validation、requirement/main-spec governance、taxonomy/discovery、verification-routing、semantic-closure 与 native archive checks 全部通过；无 delta spec sync。
+  - [x] Commit implementation/archive（`9030fa785`）；已勾选顶层 19 并追加 execution ledger。本总计划完成，没有下一项 change。
 
 ## 为什么是 19 项
 
