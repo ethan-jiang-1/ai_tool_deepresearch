@@ -1,0 +1,9 @@
+schema_version: semantic-closure/v1
+change: retire-unimplemented-fork-repair-contract
+status: not_applicable
+reason: >-
+  This change retires an unimplemented accepted capability, its catalog row, and
+  its live requirement identity. It changes no current deterministic runtime
+  fact, resolver, established-by surface, verdict consumer, or derived runtime
+  projection; existing repair-loop, Gate-router, and conditional-node behavior
+  is explicitly verify-only and remains outside the target-edit scope.

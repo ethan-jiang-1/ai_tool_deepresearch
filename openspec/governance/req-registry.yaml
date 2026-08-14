@@ -55,7 +55,7 @@ prefixes:
   ERS: verification/experiment-run-strategy
   EXA: verification/experiment-agent-autorun
   FDB: research/final-delivery-backing
-  FOR: workflow/fork-repair-converge
+  FOR: fork-repair-converge        # all entries deprecated; no spec directory
   FRE: engine/framework-engine
   FIO: bundle/file-observability
   GAC: engine/gate-content-dedup
@@ -835,8 +835,8 @@ COS-001: conditional-nodes — Deterministic branch checkpoint transforms
 # workflow/dynamic-node-loading
 DYS-001: dynamic-node-loading — Explicit fileRef Markdown closure loading with cached parsed node data
 
-# workflow/fork-repair-converge
-FOR-001: fork-repair-converge — Multi-fail shared repair checkpoint convergence
+# fork-repair-converge — all entries deprecated; no spec directory
+FOR-001: fork-repair-converge — Multi-fail shared repair checkpoint convergence [DEPRECATED]
 
 # workflow/playbook-runner
 PLR-001: playbook-runner — PLAYBOOK_MANIFEST plus Agent Autorun instruction is the normal Playbook Agent entry

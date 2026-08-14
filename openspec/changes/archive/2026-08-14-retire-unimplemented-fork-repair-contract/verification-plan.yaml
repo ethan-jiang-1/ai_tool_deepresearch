@@ -1,0 +1,16 @@
+schema_version: verification-routing/v1
+change: retire-unimplemented-fork-repair-contract
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: No deterministic implementation behavior changes; the change retires a false accepted contract and verifies repository governance plus protected current contracts.
+  integration:
+    status: not_applicable
+    rationale: No CLI, bundle, or cross-module runtime boundary changes.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No workflow-scale deterministic behavior changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change makes no claim about Agent research, judgment, or writing behavior.
+claims: []
