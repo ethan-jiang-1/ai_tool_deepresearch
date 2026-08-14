@@ -15,6 +15,7 @@
 | 06 | 2026-08-13 | `2026-08-13-retire-legacy-research-access-envelope` | Legacy access envelope rejected at current schema/reader boundaries | commit `0884dc205`; 12 selected deterministic assets plus package/archive governance |
 | 07 | 2026-08-13 | `2026-08-13-retire-legacy-plan-migration` | Old mutable plan remains human-readable but cannot enter current inspect/reentry/migration | commit `2a79435bb`; selected schema/topic-state/reader/guidance/rerun tests plus governance |
 | 08 | 2026-08-14 | `2026-08-14-make-current-reference-authoring-uid-only` | New references use scalar UID, `all`, or an exact UID subset | commit `0f415d92b`; 99 selected tests plus strict OpenSpec and archive governance |
+| 09 | 2026-08-14 | `2026-08-14-decide-historic-reference-reader-policy` | Retained `related_topic` Markdown remains human-readable but cannot enter current Engine evidence paths | commit `35daf961f`; 86 selected tests, package validation, strict OpenSpec, delta/main comparison, and governed archive |
 
 ## Notable Sequencing Decisions
 
@@ -22,6 +23,7 @@
 - C3 then removed legacy bundle-entry success behavior.
 - C4a and C4b were separate because profile access and plan migration had different readers and failure consequences.
 - C5a-1 changed current writers only; historic reference-reader policy remained explicitly deferred to item 09.
+- C5a-2 then retired the historic reader branch without rewriting retained Markdown; the C1 inactive-surface cards may now be evaluated independently.
 
 ## Metrics Snapshot
 
@@ -41,6 +43,7 @@ without deleting required behavior.
 | 2026-08-13 | 06 | Legacy URL/fetch/search/candidate/source-class/access envelope removed | PASS |
 | 2026-08-13 | 07 | Legacy plan schema union and migration readers/writers removed | PASS |
 | 2026-08-14 | 08 | `related_topic` removed from current rich-reference authoring | PASS |
+| 2026-08-14 | 09 | `related_topic` rejected as current reference evidence while historical bytes stay untouched | PASS |
 
 ## Update Template
 
