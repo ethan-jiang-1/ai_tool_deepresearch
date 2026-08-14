@@ -193,7 +193,7 @@ function materializeSubmittedWave0Reference(bundleDir, topic, record, sourceUrl,
   mkdirSync(path.dirname(stagedPath), { recursive: true });
   writeFileSync(stagedPath, `${referenceContent({
     source_url: sourceUrl,
-    related_topic: 'all',
+    related_topic_uid: 'all',
     evidence_role: 'foundation',
     accessed_at: '2026-07-14',
   })}\n\n## Submitted Backing\n- source_identity: ${record.work_id}/1\n- source_yaml_ref: artifacts/wave0/${topic.slug}/source.yaml\n- cache_trail_ref: ${cacheTrail}\n- result_ref: ${record.paths.result_ref}\n- work_unit_ref: ${record.paths.work_unit_dir}\n`);

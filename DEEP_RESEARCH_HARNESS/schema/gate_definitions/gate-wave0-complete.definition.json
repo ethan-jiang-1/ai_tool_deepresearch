@@ -34,6 +34,13 @@
       "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
+      "id": "reference_format",
+      "check": "reference_format",
+      "target": "reference/00-shared-*.md",
+      "failure_message": "Wave0 shared references must use current UID topic binding metadata and the required rich-reference format; a historical related_topic key is preserved for people but cannot be current Engine evidence.",
+      "finding": { "source": "checker" }
+    },
+    {
       "id": "shared_ref_count_floor",
       "check": "count_floor",
       "target": "reference/00-shared-*.md",

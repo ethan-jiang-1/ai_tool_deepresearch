@@ -5,7 +5,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { checkReferenceFormatFiles, tryLoadGateDefinition } from '../engine/helpers/gate-helpers.mjs';
+import { tryLoadGateDefinition } from '../engine/helpers/gate-helpers.mjs';
 import {
   buildContractEvaluation,
   emitInspectResult,
@@ -82,18 +82,6 @@ if (existsSync(join(referencePath, '00_shared'))) {
     repair: 'Move relevant projections to flat 00-cross-<slug>.md files and remove the legacy directory.',
   }));
 }
-
-const crossFiles = existsSync(referencePath) ? readdirSync(referencePath).filter((file) => file.startsWith('00-cross-') && file.endsWith('.md')) : [];
-const crossReferenceFiles = crossFiles.map((file) => ({
-  relPath: `reference/${file}`,
-  absPath: join(referencePath, file),
-}));
-const crossPresentation = checkReferenceFormatFiles(crossReferenceFiles, { bundlePath: resolvedBundlePath });
-additionalChecksRun += 1;
-additionalFindings.push(...crossPresentation.findings.map((finding) => makeContractFinding({
-  ...finding,
-  classification: 'advisory',
-})));
 
 const seedMap = evaluateSeedTopicProjectionReadiness(resolvedBundlePath, { wave: 'wave2', topicRegistryFact, findingIndexFact });
 additionalChecksRun += 1;

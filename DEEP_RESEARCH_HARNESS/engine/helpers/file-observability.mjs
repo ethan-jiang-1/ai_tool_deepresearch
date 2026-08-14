@@ -552,11 +552,11 @@ export function auditCanonicalTopicFootprint(bundlePath, {
           : metadata.get('related_topic_uid')
           ? { kind: 'related_topic_uid', surface: `${relPath}#metadata.related_topic_uid` }
           : null,
-        metadata.get('related_topic')
+        metadata.has('related_topic')
           ? { kind: 'related_topic', surface: `${relPath}#metadata.related_topic` }
           : null,
       ].filter(Boolean),
-      repair_kind: 'repair_topic_reference',
+      repair_kind: 'materialize_canonical_surface',
     });
   }
 

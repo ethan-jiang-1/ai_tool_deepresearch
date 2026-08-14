@@ -206,7 +206,7 @@ related_topic_uid: "{topic.topic_uid}"
 Rules:
 
 - New rich-reference metadata is one opening YAML-frontmatter mapping; serialize its metadata object with `yaml.stringify(...)` and place that mapping between the opening `---` fences. Legacy `- key: value` metadata is read-compatible only and is not a new-output option.
-- Provide the eight common metadata fields plus exactly one current UID binding: exact registered `related_topic_uid`, `related_topic_uid: all`, or a non-empty duplicate-free `related_topic_uids` array for an exact selected subset. Do not write `related_topic` in new output; it remains a historical reader input only.
+- Provide the eight common metadata fields plus exactly one current UID binding: exact registered `related_topic_uid`, `related_topic_uid: all`, or a non-empty duplicate-free `related_topic_uids` array for an exact selected subset. Do not write `related_topic` in new output; retained historical files remain human-readable but are rejected by the current Engine.
 - All five semantic sections are required and non-empty. Use the canonical headings when convenient; heading case, level, spacing, order, and list presentation may vary without changing the contract.
 - `source_url` must be present, URL-parseable, and recoverable through submitted cache/source trails.
 - `Key Facts` must contain concrete facts from the fetched page, while `Core Content Capture` must separately preserve a non-empty narrative capture; no fixed fact count is required.

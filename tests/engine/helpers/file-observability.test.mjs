@@ -436,7 +436,7 @@ describe('file observability', () => {
     }
   });
 
-  it('groups explicit registry-external durable topic facts into one canonical finding', () => {
+  it('keeps a retired reference out of an unregistered durable-topic finding', () => {
     const dir = setupBundle('fo-canonical-unregistered', {
       'artifacts/wave1/topic-x/evidence-summary.md': '# Evidence\n',
       'reference/topic-x-source.md': '- related_topic: topic-x\n\n## Key Facts\n',
@@ -445,26 +445,29 @@ describe('file observability', () => {
       topics: [{ id: 'T01', slug: 'topic-a' }],
       targetPhase: null,
     });
-    const roots = result.canonical_findings.filter((finding) => finding.topic_identity === 'topic-x');
-    assert.strictEqual(roots.length, 1);
-    assert.strictEqual(roots[0].rule_id, 'unregistered_durable_topic');
-    assert.strictEqual(roots[0].classification, 'blocking');
-    const surfaces = new Set([roots[0].primary_surface, ...roots[0].supporting_details.map((detail) => detail.surface)]);
-    assert.ok(surfaces.has('reference/topic-x-source.md'));
-    assert.ok(surfaces.has('artifacts/wave1/topic-x'));
+    const durableRoots = result.canonical_findings.filter((finding) => finding.topic_identity === 'topic-x');
+    assert.strictEqual(durableRoots.length, 1);
+    assert.strictEqual(durableRoots[0].rule_id, 'unregistered_durable_topic');
+    assert.strictEqual(durableRoots[0].primary_surface, 'artifacts/wave1/topic-x');
+    const retiredRoots = result.canonical_findings.filter((finding) => finding.primary_surface === 'reference/topic-x-source.md');
+    assert.strictEqual(retiredRoots.length, 1);
+    assert.strictEqual(retiredRoots[0].rule_id, 'reference_topic_binding_legacy_unsupported');
+    assert.strictEqual(retiredRoots[0].topic_identity, null);
   });
 
-  it('uses exact registry ids/slugs and accepts related_topic all or exact lists', () => {
+  it('reports retired reference metadata as one non-attributed root per file', () => {
     const dir = setupBundle('fo-topic-aliases', {
       'reference/shared.md': '- related_topic: all\n\n## Key Facts\n',
       'reference/list.md': '- related_topic: T01, topic-a\n\n## Key Facts\n',
       'reference/dangling.md': '- related_topic: T01, topic-z\n\n## Key Facts\n',
     });
     const result = auditFileObservability(dir, { topics: [{ id: 'T01', slug: 'topic-a' }] });
-    assert.equal(result.canonical_findings.some((finding) => finding.topic_identity === 'all'), false);
-    assert.equal(result.canonical_findings.some((finding) => finding.topic_identity === 'T01'), false);
-    assert.equal(result.canonical_findings.some((finding) => finding.topic_identity === 'topic-a'), false);
-    assert.equal(result.canonical_findings.filter((finding) => finding.topic_identity === 'topic-z').length, 1);
+    const roots = result.canonical_findings.filter((finding) => finding.rule_id === 'reference_topic_binding_legacy_unsupported');
+    assert.equal(roots.length, 3);
+    for (const root of roots) {
+      assert.equal(root.topic_identity, null);
+      assert.equal(root.repair_kind, 'materialize_canonical_surface');
+    }
   });
 
   it('binds UID-only reference metadata through the canonical resolver', () => {
@@ -519,7 +522,7 @@ describe('file observability', () => {
     assert.equal(roots[0].primary_surface, 'reference/uid-only.md');
   });
 
-  it('reports conflicting UID and legacy reference metadata as one binding root', () => {
+  it('reports dual UID and retired metadata as one retired-key root', () => {
     const topicUid = 'tp_11111111-1111-4111-8111-111111111111';
     const otherUid = 'tp_22222222-2222-4222-8222-222222222222';
     const dir = setupBundle('fo-topic-binding-conflict', {
@@ -533,8 +536,9 @@ describe('file observability', () => {
     });
     const roots = result.canonical_findings.filter((finding) => finding.primary_surface === 'reference/conflict.md');
     assert.equal(roots.length, 1);
-    assert.equal(roots[0].rule_id, 'reference_topic_binding_conflict');
+    assert.equal(roots[0].rule_id, 'reference_topic_binding_legacy_unsupported');
     assert.equal(roots[0].classification, 'blocking');
+    assert.equal(roots[0].supporting_details.some((detail) => detail.surface.endsWith('#metadata.related_topic')), true);
   });
 
   it('keeps canonical footprint binding audit read-only', () => {
@@ -553,7 +557,7 @@ describe('file observability', () => {
   it('classifies previous-layout artifact and reference paths as the same UID without expecting aliases', () => {
     const dir = setupBundle('fo-topic-history', {
       'artifacts/wave1/old-topic/evidence-summary.md': '# Evidence\n',
-      'reference/old-topic-source.md': '- related_topic: old-topic\n\n## Key Facts\n',
+      'reference/old-topic-source.md': '- related_topic_uid: tp-a\n\n## Key Facts\n',
     });
     const result = auditFileObservability(dir, {
       topics: [{ topic_uid: 'tp-a', id: '01', slug: 'current-topic', previous_layouts: [{ id: '02', slug: 'old-topic' }] }],

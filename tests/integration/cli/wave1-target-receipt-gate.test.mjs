@@ -179,7 +179,7 @@ human_decision_checkpoints:
     '- trust_level: practitioner\n' +
     '- why_it_matters: Deepening evidence.\n' +
     '- accessed_at: 2026-06-15\n' +
-    '- related_topic: topic-a\n\n' +
+    '- related_topic_uid: tp_123e4567-e89b-12d3-a456-426614174000\n\n' +
     '## Key Facts\n- Finding one: Important initial finding.\n- Finding two: Second key insight.\n- Finding three: Third data point.\n- Finding four: Fourth observation.\n- Finding five: Fifth concluding fact.\n\n## Core Content Capture\nThis is a substantive core content capture section that provides meaningful analysis of the topic being researched. It exceeds one hundred characters to satisfy the minimum quality threshold for reference counting.\n' +
     '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- Term.\n## Risks And Limitations\n- None.\n');
   writeFileSync(join(dir, 'reference', '_INDEX.md'), [
@@ -203,7 +203,7 @@ human_decision_checkpoints:
       '- trust_level: practitioner\n' +
       `- why_it_matters: Deepening evidence for ${topic.slug}.\n` +
       '- accessed_at: 2026-06-15\n' +
-      `- related_topic: ${topic.slug}\n\n` +
+      `- related_topic_uid: ${topic.topic_uid}\n\n` +
       '## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nThis is substantive core content capture that provides meaningful analysis exceeding one hundred characters to satisfy the minimum quality threshold for reference counting.\n' +
       '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- Term.\n## Risks And Limitations\n- None.\n');
     const idxLines = readFileSync(join(dir, 'reference', '_INDEX.md'), 'utf8').trim().split('\n');
@@ -279,7 +279,7 @@ function materializeSubmittedWave1Projection(dir, {
   mkdirSync(join(dir, '_tmp'), { recursive: true });
   writeFileSync(stagingPath, `${referenceContent({
     source_url: sourceUrl,
-    related_topic: slug,
+    related_topic_uid: topicUid,
   })}\n## Submitted Backing\n- source_ref: ${sourceRef}\n- cache_trail_ref: ${cacheTrail}\n- result_ref: ${submission.record.paths.result_ref}\n- work_unit_ref: ${submission.record.paths.work_unit_dir}\n`);
   const persisted = spawnSync('node', [
     ARTIFACT_PERSISTENCE,

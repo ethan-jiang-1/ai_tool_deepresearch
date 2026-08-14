@@ -30,7 +30,7 @@ function refContent(overrides = {}) {
     source_type: 'primary',
     tier: 'Tier 2',
     trust_level: 'expert',
-    related_topic: 'topic-a',
+    related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
     evidence_role: 'deepening_reference',
     why_it_matters: 'Key source for the research.',
     accessed_at: '2026-06-15',
@@ -50,7 +50,8 @@ function refContent(overrides = {}) {
     `- source_type: ${opts.source_type}`,
     `- tier: ${opts.tier}`,
     `- trust_level: ${opts.trust_level}`,
-    `- related_topic: ${opts.related_topic}`,
+    ...(opts.related_topic_uid === undefined ? [] : [`- related_topic_uid: ${opts.related_topic_uid}`]),
+    ...(Object.hasOwn(overrides, 'related_topic') ? [`- related_topic: ${opts.related_topic}`] : []),
     `- evidence_role: ${opts.evidence_role}`,
     `- why_it_matters: ${opts.why_it_matters}`,
     `- accessed_at: ${opts.accessed_at}`,
@@ -107,6 +108,24 @@ describe('isCountable', () => {
     });
     const result = isCountable('reference/qualified.md', dir);
     assert.strictEqual(result.countable, true, `Expected countable but got: ${JSON.stringify(result)}`);
+  });
+
+  it('returns the shared legacy rejection for a historical or dual binding', () => {
+    const dir = setupBundle('rc-retired-binding', {
+      'reference/legacy.md': refContent({ related_topic_uid: undefined, related_topic: 'topic-a' }),
+      'reference/dual.md': refContent({ related_topic: 'topic-a' }),
+    });
+    for (const refPath of ['reference/legacy.md', 'reference/dual.md']) {
+      const result = isCountable(refPath, dir);
+      assert.strictEqual(result.countable, false);
+      assert.strictEqual(result.reason, 'reference_topic_binding_legacy_unsupported');
+    }
+    const result = countReferences(dir, { source: 'filesystem' });
+    assert.strictEqual(result.count, 0);
+    assert.deepStrictEqual(result.uncountable.map((entry) => entry.reason), [
+      'reference_topic_binding_legacy_unsupported',
+      'reference_topic_binding_legacy_unsupported',
+    ]);
   });
 
   it('returns countable=true when Core Content Capture is short', () => {
@@ -208,7 +227,7 @@ describe('isCountable', () => {
         '- source_type: primary',
         '- tier: Tier 2',
         '- trust_level: expert',
-        '- related_topic: topic-a',
+        '- related_topic_uid: tp_123e4567-e89b-12d3-a456-426614174000',
         '- evidence_role: deepening_reference',
         '- why_it_matters: Important.',
         '- accessed_at: 2026-06-15',
@@ -367,7 +386,7 @@ describe('countReferences', () => {
       mkdirSync(join(dir, 'reference'), { recursive: true });
       writeFileSync(join(dir, 'reference/topic-a-source.md'), referenceContent({
         source_url: sourceUrl,
-        related_topic: 'topic-a',
+        related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
         coreContent: `This Phase-owned projection cites ${evidencePath} and ${cacheTrail} as submitted backing. The capture remains long enough to satisfy countable quality thresholds for the consumer reference.`,
       }));
 
@@ -395,7 +414,7 @@ describe('countReferences', () => {
       mkdirSync(join(dir, 'reference'), { recursive: true });
       writeFileSync(join(dir, 'reference/00-shared-backed.md'), referenceContent({
         source_url: sourceUrl,
-        related_topic: 'all',
+        related_topic_uid: 'all',
         coreContent: [
           `Submitted source identity ${entryId}.`,
           `Source YAML ${sourceYamlRef}.`,
@@ -465,7 +484,7 @@ describe('countReferences', () => {
             source_slug: 's01_source',
             content: referenceContent({
               source_url: 'https://example.com/research/topic-a',
-              related_topic: 'topic-a',
+              related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
             }),
           },
           {
@@ -475,7 +494,7 @@ describe('countReferences', () => {
             source_slug: 's01_source',
             content: referenceContent({
               source_url: 'https://example.com/research/topic-b',
-              related_topic: 'topic-b',
+              related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174001',
             }),
           },
         ],

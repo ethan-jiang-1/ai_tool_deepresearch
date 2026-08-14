@@ -94,7 +94,7 @@ function submitWave1Source(dir, {
         role: 'reference',
         source_url: sourceUrl,
         source_slug: 'new-source',
-        content: referenceContent({ source_url: sourceUrl, related_topic: topic }),
+        content: referenceContent({ source_url: sourceUrl, related_topic_uid: topicUid }),
       },
       { path: evidencePath, role: 'evidence_summary', content: `[Source](${sourceUrl})\n\n## Key Findings\n1. Mechanism.\n` },
       { path: questionPath, role: 'question_list', content: '## Topic Investigation Targets\n\nTargets.\n\n## Question Reconciliation\n\nReconciled.\n\n## Emergent Question Protocol\n\nChecked.\n\n## Exploration / Exploitation Decision\n\nContinue.\n' },
@@ -171,7 +171,7 @@ function writeWave2CrossReference(dir, {
   mkdirSync(path.dirname(refPath), { recursive: true });
   writeFileSync(refPath, referenceContent({
     source_url: sourceUrl,
-    related_topic: 'cross-topic',
+    related_topic_uid: 'all',
     evidence_role: 'cross_topic_projection',
     coreContent: `${id} cites artifacts/wave2/finding-index.yaml, artifacts/wave2/cross-topic-ledger.md, artifacts/wave1/topic-a/evidence-summary.md, and artifacts/wave1/topic-b/evidence-summary.md as concrete prior backing.`,
   }));

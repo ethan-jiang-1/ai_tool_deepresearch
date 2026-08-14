@@ -395,7 +395,7 @@ function ensureWave0Scaffold(bundle) {
     '- trust_level: practitioner\n' +
     '- why_it_matters: Establishes fixture evidence for handoff witnessing.\n' +
     '- accessed_at: 2026-07-05\n' +
-    '- related_topic: all\n\n' +
+    '- related_topic_uid: all\n\n' +
     '## Key Facts\n' +
     '- Handoff witnesses bind source gate attempts to target node loads.\n' +
     '- Status sync follows witnessed route-bound load completion.\n' +
@@ -475,7 +475,7 @@ function wave1ReferenceContent(sourceUrl) {
     '- trust_level: practitioner\n' +
     '- why_it_matters: Deepening evidence.\n' +
     '- accessed_at: 2026-07-05\n' +
-    '- related_topic: topic-a\n\n' +
+    '- related_topic_uid: tp_11111111-1111-4111-8111-111111111111\n\n' +
     '## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n' +
     '## Core Content Capture\nThis section is long enough to satisfy the reference quality gate and describes how route-bound witnesses connect source gate outputs to target phase entry.\n' +
     '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- witness\n## Risks And Limitations\n- Fixture.\n';

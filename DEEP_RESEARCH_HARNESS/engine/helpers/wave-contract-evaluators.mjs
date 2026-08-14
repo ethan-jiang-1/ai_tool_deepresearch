@@ -594,6 +594,7 @@ export function evaluateWave0Contract(bundlePath, definition, { topicRegistryFac
   const directResults = new Map();
   let sharedReferenceFloorRule = null;
   let wave0ReferenceConvergence = null;
+  let legacyReferenceBinding = false;
   let layouts;
   try {
     layouts = topicRegistryFact?.wave_layouts || topicLayouts(bundlePath);
@@ -683,6 +684,12 @@ export function evaluateWave0Contract(bundlePath, definition, { topicRegistryFac
           result = count >= threshold ? { passed: true } : { passed: false, detail: `Count floor not met for ${target.resolved}: ${count} entries (threshold: ${threshold}) (topic: ${target.topic})` };
         } else if (rule.check === 'count_floor') {
           result = evaluateCountFloor(bundlePath, rule, target.resolved, target.topic, target.alternatives);
+        } else if (rule.check === 'reference_format') {
+          const check = checkReferenceFormatFiles(matchingAlternativeFiles(bundlePath, target), { rule, bundlePath });
+          legacyReferenceBinding ||= check.findings.some((finding) => (
+            finding.observed?.reason_code === 'reference_topic_binding_legacy_unsupported'
+          ));
+          result = { passed: check.passed, detail: check.inspect.join('; '), findings: check.findings || [] };
         } else if (rule.check === 'pattern_match') {
           result = evaluatePattern(bundlePath, rule, target.resolved, target.topic);
         } else if (rule.check === 'status_value') {
@@ -726,7 +733,9 @@ export function evaluateWave0Contract(bundlePath, definition, { topicRegistryFac
     }
   }
 
-  if (sharedReferenceFloorRule && !declarationGap) {
+  if (sharedReferenceFloorRule && legacyReferenceBinding) {
+    maskedRuleIds.push(sharedReferenceFloorRule.id);
+  } else if (sharedReferenceFloorRule && !declarationGap) {
     const sourcePrerequisitesReady = layouts.every((layout) => sourceStates.get(layout.topic) === 'valid');
     const submittedAuthorityBlocked = findings.some((finding) => new Set([
       'wave0_work_unit_ledger_exists',
@@ -806,6 +815,24 @@ export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFac
     }
     return depthContractChecks.get(cacheKey);
   };
+  const referenceFormatChecks = new Map();
+  const legacyReferenceBindingTopics = new Set();
+  const referenceFormatRule = definition.rules.find((rule) => rule.check === 'reference_format');
+  if (referenceFormatRule) {
+    for (const target of expandRuleTargets(bundlePath, referenceFormatRule, layouts)) {
+      const check = checkReferenceFormatFiles(matchingAlternativeFiles(bundlePath, target), {
+        rule: referenceFormatRule,
+        bundlePath,
+      });
+      const key = scopedRuleId(referenceFormatRule.id, target.topic);
+      referenceFormatChecks.set(key, check);
+      if (check.findings.some((finding) => (
+        finding.observed?.reason_code === 'reference_topic_binding_legacy_unsupported'
+      ))) {
+        legacyReferenceBindingTopics.add(target.topic);
+      }
+    }
+  }
   let checksRun = 0;
 
   for (const rule of definition.rules) {
@@ -822,6 +849,11 @@ export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFac
       }
       if (rule.id === 'per_topic_ref_md_count_floor' && target.topic
         && blocksWave1ReferenceFloor(getDepthContractCheck(target.topic))) {
+        maskedRuleIds.push(id);
+        continue;
+      }
+      if (target.topic && legacyReferenceBindingTopics.has(target.topic)
+        && ['per_topic_ref_md_count_floor', 'reference_source_url_parseable', 'reference_index_coverage', 'ledger_coverage'].includes(rule.id)) {
         maskedRuleIds.push(id);
         continue;
       }
@@ -931,7 +963,8 @@ export function evaluateWave1Contract(bundlePath, definition, { topicRegistryFac
           const check = checkCacheCoverage(bundlePath, { rule });
           result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'reference_format') {
-          const check = checkReferenceFormatFiles(matchingAlternativeFiles(bundlePath, target), { rule, bundlePath });
+          const check = referenceFormatChecks.get(scopedRuleId(rule.id, target.topic))
+            || checkReferenceFormatFiles(matchingAlternativeFiles(bundlePath, target), { rule, bundlePath });
           result = { passed: check.passed, detail: check.inspect.join('; '), findings: check.findings || [] };
         } else if (rule.check === 'reference_source_url_parseable') {
           const check = checkReferenceSourceUrls(matchingAlternativeFiles(bundlePath, target), { rule });
@@ -1009,6 +1042,7 @@ export function evaluateWave2Contract(bundlePath, definition, { topicRegistryFac
   const maskedRuleIds = [];
   const missingFiles = new Set();
   const invalidYaml = new Set();
+  let legacyReferenceBinding = false;
   let layouts;
   try {
     layouts = topicRegistryFact?.wave_layouts || topicLayouts(bundlePath);
@@ -1057,6 +1091,15 @@ export function evaluateWave2Contract(bundlePath, definition, { topicRegistryFac
         continue;
       }
       if (['ledger_non_empty', 'ledger_fixed_sections'].includes(rule.id) && missingFiles.has(target.resolved)) {
+        maskedRuleIds.push(id);
+        continue;
+      }
+      if (legacyReferenceBinding && [
+        'wave2_cross_reference_index_coverage',
+        'wave2_work_unit_cross_ref_coverage',
+        'wave2_work_unit_submission_presence',
+        'wave2_delegated_bypass_suspected',
+      ].includes(rule.id)) {
         maskedRuleIds.push(id);
         continue;
       }
@@ -1174,6 +1217,12 @@ export function evaluateWave2Contract(bundlePath, definition, { topicRegistryFac
           const check = getFindingIndexCheck(rule);
           maskedRuleIds.push(...(check.masked_rule_ids || []).map((masked) => `${rule.id}:${masked}`));
           result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
+        } else if (rule.check === 'reference_format') {
+          const check = checkReferenceFormatFiles(listMatchingBundleFiles(bundlePath, target.resolved), { rule, bundlePath });
+          legacyReferenceBinding ||= check.findings.some((finding) => (
+            finding.observed?.reason_code === 'reference_topic_binding_legacy_unsupported'
+          ));
+          result = { passed: check.passed, detail: check.inspect.join('; '), findings: check.findings || [] };
         } else if (rule.check === 'reference_index_coverage') {
           const check = checkReferenceIndexCoverage(bundlePath, listMatchingBundleFiles(bundlePath, target.resolved), { sourceLayer: rule.source_layer || null, rule });
           result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };

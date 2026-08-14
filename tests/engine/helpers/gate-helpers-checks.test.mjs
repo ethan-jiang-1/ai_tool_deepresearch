@@ -33,7 +33,7 @@ const TMP = join(__dirname, '.test-gate-helpers-checks-tmp');
 
 function canonicalReferenceFrontmatter({
   sourceUrl = 'https://example.com/news/a',
-  relatedTopic = 'topic-a',
+  relatedTopicUid = 'all',
   coreContent = 'Narrative capture.',
 } = {}) {
   return [
@@ -46,7 +46,7 @@ function canonicalReferenceFrontmatter({
     'trust_level: practitioner',
     'why_it_matters: "Relevant."',
     'accessed_at: "2026-07-14"',
-    `related_topic: "${relatedTopic}"`,
+    `related_topic_uid: "${relatedTopicUid}"`,
     '---',
     '',
     '# Reference',
@@ -84,7 +84,7 @@ function writeWave0ProjectionProfile(dir) {
 function submittedWave0ProjectionContent({ sourceUrl, entryId, sourceYamlRef, cacheTrail, resultRef, workUnitRef }) {
   return canonicalReferenceFrontmatter({
     sourceUrl,
-    relatedTopic: 'all',
+    relatedTopicUid: 'all',
     coreContent: [
       `Submitted source identity: ${entryId}.`,
       `Source YAML: ${sourceYamlRef}.`,
@@ -252,7 +252,7 @@ describe('reference file gate helpers', () => {
     }
   });
 
-  it('reports one topic-binding conflict when UID and legacy metadata disagree', () => {
+  it('reports one retired-key root before dual-binding conflict and avoids direct rewrite advice', () => {
     const dir = join(__dirname, '.test-gh-ref-dual-binding');
     const topicA = 'tp_123e4567-e89b-12d3-a456-426614174000';
     const topicB = 'tp_123e4567-e89b-12d3-a456-426614174001';
@@ -292,7 +292,11 @@ describe('reference file gate helpers', () => {
       const result = checkReferenceFormatFiles(listMatchingBundleFiles(dir, 'reference/*.md'), { bundlePath: dir });
       assert.equal(result.passed, false);
       assert.equal(result.findings.filter((finding) => /topic_binding/.test(finding.id)).length, 1);
-      assert.match(result.findings.find((finding) => /topic_binding/.test(finding.id)).missing_fact, /conflict/i);
+      const finding = result.findings.find((candidate) => /topic_binding/.test(candidate.id));
+      assert.equal(finding.id.endsWith(':reference_topic_binding_legacy_unsupported'), true);
+      assert.match(finding.missing_fact, /#metadata\.related_topic is retired/i);
+      assert.equal(finding.write_to, 'Current UID-bound reference materialization path');
+      assert.match(finding.repair, /without rewriting/i);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -310,7 +314,7 @@ describe('reference file gate helpers', () => {
       '- trust_level: practitioner',
       '- why_it_matters: Relevant.',
       '- accessed_at: 2026-07-14',
-      '- related_topic: topic-a',
+      '- related_topic_uid: all',
       '',
       '#### risks and limitations',
       'Risk.',
@@ -440,7 +444,7 @@ describe('reference file gate helpers', () => {
     }
   });
 
-  it('accepts canonical YAML frontmatter while keeping legacy metadata readable', () => {
+  it('accepts canonical YAML frontmatter while keeping legacy bullet metadata readable', () => {
     const dir = join(__dirname, '.test-gh-ref-yaml');
     mkdirSync(join(dir, 'reference'), { recursive: true });
     writeFileSync(join(dir, 'reference', 'topic-a-canonical.md'), canonicalReferenceFrontmatter());
@@ -455,7 +459,7 @@ describe('reference file gate helpers', () => {
       assert.equal(urls.passed, true, urls.inspect.join('; '));
       assert.equal(canonical.presentation, 'frontmatter');
       assert.equal(canonical.metadata.get('source_url'), 'https://example.com/news/a');
-      assert.equal(parseReferenceMetadata(readFileSync(join(dir, 'reference', 'topic-a-canonical.md'), 'utf8')).get('related_topic'), 'topic-a');
+      assert.equal(parseReferenceMetadata(readFileSync(join(dir, 'reference', 'topic-a-canonical.md'), 'utf8')).get('related_topic_uid'), 'all');
       assert.equal(legacy.presentation, 'legacy_bullets');
       assert.equal(legacy.metadata.get('source_url'), 'https://example.com/legacy');
     } finally {
@@ -543,7 +547,7 @@ describe('reference file gate helpers', () => {
       mkdirSync(join(dir, 'reference'), { recursive: true });
       writeFileSync(join(dir, 'reference', 'topic-a-source.md'), canonicalReferenceFrontmatter({
         sourceUrl,
-        relatedTopic: 'topic-a',
+        relatedTopicUid: 'tp_123e4567-e89b-12d3-a456-426614174000',
         coreContent: `This Phase-owned projection cites submitted backing ${evidencePath} and ${cacheTrail}. The capture text is long enough to satisfy the countable reference threshold while preserving source provenance.`,
       }));
 
@@ -571,7 +575,7 @@ describe('reference file gate helpers', () => {
           role: 'reference',
           source_url: legacyUrl,
           source_slug: 'legacy',
-          content: canonicalReferenceFrontmatter({ sourceUrl: legacyUrl, relatedTopic: 'all' }),
+          content: canonicalReferenceFrontmatter({ sourceUrl: legacyUrl, relatedTopicUid: 'all' }),
         }],
         cacheTrails: [{
           path: '_cache/wave0/primary/queue-a/legacy',
@@ -634,7 +638,7 @@ describe('reference file gate helpers', () => {
       const refPath = join(dir, 'reference/00-shared-unbacked.md');
       writeFileSync(refPath, canonicalReferenceFrontmatter({
         sourceUrl,
-        relatedTopic: 'all',
+        relatedTopicUid: 'all',
         coreContent: `URL-only projection cites ${commonRefs} but does not name a source identity.`,
       }));
       const urlOnly = classifyReferenceAuthority(dir, 'reference/00-shared-unbacked.md');
@@ -643,7 +647,7 @@ describe('reference file gate helpers', () => {
 
       writeFileSync(refPath, canonicalReferenceFrontmatter({
         sourceUrl,
-        relatedTopic: 'all',
+        relatedTopicUid: 'all',
         coreContent: `Ambiguous duplicate URL identities ${submission.record.work_id}/1 and ${submission.record.work_id}/2 cite ${commonRefs}.`,
       }));
       const ambiguous = classifyReferenceAuthority(dir, 'reference/00-shared-unbacked.md');
@@ -657,7 +661,7 @@ describe('reference file gate helpers', () => {
       ].join('\n'));
       writeFileSync(join(dir, 'reference/00-shared-index-only.md'), canonicalReferenceFrontmatter({
         sourceUrl,
-        relatedTopic: 'all',
+        relatedTopicUid: 'all',
         coreContent: 'This file and its navigation row do not establish submitted backing.',
       }));
       const indexOnly = classifyReferenceAuthority(dir, 'reference/00-shared-index-only.md');
@@ -679,7 +683,7 @@ describe('reference file gate helpers', () => {
       ].join('\n'));
       writeFileSync(join(dir, 'reference', 'topic-a-source.md'), referenceContent({
         source_url: 'https://example.com/research/unsubmitted',
-        related_topic: 'topic-a',
+        related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
         coreContent: 'This legal-looking reference has an index row, but no submitted source claim, cache trail, degraded capture, or accepted source URL backs it.',
       }));
 
@@ -703,7 +707,7 @@ describe('reference file gate helpers', () => {
       ].join('\n'));
       writeFileSync(join(dir, 'reference', 'topic-a-source.md'), referenceContent({
         source_url: 'https://example.com/research/source',
-        related_topic: 'topic-a',
+        related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
       }));
 
       const files = listMatchingBundleFiles(dir, 'reference/*topic-a*.md');

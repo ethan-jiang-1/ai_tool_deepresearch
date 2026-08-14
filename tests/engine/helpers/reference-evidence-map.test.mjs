@@ -70,7 +70,7 @@ function submitCurrentWave1(dir) {
       payload: { topic_uid: TOPIC_UID, topic_slug: TOPIC, wave: 1, assignment_mode: 'primary' },
     },
     outputs: [
-      { path: sourceRef, role: 'reference', source_url: sourceUrl, source_slug: 'current-focus-source', content: referenceContent({ source_url: sourceUrl, related_topic: TOPIC }) },
+      { path: sourceRef, role: 'reference', source_url: sourceUrl, source_slug: 'current-focus-source', content: referenceContent({ source_url: sourceUrl, related_topic_uid: TOPIC_UID }) },
       { path: evidenceRef, role: 'evidence_summary', content: '[Source](' + sourceUrl + ')\n\n## Key Findings\n1. Current backing.\n' },
       { path: questionsRef, role: 'question_list', content: '## Topic Investigation Targets\n\nCurrent.\n\n## Question Reconciliation\n\nCurrent.\n\n## Emergent Question Protocol\n\nCurrent.\n\n## Exploration / Exploitation Decision\n\nCurrent.\n' },
     ],
@@ -171,10 +171,10 @@ function render(dir) {
 describe('Reference Evidence Map renderer', () => {
   it('renders direct relationship classes in path order and keeps an unclassifiable reference unknown', () => {
     const dir = bundle();
-    writeReference(dir, 'topic-a-specific.md', { related_topic: TOPIC });
-    writeReference(dir, '00-cross-comparison.md', { related_topic: 'all' });
-    writeReference(dir, '00-shared-foundation.md', { related_topic: 'all' });
-    writeReference(dir, 'unclassifiable.md', { related_topic: 'not-a-topic' });
+    writeReference(dir, 'topic-a-specific.md', { related_topic_uid: TOPIC_UID });
+    writeReference(dir, '00-cross-comparison.md', { related_topic_uid: 'all' });
+    writeReference(dir, '00-shared-foundation.md', { related_topic_uid: 'all' });
+    writeReference(dir, 'unclassifiable.md', { related_topic_uid: 'tp_00000000-0000-4000-8000-000000000000' });
 
     const first = render(dir);
     const second = render(dir);
@@ -186,7 +186,7 @@ describe('Reference Evidence Map renderer', () => {
       ['reference/unclassifiable.md', 'unknown'],
     ]);
     assert.match(first.bytes, /topic-a \(tp_123e4567-e89b-12d3-a456-426614174000\)/);
-    assert.match(first.bytes, /reference\/unclassifiable\.md.*reference_index_layer_unclassifiable/);
+    assert.match(first.bytes, /reference\/unclassifiable\.md.*reference_topic_uid_unknown/);
     assert.match(first.bytes, /A Topic-level focus status does not attribute an individual reference file/);
   });
 

@@ -79,7 +79,7 @@ function sourceUrlFromContent(sourceContent) {
 function inspectableReferenceContent(topic, refPath, submission, sourceUrl) {
   return [
     referenceContent({
-      related_topic: topic.slug,
+      related_topic_uid: 'all',
       source_url: sourceUrl,
       evidence_role: 'foundation',
     }),
@@ -628,7 +628,7 @@ describe('operate-topic-state projection packets', () => {
 
     const missingRef = 'reference/00-shared-topic-a-01.md';
     const nearMatch = 'reference/00-shared-topic-a-1.md';
-    writeFileSync(join(bundle, nearMatch), referenceContent({ related_topic: topic.slug }));
+    writeFileSync(join(bundle, nearMatch), referenceContent({ related_topic_uid: 'all' }));
     const result = runApply(bundle, packet(topic, authority, {
       entries: [{ ...packetEntry(authority, 1), refs: [missingRef] }],
     }));

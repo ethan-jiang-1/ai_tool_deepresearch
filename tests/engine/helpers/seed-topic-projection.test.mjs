@@ -156,7 +156,7 @@ function submitCurrentWork(bundle, topic, phase, {
       role: 'reference',
       source_url: sourceUrl,
       source_slug: `${phase}-topic-a`,
-      content: referenceContent({ related_topic: topic.slug }),
+      content: referenceContent({ related_topic_uid: topic.topic_uid }),
     };
   const submitted = claimAndSubmitWorkUnit(bundle, {
     phase,
@@ -174,7 +174,7 @@ function submitCurrentWork(bundle, topic, phase, {
   assert.equal(submitted.submitted.ok, true);
   if (phase === 'wave0') {
     mkdirSync(join(bundle, 'reference'), { recursive: true });
-    writeFileSync(join(bundle, refPath), referenceContent({ related_topic: topic.slug }));
+    writeFileSync(join(bundle, refPath), referenceContent({ related_topic_uid: 'all' }));
   }
   return { workId: submitted.record.work_id, refPath };
 }

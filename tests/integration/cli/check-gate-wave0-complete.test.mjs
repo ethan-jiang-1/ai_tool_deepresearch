@@ -183,7 +183,7 @@ function writeWave0PhaseProjection(dir, submission) {
   writeFileSync(join(dir, 'reference/00-shared-ai-safety.md'),
     `---\nsource_url: "${TOPIC_A_SOURCE_URL}"\nacceptance_status: accepted\n` +
     'source_type: secondary\ntier: "Tier 2"\nevidence_role: foundation\ntrust_level: practitioner\n' +
-    'why_it_matters: "Foundation context for the shared research question."\naccessed_at: "2026-06-15"\nrelated_topic: all\n---\n' +
+    'why_it_matters: "Foundation context for the shared research question."\naccessed_at: "2026-06-15"\nrelated_topic_uid: all\n---\n' +
     '# AI Safety Foundation\n\n' +
     '## Key Facts\n- Submitted foundation source is available for this consumer projection.\n\n' +
     '## Core Content Capture\nThe submitted Wave0 source provides bounded foundation evidence for this reader-facing projection.\n\n' +
@@ -347,6 +347,34 @@ describe('check-gate-wave0-complete', () => {
       node_ref: 'phases/phase-wave0.md',
       gate: 'wave0-complete',
     });
+  });
+
+  it('1. rejects a dual historical binding through one shared Gate and inspect root', () => {
+    const dir = createBundle(unique('retired-dual-binding'));
+    setupHappyPath(dir);
+    const referencePath = join(dir, 'reference/00-shared-ai-safety.md');
+    const historicalBytes = readFileSync(referencePath, 'utf8').replace(
+      'related_topic_uid: all',
+      'related_topic_uid: all\nrelated_topic: all',
+    );
+    writeFileSync(referencePath, historicalBytes);
+
+    for (const output of [
+      JSON.parse(runGate(dir).stdout),
+      JSON.parse(runInspect(dir).stdout),
+    ]) {
+      assert.equal(output.check.passed, false);
+      assert.deepEqual(output.check.failed_rule_ids, ['reference_format'], JSON.stringify(output));
+      assert.equal(output.inspect.filter((line) => (
+        line.includes('reference_topic_binding_legacy_unsupported')
+      )).length, 1);
+      assert.equal(output.check.masked_rule_ids.includes('shared_ref_count_floor'), true);
+      const hint = output.hints.find((candidate) => candidate.rule_id === 'reference_format');
+      assert.ok(hint, JSON.stringify(output.hints));
+      assert.match(hint.missing_fact, /#metadata\.related_topic/);
+      assert.equal(hint.write_to, 'Current UID-bound reference materialization path');
+    }
+    assert.equal(readFileSync(referencePath, 'utf8'), historicalBytes);
   });
 
   it('1a. aggregates historical Wave0 artifact and submitted coverage as one current UID floor', () => {
@@ -822,7 +850,7 @@ sources:
       '---\nsource_url: "https://example.com"\nacceptance_status: accepted\n' +
       'source_type: supplementary\ntier: tier_3\nevidence_role: supporting\n' +
       'trust_level: medium\nwhy_it_matters: "Count floor fulfillment"\n' +
-      'accessed_at: "2026-06-27"\nrelated_topic: "shared"\n---\n' +
+      'accessed_at: "2026-06-27"\nrelated_topic_uid: all\n---\n' +
       '## Key Facts\n- Generic placeholder\n## Core Content Capture\nNo real content.\n' +
       '## Relevance To This Research\nMinimal.\n## Quotable Terms / Concepts\n- None.\n## Risks And Limitations\n- Placeholder.\n');
     writeTraceEvents(dir, [

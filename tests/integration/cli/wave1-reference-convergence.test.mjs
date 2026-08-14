@@ -36,7 +36,7 @@ function submitReviewedCandidate(dir, topic) {
     queueItemOverrides: { payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug, wave: 1, assignment_mode: 'primary' } },
     outputs: [{
       path: 'reference/submitted-source.md', role: 'reference', source_url: sourceUrl, source_slug: 'submitted-source',
-      content: referenceContent({ source_url: sourceUrl, related_topic: topic.slug }),
+      content: referenceContent({ source_url: sourceUrl, related_topic_uid: topic.topic_uid }),
     }],
     cacheTrails: [{ path: '_cache/wave1/primary/topic-a-primary/source', url: sourceUrl }],
     resultOverrides: {
@@ -86,10 +86,15 @@ function writeDepthReview(dir, topic, records) {
   }, null, 2)}\n`);
 }
 
-function sync(dir) {
+function runSync(dir) {
   const result = spawnSync('node', [join(root, 'DEEP_RESEARCH_HARNESS/cli/sync-reference-index.mjs'), '--bundle', dir], { encoding: 'utf8' });
-  assert.equal(result.status, 0, result.stderr || result.stdout);
-  return JSON.parse(result.stdout);
+  return { process: result, output: JSON.parse(result.stdout) };
+}
+
+function sync(dir) {
+  const { process, output } = runSync(dir);
+  assert.equal(process.status, 0, process.stderr || process.stdout);
+  return output;
 }
 
 function inspect(dir) {
@@ -109,7 +114,7 @@ describe('Wave1 reference convergence commands', () => {
     const canonical = canonicalWave1ReferencePath({ topicSlug: topic.slug, sourceUrl: candidate.normalized_url });
     writeFileSync(join(dir, canonical.path), referenceContent({
       source_url: candidate.normalized_url,
-      related_topic: topic.slug,
+      related_topic_uid: topic.topic_uid,
       coreContent: `Submitted backing: ${candidate.source_refs[0]} ${candidate.cache_trail_refs[0]} ${candidate.work_unit_refs[0]}.`,
     }));
     assert.equal(sync(dir).verdict, 'committed');
@@ -119,14 +124,27 @@ describe('Wave1 reference convergence commands', () => {
     assert.match(readFileSync(join(dir, 'reference/_INDEX.md'), 'utf8'), new RegExp(`\\| ${canonical.path.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')} \\|`));
   });
 
-  it('does not let a legacy projection satisfy canonical current coverage', () => {
+  it('blocks a legacy projection without changing existing navigation or coverage', () => {
     const { dir, topic } = bundle();
     const record = submitReviewedCandidate(dir, topic);
+    assert.equal(sync(dir).verdict, 'committed');
     writeFileSync(join(dir, 'reference/01-wave1-legacy.md'), referenceContent({
       source_url: 'https://example.com/research/current-source', related_topic: topic.slug,
       coreContent: `Historical backing: reference/submitted-source.md _cache/wave1/primary/topic-a-primary/source ${record.work_id}.`,
     }));
-    assert.equal(sync(dir).verdict, 'committed');
+    const legacyPath = join(dir, 'reference/01-wave1-legacy.md');
+    const indexPath = join(dir, 'reference/_INDEX.md');
+    const legacyBefore = readFileSync(legacyPath, 'utf8');
+    const indexBefore = readFileSync(indexPath, 'utf8');
+    const blocked = runSync(dir);
+    assert.equal(blocked.process.status, 1, blocked.process.stderr || blocked.process.stdout);
+    assert.equal(
+      blocked.output.reason_code,
+      'reference_topic_binding_legacy_unsupported',
+      JSON.stringify(blocked.output),
+    );
+    assert.equal(readFileSync(legacyPath, 'utf8'), legacyBefore);
+    assert.equal(readFileSync(indexPath, 'utf8'), indexBefore);
     const result = evaluateWave1ReferenceTopic(dir, { topic: topic.slug, topicRegistryFact: buildCanonicalTopicRegistryFact(dir), requiredFloor: 1 });
     assert.equal(result.result.outcome, 'materialize_projection');
   });

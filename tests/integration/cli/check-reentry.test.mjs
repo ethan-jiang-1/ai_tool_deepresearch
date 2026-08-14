@@ -163,7 +163,7 @@ function phaseOwnedReference(sourceUrl, backingBody) {
     'trust_level: practitioner',
     'why_it_matters: "Backed reference."',
     'accessed_at: "2026-07-14"',
-    'related_topic: topic-a',
+    'related_topic_uid: tp_123e4567-e89b-12d3-a456-426614174000',
     '---',
     '',
     '# Topic A Reference',

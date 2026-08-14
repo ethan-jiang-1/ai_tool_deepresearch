@@ -62,10 +62,13 @@ function existingDates(bundlePath) {
 function sourceLayer(relPath, metadata, layouts) {
   const binding = resolveReferenceTopicBinding(layouts, metadata);
   if (!binding.ok) {
+    const legacyUnsupported = binding.reason_code === 'reference_topic_binding_legacy_unsupported';
     return {
       ok: false,
-      reason_code: 'reference_index_layer_unclassifiable',
-      reason: `${relPath} has no resolvable canonical or accepted historical Topic binding.`,
+      reason_code: binding.reason_code || 'reference_index_layer_unclassifiable',
+      reason: legacyUnsupported
+        ? `${relPath} contains retired related_topic metadata and cannot enter current reference navigation.`
+        : `${relPath} has no resolvable current canonical Topic binding.`,
     };
   }
   if (/^reference\/00-shared-[^/]+\.md$/.test(relPath)) return { ok: true, source_layer: 'wave0_foundation', binding };
@@ -301,6 +304,17 @@ function currentFocusStatus(bundlePath, layout, currentRerunCount) {
 
 function renderReferenceEvidenceMapFromFacts(bundlePath, facts, { syncDate } = {}) {
   if (!DATE.test(syncDate)) return blocked('sync_date_invalid', 'syncDate must be YYYY-MM-DD.', {}, README_TARGET);
+  const retiredReference = facts.references.find((reference) => (
+    reference.classification.reason_code === 'reference_topic_binding_legacy_unsupported'
+  ));
+  if (retiredReference) {
+    return blocked(
+      retiredReference.classification.reason_code,
+      retiredReference.classification.reason,
+      { ref_file: retiredReference.relPath },
+      README_TARGET,
+    );
+  }
   const name = safeCell(facts.plan?.plan_basename || facts.plan?.name || 'research-bundle');
   const relationships = facts.references.map((reference) => ({ ref_file: reference.relPath, ...referenceRelationship(reference, facts) }));
   let currentRerunCount;
@@ -463,25 +477,14 @@ export function syncReferenceIndex(bundlePath, options = {}) {
   const facts = loadReferenceFacts(bundlePath);
   if (!facts.ok) return facts;
   const index = renderReferenceIndexFromFacts(bundlePath, facts, { syncDate });
+  if (!index.ok) return index;
   const readme = renderReferenceEvidenceMapFromFacts(bundlePath, facts, { syncDate });
   if (!readme.ok) return readme;
-
-  const indexUnclassifiable = !index.ok && index.reason_code === 'reference_index_layer_unclassifiable';
-  if (!index.ok && !indexUnclassifiable) return index;
 
   const stagingRoot = join(bundlePath, '_diagnostics');
   mkdirSync(stagingRoot, { recursive: true });
   const stagingPath = mkdtempSync(join(stagingRoot, 'reference-index-sync-'));
   try {
-    if (indexUnclassifiable) {
-      const readmeResult = persistRenderedTarget(bundlePath, readme, stagingPath, options);
-      return aggregateResults({
-        indexResult: { verdict: 'blocked', reason_code: index.reason_code, reason: index.reason, target: INDEX_TARGET },
-        readmeResult,
-        forcedBlock: { reason_code: index.reason_code, reason: index.reason, target: INDEX_TARGET },
-      });
-    }
-
     const indexResult = persistRenderedTarget(bundlePath, index, stagingPath, options);
     if (indexResult.verdict === 'blocked') return aggregateResults({ indexResult, indexRows: index.rows.length });
     const readmeResult = persistRenderedTarget(bundlePath, readme, stagingPath, options);

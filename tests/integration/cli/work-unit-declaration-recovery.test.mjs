@@ -77,7 +77,7 @@ depends_on_topic_uids: []
 `);
   writeFileSync(path.join(dir, 'reference/00-shared-topic-a.md'), `${referenceContent({
     source_url: sourceUrl,
-    related_topic: 'all',
+    related_topic_uid: 'all',
     evidence_role: 'foundation',
     accessed_at: '2026-07-14',
   })}\n`);

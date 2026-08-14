@@ -39,3 +39,13 @@ convert, move, or duplicate the file.
 - **THEN** it SHALL retain the file bytes and human-readable Markdown
 - **AND** it SHALL not treat the file as structurally valid current Engine
   evidence through that metadata form
+
+#### Scenario: Legacy binding cannot regenerate the current reference index
+
+- **WHEN** reference index synchronization encounters a reference containing
+  `related_topic`
+- **THEN** it SHALL return
+  `reference_topic_binding_legacy_unsupported` before persisting `_INDEX.md` or
+  another derived navigation target
+- **AND** it SHALL leave the historical reference and existing derived bytes
+  unchanged

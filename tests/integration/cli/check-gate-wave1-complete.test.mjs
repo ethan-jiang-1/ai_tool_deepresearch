@@ -198,7 +198,7 @@ function canonicalRichReference(sourceUrl, backing = '') {
     'trust_level: practitioner',
     'why_it_matters: "Deepening evidence."',
     'accessed_at: "2026-06-15"',
-    'related_topic: topic-a',
+    'related_topic_uid: tp_123e4567-e89b-12d3-a456-426614174000',
     '---',
     '',
     '# Topic A Deepening Reference',
@@ -346,7 +346,7 @@ human_decision_checkpoints:
     '- trust_level: practitioner\n' +
     '- why_it_matters: Deepening evidence.\n' +
     '- accessed_at: 2026-06-15\n' +
-    '- related_topic: topic-a\n\n' +
+    '- related_topic_uid: tp_123e4567-e89b-12d3-a456-426614174000\n\n' +
     '## Key Facts\n- Finding one: Important initial finding.\n- Finding two: Second key insight.\n- Finding three: Third data point.\n- Finding four: Fourth observation.\n- Finding five: Fifth concluding fact.\n\n## Core Content Capture\nThis is a substantive core content capture section that provides meaningful analysis of the topic being researched. It exceeds one hundred characters to satisfy the minimum quality threshold for reference counting.\n' +
     '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- Term.\n## Risks And Limitations\n- None.\n');
   writeFileSync(join(dir, 'reference', '_INDEX.md'), [
@@ -688,10 +688,9 @@ function submitParityTopic(dir, topic, { preserveQueue = false } = {}) {
   writeFileSync(join(dir, referencePath), `${referenceContent({
     source_url: sourceUrl,
     related_topic_uid: topic.topic_uid,
-    related_topic: undefined,
     evidence_role: 'deepening_reference',
     accessed_at: '2026-07-14',
-  }).replace(/^- related_topic: undefined\n/m, `- related_topic_uid: ${topic.topic_uid}\n`)}\n`);
+  })}\n`);
   writeFileSync(join(dir, evidencePath), parityEvidenceSummary(topic, sourceUrl));
   writeFileSync(join(dir, questionPath), parityQuestionList(topic, sourceUrl));
   writeFileSync(join(dir, 'seed_topics', `${topic.slug}.md`), renderCanonicalSeed(topic));
@@ -1019,7 +1018,7 @@ describe('check-gate-wave1-complete', () => {
     writeCanonicalTopicPlan(dir, topicUid);
     const referencePath = join(dir, 'reference/01-topic-a-deepening.md');
     writeFileSync(referencePath, readFileSync(referencePath, 'utf8').replace(
-      '- related_topic: topic-a',
+      '- related_topic_uid: tp_123e4567-e89b-12d3-a456-426614174000',
       `- related_topic_uid: ${topicUid}`,
     ));
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
@@ -1034,6 +1033,42 @@ describe('check-gate-wave1-complete', () => {
 
     const inspectOutput = JSON.parse(runInspect(dir).stdout);
     assert.equal(inspectOutput.check.failed_rule_ids.some((id) => id.startsWith('reference_format')), false);
+  });
+
+  it('1g. reports one retired-key root for a dual binding without downstream floor noise', () => {
+    const dir = createBundle(unique('retired-dual-binding'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitAndReviewWave1WorkUnit(dir);
+    writeWave1Trace(dir);
+
+    const referencePath = join(dir, 'reference/01-topic-a-deepening.md');
+    const historicalBytes = readFileSync(referencePath, 'utf8').replace(
+      '- related_topic_uid: tp_123e4567-e89b-12d3-a456-426614174000',
+      '- related_topic_uid: tp_123e4567-e89b-12d3-a456-426614174000\n- related_topic: topic-a',
+    );
+    writeFileSync(referencePath, historicalBytes);
+
+    for (const output of [
+      JSON.parse(runGate(dir).stdout),
+      JSON.parse(runInspect(dir).stdout),
+    ]) {
+      assert.equal(output.check.passed, false);
+      assert.deepEqual(output.check.failed_rule_ids, ['reference_format'], JSON.stringify(output));
+      assert.equal(output.inspect.filter((line) => (
+        line.includes('reference_topic_binding_legacy_unsupported')
+      )).length, 1);
+      assert.equal(output.check.failed_rule_ids.some((id) => (
+        /per_topic_ref_md_count_floor|reference_index_coverage|ledger_coverage/.test(id)
+      )), false);
+      const hint = output.hints.find((candidate) => candidate.rule_id === 'reference_format');
+      assert.ok(hint, JSON.stringify(output.hints));
+      assert.match(hint.missing_fact, /#metadata\.related_topic/);
+      assert.equal(hint.write_to, 'Current UID-bound reference materialization path');
+      assert.equal(output.advice.filter((advice) => /without rewriting/i.test(advice)).length, 1);
+    }
+    assert.equal(readFileSync(referencePath, 'utf8'), historicalBytes);
   });
 
   it('1j. routes raw document markup through the existing Gate and side-effect-free inspect repair', () => {
@@ -1299,7 +1334,7 @@ describe('check-gate-wave1-complete', () => {
       '- trust_level: caution\n' +
       '- why_it_matters: Supplementary reference\n' +
       '- accessed_at: 2026-06-27\n' +
-      '- related_topic: topic-a\n\n' +
+      '- related_topic_uid: tp_123e4567-e89b-12d3-a456-426614174000\n\n' +
       '## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nSee primary reference.\n' +
       '## Relevance To This Research\nSupports topic analysis.\n## Quotable Terms / Concepts\n- None.\n## Risks And Limitations\n- Supplementary source.\n');
     const result = runGate(dir);
@@ -1326,7 +1361,7 @@ describe('check-gate-wave1-complete', () => {
       '- trust_level: practitioner\n' +
       '- why_it_matters: Orphan test\n' +
       '- accessed_at: 2026-06-27\n' +
-      '- related_topic: topic-a\n\n' +
+      '- related_topic_uid: tp_123e4567-e89b-12d3-a456-426614174000\n\n' +
       '## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nContent.\n' +
       '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- Term.\n## Risks And Limitations\n- None.\n');
     const result = runGate(dir);

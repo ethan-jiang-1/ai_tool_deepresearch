@@ -66,7 +66,7 @@ function submitWave1Candidate(dir, { queueItemId, topicUid, topicSlug, sourceUrl
       role: 'reference',
       source_url: sourceUrl,
       source_slug: 'submitted-source',
-      content: referenceContent({ source_url: sourceUrl, related_topic: topicSlug }),
+      content: referenceContent({ source_url: sourceUrl, related_topic_uid: topicUid }),
     }],
     cacheTrails: [{ path: cacheTrail, url: sourceUrl }],
     resultOverrides: { source_claims: [claim], accepted_source_urls: [sourceUrl] },
@@ -193,7 +193,7 @@ describe('reviewed Wave1 submitted backing', () => {
     mkdirSync(join(dir, 'reference'), { recursive: true });
     writeFileSync(join(dir, locator.path), referenceContent({
       source_url: candidate.normalized_url,
-      related_topic: topicA.slug,
+      related_topic_uid: topicA.topic_uid,
       coreContent: `Projection backing: ${candidate.source_refs[0]} ${candidate.cache_trail_refs[0]} ${candidate.work_unit_refs[0]}.`,
     }));
 
@@ -215,7 +215,7 @@ describe('reviewed Wave1 submitted backing', () => {
 
     writeFileSync(join(dir, locator.path), referenceContent({
       source_url: candidate.normalized_url,
-      related_topic: topicA.slug,
+      related_topic_uid: topicA.topic_uid,
       coreContent: `Projection backing: ${candidate.source_refs[0]}.`,
     }));
     const unbound = inspectWave1CandidateProjection(dir, { topicSlug: topicA.slug, candidate });

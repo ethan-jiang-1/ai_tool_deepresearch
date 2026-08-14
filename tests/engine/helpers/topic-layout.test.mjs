@@ -68,42 +68,53 @@ describe('topic layout resolver', () => {
     assert.equal(losslessTopicSlugStem('03_Current A'), null);
   });
 
-  it('resolves UID-only, legacy, unpadded ordinal, and agreeing dual reference bindings', () => {
+  it('resolves current UID-only reference bindings', () => {
     assert.deepEqual(resolveReferenceTopicBinding(layouts, new Map([
       ['related_topic_uid', topics[0].topic_uid],
     ])).topic_uids, [topics[0].topic_uid]);
-
-    for (const legacyValue of ['03_current-a', '01_old-a', '03', '3']) {
-      assert.deepEqual(resolveReferenceTopicBinding(layouts, new Map([
-        ['related_topic', legacyValue],
-      ])).topic_uids, [topics[0].topic_uid]);
-    }
-
-    const dual = resolveReferenceTopicBinding(layouts, new Map([
-      ['related_topic_uid', topics[0].topic_uid],
-      ['related_topic', '01_old-a'],
-    ]));
-    assert.equal(dual.ok, true);
-    assert.deepEqual(dual.topic_uids, [topics[0].topic_uid]);
+    assert.equal(resolveReferenceTopicBinding(layouts, new Map([
+      ['related_topic_uid', 'all'],
+    ])).all, true);
   });
 
-  it('fails one reference-binding root for conflicting or ambiguous legacy forms', () => {
-    const conflict = resolveReferenceTopicBinding(layouts, new Map([
-      ['related_topic_uid', topics[0].topic_uid],
-      ['related_topic', '01_current-b'],
-    ]));
-    assert.equal(conflict.ok, false);
-    assert.equal(conflict.reason_code, 'reference_topic_binding_conflict');
+  it('rejects every retired related_topic declaration before parsing its value', () => {
+    const cases = [
+      ['current slug', new Map([['related_topic', '03_current-a']])],
+      ['previous slug', new Map([['related_topic', '01_old-a']])],
+      ['current id', new Map([['related_topic', '03']])],
+      ['unpadded id', new Map([['related_topic', '3']])],
+      ['sentinel', new Map([['related_topic', 'all']])],
+      ['list', new Map([['related_topic', '03_current-a,01_old-a']])],
+      ['empty', new Map([['related_topic', '']])],
+      ['agreeing dual', new Map([['related_topic_uid', topics[0].topic_uid], ['related_topic', '01_old-a']])],
+      ['conflicting dual', new Map([['related_topic_uid', topics[0].topic_uid], ['related_topic', '01_current-b']])],
+    ];
+    for (const [name, metadata] of cases) {
+      const binding = resolveReferenceTopicBinding(layouts, metadata);
+      assert.equal(binding.ok, false, name);
+      assert.equal(binding.reason_code, 'reference_topic_binding_legacy_unsupported', name);
+      assert.equal(Object.hasOwn(binding, 'topic_uids'), false, name);
+    }
+  });
 
-    const ambiguousLayouts = evaluateTopicLayouts([
-      topics[0],
-      { ...topics[1], previous_layouts: [{ id: '03', slug: '03_old-b' }] },
-    ]);
-    const ambiguous = resolveReferenceTopicBinding(ambiguousLayouts, new Map([
-      ['related_topic', '03'],
-    ]));
-    assert.equal(ambiguous.ok, false);
-    assert.equal(ambiguous.reason_code, 'reference_topic_binding_ambiguous');
+  it('rejects a retired related_topic declaration on plain-object metadata', () => {
+    const binding = resolveReferenceTopicBinding(layouts, {
+      related_topic_uid: topics[0].topic_uid,
+      related_topic: '',
+    });
+    assert.equal(binding.ok, false);
+    assert.equal(binding.reason_code, 'reference_topic_binding_legacy_unsupported');
+  });
+
+  it('keeps malformed current UID forms distinct from retired-key rejection', () => {
+    for (const metadata of [
+      new Map([['related_topic_uid', 'unknown']]),
+      new Map([['related_topic_uid', 'a,b']]),
+    ]) {
+      const binding = resolveReferenceTopicBinding(layouts, metadata);
+      assert.equal(binding.ok, false);
+      assert.notEqual(binding.reason_code, 'reference_topic_binding_legacy_unsupported');
+    }
   });
 
   it('resolves an exact UID subset without inferring all Topics', () => {

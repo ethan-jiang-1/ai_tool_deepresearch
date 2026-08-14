@@ -35,7 +35,7 @@ function materializeWave1Reference(dir, { topic, sourceUrl, sourceRef, cacheTrai
   mkdirSync(join(dir, '_tmp'), { recursive: true });
   writeFileSync(stagingPath, `${referenceContent({
     source_url: sourceUrl,
-    related_topic: topic.slug,
+    related_topic_uid: topic.topic_uid,
   })}\n## Submitted Backing\n- source_ref: ${sourceRef}\n- cache_trail_ref: ${cacheTrail}\n- result_ref: ${submission.record.paths.result_ref}\n- work_unit_ref: ${submission.record.paths.work_unit_dir}\n`);
   const persisted = spawnSync('node', [
     ARTIFACT_PERSISTENCE,
@@ -338,7 +338,7 @@ describe('Gate dynamic threshold — wave1', () => {
             lineage: { topic_uid: topic.topic_uid, topic_slug: topic.slug, phase: 'wave1' },
           },
           outputs: [
-            { path: referencePath, role: 'reference', source_url: sourceUrl, source_slug: `${topic.slug}-deepening-${ordinal}`, content: referenceContent({ source_url: sourceUrl, related_topic: topic.slug }) },
+            { path: referencePath, role: 'reference', source_url: sourceUrl, source_slug: `${topic.slug}-deepening-${ordinal}`, content: referenceContent({ source_url: sourceUrl, related_topic_uid: topic.topic_uid }) },
             { path: sourceRef, role: 'evidence_summary' },
             { path: `artifacts/wave1/${topic.slug}/question-list.md`, role: 'question_list' },
           ],

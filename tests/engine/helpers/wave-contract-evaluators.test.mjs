@@ -88,7 +88,7 @@ function submitReviewedCandidate(dir) {
       role: 'reference',
       source_url: sourceUrl,
       source_slug: 'submitted-source',
-      content: referenceContent({ source_url: sourceUrl, related_topic: TOPIC.slug }),
+      content: referenceContent({ source_url: sourceUrl, related_topic_uid: TOPIC.topic_uid }),
     }],
     cacheTrails: [{ path: cacheTrail, url: sourceUrl }],
     resultOverrides: {
@@ -167,7 +167,7 @@ describe('Wave1 convergence feedback projection', () => {
     const { sourceUrl } = submitReviewedCandidate(dir);
     writeFileSync(join(dir, 'reference', 'topic-a-legacy.md'), referenceContent({
       source_url: sourceUrl,
-      related_topic: TOPIC.slug,
+      related_topic_uid: TOPIC.topic_uid,
       coreContent: 'This legacy projection intentionally lacks submitted backing references.',
     }));
 

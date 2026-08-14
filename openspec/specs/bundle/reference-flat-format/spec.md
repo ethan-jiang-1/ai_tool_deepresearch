@@ -812,8 +812,12 @@ New writer guidance SHALL NOT select `related_topic` as a new-output form. The
 derived `_INDEX.md` navigation `related_topic` cell SHALL render a stable
 reader-facing label for every valid form without becoming Topic authority.
 
-Existing reference files that use `related_topic` remain reader-compatible and
-byte-unchanged; this requirement neither converts nor rejects them.
+Existing Markdown bytes that contain `related_topic` remain directly readable
+by people at their recorded paths. They are not valid current Engine
+reference-format input, including a dual declaration beside a UID form; current
+format validation SHALL report the shared
+`reference_topic_binding_legacy_unsupported` result and SHALL not rewrite,
+convert, move, or duplicate the file.
 
 #### Scenario: Selected subset renders as one canonical metadata form
 
@@ -829,3 +833,21 @@ byte-unchanged; this requirement neither converts nor rejects them.
 - **THEN** it SHALL use the exact scalar `related_topic_uid`
 - **AND** current templates and examples SHALL not offer `related_topic` as an
   alternative new-output field
+
+#### Scenario: Preserved legacy Markdown is not current evidence input
+
+- **WHEN** a reader encounters a historical reference containing
+  `related_topic`
+- **THEN** it SHALL retain the file bytes and human-readable Markdown
+- **AND** it SHALL not treat the file as structurally valid current Engine
+  evidence through that metadata form
+
+#### Scenario: Legacy binding cannot regenerate the current reference index
+
+- **WHEN** reference index synchronization encounters a reference containing
+  `related_topic`
+- **THEN** it SHALL return
+  `reference_topic_binding_legacy_unsupported` before persisting `_INDEX.md` or
+  another derived navigation target
+- **AND** it SHALL leave the historical reference and existing derived bytes
+  unchanged

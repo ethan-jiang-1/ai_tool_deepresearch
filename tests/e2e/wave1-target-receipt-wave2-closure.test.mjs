@@ -148,7 +148,7 @@ ${renderSeedProjectionAppendix()}
     related_topic_uid: uid,
     accessed_at: '2026-07-14',
     evidence_role: 'deepening_reference',
-  }).replace(/^- related_topic: undefined\n/m, `- related_topic_uid: ${uid}\n`) + '\n');
+  }) + '\n');
 
   // Reference index
   const indexPath = join(dir, 'reference', '_INDEX.md');
@@ -235,7 +235,7 @@ function materializeWave1Projection(dir, topic, { submission, sourceRef, cacheTr
   const stagingPath = join(dir, '_tmp', `${topic.slug}-wave1-projection.md`);
   const reference = `${referenceContent({
     source_url: sourceUrl,
-    related_topic: topic.slug,
+    related_topic_uid: topic.topic_uid,
     accessed_at: '2026-07-14',
     evidence_role: 'deepening_reference',
   })}\n## Submitted Backing\n- source_ref: ${sourceRef}\n- cache_trail_ref: ${cacheTrail}\n- result_ref: ${submission.record.paths.result_ref}\n- work_unit_ref: ${submission.record.paths.work_unit_dir}\n`;

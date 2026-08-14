@@ -50,7 +50,7 @@ New files begin with one `---`-delimited YAML mapping, before the Markdown title
 
 This opening mapping is the canonical writer contract. `readReferenceMetadata()` supplies its semantic values to format, URL, index, count, and backing consumers. Existing legacy `- key: value` lines before the first semantic section remain read-compatible only; do not choose that retired presentation for a new file. Do not use a `sources:` wrapper or a non-mapping YAML root. If inspect reports `reference_metadata_frontmatter_invalid`, repair the opening mapping itself; if a valid mapping is missing one required key, repair that named key and rerun the same checkpoint.
 
-**必填 contract facts**（inspect CLI 会检查这些 key 是否存在且非空）：八个 common metadata fields，加一个可解析的 Topic binding。新文件只能选择一个 current UID form：一个 exact registered `related_topic_uid`、genuinely all-Topic 的 `related_topic_uid: all`，或 exact selected subset 的非空去重 `related_topic_uids` YAML array。不得为新文件写 `related_topic`。历史文件中的 `related_topic` 仍可被 reader 兼容解析；它不是新输出选项，也不需要重写。
+**必填 contract facts**（inspect CLI 会检查这些 key 是否存在且非空）：八个 common metadata fields，加一个可解析的 Topic binding。新文件只能选择一个 current UID form：一个 exact registered `related_topic_uid`、genuinely all-Topic 的 `related_topic_uid: all`，或 exact selected subset 的非空去重 `related_topic_uids` YAML array。不得为新文件写 `related_topic`。历史文件中的 `related_topic` 保持人工可读，但 current Engine 会拒绝它；它不是新输出选项，也不需要重写。
 
 | Key | 类型 | 说明 |
 |-----|------|------|

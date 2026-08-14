@@ -595,7 +595,7 @@ export function checkReferenceFormatFiles(files, { rule = null, bundlePath = nul
         }));
       }
     }
-    const binding = layouts
+    const binding = layouts || metadata.has('related_topic')
       ? resolveReferenceTopicBinding(layouts, metadata)
       : REFERENCE_TOPIC_BINDING_FIELDS.some((field) => Boolean(metadata.get(field)))
         ? { ok: true }
@@ -603,7 +603,10 @@ export function checkReferenceFormatFiles(files, { rule = null, bundlePath = nul
     if (!binding.ok) {
       const reason = binding.reason_code || 'reference_topic_binding_invalid';
       const detail = `Invalid reference topic binding in ${file.relPath}: ${reason}`;
-      const writeField = reason === 'reference_topic_binding_conflict'
+      const legacyUnsupported = reason === 'reference_topic_binding_legacy_unsupported';
+      const writeField = legacyUnsupported
+        ? null
+        : reason === 'reference_topic_binding_conflict'
         ? 'related_topic_uid,related_topic_uids,related_topic'
         : metadata.has('related_topic_uids')
           ? 'related_topic_uids'
@@ -616,19 +619,25 @@ export function checkReferenceFormatFiles(files, { rule = null, bundlePath = nul
         id: `${rule?.id || 'reference_format'}:${file.relPath}:topic_binding:${reason}`,
         blockingBasis: 'binding_integrity',
         surface: file.absPath,
-        expected: 'One resolvable reference topic binding: exact registered related_topic_uid, all sentinel, non-empty exact related_topic_uids array, or compatible historical related_topic; simultaneous forms must agree.',
+        expected: 'One current reference topic binding: exact registered related_topic_uid, all sentinel, or non-empty exact related_topic_uids array with no related_topic key.',
         observed: {
           related_topic_uid: metadata.get('related_topic_uid') || null,
           related_topic_uids: metadata.get('related_topic_uids') || null,
           related_topic: metadata.get('related_topic') || null,
           reason_code: reason,
         },
-        missingFact: reason === 'reference_topic_binding_conflict'
+        missingFact: legacyUnsupported
+          ? `${file.relPath}#metadata.related_topic is retired and cannot participate in current Engine evidence consumption.`
+          : reason === 'reference_topic_binding_conflict'
           ? `${file.relPath} has conflicting related_topic_uid and related_topic bindings.`
           : `${file.relPath} topic binding is not resolvable: ${reason}.`,
         repairKind: 'agent_action',
-        writeTo: `${file.absPath}#metadata.${writeField}`,
-        repair: `Repair the reference topic binding in ${file.relPath} to one exact registered UID, all sentinel, exact UID array, or compatible current/previous id or slug, then rerun this checkpoint.`,
+        writeTo: legacyUnsupported
+          ? 'Current UID-bound reference materialization path'
+          : `${file.absPath}#metadata.${writeField}`,
+        repair: legacyUnsupported
+          ? `Create a new current UID-bound reference through the normal materialization path, then rerun this checkpoint without rewriting ${file.relPath}.`
+          : `Repair the reference topic binding in ${file.relPath} to one exact registered UID, all sentinel, or exact UID array, then rerun this checkpoint.`,
         detail,
       }));
     }

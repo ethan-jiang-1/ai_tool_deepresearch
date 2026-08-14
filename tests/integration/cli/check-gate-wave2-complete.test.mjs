@@ -840,7 +840,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
     createMinBackfill(dir);
     writeFileSync(join(dir, 'reference/00-cross-market-shift.md'), referenceContent({
       source_url: 'https://example.com/research/market-shift',
-      related_topic: 'cross-topic',
+      related_topic_uids: ['tp_123e4567-e89b-12d3-a456-426614174000'],
       evidence_role: 'targeted_evidence',
     }));
     writeWave2Trace(dir);
@@ -866,6 +866,46 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected submitted cross-reference work-unit pass, got inspect: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('15a. rejects a dual historical cross-reference through one shared Gate and inspect root', () => {
+    const dir = createBundle(unique('retired-dual-binding'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    submitWave2CrossReference(dir);
+    createMinIndex(dir);
+    createMinBackfill(dir);
+    writeWave2Trace(dir);
+    const referencePath = join(dir, 'reference/00-cross-market-shift.md');
+    const historicalBytes = readFileSync(referencePath, 'utf8').replace(
+      'related_topic_uids:\n  - tp_123e4567-e89b-12d3-a456-426614174000',
+      'related_topic_uids:\n  - tp_123e4567-e89b-12d3-a456-426614174000\nrelated_topic: cross-topic',
+    );
+    writeFileSync(referencePath, historicalBytes);
+
+    for (const output of [
+      JSON.parse(runGate(dir).stdout),
+      JSON.parse(runInspect(dir).stdout),
+    ]) {
+      assert.equal(output.check.passed, false);
+      assert.deepEqual(output.check.failed_rule_ids, ['reference_format'], JSON.stringify(output));
+      assert.equal(output.inspect.filter((line) => (
+        line.includes('reference_topic_binding_legacy_unsupported')
+      )).length, 1);
+      for (const ruleId of [
+        'wave2_cross_reference_index_coverage',
+        'wave2_work_unit_cross_ref_coverage',
+        'wave2_work_unit_submission_presence',
+        'wave2_delegated_bypass_suspected',
+      ]) {
+        assert.equal(output.check.masked_rule_ids.includes(ruleId), true);
+      }
+      const hint = output.hints.find((candidate) => candidate.rule_id === 'reference_format');
+      assert.ok(hint, JSON.stringify(output.hints));
+      assert.match(hint.missing_fact, /#metadata\.related_topic/);
+      assert.equal(hint.write_to, 'Current UID-bound reference materialization path');
+    }
+    assert.equal(readFileSync(referencePath, 'utf8'), historicalBytes);
   });
 
   it('15b. masks Wave2 declaration-dependent symptoms behind one recoverable parent', () => {

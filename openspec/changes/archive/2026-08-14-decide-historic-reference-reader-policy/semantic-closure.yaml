@@ -1,0 +1,66 @@
+schema_version: semantic-closure/v1
+change: decide-historic-reference-reader-policy
+status: affected
+catalog_additions: []
+affected:
+  - family: wave.submitted-reference-convergence
+    fact: >-
+      Whether Reference Markdown declares a current canonical Topic set that may
+      participate in Wave evidence convergence. Scalar UID, all-Topic sentinel,
+      and exact non-empty deduplicated UID subsets resolve through the shared
+      adapter. Presence of retired related_topic, including a dual declaration,
+      yields reference_topic_binding_legacy_unsupported and establishes no
+      current Gate, index, provenance, observability, or rerun evidence.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/topic-layout.mjs#resolveReferenceTopicBinding
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs#readReferenceMetadata
+      - DEEP_RESEARCH_HARNESS/engine/helpers/topic-layout.mjs#resolveReferenceTopicBinding
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/reference-index-sync.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-provenance.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs
+      - DEEP_RESEARCH_HARNESS/cli/inspect-wave0-output.mjs
+      - DEEP_RESEARCH_HARNESS/cli/inspect-wave1-output.mjs
+      - DEEP_RESEARCH_HARNESS/cli/inspect-wave2-output.mjs
+    overlap:
+      - coordinate: openspec/specs/research/canonical-topic-state/spec.md
+        relation: authoritative
+        detail: CTS owns the shared Reference Markdown binding adapter and its canonical Topic-set conclusion.
+      - coordinate: openspec/specs/bundle/reference-flat-format/spec.md
+        relation: authoritative
+        detail: REF owns which metadata forms make a rich reference structurally eligible for current Engine consumption.
+      - coordinate: openspec/specs/research/research-wave-gate-implementation/spec.md
+        relation: authoritative
+        detail: RWG owns Gate countability and Topic attribution consequences of the shared binding conclusion.
+      - coordinate: openspec/specs/engine/cli-inspect-output-conventions/spec.md
+        relation: authoritative
+        detail: IOC owns inspect projection of the shared direct binding root.
+      - coordinate: openspec/specs/bundle/file-observability/spec.md
+        relation: authoritative
+        detail: FIO owns read-only footprint and binding-drift findings without creating Topic authority.
+      - coordinate: openspec/specs/workflow/rerun-topic-integration/spec.md
+        relation: authoritative
+        detail: RTI owns rerun consumption and current materialization of rich references.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-reference-template.md
+        relation: derived
+        detail: The template presents current UID writer forms; it neither resolves identity nor grants legacy-reader acceptance.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md
+        relation: derived
+        detail: Wave0 guidance selects current all-Topic materialization but does not decide metadata validity.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md
+        relation: derived
+        detail: Wave1 guidance selects current scalar UID materialization but does not decide metadata validity.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave2.md
+        relation: derived
+        detail: Wave2 guidance selects an exact current UID subset but does not decide metadata validity.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-rerun.md
+        relation: derived
+        detail: Rerun guidance routes replacement evidence through current materialization; it does not rewrite history or resolve identity.
+    verification:
+      truth_table: tests/engine/helpers/topic-layout.test.mjs
+      cross_surface: tests/integration/cli/check-gate-wave1-complete.test.mjs

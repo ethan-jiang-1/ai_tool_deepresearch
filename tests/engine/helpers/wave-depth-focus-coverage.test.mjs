@@ -69,7 +69,7 @@ function submitCurrentWave1(dir) {
       payload: { topic_uid: TOPIC_UID, topic_slug: TOPIC, wave: 1, assignment_mode: 'primary' },
     },
     outputs: [
-      { path: sourceRef, role: 'reference', source_url: sourceUrl, source_slug: 'current-focus-source', content: referenceContent({ source_url: sourceUrl, related_topic: TOPIC }) },
+      { path: sourceRef, role: 'reference', source_url: sourceUrl, source_slug: 'current-focus-source', content: referenceContent({ source_url: sourceUrl, related_topic_uid: TOPIC_UID }) },
       { path: evidenceRef, role: 'evidence_summary', content: `[Source](${sourceUrl})\n\n## Key Findings\n1. Current backing.\n` },
       { path: questionsRef, role: 'question_list', content: '## Topic Investigation Targets\n\nCurrent.\n\n## Question Reconciliation\n\nCurrent.\n\n## Emergent Question Protocol\n\nCurrent.\n\n## Exploration / Exploitation Decision\n\nCurrent.\n' },
     ],

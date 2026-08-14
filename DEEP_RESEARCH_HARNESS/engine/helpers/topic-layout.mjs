@@ -128,53 +128,22 @@ function resolveReferenceUidSubsetForm(layouts, rawValue) {
   return referenceBindingResult(resolvedLayouts);
 }
 
-function referenceIdCandidates(layouts, token) {
-  const exact = layouts.referenceByAnyId.get(token) || [];
-  if (exact.length > 0 || !/^\d+$/.test(token)) return exact;
-  const ordinal = Number(token);
-  const candidates = [];
-  for (const [id, owners] of layouts.referenceByAnyId) {
-    if (/^\d+$/.test(id) && Number(id) === ordinal) candidates.push(...owners);
-  }
-  return candidates;
+function hasReferenceMetadataKey(metadata, key) {
+  return metadata instanceof Map
+    ? metadata.has(key)
+    : Object.hasOwn(metadata || {}, key);
 }
 
-function resolveReferenceLegacyForm(layouts, rawValue) {
-  if (!rawValue) return null;
-  const tokens = rawValue.split(',').map((value) => value.trim()).filter(Boolean);
-  if (tokens.length === 0) return { ok: false, reason_code: 'reference_topic_binding_missing' };
-  if (tokens.includes('all')) {
-    return tokens.length === 1
-      ? { ok: true, all: true, topic_uids: [], topic_keys: [] }
-      : { ok: false, reason_code: 'reference_topic_binding_ambiguous', value: rawValue };
-  }
-
-  const resolvedLayouts = [];
-  for (const token of tokens) {
-    const candidates = uniqueReferenceLayouts([
-      ...(layouts.referenceByAnySlug.get(token) || []),
-      ...referenceIdCandidates(layouts, token),
-    ]);
-    if (candidates.length === 0) {
-      return { ok: false, reason_code: 'reference_topic_binding_unknown', value: token };
-    }
-    if (candidates.length > 1) {
-      return { ok: false, reason_code: 'reference_topic_binding_ambiguous', value: token };
-    }
-    resolvedLayouts.push(candidates[0]);
-  }
-  return referenceBindingResult(resolvedLayouts);
-}
-
-/** Resolve reference Markdown's UID and legacy topic-binding compatibility fields through the shared layout facts. */
+/** Resolve Reference Markdown's current UID binding through the shared layout facts. */
 export function resolveReferenceTopicBinding(layouts, metadata) {
+  if (hasReferenceMetadataKey(metadata, 'related_topic')) {
+    return { ok: false, reason_code: 'reference_topic_binding_legacy_unsupported' };
+  }
+
   const uidValue = referenceMetadataValue(metadata, 'related_topic_uid');
   const uidValues = referenceMetadataArray(metadata, 'related_topic_uids');
-  const legacyValue = referenceMetadataValue(metadata, 'related_topic');
-  const hasUidArray = metadata instanceof Map
-    ? metadata.has('related_topic_uids')
-    : Object.hasOwn(metadata || {}, 'related_topic_uids');
-  if (!uidValue && !hasUidArray && !legacyValue) return { ok: false, reason_code: 'reference_topic_binding_missing' };
+  const hasUidArray = hasReferenceMetadataKey(metadata, 'related_topic_uids');
+  if (!uidValue && !hasUidArray) return { ok: false, reason_code: 'reference_topic_binding_missing' };
 
   const uidResult = resolveReferenceUidForm(layouts, uidValue);
   const uidSubsetResult = hasUidArray
@@ -182,8 +151,7 @@ export function resolveReferenceTopicBinding(layouts, metadata) {
       ? { ok: false, reason_code: 'reference_topic_uids_invalid' }
       : resolveReferenceUidSubsetForm(layouts, uidValues)
     : null;
-  const legacyResult = resolveReferenceLegacyForm(layouts, legacyValue);
-  const invalid = [uidResult, uidSubsetResult, legacyResult].find((result) => result && !result.ok);
+  const invalid = [uidResult, uidSubsetResult].find((result) => result && !result.ok);
   if (invalid) return invalid;
 
   if (uidResult && uidSubsetResult) {
@@ -195,21 +163,7 @@ export function resolveReferenceTopicBinding(layouts, metadata) {
     };
   }
 
-  const currentResult = uidResult || uidSubsetResult;
-  if (currentResult && legacyResult) {
-    const uidSignature = currentResult.all ? 'all' : currentResult.topic_keys.join(',');
-    const legacySignature = legacyResult.all ? 'all' : legacyResult.topic_keys.join(',');
-    if (uidSignature !== legacySignature) {
-      return {
-        ok: false,
-        reason_code: 'reference_topic_binding_conflict',
-        related_topic_uid: uidValue,
-        related_topic_uids: uidValues,
-        related_topic: legacyValue,
-      };
-    }
-  }
-  return currentResult || legacyResult;
+  return uidResult || uidSubsetResult;
 }
 
 export function resolveTopicLayout(layouts, { topic_uid: topicUid, topic_slug: topicSlug } = {}, { currentOnly = false } = {}) {

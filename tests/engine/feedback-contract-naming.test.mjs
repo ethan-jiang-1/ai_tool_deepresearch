@@ -30,7 +30,7 @@ test('quoted acceptance_status warning marker parses', () => {
     'source_url: "https://example.com/agent-taxonomy"',
     'acceptance_status: "accepted :warning:"',
     'tier: "Tier 2"',
-    'related_topic: all',
+    'related_topic_uid: all',
     '---',
     '# Title',
     '',

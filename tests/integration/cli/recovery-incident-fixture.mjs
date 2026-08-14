@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 export function addCanonicalRecoveryIncident(bundlePath, { identity = 'topic-x' } = {}) {
   const files = {
     [`artifacts/wave1/${identity}/evidence-summary.md`]: `# ${identity} evidence\n`,
-    [`reference/${identity}-source.md`]: `- related_topic: ${identity}\n\n## Key Facts\n- Durable registry-external result.\n`,
+    [`reference/${identity}-source.md`]: '- related_topic_uid: all\n\n## Key Facts\n- Durable registry-external result.\n',
     [`artifacts/addendum/${identity}/result.md`]: `- topic_slug: ${identity}\n\n## Result\nParallel durable output.\n`,
   };
   for (const [relativePath, content] of Object.entries(files)) {

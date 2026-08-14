@@ -6,10 +6,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-import {
-  checkReferenceFormatFiles,
-  tryLoadGateDefinition,
-} from '../engine/helpers/gate-helpers.mjs';
+import { tryLoadGateDefinition } from '../engine/helpers/gate-helpers.mjs';
 import {
   buildContractEvaluation,
   emitInspectResult,
@@ -91,7 +88,6 @@ for (const entry of markdownFiles.filter((candidate) => candidate.isDirectory() 
 }
 
 const referenceFiles = markdownFiles.filter((entry) => entry.isFile() && entry.name.endsWith('.md')).map((entry) => entry.name);
-const sharedFiles = referenceFiles.filter((file) => file.startsWith('00-shared-'));
 additionalChecksRun += 1;
 for (const file of referenceFiles.filter((name) => !['_INDEX.md', 'README.md'].includes(name) && !name.startsWith('00-shared-'))) {
   additionalFindings.push(makeContractFinding({
@@ -103,17 +99,6 @@ for (const file of referenceFiles.filter((name) => !['_INDEX.md', 'README.md'].i
     repair: `Rename reference/${file} to 00-shared-<slug>.md or move it out of reference/.`,
   }));
 }
-
-const sharedReferenceFiles = sharedFiles.map((file) => ({
-  relPath: `reference/${file}`,
-  absPath: join(referencePath, file),
-}));
-const referencePresentation = checkReferenceFormatFiles(sharedReferenceFiles, { bundlePath: resolvedBundlePath });
-additionalChecksRun += 1;
-additionalFindings.push(...referencePresentation.findings.map((finding) => makeContractFinding({
-  ...finding,
-  classification: 'advisory',
-})));
 
 additionalChecksRun += 1;
 const indexPath = join(referencePath, '_INDEX.md');

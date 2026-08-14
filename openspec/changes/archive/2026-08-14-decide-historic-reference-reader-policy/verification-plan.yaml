@@ -1,0 +1,58 @@
+schema_version: verification-routing/v1
+change: decide-historic-reference-reader-policy
+test_classes:
+  unit:
+    status: selected
+    rationale: The shared binding adapter, format evaluator, index synchronizer, and file observability own focused deterministic rejection and non-mutation contracts.
+  integration:
+    status: selected
+    rationale: Production Gate, inspect, reference navigation, provenance, and rerun-facing CLI boundaries must expose one shared result over temporary bundle facts.
+  deterministic_e2e:
+    status: selected
+    rationale: A workflow-scale current UID-bound Wave1 receipt and Wave2 closure path must remain valid after retiring historical reference input.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change claims deterministic metadata, Engine, CLI, and lifecycle behavior only; it does not claim real Agent research, judgment, or writing quality.
+claims:
+  - id: legacy-key-presence-has-one-adapter-result
+    statement: The shared reference-binding adapter rejects legacy-only, empty, and dual related_topic declarations with reference_topic_binding_legacy_unsupported while retaining all current UID forms and their distinct invalid-form diagnostics.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/engine/helpers/topic-layout.test.mjs }
+    execution_profile: { fixture: none, subject_execution: none, runtime: none, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit
+  - id: legacy-reference-creates-no-observability-footprint
+    statement: File observability returns one non-attributed legacy-binding root without a canonical Topic footprint, dangling legacy identity, rewrite recommendation, or reference-byte mutation.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/engine/helpers/file-observability.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: none, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit
+  - id: legacy-reference-blocks-index-before-write
+    statement: Reference index synchronization propagates the shared legacy-unsupported reason and leaves existing reference, index, and navigation bytes unchanged instead of classifying or converting the historical binding.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/engine/helpers/reference-index-sync.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: none, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit
+  - id: wave-gate-and-inspect-share-legacy-root
+    statement: Wave1 Gate and inspect expose the same reference_topic_binding_legacy_unsupported root, do not count the historical reference, and continue to accept an equivalent current UID-bound reference.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/integration/cli/check-gate-wave1-complete.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: temporary_bundle, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit
+  - id: reference-navigation-has-no-legacy-fallback
+    statement: The production reference evidence-map/index CLI accepts current UID forms but cannot regenerate current navigation or provenance from a related_topic-only reference.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/integration/cli/reference-evidence-map.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: none, runtime: temporary_bundle, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit
+  - id: current-uid-reference-chain-remains-valid
+    statement: A current UID-bound Wave1 submitted reference, carried-target receipt, and Wave2 closure remain deterministic and countable after the historical reader branch is removed.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset: { kind: node_test, path: tests/e2e/wave1-target-receipt-wave2-closure.test.mjs }
+    execution_profile: { fixture: fixture_backed, subject_execution: simulated_agent_actions, runtime: temporary_bundle, external_calls: none, verdict_judge: deterministic }
+    verdict_authority: node_test_exit

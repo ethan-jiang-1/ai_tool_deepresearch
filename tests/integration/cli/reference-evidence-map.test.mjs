@@ -49,8 +49,8 @@ function bundle() {
     '    rerun_count: 0',
     '',
   ].join('\n'));
-  writeFileSync(join(dir, 'reference', '00-shared-foundation.md'), referenceContent({ related_topic: 'all' }));
-  writeFileSync(join(dir, 'reference', 'topic-a-current.md'), referenceContent({ related_topic: 'topic-a' }));
+  writeFileSync(join(dir, 'reference', '00-shared-foundation.md'), referenceContent({ related_topic_uid: 'all' }));
+  writeFileSync(join(dir, 'reference', 'topic-a-current.md'), referenceContent({ related_topic_uid: TOPIC.topic_uid }));
   writeFileSync(join(dir, 'reference', '_INDEX.md'), 'stale index');
   writeFileSync(join(dir, 'reference', 'README.md'), 'stale reader navigation');
   return dir;
@@ -98,5 +98,25 @@ describe('reference evidence map CLI', () => {
     assert.equal(second.output.verdict, 'unchanged');
     assert.deepEqual(second.output.committed_targets, []);
     assert.deepEqual(authoritySnapshot(dir), authorityBefore);
+  });
+
+  it('rejects a retained legacy reference before navigation persistence', () => {
+    const dir = bundle();
+    const referencePath = join(dir, 'reference', 'topic-a-current.md');
+    const historicalBytes = readFileSync(referencePath, 'utf8').replace(
+      `- related_topic_uid: ${TOPIC.topic_uid}`,
+      `- related_topic_uid: ${TOPIC.topic_uid}\n- related_topic: topic-a`,
+    );
+    writeFileSync(referencePath, historicalBytes);
+    const indexBefore = readFileSync(join(dir, 'reference', '_INDEX.md'), 'utf8');
+    const readmeBefore = readFileSync(join(dir, 'reference', 'README.md'), 'utf8');
+
+    const result = sync(dir);
+    assert.equal(result.process.status, 1);
+    assert.equal(result.output.verdict, 'blocked');
+    assert.equal(result.output.reason_code, 'reference_topic_binding_legacy_unsupported');
+    assert.equal(readFileSync(referencePath, 'utf8'), historicalBytes);
+    assert.equal(readFileSync(join(dir, 'reference', '_INDEX.md'), 'utf8'), indexBefore);
+    assert.equal(readFileSync(join(dir, 'reference', 'README.md'), 'utf8'), readmeBefore);
   });
 });

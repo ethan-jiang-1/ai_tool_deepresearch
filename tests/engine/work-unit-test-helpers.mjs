@@ -48,7 +48,7 @@ export function referenceContent(overrides = {}) {
     source_type: 'primary',
     tier: 'Tier 2',
     trust_level: 'expert',
-    related_topic: 'topic-a',
+    related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
     evidence_role: 'deepening_reference',
     why_it_matters: 'Relevant source for this research.',
     accessed_at: '2026-07-06',
@@ -62,13 +62,22 @@ export function referenceContent(overrides = {}) {
     ],
     ...overrides,
   };
+  const topicBinding = Object.hasOwn(overrides, 'related_topic_uids')
+    ? [
+      '- related_topic_uids:',
+      ...(opts.related_topic_uids || []).map((topicUid) => `  - ${topicUid}`),
+    ]
+    : [`- related_topic_uid: ${opts.related_topic_uid}`];
+  if (Object.hasOwn(overrides, 'related_topic') && opts.related_topic !== undefined) {
+    topicBinding.push(`- related_topic: ${opts.related_topic}`);
+  }
   return [
     `- source_url: ${opts.source_url}`,
     `- acceptance_status: ${opts.acceptance_status}`,
     `- source_type: ${opts.source_type}`,
     `- tier: ${opts.tier}`,
     `- trust_level: ${opts.trust_level}`,
-    `- related_topic: ${opts.related_topic}`,
+    ...topicBinding,
     `- evidence_role: ${opts.evidence_role}`,
     `- why_it_matters: ${opts.why_it_matters}`,
     `- accessed_at: ${opts.accessed_at}`,

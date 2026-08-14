@@ -342,7 +342,7 @@ describe('work-unit provenance gate helpers', () => {
     ]);
     writeFileSync(join(dir, 'reference', 'topic-a-source.md'), referenceContent({
       source_url: sourceUrl,
-      related_topic: 'topic-a',
+      related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
       coreContent: 'This Phase-owned topic reference cites artifacts/wave1/topic-a/evidence-summary.md and _cache/wave1/primary/topic-a/s01_source as submitted backing for the source URL.',
     }));
 
@@ -368,7 +368,7 @@ describe('work-unit provenance gate helpers', () => {
     ]);
     writeFileSync(join(dir, 'reference', 'topic-a-source.md'), referenceContent({
       source_url: 'https://example.com/research/unsubmitted',
-      related_topic: 'topic-a',
+      related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
       coreContent: 'This reference names artifacts/wave1/topic-a/evidence-summary.md, but the URL is absent from submitted source claims, accepted URL surfaces, cache trails, and degraded capture backing.',
     }));
 
@@ -503,7 +503,7 @@ describe('work-unit provenance gate helpers', () => {
     ]);
     writeFileSync(join(dir, 'reference', '00-cross-w2f-001-topic-a.md'), referenceContent({
       source_url: sourceUrl,
-      related_topic: 'cross-topic',
+      related_topic_uid: 'all',
       evidence_role: 'cross_topic_projection',
       coreContent: 'W2F-001 is linked to artifacts/wave2/finding-index.yaml, artifacts/wave2/cross-topic-ledger.md, artifacts/wave1/topic-a/evidence-summary.md, and _cache/wave1/primary/topic-a/s01_source as prior submitted backing.',
     }));
@@ -538,7 +538,7 @@ describe('work-unit provenance gate helpers', () => {
         source_slug: 's01_targeted',
         content: referenceContent({
           source_url: sourceUrl,
-          related_topic: 'cross-topic',
+          related_topic_uid: 'all',
           evidence_role: 'cross_topic_projection',
           coreContent: 'W2F-004 targeted evidence was fetched by a Wave2 work unit and materialized as a submitted reference output.',
         }),
@@ -578,7 +578,7 @@ describe('work-unit provenance gate helpers', () => {
     ]);
     writeFileSync(join(dir, 'reference', '00-cross-w2f-002-new.md'), referenceContent({
       source_url: 'https://example.com/research/new-wave2-source',
-      related_topic: 'cross-topic',
+      related_topic_uid: 'all',
       evidence_role: 'cross_topic_projection',
       coreContent: 'W2F-002 cites artifacts/wave2/finding-index.yaml, artifacts/wave2/cross-topic-ledger.md, artifacts/wave1/topic-a/evidence-summary.md, and _cache/wave1/primary/topic-a/s01_source, but the metadata source_url is newly introduced.',
     }));
@@ -613,11 +613,11 @@ describe('work-unit provenance gate helpers', () => {
     ]);
     writeFileSync(join(dir, 'reference', 'topic-b-unbacked.md'), referenceContent({
       source_url: 'https://example.com/research/unbacked-chain-source',
-      related_topic: 'topic-b',
+      related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
     }));
     writeFileSync(join(dir, 'reference', '00-cross-w2f-003-chain.md'), referenceContent({
       source_url: sourceUrl,
-      related_topic: 'cross-topic',
+      related_topic_uid: 'all',
       evidence_role: 'cross_topic_projection',
       coreContent: 'W2F-003 cites artifacts/wave2/finding-index.yaml, artifacts/wave2/cross-topic-ledger.md, and reference/topic-b-unbacked.md, but no concrete prior-wave source/cache/work-unit backing ref appears in the body.',
     }));

@@ -72,7 +72,7 @@ function submitWave1(dir, { queueItemId, topicUid, topicSlug, sourceUrl, assignm
       role: 'reference',
       source_url: sourceUrl,
       source_slug: 'submitted-source',
-      content: referenceContent({ source_url: sourceUrl, related_topic: topicSlug }),
+      content: referenceContent({ source_url: sourceUrl, related_topic_uid: topicUid }),
     }],
     cacheTrails: [{ path: cacheTrail, url: sourceUrl }],
     resultOverrides: { source_claims: [claim], accepted_source_urls: [sourceUrl] },

@@ -25,13 +25,28 @@ The same physical file or submitted row SHALL count at most once for one UID.
 A previous slug SHALL NOT create a new topic, satisfy another UID, or grant
 authority without existing submitted coverage.
 
-#### Scenario: Renamed topic retains UID-bound historical wave coverage
+#### Scenario: Renamed topic retains historical wave coverage
 
 - **WHEN** a topic's submitted Wave1 outputs remain under a unique previous
   slug after canonical rename and their reference metadata uses a current UID
   form
 - **THEN** the Wave1 gate SHALL attribute those outputs to the same UID without
   requiring file moves or ledger rewrites
+
+#### Scenario: New rerun output uses current slug
+
+- **WHEN** new work is enqueued after layout mutation
+- **THEN** its required output paths SHALL use the current slug while historical coverage remains readable under previous slugs
+
+#### Scenario: Duplicate match counts once
+
+- **WHEN** one submitted output is discoverable through more than one accepted-layout check
+- **THEN** gate counting SHALL deduplicate it by existing provenance identity
+
+#### Scenario: Previous aliases are not extra floors
+
+- **WHEN** one UID has several previous slugs but valid submitted coverage under only one accepted slug
+- **THEN** a one-per-topic rule SHALL evaluate the UID aggregate rather than require coverage for every alias
 
 #### Scenario: Legacy-only reference cannot satisfy a current floor
 
@@ -41,7 +56,7 @@ authority without existing submitted coverage.
 - **AND** the reference SHALL not contribute to topic attribution, provenance,
   reference navigation, or numeric floor coverage
 
-#### Scenario: Current UID binding does not require legacy-field rewrite
+#### Scenario: Historical reference binding does not require migration
 
 - **WHEN** an existing covered reference resolves through an exact current UID
   form and has no `related_topic`

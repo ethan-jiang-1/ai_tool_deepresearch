@@ -83,6 +83,12 @@ export function isCountable(refPath, bundleDir) {
   if (metadataRead.error) return { countable: false, reason: 'unparseable' };
   const metadata = metadataRead.metadata;
 
+  // A historical binding is never current evidence, even in this deliberately
+  // narrow numeric predicate that otherwise does not resolve Topic identity.
+  if (metadata.has('related_topic')) {
+    return { countable: false, reason: 'reference_topic_binding_legacy_unsupported' };
+  }
+
   // ── Detect unparseable: no metadata fields AND no ## sections ──
   const hasSections = /^##\s+/m.test(content);
   if (metadata.size === 0 && !hasSections) {

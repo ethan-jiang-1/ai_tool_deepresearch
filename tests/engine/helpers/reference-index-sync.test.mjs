@@ -3,10 +3,15 @@ import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { renderReferenceIndex, syncReferenceIndex } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/reference-index-sync.mjs';
+import {
+  renderReferenceEvidenceMap,
+  renderReferenceIndex,
+  syncReferenceIndex,
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/reference-index-sync.mjs';
 import { cleanupWorkUnitBundle, referenceContent, tempWorkUnitBundle } from '../work-unit-test-helpers.mjs';
 
 const bundles = [];
+const TOPIC_UID = 'tp_123e4567-e89b-12d3-a456-426614174000';
 after(() => bundles.splice(0).forEach(cleanupWorkUnitBundle));
 
 function bundle() {
@@ -18,7 +23,7 @@ function bundle() {
     derived_topic_count: 1,
     topic_registry_version: '2',
     topic_registry: [{
-      topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A',
+      topic_uid: TOPIC_UID, id: '01', slug: 'topic-a', title: 'Topic A',
       must_answer: ['What matters?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [],
     }],
   }, null, 2)}\n---\n# Plan\n`);
@@ -57,10 +62,10 @@ function uidSubsetReference(uids) {
 describe('reference index synchronization', () => {
   it('renders every flat reference family in stable order and retains a valid prior date', () => {
     const dir = bundle();
-    writeReference(dir, '00-cross-findings.md', { related_topic: 'all', source_type: 'mixed' });
-    writeReference(dir, '00-shared-foundation.md', { related_topic: 'all' });
-    writeReference(dir, '01-wave1-legacy.md', { related_topic: 'topic-a' });
-    writeReference(dir, 'topic-a-current.md', { related_topic: 'topic-a' });
+    writeReference(dir, '00-cross-findings.md', { related_topic_uid: 'all', source_type: 'mixed' });
+    writeReference(dir, '00-shared-foundation.md', { related_topic_uid: 'all' });
+    writeReference(dir, '01-wave1-current.md', { related_topic_uid: TOPIC_UID });
+    writeReference(dir, 'topic-a-current.md', { related_topic_uid: TOPIC_UID });
     writeFileSync(join(dir, 'reference', '_INDEX.md'), [
       '# Old', '', '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
       '| --- | --- | --- | --- | --- | --- | --- | --- |',
@@ -74,19 +79,26 @@ describe('reference index synchronization', () => {
     assert.equal(committed.verdict, 'committed');
     const index = readFileSync(join(dir, 'reference/_INDEX.md'), 'utf8');
     assert.match(index, /Reference count:\*\* 4/);
-    assert.match(index, /01-wave1-legacy\.md \| primary .* \| wave1_topic/);
+    assert.match(index, /01-wave1-current\.md \| primary .* \| wave1_topic/);
     assert.equal(syncReferenceIndex(dir, { syncDate: '2026-07-28' }).verdict, 'unchanged');
   });
 
-  it('blocks an unclassifiable non-special reference without touching the target', () => {
+  it('blocks a retired reference before any navigation write', () => {
     const dir = bundle();
     writeReference(dir, 'unknown.md', { related_topic: 'unknown-topic' });
-    const target = join(dir, 'reference/_INDEX.md');
-    writeFileSync(target, 'keep these bytes');
+    const indexTarget = join(dir, 'reference/_INDEX.md');
+    const readmeTarget = join(dir, 'reference/README.md');
+    writeFileSync(indexTarget, 'keep index bytes');
+    writeFileSync(readmeTarget, 'keep README bytes');
+    const evidenceMap = renderReferenceEvidenceMap(dir, { syncDate: '2026-07-28' });
+    assert.equal(evidenceMap.verdict, 'blocked');
+    assert.equal(evidenceMap.reason_code, 'reference_topic_binding_legacy_unsupported');
+    assert.equal(evidenceMap.target, 'reference/README.md');
     const result = syncReferenceIndex(dir, { syncDate: '2026-07-28' });
     assert.equal(result.verdict, 'blocked');
-    assert.equal(result.reason_code, 'reference_index_layer_unclassifiable');
-    assert.equal(readFileSync(target, 'utf8'), 'keep these bytes');
+    assert.equal(result.reason_code, 'reference_topic_binding_legacy_unsupported');
+    assert.equal(readFileSync(indexTarget, 'utf8'), 'keep index bytes');
+    assert.equal(readFileSync(readmeTarget, 'utf8'), 'keep README bytes');
   });
 
   it('renders a cross-reference UID subset as a navigation label without broadening it', () => {
@@ -107,7 +119,7 @@ describe('reference index synchronization', () => {
 
   it('returns a CAS block without merging concurrent index drift', () => {
     const dir = bundle();
-    writeReference(dir, '00-shared-foundation.md', { related_topic: 'all' });
+    writeReference(dir, '00-shared-foundation.md', { related_topic_uid: 'all' });
     const target = join(dir, 'reference/_INDEX.md');
     writeFileSync(target, [
       '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
@@ -125,7 +137,7 @@ describe('reference index synchronization', () => {
 
   it('reports and converges a later README CAS block without rollback or merge', () => {
     const dir = bundle();
-    writeReference(dir, '00-shared-foundation.md', { related_topic: 'all' });
+    writeReference(dir, '00-shared-foundation.md', { related_topic_uid: 'all' });
     const indexTarget = join(dir, 'reference/_INDEX.md');
     const readmeTarget = join(dir, 'reference/README.md');
     let payloadFsyncs = 0;
