@@ -2,7 +2,7 @@
 
 > 原候选 change：`drop-legacy-profile-and-topic-compatibility`
 >
-> 状态：known-surface classification closed; C4a/C4b each require a separate policy decision and proposal
+> 状态：complete; C4a/C4b are governed-archived as dashboard items 06-07
 >
 > 风险：C4a L3; C4b L4
 
@@ -11,7 +11,8 @@
 profile `research_access` 的 legacy shape 与 topic identity/migration 不是同一个 contract family。前者影响 HITL1 Gate 和 profile reader；后者影响 current bundle 的 topic identity、reference binding、rerun、Gate coverage、file observability 和 retained historical evidence。把它们放进一个 change 会让风险不可审查。
 
 独立审批卡： [C4a](C4a-retire-legacy-research-access-envelope.md) 与
-[C4b](C4b-retire-legacy-plan-migration.md)。它们不是已创建的 OpenSpec changes。
+[C4b](C4b-retire-legacy-plan-migration.md)。两项已分别完成 OpenSpec lifecycle 并归档；
+这张 parent card 只保留当时为什么拆开的风险依据。
 
 ## C4a: Current-only `research_access` profile
 
@@ -40,8 +41,8 @@ observations。是否把整个 `research_access` 字段从 optional 提升为 re
 
 - [x] producer/reader trace complete：current writer 不生成旧 envelope；HITL1 是唯一旧-envelope semantic consumer；`validate-bundle`、Setup/rerun Gate、post-final recovery 是 shared schema rejection consumers；style writer 只 preservation。
 - [x] `unprobed`、current `available`、current `unavailable` 都是 current legal states；不要把 status 名字误删。
-- [ ] 用户明确选择：旧 shape 删除后，缺少 `research_access` 是全局 profile invalid，还是仅在 HITL1 时失败；这是 product state decision。
-- [ ] 选择 legacy envelope 的 rejection owner：复用 `profile_schema_valid` failure，或引入一个明确的 unsupported-current-contract result；不得让每个 generic reader 各自发明错误形状。
+- [x] 用户已确认 C4a policy；缺少 optional `research_access` 不因此变成全局 profile invalid。
+- [x] C4a 已选择并实现一致的 legacy-envelope rejection boundary；没有让各 generic reader 发明不同错误形状。
 - [x] 确认 host adapter 的 boundary taxonomy 只消费 schema-valid legacy profile format；它随 legacy envelope positive path 一起退出，adapter 的 current canary identity和 permission protections保留。
 - [x] 保留路径已有 characterization/e2e evidence：C4a focused suite 64 pass / 0 fail；proposal 仍须把 current direct-sample preservation 与 one unsupported-legacy boundary 写成 explicit tests。
 
@@ -75,7 +76,7 @@ reader。风险为 L4：错误扩大范围会令已提交 evidence 不可绑定�
 
 - [x] 已区分：legacy mutable plan migration 是 C4b；current `previous_layouts` lineage 保留；historical reference reader 是 C5a。
 - [x] 已绘制 `LegacyPlanSchema -> inspect legacy -> sanctioned rerun migrate_legacy` 的 migration path，及 `previous_layouts -> reference/provenance/Gate/rerun` 的 current lineage path。
-- [ ] 用户明确决定：历史 bundle 的 legacy mutable plan 是否仍由 current Engine 可重入；若否，旧 plan 仅可人工查看，Engine inspect/apply 明确 unsupported-current-contract。
+- [x] 用户已选择停止 current Engine re-entry；旧 plan 仅可人工查看，Engine inspect/apply 明确拒绝。
 - [x] 保留路径已验证：Plan/C4b focused suite 103 pass / 0 fail，覆盖 canonical mutation、added-topic、previous-layout evidence、reentry checks 和 full rerun continuity；proposal 仍须固定其中与改动有关的 regression set，并加 one explicit legacy rejection test。
 
 ### 可能涉及
@@ -84,6 +85,6 @@ reader。风险为 L4：错误扩大范围会令已提交 evidence 不可绑定�
 
 ## 何时算完成
 
-- [ ] C4a 与 C4b 有独立 OpenSpec change slug、proposal、risk review 和 verification plan。
-- [ ] C4a 完成不自动授权 C4b。
-- [ ] C4b 只有在 historical artifact handling 得到明确决策和 L4 coverage 后才能进入 Apply。
+- [x] C4a 与 C4b 分别完成 OpenSpec proposal、risk review、Apply、sync 和 governed archive。
+- [x] C4a 的完成没有自动授权 C4b；两项按顺序分别获批。
+- [x] C4b 在 historical artifact handling 明确决策并取得 L4 coverage 后才进入 Apply。

@@ -2,7 +2,7 @@
 
 > 候选 change：`remove-internal-versioning-and-slim-entry`
 >
-> 状态：audit coverage closed; C2a/C2b/C2c are governed-archived; the next item is C3's single policy decision
+> 状态：complete; C2a/C2b/C2c are governed-archived as dashboard items 02-04; no remaining C2 work
 >
 > 风险：L2
 
@@ -98,4 +98,4 @@ stamp 已被移除，也不绕过全域 Coverage Gate。
 
 - [x] Agent 能在 `RUN.md` 首屏进入真实执行路由。
 - [x] C2 known-surface inventory 已逐项归类，且 version discriminator 没有被误列为 release cleanup。
-- [x] C2c 已以独立 Apply -> sync -> archive 收口；现在才进入 C3 的单独 policy decision。
+- [x] C2c 已以独立 Apply -> sync -> archive 收口；C2 全部执行项已经完成。

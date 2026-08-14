@@ -2,7 +2,9 @@
 
 > Candidate change: `retire-unreferenced-seed-topic-pointer`
 >
-> Status: low-risk candidate; awaiting user approval
+> Planned execution batch: dashboard item 10 `retire-inactive-contract-surfaces`
+>
+> Status: decision card; fresh zero-caller scan pending before the grouped proposal
 >
 > Risk: L1
 

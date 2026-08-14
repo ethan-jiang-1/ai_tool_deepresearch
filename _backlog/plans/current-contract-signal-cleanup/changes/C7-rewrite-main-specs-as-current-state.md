@@ -2,13 +2,19 @@
 
 > 候选 change：`rewrite-main-specs-as-current-state`
 >
-> 状态：deferred until runtime compatibility decisions settle
+> Planned execution batch: dashboard item 14 `finalize-current-contract-presentation`, combined with C8 residual cleanup
+>
+> 状态：deferred until dashboard items 09-13 archive; behavior changes sync their own specs incrementally
 >
 > 风险：L2-L3
 
 ## 要解决什么
 
 accepted main specs 应该描述“现在可观察到的系统 contract”，而不是在每个 capability 里保存 change migration 叙事、历史版本、废弃 capability 的永久说明。现在审计到 85 份 main spec、约 26,757 行，其中 46 份有明显历史过渡措辞；有 13 个 retired requirement ID 仍出现于 main specs。
+
+这不再计划成一次覆盖 85 份 specs 的独立大改写。Dashboard items 09-13 各自
+同步其行为 delta；item 14 只处理收口后仍有证据证明是纯 narration、pure-retired
+catalog/spec noise 或 contradictory wording 的 residual set。
 
 这项工作放在后面，因为在 C3-C6 尚未决定前，过早删除 spec 中的 legacy wording 只会让 main spec 与 runtime 更不一致。
 
@@ -51,9 +57,9 @@ accepted main specs 应该描述“现在可观察到的系统 contract”，而
 
 - 任何删掉 requirement 的动作都要遵守 requirement registry 的 archive/sync route；不能手工让 ID 变 orphan。
 - 不能用“字数下降”作为 done condition。若 current behavior 尚存在，必须先留在 owner spec。
-- [ ] C1-C6 先提供实际 runtime disposition；否则该卡只做 inventory，不写 main spec delta。
+- [ ] Dashboard items 09-13 先提供实际 runtime disposition并同步各自 main specs；否则该卡只做 inventory，不写 residual delta。
 - [ ] 创建 per-spec inventory，列出 requirement owner、behavior evidence、classification 和 action。
-- [ ] 先拿 2-3 个 low-risk tombstone specs 试点，验证 governance route，再扩展。
+- [ ] 对 residual set 逐项证明 owner/action；不以“85 份都重写”为目标。
 - [ ] 任何 wording-only test 都要解释其保护的是 routing/authority 还是只是段落文本。
 
 ## Verification

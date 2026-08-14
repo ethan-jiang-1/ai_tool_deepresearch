@@ -2,7 +2,9 @@
 
 > Candidate change: `decide-historic-reference-reader-policy`
 >
-> Status: decision blocked by C5a-1 and user policy; no proposal created
+> Execution batch: dashboard item 09; standalone active OpenSpec change
+>
+> Status: strict current-only policy selected; OpenSpec proposal and six delta specs created; design/tasks/governance artifacts pending
 >
 > Risk: L4
 
@@ -49,9 +51,10 @@ evidence countability. Do not decide this by token scanning alone.
 
 ## Proposal gate
 
-- [ ] C5a-1 has archived and new current output is UID-only.
+- [x] C5a-1 has archived and new current output is UID-only
+  (`2026-08-14-make-current-reference-authoring-uid-only`, commit `0f415d92b`).
 - [x] Per-reader fanout mapped.
-- [ ] User selects A, B, or C.
+- [x] User selected B: current Engine returns one stable unsupported-current-contract result; historical Markdown remains manually readable and byte-unchanged.
 - [ ] Current Wave0/Wave1/rerun and reference-provenance characterization identifies exact changed consequences.
 - [ ] One selected boundary is represented in Gate/index/file-observability/provenance tests; no silent rewrite task exists.
 

@@ -2,7 +2,7 @@
 
 > 原候选 change：`drop-legacy-reference-and-experiment-formats`
 >
-> 状态：C5b 的 known-surface classification 已闭合；C5a 已证明 Wave1 单 Topic writer 的 UID 来源，但 shared/cross Topic 形状仍须先收口
+> 状态：C5a-1 governed-archived；C5a-2 是 active dashboard item 09；C5b 是 item 11 的独立 decision card
 >
 > 风险：C5a L4; C5b L4
 
@@ -12,8 +12,9 @@ reference topic-binding compatibility 是 research evidence 语义；experiment 
 
 独立审批卡： [C5a-1](C5a1-uid-only-current-reference-authoring.md)、
 [C5a-2](C5a2-historic-reference-reader-policy.md) 与
-[C5b](C5b-retained-experiment-history-policy.md)。它们不是已创建的
-OpenSpec changes。
+[C5b](C5b-retained-experiment-history-policy.md)。C5a-1 已归档；C5a-2 已创建
+standalone OpenSpec change；C5b 仍是 decision card，并只在 experiment-history
+policy 与 C1f 对齐时共享 dashboard item 11。
 
 ## C5a: Reference metadata and topic binding
 
@@ -51,9 +52,9 @@ mass rewrite 不等于 current Engine 必须继续把它当有效输入。
 - [x] per-reader inventory 已确认：Gate、index sync、file observability、provenance、rerun 都通过 shared topic-layout resolver 受影响。
 - [x] current writer/guidance 仍输出或允许 legacy key，故 reader removal 现在 No-go。
 - [x] Wave0 `all` writer and Wave1 exact UID / slug handoff have been traced through the actual Phase-owned materialization path.
-- [ ] C5a-1b: decide and specify a lossless current writer form for shared/cross Topic references before removing `related_topic` as a new-output choice.
-- [ ] C5a-1: after C5a-1b, prove every remaining rich-reference authoring handoff supplies the selected canonical binding and then remove `related_topic` from new-output guidance.
-- [ ] C5a-2: user selects immutable historic-reference policy: Engine retain-reader, explicit reject, or human-only opaque; no silent rewrite.
+- [x] C5a-1b: B policy selected a lossless current writer form for shared/cross Topic references: self-contained exact `related_topic_uids: [uid, ...]` subsets, distinct from scalar UID and `all`.
+- [x] C5a-1: `make-current-reference-authoring-uid-only` proved current authoring and removed `related_topic` from new-output guidance; it was governed-archived as `2026-08-14-make-current-reference-authoring-uid-only` (commit `0f415d92b`).
+- [x] C5a-2: user selected explicit rejection for current Engine input while preserving historic Markdown bytes and manual readability.
 - [ ] 用 Wave0/Wave1/rerun coverage 测试证明 UID-only current path 仍正确，并为 selected historic boundary 写 test。
 
 ## C5b: Experiment retained reports/audits and selection observations
@@ -92,6 +93,7 @@ marker v1；名字带 v1 不表示存在可删的多版本 reader。
 
 ## 何时算完成
 
-- [ ] C5a-1、C5a-2 和 C5b 建成独立 proposals；不共享一张泛化 “legacy format” delta。
+- [x] C5a-1 已 governed-archived；C5a-2 保持 standalone active proposal，不与 experiment history 合并。
+- [ ] C5b 完成独立 policy decision；只在与 C1f 共享 experiment-history owner、policy 和 rollback boundary 时共用 dashboard item 11。
 - [ ] 每项明确 retained artifacts 对 Engine 的政策。
 - [ ] 所有 current writer/reader 和 legacy rejection/opaque boundary 有测试。

@@ -2,7 +2,9 @@
 
 > Candidate change: `retire-archived-case-ledger-helper`
 >
-> Status: bounded L2 test/contract candidate; audit coverage complete
+> Planned execution batch: dashboard item 11 `retire-legacy-experiment-history-inputs`, conditional on C5b policy alignment
+>
+> Status: decision card; current-invariant versus migration-record decision pending
 >
 > Risk: L2
 

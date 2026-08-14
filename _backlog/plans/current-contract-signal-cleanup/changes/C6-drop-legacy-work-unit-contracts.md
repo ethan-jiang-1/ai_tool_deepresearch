@@ -2,11 +2,11 @@
 
 > Program family: C6
 >
-> Status: four-card split and reader-fanout audit complete; individual L4 policy decisions pending
+> Status: four decision cards and reader-fanout audit complete; C6a-C6c conditionally map to dashboard item 12, C6d is standalone item 13
 >
 > Risk: L4 throughout
 
-## Why C6 is not one change
+## Why C6 has two execution boundaries
 
 `work-unit` has several independently versioned or absent facts. They all look
 like "old compatibility" in a token scan, but they answer different questions:
@@ -18,10 +18,12 @@ like "old compatibility" in a token scan, but they answer different questions:
 | C6c | Attempt lacks `actor_contract_version` / `actor_execution` | Normal current claim records actor v1 provenance | Ledger and inspect project the absence as `legacy_unrecorded` rather than inventing a real actor | [C6c](C6c-retire-unrecorded-actor-provenance.md) |
 | C6d | `work-unit.transaction.v1` journal | New mutations write only transaction v2 | An unfinished v1 journal blocks mutation as suspect; a committed v1 journal can be historical original-submission evidence | [C6d](C6d-retire-transaction-v1-history.md) |
 
-An artifact can match more than one row. That does not authorize one proposal to
-remove all four branches. It means a later proposal must explicitly state which
-reader owns the artifact at its boundary and which other card remains out of
-scope.
+An artifact can match more than one row. C6a-C6c therefore remain separate
+decision cards but may share one proposal/apply/archive when all three select the
+same explicit rejection boundary: they operate on the same attempt envelope and
+overlapping submit/provenance readers. C6d remains separate because an unresolved
+transaction journal is a fail-closed mutation blocker with a different rollback
+and safety boundary.
 
 ## Verified family boundary
 
@@ -47,6 +49,10 @@ scope.
 - [ ] A user must make the affected historical-artifact policy decision one
   card at a time. "Humans may read the file" does not itself answer whether the
   current Engine may parse it, count it, recover it, or mutate around it.
+- [ ] C6a-C6c may enter dashboard item 12 only after all three decisions align
+  on one explicit rejection boundary and current marked/v3 behavior is characterized.
+- [ ] C6d always enters standalone dashboard item 13; no record-reader cleanup
+  may make an unresolved v1 journal disappear from the mutation blocker scan.
 - [ ] Any future old-input failure must be one explicit owned rejection or
   opaque-history result. It must not be a v3 default, automatic migration, or
   silent omission from a safety scan.

@@ -2,7 +2,9 @@
 
 > Candidate change: `retire-stale-abstract-gate-fsm`
 >
-> Status: decision ready; awaiting user approval
+> Planned execution batch: dashboard item 10 `retire-inactive-contract-surfaces`
+>
+> Status: decision card; internal API-removal approval pending
 >
 > Risk: L2
 

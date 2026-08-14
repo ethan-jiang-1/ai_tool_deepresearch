@@ -2,7 +2,7 @@
 
 > Candidate change: `make-current-reference-authoring-uid-only`
 >
-> Status: Wave1 handoff proof complete; blocked by C5a-1b shared/cross Topic binding shape
+> Status: completed and governed-archived as `2026-08-14-make-current-reference-authoring-uid-only` (commit `0f415d92b`); historical-reader policy remains C5a-2
 >
 > Risk: L3
 
@@ -10,8 +10,8 @@
 
 Can every new rich reference use a lossless current binding form, so current
 authoring stops emitting or teaching the slug/id-based `related_topic`
-compatibility form? The per-Topic Wave1 answer is now known; the shared/cross
-Topic answer belongs to C5a-1b.
+compatibility form? Yes: C5a-1 applied scalar UID, `all`, and exact UID-array
+forms without changing the historical reader.
 
 ## Verified boundary
 
@@ -66,10 +66,12 @@ binding fact projected into its task before it can be included.
 - [x] Current legacy-key writer/guidance discovered.
 - [x] Wave1 actual Phase-owned materialization handoff carries exact UID and slug through queue and submitted-backing facts.
 - [x] Wave0 shared materialization has the `all` sentinel available.
-- [ ] C5a-1b defines a lossless current binding for selected cross-Topic subsets.
-- [ ] Decide whether an explicitly assigned future delegated rich-reference task must receive the selected binding in its generated task contract; no current normal task assigns such output.
-- [ ] Add Wave0/Wave1/Wave2 current-output characterization tests for the selected writer forms.
-- [ ] User approves this writer-only slice after the overall policy queue reaches C5a.
+- [x] C5a-1b defines a lossless current binding for selected cross-Topic
+  subsets: `related_topic_uids: [uid, ...]`, distinct from scalar UID and
+  `all`.
+- [ ] Decide whether an explicitly assigned future delegated rich-reference task must receive the selected binding in its generated task contract; no current normal task assigns such output. This remains outside C5a-1 because no current task assigns rich-reference output.
+- [x] Add Wave0/Wave1/Wave2 current-output characterization tests for the selected writer forms.
+- [x] User approves this writer-only slice after the overall policy queue reaches C5a.
 
 ## Expected verification
 

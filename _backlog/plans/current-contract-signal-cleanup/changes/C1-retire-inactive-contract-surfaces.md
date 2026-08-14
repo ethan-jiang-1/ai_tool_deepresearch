@@ -2,7 +2,7 @@
 
 > 候选 change：`retire-inactive-contract-surfaces`
 >
-> 状态：audit coverage closed; C1b-C1f are split candidates awaiting their own approval
+> 状态：audit coverage closed; C1b-C1e map to dashboard item 10; C1f maps conditionally to experiment-history item 11
 >
 > 风险：L1 for tombstones; L3 for gate utilities with current experiment consumers
 
@@ -70,18 +70,22 @@ Harness 的其他 broad-scan hit 已被全域审计；之后补充发现的 C1e/
 - [x] `bundle-start-from-here` 的处置归 C3；C1 不删除其 current behavior contract。
 - [x] `shared-seed-topic-authoring` 已确认不在 manifest、`requires`、`suggested_context` 或 explicit reader 中；没有目录枚举式隐含 consumer。
 
-## 后续 Proposal 的共同 No-go
+## Execution grouping
 
-- [x] 全域 Coverage Gate 已完成；C1b-C1f 可在各自获用户批准并满足自身证据门后 proposal。
-- [ ] 每个 slice 必须保留各自的 exact current consumer/rejection proof，不能重新合并为一个“inactive surfaces”大 change。
+- [x] 全域 Coverage Gate 已完成；C1b-C1f 各自保留 decision-card approval 与证据门，但按下列 item 10/11 batch gate 进入 proposal。
+- [ ] C1b-C1e 各自保留 exact consumer/rejection proof，但在相关决策一致后共用
+  dashboard item 10 的 proposal/apply/archive。
+- [ ] C1f 不进入 item 10；它与 C5b 共享 experiment-history owner，只有 policy
+  对齐时才进入 dashboard item 11。
+- [ ] 任一 card 的 policy、rollback 或验证边界不再对齐时，在 proposal 前拆分并
+  更新 dashboard 分母。
 
-## 分拆后的 future slices
+## Decision cards and execution batches
 
-- **C1b**：删除无 consumer 的 `shared-seed-topic-authoring.md` pointer（L1）。
-- **C1c**：retire stale abstract Gate FSM、barrel exports、专属正向 tests 和误导性 current docs/spec wording（L2）。
-- **C1d**：决定是否 retire 未实现的 fork-repair convergence product contract；这不是 code cleanup，而是架构承诺的取舍（L2）。
-- **C1e**：删除没有任何 caller 的私有 YAML-subset parser，同时保留当前 JSON-or-YAML frontmatter contract（L1）。
-- **C1f**：决定 archive-only case-ledger helper/test 是否还应作为当前 Autorun invariant（L2）。
+- **Dashboard item 10**：C1b pointer、C1c stale Gate FSM、C1d unimplemented
+  fork-repair promise、C1e unreachable YAML-subset helper。
+- **Dashboard item 11 (conditional)**：C1f archive-only case-ledger helper 与 C5b
+  retained experiment history。
 
 这些 slice 都不得触碰 gate-loop/fork、return-map guidance 或 C3 的 legacy bundle-entry behavior。
 
@@ -100,4 +104,4 @@ proposal 还应选择对应 Markdown/experiment tests；若移除 `gate.mjs`，�
 
 - [x] current catalog 不再把 retired `gate-content-dedup` 当可用 capability。完成于 `2026-08-12-correct-retired-content-dedup-catalog` archive。
 - [x] C1 known-surface inventory 已逐项归类；仍有 current consumer 的 surface 没有被伪称 dead。
-- [ ] 按 C1b-C1f 或用户指定的顺序逐项决定/提案；每项单独获批准后才进入 proposal。
+- [ ] C1b-C1f 逐项完成决策；按 dashboard item 10/11 的合并门进入 proposal。

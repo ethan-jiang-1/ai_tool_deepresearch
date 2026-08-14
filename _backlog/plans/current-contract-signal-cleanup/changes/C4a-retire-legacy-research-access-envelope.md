@@ -2,7 +2,7 @@
 
 > Candidate change: `retire-legacy-research-access-envelope`
 >
-> Status: standalone proposal complete and governance-validated; awaiting explicit Apply authorization
+> Status: governed-archived as `2026-08-13-retire-legacy-research-access-envelope` (dashboard item 06)
 >
 > Risk: L3
 
@@ -11,7 +11,7 @@
 Can the current profile contract reject the old URL/fetch/search/access-boundary
 envelope while keeping the current HITL1 direct-sample observation model intact?
 
-## Verified current versus legacy shapes
+## Verified current versus legacy shapes before item 06
 
 Current states are all intentional and must remain legal:
 
@@ -21,9 +21,10 @@ Current states are all intentional and must remain legal:
 | `available` + complete `sample_observations` | current direct-sample terminal observation |
 | `unavailable` + complete `sample_observations` + reason | current direct-sample terminal observation |
 
-The legacy branch is a different envelope: `available` / `unavailable` plus
+The legacy branch was a different envelope: `available` / `unavailable` plus
 URL, fetch outcome, search/fetch surface, candidate metadata, and optional
-`access_boundary`. `ProfileSchema` currently accepts both families.
+`access_boundary`. Before item 06, `ProfileSchema` accepted both families; this
+paragraph records the removed compatibility boundary, not the current contract.
 
 HITL1 is the direct semantic consumer. Its specialized adapter feedback reads a
 schema-validated legacy `access_boundary`; the selected research-access adapter
@@ -37,7 +38,7 @@ The current writer has no legacy branch: the profile template writes only
 profile schema, so removal makes historical envelopes invalid at those general
 boundaries too. They do not otherwise interpret URL/fetch/boundary fields.
 
-## Proposed current-only result
+## Archived current-only result
 
 - Remove `LegacyResearchAccessSchema` from `ProfileSchema`.
 - Retain all three current states above and their direct-sample validation.
@@ -62,7 +63,7 @@ smuggling in a new global state requirement: absence remains schema-valid
 outside HITL1, while HITL1 continues to reject it through its existing
 recorded-observation rule.
 
-## Expected effect and side effects
+## Archived effect and side effects
 
 - Old profile envelopes no longer pass schema validation or reach the special
   access-boundary routing path.
@@ -120,7 +121,7 @@ new observation when appropriate.
   capability discovery, verification routing, and semantic closure plan-mode
   validation passed on 2026-08-13.
 
-## Expected verification
+## Verification route used
 
 ```bash
 node --test tests/schema/contracts/profile.test.mjs \
@@ -129,3 +130,6 @@ node --test tests/schema/contracts/profile.test.mjs \
   tests/integration/cli/apply-research-style.test.mjs
 node DEEP_RESEARCH_HARNESS/cli/validate-workflow-package.mjs
 ```
+
+Apply, accepted-spec sync, selected deterministic verification, closeout review,
+and governed archive completed on 2026-08-13.

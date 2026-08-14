@@ -2,7 +2,9 @@
 
 > Candidate change: `retire-unreachable-yaml-subset-parser`
 >
-> Status: bounded L1 candidate; audit coverage complete
+> Planned execution batch: dashboard item 10 `retire-inactive-contract-surfaces`
+>
+> Status: decision card; fresh zero-caller scan pending before the grouped proposal
 >
 > Risk: L1
 

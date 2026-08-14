@@ -2,7 +2,7 @@
 
 > Candidate change: `retire-legacy-plan-migration`
 >
-> Status: known-surface classification closed; policy decision pending; no proposal created
+> Status: governed-archived as `2026-08-13-retire-legacy-plan-migration` (dashboard item 07)
 >
 > Risk: L4
 
@@ -12,12 +12,14 @@ May the current Engine stop inspecting and migrating a legacy mutable
 `rb_plan.md`, so old bundles are human-readable only rather than re-enterable
 by the current rerun system?
 
-## Verified boundary
+## Verified pre-change boundary
 
-`PlanSchema` accepts both a canonical `topic_registry_version: "2"` plan and
-`LegacyPlanSchema`. `canonical-topic-state` detects the latter during inspect
-and, inside a sanctioned rerun, accepts an explicit `migrate_legacy` input.
-`check-reentry` then supplies migration guidance for the old plan.
+Before item 07, `PlanSchema` accepted both a canonical
+`topic_registry_version: "2"` plan and `LegacyPlanSchema`.
+`canonical-topic-state` detected the latter during inspect and, inside a
+sanctioned rerun, accepted an explicit `migrate_legacy` input. `check-reentry`
+then supplied migration guidance for the old plan. This paragraph records the
+removed compatibility boundary; it is not the current contract.
 
 This is the actual historical compatibility branch. It is separate from
 `previous_layouts[]`:
@@ -41,7 +43,7 @@ only blocks legacy state explicitly in Final; elsewhere inspect can still offer
 the sanctioned migration route. This means removal needs one explicit old-plan
 rejection owner across inspect/reentry/apply, not a partial loss of support.
 
-## Proposed current-only result
+## Archived current-only result
 
 - Remove the legacy plan union and `migrate_legacy` operation.
 - A legacy mutable plan receives one explicit unsupported-current-contract
@@ -63,11 +65,11 @@ That is why this is L4. It is not safe to infer permission merely from the
 project's general current-only principle; the user must decide whether this
 loss of re-entry is acceptable.
 
-## Policy decision needed
+## Recorded policy decision
 
 | Choice | Result |
 |---|---|
-| A. Retire current Engine migration (recommended under the stated current-only policy) | Legacy plans are manual-history only; current Engine rejects them consistently |
+| **A. Retire current Engine migration (selected and archived)** | Legacy plans are manual-history only; current Engine rejects them consistently |
 | B. Retain migration | Old plans remain a live re-entry contract; this cleanup does not remove the branch |
 
 ## Protected current behavior
@@ -81,14 +83,14 @@ loss of re-entry is acceptable.
 
 - [x] Legacy migration path mapped.
 - [x] Current layout lineage separated from legacy plan compatibility.
-- [ ] User chooses A or B.
+- [x] User chose A.
 - [x] Current canonical preservation evidence passed: 103 focused tests, 0
   fail, including layout lineage, added-topic, reentry, and full rerun
   continuity.
-- [ ] If A, proposal adds explicit legacy rejection coverage and fixes one
+- [x] The proposal added explicit legacy rejection coverage and fixed one
   rejection owner across inspect/reentry/apply while retaining that canonical
   regression set.
-- [ ] Historic artifact policy is written without widening scope into C5a/C6.
+- [x] Historic artifact policy was written without widening scope into C5a/C6.
 
 ## Expected verification
 

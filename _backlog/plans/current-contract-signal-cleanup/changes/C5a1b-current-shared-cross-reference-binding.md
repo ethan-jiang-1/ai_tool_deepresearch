@@ -2,7 +2,7 @@
 
 > Candidate change: `define-current-shared-cross-reference-binding`
 >
-> Status: evidence investigation closed; user policy/design decision pending
+> Status: B policy applied by archived C5a-1 `make-current-reference-authoring-uid-only`; historic-reader policy remains C5a-2
 >
 > Risk: L4
 
@@ -72,6 +72,24 @@ on whether a reference's Topic scope must remain independently self-contained
 or is properly a projection of the Wave2 finding. This is a bounded OpenSpec
 design decision, not an invitation to add a field or rewrite historic files.
 
+## Confirmed policy: B
+
+New rich-reference metadata SHALL use one of three mutually exclusive current
+binding forms:
+
+- `related_topic_uid: <uid>` for exactly one Topic;
+- `related_topic_uid: all` for a genuinely all-Topic shared reference; or
+- `related_topic_uids: [<uid>, ...]` for an exact selected subset of two or
+  more Topics.
+
+The UID array is the reference's self-contained canonical scope, not a
+Wave2-specific join to a `W2F-*` finding. It SHALL be non-empty, contain
+registered current UIDs only, and have no duplicates. A selected subset SHALL
+NOT be broadened to `all`. This decision concerns new current output only:
+it does not remove the historical `related_topic` reader, rewrite existing
+reference bytes, or introduce migration/conversion behavior. C5a-2 continues
+to own the historic-reader policy.
+
 ## Protected behavior
 
 - `related_topic_uid: all` for genuinely shared sources.
@@ -93,11 +111,13 @@ design decision, not an invitation to add a field or rewrite historic files.
 - [x] Trace writer/gate/index/observability consequences and record the
   `related_topic: cross-topic` advisory-only mismatch as a current contract
   gap rather than a valid compatibility form.
-- [ ] User approves the current cardinality policy.
-- [ ] Proposal specifies the one resolver/index/provenance behavior for each
+- [x] User approved option B: self-contained `related_topic_uids: [uid, ...]`
+  is the canonical selected-subset form, while scalar UID and `all` retain
+  their distinct current semantics.
+- [x] Proposal specified the one resolver/index/provenance behavior for each
   chosen cardinality, the formal-versus-advisory outcome for invalid Wave2
   metadata, and an explicit treatment for old `related_topic` files.
-- [ ] Do not add a migration or silently convert old reference bytes.
+- [x] Do not add a migration or silently convert old reference bytes.
 
 ## Expected verification
 

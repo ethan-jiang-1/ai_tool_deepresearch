@@ -2,7 +2,9 @@
 
 > Candidate change: `retire-transaction-v1-history`
 >
-> Status: reader fanout evidence complete; user policy decision pending
+> Execution batch: dashboard item 13; standalone because it owns mutation safety
+>
+> Status: decision card; reader fanout complete and user policy pending
 >
 > Risk: L4
 

@@ -2,7 +2,9 @@
 
 > Candidate change: `retire-unimplemented-fork-repair-contract`
 >
-> Status: product decision required; awaiting user approval
+> Planned execution batch: dashboard item 10 `retire-inactive-contract-surfaces`
+>
+> Status: decision card; architecture-promise retirement decision pending
 >
 > Risk: L2
 

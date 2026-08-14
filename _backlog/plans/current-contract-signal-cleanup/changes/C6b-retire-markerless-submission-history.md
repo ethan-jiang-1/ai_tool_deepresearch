@@ -2,7 +2,9 @@
 
 > Candidate change: `retire-markerless-submission-history`
 >
-> Status: reader fanout evidence complete; user policy decision pending
+> Planned execution batch: dashboard item 12 `retire-historic-work-unit-record-readers`, conditional on C6a/C6c policy alignment
+>
+> Status: decision card; reader fanout complete and user policy pending
 >
 > Risk: L4
 

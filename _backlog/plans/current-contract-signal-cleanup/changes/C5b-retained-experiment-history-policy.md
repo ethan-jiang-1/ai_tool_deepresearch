@@ -2,7 +2,9 @@
 
 > Candidate change: `decide-retained-experiment-history-policy`
 >
-> Status: audit coverage closed; policy decision pending
+> Planned execution batch: dashboard item 11 `retire-legacy-experiment-history-inputs`, conditional on C1f policy alignment
+>
+> Status: decision card; retained-history prediction/admission/selection policy pending
 >
 > Risk: L4
 

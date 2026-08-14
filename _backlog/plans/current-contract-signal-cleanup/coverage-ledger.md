@@ -14,7 +14,7 @@ a bounded next investigation.
 
 | Classification | Meaning |
 |---|---|
-| `bounded cleanup candidate` | A concrete current surface may be removed or rewritten after its own proposal gate. |
+| `bounded cleanup candidate` | A concrete current surface may be removed or rewritten after its decision card passes and the applicable execution batch enters proposal. |
 | `protected current semantic` | Required current runtime, recovery, provenance, experiment, or guidance behavior; not a cleanup target. |
 | `current rejection boundary` | A current contract intentionally rejects old/malformed input; retain or rewrite only as current observable behavior. |
 | `history-only documentation` | Archive/tombstone material that does not present a positive current path. |
@@ -37,14 +37,14 @@ backlog/run-bundle paths without explicit user authorization.
 
 | Family | Known-surface status | Classification result | Remaining work before global closure |
 |---|---|---|---|
-| C1 inactive contract surfaces | audit closed | C1a archived; C1b/C1c/C1e bounded candidates; C1d/C1f need explicit product/invariant decisions; gate-loop/fork and return-map are protected; bundle entry belongs to C3 | individual user approval and each card's own proposal gate |
-| C2 internal versioning / entry history | audit closed | C2a, C2b, and C2c are governed-archived; C2b retired the writer-only stamp before C2c retired the governance choreography; Harness-local changelog allowance is fixture-only false positive; schema discriminators remain protected/other-family | C2 has no remaining target work; next queue item is C3's single policy/design decision |
-| C3 bundle entry compatibility | audit closed | current writer emits `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md`; `RUN_BUNDLE.md`, map-only, and `START_FROM_HERE.md` remain positive/non-blocking through guidance/CLI/tests; no shared entry predicate exists | one user policy/design decision; proposal must choose one rejection owner and synchronize the copied inspector fixture/specs |
-| C4 profile/topic compatibility | audit closed | C4a legacy profile envelope has no current writer; HITL1 is its semantic reader while shared validators become rejection consumers. C4b legacy plan migration is distinct from current `previous_layouts[]`; active execution already requires canonical plans. Current direct-sample statuses and layout lineage are protected. | two independent user decisions; each proposal must select one old-input rejection owner and preserve the recorded C4a/C4b regression paths |
-| C5 reference / experiment formats | audit closed | Wave1 UID handoff and C5b retained-history reader fanout are closed. C5a-1b confirms selected multi-Topic Wave2 references are a current required output shape; `related_topic: cross-topic` is an advisory-only invalid binding, not a valid writer contract. Scalar UID/all cannot replace exact subsets; C5a-2 remains blocked by the current binding and historic-reader policies. | separate user decisions for C5a-1b cardinality, C5a-1 writer-only cleanup, C5a-2 historic-reader policy, and C5b retained-history policy; do not inspect unauthorized bundles |
-| C6 work-unit historical contracts | audit closed | C6a explicit assignment v1/v2, C6b markerless submitted attempt, C6c unrecorded actor provenance, and C6d transaction v1 each have complete reader fanout. Current writers use assignment v3, marked submission v1, actor v1, and transaction v2; accepted read-only historical behavior still exists and no deletion conclusion follows. `legacy_non_work_unit_rows` is a protected C6b safety diagnostic. | choose C6a-C6d one at a time; preserve the separate active mutation, recovery, inspection, provenance/Gate, safety scanning, and old-artifact consequences |
-| C7 main specs as current state | audit closed | all 85 specs have a direct owner/classification inventory; historical language is a later rewrite concern, not an unknown spec surface | wait for runtime policy decisions, then rewrite only the accepted specs affected by applied changes |
-| C8 context / routing | audit closed | `CONTEXT.md` is a bounded glossary, and direct root/Harness routing and literal Markdown tests are classified | wait for C3/C7 behavior facts, then make a small wording/routing slice |
+| C1 inactive contract surfaces | audit closed | C1a archived; C1b/C1c/C1d/C1e retain separate decision evidence but share execution item 10 when their merge gate holds; C1f maps conditionally to experiment-history item 11; gate-loop/fork and return-map are protected; bundle entry was closed by C3 | approve each risky card before opening its assigned batch; split the batch only if policy, consumer/test, or rollback boundaries diverge |
+| C2 internal versioning / entry history | archived | C2a, C2b, and C2c are governed-archived as dashboard items 02-04; schema discriminators remain protected/other-family | no remaining C2 work |
+| C3 bundle entry compatibility | archived | dashboard item 05 removed the legacy-entry success paths and retained one current entry/map contract | no remaining C3 work |
+| C4 profile/topic compatibility | archived | dashboard items 06-07 retired the legacy research-access envelope and legacy mutable-plan migration while preserving current direct-sample states and `previous_layouts[]` lineage | no remaining C4 work |
+| C5 reference / experiment formats | item 09 active | item 08 made current writers UID-only; item 09 owns the historic reference-reader rejection policy; C5b maps conditionally to experiment-history item 11 | finish item 09; then decide C5b separately before item 11's merge gate |
+| C6 work-unit historical contracts | audit closed | C6a/C6b/C6c retain separate decision evidence and map conditionally to reader-cleanup item 12; C6d remains standalone item 13 because transaction mutation safety has a distinct consequence and rollback boundary; `legacy_non_work_unit_rows` stays protected | review decisions one at a time, then open item 12 only if its merge gate holds; execute item 13 separately |
+| C7 main specs as current state | queued as item 14 | all 85 specs have a direct owner/classification inventory; historical language is a later rewrite concern, not an unknown spec surface | wait for items 09-13, then execute with C8 only if the shared presentation-only boundary still holds |
+| C8 context / routing | queued as item 14 | `CONTEXT.md` is a bounded glossary, and direct root/Harness routing and literal Markdown tests are classified | wait for items 09-13, then perform the final presentation cleanup with C7 |
 | Other broad-scan clusters | audit closed | fallback, version discriminator, recovery/history, and current rejection terms are classified as protected semantics, rejection boundaries, or false positives | no unowned cluster remains; future discovery is added as a new bounded row |
 
 ## Global Gate
@@ -56,8 +56,9 @@ backlog/run-bundle paths without explicit user authorization.
 - [x] `CONTEXT.md` and directly affected routing/test surfaces have current-owner classifications.
 - [x] Unclassified candidate count: **0**.
 
-The Global Gate now permits an individually approved slice to enter proposal.
-It does not approve that slice: the user must still decide its policy where a
-card requires one, and the card's own Go / No-go evidence must still hold. The
+The Global Gate now permits an approved execution batch to enter proposal. It
+does not approve every card in that batch: the user must still decide each risky
+policy one at a time, each card's Go / No-go evidence must hold, and the batch
+merge gate must still be true. The
 already archived C1a/C2a slices remain historical exceptions, not a precedent
 for proposal-first discovery.

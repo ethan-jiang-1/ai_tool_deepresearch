@@ -2,13 +2,15 @@
 
 > 候选 change：`sharpen-context-and-routing`
 >
-> 状态：deferred until C7
+> Planned execution batch: dashboard item 14 `finalize-current-contract-presentation`, combined with C7 residual cleanup
+>
+> 状态：deferred until dashboard items 09-13 archive
 >
 > 风险：L1-L2
 
 ## 要解决什么
 
-`CONTEXT.md` 目前只有 74 行，且已有明确非权威边界。它不是主要噪声源；真正风险是它以及 root/Harness instructions 被 tests 固定成特定句子、链接和顺序，导致每次当前 contract 演进都要保持历史措辞。应在 runtime/spec 清理完成后，压缩为最少的术语和 authority pointers。
+`CONTEXT.md` 目前只有 74 行，且已有明确非权威边界。它不是主要噪声源；真正风险是它以及 root/Harness instructions 被 tests 固定成特定句子、链接和顺序，导致每次当前 contract 演进都要保持历史措辞。应在 runtime/spec 清理完成后，与 C7 residual spec/catalog cleanup 共用 dashboard item 14，压缩为最少的术语和 authority pointers。
 
 ## 已验证事实
 
@@ -37,7 +39,7 @@
 - 不把 `CONTEXT.md` 误删成无用 slogan。每条保留/删除都问：去掉后 Agent 会把哪两个 current concepts 混淆？
 - 不改变 Deep Research selected-bundle routing 的硬 gate，直到 C3 的 behavior 已 archive。
 - 不把 ADR 设为普遍必读；继续按需读取。
-- [ ] C7 后重新枚举 docs 中实际的 current owner links，删掉只指向 retired/currently removed surfaces 的链接。
+- [ ] Dashboard items 09-13 archive 后，与 C7 residual inventory 一起重新枚举 docs 中实际的 current owner links，删掉只指向 retired/currently removed surfaces 的链接。
 - [ ] 每个拟改 Markdown test 先分类为 behavior/routing/wording-only。
 - [ ] 以 agent task 的真实读取路径进行 reviewer walkthrough：Charter -> Context -> task owner，而不只是运行 regex。
 

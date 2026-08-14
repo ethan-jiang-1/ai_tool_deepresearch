@@ -2,7 +2,9 @@
 
 > Candidate change: `retire-unrecorded-actor-provenance`
 >
-> Status: reader fanout evidence complete; user policy decision pending
+> Planned execution batch: dashboard item 12 `retire-historic-work-unit-record-readers`, conditional on C6a/C6b policy alignment
+>
+> Status: decision card; reader fanout complete and user policy pending
 >
 > Risk: L4
 
