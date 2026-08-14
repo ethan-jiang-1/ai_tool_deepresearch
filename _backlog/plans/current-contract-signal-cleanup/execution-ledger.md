@@ -22,6 +22,8 @@
 | 13 | 2026-08-14 | `2026-08-14-retire-unreachable-yaml-subset-parser` | The unreachable private YAML-subset parser is absent; exported JSON-first/package-backed YAML parsing remains the only current frontmatter path | commit `513186872`; 39 focused parser tests, workflow-package validation, zero-reference and protected-surface review, strict OpenSpec/governance, closeout review, and governed finalizer |
 | 14 | 2026-08-14 | `2026-08-14-retire-archived-case-ledger-helper` | The archive-only case-ledger helper cluster and its archive-path baseline test are absent; the manifest remains the sole runnable-corpus authority | commit `374d86c33`; selected host-tool/Supervisor integration regression, workflow-package validation, zero-reference/protected-surface review, strict OpenSpec/archive governance, closeout review, and governed finalizer |
 | 15 | 2026-08-14 | `2026-08-14-decide-retained-experiment-history-policy` | Retained v1 report/audit/selection material is human-readable/diagnostic-only and cannot establish current Supervisor prediction, admission, qualification, group-gap, selection, or launch facts; current-v2 stale-surface qualification remains explicit | commits `1aa0c1c35`, `a407cf980`, `969dbfbcd`, `0ea53de58`; 52 selected deterministic unit/integration tests, delta/main re-comparison, strict OpenSpec/archive governance, closeout review, and governed finalizer |
+| 16 | 2026-08-14 | `2026-08-14-retire-legacy-work-unit-attempt-inputs` | Explicit assignment v1/v2, markerless submission history, and actor-unrecorded attempts stop at `unsupported_current_contract`; the complete current work-unit profile remains the sole current authority | commit `7a96ca254`; selected deterministic unit/integration/deterministic-E2E suites, workflow-package validation, delta/main re-comparison, strict OpenSpec/archive governance, closeout review, and governed finalizer |
+| 17 | 2026-08-15 | `2026-08-15-retire-transaction-v1-history` | Public transaction authority is v2-only; unsafe v1/invalid bytes still fail closed, while a complete committed v1 file is diagnostic-only and cannot establish acceptance or lineage authority | commit `858cbdb87`; selected schema/unit/integration/deterministic-E2E suites, workflow-package validation, delta/main re-comparison, strict OpenSpec/archive governance, closeout review, and governed finalizer |
 
 ## Notable Sequencing Decisions
 
@@ -57,6 +59,8 @@ without deleting required behavior.
 | 2026-08-14 | 13 | Unreachable private YAML-subset parser retired while the exported JSON/YAML frontmatter contract remains unchanged | PASS |
 | 2026-08-14 | 14 | Archive-only case-ledger reader/validator/test cluster retired while current manifest/V2/Supervisor paths remain unchanged | PASS |
 | 2026-08-14 | 15 | Retained v1 experiment material made diagnostic-only; current Supervisor strategy input is complete v2 only | PASS |
+| 2026-08-14 | 16 | Legacy work-unit attempt inputs rejected before current authority computation; the complete current profile remains usable | PASS |
+| 2026-08-15 | 17 | Positive transaction-v1 authority removed; unsafe raw bytes remain fail-closed and committed v1 is diagnostic-only | PASS |
 
 ## Update Template
 

@@ -1,10 +1,10 @@
 # C6c: Decide the Unrecorded-Actor Provenance Policy
 
-> Candidate change: `retire-unrecorded-actor-provenance`
+> Merged candidate change: `retire-legacy-work-unit-attempt-inputs` (C6a+C6b+C6c)
 >
 > Planned execution batch: dashboard item 16 `C6a+C6b+C6c`, conditional on C6a/C6b policy alignment
 >
-> Status: decision card; reader fanout complete and user policy pending
+> Status: policy A governed-archived as dashboard item 16 (`7a96ca254`)
 >
 > Risk: L4
 
@@ -42,8 +42,13 @@ It applies even when the same old attempt also matches C6a or C6b.
 | B. Opaque historical display | Show raw coordinates without synthesizing an actor projection or allowing Gate/recovery computation | Preserves human audit while ending provenance compatibility | Every consumer must distinguish raw display from actor-backed authority |
 | C. Retain explicit unknown provenance | Keep `legacy_unrecorded` as a bounded read-only projection | Avoids fabricating identity and preserves historical inspection | Retains an extra provenance interpretation |
 
-No choice is selected. The dangerous non-option is silently defaulting a
-missing actor to a real current actor class.
+**Selected: A. Reject actor-unrecorded attempts.** The Engine will need one
+owned unsupported-current-contract result before submission, recovery,
+inspection, supersession, or provenance evaluation. It SHALL NOT project
+`legacy_unrecorded`, default the attempt to `delegated_subagent` or
+`phase_agent_fallback`, or silently drop the old record during an Engine safety
+scan. Historical bytes may remain human-readable, but they no longer
+participate in current Engine computation.
 
 ## Effects and side effects to assess
 
@@ -67,11 +72,25 @@ missing actor to a real current actor class.
 - [x] Map every actor-provenance consumer, including ledger validation,
   provenance/Gate evaluation, recovery, supersession, CLI output, guidance,
   and accepted specs.
-- [ ] Characterize current delegated and authorized fallback claims separately
-  from any legacy fixture.
-- [ ] User selects A, B, or C.
-- [ ] A proposal proves that a missing actor produces one explicit
-  rejection/opaque result and can never be rewritten as a real actor identity.
+- [x] Characterize current delegated and authorized fallback claims separately
+  from any legacy fixture. Completed 2026-08-14: both current paths write
+  `work-unit.actor.v1` and the exact `actor_execution` through claim, submit,
+  ledger, and inspect; an available probe binds `delegated_subagent`, while an
+  unavailable probe permits `phase_agent_fallback` only under its existing
+  authorization rule. The selected actor/submit/lifecycle/CLI/provenance suite
+  passed without mutating a real run bundle.
+- [x] User selects A, B, or C. Completed 2026-08-14: user selected A; an
+  attempt with absent actor provenance is to be rejected before current Engine
+  computation, without an actor identity inference or compatibility adapter.
+- [x] The unified C6a+C6b+C6c proposal proves that a missing actor produces
+  one explicit rejection result and can never be rewritten as a real actor
+  identity. Completed 2026-08-14: `retire-legacy-work-unit-attempt-inputs`
+  passed strict and planning-governance checks plus risk-led polish;
+  implementation and governed archive completed as dashboard item 16.
+- [x] Merge gate decided 2026-08-14: C6a/C6b/C6c share a tightly coupled
+  work-unit attempt Source of Record, the same reject policy, substantially
+  overlapping readers/tests, and one atomic rollback boundary. C6d and
+  `legacy_non_work_unit_rows` remain out of scope.
 
 ## Expected verification
 

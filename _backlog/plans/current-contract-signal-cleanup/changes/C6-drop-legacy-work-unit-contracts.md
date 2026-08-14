@@ -2,7 +2,7 @@
 
 > Program family: C6
 >
-> Status: four decision cards and reader-fanout audit complete; C6a-C6c conditionally map to dashboard item 12, C6d is standalone item 13
+> Status: C6a-C6c archived as dashboard item 16; C6d policy A archived as standalone item 17
 >
 > Risk: L4 throughout
 
@@ -16,7 +16,7 @@ like "old compatibility" in a token scan, but they answer different questions:
 | C6a | Explicit `work-unit.assignment.v1` / `.v2` marker | New claims write only `work-unit.assignment.v3` | Submit validation preserves the output-contract interpretation recorded with a marked old attempt | [C6a](C6a-retire-marked-assignment-history.md) |
 | C6b | Markerless submitted attempt, especially no `submission_contract_version` | New claims write `work-unit.submission.v1` and its immutable acceptance fingerprint | Submit normalization, hash-mirror validation, declaration recovery, late-submit, and supersession can interpret the older representation | [C6b](C6b-retire-markerless-submission-history.md) |
 | C6c | Attempt lacks `actor_contract_version` / `actor_execution` | Normal current claim records actor v1 provenance | Ledger and inspect project the absence as `legacy_unrecorded` rather than inventing a real actor | [C6c](C6c-retire-unrecorded-actor-provenance.md) |
-| C6d | `work-unit.transaction.v1` journal | New mutations write only transaction v2 | An unfinished v1 journal blocks mutation as suspect; a committed v1 journal can be historical original-submission evidence | [C6d](C6d-retire-transaction-v1-history.md) |
+| C6d | `work-unit.transaction.v1` journal | New mutations write only transaction v2 | Policy A: unfinished, unreadable, malformed, or proof-incomplete journal remains a `suspect_transaction` blocker; structurally complete committed v1 is diagnostic-only and cannot be original-submission evidence | [C6d](C6d-retire-transaction-v1-history.md) |
 
 An artifact can match more than one row. C6a-C6c therefore remain separate
 decision cards but may share one proposal/apply/archive when all three select the
@@ -46,16 +46,20 @@ and safety boundary.
   their own user decision and card-level Go / No-go are complete.
 - [x] Each card has a complete producer / reader / caller / guidance / spec /
   test map for its exact shape in `inventories/c6-work-unit-reader-fanout.md`.
-- [ ] A user must make the affected historical-artifact policy decision one
-  card at a time. "Humans may read the file" does not itself answer whether the
-  current Engine may parse it, count it, recover it, or mutate around it.
-- [ ] C6a-C6c may enter dashboard item 12 only after all three decisions align
-  on one explicit rejection boundary and current marked/v3 behavior is characterized.
-- [ ] C6d always enters standalone dashboard item 13; no record-reader cleanup
-  may make an unresolved v1 journal disappear from the mutation blocker scan.
-- [ ] Any future old-input failure must be one explicit owned rejection or
-  opaque-history result. It must not be a v3 default, automatic migration, or
-  silent omission from a safety scan.
+- [x] A user made each affected historical-artifact policy decision one card at
+  a time. "Humans may read the file" did not itself authorize current Engine
+  parsing, counting, recovery, or mutation.
+- [x] C6a-C6c aligned on one explicit rejection boundary, were applied as
+  dashboard item 16, and are governed-archived.
+- [x] C6d entered standalone dashboard item 17 with policy A; its proposal
+  preserved the rule that no unresolved v1 journal can disappear from the
+  mutation blocker scan.
+- [x] C6d received user review and explicit `APPLY`; a committed v1 journal
+  does not regain authority during implementation, and its governed archive is
+  `2026-08-15-retire-transaction-v1-history`.
+- [x] C6 historical-input failures now use their selected explicit rejection
+  or safety result. They do not default to v3, automatically migrate, or omit
+  an unsafe journal from the safety scan.
 
 ## Closed coverage record
 
@@ -68,9 +72,9 @@ and safety boundary.
 - [x] Repository fixture/test evidence is mapped by exact historic shape. No
   run bundle was inspected; a concrete user-authorized bundle would be a new
   evidence source, not a precondition for audit closure.
-- [ ] Keep direct characterization evidence for current v3 claim/submit,
-  timeout recovery, eligible late-submit, and supersession before any branch is
-  removed.
+- [x] Direct characterization evidence for current v3 claim/submit, timeout
+  recovery, eligible late-submit, supersession, and current v2 transaction
+  safety is recorded in the archived item-16 and item-17 evidence.
 
 ## Family verification baseline
 

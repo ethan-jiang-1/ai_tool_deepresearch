@@ -1,10 +1,10 @@
 # C6a: Decide the Marked Assignment v1/v2 Reader Policy
 
-> Candidate change: `retire-marked-assignment-history`
+> Merged candidate change: `retire-legacy-work-unit-attempt-inputs` (C6a+C6b+C6c)
 >
 > Planned execution batch: dashboard item 16 `C6a+C6b+C6c`, conditional on C6b/C6c policy alignment
 >
-> Status: decision card; reader fanout complete and user policy pending
+> Status: policy A governed-archived as dashboard item 16 (`7a96ca254`)
 >
 > Risk: L4
 
@@ -43,9 +43,12 @@ transaction journals belong to C6d.
 | B. Opaque historical display | Raw files may be located for people but do not enter assignment validation | Cuts execution compatibility while preserving manual inspection | Every downstream reader must be prevented from treating the artifact as a valid work-unit attempt |
 | C. Retain recorded interpretation | Keep the present read-only v1/v2 branch | Preserves historical attempt semantics | Retains multiple assignment interpretations and associated guidance/tests |
 
-No choice is selected. The stated current-only preference makes A or B plausible,
-but either one changes a previously accepted historical execution/recovery
-contract and requires explicit user approval.
+**Selected: A. Reject explicit v1/v2.** The Engine will need one owned
+unsupported-current-contract result before assignment/output interpretation.
+It SHALL NOT migrate, default, or otherwise reinterpret a marked v1/v2 attempt
+as v3. Historical bytes may remain human-readable, but the old attempt will no
+longer participate in current submit, inspection, recovery, supersession, or
+provenance computation.
 
 ## Effects and side effects to assess
 
@@ -66,13 +69,23 @@ contract and requires explicit user approval.
   example identified.
 - [x] Map every v1/v2 reader, including submit, inspect, recovery,
   supersession, Gate/provenance, CLI guidance, and accepted specs.
-- [ ] Characterize current v3 claim/submit and current Wave1 supplementary
-  behavior independently of legacy fixtures.
-- [ ] User selects A, B, or C.
-- [ ] A proposal names one rejection/opaque owner and proves that a marked old
-  attempt cannot be reinterpreted as v3.
-- [ ] The proposal keeps C6b-C6d out of scope except for explicitly tested
-  overlap shapes.
+- [x] Characterize current v3 claim/submit and current Wave1 supplementary
+  behavior independently of legacy fixtures. Completed 2026-08-14: current
+  claim writes v3 across index/manifest/beacon; current submit validates their
+  exact bound output contract; only v3 supplementary Wave1 accepts an empty
+  `required_outputs` declaration. The focused assignment/submit/lifecycle/CLI
+  suite passed 129 tests.
+- [x] User selects A, B, or C. Completed 2026-08-14: user selected A; marked
+  v1/v2 are to be rejected without v3 inference or a compatibility adapter.
+- [x] The unified C6a+C6b+C6c proposal names one rejection owner and proves
+  that a marked old attempt cannot be reinterpreted as v3. Completed
+  2026-08-14: `retire-legacy-work-unit-attempt-inputs` passed strict and
+  planning-governance checks plus risk-led polish; implementation and governed
+  archive completed as dashboard item 16.
+- [x] Merge gate decided 2026-08-14: C6a/C6b/C6c share a tightly coupled
+  work-unit attempt Source of Record, the same reject policy, substantially
+  overlapping readers/tests, and one atomic rollback boundary. C6d and
+  `legacy_non_work_unit_rows` remain out of scope.
 
 ## Expected verification
 

@@ -2,9 +2,9 @@
 
 > 候选 change：`rewrite-main-specs-as-current-state`
 >
-> Planned execution batch: dashboard item 14 `finalize-current-contract-presentation`, combined with C8 residual cleanup
+> Planned execution batch: dashboard item 18 `finalize-current-contract-presentation`, conditionally combined with C8 residual cleanup
 >
-> 状态：deferred until dashboard items 09-13 archive; behavior changes sync their own specs incrementally
+> 状态：current dashboard item; revalidate the shared presentation-only boundary and exact residual set before any proposal
 >
 > 风险：L2-L3
 
@@ -57,7 +57,7 @@ catalog/spec noise 或 contradictory wording 的 residual set。
 
 - 任何删掉 requirement 的动作都要遵守 requirement registry 的 archive/sync route；不能手工让 ID 变 orphan。
 - 不能用“字数下降”作为 done condition。若 current behavior 尚存在，必须先留在 owner spec。
-- [ ] Dashboard items 09-13 先提供实际 runtime disposition并同步各自 main specs；否则该卡只做 inventory，不写 residual delta。
+- [x] Dashboard items 09-17 已提供实际 runtime disposition并同步各自 main specs；现在重验 residual set，不以历史 inventory 直接写 delta。
 - [ ] 创建 per-spec inventory，列出 requirement owner、behavior evidence、classification 和 action。
 - [ ] 对 residual set 逐项证明 owner/action；不以“85 份都重写”为目标。
 - [ ] 任何 wording-only test 都要解释其保护的是 routing/authority 还是只是段落文本。

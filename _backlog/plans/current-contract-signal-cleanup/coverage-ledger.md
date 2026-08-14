@@ -1,6 +1,6 @@
 # Current-Contract Signal Cleanup: Coverage Ledger
 
-> Status: audit coverage complete; individual cleanup decisions pending
+> Status: audit coverage complete; item 17 is governed-archived; item 18 is the sole queued execution batch
 >
 > Purpose: prove audit coverage before any new cleanup proposal, not count keyword hits as evidence.
 
@@ -41,10 +41,10 @@ backlog/run-bundle paths without explicit user authorization.
 | C2 internal versioning / entry history | archived | C2a, C2b, and C2c are governed-archived as dashboard items 02-04; schema discriminators remain protected/other-family | no remaining C2 work |
 | C3 bundle entry compatibility | archived | dashboard item 05 removed the legacy-entry success paths and retained one current entry/map contract | no remaining C3 work |
 | C4 profile/topic compatibility | archived | dashboard items 06-07 retired the legacy research-access envelope and legacy mutable-plan migration while preserving current direct-sample states and `previous_layouts[]` lineage | no remaining C4 work |
-| C5 reference / experiment formats | item 09 and C1f archived; C5b ready for APPLY | items 08-09 made current writers UID-only and retired historic reference-reader evidence; C1f retired archive-only experiment-ledger scaffolding; C5b's current-v2-only retained-history proposal has passed planning governance | obtain APPLY, then retire v1 retained-history input to current Supervisor prediction/admission/selection without reading or rewriting real retained history |
-| C6 work-unit historical contracts | audit closed | C6a/C6b/C6c retain separate decision evidence and map conditionally to reader-cleanup item 16; C6d remains standalone item 17 because transaction mutation safety has a distinct consequence and rollback boundary; `legacy_non_work_unit_rows` stays protected | review decisions one at a time, then open item 16 only if its merge gate holds; execute item 17 separately |
-| C7 main specs as current state | queued as item 18 | all 85 specs have a direct owner/classification inventory; historical language is a later rewrite concern, not an unknown spec surface | wait for items 15-17, then execute with C8 only if the shared presentation-only boundary still holds |
-| C8 context / routing | queued as item 18 | `CONTEXT.md` is a bounded glossary, and direct root/Harness routing and literal Markdown tests are classified | wait for items 15-17, then perform the final presentation cleanup with C7 |
+| C5 reference / experiment formats | archived | items 08-09 made current writers UID-only and retired historic reference-reader evidence; C1f retired archive-only experiment-ledger scaffolding; C5b retired v1 retained-history input to current Supervisor prediction/admission/selection without reading or rewriting real retained history | no remaining C5 work |
+| C6 work-unit historical contracts | archived | C6a/C6b/C6c are governed-archived as the complete-current work-unit profile; C6d policy A has retired positive v1 authority while preserving raw fail-closed unsafe-journal detection; `legacy_non_work_unit_rows` stays protected | no remaining C6 work |
+| C7 main specs as current state | current item 18 | all 85 specs have a direct owner/classification inventory; historical language is a later rewrite concern, not an unknown spec surface | revalidate the exact residual set with C8; propose only if the shared presentation-only boundary still holds |
+| C8 context / routing | current item 18 | `CONTEXT.md` is a bounded glossary, and direct root/Harness routing and literal Markdown tests are classified | revalidate the exact residual set with C7; propose only if the shared presentation-only boundary still holds |
 | Other broad-scan clusters | audit closed | fallback, version discriminator, recovery/history, and current rejection terms are classified as protected semantics, rejection boundaries, or false positives | no unowned cluster remains; future discovery is added as a new bounded row |
 
 ## Global Gate

@@ -1,10 +1,10 @@
 # C6b: Decide the Markerless Submitted-Attempt Policy
 
-> Candidate change: `retire-markerless-submission-history`
+> Merged candidate change: `retire-legacy-work-unit-attempt-inputs` (C6a+C6b+C6c)
 >
 > Planned execution batch: dashboard item 16 `C6a+C6b+C6c`, conditional on C6a/C6c policy alignment
 >
-> Status: decision card; reader fanout complete and user policy pending
+> Status: policy A governed-archived as dashboard item 16 (`7a96ca254`)
 >
 > Risk: L4
 
@@ -52,8 +52,13 @@ remain C6a; absent actor provenance remains C6c.
 | B. Opaque historical display | May expose raw coordinates only; does not validate, count, recover, or supersede from the bytes | Keeps manual inspection while ending computational compatibility | Requires one exact no-count/no-recovery boundary across every current reader |
 | C. Retain full read-only compatibility | Preserve the present version-applicable mirror/recovery reader | Least disruptive to existing historical reruns | Keeps the most complex legacy fanout |
 
-No choice is selected. A or B may fit current-only policy, but neither may
-silently discard a legacy record during a current safety or provenance scan.
+**Selected: A. Reject markerless attempts.** The Engine will need one owned
+unsupported-current-contract result before it computes submission, recovery,
+supersession, or provenance facts. It SHALL NOT derive current acceptance from
+the old index/status hash mirrors, normalize a markerless Wave1 role set, or
+silently discard the old record during a safety or provenance scan. Historical
+bytes may remain human-readable, but they no longer participate in current
+Engine computation.
 
 ## Effects and side effects to assess
 
@@ -80,11 +85,25 @@ silently discard a legacy record during a current safety or provenance scan.
   combination and classify active execution versus historical interpretation.
 - [x] Classify the exact role of `legacy_non_work_unit_rows` without widening
   this card into generic JSONL cleanup.
-- [ ] Characterize all current marked recovery and supersession paths before a
-  branch is removed.
-- [ ] User selects A, B, or C.
-- [ ] A proposal provides a single explicit old-input boundary and proves no
-  markerless input is upgraded, inferred, or silently dropped.
+- [x] Characterize all current marked recovery and supersession paths before a
+  branch is removed. Completed 2026-08-14: the marked
+  `work-unit.submission.v1` path retains ledger-first immutable-fingerprint
+  verification through normal submit, exact declaration recovery, eligible
+  late-submit, and supersession. The selected submit/recovery/actor/CLI/e2e
+  suite passed 109 tests; workflow-package validation passed.
+- [x] User selects A, B, or C. Completed 2026-08-14: user selected A; the
+  markerless hash-mirror representation is to be rejected before any current
+  submission or provenance computation, without upgrading or silently dropping
+  the historical record.
+- [x] The unified C6a+C6b+C6c proposal provides one explicit old-input
+  boundary and proves no markerless input is upgraded, inferred, or silently
+  dropped. Completed 2026-08-14: `retire-legacy-work-unit-attempt-inputs`
+  passed strict and planning-governance checks plus risk-led polish;
+  implementation and governed archive completed as dashboard item 16.
+- [x] Merge gate decided 2026-08-14: C6a/C6b/C6c share a tightly coupled
+  work-unit attempt Source of Record, the same reject policy, substantially
+  overlapping readers/tests, and one atomic rollback boundary. C6d and
+  `legacy_non_work_unit_rows` remain out of scope.
 
 ## Expected verification
 

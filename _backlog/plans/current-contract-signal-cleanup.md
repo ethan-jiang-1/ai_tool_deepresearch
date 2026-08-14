@@ -2,14 +2,16 @@
 
 > **唯一进度入口：每次回来只看下面这张总清单。**
 >
-> 总进度：`[###############---]` **15 / 18 个执行项已归档或明确关闭；还剩 3 个（16-18）**
-> 当前位置：**16 / C6a+C6b+C6c；合并门与 policy decision 尚未完成**
-> 眼前一步：**只刻画三条 current work-unit 安全路径（v3 assignment、marked submission/recovery、recorded actor）；随后重判 C6a/C6b/C6c 的四项合并门，并逐项请用户选择 A/B/C。此步骤不改 Harness。**
-> 修改权限：**C5b 已归档并提交。C6 尚未有 policy decision 或 APPLY 授权；只能更新其 OpenSpec/backlog 决策材料，不得修改 Harness、tests 或 accepted main specs。**
+> 总进度：`[#################-]` **17 / 18 个执行项已归档或明确关闭；还剩 1 个（18）**
+> 当前位置：**18 / `C7+C8`；仅剩 current-state presentation cleanup，尚未开始 proposal。**
+> 眼前一步：**先重验 C7/C8 是否仍共享纯 presentation-only 边界，再列出精确 residual set、owner、风险和验证；未获用户逐项确认前不得创建 proposal 或修改 Harness/specs/docs/tests。**
+> 修改权限：**C6d 已 governed-archived 并提交。Item 18 目前只有调查与 decision-card/backlog 更新权限；`DEEP_RESEARCH_HARNESS/`、accepted main specs、routing docs 与 tests 均保持只读。**
+>
+> Proposal gate：**每个新 OpenSpec proposal 完成 planning checks 后，必须紧接着运行 `polish-openspec-change`；只有 checks 与 polish 都通过，才可进入 review / `APPLY`。**
 
 ## 总 Todo Checklist
 
-编号 `01-17` 是实际执行顺序，每一项对应一个 OpenSpec 执行批次或明确关闭决定；`C...` 是审计卡编号，
+编号 `01-18` 是实际执行顺序，每一项对应一个 OpenSpec 执行批次或明确关闭决定；`C...` 是审计卡编号，
 两者不是一套编号。当前项只在这张清单内展开，不再另设 `Current Item` 章节。顶层 checkbox
 只有在该批次完成 governed archive、commit，并回填本看板后才勾选。
 
@@ -102,17 +104,37 @@
   - [x] 将 ERS-001/ERS-002、EXA-009、EXO-007、PLR-004 delta specs 同步进 accepted main specs，并登记 `verification.autorun-current-retained-observation` semantic fact family。
   - [x] 完成 closeout review 和 governed archive：[`2026-08-14-decide-retained-experiment-history-policy`](../../openspec/changes/archive/2026-08-14-decide-retained-experiment-history-policy/)。
   - [x] Commit implementation/archive/spec sync（`1aa0c1c35`、`a407cf980`、`969dbfbcd`、`0ea53de58`）；已回填本看板、C5b card 与 execution ledger。
-- [ ] 16 `C6a+C6b+C6c`：停止读取历史 work-unit records（满足合并门时合并）
-  - [ ] 先分别刻画并验证 current v3 assignment、current marked submission/recovery/supersession、current recorded delegated/fallback actor 路径；不得以 legacy fixture 代替。
-  - [ ] 以 Source of Record、policy、consumer/test overlap、rollback boundary 四项条件重新判定合并；不成立则在尚未执行的分母内拆批。
-  - [ ] 逐卡向用户说明副作用并选择 A/B/C；完成前不得创建 removal proposal 或改 target code。
-- [ ] 17 `C6d`：将 transaction v1 明确限定为不支持的历史格式（单独执行）
+- [x] 16 `C6a+C6b+C6c`：停止读取历史 work-unit records（满足合并门时合并）
+  - OpenSpec archive: [`2026-08-14-retire-legacy-work-unit-attempt-inputs`](../../openspec/changes/archive/2026-08-14-retire-legacy-work-unit-attempt-inputs/)
+  - [x] C6a：已刻画 current v3 assignment / supplementary 行为；用户选择 A，explicit assignment v1/v2 将被拒绝且不得升级为 v3。
+  - [x] C6b：已刻画 current marked submission/recovery/supersession；用户选择 A，markerless hash-mirror attempt 将在任何 current submission/recovery/supersession/provenance 计算前被拒绝，不得升级或静默丢弃。选定 current-path suite `109 / 109` 通过，workflow-package validation 通过。
+  - [x] C6c：已刻画 current recorded delegated/fallback actor 路径；用户选择 A，actor-unrecorded attempt 将在任何 current submission/recovery/inspection/supersession/provenance 计算前被拒绝，不得推断、升级或静默丢弃。两条 current 路径均写入并绑定 `work-unit.actor.v1` 与 exact `actor_execution`；selected actor/submit/lifecycle/CLI/provenance suite 通过。
+  - [x] 合并门通过：三卡共享 tightly-coupled work-unit attempt Source of Record、同一 A/reject policy、重叠的 submit/inspect/recovery/supersession/provenance consumers 与 tests，且只有一次原子切换到完整 current profile 才安全。合并为 `retire-legacy-work-unit-attempt-inputs`；C6d 与 `legacy_non_work_unit_rows` 明确排除。
+  - [x] 完成 unified removal proposal、strict/requirements/project-specs/verification-routing/semantic-closure planning checks 与至少两轮 risk-led polish；补齐 Wave0 rich-reference projection/Gate reader。
+  - [x] 用户 review 后明确授权 `APPLY`；在首次 target edit 前完成 plan review。
+  - [x] 实施 `tasks.md` 25 / 25：旧 assignment v1/v2、markerless hash-mirror 与 actor-unrecorded attempt 在 submit/recovery/timeout/supersession/Gate authority mutation 前统一得到 `unsupported_current_contract`；完整 current profile 保持可用。
+  - [x] 同步三个 delta 到 accepted main specs，完成 selected deterministic evidence、workflow-package validation、semantic closure、closeout review 与 governed archive。
+  - [x] Commit implementation / archive artifacts（`7a96ca254`）；更新本看板。
+- [x] 17 `C6d`：将 transaction v1 明确限定为不支持的历史格式（单独执行）
+  - [C6d decision card](current-contract-signal-cleanup/changes/C6d-retire-transaction-v1-history.md)
+  - OpenSpec archive: [`2026-08-15-retire-transaction-v1-history`](../../openspec/changes/archive/2026-08-15-retire-transaction-v1-history/)
+  - [x] 用户选择 A：v1 不得建立 submit、recovery、supersession、normalized ledger、Gate、inspect 或 lineage 的 current authority；不迁移、重写或补全历史 journal。
+  - [x] 保留 raw fail-closed safety scan：未 committed、malformed、unreadable 或 proof-incomplete journal 继续以 `suspect_transaction` 阻止 mutation；只有结构完整的 committed v1 可作为不阻断的诊断历史。
+  - [x] 创建 proposal、DEW-023/DEW-024 delta、design、tasks、semantic closure 与 verification plan。
+  - [x] 完成 strict OpenSpec、requirements/specs、taxonomy/discovery、verification-routing、semantic-closure 与 diff planning checks。
+  - [x] 完成 `polish-openspec-change` 风险复核：`work-unit-submit.mjs` 和 supersession 的两个 original-evidence reader 都要求 committed v2；不得让只有 `status: committed` 的 malformed v1 绕过 safety scan。
+  - [x] 用户明确授权 `APPLY`；先完成 plan review 和 planning checks，再修改 Harness、tests 与 accepted main specs。
+  - [x] 实施 `tasks.md` 2.1–2.4：移除正向 v1 schema/union/barrel exports；保留最小 raw safety classifier；只有完整 committed v1 是不阻断的诊断历史。
+  - [x] 收紧 declaration recovery 与 supersession：original-submit evidence 必须为 trace/work/queue-bound committed v2；v1-only evidence 在 `missing_contract` 停止，不产生 ledger、successor、Gate 或 lineage authority。
+  - [x] 新增 schema/unit/integration/deterministic-E2E 证明：unsafe v1 零 mutation；committed v1 不阻断 current v2；v1-only evidence 无 declaration recovery 或 supersession authority。
+  - [x] 完成 selected deterministic verification、workflow-package validation、strict/archive governance、semantic closure、delta/main sync 与 closeout review；`tasks.md` 为 `18 / 18`。
+  - [x] Governed archive（全部 finalizer checks passed）并提交 implementation/archive/spec sync（`858cbdb87`）；已回填本看板与 execution ledger。
 - [ ] 18 `C7+C8`：最终清理 main specs、context 与 routing 的当前态表述
 
 ## 为什么是 18 项
 
 - **审计口径：** 21 张细粒度 decision cards，用来保证风险不漏项。
-- **执行口径：** 14 个已归档 change + 4 个剩余执行批次/决定 = 目标总数 18。
+- **执行口径：** 17 个已归档执行批次 + 1 个剩余执行批次/决定 = 目标总数 18。
 - 一张 decision card 不自动等于一个 OpenSpec change。
 - 只有 Source of Record、兼容决策、consumer/test 影响面和回滚边界一致时才合并执行。
 - 失败后果或 mutation safety 不同时必须拆开，所以 `C5a-2` 不与 experiment 合并，
@@ -134,7 +156,10 @@
 | 12 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-retire-unreferenced-seed-topic-pointer/) |
 | 13 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-retire-unreachable-yaml-subset-parser/) |
 | 14 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-retire-archived-case-ledger-helper/) |
-| 15 的待实施提案与任务 | [Active OpenSpec change](../../openspec/changes/decide-retained-experiment-history-policy/) |
+| 15 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-decide-retained-experiment-history-policy/) |
+| 16 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-retire-legacy-work-unit-attempt-inputs/) |
+| 17 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-15-retire-transaction-v1-history/) |
+| 18 的待决清理范围 | [C7/C8 decision cards](current-contract-signal-cleanup/README.md) |
 
 ## 更新规则
 
