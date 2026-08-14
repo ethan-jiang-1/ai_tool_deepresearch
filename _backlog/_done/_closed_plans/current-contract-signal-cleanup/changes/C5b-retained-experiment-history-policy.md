@@ -4,7 +4,7 @@
 >
 > Planned execution batch: dashboard item 15 `decide-retained-experiment-history-policy` (standalone; C1f merge gate failed)
 >
-> Status: governed archived on 2026-08-14 as [`2026-08-14-decide-retained-experiment-history-policy`](../../../../openspec/changes/archive/2026-08-14-decide-retained-experiment-history-policy/); commits `1aa0c1c35`, `a407cf980`, `969dbfbcd`, and `0ea53de58`
+> Status: governed archived on 2026-08-14 as [`2026-08-14-decide-retained-experiment-history-policy`](../../../../../openspec/changes/archive/2026-08-14-decide-retained-experiment-history-policy/); commits `1aa0c1c35`, `a407cf980`, `969dbfbcd`, and `0ea53de58`
 >
 > Risk: L4
 

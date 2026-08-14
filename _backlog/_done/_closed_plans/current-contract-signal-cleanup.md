@@ -3,7 +3,7 @@
 > **唯一进度入口：每次回来只看下面这张总清单。**
 >
 > 总进度：`[###################]` **19 / 19 个执行批次均已 governed-archived 并提交；本计划已完成。**
-> 当前位置：**完成；C8 已归档为 [`2026-08-15-align-current-guidance-contract-guards`](../../openspec/changes/archive/2026-08-15-align-current-guidance-contract-guards/)，implementation/archive commit 为 `9030fa785`，`tasks.md` 为 20 / 20。**
+> 当前位置：**完成；C8 已归档为 [`2026-08-15-align-current-guidance-contract-guards`](../../../openspec/changes/archive/2026-08-15-align-current-guidance-contract-guards/)，implementation/archive commit 为 `9030fa785`，`tasks.md` 为 20 / 20。**
 > 眼前一步：**没有下一项 change。只有发现新的、能指向现行 Source of Record 的噪声时，才新建独立 decision card 和 OpenSpec proposal。**
 > 修改权限：**本 cleanup plan 不再授权任何 target 修改；后续工作回到正常 OpenSpec change lifecycle。**
 >
@@ -24,7 +24,7 @@
 - [x] 07 `C4b`：停止迁移旧 mutable plan
 - [x] 08 `C5a-1`：当前 reference writer 只写 UID binding
 - [x] 09 `C5a-2`：当前 Engine 拒绝历史 reference binding
-  - OpenSpec archive: [`2026-08-14-decide-historic-reference-reader-policy`](../../openspec/changes/archive/2026-08-14-decide-historic-reference-reader-policy/)
+  - OpenSpec archive: [`2026-08-14-decide-historic-reference-reader-policy`](../../../openspec/changes/archive/2026-08-14-decide-historic-reference-reader-policy/)
   - 这项的意义：旧 Markdown 保持可人工阅读、字节不变；但其中的 `related_topic`
     不再算作当前 Gate、index、provenance、observability 或 rerun 的有效证据。
   - 单独执行的原因：它改变的是历史文件的 reader/rejection 边界；误改会影响多类
@@ -49,7 +49,7 @@
   - [x] Commit implementation / archive artifacts（`35daf961f`）
   - [x] 更新本看板与 execution ledger
 - [x] 10 `C1d`：退役未实现的 fork-repair contract
-  - OpenSpec archive: [`2026-08-14-retire-unimplemented-fork-repair-contract`](../../openspec/changes/archive/2026-08-14-retire-unimplemented-fork-repair-contract/)
+  - OpenSpec archive: [`2026-08-14-retire-unimplemented-fork-repair-contract`](../../../openspec/changes/archive/2026-08-14-retire-unimplemented-fork-repair-contract/)
   - [x] 用户选择 A：退役该无实现的承诺；不改变现有 Gate/repair 行为。
   - 此项只决定项目承诺；不改变现有 Gate/repair 行为。
   - [x] 创建 proposal、完整 removal delta、design、tasks、semantic closure 与 verification plan。
@@ -58,7 +58,7 @@
   - [x] Commit implementation / archive artifacts（`3ca1339cd`）
   - [x] 更新本看板与 execution ledger。
 - [x] 11 `C1c`：移除 stale abstract Gate FSM 与其内部 API
-  - OpenSpec archive: [`2026-08-14-retire-stale-abstract-gate-fsm`](../../openspec/changes/archive/2026-08-14-retire-stale-abstract-gate-fsm/)
+  - OpenSpec archive: [`2026-08-14-retire-stale-abstract-gate-fsm`](../../../openspec/changes/archive/2026-08-14-retire-stale-abstract-gate-fsm/)
   - [x] 用户批准退役五个无当前 caller 的内部 API export；不保留 adapter、alias 或版本 fallback。
   - [x] 删除 stale FSM、barrel exports 和 stale-only tests；当前 chain/router、Gate definitions、CLI、bundle 与 Agent flow 保持不变。
   - [x] 同步三份 delta，退役 `SCO-003`/`TRT-011` 为不可复用的 registry 历史，并让保留的 `TRT-012` 只指向现有 chain/router。
@@ -67,7 +67,7 @@
   - [x] 更新本看板。
 - [x] 12 `C1b`：移除无 caller 的 seed-topic authoring pointer
   - [C1b change card](current-contract-signal-cleanup/changes/C1b-retire-unreferenced-seed-topic-pointer.md)
-  - OpenSpec archive: [`2026-08-14-retire-unreferenced-seed-topic-pointer`](../../openspec/changes/archive/2026-08-14-retire-unreferenced-seed-topic-pointer/)
+  - OpenSpec archive: [`2026-08-14-retire-unreferenced-seed-topic-pointer`](../../../openspec/changes/archive/2026-08-14-retire-unreferenced-seed-topic-pointer/)
   - [x] proposal 前复核：精确 file/id/scope 在 current supported surfaces 为零引用；manifest、phase `requires` 与 `suggested_context` 均不加载它，workflow package 校验通过。
   - [x] 用户批准删除该旧 Agent-reading pointer；不保留 alias、tombstone、fallback 或迁移路径。
   - [x] 创建并完成 `retire-unreferenced-seed-topic-pointer`；删除仅限该未注册 pointer，当前 owner 保持不变。
@@ -77,7 +77,7 @@
   - [x] 更新本看板与 execution ledger。
 - [x] 13 `C1e`：移除不可达的 private YAML-subset parser
   - [C1e change card](current-contract-signal-cleanup/changes/C1e-retire-unreachable-yaml-subset-parser.md)
-  - OpenSpec archive: [`2026-08-14-retire-unreachable-yaml-subset-parser`](../../openspec/changes/archive/2026-08-14-retire-unreachable-yaml-subset-parser/)
+  - OpenSpec archive: [`2026-08-14-retire-unreachable-yaml-subset-parser`](../../../openspec/changes/archive/2026-08-14-retire-unreachable-yaml-subset-parser/)
   - [x] 用户选择 A：退役仅有定义的 private helper；保留 `parseFrontmatter()` 的 JSON/YAML current contract。
   - [x] fresh current-surface scan：`parseYAMLSubset()` 只命中私有定义；apply 后 current source/tests/main specs/guidance 为零命中。
   - [x] 创建并完成 `retire-unreachable-yaml-subset-parser` 的 proposal、design、tasks、`semantic-closure.yaml` 与 `verification-plan.yaml`；无 accepted capability 行为变更，`specs` 合法 `skip_specs`。
@@ -88,7 +88,7 @@
   - [x] Governed archive；commit implementation / archive artifacts（`513186872`）。
   - [x] 更新本看板、execution ledger 与相关 decision cards。
 - [x] 14 `C1f`：退役 archived case-ledger helper cluster（standalone）
-  - OpenSpec archive: [`2026-08-14-retire-archived-case-ledger-helper`](../../openspec/changes/archive/2026-08-14-retire-archived-case-ledger-helper/)
+  - OpenSpec archive: [`2026-08-14-retire-archived-case-ledger-helper`](../../../openspec/changes/archive/2026-08-14-retire-archived-case-ledger-helper/)
   - [x] 用户确认 `97 / 502 / 16` 是 completed migration record，不是 current product invariant；不需要新的 current owner。
   - [x] 与 C5b 的 merge gate 不成立：C1f 只移除 archive-path test/helper；C5b 影响 current Supervisor selection。二者 Source of Record、policy、consumer/test 与 rollback boundary 不同。
   - [x] 创建、review 并完成 `retire-archived-case-ledger-helper`；`specs` 合法 `skip_specs`，不改变 accepted observable behavior。
@@ -102,10 +102,10 @@
   - [x] 已取得并完成 `APPLY`：先完成 feedback plan review 和 plan checks，再改 Harness/tests；未读取或重写真实 `.exp-bundles/` 历史。
   - [x] 完成 `tasks.md` 的 2.1–4.4（14 / 16）：v1 current-input schemas/reader/qualification projection 已退出；current-v2 stale execution-surface 的显式 qualification 仍保留；选定 52 个 deterministic unit/integration tests 和 archive-preflight governance 均通过。
   - [x] 将 ERS-001/ERS-002、EXA-009、EXO-007、PLR-004 delta specs 同步进 accepted main specs，并登记 `verification.autorun-current-retained-observation` semantic fact family。
-  - [x] 完成 closeout review 和 governed archive：[`2026-08-14-decide-retained-experiment-history-policy`](../../openspec/changes/archive/2026-08-14-decide-retained-experiment-history-policy/)。
+  - [x] 完成 closeout review 和 governed archive：[`2026-08-14-decide-retained-experiment-history-policy`](../../../openspec/changes/archive/2026-08-14-decide-retained-experiment-history-policy/)。
   - [x] Commit implementation/archive/spec sync（`1aa0c1c35`、`a407cf980`、`969dbfbcd`、`0ea53de58`）；已回填本看板、C5b card 与 execution ledger。
 - [x] 16 `C6a+C6b+C6c`：停止读取历史 work-unit records（满足合并门时合并）
-  - OpenSpec archive: [`2026-08-14-retire-legacy-work-unit-attempt-inputs`](../../openspec/changes/archive/2026-08-14-retire-legacy-work-unit-attempt-inputs/)
+  - OpenSpec archive: [`2026-08-14-retire-legacy-work-unit-attempt-inputs`](../../../openspec/changes/archive/2026-08-14-retire-legacy-work-unit-attempt-inputs/)
   - [x] C6a：已刻画 current v3 assignment / supplementary 行为；用户选择 A，explicit assignment v1/v2 将被拒绝且不得升级为 v3。
   - [x] C6b：已刻画 current marked submission/recovery/supersession；用户选择 A，markerless hash-mirror attempt 将在任何 current submission/recovery/supersession/provenance 计算前被拒绝，不得升级或静默丢弃。选定 current-path suite `109 / 109` 通过，workflow-package validation 通过。
   - [x] C6c：已刻画 current recorded delegated/fallback actor 路径；用户选择 A，actor-unrecorded attempt 将在任何 current submission/recovery/inspection/supersession/provenance 计算前被拒绝，不得推断、升级或静默丢弃。两条 current 路径均写入并绑定 `work-unit.actor.v1` 与 exact `actor_execution`；selected actor/submit/lifecycle/CLI/provenance suite 通过。
@@ -117,7 +117,7 @@
   - [x] Commit implementation / archive artifacts（`7a96ca254`）；更新本看板。
 - [x] 17 `C6d`：将 transaction v1 明确限定为不支持的历史格式（单独执行）
   - [C6d decision card](current-contract-signal-cleanup/changes/C6d-retire-transaction-v1-history.md)
-  - OpenSpec archive: [`2026-08-15-retire-transaction-v1-history`](../../openspec/changes/archive/2026-08-15-retire-transaction-v1-history/)
+  - OpenSpec archive: [`2026-08-15-retire-transaction-v1-history`](../../../openspec/changes/archive/2026-08-15-retire-transaction-v1-history/)
   - [x] 用户选择 A：v1 不得建立 submit、recovery、supersession、normalized ledger、Gate、inspect 或 lineage 的 current authority；不迁移、重写或补全历史 journal。
   - [x] 保留 raw fail-closed safety scan：未 committed、malformed、unreadable 或 proof-incomplete journal 继续以 `suspect_transaction` 阻止 mutation；只有结构完整的 committed v1 可作为不阻断的诊断历史。
   - [x] 创建 proposal、DEW-023/DEW-024 delta、design、tasks、semantic closure 与 verification plan。
@@ -130,7 +130,7 @@
   - [x] 完成 selected deterministic verification、workflow-package validation、strict/archive governance、semantic closure、delta/main sync 与 closeout review；`tasks.md` 为 `18 / 18`。
   - [x] Governed archive（全部 finalizer checks passed）并提交 implementation/archive/spec sync（`858cbdb87`）；已回填本看板与 execution ledger。
 - [x] 18 `C7`：退役 `gate-content-dedup` 的 pure-retired live spec/catalog entry
-  - OpenSpec archive: [`2026-08-15-retire-gate-content-dedup-tombstone`](../../openspec/changes/archive/2026-08-15-retire-gate-content-dedup-tombstone/)
+  - OpenSpec archive: [`2026-08-15-retire-gate-content-dedup-tombstone`](../../../openspec/changes/archive/2026-08-15-retire-gate-content-dedup-tombstone/)
   - 已证实范围仅为 `openspec/specs/engine/gate-content-dedup/spec.md`、catalog row、GAC retired registry metadata；不改 Harness/runtime/current docs/tests。
   - 合并门对 C8 不成立：C7 的 Source of Record 是 accepted-spec/registry identity；C8 的 Source of Record 是 current routing docs 与 Markdown regression guards，且后者含 work-unit fixture current-profile 风险，consumer/test/rollback boundary 不同。
   - [x] 复核 residual set、runtime 零正向 authority 与 `BUS`/`FOR` whole-capability-retirement 先例。
@@ -142,11 +142,11 @@
   - [x] 完成 closeout review 与 governed archive（全部 finalizer checks passed）；commit implementation/archive（`b0e7d4e96`）。
   - [x] 回填本看板、execution ledger、coverage ledger 与 C7/C8 decision cards。
 - [x] 19 `C8`：对齐 current context/routing Markdown guards（已归档并提交）
-  - OpenSpec archive: [`2026-08-15-align-current-guidance-contract-guards`](../../openspec/changes/archive/2026-08-15-align-current-guidance-contract-guards/)
+  - OpenSpec archive: [`2026-08-15-align-current-guidance-contract-guards`](../../../openspec/changes/archive/2026-08-15-align-current-guidance-contract-guards/)
   - C8 不可与 C7 合并：C7 的 Source of Record 是 retired accepted-spec/registry identity；C8 的 Source of Record 是 existing current routing/feedback/reference/work-unit contracts 与它们的 docs/tests projection。
   - [x] 完成全量 current-surface 复核：先确认 10 个 drift，分别是 3 个 routing literal assertions、1 个 HITL1 retired repair-kind assertion、1 个 historical reference-reader assertion、1 处 `RUN.md` logical-actor/liveness 漏项、2 个缺 actor-v1 的 generated-guidance fixtures、1 个错误保留 legacy-unbound envelope 成功路径的 actor-delivery test、以及 1 个缺 current assignment/actor fixture 的 work-ID unit test；Apply 时另发现 direct-output guard 的 1 个跨文档误匹配，已作为 1.6a 修复，所以最终范围为 11 个 drift。
   - [x] 对全部 8 个直接调用 `createWorkUnit` 的测试文件做验证：4 个已具备完整 current profile；上述 4 个是唯一仍失败/漂移的文件。不得借 C8 删除或弱化 Engine 的 current envelope rejection。
-  - [x] 创建独立 proposal（现已归档为 [`2026-08-15-align-current-guidance-contract-guards`](../../openspec/changes/archive/2026-08-15-align-current-guidance-contract-guards/)）：`skip_specs: true`，不改 runtime、schema、accepted specs、registry 或任何 historical success/compatibility path。
+  - [x] 创建独立 proposal（现已归档为 [`2026-08-15-align-current-guidance-contract-guards`](../../../openspec/changes/archive/2026-08-15-align-current-guidance-contract-guards/)）：`skip_specs: true`，不改 runtime、schema、accepted specs、registry 或任何 historical success/compatibility path。
   - [x] 完成 strict OpenSpec、requirements、project-specs、capability discovery、verification routing（8 claims：1 unit + 7 integration）、semantic closure 和 diff checks；完成两轮 risk-led `polish-openspec-change`。
   - [x] 用户明确授权 `APPLY`；完成 feedback plan review 后只改 1 处 `RUN.md`、8 个列名测试资产与 1 个 test helper。selected suite 两次均为 36 / 36；workflow-package、protected-surface、strict OpenSpec、requirement/project-spec/taxonomy/discovery、verification-routing、semantic-closure 与 archive preconditions 全部通过。
   - [x] 完成 closeout review；发现并收口 actor-delivery negative fixture 的 artifact-boundary 缺口：允许 transaction audit，但禁止 index、manifest、beacon、task、result-schema 与 actor-guidance publication。
@@ -172,17 +172,17 @@
 | 全量扫描有没有漏项 | [Coverage ledger](current-contract-signal-cleanup/coverage-ledger.md) |
 | 合并规则与执行协议 | [Policy and protocol](current-contract-signal-cleanup/policy-and-protocol.md) |
 | 已归档项的验证证据 | [Execution ledger](current-contract-signal-cleanup/execution-ledger.md) |
-| 09 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-decide-historic-reference-reader-policy/) |
-| 10 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-retire-unimplemented-fork-repair-contract/) |
-| 11 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-retire-stale-abstract-gate-fsm/) |
-| 12 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-retire-unreferenced-seed-topic-pointer/) |
-| 13 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-retire-unreachable-yaml-subset-parser/) |
-| 14 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-retire-archived-case-ledger-helper/) |
-| 15 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-decide-retained-experiment-history-policy/) |
-| 16 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-retire-legacy-work-unit-attempt-inputs/) |
-| 17 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-15-retire-transaction-v1-history/) |
-| 18 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-15-retire-gate-content-dedup-tombstone/) |
-| 19 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-15-align-current-guidance-contract-guards/) |
+| 09 的归档提案与验证记录 | [Archived OpenSpec change](../../../openspec/changes/archive/2026-08-14-decide-historic-reference-reader-policy/) |
+| 10 的归档提案与验证记录 | [Archived OpenSpec change](../../../openspec/changes/archive/2026-08-14-retire-unimplemented-fork-repair-contract/) |
+| 11 的归档提案与验证记录 | [Archived OpenSpec change](../../../openspec/changes/archive/2026-08-14-retire-stale-abstract-gate-fsm/) |
+| 12 的归档提案与验证记录 | [Archived OpenSpec change](../../../openspec/changes/archive/2026-08-14-retire-unreferenced-seed-topic-pointer/) |
+| 13 的归档提案与验证记录 | [Archived OpenSpec change](../../../openspec/changes/archive/2026-08-14-retire-unreachable-yaml-subset-parser/) |
+| 14 的归档提案与验证记录 | [Archived OpenSpec change](../../../openspec/changes/archive/2026-08-14-retire-archived-case-ledger-helper/) |
+| 15 的归档提案与验证记录 | [Archived OpenSpec change](../../../openspec/changes/archive/2026-08-14-decide-retained-experiment-history-policy/) |
+| 16 的归档提案与验证记录 | [Archived OpenSpec change](../../../openspec/changes/archive/2026-08-14-retire-legacy-work-unit-attempt-inputs/) |
+| 17 的归档提案与验证记录 | [Archived OpenSpec change](../../../openspec/changes/archive/2026-08-15-retire-transaction-v1-history/) |
+| 18 的归档提案与验证记录 | [Archived OpenSpec change](../../../openspec/changes/archive/2026-08-15-retire-gate-content-dedup-tombstone/) |
+| 19 的归档提案与验证记录 | [Archived OpenSpec change](../../../openspec/changes/archive/2026-08-15-align-current-guidance-contract-guards/) |
 
 ## 更新规则
 

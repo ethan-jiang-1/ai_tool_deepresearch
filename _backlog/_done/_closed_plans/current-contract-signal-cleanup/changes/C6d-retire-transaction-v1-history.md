@@ -76,7 +76,7 @@ current submit, recovery, supersession, Gate, inspect, or lineage conclusion.
 - [x] Proposal proves that no uncommitted/invalid v1 journal can disappear
   from the mutation blocker scan; committed-v1 proof becomes diagnostic-only
   and cannot establish current authority.
-- [x] Create and polish [`retire-transaction-v1-history`](../../../../openspec/changes/archive/2026-08-15-retire-transaction-v1-history/): two deltas, design, tasks, semantic closure, and verification plan all agree on policy A.
+- [x] Create and polish [`retire-transaction-v1-history`](../../../../../openspec/changes/archive/2026-08-15-retire-transaction-v1-history/): two deltas, design, tasks, semantic closure, and verification plan all agree on policy A.
 - [x] User explicitly authorized `APPLY`; implementation removed positive v1
   parsing and committed-v1 evidence authority without changing current v2
   contention, rollback, or recovery behavior.

@@ -65,4 +65,4 @@ node openspec/governance/check-project-reqs.mjs --mode plan
   template, playbook, Engine, Gate, and bundle surfaces remained unchanged.
 - [x] `validate-workflow-package.mjs`, strict OpenSpec validation, archive
   governance, and governed finalization passed. The archived change is
-  [`2026-08-14-retire-unreferenced-seed-topic-pointer`](../../../../openspec/changes/archive/2026-08-14-retire-unreferenced-seed-topic-pointer/).
+  [`2026-08-14-retire-unreferenced-seed-topic-pointer`](../../../../../openspec/changes/archive/2026-08-14-retire-unreferenced-seed-topic-pointer/).
