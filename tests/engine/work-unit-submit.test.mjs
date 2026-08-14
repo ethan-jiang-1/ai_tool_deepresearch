@@ -865,6 +865,45 @@ describe('submitWorkUnit', () => {
     }
   });
 
+  it('requires committed v2 original-submit evidence for current declaration recovery', () => {
+    const dir = tempBundle();
+    try {
+      const record = claimCurrentWave0(dir);
+      const { resultPath } = writeCurrentWave0SubmitFiles(dir, record);
+      assert.equal(submitWorkUnit(dir, { work_id: record.work_id, resultPath }).ok, true);
+      const txRoot = transactionDir(dir);
+      const originalName = readdirSync(txRoot).find((name) => {
+        const transaction = JSON.parse(readFileSync(path.join(txRoot, name), 'utf8'));
+        return transaction.operation === 'submit_work_unit' && transaction.status === 'committed';
+      });
+      assert.ok(originalName);
+      const originalPath = path.join(txRoot, originalName);
+      const original = JSON.parse(readFileSync(originalPath, 'utf8'));
+      writeFileSync(originalPath, `${JSON.stringify({
+        schema_version: 'work-unit.transaction.v1',
+        tx_id: original.tx_id,
+        operation: original.operation,
+        status: 'committed',
+        started_at: original.started_at,
+        committed_at: original.settled_at,
+      })}\n`);
+      const statusPath = path.join(dir, record.paths.status_ref);
+      const status = JSON.parse(readFileSync(statusPath, 'utf8'));
+      status.updated_at = '2026-07-30T00:00:01.000Z';
+      writeFileSync(statusPath, `${JSON.stringify(status)}\n`);
+      rmSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER));
+      const before = authoritySnapshot(dir, record);
+
+      const recovered = recoverWorkUnitDeclaration(dir, { work_id: record.work_id });
+      assert.equal(recovered.ok, false);
+      assert.equal(recovered.reason_code, 'missing_contract');
+      assert.match(recovered.missing_fact, /original submit\/transaction evidence/i);
+      assertSnapshotEqual(authoritySnapshot(dir, record), before, 'v1 original evidence must not restore a declaration');
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('rejects an old assignment before submit or declaration recovery can mutate authority', () => {
     const dir = tempBundle();
     try {

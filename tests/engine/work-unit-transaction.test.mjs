@@ -353,6 +353,94 @@ describe('work-unit transaction v2', () => {
     }
   });
 
+  it('treats only complete committed v1 bytes as diagnostic history', () => {
+    const completeCommitted = {
+      schema_version: 'work-unit.transaction.v1',
+      tx_id: 'tx-legacy-committed',
+      operation: 'submit_work_unit',
+      status: 'committed',
+      started_at: '2026-07-30T00:00:00.000Z',
+      committed_at: '2026-07-30T00:01:00.000Z',
+    };
+    const unsafeCases = [
+      {
+        name: 'started',
+        journal: { ...completeCommitted, tx_id: 'tx-legacy-started', status: 'started', committed_at: null },
+      },
+      {
+        name: 'failed',
+        journal: { ...completeCommitted, tx_id: 'tx-legacy-failed', status: 'failed', committed_at: null, error: 'legacy failure' },
+      },
+      {
+        name: 'committed-without-proof',
+        journal: { ...completeCommitted, tx_id: 'tx-legacy-incomplete', committed_at: null },
+      },
+      {
+        name: 'unreadable',
+        journal: '{not json',
+      },
+    ];
+
+    for (const { name, journal } of unsafeCases) {
+      const bundleDir = tempWorkUnitBundle(`wu-tx-v1-${name}-`);
+      try {
+        const txDir = path.join(bundleDir, '_work_units', '_transactions');
+        mkdirSync(txDir, { recursive: true });
+        const journalPath = path.join(txDir, `tx-${name}.json`);
+        writeFileSync(journalPath, typeof journal === 'string' ? journal : `${JSON.stringify(journal)}\n`);
+        writeFileSync(path.join(bundleDir, 'authority.json'), 'before\n');
+        const beforeAuthority = readFileSync(path.join(bundleDir, 'authority.json'), 'base64');
+
+        const projection = inspectWorkUnitTransaction(bundleDir, {
+          operation: 'submit_work_unit',
+          targetWorkIds: [WORK_ID],
+          targetQueueItemIds: ['queue-a'],
+        });
+        assert.equal(projection.disposition, 'suspect_transaction');
+        const blocked = withWorkUnitTransaction(bundleDir, 'submit_work_unit', {
+          targetWorkIds: [WORK_ID],
+          targetQueueItemIds: ['queue-a'],
+          mutationTargets: ['authority.json'],
+        }, () => {
+          writeFileSync(path.join(bundleDir, 'authority.json'), 'after\n');
+          return { ok: true };
+        });
+        assert.equal(blocked.ok, false);
+        assert.equal(blocked.reason_code, 'suspect_transaction');
+        assert.equal(readFileSync(path.join(bundleDir, 'authority.json'), 'base64'), beforeAuthority);
+      } finally {
+        cleanupWorkUnitBundle(bundleDir);
+      }
+    }
+
+    const bundleDir = tempWorkUnitBundle('wu-tx-v1-committed-');
+    try {
+      const txDir = path.join(bundleDir, '_work_units', '_transactions');
+      mkdirSync(txDir, { recursive: true });
+      const legacyPath = path.join(txDir, `${completeCommitted.tx_id}.json`);
+      writeFileSync(legacyPath, `${JSON.stringify(completeCommitted)}\n`);
+      writeFileSync(path.join(bundleDir, 'authority.json'), 'before\n');
+      assert.equal(inspectWorkUnitTransaction(bundleDir).disposition, 'none');
+      const current = withWorkUnitTransaction(bundleDir, 'submit_work_unit', {
+        targetWorkIds: [WORK_ID],
+        targetQueueItemIds: ['queue-a'],
+        mutationTargets: ['authority.json'],
+      }, () => {
+        writeFileSync(path.join(bundleDir, 'authority.json'), 'after\n');
+        return { ok: true };
+      });
+      assert.equal(current.ok, true);
+      assert.equal(readFileSync(path.join(bundleDir, 'authority.json'), 'utf8'), 'after\n');
+      const beforeRecovery = readFileSync(legacyPath, 'base64');
+      const recovery = recoverWorkUnitTransaction(bundleDir, { tx_id: completeCommitted.tx_id });
+      assert.equal(recovery.ok, false);
+      assert.equal(recovery.reason_code, 'suspect_transaction');
+      assert.equal(readFileSync(legacyPath, 'base64'), beforeRecovery);
+    } finally {
+      cleanupWorkUnitBundle(bundleDir);
+    }
+  });
+
   it('prevents default and forced timeout without treating unrelated contention as attempt progress', async () => {
     for (const sameAttempt of [true, false]) {
       const bundleDir = tempWorkUnitBundle(`wu-tx-timeout-${sameAttempt ? 'same' : 'other'}-`);

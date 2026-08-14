@@ -18,16 +18,14 @@ import {
 } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/queue.mjs';
 import {
   WORK_UNIT_TRANSACTION_LOCK_SCHEMA_VERSION,
-  WORK_UNIT_TRANSACTION_V1_SCHEMA_VERSION,
   WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
-  WorkUnitTransactionJournalSchema,
   WorkUnitTransactionLockOwnerSchema,
   WorkUnitTransactionMutationManifestSchema,
   WorkUnitTransactionPairSchema,
   WorkUnitTransactionProjectionSchema,
-  WorkUnitTransactionV1JournalSchema,
   WorkUnitTransactionV2JournalSchema,
 } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/work-unit-transaction.mjs';
+import * as schema from '../../../DEEP_RESEARCH_HARNESS/schema/index.mjs';
 
 const WORK_ID = 'wu-w0-b000-src-i0001';
 const QUEUE_ITEM_ID = 'queue-a';
@@ -352,18 +350,6 @@ function journalV2(overrides = {}) {
   };
 }
 
-function journalV1(overrides = {}) {
-  return {
-    schema_version: WORK_UNIT_TRANSACTION_V1_SCHEMA_VERSION,
-    tx_id: 'legacy-tx',
-    operation: 'submit_work_unit',
-    status: 'started',
-    started_at: NOW,
-    committed_at: null,
-    ...overrides,
-  };
-}
-
 function caller() {
   return { operation: 'submit_work_unit', work_id: WORK_ID, queue_item_id: QUEUE_ITEM_ID };
 }
@@ -401,24 +387,22 @@ describe('work-unit transaction recovery schemas', () => {
     }
   });
 
-  it('keeps transaction-v1 as a strict read-only legacy branch', () => {
-    const valid = [
-      journalV1(),
-      journalV1({ status: 'committed', committed_at: NOW }),
-      journalV1({ status: 'failed', error: 'legacy failure' }),
-    ];
-    valid.forEach((journal) => {
-      assert.ok(WorkUnitTransactionV1JournalSchema.safeParse(journal).success);
-      assert.ok(WorkUnitTransactionJournalSchema.safeParse(journal).success);
-    });
-    for (const invalid of [
-      journalV1({ status: 'committed' }),
-      journalV1({ status: 'failed' }),
-      journalV1({ mutation_manifest: manifestProof() }),
-      journalV1({ schema_version: 'work-unit.transaction.v0' }),
+  it('exposes only transaction-v2 positive schema contracts', () => {
+    for (const retiredExport of [
+      'WORK_UNIT_TRANSACTION_V1_SCHEMA_VERSION',
+      'WorkUnitTransactionV1JournalSchema',
+      'WorkUnitTransactionJournalSchema',
     ]) {
-      assert.equal(WorkUnitTransactionJournalSchema.safeParse(invalid).success, false);
+      assert.equal(Object.hasOwn(schema, retiredExport), false);
     }
+    assert.equal(WorkUnitTransactionV2JournalSchema.safeParse({
+      schema_version: 'work-unit.transaction.v1',
+      tx_id: 'legacy-tx',
+      operation: 'submit_work_unit',
+      status: 'committed',
+      started_at: NOW,
+      committed_at: NOW,
+    }).success, false);
   });
 
   it('accepts every v2 disposition and rejects mixed or incomplete disposition shapes', () => {
@@ -430,7 +414,6 @@ describe('work-unit transaction recovery schemas', () => {
     ];
     valid.forEach((journal) => {
       assert.ok(WorkUnitTransactionV2JournalSchema.safeParse(journal).success);
-      assert.ok(WorkUnitTransactionJournalSchema.safeParse(journal).success);
     });
     for (const invalid of [
       journalV2({ mutation_manifest: undefined }),

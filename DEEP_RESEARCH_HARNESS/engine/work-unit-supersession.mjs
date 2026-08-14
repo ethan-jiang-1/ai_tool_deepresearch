@@ -11,10 +11,7 @@ import {
   WORK_UNIT_SUPERSESSION_SCHEMA_VERSION,
   WorkUnitSupersessionRelationSchema,
 } from '../schema/contracts/work-unit.mjs';
-import {
-  WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
-  WorkUnitTransactionJournalSchema,
-} from '../schema/contracts/work-unit-transaction.mjs';
+import { WorkUnitTransactionV2JournalSchema } from '../schema/contracts/work-unit-transaction.mjs';
 import {
   clone,
   hashValue,
@@ -142,14 +139,14 @@ function originalAcceptanceEvidence(bundleDir, record, acceptedHash) {
     if (!existsSync(journalPath)) continue;
     let journal;
     try {
-      journal = WorkUnitTransactionJournalSchema.parse(readJson(journalPath));
+      journal = WorkUnitTransactionV2JournalSchema.parse(readJson(journalPath));
     } catch {
       continue;
     }
     if (journal.status !== 'committed') continue;
     if (!['submit_work_unit', 'late_submit_work_unit'].includes(journal.operation)) continue;
-    if (journal.schema_version === 'work-unit.transaction.v2'
-      && !journal.target_work_ids.includes(record.work_id)) continue;
+    if (!journal.target_work_ids.includes(record.work_id)
+      || !journal.target_queue_item_ids.includes(record.queue_item_id)) continue;
     candidates.push({ tx_id: event.tx_id, journal, submitted_event: event });
   }
   const unique = new Map(candidates.map((candidate) => [candidate.tx_id, candidate]));
@@ -384,9 +381,8 @@ function validateSupersessionTransactionRelation(bundleDir, relation, { allowSta
   if (!existsSync(journalPath)) {
     throw new Error(`supersession transaction journal is missing: ${relation.tx_id}`);
   }
-  const journal = WorkUnitTransactionJournalSchema.parse(readJson(journalPath));
-  if (journal.schema_version !== WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION
-    || journal.tx_id !== relation.tx_id
+  const journal = WorkUnitTransactionV2JournalSchema.parse(readJson(journalPath));
+  if (journal.tx_id !== relation.tx_id
     || journal.operation !== 'supersede_work_unit') {
     throw new Error(`supersession transaction reference is invalid: ${relation.tx_id}`);
   }

@@ -1,0 +1,167 @@
+schema_version: verification-routing/v1
+change: retire-transaction-v1-history
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Transaction schema/safety classification and original-acceptance evidence
+      are deterministic Engine contracts with focused unit truth tables.
+  integration:
+    status: selected
+    rationale: >-
+      The operate-work-unit CLI fixture proves the changed fail-closed
+      mutation boundary and zero-mutation behavior through its public command
+      surface.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      The fixture-backed attempt-recovery flow proves the full current v2
+      declaration-recovery and supersession lineage remains intact while v1
+      evidence cannot create historical acceptance authority.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change alters deterministic transaction interpretation only and
+      makes no claim about Agent research, judgment, writing, or tool behavior.
+claims:
+  - id: public-transaction-schema-is-v2-only
+    statement: >-
+      DEW-023: the public transaction schema and barrel expose only the current
+      v2 protocol; v1 is not accepted by the positive journal parser, while
+      raw legacy bytes remain available only to the Engine's fail-closed safety
+      classifier.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/contracts/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: raw-legacy-journal-remains-fail-closed
+    statement: >-
+      DEW-023: raw v1 started/failed and unreadable/malformed transaction
+      journal bytes yield suspect_transaction before mutation, while a
+      structurally complete committed v1 journal alone does not block a new
+      current v2 path, never becomes current authority, and obtains no
+      recovery path.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-transaction.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-v2-transaction-contract-survives
+    statement: >-
+      DEW-023: valid v2 busy contention, exact before-image rollback, and
+      idempotent settled transaction recovery preserve their existing
+      deterministic contract after v1 positive parsing is retired.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-transaction.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: v1-evidence-cannot-recover-declaration
+    statement: >-
+      DEW-024: a complete-current predecessor whose only original-submit
+      journal evidence is committed v1 cannot restore a declaration and stops
+      at missing_contract without authority mutation; committed v2 evidence
+      retains the current declaration-recovery path.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-submit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: cli-v1-safety-boundary-has-zero-mutation
+    statement: >-
+      DEW-023: operate-work-unit CLI returns the existing suspect boundary for
+      unsafe v1 journal fixtures and rejects v1 recovery without changing any
+      temporary-bundle authority surface.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: cli-v1-evidence-cannot-recover-declaration
+    statement: >-
+      DEW-024: the declaration-recovery CLI rejects a complete-current
+      predecessor whose only original-submit journal evidence is committed v1
+      at the missing-contract boundary without changing its temporary bundle.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/work-unit-declaration-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-v2-lineage-survives-without-v1-proof
+    statement: >-
+      DEW-024: the deterministic attempt-recovery flow retains current v2
+      ledger-first recovery and supersession lineage after v1 positive parsing
+      is retired.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: v1-evidence-cannot-create-supersession-lineage
+    statement: >-
+      DEW-024: a complete-current predecessor whose only original-submit
+      journal evidence is committed v1 stops at missing_contract, creates no
+      successor, and cannot establish normalized-ledger, Gate, inspect, or
+      historical-lineage authority.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

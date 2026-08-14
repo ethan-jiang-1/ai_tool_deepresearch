@@ -12,6 +12,7 @@ import {
 } from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
+import { z } from 'zod';
 
 import { WORK_UNITS } from './work-unit-constants.mjs';
 import { logToRun } from './logger.mjs';
@@ -24,7 +25,6 @@ import {
 import {
   WORK_UNIT_TRANSACTION_LOCK_SCHEMA_VERSION,
   WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
-  WorkUnitTransactionJournalSchema,
   WorkUnitTransactionLockOwnerSchema,
   WorkUnitTransactionMutationManifestSchema,
   WorkUnitTransactionPairSchema,
@@ -41,6 +41,7 @@ export const WORK_UNIT_TRANSACTION_TRANSITIONS = Object.freeze({
 
 const LOCK_OWNER_BASENAME = 'owner.json';
 const AUDIT_ONLY_PATHS = new Set(['rb_trace.jsonl', '_logs/run.log']);
+const LEGACY_TRANSACTION_V1_SCHEMA_VERSION = 'work-unit.transaction.v1';
 
 function rootPath(bundleDir) {
   return path.resolve(bundleDir);
@@ -191,7 +192,7 @@ function defaultRerun(operation, bundleDir, { targetWorkIds = [] } = {}) {
 }
 
 function rawSuspectHolder(owner = null, journal = null) {
-  const rawDisposition = journal?.schema_version === 'work-unit.transaction.v1' && journal?.status === 'failed'
+  const rawDisposition = journal?.schema_version === LEGACY_TRANSACTION_V1_SCHEMA_VERSION && journal?.status === 'failed'
     ? 'legacy_failed'
     : ['started', 'committed', 'rolled_back', 'suspect'].includes(journal?.status)
       ? journal.status
@@ -204,6 +205,32 @@ function rawSuspectHolder(owner = null, journal = null) {
     target_queue_item_ids: Array.isArray(owner?.target_queue_item_ids) ? owner.target_queue_item_ids : Array.isArray(journal?.target_queue_item_ids) ? journal.target_queue_item_ids : [],
     journal_disposition: rawDisposition,
   };
+}
+
+function isCompleteCommittedV1Diagnostic(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
+  const expectedFields = [
+    'schema_version',
+    'tx_id',
+    'operation',
+    'status',
+    'started_at',
+    'committed_at',
+  ];
+  if (Object.keys(raw).length !== expectedFields.length
+    || !expectedFields.every((field) => Object.hasOwn(raw, field))) return false;
+  return raw.schema_version === LEGACY_TRANSACTION_V1_SCHEMA_VERSION
+    && typeof raw.tx_id === 'string'
+    && raw.tx_id.trim().length > 0
+    && typeof raw.operation === 'string'
+    && raw.operation.trim().length > 0
+    && raw.status === 'committed'
+    && isExactIsoTimestamp(raw.started_at)
+    && isExactIsoTimestamp(raw.committed_at);
+}
+
+function isExactIsoTimestamp(value) {
+  return z.string().datetime().safeParse(value).success;
 }
 
 function currentTargetsMatchManifest(bundleDir, journal) {
@@ -303,11 +330,13 @@ function unresolvedOrphanJournals(bundleDir, { exceptTxId = null } = {}) {
     let raw;
     try {
       raw = readJson(path.join(dir, entry.name));
-      const journal = WorkUnitTransactionJournalSchema.parse(raw);
-      if (journal.tx_id === exceptTxId) continue;
-      if (journal.schema_version === WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION
-        && ['started', 'suspect'].includes(journal.status)) out.push(journal);
-      if (journal.schema_version === 'work-unit.transaction.v1' && journal.status !== 'committed') out.push(journal);
+      const parsed = WorkUnitTransactionV2JournalSchema.safeParse(raw);
+      if (!parsed.success) {
+        if (isCompleteCommittedV1Diagnostic(raw)) continue;
+        throw parsed.error;
+      }
+      if (parsed.data.tx_id === exceptTxId) continue;
+      if (['started', 'suspect'].includes(parsed.data.status)) out.push(parsed.data);
     } catch (error) {
       out.push({
         tx_id: typeof raw?.tx_id === 'string' ? raw.tx_id : entry.name.replace(/\.json$/, ''),
@@ -611,23 +640,13 @@ export function recoverWorkUnitTransaction(bundleDir, { tx_id, transactionHooks 
 
   let journal;
   try {
-    journal = WorkUnitTransactionJournalSchema.parse(readJson(targetPath));
+    journal = WorkUnitTransactionV2JournalSchema.parse(readJson(targetPath));
   } catch (error) {
     return {
       ok: false,
       reason_code: 'suspect_transaction',
       repair_kind: 'missing_contract',
       missing_fact: `transaction journal is not recoverable v2 proof: ${error.message || String(error)}`,
-      write_to: null,
-      rerun: recoverTransactionRerun(bundleDir, tx_id),
-    };
-  }
-  if (journal.schema_version !== WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION) {
-    return {
-      ok: false,
-      reason_code: 'suspect_transaction',
-      repair_kind: 'missing_contract',
-      missing_fact: `legacy transaction ${tx_id} has no v2 before-image recovery proof`,
       write_to: null,
       rerun: recoverTransactionRerun(bundleDir, tx_id),
     };

@@ -28,6 +28,11 @@ families:
     bounded_question: Has Wave1 fulfilled its question_list direct-output contract?
   - id: work-unit.source-claim-provenance
     bounded_question: Does a source claim, accepted URL, cache trail, or degraded capture have legal provenance?
+  - id: work-unit.transaction-mutation-integrity
+    bounded_question: >-
+      Does the observed work-unit transaction lock or journal provide current
+      v2 mutation authority, require a fail-closed suspect stop, or permit no
+      transaction conclusion?
   - id: work-unit.submission-ledger-and-supersession
     bounded_question: What is the current-versus-historical conclusion of submit, ledger/hash, and supersession lineage?
   - id: wave.submitted-reference-convergence

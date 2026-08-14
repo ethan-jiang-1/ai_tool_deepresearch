@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -266,6 +266,41 @@ describe('BUG-088 declaration fault recovery through real CLI', () => {
     const output = JSON.parse(rejected.stdout);
     assert.equal(output.ok, false);
     assert.equal(output.reason_code, 'unsupported_current_contract');
+    assert.deepEqual(recoveryAuthoritySnapshot(dir, submitted.record), before);
+  });
+
+  it('rejects committed v1 original-submit evidence at missing_contract without authority mutation', () => {
+    const { dir, sourceUrl } = createBundle('v1-original-evidence');
+    const submitted = submitThroughCli(dir, sourceUrl, { late: false });
+    const txRoot = path.join(dir, '_work_units', '_transactions');
+    const originalName = readdirSync(txRoot).find((name) => {
+      const transaction = JSON.parse(readFileSync(path.join(txRoot, name), 'utf8'));
+      return transaction.operation === 'submit_work_unit' && transaction.status === 'committed';
+    });
+    assert.ok(originalName);
+    const originalPath = path.join(txRoot, originalName);
+    const original = JSON.parse(readFileSync(originalPath, 'utf8'));
+    writeFileSync(originalPath, `${JSON.stringify({
+      schema_version: 'work-unit.transaction.v1',
+      tx_id: original.tx_id,
+      operation: original.operation,
+      status: 'committed',
+      started_at: original.started_at,
+      committed_at: original.settled_at,
+    })}\n`);
+    const statusPath = path.join(dir, submitted.record.paths.status_ref);
+    const status = JSON.parse(readFileSync(statusPath, 'utf8'));
+    status.updated_at = '2026-07-30T00:00:01.000Z';
+    writeFileSync(statusPath, `${JSON.stringify(status)}\n`);
+    rmSync(path.join(dir, 'rb_output_declarations.jsonl'));
+    const before = recoveryAuthoritySnapshot(dir, submitted.record);
+
+    const rejected = run(WORK_UNIT_CLI, ['recover-declaration', dir, '--work-id', submitted.record.work_id]);
+    assert.equal(rejected.status, 1, rejected.stderr || rejected.stdout);
+    const output = JSON.parse(rejected.stdout);
+    assert.equal(output.ok, false);
+    assert.equal(output.reason_code, 'missing_contract');
+    assert.match(output.missing_fact, /original submit\/transaction evidence/i);
     assert.deepEqual(recoveryAuthoritySnapshot(dir, submitted.record), before);
   });
 });

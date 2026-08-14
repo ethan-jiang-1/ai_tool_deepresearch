@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { WORK_UNIT_ID_PATTERN } from './work-unit.mjs';
 
 export const WORK_UNIT_TRANSACTION_LOCK_SCHEMA_VERSION = 'work-unit.transaction-lock.v1';
-export const WORK_UNIT_TRANSACTION_V1_SCHEMA_VERSION = 'work-unit.transaction.v1';
 export const WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION = 'work-unit.transaction.v2';
 
 export const WorkUnitTransactionOperationSchema = z.enum([
@@ -118,29 +117,6 @@ export const WorkUnitTransactionLockOwnerSchema = z.object({
   }
 });
 
-export const WorkUnitTransactionV1JournalSchema = z.object({
-  schema_version: z.literal(WORK_UNIT_TRANSACTION_V1_SCHEMA_VERSION),
-  tx_id: z.string().trim().min(1),
-  operation: z.string().trim().min(1),
-  status: z.enum(['started', 'committed', 'failed']),
-  started_at: z.string().datetime(),
-  committed_at: z.string().datetime().nullable(),
-  error: z.string().min(1).optional(),
-}).strict().superRefine((data, ctx) => {
-  if (data.status === 'committed' && data.committed_at === null) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['committed_at'], message: 'committed v1 journal requires committed_at' });
-  }
-  if (data.status !== 'committed' && data.committed_at !== null) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['committed_at'], message: `${data.status} v1 journal cannot have committed_at` });
-  }
-  if (data.status === 'failed' && !data.error) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['error'], message: 'failed v1 journal requires error' });
-  }
-  if (data.status !== 'failed' && data.error) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['error'], message: `${data.status} v1 journal cannot have error` });
-  }
-});
-
 export const WorkUnitTransactionV2JournalSchema = z.object({
   schema_version: z.literal(WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION),
   tx_id: z.string().trim().min(1),
@@ -183,11 +159,6 @@ export const WorkUnitTransactionV2JournalSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['error'], message: `${data.status} journal requires an audit reason` });
   }
 });
-
-export const WorkUnitTransactionJournalSchema = z.union([
-  WorkUnitTransactionV1JournalSchema,
-  WorkUnitTransactionV2JournalSchema,
-]);
 
 export const WorkUnitTransactionPairSchema = z.object({
   owner: WorkUnitTransactionLockOwnerSchema,

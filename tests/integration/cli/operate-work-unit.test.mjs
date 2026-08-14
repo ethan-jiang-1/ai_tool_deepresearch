@@ -1401,6 +1401,30 @@ describe('operate-work-unit inspect', () => {
       cleanup(dir);
     }
   });
+
+  it('allows a current claim beside a complete committed v1 diagnostic journal', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [currentWave0QueueItem('queue-v1-diagnostic')]);
+      mkdirSync(transactionDir(dir), { recursive: true });
+      const legacyPath = path.join(transactionDir(dir), 'tx-v1-committed.json');
+      writeFileSync(legacyPath, `${JSON.stringify({
+        schema_version: 'work-unit.transaction.v1',
+        tx_id: 'tx-v1-committed',
+        operation: 'submit_work_unit',
+        status: 'committed',
+        started_at: '2026-07-30T00:00:00.000Z',
+        committed_at: '2026-07-30T00:01:00.000Z',
+      })}\n`);
+
+      const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
+      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
+      assert.equal(JSON.parse(claim.stdout).claimed_count, 1);
+      assert.equal(readFileSync(legacyPath, 'utf8').includes('work-unit.transaction.v1'), true);
+    } finally {
+      cleanup(dir);
+    }
+  });
 });
 
 describe('operate-work-unit attempt recovery operations', () => {
@@ -1596,7 +1620,7 @@ describe('operate-work-unit attempt recovery operations', () => {
             targetQueueItemIds: [${JSON.stringify(holderQueueId)}],
             mutationTargets: ['rb_queue.json']
           }, () => {
-            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2600);
+            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 6000);
             return { ok: true };
           });
           if (!result.ok) process.exit(2);

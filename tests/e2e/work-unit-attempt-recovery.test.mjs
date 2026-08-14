@@ -245,6 +245,54 @@ describe('submitted work-unit supersession', () => {
     }
   });
 
+  it('does not let committed v1 original evidence create supersession or historical lineage', () => {
+    const bundleDir = tempWorkUnitBundle('wu-supersede-v1-evidence-');
+    try {
+      const { record, submitted } = claimAndSubmitWorkUnit(bundleDir);
+      assert.equal(submitted.ok, true);
+      const txRoot = path.join(bundleDir, '_work_units', '_transactions');
+      const originalName = readdirSync(txRoot).find((name) => {
+        const transaction = JSON.parse(readFileSync(path.join(txRoot, name), 'utf8'));
+        return transaction.operation === 'submit_work_unit' && transaction.status === 'committed';
+      });
+      assert.ok(originalName);
+      const originalPath = path.join(txRoot, originalName);
+      const original = JSON.parse(readFileSync(originalPath, 'utf8'));
+      writeFileSync(originalPath, `${JSON.stringify({
+        schema_version: 'work-unit.transaction.v1',
+        tx_id: original.tx_id,
+        operation: original.operation,
+        status: 'committed',
+        started_at: original.started_at,
+        committed_at: original.settled_at,
+      })}\n`);
+      rmSync(path.join(bundleDir, 'rb_output_declarations.jsonl'));
+      const resultPath = path.join(bundleDir, record.paths.result_ref);
+      const drifted = JSON.parse(readFileSync(resultPath, 'utf8'));
+      drifted.summary = 'prevents exact declaration reconstruction';
+      writeFileSync(resultPath, `${JSON.stringify(drifted, null, 2)}\n`);
+      const before = coreAuthoritySnapshot(bundleDir);
+
+      const eligibility = evaluateWorkUnitSupersessionEligibility(bundleDir, { work_id: record.work_id });
+      assert.equal(eligibility.eligible, false);
+      assert.equal(eligibility.reason_code, 'missing_contract');
+      const superseded = supersedeWorkUnitAttempt(bundleDir, {
+        work_id: record.work_id,
+        reason: 'v1 evidence cannot authorize a successor',
+      });
+      assert.equal(superseded.ok, false);
+      assert.equal(superseded.reason_code, 'missing_contract');
+      assert.deepEqual(coreAuthoritySnapshot(bundleDir), before);
+      assert.throws(
+        () => evaluateNormalizedSubmittedWorkUnitLedger(bundleDir),
+        /submitted ledger row is missing/,
+      );
+      assert.equal(inspectWorkUnits(bundleDir).passed, false);
+    } finally {
+      cleanupWorkUnitBundle(bundleDir);
+    }
+  });
+
   it('rejects predecessor candidate coordinates for a freshly claimed successor', () => {
     const bundleDir = tempWorkUnitBundle('wu-supersede-stale-binding-');
     try {

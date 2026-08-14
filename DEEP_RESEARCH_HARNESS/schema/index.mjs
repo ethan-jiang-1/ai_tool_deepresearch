@@ -54,10 +54,8 @@ export {
 } from './contracts/work-unit.mjs';
 export {
   WORK_UNIT_TRANSACTION_LOCK_SCHEMA_VERSION,
-  WORK_UNIT_TRANSACTION_V1_SCHEMA_VERSION,
   WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
   WorkUnitTransactionBusyProjectionSchema,
-  WorkUnitTransactionJournalSchema,
   WorkUnitTransactionLockOwnerSchema,
   WorkUnitTransactionMutationManifestSchema,
   WorkUnitTransactionMutationTargetSchema,
@@ -65,7 +63,6 @@ export {
   WorkUnitTransactionPairSchema,
   WorkUnitTransactionProjectionSchema,
   WorkUnitTransactionSuspectProjectionSchema,
-  WorkUnitTransactionV1JournalSchema,
   WorkUnitTransactionV2DispositionSchema,
   WorkUnitTransactionV2JournalSchema,
 } from './contracts/work-unit-transaction.mjs';

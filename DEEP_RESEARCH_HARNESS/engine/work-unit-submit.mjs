@@ -68,6 +68,7 @@ import {
   WorkUnitStatusFileSchema,
   WorkUnitSubmissionV1StatusFileSchema,
 } from '../schema/contracts/work-unit.mjs';
+import { WorkUnitTransactionV2JournalSchema } from '../schema/contracts/work-unit-transaction.mjs';
 import { loadQueue, saveQueue } from './queue-manager-lifecycle.mjs';
 import { refill } from './queue-manager-window.mjs';
 import { logToRun } from './logger.mjs';
@@ -557,8 +558,11 @@ function readOriginalSubmitEvidence(bundleDir, record, { resultHash, ledgerRecor
     for (const name of readdirSync(txRoot)) {
       if (!name.endsWith('.json')) continue;
       try {
-        const tx = JSON.parse(readFileSync(path.join(txRoot, name), 'utf-8'));
-        if (tx?.status === 'committed' && ['submit_work_unit', 'late_submit_work_unit'].includes(tx.operation)) {
+        const tx = WorkUnitTransactionV2JournalSchema.parse(JSON.parse(readFileSync(path.join(txRoot, name), 'utf-8')));
+        if (tx.status === 'committed'
+          && ['submit_work_unit', 'late_submit_work_unit'].includes(tx.operation)
+          && tx.target_work_ids.includes(record.work_id)
+          && tx.target_queue_item_ids.includes(record.queue_item_id)) {
           transactions.set(tx.tx_id, tx);
         }
       } catch { /* malformed evidence is not eligible */ }
@@ -761,7 +765,7 @@ function prepareCurrentDeclarationRecovery(bundleDir, workId) {
       item.event.ts,
       item.lateEvent?.ts,
       item.transaction.started_at,
-      item.transaction.committed_at,
+      item.transaction.settled_at,
     ]) {
       if (typeof candidate === 'string' && Number.isFinite(Date.parse(candidate))) timestampCandidates.add(candidate);
     }
@@ -798,17 +802,22 @@ function prepareCurrentDeclarationRecovery(bundleDir, workId) {
   }
   if (matches.size === 0) {
     const error = new Error(`missing_contract: no legal recovery can reproduce ${record.work_id}'s accepted declaration; do not append provenance.`);
+    error.recovery_reason_code = 'missing_contract';
     if (record.wave === 0 && record.kind === 'wave0_source_intake') {
       error.recovery_reason_code = 'missing_source_contribution_no_legal_recovery';
     }
     throw error;
   }
   if (matches.size > 1) {
-    throw new Error(`missing_contract: declaration reconstruction is ambiguous for ${record.work_id}`);
+    const error = new Error(`missing_contract: declaration reconstruction is ambiguous for ${record.work_id}`);
+    error.recovery_reason_code = 'missing_contract';
+    throw error;
   }
   const [{ row: ledgerRow, source: reconstructionSource }] = [...matches.values()];
   if (!timestampsUnified && evidence.length === 0 && existingRows.length === 0) {
-    throw new Error(`missing_contract: declaration timestamps for ${record.work_id} require original submit/transaction evidence`);
+    const error = new Error(`missing_contract: declaration timestamps for ${record.work_id} require original submit/transaction evidence`);
+    error.recovery_reason_code = 'missing_contract';
+    throw error;
   }
   if (existingRows.length === 1 && JSON.stringify(existingRows[0]) !== JSON.stringify(ledgerRow)) {
     throw new Error(`existing declaration row conflicts with reconstructed row for ${record.work_id}`);

@@ -24,7 +24,6 @@ import {
 import {
   workUnitsRoot,
   workUnitIndexPath,
-  transactionDir,
   validateWorkIdBinding,
   computeWorkUnitHealthProjection,
   computeStatusCounts,
@@ -42,7 +41,6 @@ import { classifyCompleteCurrentWorkUnitProfile } from './work-unit-current-prof
 import { loadCurrentSubmittedLedgerFact } from './work-unit-submitted-ledger.mjs';
 import { projectWorkUnitAttemptDisposition } from './work-unit-attempt-disposition.mjs';
 import { evaluateNormalizedSubmittedWorkUnitLedger } from './work-unit-supersession.mjs';
-import { WorkUnitTransactionJournalSchema } from '../schema/contracts/work-unit-transaction.mjs';
 import { inspectWorkUnitTransaction } from './work-unit-transaction.mjs';
 
 function listWorkUnitDirs(bundleDir) {
@@ -60,23 +58,7 @@ function listWorkUnitDirs(bundleDir) {
 }
 
 function transactionIssues(bundleDir) {
-  const dir = transactionDir(bundleDir);
-  if (!existsSync(dir)) return [];
   const issues = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
-    try {
-      const tx = WorkUnitTransactionJournalSchema.parse(readJson(path.join(dir, entry.name)));
-      if (tx.schema_version === 'work-unit.transaction.v1' && tx.status !== 'committed') {
-        issues.push(`suspect legacy transaction ${entry.name}: status=${tx.status}`);
-      }
-      if (tx.schema_version === 'work-unit.transaction.v2' && ['started', 'suspect'].includes(tx.status)) {
-        issues.push(`unresolved transaction ${entry.name}: status=${tx.status}`);
-      }
-    } catch (error) {
-      issues.push(`invalid transaction journal ${entry.name}: ${error.message || String(error)}`);
-    }
-  }
   const current = inspectWorkUnitTransaction(bundleDir, { operation: 'submit_work_unit' });
   if (current.disposition === 'busy') issues.push(`work-unit transaction busy: ${current.holder.tx_id}`);
   if (current.disposition === 'suspect_transaction') issues.push(current.missing_fact);

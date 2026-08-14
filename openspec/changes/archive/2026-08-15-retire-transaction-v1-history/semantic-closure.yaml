@@ -1,0 +1,66 @@
+schema_version: semantic-closure/v1
+change: retire-transaction-v1-history
+status: affected
+catalog_additions:
+  - id: work-unit.transaction-mutation-integrity
+    bounded_question: >-
+      Does the observed work-unit transaction lock or journal provide current
+      v2 mutation authority, require a fail-closed suspect stop, or permit no
+      transaction conclusion?
+affected:
+  - family: work-unit.transaction-mutation-integrity
+    fact: >-
+      Only a schema-valid work-unit.transaction.v2 lock/journal relation can
+      establish current busy, recovery, or settled transaction authority;
+      unresolved v1 and unreadable, malformed, or proof-incomplete journal
+      bytes establish only the fail-closed suspect_transaction mutation stop.
+      A structurally complete committed v1 journal is diagnostic history that
+      does not itself block a new current v2 mutation and has no current
+      transaction authority.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs#inspectWorkUnitTransaction
+    established_by:
+      - DEEP_RESEARCH_HARNESS/schema/contracts/work-unit-transaction.mjs#WorkUnitTransactionV2JournalSchema
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-timeout-preflight.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-inspect.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs#recoverWorkUnitTransaction
+    overlap:
+      - coordinate: openspec/specs/agent/delegated-work-units/spec.md
+        relation: authoritative
+        detail: DEW-023 owns the observable transaction preflight, suspect, and recovery behavior.
+    verification:
+      truth_table: tests/engine/work-unit-transaction.test.mjs
+      cross_surface: tests/integration/cli/operate-work-unit.test.mjs
+  - family: work-unit.submission-ledger-and-supersession
+    fact: >-
+      A complete-current submitted predecessor may use original-submit
+      transaction evidence for declaration recovery, supersession, historical
+      inspection, and lineage only when one committed v2 journal is bound to
+      its current trace and ledger fingerprint; a committed v1 journal cannot
+      establish current acceptance authority and leaves the direct
+      declaration-recovery/supersession reader at missing_contract.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs#originalAcceptanceEvidence
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-current-profile.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs#readOriginalSubmitEvidence
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs
+    overlap:
+      - coordinate: openspec/specs/agent/delegated-work-units/spec.md
+        relation: authoritative
+        detail: DEW-024 owns current predecessor correction and acceptance-evidence behavior.
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-readers.mjs
+        relation: derived
+        detail: Gate readers consume the resulting submitted-ledger and lineage conclusion but cannot reinterpret retired transaction bytes.
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-provenance.mjs
+        relation: derived
+        detail: Gate provenance presents declaration-recovery gaps from the resolved current proof conclusion without treating v1 bytes as evidence.
+    verification:
+      truth_table: tests/engine/work-unit-submit.test.mjs
+      cross_surface: tests/e2e/work-unit-attempt-recovery.test.mjs
