@@ -77,3 +77,5 @@ _subagents/
 .codex
 .codex/
 .codewhale/
+# ===== Transient working files =====
+_backlog/_scratch/
