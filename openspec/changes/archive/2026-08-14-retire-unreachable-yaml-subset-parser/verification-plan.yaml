@@ -1,0 +1,43 @@
+schema_version: verification-routing/v1
+change: retire-unreachable-yaml-subset-parser
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The existing workflow-chain unit suite directly characterizes the
+      protected exported parser's JSON and valid non-JSON YAML flow-mapping
+      behavior after the unreachable private helper is removed.
+  integration:
+    status: not_applicable
+    rationale: >-
+      The change adds no CLI, bundle, or cross-module runtime behavior. The
+      existing workflow-package CLI is package-consistency evidence, not a new
+      integration behavior claim.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      The change does not alter a workflow-scale deterministic path, lifecycle,
+      run-bundle format, or end-to-end result.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change makes no claim about Agent research, judgment, writing, tool
+      use, or trace-backed Agent behavior.
+claims:
+  - id: current-frontmatter-parser-remains-authoritative
+    statement: >-
+      The exported parseFrontmatter() continues to accept the existing JSON and
+      valid non-JSON YAML flow-mapping forms while preserving its current schema
+      validation boundary after the unused private helper is removed.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/workflow-chain.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

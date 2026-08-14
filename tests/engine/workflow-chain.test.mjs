@@ -253,8 +253,8 @@ describe('frontmatter parsing', () => {
   });
 
   it('gracefully handles non-JSON frontmatter via YAML fallback', () => {
-    // { bad json } is not valid JSON, but YAML subset parser handles it gracefully
-    // (line has no colon, skipped → empty object → requires defaults to [])
+    // { bad json } is a valid YAML flow mapping with no requires key.
+    // The yaml package fallback therefore returns the default empty requires.
     assert.deepStrictEqual(parseFrontmatter('---\n{ bad json }\n---\n').requires, []);
   });
 

@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: retire-unreachable-yaml-subset-parser
+status: not_applicable
+reason: >-
+  This change removes an unreachable private parser implementation and corrects
+  a test comment. It changes no deterministic runtime fact, resolver,
+  established-by surface, verdict consumer, or derived runtime projection:
+  parseFrontmatter(), its JSON-first/yaml-package parse path, NodeFrontmatter
+  validation, dependency closure, workflow package validation, bundle state,
+  and Agent flow remain unchanged.
