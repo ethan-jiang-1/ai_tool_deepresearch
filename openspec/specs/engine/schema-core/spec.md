@@ -1,10 +1,10 @@
 # schema-core Specification
 
-> req: SCO-001, SCO-002, SCO-003, SCO-004, SCO-005, SCO-006, SCO-007, SCO-008, SCO-009, SCO-010, SCO-011, SCO-012, SCO-013, SCO-014
+> req: SCO-001, SCO-002, SCO-004, SCO-005, SCO-006, SCO-007, SCO-008, SCO-009, SCO-010, SCO-011, SCO-012, SCO-013, SCO-014
 > inv: INV-SOR-001
 
 ## Purpose
-Deep Research 的类型地基。定义所有领域枚举 (10 个) 和契约 (6 个)，以及 Gate 状态机转换表。纯 JavaScript (.mjs)，零编译，node 直接 import。
+Deep Research 的类型地基。定义所有领域枚举 (10 个) 和契约 (6 个)。纯 JavaScript (.mjs)，零编译，node 直接 import。
 ## Requirements
 ### Requirement: Six domain enums defined as Zod schemas
 
@@ -146,35 +146,6 @@ Rerun direction hints (topic adjustment plan) SHALL be written into `seed_topics
 
 - **WHEN** a bundle created before this change is validated
 - **THEN** missing `rerun_count` SHALL default to 0 and validation SHALL pass
-
-### Requirement: Gate transition table covers all states
-> **@deprecated** — The abstract FSM in `schema/contracts/gate.mjs` (GATE_MACHINE_STATES / GATE_TRANSITIONS) is no longer the canonical transition source. The canonical truth source is `workflows/transitions.chain.json` + `engine/ask-next.mjs` (resolveNodeTransitionDetailed). The GateTransitionTable SHALL be retained for backward compatibility but SHALL NOT be the reference for new features. See: openspec/specs/transition-table/spec.md.
-
-The abstract FSM originally defined transitions for 8 states: instantiation_complete, setup_ready, wave0_complete, wave1_complete, wave2_complete, hitl2_pending_user, readiness_passed, blocked_terminal. The current lifecycle uses 11 gate states (see `CurrentGate` enum in `schema/enums.mjs`).
-
-#### Scenario: Every non-terminal state has at least one transition
-- **WHEN** the deprecated GateTransitionTable is validated
-- **THEN** non-terminal states each have ≥ 1 transition entry
-
-#### Scenario: PASS events follow correct gate order
-> **@deprecated** — This scenario describes the old abstract FSM (instantiation→setup→wave0, no hitl1/seed-topics). The canonical chain (transitions.chain.json) is: instantiation→hitl1→setup→seed-topics→wave0→wave1→wave2→hitl2→readiness→final.
-
-- **WHEN** PASS_SETUP fires from instantiation_complete
-- **THEN** next state is setup_ready (old FSM only; canonical chain routes instantiation→hitl1 first)
-- **WHEN** PASS_WAVE0 fires from setup_ready
-- **THEN** next state is wave0_complete (old FSM only; canonical chain routes setup→seed-topics first)
-
-#### Scenario: REOPEN returns to correct prior gate
-- **WHEN** REOPEN fires from wave0_complete
-- **THEN** next state is setup_ready
-- **WHEN** REOPEN fires from wave1_complete
-- **THEN** next state is wave0_complete
-
-#### Scenario: HITL2 user actions route correctly
-- **WHEN** USER_PROCEED fires from hitl2_pending_user
-- **THEN** next state is readiness_passed
-- **WHEN** USER_REPAIR fires from hitl2_pending_user
-- **THEN** next state is wave1_complete
 
 ### Requirement: Schema is directly importable by node
 All schema files SHALL be valid JavaScript (.mjs) that `node` can import directly without compilation.

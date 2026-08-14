@@ -107,8 +107,6 @@ DEEP_RESEARCH_HARNESS/
       shared/
 
   schema/
-    contracts/
-      gate.mjs
     gate_definitions/
       gate-*.definition.json
 
@@ -211,7 +209,7 @@ Gate files have three different meanings and must not be mixed:
 
 | Concern | Location | Mutability | Meaning |
 |---------|----------|------------|---------|
-| Gate transition-table contract | `DEEP_RESEARCH_HARNESS/schema/contracts/gate.mjs` | read-only | Defines gate machine states, events, transitions, and transition validation. |
+| Gate transition-table contract | `DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json` + `DEEP_RESEARCH_HARNESS/engine/ask-next.mjs` | read-only | The chain is the current routing source of record; `resolveNodeTransitionDetailed()` provides detailed transition queries. |
 | Gate definition target | `DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-*.definition.json` | read-only | Defines what a gate checks. |
 | Gate engine target | `DEEP_RESEARCH_HARNESS/engine/gates/` | read-only | Loads/evaluates definitions against a bundle. |
 | Gate CLI wrapper target | `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-*.mjs` | read-only | Runs one gate against an explicit bundle. |
@@ -325,7 +323,7 @@ Runtime continuity and logging details live in `openspec/operations/logging-conv
 | Agent-facing shared workflow context target | `DEEP_RESEARCH_HARNESS/workflows/nodes/shared/` |
 | Workflow manifest target | `DEEP_RESEARCH_HARNESS/workflows/manifest.json` |
 | Operator/Agent command instructions | `DEEP_RESEARCH_HARNESS/command_playbook/` |
-| Gate transition-table contract target | `DEEP_RESEARCH_HARNESS/schema/contracts/gate.mjs` |
+| Gate transition-table contract target | `DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json` via `engine/ask-next.mjs` `resolveNodeTransitionDetailed()` |
 | Gate rule definition target | `DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-*.definition.json` |
 | Gate evaluator/loader code target | `DEEP_RESEARCH_HARNESS/engine/gates/` |
 | Gate shared helper code target | `DEEP_RESEARCH_HARNESS/engine/helpers/` |

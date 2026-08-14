@@ -1,0 +1,30 @@
+schema_version: verification-routing/v1
+change: retire-stale-abstract-gate-fsm
+test_classes:
+  unit:
+    status: selected
+    rationale: The protected current chain/router contract is a direct deterministic module boundary, and its existing real-chain unit regression proves the removal leaves that current route intact.
+  integration:
+    status: not_applicable
+    rationale: The change adds no CLI, bundle, or cross-module runtime-boundary behavior; documentation and accepted-spec corrections are verified by scoped scans and OpenSpec governance rather than claimed as integration behavior.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The change does not alter workflow-scale deterministic behavior, bundle lifecycle, or a current end-to-end path.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change makes no claim about Agent research, judgment, writing, tool use, or trace-backed Agent behavior.
+claims:
+  - id: current-chain-router-remains-authoritative
+    statement: The existing detailed router continues to resolve every current real-chain lifecycle transition after the stale abstract Gate FSM is removed.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/ask-next.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

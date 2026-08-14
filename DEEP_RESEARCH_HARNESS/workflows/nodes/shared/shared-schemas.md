@@ -222,7 +222,7 @@ Bare runtime paths in this node are current run bundle-root relative. If the cur
 ### Gate Contract
 
 - **Gate definition JSON**：`DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-*.definition.json` — read-only deterministic rule definition
-- **Gate transition-table contract**：`DEEP_RESEARCH_HARNESS/schema/contracts/gate.mjs` — `GATE_MACHINE_STATES`、`GATE_TRANSITIONS`、transition validation
+- **Gate transition-table contract**：`DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json` — current routing source of record；由 `engine/ask-next.mjs` 的 `resolveNodeTransitionDetailed()` 查询
 - **Gate CLI**：`DEEP_RESEARCH_HARNESS/cli/gates/check-gate-*.mjs` — 每个 gate 一个独立 CLI wrapper
 - **Gate helpers**：`DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers.mjs` — shared parse/load/validate/route/build/emit
 

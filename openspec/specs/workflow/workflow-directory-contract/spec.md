@@ -99,11 +99,12 @@ per-Gate engine module exists. Shared helpers SHALL reside under
 `DEEP_RESEARCH_HARNESS/engine/helpers/`.
 
 The current Gate transition-table contract SHALL be represented by
-`DEEP_RESEARCH_HARNESS/schema/contracts/gate.mjs`. Gate-definition JSON files
-remain read-only rule sources under the canonical Harness schema directory and
-are loaded by the Gate-helper/per-Gate CLI pipeline; no
-`gate-definition.mjs` executable contract is part of the current accepted
-runtime surface.
+`DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json`; the existing
+`resolveNodeTransitionDetailed()` router SHALL provide the detailed transition
+query path. Gate-definition JSON files remain read-only rule sources under the
+canonical Harness schema directory and are loaded by the Gate-helper/per-Gate
+CLI pipeline; no `gate-definition.mjs` executable contract is part of the
+current accepted runtime surface.
 
 #### Scenario: Gate definition is Harness asset not bundle copy
 

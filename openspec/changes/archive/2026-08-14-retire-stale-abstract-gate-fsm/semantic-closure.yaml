@@ -1,0 +1,11 @@
+schema_version: semantic-closure/v1
+change: retire-stale-abstract-gate-fsm
+status: not_applicable
+reason: >-
+  This change removes an unused stale internal API and corrects current
+  specifications and guidance to name the already-existing chain/router owner.
+  It changes no current deterministic runtime fact, resolver,
+  established-by surface, verdict consumer, or derived runtime projection:
+  transitions.chain.json and resolveNodeTransitionDetailed() remain unchanged,
+  and the change makes no Gate-verdict, status, trace, bundle, or phase-flow
+  claim.

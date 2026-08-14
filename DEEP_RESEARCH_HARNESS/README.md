@@ -73,7 +73,7 @@ Current run bundle root 是本次 research run、CLI invocation、task card 或�
 
 - `COMMANDS.md`：命令索引。
 - `cli/`：当前 Harness-level CLI，包括 `instantiate-run-bundle.mjs`、`validate-bundle.mjs`、`inspect-bundle.mjs`、`operate-queue.mjs`。
-- `schema/contracts/`：当前 executable schema contracts，包括 `gate.mjs`、`plan.mjs`、`profile.mjs`、`queue.mjs`、`status.mjs`、`trace.mjs`。
+- `schema/contracts/`：当前 executable schema contracts，包括 `plan.mjs`、`profile.mjs`、`queue.mjs`、`status.mjs`、`trace.mjs`。
 - `engine/`：当前 deterministic engine code 和 trace utility。
 - `rb_templates/`：实例化 run bundle 时 materialize 的初始模板。
 - `command_playbook/`：Agent-facing command instructions and diagnostic/maintenance playbooks; not a human/operator co-runner surface for autonomous pipeline execution.
@@ -84,7 +84,7 @@ Current run bundle root 是本次 research run、CLI invocation、task card 或�
 
 - `workflows/manifest.json` 和 `workflows/nodes/`：v1 只有一个 canonical Deep Research workflow，不使用 `workflows/<workflow-name>/` namespace。
 - `schema/gate_definitions/`：read-only gate definition JSON，不保存 pass/fail。
-- `schema/contracts/gate.mjs`：当前 gate transition-table contract；不是 gate definition JSON 的 Zod schema。
+- `workflows/transitions.chain.json`：当前 Gate transition source of record；`engine/ask-next.mjs` 的 `resolveNodeTransitionDetailed()` 提供详细查询。
 - `engine/gates/`：per-gate engine modules 的目标位置；当前共享 helper 位于 `engine/helpers/gate-helpers.mjs`。
 - `cli/gates/`：one gate per external CLI wrapper。Gate 命令必须显式接收 current run bundle root；具体 flag 由实现 contract 决定。
 
