@@ -1,7 +1,7 @@
 // @impl DEW-009, RWP-015
 
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
@@ -93,7 +93,7 @@ describe('current actor-bound work-unit delivery', () => {
     }
   });
 
-  it('preserves the existing no-claim repair before delivery and leaves legacy construction unbound', () => {
+  it('preserves the existing no-claim repair and rejects incomplete legacy construction', () => {
     const noClaimBundle = tempWorkUnitBundle('wu-role-delivery-no-claim-');
     const legacyBundle = tempWorkUnitBundle('wu-role-delivery-legacy-');
     try {
@@ -117,13 +117,14 @@ describe('current actor-bound work-unit delivery', () => {
       assert.equal(noClaim.reason_code, 'kind_actor_policy_mismatch');
       assert.equal(existsSync(path.join(noClaimBundle, '_work_units', '_index.json')), false);
 
-      const { manifest } = createWorkUnit(legacyBundle, {
+      assert.throws(() => createWorkUnit(legacyBundle, {
         queueItem: delegatedQueueItem('legacy-queue', { phase: 'wave1', kind: 'wave1_topic_deepening' }),
         wave: 1,
-      });
-      assert.equal(manifest.actor_execution, undefined);
-      const legacyTask = readFileSync(path.join(legacyBundle, manifest.paths.task_ref), 'utf8');
-      assert.doesNotMatch(legacyTask, /## Actor Guidance/);
+      }), /unsupported current work-unit contract.*envelope profile/i);
+      assert.equal(existsSync(path.join(legacyBundle, '_work_units', '_index.json')), false);
+      const envelopePublications = readdirSync(path.join(legacyBundle, '_work_units'), { recursive: true })
+        .filter((entry) => /(?:^|\/)(?:manifest\.json|_beacon\.json|task\.md|result\.schema\.json|_agent\.json)$/.test(entry));
+      assert.deepEqual(envelopePublications, []);
     } finally {
       cleanupWorkUnitBundle(noClaimBundle);
       cleanupWorkUnitBundle(legacyBundle);

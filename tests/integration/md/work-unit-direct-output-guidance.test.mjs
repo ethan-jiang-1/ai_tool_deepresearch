@@ -8,6 +8,7 @@ import { describe, it } from 'node:test';
 
 import { makeItem } from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import { createWorkUnit } from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
+import { currentDelegatedActorExecution } from '../../engine/work-unit-test-helpers.mjs';
 
 const ROOT = process.cwd();
 const WHITELIST = [
@@ -43,7 +44,11 @@ describe('generated direct-output guidance', () => {
         required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
         writes_to: ['artifacts/wave0/topic-a/source.yaml'],
       });
-      const { manifest } = createWorkUnit(dir, { queueItem, wave: 0 });
+      const { manifest } = createWorkUnit(dir, {
+        queueItem,
+        wave: 0,
+        actor_execution: currentDelegatedActorExecution('dpt-source-intake'),
+      });
       const task = readFileSync(path.join(dir, manifest.paths.task_ref), 'utf8');
       assert.match(task, /assignment_contract_version:\s*`?work-unit\.assignment\.v3/);
       assert.match(task, /artifacts\/wave0\/topic-a\/source\.yaml/);
@@ -54,7 +59,7 @@ describe('generated direct-output guidance', () => {
       assert.match(task, /verify every assigned required output.*before.*work_done/is);
       assert.match(task, /Phase Agent.*dry-submit.*after.*actor.*return/is);
       assert.match(task, /formal submit.*only.*acceptance|formal submit.*success owner/is);
-      assert.doesNotMatch(task, /edit.*direct_contract|choose.*direct_contract|actor.*select.*contract/is);
+      assert.doesNotMatch(task, /\b(?:edit|choose|select)\b[^\n]{0,80}\bdirect_contract\b/i);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

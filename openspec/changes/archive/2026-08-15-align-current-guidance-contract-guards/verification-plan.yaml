@@ -1,0 +1,151 @@
+schema_version: verification-routing/v1
+change: align-current-guidance-contract-guards
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The focused in-process work-ID fixture needs a complete current envelope
+      fixture while retaining its parser and binding proof boundary.
+  integration:
+    status: selected
+    rationale: >-
+      Existing integration tests directly read current Markdown contracts or
+      create test-owned disposable envelopes through the production Engine.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: No lifecycle-scale behavior, transition, or temporary-bundle workflow changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change makes no claim about real Agent or sub-agent semantic behavior.
+claims:
+  - id: work-id-fixture-uses-current-envelope-profile
+    statement: >-
+      The focused work-ID binding fixture supplies current Wave0 assignment and
+      delegated actor facts, so it proves the existing in-process ID binding
+      without a legacy envelope fallback.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-index.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-entry-routing-guards-align
+    statement: >-
+      Root/Harness guidance tests protect the current selected-pair entry and
+      no-fallback contract, rather than retired routing phrases.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/dpt-research-entry-routing-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-hitl1-hint-guard-aligns
+    statement: >-
+      HITL1 guidance is tested against its current supported repair kinds and
+      does not gain a retired external-action route.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/gate-hint-controller-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: current-reference-reader-guard-aligns
+    statement: >-
+      Current reference guidance accepts only UID bindings for new output and
+      treats historical related_topic metadata as human-readable but rejected
+      current input.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/parser-aligned-guidance.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: run-logical-actor-boundary-is-complete
+    statement: >-
+      Every public recovery surface, including RUN.md, bounds logical actor
+      bindings without claiming physical writer authentication or liveness.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/work-unit-attempt-recovery-guidance.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: direct-output-fixture-uses-current-profile
+    statement: >-
+      Generated direct-output guidance is exercised through a complete current
+      delegated actor envelope without changing Engine profile admission.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/work-unit-direct-output-guidance.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: receipt-guidance-fixture-uses-current-profile
+    statement: >-
+      Generated receipt guidance is exercised through a complete current
+      delegated actor envelope without changing Engine profile admission.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/work-unit-receipt-guidance.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: incomplete-actor-envelope-remains-rejected
+    statement: >-
+      The actor-delivery test retains its no-claim repair check and protects
+      the current rejection of a direct envelope missing the actor-v1 profile
+      before it can publish a legacy unbound delivery surface.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/engine/work-unit-role-contract-delivery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

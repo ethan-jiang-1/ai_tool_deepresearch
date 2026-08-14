@@ -10,6 +10,7 @@ const PHASES = [
   'phase-setup.md',
   'phase-seed-topics.md',
 ];
+const HITL1 = 'phase-hitl1.md';
 
 function readPhase(name) {
   return readFileSync(new URL(`../../../DEEP_RESEARCH_HARNESS/workflows/nodes/phases/${name}`, import.meta.url), 'utf8');
@@ -34,12 +35,16 @@ describe('formal Gate hint consumption in early-phase Controllers', () => {
       assert.match(section, /`repair_kind: agent_action`[\s\S]*?由 Agent/);
       assert.match(section, /`repair_kind: engine_operation`[\s\S]*?由 Agent/);
       assert.match(section, /`repair_kind: user_decision`[\s\S]*?只/);
-      assert.match(section, /`repair_kind: external_action`/);
       assert.match(section, /`repair_kind: missing_contract`/);
       assert.match(section, /Hint 不创造 permission/);
       assert.match(section, /Agent MUST 运行[^\n]+exact `rerun`/);
       assert.match(section, /不得从 `inspect\[\]`\/`advice\[\]`[^\n]+blocking repair/);
       assert.match(section, /不得直接编辑|不得直接改/);
+      if (phase === HITL1) {
+        assert.doesNotMatch(section, /`repair_kind: external_action`/);
+      } else {
+        assert.match(section, /`repair_kind: external_action`/);
+      }
     });
   }
 

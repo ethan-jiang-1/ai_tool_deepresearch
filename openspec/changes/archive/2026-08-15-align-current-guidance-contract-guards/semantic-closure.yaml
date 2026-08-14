@@ -1,0 +1,11 @@
+schema_version: semantic-closure/v1
+change: align-current-guidance-contract-guards
+status: not_applicable
+reason: >-
+  This change aligns Markdown and test projections with already
+  accepted current routing, hint, reference-reader, and work-unit-envelope
+  contracts. It changes no deterministic runtime fact, resolver, establishing
+  surface, verdict consumer, or derived runtime projection. The one RUN.md
+  addition restates an existing logical-actor boundary; positive test fixtures
+  provide an existing complete profile and the retained negative fixture
+  protects existing Engine rejection without changing its validation.

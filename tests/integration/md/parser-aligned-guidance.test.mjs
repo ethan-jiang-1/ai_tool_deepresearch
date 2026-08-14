@@ -87,7 +87,7 @@ describe('REF-007 parser-aligned Agent guidance', () => {
     assert.doesNotMatch(`${phase}\n${template}\n${extractor}`, /at least five key facts|at least 5 concrete bullet facts|顺序固定|大小写敏感/i);
   });
 
-  it('current reference guidance exposes UID cardinality forms and confines legacy binding to readers', () => {
+  it('current reference guidance exposes UID cardinality forms and rejects historical binding as current input', () => {
     const template = readNode('shared/shared-reference-template.md');
     const extractor = readNode('phases/subagent-dpt-evidence-extractor.md');
     const combined = `${template}\n${extractor}`;
@@ -95,7 +95,8 @@ describe('REF-007 parser-aligned Agent guidance', () => {
     assert.match(combined, /related_topic_uid/);
     assert.match(combined, /related_topic_uids/);
     assert.match(combined, /related_topic_uid:\s*all/);
-    assert.match(combined, /legacy.*reader|historical.*reader|reader.*historical/i);
+    assert.match(combined, /(?:historical|历史)[\s\S]{0,180}(?:human-readable|人工可读)[\s\S]{0,180}(?:rejected|拒绝)/i);
+    assert.match(combined, /(?:rejected by the current Engine|current Engine 会拒绝)/i);
     assert.doesNotMatch(template, /related_topic:\s*all/);
     assert.doesNotMatch(extractor, /related_topic:\s*"\{topic\.slug\}"/);
   });

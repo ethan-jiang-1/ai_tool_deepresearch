@@ -24,10 +24,12 @@ describe('Deep Research Harness research entry routing contract', () => {
     assert.equal(blocks[0], blocks[1], 'root routing guidance must stay synchronized');
 
     const block = blocks[0];
-    assert.match(block, /explicitly supplied reachable existing run bundle/i);
+    assert.match(block, /explicitly supplied reachable existing bundle candidate/i);
+    assert.match(block, /same-root `BUNDLE_ENTRY\.md` \+ `BUNDLE_MAP\.md` preflight/i);
     assert.match(block, /continue-run-bundle\.md/);
-    assert.match(block, /otherwise[\s\S]*DEEP_RESEARCH_HARNESS\/RUN\.md/i);
-    assert.match(block, /discovered, bare, or unreachable map does not select a run/i);
+    assert.match(block, /unsupported_current_entry_contract/);
+    assert.match(block, /With no supplied existing candidate[\s\S]*DEEP_RESEARCH_HARNESS\/RUN\.md/i);
+    assert.match(block, /discovered, bare, or unreachable file does not select a run/i);
     assert.match(block, /`research`, `deep-research`, or an equivalent one-shot shortcut/);
     assert.match(block, /request-specific WebSearch\/WebFetch/);
     assert.match(block, /collect\/synthesize evidence manually/);
@@ -44,7 +46,9 @@ describe('Deep Research Harness research entry routing contract', () => {
 
     for (const text of surfaces) {
       assert.match(text, /continue-run-bundle\.md/);
-      assert.match(text, /否则先读 `RUN\.md`/);
+      assert.match(text, /同根 `BUNDLE_ENTRY\.md` \+ `BUNDLE_MAP\.md`/);
+      assert.match(text, /unsupported_current_entry_contract/);
+      assert.match(text, /没有 explicit candidate 才读 `RUN\.md`/);
       assert.match(text, /`research`、`deep-research`/);
       assert.match(text, /直接 WebSearch\/WebFetch/);
       assert.match(text, /HITL1 probe 与后续 phase 已授权的 research/);
@@ -77,13 +81,15 @@ describe('Deep Research Harness research entry routing contract', () => {
     assert.match(run, /Section 2[\s\S]*授权 capability probe 和后续研究工作/);
     assert.match(run, /不声称能阻止宿主预先匹配 skill 或注入工具/);
 
-    assert.match(readme, /否则先读 `RUN\.md`/);
+    assert.match(readme, /没有 explicit existing candidate 才读 `RUN\.md`/);
+    assert.match(readme, /unsupported_current_entry_contract/);
     assert.match(readme, /selected entry 读完前/);
     assert.match(readme, /Section 2 随后进入 `command_playbook\/start-research\.md`/);
     assert.match(readme, /不保证宿主不会预先匹配 skill 或注入工具/);
 
     assert.match(commands, /`RUN\.md` 选定新研究 entry 后的下游 playbook/);
-    assert.match(start, /只有在已读 `RUN\.md`、且没有 explicit reachable existing-run-bundle continuation route 后/);
+    assert.match(start, /同根 `BUNDLE_ENTRY\.md` \+ `BUNDLE_MAP\.md`/);
+    assert.match(start, /unsupported_current_entry_contract/);
     assert.doesNotMatch(start, /新研究入口/);
   });
 });

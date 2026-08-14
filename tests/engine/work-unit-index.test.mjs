@@ -15,6 +15,7 @@ import {
   workUnitIndexPath,
   workUnitsRoot,
 } from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
+import { currentDelegatedActorExecution } from './work-unit-test-helpers.mjs';
 
 function tempBundle() {
   return mkdtempSync(path.join(os.tmpdir(), 'wu-'));
@@ -31,7 +32,13 @@ function queueItem(overrides = {}) {
     targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
     kind: 'wave0_source_intake',
     producer_rule: 'source_intake_fan_in',
-    payload: { topic_slug: 'topic-a' },
+    payload: {
+      topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+      topic_slug: 'topic-a',
+      wave: 0,
+    },
+    required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+    writes_to: ['artifacts/wave0/topic-a/source.yaml'],
     ...overrides,
   });
 }
@@ -70,7 +77,12 @@ describe('work_id parsing and binding', () => {
   it('validates encoded fields against kind registry and manifest fields', () => {
     const dir = tempBundle();
     try {
-      const { manifest } = createWorkUnit(dir, { queueItem: queueItem(), wave: 0 });
+      const item = queueItem();
+      const { manifest } = createWorkUnit(dir, {
+        queueItem: item,
+        wave: 0,
+        actor_execution: currentDelegatedActorExecution(item.targets.delegates.role_key),
+      });
       assert.equal(validateWorkIdBinding({
         work_id: manifest.work_id,
         kindRegistry: loadWorkUnitIndex(dir).kind_registry,

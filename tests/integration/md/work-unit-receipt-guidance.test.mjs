@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import { createWorkUnit } from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import { makeItem } from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
+import { currentDelegatedActorExecution } from '../../engine/work-unit-test-helpers.mjs';
 
 const created = [];
 function tempBundle() {
@@ -17,7 +18,15 @@ function queueItem() {
   return makeItem({
     queue_item_id: 'topic-a', title: 'Source intake',
     targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
-    kind: 'wave0_source_intake', producer_rule: 'source_intake_fan_in', payload: { topic_slug: 'topic-a' },
+    kind: 'wave0_source_intake',
+    producer_rule: 'source_intake_fan_in',
+    payload: {
+      topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+      topic_slug: 'topic-a',
+      wave: 0,
+    },
+    required_receipts: ['file:artifacts/wave0/topic-a/source.yaml'],
+    writes_to: ['artifacts/wave0/topic-a/source.yaml'],
   });
 }
 function assertReceiptBoundary(content, label) {
@@ -32,7 +41,11 @@ describe('work-unit receipt guidance boundary', () => {
 
   it('keeps generated task and spawn prompt on assigned receipt authority', () => {
     const dir = tempBundle();
-    const { manifest, spawn_prompt } = createWorkUnit(dir, { queueItem: queueItem(), wave: 0 });
+    const { manifest, spawn_prompt } = createWorkUnit(dir, {
+      queueItem: queueItem(),
+      wave: 0,
+      actor_execution: currentDelegatedActorExecution('dpt-source-intake'),
+    });
     const task = readFileSync(path.join(dir, manifest.paths.task_ref), 'utf8');
     assertReceiptBoundary(task, 'generated task');
     assertReceiptBoundary(spawn_prompt, 'spawn prompt');

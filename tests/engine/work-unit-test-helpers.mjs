@@ -126,6 +126,25 @@ export function availableActorDecision(kind = 'wave0_source_intake') {
   };
 }
 
+export function currentDelegatedActorExecution(roleKey) {
+  if (typeof roleKey !== 'string' || roleKey.length === 0) {
+    throw new Error('current delegated actor execution requires an explicit role key');
+  }
+  return {
+    execution_actor_class: 'delegated_subagent',
+    delegated_role_key: roleKey,
+    observation: {
+      outcome: 'available',
+      source: 'native_probe',
+      role_key: roleKey,
+      reason_code: 'probe_succeeded',
+      recorded_at: '2026-08-15T00:00:00.000Z',
+    },
+    policy_decision: 'normal_allowed',
+    fallback_from: null,
+  };
+}
+
 export function delegatedQueueItem(id = 'queue-a', overrides = {}) {
   const phase = overrides.phase || 'wave0';
   const kind = overrides.kind || kindForPhase(phase);
