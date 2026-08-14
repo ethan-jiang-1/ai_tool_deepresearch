@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: retire-unreferenced-seed-topic-pointer
+status: not_applicable
+reason: >-
+  This change removes an unreferenced Agent-reading compatibility pointer. It
+  changes no deterministic runtime fact, resolver, established-by surface,
+  verdict consumer, or derived runtime projection: manifest membership, phase
+  dependencies, shared return-map guidance, seed-topic template and
+  operate-topic-state ownership, Gate behavior, bundle state, and Agent flow
+  remain unchanged.

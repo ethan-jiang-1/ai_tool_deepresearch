@@ -1,0 +1,28 @@
+schema_version: verification-routing/v1
+change: retire-unreferenced-seed-topic-pointer
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The change adds or modifies no JavaScript deterministic contract; the
+      existing workflow-package CLI is invoked as package-consistency evidence,
+      not recast as a new unit claim.
+  integration:
+    status: not_applicable
+    rationale: >-
+      No CLI, bundle, or cross-module behavior changes. The deletion is proved
+      through scoped absence/protected-surface review and the existing package
+      validator rather than a new integration behavior claim. The existing
+      package-validator integration test uses a synthetic package and cannot
+      prove that this specific current pointer has no caller.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      The change does not alter a workflow-scale deterministic path, lifecycle,
+      run-bundle format, or current end-to-end result.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change makes no claim about Agent research, judgment, writing, tool
+      use, or trace-backed Agent behavior.
+claims: []
