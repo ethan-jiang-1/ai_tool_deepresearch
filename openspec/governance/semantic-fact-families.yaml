@@ -1,5 +1,10 @@
 schema_version: semantic-fact-families/v1
 families:
+  - id: verification.autorun-current-retained-observation
+    bounded_question: >-
+      Which retained Autorun report/audit records may establish current
+      prediction, admission, qualification, group-selection, or launch facts,
+      and which records are diagnostic-only historical material?
   - id: research.scope-and-rerun-intent
     bounded_question: What are the current scope, canonical Topic, and rerun intent?
   - id: research.host-access-envelope
