@@ -182,7 +182,7 @@
 | 16 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-retire-legacy-work-unit-attempt-inputs/) |
 | 17 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-15-retire-transaction-v1-history/) |
 | 18 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-15-retire-gate-content-dedup-tombstone/) |
-| 19 的唯一待决 docs/tests alignment | [C8 decision card](current-contract-signal-cleanup/changes/C8-sharpen-context-and-routing.md) |
+| 19 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-15-align-current-guidance-contract-guards/) |
 
 ## 更新规则
 
@@ -196,3 +196,10 @@
 只有当所有顶层执行项都已勾选，或有证据证明无需执行并明确关闭，且 coverage 仍然完整、
 current docs/specs/tests 只暴露当前成功路径、最终 package/spec/requirement checks 全部通过时，
 本计划才算完成。
+
+## 归档说明
+
+2026-08-15 的收尾审计确认：19 个执行批次均已 governed-archived 并提交，本计划满足上述完成条件，
+因此移入 `_backlog/_done/_closed_plans/`。审计还提出四项 P2 Markdown regression-guard strengthening
+建议；它们不是当前行为或兼容路径缺陷，也不重开本计划。若决定采用，必须作为新的、独立的 OpenSpec
+change 提出。

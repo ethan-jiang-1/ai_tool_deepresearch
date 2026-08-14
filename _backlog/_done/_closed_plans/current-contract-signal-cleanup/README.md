@@ -14,20 +14,16 @@ The [coverage ledger](coverage-ledger.md) answers whether the repository audit i
 [policy and protocol](policy-and-protocol.md) explains when cards may share one execution batch.
 The [execution ledger](execution-ledger.md) records completed archives.
 
-## Current Decision
+## Final Execution State
 
 | Dashboard item | Decision cards | Current status | OpenSpec change |
 |---:|---|---|---|
 | 18 | [C7 residual main-spec cleanup](changes/C7-rewrite-main-specs-as-current-state.md) | Governed-archived: live GAC spec/catalog entry retired; immutable deprecated registry/archive history retained | `2026-08-15-retire-gate-content-dedup-tombstone` |
-| 19 | [C8 context/routing cleanup](changes/C8-sharpen-context-and-routing.md) | Only remaining item: classify current routing guards, documentation omissions, and complete-current-profile fixture inputs before proposal | none |
+| 19 | [C8 context/routing cleanup](changes/C8-sharpen-context-and-routing.md) | Governed-archived: current routing, HITL1, reference-reader, logical-actor, and current-profile fixture guards align with existing current contracts | `2026-08-15-align-current-guidance-contract-guards` |
 
 ## Remaining Decision Queue
 
-Cards remain individually reviewable even when they conditionally share one OpenSpec lifecycle.
-
-| Order | Card | Risk | Planned execution batch | Decision still needed |
-|---:|---|---:|---|---|
-| 19 | [C8 context/routing cleanup](changes/C8-sharpen-context-and-routing.md) | L2-L3 | separate later change | Classify each stale assertion/current-doc omission and determine the two fixture profile inputs |
+None. The 19 dashboard items are governed-archived. A future finding must enter as a new bounded card rather than reopening this completed program.
 
 ## Family Maps
 

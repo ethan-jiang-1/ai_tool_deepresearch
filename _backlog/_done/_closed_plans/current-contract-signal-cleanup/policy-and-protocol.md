@@ -109,12 +109,14 @@ finalizer required by current operation guidance.
 
 ## Program Close Conditions
 
-- [ ] Dashboard items 01-18 are archived or explicitly closed as unnecessary with evidence.
-- [ ] Coverage ledger remains complete with zero unclassified candidates.
-- [ ] Each audited artifact family exposes one current positive contract.
-- [ ] Current docs/specs/tests do not teach old input as a success path.
-- [ ] Historical artifacts remain manually readable but are not silently executed or migrated.
-- [ ] Current recovery, rerun, provenance, supersession, and transaction safety remain verified.
-- [ ] Main specs and capability catalog describe current observable behavior rather than change history.
-- [ ] `CONTEXT.md` and routing instructions pass their final signal review.
-- [ ] Final package, spec, requirement, and selected behavioral checks pass.
+Close evidence: all 19 dashboard items are governed-archived; the execution ledger records their scoped verification and the C8 finalizer completed on 2026-08-15.
+
+- [x] Dashboard items 01-19 are archived or explicitly closed as unnecessary with evidence.
+- [x] Coverage ledger remains complete with zero unclassified candidates.
+- [x] Each audited artifact family exposes one current positive contract.
+- [x] Current docs/specs/tests do not teach old input as a success path.
+- [x] Historical artifacts remain manually readable but are not silently executed or migrated.
+- [x] Current recovery, rerun, provenance, supersession, and transaction safety remain verified.
+- [x] Main specs and capability catalog describe current observable behavior rather than change history.
+- [x] `CONTEXT.md` and routing instructions pass their final signal review.
+- [x] Final package, spec, requirement, and selected behavioral checks pass.

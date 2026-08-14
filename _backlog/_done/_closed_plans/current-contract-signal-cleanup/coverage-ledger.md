@@ -1,6 +1,6 @@
 # Current-Contract Signal Cleanup: Coverage Ledger
 
-> Status: audit coverage complete; item 18 (C7) is governed-archived; only item 19 (C8 current decision) remains
+> Status: audit coverage and all 19 execution batches complete; C8 is governed-archived and this ledger is historical evidence
 >
 > Purpose: prove audit coverage before any new cleanup proposal, not count keyword hits as evidence.
 
@@ -44,7 +44,7 @@ backlog/run-bundle paths without explicit user authorization.
 | C5 reference / experiment formats | archived | items 08-09 made current writers UID-only and retired historic reference-reader evidence; C1f retired archive-only experiment-ledger scaffolding; C5b retired v1 retained-history input to current Supervisor prediction/admission/selection without reading or rewriting real retained history | no remaining C5 work |
 | C6 work-unit historical contracts | archived | C6a/C6b/C6c are governed-archived as the complete-current work-unit profile; C6d policy A has retired positive v1 authority while preserving raw fail-closed unsafe-journal detection; `legacy_non_work_unit_rows` stays protected | no remaining C6 work |
 | C7 main specs as current state | archived | `engine/gate-content-dedup` live main spec/catalog residual is removed; GAC-001..009 remain immutable deprecated registry/archive history | no remaining C7 work |
-| C8 context / routing | current item 19 | direct routing surfaces and guards are classified, but current-doc omissions/stale assertions and two current-profile fixtures have a distinct scope | classify each test/doc/fixture fact; do not weaken a behavior guard merely to remove an old literal |
+| C8 context / routing | archived | current routing guards, documentation omissions, and complete-current-profile fixtures were aligned to the existing current contracts by dashboard item 19 | no remaining C8 work |
 | Other broad-scan clusters | audit closed | fallback, version discriminator, recovery/history, and current rejection terms are classified as protected semantics, rejection boundaries, or false positives | no unowned cluster remains; future discovery is added as a new bounded row |
 
 ## Global Gate

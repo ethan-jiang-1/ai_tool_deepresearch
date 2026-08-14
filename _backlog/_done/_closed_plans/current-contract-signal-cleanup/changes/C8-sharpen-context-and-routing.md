@@ -1,10 +1,10 @@
 # C8: Sharpen Context and Routing
 
-> 候选 change：`sharpen-context-and-routing`
+> Archived change：`2026-08-15-align-current-guidance-contract-guards`
 >
-> Planned execution batch: dashboard item 19; the only remaining batch after C7 independently archived
+> Completed execution batch: dashboard item 19
 >
-> 状态：current item; no proposal until each failed current routing/doc/fixture guard is classified
+> 状态：governed-archived and committed (`9030fa785`)
 >
 > 风险：L2-L3
 
@@ -42,9 +42,9 @@
 - 不把 ADR 设为普遍必读；继续按需读取。
 - [x] Dashboard items 09-18 已 archive；重新枚举 docs 中实际的 current owner links，定位只指向 retired/currently removed surfaces 的链接。
 - [x] Merge gate 复核失败：C7 仅退役 accepted-spec/registry identity；C8 会影响 current docs/tests，并含 profile fixture risk，必须独立 lifecycle。C7 已于 2026-08-15 archived，不能借其 scope 删除或弱化 C8 guards。
-- [ ] 每个拟改 Markdown test 先分类为 behavior/routing/wording-only。
-- [ ] 确定 `work-unit-direct-output-guidance` 与 `work-unit-receipt-guidance` fixture 所需的最小 complete-current actor profile；不改变 Engine profile requirement。
-- [ ] 以 agent task 的真实读取路径进行 reviewer walkthrough：Charter -> Context -> task owner，而不只是运行 regex。
+- [x] 每个拟改 Markdown test 已分类为 behavior/routing/wording-only。
+- [x] 已确定 `work-unit-direct-output-guidance` 与 `work-unit-receipt-guidance` fixture 所需的最小 complete-current actor profile；未改变 Engine profile requirement。
+- [x] 已按 agent task 的真实读取路径完成 reviewer walkthrough：Charter -> Context -> task owner，而不只是运行 regex。
 
 ## Verification
 
@@ -60,7 +60,7 @@ node DEEP_RESEARCH_HARNESS/cli/validate-workflow-package.mjs
 
 ## 何时算完成
 
-- [ ] `CONTEXT.md` 仍能让新 Agent 分清 authority 与 runtime boundary，但不复制 specs/playbooks。
-- [ ] all current routing docs only name current success routes.
-- [ ] remaining literal Markdown assertions protect a meaningful routing/authority fact.
-- [ ] no doc becomes a shadow behavior spec.
+- [x] `CONTEXT.md` 仍让新 Agent 分清 authority 与 runtime boundary，但不复制 specs/playbooks。
+- [x] all current routing docs only name current success routes.
+- [x] remaining literal Markdown assertions protect a meaningful routing/authority fact.
+- [x] no doc becomes a shadow behavior spec.

@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-08-12 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-08-15 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -81,5 +81,6 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-059 | 2026-08-12 | systemic-active-bug-remediation.md | BUG-216--219 经两项最小 OpenSpec change 全部修复：guidance/test drift 由 `repair-agent-guidance-contract-drift`（`65fdb829a`）关闭，public schema/reference-format contract 由 `harden-agent-authored-contracts`（`ab2f17c49`，v0.88）关闭。 |
 | CLS-060 | 2026-08-12 | active-bugs-220-224-primary-source-research.md | BUG-220--224 的 current-head primary-source 分诊已由后续有界 change 验证并完成：220 保留 exact regression，221--223 修复，224 作为 accepted grammar 澄清。 |
 | CLS-061 | 2026-08-12 | bug-220-224-wave-reference-closeout-remediation.md | `repair-wave1-reference-closeout-feedback`（`5503cc37b`，v0.89）已 archive；完成 Wave1 depth-review-first closeout、root-first feedback、supplementary review sync，并保留一个 resolver/consumer/derived projection 形状。 |
+| CLS-062 | 2026-08-15 | current-contract-signal-cleanup.md + current-contract-signal-cleanup/ | 19 个 current-only cleanup execution batch 均 governed-archived；最终 C8 为 `2026-08-15-align-current-guidance-contract-guards`（`9030fa785`）。未来若采用四项 Markdown regression-guard 加强建议，须另建有界 change，不重开本计划。 |
 
-**Next available plan ID: CLS-062**
+**Next available plan ID: CLS-063**
