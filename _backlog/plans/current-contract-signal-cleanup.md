@@ -2,16 +2,16 @@
 
 > **唯一进度入口：每次回来只看下面这张总清单。**
 >
-> 总进度：`[#################-]` **17 / 18 个执行项已归档或明确关闭；还剩 1 个（18）**
-> 当前位置：**18 / `C7+C8`；仅剩 current-state presentation cleanup，尚未开始 proposal。**
-> 眼前一步：**先重验 C7/C8 是否仍共享纯 presentation-only 边界，再列出精确 residual set、owner、风险和验证；未获用户逐项确认前不得创建 proposal 或修改 Harness/specs/docs/tests。**
-> 修改权限：**C6d 已 governed-archived 并提交。Item 18 目前只有调查与 decision-card/backlog 更新权限；`DEEP_RESEARCH_HARNESS/`、accepted main specs、routing docs 与 tests 均保持只读。**
+> 总进度：`[##################-]` **18 / 19 个执行项已归档或明确关闭；还剩 1 个（19）**
+> 当前位置：**19 / `C8`；C7 已 governed-archived 并提交，C8 尚未创建 proposal。**
+> 眼前一步：**先为 C8 逐项确认：哪些 Markdown test 在保护真正的 routing/authority behavior，哪些只是过期 literal；并为两个 guidance fixture 确认最小 complete-current actor profile。确认前不创建 proposal，也不修改 target docs/tests/fixtures。**
+> 修改权限：**C7 已归档并提交（`b0e7d4e96`）。C8 现在仅有调查与 decision-card/backlog 更新权限；`DEEP_RESEARCH_HARNESS/`、accepted main specs、routing docs 与 tests 保持只读，直至完成独立 proposal、checks、polish 并获用户 `APPLY`。**
 >
 > Proposal gate：**每个新 OpenSpec proposal 完成 planning checks 后，必须紧接着运行 `polish-openspec-change`；只有 checks 与 polish 都通过，才可进入 review / `APPLY`。**
 
 ## 总 Todo Checklist
 
-编号 `01-18` 是实际执行顺序，每一项对应一个 OpenSpec 执行批次或明确关闭决定；`C...` 是审计卡编号，
+编号 `01-19` 是实际执行顺序，每一项对应一个 OpenSpec 执行批次或明确关闭决定；`C...` 是审计卡编号，
 两者不是一套编号。当前项只在这张清单内展开，不再另设 `Current Item` 章节。顶层 checkbox
 只有在该批次完成 governed archive、commit，并回填本看板后才勾选。
 
@@ -129,12 +129,26 @@
   - [x] 新增 schema/unit/integration/deterministic-E2E 证明：unsafe v1 零 mutation；committed v1 不阻断 current v2；v1-only evidence 无 declaration recovery 或 supersession authority。
   - [x] 完成 selected deterministic verification、workflow-package validation、strict/archive governance、semantic closure、delta/main sync 与 closeout review；`tasks.md` 为 `18 / 18`。
   - [x] Governed archive（全部 finalizer checks passed）并提交 implementation/archive/spec sync（`858cbdb87`）；已回填本看板与 execution ledger。
-- [ ] 18 `C7+C8`：最终清理 main specs、context 与 routing 的当前态表述
+- [x] 18 `C7`：退役 `gate-content-dedup` 的 pure-retired live spec/catalog entry
+  - OpenSpec archive: [`2026-08-15-retire-gate-content-dedup-tombstone`](../../openspec/changes/archive/2026-08-15-retire-gate-content-dedup-tombstone/)
+  - 已证实范围仅为 `openspec/specs/engine/gate-content-dedup/spec.md`、catalog row、GAC retired registry metadata；不改 Harness/runtime/current docs/tests。
+  - 合并门对 C8 不成立：C7 的 Source of Record 是 accepted-spec/registry identity；C8 的 Source of Record 是 current routing docs 与 Markdown regression guards，且后者含 work-unit fixture current-profile 风险，consumer/test/rollback boundary 不同。
+  - [x] 复核 residual set、runtime 零正向 authority 与 `BUS`/`FOR` whole-capability-retirement 先例。
+  - [x] 创建 OpenSpec scaffold、proposal、removal delta、design、tasks、semantic closure 与 verification plan。
+  - [x] 运行 strict/planning governance checks 并完成 required `polish-openspec-change`：三轮复核后 ready；修正了 registry retired-tail 精确位置、将治理事实与 hygiene-test 事实分开，并保护 `agent/agent-testing` 的现行 negative metric boundary。
+  - [x] 用户明确授权 `APPLY`；先完成 feedback plan review，再进入 target edits。
+  - [x] 实施 `tasks.md` 9 / 9：删除 live GAC main spec/catalog entry，保留九个 deprecated GAC IDs 的 registry/archive history；Harness/runtime/current docs/tests 未改。
+  - [x] 完成 hygiene integration（1 / 1）、workflow-package、strict OpenSpec、archive requirement/project-spec/taxonomy/discovery、verification-routing/semantic-closure 与 delta/main re-comparison。
+  - [x] 完成 closeout review 与 governed archive（全部 finalizer checks passed）；commit implementation/archive（`b0e7d4e96`）。
+  - [x] 回填本看板、execution ledger、coverage ledger 与 C7/C8 decision cards。
+- [ ] 19 `C8`：对齐 current context/routing Markdown guards（唯一剩余项，独立决定）
+  - C8 不可与 C7 合并：它涵盖 C3 后过期 routing literal assertions、C4a/C5a-2 policy 后的旧断言、RUN.md actor/liveness guidance 漏项，以及两个缺 complete-current-work-unit profile 的 guidance fixtures。
+  - 先确认两个 fixture 的最小 current profile input，再逐项区分「test 旧断言」与「current doc 漏掉事实」；不得借 C7 删除/弱化这些 behavior guards。
 
-## 为什么是 18 项
+## 为什么是 19 项
 
 - **审计口径：** 21 张细粒度 decision cards，用来保证风险不漏项。
-- **执行口径：** 17 个已归档执行批次 + 1 个剩余执行批次/决定 = 目标总数 18。
+- **执行口径：** 18 个已归档执行批次 + 1 个剩余执行批次/决定 = 目标总数 19。
 - 一张 decision card 不自动等于一个 OpenSpec change。
 - 只有 Source of Record、兼容决策、consumer/test 影响面和回滚边界一致时才合并执行。
 - 失败后果或 mutation safety 不同时必须拆开，所以 `C5a-2` 不与 experiment 合并，
@@ -159,7 +173,8 @@
 | 15 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-decide-retained-experiment-history-policy/) |
 | 16 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-14-retire-legacy-work-unit-attempt-inputs/) |
 | 17 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-15-retire-transaction-v1-history/) |
-| 18 的待决清理范围 | [C7/C8 decision cards](current-contract-signal-cleanup/README.md) |
+| 18 的归档提案与验证记录 | [Archived OpenSpec change](../../openspec/changes/archive/2026-08-15-retire-gate-content-dedup-tombstone/) |
+| 19 的唯一待决 docs/tests alignment | [C8 decision card](current-contract-signal-cleanup/changes/C8-sharpen-context-and-routing.md) |
 
 ## 更新规则
 

@@ -2,15 +2,15 @@
 
 > 候选 change：`sharpen-context-and-routing`
 >
-> Planned execution batch: dashboard item 18 `finalize-current-contract-presentation`, conditionally combined with C7 residual cleanup
+> Planned execution batch: dashboard item 19; the only remaining batch after C7 independently archived
 >
-> 状态：current dashboard item; revalidate the shared presentation-only boundary and exact residual set before any proposal
+> 状态：current item; no proposal until each failed current routing/doc/fixture guard is classified
 >
-> 风险：L1-L2
+> 风险：L2-L3
 
 ## 要解决什么
 
-`CONTEXT.md` 目前只有 74 行，且已有明确非权威边界。它不是主要噪声源；真正风险是它以及 root/Harness instructions 被 tests 固定成特定句子、链接和顺序，导致每次当前 contract 演进都要保持历史措辞。应在 runtime/spec 清理完成后，与 C7 residual spec/catalog cleanup 共同重验 dashboard item 18 的合并边界，再压缩为最少的术语和 authority pointers。
+`CONTEXT.md` 目前只有 74 行，且已有明确非权威边界。它不是主要噪声源；真正风险是它以及 root/Harness instructions 被 tests 固定成特定句子、链接和顺序，导致每次当前 contract 演进都要保持历史措辞。C7 已完成 pure-retired spec/catalog 清理；C8 现在只处理仍然存在的 current routing/doc guards 与 fixture profile 事实，并且必须先逐项分类，再压缩为最少的术语和 authority pointers。
 
 ## 已验证事实
 
@@ -20,6 +20,7 @@
 | root `AGENTS.md` | 给出 Charter-first、OpenSpec phase gate、Deep Research routing | 改错会突破治理或路由错误 |
 | Harness `AGENTS.md`/`CLAUDE.md`/README/RUN/COMMANDS | 当前含 legacy bundle-entry guidance | C3 后应同步，不能单独先改成与 CLI 不符 |
 | Markdown tests | 多处匹配 literal link/wording/order | 容易把文案当行为 contract |
+| work-unit guidance fixtures | 2 个 fixture 在 C6 complete-current profile 后无法创建 envelope | 必须补最小 current profile facts；不能把 fixture failure 当作 wording-only 问题 |
 
 ## 目标 contract
 
@@ -39,8 +40,10 @@
 - 不把 `CONTEXT.md` 误删成无用 slogan。每条保留/删除都问：去掉后 Agent 会把哪两个 current concepts 混淆？
 - 不改变 Deep Research selected-bundle routing 的硬 gate，直到 C3 的 behavior 已 archive。
 - 不把 ADR 设为普遍必读；继续按需读取。
-- [x] Dashboard items 09-17 已 archive；现在与 C7 residual inventory 一起重新枚举 docs 中实际的 current owner links，定位只指向 retired/currently removed surfaces 的链接。
+- [x] Dashboard items 09-18 已 archive；重新枚举 docs 中实际的 current owner links，定位只指向 retired/currently removed surfaces 的链接。
+- [x] Merge gate 复核失败：C7 仅退役 accepted-spec/registry identity；C8 会影响 current docs/tests，并含 profile fixture risk，必须独立 lifecycle。C7 已于 2026-08-15 archived，不能借其 scope 删除或弱化 C8 guards。
 - [ ] 每个拟改 Markdown test 先分类为 behavior/routing/wording-only。
+- [ ] 确定 `work-unit-direct-output-guidance` 与 `work-unit-receipt-guidance` fixture 所需的最小 complete-current actor profile；不改变 Engine profile requirement。
 - [ ] 以 agent task 的真实读取路径进行 reviewer walkthrough：Charter -> Context -> task owner，而不只是运行 regex。
 
 ## Verification

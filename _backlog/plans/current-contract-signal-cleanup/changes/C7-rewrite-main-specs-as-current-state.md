@@ -1,10 +1,10 @@
 # C7: Rewrite Main Specs as Current State
 
-> 候选 change：`rewrite-main-specs-as-current-state`
+> Archived change：`2026-08-15-retire-gate-content-dedup-tombstone`
 >
-> Planned execution batch: dashboard item 18 `finalize-current-contract-presentation`, conditionally combined with C8 residual cleanup
+> Completed execution batch: dashboard item 18; intentionally split from C8
 >
-> 状态：current dashboard item; revalidate the shared presentation-only boundary and exact residual set before any proposal
+> 状态：governed-archived and committed (`b0e7d4e96`)
 >
 > 风险：L2-L3
 
@@ -23,7 +23,7 @@ catalog/spec noise 或 contradictory wording 的 residual set。
 | Fact | 解释 |
 |---|---|
 | retired IDs 有 registry 级 tombstone 语义 | registry 历史不应被删除或复用 |
-| `bundle-start-from-here` 和 `gate-content-dedup` 是 pure-retired main specs | 最明显的 catalog/spec noise candidates |
+| `gate-content-dedup` 是剩余 pure-retired main spec | `bundle-start-from-here` 已由 C3 退役；GAC 是唯一当前可执行 residual |
 | main spec 中含有明确 current rejection 规则 | 不能把每个 `legacy` token 都当作纯历史删掉 |
 | governance traceability spec 已规定 current surface 如何谈 retired terms | 清理必须遵守现有 hygiene contract，而非自创关键词扫描规则 |
 
@@ -58,9 +58,12 @@ catalog/spec noise 或 contradictory wording 的 residual set。
 - 任何删掉 requirement 的动作都要遵守 requirement registry 的 archive/sync route；不能手工让 ID 变 orphan。
 - 不能用“字数下降”作为 done condition。若 current behavior 尚存在，必须先留在 owner spec。
 - [x] Dashboard items 09-17 已提供实际 runtime disposition并同步各自 main specs；现在重验 residual set，不以历史 inventory 直接写 delta。
-- [ ] 创建 per-spec inventory，列出 requirement owner、behavior evidence、classification 和 action。
-- [ ] 对 residual set 逐项证明 owner/action；不以“85 份都重写”为目标。
-- [ ] 任何 wording-only test 都要解释其保护的是 routing/authority 还是只是段落文本。
+- [x] 重新核验 residual set：`gate-content-dedup` 是唯一 current main-spec/catal​​og pure tombstone；所有 GAC IDs 已 deprecated，当前 runtime/guidance 无正向 authority。
+- [x] C7/C8 merge gate failed：registry/spec retirement 与 routing guards/current-profile fixtures 不共享 owner、consumer/test 或 rollback boundary。
+- [x] 创建 standalone `retire-gate-content-dedup-tombstone` planning artifacts；不以“85 份都重写”为目标。
+- [x] 完成 strict/planning governance checks 与三轮 `polish-openspec-change`；registry retired-tail position、governance/test proof boundary、`agent/agent-testing` negative metric owner 均已复核。
+- [x] 用户授权 `APPLY`；完成 9 / 9 tasks、closeout review 与 governed archive。live `engine/gate-content-dedup` spec/catalog entry 已移除，GAC-001..009 仅保留为不可复用的 retired registry/archive history。
+- [x] focused hygiene integration（1 / 1）、workflow-package、strict OpenSpec、archive requirement/project-spec/taxonomy/discovery、verification-routing/semantic-closure 以及 delta/main re-comparison 全部通过；Harness、runtime guidance、tests 与 C8 surfaces 无 target diff。
 
 ## Verification
 
@@ -74,7 +77,7 @@ node openspec/governance/check-project-reqs.mjs --mode archive --change <change>
 
 ## 何时算完成
 
-- [ ] pure-retired main spec count is zero, unless an accepted governance owner explicitly requires a minimal live negative boundary.
-- [ ] remaining historical wording has per-hit current-contract justification.
-- [ ] catalog, main specs and executable behavior agree on every changed capability.
-- [ ] archived changes—not current specs—carry migration history.
+- [x] pure-retired main spec count is zero for the independently proven GAC residual；不保留 live negative-boundary tombstone。
+- [x] changed GAC historical identity is justified only in the registry/archive，not a current main spec。
+- [x] catalog、main specs 与 executable behavior一致：current surfaces 无 `engine/gate-content-dedup` capability，GAC IDs 保留为 deprecated history。
+- [x] archived change—not current specs—carries the retirement rationale and migration history。

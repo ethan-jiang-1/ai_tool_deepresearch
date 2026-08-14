@@ -18,7 +18,8 @@ The [execution ledger](execution-ledger.md) records completed archives.
 
 | Dashboard item | Decision cards | Current status | OpenSpec change |
 |---:|---|---|---|
-| 18 | [C7 residual main-spec cleanup](changes/C7-rewrite-main-specs-as-current-state.md), [C8 context/routing cleanup](changes/C8-sharpen-context-and-routing.md) | Reassess the shared presentation-only boundary and exact residual set; no proposal yet | none |
+| 18 | [C7 residual main-spec cleanup](changes/C7-rewrite-main-specs-as-current-state.md) | Governed-archived: live GAC spec/catalog entry retired; immutable deprecated registry/archive history retained | `2026-08-15-retire-gate-content-dedup-tombstone` |
+| 19 | [C8 context/routing cleanup](changes/C8-sharpen-context-and-routing.md) | Only remaining item: classify current routing guards, documentation omissions, and complete-current-profile fixture inputs before proposal | none |
 
 ## Remaining Decision Queue
 
@@ -26,8 +27,7 @@ Cards remain individually reviewable even when they conditionally share one Open
 
 | Order | Card | Risk | Planned execution batch | Decision still needed |
 |---:|---|---:|---|---|
-| 18 | [C7 residual main-spec cleanup](changes/C7-rewrite-main-specs-as-current-state.md) | L2-L3 | `finalize-current-contract-presentation` | Exact residual set after C6d completes |
-| 18 | [C8 context/routing cleanup](changes/C8-sharpen-context-and-routing.md) | L1-L2 | `finalize-current-contract-presentation` | Which wording tests protect behavior versus prose |
+| 19 | [C8 context/routing cleanup](changes/C8-sharpen-context-and-routing.md) | L2-L3 | separate later change | Classify each stale assertion/current-doc omission and determine the two fixture profile inputs |
 
 ## Family Maps
 

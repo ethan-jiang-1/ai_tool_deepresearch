@@ -24,6 +24,7 @@
 | 15 | 2026-08-14 | `2026-08-14-decide-retained-experiment-history-policy` | Retained v1 report/audit/selection material is human-readable/diagnostic-only and cannot establish current Supervisor prediction, admission, qualification, group-gap, selection, or launch facts; current-v2 stale-surface qualification remains explicit | commits `1aa0c1c35`, `a407cf980`, `969dbfbcd`, `0ea53de58`; 52 selected deterministic unit/integration tests, delta/main re-comparison, strict OpenSpec/archive governance, closeout review, and governed finalizer |
 | 16 | 2026-08-14 | `2026-08-14-retire-legacy-work-unit-attempt-inputs` | Explicit assignment v1/v2, markerless submission history, and actor-unrecorded attempts stop at `unsupported_current_contract`; the complete current work-unit profile remains the sole current authority | commit `7a96ca254`; selected deterministic unit/integration/deterministic-E2E suites, workflow-package validation, delta/main re-comparison, strict OpenSpec/archive governance, closeout review, and governed finalizer |
 | 17 | 2026-08-15 | `2026-08-15-retire-transaction-v1-history` | Public transaction authority is v2-only; unsafe v1/invalid bytes still fail closed, while a complete committed v1 file is diagnostic-only and cannot establish acceptance or lineage authority | commit `858cbdb87`; selected schema/unit/integration/deterministic-E2E suites, workflow-package validation, delta/main re-comparison, strict OpenSpec/archive governance, closeout review, and governed finalizer |
+| 18 | 2026-08-15 | `2026-08-15-retire-gate-content-dedup-tombstone` | Pure-retired `engine/gate-content-dedup` no longer has a live main-spec/catalog identity; GAC-001..009 remain immutable deprecated registry/archive history only | commit `b0e7d4e96`; hygiene integration 1/1, workflow-package validation, strict OpenSpec, archive requirement/project-spec/taxonomy/discovery, verification-routing/semantic-closure, delta/main comparison, closeout review, and governed finalizer |
 
 ## Notable Sequencing Decisions
 
@@ -61,6 +62,7 @@ without deleting required behavior.
 | 2026-08-14 | 15 | Retained v1 experiment material made diagnostic-only; current Supervisor strategy input is complete v2 only | PASS |
 | 2026-08-14 | 16 | Legacy work-unit attempt inputs rejected before current authority computation; the complete current profile remains usable | PASS |
 | 2026-08-15 | 17 | Positive transaction-v1 authority removed; unsafe raw bytes remain fail-closed and committed v1 is diagnostic-only | PASS |
+| 2026-08-15 | 18 | Pure-retired GAC main spec/catalog entry removed while historical IDs remain registry/archive-only | PASS |
 
 ## Update Template
 
