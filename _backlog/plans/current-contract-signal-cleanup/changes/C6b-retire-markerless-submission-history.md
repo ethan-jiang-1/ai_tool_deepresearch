@@ -2,7 +2,7 @@
 
 > Candidate change: `retire-markerless-submission-history`
 >
-> Planned execution batch: dashboard item 12 `retire-historic-work-unit-record-readers`, conditional on C6a/C6c policy alignment
+> Planned execution batch: dashboard item 16 `C6a+C6b+C6c`, conditional on C6a/C6c policy alignment
 >
 > Status: decision card; reader fanout complete and user policy pending
 >

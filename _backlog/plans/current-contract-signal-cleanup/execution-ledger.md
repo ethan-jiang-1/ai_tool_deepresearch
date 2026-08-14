@@ -21,6 +21,7 @@
 | 12 | 2026-08-14 | `2026-08-14-retire-unreferenced-seed-topic-pointer` | The unregistered seed-topic compatibility pointer is absent; direct template, playbook, and loaded return-map owners remain the only current paths | commit `530a25cff`; exact zero-reference scans, workflow-package validation, strict OpenSpec, archive governance, closeout review, and governed finalizer |
 | 13 | 2026-08-14 | `2026-08-14-retire-unreachable-yaml-subset-parser` | The unreachable private YAML-subset parser is absent; exported JSON-first/package-backed YAML parsing remains the only current frontmatter path | commit `513186872`; 39 focused parser tests, workflow-package validation, zero-reference and protected-surface review, strict OpenSpec/governance, closeout review, and governed finalizer |
 | 14 | 2026-08-14 | `2026-08-14-retire-archived-case-ledger-helper` | The archive-only case-ledger helper cluster and its archive-path baseline test are absent; the manifest remains the sole runnable-corpus authority | commit `374d86c33`; selected host-tool/Supervisor integration regression, workflow-package validation, zero-reference/protected-surface review, strict OpenSpec/archive governance, closeout review, and governed finalizer |
+| 15 | 2026-08-14 | `2026-08-14-decide-retained-experiment-history-policy` | Retained v1 report/audit/selection material is human-readable/diagnostic-only and cannot establish current Supervisor prediction, admission, qualification, group-gap, selection, or launch facts; current-v2 stale-surface qualification remains explicit | commits `1aa0c1c35`, `a407cf980`, `969dbfbcd`, `0ea53de58`; 52 selected deterministic unit/integration tests, delta/main re-comparison, strict OpenSpec/archive governance, closeout review, and governed finalizer |
 
 ## Notable Sequencing Decisions
 
@@ -29,7 +30,7 @@
 - C4a and C4b were separate because profile access and plan migration had different readers and failure consequences.
 - C5a-1 changed current writers only; historic reference-reader policy remained explicitly deferred to item 09.
 - C5a-2 then retired the historic reader branch without rewriting retained Markdown; the C1 inactive-surface cards may now be evaluated independently.
-- C1d retired the unimplemented fork-repair promise without adding compatibility or changing current runtime behavior; C1c then removed its separately approved stale internal API without changing current routing. C1b then removed its independently verified zero-caller pointer without changing the loaded Seed Topics closure; C1e then removed its independently verified private parser without changing the exported parser contract. C1f then retired the archive-only case-ledger reader/validator/test cluster without changing current manifest or Supervisor behavior. C5b remains separate because it decides current retained-history selection policy.
+- C1d retired the unimplemented fork-repair promise without adding compatibility or changing current runtime behavior; C1c then removed its separately approved stale internal API without changing current routing. C1b then removed its independently verified zero-caller pointer without changing the loaded Seed Topics closure; C1e then removed its independently verified private parser without changing the exported parser contract. C1f then retired the archive-only case-ledger reader/validator/test cluster without changing current manifest or Supervisor behavior. C5b remained separate because it decided current retained-history selection policy; it is now archived before the work-unit reader decisions begin.
 
 ## Metrics Snapshot
 
@@ -55,6 +56,7 @@ without deleting required behavior.
 | 2026-08-14 | 12 | Unreferenced seed-topic compatibility pointer retired while explicit current owners and package closure remain unchanged | PASS |
 | 2026-08-14 | 13 | Unreachable private YAML-subset parser retired while the exported JSON/YAML frontmatter contract remains unchanged | PASS |
 | 2026-08-14 | 14 | Archive-only case-ledger reader/validator/test cluster retired while current manifest/V2/Supervisor paths remain unchanged | PASS |
+| 2026-08-14 | 15 | Retained v1 experiment material made diagnostic-only; current Supervisor strategy input is complete v2 only | PASS |
 
 ## Update Template
 

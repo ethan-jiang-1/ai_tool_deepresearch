@@ -2,10 +2,10 @@
 
 > **唯一进度入口：每次回来只看下面这张总清单。**
 >
-> 总进度：`[##############----]` **14 / 18 个执行项已归档或明确关闭；还剩 4 个（15-18）**
-> 当前位置：**15 / C5b；用户已选择 C，OpenSpec proposal 已完成，等待 APPLY**
-> 眼前一步：**审阅并确认 `decide-retained-experiment-history-policy` 的 apply；retained v1 report/audit 只能人工阅读或产生非致命 diagnostics，不能影响当前 prediction、qualification 或 selection。**
-> 修改权限：**已获得 C5b policy decision；仅可创建或修订 OpenSpec proposal artifacts，尚未获得 APPLY 授权，Harness、tests 与 accepted main specs 不得修改**
+> 总进度：`[###############---]` **15 / 18 个执行项已归档或明确关闭；还剩 3 个（16-18）**
+> 当前位置：**16 / C6a+C6b+C6c；合并门与 policy decision 尚未完成**
+> 眼前一步：**只刻画三条 current work-unit 安全路径（v3 assignment、marked submission/recovery、recorded actor）；随后重判 C6a/C6b/C6c 的四项合并门，并逐项请用户选择 A/B/C。此步骤不改 Harness。**
+> 修改权限：**C5b 已归档并提交。C6 尚未有 policy decision 或 APPLY 授权；只能更新其 OpenSpec/backlog 决策材料，不得修改 Harness、tests 或 accepted main specs。**
 
 ## 总 Todo Checklist
 
@@ -94,11 +94,18 @@
   - [x] 完成 selected host-tool/Supervisor regression、workflow-package、零引用/protected-surface review、strict OpenSpec 与 archive governance/finalizer。
   - [x] Governed archive；commit implementation / archive artifacts（`374d86c33`）。
   - [x] 更新本看板、execution ledger、coverage ledger 与 C1f change card。
-- [ ] 15 `C5b`：决定 retained experiment history 是否进入 current prediction/admission/selection（单独执行）
+- [x] 15 `C5b`：决定 retained experiment history 是否进入 current prediction/admission/selection（单独执行）
   - [x] 用户选择 C：retained v1 report/audit 可人工阅读或产生非致命 diagnostics，但不得影响当前 prediction、qualification 或 selection。
-  - [x] 创建并审阅 standalone [`decide-retained-experiment-history-policy`](../../openspec/changes/decide-retained-experiment-history-policy/) OpenSpec proposal：四个 delta specs、design、tasks、semantic closure 与 verification plan 已齐全；strict/requirement/project-spec/taxonomy/discovery/routing/closure plan checks 均通过。
-  - [ ] 取得 `APPLY` 授权后，按 tasks.md 先完成 feedback plan review 和 plan checks，再改 Harness/tests；不得读取或重写真实 `.exp-bundles/` 历史。
+  - [x] 创建并审阅 standalone OpenSpec proposal：四个 delta specs、design、tasks、semantic closure 与 verification plan 完整；strict/requirement/project-spec/taxonomy/discovery/routing/closure plan checks 通过。
+  - [x] 已取得并完成 `APPLY`：先完成 feedback plan review 和 plan checks，再改 Harness/tests；未读取或重写真实 `.exp-bundles/` 历史。
+  - [x] 完成 `tasks.md` 的 2.1–4.4（14 / 16）：v1 current-input schemas/reader/qualification projection 已退出；current-v2 stale execution-surface 的显式 qualification 仍保留；选定 52 个 deterministic unit/integration tests 和 archive-preflight governance 均通过。
+  - [x] 将 ERS-001/ERS-002、EXA-009、EXO-007、PLR-004 delta specs 同步进 accepted main specs，并登记 `verification.autorun-current-retained-observation` semantic fact family。
+  - [x] 完成 closeout review 和 governed archive：[`2026-08-14-decide-retained-experiment-history-policy`](../../openspec/changes/archive/2026-08-14-decide-retained-experiment-history-policy/)。
+  - [x] Commit implementation/archive/spec sync（`1aa0c1c35`、`a407cf980`、`969dbfbcd`、`0ea53de58`）；已回填本看板、C5b card 与 execution ledger。
 - [ ] 16 `C6a+C6b+C6c`：停止读取历史 work-unit records（满足合并门时合并）
+  - [ ] 先分别刻画并验证 current v3 assignment、current marked submission/recovery/supersession、current recorded delegated/fallback actor 路径；不得以 legacy fixture 代替。
+  - [ ] 以 Source of Record、policy、consumer/test overlap、rollback boundary 四项条件重新判定合并；不成立则在尚未执行的分母内拆批。
+  - [ ] 逐卡向用户说明副作用并选择 A/B/C；完成前不得创建 removal proposal 或改 target code。
 - [ ] 17 `C6d`：将 transaction v1 明确限定为不支持的历史格式（单独执行）
 - [ ] 18 `C7+C8`：最终清理 main specs、context 与 routing 的当前态表述
 

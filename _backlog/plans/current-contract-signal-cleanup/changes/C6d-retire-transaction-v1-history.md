@@ -2,7 +2,7 @@
 
 > Candidate change: `retire-transaction-v1-history`
 >
-> Execution batch: dashboard item 13; standalone because it owns mutation safety
+> Execution batch: dashboard item 17; standalone because it owns mutation safety
 >
 > Status: decision card; reader fanout complete and user policy pending
 >

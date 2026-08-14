@@ -4,7 +4,7 @@
 >
 > Planned execution batch: dashboard item 15 `decide-retained-experiment-history-policy` (standalone; C1f merge gate failed)
 >
-> Status: standalone OpenSpec proposal complete on 2026-08-14; awaiting user `APPLY`
+> Status: governed archived on 2026-08-14 as [`2026-08-14-decide-retained-experiment-history-policy`](../../../../openspec/changes/archive/2026-08-14-decide-retained-experiment-history-policy/); commits `1aa0c1c35`, `a407cf980`, `969dbfbcd`, and `0ea53de58`
 >
 > Risk: L4
 
@@ -13,7 +13,7 @@
 Should v1 retained experiment reports/audit events remain input to the current
 Supervisor's prediction and regression-qualification decisions?
 
-## Verified boundary
+## Pre-apply boundary
 
 New writers emit:
 
@@ -34,8 +34,19 @@ Those records are active inputs today:
   and launch it under the fast envelope with prediction basis
   `observed_source_matching_history`.
 
-The accepted experiment strategy spec explicitly describes this v1
-qualification behavior. It is not merely a leftover parser.
+The then-accepted experiment strategy spec explicitly described this v1
+qualification behavior. It was not merely a leftover parser.
+
+## Applied boundary
+
+- Retained v1 reports, audit events, and v2 envelopes with v1 selection
+  observations remain human-readable material and produce non-fatal existing
+  diagnostics only.
+- They establish no current observation, prediction, admission,
+  `needs_qualification`, group-gap, selection, or launch fact.
+- The current-v2 source-matching, stale-execution-surface qualification path
+  remains available only through explicit `--regression-qualification` intent.
+- No real `.exp-bundles/` history was inspected or rewritten.
 
 ## Choices
 
@@ -75,7 +86,7 @@ not claim that no real v1 records exist or make its policy depend on prevalence.
 - [x] Concrete retained-history inspection is not required: the policy must not depend on prevalence, and `.exp-bundles/` remains out of scope.
 - [x] `decide-retained-experiment-history-policy` specifies exact selection, prediction, diagnostics, current-v2-only qualification, and no-launch behavior; its strict OpenSpec, requirement/project-spec, capability taxonomy/discovery, verification-routing, and semantic-closure plan checks pass.
 
-## Expected verification
+## Applied verification
 
 ```bash
 node --test tests/host_tools/experiment-run-strategy.test.mjs \
@@ -87,3 +98,9 @@ node openspec/governance/check-verification-routing.mjs \
 node openspec/governance/check-semantic-closure.mjs \
   --change decide-retained-experiment-history-policy --mode assets
 ```
+
+All selected deterministic tests passed (52 tests across the three declared
+assets). Strict OpenSpec, archive requirement governance, project-spec,
+capability taxonomy/discovery, verification-routing assets, semantic-closure
+assets, and `git diff --check` also passed. Closeout review and the governed
+finalizer passed; the archived task list is complete at 16 / 16.
