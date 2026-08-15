@@ -4,7 +4,30 @@
 >
 > Tracking owner：本文件。完成一项就立即更新 checkbox；不在别的文档维护第二套进度。
 >
-> 当前步骤：P1.5，审定 HITL2 -> Final composition handoff contract。
+> 当前步骤：P2.1，创建 active OpenSpec change。
+>
+> Last directory consistency audit：2026-08-15，P1.7 passed。
+
+## How To Advance From This File
+
+以后从本文件推进，不需要先重读整个目录：
+
+1. 找到唯一标有 **CURRENT** 的 task。
+2. 只读取该 task 明确引用或实际需要的设计/authoritative sources。
+3. 完成 task 的产物与验证后，立即把它改为 `[x]`。
+4. 将下一项改成 **CURRENT**，并同步下方 Current Checkpoint。
+5. 若执行中发现新工作，先作为普通 pending task 插入正确阶段；不得藏在 prose 或另开第二套 TODO。
+
+## Current Checkpoint
+
+| Item | Current value |
+|---|---|
+| Phase | P2 - OpenSpec Proposal |
+| Current task | P2.1 创建 active OpenSpec change |
+| Primary inputs | `hitl2-final-composition-handoff.md`、`recommended-final-composition-design.md`、`view-contract-sketch.md` |
+| Allowed writes | `openspec/changes/<change-name>/` only |
+| Exit evidence | Active change exists，proposal/design/specs/tasks 已按后续 P2 tasks 可继续生成；Harness target code 未修改 |
+| Next task after pass | P2.2 记录 owner、interaction、compatibility 和 handoff witness design |
 
 ## Tracking Rules
 
@@ -29,15 +52,16 @@
 - [x] P1.1 盘点现有 `rb_profile.yaml`、HITL2 prompt/phase、HITL2 Gate、Readiness 和 Final consumer。
 - [x] P1.2 确定 durable owner：`rb_profile.yaml#/human_decision_checkpoints/hitl2/composition_handoff`。
 - [x] P1.3 确定不重复 owner：继续复用现有 `final_report_view`、`custom_slug`、`root_must_answer_set` 和 verified finding/backing surfaces。
-- [x] P1.4 形成 v1 candidate：字段、枚举、resolution precedence、interaction algorithm、cross-field invariants、rerun binding、legacy posture 和 Final consumption rules。
-- [ ] **P1.5 CURRENT** 用户审阅并接受 [hitl2-final-composition-handoff.md](hitl2-final-composition-handoff.md)，或指出需要修订的具体字段/流程。
-- [ ] P1.6 将已接受 contract 同步回 `recommended-final-composition-design.md` 和 `view-contract-sketch.md`，删除“仍未决定”的冲突表述，但保留历史 alternatives。
+- [x] P1.4 形成 v1 contract：字段、枚举、resolution precedence、interaction algorithm、cross-field invariants、rerun binding、legacy posture 和 Final consumption rules。
+- [x] P1.5 用户接受 [hitl2-final-composition-handoff.md](hitl2-final-composition-handoff.md)。
+- [x] P1.6 将 accepted contract 同步回 `recommended-final-composition-design.md`、`composition-logic-feasibility.md`、`view-contract-sketch.md` 和 future Sub-agent seam，保留历史 alternatives 但移除 current contradictions。
+- [x] P1.7 完成目录级系统性审计：统一 handoff/context/working-view 三层术语、owner、状态、legacy、witness、view decisions 和单一 tracking 入口。
 
 出口：HITL2 能在离开 checkpoint 前生成一份完整、无 sentinel、绑定当前 rerun round 的 resolved contract；Final 不需要读取聊天、猜默认值或回问 HITL2。
 
 ## P2 - OpenSpec Proposal
 
-- [ ] P2.1 创建一个 active OpenSpec change，不直接修改 Harness target code。
+- [ ] **P2.1 CURRENT** 创建一个 active OpenSpec change，不直接修改 Harness target code。
 - [ ] P2.2 在 proposal/design 中记录 source of record、producer/consumer ownership、interaction boundary 和 compatibility posture。
 - [ ] P2.3 为 HITL UX、profile contract、HITL2 Gate、readiness consistency 和 Final composition behavior 编写 delta specs。
 - [ ] P2.4 把实现和验证拆成可逐项验收的 `tasks.md`；声明适用的 feedback marker。
@@ -52,8 +76,10 @@
 - [ ] P3.3 更新 HITL2 brief：展示完整 composition recommendation，而不是向用户暴露 schema 问卷。
 - [ ] P3.4 更新 HITL2 phase：实现 material-ambiguity resolution、单一 clarification frontier 和 accepted write behavior。
 - [ ] P3.5 扩展 HITL2 Gate：仅对 `proceed_to_readiness` 条件性要求完整 handoff，并校验 custom/not_started/rerun binding invariants。
-- [ ] P3.6 定义并实现 passed HITL2 handoff 的结构一致性 witness，防止 Gate 后 profile drift 被 Final 静默消费。
-- [ ] P3.7 覆盖 pending、accepted recommendation、user correction、custom、rerun 和 malformed handoff tests。
+- [ ] P3.6 在 passed HITL2 receipt 中记录 normalized accepted projection + fingerprint，并由 Readiness structural precheck 检测 drift。
+- [ ] P3.7 实现 receipt-bound mechanical restore：仅恢复 composition projection；不重新询问用户，不把 receipt 变成 Final 的正常 source。
+- [ ] P3.8 实现 legacy/in-flight bundle 的 supported migration posture；缺 handoff 不得由 Final 隐式默认。
+- [ ] P3.9 覆盖 pending、accepted recommendation、user correction、custom、rerun、drift restore、legacy 和 malformed handoff tests。
 
 出口：不完整或过期 handoff 无法进入 readiness；机械写入错误不会变成重复用户提问。
 
@@ -71,9 +97,9 @@
 ## P5 - Verification And Compatibility
 
 - [ ] P5.1 Schema unit tests：字段类型、closed enums、strict objects、conditional requirements 和 round binding。
-- [ ] P5.2 Gate integration tests：proceed/handoff matrix、custom requirements、sentinel rejection、repair ownership 和 handoff drift。
+- [ ] P5.2 Gate/Readiness integration tests：proceed/handoff matrix、custom requirements、sentinel rejection、receipt fingerprint、repair ownership 和 handoff drift。
 - [ ] P5.3 Deterministic lifecycle tests：HITL2 -> Readiness -> Final 正常 handoff，及 rerun 后旧 handoff 不可复用。
-- [ ] P5.4 Legacy tests：历史 bundle 可 inspect；缺 handoff 不会被 Final 隐式默认或伪装成新授权。
+- [ ] P5.4 Legacy/migration tests：历史 bundle 可 inspect；in-flight bundle 只有 supported migration path；缺 handoff 不会被 Final 隐式默认或伪装成新授权。
 - [ ] P5.5 真实 `agent_flow_e2e`：至少覆盖 executive、claim judgment、technical deep dive 和 custom 四种交付。
 - [ ] P5.6 语义审阅：must-answer coverage、finding meaning、confidence、limitations 和 backing 不随 view 漂移。
 - [ ] P5.7 文档/enum/schema/gate/test parity 检查全部通过。

@@ -8,13 +8,14 @@
 
 ## 1. 总体判断
 
-这套组织逻辑可行，而且不需要重做 Wave0、Wave1、Wave2 或 HITL2。
+这套组织逻辑可行，不需要重做 Wave0、Wave1、Wave2 或 topology；但需要深化现有 HITL2 boundary，使它在进入 Readiness 前产出 accepted composition handoff。
 
 关键点是不能从 Wave artifacts 直接跳到 narrative spine。Final 必须先建立一个按用户问题组织的临时 Answer Inventory，再根据 report view 排序、分组和控制粒度。
 
 ```text
 verified production-oriented artifacts
-  -> resolve delivery brief
+  + accepted HITL2 composition handoff
+  -> build bounded Final composition context
   -> build answer-oriented inventory
   -> close must-answer coverage and materiality
   -> apply one view transformation
@@ -38,11 +39,12 @@ verified production-oriented artifacts
 
 | Final needs | Current readable surface | Assessment |
 |---|---|---|
-| 研究目的、用途、范围 | `rb_plan.md## Goal`、HITL1 Alignment Snapshot | 足够，属于 narrative reground context |
+| 研究目的、范围 | `rb_plan.md## Goal`、HITL1 Alignment Snapshot | 足够，属于 research reground context |
 | Root must-answer | `rb_profile.yaml#/root_must_answer_set` | 足够，结构化直接事实 |
 | 用户控制 | `rb_plan.md## Constraints > User Research Controls` | 足够，guidance-only |
-| Report view | HITL2 `final_report_view` | 普通 named view 足够 |
-| Answerability 和最终限制 | HITL2 decision brief、`answerability_class`、`rationale` | 足够做 Agent judgment |
+| Reader/use、primary focus、delivery posture | HITL2 `composition_handoff` | accepted plan contract 已补足 |
+| Report view | HITL2 `final_report_view` + handoff `view_instructions` | named/custom view 均足够 |
+| Answerability 和最终限制 | HITL2 decision brief、`answerability_class`、verified limitation surfaces | 足够做 Agent judgment；不从 `rationale` 补 composition semantics |
 | Finding triage | Wave2 `finding-index.yaml` | 足够提供 ID、priority、status、decision、confidence、gap |
 | Finding reasoning | `cross-topic-ledger.md`、`synthesis.md` | 足够提供关系、矛盾和解释 |
 | Topic-local meaning | Seed Topic return maps、Wave1 artifacts | 足够提供机制、趋势、限制和 navigation |
@@ -80,18 +82,19 @@ concrete submitted-backed references
 
 ### Interface
 
-Final Phase Agent 以一个较小的 brief 进入 composition procedure：
+Final Phase Agent 以一个较小的 composition context 进入 procedure：
 
 ```text
-Reader/use
-Primary question
-Selected view contract
+Accepted reader / intended use / primary focus
+Selected final_report_view / view instructions
 Exact root must-answer set
-Non-negotiable user constraints and visible limitations
+Material findings/limitations that must remain visible
 Allowed verified read graph
-Language / length / deliverable posture
+Accepted language / length / evidence exposure / appendix posture
 Intended final target
 ```
+
+其中 user-facing composition semantics 来自 `composition_handoff`；must-answer、limitations、read graph 和 target 由 Final 从各自 existing owner 合并。这个 context 不持久化，不与 handoff 竞争 authority。
 
 Procedure 形成：
 
@@ -137,9 +140,9 @@ Semantic self-check result
 
 ## 5. 组织算法
 
-### 5.1 Resolve Delivery Brief
+### 5.1 Build Final Composition Context
 
-读取 Purpose、Scope、Alignment Snapshot、exact must-answer、controls、HITL2 answerability/rationale/view，以及 language、length 和 target。此时不冻结完整 finding set，也不写正文。
+读取 accepted `composition_handoff` / `final_report_view`、exact must-answer、Purpose/Scope、HITL2 answerability、verified limitation surfaces、allowed read graph 和 runtime target。此时不冻结完整 finding set，也不写正文；不得从 `rationale`、decision brief 或旧聊天补猜 handoff 字段。
 
 ### 5.2 Build Answer Inventory
 
@@ -225,8 +228,8 @@ Engine 继续只判断 path、Evidence Map structure 和 submitted provenance。
 - `evidence_map`：可行，但要区分 evidence-led report 与 mandatory `## Evidence Map` declaration。
 - `claim_judgment`：可行，claim 优先来自用户明确主张和 must-answer，不机械改写所有问题。
 - `technical_deep_dive`：可行，默认按 mechanism/dependency/causal chain，而不是简单按 Topic。
-- `custom`：当前不完全可行，`custom_slug` 不能恢复 reader/use/spine。
-- `not_started`：需要 proposal 明确透明默认规则。
+- `custom`：可行；`view_instructions` 承担 durable custom semantics，`custom_slug` 只作 identifier。
+- `not_started`：只作 pre-HITL2 sentinel；delivery path 在 HITL2 规范化，Final 不透明默认。
 
 详细语义与失败形态见 `view-contract-sketch.md`。
 
@@ -239,17 +242,17 @@ Final Phase Agent 必须区分 reasoning surface 与合法 backing：
 - Evidence Map 必须指向 submitted `source_yaml` / `evidence_summary`，或 submitted-backed `reference/*.md` projection；
 - `reference/_INDEX.md`、`final/`、`_cache/`、finding index 和 ledger 不是合法 backing target。
 
-Composition brief 必须提供 intended final target，Final Phase Agent 才能写出相对于 `final/report.md` 正确解析的 Markdown links。Staging 文件位置不能改变链接语义。
+Runtime Final context 必须提供 intended final target，Final Phase Agent 才能写出相对于 `final/report.md` 正确解析的 Markdown links。Target/path 不属于 HITL2 handoff，staging 文件位置也不能改变链接语义。
 
 ## 8. Execution Path Feasibility
 
 ### Current path: Phase Agent direct
 
-当前路径不要求第二个 actor。Final Phase Agent 已拥有所需 semantic judgment，并可在现有 Final boundary 内使用 bounded brief、bounded read graph、working views 和 persistence path。
+当前路径不要求第二个 actor。Final Phase Agent 已拥有所需 semantic judgment，并可在现有 Final boundary 内使用 accepted handoff、bounded composition context、working views 和 persistence path。
 
 ### Deferred path: formal Report Composer
 
-从语义上，Composer 可以消费同一 brief 并输出 draft/summary；但当前 runtime 没有 non-search report-composer role、assignment kind 或 output contract。接入它会触及：
+从语义上，Composer 可以消费由 accepted handoff 派生的同一 bounded composition context 并输出 draft/summary；但当前 runtime 没有 non-search report-composer role、assignment kind 或 output contract。接入它会触及：
 
 - Final 是否 work-unit-capable；
 - non-search actor policy；
@@ -280,8 +283,8 @@ Composition brief 必须提供 intended final target，Final Phase Agent 才能�
 1. Final topology 不变，Composition Pass 内含于 Final。
 2. Answer Inventory 是必经 working view，但不是 runtime authority。
 3. 所有 view 复用同一 inventory，只改变 grouping、ordering、detail 和 evidence exposure。
-4. 当前由 Final Phase Agent 直接负责 brief、join、coverage、materiality、spine、placement、drafting 和 self-check。
-5. `custom` 和 `not_started` 仍需 proposal 明确 contract。
+4. HITL2 负责 accepted composition handoff；Final Phase Agent 负责 context join、coverage、materiality、spine、placement、drafting 和 self-check。
+5. `custom` 和 `not_started` 已由 handoff contract 收口，不再作为 proposal 开放分支。
 6. Formal Sub-agent path 暂不考虑，但保留为有条件重开的执行层备选。
 
 剩余风险必须通过真实 readiness-passed bundle 的多-view Agent-flow experiment 验证，不能用固定 Markdown fixture 证明报告语义质量。

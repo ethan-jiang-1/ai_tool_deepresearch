@@ -1,8 +1,8 @@
 # Final Report View Contract Sketch
 
-> 状态：供后续 OpenSpec proposal 推敲的语义草图，不是 schema、accepted spec、Gate contract 或实现任务。
+> 状态：已与当前 handoff contract 对齐的 plan-level view 语义输入；不是 accepted spec、Gate contract 或实现许可。
 >
-> 当前关系：所有 view 由 Final Phase Agent 通过同一个 Report Composition Pass 执行；本文件不决定执行 actor。
+> 当前关系：HITL2 按 `hitl2-final-composition-handoff.md` 收敛 composition intent；所有 view 由 Final Phase Agent 通过同一个 Report Composition Pass 执行。本文件只定义 view transformation，不重复 handoff schema 或执行 actor。
 
 ## 1. View 不只是格式
 
@@ -12,23 +12,34 @@
 |---|---|
 | Reader | 谁会读？背景和耐心如何？ |
 | Use | 读完要判断、决定、理解或核查什么？ |
-| Primary question | 第一优先回答哪个问题？ |
+| Primary focus | 第一优先服务哪个问题、主张、决定或机制？ |
 | Spine | 按 decision、question、claim、mechanism、topic 还是 evidence 展开？ |
 | Selection | 哪些 finding 必须前置，哪些可附录或省略？ |
 | Granularity | 只给结论，还是展开机制、条件和边界？ |
 | Evidence exposure | 正文展示多少来源与证据链？ |
 | Uncertainty posture | limitation 应就地、集中，还是两者都要？ |
-| Deliverable shape | 一份主报告，还是主报告加 appendix/brief？ |
+| Appendix posture | 是否需要 Evidence Map 之外的 appendix？ |
 
 如果这些问题仍全靠 Final 临场猜，view enum 就没有形成足够深的 Interface。
 
-## 2. 通用 Composition Brief
+## 2. Durable Handoff 与 Final Working Plan
 
-不建议一开始把它做成 schema。先把它当作 Final Phase Agent 的短写作计划：
+当前设计明确分成两层，不能再用同一个 “composition brief” 同时指代它们。
+
+HITL2 持久化的 `composition_handoff` 是跨节点 schema，包含：
 
 ```text
-Reader/use:
-Primary question:
+Reader / familiarity
+Intended use
+Primary focus
+Foreground / compress preferences
+Language / length / evidence exposure / appendix posture
+Optional view instructions
+```
+
+Final 再从 accepted handoff 与 verified state 形成不持久化的 working plan：
+
+```text
 Narrative spine:
 Must-answer order:
 Selected key findings:
@@ -38,7 +49,7 @@ Main body vs appendix:
 Deliberate omissions:
 ```
 
-前四项主要由 HITL1/HITL2 已记录语义决定；后五项由 Final Phase Agent 从 verified state 做授权范围内的写作判断。
+Reader/use/primary focus 和 delivery posture 不由 Final 重解；spine、must-answer order、finding placement、limitations 和 omissions 由 Final 在 accepted handoff 与 verified evidence boundary 内判断。Working plan 不是第二个 authority。
 
 ## 3. `profile_default`
 
@@ -234,9 +245,9 @@ Mechanism/dependency/causal-chain first。
 
 由用户在 HITL1 controls 或 HITL2 view discussion 中明确表达。
 
-### Current contract gap
+### Current contract
 
-`custom_slug` 只适合做标识，不足以让 Final 恢复 custom view。一个可执行的 custom view 至少需要 durable narrative semantics：
+`custom_slug` 只作标识。一个可执行的 custom view 由通用 handoff fields 加必填 `view_instructions` 组成，至少明确：
 
 - 面向谁；
 - 用来做什么；
@@ -244,27 +255,24 @@ Mechanism/dependency/causal-chain first。
 - 不要什么；
 - 希望怎样组织或呈现。
 
-候选恢复顺序：
+Resolution 顺序：
 
 ```text
-1. HITL2 rationale 中明确的 view wording
-2. User Research Controls 中的 delivery needs / analytical lens
-3. HITL1 Alignment Snapshot 和 Purpose
-4. custom_slug 仅作名字，不作为语义来源
+1. current HITL2 explicit correction
+2. accepted HITL1 purpose / delivery control
+3. disclosed candidate accepted by the user
+4. persist resolved semantics to composition_handoff.view_instructions
 ```
 
-如果这些位置都没有足够信息，`custom` 是 unresolved user decision。正常修复位置应在 HITL2；Final 不能在 terminal delivery 中主动补问，也不能只凭 slug 猜测。
+如果 `view_instructions` 仍为空，`custom` 是 unresolved user decision，HITL2 不得记录 delivery proceed。Final 不能从 `rationale`、controls、chat 或 slug 恢复缺失语义。
+
+历史上考虑过从 `rationale` 或 HITL1 prose 逐层 fallback；当前 contract 已明确不采用，因为它会让 Final 重新解释 raw intent，并形成多个 composition owner。
 
 ## 9. `not_started`
 
-当前 schema 允许 `final_report_view: not_started`，HITL2 Gate 又不强制 view。Final 不能每次临场猜。
+`not_started` 只允许作为 pre-HITL2 sentinel。用户选择交付且没有修改 view 时，HITL2 写入 `profile_default`；HITL2 Gate 对 `proceed_to_readiness` 拒绝 `not_started`。Final 不再拥有透明默认分支。
 
-后续 proposal 应明确二选一：
-
-1. HITL2 在用户直接选择交付且未改 view 时写入 `profile_default`；或
-2. Final 透明地把 `not_started` 解析为 `profile_default`。
-
-前者让 Final 读取已解析决定；后者改动更小。两者都不应新增第三个 checkpoint。
+历史上考虑过由 Final 把 `not_started` 解释成 `profile_default`；当前不采用，因为它会让同一合法 run 在不同 Final consumer 中得到不同解释。
 
 ## 10. 跨 View 的统一内容盘点
 
@@ -276,13 +284,13 @@ Mechanism/dependency/causal-chain first。
 
 这张表不需要成为 artifact contract。它让 view 差异发生在 Placement、ordering 和 granularity，而不是让不同 view 各自遗漏不同事实义务。
 
-## 11. 仍需 Proposal 决定的问题
+## 11. Locked Proposal Decisions
 
-1. `custom` semantics 最终复用 HITL2 rationale、User Research Controls，还是另一个 existing narrative owner？
-2. `not_started` 采用 HITL2 normalization 还是 Final transparent default？
-3. `evidence_map` 是否只在 guidance 中称作 evidence-led report，还是未来需要 enum rename？
-4. 一次 delivery 默认只产一份 primary report，还是允许 primary report + optional appendix/brief package？
-5. `profile_default` mapping 是否足够稳定，哪些部分必须继续留给 Agent judgment？
-6. executive brief 中 recommendation 何时适用，何时只能输出 decision implications？
+1. `custom` semantics 使用 `composition_handoff.view_instructions`；不复用 `rationale`。
+2. `not_started` 由 HITL2 normalization 解决；Final 不透明默认。
+3. 保留 `evidence_map` enum 名称，并在 guidance 中明确它表示 evidence-led report，不能与 mandatory `## Evidence Map` declaration 混同。
+4. v1 默认产出一份 primary report；`delivery.appendix` 只控制 Evidence Map 之外的 appendix。多份 primary deliverables 不进入当前 scope。
+5. `profile_default` mapping 提供 transparent starting spine；accepted handoff 优先，具体 section ordering/placement 继续属于 Final judgment。
+6. `executive_brief` 只有在 evidence strength 支持时才输出 recommendation；否则输出 decision implications、boundaries 和 unknowns。
 
-这些是 view semantics 的真实未决问题，不重新打开已经选定的 current executor。执行路径与备选 actor 的讨论见 `recommended-final-composition-design.md` 和 `subagent-composition-seam.md`。
+这些决定进入后续 proposal，不重新打开 current executor、第三个 HITL 或 Sub-agent。执行路径与备选 actor 的讨论见 `recommended-final-composition-design.md` 和 `subagent-composition-seam.md`。

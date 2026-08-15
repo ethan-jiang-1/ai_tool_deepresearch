@@ -5,13 +5,15 @@
 > 当前执行决定：Final Phase Agent 直接执行完整 Report Composition Pass。
 >
 > 保留原因：本文记录为什么曾考虑 delegated Report Composer、它会触及哪些 contract，以及什么证据出现后值得重新打开。它不覆盖当前决定。
+>
+> Current-contract note：未来若重新打开 Composer，它也必须消费 accepted `composition_handoff` 派生的 bounded Final context，不得建立另一套 reader/use schema。
 
 ## 1. 最初要解决的张力
 
 探索从四个约束出发：
 
 1. **Graph 不变形**：Chain 到 `phase-final` 后就出报告，不增加用户可见 phase、Gate 或回跳。
-2. **UX 不加复杂度**：用户不在 Final 再面对报告设计问卷；系统读取已有 profile、controls 和 `final_report_view`。
+2. **UX 不加复杂度**：用户不在 Final 再面对报告设计问卷；HITL2 已将 composition intent 收敛进 accepted handoff。
 3. **上下文隔离**：长篇材料扫描、章节设计和写作可能挤压 Final Phase Agent context。
 4. **不做大调整**：前面的 Wave 和 Chain 已经成立，Final 改进应尽量是 terminal node 内部深化。
 
@@ -24,8 +26,8 @@
 ```text
 readiness passed
   -> phase-final
-  -> resolve recorded report preference
-  -> prepare bounded composition brief
+  -> consume accepted composition handoff
+  -> prepare bounded Final composition context
   -> optionally delegate report drafting
   -> Phase Agent accepts/repairs draft
   -> persist-final-report
@@ -56,10 +58,10 @@ no outgoing Gate
 
 | Responsibility | Possible future owner |
 |---|---|
-| 解释用户用途与 recorded view | Final Phase Agent |
+| 消费 accepted reader/use 与 recorded view | Final Phase Agent |
 | 确认 must-answer coverage obligations | Final Phase Agent |
 | 决定哪些 limitation 不能隐藏 | Final Phase Agent |
-| 冻结 composition brief | Final Phase Agent |
+| 冻结 bounded Final composition context | Final Phase Agent |
 | 扫描允许的 verified surfaces | Report Composer Sub-agent |
 | 建立 inventory、设计章节、展开论证 | Report Composer Sub-agent |
 | 起草 citations 与 mandatory Evidence Map | Report Composer Sub-agent |
@@ -71,23 +73,24 @@ no outgoing Gate
 
 > Phase Agent 决定“这份报告必须怎样才算对题且诚实”，Composer 在这个冻结边界内完成材料处理和长篇 drafting。
 
-这不会让 Phase Agent 变成零工作。它至少仍需确认 legal Final entry、形成 brief、启动并跟踪 attempt、阅读 compact summary、处理 persistence、交付 committed artifact。
+这不会让 Phase Agent 变成零工作。它至少仍需确认 legal Final entry、形成 bounded context、启动并跟踪 attempt、阅读 compact summary、处理 persistence、交付 committed artifact。
 
 ## 4. Future Composer Interface
 
 如果未来正式引入 Report Composer，Interface 不应是“读取整个 bundle，自由写一份好报告”。
 
-### Composition brief
+### Future Composer input adapter
+
+Adapter 从当前 accepted contract 与 existing owners 派生，不产生新 user-intent owner：
 
 ```text
-Report view:
-Reader/use:
-Primary question:
+Accepted final_report_view / view instructions:
+Accepted reader / intended use / primary focus:
 Exact root must-answer set:
 Non-negotiable findings/limitations:
 Allowed verified read graph:
-Language and length posture:
-Preferred spine / delivery shape:
+Accepted language / length / evidence exposure / appendix posture:
+Preferred spine:
 Intended final target:
 Staging write coordinate:
 ```

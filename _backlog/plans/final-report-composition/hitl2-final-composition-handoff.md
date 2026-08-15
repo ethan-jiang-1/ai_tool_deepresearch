@@ -1,6 +1,6 @@
 # HITL2 -> Final Composition Handoff Contract
 
-> 状态：v1 candidate，等待当前审阅接受；不是 accepted spec 或 runtime contract。
+> 状态：已接受的 v1 plan contract；等待 OpenSpec proposal，不是 accepted spec 或 runtime contract。
 >
 > Producer：HITL2 Phase Agent。
 >
@@ -59,7 +59,7 @@ rb_profile.yaml#/human_decision_checkpoints/hitl2/composition_handoff
 
 Final 的 composition semantics 只能读取 `final_report_view` 和 `composition_handoff`。它不得因为 handoff 缺字段而改读 `rationale`、decision brief、旧聊天或 `custom_slug` 猜答案。
 
-## 3. Proposed V1 Schema
+## 3. Locked V1 Plan Schema
 
 ```yaml
 human_decision_checkpoints:
@@ -124,6 +124,8 @@ delivery.appendix:
 ```
 
 `appendix: none` 只表示不增加额外 appendix；每份 Final Markdown 的 mandatory Evidence Map 仍然存在。
+
+v1 只授权一份 primary report。`appendix` 控制该主报告是否附加 Evidence Map 之外的补充材料，不创建第二份 primary brief/report package；多 primary deliverables 需要未来 contract version。
 
 ### 3.2 Field contract
 
@@ -264,7 +266,7 @@ Gate 只验证结构、closed vocabulary、conditional presence 和 round bindin
 
 ## 10. Handoff Witness And Drift
 
-Passed HITL2 receipt 应绑定以下 normalized projection，而不是只记录 `user_decision`：
+Passed HITL2 receipt 应保存 immutable accepted projection 及其 deterministic fingerprint，而不是只记录 `user_decision`：
 
 ```text
 final_report_view
@@ -274,9 +276,9 @@ composition_handoff.for_rerun_count
 composition_handoff full normalized value
 ```
 
-实现阶段应为该 projection 生成 deterministic fingerprint，并在 Readiness structural precheck 中确认 current profile 未漂移。这个检查只证明“Final 将读取 HITL2 Gate 接受过的同一 contract”，不评价 composition quality，也不创建 Final Gate。
+Readiness structural precheck 重算 current profile projection 的 fingerprint，并与 passed HITL2 receipt 比较。这个检查只证明“Final 将读取 HITL2 Gate 接受过的同一 contract”，不评价 composition quality，也不创建 Final Gate。
 
-Profile 仍是 source of record；receipt/fingerprint 只是 accepted-state witness。发现 drift 必须在 Final entry 前处理，不能让 Final 先猜一个版本、再回头找 HITL2。
+Profile 仍是 current source of record；receipt projection/fingerprint 是 immutable accepted-state witness，不是 Final 的正常读取入口。若 drift 只涉及这份 projection，受支持的 Engine operation 从 receipt 精确恢复 accepted values，并重新运行 Readiness check；若存在 unrelated profile drift，则暴露 exact lifecycle/contract boundary。两种情况都不得再次询问用户，也不能让 Final 先猜一个版本再回头找 HITL2。
 
 ## 11. Final Consumption Algorithm
 
@@ -323,9 +325,9 @@ Final 可以决定章节名、局部编排和具体证据放置，但不得：
 - 已越过旧 HITL2、但尚未进入 Final 的 legacy bundle 必须通过受支持的一次性 migration/HITL2 resolution 获得 contract；Final 不生成兼容性默认值。
 - Resume 时只信 durable pending/accepted state，不根据 session chat 猜用户已经答过什么。
 
-## 14. Acceptance Statement
+## 14. Accepted Decisions
 
-接受本 contract 等于锁定以下设计决定：
+本 contract 已锁定以下设计决定：
 
 1. HITL2 写 resolved contract，Final 不解释 raw intent。
 2. `composition_handoff` 是唯一新增 durable composition owner。

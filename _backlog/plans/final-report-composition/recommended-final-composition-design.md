@@ -4,7 +4,7 @@
 >
 > 当前执行者：Final Phase Agent 直接完成整个 Report Composition Pass；暂不引入 Sub-agent。
 >
-> 相关推敲：组织算法见 `composition-logic-feasibility.md`，view 语义见 `view-contract-sketch.md`，delegation 备选见 `subagent-composition-seam.md`。
+> Contract 入口：HITL2 producer / Final consumer 见 `hitl2-final-composition-handoff.md`；组织算法见 `composition-logic-feasibility.md`，view 语义见 `view-contract-sketch.md`，delegation 备选见 `subagent-composition-seam.md`。
 
 ## 1. 结论先行
 
@@ -15,7 +15,8 @@ readiness passed
       |
       v
 phase-final
-  -> resolve composition brief
+  -> consume accepted composition handoff
+  -> build bounded Final composition context
   -> Final Phase Agent runs Report Composition Pass
        -> build Answer Inventory
        -> close coverage and materiality
@@ -66,7 +67,8 @@ Wave0 到 Wave2 主要产生事实、证据和研究判断。Final 负责 commun
 
 | Responsibility | Current owner |
 |---|---|
-| 恢复 reader/use、must-answer 和不可隐藏限制 | Final Phase Agent |
+| 收敛 reader/use、primary focus、view 和 delivery posture | HITL2 Phase Agent + user decision |
+| 消费 accepted handoff，恢复 must-answer 和不可隐藏限制 | Final Phase Agent |
 | 扫描 verified surfaces、建立 inventory 和关闭 coverage | Final Phase Agent |
 | 选择 spine、安排章节、控制粒度和起草 | Final Phase Agent |
 | 检查 finding meaning、confidence 和 limitation 未漂移 | Final Phase Agent |
@@ -81,26 +83,30 @@ Report Composition Module 的 Interface 只需要三类输入：
 
 ```text
 verified research state
-+ reader/use composition brief
-+ delivery constraints and intended final target
++ accepted composition contract
+    = final_report_view + composition_handoff
++ runtime Final context
+    = allowed verified read graph + intended final target
 ```
 
-一个最小 Agent-readable composition brief 可以是：
+这里必须区分 durable handoff 与 Final working context：
+
+- `composition_handoff` 是 HITL2 写入 profile、HITL2 Gate admission、Final 只读消费的跨节点 schema；完整 contract 见 `hitl2-final-composition-handoff.md`。
+- Final composition context 是 Final 将 accepted handoff、root must-answer、verified limitations、合法 read graph 和 runtime target 合并后的内部 working input，不是第二个持久化 owner。
+
+一个最小 Final composition context 可以是：
 
 ```text
-Reader/use:
-Primary question:
-Selected report view:
-Root must-answer references:
-Non-negotiable findings/limitations:
+Accepted reader / intended use / primary focus:
+Selected final_report_view and view instructions:
+Exact root must-answer set:
+Material findings/limitations that must remain visible:
 Allowed verified read surfaces:
-Language and length posture:
-View contract / preferred spine:
-Required delivery shape:
+Accepted language / length / evidence exposure / appendix posture:
 Intended final target:
 ```
 
-它是 Final Phase Agent 的工作纪律，不是 Agent 间 handoff，也不需要一开始升格为 schema、status、Gate 或 persistent authority。
+这个 context 是 Final Phase Agent 的工作纪律，不是 Agent 间 handoff，也不需要升格为 schema、status、Gate 或 persistent authority。跨节点数据只由 accepted `composition_handoff` 承担。
 
 Module 的 implementation 隐藏：
 
@@ -122,9 +128,11 @@ Module 的 implementation 隐藏：
 
 - `rb_plan.md## Goal`、Purpose、scope 和 User Research Controls；
 - `rb_profile.yaml#/root_must_answer_set`；
-- HITL1 Alignment Snapshot；
-- HITL2 answerability、rationale、主要 limitation 和 `final_report_view`；
-- language、length、deliverable shape 和 intended final target。
+- accepted HITL2 `composition_handoff` 和 `final_report_view`；
+- HITL2 answerability 与 verified limitation surfaces；
+- runtime allowed read graph 和 intended final target。
+
+HITL1 Purpose/controls 仍可用于理解 research context，但不得在 handoff 缺字段时覆盖或补造 composition semantics；`rationale` 也不再承担 reader/use fallback。
 
 这一步防止报告“内容正确但交付不对题”。
 
@@ -247,6 +255,7 @@ Admission rejection 只修复 Engine 指定的 staging row 或合法 backing sur
 
 Deterministic verification 只证明结构事实：
 
+- composition handoff schema、conditional Gate admission、rerun binding 和 accepted-state witness；
 - view enum/guidance parity；
 - `phase-final` terminal/no-search/no-outgoing-Gate contract；
 - mandatory Evidence Map、path safety、submitted backing 和 `persist-final-report` admission；
@@ -263,11 +272,12 @@ Deterministic verification 只证明结构事实：
 
 ## 10. OpenSpec 落地边界
 
-后续 proposal 仍需明确两个真实 contract gap：
+后续 proposal 采用已经锁定的 handoff contract：
 
-1. `custom` view 的 durable narrative carrier 应复用哪个现有 owner。
-2. `not_started` 应在 HITL2 写成 `profile_default`，还是由 Final 透明解析为 `profile_default`。
+1. `custom` semantics 由 `composition_handoff.view_instructions` 持久化；`custom_slug` 只作 identifier。
+2. `not_started` 只作 pre-HITL2 sentinel；delivery path 由 HITL2 规范化为 `profile_default` 或其他明确 view。
+3. Handoff 与当前 `rerun_count` 绑定；Final 不从旧 round、`rationale`、decision brief 或 chat memory 恢复 composition intent。
 
 当前选择的中心句是：
 
-> Final 是 graph 上唯一的 terminal delivery node；其内部必须经过一次由 Final Phase Agent 直接执行的 Report Composition Pass。Final Phase Agent 负责读者问题、内容盘点、覆盖义务、事实边界、章节编排、起草和语义自检，Engine 只做 backing 与 persistence verdict。当前不使用 Sub-agent。
+> HITL2 是 composition intent 的唯一交互与持久化 owner；Final 是 graph 上唯一的 terminal delivery node，只消费 accepted handoff 和 verified state，并由 Final Phase Agent 直接执行 Report Composition Pass。Engine 负责 schema/handoff witness、backing 与 persistence verdict。当前不使用 Sub-agent。

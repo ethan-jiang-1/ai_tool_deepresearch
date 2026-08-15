@@ -7,10 +7,10 @@
 | File | Role | Status |
 |---|---|---|
 | [progressive-plan.md](progressive-plan.md) | Progressive checklist、当前步骤、阶段出口和整体 Definition of Done | Tracking owner |
-| [hitl2-final-composition-handoff.md](hitl2-final-composition-handoff.md) | HITL2 收集/解析流程、durable handoff schema、Gate invariants 和 Final 消费规则 | 当前待审 contract |
+| [hitl2-final-composition-handoff.md](hitl2-final-composition-handoff.md) | HITL2 收集/解析流程、durable handoff schema、Gate invariants 和 Final 消费规则 | 已接受的 plan contract |
 | [recommended-final-composition-design.md](recommended-final-composition-design.md) | 当前 executor 路径、Composition Pass、ownership、verification 和 OpenSpec scope | 当前选择 |
 | [composition-logic-feasibility.md](composition-logic-feasibility.md) | Artifact join、Answer Inventory、materiality、view transformation 和 backing 推敲 | 支撑当前选择 |
-| [view-contract-sketch.md](view-contract-sketch.md) | 各 `final_report_view` 的 reader question、spine、selection 和 failure modes | Proposal input；待按 handoff contract 对齐 |
+| [view-contract-sketch.md](view-contract-sketch.md) | 各 `final_report_view` 的 reader task、spine、selection 和 failure modes | 已对齐的 proposal input |
 | [subagent-composition-seam.md](subagent-composition-seam.md) | Formal Composer、ad-hoc spawn、staging 和 fallback 的备选分析 | 当前暂不考虑，保留 |
 
 ## Reading Routes
