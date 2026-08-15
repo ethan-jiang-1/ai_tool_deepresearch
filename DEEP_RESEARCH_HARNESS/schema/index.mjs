@@ -26,7 +26,7 @@ export {
   WORK_UNIT_SUPERSESSION_LINEAGE_FIELDS,
   WorkUnitSupersessionQueueLineageSchema,
 } from './contracts/queue.mjs';
-export { ProfileSchema, ResearchStyleParamsSchema } from './contracts/profile.mjs';
+export { CompositionHandoffSchema, ProfileSchema, ResearchStyleParamsSchema } from './contracts/profile.mjs';
 export { CanonicalPlanSchema, CanonicalTopicEntrySchema, PreviousTopicLayoutSchema, PlanSchema } from './contracts/plan.mjs';
 export { ReferenceMetadataSchema, ReferenceMetadataArraySchema, validateIndexMD } from './contracts/reference.mjs';
 export { TraceEntrySchema, TraceSchema } from './contracts/trace.mjs';

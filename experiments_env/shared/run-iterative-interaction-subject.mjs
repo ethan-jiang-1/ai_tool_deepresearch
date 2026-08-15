@@ -9,6 +9,7 @@ import {
   existsSync,
   mkdirSync,
   openSync,
+  readdirSync,
   readFileSync,
   statSync,
   writeFileSync,
@@ -196,11 +197,184 @@ const SUBJECTS = {
     tools: 'Glob,Grep,Read,Write',
     boundary: 'Write only case-951-judge-record.json. Do not alter runtime state, trace, Subject evidence, native completion, health output, or cleanup. This AI judgment remains distinct from real-human evidence.',
   },
+  '136': {
+    bundlePrefix: 'dpt_disp_case-136_',
+    transcript: 'case-136-subject-transcript.jsonl',
+    system: 'You are the independent Subject Agent for case 136, distinct from the Playbook Agent and the later AI judge. Work only in the exact bundle path provided by the runner. You own the post-setup HITL2 interaction and the one terminal Final report for this bundle.',
+    messages: [
+      'Read case-136-scenario.json for the current user delivery request. Treat initial_user_message as the user\'s current HITL2 message. Read the verified bundle state and present one complete reader-facing composition recommendation. Create the required decision brief and pending HITL2 state, but do not record a delivery decision, enter Readiness, or create a Final report in this turn. When the scenario says a material clarification is required, ask only the smallest recommendation-bearing frontier of at most three independent questions.',
+      'The runner supplies the current user\'s natural-language resolution after the first bounded turn.',
+      'The runner supplies the legal Readiness continuation after the accepted HITL2 handoff.',
+      'The runner supplies the legal Final continuation after the Readiness handoff.',
+    ],
+    tools: 'Bash,Edit,Glob,Grep,Read,Write',
+    boundary: 'Use no Task/Sub-agent tool and do not read another case-136 bundle or report. Do not write playbook verdict checks, native completion, health output, cleanup, or a second primary report. Preserve the current accepted profile as the composition owner, use only the existing Gate/entry/status commands, and persist the one Final Markdown report through persist-final-report.',
+    afterTurn: observeCase136Boundary,
+    timeoutMs: 12 * 60 * 1000,
+  },
+  '136-judge': {
+    bundlePrefix: 'dpt_disp_case-136_',
+    transcript: 'case-136-judge-transcript.jsonl',
+    system: 'You are the independent AI reviewer for case 136. You did not produce any HITL2 handoff or report. Review only the judge input and retained Subject/runtime surfaces named there. You may read the four explicitly declared report paths to compare them, but you may not change any report or runtime state.',
+    messages: ['Read case-136-judge-input.json. Independently judge the four retained Subject executions for complete reader-facing HITL2 recommendation, clear natural-language resolution without blanket reconfirmation, the custom scenario\'s bounded clarification, materially distinct view-aware report organization, stable verified meaning/confidence/limitations, and terminal discipline. Write only case-136-judge-record.json as strict JSON with schema_version="agent-experiment-judge/v1", source="ai-judge", case="case-136-heavy-final-composition", verdict="pass" or "fail", criteria containing exactly hitl2_recommendation, natural_language_resolution, bounded_clarification, view_difference, verified_meaning_stability, and terminal_discipline, where each value has verdict="pass" or "fail" and non-empty rationale, plus non-empty rationale.'],
+    tools: 'Glob,Grep,Read,Write',
+    boundary: 'Write only case-136-judge-record.json. Do not alter report bytes, profile, status, trace, Subject evidence, native completion, health output, or cleanup. This AI judgment is experiment-only and does not become a production Final verdict.',
+    timeoutMs: 12 * 60 * 1000,
+  },
 };
 
 function usage() {
-  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <125|154|204|115|164|225|227|232|318|711|712|713-readiness|713-final|714|716|901|951|951-judge> --bundle <path>');
+  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <125|154|204|115|164|225|227|232|318|711|712|713-readiness|713-final|714|716|901|951|951-judge|136|136-judge> --bundle <path>');
   process.exit(2);
+}
+
+function readCase136Scenario(bundle) {
+  const scenarioPath = join(bundle, 'case-136-scenario.json');
+  const scenario = JSON.parse(readFileSync(scenarioPath, 'utf8'));
+  const views = new Set(['executive_brief', 'claim_judgment', 'technical_deep_dive', 'custom']);
+  if (scenario?.schema_version !== 'case-136-scenario/v1'
+    || typeof scenario?.scenario_id !== 'string'
+    || !views.has(scenario?.view)
+    || typeof scenario?.initial_user_message !== 'string'
+    || !scenario.initial_user_message.trim()
+    || typeof scenario?.resolution_message !== 'string'
+    || !scenario.resolution_message.trim()
+    || typeof scenario?.requires_clarification !== 'boolean') {
+    throw new Error('case 136 requires one complete scenario input');
+  }
+  return scenario;
+}
+
+function listedFinalReports(bundle) {
+  const finalDir = join(bundle, 'final');
+  if (!existsSync(finalDir)) return [];
+  return readdirSync(finalDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+    .map((entry) => `final/${entry.name}`)
+    .sort();
+}
+
+function assertCase136Status(bundle, expected) {
+  const status = JSON.parse(readFileSync(join(bundle, 'rb_status.json'), 'utf8'));
+  for (const [key, value] of Object.entries(expected)) {
+    if (status[key] !== value) throw new Error(`case 136 expected status.${key}=${value}, received ${status[key]}`);
+  }
+  return status;
+}
+
+function assertCase136NoFinal(bundle) {
+  const reports = listedFinalReports(bundle);
+  if (reports.length > 0) throw new Error(`case 136 created a Final report before legal Final composition: ${reports.join(', ')}`);
+}
+
+function case136Handoff(profile) {
+  return profile?.human_decision_checkpoints?.hitl2?.composition_handoff;
+}
+
+function case136FinalResponseHasQuestion(bundle) {
+  const transcript = readFileSync(join(bundle, 'case-136-subject-transcript.jsonl'), 'utf8')
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line) => {
+      try { return JSON.parse(line); } catch { return null; }
+    })
+    .filter(Boolean);
+  const finalResult = transcript.filter((event) => event.type === 'result').at(-1);
+  const text = typeof finalResult?.result === 'string' ? finalResult.result : '';
+  return /[?？]/.test(text);
+}
+
+function observeCase136Boundary({ bundle, completedTurns }) {
+  const scenario = readCase136Scenario(bundle);
+  const profile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'));
+
+  if (completedTurns === 1) {
+    assertCase136Status(bundle, {
+      current_node: 'phases/phase-hitl2.md',
+      current_gate: 'wave2_complete',
+      next_gate: 'hitl2_recorded',
+    });
+    if (profile.human_decision_checkpoints?.hitl2?.status !== 'pending_user' || case136Handoff(profile)) {
+      throw new Error('case 136 first Subject turn did not retain a pending, unaccepted HITL2 boundary');
+    }
+    assertCase136NoFinal(bundle);
+    return { message: scenario.resolution_message };
+  }
+
+  if (completedTurns === 2) {
+    assertCase136Status(bundle, {
+      current_node: 'phases/phase-readiness.md',
+      current_gate: 'hitl2_recorded',
+      next_gate: 'readiness_passed',
+    });
+    const hitl2 = profile.human_decision_checkpoints?.hitl2;
+    if (hitl2?.status !== 'recorded' || hitl2?.user_decision !== 'proceed_to_readiness'
+      || hitl2.final_report_view !== scenario.view || !case136Handoff(profile)
+      || (scenario.view === 'custom' && !case136Handoff(profile).view_instructions)) {
+      throw new Error('case 136 accepted HITL2 projection is incomplete or does not match its scenario');
+    }
+    assertCase136NoFinal(bundle);
+    const surface = loadProductionSurface(bundle);
+    if (surface.nodeRef !== 'phases/phase-readiness.md') throw new Error('case 136 did not enter the legal Readiness node');
+    return {
+      message: [
+        'The accepted HITL2 handoff is now durable. Execute the injected current Readiness checkpoint from direct bundle facts. If it passes, consume only its selected target through enter-phase and synchronize the source gate status. Stop after legal Final entry without drafting a report; the runner will then load Final.',
+        surface.text,
+      ].join('\n\n'),
+    };
+  }
+
+  if (completedTurns === 3) {
+    assertCase136Status(bundle, {
+      current_node: 'phases/phase-final.md',
+      current_gate: 'readiness_passed',
+      next_gate: 'none',
+    });
+    assertCase136NoFinal(bundle);
+    const surface = loadProductionSurface(bundle);
+    if (surface.nodeRef !== 'phases/phase-final.md') throw new Error('case 136 did not enter the legal Final node');
+    return {
+      message: [
+        'Execute one view-aware Report Composition Pass using only this bundle\'s accepted profile and verified state. Persist exactly one primary Final Markdown report through persist-final-report, save its complete JSON response as case-136-final-persistence.json, and return a direct delivery summary without a question. Do not create a second report, a Gate, a transition, or a Sub-agent.',
+        surface.text,
+      ].join('\n\n'),
+    };
+  }
+
+  if (completedTurns === 4) {
+    assertCase136Status(bundle, {
+      current_node: 'phases/phase-final.md',
+      current_gate: 'readiness_passed',
+      next_gate: 'none',
+    });
+    const reports = listedFinalReports(bundle);
+    if (reports.length !== 1) throw new Error(`case 136 requires exactly one primary Final Markdown report, received ${reports.length}`);
+    const persistence = JSON.parse(readFileSync(join(bundle, 'case-136-final-persistence.json'), 'utf8'));
+    if (persistence.operation !== 'persist-final-report' || persistence.verdict !== 'committed' || persistence.check?.passed !== true) {
+      throw new Error('case 136 Final report did not use a committed persist-final-report admission');
+    }
+    const trace = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse);
+    const finalDeliveryEvent = trace.some((event) => event.event === 'final_delivery');
+    const finalGate = trace.some((event) => event.event === 'gate_attempt' && /final/i.test(String(event.gate || '')));
+    if (finalDeliveryEvent || finalGate) throw new Error('case 136 introduced a forbidden Final trace or Gate event');
+    const observation = {
+      schema_version: 'case-136-subject-observation/v1',
+      source: 'subject-adapter-observer',
+      scenario_id: scenario.scenario_id,
+      view: scenario.view,
+      completed_turns: completedTurns,
+      final_report: reports[0],
+      persistence_operation: persistence.operation,
+      persistence_verdict: persistence.verdict,
+      final_response_has_question: case136FinalResponseHasQuestion(bundle),
+      final_gate_attempt_present: finalGate,
+      final_delivery_trace_present: finalDeliveryEvent,
+    };
+    writeFileSync(join(bundle, 'case-136-subject-observation.json'), `${JSON.stringify(observation, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+    return null;
+  }
+
+  throw new Error(`case 136 received an unexpected completed turn count: ${completedTurns}`);
 }
 
 function observeCase318CrashWindow({ bundle, completedTurns }) {

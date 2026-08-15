@@ -31,6 +31,13 @@ Final 交付前运行最后一个 deterministic checkpoint：验证所有 requir
 
 **Readiness 只做 deterministic structural check。** 不做 content quality、writing quality、argument strength、synthesis completeness 等语义判断。语义质量由 HITL2 人类审查负责，Readiness 只确认"东西都在且格式合法"。
 
+HITL2 已接受的 composition Source of Record 是
+`rb_profile.yaml#/human_decision_checkpoints/hitl2/final_report_view` 与
+`rb_profile.yaml#/human_decision_checkpoints/hitl2/composition_handoff`。Readiness
+在这个既有 structural checkpoint 中，由 Engine 把当前 profile 与 exact selected
+HITL2 handoff witness 比较；它不重建 reader/use/focus，不给 Final 提供 receipt
+fallback，也不引入第二个 checkpoint。
+
 ## 2. Required Inputs
 
 - Active `dpt_rb_*` run bundle（全部 prior phase + gate 完成，HITL2 decision 已 recorded）
@@ -50,10 +57,35 @@ Final 交付前运行最后一个 deterministic checkpoint：验证所有 requir
 - 检查 `rb_profile.yaml` 可解析为合法 YAML（`yaml_parse`）
 - 检查 `rb_trace.jsonl` 每行都是合法 JSON（`jsonl_parse`）
 - 检查 `rb_status.json` 中 gate 前 source-gate window：`current_gate: hitl2_recorded` / `next_gate: readiness_passed`
+- 通过 existing route-bound handoff preflight 比较 current profile composition 与 selected HITL2 witness；normal v1 receipt 与 predecessor-bound legacy migration witness 使用同一 comparison owner
 - 更新 `rb_status.json` 中 readiness 相关状态
 - 记录 `readiness_check` trace event 到 `rb_trace.jsonl`
 
 **Readiness gate CLI 执行以上全部检查。** Agent 角色是确认 gate pass 后 advance 到 final，或在 gate fail 后按 inspect/advice 修复。
+
+### 3a. Composition Consistency At This Existing Checkpoint
+
+只在 exact selected `hitl2-recorded -> phases/phase-readiness.md` handoff 已成立后，
+`check-gate-readiness-passed.mjs` 才比较 current profile composition。`final_report_view`
+仍使用既有 view vocabulary：`profile_default`、`executive_brief`、`evidence_map`、
+`claim_judgment`、`technical_deep_dive` 或 `custom`；`custom` 的语义仍只来自 accepted
+`composition_handoff`，不是 `custom_slug`。
+
+- exact match：继续本 Gate 的原有 structural rules；Final 只读 current profile。
+- `composition_projection_drift`：CLI hint 只会给出以下 bounded repair。Agent 执行它后重跑**同一个** Readiness Gate；该操作不问用户、不自动进入 Final。
+
+  ```bash
+  node DEEP_RESEARCH_HARNESS/cli/operate-composition-handoff.mjs restore --bundle <bundle> --current-node phases/phase-readiness.md
+  ```
+
+- non-composition profile drift 或 malformed witness：保持 failed，按 named owner/contract boundary 处理；不得用 restore 覆盖它。
+- receipt-less pre-v1 predecessor：只有 current HITL2 interaction 已经取得一份 complete explicit accepted projection、bundle 仍处于合法 pre-Final boundary 且 operation 正常判定 eligible 时，Agent 才可执行一次 migration，然后重跑同一个 Gate：
+
+  ```bash
+  node DEEP_RESEARCH_HARNESS/cli/operate-composition-handoff.mjs migrate-legacy --bundle <bundle> --current-node phases/phase-readiness.md --input <accepted-projection.yaml>
+  ```
+
+  migration 不重写 historical Gate，不把旧 context 说成已比较，也不自动取得用户决定。Readiness 不提出 composition 问题、不自动 mutation；缺少 accepted input 或 eligibility 时，保持当前 failed boundary。
 
 ## 4. Expected Artifacts
 
@@ -62,6 +94,7 @@ Final 交付前运行最后一个 deterministic checkpoint：验证所有 requir
 - `rb_profile.yaml` 可解析
 - `rb_trace.jsonl` 每行合法 JSON
 - Gate 前 status window 为 `current_gate: hitl2_recorded` / `next_gate: readiness_passed`。Readiness gate pass 后，§6 的 `advance-status --to readiness_passed` 才会写入 terminal status `current_gate: readiness_passed` / `next_gate: none`。
+- HITL2 composition witness 与当前 profile match，或一个 eligible migration 已建立其 post-migration witness；receipt 只用于 this checkpoint consistency，不成为 Final 数据 owner。
 
 ## 5. Gate Command
 
@@ -89,6 +122,8 @@ node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to readiness
 3. `repair_kind: user_decision`：识别真实缺失的语义/风险决定。Readiness 是 `stop: no`，不得由 hint 创建新 HITL、earlier-phase route、repair controller 或 lifecycle；没有 accepted decision path 时保持当前 checkpoint failed。
 4. `repair_kind: external_action`：识别不可代理的权限/环境前置条件；不主动请求 acknowledgement，满足后机械执行回到 Agent。
 5. `repair_kind: missing_contract`：保留 exact unavailable capability/contract boundary，不提供手改 trace/status、用户等待、绕过 Gate 或 speculative fallback。
+
+当 hint 是 `composition_projection_drift` 时，`write_to` 中唯一的 Engine operation 是 `operate-composition-handoff.mjs restore`；Agent 执行后重跑同一 `readiness-passed` Gate。不得在 Readiness 询问用户、创造 semantic score、自动运行 migration，或建立新的 composition checkpoint。
 
 Hint 不创造 permission、controller、lifecycle 或 route。完成可执行动作后 Agent MUST 运行 hint 的 exact `rerun`，回到同一个 `readiness-passed` checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 猜 blocking repair；按 `missing_contract` 暴露最小边界。
 

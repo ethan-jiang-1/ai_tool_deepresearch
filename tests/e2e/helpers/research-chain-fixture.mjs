@@ -254,12 +254,49 @@ export function stageWave2(bundle, { project = true, completion = true } = {}) {
   if (completion) recordWaveCompletion(bundle, 'wave2');
 }
 
+function acceptedCompositionHandoff(rerunCount) {
+  return {
+    contract_version: 1,
+    for_rerun_count: rerunCount,
+    reader: {
+      description: 'Operators reviewing deterministic continuity.',
+      familiarity: 'working',
+    },
+    intended_use: 'Decide whether the current rerun has preserved authority.',
+    primary_focus: 'Current-round checkpoint continuity and its limits.',
+    content_priorities: {
+      foreground: ['Current-round evidence', 'Authority limits'],
+      compress: ['Historical setup detail'],
+    },
+    delivery: {
+      language: 'en-US',
+      length: 'standard',
+      evidence_exposure: 'balanced',
+      appendix: 'as_needed',
+    },
+  };
+}
+
 export function stageHitl2(bundle, decision, rerunCount = 1) {
   mkdirSync(join(bundle, 'artifacts/hitl2'), { recursive: true });
   writeFileSync(join(bundle, 'artifacts/hitl2/decision-brief.md'), '# Decision Brief\n\n## Key Findings\nContinuity reached HITL2.\n\n## Open Questions\nNone.\n\n## Recommended Actions\nProceed.\n');
   const profilePath = join(bundle, 'rb_profile.yaml');
   const profile = parseYaml(readFileSync(profilePath, 'utf8'));
-  profile.human_decision_checkpoints.hitl2 = { ...profile.human_decision_checkpoints.hitl2, status: 'recorded', user_decision: decision, final_report_view: 'profile_default', rationale: 'Exercise deterministic continuity.', rerun_count: rerunCount, recorded_at: '2026-07-15T00:00:00.000Z' };
+  const hitl2 = {
+    ...profile.human_decision_checkpoints.hitl2,
+    status: 'recorded',
+    user_decision: decision,
+    final_report_view: 'profile_default',
+    rationale: 'Exercise deterministic continuity.',
+    rerun_count: rerunCount,
+    recorded_at: '2026-07-15T00:00:00.000Z',
+  };
+  if (decision === 'proceed_to_readiness') {
+    hitl2.composition_handoff = acceptedCompositionHandoff(rerunCount);
+  } else {
+    delete hitl2.composition_handoff;
+  }
+  profile.human_decision_checkpoints.hitl2 = hitl2;
   writeFileSync(profilePath, stringifyYaml(profile));
   logCompletion(bundle, 'hitl2_recorded');
 }

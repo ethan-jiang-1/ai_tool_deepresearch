@@ -49,7 +49,6 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 | `exp_wff_delivery/case-132-standard-hitl2-decision.md` |
 | `exp_wff_delivery/case-133-standard-hitl2-rerun.md` |
 | `exp_wff_delivery/case-134-standard-delivery-repair.md` |
-| `exp_wff_delivery/case-135-standard-readiness-precheck.md` |
 | `exp_wff_wave-chain/case-151-standard-waves-full-chain.md` |
 | `exp_wff_wave-chain/case-152-standard-wave-repair-loop.md` |
 | `exp_wff_wave-chain/case-153-standard-wave-fault-tolerance.md` |
@@ -121,6 +120,8 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 - `exp_extrem_slow/case-221-extreme-slow-batch-subagent.md`
 - `exp_extrem_slow/case-224-extreme-slow-happy-and-fail.md`
 - `exp_extrem_slow/case-225-extreme-slow-returned-work-closeout.md`
+- `exp_extrem_slow/case-135-extreme-slow-readiness-precheck.md`
+- `exp_extrem_slow/case-136-extreme-slow-final-composition.md`
 - `exp_extrem_slow/case-712-extreme-slow-hitl2-natural-rerun.md`
 
 These playbooks are quarantined because their observed runs were excessively slow. Do not run them. Refactor a quarantined playbook, move it to a normal `light`, `standard`, or `heavy` runnable path, and explicitly register it in the machine table before reactivation; otherwise remove it.

@@ -52,6 +52,62 @@ Lifecycle handoff/status consistency MAY be enforced by the shared gate handoff 
 - **THEN** the gate definition SHALL NOT fail solely for that missing event
 - **AND** the gate CLI SHALL still write its own `gate_attempt` audit event
 
+For `proceed_to_readiness` only, the HITL2 Gate SHALL require that
+`final_report_view` is an existing delivery value other than `not_started`,
+`composition_handoff` parses through the strict v1 schema, its
+`for_rerun_count` equals the effective sibling `hitl2.rerun_count` (default
+`0` when absent), and `custom` has both trim-non-empty `custom_slug` and
+trim-non-empty `composition_handoff.view_instructions`. A non-custom view
+SHALL not obtain semantics from `custom_slug`. The Gate SHALL use the shared
+pure evaluator for these invariants and SHALL validate only structure, closed
+vocabulary, conditional presence, and round binding, not semantic quality.
+
+On a successful routed proceed attempt, the Engine-authored `gate_attempt`
+SHALL carry one strict immutable `composition_handoff_receipt` with
+`schema_version: composition-handoff-receipt/v1`, normalized
+`final_report_view`, normalized `custom_slug` (or null), full normalized
+handoff, and canonical `projection_sha256` and `profile_context_sha256` values
+for the projection and parsed profile context excluding only those three
+composition coordinates. Recursive canonical hashing SHALL sort object keys and
+preserve array order. Receipt
+durability is part of successful routing: inability to append it SHALL fail the
+handoff. Non-delivery decisions retain their existing behavior without a
+handoff requirement or composition receipt.
+
+#### Scenario: Complete proceed decision emits a bound receipt
+
+- **WHEN** a recorded `proceed_to_readiness` profile has a complete v1 handoff,
+  a delivery view, and matching rerun counts
+- **THEN** the HITL2 Gate SHALL pass and route to Readiness
+- **AND** its durable `gate_attempt` SHALL carry normalized projection and
+  profile-context fingerprints
+
+#### Scenario: Incomplete or stale proceed handoff fails at HITL2
+
+- **WHEN** `proceed_to_readiness` has no handoff, a malformed handoff,
+  `final_report_view: not_started`, a rerun-count mismatch, or unresolved
+  custom semantics
+- **THEN** the Gate SHALL fail before routing
+- **AND** feedback SHALL identify the smallest direct profile fact to repair at
+  HITL2 rather than direct Final to infer a replacement
+
+#### Scenario: Non-delivery decisions do not acquire a composition blocker
+
+- **WHEN** the recorded decision is `request_view_revision`, `repair`, `rerun`,
+  or `stop_blocked`
+- **THEN** existing Gate decision behavior SHALL run without requiring a
+  composition handoff
+- **AND** no composition receipt SHALL be emitted or treated as Final
+  authorization
+
+#### Scenario: Receipt durability is part of a successful route
+
+- **WHEN** proceed facts pass but the Engine cannot durably append the
+  receipt-bearing `gate_attempt`
+- **THEN** the Gate SHALL fail the handoff
+- **AND** it SHALL direct repair to the trace durability boundary and rerun of
+  the same HITL2 Gate
+
 ### Requirement: Readiness passed gate rule set
 
 `gate-readiness-passed.definition.json` SHALL define a complete rule set replacing the placeholder. The gate SHALL verify:
@@ -81,6 +137,77 @@ The gate SHALL NOT evaluate content quality, writing quality, argument strength,
 - **WHEN** the gate executes the prior-gate audit rule
 - **AND** any required prior gate lacks a `gate_attempt` event with `passed: true` in `rb_trace.jsonl`
 - **THEN** the gate SHALL return fail identifying the missing gate passage evidence
+
+Readiness SHALL obtain its composition witness only from the exact legal
+HITL2-to-Readiness handoff selected by the existing route-bound handoff
+preflight. It SHALL not scan arbitrary earlier receipts, choose by filesystem
+recency, or read a decision brief as authority. For the current v1 contract it
+SHALL require a valid receipt on that selected passed HITL2 `gate_attempt`,
+parse current profile, reconstruct the same normalized projection and
+profile-context values, and compare both fingerprints.
+
+Matching projection and context continues existing Readiness rules. Mismatched
+context SHALL fail as unrelated profile drift with no composition-only restore;
+matching context and mismatched projection SHALL fail as bounded composition
+projection drift and return exactly
+`node DEEP_RESEARCH_HARNESS/cli/operate-composition-handoff.mjs restore --bundle <bundle> --current-node phases/phase-readiness.md`.
+Missing, malformed, unsupported, or fingerprint-inconsistent receipts fail
+closed at their witness boundary. `restore` SHALL reuse the selected handoff and
+shared evaluator, run only while current non-composition context matches, write
+only `final_report_view`, `custom_slug`, and `composition_handoff` atomically,
+validate the whole profile, append one audit event, and leave all other profile,
+trace, status, artifact, receipt, and research facts unchanged. Its only next
+action is the same Readiness Gate; it does not ask the user, infer semantics,
+enter Final, rerun HITL2, or make the receipt Final's normal source.
+
+An in-flight selected pre-v1 passed proceed predecessor may use
+`migrate-legacy` only before Final, only once, only with a complete
+user-accepted current-round projection input, and only when profile, status,
+and route form a legal pre-Final lifecycle boundary. It SHALL update exactly
+the same three coordinates atomically and append one predecessor-bound migration
+witness with the receipt shape. Its profile-context fingerprint starts at the
+committed migration result; it SHALL not claim predecessor-era context equality.
+Current v1, non-proceed, stale, conflicting, repeated, post-Final, or inferred
+input attempts SHALL make no mutation.
+
+#### Scenario: Current profile matches the route-bound accepted receipt
+
+- **WHEN** Readiness has a legal HITL2 handoff whose receipt and current profile
+  produce equal projection and context fingerprints
+- **THEN** composition consistency SHALL pass
+- **AND** Readiness SHALL continue its existing structural rules
+
+#### Scenario: Pure composition drift is repairable without another question
+
+- **WHEN** only `final_report_view`, `custom_slug`, or `composition_handoff`
+  differs from the selected receipt while profile context still matches
+- **THEN** Readiness SHALL fail with one composition-restore operation
+- **AND** successful restore followed by the same Readiness check SHALL recover
+  the exact accepted projection without user interaction
+
+#### Scenario: Unrelated profile drift cannot be hidden by restore
+
+- **WHEN** a non-composition profile fact changes after HITL2 Gate pass
+- **THEN** Readiness SHALL report unrelated profile drift
+- **AND** restore SHALL refuse to write any field or represent the profile as
+  Gate-accepted context
+
+#### Scenario: Legacy migration establishes no fictional predecessor context
+
+- **WHEN** the selected pre-v1 Gate attempt has no profile-context fingerprint
+- **THEN** migration SHALL identify historical context equality as unproven and
+  establish its fingerprint only from the committed result
+- **AND** a later non-composition change SHALL fail Readiness against that
+  migration baseline
+
+#### Scenario: Migration cannot become a normal success path
+
+- **WHEN** the selected handoff carries a v1 receipt, Final was legally
+  entered, or a migration already exists
+- **THEN** `migrate-legacy` SHALL fail without changing profile, status, trace,
+  or artifacts
+- **AND** it SHALL not offer another migration, Final fallback, or rewritten
+  historical Gate event
 
 ### Requirement: HITL2 gate CLI evaluates rules from definition
 

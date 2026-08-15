@@ -1,7 +1,7 @@
 // tests/schema/contracts/profile.test.mjs — 1:1 for DEEP_RESEARCH_HARNESS/schema/contracts/profile.mjs
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ProfileSchema } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/profile.mjs';
+import { CompositionHandoffSchema, ProfileSchema } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/profile.mjs';
 
 const valid = {
   plan_basename: 'test',
@@ -12,6 +12,43 @@ const valid = {
     hitl2: { status: 'not_started', answerability_class: 'not_assessed', user_decision: 'not_started', final_report_view: 'not_started' },
   },
 };
+
+function completeCompositionHandoff(overrides = {}) {
+  return {
+    contract_version: 1,
+    for_rerun_count: 0,
+    reader: {
+      description: 'Operational decision makers',
+      familiarity: 'working',
+    },
+    intended_use: 'Choose a delivery approach.',
+    primary_focus: 'Material risks and trade-offs.',
+    content_priorities: {
+      foreground: ['Decision implications'],
+      compress: ['Background detail'],
+    },
+    delivery: {
+      language: 'en-US',
+      length: 'standard',
+      evidence_exposure: 'balanced',
+      appendix: 'as_needed',
+    },
+    ...overrides,
+  };
+}
+
+function profileWithCompositionHandoff(composition_handoff) {
+  return {
+    ...valid,
+    human_decision_checkpoints: {
+      ...valid.human_decision_checkpoints,
+      hitl2: {
+        ...valid.human_decision_checkpoints.hitl2,
+        composition_handoff,
+      },
+    },
+  };
+}
 
 const currentDirectSampleObservations = [
   { sample_id: 'gov_cn', source_group: 'china', outcome: 'content', retrieval_surface: 'native' },
@@ -103,6 +140,46 @@ describe('ProfileSchema', () => {
   it('accepts optional custom_slug on hitl2', () => {
     const withSlug = { ...valid, human_decision_checkpoints: { ...valid.human_decision_checkpoints, hitl2: { ...valid.human_decision_checkpoints.hitl2, custom_slug: 'my-slug' } } };
     assert.ok(ProfileSchema.safeParse(withSlug).success);
+  });
+
+  it('accepts and normalizes a complete strict composition handoff', () => {
+    const handoff = completeCompositionHandoff({
+      reader: { description: '  Operational decision makers  ', familiarity: 'working' },
+      content_priorities: { foreground: ['  Decision implications  '], compress: [] },
+      delivery: { language: 'EN-us', length: 'standard', evidence_exposure: 'balanced', appendix: 'as_needed' },
+    });
+
+    const result = ProfileSchema.parse(profileWithCompositionHandoff(handoff));
+    assert.equal(result.human_decision_checkpoints.hitl2.composition_handoff.reader.description, 'Operational decision makers');
+    assert.deepEqual(result.human_decision_checkpoints.hitl2.composition_handoff.content_priorities.foreground, ['Decision implications']);
+    assert.equal(result.human_decision_checkpoints.hitl2.composition_handoff.delivery.language, 'en-US');
+    assert.equal(CompositionHandoffSchema.safeParse(handoff).success, true);
+  });
+
+  it('keeps composition_handoff optional outside delivery authorization', () => {
+    assert.equal(ProfileSchema.safeParse(valid).success, true);
+  });
+
+  it('rejects malformed, unresolved, duplicate, and unknown composition handoff facts', () => {
+    const malformed = [
+      completeCompositionHandoff({ reader: { familiarity: 'working' } }),
+      completeCompositionHandoff({ reader: { description: 'unknown', familiarity: 'working' } }),
+      completeCompositionHandoff({ intended_use: 'recover from rationale' }),
+      completeCompositionHandoff({ content_priorities: { foreground: ['Decision', ' Decision '], compress: [] } }),
+      completeCompositionHandoff({ delivery: { language: 'not a language tag', length: 'standard', evidence_exposure: 'balanced', appendix: 'as_needed' } }),
+      completeCompositionHandoff({ reader: { description: 'Reader', familiarity: 'working', extra: true } }),
+      completeCompositionHandoff({ copied_findings: [] }),
+    ];
+
+    for (const handoff of malformed) {
+      assert.equal(ProfileSchema.safeParse(profileWithCompositionHandoff(handoff)).success, false, JSON.stringify(handoff));
+    }
+  });
+
+  it('requires all explicit delivery fields without defaults', () => {
+    const handoff = completeCompositionHandoff();
+    delete handoff.delivery.appendix;
+    assert.equal(CompositionHandoffSchema.safeParse(handoff).success, false);
   });
 
   it('accepts a profile without optional research_access', () => {

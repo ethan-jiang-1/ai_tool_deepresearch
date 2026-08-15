@@ -256,12 +256,49 @@ function stageWave2(bundle) {
   logCompletion(bundle, 'wave2_completion');
 }
 
+function acceptedCompositionHandoff(rerunCount) {
+  return {
+    contract_version: 1,
+    for_rerun_count: rerunCount,
+    reader: {
+      description: 'Operators reviewing deterministic continuity.',
+      familiarity: 'working',
+    },
+    intended_use: 'Decide whether the current rerun has preserved authority.',
+    primary_focus: 'Current-round checkpoint continuity and its limits.',
+    content_priorities: {
+      foreground: ['Current-round evidence', 'Authority limits'],
+      compress: ['Historical setup detail'],
+    },
+    delivery: {
+      language: 'en-US',
+      length: 'standard',
+      evidence_exposure: 'balanced',
+      appendix: 'as_needed',
+    },
+  };
+}
+
 function stageHitl2(bundle, decision, rerunCount) {
   mkdirSync(join(bundle, 'artifacts/hitl2'), { recursive: true });
   writeFileSync(join(bundle, 'artifacts/hitl2/decision-brief.md'), '# Decision Brief\n\n## Key Findings\nContinuity reached HITL2.\n\n## Open Questions\nNone.\n\n## Recommended Actions\nRerun.\n');
   const profilePath = join(bundle, 'rb_profile.yaml');
   const profile = parseYaml(readFileSync(profilePath, 'utf8'));
-  profile.human_decision_checkpoints.hitl2 = { ...profile.human_decision_checkpoints.hitl2, status: 'recorded', user_decision: decision, final_report_view: 'profile_default', rationale: 'Exercise rerun continuity.', rerun_count: rerunCount, recorded_at: '2026-07-15T00:00:00.000Z' };
+  const hitl2 = {
+    ...profile.human_decision_checkpoints.hitl2,
+    status: 'recorded',
+    user_decision: decision,
+    final_report_view: 'profile_default',
+    rationale: 'Exercise rerun continuity.',
+    rerun_count: rerunCount,
+    recorded_at: '2026-07-15T00:00:00.000Z',
+  };
+  if (decision === 'proceed_to_readiness') {
+    hitl2.composition_handoff = acceptedCompositionHandoff(rerunCount);
+  } else {
+    delete hitl2.composition_handoff;
+  }
+  profile.human_decision_checkpoints.hitl2 = hitl2;
   writeFileSync(profilePath, stringifyYaml(profile));
   logCompletion(bundle, 'hitl2_recorded');
 }
@@ -390,6 +427,69 @@ describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
     for (const gate of ['hitl2-recorded', 'rerun-ready', 'seed-topics-ready', 'wave0-complete', 'wave1-complete', 'wave2-complete']) {
       assert.ok(attempts.some((event) => event.gate === gate), `missing real passing gate attempt ${gate}`);
     }
+  });
+
+  it('binds a production receipt to its round and rejects replay before recovering the delivery tail', () => {
+    const firstRound = restoreBundle(snapshot, baseline);
+
+    // Fixture-labeled Agent/human input. The Gate, route entry, status transition,
+    // and receipt are all authored by the production CLI path.
+    stageHitl2(firstRound, 'proceed_to_readiness', 0);
+    passAndEnter(firstRound, 'hitl2-recorded', 'phases/phase-hitl2.md', 'hitl2_recorded');
+    const firstReceipt = readTrace(firstRound)
+      .filter((event) => event.event === 'gate_attempt' && event.gate === 'hitl2-recorded' && event.passed)
+      .at(-1)?.composition_handoff_receipt;
+    assert.ok(firstReceipt, 'the routed production HITL2 attempt must retain one receipt');
+    assert.equal(firstReceipt.composition_handoff.for_rerun_count, 0);
+    assert.match(firstReceipt.projection_sha256, /^[a-f0-9]{64}$/);
+
+    passAndEnter(firstRound, 'readiness-passed', 'phases/phase-readiness.md', 'readiness_passed');
+    assert.equal(readStatus(firstRound).current_node, 'phases/phase-final.md');
+    const firstReadiness = readTrace(firstRound)
+      .filter((event) => event.event === 'gate_attempt' && event.gate === 'readiness-passed' && event.passed)
+      .at(-1);
+    assert.equal(firstReadiness?.next, 'phases/phase-final.md');
+
+    const rerunRound = restoreBundle(snapshot, baseline);
+    runRerunCycle(rerunRound);
+    assert.equal(readStatus(rerunRound).current_node, 'phases/phase-hitl2.md');
+
+    // Fixture-labeled replay of the prior accepted projection. The old receipt is
+    // never injected into trace authority; the current production Gate must reject
+    // the stale profile handoff before it can route this round to Readiness.
+    const profilePath = join(rerunRound, 'rb_profile.yaml');
+    const replayedProfile = parseYaml(readFileSync(profilePath, 'utf8'));
+    replayedProfile.human_decision_checkpoints.hitl2 = {
+      ...replayedProfile.human_decision_checkpoints.hitl2,
+      status: 'recorded',
+      user_decision: 'proceed_to_readiness',
+      final_report_view: firstReceipt.final_report_view,
+      rationale: 'Fixture-labeled replay of a prior-round delivery decision.',
+      rerun_count: 1,
+      composition_handoff: firstReceipt.composition_handoff,
+    };
+    writeFileSync(profilePath, stringifyYaml(replayedProfile));
+    const rejected = runGate(rerunRound, 'hitl2-recorded', 'phases/phase-hitl2.md', { expectedStatus: 1 });
+    assert.equal(rejected.output.check.passed, false);
+    assert.match(rejected.output.inspect.join('\n'), /rerun|round|composition/i);
+    assert.equal(readStatus(rerunRound).current_node, 'phases/phase-hitl2.md');
+    const rejectedAttempt = readTrace(rerunRound).at(-1);
+    assert.equal(rejectedAttempt?.gate, 'hitl2-recorded');
+    assert.equal(rejectedAttempt?.passed, false);
+    assert.equal(rejectedAttempt?.composition_handoff_receipt, undefined);
+    assert.equal(readTrace(rerunRound).some((event) => event.event === 'load_complete' && event.entry === 'phases/phase-final.md'), false);
+
+    stageHitl2(rerunRound, 'proceed_to_readiness', 1);
+    passAndEnter(rerunRound, 'hitl2-recorded', 'phases/phase-hitl2.md', 'hitl2_recorded');
+    const currentReceipt = readTrace(rerunRound)
+      .filter((event) => event.event === 'gate_attempt' && event.gate === 'hitl2-recorded' && event.passed)
+      .at(-1)?.composition_handoff_receipt;
+    assert.ok(currentReceipt, 'the recovered current round must receive one new production receipt');
+    assert.equal(currentReceipt.composition_handoff.for_rerun_count, 1);
+    assert.notEqual(currentReceipt.projection_sha256, firstReceipt.projection_sha256);
+
+    passAndEnter(rerunRound, 'readiness-passed', 'phases/phase-readiness.md', 'readiness_passed');
+    assert.equal(readStatus(rerunRound).current_node, 'phases/phase-final.md');
   });
 
   it('drives labeled add, update, and direction-only candidates through production apply/recovery before count synchronization', () => {

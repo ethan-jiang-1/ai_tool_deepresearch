@@ -14,6 +14,7 @@ import { readGateDefinitionSnapshot } from '../../schema/contracts/gate-definiti
 import { resolveNodeTransitionDetailed } from '../ask-next.mjs';
 import { parseMdFrontmatter } from './gate-helpers-readers.mjs';
 import { isValidCarriedTargetReceipt } from './wave-carried-target-receipts.mjs';
+import { validateCompositionHandoffReceipt } from './composition-handoff.mjs';
 import { continuationForGateResult } from './continuation-cue.mjs';
 import {
   buildContractEvaluation,
@@ -798,25 +799,35 @@ function traceDurabilityError(error, bundlePath, result) {
  *
  * @param {string} bundlePath — path to the active runtime context
  * @param {object} result — gate result from buildGateResult()
- * @param {{ strictTrace?: boolean, carriedTargetReceipt?: object }} [options]
+ * @param {{ strictTrace?: boolean, carriedTargetReceipt?: object, compositionHandoffReceipt?: object }} [options]
  * @returns {void}
  *
  * @impl GSK-005, LOC-001, LOC-002, TRW-001, TRW-002, TRW-003, TRW-004
  */
 export function writeGateAttempt(bundlePath, result, options = {}) {
   if (options.setupReadyStaged === true) return writeSetupReadyStagedAttempt(bundlePath, result);
-  const { strictTrace = false, carriedTargetReceipt = null } = options;
+  const { strictTrace = false, carriedTargetReceipt = null, compositionHandoffReceipt = null } = options;
   try {
     applyEngineAttemptDiagnostics(bundlePath, result);
     const { check, routing, inspect, advice } = result;
     const bundle = readBundleName(bundlePath);
     const phase = derivePhaseFromGate(check.gate);
     const routedWave1Pass = check.gate === 'wave1-complete' && check.passed === true && check.next != null;
+    const routedHitl2Proceed = check.gate === 'hitl2-recorded'
+      && check.passed === true
+      && check.currentNodeRef === 'phases/phase-hitl2.md'
+      && check.next === 'phases/phase-readiness.md';
     if (carriedTargetReceipt !== null && !routedWave1Pass) {
       throw new Error('carriedTargetReceipt is accepted only for a successful routed Wave1 Gate attempt');
     }
     if (routedWave1Pass && !isValidCarriedTargetReceipt(carriedTargetReceipt)) {
       throw new Error('successful routed Wave1 Gate attempt requires a valid carriedTargetReceipt');
+    }
+    if (compositionHandoffReceipt !== null && !routedHitl2Proceed) {
+      throw new Error('compositionHandoffReceipt is accepted only for a successful routed HITL2 proceed Gate attempt');
+    }
+    if (routedHitl2Proceed && !validateCompositionHandoffReceipt(compositionHandoffReceipt).ok) {
+      throw new Error('successful routed HITL2 proceed Gate attempt requires a valid compositionHandoffReceipt');
     }
 
     // 1. Precompute diagnostic path and write diagnostic BEFORE logging
@@ -890,6 +901,7 @@ export function writeGateAttempt(bundlePath, result, options = {}) {
         traceEntry.degraded_rules = check.degraded_rules || [];
       }
       if (routedWave1Pass) traceEntry.carried_target_receipt = carriedTargetReceipt;
+      if (routedHitl2Proceed) traceEntry.composition_handoff_receipt = compositionHandoffReceipt;
       // TRW-001: Include diagnostic_path when available
       if (logDetail.diagnostic_path) {
         traceEntry.diagnostic_path = logDetail.diagnostic_path;

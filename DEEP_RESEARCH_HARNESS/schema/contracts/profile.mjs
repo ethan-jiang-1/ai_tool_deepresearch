@@ -1,4 +1,4 @@
-// @impl SCO-002, SCO-008: ProfileSchema for rb_profile.yaml
+// @impl SCO-002, SCO-008, SCO-011: ProfileSchema for rb_profile.yaml
 import { z } from 'zod';
 import {
   ResearchProfile,
@@ -14,6 +14,68 @@ import {
 
 const TrimmedNonEmptyString = z.string().trim().min(1);
 const IsoTimestamp = z.string().datetime({ offset: true });
+const ReservedCompositionText = new Set(['unknown', 'not_started', 'rationale']);
+
+const CompositionText = TrimmedNonEmptyString.superRefine((value, context) => {
+  const normalized = value.toLowerCase();
+  if (ReservedCompositionText.has(normalized) || /^(?:read|recover|infer|derive)(?:\s+the)?(?:\s+value)?\s+from\s+rationale$/i.test(value)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Composition text must contain resolved meaning rather than a sentinel or rationale fallback.',
+    });
+  }
+});
+
+const CanonicalLanguageTag = CompositionText.transform((value, context) => {
+  try {
+    const [canonical] = Intl.getCanonicalLocales(value);
+    if (!canonical) throw new RangeError('missing canonical language tag');
+    return canonical;
+  } catch {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Delivery language must be a valid BCP 47 language tag.',
+    });
+    return z.NEVER;
+  }
+});
+
+const CompositionPriorityListSchema = z.array(CompositionText).superRefine((values, context) => {
+  const seen = new Set();
+  for (const [index, value] of values.entries()) {
+    if (seen.has(value)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [index],
+        message: 'Composition priorities must be unique after trimming.',
+      });
+    }
+    seen.add(value);
+  }
+});
+
+// @impl SCO-002, SCO-008, SCO-011: durable HITL2-to-Final composition contract
+export const CompositionHandoffSchema = z.object({
+  contract_version: z.literal(1),
+  for_rerun_count: z.number().int().min(0),
+  reader: z.object({
+    description: CompositionText,
+    familiarity: z.enum(['general', 'working', 'expert', 'mixed']),
+  }).strict(),
+  intended_use: CompositionText,
+  primary_focus: CompositionText,
+  content_priorities: z.object({
+    foreground: CompositionPriorityListSchema,
+    compress: CompositionPriorityListSchema,
+  }).strict(),
+  delivery: z.object({
+    language: CanonicalLanguageTag,
+    length: z.enum(['concise', 'standard', 'detailed']),
+    evidence_exposure: z.enum(['key_evidence', 'balanced', 'audit_ready']),
+    appendix: z.enum(['none', 'as_needed', 'required']),
+  }).strict(),
+  view_instructions: CompositionText.optional(),
+}).strict();
 const UnprobedResearchAccessSchema = z.object({
   status: z.literal('unprobed'),
 }).strict();
@@ -183,6 +245,7 @@ export const ProfileSchema = z.object({
       custom_slug: z.string().optional(),
       rerun_count: z.number().int().min(0).default(0).optional(),
       rationale: z.string().optional(),
+      composition_handoff: CompositionHandoffSchema.optional(),
     }),
   }),
 });

@@ -20,7 +20,7 @@ suggested_context:
 
 ## 0. Execution Brief
 
-- **Objective**: Present the final review decision brief and persist the user's HITL2 decision.
+- **Objective**: Present the final review and one complete composition recommendation, then persist the user's HITL2 decision.
 - **Start here**: Read Wave artifacts, `brief/hitl2.md`, `rb_profile.yaml`, `rb_status.json`, and `rb_trace.jsonl`.
 - **Path to pass**: Write the decision brief and pending marker, ask the user, persist the canonical decision enum, then run the HITL2 gate.
 - **Completion check**: User decision is recorded and `check-gate-hitl2-recorded.mjs` passes.
@@ -28,7 +28,7 @@ suggested_context:
 
 ## 1. Stage Goal
 
-产出 decision brief 并询问用户 structured final review decision。将用户 decision 记录到 `rb_profile.yaml` 的 `human_decision_checkpoints.hitl2` 下。
+产出 decision brief，展示一份完整、面向用户语义的 composition recommendation，并在当前 HITL2 boundary 取得最终 review decision。将用户 decision 与已接受的交付意图记录到 `rb_profile.yaml` 的 `human_decision_checkpoints.hitl2` 下。
 
 HITL2 是 delivery 前最后一次人类审查——用户在此决定是否 proceed to readiness、revise view、repair current run、rerun through `phase-rerun`，或 stop blocked。
 
@@ -40,7 +40,7 @@ HITL2 是 delivery 前最后一次人类审查——用户在此决定是否 pro
 - `rb_profile.yaml`（含 hitl1 和 prior HITL decision 历史）
 - `rb_status.json`（当前 lifecycle 位置的 status 快照）
 - `rb_trace.jsonl`（完整的 trace 记录）
-- `shared-profile.md`（HITL2 字段文档：answerability_class, user_decision, final_report_view, custom_slug）
+- `shared-profile.md`（HITL2 字段文档：answerability_class, user_decision, final_report_view, custom_slug, composition_handoff）
 
 ## 3. Allowed Actions
 
@@ -63,14 +63,36 @@ node --input-type=module -e "import { loadGateDefinition, readBundleProfile, eva
   - 仍然不足或需要谨慎的地方是：汇总 question-list 中的 open/gap 问题 + 静默期降级汇总（`shared-silent-execution.md` §2 的 HITL2 汇总）
   - 当前推荐、理由与影响：从 direct facts、legal path 和 shared availability 中选择一个用户可理解的动作
 - **展示 prompt 之前先写 durable state**：产出 decision brief artifact（`artifacts/hitl2/decision-brief.md`）+ 将 `hitl2.status` 设为 `pending_user`。此步骤不可跳过——session 断掉后 Agent 恢复时 SHALL 能通过 `hitl2.status = pending_user` 得知用户尚未回复
-- 从 `brief/hitl2.md` 的「入口 Prompt」读取 recommendation-first 文本，填入 review、一个推荐、理由与影响后展示
+- 从 `brief/hitl2.md` 的「入口 Prompt」读取 recommendation-first 文本，填入 review、一个推荐、理由与影响，以及一份完整交付建议后展示
 - 遵循 `shared-agent-ux-guidance.md`：用户可以直接接受推荐、自然语言修正、使用 A/B/C/D/E 快捷方式或继续提问；清楚决定本身就是确认
+
+### 3b. Composition Recommendation And Resolution
+
+交付建议只回答一个问题：对本 rerun round 已验证的研究，Final 应为谁、为了什么、优先回答什么，并以怎样的 view 和交付姿态组织报告。它不复制 root must-answer、findings、confidence、limitations、source references、outline 或 citation plan；这些仍由现有 verified state 或 Final judgment 拥有。
+
+1. 依次使用 current HITL2 explicit correction、accepted HITL1 purpose/delivery controls、current root must-answer shape、selected view 的透明默认和 disclosed system defaults，形成一个 candidate。
+2. 用读者可理解的语言展示 reader/familiarity、intended use、primary focus、view/read path、foreground/compress、language、length、evidence exposure 和 appendix posture；不要让用户填写 schema field 或 enum。
+3. 只有两个或更多合理取值会实质改变 reader task、primary focus、primary spine、content priority、解释深度或 evidence exposure 时，才发起澄清。一条消息最多包含三个当前独立的问题；每项说明推荐值和影响。依赖前一答案的问题留到下一轮。透明默认可解决、或不会改变交付行为的细节不问。
+4. 用户可以直接接受整份 candidate、只修正其中一项，或委托 Agent 使用已展示的推荐。清楚接受、修正或委托即完成当前语义决定：重述 resolved meaning，写入 accepted owner，再运行 Gate；不得追加 blanket second confirmation。
+5. 若仍有 material ambiguity，保持 `hitl2.status: pending_user`，只在 decision brief 保留 human-readable candidate，且不得写 `proceed_to_readiness`、不得运行 passed handoff。用户先说“交付”但仍有一个 material boundary 时，该意图和后续最小答案共同完成同一决定，不再要求再次确认。
+
+`not_started` 只是 pre-HITL2 sentinel。delivery candidate 必须将其 resolved 为 `profile_default` 或另一明确 view。`custom` candidate 必须取得并展示 reader、use、primary focus、不要什么以及组织/呈现方式；`custom_slug` 只是 identifier，只有接受 trim-non-empty `view_instructions` 后才可 resolved。不得从 `rationale`、decision brief、chat 或 slug 推断缺失 composition semantics。
+
+只有 accepted candidate 可写入以下 existing profile owner：
+
+- `final_report_view`：明确 delivery view，不得为 `not_started`；
+- `custom_slug`：仅在 `custom` view 时写入 resolved identifier；非 custom 不从它获得语义；
+- `composition_handoff`：完整 v1 reader/use/focus/presentation contract，`for_rerun_count` 必须等于当前已读取的 `rerun_count`。
+
+同时将 decision brief 中的 candidate projection 更新为 accepted projection，供人类 resume/read；它不是 machine owner。非 delivery decision 保持既有语义：不要求 composition handoff，也不因其缺失而被阻塞。
+
 - 将用户 decision 写入 `rb_profile.yaml#/human_decision_checkpoints/hitl2`：
   - `status: recorded`
   - `user_decision`: 见下方枚举
   - `rationale`: 自由文本；若 legal `rerun` 含新的或修订的 focus，保留 `用户的重点原话（逐字保留）` 与 `Agent 对本轮额外研究方向的理解（可由用户修正）` 两个 labelled narrative parts。Agent 必须在同一 HITL2 loop 允许修正后才记录；它们不改变 enum、availability evaluator、Gate、route、profile field 或 Topic field。没有 focus 的 rerun 继续使用原有 rationale form
-  - `final_report_view`: 用户期望的 final report 视角（可选）
-  - `custom_slug`: 自定义 identifier（可选）
+  - `final_report_view`: 仅对 accepted delivery decision 写入明确 view；其他 decision 保持既有行为
+  - `custom_slug`: 仅对 accepted `custom` delivery view 写入 resolved identifier
+  - `composition_handoff`: 仅对 accepted `proceed_to_readiness` 写入完整 current-round v1 contract；不得复制 research owner 或以 pending candidate 代替 accepted contract
 
 ### user_decision 枚举
 
@@ -108,6 +130,7 @@ node --input-type=module -e "import { loadGateDefinition, readBundleProfile, eva
 - `artifacts/hitl2/decision-brief.md`（非空，含 findings summary、open questions、recommended actions）
 - `rb_profile.yaml#/human_decision_checkpoints/hitl2/status` = `recorded`
 - `rb_profile.yaml#/human_decision_checkpoints/hitl2/user_decision` 非空且为合法枚举值
+- 当 `user_decision: proceed_to_readiness` 时，`final_report_view` 和完整 current-round `composition_handoff` 已被 accepted；其他 decision 不因 absence 被阻塞
 - `rb_trace.jsonl` 中有 `hitl2_recorded` event
 - Gate 前 status window 为 `current_gate: wave2_complete` / `next_gate: hitl2_recorded`。HITL2 自己通过后，才在 §6 按 selected branch 运行 `advance-status --to hitl2_recorded`，写入 `next_gate: readiness_passed` 或 `next_gate: rerun_ready`。
 
@@ -164,6 +187,8 @@ Phase Agent 仍写 `hitl2_recorded` diagnostic event，但缺少该独立 event 
 - **MUST NOT 将不确定 branch 的路由编码进 transition chain**——确定性出口（有固定、上下文无关的 next-node 目标）SHALL 进 chain。当前确定性出口：`passed`、`rerun`。不确定 branch：`request_view_revision`、`repair`、`stop_blocked`（目标依赖 Agent 判断运行时状态）——归 Agent
 - **MUST NOT 在 `user_decision: rerun` 时仍然 advance 到 readiness**——gate CLI MUST emit the `rerun` outcome, and Agent MUST consume `check.next: phases/phase-rerun.md` through `enter-phase`
 - **HITL2 phase 写 `human_decision_checkpoints/hitl2` 时 MUST preserve 已有的 `rerun_count` 值**——MUST NOT 重置或删除。`rerun_count` 由 `phase-rerun.md` 管理递增，HITL2 只能读取不能修改
+- **MUST NOT 让 pending 或 custom-incomplete candidate 跨到 Readiness**——只有 clear acceptance/correction/delegation 后的完整 profile handoff 才可写 `proceed_to_readiness`
+- **MUST NOT 从 rationale、decision brief、chat 或 custom_slug 恢复 composition semantics**——这些都不是 Final 的 accepted composition owner
 - **accepted post-final feedback route MUST 通过 HITL2 repair/rerun 承载**，MUST NOT 通过 final node hidden loop；本 phase 不暗示该 reentry route 已由当前 runtime 实现
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
 

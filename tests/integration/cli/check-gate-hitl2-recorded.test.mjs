@@ -57,16 +57,33 @@ ${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
     final_report_view: profile_default
     rationale: "The research is complete and ready for final delivery."
     rerun_count: 0
+    composition_handoff:
+      contract_version: 1
+      for_rerun_count: 0
+      reader:
+        description: "Decision makers"
+        familiarity: working
+      intended_use: "Choose next actions."
+      primary_focus: "Material risks and trade-offs."
+      content_priorities:
+        foreground: ["Decision implications"]
+        compress: ["Background"]
+      delivery:
+        language: en-US
+        length: standard
+        evidence_exposure: balanced
+        appendix: as_needed
 `;
 
-function profileWithDecision(decision) {
-  return VALID_PROFILE.replace('user_decision: proceed_to_readiness', `user_decision: ${decision}`);
+function profileWithDecision(decision, { includeComposition = true } = {}) {
+  const profile = VALID_PROFILE.replace('user_decision: proceed_to_readiness', `user_decision: ${decision}`);
+  return includeComposition ? profile : profile.replace(/\n    composition_handoff:\n(?: {6,}.*\n)+/g, '\n');
 }
 
-function writePassingHitl2Inputs(dir, decision = 'proceed_to_readiness') {
+function writePassingHitl2Inputs(dir, decision = 'proceed_to_readiness', options = {}) {
   writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'),
     '# Final Review Decision Brief\n\n## Key Findings\n\nThe research produced strong evidence across 3 topics.\n\n## Open Questions\n\n1. How to generalize?\n\n## Recommended Actions\n\nProceed to final delivery.\n');
-  writeFileSync(join(dir, 'rb_profile.yaml'), profileWithDecision(decision));
+  writeFileSync(join(dir, 'rb_profile.yaml'), profileWithDecision(decision, options));
   writeHitl2HandoffTrace(dir, [{ event: 'hitl2_recorded', ts: new Date().toISOString() }]);
 }
 
@@ -303,6 +320,8 @@ describe('check-gate-hitl2-recorded', () => {
 
     const attempts = readTrace(dir).filter(e => e.event === 'gate_attempt' && e.gate === 'hitl2-recorded');
     assert.equal(attempts.at(-1).next, 'phases/phase-readiness.md');
+    assert.equal(attempts.at(-1).composition_handoff_receipt.schema_version, 'composition-handoff-receipt/v1');
+    assert.match(attempts.at(-1).composition_handoff_receipt.projection_sha256, /^[a-f0-9]{64}$/);
   });
 
   it('11. rerun emits rerun target in check.next and trace', () => {
@@ -320,7 +339,7 @@ describe('check-gate-hitl2-recorded', () => {
 
   it('12. non-deterministic decisions do not default to readiness handoff', () => {
     const dir = createBundle(unique('repair-no-default'));
-    writePassingHitl2Inputs(dir, 'repair');
+    writePassingHitl2Inputs(dir, 'repair', { includeComposition: false });
 
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -333,6 +352,32 @@ describe('check-gate-hitl2-recorded', () => {
     assert.ok(attempts.length > 0);
     assert.equal(attempts.at(-1).passed, true);
     assert.equal(attempts.at(-1).next, null);
+    assert.equal(Object.hasOwn(attempts.at(-1), 'composition_handoff_receipt'), false);
+  });
+
+  it('12b. proceed fails at the direct HITL2 owner for missing, stale, not_started, and unresolved custom handoffs', () => {
+    const variants = [
+      ['missing', profileWithDecision('proceed_to_readiness', { includeComposition: false })],
+      ['stale-round', VALID_PROFILE.replace('for_rerun_count: 0', 'for_rerun_count: 1')],
+      ['not-started-view', VALID_PROFILE.replace('final_report_view: profile_default', 'final_report_view: not_started')],
+      ['custom-unresolved', VALID_PROFILE
+        .replace('final_report_view: profile_default', 'final_report_view: custom')
+        .replace('    rationale:', '    custom_slug: " "\n    rationale:')],
+    ];
+
+    for (const [name, profile] of variants) {
+      const dir = createBundle(unique(`composition-${name}`));
+      writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
+      writeFileSync(join(dir, 'rb_profile.yaml'), profile);
+      writeHitl2HandoffTrace(dir);
+      const result = runGate(dir);
+      const output = JSON.parse(result.stdout);
+      assert.equal(result.status, 1, name);
+      assert.equal(output.check.passed, false, name);
+      const hint = output.hints.find((candidate) => candidate.rule_id === 'composition_handoff_proceed_contract');
+      assertCompleteHint(hint);
+      assert.equal(hint.write_to, 'phases/phase-hitl2.md');
+    }
   });
 
   it('13. strict Gate-attempt trace failure becomes a helper-owned failed result', () => {

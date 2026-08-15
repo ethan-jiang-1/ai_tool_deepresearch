@@ -351,3 +351,105 @@ HITL2 MAY 保留五个快捷选项（A/B/C/D/E），但 SHALL 以用户可理解
   - 即将生成最终报告；
   - 此期间框架不会主动浮出报告进度、普通错误、idle 或请求继续确认，Agent 沿现有合法路径自行处理；
   - Final 是交付，不再发起第三次决定交互。
+
+When the current recommendation is delivery or the user expresses delivery
+intent, HITL2 SHALL present a compact, complete, user-semantic composition
+recommendation in the same entry. It SHALL cover reader and familiarity,
+intended use, primary focus, report view, foreground/compress priorities,
+language, length, evidence exposure, and appendix posture without requiring the
+user to fill schema fields or learn enums.
+
+The Agent SHALL form that candidate in this order: current HITL2 explicit
+correction, accepted HITL1 purpose/delivery controls, current root must-answer
+shape, selected-view transparent defaults, then disclosed system defaults. A
+candidate is a recommendation only until the user clearly accepts, corrects, or
+delegates it. Only when two or more reasonable values would materially change
+reader task, primary focus, primary spine, content priority, explanatory depth,
+or evidence exposure SHALL the Agent ask a clarification. It MAY group no more
+than three currently independent recommended questions in one message; dependent
+questions SHALL wait, and transparent or non-material details SHALL NOT become
+questions.
+
+Clear acceptance, correction, or delegation SHALL itself confirm the resolved
+candidate. The Agent SHALL restate its meaning, write the existing
+`final_report_view` owner and the durable `composition_handoff` owner, then run
+the existing Gate without a blanket second confirmation. If material ambiguity
+remains, `hitl2.status` SHALL stay `pending_user`; the candidate may remain a
+decision-brief proposal, but the Agent SHALL NOT write `proceed_to_readiness`
+or hand an incomplete object to Final.
+
+When the user says delivery after a complete candidate with no material
+ambiguity, that statement SHALL accept the candidate. If a material boundary
+remains, it expresses delivery intent only; the smallest missing boundary SHALL
+be asked, and the answer plus the prior intent SHALL complete the decision
+without another delivery confirmation. A correction to a pending view updates
+the candidate and SHALL NOT become `request_view_revision` unless the user
+explicitly chooses to defer delivery through that existing branch.
+
+For `custom`, HITL2 SHALL obtain and show resolved reader, use, primary focus,
+what to avoid, and desired organization/presentation semantics, and write
+trim-non-empty `view_instructions`; `custom_slug` remains only an identifier.
+`not_started` is pre-HITL2 only and a delivery candidate SHALL normalize it to
+`profile_default` or another explicit view. The Agent SHALL NOT recover missing
+composition semantics from `rationale`, decision brief, chat, or slug.
+
+#### Scenario: User accepts a complete delivery recommendation
+
+- **WHEN** Agent displays a HITL2 research review and complete composition
+  recommendation, and the user says “够了，按这个出报告” or an equivalent clear
+  delegation
+- **THEN** Agent SHALL record `proceed_to_readiness`, an explicit
+  `final_report_view`, a complete `composition_handoff`, and `status: recorded`
+- **AND** Agent SHALL NOT add a second confirmation
+
+#### Scenario: Material composition ambiguity gets one bounded frontier
+
+- **WHEN** two or more current reader/use/view interpretations would materially
+  change report spine, focus, or evidence exposure
+- **THEN** Agent SHALL use one message with no more than three independent
+  questions, each with a recommendation and impact
+- **AND** it SHALL defer dependent questions and SHALL NOT turn HITL2 into a
+  field-by-field questionnaire
+
+#### Scenario: Delivery intent plus clarification completes one decision
+
+- **WHEN** the user first says “直接交付”, one material composition boundary
+  remains unresolved, and the user then clearly answers that minimum question
+- **THEN** the earlier delivery intent and answer SHALL jointly form the
+  resolved handoff
+- **AND** Agent SHALL write the accepted owner and continue without asking the
+  user to confirm delivery again
+
+#### Scenario: User corrects the displayed candidate
+
+- **WHEN** the user says “读者改成管理层，篇幅简短，但保留关键证据”
+- **THEN** Agent SHALL update the candidate, restate the resolved effect, and
+  persist the corrected values when no material ambiguity remains
+- **AND** it SHALL not require a letter choice, map the pending correction to
+  `request_view_revision`, or leave the correction only in chat
+
+#### Scenario: Custom view remains pending until executable
+
+- **WHEN** the user chooses `custom` without enough reader/use/focus/
+  organization semantics to form `view_instructions`
+- **THEN** Agent SHALL keep `pending_user` and ask only the smallest missing
+  boundary
+- **AND** it SHALL not use slug, rationale, decision brief, or chat as a
+  fallback Final contract
+
+#### Scenario: Non-delivery action remains unblocked without a handoff
+
+- **WHEN** the user clearly chooses `request_view_revision`, `rerun`, `repair`,
+  or `stop_blocked`
+- **THEN** Agent SHALL preserve the existing action-specific mapping,
+  availability, cost, rationale, honesty, and route behavior
+- **AND** absence of `composition_handoff` SHALL not force a delivery question
+  or authorize Final
+
+#### Scenario: Decision brief supports resume without becoming authority
+
+- **WHEN** a HITL2 session interrupts while a composition candidate is pending
+- **THEN** Agent MAY use `decision-brief.md` to restore conversational context
+  and continue waiting
+- **AND** only a subsequently accepted profile handoff SHALL authorize
+  Readiness or Final

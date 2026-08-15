@@ -203,6 +203,67 @@ remain Agent-level decisions without fixed chain entries.
 - **THEN** CDP-001 SHALL NOT authorize writing `human_decision_checkpoints.hitl2`, changing deterministic state, or selecting a HITL2 route from that message alone
 - **AND** the message SHALL NOT create a third HITL checkpoint, pause state, permission, or mutation authority
 
+When delivery is recommended or intended, the HITL2 phase SHALL add a compact
+Chinese-language composition recommendation for reader/familiarity, intended
+use, primary focus, selected report view, foreground/compress priorities,
+language, length, evidence exposure, and appendix posture. It SHALL present
+reader-facing meaning, not a schema questionnaire or enum form. The Phase Agent
+SHALL resolve the candidate from current explicit correction, accepted HITL1
+purpose/control, root must-answer shape, transparent selected-view defaults,
+then disclosed system defaults.
+
+Only a material ambiguity frontier may interrupt delivery: currently independent
+questions may be grouped into one message of at most three questions, while
+dependent questions wait. Clear acceptance, correction, or delegation completes
+the semantic decision. The Agent SHALL write the resolved values to the durable
+profile owner, update the decision brief's candidate projection to the accepted
+projection, and run the existing HITL2 Gate without a blanket second
+confirmation. An unresolved candidate SHALL stay `pending_user`, SHALL NOT
+write `proceed_to_readiness`, and SHALL NOT attempt a passed handoff.
+
+A correction while pending updates that candidate and SHALL NOT silently become
+the context-dependent `request_view_revision` branch unless the user explicitly
+chooses to defer delivery. For `custom`, a non-empty accepted
+`view_instructions` covering intended organization or focus is required; Final
+SHALL never reconstruct custom semantics from slug, rationale, or chat. The
+phase SHALL preserve every existing decision enum and rerun, repair, stop, Gate,
+status, and route semantic, and SHALL not treat rationale, raw chat,
+`custom_slug`, or decision brief as a composition machine owner.
+
+#### Scenario: Complete composition recommendation is accepted without a second confirmation
+
+- **WHEN** HITL2 displays a complete composition recommendation and the user
+  says “按这个交付” or an equivalent clear delegation
+- **THEN** the Agent SHALL write the resolved handoff, record
+  `proceed_to_readiness`, and run the existing Gate
+- **AND** it SHALL not ask a blanket “是否确定” question
+
+#### Scenario: One clarification frontier resolves material ambiguity
+
+- **WHEN** two or more currently answerable reader/use/view interpretations
+  would materially change the report's spine or evidence exposure
+- **THEN** the Agent SHALL present at most three independent recommended
+  questions together
+- **AND** after the user's answer it SHALL produce one resolved candidate rather
+  than a schema interview or a new lifecycle checkpoint
+
+#### Scenario: Delivery intent waits at an unresolved boundary
+
+- **WHEN** the user says “直接交付” while custom semantics, reader/use, or
+  another material composition distinction remains unresolved
+- **THEN** the Agent SHALL retain `pending_user`, explain only the missing
+  boundary, and ask the smallest required clarification
+- **AND** once it is answered, the earlier delivery intent and answer SHALL
+  jointly complete the decision without another confirmation
+
+#### Scenario: Custom view cannot cross with guessed semantics
+
+- **WHEN** `final_report_view` is `custom` but the user has not accepted
+  non-empty `view_instructions` covering intended organization or focus
+- **THEN** the phase SHALL remain pending and SHALL not route to Readiness
+- **AND** Final SHALL never reconstruct the custom view from slug, rationale,
+  or chat
+
 ### Requirement: Phase Readiness body completeness
 
 `phase-readiness.md` SHALL contain a complete 9-section body. The node SHALL declare `phase: readiness`, `gate: readiness-passed`, `next: final`, `stop: "no"`.
@@ -245,6 +306,26 @@ The phase SHALL NOT judge semantic quality or writing quality. It SHALL only per
 - **THEN** the phase body SHALL NOT instruct semantic quality judgment of synthesis or decision brief content
 - **AND** SHALL restrict checks to structural/existence/consistency criteria enforced by the readiness gate
 
+Readiness SHALL keep composition comparison at this existing structural
+checkpoint. Its guidance SHALL identify the current profile as Final's
+composition owner and the selected HITL2 receipt only as the immutable witness
+used by the existing route-bound preflight. It SHALL invoke the shared Engine
+comparison rather than duplicate fingerprint logic. Exact match proceeds under
+the existing rules; projection-only drift exposes only the bounded restore
+operation and rerun of this same Readiness Gate; unrelated context drift and
+invalid witnesses fail closed. An eligible pre-v1 in-flight predecessor may use
+only the named legacy-migration operation. The phase SHALL add no user question,
+semantic score, automatic mutation, or second checkpoint, and Final SHALL never
+read the receipt as a fallback data owner.
+
+#### Scenario: Readiness projects the one composition consistency boundary
+
+- **WHEN** the selected legal HITL2 handoff and current profile are compared
+- **THEN** the phase SHALL direct the Agent to the shared Gate/operation result
+  and its exact restore or migration command when applicable
+- **AND** it SHALL not ask the user, recreate fingerprint logic, or create a
+  second composition checkpoint
+
 ### Requirement: Phase Final body completeness
 
 `phase-final.md` SHALL contain a complete 9-section body. The node SHALL declare `phase: final`, `gate: null`, and `stop: "no"`; it SHALL not declare a `next` frontmatter field. It SHALL be a terminal node — no outgoing gate, no normal next phase.
@@ -280,6 +361,84 @@ Delivery completion SHALL be evidenced by the existence of at least one report f
 - **THEN** the accepted post-final recovery operation SHALL write the current HITL2 rerun semantics and audited recovery lineage
 - **AND** rework SHALL enter the existing `phases/phase-rerun.md` path without re-asking the same decision
 - **AND** Final SHALL NOT implement a hidden loop back to earlier phases or claim unsupported generic repair authority
+
+After legal Readiness entry, Final SHALL consume the current accepted
+`final_report_view` and `composition_handoff` from the profile with verified
+research state. It SHALL not consume a receipt as a normal source or fill
+missing semantics from rationale, decision brief, chat, slug, or transparent
+Final defaults. The same terminal node SHALL execute this Report Composition
+Pass in order:
+
+1. **Reground** in the goal, scope, root must-answer set, accepted handoff,
+   answerability/limitation surfaces, allowed read graph, and final target;
+2. **Answer Inventory** by joining verified finding index, evidence meaning,
+   Wave-local mechanism/limitation material, and submitted-backed references;
+3. **Coverage and materiality** by assigning every root must-answer
+   `answered`, `partial`, or `unavailable`, retaining material answers,
+   contradictions, limitations, confidence boundaries, and backing obligations;
+4. **Spine and placement** by selecting one primary narrative spine and deciding
+   must-answer order, finding placement, body/appendix boundaries, and explicit
+   reasons for omitted P0/P1 material; and
+5. **Draft and self-check** before invoking the existing
+   `persist-final-report` admission path.
+
+The view mappings SHALL remain distinguishable while sharing verified-content
+obligations: `profile_default` starts from the profile-appropriate question,
+topic, or claim spine; `executive_brief` is decision-first and foregrounds
+P0/P1, material risks, trade-offs, and unknowns; `evidence_map` is
+evidence-first and exposes support, contradiction, limitation, confidence, and
+gaps without replacing the mandatory Evidence Map declaration; `claim_judgment`
+is claim-first and states judgment, support, counterevidence, conditions,
+confidence, and residual unknowns; `technical_deep_dive` is
+mechanism/dependency-first and distinguishes observed fact, inferred mechanism,
+and unresolved hypothesis; `custom` follows accepted non-empty
+`view_instructions` within verified evidence and must-answer boundaries.
+
+Foreground, compress, delivery length, evidence exposure, and appendix
+preferences SHALL affect only ordering, granularity, and presentation. They
+SHALL NOT hide or weaken a material contradiction, limitation, uncertainty,
+must-answer obligation, confidence boundary, submitted-backing requirement, or
+mandatory Evidence Map. Exact section names and transitions remain Final Agent
+judgment. Final SHALL add no question, wait, confirmation, feedback loop,
+outgoing Gate, transition, delegated production actor, second primary report,
+or report-quality deterministic verdict; a failed persistence/backing check
+returns to retained staging and the same operation.
+
+#### Scenario: Different views change reading path but not verified meaning
+
+- **WHEN** the same readiness-passed verified state is delivered under two
+  accepted handoffs with different standard views
+- **THEN** reports MAY differ in reader framing, spine, order, granularity,
+  evidence exposure, and appendix placement
+- **AND** finding meaning, status/confidence, limitations, must-answer coverage,
+  provenance, and submitted backing SHALL remain consistent
+
+#### Scenario: Material content survives compression
+
+- **WHEN** a handoff asks Final to compress a finding, counterevidence, or
+  limitation
+- **THEN** Final MAY move non-material detail to an appendix or omit repetition
+- **AND** it SHALL retain content whose absence would change an answer,
+  confidence, scope, decision implication, mechanism understanding, or
+  limitation visibility
+
+#### Scenario: Final does not reopen HITL2
+
+- **WHEN** Final encounters a missing, unsupported, stale, or drifted handoff
+  after legal entry
+- **THEN** it SHALL expose the upstream contract boundary and stop the delivery
+  claim
+- **AND** it SHALL not ask the user, silently default a view, or route back to
+  HITL2 from inside Final
+
+#### Scenario: Final persists after composition self-check and backing admission
+
+- **WHEN** the Composition Pass has completed its coverage/self-check and the
+  report contains the required Evidence Map
+- **THEN** the Agent SHALL invoke `persist-final-report` and present delivery
+  only after a committed result and existing Final-entry evidence
+- **AND** a structural backing rejection SHALL be repaired at retained staging
+  and rerun through the same operation
 
 ### Requirement: Final delivery is terminal non-interactive delivery and post-final feedback re-enters through HITL2
 

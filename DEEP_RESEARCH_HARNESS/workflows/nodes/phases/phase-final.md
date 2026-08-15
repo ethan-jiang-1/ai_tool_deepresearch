@@ -20,7 +20,7 @@ suggested_context:
 
 ## 0. Execution Brief
 
-- **Objective**: Deliver final report artifacts from verified bundle state.
+- **Objective**: Run one view-aware Report Composition Pass and deliver final report artifacts from verified bundle state.
 - **Start here**: Confirm readiness-passed state, then read verified wave artifacts, profile, status, trace, and, when present, `rb_plan.md## Constraints > User Research Controls`.
 - **Path to pass**: Confirm terminal status from readiness (`current_gate: readiness_passed` / `next_gate: none`) and generate at least one report under `final/`; optional diagnostic logs do not prove delivery.
 - **Completion check**: At least one final artifact exists under `final/`; there is no gate command for this terminal node.
@@ -38,7 +38,7 @@ Delivery completion 的 evidence 是 legally entered Final node 中 `final/` 目
 
 - Readiness gate passed 的 active `dpt_rb_*` run bundle
 - All verified wave artifacts（Wave0 reference、Wave1 skeleton、Wave2 synthesis）
-- `rb_profile.yaml`（用户 profile、HITL1/HITL2 decision、final_report_view 偏好）
+- `rb_profile.yaml`（用户 profile、HITL1/HITL2 decision，以及 accepted `final_report_view` + `composition_handoff`）
 - `rb_status.json`（确认 readiness passed）
 - `rb_trace.jsonl`（完整 trace 记录）
 
@@ -47,7 +47,7 @@ User controls remain guidance only: apply them against verified evidence and exi
 ## 3. Allowed Actions
 
 - 读取所有 verified bundle state：wave artifacts、profile、status、trace
-- 根据用户 `final_report_view` 偏好（来自 `rb_profile.yaml` HITL2 字段）组织报告结构和侧重点
+- 从 current profile 的 accepted `final_report_view` 与 `composition_handoff` 组织报告结构和侧重点；receipt 只属于上游 Readiness consistency witness，不能作为 Final 的 fallback data owner
 - 从 verified bundle state 生成至少 1 份 final report artifact 到 `final/` 目录
 - Final Markdown report 必须在 retained staging file 中包含一个 `Evidence Map`：每个 selected key finding 一行，使用 `Finding ID`、`Declared Key Finding`、`Submitted Backing` 三列，并在 backing cell 用标准 Markdown link 指向已 submitted 的 `source_yaml` / `evidence_summary` 或已有 submitted-backed `reference/` projection
 - 对 safe `final/*.md` staging report，只能用 `operate-artifact-persistence.mjs persist-final-report` 提交；读取其 `check` / `inspect` / `advice`，若 admission rejected，只修复命名的 staging row 或合法 backing surface 后重跑同一 command。只有 `committed` 后才消费该文件；generic `persist` 不能提交 Final Markdown。崩溃恢复使用无并发 persist 的 quiescent `sweep`
@@ -56,6 +56,33 @@ User controls remain guidance only: apply them against verified evidence and exi
 - Report 中的声明使用标准 Markdown link `[label](relative/path.md)` 引用来源
 - 确认 `rb_status.json` 已由 readiness §6 写成 `current_gate: readiness_passed` / `next_gate: none`；Final 没有 gate，不再运行 `advance-status`，也不把 status 改成 `none/null`
 - 可通过 `_logs/run.log` 记录 diagnostic completion summary；不要写 `final_delivery` trace event，也不要把 log/chat summary 当作 delivery evidence
+
+### 3a. Report Composition Pass
+
+进入 Final 后，先确认 current profile 中的 accepted handoff 与 verified bundle state 都可读。Final 不从 `rationale`、decision brief、chat、`custom_slug` 或 receipt 补猜 reader/use/focus/view semantics。若此 upstream contract 不存在、unsupported 或无法安全读取，暴露该 upstream boundary 并停止 delivery claim；不要向用户提问、默认一个 view、回跳 HITL2，或新建 Gate。
+
+在同一个 Final Phase Agent 内按以下顺序完成一次 Report Composition Pass。其 Answer Inventory、coverage summary、placement map、omission reasons、staging draft 与 self-check 都是本次工作视图，不产生 schema、Gate、Queue、Sub-agent handoff 或第二个 primary report：
+
+1. **Reground**：重读 goal、scope、root must-answer set、accepted handoff、answerability/limitation surfaces、allowed read graph 和 final target。
+2. **Answer Inventory**：把 verified finding index、evidence meaning、Wave-local mechanism/limitation material 与 submitted-backed references 汇集为可写作的答案库存。
+3. **Coverage and materiality**：为每个 root must-answer 标明 `answered`、`partial` 或 `unavailable`，保留 material answer、contradiction、limitation、confidence boundary 和 submitted backing obligation。
+4. **Spine and placement**：选择一个 primary narrative spine，决定 must-answer 的顺序、finding 的落点、正文/附录边界，并对任何 omitted P0/P1 material 保留明确理由。
+5. **Draft and self-check**：按已选择的 view 写一份 primary report，自检 coverage、materiality、limitations、confidence、Evidence Map 与 backing，然后只通过既有 `persist-final-report` admission path 提交 retained staging。
+
+`foreground`、`compress`、length、evidence exposure 与 appendix posture 只影响顺序、粒度与呈现。它们不能隐藏或减弱 material must-answer、contradiction、limitation、uncertainty、confidence boundary、submitted backing requirement 或 mandatory `## Evidence Map`。`evidence_map` view 也不能替代每份 Final Markdown 必须包含的 Evidence Map declaration。
+
+### 3b. Accepted View Policies
+
+所有 view 共享同一份 verified meaning、coverage 和 backing obligations；view 只改变阅读路径与表达粒度，具体 section names 和段落过渡仍由 Final judgment 决定。
+
+| accepted `final_report_view` | Reader task and initial primary spine | Selection and evidence exposure |
+|---|---|---|
+| `profile_default` | 从 research profile 合适的 question/topic/claim spine 开始 | 按已接受的 delivery posture 平衡背景与关键证据 |
+| `executive_brief` | decision-first，先呈现 P0/P1、material risks、trade-offs 与 unknowns | 压缩重复背景，保留会改变决策的关键证据与限制 |
+| `evidence_map` | evidence-first，按 support、contradiction、limitation、confidence 与 gap 组织 | 使 evidence relation 更显性，但保留正文回答和 mandatory Evidence Map |
+| `claim_judgment` | claim-first，逐项给出 judgment、support、counterevidence、conditions、confidence 与 residual unknowns | 让判断依据可审阅，不把 counterevidence 或边界压掉 |
+| `technical_deep_dive` | mechanism/dependency-first | 区分 observed fact、inferred mechanism 与 unresolved hypothesis，并保留限制和 backing |
+| `custom` | 依照 accepted non-empty `view_instructions` 的 reader/use/focus/organization | 只在 verified evidence 与 must-answer boundary 内执行，不把 slug 当作语义 |
 
 ## 4. Expected Artifacts
 
@@ -66,6 +93,7 @@ User controls remain guidance only: apply them against verified evidence and exi
 - `rb_status.json` 中保持 `current_gate: readiness_passed` / `next_gate: none`
 - `final/` 目录存在即证明 delivery 完成
 - Persistence 只证明 bytes durable；它不替代 readiness pass、Final entry witness 或本节的 delivery 条件
+- 每个 primary report 已完成 Report Composition Pass；它保留 root must-answer coverage、material contradiction/limitation/confidence、mandatory Evidence Map 和 submitted backing，无论 accepted view 如何压缩或重排
 
 ## 5. Gate Command
 
@@ -113,6 +141,8 @@ Post-delivery 用户反馈入口：若用户明确决定 rerun scope/risk，Agen
 - **MUST NOT 写 `final_delivery` trace event 或用 log/chat summary 证明 delivery**——final 无 gate CLI，charter 禁止手写 trace event。delivery 由 legal Final entry 后的 `final/` 文件存在证明
 - **MUST NOT 用 generic `persist` 绕过 Final Markdown Evidence Map admission**——safe `final/*.md` 只经 `persist-final-report` durable commit；admission pass 仍不替代 readiness pass、Final entry 或 Agent/human semantic review
 - **MUST NOT 把 premature `final/` 文件当成 delivery**——没有 readiness-to-final handoff 和 Final entry witness 时，`final/` 只是 phase-boundary violation diagnostic
+- **MUST NOT 将 receipt、rationale、decision brief、chat 或 `custom_slug` 当作 accepted composition fallback**——Final 只消费 current profile handoff 与 verified state
+- **MUST NOT 为不同 view 创建 Sub-agent、第二份 primary report、Final question、Final Gate 或 outgoing transition**——view-aware composition 是同一个 terminal Phase Agent 的工作
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
 
 ## Log

@@ -22,6 +22,10 @@ import {
   makeContractFinding,
   makeDefinitionRuleFinding,
 } from '../../engine/helpers/wave-contract-findings.mjs';
+import {
+  evaluateCompositionHandoffConsistency,
+  selectCompositionHandoffWitness,
+} from '../../engine/helpers/composition-handoff.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
@@ -104,6 +108,22 @@ function readTraceJsonl() {
   });
   traceRead = { exists: true, events, badLines, error: null };
   return traceRead;
+}
+
+let profileRead = null;
+function readProfile() {
+  if (profileRead) return profileRead;
+  const profilePath = join(bundlePath, 'rb_profile.yaml');
+  if (!existsSync(profilePath)) {
+    profileRead = { value: null, exists: false, error: 'file absent' };
+    return profileRead;
+  }
+  try {
+    profileRead = { value: parseYaml(readFileSync(profilePath, 'utf-8')), exists: true, error: null };
+  } catch (error) {
+    profileRead = { value: null, exists: true, error: error.message || String(error) };
+  }
+  return profileRead;
 }
 
 function profileParseFinding(rule, failure) {
@@ -305,27 +325,72 @@ for (const rule of definition.rules) {
 }
 
 const ruleEvaluation = buildContractEvaluation({ checksRun, findings });
-const outcome = ruleEvaluation.passed ? 'passed' : 'failed';
+let compositionConsistency = null;
+const compositionFindings = [];
+if (ruleEvaluation.passed) {
+  const witness = selectCompositionHandoffWitness({
+    predecessor: handoffPreflight.handoff,
+    trace_events: handoffPreflight.traceEvents,
+  });
+  compositionConsistency = witness.ok
+    ? evaluateCompositionHandoffConsistency(readProfile().value, witness.receipt)
+    : witness;
+  if (!compositionConsistency.ok) {
+    const restoreCommand = `node DEEP_RESEARCH_HARNESS/cli/operate-composition-handoff.mjs restore --bundle ${bundlePath} --current-node phases/phase-readiness.md`;
+    const projectionDrift = compositionConsistency.kind === 'composition_projection_drift';
+    const contextDrift = compositionConsistency.kind === 'profile_context_drift';
+    const invalidWitness = compositionConsistency.kind === 'invalid_witness';
+    compositionFindings.push(makeContractFinding({
+      id: 'composition_handoff_readiness_consistency',
+      ruleId: 'composition_handoff_readiness_consistency',
+      findingSource: 'checker',
+      classification: 'blocking',
+      blockingBasis: contextDrift ? 'authority_integrity' : 'recorded_human_decision',
+      surface: invalidWitness
+        ? 'rb_trace.jsonl#selected-hitl2-gate_attempt.composition_handoff_receipt'
+        : 'rb_profile.yaml#/human_decision_checkpoints/hitl2',
+      expected: 'The current composition projection and non-composition profile context equal the exact selected HITL2 witness.',
+      observed: compositionConsistency.reason_code,
+      missingFact: `Readiness composition consistency failed: ${compositionConsistency.reason_code}.`,
+      repairKind: projectionDrift ? 'engine_operation' : (contextDrift || invalidWitness ? 'missing_contract' : 'agent_action'),
+      writeTo: projectionDrift
+        ? restoreCommand
+        : (contextDrift ? 'Owning profile/lifecycle boundary for non-composition drift' : (invalidWitness ? 'Selected HITL2 Gate witness contract boundary' : 'rb_profile.yaml#/human_decision_checkpoints/hitl2')),
+      repair: projectionDrift
+        ? `Restore the exact selected projection, then rerun this same Readiness Gate: ${restoreCommand}`
+        : 'Resolve the named authoritative boundary; do not use the receipt as a Final fallback or infer replacement composition semantics.',
+      detail: `[composition_handoff_readiness_consistency] ${compositionConsistency.reason_code}`,
+    }));
+  }
+}
+
+const compositionEvaluation = buildContractEvaluation({
+  checksRun: checksRun + (ruleEvaluation.passed ? 1 : 0),
+  findings: [...ruleEvaluation.findings, ...compositionFindings],
+  maskedRuleIds: ruleEvaluation.masked_rule_ids,
+});
+const outcome = compositionEvaluation.passed ? 'passed' : 'failed';
 const routing = resolveRouting(args.transitions, args.currentNode, outcome);
 const routingFailed = ['invalid_input', 'config_error'].includes(routing.kind);
 const evaluation = buildContractEvaluation({
-  checksRun,
-  findings: [...ruleEvaluation.findings, ...(routing.findings || [])],
-  maskedRuleIds: ruleEvaluation.masked_rule_ids,
+  checksRun: compositionEvaluation.checks_run,
+  findings: [...compositionEvaluation.findings, ...(routing.findings || [])],
+  maskedRuleIds: compositionEvaluation.masked_rule_ids,
 });
 
 const result = buildGateResult({
-  passed: ruleEvaluation.passed && !routingFailed,
+  passed: compositionEvaluation.passed && !routingFailed,
   gate: definition.gate,
   currentNodeRef: args.currentNode,
   routing,
-  inspect: [...ruleEvaluation.inspect, ...(routing.inspect || [])],
-  advice: [...ruleEvaluation.advice, ...(routing.advice || [])],
+  inspect: [...compositionEvaluation.inspect, ...(routing.inspect || [])],
+  advice: [...compositionEvaluation.advice, ...(routing.advice || [])],
   findings: evaluation.findings,
   bundlePath,
   extraCheck: {
     failed_rule_ids: evaluation.failed_rule_ids,
     masked_rule_ids: evaluation.masked_rule_ids,
+    composition_handoff_consistency: compositionConsistency?.kind || null,
   },
   attemptNumber: args.attempt ?? 0,
 });

@@ -515,6 +515,7 @@ function makeHandoff(traceEvent, edge, events, { requireLoad = false, bundlePath
     degradedReason: edge.degradedReason || null,
     degradedRules: edge.degradedRules || [],
     sourceAttemptTs: traceEvent.event.ts || null,
+    sourceAttemptLineSha256: traceEvent.lineSha256 || null,
     loadComplete: null,
   };
 
@@ -681,7 +682,7 @@ export function validateSourceGateStatusSync(bundlePath, sourceGateEnum) {
     return { ok: true, covered: true, handoff: latest, exceptional: true, stage: exceptionalStage.stage };
   }
 
-  const made = makeHandoff({ index: latest.index, event: latest.event }, {
+  const made = makeHandoff({ index: latest.index, event: latest.event, lineSha256: latest.sourceAttemptLineSha256 }, {
     sourceGate: latest.sourceGate,
     sourceGateEnum: latest.sourceGateEnum,
     sourceNode: latest.sourceNode,
@@ -838,7 +839,7 @@ export function checkPhaseHandoffPreflight(bundlePath, currentNodeRef) {
     return { ok: true, handoff: latest, exceptional: true, stage: exceptionalStage.stage };
   }
 
-  const made = makeHandoff({ index: latest.index, event: latest.event }, {
+  const made = makeHandoff({ index: latest.index, event: latest.event, lineSha256: latest.sourceAttemptLineSha256 }, {
     sourceGate: latest.sourceGate,
     sourceGateEnum: latest.sourceGateEnum,
     sourceNode: latest.sourceNode,
@@ -932,5 +933,5 @@ export function checkPhaseHandoffPreflight(bundlePath, currentNodeRef) {
     }, { handoff });
   }
 
-  return { ok: true, handoff };
+  return { ok: true, handoff, traceEvents: ctx.events };
 }

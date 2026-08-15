@@ -1,0 +1,81 @@
+schema_version: semantic-closure/v1
+change: final-report-composition
+status: affected
+catalog_additions: []
+affected:
+  - family: lifecycle.gate-status-trace-handoff
+    fact: >-
+      Whether the exact current composition projection in rb_profile.yaml is
+      either a complete current-round contract accepted by the selected legal
+      v1 HITL2 proceed Gate or a complete explicitly accepted projection
+      committed by one eligible predecessor-bound legacy migration, and remains
+      identical when Readiness authorizes Final. The conclusion distinguishes a
+      matching projection, projection-only drift, unrelated profile-context
+      drift, an eligible migration whose context evidence begins at commit, and
+      missing/malformed/unsupported witness facts. It does not claim legacy
+      predecessor-era context equality or judge reader/use quality, report
+      quality, or submitted evidence adequacy.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/composition-handoff.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl2-recorded.mjs
+      - DEEP_RESEARCH_HARNESS/cli/operate-composition-handoff.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-readiness-passed.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl2-recorded.mjs
+      - DEEP_RESEARCH_HARNESS/cli/operate-composition-handoff.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/schema/contracts/profile.mjs
+        relation: authoritative
+        detail: >-
+          ProfileSchema owns the strict local shape of the durable current
+          composition object and preserves absent historical/non-delivery forms.
+          The shared resolver, not the schema alone, decides proceed admission,
+          sibling round binding, receipt equality, drift class, and migration
+          eligibility.
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-core.mjs
+        relation: authoritative
+        detail: >-
+          The existing strict successful gate_attempt trace path carries the
+          validated receipt atomically with the HITL2 handoff. It does not
+          normalize or semantically interpret the composition contract.
+      - coordinate: DEEP_RESEARCH_HARNESS/rb_templates/rb_profile.yaml.tmpl
+        relation: derived
+        detail: >-
+          The run-bundle starter projects the optional profile coordinate and
+          supported view vocabulary. It does not resolve admission, lifecycle
+          acceptance, drift, restore, or migration eligibility.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-profile.md
+        relation: derived
+        detail: >-
+          Shared profile guidance presents the durable composition owner and
+          its mutation boundary to Agents. It does not establish the selected
+          Gate witness or decide the handoff-family conclusion.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/brief/hitl2.md
+        relation: derived
+        detail: >-
+          The HITL2 brief presents the accepted interaction and persistence
+          route in reader-facing terms. It does not turn recommendation prose
+          or user language into deterministic acceptance evidence.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl2.md
+        relation: derived
+        detail: >-
+          HITL2 guidance projects the interaction and Agent-owned profile write.
+          It does not make candidate prose or user-facing recommendation a Gate
+          verdict or accepted-state witness.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-readiness.md
+        relation: derived
+        detail: >-
+          Readiness guidance projects the shared evaluator's bounded failure,
+          restore, migration, and same-check rerun vocabulary. It does not
+          compute fingerprints, mutate authority, or establish a Gate verdict.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-final.md
+        relation: derived
+        detail: >-
+          Final reads the current accepted profile contract after Readiness and
+          applies semantic composition judgment. It does not consume trace as a
+          fallback, establish lifecycle acceptance, or become a deterministic
+          verdict consumer for the handoff family.
+    verification:
+      truth_table: tests/engine/helpers/composition-handoff.test.mjs
+      cross_surface: tests/integration/cli/check-gate-readiness-passed.test.mjs

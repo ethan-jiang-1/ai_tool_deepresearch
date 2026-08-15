@@ -157,6 +157,14 @@ suggested_context:
 - **填写时机**：HITL2 phase，仅当 `final_report_view == custom` 时填写
 - **含义**：用户自定义的报告视角标识符
 
+### `human_decision_checkpoints.hitl2.composition_handoff`
+
+- **类型**：optional strict v1 object；只在 HITL2 已得到完整 accepted delivery intent 后写入。
+- **内容**：current rerun binding、reader/familiarity、intended use、primary focus、foreground/compress priorities，以及 language/length/evidence exposure/appendix；`custom` view 还需要 resolved `view_instructions`。
+- **owner**：current `rb_profile.yaml` 是 Final 的正常读取来源；decision brief、chat、`rationale` 和 receipt 都不是 fallback owner。
+- **gate 行为**：ProfileSchema 只校验局部 shape。`hitl2-recorded` Gate 在 `proceed_to_readiness` 时校验 view/custom/rerun sibling invariants 并写 immutable witness；Readiness 比较 current profile 与该 witness。
+- **compatibility**：absence 对 historical、pending 和 non-delivery profile 仍可读，但不授权 Readiness 或 Final。
+
 ### `human_decision_checkpoints.hitl2.rerun_count`
 
 - **类型**：optional non-negative integer，schema default 为 `0`

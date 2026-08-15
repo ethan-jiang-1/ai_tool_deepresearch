@@ -22,6 +22,7 @@ import {
   makeContractFinding,
   makeDefinitionRuleFinding,
 } from '../../engine/helpers/wave-contract-findings.mjs';
+import { evaluateCompositionProceed } from '../../engine/helpers/composition-handoff.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
@@ -311,12 +312,42 @@ if (ruleEvaluation.passed) {
   selectedDecision = resolveObjectPath(readProfile().value || {}, 'human_decision_checkpoints/hitl2/user_decision');
 }
 
+let compositionProceed = null;
+const compositionFindings = [];
+if (ruleEvaluation.passed && selectedDecision === 'proceed_to_readiness') {
+  compositionProceed = evaluateCompositionProceed(readProfile().value);
+  if (!compositionProceed.ok) {
+    const path = compositionProceed.path?.join('.') || 'human_decision_checkpoints.hitl2.composition_handoff';
+    compositionFindings.push(makeContractFinding({
+      id: 'composition_handoff_proceed_contract',
+      ruleId: 'composition_handoff_proceed_contract',
+      findingSource: 'checker',
+      classification: 'blocking',
+      blockingBasis: 'recorded_human_decision',
+      surface: `rb_profile.yaml#/${path.replaceAll('.', '/')}`,
+      expected: 'A complete current-round composition handoff for the selected delivery view.',
+      observed: compositionProceed.reason_code,
+      missingFact: `HITL2 proceed cannot be witnessed because ${compositionProceed.reason_code}.`,
+      repairKind: 'user_decision',
+      writeTo: 'phases/phase-hitl2.md',
+      repair: 'Resolve the named delivery intent fact at HITL2, write the accepted profile owner, then rerun the same Gate.',
+      detail: `[composition_handoff_proceed_contract] ${compositionProceed.reason_code}`,
+    }));
+  }
+}
+
+const compositionEvaluation = buildContractEvaluation({
+  checksRun: checksRun + (selectedDecision === 'proceed_to_readiness' ? 1 : 0),
+  findings: [...ruleEvaluation.findings, ...compositionFindings],
+  maskedRuleIds: ruleEvaluation.masked_rule_ids,
+});
+
 let outcome = 'failed';
 let deterministicHandoff = false;
-if (ruleEvaluation.passed && selectedDecision === 'proceed_to_readiness') {
+if (compositionEvaluation.passed && selectedDecision === 'proceed_to_readiness' && compositionProceed?.ok) {
   outcome = 'passed';
   deterministicHandoff = true;
-} else if (ruleEvaluation.passed && selectedDecision === 'rerun') {
+} else if (compositionEvaluation.passed && selectedDecision === 'rerun') {
   outcome = 'rerun';
   deterministicHandoff = true;
 }
@@ -324,18 +355,18 @@ if (ruleEvaluation.passed && selectedDecision === 'proceed_to_readiness') {
 const routing = resolveRouting(args.transitions, args.currentNode, outcome);
 const routingFailed = ['invalid_input', 'config_error'].includes(routing.kind);
 const evaluation = buildContractEvaluation({
-  checksRun,
-  findings: [...ruleEvaluation.findings, ...(routing.findings || [])],
-  maskedRuleIds: ruleEvaluation.masked_rule_ids,
+  checksRun: compositionEvaluation.checks_run,
+  findings: [...compositionEvaluation.findings, ...(routing.findings || [])],
+  maskedRuleIds: compositionEvaluation.masked_rule_ids,
 });
 
 const result = buildGateResult({
-  passed: ruleEvaluation.passed && !routingFailed,
+  passed: compositionEvaluation.passed && !routingFailed,
   gate: definition.gate,
   currentNodeRef: args.currentNode,
   routing,
-  inspect: [...ruleEvaluation.inspect, ...(routing.inspect || [])],
-  advice: [...ruleEvaluation.advice, ...(routing.advice || [])],
+  inspect: [...compositionEvaluation.inspect, ...(routing.inspect || [])],
+  advice: [...compositionEvaluation.advice, ...(routing.advice || [])],
   findings: evaluation.findings,
   bundlePath,
   extraCheck: {
@@ -343,12 +374,18 @@ const result = buildGateResult({
     masked_rule_ids: evaluation.masked_rule_ids,
     hitl2_user_decision: selectedDecision,
     deterministic_handoff: deterministicHandoff,
+    composition_handoff: compositionProceed?.ok === true,
   },
   attemptNumber: args.attempt ?? 0,
 });
 
 try {
-  writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
+  writeGateAttempt(bundlePath, result, {
+    strictTrace: result.check?.passed === true && result.check?.next != null,
+    ...(compositionProceed?.ok === true && result.check?.passed === true && result.check?.next === 'phases/phase-readiness.md'
+      ? { compositionHandoffReceipt: compositionProceed.receipt }
+      : {}),
+  });
 } catch (error) {
   const failedRouting = resolveRouting(args.transitions, args.currentNode, 'failed');
   const failureEvaluation = buildContractEvaluation({ findings: [...(error.findings || []), ...(failedRouting.findings || [])] });

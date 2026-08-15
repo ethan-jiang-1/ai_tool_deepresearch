@@ -163,10 +163,15 @@ function collectSubmittedWorkUnitProjectionFacts(bundleDir, {
   if (normalized.facts.length === 0) return { passed: true, facts: [], root_findings: [], warnings: [] };
 
   const facts = [];
+  const warnings = [];
   for (const { ledger_row: ledgerRow, index_record: record } of normalized.facts) {
     if (record.status !== 'submitted' || record.wave !== wave) continue;
     if (kind && record.kind !== kind) continue;
     if (roundScope === 'current') {
+      if (record.rerun_count === undefined || record.rerun_count === null) {
+        warnings.push(`legacy submitted row ${record.work_id} without rerun_count excluded from current-round eligibility`);
+        continue;
+      }
       if (record.rerun_count !== rerunCount) continue;
     } else if (record.rerun_count !== undefined && record.rerun_count !== null && record.rerun_count > rerunCount) {
       continue;
@@ -203,7 +208,7 @@ function collectSubmittedWorkUnitProjectionFacts(bundleDir, {
     }
   }
 
-  return { passed: true, facts, root_findings: [], warnings: [] };
+  return { passed: true, facts, root_findings: [], warnings };
 }
 
 export function collectEligibleWorkUnitProjection(bundleDir, options = {}) {

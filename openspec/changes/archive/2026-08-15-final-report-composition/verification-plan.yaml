@@ -1,0 +1,185 @@
+schema_version: verification-routing/v1
+change: final-report-composition
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Composition handoff schema parsing, normalization, conditional invariants,
+      canonical projection hashing, rerun binding, and drift classification are
+      focused in-process deterministic contracts.
+  integration:
+    status: selected
+    rationale: >-
+      HITL2 and Readiness behavior crosses ProfileSchema, shared evaluator,
+      production Gate CLI, trace receipt, atomic profile operation, and Markdown
+      guidance boundaries in temporary bundles.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      A JS-led production-CLI chain must prove the current-round HITL2 receipt,
+      route-bound Readiness comparison, Final entry, and stale-round rejection
+      across multiple lifecycle checkpoints without claiming Agent behavior.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      Active registered fixture-backed delivery playbooks provide native trace
+      proof for the deterministic HITL2 and terminal-chain contracts. Readiness
+      consistency remains JS-led integration/deterministic-E2E proof after its
+      measured-over-120-second playbook is quarantined. The current Change
+      makes no Agent-behavior or semantic-report-quality claim.
+claims:
+  - id: composition-handoff-schema-contract
+    statement: >-
+      SCO-002/SCO-008/SCO-011: ProfileSchema and the exported composition schema
+      accept one complete strict v1 handoff, preserve historical/pre-delivery
+      absence, normalize only declared structural equivalents, and reject
+      missing, unknown, empty, duplicate, sentinel, invalid-language, and
+      duplicated-research-authority fields without defaulting semantics.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/contracts/profile.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: composition-projection-receipt-truth-table
+    statement: >-
+      CDG-001/CDG-002/CDG-003/CDG-004: the shared composition evaluator owns
+      proceed conditional invariants, effective rerun binding, canonical
+      normalized projection/context fingerprints, receipt validation, exact
+      match, projection-only drift, unrelated context drift, and ineligible
+      migration classification from direct profile and selected-handoff facts.
+      Legacy migration establishes only a post-migration context baseline and
+      does not manufacture predecessor-era equality evidence.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/composition-handoff.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl2-composition-admission-and-witness
+    statement: >-
+      CDG-001/CDG-003: the real HITL2 Gate conditionally requires a complete
+      current-round delivery contract, rejects not_started/custom/round/schema
+      defects with direct feedback, leaves non-delivery decisions unblocked, and
+      durably emits exactly one normalized receipt on a routed proceed attempt.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-hitl2-recorded.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: readiness-composition-consistency-and-repair
+    statement: >-
+      CDE-002/CDG-002/CDG-004: the real Readiness Gate selects the route-bound
+      HITL2 receipt, accepts an exact current profile, reports one restore
+      action for projection-only drift, refuses restore on unrelated profile
+      drift, and permits exactly one eligible predecessor-bound legacy migration
+      whose context witness starts at commit, while all rejected operations leave
+      authority unchanged.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-readiness-passed.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl2-final-composition-guidance-parity
+    statement: >-
+      HIU-003 and CDP-001/CDP-002/CDP-003/CDP-004/CDP-006: profile template,
+      shared profile docs, HITL2 brief/phase, Readiness, and Final expose the
+      same owner and view vocabulary; pending candidates never authorize
+      delivery; Final uses the five-step pass, one Agent, no new question/Gate/
+      transition, and the existing persist-final-report path.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/final-report-composition-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: composition-delivery-round-continuity
+    statement: >-
+      CDG-001/CDG-002/CDG-003/CDG-004 and CDP-003: a JS driver uses real
+      production CLIs to carry a fixture-labeled Agent/human profile through
+      HITL2 -> Readiness -> Final with a route-bound receipt, while a rerun
+      makes the prior-round handoff unusable until the current round creates a
+      new accepted projection. The proof covers deterministic authority only.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/rerun-round-continuity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl2-composition-playbook-contract
+    statement: >-
+      CDE-001/CDG-001/CDG-003: the registered fixture-backed HITL2 playbook
+      enters through the legal Wave2 predecessor, uses the real HITL2 Gate CLI,
+      proves complete proceed admission and its normalized receipt, proves
+      direct rejection of malformed composition facts, and preserves all four
+      non-delivery decisions without claiming Subject Agent recommendation or
+      natural-language behavior.
+    test_class: agent_flow_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wff_delivery/case-132-standard-hitl2-decision.md
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
+  - id: composition-delivery-tail-playbook-contract
+    statement: >-
+      CDE-003/CDG-001/CDG-002/CDP-003: the registered fixture-backed full-chain
+      playbook drives real HITL2 and Readiness Gate output through route-bound
+      receipt lineage into legal Final entry, while retaining Final's gate-null,
+      no-outgoing-transition, one-terminal-node contract and making no claim
+      about real HITL2 interaction or semantic report quality.
+    test_class: agent_flow_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wff_delivery/case-131-standard-delivery-full-chain.md
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
