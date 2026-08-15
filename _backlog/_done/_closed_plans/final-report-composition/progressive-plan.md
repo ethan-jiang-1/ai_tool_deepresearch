@@ -1,40 +1,41 @@
 # Final Report Composition - Progressive Plan
 
-> 状态：已归档。当前 Change 已收口 deterministic contract；不等待真实 Agent
-> 语义行为实验。
+> 状态：已关闭。`final-report-composition` 和后续的
+> `fast-final-composition-evidence` 均已 governed-archived；后者的一次授权运行以
+> `agent_timeout` 收口为 no-evidence，不等待重试或真实 Agent 语义行为成功。
 >
 > Tracking owner：本文件。每完成一项立即更新 checkbox、Current Checkpoint 和
-> 证据链接。OpenSpec [`tasks.md`](../../../openspec/changes/archive/2026-08-15-final-report-composition/tasks.md)
+> 证据链接。OpenSpec [`tasks.md`](../../../../openspec/changes/archive/2026-08-15-final-report-composition/tasks.md)
 > 是本 Change 的已归档执行账本，不是另一个 Change。
 
 ## Current Checkpoint
 
 | Item | Current value |
 |---|---|
-| Archive | `2026-08-15-final-report-composition` |
-| Current task | 无。Change 已通过 governed finalizer 归档。 |
-| Completion boundary | schema、HITL2/Readiness Gate、restore/migration、Final guidance、deterministic E2E、case-131/132 fixture-backed proof 与 governed archive |
+| Archive | `2026-08-15-final-report-composition`；`2026-08-15-fast-final-composition-evidence` |
+| Current task | 无。两个 Change 均已通过 governed finalizer 归档。 |
+| Completion boundary | schema、HITL2/Readiness Gate、restore/migration、Final guidance、deterministic E2E、case-131/132 fixture-backed proof，以及 case-137 一次 no-evidence quarantine 与两个 governed archive |
 | Explicitly excluded | real-Agent recommendation、自然语言交互质量、跨 view 报告语义质量，以及所有 Sub-agent production path |
 | Slow-case rule | 任一 native run 超过 120 秒，立即移入 `experiments_playbook/exp_extrem_slow/`，退出 active manifest 和 Change completion；不在本 Change 重试 |
-| Future evidence | 若要补真实 Agent behavior，另开 Change，并先把单次运行 hard cap 设计为 60 秒以内 |
+| Future evidence | 无 active work。只有在重新定义不同的有界路径并获准新建 Change 后，才可尝试新的真实 Agent observation。 |
 
-## Next Recommended Work
+## Follow-on Evidence Initiative (Completed)
 
-> 当前没有 active work。以下是新 initiative 的建议入口，不是对已归档 Change
-> 的续写任务；在获准创建新 Change 前，不需要执行任何实验或代码修改。
+> `fast-final-composition-evidence` 已按独立 initiative 执行并归档。唯一授权运行以
+> `agent_timeout` 结束，保留为 no-evidence diagnostic；没有 CDE-003 Agent-behavior
+> PASS claim，也没有重试。
 
-- [ ] N0.1 **AWAITING APPROVAL**：创建一个范围受限的 OpenSpec Change，建议名为
-  `fast-final-composition-evidence`，目标仅为取得一条真实 Agent 的 Final composition
-  行为证据。
-- [ ] N0.2 该 Change 的第一个 planning task：设计一个单场景、单次运行 hard cap 不超过
-  60 秒的 real-Agent experiment，并预先定义 timeout 时的停止、记录和隔离路径。
-- [ ] N0.3 验证结论只覆盖该场景中实际观察到的 Agent 行为；fixture、static check 和
-  deterministic contract 不能被表述为报告语义质量证明。
-- [ ] N0.4 `case-135`、`case-136` 保持在 `exp_extrem_slow/` 作为诊断参考，不重启、
-  不纳入 active manifest，也不作为新 Change 的 completion evidence。
+- [x] N0.1 创建并归档范围受限的 `fast-final-composition-evidence` Change。
+- [x] N0.2 定义单场景、单次运行的 30/45/5-second process bounds、60-second
+  retained-evidence threshold，以及 timeout 的停止、记录和隔离路径。
+- [x] N0.3 将验证结论限定为实际观察：本次无 native PASS，fixture/static contract
+  没有被表述为报告语义质量或 Agent-behavior evidence。
+- [x] N0.4 `case-135`、`case-136` 与本次的 `case-137` 均保持在
+  `exp_extrem_slow/`；不纳入 active manifest，也不作为 completion evidence。
 
-出口：新 Change 获准且其 proposal/design 明确了 60 秒实验、可观测完成条件和
-timeout quarantine；否则本 initiative 保持关闭状态。
+出口：已达成。`2026-08-15-fast-final-composition-evidence` 的一次运行记录为
+`duration_ms: 45177`、native `null`、lifecycle `ERROR`、health `null`；case-137 已
+quarantine，未来若有新路径必须新建 Change，不能重开本 initiative。
 
 ## How To Advance
 
@@ -97,4 +98,7 @@ timeout quarantine；否则本 initiative 保持关闭状态。
 
 ## Definition Of Done
 
-本 Change 已以可审计的 deterministic contract 收口，而不是“跑出了看起来不错的报告”。真实 Agent 行为证据既不由 fixture/static tests 冒充，也不由超时实验阻塞；它被明确记录为后续、带 60 秒 hard cap 的独立决策。
+本计划已收口：deterministic contract 由 `final-report-composition` 归档；后续的一次
+60-second-bounded real-Agent observation 由 `fast-final-composition-evidence` 独立归档为
+no-evidence。真实 Agent 行为既不由 fixture/static tests 冒充，也不由超时实验阻塞；新证据
+只能来自未来获准的不同 Change。

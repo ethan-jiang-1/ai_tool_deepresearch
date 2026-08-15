@@ -18,7 +18,6 @@
 | Plan | 简述 | 状态 |
 |------|------|------|
 | `hitl1-bounded-clarification-alignment` | 在既有 HITL1 内加入可选、有限的主动反问与对齐快照：保留“你先研究”的自主出口，不新增 checkpoint、状态机或语义 Gate。 | active（设计验证待开始） |
-| `final-report-composition/` | 推敲 Final 如何把同一 verified research state 投影为不同读者用途的报告：区分 Wave2 研究综合与 Final 交付组织，深化 `final_report_view` 语义，并保留事实、置信度、限制与 backing 不变量。 | active（拓扑已定，组织逻辑审查完成，尚未进入 OpenSpec） |
 | `semantic-fact-closure-openspec-governance` | 防止 Engine 同一确定性事实被多处各自解释：建立可增长的事实家族目录、每 change 的 closure record、OpenSpec apply/archive checker 闭环；CI 当前明确不在范围内。 | active（共同理解完成，ready to propose Change A） |
 | `seven-topic-seven-subagent-concurrency-investigation` | delegated concurrency control：当前无结构化 cap owner；下一步以 single ceiling（候选 12）使批量 claim 按当前独立可执行 demand、余量和上限计算。 | active（调查完成，ready to propose） |
 | `topic-research-emphasis/` | 研究主题共同基线之上的差异化追加投入：P1 已归档，确认既有 carrier 与 rerun guidance；`progressive/` 将 P2 的可追溯覆盖和后续读者投影拆成独立 OpenSpec slice。 | active（P2 ready to propose） |
@@ -33,6 +32,7 @@
 | Plan | 关闭依据 |
 |------|----------|
 | `current-contract-signal-cleanup` | 19 个 current-only cleanup execution batch 均已 governed-archived 并提交；最终 C8 archive 为 `2026-08-15-align-current-guidance-contract-guards`（`9030fa785`）。后续若采纳审计提出的 Markdown regression-guard 加强建议，必须另建有界 OpenSpec change。 |
+| `final-report-composition/` | CLS-063：HITL2 composition handoff、Readiness/Final terminal contract、deterministic proofs 与 case-135/136 quarantine 已由 `2026-08-15-final-report-composition` 归档；随后 case-137 的唯一 bounded real-Agent run 由 `2026-08-15-fast-final-composition-evidence` 以 no-evidence quarantine 收口，不声明 Agent-behavior PASS。 |
 
 ---
 

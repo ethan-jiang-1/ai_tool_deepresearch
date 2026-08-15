@@ -9,7 +9,7 @@
 本 Change 只补一条窄而诚实的真实 Agent 证据：一个独立 Subject Agent 在已有合法
 Final entry、已接受 handoff 和小型 verified-state 前提下，完成一次 terminal report
 composition。原始需求和边界来自
-[`_backlog/plans/final-report-composition/progressive-plan.md`](../../../_backlog/plans/final-report-composition/progressive-plan.md)
+[`_backlog/_done/_closed_plans/final-report-composition/progressive-plan.md`](../../../../_backlog/_done/_closed_plans/final-report-composition/progressive-plan.md)
 的 `Next Recommended Work`；该索引明确要求另开 Change、以 60 秒作为快速证据阈值，
 且不得把 fixture/static check 表述为报告语义质量证明。
 

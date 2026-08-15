@@ -2,7 +2,7 @@
 
 当前 Final 只能看到分散的 research purpose、`final_report_view`、`rationale` 和 verified artifacts，无法确定报告面向谁、用于什么、首要服务什么问题以及应采用怎样的交付姿态。若继续让 Final 从聊天、decision brief 或相邻字段补猜，同一份 verified research state 会因 consumer 推断不同而产生不可审计的 composition 漂移。
 
-本 Change 将已接受的 backlog 设计收敛为一个可执行 contract：HITL2 在最后一个交互点完成 composition intent 的推荐、必要澄清和持久化，Engine 验证并见证该 handoff，Final 只读消费它并直接完成 Report Composition Pass。原始需求与锁定决定来自 `_backlog/plans/final-report-composition/hitl2-final-composition-handoff.md`、`recommended-final-composition-design.md` 和 `view-contract-sketch.md`。
+本 Change 将已接受的 backlog 设计收敛为一个可执行 contract：HITL2 在最后一个交互点完成 composition intent 的推荐、必要澄清和持久化，Engine 验证并见证该 handoff，Final 只读消费它并直接完成 Report Composition Pass。原始需求与锁定决定来自 `_backlog/_done/_closed_plans/final-report-composition/hitl2-final-composition-handoff.md`、`recommended-final-composition-design.md` 和 `view-contract-sketch.md`。
 
 ## What Changes
 
