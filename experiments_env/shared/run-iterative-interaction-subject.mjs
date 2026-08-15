@@ -212,6 +212,16 @@ const SUBJECTS = {
     afterTurn: observeCase136Boundary,
     timeoutMs: 12 * 60 * 1000,
   },
+  '137': {
+    bundlePrefix: 'dpt_disp_case-137_',
+    transcript: 'case-137-subject-transcript.jsonl',
+    system: 'You are the independent Subject Agent for case 137, distinct from the Playbook Agent. Work only in the exact legally entered Final bundle provided by the runner. You own one bounded Final composition and no upstream decision or workflow transition.',
+    messages: ['Execute the injected current Final Phase guidance against this bundle\'s one root must-answer and one submitted-backed finding. Write one concise Chinese primary Markdown report of at most 1,600 UTF-8 bytes. It must contain exactly one `## Evidence Map` table row with the columns `Finding ID`, `Declared Key Finding`, and `Submitted Backing`, linking only to the fixture\'s submitted evidence. Persist it through `persist-final-report`, save the complete JSON response as `case-137-final-persistence.json`, then give a direct delivery summary without a question. Do not create a second report, a Gate, a transition, a Task/Sub-agent, network request, or any output outside this bundle.'],
+    tools: 'Bash,Glob,Grep,Read,Write',
+    boundary: 'Use exactly one Final-only turn. Do not write playbook verdict checks, native completion, health output, cleanup, or a second primary report. Do not read framework source or another bundle. Preserve the accepted profile as the composition owner and use only the existing persist-final-report path.',
+    afterTurn: observeCase137Boundary,
+    timeoutMs: 30_000,
+  },
   '136-judge': {
     bundlePrefix: 'dpt_disp_case-136_',
     transcript: 'case-136-judge-transcript.jsonl',
@@ -224,7 +234,7 @@ const SUBJECTS = {
 };
 
 function usage() {
-  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <125|154|204|115|164|225|227|232|318|711|712|713-readiness|713-final|714|716|901|951|951-judge|136|136-judge> --bundle <path>');
+  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <125|154|204|115|164|225|227|232|318|711|712|713-readiness|713-final|714|716|901|951|951-judge|136|137|136-judge> --bundle <path>');
   process.exit(2);
 }
 
@@ -375,6 +385,93 @@ function observeCase136Boundary({ bundle, completedTurns }) {
   }
 
   throw new Error(`case 136 received an unexpected completed turn count: ${completedTurns}`);
+}
+
+function case137EvidenceMapRowCount(markdown) {
+  const lines = markdown.split(/\r?\n/);
+  const headingIndex = lines.findIndex((line) => line.trim() === '## Evidence Map');
+  if (headingIndex < 0) return 0;
+  const nextHeadingOffset = lines.slice(headingIndex + 1).findIndex((line) => /^##\s+/.test(line));
+  const sectionLines = lines.slice(headingIndex + 1, nextHeadingOffset < 0 ? undefined : headingIndex + 1 + nextHeadingOffset);
+  const tableLines = sectionLines.filter((line) => /^\s*\|/.test(line));
+  return tableLines.slice(2).filter((line) => line.split('|').some((cell) => cell.trim())).length;
+}
+
+function case137FinalResponseHasQuestion(bundle) {
+  const transcript = readFileSync(join(bundle, 'case-137-subject-transcript.jsonl'), 'utf8')
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line) => {
+      try { return JSON.parse(line); } catch { return null; }
+    })
+    .filter(Boolean);
+  const finalResult = transcript.filter((event) => event.type === 'result').at(-1);
+  const text = typeof finalResult?.result === 'string' ? finalResult.result : '';
+  return /[?？]/.test(text);
+}
+
+function case137TranscriptToolNames(bundle) {
+  const events = readFileSync(join(bundle, 'case-137-subject-transcript.jsonl'), 'utf8')
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line) => {
+      try { return JSON.parse(line); } catch { return null; }
+    })
+    .filter(Boolean);
+  const names = [];
+  function visit(value) {
+    if (Array.isArray(value)) return value.forEach(visit);
+    if (!value || typeof value !== 'object') return;
+    if (value.type === 'tool_use' && typeof value.name === 'string') names.push(value.name);
+    for (const child of Object.values(value)) visit(child);
+  }
+  visit(events);
+  return names;
+}
+
+function observeCase137Boundary({ bundle, completedTurns }) {
+  if (completedTurns !== 1) throw new Error(`case 137 requires one completed Subject turn, received ${completedTurns}`);
+
+  assertCase136Status(bundle, {
+    current_node: 'phases/phase-final.md',
+    current_gate: 'readiness_passed',
+    next_gate: 'none',
+  });
+  const reports = listedFinalReports(bundle);
+  if (reports.length !== 1) throw new Error(`case 137 requires exactly one primary Final Markdown report, received ${reports.length}`);
+  const reportPath = join(bundle, reports[0]);
+  const reportBytes = statSync(reportPath).size;
+  const evidenceMapRows = case137EvidenceMapRowCount(readFileSync(reportPath, 'utf8'));
+  if (reportBytes > 1600) throw new Error(`case 137 Final report exceeds 1600 UTF-8 bytes: ${reportBytes}`);
+  if (evidenceMapRows !== 1) throw new Error(`case 137 Final report requires one Evidence Map row, received ${evidenceMapRows}`);
+  const persistence = JSON.parse(readFileSync(join(bundle, 'case-137-final-persistence.json'), 'utf8'));
+  if (persistence.operation !== 'persist-final-report' || persistence.verdict !== 'committed' || persistence.check?.passed !== true) {
+    throw new Error('case 137 Final report did not use a committed persist-final-report admission');
+  }
+  const trace = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse);
+  const finalDeliveryEvent = trace.some((event) => event.event === 'final_delivery');
+  const finalGate = trace.some((event) => event.event === 'gate_attempt' && /final/i.test(String(event.gate || '')));
+  if (finalDeliveryEvent || finalGate) throw new Error('case 137 introduced a forbidden Final trace or Gate event');
+  const toolNames = case137TranscriptToolNames(bundle);
+  const prohibitedTool = toolNames.find((name) => ['Task', 'WebFetch', 'WebSearch'].includes(name)) || null;
+  if (prohibitedTool) throw new Error(`case 137 used a prohibited tool: ${prohibitedTool}`);
+  const observation = {
+    schema_version: 'case-137-subject-observation/v1',
+    source: 'subject-adapter-observer',
+    completed_turns: completedTurns,
+    final_report: reports[0],
+    report_bytes: reportBytes,
+    evidence_map_rows: evidenceMapRows,
+    persistence_operation: persistence.operation,
+    persistence_verdict: persistence.verdict,
+    final_response_has_question: case137FinalResponseHasQuestion(bundle),
+    final_gate_attempt_present: finalGate,
+    final_delivery_trace_present: finalDeliveryEvent,
+    subject_tool_names: toolNames,
+    prohibited_tool_present: prohibitedTool,
+  };
+  writeFileSync(join(bundle, 'case-137-subject-observation.json'), `${JSON.stringify(observation, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+  return null;
 }
 
 function observeCase318CrashWindow({ bundle, completedTurns }) {

@@ -1,0 +1,52 @@
+schema_version: verification-routing/v1
+change: fast-final-composition-evidence
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      This Change adds no focused production helper or schema contract. The
+      planned deterministic source-contract check crosses Markdown, manifest,
+      and Subject-launch configuration, so it belongs to integration.
+  integration:
+    status: selected
+    rationale: >-
+      One JS-led source-contract test must verify that the registered
+      playbook, its setup-only/real-Agent profile, its one-finding minimal
+      fixture, the 30/45/5-second process limits, the retained 60-second
+      threshold, and the case-135/136 exclusions
+      remain coherent without claiming a runtime Subject result.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      The existing Final entry, handoff, persistence, and terminal state chain
+      are unchanged and remain covered by their accepted deterministic assets.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The one authorized real-Agent attempt is retained as a run-owned
+      no-evidence diagnostic after its 45-second Playbook Agent timeout. No
+      Agent-behavior PASS claim remains for an agent_flow_e2e asset to prove;
+      the source-contract check verifies its explicit quarantine and evidence
+      boundary without substituting static proof for runtime behavior.
+claims:
+  - id: fast-final-composition-source-contract
+    statement: >-
+      CDE-003: the case-137 source contract records the one setup-only,
+      real-Agent, deterministic-judge Final-composition attempt and its
+      one-finding fixture, Subject 30-second allowance, Headless 45-second and
+      health 5-second invocation limits, retained 60-second threshold, and
+      case-135/136 exclusion. It also verifies that the observed no-evidence
+      timeout exited the active corpus. This proves only deterministic
+      source-asset consistency.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/case-137-fast-final-composition-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

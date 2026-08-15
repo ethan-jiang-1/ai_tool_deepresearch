@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: fast-final-composition-evidence
+status: not_applicable
+reason: >-
+  The Change adds an experiment playbook, its Subject-launch configuration, and
+  verification assets, but changes no Deep Research Harness deterministic
+  runtime semantic resolver, authority-establishing Engine surface, or verdict
+  consumer. Retained experiment evidence remains owned by the existing Autorun
+  and native-completion contracts rather than becoming a new Harness fact
+  family.

@@ -122,6 +122,7 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 - `exp_extrem_slow/case-225-extreme-slow-returned-work-closeout.md`
 - `exp_extrem_slow/case-135-extreme-slow-readiness-precheck.md`
 - `exp_extrem_slow/case-136-extreme-slow-final-composition.md`
+- `exp_extrem_slow/case-137-extreme-slow-final-composition.md`
 - `exp_extrem_slow/case-712-extreme-slow-hitl2-natural-rerun.md`
 
 These playbooks are quarantined because their observed runs were excessively slow. Do not run them. Refactor a quarantined playbook, move it to a normal `light`, `standard`, or `heavy` runnable path, and explicitly register it in the machine table before reactivation; otherwise remove it.

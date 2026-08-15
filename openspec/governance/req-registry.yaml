@@ -549,7 +549,7 @@ CTS-010: canonical-topic-state — operate-topic-state schema projection exposes
 # research/content-delivery-experiments
 CDE-001: content-delivery-experiments — case-132 uses real HITL2 gate output for valid decisions, direct negative facts, sentinel rejection, and non-blocking diagnostic-event absence
 CDE-002: content-delivery-experiments — case-135 uses real readiness gate output for complete input and artifact, prior-gate, YAML, and JSONL boundary failures
-CDE-003: content-delivery-experiments — case-131 proves real HITL2/readiness output, witnessed handoffs, source-gate status sync, and terminal Final semantics
+CDE-003: content-delivery-experiments — case-131 proves the deterministic delivery tail; the one case-137 Final-composition attempt is quarantined as no-evidence and makes no Agent-behavior PASS claim
 CDE-004: content-delivery-experiments — case-133 proves real HITL2 rerun output routes to phase-rerun and through rerun-ready to seed-topics
 CDE-005: content-delivery-experiments — case-134 proves same-check HITL2 and readiness repair loops from real failed and passed gate attempts
 
