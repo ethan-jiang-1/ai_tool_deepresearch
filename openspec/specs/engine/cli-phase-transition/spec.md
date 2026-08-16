@@ -105,6 +105,43 @@ configuration before it calls `assessNode()`. Only then SHALL it load the target
 dependency closure through `assessNode()`, write route-bound `load_complete`,
 and update `rb_status.json#/current_node` without mutating gate windows.
 
+Before the first route-bound `load_complete` for an authorized
+`phases/phase-final.md` handoff, `enter-phase` SHALL also establish the
+pre-publication Final inventory baseline after action-core preflight and before
+`assessNode()` or any entry mutation. For the bundle's first legal Final entry,
+with no earlier route-bound legal Final load, the shared canonical primary-series
+resolver SHALL return one valid empty primary inventory. A modern base, a
+canonical revision, a legacy-primary candidate, or an invalid/ambiguous primary
+classification SHALL block the entry; the command SHALL not infer creation order
+from filename, mtime, directory order, report content, or chat.
+
+For a later Readiness-to-Final handoff descended from one accepted
+`post_final_reentry` lineage, the shared handoff evaluation SHALL return that
+unique retired C5 event as the entry witness. Before writing the new Final load,
+the current deterministic sorted inventory of safe regular files under `final/`
+SHALL reproduce `previous_final.final_inventory_sha256` exactly. A premature
+canonical append, supplementary-file drift, unsafe entry, unreadable inventory,
+ambiguous primary classification, missing retired witness, or conflicting
+descendant lineage SHALL reject the entry without `load_complete` or
+`current_node` mutation. This admission establishes only the inventory baseline
+at Final entry; publication after entry and later immutable-prefix proof remain
+separate facts.
+
+If an earlier route-bound legal Final load exists but the new authorized Final
+handoff cannot be bound to exactly one accepted C5 descendant lineage, entry
+SHALL block as unsupported lineage. It SHALL not reuse the first-entry empty rule,
+select an older C5 event by recency guess, or treat an existing report as delivery
+for the new handoff.
+
+The Final inventory admission SHALL apply only before the first bound load for
+the authorized handoff. An exact retry after that load already exists SHALL use
+the established route-bound witness and existing partial-entry behavior rather
+than reinterpret a report published after the load as premature. Bundles whose
+legal Final load predates this admission contract, including an already-entered
+single-legacy-primary bundle, SHALL remain readable through the accepted
+compatibility and reentry contracts; the new check SHALL not fabricate a
+historical baseline or require a replacement load.
+
 `enter-phase --help` and `-h` SHALL return static invocation help with exit
 code `0` and no bundle, trace, status, or loader side effect. Its only non-help
 form is exactly one `--bundle <bundle-path>` and one `--node <file-ref>`, with
@@ -171,6 +208,30 @@ before `assessNode()` runs; it SHALL not append `load_complete`, mutate
 action core. The preflight SHALL read only the selected framework target source;
 it SHALL not invoke the workflow loader or resolve the target dependency
 closure.
+
+#### Scenario: First Final entry requires an empty primary baseline
+
+- **WHEN** the latest legal handoff authorizes the bundle's first entry to `phases/phase-final.md` and no route-bound legal Final load exists
+- **THEN** `enter-phase` SHALL require the shared primary-series resolver to return a valid empty inventory before `assessNode()` or entry mutation
+- **AND** any existing modern, revision, legacy-primary, invalid, or ambiguous primary inventory SHALL reject without guessing creation order
+
+#### Scenario: Post-final return requires the event-bound prior inventory
+
+- **WHEN** accepted C5 descendants reach a newer legal Readiness-to-Final handoff with no route-bound Final load for that handoff
+- **THEN** `enter-phase` SHALL require current safe sorted Final inventory to reproduce the unique retired event's `previous_final.final_inventory_sha256` exactly
+- **AND** any premature append, supplementary drift, unsafe inventory, missing witness, or conflicting lineage SHALL reject before `load_complete` or `current_node` mutation
+
+#### Scenario: Existing bound Final entry remains compatible
+
+- **WHEN** the authorized Final handoff already has its route-bound `load_complete`, including an already-entered legacy bundle or a partial current-node write retry
+- **THEN** the new inventory admission SHALL not retroactively reject that established entry or fabricate a historical baseline
+- **AND** existing compatibility, audit, and partial-entry recovery contracts SHALL remain responsible for subsequent interpretation
+
+#### Scenario: Later Final handoff without accepted C5 provenance is rejected
+
+- **WHEN** an earlier legal Final load exists and a different authorized Final handoff has no unique accepted C5 descendant provenance
+- **THEN** `enter-phase` SHALL reject before workflow dependency loading, `load_complete`, or `current_node` mutation
+- **AND** it SHALL not reuse first-entry admission or choose an older event by timestamp, filename, or append order
 
 #### Scenario: Enter phase accepts degraded source pass
 

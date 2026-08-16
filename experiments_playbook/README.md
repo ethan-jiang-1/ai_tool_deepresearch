@@ -32,18 +32,29 @@ experiments_playbook/
   RUN_AGENT_AUTORUN_EXPS.md     # injected one-case Headless Playbook Agent contract
   RUN_INTERACTIVE_EXPS.md       # injected one-case manual debug/judgment contract
   exp_*/ and exph_*/            # case-<id>-<light|standard|heavy>-<role>.md
-  exp_extrem_slow/              # quarantined case-<id>-extreme-slow-<role>.md; never runnable
+  exp_extrem_slow/              # suspended diagnostic archive; never runnable
 ```
 
 The manifest owns only registered paths and order. Selected V2 frontmatter owns case/group, native verdict/check policy, stable bundle/verdict/health roles, health profile, and proof profile. Filename grammar owns execution cost. Native completion owns this run's actual role-to-path binding and outcome.
 
 Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cost does not itself establish a Subject-behavior claim.
 
-## Extreme-slow quarantine
+## Extreme-Slow Suspended Archive
 
-`exp_extrem_slow/` holds cases that have shown an unacceptable observed runtime. It is not a fourth `light|standard|heavy` tier, is excluded from the active manifest corpus, and must never be selected by Autorun or Interactive replay.
+`exp_extrem_slow/` contains examples whose observed runtime or execution shape
+was unacceptable. It is a suspended diagnostic archive, not a fourth
+`light|standard|heavy` tier. It is excluded from the active manifest corpus and
+must never be selected, run, replayed, restored, registered, or enabled by
+Autorun, Interactive execution, a selector, or a manual workaround.
 
-To reactivate one, first refactor the playbook, move it to a normal runnable `exp_*/` or `exph_*/` location with a supported `light`, `standard`, or `heavy` filename cost, and explicitly register it in `PLAYBOOK_MANIFEST.md`. Otherwise remove it. Current quarantined cases are Case 221, Case 224, Case 225, and Case 712.
+The retained playbooks and diagnostics are historical context only. They have
+no current regression, execution, or Agent-behavior proof value and do not
+permit an in-place repair or reactivation. A future separately approved change
+must first reconsider the experiment, then refactor or replace it with a
+bounded runnable candidate. That new candidate needs its own validation and
+explicit active-manifest registration before it can run. Until then, the entire
+directory remains suspended. See `exp_extrem_slow/README.md` for the directory
+boundary.
 
 ## Normal commands
 

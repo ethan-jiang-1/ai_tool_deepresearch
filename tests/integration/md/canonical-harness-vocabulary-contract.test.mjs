@@ -97,11 +97,11 @@ describe('canonical Deep Research Harness vocabulary', () => {
     assert.match(harnessDocs.instantiate, /Harness execution 开始前/);
     assert.match(harnessDocs.start, /Harness execution 开始前/);
 
-    assert.match(specs.runEntry, /proceed with Harness execution/);
-    assert.match(specs.runEntry, /only Harness-initiated points/);
+    assert.match(specs.runEntry, /transfers control to the Agent/);
+    assert.match(specs.runEntry, /only Harness-initiated in-run lifecycle/);
     assert.match(specs.agentCommand, /Deep Research Harness command surfaces/);
     assert.match(specs.agentCommand, /Harness commands are invoked by the Phase Agent/);
-    assert.match(specs.silentExecution, /\*\*Harness-initiated\*\*/);
+    assert.match(specs.silentExecution, /\*\*non-terminal Harness-initiated\*\*/);
   });
 
   it('names the Harness role taxonomy while retaining exact protocol identifiers', () => {

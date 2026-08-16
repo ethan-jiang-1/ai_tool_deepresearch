@@ -17,7 +17,7 @@
 - 保留历史 bundle：若合法 Final lineage 下没有 `final/final.md` 且恰有一份既有 Markdown 主报告（例如 `final/report.md`），将其只读分类为 legacy v0，第一次修订追加 v1；多个无法区分的 legacy candidates 明确返回 ambiguity，不按时间或目录顺序猜。
 - Final view 修订不回写当前 Final lineage 的 HITL2 `final_report_view` / `composition_handoff`，避免把 presentation preference 伪装成该 lineage 的 accepted delivery semantics。Final Agent 以当前 latest report、当前 lineage 的 accepted handoff、verified evidence 和当前用户反馈完成语义修订；audited rerun 后的新 HITL2/Readiness lineage 可通过原有流程建立新的 accepted handoff，但不能重写旧 lineage 或旧报告。Engine 不判断“technical deep dive 是否足够深入”。
 - 新会话/中断恢复继续以 `rb_status.json.current_node`、Gate window 和 route-bound handoff/load 为 control-surface coordinates；reentry projection 在没有显式 rerun 请求时返回当前最近 owner，而不是把所有 clean Final 都只投影为 post-final rerun。若较新的合法 Readiness→Final handoff 来自 accepted C5 lineage，则无 load 时先返回 `enter-phase`，有 load 但未同步时先返回 `advance-status`；只有 terminal Final window 成立后，C5 事件绑定的旧 Final inventory digest 才区分 immediate publication 与普通 refinement。
-- 增加 deterministic contract coverage 与一个真实 Agent multi-turn `agent_flow_e2e`：用一个无网络、单 Subject session 的五次 supplied turn 证明首次先交付、两轮反馈各追加一个版本、仍停留 Final、满意不产生新状态，以及随后同一 lineage 上的新增证据请求才选择/accept 现有 rerun。fixture/static checks 不冒充用户满意度或报告质量证据。
+- 增加 deterministic contract coverage 与一个真实 Agent multi-turn `agent_flow_e2e`：用一个无网络、单 Subject session 的五次 supplied turn 证明首次先交付、两轮反馈各追加一个版本、仍停留 Final、满意不产生新状态，以及随后同一 lineage 上的新增证据请求才选择/accept 现有 rerun。首个 native `NOT_RUN` 只保留诊断；经用户明确 material replan 后，才可在相同边界下授权一份 replacement run。fixture/static checks 不冒充用户满意度或报告质量证据。
 - 本 Change 不新增第三个 HITL、Final Gate、outgoing transition、硬性修订轮数、report-quality Engine verdict、profile revision counter、自动研究或历史版本覆盖/删除。
 
 ## Capability Discovery

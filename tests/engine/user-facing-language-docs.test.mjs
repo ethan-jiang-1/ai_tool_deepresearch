@@ -33,11 +33,13 @@ describe('user-facing language guidance docs', () => {
   it('Final phase prefers Chinese only on legal terminal delivery surfaces', () => {
     const text = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-final.md');
 
-    assert.ok(text.includes('用户未指定其他输出语言时'));
-    assert.ok(text.includes('final report narrative'));
-    assert.ok(text.includes('terminal delivery summary'));
-    assert.ok(text.includes('citations、source titles、paths、commands、field names、enum values'));
-    assert.ok(text.includes('legal Final entry 后的 `final/` 文件存在证明'));
+    assert.ok(text.includes('After admitted entry and the exact Readiness status sync, first'));
+    assert.ok(text.includes('delivery is immediate. After each committed report, show it and invite ordinary'));
+    assert.ok(text.includes('After each committed report, show it and invite ordinary'));
+    assert.ok(text.includes('Use Chinese for report narrative and delivery/feedback language unless the user'));
+    assert.ok(text.includes('asks for another language.'));
+    assert.ok(text.includes('Keep canonical paths, commands, field names, enums,'));
+    assert.ok(text.includes('citations, and source titles unchanged.'));
 
     assert.doesNotMatch(text, /md:final_delivery/);
     assert.doesNotMatch(text, /gate:\s*final_delivery/i);

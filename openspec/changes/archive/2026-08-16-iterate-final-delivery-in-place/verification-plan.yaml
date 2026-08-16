@@ -28,7 +28,8 @@ test_classes:
       Deliver-first behavior and natural-language presentation-versus-research
       classification are Agent behavior. One no-network, bounded real Subject
       Agent session observes five supplied turns under a 120-second hard cap;
-      unavailable or failed native runtime is NOT_RUN and report quality or
+      unavailable or failed native runtime is NOT_RUN unless a user-confirmed
+      material replan authorizes one replacement attempt, and report quality or
       genuine human satisfaction is not claimed.
 claims:
   - id: primary-final-series-truth-table
@@ -333,8 +334,10 @@ claims:
       response whose no-mutation snapshot is frozen by a turn observer, then an
       evidence-expansion request on the same lineage that selects/accepts C5
       without another report. Exactly one authenticated native run is allowed
-      under a 120-second total Subject cap; failure/timeout/missing health is
-      quarantined NOT_RUN and leaves this claim open without retry. Native
+      by default under a 120-second total Subject cap; failure/timeout/missing
+      health is quarantined NOT_RUN and leaves this claim open without an
+      automatic retry. One user-confirmed material replan may authorize one
+      replacement attempt under the same cap. Native
       evidence proves only this observed procedure; it does not prove report
       improvement, generic classification accuracy, or genuine satisfaction.
     test_class: agent_flow_e2e

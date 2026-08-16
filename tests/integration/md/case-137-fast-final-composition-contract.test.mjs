@@ -10,11 +10,9 @@ import { PlaybookFrontmatterSchema } from '../../../DEEP_RESEARCH_HARNESS/schema
 const ROOT = process.cwd();
 const PLAYBOOK_PATH = 'experiments_playbook/exp_extrem_slow/case-137-extreme-slow-final-composition.md';
 const MANIFEST_PATH = 'exp_wff_delivery/case-137-standard-fast-final-composition.md';
-const NO_EVIDENCE_PATH = 'openspec/changes/fast-final-composition-evidence/agent-run-evidence.md';
 const playbook = readFileSync(`${ROOT}/${PLAYBOOK_PATH}`, 'utf8');
 const runner = readFileSync(`${ROOT}/experiments_env/shared/run-iterative-interaction-subject.mjs`, 'utf8');
 const manifest = readFileSync(`${ROOT}/experiments_playbook/PLAYBOOK_MANIFEST.md`, 'utf8');
-const noEvidence = readFileSync(`${ROOT}/${NO_EVIDENCE_PATH}`, 'utf8');
 
 function frontmatter(markdown) {
   const raw = markdown.match(/^---\n([\s\S]*?)\n---/)?.[1];
@@ -110,7 +108,7 @@ describe('case-137 fast Final composition source contract', () => {
     assert.match(playbook, /not a whole-case deadline/);
   });
 
-  it('records the one-shot no-evidence outcome without semantic judging or historical substitutes', () => {
+  it('keeps the quarantined attempt as diagnostic history without fabricating evidence', () => {
     assert.doesNotMatch(frontmatter(playbook), /ai_judge/);
     assert.match(playbook, /do\s+not prove report quality/i);
     assert.match(playbook, /case-135 and case-136 diagnostics cannot substitute/i);
@@ -120,11 +118,9 @@ describe('case-137 fast Final composition source contract', () => {
     assert.match(playbook, /53e68120-9201-45e0-9e9b-df83ad811779/);
     assert.match(playbook, /45177 ms/);
     assert.match(playbook, /ERROR\/agent_timeout/);
+    assert.match(playbook, /without native completion or\s*>?\s*health output/);
+    assert.match(playbook, /not Agent-behavior or Change-completion evidence/);
+    assert.match(playbook, /moved\s*>?\s*out of the active manifest with no retry/);
     assert.match(manifest, /exp_extrem_slow\/case-137-extreme-slow-final-composition\.md/);
-    assert.match(noEvidence, /outcome: no-evidence/);
-    assert.match(noEvidence, /native_outcome: null/);
-    assert.match(noEvidence, /lifecycle_outcome: ERROR/);
-    assert.match(noEvidence, /health: null/);
-    assert.match(noEvidence, /no\s+CDE-003 Agent-behavior\s+PASS claim/);
   });
 });

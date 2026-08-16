@@ -32,6 +32,10 @@ import {
 import {
   readSubmittedWorkUnitDeclarations,
 } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-readers.mjs';
+import {
+  evaluateDirectOutputTarget,
+  semanticOrderedArrayDigest,
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/direct-output-contract.mjs';
 
 const __dirname = new URL('.', import.meta.url).pathname;
 
@@ -313,13 +317,14 @@ function inspectGateAttempts(bundlePath, profile) {
 }
 
 /**
- * Cross-check gate_attempt events in trace vs _logs/run.log gate_attempt entries.
+ * Cross-check trace gate attempts against their run-log projections.
+ * setup-ready deliberately writes a route_pending projection with the same ID.
  */
 function inspectTimeline(bundlePath, profile, traceByEvent) {
   const required = isRequiredSection(profile, 'timeline');
   const traceGateAttempts = (traceByEvent && traceByEvent['gate_attempt']) || 0;
 
-  // Count gate_attempt entries in run.log
+  // Count gate_attempt entries and bound setup-ready route_pending projections.
   let logGateAttempts = 0;
   let mismatches = 0;
   const logPath = join(bundlePath, '_logs', 'run.log');
@@ -335,8 +340,17 @@ function inspectTimeline(bundlePath, profile, traceByEvent) {
             logGateAttempts++;
           }
         } catch {
-          if (/\]\s+(INFO|WARN|ERROR)\s+gate_attempt\s+bundle=/.test(line)) {
+          const plainLog = line.match(/\]\s+(INFO|WARN|ERROR)\s+(gate_attempt|route_pending)\s+bundle=[^\s]+\s*(.*)$/);
+          if (plainLog?.[2] === 'gate_attempt') {
             logGateAttempts++;
+          } else if (plainLog?.[2] === 'route_pending') {
+            try {
+              const projection = JSON.parse(plainLog[3]);
+              if (typeof projection.gate === 'string' && projection.gate.length > 0
+                && typeof projection.gate_attempt_id === 'string' && projection.gate_attempt_id.length > 0) {
+                logGateAttempts++;
+              }
+            } catch { /* An unparseable route_pending line is not a bound gate projection. */ }
           }
         }
       }
@@ -574,6 +588,53 @@ function cacheTrailMapsToReference(bundlePath, trail, ref) {
   return leaf.length > 0 && trail.includes(leaf);
 }
 
+function collectSubmittedSourceReferences(bundlePath, rows) {
+  const references = [];
+  const details = [];
+
+  for (const row of rows) {
+    for (const entry of row.output_files || []) {
+      if (entry.role === 'reference') {
+        references.push({ ...entry, work_id: row.work_id, cache_trails: row.cache_trails || [] });
+      }
+    }
+
+    const contribution = row.source_contribution;
+    if (!contribution) continue;
+
+    const evaluated = evaluateDirectOutputTarget({
+      bundleDir: bundlePath,
+      target: contribution.target,
+      contractId: contribution.direct_contract,
+    });
+    if (!evaluated.passed) {
+      details.push(`${contribution.target} (${row.work_id || 'unknown work_id'}): current source contribution is invalid`);
+      continue;
+    }
+
+    const submittedPrefix = evaluated.validated_value.slice(0, contribution.validated_length);
+    if (submittedPrefix.length !== contribution.validated_length) {
+      details.push(`${contribution.target} (${row.work_id || 'unknown work_id'}): submitted source contribution prefix is shortened`);
+      continue;
+    }
+    if (semanticOrderedArrayDigest(submittedPrefix) !== contribution.semantic_digest) {
+      details.push(`${contribution.target} (${row.work_id || 'unknown work_id'}): submitted source contribution prefix drifted`);
+      continue;
+    }
+
+    for (const source of submittedPrefix) {
+      references.push({
+        path: contribution.target,
+        source_url: source.url,
+        work_id: row.work_id,
+        cache_trails: row.cache_trails || [],
+      });
+    }
+  }
+
+  return { references, details };
+}
+
 /**
  * Check submitted source recoverability from current authority surfaces.
  */
@@ -593,9 +654,8 @@ function inspectSourceRecoverability(bundlePath, profile) {
     };
   }
 
-  const references = rows.flatMap((row) => (row.output_files || [])
-    .filter((entry) => entry.role === 'reference')
-    .map((entry) => ({ ...entry, work_id: row.work_id, cache_trails: row.cache_trails || [] })));
+  const sourceFacts = collectSubmittedSourceReferences(bundlePath, rows);
+  const references = sourceFacts.references;
 
   if (references.length === 0) {
     return {
@@ -605,15 +665,17 @@ function inspectSourceRecoverability(bundlePath, profile) {
       parseable_source_urls: 0,
       mapped_cache_trails: 0,
       recoverable: 0,
-      issues: 0,
-      sectionIssues: required ? [{ detail: 'No submitted reference outputs available for source recoverability checks' }] : [],
+      issues: sourceFacts.details.length,
+      sectionIssues: required
+        ? (sourceFacts.details.length > 0 ? sourceFacts.details.map((detail) => ({ detail })) : [{ detail: 'No submitted source contribution or reference output available for source recoverability checks' }])
+        : [],
     };
   }
 
   let parseable = 0;
   let mapped = 0;
   let recoverable = 0;
-  const details = [];
+  const details = [...sourceFacts.details];
 
   for (const ref of references) {
     const hasUrl = parseableUrl(ref.source_url);

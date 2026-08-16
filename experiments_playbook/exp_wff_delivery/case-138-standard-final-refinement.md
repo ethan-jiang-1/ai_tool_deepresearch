@@ -17,7 +17,7 @@ runtime: real_disposable_bundle
 external_calls: none
 verdict_judge: deterministic
 req: CDE-003, CDP-003, CDP-004, POF-001
-not_run_if: "The authenticated Subject Agent, required production tools, or native completion is unavailable; the single 120-second attempt must not be retried automatically."
+not_run_if: "The authenticated Subject Agent, required production tools, or native completion is unavailable; the user-confirmed replacement 120-second attempt must not be retried automatically."
 ---
 
 <!-- @impl CDE-003, CDP-003, CDP-004, POF-001 -->
@@ -29,6 +29,12 @@ not_run_if: "The authenticated Subject Agent, required production tools, or nati
 The setup helper creates exactly one legal Final boundary with an empty primary
 inventory, one supplied submitted backing, and no report. It performs no
 network research and does not generate a Subject result or native verdict.
+
+The original native attempt remains quarantined `NOT_RUN`. This playbook records
+the user-confirmed replacement authorization in its new disposable bundle and
+permits exactly one replacement Subject invocation; it does not erase the
+original diagnostic, grant a third attempt, or turn the authorization into a
+native completion fact.
 
 One independent authenticated Subject Agent receives five supplied turns in one
 session: initial delivery, unlabelled presentation revision, labelled technical
@@ -54,6 +60,16 @@ quality, user satisfaction, or general intent-classification accuracy.
 ```bash
 B=$(node experiments_env/shared/prepare-iterative-interaction-case.mjs 138 --target-dir {{CASE_RUN_ROOT_SH}})
 node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
+node --input-type=module - "$B" <<'JS'
+import { writeFileSync } from 'node:fs';
+const [bundle] = process.argv.slice(2);
+writeFileSync(`${bundle}/case-138-replan.json`, `${JSON.stringify({
+  authorization: 'user_confirmed_replacement',
+  original_attempt: 'quarantined_not_run',
+  replacement_attempt_limit: 1,
+  subject_runtime_cap_seconds: 120,
+}, null, 2)}\n`);
+JS
 ```
 
 The created bundle must contain `case-138-setup.json` and
@@ -73,9 +89,10 @@ if [ "$SUBJECT_STATUS" -ne 0 ]; then
 fi
 ```
 
-Only this one invocation is authorized. A timeout, missing actor, missing
-tooling, failed observer, or other native failure is preserved as `NOT_RUN`;
-this playbook neither retries it nor substitutes fixture or Playbook-Agent work.
+Only this user-confirmed replacement invocation is authorized. A timeout,
+missing actor, missing tooling, failed observer, or other native failure is
+preserved as `NOT_RUN`; this playbook neither retries it nor substitutes fixture
+or Playbook-Agent work.
 
 ## Step 3 - Bind The Retained Procedure Observation
 

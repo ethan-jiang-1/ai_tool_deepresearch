@@ -139,9 +139,13 @@ describe('case-138 standard Final refinement source contract', () => {
     assert.match(observer, /immutable_prior_bytes: true/);
   });
 
-  it('declares one native attempt and no report-quality, generic-intent, or satisfaction proof', () => {
+  it('binds one user-confirmed replacement attempt without report-quality, generic-intent, or satisfaction proof', () => {
     assert.equal((playbook.match(/run-iterative-interaction-subject\.mjs 138 --bundle/g) || []).length, 1);
-    assert.match(playbook, /single 120-second attempt must not be retried automatically/i);
+    assert.match(playbook, /authorization: 'user_confirmed_replacement'/);
+    assert.match(playbook, /original_attempt: 'quarantined_not_run'/);
+    assert.match(playbook, /replacement_attempt_limit: 1/);
+    assert.match(playbook, /replacement 120-second attempt must not be retried automatically/i);
+    assert.match(playbook, /does not erase the[\s\S]*original diagnostic,[\s\S]*grant a third attempt/i);
     assert.match(playbook, /NOT_RUN/);
     assert.match(playbook, /does not judge report\s+quality, user satisfaction, or general intent-classification accuracy/i);
     assert.match(playbook, /Does not prove \| Report improvement, generic feedback classification, genuine user satisfaction, or rerun completion/);

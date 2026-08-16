@@ -12,65 +12,6 @@ const FAMILY_ID_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$/
 export const ChangeNameSchema = z.string().regex(CHANGE_NAME_RE, 'must be safe kebab-case');
 export const SemanticFactFamilyIdSchema = z.string().regex(FAMILY_ID_RE, 'must be a dotted semantic fact family ID');
 
-export const INITIAL_SEMANTIC_FACT_FAMILIES = Object.freeze([
-  Object.freeze({
-    id: 'research.scope-and-rerun-intent',
-    bounded_question: 'What are the current scope, canonical Topic, and rerun intent?',
-  }),
-  Object.freeze({
-    id: 'research.host-access-envelope',
-    bounded_question: "What does the latest bounded direct-page observation say about the fixed China and overseas samples — each sample's compact terminal outcome, whether any non-diagnostic core sample returned real content, and the observation time — and does an already validated legacy access_boundary own any unavailable part? Current sample outcomes are a Phase semantic-input fact, not an Engine-owned network diagnosis.",
-  }),
-  Object.freeze({
-    id: 'queue.demand-lifecycle',
-    bounded_question: 'What is the legal lifecycle of queue demand, terminal history, and replacement?',
-  }),
-  Object.freeze({
-    id: 'work-unit.attempt-identity-and-actor',
-    bounded_question: 'Are work-unit identity, queue/assignment binding, actor, nonce, and runtime receipt consistent?',
-  }),
-  Object.freeze({
-    id: 'work-unit.assignment-output-obligation',
-    bounded_question: 'What direct-output declaration and required-output obligations does this work-unit assignment impose?',
-  }),
-  Object.freeze({
-    id: 'work-unit.wave0-source-output',
-    bounded_question: 'Has Wave0 fulfilled its source_yaml direct-output contract?',
-  }),
-  Object.freeze({
-    id: 'work-unit.wave1-evidence-summary-output',
-    bounded_question: 'Has Wave1 fulfilled its evidence_summary direct-output contract?',
-  }),
-  Object.freeze({
-    id: 'work-unit.wave1-question-list-output',
-    bounded_question: 'Has Wave1 fulfilled its question_list direct-output contract?',
-  }),
-  Object.freeze({
-    id: 'work-unit.source-claim-provenance',
-    bounded_question: 'Does a source claim, accepted URL, cache trail, or degraded capture have legal provenance?',
-  }),
-  Object.freeze({
-    id: 'work-unit.submission-ledger-and-supersession',
-    bounded_question: 'What is the current-versus-historical conclusion of submit, ledger/hash, and supersession lineage?',
-  }),
-  Object.freeze({
-    id: 'wave.submitted-reference-convergence',
-    bounded_question: 'Are Wave0/Wave1 submitted backing, reference materialization, and convergence consistent?',
-  }),
-  Object.freeze({
-    id: 'wave2.finding-and-target-authority',
-    bounded_question: 'What is the authority of Wave2 findings, carried targets, synthesis, and cross-reference?',
-  }),
-  Object.freeze({
-    id: 'lifecycle.gate-status-trace-handoff',
-    bounded_question: 'Do Gate, status, trace, and handoff receipt constitute legal lifecycle evidence?',
-  }),
-  Object.freeze({
-    id: 'final.submitted-backing-admission',
-    bounded_question: 'Does each Final Evidence Map link have legal submitted backing?',
-  }),
-]);
-
 export function splitRepositoryCoordinate(value) {
   const coordinate = String(value).trim();
   const fragmentIndex = coordinate.indexOf('#');

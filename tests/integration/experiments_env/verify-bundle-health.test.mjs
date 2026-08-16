@@ -310,6 +310,33 @@ describe('verify-bundle-health.mjs', () => {
       assert.strictEqual(report.gate_attempts.pass, 1);
       assert.strictEqual(report.gate_attempts.fail, 0);
     });
+
+    it('counts a bound route_pending log as the setup-ready trace attempt', () => {
+      const dir = createBundleDir('std-route-pending-timeline');
+      writeBaseBundleFiles(dir, 'std-route-pending-timeline', {
+        phase: 'setup',
+        trace: [{
+          ts: '2026-01-01T00:00:01.000Z',
+          event: 'gate_attempt',
+          gate: 'setup-ready',
+          gate_attempt_id: 'setup-attempt-1',
+          passed: true,
+        }],
+      });
+      const logPath = join(dir, '_logs', 'run.log');
+      writeFileSync(logPath, '[2026-01-01T00:00:01.000Z] INFO route_pending bundle=std-route-pending-timeline {"gate":"setup-ready","gate_attempt_id":"setup-attempt-1"}\n');
+
+      let r = spawnSync('node', [VERIFIER, '--bundle', dir, '--profile', 'standard', '--json'], { encoding: 'utf-8', timeout: 30000 });
+      let report = JSON.parse(r.stdout.trim());
+      assert.strictEqual(report.timeline.status, 'clean');
+      assert.strictEqual(report.timeline.log_gate_attempts, 1);
+
+      writeFileSync(logPath, '[2026-01-01T00:00:01.000Z] INFO route_pending bundle=std-route-pending-timeline {"gate":"setup-ready"}\n');
+      r = spawnSync('node', [VERIFIER, '--bundle', dir, '--profile', 'standard', '--json'], { encoding: 'utf-8', timeout: 30000 });
+      report = JSON.parse(r.stdout.trim());
+      assert.strictEqual(report.timeline.status, 'issues');
+      assert.strictEqual(report.timeline.log_gate_attempts, 0);
+    });
   });
 
   // ── Heavy Profile ──────────────────────────────────────────────────────

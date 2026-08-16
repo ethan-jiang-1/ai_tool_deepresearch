@@ -430,11 +430,14 @@ human was satisfied. Missing Agent/runtime/tool capability is `NOT_RUN`, never a
 fixture PASS. The case uses one finding, one Evidence Map row, compact reports,
 per-turn observers, a snapshot frozen immediately after the satisfaction turn,
 and the accepted active-suite hard cap of 120 seconds total Subject runtime.
-Only one canonical native run is authorized: timeout, missing health/native
-completion, or other failure quarantines retained diagnostics, records
-`NOT_RUN`, leaves the selected Agent-flow claim/task open for explicit replan,
-and triggers no automatic retry. Historical case 137 remains quarantined
-no-evidence and is not reinterpreted.
+Only one canonical native run is authorized by default: timeout, missing
+health/native completion, or other failure quarantines retained diagnostics,
+records `NOT_RUN`, leaves the selected Agent-flow claim/task open for explicit
+replan, and triggers no automatic retry. A user-confirmed material replan may
+authorize exactly one replacement native run under the same 120-second cap;
+the replacement preserves the original diagnostics and cannot itself trigger a
+further automatic retry. Historical case 137 remains quarantined no-evidence
+and is not reinterpreted.
 
 ### 10. Semantic precision, control simplification, and responsibility review
 

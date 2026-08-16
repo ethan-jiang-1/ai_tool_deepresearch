@@ -328,274 +328,406 @@ read the receipt as a fallback data owner.
 
 ### Requirement: Phase Final body completeness
 
-`phase-final.md` SHALL contain a complete 9-section body. The node SHALL declare `phase: final`, `gate: null`, and `stop: "no"`; it SHALL not declare a `next` frontmatter field. It SHALL be a terminal node — no outgoing gate, no normal next phase.
+`phase-final.md` SHALL contain a complete 9-section body. The node SHALL declare
+`phase: final`, `gate: null`, and `stop: "yes"`; it SHALL not declare a `next`
+frontmatter field. Final SHALL remain the terminal lifecycle node: it has no
+outgoing Gate, normal next phase, or transition-table entry. For Final only,
+`stop: "yes"` SHALL mean **deliver first, then remain available for refinement**;
+it SHALL NOT delay the first report until the user supplies another decision.
 
-The phase SHALL generate final report artifact(s) from verified bundle state. The report SHALL source content from verified wave artifacts and profile, not from chat memory.
+On the bundle's first legal Final entry, after `enter-phase` has admitted a valid
+empty canonical primary Final inventory, written the route-bound load, and the
+existing Readiness source-gate status synchronization has completed, the Agent
+SHALL immediately execute the existing view-aware Report
+Composition Pass from verified bundle state and the accepted profile handoff,
+publish `final/final.md`, present that committed report, and then invite concise
+feedback. It SHALL not ask a pre-delivery confirmation or offer a partial report.
+In this contract, Final means the user's current primary delivered report; it
+SHALL not be pre-bound to a particular pain point, view, feature label, or
+presentation template. Those values MAY shape one version without defining a
+parallel Final type or series.
 
-Post-final user feedback SHALL NOT be processed by Final or require reloading Final/HITL2 as a duplicate question loop. When the feedback is an explicit rerun request, the accepted post-final recovery operation SHALL persist the decision into the existing HITL2 `rerun` profile semantics and create one audited handoff to `phases/phase-rerun.md`. Unsupported repair/state-seed requests SHALL remain unavailable. Final SHALL NOT contain hidden next, hidden gate, implicit loop or generic override wording.
+When an accepted post-final rerun later completes a newer legal Readiness-to-
+Final handoff, the existing bundle-wide primary series SHALL remain in place.
+Before the new Final load, `enter-phase` SHALL have admitted the exact full safe
+Final inventory bound by the retired C5 event's prior digest. The existing
+Readiness source-gate status synchronization SHALL then complete before Final
+work. That baseline and terminal status distinguish the old delivery from the
+new one. If synchronized current inventory still matches that prior digest with
+zero appended canonical versions, Final SHALL immediately compose from the
+new verified lineage and publish global `latest + 1` before requesting feedback;
+it SHALL not present the old latest report as though it were the new delivery.
+Once one or more immutable appended versions uniquely preserve that prior
+inventory, the newest version is bound to the newer Final lineage and ordinary
+in-place refinement resumes. No second `final/final.md` is created.
 
-Delivery completion SHALL be evidenced by the existence of at least one report file under the `final/` directory. Because `phase-final.md` is a terminal node with `gate: null`, there is no gate CLI to write a `final_delivery` trace event, and the charter prohibits hand-writing trace events. Therefore the delivery fact is proven by file existence plus legal readiness→Final entry, not by a `final_delivery` event.
+After a report is bound to the current Final lineage, Final SHALL remain the
+current node. Clear feedback limited to reader, structure, ordering, length,
+wording, emphasis, evidence visibility, appendix posture, or explanation of
+already verified facts SHALL be handled inside Final: the Agent SHALL read the
+latest committed primary report, the accepted handoff for the current Final
+lineage, verified evidence, and the current user turn; prepare a complete
+replacement staging report; publish one immutable next version; present it; and
+wait again. The loop has no fixed round limit and ends for the current
+interaction when the user expresses satisfaction or declines another revision.
 
-#### Scenario: Final frontmatter contract
+If material ambiguity would change the requested presentation, the Agent SHALL
+ask only the smallest clarification needed for the next report version. This is
+Final-owned delivery collaboration, not a HITL2 decision, Gate, lifecycle state,
+or persisted satisfaction verdict. Final SHALL NOT rewrite
+`human_decision_checkpoints.hitl2.final_report_view`, `composition_handoff`, or
+the predecessor receipt to make a later presentation preference look like the
+current-lineage delivery decision.
 
-- **WHEN** `phase-final.md` is loaded
-- **THEN** its frontmatter SHALL contain `node_type: phase`, `id: phase-final`, `phase: final`, `gate: null`, and `stop: "no"`
-- **AND** it SHALL not contain a `next` frontmatter field
-- **AND** `gate` being `null` SHALL mean no outgoing gate CLI runs after this phase
-
-#### Scenario: Final report generation
-
-- **WHEN** Agent executes the final phase
-- **THEN** Agent SHALL generate at least 1 final report artifact in the `final/` directory
-- **AND** report content SHALL be sourced from verified bundle state (wave artifacts, profile, status)
-
-#### Scenario: Final terminal semantics
-
-- **WHEN** final phase completes
-- **THEN** the lifecycle SHALL have no normal next phase
-- **AND** `transitions.chain.json` SHALL NOT contain an entry for `phases/phase-final.md`
-
-#### Scenario: Post-final feedback routing
-
-- **WHEN** user provides explicit rerun feedback after final delivery
-- **THEN** the accepted post-final recovery operation SHALL write the current HITL2 rerun semantics and audited recovery lineage
-- **AND** rework SHALL enter the existing `phases/phase-rerun.md` path without re-asking the same decision
-- **AND** Final SHALL NOT implement a hidden loop back to earlier phases or claim unsupported generic repair authority
+Feedback that requires a new source, new Topic, new evidence collection, a new
+research conclusion, a research-profile change, or another expansion of the
+verified research boundary SHALL NOT be fulfilled by rewriting Final. The Agent
+SHALL retain the explicit request and use the accepted audited post-final rerun
+operation. Unsupported arbitrary state repair or history rewrite SHALL remain
+unavailable. Final SHALL not hide a transition to an earlier phase.
 
 After legal Readiness entry, Final SHALL consume the current accepted
 `final_report_view` and `composition_handoff` from the profile with verified
 research state. It SHALL not consume a receipt as a normal source or fill
-missing semantics from rationale, decision brief, chat, slug, or transparent
-Final defaults. The same terminal node SHALL execute this Report Composition
-Pass in order:
+missing current-lineage delivery semantics from rationale, decision brief, chat, slug, or
+transparent defaults. Each first or revised report SHALL execute this Report
+Composition Pass:
 
-1. **Reground** in the goal, scope, root must-answer set, accepted handoff,
-   answerability/limitation surfaces, allowed read graph, and final target;
+1. **Reground** in the goal, scope, root must-answer set, the accepted handoff for
+   the current Final lineage, answerability/limitation surfaces, allowed read
+   graph, latest report when present, and current bounded feedback;
 2. **Answer Inventory** by joining verified finding index, evidence meaning,
    Wave-local mechanism/limitation material, and submitted-backed references;
-3. **Coverage and materiality** by assigning every root must-answer
-   `answered`, `partial`, or `unavailable`, retaining material answers,
-   contradictions, limitations, confidence boundaries, and backing obligations;
+3. **Coverage and materiality** by assigning every root must-answer `answered`,
+   `partial`, or `unavailable`, retaining material answers, contradictions,
+   limitations, confidence boundaries, and backing obligations;
 4. **Spine and placement** by selecting one primary narrative spine and deciding
    must-answer order, finding placement, body/appendix boundaries, and explicit
    reasons for omitted P0/P1 material; and
-5. **Draft and self-check** before invoking the existing
-   `persist-final-report` admission path.
+5. **Draft and self-check** before invoking the canonical primary Final
+   publication path.
 
 The view mappings SHALL remain distinguishable while sharing verified-content
-obligations: `profile_default` starts from the profile-appropriate question,
-topic, or claim spine; `executive_brief` is decision-first and foregrounds
-P0/P1, material risks, trade-offs, and unknowns; `evidence_map` is
-evidence-first and exposes support, contradiction, limitation, confidence, and
-gaps without replacing the mandatory Evidence Map declaration; `claim_judgment`
-is claim-first and states judgment, support, counterevidence, conditions,
-confidence, and residual unknowns; `technical_deep_dive` is
-mechanism/dependency-first and distinguishes observed fact, inferred mechanism,
-and unresolved hypothesis; `custom` follows accepted non-empty
-`view_instructions` within verified evidence and must-answer boundaries.
+obligations: `profile_default` is profile-appropriate; `executive_brief` is
+decision-first; `evidence_map` is evidence-first; `claim_judgment` is
+claim-first; `technical_deep_dive` is mechanism/dependency-first and
+distinguishes observed fact, inferred mechanism, and unresolved hypothesis;
+`custom` follows accepted instructions within verified boundaries. A revision
+MAY move between these presentation shapes in response to clear user feedback,
+but the filename feature label is descriptive only and SHALL NOT mutate the
+accepted HITL2 owner.
 
-Foreground, compress, delivery length, evidence exposure, and appendix
-preferences SHALL affect only ordering, granularity, and presentation. They
-SHALL NOT hide or weaken a material contradiction, limitation, uncertainty,
-must-answer obligation, confidence boundary, submitted-backing requirement, or
-mandatory Evidence Map. Exact section names and transitions remain Final Agent
-judgment. Final SHALL add no question, wait, confirmation, feedback loop,
-outgoing Gate, transition, delegated production actor, second primary report,
-or report-quality deterministic verdict; a failed persistence/backing check
-returns to retained staging and the same operation.
+Foreground, compression, length, evidence exposure, and appendix preferences
+SHALL affect ordering, granularity, and presentation only. They SHALL NOT hide
+or weaken a material contradiction, limitation, uncertainty, must-answer
+obligation, confidence boundary, submitted-backing requirement, or mandatory
+Evidence Map. Exact sections and prose remain Agent judgment. The Engine SHALL
+not judge whether a report is sufficiently concise, executive, or technically
+deep.
+
+Delivery evidence SHALL remain a committed primary report under `final/` bound
+to the current legal readiness-to-Final entry as the empty-series base or a
+proven later append. Final has no Gate CLI and SHALL NOT write a `final_delivery`
+trace event or a satisfaction event.
+
+#### Scenario: Final frontmatter contract
+
+- **WHEN** `phase-final.md` is loaded
+- **THEN** frontmatter SHALL contain `node_type: phase`, `id: phase-final`,
+  `phase: final`, `gate: null`, and `stop: "yes"`
+- **AND** it SHALL not contain a `next` field
+- **AND** `gate: null` SHALL mean no outgoing Gate CLI runs
+
+#### Scenario: Final report generation
+
+- **WHEN** `enter-phase` admits an empty primary baseline and Readiness status synchronization completes the first legal Final entry in a new bundle
+- **THEN** the Agent SHALL compose and publish `final/final.md` before requesting feedback
+- **AND** report content SHALL come from verified bundle state rather than chat memory
+
+#### Scenario: Later Final lineage appends before requesting feedback
+
+- **WHEN** an accepted C5 lineage reaches a newer legal Final handoff, `enter-phase` admits the exact event-bound prior inventory, Readiness status synchronization completes, and inventory still has no appended canonical version
+- **THEN** the Agent SHALL compose from the newer verified lineage and publish global `latest + 1` before requesting feedback
+- **AND** it SHALL not recreate `final/final.md` or present the prior lineage's latest report as the new delivery
+
+#### Scenario: Final is the current primary report, not a fixed view
+
+- **WHEN** the accepted view, current feedback, or optional feature label emphasizes a particular reader need or presentation angle
+- **THEN** that emphasis MAY shape the current Final version
+- **AND** it SHALL not redefine Final as a pain-point-specific artifact, create another primary series, or change lifecycle authority
+
+#### Scenario: Final terminal semantics
+
+- **WHEN** a first or revised Final report commits
+- **THEN** lifecycle position SHALL remain `phases/phase-final.md`
+- **AND** `transitions.chain.json` SHALL NOT contain an entry for Final
+- **AND** no Gate, status transition, or satisfaction state SHALL be added
+
+#### Scenario: Post-final feedback routing
+
+- **WHEN** feedback asks only for another presentation of existing verified content
+- **THEN** Final SHALL publish another primary version and remain in Final
+- **AND** it SHALL not reload HITL2 or invoke post-final rerun
+- **WHEN** feedback requires new research or evidence
+- **THEN** the accepted audited post-final rerun path SHALL own the request
 
 #### Scenario: Different views change reading path but not verified meaning
 
-- **WHEN** the same readiness-passed verified state is delivered under two
-  accepted handoffs with different standard views
-- **THEN** reports MAY differ in reader framing, spine, order, granularity,
-  evidence exposure, and appendix placement
-- **AND** finding meaning, status/confidence, limitations, must-answer coverage,
-  provenance, and submitted backing SHALL remain consistent
+- **WHEN** two Final versions present the same readiness-passed research through different views
+- **THEN** they MAY differ in framing, spine, order, granularity, evidence exposure, and appendix placement
+- **AND** finding meaning, status/confidence, limitations, must-answer coverage, provenance, and submitted backing SHALL remain consistent
 
 #### Scenario: Material content survives compression
 
-- **WHEN** a handoff asks Final to compress a finding, counterevidence, or
-  limitation
+- **WHEN** feedback asks to compress a finding, counterevidence, or limitation
 - **THEN** Final MAY move non-material detail to an appendix or omit repetition
-- **AND** it SHALL retain content whose absence would change an answer,
-  confidence, scope, decision implication, mechanism understanding, or
-  limitation visibility
+- **AND** it SHALL retain content whose absence would change an answer, confidence, scope, decision implication, mechanism understanding, or limitation visibility
 
 #### Scenario: Final does not reopen HITL2
 
-- **WHEN** Final encounters a missing, unsupported, stale, or drifted handoff
-  after legal entry
-- **THEN** it SHALL expose the upstream contract boundary and stop the delivery
-  claim
-- **AND** it SHALL not ask the user, silently default a view, or route back to
-  HITL2 from inside Final
+- **WHEN** Final receives a presentation-only revision request
+- **THEN** it SHALL use the current Final interaction without rewriting or reopening HITL2
+- **WHEN** the current Final lineage's accepted handoff is missing, unsupported, stale, or drifted before its first delivery
+- **THEN** Final SHALL expose that upstream contract boundary and SHALL not invent missing semantics
 
 #### Scenario: Final persists after composition self-check and backing admission
 
-- **WHEN** the Composition Pass has completed its coverage/self-check and the
-  report contains the required Evidence Map
-- **THEN** the Agent SHALL invoke `persist-final-report` and present delivery
-  only after a committed result and existing Final-entry evidence
-- **AND** a structural backing rejection SHALL be repaired at retained staging
-  and rerun through the same operation
+- **WHEN** a first or revised staging report completes its semantic self-check and bounded Evidence Map
+- **THEN** the Agent SHALL invoke the canonical primary publication operation
+- **AND** it SHALL present the version only after a committed result
+- **AND** a backing rejection SHALL return to retained staging and the same operation
 
-### Requirement: Final delivery is terminal non-interactive delivery and post-final feedback re-enters through HITL2
+### Requirement: Final delivery remains terminal while iterating in place
 
-Content delivery phase docs SHALL distinguish terminal non-interactive Final delivery from interactive in-run decision checkpoints while providing the accepted post-final feedback routing contract.
+Content-delivery guidance SHALL distinguish lifecycle terminality from
+interaction placement. HITL1 and HITL2 SHALL remain the only framework-initiated
+in-run checkpoints that request a lifecycle semantic decision. Final SHALL be a
+terminal interactive delivery surface, not a third HITL: it requests feedback
+about an already delivered artifact but owns no Gate verdict, decision enum,
+outgoing transition, accepted profile decision, or lifecycle completion state.
 
-For Final, `non-interactive` SHALL mean that the framework does not initiate a question, decision wait, confirmation, progress/partial-delivery offer or repair loop. It SHALL NOT mean that the Agent ignores a user-initiated normal conversation turn already current. During active Final, the Agent SHALL answer such a turn from verified direct facts or state the smallest unavailable boundary without creating a decision owner, pause, durable intent, route, mutation/reentry authority or third checkpoint. Before final artifacts legally exist, the answer SHALL NOT claim delivery, turn into a progress/partial-report offer or alter `interaction: terminal_delivery` / `next_action: deliver_final_artifacts`. After legal Final delivery, ordinary factual replies remain answerable; only an explicit rerun request that requires mutation/reentry MAY enter the accepted audited post-final recovery path.
+The Final interaction SHALL follow this order:
 
-For this capability:
+```text
+legal Final entry
+  -> complete the exact Readiness source-gate status synchronization
+  -> publish and present the first report immediately
+  -> invite and await feedback on that report
+  -> clear presentation feedback: publish and present one next version
+  -> invite and await feedback again
+  -> satisfied: end the current interaction without another write
+  -> evidence-expanding request: use audited post-final rerun
+```
 
-- HITL1 and HITL2 SHALL remain the only framework-initiated interactive in-run checkpoints where the framework invites and waits for a semantic decision;
-- HITL2 SHALL remain the structured human decision vocabulary for review, repair, rerun, or stop decisions, while its prompt MAY accept clear natural language and optional shortcuts;
-- the natural-language mapping defined for HITL2 SHALL apply only at that accepted HITL2 decision boundary and SHALL NOT turn an ordinary voluntary message during a non-HITL phase into persisted decision or mutation authority;
-- readiness SHALL remain the structural precheck before final delivery;
-- Final SHALL remain a terminal non-interactive delivery phase with `gate: null`, no `next` frontmatter field, no hidden next phase, no hidden gate, no recommendation/confirmation prompt, and no implicit loop;
-- final report delivery MAY surface final artifacts after they exist, but SHALL NOT ask the user whether to continue, whether partial output is enough, or whether to repair inside Final; and
-- explicit user feedback after final delivery that requests rerun and requires mutation/reentry SHALL use the accepted audited post-final recovery operation, which records the new decision as HITL2 `rerun` semantics and creates one legal handoff to the existing rerun phase rather than turning Final into a repair surface; ordinary factual replies SHALL NOT be forced through recovery.
+The first report SHALL NOT depend on a user response after Final entry. After
+each committed report, the Agent SHALL make the artifact directly available and
+invite natural-language feedback without forcing a menu, a formal confirmation,
+or HITL2 vocabulary. A clear revision request authorizes exactly the bounded
+semantic rewrite it describes; it does not authorize new evidence collection,
+profile mutation, state repair, overwrite, deletion, or another lifecycle path.
+Materially ambiguous feedback receives one minimum clarification before the
+next version. A user expression of satisfaction ends the current interaction
+and SHALL NOT be persisted as an Engine fact or produce an empty version.
 
-The post-final operation SHALL NOT require the user to repeat the same rerun decision at a newly loaded HITL2 prompt. After the semantic/risk decision and any host-required non-delegable approval, the Agent SHALL execute inspect/apply/recover, consume the legal rerun handoff and continue the existing canonical rerun pipeline. This is HITL2-mediated decision semantics through the accepted recovery operation, not a third checkpoint, a Final-owned loop, or generic prompt-side mapping authority.
+Final MAY use recommendation-first language when useful, such as briefly
+recommending a structure or explaining the impact of a requested shortening.
+That recommendation SHALL remain Agent advice about the next artifact, not a
+framework decision checkpoint or a second confirmation requirement.
 
-The previous Final delivery SHALL remain historical truth: the recovery audit SHALL bind the prior readiness→Final handoff/load, prior HITL2 decision/profile hash, status hash and final inventory digest. C5 SHALL NOT delete or rewrite existing gate attempts, entry witnesses, evidence, receipts, ledger rows or final artifacts to imply that delivery never occurred.
+Each readiness-to-Final handoff and all committed primary reports SHALL remain
+historical truth. In-place refinement within one Final lineage SHALL not rewrite
+Gate attempts, entry witnesses, that lineage's profile handoff fields, evidence,
+receipts, ledger rows, or prior report bytes. When a later explicit request
+crosses the verified research boundary, the post-final operation SHALL record
+existing HITL2 `rerun` semantics and create one legal handoff to
+`phases/phase-rerun.md`; the user SHALL not have to repeat that rerun decision in
+a duplicate Final or HITL2 prompt. A later normal HITL2/Readiness pass MAY
+establish a new accepted composition handoff for the next Final lineage without
+rewriting any earlier handoff.
 
-When the user has not requested another output language, Final phase guidance SHALL contain a soft instruction to prefer Chinese for user-facing report narrative and the terminal delivery summary. Internal enum values, file paths, field names, CLI commands, citations, and source titles SHALL retain canonical or source form. The language instruction SHALL NOT add a language detector, make non-Chinese output a deterministic delivery failure, or alter Final authorization and evidence requirements.
-
-The language instruction SHALL NOT create a new Final gate, hidden next edge, post-delivery interaction loop, `final_delivery` trace authority, or chat/log summary that substitutes for legal readiness-to-final handoff and `final/` artifact existence.
-
-This requirement SHALL NOT authorize generic repair, arbitrary state mutation or developer state-seed. Unsupported post-final actions SHALL remain a missing capability rather than being routed through the rerun exception.
+When the user has not requested another language, Final guidance SHALL prefer
+Chinese for report narrative, delivery summaries, and feedback invitations.
+Canonical enum values, paths, field names, commands, citations, and source
+titles SHALL retain their canonical or source form. Language preference SHALL
+not alter authorization, evidence, or persistence requirements.
 
 #### Scenario: Final delivery is not a third in-run checkpoint
 
-- **WHEN** `phase-final.md` delivers final report artifacts
-- **THEN** the docs SHALL treat that delivery as terminal output after final artifacts exist
-- **AND** they SHALL NOT describe Final as a confirmation loop, progress report, recommendation prompt, or interactive repair checkpoint
+- **WHEN** Final presents a committed report and asks whether the user wants it adjusted
+- **THEN** the lifecycle SHALL remain terminal with no Gate or outgoing transition
+- **AND** the feedback invitation SHALL not create a HITL decision enum or persisted verdict
 
 #### Scenario: User-initiated turn during Final is answered without opening a Final loop
 
-- **WHEN** a user-initiated normal conversation turn is current while Final is active
-- **THEN** the Agent SHALL answer from verified direct facts or state the smallest unavailable boundary
-- **AND** before final artifacts legally exist it SHALL NOT claim delivery, offer progress/partial delivery or wait for confirmation
-- **AND** the reply SHALL NOT create a decision owner, pause, durable intent, route, mutation/reentry authority or change `terminal_delivery` / `deliver_final_artifacts`
-- **AND** after legal delivery only an explicit accepted rerun request MAY enter audited post-final recovery; ordinary factual replies SHALL NOT open a Final loop
+> **@deprecated behavior** — The scenario title is retained as an archive
+> anchor. “Without opening” now means no lifecycle/Gate/HITL loop; bounded
+> presentation refinement is handled by the already-current Final interaction.
+
+- **WHEN** the user gives clear presentation feedback after a committed Final report
+- **THEN** the Agent SHALL revise from current verified facts, publish one next version, and remain in Final
+- **AND** it SHALL not route the request through HITL2 or audited rerun
 
 #### Scenario: Final does not inherit HITL2 prompt-side mapping
 
-- **WHEN** Final generates or delivers report artifacts
-- **THEN** it SHALL NOT invite a new proceed/repair/rerun/stop decision or map an ordinary delivery response into `human_decision_checkpoints.hitl2`
-- **AND** only the separately accepted audited post-final rerun operation MAY create the existing rerun semantics after an explicit post-final request
+- **WHEN** Final receives natural-language satisfaction, revision, or clarification text
+- **THEN** it SHALL interpret that text only for the bounded delivery interaction
+- **AND** it SHALL not map it into `human_decision_checkpoints.hitl2` unless the request explicitly requires the accepted post-final rerun path
 
 #### Scenario: Final narrative prefers Chinese without translating canonical tokens
 
-- **WHEN** `phase-final.md` generates and delivers final artifacts
-- **AND** the user has not requested another output language
-- **THEN** Agent-facing guidance SHALL instruct the Agent to prefer Chinese for report narrative and the delivery summary
-- **AND** citations, source titles, paths, commands, field names, and enum values SHALL remain in canonical or source form
-- **AND** language preference SHALL NOT replace legal Final entry or final artifact evidence
-- **AND** it SHALL NOT require or imply a `final_delivery` gate/trace event as delivery authority
+- **WHEN** Final generates, delivers, or discusses a report and the user requested no other language
+- **THEN** guidance SHALL prefer Chinese narrative
+- **AND** citations, source titles, paths, commands, field names, and enum values SHALL remain canonical
+
+#### Scenario: Satisfied user ends interaction without new state
+
+- **WHEN** the user says the current version is satisfactory or requests no further change
+- **THEN** the Agent SHALL end the current interaction without publishing another version
+- **AND** the Engine SHALL not write a satisfaction flag, Gate event, status transition, or trace event
 
 #### Scenario: Post-final rerun uses audited HITL2 semantics
 
-- **WHEN** user feedback after legal Final delivery explicitly requests a rerun and current host permission allows the operation
-- **THEN** the Agent SHALL submit the retained post-final request through the accepted recovery operation
-- **AND** the Engine SHALL record HITL2 `rerun` semantics and one lineage-bound handoff to `phases/phase-rerun.md`
-- **AND** the user SHALL NOT be asked to run ordinary recovery commands or repeat the same decision at a Final-owned or duplicate HITL2 loop
+- **WHEN** feedback explicitly requires a new source, Topic, evidence collection, research conclusion, or research-profile change
+- **THEN** the Agent SHALL retain and submit that request through the accepted post-final recovery operation
+- **AND** the Engine SHALL record existing HITL2 `rerun` semantics and one lineage-bound handoff to `phases/phase-rerun.md`
 
 #### Scenario: Post-final feedback keeps HITL2 routing
-> **@deprecated** — The pre-C5 scenario name is retained for archive compatibility. Routing now means recording HITL2 rerun semantics through the audited recovery operation and entering the existing rerun node, not reloading a duplicate HITL2 prompt.
 
-- **WHEN** user feedback arrives after final delivery and requests rerun
-- **THEN** docs SHALL route the decision through the accepted post-final recovery operation into the existing HITL2 rerun contract
-- **AND** they SHALL NOT add a hidden Final gate, hidden Final next edge, duplicate HITL2 question or Final-owned repair loop
+> **@deprecated** — The historical scenario name is retained for archive
+> compatibility. Only evidence-expanding feedback keeps audited HITL2 rerun
+> routing; presentation-only feedback now remains in Final.
+
+- **WHEN** post-final feedback crosses the verified research boundary
+- **THEN** it SHALL use audited post-final rerun rather than a hidden Final transition
+- **AND** presentation-only feedback SHALL not be routed there
 
 #### Scenario: Unsupported post-final action remains unavailable
 
-- **WHEN** post-final feedback requests arbitrary repair-in-place, status movement, history rewrite or developer state-seed rather than `post_final_rerun`
-- **THEN** the framework SHALL report the missing capability/permission boundary
-- **AND** SHALL NOT reinterpret the request as a rerun or generic override
+- **WHEN** feedback asks for arbitrary state mutation, history rewrite, report overwrite/deletion, or developer state-seed
+- **THEN** the framework SHALL report the missing capability or permission boundary
+- **AND** it SHALL not reinterpret the request as presentation refinement or rerun
 
 #### Scenario: Prior Final lineage remains auditable
 
-- **WHEN** a post-final rerun is accepted
-- **THEN** existing Final gate/load/evidence/provenance history SHALL remain unchanged
-- **AND** the recovery event SHALL bind the prior delivery lineage and current rerun lineage
+- **WHEN** one or more Final revisions or a later rerun occur
+- **THEN** all earlier report versions and readiness/Final evidence SHALL remain unchanged
+- **AND** any rerun recovery event SHALL bind the prior delivery lineage and current rerun lineage
 
 #### Scenario: Final terminal frontmatter has no outgoing edge
 
-- **WHEN** `phase-final.md` is loaded for terminal delivery
-- **THEN** its frontmatter SHALL use `gate: null` and omit `next`
-- **AND** that absence SHALL not create a hidden next phase, Final Gate, or
-  Final-owned repair loop
+- **WHEN** `phase-final.md` is loaded for delivery and refinement
+- **THEN** frontmatter SHALL use `gate: null`, `stop: "yes"`, and omit `next`
+- **AND** in-place interaction SHALL not create a hidden next phase or Final Gate
 
 ### Requirement: Final artifacts SHALL count as delivery evidence only after legal readiness-to-final handoff and final node entry
 
-Final report files under `final/` SHALL count as terminal delivery evidence only when the lifecycle has legally reached `phase-final.md`: readiness has passed with `check.next` targeting `phases/phase-final.md`, `enter-phase` has written a route-bound `load_complete` for Final, and status synchronization reflects the readiness source gate after that load witness.
+Primary Final report files SHALL count as delivery evidence only when the
+lifecycle legally reached `phase-final.md`: Readiness passed with `check.next`
+targeting Final, `enter-phase` admitted the required pre-publication inventory
+baseline and wrote its route-bound `load_complete`, and status synchronization
+reflects the Readiness source Gate. The first legal Final load SHALL have admitted
+an empty primary series; a post-C5 return load SHALL have admitted an exact match
+to the retired event's full prior Final inventory digest. Presentation revisions
+committed while that same lineage remains current SHALL inherit it without a new
+Gate or load.
 
-Files under `final/` created from wave0, wave1, wave2, setup, seed-topics, HITL2, readiness before pass, rerun, or any other non-Final context SHALL be diagnostic evidence only. They SHALL NOT prove delivery, SHALL NOT authorize user-facing final report presentation, and SHALL NOT replace readiness or prior gate checks.
+`final/final.md` SHALL be the initial primary report only for the bundle's first
+admitted and synchronized legal Final lineage with empty primary inventory. Revisions and every first
+report for a later legal Final lineage SHALL use `final/final_v<N>.md` or
+`final/final_<feature>_v<N>.md`, where `N` is the globally monotonic Engine-
+allocated revision number. For a later lineage produced by accepted C5, delivery
+evidence SHALL require a unique immutable-prefix proof against that event's
+prior Final inventory digest: zero appended canonical versions means delivery is
+still pending; one or more appended highest versions bind the newest version to
+the later lineage. No match is lineage/inventory drift, not delivery. All
+canonical files SHALL remain immutable delivery history. Supplementary or legacy
+Markdown under `final/` SHALL not become canonical primary delivery merely
+because it exists.
+
+For a new Final handoff, a primary-looking file created before legal Final entry,
+or any post-C5 inventory drift before its new load, SHALL cause `enter-phase` to
+reject before entry mutation. Files outside the canonical publication path or in
+an invalid/ambiguous series SHALL remain diagnostic or supplementary artifacts;
+they SHALL not bypass readiness, prove a committed version, or authorize user-
+facing delivery. A bundle with a legal Final load predating this admission
+contract remains readable through explicit legacy compatibility, not through a
+fabricated claim about historical creation order.
 
 #### Scenario: Legal final delivery uses readiness handoff evidence
 
-- **WHEN** readiness gate passes with `check.next: "phases/phase-final.md"`
-- **AND** `enter-phase` writes a route-bound `load_complete` for `phases/phase-final.md`
-- **AND** status synchronization records the readiness source gate window
-- **AND** the Agent writes `final/report.md` while executing Final
-- **THEN** the final report file MAY count as terminal delivery evidence
+- **WHEN** Readiness passes, empty-primary admission succeeds, Final is legally entered and synchronized, and canonical publication then commits `final/final.md`
+- **THEN** that file SHALL count as the first primary delivery artifact
+
+#### Scenario: Legal Final revision reuses the same terminal lineage
+
+- **WHEN** Final remains current after the first delivery and canonical publication commits `final/final_v1.md`
+- **THEN** the revision SHALL count as delivery evidence without another Gate or phase entry
+- **AND** `final/final.md` SHALL remain unchanged
+
+#### Scenario: Newer Final handoff alone is not a new delivery
+
+- **WHEN** accepted C5 descendants reach a newer legal Final handoff, exact prior-inventory admission and Readiness status synchronization succeed, but canonical inventory has no append beyond the C5 event-bound prior digest
+- **THEN** the newer lineage SHALL remain at immediate Final delivery pending
+- **AND** the prior latest report SHALL remain historical delivery evidence for its prior lineage, not current delivery evidence for the newer lineage
+
+#### Scenario: First report after rerun appends the global series
+
+- **WHEN** the newer Final lineage has completed entry/status synchronization, publishes a backed next version, and current inventory uniquely preserves the event-bound prior inventory as an immutable prefix
+- **THEN** the appended highest version SHALL count as the first delivery for that newer lineage
+- **AND** all earlier versions and lineage evidence SHALL remain unchanged
 
 #### Scenario: Premature final report is phase-boundary violation
 
-- **WHEN** the active authorized phase is wave0, wave1, wave2, or another non-Final phase
-- **AND** a file appears under `final/`
-- **THEN** inspection, readiness, or phase status audit SHALL report premature terminal output or phase-boundary violation
-- **AND** the file SHALL NOT count as terminal delivery evidence
+- **WHEN** a primary-looking Final file appears before the first Final load or changes the C5-bound inventory before a later Final load
+- **THEN** `enter-phase` SHALL reject that new Final entry and audit SHALL report premature terminal output or inventory drift
+- **AND** the file SHALL not count as delivery evidence
 
 #### Scenario: Final file existence does not bypass readiness
 
-- **WHEN** `final/report.md` exists
-- **AND** trace lacks a passed readiness gate and route-bound Final `load_complete`
-- **THEN** readiness/final audit SHALL treat the file as non-authoritative
-- **AND** it SHALL direct the Agent back to the latest legal phase or repair path
+- **WHEN** a primary-looking Final file exists without a passed Readiness Gate and route-bound Final load
+- **THEN** audit SHALL treat it as non-authoritative
+- **AND** it SHALL direct the Agent to the latest legal phase or repair path
 
 ### Requirement: Final guidance SHALL declare and persist traceable evidence backing
 
-Final phase guidance SHALL direct the Phase Agent to write a bounded Evidence
-Map in every Final Markdown report, choose its key-finding declarations from
-verified bundle state, and invoke `persist-final-report` for each safe Markdown
-target under `final/`. The guidance SHALL preserve a completed staging file
-until a `committed` result and SHALL direct the Agent to repair the reported
-map row or backing path, then rerun the same operation when deterministic
-admission fails.
+Final guidance SHALL direct the Phase Agent to write a bounded Evidence Map in
+every primary Final Markdown report, select its declarations from verified
+bundle state, and use the canonical primary publication operation. The Agent
+SHALL preserve completed staging until a `committed` result and repair the
+reported map row or backing path before rerunning the same operation after a
+deterministic rejection.
 
-The guidance SHALL preserve Final's existing terminal semantics: `gate: null`,
-no Final Gate, no `final_delivery` trace event, no hidden next edge, no
-Final-owned feedback/retry loop, and no user prompt for ordinary report repair.
-The Agent remains responsible for content judgment and authorized mechanical
-repair; the Engine remains responsible only for structural declaration, path,
-and submitted-provenance feedback.
+Every revision SHALL independently pass the existing submitted-backing
+admission contract. A prior version's successful backing check SHALL not admit
+new bytes by inheritance. The Engine SHALL validate structural declaration,
+safe paths, canonical inventory, backing, immutability, version allocation, and
+atomic commit; it SHALL not judge report quality or user satisfaction.
+
+This guidance SHALL preserve Final lifecycle semantics: `gate: null`, no
+`final_delivery` or satisfaction trace event, no hidden next edge, and no
+outgoing transition. Its allowed user feedback loop SHALL remain bounded to
+Agent-owned presentation refinement from existing verified evidence.
 
 #### Scenario: Final Markdown delivery uses the one admitted persistence path
 
-- **WHEN** the Phase Agent prepares a Final Markdown report in retained
-  staging
-- **THEN** Final guidance SHALL require a bounded Evidence Map and direct the
-  Agent to use `persist-final-report` rather than generic `persist`
-- **AND** the report SHALL not be presented as delivered before a `committed`
-  result and the existing legal Final-entry conditions hold
+- **WHEN** the Phase Agent prepares a first or revised primary Final report in retained staging
+- **THEN** guidance SHALL require a bounded Evidence Map and the canonical primary publication operation
+- **AND** the report SHALL not be presented as delivered before a committed result and legal Final-entry evidence
 
 #### Scenario: Final backing rejection stays an Agent repair of staging
 
-- **WHEN** `persist-final-report` returns a backing rejection during Final
-- **THEN** Final guidance SHALL direct the Agent to inspect the reported direct
-  fact, repair its retained staging report or its legal backing surface, and
-  rerun `persist-final-report`
-- **AND** it SHALL not ask the user to run an ordinary command or create a
-  Final Gate, Final trace event, Final-owned interaction loop, or new lifecycle
-  state
+- **WHEN** canonical publication rejects a report's Evidence Map backing
+- **THEN** guidance SHALL direct the Agent to repair retained staging or its legal backing surface and rerun the same operation
+- **AND** it SHALL not ask the user to run ordinary commands or create a Gate, status, or report-quality verdict
+
+#### Scenario: Every revision receives independent backing admission
+
+- **WHEN** `final/final.md` was admitted and a different staging report is proposed as `final/final_v1.md`
+- **THEN** the new report SHALL be evaluated against current submitted backing before commit
+- **AND** prior admission SHALL not authorize the revised bytes
 
 #### Scenario: Final terminal delivery semantics remain unchanged
 
-- **WHEN** a Final Markdown report has passed backing admission and commits
-- **THEN** Final SHALL remain a terminal, non-interactive delivery phase with
-  no outgoing Gate or transition
-- **AND** the persistence result and Evidence Map SHALL not replace the
-  existing readiness-to-Final handoff and Final-entry evidence
+- **WHEN** a primary Final report commits
+- **THEN** Final SHALL remain a terminal lifecycle node with no Gate, normal next phase, status advance, or delivery trace event
+- **AND** the Agent MAY continue only the bounded in-place refinement interaction or use audited rerun for evidence expansion

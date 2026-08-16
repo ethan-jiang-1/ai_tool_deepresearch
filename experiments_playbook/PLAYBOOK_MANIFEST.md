@@ -2,6 +2,14 @@
 
 # Agent Experiment Playbook Manifest
 
+> **⚠️ DO NOT SELECT `exp_extrem_slow/` — SUSPENDED, NEVER RUNNABLE.**
+> `exp_extrem_slow/` is a quarantine, not a runnable tier. Never select, load, execute,
+> replay, restore, register, or enable any playbook under it — in Autorun, Interactive
+> execution, any selector, profile, or manual workaround. It is absent from the table
+> below on purpose. Only a separately approved change may refactor/replace a quarantined
+> case into a normal runnable path with explicit active-manifest registration. See the
+> "Extreme-slow quarantine" section at the end of this file.
+
 This is the single active registration and execution-order authority for command experiments. Agent Experiment Autorun consumes only the bounded table below.
 
 Each row contains one path. Case and experiment identity, native verdict policy, bundle/verdict/health roles, health profile, proof profile, and judge class come from the selected playbook's strict V2 frontmatter. Execution cost comes from the filename. Filesystem discovery is used only to reject unregistered or stale cases.

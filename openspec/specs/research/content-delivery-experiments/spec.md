@@ -138,84 +138,156 @@ Final composition is semantically useful.
 - **AND** the selected JS-led proof assets SHALL remain the completion route for
   its deterministic contract until a later Change reintroduces a fast playbook
 
-### Requirement: Full delivery chain playbook
+### Requirement: Delivery tail and Final refinement playbooks
 
-The controlled experiment at `experiments_playbook/exp_wff_delivery/case-131-standard-delivery-full-chain.md` SHALL verify the current delivery tail with real gate output and witnessed handoffs:
+The controlled experiment at
+`experiments_playbook/exp_wff_delivery/case-131-standard-delivery-full-chain.md`
+SHALL continue to verify the deterministic delivery tail with real Gate output
+and witnessed handoffs:
 
 ```text
 Wave2 passed handoff
   -> HITL2 proceed_to_readiness output
-  -> readiness entry and source-gate status synchronization
-  -> readiness gate pass
-  -> final terminal entry
+  -> Readiness entry and source-gate status synchronization
+  -> Readiness Gate pass
+  -> terminal Final entry with no outgoing transition
 ```
 
-The case SHALL NOT pre-seed a target gate as already passed to bypass the predecessor handoff. It SHALL verify both tested gate attempts and preserve final `gate: none` terminal semantics.
+The case SHALL not pre-seed either tested target Gate as passed or fabricate the
+composition receipt. It SHALL verify the route-bound receipt lineage, both
+tested Gate attempts, legal entries, and Final's `gate: null` / no-transition
+semantics. Fixture-authored profile and verified-state prerequisites mean it
+proves deterministic delivery-chain behavior only, not real HITL2 interaction,
+Final writing, or report quality.
 
 #### Scenario: Sequential delivery tail uses legal handoffs
 
-- **WHEN** the case drives a valid HITL2 proceed decision and readiness precheck
-- **THEN** HITL2 SHALL emit `phases/phase-readiness.md`
-- **AND** the selected target SHALL be entered before source-gate status synchronization
-- **AND** readiness SHALL pass through its normal terminal handoff
+- **WHEN** case-131 drives valid HITL2 proceed and Readiness precheck
+- **THEN** each target SHALL be entered before source-gate status synchronization
+- **AND** Readiness SHALL pass through its normal Final handoff
 
 #### Scenario: Final remains terminal
 
-- **WHEN** the case reaches `phase-final.md`
-- **THEN** final SHALL have `gate: none`
-- **AND** `transitions.chain.json` SHALL NOT define an outgoing final transition
-
-The delivery-tail case SHALL not pre-seed either tested Gate as passed or
-fabricate the receipt. It SHALL verify the normalized route-bound receipt
-lineage across both Gate attempts, legal entries, and Final's `gate: null`,
-no-outgoing-transition semantics. It MAY use fixture-authored profile and
-verified-state prerequisites and therefore proves deterministic delivery-chain
-behavior only, not real HITL2 recommendation or report quality.
+- **WHEN** case-131 reaches `phase-final.md`
+- **THEN** Final SHALL have `gate: null`, `stop: "yes"`, and no outgoing transition-table entry
 
 #### Scenario: Sequential delivery tail carries one accepted contract
 
-- **WHEN** the case drives a valid HITL2 proceed decision and Readiness precheck
-- **THEN** HITL2 SHALL emit Readiness with a normalized receipt and Readiness
-  SHALL verify the same current profile projection before emitting Final
-- **AND** both target entries SHALL use the existing witnessed handoff path
+- **WHEN** case-131 drives a valid accepted composition contract
+- **THEN** HITL2 SHALL emit a normalized receipt and Readiness SHALL verify the same current profile projection
+- **AND** both entries SHALL use the witnessed handoff path
 
-The one authorized CDE-003 case-137 invocation used the setup-only, single
-Subject Final-composition scenario with the declared 30-second Subject,
-45-second Headless, 5-second health, and 60-second retained-evidence bounds.
-Retained Supervisor batch `53e68120-9201-45e0-9e9b-df83ad811779` recorded
-`duration_ms: 45177`, native outcome `null`, lifecycle outcome `ERROR`, and
-health `null` because the Playbook Agent timed out. The run-owned report and
-logs remain diagnostic material; `agent-run-evidence.md` indexes them without
-replacing their authority.
+One new bounded real-Agent case at
+`experiments_playbook/exp_wff_delivery/case-138-standard-final-refinement.md`
+SHALL observe the Final interaction protocol in one real disposable bundle and
+one continuous real Subject session with no network research. A
+setup-only fixture MAY establish legal Final entry, one accepted composition
+handoff, exactly one minimal verified/submitted-backed finding represented by
+one Final Evidence Map row, and an empty primary
+Final inventory. It SHALL not create a report, publication result, Subject
+prompt/transcript/result, simulated user response, native completion, or
+Agent-behavior verdict before the Subject runs.
 
-`experiments_playbook/exp_extrem_slow/case-137-extreme-slow-final-composition.md`
-SHALL remain quarantined outside the active manifest. CDE-003 SHALL have no
-active Final-composition Agent-behavior proof, no retry, and no Agent-behavior
-PASS claim. Its retained source-contract test MAY verify the fixture shape,
-process limits, explicit quarantine, and no-evidence record, but it SHALL NOT
-substitute static proof, case-135/case-136 diagnostics, or fixture facts for a
-real-Subject observation. It SHALL NOT assert report quality, reader-value,
-semantic correctness, HITL2 interaction quality, cross-view behavior, a
-real-human verdict, or an Engine report-quality verdict.
+The Subject interaction SHALL have five bounded supplied turns:
+
+1. first Final entry with no user feedback, requiring immediate publication of
+   a compact `final/final.md` and a feedback invitation;
+2. clear presentation-only feedback, requiring one unlabelled
+   `final/final_v1.md` revision;
+3. clear feature-focused presentation feedback, requiring
+   `final/final_technical_deep_dive_v2.md`; and
+4. an explicit satisfaction response, requiring no new file or state change;
+   then a per-turn observer SHALL freeze the inventory/status/profile/trace
+   snapshot before any later input; and
+5. a later explicit evidence-expanding request on the same Final lineage,
+   requiring selection and acceptance of the existing C5 operation without
+   publishing another primary report or completing the research rerun.
+
+The retained native transcript/result, canonical inventory, publication
+results, status/current node, profile, and trace SHALL establish only these
+bounded observations: first delivery preceded the first feedback request; each
+clear presentation request caused exactly one new immutable committed version;
+global numbering crossed labelled/unlabelled names; all versions independently
+passed submitted backing; current node stayed Final; HITL2 handoff/profile and
+prior bytes remained unchanged; satisfaction produced no file, Gate, status, or
+trace mutation through the frozen turn-4 snapshot; and no post-final rerun
+operation was invoked through turn 4. Turn 5 SHALL separately prove that the
+Subject selected and accepted C5 without publishing another report or completing
+the rerun.
+
+The real-Agent case SHALL use the supported iterative Subject runner, compact
+report instructions, per-turn observers, and a hard total Subject-runtime cap
+of 120 seconds, the accepted active-suite threshold. Exactly one canonical
+authenticated native run is authorized by default for this Change. If it times
+out,
+exceeds that threshold, lacks valid native completion/health, or otherwise
+fails, the case SHALL be quarantined with retained diagnostics and `NOT_RUN`;
+the selected Agent-flow claim/task SHALL remain incomplete for explicit replan,
+and no automatic retry or Agent-behavior PASS claim is allowed. A
+user-confirmed material replan MAY authorize exactly one replacement native run
+under the same cap, preserving the first run's diagnostics; that replacement
+SHALL not trigger another automatic retry. A
+static Markdown test MAY prove fixture shape, prompts, registered routing, and
+verdict-boundary declarations; it SHALL not substitute for the native
+multi-turn observation.
+
+Neither case-138 nor any deterministic fixture SHALL claim that the report is
+actually useful, technically deep, semantically superior, or satisfactory to a
+real human. The Engine SHALL not judge those claims. The satisfaction turn
+proves only that the Subject obeyed the no-new-mutation protocol after the
+fixture-provided user expression; it does not prove genuine human satisfaction.
+
+#### Scenario: First Final turn delivers before asking
+
+- **WHEN** case-138 starts a real Subject at legal Final with empty canonical inventory
+- **THEN** retained native evidence SHALL show committed `final/final.md` before the Subject's feedback invitation
+- **AND** no pre-delivery user confirmation SHALL be required
+
+#### Scenario: Two feedback turns append two immutable versions
+
+- **WHEN** the Subject receives the two declared presentation-only feedback turns
+- **THEN** inventory SHALL add exactly `final/final_v1.md` and `final/final_technical_deep_dive_v2.md`
+- **AND** all prior primary bytes SHALL remain unchanged and current node SHALL remain Final
+
+#### Scenario: Satisfaction creates no new runtime fact
+
+- **WHEN** the declared satisfaction turn follows version 2
+- **THEN** the turn-4 observer SHALL freeze before/after inventory, status, profile, and trace and show them unchanged before turn 5 begins
+- **AND** the observation SHALL not be described as proof of genuine human satisfaction
+
+#### Scenario: Later evidence expansion selects audited rerun on the same lineage
+
+- **WHEN** turn 5 explicitly requires a new source or research conclusion after the frozen satisfaction snapshot
+- **THEN** the Subject SHALL not publish a presentation revision for that request
+- **AND** it SHALL select and accept the existing post-final rerun owner on the same lineage without inventing a Final transition or completing the rerun
+
+#### Scenario: One bounded native attempt cannot be amplified
+
+- **WHEN** case 138 exceeds 120 seconds, times out, lacks valid native completion/health, or otherwise fails its single authorized native run
+- **THEN** retained diagnostics SHALL be quarantined and the result SHALL be `NOT_RUN`
+- **AND** no automatic retry, historical-case substitution, or selected Agent-flow completion claim SHALL occur
+
+#### Scenario: User-confirmed replan authorizes one replacement attempt
+
+- **WHEN** the original authorized case-138 run is quarantined `NOT_RUN` and the user explicitly confirms a material replan
+- **THEN** exactly one replacement native run MAY execute under the same 120-second cap while retaining the original diagnostics
+- **AND** another automatic retry, historical-case substitution, or selected Agent-flow completion claim without a passing replacement remains forbidden
 
 #### Scenario: One authorized run closes with no evidence
 
-- **WHEN** the retained CDE-003 Supervisor result has no native completion,
-  lifecycle `ERROR`, and no health outcome after the 45-second Headless timeout
-- **THEN** the run SHALL remain retained diagnostic material rather than a
-  completion claim
-- **AND** the case SHALL be absent from the active manifest and remain in
-  `exp_extrem_slow/` without an automatic retry in this Change
-- **AND** the Change MAY close only with an explicit `no-evidence` outcome and
-  no CDE-003 Agent-behavior PASS claim
+- **WHEN** the retained historical case-137 Supervisor result has no native completion, lifecycle `ERROR`, and no health outcome
+- **THEN** it SHALL remain diagnostic no-evidence in `exp_extrem_slow/`
+- **AND** it SHALL not be retried automatically or count as a case-138 Agent-behavior PASS
 
 #### Scenario: Historical material does not substitute for Subject behavior
 
-- **WHEN** case-137 has its setup-only fixture facts, static contract checks,
-  or retained diagnostics from case-135 or case-136 but no passing current
-  real-Subject native completion
-- **THEN** those materials SHALL NOT establish a CDE-003 Agent-behavior
-  observation
+- **WHEN** prior case-137 diagnostics, setup fixtures, static contracts, or case-138 prompt text exist without a passing current native multi-turn completion
+- **THEN** those materials SHALL not establish the Final-refinement Agent-behavior claim
+
+The historical one-shot case-137 result SHALL remain quarantined at
+`experiments_playbook/exp_extrem_slow/case-137-extreme-slow-final-composition.md`
+as diagnostic no-evidence. Its earlier timeout SHALL not be relabelled as proof
+for case-138, and this Change SHALL not automatically retry it.
 
 ### Requirement: HITL2 rerun branch playbook
 

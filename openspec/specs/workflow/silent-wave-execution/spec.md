@@ -77,58 +77,94 @@ Autonomous continuation SHALL mean continuing through the legal lifecycle chain,
 
 ### Requirement: Silent autonomous execution has no implicit human co-runner
 
-Silent autonomous execution SHALL NOT treat the user, unrelated background workflows, Harness waiting states, or user acknowledgement as a continuation prerequisite for non-terminal `stop: no` phases. HITL1 and HITL2 SHALL remain the only Harness-initiated interactive in-run checkpoints where the Harness invites and waits for a semantic decision, and terminal Final delivery SHALL remain the only terminal delivery exception after final artifacts exist.
+Silent autonomous execution SHALL NOT treat the user, unrelated background
+workflows, Harness waiting states, or user acknowledgement as a continuation
+prerequisite for non-terminal `stop: "no"` phases. HITL1 and HITL2 SHALL remain
+the only Harness-initiated in-run checkpoints where the Harness invites and
+waits for a lifecycle semantic decision. Final SHALL remain the terminal
+delivery exception: it publishes before waiting, then invites feedback about
+the delivered artifact while remaining outside Gate/HITL decision semantics.
 
-The silent contract SHALL distinguish two directions:
+The silent contract SHALL distinguish these surfaces:
 
-- **Harness-initiated**: while no user-initiated message is being answered, the Agent SHALL NOT initiate a status reply, progress report, partial delivery, question, approval request, acknowledgement, idle report, or continuation request from a non-terminal `stop: no` phase; it SHALL continue, repair, degrade, consume a legal handoff, or hold silently;
-- **user-initiated**: when a user message is already the current normal conversation turn, the Agent SHALL answer that message rather than ignore it. The answer SHALL NOT turn the current node into HITL, create a checkpoint, permission, mutation/reentry authority, pause/interrupt lifecycle, or durable mid-run intent. If the requested action has no legal path at the current position, the answer SHALL state that smallest boundary. If the user has not separately changed the task through an existing accepted path, the pre-existing autonomous continuation obligation and current projected `next_action` SHALL remain unchanged. This contract does not claim asynchronous scheduling or prove that post-answer execution already occurred.
+- **non-terminal Harness-initiated**: while no user turn is being answered, the
+  Agent SHALL NOT initiate status, progress, partial delivery, question,
+  approval, acknowledgement, idle, or continuation output from a non-terminal
+  `stop: "no"` phase; it SHALL continue, repair, degrade, consume a legal
+  handoff, or hold silently;
+- **non-terminal user-initiated**: an already-current user message SHALL be
+  answered without creating checkpoint, permission, mutation/reentry authority,
+  pause, durable intent, or a promise that arbitrary mid-run scope took effect;
+  and
+- **terminal Final**: whenever direct lineage/inventory facts show that the
+  current legal Final lineage has no bound report, the Agent SHALL publish and
+  present immediately—bundle base after empty-primary entry admission or global
+  next version after a later rerun whose new Final load admitted the exact prior
+  inventory, in both cases only after the exact Readiness status synchronization;
+  after each committed report it MAY initiate a concise feedback
+  invitation and wait, then publish a bounded presentation revision from
+  existing verified evidence. This exception SHALL not authorize a Gate,
+  outgoing transition, status change, HITL2 mapping, new research, or persisted
+  satisfaction state.
 
-Any Chinese-first or prefer-Chinese guidance SHALL apply only to an already-authorized user-facing response. Language preference SHALL NOT independently authorize the Agent/Harness to initiate status, progress, partial-delivery, question, approval, or acknowledgement output. An outer Harness/task notification SHALL NOT be treated as a user-initiated conversation turn and SHALL NOT become a continuation dependency.
+Chinese-first guidance SHALL apply only on an already-authorized user-facing
+surface. It SHALL not authorize non-terminal surfacing. Outer task/Harness
+notifications SHALL not count as user turns or continuation dependencies.
 
-A user request SHALL NOT by itself expand host permission, override an Engine verdict, hand-author runtime state, or create a missing mutation/reentry capability. When an accepted path can consume the request, the Agent SHALL execute the remaining legal mechanics; when no accepted path exists, the Agent SHALL state the smallest boundary without fabricating success. This requirement does not promise that an arbitrary mid-run message will be persisted or take effect in the current run.
+A user request SHALL NOT by itself expand host permission or override Engine
+facts. In Final, clear presentation feedback is an accepted semantic input for
+one report revision; feedback requiring new sources, Topics, evidence,
+conclusions, or research-profile changes SHALL use the accepted post-final
+rerun owner. When no accepted path exists, the Agent SHALL state the smallest
+boundary without fabricating success.
 
 #### Scenario: Background workflow is not a continuation dependency
 
-- **WHEN** the Agent is inside a non-terminal `stop: no` phase
-- **AND** an unrelated dynamic workflow or harness waiting message exists outside Deep Research Harness authority
-- **THEN** the Agent SHALL NOT wait for it as a phase continuation condition
-- **AND** it SHALL continue, repair, degrade, or hold silently according to runtime truth in the current run bundle
+- **WHEN** the Agent is inside a non-terminal `stop: "no"` phase
+- **AND** an unrelated workflow or waiting message exists outside Harness authority
+- **THEN** the Agent SHALL continue, repair, degrade, or hold according to current bundle truth
+- **AND** it SHALL not wait for that external message as a lifecycle condition
 
 #### Scenario: Language preference does not authorize a silent-phase reply
 
-- **WHEN** the Agent is inside a non-terminal `stop: no` phase
-- **AND** prefer-Chinese guidance exists without a user-initiated conversation turn
-- **THEN** the Agent SHALL NOT infer permission to initiate a user-facing status, progress, question, approval request, or acknowledgement
-- **AND** it SHALL follow the existing silent continuation, repair, degradation, or hold contract
+- **WHEN** a non-terminal `stop: "no"` phase has prefer-Chinese guidance but no current user turn
+- **THEN** the Agent SHALL not initiate status, progress, question, approval, or acknowledgement
 
 #### Scenario: Stale single-turn status allowance is rejected
 
-- **WHEN** static validation scans `shared-silent-execution.md`
-- **THEN** it SHALL reject both a blanket permission for Agent-initiated single-turn status/acknowledgement output and an absolute rule that every user-initiated turn must be ignored
-- **AND** it SHALL require the direction-aware contract: no Harness-initiated surfacing, but a normal received user turn is answered without new authority
+- **WHEN** static validation scans silent-execution guidance
+- **THEN** it SHALL reject both blanket non-terminal surfacing and an absolute rule that received user turns must be ignored
+- **AND** it SHALL recognize terminal Final as the explicit deliver-first feedback exception
 
 #### Scenario: User-initiated turn is answered without becoming HITL
 
-- **WHEN** the user voluntarily sends a message and that message is the current normal conversation turn while a non-terminal `stop: no` phase is active
-- **THEN** the Agent SHALL answer the message from current direct facts or state the smallest missing-path boundary
-- **AND** the answer SHALL NOT create a third HITL, change `stop`, authorize profile/topic/state mutation, select a route, or create permission
-- **AND** absent a separately accepted task change, the existing autonomous continuation obligation and projected `next_action` SHALL remain unchanged
-- **AND** this scenario SHALL NOT be used as evidence of asynchronous interruption transport or observed post-answer execution
+- **WHEN** a user voluntarily sends a current message during a non-terminal `stop: "no"` phase
+- **THEN** the Agent SHALL answer from direct facts or state the smallest missing-path boundary
+- **AND** the answer SHALL not create a checkpoint, state, permission, route, or durable intervention
 
 #### Scenario: User-initiated supplemental scope does not imply durable intervention
 
-- **WHEN** a user-initiated message asks to add or redirect research while the current node is a non-HITL `stop: no` phase
-- **THEN** the Agent SHALL NOT claim that the request has been persisted or applied unless an existing accepted owner/path actually records and applies it
-- **AND** the Agent SHALL NOT invent a request queue, pause state, mutation path, or HITL2 decision from the message alone
-- **AND** if no existing path is legal at that position, the Agent SHALL state that smallest boundary
+- **WHEN** a user asks to add or redirect research during a non-terminal `stop: "no"` phase
+- **THEN** the Agent SHALL not claim the request was persisted or applied without an accepted owner
+- **AND** it SHALL not invent a request queue, pause state, mutation path, or HITL2 decision
+
+#### Scenario: Final may invite feedback after delivery
+
+- **WHEN** a primary Final report commits
+- **THEN** the Agent MAY present it, invite bounded presentation feedback, and wait
+- **AND** this SHALL not weaken silence for any non-terminal phase or create a third HITL
+
+#### Scenario: Final delivery-pending lineage cannot wait
+
+- **WHEN** Final is legally loaded and synchronized with no report bound to the current lineage, whether an admitted empty first inventory or an admitted zero-append return after accepted rerun
+- **THEN** the Agent SHALL publish and present the required base or next global version before inviting or awaiting feedback
+- **AND** `stop: "yes"` SHALL not be interpreted as generic pre-execution waiting
 
 #### Scenario: Static guidance distinguishes initiation from reply
 
-- **WHEN** static validation scans `shared-silent-execution.md` and the injected autonomous header
-- **THEN** it SHALL find an explicit prohibition on Harness-initiated surfacing
-- **AND** it SHALL NOT find an absolute rule that the user is unavailable or that a user-initiated normal conversation turn must be ignored
-- **AND** it SHALL NOT add a mid-run message queue, pause state, or interrupt controller
+- **WHEN** validation scans silent guidance and injected headers
+- **THEN** it SHALL find non-terminal no-initiation, current-turn reply, and terminal Final deliver-first refinement as distinct contracts
+- **AND** it SHALL not add chat interception, a message queue, pause state, or interaction controller
 
 ### Requirement: Stop:no surfacing intent SHALL be recorded before any prohibited user-facing pause when the Agent can identify the intent
 

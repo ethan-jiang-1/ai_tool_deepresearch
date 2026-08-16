@@ -87,11 +87,14 @@ the rerun.
 The real-Agent case SHALL use the supported iterative Subject runner, compact
 report instructions, per-turn observers, and a hard total Subject-runtime cap
 of 120 seconds, the accepted active-suite threshold. Exactly one canonical
-authenticated native run is authorized for this Change. If it times out,
-exceeds that threshold, lacks valid native completion/health, or otherwise
+authenticated native run is authorized by default for this Change. If it times
+out, exceeds that threshold, lacks valid native completion/health, or otherwise
 fails, the case SHALL be quarantined with retained diagnostics and `NOT_RUN`;
 the selected Agent-flow claim/task SHALL remain incomplete for explicit replan,
-and no automatic retry or Agent-behavior PASS claim is allowed. A
+and no automatic retry or Agent-behavior PASS claim is allowed. A user-confirmed
+material replan MAY authorize exactly one replacement native run under the same
+cap, preserving the first run's diagnostics; that replacement SHALL not trigger
+another automatic retry. A
 static Markdown test MAY prove fixture shape, prompts, registered routing, and
 verdict-boundary declarations; it SHALL not substitute for the native
 multi-turn observation.
@@ -131,6 +134,12 @@ fixture-provided user expression; it does not prove genuine human satisfaction.
 - **WHEN** case 138 exceeds 120 seconds, times out, lacks valid native completion/health, or otherwise fails its single authorized native run
 - **THEN** retained diagnostics SHALL be quarantined and the result SHALL be `NOT_RUN`
 - **AND** no automatic retry, historical-case substitution, or selected Agent-flow completion claim SHALL occur
+
+#### Scenario: User-confirmed replan authorizes one replacement attempt
+
+- **WHEN** the original authorized case-138 run is quarantined `NOT_RUN` and the user explicitly confirms a material replan
+- **THEN** exactly one replacement native run MAY execute under the same 120-second cap while retaining the original diagnostics
+- **AND** another automatic retry, historical-case substitution, or selected Agent-flow completion claim without a passing replacement remains forbidden
 
 #### Scenario: One authorized run closes with no evidence
 

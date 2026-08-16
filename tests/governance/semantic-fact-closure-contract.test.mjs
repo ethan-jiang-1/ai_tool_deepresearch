@@ -4,7 +4,6 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { parse as parseYaml } from 'yaml';
 import {
-  INITIAL_SEMANTIC_FACT_FAMILIES,
   parseSemanticClosureRecord,
   parseSemanticFactFamilies,
 } from '../../openspec/governance/semantic-fact-closure-contract.mjs';
@@ -51,7 +50,7 @@ function assertInvalid(result, pattern) {
 }
 
 describe('semantic-fact-families/v1 contract', () => {
-  it('strictly parses the exact initial thirteen bounded family pairs', () => {
+  it('strictly parses the current catalog and its Final primary-series family', () => {
     const catalog = parseYaml(readFileSync(
       `${REPO}/openspec/governance/semantic-fact-families.yaml`,
       'utf8',
@@ -59,13 +58,11 @@ describe('semantic-fact-families/v1 contract', () => {
     const parsed = parseSemanticFactFamilies(catalog);
 
     assert.equal(parsed.ok, true);
-    assert.deepEqual(parsed.catalog.families, INITIAL_SEMANTIC_FACT_FAMILIES);
-    assert.equal(parsed.catalog.families.length, 14);
     assert.deepEqual(
-      parsed.catalog.families.find((family) => family.id === 'work-unit.assignment-output-obligation'),
+      parsed.catalog.families.find((family) => family.id === 'final.primary-report-series'),
       {
-        id: 'work-unit.assignment-output-obligation',
-        bounded_question: 'What direct-output declaration and required-output obligations does this work-unit assignment impose?',
+        id: 'final.primary-report-series',
+        bounded_question: 'Given the safe direct-root Final inventory, which file is the modern or legacy primary base, what immutable contiguous revision series and latest committed report exist, what version/target may be allocated next, or which ambiguity or malformed-history fact blocks that conclusion?',
       },
     );
   });

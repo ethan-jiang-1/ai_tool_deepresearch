@@ -120,17 +120,18 @@ describe('iterative research interaction contract', () => {
     assert.doesNotMatch(silent, /rerun_count\s*>=\s*\d+/);
   });
 
-  it('keeps Final terminal delivery while allowing a current factual reply without a delivery overclaim', () => {
+  it('keeps Final terminal while delivering first and refining presentation in place', () => {
     const final = read(FINAL_PHASE);
     const header = read(CHAIN);
-    assert.match(final, /terminal delivery|终态|terminal node/i);
-    assert.match(final, /用户主动|user-initiated/i);
-    assert.match(final, /事实|factual/i);
-    assert.match(final, /final\/.*(?:为空|empty)|artifact.*(?:之前|before)/i);
-    assert.match(final, /不.*(?:发起|启动).*(?:提问|等待|反馈.*循环|repair loop)|shall not initiate/i);
+    assert.match(final, /Lifecycle terminal, delivery interactive/i);
+    assert.match(final, /missing primary report immediately/i);
+    assert.match(final, /presentation feedback/i);
+    assert.match(final, /satisfied.*writes nothing/i);
+    assert.match(final, /Only evidence-expanding work uses\s+audited C5/i);
+    assert.match(final, /MUST NOT wait for feedback/i);
     assert.match(header, /TERMINAL DELIVERY MODE/);
-    assert.match(header, /deliver final artifacts/i);
-    assert.match(header, /current factual|user-initiated/i);
+    assert.match(header, /compose, publish, and present/i);
+    assert.match(header, /deliver first, then refine in place/i);
     assert.doesNotMatch(final, /Final\s+(?:是|is)\s+(?:第三|third).*(?:checkpoint|交互点)/i);
   });
 });
