@@ -13,19 +13,41 @@ changes:
 
 ## Background
 
-2026-08-16 的四路深挖结论(证据全文:
-[`cleanup-effect-verification.md`](cleanup-effect-verification.md)):历史上
+2026-08-16 的四路深挖结论(证据全文一份:
+[`cleanup-effect-verification.md`](cleanup-effect-verification.md)——Part I
+(§1-6) = 历史失败模式 FM-1/2/3 + 当前树判定;Part II(§7-13)= 恢复指令↔代码
+对照 M1-M10、权威分层漂移 B1-B5、路由热点 H1-H8、第一手核验清单、修复映射、
+不变量候选与 reentry 追加发现):历史上
 "agent 老是做不对"来自三个复发失败模式——spec/指引与代码漂移(FM-1/FM-2)、
 状态真相过期(FM-3),以及"治理全靠 prose + 自守,checker 只活在 OpenSpec
 流程内部、无任何强制执行"。FM-3 已被之前的清理结构性修好;本 plan 收敛
 FM-1/FM-2 的剩余部分与执行器缺口,用**尽量少的 OpenSpec change**:三个
 主 change + 一个 deferred。
 
+## 执行上下文(新 session 起手必读)
+
+本文件是被用户**显式选中**的计划入口(仓库规则:未经显式指定不读
+`_backlog/`;用户在新 session 里点名本文件即视为显式选择)。接手顺序:
+
+1. 先读 `openspec/constitution/project-charter.md` + 根 `CONTEXT.md`(仓库强制预读)。
+2. 读证据文件 [`cleanup-effect-verification.md`](cleanup-effect-verification.md)
+   全文(Part I/II),**不要跳过**:M/B/H 编号是下面 change 的直接依据,
+   所有 file:line 已经核验过,不需要重新推导(§13 嵌套审计项除外,须先复核)。
+3. 按 "## 顺序与依赖" 逐个 change 执行,每个 change 严格走
+   `openspec/changes/` 生命周期(propose → apply → archive),目标文件在
+   `/opsx:apply` 前保持不动。
+4. Tracking:每个 change 的 `- [ ]` 检查项勾选进度并更新本文件;change 归档后
+   在 `_backlog/plans/README.md` 的活跃列表更新本 plan 状态;全部归档后按
+   README 的关闭流程 `git mv` 到 `_backlog/_done/_closed_plans/`。
+5. 如果某项证据与当前树不符(后续提交可能已改),以当前树为准,并把差异
+   写回证据文件对应的行——不要带着过期 file:line 继续执行。
+
 ## Change 拆分
 
 ### C1 `repair-current-guidance-contract-drift`(纯事实校准,无 Engine 行为变化)
 
-把已逐条核验的漂移一次修掉。全部是"让文档说真话",不是加规则:
+把已逐条核验的漂移一次修掉。全部是"让文档说真话",不是加规则
+(逐条依据 = 证据文件 B1-B5、H1/H4/H5/H6 + 第一手核验清单):
 
 - 停止授权真相:`DEEP_RESEARCH_HARNESS/README.md:138` 与
   `openspec/guidance/models/agentic-queue-mechanism.md:234` 改为指向枚举为
@@ -47,12 +69,17 @@ FM-1/FM-2 的剩余部分与执行器缺口,用**尽量少的 OpenSpec change**:
   `command_playbook/continue-run-bundle.md`,其余 6-8 个 surface 改为指针,
   消除 README↔RUN↔COMMANDS 环形路由。
 - read-only 双规则(B3)、Final "deliver-first interactive"(B4)等措辞对齐。
+- reentry 面追加(证据 §13):RA-M1(HITL1 search policy spec 文本)、
+  RA-M2(RRD-008 vs POF-001 优先级冲突——propose 时决定真相 spec 并让对侧
+  指向它)、RA-M4(`persist-final-report` 补进 COMMANDS.md)、RA-L1(命令带全
+  可执行前缀)。RA-L5 不改。
 - 新增"不变量简报":约 15 条可机器验证的不变事实,作为新 agent onboarding
   基线(AGENTS.md 首屏引用,其余 lazy-load)。
 
 ### C2 `make-work-unit-recovery-feedback-direct`(Engine 行为)
 
-让反馈自带下一步,消除暗号与猜测:
+让反馈自带下一步,消除暗号与猜测(逐条依据 = 证据文件 M1-M10 +
+恢复面心智模型一行版):
 
 - 反馈面统一:五个反馈面(submit 拒绝 / late-submit 拒绝 / transaction 阻塞 /
   dry-submit / inspect)全部发出同一形状的 `attempt_disposition` + `next`。
@@ -63,12 +90,20 @@ FM-1/FM-2 的剩余部分与执行器缺口,用**尽量少的 OpenSpec change**:
 - `RUN.md:36-38` 恢复段改写为一张"被测试锁定"的决策表(disposition →
   发出面 → repair_kind → CLI 动词 → 重跑什么),测试断言每个 engine 侧的
   `repair_kind` 都有表行和匹配 CLI 动词。
+- reentry 投影真话候选(证据 §13,propose 时确认行为 vs 文档后纳入):
+  RA-M3(blocked 必须投影为 blocked,不得落入 `blocker: null` 的 reachable)、
+  RA-M5(legacy load 识别:实现检测,或把 spec 保证收窄到 post-0edb58310 load
+  并记录迁移边界——propose 时二选一)、
+  RA-L2(sweep advice 不得对 primary workspace 说 retry persist)、
+  RA-L3(`--feature` 在 persist 面要么生效要么显式拒绝)、
+  RA-L4(delivery-pending 与 refinement 在投影中可区分)。
 - 配套 spec deltas:`engine/check-inspect-feedback`、
   `agent/delegated-work-units`。
 
 ### C3 `add-doc-code-drift-guards`(governance + verification)
 
-把"人肉审计"变成"永久检查",并解决执行器缺口:
+把"人肉审计"变成"永久检查",并解决执行器缺口(逐条依据 = 证据文件
+H2/H8 + 第一手核验清单中的无 CI/hook 验证):
 
 - 内容漂移检查器:校验 guidance/spec 散文中的路径、CLI 名、exit code、
   gate 规则清单与代码一致(把 spec-reality-sync 永久化;exit-code inventory
@@ -84,8 +119,9 @@ FM-1/FM-2 的剩余部分与执行器缺口,用**尽量少的 OpenSpec change**:
 ### C4 `dedup-phase-closure-loading`(deferred,独立触发)
 
 共享文件(shared-profile/schemas/silent-execution 等)每 phase 重注入,
-一整轮约 2,600 行重复散文。收益是上下文效率,不影响正确性。触发条件:
-一次真实 run 的上下文成本观察,或用户明确要求压上下文;否则保持 deferred。
+一整轮约 2,600 行重复散文(证据文件 H7)。收益是上下文效率,不影响正确性。
+触发条件:一次真实 run 的上下文成本观察,或用户明确要求压上下文;否则保持
+deferred。
 
 ## Progress TODO
 
@@ -100,6 +136,8 @@ FM-1/FM-2 的剩余部分与执行器缺口,用**尽量少的 OpenSpec change**:
 - [ ] apply:目标文件全部校准(README:138 / RUN.md:32 / COMMANDS.md:55
   方向决定 / typo / skill 路径 / CONTEXT / 入口单一源 / 不变量简报)
 - [ ] exit-code 方向决定落地 + 回归锁定
+- [ ] reentry 面校准(证据 §13):RA-M2 决定真相 spec 并收敛对侧;RA-M1/RA-M4/
+  RA-L1 文档校准;RA-L5 不改
 - [ ] npm test 相关子集绿(tests/integration/md/ + exit-code inventory)
 - [ ] archive:finalizer + 本 plan 登记 CLS 编号
 
@@ -111,6 +149,8 @@ FM-1/FM-2 的剩余部分与执行器缺口,用**尽量少的 OpenSpec change**:
 - [ ] verification-plan.yaml:unit(attempt_disposition 统一)+ integration
   (五个反馈面形状一致)+ deterministic_e2e(恢复链)
 - [ ] apply:engine 五面统一 + repair_kind 对齐 + supersede 压平
+- [ ] RA-M3/RA-M5/RA-L2/RA-L3/RA-L4 候选复核(证据 §13):确认为行为修复的
+  纳入本 change,纯文档的移回 C1 范畴
 - [ ] apply:RUN.md 决策表 + 表↔代码锁定测试
 - [ ] npm test 相关子集绿(tests/engine/work-unit-*)
 - [ ] archive:finalizer + 本 plan 登记
@@ -153,3 +193,4 @@ C1/C2 有轻微交叠(RUN.md 恢复段):C1 只把该段改成"准确描述现状
 
 通过各 change 自己的 proposal/design/tasks/verification-plan 续跑;本文件
 只跟踪分组、顺序与检查项。目标文件在 `/opsx:apply` 前保持不动。
+接手与 tracking 约定见上方 "## 执行上下文(新 session 起手必读)"。
