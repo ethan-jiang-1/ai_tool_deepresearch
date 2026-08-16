@@ -15,6 +15,7 @@ import {
   QueueSchema,
   QueueTerminalHistoryRecordSchema,
 } from '../schema/contracts/queue.mjs';
+import { QueueHealth, StopAuthorizationState } from '../schema/enums.mjs';
 
 let _trace = null;
 let _bundleDir = null;
@@ -53,8 +54,8 @@ export const QUEUE = {
   TRACE: 'rb_trace.jsonl',
 };
 
-const QueueHealth = z.enum(['ready', 'thin', 'blocked', 'closed']);
-const StopAuthorizationState = z.enum(['unauthorized_continue_required', 'final_delivery', 'decision_blocker', 'empty_queue_after_refill']);
+// QueueHealth and StopAuthorizationState come from schema/enums.mjs (single
+// source of truth); do not redefine the enum literals locally.
 
 export const QueueStateSchema = z.object({
   schema_version: z.literal(QUEUE_SCHEMA_VERSION).default(QUEUE_SCHEMA_VERSION),
@@ -221,8 +222,4 @@ export function queueItemSnapshotHash(item) {
 
 export function check(passed, message) {
   return { passed, check: passed, inspect: passed ? [] : [message], advice: passed ? 'Continue from active_window.' : message };
-}
-
-export function advice(kind, message) {
-  return { passed: false, check: false, inspect: [kind], advice: message };
 }

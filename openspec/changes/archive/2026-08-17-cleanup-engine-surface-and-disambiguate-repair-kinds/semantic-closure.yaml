@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: cleanup-engine-surface-and-disambiguate-repair-kinds
+status: not_applicable
+reason: >-
+  本 change 只 retire 死代码、收敛 enum/schema 与 CLI 路径常量、给 god modules
+  加导航注释，并把 file-observability 面字段名从 repair_kind 改为
+  repair_directive（6 值语义不变）。不改变任何 cataloged semantic fact family
+  覆盖的确定性事实（work-unit 面与 gate/phase 面的 repair_kind 枚举、queue
+  运行时语义、topic-state、receipt/ledger/trace 事实均不触及）；repair_directive
+  是既有 file-observability 诊断字段的命名重映射，不构成新 fact family。

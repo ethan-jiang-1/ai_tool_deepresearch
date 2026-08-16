@@ -1,6 +1,7 @@
 // @impl DEW-002, DEW-003, DEW-004, DEW-006, DEW-014, DEW-023, DEW-024, CHI-004, EXO-001, SWE-006
 // Work-unit lifecycle: create, parse phase, eligibility, claim, close, batch open.
 
+// Navigation: public API — createWorkUnit, parsePhase, defaultKindForWave, itemWave, isEligibleDelegatedItem, countUnclaimedDelegated, phaseInFlight, openWorkUnitBatch, claimWorkUnits, replaceWorkUnitAttempt, closeWorkUnitAttempt
 import path from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';

@@ -1,5 +1,6 @@
 // @impl IOC-001, IOC-002, IOC-003, CHI-001, RWG-005, RWG-018
 
+// Navigation: public API — evaluateWave0Contract, evaluateWave1Contract, evaluateWave2Contract
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join, resolve as resolvePath } from 'node:path';
 import { parse as parseYaml } from 'yaml';

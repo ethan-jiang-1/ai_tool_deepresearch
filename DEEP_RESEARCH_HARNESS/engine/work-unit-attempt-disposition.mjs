@@ -11,9 +11,13 @@ import {
 } from './work-unit-supersession.mjs';
 import { classifyCompleteCurrentWorkUnitProfile } from './work-unit-current-profile.mjs';
 import { WORK_UNIT_REPAIR_KIND } from './work-unit-repair-vocabulary.mjs';
+import { CLI_OPERATE_WORK_UNIT } from './work-unit-constants.mjs';
 
+// attempt-disposition rerun builder: the dry-submit command (predictive,
+// read-only). Distinct from the submit/late-submit rerun builder in
+// work-unit-submit-integrity.mjs; both share CLI_OPERATE_WORK_UNIT.
 function submitRerun(bundleDir, record) {
-  return `node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs dry-submit ${JSON.stringify(path.resolve(bundleDir))} --work-id ${JSON.stringify(record.work_id)} --result ${JSON.stringify(path.join(path.resolve(bundleDir), record.paths.result_ref))}`;
+  return `node ${CLI_OPERATE_WORK_UNIT} dry-submit ${JSON.stringify(path.resolve(bundleDir))} --work-id ${JSON.stringify(record.work_id)} --result ${JSON.stringify(path.join(path.resolve(bundleDir), record.paths.result_ref))}`;
 }
 
 export function projectWorkUnitAttemptDisposition(bundleDir, record, {

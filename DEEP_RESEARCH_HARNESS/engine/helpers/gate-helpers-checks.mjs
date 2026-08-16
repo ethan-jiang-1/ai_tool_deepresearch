@@ -4,6 +4,7 @@
 //
 // Re-exported by gate-helpers.mjs for backward compatibility.
 
+// Navigation: public API — REQUIRED_REFERENCE_METADATA_FIELDS, REFERENCE_TOPIC_BINDING_FIELDS, REQUIRED_REFERENCE_SECTIONS, readReferenceMetadata, parseReferenceMetadata, checkReferenceFormatFiles, checkReferenceSourceUrls, classifyReferenceAuthority, checkReferenceLedgerCoverage, checkReferenceIndexCoverage, checkCacheCoverage
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, join, resolve as resolvePath } from 'node:path';
 import {

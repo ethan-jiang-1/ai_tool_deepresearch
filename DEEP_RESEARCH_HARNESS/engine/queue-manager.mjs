@@ -9,7 +9,6 @@
 // ## Internal layout
 // - queue-manager-core.mjs: trace/logger singleton, constants, schemas, shared helpers
 // - queue-manager-window.mjs: active-window mechanics, refill, preemption
-// - queue-manager-ledger.mjs: compatibility export for submitted work-unit ledger schema
 // - queue-manager-lifecycle.mjs: public lifecycle API and receipt checking
 // - queue-manager-render.mjs: Markdown projection rendering
 //
@@ -25,7 +24,6 @@ export {
   queueItemSnapshotHash,
   validateQueue,
 } from './queue-manager-core.mjs';
-export { OutputDeclarationLedgerRecord } from './queue-manager-ledger.mjs';
 export {
   checkReceipts,
   createQueue,

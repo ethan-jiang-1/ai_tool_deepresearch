@@ -1,4 +1,7 @@
 // @impl AGQ-013, DEW-004, DEW-009
+// Work-unit assignment contract: the actor/assignment shape a claimed attempt
+// must satisfy. Input: queue demand + assignment → Output: assignment contract
+// facts → Consumers: claim/preflight and role-guidance surfaces.
 
 import {
   WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION,

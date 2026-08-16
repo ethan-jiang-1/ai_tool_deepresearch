@@ -13,6 +13,7 @@
 //   FILE_CLASSIFICATIONS — frozen array of 6 valid classification values
 //   SEVERITY_LEVELS — frozen array of severity values
 
+// Navigation: public API — FILE_CLASSIFICATIONS, SEVERITY_LEVELS, auditCanonicalTopicFootprint, auditFileObservability
 import { existsSync, readdirSync, statSync, readFileSync } from 'node:fs';
 import { join, relative, basename } from 'node:path';
 import {
@@ -556,7 +557,7 @@ export function auditCanonicalTopicFootprint(bundlePath, {
           ? { kind: 'related_topic', surface: `${relPath}#metadata.related_topic` }
           : null,
       ].filter(Boolean),
-      repair_kind: 'materialize_canonical_surface',
+      repair_directive: 'materialize_canonical_surface',
     });
   }
 
@@ -596,7 +597,7 @@ export function auditCanonicalTopicFootprint(bundlePath, {
       topic_identity: identity,
       primary_surface: primaryFact.surface,
       supporting_details: identityFacts.filter((fact) => fact !== primaryFact).map((fact) => ({ kind: fact.kind, surface: fact.surface })),
-      repair_kind: durable ? 'reconcile_topic_identity' : 'repair_topic_reference',
+      repair_directive: durable ? 'reconcile_topic_identity' : 'repair_topic_reference',
     });
   }
 
@@ -616,7 +617,7 @@ export function auditCanonicalTopicFootprint(bundlePath, {
         topic_identity: identity,
         primary_surface: missing[0],
         supporting_details: missing.slice(1).map((surface) => ({ kind: 'missing_surface', surface })),
-        repair_kind: 'materialize_canonical_surface',
+        repair_directive: 'materialize_canonical_surface',
       });
     }
   }
@@ -632,7 +633,7 @@ export function auditCanonicalTopicFootprint(bundlePath, {
           topic_identity: null,
           primary_surface: `artifacts/${entry.name}`,
           supporting_details: [],
-          repair_kind: 'classify_namespace',
+          repair_directive: 'classify_namespace',
         });
       }
     }
@@ -689,7 +690,7 @@ export function auditFileObservability(bundlePath, {
         topic_identity: null,
         primary_surface: currentEntry.missing_files.join(', '),
         supporting_details: currentEntry.missing_files,
-        repair_kind: 'current_entry_contract',
+        repair_directive: 'current_entry_contract',
       }],
       inspect: [`[unsupported_current_entry_contract] Missing current bundle entry file(s): ${currentEntry.missing_files.join(', ')}`],
       advice: ['Current Harness operations require both BUNDLE_ENTRY.md and BUNDLE_MAP.md at the selected bundle root.'],
@@ -711,7 +712,7 @@ export function auditFileObservability(bundlePath, {
         topic_identity: null,
         primary_surface: workspace,
         supporting_details: [],
-        repair_kind: 'exact_topic_state_recover',
+        repair_directive: 'exact_topic_state_recover',
       }],
       inspect: ['[accepted_topic_layout_workspace] A canonical topic layout operation requires exact recovery before file classification.'],
       advice: [`node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs recover --bundle ${bundlePath} --operation-id ${acceptedOperation}`],

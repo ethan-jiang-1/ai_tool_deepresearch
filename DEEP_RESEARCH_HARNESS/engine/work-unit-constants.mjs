@@ -1,5 +1,10 @@
 // Work-unit constants: kind registry, output ledger path, required receipt fields, default contracts.
 
+// Canonical CLI script paths (single source of truth for rerun-command builders;
+// new consumers reference these instead of hardcoding the path).
+export const CLI_OPERATE_WORK_UNIT = 'DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs';
+export const CLI_OPERATE_QUEUE = 'DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs';
+
 export const WORK_UNITS = {
   ROOT: '_work_units',
   INDEX: '_work_units/_index.json',

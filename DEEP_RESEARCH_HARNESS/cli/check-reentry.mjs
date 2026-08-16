@@ -623,7 +623,7 @@ function auditLedgerCoverage(bundlePath, target) {
         authority: classification.authority,
         reason_code: classification.reason_code || null,
         missing_fact: root.missing_fact || null,
-        repair_kind: root.repair_kind || null,
+        repair_kind: root.repair_directive || null,
         write_to: root.write_to || null,
       },
     });

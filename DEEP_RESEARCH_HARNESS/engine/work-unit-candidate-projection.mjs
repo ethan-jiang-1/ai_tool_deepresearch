@@ -1,4 +1,7 @@
 // @impl DEW-014, DEW-015
+// Candidate projection: shape of a claimed work-unit candidate before submit.
+// Input: candidate record → Output: bounded candidate projection → Consumers:
+// dry-submit/submit preflight and disposition surfaces.
 
 import { WorkUnitCandidateProjectionSchema } from '../schema/contracts/work-unit.mjs';
 

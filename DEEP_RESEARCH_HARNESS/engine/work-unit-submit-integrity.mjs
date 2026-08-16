@@ -11,10 +11,14 @@ import { classifyCompleteCurrentWorkUnitProfile } from './work-unit-current-prof
 import { loadQueueReadOnly } from './queue-manager-lifecycle.mjs';
 import { queueItemSnapshotHash } from './queue-manager-core.mjs';
 import { WORK_UNIT_REPAIR_KIND } from './work-unit-repair-vocabulary.mjs';
+import { CLI_OPERATE_WORK_UNIT } from './work-unit-constants.mjs';
 
+// submit-integrity rerun builder: the submit / late-submit command (the
+// submit-owned preflight surface). Distinct from the dry-submit rerun builder
+// in work-unit-attempt-disposition.mjs; both share CLI_OPERATE_WORK_UNIT.
 function submitRerun(bundleDir, record, resultPath, operation) {
   const command = operation === 'late_submit_work_unit' ? 'late-submit' : 'submit';
-  return `node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs ${command} ${JSON.stringify(path.resolve(bundleDir))} --work-id ${JSON.stringify(record.work_id)} --result ${JSON.stringify(path.resolve(resultPath || path.join(bundleDir, record.paths.result_ref)))}`;
+  return `node ${CLI_OPERATE_WORK_UNIT} ${command} ${JSON.stringify(path.resolve(bundleDir))} --work-id ${JSON.stringify(record.work_id)} --result ${JSON.stringify(path.resolve(resultPath || path.join(bundleDir, record.paths.result_ref)))}`;
 }
 
 function root(code, missingFact, repairKind, writeTo, rerun) {

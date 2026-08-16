@@ -466,7 +466,7 @@ describe('file observability', () => {
     assert.equal(roots.length, 3);
     for (const root of roots) {
       assert.equal(root.topic_identity, null);
-      assert.equal(root.repair_kind, 'materialize_canonical_surface');
+      assert.equal(root.repair_directive, 'materialize_canonical_surface');
     }
   });
 

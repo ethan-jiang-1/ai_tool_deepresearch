@@ -13,7 +13,7 @@ import {
   withTimestamps,
 } from './queue-manager-core.mjs';
 
-export function rank(item) {
+function rank(item) {
   const order = { P0_preempted_restore: 0, P1_state_or_gate_repair: 1, P2_close_open_loop: 2, P3_current_gate_gap: 3, P4_progressive_artifact_or_seed_backfill: 4, P5_new_reference_intake: 5, P6_topology_triage: 6 };
   const restore = item.restore_priority === 'next_tail_opening' ? -1 : 0;
   return [restore, order[item.priority_class] ?? 99, item.created_at || ''];

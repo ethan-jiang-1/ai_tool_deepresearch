@@ -1,5 +1,7 @@
 // @impl DEW-024, RRM-007, REF-009, RWG-018, RWG-022
 // Narrow submitted-work projection for return-map and eligible-row consumers.
+// Input: submitted ledger rows → Output: reader-facing projection of accepted
+// delegated work → Consumers: return-map, gate coverage rows.
 
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import path from 'node:path';

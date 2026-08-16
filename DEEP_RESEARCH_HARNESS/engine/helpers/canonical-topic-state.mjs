@@ -1,5 +1,6 @@
 // @impl CTS-001, CTS-002, CTS-003, CTS-004, CTS-009, SCO-013
 
+// Navigation: public API — TOPIC_STATE_SCHEMA_VERSION, TOPIC_STATE_ROOT, TOPIC_STATE_OPERATIONS, SEED_TOPIC_PROJECTION_ENTRY_FIELDS, SEED_TOPIC_PROJECTION_CARD_LABEL, SEED_TOPIC_PROJECTION_SLOTS, projectionSlotForId, projectionSlotsForWave, projectionSlotHeadingMatches, locateSeedProjectionSlots, renderSeedProjectionCard, renderSeedProjectionSlot, renderSeedProjectionAppendix, TopicApplyPlanSchema, …
 import {
   closeSync, constants, existsSync, fsyncSync, lstatSync, mkdirSync, openSync,
   readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync,

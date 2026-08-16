@@ -4,6 +4,7 @@
 //
 // Re-exported by gate-helpers.mjs for backward compatibility.
 
+// Navigation: public API — parseGateCliArgs, loadGateDefinition, tryLoadGateDefinition, loadManifest, checkNodeGateBinding, validateNodeGateBinding, resolveRouting, projectGateHints, buildGateResult, emitGateResult, derivePhaseFromGate, writeGateAttempt, writeCheckpointManifest, writeGateFailureDiagnostic, …
 import { parseArgs } from 'node:util';
 import { existsSync, readFileSync, writeFileSync, appendFileSync, readdirSync, statSync, mkdirSync, openSync, closeSync, renameSync, rmSync } from 'node:fs';
 import { join, dirname, basename, relative, resolve as resolvePath } from 'node:path';

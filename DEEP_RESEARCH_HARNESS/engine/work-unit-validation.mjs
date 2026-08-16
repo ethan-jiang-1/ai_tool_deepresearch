@@ -2,6 +2,7 @@
 // Work-unit validation: manifest/beacon/result reading, runtime receipt validation,
 // output file validation, cache trail validation, source claim validation, queue binding validation.
 
+// Navigation: public API — readAndValidateManifest, validateManifestTopicBinding, readAndValidateBeacon, readAndValidateResult, validateSubmitRuntimeReceipt, validateOutputFiles, canonicalizeCacheLeafPage, validateCacheTrails, acceptedClaimStatus, normalizeUrlForSourceCache, buildSourceRefLineage, resolveAcceptedSourceRefAuthorization, cacheTrailMapping, validateSourceClaims, …
 import {
   existsSync,
   readFileSync,

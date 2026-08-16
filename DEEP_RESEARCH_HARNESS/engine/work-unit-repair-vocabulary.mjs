@@ -2,6 +2,11 @@
 // Single engine-owned export of the attempt-owned work-unit recovery
 // repair_kind vocabulary. The RUN.md decision table and the decision-table
 // regression derive their row set from this export.
+//
+// Test-lock exports: WORK_UNIT_REPAIR_KINDS and REPAIR_KIND_CLI_VERB are
+// consumed only by the decision-table regression
+// (tests/engine/work-unit-recovery-decision-table.test.mjs); production code
+// consumes WORK_UNIT_REPAIR_KIND.
 // @impl CHI-004
 
 export const WORK_UNIT_REPAIR_KIND = Object.freeze({

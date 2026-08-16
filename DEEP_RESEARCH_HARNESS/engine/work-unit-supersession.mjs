@@ -1,6 +1,7 @@
 // @impl DEW-024, AGQ-026, WPG-016, CHI-004
 // Audited submitted-attempt supersession and unique current-lineage resolution.
 
+// Navigation: public API — validateSubmittedPredecessorAuthority, buildSupersessionSuccessorDemand, resolveWorkUnitSupersessionLineage, evaluateWorkUnitSupersessionEligibility, supersedeWorkUnitAttempt, evaluateNormalizedSubmittedWorkUnitLedger
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 

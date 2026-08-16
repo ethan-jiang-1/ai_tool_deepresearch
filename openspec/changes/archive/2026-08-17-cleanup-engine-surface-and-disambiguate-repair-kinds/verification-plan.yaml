@@ -1,0 +1,64 @@
+schema_version: verification-routing/v1
+change: cleanup-engine-surface-and-disambiguate-repair-kinds
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      死导出零引用是仓库内静态扫描事实，落在 tests/engine/（unit 边界）：
+      dead-export-regression.test.mjs 断言 retire 后的符号不再被 import、
+      测试锁定导出保留且头注释标注。
+  integration:
+    status: selected
+    rationale: >-
+      repair_directive 字段名消歧与 CONTEXT 指针是跨文件确定性文档/代码事实：
+      静态断言 emitter/consumer/CONTEXT 的字段名与三套枚举区分句，落在
+      tests/integration/md/。无网络、无 Agent 执行。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      无 lifecycle/gate/recovery 链行为变化：不改 Engine 运行时语义、gates、
+      schema、CLI 行为（repair_directive 是 file-observability 诊断字段重命名，
+      消费点同步），不需要驱动端到端临时 bundle 链。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称真实 Agent 行为变化：全部为内部重构、注释与字段名消歧，由确定性
+      文档/静态回归锁定，不做 Agent 行为断言。
+claims:
+  - id: dead-export-regression
+    statement: >-
+      esm-dirname 模块及其自测已删除；advice/makeItem/rank/OutputDeclarationLedgerRecord
+      不再被任何模块 import；work-unit-repair-vocabulary 的测试锁定导出保留且
+      头注释标注用途。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/dead-export-regression.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: repair-directive-and-context-lock
+    statement: >-
+      engine/helpers/file-observability.mjs 与 cli/check-reentry.mjs 使用
+      repair_directive 字段且无 file-observability 面 repair_kind 字面量；
+      CONTEXT.md 三套 repair 词汇区分句存在且 file-observability 面为
+      repair_directive、work-unit 面权威指针包含
+      engine/work-unit-repair-vocabulary.mjs；work-unit 面与 gate/phase 面
+      repair_kind 枚举不变；C2/C3/C5 compact 行存在。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/repair-directive-lock.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

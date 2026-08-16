@@ -1,5 +1,7 @@
 // @impl DEW-004, DEW-017, DEW-024
 // One current-profile boundary for every Engine reader of an existing work unit.
+// Input: work-unit record → Output: bounded current profile (validity + shape)
+// → Consumers: submit, disposition, integrity checks.
 
 import { existsSync } from 'node:fs';
 import path from 'node:path';

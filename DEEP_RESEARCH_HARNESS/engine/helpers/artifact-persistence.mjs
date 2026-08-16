@@ -1,5 +1,6 @@
 // @impl ARP-001, ARP-002, ARP-003
 
+// Navigation: public API — ARTIFACT_PERSISTENCE_SCHEMA_VERSION, ARTIFACT_PERSISTENCE_ROOT, ARTIFACT_PERSISTENCE_OPERATIONS, ARTIFACT_PERSISTENCE_VERDICTS, ARTIFACT_PERSISTENCE_SUPPORTED_ROOTS, ARTIFACT_PERSISTENCE_EXCLUDED_SURFACES, isSafeArtifactTarget, ArtifactPersistenceOperationSchema, FinalReportPublishResultSchema, ArtifactPersistResultSchema, FinalReportPersistResultSchema, ArtifactSweepEntrySchema, ArtifactSweepSummarySchema, ArtifactPersistenceConfigError, …
 import {
   closeSync,
   constants,

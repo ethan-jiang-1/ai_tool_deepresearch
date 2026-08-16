@@ -1,6 +1,7 @@
 // handoff-helpers.mjs — Trace-backed lifecycle handoff validation
 // @impl CPT-003, CPT-004, GSK-007
 
+// Navigation: public API — BOOTSTRAP_TARGET_NODES, COVERED_PREFLIGHT_TARGET_NODES, COVERED_ENTRY_TARGET_NODES, COVERED_SOURCE_NODES, gateKeyToEnum, gateEnumToKey, loadHandoffTopology, readTraceEventsWithIndex, findLatestLegalHandoff, inspectPostFinalHandoffStage, evaluateFinalEntryAdmission, validateEnterPhaseTarget, validateSourceGateStatusSync, checkPhaseHandoffPreflight
 import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';

@@ -1,3 +1,4 @@
+// Navigation: public API — RETURN_MAP_FIELDS, RETURN_MAP_RELATIONSHIPS, RETURN_MAP_STATUS_LABELS, extractReturnMapEntries, extractSeedSectionFamily, isLimitationReturnMapEntry, isEvidenceBearingReturnMapEntry, extractConcreteReferenceRefs, validateReturnMapContent, extractExactProjectionIdentities, extractSeedFamilyEntries, evaluateSeedTopicProjectionReadiness, inspectSeedTopicReturnMaps
 import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve as resolvePath } from 'node:path';
 

@@ -27,7 +27,7 @@ export const CanonicalTopicFindingSchema = z.object({
     kind: z.string().min(1),
     surface: z.string().min(1),
   })),
-  repair_kind: z.string().min(1),
+  repair_directive: z.string().min(1),
 });
 
 export const RecoveryRootFindingSchema = z.object({
