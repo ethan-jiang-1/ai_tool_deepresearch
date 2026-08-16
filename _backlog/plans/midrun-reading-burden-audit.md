@@ -12,6 +12,42 @@ Date: repo-internal analysis · Status: analysis only (no OpenSpec change propos
 > `schema/gate_definitions/*.json`, `cli/*.mjs`, `engine/*.mjs`, and `engine/helpers/*.mjs`.
 > Class (1) is claimed only where the enforcing check was actually located.
 
+> **Cross-reference:** a parallel machine-check catalog (background sub-agent, 784 lines, 5 areas,
+> ~590 entries) is at `_backlog/plans/machine-checks-catalog.md` — gate rule ids, gate-CLI helper
+> call chains, ~40 engine helper modules with rejection codes, CLI validators, and all 268 test
+> files. Every class-(1) citation in this audit was verified first-hand and is consistent with that
+> catalog; none of the citations below uses a non-existent identifier. Authoritative corrections
+> and precision notes from the catalog:
+> - Topic-state / seed-projection enforcement identifiers: `canonical_binding_mismatch`,
+>   `writer_postcondition_failed`, `seed_projection_layout_missing`, `canonical_topic_state_required`
+>   (there is no `hand_edit_detected`); `seed_projection_token`, `seed_projection_token_ambiguous`,
+>   `__BACKFILL_*` retention checks, and `template_not_expanded` (diagnostic-only, **never** blocks a
+>   gate) (there is no `token_replacement`); `ProjectionPacketSchema` zod messages plus
+>   `input_invalid`, `projection_source_identity_not_current`, `projection_slot_not_owned`
+>   (there is no `invalid_packet_fields`).
+> - Floor / index identifiers are exactly: `shared_ref_count_floor`, `per_topic_count_floor`,
+>   `per_topic_ref_md_count_floor`, `source_novelty_floor`, `reference_index_coverage`,
+>   `reference_ledger_coverage`, `sync_reference_index` (outcome), `reference_navigation_*`
+>   (there is no `ref_count_floor` / `citation_coverage` / `index_sync_mismatch`).
+> - Bypass detection: exhaustive fall-through is `classifyReferenceAuthority` → `delegated_bypass`
+>   at `gate-helpers-checks.mjs:928-936` (there is no `all_handled_else_reject`).
+> - `file_exists` / `status_value` / `per_topic_count_floor` resolve in the gate CLIs and
+>   `wave-contract-evaluators` via `resolveThreshold` (`gate-helpers-readers.mjs:119-152`), not in
+>   `gate-helpers-*.mjs` themselves.
+> - `engine/work-unit-transaction.mjs` and `engine/consistency-validator.mjs` live in
+>   `DEEP_RESEARCH_HARNESS/engine/` (root), not `engine/helpers/` (this audit's citations already
+>   use the correct paths).
+> - Gate CLIs add hard checks beyond the definitions (e.g. hitl1 canonical-topic-state
+>   prerequisite, setup-ready staged persistence, wave fatigue/degradation threshold = 3, hitl2
+>   `composition_handoff_proceed_contract`, readiness `composition_handoff_readiness_consistency`,
+>   rerun `rerun_profile_prerequisite`); `advance-status` rejects skipped gates at :208-215 and does
+>   not guess loaded-node continuation (:217-236).
+> - Tests: 268 real files (tests/e2e 14, tests/engine 43+41 helpers, tests/schema 18,
+>   tests/governance 5, tests/host_tools 3, tests/integration/cli 58, tests/integration/md 64,
+>   other integration 22); there is **no** `tests/deterministic_e2e/` or `tests/unit/` — the
+>   "tests that would lock it" column in Task B should target `tests/integration/cli` +
+>   `tests/engine` + `tests/integration/md`.
+
 ---
 
 ## TASK A — Negative-space audit
