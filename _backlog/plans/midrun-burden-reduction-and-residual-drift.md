@@ -122,8 +122,10 @@ engine-scoped change,且须先重验 `shared-silent-execution.md:96` 与
 ### C1 — repair-residual-recovery-spelling-drift
 
 - [ ] propose:语义反思 + 简洁准入两问 + delta specs
-- [ ] polish:/polish-openspec-change 至少两轮,直到 `ready for apply`
-  (`openspec validate --strict` + `git diff --check`)
+- [ ] polish(强制,propose 后**必须**立即跟上,不得跳过、不得直接 apply):
+  /polish-openspec-change 至少两轮(Pass 1 整体一致性 + 至少一轮 risk-led),
+  直到 `ready for apply`(`openspec validate --strict` + `git diff --check` 通过);
+  `not ready` 时只报未决决定与下一步,不强行 apply
 - [ ] verification-plan.yaml:四类 test class 声明(integration 为主)
 - [ ] apply:R1/R2 连字符化 + R4/R5/R6 修正
 - [ ] apply:R3 扫描面扩展,新扫描命中"修复前两处、修复后零处"
@@ -134,9 +136,11 @@ engine-scoped change,且须先重验 `shared-silent-execution.md:96` 与
 
 - [ ] propose:三分类执行细则 + 目标文件面 + 立法 delta(吸收 §1.4 种子数据与
   审计 §A.3/§A.4 的逐条对照;manifest.shared 漂移的方向决定)
-- [ ] polish:/polish-openspec-change 直到 `ready for apply`;polish 内闭环:
+- [ ] polish(强制,propose 后**必须**立即跟上,不得跳过、不得直接 apply):
+  /polish-openspec-change 至少两轮,直到 `ready for apply`
+  (`openspec validate --strict` + `git diff --check` 通过);polish 内闭环:
   删除门槛(每条删除附可验证的机器检查名或过时证据)、hitl1/hitl2 requires
-  前置的落地顺序
+  前置的落地顺序;未闭环或 `not ready` 不得进入 apply
 - [ ] verification-plan.yaml:unit/integration 覆盖"删后规则仍被机器强制"
   (每删一条对应一个 negative 断言)+ 新增 consistency 检查类测试
 - [ ] apply:先补 hitl1/hitl2 的 `shared-anti-cheating-rules.md` requires
@@ -166,8 +170,10 @@ C3: deferred,独立触发,不阻塞本 plan 关闭
 2. 读本文件全文 + 两份参照:[`machine-checks-catalog.md`](machine-checks-catalog.md)
    (C2 分类对照表)与 [`midrun-reading-burden-audit.md`](midrun-reading-burden-audit.md)
    (逐条分类与 C4 选项表)。
-3. 每个 change 严格走:propose → polish(/polish-openspec-change,至少两轮,直到
-   `ready for apply`)→ apply → archive;目标文件在 `/opsx:apply` 前不动。
+3. 每个 change 严格走:**propose → polish(强制门:propose 后必须立即
+   /polish-openspec-change,至少两轮,直到 `ready for apply` 才允许 apply,
+   不得跳过、不得先 apply 后补)→ apply → archive**;目标文件在
+   `/opsx:apply` 前不动。
 4. Tracking:勾选上方检查项;归档后在 `_backlog/plans/README.md` 更新状态;
    全部归档后按关闭流程 `git mv` 到 `_backlog/_done/_closed_plans/`。
 5. 证据与当前树不符时以当前树为准,并把差异写回本文件对应行。
