@@ -1,7 +1,7 @@
 # Plan: 迭代式 Final 交付 + 版本化 Final 输出
 
-**性质:** 第一性原则 + 能力立项前设计计划（pre-OpenSpec）
-**状态:** active（设计验证待开始）
+**性质:** 第一性原则 + 能力立项前设计计划（pre-OpenSpec，已完成）
+**状态:** completed（2026-08-16；实现、验证和 OpenSpec 归档均已完成）
 **触发:** 对 `enterprise-safe-ai-harness-v2` 做技术深入版（`technical_deep_dive`）Final 交付时，暴露两个缺口：
 1. **Final 一次成型，无法与用户反复打磨。** 当前 Final 是 terminal delivery：`interaction: terminal_delivery`，节点无 gate，报告写出即交付。但真实场景下，用户看了第一版报告后想改 view、调章节、换读者/篇幅/证据粒度——没有合法回路，只能靠人工重建或整条 rerun。用户明确期望：**Final 也能像 HITL2 一样跟用户反复敲打**。
 2. **Final 输出文件名不随迭代变化。** 当前约定固定写 `final/`（内部 `report.md`）。一旦进入迭代，多次交付都写同一个名字，无法追溯「第几版」。用户期望：**默认 `final.md`；迭代后 `final_v1.md`、`final_v2.md` …；也容许带特征标签的形式 `final_<特征>_v<N>.md`（如 `final_technical_deep_dive_v1.md`）**，代表该 final 是冲某特定特点/视角输出的，跟踪版本。
@@ -254,22 +254,22 @@ case 138 的 total Subject runtime hard cap 为 accepted active-suite threshold 
 - [x] 完成 `tasks.md`（Apply 前 review、实现、验证、sync、closeout）
 - [x] 完成最终 strict/governance/readiness 双轮审查（第二轮修正 publisher/lifecycle authority 与 case 138 风险边界；第三轮零编辑通过）
 
-#### Apply（尚未开始）
+#### Apply（已完成）
 
-- [ ] 完成 `openspec-feedback:plan-review`，关闭所有 review finding
-- [ ] 实现 primary Final series resolver
-- [ ] 实现 `publish-final-report`、reserved namespace 与 crash-safe no-clobber commit
-- [ ] 更新 Final node、workflow header/cue 和 Agent-facing entry/command guidance
-- [ ] 更新 clean Final reentry 与 accepted C5 owner precedence
-- [ ] 完成 unit + integration + deterministic E2E
-- [ ] 创建、登记并真实运行 case 138；无真实 Agent 能力时只能记 `NOT_RUN`
-- [ ] 运行完整 `node --test tests` 与 assets-mode governance checks
-- [ ] 将 9 份 delta specs 同步到 main specs 并语义复核
+- [x] 完成 `openspec-feedback:plan-review`，关闭所有 review finding
+- [x] 实现 primary Final series resolver
+- [x] 实现 `publish-final-report`、reserved namespace 与 crash-safe no-clobber commit
+- [x] 更新 Final node、workflow header/cue 和 Agent-facing entry/command guidance
+- [x] 更新 clean Final reentry 与 accepted C5 owner precedence
+- [x] 完成 unit + integration + deterministic E2E
+- [x] 创建、登记并真实运行 case 138；无真实 Agent 能力时只能记 `NOT_RUN`
+- [x] 运行完整 `node --test tests` 与 assets-mode governance checks
+- [x] 将 9 份 delta specs 同步到 main specs 并语义复核
 
-#### Archive（尚未开始）
+#### Archive（已完成）
 
-- [ ] 完成 `openspec-feedback:closeout-review`，关闭所有 ordinary finding tasks
-- [ ] 通过 archive-mode requirement check 和 project-spec check
-- [ ] 仅通过 `finalize-change-archive.mjs` 完成归档
+- [x] 完成 `openspec-feedback:closeout-review`，关闭所有 ordinary finding tasks
+- [x] 通过 archive-mode requirement check 和 project-spec check
+- [x] 仅通过 `finalize-change-archive.mjs` 完成归档
 
-当前阶段结论：**OpenSpec change 已 `ready for apply`，但尚未修改 Harness、tests 或 experiments；下一阶段必须由新的显式 `/opsx:apply` 请求启动。**
+当前阶段结论：**`iterate-final-delivery-in-place` 已在 `openspec/changes/archive/2026-08-16-iterate-final-delivery-in-place/` 归档；实现与验证随提交 `860f65234` 落地。本文件仅保留为已完成的立项与决策记录。**
