@@ -1,0 +1,7 @@
+schema_version: semantic-closure/v1
+change: repair-preexisting-regression-contracts
+status: not_applicable
+reason: >-
+  This change only aligns existing unit/integration test assertions and fixtures
+  with current accepted contracts. It creates or changes no deterministic
+  runtime fact family, resolver, establishing surface, or verdict consumer.

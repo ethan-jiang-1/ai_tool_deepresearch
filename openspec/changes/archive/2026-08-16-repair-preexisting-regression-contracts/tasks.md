@@ -1,0 +1,20 @@
+## 1. Apply Preconditions
+
+- [x] 1.1 `openspec-feedback:plan-review` Before the first target edit, obtain current Apply guidance and review `proposal.md`, `design.md`, this task list, `verification-plan.yaml`, and `semantic-closure.yaml` against the five classified failures and their accepted owner contracts. Record every actionable finding as an ordinary unchecked task naming the affected reader question, authoritative owner, smallest repair, and independently observable done condition. Done when every failure is confirmed to be a stale observer or fixture rather than an implementation/spec mismatch. (CHF-001, CHF-002)
+- [x] 1.2 Run `node openspec/governance/check-project-reqs.mjs --mode plan`, `node openspec/governance/check-verification-routing.mjs --change repair-preexisting-regression-contracts --mode plan`, and `node openspec/governance/check-semantic-closure.mjs --change repair-preexisting-regression-contracts --mode plan`. Done when all pass and structural PASS is reported only as planning/governance evidence. (CHF-002)
+
+## 2. Regression Observer Repairs
+
+- [x] 2.1 Update `tests/integration/cli/check-gate-wave1-complete.test.mjs` so its fixtures/assertions exercise the current Wave1 Gate input, submitted-backing, and semantic-section contracts without reintroducing retired submit-time semantic validation or canonical-role assumptions. Done when its direct production CLI scenarios pass and still fail for the current violated facts. (RWG-002, RWG-005)
+- [x] 2.2 Update `tests/schema/gate-definition.test.mjs` to assert the current exact instantiation/setup total `39` (`18 + 21`), Wave0 total `16`, and Wave2 total `19`, while retaining named rule/invariant assertions. Done when a later addition, removal, or semantic drift in those definitions remains visibly failing. (GSK-001)
+- [x] 2.3 Update `tests/integration/cli/exit-code-convention.test.mjs` so its shipped-CLI inventory includes `operate-composition-handoff.mjs` with its existing no-argument code-`2` invocation sample. Done when the inventory exactly covers current `.mjs` command files without changing CLI behavior. (CLE-001)
+- [x] 2.4 Update `tests/integration/cli/handoff-witnessing-lifecycle.test.mjs` fixture setup with the current required `composition_handoff` before attempting HITL2/Final lifecycle assertions. Done when the fixture reaches its intended existing lifecycle boundary and preserves its negative laundering coverage. (CDG-001)
+- [x] 2.5 Update `tests/integration/governance/change-feedback-finalizer.test.mjs` so supported entry surfaces are checked for current operation-guidance retrieval, while `openspec-feedback:` markers are asserted in generated change tasks. Done when the test matches the accepted feedback-lifecycle ownership split without modifying stable entry surface behavior. (CHF-001, CHF-002)
+
+## 3. Verification And Closure
+
+- [x] 3.1 Run the five repaired test files directly with `node --test`. Done when each passes without skips and the result is reported only as deterministic unit/integration evidence.
+- [x] 3.2 Run canonical `npm test`. Done when the full suite passes with no new unrelated repair added to this change.
+- [x] 3.3 Run `node openspec/governance/check-project-reqs.mjs --mode archive --change repair-preexisting-regression-contracts`. Done when it reports zero duplicate, orphan, unregistered, and reused-retired requirement IDs; `skip_specs: true` remains honest.
+- [x] 3.4 Run `node openspec/governance/check-project-specs.mjs`. Done when it reports zero `deltaHeaderInMain`, `missingPurpose`, `missingRequirements`, and `missingReqHeader` findings.
+- [x] 3.5 `openspec-feedback:closeout-review` Before archive, obtain current Archive guidance and review the scoped test/fixture diff, `semantic-closure.yaml`, `verification-plan.yaml`, all focused results, and full-suite result. Record every actionable finding as an ordinary unchecked task with its affected reader question, authoritative owner, smallest repair, and independently observable done condition. Done when no behavior change, runtime fact change, or evidence overclaim is hidden in the regression repair. (CHF-001, CHF-003)

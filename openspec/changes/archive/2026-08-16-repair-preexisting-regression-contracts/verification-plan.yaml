@@ -1,0 +1,101 @@
+schema_version: verification-routing/v1
+change: repair-preexisting-regression-contracts
+test_classes:
+  unit:
+    status: selected
+    rationale: Gate-definition assertions exercise parsed definition contracts without a runtime bundle.
+  integration:
+    status: selected
+    rationale: The four remaining failures exercise production CLI, handoff, and governance fixture boundaries.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: This change repairs local regression observers and does not introduce or alter a workflow-scale production path.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: No real Agent behavior claim, playbook, Subject session, or native completion is added or changed.
+claims:
+  - id: current-regression-observers-align
+    statement: >-
+      The selected unit and integration tests observe the current Gate, CLI,
+      handoff, and feedback-governance contracts without preserving stale
+      historical assumptions.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave1-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: cli-command-inventory-aligns
+    statement: >-
+      The exit-code convention test inventories every current shipped CLI and
+      verifies representative existing exit outcomes without changing command
+      behavior.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/exit-code-convention.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: handoff-fixture-reaches-current-admission
+    statement: >-
+      The handoff-witnessing fixture supplies the current composition-handoff
+      prerequisite so its real CLIs can exercise the existing lifecycle and
+      laundering-rejection boundaries.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/handoff-witnessing-lifecycle.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: feedback-entry-guidance-ownership-aligns
+    statement: >-
+      Feedback-finalizer integration coverage distinguishes generated change
+      task markers from stable supported entry surfaces that retrieve current
+      operation guidance.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/change-feedback-finalizer.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: gate-definition-count-observer-aligns
+    statement: >-
+      Gate-definition regression assertions retain coverage of the current
+      named rule sets and no longer fail solely because accepted rule totals
+      changed.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/gate-definition.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

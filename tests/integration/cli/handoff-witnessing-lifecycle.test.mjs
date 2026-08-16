@@ -252,6 +252,24 @@ human_decision_checkpoints:
     final_report_view: profile_default
     rationale: "${rationale}"
     rerun_count: 1
+    composition_handoff:
+      contract_version: 1
+      for_rerun_count: 1
+      reader:
+        description: "A reader reviewing the Final lifecycle boundary."
+        familiarity: working
+      intended_use: "Verify handoff witnessing and recovery behavior."
+      primary_focus: "Lifecycle integrity and receipt-bound composition."
+      content_priorities:
+        foreground:
+          - "Lifecycle evidence"
+        compress:
+          - "Background detail"
+      delivery:
+        language: en
+        length: standard
+        evidence_exposure: balanced
+        appendix: as_needed
     recorded_at: "2026-07-05T00:00:00.000Z"
 `);
 

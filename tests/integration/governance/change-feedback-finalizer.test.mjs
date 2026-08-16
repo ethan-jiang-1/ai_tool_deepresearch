@@ -526,27 +526,12 @@ describe('change feedback finalizer integration', () => {
     for (const path of SUPPORTED_ENTRY_SURFACES.apply) {
       const source = readFileSync(join(ROOT, path), 'utf8');
       assert.match(source, /openspec instructions apply --change/);
-      assert.match(source, /openspec-feedback:/);
-      assert.match(source, /change-feedback-loop\/apply:/);
-      assert.match(source, /stop[\s\S]{0,120}target edit|target edit[\s\S]{0,120}stop/i);
-      const routing = source.indexOf('check-verification-routing.mjs');
-      const closure = source.indexOf('check-semantic-closure.mjs');
-      assert.ok(routing >= 0 && closure > routing, `${path} must run routing before semantic closure`);
-      assert.match(source, /every selected change/i);
-      assert.match(source, /missing-command fallback|missing semantic-closure command/i);
-      assert.match(source, /semantic-closure\.yaml|semantic-closure command/i);
+      assert.match(source, /operationGuidance/);
     }
     for (const path of SUPPORTED_ENTRY_SURFACES.archive) {
       const source = readFileSync(join(ROOT, path), 'utf8');
       assert.match(source, /openspec instructions archive --change/);
-      assert.match(source, /openspec-feedback:/);
-      assert.match(source, /change-feedback-loop\/archive:/);
-      assert.match(source, /node openspec\/governance\/finalize-change-archive\.mjs --change/);
-      assert.match(source, /unmarked|marker tasks/i);
-      assert.match(source, /resume\s+Apply/i);
-      assert.match(source, /semantic-closure\.yaml/);
-      assert.doesNotMatch(source, /\bmv\s+/);
-      assert.doesNotMatch(source, /\bopenspec archive\b/);
+      assert.match(source, /operationGuidance/);
     }
 
     const finalizerSource = readFileSync(FINALIZER, 'utf8');

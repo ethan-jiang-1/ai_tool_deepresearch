@@ -1139,12 +1139,13 @@ describe('check-gate-wave1-complete', () => {
   it('1f. an empty required question-list semantic section remains blocking once', () => {
     const dir = createBundle(unique('missing-question-section'));
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitAndReviewWave1WorkUnit(dir);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST.replace(
       /## Question Reconciliation\n\n[\s\S]*?(?=\n## Emergent Question Protocol)/,
       '## Question Reconciliation\n\n',
     ));
-    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitAndReviewWave1WorkUnit(dir);
     writeWave1Trace(dir);
 
     const outputs = [
@@ -1162,19 +1163,20 @@ describe('check-gate-wave1-complete', () => {
     assert.deepEqual({ ...hints[0], rerun: null }, { ...hints[1], rerun: null });
   });
 
-  it('1a. passes when Wave1 required outputs were submitted as other and normalized before ledger coverage', () => {
+  it('1a. rejects noncanonical required output roles at submission', () => {
     const dir = createBundle(unique('otherrole'));
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitAndReviewWave1WorkUnit(dir, {
+    const submission = submitWave1WorkUnit(dir, {
       evidenceRole: 'other',
       questionRole: 'other',
     });
-    writeWave1Trace(dir);
-    const result = runGate(dir);
-    const output = JSON.parse(result.stdout);
-    assert.equal(output.check.passed, true, `Expected normalized required role pass, got inspect: ${JSON.stringify(output.inspect)}`);
+    assert.equal(submission.submitted.ok, false);
+    assert.match(
+      submission.submitted.inspect.join('\n'),
+      /required output artifacts\/wave1\/topic-a\/evidence-summary\.md must use canonical role evidence_summary; got other/,
+    );
   });
 
   it('1b. fails when a required artifact exists but canonical submitted coverage is missing', () => {
@@ -1189,8 +1191,9 @@ describe('check-gate-wave1-complete', () => {
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false, `Expected missing canonical submitted coverage failure, got inspect: ${JSON.stringify(output.inspect)}`);
-    assert.ok(output.inspect.some((line) => /artifacts\/wave1\/topic-a\/question-list\.md/.test(line) && /submitted work-unit coverage/i.test(line)),
-      `Expected missing question_list coverage diagnostic, got: ${JSON.stringify(output.inspect)}`);
+    assert.ok(output.inspect.some((line) => (
+      /^\[materialize_projection\] Current Topic topic-a has 1 submitted backing candidate\(s\) without a closed canonical projection\.$/.test(line)
+    )), `Expected current submitted-backing projection diagnostic, got: ${JSON.stringify(output.inspect)}`);
   });
 
   it('1c. passes and reports canonicalization when depth-review reviewed refs have harmless trailing slash', () => {
@@ -1262,10 +1265,11 @@ describe('check-gate-wave1-complete', () => {
 
   it('4. fails when key findings section is empty', () => {
     const dir = createBundle(unique('emptyfind'));
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), EMPTY_FINDINGS_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
     submitAndReviewWave1WorkUnit(dir);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), EMPTY_FINDINGS_SUMMARY);
     writeWave1Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);

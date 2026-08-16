@@ -208,12 +208,12 @@ describe('Gate-definition common contract', () => {
 });
 
 describe('instantiation/setup finding-source admission', () => {
-  it('schema-parses all 38 existing rules without changing their check-specific shape', () => {
+  it('schema-parses all 39 existing rules without changing their check-specific shape', () => {
     const instantiation = parseGateDefinition(loadActiveDefinition('gate-instantiation-complete.definition.json'));
     const setup = parseGateDefinition(loadActiveDefinition('gate-setup-ready.definition.json'));
-    assert.equal(instantiation.rules.length, 17);
+    assert.equal(instantiation.rules.length, 18);
     assert.equal(setup.rules.length, 21);
-    assert.equal(instantiation.rules.length + setup.rules.length, 38);
+    assert.equal(instantiation.rules.length + setup.rules.length, 39);
     assert.equal(setup.rules.find((rule) => rule.id === 'basename_consistency').fields.length, 3);
     assert.equal(setup.rules.find((rule) => rule.id === 'plan_schema_valid').schema, 'PlanSchema');
   });
@@ -346,9 +346,9 @@ describe('HITL2/readiness/rerun finding-source admission', () => {
 });
 
 describe('Wave0 finding-source admission', () => {
-  it('schema-parses all 15 Wave0 rules', () => {
+  it('schema-parses all 16 Wave0 rules', () => {
     const wave0 = parseGateDefinition(loadActiveDefinition('gate-wave0-complete.definition.json'));
-    assert.equal(wave0.rules.length, 15);
+    assert.equal(wave0.rules.length, 16);
   });
 
   it('keeps single-root artifact and floor rules definition-owned', () => {
@@ -491,9 +491,9 @@ describe('Wave1 finding-source admission', () => {
 });
 
 describe('Wave2 finding-source admission', () => {
-  it('schema-parses all 18 Wave2 rules after retiring duplicate token rules', () => {
+  it('schema-parses all 19 Wave2 rules after retiring duplicate token rules', () => {
     const wave2 = parseGateDefinition(loadActiveDefinition('gate-wave2-complete.definition.json'));
-    assert.equal(wave2.rules.length, 18);
+    assert.equal(wave2.rules.length, 19);
     for (const id of ['backfill_judgment_token_absent', 'backfill_questions_token_absent']) {
       assert.equal(wave2.rules.some((rule) => rule.id === id), false);
     }
