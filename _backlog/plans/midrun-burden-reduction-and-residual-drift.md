@@ -27,9 +27,9 @@ changes:
 |---|---|---|---|
 | R1 | `DEEP_RESEARCH_HARNESS/COMMANDS.md:134` | `repair_kind: recover_transaction`(下划线)vs 引擎发射 `'recover-transaction'`(连字符,`work-unit-transaction.mjs:270,277,689,744`)。按文档比对永远匹配不上 | 连字符化 |
 | R2 | `DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md:141` | 同上 | 连字符化 |
-| R3 | `tests/engine/work-unit-recovery-decision-table.test.mjs:60-74` | 只扫 4 个引擎文件 + RUN.md,对 R1/R2 盲区 | 扫描面扩到 `COMMANDS.md`、`shared-subagent-protocol.md`、`cli/README.md`、`command_playbook/provenance-forensics-guide.md`、`workflows/nodes/phases/phase-wave{0,1,2}.md` |
+| R3 | `tests/engine/work-unit-recovery-decision-table.test.mjs:60-74` | 只扫 4 个引擎文件 + RUN.md,对 R1/R2 盲区。2026-08-16 apply 追加发现:原断言 `/['"\`]recover_transaction['"\`]/` 本身也是盲区——文档形式是 `` `repair_kind: recover_transaction` ``(引号包裹整个短语,值前是 `repair_kind: ` 而非引号),旧断言即使扫到文档面也匹配不上;已补 `repair_kind:\s*['"\`]?<value>` 值位置断言,红绿对照验证"修复前红、修复后绿" | 扫描面扩到 `COMMANDS.md`、`shared-subagent-protocol.md`、`cli/README.md`、`command_playbook/provenance-forensics-guide.md`、`workflows/nodes/phases/phase-wave{0,1,2}.md` + 值位置断言 |
 | R4 | `DEEP_RESEARCH_HARNESS/RUN.md:16` | "pre-pipeline routing exception" 无指针(定义在 `openspec/specs/agent/agent-command-surface/spec.md:208`) | 加指针 |
-| R5 | `CONTEXT.md:79`、`openspec/README.md:49-52` | "非权威…then stop" 无具体下一跳 | 补具体路径/命令 |
+| R5 | `CONTEXT.md:79`、`openspec/README.md:49-52` | "非权威…then stop" 无具体下一跳。2026-08-16 propose 核对:CONTEXT.md:79-83 已有分类下一跳(accepted spec / executable contract / operation guide),缺具体路径/命令;openspec/README.md:49-52 只有 "approved OpenSpec lifecycle" 无具体命令 | 补具体路径/命令 |
 | R6 | `COMMANDS.md:138`、`shared-subagent-protocol.md:~149` 的 no-edit 列表 | 裸 `_status.json` 有歧义(work-unit 级 `_work_units/waveN/<work_id>/_status.json` vs bundle `rb_status.json`) | 写全名 |
 
 ### 1.2 已验证不是漂移(全仓 token 级扫描)
@@ -121,16 +121,16 @@ engine-scoped change,且须先重验 `shared-silent-execution.md:96` 与
 
 ### C1 — repair-residual-recovery-spelling-drift
 
-- [ ] propose:语义反思 + 简洁准入两问 + delta specs
-- [ ] polish(强制,propose 后**必须**立即跟上,不得跳过、不得直接 apply):
+- [x] propose:语义反思 + 简洁准入两问 + delta specs
+- [x] polish(强制,propose 后**必须**立即跟上,不得跳过、不得直接 apply):
   /polish-openspec-change 至少两轮(Pass 1 整体一致性 + 至少一轮 risk-led),
   直到 `ready for apply`(`openspec validate --strict` + `git diff --check` 通过);
   `not ready` 时只报未决决定与下一步,不强行 apply
-- [ ] verification-plan.yaml:四类 test class 声明(integration 为主)
-- [ ] apply:R1/R2 连字符化 + R4/R5/R6 修正
-- [ ] apply:R3 扫描面扩展,新扫描命中"修复前两处、修复后零处"
-- [ ] npm test 相关子集绿(tests/engine/work-unit-recovery-decision-table + md 契约)
-- [ ] archive:finalizer + 本 plan 登记
+- [x] verification-plan.yaml:四类 test class 声明(integration 为主)
+- [x] apply:R1/R2 连字符化 + R4/R5/R6 修正
+- [x] apply:R3 扫描面扩展,新扫描命中"修复前两处、修复后零处"
+- [x] npm test 相关子集绿(tests/engine/work-unit-recovery-decision-table + md 契约)
+- [x] archive:finalizer + 本 plan 登记
 
 ### C2 — reduce-mid-run-context-burden
 

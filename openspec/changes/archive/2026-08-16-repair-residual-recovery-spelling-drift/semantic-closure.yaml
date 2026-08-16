@@ -1,0 +1,13 @@
+schema_version: semantic-closure/v1
+change: repair-residual-recovery-spelling-drift
+status: not_applicable
+reason: >-
+  This change repairs static Agent-facing wording and extends an existing
+  test-scan surface only. It changes no Harness runtime fact family,
+  resolver, authority-establishing surface, deterministic verdict, or
+  production behavior: R1/R2 restore the documented recovery repair_kind
+  spelling to the value the Engine already emits; R3 widens which static
+  documents the existing decision-table regression scans; R4/R5/R6 add
+  pointers, next-hop wording, and full file coordinates to existing
+  guidance prose. No work-unit transaction, submission, gate, status, or
+  entry fact family is affected.

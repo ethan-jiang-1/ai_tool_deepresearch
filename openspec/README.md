@@ -49,4 +49,5 @@ or grant implementation permission.
 Models and operations are not Charter companions. Accepted specifications,
 executable contracts, and the selected run bundle remain separate authorities.
 When a guidance document reveals behavior that must change, leave this map and
-use the approved OpenSpec lifecycle.
+use the approved OpenSpec lifecycle (`/opsx:propose` → `/opsx:explore` →
+`/opsx:apply` → `/opsx:archive`; 每阶段先读 `openspec/governance/` 对应检查)。

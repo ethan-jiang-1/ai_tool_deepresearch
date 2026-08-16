@@ -206,7 +206,11 @@ reconstruct the original command.
 For attempt-owned work-unit recovery feedback (the five surfaces above), `repair_kind` values that name a
 work-unit recovery operation SHALL use the CLI-verb spelling (`recover-transaction`, `recover-declaration`,
 `supersede`, `wait`, `missing_contract`) or carry the exact command string; a feedback result SHALL NOT
-emit an underscore-spelled `repair_kind` that no CLI verb matches. This rule SHALL NOT rename the
+emit an underscore-spelled `repair_kind` that no CLI verb matches. Agent-facing work-unit recovery guidance
+— including `COMMANDS.md`, `shared-subagent-protocol.md`, `cli/README.md`,
+`command_playbook/provenance-forensics-guide.md`, and the wave phase nodes — SHALL spell those recovery
+`repair_kind` values with the same CLI-verb spelling and SHALL NOT present an underscore-spelled recovery
+`repair_kind` that no CLI verb matches. This rule SHALL NOT rename the
 non-recovery `repair_kind` vocabularies owned by other surfaces (for example the gate-hint kinds
 `agent_action`, `engine_operation`, `user_decision`, `external_action`, `semantic_boundary`, and the
 topic-state/entry kinds), which keep their existing contract wording. A successful `supersede` result
@@ -216,7 +220,8 @@ have to reconstruct the next claim/submit path from nested fields. The mapping f
 root to `repair_kind` to CLI verb SHALL be stated in one test-locked decision table in `RUN.md`'s recovery
 section, with one row per attempt-owned recovery `repair_kind` the engine can emit. A deterministic
 regression SHALL assert that every such emitted `repair_kind` has a table row and a matching CLI verb (or
-exact command string).
+exact command string), and SHALL additionally scan the full Agent-facing work-unit recovery guidance
+surface for underscore-spelled recovery `repair_kind` values, failing when one appears.
 
 #### Scenario: contention feedback preserves the current attempt
 
@@ -274,6 +279,16 @@ exact command string).
 - **AND** the RUN.md recovery decision table SHALL contain that `repair_kind` row with the matching CLI verb
   and the checkpoint to rerun
 - **AND** the lock regression SHALL fail if an emitted `repair_kind` has no table row
+
+#### Scenario: recovery repair kind spelling is doc-surface locked
+
+- **WHEN** any Agent-facing work-unit recovery guidance surface (`COMMANDS.md`,
+  `shared-subagent-protocol.md`, `cli/README.md`, `command_playbook/provenance-forensics-guide.md`, or a
+  wave phase node) mentions a work-unit recovery `repair_kind`
+- **THEN** the value SHALL use the CLI-verb spelling (`recover-transaction` / `recover-declaration` /
+  `supersede`) or carry the exact command string
+- **AND** the deterministic decision-table regression SHALL scan those surfaces and fail when an
+  underscore-spelled recovery `repair_kind` appears in any of them
 
 #### Scenario: recovery result is not a dead end
 

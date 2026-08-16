@@ -59,14 +59,29 @@ describe('work-unit recovery decision table lock', () => {
 
   it('engine repair_kind values use CLI-verb spelling (no underscore recovery kinds)', () => {
     const sources = [
+      // Engine emission points.
       'DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs',
       'DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs',
       'DEEP_RESEARCH_HARNESS/engine/work-unit-submit-integrity.mjs',
       'DEEP_RESEARCH_HARNESS/engine/work-unit-attempt-disposition.mjs',
+      // Agent-facing recovery guidance surfaces (CHI-004 doc-surface lock).
+      'DEEP_RESEARCH_HARNESS/COMMANDS.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md',
+      'DEEP_RESEARCH_HARNESS/cli/README.md',
+      'DEEP_RESEARCH_HARNESS/command_playbook/provenance-forensics-guide.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md',
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave2.md',
     ];
     const joined = sources.map(read).join('\n');
     for (const oldSpelling of ['recover_transaction', 'recover_declaration']) {
+      // Directly quoted literal (engine string literals and standalone doc references).
       assert.doesNotMatch(joined, new RegExp(`['"\`]${oldSpelling}['"\`]`), `underscore recovery spelling still emitted: ${oldSpelling}`);
+      // repair_kind value position: doc prose wraps the whole phrase, e.g.
+      // `repair_kind: recover_transaction`, so the value is preceded by
+      // `repair_kind: ` rather than a quote; the optional quote also covers
+      // `repair_kind: 'recover_transaction'` engine literals.
+      assert.doesNotMatch(joined, new RegExp(`repair_kind:\\s*['"\`]?${oldSpelling}`), `underscore repair_kind value still present: ${oldSpelling}`);
     }
     for (const kind of RECOVERY_REPAIR_KINDS) {
       assert.ok(ENGINE_SPELLINGS[kind], `unexpected repair_kind in lock set: ${kind}`);

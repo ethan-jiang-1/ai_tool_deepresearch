@@ -77,7 +77,8 @@ and then the focused mechanism model selected by the control map.
 ## Working Boundary
 
 Use this context to avoid category errors, then stop. For capability behavior,
-read the applicable accepted spec; for deterministic facts, inspect the
+read the applicable accepted spec (start at the [OpenSpec Control Map](openspec/README.md),
+then the [spec catalog](openspec/specs/README.md)); for deterministic facts, inspect the
 executable contract or selected run bundle; for a procedure, read its operation
 guide. Do not turn this orientation into a second glossary or a cached copy of
 current behavior.

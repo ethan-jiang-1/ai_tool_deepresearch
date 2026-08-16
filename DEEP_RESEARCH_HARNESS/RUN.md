@@ -13,7 +13,7 @@
 
 当前 agent 可能有内置的"快速研究/搜索"捷径（Claude Code：`deep-research` skill；Codex / Cursor / Windsurf 等：各自的内置搜索/research）——它们通用、一次性、无 gate、无证据包。`DEEP_RESEARCH_HARNESS` 是本项目的 Deep Research Harness：证据可追溯、多轮、gate 门控、产出可校验的 run bundle。此 guidance 不声称能阻止宿主预先匹配 skill 或注入工具；它只规定 Agent 在本 entry 已选定后的下一步。
 
-读到本文件时不要再问用户是否改用内置捷径或是否使用 DEEP_RESEARCH_HARNESS。一次性 trigger 已选择本入口；继续执行 Section 2 的 Agent-run Harness flow。Section 2 及其进入的 HITL1/phase instructions 才单独授权 capability probe 和后续研究工作。若 bundle 尚未创建，唯一允许的前置澄清是 pre-pipeline routing exception，必须发生在 autonomous lifecycle 开始前，且不得削弱 HITL1/HITL2-only interactive in-run boundary。
+读到本文件时不要再问用户是否改用内置捷径或是否使用 DEEP_RESEARCH_HARNESS。一次性 trigger 已选择本入口；继续执行 Section 2 的 Agent-run Harness flow。Section 2 及其进入的 HITL1/phase instructions 才单独授权 capability probe 和后续研究工作。若 bundle 尚未创建，唯一允许的前置澄清是 pre-pipeline routing exception（定义见 [agent-command-surface spec](../openspec/specs/agent/agent-command-surface/spec.md) 的 "Entry docs distinguish trigger from command execution" requirement 中 pre-pipeline routing exception 条款），必须发生在 autonomous lifecycle 开始前，且不得削弱 HITL1/HITL2-only interactive in-run boundary。
 
 ## 2. 开跑（Harness）
 完整步骤见 `command_playbook/start-research.md`，一句话版：

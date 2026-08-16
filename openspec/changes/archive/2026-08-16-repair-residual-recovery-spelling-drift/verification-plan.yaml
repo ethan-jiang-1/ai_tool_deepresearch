@@ -1,0 +1,100 @@
+schema_version: verification-routing/v1
+change: repair-residual-recovery-spelling-drift
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The R3 scan-surface extension lives in
+      tests/engine/work-unit-recovery-decision-table.test.mjs, the existing
+      focused deterministic test that already locks engine emission spelling
+      and the RUN.md decision table; widening its document scan is the same
+      static string-scan class as today (per the repo's existing
+      classification, matching the round-1 ACS-003 precedent).
+  integration:
+    status: selected
+    rationale: >-
+      The R4/R5/R6 prose calibrations touch RUN.md, CONTEXT.md,
+      openspec/README.md, COMMANDS.md, and shared-subagent-protocol.md, whose
+      structure and pointer contracts are locked by existing deterministic
+      cross-file regressions under tests/integration/md/ and
+      tests/integration/cli/; those regressions must stay green after the
+      edits, and any new document-surface spelling assertion is a
+      deterministic cross-file fact against real repository files.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      Zero engine/schema/gate/recovery-chain behavior changes: no temporary
+      bundle chain needs to be driven end to end; the fixes are static
+      document calibrations and a wider static scan.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      No Agent behavior changes: the change repairs prose spelling, pointers,
+      next-hop wording, and file coordinates locked by deterministic
+      documentation regressions, not claims about real Agent behavior.
+claims:
+  - id: recovery-spelling-locked-across-doc-surfaces
+    statement: >-
+      CHI-004 (extended): no Agent-facing work-unit recovery guidance surface
+      in the Harness (COMMANDS.md, shared-subagent-protocol.md, cli/README.md,
+      command_playbook/provenance-forensics-guide.md,
+      workflows/nodes/phases/phase-wave{0,1,2}.md) uses the underscore
+      spellings recover_transaction / recover_declaration, and the engine
+      emission files plus RUN.md decision table keep their existing
+      CLI-verb-spelling lock; the regression fails and names the offending
+      surface before the fix and passes after it.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-recovery-decision-table.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: run-entry-context-routing-regression-stays-green
+    statement: >-
+      RUE/ACR-004: after the R4 (RUN.md pre-pipeline routing exception
+      pointer) and R5 (CONTEXT.md / openspec/README.md next-hop wording)
+      edits, the existing entry-routing and context-routing regressions
+      (tests/integration/md/agent-context-routing-contract.test.mjs,
+      tests/integration/md/dpt-research-entry-routing-contract.test.mjs) still
+      pass, proving the selected-entry route and Charter-then-context route
+      were preserved.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-context-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: command-docs-regression-stays-green
+    statement: >-
+      ACS/CIF: after the R1 (COMMANDS.md spelling) and R6 (full _status.json
+      coordinates in the COMMANDS.md no-edit list) edits, the existing
+      command-contract regression (tests/engine/command-contract-docs.test.mjs,
+      which scans COMMANDS.md, cli/README.md, RUN.md, README.md, and the
+      command playbooks) still passes, proving command inventory wording,
+      exit-code convention, and full-prefix command strings remain
+      contract-consistent. The shared-subagent-protocol.md spelling is locked
+      by the recovery-spelling-locked-across-doc-surfaces claim instead.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/command-contract-docs.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
