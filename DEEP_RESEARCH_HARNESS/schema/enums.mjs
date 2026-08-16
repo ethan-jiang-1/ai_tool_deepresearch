@@ -1,6 +1,8 @@
 // @impl SCO-001, SCO-005, SCO-006, SCO-007: 14 domain enums
 import { z } from 'zod';
 
+// 值序 = workflows/manifest.json 生命周期序（WNC-001）；none 是终态哨兵，不属于任何 gate。
+// 与 manifest gate key 的对应是机械的 `-` ↔ `_` 替换；顺序与对应关系由 tests/integration/cli/transition-integrity.test.mjs 锁定。
 export const CurrentGate = z.enum([
   'instantiation_complete',
   'hitl1_recorded',
@@ -10,8 +12,8 @@ export const CurrentGate = z.enum([
   'wave1_complete',
   'wave2_complete',
   'hitl2_recorded',
-  'rerun_ready',
   'readiness_passed',
+  'rerun_ready',
   'none',
 ]);
 

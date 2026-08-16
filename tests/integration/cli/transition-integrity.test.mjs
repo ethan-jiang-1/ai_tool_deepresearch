@@ -189,6 +189,27 @@ describe('Layer 1 — Structural consistency', () => {
     assert.equal(unexpected.length, 0,
       `CurrentGate enum values not in manifest: ${JSON.stringify(unexpected)}`);
   });
+
+  it('CurrentGate declaration order matches manifest lifecycle order (none last)', () => {
+    const expected = manifest.phases.filter(p => p.gate).map(p => gateKeyToEnum(p.gate));
+    const actual = gateEnums.filter(e => e !== 'none');
+    assert.deepEqual(actual, expected,
+      `CurrentGate order ${JSON.stringify(actual)} should match manifest order ${JSON.stringify(expected)}`);
+    assert.equal(gateEnums[gateEnums.length - 1], 'none',
+      'terminal sentinel "none" must be the last CurrentGate value');
+  });
+
+  it('rb_plan.md.tmpl Progress checklist order matches manifest lifecycle order', () => {
+    const tmpl = readFileSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'rb_templates', 'rb_plan.md.tmpl'), 'utf-8');
+    const progressSection = (tmpl.split('## Progress')[1] ?? '').split('## Decisions')[0] ?? '';
+    const checklist = progressSection
+      .split('\n')
+      .filter((line) => line.trim().startsWith('- [ ] '))
+      .map((line) => line.trim().replace('- [ ] ', ''));
+    const expected = manifest.phases.filter(p => p.gate).map(p => p.gate);
+    assert.deepEqual(checklist, expected,
+      `Progress checklist order ${JSON.stringify(checklist)} should match manifest order ${JSON.stringify(expected)}`);
+  });
 });
 
 // ── Layer 2: Gate definition and wiring integrity ─────────────────────

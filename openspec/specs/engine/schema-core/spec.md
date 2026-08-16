@@ -9,12 +9,18 @@ Deep Research 的类型地基。定义所有领域枚举 (10 个) 和契约 (6 �
 ### Requirement: Six domain enums defined as Zod schemas
 
 The schema SHALL retain the current lifecycle and HITL/profile Zod enums, including
-`CurrentGate` with `rerun_ready` between `hitl2_recorded` and `readiness_passed` and
-the six-value `HITL2UserDecision` set. It SHALL additionally define closed
-research-access vocabulary for `china` and `overseas` source groups, the declared
-fixed sample IDs, compact sample terminal outcomes, and executor-neutral direct
-retrieval surface categories. Retired source-class, candidate, and access-boundary
-vocabulary SHALL NOT remain a current enum or profile contract surface.
+`CurrentGate` and the six-value `HITL2UserDecision` set. `CurrentGate` values SHALL
+be the snake_case rendering of the `DEEP_RESEARCH_HARNESS/workflows/manifest.json`
+gate keys in manifest lifecycle order, with `readiness_passed` before `rerun_ready`,
+followed by the terminal sentinel `none`. The manifest–enum correspondence and order
+SHALL remain regression-locked; Agent-facing documentation SHALL state the mechanical
+`-` ↔ `_` derivation rule and point to the manifest and `schema/enums.mjs` as the two
+single sources instead of maintaining a second hand-written mapping. It SHALL
+additionally define closed research-access vocabulary for `china` and `overseas`
+source groups, the declared fixed sample IDs, compact sample terminal outcomes, and
+executor-neutral direct retrieval surface categories. Retired source-class,
+candidate, and access-boundary vocabulary SHALL NOT remain a current enum or profile
+contract surface.
 
 The new access vocabulary SHALL distinguish real content, login-required,
 challenge, HTTP-denied, rate-limited, transport-inconclusive, other failed,
@@ -74,6 +80,13 @@ The presence of the `not_started` schema sentinel SHALL NOT make it a gate-pass 
 
 - **WHEN** `StatusSchema.safeParse({ current_mode: 'execution', state: 'in_progress', current_gate: 'rerun_ready', next_gate: 'seed_topics_ready' })` is called
 - **THEN** it returns `{ success: true }`
+
+#### Scenario: CurrentGate order matches manifest lifecycle order
+
+- **WHEN** the `CurrentGate` enum values are read in declaration order
+- **THEN** they SHALL match the manifest gate key order, with `readiness_passed` before `rerun_ready`
+- **AND** the terminal sentinel `none` SHALL be last
+- **AND** the existing manifest–enum regression SHALL fail if the correspondence or order drifts
 
 ### Requirement: Six Zod contracts
 

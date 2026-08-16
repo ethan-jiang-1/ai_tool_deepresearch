@@ -25,10 +25,10 @@
 
 - `rb_plan.md`: research plan and topic registry.
 - `rb_profile.yaml`: HITL answers and user-facing preference decisions.
-- `rb_status.json`: runtime status summary. Non-null `current_node` is the current loaded lifecycle Markdown coordinate; `current_gate` and `next_gate` are gate-window state.
+- `rb_status.json`: runtime status summary. Non-null `current_node` is the current loaded lifecycle Markdown coordinate; `current_gate` and `next_gate` are gate-window state. 新 bundle 初始 `current_gate: setup_ready` / `state: not_started` 是 instantiation/HITL1 的 bootstrap status 例外（WNC-010），不是漂移。
 - `rb_queue.json`: queue v2 state.
 - `rb_trace.jsonl`: append-only runtime audit trace.
-- `rb_output_declarations.jsonl`: submitted work-unit output declaration ledger read by gates for delegated Agent outputs.
+- `rb_output_declarations.jsonl`: submitted work-unit output declaration ledger read by gates for delegated Agent outputs; 由 Engine 在首次成功 `submit` 时创建，新 bundle 尚未有它不构成漂移。
 - `_work_units/`: Engine-owned work-unit allocation, envelopes, runtime receipts, results, and submit records.
 
 ## Diagnostics Map

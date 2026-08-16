@@ -66,4 +66,4 @@ node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs inspect --bundle <bundle>
 
 Then follow `phase-rerun.md`: existing topic-state apply/recover, rerun-count increment, rerun-ready gate, `enter-phase <check.next>`, and `advance-status --to rerun_ready`.
 
-`check-reentry --at phase-rerun` means `rerun_ready` has already passed. Immediately after C5 entry/status sync, the correct incoming checkpoint is `hitl2_recorded`.
+`check-reentry --at phase-rerun` means `rerun_ready` has already passed. Immediately after C5 entry/status sync, the correct incoming checkpoint is `hitl2_recorded`. `--at` 接受 gate enum（如 `hitl2_recorded`）或 phase（如 `phase-rerun`），两者语义见 check-reentry 契约。

@@ -1,0 +1,110 @@
+schema_version: verification-routing/v1
+change: repair-runtime-doc-contradictions
+test_classes:
+  integration:
+    status: selected
+    rationale: >-
+      The enum/plan-template order assertions live in the existing
+      tests/integration/cli/transition-integrity.test.mjs, which already locks
+      the manifest–enum 1:1 correspondence; the doc edits touch COMMANDS.md,
+      cli/README.md, RUN.md, CONTEXT.md, templates, and playbooks whose
+      contracts are locked by existing deterministic cross-file regressions
+      under tests/engine/ and tests/integration/. Those regressions must stay
+      green after the edits.
+  unit:
+    status: selected
+    rationale: >-
+      The exit-code documentation alignment is locked by the existing static
+      scan tests tests/engine/command-contract-docs.test.mjs and
+      tests/integration/cli/exit-code-convention.test.mjs; they must stay
+      green after the stale note removal.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      Zero engine/schema/gate/recovery-chain runtime behavior changes: the
+      CurrentGate enum value membership is unchanged (declaration order only),
+      no bundle chain needs to be driven end to end, and the fixes are static
+      documentation alignments plus two static order assertions.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      No Agent behavior changes: the change repairs prose contradictions,
+      document order, and one presentation-level enum ordering locked by
+      deterministic regressions, not claims about real Agent behavior.
+claims:
+  - id: gate-order-and-plan-progress-order-locked
+    statement: >-
+      SCO-001 (modified): CurrentGate declaration order equals the manifest
+      gate key order (readiness_passed before rerun_ready, none last) and the
+      rb_plan.md.tmpl ## Progress checklist order equals the manifest order;
+      the extended transition-integrity regression fails and names the
+      drifted surface before the fix and passes after it.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/transition-integrity.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: exit-code-doc-alignment-regression-stays-green
+    statement: >-
+      CLE-003 (verify-only): after removing the stale validate-workflow-package
+      drift note from cli/README.md, the command-contract-docs and
+      exit-code-convention regressions still pass, proving the documented
+      tri-state 0/1/2 inventory in COMMANDS.md is the single, non-contradicted
+      statement for that command.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/command-contract-docs.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: context-and-entry-routing-regressions-stay-green
+    statement: >-
+      ACR-001 (verify-only): after the CONTEXT.md third repair_kind face
+      addition and the README/RUN.md edits, the agent-context-routing-contract
+      and dpt-research-entry-routing-contract regressions still pass, proving
+      the glossary authority boundaries and the selected-entry route were
+      preserved.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-context-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: bundle-instantiation-and-template-regressions-stay-green
+    statement: >-
+      CMI-001 (modified): after the playbook/template ledger-file
+      clarifications and the rb_status.json.tmpl bootstrap comment, the
+      instantiate-run-bundle, validate-bundle, and validate-workflow-package
+      regressions still pass, proving templates still materialize a valid
+      bundle and the package stays consistent.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/instantiate-run-bundle.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

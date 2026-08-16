@@ -1,0 +1,19 @@
+schema_version: semantic-closure/v1
+change: repair-runtime-doc-contradictions
+status: not_applicable
+reason: >-
+  This change repairs contradictory Agent-facing documentation and aligns two
+  presentation surfaces with already-accepted facts; it does not alter a Deep
+  Research Harness runtime resolver or verdict consumer for any cataloged
+  deterministic fact family. F1 removes a stale cli/README.md note so the
+  derived surface matches the already-accepted cli-exit-code-conventions
+  contract and its existing truth table (tests/integration/cli/exit-code-convention.test.mjs
+  is untouched and stays green); F2/F3 collapse the gate-name derivation to
+  the existing mechanical `-` ↔ `_` rule and make the CurrentGate declaration
+  order match the manifest (Zod enum membership unchanged, so no runtime
+  verdict changes); F4–F9 add comments, pointers, and one documentation
+  convention. The two MODIFIED deltas (SCO-001 order clause, CMI-001
+  ledger-file clarification) pin documentation-order and instantiation-time
+  content facts; they add no runtime fact family, resolver,
+  authority-establishing surface, deterministic verdict, or production
+  behavior change.

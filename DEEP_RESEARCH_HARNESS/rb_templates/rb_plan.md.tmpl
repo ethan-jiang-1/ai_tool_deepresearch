@@ -49,6 +49,7 @@ topic_registry: []
 
 ## Progress
 
+<!-- 勾选顺序 = workflows/manifest.json 生命周期序。readiness 与 rerun 是 HITL2 的两个互斥出口，不是先后顺序。 -->
 - [ ] instantiation-complete
 - [ ] hitl1-recorded
 - [ ] setup-ready
@@ -57,8 +58,8 @@ topic_registry: []
 - [ ] wave1-complete
 - [ ] wave2-complete
 - [ ] hitl2-recorded
-- [ ] rerun-ready
 - [ ] readiness-passed
+- [ ] rerun-ready
 
 ## Decisions
 (append-only — 关键决策记录，最新在上)

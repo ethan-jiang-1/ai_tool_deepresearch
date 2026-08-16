@@ -37,7 +37,7 @@ Delegated sub-agent work uses the Engine-mediated work-unit path only: queue dem
 
 For work-unit recovery, preserve the exact command/checkpoint that produced the feedback and read its structured `attempt_disposition` + `next`. All five work-unit feedback surfaces (submit rejection, late-submit rejection, transaction blocking, dry-submit, inspect) emit the same shape: `attempt_disposition` names the disposition root and owner, `next` carries one `repair_kind` (CLI-verb spelling), the exact command or `write_to`, and the same checkpoint to rerun. Recovery results (including `recover-transaction` / `recover-declaration`) are never a dead end: they carry the same `next` rerun coordinate. Rerun the same checkpoint after a successful or idempotent result. The test-locked decision table below is the single disposition → `repair_kind` → CLI verb → rerun map:
 
-| disposition 反馈面 | `repair_kind` | CLI 动词(exact 命令) | 重跑什么 |
+| 适用情形/触发条件 | `repair_kind` | CLI 动词(exact 命令) | 重跑什么 |
 |---|---|---|---|
 | `busy`(transaction 阻塞 / submit 争用) | `wait` | 调用者同一 operation(区分 caller 与 holder 的 transaction/operation/work/queue 坐标,读 `journal_disposition`;不推断进度或 liveness) | 等待后重跑调用者完全相同的 operation |
 | `suspect_transaction`(锁定/日志残缺) | `recover-transaction` | `node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs recover-transaction <bundle> --tx-id <id>`(仅当无全局锁、`repair_kind` 指名该 operation、且该未锁 v2 journal 可完整比对 before-image) | 成功或幂等结果后,重跑产生反馈的同一 inspect / dry-submit / timeout-preflight / submit / Gate checkpoint;否则 `missing_contract` 是边界 |

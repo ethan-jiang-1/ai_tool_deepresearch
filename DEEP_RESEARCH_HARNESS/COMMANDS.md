@@ -70,6 +70,8 @@ The following selected public operations share a narrow discoverability boundary
 
 This selected contract does not normalize unrelated utilities. Their documented invocation and output classes remain authoritative.
 
+`--to` 的 `<source-gate-enum>` 是 `schema/enums.mjs` `CurrentGate` 的 snake_case 值；它与 `workflows/manifest.json` gate key 的对应是机械的 `-` ↔ `_` 替换（例如 `wave0-complete` → `wave0_complete`）。两个单一真相源是 manifest（kebab key、生命周期序）与 enums.mjs（snake enum）；文档不另立手写对照表。
+
 ## 实例化与开始 Research
 | 命令 | 文件 | 说明 |
 |------|------|------|

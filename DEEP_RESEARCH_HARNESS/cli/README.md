@@ -75,7 +75,6 @@ Non-gate current-state inventory:
 - `validate-work-unit-hygiene.mjs` is a static production-surface hygiene gate. It exits `1` when removed delegated authority tokens, unsupported provenance check names, or queue/index semantic regressions appear in active framework surfaces.
 - Many utility validators are binary `0/1` and do not yet share a common exit helper.
 - `log-event.mjs` always exits `0`, even when a diagnostic log or trace write cannot be completed. This exception keeps logging failure from blocking Agent flow, but it is not evidence that a load-bearing trace event was written.
-- Known doc/code drift: `validate-workflow-package.mjs` header documents code `2` for invocation errors, but current implementation only exits `0` or `1`.
 
 Exit codes SHALL NOT encode morale, encouragement, progress pressure, fatigue, or reassurance. Put repair direction and autonomous-continuation reminders in `inspect[]`, `advice[]`, structured diagnostics, or Agent-readable Markdown.
 
@@ -92,6 +91,8 @@ Only the following public operations use the C3 static invocation helper. For ea
 | `plan-hostfile-sections.mjs` | `render-no-controls`; `render-supplied-controls --input <snapshot-path>` | Prints deterministic text only; it does not resolve, select, or write a bundle. |
 
 Do not reflect an unvalidated token into `write_to`, a rerun command, or a writable coordinate. Read each command's structured output for the direct root and the existing legal next operation.
+
+`advance-status --to` 的 `<source-gate-enum>` 是 `schema/enums.mjs` `CurrentGate` 的 snake_case 值；它与 `workflows/manifest.json` gate key 的对应是机械的 `-` ↔ `_` 替换（例如 `wave0-complete` → `wave0_complete`）。两个单一真相源是 manifest（kebab key、生命周期序）与 enums.mjs（snake enum）；文档不另立手写对照表。
 
 ## Gate Output Contract — Structured CLIs Cannot Return Useless Output
 

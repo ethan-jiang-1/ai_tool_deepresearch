@@ -43,7 +43,7 @@ suggested_context: []
 
 - 新建 bundle 目录（`dpt_rb_<name>` 或 disposable experiment 的 `dpt_disp_<name>_<hex>`）
 - `BUNDLE_MAP.md` passive bundle map
-- 5 个 `rb_*` control files（`rb_plan.md`、`rb_profile.yaml`、`rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`）
+- 5 个 `rb_*` control files（`rb_plan.md`、`rb_profile.yaml`、`rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`）；第 6 个 ledger 文件 `rb_output_declarations.jsonl` 由 Engine 在首次成功 `submit` 时惰性创建，新 bundle 尚无此文件不构成漂移
 - Canonical scaffold directories：`seed_topics/`、`reference/`、`artifacts/`、`final/`、`_cache/`
 
 ## 5. Gate Command

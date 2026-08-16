@@ -4,6 +4,8 @@ Deep Research Harness (`DEEP_RESEARCH_HARNESS/`) 的运行时入口说明。
 
 Harness 采用 recommendation-first 的两点交互节奏：HITL1 对齐，静默自主研究，HITL2 审阅，Final 交付；用户主动问答不会自动变成新的 checkpoint 或运行权力。
 
+> 语言约定：精确 token/命令/枚举/文件坐标用英文，推理与边界说明用中文；同一控制面内不混用两套主语言。
+
 ## 共享项目上下文
 
 开始 Deep Research Harness work 前，先读 [Project Charter](../openspec/constitution/project-charter.md)，再读
@@ -136,6 +138,7 @@ dpt_rb_<name>/
 - Queue 为空且无法 refill 时才能停止。
 - 停止授权: 唯一真相是 `engine/queue-manager-core.mjs` 的 `StopAuthorizationState` 枚举（4 值）。`syncQueueHealth` 实际写入 `empty_queue_after_refill`（drain 后停止）与 `unauthorized_continue_required`（继续）；`final_delivery` / `decision_blocker` 是保留值，当前无代码写入。指引不得另列"合法值"清单。
 - 面向 research run 的命令必须显式接收 current run bundle root；现有 bundle 工具使用明确的 `<bundleDir>`。
+- 新 bundle 的初始 `current_gate: setup_ready` / `state: not_started` 是 WNC-010 声明的 instantiation/HITL1 bootstrap status 例外（解释见 `workflows/nodes/phases/phase-instantiation.md`），不是漂移；从 setup 起各 phase 才走常规 enter-phase/advance-status handoff。
 - 不要依赖 chat memory 判断当前 run 状态；必须以 current run bundle root、可用的 check/gate CLI output 和 trace 为准。
 
 ## 质量保障
