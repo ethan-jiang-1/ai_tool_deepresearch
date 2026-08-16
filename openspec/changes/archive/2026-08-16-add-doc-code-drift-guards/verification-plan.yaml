@@ -1,0 +1,115 @@
+schema_version: verification-routing/v1
+change: add-doc-code-drift-guards
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The checker's path/CLI/gate-coverage rules are focused deterministic
+      truth tables over fixture inputs in tests/governance/, and the
+      --check-prefix registry query logic is a pure registry fact lookup.
+  integration:
+    status: selected
+    rationale: >-
+      The checker must prove zero drift on the real repository documents, the
+      static exit-code sweep must run against the real CLI sources, and the
+      --check-prefix command must run against the live registry.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No lifecycle/gate/recovery chain changes; the checker and query are
+      static deterministic tools fully covered by unit and integration
+      assertions, with the finalizer wiring verified by the existing
+      finalizer integration test.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      No Agent behavior changes; governance tooling only, locked by
+      deterministic JS-led tests.
+claims:
+  - id: content-drift-path-rules
+    statement: >-
+      RET-006: the content-drift checker accepts every repository-relative
+      prose path that exists, rejects missing paths with the file and
+      reference named, and excludes bundle-runtime paths, template
+      placeholders, and deprecated anchors per its documented allowlist.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/check-content-drift.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: content-drift-gate-coverage
+    statement: >-
+      RET-006: every gate in schema/gate_definitions/gate-*.definition.json
+      has a summary row in the shared gate-rules surface and vice versa; the
+      checker fails and names the missing side when coverage breaks.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/check-content-drift.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: content-drift-zero-on-real-docs
+    statement: >-
+      RET-006: check-content-drift.mjs reports zero drift on the current
+      repository guidance, accepted specs, and Harness documentation after
+      this change's reconciliation.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/check-content-drift.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: check-prefix-query
+    statement: >-
+      RET-001: check-project-reqs.mjs --check-prefix ACR prints the ACR
+      mapping, all ACR-* IDs with their states, and exits 0; an unknown or
+      malformed prefix exits 2 with a usage message.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/check-project.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: exit-code-static-sweep
+    statement: >-
+      CLE-004: for every inventoried CLI, the static sweep finds the exit
+      codes the source actually emits via process.exit literals and asserts
+      consistency with the documented convention class (tri-state classes
+      emit 2; binary classes do not).
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/exit-code-convention.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

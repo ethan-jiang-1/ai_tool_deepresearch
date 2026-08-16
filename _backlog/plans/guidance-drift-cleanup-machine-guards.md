@@ -178,18 +178,23 @@ deferred。
   semantic-closure consumers 角色复核(RUN.md/persist-artifact.md → overlap:
   derived;verdict consumer 只留测试/CLI)
 
-### C3 — add-doc-code-drift-guards
+### C3 — add-doc-code-drift-guards ✅ CLS-066
 
-- [ ] propose:内容漂移检查器范围(路径/CLI 名/exit code/gate 清单)
-- [ ] polish:/polish-openspec-change,至少两轮,直到 `ready for apply`
-  (`openspec validate --strict` + `git diff --check`);hook 接线决定项必须在
-  polish 内给出明确结论(做/不做/何时)
-- [ ] design review:hook 接线决定项(本地 pre-commit:做/不做/何时)
-- [ ] verification-plan.yaml:unit(checker 规则)+ integration(对真实文档跑)
-- [ ] apply:checker 实现 + req-registry 前缀查询 + (决定项)pre-commit hook
-- [ ] apply:finalizer 串入新 checker(与既有四个 checker 并列)
-- [ ] npm test 全量绿(新 checker 对已修漂移应为零报错)
-- [ ] archive:finalizer + 本 plan 登记
+- [x] propose:内容漂移检查器范围(路径/CLI 名/exit code/gate 清单);hook 决定项
+  升级用户并拍板 = **不做 hook,只交付 checker**(远程 CI 沿用既有边界)
+- [x] polish:/polish-openspec-change,两轮;Pass 2 用原型扫描真实文档——24 个
+  "缺失"引用分诊:glob/锚点/能力路径跳过,`CHANGELOG.md`/`new-disposable-bundle`
+  确认为刻意否定引用 → checker 规则增加 negative/placement allowlist
+- [x] design review:hook 接线决定项闭环(不做;不写脚本、不设 core.hooksPath)
+- [x] verification-plan.yaml:unit(checker 规则 truth table)+ integration
+  (真实文档零漂移、`--check-prefix`、exit-code 静态扫描)
+- [x] apply:checker 实现(`openspec/governance/check-content-drift.mjs`,383 条
+  引用零报错;gate 覆盖修复:shared-gate-rules 补 `rerun-ready` 表行)+
+  req-registry 前缀查询(`--check-prefix <ABC>`)+ 无 hook
+- [x] apply:finalizer 串入新 checker(content_drift 检查,12 项检查全过)
+- [x] npm test 全量绿(governance unit 37、governance integration 35、
+  exit-code 33、md 340、finalizer 单测 9)
+- [x] archive:finalizer 全绿,归档为 `2026-08-16-add-doc-code-drift-guards`
 
 ### C4 — dedup-phase-closure-loading(deferred)
 

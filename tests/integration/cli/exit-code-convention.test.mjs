@@ -186,6 +186,30 @@ describe('CLI exit-code convention runtime representatives', () => {
     }
   });
 
+  it('static sweep: documented convention class matches the exit codes the source actually emits', () => {
+    for (const [cli, entry] of Object.entries(CLI_CONVENTION_INVENTORY)) {
+      const source = readFileSync(join(CLI_DIR, cli), 'utf8');
+      const literalExits = [...source.matchAll(/process\.exit\(\s*(\d+)\s*\)/g)].map((m) => Number(m[1]));
+      const dynamicExit = source.includes('exit_code');
+      const klass = entry.class;
+      const claimsCode2 = /code 2|tri-state|invocation/.test(klass) || klass.includes('2');
+      if (claimsCode2) {
+        assert.ok(
+          literalExits.includes(2) || dynamicExit,
+          `${cli} class '${klass}' documents code 2 but the source never exits 2 (literals ${JSON.stringify(literalExits)}, dynamic ${dynamicExit})`,
+        );
+      } else {
+        assert.ok(
+          !literalExits.includes(2),
+          `${cli} class '${klass}' documents binary/0-1 behavior but the source exits 2 literally`,
+        );
+      }
+      if (/always-0/.test(klass)) {
+        assert.ok(literalExits.every((code) => code === 0), `${cli} must be an always-0 exception`);
+      }
+    }
+  });
+
   it('shared gate helper emits code 0 for gate pass', () => {
     const result = runEmitGateResult(gateResult({ passed: true, routingKind: 'next' }));
     assert.equal(result.status, 0);

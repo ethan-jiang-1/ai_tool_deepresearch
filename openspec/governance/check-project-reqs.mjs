@@ -33,6 +33,7 @@ function parseCli() {
       options: {
         mode: { type: 'string' },
         change: { type: 'string' },
+        'check-prefix': { type: 'string' },
       },
       allowPositionals: true,
       strict: true,
@@ -49,10 +50,15 @@ function parseCli() {
   if (mode === 'archive' && (!change || !CHANGE_RE.test(change))) {
     usage('Archive mode requires a safe active --change value.');
   }
+  const checkPrefix = parsed.values['check-prefix'] ?? null;
+  if (checkPrefix !== null && (mode !== 'plan' || change !== undefined)) {
+    usage('--check-prefix is a standalone query and cannot be combined with --mode or --change.');
+  }
   return {
     root: parsed.positionals[0] ?? process.cwd(),
     mode,
     change: change ?? null,
+    checkPrefix,
   };
 }
 
@@ -307,7 +313,7 @@ function printReservationFailures(failures) {
   return true;
 }
 
-const { root, mode, change: selectedChange } = parseCli();
+const { root, mode, change: selectedChange, checkPrefix } = parseCli();
 const registryPath = join(root, 'openspec', 'governance', 'req-registry.yaml');
 const specsDir = join(root, 'openspec', 'specs');
 const changesDir = join(root, 'openspec', 'changes');
@@ -335,6 +341,22 @@ const retired = new Set(
   allEntries.filter(([, value]) => String(value).toUpperCase().includes('DEPRECATED')).map(([id]) => id),
 );
 const registered = new Set(allEntries.map(([id]) => id));
+if (checkPrefix) {
+  const prefix = checkPrefix.toUpperCase();
+  if (!PREFIX_RE.test(prefix)) usage(`--check-prefix must be a three-letter prefix (got ${checkPrefix}).`);
+  const mapping = registry.prefixes?.[prefix];
+  const ids = allEntries
+    .filter(([id]) => id.startsWith(`${prefix}-`))
+    .map(([id, value]) => ({ id, state: retired.has(id) ? 'retired' : 'alive' }));
+  if (mapping === undefined && ids.length === 0) {
+    console.error(`Unknown prefix: ${prefix}`);
+    process.exit(2);
+  }
+  console.log(`prefix ${prefix}:`);
+  console.log(`  mapping: ${mapping === undefined ? '(not live)' : mapping}`);
+  for (const { id, state } of ids) console.log(`  ${id}: ${state}`);
+  process.exit(0);
+}
 const metadata = prefixMetadata(registryText);
 const prefixFailures = validatePrefixTargets(registry.prefixes, metadata, specsDir);
 const prefixEntries = registryPrefixEntries(registry.prefixes, metadata);

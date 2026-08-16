@@ -1,0 +1,14 @@
+schema_version: semantic-closure/v1
+change: add-doc-code-drift-guards
+status: not_applicable
+reason: >-
+  This change adds governance tooling only: a deterministic content-drift
+  checker (prose path / CLI name / gate-summary coverage), a --check-prefix
+  query interface on check-project-reqs.mjs, a static extension of the
+  exit-code inventory regression, and finalizer wiring. None of these alter
+  any deterministic runtime fact, schema, state, projection, or executable
+  contract; the affected fact families cataloged in
+  openspec/governance/semantic-fact-families.yaml remain unchanged by this
+  change. The checker's verdicts are new deterministic observations about
+  existing facts (paths, CLI tools, gate definitions, exit-code literals),
+  not new facts themselves.

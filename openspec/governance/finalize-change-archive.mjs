@@ -46,6 +46,7 @@ const RootCodeSchema = z.enum([
   'capability_discovery_failed',
   'verification_routing_failed',
   'semantic_closure_failed',
+  'content_drift_failed',
   'native_archive_failed',
   'native_archive_invalid',
   'post_archive_mismatch',
@@ -75,6 +76,7 @@ const CheckSchema = z.object({
     'capability_discovery',
     'verification_routing',
     'semantic_closure',
+    'content_drift',
     'native_archive',
   ]),
   status: z.literal('passed'),
@@ -400,6 +402,17 @@ export async function finalizeChangeArchive({
       return makeBlocked(selectedChange, checks, 'semantic_closure_failed', summarizeProcess(semanticClosureCheck), 'openspec/governance/check-semantic-closure.mjs');
     }
     addCheck(checks, 'semantic_closure');
+
+    const contentDriftCheck = await runStep(
+      runCommand,
+      process.execPath,
+      [join(planningRoot, 'openspec/governance/check-content-drift.mjs'), planningRoot],
+      planningRoot,
+    );
+    if (contentDriftCheck.status !== 0) {
+      return makeBlocked(selectedChange, checks, 'content_drift_failed', summarizeProcess(contentDriftCheck), 'openspec/governance/check-content-drift.mjs');
+    }
+    addCheck(checks, 'content_drift');
 
     const nativeArchive = await runStep(runCommand, 'openspec', ['archive', selectedChange, '--json', '--skip-specs'], planningRoot);
     if (nativeArchive.status !== 0) {

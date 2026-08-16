@@ -87,6 +87,9 @@ function runner({ failAt, nativeOutput, statusOutput } = {}) {
       if (command === process.execPath && args[0].endsWith('check-semantic-closure.mjs')) {
         return failAt === 'semantic' ? { status: 1, stdout: '', stderr: 'semantic closure failure' } : { status: 0, stdout: 'ok', stderr: '' };
       }
+      if (command === process.execPath && args[0].endsWith('check-content-drift.mjs')) {
+        return failAt === 'content-drift' ? { status: 1, stdout: '', stderr: 'content drift failure' } : { status: 0, stdout: 'clean', stderr: '' };
+      }
       if (command === 'openspec' && args[0] === 'archive') {
         return {
           status: failAt === 'archive' ? 1 : 0,
@@ -315,6 +318,19 @@ describe('change feedback archive finalizer', () => {
     assert.match(semantic.calls.at(-1).args[0], /check-semantic-closure\.mjs$/);
     assert.deepEqual(semantic.calls.at(-1).args.slice(1), ['--change', CHANGE, '--mode', 'assets']);
     assert.equal(semantic.calls.some((call) => call.command === 'openspec' && call.args[0] === 'archive'), false);
+
+    const contentDrift = runner({ failAt: 'content-drift' });
+    const contentDriftResult = await finalizeChangeArchive({
+      change: CHANGE,
+      projectRoot: ROOT,
+      runCommand: contentDrift.run,
+      fsApi: fakeFs(completeTasks()),
+    });
+    assert.equal(contentDriftResult.root.code, 'content_drift_failed');
+    assert.equal(FinalizationResultSchema.safeParse(contentDriftResult).success, true);
+    assert.equal(contentDrift.calls.length, 9);
+    assert.match(contentDrift.calls.at(-1).args[0], /check-content-drift\.mjs$/);
+    assert.equal(contentDrift.calls.some((call) => call.command === 'openspec' && call.args[0] === 'archive'), false);
   });
 
   it('reports invalid native output without inventing archive success', async () => {
@@ -357,8 +373,8 @@ describe('change feedback archive finalizer', () => {
     assert.equal(result.outcome, 'archived');
     assert.equal(result.archive.path, ARCHIVE_PATH);
     assert.equal(result.archive.specs_updated, false);
-    assert.deepEqual(result.checks.map((check) => check.id).slice(-3), [
-      'verification_routing', 'semantic_closure', 'native_archive',
+    assert.deepEqual(result.checks.map((check) => check.id).slice(-4), [
+      'verification_routing', 'semantic_closure', 'content_drift', 'native_archive',
     ]);
     assert.equal(commands.calls.at(-1).args.join(' '), `archive ${CHANGE} --json --skip-specs`);
     assert.equal(FinalizationResultSchema.safeParse(result).success, true);

@@ -401,6 +401,24 @@ describe('project governance checks', () => {
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
+  it('--check-prefix queries the registry by prefix without running the full check', () => {
+    const tmpDir = mkdtempSync(join(TMP, 'dpt_rb_test_'));
+    try {
+      seedGovernanceFixture(tmpDir);
+      const found = spawnSync('node', [CHECK_REQS, tmpDir, '--check-prefix', 'ABC'], { encoding: 'utf-8' });
+      assert.equal(found.status, 0, found.stdout + found.stderr);
+      assert.match(found.stdout, /mapping: agent\/demo-capability/);
+      assert.match(found.stdout, /ABC-001: alive/);
+      const unknown = spawnSync('node', [CHECK_REQS, tmpDir, '--check-prefix', 'ZZZ'], { encoding: 'utf-8' });
+      assert.equal(unknown.status, 2, unknown.stdout + unknown.stderr);
+      assert.match(unknown.stderr, /Unknown prefix/);
+      const malformed = spawnSync('node', [CHECK_REQS, tmpDir, '--check-prefix', 'ab'], { encoding: 'utf-8' });
+      assert.equal(malformed.status, 2, malformed.stdout + malformed.stderr);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   });
 });
 
