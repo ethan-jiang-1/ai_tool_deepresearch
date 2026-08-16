@@ -90,6 +90,7 @@ const NextActionSchema = z.object({
   command: z.string().min(1).nullable().default(null),
   target_ref: z.string().min(1).nullable().default(null),
   operation_id: OperationIdSchema.nullable().default(null),
+  delivery_stage: z.enum(['delivery_pending', 'refinement']).optional(),
 }).strict();
 
 export const PostFinalRecoveryResultSchema = z.object({
@@ -336,7 +337,7 @@ function finalFacts(bundle) {
 function nextActionForStage(bundlePath, stage, operationId = null, owner = null) {
   if (stage === 'newer_final_entry_pending') return { kind: 'enter_phase', command: `node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle ${bundlePath} --node phases/phase-final.md`, target_ref: 'phases/phase-final.md', operation_id: operationId };
   if (stage === 'newer_final_loaded_pending_status') return { kind: 'advance_status', command: `node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle ${bundlePath} --to readiness_passed`, target_ref: 'readiness_passed', operation_id: operationId };
-  if (stage === 'newer_final_delivery_pending') return { kind: 'current_owner', command: null, target_ref: 'phases/phase-final.md', operation_id: operationId };
+  if (stage === 'newer_final_delivery_pending') return { kind: 'current_owner', command: null, target_ref: 'phases/phase-final.md', operation_id: operationId, delivery_stage: 'delivery_pending' };
   if (stage === 'pre_entry') return { kind: 'enter_phase', command: `node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle ${bundlePath} --node phases/phase-rerun.md`, target_ref: 'phases/phase-rerun.md', operation_id: operationId };
   if (stage === 'loaded_pending_status') return { kind: 'advance_status', command: `node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle ${bundlePath} --to hitl2_recorded`, target_ref: 'hitl2_recorded', operation_id: operationId };
   if (owner?.kind === 'current_owner') return { kind: owner.kind, command: null, target_ref: owner.target_ref, operation_id: operationId };

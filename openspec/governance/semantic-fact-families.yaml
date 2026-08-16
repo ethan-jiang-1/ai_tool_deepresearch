@@ -57,3 +57,9 @@ families:
       consistency-issue, and invocation/configuration-error results per the
       accepted cli-exit-code-conventions contract, and is that behavior aligned
       with its header and COMMANDS.md inventory entry?
+  - id: artifact.persistence-operation-contract
+    bounded_question: >-
+      Which parameters does each operate-artifact-persistence operation
+      (persist / persist-final-report / publish-final-report / sweep) accept,
+      and which workspace type does its recovery advice address, per the
+      accepted artifact-persistence-recovery contract?

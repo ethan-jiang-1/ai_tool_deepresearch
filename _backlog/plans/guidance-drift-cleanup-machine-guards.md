@@ -148,22 +148,35 @@ deferred。
   32/32 + command-contract-docs 16/16 + static-regression + reentry/persistence)
 - [x] archive:finalizer 全绿,归档为 `2026-08-16-repair-current-guidance-contract-drift`
 
-### C2 — make-work-unit-recovery-feedback-direct
+### C2 — make-work-unit-recovery-feedback-direct ✅ CLS-065
 
-- [ ] propose:语义反思 + 简洁准入两问(对照 simple-reliable-control 的
-  "quality control 比被校验的工作简单")
-- [ ] polish:/polish-openspec-change,至少两轮,直到 `ready for apply`
-  (`openspec validate --strict` + `git diff --check`);RA-M3/RA-M5 的
-  行为 vs 文档分诊必须在 polish 内闭环,决定不了的升级给用户
-- [ ] design review:反馈形状与向后兼容边界(旧字段保留/迁移路径)
-- [ ] verification-plan.yaml:unit(attempt_disposition 统一)+ integration
-  (五个反馈面形状一致)+ deterministic_e2e(恢复链)
-- [ ] apply:engine 五面统一 + repair_kind 对齐 + supersede 压平
-- [ ] RA-M3/RA-M5/RA-L2/RA-L3/RA-L4 候选复核(证据 §13):确认为行为修复的
-  纳入本 change,纯文档的移回 C1 范畴
-- [ ] apply:RUN.md 决策表 + 表↔代码锁定测试
-- [ ] npm test 相关子集绿(tests/engine/work-unit-*)
-- [ ] archive:finalizer + 本 plan 登记
+- [x] propose:语义反思 + 简洁准入两问(对照 simple-reliable-control 的
+  "quality control 比被校验的工作简单");RA-M5/RA-L3 两个方向决定已升级用户
+  并拍板(RA-M5=收窄 spec 保证到 post-0edb58310 + 记录迁移边界,不做 legacy
+  兼容;RA-L3=严格拒绝 `--feature` + 错误提示正确操作)
+- [x] polish:/polish-openspec-change,三轮(Pass 1 整体一致性 + Pass 2 risk-led:
+  枚举 engine 全域 repair_kind 12 值,CLI-动词规则收敛到 attempt-owned 恢复面,
+  避免全仓词汇重命名;Pass 3 全绿),直到 `ready for apply`
+- [x] design review:反馈形状与向后兼容边界(旧字段保留/迁移路径)
+- [x] verification-plan.yaml:unit(repair_kind↔CLI 动词映射、journal 枚举、
+  supersede 顶层、blocked 投影)+ integration(五面形状一致、`--feature` 拒绝、
+  reentry 投影)+ deterministic_e2e(恢复链:busy→wait→rerun、
+  suspect→recover-transaction→rerun、supersede→successor、late-submit)
+- [x] apply:engine 五面统一(submit/late-submit 拒绝面补 attempt_disposition;
+  dry-submit/inspect 已有;transaction 面补 next)+ repair_kind 对齐(连字符)+
+  supersede 压平(`tx_id`/`successor_queue_item_id` 顶层)
+- [x] RA-M3/RA-M5/RA-L2/RA-L3/RA-L4 候选复核:RA-M3(blocked 不得投影为
+  reachable)、RA-L2(sweep advice 按 workspace 区分)、RA-L4(delivery-pending vs
+  refinement 投影区分,`delivery_stage` 字段)确认为行为修复纳入;RA-M5 spec
+  收窄 + 诚实边界错误信息;RA-L5 不改
+- [x] apply:RUN.md 决策表(disposition → repair_kind → CLI 动词 → 重跑)+
+  表↔代码锁定测试(`tests/engine/work-unit-recovery-decision-table.test.mjs`,
+  3/3)
+- [x] npm test 相关子集绿(tests/engine/work-unit-* 202/202、CLI 子集 95/95、
+  e2e 65/65 含新增恢复链、md 340/340)
+- [x] archive:finalizer 全绿,归档为 `2026-08-16-make-work-unit-recovery-feedback-direct`;
+  semantic-closure consumers 角色复核(RUN.md/persist-artifact.md → overlap:
+  derived;verdict consumer 只留测试/CLI)
 
 ### C3 — add-doc-code-drift-guards
 

@@ -220,6 +220,12 @@ export const WorkUnitTransactionBusyProjectionSchema = z.object({
   missing_fact: z.null(),
   write_to: z.null(),
   rerun: z.string().trim().min(1),
+  next: z.object({
+    repair_kind: z.literal('wait'),
+    missing_fact: z.null(),
+    write_to: z.null(),
+    rerun: z.string().trim().min(1),
+  }).strict(),
 }).strict();
 
 export const WorkUnitTransactionSuspectProjectionSchema = z.object({
@@ -227,13 +233,19 @@ export const WorkUnitTransactionSuspectProjectionSchema = z.object({
   caller: WorkUnitTransactionCallerSchema,
   holder: SuspectTransactionHolderSchema.nullable(),
   targets_same_attempt: z.boolean().nullable(),
-  repair_kind: z.enum(['recover_transaction', 'missing_contract']),
+  repair_kind: z.enum(['recover-transaction', 'missing_contract']),
   missing_fact: z.string().trim().min(1),
   write_to: z.string().trim().min(1).nullable(),
   rerun: z.string().trim().min(1),
+  next: z.object({
+    repair_kind: z.enum(['recover-transaction', 'missing_contract']),
+    missing_fact: z.string().trim().min(1).nullable(),
+    write_to: z.string().trim().min(1).nullable(),
+    rerun: z.string().trim().min(1),
+  }).strict(),
 }).strict().superRefine((data, ctx) => {
-  if (data.repair_kind === 'recover_transaction' && data.write_to === null) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['write_to'], message: 'recover_transaction requires the named prior journal path' });
+  if (data.repair_kind === 'recover-transaction' && data.write_to === null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['write_to'], message: 'recover-transaction requires the named prior journal path' });
   }
   if (data.repair_kind === 'missing_contract' && data.write_to !== null) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['write_to'], message: 'missing_contract cannot name a mutation target' });

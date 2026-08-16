@@ -723,7 +723,7 @@ export function evaluateFinalEntryAdmission(bundlePath, handoff) {
     if (inventory.primary_series.classification !== 'empty') {
       return {
         ok: false,
-        reason: `first Final entry requires an empty primary inventory; found ${inventory.primary_series.classification}`,
+        reason: `first Final entry requires an empty primary inventory; found ${inventory.primary_series.classification}. A pre-0edb58310 Final load ({entry, plan, ts} only) is outside the readability guarantee and cannot be admitted as a route-bound Final load.`,
         inventory,
       };
     }

@@ -195,6 +195,29 @@ mutation, a `started` holder targeting the checked work ID additionally blocks b
 terminalization as same-attempt integrity, and a suspect transaction receives no wait, force-timeout,
 lock-deletion, or cleanup advice.
 
+All five work-unit feedback surfaces — formal submit rejection, late-submit rejection, transaction
+blocking, dry-submit, and inspect — SHALL emit the same `attempt_disposition` + `next` shape. The shape
+SHALL carry the disposition root (one of the closed disposition vocabulary), the authoritative owner
+surface, an exact legal operation or honest `missing_contract`, and the same checkpoint to rerun. A
+recovery result (including `recoverWorkUnitTransaction`) SHALL NOT be a dead end: it SHALL carry the same
+`next`/rerun coordinate for the checkpoint that produced the feedback, so the caller never has to
+reconstruct the original command.
+
+For attempt-owned work-unit recovery feedback (the five surfaces above), `repair_kind` values that name a
+work-unit recovery operation SHALL use the CLI-verb spelling (`recover-transaction`, `recover-declaration`,
+`supersede`, `wait`, `missing_contract`) or carry the exact command string; a feedback result SHALL NOT
+emit an underscore-spelled `repair_kind` that no CLI verb matches. This rule SHALL NOT rename the
+non-recovery `repair_kind` vocabularies owned by other surfaces (for example the gate-hint kinds
+`agent_action`, `engine_operation`, `user_decision`, `external_action`, `semantic_boundary`, and the
+topic-state/entry kinds), which keep their existing contract wording. A successful `supersede` result
+SHALL place `tx_id` and `successor_queue_item_id` at the top level of the result (not nested inside the
+relation object) and SHALL name the successor's ordinary actor-observed location, so the reader does not
+have to reconstruct the next claim/submit path from nested fields. The mapping from disposition
+root to `repair_kind` to CLI verb SHALL be stated in one test-locked decision table in `RUN.md`'s recovery
+section, with one row per attempt-owned recovery `repair_kind` the engine can emit. A deterministic
+regression SHALL assert that every such emitted `repair_kind` has a table row and a matching CLI verb (or
+exact command string).
+
 #### Scenario: contention feedback preserves the current attempt
 
 - **WHEN** a formal submit receives global transaction-lock contention with a schema-valid lock owner and
@@ -234,6 +257,30 @@ lock-deletion, or cleanup advice.
 - **WHEN** timeout-preflight finds a valid active v2 `started` journal whose target set contains the checked work ID
 - **THEN** feedback SHALL identify the same-attempt transaction fact and same timeout-preflight rerun
 - **AND** it SHALL not offer default timeout, forced timeout, journal recovery, or lock deletion
+
+#### Scenario: all five surfaces emit the unified disposition shape
+
+- **WHEN** a formal submit rejection, a late-submit rejection, a transaction block, a dry-submit, or an
+  inspect emits attempt-owned feedback for the same attempt
+- **THEN** each SHALL emit the same `attempt_disposition` + `next` shape with the same closed disposition
+  vocabulary, owner surface, exact operation or `missing_contract`, and same-checkpoint rerun
+- **AND** a deterministic regression SHALL assert shape consistency across the five surfaces
+
+#### Scenario: repair kind matches the CLI verb
+
+- **WHEN** an engine feedback emits a `repair_kind` naming a work-unit recovery operation
+- **THEN** the value SHALL match the CLI verb spelling (`recover-transaction` / `recover-declaration` /
+  `supersede`) or carry the exact command string
+- **AND** the RUN.md recovery decision table SHALL contain that `repair_kind` row with the matching CLI verb
+  and the checkpoint to rerun
+- **AND** the lock regression SHALL fail if an emitted `repair_kind` has no table row
+
+#### Scenario: recovery result is not a dead end
+
+- **WHEN** `operate-work-unit recover-transaction` or `recover-declaration` returns a successful or
+  idempotent result
+- **THEN** the result SHALL carry the same-checkpoint rerun coordinate
+- **AND** the caller SHALL not need to have preserved the original command from memory
 
 ### Requirement: Generic parse/validation failures SHALL name the exact contract fact
 

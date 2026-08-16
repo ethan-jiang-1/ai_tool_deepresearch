@@ -59,6 +59,8 @@ describe('work-unit attempt disposition', () => {
         reason: 'result drift',
       });
       assert.equal(corrected.ok, true);
+      assert.equal(corrected.tx_id, corrected.relation.tx_id, 'supersede result must expose tx_id at the top level');
+      assert.equal(corrected.successor_queue_item_id, corrected.relation.successor_queue_item_id, 'supersede result must expose successor_queue_item_id at the top level');
       const historical = inspectWorkUnits(bundleDir).attempt_disposition.find((entry) => entry.work_id === record.work_id);
       assert.equal(historical.coverage.disposition, 'historical');
       assert.equal(historical.coverage.current_lineage_leaf.queue_item_id, corrected.relation.successor_queue_item_id);

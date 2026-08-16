@@ -136,11 +136,13 @@ for the new handoff.
 The Final inventory admission SHALL apply only before the first bound load for
 the authorized handoff. An exact retry after that load already exists SHALL use
 the established route-bound witness and existing partial-entry behavior rather
-than reinterpret a report published after the load as premature. Bundles whose
-legal Final load predates this admission contract, including an already-entered
-single-legacy-primary bundle, SHALL remain readable through the accepted
-compatibility and reentry contracts; the new check SHALL not fabricate a
-historical baseline or require a replacement load.
+than reinterpret a report published after the load as premature. The readability guarantee SHALL cover Final loads bound by the four-field handoff
+binding (`handoff_source_attempt_index` / `gate` / `node` / `target_node`) introduced by
+commit `0edb58310` (harden-phase-handoff-witnessing) and later. A pre-`0edb58310`
+Final load carrying only the legacy three fields (`entry`, `plan`, `ts`) is outside this
+guarantee: such a bundle SHALL report the honest migration boundary rather than
+fabricate a historical baseline, pretend compatibility, or require a replacement
+load.
 
 `enter-phase --help` and `-h` SHALL return static invocation help with exit
 code `0` and no bundle, trace, status, or loader side effect. Its only non-help
@@ -223,7 +225,7 @@ closure.
 
 #### Scenario: Existing bound Final entry remains compatible
 
-- **WHEN** the authorized Final handoff already has its route-bound `load_complete`, including an already-entered legacy bundle or a partial current-node write retry
+- **WHEN** the authorized Final handoff already has its route-bound `load_complete`, including an already-entered post-`0edb58310` bundle or a partial current-node write retry
 - **THEN** the new inventory admission SHALL not retroactively reject that established entry or fabricate a historical baseline
 - **AND** existing compatibility, audit, and partial-entry recovery contracts SHALL remain responsible for subsequent interpretation
 
@@ -334,6 +336,7 @@ closure.
   `rb_status.json#/current_node`
 - **AND** it SHALL not emit a workflow, trace, or receipt event while attempting
   the action-core preflight
+
 
 ### Requirement: Advance status refuses unwitnessed or unpassed phase handoffs (CPT-004)
 

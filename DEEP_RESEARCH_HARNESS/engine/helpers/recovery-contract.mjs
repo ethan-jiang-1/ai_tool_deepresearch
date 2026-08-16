@@ -14,6 +14,7 @@ export const RecoveryActionSchema = z.object({
   node_ref: z.string().min(1).optional(),
   preconditions: z.array(z.string()).default([]),
   sanctioned: z.boolean().optional(),
+  delivery_stage: z.enum(['delivery_pending', 'refinement']).optional(),
 });
 
 export const CanonicalTopicFindingSchema = z.object({
@@ -90,12 +91,15 @@ export function assessStructuredRecoveryAction(bundlePath, action) {
   return { sanctioned_path_status: 'not_applicable', recommended_action: null, direct_blocker: 'No existing sanctioned deterministic repair contract applies to this surface.' };
 }
 
-function currentFinalOwnerAction() {
+function currentFinalOwnerAction(finalInventory = null, postFinalInspection = null) {
+  const deliveryPending = finalInventory?.classification === 'empty'
+    || postFinalInspection?.stage === 'newer_final_delivery_pending';
   return RecoveryActionSchema.parse({
     kind: 'current_owner',
     target_ref: 'phases/phase-final.md',
     preconditions: [],
     sanctioned: true,
+    delivery_stage: deliveryPending ? 'delivery_pending' : 'refinement',
   });
 }
 
@@ -136,6 +140,9 @@ function finalBoundaryProjection({ postFinalInspection, finalInventory, statusPo
     };
   }
 
+  if (postFinalInspection?.verdict === 'blocked') {
+    return { action: null, blocker: postFinalInspection.reason || postFinalInspection.reason_code || 'post-final recovery is blocked' };
+  }
   if (postFinalInspection?.reason_code === 'artifact_persistence_owner' && postFinalAction) {
     return { action: postFinalAction, blocker: null };
   }
@@ -145,7 +152,7 @@ function finalBoundaryProjection({ postFinalInspection, finalInventory, statusPo
   if (postFinalInspection && ['unchanged', 'recover_required'].includes(postFinalInspection.verdict) && postFinalAction) {
     return { action: postFinalAction, blocker: null };
   }
-  return { action: currentFinalOwnerAction(), blocker: null };
+  return { action: currentFinalOwnerAction(finalInventory, postFinalInspection), blocker: null };
 }
 
 export function buildRecoverySummary({ canonicalFindings = [], blockers = [], target = null, statusPosition = null, finalInventory = null, postFinalInspection = null } = {}) {
@@ -155,7 +162,7 @@ export function buildRecoverySummary({ canonicalFindings = [], blockers = [], ta
   for (const finding of canonicalFindings.filter((item) => item.classification === 'blocking')) {
     const terminalPositionMismatch = statusPosition?.current_node === 'phases/phase-final.md'
       && target?.phase_key !== 'final';
-    const postFinalReachable = Boolean(postFinalInspection && postFinalAction);
+    const postFinalReachable = Boolean(postFinalInspection && postFinalInspection.verdict !== 'blocked' && postFinalAction);
     roots.push({
       id: `recovery:${finding.id}`,
       source_kind: 'canonical_topic',
@@ -179,7 +186,7 @@ export function buildRecoverySummary({ canonicalFindings = [], blockers = [], ta
     });
   });
   if (finalProjection && canonicalFindings.every((item) => item.classification !== 'blocking')) {
-    const reachable = Boolean(postFinalAction);
+    const reachable = Boolean(postFinalInspection?.verdict !== 'blocked' && postFinalAction);
     roots.push({
       id: 'recovery:post-final-recovery',
       source_kind: 'post_final_recovery',

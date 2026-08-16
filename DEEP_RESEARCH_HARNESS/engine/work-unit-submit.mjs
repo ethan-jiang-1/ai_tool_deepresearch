@@ -428,6 +428,10 @@ function lateSubmitRejection(bundleDir, {
     reason,
     reason_code: reasonCode,
     candidate_result_path: resultPath ? path.resolve(resultPath) : null,
+    attempt_disposition: record ? projectWorkUnitAttemptDisposition(bundleDir, record, {
+      operation: 'late_submit_work_unit',
+      rerun: drySubmitRerun(bundleDir, record.work_id, resultPath),
+    }) : null,
     inspect: [reason],
     advice: record?.status === 'claimed'
       ? 'Use normal operate-work-unit submit for claimed attempts; late-submit is only for audited timed_out recovery.'
@@ -1016,6 +1020,10 @@ function recordSubmitRejection(bundleDir, {
       queue_item_id: record.queue_item_id,
       status: record.status,
       last_submit_rejection: rejected,
+      attempt_disposition: projectWorkUnitAttemptDisposition(bundleDir, record, {
+        operation: 'submit_work_unit',
+        rerun: drySubmitRerun(bundleDir, record.work_id, resultPath),
+      }),
       inspect: [rejected.reason],
       advice: 'Terminal work-unit attempts cannot be submitted; follow the reported owner boundary rather than editing authority files.',
       ...guidance,
@@ -1031,6 +1039,10 @@ function recordSubmitRejection(bundleDir, {
       status: record.status,
       reason,
       reason_code: reasonCodeForSubmit(reason),
+      attempt_disposition: projectWorkUnitAttemptDisposition(bundleDir, record, {
+        operation: 'submit_work_unit',
+        rerun: drySubmitRerun(bundleDir, record.work_id, resultPath),
+      }),
       inspect: [reason],
       advice: 'Submit is only accepted for claimed attempts; use the reported owner boundary and re-run dry-submit when the attempt is claim-eligible.',
       ...guidance,
@@ -1077,6 +1089,10 @@ function recordSubmitRejection(bundleDir, {
       queue_item_id: record.queue_item_id,
       status: 'claimed',
       last_submit_rejection: rejection,
+      attempt_disposition: projectWorkUnitAttemptDisposition(bundleDir, record, {
+        operation: 'submit_work_unit',
+        rerun: drySubmitRerun(bundleDir, record.work_id, resultPath),
+      }),
       inspect: [reason],
       advice: 'Repair the same candidate through the reported coordinates and rerun the exact dry-submit checkpoint before formal submit.',
       index: savedIndex,

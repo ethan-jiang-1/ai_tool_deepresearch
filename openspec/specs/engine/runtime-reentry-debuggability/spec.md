@@ -403,6 +403,13 @@ SHALL be:
 7. otherwise -> current Final owner, using admitted empty inventory for the bundle's first
    delivery or the latest committed primary report for refinement.
 
+
+A post-final inspection whose verdict is `blocked` SHALL project that root as blocked and SHALL NOT fall
+through to a `blocker: null` reachable current-owner action; a blocked root is never `reachable`. The
+summary SHALL also distinguish delivery-pending from refinement in its projected Final action:
+zero-append (admitted empty inventory or a newer lineage with no appended canonical version) SHALL project
+as immediate delivery, while a proven-append (latest committed report bound to the current lineage) SHALL
+project as latest-report refinement; the two SHALL NOT be byte-identical projections.
 This ordering SHALL follow `research/post-final-recovery` (POF-001), which owns
 accepted C5 workspace/lineage precedence over artifact-persistence ownership;
 this list mirrors that Source of Record and SHALL NOT re-decide the precedence
@@ -524,10 +531,27 @@ postconditions SHALL continue to check the actual current source-gate window.
 - **WHEN** invocation cannot load a bundle or normalize target and exits `2`
 - **THEN** it MAY omit recovery while preserving structured invocation feedback
 
+
+#### Scenario: blocked inspection is not projected as reachable
+
+- **WHEN** a post-final inspection returns `verdict: blocked` for a root
+- **THEN** the summary SHALL project that root as blocked
+- **AND** it SHALL NOT project a `reachable` current-owner action with `blocker: null`
+
+#### Scenario: zero-append and proven-append projections are distinguishable
+
+- **WHEN** a newer Final lineage has no appended canonical version (delivery-pending)
+- **THEN** the summary SHALL project immediate delivery as the Final action
+- **AND** when the current lineage has a latest committed report bound by a proven append, the summary SHALL
+  project latest-report refinement instead
+- **AND** the two projections SHALL NOT be byte-identical
+
+#### Scenario: Recovery summary is read-only
 #### Scenario: Recovery summary is read-only
 
 - **WHEN** `check-reentry` produces a summary
 - **THEN** recursive before/after inspection SHALL show no mutation to runtime authority or content
+
 
 ### Requirement: Reentry SHALL consume canonical topic-state inspection without mutation
 

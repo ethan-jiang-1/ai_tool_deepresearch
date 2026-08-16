@@ -748,7 +748,7 @@ export function evaluateWorkUnitSupersessionEligibility(bundleDir, {
       if (recovery.eligible && recovery.declaration_present === false) {
         return failure(bundleDir, record, 'declaration_recovery_required',
           `Exact declaration recovery is the nearest legal action for ${record.work_id}.`, {
-            repairKind: 'recover_declaration',
+            repairKind: 'recover-declaration',
             writeTo: 'rb_output_declarations.jsonl',
             rerun: recovery.operation,
             observedRoots: observed,
@@ -878,6 +878,8 @@ export function supersedeWorkUnitAttempt(bundleDir, {
       idempotent: false,
       work_id: current.work_id,
       queue_item_id: current.queue_item_id,
+      tx_id: relation.tx_id,
+      successor_queue_item_id: relation.successor_queue_item_id,
       relation,
       successor: lineage.leaf,
       lineage,

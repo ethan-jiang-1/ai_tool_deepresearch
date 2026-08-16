@@ -1988,6 +1988,14 @@ attempt's owner or progress. An unpaired, unreadable, target-mismatched, proof-i
 malformed legacy, or `suspect` lock/journal SHALL return `suspect_transaction`, not `busy`, and SHALL not make a liveness
 inference. Age SHALL not classify a transaction as stale or dead.
 
+
+The transaction helper SHALL expose `journal_disposition` as a bounded Zod enum with exactly the values
+`started` | `committed` | `rolled_back` | `suspect` | `legacy_failed` | `unknown`; a bare
+unvalidated string SHALL NOT be projected as a structured disposition. Formal submit rejection,
+late-submit rejection, and transaction-blocking feedback SHALL emit the unified `attempt_disposition` +
+`next` shape defined by `engine/check-inspect-feedback` (CHI-004) — same closed disposition vocabulary,
+owner surface, exact operation or `missing_contract`, and same-checkpoint rerun — instead of bespoke
+fields.
 Each new journal SHALL use `schema_version: work-unit.transaction.v2`; v1 journals SHALL NOT be interpreted
 as a current transaction protocol or gain v2 recovery semantics by framework-version inference. The raw
 transaction-directory safety scan SHALL still identify a journal carrying the v1 marker: an uncommitted v1
@@ -2128,6 +2136,7 @@ manual deletion advice is authorized by this requirement.
   transaction blocks the command
 - **THEN** it SHALL return the existing settled disposition without mutation
 - **AND** it SHALL not create recovery authority, rewrite audit history, or reinterpret `committed` as rollback
+
 
 ### Requirement: Submitted correction SHALL use audited supersession and one fresh successor
 

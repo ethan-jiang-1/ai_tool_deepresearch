@@ -88,6 +88,10 @@ if (!values.bundle) {
 
 try {
   if (operation === 'persist' || operation === 'persist-final-report') {
+    if (values.feature) {
+      emit(invocationError(operation, '`--feature` is only accepted by `publish-final-report`; this operation does not accept it (did you mean publish-final-report?)'));
+      process.exit(2);
+    }
     if (!values.source || !values.target) {
       emit(invocationError(operation, '--source and --target are required for persistence operations'));
       process.exit(2);

@@ -110,7 +110,7 @@ export function evaluateWorkUnitSubmitIntegrity(bundleDir, {
       roots.push(root(
         error.reason_code || 'submitted_integrity_invalid',
         error.message || String(error),
-        error.reason_code === 'submitted_declaration_missing' ? 'recover_declaration' : 'missing_contract',
+        error.reason_code === 'submitted_declaration_missing' ? 'recover-declaration' : 'missing_contract',
         error.reason_code === 'submitted_declaration_missing' ? 'rb_output_declarations.jsonl' : null,
         rerun,
       ));

@@ -1,7 +1,8 @@
 // @impl DEW-022, DEW-024, AGQ-026, WPG-016, CHI-004
 
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
@@ -10,15 +11,18 @@ import {
   closeWorkUnitAttempt,
   evaluateNormalizedSubmittedWorkUnitLedger,
   evaluateWorkUnitSupersessionEligibility,
+  inspectWorkUnitTransaction,
   inspectWorkUnits,
   lateSubmitWorkUnit,
   loadWorkUnitIndex,
   readWorkUnitLedgerRows,
+  recoverWorkUnitTransaction,
   replaceWorkUnitAttempt,
   saveWorkUnitIndex,
   resolveWorkUnitSupersessionLineage,
   submitWorkUnit,
   supersedeWorkUnitAttempt,
+  transactionLockOwnerPath,
 } from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-core.mjs';
 import { loadQueue, queueItemSnapshotHash } from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import { enqueue, saveQueue } from '../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
@@ -34,6 +38,10 @@ import {
   cleanupWorkUnitBundle,
   tempWorkUnitBundle,
 } from '../engine/work-unit-test-helpers.mjs';
+import {
+  WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
+  WorkUnitTransactionV2JournalSchema,
+} from '../../DEEP_RESEARCH_HARNESS/schema/contracts/work-unit-transaction.mjs';
 
 function writeAttemptCandidate(bundleDir, record, templateResult, summary) {
   const runtimeReceipt = {
@@ -215,7 +223,7 @@ describe('submitted work-unit supersession', () => {
       const recoverFirst = evaluateWorkUnitSupersessionEligibility(bundleDir, { work_id: record.work_id });
       assert.equal(recoverFirst.eligible, false);
       assert.equal(recoverFirst.reason_code, 'declaration_recovery_required');
-      assert.equal(recoverFirst.repair_kind, 'recover_declaration');
+      assert.equal(recoverFirst.repair_kind, 'recover-declaration');
 
       const resultPath = path.join(bundleDir, record.paths.result_ref);
       const drifted = JSON.parse(readFileSync(resultPath, 'utf8'));
@@ -1088,6 +1096,113 @@ describe('submitted work-unit supersession', () => {
       });
       assert.equal(replay.ok, false);
       assert.equal(replay.reason_code, 'supersession_integrity_invalid');
+    } finally {
+      cleanupWorkUnitBundle(bundleDir);
+    }
+  });
+});
+
+
+describe('work-unit recovery chain feedback (CHI-004)', () => {
+  it('busy contention feedback carries wait + rerun and releases to a normal submit', () => {
+    const bundleDir = tempWorkUnitBundle('wu-chain-busy-');
+    try {
+      const { record } = claimAndSubmitWorkUnit(bundleDir);
+      // Hold the global transaction pair like a live contender: valid lock owner + started v2 journal.
+      const txId = `tx-${Date.now()}`;
+      const journalRef = `_work_units/_transactions/${txId}.json`;
+      const target = 'authority.json';
+      writeFileSync(path.join(bundleDir, target), 'before\n');
+      const beforeSha256 = createHash('sha256').update('before\n').digest('hex');
+      const started = WorkUnitTransactionV2JournalSchema.parse({
+        schema_version: WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
+        tx_id: txId,
+        operation: 'submit_work_unit',
+        journal_ref: journalRef,
+        target_work_ids: [record.work_id],
+        target_queue_item_ids: [record.queue_item_id],
+        mutation_manifest: { targets: [{ path: target, before_exists: true, before_sha256: beforeSha256 }] },
+        status: 'started',
+        started_at: new Date().toISOString(),
+        settled_at: null,
+        error: null,
+      });
+      mkdirSync(path.dirname(path.join(bundleDir, journalRef)), { recursive: true });
+      writeFileSync(path.join(bundleDir, journalRef), `${JSON.stringify(started, null, 2)}\n`);
+      mkdirSync(path.dirname(transactionLockOwnerPath(bundleDir)), { recursive: true });
+      writeFileSync(transactionLockOwnerPath(bundleDir), JSON.stringify({
+        schema_version: 'work-unit.transaction-lock.v1',
+        tx_id: txId,
+        operation: 'submit_work_unit',
+        journal_ref: journalRef,
+        target_work_ids: [record.work_id],
+        target_queue_item_ids: [record.queue_item_id],
+        acquired_at: new Date().toISOString(),
+      }));
+
+      const busy = inspectWorkUnitTransaction(bundleDir, {
+        operation: 'submit_work_unit',
+        targetWorkIds: [record.work_id],
+        targetQueueItemIds: [record.queue_item_id],
+      });
+      assert.equal(busy.disposition, 'busy');
+      assert.equal(busy.repair_kind, 'wait');
+      assert.equal(busy.targets_same_attempt, true);
+      assert.ok(busy.next, 'busy projection must carry next');
+      assert.equal(busy.next.repair_kind, 'wait');
+      assert.ok(busy.next.rerun && busy.next.rerun.length > 0, 'busy next must carry the rerun coordinate');
+
+      // Release the pair: rerunning the same checkpoint now observes no transaction.
+      rmSync(path.join(bundleDir, journalRef));
+      rmSync(path.dirname(transactionLockOwnerPath(bundleDir)), { recursive: true, force: true });
+      const released = inspectWorkUnitTransaction(bundleDir, {
+        operation: 'submit_work_unit',
+        targetWorkIds: [record.work_id],
+        targetQueueItemIds: [record.queue_item_id],
+      });
+      assert.equal(released.disposition, 'none');
+    } finally {
+      cleanupWorkUnitBundle(bundleDir);
+    }
+  });
+
+  it('suspect transaction recovery returns next and replays idempotently', () => {
+    const bundleDir = tempWorkUnitBundle('wu-chain-suspect-');
+    try {
+      const { record } = claimAndSubmitWorkUnit(bundleDir);
+      const txId = `tx-${Date.now()}`;
+      const journalRef = `_work_units/_transactions/${txId}.json`;
+      const target = 'authority.json';
+      writeFileSync(path.join(bundleDir, target), 'before\n');
+      const beforeSha256 = createHash('sha256').update('before\n').digest('hex');
+      const started = WorkUnitTransactionV2JournalSchema.parse({
+        schema_version: WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
+        tx_id: txId,
+        operation: 'submit_work_unit',
+        journal_ref: journalRef,
+        target_work_ids: [record.work_id],
+        target_queue_item_ids: [record.queue_item_id],
+        mutation_manifest: { targets: [{ path: target, before_exists: true, before_sha256: beforeSha256 }] },
+        status: 'started',
+        started_at: new Date().toISOString(),
+        settled_at: null,
+        error: null,
+      });
+      mkdirSync(path.dirname(path.join(bundleDir, journalRef)), { recursive: true });
+      writeFileSync(path.join(bundleDir, journalRef), `${JSON.stringify(started, null, 2)}\n`);
+
+      const recovered = recoverWorkUnitTransaction(bundleDir, { tx_id: txId });
+      assert.equal(recovered.ok, true);
+      assert.equal(recovered.disposition, 'rolled_back');
+      assert.ok(recovered.next, 'recover result must carry next (not a dead end)');
+      assert.equal(recovered.next.repair_kind, 'recover-transaction');
+      assert.ok(recovered.next.rerun && recovered.next.rerun.includes('recover-transaction'), 'recover next must name the same recovery checkpoint');
+
+      const replay = recoverWorkUnitTransaction(bundleDir, { tx_id: txId });
+      assert.equal(replay.ok, true);
+      assert.equal(replay.idempotent, true);
+      assert.ok(replay.next, 'idempotent replay must also carry next');
+      assert.equal(replay.next.repair_kind, 'recover-transaction');
     } finally {
       cleanupWorkUnitBundle(bundleDir);
     }

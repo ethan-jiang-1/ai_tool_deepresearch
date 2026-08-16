@@ -1,0 +1,189 @@
+schema_version: verification-routing/v1
+change: make-work-unit-recovery-feedback-direct
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      repair_kind-to-CLI-verb mapping, journal_disposition enum bounds,
+      supersede top-level projection consistency, and blocked-projection
+      decisions are focused deterministic truth tables over direct facts in
+      tests/engine/.
+  integration:
+    status: selected
+    rationale: >-
+      Five-surface feedback shape consistency, --feature rejection, and the
+      RUN.md decision-table lock are cross-file/CLI deterministic facts
+      verified against real modules and the real CLI without network or Agent
+      execution.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      The recovery chain (busy→wait→rerun, suspect→recover-transaction→rerun,
+      supersede→successor claim/submit, late-submit) must be driven end to end
+      through production CLIs in a temporary bundle to prove feedback is never
+      a dead end.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      No Agent behavior change: the feedback shape, decision table, and
+      projections are Engine deterministic contracts locked by JS-led tests;
+      no claim about real Agent behavior is made.
+claims:
+  - id: repair-kind-cli-verb-mapping-lock
+    statement: >-
+      CHI-004: every attempt-owned recovery repair_kind the engine can emit
+      (recover-transaction / recover-declaration / supersede / wait /
+      missing_contract) uses CLI-verb spelling or carries the exact command
+      string, and the RUN.md recovery decision table has a row for each with a
+      matching CLI verb and same-checkpoint rerun.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-recovery-decision-table.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: journal-disposition-bounded-enum
+    statement: >-
+      DEW-020: journal_disposition is validated as the bounded Zod enum
+      started | committed | rolled_back | suspect | legacy_failed | unknown;
+      a bare unvalidated string is not projected as a structured disposition.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/contracts/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: supersede-top-level-projection
+    statement: >-
+      CHI-004: a successful supersede result exposes tx_id and
+      successor_queue_item_id at the top level and names the successor's
+      ordinary location, while the nested relation fields remain readable.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-attempt-disposition.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: blocked-projection-is-blocked
+    statement: >-
+      RRD-008: a post-final inspection with verdict blocked projects its root
+      as blocked and never as reachable with a null blocker; delivery-pending
+      and refinement Final projections are distinguishable.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/recovery-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: five-surface-shape-consistency
+    statement: >-
+      CHI-004/DEW-020: formal submit rejection, late-submit rejection,
+      transaction blocking, dry-submit, and inspect emit the same
+      attempt_disposition + next shape with the same closed disposition
+      vocabulary, owner surface, exact operation or missing_contract, and
+      same-checkpoint rerun.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: feature-scope-rejection
+    statement: >-
+      ARP-004: persist and persist-final-report reject --feature as an invalid
+      invocation (exit 2) with an error naming publish-final-report as the
+      operation that accepts it.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/artifact-persistence.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: reentry-projection-blocked-and-distinct
+    statement: >-
+      RRD-008: check-reentry projects a blocked post-final root as blocked
+      (never reachable with a null blocker), and delivery-pending versus
+      refinement Final projections are distinguishable in the summary.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-reentry.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: sweep-advice-workspace-aware
+    statement: >-
+      ARP-002: sweep operation_not_prepared advice is workspace-aware — a
+      primary-publication workspace is never advised to retry generic persist,
+      while a non-primary workspace may be.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/artifact-persistence.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: recovery-chain-e2e
+    statement: >-
+      CHI-004: in a temporary bundle, the production recovery chain
+      (busy→wait→rerun, suspect→recover-transaction→rerun,
+      supersede→successor claim/submit, late-submit) completes with each
+      feedback carrying the next rerun coordinate.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

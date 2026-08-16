@@ -66,6 +66,7 @@ describe('recovery contract', () => {
       target_ref: 'phases/phase-final.md',
       preconditions: [],
       sanctioned: true,
+      delivery_stage: 'refinement',
     });
   });
 

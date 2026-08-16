@@ -472,12 +472,25 @@ describe('work-unit transaction recovery schemas', () => {
       caller: caller(),
       holder: { ...holder(), journal_disposition: 'suspect' },
       targets_same_attempt: true,
-      repair_kind: 'recover_transaction',
+      repair_kind: 'recover-transaction',
       missing_fact: 'the unlocked journal needs exact before-image reconciliation',
       write_to: `_work_units/_transactions/${TX_ID}.json`,
       rerun: `operate-work-unit recover-transaction /tmp/bundle --tx-id ${TX_ID}`,
+      next: {
+        repair_kind: 'recover-transaction',
+        missing_fact: 'the unlocked journal needs exact before-image reconciliation',
+        write_to: `_work_units/_transactions/${TX_ID}.json`,
+        rerun: `operate-work-unit recover-transaction /tmp/bundle --tx-id ${TX_ID}`,
+      },
     };
-    for (const projection of [none, busy, suspect]) {
+    const busyWithNext = { ...busy, next: { ...busy } };
+    busyWithNext.next = {
+      repair_kind: 'wait',
+      missing_fact: null,
+      write_to: null,
+      rerun: busy.rerun,
+    };
+    for (const projection of [none, busyWithNext, suspect]) {
       assert.deepEqual(WorkUnitTransactionProjectionSchema.parse(projection), projection);
     }
     for (const invalid of [

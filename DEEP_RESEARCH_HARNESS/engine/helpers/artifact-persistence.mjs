@@ -1022,6 +1022,9 @@ function inspectSweepWorkspace({ bundleReal, bundleReaderPath, persistenceRoot, 
   }
 
   if (operation.state === 'preparing') {
+    const retryAdvice = primaryPublication
+      ? `Inspect and remove ${relativeWorkspace(bundleReal, workspacePath)}, then retry the recorded primary publication from retained staging (generic persist is not used for the primary report), then rerun sweep.`
+      : `Inspect and remove ${relativeWorkspace(bundleReal, workspacePath)}, retry persist from ${operation.source_path} to ${operation.target}, then rerun sweep.`;
     return blockedSweepEntry({
       bundleReal,
       workspacePath,
@@ -1030,7 +1033,7 @@ function inspectSweepWorkspace({ bundleReal, bundleReaderPath, persistenceRoot, 
       sourcePath: operation.source_path,
       reasonCode: 'operation_not_prepared',
       reason: 'Operation was accepted but payload preparation did not complete.',
-      recommendedAction: `Inspect and remove ${relativeWorkspace(bundleReal, workspacePath)}, retry persist from ${operation.source_path} to ${operation.target}, then rerun sweep.`,
+      recommendedAction: retryAdvice,
     });
   }
 

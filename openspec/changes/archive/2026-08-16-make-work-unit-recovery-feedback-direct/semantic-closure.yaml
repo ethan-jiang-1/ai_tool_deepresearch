@@ -1,0 +1,150 @@
+schema_version: semantic-closure/v1
+change: make-work-unit-recovery-feedback-direct
+status: affected
+catalog_additions: []
+affected:
+  - family: work-unit.transaction-mutation-integrity
+    fact: >-
+      Work-unit transaction feedback exposes journal_disposition as a bounded
+      Zod enum (started | committed | rolled_back | suspect | legacy_failed |
+      unknown), busy/suspect roots follow the existing v2 lock/journal
+      authority, and recover-transaction/recover-declaration results carry a
+      next/rerun coordinate instead of ending the recovery loop.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs
+      - openspec/specs/agent/delegated-work-units/spec.md
+      - openspec/specs/engine/check-inspect-feedback/spec.md
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs
+    overlap:
+      - coordinate: openspec/specs/agent/delegated-work-units/spec.md
+        relation: authoritative
+        detail: >-
+          DEW-020 owns transaction journal disposition, busy/suspect roots,
+          timeout-preflight, and recover-transaction semantics; this change
+          bounds the disposition enum and unifies the feedback shape.
+      - coordinate: DEEP_RESEARCH_HARNESS/RUN.md
+        relation: derived
+        detail: >-
+          RUN.md projects the recovery decision table to the Agent; it does
+          not consume or decide the transaction verdict.
+      - coordinate: openspec/specs/engine/check-inspect-feedback/spec.md
+        relation: authoritative
+        detail: >-
+          CHI-004 owns attempt-recovery feedback shape, repair_kind spelling,
+          and the same-checkpoint rerun contract.
+      - coordinate: DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs
+        relation: derived
+        detail: >-
+          The CLI projects transaction feedback to the Agent without deciding
+          the disposition or recovery legality.
+    verification:
+      truth_table: tests/schema/contracts/work-unit-attempt-recovery.test.mjs
+      cross_surface: tests/integration/cli/operate-work-unit.test.mjs
+  - family: work-unit.submission-ledger-and-supersession
+    fact: >-
+      repair_kind values emitted for work-unit recovery use CLI-verb spelling
+      (recover-transaction / recover-declaration / supersede / wait /
+      missing_contract) and feedback carries the exact command string; a
+      successful supersede result exposes tx_id and successor_queue_item_id at
+      the top level while preserving the nested relation fields.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs
+      - openspec/specs/agent/delegated-work-units/spec.md
+      - openspec/specs/engine/check-inspect-feedback/spec.md
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs
+    overlap:
+      - coordinate: openspec/specs/engine/check-inspect-feedback/spec.md
+        relation: authoritative
+        detail: >-
+          CHI-004 owns the repair_kind-to-CLI-verb mapping and the supersede
+          result shape (top-level tx_id / successor_queue_item_id).
+      - coordinate: openspec/specs/agent/delegated-work-units/spec.md
+        relation: authoritative
+        detail: >-
+          DEW-021 owns supersession eligibility and the immutable relation;
+          this change only flattens the result projection.
+      - coordinate: DEEP_RESEARCH_HARNESS/RUN.md
+        relation: derived
+        detail: >-
+          RUN.md recovery decision table states the disposition-to-verb map
+          for the Agent without deciding recovery legality.
+    verification:
+      truth_table: tests/engine/work-unit-attempt-disposition.test.mjs
+      cross_surface: tests/integration/cli/operate-work-unit.test.mjs
+  - family: lifecycle.gate-status-trace-handoff
+    fact: >-
+      A post-final inspection with verdict blocked projects its root as
+      blocked and never as reachable with a null blocker; delivery-pending
+      (zero-append) and refinement (proven-append) Final projections are
+      distinguishable in the reentry summary.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/recovery-contract.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/recovery-contract.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs
+      - openspec/specs/engine/runtime-reentry-debuggability/spec.md
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs
+    overlap:
+      - coordinate: openspec/specs/engine/runtime-reentry-debuggability/spec.md
+        relation: authoritative
+        detail: >-
+          RRD-008 owns incident-shaped owner precedence and the clean Final
+          current-owner projection; this change closes the blocked-falls-
+          through-to-reachable defect and distinguishes delivery from
+          refinement.
+      - coordinate: openspec/specs/research/post-final-recovery/spec.md
+        relation: authoritative
+        detail: >-
+          POF-001 owns accepted C5 workspace/lineage precedence; the
+          projection mirrors it without re-deciding ownership.
+      - coordinate: DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs
+        relation: derived
+        detail: >-
+          The CLI renders the summary without establishing owner facts.
+    verification:
+      truth_table: tests/engine/helpers/recovery-contract.test.mjs
+      cross_surface: tests/integration/cli/check-reentry.test.mjs
+  - family: artifact.persistence-operation-contract
+    fact: >-
+      --feature is accepted only by publish-final-report; persist and
+      persist-final-report reject it as an invalid invocation (exit 2) with an
+      error naming the correct operation. Sweep operation_not_prepared advice
+      is workspace-aware: a primary-publication workspace is never advised to
+      retry generic persist; non-primary workspaces may be.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs
+      - openspec/specs/bundle/artifact-persistence-recovery/spec.md
+    consumers:
+      - tests/integration/cli/artifact-persistence.test.mjs
+    overlap:
+      - coordinate: openspec/specs/bundle/artifact-persistence-recovery/spec.md
+        relation: authoritative
+        detail: >-
+          ARP-004 owns publish-final-report's --feature scope; ARP-002 owns
+          sweep verdicts and recovery advice; this change strictifies the
+          invocation contract and the advice.
+      - coordinate: DEEP_RESEARCH_HARNESS/command_playbook/persist-artifact.md
+        relation: derived
+        detail: >-
+          The playbook projects the recovery advice to the Agent; it does not
+          consume or decide the persistence verdict.
+      - coordinate: DEEP_RESEARCH_HARNESS/COMMANDS.md
+        relation: derived
+        detail: >-
+          The command index documents the operations without deciding
+          invocation legality.
+    verification:
+      truth_table: tests/integration/cli/artifact-persistence.test.mjs
+      cross_surface: tests/engine/helpers/artifact-persistence.test.mjs
