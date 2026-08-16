@@ -142,21 +142,21 @@ engine-scoped change,且须先重验 `shared-silent-execution.md:96` 与
 
 ### C2 — reduce-mid-run-context-burden
 
-- [ ] propose:三分类执行细则 + 目标文件面 + 立法 delta(吸收 §1.4 种子数据与
-  审计 §A.3/§A.4 的逐条对照;manifest.shared 漂移的方向决定)
-- [ ] polish(强制,propose 后**必须**立即跟上,不得跳过、不得直接 apply):
+- [x] propose:三分类执行细则 + 目标文件面 + 立法 delta(吸收 §1.4 种子数据与
+  审计 §A.3/§A.4 的逐条对照;manifest.shared 漂移方向 = 移除,已由 propose 证据决定)
+- [x] polish(强制,propose 后**必须**立即跟上,不得跳过、不得直接 apply):
   /polish-openspec-change 至少两轮,直到 `ready for apply`
   (`openspec validate --strict` + `git diff --check` 通过);polish 内闭环:
   删除门槛(每条删除附可验证的机器检查名或过时证据)、hitl1/hitl2 requires
   前置的落地顺序;未闭环或 `not ready` 不得进入 apply
-- [ ] verification-plan.yaml:unit/integration 覆盖"删后规则仍被机器强制"
+- [x] verification-plan.yaml:unit/integration 覆盖"删后规则仍被机器强制"
   (每删一条对应一个 negative 断言)+ 新增 consistency 检查类测试
-- [ ] apply:先补 hitl1/hitl2 的 `shared-anti-cheating-rules.md` requires
-- [ ] apply:逐条三分类 → 删(2)类 → 删/指针化(1)类 → 压缩(3)类;每删一条
+- [x] apply:先补 hitl1/hitl2 的 `shared-anti-cheating-rules.md` requires
+- [x] apply:逐条三分类 → 删(2)类 → 删/指针化(1)类 → 压缩(3)类;每删一条
   记录机器检查名;结构性缺陷(双 ### 13/孤儿 §12)修复
-- [ ] apply:立法 delta 落 main spec + check-content-drift / consistency 扩展落地
-- [ ] npm test 全量绿 + 复测否定规则计数/重复税并写回本文件 §1.3
-- [ ] archive:finalizer + 本 plan 登记
+- [x] apply:立法 delta 落 main spec + check-content-drift / consistency 扩展落地
+- [x] npm test 全量绿 + 复测否定规则计数/重复税并写回本文件 §1.3
+- [x] archive:finalizer + 本 plan 登记
 
 ### C3 — dedup-phase-closure-loading(deferred)
 
