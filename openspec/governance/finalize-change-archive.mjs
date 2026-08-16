@@ -51,6 +51,7 @@ const RootCodeSchema = z.enum([
   'surface_inventory_failed',
   'phase_node_structure_failed',
   'spec_req_ids_failed',
+  'guidance_requirement_ids_failed',
   'native_archive_failed',
   'native_archive_invalid',
   'post_archive_mismatch',
@@ -85,6 +86,7 @@ const CheckSchema = z.object({
     'surface_inventory',
     'phase_node_structure',
     'spec_req_ids',
+    'guidance_requirement_ids',
     'native_archive',
   ]),
   status: z.literal('passed'),
@@ -427,6 +429,7 @@ export async function finalizeChangeArchive({
       ['check-surface-inventory.mjs', 'surface_inventory_failed'],
       ['check-phase-node-structure.mjs', 'phase_node_structure_failed'],
       ['check-spec-req-ids.mjs', 'spec_req_ids_failed'],
+      ['check-guidance-requirement-ids.mjs', 'guidance_requirement_ids_failed'],
     ];
     for (const [script, code] of driftGuardCheckers) {
       const guardCheck = await runStep(

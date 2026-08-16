@@ -1,6 +1,6 @@
 # Guidance Constitution
 
-> req: GCO-001, GCO-002, GCO-003, GCO-004, GCO-005, GCO-006, GCO-007, GCO-008
+> req: GCO-001, GCO-002, GCO-003, GCO-004, GCO-005, GCO-006, GCO-007, GCO-008, GCO-009
 
 ## Purpose
 
@@ -189,10 +189,12 @@ verdict.
 The repository SHALL retain focused deterministic coverage for the topology facts that do not
 require semantic judgment: canonical current role paths, required role frontmatter/authority
 coordinates, current internal Markdown-link resolution, root/Harness route ordering and required
-synchronized blocks, absence of a duplicate guidance root or mirror, and bounded current old-path
-references. Those checks SHALL identify their owned repair surface. They SHALL NOT decide whether a
-model answers a valuable question, whether a constitutional invariant is well-written, or whether
-research judgment is semantically sufficient.
+synchronized blocks, root hard-rule surface agreement (root `README.md` Rules In One Screen versus
+root `AGENTS.md`/`CLAUDE.md` Hard Rules on their machine-checkable key facts), absence of a
+duplicate guidance root or mirror, and bounded current old-path references. Those checks SHALL
+identify their owned repair surface. They SHALL NOT decide whether a model answers a valuable
+question, whether a constitutional invariant is well-written, or whether research judgment is
+semantically sufficient.
 
 #### Scenario: A future relevant design receives the ordered route
 
@@ -233,5 +235,27 @@ research judgment is semantically sufficient.
 - **WHEN** a current guidance path, role coordinate, internal link, mirror, old-path reference, or
   synchronized entry-route block drifts
 - **THEN** the focused topology regression fails at the owned repair surface
-- **AND** the regression does not pass or fail a judgment about abstraction value, prose quality,
-  or research evidence sufficiency
+
+#### Scenario: Root hard-rule surfaces stay synchronized
+
+- **WHEN** root `README.md` Rules In One Screen, root `AGENTS.md`, or root `CLAUDE.md` diverges on
+  a machine-checkable hard-rule key fact (Node version floor, ESM/TypeScript/Python posture,
+  approved dependency set, test runner, test placement, or `_old_topics` do-not-read rule)
+- **THEN** the focused deterministic coverage SHALL fail at the diverged surface
+- **AND** the repair SHALL restore agreement across all three surfaces rather than deleting the check
+
+### Requirement: Model documents do not present normative rules
+
+Model documents under `openspec/guidance/models/` SHALL NOT contain normative MUST/MUST-NOT phrasing (a `MUST` or `MUST NOT` token used to command behavior). A model document MAY describe terminology or understanding discipline, but any such discipline SHALL be phrased as descriptive convention (for example, "the shared vocabulary uses X to mean Y") and SHALL carry an explicit statement that its normative effect is owned by the applicable accepted spec or executable contract, never by the model document itself. The project SHALL retain deterministic coverage that fails when a model document contains a `MUST`/`MUST NOT` token outside a quoted requirement pointer. This requirement SHALL NOT prevent a model document from quoting a requirement as a pointer to its owner surface.
+
+#### Scenario: Model document carries normative MUST phrasing
+
+- **WHEN** a model document contains a `MUST` or `MUST NOT` token outside a quoted requirement pointer
+- **THEN** the deterministic coverage SHALL fail and name the file and line
+- **AND** the repair SHALL rephrase the sentence as a descriptive convention or move the rule to its accepted-spec owner, not invent a new normative surface
+
+#### Scenario: Descriptive terminology discipline remains legal
+
+- **WHEN** a model document states that the project vocabulary reserves `queue_item_id` for demand identity and `work_id` for attempt identity as the shared reading convention
+- **THEN** the coverage SHALL accept the phrasing when it is descriptive and carries the accepted-spec ownership statement
+- **AND** the model document SHALL NOT be treated as the behavior authority for that vocabulary

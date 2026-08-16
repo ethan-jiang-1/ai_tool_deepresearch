@@ -1,0 +1,91 @@
+schema_version: verification-routing/v1
+change: repair-doc-and-governance-drift-and-machine-gaps
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      本 change 无 in-process 纯函数逻辑面：新增的 check-all 聚合与
+      guidance-ID 校验、H1 检查都是 CLI 级只读脚本，其行为通过真实仓库树的
+      integration 断言验证（真实树 PASS + 注入单处违规 FAIL），不产生需要
+      unit 隔离的契约面。
+  integration:
+    status: selected
+    rationale: >-
+      全部可验证事实都是确定性的跨文件文档/治理事实：文档 canonical 表述
+      （D1-D8）经 tests/integration/md 静态断言锁定；checker 行为经
+      tests/governance 真实树断言锁定。无网络、无 Agent 执行。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      无 lifecycle/gate/recovery 链变化：不改 Engine、CLI、gates、schema、
+      runtime 状态，不需要驱动端到端临时 bundle 链。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称真实 Agent 行为变化：全部为文档措辞与 accepted contract 对齐，
+      由确定性文档/治理回归锁定，不做 Agent 行为断言。
+claims:
+  - id: doc-drift-lock
+    statement: >-
+      文档面修复被确定性断言锁定：workflows/README.md 不再含「只编码
+      `passed` 分支」过期句且含 D1 新表述、chain 数据中每个 state ∈
+      {passed, rerun}；RUN.md:38 注解不再含「CLI-verb spelling」失真实词且含
+      D2 准确措辞；RUN.md:59 与 harness README.md:31 含反 fallback 消歧句；
+      persist-artifact.md 含两个完整 persist-final-report 命令形态；
+      COMMANDS.md verb 清单含 `timeout-preflight`；根 README 含语言约定
+      bullet；post-final-recovery.md 不再混语；agentic-execution-model.md
+      无 MUST/MUST-NOT 规范性节；catalog 含 accepted-vs-historical 声明。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/doc-governance-drift-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: governance-machinery
+    statement: >-
+      治理机制真实存在且行为符合 spec：check-all.mjs 枚举全部 check-*.mjs、
+      只读、聚合 exit code、挂 package.json；check-guidance-requirement-ids.mjs
+      在真实树 PASS 且注入一个未注册 ID 时 FAIL；check-project-specs.mjs 对
+      无 H1 的 main spec 报 missingH1 且两个历史缺 H1 文件已补；
+      model-docs-normative-language.test.mjs 对 MUST token FAIL；
+      root-hard-rule-surface-sync.test.mjs 锁定三面硬规则一致；finalizer
+      CheckSchema 含 guidance-ID 检查步。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/check-all.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: spec-delta-sync
+    statement: >-
+      delta/main 同步后：transition-table 主 spec 的 structure requirement
+      以 node ref 为 key、state 枚举为 passed/rerun；requirement-traceability
+      主 spec 的 RET-006 为 finalizer 指针版、含 RET-007~010 四个 ADDED
+      requirement；guidance-constitution 主 spec 含 GCO-009 且 GCO-008
+      coverage 句含 root hard-rule surface agreement；两个历史缺 H1 的
+      main spec 已补 H1；`> req:` 头同步（RET-001..010、GCO-001..009）；
+      req-registry.yaml 含新 ID。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/spec-sync-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

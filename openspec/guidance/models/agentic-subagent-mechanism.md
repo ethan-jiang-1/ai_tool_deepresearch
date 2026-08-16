@@ -187,37 +187,39 @@ node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs late-submit <bundle> --work
 
 ---
 
-## 8. MUST / MUST NOT
+## 8. Terminology Discipline (Reading Conventions)
+
+> Terminology discipline only: the accepted specs (e.g. `agent/delegated-work-units`, `engine/check-inspect-feedback`) own the normative effect of these reading conventions; this model document does not.
 
 ### Phase Agent
 
-- MUST claim delegated queue demand through `operate-work-unit claim`.
-- MUST spawn Sub-agents only with bounded work-unit task prompts.
-- MUST submit returned result JSON through `operate-work-unit submit`.
-- MUST repair submit rejection or explicitly close terminal attempts.
-- MAY invoke explicit audited `late-submit` only for a command-targeted eligible `timed_out` attempt under the accepted contract; MUST NOT treat it as the default retry path.
-- MUST run wave gates after phase drain.
-- MUST NOT hand-write submitted ledger rows.
-- MUST NOT use filesystem presence as delegated coverage.
-- MUST NOT use queue completion as delegated success.
+- Convention: claim delegated queue demand through `operate-work-unit claim`.
+- Convention: spawn Sub-agents only with bounded work-unit task prompts.
+- Convention: submit returned result JSON through `operate-work-unit submit`.
+- Convention: repair submit rejection or explicitly close terminal attempts.
+- May invoke explicit audited `late-submit` only for a command-targeted eligible `timed_out` attempt under the accepted contract; it is not the default retry path.
+- Convention: run wave gates after phase drain.
+- Anti-convention: hand-write submitted ledger rows.
+- Anti-convention: use filesystem presence as delegated coverage.
+- Anti-convention: use queue completion as delegated success.
 
 ### Sub-agent
 
-- MUST read `task.md`, `_beacon.json`, and `result.schema.json`.
-- MUST preserve `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
-- MUST write only assigned receipt, output, and cache paths.
-- MUST return schema-valid result JSON.
-- MUST NOT mutate queue, status, plan, gates, chain, or ledger authority.
-- MUST NOT decide phase completion or final answer readiness.
-- MUST NOT fabricate sources, cache trails, receipt events, or output declarations.
+- Convention: read `task.md`, `_beacon.json`, and `result.schema.json`.
+- Convention: preserve `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
+- Convention: write only assigned receipt, output, and cache paths.
+- Convention: return schema-valid result JSON.
+- Anti-convention: mutate queue, status, plan, gates, chain, or ledger authority.
+- Anti-convention: decide phase completion or final answer readiness.
+- Anti-convention: fabricate sources, cache trails, receipt events, or output declarations.
 
 ### Engine/Gate Interpretation
 
-- MUST treat `rb_output_declarations.jsonl` submitted work-unit rows as delegated coverage authority.
-- MUST treat `_work_units/` and receipts as cross-check/diagnostic surfaces unless tied to submitted coverage.
-- MUST reject or diagnose direct/orphan delegated artifacts that lack submitted coverage.
-- MUST prefer direct submit facts, prerequisite short-circuiting, and one actionable repair target over cascading validation output.
-- MUST keep normal submit and audited late-submit on the same validation/ledger authority path; MUST NOT create another delegated completion authority.
+- Convention: treat `rb_output_declarations.jsonl` submitted work-unit rows as delegated coverage authority.
+- Convention: treat `_work_units/` and receipts as cross-check/diagnostic surfaces unless tied to submitted coverage.
+- Convention: reject or diagnose direct/orphan delegated artifacts that lack submitted coverage.
+- Convention: prefer direct submit facts, prerequisite short-circuiting, and one actionable repair target over cascading validation output.
+- Convention: keep normal submit and audited late-submit on the same validation/ledger authority path; never create another delegated completion authority.
 
 ---
 

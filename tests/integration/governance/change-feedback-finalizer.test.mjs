@@ -368,6 +368,8 @@ describe('change feedback finalizer integration', () => {
     ]);
 
     write(root, 'openspec/specs/governance/demo-capability/spec.md', [
+      '# demo-capability',
+      '',
       '> req: ABC-001',
       '',
       '## Purpose',

@@ -95,6 +95,7 @@ function runner({ failAt, nativeOutput, statusOutput } = {}) {
         ['check-surface-inventory.mjs', 'surface-inventory'],
         ['check-phase-node-structure.mjs', 'phase-structure'],
         ['check-spec-req-ids.mjs', 'spec-req-ids'],
+        ['check-guidance-requirement-ids.mjs', 'guidance-ids'],
       ]) {
         if (command === process.execPath && args[0].endsWith(script)) {
           return failAt === key ? { status: 1, stdout: '', stderr: `${key} failure` } : { status: 0, stdout: 'clean', stderr: '' };
@@ -383,7 +384,7 @@ describe('change feedback archive finalizer', () => {
     assert.equal(result.outcome, 'archived');
     assert.equal(result.archive.path, ARCHIVE_PATH);
     assert.equal(result.archive.specs_updated, false);
-    assert.deepEqual(result.checks.map((check) => check.id).slice(-8), [
+    assert.deepEqual(result.checks.map((check) => check.id).slice(-9), [
       'verification_routing',
       'semantic_closure',
       'content_drift',
@@ -391,6 +392,7 @@ describe('change feedback archive finalizer', () => {
       'surface_inventory',
       'phase_node_structure',
       'spec_req_ids',
+      'guidance_requirement_ids',
       'native_archive',
     ]);
     assert.equal(commands.calls.at(-1).args.join(' '), `archive ${CHANGE} --json --skip-specs`);

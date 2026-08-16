@@ -342,7 +342,13 @@ describe('Agent-facing command contract docs', () => {
 
   it('keeps topic-state schema discovery and controls rendering on their existing owner boundaries', () => {
     const topicState = read('DEEP_RESEARCH_HARNESS/command_playbook/operate-topic-state.md');
-    const controls = read('DEEP_RESEARCH_HARNESS/command_playbook/plan-hostfile-sections.md');
+    // The dedicated controls-rendering playbook is retired; the renderer contract
+    // now lives on its current owner surfaces (COMMANDS.md invocation row and the
+    // HITL1 phase node's renderer usage).
+    const controls = [
+      read('DEEP_RESEARCH_HARNESS/COMMANDS.md'),
+      read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl1.md'),
+    ].join('\n');
 
     for (const marker of [
       'Discover The Accepted Input Before Apply',
@@ -360,11 +366,11 @@ describe('Agent-facing command contract docs', () => {
       'render-no-controls',
       'render-supplied-controls --input <snapshot-path>',
       'exits `2`',
-      'do not hand-write a substitute fence',
+      '不得手写较短 fence',
     ]) {
-      assert.ok(controls.includes(marker), `controls playbook missing marker: ${marker}`);
+      assert.ok(controls.includes(marker), `controls surface missing marker: ${marker}`);
     }
-    assert.match(controls, /never\s+selects a bundle/);
+    assert.match(controls, /never\s+selects or writes a bundle/);
   });
 
   it('rejects known command-audience and boundary wording drift unless allowlisted', () => {

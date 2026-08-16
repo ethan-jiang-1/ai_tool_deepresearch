@@ -82,7 +82,8 @@ describe('Deep Research Harness research entry routing contract', () => {
     assert.match(run, /Section 2[\s\S]*授权 capability probe 和后续研究工作/);
     assert.match(run, /不声称能阻止宿主预先匹配 skill 或注入工具/);
 
-    assert.match(readme, /没有 explicit existing candidate 才读 `RUN\.md`/);
+    assert.match(readme, /只有用户从一开始就没有提供任何 existing candidate 时才读 `RUN\.md`/);
+    assert.match(readme, /preflight 失败不等于「没有 explicit candidate」/);
     assert.match(readme, /unsupported_current_entry_contract/);
     assert.match(readme, /selected entry 读完前/);
     assert.match(readme, /Section 2 随后进入 `command_playbook\/start-research\.md`/);

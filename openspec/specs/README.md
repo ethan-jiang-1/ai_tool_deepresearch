@@ -6,6 +6,8 @@ the linked `spec.md` remains the authoritative behavior contract. Read the
 catalog to form a candidate set, inspect the cited main specs, then record the
 reuse or new-capability decision in the change proposal.
 
+> 本 catalog 列出的 capability 行即当前 **accepted** capabilities；历史或废弃 capability 不在此列出——历史 change 记录在 `openspec/changes/archive/`，废弃 requirement ID 保留在 `openspec/governance/req-registry.yaml` 的 `[DEPRECATED]` 组。Catalog 只用于导航，main spec 仍是 behavior authority。
+
 ## Agent
 
 | Capability path | Purpose | Keywords | Boundaries / neighbors | Related entries | Agent/Markdown owns | Engine/Node owns |

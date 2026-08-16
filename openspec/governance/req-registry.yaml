@@ -347,6 +347,7 @@ FIO-004: file-observability — Explained files remain non-authoritative until l
 FIO-005: file-observability — Root bundle map files follow canonical map policy
 FIO-006: file-observability — File observability detects canonical topic footprint drift without granting authority
 FIO-007: file-observability — File observability resolves current and historical topic layouts through one canonical resolver
+FIO-008: file-observability — File observability names its feedback field repair_directive
 
 # bundle/reference-flat-format
 REF-001: reference-flat-format — Flat reference directory with three-level naming prefixes (00-shared-/{topic_slug}-<qualifier>/00-cross-)
@@ -513,6 +514,7 @@ GCO-005: guidance-constitution — Authority, capability, permission, responsibi
 GCO-006: guidance-constitution — Closure claims are bounded by claim-specific provenance, scope, and proof distance
 GCO-007: guidance-constitution — Semantic-precision direction makes new abstractions reviewable as bounded decision-ready semantic levels without creating runtime authority
 GCO-008: guidance-constitution — Charter, guidance navigation, and OpenSpec route relevant future designs through semantic precision, simple control, and helper responsibility
+GCO-009: guidance-constitution — Model documents do not present normative rules
 
 # governance/requirement-traceability
 RET-001: requirement-traceability — Prefix abbreviation registry as self-documenting source of truth
@@ -521,6 +523,10 @@ RET-003: requirement-traceability — Capability boundary test (4 conditions) pr
 RET-004: requirement-traceability — Alphabetical ordering of groups and numeric ordering within groups
 RET-005: requirement-traceability — Deprecation without deletion (IDs never reused)
 RET-006: requirement-traceability — Check script compliance as hard gate for archive
+RET-007: requirement-traceability — Aggregated read-only governance health entry (check-all)
+RET-008: requirement-traceability — Capability catalog declares current-accepted scope
+RET-009: requirement-traceability — Main spec files carry a level-one title
+RET-010: requirement-traceability — Requirement IDs in guidance prose resolve against the registry
 
 # governance/semantic-fact-closure
 SEF-001: semantic-fact-closure — Semantic fact catalog provides a bounded shared vocabulary

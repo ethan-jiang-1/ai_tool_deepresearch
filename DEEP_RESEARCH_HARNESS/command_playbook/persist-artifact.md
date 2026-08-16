@@ -73,11 +73,8 @@ backing before the durability commit and uses the same compare-and-swap
 discipline:
 
 ```bash
-node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs persist-final-report \
-  --bundle <bundle> \
-  --source <completed-final-markdown-staging-file> \
-  --target <final/non-primary-report.md> \
-  (--expect-absent | --expect-sha256 <current-target-sha256>)
+node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs persist-final-report --bundle <bundle> --source <completed-final-markdown-staging-file> --target <final/non-primary-report.md> --expect-absent
+node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs persist-final-report --bundle <bundle> --source <completed-final-markdown-staging-file> --target <final/non-primary-report.md> --expect-sha256 <current-target-sha256>
 ```
 
 `blocked` (exit `1`) means backing admission or CAS failed: keep the retained

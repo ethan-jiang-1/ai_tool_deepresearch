@@ -18,6 +18,7 @@ Before triggering `DEEP_RESEARCH_HARNESS/RUN.md`, complete the human preflight i
 - Then read [`CONTEXT.md`](CONTEXT.md) to align terminology and ownership boundaries. It is a non-authoritative glossary; normal instruction discovery and task-specific authoritative sources still apply.
 - For a durable architecture rationale, consult [`docs/adr/`](docs/adr/) on demand. It is not another mandatory pre-task read.
 - Start from the repository root and choose the top-level surface relevant to the task. Do not pre-read every root document or recursively scan directories; use the Coding Agent's normal instruction-discovery behavior and the task context.
+- 语言约定（全仓库控制面）：精确 token/命令/枚举/文件坐标用英文，推理与边界说明用中文，同一控制面内不混用两套主语言。新写的推理正文用中文；已有英文控制面逐步归一，不强行一次全改。
 
 ## Directory Map
 
@@ -59,6 +60,7 @@ Classification and proof permissions are defined by the accepted `verification-r
 ## Rules In One Screen
 
 - Node.js >=20, pure JavaScript ESM (`.mjs`).
+- No TypeScript. Absolutely no Python.
 - Only approved npm deps: `zod`, `yaml`.
 - Everything else uses Node built-ins.
 - Tests use `node:test` + `node:assert`.

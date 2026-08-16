@@ -10,11 +10,12 @@
 //
 // 本脚本不检查 openspec/changes/ 下的 delta spec；那部分交给 OpenSpec validate/archive。
 //
-// 四项检查:
+// 五项检查:
 //   1. deltaHeaderInMain   — main spec 出现 delta 头 (OpenSpec 结构错误)
 //   2. missingPurpose      — 缺少 ## Purpose 节
 //   3. missingRequirements — 缺少 ## Requirements 节
 //   4. missingReqHeader    — 缺少 > req: 行 (本项目 openspec/governance/req-registry.yaml 追踪约定)
+//   5. missingH1/duplicateH1 — main spec 必须以单个一级标题开头 (RET-009)
 
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -148,6 +149,27 @@ for (const file of specFiles) {
     });
     failed = true;
   }
+
+  // 5. H1 结构（RET-009）：文件以单个一级标题开头；无 H1 → missingH1，多于一个 → duplicateH1
+  const trimmedContent = content.trimStart();
+  const h1Lines = structuralContent
+    .split('\n')
+    .filter((l) => /^#\s+/.test(l));
+  if (!trimmedContent.startsWith('# ')) {
+    violations.push({
+      file: shortPath,
+      check: 'missingH1',
+      detail: 'main spec 必须以单个一级标题（# Title）开头（RET-009）',
+    });
+    failed = true;
+  } else if (h1Lines.length > 1) {
+    violations.push({
+      file: shortPath,
+      check: 'duplicateH1',
+      detail: `main spec 含 ${h1Lines.length} 个一级标题，只允许一个（RET-009）`,
+    });
+    failed = true;
+  }
 }
 
 if (failed) {
@@ -163,6 +185,8 @@ if (failed) {
     missingPurpose: 'Missing ## Purpose section',
     missingRequirements: 'Missing ## Requirements section',
     missingReqHeader: 'Missing > req: header',
+    missingH1: 'Missing level-one title',
+    duplicateH1: 'Duplicate level-one title',
   };
 
   for (const [check, items] of byCheck) {

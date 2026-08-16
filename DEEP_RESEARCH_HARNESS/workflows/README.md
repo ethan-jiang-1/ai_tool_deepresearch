@@ -35,7 +35,7 @@ workflows/
 
 ## transitions.chain.json — Routing Table
 
-Chain 只编码 `passed` 分支的 normal next。`failed`、`rerun` 等 branch 路由归 Agent decision authority，不编码进 chain。
+Chain 是故意稀疏的静态映射表：编码 `passed` 与已声明的 `rerun` 分支的 normal next（当前仅 `phases/phase-hitl2.md` 编码 `rerun` → `phases/phase-rerun.md`）。未编码的分支（`failed`、未知 state、未列出的 node）归 Agent decision authority，查表返回 `found: false`，不新增 chain 语义。
 
 ## nodes/ — Agent Instructions
 

@@ -40,6 +40,7 @@ const FINALIZER_CHECKS = [
   'surface_inventory',
   'phase_node_structure',
   'spec_req_ids',
+  'guidance_requirement_ids',
   'native_archive',
 ];
 
@@ -77,6 +78,7 @@ function copyGovernanceClosure(root) {
     'check-surface-inventory.mjs',
     'check-phase-node-structure.mjs',
     'check-spec-req-ids.mjs',
+    'check-guidance-requirement-ids.mjs',
   ];
   for (const file of files) {
     const destination = join(root, 'openspec/governance', file);
@@ -150,6 +152,8 @@ function createCompleteChange() {
     '',
   ].join('\n'));
   const mainSpec = write(root, 'openspec/specs/governance/demo-archive-boundary/spec.md', [
+    '# demo-archive-boundary',
+    '',
     '> req: ABC-001',
     '',
     '## Purpose',

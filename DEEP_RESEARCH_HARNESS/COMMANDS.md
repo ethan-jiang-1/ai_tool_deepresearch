@@ -86,7 +86,7 @@ Existing run-bundle reload resolves the supplied directory to the current run bu
 | 命令 | 文件 | 说明 |
 |------|------|------|
 | setup-real-subagents | command_playbook/setup-real-subagents.md | 设置 Codex/Claude Code 项目级 real subagent 定义 |
-| operate-work-unit.mjs | cli/operate-work-unit.mjs | delegated work-unit 生命周期（`claim`/`dry-submit`/`submit`/`late-submit`/`recover-declaration`/`recover-transaction`/`replace`/`supersede`/`fail`/`timeout`/`abandon`/`open-batch`/`inspect`）；成功 `claim` 输出 poll/inspect continuation cue，普通 `submit` 只接受 claimed，`replace` 处理 failed/abandoned，`supersede` 为 eligible submitted drift 建一个 fresh successor，两个 recovery operation 均保持既有 authority 边界 |
+| operate-work-unit.mjs | cli/operate-work-unit.mjs | delegated work-unit 生命周期（`claim`/`dry-submit`/`submit`/`late-submit`/`recover-declaration`/`recover-transaction`/`replace`/`supersede`/`fail`/`timeout`/`timeout-preflight`/`abandon`/`open-batch`/`inspect`）；成功 `claim` 输出 poll/inspect continuation cue，普通 `submit` 只接受 claimed，`replace` 处理 failed/abandoned，`supersede` 为 eligible submitted drift 建一个 fresh successor，两个 recovery operation 均保持既有 authority 边界 |
 | work-unit-actor-decision | command_playbook/work-unit-actor-decision.md | queue-front role inspect → 一次真实 native probe → 同一 claim checkpoint；normal batch、单项 Phase Agent fallback 或 no-claim |
 | provenance-forensics-guide | command_playbook/provenance-forensics-guide.md | 事后判定 delegated 证据 provenance 真伪；submitted work-unit ledger 是 gate authority |
 

@@ -205,20 +205,22 @@ Both axes must agree. A Markdown instruction can tell the Phase Agent to claim w
 
 ---
 
-## 8. MUST / MUST NOT
+## 8. Terminology Discipline (Reading Conventions)
 
-- MUST describe production delegated work as `queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate`.
-- MUST reserve `queue_item_id` for demand identity and `work_id` for delegated attempt identity.
-- MUST treat `operate-work-unit submit` as the normal delegated success boundary and explicit audited `operate-work-unit late-submit` as the only terminal completion exception.
-- MUST treat submitted ledger rows as delegated gate coverage authority.
-- MUST treat `_work_units/`, receipts, output files, cache trails, and runtime refs as cross-check or diagnostic surfaces unless tied to submitted ledger coverage.
-- MUST use "Sub-agent" for the surviving bounded actor.
-- MUST keep every cross-tier handoff explicit and short, with one direct authority and one actionable checkpoint result.
-- MUST NOT describe the retired delegated transport as a production path.
-- MUST NOT teach delegated queue completion, filesystem presence, or hand-written ledger rows as production coverage.
-- MUST NOT describe audited late-submit as a second delegated transport, default retry route, or generalized terminal recovery controller.
-- MUST NOT let a sub-agent mutate queue state, append ledgers, run gates, or authorize phase completion.
-- MUST NOT add hidden cross-tier inference, duplicate completion paths, or cascading diagnostics when the direct tier authority can answer the checkpoint.
+> Terminology discipline only: the accepted specs (e.g. `agent/delegated-work-units`, `engine/check-inspect-feedback`) own the normative effect of these reading conventions; this model document does not.
+
+- Convention: describe production delegated work as `queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate`.
+- Convention: reserve `queue_item_id` for demand identity and `work_id` for delegated attempt identity.
+- Convention: treat `operate-work-unit submit` as the normal delegated success boundary and explicit audited `operate-work-unit late-submit` as the only terminal completion exception.
+- Convention: treat submitted ledger rows as delegated gate coverage authority.
+- Convention: treat `_work_units/`, receipts, output files, cache trails, and runtime refs as cross-check or diagnostic surfaces unless tied to submitted ledger coverage.
+- Convention: use "Sub-agent" for the surviving bounded actor.
+- Convention: keep every cross-tier handoff explicit and short, with one direct authority and one actionable checkpoint result.
+- Anti-convention: describe the retired delegated transport as a production path.
+- Anti-convention: teach delegated queue completion, filesystem presence, or hand-written ledger rows as production coverage.
+- Anti-convention: describe audited late-submit as a second delegated transport, default retry route, or generalized terminal recovery controller.
+- Anti-convention: let a sub-agent mutate queue state, append ledgers, run gates, or authorize phase completion.
+- Anti-convention: add hidden cross-tier inference, duplicate completion paths, or cascading diagnostics when the direct tier authority can answer the checkpoint.
 
 ---
 

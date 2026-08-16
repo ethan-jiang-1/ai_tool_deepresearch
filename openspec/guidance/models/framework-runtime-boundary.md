@@ -223,19 +223,21 @@ Gate 一词有五面含义（transition 表 / definition JSON / engine / CLI wra
 | Gate attempt history | `<active-bundle-root>/rb_trace.jsonl` | append-only | Records gate attempts, pass/fail, repair, waiting/block events. |
 | Gate output snapshot | `<active-bundle-root>/_cache/gate-results/` | mutable cache | Optional latest CLI output; not main authority. |
 
-Gate CLI commands MUST accept an explicit bundle path. The workflow-foundation target examples use `--bundle`, but the concrete flag shape belongs to the executable command contract:
+Gate CLI commands take an explicit bundle path. The workflow-foundation target examples use `--bundle`, but the concrete flag shape belongs to the executable command contract:
 
 ```bash
 node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs --bundle dpt_rb_example
 ```
 
-Gate CLI commands MUST NOT infer active run state from chat memory or write results into `DEEP_RESEARCH_HARNESS/`.
+Gate CLI commands do not infer active run state from chat memory or write results into `DEEP_RESEARCH_HARNESS/`.
 
 ---
 
 ## Agent–Engine Communication
 
 这些规则约束 Markdown/Agent 和 JS/CLI/Engine 之间的信息流向。核心原则：**MD 控制流程，JS 控制校验节点；JS 不知道全局路由，MD 不越权做确定性裁决。**
+
+> 本节「约定/反向约定」是术语纪律（非权威 model 的读法约定）；规范性效力以对应 accepted spec 为准（如 `bundle/bundle-data-isolation`、`workflow/workflow-directory-contract`），不在本文件。
 
 ### MD 是 Controller
 
@@ -245,15 +247,15 @@ Markdown（playbook、task card、node）是 Agent Flow 的编织者。它告诉
 
 完整的运行时循环机制（谁驱动、谁路由、谁验证、三层权威架构）见 `openspec/guidance/models/agentic-workflow-mechanism.md`。
 
-- **MUST**：多阶段 Agent Flow 保持在 Markdown/playbook 中，JS/CLI 只做确定性 checkpoint。
-- **MUST NOT**：将 Agent Flow 藏入 JS controller。JS 控制的是校验节点，不是整条流程。
+- **约定**：多阶段 Agent Flow 保持在 Markdown/playbook 中，JS/CLI 只做确定性 checkpoint。
+- **反向约定**：将 Agent Flow 藏入 JS controller。JS 控制的是校验节点，不是整条流程。
 
 ### ⚡ 铁律：禁止环境变量传递配置
 
 **这是硬性约束，没有例外。** Coding Agent 环境中每个 tool call 是独立 shell 进程——`export FOO=bar` 在 call A 中设置，call B 完全看不到。任何依赖 `process.env` 在 component 间传递配置的做法在 Coding Agent 下都是死路。
 
-- **MUST**：所有配置通过 CLI flag、函数参数、runtime 属性显式传递。
-- **MUST NOT**：在任何 `.mjs`、`.js`、playbook inline script 中使用 `process.env` 读取配置或状态。
+- **约定**：所有配置通过 CLI flag、函数参数、runtime 属性显式传递。
+- **反向约定**：在任何 `.mjs`、`.js`、playbook inline script 中使用 `process.env` 读取配置或状态。
 - 常见错误模式及替代方案：
   - `process.env.NODES_DIR` → `createWorkflowRuntime(source, nodesDir)` 参数
   - `export DPT_NON_INTERACTIVE=1` → `--non-interactive` CLI flag
@@ -274,7 +276,7 @@ Gate CLI 是纯确定性检查器——遍历 rules、执行 check、返回结�
 
 - Gate CLI 输出 SHALL 包含：`check`（passed/failed + currentNodeRef + next）、`routing`（详细路由结果）、`inspect`（诊断）、`advice`（修复方向）。
 - `next` SHALL 来自 `resolveNodeTransitionDetailed(currentNodeRef, outcome)` 查询，NOT 来自 CLI flag 或 manifest 字段。
-- **MUST NOT**：让 Playbook 手动查表拼参数传给 gate。Transition 查询是 Gate 的内部调用。
+- **反向约定**：让 Playbook 手动查表拼参数传给 gate。Transition 查询是 Gate 的内部调用。
 - `--current-node` 是必选 flag；`askNext(path, gate, state)` 已退役。
 
 ### Trace 是真相，Log 是解释
@@ -288,36 +290,38 @@ Gate CLI 是纯确定性检查器——遍历 rules、执行 check、返回结�
 | 裁决 | 是——最终 pass/fail 从这里判 | 否——只辅助理解 |
 | 内容 | 完整 gate 响应（check + inspect + advice） | 引擎事件、进度、细节 |
 
-- **MUST**：实验/playbook 的最终裁决从 trace JSONL 来，不从 console output 或 log 来。
-- **MUST**：trace check event 记录 gate 的完整回答（passed + next + inspect + advice），不止 passed/failed。
-- **MUST NOT**：用 `console.log` 替代 trace 做 pass/fail 裁决。
+- **约定**：实验/playbook 的最终裁决从 trace JSONL 来，不从 console output 或 log 来。
+- **约定**：trace check event 记录 gate 的完整回答（passed + next + inspect + advice），不止 passed/failed。
+- **反向约定**：用 `console.log` 替代 trace 做 pass/fail 裁决。
 
 Runtime continuity and logging details live in `openspec/operations/logging-conventions.md`: after context loss, recover from current run bundle control files and `rb_trace.jsonl`; use `_logs/run.log` only for diagnosis.
 
 ---
 
-## MUST
+## Reading Conventions
 
-- MUST treat `DEEP_RESEARCH_HARNESS/` as read-only during run execution.
-- MUST store mutable runtime truth inside the active runtime bundle root, currently an explicit `dpt_rb_*` or `dpt_disp_*` directory.
-- MUST distinguish framework definition from runtime state.
-- MUST put read-only gate definitions under `DEEP_RESEARCH_HARNESS/schema/gate_definitions/` when gate definitions are implemented.
-- MUST put current run phase/gate status in `rb_status.json`.
-- MUST put gate attempts, pass/fail events, repair events, waiting/block events, and audit history in `rb_trace.jsonl`.
-- MUST require gate CLIs to receive an explicit bundle path.
-- MUST resolve bare runtime paths such as `rb_queue.json`, `reference/`, `_cache/`, `_logs/`, and `_work_units/...` under the current run bundle root.
-- MUST treat `_cache/` as rebuildable diagnostic/projection space, not primary authority.
-- MUST keep runtime quality checks on the shortest direct authority path available for the truth type.
+> Terminology discipline only: the accepted specs (e.g. `bundle/bundle-data-isolation`, `workflow/workflow-directory-contract`) own the normative effect of these reading conventions; this model document does not.
 
-## MUST NOT
+- Convention: treat `DEEP_RESEARCH_HARNESS/` as read-only during run execution.
+- Convention: store mutable runtime truth inside the active runtime bundle root, currently an explicit `dpt_rb_*` or `dpt_disp_*` directory.
+- Convention: distinguish framework definition from runtime state.
+- Convention: put read-only gate definitions under `DEEP_RESEARCH_HARNESS/schema/gate_definitions/` when gate definitions are implemented.
+- Convention: put current run phase/gate status in `rb_status.json`.
+- Convention: put gate attempts, pass/fail events, repair events, waiting/block events, and audit history in `rb_trace.jsonl`.
+- Convention: require gate CLIs to receive an explicit bundle path.
+- Convention: resolve bare runtime paths such as `rb_queue.json`, `reference/`, `_cache/`, `_logs/`, and `_work_units/...` under the current run bundle root.
+- Convention: treat `_cache/` as rebuildable diagnostic/projection space, not primary authority.
+- Convention: keep runtime quality checks on the shortest direct authority path available for the truth type.
 
-- MUST NOT write gate result, HITL answer, repair attempt, trace, artifact, or final output into `DEEP_RESEARCH_HARNESS/`.
-- MUST NOT copy gate definitions into every bundle as runtime state.
-- MUST NOT put mutable run data under `DEEP_RESEARCH_HARNESS/schema/`, `DEEP_RESEARCH_HARNESS/workflows/`, `DEEP_RESEARCH_HARNESS/engine/`, or `DEEP_RESEARCH_HARNESS/cli/`.
-- MUST NOT put framework definitions in `_cache/`.
-- MUST NOT treat chat memory, progress summaries, or console output as runtime truth.
-- MUST NOT use guideline prose to override accepted specs, executable schema, CLI verdicts, or current run bundle state.
-- MUST NOT validate a projection of a projection or use cache/log/console as a substitute for direct bundle authority when that authority is readable.
+## Anti-Conventions
+
+- Anti-convention: write gate result, HITL answer, repair attempt, trace, artifact, or final output into `DEEP_RESEARCH_HARNESS/`.
+- Anti-convention: copy gate definitions into every bundle as runtime state.
+- Anti-convention: put mutable run data under `DEEP_RESEARCH_HARNESS/schema/`, `DEEP_RESEARCH_HARNESS/workflows/`, `DEEP_RESEARCH_HARNESS/engine/`, or `DEEP_RESEARCH_HARNESS/cli/`.
+- Anti-convention: put framework definitions in `_cache/`.
+- Anti-convention: treat chat memory, progress summaries, or console output as runtime truth.
+- Anti-convention: use guideline prose to override accepted specs, executable schema, CLI verdicts, or current run bundle state.
+- Anti-convention: validate a projection of a projection or use cache/log/console as a substitute for direct bundle authority when that authority is readable.
 
 ---
 

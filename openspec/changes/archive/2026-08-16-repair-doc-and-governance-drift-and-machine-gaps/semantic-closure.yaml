@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: repair-doc-and-governance-drift-and-machine-gaps
+status: not_applicable
+reason: >-
+  本 change 只修文档措辞、spec 指针与只读治理检查脚本，不改变任何 cataloged
+  semantic fact family 覆盖的确定性事实：不改 Engine/CLI/gate/schema/runtime
+  行为，不引入新的确定性事实解释面（新增的 check-all 聚合与 guidance-ID 校验
+  都是既有 checker 事实的只读投影，不产生第二真相源）。delta 面
+  （transition-table state 枚举、RET-006 硬门指针、GCO model 语言约束）是
+  既有 requirement 的表述校准，不构成新 fact family。

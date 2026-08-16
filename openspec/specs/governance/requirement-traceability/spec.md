@@ -1,6 +1,6 @@
 # requirement-traceability
 
-> req: RET-001, RET-002, RET-003, RET-004, RET-005, RET-006
+> req: RET-001, RET-002, RET-003, RET-004, RET-005, RET-006, RET-007, RET-008, RET-009, RET-010
 
 ## Purpose
 
@@ -75,6 +75,7 @@ In `--mode archive --change <active-change>` mode, every selected reservation
 SHALL be transitioned. A complete pending or complete transitioned reservation
 of another active change SHALL not make that selected archive fail. The command
 SHALL reject a missing, unsafe, or non-active `--change` value rather than
+silently broadening the selected archive scope.
 
 `check-project-reqs.mjs` SHALL expose `--check-prefix <PREFIX>`: given one three-letter prefix, it SHALL
 print that prefix's live mapping (canonical `domain/capability` path), every requirement ID registered
@@ -88,8 +89,6 @@ registry; it SHALL NOT change plan-mode or archive-mode behavior.
 - **WHEN** a change author runs `node openspec/governance/check-project-reqs.mjs --check-prefix ACR`
 - **THEN** the command SHALL print the `ACR` mapping and all `ACR-*` IDs with their states and exit `0`
 - **AND** an unknown prefix SHALL exit `2` with a usage message instead of printing an empty result
-
-silently broadening the selected archive scope.
 
 #### Scenario: New capability has a valid plan-stage identity
 
@@ -305,16 +304,15 @@ SHALL NOT 将废弃 ID 移到单独的 "deprecated" 合成组——废弃是 ID 
 
 ### Requirement: Check script compliance as hard gate
 
-Every change SHALL run the project governance checks before archive:
-
-1. `node openspec/governance/check-project-reqs.mjs --mode archive --change <change>` -- 0 duplicate, 0 unregistered, 0 orphan, 0 reusedRetired, and every selected reservation transitioned to live identity
-2. `node openspec/governance/check-project-specs.mjs` -- 0 deltaHeaderInMain, 0 missingPurpose, 0 missingRequirements, 0 missingReqHeader
-3. `node openspec/governance/check-capability-taxonomy.mjs` -- no invalid live path, catalog inventory, project-local relation, or control-boundary result
-4. `node openspec/governance/check-capability-discovery.mjs --change <change>` -- a structurally valid discovery record for the selected active change
-
-
-5. `node openspec/governance/check-content-drift.mjs` -- 0 broken prose path references, 0 unknown CLI
-   tool references, and full gate-summary coverage against `schema/gate_definitions/`
+Every change SHALL pass the project governance checks before archive. The complete hard-gate set,
+its member commands, and its ordering SHALL be defined by exactly one machine surface: the governed
+finalizer's `CheckSchema` in `openspec/governance/finalize-change-archive.mjs`. This spec SHALL NOT
+hand-copy a check list; any observed divergence SHALL be resolved by correcting the finalizer
+surface (the machine is the owner), never by maintaining a second list in prose. A reader needing
+the current list SHALL read the finalizer surface or run the aggregated read-only governance health
+entry defined by the "Aggregated read-only governance health entry" requirement. The historical
+five-check enumeration formerly written here is retired prose and SHALL NOT be restored as a
+parallel authority.
 
 The content-drift check SHALL scan guidance, accepted-spec prose, and Harness documentation for
 repository-relative path references that do not exist (excluding bundle-runtime paths such as `rb_*`,
@@ -378,11 +376,8 @@ or optional environment skill availability has been decided by the Engine.
 #### Scenario: Change ready for archive
 
 - **WHEN** change tasks are complete
-- **THEN** `check-project-reqs.mjs --mode archive --change <change>` SHALL pass
-- **AND** `check-project-specs.mjs` SHALL pass
-- **AND** `check-capability-taxonomy.mjs` SHALL pass
-- **AND** `check-capability-discovery.mjs --change <change>` SHALL pass
-- **AND** delegated-work hygiene SHALL pass when the change touches delegated production surfaces
+- **THEN** the governed finalizer SHALL run its complete `CheckSchema` sequence
+- **AND** any hard-gate failure SHALL block the archive transition
 
 #### Scenario: Discovery structure is not semantic approval
 
@@ -441,3 +436,55 @@ or optional environment skill availability has been decided by the Engine.
 - **WHEN** an active cleanup change names retired delegated, ledger, or old queue terms in its proposal, design, task list, inventory, or negative delta requirements
 - **THEN** delegated-work hygiene MAY classify those occurrences as cleanup-control
 - **AND** that allowance SHALL NOT permit the same wording in current production guidance, current runner surfaces, or runnable playbooks
+
+### Requirement: Aggregated read-only governance health entry
+
+The project SHALL provide one aggregated read-only governance health entry: `node openspec/governance/check-all.mjs [--change <name>]`. It SHALL run every current `check-*.mjs` script in `openspec/governance/` that takes no per-change domain work by default, pass the optional `--change` through to the checks that accept it, and print one line per check with its result plus an aggregate exit code (0 all pass, non-zero otherwise). It SHALL be strictly read-only: no archive transition, no repair, no target edits, and no authority grant. It SHALL NOT replace the governed finalizer, whose `CheckSchema` remains the sole archive authority.
+
+#### Scenario: Health entry aggregates every checker
+
+- **WHEN** a developer runs `node openspec/governance/check-all.mjs`
+- **THEN** it SHALL print one result line per current `check-*.mjs` script and exit 0 only when every check passes
+- **AND** a failing check SHALL be named with its own repair coordinate rather than collapsed into a single aggregate message
+
+#### Scenario: Health entry is not an archive transition
+
+- **WHEN** a developer runs the aggregated entry
+- **THEN** it SHALL NOT perform the native archive transition or any target edit
+- **AND** its exit code SHALL NOT be treated as archive permission
+
+### Requirement: Capability catalog declares current-accepted scope
+
+`openspec/specs/README.md`（Capability Catalog）SHALL state near its head that the rows it lists are the current accepted capabilities, that historical or deprecated capabilities are not listed here, and that historical change records live under `openspec/changes/archive/` while deprecated requirement IDs remain visible in `openspec/governance/req-registry.yaml` `[DEPRECATED]` groups. The statement SHALL be prose navigation context only; it SHALL NOT change catalog row authority or introduce a second behavior definition.
+
+#### Scenario: Reader can tell accepted from historical
+
+- **WHEN** an Agent reads the catalog to decide which capability owns a behavior
+- **THEN** it SHALL see the current-accepted scope statement near the head
+- **AND** it SHALL be directed to the change archive and registry deprecated groups for historical identity rather than guessing whether a row is current
+
+### Requirement: Main spec files carry a level-one title
+
+Every main spec file under `openspec/specs/<domain>/<capability>/spec.md` SHALL begin with a single level-one title line (`# <Capability Title>`), SHALL NOT begin directly with the `> req:` header line, and SHALL NOT carry more than one level-one title. `check-project-specs.mjs` SHALL fail a main spec whose file does not begin with exactly one `# ` line, reporting a `missingH1` (or `duplicateH1`) result. This requirement SHALL NOT constrain the capability title wording beyond the single-H1 structural fact.
+
+#### Scenario: Missing level-one title blocks the spec check
+
+- **WHEN** a main spec file begins with a `> req:` line or otherwise lacks its `# ` title
+- **THEN** `check-project-specs.mjs` SHALL fail with `missingH1` naming the file
+- **AND** the governed finalizer SHALL block archive until the title is present
+
+### Requirement: Requirement IDs in guidance prose resolve against the registry
+
+The project SHALL retain deterministic coverage that scans the current guidance prose surfaces (`openspec/guidance/`, `openspec/operations/`, `openspec/constitution/`) for requirement-ID tokens matching `[A-Z]{3}-\d{3}` and fails any token that does not resolve to a registered ID in `openspec/governance/req-registry.yaml` (alive or `[DEPRECATED]`). Registry key lines, self-referential checker/test prose, and `openspec/changes/` artifacts SHALL NOT be scanned by this coverage. The coverage SHALL be exposed as a governance check usable before archive.
+
+#### Scenario: Guidance cites an unregistered ID
+
+- **WHEN** a guidance, operation, or constitution document references a requirement ID absent from the registry
+- **THEN** the deterministic coverage SHALL fail and name the file, the token, and the nearest repair (register the ID through the legal lifecycle path or correct the reference)
+- **AND** the failure SHALL NOT be silently ignored by other governance checks
+
+#### Scenario: Deprecated IDs remain resolvable
+
+- **WHEN** a guidance document references a registered but `[DEPRECATED]` requirement ID as historical context
+- **THEN** the coverage SHALL accept the reference as resolvable
+- **AND** it SHALL NOT grant the deprecated ID any live authority

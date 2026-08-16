@@ -59,7 +59,7 @@ This file can decide:
 - Structural constraints on how queue, gate, chain, and repair paths interact.
 - Task card principles: verification split between engine and agent, target separation between direct Phase Agent execution and delegated Sub-agent execution.
 - Result obligations that queue-based execution must satisfy where applicable: filling, stop visibility, context sustainability, and explicit recovery.
-- Behavioral MUST / MUST NOT for queue operations, Phase Agent behavior, context management, and implementation discipline.
+- Behavioral conventions for queue operations, Phase Agent behavior, context management, and implementation discipline.
 
 This file cannot decide:
 
@@ -255,45 +255,47 @@ These are deterministic checkpoint obligations where direct bundle facts exist. 
 
 ---
 
-## 8. MUST / MUST NOT
+## 8. Terminology Discipline (Reading Conventions)
+
+> Terminology discipline only: the accepted specs (e.g. `agent/agentic-queue`, `agent/delegated-work-units`) own the normative effect of these reading conventions; this model document does not.
 
 ### Architecture
 
-- MUST treat the queue as operating exclusively within the inner loop (within-phase).
-- MUST NOT let queue operations drive phase transitions or query `transitions.chain.json`.
-- MUST classify every piece of work by its verifier before deciding dispatch path.
-- MUST keep Q-repair and gate-repair as separate paths with exactly one contact point (Q empty + gate fail, where gate retains authority).
+- Convention: the queue operates exclusively within the inner loop (within-phase).
+- Anti-convention: queue operations drive phase transitions or query `transitions.chain.json`.
+- Convention: classify every piece of work by its verifier before deciding dispatch path.
+- Convention: keep Q-repair and gate-repair as separate paths with exactly one contact point (Q empty + gate fail, where gate retains authority).
 
 ### Queue Operations
 
-- MUST use `operate-queue.mjs` CLI or `queue-manager.mjs` API for all queue mutations.
-- MUST NOT hand-edit queue state (`rb_queue.json`).
-- MUST treat the Markdown projection (`_cache/agentic-queue/current-task.md`) as a read-only Agent-facing view — not as the queue authority.
-- MUST keep machine queue authority in structured JSON state.
+- Convention: use `operate-queue.mjs` CLI or `queue-manager.mjs` API for all queue mutations.
+- Anti-convention: hand-edit queue state (`rb_queue.json`).
+- Convention: treat the Markdown projection (`_cache/agentic-queue/current-task.md`) as a read-only Agent-facing view — not as the queue authority.
+- Convention: keep machine queue authority in structured JSON state.
 
 ### Phase Agent Behavior
 
-- MUST complete every claimed task. MUST NOT skip tasks without explicit failure recording via `operate-queue fail`.
-- For tasks delegated to a Sub-agent, MUST claim a work unit, spawn the bounded task, and submit by `work_id` through `operate-work-unit submit`.
-- MUST NOT run WebSearch/WebFetch in Phase Agent context to satisfy delegated search/fetch tasks.
-- MUST NOT call queue completion as delegated success.
-- MUST run gate CLI at phase completion. MUST NOT bypass gate to declare phase complete.
-- MUST NOT let sub-agents pass gates, mutate queues, count evidence, or authorize final output.
+- Convention: complete every claimed task; unclaimed failures are recorded via `operate-queue fail` rather than skipped silently.
+- For tasks delegated to a Sub-agent: claim a work unit, spawn the bounded task, and submit by `work_id` through `operate-work-unit submit`.
+- Anti-convention: run WebSearch/WebFetch in Phase Agent context to satisfy delegated search/fetch tasks.
+- Anti-convention: call queue completion as delegated success.
+- Convention: run gate CLI at phase completion; the gate, not the Phase Agent, declares phase complete.
+- Anti-convention: let sub-agents pass gates, mutate queues, count evidence, or authorize final output.
 
 ### Context Management
 
-- MUST assign `targets.delegates.to: "sub-agent"` for high-I/O, low-context-dependency tasks.
-- MUST NOT read full Sub-agent output or cache dumps into Phase Agent context after submit — read projections, submit diagnostics, and gate feedback.
-- MUST protect Phase Agent context by routing noisy search/fetch work to bounded sub-agent tasks.
+- Convention: assign `targets.delegates.to: "sub-agent"` for high-I/O, low-context-dependency tasks.
+- Anti-convention: read full Sub-agent output or cache dumps into Phase Agent context after submit — read projections, submit diagnostics, and gate feedback.
+- Convention: protect Phase Agent context by routing noisy search/fetch work to bounded sub-agent tasks.
 
 ### Implementation Discipline
 
-- MUST route new AGQ behavior through OpenSpec proposal/spec/tasks before implementation.
-- MUST NOT implement loop-engineering behavior directly from this guideline without an accepted OpenSpec change.
-- MUST treat the queue engine (AGQ-001~006) as implemented runtime truth.
-- MUST treat queue engine + seed-topics/wave0/wave1/wave2 integrations as accepted runtime truth.
-- MUST treat remaining stop/context/recovery gaps as problem statements, not as approval for a specific mechanism; proposals SHALL start with the shortest direct-authority solution and explain any added state or branch.
-- MUST NOT add a watcher, daemon, hidden retry loop, duplicate queue truth, or projection-of-projection merely because a historical subsection names a reliability risk.
+- Convention: route new AGQ behavior through OpenSpec proposal/spec/tasks before implementation.
+- Anti-convention: implement loop-engineering behavior directly from this guideline without an accepted OpenSpec change.
+- Convention: treat the queue engine (AGQ-001~006) as implemented runtime truth.
+- Convention: treat queue engine + seed-topics/wave0/wave1/wave2 integrations as accepted runtime truth.
+- Convention: treat remaining stop/context/recovery gaps as problem statements, not as approval for a specific mechanism; proposals start with the shortest direct-authority solution and explain any added state or branch.
+- Anti-convention: add a watcher, daemon, hidden retry loop, duplicate queue truth, or projection-of-projection merely because a historical subsection names a reliability risk.
 
 ---
 

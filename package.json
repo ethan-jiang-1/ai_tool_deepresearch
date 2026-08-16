@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "find tests/ -name '*.test.mjs' -print0 | xargs -0 node --test"
+    "test": "find tests/ -name '*.test.mjs' -print0 | xargs -0 node --test",
+    "governance:check": "node openspec/governance/check-all.mjs"
   },
   "dependencies": {
     "yaml": "^2.9.0",

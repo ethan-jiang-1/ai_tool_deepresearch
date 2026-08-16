@@ -32,7 +32,7 @@ This file can decide:
 
 - The agentic loop architecture: who drives, who routes, who validates.
 - The Three-Authority Architecture between MD phase nodes, chain routing table, and JS validation engine.
-- Hard constraints on what each authority component MUST NOT do.
+- Hard boundaries on what each authority component does not do.
 
 This file cannot decide:
 
@@ -101,7 +101,9 @@ Agent 驱动的 workflow 不是 JS engine 跑循环。它是一个 **Phase Agent
 
 三类权威组件各司其职，边界不可模糊：
 
-| 权威组件 | 是什么 | 做什么 | MUST NOT |
+> 本节「约定/反向约定」是术语纪律（非权威 model 的读法约定）；规范性效力以对应 accepted spec 为准（如 `engine/transition-table`、`workflow/workflow-node-contract`），不在本文件。
+
+| 权威组件 | 是什么 | 做什么 | 边界（不做） |
 |----|--------|--------|----------|
 | **MD phase node** | controller surface | 告诉 Phase Agent：这一步的目标、输入、允许动作、gate 命令、pass/fail 处理、stop 行为、反作弊规则 | 不做确定性裁决；不查路由表；不写 trace |
 | **transitions.chain.json** | passive routing table | `{ currentNodeRef, outcome } → nextNodeRef`，纯静态映射 | 不编码分支逻辑（fail/repair 归 Agent）；不持有状态；不驱动循环 |
@@ -111,17 +113,17 @@ Agent 驱动的 workflow 不是 JS engine 跑循环。它是一个 **Phase Agent
 
 每个 `DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-*.md` 是一个独立的 controller surface。它的 frontmatter 声明元数据（`phase`、`gate`、`stop`），它的 body 包含完整的执行指令。Phase Agent 读它，照它说的做。
 
-- **MUST**：每个 phase node 的 body 定义该阶段的完整控制面（目标、动作、gate 命令、pass/fail 处理）。
-- **MUST**：Phase Agent 执行完毕后跑 gate CLI，读取 `check.next`，再通过 accepted handoff loader/check 消费该 node。
-- **MUST NOT**：MD node 越过 gate 自行声明 next。transition 路由是 chain 的职责。
+- **约定**：每个 phase node 的 body 定义该阶段的完整控制面（目标、动作、gate 命令、pass/fail 处理）。
+- **约定**：Phase Agent 执行完毕后跑 gate CLI，读取 `check.next`，再通过 accepted handoff loader/check 消费该 node。
+- **反向约定**：MD node 不越过 gate 自行声明 next。transition 路由是 chain 的职责。
 
 ### transitions.chain.json — Passive Routing Table
 
 `DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json` 是唯一的路由数据源。它是一个纯静态映射：给定当前 node fileRef 和 gate outcome，返回下一个 node fileRef。
 
-- **MUST**：chain 编码**确定性出口**（outcome 有固定、上下文无关的 next-node 目标，如 `passed` 和 `rerun`）。不确定 branch（`request_view_revision`、`repair`、`stop_blocked`）归 Agent 判断，不进入 chain。
-- **MUST**：chain 的 key 和 value 都是 node fileRef（如 `phases/phase-wave0.md`），不是 gate key 或 phase key。
-- **MUST NOT**：chain 不持有状态、不计数、不追踪 cursor、不编码条件分支。它回答查询，仅此而已。
+- **约定**：chain 编码**确定性出口**（outcome 有固定、上下文无关的 next-node 目标，如 `passed` 和 `rerun`）。不确定 branch（`request_view_revision`、`repair`、`stop_blocked`）归 Agent 判断，不进入 chain。
+- **约定**：chain 的 key 和 value 都是 node fileRef（如 `phases/phase-wave0.md`），不是 gate key 或 phase key。
+- **反向约定**：chain 不持有状态、不计数、不追踪 cursor、不编码条件分支。它回答查询，仅此而已。
 
 chain 是**被查询**的——Phase Agent 通过 gate/Engine 的 `resolveNodeTransitionDetailed()` 问它，它回答一个字符串。它不知道谁在问、为什么问、问完要干什么。
 
@@ -129,10 +131,10 @@ chain 是**被查询**的——Phase Agent 通过 gate/Engine 的 `resolveNodeTr
 
 Engine 层（gate CLI、ask-next.mjs、transition-chain.mjs、trace.mjs、workflow-chain.mjs）只做确定性工作：校验、查表、写审计记录。
 
-- **MUST**：gate CLI 接收 `--bundle` 和 `--current-node`，内部调用 chain 查路由，输出 `check.next`。
-- **MUST**：路由查询入口在 Engine 内部——MD/Phase Agent 不自己查路由。当前实现（`resolveNodeTransitionDetailed()`）按 transition file 后缀分发（`.chain.json`），但具体函数名与后缀调度规则归 accepted spec，不是本文件的 normative 契约。
-- **MUST**：trace 写入 `rb_trace.jsonl`，append-only，是 pass/fail 的权威审计 trail。
-- **MUST NOT**：Engine 不编排多阶段流程，不自主选择、加载或执行下一个 node，不选修复策略，不做语义判断。
+- **约定**：gate CLI 接收 `--bundle` 和 `--current-node`，内部调用 chain 查路由，输出 `check.next`。
+- **约定**：路由查询入口在 Engine 内部——MD/Phase Agent 不自己查路由。当前实现（`resolveNodeTransitionDetailed()`）按 transition file 后缀分发（`.chain.json`），但具体函数名与后缀调度规则归 accepted spec，不是本文件的 normative 契约。
+- **约定**：trace 写入 `rb_trace.jsonl`，append-only，是 pass/fail 的权威审计 trail。
+- **反向约定**：Engine 不编排多阶段流程，不自主选择、加载或执行下一个 node，不选修复策略，不做语义判断。
 
 `workflow-chain.mjs` 是被动引擎：Phase Agent 调 `assessNode(fileRef)` 加载**这一个** node（及其依赖闭包），Engine 返回 MD content。Phase Agent 决定下一步——Engine 不推进循环。
 
@@ -142,37 +144,39 @@ Engine 层（gate CLI、ask-next.mjs、transition-chain.mjs、trace.mjs、workfl
 
 Node 按需加载，不预加载。
 
-- **MUST**：Phase Agent 只在拿到 `check.next` 后才通过 accepted loader/check 加载下一个 node。不存在「先把所有 node 读进内存」的步骤。
-- **MUST**：Engine 的运行时按需读缓存（避免重复读磁盘）只是缓存，不是预加载机制。
-- **MUST NOT**：manifest 不是执行顺序的权威——chain 才是。manifest 列出所有 node，chain 定义它们之间的转移。
+- **约定**：Phase Agent 只在拿到 `check.next` 后才通过 accepted loader/check 加载下一个 node。不存在「先把所有 node 读进内存」的步骤。
+- **约定**：Engine 的运行时按需读缓存（避免重复读磁盘）只是缓存，不是预加载机制。
+- **反向约定**：manifest 不是执行顺序的权威——chain 才是。manifest 列出所有 node，chain 定义它们之间的转移。
 
 当前 workflow 的 `transitions.chain.json` 里列出的 node（instantiation → hitl1 → setup → seed-topics → wave0 → wave1 → wave2 → hitl2 → readiness → rerun → final）在 Phase Agent 走到之前不会被加载。chain 只是地图，不是行程单。
 
 ---
 
-## MUST
+## Reading Conventions
 
-- MUST treat MD phase nodes as the controller for each workflow step.
-- MUST treat `transitions.chain.json` as the single source of truth for node-to-node routing.
-- MUST route through the Engine's accepted transition lookup — no hardcoded next, no manifest-based next inference.
-- MUST keep the Phase Agent as the runtime driver: read phase MD → execute → gate → chain lookup → consume `check.next` through the accepted handoff loader/check → read next phase MD.
-- MUST keep JS Engine stateless and passive: validate, look up, write trace — never drive the loop.
-- MUST encode deterministic outcomes in chain. A deterministic outcome is one with a fixed, context-independent next-node target. Currently: `passed` (all phases) and `rerun` (HITL2). Indeterminate branches (`request_view_revision`, `repair`, `stop_blocked`) whose target depends on Agent runtime judgment SHALL NOT have chain entries — they return `no_transition`.
-- MUST load nodes on demand, driven by `check.next` and the accepted handoff loader/check — never preload the whole graph.
-- MUST keep each phase boundary as a short explicit chain: direct gate facts -> one verdict -> one route lookup -> one target-node load.
+> Terminology discipline only: the accepted specs (e.g. `engine/transition-table`, `workflow/workflow-node-contract`) own the normative effect of these reading conventions; this model document does not.
+
+- Convention: MD phase nodes are the controller for each workflow step.
+- Convention: `transitions.chain.json` is the single source of truth for node-to-node routing.
+- Convention: route through the Engine's accepted transition lookup — no hardcoded next, no manifest-based next inference.
+- Convention: the Phase Agent is the runtime driver: read phase MD → execute → gate → chain lookup → consume `check.next` through the accepted handoff loader/check → read next phase MD.
+- Convention: the JS Engine stays stateless and passive: validate, look up, write trace — never drive the loop.
+- Convention: deterministic outcomes are encoded in chain. A deterministic outcome is one with a fixed, context-independent next-node target. Currently: `passed` (all phases) and `rerun` (HITL2). Indeterminate branches (`request_view_revision`, `repair`, `stop_blocked`) whose target depends on Agent runtime judgment have no chain entries — they return `no_transition`.
+- Convention: load nodes on demand, driven by `check.next` and the accepted handoff loader/check — never preload the whole graph.
+- Convention: keep each phase boundary as a short explicit chain: direct gate facts -> one verdict -> one route lookup -> one target-node load.
 
 Concrete function and file names referenced above (e.g. the current `resolveNodeTransitionDetailed()` entry point and `assessNode()` node loader) are descriptive anchors for the current implementation, not part of this normative contract. They may be renamed, wrapped, or relocated by an accepted project change; the principles above must hold either way. The applicable accepted contract owns function, file-naming, and backend-dispatch details.
 
-## MUST NOT
+## Anti-Conventions
 
-- MUST NOT implement a JS walker, cursor, or loop that drives node-to-node progression.
-- MUST NOT encode indeterminate branch logic into `transitions.chain.json`. Outcomes whose target depends on Agent judgment of runtime state (`request_view_revision`, `repair`, `stop_blocked`) SHALL NOT have chain entries.
-- MUST NOT preload all nodes at startup.
-- MUST NOT let MD node or Phase Agent bypass gate verification to declare next node.
-- MUST NOT let JS Engine decide which node to load next or when to advance.
-- MUST NOT reintroduce FSM as a transition mechanism. Chain is the only backend.
-- MUST NOT use manifest as the source of transition truth — manifest is inventory, chain is routing.
-- MUST NOT add layered fallback routing, derived lifecycle controllers, or cascading gate diagnostics when a direct check and one `check.next` are sufficient.
+- Anti-convention: implement a JS walker, cursor, or loop that drives node-to-node progression.
+- Anti-convention: encode indeterminate branch logic into `transitions.chain.json`. Outcomes whose target depends on Agent judgment of runtime state (`request_view_revision`, `repair`, `stop_blocked`) have no chain entries.
+- Anti-convention: preload all nodes at startup.
+- Anti-convention: let MD node or Phase Agent bypass gate verification to declare next node.
+- Anti-convention: let JS Engine decide which node to load next or when to advance.
+- Anti-convention: reintroduce FSM as a transition mechanism. Chain is the only backend.
+- Anti-convention: use manifest as the source of transition truth — manifest is inventory, chain is routing.
+- Anti-convention: add layered fallback routing, derived lifecycle controllers, or cascading gate diagnostics when a direct check and one `check.next` are sufficient.
 
 ---
 
@@ -186,11 +190,11 @@ These are not architectural rules — they are implementation properties that mu
 
 Indeterminate branches — outcomes whose targets depend on Agent judgment of runtime state — are intentionally absent from chain. These include `request_view_revision` (Agent decides which phase to return to), `repair` (Agent stays in HITL2 to fix issues), and `stop_blocked` (terminal, no next). Chain correctly returns `no_transition` for these.
 
-Every new phase added to the workflow MUST include its deterministic chain entries before the phase can be reached through the normal loop.
+Every new phase added to the workflow needs its deterministic chain entries before the phase can be reached through the normal loop.
 
 ### Dynamic Loading Integrity
 
-The Phase Agent MUST load each phase node on demand by consuming `check.next` through the accepted handoff loader/check. If nodes are preloaded (or the Phase Agent guesses the next node), two failures become possible: (a) the Phase Agent executes a phase the gate did not authorize, bypassing the gate's deterministic checkpoint; (b) the Phase Agent's context accumulates the content of phases it has not yet reached, defeating the context-isolation benefit of single-phase-at-a-time execution. The on-demand loading is not a performance optimization — it is a structural requirement for the gate-chain contract to hold.
+The Phase Agent loads each phase node on demand by consuming `check.next` through the accepted handoff loader/check. If nodes are preloaded (or the Phase Agent guesses the next node), two failures become possible: (a) the Phase Agent executes a phase the gate did not authorize, bypassing the gate's deterministic checkpoint; (b) the Phase Agent's context accumulates the content of phases it has not yet reached, defeating the context-isolation benefit of single-phase-at-a-time execution. The on-demand loading is not a performance optimization — it is a structural requirement for the gate-chain contract to hold.
 
 `enter-phase` and the resulting route-bound `load_complete` are handoff witnesses. They prove target-node entry/loading, not target-phase work completion. After handoff, the Phase Agent must still execute the target phase and pass its own gate or content checks before that target work is complete.
 

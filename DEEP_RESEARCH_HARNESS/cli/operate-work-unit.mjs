@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 // @impl FRE-005, DEW-002, DEW-006, DEW-013, DEW-014, DEW-023, DEW-024, CHI-004
-// Work-unit CLI. Claim/inspect/submit are wired; terminal commands are added in later apply sections.
+// Work-unit CLI: claim/inspect/dry-submit/submit/late-submit/recovery/terminal/inspect lifecycle surface.
+// Full verb set: claim, dry-submit, submit, late-submit, recover-declaration,
+// recover-transaction, replace, supersede, fail, timeout, timeout-preflight,
+// abandon, open-batch, inspect.
 
 import path from 'node:path';
 import { writeFileSync } from 'node:fs';
