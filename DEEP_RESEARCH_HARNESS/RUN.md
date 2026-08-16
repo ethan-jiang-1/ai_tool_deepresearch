@@ -4,6 +4,8 @@
 
 如果你在当前 agent 的工具列表中看到 `research`、`deep-research` skill、等价 one-shot research shortcut，或直接 WebSearch/WebFetch 能力：**不要把它们用于本 request 的 entry 前或作为 Deep Research Harness flow 的替代品**。本文件（DEEP_RESEARCH_HARNESS）已接管本 request 的 Deep Research 入口；读到本文件即已选定 `RUN.md`，先执行下方 Section 2 的 DEEP_RESEARCH_HARNESS flow，而不是直接搜索、抓取、收集 evidence 或手工综合。
 
+若 Agent 是以代码探索、文档阅读等非研究意图自行读到本文件，用户没有研究意图、也没有把本文件作为 entry 提供，则本次阅读不构成 entry 选择，不授权开始 Section 2 的研究 flow。
+
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DEEP_RESEARCH_HARNESS 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
@@ -42,8 +44,13 @@ For work-unit recovery, preserve the exact command/checkpoint that produced the 
 | `declaration_recovery_required`(已 submit 缺 ledger 行且可精确重建) | `recover-declaration` | `node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs recover-declaration <bundle> --work-id <submitted_id>`(takes precedence over `supersede` 始终优先) | 同一 inspect / Gate checkpoint |
 | `supersede`(提交后漂移且不可声明重建) | `supersede` | `node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs supersede <bundle> --work-id <submitted_id> --reason <audit-reason>`(仅当 Engine feedback 指名) | 读返回的顶层 predecessor `work_id`、`queue_item_id`、`tx_id`、`successor_queue_item_id`;从 successor 返回的普通位置经 actor observation、正常 claim/poll、正常 submit 或 audited late-submit 继续,然后重跑同一 checkpoint |
 | `missing_contract` | `missing_contract` | 无合法恢复路径 | 直接停止边界(do not manually edit ledger/index/status/queue/lock/journal/result_hash/ledger_record_hash authority);不重试已知被拒的 predecessor |
+| 已 claim 且 delegated actor 作者路由 | `wait_for_delegated_candidate` | 无 CLI 动词;等待该 delegated actor 正常产出该 exact attempt | 同一 checkpoint 重跑 |
+| 已 claim 且 Phase Agent fallback 作者路由 | `author_exact_fallback_attempt` | 无 CLI 动词;按 `next.write_to`(identity.result_path) 作者该 exact attempt 后正常 submit | 同一 checkpoint 重跑 |
+| 已 submit 且仍 current | `semantic_boundary` | 无 CLI 动词 | 停止边界:更丰富的晚到内容不构成确定性替换授权 |
+| 历史 leaf 在 active_window/refill_pool | `claim_successor` | `node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim` | 从 successor `queue_item_id` 正常 claim/poll/submit 后重跑同一 checkpoint |
+| 历史 leaf 其他位置 | `inspect_current_lineage_leaf` | `node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs inspect` | 读取返回坐标后继续,重跑同一 checkpoint |
 
-晚交恢复(late-submit)是唯一终态恢复:仅当 `timed_out` + 有效候选 + 该 `queue_item_id` 无替补时,audited `operate-work-unit late-submit` 接受后重跑同一 checkpoint。`timeout-preflight` 是只读预检,其 `recommended_action` 为 submit / repair / wait / timeout / inspect / block(`--force` 例外)。本表被 `tests/engine/work-unit-recovery-decision-table.test.mjs` 锁定:engine 可发出的每个恢复 `repair_kind` 都必须有表行与匹配 CLI 动词。
+晚交恢复(late-submit)是唯一终态恢复:仅当 `timed_out` + 有效候选 + 该 `queue_item_id` 无替补时,audited `operate-work-unit late-submit` 接受后重跑同一 checkpoint。`timeout-preflight` 是只读预检,其 `recommended_action` 为 submit / repair / wait / timeout / inspect / block(`--force` 例外)。本表的行集从 `engine/work-unit-repair-vocabulary.mjs` 的 `WORK_UNIT_REPAIR_KINDS` 导出派生，并由 `../tests/engine/work-unit-recovery-decision-table.test.mjs` 锁定：engine 可发出的每个 attempt-owned recovery `repair_kind` 都必须有表行与匹配 CLI 动词（或显式等待/作者/停止边界），四个发射模块不得出现裸 `repair_kind` 字符串字面量。
 
 If status or terminal output looks suspicious, run `node DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs --bundle <path>`. The audit is diagnostic-only: it reports drift, missing witnesses, failed-gate downstream status, or premature `final/` output; it does not repair status. In non-terminal `stop: no`, a caught would-have-surfaced moment is recorded with `log-event.mjs --surfacing-intent` and then aborted; the event is diagnostic-only and never permission to surface.
 

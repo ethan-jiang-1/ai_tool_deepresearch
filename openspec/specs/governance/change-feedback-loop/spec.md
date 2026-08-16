@@ -219,8 +219,9 @@ change and planning paths from OpenSpec, verify required artifacts, verify
 exactly one completed plan-review marker and one completed closeout-review
 marker with no other incomplete task, run strict OpenSpec validation, and then
 run requirement-traceability, main-spec, capability-taxonomy,
-capability-discovery, verification-routing asset, and semantic-closure asset
-checks in that order.
+capability-discovery, verification-routing asset, semantic-closure asset,
+content-drift, guidance-pointer-target, surface-inventory, phase-node-structure,
+and spec-requirement-id checks in that order.
 
 Only after those direct facts pass, and only after the Agent has completed any required semantic delta/main sync
 and re-comparison, the finalizer SHALL invoke the native OpenSpec archive transition in its no-spec-write mode.
@@ -244,8 +245,9 @@ plan-stage reservation into a selected-change archive failure.
 #### Scenario: ordered governance failure short-circuits finalization
 
 - **WHEN** strict validation, requirement traceability, main-spec structure,
-  taxonomy, discovery record, verification-routing assets, or semantic-closure
-  assets fail
+  taxonomy, discovery record, verification-routing assets, semantic-closure
+  assets, content drift, guidance pointer targets, surface inventory, phase
+  node structure, or spec requirement IDs fail
 - **THEN** finalization SHALL report the earliest failing direct check before native archive
 - **AND** it SHALL not perform a directory move, write main specs, or infer test success
 

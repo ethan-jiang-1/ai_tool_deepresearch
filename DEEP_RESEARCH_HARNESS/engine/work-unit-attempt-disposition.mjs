@@ -10,6 +10,7 @@ import {
   resolveWorkUnitSupersessionLineage,
 } from './work-unit-supersession.mjs';
 import { classifyCompleteCurrentWorkUnitProfile } from './work-unit-current-profile.mjs';
+import { WORK_UNIT_REPAIR_KIND } from './work-unit-repair-vocabulary.mjs';
 
 function submitRerun(bundleDir, record) {
   return `node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs dry-submit ${JSON.stringify(path.resolve(bundleDir))} --work-id ${JSON.stringify(record.work_id)} --result ${JSON.stringify(path.join(path.resolve(bundleDir), record.paths.result_ref))}`;
@@ -44,7 +45,7 @@ export function projectWorkUnitAttemptDisposition(bundleDir, record, {
         missing_fact: missingFact,
       },
       next: {
-        repair_kind: 'missing_contract',
+        repair_kind: WORK_UNIT_REPAIR_KIND.missingContract,
         missing_fact: missingFact,
         write_to: null,
         rerun: rerun || submitRerun(bundleDir, record),
@@ -86,7 +87,7 @@ export function projectWorkUnitAttemptDisposition(bundleDir, record, {
       try {
         const submitted = loadCurrentSubmittedLedgerFact(bundleDir, record);
         submittedRecovery = evaluateWorkUnitSupersessionEligibility(bundleDir, { work_id: record.work_id });
-        coverage = submittedRecovery.eligible || !['semantic_boundary'].includes(submittedRecovery.reason_code)
+        coverage = submittedRecovery.eligible || ![WORK_UNIT_REPAIR_KIND.semanticBoundary].includes(submittedRecovery.reason_code)
           ? {
               disposition: 'unresolved',
               ledger_record_hash: submitted.ledger_record_hash,
@@ -122,21 +123,21 @@ export function projectWorkUnitAttemptDisposition(bundleDir, record, {
     };
   } else if (record.status === 'claimed' && logicalActorClass === 'delegated_subagent') {
     next = {
-      repair_kind: 'wait_for_delegated_candidate',
+      repair_kind: WORK_UNIT_REPAIR_KIND.waitForDelegatedCandidate,
       missing_fact: 'The selected delegated actor route owns candidate authoring for this exact attempt.',
       write_to: null,
       rerun: rerun || submitRerun(bundleDir, record),
     };
   } else if (record.status === 'claimed') {
     next = {
-      repair_kind: 'author_exact_fallback_attempt',
+      repair_kind: WORK_UNIT_REPAIR_KIND.authorExactFallbackAttempt,
       missing_fact: 'The Phase Agent fallback route may author only this exact attempt binding.',
       write_to: identity.result_path,
       rerun: rerun || submitRerun(bundleDir, record),
     };
   } else if (coverage.disposition === 'current') {
     next = {
-      repair_kind: 'semantic_boundary',
+      repair_kind: WORK_UNIT_REPAIR_KIND.semanticBoundary,
       missing_fact: 'The submitted attempt remains current; richer late content alone does not authorize deterministic replacement.',
       write_to: null,
       rerun: rerun || submitRerun(bundleDir, record),
@@ -144,10 +145,10 @@ export function projectWorkUnitAttemptDisposition(bundleDir, record, {
   } else if (coverage.disposition === 'historical') {
     const leaf = coverage.current_lineage_leaf;
     const repairKind = ['active_window', 'refill_pool'].includes(leaf.queue_location)
-      ? 'claim_successor'
+      ? WORK_UNIT_REPAIR_KIND.claimSuccessor
       : leaf.queue_location === 'delegated_in_flight'
-        ? 'wait_for_delegated_candidate'
-        : 'inspect_current_lineage_leaf';
+        ? WORK_UNIT_REPAIR_KIND.waitForDelegatedCandidate
+        : WORK_UNIT_REPAIR_KIND.inspectCurrentLineageLeaf;
     next = {
       repair_kind: repairKind,
       missing_fact: `Submitted predecessor ${record.work_id} is historical; continue only from current lineage leaf ${leaf.queue_item_id}.`,
@@ -164,14 +165,14 @@ export function projectWorkUnitAttemptDisposition(bundleDir, record, {
     };
   } else if (submittedRecovery?.eligible) {
     next = {
-      repair_kind: 'supersede',
+      repair_kind: WORK_UNIT_REPAIR_KIND.supersede,
       missing_fact: `Submitted attempt ${record.work_id} has supersession-eligible ${submittedRecovery.root_code}.`,
       write_to: null,
       rerun: submittedRecovery.rerun,
     };
   } else {
     next = {
-      repair_kind: submittedRecovery?.repair_kind || 'missing_contract',
+      repair_kind: submittedRecovery?.repair_kind || WORK_UNIT_REPAIR_KIND.missingContract,
       missing_fact: submittedRecovery?.missing_fact || coverage.missing_fact || `No direct recovery action is established for ${record.status}.`,
       write_to: submittedRecovery?.write_to || null,
       rerun: submittedRecovery?.rerun || rerun || submitRerun(bundleDir, record),

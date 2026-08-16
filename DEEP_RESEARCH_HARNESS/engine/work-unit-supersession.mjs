@@ -46,6 +46,7 @@ import { enqueue, loadQueue, loadQueueReadOnly, saveQueue } from './queue-manage
 import { queueItemSnapshotHash } from './queue-manager-core.mjs';
 import { evaluateDirectOutputTarget, semanticOrderedArrayDigest } from './helpers/direct-output-contract.mjs';
 import { logToRun } from './logger.mjs';
+import { WORK_UNIT_REPAIR_KIND } from './work-unit-repair-vocabulary.mjs';
 
 const WORK_UNIT_INDEX_TARGET = '_work_units/_index.json';
 const QUEUE_TARGET = 'rb_queue.json';
@@ -75,7 +76,7 @@ function supersedeCommand(bundleDir, workId, reason = '<audit-reason>') {
 }
 
 function failure(bundleDir, record, code, missingFact, {
-  repairKind = 'missing_contract',
+  repairKind = WORK_UNIT_REPAIR_KIND.missingContract,
   writeTo = null,
   rerun = null,
   observedRoots = [],
@@ -748,7 +749,7 @@ export function evaluateWorkUnitSupersessionEligibility(bundleDir, {
       if (recovery.eligible && recovery.declaration_present === false) {
         return failure(bundleDir, record, 'declaration_recovery_required',
           `Exact declaration recovery is the nearest legal action for ${record.work_id}.`, {
-            repairKind: 'recover-declaration',
+            repairKind: WORK_UNIT_REPAIR_KIND.recoverDeclaration,
             writeTo: 'rb_output_declarations.jsonl',
             rerun: recovery.operation,
             observedRoots: observed,
@@ -759,7 +760,7 @@ export function evaluateWorkUnitSupersessionEligibility(bundleDir, {
     try {
       acceptance = originalAcceptanceEvidence(bundleDir, record, parent.accepted_hash);
     } catch (error) {
-      return failure(bundleDir, record, 'missing_contract', `Durable acceptance evidence is incomplete for ${record.work_id}: ${error.message || String(error)}`, {
+      return failure(bundleDir, record, WORK_UNIT_REPAIR_KIND.missingContract, `Durable acceptance evidence is incomplete for ${record.work_id}: ${error.message || String(error)}`, {
         observedRoots: observed,
       });
     }
@@ -772,9 +773,9 @@ export function evaluateWorkUnitSupersessionEligibility(bundleDir, {
 
   const rootCode = selectRoot(observed);
   if (!rootCode) {
-    return failure(bundleDir, record, 'semantic_boundary',
+    return failure(bundleDir, record, WORK_UNIT_REPAIR_KIND.semanticBoundary,
       `Submitted attempt ${record.work_id} remains hash-valid; richer or later content alone does not authorize deterministic correction.`, {
-        repairKind: 'semantic_boundary',
+        repairKind: WORK_UNIT_REPAIR_KIND.semanticBoundary,
       });
   }
   return {

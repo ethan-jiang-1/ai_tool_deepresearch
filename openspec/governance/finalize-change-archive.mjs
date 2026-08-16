@@ -47,6 +47,10 @@ const RootCodeSchema = z.enum([
   'verification_routing_failed',
   'semantic_closure_failed',
   'content_drift_failed',
+  'guidance_pointer_targets_failed',
+  'surface_inventory_failed',
+  'phase_node_structure_failed',
+  'spec_req_ids_failed',
   'native_archive_failed',
   'native_archive_invalid',
   'post_archive_mismatch',
@@ -77,6 +81,10 @@ const CheckSchema = z.object({
     'verification_routing',
     'semantic_closure',
     'content_drift',
+    'guidance_pointer_targets',
+    'surface_inventory',
+    'phase_node_structure',
+    'spec_req_ids',
     'native_archive',
   ]),
   status: z.literal('passed'),
@@ -413,6 +421,25 @@ export async function finalizeChangeArchive({
       return makeBlocked(selectedChange, checks, 'content_drift_failed', summarizeProcess(contentDriftCheck), 'openspec/governance/check-content-drift.mjs');
     }
     addCheck(checks, 'content_drift');
+
+    const driftGuardCheckers = [
+      ['check-guidance-pointer-targets.mjs', 'guidance_pointer_targets_failed'],
+      ['check-surface-inventory.mjs', 'surface_inventory_failed'],
+      ['check-phase-node-structure.mjs', 'phase_node_structure_failed'],
+      ['check-spec-req-ids.mjs', 'spec_req_ids_failed'],
+    ];
+    for (const [script, code] of driftGuardCheckers) {
+      const guardCheck = await runStep(
+        runCommand,
+        process.execPath,
+        [join(planningRoot, 'openspec/governance', script), planningRoot],
+        planningRoot,
+      );
+      if (guardCheck.status !== 0) {
+        return makeBlocked(selectedChange, checks, code, summarizeProcess(guardCheck), `openspec/governance/${script}`);
+      }
+      addCheck(checks, code.replace('_failed', ''));
+    }
 
     const nativeArchive = await runStep(runCommand, 'openspec', ['archive', selectedChange, '--json', '--skip-specs'], planningRoot);
     if (nativeArchive.status !== 0) {

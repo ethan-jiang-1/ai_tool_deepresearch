@@ -1,0 +1,76 @@
+schema_version: verification-routing/v1
+change: repair-work-unit-recovery-vocabulary-and-drift-guards
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      词汇模块的 10 值集合与 verb map、决策表行集派生、发射模块无裸字面量、
+      4 个 drift-guard checker 的 fixture 行为，都是 in-process 确定性契约，
+      由 tests/engine/ 与 tests/governance/ 下的 node:test 断言锁定。
+  integration:
+    status: selected
+    rationale: >-
+      finalizer 新检查序列在隔离 fixture 中走完真实 archive 链
+      （change-feedback-loop-archive.test.mjs，F-13 修复后转绿），是跨进程、
+      真实文件树的确定性事实，无网络、无 Agent 执行。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      无 lifecycle/gate/recovery 行为变化：engine 发射值集合不变，不驱动
+      端到端 bundle 链。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称真实 Agent 行为变化；决策表补行与 checker 均为确定性契约。
+claims:
+  - id: repair-vocabulary-single-source-and-table-lock
+    statement: >-
+      CHI-004：WORK_UNIT_REPAIR_KINDS 含 10 个 attempt-owned recovery 值且无
+      下划线拼写；REPAIR_KIND_CLI_VERB 覆盖每个值（verb 或显式 null）；RUN.md
+      决策表每值一行；四个发射模块不含 repair_kind 裸字符串字面量。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-recovery-decision-table.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: drift-guard-checker-unit-contracts
+    statement: >-
+      F-11：四个 drift-guard checker 对 fixture 输入分别给出 pass 与
+      fail（缺失指针、过期 surface 声明、缺 §6 模式、req-ID 序数错位）的
+      确定性裁决。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/drift-guard-checkers.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: finalizer-drift-guard-chain-in-isolated-fixture
+    statement: >-
+      F-13/CHF：隔离 fixture 中 finalizer 按新检查序列（含 content_drift 与
+      4 个 drift-guard 检查）完整归档 synchronized change，退出码 0 且
+      FINALIZER_CHECKS 期望集与实现一致。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/change-feedback-loop-archive.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

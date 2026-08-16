@@ -11,7 +11,9 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
+  statSync,
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -33,6 +35,11 @@ const FINALIZER_CHECKS = [
   'capability_discovery',
   'verification_routing',
   'semantic_closure',
+  'content_drift',
+  'guidance_pointer_targets',
+  'surface_inventory',
+  'phase_node_structure',
+  'spec_req_ids',
   'native_archive',
 ];
 
@@ -65,6 +72,11 @@ function copyGovernanceClosure(root) {
     'verification-routing-contract.mjs',
     'check-semantic-closure.mjs',
     'semantic-fact-closure-contract.mjs',
+    'check-content-drift.mjs',
+    'check-guidance-pointer-targets.mjs',
+    'check-surface-inventory.mjs',
+    'check-phase-node-structure.mjs',
+    'check-spec-req-ids.mjs',
   ];
   for (const file of files) {
     const destination = join(root, 'openspec/governance', file);
@@ -83,6 +95,48 @@ function createCompleteChange() {
   run('openspec', ['init', root, '--tools', 'none', '--no-animation']);
   symlinkSync(join(PROJECT_ROOT, 'node_modules'), join(root, 'node_modules'), 'dir');
   symlinkSync(join(PROJECT_ROOT, 'DEEP_RESEARCH_HARNESS'), join(root, 'DEEP_RESEARCH_HARNESS'), 'dir');
+  symlinkSync(join(PROJECT_ROOT, 'experiments_env'), join(root, 'experiments_env'), 'dir');
+  symlinkSync(join(PROJECT_ROOT, 'docs'), join(root, 'docs'), 'dir');
+  copyFileSync(join(PROJECT_ROOT, 'CONTEXT.md'), join(root, 'CONTEXT.md'));
+  copyFileSync(join(PROJECT_ROOT, 'openspec/README.md'), join(root, 'openspec/README.md'));
+  for (const sub of ['constitution', 'guidance', 'operations']) {
+    symlinkSync(join(PROJECT_ROOT, 'openspec', sub), join(root, 'openspec', sub), 'dir');
+  }
+  // Real main specs (read-only) so guidance/content-drift references resolve;
+  // governance/ stays a real directory for the demo-change spec.
+  mkdirSync(join(root, 'openspec/specs'), { recursive: true });
+  for (const dom of ['agent', 'bundle', 'engine', 'research', 'verification', 'workflow']) {
+    symlinkSync(join(PROJECT_ROOT, 'openspec/specs', dom), join(root, 'openspec/specs', dom), 'dir');
+  }
+  copyFileSync(join(PROJECT_ROOT, 'openspec/specs/README.md'), join(root, 'openspec/specs/README.md'));
+  // Fixture-owned subtrees stay REAL directories (writes must never traverse
+  // symlinks into the production tree); read-only siblings are symlinked.
+  mkdirSync(join(root, 'tests/integration/governance'), { recursive: true });
+  for (const entry of readdirSync(join(PROJECT_ROOT, 'tests'))) {
+    if (entry === 'integration') continue;
+    symlinkSync(
+      join(PROJECT_ROOT, 'tests', entry),
+      join(root, 'tests', entry),
+      statSync(join(PROJECT_ROOT, 'tests', entry)).isDirectory() ? 'dir' : 'file',
+    );
+  }
+  for (const entry of readdirSync(join(PROJECT_ROOT, 'tests/integration'))) {
+    if (entry === 'governance') continue;
+    symlinkSync(
+      join(PROJECT_ROOT, 'tests/integration', entry),
+      join(root, 'tests/integration', entry),
+      statSync(join(PROJECT_ROOT, 'tests/integration', entry)).isDirectory() ? 'dir' : 'file',
+    );
+  }
+  mkdirSync(join(root, 'experiments_playbook/exp_fixture'), { recursive: true });
+  for (const entry of readdirSync(join(PROJECT_ROOT, 'experiments_playbook'))) {
+    if (entry === 'exp_fixture' || entry === 'PLAYBOOK_MANIFEST.md') continue;
+    symlinkSync(
+      join(PROJECT_ROOT, 'experiments_playbook', entry),
+      join(root, 'experiments_playbook', entry),
+      statSync(join(PROJECT_ROOT, 'experiments_playbook', entry)).isDirectory() ? 'dir' : 'file',
+    );
+  }
   copyGovernanceClosure(root);
   run('openspec', ['new', 'change', CHANGE, '--json'], { cwd: root });
 

@@ -90,6 +90,16 @@ function runner({ failAt, nativeOutput, statusOutput } = {}) {
       if (command === process.execPath && args[0].endsWith('check-content-drift.mjs')) {
         return failAt === 'content-drift' ? { status: 1, stdout: '', stderr: 'content drift failure' } : { status: 0, stdout: 'clean', stderr: '' };
       }
+      for (const [script, key] of [
+        ['check-guidance-pointer-targets.mjs', 'guidance-pointers'],
+        ['check-surface-inventory.mjs', 'surface-inventory'],
+        ['check-phase-node-structure.mjs', 'phase-structure'],
+        ['check-spec-req-ids.mjs', 'spec-req-ids'],
+      ]) {
+        if (command === process.execPath && args[0].endsWith(script)) {
+          return failAt === key ? { status: 1, stdout: '', stderr: `${key} failure` } : { status: 0, stdout: 'clean', stderr: '' };
+        }
+      }
       if (command === 'openspec' && args[0] === 'archive') {
         return {
           status: failAt === 'archive' ? 1 : 0,
@@ -373,8 +383,15 @@ describe('change feedback archive finalizer', () => {
     assert.equal(result.outcome, 'archived');
     assert.equal(result.archive.path, ARCHIVE_PATH);
     assert.equal(result.archive.specs_updated, false);
-    assert.deepEqual(result.checks.map((check) => check.id).slice(-4), [
-      'verification_routing', 'semantic_closure', 'content_drift', 'native_archive',
+    assert.deepEqual(result.checks.map((check) => check.id).slice(-8), [
+      'verification_routing',
+      'semantic_closure',
+      'content_drift',
+      'guidance_pointer_targets',
+      'surface_inventory',
+      'phase_node_structure',
+      'spec_req_ids',
+      'native_archive',
     ]);
     assert.equal(commands.calls.at(-1).args.join(' '), `archive ${CHANGE} --json --skip-specs`);
     assert.equal(FinalizationResultSchema.safeParse(result).success, true);

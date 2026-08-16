@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: repair-work-unit-recovery-vocabulary-and-drift-guards
+status: not_applicable
+reason: >-
+  本 change 不改任何 cataloged semantic fact family 覆盖的确定性事实：
+  attempt-owned recovery repair_kind 的 10 个发射值及其 disposition 语义不变，
+  只把词汇声明收敛到单一 engine 导出并补全 RUN.md 决策表与锁定回归；
+  finalizer 新增的 4 个检查是文档/目录存在性与一致性事实，不属于
+  work-unit.transaction-mutation-integrity、work-unit.submission-ledger-and-
+  supersession 等既有 family 的 bounded question。

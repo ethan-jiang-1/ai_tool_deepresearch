@@ -31,6 +31,7 @@ import {
   WorkUnitTransactionProjectionSchema,
   WorkUnitTransactionV2JournalSchema,
 } from '../schema/contracts/work-unit-transaction.mjs';
+import { WORK_UNIT_REPAIR_KIND } from './work-unit-repair-vocabulary.mjs';
 
 export const WORK_UNIT_TRANSACTION_TRANSITIONS = Object.freeze({
   started: Object.freeze(['committed', 'rolled_back', 'suspect']),
@@ -267,14 +268,14 @@ function suspectProjection(bundleDir, operation, options, {
     targets_same_attempt: holder && options.targetWorkIds?.[0]
       ? holder.target_work_ids.includes(options.targetWorkIds[0])
       : null,
-    repair_kind: recoverable ? 'recover-transaction' : 'missing_contract',
+    repair_kind: recoverable ? WORK_UNIT_REPAIR_KIND.recoverTransaction : WORK_UNIT_REPAIR_KIND.missingContract,
     missing_fact: reason,
     write_to: recoverable ? journal.journal_ref : null,
     rerun: recoverable
       ? recoverTransactionRerun(bundleDir, journal.tx_id)
       : (options.rerun || defaultRerun(operation, bundleDir, options)),
     next: {
-      repair_kind: recoverable ? 'recover-transaction' : 'missing_contract',
+      repair_kind: recoverable ? WORK_UNIT_REPAIR_KIND.recoverTransaction : WORK_UNIT_REPAIR_KIND.missingContract,
       missing_fact: reason,
       write_to: recoverable ? journal.journal_ref : null,
       rerun: recoverable
@@ -315,12 +316,12 @@ function readHeldTransactionProjection(bundleDir, operation, options) {
       },
       targets_same_attempt: journal.status === 'started'
         && Boolean(options.targetWorkIds?.some((workId) => owner.target_work_ids.includes(workId))),
-      repair_kind: 'wait',
+      repair_kind: WORK_UNIT_REPAIR_KIND.wait,
       missing_fact: null,
       write_to: null,
       rerun: options.rerun || defaultRerun(operation, bundleDir, options),
       next: {
-        repair_kind: 'wait',
+        repair_kind: WORK_UNIT_REPAIR_KIND.wait,
         missing_fact: null,
         write_to: null,
         rerun: options.rerun || defaultRerun(operation, bundleDir, options),
@@ -626,7 +627,7 @@ export function recoverWorkUnitTransaction(bundleDir, { tx_id, transactionHooks 
     return {
       ok: false,
       reason_code: 'invalid_transaction_id',
-      repair_kind: 'missing_contract',
+      repair_kind: WORK_UNIT_REPAIR_KIND.missingContract,
       missing_fact: '--tx-id is required',
       write_to: null,
       rerun: recoverTransactionRerun(bundleDir, tx_id),
@@ -645,12 +646,12 @@ export function recoverWorkUnitTransaction(bundleDir, { tx_id, transactionHooks 
     return {
       ok: false,
       reason_code: 'suspect_transaction',
-      repair_kind: 'missing_contract',
+      repair_kind: WORK_UNIT_REPAIR_KIND.missingContract,
       missing_fact: `transaction journal does not exist: ${journalRef(tx_id)}`,
       write_to: null,
       rerun: recoverTransactionRerun(bundleDir, tx_id),
       next: {
-        repair_kind: 'missing_contract',
+        repair_kind: WORK_UNIT_REPAIR_KIND.missingContract,
         missing_fact: `transaction journal does not exist: ${journalRef(tx_id)}`,
         write_to: null,
         rerun: recoverTransactionRerun(bundleDir, tx_id),
@@ -665,12 +666,12 @@ export function recoverWorkUnitTransaction(bundleDir, { tx_id, transactionHooks 
     return {
       ok: false,
       reason_code: 'suspect_transaction',
-      repair_kind: 'missing_contract',
+      repair_kind: WORK_UNIT_REPAIR_KIND.missingContract,
       missing_fact: `transaction journal is not recoverable v2 proof: ${error.message || String(error)}`,
       write_to: null,
       rerun: recoverTransactionRerun(bundleDir, tx_id),
       next: {
-        repair_kind: 'missing_contract',
+        repair_kind: WORK_UNIT_REPAIR_KIND.missingContract,
         missing_fact: `transaction journal is not recoverable v2 proof: ${error.message || String(error)}`,
         write_to: null,
         rerun: recoverTransactionRerun(bundleDir, tx_id),
@@ -686,7 +687,7 @@ export function recoverWorkUnitTransaction(bundleDir, { tx_id, transactionHooks 
       disposition: journal.status,
       journal_ref: journal.journal_ref,
       next: {
-        repair_kind: 'recover-transaction',
+        repair_kind: WORK_UNIT_REPAIR_KIND.recoverTransaction,
         missing_fact: null,
         write_to: journal.journal_ref,
         rerun: recoverTransactionRerun(bundleDir, tx_id),
@@ -697,12 +698,12 @@ export function recoverWorkUnitTransaction(bundleDir, { tx_id, transactionHooks 
     return {
       ok: false,
       reason_code: 'suspect_transaction',
-      repair_kind: 'missing_contract',
+      repair_kind: WORK_UNIT_REPAIR_KIND.missingContract,
       missing_fact: `transaction ${tx_id} targets do not match the complete declared before-image`,
       write_to: null,
       rerun: recoverTransactionRerun(bundleDir, tx_id),
       next: {
-        repair_kind: 'missing_contract',
+        repair_kind: WORK_UNIT_REPAIR_KIND.missingContract,
         missing_fact: `transaction ${tx_id} targets do not match the complete declared before-image`,
         write_to: null,
         rerun: recoverTransactionRerun(bundleDir, tx_id),
@@ -741,7 +742,7 @@ export function recoverWorkUnitTransaction(bundleDir, { tx_id, transactionHooks 
       disposition: 'rolled_back',
       journal_ref: settled.journal_ref,
       next: {
-        repair_kind: 'recover-transaction',
+        repair_kind: WORK_UNIT_REPAIR_KIND.recoverTransaction,
         missing_fact: null,
         write_to: settled.journal_ref,
         rerun: recoverTransactionRerun(bundleDir, tx_id),

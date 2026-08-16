@@ -10,6 +10,7 @@ import { readAndValidateBeacon, readAndValidateManifest } from './work-unit-vali
 import { classifyCompleteCurrentWorkUnitProfile } from './work-unit-current-profile.mjs';
 import { loadQueueReadOnly } from './queue-manager-lifecycle.mjs';
 import { queueItemSnapshotHash } from './queue-manager-core.mjs';
+import { WORK_UNIT_REPAIR_KIND } from './work-unit-repair-vocabulary.mjs';
 
 function submitRerun(bundleDir, record, resultPath, operation) {
   const command = operation === 'late_submit_work_unit' ? 'late-submit' : 'submit';
@@ -39,7 +40,7 @@ export function evaluateWorkUnitSubmitIntegrity(bundleDir, {
     const selectedPrimary = root(
       profile.reason_code,
       `unsupported current work-unit contract for ${record.work_id}: ${profile.unsupported_discriminator}`,
-      'missing_contract',
+      WORK_UNIT_REPAIR_KIND.missingContract,
       null,
       rerun,
     );
@@ -82,7 +83,7 @@ export function evaluateWorkUnitSubmitIntegrity(bundleDir, {
     roots.push(root(
       'attempt_binding_invalid',
       error.message || String(error),
-      'missing_contract',
+      WORK_UNIT_REPAIR_KIND.missingContract,
       null,
       rerun,
     ));
@@ -92,7 +93,7 @@ export function evaluateWorkUnitSubmitIntegrity(bundleDir, {
   try {
     ledgerRows = readWorkUnitLedgerRows(bundleDir);
   } catch (error) {
-    roots.push(root('submitted_ledger_invalid', error.message || String(error), 'missing_contract', null, rerun));
+    roots.push(root('submitted_ledger_invalid', error.message || String(error), WORK_UNIT_REPAIR_KIND.missingContract, null, rerun));
   }
   const targetRows = ledgerRows.filter((row) => row.work_id === record.work_id);
   let ledger = { disposition: 'absent', row_count: targetRows.length };
@@ -110,7 +111,7 @@ export function evaluateWorkUnitSubmitIntegrity(bundleDir, {
       roots.push(root(
         error.reason_code || 'submitted_integrity_invalid',
         error.message || String(error),
-        error.reason_code === 'submitted_declaration_missing' ? 'recover-declaration' : 'missing_contract',
+        error.reason_code === 'submitted_declaration_missing' ? WORK_UNIT_REPAIR_KIND.recoverDeclaration : WORK_UNIT_REPAIR_KIND.missingContract,
         error.reason_code === 'submitted_declaration_missing' ? 'rb_output_declarations.jsonl' : null,
         rerun,
       ));
@@ -119,7 +120,7 @@ export function evaluateWorkUnitSubmitIntegrity(bundleDir, {
     roots.push(root(
       'unexpected_submitted_declaration',
       `non-submitted attempt ${record.work_id} already has ${targetRows.length} declaration row(s)`,
-      'missing_contract',
+      WORK_UNIT_REPAIR_KIND.missingContract,
       null,
       rerun,
     ));
@@ -150,7 +151,7 @@ export function evaluateWorkUnitSubmitIntegrity(bundleDir, {
       queue = { disposition: 'terminal_or_retry', location: null };
     }
   } catch (error) {
-    roots.push(root('queue_binding_invalid', error.message || String(error), 'missing_contract', null, rerun));
+    roots.push(root('queue_binding_invalid', error.message || String(error), WORK_UNIT_REPAIR_KIND.missingContract, null, rerun));
   }
 
   return {
