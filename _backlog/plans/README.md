@@ -28,10 +28,9 @@
 
 ### 参照资料（非 plan，供后续 change 引用）
 
-| 文件 | 内容 |
-|------|------|
-| `machine-checks-catalog.md` | 全 gate 定义逐条目录（check 名 / rule id / target），2026-08-16 负担轴审计产物；用于判断 phase 散文禁令是否已被机器强制。权威仍是 `schema/gate_definitions/*.definition.json`。 |
-| `midrun-reading-burden-audit.md` | 2026-08-16 负担审计全报告：否定规则三分类（~448 sites：55% 机器覆盖 / 8% 过时重复 / 37% 纯纪律）、代表例逐条对照、C4 选项表与 Option A 推荐。C2 apply 的种子数据。 |
+（当前无；`machine-checks-catalog.md` 与 `midrun-reading-burden-audit.md` 已随
+`midrun-burden-reduction-and-residual-drift` plan 归档至
+`../_done/_closed_plans/`，C3 触发时取用。）
 
 ---
 

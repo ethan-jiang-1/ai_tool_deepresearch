@@ -165,8 +165,8 @@ function checkGateCoverage(failures) {
 const PHASE_DIR = join(HARNESS, 'workflows/nodes/phases');
 const SHARED_DIR = join(HARNESS, 'workflows/nodes/shared');
 // Representative machine-covered prohibition phrasings (see
-// _backlog/plans/machine-checks-catalog.md for the full catalog; the gate
-// definition JSON remains the authoritative machine-check source).
+// _backlog/_done/_closed_plans/machine-checks-catalog.md for the full catalog;
+// the gate definition JSON remains the authoritative machine-check source).
 const MACHINE_COVERED_PROHIBITIONS = [
   '禁止手写', // ledger rows, trace events, receipts, gate results
   'do not hand-write',
