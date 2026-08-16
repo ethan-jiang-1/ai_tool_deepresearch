@@ -18,7 +18,7 @@ playbook 进入具体操作。这个 pre-read 不是 Deep Research Harness resea
 
 **用户表达了研究意图——研究/调研/deep research/research report/"帮我查…"/"…是什么"等——尤其提到 `DEEP_RESEARCH_HARNESS` 或 deep research → 触发这个 Harness，不要把它当代码探索请求。**
 
-- **本 Harness 就是项目的 Deep Research Harness。** 对已选择的研究，只有用户明确提供当前 workspace 内可达的 existing bundle candidate（目录或其中的文件）并要求继续/检查时，才先检查同根 `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md`；通过后读 `command_playbook/continue-run-bundle.md`，其目录解析为本次操作的 canonical absolute current run bundle root。显式 candidate 缺少任一文件即报告 `unsupported_current_entry_contract` 并停止；不得读 legacy entry、回落 `RUN.md`、新建/另选 bundle、迁移、upgrade 或提供 human-only Harness command。没有 explicit candidate 才读 `RUN.md`。扫描发现、只提文件名或不可达路径都不选择 run，也不从文件坐标执行命令；人仍可在 Harness operational contract 外直接阅读历史 Markdown。
+- **本 Harness 就是项目的 Deep Research Harness。** 入口选择的完整规则只有一处 canonical 表述：`command_playbook/continue-run-bundle.md` 的 "Entry Selection (canonical)" 节；本文件只放指针。要点：对已选择的研究，用户明确提供当前 workspace 内可达的 existing bundle candidate（目录或其中的文件）并要求继续/检查时，先检查同根 `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md`；通过后读 `command_playbook/continue-run-bundle.md`，其目录解析为本次操作的 canonical absolute current run bundle root。显式 candidate 缺少任一文件即报告 `unsupported_current_entry_contract` 并停止；没有 explicit candidate 才读 `RUN.md`。扫描发现、只提文件名或不可达路径都不选择 run，也不从文件坐标执行命令；人仍可在 Harness operational contract 外直接阅读历史 Markdown。
 - **entry 前不做替代研究。** 在上述 selected entry 读完前，不调用 `research`、`deep-research` 或等价 one-shot shortcut，不对该 request 直接 WebSearch/WebFetch，也不手工收集或综合 evidence。此限制只覆盖 entry 前；`RUN.md` 进入的 HITL1 probe 与后续 phase 已授权的 research 仍按其原有 contract 执行。仓库 guidance 不能保证宿主不会预先匹配 skill 或注入工具。
 - **`start-research.md` 只是 RUN.md 后的下游 new-run playbook。** 没有上述明确 existing map 时，先读 `RUN.md`，再由其 Section 2 进入 `command_playbook/start-research.md` 创建 `dpt_rb_<name>/`、写入研究问题、加载 `phase-instantiation.md`；之后每个 phase node 靠 `check.next` 推进到 `phase-final`。
 - **触发按意图，不按关键词**：用户即使只贴了 `DEEP_RESEARCH_HARNESS` 的路径、没说"研究"二字，只要意图是"我要查/研究一个问题"，就走上面入口。别把路径前缀当普通工作目录上下文而错过。
@@ -33,4 +33,4 @@ playbook 进入具体操作。这个 pre-read 不是 Deep Research Harness resea
 
 搞不清楚流程时，回到 `README.md`。
 
-> 注：本文件与 `AGENTS.md` 内容保持同步（分别服务 Claude Code / Codex）。改路由规则时两份都要一起改，避免漂移。
+> 注：本文件与其配对行为文件保持同步（Codex 读 `AGENTS.md`、Claude Code 读 `CLAUDE.md`，正文除工具名外逐字节一致）。改路由规则时两份一起改，避免漂移。

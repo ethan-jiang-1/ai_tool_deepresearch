@@ -4,6 +4,33 @@ Agent command: reload one explicitly supplied, reachable existing run bundle.
 This playbook is navigation and Agent flow; it does not create lifecycle,
 Gate, receipt, trace, permission, or mutation authority.
 
+## Entry Selection (canonical)
+
+This section is the single canonical statement of the complete entry-selection
+rule. All other entry surfaces (repo-root and Harness behavior files, Harness
+README, RUN, COMMANDS, start-research) carry a short pointer to this section
+instead of restating the rule.
+
+An explicitly supplied reachable existing bundle candidate (a directory or a
+file within it) with continuation or inspection intent first passes the
+same-root `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md` preflight, then follows the
+Reload Procedure below. A supplied candidate missing either file is
+`unsupported_current_entry_contract`: stop without reading it as an
+operational entry, falling back to `RUN.md`, creating a bundle, selecting
+another bundle, migration, upgrade, or a human-only Harness command.
+
+With no supplied existing candidate, research, deep-research, investigation,
+or report intent with `DEEP_RESEARCH_HARNESS/` selected uses
+`DEEP_RESEARCH_HARNESS/RUN.md`. A discovered, bare, or unreachable file does
+not select a run. A verified selected bundle directory resolves to the
+operation's canonical absolute current run bundle root.
+
+Before the selected entry is read, do not invoke a built-in `research` /
+`deep-research` shortcut, perform request-specific WebSearch/WebFetch, or
+collect/synthesize evidence manually; the selected entry and its later phase
+instructions authorize subsequent legal research work. Direct human reading of
+historical Markdown remains outside this operational contract.
+
 ## Preconditions
 
 - The user explicitly supplied/opened a reachable existing bundle candidate

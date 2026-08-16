@@ -275,6 +275,14 @@ Allowlist entries SHALL be explicit and reviewable: file or glob, phrase class, 
 
 The validator SHALL reuse the existing command-contract documentation regression surface, remain deterministic, and use Node.js built-ins only. It SHALL NOT add a prose-quality classifier or attempt to judge wording beyond the defined phrase classes and required stable markers.
 
+The command-index regression SHALL additionally verify command-index completeness and copyability for the surfaces this change touches:
+
+- `persist-final-report` SHALL appear in `COMMANDS.md` as an Agent-facing operation of `operate-artifact-persistence.mjs`;
+- an executable command string presented in prose or in a command playbook copy context SHALL carry the full executable prefix `node DEEP_RESEARCH_HARNESS/cli/<tool>.mjs <verb> ...` so a copied command string executes without reconstruction; and
+- the compact operation tables in `COMMANDS.md` MAY keep their bare non-help form when the same table row names the exact `cli/` file coordinate for the operation, because the coordinate is resolvable from the row.
+
+The regression SHALL be deterministic, name the missing or non-copyable entry, and SHALL NOT invent requirements for commands that are not Agent-facing operation surfaces.
+
 #### Scenario: Static validation catches implicit human presence
 
 - **WHEN** an Agent-facing command doc says a user/operator should run a pipeline command or decide whether to continue during a non-HITL phase
@@ -294,6 +302,18 @@ The validator SHALL reuse the existing command-contract documentation regression
 - **WHEN** a framework doc mentions operator inspection as post-run or diagnostic review
 - **THEN** static validation SHALL NOT fail solely for that phrase
 - **AND** the wording SHALL NOT describe the operator as a command co-runner during the autonomous pipeline
+
+#### Scenario: Implemented command is missing from the index
+
+- **WHEN** `persist-final-report` is absent from `COMMANDS.md` even though it is implemented and required by an accepted spec
+- **THEN** the command-index regression SHALL fail
+- **AND** the failure SHALL name the missing command
+
+#### Scenario: Prose command string is not directly executable
+
+- **WHEN** `COMMANDS.md` prose or a command playbook presents an executable command string without the full `node DEEP_RESEARCH_HARNESS/cli/<tool>.mjs` prefix
+- **THEN** the command-index regression SHALL fail
+- **AND** the failure SHALL name the entry and its expected prefix
 
 ### Requirement: Phase-boundary terminology is discoverable
 

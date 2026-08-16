@@ -33,6 +33,14 @@ runtime record. There is deliberately no `DEEP_RESEARCH_HARNESS/CONTEXT.md`.
   present run, CLI invocation, task card, or experiment. It is never inferred
   from chat, cwd, recency, or filesystem order.
 
+运行时三坐标(compact 版;完整定义见 `DEEP_RESEARCH_HARNESS/README.md`「运行时边界」):
+
+| 坐标 | Compact distinction |
+|---|---|
+| `repo_command_root` | 执行 `node DEEP_RESEARCH_HARNESS/...` 的仓库根，只是命令位置 |
+| `framework_root` | `DEEP_RESEARCH_HARNESS/`，只读 reusable Harness assets |
+| `current_run_bundle_root` | 本次操作显式选中的 `dpt_rb_*` / `dpt_disp_*`，唯一 runtime truth 根 |
+
 ## Core Ownership Terms
 
 | Term | Compact distinction |
@@ -44,8 +52,9 @@ runtime record. There is deliberately no `DEEP_RESEARCH_HARNESS/CONTEXT.md`.
 | **Engine** | deterministic schema/checkpoint/receipt/trace authority; not a research or semantic judge |
 | **Runtime truth** | durable current facts under the selected current run bundle root; not chat memory or reusable assets |
 | **Source of Record** | the one owner for a class of facts; not a projection or an automatic permission grant |
-| **Gate** | Engine checkpoint that permits a legal transition only when accepted checks pass; not a research phase or workflow controller |
+| **Gate** | Engine checkpoint that permits a legal transition only when accepted checks pass; not a research phase or workflow controller。Gate 一词有五面含义（transition 表 / definition JSON / engine / CLI wrapper / runtime status），完整五面表见 `openspec/guidance/models/framework-runtime-boundary.md` |
 | **Check / Inspect / Advice** | deterministic pass/fail, diagnosis, and bounded next-step feedback; none repairs or grants permission by itself |
+| **`hints[]` / `repair_kind`** | 每 phase §7 反馈主面的 closed-enum 下一步载体：`hints[]` 带一个直接 repair/owner 边界，`repair_kind` 命名具体恢复操作；反馈形状的完整契约以所属 accepted spec / model 为准，此处只做术语对齐 |
 
 ## Execution Distinctions
 

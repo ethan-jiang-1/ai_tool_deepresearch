@@ -127,24 +127,26 @@ deferred。
 
 ## Progress TODO
 
-### C1 — repair-current-guidance-contract-drift
+### C1 — repair-current-guidance-contract-drift ✅ CLS-064
 
-- [ ] propose:语义反思 + 简洁准入两问 + delta specs(涉及
+- [x] propose:语义反思 + 简洁准入两问 + delta specs(涉及
   bundle/run-entry、agent/agent-command-surface、agent/agent-context-routing、
-  governance/guidance-constitution)
-- [ ] polish:/polish-openspec-change,至少两轮(Pass 1 整体一致性 + 至少一轮
+  governance/guidance-constitution;实做 7 个 delta——另含 workflow-node-contract、
+  runtime-reentry-debuggability、cli-exit-code-conventions)
+- [x] polish:/polish-openspec-change,至少两轮(Pass 1 整体一致性 + 至少一轮
   risk-led),直到 `ready for apply`(`openspec validate --strict` +
   `git diff --check` 通过);发现的产品/范围决策升级给用户,不自行猜
-- [ ] design review:三原则审查(尤其"删除比增加多")
-- [ ] verification-plan.yaml:四类 test class 声明,含 AGENTS≡CLAUDE 守卫
+- [x] design review:三原则审查(尤其"删除比增加多")
+- [x] verification-plan.yaml:四类 test class 声明,含 AGENTS≡CLAUDE 守卫
   (integration)与 skill 路径存在性检查
-- [ ] apply:目标文件全部校准(README:138 / RUN.md:32 / COMMANDS.md:55
+- [x] apply:目标文件全部校准(README:138 / RUN.md:32 / COMMANDS.md:55
   方向决定 / typo / skill 路径 / CONTEXT / 入口单一源 / 不变量简报)
-- [ ] exit-code 方向决定落地 + 回归锁定
-- [ ] reentry 面校准(证据 §13):RA-M2 决定真相 spec 并收敛对侧;RA-M1/RA-M4/
-  RA-L1 文档校准;RA-L5 不改
-- [ ] npm test 相关子集绿(tests/integration/md/ + exit-code inventory)
-- [ ] archive:finalizer + 本 plan 登记 CLS 编号
+- [x] exit-code 方向决定落地 + 回归锁定(用户拍板:代码补 exit 2)
+- [x] reentry 面校准(证据 §13):RA-M2 决定真相 spec 并收敛对侧(用户拍板:
+  POF-001 为真相,RRD-008 对齐);RA-M1/RA-M4/RA-L1 文档校准;RA-L5 不改
+- [x] npm test 相关子集绿(tests/integration/md/ 340/340 + exit-code inventory
+  32/32 + command-contract-docs 16/16 + static-regression + reentry/persistence)
+- [x] archive:finalizer 全绿,归档为 `2026-08-16-repair-current-guidance-contract-drift`
 
 ### C2 — make-work-unit-recovery-feedback-direct
 

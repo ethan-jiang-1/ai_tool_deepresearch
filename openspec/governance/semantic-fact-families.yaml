@@ -51,3 +51,9 @@ families:
     bounded_question: Does each Final Evidence Map link have legal submitted backing?
   - id: bundle.current-entry-contract
     bounded_question: May an explicitly selected bundle root enter a current Harness operation under the same-root BUNDLE_ENTRY.md plus BUNDLE_MAP.md contract?
+  - id: cli.exit-code-convention
+    bounded_question: >-
+      For each documented framework CLI, which exit code does it emit for pass,
+      consistency-issue, and invocation/configuration-error results per the
+      accepted cli-exit-code-conventions contract, and is that behavior aligned
+      with its header and COMMANDS.md inventory entry?

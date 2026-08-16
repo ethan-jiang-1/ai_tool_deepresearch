@@ -26,7 +26,7 @@ research；它不改变随后 `continue-run-bundle.md` / `RUN.md` 的 existing s
 - 用户说"研究/调研/deep research/research report/帮我查…/…是什么"等研究意图；
 - 任何"我要就某个话题得到一份有来源、可核查的研究报告"的需求。
 
-**本 Harness 就是项目的 Deep Research Harness。** 已选择研究时，用户明确提供当前 workspace 内可达 existing bundle candidate（目录或其中的文件）并要求继续/检查，先验证同根 `BUNDLE_ENTRY.md` 与 `BUNDLE_MAP.md`；只有完整 pair 才走 `command_playbook/continue-run-bundle.md`，并将该目录解析为本次操作的 canonical absolute current run bundle root。显式 candidate 缺少任一文件即以 `unsupported_current_entry_contract` 停止，不读 legacy entry、不回落 `RUN.md`、不新建/另选 bundle、不迁移/upgrade、也不提供 human-only Harness command。扫描发现、只提文件名或不可达路径不选择 run。没有 explicit existing candidate 才读 `RUN.md`；人仍可在 Harness operational contract 外直接阅读历史 Markdown。
+**本 Harness 就是项目的 Deep Research Harness。** 入口选择的完整规则只有一处 canonical 表述：`command_playbook/continue-run-bundle.md` 的 "Entry Selection (canonical)" 节；本文件只放指针。要点：已选择研究时，用户明确提供当前 workspace 内可达 existing bundle candidate（目录或其中的文件）并要求继续/检查，先验证同根 `BUNDLE_ENTRY.md` 与 `BUNDLE_MAP.md`；只有完整 pair 才走 `command_playbook/continue-run-bundle.md`，并将该目录解析为本次操作的 canonical absolute current run bundle root。显式 candidate 缺少任一文件即以 `unsupported_current_entry_contract` 停止。没有 explicit existing candidate 才读 `RUN.md`；扫描发现、只提文件名或不可达路径不选择 run；人仍可在 Harness operational contract 外直接阅读历史 Markdown。
 
 在 selected entry 读完前，**不要**调用 `research`、`deep-research` 或等价 one-shot shortcut，不对该 request 直接 WebSearch/WebFetch，也不手工收集或综合 evidence。`RUN.md` 的 Section 2 随后进入 `command_playbook/start-research.md` 创建新 run 并加载第一个 phase node；HITL1 probe 和后续 phase research 仍由各自进入后的既有 contract 授权。本 guidance 不保证宿主不会预先匹配 skill 或注入工具。
 
@@ -40,7 +40,7 @@ research；它不改变随后 `continue-run-bundle.md` / `RUN.md` 的 existing s
 
 `DEEP_RESEARCH_HARNESS/` 是 reusable Harness assets，不是某一次 run 的工作目录。
 
-- `DEEP_RESEARCH_HARNESS/` 在 workflow 执行期间视为 read-only Harness surface。
+- `DEEP_RESEARCH_HARNESS/` 在 workflow 执行期间视为 read-only Harness surface。这是**运行时 scope** 的只读（run 内容不写回框架）；另有**生命周期 scope** 的只读（根 `AGENTS.md`/`CLAUDE.md`：`/opsx:apply` 前框架代码只读），两层不同，互相不替代。
 - 同一套 `DEEP_RESEARCH_HARNESS/` 可以服务多个 `dpt_rb_*` production run bundle 或 `dpt_disp_*` disposable experiment bundle。
 - 当前 research run 的 runtime truth 只来自 current run bundle root，不来自 chat memory，也不写回 Harness。
 - “单主 workflow” 指 v1 只有一个 canonical Deep Research workflow package；不表示只能有一个 run bundle。
@@ -135,7 +135,7 @@ dpt_rb_<name>/
 
 - 操作前 reload current run bundle root 的控制文件。
 - Queue 为空且无法 refill 时才能停止。
-- 停止授权: 仅 final_delivery / decision_blocker / empty_queue_after_refill。
+- 停止授权: 唯一真相是 `engine/queue-manager-core.mjs` 的 `StopAuthorizationState` 枚举（4 值）。`syncQueueHealth` 实际写入 `empty_queue_after_refill`（drain 后停止）与 `unauthorized_continue_required`（继续）；`final_delivery` / `decision_blocker` 是保留值，当前无代码写入。指引不得另列"合法值"清单。
 - 面向 research run 的命令必须显式接收 current run bundle root；现有 bundle 工具使用明确的 `<bundleDir>`。
 - 不要依赖 chat memory 判断当前 run 状态；必须以 current run bundle root、可用的 check/gate CLI output 和 trace 为准。
 

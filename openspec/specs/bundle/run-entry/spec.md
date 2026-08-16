@@ -235,9 +235,16 @@ the Agent retains the direct Harness-context boundary. When no existing
 candidate is supplied, selected new-research routing SHALL use `RUN.md` before
 later workflow instructions or research work.
 
-The distinction SHALL be synchronized across repo-root `AGENTS.md` and
-`CLAUDE.md`, Harness `AGENTS.md` and `CLAUDE.md`, and relevant Harness
-entry/command guidance. It SHALL NOT add a lifecycle checkpoint, host trigger,
+The complete entry-selection rule — including both the verified-pair branch and
+the no-candidate `RUN.md` branch — SHALL have exactly one canonical statement in
+`DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md`. Repo-root
+`AGENTS.md` and `CLAUDE.md`, Harness `AGENTS.md` and `CLAUDE.md`, and relevant
+Harness entry/command guidance (README, RUN, COMMANDS, start-research) SHALL
+carry a short pointer to that canonical statement instead of restating the
+complete rule. Pointers SHALL name the playbook and the unsupported-current-
+entry-contract boundary without reproducing the selection procedure. A pointer
+SHALL NOT weaken, reorder, or paraphrase the canonical rule's outcomes. This
+single-source arrangement SHALL NOT add a lifecycle checkpoint, host trigger,
 permission, mutation, or rerun authority.
 
 #### Scenario: Explicit existing bundle prevents a second bundle and pre-entry research
@@ -274,3 +281,15 @@ permission, mutation, or rerun authority.
   commands
 - **AND** it SHALL NOT treat entry-card content as host trigger, Harness
   authentication, permission, or reentry authority
+
+#### Scenario: Entry surfaces point instead of restating
+
+- **WHEN** an Agent reads a root or Harness routing surface before selecting an
+  entry
+- **THEN** the surface SHALL point to
+  `DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md` as the one
+  canonical statement of the complete selection rule
+- **AND** it SHALL NOT reproduce the full selection procedure or rephrase its
+  branches
+- **AND** the canonical playbook SHALL state both the verified-pair branch and
+  the no-candidate `RUN.md` branch

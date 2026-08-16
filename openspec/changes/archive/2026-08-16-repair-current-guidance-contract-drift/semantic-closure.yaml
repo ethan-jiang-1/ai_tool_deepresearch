@@ -1,0 +1,46 @@
+schema_version: semantic-closure/v1
+change: repair-current-guidance-contract-drift
+status: affected
+catalog_additions: []
+affected:
+  - family: cli.exit-code-convention
+    fact: >-
+      validate-workflow-package.mjs emits 0 for a consistent workflow package, 1
+      for consistency issues, and 2 for invocation/configuration errors (missing
+      required context or unreadable files), matching its header, the
+      cli-exit-code-conventions inventory, and COMMANDS.md; its invocation-error
+      path is added by this change, while every other framework CLI keeps its
+      existing documented exit behavior.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/cli/validate-workflow-package.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/cli/validate-workflow-package.mjs
+      - openspec/specs/engine/cli-exit-code-conventions/spec.md
+      - tests/integration/cli/exit-code-convention.test.mjs
+    consumers:
+      - tests/integration/cli/exit-code-convention.test.mjs
+    overlap:
+      - coordinate: openspec/specs/engine/cli-exit-code-conventions/spec.md
+        relation: authoritative
+        detail: >-
+          CLE-001/CLE-003/CLE-004 own the exit-code convention, the inventory of
+          command classes and exceptions, and the regression that locks them;
+          this change reconciles validate-workflow-package as a selected surface.
+      - coordinate: DEEP_RESEARCH_HARNESS/COMMANDS.md
+        relation: derived
+        detail: >-
+          The command index documents the exit-code convention for Agent
+          callers; it does not decide exit behavior.
+      - coordinate: DEEP_RESEARCH_HARNESS/cli/README.md
+        relation: derived
+        detail: >-
+          CLI-level documentation mirrors the convention without owning the
+          behavior.
+      - coordinate: openspec/changes/repair-current-guidance-contract-drift/specs/engine/cli-exit-code-conventions/spec.md
+        relation: derived
+        detail: >-
+          The active delta records the reconcile decision for this change; it
+          does not establish the runtime exit behavior by itself.
+    verification:
+      truth_table: tests/integration/cli/exit-code-convention.test.mjs
+      cross_surface: tests/integration/md/agent-context-routing-contract.test.mjs

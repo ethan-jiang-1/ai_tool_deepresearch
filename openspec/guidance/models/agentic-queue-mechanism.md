@@ -231,7 +231,7 @@ The filling mechanism must be cheap enough that it does not defeat the purpose: 
 
 ### 7.2 Stop Authorization: Computed But Not Enforced
 
-The engine already computes `stop_authorization_state` in `claim()`: refill pool non-empty → `unauthorized_continue_required`; refill pool empty → `empty_queue_after_refill`. Valid stop states are `final_delivery`, `decision_blocker`, and `empty_queue_after_refill`. The default is `unauthorized_continue_required` — the Phase Agent must continue.
+The engine already computes `stop_authorization_state` in `claim()`: refill pool non-empty → `unauthorized_continue_required`; refill pool empty → `empty_queue_after_refill`. 合法值的唯一真相是 `DEEP_RESEARCH_HARNESS/engine/queue-manager-core.mjs` 的 `StopAuthorizationState` 枚举（4 值）：`unauthorized_continue_required`、`final_delivery`、`decision_blocker`、`empty_queue_after_refill`。`syncQueueHealth` 实际写入的只有 `empty_queue_after_refill` 与 `unauthorized_continue_required`；`final_delivery` / `decision_blocker` 是保留值，当前无代码写入。默认是 `unauthorized_continue_required` — the Phase Agent must continue。
 
 The enforcement point is phase drain and gate readiness: queue demand, delegated in-flight work units, expired attempts, and repair/refill demand must all be accounted for before the gate can advance. The preferred reinforcement is a short Engine/CLI continuation or repair cue at the decision point. This requirement does not authorize chat interception, a session watcher, or a new stop state machine.
 

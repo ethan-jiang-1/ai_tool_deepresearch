@@ -1,14 +1,6 @@
-# Agent Context Routing
+> req: ACR-001, ACR-002, ACR-004
 
-> req: ACR-001, ACR-002, ACR-003, ACR-004
-
-## Purpose
-
-Give every substantive repository task a short vocabulary-alignment entry route
-that preserves the Deep Research Tool's agentic architecture without turning a
-glossary or ADR into a competing behavior or runtime authority.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Project glossary preserves canonical terminology boundaries
 

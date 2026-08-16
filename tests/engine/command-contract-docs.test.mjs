@@ -287,6 +287,25 @@ describe('Agent-facing command contract docs', () => {
     }
   });
 
+  it('command index registers persist-final-report with the full executable prefix', () => {
+    const commands = read('DEEP_RESEARCH_HARNESS/COMMANDS.md');
+    const playbook = read('DEEP_RESEARCH_HARNESS/command_playbook/persist-artifact.md');
+
+    const prefix = 'node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs';
+    assert.ok(
+      commands.includes(`${prefix} persist-final-report`),
+      'COMMANDS.md must register persist-final-report with the full executable prefix',
+    );
+    assert.ok(
+      commands.includes(`${prefix} publish-final-report`),
+      'COMMANDS.md prose must carry the full executable prefix for publish-final-report',
+    );
+    assert.ok(
+      playbook.includes(`${prefix} persist-final-report`),
+      'persist-artifact playbook must carry the full executable prefix for persist-final-report',
+    );
+  });
+
   it('documents the selected operation grammar and direct feedback boundary without normalizing utilities', () => {
     const commands = read('DEEP_RESEARCH_HARNESS/COMMANDS.md');
     const cliReadme = read('DEEP_RESEARCH_HARNESS/cli/README.md');

@@ -5,6 +5,10 @@ description: Archive a completed OpenSpec feedback-lifecycle change.
 
 # `/opsx:archive`
 
+> 分工：本 skill 是 `/opsx:*` 命令的薄封装变体。同一操作的标准工作流以
+> `.agents/skills/openspec-archive-change/SKILL.md` 为准（更完整的步骤与 guardrails）；
+> 两套 skill 指向同一 OpenSpec lifecycle，不合并、不互相覆盖。
+
 Select and preserve one active change identity. Run `openspec status --change "<name>" --json`
 and `openspec instructions archive --change "<name>" --json` before finalization. Require valid
 `operationGuidance` containing `change-feedback-loop/archive:`. A failed or missing lookup stops
@@ -13,7 +17,7 @@ one `openspec-feedback:plan-review` task and one `openspec-feedback:closeout-rev
 finalization. An unmarked or malformed change must add those existing marker tasks and resume
 Apply; it must not invoke the finalizer or a native archive command.
 
-Read `guidelines/change-feedback-loop.md`, review the selected change-scoped actual diff and
+Read `openspec/operations/change-feedback-loop.md`, review the selected change-scoped actual diff and
 selected evidence, and write each actionable finding as an ordinary pending task while keeping
 the closeout marker open. Complete Agent-owned delta/main sync and re-comparison where
 applicable. Review `semantic-closure.yaml` against actual changed surfaces: for `affected`, assess

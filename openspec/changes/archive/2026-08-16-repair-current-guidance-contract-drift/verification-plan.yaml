@@ -1,0 +1,142 @@
+schema_version: verification-routing/v1
+change: repair-current-guidance-contract-drift
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The ACS-003 command-index regression is a static string scan over
+      COMMANDS.md and playbooks implemented as a focused deterministic test
+      under tests/engine/ (per the repo's existing classification); it gains
+      two additional assertions in this change.
+  integration:
+    status: selected
+    rationale: >-
+      Byte-level behavior-file pair sync, skill/guidance reference existence,
+      and CLI exit-code alignment are deterministic cross-file facts verified
+      against real repository files and the real CLI without network or Agent
+      execution.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No lifecycle/gate/recovery chain changes: the only behavior change is one
+      CLI invocation-error exit path, fully covered by integration assertions;
+      no temporary-bundle chain needs to be driven end to end.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      No Agent behavior changes: entry-routing pointers, glossary terms, and
+      invariant briefs are prose calibrations locked by deterministic
+      documentation regressions, not claims about real Agent behavior.
+claims:
+  - id: command-index-registration-and-prefix
+    statement: >-
+      ACS-003: persist-final-report appears in COMMANDS.md as an Agent-facing
+      operation of operate-artifact-persistence.mjs, and executable command
+      strings in COMMANDS.md prose and command playbooks carry the full
+      node DEEP_RESEARCH_HARNESS/cli/<tool>.mjs prefix, with compact operation
+      tables exempt because their rows name the cli coordinate.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/command-contract-docs.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: root-behavior-file-pair-sync-guard
+    statement: >-
+      ACR-002/ACR-004: repo-root AGENTS.md and CLAUDE.md remain byte-identical
+      modulo their tool-specific title lines (first three lines); the guard test
+      fails and names the first differing byte when either file drifts.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-behavior-file-pair-sync-guard.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: harness-behavior-file-pair-sync-guard
+    statement: >-
+      ACR-002/ACR-004: DEEP_RESEARCH_HARNESS/AGENTS.md and CLAUDE.md remain
+      byte-identical modulo their tool-specific title lines (first three lines);
+      the guard test fails and names the first differing byte when either file
+      drifts.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-behavior-file-pair-sync-guard.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: guidance-references-resolve
+    statement: >-
+      ACR-004: every guidance path referenced by repository skill files under
+      .agents/skills/ and .claude/skills/ resolves to an existing file; a
+      retired guidelines/ prefix reference or any missing path fails the test
+      and names the offending file and reference.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/guidance-references-resolve.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: workflow-package-exit-code-alignment
+    statement: >-
+      CLE-003/CLE-004: validate-workflow-package.mjs emits 0 for a consistent
+      package, 1 for consistency issues, and 2 for invocation/configuration
+      errors, and COMMANDS.md no longer lists it as known doc/code drift; the
+      exit-code regression asserts a representative invocation-error run and the
+      inventory wording.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/exit-code-convention.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: context-routing-regression-stays-green
+    statement: >-
+      ACR-004/RUE-006: after the glossary term additions, single-source entry
+      pointers, and behavior-file guard edits, the existing
+      tests/integration/md/agent-context-routing-contract.test.mjs (focused
+      context-routing regression) and
+      tests/integration/md/dpt-research-entry-routing-contract.test.mjs
+      (research-entry routing contract) still pass, proving the
+      Charter-then-context route and selected-entry contract were preserved.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-context-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

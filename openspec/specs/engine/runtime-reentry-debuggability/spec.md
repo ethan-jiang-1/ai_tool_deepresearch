@@ -386,12 +386,12 @@ runtime authority or rely on chat memory.
 Across a Final-boundary handoff and current terminal Final, owner precedence
 SHALL be:
 
-1. accepted artifact-publication/persistence workspace -> exact existing
-   quiescent `sweep` or blocked-workspace repair;
-2. invalid or ambiguous canonical primary inventory -> its direct inventory
-   blocker, never post-final rerun;
-3. already accepted, still-active C5 workspace or lineage -> its exact existing
+1. already accepted, still-active C5 workspace or lineage -> its exact existing
    recovery owner;
+2. accepted artifact-publication/persistence workspace -> exact existing
+   quiescent `sweep` or blocked-workspace repair;
+3. invalid or ambiguous canonical primary inventory -> its direct inventory
+   blocker, never post-final rerun;
 4. newer legal Final handoff after retired C5 but no route-bound Final load ->
    exact existing `enter-phase` action, whose admission must reproduce the
    event-bound prior inventory before mutation;
@@ -402,6 +402,11 @@ SHALL be:
    more-append latest refinement; and
 7. otherwise -> current Final owner, using admitted empty inventory for the bundle's first
    delivery or the latest committed primary report for refinement.
+
+This ordering SHALL follow `research/post-final-recovery` (POF-001), which owns
+accepted C5 workspace/lineage precedence over artifact-persistence ownership;
+this list mirrors that Source of Record and SHALL NOT re-decide the precedence
+or add an owner.
 
 Final refinement MAY be projected as the existing `current_owner` action kind
 targeted at `phases/phase-final.md`; it SHALL not add a recovery controller,
@@ -477,7 +482,12 @@ postconditions SHALL continue to check the actual current source-gate window.
 
 #### Scenario: Pending artifact persistence precedes C5
 
-- **WHEN** terminal Final contains an accepted artifact-persistence workspace
+> **@deprecated scenario name** — The title is retained as the historical
+> anchor. With no accepted C5 workspace, an accepted artifact-persistence
+> workspace takes precedence; an accepted C5 owner takes precedence over it
+> per POF-001.
+
+- **WHEN** terminal Final contains an accepted artifact-persistence workspace and no accepted C5 workspace or lineage exists
 - **THEN** summary SHALL expose only the existing quiescent sweep/recovery action for that root
 - **AND** it SHALL not publish, refine, or offer C5 while inventory is unstable
 

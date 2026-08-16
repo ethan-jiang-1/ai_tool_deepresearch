@@ -26,7 +26,7 @@
 | `gate-schema-capability-audit` | 全面 Gate quality audit（重开 2026-08-07）：per-gate gap map 与语义质量审计未完成；BUG-201/202/204 的确定性闭环已由 `bug-200-204-gate-and-queue-remediation` change 1 收敛，其余内容质量 concerns 仍待审计。 | active（审计未闭环） |
 | `iterative-final-delivery-versioned-output` | Final 交付可迭代打磨（与用户反复敲打、就地重写，不新增 checkpoint）+ 版本化 Final 输出命名（`final.md` → `final-v1.md`、`final-v2.md` …）。触发自 `enterprise-safe-ai-harness-v2` 技术深入版交付。 | active（设计验证待开始） |
 | `cleanup-effect-verification` | 2026-08-16 四路深挖分析底稿（单文件，Part I/II）：678 commits 失败模式分类、清理效果分层验证（FM-3 结构性修复 / FM-1 内容漂移无机器检查 / 无 CI·hook）、恢复指令↔代码 M1-M10、权威漂移 B1-B5、路由热点 H1-H8、修复映射与不变量候选。 | active（分析底稿；修复清单待转 OpenSpec change） |
-| `guidance-drift-cleanup-machine-guards` | 把深挖发现的漂移收敛为 **3 个 OpenSpec change + 1 deferred**：C1 事实校准（散文说真话+入口单一源+AGENTS≡CLAUDE 守卫）、C2 恢复反馈直达（Engine 自带下一步）、C3 文档-代码漂移守卫（checker+可选本地 pre-commit）。C4 phase 闭包去重 deferred。 | active（待 propose C1） |
+| `guidance-drift-cleanup-machine-guards` | 把深挖发现的漂移收敛为 **3 个 OpenSpec change + 1 deferred**：C1 事实校准（散文说真话+入口单一源+AGENTS≡CLAUDE 守卫）、C2 恢复反馈直达（Engine 自带下一步）、C3 文档-代码漂移守卫（checker+可选本地 pre-commit）。C4 phase 闭包去重 deferred。 | active（C1 已归档 CLS-064：`2026-08-16-repair-current-guidance-contract-drift`；待 propose C2） |
 
 ---
 

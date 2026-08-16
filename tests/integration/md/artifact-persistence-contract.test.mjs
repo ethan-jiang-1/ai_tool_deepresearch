@@ -30,7 +30,8 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
     for (const marker of ['retained staging', 'quiescent', 'retry persist', 'rerun sweep', 'There is no force overwrite']) {
       assert.ok(playbook.includes(marker), `playbook missing ${marker}`);
     }
-    assert.match(commands, /publish-final-report --bundle --source \[--feature\]/);
+    assert.match(commands, /node DEEP_RESEARCH_HARNESS\/cli\/operate-artifact-persistence\.mjs publish-final-report --bundle <path> --source <retained-staging> \[--feature <safe_snake_case>\]/);
+    assert.match(commands, /node DEEP_RESEARCH_HARNESS\/cli\/operate-artifact-persistence\.mjs persist-final-report/);
     assert.match(antiCheating, /unknown-temp promotion/);
   });
 

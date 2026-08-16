@@ -106,6 +106,7 @@ At minimum, the inventory SHALL document:
 - many current non-gate utility CLIs emit binary `0/1` and do not yet share a common exit helper;
 - `log-event.mjs` is a documented exception that returns `0` even when logging fails, because diagnostic log/trace write failure must not block Agent flow unless a separate accepted contract says otherwise;
 - `check-reentry.mjs` and inspect-style tools may use `2` for caller invocation/config errors even when not routed through the gate helper;
+- `validate-workflow-package.mjs` is a reconciled invocation-error surface: it emits `0` for a consistent package, `1` for consistency issues, and `2` for invocation/configuration errors such as missing required context or unreadable files; and
 - any known doc/code drift discovered during apply, such as a header documenting an exit code a command does not emit, SHALL be recorded as drift rather than silently normalized in prose.
 
 This change SHALL reconcile help and invocation/configuration behavior only for
@@ -136,6 +137,12 @@ helper SHALL be a separate OpenSpec change.
 - **AND** unselected utility behavior SHALL remain an explicit documented
   exception until a separately accepted change reconciles it
 
+#### Scenario: Reconcile-workflow-package exit two is documented as current behavior
+
+- **WHEN** the Agent reads the exit-code convention for `validate-workflow-package.mjs`
+- **THEN** the docs SHALL state its current tri-state behavior including `2` for invocation/configuration errors
+- **AND** they SHALL NOT present it as a pending drift or future reconciliation item
+
 ### Requirement: Exit-code convention has regression coverage
 
 The project SHALL include regression coverage for the documented exit-code convention and exception inventory.
@@ -146,6 +153,7 @@ Coverage SHALL verify both documentation discoverability and representative runt
 - a non-gate utility CLI currently behaves as a documented binary command or documented exception;
 - `log-event.mjs` remains documented as an always-0 diagnostic/logging exception;
 - current non-gate utility exceptions remain visible rather than being silently normalized into the target convention;
+- `validate-workflow-package.mjs` emits `2` for a representative invocation/configuration error and `0`/`1` for its documented pass/fail results, and the docs no longer list it as known drift;
 - the docs state that Agent callers must read structured stdout rather than relying only on numeric exit code; and
 - the docs state that morale/continuation guidance belongs in advice or Agent-readable prose, not exit code.
 
@@ -162,3 +170,9 @@ The regression SHALL be deterministic, use Node.js built-ins plus existing appro
 - **WHEN** `log-event.mjs` remains an always-0 command but the docs stop documenting that exception
 - **THEN** the regression SHALL fail
 - **AND** the failure SHALL identify the missing exception inventory entry
+
+#### Scenario: Regression detects reconciled-surface drift
+
+- **WHEN** `validate-workflow-package.mjs` no longer emits `2` for an invocation error, or the docs list it as known drift
+- **THEN** the regression SHALL fail
+- **AND** the failure SHALL identify the exit-code or inventory entry that drifted

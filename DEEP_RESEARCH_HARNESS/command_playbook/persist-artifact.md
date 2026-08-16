@@ -67,6 +67,24 @@ declaration/path/backing/durability facts only; it does not decide legal Final
 entry, report quality, feedback type, or user satisfaction. Generic `persist`
 intentionally rejects reserved `final/final*.md` targets.
 
+For a safe **non-primary** Markdown target under `final/` (not the canonical
+primary series), use `persist-final-report`, which admits the Evidence Map
+backing before the durability commit and uses the same compare-and-swap
+discipline:
+
+```bash
+node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs persist-final-report \
+  --bundle <bundle> \
+  --source <completed-final-markdown-staging-file> \
+  --target <final/non-primary-report.md> \
+  (--expect-absent | --expect-sha256 <current-target-sha256>)
+```
+
+`blocked` (exit `1`) means backing admission or CAS failed: keep the retained
+staging, repair the named map row/backing surface or re-observe the target
+digest, then rerun the same `persist-final-report`; never retry generic
+`persist` for a `final/` Markdown target.
+
 ## Recover After A Crash
 
 First stop concurrent persist activity for the selected bundle. Then run the single quiescent sweep:

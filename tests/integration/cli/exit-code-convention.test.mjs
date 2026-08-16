@@ -5,7 +5,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { spawnSync } from 'node:child_process';
-import { readdirSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -107,8 +107,8 @@ const CLI_CONVENTION_INVENTORY = {
     coverage: ['tests/integration/cli/validate-work-unit-hygiene.test.mjs', 'this file: shipped framework exits 0'],
   },
   'validate-workflow-package.mjs': {
-    class: 'non-gate binary validator with documented header/code drift',
-    coverage: ['tests/integration/cli/validate-workflow-package.test.mjs', 'this file: shipped workflow package exits 0'],
+    class: 'non-gate tri-state validator with code 2 invocation errors',
+    coverage: ['tests/integration/cli/validate-workflow-package.test.mjs', 'this file: shipped workflow package exits 0, unknown flag exits 2'],
   },
 };
 
@@ -220,6 +220,25 @@ describe('CLI exit-code convention runtime representatives', () => {
     const cli = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'log-event.mjs');
     const result = runNode([cli, '--level', 'info', '--msg', 'missing bundle']);
     assert.equal(result.status, 0);
+  });
+
+  it('validate-workflow-package.mjs emits 2 for invocation errors and is no longer listed as drift', () => {
+    const cli = join(CLI_DIR, 'validate-workflow-package.mjs');
+    const unknownFlag = runNode([cli, '--bogus-flag']);
+    assert.equal(unknownFlag.status, 2, unknownFlag.stderr || unknownFlag.stdout);
+    assert.match(unknownFlag.stderr, /invocation error/);
+    assert.match(unknownFlag.stderr, /Usage:/);
+
+    const missingDir = runNode([cli, '--workflows-dir', join(REPO_ROOT, '__missing_workflows_dir__')]);
+    assert.equal(missingDir.status, 2, missingDir.stderr || missingDir.stdout);
+    assert.match(missingDir.stderr, /not found or unreadable/);
+
+    const shipped = runNode([cli]);
+    assert.equal(shipped.status, 0, shipped.stderr || shipped.stdout);
+
+    const commands = readFileSync(join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'COMMANDS.md'), 'utf8');
+    assert.doesNotMatch(commands, /Known doc\/code drift[\s\S]*validate-workflow-package/);
+    assert.match(commands, /validate-workflow-package\.mjs` is a reconciled tri-state surface/);
   });
 
   it('selected public operations keep standalone help and malformed static forms outside domain evaluation', () => {
