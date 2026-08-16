@@ -127,7 +127,7 @@ deferred。
 
 ## Progress TODO
 
-### C1 — repair-current-guidance-contract-drift ✅ CLS-064
+### C1 — repair-current-guidance-contract-drift ✅
 
 - [x] propose:语义反思 + 简洁准入两问 + delta specs(涉及
   bundle/run-entry、agent/agent-command-surface、agent/agent-context-routing、
@@ -146,9 +146,9 @@ deferred。
   POF-001 为真相,RRD-008 对齐);RA-M1/RA-M4/RA-L1 文档校准;RA-L5 不改
 - [x] npm test 相关子集绿(tests/integration/md/ 340/340 + exit-code inventory
   32/32 + command-contract-docs 16/16 + static-regression + reentry/persistence)
-- [x] archive:finalizer 全绿,归档为 `2026-08-16-repair-current-guidance-contract-drift`
+- [x] archive:finalizer 全绿,归档为 `2026-08-16-repair-current-guidance-contract-drift`;plan 关闭时统一登记 CLS 编号
 
-### C2 — make-work-unit-recovery-feedback-direct ✅ CLS-065
+### C2 — make-work-unit-recovery-feedback-direct ✅
 
 - [x] propose:语义反思 + 简洁准入两问(对照 simple-reliable-control 的
   "quality control 比被校验的工作简单");RA-M5/RA-L3 两个方向决定已升级用户
@@ -178,7 +178,7 @@ deferred。
   semantic-closure consumers 角色复核(RUN.md/persist-artifact.md → overlap:
   derived;verdict consumer 只留测试/CLI)
 
-### C3 — add-doc-code-drift-guards ✅ CLS-066
+### C3 — add-doc-code-drift-guards ✅
 
 - [x] propose:内容漂移检查器范围(路径/CLI 名/exit code/gate 清单);hook 决定项
   升级用户并拍板 = **不做 hook,只交付 checker**(远程 CI 沿用既有边界)
