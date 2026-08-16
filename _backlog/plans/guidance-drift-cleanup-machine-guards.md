@@ -34,8 +34,10 @@ FM-1/FM-2 的剩余部分与执行器缺口,用**尽量少的 OpenSpec change**:
    全文(Part I/II),**不要跳过**:M/B/H 编号是下面 change 的直接依据,
    所有 file:line 已经核验过,不需要重新推导(§13 嵌套审计项除外,须先复核)。
 3. 按 "## 顺序与依赖" 逐个 change 执行,每个 change 严格走
-   `openspec/changes/` 生命周期(propose → apply → archive),目标文件在
-   `/opsx:apply` 前保持不动。
+   `openspec/changes/` 生命周期:**propose → polish(/polish-openspec-change,
+   至少两轮:Pass 1 整体一致性 + 至少一轮 risk-led,直到 `ready for apply`
+   且 `openspec validate --strict` + `git diff --check` 通过)→ apply →
+   archive**,目标文件在 `/opsx:apply` 前保持不动。
 4. Tracking:每个 change 的 `- [ ]` 检查项勾选进度并更新本文件;change 归档后
    在 `_backlog/plans/README.md` 的活跃列表更新本 plan 状态;全部归档后按
    README 的关闭流程 `git mv` 到 `_backlog/_done/_closed_plans/`。
@@ -130,6 +132,9 @@ deferred。
 - [ ] propose:语义反思 + 简洁准入两问 + delta specs(涉及
   bundle/run-entry、agent/agent-command-surface、agent/agent-context-routing、
   governance/guidance-constitution)
+- [ ] polish:/polish-openspec-change,至少两轮(Pass 1 整体一致性 + 至少一轮
+  risk-led),直到 `ready for apply`(`openspec validate --strict` +
+  `git diff --check` 通过);发现的产品/范围决策升级给用户,不自行猜
 - [ ] design review:三原则审查(尤其"删除比增加多")
 - [ ] verification-plan.yaml:四类 test class 声明,含 AGENTS≡CLAUDE 守卫
   (integration)与 skill 路径存在性检查
@@ -145,6 +150,9 @@ deferred。
 
 - [ ] propose:语义反思 + 简洁准入两问(对照 simple-reliable-control 的
   "quality control 比被校验的工作简单")
+- [ ] polish:/polish-openspec-change,至少两轮,直到 `ready for apply`
+  (`openspec validate --strict` + `git diff --check`);RA-M3/RA-M5 的
+  行为 vs 文档分诊必须在 polish 内闭环,决定不了的升级给用户
 - [ ] design review:反馈形状与向后兼容边界(旧字段保留/迁移路径)
 - [ ] verification-plan.yaml:unit(attempt_disposition 统一)+ integration
   (五个反馈面形状一致)+ deterministic_e2e(恢复链)
@@ -158,6 +166,9 @@ deferred。
 ### C3 — add-doc-code-drift-guards
 
 - [ ] propose:内容漂移检查器范围(路径/CLI 名/exit code/gate 清单)
+- [ ] polish:/polish-openspec-change,至少两轮,直到 `ready for apply`
+  (`openspec validate --strict` + `git diff --check`);hook 接线决定项必须在
+  polish 内给出明确结论(做/不做/何时)
 - [ ] design review:hook 接线决定项(本地 pre-commit:做/不做/何时)
 - [ ] verification-plan.yaml:unit(checker 规则)+ integration(对真实文档跑)
 - [ ] apply:checker 实现 + req-registry 前缀查询 + (决定项)pre-commit hook
