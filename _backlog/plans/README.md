@@ -25,6 +25,14 @@
 | `bug-200-204-gate-and-queue-remediation` | BUG-200--204 的收敛分诊：关闭 current-head 已覆盖的 BUG-200；以两个 OpenSpec change 分别修 Gate/recovery contract 与递归 queue repair；不将 gate audit 拆为独立生命周期，也不让无 submitted evidence 的 topic 伪造完成。 | ready for OpenSpec proposals |
 | `gate-schema-capability-audit` | 全面 Gate quality audit（重开 2026-08-07）：per-gate gap map 与语义质量审计未完成；BUG-201/202/204 的确定性闭环已由 `bug-200-204-gate-and-queue-remediation` change 1 收敛，其余内容质量 concerns 仍待审计。 | active（审计未闭环） |
 | `iterative-final-delivery-versioned-output` | Final 交付可迭代打磨（与用户反复敲打、就地重写，不新增 checkpoint）+ 版本化 Final 输出命名（`final.md` → `final-v1.md`、`final-v2.md` …）。触发自 `enterprise-safe-ai-harness-v2` 技术深入版交付。 | active（设计验证待开始） |
+| `midrun-burden-reduction-and-residual-drift` | 第二轮治疗：①残留漂移（两处 repair_kind 下划线、决策表测试盲区、三个小尾巴）→ C1；②负担轴（否定规则瘦身 + 去重，= 审计 Option A 纯 markdown，零引擎改动）→ C2；引擎级闭包去重 → C3 deferred。最少 2 个 change。 | active（待 propose C1） |
+
+### 参照资料（非 plan，供后续 change 引用）
+
+| 文件 | 内容 |
+|------|------|
+| `machine-checks-catalog.md` | 全 gate 定义逐条目录（check 名 / rule id / target），2026-08-16 负担轴审计产物；用于判断 phase 散文禁令是否已被机器强制。权威仍是 `schema/gate_definitions/*.definition.json`。 |
+| `midrun-reading-burden-audit.md` | 2026-08-16 负担审计全报告：否定规则三分类（~448 sites：55% 机器覆盖 / 8% 过时重复 / 37% 纯纪律）、代表例逐条对照、C4 选项表与 Option A 推荐。C2 apply 的种子数据。 |
 
 ---
 
