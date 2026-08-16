@@ -38,6 +38,7 @@
 
 | Plan | 关闭依据 |
 |------|----------|
+| `agent-guidance-conflict-drift-remediation` + `agent-guidance-conflict-drift-findings` | CLS-066/CLS-067：F-01~F-13 全部闭合——C1 `2026-08-16-harness-entry-doc-consistency`、C2 `2026-08-16-repair-guidance-terminology-pointer-drift`、C3 `2026-08-16-repair-work-unit-recovery-vocabulary-and-drift-guards` 三个 change 均 propose→polish→apply→archive（finalizer 12/12/16 checks）；全量 `npm test` 2909/2909 0 fail；F-11 四类 drift-guard checker 已接入 finalizer 归档序列。 |
 | `midrun-burden-reduction-and-residual-drift` | CLS-065：C1 `2026-08-16-repair-residual-recovery-spelling-drift`（repair_kind 连字符化 + 决策表扫描面扩展 + R4/R5/R6）与 C2 `2026-08-16-reduce-mid-run-context-burden`（wave §9/§7 指针化 + anti-cheating 结构修复 + 两个检查类，静态删 432 行）均已 archive。C3 引擎级 once-per-run loading 保持 deferred（触发=一次真实 run 成本观察或用户明确要求），不阻塞本 plan 关闭。参照资料 `machine-checks-catalog.md` / `midrun-reading-burden-audit.md` 保留在 `plans/` 供 C3 触发时取用。 |
 
 ## 最近关闭 (2026-08-15)
