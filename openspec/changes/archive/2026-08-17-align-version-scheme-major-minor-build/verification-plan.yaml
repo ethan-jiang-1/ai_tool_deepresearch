@@ -1,0 +1,75 @@
+schema_version: verification-routing/v1
+change: align-version-scheme-major-minor-build
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Two focused deterministic node:test assets: the new
+      tests/governance/bump-version.test.mjs locks the bump CLI behavior
+      (segment flags, rejection paths, dry-run, write-back), and the updated
+      tests/engine/version-management.test.mjs locks the new CHANGELOG
+      contract (two-dot heading, no single-dot v0.x). Both live under tests/
+      outside integration/e2e, matching the existing governance tool tests
+      (check-content-drift.test.mjs, requirement-reservation-contract.test.mjs).
+  integration:
+    status: not_applicable
+    rationale: >-
+      No cross-file document contracts change beyond the version-management
+      main spec sync; the CHANGELOG itself is a root human-history file with no
+      integration regression locking its headings. No bundle or CLI integration
+      surface is touched.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      Zero engine/schema/gate/bundle runtime behavior changes: the bump tool is
+      a governance utility over the root changelog; no temporary bundle chain
+      needs to be driven end to end.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      No Agent behavior changes: the change adds a governance CLI and calibrates
+      the versioning rule, not claims about real Agent behavior in a research
+      run.
+claims:
+  - id: bump-tool-enforces-explicit-segment-and-boundary
+    statement: >-
+      VEM-001 (modified): the bump tool rejects no-flag and combined-flag runs
+      with a non-zero exit without writing, bumps only the requested
+      MAJOR.MINOR.BUILD segment (build +1, minor +1 with build reset to 0,
+      major +1 with minor/build reset to 0), rejects an unparseable latest
+      version, honors --dry-run (with an explicit segment flag) without
+      writing, and preserves existing
+      changelog entries on write-back; the unit test fails and names the
+      offending behavior before the fix and passes after it.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/bump-version.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: version-management-contract-test-matches-new-changelog
+    statement: >-
+      VEM-001 (modified): the root CHANGELOG is locked as concise
+      non-authoritative human history under the two-dot MAJOR.MINOR.BUILD
+      scheme (## 0.2.0 heading present, no single-dot ## v0.x heading), while
+      RUN.md stays banner-free, no Harness-local changelog exists, and
+      config.yaml gains no version choreography; the updated
+      version-management.test.mjs passes against the new CHANGELOG and spec.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/version-management.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

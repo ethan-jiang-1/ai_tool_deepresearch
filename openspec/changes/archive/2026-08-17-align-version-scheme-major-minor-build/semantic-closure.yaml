@@ -1,0 +1,12 @@
+schema_version: semantic-closure/v1
+change: align-version-scheme-major-minor-build
+status: not_applicable
+reason: >-
+  This change calibrates the root CHANGELOG versioning scheme and adds a
+  governance-only bump CLI (openspec/governance/bump-version.mjs). It changes
+  no Harness runtime fact family, resolver, authority-establishing surface,
+  deterministic verdict, schema contract, gate rule, trace event, work-unit,
+  queue, status, or research evidence family: the CHANGELOG is already
+  non-authoritative human history (VEM-001), the framework_version stamp was
+  retired, RUN.md projects no version, and the bump tool only edits the root
+  changelog file. No production runtime fact is established or consumed.

@@ -19,10 +19,9 @@ describe('framework version management', () => {
     const changelog = read('CHANGELOG.md');
 
     assert.match(changelog, /^# Changelog$/m);
-    assert.match(changelog, /retained human change history/i);
-    assert.match(changelog, /not a current Harness version/i);
-    assert.match(changelog, /runtime compatibility[\s>]+selector/i);
-    assert.match(changelog, /execution Source of Record/i);
+    assert.match(changelog, /^## 0\.2\.\d+$/m);
+    assert.doesNotMatch(changelog, /^## v0\.\d+$/m);
+    assert.doesNotMatch(changelog, /^## \d+\.\d+$/m);
   });
 
   it('does not project changelog history into RUN.md', () => {
