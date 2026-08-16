@@ -12,7 +12,7 @@ import {
 
 const STOP_NO = { stop: 'no', gate: 'wave1-complete' };
 const STOP_YES = { stop: 'yes', gate: 'hitl2-recorded' };
-const FINAL = { stop: 'no', gate: null };
+const FINAL = { stop: 'yes', gate: null };
 
 function assertMinimalCue(cue, expected) {
   assert.deepEqual(cue, expected);

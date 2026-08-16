@@ -52,3 +52,11 @@ create a third HITL, expand host permission, override an Engine verdict, or
 authorize a rerun. `BUNDLE_ENTRY.md` and `BUNDLE_MAP.md` do not themselves
 select lifecycle work or runtime authority. Historical Markdown may be read
 directly by a human outside this Harness operational contract.
+
+When the selected current coordinate is Final, reload the resolved owner rather
+than inferring one from chat: an admitted empty inventory needs bundle-base
+delivery, an admitted post-C5 zero-append inventory needs the next global
+delivery, and a bound current-lineage report may be refined in place. A clean
+Final is not a default C5 request; satisfaction is not a runtime fact; and a
+primary-looking pre-entry or drifted inventory remains blocked by the entry/
+reentry contracts.

@@ -98,7 +98,12 @@ authoritative behavior contract + executable contract + runtime truth
 
 - HITL1/HITL2 是 human-directed decision 的 in-run placements；非 HITL `stop:no` phases 保持不请求新的用户 decision 的 autonomous/silent posture。它不创建 host scheduler，也不保证后续 turn 或 tool call。
 - Out-of-band maintenance/debug MUST NOT 被描述为第三个 HITL、Final-owned repair loop 或新的 lifecycle state。
-- Final 仍是 terminal non-interactive delivery；post-final reentry 是否存在由 accepted content-delivery/runtime contract 决定。
+- Final 仍是 terminal lifecycle delivery，但不是 terminal non-interactive
+  conversation：合法 entry 和 Readiness status sync 后必须先发布 current lineage
+  缺失的报告，随后可在同一 node 接受 bounded presentation feedback 并追加 immutable
+  version。它不成为第三个 HITL、Gate、state、handoff rewrite 或 satisfaction fact；
+  只有 evidence/research expansion 的 post-final reentry 由 accepted
+  content-delivery/runtime contract 决定。
 
 ### 5. No Help Through Fabrication
 

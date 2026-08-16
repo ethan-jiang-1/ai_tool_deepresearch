@@ -38,9 +38,14 @@ suggested_context: []
 
 **正确替代**：instantiation、HITL1、setup 三个 phase 只做 bundle 创建、用户输入收集、结构一致性检查。不要在这个阶段讨论"已经覆盖了多少 evidence"或"综合质量如何"——那属于 wave0/1/2。
 
-### 6. 禁止在 `stop: yes` phase 不等用户输入就继续
+### 6. 禁止把 generic `stop: yes` 绕成无用户决定的继续
 
-**正确替代**：`phase-hitl1.md` 的 `stop: yes` 意味着 Agent MUST 等待用户回答后再运行 gate。不要在用户未回答时填入 placeholder 数据然后继续。
+**正确替代**：`phase-hitl1.md` 和 `phase-hitl2.md` 的 `stop: yes` 意味着
+Agent MUST 等待真实用户决定后再运行各自 Gate。不要填 placeholder 数据。唯一
+placement exception 是 manifest Final：它仍 `gate: null`，但在合法 entry 和
+Readiness status synchronization 后必须先发布当前 lineage 缺失的报告；随后才在
+同一 Final node 邀请 presentation feedback。这个 exception 不创建第三个 HITL、
+Gate、state 或 transition。
 
 ### 7. 禁止伪造用户 HITL 答案
 
@@ -50,9 +55,15 @@ suggested_context: []
 
 **正确替代**：final report MUST 从 verified bundle state 生成——读取 Wave0/1/2 artifacts、`rb_profile.yaml`、`rb_status.json`、`rb_trace.jsonl` 等持久化文件。不能重新凭聊天记忆或 LLM 内部知识编造内容。报告中的声明必须引用 bundle 中真实存在的 source artifact。
 
-### 9. 禁止在 final phase 暗藏 hidden next、hidden gate 或隐式循环
+### 9. 禁止在 Final 暗藏 hidden next、hidden gate 或生命周期循环
 
-**正确替代**：final 是 terminal node（`gate: null`，`transitions.chain.json` 无 final 条目）。Post-delivery 用户反馈走 HITL2 `rerun` 路径——Agent 用 `rerun` outcome 查 chain → 进入 `phase-rerun.md`（对比 rationale 与 seed_topics 现状、产出 topic 调整方案、gate pass）→ chain 路由进 `seed-topics` → wave0 → wave1 → wave2 增量链。不能在 final node 里塞 hidden loop 让 Agent 原地转圈。
+**正确替代**：Final 是 terminal node（`gate: null`，`transitions.chain.json` 无
+Final source 条目）。已交付报告的 clear presentation feedback 可在同一 Final
+node 产出一份 immutable next version；这不是 hidden loop、Gate 或
+self-transition，也不改 HITL2 handoff。只有需要新来源、Topic、evidence、research
+conclusion 或 research-profile 变化的反馈，才走 audited C5/HITL2 `rerun` path →
+`phase-rerun.md` → existing incremental chain。不要把普通报告打磨强行变成 rerun，
+也不要把 rerun 偷塞进 Final。
 
 ### 10. 禁止 readiness gate 做语义质量判断
 

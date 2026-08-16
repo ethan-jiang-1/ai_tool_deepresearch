@@ -46,6 +46,39 @@ describe('post-final recovery helper', { concurrency: false }, () => {
     assert.equal(different.reason_code, 'different_request_same_final');
   });
 
+  it('keeps inspect read-only and leaves semantic request selection outside the Engine', () => {
+    const bundle = createTerminalFinalBundle(root, 'inspect-only');
+    const before = {
+      status: readFileSync(join(bundle, 'rb_status.json'), 'utf8'),
+      profile: readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'),
+      trace: readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8'),
+      final: readFileSync(join(bundle, 'final', 'report.md'), 'utf8'),
+      recoveryRootExists: existsSync(join(bundle, '_diagnostics', 'post-final-recovery')),
+    };
+
+    const inspection = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.equal(inspection.verdict, 'eligible');
+    assert.equal(inspection.next_action.kind, 'prepare_request');
+    assert.deepEqual({
+      status: readFileSync(join(bundle, 'rb_status.json'), 'utf8'),
+      profile: readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'),
+      trace: readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8'),
+      final: readFileSync(join(bundle, 'final', 'report.md'), 'utf8'),
+      recoveryRootExists: existsSync(join(bundle, '_diagnostics', 'post-final-recovery')),
+    }, before);
+
+    // The Engine retains opaque Agent-selected request text; it does not classify feedback.
+    const request = requestFromInspection(inspection, {
+      reason: 'Need a newly retained source before changing the conclusion.',
+      requested_scope: 'Compare the new source with the current evidence map.',
+    });
+    const applied = applyPostFinalRecovery({ bundlePath: bundle, input: request });
+    assert.equal(applied.verdict, 'committed');
+    const event = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(JSON.parse).at(-1);
+    assert.equal(event.reason, request.reason);
+    assert.equal(event.requested_scope, request.requested_scope);
+  });
+
   it('blocks the next rerun before workspace creation when the active rule would fail', () => {
     const bundle = createTerminalFinalBundle(root, 'limit', { rerunCount: rerunCountRule.value - 1 });
     const inspection = inspectPostFinalRecovery({ bundlePath: bundle });
@@ -53,6 +86,22 @@ describe('post-final recovery helper', { concurrency: false }, () => {
     assert.equal(inspection.reason_code, 'rerun_limit_exhausted');
     assert.equal(inspection.next_action.kind, 'new_bundle_decision');
     assert.equal(existsSync(join(bundle, '_diagnostics', 'post-final-recovery')), false);
+  });
+
+  it('uses the shared primary-series resolver while retaining the complete Final inventory digest', () => {
+    const bundle = createTerminalFinalBundle(root, 'primary-series');
+    mkdirSync(join(bundle, 'final', 'supplementary'), { recursive: true });
+    writeFileSync(join(bundle, 'final', 'supplementary', 'notes.md'), '# Supplementary\n');
+
+    const accepted = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.equal(accepted.verdict, 'eligible');
+    assert.equal(accepted.facts.request_bindings.expected_final_lineage.final_inventory_sha256.length, 64);
+
+    writeFileSync(join(bundle, 'final', 'final_v2.md'), '# Gapped canonical revision\n');
+    const rejected = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.equal(rejected.verdict, 'blocked');
+    assert.equal(rejected.reason_code, 'fresh_final_ineligible');
+    assert.match(rejected.reason, /non_contiguous_revisions/);
   });
 
   it('short-circuits C2, C3, and accepted C5 workspace owners', () => {
@@ -186,9 +235,10 @@ describe('post-final recovery helper', { concurrency: false }, () => {
     const status = JSON.parse(readFileSync(join(bundle, 'rb_status.json'), 'utf8'));
     status.current_node = 'phases/phase-final.md'; status.current_gate = 'readiness_passed'; status.next_gate = 'none';
     writeFileSync(join(bundle, 'rb_status.json'), `${JSON.stringify(status, null, 2)}\n`);
-    writeFileSync(join(bundle, 'final', 'report.md'), '# New Final\n');
+    writeFileSync(join(bundle, 'final', 'report.md'), '# Premature New Final\n');
     const fresh = inspectPostFinalRecovery({ bundlePath: bundle });
-    assert.equal(fresh.verdict, 'eligible');
-    assert.equal(fresh.facts.request_bindings.expected_final_lineage.final_handoff_index, 3);
+    assert.equal(fresh.verdict, 'blocked');
+    assert.equal(fresh.reason_code, 'accepted_lineage_drift');
+    assert.match(fresh.reason, /normal descendant lineage/);
   });
 });

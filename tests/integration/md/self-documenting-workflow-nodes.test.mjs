@@ -83,6 +83,22 @@ describe('Manifest lifecycle phase nodes — Execution Brief', () => {
   }
 });
 
+describe('Final node delivery placement', () => {
+  it('is terminal in lifecycle metadata while placing iterative delivery in the loaded Final node', () => {
+    const md = readNode('phases/phase-final.md');
+    const fm = parseFrontmatter(md);
+
+    assert.equal(fm.gate, null);
+    assert.equal(fm.stop, 'yes');
+    assert.equal(Object.hasOwn(fm, 'next'), false);
+    assert.match(md, /admitted empty inventory publishes\s+`final\/final\.md`/);
+    assert.match(md, /admitted post-C5 return with zero canonical append/);
+    assert.match(md, /satisfied turn writes nothing/);
+    assert.match(md, /Presentation feedback alone remains here/);
+    assert.match(md, /Only evidence-expanding work uses\s+audited C5/);
+  });
+});
+
 describe('Work-unit role spec nodes — Role Brief and manifest boundary', () => {
   const roleSpecs = [
     {

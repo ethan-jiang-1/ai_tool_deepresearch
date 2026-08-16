@@ -24,6 +24,7 @@ import { readGateDefinitionSnapshot } from '../../schema/contracts/gate-definiti
 import { ProfileSchema } from '../../schema/contracts/profile.mjs';
 import { appendExactTraceLine } from '../trace.mjs';
 import { normalizedBundleBasenameFromPath } from './bundle-identity.mjs';
+import { readFinalReportInventory } from './final-report-series.mjs';
 import { findLatestLegalHandoff, inspectPostFinalHandoffStage, loadHandoffTopology, readTraceEventsWithIndex } from './handoff-helpers.mjs';
 import { readBundlePlan, readBundleProfile } from './gate-helpers-readers.mjs';
 import { evaluateRerunAvailability } from './rerun-availability.mjs';
@@ -54,6 +55,10 @@ export const POST_FINAL_RECOVERY_STAGES = Object.freeze([
   'synchronized_initial_profile',
   'synchronized_count_incremented',
   'descendant_pipeline',
+  'newer_final_entry_pending',
+  'newer_final_loaded_pending_status',
+  'newer_final_delivery_pending',
+  'retired_by_newer_final',
 ]);
 
 
@@ -227,22 +232,14 @@ function acceptedOwnerWorkspace(bundle, relativeRoot, manifestName, commandFor) 
 }
 
 function finalInventory(bundle) {
-  const root = path.join(bundle, 'final');
-  if (!existsSync(root)) throw new Error('final directory is missing');
-  const entries = [];
-  function walk(current) {
-    for (const name of readdirSync(current).sort()) {
-      const absolute = path.join(current, name);
-      const info = lstatSync(absolute);
-      if (info.isSymbolicLink()) throw new Error(`final inventory contains symlink: ${relativeRef(bundle, absolute)}`);
-      if (info.isDirectory()) walk(absolute);
-      else if (info.isFile()) entries.push({ path: relativeRef(bundle, absolute), sha256: hashBytes(readFileSync(absolute)) });
-      else throw new Error(`final inventory contains unsupported entry: ${relativeRef(bundle, absolute)}`);
-    }
+  const inventory = readFinalReportInventory(bundle);
+  const primarySeries = inventory.primary_series;
+  if (!primarySeries.valid) {
+    const first = primarySeries.blockers[0];
+    throw new Error(`Final primary inventory is invalid: ${first.code}: ${first.detail}`);
   }
-  walk(root);
-  if (entries.length === 0) throw new Error('final inventory has no delivered report file');
-  return { entries, sha256: canonicalDigest(entries) };
+  if (primarySeries.latest === null) throw new Error('final primary inventory has no delivered report file');
+  return inventory;
 }
 
 function logicalBundleIdentity(bundle, status, profile, plan) {
@@ -323,7 +320,7 @@ function finalFacts(bundle) {
   const inventory = finalInventory(bundle);
   const { guard, availability } = rerunGuard(profile, { includeNextIncrement: true });
   return {
-    status, statusRaw, profile, profileRaw, identity, inventory, guard, availability,
+    status, statusRaw, profile, profileRaw, identity, inventory, primary_series: inventory.primary_series, guard, availability,
     routing: routingFacts(),
     lineage: ExpectedFinalLineageSchema.parse({
       final_handoff_index: handoff.handoff.index,
@@ -337,6 +334,9 @@ function finalFacts(bundle) {
 }
 
 function nextActionForStage(bundlePath, stage, operationId = null, owner = null) {
+  if (stage === 'newer_final_entry_pending') return { kind: 'enter_phase', command: `node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle ${bundlePath} --node phases/phase-final.md`, target_ref: 'phases/phase-final.md', operation_id: operationId };
+  if (stage === 'newer_final_loaded_pending_status') return { kind: 'advance_status', command: `node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle ${bundlePath} --to readiness_passed`, target_ref: 'readiness_passed', operation_id: operationId };
+  if (stage === 'newer_final_delivery_pending') return { kind: 'current_owner', command: null, target_ref: 'phases/phase-final.md', operation_id: operationId };
   if (stage === 'pre_entry') return { kind: 'enter_phase', command: `node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle ${bundlePath} --node phases/phase-rerun.md`, target_ref: 'phases/phase-rerun.md', operation_id: operationId };
   if (stage === 'loaded_pending_status') return { kind: 'advance_status', command: `node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle ${bundlePath} --to hitl2_recorded`, target_ref: 'hitl2_recorded', operation_id: operationId };
   if (owner?.kind === 'current_owner') return { kind: owner.kind, command: null, target_ref: owner.target_ref, operation_id: operationId };
@@ -362,7 +362,7 @@ function inspectInternal({ bundlePath }) {
   if (topicOwner) return result({ operation: 'inspect', verdict: 'blocked', reason_code: 'topic_state_owner', reason: 'Canonical topic-state recovery owns the nearest action.', warnings: workspaces.warnings, next_action: { kind: 'repair_owner', command: topicOwner.command, target_ref: topicOwner.workspace, operation_id: null } });
   const active = inspectPostFinalHandoffStage(bundle);
   if (!active.ok && !['missing_event', 'superseded_event'].includes(active.reason_code)) return result({ operation: 'inspect', verdict: 'blocked', reason_code: 'accepted_lineage_drift', reason: active.reason, warnings: workspaces.warnings });
-  if (active.ok) {
+  if (active.ok && active.stage !== 'retired_by_newer_final') {
     const lineage = active.lineage || { event: active.handoff.event, index: active.handoff.index, eventLineSha256: active.handoff.eventLineSha256 };
     const event = lineage.event;
     return result({ operation: 'inspect', verdict: 'unchanged', reason_code: 'already_committed', reason: 'An accepted post-final recovery lineage is already active.', operation_id: event.operation_id, stage: active.stage, warnings: workspaces.warnings, facts: { request_sha256: event.request_sha256, event_id: event.event_id, event_index: lineage.index, event_line_sha256: lineage.eventLineSha256 }, next_action: nextActionForStage(bundlePath, active.stage, event.operation_id, active.owner) });

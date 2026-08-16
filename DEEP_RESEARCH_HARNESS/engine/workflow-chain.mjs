@@ -91,18 +91,24 @@ This is a non-terminal \`stop: no\` phase. The framework and Agent SHALL NOT ini
 
 `;
 
-const TERMINAL_DELIVERY_HEADER = `## TERMINAL DELIVERY MODE -- DELIVER FINAL ARTIFACTS ONLY
+const TERMINAL_DELIVERY_HEADER = `## TERMINAL DELIVERY MODE -- DELIVER FIRST, THEN REFINE IN PLACE
 
-This is the terminal \`stop: no\` + \`gate: null\` phase. You are delivering the final research output.
+This is the manifest Final terminal \`gate: null\` phase. Its \`stop: yes\` is
+Final-specific, not a generic HITL wait. Preserve the continuation cue
+\`terminal_delivery\` / \`deliver_final_artifacts\` and complete the existing
+Readiness status synchronization before Final work.
 
-**Allowed:**
-- Write \`final/\` artifact(s) from verified bundle state
-- Keep terminal status from readiness: \`current_gate: readiness_passed\` / \`next_gate: none\`; Final has no gate and does not advance status
-- Answer an already-current user-initiated factual turn from verified facts without claiming an empty \`final/\` has been delivered; the reply adds no lifecycle authority
+**Current-lineage order:**
+- An entry-admitted empty primary inventory: compose, publish, and present the bundle base before any question or wait
+- An entry-admitted post-rerun prior inventory with zero canonical append: compose, publish, and present the next global version before any question or wait
+- A report already bound to the current Final lineage: reground in the latest version and handle one clear presentation refinement at a time
+- After each committed report, invite concise natural-language feedback and remain on Final; satisfaction ends the current turn with no write
+- Only feedback requiring new evidence/research uses the accepted audited C5 rerun path
 
-**Do not initiate:**
-- Any question, confirmation request, wait, A/B choice, progress report, repair loop, or post-delivery feedback loop
-- User feedback goes through HITL2 rerun, not through this phase
+**Boundaries:**
+- Keep Readiness terminal status: \`current_gate: readiness_passed\` / \`next_gate: none\`; Final has no Gate, transition, status advance, satisfaction state, or delivery trace event
+- Publish only through the canonical primary publisher; it allocates immutable names and does not establish lifecycle entry or report quality
+- This header is Agent-facing guidance. It does not inspect chat, establish inventory/lineage/publication facts, or create interaction transport
 
 ---
 
@@ -549,8 +555,8 @@ export function assessNode(fileRef, state, runtime, trace = null, logger = null)
       if (entryCached && entryCached.frontmatter) {
         const { phase, stop, gate } = entryCached.frontmatter;
 
-        if (phase === 'final' && stop === 'no' && (gate === null || gate === undefined)) {
-          // Final terminal delivery: inject TERMINAL DELIVERY MODE
+        if (manifestPhase.key === 'final' && phase === 'final' && stop === 'yes' && gate === null) {
+          // Final-specific terminal interaction comes before generic stop:yes handling.
           injectContractHeader(runtime, ref, TERMINAL_DELIVERY_HEADER);
           if (logger) logger.debug(`injected TERMINAL DELIVERY MODE header into ${ref}`);
         } else if (stop === 'no' && gate != null) {

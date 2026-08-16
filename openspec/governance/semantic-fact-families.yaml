@@ -41,6 +41,12 @@ families:
     bounded_question: What is the authority of Wave2 findings, carried targets, synthesis, and cross-reference?
   - id: lifecycle.gate-status-trace-handoff
     bounded_question: Do Gate, status, trace, and handoff receipt constitute legal lifecycle evidence?
+  - id: final.primary-report-series
+    bounded_question: >-
+      Given the safe direct-root Final inventory, which file is the modern or
+      legacy primary base, what immutable contiguous revision series and latest
+      committed report exist, what version/target may be allocated next, or
+      which ambiguity or malformed-history fact blocks that conclusion?
   - id: final.submitted-backing-admission
     bounded_question: Does each Final Evidence Map link have legal submitted backing?
   - id: bundle.current-entry-contract

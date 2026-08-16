@@ -32,7 +32,10 @@ There is no force overwrite. A blocked compare-and-swap means the Agent must ins
 
 ## Final Markdown Reports
 
-For a safe Markdown target under `final/`, write the complete report to retained staging with exactly one bounded Evidence Map declaration table:
+For a primary Final Markdown report, first confirm that Final entry was admitted
+and the exact Readiness status synchronization completed. Write the complete
+report to retained staging with exactly one bounded Evidence Map declaration
+table:
 
 ```md
 ## Evidence Map
@@ -44,17 +47,25 @@ For a safe Markdown target under `final/`, write the complete report to retained
 
 Every map row needs non-empty values in all three columns. `Submitted Backing` may link only to an exact submitted `source_yaml` or `evidence_summary` output, or to an existing `reference/` projection whose current authority classification has submitted backing. The map is a reader declaration, not a second ledger or a semantic claim-quality check.
 
-Use the one admitted Final Markdown command:
+Use the one admitted primary Final publisher. It owns primary target and global
+version allocation; callers must not supply a target, version, CAS, overwrite,
+or force selector:
 
 ```bash
-node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs persist-final-report \
+node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs publish-final-report \
   --bundle <bundle> \
   --source <completed-final-markdown-staging-file> \
-  --target <final/report.md> \
-  --expect-absent
+  [--feature <safe_snake_case>]
 ```
 
-Read its top-level `check`, `inspect`, and `advice`. On a backing rejection, retain staging, repair the named map row or legal backing surface, and rerun `persist-final-report`. A pass establishes only structural declaration, safe-path, and submitted-provenance admission; it does not decide whether the evidence semantically supports the prose. Generic `persist` intentionally rejects safe Final Markdown targets and names `persist-final-report` as the direct rerun operation.
+An empty admitted primary inventory commits `final/final.md`; every later
+publication uses the next immutable global version, with an optional descriptive
+feature. Read its top-level `check`, `inspect`, and `advice`. On a backing
+rejection, retain staging, repair the named map row or legal backing surface,
+and rerun `publish-final-report`. A committed result establishes mechanical
+declaration/path/backing/durability facts only; it does not decide legal Final
+entry, report quality, feedback type, or user satisfaction. Generic `persist`
+intentionally rejects reserved `final/final*.md` targets.
 
 ## Recover After A Crash
 
@@ -68,7 +79,11 @@ node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs sweep --bundle <
 - `cleaned`: the target already contained the prepared bytes and the stale workspace was removed.
 - `blocked`: inspect the one reported root fact and follow its `recommended_action`.
 
-For a blocked prepared Final Markdown workspace, `sweep` has rerun the same backing admission before target rename. Repair the named retained staging/backing boundary, remove only the reported workspace without following symlinks, then rerun `persist-final-report`; do not retry generic `persist` for that Final report.
+For a blocked prepared primary workspace, `sweep` preserves the exact
+publication binding without reallocating. Repair the named retained
+staging/backing boundary, remove only the reported workspace without following
+symlinks when the Engine identifies that repair, then rerun
+`publish-final-report`; do not retry generic `persist` for that primary report.
 
 For an incomplete or invalid workspace, the nearest legal repair is Agent-owned: inspect the reported `_diagnostics/artifact-persistence/<operation-id>/`, remove only that diagnostic workspace without following symlinks, retry persist from the retained staging source, then rerun sweep. For a target conflict, resolve which content should win before removing/retrying the workspace. There is no automatic discard, quarantine, repair-all, or unknown-temp promotion.
 

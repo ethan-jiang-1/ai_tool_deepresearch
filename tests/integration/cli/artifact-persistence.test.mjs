@@ -17,8 +17,11 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   ARTIFACT_PERSISTENCE_ROOT,
+  ArtifactPersistenceOperationSchema,
   ArtifactPersistenceCrashError,
+  FinalReportPublishResultSchema,
   persistBundleFile,
+  publishFinalReport,
   sha256File,
 } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs';
 import {
@@ -257,6 +260,169 @@ describe('operate-artifact-persistence CLI', () => {
     assert.equal(json.verdict, 'committed');
     assert.equal(readFileSync(path.join(bundle, 'final', 'report.MD'), 'utf8'), bytes);
     assert.deepEqual(persistenceWorkspaces(bundle), []);
+  });
+
+  it('publishes the bundle-wide base and globally ordered labelled revision', () => {
+    const { bundle, sourcePath } = createSubmittedFinalBundle();
+    const baseSource = path.join(bundle, '_logs', 'primary-base.md');
+    const revisionSource = path.join(bundle, '_logs', 'primary-revision.md');
+    const secondRevisionSource = path.join(bundle, '_logs', 'primary-revision-2.md');
+    const baseBytes = finalReport(`[submitted source](../${sourcePath})`);
+    const revisionBytes = finalReport(`[submitted source](../${sourcePath})`);
+    writeFileSync(baseSource, baseBytes);
+    writeFileSync(revisionSource, revisionBytes);
+    writeFileSync(secondRevisionSource, revisionBytes);
+
+    const base = publishFinalReport({ bundlePath: bundle, sourcePath: baseSource, feature: 'ignored_for_base' });
+    assert.equal(base.verdict, 'committed');
+    assert.equal(base.target, 'final/final.md');
+    assert.equal(base.version, 0);
+    assert.equal(base.feature, null);
+    assert.equal(readFileSync(path.join(bundle, base.target), 'utf8'), baseBytes);
+
+    const revision = publishFinalReport({ bundlePath: bundle, sourcePath: revisionSource, feature: 'technical_deep_dive' });
+    assert.equal(revision.verdict, 'committed');
+    assert.equal(revision.target, 'final/final_technical_deep_dive_v1.md');
+    assert.equal(revision.version, 1);
+    assert.equal(revision.previous_target, 'final/final.md');
+    assert.equal(readFileSync(path.join(bundle, revision.target), 'utf8'), revisionBytes);
+    assert.equal(readFileSync(path.join(bundle, 'final', 'final.md'), 'utf8'), baseBytes);
+
+    const secondRevision = publishFinalReport({ bundlePath: bundle, sourcePath: secondRevisionSource });
+    assert.equal(secondRevision.target, 'final/final_v2.md');
+    assert.equal(secondRevision.version, 2);
+  });
+
+  it('rejects malformed publication bindings and blocks invalid inventory/backing before workspace creation', () => {
+    const { bundle, sourcePath } = createSubmittedFinalBundle();
+    const source = path.join(bundle, '_logs', 'binding-source.md');
+    writeFileSync(source, finalReport(`[submitted source](../${sourcePath})`));
+    assert.throws(() => publishFinalReport({
+      bundlePath: bundle,
+      sourcePath: source,
+      hooks: { afterPreparedPublished: () => { throw new ArtifactPersistenceCrashError('afterPreparedPublished'); } },
+    }), ArtifactPersistenceCrashError);
+    const workspace = path.join(bundle, ...ARTIFACT_PERSISTENCE_ROOT.split('/'), readdirSync(path.join(bundle, ...ARTIFACT_PERSISTENCE_ROOT.split('/')))[0]);
+    const operation = JSON.parse(readFileSync(path.join(workspace, 'operation.json'), 'utf8'));
+    assert.equal(ArtifactPersistenceOperationSchema.safeParse(operation).success, true);
+    assert.equal(ArtifactPersistenceOperationSchema.safeParse({ ...operation, target: 'final/final_v9.md' }).success, false);
+    assert.equal(ArtifactPersistenceOperationSchema.safeParse({ ...operation, publication: { ...operation.publication, feature: 'Unsafe' } }).success, false);
+    assert.equal(ArtifactPersistenceOperationSchema.safeParse({ ...operation, workspace_kind: 'other' }).success, false);
+    assert.equal(FinalReportPublishResultSchema.safeParse({
+      schema_version: operation.schema_version,
+      operation: 'publish-final-report',
+      check: operation.publication.backing.check,
+      inspect: [], advice: [], operation_id: null, target: null,
+      base_classification: 'empty', version: null, feature: null, previous_target: null, inventory_sha256: null,
+      verdict: 'committed', reason_code: 'committed', reason: 'bad', workspace: null,
+    }).success, false);
+    rmSync(workspace, { recursive: true });
+
+    writeFileSync(path.join(bundle, 'final', 'first.md'), '# one\n');
+    writeFileSync(path.join(bundle, 'final', 'second.md'), '# two\n');
+    const ambiguous = publishFinalReport({ bundlePath: bundle, sourcePath: source });
+    assert.equal(ambiguous.verdict, 'blocked');
+    assert.equal(ambiguous.reason_code, 'primary_inventory_ambiguous_legacy_base');
+    assert.deepEqual(persistenceWorkspaces(bundle), []);
+
+    rmSync(path.join(bundle, 'final', 'first.md'));
+    rmSync(path.join(bundle, 'final', 'second.md'));
+    writeFileSync(source, '# Missing Evidence Map\n');
+    const backing = publishFinalReport({ bundlePath: bundle, sourcePath: source });
+    assert.equal(backing.verdict, 'blocked');
+    assert.equal(backing.check.passed, false);
+    assert.equal(backing.target, 'final/final.md');
+    assert.deepEqual(persistenceWorkspaces(bundle), []);
+  });
+
+  it('appends after one legacy version zero without rewriting its bytes', () => {
+    const { bundle, sourcePath } = createSubmittedFinalBundle();
+    const legacyPath = path.join(bundle, 'final', 'historical.md');
+    const source = path.join(bundle, '_logs', 'legacy-append.md');
+    writeFileSync(legacyPath, '# Historical final\n');
+    writeFileSync(source, finalReport(`[submitted source](../${sourcePath})`));
+    const result = publishFinalReport({ bundlePath: bundle, sourcePath: source });
+    assert.equal(result.verdict, 'committed');
+    assert.equal(result.base_classification, 'legacy');
+    assert.equal(result.target, 'final/final_v1.md');
+    assert.equal(readFileSync(legacyPath, 'utf8'), '# Historical final\n');
+  });
+
+  it('does not accept caller-selected publication targets, versions, or overwrite controls', () => {
+    const { bundle, sourcePath } = createSubmittedFinalBundle();
+    const source = path.join(bundle, '_logs', 'strict-publish.md');
+    writeFileSync(source, finalReport(`[submitted source](../${sourcePath})`));
+    for (const extra of [
+      { target: 'final/final_v9.md' },
+      { version: 9 },
+      { expectedTarget: { kind: 'absent' } },
+      { overwrite: true },
+    ]) {
+      assert.throws(() => publishFinalReport({ bundlePath: bundle, sourcePath: source, ...extra }), /unrecognized/i);
+    }
+    assert.equal(existsSync(path.join(bundle, 'final', 'final.md')), false);
+  });
+
+  it('sweeps a prepared primary publication exactly and never overwrites a collision', () => {
+    const { bundle, sourcePath } = createSubmittedFinalBundle();
+    const source = path.join(bundle, '_logs', 'primary-crash.md');
+    const bytes = finalReport(`[submitted source](../${sourcePath})`);
+    writeFileSync(source, bytes);
+    assert.throws(() => publishFinalReport({
+      bundlePath: bundle,
+      sourcePath: source,
+      hooks: { afterPreparedPublished: () => { throw new ArtifactPersistenceCrashError('afterPreparedPublished'); } },
+    }), ArtifactPersistenceCrashError);
+
+    const swept = runCli('sweep', '--bundle', bundle);
+    assert.equal(swept.status, 0, swept.stderr);
+    assert.equal(parseJson(swept).entries[0].verdict, 'finalized');
+    assert.equal(readFileSync(path.join(bundle, 'final', 'final.md'), 'utf8'), bytes);
+
+    const collisionSource = path.join(bundle, '_logs', 'primary-collision.md');
+    writeFileSync(collisionSource, bytes);
+    const collision = publishFinalReport({
+      bundlePath: bundle,
+      sourcePath: collisionSource,
+      hooks: {
+        beforePrimaryTargetCommit: () => writeFileSync(path.join(bundle, 'final', 'final_v1.md'), 'competing bytes\n'),
+      },
+    });
+    assert.equal(collision.verdict, 'blocked');
+    assert.equal(collision.reason_code, 'target_collision_retry');
+    assert.equal(readFileSync(path.join(bundle, 'final', 'final_v1.md'), 'utf8'), 'competing bytes\n');
+    assert.equal(readFileSync(path.join(bundle, 'final', 'final.md'), 'utf8'), bytes);
+  });
+
+  it('exposes the primary publisher through the production CLI with strict argument exclusion', () => {
+    const { bundle, sourcePath } = createSubmittedFinalBundle();
+    const source = path.join(bundle, '_logs', 'cli-primary.md');
+    writeFileSync(source, finalReport(`[submitted source](../${sourcePath})`));
+
+    const committed = runCli('publish-final-report', '--bundle', bundle, '--source', source);
+    assert.equal(committed.status, 0, committed.stderr);
+    assert.equal(parseJson(committed).target, 'final/final.md');
+    assert.match(readFileSync(path.join(bundle, '_logs', 'run.log'), 'utf8'), /artifact_persistence_publish_final_report/);
+
+    const labelled = runCli('publish-final-report', '--bundle', bundle, '--source', source, '--feature', 'technical_deep_dive');
+    assert.equal(labelled.status, 0, labelled.stderr);
+    assert.equal(parseJson(labelled).target, 'final/final_technical_deep_dive_v1.md');
+    const v2 = runCli('publish-final-report', '--bundle', bundle, '--source', source);
+    assert.equal(v2.status, 0, v2.stderr);
+    assert.equal(parseJson(v2).target, 'final/final_v2.md');
+
+    const targetRejected = runCli('publish-final-report', '--bundle', bundle, '--source', source, '--target', 'final/final_v1.md');
+    assert.equal(targetRejected.status, 2);
+    assert.equal(parseJson(targetRejected).error, 'invalid_invocation');
+    const featureRejected = runCli('publish-final-report', '--bundle', bundle, '--source', source, '--feature', 'unsafe-label');
+    assert.equal(featureRejected.status, 2);
+    assert.equal(parseJson(featureRejected).error, 'invalid_configuration');
+
+    for (const operation of ['persist', 'persist-final-report']) {
+      const reserved = runCli(operation, '--bundle', bundle, '--source', source, '--target', 'final/final_v1.md', '--expect-absent');
+      assert.equal(reserved.status, 1, reserved.stderr);
+      assert.equal(parseJson(reserved).reason_code, 'primary_target_requires_publication');
+    }
   });
 
   it('rejects malformed, unsafe, missing, and unsubmitted Final backing before workspace creation', () => {

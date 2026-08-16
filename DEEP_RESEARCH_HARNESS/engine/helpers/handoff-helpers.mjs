@@ -8,6 +8,10 @@ import { PostFinalRecoveryEventSchema } from './post-final-reentry-contract.mjs'
 import { computeResearchStyleParams } from './research-style-params.mjs';
 import { makeContractFinding, projectFindingCompatibility } from './wave-contract-findings.mjs';
 import { readGateDefinitionSnapshot } from '../../schema/contracts/gate-definition.mjs';
+import {
+  digestFinalReportInventoryEntries,
+  readFinalReportInventory,
+} from './final-report-series.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -372,9 +376,6 @@ function continuousNormalDescendant(events, topology, item) {
     handoffs.push(made.handoff);
   }
   if (handoffs.length === 0) return { ok: true, latest: null };
-  if (handoffs.some((handoff) => handoff.sourceNode === 'phases/phase-readiness.md' && handoff.targetNode === 'phases/phase-final.md')) {
-    return { ok: false, retired: true, reason: 'post-final lineage is retired by a newer legal Final delivery' };
-  }
   if (handoffs[0].sourceNode !== 'phases/phase-rerun.md') {
     return { ok: false, reason: 'normal descendant lineage does not begin at the accepted rerun node' };
   }
@@ -383,7 +384,120 @@ function continuousNormalDescendant(events, topology, item) {
       return { ok: false, reason: `normal descendant lineage is discontinuous at trace index ${handoffs[index].index}` };
     }
   }
-  return { ok: true, latest: handoffs.at(-1) };
+  const finalHandoffs = handoffs.filter((handoff) => handoff.sourceNode === 'phases/phase-readiness.md' && handoff.targetNode === 'phases/phase-final.md');
+  if (finalHandoffs.length === 0) return { ok: true, latest: handoffs.at(-1) };
+  if (finalHandoffs.length !== 1 || finalHandoffs[0].index !== handoffs.at(-1).index) {
+    return { ok: false, reason: 'post-final descendant lineage contains conflicting authority after a newer Final handoff' };
+  }
+  return { ok: true, latest: handoffs.at(-1), newerFinal: finalHandoffs[0] };
+}
+
+function retiredPostFinalWitness(item, edge) {
+  return {
+    event: item.event,
+    index: item.index,
+    eventLineSha256: item.lineSha256,
+    operationId: edge.operationId,
+    eventId: edge.eventId,
+    previousFinal: edge.previousFinal,
+  };
+}
+
+function proveNewerFinalAppend(inventory, priorInventorySha256) {
+  const removable = inventory.primary_series.primary_entries
+    .filter((entry) => entry.kind === 'revision')
+    .slice()
+    .reverse();
+  const removedTargets = [];
+  for (const entry of removable) {
+    removedTargets.push(entry.target);
+    const removed = new Set(removedTargets);
+    const priorEntries = inventory.entries.filter((item) => !removed.has(item.path));
+    if (digestFinalReportInventoryEntries(priorEntries) === priorInventorySha256) {
+      return {
+        matched: true,
+        removed_targets: [...removedTargets],
+        current_target: inventory.primary_series.latest?.target || null,
+      };
+    }
+  }
+  return { matched: false };
+}
+
+function inspectNewerFinalStage({ bundlePath, item, edge, descendantChain, status }) {
+  const handoff = descendantChain.newerFinal;
+  const retiredEvent = retiredPostFinalWitness(item, edge);
+  const base = {
+    ok: true,
+    handoff,
+    retired_event: retiredEvent,
+    lineage: retiredEvent,
+  };
+
+  if (!handoff.loadComplete) {
+    return withOwner({ ...base, stage: 'newer_final_entry_pending' }, {
+      kind: 'enter_phase',
+      target_ref: 'phases/phase-final.md',
+    });
+  }
+  if (status.current_node !== 'phases/phase-final.md') {
+    return {
+      ok: false,
+      reason_code: 'newer_final_load_drift',
+      reason: 'newer Final load exists but rb_status.json does not retain the Final current-node coordinate',
+      handoff,
+      retired_event: retiredEvent,
+    };
+  }
+  if (status.current_gate !== 'readiness_passed' || status.next_gate !== 'none') {
+    return withOwner({ ...base, stage: 'newer_final_loaded_pending_status' }, {
+      kind: 'advance_status',
+      target_ref: 'readiness_passed',
+    });
+  }
+
+  let inventory;
+  try {
+    inventory = readFinalReportInventory(bundlePath);
+  } catch (error) {
+    return {
+      ok: false,
+      reason_code: 'newer_final_inventory_invalid',
+      reason: `cannot read newer Final inventory: ${error.message}`,
+      handoff,
+      retired_event: retiredEvent,
+    };
+  }
+  if (!inventory.primary_series.valid) {
+    const first = inventory.primary_series.blockers[0];
+    return {
+      ok: false,
+      reason_code: 'newer_final_inventory_invalid',
+      reason: `newer Final primary inventory is invalid: ${first.code}: ${first.detail}`,
+      handoff,
+      retired_event: retiredEvent,
+    };
+  }
+  if (inventory.sha256 === edge.previousFinal.final_inventory_sha256) {
+    return withOwner({ ...base, stage: 'newer_final_delivery_pending', inventory }, {
+      kind: 'current_owner',
+      target_ref: 'phases/phase-final.md',
+    });
+  }
+  const appendProof = proveNewerFinalAppend(inventory, edge.previousFinal.final_inventory_sha256);
+  if (!appendProof.matched) {
+    return {
+      ok: false,
+      reason_code: 'newer_final_inventory_drift',
+      reason: 'newer Final inventory is neither the accepted prior inventory nor a proven immutable canonical append',
+      handoff,
+      retired_event: retiredEvent,
+    };
+  }
+  return withOwner({ ...base, stage: 'retired_by_newer_final', inventory, append_proof: appendProof }, {
+    kind: 'current_owner',
+    target_ref: 'phases/phase-final.md',
+  });
 }
 
 export function inspectPostFinalHandoffStage(bundlePath) {
@@ -404,7 +518,6 @@ export function inspectPostFinalHandoffStage(bundlePath) {
   if (!selected) return { ok: false, reason_code: 'missing_event', reason: 'no structurally valid post_final_reentry event was found' };
   const { item, edge } = selected;
   const descendantChain = continuousNormalDescendant(trace.events, topology, item);
-  if (descendantChain.retired) return { ok: false, reason_code: 'superseded_event', reason: descendantChain.reason };
   if (!descendantChain.ok) return { ok: false, reason_code: 'descendant_lineage_drift', reason: descendantChain.reason };
   const latestNormal = descendantChain.latest;
   const statusPath = join(bundlePath, 'rb_status.json');
@@ -414,6 +527,9 @@ export function inspectPostFinalHandoffStage(bundlePath) {
   const profileRaw = readFileSync(profilePath);
   const profile = parseYaml(profileRaw.toString('utf8'));
   const status = JSON.parse(statusRaw.toString('utf8'));
+  if (descendantChain.newerFinal) {
+    return inspectNewerFinalStage({ bundlePath, item, edge, descendantChain, status });
+  }
   const profileSha256 = createHash('sha256').update(profileRaw).digest('hex');
   const load = findBoundPostFinalLoad(trace.events, item, edge);
   const transition = findBoundPostFinalTransition(trace.events, item, edge, load);
@@ -554,6 +670,96 @@ function contextFor(bundlePath) {
   } catch (err) {
     return { ok: false, reason: `failed to load workflow handoff topology: ${err.message}` };
   }
+}
+
+function routeBoundFinalLoads(events, topology) {
+  const loads = [];
+  for (const item of events) {
+    const edge = edgeForAttempt(item, topology);
+    if (!edge || edge.sourceNode !== 'phases/phase-readiness.md' || edge.targetNode !== 'phases/phase-final.md') continue;
+    const handoff = {
+      index: item.index,
+      sourceGate: edge.sourceGate,
+      sourceNode: edge.sourceNode,
+      targetNode: edge.targetNode,
+    };
+    const loadComplete = findBoundLoad(events, handoff);
+    if (loadComplete) loads.push({ ...handoff, loadComplete });
+  }
+  return loads;
+}
+
+/**
+ * Evaluate only the filesystem/provenance baseline that must exist before the
+ * first route-bound load for a newly authorized Final handoff. This is not a
+ * publisher, delivery, or user-feedback verdict.
+ */
+export function evaluateFinalEntryAdmission(bundlePath, handoff) {
+  if (handoff?.sourceNode !== 'phases/phase-readiness.md' || handoff?.targetNode !== 'phases/phase-final.md') {
+    return { ok: true, applicable: false, mode: 'not_final' };
+  }
+  const ctx = contextFor(bundlePath);
+  if (!ctx.ok) return { ok: false, reason: ctx.reason };
+
+  const existingLoad = findBoundLoad(ctx.events, handoff);
+  if (existingLoad) {
+    return { ok: true, applicable: true, mode: 'already_bound', loadComplete: existingLoad };
+  }
+
+  let inventory;
+  try {
+    inventory = readFinalReportInventory(bundlePath);
+  } catch (error) {
+    return { ok: false, reason: `cannot read Final inventory before entry: ${error.message}` };
+  }
+  if (!inventory.primary_series.valid) {
+    const first = inventory.primary_series.blockers[0];
+    return { ok: false, reason: `Final primary inventory is invalid before entry: ${first.code}: ${first.detail}` };
+  }
+
+  const earlierFinalLoads = routeBoundFinalLoads(ctx.events, ctx.topology)
+    .filter((item) => item.index !== handoff.index);
+  if (earlierFinalLoads.length === 0) {
+    if (inventory.primary_series.classification !== 'empty') {
+      return {
+        ok: false,
+        reason: `first Final entry requires an empty primary inventory; found ${inventory.primary_series.classification}`,
+        inventory,
+      };
+    }
+    return { ok: true, applicable: true, mode: 'first_empty', inventory };
+  }
+
+  const postFinal = inspectPostFinalHandoffStage(bundlePath);
+  if (!postFinal.ok) {
+    return {
+      ok: false,
+      reason: `later Final entry requires one accepted retired C5 witness: ${postFinal.reason}`,
+      inventory,
+    };
+  }
+  if (postFinal.stage !== 'newer_final_entry_pending' || postFinal.handoff?.index !== handoff.index || !postFinal.retired_event) {
+    return {
+      ok: false,
+      reason: 'later Final entry is not the unique entry-pending descendant of an accepted C5 lineage',
+      inventory,
+    };
+  }
+  if (inventory.sha256 !== postFinal.retired_event.previousFinal.final_inventory_sha256) {
+    return {
+      ok: false,
+      reason: 'Final inventory drifted from the accepted C5 prior-inventory digest before later Final entry',
+      inventory,
+      retired_event: postFinal.retired_event,
+    };
+  }
+  return {
+    ok: true,
+    applicable: true,
+    mode: 'post_c5_prior_inventory',
+    inventory,
+    retired_event: postFinal.retired_event,
+  };
 }
 
 export function validateEnterPhaseTarget(bundlePath, targetNode) {

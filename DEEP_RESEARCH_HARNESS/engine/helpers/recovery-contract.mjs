@@ -90,6 +90,15 @@ export function assessStructuredRecoveryAction(bundlePath, action) {
   return { sanctioned_path_status: 'not_applicable', recommended_action: null, direct_blocker: 'No existing sanctioned deterministic repair contract applies to this surface.' };
 }
 
+function currentFinalOwnerAction() {
+  return RecoveryActionSchema.parse({
+    kind: 'current_owner',
+    target_ref: 'phases/phase-final.md',
+    preconditions: [],
+    sanctioned: true,
+  });
+}
+
 function projectPostFinalAction(postFinalInspection) {
   const action = postFinalInspection?.next_action;
   if (!action) return null;
@@ -114,9 +123,35 @@ function projectPostFinalAction(postFinalInspection) {
   });
 }
 
-export function buildRecoverySummary({ canonicalFindings = [], blockers = [], target = null, statusPosition = null, postFinalInspection = null } = {}) {
-  const roots = [];
+function finalBoundaryProjection({ postFinalInspection, finalInventory, statusPosition }) {
+  const finalStage = typeof postFinalInspection?.stage === 'string'
+    && postFinalInspection.stage.startsWith('newer_final_');
+  const currentFinal = statusPosition?.current_node === 'phases/phase-final.md';
   const postFinalAction = projectPostFinalAction(postFinalInspection);
+  if (!currentFinal && !finalStage) {
+    if (!postFinalInspection) return null;
+    return {
+      action: postFinalAction,
+      blocker: postFinalAction ? null : postFinalInspection.reason,
+    };
+  }
+
+  if (postFinalInspection?.reason_code === 'artifact_persistence_owner' && postFinalAction) {
+    return { action: postFinalAction, blocker: null };
+  }
+  if (finalInventory && !finalInventory.valid) {
+    return { action: null, blocker: finalInventory.reason };
+  }
+  if (postFinalInspection && ['unchanged', 'recover_required'].includes(postFinalInspection.verdict) && postFinalAction) {
+    return { action: postFinalAction, blocker: null };
+  }
+  return { action: currentFinalOwnerAction(), blocker: null };
+}
+
+export function buildRecoverySummary({ canonicalFindings = [], blockers = [], target = null, statusPosition = null, finalInventory = null, postFinalInspection = null } = {}) {
+  const roots = [];
+  const finalProjection = finalBoundaryProjection({ postFinalInspection, finalInventory, statusPosition });
+  const postFinalAction = finalProjection?.action || null;
   for (const finding of canonicalFindings.filter((item) => item.classification === 'blocking')) {
     const terminalPositionMismatch = statusPosition?.current_node === 'phases/phase-final.md'
       && target?.phase_key !== 'final';
@@ -143,14 +178,14 @@ export function buildRecoverySummary({ canonicalFindings = [], blockers = [], ta
       recommended_action: null,
     });
   });
-  if (postFinalInspection && canonicalFindings.every((item) => item.classification !== 'blocking')) {
+  if (finalProjection && canonicalFindings.every((item) => item.classification !== 'blocking')) {
     const reachable = Boolean(postFinalAction);
     roots.push({
       id: 'recovery:post-final-recovery',
       source_kind: 'post_final_recovery',
       source_ref: 'post-final-recovery',
-      sanctioned_path_status: reachable ? 'reachable' : (postFinalInspection.verdict === 'blocked' ? 'missing_contract' : 'not_applicable'),
-      direct_blocker: reachable ? null : postFinalInspection.reason,
+      sanctioned_path_status: reachable ? 'reachable' : 'missing_contract',
+      direct_blocker: reachable ? null : finalProjection.blocker,
       recommended_action: reachable ? postFinalAction : null,
     });
   }

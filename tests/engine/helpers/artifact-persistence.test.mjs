@@ -2,6 +2,7 @@
 
 import { afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import {
   existsSync,
   mkdirSync,
@@ -23,11 +24,19 @@ import {
   ArtifactPersistenceCrashError,
   ArtifactSweepSummarySchema,
   persistBundleFile,
+  publishFinalReport,
   sha256File,
   sweepPendingArtifactWrites,
 } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs';
+import {
+  claimAndSubmitFixtureWorkUnit,
+  sourceYamlContent,
+  writeWave0Scaffold,
+} from '../../../experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const roots = [];
+const repoRoot = path.resolve(import.meta.dirname, '../../..');
+const artifactCli = path.join(repoRoot, 'DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs');
 
 function createBundle(name = 'artifact-persistence') {
   const bundle = mkdtempSync(path.join(tmpdir(), `dpt-${name}-`));
@@ -48,6 +57,55 @@ function stagingFile(bundle, name, content) {
 function workspaces(bundle) {
   const root = path.join(bundle, ...ARTIFACT_PERSISTENCE_ROOT.split('/'));
   return existsSync(root) ? readdirSync(root).map((entry) => path.join(root, entry)) : [];
+}
+
+function submittedFinalBundle() {
+  const bundle = createBundle('primary-publication');
+  writeWave0Scaffold(bundle, { syntheticWave0Trace: false });
+  const sourcePath = 'artifacts/wave0/topic-a/source.yaml';
+  const submitted = claimAndSubmitFixtureWorkUnit(bundle, {
+    phase: 'wave0',
+    queue_item_id: 'primary-publication-source',
+    topic_slug: 'topic-a',
+    output_path: sourcePath,
+    role: 'source_yaml',
+    source_url: 'https://evidence.example.test/primary-publication/source',
+    source_slug: 'primary-publication-source',
+    output_content: sourceYamlContent({
+      source_url: 'https://evidence.example.test/primary-publication/source',
+      topic_slug: 'topic-a',
+    }),
+  });
+  assert.equal(submitted.submit.ok, true, JSON.stringify(submitted.submit));
+  return { bundle, sourcePath };
+}
+
+function finalReport(backing) {
+  return [
+    '# Final Report',
+    '',
+    '## Evidence Map',
+    '',
+    '| Finding ID | Declared Key Finding | Submitted Backing |',
+    '| --- | --- | --- |',
+    `| F-001 | A mechanically backed declaration. | ${backing} |`,
+    '',
+  ].join('\n');
+}
+
+function runPublishCli(bundle, source) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [artifactCli, 'publish-final-report', '--bundle', bundle, '--source', source], {
+      cwd: repoRoot,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => { stdout += chunk; });
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.on('error', reject);
+    child.on('close', (status) => resolve({ status, stdout, stderr }));
+  });
 }
 
 afterEach(() => {
@@ -72,31 +130,71 @@ describe('artifact persistence workspace', () => {
     assert.deepEqual(ArtifactPersistResultSchema.parse(result), result);
   });
 
-  it('uses compare-and-swap replacement and creates no workspace on initial drift', () => {
+  it('keeps an inventory-selected legacy Final report immutable', () => {
     const bundle = createBundle();
     const targetPath = path.join(bundle, 'final/report.md');
     writeFileSync(targetPath, 'old\n');
     const source = stagingFile(bundle, 'replacement.md', 'new\n');
     const wrongDigest = '0'.repeat(64);
-    const blocked = persistBundleFile({
+    assert.throws(() => persistBundleFile({
       bundlePath: bundle,
       sourcePath: source,
       target: 'final/report.md',
       expectedTarget: { kind: 'sha256', value: wrongDigest },
-    });
-    assert.equal(blocked.verdict, 'blocked');
-    assert.equal(blocked.reason_code, 'initial_target_mismatch');
+    }), (error) => error instanceof ArtifactPersistenceConfigError && error.code === 'legacy_primary_immutable');
     assert.equal(readFileSync(targetPath, 'utf8'), 'old\n');
     assert.deepEqual(workspaces(bundle), []);
 
-    const committed = persistBundleFile({
+    assert.throws(() => persistBundleFile({
       bundlePath: bundle,
       sourcePath: source,
       target: 'final/report.md',
       expectedTarget: { kind: 'sha256', value: sha256File(targetPath) },
-    });
-    assert.equal(committed.verdict, 'committed');
-    assert.equal(readFileSync(targetPath, 'utf8'), 'new\n');
+    }), (error) => error instanceof ArtifactPersistenceConfigError && error.code === 'legacy_primary_immutable');
+    assert.equal(readFileSync(targetPath, 'utf8'), 'old\n');
+  });
+
+  it('uses no-clobber publication across concurrent production CLI processes', async () => {
+    const { bundle, sourcePath } = submittedFinalBundle();
+    const sourceA = stagingFile(bundle, 'primary-a.md', finalReport(`[submitted source](../${sourcePath})`));
+    const sourceB = stagingFile(bundle, 'primary-b.md', finalReport(`[submitted source](../${sourcePath})`));
+    const [first, second] = await Promise.all([runPublishCli(bundle, sourceA), runPublishCli(bundle, sourceB)]);
+    const results = [first, second].map((result) => ({
+      ...result,
+      json: result.stdout.trim() ? JSON.parse(result.stdout) : null,
+    }));
+
+    assert.ok(existsSync(path.join(bundle, 'final', 'final.md')));
+    const committed = results.filter((result) => result.status === 0);
+    const committedTargets = committed.map((result) => result.json.target);
+    assert.equal(new Set(committedTargets).size, committedTargets.length);
+    assert.ok(results.every((result) => [0, 1, 2].includes(result.status)), JSON.stringify(results));
+    for (const result of results.filter((result) => result.status !== 0)) {
+      assert.ok(
+        result.json?.reason_code === 'target_collision_retry'
+        || result.json?.reason_code === 'primary_inventory_drift'
+        || result.json?.reason_code === 'artifact_persistence_owner'
+        || result.json?.error === 'operation_failed',
+        JSON.stringify(result),
+      );
+    }
+    const seriesFiles = readdirSync(path.join(bundle, 'final')).filter((name) => /^final(?:_.+)?\.md$/.test(name));
+    assert.equal(seriesFiles.filter((name) => name === 'final.md').length, 1);
+    assert.ok(seriesFiles.length <= 2, JSON.stringify(seriesFiles));
+  });
+
+  it('sweeps an exact prepared primary publication after target creation', () => {
+    const { bundle, sourcePath } = submittedFinalBundle();
+    const source = stagingFile(bundle, 'primary-after-target.md', finalReport(`[submitted source](../${sourcePath})`));
+    assert.throws(() => publishFinalReport({
+      bundlePath: bundle,
+      sourcePath: source,
+      hooks: { afterPrimaryTargetCommit: () => { throw new ArtifactPersistenceCrashError('afterPrimaryTargetCommit'); } },
+    }), ArtifactPersistenceCrashError);
+    const sweep = sweepPendingArtifactWrites({ bundlePath: bundle });
+    assert.equal(sweep.passed, true, JSON.stringify(sweep));
+    assert.equal(sweep.entries[0].verdict, 'cleaned');
+    assert.equal(readFileSync(path.join(bundle, 'final', 'final.md'), 'utf8'), readFileSync(source, 'utf8'));
   });
 
   it('blocks late target drift and removes only its accepted workspace', () => {

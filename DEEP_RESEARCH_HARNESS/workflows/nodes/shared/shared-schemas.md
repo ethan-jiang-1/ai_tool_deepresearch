@@ -208,7 +208,15 @@ Bare runtime paths in this node are current run bundle-root relative. If the cur
 
 ## Final Delivery
 
-- **`final/`**：Terminal delivery 目录（`gate: null`，无 gate CLI 检查）。Agent 从 verified bundle state 生成 final report artifact(s)，格式自由。Delivery 完成由 `final/` 下存在至少一份报告文件来证明。空目录不代表 delivery 完成。Post-delivery 反馈走 HITL2 `rerun` 路径。
+- **`final/`**：Final 是 `gate: null` 的 terminal lifecycle 目录，而非固定 view。
+  在 admitted entry 和 Readiness status synchronization 后，空 primary inventory
+  先由 `publish-final-report` 写 `final/final.md`；admitted post-C5 zero-append
+  lineage 先追加 next global version。每份 primary report 独立通过 submitted
+  Evidence Map backing、不可覆盖且保留历史。
+- 交付后，presentation-only feedback 留在 `phase-final.md` 并追加一个版本；
+  satisfied turn 不写 runtime fact。只有 evidence/research expansion 走 existing
+  audited C5/HITL2 rerun。`final/` inventory 是版本/latest source of record，不增
+  profile counter/current pointer，也不让文件存在绕过 legal Final entry。
 
 ### Work-Unit Role Spec Nodes
 

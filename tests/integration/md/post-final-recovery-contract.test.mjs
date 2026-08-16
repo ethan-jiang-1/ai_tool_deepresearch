@@ -11,7 +11,7 @@ describe('post-final recovery Agent-facing contract', () => {
   const rerunPhase = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-rerun.md');
   const transitions = JSON.parse(read('DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json'));
 
-  it('keeps Final terminal and exposes one copyable audited rerun chain', () => {
+  it('keeps Final terminal, retains presentation refinement there, and exposes one audited evidence-expansion chain', () => {
     assert.equal(Object.hasOwn(transitions, 'phases/phase-final.md'), false);
     for (const marker of [
       'operate-post-final-recovery.mjs inspect',
@@ -22,7 +22,11 @@ describe('post-final recovery Agent-facing contract', () => {
       'check-reentry.mjs --bundle <bundle> --at hitl2_recorded',
       'operate-topic-state.mjs inspect',
     ]) assert.match(playbook, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    assert.match(finalPhase, /Final node 自身不处理修改、不重问同一决定/);
+    assert.match(finalPhase, /remains the current node[\s>]+while a delivered report is discussed and refined/);
+    assert.match(finalPhase, /clear presentation request: publish one immutable next version/);
+    assert.match(finalPhase, /new evidence\/research: accepted C5 request and existing rerun path/);
+    assert.match(playbook, /evidence-expanding\s+user\s+decision/);
+    assert.doesNotMatch(finalPhase, /Final node 自身不处理修改、不重问同一决定/);
     assert.match(rerunPhase, /post_final_reentry.*不代表post-Final HITL2 gate曾运行/);
   });
 

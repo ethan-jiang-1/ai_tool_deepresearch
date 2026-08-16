@@ -32,7 +32,10 @@ suggested_context:
 
 HITL2 是 delivery 前最后一次人类审查——用户在此决定是否 proceed to readiness、revise view、repair current run、rerun through `phase-rerun`，或 stop blocked。
 
-当 accepted post-final reentry path 把反馈带回 HITL2 时，Agent 将决定写入现有 HITL2 `user_decision` / `rationale` fields，再走 repair 或 rerun path；本 phase 不自行创造 post-final reentry capability。
+当 evidence-expanding feedback 通过 accepted post-final reentry path 回到 HITL2 时，
+Agent 将决定写入现有 HITL2 `user_decision` / `rationale` fields，再走 repair 或
+rerun path；presentation-only Final feedback 不回到这里，也不改写旧 handoff。
+本 phase 不自行创造 post-final reentry capability。
 
 ## 2. Required Inputs
 

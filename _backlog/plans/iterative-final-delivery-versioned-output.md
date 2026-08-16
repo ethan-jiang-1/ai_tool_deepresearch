@@ -141,3 +141,135 @@
 6. **补验收测试**：按 §5 写用例（首版 `final.md` → 迭代 `final_v1.md` → 再迭代 `final_v2.md`；带特征标签 `final_technical_deep_dive_v1.md`；view 变更更新 profile owner；report 打磨不进 rerun）。
 
 **约束提醒**：Node.js >=20 纯 ESM `.mjs`、无 Python、无新增依赖（仅 zod/yaml）、测试在 `tests/`（repo root）下、`DEEP_RESEARCH_HARNESS/` 在 `/opsx:apply` 前只读。
+
+---
+
+## 7. 评审后定案（2026-08-16，取代前文冲突建议）
+
+> 本节是对前文 pre-OpenSpec 设想的正式复核结论。凡与本节冲突，以本节和
+> `openspec/changes/iterate-final-delivery-in-place/` 的 change artifacts 为准。
+
+### 7.1 对问题的最终理解
+
+这个需求不是“Final 完成后再开一个反馈流程”，而是：
+
+1. **第一次合法进入 Final，先直接产出并展示首版，不能先问用户。**
+2. **首版交付后仍停在同一个 `phases/phase-final.md` node。** 用户不满意就对着已经看到的报告继续提意见；Agent 每次产出一个新版本、再次展示、继续等反馈。
+3. **用户满意只结束当次交互。** 不离开 Final、不新增 lifecycle state、Gate、trace event、满意字段或 outgoing transition。
+4. **这里的 `final` 是用户当时拿到的主报告。** 它不固定等于某个“烦恼点”、`technical_deep_dive` 或其他 view；可选 feature 只描述这一版的呈现特点，不是新的报告类型、计数器或 authority。
+5. **只有越过当前 verified research boundary 才离开 Final。** 改读者、结构、篇幅、措辞、解释深度、现有证据显隐仍在 Final；新增来源、Topic、证据、研究结论或 research-profile 语义才走现有 audited C5/post-final rerun。
+
+因此应把两层语义分开：
+
+```text
+lifecycle：Readiness -> Final（terminal，之后无普通 transition）
+delivery interaction：首版 -> 用户反馈 -> v1 -> 用户反馈 -> v2 -> …… -> 用户满意
+```
+
+第二行是同一 Final node 上的用户会话，不是状态机自环、自动 rewrite loop 或第三个 HITL。
+
+### 7.2 命名定案
+
+Primary Final series 统一为：
+
+```text
+首版：       final/final.md
+无标签修订： final/final_v1.md
+带标签修订： final/final_technical_deep_dive_v2.md
+下一版：     final/final_v3.md
+```
+
+- `N` 在有标签和无标签文件之间**全局单调递增**，不能按 feature 分叉计数。
+- `<feature>` 使用安全 lowercase `snake_case`，只说明呈现特点；用户不需要选择文件名或版本号。
+- 已提交版本全部不可变；新反馈只能追加一份完整新报告，不能覆盖、删除或重编号历史。
+- canonical `final/final*.md` 只允许由 Engine 的 `publish-final-report` 分配和提交。
+- 老 bundle 若没有 `final/final.md` 且恰有一份可辨认的 root-level Markdown 主报告（如 `final/report.md`），将它只读视为 legacy v0，第一次修订直接追加 v1；多个候选时 fail closed，不按 mtime、目录顺序或内容猜。
+- 目录 inventory 同时是版本号和 latest report 的 Source of Record；不新增 profile counter 或 `current-final` pointer。
+
+### 7.3 对前文方案的修改意见
+
+以下前文建议经评审后明确废弃：
+
+| 前文设想 | 评审后决定 | 原因 |
+|---|---|---|
+| 拆成“命名”和“迭代”两个 change | 合并为一个 change：`iterate-final-delivery-in-place` | 两者共享一个用户可见闭环、一个 publisher 和同一兼容边界；拆开会产生中间不可用状态 |
+| 用 profile 字段或独立 counter 跟踪版本 | 只读 canonical Final inventory 分配版本 | 避免 filesystem/counter 双真源和 crash recovery 原子性问题 |
+| Final view 变化时回写 `final_report_view` / `composition_handoff` | presentation revision 不回写 HITL2 handoff/profile/receipt | 后续偏好不应伪装成首版交付时已接受的研究语义 |
+| Engine 校验报告是否符合 view、是否足够 technical | Engine 只校验路径、inventory、版本、不可覆盖、backing 和 durable commit | “够不够深入/用户满不满意”是 Agent 与用户的语义判断，不能伪造成 deterministic verdict |
+| 写 Final revision trace/log 作为版本 authority | committed primary inventory 是 authority；日志仅诊断 | Final delivery 仍不新增 trace event，避免平行版本账本 |
+| 所有 post-delivery feedback 都走 rerun | 仅 evidence/research expansion 走 C5；presentation 留在 Final | 报告打磨不应重跑研究，真正的新研究仍必须审计 |
+| clean Final reentry 默认推荐 C5 | clean Final 默认恢复 Final owner；accepted C5 workspace/lineage 成立后才由 C5 接管 | 机械上“可以 rerun”不等于用户已经请求 rerun |
+| `stop: "yes"` 表示进入 Final 后先等待 | Final 专用语义是“deliver first, then wait/refine” | 用户只有看到首版后才知道如何反馈 |
+
+### 7.4 落地架构
+
+OpenSpec change：`openspec/changes/iterate-final-delivery-in-place/`
+
+最短合法闭环：
+
+```text
+legal Final entry
+  -> Final Agent 从 accepted handoff + verified evidence 写 retained staging
+  -> Engine publish-final-report
+       -> resolve canonical inventory
+       -> admit Evidence Map submitted backing
+       -> allocate target/version
+       -> atomic no-clobber commit
+  -> Agent 展示 latest report 并邀请反馈（current_node 仍是 Final）
+  -> presentation feedback：重复一次完整 staging + append publication
+  -> satisfied：停止当前交互，不写 runtime fact
+  -> evidence expansion：existing C5 inspect/apply/recover -> legal rerun chain
+```
+
+实现分为五个直接 owner：
+
+1. **Primary series resolver**：新增纯 helper `engine/helpers/final-report-series.mjs`，唯一解释 base/legacy/version/latest/blocker。
+2. **Deep publisher**：在既有 artifact-persistence Module 内新增 `publish-final-report`；调用者不能传 target/version/CAS/force。
+3. **No-clobber commit**：primary publication 使用同设备原子 no-clobber 创建，关闭现有 check-then-rename 在并发窗口可能覆盖的风险；失败者重新 inspect/allocate，不加持久锁或 counter。
+4. **Final interaction guidance**：`phase-final.md` 改为 Final 专用 `stop: "yes"`，loader 保留既有 `terminal_delivery / deliver_final_artifacts` cue，但解释为 inventory-aware deliver-first/refinement。
+5. **Reentry/C5 precedence**：publication recovery > inventory blocker > accepted C5 lineage > clean Final owner；Engine 不读 chat、不推断满意或反馈类型。
+
+### 7.5 验证边界
+
+- `unit`：primary series truth table、publication workspace/result、no-clobber、每版 backing、Final/C5 owner precedence。
+- `integration`：production CLI、Final loader/header/cue、Markdown/command parity、C5 request boundary、clean Final reentry。
+- `deterministic_e2e`：合法 Final entry 后依次提交 base/v1/labelled-v2，证明旧 bytes 不变、`current_node` 不变、明确 request 后才 C5。
+- `agent_flow_e2e`：新增 `case-138-standard-final-refinement.md`，使用无网络、单 Subject session、一个 finding/一行 Evidence Map 和 compact reports；五次 supplied turn 依次观察首次直接交付、两轮 presentation revision、满意后由 observer 固化无 mutation snapshot，以及随后在同一 lineage 上选择/accept C5 且不再写 report。
+
+case 138 的 total Subject runtime hard cap 为 accepted active-suite threshold `120s`，且只授权一次 canonical native run；失败、超时或缺少 native health/completion 就保留诊断、quarantine 并记 `NOT_RUN`，对应 Agent-flow claim/task 保持未完成以待显式重规划，不能自动 retry。静态 Markdown、fixture 和 Node tests 不能证明报告变好了或真人满意；case 138 也只证明该次真实 Agent procedure，不能外推通用写作质量。历史 case 137 继续是 quarantined no-evidence，不能重新包装成 proof。
+
+### 7.6 Progress Tracking
+
+> OpenSpec `tasks.md` 是 Apply/Archive 的权威工作账本；这里是方便从原 plan 查看全局阶段的镜像。不要只勾这里而不更新 `tasks.md`。
+
+#### 分析与 OpenSpec 规划
+
+- [x] 阅读 Project Charter、`CONTEXT.md`、原始 plan、相关 accepted specs 和实现 seam
+- [x] 锁定“首次直接交付、同一 Final node 驻留、满意不落状态、研究扩张才 C5”
+- [x] 建立 OpenSpec change `iterate-final-delivery-in-place`
+- [x] 完成 `proposal.md` 和 9 份 delta specs
+- [x] 完成 `design.md`
+- [x] 完成 `semantic-closure.yaml`（含 planned `final.primary-report-series` family）
+- [x] 完成 `verification-plan.yaml`（四类 verification，12 条 claim）
+- [x] 完成 `tasks.md`（Apply 前 review、实现、验证、sync、closeout）
+- [x] 完成最终 strict/governance/readiness 双轮审查（第二轮修正 publisher/lifecycle authority 与 case 138 风险边界；第三轮零编辑通过）
+
+#### Apply（尚未开始）
+
+- [ ] 完成 `openspec-feedback:plan-review`，关闭所有 review finding
+- [ ] 实现 primary Final series resolver
+- [ ] 实现 `publish-final-report`、reserved namespace 与 crash-safe no-clobber commit
+- [ ] 更新 Final node、workflow header/cue 和 Agent-facing entry/command guidance
+- [ ] 更新 clean Final reentry 与 accepted C5 owner precedence
+- [ ] 完成 unit + integration + deterministic E2E
+- [ ] 创建、登记并真实运行 case 138；无真实 Agent 能力时只能记 `NOT_RUN`
+- [ ] 运行完整 `node --test tests` 与 assets-mode governance checks
+- [ ] 将 9 份 delta specs 同步到 main specs 并语义复核
+
+#### Archive（尚未开始）
+
+- [ ] 完成 `openspec-feedback:closeout-review`，关闭所有 ordinary finding tasks
+- [ ] 通过 archive-mode requirement check 和 project-spec check
+- [ ] 仅通过 `finalize-change-archive.mjs` 完成归档
+
+当前阶段结论：**OpenSpec change 已 `ready for apply`，但尚未修改 Harness、tests 或 experiments；下一阶段必须由新的显式 `/opsx:apply` 请求启动。**

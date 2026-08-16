@@ -49,6 +49,7 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 | `exp_wff_delivery/case-132-standard-hitl2-decision.md` |
 | `exp_wff_delivery/case-133-standard-hitl2-rerun.md` |
 | `exp_wff_delivery/case-134-standard-delivery-repair.md` |
+| `exp_wff_delivery/case-138-standard-final-refinement.md` |
 | `exp_wff_wave-chain/case-151-standard-waves-full-chain.md` |
 | `exp_wff_wave-chain/case-152-standard-wave-repair-loop.md` |
 | `exp_wff_wave-chain/case-153-standard-wave-fault-tolerance.md` |

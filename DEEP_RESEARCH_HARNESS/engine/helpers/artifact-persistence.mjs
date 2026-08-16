@@ -6,6 +6,7 @@ import {
   copyFileSync,
   existsSync,
   fsyncSync,
+  linkSync,
   lstatSync,
   mkdirSync,
   openSync,
@@ -25,13 +26,19 @@ import {
   evaluateFinalDeliveryBacking,
   FinalDeliveryBackingAdviceSchema,
   FinalDeliveryBackingCheckSchema,
+  FinalDeliveryBackingEvaluationSchema,
   FinalDeliveryBackingInspectSchema,
   isFinalMarkdownTarget,
 } from './final-delivery-backing.mjs';
+import {
+  allocateFinalReportTarget,
+  FinalReportFeatureSchema,
+  readFinalReportSeries,
+} from './final-report-series.mjs';
 
 export const ARTIFACT_PERSISTENCE_SCHEMA_VERSION = '1.0.0';
 export const ARTIFACT_PERSISTENCE_ROOT = '_diagnostics/artifact-persistence';
-export const ARTIFACT_PERSISTENCE_OPERATIONS = Object.freeze(['persist', 'persist-final-report', 'sweep']);
+export const ARTIFACT_PERSISTENCE_OPERATIONS = Object.freeze(['persist', 'persist-final-report', 'publish-final-report', 'sweep']);
 export const ARTIFACT_PERSISTENCE_VERDICTS = Object.freeze(['committed', 'finalized', 'cleaned', 'blocked']);
 export const ARTIFACT_PERSISTENCE_SUPPORTED_ROOTS = Object.freeze(['reference', 'artifacts', 'final', '_cache']);
 export const ARTIFACT_PERSISTENCE_EXCLUDED_SURFACES = Object.freeze([
@@ -85,10 +92,103 @@ const PreparedOperationSchema = OperationBaseSchema.extend({
   payload_sha256: DigestSchema,
 }).strict();
 
-export const ArtifactPersistenceOperationSchema = z.discriminatedUnion('state', [
+const PrimaryPublicationBindingSchema = z.object({
+  inventory_sha256: DigestSchema,
+  base_classification: z.enum(['empty', 'modern', 'legacy']),
+  target: TargetSchema,
+  version: z.number().int().nonnegative(),
+  feature: FinalReportFeatureSchema.nullable(),
+  previous_target: TargetSchema.nullable(),
+  staging_sha256: DigestSchema.nullable(),
+  backing: FinalDeliveryBackingEvaluationSchema,
+}).strict().superRefine((value, context) => {
+  if (!value.backing.check.passed || value.backing.check.target !== value.target) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['backing'], message: 'primary publication requires passing backing for its allocated target' });
+  }
+  if (value.base_classification === 'empty') {
+    if (value.target !== 'final/final.md' || value.version !== 0 || value.feature !== null || value.previous_target !== null) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ['base_classification'], message: 'empty primary inventory must allocate only the modern version-zero base' });
+    }
+  }
+  if (value.base_classification !== 'empty' && (value.version < 1 || value.previous_target === null)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['version'], message: 'existing primary inventory must append after one prior latest target' });
+  }
+  const expectedTarget = value.version === 0
+    ? 'final/final.md'
+    : value.feature === null
+      ? `final/final_v${value.version}.md`
+      : `final/final_${value.feature}_v${value.version}.md`;
+  if (value.target !== expectedTarget) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['target'], message: 'primary publication target must exactly match the bound version and optional feature' });
+  }
+});
+
+const PrimaryPreparingOperationSchema = OperationBaseSchema.extend({
+  state: z.literal('preparing'),
+  workspace_kind: z.literal('primary_publication'),
+  expected_target: z.object({ kind: z.literal('absent') }).strict(),
+  publication: PrimaryPublicationBindingSchema.refine((value) => value.staging_sha256 === null, 'preparing publication cannot bind a payload digest'),
+}).strict();
+
+const PrimaryPreparedOperationSchema = OperationBaseSchema.extend({
+  state: z.literal('prepared'),
+  workspace_kind: z.literal('primary_publication'),
+  expected_target: z.object({ kind: z.literal('absent') }).strict(),
+  payload_size: z.number().int().nonnegative(),
+  payload_sha256: DigestSchema,
+  publication: PrimaryPublicationBindingSchema.refine((value) => value.staging_sha256 !== null, 'prepared publication requires a payload digest'),
+}).strict().superRefine((value, context) => {
+  if (value.publication.target !== value.target) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['publication', 'target'], message: 'primary publication binding target must match the workspace target' });
+  }
+  if (value.publication.staging_sha256 !== value.payload_sha256) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['publication', 'staging_sha256'], message: 'publication staging digest must bind the prepared payload bytes' });
+  }
+});
+
+export const ArtifactPersistenceOperationSchema = z.union([
   PreparingOperationSchema,
   PreparedOperationSchema,
+  PrimaryPreparingOperationSchema,
+  PrimaryPreparedOperationSchema,
 ]);
+
+export const FinalReportPublishResultSchema = z.object({
+  schema_version: z.literal(ARTIFACT_PERSISTENCE_SCHEMA_VERSION),
+  operation: z.literal('publish-final-report'),
+  check: FinalDeliveryBackingCheckSchema.nullable(),
+  inspect: z.array(FinalDeliveryBackingInspectSchema),
+  advice: z.array(FinalDeliveryBackingAdviceSchema),
+  operation_id: OperationIdSchema.nullable(),
+  target: TargetSchema.nullable(),
+  base_classification: z.enum(['empty', 'modern', 'legacy', 'invalid']),
+  version: z.number().int().nonnegative().nullable(),
+  feature: FinalReportFeatureSchema.nullable(),
+  previous_target: TargetSchema.nullable(),
+  inventory_sha256: DigestSchema.nullable(),
+  verdict: z.enum(['committed', 'blocked']),
+  reason_code: z.string().min(1),
+  reason: z.string().min(1),
+  workspace: z.string().nullable(),
+}).strict().superRefine((value, context) => {
+  if (value.check === null && (value.inspect.length !== 0 || value.advice.length !== 0)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['inspect'], message: 'unattempted backing admission cannot emit backing repair facts' });
+  }
+  if (value.check && value.target !== value.check.target) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['check', 'target'], message: 'backing target must match the allocated publication target' });
+  }
+  if (value.verdict === 'committed' && (!value.check?.passed || value.operation_id === null || value.target === null || value.version === null || value.inventory_sha256 === null || value.workspace !== null || value.reason_code !== 'committed')) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['verdict'], message: 'committed primary publication requires one complete passed allocation fact' });
+  }
+});
+
+const PublishFinalReportRequestSchema = z.object({
+  bundlePath: z.string().min(1),
+  sourcePath: z.string().min(1),
+  feature: FinalReportFeatureSchema.nullable().optional(),
+  hooks: z.unknown().nullable().optional(),
+  operationId: OperationIdSchema.optional(),
+}).strict();
 
 export const ArtifactPersistResultSchema = z.object({
   schema_version: z.literal(ARTIFACT_PERSISTENCE_SCHEMA_VERSION),
@@ -378,6 +478,112 @@ function invokeHook(hooks, name, detail) {
   if (typeof hooks?.[name] === 'function') hooks[name](detail);
 }
 
+function primaryInventorySha256(series) {
+  const canonical = {
+    classification: series.classification,
+    primary_entries: series.primary_entries.map(({ target, version, feature }) => ({ target, version, feature })),
+  };
+  return createHash('sha256').update(JSON.stringify(canonical)).digest('hex');
+}
+
+export function isReservedPrimaryTarget(target) {
+  return isSafeArtifactTarget(target) && /^final\/final[^/]*\.md$/i.test(target);
+}
+
+const PrimaryTargetRedirectSchema = z.object({
+  schema_version: z.literal(ARTIFACT_PERSISTENCE_SCHEMA_VERSION),
+  operation: z.enum(['persist', 'persist-final-report']),
+  target: TargetSchema,
+  verdict: z.literal('blocked'),
+  reason_code: z.literal('primary_target_requires_publication'),
+  reason: z.string().min(1),
+  recommended_operation: z.literal('publish-final-report'),
+}).strict();
+
+export function redirectPrimaryTargetPersist({ operation, target } = {}) {
+  return PrimaryTargetRedirectSchema.parse({
+    schema_version: ARTIFACT_PERSISTENCE_SCHEMA_VERSION,
+    operation,
+    target,
+    verdict: 'blocked',
+    reason_code: 'primary_target_requires_publication',
+    reason: 'The direct-root primary Final namespace is allocated and written only by publish-final-report.',
+    recommended_operation: 'publish-final-report',
+  });
+}
+
+function selectedLegacyTarget(bundleReal) {
+  const series = readFinalReportSeries(bundleReal);
+  return series.valid && series.classification === 'legacy' ? series.base.target : null;
+}
+
+function assertCallerTargetIsNotPrimary(bundleReal, target) {
+  if (isReservedPrimaryTarget(target)) {
+    throw new ArtifactPersistenceConfigError('canonical primary Final targets require publish-final-report', 'primary_target_reserved');
+  }
+  const legacyTarget = selectedLegacyTarget(bundleReal);
+  if (legacyTarget === target) {
+    throw new ArtifactPersistenceConfigError('the inventory-selected legacy primary report is immutable; use publish-final-report to append a revision', 'legacy_primary_immutable');
+  }
+}
+
+function publicationResult({
+  admission = null,
+  allocation = null,
+  inventorySha256 = null,
+  operationId = null,
+  verdict = 'blocked',
+  reasonCode,
+  reason,
+  workspace = null,
+} = {}) {
+  return FinalReportPublishResultSchema.parse({
+    schema_version: ARTIFACT_PERSISTENCE_SCHEMA_VERSION,
+    operation: 'publish-final-report',
+    check: admission?.check || null,
+    inspect: admission?.inspect || [],
+    advice: admission?.advice || [],
+    operation_id: operationId,
+    target: allocation?.target || null,
+    base_classification: allocation?.classification || 'invalid',
+    version: allocation?.version ?? null,
+    feature: allocation?.feature || null,
+    previous_target: allocation?.previous_target || null,
+    inventory_sha256: inventorySha256,
+    verdict,
+    reason_code: reasonCode,
+    reason,
+    workspace,
+  });
+}
+
+function ensureNoPendingArtifactWorkspace(bundleReal) {
+  const persistenceRoot = path.join(bundleReal, ...ARTIFACT_PERSISTENCE_ROOT.split('/'));
+  if (!existsSync(persistenceRoot)) return;
+  const info = lstatSync(persistenceRoot);
+  if (info.isSymbolicLink() || !info.isDirectory()) {
+    throw new ArtifactPersistenceConfigError('artifact persistence root is not a real directory', 'persistence_root_unsafe');
+  }
+  const entries = readdirSync(persistenceRoot);
+  if (entries.length > 0) {
+    throw new ArtifactPersistenceConfigError('a pending artifact persistence workspace owns recovery; run sweep before publishing', 'artifact_persistence_owner');
+  }
+}
+
+function commitPrimaryPayload(payloadPath, targetPath, parentPath) {
+  try {
+    linkSync(payloadPath, targetPath);
+    fsyncPath(parentPath);
+    return { committed: true };
+  } catch (error) {
+    if (error?.code === 'EEXIST') return { committed: false, code: 'target_collision_retry', reason: 'The allocated primary target appeared during publication; rerun the same publish-final-report command to allocate from the current inventory.' };
+    if (['EXDEV', 'EPERM', 'EOPNOTSUPP', 'ENOTSUP'].includes(error?.code)) {
+      return { committed: false, code: 'no_clobber_unsupported', reason: `The filesystem cannot provide same-device no-clobber hard-link publication: ${error.message}` };
+    }
+    throw error;
+  }
+}
+
 export function persistBundleFile({
   bundlePath,
   sourcePath,
@@ -390,6 +596,7 @@ export function persistBundleFile({
   const parsedOperationId = OperationIdSchema.parse(operationId);
   const bundleReal = resolveBundle(bundlePath);
   const { targetPath, parentPath } = resolveTarget(bundleReal, target);
+  if (target.startsWith('final/')) assertCallerTargetIsNotPrimary(bundleReal, target);
   const initialTargetFact = readTargetDigest(targetPath);
   if (!expectedTargetMatches(parsedExpectedTarget, initialTargetFact)) {
     return blockedPersist({
@@ -552,6 +759,7 @@ export function persistFinalReport({ bundlePath, sourcePath, target, expectedTar
   if (!isFinalMarkdownTarget(target)) {
     throw new ArtifactPersistenceConfigError('persist-final-report requires a safe Markdown target under final/', 'final_markdown_target_required');
   }
+  assertCallerTargetIsNotPrimary(request.bundle_real, target);
   const markdown = readFileSync(request.source_path, 'utf8');
   const admission = evaluateFinalDeliveryBacking({
     bundlePath,
@@ -567,6 +775,186 @@ export function persistFinalReport({ bundlePath, sourcePath, target, expectedTar
     expectedTarget: request.expected_target,
   });
   return finalReportPersistResult({ admission, target, persistence: persisted });
+}
+
+/**
+ * Publish one immutable primary Final report. This function owns allocation and
+ * durability only; it does not establish Final lifecycle or delivery facts.
+ */
+export function publishFinalReport(request = {}) {
+  const {
+    bundlePath,
+    sourcePath,
+    feature = null,
+    hooks = null,
+    operationId = randomUUID(),
+  } = PublishFinalReportRequestSchema.parse(request);
+  const parsedOperationId = OperationIdSchema.parse(operationId);
+  const parsedFeature = feature === null ? null : FinalReportFeatureSchema.parse(feature);
+  const bundleReal = resolveBundle(bundlePath);
+  ensureNoPendingArtifactWorkspace(bundleReal);
+
+  const series = readFinalReportSeries(bundleReal);
+  const allocation = allocateFinalReportTarget(series, { feature: parsedFeature });
+  if (!allocation.available) {
+    const first = allocation.blockers[0];
+    return publicationResult({
+      allocation,
+      reasonCode: `primary_inventory_${first.code}`,
+      reason: first.detail,
+    });
+  }
+
+  const inventorySha256 = primaryInventorySha256(series);
+  const { targetPath, parentPath } = resolveTarget(bundleReal, allocation.target);
+  if (readTargetDigest(targetPath).exists) {
+    return publicationResult({
+      allocation,
+      inventorySha256,
+      reasonCode: 'primary_target_exists',
+      reason: 'The Engine-allocated primary target already exists; rerun publication to resolve the current inventory.',
+    });
+  }
+  const persistenceRoot = ensurePersistenceRoot(bundleReal);
+  const sourceReal = resolveSource(sourcePath, targetPath, persistenceRoot);
+  if (statSync(persistenceRoot).dev !== statSync(parentPath).dev) {
+    throw new ArtifactPersistenceConfigError('persistence workspace and target parent are on different filesystem devices', 'cross_device_target');
+  }
+
+  const admission = evaluateFinalDeliveryBacking({
+    bundlePath,
+    target: allocation.target,
+    markdown: readFileSync(sourceReal, 'utf8'),
+  });
+  if (!admission.check.passed) {
+    return publicationResult({
+      admission,
+      allocation,
+      inventorySha256,
+      reasonCode: admission.inspect[0]?.code || 'final_backing_rejected',
+      reason: admission.inspect[0]?.detail || 'Final Markdown backing admission failed.',
+    });
+  }
+
+  const workspacePath = path.join(persistenceRoot, parsedOperationId);
+  mkdirSync(workspacePath, { recursive: false, mode: 0o700 });
+  fsyncPath(persistenceRoot);
+  const workspaceRef = relativeWorkspace(bundleReal, workspacePath);
+  const operationPath = path.join(workspacePath, 'operation.json');
+  const nextOperationPath = path.join(workspacePath, 'operation.json.next');
+  const payloadPath = path.join(workspacePath, 'payload');
+  let accepted = false;
+  const baseOperation = {
+    schema_version: ARTIFACT_PERSISTENCE_SCHEMA_VERSION,
+    operation_id: parsedOperationId,
+    source_path: sourceReal,
+    target: allocation.target,
+    expected_target: { kind: 'absent' },
+    created_at: new Date().toISOString(),
+    workspace_kind: 'primary_publication',
+  };
+  const basePublication = {
+    inventory_sha256: inventorySha256,
+    base_classification: allocation.classification,
+    target: allocation.target,
+    version: allocation.version,
+    feature: allocation.feature,
+    previous_target: allocation.previous_target,
+    staging_sha256: null,
+    backing: {
+      schema_version: admission.schema_version,
+      check: admission.check,
+      inspect: admission.inspect,
+      advice: admission.advice,
+    },
+  };
+
+  try {
+    const preparing = PrimaryPreparingOperationSchema.parse({ ...baseOperation, state: 'preparing', publication: basePublication });
+    invokeHook(hooks, 'beforePreparingPublished', { workspacePath, operation: preparing });
+    writeJsonDurable(nextOperationPath, preparing);
+    renameSync(nextOperationPath, operationPath);
+    fsyncPath(workspacePath);
+    accepted = true;
+    invokeHook(hooks, 'afterPreparingPublished', { workspacePath, operation: preparing });
+
+    copyFileSync(sourceReal, payloadPath, constants.COPYFILE_EXCL);
+    fsyncPath(payloadPath);
+    const payloadFact = hashFile(payloadPath);
+    invokeHook(hooks, 'afterPayloadFsync', { workspacePath, payloadFact });
+
+    const prepared = PrimaryPreparedOperationSchema.parse({
+      ...baseOperation,
+      state: 'prepared',
+      payload_size: payloadFact.size,
+      payload_sha256: payloadFact.sha256,
+      publication: { ...basePublication, staging_sha256: payloadFact.sha256 },
+    });
+    writeJsonDurable(nextOperationPath, prepared);
+    renameSync(nextOperationPath, operationPath);
+    fsyncPath(workspacePath);
+    invokeHook(hooks, 'afterPreparedPublished', { workspacePath, operation: prepared });
+
+    const currentSeries = readFinalReportSeries(bundleReal);
+    const currentAllocation = allocateFinalReportTarget(currentSeries, { feature: parsedFeature });
+    if (!currentAllocation.available || primaryInventorySha256(currentSeries) !== inventorySha256 || currentAllocation.target !== allocation.target || currentAllocation.version !== allocation.version) {
+      safeRemoveWorkspace(workspacePath, persistenceRoot);
+      return publicationResult({
+        admission,
+        allocation,
+        inventorySha256,
+        operationId: parsedOperationId,
+        reasonCode: 'primary_inventory_drift',
+        reason: 'Primary inventory changed after allocation; rerun publish-final-report to allocate from the current immutable series.',
+      });
+    }
+    invokeHook(hooks, 'beforePrimaryTargetCommit', { workspacePath, targetPath });
+    const committed = commitPrimaryPayload(payloadPath, targetPath, parentPath);
+    if (!committed.committed) {
+      safeRemoveWorkspace(workspacePath, persistenceRoot);
+      return publicationResult({
+        admission,
+        allocation,
+        inventorySha256,
+        operationId: parsedOperationId,
+        reasonCode: committed.code,
+        reason: committed.reason,
+      });
+    }
+    invokeHook(hooks, 'afterPrimaryTargetCommit', { workspacePath, targetPath });
+    invokeHook(hooks, 'beforeWorkspaceCleanup', { workspacePath, targetPath });
+    safeRemoveWorkspace(workspacePath, persistenceRoot);
+    invokeHook(hooks, 'afterWorkspaceCleanup', { workspacePath, targetPath });
+    return publicationResult({
+      admission,
+      allocation,
+      inventorySha256,
+      operationId: parsedOperationId,
+      verdict: 'committed',
+      reasonCode: 'committed',
+      reason: 'Primary report was published with an immutable no-clobber commit.',
+    });
+  } catch (error) {
+    if (error?.preserveArtifactPersistenceState) {
+      if (!accepted) {
+        try { safeRemoveWorkspace(workspacePath, persistenceRoot); } catch { /* preserve simulated crash */ }
+      }
+      throw error;
+    }
+    if (!accepted) {
+      try { safeRemoveWorkspace(workspacePath, persistenceRoot); } catch { /* preserve original error */ }
+      throw error;
+    }
+    return publicationResult({
+      admission,
+      allocation,
+      inventorySha256,
+      operationId: parsedOperationId,
+      reasonCode: error.code || 'publication_interrupted',
+      reason: error.message,
+      workspace: existsSync(workspacePath) ? workspaceRef : null,
+    });
+  }
 }
 
 function blockedSweepEntry({ bundleReal, workspacePath, operationId = null, target = null, sourcePath = null, reasonCode, reason, recommendedAction }) {
@@ -619,6 +1007,7 @@ function inspectSweepWorkspace({ bundleReal, bundleReaderPath, persistenceRoot, 
   }
 
   const operation = loaded.operation;
+  const primaryPublication = operation.workspace_kind === 'primary_publication';
   if (operation.operation_id !== workspaceName) {
     return blockedSweepEntry({
       bundleReal,
@@ -699,9 +1088,13 @@ function inspectSweepWorkspace({ bundleReal, bundleReaderPath, persistenceRoot, 
       operationId: operation.operation_id,
       target: operation.target,
       sourcePath: operation.source_path,
-      reasonCode: 'target_conflict',
-      reason: 'Current target violates the prepared compare-and-swap precondition.',
-      recommendedAction: `Resolve which content should win for ${operation.target}, then remove or retry the blocked workspace and rerun sweep.`,
+      reasonCode: primaryPublication ? 'primary_target_collision' : 'target_conflict',
+      reason: primaryPublication
+        ? 'The immutable primary target now exists with different bytes; do not overwrite it. Rerun publish-final-report after resolving the current inventory.'
+        : 'Current target violates the prepared compare-and-swap precondition.',
+      recommendedAction: primaryPublication
+        ? `Keep ${operation.target} unchanged, remove ${relativeWorkspace(bundleReal, workspacePath)}, then rerun publish-final-report from retained staging ${operation.source_path}.`
+        : `Resolve which content should win for ${operation.target}, then remove or retry the blocked workspace and rerun sweep.`,
     });
   }
 
@@ -766,9 +1159,59 @@ function inspectSweepWorkspace({ bundleReal, bundleReaderPath, persistenceRoot, 
     }
   }
 
+  if (primaryPublication) {
+    try {
+      const currentSeries = readFinalReportSeries(bundleReal);
+      const currentAllocation = allocateFinalReportTarget(currentSeries, { feature: operation.publication.feature });
+      if (!currentAllocation.available
+        || primaryInventorySha256(currentSeries) !== operation.publication.inventory_sha256
+        || currentAllocation.target !== operation.publication.target
+        || currentAllocation.version !== operation.publication.version
+        || currentAllocation.classification !== operation.publication.base_classification) {
+        return blockedSweepEntry({
+          bundleReal,
+          workspacePath,
+          operationId: operation.operation_id,
+          target: operation.target,
+          sourcePath: operation.source_path,
+          reasonCode: 'primary_inventory_drift',
+          reason: 'Primary inventory no longer matches the prepared immutable publication binding.',
+          recommendedAction: `Keep existing reports unchanged, remove ${relativeWorkspace(bundleReal, workspacePath)}, then rerun publish-final-report from retained staging ${operation.source_path}.`,
+        });
+      }
+    } catch (error) {
+      return blockedSweepEntry({
+        bundleReal,
+        workspacePath,
+        operationId: operation.operation_id,
+        target: operation.target,
+        sourcePath: operation.source_path,
+        reasonCode: error.code || 'primary_inventory_invalid',
+        reason: error.message,
+        recommendedAction: `Repair the Final inventory without rewriting committed reports, then inspect ${relativeWorkspace(bundleReal, workspacePath)}.`,
+      });
+    }
+  }
+
   try {
-    renameSync(payloadPath, targetResolved.targetPath);
-    fsyncPath(targetResolved.parentPath);
+    if (primaryPublication) {
+      const committed = commitPrimaryPayload(payloadPath, targetResolved.targetPath, targetResolved.parentPath);
+      if (!committed.committed) {
+        return blockedSweepEntry({
+          bundleReal,
+          workspacePath,
+          operationId: operation.operation_id,
+          target: operation.target,
+          sourcePath: operation.source_path,
+          reasonCode: committed.code,
+          reason: committed.reason,
+          recommendedAction: `Keep ${operation.target} unchanged and rerun publish-final-report from retained staging ${operation.source_path}.`,
+        });
+      }
+    } else {
+      renameSync(payloadPath, targetResolved.targetPath);
+      fsyncPath(targetResolved.parentPath);
+    }
     safeRemoveWorkspace(workspacePath, persistenceRoot);
     return ArtifactSweepEntrySchema.parse({
       operation_id: operation.operation_id,

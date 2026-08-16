@@ -527,7 +527,7 @@ describe('check-reentry CLI', () => {
   });
 
   describe('canonical recovery summary', () => {
-    it('groups a terminal incident into one blocking canonical root and exposes the accepted post-final recovery action without mutation', () => {
+    it('groups a terminal incident into one blocking canonical root while clean Final remains the current owner', () => {
       const dir = createTerminalFinalBundle(TMP, 'rt-canonical-incident');
       addCanonicalRecoveryIncident(dir);
       const before = recursiveSnapshot(dir);
@@ -543,8 +543,8 @@ describe('check-reentry CLI', () => {
       assert.strictEqual(roots.length, 1);
       assert.strictEqual(roots[0].sanctioned_path_status, 'reachable');
       assert.strictEqual(roots[0].direct_blocker, null);
-      assert.strictEqual(roots[0].recommended_action.kind, 'post_final_recovery');
-      assert.strictEqual(roots[0].recommended_action.target_ref, 'retained post-final request JSON, then apply');
+      assert.strictEqual(roots[0].recommended_action.kind, 'current_owner');
+      assert.strictEqual(roots[0].recommended_action.target_ref, 'phases/phase-final.md');
       assert.strictEqual(res.stdout.post_final_recovery.verdict, 'eligible');
       assert.strictEqual(res.stdout.post_final_recovery.next_action.kind, 'prepare_request');
       assert.deepStrictEqual(after, before);

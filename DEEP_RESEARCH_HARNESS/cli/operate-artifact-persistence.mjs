@@ -7,9 +7,12 @@ import {
   ARTIFACT_PERSISTENCE_SCHEMA_VERSION,
   ArtifactPersistenceConfigError,
   inspectArtifactPersistenceRequest,
+  isReservedPrimaryTarget,
   persistBundleFile,
   persistFinalReport,
+  publishFinalReport,
   redirectFinalMarkdownPersist,
+  redirectPrimaryTargetPersist,
   sweepPendingArtifactWrites,
 } from '../engine/helpers/artifact-persistence.mjs';
 import { isFinalMarkdownTarget } from '../engine/helpers/final-delivery-backing.mjs';
@@ -24,6 +27,7 @@ function usage() {
     'Usage:',
     '  node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs persist --bundle <path> --source <file> --target <bundle-relative-path> (--expect-absent | --expect-sha256 <digest>)',
     '  node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs persist-final-report --bundle <path> --source <file> --target <final/report.md> (--expect-absent | --expect-sha256 <digest>)',
+    '  node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs publish-final-report --bundle <path> --source <retained-staging> [--feature <safe_snake_case>]',
     '  node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs sweep --bundle <path>',
     '',
     'Sweep requires a quiescent bundle: do not run it concurrently with persist.',
@@ -55,6 +59,7 @@ try {
       bundle: { type: 'string' },
       source: { type: 'string' },
       target: { type: 'string' },
+      feature: { type: 'string' },
       'expect-absent': { type: 'boolean', default: false },
       'expect-sha256': { type: 'string' },
       help: { type: 'boolean', short: 'h', default: false },
@@ -72,8 +77,8 @@ if (values.help) {
   process.exit(0);
 }
 
-if (!['persist', 'persist-final-report', 'sweep'].includes(operation)) {
-  emit(invocationError(operation, 'operation must be persist, persist-final-report, or sweep'));
+if (!['persist', 'persist-final-report', 'publish-final-report', 'sweep'].includes(operation)) {
+  emit(invocationError(operation, 'operation must be persist, persist-final-report, publish-final-report, or sweep'));
   process.exit(2);
 }
 if (!values.bundle) {
@@ -101,6 +106,12 @@ try {
       target: values.target,
       expectedTarget,
     });
+    if (isReservedPrimaryTarget(request.target)) {
+      const result = redirectPrimaryTargetPersist({ operation, target: request.target });
+      logToRun(values.bundle, 'warn', `artifact_persistence_${operation.replaceAll('-', '_')}`, result);
+      emit(result);
+      process.exit(1);
+    }
     if (operation === 'persist' && isFinalMarkdownTarget(values.target)) {
       const result = redirectFinalMarkdownPersist({ target: request.target });
       logToRun(values.bundle, 'warn', 'artifact_persistence_persist', result);
@@ -129,7 +140,26 @@ try {
     process.exit(result.verdict === 'blocked' ? 1 : 0);
   }
 
-  if (values.source || values.target || values['expect-absent'] || values['expect-sha256']) {
+  if (operation === 'publish-final-report') {
+    if (!values.source) {
+      emit(invocationError(operation, '--source is required for publish-final-report'));
+      process.exit(2);
+    }
+    if (values.target || values['expect-absent'] || values['expect-sha256']) {
+      emit(invocationError(operation, 'publish-final-report accepts no target, version, or compare-and-swap flags'));
+      process.exit(2);
+    }
+    const result = publishFinalReport({
+      bundlePath: values.bundle,
+      sourcePath: values.source,
+      feature: values.feature || null,
+    });
+    logToRun(values.bundle, result.verdict === 'blocked' ? 'warn' : 'info', 'artifact_persistence_publish_final_report', result);
+    emit(result);
+    process.exit(result.verdict === 'blocked' ? 1 : 0);
+  }
+
+  if (values.source || values.target || values.feature || values['expect-absent'] || values['expect-sha256']) {
     emit(invocationError(operation, 'sweep accepts only --bundle'));
     process.exit(2);
   }

@@ -4,7 +4,7 @@
 
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
@@ -16,7 +16,14 @@ import {
   advanceStatus, cleanupRoot, createTempRoot, enterPhase, readStatus, readTrace,
   REPO_ROOT, restoreBundle, runGate, runNode, snapshotBundle,
 } from './helpers/deterministic-chain-harness.mjs';
-import { buildTerminalFinalBaseline } from './helpers/research-chain-fixture.mjs';
+import {
+  buildTerminalFinalBaseline,
+  stageHitl2,
+  stageSeed,
+  stageWave0,
+  stageWave1,
+  stageWave2,
+} from './helpers/research-chain-fixture.mjs';
 
 let root;
 let baseline;
@@ -119,6 +126,63 @@ function passThroughDescendant(bundle) {
   assert.equal(shared.owner.kind, 'current_owner');
 }
 
+function simulatedFinalReport() {
+  return [
+    '# Rerun Final Delivery',
+    '',
+    'Simulated Agent action for deterministic lineage coverage only.',
+    '',
+    '## Evidence Map',
+    '',
+    '| Finding ID | Declared Key Finding | Submitted Backing |',
+    '| --- | --- | --- |',
+    '| F-001 | The rerun fixture retains one submitted backing reference. | [submitted source](../artifacts/wave0/topic-a/source.yaml) |',
+    '',
+  ].join('\n');
+}
+
+function driveAcceptedRerunToNewReadiness(bundle) {
+  incrementCount(bundle);
+  applyStyle(bundle);
+  const rerun = runGate(bundle, 'rerun-ready', 'phases/phase-rerun.md');
+  assert.equal(rerun.output.check.passed, true, JSON.stringify(rerun.output.inspect));
+  enterPhase(bundle, rerun.output.check.next);
+  advanceStatus(bundle, 'rerun_ready');
+  stageSeed(bundle, 1);
+  const seed = runGate(bundle, 'seed-topics-ready', 'phases/phase-seed-topics.md');
+  assert.equal(seed.output.check.passed, true, JSON.stringify(seed.output.inspect));
+  enterPhase(bundle, seed.output.check.next);
+  advanceStatus(bundle, 'seed_topics_ready');
+  for (let index = 1; index <= 5; index += 1) stageWave0(bundle, `rerun-final-${index}`);
+  const wave0 = runGate(bundle, 'wave0-complete', 'phases/phase-wave0.md');
+  assert.equal(wave0.output.check.passed, true, JSON.stringify(wave0.output.inspect));
+  enterPhase(bundle, wave0.output.check.next);
+  advanceStatus(bundle, 'wave0_complete');
+  const wave1Submissions = [];
+  for (let index = 1; index <= 5; index += 1) wave1Submissions.push(stageWave1(bundle, `rerun-final-${index}`));
+  const depthReviewPath = join(bundle, 'artifacts/wave1/topic-a/depth-review.yaml');
+  const depthReview = parseYaml(readFileSync(depthReviewPath, 'utf8'));
+  depthReview.reviewed_work_unit_refs = wave1Submissions.map((submission) => submission.record.paths.work_unit_dir);
+  writeFileSync(depthReviewPath, stringifyYaml(depthReview));
+  const wave1 = runGate(bundle, 'wave1-complete', 'phases/phase-wave1.md');
+  assert.equal(wave1.output.check.passed, true, JSON.stringify(wave1.output.inspect));
+  enterPhase(bundle, wave1.output.check.next);
+  advanceStatus(bundle, 'wave1_complete');
+  stageWave2(bundle, { project: false });
+  const wave2 = runGate(bundle, 'wave2-complete', 'phases/phase-wave2.md');
+  assert.equal(wave2.output.check.passed, true, JSON.stringify(wave2.output.inspect));
+  enterPhase(bundle, wave2.output.check.next);
+  advanceStatus(bundle, 'wave2_complete');
+  stageHitl2(bundle, 'proceed_to_readiness', 1);
+  const hitl2 = runGate(bundle, 'hitl2-recorded', 'phases/phase-hitl2.md');
+  assert.equal(hitl2.output.check.passed, true, JSON.stringify(hitl2.output.inspect));
+  enterPhase(bundle, hitl2.output.check.next);
+  advanceStatus(bundle, 'hitl2_recorded');
+  const readiness = runGate(bundle, 'readiness-passed', 'phases/phase-readiness.md');
+  assert.equal(readiness.output.check.passed, true, JSON.stringify(readiness.output.inspect));
+  return readiness;
+}
+
 function assertStaleStyleGate(bundle) {
   const rerun = runGate(bundle, 'rerun-ready', 'phases/phase-rerun.md', { expectedStatus: 1 });
   assert.equal(rerun.output.check.passed, false);
@@ -172,5 +236,70 @@ describe('post-final rerun lineage continuity from a production terminal chain',
     assertStaleStyleGate(bundle);
     applyStyle(bundle);
     passThroughDescendant(bundle);
+  });
+
+  it('retains the accepted C5 audit lineage through a newer Final handoff and appends globally', () => {
+    const bundle = restoreBundle(snapshot, baseline);
+    applyC5(bundle, 'new-final');
+    const acceptedEvent = readTrace(bundle).find((event) => event.event === 'post_final_reentry');
+    assert.ok(acceptedEvent, 'accepted C5 event is retained as the audit witness');
+    const readiness = driveAcceptedRerunToNewReadiness(bundle);
+    const entryPending = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.equal(entryPending.stage, 'newer_final_entry_pending');
+    assert.equal(entryPending.next_action.kind, 'enter_phase');
+
+    // A copied test branch exercises invalid pre-load inventory without treating deletion as runtime repair.
+    const preFinalSnapshot = join(root, 'post-final-newer-final-preload-snapshot');
+    cpSync(bundle, preFinalSnapshot, { recursive: true, errorOnExist: true });
+    mkdirSync(join(bundle, 'final', 'supplementary'), { recursive: true });
+    writeFileSync(join(bundle, 'final', 'supplementary', 'drift.md'), '# Simulated drift\n');
+    const beforeStatus = readFileSync(join(bundle, 'rb_status.json'), 'utf8');
+    const beforeTrace = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8');
+    const drifted = enterPhase(bundle, readiness.output.check.next, { expectedStatus: 1 });
+    assert.match(drifted.stdout, /prior-inventory digest|inventory drifted/i);
+    assert.equal(readFileSync(join(bundle, 'rb_status.json'), 'utf8'), beforeStatus);
+    assert.equal(readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8'), beforeTrace);
+    rmSync(bundle, { recursive: true });
+    cpSync(preFinalSnapshot, bundle, { recursive: true, errorOnExist: true });
+
+    enterPhase(bundle, readiness.output.check.next);
+    const loaded = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.equal(loaded.stage, 'newer_final_loaded_pending_status');
+    assert.equal(loaded.next_action.kind, 'advance_status');
+    advanceStatus(bundle, 'readiness_passed');
+    const deliveryPending = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.equal(deliveryPending.stage, 'newer_final_delivery_pending');
+    assert.equal(deliveryPending.next_action.kind, 'current_owner');
+
+    const sourceDirectory = join(bundle, '_tmp', 'simulated-rerun-final');
+    mkdirSync(sourceDirectory, { recursive: true });
+    const source = join(sourceDirectory, 'report.md');
+    writeFileSync(source, simulatedFinalReport());
+    const publication = JSON.parse(runNode([
+      join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs'),
+      'publish-final-report', '--bundle', bundle, '--source', source,
+    ]).stdout);
+    assert.equal(publication.verdict, 'committed');
+    assert.equal(publication.target, 'final/final_v1.md');
+    assert.equal(readFileSync(join(bundle, 'final', 'report.md'), 'utf8'), '# Deterministic Final\n\nFixture-labeled Agent-owned final content.\n');
+    const retired = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.equal(retired.verdict, 'eligible');
+    assert.equal(readStatus(bundle).current_node, 'phases/phase-final.md');
+    assert.deepEqual(readTrace(bundle).find((event) => event.event === 'post_final_reentry'), acceptedEvent);
+
+    const requestPath = join(root, 'later-explicit-evidence-expansion.json');
+    writeFileSync(requestPath, `${JSON.stringify({
+      schema_version: '1.0.0',
+      action: 'post_final_rerun',
+      reason: 'A later explicit request needs a newly retained source.',
+      requested_scope: 'Expand the evidence set and reassess one conclusion.',
+      ...retired.facts.request_bindings,
+    }, null, 2)}\n`);
+    const later = JSON.parse(runNode([
+      join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-post-final-recovery.mjs'),
+      'apply', '--bundle', bundle, '--input', requestPath,
+    ]).stdout);
+    assert.equal(later.verdict, 'committed');
+    assert.equal(later.stage, 'pre_entry');
   });
 });

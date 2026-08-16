@@ -31,6 +31,7 @@ import { auditFileObservability } from '../engine/helpers/file-observability.mjs
 import { buildRecoverySummary } from '../engine/helpers/recovery-contract.mjs';
 import { inspectCanonicalTopicState } from '../engine/helpers/canonical-topic-state.mjs';
 import { inspectPostFinalRecovery } from '../engine/helpers/post-final-recovery.mjs';
+import { readFinalReportInventory } from '../engine/helpers/final-report-series.mjs';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Constants
@@ -805,6 +806,18 @@ allWarnings.push(...ledgerAudit.warnings);
 
 // 5. Checkpoint drift
 const postFinalInspection = inspectPostFinalRecovery({ bundlePath });
+let finalInventory = null;
+try {
+  const inventory = readFinalReportInventory(bundlePath);
+  finalInventory = inventory.primary_series.valid
+    ? { valid: true, classification: inventory.primary_series.classification, sha256: inventory.sha256 }
+    : {
+      valid: false,
+      reason: `Final primary inventory is invalid: ${inventory.primary_series.blockers[0]?.code || 'unknown'}: ${inventory.primary_series.blockers[0]?.detail || 'no detail'}`,
+    };
+} catch (error) {
+  finalInventory = { valid: false, reason: `Final inventory is unreadable: ${error.message}` };
+}
 const driftAudit = auditCheckpointDrift(bundlePath, checkpoint);
 const explainedControlDrift = ['unchanged', 'recover_required'].includes(postFinalInspection.verdict);
 allDrift.push(...driftAudit.drift.filter((item) => !(explainedControlDrift && ['rb_profile.yaml', 'rb_status.json'].includes(item.path))));
@@ -914,6 +927,7 @@ const recovery = buildRecoverySummary({
   blockers: allBlockers,
   target,
   statusPosition,
+  finalInventory,
   postFinalInspection,
 });
 for (const root of recovery.root_findings) {
@@ -955,6 +969,7 @@ const result = {
   drift: allDrift,
   findings: allFindings,
   recovery,
+  final_report_inventory: finalInventory,
   canonical_topic_state: topicStateInspection,
   post_final_recovery: postFinalInspection,
   inspect: allInspect,

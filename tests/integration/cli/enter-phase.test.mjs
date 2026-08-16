@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, cpSync, existsSync, mkdtempSync, rmSync, symlinkSync, writeFileSync, readFileSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -50,6 +50,26 @@ describe('enter-phase CLI', { concurrency: false }, () => {
 
   function writeTrace(events) {
     writeFileSync(join(dir, 'rb_trace.jsonl'), events.map(e => JSON.stringify(e)).join('\n') + '\n');
+  }
+
+  function prepareFinalEntry({ currentGate = 'wave2_complete', nextGate = 'readiness_passed' } = {}) {
+    mkdirSync(join(dir, 'final'), { recursive: true });
+    writeFileSync(join(dir, 'rb_status.json'), JSON.stringify({
+      bundle: 'test',
+      current_mode: 'execution',
+      state: 'in_progress',
+      current_gate: currentGate,
+      next_gate: nextGate,
+      current_node: 'phases/phase-readiness.md',
+    }, null, 2));
+    writeTrace([
+      wave0Pass({
+        gate: 'readiness-passed',
+        phase: 'readiness',
+        currentNodeRef: 'phases/phase-readiness.md',
+        next: 'phases/phase-final.md',
+      }),
+    ]);
   }
 
   function wave0Pass(overrides = {}) {
@@ -209,14 +229,7 @@ describe('enter-phase CLI', { concurrency: false }, () => {
   });
 
   it('renders Final target with terminal delivery continuation cue', () => {
-    writeTrace([
-      wave0Pass({
-        gate: 'readiness-passed',
-        phase: 'readiness',
-        currentNodeRef: 'phases/phase-readiness.md',
-        next: 'phases/phase-final.md',
-      }),
-    ]);
+    prepareFinalEntry();
 
     const out = run(['--bundle', dir, '--node', 'phases/phase-final.md']);
     assertLeadingCue(out, {
@@ -224,6 +237,44 @@ describe('enter-phase CLI', { concurrency: false }, () => {
       next_action: 'deliver_final_artifacts',
       node_ref: 'phases/phase-final.md',
     });
+    assert.match(out, /current lineage's missing primary report immediately/);
+    assert.ok(out.indexOf('--to readiness_passed') < out.indexOf('## 0. Execution Brief'));
+    const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf8'));
+    assert.equal(status.current_node, 'phases/phase-final.md');
+    const events = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    assert.equal(events.filter((event) => event.event === 'load_complete' && event.entry === 'phases/phase-final.md').length, 1);
+  });
+
+  it('rejects a premature canonical Final report before loader, load_complete, or current_node mutation', () => {
+    prepareFinalEntry();
+    writeFileSync(join(dir, 'final', 'final.md'), '# Premature report\n');
+    const statusPath = join(dir, 'rb_status.json');
+    const tracePath = join(dir, 'rb_trace.jsonl');
+    const beforeStatus = readFileSync(statusPath, 'utf8');
+    const beforeTrace = readFileSync(tracePath, 'utf8');
+
+    const out = run(['--bundle', dir, '--node', 'phases/phase-final.md'], true);
+    const parsed = JSON.parse(out);
+    assert.equal(parsed.status, 'error');
+    assert.match(parsed.reason, /first Final entry requires an empty primary inventory/);
+    assert.doesNotMatch(out, /DPT_CONTINUATION_CUE|DPT_LOADED_FILE_START/);
+    assert.equal(readFileSync(statusPath, 'utf8'), beforeStatus);
+    assert.equal(readFileSync(tracePath, 'utf8'), beforeTrace);
+  });
+
+  it('keeps an already bound Final entry compatible with a later exact retry', () => {
+    prepareFinalEntry();
+    run(['--bundle', dir, '--node', 'phases/phase-final.md']);
+    writeFileSync(join(dir, 'final', 'final.md'), '# Published after entry\n');
+
+    const out = run(['--bundle', dir, '--node', 'phases/phase-final.md']);
+    assertLeadingCue(out, {
+      interaction: 'terminal_delivery',
+      next_action: 'deliver_final_artifacts',
+      node_ref: 'phases/phase-final.md',
+    });
+    const events = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    assert.equal(events.filter((event) => event.event === 'load_complete' && event.entry === 'phases/phase-final.md').length, 2);
   });
 
   it('rejects degraded marker without passed source handoff', () => {

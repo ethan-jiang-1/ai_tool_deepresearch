@@ -17,9 +17,9 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
   const subagent = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md');
   const antiCheating = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-anti-cheating-rules.md');
 
-  it('exposes one workspace, three operations, supported roots, and excluded authority surfaces', () => {
+  it('exposes one workspace, four operations, supported roots, and excluded authority surfaces', () => {
     assert.match(helper, /ARTIFACT_PERSISTENCE_ROOT = '_diagnostics\/artifact-persistence'/);
-    assert.match(helper, /ARTIFACT_PERSISTENCE_OPERATIONS = Object\.freeze\(\['persist', 'persist-final-report', 'sweep'\]\)/);
+    assert.match(helper, /ARTIFACT_PERSISTENCE_OPERATIONS = Object\.freeze\(\['persist', 'persist-final-report', 'publish-final-report', 'sweep'\]\)/);
     for (const root of ['reference', 'artifacts', 'final', '_cache']) assert.ok(helper.includes(`'${root}'`));
     for (const excluded of ['rb_status.json', 'rb_queue.json', 'rb_trace.jsonl', 'rb_output_declarations.jsonl', '_work_units']) {
       assert.ok(helper.includes(`'${excluded}'`), `missing excluded surface ${excluded}`);
@@ -30,7 +30,7 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
     for (const marker of ['retained staging', 'quiescent', 'retry persist', 'rerun sweep', 'There is no force overwrite']) {
       assert.ok(playbook.includes(marker), `playbook missing ${marker}`);
     }
-    assert.match(commands, /three-operation durability command/);
+    assert.match(commands, /publish-final-report --bundle --source \[--feature\]/);
     assert.match(antiCheating, /unknown-temp promotion/);
   });
 
@@ -43,20 +43,25 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
     assert.doesNotMatch(cli, /rb_trace\.jsonl|log-event\.mjs|appendTrace/);
   });
 
-  it('gives Final Markdown one admitted Evidence Map command without changing terminal semantics', () => {
+  it('documents publisher-owned primary names, immutable appends, and retained recovery', () => {
     for (const source of [phaseFinal, playbook]) {
       assert.match(source, /Evidence Map/);
-      assert.match(source, /persist-final-report/);
+      assert.match(source, /publish-final-report/);
       assert.match(source, /retained staging/);
     }
+    assert.match(playbook, /final\/final\.md/);
+    assert.match(playbook, /next immutable global version/);
+    assert.match(playbook, /callers must not supply a target, version, CAS, overwrite,\s*or force selector/);
+    assert.match(playbook, /reserved `final\/final\*\.md` targets/);
+    assert.match(playbook, /`sweep` preserves the exact\s+publication binding without reallocating/);
     assert.match(phaseFinal, /gate: null/);
     assert.doesNotMatch(phaseFinal, /`gate: none`/);
     assert.doesNotMatch(phaseFinal, /^next:/m);
-    assert.match(phaseFinal, /不创建 Final Gate、Final trace event/);
-    assert.match(phaseFinal, /MUST NOT 写 `final_delivery` trace event/);
-    assert.match(phaseFinal, /没有 gate CLI/);
-    assert.match(playbook, /Generic `persist` intentionally rejects safe Final Markdown targets/);
-    assert.match(commands, /three-operation durability command/);
+    assert.match(phaseFinal, /MUST NOT overwrite, delete, rename, or renumber a committed primary/);
+    assert.match(phaseFinal, /MUST NOT add a Final Gate, `next`, self-transition, satisfaction field/);
+    assert.match(phaseFinal, /Final has `gate: null` and no outgoing Gate CLI/);
+    assert.match(playbook, /Generic `persist`\s+intentionally rejects reserved `final\/final\*\.md` targets/);
+    assert.match(commands, /commits no-clobber bytes without caller target\/version\/CAS\/overwrite input/);
   });
 
   it('does not grow recovery controllers or destructive branches', () => {

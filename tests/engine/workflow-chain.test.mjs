@@ -445,9 +445,8 @@ describe('assessNode contract header injection (WNC-008)', () => {
       'id: phase-final',
       'phase: final',
       'gate: null',
-      'stop: "no"',
-      'requires:',
-      '  - shared/shared-silent-execution',
+      'stop: "yes"',
+      'requires: []',
       '---',
       '',
       '# Phase: Final',
@@ -567,7 +566,7 @@ describe('assessNode contract header injection (WNC-008)', () => {
     assert.match(entry.md, /Agent-facing guidance only/);
   });
 
-  it('injects TERMINAL DELIVERY MODE header for final phase (phase:final + stop:no + gate:null)', () => {
+  it('injects the Final deliver-first header before generic stop:yes handling', () => {
     const nodesDir = join(WNC_TMP, 'nodes-workflow-chain');
     const runtime = createWorkflowRuntime('test', nodesDir);
     const state = createState();
@@ -576,7 +575,10 @@ describe('assessNode contract header injection (WNC-008)', () => {
     assert.equal(result.status, 'loaded');
     const entry = runtime.contentCache.get('phases/phase-final.md');
     assert.ok(entry.md.includes('TERMINAL DELIVERY MODE'));
-    assert.ok(entry.md.includes('DELIVER FINAL ARTIFACTS ONLY'));
+    assert.ok(entry.md.includes('DELIVER FIRST, THEN REFINE IN PLACE'));
+    assert.match(entry.md, /Readiness status synchronization/);
+    assert.match(entry.md, /zero canonical append/);
+    assert.match(entry.md, /Only feedback requiring new evidence\/research/);
   });
 
   it('does NOT inject header for stop: yes phase', () => {

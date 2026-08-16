@@ -52,7 +52,7 @@ describe('Final report composition Markdown contract', () => {
     assert.match(operation, /migrate-legacy/);
   });
 
-  it('makes Final execute one five-step, view-aware pass without weakening evidence obligations', () => {
+  it('keeps one five-step pass and the established evidence obligations', () => {
     const steps = ['**Reground**', '**Answer Inventory**', '**Coverage and materiality**', '**Spine and placement**', '**Draft and self-check**'];
     let cursor = -1;
     for (const step of steps) {
@@ -60,13 +60,28 @@ describe('Final report composition Markdown contract', () => {
       assert.ok(index > cursor, `${step} is present in order`);
       cursor = index;
     }
-    for (const view of VIEWS) assert.match(final, new RegExp(`\| \`${view}\` \|`));
-    for (const marker of ['contradiction', 'limitation', 'confidence boundary', 'must-answer', 'Submitted Backing', 'Evidence Map', 'persist-final-report']) {
+    for (const marker of ['contradiction', 'limitation', 'confidence boundar', 'must-answer', 'Evidence Map', 'publish-final-report']) {
       assert.match(final, new RegExp(marker));
     }
+    assert.match(final, /Submitted\s+Backing/);
     assert.match(final, /receipt.*fallback data owner/);
-    assert.match(final, /MUST NOT 为不同 view 创建 Sub-agent、第二份 primary report、Final question、Final Gate 或 outgoing transition/);
     assert.match(final, /gate: null/);
     assert.doesNotMatch(final, /^next:/m);
+  });
+
+  it('keeps Final delivery and refinement on the current lineage without rewriting HITL2', () => {
+    assert.match(final, /admitted Final entry -> advance-status --to readiness_passed/);
+    assert.match(final, /current lineage has no bound report: publish immediately/);
+    assert.match(final, /First Final entry with an admitted empty inventory publishes\s+`final\/final\.md`/);
+    assert.match(final, /admitted post-C5 return with zero canonical append/);
+    assert.match(final, /current lineage's accepted HITL2 handoff\/receipt, all earlier lineage\s+history/);
+    assert.match(final, /Preserve them; do not rewrite\s+them/);
+    assert.match(final, /publish exactly one immutable revision/);
+    assert.match(final, /satisfied, finish the current interaction with no report,\s+state, profile, status, Gate, trace, counter, pointer, or event write/);
+    assert.match(final, /new source, Topic, evidence, research conclusion,\s+or research-profile change/);
+    assert.match(final, /Presentation feedback alone remains here/);
+    assert.match(final, /Only evidence-expanding work uses\s+audited C5/);
+    assert.match(final, /MUST NOT treat a previous lineage's report as delivery for a newer C5/);
+    assert.match(final, /MUST NOT claim that Engine feedback proves report quality, semantic\s+improvement, feedback classification, or genuine user satisfaction/);
   });
 });

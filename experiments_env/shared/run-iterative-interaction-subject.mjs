@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // @impl EXA-003, EXA-005, EXA-006, EXA-008, RWP-002, VER-006
 
+import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import {
@@ -25,6 +26,7 @@ import {
   createState,
   createWorkflowRuntime,
 } from '../../DEEP_RESEARCH_HARNESS/engine/workflow-chain.mjs';
+import { readFinalReportInventory } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs';
 import { SELECTED_RESEARCH_ACCESS_ADAPTER_PATH } from '../../DEEP_RESEARCH_HARNESS/host_tools/lib/research-access-adapter.mjs';
 import { buildIterativeInteractionSubjectInvocation } from './iterative-interaction-subject-launch.mjs';
 
@@ -222,6 +224,22 @@ const SUBJECTS = {
     afterTurn: observeCase137Boundary,
     timeoutMs: 30_000,
   },
+  '138': {
+    bundlePrefix: 'dpt_disp_case-138_',
+    transcript: 'case-138-subject-transcript.jsonl',
+    system: 'You are the independent Subject Agent for case 138, distinct from the Playbook Agent. Work only in the exact legally entered Final bundle supplied by the runner. Deliver first, then make presentation-only revisions on the same Final node, and use C5 only for the final explicit evidence-expansion turn.',
+    messages: [
+      'This is the first Final entry and there is no report yet. Read case-138-final-backing.json and the injected Final guidance. Immediately write a compact Chinese Final report with exactly one Evidence Map row using that supplied submitted backing, persist it through publish-final-report, save the complete JSON as case-138-publish-0.json, then give a direct delivery response that invites feedback. Do not create a Gate, transition, or network request.',
+      '用户反馈：请只调整现有内容的结构和表达，使读者更快看到结论、证据边界和限制；不要补充新来源或改变结论。仍在同一 Final 节点，创建且只创建一个未标记的 presentation revision，通过 publish-final-report 持久化，保存完整 JSON 为 case-138-publish-1.json，然后给出直接回复。',
+      '用户反馈：请为技术读者重新组织同一批已验证证据，突出机制和限制；不要搜索或扩展证据。仍在同一 Final 节点，创建且只创建一个 feature 为 technical_deep_dive 的 presentation revision，通过 publish-final-report 持久化，保存完整 JSON 为 case-138-publish-2.json，然后给出直接回复。',
+      '用户反馈：这版可以了，不需要再修改。不要发布文件、不要写 runtime state、不要创建 Gate 或 transition；只做简短确认回复。',
+      '用户现在明确要求加入一个新的来源并据此重新评估结论。这是证据扩展，不是 presentation feedback。不要发布任何 Final report。先运行 post-final recovery inspect，从结果中构造并保留严格 JSON 请求，随后只运行一次 apply，保存 inspect/apply 完整 JSON 为 case-138-c5-inspect.json 和 case-138-c5-apply.json。不要完成 rerun、不要进入另一个 phase、不要创建 Final transition。',
+    ],
+    tools: 'Bash,Edit,Glob,Grep,Read,Write',
+    boundary: 'Use exactly five supplied turns in one session, no network research, and a hard 120-second total runtime. Do not write playbook verdict checks, native completion, health output, cleanup, or arbitrary Final targets. Persist primary reports only with publish-final-report. The fourth turn must not mutate runtime facts; the fifth is the sole explicit evidence-expansion request and may only accept existing C5.',
+    afterTurn: observeCase138Boundary,
+    timeoutMs: 120_000,
+  },
   '136-judge': {
     bundlePrefix: 'dpt_disp_case-136_',
     transcript: 'case-136-judge-transcript.jsonl',
@@ -234,7 +252,7 @@ const SUBJECTS = {
 };
 
 function usage() {
-  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <125|154|204|115|164|225|227|232|318|711|712|713-readiness|713-final|714|716|901|951|951-judge|136|137|136-judge> --bundle <path>');
+  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <125|154|204|115|164|225|227|232|318|711|712|713-readiness|713-final|714|716|901|951|951-judge|136|137|138|136-judge> --bundle <path>');
   process.exit(2);
 }
 
@@ -472,6 +490,146 @@ function observeCase137Boundary({ bundle, completedTurns }) {
   };
   writeFileSync(join(bundle, 'case-137-subject-observation.json'), `${JSON.stringify(observation, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
   return null;
+}
+
+function case138FinalFacts(bundle) {
+  const inventory = readFinalReportInventory(bundle);
+  if (!inventory.primary_series.valid) {
+    const blocker = inventory.primary_series.blockers[0];
+    throw new Error(`case 138 primary inventory is invalid: ${blocker?.code || 'unknown'}`);
+  }
+  const primaryTargets = inventory.primary_series.primary_entries.map((entry) => entry.target);
+  const reportSha256 = Object.fromEntries(primaryTargets.map((target) => [
+    target,
+    createHash('sha256').update(readFileSync(join(bundle, target))).digest('hex'),
+  ]));
+  const statusRaw = readFileSync(join(bundle, 'rb_status.json'));
+  const profileRaw = readFileSync(join(bundle, 'rb_profile.yaml'));
+  const traceRaw = readFileSync(join(bundle, 'rb_trace.jsonl'));
+  const status = JSON.parse(statusRaw.toString('utf8'));
+  return {
+    inventory_sha256: inventory.sha256,
+    primary_targets: primaryTargets,
+    report_sha256: reportSha256,
+    status: {
+      current_node: status.current_node,
+      current_gate: status.current_gate,
+      next_gate: status.next_gate,
+    },
+    status_sha256: createHash('sha256').update(statusRaw).digest('hex'),
+    profile_sha256: createHash('sha256').update(profileRaw).digest('hex'),
+    trace_sha256: createHash('sha256').update(traceRaw).digest('hex'),
+    trace_line_count: traceRaw.toString('utf8').split(/\r?\n/).filter(Boolean).length,
+  };
+}
+
+function readCase138Publication(bundle, name, target) {
+  const result = JSON.parse(readFileSync(join(bundle, name), 'utf8'));
+  if (result.operation !== 'publish-final-report' || result.verdict !== 'committed'
+    || result.target !== target || result.check?.passed !== true) {
+    throw new Error(`case 138 publication ${name} is not the expected committed ${target} result`);
+  }
+}
+
+function assertCase138FinalWindow(facts) {
+  if (facts.status.current_node !== 'phases/phase-final.md'
+    || facts.status.current_gate !== 'readiness_passed'
+    || facts.status.next_gate !== 'none') {
+    throw new Error(`case 138 left the Final status window: ${JSON.stringify(facts.status)}`);
+  }
+}
+
+function writeCase138Snapshot(bundle, name, facts) {
+  writeFileSync(join(bundle, name), `${JSON.stringify({
+    schema_version: 'case-138-final-snapshot/v1',
+    source: 'subject-adapter-observer',
+    ...facts,
+  }, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+}
+
+function sameCase138FrozenFacts(before, after) {
+  return before.inventory_sha256 === after.inventory_sha256
+    && before.status_sha256 === after.status_sha256
+    && before.profile_sha256 === after.profile_sha256
+    && before.trace_sha256 === after.trace_sha256;
+}
+
+function observeCase138Boundary({ bundle, completedTurns }) {
+  const facts = case138FinalFacts(bundle);
+  assertCase138FinalWindow(facts);
+
+  if (completedTurns === 1) {
+    assert.deepEqual(facts.primary_targets, ['final/final.md']);
+    readCase138Publication(bundle, 'case-138-publish-0.json', 'final/final.md');
+    writeCase138Snapshot(bundle, 'case-138-turn1-snapshot.json', facts);
+    return null;
+  }
+
+  if (completedTurns === 2) {
+    const turn1 = JSON.parse(readFileSync(join(bundle, 'case-138-turn1-snapshot.json'), 'utf8'));
+    assert.deepEqual(facts.primary_targets, ['final/final.md', 'final/final_v1.md']);
+    if (facts.report_sha256['final/final.md'] !== turn1.report_sha256['final/final.md']) {
+      throw new Error('case 138 changed the committed base report during the first revision');
+    }
+    readCase138Publication(bundle, 'case-138-publish-1.json', 'final/final_v1.md');
+    writeCase138Snapshot(bundle, 'case-138-turn2-snapshot.json', facts);
+    return null;
+  }
+
+  if (completedTurns === 3) {
+    const turn2 = JSON.parse(readFileSync(join(bundle, 'case-138-turn2-snapshot.json'), 'utf8'));
+    assert.deepEqual(facts.primary_targets, ['final/final.md', 'final/final_v1.md', 'final/final_technical_deep_dive_v2.md']);
+    for (const target of ['final/final.md', 'final/final_v1.md']) {
+      if (facts.report_sha256[target] !== turn2.report_sha256[target]) {
+        throw new Error(`case 138 changed committed bytes for ${target} during the labelled revision`);
+      }
+    }
+    readCase138Publication(bundle, 'case-138-publish-2.json', 'final/final_technical_deep_dive_v2.md');
+    writeCase138Snapshot(bundle, 'case-138-turn3-snapshot.json', facts);
+    return null;
+  }
+
+  if (completedTurns === 4) {
+    const turn3 = JSON.parse(readFileSync(join(bundle, 'case-138-turn3-snapshot.json'), 'utf8'));
+    if (!sameCase138FrozenFacts(turn3, facts)) {
+      throw new Error('case 138 satisfaction turn changed Final inventory, status, profile, or trace before the frozen snapshot');
+    }
+    writeCase138Snapshot(bundle, 'case-138-turn4-freeze.json', facts);
+    return null;
+  }
+
+  if (completedTurns === 5) {
+    const frozen = JSON.parse(readFileSync(join(bundle, 'case-138-turn4-freeze.json'), 'utf8'));
+    if (facts.inventory_sha256 !== frozen.inventory_sha256 || JSON.stringify(facts.report_sha256) !== JSON.stringify(frozen.report_sha256)) {
+      throw new Error('case 138 evidence-expansion turn published or changed a Final report');
+    }
+    const applied = JSON.parse(readFileSync(join(bundle, 'case-138-c5-apply.json'), 'utf8'));
+    if (applied.operation !== 'apply' || applied.verdict !== 'committed' || applied.stage !== 'pre_entry') {
+      throw new Error('case 138 evidence-expansion turn did not accept exactly one C5 operation');
+    }
+    const trace = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse);
+    const postFinal = trace.filter((event) => event.event === 'post_final_reentry');
+    const rerunGate = trace.slice(frozen.trace_line_count).some((event) => event.event === 'gate_attempt' && event.gate === 'rerun-ready');
+    if (postFinal.length !== 1 || rerunGate) {
+      throw new Error('case 138 evidence-expansion turn completed rerun work or did not retain one C5 event');
+    }
+    writeFileSync(join(bundle, 'case-138-subject-observation.json'), `${JSON.stringify({
+      schema_version: 'case-138-subject-observation/v1',
+      source: 'subject-adapter-observer',
+      completed_turns: completedTurns,
+      first_delivery_before_feedback: true,
+      primary_targets: facts.primary_targets,
+      immutable_prior_bytes: true,
+      turn4_frozen_without_runtime_mutation: true,
+      turn5_c5_accepted_without_report_or_completed_rerun: true,
+      turn4_snapshot: 'case-138-turn4-freeze.json',
+      final_inventory_sha256: facts.inventory_sha256,
+      c5_operation_id: applied.operation_id,
+    }, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+    return null;
+  }
+
+  throw new Error(`case 138 received an unexpected completed turn count: ${completedTurns}`);
 }
 
 function observeCase318CrashWindow({ bundle, completedTurns }) {

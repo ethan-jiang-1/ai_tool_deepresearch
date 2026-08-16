@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
@@ -8,6 +8,7 @@ import {
   validateEnterPhaseTarget,
   validateSourceGateStatusSync,
   checkPhaseHandoffPreflight,
+  evaluateFinalEntryAdmission,
 } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs';
 
 describe('handoff helpers', () => {
@@ -66,6 +67,24 @@ describe('handoff helpers', () => {
       handoff_source_attempt_index: sourceIndex,
       ...overrides,
     };
+  }
+
+  function finalHandoff() {
+    return {
+      index: 0,
+      sourceNode: 'phases/phase-readiness.md',
+      targetNode: 'phases/phase-final.md',
+    };
+  }
+
+  function writeFinalHandoffTrace() {
+    writeTrace([gateAttempt({
+      gate: 'readiness-passed',
+      phase: 'readiness',
+      currentNodeRef: 'phases/phase-readiness.md',
+      next: 'phases/phase-final.md',
+    })]);
+    mkdirSync(join(dir, 'final'));
   }
 
   function setupReadyAttempt(overrides = {}) {
@@ -255,5 +274,32 @@ describe('handoff helpers', () => {
     const result = checkPhaseHandoffPreflight(dir, 'phases/phase-rerun.md');
     assert.equal(result.ok, true);
     assert.equal(result.handoff.targetGateEnum, 'rerun_ready');
+  });
+
+  it('admits only an empty safe primary inventory for a first Final load', () => {
+    writeFinalHandoffTrace();
+    const admitted = evaluateFinalEntryAdmission(dir, finalHandoff());
+    assert.equal(admitted.ok, true);
+    assert.equal(admitted.mode, 'first_empty');
+
+    writeFileSync(join(dir, 'final', 'final.md'), '# Premature\n');
+    const canonical = evaluateFinalEntryAdmission(dir, finalHandoff());
+    assert.equal(canonical.ok, false);
+    assert.match(canonical.reason, /empty primary inventory/);
+  });
+
+  it('fails closed for malformed and unsafe Final inventories before first entry', () => {
+    writeFinalHandoffTrace();
+    writeFileSync(join(dir, 'final', 'final_bad-name.md'), '# malformed\n');
+    const malformed = evaluateFinalEntryAdmission(dir, finalHandoff());
+    assert.equal(malformed.ok, false);
+    assert.match(malformed.reason, /primary inventory is invalid/);
+
+    rmSync(join(dir, 'final'), { recursive: true, force: true });
+    mkdirSync(join(dir, 'final'));
+    symlinkSync(join(dir, 'rb_status.json'), join(dir, 'final', 'report.md'));
+    const unsafe = evaluateFinalEntryAdmission(dir, finalHandoff());
+    assert.equal(unsafe.ok, false);
+    assert.match(unsafe.reason, /cannot read Final inventory/);
   });
 });

@@ -1,0 +1,298 @@
+schema_version: semantic-closure/v1
+change: iterate-final-delivery-in-place
+status: affected
+catalog_additions:
+  - id: final.primary-report-series
+    bounded_question: >-
+      Given the safe direct-root Final inventory, which file is the modern or
+      legacy primary base, what immutable contiguous revision series and latest
+      committed report exist, what version/target may be allocated next, or
+      which ambiguity or malformed-history fact blocks that conclusion?
+affected:
+  - family: final.primary-report-series
+    fact: >-
+      Safe direct-root Final files resolve to exactly one empty, modern-base, or
+      single-legacy-base primary classification plus one globally monotonic
+      contiguous revision series shared by labelled and unlabelled names. The
+      highest revision, or the base when no revision exists, is the latest
+      committed primary report. The next mechanically allocatable target is base
+      version zero only for an empty bundle-wide series and otherwise latest plus
+      one, regardless of the caller's presentation or lifecycle reason. Multiple
+      legacy candidates, orphan/gapped/duplicate revisions, malformed reserved
+      names, unsafe entries, or case-fold collisions establish only a blocker.
+      Feature labels never form another series or establish view, evidence,
+      lifecycle, or satisfaction facts.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs
+      - DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs#finalFacts
+      - DEEP_RESEARCH_HARNESS/engine/helpers/recovery-contract.mjs#buildRecoverySummary
+      - DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs
+    overlap:
+      - coordinate: openspec/specs/bundle/artifact-persistence-recovery/spec.md
+        relation: authoritative
+        detail: >-
+          ARP-004 owns primary publication, reserved targets, immutability,
+          allocation, and crash/concurrency behavior; the resolver is its one
+          deterministic inventory interpretation.
+      - coordinate: openspec/specs/research/content-delivery-phase-content/spec.md
+        relation: authoritative
+        detail: >-
+          CDP-003 through CDP-006 own how Final consumes and presents the latest
+          primary report after legal entry without turning filenames into
+          lifecycle or semantic-quality authority.
+      - coordinate: openspec/specs/research/post-final-recovery/spec.md
+        relation: authoritative
+        detail: >-
+          POF-001 owns how C5 binds a valid Final inventory/lineage and blocks
+          ambiguous primary history, including zero-append versus proven-append
+          return to Final; it consumes rather than independently reconstructs
+          the series.
+      - coordinate: openspec/specs/engine/cli-phase-transition/spec.md
+        relation: authoritative
+        detail: >-
+          CPT-003 consumes the shared primary classification to admit only an
+          empty first Final baseline and does not infer version or creation order
+          independently.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-final.md
+        relation: derived
+        detail: >-
+          Final guidance presents the latest resolved report and invokes the
+          publisher, but it does not allocate a version or establish inventory
+          truth from prose or chat.
+      - coordinate: DEEP_RESEARCH_HARNESS/COMMANDS.md
+        relation: derived
+        detail: >-
+          The command index explains the primary publication operation and
+          reserved namespace to Agents without becoming the resolver.
+      - coordinate: DEEP_RESEARCH_HARNESS/command_playbook/persist-artifact.md
+        relation: derived
+        detail: >-
+          The persistence playbook projects retained staging, primary publisher,
+          reserved-target, and sweep repair behavior without allocating or
+          resolving the report series itself.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-schemas.md
+        relation: derived
+        detail: >-
+          Shared schema guidance describes canonical Final delivery artifacts to
+          Agents; it does not make arbitrary final-directory presence a primary-
+          series or lifecycle verdict.
+    verification:
+      truth_table: tests/engine/helpers/final-report-series.test.mjs
+      cross_surface: tests/e2e/final-refinement-continuity.test.mjs
+
+  - family: final.submitted-backing-admission
+    fact: >-
+      Every exact first or revised primary Final Markdown payload, and every
+      supported supplementary Final report, receives the existing Evidence Map
+      structural/submitted-backing admission before commit and again before
+      prepared recovery finalization. A rejection retains staging and creates no
+      target or accepted publication workspace. Admission establishes neither
+      legal Final entry, claim quality, semantic improvement, nor user
+      satisfaction.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/final-delivery-backing.mjs#evaluateFinalDeliveryBacking
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/final-delivery-backing.mjs#evaluateFinalDeliveryBacking
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs
+    overlap:
+      - coordinate: openspec/specs/research/final-delivery-backing/spec.md
+        relation: authoritative
+        detail: >-
+          FDB-001 and FDB-002 own the submitted-backing admission conclusion and
+          its deliberate exclusion of claim-quality judgment.
+      - coordinate: openspec/specs/bundle/artifact-persistence-recovery/spec.md
+        relation: authoritative
+        detail: >-
+          ARP-004 owns when the shared admission is consumed before primary or
+          supplementary Final durability and recovery.
+      - coordinate: openspec/specs/research/content-delivery-phase-content/spec.md
+        relation: authoritative
+        detail: >-
+          CDP-006 requires every committed version to carry the same bounded
+          backing declaration without creating a Final Gate.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-final.md
+        relation: derived
+        detail: >-
+          Final guidance tells the Agent to repair retained staging from direct
+          evaluator feedback; it does not establish the backing verdict.
+    verification:
+      truth_table: tests/engine/helpers/final-delivery-backing.test.mjs
+      cross_surface: tests/integration/cli/artifact-persistence.test.mjs
+
+  - family: research.scope-and-rerun-intent
+    fact: >-
+      Presentation-only Final feedback establishes no rerun intent and remains
+      with the Final Agent. A clean Final or mechanically available rerun also
+      establishes no rerun intent. Only an Agent-classified explicit request for
+      new sources, Topics, evidence, conclusions, research-profile semantics,
+      or another verified-boundary expansion may be retained and accepted by
+      C5; after apply, the exact accepted request/workspace/event binds current
+      post-final rerun scope. The Engine validates structure and lineage but
+      never classifies free-form feedback.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs#inspectPostFinalRecovery
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs#applyPostFinalRecovery
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs#applyPostFinalRecovery
+      - DEEP_RESEARCH_HARNESS/engine/helpers/recovery-contract.mjs#buildRecoverySummary
+      - DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs
+    overlap:
+      - coordinate: openspec/specs/research/post-final-recovery/spec.md
+        relation: authoritative
+        detail: >-
+          POF-001 owns the closed C5 request, accepted-lineage, eligibility, and
+          replay contract while excluding presentation-only feedback.
+      - coordinate: openspec/specs/research/content-delivery-phase-content/spec.md
+        relation: authoritative
+        detail: >-
+          CDP-003 and CDP-004 own the presentation-versus-research boundary and
+          keep semantic classification with the Final Agent.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-final.md
+        relation: derived
+        detail: >-
+          Final guidance presents the boundary and asks minimal clarification;
+          its prose does not make an Engine-visible rerun request accepted.
+      - coordinate: DEEP_RESEARCH_HARNESS/command_playbook/post-final-recovery.md
+        relation: derived
+        detail: >-
+          The playbook executes the already classified and retained C5 request;
+          it does not infer research intent from a clean Final.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl2.md
+        relation: derived
+        detail: >-
+          HITL2 guidance projects existing rerun semantics only for accepted
+          evidence-expanding post-final requests; it does not own presentation
+          refinement or classify free-form Final feedback mechanically.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-anti-cheating-rules.md
+        relation: derived
+        detail: >-
+          Shared anti-cheating guidance rejects hidden Final lifecycle loops
+          while allowing bounded presentation refinement on the current terminal
+          node; it does not establish accepted rerun intent.
+    verification:
+      truth_table: tests/engine/helpers/post-final-recovery.test.mjs
+      cross_surface: tests/integration/cli/post-final-recovery.test.mjs
+
+  - family: lifecycle.gate-status-trace-handoff
+    fact: >-
+      A new legal readiness-to-Final load is admitted only while the bundle's
+      first canonical primary inventory is empty or, after accepted C5, current
+      safe Final inventory exactly reproduces the unique retired event-bound
+      prior digest. A newer legal Final handoff retires C5 current recovery
+      ownership; `enter-phase` remains the exact owner before its route-bound
+      load, and the existing Readiness `advance-status` synchronization remains
+      the exact owner after load until the terminal Final status window exists.
+      Only after that synchronization, and without an accepted publication
+      workspace, inventory blocker, or accepted still-active C5 workspace or
+      lineage, does clean reentry project the Final current owner. On the first
+      lineage, the admitted empty baseline means immediate bundle-base delivery
+      until a committed canonical base binds that lineage. On a later accepted-C5
+      lineage, the admitted event-bound prior inventory means immediate global
+      append until immutable-prefix proof shows one or more newly appended
+      canonical versions; only that proven append binds the latest report to the
+      later lineage and changes clean projection to latest-report refinement.
+      Existing already-entered legacy bundles remain readable without a
+      fabricated historical baseline, and rb_status.json#/current_node remains
+      phases/phase-final.md after the first and every revised report. Accepted
+      publication recovery precedes Final, while still-active C5 lineage owns its
+      exact existing stage. Report commit and user satisfaction create no Gate,
+      status transition, self-handoff, delivery event, or lifecycle state.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/recovery-contract.mjs#buildRecoverySummary
+    established_by:
+      - DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs
+      - DEEP_RESEARCH_HARNESS/cli/advance-status.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs#applyPostFinalRecovery
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs#inspectPostFinalRecovery
+      - DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs
+    overlap:
+      - coordinate: openspec/specs/engine/cli-phase-transition/spec.md
+        relation: authoritative
+        detail: >-
+          CPT-003 owns the pre-load Final inventory admission, route-bound
+          load_complete witness, partial-entry retry, and already-entered legacy
+          compatibility. It rejects premature or drifted inventory before entry
+          mutation without using mtime, filename ordering, content, or chat.
+      - coordinate: openspec/specs/engine/runtime-reentry-debuggability/spec.md
+        relation: authoritative
+        detail: >-
+          RRD-007 and RRD-008 own current-node interpretation, incident-shaped
+          owner precedence, and the clean Final current-owner projection.
+      - coordinate: openspec/specs/workflow/workflow-node-contract/spec.md
+        relation: authoritative
+        detail: >-
+          WNC-005 and WNC-008 own Final terminal metadata, no outgoing edge,
+          and specialized deliver-first header placement.
+      - coordinate: openspec/specs/research/post-final-recovery/spec.md
+        relation: authoritative
+        detail: >-
+          POF-001 owns the point at which accepted C5 workspace/lineage replaces
+          clean Final as current recovery owner, and the later point at which a
+          newer legal Final handoff retires that owner while its prior-inventory
+          digest remains the delivery-binding witness.
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs
+        relation: authoritative
+        detail: >-
+          Shared handoff evaluation proves the accepted C5 descendant chain and
+          detects the newer legal Final handoff that retires current C5 ownership
+          while preserving exact entry/status ownership and the retired audit
+          witness; it does not classify feedback or publish the required report.
+      - coordinate: openspec/specs/research/content-delivery-phase-content/spec.md
+        relation: authoritative
+        detail: >-
+          CDP-004 and CDP-005 own continued Final interaction without another
+          lifecycle fact and legal delivery evidence from the conjunction of
+          current lineage plus a committed primary report bound as the bundle
+          base or a proven later append. The publisher supplies only the latter
+          mechanical fact.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-final.md
+        relation: derived
+        detail: >-
+          The Final Phase projects the terminal interaction contract to the
+          Agent but does not write status, transition, Gate, or satisfaction
+          authority.
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/workflow-chain.mjs
+        relation: derived
+        detail: >-
+          The loader injects the terminal delivery/refinement header from
+          lifecycle metadata and resolved owner wording; it does not establish
+          inventory, lineage, or publication facts.
+      - coordinate: DEEP_RESEARCH_HARNESS/RUN.md
+        relation: derived
+        detail: >-
+          The primary entry surface projects the two-HITL rhythm and current
+          Final owner to Agents without creating lifecycle or delivery evidence.
+      - coordinate: DEEP_RESEARCH_HARNESS/command_playbook/start-research.md
+        relation: derived
+        detail: >-
+          New-run guidance projects the same deliver-first terminal placement;
+          it does not establish a Final load, report commit, or owner verdict.
+      - coordinate: DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md
+        relation: derived
+        detail: >-
+          Continuation guidance routes a selected current bundle to the resolved
+          Final or accepted recovery owner without inferring it from chat.
+      - coordinate: DEEP_RESEARCH_HARNESS/rb_templates/BUNDLE_ENTRY.md.tmpl
+        relation: derived
+        detail: >-
+          The bundle entry surface directs resumed Agents to current Final or an
+          accepted recovery owner; it does not establish owner facts.
+      - coordinate: openspec/constitution/evolution/helper-oriented-agent.md
+        relation: derived
+        detail: >-
+          Effective helper-oriented guidance projects the distinction between
+          terminal lifecycle and deliver-first interactive Final behavior. It
+          does not establish runtime owner, publication, Gate, or satisfaction
+          facts.
+    verification:
+      truth_table: tests/engine/helpers/recovery-contract.test.mjs
+      cross_surface: tests/e2e/post-final-rerun-lineage-continuity.test.mjs

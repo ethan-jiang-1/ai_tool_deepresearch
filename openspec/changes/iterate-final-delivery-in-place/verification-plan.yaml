@@ -1,0 +1,351 @@
+schema_version: verification-routing/v1
+change: iterate-final-delivery-in-place
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Primary-series grammar/classification/allocation, publication sidecar and
+      no-clobber behavior, submitted-backing admission, and owner-projection
+      precedence are focused deterministic truth tables over direct facts.
+  integration:
+    status: selected
+    rationale: >-
+      Production CLI, filesystem durability, Final-entry inventory admission,
+      workflow loading/header injection, Final guidance, C5 request acceptance,
+      and reentry projection cross real Module boundaries in isolated temporary
+      bundles.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      A JS-led production-CLI chain must prove empty first-Final admission, base
+      plus two immutable revisions, current-node continuity, clean Final reentry,
+      accepted C5 ownership, exact prior-inventory admission on return to Final,
+      and later delivery binding without claiming that an Agent understood
+      feedback.
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      Deliver-first behavior and natural-language presentation-versus-research
+      classification are Agent behavior. One no-network, bounded real Subject
+      Agent session observes five supplied turns under a 120-second hard cap;
+      unavailable or failed native runtime is NOT_RUN and report quality or
+      genuine human satisfaction is not claimed.
+claims:
+  - id: primary-final-series-truth-table
+    statement: >-
+      ARP-004: one pure resolver accepts empty inventory, modern base, contiguous
+      globally numbered labelled/unlabelled revisions, and one legacy v0; it
+      returns base only for the empty bundle-wide series and otherwise the exact
+      global latest/next target without reading lifecycle reason; it rejects
+      ambiguous legacy, malformed reserved names, unsafe entries, gaps,
+      duplicates, or case-fold collisions without reading mtime, content, chat,
+      or a counter. Later-lineage use is proved by lifecycle integration/E2E,
+      not this inventory truth table.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/final-report-series.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: primary-publication-workspace-and-no-clobber
+    statement: >-
+      ARP-004: publication-specific Zod workspaces/results bind one resolved
+      inventory, target, version, feature, payload digest, and backing result;
+      same-device atomic no-clobber commit permits at most one winner, exact
+      sweep replay never reallocates, losing retries never overwrite history,
+      and existing persistence workspace forms remain readable.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/artifact-persistence.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: every-final-version-backing-admission
+    statement: >-
+      CDP-006 and ARP-004: the existing Final-backing evaluator applies to each
+      exact base/revision target, accepts only legal submitted Evidence Map
+      backing, emits one direct repair on rejection, and never claims legal
+      lifecycle entry, semantic improvement, report quality, or satisfaction.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/final-delivery-backing.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: final-and-c5-owner-precedence-truth-table
+    statement: >-
+      CPT-003, RRD-007/RRD-008, and POF-001: recovery projection prefers accepted
+      publication work, then primary inventory blockers, then still-active C5
+      lineage, then exact Final entry ownership before a new load, then exact
+      Readiness status synchronization after load, then clean Final current owner
+      with admitted zero-append delivery versus proven-append refinement;
+      mechanical C5 availability without a strict applied request creates no C5,
+      Gate, status, or trace fact.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/recovery-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: post-final-request-intent-truth-table
+    statement: >-
+      POF-001: a clean Final and side-effect-free eligibility inspection create
+      no accepted rerun intent; only a strict Agent-selected request applied
+      against current bundle/Final bindings establishes C5 workspace/lineage,
+      while inspection without an apply invocation performs no C5 mutation and
+      existing accepted replay remains deterministic. A newer legal Final handoff
+      retires C5 current recovery ownership, then exact entry and status-sync
+      owners remain in force; only after synchronized Final entry does zero
+      appended canonical inventory mean delivery pending, and only a proven
+      immutable append permits fresh C5 eligibility. This does not prove whether
+      free-form feedback should cause the Agent to construct that request.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/post-final-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: primary-publication-cli-contract
+    statement: >-
+      ARP-004 and CDP-006: production `publish-final-report` accepts bundle,
+      retained staging, and optional safe feature only; commits base and global
+      revisions through backing admission/no-clobber durability, reserves
+      direct-root final/final*.md from caller-targeted operations, preserves
+      legacy/non-primary compatibility, and exposes exact blocked/retry/sweep
+      feedback without caller-selected versions or overwrite. Its committed
+      result remains mechanical and neither validates nor establishes legal
+      Final lineage or user-facing delivery.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/artifact-persistence.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: final-entry-inventory-admission
+    statement: >-
+      CPT-003 and CDP-005: production `enter-phase` writes the first route-bound
+      Final load only after the shared primary resolver proves an empty first
+      inventory, and writes a post-C5 return load only after one unique retired
+      event proves current safe Final inventory exactly equals its bound prior
+      digest. Premature canonical or supplementary drift, unsafe/ambiguous
+      inventory, missing witness, or conflicting lineage fails before workflow
+      dependency loading, load, or current-node mutation. An existing bound load
+      retains partial-entry retry and already-entered legacy compatibility
+      without mtime, filename ordering, content inference, or a new delivery
+      event.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/enter-phase.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: final-terminal-header-and-cue-contract
+    statement: >-
+      CPT-003, WNC-005/WNC-008, and SWE-004: after Final entry admission, real
+      Final loading recognizes manifest Final plus gate-null before generic stop
+      handling, retains the exact Readiness status-sync command before Final work,
+      terminal_delivery/deliver_final_artifacts, requires current-lineage
+      publication before feedback for empty bundle inventory or a zero-append
+      post-rerun Final handoff, resumes latest refinement only for a bound report,
+      and leaves HITL and non-terminal silent headers unchanged without a new cue
+      enum or transition.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/enter-phase.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: final-guidance-and-command-parity
+    statement: >-
+      ACS-001, CPT-003, RUE-005, CDP-003/CDP-004/CDP-005/CDP-006, SWE-004, and WNC-005:
+      Final, RUN, COMMANDS, helper-oriented constitutional guidance, bundle
+      entry/start/continuation playbooks, and affected HITL2/shared schema/anti-
+      cheating guidance all say complete admitted entry/status synchronization,
+      then publish the bundle base or later global append before feedback, remain
+      on Final for presentation revisions, preserve
+      current-lineage HITL2 handoff plus earlier evidence/history, let the Agent
+      allocate via the publisher, end a satisfied turn without state, and use C5
+      only for research expansion.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/final-report-composition-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: accepted-rerun-intent-boundary
+    statement: >-
+      POF-001: clean Final inspect may expose mechanical availability but does
+      not make C5 the current owner; only an Agent-selected strict request for
+      evidence/research expansion may be applied and bind accepted scope. Without
+      apply, inspection produces no C5 workspace/event/profile write; all
+      existing replay stages remain compatible, and this deterministic test does
+      not classify presentation language.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/post-final-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: clean-final-reentry-owner-contract
+    statement: >-
+      CPT-003 and RRD-007/RRD-008: production check-reentry keeps current_node
+      Final after base/revisions, projects exact entry ownership before a post-C5
+      Final load, exact status synchronization after load, then admitted empty
+      bundle delivery, admitted zero-append post-rerun delivery, or proven-append
+      latest refinement for clean inventory. It gives publication, inventory,
+      and still-active-C5 facts the declared precedence, blocks unmatched prior
+      inventory, and never reads chat or infers satisfaction or pending feedback.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-reentry.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: final-refinement-lifecycle-continuity
+    statement: >-
+      ARP-004, CPT-003, CDP-003/CDP-004/CDP-005/CDP-006, RRD-007/RRD-008, and
+      POF-001: a JS driver uses one negative temporary-bundle case to reject
+      premature primary inventory before Final entry, while a separate clean case
+      admits the empty baseline, completes Readiness status synchronization, and
+      commits final/final.md, final/final_v1.md, and a labelled global v2,
+      preserves all prior bytes and current_node Final with no Final transition
+      or satisfaction state, resumes latest refinement, then establishes C5
+      ownership only after submitting an explicit evidence-expanding request.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/final-refinement-continuity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: post-rerun-final-delivery-continuity
+    statement: >-
+      CPT-003, POF-001, CDP-005, and RRD-007/RRD-008: after accepted C5
+      descendants reach a newer legal Final handoff, pre-load inventory drift is
+      rejected and exact event-bound prior inventory admits the Final load. The
+      existing Readiness status synchronization remains the sole next owner; its
+      terminal window plus unchanged baseline then projects immediate Final
+      delivery with no fresh C5. Production publication appends the next global
+      version; immutable-prefix proof binds it to the new lineage, reentry then
+      projects refinement, and all earlier reports and events remain unchanged.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/post-final-rerun-lineage-continuity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: real-agent-final-refinement-observation
+    statement: >-
+      CDE-003 and CDP-003/CDP-004: from one legal setup-only Final boundary, an
+      independent real Subject Agent uses the production Final guidance and
+      publisher in one no-network session across five supplied turns—immediate
+      first delivery, two clear presentation revisions, a no-more-revision
+      response whose no-mutation snapshot is frozen by a turn observer, then an
+      evidence-expansion request on the same lineage that selects/accepts C5
+      without another report. Exactly one authenticated native run is allowed
+      under a 120-second total Subject cap; failure/timeout/missing health is
+      quarantined NOT_RUN and leaves this claim open without retry. Native
+      evidence proves only this observed procedure; it does not prove report
+      improvement, generic classification accuracy, or genuine satisfaction.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wff_delivery/case-138-standard-final-refinement.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
