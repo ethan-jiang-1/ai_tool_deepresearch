@@ -62,5 +62,5 @@ Classification and proof permissions are defined by the accepted `verification-r
 - Only approved npm deps: `zod`, `yaml`.
 - Everything else uses Node built-ins.
 - Tests use `node:test` + `node:assert`.
-- `_original_*` directories are archives; read them only when explicitly requested.
+- `_old_topics` 归档（位于 `_backlog/_done/`，含 `_original_*` 子目录）除非显式要求否则不读。
 - `DEEP_RESEARCH_HARNESS/` is read-only until a change reaches `/opsx:apply`.

@@ -89,12 +89,22 @@ DEEP_RESEARCH_HARNESS/
     validate-bundle.mjs
     inspect-bundle.mjs
     operate-queue.mjs
+    operate-work-unit.mjs
+    enter-phase.mjs
+    advance-status.mjs
+    check-reentry.mjs
+    audit-phase-status.mjs
+    log-event.mjs
+    gates/
+      check-gate-*.mjs（当前 10 个）
   schema/
     contracts/
   engine/
   rb_templates/
   command_playbook/
 ```
+
+完整 CLI 清单以 `cli/` 目录为准（与 harness README 同一事实面）。
 
 Workflow-foundation route map:
 
@@ -119,10 +129,6 @@ DEEP_RESEARCH_HARNESS/
   cli/
     gates/
       check-gate-*.mjs
-    instantiate-run-bundle.mjs
-    validate-bundle.mjs
-    inspect-bundle.mjs
-    operate-queue.mjs
 
   rb_templates/
   command_playbook/
@@ -136,7 +142,7 @@ DEEP_RESEARCH_HARNESS/
 
 `DEEP_RESEARCH_HARNESS/engine/` contains deterministic engine code.
 
-`DEEP_RESEARCH_HARNESS/cli/` contains executable framework commands. Gate-specific wrappers target `DEEP_RESEARCH_HARNESS/cli/gates/`.
+`DEEP_RESEARCH_HARNESS/cli/` contains executable framework commands. Gate-specific wrappers live at `DEEP_RESEARCH_HARNESS/cli/gates/`（当前 10 个）。
 
 `DEEP_RESEARCH_HARNESS/rb_templates/` contains templates copied or materialized into new runtime bundles during instantiation. Only files that become initial bundle content belong here.
 
@@ -205,14 +211,14 @@ Runtime ownership:
 
 ## Gate Boundary
 
-Gate files have three different meanings and must not be mixed:
+Gate 一词有五面含义（transition 表 / definition JSON / engine / CLI wrapper / runtime status），另有 attempt history 与 output snapshot 两个辅助面。五面与辅助面如下，不得混用：
 
 | Concern | Location | Mutability | Meaning |
 |---------|----------|------------|---------|
 | Gate transition-table contract | `DEEP_RESEARCH_HARNESS/workflows/transitions.chain.json` + `DEEP_RESEARCH_HARNESS/engine/ask-next.mjs` | read-only | The chain is the current routing source of record; `resolveNodeTransitionDetailed()` provides detailed transition queries. |
-| Gate definition target | `DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-*.definition.json` | read-only | Defines what a gate checks. |
-| Gate engine target | `DEEP_RESEARCH_HARNESS/engine/gates/` | read-only | Loads/evaluates definitions against a bundle. |
-| Gate CLI wrapper target | `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-*.mjs` | read-only | Runs one gate against an explicit bundle. |
+| Gate definition JSON | `DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-*.definition.json` | read-only | Defines what a gate checks. |
+| Gate engine（目标位置） | `DEEP_RESEARCH_HARNESS/engine/gates/` | read-only | Loads/evaluates definitions against a bundle. |
+| Gate CLI wrapper | `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-*.mjs`（当前 10 个） | read-only | Runs one gate against an explicit bundle. |
 | Gate runtime status | `<active-bundle-root>/rb_status.json` | mutable | Records current run's phase/gate state summary. |
 | Gate attempt history | `<active-bundle-root>/rb_trace.jsonl` | append-only | Records gate attempts, pass/fail, repair, waiting/block events. |
 | Gate output snapshot | `<active-bundle-root>/_cache/gate-results/` | mutable cache | Optional latest CLI output; not main authority. |
@@ -327,7 +333,7 @@ Runtime continuity and logging details live in `openspec/operations/logging-conv
 | Gate rule definition target | `DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-*.definition.json` |
 | Gate evaluator/loader code target | `DEEP_RESEARCH_HARNESS/engine/gates/` |
 | Gate shared helper code target | `DEEP_RESEARCH_HARNESS/engine/helpers/` |
-| Gate CLI wrapper target | `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-*.mjs` |
+| Gate CLI wrapper | `DEEP_RESEARCH_HARNESS/cli/gates/check-gate-*.mjs`（当前 10 个） |
 | Bundle initial template | `DEEP_RESEARCH_HARNESS/rb_templates/` |
 | Current run profile / HITL data | `<active-bundle-root>/rb_profile.yaml` |
 | Current run workflow status | `<active-bundle-root>/rb_status.json` |

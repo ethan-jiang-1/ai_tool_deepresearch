@@ -1,0 +1,48 @@
+schema_version: verification-routing/v1
+change: repair-guidance-terminology-pointer-drift
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      本 change 无 in-process 逻辑变化，只有跨文件的文档一致性事实与既有回归
+      测试的转绿，不产生 unit 级断言面。
+  integration:
+    status: selected
+    rationale: >-
+      文档一致性是确定性跨文件事实：新 canonical 表述（Gate 五面表、C-series
+      glossary、repair_kind 双枚举、req-ID 引用格式、归档命名、runtime
+      coordinate 命名）通过真实仓库文件的静态断言锁定
+      （tests/integration/md/guidance-terminology-pointer-consistency.test.mjs），
+      并由既有 deep-research-harness-entry-contract 与 pair-sync guard 转绿
+      验证，无网络、无 Agent 执行。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      无 lifecycle/gate/recovery 链变化：不改 Engine、CLI、gates、schema。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称真实 Agent 行为变化：全部为 guidance 文档措辞校准，由确定性
+      文档回归锁定，不做 Agent 行为断言。
+claims:
+  - id: guidance-terminology-pointer-consistency-guard
+    statement: >-
+      framework-runtime-boundary.md 含 Gate 五面表（五面各列 owner 且 CLI wrapper
+      标当前状态）；CONTEXT.md 的 Gate 行指向该表并区分「工作单元五反馈面」，
+      含 C2/C3/C5 glossary 行与 repair_kind 双枚举区分；invariants-brief 的
+      spec 引用改为 requirement 标题 + registry ID 格式且 RUE 引用已从错误的
+      RUE-004 更正为 RUE-005；根 README/AGENTS/CLAUDE 统一 _old_topics 归档命名，
+      根 AGENTS/CLAUDE 含 current run bundle root 坐标命名；framework-runtime-boundary
+      不再含过期四工具封闭清单。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/guidance-terminology-pointer-consistency.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

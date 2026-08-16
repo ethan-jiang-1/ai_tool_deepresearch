@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: repair-guidance-terminology-pointer-drift
+status: not_applicable
+reason: >-
+  本 change 只修改非权威 guidance/入口文档（CONTEXT.md、根 README/AGENTS/CLAUDE、
+  openspec/guidance/models/ 下的 framework-runtime-boundary 与 invariants-brief），
+  不改变任何 cataloged semantic fact family 覆盖的确定性事实
+  （bundle.current-entry-contract、lifecycle.gate-status-trace-handoff、
+  cli.exit-code-convention 等均不触及）；Gate 五面表、C-series glossary、
+  repair_kind 双枚举区分与 req-ID 引用格式均为文档层校准，不构成新 fact。

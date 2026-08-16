@@ -52,9 +52,15 @@ runtime record. There is deliberately no `DEEP_RESEARCH_HARNESS/CONTEXT.md`.
 | **Engine** | deterministic schema/checkpoint/receipt/trace authority; not a research or semantic judge |
 | **Runtime truth** | durable current facts under the selected current run bundle root; not chat memory or reusable assets |
 | **Source of Record** | the one owner for a class of facts; not a projection or an automatic permission grant |
-| **Gate** | Engine checkpoint that permits a legal transition only when accepted checks pass; not a research phase or workflow controller。Gate 一词有五面含义（transition 表 / definition JSON / engine / CLI wrapper / runtime status），完整五面表见 `openspec/guidance/models/framework-runtime-boundary.md` |
+| **Gate** | Engine checkpoint that permits a legal transition only when accepted checks pass; not a research phase or workflow controller。Gate 一词有五面含义（transition 表 / definition JSON / engine / CLI wrapper / runtime status），完整五面表见 `openspec/guidance/models/framework-runtime-boundary.md`「Gate Boundary」节。注意区分：工作单元恢复语境的「五反馈面」（submit 拒绝 / late-submit 拒绝 / transaction 阻塞 / dry-submit / inspect）是另一概念，owner 见 `DEEP_RESEARCH_HARNESS/RUN.md` 决策表 |
 | **Check / Inspect / Advice** | deterministic pass/fail, diagnosis, and bounded next-step feedback; none repairs or grants permission by itself |
-| **`hints[]` / `repair_kind`** | 每 phase §7 反馈主面的 closed-enum 下一步载体：`hints[]` 带一个直接 repair/owner 边界，`repair_kind` 命名具体恢复操作；反馈形状的完整契约以所属 accepted spec / model 为准，此处只做术语对齐 |
+| **`hints[]` / `repair_kind`（gate/phase 反馈面）** | phase §7 反馈主面的 closed-enum 载体：`hints[]` 带一个直接 repair/owner 边界；`repair_kind` ∈ {`agent_action` / `engine_operation` / `user_decision` / `external_action` / `missing_contract`}；反馈形状以所属 accepted spec / model 为准，此处只做术语对齐 |
+| **`attempt_disposition` / `repair_kind`（work-unit 反馈面）** | 五个工作单元反馈面（submit 拒绝 / late-submit 拒绝 / transaction 阻塞 / dry-submit / inspect）统一发出 `attempt_disposition` + `next`；此面 `repair_kind` 是另一套枚举（如 `wait` / `recover-transaction` / `supersede` / `missing_contract` 等），完整词汇与 CLI 动词映射以 `DEEP_RESEARCH_HARNESS/RUN.md` 决策表 + `tests/engine/work-unit-recovery-decision-table.test.mjs` 为准。与 gate/phase 面的 `repair_kind` 同名不同枚举 |
+| **C2（checkpoint 代号）** | HITL1/rerun 的 freshness checkpoint，授权 `research_style_params` 写入；owner `openspec/specs/research/research-styles/spec.md` |
+| **C3（pipeline 代号）** | post-final rerun 阶段既有的 mutation/gate pipeline（canonical topic mutation、style CLI、rerun_count 推进）；owner `openspec/specs/research/post-final-recovery/spec.md` |
+| **C5（event/lineage 代号）** | Final 之后 evidence-expanding reentry 的 accepted event/lineage，post-final recovery 所有权与资格判定的依据；owner `openspec/specs/research/post-final-recovery/spec.md` + `openspec/specs/research/content-delivery-phase-content/spec.md` |
+
+> C2/C3/C5 全仓库无单一展开定义，上表为按 owner spec 用法归纳的 compact distinction；具体判定以 owner spec 为准。
 
 ## Execution Distinctions
 
