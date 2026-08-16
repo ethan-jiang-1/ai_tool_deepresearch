@@ -12,8 +12,8 @@ Date: repo-internal analysis · Status: analysis only (no OpenSpec change propos
 > `schema/gate_definitions/*.json`, `cli/*.mjs`, `engine/*.mjs`, and `engine/helpers/*.mjs`.
 > Class (1) is claimed only where the enforcing check was actually located.
 
-> **Cross-reference:** a parallel machine-check catalog (background sub-agent, 784 lines, 5 areas,
-> ~590 entries) is at `_backlog/plans/machine-checks-catalog.md` — gate rule ids, gate-CLI helper
+> **Cross-reference:** a parallel machine-check catalog (background sub-agent, 785 lines, 5 areas,
+> 592 entries) is at `_backlog/plans/machine-checks-catalog.md` — gate rule ids, gate-CLI helper
 > call chains, ~40 engine helper modules with rejection codes, CLI validators, and all 268 test
 > files. Every class-(1) citation in this audit was verified first-hand and is consistent with that
 > catalog; none of the citations below uses a non-existent identifier. Authoritative corrections
