@@ -109,4 +109,68 @@ describe('check-content-drift rule truth tables', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it('machine-covered prohibition phrasing is rejected when the phase loads no shared anti-cheating owner', () => {
+    const dir = fixtureTree({
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-setup.md': [
+        '---',
+        'node_type: phase',
+        'id: phase-setup',
+        'phase: setup',
+        'gate: setup-ready',
+        'stop: "no"',
+        'requires: []',
+        'suggested_context: []',
+        '---',
+        '# Phase: Setup',
+        '',
+        '## 1. Stage Goal',
+        '',
+        '禁止手写 ledger rows 或 trace events 冒充 pass。',
+        '',
+        '## 9. Anti-Cheating Rules',
+        '',
+        '本 phase 特有条目。',
+      ].join('\n'),
+    });
+    try {
+      const result = runChecker(dir);
+      assert.equal(result.status, 1, result.stdout + result.stderr);
+      assert.match(result.stderr, /machine-covered prohibition phrasing "禁止手写"/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('machine-covered prohibition phrasing is allowed when the phase loads the shared anti-cheating owner in requires', () => {
+    const dir = fixtureTree({
+      'DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-setup.md': [
+        '---',
+        'node_type: phase',
+        'id: phase-setup',
+        'phase: setup',
+        'gate: setup-ready',
+        'stop: "no"',
+        'requires:',
+        '  - shared/shared-anti-cheating-rules',
+        'suggested_context: []',
+        '---',
+        '# Phase: Setup',
+        '',
+        '## 1. Stage Goal',
+        '',
+        '禁止手写 ledger rows 或 trace events 冒充 pass。',
+        '',
+        '## 9. Anti-Cheating Rules',
+        '',
+        '本 phase 特有条目。',
+      ].join('\n'),
+    });
+    try {
+      const result = runChecker(dir);
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

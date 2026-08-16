@@ -73,7 +73,9 @@ describe('Wave producer contract guidance', () => {
     assert.match(text, /inspect_contract/);
     assert.match(text, /operate-work-unit\.mjs submit/);
     assert.ok(text.indexOf('dry-submit') < text.indexOf('operate-work-unit.mjs submit'));
-    assert.match(text, /Do not hand-write result semantics, cache declarations, receipts, ledger rows, trace, or provenance/i);
+    // Hand-writing prohibition is single-sourced in the shared anti-cheating
+    // file; the Wave1 node points to it instead of restating it.
+    assert.match(text, /shared\/shared-anti-cheating-rules\.md|shared-anti-cheating-rules/i);
   });
 
   it('puts one submitted-backed Phase closeout checklist before full-drain inspect', () => {

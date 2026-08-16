@@ -74,7 +74,7 @@ node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to setup_rea
 
 ## 7. On Gate Fail
 
-先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority，也不得用其 prose 猜 repair kind、字段或命令。`repair_kind` 只分配责任，当前 loaded node 的 `stop` 才决定 interaction placement；本 phase 为 `stop: no`，任何分类都不得主动发起提问、状态/进度、approval、acknowledgement 或等待。用户主动的 current turn 可从 direct facts 得到直接回答，但回答不创建 checkpoint、state、permission、route、mutation 或 reentry authority。按每个 independent primary hint 执行：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。反馈读取与互动放置的完整契约（`repair_kind` 只分配责任、当前 loaded node 的 `stop` 才决定 interaction placement、`stop: no` 不得主动发起提问/状态/approval/acknowledgement、current turn 回答不创建 checkpoint）见 `shared/shared-silent-execution.md` 与引擎注入的 AUTONOMOUS header。也不得用其 prose 猜 repair kind、字段或命令。按每个 independent primary hint 执行：
 
 1. `repair_kind: agent_action`：由 Agent 对 `write_to` 已授权的 exact mutable surface 做最小修复，例如修正允许 Agent 修改的 YAML/Markdown field 或创建明确授权的 scaffold projection。
 2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal operation；status、trace、ledger、index、receipt、hash 和 Engine-owned scaffold/binding 不得直接编辑或按 template 手搓。

@@ -845,6 +845,58 @@ export function validateWorkflowPackage(opts = {}) {
     }
   }
 
+  // ── Phase-local anti-cheating duplication ─────────────────────────
+  // When a phase node's requires includes shared/shared-anti-cheating-rules,
+  // its local anti-cheating section (## 9 / "Anti-Cheating") must not
+  // verbatim-repeat the shared file's prohibition headings. Phase-local
+  // sections keep only phase-specific prohibitions plus a pointer to the
+  // shared file. @impl SHC-004, RWP
+  const antiCheatingPath = join(nodesDir, 'shared', 'shared-anti-cheating-rules.md');
+  const antiCheatingHeadings = [];
+  if (existsSync(antiCheatingPath)) {
+    const sharedText = readFileSync(antiCheatingPath, 'utf8');
+    for (const line of sharedText.split('\n')) {
+      const m = line.match(/^### \d+\.\s+(.+)$/);
+      if (m) antiCheatingHeadings.push(m[1].replace(/`/g, '').trim());
+    }
+  }
+  for (const phase of manifest.phases || []) {
+    const nodePath = join(nodesDir, phase.node);
+    if (!existsSync(nodePath)) continue;
+    const fm = readNodeFrontmatter(nodePath);
+    if (!fm || !fm.requires) continue;
+    const hasSharedAntiCheating = fm.requires.some(
+      (r) => r === 'shared/shared-anti-cheating-rules' || r === 'shared/shared-anti-cheating-rules.md',
+    );
+    if (!hasSharedAntiCheating) continue;
+    const nodeText = readNodeMarkdown(nodePath);
+    // Extract the local anti-cheating section: lines from a `## 9.` heading
+    // up to the next `## ` heading (line-based to avoid non-greedy regex
+    // matching an empty section when the section body follows a blank line).
+    const nodeLines = nodeText.split('\n');
+    let sectionStart = -1;
+    let sectionEnd = nodeLines.length;
+    for (let i = 0; i < nodeLines.length; i++) {
+      if (sectionStart === -1 && /^## 9\./.test(nodeLines[i])) {
+        sectionStart = i + 1;
+      } else if (sectionStart !== -1 && /^## /.test(nodeLines[i])) {
+        sectionEnd = i;
+        break;
+      }
+    }
+    if (sectionStart === -1) continue;
+    const section = nodeLines.slice(sectionStart, sectionEnd).join('\n');
+    for (const heading of antiCheatingHeadings) {
+      if (heading && section.includes(heading)) {
+        issues.push({
+          class: 'phase_local_anti_cheating_duplication',
+          detail: `Phase "${phase.node}" repeats shared anti-cheating prohibition "${heading}" while shared/shared-anti-cheating-rules is in requires; keep phase-specific prohibitions plus a pointer`,
+          file: nodePath,
+        });
+      }
+    }
+  }
+
   return {
     passed: issues.length === 0,
     issues,

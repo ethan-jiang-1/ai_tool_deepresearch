@@ -23,8 +23,11 @@ describe('rerun-added Topic Wave0 uses the normal producer contract', () => {
       assert.match(content, /operate-work-unit\.mjs dry-submit/);
       assert.match(content, /repair.*same (?:candidate|claimed attempt)/i);
       assert.match(content, /formal (?:operate-work-unit )?submit/i);
-      assert.match(content, /do not.*(?:overwrite|edit|repair).*_beacon\.json/i);
     }
+    // Beacon immutability: the shared sub-agent protocol keeps the full
+    // prohibition; the wave node points to it instead of restating it.
+    assert.match(shared, /do not.*(?:overwrite|edit|repair).*_beacon\.json/i);
+    assert.match(wave0, /shared-subagent-protocol\.md/);
   });
 
   it('keeps authorized mechanical execution with the Agent and rejects retrospective provenance', () => {

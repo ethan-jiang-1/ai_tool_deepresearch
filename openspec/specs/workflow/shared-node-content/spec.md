@@ -120,11 +120,39 @@ Repair guidance SHALL NOT 变成某个具体 gate 的隐藏脚本。
 - 禁止从 chat memory 生成 final report——必须 sourced from verified bundle state
 - 禁止在 final phase 实现 hidden loop 用于 post-delivery rework
 
+When a phase node's `requires` includes `shared/shared-anti-cheating-rules`, its
+local anti-cheating section SHALL NOT verbatim-repeat the shared file's
+prohibition sentences. The phase node SHALL instead keep only phase-specific
+prohibitions and point to the shared file for the common baseline. A phase
+whose `requires` does NOT include the shared file SHALL either add it to
+`requires` before trimming its local list, or keep the local list complete.
+The shared file remains the single Agent-facing statement of the common
+baseline; phase-local sections add only phase-specific prohibitions.
+
 #### Scenario: Agent reads anti-cheating rules before phase execution
 
 - **WHEN** Agent 加载任一 pre-research phase node
 - **THEN** it SHOULD be able to use `shared-anti-cheating-rules.md` as the shared baseline
 - **AND** the node SHALL explain the correct alternative action for each prohibition
+
+#### Scenario: phase local anti-cheating section points instead of repeating
+
+- **WHEN** a phase node's `requires` includes `shared/shared-anti-cheating-rules`
+  and its local anti-cheating section repeats a prohibition sentence from the
+  shared file
+- **THEN** the deterministic workflow consistency check SHALL fail and name the
+  phase node and the repeated sentence
+- **AND** the phase node SHALL be edited to keep only phase-specific
+  prohibitions plus a pointer to the shared file
+
+#### Scenario: phase without the shared file keeps its complete local list
+
+- **WHEN** a phase node's `requires` does NOT include
+  `shared/shared-anti-cheating-rules` and its local anti-cheating section
+  covers common prohibitions
+- **THEN** the phase SHALL add the shared file to `requires` before trimming
+  the local list
+- **AND** it SHALL NOT silently weaken its in-context anti-cheating closure
 
 ### Requirement: Shared node authority boundary enforcement
 

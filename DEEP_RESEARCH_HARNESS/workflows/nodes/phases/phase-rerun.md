@@ -149,7 +149,7 @@ node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to rerun_rea
 
 ## 7. On Gate Fail
 
-先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从旧表格、legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段、命令或路由。`repair_kind` 只分配责任，当前 loaded node 的 `stop` 才决定 interaction placement；本 phase 为 `stop: no`，任何分类都不得主动发起提问、状态/进度、approval、acknowledgement 或等待。用户主动的 current turn 可从 direct facts 得到直接回答，但回答不创建 checkpoint、state、permission、route、mutation 或 reentry authority。按每个 independent primary hint 执行：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。反馈读取与互动放置的完整契约（`repair_kind` 只分配责任、当前 loaded node 的 `stop` 才决定 interaction placement、`stop: no` 不得主动发起提问/状态/approval/acknowledgement、current turn 回答不创建 checkpoint）见 `shared/shared-silent-execution.md` 与引擎注入的 AUTONOMOUS header。不得从旧表格、legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段、命令或路由。按每个 independent primary hint 执行：
 
 1. `repair_kind: agent_action`：当 `write_to` 是已授权的 rerun rationale/profile/bundle mutable surface 时，由 Agent 修复 exact field/file；不得发明 HITL2 rationale、重置 count 或伪造 completed-run structure。
 2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal topic-state/status/handoff/recovery operation；不得要求用户运行普通命令，也不得直接编辑 `rb_status.json`、trace、ledger、index、receipt、hash 或 provenance authority。
@@ -167,16 +167,13 @@ Gate fail 时按 structured hint 处理并保持当前 checkpoint failed。`user
 
 ## 9. Anti-Cheating Rules
 
-- **MUST NOT 删除已有 artifacts**：reference/、artifacts/、seed_topics/ 中的已有文件全部保留
-- **MUST NOT direct-edit registry/seed 模拟 mutation**：只用 sanctioned topic-state apply；context/`human-directed` 不绕过 lifecycle authority
+通用 anti-cheating 禁令见 `shared/shared-anti-cheating-rules.md`（已在 requires）；本 phase 特有条目如下（与 §3 重复的 MUST NOT 删除 artifacts / direct-edit registry/seed / 重新解析 profile / 绕过 handoff 加载 seed-topics 已并入 §3）：
+
 - **MUST NOT direct path-move historical outputs**：rename/reorder/renumber/safe-remove只使用existing C3B complete `mutate_layout` target；不得创建parallel addendum namespace
 - **MUST NOT 把 `post_final_reentry` 称为gate pass或permission**：它只记录accepted HITL2 rerun semantics并复用本phase现有owners
 - **MUST 读当前 rerun_count 后再递增**：若字段缺失则初始化为 1，若已有值则 +1。MUST NOT 直接覆盖为固定值
 - **MUST NOT 在无 rationale 或 rationale 为空时写 ## 本轮重跑方向**：方向 hints 必须来自用户明确的意图
 - **MUST NOT direct-edit seed direction，或以 all-seed scan / old matching section 跳过 retained candidate 与 apply**：只允许 existing accepted workspace 的 exact recover
-- **MUST NOT 重新解析 profile 或无条件启动 style CLI**：只在 committed result 的 `style_projection.command` 存在且要求 refresh 时、并且在 count increment 前执行它
-- **MUST NOT 绕过 handoff 直接加载 seed-topics**：所有路由必须来自 gate CLI `check.next`，并通过 `enter-phase --node <check.next>` 消费
-- 参见 `shared-anti-cheating-rules.md` 的通用禁令
 
 ## Log
 

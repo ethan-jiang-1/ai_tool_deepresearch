@@ -1152,3 +1152,119 @@ describe('ValidateWorkflowPackage — edge cases', () => {
     cleanup();
   });
 });
+
+// ─── Phase-local anti-cheating duplication ─────────────────────────────────
+
+describe('ValidateWorkflowPackage — phase_local_anti_cheating_duplication', () => {
+  const sharedAntiCheating = [
+    '---',
+    JSON.stringify({
+      node_type: 'shared',
+      id: 'shared-anti-cheating-rules',
+      shared_scope: 'rules',
+      authority: 'guidance-only',
+      execution_contract: { surface: 'shared-guidance', search_policy: 'no_search' },
+      requires: [],
+      suggested_context: [],
+    }),
+    '---',
+    '# Shared: Anti-Cheating Rules',
+    '',
+    '## Prohibitions',
+    '',
+    '### 1. 禁止把 chat memory 当 runtime state',
+    '',
+    '**正确替代**：reload from bundle control files.',
+    '',
+    '### 2. 禁止绕过 work-unit provenance',
+    '',
+    '**正确替代**：use operate-work-unit submit.',
+  ].join('\n');
+
+  function writePhase({ requires, section9 }) {
+    scaffold({
+      manifest: {
+        phases: [{ key: 'wave0', node: 'phases/phase-wave0.md', gate: 'wave0-complete' }],
+        shared: ['shared/shared-anti-cheating-rules.md'],
+      },
+      gateDefs: {
+        'wave0-complete': {
+          description: 'Test wave0 gate.',
+          rules: [{
+            id: 'fixture_placeholder',
+            check: 'placeholder',
+            target: 'fixture-contract-boundary',
+            failure_message: 'Test-only consistency fixture placeholder.',
+            finding: { source: 'definition', blocking_basis: 'configuration_integrity' },
+            repair: { kind: 'missing_contract', write_to: 'fixture-contract-boundary' },
+          }],
+        },
+      },
+      chain: { 'phases/phase-wave0.md': { passed: null } },
+    });
+    const nd = join(TMP, 'workflows', 'nodes');
+    writeFileSync(join(nd, 'shared', 'shared-anti-cheating-rules.md'), sharedAntiCheating);
+    const fm = {
+      node_type: 'phase',
+      id: 'phase-wave0',
+      phase: 'wave0',
+      gate: 'wave0-complete',
+      stop: 'no',
+      execution_contract: { surface: 'phase-agent', search_policy: 'no_search' },
+      requires,
+      suggested_context: [],
+    };
+    const body = [
+      '# Phase: Wave0',
+      '',
+      '## 0. Execution Brief',
+      '',
+      '- **Objective**: Test objective.',
+      '- **Start here**: Test start.',
+      '- **Path to pass**: Test path.',
+      '- **Completion check**: Test completion.',
+      '- **Failure posture**: Test failure posture.',
+      '',
+      '## 9. Anti-Cheating Rules',
+      '',
+      section9,
+    ].join('\n');
+    writeFileSync(join(nd, 'phases', 'phase-wave0.md'), `---\n${JSON.stringify(fm)}\n---\n${body}\n`);
+  }
+
+  it('reports when a phase repeats a shared prohibition heading while the shared file is in requires', () => {
+    writePhase({
+      requires: ['shared/shared-anti-cheating-rules'],
+      section9: '通用禁令见 shared/shared-anti-cheating-rules.md；本 phase 特有条目如下：\n- 禁止把 chat memory 当 runtime state',
+    });
+
+    const report = validateWorkflowPackage({
+      workflowsDir: join(TMP, 'workflows'),
+      gateDefsDir: join(TMP, 'gate_defs'),
+    });
+
+    assert.strictEqual(report.passed, false);
+    const dup = report.issues.filter(i => i.class === 'phase_local_anti_cheating_duplication');
+    assert.strictEqual(dup.length, 1, 'Expected exactly one duplication issue');
+    assert.ok(dup[0].detail.includes('禁止把 chat memory 当 runtime state'));
+    cleanup();
+  });
+
+  it('does NOT report when the phase keeps only a pointer plus phase-specific prohibitions', () => {
+    writePhase({
+      requires: ['shared/shared-anti-cheating-rules'],
+      section9: '通用禁令见 shared/shared-anti-cheating-rules.md；本 phase 特有条目如下：\n- 禁止把 gate console confidence 当作 verdict',
+    });
+
+    const report = validateWorkflowPackage({
+      workflowsDir: join(TMP, 'workflows'),
+      gateDefsDir: join(TMP, 'gate_defs'),
+    });
+
+    // Other lifecycle checks may flag the minimal fixture; this test asserts
+    // only that the duplication check stays silent for pointer-only sections.
+    const dup = report.issues.filter(i => i.class === 'phase_local_anti_cheating_duplication');
+    assert.strictEqual(dup.length, 0);
+    cleanup();
+  });
+});

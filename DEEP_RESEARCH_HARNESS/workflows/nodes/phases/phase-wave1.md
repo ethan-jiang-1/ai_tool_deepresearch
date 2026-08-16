@@ -132,7 +132,7 @@ node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs check <bundle>
 
 ### 3.2 Delegated Drain Loop
 
-Claim and submit delegated work units until queue and delegated in-flight work are drained. Before claiming, reconstruct Wave1 in-flight work from `operate-work-unit inspect <bundle>`, queue delegated-in-flight state, `_work_units/wave1/*` status/result/receipt surfaces, and submitted ledger rows.
+共享 batch-poll-submit loop（claim_count 公式、actor 观察、poll/submit/repair 骨架）见 `shared/shared-subagent-protocol.md`（已 in requires）。本 phase 特有 drain 差异如下。Before claiming, reconstruct Wave1 in-flight work from `operate-work-unit inspect <bundle>`, queue delegated-in-flight state, `_work_units/wave1/*` status/result/receipt surfaces, and submitted ledger rows.
 
 Read the `ProfileSchema`-parsed `rb_profile.yaml#/delegated_concurrency_cap` as `effective_delegated_concurrency_cap`. It is the only run-level cap input and is `12` when omitted; do not add a CLI, environment, queue, or host-capacity override.
 
@@ -212,7 +212,7 @@ Immediately after a successful formal submit, complete this visible Phase checkl
 4. Complete the existing index/Seed sync in §3.3 from the same submitted authority, then rerun that same inspect.
 5. After the full queue drain and all returned-topic checklists, run the full-drain Wave inspect in §5.
 
-The Sub-agent does not write reference/index materialization, depth review, or seed return-map backfill. Do not hand-write result semantics, cache declarations, receipts, ledger rows, trace, or provenance to bypass an Engine disposition.
+The Sub-agent does not write reference/index materialization, depth review, or seed return-map backfill. 手写 result/cache/receipt/ledger/trace/provenance 绕过 Engine disposition 的禁令见 `shared/shared-anti-cheating-rules.md`（已 in requires）。
 
 ### 3.2.2 Topic Reference Materialization
 
@@ -374,7 +374,7 @@ Continue from the Markdown rendered by `enter-phase`. `advance-status` only reco
 
 ## 7. On Gate Fail
 
-先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从 legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段或命令。`repair_kind` 只分配责任，当前 loaded node 的 `stop` 才决定 interaction placement；本 phase 为 `stop: no`，任何分类都不得主动发起提问、状态/进度、approval、acknowledgement 或等待。用户主动的 current turn 可从 direct facts 得到直接回答，但回答不创建 checkpoint、state、permission、route、mutation 或 reentry authority。按每个 independent primary hint 执行：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。反馈读取与互动放置的完整契约（`repair_kind` 只分配责任、当前 loaded node 的 `stop` 才决定 interaction placement、`stop: no` 不得主动发起提问/状态/approval/acknowledgement、current turn 回答不创建 checkpoint）见 `shared/shared-silent-execution.md` 与引擎注入的 AUTONOMOUS header。不得从 legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段或命令。按每个 independent primary hint 执行：
 
 1. `repair_kind: agent_action`：当 `write_to` 是已授权的 Wave1 mutable surface 时，由 Agent 修复 exact reference/depth/artifact field/file；不得复制 ledger/cache truth制造第二 authority。
 2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal queue/work-unit/declaration/lifecycle operation；不得要求用户运行普通命令，也不得直接编辑 status、trace、ledger、index、receipt、hash 或 provenance authority。
@@ -403,19 +403,7 @@ Do not stop for progress, idle/no-work, or partial-completion reporting. Phase c
 
 ## 9. Anti-Cheating Rules
 
-- 禁止把 direct Wave1 files or cache leaves counted as delegated evidence without submitted work-unit ledger rows.
-- 禁止用 `operate-queue complete` 完成 delegated topic deepening.
-- 禁止手写 result JSON, runtime receipts, ledger rows, or trace events to satisfy gate provenance.
-- 禁止把 search snippets, titles, or summaries without fetched source content treated as evidence.
-- 禁止让 duplicate source URLs satisfy per-topic reference floors.
-- 禁止让 duplicate Wave0 URLs satisfy the Wave1 new-source floor.
-- 禁止让 prose-only links in `evidence-summary.md` become accepted source coverage without submitted structured source claims.
-- 禁止让 Phase-owned `reference/{topic}-*.md` 扩展 delegated coverage beyond submitted `source_claims[]`, `accepted_source_urls[]`, cache trails, degraded-capture records, or work-unit refs.
-- 禁止让 `depth-review.yaml` create delegated coverage that is not backed by submitted work-unit rows.
-- 禁止 inventing a hidden default when `wave1_per_topic_ref_floor` or `topic_unique_ratio` is missing.
-- 禁止以 token replacement、raw Markdown patch、heading/path/line number 或手改 seed 完成 Wave1 projection。
-- 禁止把 Wave1 projection 写成裸 evidence list、unsupported prose、count summary 或 generic `Wave1 submitted`; retain its atomic identity-bound packet.
-- 禁止把 Agent numeric claims about ref counts used as gate evidence.
-- 禁止修改 `_work_units/_index.json` or queue state by hand to repair submit rejection.
+通用 anti-cheating 禁令见 `shared/shared-anti-cheating-rules.md`（已在 requires，含手写 trace/receipt/ledger 禁令、work-unit provenance、retry fatigue、reference authority 等）；以下为本 phase 特有与纯纪律条目：
+
 - 禁止跳过 gate JSON `inspect`/`advice` when a rule fails.
 - 禁止把 fixture-backed experiment behavior described as real Wave1 Agent research quality.

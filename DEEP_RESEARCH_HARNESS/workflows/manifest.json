@@ -12,13 +12,5 @@
     { "key": "rerun",         "node": "phases/phase-rerun.md",         "gate": "rerun-ready" },
     { "key": "final",          "node": "phases/phase-final.md",          "gate": null }
   ],
-  "shared": [
-    "shared/shared-profile.md",
-    "shared/shared-gate-rules.md",
-    "shared/shared-schemas.md",
-    "shared/shared-repair-guidance.md",
-    "shared/shared-anti-cheating-rules.md",
-    "shared/shared-agent-ux-guidance.md",
-    "shared/shared-silent-execution.md"
-  ]
+  "shared": ["shared/shared-profile.md","shared/shared-schemas.md","shared/shared-anti-cheating-rules.md","shared/shared-agent-ux-guidance.md","shared/shared-silent-execution.md"]
 }

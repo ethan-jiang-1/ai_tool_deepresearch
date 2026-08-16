@@ -195,7 +195,7 @@ node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to seed_topi
 
 ## 7. On Gate Fail
 
-先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority，也不得用其 prose、filename 或 rule target 猜 repair kind/permission。`repair_kind` 只分配责任，当前 loaded node 的 `stop` 才决定 interaction placement；本 phase 为 `stop: no`，任何分类都不得主动发起提问、状态/进度、approval、acknowledgement 或等待。用户主动的 current turn 可从 direct facts 得到直接回答，但回答不创建 checkpoint、state、permission、route、mutation 或 reentry authority。按每个 independent primary hint 执行：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。反馈读取与互动放置的完整契约（`repair_kind` 只分配责任、当前 loaded node 的 `stop` 才决定 interaction placement、`stop: no` 不得主动发起提问/状态/approval/acknowledgement、current turn 回答不创建 checkpoint）见 `shared/shared-silent-execution.md` 与引擎注入的 AUTONOMOUS header。也不得用其 prose、filename 或 rule target 猜 repair kind/permission。按每个 independent primary hint 执行：
 
 1. `repair_kind: agent_action`：正常仅可编辑 `seed-initialization` markers 之间的 body；唯一 frontmatter 例外是 apply 报告的 exact `frontmatter_invalid` syntax coordinate，修复后必须立即运行同一 `enrich_seed` writer。不得扩大到 Engine-owned appendix、registry、queue、ledger 或 canonical Topic 语义。
 2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal operation，例如 topic-state inspect/recover/apply、completion-event operation 或合法 status/handoff owner；不得直接编辑 status、trace、canonical registry 或 provenance。

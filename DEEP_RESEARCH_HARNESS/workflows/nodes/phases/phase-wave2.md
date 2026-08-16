@@ -328,7 +328,7 @@ Continue from the Markdown rendered by `enter-phase`. `advance-status` only reco
 
 ## 7. On Gate Fail
 
-先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从 legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段或命令。`repair_kind` 只分配责任，当前 loaded node 的 `stop` 才决定 interaction placement；本 phase 为 `stop: no`，任何分类都不得主动发起提问、状态/进度、approval、acknowledgement 或等待。用户主动的 current turn 可从 direct facts 得到直接回答，但回答不创建 checkpoint、state、permission、route、mutation 或 reentry authority。按每个 independent primary hint 执行：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。反馈读取与互动放置的完整契约（`repair_kind` 只分配责任、当前 loaded node 的 `stop` 才决定 interaction placement、`stop: no` 不得主动发起提问/状态/approval/acknowledgement、current turn 回答不创建 checkpoint）见 `shared/shared-silent-execution.md` 与引擎注入的 AUTONOMOUS header。不得从 legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段或命令。按每个 independent primary hint 执行：
 
 1. `repair_kind: agent_action`：当 `write_to` 是已授权的 Wave2 mutable surface 时，由 Agent 修复 exact finding/index/ledger/synthesis field/file；不得把 synthesis prose 或 filesystem-only reference 当作 provenance。
 2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal queue/work-unit/declaration/lifecycle operation；不得要求用户运行普通命令，也不得直接编辑 status、trace、ledger declaration、index、receipt、hash 或 provenance authority。
@@ -353,17 +353,7 @@ Do not stop for progress, idle/no-work, or partial-completion reporting. Phase c
 
 ## 9. Anti-Cheating Rules
 
-- 禁止把 synthesis prose 当作 `finding-index.yaml` 或 `cross-topic-ledger.md` 的替代品.
-- 禁止 direct-search new Wave2 evidence from the Phase Agent; new evidence gaps must use targeted work units.
-- 禁止让 newly fetched `reference/00-cross-*.md` pass provenance without submitted `wave2_targeted_evidence` work-unit rows.
-- 禁止让 existing-backed `reference/00-cross-*.md` rely on synthesis prose, `source_layer`, or another unbacked reference without concrete prior submitted backing.
-- 禁止手写 result JSON, runtime receipts, ledger rows, or trace events.
-- 禁止把 queue/index/filesystem presence treated as delegated evidence authority without submitted ledger rows.
-- 禁止把 unresolved P0/P1 findings silently dropped from `finding-index.yaml`.
-- 禁止把 under-backed `priority: p0` / `priority: p1` finding declared pure-synthesis-eligible without submitted evidence or explicit routing.
-- 禁止让 `gap_status: needs_search` coexist with `synthesis_eligibility.pure_synthesis_eligible: true`.
-- 禁止以 token replacement、raw Markdown patch、heading/path/line number 或手改 seed 完成 Wave2 projection。
-- 禁止从 synthesis prose alone 形成 Wave2 projection; retained packet must preserve exact W2F identity, return-map fields, and ledger/index/source refs.
+通用 anti-cheating 禁令见 `shared/shared-anti-cheating-rules.md`（已在 requires，含手写 trace/receipt/ledger 禁令、work-unit provenance、retry fatigue、reference authority 等）；以下为本 phase 特有与纯纪律条目：
+
 - 禁止 inventing references when targeted search fails; record limitation or route to HITL2.
-- 禁止 treating the same submitted reference/cache trail as independent backing for P0/P1 findings.
 - 禁止 bypassing gate JSON `inspect`/`advice`; repair, refill, defer, or record limitation from real feedback.

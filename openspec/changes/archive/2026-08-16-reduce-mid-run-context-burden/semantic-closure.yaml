@@ -1,0 +1,15 @@
+schema_version: semantic-closure/v1
+change: reduce-mid-run-context-burden
+status: not_applicable
+reason: >-
+  This change removes duplicated and machine-covered guidance prose from
+  phase/shared markdown nodes, compresses agent-discipline lists, and adds
+  deterministic guards that re-assert already-established facts (phase-local
+  anti-cheating duplication, machine-checked prohibition phrasing). It changes
+  no Harness runtime fact family, resolver, authority-establishing surface,
+  deterministic verdict, or production behavior: requires closures, --full
+  loading, the injected AUTONOMOUS header, handoff witnesses, and current_node
+  recovery all remain untouched, and shared-silent-execution.md is not
+  modified. The two new checks (consistency-validator class and
+  check-content-drift extension) enforce existing contracts on markdown
+  wording, not new runtime facts.

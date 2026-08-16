@@ -12,6 +12,7 @@ requires:
   - shared/shared-agent-ux-guidance
   - shared/shared-hitl1-capability-probe
   - shared/shared-hitl1-research-access-envelope
+  - shared/shared-anti-cheating-rules
 suggested_context:
   - brief/hitl1
 ---

@@ -199,8 +199,8 @@ inventory, backing, and durable-commit facts only.
 ## 9. Anti-Cheating Rules
 
 - **MUST NOT wait for feedback before a current lineage's missing first
-  delivery.** Empty-bundle base and admitted zero-append post-C5 delivery both
-  publish first.
+  delivery.**（先发布再邀请反馈的次序契约见本 phase §4 的 delivery 段；empty-bundle
+  base 与 admitted zero-append post-C5 delivery 都先发布）
 - **MUST NOT add a Final Gate, `next`, self-transition, satisfaction field,
   delivery trace event, revision counter, current pointer, or handoff rewrite.**
 - **MUST NOT overwrite, delete, rename, or renumber a committed primary

@@ -1,0 +1,110 @@
+schema_version: verification-routing/v1
+change: reduce-mid-run-context-burden
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The new consistency-validator check class (phase-local anti-cheating
+      duplication) and the check-content-drift prohibition-phrasing extension
+      are deterministic static checks over real repository files, asserted by
+      focused node tests under tests/engine/ and the existing content-drift
+      governance test surface; each deleted guidance sentence has a matching
+      negative assertion that the machine check still enforces the fact.
+  integration:
+    status: selected
+    rationale: >-
+      The workflow package consistency regression (validateWorkflowPackage via
+      tests/engine/consistency-validator.test.mjs) and the md contract
+      regressions (tests/integration/md/) verify that the markdown edits keep
+      phase structure, requires closures, and shared-node contracts valid, and
+      that the new shared drain-loop file resolves in every wave requires.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      Zero engine/gate/recovery-chain behavior changes: no temporary bundle
+      chain needs to be driven end to end; all changes are markdown wording
+      plus static guard extensions verified by unit/integration assertions.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      No Agent behavior claims: the change compresses Agent-readable guidance
+      and adds guards that enforce existing contracts on markdown wording; it
+      does not assert real Agent behavior.
+claims:
+  - id: phase-local-anti-cheating-duplication-guard
+    statement: >-
+      SHC-004/RWP (extended): when a phase node's requires includes
+      shared/shared-anti-cheating-rules, its local ## 9 section must not
+      verbatim-repeat the shared file's prohibition sentences; the new
+      consistency-validator check class fails and names the phase node and the
+      repeated sentence when duplication appears, and the wave/hitl1/hitl2
+      phase nodes pass it after the edits.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/consistency-validator.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: deleted-prohibition-still-machine-enforced
+    statement: >-
+      For every class-(1) guidance sentence deleted or pointerized in this
+      change, the machine check that enforces the underlying fact still exists
+      and is exercised: the decision-table/gate-rule/validator regressions
+      (work-unit-recovery-decision-table, work-unit-submitted-ledger,
+      seed-topics gate checks, wave gate checks) keep passing, proving the
+      fact remains machine-enforced without the duplicated prose.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-recovery-decision-table.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: workflow-package-and-md-regressions-stay-green
+    statement: >-
+      WNC/SHC: after the markdown dedup/compression and the new shared
+      drain-loop file, the workflow-package consistency regression and the md
+      contract regressions still pass, proving requires closures resolve, phase
+      structure (## 0-9 skeleton) is preserved, shared nodes keep their
+      authority boundaries, and the new shared file is in every wave requires.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-context-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: content-drift-prohibition-phrasing-guard
+    statement: >-
+      RET-006 (extended): check-content-drift.mjs rejects machine-covered
+      prohibition phrasing in phase prose (allowing only pointer forms); the
+      governance test for content drift stays green after the edits and fails
+      when a prohibited sentence is reintroduced.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/check-content-drift.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

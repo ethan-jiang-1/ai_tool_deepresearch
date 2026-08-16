@@ -115,7 +115,7 @@ node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to readiness
 
 ## 7. On Gate Fail
 
-先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从旧表格、legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段、命令或 earlier-phase route。`repair_kind` 只分配责任，当前 loaded node 的 `stop` 才决定 interaction placement；本 phase 为 `stop: no`，任何分类都不得主动发起提问、状态/进度、approval、acknowledgement 或等待。用户主动的 current turn 可从 direct facts 得到直接回答，但回答不创建 checkpoint、state、permission、route、mutation 或 reentry authority。按每个 independent primary hint 执行：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。反馈读取与互动放置的完整契约（`repair_kind` 只分配责任、当前 loaded node 的 `stop` 才决定 interaction placement、`stop: no` 不得主动发起提问/状态/approval/acknowledgement、current turn 回答不创建 checkpoint）见 `shared/shared-silent-execution.md` 与引擎注入的 AUTONOMOUS header。不得从旧表格、legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段、命令或 earlier-phase route。按每个 independent primary hint 执行：
 
 1. `repair_kind: agent_action`：当 `write_to` 是已授权的 artifact/profile mutable surface 时，由 Agent 修复 exact file/field；不得把缺失 prior Gate authority伪装成 artifact repair。
 2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal gate/status/handoff/recovery operation；不得要求用户运行普通命令，也不得直接编辑 `rb_status.json`、`rb_trace.jsonl`、ledger、index、receipt、hash 或 provenance authority。

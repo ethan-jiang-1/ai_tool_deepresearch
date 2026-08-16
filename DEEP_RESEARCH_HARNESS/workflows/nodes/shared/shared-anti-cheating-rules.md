@@ -75,23 +75,21 @@ conclusion 或 research-profile 变化的反馈，才走 audited C5/HITL2 `rerun
 
 ### 12. 禁止把 setup pass 当成 readiness pass
 
-### 13. 禁止遗漏 `output_files[]` 和 `cache_trails[]`
+**正确替代**：`setup-ready` gate pass 只确认 structural consistency（文件存在、schema 合法、basename 一致）。它不意味着研究质量过关或可以交付最终报告。`readiness-passed` 是另一个 gate，在 wave0/1/2 + HITL2 之后。
+
+### 13. 禁止遗漏 `output_files[]` 和 `cache_trails[]` 声明
 
 Sub-agent 返回给 work-unit submit 的 `result.json` MUST 包含 `work_id`、`queue_item_id`、`kind`、`receipt_nonce`、`output_files[]`（声明每个产出文件的 path/role/source_url）和 `cache_trails[]`（声明实际写入的 leaf source 目录路径）。遗漏声明会使 `operate-work-unit submit` reject。
 
-**正确替代**：Sub-agent 在返回 result JSON 前确认所有产出文件已在 `output_files[]` 中声明，所有 `_cache/` leaf 目录已在 `cache_trails[]` 中声明。
-
-### 14. 禁止遗漏 `cache_trails[]`
-
 每个 `cache_trails[]` 项必须是 leaf source directory（直接含 canonical base `websearch.json`/`page.md`/`meta.json` 三文件），不得声明 parent cache dir。Assigned `cache_policy.leaf_files` 只能增加 sidecar，不能移除 base files。`meta.json` 至少包含 `url`、`source_url`、`final_url`、`fetched_url` 或 `source_slug` 之一；`operate-work-unit submit` 会复用 Engine-owned contract 逐 leaf 验证。
 
-**正确替代**：声明 `_cache/wave0/primary/01_test/s01_source/`（leaf）而不是 `_cache/wave0/primary/01_test/`（parent）。
+**正确替代**：Sub-agent 在返回 result JSON 前确认所有产出文件已在 `output_files[]` 中声明，所有 `_cache/` leaf 目录已在 `cache_trails[]` 中声明（声明 `_cache/wave0/primary/01_test/s01_source/`（leaf）而不是 `_cache/wave0/primary/01_test/`（parent））。
 
-### 15. 禁止绕过 work-unit provenance
+### 14. 禁止绕过 work-unit provenance
 
 Delegated task MUST be claimed as a work unit and accepted through `operate-work-unit submit`. Phase Agent 不直接执行 search 和 page fetch 来冒充 delegated output——delegated search/fetch 必须走 work-unit claim → Sub-agent → `shared-page-fetch-guidance.md` 的 per-URL access sequence；不直接写 `rb_output_declarations.jsonl`；不手写 ledger row 冒充 completion。Gate coverage comes from submitted work-unit ledger rows plus cross-checks.
 
-### 16. 禁止伪造 reference authority；允许有 submitted backing 的 Phase-owned projection
+### 15. 禁止伪造 reference authority；允许有 submitted backing 的 Phase-owned projection
 
 Phase Agent MUST NOT use scripts (bash, node, or any language) or template substitution to batch-generate `reference/*.md` files. Script/template files, filesystem-only references, unsubmitted source URLs, hand-written ledger rows, and authority inferred from `source_layer` alone are non-authoritative. `source_layer` is not authority.
 
@@ -105,24 +103,11 @@ If the Agent wants to "create many reference files quickly," the correct answer 
 
 **正确替代**：Phase Agent claims delegated queue demand via `operate-work-unit claim` → spawns the bounded Sub-agent prompt → Sub-agent writes declared outputs/cache + runtime receipt → Phase Agent runs `operate-work-unit submit --work-id <work_id> --result <result.json>` → Engine validates and appends ledger coverage → Phase Agent writes only backed consumer projections。
 
-### 17. 禁止手工 promote 未知 temp 或 persistence workspace
+### 16. 禁止手工 promote 未知 temp 或 persistence workspace
 
 Arbitrary `.tmp` files and unbound diagnostic bytes are not recovery authority. Do not rename them into `reference/`, `artifacts/`, `final/`, or `_cache/`, and do not use a persistence verdict as provenance, submit, gate, handoff, or delivery evidence.
 
 **正确替代**：保留 completed staging source，使用 `operate-artifact-persistence.mjs persist`；崩溃后先停止该 bundle 的并发 persist，再运行 quiescent `sweep`。若返回 `blocked`，Agent 检查并只移除报告的单个 workspace，随后 retry persist 并 rerun sweep；没有 force、discard、quarantine 或 unknown-temp promotion。
-
-**正确替代**：`setup-ready` gate pass 只确认 structural consistency（文件存在、schema 合法、basename 一致）。它不意味着研究质量过关或可以交付最终报告。`readiness-passed` 是另一个 gate，在 wave0/1/2 + HITL2 之后。
-
-### 13. 确定性出口原则 — 跨 phase 路由编码标准
-
-**原则**：某 outcome 是否应进 `transitions.chain.json` 的判断标准：该 outcome 是否有固定、上下文无关的 next-node 目标。
-
-- **有固定目标 → 确定性出口，进 chain**：outcome 有唯一、不依赖 Agent 判断的 next-node。Agent 只需选择 outcome 字符串，chain 返回确定的 target fileRef。当前确定性出口：`passed`（所有 phase — gate 确定 normal next）、`rerun`（HITL2 — 用户明确选择增量重跑）。
-- **目标依赖 Agent 判断 → 不确定 branch，归 Agent**：outcome 的 target 取决于 Agent 对运行时状态的分析（哪个 phase 需要修改、修改什么、能不能直接修）。chain 返回 `no_transition`。当前不确定 branch：`request_view_revision`、`repair`、`stop_blocked`。
-
-**此原则不绑定具体 decision 名称**，可跨 phase 复用。新增确定性出口时——例如 future phase 产生新的确定性 outcome——按此标准判断是否编码进 chain。
-
-**正确替代**：在 phase MD 和 chain 设计时，对每个 outcome 问："next-node 是否固定且上下文无关？"是 → 进 chain。否 → 归 Agent。
 
 ## Authority Boundary
 

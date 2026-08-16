@@ -131,7 +131,7 @@ node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs check <bundle>
 
 ### 3.2 Delegated Drain Loop
 
-Repeat the shared batch-poll-submit loop until the queue and delegated in-flight work are drained. Before claiming, reconstruct in-flight Wave0 work from `operate-work-unit inspect <bundle>`, queue delegated-in-flight state, and `_work_units/wave0/*` status/result/receipt surfaces.
+共享 batch-poll-submit loop（claim_count 公式、actor 观察、poll/submit/repair 骨架）见 `shared/shared-subagent-protocol.md`（已 in requires）。本 phase 特有 drain 差异如下。Before claiming, reconstruct in-flight Wave0 work from `operate-work-unit inspect <bundle>`, queue delegated-in-flight state, and `_work_units/wave0/*` status/result/receipt surfaces.
 
 Read the `ProfileSchema`-parsed `rb_profile.yaml#/delegated_concurrency_cap` as `effective_delegated_concurrency_cap`. It is the only run-level cap input and is `12` when omitted; do not add a CLI, environment, queue, or host-capacity override.
 
@@ -158,7 +158,7 @@ If claim rejects a supplied observation, use top-level `actor_observation_feedba
 
 For each claimed work unit, use the claim output's canonical absolute `bundle_dir` and absolute `prompt_refs[]` paths. Never derive the bundle root from cwd, append a bundle basename, or switch to a same-named nested directory.
 
-1. Read `prompt_refs[].task_ref`, `beacon_ref`, and `result_schema_ref` at their returned absolute paths. Confirm that `_beacon.json` carries the same canonical absolute `bundle_dir`. Treat the beacon as immutable: do not overwrite, edit, or repair `_beacon.json`; an identity/root conflict belongs at the Engine checkpoint.
+1. Read `prompt_refs[].task_ref`, `beacon_ref`, and `result_schema_ref` at their returned absolute paths. Confirm that `_beacon.json` carries the same canonical absolute `bundle_dir`. Beacon immutability 与 identity/root conflict 处理见 `shared-subagent-protocol.md`（已 in requires）。
 2. Spawn the Sub-agent with the generated prompt.
 3. Require real search and page fetch following the per-URL access sequence in `shared-page-fetch-guidance.md`. When page fetch is blocked or unavailable at every prior tier, and independent shell/network permission exists, make at most one bounded `curl` request for that same URL. Do not use search snippets as evidence.
 4. Plan candidate URLs from the explicit `rb_profile.yaml#/research_style_params.wave0_per_topic_source_floor` plus a conservative small margin for fetch failures, duplicates, and non-countable pages. `wave0_shared_ref_total` remains a Phase-side planning signal for later submitted-backing materialization; it does not add a rich-reference output to this current actor contract. Do not use a fixed hard-coded fetch aim unless it is written as `profile/runtime floor + named margin`.
@@ -307,7 +307,7 @@ Continue from the Markdown rendered by `enter-phase`. `advance-status` only reco
 
 ## 7. On Gate Fail
 
-先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从 legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段或命令。`repair_kind` 只分配责任，当前 loaded node 的 `stop` 才决定 interaction placement；本 phase 为 `stop: no`，任何分类都不得主动发起提问、状态/进度、approval、acknowledgement 或等待。用户主动的 current turn 可从 direct facts 得到直接回答，但回答不创建 checkpoint、state、permission、route、mutation 或 reentry authority。按每个 independent primary hint 执行：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。反馈读取与互动放置的完整契约（`repair_kind` 只分配责任、当前 loaded node 的 `stop` 才决定 interaction placement、`stop: no` 不得主动发起提问/状态/approval/acknowledgement、current turn 回答不创建 checkpoint）见 `shared/shared-silent-execution.md` 与引擎注入的 AUTONOMOUS header。不得从 legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段或命令。按每个 independent primary hint 执行：
 
 1. `repair_kind: agent_action`：当 `write_to` 是已授权的 Wave0 mutable surface 时，由 Agent 修复 exact field/file；不得把 filesystem-only artifact 追认为 submitted coverage。
 2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal queue/work-unit/topic/lifecycle operation；不得要求用户运行普通命令，也不得直接编辑 status、trace、ledger、index、receipt、hash 或 provenance authority。
@@ -333,17 +333,7 @@ Do not stop for progress, idle/no-work, or partial-completion reporting. Phase c
 
 ## 9. Anti-Cheating Rules
 
-- 禁止把 direct filesystem artifacts 当作 delegated evidence；delegated Wave0 outputs require submitted work-unit ledger rows.
-- 禁止用 `operate-queue complete` 完成 delegated source intake.
-- 禁止手写 `rb_output_declarations.jsonl` rows, work-unit result files, receipts, or trace events.
-- 禁止把 search snippets 当作 fetched source evidence.
-- 禁止 claim 后跳过 Sub-agent task instructions and submit a fabricated result.
+通用 anti-cheating 禁令见 `shared/shared-anti-cheating-rules.md`（已在 requires，含手写 trace/receipt/ledger 禁令、work-unit provenance、retry fatigue、reference authority 等）；以下为本 phase 特有与纯纪律条目：
+
 - 禁止让当前 `wave0_source_intake` actor 写入或声明 `reference/00-shared-*.md`; shared references are Phase-owned consumer projections after formal submit.
-- 禁止以 token replacement、raw Markdown patch、heading/path/line number 或手改 seed 完成 Wave0 projection。
-- 禁止把 Wave0 projection 写成 naked URL/evidence list or generic `Wave0 submitted` prose; retain a packet entry with identity, fields, and refs.
-- 禁止让 orphan `reference/00-shared-*.md` satisfy gate coverage.
-- 禁止修改 `_work_units/_index.json` to repair submit or inspect failures.
-- 禁止覆盖、编辑或“修复” immutable `_beacon.json`; use the canonical absolute `bundle_dir` and Engine checkpoint named by the failure.
-- 禁止给 claim 前已经存在的 work/output 补写 retrospective receipt/result or post-hoc provenance；旧文件不能成为当前 claimed attempt 的 execution evidence.
-- 禁止把 gate console confidence当作 verdict；read gate JSON and trace/check artifacts.
-- 禁止在 repeated failure 后静默推进；use gate `inspect`/`advice`, terminal attempt commands, or refill.
+- 禁止把 gate console confidence 当作 verdict；read gate JSON and trace/check artifacts.

@@ -43,7 +43,9 @@ changes:
 ### 1.3 负担轴(第一轮未动,本轮的真正目标)
 
 - phase 节点体量:wave0 349 / wave1 421 / wave2 369 行;否定规则 **456 行关键字 /
-  ~448 sites**(340 是句级去重后的口径)。
+  ~448 sites**(340 是句级去重后的口径)。2026-08-16 C2 apply 后复测(全 nodes 29 文件):
+  总行数 **5,431 → 4,999(删 432 行,~8%)**,否定行 **456 → 403(降 53)**;
+  wave0 349→340 / wave1 421→410 / wave2 369→360;anti-cheating 131→117。
 - **机制事实(重要,修正初版假设)**:默认 `enter-phase` **不自动注入** shared 文件
   (`workflow-chain.mjs:377-420` 只解 `requires` 闭包;`--full` 才附全文,
   `cli/enter-phase.mjs:199-207`;canonical flow 从不传 `--full`)。"重复税"=
@@ -67,6 +69,12 @@ changes:
 - 推荐 **Option A:纯 markdown 去重/压缩,零引擎改动**:预计静态删 ~320-430 行
   (6-8%),每轮重复税降 ~350-550 行;`requires` 闭包、`--full`、注入头、
   见证链、`current_node` 恢复全部不动,每 phase 在 fresh context 仍独立可恢复。
+  2026-08-16 apply 复核:wave §3.2 **不是**审计声称的"三份近同 ~30 行"——wave0
+  ~80 行(wave 特有 dpt-source-intake 角色/floor)、wave1 163 行(4 个子节全特有)、
+  wave2 89 行(finding triage 循环特有);共享 batch-poll-submit 骨架已在
+  `shared-subagent-protocol.md`(三 wave 均 in requires),故**不新建**
+  shared-wave-drain-loop.md,改为 wave0/1 §3.2 首行显式指针到 shared-subagent-protocol
+  (wave2 无 drain 骨架,不指针)。
 - 引擎级去重(Option C once-per-run loading)会**换掉恢复语义**(fresh context
   需先跑 reload 命令)→ 列为独立 deferred,触发条件:一次真实 run 的成本观察。
 - **硬约束**:`shared-silent-execution.md` 整份不可删(恢复/放置契约);

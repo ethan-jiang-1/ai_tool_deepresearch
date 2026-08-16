@@ -10,6 +10,7 @@ execution_contract:
 requires:
   - shared/shared-profile
   - shared/shared-agent-ux-guidance
+  - shared/shared-anti-cheating-rules
 suggested_context:
   - brief/hitl2
   - shared/shared-gate-rules
@@ -187,7 +188,7 @@ Phase Agent 仍写 `hitl2_recorded` diagnostic event，但缺少该独立 event 
 
 - **用户 decision MUST 写入 `rb_profile.yaml`**，不能只停留在 chat memory
 - **MUST NOT 在用户未回答时填写 placeholder decision**——`user_decision` 必须来自真实用户输入
-- **MUST NOT 将不确定 branch 的路由编码进 transition chain**——确定性出口（有固定、上下文无关的 next-node 目标）SHALL 进 chain。当前确定性出口：`passed`、`rerun`。不确定 branch：`request_view_revision`、`repair`、`stop_blocked`（目标依赖 Agent 判断运行时状态）——归 Agent
+- **MUST NOT 将不确定 branch 的路由编码进 transition chain**——确定性出口标准（固定、上下文无关的 next-node 目标进 chain；`request_view_revision`、`repair`、`stop_blocked` 归 Agent）以 `workflows/transitions.chain.json` 与 `shared/shared-anti-cheating-rules.md` 为准，本 phase 不重复其细节
 - **MUST NOT 在 `user_decision: rerun` 时仍然 advance 到 readiness**——gate CLI MUST emit the `rerun` outcome, and Agent MUST consume `check.next: phases/phase-rerun.md` through `enter-phase`
 - **HITL2 phase 写 `human_decision_checkpoints/hitl2` 时 MUST preserve 已有的 `rerun_count` 值**——MUST NOT 重置或删除。`rerun_count` 由 `phase-rerun.md` 管理递增，HITL2 只能读取不能修改
 - **MUST NOT 让 pending 或 custom-incomplete candidate 跨到 Readiness**——只有 clear acceptance/correction/delegation 后的完整 profile handoff 才可写 `proceed_to_readiness`

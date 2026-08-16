@@ -139,13 +139,15 @@ describe('§3 Allowed Actions — three-stage queue-driven structure', () => {
 // ── §9 Anti-Cheating Rules ───────────────────────────────────────────
 
 describe('Anti-Cheating Rules', () => {
-  it('has at least 10 anti-cheating rules', () => {
+  it('keeps a pointer to the shared anti-cheating baseline plus wave-specific prohibitions', () => {
     const antiSection = body.indexOf('Anti-Cheating');
     assert.ok(antiSection > 0, 'missing Anti-Cheating Rules section');
     const sectionBody = body.slice(antiSection);
-    const rules = sectionBody.match(/禁止/g);
-    assert.ok(rules && rules.length >= 10,
-      `expected at least 10 anti-cheating rules, found ${rules ? rules.length : 0}`);
+    // The common baseline is single-sourced in the shared file (in requires);
+    // the wave section points to it instead of repeating it (SHC-004/RWP).
+    assert.match(sectionBody, /shared\/shared-anti-cheating-rules\.md/);
+    // Wave-specific prohibitions remain in the local section.
+    assert.ok(sectionBody.length > 80, 'wave-specific anti-cheating section is too short');
   });
 });
 
