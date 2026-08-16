@@ -16,7 +16,7 @@
 ## 活跃列表
 
 > BUG-200--204 已按 current-head evidence 和归档 remediation changes 结案。
-> BUG-099/106 已按 2026-08-08 分诊移入 [`../_done/_suspened_bugs/`](../_done/_suspened_bugs/)（弱模型执行产物，非确定性框架缺陷）。
+> BUG-099/106 已按 2026-08-08 分诊移入 [`../_done/_suspended_bugs/`](../_done/_suspended_bugs/)（弱模型执行产物，非确定性框架缺陷）。
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
@@ -82,9 +82,9 @@ work-unit receipt/ledger，因此不能把每个 actor 行为归因到某个更�
 “模型与归因备注”把可由更强 Agent guidance 避免的执行错误，与必须修 framework
 contract/evaluator/writer 的确定性缺陷分开记录；本批次不因模型怀疑而修改框架代码。
 
-### 弱模型执行问题挂起 → `_done/_suspened_bugs/`（2026-07-29）
+### 弱模型执行问题挂起 → `_done/_suspended_bugs/`（2026-07-29）
 
-经代码核实，BUG-144/145/147/149/161/163 共 6 个的触发点是**弱模型执行问题**（强模型按既有 contract 不会触发），不是确定性 framework 缺陷，已移至 [`../_done/_suspened_bugs/`](../_done/_suspened_bugs/)，留作 actor-guidance 参考，不作为活跃 implementation defect 处理：
+经代码核实，BUG-144/145/147/149/161/163 共 6 个的触发点是**弱模型执行问题**（强模型按既有 contract 不会触发），不是确定性 framework 缺陷，已移至 [`../_done/_suspended_bugs/`](../_done/_suspended_bugs/)，留作 actor-guidance 参考，不作为活跃 implementation defect 处理：
 
 | Bug | 弱模型触发点（非框架缺陷） |
 |-----|----------------------------|
@@ -113,7 +113,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 | BUG-159 | P3 文档契约 | advance-status 前置条件未写入 phase §5 |
 | BUG-160 | P3 CLI 可用性 | operate-topic-state/queue 无 --help |
 
-> BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspened_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
+> BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspended_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
 **Next available bug ID: BUG-225**
 

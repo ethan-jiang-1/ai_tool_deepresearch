@@ -218,7 +218,7 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 
 ## Suspended (未修复，仍在排查)
 
-这些 bug 仍在 `../_suspened_bugs/`，当前无获批 implementation change：
+这些 bug 仍在 `../_suspended_bugs/`，当前无获批 implementation change：
 
 | ID | Date | Title |
 |----|------|-------|

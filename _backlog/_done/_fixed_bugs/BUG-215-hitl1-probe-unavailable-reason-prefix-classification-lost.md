@@ -137,7 +137,7 @@ suite"` 返回的候选全部是 Wikipedia / mirror 域名，属于**结构性�
 3. **弱模型执行产物（→ 挂起参考，非活跃缺陷）**：三次独立 probe agent 返回的
    `probed_at` 都是 `2026-08-11T00:00:00.000Z`（精确午夜、跨 agent 相同、明显非
    实际探测时间）。Phase Agent 写入 profile 时已用真实时间戳替换。按
-   `_backlog/_done/_suspened_bugs/` 分诊约定，此类属弱模型执行纪律问题，不列为
+   `_backlog/_done/_suspended_bugs/` 分诊约定，此类属弱模型执行纪律问题，不列为
    活跃框架缺陷。
 
 ## Repro
