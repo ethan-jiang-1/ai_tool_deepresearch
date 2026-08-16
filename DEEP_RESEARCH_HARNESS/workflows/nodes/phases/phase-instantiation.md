@@ -56,6 +56,8 @@ node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-instantiation-complete.mjs --bun
 
 读取 `check.next`（来自 transition table 查询）。Advance to `hitl1`：加载 `phase-hitl1.md`。
 
+> 兼容例外（WNC-010）：instantiation/HITL1 为 bootstrap status shape 例外，本 phase 不执行 `enter-phase`/`advance-status` handoff；自 setup 起的后续 phase 按其 §6 常规 handoff 执行。
+
 ## 7. On Gate Fail
 
 先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。反馈读取与互动放置的完整契约（`repair_kind` 只分配责任、当前 loaded node 的 `stop` 才决定 interaction placement、`stop: no` 不得主动发起提问/状态/approval/acknowledgement、current turn 回答不创建 checkpoint）见 `shared/shared-silent-execution.md` 与引擎注入的 AUTONOMOUS header。也不得用其 prose 猜 repair kind、路径或命令。按每个 independent primary hint 执行：

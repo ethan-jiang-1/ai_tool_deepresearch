@@ -1,0 +1,47 @@
+schema_version: verification-routing/v1
+change: harness-entry-doc-consistency
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      本 change 无 in-process 逻辑/契约变化，只有跨文件的文档一致性事实与一个
+      spec delta，不产生 unit 级断言面。
+  integration:
+    status: selected
+    rationale: >-
+      文档一致性是确定性跨文件事实：新 canonical 表述通过真实仓库文件的静态
+      断言锁定（tests/integration/md/harness-entry-doc-consistency.test.mjs），
+      并复用既有 agent-behavior-file-pair-sync-guard 验证 harness
+      AGENTS/CLAUDE 同步，无网络、无 Agent 执行。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      无 lifecycle/gate/recovery 链变化：不改 Engine、CLI、gates、schema，
+      不需要驱动端到端临时 bundle 链。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称真实 Agent 行为变化：全部为文档措辞与 accepted contract 对齐，
+      由确定性文档回归锁定，不做 Agent 行为断言。
+claims:
+  - id: harness-entry-doc-consistency-guard
+    statement: >-
+      RUE-002 相关：README 的 collision 段与 pre-research-phase-content 一致
+      （不再含「必须报错停止/非当前行为」冲突句），README surface 清单为
+      「核心工具 + 以 cli/ 目录为准」指针，RUN.md §0 含 selected-entry vs
+      proactive-context-reading 区分句，phase-instantiation/phase-hitl1 §6 含
+      WNC-010 bootstrap 兼容例外标注，start-research collision 措辞对齐，
+      harness AGENTS/CLAUDE 入口 bullet 含「preflight 失败不等于无 candidate」
+      消歧句；上述文件均以 exact canonical 子串存在且过期句已移除。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/harness-entry-doc-consistency.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

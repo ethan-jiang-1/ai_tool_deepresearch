@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: harness-entry-doc-consistency
+status: not_applicable
+reason: >-
+  本 change 只修改 Agent-facing 文档措辞（harness README/RUN/phase
+  docs/playbook/AGENTS/CLAUDE）并 MODIFIED bundle/run-entry 的 RUE-002 表述，
+  不改变任何 cataloged semantic fact family 覆盖的确定性事实
+  （bundle.current-entry-contract、lifecycle.gate-status-trace-handoff、
+  cli.exit-code-convention 等均不触及）；selected-entry reading 与 proactive
+  context reading 的区分是 guidance 措辞校准，不构成新的 fact family。

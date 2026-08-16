@@ -48,7 +48,8 @@ describe('Deep Research Harness research entry routing contract', () => {
       assert.match(text, /continue-run-bundle\.md/);
       assert.match(text, /同根 `BUNDLE_ENTRY\.md` \+ `BUNDLE_MAP\.md`/);
       assert.match(text, /unsupported_current_entry_contract/);
-      assert.match(text, /没有 explicit candidate 才读 `RUN\.md`/);
+      assert.match(text, /preflight 失败，不等于「没有 explicit candidate」/);
+      assert.match(text, /禁止因此 fallback 读 `RUN\.md`/);
       assert.match(text, /`research`、`deep-research`/);
       assert.match(text, /直接 WebSearch\/WebFetch/);
       assert.match(text, /HITL1 probe 与后续 phase 已授权的 research/);

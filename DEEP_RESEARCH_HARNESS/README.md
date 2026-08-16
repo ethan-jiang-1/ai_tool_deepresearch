@@ -20,7 +20,7 @@ research；它不改变随后 `continue-run-bundle.md` / `RUN.md` 的 existing s
 
 ## 触发规则（最高优先）
 
-**用户有研究意图 → 触发本 Harness。** 这是 Deep Research 触发信号，不是代码探索请求。触发信号包括但不限于：
+**用户有研究意图 → 触发本 Harness。** 这是 Deep Research 触发信号，不是代码探索请求。Agent 主动的代码探索/上下文阅读（用户无研究意图、且未把本文件或 `RUN.md` 作为 entry 提供）不触发本 Harness、不选择 run。触发信号包括但不限于：
 
 - 用户提到 `DEEP_RESEARCH_HARNESS`——**哪怕只是贴出本目录的路径**——并带一个问题；
 - 用户说"研究/调研/deep research/research report/帮我查…/…是什么"等研究意图；
@@ -72,7 +72,8 @@ Current run bundle root 是本次 research run、CLI invocation、task card 或�
 这些 surface 当前已经存在，可直接使用：
 
 - `COMMANDS.md`：命令索引。
-- `cli/`：当前 Harness-level CLI，包括 `instantiate-run-bundle.mjs`、`validate-bundle.mjs`、`inspect-bundle.mjs`、`operate-queue.mjs`。
+- `cli/`：当前 Harness-level CLI，核心工具包括 `instantiate-run-bundle.mjs`、`validate-bundle.mjs`、`inspect-bundle.mjs`、`operate-queue.mjs`、`operate-work-unit.mjs`、`enter-phase.mjs`、`advance-status.mjs`、`check-reentry.mjs`、`audit-phase-status.mjs`、`log-event.mjs`；完整清单以 `cli/` 目录为准。
+- `cli/gates/`：当前每个 gate 一个外部 CLI wrapper（`check-gate-*.mjs`，当前 10 个）。
 - `schema/contracts/`：当前 executable schema contracts，包括 `plan.mjs`、`profile.mjs`、`queue.mjs`、`status.mjs`、`trace.mjs`。
 - `engine/`：当前 deterministic engine code 和 trace utility。
 - `rb_templates/`：实例化 run bundle 时 materialize 的初始模板。
@@ -86,7 +87,6 @@ Current run bundle root 是本次 research run、CLI invocation、task card 或�
 - `schema/gate_definitions/`：read-only gate definition JSON，不保存 pass/fail。
 - `workflows/transitions.chain.json`：当前 Gate transition source of record；`engine/ask-next.mjs` 的 `resolveNodeTransitionDetailed()` 提供详细查询。
 - `engine/gates/`：per-gate engine modules 的目标位置；当前共享 helper 位于 `engine/helpers/gate-helpers.mjs`。
-- `cli/gates/`：one gate per external CLI wrapper。Gate 命令必须显式接收 current run bundle root；具体 flag 由实现 contract 决定。
 
 ## Run Bundle 外形
 
@@ -97,8 +97,7 @@ dpt_rb_<name>/
 ```
 
 - 当前 production 实例化入口接收显式 `<name>`，创建 `dpt_rb_<name>/`；Agent-facing playbooks derive this name from the research request unless a name was already supplied before Harness execution.
-- 如果目标目录已存在，必须报错停止；不能覆盖或复用旧 bundle。
-- 自动英文 slug 和 collision suffix 是 workflow-foundation target，不是当前 production CLI 行为。
+- 如果目标目录已存在，CLI 报错退出且绝不覆盖；Agent 按 pre-research-phase-content 契约派生带 `-<hex6>` 后缀的 collision-safe 名称重试，经 trace/log 记录，不询问用户。
 - Disposable experiment bundle 使用 `dpt_disp_*`，也是 mutable runtime bundle root when selected.
 
 当前 canonical run bundle 目录外形：

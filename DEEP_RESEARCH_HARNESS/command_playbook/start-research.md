@@ -31,7 +31,7 @@ Agent 命令：从零开始一次完整的 Deep Research。
 B=$(node DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs <name>)
 ```
 
-若目录已存在，报错退出。Production run bundle 不允许覆盖；Agent 派生新的 collision-safe 名称后重试，或使用 entry 前已提供的替代名称。
+若目录已存在，CLI 报错退出（永不覆盖）；Agent 按 pre-research-phase-content 契约派生带 `-<hex6>` 后缀的 collision-safe 名称重试、经 trace/log 记录，不询问用户；或使用 entry 前已提供的替代名称。
 
 JS 脚本内部已完成：目录创建、模板替换、Zod schema 校验、validate-bundle + inspect-bundle 质量检查。
 
@@ -63,7 +63,7 @@ research_profile: <profile>
 
 ### 6. 后续：Phase Node 自行驱动
 
-从这一步开始，不再需要额外指引。每个 phase node 本身就是一个完整的 instruction sheet：
+从这一步开始，不再需要额外指引。每个 phase node 本身就是一个完整的 instruction sheet（instantiation/HITL1 为 WNC-010 声明的 bootstrap 兼容例外，已在其 §6 标注）：
 
 1. 读 phase node（`phases/phase-<name>.md`）
 2. 按 "Allowed Actions" section 执行
