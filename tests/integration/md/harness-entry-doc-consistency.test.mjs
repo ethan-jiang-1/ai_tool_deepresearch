@@ -81,15 +81,31 @@ describe('Harness README current executable surface', () => {
 });
 
 describe('Phase §6 bootstrap exception labeling (WNC-010)', () => {
-  it('labels the instantiation/HITL1 exception without adding enter-phase', () => {
-    for (const [name, text] of [['phase-instantiation', instantiation], ['phase-hitl1', hitl1]]) {
+  it('labels the exception as advance-status-only and instructs enter-phase loading', () => {
+    const expectations = [
+      ['phase-instantiation', instantiation, 'enter-phase.mjs --bundle <path> --node phases/phase-hitl1.md'],
+      ['phase-hitl1', hitl1, 'enter-phase.mjs --bundle <path> --node phases/phase-setup.md'],
+    ];
+    for (const [name, text, loader] of expectations) {
       assert.ok(
         text.includes('兼容例外（WNC-010）：instantiation/HITL1 为 bootstrap status shape 例外'),
         `${name} §6 must carry the WNC-010 bootstrap exception label`,
       );
       assert.ok(
-        !text.includes('enter-phase.mjs'),
-        `${name} must not gain an enter-phase instruction (WNC-010 SHALL NOT be silently rewritten)`,
+        text.includes('不执行 `advance-status` source-gate 同步'),
+        `${name} §6 must scope the bootstrap exception to advance-status source-gate sync only`,
+      );
+      assert.ok(
+        text.includes('例外**不豁免 `enter-phase`**'),
+        `${name} §6 must state the exception does not exempt enter-phase`,
+      );
+      assert.ok(
+        text.includes(loader),
+        `${name} §6 must instruct the exact enter-phase loader command for check.next`,
+      );
+      assert.ok(
+        !text.includes('不执行 `enter-phase`'),
+        `${name} §6 must not claim the bootstrap exception skips enter-phase`,
       );
     }
   });

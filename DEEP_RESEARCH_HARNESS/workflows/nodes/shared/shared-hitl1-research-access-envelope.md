@@ -149,7 +149,7 @@ research_access:
       retrieval_surface: curl
     - sample_id: rfc_editor
       source_group: overseas
-      outcome: not_attempted
+      outcome: round_budget_not_attempted
 ```
 
 ```yaml

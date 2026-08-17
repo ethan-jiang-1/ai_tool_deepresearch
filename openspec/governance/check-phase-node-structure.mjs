@@ -2,7 +2,11 @@
 // check-phase-node-structure.mjs — deterministic phase-node structure guard.
 // Enforces the WNC-010 handoff pattern per phase §6, with the declared
 // instantiation/HITL1 bootstrap exception and the terminal Final shape.
-// Missing node files are skipped (isolated-fixture tolerance).
+// The bootstrap exception covers only the advance-status source-gate sync
+// step: bootstrap nodes STILL load their check.next target through
+// enter-phase (that is the only current_node writer), but they must not
+// instruct advance-status in §6. Missing node files are skipped
+// (isolated-fixture tolerance).
 // Usage: node check-phase-node-structure.mjs [projectRoot]
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -34,6 +38,11 @@ const FINAL = 'phase-final.md';
 
 const failures = [];
 
+function section6(text) {
+  const match = text.match(/## 6\. On Gate Pass([\s\S]*?)(?=## 7\.|$)/);
+  return match ? match[1] : '';
+}
+
 for (const name of BOOTSTRAP) {
   const file = join(PHASES, name);
   if (!existsSync(file)) continue;
@@ -41,8 +50,12 @@ for (const name of BOOTSTRAP) {
   if (!text.includes('兼容例外（WNC-010）')) {
     failures.push(`${name}: missing WNC-010 bootstrap exception label in §6`);
   }
-  if (text.includes('enter-phase.mjs')) {
-    failures.push(`${name}: bootstrap node must not instruct enter-phase (WNC-010 exception)`);
+  const six = section6(text);
+  if (!six.includes('enter-phase.mjs')) {
+    failures.push(`${name}: §6 must instruct enter-phase loading of its check.next target (bootstrap exception does not exempt the node loader)`);
+  }
+  if (six.includes('advance-status.mjs')) {
+    failures.push(`${name}: §6 must not instruct advance-status source-gate sync (bootstrap exception covers only that step)`);
   }
 }
 

@@ -190,9 +190,11 @@ node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs --bundle <pat
 ## 6. On Gate Pass
 
 1. **发送 HITL1 出口语**：仅在 `hitl1-recorded` Gate 通过后，从 `brief/hitl1.md` 的「出口语」节读取模板文字，告知用户即将进入静默自主执行阶段（Setup → Seed Topics → Wave 0 → Wave 1 → Wave 2），期间不会浮出水面，可以关闭终端，下次见面是 HITL2。第 3d 节的「访问可用」结果不是出口语，也不代替这个 Gate-pass-only 步骤。
-2. 读取 `check.next`。Advance to `setup`：加载 `phase-setup.md`。
+2. 读取 `check.next`（应为 `phases/phase-setup.md`）。Advance to `setup`：执行
+   `node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle <path> --node phases/phase-setup.md`
+   ——这是写入 `current_node` 的唯一合法 loader。
 
-> 兼容例外（WNC-010）：instantiation/HITL1 为 bootstrap status shape 例外，本 phase 不执行 `enter-phase`/`advance-status` handoff；自 setup 起的后续 phase 按其 §6 常规 handoff 执行。
+> 兼容例外（WNC-010）：instantiation/HITL1 为 bootstrap status shape 例外，本 phase 不执行 `advance-status` source-gate 同步；例外**不豁免 `enter-phase`**——gate pass 后必须按上述命令加载 `phase-setup.md`。自 setup 起的后续 phase 按其 §6 常规 handoff 执行。
 
 ## 7. On Gate Fail
 

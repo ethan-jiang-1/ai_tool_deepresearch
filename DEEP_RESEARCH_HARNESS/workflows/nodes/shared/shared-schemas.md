@@ -134,7 +134,7 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 
 - **角色**：Ledger 的结构化影子，让 JS engine 能做确定性反馈（不承载长篇 reasoning）
 - **格式**：YAML
-- **Top-level keys**：`version`（"0.1"）/ `source_layer`（"wave2_cross_topic"）/ `ledger` / `synthesis` / `scan` / `findings` / `synthesis_eligibility`
+- **Top-level keys（全部必填）**：`version`（"0.1"）/ `source_layer`（"wave2_cross_topic"）/ `ledger` / `synthesis` / `scan` / `findings` / `synthesis_eligibility`。`ledger` 与 `synthesis` 是必填 key（inspect 的 `finding_index_contract` 对缺失即 FAIL），合法形状为非空对象（如 `ledger: { ref: artifacts/wave2/cross-topic-ledger.md }`、`synthesis: { ref: artifacts/wave2/synthesis.md }`），不是占位字符串
 - **`scan` object**：`topic_count` / `pair_count_expected` / `pair_count_checked`
 - **Pair projection grammar**：`synthesis_eligibility.scan_topic_pair_coverage` accepts a direct array of `{ pair: [topicA, topicB], refs?: [...] }` entries or exactly `{ pairs: [<same entries>] }`. Pair endpoints use canonical UID, current slug, or accepted previous slug. Object maps, key-encoded/free-text pairs, malformed/self/unknown/duplicate pairs are invalid.
 - **Pair count policy**：`topic_count` equals canonical registry size, `pair_count_expected = C(topic_count,2)`, and `pair_count_checked` equals observed unique structured pairs. Multi-topic ordinary runs require a non-empty observed set but may use profile-authorized reduced coverage; only activated rerun `action:add` requires the exact complete canonical pair universe. `wave2_cross_topic_depth: 0` does not make an empty multi-topic scan sufficient.
@@ -148,7 +148,7 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 | `status` | enum | `resolved` / `partial` / `open` / `deferred` |
 | `decision` | enum | `use_existing_evidence` / `exploit_search` / `explore_search` / `defer_hitl2` / `requires_internal_data` / `record_only` |
 | `affected_topics` | array | ≥2 for `cross_topic_emergent_question` |
-| `origin_refs` | array | Legacy question 来源；emergent 可为空但必须显式 `[]` |
+| `origin_refs` | array | 按 finding type 区分：`wave1_legacy_question` 必填（来源 question refs）；`cross_topic_resolution` 必填**非空**（inspect 的 `finding_index_contract` 对空数组即 FAIL：`cross_topic_resolution requires origin_refs[]`）；`cross_topic_emergent_question` 可为空但必须显式 `[]` |
 | `trigger_refs` | array | 触发 finding 的 evidence/question refs |
 | `search_required` | boolean | 是否需要 Sub-agent search |
 | `subagent_receipt_refs` | array | 搜索发生时的 work-unit runtime receipt refs |
@@ -203,7 +203,7 @@ Bare runtime paths in this node are current run bundle-root relative. If the cur
 以下目录以 `_` 前缀命名，gate 不检查其内容。它们是运行时暂存区，不属于 authority artifact surface：
 
 - **`_cache/`**：Sub-agent 网络原始内容缓存，四级目录 `{wave}/{batch}/{scope}/{source_dir}/`。每个 source 写 `websearch.json` + `page.md` + `meta.json`（11 字段：url, title, source_domain, source_name, fetched_at, fetch_method, fetch_chain, content_type, reliability_tier, reliability_basis, whitelist_status）。Phase Agent spawn 前 `mkdir -p`，通过 spawn prompt 传递绝对路径。Non-authority，wave 完成后可清理对应 wave 子目录。详见 `_cache/README.md`。
-- **`_work_units/`**：bundle-root production delegated work-unit envelopes, allocated by `operate-work-unit claim` and validated by `operate-work-unit submit`. Each envelope contains `manifest.json` / `task.md` / `result.schema.json` / `_beacon.json` / `runtime-receipt.jsonl` / result/status surfaces. Gate coverage still comes from submitted rows in `rb_output_declarations.jsonl`; `_work_units/` is a cross-check and diagnostic surface.
+- **`_work_units/`**：bundle-root production delegated work-unit envelopes, allocated by `operate-work-unit claim` and validated by `operate-work-unit submit`. Each envelope contains `manifest.json` / `task.md` / `result.schema.json` / `_beacon.json` / `runtime-receipt.jsonl` / result/status surfaces. Gate coverage still comes from submitted rows in `rb_output_declarations.jsonl`; `_work_units/` is a cross-check and diagnostic surface. `result_hash`（ledger row / index record 中的字段）的基准是 `sha256(stableStringify(result))`（`DEEP_RESEARCH_HARNESS/engine/work-unit-utils.mjs` 的 `hashValue`），**不是** result 文件的原始字节 hash；恢复/验证 result.json 时以此为准。
 - **assignment binding**：new current index / manifest / beacon carry Engine-owned read-only `assignment_contract_version: work-unit.assignment.v3`; manifest/beacon `output_contract.required_outputs[]` carries exact `path` / canonical `role` / `direct_contract`. Immutable `work-unit.assignment.v1` and `work-unit.assignment.v2` records remain interpreted through their recorded bound contracts, rather than through current v3 defaults. Wave1 queue `payload.assignment_mode` is the closed `primary|supplementary` intent fact. These assignment fields are not actor-fillable and do not appear as result contract selectors.
 
 ## Final Delivery

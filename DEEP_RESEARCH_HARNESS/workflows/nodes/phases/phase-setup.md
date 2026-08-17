@@ -46,7 +46,8 @@ suggested_context:
   - `rb_trace.jsonl`（存在即可，不要求非空）
 - 检查 directory scaffold 存在：`seed_topics/`、`reference/`、`artifacts/`、`final/`、`_cache/`
 - 检查 HITL1 marker 已写入 profile：`human_decision_checkpoints.hitl1.status == recorded`
-- 检查 `rb_status.json` 仍然是 `current_gate: setup_ready` / `next_gate: seed_topics_ready`（无 status drift）
+- 检查 `rb_status.json` 处于 gate 前窗口 `current_gate: hitl1_recorded` / `next_gate: setup_ready`（HITL1 完成后、进入 setup 时的合法 bootstrap 窗口，不是 status drift）
+- 运行 setup gate 前，先经 bootstrap 兼容窗口执行 `node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to setup_ready`，使状态变为 `current_gate: setup_ready` / `next_gate: seed_topics_ready`——这正是 setup gate 的 `status_current_gate` / `status_next_gate` 期望值；不要把这个前置同步留到 gate pass 之后
 - 按 normalization 规则检查 bundle dir basename、`rb_plan.md` frontmatter `plan_basename`、`rb_profile.yaml` `plan_basename` 三者一致
 
 ## 4. Expected Artifacts
@@ -61,6 +62,12 @@ node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs --bundle <path> 
 
 Retry 时传 Agent-reported `--attempt N`（N 从 1 开始，每次 rerun 递增）。若 gate 返回 `step_back: true`，暂停并重新阅读本 phase instructions §0 和 §5 后再决定策略。
 
+> **Gate 前置**：`advance-status --to setup_ready` 是 setup gate 通过的前置步骤（bootstrap
+> `hitl1_to_setup` 兼容窗口，见 §3 Allowed Actions）。在 gate 期望的
+> `current_gate: setup_ready` / `next_gate: seed_topics_ready` 就位前运行 gate 必然在
+> `status_current_gate` / `status_next_gate` 上失败；该失败 hint 的 repair 命令就是同一个
+> `advance-status --to setup_ready`。
+
 ## 6. On Gate Pass
 
 读取 gate CLI JSON output，确认 `check.passed === true`，然后读取 `check.next`（应为 `phases/phase-seed-topics.md`）。先消费 handoff，再同步 source gate status：
@@ -70,7 +77,7 @@ node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle <path> --node <check.nex
 node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to setup_ready
 ```
 
-从 `enter-phase` 渲染出的 seed-topics Markdown 继续执行下一 phase。`advance-status` 只同步 just-passed source gate；它不是加载或执行下一 phase 的动作。
+从 `enter-phase` 渲染出的 seed-topics Markdown 继续执行下一 phase。`advance-status` 只同步 just-passed source gate；它不是加载或执行下一 phase 的动作。此处的 `advance-status --to setup_ready` 是 gate pass 后的**常规 covered source-gate 同步**（要求 `current_node` 已由前面的 `enter-phase` 写入 `phases/phase-seed-topics.md`），与 §5 标注的 gate 前 bootstrap 同步（`hitl1_to_setup` 窗口）是两次不同的合法调用，不要合并或省略任一。
 
 ## 7. On Gate Fail
 

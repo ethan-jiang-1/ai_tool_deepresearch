@@ -63,3 +63,7 @@ families:
       (persist / persist-final-report / publish-final-report / sweep) accept,
       and which workspace type does its recovery advice address, per the
       accepted artifact-persistence-recovery contract?
+  - id: bundle.run-scoped-script-location
+    bounded_question: >-
+      Where do run-scoped helper scripts durably live for the current run
+      bundle, and what authority status does that location carry?

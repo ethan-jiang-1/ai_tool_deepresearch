@@ -258,6 +258,7 @@ SUD-004: subagent-dispatch — Work-unit claim writes beacon metadata with bundl
 SUD-005: subagent-dispatch — Work-unit index and manifest persist Engine-generated receipt nonce for forensic binding
 SUD-006: subagent-dispatch — buildSpawnPrompt hands sub-agent its work-unit directory plus beacon pointer
 SUD-007: subagent-dispatch — Work-unit claim and submit trace events carry receipt nonce across Engine trace chain
+SUD-008: subagent-dispatch — Work-unit claim stdout is one machine-parseable JSON document
 
 # agent/subagent-node-contract
 SNC-001: subagent-node-contract — Sub-agent role specs SHALL mandate lifecycle logging (read beacon, emit events with nonce, always-loaded)

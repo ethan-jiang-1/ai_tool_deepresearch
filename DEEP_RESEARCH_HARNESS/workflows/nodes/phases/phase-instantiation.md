@@ -54,9 +54,12 @@ node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-instantiation-complete.mjs --bun
 
 ## 6. On Gate Pass
 
-读取 `check.next`（来自 transition table 查询）。Advance to `hitl1`：加载 `phase-hitl1.md`。
+读取 `check.next`（应为 `phases/phase-hitl1.md`）。Advance to `hitl1`：执行
+`node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle <path> --node phases/phase-hitl1.md`
+——这是写入 `current_node` 的唯一合法 loader，也是随后 HITL1 `operate-topic-state apply
+--context hitl1` 授权（要求 `current_node: phases/phase-hitl1.md`）的前提。
 
-> 兼容例外（WNC-010）：instantiation/HITL1 为 bootstrap status shape 例外，本 phase 不执行 `enter-phase`/`advance-status` handoff；自 setup 起的后续 phase 按其 §6 常规 handoff 执行。
+> 兼容例外（WNC-010）：instantiation/HITL1 为 bootstrap status shape 例外，本 phase 不执行 `advance-status` source-gate 同步（bootstrap status shape 由 bundle creator 建立，不是 passed gate 的产物）；例外**不豁免 `enter-phase`**——gate pass 后必须按上述命令加载 `phase-hitl1.md`。自 setup 起的后续 phase 按其 §6 常规 handoff 执行。
 
 ## 7. On Gate Fail
 

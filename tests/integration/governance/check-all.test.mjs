@@ -5,7 +5,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readdirSync, lstatSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, lstatSync, rmSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -38,9 +38,65 @@ describe('check-all aggregation entry (RET-007)', () => {
   });
 
   it('forwards --change to the change-requiring checks', () => {
-    const result = run(['--change', 'cleanup-engine-surface-and-disambiguate-repair-kinds']);
-    assert.equal(result.status, 0, `expected exit 0, got ${result.status}\n${result.stdout}`);
-    assert.ok(!result.stdout.includes('SKIPPED(requires --change)'), 'change-requiring checks were skipped despite --change');
+    // The change-requiring checks (capability-discovery, semantic-closure,
+    // verification-routing) resolve an ACTIVE change; use a disposable fixture
+    // change created and removed by this test instead of a stale archived name.
+    const fixture = `checkall-fixture-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const changeRoot = join(REPO_ROOT, 'openspec', 'changes', fixture);
+    mkdirSync(join(changeRoot, 'specs'), { recursive: true });
+    try {
+      writeFileSync(join(changeRoot, 'proposal.md'), [
+        '# Proposal: check-all fixture',
+        '',
+        '## Why',
+        '',
+        'Disposable active change proving --change forwarding through check-all.',
+        '',
+        '## Capability Discovery',
+        '',
+        '| Candidate path | Evidence read | Decision | Reason |',
+        '| --- | --- | --- | --- |',
+        '| `engine/schema-core` | SCO-001 main spec | Excluded | Fixture only; no requirement changes. |',
+        '',
+      ].join('\n'));
+      writeFileSync(join(changeRoot, 'semantic-closure.yaml'), [
+        'schema_version: semantic-closure/v1',
+        `change: ${fixture}`,
+        'status: not_applicable',
+        'reason: >-',
+        '  Disposable check-all fixture; no runtime fact family resolver or verdict consumer changes.',
+        '',
+      ].join('\n'));
+      writeFileSync(join(changeRoot, 'verification-plan.yaml'), [
+        'schema_version: verification-routing/v1',
+        `change: ${fixture}`,
+        'test_classes:',
+        '  unit:',
+        '    status: not_applicable',
+        '    rationale: Fixture only.',
+        '  integration:',
+        '    status: not_applicable',
+        '    rationale: Fixture only.',
+        '  deterministic_e2e:',
+        '    status: not_applicable',
+        '    rationale: Fixture only.',
+        '  agent_flow_e2e:',
+        '    status: not_applicable',
+        '    rationale: Fixture only.',
+        'claims: []',
+        '',
+      ].join('\n'));
+      const result = run(['--change', fixture]);
+      assert.equal(result.status, 0, `expected exit 0, got ${result.status}\n${result.stdout}`);
+      assert.ok(!result.stdout.includes('SKIPPED(requires --change)'), 'change-requiring checks were skipped despite --change');
+    } finally {
+      rmSync(changeRoot, { recursive: true, force: true });
+    }
+    assert.equal(
+      existsSync(changeRoot),
+      false,
+      'disposable fixture change must be removed after the check',
+    );
   });
 
   it('is strictly read-only: no archive transition side effects', () => {

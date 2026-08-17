@@ -9,7 +9,7 @@
 - framework_root: `{{framework_root_relpath}}`；从 current run bundle root 到创建时 canonical read-only Deep Research Harness assets 的相对导航提示。
 - current_run_bundle_root: 本文件所在 runtime bundle root；所有 mutable runtime truth 都在这里。
 - bundle_name: `{{name}}`
-- bare runtime paths, including `rb_queue.json`, `reference/`, `artifacts/`, `_cache/`, `_logs/`, `_work_units/`, and `final/`, resolve under current_run_bundle_root.
+- bare runtime paths, including `rb_queue.json`, `reference/`, `artifacts/`, `_cache/`, `_logs/`, `_scripts/`, `_work_units/`, and `final/`, resolve under current_run_bundle_root.
 
 ## Research Content Map
 
@@ -20,6 +20,7 @@
 - `artifacts/wave2/`: synthesis, cross-topic ledger, finding index, and cross-topic projections.
 - `final/`: terminal report artifacts.
 - `_cache/`: rebuildable source/cache material; useful for provenance inspection but not authority by itself.
+- `_scripts/`: run-scoped helper scripts (executors/generators/recovery) produced by the Agent for this run; non-authority runtime area, kept with the bundle, never written to the repo root.
 
 ## Runtime Control Map
 

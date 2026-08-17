@@ -1,0 +1,23 @@
+# _scripts/ — Run-Scoped 辅助脚本（本 run bundle 自产）
+
+> **Non-authority**：本目录下的脚本只服务于当前 run bundle，随 bundle 归档；它们不是框架代码，
+> 不进入版本控制（bundle 是唯一 durable state 载体），也不作为 gate 判定依据。
+
+## 什么脚本放在这里
+
+- work-unit 执行器（真实搜索 + 抓取 + 写 cache/result 的 executor）
+- reference / seed 生成器
+- 恢复脚本（如从 ledger 重建 result.json）
+
+## 规则
+
+- run-scoped 辅助脚本 **必须**写入 current run bundle root 的 `_scripts/`；
+  **禁止**写入 repo 根（如 `.wu*-*.mjs`、`.gen-*.mjs`）或 `DEEP_RESEARCH_HARNESS/`。
+- `_scripts/` 是 non-authority 运行时区域（与 `_logs/`、`_cache/` 同类）：内容可删除、可重建，
+  不建立 gate / evidence / provenance / receipt 语义，也不进入 inspect-bundle required shape。
+- 脚本内使用的裸 runtime path（`rb_queue.json`、`_work_units/...` 等）都相对于 current run
+  bundle root，不相对于 repo root。
+
+---
+
+此文件在 bundle instantiation 时自动创建。

@@ -20,8 +20,41 @@
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
+| BUG-225 | P1 | wave0/wave1 | `operate-work-unit claim` stdout 不是合法 JSON（内嵌 task.md 含未转义控制字符），机器消费者全部解析失败；直接诱发了 run 中一次错误覆盖已提交 work unit 目录的事故 |
+| BUG-226 | P1 | hitl1 | HITL1 topic-state apply 硬性要求 `current_node=phase-hitl1`，但 instantiation/HITL1 phase 文档声称「不执行 enter-phase」——文档与 Engine 契约矛盾，按文档走必然 blocked |
+| BUG-227 | P2 | hitl1 | research-access envelope 的 Available 示例对 reserve 样本用 `not_attempted`，与 ProfileSchema 冲突（单样本只能用 `round_budget_not_attempted`） |
+| BUG-228 | P1 | wave1 | `per_topic_ref_md_count_floor` 定义写 threshold 1 / 文案「at least one」，实际阈值为 profile 8 且仅 Wave1 submitted backing 可数（Wave0-backed topic ref 不计）；计数口径不可发现 |
+| BUG-229 | P3 | setup | `phase-setup.md` §3 写出的期望 status window 与 setup gate 实际要求相反（gate 前须先 `advance-status --to setup_ready`） |
+| BUG-230 | P2 | wave2 | Wave2 finding-index 必填 top-level `ledger`/`synthesis` keys 与 `cross_topic_resolution` 非空 `origin_refs` 不在共享 schemas 的 15 字段契约表中 |
+| BUG-231 | P2 | 全程（run 边界） | 框架未为 run-scoped helper 脚本规定规范落点，Agent 在 run 期间把 11 个执行器/生成器脚本写到 repo 根目录（应进 bundle `_scripts/`）；gitignore 已有补丁模式证明反复发生 |
 
-当前没有活跃 bug。
+## 新增 (2026-08-17)
+
+以下 6 个 bug 来自一次完整 real-actor Deep Research run
+（`dpt_rb_ai-transformation-organization`，HITL1→Wave0→Wave1→Wave2→HITL2→Final，
+当前为 pi/Codex 执行器、无 sub-agent 工具、全部委托走 phase_agent_fallback）。
+Phase Agent 全程以「读引擎源码 + 试错 + 自我修复」绕过这些摩擦点完成交付；6 个均为
+current-head 确定性框架/契约缺陷，附复现路径与实账影响。
+
+非框架缺陷的 run 级观察（环境与 Agent 执行，不在此列）：
+
+- **搜索表面中文本地化**（环境）：本机出口 IP 被 Bing 判定为中国区，`mkt/setlang/enus`
+  参数无效，英文查询返回中文无关结果；英文文章级证据只能靠 `site:` 查询 + curated
+  已知 URL 收集。websearch.json 如实记录了 degraded，但流程上无提示。
+- **执行器自身脚本错误**（Agent 责任）：`.wu1-exec.mjs` 的 `cfg.max_sources || 0`
+  短路 bug；以及因 BUG-225（claim 输出非合法 JSON）被迫用 grep 提取 work_id，
+  在 claim 输出含历史 work id 时取错行，把补充证据写进已提交的
+  `wu-w1-b000-deep-i0001/0002`（已从 ledger 逐字段重建 result.json + 重抓 cache leaf
+  恢复，并验证 stableStringify hash 与 ledger `result_hash` 一致；hash 基准本身
+  也无文档，见 BUG-225 附带建议）。
+- **supplementary wave1 source_ref 授权**（Agent 责任为主）：首次把
+  `_cache/wave1/primary/{topic}` 当 source_ref 被 `source_ref_not_authorized` 拒绝；
+  反馈文本已明确列出合法选项（current assigned output 或 prior same-topic
+  evidence_summary），属于 Agent 未先读 task.md 的 Cache And Source Facts 所致，
+  非框架缺陷。
+
+> 既有卡片交集：canonical Wave1 文件名算法与单候选 inspect（本次再次命中，归属
+> BUG-221，`v0.89` 已修复）；本批 BUG-225/228 与该卡相关但为不同缺陷。
 
 > BUG-220..224 来自 `dpt_rb_enterprise-safe-ai-harness` 的原始 real-actor 观察，
 > 已由 `repair-wave1-reference-closeout-feedback`（`v0.89`，提交 `5503cc37b`）完成闭环，

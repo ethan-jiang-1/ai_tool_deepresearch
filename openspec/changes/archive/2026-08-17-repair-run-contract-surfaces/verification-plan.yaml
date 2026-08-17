@@ -1,0 +1,187 @@
+schema_version: verification-routing/v1
+change: 2026-08-17-repair-run-contract-surfaces
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The change alters no schema, enum, resolver, or verdict logic; unit truth
+      tables for Engine contracts are untouched and already green.
+  integration:
+    status: selected
+    rationale: >-
+      All new and modified proofs run deterministic CLI fixtures on disposable
+      bundles or static doc-lock assertions against framework surfaces — the
+      change's observable contract is the public command and document surface.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No multi-phase chain behavior changes; the WNC-010 handoff-sequence
+      correction is a doc/test-surface alignment whose machine behavior is
+      already locked by existing gate-chain integration coverage.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change makes no claim about Agent research, judgment, writing, or
+      tool behavior; it only aligns Agent-facing contract surfaces with
+      already-accepted deterministic contracts.
+claims:
+  - id: claim-stdout-is-parseable-json
+    statement: >-
+      SUD-008: `operate-work-unit claim` stdout parses as a single JSON value
+      for both wave0 delegated and wave1 phase_agent_fallback claims on an
+      eligible disposable bundle, and the parsed object carries
+      claimed_work_ids[] and prompt_refs[] coordinates.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/work-unit-claim-stdout-json.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wnc010-exception-does-not-exempt-enter-phase
+    statement: >-
+      WNC-010: phase-instantiation.md §6 and phase-hitl1.md §6 carry the
+      corrected bootstrap-exception wording — the exception covers
+      advance-status source-gate sync only, and both sections instruct the
+      exact `enter-phase --node <check.next>` loader command.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/harness-entry-doc-consistency.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: envelope-example-matches-profile-schema
+    statement: >-
+      The research-access envelope's Available example uses
+      round_budget_not_attempted for the unstarted reserve sample and never
+      uses whole-probe not_attempted for an individual sample, matching
+      ProfileSchema and the shared-profile terminal-outcome description.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/run-contract-surfaces-doc-lock.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-floor-definition-states-effective-semantics
+    statement: >-
+      The gate-wave1-complete definition's per_topic_ref_md_count_floor
+      failure message names rb_profile.yaml#/research_style_params/
+      wave1_per_topic_ref_floor as the effective threshold source and states
+      that only Wave1 submitted-backing canonical candidates count.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/run-contract-surfaces-doc-lock.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: setup-phase-documents-pre-gate-window
+    statement: >-
+      PRP-003: phase-setup.md §3 describes the pre-gate window
+      (hitl1_recorded -> setup_ready) and the bootstrap
+      `advance-status --to setup_ready` gate prerequisite, and does not present
+      the gate-pass state as the natural pre-gate check.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/run-contract-surfaces-doc-lock.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: finding-index-required-keys-documented
+    statement: >-
+      shared-schemas.md marks ledger and synthesis as required top-level
+      finding-index keys and states that cross_topic_resolution findings
+      require non-empty origin_refs, matching the wave-depth-contracts checker.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/run-contract-surfaces-doc-lock.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: result-hash-basis-documented
+    statement: >-
+      shared-schemas.md documents the result_hash basis as
+      sha256(stableStringify(result)) with engine/work-unit-utils.mjs as the
+      source of record, so ledger-based result verification does not require
+      reading engine source.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/run-contract-surfaces-doc-lock.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: instantiate-creates-scripts-scaffold
+    statement: >-
+      CMI-001: instantiate-run-bundle.mjs creates _scripts/ with a README
+      scaffold in every new bundle, and the bundle map lists _scripts/ as the
+      run-scoped script location.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/instantiate-run-bundle.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: scripts-location-documented-across-surfaces
+    statement: >-
+      WDC-004/CMI-001: harness README runtime boundary, root AGENTS.md, and
+      BUNDLE_MAP.md.tmpl state that run-scoped helper scripts live under the
+      current run bundle root _scripts/ and must not be written to the
+      repository root; the gitignore patch patterns are removed.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/run-contract-surfaces-doc-lock.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

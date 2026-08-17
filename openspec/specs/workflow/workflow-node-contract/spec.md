@@ -289,7 +289,9 @@ The phase body SHALL NOT frame `advance-status` as the action that enters the ne
 
 The source gate enum SHALL be the gate that just passed, not the next phase's gate. For example, wave0 gate pass SHALL synchronize with `--to wave0_complete` after `enter-phase --node phases/phase-wave1.md`; it SHALL NOT use `--to wave1_complete` until the wave1 gate itself has passed.
 
-This requirement applies to lifecycle phases whose deterministic outcome has a next lifecycle node from setup onward, including setup→seed-topics, seed-topics→wave0, wave0→wave1, wave1→wave2, wave2→HITL2, HITL2→readiness, HITL2→rerun, readiness→final, and rerun→seed-topics. HITL2 indeterminate decisions remain governed by their existing decision logic; when the current runtime emits a deterministic HITL2 branch, its selected fileRef SHALL still be consumed through `enter-phase`. The instantiation/HITL1 bootstrap status shape is a compatibility exception for this change and SHALL NOT be silently rewritten by the phase wording update.
+This requirement applies to lifecycle phases whose deterministic outcome has a next lifecycle node, including instantiation→HITL1, HITL1→setup, setup→seed-topics, seed-topics→wave0, wave0→wave1, wave1→wave2, wave2→HITL2, HITL2→readiness, HITL2→rerun, readiness→final, and rerun→seed-topics. HITL2 indeterminate decisions remain governed by their existing decision logic; when the current runtime emits a deterministic HITL2 branch, its selected fileRef SHALL still be consumed through `enter-phase`.
+
+The instantiation/HITL1 bootstrap status shape is a compatibility exception that SHALL NOT be widened by phase wording. The exception covers only the `advance-status` source-gate synchronization step of the handoff sequence for the instantiation→HITL1 and HITL1→setup transitions: `phase-instantiation.md` and `phase-hitl1.md` SHALL NOT instruct `advance-status` source-gate sync as part of those handoffs, because the bootstrap status shape (`current_gate: setup_ready`, `state: not_started`, `current_node: null`) is established by the bundle creator rather than by a passed gate. The exception does NOT exempt `enter-phase` node loading: `phase-instantiation.md` §6 SHALL instruct `enter-phase --node phases/phase-hitl1.md` (the instantiation gate `check.next`) after gate pass so `rb_status.json#/current_node` is populated before HITL1 `operate-topic-state apply --context hitl1` authorization; `phase-hitl1.md` §6 SHALL likewise instruct loading `phase-setup.md` through `enter-phase` on `hitl1-recorded` gate pass. Phase wording SHALL NOT claim that the bootstrap exception skips `enter-phase`, SHALL NOT frame the bootstrap `advance-status --to setup_ready` (the `hitl1_to_setup` compatibility window, run before the setup gate) as part of the instantiation/HITL1 handoff, and SHALL NOT silently rewrite this exception boundary.
 
 The phase wording SHALL give concrete source-gate `advance-status` commands so the Agent does not infer them at runtime:
 
@@ -337,6 +339,20 @@ resolve the dependency closure, or emit a workflow/trace/receipt event.
 - **THEN** the phase body SHALL NOT describe it as loading, entering, or executing the next phase
 - **AND** the phase body SHALL preserve `enter-phase` as the handoff consumption action
 - **AND** the phase body SHALL NOT use the next phase's gate enum as the `--to` value for the just-passed source phase
+
+#### Scenario: Instantiation/HITL1 bootstrap exception does not exempt enter-phase loading
+
+- **WHEN** the instantiation gate passes on a fresh bundle whose `check.next` is `phases/phase-hitl1.md`
+- **THEN** `phase-instantiation.md` §6 SHALL instruct `enter-phase --bundle <path> --node phases/phase-hitl1.md`
+- **AND** it SHALL NOT instruct `advance-status` source-gate sync for the instantiation→HITL1 handoff (bootstrap status shape exception)
+- **AND** it SHALL NOT claim that the bootstrap exception skips `enter-phase`
+
+#### Scenario: HITL1 handoff loads setup without source-gate sync
+
+- **WHEN** the `hitl1-recorded` gate passes and `check.next` is `phases/phase-setup.md`
+- **THEN** `phase-hitl1.md` §6 SHALL instruct `enter-phase --bundle <path> --node phases/phase-setup.md`
+- **AND** it SHALL NOT instruct `advance-status` as part of the HITL1→setup handoff
+- **AND** the setup phase's own bootstrap `advance-status --to setup_ready` (the `hitl1_to_setup` compatibility window, run before the setup gate) SHALL remain the legal pre-gate status sync described by `phase-setup.md`
 
 #### Scenario: Final delivery still happens only at final
 

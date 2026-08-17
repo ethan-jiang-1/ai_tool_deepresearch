@@ -49,7 +49,7 @@ research；它不改变随后 `continue-run-bundle.md` / `RUN.md` 的 existing s
 
 ## 运行时边界
 
-Current run bundle root 是本次 research run、CLI invocation、task card 或实验明确选中的 `dpt_rb_*` / `dpt_disp_*` 目录。它是 runtime truth 的根；“current”只描述本次操作，不表示全局选择、最新 bundle 或生命周期状态。裸 runtime path（如 `rb_queue.json`、`rb_trace.jsonl`、`rb_output_declarations.jsonl`、`reference/`、`artifacts/`、`_cache/`、`_logs/`、`final/`、`_work_units/...`）都相对于 current run bundle root，不相对于 repo root，也不相对于 `DEEP_RESEARCH_HARNESS/`。
+Current run bundle root 是本次 research run、CLI invocation、task card 或实验明确选中的 `dpt_rb_*` / `dpt_disp_*` 目录。它是 runtime truth 的根；“current”只描述本次操作，不表示全局选择、最新 bundle 或生命周期状态。裸 runtime path（如 `rb_queue.json`、`rb_trace.jsonl`、`rb_output_declarations.jsonl`、`reference/`、`artifacts/`、`_cache/`、`_logs/`、`_scripts/`、`final/`、`_work_units/...`）都相对于 current run bundle root，不相对于 repo root，也不相对于 `DEEP_RESEARCH_HARNESS/`。run-scoped 辅助脚本（executor/生成器/恢复脚本）必须写入 current run bundle root 的 `_scripts/`，不得写入 repo 根或框架目录。
 
 例如，如果 current run bundle root 是 `dpt_rb_climate-policy/`，那么 `_work_units/wave1/wu-w1-b000-deep-i0001/` 指的是 `dpt_rb_climate-policy/_work_units/wave1/wu-w1-b000-deep-i0001/`。
 
@@ -125,6 +125,7 @@ dpt_rb_<name>/
     wave2/
   final/
   _cache/
+  _scripts/
   _work_units/
 ```
 

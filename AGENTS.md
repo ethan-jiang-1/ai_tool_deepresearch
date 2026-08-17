@@ -54,6 +54,7 @@ Do not list, scan, or read these paths as task context unless the user explicitl
 ## Hard Rules
 
 - Do not read `_old_topics` archives (under `_backlog/_done/`, including `_original_*` subdirectories) unless explicitly asked.
+- **Run-scoped helper scripts（work-unit executor / 生成器 / 恢复脚本）必须写入 current run bundle root 的 `_scripts/`**，禁止写入 repo 根（如 `.wu*-*.mjs`、`.gen-*.mjs`）或 `DEEP_RESEARCH_HARNESS/`。`_scripts/` 是 non-authority 运行时区域，随 bundle 归档。
 - Use Node.js >=20, pure JavaScript ESM (`.mjs`). No TypeScript. **Absolutely no Python.** Not for scripts, not for one-liners, not for prototyping — use Node.js for everything.
 - Do not add dependencies. Approved npm deps only: `zod`, `yaml`; otherwise use Node built-ins.
 - Use `node:test` + `node:assert` for JS-led tests.

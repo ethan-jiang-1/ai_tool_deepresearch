@@ -1,0 +1,36 @@
+schema_version: semantic-closure/v1
+change: 2026-08-17-repair-run-contract-surfaces
+status: affected
+catalog_additions: []
+affected:
+  - family: bundle.run-scoped-script-location
+    fact: >-
+      Run-scoped helper scripts (one-shot work-unit executors, reference/seed
+      generators, recovery scripts) serve only the current run bundle and SHALL
+      be written under the current run bundle root `_scripts/`, scaffolded at
+      instantiation time; they SHALL NOT be written to the repository root or
+      the Harness framework root. `_scripts/` is a non-authority runtime area in
+      the same class as `_logs/` and `_cache/`: its contents never establish
+      gate, evidence, provenance, receipt, or lifecycle authority, and its
+      presence or contents are not part of any gate or inspect-bundle
+      required-shape check.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/rb_templates/_scripts/README.md.tmpl
+      - DEEP_RESEARCH_HARNESS/rb_templates/BUNDLE_MAP.md.tmpl
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs
+    overlap:
+      - coordinate: openspec/specs/bundle/cmd-bundle-instantiation/spec.md
+        relation: authoritative
+        detail: CMI-001 owns the instantiation-time bundle content contract, now including the `_scripts/` scaffold and its non-authority role.
+      - coordinate: openspec/specs/workflow/workflow-directory-contract/spec.md
+        relation: authoritative
+        detail: WDC-004 owns the bare runtime path family under current run bundle root, now including `_scripts/`.
+      - coordinate: DEEP_RESEARCH_HARNESS/README.md
+        relation: derived
+        detail: The runtime boundary section documents `_scripts/` as a bundle-root runtime area for Agent-produced scripts.
+    verification:
+      truth_table: tests/integration/cli/instantiate-run-bundle.test.mjs
+      cross_surface: tests/integration/md/run-contract-surfaces-doc-lock.test.mjs

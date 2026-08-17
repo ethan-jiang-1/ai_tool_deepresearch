@@ -385,14 +385,26 @@ describe('Layer 3b — Agent-facing handoff wording', () => {
     for (const { phaseFile, sourceGate } of handoffSources) {
       const body = readPhaseBody(phaseFile);
       const beforeGatePass = body.split('## 6. On Gate Pass')[0] || body;
-      const forbidden = [
-        `node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to ${sourceGate}`,
-      ];
+      // WNC-010 bootstrap exception: phase-setup.md SHALL document the bootstrap
+      // `advance-status --to setup_ready` (hitl1_to_setup window) as the pre-gate
+      // prerequisite for the setup gate itself; every other covered phase keeps the
+      // prohibition because its source-gate sync is post-pass only.
+      const forbidden = phaseFile === 'phase-setup.md'
+        ? []
+        : [
+          `node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to ${sourceGate}`,
+        ];
       for (const phrase of forbidden) {
         assert.ok(!beforeGatePass.includes(phrase),
           `${phaseFile} must not instruct ${phrase} before its own gate has passed`);
       }
     }
+    const setupBody = readPhaseBody('phase-setup.md');
+    const setupBeforeGatePass = setupBody.split('## 6. On Gate Pass')[0] || setupBody;
+    assert.ok(
+      setupBeforeGatePass.includes('node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to setup_ready'),
+      'phase-setup.md must document the bootstrap advance-status --to setup_ready gate prerequisite before §6',
+    );
   });
 
   it('shared silent execution names autonomous continuation and enter-phase handoff', () => {
