@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-08-15 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-08-17 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -88,5 +88,6 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-066 | 2026-08-16 | agent-guidance-conflict-drift-remediation.md | Coding-agent 视角 guidance 冲突/断点/漂移修复：C1 `2026-08-16-harness-entry-doc-consistency`（F-02 collision 三说法统一 hex6、F-04 WNC-010 bootstrap 例外显式标注、F-05 RUN.md 非研究阅读 carve-out+RUE-002 delta、F-07 surface 清单改目录指针、F-10 harness AGENTS/CLAUDE 消歧）、C2 `2026-08-16-repair-guidance-terminology-pointer-drift`（F-01 Gate 五面正名、F-06 C2/C3/C5 glossary、F-03 双枚举术语、F-08 引用格式+错引用更正、F-09 归档命名、F-12 runtime coordinate 转绿回归）、C3 `2026-08-16-repair-work-unit-recovery-vocabulary-and-drift-guards`（F-03 词汇单一源+决策表 10 行+锁定派生、F-11 四类 drift-guard checker 接入 finalizer、F-13 fixture 修复+symlink 写入事故恢复）。全量 `npm test` 2909/2909 0 fail；三个 finalizer 各 12/12/16 checks。 |
 | CLS-067 | 2026-08-16 | agent-guidance-conflict-drift-findings.md | 上游 findings 底稿：F-01~F-13 全部闭合（F-01~F-11 原始发现 + C1/C2 过程中新增 F-12/F-13），每条含证据坐标、agent 拿错风险与修复方向；V-01~V-05 已验证自洽项供对照。修复证据见 CLS-066。 |
 | CLS-068 | 2026-08-17 | coding-agent-friendliness-review-remediation.md | coding-agent 视角全仓库体检（操作面 8/10、引擎 6/10、治理 6/10）的 P0+P1 修复：Change A `2026-08-16-repair-doc-and-governance-drift-and-machine-gaps`（F-01/F-02/F-04~F-08/F-12~F-19：文档漂移清零 + RET-006 指针化 + check-all + guidance-ID 校验 + H1 检查 + model 去 MUST + finalizer 第 17 步）与 Change B `2026-08-17-cleanup-engine-surface-and-disambiguate-repair-kinds`（F-03/F-09~F-11/F-20~F-23：死代码 retire + enum 收敛 + CLI 常量化 + god-module 导航 + repair_directive 消歧）均 finalizer 17 步归档；全量 `npm test` 2955/2955 0 fail（基线 2913→2955）。F-11 残余：其余 27 处 CLI 路径字面量机械替换 deferred（常量 `CLI_OPERATE_WORK_UNIT`/`CLI_OPERATE_QUEUE` 已建立并用于两处 rerun 构建器）；P2（CLI exit 统一、god-module 拆分、spec 长度治理）保持 deferred。 |
+| CLS-069 | 2026-08-17 | bug-225-231-run-contract-surface-remediation.md | BUG-225..231（`dpt_rb_ai-transformation-organization` 真实 run 7 个活跃 bug）以**一个** OpenSpec change `2026-08-17-repair-run-contract-surfaces`（`0e97d0774`）收口：文档/示例/definition 文案对齐 + claim stdout JSON 回归锁（SUD-008）+ run-scoped 脚本 `_scripts/` 落点；零引擎裁决逻辑改动。全量 `npm test` 2975/2975 0 fail；finalizer 17/17 checks 归档。 |
 
-**Next available plan ID: CLS-069**
+**Next available plan ID: CLS-070**

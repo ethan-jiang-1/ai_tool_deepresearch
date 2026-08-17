@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-08-12 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-08-17 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -17,16 +17,25 @@
 
 > BUG-200--204 已按 current-head evidence 和归档 remediation changes 结案。
 > BUG-099/106 已按 2026-08-08 分诊移入 [`../_done/_suspended_bugs/`](../_done/_suspended_bugs/)（弱模型执行产物，非确定性框架缺陷）。
+> BUG-225..231 已按 2026-08-17 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
-| BUG-225 | P1 | wave0/wave1 | `operate-work-unit claim` stdout 不是合法 JSON（内嵌 task.md 含未转义控制字符），机器消费者全部解析失败；直接诱发了 run 中一次错误覆盖已提交 work unit 目录的事故 |
-| BUG-226 | P1 | hitl1 | HITL1 topic-state apply 硬性要求 `current_node=phase-hitl1`，但 instantiation/HITL1 phase 文档声称「不执行 enter-phase」——文档与 Engine 契约矛盾，按文档走必然 blocked |
-| BUG-227 | P2 | hitl1 | research-access envelope 的 Available 示例对 reserve 样本用 `not_attempted`，与 ProfileSchema 冲突（单样本只能用 `round_budget_not_attempted`） |
-| BUG-228 | P1 | wave1 | `per_topic_ref_md_count_floor` 定义写 threshold 1 / 文案「at least one」，实际阈值为 profile 8 且仅 Wave1 submitted backing 可数（Wave0-backed topic ref 不计）；计数口径不可发现 |
-| BUG-229 | P3 | setup | `phase-setup.md` §3 写出的期望 status window 与 setup gate 实际要求相反（gate 前须先 `advance-status --to setup_ready`） |
-| BUG-230 | P2 | wave2 | Wave2 finding-index 必填 top-level `ledger`/`synthesis` keys 与 `cross_topic_resolution` 非空 `origin_refs` 不在共享 schemas 的 15 字段契约表中 |
-| BUG-231 | P2 | 全程（run 边界） | 框架未为 run-scoped helper 脚本规定规范落点，Agent 在 run 期间把 11 个执行器/生成器脚本写到 repo 根目录（应进 bundle `_scripts/`）；gitignore 已有补丁模式证明反复发生 |
+
+## 最近关闭 (2026-08-17)
+
+| Bug | 结案依据 |
+|-----|----------|
+| BUG-225 | `2026-08-17-repair-run-contract-surfaces`（`0e97d0774`）：claim stdout JSON 回归锁（SUD-008，wave0 delegated + wave1 fallback 两路径）+ `result_hash` 基准文档化 |
+| BUG-226 | 同上：WNC-010 例外边界澄清（例外只豁免 advance-status 同步；enter-phase 仍是合法 loader）——phase 文档、`check-phase-node-structure.mjs` 机器 checker、`harness-entry-doc-consistency` 测试同步修正 |
+| BUG-227 | 同上：envelope Available 示例单样本 `not_attempted` → `round_budget_not_attempted` + 文档锁 |
+| BUG-228 | 同上：gate definition failure_message 声明 profile 阈值来源与 submitted-backing 计数口径 + 文档锁 |
+| BUG-229 | 同上：phase-setup.md §3/§5/§6 与 PRP-003 delta 改为 pre-gate bootstrap 窗口语义 |
+| BUG-230 | 同上：shared-schemas.md 标注 ledger/synthesis 必填 + resolution 非空 origin_refs + 文档锁 |
+| BUG-231 | 同上：bundle `_scripts/` scaffold + README/BUNDLE_MAP/playbook/AGENTS+CLAUDE 落点规则 + gitignore 补丁移除 |
+
+> 全量 `npm test` 2975/2975 0 fail；`openspec validate --strict`、六项 governance checker 与
+> `git diff --check` 全绿；5 份 delta spec 已同步 main specs 并 finalizer 17/17 归档。
 
 ## 新增 (2026-08-17)
 
@@ -34,7 +43,9 @@
 （`dpt_rb_ai-transformation-organization`，HITL1→Wave0→Wave1→Wave2→HITL2→Final，
 当前为 pi/Codex 执行器、无 sub-agent 工具、全部委托走 phase_agent_fallback）。
 Phase Agent 全程以「读引擎源码 + 试错 + 自我修复」绕过这些摩擦点完成交付；6 个均为
-current-head 确定性框架/契约缺陷，附复现路径与实账影响。
+current-head 确定性框架/契约缺陷，附复现路径与实账影响。**本批 6 个 bug 已于 2026-08-17 随
+`2026-08-17-repair-run-contract-surfaces` 全部修复并移入
+[`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。**
 
 非框架缺陷的 run 级观察（环境与 Agent 执行，不在此列）：
 
@@ -148,7 +159,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 
 > BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspended_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
-**Next available bug ID: BUG-225**
+**Next available bug ID: BUG-232**
 
 ## BUG-132–137 接手地图
 

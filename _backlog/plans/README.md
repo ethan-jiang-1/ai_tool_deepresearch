@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-16 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-17 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,7 +17,6 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `bug-225-231-run-contract-surface-remediation` | BUG-225..231（真实 run 7 个活跃 bug）用**一个** OpenSpec change `2026-08-17-repair-run-contract-surfaces` 收口：文档/示例/definition 文案对齐 + claim stdout 回归锁 + `_scripts/` scaffold；零引擎裁决逻辑改动。 | ready for OpenSpec apply（propose 完成，polish 待跑） |
 | `hitl1-bounded-clarification-alignment` | 在既有 HITL1 内加入可选、有限的主动反问与对齐快照：保留“你先研究”的自主出口，不新增 checkpoint、状态机或语义 Gate。 | active（设计验证待开始） |
 | `semantic-fact-closure-openspec-governance` | 防止 Engine 同一确定性事实被多处各自解释：建立可增长的事实家族目录、每 change 的 closure record、OpenSpec apply/archive checker 闭环；CI 当前明确不在范围内。 | active（共同理解完成，ready to propose Change A） |
 | `seven-topic-seven-subagent-concurrency-investigation` | delegated concurrency control：当前无结构化 cap owner；下一步以 single ceiling（候选 12）使批量 claim 按当前独立可执行 demand、余量和上限计算。 | active（调查完成，ready to propose） |
@@ -34,6 +33,12 @@
 `../_done/_closed_plans/`，C3 触发时取用。）
 
 ---
+
+## 最近关闭 (2026-08-17)
+
+| Plan | 关闭依据 |
+|------|----------|
+| `bug-225-231-run-contract-surface-remediation` | CLS-069：BUG-225..231 由**一个** OpenSpec change `2026-08-17-repair-run-contract-surfaces`（`0e97d0774`）完整收口——claim stdout JSON 回归锁（SUD-008）、WNC-010 例外边界澄清（enter-phase 仍是合法 loader）、envelope 示例、Wave1 floor 文案、setup 状态窗口、finding-index 契约文档、`_scripts/` 落点；零引擎裁决逻辑改动。propose → polish（3 轮）→ apply → finalizer 17/17 归档；全量 `npm test` 2975/2975 0 fail。七张 bug 卡随行移入 `_done/_fixed_bugs/`。 |
 
 ## 最近关闭 (2026-08-16)
 

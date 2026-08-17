@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-08-12 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-08-17 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -211,8 +211,15 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-222 | 2026-08-12 | Concrete unusable submitted-backing/depth-review roots now precede synthetic Topic guards, with direct prerequisite masking (`5503cc37b`, v0.89) |
 | BUG-223 | 2026-08-12 | Current hash-valid supplementary-row classification and depth-review primary repair projection fixed (`5503cc37b`, v0.89) |
 | BUG-224 | 2026-08-12 | Accepted one-contribution deferred grammar retained; playbook clarifies explicit entries and sequential deferred applies (`5503cc37b`, v0.89) |
+| BUG-225 | 2026-08-17 | Claim stdout JSON contract regression-locked (SUD-008) + `result_hash` basis documented (`0e97d0774`) |
+| BUG-226 | 2026-08-17 | WNC-010 bootstrap exception scoped to advance-status sync only; enter-phase stays the legal node loader — phase docs, machine checker and doc-lock tests corrected (`0e97d0774`) |
+| BUG-227 | 2026-08-17 | Research-access envelope Available example uses `round_budget_not_attempted` for the unstarted reserve sample (`0e97d0774`) |
+| BUG-228 | 2026-08-17 | Wave1 ref-floor definition failure message states the profile-driven threshold and submitted-backing countable scope (`0e97d0774`) |
+| BUG-229 | 2026-08-17 | phase-setup.md documents the pre-gate bootstrap status window and `advance-status --to setup_ready` gate prerequisite (`0e97d0774`) |
+| BUG-230 | 2026-08-17 | finding-index required top-level keys and `cross_topic_resolution` non-empty `origin_refs` documented in shared-schemas (`0e97d0774`) |
+| BUG-231 | 2026-08-17 | Run-scoped helper scripts get a sanctioned bundle `_scripts/` home; gitignore masking patches removed (`0e97d0774`) |
 
-**Next available bug ID: BUG-225**
+**Next available bug ID: BUG-232**
 
 ---
 
