@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-17 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-19 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -25,12 +25,12 @@
 | `bug-200-204-gate-and-queue-remediation` | BUG-200--204 的收敛分诊：关闭 current-head 已覆盖的 BUG-200；以两个 OpenSpec change 分别修 Gate/recovery contract 与递归 queue repair；不将 gate audit 拆为独立生命周期，也不让无 submitted evidence 的 topic 伪造完成。 | ready for OpenSpec proposals |
 | `gate-schema-capability-audit` | 全面 Gate quality audit（重开 2026-08-07）：per-gate gap map 与语义质量审计未完成；BUG-201/202/204 的确定性闭环已由 `bug-200-204-gate-and-queue-remediation` change 1 收敛，其余内容质量 concerns 仍待审计。 | active（审计未闭环） |
 | `iterative-final-delivery-versioned-output` | Final 交付可迭代打磨（与用户反复敲打、就地重写，不新增 checkpoint）+ 版本化 Final 输出命名（`final.md` → `final-v1.md`、`final-v2.md` …）。触发自 `enterprise-safe-ai-harness-v2` 技术深入版交付。 | active（设计验证待开始） |
+| `user-intent-carry-through-design-analysis` | 用户意图变更（补 seed topic / 改重点）在 HITL1 与 rerun 两处的 carry-through 系统设计：三层模型（结构化决定/解释/原话）+ 原话层缺口补齐 + 强制 re-echo；吸收 v1 rerun 分析稿。 | active（设计稿讨论中，待用户确认方向） |
 
 ### 参照资料（非 plan，供后续 change 引用）
 
-（当前无；`machine-checks-catalog.md` 与 `midrun-reading-burden-audit.md` 已随
-`midrun-burden-reduction-and-residual-drift` plan 归档至
-`../_done/_closed_plans/`，C3 触发时取用。）
+- `rerun-feedback-carry-through-design-analysis.md` — rerun 反馈 carry-through v1 分析稿（`dpt_rb_enterprise-ai-transformation-six-cases` rerun_count 1 实战观察），已被 `user-intent-carry-through-design-analysis` 吸收扩展，同目录保留供对照。
+- `machine-checks-catalog.md` 与 `midrun-reading-burden-audit.md` 已随 `midrun-burden-reduction-and-residual-drift` plan 归档至 `../_done/_closed_plans/`，C3 触发时取用。
 
 ---
 
