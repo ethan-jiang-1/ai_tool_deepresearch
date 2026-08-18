@@ -1,27 +1,30 @@
 # 用户意图变更（补 seed topic / 改重点）的 carry-through：系统性设计分析
 
-> 2026-08-19 | `_backlog/plans/` 设计分析稿 v2（设计讨论用，不是 bug 卡，也不是 OpenSpec change）
-> v2 覆盖两个 juncture：**HITL1**（看到 seed topic 预览后想补充/修正）与 **rerun**（HITL2 / post-final）。
+> 2026-08-19 | `_backlog/plans/` 设计分析稿 v3（已完成复核，不是 bug 卡，也不是 OpenSpec change）
+> 本稿覆盖两个 juncture：**HITL1**（看到 seed topic 预览后想补充/修正）与 **rerun**（HITL2 / post-final）。
 > 扩展并吸收 `rerun-feedback-carry-through-design-analysis.md`（v1，只覆盖 rerun 侧；同目录）。
-> 总原则：**框架已经成熟——利用既有表面补契约，不新增机制、不搬家、不破坏。**
+> 最终机制与执行 checklist：`user-intent-carry-through-implementation-plan.md`。
+> 总原则：**框架已经成熟——加固既有 source -> projection -> task -> coverage -> synthesis 链，不新增 schema/Gate/lifecycle。**
 
 ## 0. 结论先行
 
-用户的直觉是对的：「他当时知道，流转后不记得」真实存在，但**丢的不是结构化决定，而是「用户原话 / 为什么」这一层**。
+用户的直觉是对的：「他当时知道，流转后不记得」真实存在，但根因不是缺少一个全局 `user_intent` 对象，而是**既有 source 到实际执行/综合决策点之间的消费边仍然偏软**。
 
-- **L1 结构化决定层已经 carry 得很好，不会丢**：HITL1 的补充/修正走 `operate-topic-state apply` 原子写入 canonical registry + 每 topic `must_answer` + seed skeleton（Engine 校验）；rerun 侧走 `## 本轮重跑方向` 六字段 + shared resolver 五态（Engine 校验 + round-bound）。
-- **会丢的是 L2/L3 叙事层**：入口写一次，下游全靠 Agent「自觉重读」，消费契约全是 *when present* / *MAY*；setup/final 甚至完全不读。这正是「环节流转后不记得」的机制根因。
-- 框架里已存在两样可以拼成强制链的东西：**(a) 两段式原话约定**（`用户的重点原话（逐字保留）` + `Agent 的理解`，URC-001 / HIU-003 均已接受）；**(b) per-topic 方向结构**（rerun direction 六字段 + resolver；首轮的等价物是 must_answer + enrich 五字段）。缺口只有三个，且都是「补契约」级别。
+- **结构化决定 carry 已经很强**：HITL1 的补充/修正走 canonical topic-state；rerun 走六字段 direction + shared round resolver。
+- **现有接纳文档已经存在**：`rb_plan.md` 是 run 的 narrative host file；HITL1 baseline 已在 controls，而现成的 append-only、最新在上的 `## Decisions` 正适合承接每轮已接受 revision。
+- **原始 wording 的机器入口也已存在**：普通 HITL2 focus rerun 在 rationale；post-Final 的现有 multiline `reason` 能复用同一两段式约定，不需要新字段。
+- **真正缺口是 Decisions 尚未承接多轮历史，加上下游消费链偏软**：Seed 的 topic-local 投影是 MAY；Wave delegated work 只 MAY 携带 source coordinate；Wave2 没有 visible current-intent coverage；当前 Final phase 也未显式读取 controls/current revision。
+- **正确目标不是逐层复制原话**：原话保留在既有 owner；执行层携带 source coordinate + bounded topic/task interpretation；完成情况由 current-round submitted backing / limitation 证明。
 
-## 1. 用户意图变更的三层模型
+## 1. 用户意图变更的三类表面
 
-| 层 | 是什么 | HITL1 侧 canonical 家 | rerun 侧 canonical 家 | 下游消费 |
+| 表面 | 是什么 | HITL1 侧 | rerun 侧 | 下游角色 |
 |---|---|---|---|---|
-| L1 结构化决定 | 补什么 topic、必须答什么、边界、guardrails | `root_must_answer_set` + canonical registry + seed frontmatter enrich 五字段 | `## 本轮重跑方向` 六字段（rerun_count/action/new_search_dimensions/adjusted_depth/search_guardrails/rationale_excerpt） | **强**：Engine 校验结构、resolver 决定激活 |
-| L2 解释层 | Agent 对用户意图的理解 | controls snapshot 的理解段 / HITL1 Alignment Snapshot | `hitl2.rationale` 的理解段 | **弱**：叙事，靠 Agent 读 |
-| L3 原话层 | 用户逐字表述（打磨的原始痕迹） | controls snapshot 的 verbatim 段；**topic 修正的 verbatim 目前无固定家** | `hitl2.rationale` 的 verbatim 段；**post-final 无 verbatim 槽** | **弱/缺失** |
+| 决定 / 原始叙事 | 用户到底改了什么、为什么 | controls 保存 baseline | current rationale/C5 event 承载当前 machine/audit decision；`rb_plan.md## Decisions` 保存多轮 narrative revisions | 正常只读 baseline + 最新 revision；旧 revision 供打磨审计 |
+| Topic / attempt projection | 本 Topic、本 attempt 具体做什么 | seed enrichment/body + queue-owned `task_brief` | matching direction + queue-owned `task_brief` | 把 context 放到实际 decision point |
+| 覆盖 / 综合投影 | 本轮要求做到了什么、哪里受限 | round-0 `focus_coverage` + synthesis | current-round `focus_coverage` + synthesis | 用 backing/limitation 回答完成度，而非重复原话 |
 
-设计目标一句话：**让 L2/L3 获得与 L1 同等的「必读/必写」契约**——每一环把 why 写进它下游必读的 artifact，而不是靠下游自己记得回读入口叙事。
+设计目标一句话：**现有 `rb_plan.md` 接纳 baseline 与多轮 revision，topic/task projection 在实际执行点必达，coverage 与 synthesis 对当前轮次负责。**
 
 ## 2. 现状事实链（已逐文件验证）
 
@@ -38,98 +41,93 @@
 
 | 节点 | 消费 | 强度 |
 |---|---|---|
-| setup | 不读 controls | 无 |
-| seed-topics | 读 controls（"when present"），**可将**焦点投影为 search_guardrails/evidence_route | MAY |
-| wave0 | 读 controls（"when present"），**MAY** 在 task_brief 加一句 beacon 坐标 | MAY |
+| setup | 不读 controls | 正确：只做 structural consistency |
+| seed-topics | 读 controls（"when present"），**可将**焦点投影为 search_guardrails/evidence_route | MAY，需对 applicable Topic 收紧 |
+| wave0 | 读 controls（"when present"），**MAY** 在 task_brief 加一句 beacon 坐标 | MAY；且必须在 Wave0 自己的 enqueue 点完成 |
 | wave1 | 同上；另有 depth-review 的 `focus_coverage` 块（绑 topic UID + rerun_count，但「正面来源」未写清） | MAY + 一个含糊消费点 |
-| wave2 | 读 controls（"when present"）；resolver 只做 round-awareness；**synthesis task 不回显 why** | MAY + 最弱环 |
-| final | 不读 controls（交付意图已由 HITL2 composition_handoff.primary_focus 覆盖） | 无需新增 |
+| wave2 | 读 controls（"when present"）；resolver 只做 round-awareness；**synthesis task 不呈现 current-intent coverage** | MAY + 最弱环 |
+| final | 当前 phase 未显式列出 controls；`composition_handoff` 只拥有交付语义 | 与 accepted original-coordinate consumption 存在需收敛的 drift |
 
 ### 2.3 rerun 出口写入与下游消费
 
 - HITL2：`hitl2.rationale`（HIU-003：rerun 带新/修订 focus 时必须两段式——verbatim + 理解）。
+- `rb_plan.md## Decisions`：模板已经规定 append-only、最新在上，但当前 rerun phase 没有把 accepted rationale materialize 成多轮可读 revision；后续 profile rationale 被覆盖后，人类无法从 host file 看见完整打磨轨迹。
 - phase-rerun：读 rationale → 对比推断 → `add_topic` / `update_intent` / `set_rerun_direction`（六字段 direction，count = profile+1）→ topic-state 原子提交 → 递增 rerun_count → rerun-ready gate。crash-safe（resolver 的 future/matching/stale 三态 + recover）。
-- 下游：seed-topics 灌料时把 `new_search_dimensions` 写进 wave0 task card；wave1/wave2 有本地 resolver；**wave2 synthesis 不回显 rationale_excerpt**。
-- post-final（C5）：`operate-post-final-recovery apply` 请求 = schema version + action + 自由文本 reason/scope + identity/bindings；Engine 不评语义。**reason 是那次用户请求唯一的 durable 记录，但没有 verbatim 槽。**
+- 下游：Wave0 在自己的 queue filling 中消费 canonical seed 与 current direction；Wave1/Wave2 有本地 resolver；**Wave2 synthesis 尚未呈现 current-intent coverage**。
+- post-final（C5）：`operate-post-final-recovery apply` 请求 = schema version + action + multiline free-form reason/scope + identity/bindings；Engine 不评语义。现有 serializer 会把 reason/scope 确定性写入 rationale，并在 C5 audit event 中分开保留；缺的是两段式 authoring contract，不是 schema capacity。
 
 ## 3. 弱点分级
 
-- **W1 转写链无 verbatim 强制**：原话 → rationale（Agent 转述）→ direction.rationale_excerpt（Agent 转述）→ task card（Agent 再转述）。没有一处强制逐字。
-- **W2 HITL1 无 profile 级决策记录**：hitl1 只有 status/recorded_at；「用户修正/补充了什么」的 profile 级记录缺失，叙事只在 plan snapshots。
-- **W3 消费是机会性的**："when present" / "MAY append beacon"；setup/final 零读取。→ 「他当时知道，流转后不记得」的机制根因。
-- **W4 wave2 最弱**：synthesis 只读 evidence-summary/question-list/finding-index，不回显「为什么这轮」。
-- **W5 跨 topic 一致性靠 Agent**：同一意图写 N 份 direction，靠 Agent 同步。
-- **W6 post-final 无 verbatim 槽**（W1 在 post-final 路径上的根）。
+- **W1 既有 Decisions 未被使用**：current profile 只保留当前 rationale，多轮 rerun 后缺少一个 host-file narrative history 与 current stop point。
+- **W2 消费义务偏软**："when present" / "MAY append beacon" 让正确执行依赖 Agent 自觉。
+- **W3 post-Final authoring 未复用既有两段式约定**：能力已经存在，但 playbook 只写 `<decided reason>`。
+- **W4 Wave0 的责任位置容易误判**：future Wave0 work unit 由 `phase-wave0` 创建；seed-topics 不能替它保证 task context。
+- **W5 delegated interface 使用不精确**：真正进入 immutable `task.md` 的是 queue-owned `task_brief`，不是把原话塞进 `action`。
+- **W6 Wave2/Final 缺 current-intent stop point**：读者需要重新拼 controls、directions、coverage 与 handoff。
+- **W7 semantic proof 容易越界**：substring/equality test 只能证明文本复制，不能证明 Agent 正确理解或研究真正覆盖。
 
 ## 4. 设计原则
 
-- **P1 复用已接受约定**：两段式 verbatim+interpretation（URC-001 / HIU-003）、direction 六字段 + resolver 五态（RTI）、topic-state 原子 writer（CTS）、host-file renderer（plan-hostfile-sections）、composition_handoff.primary_focus（schema-core）。
-- **P2 Engine 只加结构、不加语义判断**（与 RTI「Engine SHALL NOT judge direction semantics / compare rationale_excerpt」一致）。
-- **P3 不新增 HITL、生命周期节点、profile 权威字段族**；gate verdict 语义不动；stop:no 沉默纪律不动（re-echo 全是本地写入，不浮出水面）。
-- **P4 不靠记忆**：每环把 why 写进它下游必读的 artifact（task card `action`、depth-review `focus_coverage`、synthesis 范围节），而不是靠下游回读入口叙事。
-- **P5 原始痕迹留在既有家，不搬家**：HITL1 focus 的 canonical 仍是 controls snapshot（URC「sole durable narrative authority」）；HITL2 的仍是 profile rationale（HIU-003）。
+- **P1 原始痕迹留在既有 host file**：HITL1 baseline 留在 controls；每轮 accepted revision 留在既有 Decisions；current profile/C5 继续拥有 machine/audit decision。
+- **P2 Source + bounded projection，不做 verbatim fan-out**：执行表面可携带坐标与 task-local interpretation，不复制整段原话。
+- **P3 Decision-point proximity**：Wave0/1/2 在实际 enqueue/claim/synthesis 点读取 current intent，不依赖几十段前的提醒。
+- **P4 使用现有 interface**：delegated handoff 用 `task_brief`；完成证明用 `focus_coverage`；Wave2 用现有 synthesis artifact。
+- **P5 Engine 不加语义判断**：只保留既有 round/schema/transaction/submitted-backing verdict；Agent 负责映射与综合。
+- **P6 不新增 HITL、state、Gate、queue kind、memory 或 controller**；`stop: no` 沉默纪律不动。
 
 ## 5. 机制设计
 
-### 机制 1：补齐「原话层」的两个缺口（回答「打磨的原始痕迹记在哪儿」）
+### 机制 1：让既有 `rb_plan.md` 真正接纳多轮变化
 
-**1a. post-final 请求加可选 verbatim 槽（推荐做）**
-`operate-post-final-recovery apply` 的 retained request 增加 optional `focus: { verbatim, agent_understanding }`（或遵循两段式标签的字符串）。C5 apply 写 `hitl2.rationale` 时保留两段式。
-→ post-final juncture 的用户打磨从「只能靠 Agent 转述的 reason」升级为「有逐字记录」。additive optional；Engine 不评语义（延续 POF）；不进 gate 输入。
+- HITL1 controls 继续是 baseline，不把后续历史塞回一次性 snapshot。
+- `phase-rerun` 对普通 HITL2 与 post-Final C5 采用同一个 writer point：在形成 topic candidate 前，把 current accepted decision 写入 `rb_plan.md## Decisions` 顶部。
+- 每个 immutable revision 同时保存：本轮 delta、用户原话、Agent 理解、affected Topics、supersedes/withdraws，以及相对 HITL1 baseline 的当前累计有效 amendments。
+- 正常恢复只读 controls + 顶部 revision；旧 entries 只在审计多轮打磨时读取。未接受的 HITL 对话草稿不写入。
+- 写入/确认 revision 后重新运行 existing topic-state inspect，再构造/apply candidate；current topic-state renderer 只刷新 Topic Registry 并保留其他 plan body，因此不增加 plan transaction、writer 或 parser。
+- presentation-only Final feedback 继续留在既有 Final version lineage；只有改变 research semantics 并进入 legal rerun 的 feedback 才形成本类 revision。
+- post-Final 有新/修订 focus 时，现有 request `reason` 使用 `用户的重点原话（逐字保留）` + `Agent 对本轮额外研究方向的理解（可由用户修正）` 两段；`requested_scope` 保持独立。
+- 不新增 runtime 文档、`focus` object、`hitl1.rationale`，也不把 Alignment Snapshot 变成 transcript。
 
-**1b. `hitl1.rationale`（讨论项，倾向做，但必须写清分工）**
-ProfileSchema 给 `human_decision_checkpoints.hitl1` 加 optional 两段式 `rationale`：记录「用户对草案的修正/补充及其理由（含原话摘录）」。
-- 分工（避免与已接受 spec 撞线）：rationale = **决定记录**（profile 家）；controls snapshot = **研究指导 literal 快照**（plan 家，URC 权威不变）。focus 的 canonical 语义仍留 controls snapshot，rationale 只引用不替代——因此不违反 HIU-002「accepted focus remains in the existing literal controls snapshot, not a profile field」。
-- 收益：hitl1/hitl2 对称；下游 re-echo 有了 profile 级、可被结构检查的源头。
-- 替代方案 **1b'（零 schema 变化，先做）**：扩展 HITL1 Alignment Snapshot 写作契约——对每条被用户修正/补充的 structured 决定，snapshot MUST 保留两段式 verbatim 摘录。收益略小（仍在 plan 叙事层），但不碰 ProfileSchema。
-- 推荐顺序：先 1b'，1b 作为后续 change 的讨论项。
+### 机制 2：加固 topic / attempt projection
 
-**1c. 既有家不动**：controls snapshot、alignment snapshot、hitl2.rationale 及其兼容形式（no-controls / ordinary-controls / legacy）全部保留。
+- **Seed Topics**：applicable controls 必须投影到既有 enrichment/body；不适用不写，信息不足写 explicit gap，不复制完整 snapshot。
+- **Rerun direction**：`rationale_excerpt` 是 bounded topic-local why；不同 Topic 可不同，但必须来自同一 current recorded rationale，并随同一 target round 的 retained input 原子提交。
+- **Wave0/Wave1/Wave2 delegated work**：实际 enqueue 点 author queue-owned `task_brief`，携带 controls/Decisions-current/seed coordinates、current-direction 读取规则和 bounded task objective；不把完整 verbatim 放进 `action`、result、receipt 或 ledger。
+- **Wave0 特例**：由 `phase-wave0` 自己为 `wave0_source_intake` demand 写 task brief，不依赖 seed-topics 预写未来 work unit。
 
-### 机制 2：强制 re-echo（消费契约升级；纯 phase MD 写作契约，零 schema/gate 变化）
+### 机制 3：用既有 proof / synthesis 表面闭环
 
-- **2a. seed-topics：MAY 投影 → MUST 投影**。与某 topic 相关的 controls focus，enrich_seed 的 hypothesis/in_scope/search_guardrails/evidence_route 必须体现（或显式 gap——gap 仍是合法输入供 wave0 收敛，不编造）；seed initialization 的「为什么对最终交付物重要」段回显 verbatim 摘录。
-- **2b. wave0/wave1：task card 强制携带 excerpt**。受影响 topic 的 delegated task card `action` 必须含一行「本轮用户要求（原话摘录）：…」——首轮取自 controls snapshot（或 hitl1.rationale / alignment verbatim）；rerun 轮取自 `direction.rationale_excerpt`。现状只有 beacon 坐标（MAY）；升级为 MUST 且带 excerpt 本身。task card `action` 已有非空约束，无 schema 变化。
-- **2c. wave1 focus_coverage：写清正面来源**。现在只说不许从文件名/HITL rationale/profile 推断；补一句正面来源：focus 语境必须从 controls snapshot（首轮）/ direction（rerun 轮）读入并绑定本轮 UID + rerun_count。让这个已有消费点从含糊变确定。
-- **2d. wave2：synthesis 回显 why**。synthesis task card `action` 必须回显受影响 topic 的方向 excerpt / 首轮 focus；`synthesis.md` 的「本轮范围」节 MUST 引用 rationale/direction excerpt。`cross-topic-ledger.md` 的 HITL2 Handoff 节（6 固定节之一）增加「本轮用户要求」回显行作为讨论项（担心 6 节结构就只落 synthesis.md 范围节，Agent-owned）。finding-index 已绑 `created_in_rerun_count`，轮次身份不会丢。
-- **2e. final：无需新增**（composition_handoff 已覆盖交付意图）；**setup：不需要读**（纯结构检查），在 MD 里明确写出即可。
-
-### 机制 3：单一来源 + 派生 + 结构可验证（v1 建议 C/D 的落地）
-
-- **3a. excerpt 派生契约**：phase-rerun 写作规则——每个 direction 的 `rationale_excerpt` 必须以 hitl2.rationale 的 verbatim 段引出（形如 `用户要求：<verbatim>；本轮方向：<guidance>`）。Engine 仍不做语义比较（RTI 不变）；确定性测试断言 verbatim 子串存在。
-- **3b. 跨 topic 一致性**：同一 rerun 的多个 direction 已在一个 retained input 中经 topic-state apply 原子提交；再加写作契约——同一 rationale 的 excerpt verbatim 前缀一致。从「靠 Agent 同步」升级为「靠事务 + 契约」。
-- **3c.（可选，暂不推荐）**：rationale 升级为结构化子字段 `{verbatim, understanding}`，Engine 才能做 verbatim 子串包含校验。成本：ProfileSchema 破坏性变化 + 历史 bundle 兼容面。留后续评估。
+- **Wave1**：focus 正面来源为 round 0 controls + seed projection，或 rerun N baseline controls + Decisions 顶部 revision + matching direction；`focus_coverage` 只用 current-round submitted refs / honest limitation。
+- **Wave2**：pure synthesis 读取 Decisions 顶部 revision、current directions、current focus coverage、carried-target receipt 与 verified evidence；在 `synthesis.md` 增加 presentation-tolerant current-intent coverage，不改 finding/ledger schema。
+- **Final**：同时读取 controls baseline、Decisions 顶部 revision、Wave2 intent coverage（完成/受限视图）和 `composition_handoff`（交付语义）；任何一个都不替另一个补 authority。
+- **Setup**：继续只做 structural consistency，不读取用户意图。
 
 ## 6. 「不破坏」清单
 
 **明确不改 / 保持：**
 - RTI resolver 五态、direction 六字段、rerun-ready gate 语义、rerun_count 语义、crash-safe 恢复。
 - CTS「HITL1 apply 不携带 rerun direction」。
-- URC snapshot 的三种兼容形式与「sole durable narrative authority」。
+- URC snapshot 的三种兼容形式；它继续是 HITL1 baseline 的 sole narrative authority，后续 revisions 使用已有 Decisions，不改写 snapshot。
 - HIU 两段式约定、HITL 环模型、stop:no 沉默纪律（re-echo 是本地写，不浮出水面）。
 - topic-state 原子 writer、queue/work-unit/ledger/receipt 权威边界。
-- C5 eligibility/lineage 判定（1a 只是请求 schema 的 additive optional 字段）。
+- C5 request schema、eligibility/lineage/event-last recovery 判定。
+- finding-index / ledger schema 与全部 Gate rules。
 
 **需要走 OpenSpec change 的（若采纳）：**
-- 1a：`post-final-recovery` spec + `operate-post-final-recovery.mjs` request schema。
-- 1b：`schema-core` ProfileSchema + `phase-hitl1.md` payload checklist + `shared-profile.md`。
-- 1b'：`pre-research-phase-content`（HITL1 phase 对应 spec）。
-- 2a-2e：phase MD 写作契约 + 对应 accepted spec delta（seed-topic-materialization、research-wave-phase-content、rerun-topic-integration、wave2-synthesis 等）。
-- 3a：`rerun-topic-integration` / `rerun-incremental-node` 写作契约。
+- 一个 `strengthen-user-intent-carry-through` change：existing Decisions 多轮接纳、post-final authoring、Seed projection、delegated task brief、Wave1 focus source、Wave2 synthesis、Final consumption。
+- 预计只改 accepted specs、phase/playbook Markdown 与 verification assets；不改 production `.mjs`。若 proposal discovery 推翻这一点，必须先回写 design/tasks。
 
-## 7. 建议的最小第一步（风险升序）
+## 7. 建议的最小第一步
 
-- **Step 0（零风险）**：本分析稿 + 与用户确认方向。
-- **Step 1**：机制 2b/2d（wave task card excerpt + wave2 回显）+ 2a（seed-topics MUST 投影）——纯 MD + spec 写作契约，不碰 Engine/gate/schema。
-- **Step 2**：机制 1a（C5 focus 槽，additive optional）+ 3a（excerpt 派生契约）+ 确定性测试（verbatim 全链贯穿断言）。
-- **Step 3**：1b'（alignment snapshot verbatim 摘录，零 schema）或 1b（hitl1.rationale，讨论后）。
-- **Step 4（可选）**：2d 的 ledger 回显行、3c 结构化 rationale。
+直接 proposal 一个 OpenSpec change：`strengthen-user-intent-carry-through`。不先做 schema change，也不拆成 capture/consumer 两个半链 change。完整 progress checklist 见 `user-intent-carry-through-implementation-plan.md`。
 
 ## 8. 测试锚点
 
-- **首轮链**：HITL1 修正（含原话）→ controls/alignment snapshot 含 verbatim → enrich_seed 焦点投影 → wave0 task card action 含 excerpt → wave1 focus_coverage 引用 → wave2 synthesis 范围节含 excerpt。
-- **rerun 链**：post_final_rerun focus 槽 → rationale 两段式 → N 个 seed 的 rationale_excerpt 均含 verbatim 前缀 → wave1 task card 含 excerpt → wave2 回显。
-- 借鉴 `tests/e2e/rerun-round-continuity.test.mjs` 的 baseline 模式（HITL2 → phase-rerun → seed-topics → waves 全链）。
+- **Integration**：带两段式 multiline `reason` 的 post-Final apply 保留 rationale/event 中既有结构；只证明 serializer/durability。
+- **Integration / deterministic E2E**：连续两个 rerun revision 最新在上、旧条目字节保留，topic-state plan replacement 不丢 Decisions history。
+- **Markdown integration**：正确 phase decision point 使用 baseline + current revision coordinates + `task_brief`，并明确只有 host-file history 保存原话，不向 N 个执行 artifact fan-out。
+- **Existing deterministic suites**：direction resolver、topic-state atomic apply、current-round focus binding、rerun continuity 不回归。
+- **Agent-flow E2E**：真实 Subject Agent 在两轮反馈中正确保留/修改/撤回上一轮 amendment，并从 controls + 顶部 revision/current direction 形成 task/coverage/synthesis。不可用时 `NOT_RUN`，不得用 fixture PASS 代替。
 
 ## 9. 关联
 
@@ -141,4 +139,4 @@ ProfileSchema 给 `human_decision_checkpoints.hitl1` 加 optional 两段式 `rat
 
 ## 附：一处对 v1 的事实修正
 
-v1 称「wave0/wave1/wave2 的 §3.0 direction resolver 会读方向段」——准确说法是：**wave0 没有本地 resolver**，它的 supplement 输入由 seed-topics 灌料时把 `new_search_dimensions` 写进 wave0 task card（phase-seed-topics Rerun-Aware 节）；wave1/wave2 才有本地 resolver。这反而强化了机制 2b 的必要性：wave0 的保真链多一跳（direction → seed-topics 灌料 → task card），MUST-carry excerpt 恰好能把这跳也从「靠自觉」变成「必写」。
+v1 称「wave0/wave1/wave2 的 §3.0 direction resolver 会读方向段」不准确：Wave1/Wave2 有明确 local resolver，Wave0 在自己的 direct-fact classification/queue filling 中消费 seed direction。seed-topics 创建的是 seed materialization card，不拥有未来 `wave0_source_intake` work-unit context。另一个关键修正是：进入 immutable `task.md` 的专用 interface 是 queue-owned `task_brief`，不是把原话塞进 `action`。

@@ -1,54 +1,62 @@
-# Rerun 反馈的 carry-through：现状、弱点与改进设计
+# Rerun 反馈的 carry-through：现状观察与设计复核
 
 > 2026-08-19 | 来源：`dpt_rb_enterprise-ai-transformation-six-cases` rerun_count 1（org-roles 补充）实战观察
-> 这是分析稿（scratch），不是 bug 卡，也不是 OpenSpec change。供设计讨论用。
+> 状态：历史分析参考；落地决策与 progress 以 `user-intent-carry-through-implementation-plan.md` 为准。
 
-## 问题
+## 问题与有效观察
 
-用户在看完 Final 后发起 rerun，把新的研究要求告诉 Agent。问题：这个"用户反馈/要求"到底落在哪个 durable 表面？第二轮 wave0/wave1/wave2 的每个 node 是否都能清楚看到"为什么要做这轮"？是只在 chat 上下文里，还是有结构性支持？
+用户在 Final 后发起 rerun，系统需要让后续 Wave 知道本轮为什么继续研究，而不能只靠 chat memory。
 
-## 现状：反馈落在哪（已验证）
+已验证的 durable 链并非空白：
 
-| 表面 | 内容 | 谁读 |
-|---|---|---|
-| `rb_profile.yaml#/human_decision_checkpoints/hitl2/rationale` | rerun 决定本身（`post_final_rerun` apply 写入的 reason + requested_scope；`user_decision: rerun`；`rerun_count: 1`） | HITL2/rerun 节点、决策审计 |
-| `seed_topics/{slug}.md## 本轮重跑方向` | 每个受影响 topic 的方向段：`rerun_count` / `action: supplement` / `new_search_dimensions` / `adjusted_depth` / `search_guardrails` / `rationale_excerpt`（含"用户要求：…"） | wave0/wave1/wave2 的 §3.0 direction resolver 会读（比对 rerun_count 与 profile 当前值才激活 supplement intent） |
-| queue task card `action` | Agent 把方向转写成 delegated 任务指令（本次 wave0 source-intake card 带 org-roles scope） | 被 claim 的 sub-agent 读 task.md |
+| 表面 | 角色 |
+|---|---|
+| `rb_plan.md## Decisions` | 已存在的 append-only、最新在上多轮 revision history；当前尚未被 rerun 流程正式使用 |
+| `rb_profile.yaml#/human_decision_checkpoints/hitl2/rationale` | 当前 rerun 的 route-bound Agent input；Engine 只判断既有结构/决定，不解释 prose，后续轮次可能覆盖 |
+| UID-bound seed `## 本轮重跑方向` | 受影响 Topic 的 round-bound increment projection |
+| queue-owned `task_brief` -> work-unit `task.md` | delegated actor 的 attempt-local execution context |
+| Wave1 `focus_coverage` | current-round commitment 的 covered/limited process evidence |
+| `artifacts/wave2/synthesis.md` | cross-topic、非权威的 reader-facing synthesis projection |
 
-结论：**不是只在 chat 上下文**。seed 的 `## 本轮重跑方向` 是主要"为什么"载体，wave0/1/2 节点按设计会读。本次实际验证：kavak seed 方向段含 `rationale_excerpt: 用户要求：对每家公司，CEO/HR/CTO/员工等组织多角色对 AI 采用的观点，分部门越多越好`。
+本次实账证明 direction 能保存 topic-local why；真正的缺口是若干消费边仍是 MAY/自觉读取，尤其 Wave0 delegated task 和 Wave2 pure synthesis。
 
-## 弱点（用户直觉对）
+## 对初稿的事实修正
 
-1. **保真链依赖 Agent 逐环转写，非结构性强制。** 用户原话 → profile rationale（Agent 转述）→ seed direction（Agent 转述）→ task card action（Agent 再转述）。没有一处强制引用用户**逐字原话**。`phase-rerun.md` 设计上允许"用户重点原话（逐字保留）"，但 `post_final_rerun` request schema 没有结构化的 verbatim-quote 字段；Agent 的 reason 是转述，不是原话。
-2. **Wave2 re-echo 最弱。** wave0/wave1 读 seed 方向；wave2 synthesis 主要读 evidence-summary/question-list/finding-index，"为什么这轮 org-roles"到 wave2 时容易淡化。除非 Phase Agent 主动重读受影响 seed 的方向段，并把它显式写进 finding-index / cross-topic-ledger / synthesis（本轮我需要在 wave2 主动做这件事）。
-3. **无单一"用户需求"表面。** 分散在 profile + N 个 seed + 各 task card；node 是否读到取决于阶段节点是否引用 + Agent 是否执行。没有"每个 node 强制回显 why"的机制。
-4. **跨 topic 一致性。** 同一用户意图被 6 个 seed 各写一份 direction，内容靠 Agent 保持同步；若某 seed 漏写/写偏，该 topic 的 supplement 意图就丢。
+1. Wave0 没有本地 direction resolver；它在自己的 queue filling 中读取 canonical seed/current direction 并创建 `wave0_source_intake` demand。不能把责任归给 seed-topics，也不能假设 seed-topics 已替未来 Wave0 work unit 写好 brief。
+2. Sub-agent 最终在 `task.md` 顶部读取的是 work-unit manifest 的 `task_brief`。queue `action` 是 demand 描述，不是最合适的 carry-through interface。
+3. post-Final request 虽无结构化 `focus` 字段，但现有 `reason` 已接受 multiline free-form 文本，C5 会将它确定性写入 profile rationale，并在 event 中保留 reason/scope。因此没有新增 verbatim schema 的必要。
+4. 多个 Topic 的 direction 应共享同一 source rationale 与 target round，但它们的 topic-local explanation 本来就可能不同；文本逐字相等不是正确的一致性定义。
+5. `rb_plan.md` 已经是 run 的 narrative host file，且 `## Decisions` 已明确为 append-only、最新在上；不需要创建新的 intention/feedback 文档。真正缺的是让 rerun 使用这个现成 section。
 
-## 改进建议（供设计讨论，未实现）
+## 复核后的机制
 
-### A. 让 seed 方向段成为强制"why"回显点
-- wave0/wave1/wave2 的 Execution Brief / task brief 显式要求：claim 前重读受影响 seed 的 `## 本轮重跑方向`，把 `rationale_excerpt` 逐字带进 task card `action`（"本轮 rerun 方向（用户要求）：<excerpt>"），并写入 sub-agent 的 task.md。
-- 好处：保真链最后一段（task card）也强制携带用户原话，不依赖 Agent 记忆。
+```text
+post-Final reason（既有两段式原话 + 理解）
+  -> hitl2.rationale（现有 C5 serializer）
+  -> rb_plan.md / Decisions 顶部 revision
+       = 本轮 delta + 相对 HITL1 baseline 的累计有效 amendments
+  -> affected seed directions（同一 retained atomic apply，round-bound）
+  -> Wave0/Wave1 task_brief（source coordinates + bounded local objective）
+  -> Wave1 current-round focus_coverage
+  -> Wave2 synthesis 的 visible intent coverage
+```
 
-### B. Wave2 显式消费方向
-- phase-wave2 增加要求：synthesis 前读受影响 topic 的 seed `## 本轮重跑方向`；`finding-index.yaml` 的 `created_in_rerun_count` 已绑定轮次，但还应让 synthesis_eligibility / ledger 回显"本轮用户要求"（例如一个 `rerun_focus` 摘要字段或在 ledger 记 `Rationale Excerpt` 行）。
-- 好处：wave2 不会淡化"为什么"。
+- 每个 accepted rerun 在既有 `rb_plan.md## Decisions` 顶部增加一个 immutable revision；旧条目形成多轮打磨痕迹，未接受的对话草稿不记录。
+- 正常执行只读 HITL1 controls baseline + Decisions 顶部 revision；旧 entries 仅用于审计。除这个单一 host-file history 外，不向 N 个 seed/task/finding 扇出完整原话。
+- `rationale_excerpt` 保留为 topic-local why，不要求逐字复制 rationale。
+- delegated work 使用现有 `task_brief`，指向 assigned seed、可选 controls 原坐标并给出 bounded task objective。
+- Wave2 必须消费 matching direction 与 current focus coverage，但不新增 `rerun_focus`、ledger 固定行或 Gate rule。
+- Engine 继续只判断 schema、round binding、transaction、submitted backing；Agent 继续判断语义映射。
 
-### C. post_final_rerun request 增加 verbatim-quote 结构
-- `operate-post-final-recovery` 的 `reason` 允许/要求结构化 `{ user_verbatim: "<用户原话>", agent_understanding: "<Agent 理解>" }`，apply 时写入 profile rationale；seed direction 的 `rationale_excerpt` 从 `user_verbatim` 派生。
-- 好处：用户原话从头到尾逐字保留，不再靠 Agent 转述。
+## 明确撤回的建议
 
-### D. 单一来源 + 派生
-- 让 seed 方向段从 profile rationale 派生（`set_rerun_direction` 的 `rationale_excerpt` 校验必须非空且与 profile rationale 一致），避免 6 份 seed 各自写偏。
-- 好处：跨 topic 一致性。
+- 撤回 post-final `{ user_verbatim, agent_understanding }` 新 schema。
+- 撤回把 user verbatim 逐字复制到每个 task-card `action`。
+- 撤回 direction 与 rationale 的 Engine substring/equality check。
+- 撤回 `finding-index.yaml.rerun_focus`、新的 synthesis eligibility 字段或 blocking ledger 格式。
+- 撤回新建 `user-intent.md` / feedback-log runtime 文档；复用既有 `rb_plan.md## Decisions`。
+- 撤回用 deterministic test 证明 Agent 理解/语义保真；这类 claim 必须走真实 `agent_flow_e2e`。
 
-### E. 测试
-- 确定性测试：给定一个带 verbatim 原话的 `post_final_rerun` request → apply → set_rerun_direction → 断言每个受影响 seed 的 `rationale_excerpt` 含原话 → wave1 task card `action` 含原话 → wave2 finding-index/ledger 含 rerun_focus。
+## 落地
 
-## 关联
-
-- `phase-rerun.md`（`## 本轮重跑方向` 写入、rerun_count 语义）
-- `phase-wave1.md` / `phase-wave2.md` §3.0（direction resolver 消费）
-- `operate-post-final-recovery.mjs`（post_final_rerun reason schema）
-- `operate-topic-state.mjs`（`set_rerun_direction` writer，rationale_excerpt 字段）
-- 本 run 实账：`dpt_rb_enterprise-ai-transformation-six-cases`（rerun_count 1，org-roles supplement）
+一个 OpenSpec change `strengthen-user-intent-carry-through` 足够。完整 capability impact、verification routing 与 checkbox progress plan 见 `user-intent-carry-through-implementation-plan.md`。
