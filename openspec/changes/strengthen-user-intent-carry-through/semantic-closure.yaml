@@ -1,0 +1,12 @@
+schema_version: semantic-closure/v1
+change: strengthen-user-intent-carry-through
+status: not_applicable
+reason: >-
+  本 change 只修改 Agent-facing phase/playbook Markdown、相应 accepted
+  behavior contracts 与其验证投影，复用现有 rb_plan.md、topic-state、C5
+  reason、queue task_brief、focus_coverage、synthesis 和 Final lineage 接口。
+  它不修改或创建任何 cataloged deterministic runtime fact family 的 Engine
+  resolver 或 verdict consumer；尤其不会让 research.scope-and-rerun-intent
+  获得新的 parser、schema、Gate、状态、receipt、transition 或 deterministic
+  conclusion。真实语义 carry-through 仍由 Agent-flow evidence 观察，而不是由
+  semantic-closure record 或 deterministic fixture 宣称。

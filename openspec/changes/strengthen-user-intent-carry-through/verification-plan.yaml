@@ -1,0 +1,234 @@
+schema_version: verification-routing/v1
+change: strengthen-user-intent-carry-through
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      既有 work-unit unit contract 已能隔离证明 queue-owned task_brief 原样进入
+      manifest 与 generated task；本 change 只复用该接口，不扩大 schema 或
+      Engine authority。
+  integration:
+    status: selected
+    rationale: >-
+      Phase/playbook 的 source-coordinate、writer ordering 与 owner-precedence
+      约束是跨 Markdown 文件的 deterministic contract；host-file bytes、C5
+      multiline reason 和 focus-coverage round binding 还需要真实模块与临时
+      bundle 边界，但不需要 Agent 或外部调用。
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      两轮 revision history 必须在 production topic-state、rerun count、Wave1
+      current-round backing 和现有 Gate/route 链中保持连续。JS 只模拟明确标注的
+      Agent-owned prose/write actions，不能据此宣称 Agent 理解了用户语义。
+  agent_flow_e2e:
+    status: selected
+    rationale: >-
+      接受、替换、撤回并在上下文切换后继续执行自然语言研究意图属于真实 Agent
+      行为。注册的 disposable-bundle case 是最小诚实证明面；Subject runtime 或
+      所需真实工具不可用时必须保留 NOT_RUN，不能用 fixture PASS 替代。
+claims:
+  - id: task-brief-envelope-passthrough
+    statement: >-
+      DEW-026: an existing queue-owned bounded task_brief is carried unchanged
+      into the work-unit manifest and generated task, while no user-intent field,
+      permission, receipt, result obligation, or second authority is introduced.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-lifecycle.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: rerun-revision-guidance-contract
+    statement: >-
+      PHS-009, URC-004, PRP-016, and REI-007: current Markdown guidance names
+      User Research Controls as the immutable HITL1 baseline, gives Decisions one
+      complete newest-first cumulative revision shape with linewise blockquote
+      containment for accepted wording, and orders initial
+      topic-state inspect/exact recovery before revision write plus fresh inspect
+      before candidate construction; it adds no parser, schema, Gate, state, or
+      competing recovery owner.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/user-intent-carry-through-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: phase-intent-projection-guidance-contract
+    statement: >-
+      PRP-016, STM-009, DEW-026, and RWP-022: Seed, Wave0, Wave1, and Wave2
+      guidance projects only applicable topic-local meaning, authors bounded
+      current-intent task briefs at each real enqueue point, names baseline,
+      newest matching revision and matching direction coordinates, rejects stale
+      directions as current instructions, and does not fan full wording into
+      queue, manifest, result, receipt, or another structured authority.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/user-intent-carry-through-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: coverage-synthesis-final-guidance-contract
+    statement: >-
+      WAI-012, WTS-013, and CDP-007: current guidance derives focus commitments
+      only from current intent sources, makes available supplementary work precede
+      an honest limitation, exposes bounded current-intent coverage in synthesis,
+      and keeps research obligations distinct from current-lineage composition
+      intent and presentation-only Final revisions.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/user-intent-carry-through-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: decisions-hostfile-preservation
+    statement: >-
+      PHS-009, URC-004, and REI-007: supplied controls and two complete Decisions
+      revisions, including structure-looking quoted user lines, remain outside
+      structured authority and retain their bytes across
+      canonical topic-state apply and exact recovery; the HITL1 baseline is not
+      rewritten and older accepted history is not reconstructed or erased.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/user-research-controls-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: post-final-multiline-focus-durability
+    statement: >-
+      POF-004: production C5 apply/recover preserves an accepted labelled
+      multiline focus reason through request, profile rationale and append-only
+      event while requested_scope remains separate; no focus object, label parser,
+      permission inference, or compatibility break is introduced.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/post-final-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: current-focus-coverage-mechanics
+    statement: >-
+      WAI-012: existing Wave1 inspect and Gate mechanics accept current reviewed
+      submitted refs, reject malformed declarations under the existing depth
+      contract, and retain only the existing explicit limitation boundary;
+      the test does not decide which natural-language commitments the Agent
+      should author.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/wave1-focus-coverage-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: two-rerun-revision-continuity
+    statement: >-
+      PHS-009, REI-007, PRP-016, and RWP-022: a temporary production bundle can
+      traverse two labelled simulated-Agent reruns while revision 2 remains the
+      newest complete cumulative amendment set, revision 1 remains byte-immutable
+      history, topic-state apply/recovery observes post-revision plan bytes, and
+      existing count, direction, Gate, route, and submitted-work authority remains
+      unchanged. This proves deterministic continuity, not semantic fidelity.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/rerun-round-continuity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: rerun-focus-current-backing
+    statement: >-
+      WAI-012: the production rerun-to-Wave1 chain rejects historical submitted
+      backing for a current focus declaration and accepts a newly submitted
+      current-round increment through the normal inspect and Gate route without
+      relabelling prior work as current coverage.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/wave1-focus-coverage-rerun.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: real-agent-multi-rerun-intent-carry-through
+    statement: >-
+      PHS-009, URC-004, PRP-016, STM-009, DEW-026, RWP-022, WAI-012,
+      WTS-013, CDP-007, POF-004, and REI-007: across a deliberate Subject-context
+      boundary, a real Agent resumes one disposable bundle after a normal HITL2
+      rerun and accepts a post-Final C5 revision that replaces and withdraws
+      first-rerun amendments,
+      preserves both immutable revisions, and uses only the current cumulative
+      intent in the observed topic/task/coverage/synthesis path. Unavailable
+      Subject runtime or required real tools yields NOT_RUN. The default path
+      permits one authenticated execution under a declared hard cap and no
+      automatic retry; FAIL or ERROR remains unresolved evidence. One observed
+      PASS does not prove generic interpretation quality or user satisfaction.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_iterative_interaction/case-717-heavy-multi-rerun-intent-carry-through.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
