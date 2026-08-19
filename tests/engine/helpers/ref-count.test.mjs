@@ -174,10 +174,44 @@ describe('isCountable', () => {
   it('returns countable=false when acceptance_status is not "accepted"', () => {
     const dir = setupBundle('rc-rejected', {
       'reference/rejected.md': refContent({ acceptance_status: 'rejected' }),
+      'reference/excluded.md': refContent({ acceptance_status: 'EXCLUDED' }),
     });
-    const result = isCountable('reference/rejected.md', dir);
-    assert.strictEqual(result.countable, false);
-    assert.ok(result.reason.includes('acceptance_status_not_accepted'), `Reason: ${result.reason}`);
+    for (const refPath of ['reference/rejected.md', 'reference/excluded.md']) {
+      const result = isCountable(refPath, dir);
+      assert.strictEqual(result.countable, false);
+      assert.ok(result.reason.includes('acceptance_status_not_accepted'), `Reason: ${result.reason}`);
+    }
+  });
+
+  it('counts the YAML quoted accepted :warning: form as the accepted family', () => {
+    const frontmatterWarning = [
+      '---',
+      'source_url: "https://example.com/warning-reference"',
+      'acceptance_status: "accepted :warning:"',
+      'source_type: primary',
+      'tier: "Tier 2"',
+      'trust_level: expert',
+      'evidence_role: deepening_reference',
+      'why_it_matters: "Key source with an inline honesty marker."',
+      'accessed_at: "2026-06-15"',
+      '---',
+      '',
+      '## Key Facts',
+      '',
+      '- Fact 1.',
+      '',
+      '## Core Content Capture',
+      '',
+      'Thin but accepted; substance is judged by the reference-format layer.',
+      '',
+    ].join('\n');
+    const dir = setupBundle('rc-accepted-warning', {
+      'reference/accepted-warning.md': frontmatterWarning,
+    });
+    const result = isCountable('reference/accepted-warning.md', dir);
+    assert.strictEqual(result.countable, true, `Expected countable but got: ${JSON.stringify(result)}`);
+    const numeric = countReferences(dir, { source: 'filesystem' });
+    assert.strictEqual(numeric.count, 1);
   });
 
   it('returns countable=false and does not throw for unparseable file', () => {

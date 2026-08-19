@@ -1,0 +1,167 @@
+schema_version: verification-routing/v1
+change: fix-transaction-guards-and-wave0-reference-balance
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      四个修复面都是纯确定性引擎逻辑（事务快照作用面、orphan 依赖序投影与
+      恢复序列、wave0 平衡选择函数、isCountable 家族判定、双 digest 与
+      append proof 基准），truth table 全部可由 tests/engine/ 的 node:test
+      以 fixture-backed 临时 bundle 直接锁定。
+  integration:
+    status: selected
+    rationale: >-
+      多 orphan 的 recover-transaction 合法结清序列经 CLI 面复验、wave0
+      多 topic 收敛的 inspect 引导分布、post-final 两次连续 rerun（含
+      non-primary 修改与新 primary 发布）都是跨 CLI/engine/temporary bundle
+      的确定性链路，需 tests/integration/ 驱动。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      不改 workflow/gate 状态机与 phase 链结构；wave gate 消费收敛结果的
+      行为由 unit + integration 的收敛函数与 inspect CLI 断言覆盖，
+      无需端到端临时 bundle 生命周期链。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称真实 Agent 行为变化：全部修复是 Engine 确定性 verdict 与选择
+      函数，Agent 面只有既有反馈坐标的内容变化，由确定性测试锁定。
+claims:
+  - id: tx-authority-surface
+    statement: >-
+      withWorkUnitTransaction 的 undeclared 检测只覆盖 work-unit authority 面
+      （_work_units/** 排除 lock 与当前 journal + rb_output_declarations.jsonl）；
+      事务窗口内非 authority 并发写不产生 suspect、不污染 rollback 证明；
+      authority 面内未声明写仍 fail-closed。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-transaction.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: multi-orphan-dependency-recovery
+    statement: >-
+      双 orphan（含 wrapper 关系）时存在合法 recover-transaction 结清序列且
+      不手改 journal bytes；inspect 多 orphan 反馈给出单一确定
+      first-recoverable 坐标与 recover-transaction rerun，无互踢循环。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-transaction.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: multi-orphan-cli-feedback
+    statement: >-
+      经 operate-work-unit CLI（inspect/submit 在多 orphan 状态下）返回的
+      transaction 阻塞反馈携带单一确定 first-recoverable 坐标与精确
+      recover-transaction rerun（wrapper 依赖序），无互踢循环、无手改 journal
+      建议。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-balanced-selection
+    statement: >-
+      收敛 materialization 候选选择为跨 topic min-已投影数轮转（topic_slug
+      字典序 tiebreak、topic 内最小 source_ordinal），字典序不再独占 floor；
+      轮转性质（一 topic 第 2 投影前所有有候选 topic 均有第 1 投影）成立。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/wave0-reference-convergence.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: accepted-warning-countable
+    statement: >-
+      isCountable 把引号形式 "accepted :warning:" 归入 accepted 家族计数；
+      EXCLUDED 与未知值仍不可计数。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/ref-count.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: primary-scoped-lineage-proof
+    statement: >-
+      FinalReportInventorySchema 计算 primary_sha256；proveNewerFinalAppend 按
+      bound basis 消费：primary-scoped 事件 + non-primary 漂移 → admission 与
+      append proof 通过；legacy 全树绑定仅为 non-primary 漂移时经 structural
+      fallback（零或多移除前缀）恢复并暴露 basis；primary series 内容篡改在
+      两基准下均 block。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/post-final-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: second-rerun-after-nonprimary-update
+    statement: >-
+      两次连续 post-final rerun：第一次在 final 阶段修改 final/topics/*.md
+      并发布新 primary 后，第二次 inspect 不返回 accepted_lineage_drift 且
+      新 C5 事件绑定 primary 基准与 basis 标记；legacy 绑定路径同样恢复。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/post-final-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-balanced-inspect-consumption
+    statement: >-
+      多 topic wave0 temporary bundle 经 inspect CLI 驱动收敛时，引导物化
+      序列跨 topic 平衡（非字典序独占），floor 达成路径与既有 gate 断言不回归。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave0-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

@@ -219,8 +219,12 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-230 | 2026-08-17 | finding-index required top-level keys and `cross_topic_resolution` non-empty `origin_refs` documented in shared-schemas (`0e97d0774`) |
 | BUG-231 | 2026-08-17 | Run-scoped helper scripts get a sanctioned bundle `_scripts/` home; gitignore masking patches removed (`0e97d0774`) |
 | BUG-235 | 2026-08-19 | User-directed closure of post-final reentry `enter-phase` handoff defect; archived as residual diagnosis without claiming a code fix |
+| BUG-232 | 2026-08-19 | Wave0 shared-reference materialization selects by cross-topic balance (fewest projected per topic, then `topic_slug`, then lowest ordinal) instead of global lexicographic exhaustion; pure selector extracted and round-robin locked (`fix-transaction-guards-and-wave0-reference-balance`) |
+| BUG-233 | 2026-08-19 | Work-unit transaction two-orphan deadlock resolved: multi-orphan feedback converges to one deterministic recover coordinate (wrapper dependency first), recover itself runs with orphan blocking disabled (`fix-transaction-guards-and-wave0-reference-balance`) |
+| BUG-234 | 2026-08-19 | Work-unit transaction authority surface narrowed to `_work_units/**` (minus lock/current journal) + root output ledger; concurrent non-authority writes no longer mark a transaction suspect (`fix-transaction-guards-and-wave0-reference-balance`) |
+| BUG-236 | 2026-08-19 | Post-final second rerun unblocked: C5 events bind the primary-series inventory digest (`final_inventory_basis: primary_series`); legacy whole-tree events recover through the structural primary-series fallback (`fix-transaction-guards-and-wave0-reference-balance`) |
 
-**Next available bug ID: BUG-236**
+**Next available bug ID: BUG-237**
 
 ---
 

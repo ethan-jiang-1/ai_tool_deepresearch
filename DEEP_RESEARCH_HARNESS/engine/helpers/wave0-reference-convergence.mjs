@@ -74,12 +74,33 @@ function duplicateProjectionIdentityFinding(entryId, files) {
   });
 }
 
-function orderedCandidates(candidates) {
-  return [...candidates].sort((left, right) => (
-    left.topic_slug.localeCompare(right.topic_slug)
+// Pure cross-topic balanced materialization selection. Among Topics that still
+// have an unprojected materializable candidate, the exposed candidate comes
+// from the Topic with the fewest already-projected Phase-owned source
+// identities (ties by lexicographic topic_slug), then that Topic's lowest
+// retained unprojected source ordinal (entry_id as the final stable tiebreak).
+// Never ranks sources by research relevance and never uses global
+// lexicographic order across Topics.
+export function selectBalancedCandidate(candidates, projectedIdentityIds, deferredIdentityIds) {
+  const projected = projectedIdentityIds instanceof Set ? projectedIdentityIds : new Set(projectedIdentityIds || []);
+  const deferred = deferredIdentityIds instanceof Set ? deferredIdentityIds : new Set(deferredIdentityIds || []);
+  const open = candidates.filter((candidate) => (
+    !projected.has(candidate.entry_id) && !deferred.has(candidate.entry_id)
+  ));
+  if (open.length === 0) return { selected: null, open: [] };
+  const projectedCountByTopic = new Map();
+  for (const candidate of candidates) {
+    if (!projected.has(candidate.entry_id)) continue;
+    projectedCountByTopic.set(candidate.topic_slug, (projectedCountByTopic.get(candidate.topic_slug) || 0) + 1);
+  }
+  const projectedCount = (topic) => projectedCountByTopic.get(topic) || 0;
+  const ordered = [...open].sort((left, right) => (
+    projectedCount(left.topic_slug) - projectedCount(right.topic_slug)
+    || left.topic_slug.localeCompare(right.topic_slug)
     || left.source_ordinal - right.source_ordinal
     || left.entry_id.localeCompare(right.entry_id)
   ));
+  return { selected: ordered[0], open: ordered };
 }
 
 function referenceFacts(bundlePath) {
@@ -181,12 +202,12 @@ export function evaluateWave0ReferenceConvergence(bundlePath, {
     };
   }
 
-  const unprojected = orderedCandidates(submitted.candidates.filter((candidate) => (
-    !reference.projected_identity_ids.has(candidate.entry_id)
-    && !deferredIdentityIds.has(candidate.entry_id)
-  )));
-  if (unprojected.length > 0) {
-    const selected = unprojected[0];
+  const { selected, open } = selectBalancedCandidate(
+    submitted.candidates,
+    reference.projected_identity_ids,
+    deferredIdentityIds,
+  );
+  if (open.length > 0) {
     const backing = readSubmittedWave0Backing(bundlePath, {
       work_id: selected.work_id,
       entry_id: selected.entry_id,

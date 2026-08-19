@@ -1967,8 +1967,8 @@ Normal submit and dry-submit SHALL evaluate one shared, read-only submit-owned i
 candidate acceptance. It SHALL check only direct facts owned by submit: current index/ledger binding,
 attempt disposition, queue in-flight or successor relation, transaction journal disposition, and current
 lock contention. It SHALL not run, predict, or promise a formal phase Gate's content, coverage, floor,
-reference, or cross-work-unit verdict. Formal submit SHALL rerun that same evaluator after acquiring the
-global transaction lock; a prior dry-submit result SHALL not authorize commit.
+reference, or cross-work-unit verdict. Formal submit SHALL rerun that same evaluator after acquiring
+the global transaction lock; a prior dry-submit result SHALL not authorize commit.
 
 Work-unit transaction acquisition contention SHALL return a structured non-mutating `busy` result rather
 than a raw filesystem exception only when a schema-valid global lock-owner record names one schema-valid
@@ -1977,8 +1977,8 @@ work/queue coordinates. It SHALL identify the caller's requested operation/work 
 holder's transaction/operation/target coordinates, expose the holder journal disposition, state whether a
 `started` holder targets the same attempt, and return one `wait` / caller-same-operation rerun coordinate. A
 paired `committed`/`rolled_back` journal whose owner lock is awaiting final release remains global busy but
-SHALL NOT be described as an active attempt mutation. Busy SHALL not label the candidate invalid, claim that
-the actor or process is live, or recommend terminalization. A busy contender SHALL not re-claim work,
+SHALL NOT be described as an active attempt mutation. Busy SHALL not label the candidate invalid, claim
+that the actor or process is live, or recommend terminalization. A busy contender SHALL not re-claim work,
 overwrite a result, write a ledger row, alter a lease, or create a blocking `started` journal.
 
 `timeout-preflight` SHALL read the same direct transaction fact. Any valid non-suspect v2 global holder SHALL
@@ -1989,7 +1989,6 @@ for another work ID or a settled journal awaiting final lock release SHALL not b
 attempt's owner or progress. An unpaired, unreadable, target-mismatched, proof-incomplete, unresolved or
 malformed legacy, or `suspect` lock/journal SHALL return `suspect_transaction`, not `busy`, and SHALL not make a liveness
 inference. Age SHALL not classify a transaction as stale or dead.
-
 
 The transaction helper SHALL expose `journal_disposition` as a bounded Zod enum with exactly the values
 `started` | `committed` | `rolled_back` | `suspect` | `legacy_failed` | `unknown`; a bare
@@ -2006,23 +2005,31 @@ journal, and any unreadable, malformed, or proof-incomplete journal, SHALL remai
 not establish transaction, acceptance, recovery, supersession, or provenance authority; when it is a
 complete v1-shaped diagnostic record and no other transaction blocker exists, it SHALL NOT itself block a
 new current v2 mutation. A v1 marker with an incomplete or malformed legacy shape SHALL be suspect rather
-than treated as committed diagnostic history. Before the first
-durable target mutation, each v2 journal SHALL declare a complete exact-path mutation
+than treated as committed diagnostic history. Before the
+first durable target mutation, each v2 journal SHALL declare a complete exact-path mutation
 manifest. Each entry SHALL contain one canonical bundle-relative rollback-owned target, its before-existence,
 and its 256-bit SHA-2 before-digest when present. The manifest SHALL cover every authority and canonicalization file
 the operation may write; it SHALL contain no glob, implicit recursive directory, unsafe path, or
 post-first-write target discovery. The current transaction's own lock/journal and append-only diagnostic
 trace/run-log writes are metadata/audit surfaces rather than rollback targets; they SHALL NOT establish
-operational authority or conceal an undeclared authority write. A journal may enter `started` only after its
+operational authority or conceal an undeclared authority write. The undeclared-mutation comparison
+surface SHALL be exactly the work-unit authority surface: the work-unit root (`_work_units/`, excluding
+the global lock and the current transaction's own journal) plus the root output declaration ledger.
+Bundle writes outside that surface during the transaction window — including delegated cache,
+run-scoped script, diagnostics, reference, or artifact writes owned by other concurrent processes —
+SHALL NOT be attributed to the transaction as undeclared mutations, SHALL NOT mark the journal
+`suspect`, and SHALL NOT make the rollback proof incomplete. A callback write to an authority-surface
+path outside the declared manifest SHALL remain a fail-closed undeclared mutation. A journal may enter `started` only after its
 declaration and lock-owner binding are durable.
 
 A journal's transient `started` state is an active direct fact. A v2 journal's durable post-operation
 disposition SHALL be one of `committed`, `rolled_back`, or `suspect`; only `committed` and `rolled_back` are
 settled, while `suspect` remains unresolved and MAY transition only to proof-verified `rolled_back` through
 the bounded recovery operation below. A failed mutation whose Engine-owned rollback has restored every
-declared target to its exact before-existence/digest SHALL be recorded as `rolled_back` and SHALL not block
-later submit/Gate work merely by existing on disk. A v2 journal whose effect cannot be deterministically
-classified SHALL remain `suspect`. A legacy v1 journal with any non-`committed` status, or any invalid
+declared target to its exact before-existence/digest SHALL be recorded as `rolled_back` — concurrent
+writes outside the work-unit authority surface SHALL NOT make that rollback proof incomplete — and SHALL not block
+later submit/Gate work merely by existing on disk. A v2 journal whose effect cannot be
+deterministically classified SHALL remain `suspect`. A legacy v1 journal with any non-`committed` status, or any invalid
 legacy journal, SHALL remain under the raw suspect boundary; its age or current clean-looking state SHALL
 not fabricate rollback, and a committed v1 journal SHALL not be promoted to a settled current fact.
 
@@ -2032,9 +2039,17 @@ and no declared target SHALL be written afterward. This ordering is the only Eng
 unlocked v2 `started`/`suspect` journal to be compared; it SHALL NOT be described as host/process liveness.
 
 `operate-work-unit recover-transaction <bundle> --tx-id <id>` SHALL be the sole transaction-recovery
-operation. It MAY mark exactly one orphaned v2 `started`/`suspect` journal `rolled_back` only when no global
-lock is held, its complete mutation manifest is valid, and every current target equals its before-image. The
-prior journal SHALL be the only operational target of a normal recovery transaction. A valid non-suspect v2
+operation. It MAY mark one named orphaned v2 `started`/`suspect` journal `rolled_back` only when no global
+lock is held, its complete mutation manifest is valid, and every current target equals its before-image.
+The named prior journal SHALL be the only operational target of a normal recovery transaction, and the
+presence of other unresolved orphan journals SHALL NOT by itself block that recovery transaction: while a
+recovery transaction settles its named target, the transaction guard SHALL exempt every unresolved orphan
+journal from mutation blocking instead of only the named one. When the named journal's own journal file is
+a declared mutation target of another unresolved orphan journal (a failed recovery wrapper), recovery
+SHALL settle that wrapper first and its feedback SHALL name that deterministic order; when several
+unresolved orphan journals coexist, inspect and blocked-operation feedback SHALL expose one deterministic
+first-recoverable journal coordinate with the exact `recover-transaction` rerun, never a mutual rerun loop
+between journals. A valid non-suspect v2
 global holder SHALL return `busy`; an unpaired/malformed/unresolved-legacy/suspect held lock, incomplete or
 malformed legacy proof, unsafe target, or digest difference SHALL return `missing_contract` under the suspect root. A request for an
 already `committed` or `rolled_back` v2 journal SHALL return that settled disposition idempotently with no
@@ -2063,8 +2078,8 @@ manual deletion advice is authorized by this requirement.
 
 - **WHEN** `timeout-preflight` observes a matching readable active `started` journal whose target set contains
   the claimed attempt
-- **THEN** it SHALL report that timeout cannot terminalize the attempt while that direct transaction fact is
-  active
+- **THEN** it SHALL report that timeout cannot terminalize the attempt while that direct transaction fact
+  is active
 - **AND** it SHALL return the same structured wait/rerun boundary as submit contention
 - **AND** neither default nor forced timeout SHALL bypass that transaction-integrity root
 - **AND** it SHALL not claim that the journal owner will complete
@@ -2117,6 +2132,24 @@ manual deletion advice is authorized by this requirement.
 - **AND** submit integrity and Gate presence checks SHALL not fail solely because that audit journal remains
 - **AND** the journal SHALL remain available as diagnostic history
 
+#### Scenario: concurrent non-authority writes do not mark a transaction suspect
+
+- **WHEN** a transaction callback writes only its declared mutation targets while another process writes
+  unrelated bundle paths outside the work-unit authority surface (for example delegated `_cache/` fetch
+  outputs or run-scoped `_scripts/` files) during the transaction window
+- **THEN** the transaction SHALL commit normally and its journal SHALL NOT be marked `suspect`
+- **AND** those concurrent writes SHALL NOT appear as undeclared targets of the transaction
+- **AND** a later rollback SHALL remain proof-complete when every declared target is restored, independent
+  of those concurrent writes
+
+#### Scenario: authority-surface undeclared writes remain fail-closed
+
+- **WHEN** a transaction callback writes a work-unit authority-surface path (work-unit state, index, queue,
+  or the root output declaration ledger) outside its declared mutation manifest
+- **THEN** the transaction SHALL stop and the journal SHALL be recorded `suspect` with the undeclared
+  authority paths named
+- **AND** the fail-closed boundary SHALL not depend on writes to non-authority bundle paths
+
 #### Scenario: one journal can be recovered only with declared proof
 
 - **WHEN** `recover-transaction` receives one unlocked v2 `started`/`suspect` journal ID with a complete
@@ -2124,6 +2157,24 @@ manual deletion advice is authorized by this requirement.
 - **THEN** it MAY record that journal as `rolled_back`
 - **AND** it SHALL not change any ledger row, result, queue item, lease, or unrelated journal
 - **AND** when the proof is absent or inconsistent, it SHALL return `missing_contract`
+
+#### Scenario: two orphan journals are settled in dependency order without deadlock
+
+- **WHEN** the transaction directory holds two unresolved orphan v2 journals and one of them declares the
+  other's journal file as a mutation target (a failed recovery wrapper)
+- **THEN** `recover-transaction` for the wrapped journal SHALL first settle the wrapper or name that exact
+  dependency order in its feedback
+- **AND** a legal sequence of `recover-transaction` calls SHALL settle both journals without hand-editing
+  journal bytes
+- **AND** blocked work-unit operations during the multi-orphan state SHALL expose one deterministic
+  first-recoverable journal coordinate with the exact `recover-transaction` rerun
+
+#### Scenario: recovery stays available while other orphans exist
+
+- **WHEN** `recover-transaction` targets one unlocked v2 `started`/`suspect` journal whose proof is complete
+  while a different unresolved orphan journal remains in the transaction directory
+- **THEN** the recovery transaction SHALL NOT be blocked solely by that other orphan journal
+- **AND** it SHALL settle only its named target and leave the other orphan to its own recovery call
 
 #### Scenario: active transaction recovery does not steal a lock
 
@@ -2138,7 +2189,6 @@ manual deletion advice is authorized by this requirement.
   transaction blocks the command
 - **THEN** it SHALL return the existing settled disposition without mutation
 - **AND** it SHALL not create recovery authority, rewrite audit history, or reinterpret `committed` as rollback
-
 
 ### Requirement: Submitted correction SHALL use audited supersession and one fresh successor
 

@@ -159,4 +159,37 @@ describe('Final primary report series', () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it('separates the primary-series witness digest from the whole-tree audit digest', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dpt-final-inventory-basis-'));
+    const bundle = join(root, 'bundle');
+    const finalRoot = join(bundle, 'final');
+    try {
+      mkdirSync(join(finalRoot, 'topics'), { recursive: true });
+      writeFileSync(join(finalRoot, 'final.md'), '# Final base\n');
+      writeFileSync(join(finalRoot, 'final_v1.md'), '# Final revision one\n');
+      writeFileSync(join(finalRoot, 'topics', 'alpha.md'), '# Topic Alpha\n');
+
+      const before = readFinalReportInventory(bundle);
+      assert.equal(before.primary_series.classification, 'modern');
+      assert.equal(before.primary_series.primary_entries.length, 2);
+      assert.match(before.primary_sha256, /^[0-9a-f]{64}$/);
+      assert.notEqual(before.primary_sha256, before.sha256);
+
+      // A non-primary presentation update moves only the whole-tree digest.
+      writeFileSync(join(finalRoot, 'topics', 'alpha.md'), '# Topic Alpha (updated)\n');
+      const afterNonPrimary = readFinalReportInventory(bundle);
+      assert.equal(afterNonPrimary.primary_sha256, before.primary_sha256);
+      assert.notEqual(afterNonPrimary.sha256, before.sha256);
+
+      // A primary-series content change moves both digests; the primary
+      // witness detects it without any non-primary noise.
+      writeFileSync(join(finalRoot, 'final_v1.md'), '# Final revision one (tampered)\n');
+      const afterPrimary = readFinalReportInventory(bundle);
+      assert.notEqual(afterPrimary.primary_sha256, before.primary_sha256);
+      assert.notEqual(afterPrimary.sha256, afterNonPrimary.sha256);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

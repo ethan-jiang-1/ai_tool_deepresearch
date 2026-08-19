@@ -1919,6 +1919,111 @@ describe('operate-work-unit attempt recovery operations', () => {
     }
   });
 
+  it('routes multi-orphan submit blocking through one deterministic recover coordinate', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], {
+        encoding: 'utf8',
+      });
+      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
+      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+      const resultPath = writeValidSubmitFiles(dir, record);
+
+      const authorityRef = 'authority.json';
+      writeFileSync(path.join(dir, authorityRef), 'before\n');
+      const targetTxId = 'tx-cli-multi-target';
+      const wrapperTxId = 'tx-cli-multi-wrapper';
+      const targetRef = `_work_units/_transactions/${targetTxId}.json`;
+      const wrapperRef = `_work_units/_transactions/${wrapperTxId}.json`;
+      mkdirSync(transactionDir(dir), { recursive: true });
+      const targetJournal = WorkUnitTransactionV2JournalSchema.parse({
+        schema_version: WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
+        tx_id: targetTxId,
+        operation: 'submit_work_unit',
+        journal_ref: targetRef,
+        target_work_ids: [workId],
+        target_queue_item_ids: ['queue-source-topic-a'],
+        mutation_manifest: {
+          targets: [{
+            path: authorityRef,
+            before_exists: true,
+            before_sha256: createHash('sha256').update('before\n').digest('hex'),
+          }],
+        },
+        status: 'started',
+        started_at: '2026-07-30T00:00:00.000Z',
+        settled_at: null,
+        error: null,
+      });
+      writeFileSync(path.join(dir, targetRef), `${JSON.stringify(targetJournal, null, 2)}\n`);
+      const wrapperJournal = WorkUnitTransactionV2JournalSchema.parse({
+        schema_version: WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
+        tx_id: wrapperTxId,
+        operation: 'recover_work_unit_transaction',
+        journal_ref: wrapperRef,
+        target_work_ids: [workId],
+        target_queue_item_ids: ['queue-source-topic-a'],
+        mutation_manifest: {
+          targets: [{
+            path: targetRef,
+            before_exists: true,
+            before_sha256: createHash('sha256').update(readFileSync(path.join(dir, targetRef))).digest('hex'),
+          }],
+        },
+        status: 'started',
+        started_at: '2026-07-30T00:05:00.000Z',
+        settled_at: null,
+        error: null,
+      });
+      writeFileSync(path.join(dir, wrapperRef), `${JSON.stringify(wrapperJournal, null, 2)}\n`);
+
+      // Submit is blocked by the multi-orphan state with exactly one
+      // deterministic recover coordinate: the wrapper, not the wrapped target.
+      const blocked = spawnSync(process.execPath, [
+        CLI, 'submit', dir, '--work-id', workId, '--result', resultPath,
+      ], { encoding: 'utf8' });
+      assert.equal(blocked.status, 1, blocked.stderr || blocked.stdout);
+      const outcome = JSON.parse(blocked.stdout);
+      assert.equal(outcome.reason_code, 'suspect_transaction');
+      assert.equal(outcome.repair_kind, 'recover-transaction');
+      assert.equal(outcome.transaction.holder.tx_id, wrapperTxId);
+      assert.equal(outcome.rerun.includes(wrapperTxId), true);
+      assert.doesNotMatch(outcome.missing_fact, /multiple unresolved transaction journals exist:/);
+
+      // Recovering the wrapped target first is rerouted to the wrapper.
+      const premature = spawnSync(process.execPath, [
+        CLI, 'recover-transaction', dir, '--tx-id', targetTxId,
+      ], { encoding: 'utf8' });
+      assert.equal(premature.status, 1, premature.stderr || premature.stdout);
+      const prematureOutcome = JSON.parse(premature.stdout);
+      assert.equal(prematureOutcome.reason_code, 'suspect_transaction');
+      assert.equal(prematureOutcome.repair_kind, 'recover-transaction');
+      assert.equal(prematureOutcome.rerun.includes(wrapperTxId), true);
+
+      // The legal CLI sequence settles both orphans and unblocks submit.
+      const wrapperRecovery = spawnSync(process.execPath, [
+        CLI, 'recover-transaction', dir, '--tx-id', wrapperTxId,
+      ], { encoding: 'utf8' });
+      assert.equal(wrapperRecovery.status, 0, wrapperRecovery.stderr || wrapperRecovery.stdout);
+      const targetRecovery = spawnSync(process.execPath, [
+        CLI, 'recover-transaction', dir, '--tx-id', targetTxId,
+      ], { encoding: 'utf8' });
+      assert.equal(targetRecovery.status, 0, targetRecovery.stderr || targetRecovery.stdout);
+      assert.equal(JSON.parse(readFileSync(path.join(dir, targetRef), 'utf8')).status, 'rolled_back');
+      assert.equal(JSON.parse(readFileSync(path.join(dir, wrapperRef), 'utf8')).status, 'rolled_back');
+
+      const resumed = spawnSync(process.execPath, [
+        CLI, 'submit', dir, '--work-id', workId, '--result', resultPath,
+      ], { encoding: 'utf8' });
+      assert.equal(resumed.status, 0, resumed.stderr || resumed.stdout);
+      assert.equal(JSON.parse(resumed.stdout).ok, true);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('returns settled recovery idempotently and rejects legacy, incomplete, and unsafe proof', () => {
     for (const status of ['committed', 'rolled_back']) {
       const dir = tempBundle();

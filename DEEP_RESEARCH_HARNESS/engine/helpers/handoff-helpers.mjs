@@ -12,6 +12,7 @@ import { readGateDefinitionSnapshot } from '../../schema/contracts/gate-definiti
 import {
   digestFinalReportInventoryEntries,
   readFinalReportInventory,
+  resolveFinalReportSeries,
 } from './final-report-series.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -404,25 +405,81 @@ function retiredPostFinalWitness(item, edge) {
   };
 }
 
-function proveNewerFinalAppend(inventory, priorInventorySha256) {
-  const removable = inventory.primary_series.primary_entries
+// The C5 event's Final-inventory witness, resolved on the basis the event
+// bound. Events carrying `final_inventory_basis: 'primary_series'` bind the
+// primary-series digest in the existing `final_inventory_sha256` field; legacy
+// events without the marker are whole-tree bindings on the same field.
+export function boundFinalWitness(previousFinal) {
+  if (previousFinal?.final_inventory_basis === 'primary_series') {
+    return { basis: 'primary_series', digest: previousFinal.final_inventory_sha256 };
+  }
+  return { basis: 'whole_tree', digest: previousFinal.final_inventory_sha256 };
+}
+
+function currentBasisDigest(inventory, basis) {
+  return basis === 'primary_series' ? inventory.primary_sha256 : inventory.sha256;
+}
+
+// Zero-or-more-highest-revision removal prefixes, shortest first.
+function finalRemovalPrefixes(inventory) {
+  const revisionTargets = inventory.primary_series.primary_entries
     .filter((entry) => entry.kind === 'revision')
     .slice()
-    .reverse();
-  const removedTargets = [];
-  for (const entry of removable) {
-    removedTargets.push(entry.target);
-    const removed = new Set(removedTargets);
-    const priorEntries = inventory.entries.filter((item) => !removed.has(item.path));
-    if (digestFinalReportInventoryEntries(priorEntries) === priorInventorySha256) {
-      return {
-        matched: true,
-        removed_targets: [...removedTargets],
-        current_target: inventory.primary_series.latest?.target || null,
-      };
-    }
+    .reverse()
+    .map((entry) => entry.target);
+  const prefixes = [[]];
+  const cumulative = [];
+  for (const target of revisionTargets) {
+    cumulative.push(target);
+    prefixes.push([...cumulative]);
   }
-  return { matched: false };
+  return prefixes;
+}
+
+function retainedPrimarySeriesValid(inventory, removedTargets) {
+  const removed = new Set(removedTargets);
+  const rootEntries = inventory.primary_series.entries
+    .filter((entry) => ['modern_base', 'legacy_candidate', 'revision'].includes(entry.classification))
+    .filter((entry) => !removed.has(entry.target))
+    .map((entry) => ({ name: entry.name, kind: entry.kind, readable: entry.readable }));
+  return resolveFinalReportSeries(rootEntries).valid;
+}
+
+export function proveNewerFinalAppend(inventory, previousFinal) {
+  const witness = boundFinalWitness(previousFinal);
+  const primaryPaths = new Set(inventory.primary_series.primary_entries.map((entry) => entry.target));
+  const basisEntries = witness.basis === 'primary_series'
+    ? inventory.entries.filter((entry) => primaryPaths.has(entry.path))
+    : inventory.entries;
+  const currentTarget = inventory.primary_series.latest?.target || null;
+  const exactMatches = [];
+  for (const prefix of finalRemovalPrefixes(inventory)) {
+    const removed = new Set(prefix);
+    const retained = basisEntries.filter((entry) => !removed.has(entry.path));
+    if (digestFinalReportInventoryEntries(retained) === witness.digest) exactMatches.push(prefix);
+  }
+  if (exactMatches.length === 1) {
+    return { matched: true, basis: witness.basis, removed_targets: exactMatches[0], current_target: currentTarget };
+  }
+  if (exactMatches.length > 1 || witness.basis !== 'whole_tree') {
+    return { matched: false, basis: witness.basis };
+  }
+  // Legacy structural fallback: the whole-tree digest is unreachable solely
+  // because non-primary entries drifted after the event was bound (the event
+  // predates the primary-series basis). The recoverable proof is structural:
+  // over the same removal prefixes, the retained primary series must remain a
+  // valid base-plus-contiguous-revisions series. Byte-level verification of
+  // retained primary entries is impossible without per-file prior hashes, so
+  // the fallback is exposed as its own diagnostic basis.
+  const structuralMatches = finalRemovalPrefixes(inventory)
+    .filter((prefix) => retainedPrimarySeriesValid(inventory, prefix));
+  if (structuralMatches.length === 0) return { matched: false, basis: witness.basis };
+  return {
+    matched: true,
+    basis: 'legacy_structural_fallback',
+    removed_targets: structuralMatches.at(-1),
+    current_target: currentTarget,
+  };
 }
 
 function inspectNewerFinalStage({ bundlePath, item, edge, descendantChain, status }) {
@@ -479,13 +536,14 @@ function inspectNewerFinalStage({ bundlePath, item, edge, descendantChain, statu
       retired_event: retiredEvent,
     };
   }
-  if (inventory.sha256 === edge.previousFinal.final_inventory_sha256) {
+  const witness = boundFinalWitness(edge.previousFinal);
+  if (currentBasisDigest(inventory, witness.basis) === witness.digest) {
     return withOwner({ ...base, stage: 'newer_final_delivery_pending', inventory }, {
       kind: 'current_owner',
       target_ref: 'phases/phase-final.md',
     });
   }
-  const appendProof = proveNewerFinalAppend(inventory, edge.previousFinal.final_inventory_sha256);
+  const appendProof = proveNewerFinalAppend(inventory, edge.previousFinal);
   if (!appendProof.matched) {
     return {
       ok: false,
@@ -494,6 +552,12 @@ function inspectNewerFinalStage({ bundlePath, item, edge, descendantChain, statu
       handoff,
       retired_event: retiredEvent,
     };
+  }
+  if (appendProof.removed_targets.length === 0) {
+    return withOwner({ ...base, stage: 'newer_final_delivery_pending', inventory, append_proof: appendProof }, {
+      kind: 'current_owner',
+      target_ref: 'phases/phase-final.md',
+    });
   }
   return withOwner({ ...base, stage: 'retired_by_newer_final', inventory, append_proof: appendProof }, {
     kind: 'current_owner',
@@ -746,7 +810,8 @@ export function evaluateFinalEntryAdmission(bundlePath, handoff) {
       inventory,
     };
   }
-  if (inventory.sha256 !== postFinal.retired_event.previousFinal.final_inventory_sha256) {
+  const admissionWitness = boundFinalWitness(postFinal.retired_event.previousFinal);
+  if (currentBasisDigest(inventory, admissionWitness.basis) !== admissionWitness.digest) {
     return {
       ok: false,
       reason: 'Final inventory drifted from the accepted C5 prior-inventory digest before later Final entry',

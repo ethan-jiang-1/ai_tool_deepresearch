@@ -21,6 +21,11 @@ export const PostFinalExpectedLineageSchema = z.object({
   status_sha256: PostFinalDigestSchema,
   profile_sha256: PostFinalDigestSchema,
   final_inventory_sha256: PostFinalDigestSchema,
+  // Post-POF-001 witness basis. Events produced after this marker carry the
+  // primary-series-scoped digest in the existing final_inventory_sha256 field
+  // with basis 'primary_series'. Legacy events without the marker are
+  // whole-tree witnesses on the same field.
+  final_inventory_basis: z.literal('primary_series').optional(),
   rerun_guard: PostFinalRerunGuardSchema,
 }).strict();
 export const PostFinalRoutingSchema = z.object({

@@ -249,10 +249,13 @@ describe('post-final rerun lineage continuity from a production terminal chain',
     assert.equal(entryPending.next_action.kind, 'enter_phase');
 
     // A copied test branch exercises invalid pre-load inventory without treating deletion as runtime repair.
+    // Non-primary presentation drift no longer blocks a primary-series-bound C5
+    // event (BUG-236); the fail-closed branch must drift the primary series.
     const preFinalSnapshot = join(root, 'post-final-newer-final-preload-snapshot');
     cpSync(bundle, preFinalSnapshot, { recursive: true, errorOnExist: true });
-    mkdirSync(join(bundle, 'final', 'supplementary'), { recursive: true });
-    writeFileSync(join(bundle, 'final', 'supplementary', 'drift.md'), '# Simulated drift\n');
+    const reportPath = join(bundle, 'final', 'report.md');
+    const acceptedReport = readFileSync(reportPath, 'utf8');
+    writeFileSync(reportPath, `${acceptedReport}<!-- simulated primary drift -->\n`);
     const beforeStatus = readFileSync(join(bundle, 'rb_status.json'), 'utf8');
     const beforeTrace = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8');
     const drifted = enterPhase(bundle, readiness.output.check.next, { expectedStatus: 1 });

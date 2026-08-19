@@ -48,7 +48,7 @@ function runDeclarationRecovery(bundlePath, workId) {
 
 function submittedMaterializationHint(output) {
   const hint = output.hints.find((entry) => entry.rule_id === 'wave0_submitted_reference_materialization');
-  assert.ok(hint, JSON.stringify(output.hints));
+  assert.ok(hint, JSON.stringify(output.check));
   return hint;
 }
 
@@ -62,7 +62,7 @@ function directContext(finding) {
 }
 
 /** Create a bundle with topic_registry and setup. */
-function createBundle(name) {
+function createBundleWithTopics(name, topics, derivedTopicCount = topics.length) {
   const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
   const dir = track(r.stdout.trim());
 
@@ -71,7 +71,7 @@ function createBundle(name) {
   // Write topic_registry into rb_plan.md frontmatter
   const planPath = join(dir, 'rb_plan.md');
   const existing = readFileSync(planPath, 'utf-8');
-  const fm = `---\n{\n  "plan_basename": "${name}",\n  "derived_topic_count": 2,\n  "topic_registry_version": "2",\n  "topic_registry": [\n    { "topic_uid": "tp_123e4567-e89b-12d3-a456-426614174000", "id": "01", "slug": "topic-a", "title": "Topic A", "must_answer": ["A?"], "scope_role": "primary", "depends_on_topic_uids": [], "previous_layouts": [] },\n    { "topic_uid": "tp_123e4567-e89b-12d3-a456-426614174001", "id": "02", "slug": "topic-b", "title": "Topic B", "must_answer": ["B?"], "scope_role": "supporting", "depends_on_topic_uids": [], "previous_layouts": [] }\n  ]\n}\n---`;
+  const fm = `---\n{\n  "plan_basename": "${name}",\n  "derived_topic_count": ${derivedTopicCount},\n  "topic_registry_version": "2",\n  "topic_registry": [\n${topics.map((topic) => `    ${JSON.stringify(topic)}`).join(',\n')}\n  ]\n}\n---`;
   writeFileSync(planPath, fm + '\n' + existing.replace(/^---\n[\s\S]*?\n---\n?/, ''));
 
   const statusPath = join(dir, 'rb_status.json');
@@ -80,6 +80,13 @@ function createBundle(name) {
   writeFileSync(statusPath, JSON.stringify(status));
 
   return dir;
+}
+
+function createBundle(name) {
+  return createBundleWithTopics(name, [
+    { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['A?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] },
+    { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174001', id: '02', slug: 'topic-b', title: 'Topic B', must_answer: ['B?'], scope_role: 'supporting', depends_on_topic_uids: [], previous_layouts: [] },
+  ]);
 }
 
 function renderCanonicalSeed(topic) {
@@ -179,9 +186,15 @@ const SCHEMA_INVALID_REF = `- url: ""
   topic_tag: "topic-a"
 `;
 
-function writeWave0PhaseProjection(dir, submission) {
-  writeFileSync(join(dir, 'reference/00-shared-ai-safety.md'),
-    `---\nsource_url: "${TOPIC_A_SOURCE_URL}"\nacceptance_status: accepted\n` +
+function writeWave0PhaseProjection(dir, submission, {
+  sourceUrl = TOPIC_A_SOURCE_URL,
+  cachePath = TOPIC_A_CACHE,
+  fileName = '00-shared-ai-safety.md',
+  ordinal = 1,
+  topicSlug = 'topic-a',
+} = {}) {
+  writeFileSync(join(dir, 'reference', fileName),
+    `---\nsource_url: "${sourceUrl}"\nacceptance_status: accepted\n` +
     'source_type: secondary\ntier: "Tier 2"\nevidence_role: foundation\ntrust_level: practitioner\n' +
     'why_it_matters: "Foundation context for the shared research question."\naccessed_at: "2026-06-15"\nrelated_topic_uid: all\n---\n' +
     '# AI Safety Foundation\n\n' +
@@ -191,9 +204,9 @@ function writeWave0PhaseProjection(dir, submission) {
     '## Quotable Terms / Concepts\n- AI safety\n\n' +
     '## Risks And Limitations\n- The source remains one bounded foundation input.\n\n' +
     '## Submitted Backing\n' +
-    `- source_identity: ${submission.record.work_id}/1\n` +
-    '- source_yaml_ref: artifacts/wave0/topic-a/source.yaml\n' +
-    `- cache_trail_ref: ${TOPIC_A_CACHE}\n` +
+    `- source_identity: ${submission.record.work_id}/${ordinal}\n` +
+    `- source_yaml_ref: artifacts/wave0/${topicSlug}/source.yaml\n` +
+    `- cache_trail_ref: ${cachePath}\n` +
     `- result_ref: ${submission.record.paths.result_ref}\n` +
     `- work_unit_ref: ${submission.record.paths.work_unit_dir}\n`);
 }
@@ -911,5 +924,91 @@ describe('RWG-018 Wave0 direct adapter parity', () => {
     const wave = evaluateWave0Contract(dir, definition);
     assert.ok(wave.failed_rule_ids.includes('per_topic_count_floor'));
     assert.equal(wave.failed_rule_ids.includes('per_topic_reference_schema_valid'), false);
+  });
+
+  it('1c. balances materialization guidance across Topics instead of lexicographic exhaustion', () => {
+    // Three Topics; topic-a already owns one Phase-owned projection and still
+    // has a second retained source. Global lexicographic order would keep
+    // guiding topic-a; cross-topic balance must guide topic-b, then topic-z.
+    const dir = createBundleWithTopics(unique('balance'), [
+      { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['A?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] },
+      { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174001', id: '02', slug: 'topic-b', title: 'Topic B', must_answer: ['B?'], scope_role: 'supporting', depends_on_topic_uids: [], previous_layouts: [] },
+      { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174002', id: '03', slug: 'topic-z', title: 'Topic Z', must_answer: ['Z?'], scope_role: 'supporting', depends_on_topic_uids: [], previous_layouts: [] },
+    ]);
+
+    writeFileSync(join(dir, 'reference/_INDEX.md'),
+      '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |\n' +
+      '| --- | --- | --- | --- | --- | --- | --- | --- |\n');
+    writeFileSync(join(dir, 'reference/README.md'), '# Reference Evidence\nFlat reference directory.\n');
+    writeTraceEvents(dir, [
+      ...witnessedHandoffEvents({
+        sourceGate: 'seed-topics-ready',
+        phase: 'seed-topics',
+        sourceNode: 'phases/phase-seed-topics.md',
+        targetNode: 'phases/phase-wave0.md',
+      }),
+      { event: 'wave0_completion', ts: new Date().toISOString() },
+    ]);
+
+    const topicASubmission = submitCurrentWave0Source(dir, {
+      queueItemId: 'topic-a',
+      topicUid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+      topicSlug: 'topic-a',
+      sourceContent: sourceMetadataArray(2).replaceAll('topic_tag: topic-a', 'topic_tag: "topic-a"'),
+      cachePath: TOPIC_A_CACHE,
+      sourceUrl: TOPIC_A_SOURCE_URL,
+    });
+    const topicBSubmission = submitCurrentWave0Source(dir, {
+      queueItemId: 'topic-b',
+      topicUid: 'tp_123e4567-e89b-12d3-a456-426614174001',
+      topicSlug: 'topic-b',
+      sourceContent: VALID_REF_B,
+      cachePath: TOPIC_B_CACHE,
+      sourceUrl: TOPIC_B_SOURCE_URL,
+      preserveQueue: true,
+    });
+    const topicZSubmission = submitCurrentWave0Source(dir, {
+      queueItemId: 'topic-z',
+      topicUid: 'tp_123e4567-e89b-12d3-a456-426614174002',
+      topicSlug: 'topic-z',
+      sourceContent: VALID_REF_B.replaceAll('topic-b', 'topic-z').replaceAll('article-2', 'article-9'),
+      cachePath: '_cache/wave0/primary/topic-z/source-yaml',
+      sourceUrl: 'https://example.com/article-9',
+      preserveQueue: true,
+    });
+
+    // topic-a #1 becomes the one existing Phase-owned projection.
+    writeWave0PhaseProjection(dir, topicASubmission);
+    materializeWave0Projection(dir, topicASubmission, { topicSlug: 'topic-a', ordinal: 1 });
+
+    // Raise the shared-reference floor above the single existing projection so
+    // the convergence must keep guiding materialization.
+    writeFileSync(join(dir, 'rb_profile.yaml'), `${readFileSync(join(dir, 'rb_profile.yaml'), 'utf8')}research_style_params:\n  wave0_shared_ref_total: 4\n`);
+
+    const firstHint = submittedMaterializationHint(JSON.parse(runInspect(dir).stdout));
+    assert.ok(
+      firstHint.missing_fact.includes(`${topicBSubmission.record.work_id}/1`),
+      `Expected topic-b balance candidate, got: ${JSON.stringify(firstHint)}`,
+    );
+    assert.equal(firstHint.missing_fact.includes(topicASubmission.record.work_id), false);
+
+    // After topic-b materializes its first projection, balance moves to topic-z.
+    writeWave0PhaseProjection(dir, topicBSubmission, {
+      sourceUrl: TOPIC_B_SOURCE_URL,
+      cachePath: TOPIC_B_CACHE,
+      fileName: '00-shared-topic-b.md',
+      ordinal: 1,
+      topicSlug: 'topic-b',
+    });
+    materializeWave0Projection(dir, topicBSubmission, {
+      topicSlug: 'topic-b',
+      ordinal: 1,
+    });
+    const secondHint = submittedMaterializationHint(JSON.parse(runInspect(dir).stdout));
+    assert.ok(
+      secondHint.missing_fact.includes(`${topicZSubmission.record.work_id}/1`),
+      `Expected topic-z balance candidate, got: ${JSON.stringify(secondHint)}`,
+    );
+    assert.equal(secondHint.missing_fact.includes(topicASubmission.record.work_id), false);
   });
 });

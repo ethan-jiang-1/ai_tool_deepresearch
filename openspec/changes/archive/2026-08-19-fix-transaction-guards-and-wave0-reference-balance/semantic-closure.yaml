@@ -1,0 +1,101 @@
+schema_version: semantic-closure/v1
+change: fix-transaction-guards-and-wave0-reference-balance
+status: affected
+catalog_additions: []
+affected:
+  - family: work-unit.transaction-mutation-integrity
+    fact: >-
+      Whether a work-unit transaction requires a fail-closed suspect stop:
+      undeclared-mutation detection is decided only over the work-unit
+      authority surface (`_work_units/**` excluding the lock and the current
+      journal, plus the root output ledger file), so concurrent non-authority
+      bundle writes neither mark the journal suspect nor pollute the rollback
+      proof; and an unresolved orphan v2 journal stays recoverable when other
+      unresolved orphans exist, with a journal targeted by another orphan's
+      recovery wrapper settled only after that wrapper in one deterministic
+      dependency-first order.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs#withWorkUnitTransaction
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs#inspectWorkUnitTransaction
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs#submitWorkUnit
+      - DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs#recoverWorkUnitTransaction
+        relation: derived
+        detail: >-
+          Recovery consumes the same undeclared/rollback-proof and orphan
+          ordering conclusions when settling journals; it does not decide the
+          detection scope or pick inspect's first-recovery coordinate outside
+          the resolver.
+    verification:
+      truth_table: tests/engine/work-unit-transaction.test.mjs
+      cross_surface: tests/integration/cli/operate-work-unit.test.mjs
+  - family: wave.submitted-reference-convergence
+    fact: >-
+      Are Wave0 submitted backing, reference materialization, and convergence
+      consistent: which single materializable source identity the convergence
+      result exposes next (the topic with the fewest current Phase-owned
+      projected identities, lexicographic topic_slug tie-break, then that
+      topic's lowest source ordinal — deterministic round-robin balance, not
+      source-relevance ranking), and whether a reference's acceptance_status
+      resolves to the accepted family for numeric counting (the quoted
+      template-documented `accepted :warning:` counts as accepted; EXCLUDED
+      and other values do not).
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/wave0-reference-convergence.mjs#evaluateWave0ReferenceConvergence
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/wave0-reference-convergence.mjs#evaluateWave0ReferenceConvergence
+      - DEEP_RESEARCH_HARNESS/engine/helpers/ref-count.mjs#isCountable
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs#evaluateWave0Contract
+      - DEEP_RESEARCH_HARNESS/engine/helpers/ref-count.mjs#countReferences
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs#acceptedSourceStatus
+        relation: derived
+        detail: >-
+          The Wave1 source-claim accepted-status set is a separate surface
+          with its own vocabulary; this change does not modify it. Wave1
+          convergence is evaluated per canonical Topic with per-topic floors
+          and does not consume the Wave0 cross-topic balance selection.
+    verification:
+      truth_table: tests/engine/helpers/wave0-reference-convergence.test.mjs
+      cross_surface: tests/integration/cli/check-gate-wave0-complete.test.mjs
+  - family: final.primary-report-series
+    fact: >-
+      Which Final inventory facts establish the newer-delivery lineage after an
+      accepted C5 rerun: new events bind a primary-series-scoped inventory
+      digest (base plus contiguous revisions, explicit basis marker) as the
+      lineage witness, so legal non-primary final presentation updates do not
+      break the append proof; events bound to the legacy whole-tree digest keep
+      the whole-tree proof first and fall back to a structural primary-series
+      append proof when non-primary drift makes it unavailable, with the
+      fallback exposed as diagnostics; primary-series content changes remain
+      fully witnessed in both bases.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs#inspectNewerFinalStage
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs#proveNewerFinalAppend
+      - DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/operate-post-final-recovery.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs#inspectPostFinalHandoffStage
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs
+        relation: derived
+        detail: >-
+          Non-primary persists remain legal presentation commits under the
+          accepted artifact-persistence contract; the lineage witness consumes
+          their effects as non-authority drift instead of conflicting with
+          them.
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs#readFinalReportInventory
+        relation: authoritative
+        detail: >-
+          The inventory reader computes both the whole-tree and the
+          primary-scoped digest from one filesystem snapshot; the proof
+          resolver selects the basis per event binding.
+    verification:
+      truth_table: tests/engine/helpers/post-final-recovery.test.mjs
+      cross_surface: tests/integration/cli/post-final-recovery.test.mjs

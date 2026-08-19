@@ -14,7 +14,7 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
-import { WORK_UNITS } from './work-unit-constants.mjs';
+import { WORK_UNITS, WORK_UNIT_OUTPUT_LEDGER } from './work-unit-constants.mjs';
 import { logToRun } from './logger.mjs';
 import {
   now,
@@ -41,7 +41,6 @@ export const WORK_UNIT_TRANSACTION_TRANSITIONS = Object.freeze({
 });
 
 const LOCK_OWNER_BASENAME = 'owner.json';
-const AUDIT_ONLY_PATHS = new Set(['rb_trace.jsonl', '_logs/run.log']);
 const LEGACY_TRANSACTION_V1_SCHEMA_VERSION = 'work-unit.transaction.v1';
 
 function rootPath(bundleDir) {
@@ -152,10 +151,20 @@ function restoreMutationTargets(snapshots) {
   return { ok: failures.length === 0, failures };
 }
 
+// The undeclared-mutation comparison surface is exactly the work-unit
+// authority surface: the work-unit root (excluding the global lock and the
+// current transaction's own journal) plus the root output declaration ledger.
+// Concurrent writes to other bundle paths (delegated cache, run-scoped
+// scripts, diagnostics, reference, artifacts) are owned by other processes
+// and are not attributed to this transaction.
 function listBundleFiles(bundleDir, currentJournalRef = null) {
   const root = rootPath(bundleDir);
   const files = new Map();
   if (!existsSync(root)) return files;
+  const record = (absolute, relative) => {
+    if (relative === currentJournalRef) return;
+    files.set(relative, sha256Bytes(readFileSync(absolute)));
+  };
   const visit = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const absolute = path.join(dir, entry.name);
@@ -166,11 +175,15 @@ function listBundleFiles(bundleDir, currentJournalRef = null) {
         continue;
       }
       if (!entry.isFile()) continue;
-      if (relative === currentJournalRef || AUDIT_ONLY_PATHS.has(relative)) continue;
-      files.set(relative, sha256Bytes(readFileSync(absolute)));
+      record(absolute, relative);
     }
   };
-  visit(root);
+  const workUnitsRoot = path.join(root, WORK_UNITS.ROOT);
+  if (existsSync(workUnitsRoot)) visit(workUnitsRoot);
+  const ledgerAbsolute = path.join(root, WORK_UNIT_OUTPUT_LEDGER);
+  if (existsSync(ledgerAbsolute) && lstatSync(ledgerAbsolute).isFile()) {
+    record(ledgerAbsolute, WORK_UNIT_OUTPUT_LEDGER);
+  }
   return files;
 }
 
@@ -364,6 +377,32 @@ function unresolvedOrphanJournals(bundleDir, { exceptTxId = null } = {}) {
   return out;
 }
 
+// Deterministic first-recovery coordinate for a multi-orphan state. A journal
+// declared as a mutation target of another unresolved orphan is a wrapped
+// recovery target: its wrapper must be settled first. Manifests are captured
+// at transaction start, so the wrapper relation is acyclic.
+function firstRecoverableOrphan(orphans) {
+  const wrappedRefs = new Set();
+  for (const orphan of orphans) {
+    for (const target of orphan?.mutation_manifest?.targets || []) {
+      if (typeof target?.path === 'string' && target.path.startsWith(`${WORK_UNITS.TRANSACTIONS}/`)) {
+        wrappedRefs.add(target.path);
+      }
+    }
+  }
+  const isV2Orphan = (entry) => entry?.schema_version === WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION
+    && !entry?.parse_error && typeof entry?.tx_id === 'string';
+  const candidates = orphans.filter((orphan) => !wrappedRefs.has(orphan?.journal_ref));
+  const ordered = [...(candidates.length > 0 ? candidates : orphans)].sort((left, right) => {
+    const byShape = Number(isV2Orphan(right)) - Number(isV2Orphan(left));
+    if (byShape !== 0) return byShape;
+    const byStartedAt = String(left?.started_at || '').localeCompare(String(right?.started_at || ''));
+    if (byStartedAt !== 0) return byStartedAt;
+    return String(left?.tx_id || '').localeCompare(String(right?.tx_id || ''));
+  });
+  return ordered[0] || null;
+}
+
 export function inspectWorkUnitTransaction(bundleDir, {
   operation = 'submit_work_unit',
   targetWorkIds = [],
@@ -389,13 +428,15 @@ export function inspectWorkUnitTransaction(bundleDir, {
   if (includeOrphans) {
     const orphans = unresolvedOrphanJournals(bundleDir, { exceptTxId: exceptTxId || ignoreHeldTxId });
     if (orphans.length > 0) {
-      const [journal] = orphans;
+      const journal = orphans.length === 1
+        ? orphans[0]
+        : (firstRecoverableOrphan(orphans) || orphans[0]);
       return suspectProjection(bundleDir, operation, options, {
         journal,
-        unlocked: orphans.length === 1,
+        unlocked: true,
         reason: orphans.length === 1
           ? `unlocked unresolved transaction journal ${journal.tx_id} has disposition ${journal.status}`
-          : `multiple unresolved transaction journals exist: ${orphans.map((entry) => entry.tx_id).join(', ')}`,
+          : `multiple unresolved transaction journals exist (${orphans.map((entry) => entry.tx_id).join(', ')}); recover ${journal.tx_id} first`,
       });
     }
   }
@@ -434,6 +475,7 @@ function normalizeOptions(options, fn) {
     mutationTargets: [...new Set(options?.mutationTargets || [])],
     rerun: options?.rerun || null,
     allowOrphanTxId: options?.allowOrphanTxId || null,
+    orphanBlocking: options?.orphanBlocking === 'none' ? 'none' : 'all',
     hooks: options?.hooks || null,
   };
   if (normalized.mutationTargets.length === 0) {
@@ -457,6 +499,7 @@ export function withWorkUnitTransaction(bundleDir, operation, options, fn) {
     targetQueueItemIds: normalized.targetQueueItemIds,
     rerun: normalized.rerun,
     exceptTxId: normalized.allowOrphanTxId,
+    includeOrphans: normalized.orphanBlocking === 'all',
   });
   if (initialProjection.disposition !== 'none') return transactionBlockedResult(initialProjection);
 
@@ -474,24 +517,21 @@ export function withWorkUnitTransaction(bundleDir, operation, options, fn) {
   let callbackStarted = false;
   let callbackStopped = false;
   try {
-    const afterAcquireProjection = inspectWorkUnitTransaction(root, {
-      operation,
-      targetWorkIds: normalized.targetWorkIds,
-      targetQueueItemIds: normalized.targetQueueItemIds,
-      rerun: normalized.rerun,
-      includeOrphans: true,
-      exceptTxId: normalized.allowOrphanTxId,
-    });
-    // The lock is ours but has no owner yet; inspect sees that as suspect. Only orphan journals matter here.
-    const orphans = unresolvedOrphanJournals(root, { exceptTxId: normalized.allowOrphanTxId });
-    if (orphans.length > 0) {
-      return transactionBlockedResult(suspectProjection(root, operation, normalized, {
-        journal: orphans[0],
-        unlocked: true,
-        reason: `unresolved transaction journal blocks ${operation}: ${orphans.map((entry) => entry.tx_id).join(', ')}`,
-      }));
+    // The lock is ours but has no owner yet; inspect would see that as
+    // suspect. Only orphan journals matter here, and only for operations that
+    // keep all-orphan blocking ('all'); the recovery transaction itself
+    // ('none') settles its named journal while other orphans remain.
+    if (normalized.orphanBlocking === 'all') {
+      const orphans = unresolvedOrphanJournals(root, { exceptTxId: normalized.allowOrphanTxId });
+      if (orphans.length > 0) {
+        const first = firstRecoverableOrphan(orphans);
+        return transactionBlockedResult(suspectProjection(root, operation, normalized, {
+          journal: first || orphans[0],
+          unlocked: Boolean(first),
+          reason: `unresolved transaction journal blocks ${operation}: ${orphans.map((entry) => entry.tx_id).join(', ')}`,
+        }));
+      }
     }
-    void afterAcquireProjection;
 
     snapshots = captureMutationTargets(root, normalized.mutationTargets);
     const mutationManifest = mutationManifestFor(snapshots);
@@ -711,11 +751,38 @@ export function recoverWorkUnitTransaction(bundleDir, { tx_id, transactionHooks 
     };
   }
 
+  // Wrapper dependency: another unresolved orphan declares this journal as a
+  // mutation target, so recovering it now would race the wrapper's own
+  // rollback proof. Settle the wrapper first; manifests are captured at
+  // transaction start, so this relation is acyclic.
+  const wrapperOrphans = unresolvedOrphanJournals(bundleDir, { exceptTxId: tx_id })
+    .filter((orphan) => (orphan?.mutation_manifest?.targets || [])
+      .some((target) => target?.path === journal.journal_ref));
+  if (wrapperOrphans.length > 0) {
+    const wrapper = firstRecoverableOrphan(wrapperOrphans) || wrapperOrphans[0];
+    const missingFact = `transaction ${tx_id} journal is a declared mutation target of unresolved transaction ${wrapper.tx_id}; recover the wrapper first`;
+    return {
+      ok: false,
+      reason_code: 'suspect_transaction',
+      repair_kind: WORK_UNIT_REPAIR_KIND.recoverTransaction,
+      missing_fact: missingFact,
+      write_to: wrapper?.journal_ref || null,
+      rerun: recoverTransactionRerun(bundleDir, wrapper.tx_id),
+      next: {
+        repair_kind: WORK_UNIT_REPAIR_KIND.recoverTransaction,
+        missing_fact: missingFact,
+        write_to: wrapper?.journal_ref || null,
+        rerun: recoverTransactionRerun(bundleDir, wrapper.tx_id),
+      },
+    };
+  }
+
   const result = withWorkUnitTransaction(bundleDir, 'recover_work_unit_transaction', {
     mutationTargets: [journal.journal_ref],
     targetWorkIds: journal.target_work_ids,
     targetQueueItemIds: journal.target_queue_item_ids,
     allowOrphanTxId: tx_id,
+    orphanBlocking: 'none',
     rerun: recoverTransactionRerun(bundleDir, tx_id),
     hooks: transactionHooks,
   }, ({ tx_id: recoveryTxId }) => {

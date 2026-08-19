@@ -170,13 +170,14 @@ describe('work-unit transaction v2', () => {
       try {
         const authorityPath = path.join(bundleDir, 'authority.json');
         writeFileSync(authorityPath, 'before\n');
+        const undeclaredRef = '_work_units/_index.json';
         assert.throws(() => withWorkUnitTransaction(bundleDir, 'submit_work_unit', {
           targetWorkIds: [WORK_ID],
           targetQueueItemIds: ['queue-a'],
           mutationTargets: ['authority.json'],
         }, () => {
           writeFileSync(authorityPath, 'after\n');
-          if (undeclared) writeFileSync(path.join(bundleDir, 'undeclared.json'), 'not-owned\n');
+          if (undeclared) writeFileSync(path.join(bundleDir, undeclaredRef), 'not-owned\n');
           if (!undeclared) throw new Error('fault after durable target write');
           return { ok: true };
         }), undeclared ? /undeclared targets/ : /fault after durable target write/);
@@ -184,10 +185,45 @@ describe('work-unit transaction v2', () => {
         const [journal] = journals(bundleDir);
         assert.equal(journal.status, undeclared ? 'suspect' : 'rolled_back');
         assert.equal(existsSync(path.join(bundleDir, '_work_units', '.lock')), false);
-        assert.equal(existsSync(path.join(bundleDir, 'undeclared.json')), undeclared);
+        assert.equal(existsSync(path.join(bundleDir, undeclaredRef)), undeclared);
       } finally {
         cleanupWorkUnitBundle(bundleDir);
       }
+    }
+  });
+
+  it('does not attribute concurrent non-authority writes to the transaction', () => {
+    const bundleDir = tempWorkUnitBundle('wu-tx-nonauthority-');
+    try {
+      const authorityPath = path.join(bundleDir, 'authority.json');
+      writeFileSync(authorityPath, 'before\n');
+      const nonAuthorityWrites = [
+        ['_cache/delegated-page.json', '{"fetched":true}\n'],
+        ['_scripts/run-helper.mjs', 'export const helper = 1;\n'],
+        ['reference/shared-note.md', 'note\n'],
+        ['artifacts/intermediate.txt', 'intermediate\n'],
+      ];
+      assert.throws(() => withWorkUnitTransaction(bundleDir, 'submit_work_unit', {
+        targetWorkIds: [WORK_ID],
+        targetQueueItemIds: ['queue-a'],
+        mutationTargets: ['authority.json'],
+      }, () => {
+        writeFileSync(authorityPath, 'after\n');
+        for (const [ref, content] of nonAuthorityWrites) {
+          mkdirSync(path.dirname(path.join(bundleDir, ref)), { recursive: true });
+          writeFileSync(path.join(bundleDir, ref), content);
+        }
+        throw new Error('fault after concurrent non-authority writes');
+      }), /fault after concurrent non-authority writes/);
+      assert.equal(readFileSync(authorityPath, 'utf8'), 'before\n');
+      const [journal] = journals(bundleDir);
+      assert.equal(journal.status, 'rolled_back');
+      assert.equal(journal.error.includes('exact before-images were restored'), true);
+      for (const [ref, content] of nonAuthorityWrites) {
+        assert.equal(readFileSync(path.join(bundleDir, ref), 'utf8'), content);
+      }
+    } finally {
+      cleanupWorkUnitBundle(bundleDir);
     }
   });
 
@@ -350,6 +386,171 @@ describe('work-unit transaction v2', () => {
       } finally {
         cleanupWorkUnitBundle(bundleDir);
       }
+    }
+  });
+
+  it('recovers wrapped and independent orphans through a deterministic command sequence', () => {
+    // Target orphan T (a failed submit) and wrapper orphan W (a failed
+    // recovery of T whose manifest declares T's journal as its target).
+    const bundleDir = tempWorkUnitBundle('wu-tx-multi-orphan-');
+    try {
+      const authorityRef = 'authority.json';
+      const authorityPath = path.join(bundleDir, authorityRef);
+      writeFileSync(authorityPath, 'before\n');
+      mkdirSync(path.join(bundleDir, '_work_units', '_transactions'), { recursive: true });
+      const targetTxId = 'tx-orphan-target';
+      const wrapperTxId = 'tx-orphan-wrapper';
+      const targetRef = `_work_units/_transactions/${targetTxId}.json`;
+      const wrapperRef = `_work_units/_transactions/${wrapperTxId}.json`;
+      const targetJournal = WorkUnitTransactionV2JournalSchema.parse({
+        schema_version: WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
+        tx_id: targetTxId,
+        operation: 'submit_work_unit',
+        journal_ref: targetRef,
+        target_work_ids: [WORK_ID],
+        target_queue_item_ids: ['queue-a'],
+        mutation_manifest: {
+          targets: [{
+            path: authorityRef,
+            before_exists: true,
+            before_sha256: sha256(Buffer.from('before\n')),
+          }],
+        },
+        status: 'started',
+        started_at: '2026-07-30T00:00:00.000Z',
+        settled_at: null,
+        error: null,
+      });
+      writeFileSync(path.join(bundleDir, targetRef), `${JSON.stringify(targetJournal, null, 2)}\n`);
+      const wrapperJournal = WorkUnitTransactionV2JournalSchema.parse({
+        schema_version: WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
+        tx_id: wrapperTxId,
+        operation: 'recover_work_unit_transaction',
+        journal_ref: wrapperRef,
+        target_work_ids: [WORK_ID],
+        target_queue_item_ids: ['queue-a'],
+        mutation_manifest: {
+          targets: [{
+            path: targetRef,
+            before_exists: true,
+            before_sha256: sha256(readFileSync(path.join(bundleDir, targetRef))),
+          }],
+        },
+        status: 'started',
+        started_at: '2026-07-30T00:05:00.000Z',
+        settled_at: null,
+        error: null,
+      });
+      writeFileSync(path.join(bundleDir, wrapperRef), `${JSON.stringify(wrapperJournal, null, 2)}\n`);
+
+      // Inspecting the multi-orphan state gives one deterministic coordinate:
+      // T is a declared target of W, so W is recoverable first.
+      const projection = inspectWorkUnitTransaction(bundleDir, {
+        operation: 'submit_work_unit',
+        targetWorkIds: [WORK_ID],
+        targetQueueItemIds: ['queue-a'],
+      });
+      assert.equal(projection.disposition, 'suspect_transaction');
+      assert.equal(projection.repair_kind, 'recover-transaction');
+      assert.equal(projection.holder.tx_id, wrapperTxId);
+      assert.equal(projection.rerun.includes(wrapperTxId), true);
+      assert.equal(projection.missing_fact.includes(`recover ${wrapperTxId} first`), true);
+
+      // Recovering the wrapped target first is refused with the wrapper coordinate.
+      const premature = recoverWorkUnitTransaction(bundleDir, { tx_id: targetTxId });
+      assert.equal(premature.ok, false);
+      assert.equal(premature.reason_code, 'suspect_transaction');
+      assert.equal(premature.repair_kind, 'recover-transaction');
+      assert.equal(premature.rerun.includes(wrapperTxId), true);
+
+      // Legal sequence: settle the wrapper (other orphan still unresolved),
+      // then the target. No journal bytes are edited by hand anywhere.
+      const wrapperRecovery = recoverWorkUnitTransaction(bundleDir, { tx_id: wrapperTxId });
+      assert.equal(wrapperRecovery.ok, true);
+      assert.equal(wrapperRecovery.disposition, 'rolled_back');
+      const targetRecovery = recoverWorkUnitTransaction(bundleDir, { tx_id: targetTxId });
+      assert.equal(targetRecovery.ok, true);
+      assert.equal(targetRecovery.disposition, 'rolled_back');
+      const settledTarget = JSON.parse(readFileSync(path.join(bundleDir, targetRef), 'utf8'));
+      const settledWrapper = JSON.parse(readFileSync(path.join(bundleDir, wrapperRef), 'utf8'));
+      assert.equal(settledTarget.status, 'rolled_back');
+      assert.equal(settledWrapper.status, 'rolled_back');
+      // Ledger is usable again without any manual journal surgery.
+      const cleared = inspectWorkUnitTransaction(bundleDir, {
+        operation: 'submit_work_unit',
+        targetWorkIds: [WORK_ID],
+        targetQueueItemIds: ['queue-a'],
+      });
+      assert.equal(cleared.disposition, 'none');
+    } finally {
+      cleanupWorkUnitBundle(bundleDir);
+    }
+  });
+
+  it('orders independent orphans by earliest started_at with a stable tiebreak', () => {
+    const bundleDir = tempWorkUnitBundle('wu-tx-independent-orphans-');
+    try {
+      mkdirSync(path.join(bundleDir, '_work_units', '_transactions'), { recursive: true });
+      const laterRef = 'reference/later.md';
+      mkdirSync(path.join(bundleDir, 'reference'), { recursive: true });
+      const laterPath = path.join(bundleDir, laterRef);
+      const orphanSpecs = [
+        { txId: 'tx-orphan-late', startedAt: '2026-07-30T00:05:00.000Z', ref: laterRef, content: 'later-before\n' },
+        { txId: 'tx-orphan-early', startedAt: '2026-07-30T00:00:00.000Z', ref: 'authority-early.json', content: 'before\n' },
+      ];
+      for (const { txId, startedAt, ref, content } of orphanSpecs) {
+        const authorityPath = path.join(bundleDir, ref);
+        writeFileSync(authorityPath, content);
+        const journalRef = `_work_units/_transactions/${txId}.json`;
+        const orphan = WorkUnitTransactionV2JournalSchema.parse({
+          schema_version: WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION,
+          tx_id: txId,
+          operation: 'submit_work_unit',
+          journal_ref: journalRef,
+          target_work_ids: [WORK_ID],
+          target_queue_item_ids: ['queue-a'],
+          mutation_manifest: {
+            targets: [{
+              path: ref,
+              before_exists: true,
+              before_sha256: sha256(Buffer.from(content)),
+            }],
+          },
+          status: 'started',
+          started_at: startedAt,
+          settled_at: null,
+          error: null,
+        });
+        writeFileSync(path.join(bundleDir, journalRef), `${JSON.stringify(orphan, null, 2)}\n`);
+      }
+
+      // The same deterministic coordinate is returned on repeated inspections.
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const projection = inspectWorkUnitTransaction(bundleDir, {
+          operation: 'submit_work_unit',
+          targetWorkIds: [WORK_ID],
+          targetQueueItemIds: ['queue-a'],
+        });
+        assert.equal(projection.disposition, 'suspect_transaction');
+        assert.equal(projection.repair_kind, 'recover-transaction');
+        assert.equal(projection.holder.tx_id, 'tx-orphan-early');
+        assert.equal(projection.rerun.includes('tx-orphan-early'), true);
+      }
+
+      // Independent orphans are recoverable in any order without hand edits.
+      const lateRecovery = recoverWorkUnitTransaction(bundleDir, { tx_id: 'tx-orphan-late' });
+      assert.equal(lateRecovery.ok, true);
+      const earlyRecovery = recoverWorkUnitTransaction(bundleDir, { tx_id: 'tx-orphan-early' });
+      assert.equal(earlyRecovery.ok, true);
+      assert.equal(readFileSync(laterPath, 'utf8'), 'later-before\n');
+      const cleared = inspectWorkUnitTransaction(bundleDir, {
+        operation: 'submit_work_unit',
+        targetWorkIds: [WORK_ID],
+        targetQueueItemIds: ['queue-a'],
+      });
+      assert.equal(cleared.disposition, 'none');
+    } finally {
+      cleanupWorkUnitBundle(bundleDir);
     }
   });
 

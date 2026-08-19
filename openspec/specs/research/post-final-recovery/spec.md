@@ -98,34 +98,52 @@ to fresh eligibility. A newer legal Readiness-to-Final handoff SHALL retire the
 older C5 lineage from current recovery ownership and project the exact normal
 Final-entry owner, but the handoff alone SHALL NOT establish Final entry, a new
 report delivery, or a fresh C5 candidate. The retired C5 event's prior Final
-inventory digest SHALL remain the audit witness for that boundary. Before the
-new route-bound Final load, `enter-phase` SHALL require current safe Final
-inventory to reproduce that digest exactly; drift SHALL block the load rather
-than be interpreted as delivery. After the admitted load, the existing Readiness
-status synchronization SHALL remain the only next owner. Only in the synchronized
-terminal Final window does zero appended canonical inventory mean Final owns
-immediate current-lineage publication. Only after one
+inventory digest SHALL remain the audit witness for that boundary, evaluated on
+the basis the event bound. Before the new route-bound Final load, `enter-phase`
+SHALL require the current safe Final inventory to reproduce that digest exactly
+on its bound basis; primary-series drift SHALL block the load rather than be
+interpreted as delivery, while legal non-primary Final presentation updates
+SHALL NOT block a primary-scoped event's load. After the admitted load, the
+existing Readiness status synchronization SHALL remain the only next owner.
+Only in the synchronized terminal Final window does zero appended canonical
+inventory mean Final owns immediate current-lineage publication. Only after one
 or more highest canonical versions are proven as immutable appends over that
 prior inventory MAY the newest report count as delivery for the newer lineage;
 only then MAY another explicit evidence-expanding request become a fresh C5
 candidate.
 
-The Final inventory digest SHALL use the canonical primary inventory evaluator
-and, where required for compatibility, a deterministic sorted digest of safe
-bundle-relative regular files under `final/`. Symlinks, unreadable entries,
-path escape, unsupported types, or ambiguous primary classification SHALL block
+The Final inventory lineage witness SHALL be a deterministic sorted digest over
+the canonical primary series entries (the primary base plus its contiguous
+revisions), computed from one safe snapshot that still scans every bundle-
+relative regular file under `final/`: symlinks, unreadable entries, path
+escape, unsupported types, or ambiguous primary classification SHALL block
 rather than be skipped. It SHALL not infer identity or recency from directory
-mtime, chat delivery text, or caches. For a newer Final handoff after accepted
-C5, the exact zero-append digest match SHALL first be consumed by `enter-phase`
-as the pre-load admission baseline. After the route-bound Final load and existing
-Readiness status synchronization, the evaluator SHALL compare current sorted inventory against the event-bound prior
-digest by removing zero or more highest canonical revision entries and rehashing
-the retained path/digest entries. Exactly one zero-append match means delivery
-pending; exactly one match after removing one or more highest revisions means
-those revisions are immutable appends and the newest is current-lineage
-delivery. No match, a match that requires removing a base/supplementary entry, or
-ambiguous canonical history SHALL block. This proof SHALL reuse the existing C5
-event field and SHALL not add timestamp authority, a delivery event, profile
+mtime, chat delivery text, or caches. A new C5 event SHALL bind that
+primary-scoped digest in the existing event field together with an explicit
+basis marker; events bound before this basis change carry no marker and remain
+legacy whole-tree bindings, where the digest is the deterministic sorted digest
+of all safe files under `final/`. Legal non-primary Final presentation updates
+committed through the accepted persistence operation SHALL NOT constitute
+lineage drift on either basis. For a newer Final handoff after accepted C5, the
+exact zero-append digest match on the event's bound basis SHALL first be
+consumed by `enter-phase` as the pre-load admission baseline. After the
+route-bound Final load and existing Readiness status synchronization, the
+evaluator SHALL compare the current inventory against the event-bound prior
+digest on the event's bound basis by removing zero or more highest canonical
+revision entries and rehashing the retained entries of that basis. Exactly one
+zero-append match means delivery pending; exactly one match after removing one
+or more highest revisions means those revisions are immutable appends and the
+newest is current-lineage delivery. For a legacy whole-tree binding whose proof
+is unavailable solely because non-primary entries drifted, the evaluator SHALL
+fall back to one structural primary-series proof evaluated over the same
+zero-or-more-highest-revision removal prefixes: for each prefix, the retained
+primary series SHALL remain structurally valid, and a zero-removal fallback
+match means delivery pending while a one-or-more-removal fallback match means
+immutable append; the fallback basis SHALL be exposed in the proof result as a
+diagnostic. No match on the bound basis, a match that requires removing a
+base/supplementary primary entry, primary-series content drift, or ambiguous
+canonical history SHALL block. This proof SHALL reuse the existing C5 event
+field and SHALL not add timestamp authority, a delivery event, profile
 counter, or current-report pointer.
 
 `apply` SHALL accept one retained strict JSON request containing schema version,
@@ -264,7 +282,7 @@ contract failures SHALL use blocked exit `1`.
 
 #### Scenario: Newer Final handoff with unchanged inventory returns to delivery
 
-- **WHEN** accepted C5 descendants reach a newer legal Final handoff, `enter-phase` admits the exact event-bound prior inventory, Readiness status synchronization completes, and inventory still has zero appended canonical revisions
+- **WHEN** accepted C5 descendants reach a newer legal Final handoff, `enter-phase` admits the exact event-bound prior inventory on its bound basis, Readiness status synchronization completes, and inventory still has zero appended canonical revisions
 - **THEN** C5 SHALL remain retired as current owner and Final SHALL own immediate publication of global `latest + 1`
 - **AND** inspect/apply SHALL not expose a fresh C5 request against the undelivered newer lineage
 
@@ -276,15 +294,34 @@ contract failures SHALL use blocked exit `1`.
 
 #### Scenario: Pre-load inventory drift blocks the post-C5 Final return
 
-- **WHEN** accepted C5 descendants reach a newer legal Final handoff but current safe Final inventory no longer reproduces the retired event-bound prior digest before the new Final load
+- **WHEN** accepted C5 descendants reach a newer legal Final handoff but the current safe Final inventory no longer reproduces the retired event-bound prior digest on its bound basis before the new Final load
 - **THEN** `enter-phase` SHALL reject without `load_complete` or `current_node` mutation
 - **AND** C5/reentry SHALL not reinterpret the drift as a delivered report or expose a fresh C5 request
 
+#### Scenario: Non-primary presentation drift does not block a primary-scoped load
+
+- **WHEN** a primary-scoped C5 event's rerun has legally updated non-primary Final presentation files (for example `final/topics/*.md` through the accepted persistence operation) before the newer Final load
+- **THEN** `enter-phase` admission SHALL still reproduce the event-bound primary-series digest
+- **AND** those non-primary updates SHALL NOT be reported as Final inventory drift
+
 #### Scenario: Immutable append establishes the newer delivery lineage
 
-- **WHEN** current valid inventory uniquely preserves the retired C5 event-bound inventory and adds one or more highest contiguous canonical revisions
+- **WHEN** current valid inventory uniquely preserves the retired C5 event-bound inventory on its bound basis and adds one or more highest contiguous canonical revisions
 - **THEN** the newest appended report MAY bind the newer legal Final lineage and clean reentry SHALL own ordinary Final refinement
 - **AND** a later explicit evidence-expanding request MAY become a fresh C5 candidate without rewriting the older event or reports
+
+#### Scenario: Non-primary updates during a rerun do not block the next rerun
+
+- **WHEN** a rerun's Final stage legally updates non-primary Final presentation files and publishes a newer primary revision, and a later explicit evidence-expanding request arrives
+- **THEN** the append proof SHALL succeed on the event's bound basis (using the structural primary-series fallback for a legacy whole-tree binding when only non-primary entries drifted, with the fallback exposed as a diagnostic)
+- **AND** inspect SHALL expose fresh C5 eligibility for that request instead of returning `accepted_lineage_drift`
+- **AND** the newer C5 event SHALL bind the current primary-scoped digest with its basis marker
+
+#### Scenario: Primary-series tampering remains drift on both bases
+
+- **WHEN** the content of a retained primary-series entry (base or historical revision) differs from the event-bound witness on its bound basis, or removing a base/supplementary primary entry would be required to match
+- **THEN** the append proof SHALL block as inventory drift on both the primary-scoped and the legacy whole-tree basis
+- **AND** the structural fallback SHALL NOT accept a primary series whose retained entries no longer form a valid contiguous series
 
 ### Requirement: Post-final recovery SHALL commit profile and one event through explicit exact recovery
 

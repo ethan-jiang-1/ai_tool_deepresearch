@@ -328,7 +328,8 @@ function finalFacts(bundle) {
       final_load_index: handoff.handoff.loadComplete.index,
       status_sha256: hashBytes(statusRaw),
       profile_sha256: hashBytes(profileRaw),
-      final_inventory_sha256: inventory.sha256,
+      final_inventory_sha256: inventory.primary_sha256,
+      final_inventory_basis: 'primary_series',
       rerun_guard: guard,
     }),
   };
@@ -395,7 +396,7 @@ function buildEvent({ facts, request, operationId, afterProfile, afterProfileRaw
     request_sha256: requestDigest(request), reason: request.reason, requested_scope: request.requested_scope,
     decision_checkpoint: 'hitl2', decision: 'rerun', decision_source: 'explicit_post_final_request', execution_actor: 'phase_agent',
     logical_bundle_identity: facts.identity,
-    previous_final: { final_handoff_index: facts.lineage.final_handoff_index, final_load_index: facts.lineage.final_load_index, status_sha256: facts.lineage.status_sha256, profile_sha256: facts.lineage.profile_sha256, final_inventory_sha256: facts.lineage.final_inventory_sha256 },
+    previous_final: { final_handoff_index: facts.lineage.final_handoff_index, final_load_index: facts.lineage.final_load_index, status_sha256: facts.lineage.status_sha256, profile_sha256: facts.lineage.profile_sha256, final_inventory_sha256: facts.lineage.final_inventory_sha256, ...(facts.lineage.final_inventory_basis ? { final_inventory_basis: facts.lineage.final_inventory_basis } : {}) },
     previous_profile_semantics: facts.profile,
     committed_after_profile_sha256: hashBytes(afterProfileRaw), committed_after_profile_semantics: afterProfile,
     routing: facts.routing, rerun_guard: facts.guard,
@@ -425,7 +426,12 @@ function validatePreparedCurrentFacts(bundle, manifest) {
   const { guard: currentGuard, availability } = rerunGuard(readBundleProfile(bundle), { includeNextIncrement: true });
   if (!availability.available) return { ok: false, reason_code: 'rerun_limit_exhausted', reason: 'The required next rerun increment is no longer available.' };
   if (currentGuard.definition_sha256 !== manifest.rerun_guard.definition_sha256 || currentGuard.current_count !== manifest.rerun_guard.current_count || currentGuard.next_count !== manifest.rerun_guard.next_count || currentGuard.limit !== manifest.rerun_guard.limit) return { ok: false, reason_code: 'rerun_rule_drift', reason: 'Active rerun-limit facts changed after acceptance.' };
-  if (finalInventory(bundle).sha256 !== manifest.final_inventory_sha256) return { ok: false, reason_code: 'final_inventory_drift', reason: 'Final artifact inventory changed after acceptance.' };
+  const currentInventory = finalInventory(bundle);
+  if (manifest.final_lineage.final_inventory_basis === 'primary_series') {
+    if (currentInventory.primary_sha256 !== manifest.final_inventory_sha256) return { ok: false, reason_code: 'final_inventory_drift', reason: 'Final primary-series inventory changed after acceptance.' };
+  } else if (currentInventory.sha256 !== manifest.final_inventory_sha256) {
+    return { ok: false, reason_code: 'final_inventory_drift', reason: 'Final artifact inventory changed after acceptance.' };
+  }
   return { ok: true };
 }
 
@@ -518,7 +524,7 @@ export function applyPostFinalRecovery({ bundlePath, input, operationId = random
     const manifest = PreparedManifestSchema.parse({
       schema_version: POST_FINAL_RECOVERY_SCHEMA_VERSION, state: 'prepared', action: POST_FINAL_RECOVERY_ACTION, operation_id: operationId, event_id: event.event_id,
       request_sha256: event.request_sha256, bundle_identity: facts.identity, final_lineage: facts.lineage,
-      before_profile_sha256: hashBytes(facts.profileRaw), after_profile_sha256: hashBytes(afterRaw), terminal_status_sha256: hashBytes(facts.statusRaw), final_inventory_sha256: facts.inventory.sha256,
+      before_profile_sha256: hashBytes(facts.profileRaw), after_profile_sha256: hashBytes(afterRaw), terminal_status_sha256: hashBytes(facts.statusRaw), final_inventory_sha256: facts.lineage.final_inventory_sha256,
       routing: facts.routing, rerun_guard: facts.guard, trace_prefix_byte_length: traceRaw.length, trace_prefix_sha256: hashBytes(traceRaw), trace_prefix_line_count: traceRaw.toString('utf8').split('\n').filter(Boolean).length,
       event_line_sha256: hashBytes(eventRaw), files: { request: 'request.json', before_profile: 'profile.before.yaml', after_profile: 'profile.after.yaml', event_line: 'event.jsonl' },
       commit_order: ['rb_profile.yaml', 'terminal_status_recheck', 'post_final_reentry', 'workspace_cleanup'], created_at: new Date().toISOString(),

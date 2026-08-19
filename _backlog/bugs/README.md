@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-08-17 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-08-19 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -18,14 +18,24 @@
 > BUG-200--204 已按 current-head evidence 和归档 remediation changes 结案。
 > BUG-099/106 已按 2026-08-08 分诊移入 [`../_done/_suspended_bugs/`](../_done/_suspended_bugs/)（弱模型执行产物，非确定性框架缺陷）。
 > BUG-225..231 已按 2026-08-17 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
+> BUG-232/233/234/236 已按 2026-08-19 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
-| BUG-232 | P2 | wave0 | 共享 reference 物化收敛按 topic_slug 排序无 per-topic 平衡/上限，排序靠前 topic 吃满 floor，靠后 topic 0 覆盖（`wave0-reference-convergence.mjs`） |
-| BUG-233 | P2 | wave1 | work-unit 事务双 orphan 死锁：两个 suspect journal 互相成为对方 recover 的阻塞，`recover-transaction` 无限互踢，无合法恢复路径（`work-unit-transaction.mjs`） |
-| BUG-234 | P2 | wave1 | work-unit 事务整 bundle 快照把并发写入误判为 "mutated undeclared targets"，并行 sub-agent 抓取时合法 submit/recover 被标 suspect（`work-unit-transaction.mjs`） |
 
-> BUG-233/234 来自 `dpt_rb_enterprise-ai-transformation-six-cases` 断电恢复观察（wave1 supplementary submit 并发撞车 → 双 orphan → 手动归档 journal 才解除死锁）。两份卡片均附复现路径、实账影响与最小修复方向。
+（当前无活跃 bug。）
+
+## 最近关闭 (2026-08-19)
+
+| Bug | 结案依据 |
+|-----|----------|
+| BUG-232 | `2026-08-19-fix-transaction-guards-and-wave0-reference-balance`：wave0 共享 reference 物化改为跨 topic 平衡选择（最少已投影 → `topic_slug` → 最低 retained ordinal），提取纯函数 `selectBalancedCandidate` 并以 round-robin 真值表 + CLI 集成测试锁定（RWG-022） |
+| BUG-233 | 同上：多 orphan 场景收敛到单一确定性 recover 坐标（wrapper 依赖优先，`firstRecoverableOrphan` 按 v2-shape/started_at/tx_id 排序），recover 自身以 `orphanBlocking: 'none'` 运行解除互踢死锁（DEW-023） |
+| BUG-234 | 同上：事务 authority surface 收窄到 `_work_units/**`（排除 lock 与当前 journal）+ 根 `rb_output_declarations.jsonl`；并发非授权写入（`_cache/`、`_scripts/`、`reference/`、`artifacts/`）不再误判 suspect（DEW-023） |
+| BUG-236 | 同上：C5 事件改绑 primary-series digest（`final_inventory_basis: primary_series`），`proveNewerFinalAppend` 按 basis 证明 append；legacy 全树事件经 structural primary-series fallback 恢复——第二次 rerun 不再被 non-primary 漂移永久阻塞（POF-001） |
+
+> 全量 `node --test` 3015/3015 0 fail；`openspec validate --strict`、governance checker 全绿；
+> 4 份 delta spec 已同步 main specs 并 finalizer 17/17 归档。
 
 ## 最近关闭 (2026-08-17)
 
@@ -170,7 +180,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 
 > BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspended_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
-**Next available bug ID: BUG-236**
+**Next available bug ID: BUG-237**
 
 ## BUG-132–137 接手地图
 

@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
+import { readFinalReportInventory } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs';
 import { applyCanonicalTopicState, recoverCanonicalTopicState } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
 import { auditPhaseStatus } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs';
 import {
@@ -247,5 +248,95 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     assert.equal(synced.post_final_recovery.next_action.kind, 'topic_state');
     assert.equal(synced.normalized_target.status_gate, 'hitl2_recorded');
     assert.equal(existsSync(join(bundle, '_diagnostics', 'post-final-recovery')), true);
+  });
+
+  // Drive one full rerun cycle after a committed C5 event whose Final stage
+  // legally updates a non-primary presentation file and publishes a newer
+  // primary revision (BUG-236). Returns nothing; the bundle ends terminal at
+  // the newer Final.
+  function driveNewerFinalCycle(bundle, { legacyBinding = false } = {}) {
+    const tracePath = join(bundle, 'rb_trace.jsonl');
+    const eventTimeWholeTreeDigest = readFinalReportInventory(bundle).sha256;
+    if (legacyBinding) {
+      const lines = readFileSync(tracePath, 'utf8').trim().split('\n');
+      const eventIndex = lines.findIndex((line) => JSON.parse(line).event === 'post_final_reentry');
+      const event = JSON.parse(lines[eventIndex]);
+      delete event.previous_final.final_inventory_basis;
+      event.previous_final.final_inventory_sha256 = eventTimeWholeTreeDigest;
+      lines[eventIndex] = JSON.stringify(event);
+      writeFileSync(tracePath, `${lines.join('\n')}\n`);
+    }
+    const chain = [
+      ['rerun-ready', 'phases/phase-rerun.md', 'phases/phase-seed-topics.md'],
+      ['seed-topics-ready', 'phases/phase-seed-topics.md', 'phases/phase-wave0.md'],
+      ['wave0-complete', 'phases/phase-wave0.md', 'phases/phase-wave1.md'],
+      ['wave1-complete', 'phases/phase-wave1.md', 'phases/phase-wave2.md'],
+      ['wave2-complete', 'phases/phase-wave2.md', 'phases/phase-hitl2.md'],
+      ['hitl2-recorded', 'phases/phase-hitl2.md', 'phases/phase-readiness.md'],
+      ['readiness-passed', 'phases/phase-readiness.md', 'phases/phase-final.md'],
+    ];
+    const baseIndex = readFileSync(tracePath, 'utf8').trim().split('\n').length;
+    const appended = chain.map(([gate, node, next], offset) => ({
+      ts: `2026-02-01T00:00:${String(offset).padStart(2, '0')}.000Z`,
+      event: 'gate_attempt',
+      gate,
+      passed: true,
+      currentNodeRef: node,
+      next,
+    }));
+    appended.push({
+      ts: '2026-02-01T00:01:00.000Z',
+      event: 'load_complete',
+      entry: 'phases/phase-final.md',
+      handoff_source_gate: 'readiness-passed',
+      handoff_source_node: 'phases/phase-readiness.md',
+      handoff_target_node: 'phases/phase-final.md',
+      handoff_source_attempt_index: baseIndex + chain.length - 1,
+    });
+    writeFileSync(tracePath, `${readFileSync(tracePath, 'utf8').trim()}\n${appended.map(JSON.stringify).join('\n')}\n`);
+    const status = JSON.parse(readFileSync(join(bundle, 'rb_status.json'), 'utf8'));
+    status.current_node = 'phases/phase-final.md';
+    status.current_gate = 'readiness_passed';
+    status.next_gate = 'none';
+    writeFileSync(join(bundle, 'rb_status.json'), `${JSON.stringify(status, null, 2)}\n`);
+    mkdirSync(join(bundle, 'final', 'topics'), { recursive: true });
+    writeFileSync(join(bundle, 'final', 'topics', 'alpha.md'), '# Topic Alpha (updated)\n');
+    writeFileSync(join(bundle, 'final', 'final_v1.md'), '# Newer primary revision\n');
+  }
+
+  it('keeps the second rerun a fresh candidate after non-primary updates and a newer primary revision', () => {
+    const bundle = createTerminalFinalBundle(root, 'second-rerun');
+    const first = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.equal(first.verdict, 'eligible');
+    const firstPath = join(root, 'second-rerun-request.json');
+    writeFileSync(firstPath, JSON.stringify(requestFromInspection(first)));
+    runJson([CLI, 'apply', '--bundle', bundle, '--input', firstPath]);
+
+    driveNewerFinalCycle(bundle);
+    const second = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.notEqual(second.reason_code, 'accepted_lineage_drift');
+    assert.equal(second.verdict, 'eligible', JSON.stringify(second));
+
+    const secondPath = join(root, 'second-rerun-request-2.json');
+    writeFileSync(secondPath, JSON.stringify(requestFromInspection(second)));
+    runJson([CLI, 'apply', '--bundle', bundle, '--input', secondPath]);
+    const events = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+    const newest = events.filter((event) => event.event === 'post_final_reentry').at(-1);
+    assert.equal(newest.previous_final.final_inventory_basis, 'primary_series');
+    assert.equal(newest.previous_final.final_inventory_sha256, readFinalReportInventory(bundle).primary_sha256);
+  });
+
+  it('recovers a legacy whole-tree binding through the structural primary-series fallback', () => {
+    const bundle = createTerminalFinalBundle(root, 'legacy-binding');
+    const first = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.equal(first.verdict, 'eligible');
+    const firstPath = join(root, 'legacy-request.json');
+    writeFileSync(firstPath, JSON.stringify(requestFromInspection(first)));
+    runJson([CLI, 'apply', '--bundle', bundle, '--input', firstPath]);
+
+    driveNewerFinalCycle(bundle, { legacyBinding: true });
+    const second = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.notEqual(second.reason_code, 'accepted_lineage_drift');
+    assert.equal(second.verdict, 'eligible', JSON.stringify(second));
   });
 });

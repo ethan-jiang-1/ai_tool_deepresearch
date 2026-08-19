@@ -121,10 +121,27 @@ export const FinalReportInventorySchema = z.object({
   primary_series: FinalReportSeriesResultSchema,
   entries: z.array(FinalReportInventoryEntrySchema),
   sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  primary_sha256: z.string().regex(/^[0-9a-f]{64}$/),
 }).strict();
 
 export function digestFinalReportInventoryEntries(entries) {
   return canonicalDigest(z.array(FinalReportInventoryEntrySchema).parse(entries));
+}
+
+// Primary-series-scoped witness digest: the canonical Final lineage is the
+// primary series (base + contiguous revisions), so the immutable-append proof
+// binds this digest instead of the whole `final/` tree. Non-primary
+// presentation files (for example `final/topics/*.md`) may change legally
+// after final without touching the lineage witness.
+export function digestFinalReportPrimarySeriesEntries(entries, primarySeries) {
+  const primaryPaths = new Set(
+    FinalReportSeriesResultSchema.parse(primarySeries).primary_entries.map((entry) => entry.target),
+  );
+  const primaryEntries = z.array(FinalReportInventoryEntrySchema)
+    .parse(entries)
+    .filter((entry) => primaryPaths.has(entry.path))
+    .sort((left, right) => left.path.localeCompare(right.path));
+  return digestFinalReportInventoryEntries(primaryEntries);
 }
 
 export class FinalReportSeriesFilesystemError extends Error {
@@ -458,5 +475,6 @@ export function readFinalReportInventory(bundlePath) {
     primary_series: primarySeries,
     entries,
     sha256: digestFinalReportInventoryEntries(entries),
+    primary_sha256: digestFinalReportPrimarySeriesEntries(entries, primarySeries),
   });
 }

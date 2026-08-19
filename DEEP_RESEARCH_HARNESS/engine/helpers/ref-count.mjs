@@ -95,9 +95,13 @@ export function isCountable(refPath, bundleDir) {
     return { countable: false, reason: 'unparseable' };
   }
 
-  // ── Condition 1: acceptance_status === "accepted" ──
-  const acceptanceStatus = metadata.get('acceptance_status') || '';
-  if (acceptanceStatus !== 'accepted') {
+  // ── Condition 1: acceptance_status belongs to the accepted family ──
+  // The template-documented YAML quoted form "accepted :warning:" (an accepted
+  // reference with an inline honesty marker) is the same accepted verdict for
+  // numeric eligibility; EXCLUDED and any other value stay non-countable.
+  const ACCEPTED_STATUS_FAMILY = new Set(['accepted', 'accepted :warning:']);
+  const acceptanceStatus = (metadata.get('acceptance_status') || '').trim();
+  if (!ACCEPTED_STATUS_FAMILY.has(acceptanceStatus)) {
     return {
       countable: false,
       reason: `acceptance_status_not_accepted: ${acceptanceStatus || 'missing'}`,
