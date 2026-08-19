@@ -19,8 +19,8 @@ suggested_context:
 ## 0. Execution Brief
 
 - **Objective**: Translate HITL2 rerun intent into incremental topic changes before re-entering seed-topics.
-- **Start here**: Read HITL2 rationale, current `rerun_count`, existing seed topic files, and `topic_registry`.
-- **Path to pass**: Inspect canonical topic state, submit retained add/refine/direction-only candidates through the existing topic-state transaction, consume its returned style-projection handoff only when registry length changed, increment `rerun_count`, then run the rerun gate.
+- **Start here**: Read the route-bound HITL2 rationale, inspect/recover canonical topic state until no accepted workspace remains, then read current `rerun_count`, `rb_plan.md`, current seed topic files, and `topic_registry`.
+- **Path to pass**: Materialize or reuse one complete target-round intent revision in `rb_plan.md## Decisions`, re-read the plan, run a fresh topic-state inspect, submit retained add/refine/direction-only candidates through the existing topic-state transaction, consume its returned style-projection handoff only when registry length changed, increment `rerun_count`, then run the rerun gate.
 - **Completion check**: `check-gate-rerun-ready.mjs` passes for `phases/phase-rerun.md`.
 - **Failure posture**: Do not search or rewrite research artifacts here; if rerun is structurally impossible, record the accepted silent degradation/unpassable event and obey gate routing.
 
@@ -34,6 +34,8 @@ HITL2 `user_decision: rerun` 后，Agent 用正常 HITL2 gate handoff或唯一ac
 
 - `rb_profile.yaml#/human_decision_checkpoints/hitl2/rationale`（用户 rerun 意图）
 - `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count`（当前 rerun 轮次）
+- `rb_plan.md## Constraints > ### User Research Controls`（HITL1 及既有 bounded source-access alignment 完成后的 immutable baseline，如存在）
+- `rb_plan.md## Decisions`（post-HITL1 accepted rerun revision history；普通恢复只读 newest complete matching revision，不合并旧 delta）
 - `seed_topics/` 目录（已有 topic 文件清单及其内容——深度、must_answer、search_guardrails）
 - `rb_plan.md` frontmatter 的 `topic_registry`（topic 集合的 source of truth）
 - `shared-profile.md`（rerun_count 字段文档）
@@ -42,19 +44,52 @@ HITL2 `user_decision: rerun` 后，Agent 用正常 HITL2 gate handoff或唯一ac
 
 ### Stage 1: 读输入
 
-1. 读取 HITL2 rationale——理解用户想要什么改变（"加经济影响分析"、"去掉不可靠的来源维度"等）。若 rationale 含 `用户的重点原话（逐字保留）` 与 `Agent 对本轮额外研究方向的理解（可由用户修正）`，它们共同说明本轮新的或修订的 focus increment：原话保留用户语义，理解只提供当前可读 direction，不是 parser、profile/Topic field、Gate input 或新的 mutation authority。
-2. 读取 `rerun_count`——若字段缺失则按既有 profile owner 的默认值处理，若已有值则计算 `target_rerun_count = current_rerun_count + 1`。
-3. 先运行 `operate-topic-state inspect`。若存在 accepted workspace，只能执行它的 exact `recover`；不存在 accepted workspace 时，旧 matching/stale direction 只是历史/现状事实，不能成为本轮 retained input 或跳过 apply 的收据。
-4. 从 canonical `topic_registry` 解析当前 topic，并读取它们 UID-bound current seed 的 frontmatter/body 了解：
+1. 读取 route-bound HITL2 rationale——理解用户想要什么改变（"加经济影响分析"、"去掉不可靠的来源维度"等）。若 rationale 含 `用户的重点原话（逐字保留）` 与 `Agent 对本轮额外研究方向的理解（可由用户修正）`，它们共同说明本轮新的或修订的 focus increment：原话保留用户语义，理解只提供当前可读 direction，不是 parser、profile/Topic field、Gate input 或新的 mutation authority。
+2. 在改动任何 plan bytes 前运行 `operate-topic-state inspect`。若存在 accepted workspace，只能执行 inspect 返回的 exact `recover`，committed recover 后必须重新 inspect；重复此过程，直到当前 inspect 明确没有 accepted workspace。workspace 拥有 recovery 时，不得写/修 Decisions、提交新语义或创建平行恢复路径。
+3. 无 accepted workspace 后读取 `rerun_count`——若字段缺失则按既有 profile owner 的默认值处理，若已有值则计算 `target_rerun_count = current_rerun_count + 1`。
+4. 读取当前 `rb_plan.md`。`### User Research Controls` 是 immutable HITL1 baseline；`## Decisions` 中 complete revisions newest-first。对于 current intent，只组合 baseline 与 newest complete matching revision 的 cumulative active amendments；older revisions 只保留历史，不得重新 union 被替换/撤回的要求。legacy bundle 没有 revision 时沿用现有 profile/direction compatibility，不从 chat、文件名或旧 artifact 反推历史。
+5. 从 canonical `topic_registry` 解析当前 topic，并读取它们 UID-bound current seed 的 frontmatter/body 了解：
    - 每个 topic 的标题、slug、must_answer、hypothesis、search_guardrails
    - 当前深度（quick_factual / exploratory_map / claim_verification）
    - 已有的 `## 本轮重跑方向` section（如有）；旧 section 可以作为上下文，但不能代替本轮 candidate。
 
 **MUST NOT** 通过扫描所有 seed 的方向、空目录或旧 matching section推断本轮是否已提交。缺失 current seed 是 canonical binding/topic-state repair，必须按 Gate hint 使用既有 owner，不得全量重建或直接编辑多个文件。
 
+### Stage 1.5: 持久化 target-round intent revision
+
+在任何 topic-state candidate 产生前，将已经合法接纳的本轮 rationale 写成或复用 `rb_plan.md## Decisions` 顶部唯一一条 complete target-round revision。每条 revision 使用下面七个固定、Agent-readable labels：
+
+```markdown
+### Rerun intent revision: <target_rerun_count>
+
+- Target rerun count: <N>
+- This-round delta: <added / changed / withdrawn, or none>
+- Affected canonical Topics: <UID + title, explicit proposed title, or none>
+- Superseded or withdrawn requirements: <bounded items, or none>
+- Accepted Agent interpretation: <bounded current interpretation, or none>
+- Current active amendments relative to HITL1 baseline: <complete cumulative set, or none>
+- Accepted user wording:
+  > <each accepted non-empty line is prefixed with `> `>
+  >
+  > <each accepted empty line is retained as `>`>
+```
+
+前六个 label/value 必须各占一个 bounded bullet line，空集合显式写 `none`；只有 `Accepted user wording` 可以 multiline。用户原话的每一行都必须留在该 label 下的 blockquote：非空行写 `> `，空行写 `>`。原话里的 `## Progress`、`## Decisions`、`### Rerun intent revision`、checkbox-looking 行或其他 Markdown structure 因此只能是 quoted content，不能成为 host-file section、progress item 或 revision entry。只保留与本轮 accepted research change 直接相关的 wording，不复制整段对话。
+
+`This-round delta` 记录这一轮新增、加强、替换或撤回了什么；`Current active amendments relative to HITL1 baseline` 必须写相对 baseline 的完整当前累计集合，而不是只写 delta。normal recovery 以 baseline + newest complete matching revision 为停止点，不 replay 或 merge older deltas。revision prose 不授予 route、mutation、permission、coverage 或 Gate authority，Engine 不解析 label、blockquote 或语义等价性。
+
+按 target count 与 accepted rationale 执行幂等处理：
+
+- 同 target、同 accepted meaning 的一条 complete revision：原样 reuse，不追加 duplicate；
+- interrupted incomplete target draft：只在确认无 accepted topic-state workspace 后补齐，补齐前不得构造 candidate；
+- 同 target 出现两个 complete duplicate/conflicting entries：保留原 bytes，停止在 plan ambiguity，不按文件顺序选 winner，不 apply topic state，也不递增 profile；
+- complete older revisions：永不修改、重排或用当前内容重写。
+
+写入、补齐或 reuse 后，必须重新读取 `rb_plan.md` 并确认 current entry complete、newest、target-matching。随后再次运行 fresh `operate-topic-state inspect`；Stage 2/3 的 retained candidate 必须基于这个已经包含 current revision 的 post-revision plan baseline。若 fresh inspect 暴露 workspace 或其他 owner boundary，先按其既有 exact operation 处理并回到本顺序，不得在 workspace 存在时继续改 plan。
+
 ### Stage 2: 对比推断 — 产出 topic 调整方案
 
-将 HITL2 rationale（用户意图）与 seed_topics 现状对比，推演出具体行动。接受的 focus 只影响受影响 Topic 的本轮 candidate：把新的 search dimensions、调整深度、guardrails 和 rationale excerpt 写入既有 `## 本轮重跑方向` guidance。已有 topic 的 `## 本轮重跑方向` section 中 `rerun_count` 不等于 `target_rerun_count` 的视为陈旧——忽略其 action，仅作为历史参考；旧 direction、submitted evidence、artifacts、reference paths 与 output history 不得被描述为新 focus work 或满足新的/修订 focus。
+将同一 accepted rationale、current revision 与 seed_topics 现状对比，推演出具体行动。接受的 focus 只影响受影响 Topic 的本轮 candidate：把新的 search dimensions、调整深度、guardrails 和 rationale excerpt（既有字段 `rationale_excerpt`）写入既有 `## 本轮重跑方向` guidance。每个 excerpt 只解释该 Topic 为什么受 current revision 影响；不同 Topic 可以不同，不得复制完整 user wording，也不要求跨 Topic 相同。已有 topic 的 `## 本轮重跑方向` section 中 `rerun_count` 不等于 `target_rerun_count` 的视为陈旧——忽略其 action，仅作为历史参考；旧 direction、submitted evidence、artifacts、reference paths 与 output history 不得被描述为新 focus work 或满足新的/修订 focus。
 
 | 场景 | action | 含义 |
 |------|--------|------|
@@ -83,7 +118,7 @@ HITL2 `user_decision: rerun` 后，Agent 用正常 HITL2 gate handoff或唯一ac
 
 ### Stage 3: Candidate Publication & Gate
 
-1. **Apply canonical topic change set**：先运行 `operate-topic-state inspect`，再把 HITL2 rationale 转成 retained JSON. Every sanctioned rerun `add_topic` / `update_intent` carries a direction candidate; a direction-only change uses `set_rerun_direction`. Read `command_playbook/operate-topic-state.md#Rerun Direction Input` for the exact six direction fields and action mapping. Submit it through the existing CLI:
+1. **Apply canonical topic change set**：使用 Stage 1.5 的 post-revision fresh inspect 与同一 accepted rationale/current revision 形成 retained JSON，不得再以 pre-revision plan bytes 构造 candidate。Every sanctioned rerun `add_topic` / `update_intent` carries a direction candidate; a direction-only change uses `set_rerun_direction`. Read `command_playbook/operate-topic-state.md#Rerun Direction Input` for the exact six direction fields and action mapping. `mutate_layout` 使用这次 fresh inspect 的 `expected_plan_sha256`；其他 action 继续由 existing apply 读取 current plan/prepared manifest 绑定。Submit it through the existing CLI:
 
 ```bash
 node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs apply --bundle <bundle> --input <retained-candidate.json>
@@ -118,6 +153,7 @@ node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-rerun-ready.mjs --bundle <path> 
 ## 4. Expected Artifacts
 
 - 受影响 seed_topic 文件中的 `## 本轮重跑方向` section 已随 topic-state apply/recover 原子写入/更新
+- `rb_plan.md## Constraints > ### User Research Controls` baseline 未重写；`## Decisions` 顶部有唯一 complete target-round revision，older complete revisions byte content 保持不变
 - `rb_plan.md` canonical registry 与 touched UID-bound current seeds 已由 topic-state apply/recover完整提交；历史 artifact/reference/output path 未移动
 - **新增 topic（`action: add`）必须在后续 phase（wave0/wave1/wave2）中遵循完整 `_cache/` 写入约定**：每个 source 写入 `websearch.json` + `page.md` + `meta.json`（11 字段），在 submitted work-unit result 的 `cache_trails[]` 中声明 leaf 路径，确保 gate `cache_coverage` 可溯源。此约定与首次运行的 topic 完全一致。
 - 仅当 committed result 返回 `style_projection.status: refresh_required` 时，`rb_profile.yaml#/research_style_params` 已由 handoff 的既有 CLI 更新到当前 `topic_count`；无 length change 时该字段不因本 phase 重写
@@ -174,6 +210,8 @@ Gate fail 时按 structured hint 处理并保持当前 checkpoint failed。`user
 - **MUST 读当前 rerun_count 后再递增**：若字段缺失则初始化为 1，若已有值则 +1。MUST NOT 直接覆盖为固定值
 - **MUST NOT 在无 rationale 或 rationale 为空时写 ## 本轮重跑方向**：方向 hints 必须来自用户明确的意图
 - **MUST NOT direct-edit seed direction，或以 all-seed scan / old matching section 跳过 retained candidate 与 apply**：只允许 existing accepted workspace 的 exact recover
+- **MUST NOT 在 accepted topic-state workspace 存在时写/修 Decisions**：先 exact recover 并 re-inspect until clear；revision durable 后必须 re-read plan 与 fresh inspect 才能构造 candidate
+- **MUST NOT merge older revision deltas into current intent**：current set 只来自 HITL1 baseline + newest complete matching cumulative revision；presentation-only feedback 与 unaccepted draft 不进入 Decisions
 
 ## Log
 

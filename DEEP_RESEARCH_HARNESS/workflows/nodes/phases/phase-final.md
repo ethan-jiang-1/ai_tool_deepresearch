@@ -25,8 +25,10 @@ suggested_context:
   current lineage's missing primary report immediately, show it, and remain in
   Final for bounded presentation revisions.
 - **Start here**: Read the accepted current-lineage HITL2 handoff, verified
-  bundle evidence, `rb_status.json`, `rb_trace.jsonl`, and the latest canonical
-  primary Final report when one is already bound.
+  bundle evidence and limitation surfaces, the HITL1 controls baseline when
+  present, the newest complete matching Decisions revision on rerun, Wave2
+  Current Intent Coverage when present, `rb_status.json`, `rb_trace.jsonl`, and
+  the latest canonical primary Final report when one is already bound.
 - **Path to pass**: First Final entry with an admitted empty inventory publishes
   `final/final.md`. An admitted post-C5 return with zero canonical append
   publishes the next global version. A current-lineage report is refined only
@@ -69,6 +71,14 @@ a newer lineage.
 - The current lineage's accepted HITL2 handoff/receipt, all earlier lineage
   history, and verified wave/evidence artifacts. Preserve them; do not rewrite
   them for a presentation revision.
+- `rb_plan.md## Constraints > ### User Research Controls` as the immutable HITL1
+  baseline when present; for current-contract rerun N, the newest complete
+  `rb_plan.md## Decisions > ### Rerun intent revision: N`; and the Wave2
+  `## Current Intent Coverage` projection when present. Older revisions remain
+  history and do not reactivate withdrawn obligations.
+- The current-lineage `composition_handoff`. Research controls/amendments own
+  research obligations; this handoff owns reader, use, view, foregrounding,
+  compression, language, evidence exposure, and appendix posture.
 - `rb_profile.yaml`, `rb_status.json`, and `rb_trace.jsonl` as current runtime
   facts, plus the canonical `final/` inventory and latest report when present.
 - The current user turn. It may guide presentation, but it cannot create
@@ -77,11 +87,15 @@ a newer lineage.
 If the current lineage's handoff, verified evidence, or Final admission facts
 are missing or drifted before first delivery, expose that upstream boundary.
 Do not fill it from chat, rationale, receipts, timestamps, directory order, or
-an older report.
+an older report. Controls, Decisions, or synthesis coverage cannot manufacture
+missing/stale current-lineage composition semantics; conversely, presentation
+preferences cannot weaken research controls, current limitations, uncertainty,
+contradictions, or backing obligations.
 
 ## 3. Allowed Actions
 
-- Compose from verified evidence and the accepted current-lineage handoff.
+- Compose from verified evidence, current research-intent owners, current
+  answerability/limitation surfaces, and the accepted current-lineage handoff.
 - Keep every primary report complete and reader-facing, with a `## Evidence
   Map` containing `Finding ID`, `Declared Key Finding`, and `Submitted
   Backing`; each backing is a safe link to submitted backing.
@@ -101,7 +115,8 @@ an older report.
   the latest report and publish exactly one immutable revision. Reader, order,
   length, phrasing, sectioning, explanation depth, and evidence exposure may
   change without changing research meaning, material limits, or accepted HITL2
-  handoff fields.
+  handoff fields. This presentation-only path never rewrites the controls
+  baseline or appends a Decisions revision.
 - For materially ambiguous presentation feedback, ask one minimum clarification
   before publishing the next version. Do not turn a clear request into an
   extra confirmation.
@@ -109,20 +124,27 @@ an older report.
   state, profile, status, Gate, trace, counter, pointer, or event write.
 - When the request needs a new source, Topic, evidence, research conclusion,
   or research-profile change, use the existing audited post-final C5
-  inspect/apply/recover route. Presentation feedback alone remains here.
+  inspect/apply/recover route. Only evidence-expanding work uses audited C5.
+  Presentation feedback alone remains here.
 
 ### 3a. Composition And Revision Discipline
 
-For every primary report, re-read verified answers, material contradictions,
-limitations, confidence boundaries, root must-answer coverage, and submitted
-backing. Choose a narrative spine appropriate to the accepted handoff and
+For every first or post-rerun primary report, re-read verified answers, material
+contradictions, limitations, confidence boundaries, root must-answer coverage,
+submitted backing, the applicable controls baseline, newest complete matching
+revision, Wave2 Current Intent Coverage, and current-lineage
+`composition_handoff`. Choose a narrative spine appropriate to the handoff and
 current user need. Existing views may change the reading path, but no revision
-may hide material uncertainty or use feature labels as a second report type.
+may hide material uncertainty or use feature labels as a second report type. A
+material unfulfilled current research commitment remains visible under the
+existing verified-content rules even when the requested view is compressed.
 
 Run the same compact composition pass for base and every revision:
 
-1. **Reground** in the accepted current-lineage handoff, verified evidence, and
-   latest report where one exists; a receipt is not a fallback data owner.
+1. **Reground** in the accepted current-lineage handoff, verified evidence,
+   baseline + newest complete matching revision, current-intent coverage, and
+   latest report where one exists; a receipt is not a fallback data owner, and
+   neither is a derived projection.
 2. **Answer Inventory** gathers verified findings, evidence meaning, and
    submitted-backed references.
 3. **Coverage and materiality** retains each must-answer's answered/partial/
@@ -211,8 +233,13 @@ inventory, backing, and durable-commit facts only.
 - **MUST NOT treat a previous lineage's report as delivery for a newer C5
   return.** It needs the admitted prior inventory and a new global append.
 - **MUST NOT route presentation-only feedback through C5/HITL2 or mutate the
-  accepted profile/composition handoff.** Only evidence-expanding work uses
-  audited C5.
+  accepted profile/composition handoff, controls baseline, or Decisions.** Only
+  evidence-expanding work uses audited C5 before a newer intent revision can
+  become current.
+- **MUST NOT infer delivery semantics from research controls/coverage or weaken
+  research obligations from presentation intent.** Missing/stale
+  `composition_handoff` remains its existing boundary; compression cannot hide
+  a material limitation or unsupported current commitment.
 - **MUST NOT claim that Engine feedback proves report quality, semantic
   improvement, feedback classification, or genuine user satisfaction.**
 - **MUST NOT fabricate Evidence Map backing, lifecycle trace, receipts, or

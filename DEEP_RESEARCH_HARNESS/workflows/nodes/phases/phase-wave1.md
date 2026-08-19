@@ -27,7 +27,7 @@ suggested_context:
 ## 0. Execution Brief
 
 - **Objective**: produce submitted `evidence-summary.md`, `question-list.md`, source backing, Phase-owned topic reference projections, and Phase-owned `depth-review.yaml` for every topic.
-- **Start here**: load Wave0 outputs, seed topics, queue state, profile thresholds, and, when present, `rb_plan.md## Constraints > User Research Controls`, then `dpt-evidence-extractor` role guidance.
+- **Start here**: load Wave0 outputs, seed topics, queue state, profile thresholds, the `rb_plan.md## Constraints > ### User Research Controls` baseline when present, the newest complete matching `## Decisions` revision on rerun, matching current directions, then `dpt-evidence-extractor` role guidance.
 - **Entry prerequisite**: after `enter-phase` loads this node, run `node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to wave0_complete` before Wave1 work or its Gate; this synchronizes the passed source gate and does not prove Wave1 completion.
 - **Delegated path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit submit` -> submitted ledger row -> gate.
 - **Completion check**: side-effect-free `inspect-wave1-output.mjs` passes first, then `check-gate-wave1-complete.mjs` passes for `phases/phase-wave1.md`.
@@ -57,7 +57,9 @@ For each delegated topic-deepening task, derive the initial candidate URL/source
 - `DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs`.
 - `shared-subagent-protocol.md` for work-unit envelope and Sub-agent rules.
 
-When controls are present, use the original read-only `rb_plan.md## Constraints > User Research Controls` coordinate; do not replace it with a copied brief. Controls may guide sources, evidence treatment, analysis and presentation, but cannot weaken submitted-evidence, provenance, source-floor, receipt or Gate contracts. Before claim, the Phase Agent MAY append the same one-sentence beacon-rooted coordinate to an existing `task_brief`; it MUST NOT add queue/manifest/result/receipt fields or ask Engine to parse controls. Without controls, task briefs remain unchanged.
+For round 0, applicable current intent comes from the `rb_plan.md## Constraints > ### User Research Controls` baseline when present plus the current canonical Seed projection. For rerun N, it comes from that immutable baseline, the newest complete `rb_plan.md## Decisions > ### Rerun intent revision: N`, and the Topic's matching current `seed_topics/{topic.slug}.md## 本轮重跑方向`. Older revisions and stale/future/invalid/legacy-unbound directions remain history or repair context; readable legacy reruns without a revision keep existing compatibility behavior and do not receive inferred history.
+
+At every initial or supplementary Wave1 enqueue, before claim, the Phase Agent SHALL author the existing queue-owned `task_brief` when current intent materially affects the demand. State the bounded topic-deepening objective and name the canonical seed coordinate; add the baseline coordinate when present; on rerun add the newest complete matching revision and matching direction coordinates; explicitly state that stale/future/invalid/legacy-unbound directions are not current instructions. Use the existing beacon-rooted bundle coordinate and do not copy complete user wording. The brief adds no queue/manifest/result/receipt field, permission, or Gate authority, and the Engine carries it unchanged through the existing path. When no current-intent source materially affects the demand, omit the optional brief rather than author an empty one.
 
 ## 3. Allowed Actions
 
@@ -65,7 +67,7 @@ When controls are present, use the original read-only `rb_plan.md## Constraints 
 
 Before filling demand, classify each current canonical Topic from direct bundle authority, not from rerun history or filesystem appearance. Use the direction resolver: read `## 本轮重跑方向` section, compare `rerun_count` with current `rb_profile.yaml` value. Only `rerun_count` matching profile current value SHALL activate supplement intent:
 
-- `matching`/`future` direction + `action: supplement` → **supplement**: normal supplementary deepening through `wave1_topic_deepening` producer path, informed by `new_search_dimensions`.
+- `matching` direction + `action: supplement` → **supplement**: normal supplementary deepening through `wave1_topic_deepening` producer path, informed by `new_search_dimensions` and the current revision.
 - Valid submitted Wave1 deepening, no supplement intent (or `stale`/`legacy_unbound`/`invalid` direction) → **reuse** that submitted historical deepening coverage.
 - No submitted Wave1 deepening → **new**: normal deepening pipeline.
 
@@ -74,6 +76,8 @@ This classification is the same for first-run and rerun-added Topics. It creates
 ### 3.1 Fill Queue
 
 If queue is empty or thin, enqueue one delegated deepening queue item for each Topic classified as new or supplement. Do not enqueue duplicate work for a reuse-classified Topic.
+
+Resolve and author the applicable current-intent `task_brief` per item before enqueue. The template includes the field for an affected item; omit it entirely when the current sources do not materially change this assignment:
 
 Task card template:
 
@@ -92,6 +96,7 @@ Task card template:
   "kind": "wave1_topic_deepening",
   "producer_rule": "topic_deepening",
   "priority_class": "P4_progressive_artifact_or_seed_backfill",
+  "task_brief": "Topic-deepening objective for {topic.title}. Read seed_topics/{topic.slug}.md and, when present, rb_plan.md## Constraints > ### User Research Controls. On rerun read rb_plan.md## Decisions > ### Rerun intent revision: <current rerun_count> and only the matching current seed_topics/{topic.slug}.md## 本轮重跑方向. Stale, future, invalid, or legacy-unbound direction is not current instruction. Resolve all paths through the existing beacon-rooted bundle coordinate.",
   "action": "Use seed topic guardrails, Wave0 source URLs as context only, and open questions to search topic-specific new evidence. Fetch page content, write evidence-summary.md and question-list.md, declare them in output_files[] with roles evidence_summary and question_list, and return structured source_claims[], accepted_source_urls[], source candidates, and leaf cache trails under _cache/wave1/primary/{topic.slug}/. Reserve role other for extra non-blocking outputs. Cover mechanism, trend/difficulty, limitation/dispute/failure-mode, and profile-required counterexample/cross-verification checks. Phase Agent materializes reference/{topic.slug}-<source-slug>.md after successful submit from submitted backing.",
   "writes_to": [
     "artifacts/wave1/{topic.slug}/evidence-summary.md",
@@ -241,11 +246,13 @@ Do not copy or retype submitted `source_claims[]`, `accepted_source_urls[]`, cac
 
 Novelty is therefore an Engine-owned exact comparison: accepted claim URLs from the reviewed submitted rows minus current Wave0 source URLs. Cache mapping is valid only when the same reviewed rows declare the claim and cache/degraded trail and the referenced cache leaf remains valid. Filesystem-only cache, prose links, and review-only claims do not create source coverage.
 
-When accepted current focus context calls for additional work, derive the smallest readable set of current commitments and add the optional `focus_coverage` block to this same review. Bind it to the current canonical Topic UID and current profile rerun count. A covered commitment names one or more current reviewed submitted Wave1 work-unit refs. A limited commitment names one visible limitation and exactly one existing `external_action`, `user_decision`, or `missing_contract` boundary; omit submitted refs for that commitment. Do not infer focus from filenames, HITL rationale, prior rounds, source counts, or the profile.
+When accepted current intent creates a material Wave1 obligation, derive the smallest readable commitment set and add the optional `focus_coverage` block to this same review. For round 0, positive commitment sources are only the applicable controls baseline plus the current canonical Seed projection. For rerun N, they are only that baseline, the newest complete Decisions revision for N, and this Topic's matching direction for N. Bind the declaration to the current canonical Topic UID and current profile rerun count. Profile prose, filenames, older revisions, stale/future/invalid directions, source counts, and historical submitted work cannot independently create a current commitment.
+
+A covered commitment names one or more reviewed, hash-valid submitted Wave1 work-unit refs whose explicit `rerun_count` equals the current profile round. Historical rows may remain context but cannot be relabelled as current backing. A limited commitment names one visible limitation and exactly one existing `external_action`, `user_decision`, or `missing_contract` boundary and omits submitted refs. This block records requirement coverage, not user wording, semantic quality, permission, or a second evidence verdict.
 
 After legally writing or updating a valid current `focus_coverage` block, run `node DEEP_RESEARCH_HARNESS/cli/sync-reference-index.mjs --bundle <path>` before rerunning the same Wave1 inspect. This refreshes only the derived `_INDEX.md` and `reference/README.md` navigation projection from direct facts. If synchronization is blocked, rerun that same command against current bytes; do not hand-edit README, `_INDEX.md`, focus coverage, a Gate result, or a reference file to make the map appear current. This does not make focus coverage a reference-file label, evidence authority, Gate route, or new closeout transition.
 
-For a repairable focus commitment, use only the existing `wave1_topic_deepening` queue, claim, dry-submit, submit, depth-review update, and Wave1 inspect loop. Record a limitation only after the same inspect exposes an external, user-decision, or missing-contract boundary with no authorized Wave1 repair. A valid `partial` or `blocked` declaration remains an existing Gate limitation, never a clean pass, new queue kind, direct-search path, auto-rerun, status, trace event, or direct HITL2 route.
+For a repairable focus commitment, use only the existing `wave1_topic_deepening` queue, claim, dry-submit, submit, depth-review update, and Wave1 inspect loop. Author the same current-intent `task_brief` at every supplementary enqueue. Record a limitation only after available authorized supplementary repair is exhausted and the same inspect exposes an external, user-decision, or missing-contract boundary with no remaining Wave1 repair. A valid `partial` or `blocked` declaration remains an existing Gate limitation, never a clean pass, new queue kind, direct-search path, auto-rerun, status, trace event, or direct HITL2 route.
 
 Minimum shape:
 
@@ -317,7 +324,7 @@ These are Agent discipline checks. The gate enforces structural and provenance c
 
 After formal Wave1 submit, first complete or repair the valid current depth review, then run the same Wave1 reference-convergence inspect. When it names submitted backing materialization, use every returned `write_to` canonical target and its listed `source_url`, `work_ids`, `work_unit_refs`, `source_refs`, and `cache_trail_refs` as the only candidate coordinates; persist the matching projection through the existing path, then run `node DEEP_RESEARCH_HARNESS/cli/sync-reference-index.mjs --bundle <path>`, refresh affected Seed Topic references through the existing packet writer, and rerun that same inspect. Do not raw-edit a seed or `_INDEX.md`, choose a legacy filename, or direct-search to repair a projection. A separately returned legacy/index/ledger/queue/receipt/provenance/format hint remains its own root; do not suppress it, hand-edit its authority, or treat materialization as its repair. If and only if convergence reports a true floor deficit after materialization and index sync, enqueue the existing supplementary `wave1_topic_deepening` card with a fresh globally unused `queue_item_id`, explicit canonical `payload.topic_uid` / `payload.topic_slug`, `payload.assignment_mode: supplementary`, `payload.reference_floor_deficit` equal to the returned positive deficit, and `required_receipts: []`; reuse a named live supplementary demand rather than duplicate it. A primary card uses `payload.assignment_mode: primary` plus the exact evidence-summary.md/question-list.md file receipt pair. Assignment intent is never inferred from an ID suffix, prose, `writes_to`, or receipt emptiness.
 
-The supplementary item follows the same claim/task/dry-submit/formal-submit loop. Use only exact prior paths listed in the claimed task's `Completion Contract -> Cache And Source Facts`; if none is listed, produce a genuinely current assigned output rather than guessing from a filename. Repair `/source_claims/<index>/source_ref` on the same candidate when dry-submit rejects lineage, and never copy an old evidence file into `output_files[]` or overwrite it solely to make validation pass.
+The supplementary item follows the same claim/task/dry-submit/formal-submit loop, with the same current-intent task brief. Use only exact prior paths listed in the claimed task's `Completion Contract -> Cache And Source Facts`; if none is listed, produce a genuinely current assigned output rather than guessing from a filename. Repair `/source_claims/<index>/source_ref` on the same candidate when dry-submit rejects lineage, and never copy an old evidence file into `output_files[]` or overwrite it solely to make validation pass.
 
 For an expired or stale claimed attempt, `timeout-preflight` returns one closed `recommended_action` plus `recommendation_basis`. Read its `candidate`, `progress`, `lease`, or `integrity` direct facts before choosing the existing submit, same-candidate repair, polling, inspection, owner, or timeout path; the basis is explanatory only and never changes candidate validity, lease, or terminal authority.
 

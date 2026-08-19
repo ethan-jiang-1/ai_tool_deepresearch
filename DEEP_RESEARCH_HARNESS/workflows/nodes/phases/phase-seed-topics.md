@@ -22,7 +22,7 @@ suggested_context:
 ## 0. Execution Brief
 
 - **Objective**: Verify and enrich committed UID-bound seed projections into search-relevant decision documents.
-- **Start here**: Read canonical `rb_plan.md` `topic_registry` and, when present, `## Constraints > User Research Controls`; then read existing UID-bound `seed_topics/`, `rb_profile.yaml`, and the queue CLI state.
+- **Start here**: Read canonical `rb_plan.md` `topic_registry`, the `## Constraints > ### User Research Controls` baseline when present, and the newest complete `## Decisions` revision matching the current rerun count when present; then read existing UID-bound `seed_topics/`, `rb_profile.yaml`, and the queue CLI state.
 - **Path to pass**: Verify exact UID/slug/intent binding, enqueue only required enrichment work, drain the queue, repair from the canonical owner, then run the seed-topics gate.
 - **Completion check**: `check-gate-seed-topics-ready.mjs` passes for `phases/phase-seed-topics.md`.
 - **Failure posture**: Treat empty/thin queue as work routing, then consume top-level Gate `hints[]`; execute legal mechanical repair and never invent missing Topic semantics.
@@ -41,12 +41,13 @@ Canonical new runs arrive with `topic_registry` and one UID-bound `seed_topics/{
 - `rb_plan.md` frontmatter 的 `topic_registry`（topic 集合的 source of truth）
 - `rb_profile.yaml` 的 `root_must_answer_set` 和 `research_profile`（topic 派生的上游约束）
 - controls present 时 `rb_plan.md## Constraints > User Research Controls`（唯一原文坐标，不是 machine authority）
+- current-contract rerun 时 `rb_plan.md## Decisions` 中 newest complete revision whose target count matches current profile `rerun_count`（当前 cumulative amendments；older revisions 只作历史）
 - `shared-schemas.md`（schema、trace、seed_topics/ 目录结构）
 - `DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs`（Agentic Queue CLI — 灌料、claim、complete 的入口）
 
 ## 3. Allowed Actions — Queue-Driven 三阶段
 
-`root_must_answer_set` 只包含 HITL1 已接受的具体问题。Seed Topics 直接把这些问题分解为 topic intent 与现有 queue/task work；不得通过“不确定”等文本模式推断隐藏状态。
+`root_must_answer_set` 只包含 HITL1 已接受的具体问题。Seed Topics 直接把这些问题分解为 topic intent 与现有 queue/task work；不得通过“不确定”等文本模式推断隐藏状态。当前研究意图由 HITL1 controls baseline 与 newest complete matching Decisions revision 的 cumulative amendments（如有）组成；older revision、stale/future/invalid direction、profile prose、chat 或 filename 不得重新激活已替换/撤回的要求。legacy bundle 没有 revision 时保留现有读取路径，不反推或补写历史。
 
 Seed-topics 使用 Agentic Queue 驱动 topic 物化。每个 topic 一个 task，由 Phase Agent 直接执行（当前 wire value 为 `main-agent`；无外部 search，从 topic_registry 的结构化定义写为文件）。seed topic 文件 **不是笼统的标签**——它必须是能驱动后续 search 的决策级文件。
 
@@ -55,7 +56,7 @@ Seed-topics 使用 Agentic Queue 驱动 topic 物化。每个 topic 一个 task�
 如果 queue 为空（`operate-queue check <bundle>` 返回 `queue_health` 为 thin/blocked 或 active_window 为空）：
 
 1. 先运行 `operate-topic-state inspect`。Canonical mode 验证 registry 与 seed 的 UID/slug/intent exact binding；accepted workspace 先 explicit recover
-2. 读取 `rb_plan.md` frontmatter 的 `topic_registry`，确定需要 enrichment 的 topic 集合
+2. 读取 `rb_plan.md` frontmatter 的 `topic_registry`，并从 baseline + newest complete matching revision 识别哪些 current controls/amendments 对每个 Topic 有实际影响，确定需要 enrichment 的 topic 集合
 3. 为需要 enrichment 的 topic 生成一个 task card JSON 文件，然后 enqueue：
 
 > **注意**：文件名直接使用 `{topic.slug}.md`（`slug` 含 `NN_` 编号前缀，如 `01_meal-timing-...`——`NN` 取自 topic_registry 数组 1-based 位置）。不需二次拼接 index。
@@ -67,7 +68,7 @@ Seed-topics 使用 Agentic Queue 驱动 topic 物化。每个 topic 一个 task�
   "queue_item_id": "seed-topic-{topic.slug}",
   "title": "Materialize seed topic: {topic.title}",
   "targets": { "controller": "main-agent" },
-  "action": "只编辑 seed_topics/{topic.slug}.md 的 <!-- seed-initialization:start --> 与 <!-- seed-initialization:end --> 之间的 Agent-owned Markdown body，并保留一个 complete enrich_seed input。该 input 只含 exact topic_uid 和 hypothesis/in_scope/out_of_scope/search_guardrails/evidence_route；通过 operate-topic-state apply 写入 frontmatter，再完成此 queue card。不得手写 canonical YAML、越过 end marker 编辑 appendix，或在 body 重复 must_answer、scope、evidence route。",
+  "action": "只编辑 seed_topics/{topic.slug}.md 的 <!-- seed-initialization:start --> 与 <!-- seed-initialization:end --> 之间的 Agent-owned Markdown body，并保留一个 complete enrich_seed input。该 input 只含 exact topic_uid 和 hypothesis/in_scope/out_of_scope/search_guardrails/evidence_route；当 current controls/amendments 实际影响此 Topic 时，把最小 topic-local interpretation 优先写入 search_guardrails/evidence_route，仅在必要时调整 hypothesis/in_scope，并在 initialization body 说明 research/delivery relevance。完整用户 wording 留在 rb_plan.md source coordinate；不适用时不写 decorative projection，信息不足时保留既有 explicit non-empty gap。通过 operate-topic-state apply 写入 frontmatter，再完成此 queue card。不得手写 canonical YAML、越过 end marker 编辑 appendix，或在 body 重复 must_answer、scope、evidence route。",
   "producer_rule": "seed_topic_materialize",
   "lineage": {"topic_slug": "{topic.slug}", "phase": "seed-topics"},
   "priority_class": "P3_current_gate_gap",
@@ -96,7 +97,7 @@ node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs check <bundle>
 
 已加载的 `templates/seed-topic-template` 定义完整初始化 skeleton、Appendix Slot、只读回填卡和 rendered entry shape。不要在本 phase 重写该模板。Projection Packet、repair map 与 rerun direction 是 `command_playbook/operate-topic-state.md` 的操作协议。Seed Topics 只在 start/end markers 内 materialize/enrich initialization area；research-round appendix 保持预埋，后续 Wave 只能按 command playbook 通过 retained packet 和 `operate-topic-state apply` materialize 其 owned slot，绝不手改 token、heading 或 end marker 之后的 bytes。
 
-controls present 时，Seed 可将与单一 topic 相关的解释投影为 `search_guardrails` / `evidence_route`，但不得替代原 snapshot 或把它伪装为新 authority。若 `rb_plan.md` 和 `rb_profile.yaml` 中不足以填充初始化字段，记录 explicit `pending` gap，不要编造。gap 是有效输入，供 Wave0 收敛。
+controls 或 current amendment 对单一 Topic 有实际影响时，Seed 必须将最小 topic-local operational interpretation 优先投影为 `search_guardrails` / `evidence_route`，必要时才补充 `hypothesis` / `in_scope`，并在 existing initialization body 中说明该 Topic 的 research/delivery relevance。完整 controls/revision wording 只留在 `rb_plan.md` source coordinate，不复制到 Seed；不适用的 Topic 保持正常 enrichment，不创建空或 decorative projection。若 `rb_plan.md` 和 `rb_profile.yaml` 中不足以填充初始化字段，记录 existing explicit non-empty `pending` gap，不要编造。该 projection 不改变 canonical Topic identity，不增加 frontmatter field，不预写未来 Wave task brief，也不是 permission、coverage、Gate 或 Engine verdict。
 
 ### 3.2 Queue-Driven 执行循环
 
@@ -231,6 +232,7 @@ node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle <bundle> --level warn --ms
 - **新增 topic**：topic-state `add_topic` 已将 canonical skeleton 与 `action: add` direction 原子提交；Seed Topics 只按 binding/enrichment loop处理它，不重写其 direction。
 - **补充 topic**：matching `action: supplement` direction 为 Wave0 提供追加搜索角度；读取 shared parser-compatible fields，不直接替换 seed section。
 - **无当前 direction 或陈旧 direction**：按正常模式处理；不把旧 direction 当作本轮 operation receipt，也不迁移/删除它。
+- **current amendment**：只读取 target count 等于 current profile `rerun_count` 的 newest complete Decisions revision，并与 immutable baseline 组合；older revisions 不 union 回 current set。matching direction 是受影响 Topic 的 current-round projection，不替代 revision source。
 
 ### 灌料时读方向 hints
 
@@ -243,6 +245,7 @@ node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle <bundle> --level warn --ms
 - **禁止编造 `must_answer_refs` 引用**：seed topic 正文只写研究骨架（维度/前提/open questions），不编造不存在的 reference
 - **禁止在 seed-topics 阶段做 research**：seed-topics 是物化已有的 topic 定义，不做搜索/阅读/evidence 工作
 - **禁止 direct-edit `## 本轮重跑方向`**：rerun direction 仅由 phase-rerun 形成 retained candidate 并通过 existing topic-state transaction 发布
+- **禁止复制完整 controls/revision wording 或预写 future Wave task brief**：Seed 只在 current intent 实际影响 Topic 时写最小 local interpretation；不适用或 legacy-missing-revision 路径不得制造空 projection 或 inferred history
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
 
 ## Log

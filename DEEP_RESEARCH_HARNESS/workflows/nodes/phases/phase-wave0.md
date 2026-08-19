@@ -27,7 +27,7 @@ suggested_context:
 ## 0. Execution Brief
 
 - **Objective**: collect foundation source metadata for every topic, then use submitted backing for any required shared reference consumer projections.
-- **Start here**: load `rb_queue.json`, `rb_plan.md` topic registry and, when present, `## Constraints > User Research Controls`, seed topic files, profile thresholds, and `dpt-source-intake` role guidance.
+- **Start here**: load `rb_queue.json`, `rb_plan.md` topic registry, the `## Constraints > ### User Research Controls` baseline when present, the newest complete matching `## Decisions` revision on rerun, seed topic files and matching current directions, profile thresholds, and `dpt-source-intake` role guidance.
 - **Entry prerequisite**: after `enter-phase` loads this node, run `node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to seed_topics_ready` before Wave0 work or its Gate; this synchronizes the passed source gate and does not prove Wave0 completion.
 - **Delegated path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit dry-submit` repair loop -> formal `operate-work-unit submit` -> submitted Wave0 contribution -> Phase materialization or deferred projection -> same inspect -> gate.
 - **Canonical closeout loop**: packet -> writer -> same inspect -> gate.
@@ -59,7 +59,9 @@ For each delegated source-intake task, derive the initial candidate URL/source t
 - `shared-subagent-protocol.md` for work-unit envelope and Sub-agent rules.
 - `shared-return-map-authoring.md` and `templates/seed-topic-template.md` through this phase's `requires` chain; `command_playbook/operate-topic-state.md` remains the sole complete packet/apply/repair protocol.
 
-When a valid user-controls snapshot is present, read its original host-file coordinate as guidance alongside profile floors and seed-topic instructions. It may guide source selection, evidence treatment and presentation, but never lowers provenance/source floors or changes receipt, Gate, queue or lifecycle authority. Before claim, the Phase Agent MAY append one sentence to the existing `task_brief`: `Read rb_plan.md## Constraints > User Research Controls through your existing beacon-rooted bundle coordinate; it is read-only research guidance.` Only add it when controls are present; do not copy controls into queue payload machine fields, manifest/result/receipt, or an empty brief.
+Current intent is read from the applicable HITL1 baseline plus, on a current-contract rerun, the newest complete Decisions revision whose target count matches the current profile `rerun_count`; for an affected Topic, also read only its matching current `## 本轮重跑方向`. Older revisions and stale/future/invalid/legacy-unbound directions remain history or repair context, not current instructions. A readable legacy rerun without a Decisions revision keeps its existing profile/direction compatibility path and does not receive inferred history.
+
+At the actual Wave0 enqueue point, before claim, the Phase Agent SHALL author the existing queue-owned `task_brief` for every intent-affected demand. Keep it bounded and task-local: state the foundation-source objective; name `seed_topics/{topic.slug}.md`; name `rb_plan.md## Constraints > ### User Research Controls` only when present; on rerun name `rb_plan.md## Decisions > ### Rerun intent revision: <current rerun_count>` and `seed_topics/{topic.slug}.md## 本轮重跑方向`; and state that only a direction matching the current profile count is instruction, while stale/future/invalid/legacy-unbound directions are not. Use the work unit's existing beacon-rooted bundle coordinate. Do not copy complete user wording or create queue payload, manifest, result, receipt, permission, or Gate fields. If none of these sources materially affects the demand, omit the optional brief and retain existing behavior rather than create an empty one. The Engine carries an authored brief unchanged through its existing queue/work-unit/task path; it does not interpret it.
 
 ## 3. Allowed Actions
 
@@ -78,6 +80,8 @@ This classification is the same for first-run and rerun-added Topics. It creates
 
 If `operate-queue check <bundle>` reports an empty or thin queue, enqueue one delegated queue item for each Topic classified as normal new-topic demand or normal supplementary demand. Do not enqueue duplicate work for an existing Topic whose valid submitted Wave0 coverage is being reused.
 
+For each affected item, resolve the current intent sources above and write a one-item `task_brief` before enqueue. The bounded objective belongs to Wave0's `source_intake_fan_in` decision; Seed Topics must not pre-author this future queue work. In the template below, include `task_brief` only when applicable:
+
 Task card template:
 
 ```json
@@ -95,6 +99,7 @@ Task card template:
   "kind": "wave0_source_intake",
   "producer_rule": "source_intake_fan_in",
   "priority_class": "P5_new_reference_intake",
+  "task_brief": "Foundation-source objective for {topic.title}. Read seed_topics/{topic.slug}.md; when present read rb_plan.md## Constraints > ### User Research Controls; on rerun read rb_plan.md## Decisions > ### Rerun intent revision: <current rerun_count> and only the matching current seed_topics/{topic.slug}.md## 本轮重跑方向. Stale, future, invalid, or legacy-unbound direction is not current instruction. Resolve all paths through the existing beacon-rooted bundle coordinate.",
   "action": "Search foundation sources for {topic.title}; fetch page content; write the assigned artifacts/wave0/{topic.slug}/source.yaml and leaf cache trails under _cache/wave0/primary/{topic.slug}/. Return only the current task-contract output_files[] and cache_trails[] for work-unit submit. Do not write a reference/00-shared-*.md file or declare a reference output; formal submit supplies the Phase-owned shared-reference backing path.",
   "writes_to": [
     "artifacts/wave0/{topic.slug}/source.yaml"

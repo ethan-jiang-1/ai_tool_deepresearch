@@ -216,6 +216,7 @@ DEW-022: delegated-work-units — Work-unit attempts expose logical execution gu
 DEW-023: delegated-work-units — Submit exposes a bounded integrity preflight and transaction disposition
 DEW-024: delegated-work-units — Submitted correction uses audited supersession and one fresh successor
 DEW-025: delegated-work-units — Current Wave0 work-unit contracts expose submitted source contributions without a competing rich-reference route
+DEW-026: delegated-work-units — Affected delegated work receives current intent through the existing task brief
 
 # agent/hitl-ux
 HIU-001: hitl-ux — HITL conversational loop model (entry → in-loop → exit → anti-infinite-loop)
@@ -573,6 +574,7 @@ CDP-003: content-delivery-phase-content — phase-final.md 9-section body (termi
 CDP-004: content-delivery-phase-content — Final delivery is terminal; post-final feedback re-enters through HITL2 repair/rerun, not a Final-owned loop
 CDP-005: content-delivery-phase-content — Final artifacts count as delivery evidence only after legal readiness-to-final handoff and final node entry
 CDP-006: content-delivery-phase-content — Final guidance declares bounded evidence backing and uses submitted-backing admission without changing terminal semantics
+CDP-007: content-delivery-phase-content — Final regrounds in current research intent and current-lineage composition intent
 
 # research/evidence-extraction
 EEX-001: evidence-extraction — isCountable reference判定（authority-selected reference 的 accepted status + parseable source URL；不重复内容/表现启发式）
@@ -593,11 +595,13 @@ PHS-005: plan-hostfile-sections — "Gate body content checks (non-empty + no un
 PHS-006: plan-hostfile-sections — "Engine writes ## Progress on gate pass (idempotent checkbox flip, gate list from template)"
 PHS-007: plan-hostfile-sections — Canonical template-owned host-file sections exclude the bounded user research-controls snapshot from heading, progress, and required-fill interpretation
 PHS-008: plan-hostfile-sections — Progress write reports actual committed/no-change outcome and never claims a checkbox mutation that was not committed
+PHS-009: plan-hostfile-sections — Decisions retains accepted rerun intent revisions newest-first
 
 # research/post-final-recovery
 POF-001: post-final-recovery — Terminal Final eligibility, retained post-final rerun request, owner precedence, and accepted-lineage replay
 POF-002: post-final-recovery — Prepared profile/event transaction uses event-last exact roll-forward recovery
 POF-003: post-final-recovery — Engine-written Final-lineage-bound exceptional handoff reuses existing HITL2 rerun owners
+POF-004: post-final-recovery — Focus-bearing post-Final requests retain wording and interpretation in the existing reason
 
 # research/pre-research-experiments
 PRE-001: pre-research-experiments — Current happy-path pre-research case uses real gates and native completion
@@ -637,6 +641,7 @@ PRP-012: pre-research-phase-content — HITL1 captures optional user research co
 PRP-013: pre-research-phase-content — Seed, Wave, and Final guidance consume the original user-controls host-file coordinate and preserve existing conflict/limitation paths
 PRP-014: pre-research-phase-content — HITL1 captures user controls before canonical topic-state apply so the committed host-file snapshot survives topic-state recovery
 PRP-015: pre-research-phase-content — HITL1 uses one selected semantic adapter without treating user confirmation as host capability permission
+PRP-016: pre-research-phase-content — Research phases consume baseline and current accepted amendments without reconstructing chat
 
 # research/research-access-adapter
 REA-001: research-access-adapter — One selected adapter declares semantic search and same-URL fetch facts
@@ -723,6 +728,7 @@ RWP-018: research-wave-phase-content — Wave delegated drain loops route timeou
 RWP-019: research-wave-phase-content — Wave delegated execution uses one visible role-bound actor decision loop
 RWP-020: research-wave-phase-content — Wave2 targeted-evidence classification with round-awareness; finding-index per-finding carries created_in_rerun_count
 RWP-021: research-wave-phase-content — Wave1 declares carried material targets in the Phase-owned review and Wave2 consumes the routed receipt without reopening a mutable parent
+RWP-022: research-wave-phase-content — Wave phases carry current intent at their actual decision points
 
 # research/seed-topic-materialization
 STM-001: seed-topic-materialization — Seed topic materialization phase node (9-section body, forces topic_registry→seed_topics/ materialization, seed_topics_completion trace event)
@@ -733,11 +739,13 @@ STM-005: seed-topic-materialization — Current case-124 proves seed topic pass 
 STM-006: seed-topic-materialization — Topic slug SHALL include zero-padded NN_ numeric prefix (NN = 1-based array position); gate triple-consistency byte-for-byte check naturally compatible
 STM-007: seed-topic-materialization — Canonical seed topics are exact UID-bound registry projections
 STM-008: seed-topic-materialization — Seed projections follow the committed current topic layout after atomic mutation
+STM-009: seed-topic-materialization — Seed materialization projects applicable baseline intent into existing topic-local surfaces
 
 # research/user-research-controls
 URC-001: user-research-controls — Optional per-run user research controls have one durable host-file snapshot and defined new/no-controls/legacy forms
 URC-002: user-research-controls — User controls guide Agent research judgment but cannot override Engine authority, provenance, floors, or lifecycle contracts
 URC-003: user-research-controls — HITL1 local-file convenience is snapshot-only and bounded to intended shareable material
+URC-004: user-research-controls — User research controls remain the HITL1 baseline for later amendments
 
 # research/wave0-artifacts-directory
 WAD-001: wave0-artifacts-directory — Bundle structure includes artifacts/wave0/ directory
@@ -756,6 +764,7 @@ WAI-008: wave1-intake — Wave1 topic references are Phase-owned materialization
 WAI-009: wave1-intake — Reference-floor-deficit feedback names the depth-review sync for supplementary work units
 WAI-010: wave1-intake — Wave1 reference-floor inspect surfaces canonical reference targets
 WAI-011: wave1-intake — Evidence-summary Key Findings semantic section includes nested descendant subsection content
+WAI-012: wave1-intake — Focus coverage derives from current accepted intent and current-round backing
 
 # research/wave2-synthesis
 WTS-001: wave2-synthesis — Wave2 phase queue-driven three-stage execution
@@ -770,6 +779,7 @@ WTS-009: wave2-synthesis — Cross-topic scan matrix as process evidence surface
 WTS-010: wave2-synthesis — Wave2 materializes existing-backed cross references without weakening targeted evidence provenance
 WTS-011: wave2-synthesis — Finding index binds declared Wave1 carried targets to the exact routed handoff receipt without overloading artifact origin refs
 WTS-012: wave2-synthesis — Finding-index currentness contract (W2F-\d{3} id and created_in_rerun_count) is documented and named in apply feedback
+WTS-013: wave2-synthesis — Wave2 synthesis exposes current-intent coverage without becoming its authority
 
 # verification/experiment-agent-autorun
 EXA-001: experiment-agent-autorun — Canonical Agent Experiment Autorun vocabulary separates Supervisor, Launcher, Playbook Agent and Subject Agent
@@ -849,6 +859,7 @@ REI-003: rerun-incremental-node — Shared evaluator interprets active rerun-rea
 REI-004: rerun-incremental-node — Chain routes HITL2 rerun as deterministic outcome (passed→readiness, rerun→rerun-node)
 REI-005: rerun-incremental-node — Active rerun-ready definition owns max-iteration protection and exhaustion failure
 REI-006: rerun-incremental-node — Sanctioned rerun add and intent refinement use canonical topic-state apply
+REI-007: rerun-incremental-node — Rerun preparation materializes one target-round intent revision before topic-state planning
 
 # workflow/rerun-topic-integration
 RTI-001: rerun-topic-integration — Sub-agent reference format is explicit in rerun topic integration

@@ -8,13 +8,14 @@ import { spawnSync } from 'node:child_process';
 import { parse as parseYaml } from 'yaml';
 
 import { createTrace } from '../../DEEP_RESEARCH_HARNESS/engine/trace.mjs';
+import { readFinalReportInventory } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs';
 import { recordCheck } from './wff-playbook-utils.mjs';
 
 const [caseId, action, ...rest] = process.argv.slice(2);
 const bundleIndex = rest.indexOf('--bundle');
 const bundle = bundleIndex >= 0 ? rest[bundleIndex + 1] : null;
-if (!['115', '711', '712', '713', '714', '716'].includes(caseId) || !action || !bundle) {
-  console.error('Usage: node experiments_env/shared/observe-iterative-interaction-case.mjs <115|711|712|713|714|716> <hash|snapshot|transition-final|verdict> --bundle <path> [--label A] [--transcript <path>]');
+if (!['115', '711', '712', '713', '714', '716', '717'].includes(caseId) || !action || !bundle) {
+  console.error('Usage: node experiments_env/shared/observe-iterative-interaction-case.mjs <115|711|712|713|714|716|717> <hash|snapshot|snapshot-round1|transition-final|verdict> --bundle <path> [--label A] [--transcript <path>]');
   process.exit(2);
 }
 
@@ -310,6 +311,170 @@ function record716(events) {
   recordCheck(tracePath, { gate: 'case-716-existing-handoff', passed: available ? gatePass && setupLoad : unavailable && gateFail && !setupLoad, detail: `available=${available} unavailable=${unavailable} gate_pass=${gatePass} gate_fail=${gateFail} setup_load=${setupLoad}` });
 }
 
+const CASE_717_LABELS = [
+  'Target rerun count',
+  'This-round delta',
+  'Affected canonical Topics',
+  'Superseded or withdrawn requirements',
+  'Accepted Agent interpretation',
+  'Current active amendments relative to HITL1 baseline',
+];
+
+function case717Revisions() {
+  const plan = readFileSync(join(bundle, 'rb_plan.md'), 'utf8');
+  const decisionsStart = plan.indexOf('\n## Decisions');
+  const decisions = decisionsStart >= 0 ? plan.slice(decisionsStart) : '';
+  const headings = [...decisions.matchAll(/^### Rerun intent revision: (\d+)\s*$/gm)];
+  return headings.map((heading, index) => {
+    const start = heading.index;
+    const end = headings[index + 1]?.index ?? decisions.length;
+    const bytes = decisions.slice(start, end).trimEnd();
+    const fields = Object.fromEntries(CASE_717_LABELS.map((label) => [
+      label,
+      bytes.match(new RegExp(`^- ${label.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}: (.+)$`, 'm'))?.[1] ?? null,
+    ]));
+    const acceptedWording = bytes.match(/^- Accepted user wording:\s*\n((?:\s*>.*(?:\n|$))+)/m)?.[1] ?? '';
+    return {
+      target: Number(heading[1]),
+      bytes,
+      sha256: sha256(bytes),
+      fields,
+      accepted_wording: acceptedWording,
+      complete: Object.values(fields).every((value) => typeof value === 'string' && value.trim())
+        && acceptedWording.split(/\r?\n/).filter(Boolean).every((line) => /^\s*>/.test(line)),
+    };
+  });
+}
+
+function case717Files(name) {
+  const found = [];
+  function walk(path) {
+    if (!existsSync(path)) return;
+    for (const entry of readdirSync(path, { withFileTypes: true })) {
+      const full = join(path, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile() && entry.name === name) found.push(full);
+    }
+  }
+  walk(bundle);
+  return found;
+}
+
+function snapshot717Round1() {
+  const revisions = case717Revisions();
+  const profile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'));
+  const status = JSON.parse(readFileSync(join(bundle, 'rb_status.json'), 'utf8'));
+  const inventory = readFinalReportInventory(bundle);
+  const revision = revisions.find((item) => item.target === 1) ?? null;
+  const output = {
+    schema_version: 'case-717-round1-observation/v1',
+    revision_count: revisions.length,
+    revision_1: revision ? { sha256: revision.sha256, bytes: revision.bytes } : null,
+    rerun_count: profile.human_decision_checkpoints?.hitl2?.rerun_count ?? null,
+    status: { current_node: status.current_node, current_gate: status.current_gate, next_gate: status.next_gate },
+    final_inventory_sha256: inventory.sha256,
+    final_primary_targets: inventory.primary_series.primary_entries.map((entry) => entry.target),
+  };
+  writeFileSync(join(bundle, 'case-717-round1-observation.json'), `${JSON.stringify(output, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+  console.log(JSON.stringify({ status: 'snapshotted', case: '717', revision_count: revisions.length }));
+}
+
+function record717() {
+  const round1ResultPath = join(bundle, 'case-717-round1-subject-result.json');
+  const round2ResultPath = join(bundle, 'case-717-round2-subject-result.json');
+  const round1PromptPath = join(bundle, 'case-717-round1-subject-prompt.json');
+  const round2PromptPath = join(bundle, 'case-717-round2-subject-prompt.json');
+  const snapshotPath = join(bundle, 'case-717-round1-observation.json');
+  const resultFilesPresent = [round1ResultPath, round2ResultPath, round1PromptPath, round2PromptPath, snapshotPath].every(existsSync);
+  const round1Result = existsSync(round1ResultPath) ? JSON.parse(readFileSync(round1ResultPath, 'utf8')) : null;
+  const round2Result = existsSync(round2ResultPath) ? JSON.parse(readFileSync(round2ResultPath, 'utf8')) : null;
+  const round1Prompt = existsSync(round1PromptPath) ? JSON.parse(readFileSync(round1PromptPath, 'utf8')) : null;
+  const round2Prompt = existsSync(round2PromptPath) ? JSON.parse(readFileSync(round2PromptPath, 'utf8')) : null;
+  const round1Snapshot = existsSync(snapshotPath) ? JSON.parse(readFileSync(snapshotPath, 'utf8')) : null;
+  const revisions = case717Revisions();
+  const newest = revisions[0] ?? null;
+  const older = revisions[1] ?? null;
+  const activeNewest = newest?.fields['Current active amendments relative to HITL1 baseline'] ?? '';
+  const activeOlder = older?.fields['Current active amendments relative to HITL1 baseline'] ?? '';
+
+  const immutableHistory = revisions.length === 2
+    && newest?.target === 2 && older?.target === 1
+    && newest.complete && older.complete
+    && round1Snapshot?.revision_1?.sha256 === older.sha256
+    && round1Snapshot?.revision_1?.bytes === older.bytes;
+  recordCheck(tracePath, {
+    gate: 'case-717-two-immutable-revisions',
+    passed: immutableHistory,
+    detail: JSON.stringify({ order: revisions.map((item) => item.target), older_sha256: older?.sha256, captured_sha256: round1Snapshot?.revision_1?.sha256 }),
+  });
+
+  const newestCumulative = /分阶段投资阈值与触发条件/.test(activeNewest)
+    && !/租赁、购买与推迟决策的现金流比较/.test(activeNewest)
+    && !/按地区分别比较融资约束/.test(activeNewest)
+    && /租赁、购买与推迟决策的现金流比较/.test(activeOlder)
+    && /按地区分别比较融资约束/.test(activeOlder)
+    && /replace|替换|改为/i.test(newest?.fields['This-round delta'] ?? '')
+    && /withdraw|撤回/i.test(newest?.fields['Superseded or withdrawn requirements'] ?? '')
+    && /分阶段投资阈值与触发条件/.test(newest?.accepted_wording ?? '')
+    && /撤回/.test(newest?.accepted_wording ?? '');
+  recordCheck(tracePath, {
+    gate: 'case-717-newest-cumulative-intent',
+    passed: newestCumulative,
+    detail: JSON.stringify({ active_newest: activeNewest, active_older: activeOlder }),
+  });
+
+  const seedTexts = case717Files('capital-constraints.md').map((path) => readFileSync(path, 'utf8'));
+  const taskTexts = case717Files('task.md').map((path) => readFileSync(path, 'utf8'));
+  const depthReviews = case717Files('depth-review.yaml').flatMap((path) => {
+    try { return [parseYaml(readFileSync(path, 'utf8'))]; } catch { return []; }
+  });
+  const currentCoverage = depthReviews.find((review) => review?.focus_coverage?.rerun_count === 2)?.focus_coverage;
+  const coverageBacked = currentCoverage?.commitments?.length > 0
+    && currentCoverage.commitments.every((item) => item.state !== 'covered'
+      || (Array.isArray(item.submitted_work_unit_refs) && item.submitted_work_unit_refs.length > 0));
+  const synthesisPath = join(bundle, 'artifacts/wave2/synthesis.md');
+  const synthesis = existsSync(synthesisPath) ? readFileSync(synthesisPath, 'utf8') : '';
+  const inventory = readFinalReportInventory(bundle);
+  const latestTarget = inventory.primary_series.latest?.target ?? null;
+  const latestFinal = latestTarget ? readFileSync(join(bundle, latestTarget), 'utf8') : '';
+  const downstreamCurrent = seedTexts.some((text) => /rerun_count\*{0,2}\s*:\s*2/i.test(text) && /分阶段投资阈值与触发条件/.test(text))
+    && taskTexts.some((text) => /Rerun intent revision: 2/.test(text) && /分阶段投资阈值与触发条件/.test(text))
+    && coverageBacked
+    && /## Current Intent Coverage/.test(synthesis)
+    && /分阶段投资阈值与触发条件/.test(synthesis)
+    && !/按地区分别比较融资约束/.test(synthesis)
+    && /分阶段投资阈值与触发条件/.test(latestFinal)
+    && !/按地区分别比较融资约束/.test(latestFinal);
+  recordCheck(tracePath, {
+    gate: 'case-717-current-intent-downstream',
+    passed: downstreamCurrent,
+    detail: JSON.stringify({ task_count: taskTexts.length, focus_outcome: currentCoverage?.outcome, latest_final: latestTarget }),
+  });
+
+  const independentContexts = resultFilesPresent
+    && round1Result?.status === 'completed' && round2Result?.status === 'completed'
+    && round1Result.session_id && round2Result.session_id && round1Result.session_id !== round2Result.session_id
+    && round1Prompt?.loaded_node === 'phases/phase-hitl2.md'
+    && round2Prompt?.loaded_node === 'phases/phase-final.md'
+    && round1Result.completed_turns === 1 && round2Result.completed_turns === 1;
+  recordCheck(tracePath, {
+    gate: 'case-717-independent-context-evidence',
+    passed: independentContexts,
+    detail: JSON.stringify({ round1_session: round1Result?.session_id, round2_session: round2Result?.session_id, round1_node: round1Prompt?.loaded_node, round2_node: round2Prompt?.loaded_node }),
+  });
+
+  const trace = traceEvents();
+  const rerunPasses = trace.filter((event) => event.event === 'gate_attempt' && event.gate === 'rerun-ready' && event.passed === true);
+  const finalLoads = trace.filter((event) => event.event === 'load_complete' && event.entry === 'phases/phase-final.md');
+  const postFinal = trace.filter((event) => event.event === 'post_final_reentry');
+  const productionRoutes = rerunPasses.length === 2 && finalLoads.length >= 2 && postFinal.length === 1;
+  recordCheck(tracePath, {
+    gate: 'case-717-production-routes',
+    passed: productionRoutes,
+    detail: JSON.stringify({ rerun_passes: rerunPasses.length, final_loads: finalLoads.length, post_final_reentry: postFinal.length }),
+  });
+}
+
 function case115ResultText(event) {
   if (typeof event?.result === 'string') return event.result.trim();
   if (typeof event?.output === 'string') return event.output.trim();
@@ -494,7 +659,9 @@ function record713() {
 }
 
 function verdict() {
-  if (caseId === '115' || caseId === '711' || caseId === '712' || caseId === '714' || caseId === '716') {
+  if (caseId === '717') {
+    record717();
+  } else if (caseId === '115' || caseId === '711' || caseId === '712' || caseId === '714' || caseId === '716') {
     const path = option('--transcript') || join(bundle, `case-${caseId}-transcript.jsonl`);
     const events = transcriptEvents(path);
     if (!events) {
@@ -518,6 +685,7 @@ function verdict() {
 
 if (action === 'hash') hashTranscript(option('--transcript'));
 else if (action === 'snapshot') snapshot(option('--label'));
+else if (action === 'snapshot-round1' && caseId === '717') snapshot717Round1();
 else if (action === 'transition-final') transitionFinal();
 else if (action === 'verdict') verdict();
 else throw new Error(`unsupported action: ${action}`);

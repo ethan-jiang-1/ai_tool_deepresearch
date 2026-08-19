@@ -14,12 +14,12 @@ const REPO_ROOT = process.cwd();
 const CASE_ID = process.argv[2];
 const targetIndex = process.argv.indexOf('--target-dir');
 const TARGET_DIR = targetIndex >= 0 && process.argv[targetIndex + 1] ? resolve(process.argv[targetIndex + 1]) : REPO_ROOT;
-if (!['138', '711', '712', '713', '714', '716'].includes(CASE_ID)) {
-  console.error('Usage: node experiments_env/shared/prepare-iterative-interaction-case.mjs <138|711|712|713|714|716> [--target-dir <dir>]');
+if (!['138', '711', '712', '713', '714', '716', '717'].includes(CASE_ID)) {
+  console.error('Usage: node experiments_env/shared/prepare-iterative-interaction-case.mjs <138|711|712|713|714|716|717> [--target-dir <dir>]');
   process.exit(2);
 }
 if (process.argv.length !== (targetIndex >= 0 ? 5 : 3)) {
-  console.error('Usage: node experiments_env/shared/prepare-iterative-interaction-case.mjs <138|711|712|713|714|716> [--target-dir <dir>]');
+  console.error('Usage: node experiments_env/shared/prepare-iterative-interaction-case.mjs <138|711|712|713|714|716|717> [--target-dir <dir>]');
   process.exit(2);
 }
 
@@ -386,6 +386,41 @@ function prepare713() {
   return bundle;
 }
 
+function prepare717() {
+  const { bundle } = buildHitl2Boundary('717');
+  const status = readStatus(bundle);
+  const profile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'));
+  assert.equal(status.current_node, 'phases/phase-hitl2.md');
+  assert.equal(profile.human_decision_checkpoints.hitl2.status, 'not_started');
+
+  appendFileSync(join(bundle, 'rb_plan.md'), `
+## Constraints
+
+### User Research Controls
+
+用户提供的本轮研究控制快照（仅作研究指导，不覆盖 Engine contracts）：
+
+\`\`\`text
+优先使用可核验的一手来源；明确区分事实、推断与仍待验证的限制。
+\`\`\`
+
+## Decisions
+
+`);
+  const plan = readFileSync(join(bundle, 'rb_plan.md'), 'utf8');
+  assert.equal(/^### Rerun intent revision:/m.test(plan), false);
+  writeFileSync(join(bundle, 'case-717-setup.json'), `${JSON.stringify({
+    schema_version: 'case-717-setup/v1',
+    fixture: 'setup_only',
+    legal_boundary: { current_node: status.current_node, current_gate: status.current_gate, next_gate: status.next_gate },
+    baseline_coordinate: 'rb_plan.md## Constraints > ### User Research Controls',
+    accepted_revision_count: 0,
+    final_primary_inventory: 'empty',
+    subject_authored_semantics_absent: true,
+  }, null, 2)}\n`);
+  return bundle;
+}
+
 function prepare138() {
   const { bundle } = buildHitl2Boundary('138');
   mkdirSync(join(bundle, 'artifacts/hitl2'), { recursive: true });
@@ -452,4 +487,12 @@ function prepare138() {
   return bundle;
 }
 
-console.log(CASE_ID === '138' ? prepare138() : CASE_ID === '711' || CASE_ID === '714' || CASE_ID === '716' ? prepareHitl1(CASE_ID) : CASE_ID === '712' ? prepare712() : prepare713());
+console.log(CASE_ID === '138'
+  ? prepare138()
+  : CASE_ID === '717'
+    ? prepare717()
+    : CASE_ID === '711' || CASE_ID === '714' || CASE_ID === '716'
+      ? prepareHitl1(CASE_ID)
+      : CASE_ID === '712'
+        ? prepare712()
+        : prepare713());

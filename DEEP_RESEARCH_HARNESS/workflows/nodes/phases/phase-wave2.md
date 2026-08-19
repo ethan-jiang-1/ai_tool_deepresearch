@@ -27,7 +27,7 @@ suggested_context:
 ## 0. Execution Brief
 
 - **Objective**: produce cross-topic synthesis artifacts and delegate only new search/evidence work through work units.
-- **Start here**: load Wave1 artifacts, `finding-index.yaml` expectations, queue state, profile thresholds, and, when present, `rb_plan.md## Constraints > User Research Controls`, then Wave2 role guidance.
+- **Start here**: load Wave1 artifacts, `finding-index.yaml` expectations, queue state, profile thresholds, the `rb_plan.md## Constraints > ### User Research Controls` baseline when present, the newest complete matching `## Decisions` revision on rerun, matching current directions, and current Wave1 focus coverage, then Wave2 role guidance.
 - **Entry prerequisite**: after `enter-phase` loads this node, run `node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle <path> --to wave1_complete` before Wave2 work or its Gate; this synchronizes the passed source gate and does not prove Wave2 completion.
 - **Pure synthesis path**: Phase Agent reads existing submitted evidence and writes synthesis artifacts.
 - **Delegated evidence path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit submit` -> submitted ledger row -> gate.
@@ -54,8 +54,12 @@ Accepted consumer-facing `W2F-xxx` findings with concrete existing Wave0/Wave1 s
 - `rb_profile.yaml` Wave2 params: `wave2_cross_topic_depth`, `wave2_emergent_search_rounds`, `p0p1_independent_backing`, `quality_min_tier`, `quality_min_substance`.
 - `shared-schemas.md` for Wave2 artifact paths and finding-index schema.
 - `operate-queue` and `operate-work-unit` CLIs.
+- `rb_plan.md## Constraints > ### User Research Controls` baseline when present and, for current-contract rerun N, `rb_plan.md## Decisions > ### Rerun intent revision: N` plus affected Topics' matching current directions.
+- Current-round Wave1 `focus_coverage`, the exact routed carried-target receipt, current finding index, and verified submitted backing.
 
-When controls are present, treat the original host-file coordinate as read-only research guidance. It may shape a legal targeted-evidence request or presentation judgment, but cannot change finding/index schemas, submitted backing, source floors or Gate authority. A Phase Agent may append the same one-sentence beacon-rooted coordinate to an existing delegated `task_brief` before claim; it must not duplicate controls into machine fields. A strict control that cannot be met follows the existing explicit limitation, `defer_hitl2`, `requires_internal_data`, or `record_only` contract rather than a hidden exception.
+For round 0, applicable current intent comes from the controls baseline plus current canonical Seed projection. For rerun N, it comes from that baseline, the newest complete matching Decisions revision, and matching current Topic directions. Older revisions, stale/future/invalid/legacy-unbound directions, and historical submitted work remain history or context, not the current amendment set or current completion proof. A readable legacy rerun without a revision retains existing compatibility behavior and receives no inferred history.
+
+For each intent-affected targeted-evidence demand, the Phase Agent SHALL author the existing queue-owned `task_brief` at the actual enqueue point before claim. State the bounded finding-gap objective; name relevant canonical seed coordinates; add the controls baseline coordinate when present; on rerun add the newest complete matching revision and assigned Topics' matching direction coordinates; and state that stale/future/invalid/legacy-unbound directions are not current instructions. Use the existing beacon-rooted bundle coordinate and do not copy complete user wording. The brief adds no finding/index, queue, manifest, result, receipt, permission, direct-search, or Gate authority. If current intent does not materially affect a demand, omit the optional brief rather than author an empty one. A strict control that cannot be met follows the existing explicit limitation, `defer_hitl2`, `requires_internal_data`, or `record_only` contract rather than a hidden exception.
 
 ## 3. Allowed Actions
 
@@ -105,7 +109,7 @@ If queue is empty, enqueue:
 }
 ```
 
-2. Targeted delegated evidence queue items only when findings require new search:
+2. Targeted delegated evidence queue items only when findings require new search. Resolve current intent for the affected finding and author the bounded `task_brief` before enqueue; the template shows the field for an affected item and it is omitted when not applicable:
 
 ```json
 {
@@ -122,6 +126,7 @@ If queue is empty, enqueue:
   "kind": "wave2_targeted_evidence",
   "producer_rule": "targeted_evidence_search",
   "priority_class": "P1_state_or_gate_repair",
+  "task_brief": "Targeted-evidence objective for {finding_id}. Read the relevant canonical seed_topics/{topic.slug}.md coordinates and, when present, rb_plan.md## Constraints > ### User Research Controls. On rerun read rb_plan.md## Decisions > ### Rerun intent revision: <current rerun_count> and only matching current affected-Topic ## 本轮重跑方向 sections. Stale, future, invalid, or legacy-unbound direction is not current instruction. Resolve all paths through the existing beacon-rooted bundle coordinate.",
   "required_receipts": [],
   "action": "Search only the assigned finding gap. Return bounded targeted evidence, source_urls, fills_gap, confidence, declared output files, and leaf cache trails for work-unit submit. The Phase Agent updates finding-index.yaml, cross-topic-ledger.md, synthesis/backfill, and any reference/00-cross-*.md projection after submitted evidence is accepted.",
   "done_condition": "targeted evidence work-unit submit succeeds or records a terminal explicit limitation for the finding",
@@ -156,17 +161,19 @@ Convergence criteria: every finding has a decision, no `priority: p0` or `priori
 
 For the synthesis queue item, the Phase Agent:
 
-1. Reads all Wave1 evidence summaries and question lists.
+1. Reads all Wave1 evidence summaries and question lists, the applicable controls baseline, newest complete matching Decisions revision on rerun, affected Topics' matching directions, current-round `focus_coverage`, the exact carried-target receipt, current finding index, and verified submitted backing.
 2. Builds a cross-topic scan matrix with dimensions such as `shared_pattern`, `contradiction`, `resolution_opportunity`, and `emergent_question`.
 3. Writes all findings into `cross-topic-ledger.md` and `finding-index.yaml`.
 4. Sets each finding decision to one of: `use_existing_evidence`, `exploit_search`, `explore_search`, `defer_hitl2`, `requires_internal_data`, `record_only`.
 5. Sets `priority`, `confidence`, `independent_backing_refs`, `gap_status`, and top-level `synthesis_eligibility`.
-6. Writes `synthesis.md` as a narrative projection grounded in existing references, citing `W2F-xxx` finding ids.
+6. Writes `synthesis.md` as a narrative projection grounded in existing references, citing `W2F-xxx` finding ids. When current controls or amendments create material commitments, include a readable `## Current Intent Coverage` section that summarizes the current incremental objective, affected Topics, covered commitments, and visible limited commitments. Cite baseline/revision/direction coordinates and applicable focus commitment/finding IDs rather than copying complete user wording. Distinguish `covered` from `limited`; a changed current commitment requires current-round backing and historical work cannot be relabelled as current completion. When no material current commitment exists, do not create an empty section.
 7. For each accepted consumer-facing backed `W2F-xxx` finding, materializes an existing-backed `reference/00-cross-*.md` projection or records an explicit non-consumer/deferred/limitation reason.
 8. **Finding round marker**：When creating new findings in `finding-index.yaml`, SHALL write `created_in_rerun_count` field from `rb_profile.yaml` current value. Legacy findings without this field remain valid — they are included in projection scope and produce advisory (non-blocking) inspect feedback if missing from seed projection.
 9. Completes the non-delegated queue item through the normal queue path only after scan/triage/gap analysis is represented in ledger/index.
 
 No delegated ledger row is required for pure synthesis artifacts.
+
+`## Current Intent Coverage` is presentation-tolerant, human-readable synthesis only. It does not add a `finding-index.yaml` field, ledger row, synthesis-eligibility condition, direct-search route, Gate rule, or second coverage verdict, and no Engine component parses it to decide semantic satisfaction. Current `focus_coverage`, finding/index, submitted backing, carried receipt, and existing Gate owners remain authoritative for their own facts.
 
 For Phase-owned `artifacts/wave2/*` and `reference/00-cross-*.md` writes, prepare complete retained staging files and commit them with `operate-artifact-persistence.mjs persist`; on crash, quiesce the bundle and run the same command's `sweep`. A persistence verdict never changes the finding, provenance, targeted-evidence, queue, or gate authority described here.
 
@@ -176,7 +183,7 @@ Newly fetched evidence follows the other authority path: it is not accepted unti
 
 #### 3.2.2 Targeted Evidence
 
-For any finding with `decision=exploit_search` or `decision=explore_search`, enqueue and drain targeted evidence work units. Reconstruct normal delegated in-flight Wave2 work before claiming, then read the `ProfileSchema`-parsed `rb_profile.yaml#/delegated_concurrency_cap` as `effective_delegated_concurrency_cap`. It is the only run-level cap input and is `12` when omitted; do not add a CLI, environment, queue, or host-capacity override.
+For any finding with `decision=exploit_search` or `decision=explore_search`, author the applicable current-intent `task_brief` at every initial or refill enqueue, then drain targeted evidence work units. Reconstruct normal delegated in-flight Wave2 work before claiming, then read the `ProfileSchema`-parsed `rb_profile.yaml#/delegated_concurrency_cap` as `effective_delegated_concurrency_cap`. It is the only run-level cap input and is `12` when omitted; do not add a CLI, environment, queue, or host-capacity override.
 
 For a normal delegated top-up, compute:
 

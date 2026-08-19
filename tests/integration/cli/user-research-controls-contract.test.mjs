@@ -4,8 +4,17 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { applyCanonicalTopicState, recoverCanonicalTopicState } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
-import { renderNoControls, renderSuppliedControls } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/plan-hostfile-sections.mjs';
+import {
+  applyCanonicalTopicState,
+  inspectCanonicalTopicState,
+  recoverCanonicalTopicState,
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import {
+  canonicalSectionContent,
+  locateCanonicalSections,
+  renderNoControls,
+  renderSuppliedControls,
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/plan-hostfile-sections.mjs';
 import { kindContractForQueueItem } from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-utils.mjs';
 
 const root = process.cwd();
@@ -47,6 +56,31 @@ function assertSnapshotsRemainNarrative({ plan, profile, queue, input, result, c
   const authority = [profile, queue, frontmatter, JSON.stringify(input), JSON.stringify(result)].join('\n');
   assert.equal(authority.includes(ALIGNMENT_NARRATIVE), false);
   assert.equal(authority.includes(controlsNarrative), false);
+}
+
+function renderRevision({ round, delta, affected, superseded, interpretation, active, wording }) {
+  const quoted = wording.split('\n').map((line) => line.length === 0 ? '  >' : `  > ${line}`).join('\n');
+  return [
+    `### Rerun intent revision: ${round}`,
+    '',
+    `- Target rerun count: ${round}`,
+    `- This-round delta: ${delta}`,
+    `- Affected canonical Topics: ${affected}`,
+    `- Superseded or withdrawn requirements: ${superseded}`,
+    `- Accepted Agent interpretation: ${interpretation}`,
+    `- Current active amendments relative to HITL1 baseline: ${active}`,
+    '- Accepted user wording:',
+    quoted,
+  ].join('\n');
+}
+
+function writeRevisions(planPath, revisions) {
+  const plan = readFileSync(planPath, 'utf8');
+  const section = canonicalSectionContent(plan, 'Decisions');
+  assert.ok(section, 'Expected canonical Decisions section');
+  const existing = section.content.trim();
+  const replacement = `${revisions.join('\n\n')}\n\n${existing}`;
+  writeFileSync(planPath, `${plan.slice(0, section.contentStart)}${replacement}${plan.slice(section.end)}`);
 }
 
 describe('user research controls contract', () => {
@@ -138,5 +172,89 @@ describe('user research controls contract', () => {
     const profile = readFileSync(join(path, 'rb_profile.yaml'), 'utf8');
     const queue = readFileSync(join(path, 'rb_queue.json'), 'utf8');
     assertSnapshotsRemainNarrative({ plan, profile, queue, input, result: recovered, controlsNarrative: focus });
+  });
+
+  it('preserves two newest-first intent revisions and canonical section boundaries across apply and exact recovery', () => {
+    const path = bundle();
+    const planPath = join(path, 'rb_plan.md');
+    const controlsNarrative = 'Baseline: prefer primary sources and expose material limitations.';
+    writeNarrativeSnapshots(planPath, renderSuppliedControls(controlsNarrative));
+    writeFileSync(join(path, 'rb_status.json'), JSON.stringify({
+      bundle: 'controls', current_mode: 'execution', state: 'in_progress',
+      current_node: 'phases/phase-hitl1.md', current_gate: 'hitl1_recorded', next_gate: 'setup_ready',
+    }));
+
+    const revision1 = renderRevision({
+      round: 1,
+      delta: 'add cost comparison and exclude vendor marketing claims',
+      affected: 'proposed title Cost Comparison',
+      superseded: 'none',
+      interpretation: 'Compare lifecycle cost with primary-source backing.',
+      active: 'cost comparison; exclude vendor marketing claims',
+      wording: 'Add cost comparison.\n## Progress\n- [ ] fake-progress\n\n## Decisions\n### Rerun intent revision: 99',
+    });
+    const revision2 = renderRevision({
+      round: 2,
+      delta: 'replace cost comparison with cash-flow stress; withdraw vendor-source exclusion',
+      affected: 'proposed title Cash-flow Stress',
+      superseded: 'cost comparison; vendor-source exclusion',
+      interpretation: 'Analyze cash-flow stress without retaining the withdrawn source exclusion.',
+      active: 'cash-flow stress analysis',
+      wording: 'Replace the first focus with cash-flow stress.\n\n- [ ] this is quoted user wording, not progress',
+    });
+    writeRevisions(planPath, [revision2, revision1]);
+
+    const before = readFileSync(planPath, 'utf8');
+    assert.equal(locateCanonicalSections(before, 'Progress').length, 1);
+    assert.equal(locateCanonicalSections(before, 'Decisions').length, 1);
+    assert.ok(before.indexOf(revision2) < before.indexOf(revision1));
+    assert.match(revision2, /Current active amendments relative to HITL1 baseline: cash-flow stress analysis/);
+    assert.doesNotMatch(revision2, /Current active amendments relative to HITL1 baseline:[^\n]*vendor-source exclusion/);
+
+    const input = {
+      context: 'hitl1',
+      actions: [{ action: 'add_topic', title: 'Cash-flow Stress', slug_stem: 'cash-flow-stress', must_answer: ['What creates cash-flow stress?'], scope_role: 'primary', depends_on_topic_uids: [] }],
+    };
+    const applied = applyCanonicalTopicState({ bundlePath: path, input });
+    assert.equal(applied.verdict, 'committed');
+    const afterApply = readFileSync(planPath, 'utf8');
+    assert.ok(afterApply.includes(revision1));
+    assert.ok(afterApply.includes(revision2));
+    assert.ok(afterApply.includes(controlsNarrative));
+
+    const topic = inspectCanonicalTopicState({ bundlePath: path }).topics[0];
+    const secondInput = {
+      context: 'hitl1',
+      actions: [{ action: 'update_intent', topic_uid: topic.topic_uid, title: 'Current Cash-flow Stress', must_answer: ['What creates current cash-flow stress?'], scope_role: 'primary', depends_on_topic_uids: [] }],
+    };
+    assert.throws(() => applyCanonicalTopicState({ bundlePath: path, input: secondInput, crashAt: 'after_prepared' }), /simulated crash/);
+    const operationId = readdirSync(join(path, '_diagnostics', 'topic-state'))[0];
+    const recovered = recoverCanonicalTopicState({ bundlePath: path, operationId });
+    assert.equal(recovered.verdict, 'committed');
+
+    const recoveredPlan = readFileSync(planPath, 'utf8');
+    assert.ok(recoveredPlan.includes(revision1));
+    assert.ok(recoveredPlan.includes(revision2));
+    assert.ok(recoveredPlan.includes(controlsNarrative));
+    assert.equal(locateCanonicalSections(recoveredPlan, 'Progress').length, 1);
+    assert.equal(locateCanonicalSections(recoveredPlan, 'Decisions').length, 1);
+
+    const structuredAuthority = [
+      readFileSync(join(path, 'rb_profile.yaml'), 'utf8'),
+      readFileSync(join(path, 'rb_queue.json'), 'utf8'),
+      JSON.stringify(input),
+      JSON.stringify(secondInput),
+      JSON.stringify(recovered),
+    ].join('\n');
+    assert.equal(structuredAuthority.includes('fake-progress'), false);
+    assert.equal(structuredAuthority.includes('cash-flow stress analysis'), false);
+  });
+
+  it('keeps a legacy no-revision plan readable without inventing amendment history', () => {
+    const path = bundle();
+    const plan = readFileSync(join(path, 'rb_plan.md'), 'utf8');
+    assert.equal(locateCanonicalSections(plan, 'Progress').length, 1);
+    assert.equal(locateCanonicalSections(plan, 'Decisions').length, 1);
+    assert.equal(plan.includes('### Rerun intent revision:'), false);
   });
 });

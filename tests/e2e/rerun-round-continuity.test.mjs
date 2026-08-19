@@ -2,6 +2,7 @@
 // JS simulates labeled Agent-owned inputs; production CLIs own deterministic authority.
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
+import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
@@ -39,7 +40,7 @@ function currentAvailableResearchAccess() {
 
 function writePlanAndProfile(bundle, { decision = 'not_started', rerunCount = 0 } = {}) {
   const planBasename = basename(bundle).replace(/^dpt_rb_/, '');
-  writeFileSync(join(bundle, 'rb_plan.md'), `---\n${JSON.stringify({ plan_basename: planBasename, topic_registry_version: '2', derived_topic_count: 1, topic_registry: [TOPIC] }, null, 2)}\n---\n# Deterministic rerun plan\n`);
+  writeFileSync(join(bundle, 'rb_plan.md'), `---\n${JSON.stringify({ plan_basename: planBasename, topic_registry_version: '2', derived_topic_count: 1, topic_registry: [TOPIC] }, null, 2)}\n---\n# Deterministic rerun plan\n\n## Constraints\n\n### User Research Controls\n\nFixture HITL1 baseline: retain primary runtime facts.\n\n## Decisions\n\n(append-only — fixture decisions, newest first)\n`);
   writeFileSync(join(bundle, 'rb_profile.yaml'), stringifyYaml({
     plan_basename: planBasename, research_profile: 'debug', root_must_answer_set: TOPIC.must_answer,
     research_style_params: { user_visible: false, wave0_per_topic_source_floor: 1, wave0_shared_ref_total: 1, wave1_per_topic_ref_floor: 1, topic_unique_ratio: 0, counterexample_search: false, cross_verification: false, p0p1_independent_backing: 1, quality_min_tier: 'tier_4', quality_min_substance: 'none', wave2_cross_topic_depth: 0, wave2_emergent_search_rounds: 0 },
@@ -325,6 +326,43 @@ function directionSection(bytes) {
   return bytes.slice(bytes.indexOf('## 本轮重跑方向'));
 }
 
+function sha256(bytes) {
+  return createHash('sha256').update(bytes).digest('hex');
+}
+
+function intentRevision({ round, delta, superseded, interpretation, active, wording }) {
+  const quoted = wording.split('\n').map((line) => line ? `  > ${line}` : '  >').join('\n');
+  return [
+    `### Rerun intent revision: ${round}`,
+    '',
+    `- Target rerun count: ${round}`,
+    `- This-round delta: ${delta}`,
+    `- Affected canonical Topics: ${TOPIC.topic_uid} + ${TOPIC.title}`,
+    `- Superseded or withdrawn requirements: ${superseded}`,
+    `- Accepted Agent interpretation: ${interpretation}`,
+    `- Current active amendments relative to HITL1 baseline: ${active}`,
+    '- Accepted user wording:',
+    quoted,
+  ].join('\n');
+}
+
+// Simulated-Agent prose write. This is not an Engine parser or semantic verdict.
+function writeOrReuseIntentRevision(bundle, revision, round) {
+  const planPath = join(bundle, 'rb_plan.md');
+  const plan = readFileSync(planPath, 'utf8');
+  const heading = `### Rerun intent revision: ${round}`;
+  const count = plan.split(heading).length - 1;
+  if (count === 1) {
+    assert.ok(plan.includes(revision), `round ${round} revision must be reused byte-for-byte`);
+    return 'reused';
+  }
+  assert.equal(count, 0, `round ${round} must not have duplicate complete revisions`);
+  const decisions = '## Decisions\n';
+  assert.ok(plan.includes(decisions), 'fixture plan must expose the existing Decisions host section');
+  writeFileSync(planPath, plan.replace(decisions, `${decisions}\n${revision}\n\n`));
+  return 'written';
+}
+
 function inspectEligible(bundle, phase) {
   const result = runNode([
     join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs'),
@@ -534,6 +572,99 @@ describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
     setProfileRerunCount(bundle, 2);
     const synchronized = runGate(bundle, 'rerun-ready', 'phases/phase-rerun.md');
     assert.equal(synchronized.output.check.passed, true, JSON.stringify(synchronized.output.inspect));
+  });
+
+  it('preserves two simulated-Agent intent revisions through production rerun continuity', () => {
+    const bundle = restoreBundle(snapshot, baseline);
+    const topicStateCli = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs');
+    const planPath = join(bundle, 'rb_plan.md');
+    const revision1 = intentRevision({
+      round: 1,
+      delta: 'add lifecycle-cost comparison and exclude vendor-only claims',
+      superseded: 'none',
+      interpretation: 'Compare lifecycle cost using non-vendor backing.',
+      active: 'lifecycle-cost comparison; exclude vendor-only claims',
+      wording: 'Add lifecycle-cost comparison.\nExclude vendor-only claims.',
+    });
+    const revision2 = intentRevision({
+      round: 2,
+      delta: 'replace lifecycle-cost comparison with cash-flow stress; withdraw vendor-only exclusion',
+      superseded: 'lifecycle-cost comparison; vendor-only exclusion',
+      interpretation: 'Analyze cash-flow stress without retaining the withdrawn source exclusion.',
+      active: 'cash-flow stress analysis',
+      wording: 'Replace the earlier focus with cash-flow stress.\n\nWithdraw the vendor-only exclusion.',
+    });
+
+    stageHitl2(bundle, 'rerun', 0);
+    passAndEnter(bundle, 'hitl2-recorded', 'phases/phase-hitl2.md', 'hitl2_recorded');
+    const topic = parseYaml(readFileSync(planPath, 'utf8').match(/^---\n([\s\S]*?)\n---/)[1]).topic_registry[0];
+    const round1Candidate = {
+      context: 'rerun',
+      actions: [{
+        action: 'update_intent', topic_uid: topic.topic_uid, title: 'Topic A lifecycle cost',
+        must_answer: ['How does lifecycle cost affect the decision?'], scope_role: 'primary', depends_on_topic_uids: [],
+        direction: directionCandidate({ count: 1 }),
+      }],
+    };
+
+    // Simulated interruption left an accepted topic-state workspace. Production
+    // recovery owns it before any Decisions bytes may change.
+    assert.throws(() => applyCanonicalTopicState({ bundlePath: bundle, input: round1Candidate, crashAt: 'after_prepared' }), /simulated crash/);
+    const blocked = parseJsonOutput(runNode([topicStateCli, 'inspect', '--bundle', bundle], { expectedStatus: 1 }));
+    assert.equal(readFileSync(planPath, 'utf8').includes('### Rerun intent revision: 1'), false);
+    const recovered = parseJsonOutput(runNode([topicStateCli, 'recover', '--bundle', bundle, '--operation-id', blocked.blockers[0].operation_id]));
+    assert.equal(recovered.verdict, 'committed');
+    assert.equal(writeOrReuseIntentRevision(bundle, revision1, 1), 'written');
+    const planAfterRevision1 = readFileSync(planPath);
+    const postRevision1 = parseJsonOutput(runNode([topicStateCli, 'inspect', '--bundle', bundle]));
+    assert.equal(postRevision1.plan_sha256, sha256(planAfterRevision1));
+    assert.ok(planAfterRevision1.toString('utf8').includes(revision1));
+
+    setProfileRerunCount(bundle, 1);
+    passAndEnter(bundle, 'rerun-ready', 'phases/phase-rerun.md', 'rerun_ready');
+    stageSeed(bundle, 1);
+    passAndEnter(bundle, 'seed-topics-ready', 'phases/phase-seed-topics.md', 'seed_topics_ready', () => stageWave0(bundle, 'intent-r1'));
+    passAndEnter(bundle, 'wave0-complete', 'phases/phase-wave0.md', 'wave0_complete', () => stageWave1(bundle, 'intent-r1'));
+    passAndEnter(bundle, 'wave1-complete', 'phases/phase-wave1.md', 'wave1_complete', () => stageWave2(bundle));
+    passAndEnter(bundle, 'wave2-complete', 'phases/phase-wave2.md', 'wave2_complete');
+
+    stageHitl2(bundle, 'rerun', 1);
+    passAndEnter(bundle, 'hitl2-recorded', 'phases/phase-hitl2.md', 'hitl2_recorded');
+    assert.equal(writeOrReuseIntentRevision(bundle, revision2, 2), 'written');
+    const planAfterRevision2 = readFileSync(planPath);
+
+    // Simulated resume after the narrative write reuses the same complete target
+    // entry. This proves deterministic continuity only, not semantic fidelity.
+    assert.equal(writeOrReuseIntentRevision(bundle, revision2, 2), 'reused');
+    const textAfterReuse = readFileSync(planPath, 'utf8');
+    assert.equal(textAfterReuse.split('### Rerun intent revision: 2').length - 1, 1);
+    assert.ok(textAfterReuse.indexOf(revision2) < textAfterReuse.indexOf(revision1));
+    assert.ok(textAfterReuse.includes(revision1));
+    assert.deepEqual(Buffer.from(revision1), Buffer.from(textAfterReuse.slice(textAfterReuse.indexOf(revision1), textAfterReuse.indexOf(revision1) + revision1.length)));
+    assert.doesNotMatch(revision2, /Current active amendments relative to HITL1 baseline:[^\n]*(lifecycle-cost|vendor-only)/);
+
+    const postRevision2 = parseJsonOutput(runNode([topicStateCli, 'inspect', '--bundle', bundle]));
+    assert.equal(postRevision2.plan_sha256, sha256(planAfterRevision2));
+    const currentTopic = postRevision2.topics.find((candidate) => candidate.topic_uid === topic.topic_uid);
+    const round2Candidate = {
+      context: 'rerun',
+      actions: [{
+        action: 'update_intent', topic_uid: topic.topic_uid, title: 'Topic A cash-flow stress',
+        must_answer: ['How does cash-flow stress affect the decision?'], scope_role: 'primary', depends_on_topic_uids: [],
+        direction: { ...directionCandidate({ count: 2 }), rationale_excerpt: 'Current revision changes this Topic to cash-flow stress analysis.' },
+      }],
+    };
+    assert.ok(currentTopic, 'post-revision inspect must resolve the current Topic');
+    assert.equal(applyCanonicalTopicState({ bundlePath: bundle, input: round2Candidate }).verdict, 'committed');
+    const afterRound2Apply = readFileSync(planPath, 'utf8');
+    assert.ok(afterRound2Apply.includes(revision2));
+    assert.ok(afterRound2Apply.includes(revision1));
+    assert.equal(afterRound2Apply.split('### Rerun intent revision: 2').length - 1, 1);
+
+    setProfileRerunCount(bundle, 2);
+    const round2Gate = passAndEnter(bundle, 'rerun-ready', 'phases/phase-rerun.md', 'rerun_ready');
+    assert.equal(round2Gate.check.next, 'phases/phase-seed-topics.md');
+    assert.equal(readStatus(bundle).current_node, 'phases/phase-seed-topics.md');
   });
 
   it('fails at rerun-ready on malformed profile without downstream transition', () => {

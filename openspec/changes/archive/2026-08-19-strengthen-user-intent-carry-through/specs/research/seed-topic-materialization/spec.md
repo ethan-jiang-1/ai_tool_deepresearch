@@ -17,7 +17,9 @@ or decorative projection. When upstream meaning is insufficient, it SHALL use
 the existing explicit non-empty gap form rather than invent intent. The
 projection SHALL NOT change canonical Topic identity, add frontmatter fields,
 copy full user wording, pre-author future Wave task briefs, or become a Gate or
-Engine semantic verdict.
+Engine semantic verdict. Deterministic checks may prove this structural
+boundary, but only native completion from a real Agent-flow run may evidence
+the Agent's semantic projection behavior.
 
 #### Scenario: Source restriction reaches an affected Topic
 

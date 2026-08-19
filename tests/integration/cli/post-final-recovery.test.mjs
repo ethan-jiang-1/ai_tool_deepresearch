@@ -7,7 +7,11 @@ import { tmpdir } from 'node:os';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { applyCanonicalTopicState, recoverCanonicalTopicState } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
 import { auditPhaseStatus } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs';
-import { inspectPostFinalRecovery } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs';
+import {
+  applyPostFinalRecovery,
+  inspectPostFinalRecovery,
+  PostFinalRecoveryCrashError,
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs';
 import { createTerminalFinalBundle, requestFromInspection } from './post-final-recovery-fixture.mjs';
 
 const REPO_ROOT = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
@@ -34,11 +38,63 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     writeFileSync(inputPath, JSON.stringify(requestFromInspection(inspected)));
     const applied = runJson([CLI, 'apply', '--bundle', bundle, '--input', inputPath]);
     assert.equal(applied.verdict, 'committed');
+    const ordinaryProfile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'));
+    assert.equal(ordinaryProfile.human_decision_checkpoints.hitl2.rationale, 'Post-final rerun reason:\nNeed additional evidence\n\nRequested scope:\nAdd a focused comparison');
+    const ordinaryEvent = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(JSON.parse).find((event) => event.event === 'post_final_reentry');
+    assert.equal(ordinaryEvent.reason, 'Need additional evidence');
+    assert.equal(ordinaryEvent.requested_scope, 'Add a focused comparison');
     const replay = runJson([CLI, 'apply', '--bundle', bundle, '--input', inputPath]);
     assert.equal(replay.verdict, 'unchanged');
     const invalid = spawnSync('node', [CLI, 'apply', '--bundle', bundle, '--input', inputPath, '--force'], { cwd: REPO_ROOT, encoding: 'utf8' });
     assert.equal(invalid.status, 2);
     assert.equal(JSON.parse(invalid.stdout).error, 'invalid_invocation');
+  });
+
+  it('preserves a labelled multiline focus reason and separate scope through exact recovery', () => {
+    const bundle = createTerminalFinalBundle(root, 'focus-recovery');
+    const inspection = inspectPostFinalRecovery({ bundlePath: bundle });
+    const operationId = '71717171-7171-4717-8717-717171717171';
+    const reason = [
+      '用户的重点原话（逐字保留）：',
+      '请加强现金流压力分析，并比较租赁与购买。',
+      '',
+      'Agent 对本轮额外研究方向的理解（可由用户修正）：',
+      '比较两条路径在现金流压力下的成本、风险和适用条件。',
+    ].join('\r\n');
+    const input = requestFromInspection(inspection, {
+      reason: `  ${reason}  `,
+      requested_scope: '  增补现金流压力证据\r\n并更新相关结论  ',
+    });
+    const normalizedReason = reason.replaceAll('\r\n', '\n');
+    const normalizedScope = '增补现金流压力证据\n并更新相关结论';
+
+    assert.throws(() => applyPostFinalRecovery({
+      bundlePath: bundle,
+      input,
+      operationId,
+      hooks: { afterProfileCommit() { throw new PostFinalRecoveryCrashError('after_profile'); } },
+    }), PostFinalRecoveryCrashError);
+    assert.equal(inspectPostFinalRecovery({ bundlePath: bundle }).verdict, 'recover_required');
+
+    const recovered = runJson([CLI, 'recover', '--bundle', bundle, '--operation-id', operationId]);
+    assert.equal(recovered.verdict, 'committed');
+    const profile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'));
+    assert.equal(
+      profile.human_decision_checkpoints.hitl2.rationale,
+      `Post-final rerun reason:\n${normalizedReason}\n\nRequested scope:\n${normalizedScope}`,
+    );
+
+    const events = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+    const event = events.find((candidate) => candidate.event === 'post_final_reentry');
+    assert.equal(event.reason, normalizedReason);
+    assert.equal(event.requested_scope, normalizedScope);
+    assert.equal(events.filter((candidate) => candidate.event_id === event.event_id).length, 1);
+
+    const replayPath = join(root, 'focus-replay.json');
+    writeFileSync(replayPath, JSON.stringify(input));
+    const replay = runJson([CLI, 'apply', '--bundle', bundle, '--input', replayPath]);
+    assert.equal(replay.verdict, 'unchanged');
+    assert.equal(readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(JSON.parse).filter((candidate) => candidate.event_id === event.event_id).length, 1);
   });
 
   it('rejects a retired access envelope at the post-final ProfileSchema reader', () => {

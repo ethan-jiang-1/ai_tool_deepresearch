@@ -33,11 +33,33 @@ Read `verdict`, `reason_code`, `facts.request_bindings`, and the single `next_ac
 
 ## 2. Retain Request
 
+If the accepted evidence-expanding request adds or revises a research focus,
+resolve any material ambiguity and let the user correct the Agent's concise
+interpretation before `apply`. Put exactly these two visibly labelled parts in
+the existing multiline `reason` string:
+
+```text
+用户的重点原话（逐字保留）：
+<only the accepted wording directly relevant to this research expansion>
+
+Agent 对本轮额外研究方向的理解（可由用户修正）：
+<the accepted corrected, bounded interpretation>
+```
+
+The first part faithfully retains the accepted normalized focus wording, not
+the whole Final conversation. Existing LF normalization, outer trim, and NUL
+rejection still apply, so “逐字保留” does not promise CRLF or outer-whitespace
+preservation. Keep `requested_scope` separate and bounded. The Engine validates
+the existing request shape/lineage only; it does not parse these labels,
+classify focus, compare the two parts, or infer permission. When an
+evidence-expanding rerun has no new or revised focus, retain the existing
+ordinary non-empty `reason` contract without empty labels.
+
 ```json
 {
   "schema_version": "1.0.0",
   "action": "post_final_rerun",
-  "reason": "<decided reason>",
+  "reason": "<ordinary decided reason, or the accepted labelled multiline focus reason above>",
   "requested_scope": "<decided scope>",
   "expected_bundle_identity": "<copy object from inspect facts.request_bindings>",
   "expected_final_lineage": "<copy object from inspect facts.request_bindings>"
@@ -45,6 +67,8 @@ Read `verdict`, `reason_code`, `facts.request_bindings`, and the single `next_ac
 ```
 
 Keep the file until `apply` returns `committed|unchanged` or exact recovery finishes.
+Do not add a focus object or field, label parser, permission inference,
+serializer/event/workspace change, or second rerun route.
 
 ## 3. Apply Or Exact Recover
 

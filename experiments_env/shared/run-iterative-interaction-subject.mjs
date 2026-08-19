@@ -151,6 +151,24 @@ const SUBJECTS = {
     tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
     boundary: 'Complete the minimum work owned by the current phase. Preserve the accepted focus only in the production host-file controls snapshot, then stop after its Gate and immediate legal handoff before executing the newly loaded phase.',
   },
+  '717-round1': {
+    bundlePrefix: 'dpt_disp_case-717_',
+    transcript: 'case-717-round1-subject-transcript.jsonl',
+    system: 'You are the independent Subject Agent for case 717 round 1, distinct from the Playbook Agent. Work only in the exact supplied bundle. Start from its injected current production surface and direct facts, and own every semantic decision and write needed for the user turn.',
+    messages: ['继续研究。请把“租赁、购买与推迟决策的现金流比较”加入当前重点，并增加“按地区分别比较融资约束”的要求；请按正常研究流程完成这一轮并给我更新后的报告。'],
+    tools: 'Task,Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
+    boundary: 'Complete exactly one accepted normal HITL2 rerun through the next legally entered Final and its first current-lineage report. You own the accepted interpretation, revision, topic projection, current task briefs, coverage, synthesis, HITL2 decision, composition handoff, and report. Use only production routes and real actor/tool evidence; do not write playbook verdict checks, native completion, health output, cleanup, or any case-717 observer file. Fail honestly if a required authenticated actor, search/fetch tool, or legal operation is unavailable.',
+    timeoutMs: 12 * 60 * 1000,
+  },
+  '717-round2': {
+    bundlePrefix: 'dpt_disp_case-717_',
+    transcript: 'case-717-round2-subject-transcript.jsonl',
+    system: 'You are the independent Subject Agent for case 717 round 2, distinct from both the Playbook Agent and the prior Subject context. Work only in the exact supplied bundle. Start fresh from its injected current Final production surface and direct facts, without relying on prior chat.',
+    messages: ['请再补充新的可核验一手来源，然后把当前的“租赁、购买与推迟决策的现金流比较”改为“分阶段投资阈值与触发条件”，并撤回“按地区分别比较融资约束”的要求；请据此重新评估并更新报告。'],
+    tools: 'Task,Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
+    boundary: 'Treat this as one evidence-expanding post-Final request, then complete exactly one accepted C5 rerun through the next legally entered Final and its current-lineage report. You own the accepted interpretation, replacement and withdrawal semantics, revision, topic projection, current task briefs, coverage, synthesis, HITL2 decision, composition handoff, and report. Use only production routes and real actor/tool evidence; do not write playbook verdict checks, native completion, health output, cleanup, or any case-717 observer file. Fail honestly if a required authenticated actor, search/fetch tool, or legal operation is unavailable.',
+    timeoutMs: 12 * 60 * 1000,
+  },
   '712': {
     bundlePrefix: 'dpt_disp_case-712_',
     transcript: 'case-712-transcript.jsonl',
@@ -252,7 +270,7 @@ const SUBJECTS = {
 };
 
 function usage() {
-  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <125|154|204|115|164|225|227|232|318|711|712|713-readiness|713-final|714|716|901|951|951-judge|136|137|138|136-judge> --bundle <path>');
+  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <125|154|204|115|164|225|227|232|318|711|712|713-readiness|713-final|714|716|717-round1|717-round2|901|951|951-judge|136|137|138|136-judge> --bundle <path>');
   process.exit(2);
 }
 

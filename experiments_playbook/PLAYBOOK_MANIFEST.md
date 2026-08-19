@@ -118,6 +118,7 @@ Heavy filename cost covers either real Agent/Sub-agent work or a long chain; cos
 | `exp_iterative_interaction/case-714-heavy-user-research-controls.md` |
 | `exp_iterative_interaction/case-715-heavy-wave-target-receipt-closure.md` |
 | `exp_iterative_interaction/case-716-heavy-hitl1-topic-focus.md` |
+| `exp_iterative_interaction/case-717-heavy-multi-rerun-intent-carry-through.md` |
 | `exph_workflow-foundation/case-901-heavy-topic-rewrite-agent.md` |
 | `exph_workflow-foundation/case-951-heavy-topic-rewrite-ai-judge.md` |
 <!-- /agent-experiment-manifest -->
