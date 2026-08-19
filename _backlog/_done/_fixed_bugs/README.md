@@ -218,8 +218,9 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-229 | 2026-08-17 | phase-setup.md documents the pre-gate bootstrap status window and `advance-status --to setup_ready` gate prerequisite (`0e97d0774`) |
 | BUG-230 | 2026-08-17 | finding-index required top-level keys and `cross_topic_resolution` non-empty `origin_refs` documented in shared-schemas (`0e97d0774`) |
 | BUG-231 | 2026-08-17 | Run-scoped helper scripts get a sanctioned bundle `_scripts/` home; gitignore masking patches removed (`0e97d0774`) |
+| BUG-235 | 2026-08-19 | User-directed closure of post-final reentry `enter-phase` handoff defect; archived as residual diagnosis without claiming a code fix |
 
-**Next available bug ID: BUG-232**
+**Next available bug ID: BUG-236**
 
 ---
 

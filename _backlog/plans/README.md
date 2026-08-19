@@ -25,12 +25,10 @@
 | `bug-200-204-gate-and-queue-remediation` | BUG-200--204 的收敛分诊：关闭 current-head 已覆盖的 BUG-200；以两个 OpenSpec change 分别修 Gate/recovery contract 与递归 queue repair；不将 gate audit 拆为独立生命周期，也不让无 submitted evidence 的 topic 伪造完成。 | ready for OpenSpec proposals |
 | `gate-schema-capability-audit` | 全面 Gate quality audit（重开 2026-08-07）：per-gate gap map 与语义质量审计未完成；BUG-201/202/204 的确定性闭环已由 `bug-200-204-gate-and-queue-remediation` change 1 收敛，其余内容质量 concerns 仍待审计。 | active（审计未闭环） |
 | `iterative-final-delivery-versioned-output` | Final 交付可迭代打磨（与用户反复敲打、就地重写，不新增 checkpoint）+ 版本化 Final 输出命名（`final.md` → `final-v1.md`、`final-v2.md` …）。触发自 `enterprise-safe-ai-harness-v2` 技术深入版交付。 | active（设计验证待开始） |
-| `user-intent-carry-through-implementation-plan` | 用一个 OpenSpec change 让既有 `rb_plan.md` 接纳 HITL1 baseline 与多轮 append-only intent revisions，再加固到 seed direction、task brief、current-round coverage、Wave2 synthesis 与 Final；不新增 runtime 文档/schema/Gate/lifecycle。 | ready to propose（progress checklist 已建立） |
 
 ### 参照资料（非 plan，供后续 change 引用）
 
-- `user-intent-carry-through-design-analysis.md` — HITL1 + rerun 的系统分析稿，已完成设计复核；最终机制与执行进度转入 `user-intent-carry-through-implementation-plan.md`。
-- `rerun-feedback-carry-through-design-analysis.md` — rerun 实战观察稿，已修正 Wave0/task-brief/post-final schema 等早期判断，同目录保留供证据对照。
+- `user-intent-carry-through-design-analysis.md`、`rerun-feedback-carry-through-design-analysis.md`、`user-intent-carry-through-implementation-plan.md` — 已随 `strengthen-user-intent-carry-through` 完成并移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 - `machine-checks-catalog.md` 与 `midrun-reading-burden-audit.md` 已随 `midrun-burden-reduction-and-residual-drift` plan 归档至 `../_done/_closed_plans/`，C3 触发时取用。
 
 ---

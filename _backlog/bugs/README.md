@@ -21,6 +21,11 @@
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
+| BUG-232 | P2 | wave0 | 共享 reference 物化收敛按 topic_slug 排序无 per-topic 平衡/上限，排序靠前 topic 吃满 floor，靠后 topic 0 覆盖（`wave0-reference-convergence.mjs`） |
+| BUG-233 | P2 | wave1 | work-unit 事务双 orphan 死锁：两个 suspect journal 互相成为对方 recover 的阻塞，`recover-transaction` 无限互踢，无合法恢复路径（`work-unit-transaction.mjs`） |
+| BUG-234 | P2 | wave1 | work-unit 事务整 bundle 快照把并发写入误判为 "mutated undeclared targets"，并行 sub-agent 抓取时合法 submit/recover 被标 suspect（`work-unit-transaction.mjs`） |
+
+> BUG-233/234 来自 `dpt_rb_enterprise-ai-transformation-six-cases` 断电恢复观察（wave1 supplementary submit 并发撞车 → 双 orphan → 手动归档 journal 才解除死锁）。两份卡片均附复现路径、实账影响与最小修复方向。
 
 ## 最近关闭 (2026-08-17)
 
@@ -36,6 +41,12 @@
 
 > 全量 `npm test` 2975/2975 0 fail；`openspec validate --strict`、六项 governance checker 与
 > `git diff --check` 全绿；5 份 delta spec 已同步 main specs 并 finalizer 17/17 归档。
+
+## 最近关闭 (2026-08-19)
+
+| Bug | 结案依据 |
+|-----|----------|
+| BUG-235 | 用户指示归档；保留 post-final reentry `enter-phase` handoff 的真实 ERROR 与残余修复方向，未宣称代码已修复。 |
 
 ## 新增 (2026-08-17)
 
@@ -159,7 +170,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 
 > BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspended_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
-**Next available bug ID: BUG-232**
+**Next available bug ID: BUG-236**
 
 ## BUG-132–137 接手地图
 

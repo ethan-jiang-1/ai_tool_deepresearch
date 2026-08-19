@@ -25,9 +25,10 @@
 
 | # | 文件 | 优先级 | 简述 | 阻塞 / 备注 |
 |---|------|--------|------|-------------|
-| 1 | `todo-final-output-eval.md` | **低–中（需重述）** | 交付前 read-only diagnostic → HITL2 recommendation | 后续消费统一的问题闭环；不得 auto-rerun 或绕过 HITL2 |
-| 2 | `todo-hooks-deferral.md` | **延后 / parked** | workflow boundary hooks | 仅在现有 Gate/inspect/reentry 有真实直接缺口时重启 |
-| 3 | `todo-context-reground.md` | **parked** | head re-ground | recovery 已 DONE；仅在现有 reload 不足的真实 case 下重启 |
+| 1 | `todo-bounded-wave0-e2e-smoke-lane.md` | **高** | 单 Topic/单 Wave0/单 work-unit 的真实 Agent-flow 短回归 | 先 Explore；不新增旁路 runner、第二 verdict 或隐式降级 |
+| 2 | `todo-final-output-eval.md` | **低–中（需重述）** | 交付前 read-only diagnostic → HITL2 recommendation | 后续消费统一的问题闭环；不得 auto-rerun 或绕过 HITL2 |
+| 3 | `todo-hooks-deferral.md` | **延后 / parked** | workflow boundary hooks | 仅在现有 Gate/inspect/reentry 有真实直接缺口时重启 |
+| 4 | `todo-context-reground.md` | **parked** | head re-ground | recovery 已 DONE；仅在现有 reload 不足的真实 case 下重启 |
 
 ### 本轮已移出活跃
 

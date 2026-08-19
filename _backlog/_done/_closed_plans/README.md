@@ -89,5 +89,8 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-067 | 2026-08-16 | agent-guidance-conflict-drift-findings.md | 上游 findings 底稿：F-01~F-13 全部闭合（F-01~F-11 原始发现 + C1/C2 过程中新增 F-12/F-13），每条含证据坐标、agent 拿错风险与修复方向；V-01~V-05 已验证自洽项供对照。修复证据见 CLS-066。 |
 | CLS-068 | 2026-08-17 | coding-agent-friendliness-review-remediation.md | coding-agent 视角全仓库体检（操作面 8/10、引擎 6/10、治理 6/10）的 P0+P1 修复：Change A `2026-08-16-repair-doc-and-governance-drift-and-machine-gaps`（F-01/F-02/F-04~F-08/F-12~F-19：文档漂移清零 + RET-006 指针化 + check-all + guidance-ID 校验 + H1 检查 + model 去 MUST + finalizer 第 17 步）与 Change B `2026-08-17-cleanup-engine-surface-and-disambiguate-repair-kinds`（F-03/F-09~F-11/F-20~F-23：死代码 retire + enum 收敛 + CLI 常量化 + god-module 导航 + repair_directive 消歧）均 finalizer 17 步归档；全量 `npm test` 2955/2955 0 fail（基线 2913→2955）。F-11 残余：其余 27 处 CLI 路径字面量机械替换 deferred（常量 `CLI_OPERATE_WORK_UNIT`/`CLI_OPERATE_QUEUE` 已建立并用于两处 rerun 构建器）；P2（CLI exit 统一、god-module 拆分、spec 长度治理）保持 deferred。 |
 | CLS-069 | 2026-08-17 | bug-225-231-run-contract-surface-remediation.md | BUG-225..231（`dpt_rb_ai-transformation-organization` 真实 run 7 个活跃 bug）以**一个** OpenSpec change `2026-08-17-repair-run-contract-surfaces`（`0e97d0774`）收口：文档/示例/definition 文案对齐 + claim stdout JSON 回归锁（SUD-008）+ run-scoped 脚本 `_scripts/` 落点；零引擎裁决逻辑改动。全量 `npm test` 2975/2975 0 fail；finalizer 17/17 checks 归档。 |
+| CLS-070 | 2026-08-19 | rerun-feedback-carry-through-design-analysis.md | Rerun 反馈 carry-through 的实战分析与机制复核；结论被 user-intent carry-through 实施计划吸收。 |
+| CLS-071 | 2026-08-19 | user-intent-carry-through-design-analysis.md | HITL1 与多轮 rerun 用户意图承接的系统设计分析；由 `strengthen-user-intent-carry-through` 落地。 |
+| CLS-072 | 2026-08-19 | user-intent-carry-through-implementation-plan.md | 最小侵入 OpenSpec 实施计划；已完成 apply、验证、归档并保留 native Agent-flow 残余风险。 |
 
-**Next available plan ID: CLS-070**
+**Next available plan ID: CLS-073**
