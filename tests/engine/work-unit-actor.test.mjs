@@ -19,6 +19,17 @@ const unavailable = {
   reason_code: 'probe_capacity_unavailable',
 };
 
+function distinctWave0Item(id, index) {
+  const topicSlug = `topic-${index + 1}`;
+  return delegatedQueueItem(id, {
+    payload: {
+      topic_uid: `tp_123e4567-e89b-12d3-a456-${String(426614174000 + index).padStart(12, '0')}`,
+      topic_slug: topicSlug,
+      wave: 0,
+    },
+  });
+}
+
 describe('work-unit actor decision', () => {
   it('implements the closed observation matrix and default deny policy', () => {
     assert.equal(evaluateActorDecision({ observation: { outcome: 'available', source: 'native_probe', role_key: 'dpt-source-intake', reason_code: 'probe_succeeded' }, executionActorClass: 'delegated_subagent', plannedRoleKey: 'dpt-source-intake', actorPolicy: policy }).verdict, 'allow_claim');
@@ -32,7 +43,7 @@ describe('work-unit actor decision', () => {
   it('does not mutate queue or allocate authority for unavailable normal actor', () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'wu-actor-no-claim-'));
     try {
-      seedDelegatedQueue(dir, Array.from({ length: 5 }, (_, index) => delegatedQueueItem(`queue-${index}`)));
+      seedDelegatedQueue(dir, Array.from({ length: 5 }, (_, index) => distinctWave0Item(`queue-${index}`, index)));
       for (const ref of ['rb_status.json', 'rb_profile.yaml', 'artifact.txt', 'reference/ref.md', 'final/report.md']) {
         const target = path.join(dir, ref);
         mkdirSync(path.dirname(target), { recursive: true });
@@ -100,7 +111,14 @@ describe('work-unit actor decision', () => {
     try {
       seedDelegatedQueue(dir, [
         delegatedQueueItem('queue-a'),
-        delegatedQueueItem('queue-b', { targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-evidence-extractor', timeout_ms: 600000 } } }),
+        delegatedQueueItem('queue-b', {
+          targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-evidence-extractor', timeout_ms: 600000 } },
+          payload: {
+            topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174001',
+            topic_slug: 'topic-b',
+            wave: 0,
+          },
+        }),
       ]);
       const first = claimWorkUnits(dir, {
         phase: 'wave0',

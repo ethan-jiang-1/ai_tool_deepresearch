@@ -426,11 +426,20 @@ function previewClaimCandidates(queue, wave, requestedCount, executionActorClass
   return { candidates, planned_role_key: plannedRoleKey, blocked_by_queue_item_id: blockedBy };
 }
 
-function preflightClaimAssignments(bundleDir, candidates) {
+function preflightClaimAssignments(bundleDir, candidates, { queue, targetConflictRerun = null } = {}) {
   const plans = [];
-  for (const candidate of candidates) {
+  for (const [index, candidate] of candidates.entries()) {
     const queueItem = candidate.item;
-    const admission = admitQueueDemand({ bundleDir, queueItem });
+    const rerun = typeof targetConflictRerun === 'function'
+      ? targetConflictRerun(index)
+      : candidate.target_conflict_rerun;
+    const admission = admitQueueDemand({
+      bundleDir,
+      queueItem,
+      queue,
+      excludeWave0QueueItemId: queueItem.queue_item_id,
+      targetConflictRerun: rerun,
+    });
     if (!admission.ok) {
       return {
         ok: false,
@@ -438,6 +447,15 @@ function preflightClaimAssignments(bundleDir, candidates) {
           queue_item_id: queueItem.queue_item_id,
           reason: admission.reason,
           reason_code: admission.reason_code,
+          ...(admission.reason_code === 'wave0_source_target_conflict' ? {
+            source_target: admission.source_target,
+            candidate_queue_item_id: admission.candidate_queue_item_id,
+            owner_kind: admission.owner_kind,
+            owner_queue_item_id: admission.owner_queue_item_id,
+            ...(admission.owner_work_id ? { owner_work_id: admission.owner_work_id } : {}),
+            repair_kind: admission.repair_kind,
+            rerun: admission.rerun,
+          } : {}),
         },
       };
     }
@@ -448,6 +466,7 @@ function preflightClaimAssignments(bundleDir, candidates) {
       queue_item_snapshot_hash: queueItemSnapshotHash(queueItem),
       queue_item_full_hash: hashValue(queueItem),
       assignment_contract: admission.assignment_contract,
+      target_conflict_rerun: rerun,
     });
   }
   return { ok: true, plans };
@@ -492,7 +511,7 @@ function recheckClaimPlan(bundleDir, plans, { existed: expectedIndexExisted, has
     ...plan,
     item: assignmentView.active_window[index],
   }));
-  const admission = preflightClaimAssignments(bundleDir, assignmentCandidates);
+  const admission = preflightClaimAssignments(bundleDir, assignmentCandidates, { queue: assignmentView });
   if (!admission.ok) throw new Error(`delegated admission rejected for queue item ${admission.rejected.queue_item_id}: ${admission.rejected.reason}`);
 
   const queue = loadQueueReadOnly(bundleDir);
@@ -549,7 +568,29 @@ export function claimWorkUnits(bundleDir, {
     };
   }
 
-  const preflight = preflightClaimAssignments(bundleDir, preview.candidates);
+  const targetConflictRerun = (candidateIndex) => {
+    const conflictFreeCount = Math.max(1, candidateIndex);
+    const args = [
+      'node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs claim',
+      claimCommandArg(path.resolve(bundleDir)),
+      '--phase', claimCommandArg(phase),
+      '--count', claimCommandArg(conflictFreeCount),
+    ];
+    if (actorObservation) {
+      args.push(
+        '--actor-outcome', claimCommandArg(actorObservation.outcome),
+        '--actor-source', claimCommandArg(actorObservation.source),
+        '--actor-role-key', claimCommandArg(actorObservation.role_key),
+        '--actor-reason', claimCommandArg(actorObservation.reason_code),
+        '--execution-actor', claimCommandArg(executionActorClass),
+      );
+    }
+    return args.join(' ');
+  };
+  const preflight = preflightClaimAssignments(bundleDir, preview.candidates, {
+    queue: previewQueue,
+    targetConflictRerun,
+  });
   if (!preflight.ok) {
     return {
       ok: false,
@@ -708,6 +749,9 @@ export function claimWorkUnits(bundleDir, {
     ].join(' '),
     hooks: transactionHooks,
   }, ({ tx_id }) => {
+    if (typeof transactionHooks?.beforeClaimRecheck === 'function') {
+      transactionHooks.beforeClaimRecheck({ operation: 'claim_work_units', tx_id, bundle_dir: bundleDir });
+    }
     let { queue, index } = recheckClaimPlan(bundleDir, deliveryPlans, previewIndexPlan);
     const claimed = [];
     let blockedBy = preview.blocked_by_queue_item_id;

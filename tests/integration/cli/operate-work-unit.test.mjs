@@ -15,6 +15,10 @@ import assert from 'node:assert/strict';
 
 import { makeItem } from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
 import { createQueue, enqueue, saveQueue } from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
+import { buildCanonicalTopicRegistryFact } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/topic-registry-fact.mjs';
+import {
+  collectSubmittedWave0ContributionProjection,
+} from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-projection.mjs';
 import {
   WORK_UNIT_OUTPUT_LEDGER,
   createWorkUnit,
@@ -174,35 +178,51 @@ function supplementaryWave1QueueItem(overrides = {}) {
   });
 }
 
-function writeCanonicalPlan(dir) {
+function wave0Topic(index = 0) {
+  const suffix = String(426614174000 + index).padStart(12, '0');
+  const letter = String.fromCharCode('a'.charCodeAt(0) + index);
+  return {
+    topic_uid: `tp_123e4567-e89b-12d3-a456-${suffix}`,
+    id: String(index + 1).padStart(2, '0'),
+    slug: `topic-${letter}`,
+    title: `Topic ${letter.toUpperCase()}`,
+  };
+}
+
+function writeCanonicalPlan(dir, topics = [wave0Topic()]) {
+  const registry = topics.map((topic) => [
+    `  - topic_uid: ${topic.topic_uid}`,
+    `    id: "${topic.id}"`,
+    `    slug: ${topic.slug}`,
+    `    title: ${topic.title}`,
+    `    must_answer: ["${topic.title}?"]`,
+    '    scope_role: primary',
+    '    depends_on_topic_uids: []',
+    '    previous_layouts: []',
+  ].join('\n')).join('\n');
   writeFileSync(path.join(dir, 'rb_plan.md'), `---
 plan_basename: test
-derived_topic_count: 1
+derived_topic_count: ${topics.length}
 topic_registry_version: "2"
 topic_registry:
-  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
-    id: "01"
-    slug: topic-a
-    title: Topic A
-    must_answer: ["A?"]
-    scope_role: primary
-    depends_on_topic_uids: []
-    previous_layouts: []
+${registry}
 ---
 # Plan
 `);
   mkdirSync(path.join(dir, 'seed_topics'), { recursive: true });
-  writeFileSync(path.join(dir, 'seed_topics', 'topic-a.md'), `---
-topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
-id: "01"
-slug: topic-a
-title: Topic A
-must_answer: ["A?"]
+  for (const topic of topics) {
+    writeFileSync(path.join(dir, 'seed_topics', `${topic.slug}.md`), `---
+topic_uid: ${topic.topic_uid}
+id: "${topic.id}"
+slug: ${topic.slug}
+title: ${topic.title}
+must_answer: ["${topic.title}?"]
 scope_role: primary
 depends_on_topic_uids: []
 ---
-# Topic A
+# ${topic.title}
 `);
+  }
 }
 
 function currentWave0QueueItem(id, overrides = {}) {
@@ -219,6 +239,21 @@ function currentWave0QueueItem(id, overrides = {}) {
   });
 }
 
+function wave0QueueItemForTopic(id, topic, payload = {}) {
+  const sourcePath = `artifacts/wave0/${topic.slug}/source.yaml`;
+  return currentWave0QueueItem(id, {
+    title: `Source intake ${topic.title}`,
+    payload: {
+      wave: 0,
+      topic_uid: topic.topic_uid,
+      topic_slug: topic.slug,
+      ...payload,
+    },
+    required_receipts: [`file:${sourcePath}`],
+    writes_to: [sourcePath],
+  });
+}
+
 function saveQueueWith(dir, items) {
   if (!existsSync(path.join(dir, 'rb_plan.md')) && items.some((item) => item.kind === 'wave0_source_intake')) {
     writeCanonicalPlan(dir);
@@ -228,22 +263,33 @@ function saveQueueWith(dir, items) {
   saveQueue(dir, queue);
 }
 
-function writeValidSubmitFiles(dir, record) {
-  const sourcePath = 'artifacts/wave0/topic-a/source.yaml';
+function writeValidSubmitFiles(dir, record, {
+  sources = null,
+  cacheSource = null,
+} = {}) {
+  const manifest = JSON.parse(readFileSync(path.join(dir, record.paths.manifest_ref), 'utf-8'));
+  const sourcePath = manifest.output_contract.required_outputs.find((output) => output.role === 'source_yaml').path;
+  const topicSlug = sourcePath.split('/').at(-2);
+  const resolvedSources = sources || [{
+    url: 'https://example.com/source',
+    title: 'Example source',
+    retrieved_date: '2026-07-20',
+    topic_tag: topicSlug,
+  }];
+  const resolvedCacheSource = cacheSource || resolvedSources.at(-1);
   mkdirSync(path.dirname(path.join(dir, sourcePath)), { recursive: true });
-  writeFileSync(path.join(dir, sourcePath), [
-    '- url: https://example.com/source',
-    '  title: Example source',
-    '  retrieved_date: 2026-07-20',
-    '  topic_tag: topic-a',
-    '',
-  ].join('\n'));
+  writeFileSync(path.join(dir, sourcePath), `${resolvedSources.map((source) => [
+    `- url: ${source.url}`,
+    `  title: ${source.title}`,
+    `  retrieved_date: ${source.retrieved_date}`,
+    `  topic_tag: ${source.topic_tag}`,
+  ].join('\n')).join('\n')}\n`);
 
   const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
   mkdirSync(path.join(dir, cacheTrail), { recursive: true });
   writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
-  writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nFetched content capture for https://example.com/source. This body preserves the source text used by the work unit.\n');
-  writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://example.com/source"}\n');
+  writeFileSync(path.join(dir, cacheTrail, 'page.md'), `# Captured Page\n\nFetched content capture for ${resolvedCacheSource.url}. This body preserves the source text used by the work unit.\n`);
+  writeFileSync(path.join(dir, cacheTrail, 'meta.json'), `${JSON.stringify({ url: resolvedCacheSource.url })}\n`);
 
   writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
     event: 'work_done',
@@ -403,15 +449,11 @@ describe('operate-work-unit inspect', () => {
     let child;
     let watcher;
     try {
-      writeCanonicalPlan(dir);
+      const topics = Array.from({ length: 10 }, (_, index) => wave0Topic(index));
+      writeCanonicalPlan(dir, topics);
       const padding = 'x'.repeat(512 * 1024);
-      const items = Array.from({ length: 10 }, (_, index) => currentWave0QueueItem(`queue-race-${index}`, {
-        payload: {
-          wave: 0,
-          topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
-          topic_slug: 'topic-a',
+      const items = topics.map((topic, index) => wave0QueueItemForTopic(`queue-race-${index}`, topic, {
           non_selector_padding: padding,
-        },
       }));
       saveQueueWith(dir, items);
       mkdirSync(path.join(dir, '_work_units', '_transactions'), { recursive: true });
@@ -752,6 +794,70 @@ describe('operate-work-unit inspect', () => {
     }
   });
 
+  it('serializes same-target Wave0 supplements and preserves append-only ordinal ownership', () => {
+    const dir = tempBundle();
+    try {
+      writeFileSync(path.join(dir, 'rb_profile.yaml'), 'human_decision_checkpoints:\n  hitl2:\n    rerun_count: 0\n');
+      saveQueueWith(dir, [
+        currentWave0QueueItem('queue-wave0-initial'),
+        currentWave0QueueItem('queue-wave0-supplement'),
+      ]);
+      const firstClaim = JSON.parse(execFileSync(process.execPath, [
+        CLI, 'claim', dir, '--phase', 'wave0', '--count', '1',
+      ], { encoding: 'utf-8' }));
+      assert.equal(firstClaim.claimed_count, 1);
+      const firstWorkId = firstClaim.claimed_work_ids[0];
+      const firstRecord = loadWorkUnitIndex(dir).work_units[firstWorkId];
+      const firstSource = {
+        url: 'https://example.com/source-1',
+        title: 'Example source 1',
+        retrieved_date: '2026-07-20',
+        topic_tag: 'topic-a',
+      };
+      const firstResultPath = writeValidSubmitFiles(dir, firstRecord, { sources: [firstSource] });
+      const firstSubmit = JSON.parse(execFileSync(process.execPath, [
+        CLI, 'submit', dir, '--work-id', firstWorkId, '--result', firstResultPath,
+      ], { encoding: 'utf-8' }));
+      assert.equal(firstSubmit.status, 'submitted');
+
+      const secondClaim = JSON.parse(execFileSync(process.execPath, [
+        CLI, 'claim', dir, '--phase', 'wave0', '--count', '1',
+      ], { encoding: 'utf-8' }));
+      assert.equal(secondClaim.claimed_count, 1);
+      const secondWorkId = secondClaim.claimed_work_ids[0];
+      const secondRecord = loadWorkUnitIndex(dir).work_units[secondWorkId];
+      const secondSource = {
+        url: 'https://example.com/source-2',
+        title: 'Example source 2',
+        retrieved_date: '2026-07-20',
+        topic_tag: 'topic-a',
+      };
+      const secondResultPath = writeValidSubmitFiles(dir, secondRecord, {
+        sources: [firstSource, secondSource],
+        cacheSource: secondSource,
+      });
+      const secondSubmit = JSON.parse(execFileSync(process.execPath, [
+        CLI, 'submit', dir, '--work-id', secondWorkId, '--result', secondResultPath,
+      ], { encoding: 'utf-8' }));
+      assert.equal(secondSubmit.status, 'submitted');
+
+      const projection = collectSubmittedWave0ContributionProjection(dir, {
+        topicRegistryFact: buildCanonicalTopicRegistryFact(dir),
+      });
+      assert.equal(projection.passed, true, JSON.stringify(projection.root_findings));
+      assert.deepEqual(projection.candidates.map(({ work_id, source_ordinal, entry_id }) => ({
+        work_id,
+        source_ordinal,
+        entry_id,
+      })), [
+        { work_id: firstWorkId, source_ordinal: 1, entry_id: `${firstWorkId}/1` },
+        { work_id: secondWorkId, source_ordinal: 2, entry_id: `${secondWorkId}/2` },
+      ]);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('rejects a retired assignment profile through the CLI before authority mutation', () => {
     const dir = tempBundle();
     try {
@@ -959,12 +1065,11 @@ describe('operate-work-unit inspect', () => {
   it('emits complete claim JSON when existing in-flight records make the response large', () => {
     const dir = tempBundle();
     try {
-      saveQueueWith(dir, [
-        queueItem(),
-        queueItem({ queue_item_id: 'queue-source-topic-a-2' }),
-        queueItem({ queue_item_id: 'queue-source-topic-a-3' }),
-        queueItem({ queue_item_id: 'queue-source-topic-a-4' }),
-      ]);
+      const topics = Array.from({ length: 4 }, (_, index) => wave0Topic(index));
+      writeCanonicalPlan(dir, topics);
+      saveQueueWith(dir, topics.map((topic, index) => (
+        wave0QueueItemForTopic(`queue-source-${topic.slug}-${index + 1}`, topic)
+      )));
 
       for (let i = 0; i < 4; i += 1) {
         const result = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], {
@@ -1433,9 +1538,11 @@ describe('operate-work-unit attempt recovery operations', () => {
     let holder = null;
     let holderDone = null;
     try {
+      const topics = [wave0Topic(0), wave0Topic(1)];
+      writeCanonicalPlan(dir, topics);
       saveQueueWith(dir, [
-        currentWave0QueueItem('queue-contention-a'),
-        currentWave0QueueItem('queue-contention-b'),
+        wave0QueueItemForTopic('queue-contention-a', topics[0]),
+        wave0QueueItemForTopic('queue-contention-b', topics[1]),
       ]);
       const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0', '--count', '2'], {
         encoding: 'utf8',

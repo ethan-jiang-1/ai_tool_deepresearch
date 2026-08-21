@@ -102,6 +102,36 @@ describe('operate-queue delegated demand admission', () => {
     assert.equal(readFileSync(join(dir, 'rb_queue.json'), 'utf8'), before);
   });
 
+  it('rejects a second active Wave0 source target with structured feedback and no authority mutation', () => {
+    const dir = createTempDir('queue-admission-wave0-target-enqueue');
+    writeBundle(dir);
+    saveDemand(dir, [delegated('wave0-source-topic-a-owner')]);
+    const taskPath = join(dir, 'later.json');
+    writeFileSync(taskPath, JSON.stringify(delegated('wave0-source-topic-a-later', {
+      action: 'Research a different dimension with different URLs and cache trails.',
+      writes_to: ['artifacts/wave0/topic-a/renamed-cache-does-not-change-target.json'],
+    })));
+    const queueBefore = readFileSync(join(dir, 'rb_queue.json'));
+    const tracePath = join(dir, 'rb_trace.jsonl');
+    const traceBefore = existsSync(tracePath) ? readFileSync(tracePath) : null;
+
+    const result = run(QUEUE_CLI, 'enqueue', dir, '--task', taskPath);
+    assert.equal(result.status, 1);
+    assert.equal(result.stderr, '');
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.reason_code, 'wave0_source_target_conflict');
+    assert.equal(output.source_target, 'artifacts/wave0/topic-a/source.yaml');
+    assert.equal(output.candidate_queue_item_id, 'wave0-source-topic-a-later');
+    assert.equal(output.owner_kind, 'queued');
+    assert.equal(output.owner_queue_item_id, 'wave0-source-topic-a-owner');
+    assert.equal(output.repair_kind, 'agent_action');
+    assert.match(output.rerun, /operate-queue\.mjs enqueue/);
+    assert.equal(readFileSync(join(dir, 'rb_queue.json')).equals(queueBefore), true);
+    assert.equal(existsSync(tracePath), traceBefore !== null);
+    if (traceBefore) assert.equal(readFileSync(tracePath).equals(traceBefore), true);
+    assert.equal(existsSync(join(dir, '_work_units')), false);
+  });
+
   it('rejects an old mutable plan through the current topic-state boundary without queue mutation', () => {
     const dir = createTempDir('queue-admission-old-plan');
     writeBundle(dir);
@@ -126,6 +156,40 @@ describe('operate-queue delegated demand admission', () => {
     assert.match(result.stdout, /wave1-legacy-check/);
     assert.match(result.stdout, /assignment_mode/);
     assert.equal(readFileSync(join(dir, 'rb_queue.json'), 'utf8'), before);
+  });
+
+  it('diagnoses a legacy duplicate target in check and preserves it during stale repair', () => {
+    const dir = createTempDir('queue-admission-wave0-target-check');
+    writeBundle(dir);
+    saveDemand(dir, [
+      delegated('wave0-source-topic-a-owner'),
+      delegated('wave0-source-topic-a-later'),
+    ]);
+    const queueBeforeCheck = readFileSync(join(dir, 'rb_queue.json'));
+    const check = run(QUEUE_CLI, 'check', dir);
+    assert.equal(check.status, 1);
+    const checked = JSON.parse(check.stdout);
+    assert.equal(checked.admission_issues.length, 1);
+    assert.deepEqual(checked.admission_issues[0], {
+      location: 'active_window',
+      queue_item_id: 'wave0-source-topic-a-later',
+      reason: "Wave0 source target 'artifacts/wave0/topic-a/source.yaml' is already owned by queued 'wave0-source-topic-a-owner'",
+      reason_code: 'wave0_source_target_conflict',
+      source_target: 'artifacts/wave0/topic-a/source.yaml',
+      owner_kind: 'queued',
+      owner_queue_item_id: 'wave0-source-topic-a-owner',
+      repair_kind: 'agent_action',
+      rerun: `node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs check ${JSON.stringify(dir)}`,
+    });
+    assert.doesNotMatch(checked.advice, /remove-stale/i);
+    assert.equal(readFileSync(join(dir, 'rb_queue.json')).equals(queueBeforeCheck), true);
+
+    const cardBeforeRepair = JSON.parse(queueBeforeCheck.toString()).active_window[1];
+    const repair = run(QUEUE_CLI, 'repair', dir, '--remove-stale');
+    assert.equal(repair.status, 0, repair.stderr);
+    assert.equal(JSON.parse(repair.stdout).removed_count, 0);
+    const queueAfterRepair = JSON.parse(readFileSync(join(dir, 'rb_queue.json'), 'utf8'));
+    assert.deepEqual(queueAfterRepair.active_window[1], cardBeforeRepair);
   });
 
   it('rejects a claim batch atomically when a later planned demand is inadmissible', () => {

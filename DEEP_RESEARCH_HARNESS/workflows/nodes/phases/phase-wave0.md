@@ -78,7 +78,9 @@ This classification is the same for first-run and rerun-added Topics. It creates
 
 ### 3.1 Fill Queue
 
-If `operate-queue check <bundle>` reports an empty or thin queue, enqueue one delegated queue item for each Topic classified as normal new-topic demand or normal supplementary demand. Do not enqueue duplicate work for an existing Topic whose valid submitted Wave0 coverage is being reused.
+If `operate-queue check <bundle>` reports an empty or thin queue, enqueue exactly one standard delegated demand for each new Topic classified as normal new-topic demand, plus only a currently needed normal supplementary demand for an existing Topic. Do not enqueue duplicate work for an existing Topic whose valid submitted Wave0 coverage is being reused. Business, organization, methodology, or other research dimensions that resolve to the same canonical Topic `source.yaml` must be combined into that one bounded demand or scheduled as serial supplements; they are not independent writers.
+
+Before enqueue, resolve each candidate through its current canonical assignment contract. Different exact `source_yaml` targets remain eligible for normal bounded fan-out. Do not enqueue a second same-target demand while an earlier queued demand or delegated in-flight attempt owns that target. If enqueue returns `reason_code: wave0_source_target_conflict`, preserve the unqueued intent, follow the named owner's existing claim/poll/dry-submit/submit/repair/terminalization loop, reconsider whether a supplement is still needed, and rerun enqueue. If `check` finds a same-target card retained from an older queue, leave it queued, claim only the returned conflict-free prefix (often the same claim with `--count 1`), complete the named owner, and rerun check/claim from fresh facts. Never rename a queue item, split cache namespaces, or edit a ledger row or source array; user direction does not manufacture target independence.
 
 For each affected item, resolve the current intent sources above and write a one-item `task_brief` before enqueue. The bounded objective belongs to Wave0's `source_intake_fan_in` decision; Seed Topics must not pre-author this future queue work. In the template below, include `task_brief` only when applicable:
 
@@ -148,7 +150,7 @@ claim_count = min(eligible_independent_demand, effective_delegated_concurrency_c
 
 This is the accepted bounded top-up batch-claim posture: conceptual `--count <claim-count>` names the computed `claim_count`, bounded by independent eligible demand, the accepted/default cap (`effective_delegated_concurrency_cap` parsed from the profile), and remaining free delegated in-flight capacity (`remaining_free_capacity`).
 
-Here `eligible_independent_demand` is the queue-front count of independent eligible Wave0 source-intake demand, and `remaining_free_capacity` is the effective cap minus reconstructed normal delegated in-flight work. If reconstructed normal delegated in-flight work already reaches the effective cap, poll, submit, repair, or terminalize those attempts before claiming more. Use `--count 1` only for a single remaining item, dependency-blocked front item, effective cap of 1, or a narrow repair.
+Here `eligible_independent_demand` is the queue-front count of eligible Wave0 source-intake demands whose current canonical assignment contracts resolve to pairwise-distinct exact `source_yaml` targets. Different Topic targets remain batchable; different briefs, research dimensions, cache trails, queue IDs, or URL sets do not make same-target demands independent. `remaining_free_capacity` is the effective cap minus reconstructed normal delegated in-flight work. If reconstructed normal delegated in-flight work already reaches the effective cap, poll, submit, repair, or terminalize those attempts before claiming more. Use `--count 1` for a single remaining item, dependency-blocked or same-target-blocked front item, effective cap of 1, or a narrow repair.
 
 This bounded prompt count is a Phase-Agent policy choice, not proof that a host started, kept live, or physically ran that number of native sub-agents concurrently. When the Engine admits `phase_agent_fallback`, claim exactly one work unit regardless of the profile cap.
 
@@ -160,6 +162,8 @@ node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs inspect <bundle>
 ```
 
 If claim rejects a supplied observation, use top-level `actor_observation_feedback` to read the planned `dpt-source-intake` role, primary conflict, closed legal tuples, and its same-claim rerun. The generated `Completion Contract` uses this same actor/candidate vocabulary; it is not a second actor proof or cache rule.
+
+If claim instead returns `reason_code: wave0_source_target_conflict`, read the exact `source_target` and named queued or in-flight owner. For a queued-prefix conflict, rerun the emitted same claim with its reduced conflict-free count. For an in-flight owner, complete that owner's existing poll/dry-submit/submit/repair/terminalization loop and rerun the same claim checkpoint. A terminal or submitted owner releases mechanical target ownership; a still-needed later supplement then follows normal claim and submit, where its strict append receives only its own new `<work_id>/<global ordinal>` contribution coordinates.
 
 For each claimed work unit, use the claim output's canonical absolute `bundle_dir` and absolute `prompt_refs[]` paths. Never derive the bundle root from cwd, append a bundle basename, or switch to a same-named nested directory.
 

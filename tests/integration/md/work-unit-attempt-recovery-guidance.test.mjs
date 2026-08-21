@@ -97,6 +97,24 @@ const phaseSurfaces = Object.freeze([
 ]);
 
 describe('work-unit attempt-recovery Agent-facing guidance', () => {
+  it('keeps Wave0 fan-out target-exclusive while preserving serial contribution handoff', () => {
+    const wave0 = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md');
+    const shared = read('DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md');
+
+    assert.match(wave0, /exactly one standard delegated demand for each new Topic/i);
+    assert.match(wave0, /research dimensions[\s\S]{0,240}combined[\s\S]{0,180}serial supplements/i);
+    assert.match(wave0, /Different exact `source_yaml` targets remain eligible for normal bounded fan-out/i);
+    assert.match(wave0, /wave0_source_target_conflict[\s\S]{0,600}named owner[\s\S]{0,500}(?:--count 1|reduced conflict-free count)/i);
+    assert.match(wave0, /strict append[\s\S]{0,180}<work_id>\/<global ordinal>/i);
+    assert.match(wave0, /user direction does not manufacture target independence/i);
+
+    assert.match(shared, /Wave0[\s\S]{0,180}pairwise-distinct exact `source_yaml` targets/i);
+    assert.match(shared, /Different Topic targets remain batchable/i);
+    assert.match(shared, /same-target demands[\s\S]{0,220}serial supplement/i);
+    assert.match(shared, /wave0_source_target_conflict[\s\S]{0,500}same-claim `rerun`/i);
+    assert.match(shared, /Do not[^\n]*seek user permission to create concurrent same-target writers/i);
+  });
+
   it('wires every public operation to exact coordinates and a same-checkpoint rerun', () => {
     for (const [label, relativePath] of publicSurfaces) {
       assertPublicRecoveryGuidance(read(relativePath), label);

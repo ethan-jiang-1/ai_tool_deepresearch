@@ -791,21 +791,33 @@ The queue system SHALL allow these supplementary IDs when the task card includes
 
 ### Requirement: Wave delegated queue loops SHALL prefer bounded batched claims for independent demand
 
+> req: AGQ-022
+
 Wave0, Wave1, and Wave2 queue-loop guidance SHALL instruct the Phase Agent to claim independent eligible delegated demand in bounded batches rather than treating `--count 1` as the normal drain strategy. The `ProfileSchema`-parsed run profile SHALL be the direct Source of Record for this policy. An explicit `rb_profile.yaml#/delegated_concurrency_cap` SHALL be its persisted override; `ProfileSchema` SHALL accept only an integer from `1` through `20`, and SHALL supply `12` as the effective value when the field is omitted. No CLI option or environment variable SHALL override that parsed profile value.
 
 The Phase Agent SHALL compute `claim_count = min(eligible_independent_demand, effective_delegated_concurrency_cap, remaining_free_capacity)`. The explicit claim count SHALL top up available parallel capacity rather than blindly claim all remaining demand. If reconstructed normal delegated in-flight work already reaches the effective cap, phase guidance SHALL poll, submit, repair, or terminalize existing attempts before claiming more.
 
-The Engine SHALL remain the sole allocator of work-unit IDs. Batched execution SHALL still use `operate-work-unit claim --count <N>`, one Engine-created work unit per delegated queue demand, and successful completion through `operate-work-unit submit`. The queue active window, refill pool, delegated in-flight bindings, actor preflight, admission, and transaction checks remain the authority. Batching SHALL NOT introduce another scheduler, host-capacity probe, queue state, or sub-agent ID allocation path.
+For Wave0, two `wave0_source_intake` demands are independent for simultaneous claim only when their current canonical assignment contracts resolve to different exact `source_yaml` direct-output targets. Different task briefs, queue IDs, research dimensions, cache trails, or URL sets SHALL NOT make demands independent when they resolve to the same target. The queue-order-earliest admitted demand for one target MAY proceed; later same-target demand SHALL remain unclaimed until the earlier demand or attempt reaches its existing terminal/submitted boundary and fresh admission no longer reports a target conflict. This target rule SHALL NOT change Wave1 or Wave2 independence semantics.
 
-`phase_agent_fallback` SHALL retain its existing claim count of exactly one regardless of the profile cap. `--count 1` MAY be used when only one eligible item remains, when dependency or queue-front ordering blocks a larger batch, when the accepted cap is `1`, or for a narrow repair attempt. Phase guidance SHALL NOT present serial `--count 1` as the default strategy for independent topic source intake, topic deepening, or targeted evidence demand.
+The Engine SHALL remain the sole allocator of work-unit IDs. Batched execution SHALL still use `operate-work-unit claim --count <N>`, one Engine-created work unit per delegated queue demand, and successful completion through `operate-work-unit submit`. The queue active window, refill pool, delegated in-flight bindings, actor preflight, admission, and transaction checks remain the authority. Batching SHALL NOT introduce another scheduler, host-capacity probe, queue state, target-lock state, or sub-agent ID allocation path.
+
+`phase_agent_fallback` SHALL retain its existing claim count of exactly one regardless of the profile cap. `--count 1` MAY be used when only one eligible item remains, when dependency, queue-front ordering, or Wave0 same-target exclusion blocks a larger batch, when the accepted cap is `1`, or for a narrow repair attempt. Phase guidance SHALL NOT present serial `--count 1` as the default strategy for independent topic source intake, topic deepening, or targeted evidence demand.
 
 The cap SHALL limit only the number of Engine-created work-unit prompts the Phase Agent may request in one normal delegated top-up. A claim count, prompt handoff, or deterministic test SHALL NOT be presented as proof that a host started, kept live, or physically ran that many native sub-agents concurrently.
 
+This target-exclusivity modification does not alter the existing Agent Experiment native completion boundary or make queue admission a substitute for native completion evidence.
+
 #### Scenario: Wave0 claims independent source-intake work in a batch
 
-- **WHEN** Wave0 has multiple independent `wave0_source_intake` queue items eligible at the queue front
+- **WHEN** Wave0 has multiple `wave0_source_intake` queue items at the eligible front whose canonical assignment targets are pairwise distinct
 - **THEN** phase guidance SHALL instruct the Phase Agent to compute a bounded effective claim count and call `operate-work-unit claim --count <claim-count>`
 - **AND** the returned prompts SHALL be fanned out as distinct Engine-allocated work units
+
+#### Scenario: Same-target Wave0 demands are not one concurrent batch
+
+- **WHEN** two Wave0 demands have different queue IDs or research briefs but both resolve to `artifacts/wave0/<same-topic>/source.yaml`
+- **THEN** only the queue-order-earliest admitted demand SHALL be eligible for the next claim while the later demand remains unclaimed
+- **AND** the later demand SHALL be reconsidered from fresh facts only after the owner demand or attempt reaches its existing terminal/submitted boundary
 
 #### Scenario: Wave1 claims independent topic-deepening work in a batch
 
@@ -821,7 +833,7 @@ The cap SHALL limit only the number of Engine-created work-unit prompts the Phas
 
 #### Scenario: profile default supports seven independent claims
 
-- **WHEN** a parsed run profile omits `delegated_concurrency_cap`, seven independent eligible demands are available, and no normal delegated attempts are in flight
+- **WHEN** a parsed run profile omits `delegated_concurrency_cap`, seven eligible demands with no applicable target conflict are available, and no normal delegated attempts are in flight
 - **THEN** the effective cap SHALL be `12` and phase guidance SHALL permit a proposed `claim --count 7`
 - **AND** the proposal SHALL remain subject to the existing Engine admission and actor-preflight result
 

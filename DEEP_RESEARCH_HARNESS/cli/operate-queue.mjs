@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
 import {
   claim, complete, enqueue, fail, inspect,
-  loadQueue, pendingCount, preempt, render, saveQueue, validateQueue, QUEUE,
+  loadQueue, loadQueueReadOnly, pendingCount, preempt, render, saveQueue, validateQueue, QUEUE,
   recordQueueAssignmentModeRepaired,
 } from '../engine/queue-manager.mjs';
 import { inspectCanonicalTopicState } from '../engine/helpers/canonical-topic-state.mjs';
@@ -472,7 +472,14 @@ function repairRemoveStale(queue, bundleDir) {
     const stale = staleReason(item);
     if (stale) return stale;
     if (!isDelegatedWorkUnitDemand(item)) return null;
-    const admission = admitQueueDemand({ bundleDir, queueItem: item });
+    const admission = admitQueueDemand({
+      bundleDir,
+      queueItem: item,
+      queue,
+      excludeWave0QueueItemId: item.queue_item_id,
+      targetConflictRerun: `node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs check ${JSON.stringify(path.resolve(bundleDir))}`,
+    });
+    if (admission.reason_code === 'wave0_source_target_conflict') return null;
     return admission.ok ? null : admission.reason;
   }
 
@@ -497,15 +504,34 @@ function repairRemoveStale(queue, bundleDir) {
   return { queue, removed };
 }
 
-function delegatedTaskCardAdmission(taskCard, bundleDir) {
+function delegatedTaskCardAdmission(taskCard, bundleDir, options = {}) {
   if (!isDelegatedWorkUnitDemand(taskCard)) return { ok: true, applicable: false, queue_item: taskCard };
-  return admitQueueDemand({ bundleDir, queueItem: taskCard });
+  return admitQueueDemand({ bundleDir, queueItem: taskCard, ...options });
 }
 
-function admitDelegatedTaskCard(taskCard, bundleDir) {
-  const admission = delegatedTaskCardAdmission(taskCard, bundleDir);
+function admitDelegatedTaskCard(taskCard, bundleDir, options = {}) {
+  const admission = delegatedTaskCardAdmission(taskCard, bundleDir, options);
   if (!admission.ok) throw new Error(admission.reason);
   return admission.queue_item;
+}
+
+function enqueueTargetConflictFeedback(admission) {
+  if (admission?.reason_code !== 'wave0_source_target_conflict') return null;
+  return {
+    ok: false,
+    reason_code: admission.reason_code,
+    reason: admission.reason,
+    source_target: admission.source_target,
+    candidate_queue_item_id: admission.candidate_queue_item_id,
+    owner_kind: admission.owner_kind,
+    owner_queue_item_id: admission.owner_queue_item_id,
+    ...(admission.owner_work_id ? { owner_work_id: admission.owner_work_id } : {}),
+    repair_kind: admission.repair_kind,
+    rerun: admission.rerun,
+    recommended_action: admission.owner_work_id
+      ? `Complete the existing submit, repair, or terminalization loop for ${admission.owner_work_id}, reconsider whether the retained card is still needed, then rerun the same enqueue command.`
+      : `Claim a conflict-free prefix beginning with ${admission.owner_queue_item_id}, complete its existing loop, reconsider whether the retained card is still needed, then rerun the same enqueue command.`,
+  };
 }
 
 function enqueueAssignmentModeFeedback(admission, { bundlePath, taskPath }) {
@@ -591,7 +617,10 @@ function repairAssignmentMode(queue, bundleDir, { queueItemId, mode }) {
     ? nextQueue.active_window.splice(target.index, 1, repaired)
     : nextQueue.refill_pool.splice(target.index, 1, repaired);
 
-  admitDelegatedTaskCard(repaired, bundleDir);
+  admitDelegatedTaskCard(repaired, bundleDir, {
+    queue,
+    excludeWave0QueueItemId: repaired.queue_item_id,
+  });
   validateQueue(nextQueue);
   return {
     queue: nextQueue,
@@ -606,7 +635,9 @@ function repairAssignmentMode(queue, bundleDir, { queueItemId, mode }) {
 // Main command dispatch
 // ═══════════════════════════════════════════════════════════════════════════
 
-let queue = loadQueue(bundleDir);
+let queue = ['check', 'enqueue'].includes(command)
+  ? loadQueueReadOnly(bundleDir)
+  : loadQueue(bundleDir);
 
 try {
   if (command === 'check') {
@@ -625,15 +656,40 @@ try {
     for (const [location, items] of [['active_window', queue.active_window], ['refill_pool', queue.refill_pool]]) {
       for (const item of items) {
         if (!isDelegatedWorkUnitDemand(item)) continue;
-        const admission = admitQueueDemand({ bundleDir, queueItem: item });
-        if (!admission.ok) admissionIssues.push(`${location} delegated queue_item_id '${item.queue_item_id}' is not admissible: ${admission.reason}`);
+        const admission = admitQueueDemand({
+          bundleDir,
+          queueItem: item,
+          queue,
+          excludeWave0QueueItemId: item.queue_item_id,
+          targetConflictRerun: `node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs check ${JSON.stringify(path.resolve(bundleDir))}`,
+        });
+        if (!admission.ok) admissionIssues.push({
+          location,
+          queue_item_id: item.queue_item_id,
+          reason: admission.reason,
+          reason_code: admission.reason_code,
+          ...(admission.reason_code === 'wave0_source_target_conflict' ? {
+            source_target: admission.source_target,
+            owner_kind: admission.owner_kind,
+            owner_queue_item_id: admission.owner_queue_item_id,
+            ...(admission.owner_work_id ? { owner_work_id: admission.owner_work_id } : {}),
+            repair_kind: admission.repair_kind,
+            rerun: admission.rerun,
+          } : {}),
+        });
       }
     }
     const checked = admissionIssues.length === 0 ? feedback : {
       passed: false,
       check: false,
-      inspect: [...(feedback.inspect || []), ...admissionIssues],
-      advice: feedback.advice || 'Repair rejected unclaimed delegated demand with operate-queue repair --remove-stale.',
+      inspect: [
+        ...(feedback.inspect || []),
+        ...admissionIssues.map((issue) => `${issue.location} delegated queue_item_id '${issue.queue_item_id}' is not admissible: ${issue.reason}`),
+      ],
+      admission_issues: admissionIssues,
+      advice: admissionIssues.some((issue) => issue.reason_code === 'wave0_source_target_conflict')
+        ? 'Claim a conflict-free prefix, complete the disclosed owner loop, then rerun this check. Do not remove the valid blocked demand as stale.'
+        : feedback.advice || 'Repair rejected unclaimed delegated demand with operate-queue repair --remove-stale.',
     };
     emit(checked);
     process.exit(checked.passed ? 0 : 1);
@@ -667,9 +723,14 @@ try {
       process.exit(1);
     }
 
-    const admission = delegatedTaskCardAdmission(validation.taskCard || taskCard, bundleDir);
+    const enqueueRerun = `node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs enqueue ${JSON.stringify(path.resolve(bundle))} --task ${JSON.stringify(path.resolve(values.task))}`;
+    const admission = delegatedTaskCardAdmission(validation.taskCard || taskCard, bundleDir, {
+      queue,
+      targetConflictRerun: enqueueRerun,
+    });
     if (!admission.ok) {
-      const feedback = enqueueAssignmentModeFeedback(admission, { bundlePath: bundle, taskPath: values.task });
+      const feedback = enqueueTargetConflictFeedback(admission)
+        || enqueueAssignmentModeFeedback(admission, { bundlePath: bundle, taskPath: values.task });
       if (feedback) {
         emit(feedback);
         process.exit(1);

@@ -52,6 +52,20 @@ function delegated(id, overrides = {}) {
   });
 }
 
+function delegatedForTopic(id, index) {
+  const suffix = String(index).padStart(12, '0');
+  const slug = `topic-${index}`;
+  return delegated(id, {
+    payload: {
+      topic_uid: `tp_123e4567-e89b-12d3-a456-${suffix}`,
+      topic_slug: slug,
+      wave: 0,
+    },
+    required_receipts: [`file:artifacts/wave0/${slug}/source.yaml`],
+    writes_to: [`artifacts/wave0/${slug}/source.yaml`],
+  });
+}
+
 function direct(id) {
   return makeItem({
     queue_item_id: id,
@@ -64,34 +78,49 @@ function direct(id) {
 
 function saveSeedQueue(dir, items) {
   if (!existsSync(path.join(dir, 'rb_plan.md'))) {
-    writeFileSync(path.join(dir, 'rb_plan.md'), `---
-plan_basename: claim-test
-derived_topic_count: 1
-topic_registry_version: "2"
-topic_registry:
-  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
-    id: "01"
-    slug: topic-a
-    title: Topic A
+    const topics = new Map();
+    for (const item of items) {
+      if (!item.payload?.topic_uid || !item.payload?.topic_slug) continue;
+      topics.set(item.payload.topic_uid, {
+        topic_uid: item.payload.topic_uid,
+        slug: item.payload.topic_slug,
+      });
+    }
+    if (topics.size === 0) topics.set('tp_123e4567-e89b-12d3-a456-426614174000', {
+      topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
+      slug: 'topic-a',
+    });
+    const topicRows = [...topics.values()].map((entry, index) => `  - topic_uid: ${entry.topic_uid}
+    id: "${String(index + 1).padStart(2, '0')}"
+    slug: ${entry.slug}
+    title: Topic ${index + 1}
     must_answer: ["What matters?"]
     scope_role: primary
     depends_on_topic_uids: []
-    previous_layouts: []
+    previous_layouts: []`).join('\n');
+    writeFileSync(path.join(dir, 'rb_plan.md'), `---
+plan_basename: claim-test
+derived_topic_count: ${topics.size}
+topic_registry_version: "2"
+topic_registry:
+${topicRows}
 ---
 # Plan
 `);
     mkdirSync(path.join(dir, 'seed_topics'), { recursive: true });
-    writeFileSync(path.join(dir, 'seed_topics', 'topic-a.md'), `---
-topic_uid: tp_123e4567-e89b-12d3-a456-426614174000
-id: "01"
-slug: topic-a
-title: Topic A
+    for (const [index, entry] of [...topics.values()].entries()) {
+      writeFileSync(path.join(dir, 'seed_topics', `${entry.slug}.md`), `---
+topic_uid: ${entry.topic_uid}
+id: "${String(index + 1).padStart(2, '0')}"
+slug: ${entry.slug}
+title: Topic ${index + 1}
 must_answer: ["What matters?"]
 scope_role: primary
 depends_on_topic_uids: []
 ---
-# Topic A
+# Topic ${index + 1}
 `);
+    }
   }
   let queue = createQueue(path.basename(dir));
   for (const item of items) queue = enqueue(queue, item);
@@ -113,7 +142,7 @@ describe('claimWorkUnits', () => {
   it('claims a contiguous delegated prefix in one transaction', () => {
     const dir = tempBundle();
     try {
-      saveSeedQueue(dir, [delegated('queue-a'), delegated('queue-b'), delegated('queue-c')]);
+      saveSeedQueue(dir, [delegatedForTopic('queue-a', 1), delegatedForTopic('queue-b', 2), delegatedForTopic('queue-c', 3)]);
       const result = claimWorkUnits(dir, { phase: 'wave0', count: 2, ...availableSourceActor });
       assert.equal(result.claimed_count, 2);
       assert.deepEqual(result.claimed_work_ids, ['wu-w0-b000-src-i0001', 'wu-w0-b000-src-i0002']);
@@ -155,13 +184,129 @@ describe('claimWorkUnits', () => {
   it('claims seven eligible normal demands without a cap scheduler', () => {
     const dir = tempBundle();
     try {
-      saveSeedQueue(dir, Array.from({ length: 7 }, (_, index) => delegated(`queue-${index + 1}`)));
+      saveSeedQueue(dir, Array.from({ length: 7 }, (_, index) => delegatedForTopic(`queue-${index + 1}`, index + 1)));
       const result = claimWorkUnits(dir, { phase: 'wave0', count: 7, ...availableSourceActor });
       assert.equal(result.claimed_count, 7);
       assert.equal(result.in_flight_count, 7);
       assert.equal(result.unclaimed_delegated_count, 0);
       assert.equal(new Set(result.claimed_work_ids).size, 7);
       assert.equal(Object.keys(loadWorkUnitIndex(dir).work_units).length, 7);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('rejects a requested same-target Wave0 batch atomically before allocation', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-owner'), delegated('queue-later')]);
+      const queueBefore = readFileSync(path.join(dir, 'rb_queue.json'));
+      const result = claimWorkUnits(dir, { phase: 'wave0', count: 2, ...availableSourceActor });
+
+      assert.equal(result.ok, false);
+      assert.equal(result.claimed_count, 0);
+      assert.deepEqual(result.claimed_work_ids, []);
+      assert.equal(result.admission.reason_code, 'wave0_source_target_conflict');
+      assert.equal(result.admission.candidate_queue_item_id, 'queue-later');
+      assert.equal(result.admission.owner_kind, 'queued');
+      assert.equal(result.admission.owner_queue_item_id, 'queue-owner');
+      assert.equal(result.admission.repair_kind, 'agent_action');
+      assert.match(result.admission.rerun, /--count 1/);
+      assert.equal(readFileSync(path.join(dir, 'rb_queue.json')).equals(queueBefore), true);
+      assert.equal(existsSync(workUnitIndexPath(dir)), false);
+      assert.equal(existsSync(path.join(dir, '_work_units')), false);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('drains a legacy same-target queue serially and releases ownership at terminalization', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-owner'), delegated('queue-later')]);
+      const first = claimWorkUnits(dir, { phase: 'wave0', count: 1, ...availableSourceActor });
+      assert.equal(first.claimed_count, 1);
+      assert.equal(loadQueue(dir).active_window[0].queue_item_id, 'queue-later');
+
+      const blocked = claimWorkUnits(dir, { phase: 'wave0', count: 1, ...availableSourceActor });
+      assert.equal(blocked.claimed_count, 0);
+      assert.equal(blocked.admission.reason_code, 'wave0_source_target_conflict');
+      assert.equal(blocked.admission.owner_kind, 'in_flight');
+      assert.equal(blocked.admission.owner_work_id, first.claimed_work_ids[0]);
+
+      const terminal = closeWorkUnitAttempt(dir, {
+        work_id: first.claimed_work_ids[0],
+        status: 'abandoned',
+        reason: 'release target for serial-drain test',
+      });
+      assert.equal(terminal.ok, true);
+      const second = claimWorkUnits(dir, { phase: 'wave0', count: 1, ...availableSourceActor });
+      assert.equal(second.claimed_count, 1);
+      assert.equal(loadWorkUnitIndex(dir).work_units[second.claimed_work_ids[0]].queue_item_id, 'queue-later');
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('rechecks target conflicts under the claim transaction before mutation', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegatedForTopic('queue-a', 1), delegatedForTopic('queue-b', 2)]);
+      const queueBefore = readFileSync(path.join(dir, 'rb_queue.json'));
+      let hookCalled = false;
+      assert.throws(() => claimWorkUnits(dir, {
+        phase: 'wave0',
+        count: 2,
+        ...availableSourceActor,
+        transactionHooks: {
+          beforeClaimRecheck({ operation }) {
+            hookCalled = true;
+            assert.equal(operation, 'claim_work_units');
+            const queue = JSON.parse(readFileSync(path.join(dir, 'rb_queue.json'), 'utf8'));
+            queue.active_window[1] = {
+              ...queue.active_window[1],
+              payload: { ...queue.active_window[1].payload, ...queue.active_window[0].payload },
+              required_receipts: [...queue.active_window[0].required_receipts],
+              writes_to: [...queue.active_window[0].writes_to],
+            };
+            writeFileSync(path.join(dir, 'rb_queue.json'), `${JSON.stringify(queue, null, 2)}\n`);
+          },
+        },
+      }), /wave0_source_target_conflict|already owned/);
+      assert.equal(hookCalled, true);
+      assert.equal(readFileSync(path.join(dir, 'rb_queue.json')).equals(queueBefore), true);
+      assert.equal(existsSync(workUnitIndexPath(dir)), false);
+      assert.equal(existsSync(path.join(dir, '_work_units', 'wu-w0-b000-src-i0001')), false);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('keeps a malformed in-flight current profile at its existing fail-closed boundary', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-owner')]);
+      const first = claimWorkUnits(dir, { phase: 'wave0', count: 1, ...availableSourceActor });
+      let queue = loadQueue(dir);
+      queue = enqueue(queue, delegated('queue-later'));
+      saveQueue(dir, queue);
+
+      const indexPath = workUnitIndexPath(dir);
+      const index = JSON.parse(readFileSync(indexPath, 'utf8'));
+      index.work_units[first.claimed_work_ids[0]].assignment_contract_version = 'work-unit.assignment.v2';
+      writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
+      const queueBefore = readFileSync(path.join(dir, 'rb_queue.json'));
+
+      assert.throws(() => claimWorkUnits(dir, {
+        phase: 'wave0',
+        count: 1,
+        ...availableSourceActor,
+      }), (error) => {
+        assert.match(error.message, /unsupported current work-unit contract/);
+        assert.doesNotMatch(error.message, /wave0_source_target_conflict/);
+        return true;
+      });
+      assert.equal(readFileSync(path.join(dir, 'rb_queue.json')).equals(queueBefore), true);
     } finally {
       cleanup(dir);
     }

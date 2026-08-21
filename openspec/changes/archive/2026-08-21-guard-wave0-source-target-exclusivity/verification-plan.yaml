@@ -1,0 +1,137 @@
+schema_version: verification-routing/v1
+change: guard-wave0-source-target-exclusivity
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Target identity, owner ordering, self exclusion, and conflict feedback are
+      focused in-process admission/claim contracts over supplied deterministic
+      facts.
+  integration:
+    status: selected
+    rationale: >-
+      Enqueue, queue check, claim transaction rejection, serial drain, and
+      submitted contribution projection cross production CLI/module and
+      temporary-bundle boundaries.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      The change adds no new workflow-scale lifecycle or Gate transition; the
+      existing queue, claim, submit, and projection boundaries can be proved by
+      focused integration tests without creating a second full-chain fixture.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change claims deterministic target exclusion and byte preservation,
+      not real Agent research quality, actor concurrency, or semantic judgment.
+claims:
+  - id: wave0-target-owner-truth-table
+    statement: >-
+      QIV-001 and AGQ-022: the shared pure admission evaluator derives queued
+      targets from current canonical assignment and in-flight targets from their
+      current-profile-valid immutable manifest contracts, selects one ordered
+      owner per exact target, excludes the checked item itself, permits distinct
+      targets, and returns the closed conflict feedback without inferring
+      identity from prose or URLs.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/queue-demand-admission.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-claim-batch-atomicity
+    statement: >-
+      DEW-003 and AGQ-022: claim rejects a requested prefix containing duplicate
+      Wave0 targets or an in-flight target owner before allocation/mutation,
+      while a distinct-target prefix and the earliest conflict-free legacy item
+      remain claimable.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-claim.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-enqueue-check-conflict-feedback
+    statement: >-
+      QIV-001: production enqueue rejects a second same-target Wave0 card with
+      exact owner/target/rerun feedback and no authority mutation; queue check
+      reports an already persisted later conflict without classifying it as
+      stale-removal work, repair --remove-stale preserves that valid blocked
+      card, and distinct targets remain admissible.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-queue-demand-admission.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-serial-contribution-preserved
+    statement: >-
+      RWP-001 and RRM-007: after the first same-target owner submits, a later
+      supplementary demand can claim and submit a strict append whose global
+      ordinal interval belongs only to the later work ID.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-non-monotonic-history-remains-fail-closed
+    statement: >-
+      RRM-007, AGO-003, and AGO-005 remain unchanged: a deliberately
+      non-monotonic accepted contribution history still returns
+      submitted_source_contribution_non_monotonic without assigning candidate
+      ordinals or inferring ownership from current source bytes.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-projection.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave0-phase-target-exclusivity-guidance
+    statement: >-
+      RWP-001 and AGQ-022: active Wave0 guidance defines one standard demand per
+      new Topic, different-target batching, same-target serial supplement, and
+      the Engine-returned owner-completion/reduced-count rerun without teaching ledger,
+      source-array, cache, or queue-ID workarounds.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/work-unit-attempt-recovery-guidance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

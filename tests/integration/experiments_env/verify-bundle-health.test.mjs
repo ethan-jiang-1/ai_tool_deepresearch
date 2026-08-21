@@ -188,10 +188,14 @@ function createLifecycleProjectionBundle(name) {
     trace: [{ ts: '2026-01-01T00:00:00.000Z', event: 'run_start' }],
   });
   seedDelegatedQueue(dir, [
-    delegatedQueueItem('claimed', { phase: 'wave0' }),
-    delegatedQueueItem('failed', { phase: 'wave0' }),
-    delegatedQueueItem('timed', { phase: 'wave0' }),
-    delegatedQueueItem('abandoned', { phase: 'wave0' }),
+    ...['claimed', 'failed', 'timed', 'abandoned'].map((id, index) => delegatedQueueItem(id, {
+      phase: 'wave0',
+      payload: {
+        topic_uid: `tp_123e4567-e89b-12d3-a456-${String(426614174000 + index).padStart(12, '0')}`,
+        topic_slug: `topic-${index + 1}`,
+        wave: 0,
+      },
+    })),
   ]);
   const claim = claimWorkUnits(dir, { phase: 'wave0', count: 4, ...availableActorDecision('wave0_source_intake') });
   const [claimedId, failedId, timedId, abandonedId] = claim.claimed_work_ids;

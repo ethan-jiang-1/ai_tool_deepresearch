@@ -10,11 +10,15 @@
 ## Requirements
 ### Requirement: Wave0 phase body completeness
 
+> req: RWP-001
+
 Wave0 phase body SHALL describe source intake delegated work as work-unit kind `wave0_source_intake`. It SHALL instruct the Agent to claim queue demand through `operate-work-unit`, dispatch prompts, run existing dry-submit on returned candidate work before formal submit, submit passing results by `work_id`, and run inspect/gate after phase drain. The current source-intake actor contract SHALL cover its assigned `artifacts/wave0/{topic.slug}/source.yaml`, cache, result, and receipt facts only; the phase SHALL NOT ask that actor to author `reference/00-shared-*.md` as a delegated completion or shared-reference-floor route.
 
 After formal submit, the Phase Agent SHALL consume the Wave0 submitted-reference convergence result. When it identifies exact materializable submitted backing, the Phase Agent MAY load the existing shared reference template and create one Phase-owned consumer projection through the existing artifact-persistence and index-synchronization boundary. The projection SHALL cite exact submitted source/cache/work-unit backing, then rerun the same inspect. When the Phase Agent elects an allowed deferred outcome, it SHALL use the existing topic-state packet path and its contribution-scoped deferred form; it SHALL not hand-edit a seed, reference index, submitted ledger, source YAML, or cache. No gate or inspect result authorizes a Phase Agent to invent evidence, choose source relevance, or write a reference before submit.
 
-For a sanctioned rerun, Wave0 queue filling SHALL classify current topics from the canonical registry, seed rerun direction and direct queue/work-unit/submitted-ledger facts. A rerun `action:add` topic without current queued, delegated-in-flight or submitted Wave0 coverage SHALL receive the same `source_intake_fan_in` / `wave0_source_intake` delegated demand used by first-run Wave0. An existing topic with valid current-or-previous-layout submitted Wave0 coverage and no supplement intent SHALL NOT be redundantly re-enqueued. An orphan `source.yaml` without submitted coverage SHALL NOT count as completed work.
+For a sanctioned rerun, Wave0 queue filling SHALL classify current topics from the canonical registry, seed rerun direction and direct queue/work-unit/submitted-ledger facts. A rerun `action:add` topic without current queued, delegated-in-flight or submitted Wave0 coverage SHALL receive exactly one standard `source_intake_fan_in` / `wave0_source_intake` delegated demand, as used by first-run Wave0. An existing topic with valid current-or-previous-layout submitted Wave0 coverage and no supplement intent SHALL NOT be redundantly re-enqueued. An orphan `source.yaml` without submitted coverage SHALL NOT count as completed work.
+
+Wave0 guidance SHALL define simultaneous source-intake fan-out by exact assignment target: different canonical Topic `source.yaml` targets may use the normal bounded batch, but multiple research dimensions for one Topic SHALL remain one demand or execute as serial supplementary demands. The Phase Agent SHALL not enqueue or claim a second same-target demand while an earlier queue demand or delegated attempt owns that target. On an enqueue-time `wave0_source_target_conflict`, it SHALL retain the unqueued later intent, claim/poll/submit or terminalize the named owner through the existing loop, reconsider whether supplement work is still needed, and rerun enqueue. When check finds a later same-target card already persisted by an older framework, it SHALL leave that card in queue, claim a conflict-free prefix, complete the named owner, and rerun check/claim from fresh facts. It SHALL not rename the queue item, split cache namespaces, edit the ledger/source array, or ask the user to manufacture target independence.
 
 Before delegated claim, the Phase Agent SHALL read the queue-front role, perform one bounded current native probe for that exact role, and invoke `operate-work-unit claim` with the complete actor observation and execution actor choice. The phase SHALL explicitly forbid `operate-queue claim` and `operate-queue complete` for delegated source-intake demand and SHALL route no-claim feedback back to the same work-unit claim checkpoint.
 
@@ -63,6 +67,18 @@ After a successful Wave0 submit, the Phase Agent SHALL obtain each Seed Projecti
 - **WHEN** a delegated Wave0 demand is at the active queue front but actor observation is missing or the non-delegated queue claim command is used
 - **THEN** phase guidance SHALL tell the Agent to read the returned root cause
 - **AND** the only nearest repair SHALL be to perform the required role probe and rerun `operate-work-unit claim`
+
+#### Scenario: Different Topics retain bounded Wave0 fan-out
+
+- **WHEN** multiple eligible Wave0 demands resolve to different canonical source targets
+- **THEN** phase guidance SHALL include them in the existing bounded top-up calculation
+- **AND** it SHALL not serialize them merely because they share one work-unit kind
+
+#### Scenario: One Topic's dimensions do not create concurrent writers
+
+- **WHEN** business, organization, and methodology research for one Topic would all write its one canonical `source.yaml`
+- **THEN** Wave0 guidance SHALL combine them into one demand or schedule later supplements only after the current owner terminalizes
+- **AND** it SHALL not fan them out as concurrent same-target work units
 
 ### Requirement: Wave1 phase body completeness with subagent boundary
 

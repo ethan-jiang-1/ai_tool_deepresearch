@@ -1,0 +1,84 @@
+schema_version: semantic-closure/v1
+change: guard-wave0-source-target-exclusivity
+status: affected
+catalog_additions: []
+affected:
+  - family: queue.demand-lifecycle
+    fact: >-
+      Whether a current Wave0 delegated demand is the queue-order-earliest
+      unclaimed owner of its exact assignment-resolved source target, is blocked
+      behind another queued owner, or conflicts with a delegated in-flight
+      owner. The conclusion is ephemeral admission truth; it neither persists a
+      target lock nor changes queue terminal history.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/queue-demand-admission.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/queue-demand-admission.mjs
+      - DEEP_RESEARCH_HARNESS/engine/queue-manager-core.mjs
+      - DEEP_RESEARCH_HARNESS/engine/queue-manager-lifecycle.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-index.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-lifecycle.mjs
+    overlap:
+      - coordinate: openspec/specs/agent/queue-input-validation/spec.md
+        relation: authoritative
+        detail: >-
+          QIV-001 owns the shared current-facts admission behavior for enqueue,
+          check, and claim consumers, including side-effect-free rejection.
+      - coordinate: openspec/specs/agent/agentic-queue/spec.md
+        relation: authoritative
+        detail: >-
+          AGQ-022 defines when Wave0 demand is independent for a simultaneous
+          bounded claim and how an older duplicate-target queue drains.
+      - coordinate: openspec/specs/research/research-wave-phase-content/spec.md
+        relation: derived
+        detail: >-
+          RWP-001 governs how the Phase Agent presents and follows the
+          Engine-resolved target-exclusion loop without owning its verdict.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md
+        relation: derived
+        detail: >-
+          Phase guidance presents the Engine-resolved target-conflict loop to
+          the Agent; it does not establish target ownership or queue lifecycle.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-subagent-protocol.md
+        relation: derived
+        detail: >-
+          Shared batch guidance presents the Wave0 distinct-target rule and
+          same-claim rerun; it does not resolve or own the conflict verdict.
+    verification:
+      truth_table: tests/engine/helpers/queue-demand-admission.test.mjs
+      cross_surface: tests/integration/cli/operate-queue-demand-admission.test.mjs
+  - family: work-unit.assignment-output-obligation
+    fact: >-
+      Whether every candidate in a planned Wave0 claim prefix has a distinct
+      exact source_yaml target and none conflicts with current delegated
+      in-flight ownership. Unclaimed targets are resolved from the current
+      canonical assignment contract; an in-flight owner's target comes from its
+      current-profile-valid immutable manifest output contract before any new
+      work-unit allocation or envelope mutation.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-lifecycle.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-assignment-contract.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/queue-demand-admission.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-lifecycle.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-lifecycle.mjs
+    overlap:
+      - coordinate: openspec/specs/agent/delegated-work-units/spec.md
+        relation: authoritative
+        detail: >-
+          DEW-003 owns pre-allocation claim admission, batch atomicity, and the
+          transaction recheck for the planned prefix.
+      - coordinate: openspec/specs/research/research-return-map/spec.md
+        relation: derived
+        detail: >-
+          RRM-007 consumes only accepted submitted contribution history. It is
+          unchanged and remains the downstream fail-closed proof boundary, not
+          the claim conflict resolver.
+    verification:
+      truth_table: tests/engine/work-unit-claim.test.mjs
+      cross_surface: tests/integration/cli/operate-work-unit.test.mjs

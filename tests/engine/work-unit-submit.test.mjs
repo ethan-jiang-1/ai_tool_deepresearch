@@ -1291,7 +1291,16 @@ describe('submitWorkUnit', () => {
   it('submits an out-of-order work unit and completes only the bound queue demand', () => {
     const dir = tempBundle();
     try {
-      saveSeedQueue(dir, [delegated('queue-a'), delegated('queue-b')]);
+      writeCanonicalTwoTopicPlan(dir);
+      saveSeedQueue(dir, [delegated('queue-a'), delegated('queue-b', {
+        payload: {
+          topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174001',
+          topic_slug: 'topic-b',
+          wave: 0,
+        },
+        required_receipts: ['file:artifacts/wave0/topic-b/source.yaml'],
+        writes_to: ['artifacts/wave0/topic-b/source.yaml'],
+      })]);
       claimWorkUnits(dir, { phase: 'wave0', count: 2 });
       const index = loadWorkUnitIndex(dir);
       const second = index.work_units['wu-w0-b000-src-i0002'];

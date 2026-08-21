@@ -3,7 +3,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { evaluateQueueDemandAdmission } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/queue-demand-admission.mjs';
+import {
+  evaluateQueueDemandAdmission,
+  Wave0TargetConflictSchema,
+  Wave0TargetOwnerSchema,
+} from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/queue-demand-admission.mjs';
 import { WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/work-unit.mjs';
 
 const topic = {
@@ -46,6 +50,9 @@ describe('evaluateQueueDemandAdmission', () => {
       assert.equal(result.ok, true, `${kind}: ${result.reason || ''}`);
       assert.equal(result.kind, kind);
       assert.equal(result.assignment_contract.assignment_contract_version, WORK_UNIT_ASSIGNMENT_CONTRACT_VERSION);
+      if (kind === 'wave0_source_intake') {
+        assert.equal(result.wave0_source_target, 'artifacts/wave0/topic-a/source.yaml');
+      }
     }
   });
 
@@ -144,5 +151,95 @@ describe('evaluateQueueDemandAdmission', () => {
     assert.deepEqual(result, { ok: true, applicable: false, queue_item: card });
     assert.equal(JSON.stringify(card), beforeCard);
     assert.equal(JSON.stringify(currentFacts), beforeFacts);
+  });
+
+  it('rejects a later same-target Wave0 candidate with closed owner feedback', () => {
+    const card = delegated('wave0_source_intake', { queue_item_id: 'wave0-later' });
+    const facts = {
+      ...currentFacts,
+      wave0TargetOwners: [{
+        owner_kind: 'queued',
+        queue_item_id: 'wave0-earlier',
+        target: 'artifacts/wave0/topic-a/source.yaml',
+      }],
+      targetConflictRerun: 'operate-work-unit claim --count 1',
+    };
+    const before = JSON.stringify({ card, facts });
+    const result = evaluateQueueDemandAdmission({ queueItem: card, currentFacts: facts });
+
+    assert.equal(result.ok, false);
+    assert.equal(result.reason_code, 'wave0_source_target_conflict');
+    assert.equal(result.repair_kind, 'agent_action');
+    assert.equal(result.source_target, 'artifacts/wave0/topic-a/source.yaml');
+    assert.equal(result.candidate_queue_item_id, 'wave0-later');
+    assert.equal(result.owner_kind, 'queued');
+    assert.equal(result.owner_queue_item_id, 'wave0-earlier');
+    assert.equal(Object.hasOwn(result, 'owner_work_id'), false);
+    assert.equal(result.rerun, 'operate-work-unit claim --count 1');
+    assert.equal(Object.hasOwn(result, 'wait'), false);
+    assert.equal(JSON.stringify({ card, facts }), before);
+  });
+
+  it('excludes the persisted queue candidate itself and permits a distinct target', () => {
+    const card = delegated('wave0_source_intake', { queue_item_id: 'wave0-owner' });
+    const owner = {
+      owner_kind: 'queued',
+      queue_item_id: 'wave0-owner',
+      target: 'artifacts/wave0/topic-a/source.yaml',
+    };
+    const self = evaluateQueueDemandAdmission({
+      queueItem: card,
+      currentFacts: { ...currentFacts, wave0TargetOwners: [owner], excludeWave0QueueItemId: 'wave0-owner' },
+    });
+    assert.equal(self.ok, true);
+
+    const distinct = evaluateQueueDemandAdmission({
+      queueItem: card,
+      currentFacts: {
+        ...currentFacts,
+        wave0TargetOwners: [{ ...owner, queue_item_id: 'wave0-other', target: 'artifacts/wave0/topic-b/source.yaml' }],
+      },
+    });
+    assert.equal(distinct.ok, true);
+  });
+
+  it('reports an in-flight owner with its immutable work identity', () => {
+    const result = evaluateQueueDemandAdmission({
+      queueItem: delegated('wave0_source_intake', { queue_item_id: 'wave0-later' }),
+      currentFacts: {
+        ...currentFacts,
+        wave0TargetOwners: [{
+          owner_kind: 'in_flight',
+          queue_item_id: 'wave0-running',
+          work_id: 'wu-w0-b000-src-i0001',
+          target: 'artifacts/wave0/topic-a/source.yaml',
+        }],
+      },
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.owner_kind, 'in_flight');
+    assert.equal(result.owner_queue_item_id, 'wave0-running');
+    assert.equal(result.owner_work_id, 'wu-w0-b000-src-i0001');
+  });
+
+  it('validates ephemeral owner and conflict facts strictly', () => {
+    assert.throws(() => Wave0TargetOwnerSchema.parse({
+      owner_kind: 'in_flight',
+      queue_item_id: 'wave0-running',
+      target: 'artifacts/wave0/topic-a/source.yaml',
+    }), /in_flight owner requires work_id/);
+    assert.throws(() => Wave0TargetOwnerSchema.parse({
+      owner_kind: 'queued',
+      queue_item_id: 'wave0-queued',
+      work_id: 'wu-w0-b000-src-i0001',
+      target: 'artifacts/wave0/topic-a/source.yaml',
+    }), /queued owner must not carry work_id/);
+    assert.throws(() => Wave0TargetConflictSchema.parse({
+      candidate: { queue_item_id: 'candidate', target: 'artifacts/wave0/topic-a/source.yaml' },
+      owner: { owner_kind: 'queued', queue_item_id: 'owner', target: 'artifacts/wave0/topic-b/source.yaml' },
+      reason_code: 'wave0_source_target_conflict',
+      repair_kind: 'agent_action',
+      rerun: 'rerun admission',
+    }), /candidate and owner targets must match/);
   });
 });
