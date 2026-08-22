@@ -176,3 +176,14 @@ verified: `check-gate-setup-ready:455-477` compares normalized basename vs
 plan_basename; restore-in-place keeps it). Focused run 4/4 pass; file wall
 **21.1s → 6.64s** (~14.5s saved); leaves 0.31-0.87s (were 3.9-7.8s). No
 assertions changed, no cases merged. Full canonical run pending.
+
+## Workstream 4 (finalizer restructure) — COMPLETED 2026-08-22
+
+Change `restructure-finalizer-checker-matrix` (plan P0.4/P0.5): rank 1 →
+2 finalizer sentinels + direct checker matrix (exact production
+invocations) + static script→code mapping; rank 3 → tasks+apply projections
++ static config.yaml guidance assertions. File 52.7s → 36.8s (rank-1
+24.2→11.8s, rank-3 22.7→8.0s); full run 2799/2799, 581.8s. Ranks 4/6/7/12
+retained as sentinels. Remaining agenda: handoff/rerun snapshot sharing,
+gate-matrix P3 (operate-queue-validation 23.1s/98, check-gate-wave0/1/2
+~60s/217 launches), P3 tail (engine transaction waits).

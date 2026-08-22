@@ -1,6 +1,6 @@
 # Slow Test Suite Audit And Remediation
 
-> Status: active — scope discovery closed 2026-08-22; workstreams 1 (dedup), 2 (event release) & 3 (wave1 snapshot share) completed & archived; remaining P0-P3 deferred | Measured: 2026-08-22 | Baseline commit: `046b741dc`
+> Status: active — scope discovery closed 2026-08-22; workstreams 1-4 completed & archived (dedup, event release, wave1 snapshot share, finalizer restructure); remaining P0-P3 deferred | Measured: 2026-08-22 | Baseline commit: `046b741dc`
 
 ## Objective
 
@@ -487,3 +487,23 @@ Archived change: `2026-08-22-share-wave1-focus-contract-baseline`
 - Remaining workstreams (finalizer restructure, more snapshot sharing
   [handoff/rerun], gate-matrix P3, P3 tail incl. engine transaction waits)
   deferred per §"Execution Decision".
+
+## Workstream 4 (finalizer restructure) — COMPLETED 2026-08-22
+
+Archived change: `2026-08-22-restructure-finalizer-checker-matrix`
+(all 17 finalizer checks passed, `specs_updated: false`).
+
+- `change-feedback-finalizer.test.mjs` rank 1: six replaying finalizer runs →
+  **two sentinels** (first boundary + complete 9-check chain) + **direct
+  checker matrix** (main-spec/taxonomy/discovery/routing via the finalizer's
+  exact production invocations) + a static script→code mapping test.
+- Rank 3: four `openspec instructions` projections → **tasks + apply**;
+  proposal/archive rule fragments asserted statically at their repo sources
+  (`openspec/config.yaml` + `change-feedback-loop.md` +
+  `semantic-fact-closure-contract.mjs`), which the CLI embeds.
+- Ranks 4/6/7/12 and the archive-success sentinel unchanged.
+- Verification: focused 8/8 pass, file wall **52.7s → 36.8s** (rank-1
+  24.2→11.8s, rank-3 22.7→8.0s); full canonical run **2799 passed / 0
+  failed / 0 cancelled** (2798 + 1 new static-mapping leaf), wall 581.8s.
+- No test cases merged; every assertion fact preserved or moved to an
+  equivalent direct/static proof.
