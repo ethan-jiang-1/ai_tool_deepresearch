@@ -1,0 +1,44 @@
+schema_version: verification-routing/v1
+change: share-wave1-focus-contract-baseline
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The changed surface is an integration CLI/fixture cluster; no unit
+      surface is touched.
+  integration:
+    status: selected
+    rationale: >-
+      The four Wave1 focus-coverage contract facts are proven through the
+      production gate/inspect CLIs against a restored immutable baseline
+      built once per run; every variant's assertions are unchanged.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale chain is changed; the e2e rerun sibling is untouched.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change repairs deterministic test-harness setup only; it makes no
+      claim about real Agent or Subject-Agent behavior.
+claims:
+  - id: wave1-focus-contract-facts-preserved
+    statement: >-
+      WAI-005, RWG-002, RWG-003: the clean-path, definition-owned
+      degradable-limit (partial/blocked), and non-degradable
+      per_topic_depth_review_contract masking facts hold identically when
+      each variant runs on a byte-snapshot baseline built once per test run
+      and restored to its original path before each independent
+      focus_coverage mutation.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/wave1-focus-coverage-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

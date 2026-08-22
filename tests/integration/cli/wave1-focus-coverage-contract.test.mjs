@@ -1,8 +1,8 @@
 // @impl WAI-005, RWG-002, RWG-003
-import { after, describe, it } from 'node:test';
+import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 import {
@@ -11,7 +11,9 @@ import {
   instantiateBundle,
   parseJsonOutput,
   REPO_ROOT,
+  restoreBundle,
   runNode,
+  snapshotBundle,
 } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 import {
   PRIMARY_TOPIC,
@@ -22,6 +24,20 @@ import {
 } from '../../e2e/helpers/research-chain-fixture.mjs';
 
 const roots = [];
+
+// Shared immutable Wave1-ready baseline: built once per test run via
+// production predecessors, byte-snapshotted, and restored to its original
+// path before each variant's independent focus_coverage mutation. Restoring
+// the original path preserves the bundle-identity invariant
+// (check-gate-setup-ready compares the normalized bundle basename with
+// rb_plan.md/rb_profile.yaml plan_basename).
+let baseline;
+let snapshot;
+
+function restoredBundle() {
+  restoreBundle(snapshot, baseline);
+  return baseline;
+}
 
 function prepareWave1Bundle(label) {
   const root = createTempRoot();
@@ -82,13 +98,18 @@ function baseFocus(outcome, review) {
 describe('Wave1 focus coverage contract through inspect and formal Gate', () => {
   after(() => roots.forEach(cleanupRoot));
 
+  before(() => {
+    baseline = prepareWave1Bundle('focus-shared');
+    snapshot = snapshotBundle(baseline, dirname(baseline));
+  });
+
   it('keeps missing focus and covered focus on the existing clean Wave1 path', () => {
-    const noFocusBundle = prepareWave1Bundle('focus-no-declaration');
+    const noFocusBundle = restoredBundle();
     const noFocus = runWave1Gate(noFocusBundle);
     assert.equal(noFocus.check.passed, true, noFocus.inspect.join('\n'));
     assert.equal(noFocus.check.failed_rule_ids.includes('focus_coverage_limit'), false);
 
-    const coveredBundle = prepareWave1Bundle('focus-covered');
+    const coveredBundle = restoredBundle();
     const review = parseYaml(readFileSync(join(coveredBundle, 'artifacts/wave1/topic-a/depth-review.yaml'), 'utf8'));
     const focus = baseFocus('covered', review);
     focus.commitments = [coveredCommitment(review)];
@@ -100,7 +121,7 @@ describe('Wave1 focus coverage contract through inspect and formal Gate', () => 
 
   for (const outcome of ['partial', 'blocked']) {
     it(`${outcome} emits only the existing definition-owned degradable limit`, () => {
-      const bundle = prepareWave1Bundle(`focus-${outcome}`);
+      const bundle = restoredBundle();
       const review = parseYaml(readFileSync(join(bundle, 'artifacts/wave1/topic-a/depth-review.yaml'), 'utf8'));
       const focus = baseFocus(outcome, review);
       const limitation = {
@@ -131,7 +152,7 @@ describe('Wave1 focus coverage contract through inspect and formal Gate', () => 
   }
 
   it('keeps an invalid focus declaration under the non-degradable depth contract and masks the limit', () => {
-    const bundle = prepareWave1Bundle('focus-invalid');
+    const bundle = restoredBundle();
     const review = parseYaml(readFileSync(join(bundle, 'artifacts/wave1/topic-a/depth-review.yaml'), 'utf8'));
     const focus = baseFocus('covered', review);
     focus.topic_uid = 'tp_00000000-0000-4000-8000-000000000000';

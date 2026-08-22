@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: share-wave1-focus-contract-baseline
+status: not_applicable
+reason: >-
+  This change repairs test-owned setup economics only: one integration
+  cluster's five fresh bundle builds become one build plus per-variant
+  byte-snapshot restores at the original path. It introduces no Harness
+  runtime fact family, resolver, authority-establishing surface, or
+  deterministic production behavior, so no semantic-fact closure record
+  applies.
