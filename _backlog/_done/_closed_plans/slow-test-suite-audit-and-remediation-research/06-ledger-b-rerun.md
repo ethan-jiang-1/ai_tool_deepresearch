@@ -1,6 +1,6 @@
 # Obligation Ledger B: rerun-round-continuity.test.mjs
 
-> Generated: 2026-08-21 | Plan: `_backlog/plans/slow-test-suite-audit-and-remediation.md`
+> Generated: 2026-08-21 | Plan: `_backlog/_done/_closed_plans/slow-test-suite-audit-and-remediation.md`
 > File: [tests/e2e/rerun-round-continuity.test.mjs](/Users/bowhead/ai_tool_deepresearch/tests/e2e/rerun-round-continuity.test.mjs)
 
 ## File-Level Snapshot Economics

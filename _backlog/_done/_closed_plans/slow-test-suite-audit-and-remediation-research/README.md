@@ -1,7 +1,7 @@
 # Slow Test Suite — Research Notes
 
 > Status: **scope discovery substantially complete — gate closing** | Updated:
-> 2026-08-22 | Companion to `_backlog/plans/slow-test-suite-audit-and-remediation.md`
+> 2026-08-22 | Companion to `_backlog/_done/_closed_plans/slow-test-suite-audit-and-remediation.md`
 
 These notes accumulate the *scope-discovery research* the plan explicitly
 requires **before** any OpenSpec Change is proposed (plan §"Scope Discovery

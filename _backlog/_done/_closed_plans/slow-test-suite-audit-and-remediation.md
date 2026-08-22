@@ -1,6 +1,6 @@
 # Slow Test Suite Audit And Remediation
 
-> Status: active — scope discovery closed 2026-08-22; workstreams 1-6 completed & archived; WS7 part 1 done (dedup, event release, wave1 snapshot, finalizer, baseline-share expansion); remaining P0-P3 deferred | Measured: 2026-08-22 | Baseline commit: `046b741dc`
+> Status: **closed 2026-08-22** — scope discovery complete; workstreams 1-6 + WS7 part 1 completed & archived (~217s deterministic savings; suite 757s -> ~574s); remaining WS7 part 2 / WS8 / WS9 deferred as low ROI | Measured: 2026-08-22 | Baseline commit: `046b741dc` | Archived: `_backlog/_done/_closed_plans/`
 
 ## Objective
 
@@ -390,7 +390,7 @@ single reader question, direct Source of Record, or defensible proof boundary.
 
 ## Research Progress — 2026-08-22 (scope discovery complete; gate C1-C5 closed)
 
-Working notes live in `_backlog/plans/slow-test-suite-audit-and-remediation-research/`
+Working notes live in `_backlog/_done/_closed_plans/slow-test-suite-audit-and-remediation-research/`
 (README indexes `01-09` + `tools/`). Key updates to this plan:
 
 - **Fresh canonical baseline** (same command, quiet machine): `757.0s`,
@@ -445,7 +445,7 @@ Archived change: `2026-08-22-deduplicate-aggregate-test-suite-imports`
   3028 → 2798 exactly as designed.
 - Remaining workstreams (finalizer restructure, event release, snapshot
   sharing, matrices, P3 tail) are deferred per §"Execution Decision";
-  working agenda: `_backlog/plans/slow-test-suite-audit-and-remediation-research/07-scope-gate-consolidation.md`.
+  working agenda: `_backlog/_done/_closed_plans/slow-test-suite-audit-and-remediation-research/07-scope-gate-consolidation.md`.
 
 ## Workstream 2 (event release) — COMPLETED 2026-08-22
 

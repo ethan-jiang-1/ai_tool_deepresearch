@@ -4,7 +4,7 @@
 // them, so each owned suite executes exactly once under canonical discovery.
 // Previously this file re-executed all nine suites as an import-aggregator
 // (~101.5s / 420 child-process launches — see
-// _backlog/plans/slow-test-suite-audit-and-remediation.md §"Research Progress").
+// _backlog/_done/_closed_plans/slow-test-suite-audit-and-remediation.md §"Research Progress").
 // @impl SWE-001, SWE-006, CPT-001, CPT-003, DEW-003, GSK-006, CHI-001
 
 import assert from 'node:assert/strict';
