@@ -140,3 +140,29 @@ Evidence so far points to:
   - Gate-matrix P3: ~40-60s (files above, launch-count reduction).
   - **Projected total ≈ 220-250s of the needed ~470s below 300s target** —
     the rest must come from P3 per-file tail work per the plan's discipline.
+
+---
+
+## Implementation guardrail (user decision, 2026-08-22)
+
+**Never merge independent test cases for speed.** Tests exist to prove
+independent, clear facts; every `it()`, every parameterized variant (e.g.
+`sameAttempt` in the transaction-holder tests), and every assertion is
+preserved as-is. Optimization only changes *how a case is set up or held*
+(fixed wait → explicit ready/release handshake; repeated setup → copied
+immutable baseline; redundant subprocess → direct matrix + retained
+sentinel). A "share setup" or "split matrix" disposition must keep all old
+rows/assertions and all retained real boundaries; it never collapses cases.
+This is the reading for plan decision-matrix rows "Share immutable setup",
+"Split", and P1.4's "table-driven direct matrix".
+
+## Workstream 2 (event release) — in progress 2026-08-22
+
+Change `replace-transaction-holder-fixed-wait` (plan P0.3): replaced the
+2×6s fixed `Atomics.wait` in the `operate-work-unit.test.mjs:1707` holder
+with a ready/release file handshake (holder writes `*.holder-ready`, polls
+≤30s for `*.holder-release`; test waits ready → runs every assertion
+unchanged → writes release). Focused run 42/42 pass; holder leaf **12.5s →
+1.2s** (~11.3s saved). No assertions changed, no cases merged; both
+`sameAttempt` variants preserved. Full canonical run pending; engine
+transaction waits (`:900/:1200/:1800`) remain a P3 item (separate facts).

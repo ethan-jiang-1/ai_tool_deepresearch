@@ -1,6 +1,6 @@
 # Slow Test Suite Audit And Remediation
 
-> Status: active — scope discovery closed 2026-08-22; workstream 1 (dedup) completed & archived; remaining P0-P3 deferred | Measured: 2026-08-22 | Baseline commit: `046b741dc`
+> Status: active — scope discovery closed 2026-08-22; workstreams 1 (dedup) & 2 (event release) completed & archived; remaining P0-P3 deferred | Measured: 2026-08-22 | Baseline commit: `046b741dc`
 
 ## Objective
 
@@ -446,3 +446,22 @@ Archived change: `2026-08-22-deduplicate-aggregate-test-suite-imports`
 - Remaining workstreams (finalizer restructure, event release, snapshot
   sharing, matrices, P3 tail) are deferred per §"Execution Decision";
   working agenda: `_backlog/plans/slow-test-suite-audit-and-remediation-research/07-scope-gate-consolidation.md`.
+
+## Workstream 2 (event release) — COMPLETED 2026-08-22
+
+Archived change: `2026-08-22-replace-transaction-holder-fixed-wait`
+(all 17 finalizer checks passed, `specs_updated: false`).
+
+- `operate-work-unit.test.mjs:1707` holder: 2×6s fixed `Atomics.wait`
+  → ready/release file handshake (holder stays real; ready written on lock
+  acquisition, bounded 30s release poll; test waits ready, runs every
+  assertion unchanged for both `sameAttempt` variants, writes release).
+- Verification: focused run 42/42 pass; holder leaf **12.5s → 1.2s**
+  (deterministic saving ~11.3s); full canonical run **2798 passed / 0 failed
+  / 0 cancelled, wall 610.0s** (residual wall delta vs 649.9s within machine
+  variance; single sample).
+- No test cases merged and no assertion changed (implementation guardrail,
+  research notes §07).
+- Remaining workstreams (finalizer restructure, snapshot sharing, matrices,
+  P3 tail incl. engine transaction waits `:900/:1200/:1800`) deferred per
+  §"Execution Decision".
