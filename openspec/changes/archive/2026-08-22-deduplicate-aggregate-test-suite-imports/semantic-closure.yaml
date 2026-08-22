@@ -1,0 +1,9 @@
+schema_version: semantic-closure/v1
+change: deduplicate-aggregate-test-suite-imports
+status: not_applicable
+reason: >-
+  This change repairs test-owned harness wiring only: it converts an
+  import-aggregator into an inventory test and drops two side-effect test
+  imports. It introduces no Harness runtime fact family, resolver,
+  authority-establishing surface, or deterministic production behavior, so no
+  semantic-fact closure record applies.

@@ -5,9 +5,6 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
-import './work-unit-attempt-disposition.test.mjs';
-import './work-unit-transaction.test.mjs';
-
 const REPO_ROOT = path.resolve('.');
 
 function source(relativePath) {

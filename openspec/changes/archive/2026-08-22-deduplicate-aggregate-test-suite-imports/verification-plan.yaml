@@ -1,0 +1,62 @@
+schema_version: verification-routing/v1
+change: deduplicate-aggregate-test-suite-imports
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The attempt-recovery implementation-inventory assertions are static
+      source-of-record checks that need no runtime lifecycle; this change only
+      stops them from re-executing two sibling suites.
+  integration:
+    status: selected
+    rationale: >-
+      The continuation-initiation claim entry is an integration-surface
+      asset; after this change it proves suite ownership and canonical-glob
+      membership without re-executing any CLI fixture.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale deterministic chain is changed; duplicated execution
+      removal does not alter any e2e proof boundary.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change repairs deterministic test-harness wiring only; it makes no
+      claim about real Agent or Subject-Agent behavior.
+claims:
+  - id: continuation-initiation-inventory
+    statement: >-
+      SWE-001, SWE-006, CPT-001, CPT-003, DEW-003, GSK-006, CHI-001: the
+      continuation-initiation verification claim's nine owned suites still
+      exist and are covered by the canonical discovery glob, and the aggregate
+      entry no longer re-executes them.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/continuation-initiation-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: attempt-recovery-inventory-standalone
+    statement: >-
+      DEW-022, DEW-023, DEW-024, CHI-004: the work-unit attempt-recovery
+      implementation-inventory assertions still pass and no longer
+      re-execute the disposition and transaction suites through side-effect
+      imports.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
