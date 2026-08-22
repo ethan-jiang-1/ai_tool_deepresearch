@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import { createHash } from 'node:crypto';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { appendFileSync, cpSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { claimAndSubmitFixtureWorkUnit } from '../../experiments_env/shared/work-unit-playbook-utils.mjs';
@@ -20,6 +20,11 @@ import {
 let root;
 let baseline;
 let snapshot;
+// Second immutable layer for the action:add direction variants: the wave2
+// state after one shared reachWave2 (production-submitted wave1 rows), built
+// once in before() and restored per variant.
+let wave2Ready;
+let wave2Snapshot;
 const TOPIC = { topic_uid: 'tp_11111111-1111-4111-8111-111111111111', id: 't1', slug: 'topic-a', title: 'Topic A', must_answer: ['How does rerun continuity preserve authority?'], scope_role: 'primary', depends_on_topic_uids: [] };
 
 function currentAvailableResearchAccess() {
@@ -451,7 +456,18 @@ function useDeltaSynthesis(bundle) {
   writeFileSync(path, `${readFileSync(path, 'utf8')}\n## Delta Synthesis\nFixture-labeled incremental synthesis.\n`);
 }
 
-before(() => { root = createTempRoot(); baseline = buildBaseline(); snapshot = snapshotBundle(baseline, root); });
+before(() => {
+  root = createTempRoot();
+  baseline = buildBaseline();
+  snapshot = snapshotBundle(baseline, root);
+  // Second immutable layer for the direction variants. snapshotBundle always
+  // writes to root/.baseline-snapshot, so copy the wave2 state to a distinct
+  // path to avoid clobbering the pristine baseline snapshot.
+  wave2Ready = restoreBundle(snapshot, baseline);
+  reachWave2(wave2Ready, { suffix: 'direction-shared' });
+  wave2Snapshot = join(root, '.wave2-snapshot');
+  cpSync(wave2Ready, wave2Snapshot, { recursive: true });
+});
 after(() => cleanupRoot(root));
 
 describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
@@ -726,8 +742,7 @@ describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
     { label: 'invalid', count: 'not-a-number' },
   ]) {
     it(`${direction.label} action:add direction does not activate the Wave2 full-synthesis restriction`, () => {
-      const bundle = restoreBundle(snapshot, baseline);
-      reachWave2(bundle, { suffix: `direction-${direction.label}` });
+      const bundle = restoreBundle(wave2Snapshot, wave2Ready);
       stageSeed(bundle, 1, { action: 'add', directionCount: direction.count });
       useDeltaSynthesis(bundle);
       const result = runGate(bundle, 'wave2-complete', 'phases/phase-wave2.md');
@@ -737,8 +752,7 @@ describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
   }
 
   it('keeps a future add direction inactive until profile-count synchronization makes it current', () => {
-    const bundle = restoreBundle(snapshot, baseline);
-    reachWave2(bundle, { suffix: 'direction-future' });
+    const bundle = restoreBundle(wave2Snapshot, wave2Ready);
     stageSeed(bundle, 1, { action: 'add', directionCount: 2 });
     const directionPath = join(bundle, 'seed_topics/topic-a.md');
     const directionBytes = readFileSync(directionPath);

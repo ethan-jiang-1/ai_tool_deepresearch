@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: share-test-baselines-expansion
+status: not_applicable
+reason: >-
+  This change repairs test-owned setup economics only: three deterministic
+  families build their production predecessor state once per run and restore
+  a byte snapshot to the original path per variant. It introduces no Harness
+  runtime fact family, resolver, authority-establishing surface, or
+  deterministic production behavior, so no semantic-fact closure record
+  applies.

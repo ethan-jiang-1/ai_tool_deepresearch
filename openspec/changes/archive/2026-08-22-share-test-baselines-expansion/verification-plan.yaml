@@ -1,0 +1,64 @@
+schema_version: verification-routing/v1
+change: share-test-baselines-expansion
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The changed surfaces are integration/e2e CLI fixture families; no unit
+      surface is touched.
+  integration:
+    status: selected
+    rationale: >-
+      The handoff lifecycle facts and the rerun direction facts are proven
+      through production CLI gates against restored immutable baselines; all
+      assertions unchanged.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      The final-refinement continuity facts (Final entry rejection,
+      publish/refine, C5-on-explicit-request) and the shared rerun chain
+      facts remain proven through production checkpoints on restored
+      baselines.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change repairs deterministic test-harness setup only; it makes no
+      claim about real Agent or Subject-Agent behavior.
+claims:
+  - id: shared-baseline-facts-preserved
+    statement: >-
+      ARP-004, CPT-003, RRD-007, RRD-008, CDP-003..006, POF-001, WNC-005,
+      CHF-002..004, SEF-002, RWG-002, RWG-003, WAI-005: the Final-refinement,
+      handoff lifecycle, and rerun action:add direction facts hold identically
+      when each family's production predecessor state is built once per run,
+      byte-snapshotted, and restored to the original path before each
+      variant's independent mutation.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/final-refinement-continuity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: handoff-shared-prefix-preserved
+    statement: >-
+      The handoff witnessing lifecycle (normal, HITL2 rerun, superseded-pass
+      branches) facts hold identically when the shared wave0-entry prefix is
+      built once per run and restored per branch at its original path.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/handoff-witnessing-lifecycle.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

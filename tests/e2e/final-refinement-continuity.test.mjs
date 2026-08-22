@@ -17,8 +17,10 @@ import {
   readStatus,
   readTrace,
   REPO_ROOT,
+  restoreBundle,
   runGate,
   runNode,
+  snapshotBundle,
 } from './helpers/deterministic-chain-harness.mjs';
 import { buildHitl2Baseline, passAndEnter, stageHitl2 } from './helpers/research-chain-fixture.mjs';
 
@@ -27,6 +29,15 @@ const POST_FINAL = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-post-final
 const REENTRY = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs');
 
 let root;
+let baseline;
+let snapshot;
+
+// Shared immutable HITL2 baseline: built once per test run via production
+// predecessors, byte-snapshotted, restored to its original path per test.
+function restoredBundle() {
+  restoreBundle(snapshot, baseline);
+  return baseline;
+}
 
 function simulatedFinalReport(backing, title) {
   return [
@@ -85,12 +96,16 @@ function currentFinalOwner(bundle) {
   return output;
 }
 
-before(() => { root = createTempRoot(); });
+before(() => {
+  root = createTempRoot();
+  baseline = buildHitl2Baseline(root, 'final-shared');
+  snapshot = snapshotBundle(baseline, root);
+});
 after(() => cleanupRoot(root));
 
 describe('Final refinement continuity through production CLIs', { timeout: 120000 }, () => {
   it('rejects a premature primary-looking file before Final entry without entry mutation', () => {
-    const bundle = buildHitl2Baseline(root, 'final-negative');
+    const bundle = restoredBundle();
     const readiness = reachEmptyFinal(bundle);
     mkdirSync(join(bundle, 'final'), { recursive: true });
     writeFileSync(join(bundle, 'final', 'final.md'), '# Premature simulated report\n');
@@ -104,7 +119,7 @@ describe('Final refinement continuity through production CLIs', { timeout: 12000
   });
 
   it('delivers the base, refines in place, and accepts C5 only after an explicit expansion request', () => {
-    const bundle = buildHitl2Baseline(root, 'final-continuity');
+    const bundle = restoredBundle();
     const readiness = reachEmptyFinal(bundle);
     enterAndSynchronizeFinal(bundle, readiness);
 

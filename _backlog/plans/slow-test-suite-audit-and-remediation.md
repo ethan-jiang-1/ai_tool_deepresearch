@@ -1,6 +1,6 @@
 # Slow Test Suite Audit And Remediation
 
-> Status: active — scope discovery closed 2026-08-22; workstreams 1-4 completed & archived (dedup, event release, wave1 snapshot share, finalizer restructure); remaining P0-P3 deferred | Measured: 2026-08-22 | Baseline commit: `046b741dc`
+> Status: active — scope discovery closed 2026-08-22; workstreams 1-5 completed & archived (dedup, event release, wave1 snapshot, finalizer, baseline-share expansion); remaining P0-P3 deferred | Measured: 2026-08-22 | Baseline commit: `046b741dc`
 
 ## Objective
 
@@ -507,3 +507,66 @@ Archived change: `2026-08-22-restructure-finalizer-checker-matrix`
   failed / 0 cancelled** (2798 + 1 new static-mapping leaf), wall 581.8s.
 - No test cases merged; every assertion fact preserved or moved to an
   equivalent direct/static proof.
+
+## Progress Summary — 2026-08-22 (after workstreams 1-4)
+
+| Run | Wall | Note |
+|---|---:|---|
+| Plan baseline (2026-08-21) | 822.455s | — |
+| Fresh baseline (2026-08-22) | 757.0s | machine drift |
+| After WS1 dedup | 649.9s | 3028 → 2798 leaves |
+| After WS2 event release | 610.0s | holder 12.5 → 1.2s |
+| After WS3 wave1 snapshot | 625.8s | wave1 file 21.1 → 6.6s (single-sample noise) |
+| After WS4 finalizer | 581.8s | finalizer file 52.7 → 36.8s; 2799 leaves |
+
+Deterministic savings (leaf/file level): dedup ~107s + event release ~11.3s +
+wave1 ~14.5s + finalizer ~16s ≈ **149s**. Suite single-sample walls vary
+±10-15s; the durable acceptance gate still requires two clean runs below 300s.
+
+### Remaining agenda (corrected 2026-08-22)
+
+| Block | Files / cost | Est. saving | Risk | Notes |
+|---|---|---|---|---|
+| Gate/queue matrix P3 | check-gate-wave0/1/2 (22.3/22.9/14.8s), readiness (10.4s), hitl1/hitl2 (9.3/8.3s), operate-queue-validation (23.1s), agent-experiment-autorun (7.2s) ≈ 118s / ~500 launches | **~40-55s** | mid-high | largest remaining; finalizer-style restructure per file (direct evaluator matrix + CLI sentinel); grind-heavy |
+| Handoff prefix share | handoff-witnessing-lifecycle (24.1s / 142) | ~10s | mid | snapshot at post-passWave0WithDiagnostics; checkpoint byte-stability to verify |
+| Rerun variant matrix | e2e rerun-round-continuity 728×2 / 739 (~10s of 59.8s) | ~10s | mid | reachWave2 baseline + one sentinel |
+| run-agent-experiment split | 27.7s / 61 | ~10-15s | mid | reasonForProcess etc. already unit-covered; supervisor sentinels kept |
+| final-refinement baseline share | final-refinement-continuity (11.4s / 90) | ~5-7s | low | snapshot pattern already proven (wave1); per-case rebuilds today |
+| Engine transaction waits | work-unit-transaction Atomics.wait 900/1200/1800ms | ~3s | low | event-release pattern extension |
+| Misc 1-3s tail | ~270 files / ~460s | 5-20s | low | per-file, each small; low ROI per change |
+
+Note: post-final-rerun-lineage-continuity ALREADY shares a snapshot per run
+(restoreBundle(snapshot, baseline) in before()); its 19.8s are irreducible
+full-chain suffixes — not a sharing target. wave1-focus-coverage-rerun and
+reference-evidence-map-rerun are single-case files (no intra-file sharing;
+cross-file sharing would merge cases — forbidden).
+
+## Workstream Tracking (checklist — check off as each lands)
+
+- [x] **WS1 — deduplication** (~107s). Archived: `2026-08-22-deduplicate-aggregate-test-suite-imports`.
+- [x] **WS2 — event release (CLI transaction-holder)** (~11.3s). Archived: `2026-08-22-replace-transaction-holder-fixed-wait`.
+- [x] **WS3 — snapshot share (wave1 focus)** (~14.5s). Archived: `2026-08-22-share-wave1-focus-contract-baseline`.
+- [x] **WS4 — finalizer restructure** (~16s). Archived: `2026-08-22-restructure-finalizer-checker-matrix`.
+- [x] **WS5 — snapshot-share expansion** (final-refinement + handoff prefix + rerun direction variants; ~15s deterministic). Archived: `2026-08-22-share-test-baselines-expansion`.
+- [ ] **WS6 — event-release extension** (engine transaction waits 900/1200/1800ms; ~3s).
+- [ ] **WS7 — gate/queue matrix P3** (check-gate-wave0/1/2-complete, readiness, hitl1/hitl2-recorded, operate-queue-validation, agent-experiment-autorun; ~40-55s).
+- [ ] **WS8 — run-agent-experiment split matrix** (~10-15s).
+- [ ] **WS9 — P3 misc tail** (remaining 1-3s files, per-file; low ROI each).
+
+## Workstream 5 (snapshot-share expansion) — COMPLETED 2026-08-22
+
+Archived change: `2026-08-22-share-test-baselines-expansion`
+(all 17 finalizer checks passed, `specs_updated: false`).
+
+- `final-refinement-continuity.test.mjs`: `buildHitl2Baseline` once in
+  `before()`, snapshot/restore per test (file 11.4s → 7.8s).
+- `handoff-witnessing-lifecycle.test.mjs`: shared wave0-entry prefix
+  (`buildSharedPrefixState` + snapshot/restore per branch); :988 leaf
+  22.8s → 17.3s; checks/health/cleanup accounting intact.
+- `rerun-round-continuity.test.mjs`: second snapshot layer at the shared
+  `reachWave2` state (`.wave2-snapshot` path — `snapshotBundle` hardcodes
+  `.baseline-snapshot`, so a distinct `cpSync` path is used); three direction
+  leaves ~4s → ~0.3s each.
+- Verification: focused 2/2, 1/1, 16/16; full canonical run **2799 passed /
+  0 failed / 0 cancelled**, wall 595.7s (single sample).
+- No test cases merged; every assertion preserved.

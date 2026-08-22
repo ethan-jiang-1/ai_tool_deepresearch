@@ -15,7 +15,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 
 import {
   claimAndSubmitFixtureWorkUnit,
@@ -26,6 +26,7 @@ import {
   renderSeedProjectionAppendix,
 } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
 import { canonicalWave1ReferencePath } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs';
+import { restoreBundle, snapshotBundle } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 
 const REPO_ROOT = process.cwd();
 const bundles = [];
@@ -760,38 +761,43 @@ function stageFinalArtifact(bundle) {
   writeFileSync(join(bundle, 'final/report.md'), '# Final Report\n\nDelivered from verified fixture state.\n');
 }
 
-function prepareThroughWave0Entry(label) {
-  const { bundle, name } = createBundle(label);
+// Builds the shared wave0-entry prefix (createBundle + plan/profile + the
+// real instantiation/hitl1/setup/seed gates + passWave0WithDiagnostics)
+// ONCE per :988 test run, so the three branches restore a byte snapshot of
+// this legal predecessor state instead of rebuilding it three times.
+function buildSharedPrefixState() {
+  const { bundle, name } = createBundle('shared-prefix');
   writeBasePlanAndProfile(bundle, name);
 
   const inst = runGate(bundle, 'instantiation-complete', 'phases/phase-instantiation.md');
-  expect(bundle, `${label}:instantiation-pass`, inst.json.check.passed === true, 'real instantiation gate passed');
+  expect(bundle, 'shared-prefix:instantiation-pass', inst.json.check.passed === true, 'real instantiation gate passed');
   enterPhase(bundle, inst.json.check.next);
 
   const hitl1Bootstrap = advanceStatus(bundle, 'hitl1_recorded');
-  expect(bundle, `${label}:hitl1-bootstrap-status`, hitl1Bootstrap.json.status === 'ok', 'bootstrap status enables hitl1 gate');
+  expect(bundle, 'shared-prefix:hitl1-bootstrap-status', hitl1Bootstrap.json.status === 'ok', 'bootstrap status enables hitl1 gate');
 
   const hitl1 = runGate(bundle, 'hitl1-recorded', 'phases/phase-hitl1.md');
-  expect(bundle, `${label}:hitl1-pass`, hitl1.json.check.passed === true, 'real hitl1 gate passed');
+  expect(bundle, 'shared-prefix:hitl1-pass', hitl1.json.check.passed === true, 'real hitl1 gate passed');
   enterPhase(bundle, hitl1.json.check.next);
 
   const setupBootstrap = advanceStatus(bundle, 'setup_ready');
-  expect(bundle, `${label}:setup-bootstrap-status`, setupBootstrap.json.status === 'ok', 'bootstrap status enables setup gate');
+  expect(bundle, 'shared-prefix:setup-bootstrap-status', setupBootstrap.json.status === 'ok', 'bootstrap status enables setup gate');
 
   const setup = runGate(bundle, 'setup-ready', 'phases/phase-setup.md');
-  expect(bundle, `${label}:setup-pass`, setup.json.check.passed === true, 'real setup gate passed');
+  expect(bundle, 'shared-prefix:setup-pass', setup.json.check.passed === true, 'real setup gate passed');
   enterPhase(bundle, setup.json.check.next);
   const setupSync = advanceStatus(bundle, 'setup_ready');
-  expect(bundle, `${label}:setup-source-sync`, setupSync.json.current_gate === 'setup_ready' && setupSync.json.next_gate === 'seed_topics_ready', 'setup source-gate sync established seed-topics window');
+  expect(bundle, 'shared-prefix:setup-source-sync', setupSync.json.current_gate === 'setup_ready' && setupSync.json.next_gate === 'seed_topics_ready', 'setup source-gate sync established seed-topics window');
 
   stageSeedTopic(bundle);
   const seed = runGate(bundle, 'seed-topics-ready', 'phases/phase-seed-topics.md');
-  expect(bundle, `${label}:seed-pass`, seed.json.check.passed === true, 'real seed-topics gate passed');
+  expect(bundle, 'shared-prefix:seed-pass', seed.json.check.passed === true, 'real seed-topics gate passed');
   enterPhase(bundle, seed.json.check.next);
   const seedSync = advanceStatus(bundle, 'seed_topics_ready');
-  expect(bundle, `${label}:seed-source-sync`, seedSync.json.current_gate === 'seed_topics_ready' && seedSync.json.next_gate === 'wave0_complete', 'seed source-gate sync established wave0 window');
+  expect(bundle, 'shared-prefix:seed-source-sync', seedSync.json.current_gate === 'seed_topics_ready' && seedSync.json.next_gate === 'wave0_complete', 'seed source-gate sync established wave0 window');
 
-  return bundle;
+  const wave0 = passWave0WithDiagnostics(bundle, 'shared-prefix');
+  return { bundle, wave0 };
 }
 
 function passWave0WithDiagnostics(bundle, label) {
@@ -814,10 +820,7 @@ function passWave0WithDiagnostics(bundle, label) {
   return attempt3;
 }
 
-function continueMainLifecycle() {
-  const bundle = prepareThroughWave0Entry('main');
-  const wave0 = passWave0WithDiagnostics(bundle, 'main');
-
+function continueMainLifecycle(bundle, wave0) {
   const noEntryStatus = advanceStatus(bundle, 'wave0_complete', { expectSuccess: false });
   expectBoundary(bundle, 'main:unwitnessed-status-fails', noEntryStatus.json.status === 'ok', 'source-gate status sync rejects missing wave1 load witness');
 
@@ -871,9 +874,7 @@ function continueMainLifecycle() {
   return bundle;
 }
 
-function runRerunBranch() {
-  const bundle = prepareThroughWave0Entry('rerun');
-  passWave0WithDiagnostics(bundle, 'rerun');
+function runRerunBranch(bundle) {
   enterPhase(bundle, 'phases/phase-wave1.md');
   advanceStatus(bundle, 'wave0_complete');
   stageWave1Pass(bundle);
@@ -907,10 +908,7 @@ function runRerunBranch() {
   return bundle;
 }
 
-function runSupersededBranch() {
-  const bundle = prepareThroughWave0Entry('supersede');
-  passWave0WithDiagnostics(bundle, 'supersede');
-
+function runSupersededBranch(bundle) {
   const failedAfterPass = runGate(bundle, 'wave0-complete', 'phases/phase-wave0.md');
   expectBoundary(bundle, 'supersede:newer-failed-attempt', failedAfterPass.json.check.passed, 'newer real wave0 failed attempt supersedes old pass');
 
@@ -989,9 +987,11 @@ describe('handoff witnessing lifecycle integration', { timeout: 180000 }, () => 
     let pass = false;
     let thrown = null;
     try {
-      continueMainLifecycle();
-      runRerunBranch();
-      runSupersededBranch();
+      const shared = buildSharedPrefixState();
+      const prefixSnapshot = snapshotBundle(shared.bundle, dirname(shared.bundle));
+      continueMainLifecycle(restoreBundle(prefixSnapshot, shared.bundle), shared.wave0);
+      runRerunBranch(restoreBundle(prefixSnapshot, shared.bundle));
+      runSupersededBranch(restoreBundle(prefixSnapshot, shared.bundle));
       pass = finalVerdict();
     } catch (err) {
       thrown = err;
