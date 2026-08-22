@@ -1,6 +1,6 @@
 # Slow Test Suite Audit And Remediation
 
-> Status: active analysis | Measured: 2026-08-21 | Baseline commit: `046b741dc`
+> Status: active — scope discovery closed 2026-08-22; workstream 1 (dedup) completed & archived; remaining P0-P3 deferred | Measured: 2026-08-22 | Baseline commit: `046b741dc`
 
 ## Objective
 
@@ -385,3 +385,64 @@ single reader question, direct Source of Record, or defensible proof boundary.
    boundary, requires hand-written Engine authority, causes test contamination,
    or misses its allocated budget. Do not trade it for concurrency, a skip, a
    timeout increase, or quiet test discovery exclusion.
+
+---
+
+## Research Progress — 2026-08-22 (scope discovery complete; gate C1-C5 closed)
+
+Working notes live in `_backlog/plans/slow-test-suite-audit-and-remediation-research/`
+(README indexes `01-09` + `tools/`). Key updates to this plan:
+
+- **Fresh canonical baseline** (same command, quiet machine): `757.0s`,
+  `3028` passed / `0` failed; suite-level `>3s` leaves `37 / 254.7s` (plan
+  baseline was `822.455s` / `43 / 357.6s` — machine drift; ranking stable,
+  per-case absolutes are selection signals only).
+- **Duplication is the largest measured item and is far bigger than the
+  `>3s` inventory suggested:** `continuation-initiation-contract.test.mjs`
+  alone = **101.5s / 420 child-process launches** (re-executes 9 discovered
+  suites; plan credited 12.433s); `tests/engine/work-unit-attempt-recovery.test.mjs`
+  adds **5.5s** (re-executes 2 discovered suites). Combined dedup ≈ **107s**
+  (~14% of the per-file wall sum `767.7s`). Both paths are referenced only by
+  archived verification-plans; no active asset-path constraint.
+- **Per-file cost profile** (291 files, `08-cost-table.md`): top items —
+  aggregate `101.5s`, e2e `rerun-round-continuity` `59.8s/463`, finalizer
+  `52.7s/25 heavy launches`, `operate-work-unit` `34.0s/139`,
+  `run-agent-experiment` `27.7s/61`, handoff `24.1s/142`.
+- **New P3 finding not in the plan's `>3s` inventory:** gate-matrix families
+  (`operate-queue-validation` `23.1s/98`, `check-gate-wave0/1/2-complete`
+  `22.3/22.9/14.8s`, readiness/hitl1/hitl2-recorded, `agent-experiment-autorun`
+  `7.2s/61`) dominate the 1-3s tail; direct-matrix + shared-fixture candidates.
+- **Obligation ledgers** for all 42 distinct `>3s` cases are complete
+  (`06-ledger-a..g.md`); every case has assertion / authority / mutation /
+  neighbors / disposition / evidence. No suspension is proposed.
+- **Measured savings outlook:** dedup `107s` (measured) + finalizer
+  `~35-45s` + event release `~10-12s` + snapshot/matrix `~25-35s` +
+  gate-matrix P3 `~40-60s` ≈ `220-250s` of the ~470s needed below `300s`; the
+  remainder is P3 per-file work per this plan's discipline.
+
+## Execution Decision — 2026-08-22 (first workstream only)
+
+Per the OpenSpec decision gate's "isolated harness defect" option, the
+**first executed workstream is aggregate-import deduplication** (≈107s
+measured): convert `continuation-initiation-contract.test.mjs` to an
+inventory/wiring test that does not import discovered suites, and remove the
+two side-effect imports from `tests/engine/work-unit-attempt-recovery.test.mjs`.
+All other workstreams (finalizer restructure, snapshot sharing, matrices,
+P3 tail) are **deferred** and will be revisited after this change lands, using
+`07-scope-gate-consolidation.md` as the working agenda.
+
+## Workstream 1 (deduplication) — COMPLETED 2026-08-22
+
+Archived change: `2026-08-22-deduplicate-aggregate-test-suite-imports`
+(all 17 finalizer checks passed, `specs_updated: false`).
+
+- `continuation-initiation-contract.test.mjs` → inventory/wiring test (no
+  imports; `@impl` linkage and file path preserved).
+- `tests/engine/work-unit-attempt-recovery.test.mjs` → two side-effect
+  imports removed (own 4 leaves unchanged).
+- Verification: full canonical serial run **2798 passed / 0 failed / 0
+  cancelled, wall 649.9s** (baseline 757.0s → **≈107s saved**); leaf total
+  3028 → 2798 exactly as designed.
+- Remaining workstreams (finalizer restructure, event release, snapshot
+  sharing, matrices, P3 tail) are deferred per §"Execution Decision";
+  working agenda: `_backlog/plans/slow-test-suite-audit-and-remediation-research/07-scope-gate-consolidation.md`.
