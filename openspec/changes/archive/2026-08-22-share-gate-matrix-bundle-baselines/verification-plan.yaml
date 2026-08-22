@@ -1,0 +1,42 @@
+schema_version: verification-routing/v1
+change: share-gate-matrix-bundle-baselines
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The changed surfaces are integration CLI gate/queue matrices; no unit
+      surface is touched.
+  integration:
+    status: selected
+    rationale: >-
+      The gate verdict and queue-validation facts are proven through the
+      production gate/inspect/operate-queue CLIs against restored empty
+      bundle baselines; every leaf's assertions unchanged.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale chain is changed.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change repairs deterministic test-harness setup only; it makes no
+      claim about real Agent or Subject-Agent behavior.
+claims:
+  - id: gate-matrix-facts-preserved
+    statement: >-
+      The wave0/wave2-complete, readiness-passed, hitl2-recorded, and
+      operate-queue-validation leaf facts hold identically when each leaf
+      runs on a byte-snapshot empty bundle built once per run and restored to
+      its original path before the leaf's own fixture mutations.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave0-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

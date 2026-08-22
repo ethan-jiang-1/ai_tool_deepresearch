@@ -1,9 +1,9 @@
 // gate-wave0-complete integration tests (RWG-001, RWG-004)
-import { describe, it, after } from 'node:test';
+import { describe, it, after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
 import {
   claimAndSubmitWorkUnit,
@@ -17,6 +17,7 @@ import { evaluateSeedTopicProjectionReadiness } from '../../../DEEP_RESEARCH_HAR
 import { buildCanonicalTopicRegistryFact } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/topic-registry-fact.mjs';
 import { evaluateWave0Contract } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs';
 import { collectSubmittedWave0ContributionProjection } from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-projection.mjs';
+import { restoreBundle, snapshotBundle } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs');
@@ -345,9 +346,19 @@ function setupWave0WithoutSharedReference(dir, { submitWorkUnit = true } = {}) {
 
 describe('check-gate-wave0-complete', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+  let sharedBundle;
+  let sharedSnapshot;
+  before(() => {
+    sharedBundle = createBundle('shared');
+    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+  });
+  function restoredBundle() {
+    restoreBundle(sharedSnapshot, sharedBundle);
+    return sharedBundle;
+  }
 
   it('1. happy path: all rules pass', () => {
-    const dir = createBundle(unique('happy'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -363,7 +374,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('1. rejects a dual historical binding through one shared Gate and inspect root', () => {
-    const dir = createBundle(unique('retired-dual-binding'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     const referencePath = join(dir, 'reference/00-shared-ai-safety.md');
     const historicalBytes = readFileSync(referencePath, 'utf8').replace(
@@ -391,7 +402,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('1a. aggregates historical Wave0 artifact and submitted coverage as one current UID floor', () => {
-    const dir = createBundle(unique('historical-layout'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     const planPath = join(dir, 'rb_plan.md');
     const plan = readFileSync(planPath, 'utf8').replace(
@@ -406,7 +417,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('reports an unsubmitted Wave0 suffix through one shared contribution parent root', () => {
-    const dir = createBundle(unique('candidate-projection'));
+    const dir = restoredBundle();
     const submission = setupHappyPath(dir);
     writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `${VALID_REF}${VALID_REF_SECOND}`);
 
@@ -432,7 +443,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('keeps legal nineteen-to-twenty supplement coordinates disjoint in readiness and Gate', () => {
-    const dir = createBundle(unique('candidate-contribution-append'));
+    const dir = restoredBundle();
     const initial = setupHappyPath(dir, { sourceContent: sourceMetadataArray(19) });
     materializeWave0Projection(dir, initial, {
       deferred: true,
@@ -463,7 +474,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('1b. inspect reads bullet metadata after an optional H1 title', () => {
-    const dir = createBundle(unique('h1meta'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     const referencePath = join(dir, 'reference/00-shared-ai-safety.md');
     writeFileSync(referencePath, `# AI Safety Landscape\n\n${readFileSync(referencePath, 'utf8')}`);
@@ -473,7 +484,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('1b. exposes submitted materialization before a dependent shared-reference floor', () => {
-    const dir = createBundle(unique('degraded'));
+    const dir = restoredBundle();
     setupWave0WithoutSharedReference(dir);
     const rawInspect = JSON.parse(runInspect(dir).stdout);
     assert.equal(rawInspect.check.passed, false);
@@ -533,7 +544,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('1b. retains an independent invalid shared-reference backing beside a materialization candidate', () => {
-    const dir = createBundle(unique('materialization-with-invalid-backing'));
+    const dir = restoredBundle();
     const { topicASubmission } = setupWave0WithoutSharedReference(dir);
     writeWave0PhaseProjection(dir, topicASubmission);
     const validProjection = join(dir, 'reference/00-shared-ai-safety.md');
@@ -561,7 +572,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('1b. emits degraded floor feedback only after all submitted candidates are explicitly deferred', () => {
-    const dir = createBundle(unique('deferred-floor'));
+    const dir = restoredBundle();
     const { topicASubmission, topicBSubmission } = setupWave0WithoutSharedReference(dir);
     materializeWave0Projection(dir, topicASubmission, { deferred: true });
     materializeWave0Projection(dir, topicBSubmission, { deferred: true, topicSlug: 'topic-b' });
@@ -575,7 +586,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('1b. submitted-backing feedback names a Phase-owned consumer projection target', () => {
-    const dir = createBundle(unique('shared-reference-feedback'));
+    const dir = restoredBundle();
     setupWave0WithoutSharedReference(dir);
     const result = runGate(dir);
     assert.equal(result.status, 1, result.stderr || result.stdout);
@@ -592,7 +603,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('1c. refuses degraded pass when runtime-truth blockers remain', () => {
-    const dir = createBundle(unique('nodegrade'));
+    const dir = restoredBundle();
     setupWave0WithoutSharedReference(dir, { submitWorkUnit: false });
     const result = runGate(dir, { attempt: 3 });
     assert.equal(result.status, 1, result.stderr || result.stdout);
@@ -614,7 +625,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('1d. returns one submitted-declaration parent root and masks dependent provenance symptoms', () => {
-    const dir = createBundle(unique('declaration-gap'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     const index = JSON.parse(readFileSync(join(dir, '_work_units/_index.json'), 'utf8'));
     const submittedWorkIds = Object.values(index.work_units)
@@ -665,7 +676,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('2. fails when reference/_INDEX.md is missing', () => {
-    const dir = createBundle(unique('noindex'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     rmSync(join(dir, 'reference/_INDEX.md'));
     const result = runGate(dir);
@@ -688,7 +699,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('3. fails when per-topic source.yaml is missing', () => {
-    const dir = createBundle(unique('nosource'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     rmSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'));
     const result = runGate(dir);
@@ -698,7 +709,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('4. fails on schema violation (empty url)', () => {
-    const dir = createBundle(unique('schema'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), SCHEMA_INVALID_REF);
     const result = runGate(dir);
@@ -708,7 +719,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('5. fails when count_floor is below threshold (empty YAML array)', () => {
-    const dir = createBundle(unique('floor'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), '[]');
     const result = runGate(dir);
@@ -718,7 +729,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('5b. marks downstream count diagnostics as masked when upstream YAML parse fails', () => {
-    const dir = createBundle(unique('mask'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), ': definitely-not-yaml\n');
     const result = runGate(dir);
@@ -731,7 +742,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('6. fails when count_floor passes but schema_valid fails (AND interaction)', () => {
-    const dir = createBundle(unique('and'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     // Mix: one valid entry + one invalid entry (empty url) = count_floor passes (2 entries) but schema_valid fails
     writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `- url: "https://example.com/ok"
@@ -752,7 +763,7 @@ describe('check-gate-wave0-complete', () => {
   });
 
   it('6b. diagnoses source.yaml object wrappers through the shared top-level root', () => {
-    const dir = createBundle(unique('objectshape'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `wave: 0
 topic: topic-a
@@ -771,7 +782,7 @@ sources:
   });
 
   it('6c. names the earliest missing source.yaml field coordinate', () => {
-    const dir = createBundle(unique('missingfields'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `- url: "https://example.com/no-fields"
   title: "Missing fields"
@@ -785,7 +796,7 @@ sources:
   });
 
   it('6d. fails delegated coverage when submitted result.json drifts after ledger append', () => {
-    const dir = createBundle(unique('resultdrift'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     const index = JSON.parse(readFileSync(join(dir, '_work_units/_index.json'), 'utf-8'));
     const record = Object.values(index.work_units).find((entry) => entry.status === 'submitted');
@@ -810,7 +821,7 @@ sources:
   });
 
   it('7. fails when topic_registry is empty', () => {
-    const dir = createBundle(unique('emptyreg'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     // Empty the registry
     const planPath = join(dir, 'rb_plan.md');
@@ -824,7 +835,7 @@ sources:
   });
 
   it('8. fails on status drift (wrong next_gate)', () => {
-    const dir = createBundle(unique('drift'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     const statusPath = join(dir, 'rb_status.json');
     const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
@@ -837,7 +848,7 @@ sources:
   });
 
   it('9. fails when trace event (wave0_completion) is missing from rb_trace.jsonl', () => {
-    const dir = createBundle(unique('notrace'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     writeTraceEvents(dir, witnessedHandoffEvents({
       sourceGate: 'seed-topics-ready',
@@ -852,7 +863,7 @@ sources:
   });
 
   it('8. rejects shared reference files with placeholder source_url (example.com)', () => {
-    const dir = createBundle(unique('phshared'));
+    const dir = restoredBundle();
     mkdirSync(join(dir, 'artifacts/wave0/topic-a'), { recursive: true });
     mkdirSync(join(dir, 'artifacts/wave0/topic-b'), { recursive: true });
     writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'),
@@ -884,9 +895,19 @@ sources:
 });
 describe('RWG-018 Wave0 direct adapter parity', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+  let sharedBundle;
+  let sharedSnapshot;
+  before(() => {
+    sharedBundle = createBundle('shared');
+    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+  });
+  function restoredBundle() {
+    restoreBundle(sharedSnapshot, sharedBundle);
+    return sharedBundle;
+  }
 
   it('0a. projects the shared Wave0 direct root without duplicating YAML interpretation', async () => {
-    const dir = createBundle(unique('direct-root-parity'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     const target = 'artifacts/wave0/topic-a/source.yaml';
     writeFileSync(join(dir, target), 'url: https://example.com/not-an-array\n');
@@ -908,7 +929,7 @@ describe('RWG-018 Wave0 direct adapter parity', () => {
   });
 
   it('0b. keeps Wave0 count and submitted provenance outside the direct contract', async () => {
-    const dir = createBundle(unique('direct-wave-only'));
+    const dir = restoredBundle();
     setupHappyPath(dir);
     const target = 'artifacts/wave0/topic-a/source.yaml';
     writeFileSync(join(dir, target), '[]\n');

@@ -1,12 +1,13 @@
 // gate-readiness-passed integration tests (CDG-004)
-import { describe, it, after } from 'node:test';
+import { describe, it, after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { setStatusWindow, witnessedHandoffEvents } from './handoff-fixtures.mjs';
 import { evaluateCompositionProceed } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/composition-handoff.mjs';
+import { restoreBundle, snapshotBundle } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-readiness-passed.mjs');
@@ -196,9 +197,19 @@ function createLegacyBundle(name) {
 
 describe('check-gate-readiness-passed', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+  let sharedBundle;
+  let sharedSnapshot;
+  before(() => {
+    sharedBundle = createBundle('shared');
+    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+  });
+  function restoredBundle() {
+    restoreBundle(sharedSnapshot, sharedBundle);
+    return sharedBundle;
+  }
 
   it('1. happy path: all artifacts + 8 gates + valid YAML + valid JSONL → pass', () => {
-    const dir = createBundle(unique('happy'));
+    const dir = restoredBundle();
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected pass, got inspect: ${JSON.stringify(output.inspect)}`);
@@ -207,7 +218,7 @@ describe('check-gate-readiness-passed', () => {
   });
 
   it('2. fails when seed_topics/ is missing', () => {
-    const dir = createBundle(unique('noseed'));
+    const dir = restoredBundle();
     rmSync(join(dir, 'seed_topics'), { recursive: true, force: true });
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -221,7 +232,7 @@ describe('check-gate-readiness-passed', () => {
   });
 
   it('3. fails when seed_topics/ is empty', () => {
-    const dir = createBundle(unique('emptyseed'));
+    const dir = restoredBundle();
     rmSync(join(dir, 'seed_topics'), { recursive: true, force: true });
     mkdirSync(join(dir, 'seed_topics'));
     const result = runGate(dir);
@@ -232,7 +243,7 @@ describe('check-gate-readiness-passed', () => {
   });
 
   it('4. fails when reference/_INDEX.md is missing', () => {
-    const dir = createBundle(unique('noref'));
+    const dir = restoredBundle();
     rmSync(join(dir, 'reference/_INDEX.md'));
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -242,7 +253,7 @@ describe('check-gate-readiness-passed', () => {
   });
 
   it('5. fails when artifacts/wave2/synthesis.md is missing', () => {
-    const dir = createBundle(unique('nosynthesis'));
+    const dir = restoredBundle();
     rmSync(join(dir, 'artifacts/wave2/synthesis.md'));
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -252,7 +263,7 @@ describe('check-gate-readiness-passed', () => {
   });
 
   it('6. fails when artifacts/hitl2/decision-brief.md is missing', () => {
-    const dir = createBundle(unique('nobrief'));
+    const dir = restoredBundle();
     rmSync(join(dir, 'artifacts/hitl2/decision-brief.md'));
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -262,7 +273,7 @@ describe('check-gate-readiness-passed', () => {
   });
 
   it('7. fails when fewer than 8 gate_attempt events with passed=true', () => {
-    const dir = createBundle(unique('fewgates'));
+    const dir = restoredBundle();
 
     // Overwrite trace with only 5 passed gates
     const partialTrace = buildTrace([
@@ -289,7 +300,7 @@ describe('check-gate-readiness-passed', () => {
   });
 
   it('8. fails when rb_profile.yaml is unparseable', () => {
-    const dir = createBundle(unique('badyaml'));
+    const dir = restoredBundle();
 
     writeFileSync(join(dir, 'rb_profile.yaml'), 'key: [bad: > yaml:');
 
@@ -305,7 +316,7 @@ describe('check-gate-readiness-passed', () => {
   });
 
   it('9. fails when rb_trace.jsonl has unparseable lines', () => {
-    const dir = createBundle(unique('badjsonl'));
+    const dir = restoredBundle();
 
     const badTrace = buildTrace(PRIOR_GATES) + 'this is not json\n' + 'neither is this\n';
     writeFileSync(join(dir, 'rb_trace.jsonl'), badTrace);
@@ -318,7 +329,7 @@ describe('check-gate-readiness-passed', () => {
   });
 
   it('10. fails on status drift (wrong next_gate)', () => {
-    const dir = createBundle(unique('drift'));
+    const dir = restoredBundle();
 
     const statusPath = join(dir, 'rb_status.json');
     const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
@@ -333,7 +344,7 @@ describe('check-gate-readiness-passed', () => {
   });
 
   it('10b. reports one restore command for projection-only drift and refuses it for context drift', () => {
-    const projectionDir = createBundle(unique('projection-drift'));
+    const projectionDir = restoredBundle();
     writeFileSync(join(projectionDir, 'rb_profile.yaml'), VALID_PROFILE.replace('final_report_view: executive_brief', 'final_report_view: claim_judgment'));
     const projectionResult = runGate(projectionDir);
     const projectionOutput = JSON.parse(projectionResult.stdout);
@@ -343,7 +354,7 @@ describe('check-gate-readiness-passed', () => {
     assert.equal(projectionHint.repair_kind, 'engine_operation');
     assert.match(projectionHint.write_to, /operate-composition-handoff\.mjs restore/);
 
-    const contextDir = createBundle(unique('context-drift'));
+    const contextDir = restoredBundle();
     writeFileSync(join(contextDir, 'rb_profile.yaml'), VALID_PROFILE.replace('How to measure alignment?', 'A changed root question'));
     const contextResult = runGate(contextDir);
     const contextOutput = JSON.parse(contextResult.stdout);
@@ -359,7 +370,7 @@ describe('check-gate-readiness-passed', () => {
       ['missing', (event) => { delete event.composition_handoff_receipt; }],
       ['malformed', (event) => { event.composition_handoff_receipt.projection_sha256 = '0'.repeat(64); }],
     ]) {
-      const dir = createBundle(unique(`receipt-${name}`));
+      const dir = restoredBundle();
       const events = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf-8').trim().split('\n').map((line) => JSON.parse(line));
       mutate(events.find((event) => event.event === 'gate_attempt' && event.gate === 'hitl2-recorded'));
       writeFileSync(join(dir, 'rb_trace.jsonl'), `${events.map((event) => JSON.stringify(event)).join('\n')}\n`);
@@ -373,7 +384,7 @@ describe('check-gate-readiness-passed', () => {
   });
 
   it('10d. restore changes only the accepted projection, audits once, and reruns the same Readiness Gate', () => {
-    const dir = createBundle(unique('restore'));
+    const dir = restoredBundle();
     const profilePath = join(dir, 'rb_profile.yaml');
     const tracePath = join(dir, 'rb_trace.jsonl');
     const statusPath = join(dir, 'rb_status.json');
@@ -398,7 +409,7 @@ describe('check-gate-readiness-passed', () => {
   });
 
   it('10e. rejected restore leaves profile, trace, status, and artifacts unchanged', () => {
-    const dir = createBundle(unique('restore-context-drift'));
+    const dir = restoredBundle();
     const profilePath = join(dir, 'rb_profile.yaml');
     writeFileSync(profilePath, VALID_PROFILE.replace('How to measure alignment?', 'A changed root question'));
     const paths = [profilePath, join(dir, 'rb_trace.jsonl'), join(dir, 'rb_status.json'), join(dir, 'artifacts/wave2/synthesis.md')];

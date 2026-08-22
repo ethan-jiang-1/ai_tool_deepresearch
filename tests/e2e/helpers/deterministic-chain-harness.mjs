@@ -46,6 +46,10 @@ export function instantiateBundle(root, label) {
 
 export function snapshotBundle(source, root) {
   const snapshot = join(root, '.baseline-snapshot');
+  // cpSync(recursive) MERGES into an existing destination; a stale snapshot
+  // left by an earlier run/file would contaminate the copy. Clear first, like
+  // restoreBundle does, so the snapshot is a clean byte copy of the source.
+  rmSync(snapshot, { recursive: true, force: true });
   cpSync(source, snapshot, { recursive: true, errorOnExist: true });
   return snapshot;
 }

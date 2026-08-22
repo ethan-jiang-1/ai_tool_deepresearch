@@ -1,9 +1,10 @@
 // gate-hitl2-recorded integration tests (CDG-003)
-import { describe, it, after } from 'node:test';
+import { describe, it, after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { restoreBundle, snapshotBundle } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl2-recorded.mjs');
@@ -136,9 +137,19 @@ function writeHitl2HandoffTrace(dir, extraEvents = []) {
 
 describe('check-gate-hitl2-recorded', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+  let sharedBundle;
+  let sharedSnapshot;
+  before(() => {
+    sharedBundle = createBundle('shared');
+    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+  });
+  function restoredBundle() {
+    restoreBundle(sharedSnapshot, sharedBundle);
+    return sharedBundle;
+  }
 
   it('1. happy path: valid decision brief + profile decision + trace event → pass', () => {
-    const dir = createBundle(unique('happy'));
+    const dir = restoredBundle();
 
     // Write decision brief
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'),
@@ -157,7 +168,7 @@ describe('check-gate-hitl2-recorded', () => {
   });
 
   it('2. fails when decision brief is missing', () => {
-    const dir = createBundle(unique('nobrief'));
+    const dir = restoredBundle();
 
     writeFileSync(join(dir, 'rb_profile.yaml'), VALID_PROFILE);
     writeHitl2HandoffTrace(dir, [{ event: 'hitl2_recorded', ts: new Date().toISOString() }]);
@@ -176,7 +187,7 @@ describe('check-gate-hitl2-recorded', () => {
   });
 
   it('3. fails when decision brief is empty', () => {
-    const dir = createBundle(unique('emptybrief'));
+    const dir = restoredBundle();
 
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '---\n---\n');
     writeFileSync(join(dir, 'rb_profile.yaml'), VALID_PROFILE);
@@ -190,7 +201,7 @@ describe('check-gate-hitl2-recorded', () => {
   });
 
   it('4. fails when hitl2.status is not recorded', () => {
-    const dir = createBundle(unique('badstatus'));
+    const dir = restoredBundle();
 
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
     const badProfile = VALID_PROFILE.replace(
@@ -211,7 +222,7 @@ describe('check-gate-hitl2-recorded', () => {
   });
 
   it('5. fails when user_decision is empty', () => {
-    const dir = createBundle(unique('nodecision'));
+    const dir = restoredBundle();
 
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
     const noDecisionProfile = VALID_PROFILE.replace('user_decision: proceed_to_readiness', 'user_decision: ');
@@ -231,7 +242,7 @@ describe('check-gate-hitl2-recorded', () => {
   });
 
   it('6. fails when user_decision is not in accepted enum', () => {
-    const dir = createBundle(unique('badenum'));
+    const dir = restoredBundle();
 
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
     const badEnumProfile = VALID_PROFILE.replace('user_decision: proceed_to_readiness', 'user_decision: random_choice');
@@ -246,7 +257,7 @@ describe('check-gate-hitl2-recorded', () => {
   });
 
   it('6b. rejects not_started sentinel as a recorded gate decision', () => {
-    const dir = createBundle(unique('sentinel'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
     writeFileSync(join(dir, 'rb_profile.yaml'), profileWithDecision('not_started'));
     writeHitl2HandoffTrace(dir);
@@ -260,7 +271,7 @@ describe('check-gate-hitl2-recorded', () => {
   });
 
   it('7. gate passes without hitl2_recorded trace event (rule removed — redundant with artifact checks)', () => {
-    const dir = createBundle(unique('notrace'));
+    const dir = restoredBundle();
 
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
     writeFileSync(join(dir, 'rb_profile.yaml'), VALID_PROFILE);
@@ -272,7 +283,7 @@ describe('check-gate-hitl2-recorded', () => {
   });
 
   it('8. fails when rb_profile.yaml is unparseable YAML', () => {
-    const dir = createBundle(unique('badyaml'));
+    const dir = restoredBundle();
 
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
     writeFileSync(join(dir, 'rb_profile.yaml'), '{invalid: [yaml: :}:');
@@ -290,7 +301,7 @@ describe('check-gate-hitl2-recorded', () => {
   });
 
   it('9. fails on status drift (wrong next_gate)', () => {
-    const dir = createBundle(unique('drift'));
+    const dir = restoredBundle();
 
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
     writeFileSync(join(dir, 'rb_profile.yaml'), VALID_PROFILE);
@@ -310,7 +321,7 @@ describe('check-gate-hitl2-recorded', () => {
   });
 
   it('10. proceed_to_readiness emits readiness target in check.next and trace', () => {
-    const dir = createBundle(unique('proceed-next'));
+    const dir = restoredBundle();
     writePassingHitl2Inputs(dir, 'proceed_to_readiness');
 
     const result = runGate(dir);
@@ -325,7 +336,7 @@ describe('check-gate-hitl2-recorded', () => {
   });
 
   it('11. rerun emits rerun target in check.next and trace', () => {
-    const dir = createBundle(unique('rerun-next'));
+    const dir = restoredBundle();
     writePassingHitl2Inputs(dir, 'rerun');
 
     const result = runGate(dir);
@@ -338,7 +349,7 @@ describe('check-gate-hitl2-recorded', () => {
   });
 
   it('12. non-deterministic decisions do not default to readiness handoff', () => {
-    const dir = createBundle(unique('repair-no-default'));
+    const dir = restoredBundle();
     writePassingHitl2Inputs(dir, 'repair', { includeComposition: false });
 
     const result = runGate(dir);
@@ -366,7 +377,7 @@ describe('check-gate-hitl2-recorded', () => {
     ];
 
     for (const [name, profile] of variants) {
-      const dir = createBundle(unique(`composition-${name}`));
+      const dir = restoredBundle();
       writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
       writeFileSync(join(dir, 'rb_profile.yaml'), profile);
       writeHitl2HandoffTrace(dir);
@@ -381,7 +392,7 @@ describe('check-gate-hitl2-recorded', () => {
   });
 
   it('13. strict Gate-attempt trace failure becomes a helper-owned failed result', () => {
-    const dir = createBundle(unique('trace-durability'));
+    const dir = restoredBundle();
     writePassingHitl2Inputs(dir, 'proceed_to_readiness');
     const tracePath = join(dir, 'rb_trace.jsonl');
     chmodSync(tracePath, 0o444);

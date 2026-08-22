@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: share-gate-matrix-bundle-baselines
+status: not_applicable
+reason: >-
+  This change repairs test-owned setup economics only: five integration
+  gate/queue matrices build one empty disposable bundle per run and restore a
+  byte snapshot to the original path per leaf. It introduces no Harness
+  runtime fact family, resolver, authority-establishing surface, or
+  deterministic production behavior, so no semantic-fact closure record
+  applies.

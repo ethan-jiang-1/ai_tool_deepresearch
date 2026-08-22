@@ -1,12 +1,13 @@
 // operate-queue-validation.test.mjs — regression tests for QIV-001..004, AGQ-001/004
 // Covers: enqueue topic validation, bundle_name, repair, completion_receipt null
 
-import { describe, it, after } from 'node:test';
+import { describe, it, after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
+import { restoreBundle, snapshotBundle } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 
 const REPO_ROOT = process.cwd();
 const OPERATE_QUEUE = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs');
@@ -125,9 +126,19 @@ function setQueueBundleName(dir, name) {
 
 describe('QIV-001 enqueue topic validation', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+  let sharedBundle;
+  let sharedSnapshot;
+  before(() => {
+    sharedBundle = createBundle('shared');
+    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+  });
+  function restoredBundle() {
+    restoreBundle(sharedSnapshot, sharedBundle);
+    return sharedBundle;
+  }
 
   it('1. accepts valid topic_slug in payload', () => {
-    const dir = createBundle(unique('valid'));
+    const dir = restoredBundle();
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, { queue_item_id: 'wave0-source-topic-a', payload: { topic_slug: 'topic-a' } });
     const r = runOq(dir, 'enqueue', '--task', taskFile);
@@ -138,7 +149,7 @@ describe('QIV-001 enqueue topic validation', () => {
   });
 
   it('2. rejects unknown topic_slug', () => {
-    const dir = createBundle(unique('unknown'));
+    const dir = restoredBundle();
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, { queue_item_id: 'wave0-source-clinical-scenarios', payload: { topic_slug: 'clinical-scenarios' } });
     const r = runOq(dir, 'enqueue', '--task', taskFile);
@@ -148,7 +159,7 @@ describe('QIV-001 enqueue topic validation', () => {
   });
 
   it('3. accepts explicit payload topic_slug when queue_item_id has iteration suffix', () => {
-    const dir = createBundle(unique('suffix'));
+    const dir = restoredBundle();
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, {
       queue_item_id: 'wave1-deepen-topic-a-v2',
@@ -161,7 +172,7 @@ describe('QIV-001 enqueue topic validation', () => {
   });
 
   it('4. rejects conflicting explicit payload and lineage topic_slug', () => {
-    const dir = createBundle(unique('explicit-conflict'));
+    const dir = restoredBundle();
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, {
       queue_item_id: 'wave1-deepen-topic-a',
@@ -176,7 +187,7 @@ describe('QIV-001 enqueue topic validation', () => {
   });
 
   it('5. rejects topic-scoped task with no resolvable slug', () => {
-    const dir = createBundle(unique('noslug'));
+    const dir = restoredBundle();
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, { queue_item_id: 'mystery-deepen-foo', producer_rule: 'topic_deepening' });
     const r = runOq(dir, 'enqueue', '--task', taskFile);
@@ -186,7 +197,7 @@ describe('QIV-001 enqueue topic validation', () => {
   });
 
   it('6. accepts valid lineage topic_slug without payload topic_slug', () => {
-    const dir = createBundle(unique('lineage'));
+    const dir = restoredBundle();
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, {
       queue_item_id: 'wave1-deepen-topic-a-v2',
@@ -199,7 +210,7 @@ describe('QIV-001 enqueue topic validation', () => {
   });
 
   it('7. accepts Wave2 finding-scoped backing task without topic_slug', () => {
-    const dir = createBundle(unique('finding'));
+    const dir = restoredBundle();
     // Create finding-index.yaml so validation checks finding_id
     mkdirSync(join(dir, 'artifacts', 'wave2'), { recursive: true });
     writeFileSync(join(dir, 'artifacts/wave2/finding-index.yaml'), 'findings:\n  - id: W2F-001\n    decision: exploit_search\n');
@@ -215,7 +226,7 @@ describe('QIV-001 enqueue topic validation', () => {
   });
 
   it('8. rejects Wave2 finding-scoped task when finding_id not in index', () => {
-    const dir = createBundle(unique('badfinding'));
+    const dir = restoredBundle();
     mkdirSync(join(dir, 'artifacts', 'wave2'), { recursive: true });
     writeFileSync(join(dir, 'artifacts/wave2/finding-index.yaml'), 'findings:\n  - id: W2F-001\n');
     const taskFile = join(dir, 'task.json');
@@ -231,7 +242,7 @@ describe('QIV-001 enqueue topic validation', () => {
   });
 
   it('9. rejects a previous-layout slug with the current suggestion and no write', () => {
-    const dir = createBundle(unique('previous'));
+    const dir = restoredBundle();
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, { payload: { topic_slug: 'old-topic-a' } });
     const before = readFileSync(join(dir, 'rb_queue.json'), 'utf8');
@@ -244,7 +255,7 @@ describe('QIV-001 enqueue topic validation', () => {
   });
 
   it('10. rejects caller UID mismatch without queue mutation', () => {
-    const dir = createBundle(unique('uid-mismatch'));
+    const dir = restoredBundle();
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, { payload: { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174001', topic_slug: 'topic-a' } });
     const before = readFileSync(join(dir, 'rb_queue.json'), 'utf8');
@@ -255,7 +266,7 @@ describe('QIV-001 enqueue topic validation', () => {
   });
 
   it('11. prioritizes accepted workspace recovery before layout validation', () => {
-    const dir = createBundle(unique('workspace'));
+    const dir = restoredBundle();
     const workspace = join(dir, '_diagnostics/topic-state/op-layout');
     mkdirSync(workspace, { recursive: true });
     writeFileSync(join(workspace, 'prepared.json'), '{}\n');
@@ -270,9 +281,19 @@ describe('QIV-001 enqueue topic validation', () => {
 
 describe('QIV-002 bundle_name validation', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+  let sharedBundle;
+  let sharedSnapshot;
+  before(() => {
+    sharedBundle = createBundle('shared');
+    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+  });
+  function restoredBundle() {
+    restoreBundle(sharedSnapshot, sharedBundle);
+    return sharedBundle;
+  }
 
   it('1. rejects operation when bundle_name mismatches', () => {
-    const dir = createBundle(unique('mismatch'));
+    const dir = restoredBundle();
     setQueueBundleName(dir, 'wrong-bundle-name');
     const r = runOq(dir, 'check');
     assert.equal(r.status, 1);
@@ -280,7 +301,7 @@ describe('QIV-002 bundle_name validation', () => {
   });
 
   it('2. legacy queue (null bundle_name) gets auto-injected on first operation', () => {
-    const dir = createBundle(unique('legacy'));
+    const dir = restoredBundle();
     // Ensure null bundle_name
     const q = JSON.parse(readFileSync(join(dir, 'rb_queue.json'), 'utf-8'));
     q.bundle_name = null;
@@ -297,9 +318,19 @@ describe('QIV-002 bundle_name validation', () => {
 
 describe('QIV-003 projection staleness', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+  let sharedBundle;
+  let sharedSnapshot;
+  before(() => {
+    sharedBundle = createBundle('shared');
+    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+  });
+  function restoredBundle() {
+    restoreBundle(sharedSnapshot, sharedBundle);
+    return sharedBundle;
+  }
 
   it('1. project writes generated_at and source_queue_sha256', () => {
-    const dir = createBundle(unique('project'));
+    const dir = restoredBundle();
     const r = runOq(dir, 'project');
     const out = JSON.parse(r.stdout);
     assert.equal(out.ok, true);
@@ -313,7 +344,7 @@ describe('QIV-003 projection staleness', () => {
   });
 
   it('2. check warns when projection is stale', () => {
-    const dir = createBundle(unique('stale'));
+    const dir = restoredBundle();
     // First project
     runOq(dir, 'project');
     // Modify queue
@@ -328,9 +359,19 @@ describe('QIV-003 projection staleness', () => {
 
 describe('QIV-004 repair --remove-stale', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+  let sharedBundle;
+  let sharedSnapshot;
+  before(() => {
+    sharedBundle = createBundle('shared');
+    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+  });
+  function restoredBundle() {
+    restoreBundle(sharedSnapshot, sharedBundle);
+    return sharedBundle;
+  }
 
   it('1. removes task card with unknown topic_slug', () => {
-    const dir = createBundle(unique('repair'));
+    const dir = restoredBundle();
     // Enqueue a task with a valid topic first
     const taskFileA = join(dir, 'task_a.json');
     writeTaskFile(taskFileA, { queue_item_id: 'wave0-source-topic-a', payload: { topic_slug: 'topic-a' } });
@@ -368,9 +409,19 @@ describe('QIV-004 repair --remove-stale', () => {
 
 describe('AGQ-001/004 completion_receipt null', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+  let sharedBundle;
+  let sharedSnapshot;
+  before(() => {
+    sharedBundle = createBundle('shared');
+    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+  });
+  function restoredBundle() {
+    restoreBundle(sharedSnapshot, sharedBundle);
+    return sharedBundle;
+  }
 
   it('1. null completion_receipt with empty required_receipts is valid', () => {
-    const dir = createBundle(unique('nullreceipt'));
+    const dir = restoredBundle();
     // Direct schema test: validate via makeItem path
     // Enqueue with completion_receipt: null and required_receipts: []
     const taskFile = join(dir, 'task.json');
@@ -386,7 +437,7 @@ describe('AGQ-001/004 completion_receipt null', () => {
   });
 
   it('2. null completion_receipt with non-empty required_receipts is rejected', () => {
-    const dir = createBundle(unique('badnull'));
+    const dir = restoredBundle();
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, {
       queue_item_id: 'wave0-source-topic-a',
@@ -399,7 +450,7 @@ describe('AGQ-001/004 completion_receipt null', () => {
   });
 
   it('3. missing completion_receipt property is still rejected by schema', () => {
-    const dir = createBundle(unique('missing'));
+    const dir = restoredBundle();
     const taskFile = join(dir, 'task.json');
     // Write raw JSON without completion_receipt field
     const raw = {
@@ -418,6 +469,16 @@ describe('AGQ-001/004 completion_receipt null', () => {
 
 describe('AGQ-019 generic Queue failure terminalization', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+  let sharedBundle;
+  let sharedSnapshot;
+  before(() => {
+    sharedBundle = createBundle('shared');
+    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+  });
+  function restoredBundle() {
+    restoreBundle(sharedSnapshot, sharedBundle);
+    return sharedBundle;
+  }
 
   function enqueueMainAgentDemand(dir, id = 'wave0-source-topic-a', topicSlug = 'topic-a') {
     const taskPath = join(dir, `${id}.json`);
@@ -428,7 +489,7 @@ describe('AGQ-019 generic Queue failure terminalization', () => {
   }
 
   it('records one no-successor terminal row and no repair demand through the public CLI', () => {
-    const dir = createBundle(unique('terminal-no-successor'));
+    const dir = restoredBundle();
     const id = 'wave0-source-topic-a';
     enqueueMainAgentDemand(dir, id);
     const failurePath = join(dir, 'failure.json');
@@ -451,7 +512,7 @@ describe('AGQ-019 generic Queue failure terminalization', () => {
   });
 
   it('rejects caller repair payload and delegated demand without Queue-byte mutation', () => {
-    const payloadDir = createBundle(unique('failure-payload'));
+    const payloadDir = restoredBundle();
     const id = 'wave0-source-topic-a';
     enqueueMainAgentDemand(payloadDir, id);
     const payloadPath = join(payloadDir, 'failure.json');
@@ -462,7 +523,7 @@ describe('AGQ-019 generic Queue failure terminalization', () => {
     assert.match(payloadResult.stderr, /repair/i);
     assert.equal(readFileSync(join(payloadDir, 'rb_queue.json'), 'utf8'), payloadBefore);
 
-    const delegatedDir = createBundle(unique('failure-delegated'));
+    const delegatedDir = restoredBundle();
     enqueueMainAgentDemand(delegatedDir, id);
     const queuePath = join(delegatedDir, 'rb_queue.json');
     const queue = JSON.parse(readFileSync(queuePath, 'utf8'));
@@ -481,7 +542,7 @@ describe('AGQ-019 generic Queue failure terminalization', () => {
   });
 
   it('rejects a stale-front failure without Queue-byte mutation', () => {
-    const dir = createBundle(unique('failure-stale-front'));
+    const dir = restoredBundle();
     const frontId = 'wave0-source-topic-a';
     const staleId = 'wave0-source-topic-b';
     enqueueMainAgentDemand(dir, frontId, 'topic-a');
@@ -499,9 +560,19 @@ describe('AGQ-019 generic Queue failure terminalization', () => {
 
 describe('AGQ-013 Wave1 assignment-mode admission and repair', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+  let sharedBundle;
+  let sharedSnapshot;
+  before(() => {
+    sharedBundle = createBundle('shared');
+    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+  });
+  function restoredBundle() {
+    restoreBundle(sharedSnapshot, sharedBundle);
+    return sharedBundle;
+  }
 
   it('keeps historical missing-mode rows loadable but diagnoses them for repair, then rejects invalid new enqueue', async (t) => {
-    const historicalDir = createBundle(unique('mode-history'));
+    const historicalDir = restoredBundle();
     seedMissingModeWave1Card(historicalDir);
     const normalized = runOq(historicalDir, 'count');
     assert.equal(normalized.status, 0, normalized.stderr);
@@ -526,7 +597,7 @@ describe('AGQ-013 Wave1 assignment-mode admission and repair', () => {
     ];
     for (const testCase of invalid) {
       await t.test(testCase.label, () => {
-        const dir = createBundle(unique(`mode-${testCase.label}`));
+        const dir = restoredBundle();
         const taskPath = join(dir, 'task.json');
         writeTaskFile(taskPath, {
           queue_item_id: `wave1-deepen-topic-a-${testCase.label}`,
@@ -550,7 +621,7 @@ describe('AGQ-013 Wave1 assignment-mode admission and repair', () => {
   });
 
   it('returns task-card JSON feedback only for a missing payload assignment_mode', () => {
-    const dir = createBundle(unique('mode-feedback'));
+    const dir = restoredBundle();
     const taskPath = join(dir, 'task card.json');
     writeTaskFile(taskPath, {
       queue_item_id: 'wave1-deepen-topic-a-feedback',
@@ -639,7 +710,7 @@ describe('AGQ-013 Wave1 assignment-mode admission and repair', () => {
     ];
     for (const selector of selectors) {
       await t.test(selector, () => {
-        const dir = createBundle(unique(`selector-${selector}`));
+        const dir = restoredBundle();
         const taskPath = join(dir, 'task.json');
         writeTaskFile(taskPath, {
           queue_item_id: `wave1-deepen-topic-a-${selector.replaceAll('_', '-')}`,
@@ -669,7 +740,7 @@ describe('AGQ-013 Wave1 assignment-mode admission and repair', () => {
   it('repairs one unclaimed mode-absent card with one save-before-event sequence', async (t) => {
     for (const mode of ['primary', 'supplementary']) {
       await t.test(mode, () => {
-        const dir = createBundle(unique(`repair-${mode}`));
+        const dir = restoredBundle();
         const original = seedMissingModeWave1Card(dir, {
           queue_item_id: `wave1-deepen-topic-a-repair-${mode}`,
           writes_to: ['artifacts/wave1/topic-a/optional-notes.md'],
@@ -755,7 +826,7 @@ describe('AGQ-013 Wave1 assignment-mode admission and repair', () => {
       },
     ];
     for (const testCase of cases) {
-      const dir = createBundle(unique(`repair-invalid-${testCase.label}`));
+      const dir = restoredBundle();
       if (testCase.seed) {
         const item = seedMissingModeWave1Card(dir, {
           queue_item_id: testCase.id,

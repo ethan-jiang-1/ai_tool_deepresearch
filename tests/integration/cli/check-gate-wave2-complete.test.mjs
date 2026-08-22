@@ -1,14 +1,15 @@
 // gate-wave2-complete integration tests (RWG-003, RWG-006, RWG-008)
-import { describe, it, after } from 'node:test';
+import { describe, it, after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
 import {
   claimAndSubmitWorkUnit,
   referenceContent,
 } from '../../engine/work-unit-test-helpers.mjs';
+import { restoreBundle, snapshotBundle } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs');
@@ -445,11 +446,21 @@ function writeWave2ContractIndex(dir, {
 
 describe('check-gate-wave2-complete', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
+  let sharedBundle;
+  let sharedSnapshot;
+  before(() => {
+    sharedBundle = createBundle('shared');
+    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+  });
+  function restoredBundle() {
+    restoreBundle(sharedSnapshot, sharedBundle);
+    return sharedBundle;
+  }
 
   // ── Existing tests (updated for three-artifact expectations) ──────────
 
   it('1. happy path: all three artifacts present, valid links, backfill clean → pass', () => {
-    const dir = createBundle(unique('happy'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     createMinIndex(dir);
@@ -463,7 +474,7 @@ describe('check-gate-wave2-complete', () => {
   });
 
   it('inspect accepts a valid Wave2 artifact triple without a Return Map workaround', () => {
-    const dir = createBundle(unique('inspect-no-return-map'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     createMinIndex(dir);
@@ -476,7 +487,7 @@ describe('check-gate-wave2-complete', () => {
 
   it('inspect retains artifact-specific roots after return-map scope correction', () => {
     const createValidInspectBundle = (name) => {
-      const dir = createBundle(unique(name));
+      const dir = restoredBundle();
       writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
       createMinLedger(dir);
       createMinIndex(dir);
@@ -508,7 +519,7 @@ describe('check-gate-wave2-complete', () => {
   });
 
   it('1b. accepts harmless ledger heading marker, case, and spacing differences', () => {
-    const dir = createBundle(unique('ledger-tolerant'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     const ledgerPath = join(dir, 'artifacts/wave2/cross-topic-ledger.md');
@@ -524,7 +535,7 @@ describe('check-gate-wave2-complete', () => {
   });
 
   it('1d. accepts all six non-empty ledger sections in arbitrary order and heading levels', () => {
-    const dir = createBundle(unique('ledger-reordered'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     writeFileSync(join(dir, 'artifacts/wave2/cross-topic-ledger.md'), `# Ledger
 
@@ -555,7 +566,7 @@ None imported.
   });
 
   it('1e. keeps an empty required ledger semantic section blocking once', () => {
-    const dir = createBundle(unique('ledger-empty-section'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     const ledgerPath = join(dir, 'artifacts/wave2/cross-topic-ledger.md');
@@ -573,7 +584,7 @@ None imported.
   });
 
   it('1c. Wave2 inspect reports missing hitl2_handoff without derivative handoff failures', () => {
-    const dir = createBundle(unique('missing-hitl-field'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     createFullCoverageIndex(dir);
@@ -591,7 +602,7 @@ None imported.
   });
 
   it('2. fails when synthesis.md is missing', () => {
-    const dir = createBundle(unique('nofile'));
+    const dir = restoredBundle();
     createMinLedger(dir);
     createMinIndex(dir);
     createMinBackfill(dir);
@@ -612,7 +623,7 @@ None imported.
   });
 
   it('3. fails when synthesis is empty', () => {
-    const dir = createBundle(unique('empty'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), '---\n---\n');
     createMinLedger(dir);
     createMinIndex(dir);
@@ -625,7 +636,7 @@ None imported.
   });
 
   it('4. fails when synthesis has no Markdown links', () => {
-    const dir = createBundle(unique('nolinks'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_NO_LINKS);
     createMinLedger(dir);
     createMinIndex(dir);
@@ -638,7 +649,7 @@ None imported.
   });
 
   it('5. fails when all link targets are missing', () => {
-    const dir = createBundle(unique('dead'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_DEAD_LINKS);
     createMinLedger(dir);
     createMinIndex(dir);
@@ -651,7 +662,7 @@ None imported.
   });
 
   it('6. passes when at least one link target is valid (mixed valid/dead links)', () => {
-    const dir = createBundle(unique('mixed'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_MIXED_LINKS);
     createMinLedger(dir);
     createMinIndex(dir);
@@ -664,7 +675,7 @@ None imported.
   });
 
   it('7. fails on status drift', () => {
-    const dir = createBundle(unique('drift'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     createMinIndex(dir);
@@ -683,7 +694,7 @@ None imported.
   // ── New tests: three-artifact gate rules ──────────────────────────────
 
   it('8. fails when ledger is missing', () => {
-    const dir = createBundle(unique('noledger'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinIndex(dir);
     createMinBackfill(dir);
@@ -695,7 +706,7 @@ None imported.
   });
 
   it('9. fails when finding-index.yaml is unparseable', () => {
-    const dir = createBundle(unique('badindex'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     writeFileSync(join(dir, 'artifacts/wave2/finding-index.yaml'), '{ this is not valid YAML: [[[');
@@ -708,7 +719,7 @@ None imported.
   });
 
   it('10. does not invent a Wave2 projection obligation from a no-demand token', () => {
-    const dir = createBundle(unique('token'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     createMinIndex(dir);
@@ -721,7 +732,7 @@ None imported.
   });
 
   it('11. fails action:add rerun when synthesis uses delta-only mode', () => {
-    const dir = createBundle(unique('adddelta'));
+    const dir = restoredBundle();
     configureActionAddRerun(dir);
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), `${SYNTHESIS_WITH_VALID_LINKS}
 
@@ -739,7 +750,7 @@ W2F-001: Delta-only addition for topic-b.
   });
 
   it('12. passes action:add rerun with full topic coverage and no delta synthesis', () => {
-    const dir = createBundle(unique('addfull'));
+    const dir = restoredBundle();
     configureActionAddRerun(dir);
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), `# Cross-Topic Synthesis
 
@@ -754,7 +765,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
   });
 
   it('12b. action:add rejects a missing three-topic pair even when every slug appears in prose', () => {
-    const dir = createBundle(unique('rerun-missing-pair'));
+    const dir = restoredBundle();
     configureThreeTopicActionAddRerun(dir);
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), `${SYNTHESIS_WITH_VALID_LINKS}\nAll slugs mentioned: topic-a topic-b topic-c.\n`);
     createFullCoverageLedger(dir);
@@ -775,7 +786,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
   });
 
   it('12e. malformed pair facts mask only pair policy while Delta Synthesis remains independently actionable', () => {
-    const dir = createBundle(unique('rerun-pair-mask-delta'));
+    const dir = restoredBundle();
     configureThreeTopicActionAddRerun(dir);
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), `# Synthesis\n\n## Delta Synthesis (Rerun 1)\n\nW2F-001 [Topic A](../wave1/topic-a/evidence-summary.md).\n`);
     createFullCoverageLedger(dir);
@@ -791,7 +802,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
   });
 
   it('12c. action:add accepts the exact three-topic structured pair universe', () => {
-    const dir = createBundle(unique('rerun-exact-pairs'));
+    const dir = restoredBundle();
     configureThreeTopicActionAddRerun(dir);
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createFullCoverageLedger(dir);
@@ -805,7 +816,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
   });
 
   it('12d. malformed pair facts mask the rerun full-pair implication', () => {
-    const dir = createBundle(unique('rerun-pair-mask'));
+    const dir = restoredBundle();
     configureThreeTopicActionAddRerun(dir);
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createFullCoverageLedger(dir);
@@ -820,7 +831,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
   });
 
   it('13. fails when trace event (wave2_completion) is missing from rb_trace.jsonl', () => {
-    const dir = createBundle(unique('notrace'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     createMinIndex(dir);
@@ -833,7 +844,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
   });
 
   it('14. fails when targeted cross-reference evidence exists without submitted work-unit coverage', () => {
-    const dir = createBundle(unique('crossdirect'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     createMinIndex(dir);
@@ -856,7 +867,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
   });
 
   it('15. passes when targeted cross-reference evidence is covered by a submitted work unit', () => {
-    const dir = createBundle(unique('crosswu'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     submitWave2CrossReference(dir);
@@ -869,7 +880,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
   });
 
   it('15a. rejects a dual historical cross-reference through one shared Gate and inspect root', () => {
-    const dir = createBundle(unique('retired-dual-binding'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     submitWave2CrossReference(dir);
@@ -909,7 +920,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
   });
 
   it('15b. masks Wave2 declaration-dependent symptoms behind one recoverable parent', () => {
-    const dir = createBundle(unique('declaration-gap'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     const submission = submitWave2CrossReference(dir);
@@ -938,7 +949,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
   });
 
   it('16. fails when synthesis exists but scan/triage projection is missing', () => {
-    const dir = createBundle(unique('noscan'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     writeWave2ContractIndex(dir, { scanMatrixPresent: false });
@@ -952,7 +963,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
   });
 
   it('17. fails when search-required finding has no receipt or explicit deferral', () => {
-    const dir = createBundle(unique('searchrequired'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     writeWave2ContractIndex(dir, { findings: [wave2Finding()] });
@@ -966,7 +977,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
   });
 
   it('18. passes targeted evidence receipt when backed by submitted work-unit row', () => {
-    const dir = createBundle(unique('targetreceipt'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     const { record, submitted } = submitWave2CrossReference(dir);
@@ -986,7 +997,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
   });
 
   it('19. passes legal pure synthesis with zero delegated targeted rows', () => {
-    const dir = createBundle(unique('pure'));
+    const dir = restoredBundle();
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinLedger(dir);
     writeWave2ContractIndex(dir, { findings: [] });
