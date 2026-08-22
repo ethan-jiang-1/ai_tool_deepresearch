@@ -1,6 +1,6 @@
 # Slow Test Suite Audit And Remediation
 
-> Status: active — scope discovery closed 2026-08-22; workstreams 1 (dedup) & 2 (event release) completed & archived; remaining P0-P3 deferred | Measured: 2026-08-22 | Baseline commit: `046b741dc`
+> Status: active — scope discovery closed 2026-08-22; workstreams 1 (dedup), 2 (event release) & 3 (wave1 snapshot share) completed & archived; remaining P0-P3 deferred | Measured: 2026-08-22 | Baseline commit: `046b741dc`
 
 ## Objective
 
@@ -465,3 +465,25 @@ Archived change: `2026-08-22-replace-transaction-holder-fixed-wait`
 - Remaining workstreams (finalizer restructure, snapshot sharing, matrices,
   P3 tail incl. engine transaction waits `:900/:1200/:1800`) deferred per
   §"Execution Decision".
+
+## Workstream 3 (snapshot sharing, wave1 focus) — COMPLETED 2026-08-22
+
+Archived change: `2026-08-22-share-wave1-focus-contract-baseline`
+(all 17 finalizer checks passed, `specs_updated: false`).
+
+- `wave1-focus-coverage-contract.test.mjs`: five fresh Wave1 bundle builds
+  → one build per run (`before()`), byte-snapshot, restore to the ORIGINAL
+  path per variant (bundle-identity invariant verified:
+  `check-gate-setup-ready:455-477` compares normalized basename vs
+  plan_basename; restore-in-place keeps it). All four cases + the
+  partial/blocked loop and every assertion verbatim.
+- Verification: focused run 4/4 pass, file wall **21.1s → 6.64s** (~14.5s
+  saved, launches ~149 → ~55); full canonical run **2798 passed / 0 failed /
+  0 cancelled** (single-sample wall 625.8s; suite-level single-sample wall
+  varies ±10-15s across runs — the deterministic saving is the focused file
+  measurement).
+- No test cases merged and no assertion changed (implementation guardrail,
+  research notes §07).
+- Remaining workstreams (finalizer restructure, more snapshot sharing
+  [handoff/rerun], gate-matrix P3, P3 tail incl. engine transaction waits)
+  deferred per §"Execution Decision".

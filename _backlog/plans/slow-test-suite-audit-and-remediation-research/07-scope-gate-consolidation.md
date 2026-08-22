@@ -166,3 +166,13 @@ unchanged → writes release). Focused run 42/42 pass; holder leaf **12.5s →
 1.2s** (~11.3s saved). No assertions changed, no cases merged; both
 `sameAttempt` variants preserved. Full canonical run pending; engine
 transaction waits (`:900/:1200/:1800`) remain a P3 item (separate facts).
+
+## Workstream 3 (snapshot sharing, wave1 focus) — in progress 2026-08-22
+
+Change `share-wave1-focus-contract-baseline` (plan P1.1): build the Wave1
+baseline once per run in `before()`, `snapshotBundle` it, `restoreBundle`
+to the ORIGINAL path before each variant (bundle-identity invariant
+verified: `check-gate-setup-ready:455-477` compares normalized basename vs
+plan_basename; restore-in-place keeps it). Focused run 4/4 pass; file wall
+**21.1s → 6.64s** (~14.5s saved); leaves 0.31-0.87s (were 3.9-7.8s). No
+assertions changed, no cases merged. Full canonical run pending.
