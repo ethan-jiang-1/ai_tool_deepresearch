@@ -229,17 +229,26 @@ describe('work-unit transaction v2', () => {
 
   it('returns structured busy from a real contender CLI while another process owns the pair', async () => {
     const bundleDir = tempWorkUnitBundle('wu-tx-contention-');
+    const readyFile = path.join(path.dirname(bundleDir), `${path.basename(bundleDir)}.holder-ready`);
+    const releaseFile = path.join(path.dirname(bundleDir), `${path.basename(bundleDir)}.holder-release`);
     try {
       writeFileSync(path.join(bundleDir, 'authority.json'), 'before\n');
       const moduleUrl = pathToFileURL(path.resolve('DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs')).href;
       const holderScript = `
+        import { existsSync, writeFileSync } from 'node:fs';
         import { withWorkUnitTransaction } from ${JSON.stringify(moduleUrl)};
         const result = withWorkUnitTransaction(${JSON.stringify(bundleDir)}, 'submit_work_unit', {
           targetWorkIds: [${JSON.stringify(WORK_ID)}],
           targetQueueItemIds: ['queue-a'],
           mutationTargets: ['authority.json']
         }, () => {
-          Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1200);
+          writeFileSync(${JSON.stringify(readyFile)}, 'ready\\n');
+          const buf = new Int32Array(new SharedArrayBuffer(4));
+          let elapsed = 0;
+          while (!existsSync(${JSON.stringify(releaseFile)}) && elapsed < 30000) {
+            Atomics.wait(buf, 0, 0, 50);
+            elapsed += 50;
+          }
           return { ok: true };
         });
         if (!result.ok) process.exit(2);
@@ -250,6 +259,7 @@ describe('work-unit transaction v2', () => {
       });
       const holderDone = waitForChild(holder);
       await waitForFile(transactionLockOwnerPath(bundleDir));
+      await waitForFile(readyFile);
       const projection = inspectWorkUnitTransaction(bundleDir, {
         operation: 'submit_work_unit',
         targetWorkIds: [WORK_ID],
@@ -281,8 +291,11 @@ describe('work-unit transaction v2', () => {
       assert.equal(outcome.reason_code, 'busy');
       assert.equal(outcome.transaction.holder.tx_id, projection.holder.tx_id);
       assert.doesNotMatch(cli.stdout, /EEXIST/);
+      writeFileSync(releaseFile, 'release\n');
       await holderDone;
     } finally {
+      rmSync(readyFile, { force: true });
+      rmSync(releaseFile, { force: true });
       cleanupWorkUnitBundle(bundleDir);
     }
   });
@@ -290,11 +303,12 @@ describe('work-unit transaction v2', () => {
   it('keeps a settled journal honestly busy until final lock release', async () => {
     const bundleDir = tempWorkUnitBundle('wu-tx-settled-window-');
     const readyFile = path.join(path.dirname(bundleDir), `${path.basename(bundleDir)}.settled-ready`);
+    const releaseFile = path.join(path.dirname(bundleDir), `${path.basename(bundleDir)}.settled-release`);
     try {
       writeFileSync(path.join(bundleDir, 'authority.json'), 'before\n');
       const moduleUrl = pathToFileURL(path.resolve('DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs')).href;
       const holderScript = `
-        import { writeFileSync } from 'node:fs';
+        import { existsSync, writeFileSync } from 'node:fs';
         import { withWorkUnitTransaction } from ${JSON.stringify(moduleUrl)};
         const result = withWorkUnitTransaction(${JSON.stringify(bundleDir)}, 'submit_work_unit', {
           targetWorkIds: [${JSON.stringify(WORK_ID)}],
@@ -303,7 +317,12 @@ describe('work-unit transaction v2', () => {
           hooks: {
             afterCommittedBeforeRelease({ journal }) {
               writeFileSync(${JSON.stringify(readyFile)}, JSON.stringify({ status: journal.status }));
-              Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000);
+              const buf = new Int32Array(new SharedArrayBuffer(4));
+              let elapsed = 0;
+              while (!existsSync(${JSON.stringify(releaseFile)}) && elapsed < 30000) {
+                Atomics.wait(buf, 0, 0, 50);
+                elapsed += 50;
+              }
             }
           }
         }, () => ({ ok: true }));
@@ -327,11 +346,13 @@ describe('work-unit transaction v2', () => {
       assert.equal(projection.repair_kind, 'wait');
       assert.equal(journals(bundleDir).filter((journal) => journal.status === 'started').length, 0);
 
+      writeFileSync(releaseFile, 'release\n');
       await holderDone;
       assert.equal(existsSync(transactionLockOwnerPath(bundleDir)), false);
       assert.equal(inspectWorkUnitTransaction(bundleDir).disposition, 'none');
     } finally {
       rmSync(readyFile, { force: true });
+      rmSync(releaseFile, { force: true });
       cleanupWorkUnitBundle(bundleDir);
     }
   });
@@ -645,6 +666,8 @@ describe('work-unit transaction v2', () => {
   it('prevents default and forced timeout without treating unrelated contention as attempt progress', async () => {
     for (const sameAttempt of [true, false]) {
       const bundleDir = tempWorkUnitBundle(`wu-tx-timeout-${sameAttempt ? 'same' : 'other'}-`);
+      const readyFile = path.join(path.dirname(bundleDir), `${path.basename(bundleDir)}.holder-ready`);
+      const releaseFile = path.join(path.dirname(bundleDir), `${path.basename(bundleDir)}.holder-release`);
       try {
         seedDelegatedQueue(bundleDir, [delegatedQueueItem('queue-a')]);
         const claim = claimWorkUnits(bundleDir, {
@@ -656,13 +679,20 @@ describe('work-unit transaction v2', () => {
         const holderWorkId = sameAttempt ? workId : 'wu-w0-b000-src-i9999';
         const moduleUrl = pathToFileURL(path.resolve('DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs')).href;
         const holderScript = `
+          import { existsSync, writeFileSync } from 'node:fs';
           import { withWorkUnitTransaction } from ${JSON.stringify(moduleUrl)};
           const result = withWorkUnitTransaction(${JSON.stringify(bundleDir)}, 'submit_work_unit', {
             targetWorkIds: [${JSON.stringify(holderWorkId)}],
             targetQueueItemIds: [${JSON.stringify(sameAttempt ? 'queue-a' : 'queue-other')}],
             mutationTargets: ['rb_queue.json']
           }, () => {
-            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 900);
+            writeFileSync(${JSON.stringify(readyFile)}, 'ready\\n');
+            const buf = new Int32Array(new SharedArrayBuffer(4));
+            let elapsed = 0;
+            while (!existsSync(${JSON.stringify(releaseFile)}) && elapsed < 30000) {
+              Atomics.wait(buf, 0, 0, 50);
+              elapsed += 50;
+            }
             return { ok: true };
           });
           if (!result.ok) process.exit(2);
@@ -673,6 +703,7 @@ describe('work-unit transaction v2', () => {
         });
         const holderDone = waitForChild(holder);
         await waitForFile(transactionLockOwnerPath(bundleDir));
+        await waitForFile(readyFile);
         const before = JSON.stringify(loadWorkUnitIndex(bundleDir));
         const preflight = timeoutPreflightWorkUnit(bundleDir, { work_id: workId });
         assert.equal(preflight.timeout_eligible, false);
@@ -693,8 +724,11 @@ describe('work-unit transaction v2', () => {
           assert.equal(loadWorkUnitIndex(bundleDir).work_units[workId].status, 'claimed');
         }
         assert.equal(JSON.stringify(loadWorkUnitIndex(bundleDir)), before);
+        writeFileSync(releaseFile, 'release\n');
         await holderDone;
       } finally {
+        rmSync(readyFile, { force: true });
+        rmSync(releaseFile, { force: true });
         cleanupWorkUnitBundle(bundleDir);
       }
     }

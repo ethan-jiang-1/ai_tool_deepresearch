@@ -1,0 +1,9 @@
+schema_version: semantic-closure/v1
+change: release-engine-transaction-waits
+status: not_applicable
+reason: >-
+  This change repairs test-owned holder timing only: three engine contention
+  tests replace fixed Atomics.wait holds with explicit ready/release file
+  handshakes. It introduces no Harness runtime fact family, resolver,
+  authority-establishing surface, or deterministic production behavior, so no
+  semantic-fact closure record applies.

@@ -1,0 +1,41 @@
+schema_version: verification-routing/v1
+change: release-engine-transaction-waits
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The three engine-level contention tests prove transaction busy/
+      timeout facts against a real holder child; only the holder's fixed wait
+      becomes an explicit ready/release handshake.
+  integration:
+    status: not_applicable
+    rationale: >-
+      No CLI/fixture integration surface is touched by this change.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale chain is changed.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change repairs deterministic test-harness timing only; it makes no
+      claim about real Agent or Subject-Agent behavior.
+claims:
+  - id: engine-contention-facts-preserved
+    statement: >-
+      DEW-023: structured-busy, settled-journal-busy, and default/forced
+      timeout-refusal facts hold identically for real transaction holders
+      after their fixed 1200/1000/900ms waits are replaced by explicit
+      ready/release handshakes.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-transaction.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
