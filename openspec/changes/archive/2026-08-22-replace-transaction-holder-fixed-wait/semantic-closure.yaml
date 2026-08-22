@@ -1,0 +1,9 @@
+schema_version: semantic-closure/v1
+change: replace-transaction-holder-fixed-wait
+status: not_applicable
+reason: >-
+  This change repairs test-owned holder timing only: it replaces a fixed
+  6-second wait in one integration leaf's holder child with an explicit
+  ready/release file handshake. It introduces no Harness runtime fact family,
+  resolver, authority-establishing surface, or deterministic production
+  behavior, so no semantic-fact closure record applies.

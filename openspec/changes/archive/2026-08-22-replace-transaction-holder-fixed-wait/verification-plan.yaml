@@ -1,0 +1,45 @@
+schema_version: verification-routing/v1
+change: replace-transaction-holder-fixed-wait
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The changed leaf is an integration-surface CLI/fixture test; no unit
+      surface is touched.
+  integration:
+    status: selected
+    rationale: >-
+      The transaction-holder contention leaf exercises the real CLI
+      (operate-work-unit timeout-preflight/timeout/recover-transaction)
+      against a live holder process; only the holder's fixed wait is replaced
+      by an explicit handshake.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale chain is changed.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change repairs deterministic test-harness timing only; it makes no
+      claim about real Agent or Subject-Agent behavior.
+claims:
+  - id: holder-contention-facts-preserved
+    statement: >-
+      DEW-023: default and forced timeouts are still refused for valid
+      transaction holders with identical busy facts (targets_same_attempt,
+      recommended_action wait, holder identity, no unrelated progress, queue
+      and index byte immutability, claimed status) after the holder's fixed
+      6s wait is replaced by an explicit ready/release handshake, for both
+      same-attempt and different-attempt contention.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

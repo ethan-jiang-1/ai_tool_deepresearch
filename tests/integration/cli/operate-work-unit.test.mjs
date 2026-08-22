@@ -1709,6 +1709,8 @@ describe('operate-work-unit attempt recovery operations', () => {
       const dir = tempBundle();
       let holder = null;
       let holderDone = null;
+      const readyFile = path.join(path.dirname(dir), `${path.basename(dir)}.holder-ready`);
+      const releaseFile = path.join(path.dirname(dir), `${path.basename(dir)}.holder-release`);
       try {
         saveQueueWith(dir, [currentWave0QueueItem(`queue-timeout-${sameAttempt ? 'same' : 'other'}`)]);
         const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf8' });
@@ -1721,13 +1723,20 @@ describe('operate-work-unit attempt recovery operations', () => {
         const indexBefore = readFileSync(workUnitIndexPath(dir), 'base64');
         const transactionModule = pathToFileURL(path.resolve('DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs')).href;
         const holderScript = `
+          import { existsSync, writeFileSync } from 'node:fs';
           import { withWorkUnitTransaction } from ${JSON.stringify(transactionModule)};
           const result = withWorkUnitTransaction(${JSON.stringify(dir)}, 'submit_work_unit', {
             targetWorkIds: [${JSON.stringify(holderWorkId)}],
             targetQueueItemIds: [${JSON.stringify(holderQueueId)}],
             mutationTargets: ['rb_queue.json']
           }, () => {
-            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 6000);
+            writeFileSync(${JSON.stringify(readyFile)}, 'ready\\n');
+            const buf = new Int32Array(new SharedArrayBuffer(4));
+            let elapsed = 0;
+            while (!existsSync(${JSON.stringify(releaseFile)}) && elapsed < 30000) {
+              Atomics.wait(buf, 0, 0, 50);
+              elapsed += 50;
+            }
             return { ok: true };
           });
           if (!result.ok) process.exit(2);
@@ -1737,6 +1746,7 @@ describe('operate-work-unit attempt recovery operations', () => {
           stdio: ['ignore', 'ignore', 'pipe'],
         });
         holderDone = childCompletion(holder);
+        await waitForPath(readyFile);
         await waitForPath(transactionLockOwnerPath(dir));
         const journalNames = readdirSync(transactionDir(dir)).filter((name) => name.endsWith('.json')).sort();
 
@@ -1789,12 +1799,15 @@ describe('operate-work-unit attempt recovery operations', () => {
           journalNames,
         );
         assert.equal(loadWorkUnitIndex(dir).work_units[workId].status, 'claimed');
+        writeFileSync(releaseFile, 'release\n');
         await holderDone;
         holder = null;
         holderDone = null;
       } finally {
         if (holder && holder.exitCode === null) holder.kill('SIGKILL');
         await holderDone?.catch(() => {});
+        rmSync(readyFile, { force: true });
+        rmSync(releaseFile, { force: true });
         cleanup(dir);
       }
     }
