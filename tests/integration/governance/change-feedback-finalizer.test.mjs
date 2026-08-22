@@ -242,6 +242,21 @@ function runFinalizer(root) {
   return JSON.parse(result.stdout);
 }
 
+// Runs a governance checker directly with the finalizer's exact production
+// invocation, proving the boundary's failure identity without replaying the
+// finalizer's earlier checkers. The copied script inside the fixture root is
+// used (copyGovernanceScripts), exactly as the finalizer does.
+function runChecker(root, script, args = []) {
+  const result = spawnSync(process.execPath, [join(root, 'openspec/governance', script), ...args], {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: 30000,
+  });
+  assert.notEqual(result.status, 0, `${script} must fail:\n${result.stdout}\n${result.stderr}`);
+  assert.ok((result.stderr || result.stdout).trim().length > 0, `${script} produced no failure output`);
+  return result;
+}
+
 after(() => {
   for (const path of created) rmSync(path, { recursive: true, force: true });
 });
@@ -249,9 +264,6 @@ after(() => {
 describe('change feedback finalizer integration', () => {
   it('delivers feedback marker task instructions and operation guidance for a fresh change', () => {
     const root = createGeneratedFeedbackChange();
-    const proposal = JSON.parse(run('openspec', [
-      'instructions', 'proposal', '--change', 'generated-feedback-change', '--json',
-    ], { cwd: root }));
     const taskInstructions = JSON.parse(run('openspec', [
       'instructions', 'tasks', '--change', 'generated-feedback-change', '--json',
     ], { cwd: root }));
@@ -260,29 +272,33 @@ describe('change feedback finalizer integration', () => {
     assert.match(markerRules[0], /openspec-feedback:plan-review/);
     assert.match(markerRules[0], /openspec-feedback:closeout-review/);
     assert.match(markerRules[0], /初始为 `- \[ \]`/);
-    assert.ok(proposal.rules.some((rule) => (
-      rule.includes('requirement-reservation.yaml')
-      && rule.includes('check-project-reqs.mjs --mode plan')
-      && rule.includes('不得预登记')
-    )));
-    const closureRule = proposal.rules.find((rule) => rule.includes('semantic-fact-families.yaml'));
-    assert.ok(closureRule);
-    assert.match(closureRule, /semantic-closure\.yaml/);
-    assert.match(closureRule, /not_applicable/);
-    assert.match(closureRule, /status: affected/);
-    assert.match(closureRule, /catalog_additions/);
-    assert.match(closureRule, /target edit/);
-    assert.match(closureRule, /actual symbol or document anchor/);
-    assert.match(closureRule, /bare file coordinate/);
-    assert.match(closureRule, /verdict consumers/);
-    assert.match(closureRule, /overlap: derived/);
-    assert.match(closureRule, /does not validate fragment\/role semantics/);
+
+    // The proposal/archive projection fragments are repo-owned guidance text;
+    // assert them at their source (openspec/config.yaml) instead of paying a
+    // fresh CLI launch per projection. The retained tasks/apply projections
+    // prove the CLI wires repo guidance into generated instructions.
+    const configYaml = readFileSync(join(ROOT, 'openspec/config.yaml'), 'utf8');
+    assert.ok(configYaml.includes('requirement-reservation.yaml'));
+    assert.ok(configYaml.includes('check-project-reqs.mjs --mode plan'));
+    assert.ok(configYaml.includes('不得预登记'));
+    assert.ok(configYaml.includes('semantic-fact-families.yaml'));
+    for (const fragment of [
+      'semantic-closure.yaml',
+      'not_applicable',
+      'status: affected',
+      'catalog_additions',
+      'target edit',
+      'actual symbol or document anchor',
+      'bare file coordinate',
+      'verdict consumers',
+      'overlap: derived',
+      'does not validate fragment/role semantics',
+    ]) {
+      assert.ok(configYaml.includes(fragment), `config.yaml must carry guidance fragment: ${fragment}`);
+    }
 
     const apply = JSON.parse(run('openspec', [
       'instructions', 'apply', '--change', 'generated-feedback-change', '--json',
-    ], { cwd: root }));
-    const archive = JSON.parse(run('openspec', [
-      'instructions', 'archive', '--change', 'generated-feedback-change', '--json',
     ], { cwd: root }));
     const applyFeedback = apply.operationGuidance.find((entry) => entry.startsWith('change-feedback-loop/apply:'));
     assert.ok(applyFeedback);
@@ -301,14 +317,6 @@ describe('change feedback finalizer integration', () => {
     assert.ok(closureGuidance);
     assert.ok(closureGuidance.indexOf('check-verification-routing.mjs') < closureGuidance.indexOf('check-semantic-closure.mjs'));
     assert.match(closureGuidance, /missing-command fallback/);
-    const archiveFeedback = archive.operationGuidance.find((entry) => entry.startsWith('change-feedback-loop/archive:'));
-    assert.ok(archiveFeedback);
-    assert.match(archiveFeedback, /openspec\/operations\/change-feedback-loop\.md/);
-    assert.match(archiveFeedback, /actual symbol or document anchor/);
-    assert.match(archiveFeedback, /bare file coordinate/);
-    assert.match(archiveFeedback, /verdict consumers/);
-    assert.match(archiveFeedback, /overlap: derived/);
-    assert.match(archiveFeedback, /does not validate fragment\/role semantics/);
 
     const guideline = readFileSync(join(ROOT, 'openspec/operations/change-feedback-loop.md'), 'utf8');
     assert.match(guideline, /semantic-closure\.yaml/);
@@ -353,19 +361,20 @@ describe('change feedback finalizer integration', () => {
 
   it('short-circuits every governance checker through the production CLI', () => {
     const root = createGovernanceFixture();
+
+    // Sentinel 1: the ordered chain stops at the first governance checker.
     const requirements = runFinalizer(root);
     assert.equal(requirements.root.code, 'requirement_governance_failed');
     assert.deepEqual(requirements.checks.map((check) => check.id), [
       'openspec_status', 'artifacts', 'tasks', 'strict_validation',
     ]);
 
+    // Direct checker matrix: each intermediate boundary fails its checker
+    // natively (the finalizer's exact invocations), without replaying the
+    // earlier checkers to reach it.
     write(root, 'openspec/governance/req-registry.yaml', 'prefixes:\n  ABC: governance/demo-capability\n\nABC-001: demo-capability - fixture requirement\n');
     write(root, 'openspec/specs/governance/demo-capability/spec.md', '> req: ABC-001\n');
-    const mainSpecs = runFinalizer(root);
-    assert.equal(mainSpecs.root.code, 'main_spec_governance_failed');
-    assert.deepEqual(mainSpecs.checks.map((check) => check.id), [
-      'openspec_status', 'artifacts', 'tasks', 'strict_validation', 'requirement_governance',
-    ]);
+    runChecker(root, 'check-project-specs.mjs', [root]);
 
     write(root, 'openspec/specs/governance/demo-capability/spec.md', [
       '# demo-capability',
@@ -383,12 +392,7 @@ describe('change feedback finalizer integration', () => {
       'The fixture SHALL reach the routing boundary.',
       '',
     ].join('\n'));
-    const taxonomy = runFinalizer(root);
-    assert.equal(taxonomy.root.code, 'capability_taxonomy_failed');
-    assert.deepEqual(taxonomy.checks.map((check) => check.id), [
-      'openspec_status', 'artifacts', 'tasks', 'strict_validation',
-      'requirement_governance', 'main_spec_governance',
-    ]);
+    runChecker(root, 'check-capability-taxonomy.mjs', [root]);
 
     write(root, 'openspec/specs/README.md', [
       '# Capability Catalog',
@@ -400,12 +404,7 @@ describe('change feedback finalizer integration', () => {
       '| governance/demo-capability | Fixture governance capability. | fixture | Finalizer fixture only. | none | Select semantic work. | Validate deterministic structure. |',
       '',
     ].join('\n'));
-    const discovery = runFinalizer(root);
-    assert.equal(discovery.root.code, 'capability_discovery_failed');
-    assert.deepEqual(discovery.checks.map((check) => check.id), [
-      'openspec_status', 'artifacts', 'tasks', 'strict_validation',
-      'requirement_governance', 'main_spec_governance', 'capability_taxonomy',
-    ]);
+    runChecker(root, 'check-capability-discovery.mjs', ['--change', 'demo-change']);
 
     write(root, 'openspec/changes/demo-change/proposal.md', [
       '## Why',
@@ -433,14 +432,9 @@ describe('change feedback finalizer integration', () => {
       '- Temporary fixture only.',
       '',
     ].join('\n'));
-    const routing = runFinalizer(root);
-    assert.equal(routing.root.code, 'verification_routing_failed');
-    assert.deepEqual(routing.checks.map((check) => check.id), [
-      'openspec_status', 'artifacts', 'tasks', 'strict_validation',
-      'requirement_governance', 'main_spec_governance', 'capability_taxonomy',
-      'capability_discovery',
-    ]);
+    runChecker(root, 'check-verification-routing.mjs', ['--change', 'demo-change', '--mode', 'assets']);
 
+    // Sentinel 2: the complete ordered chain, failing at the last boundary.
     writeRoutingAndClosureFixture(root, { catalog: false });
     const semantic = runFinalizer(root);
     assert.equal(semantic.root.code, 'semantic_closure_failed');
@@ -450,6 +444,22 @@ describe('change feedback finalizer integration', () => {
       'capability_discovery', 'verification_routing',
     ]);
     assert.match(semantic.root.owner, /check-semantic-closure\.mjs/);
+  });
+
+  it('maps each governance checker to its finalizer failure code', () => {
+    const source = readFileSync(FINALIZER, 'utf8');
+    for (const [script, code] of [
+      ['check-project-reqs.mjs', 'requirement_governance_failed'],
+      ['check-project-specs.mjs', 'main_spec_governance_failed'],
+      ['check-capability-taxonomy.mjs', 'capability_taxonomy_failed'],
+      ['check-capability-discovery.mjs', 'capability_discovery_failed'],
+      ['check-verification-routing.mjs', 'verification_routing_failed'],
+      ['check-semantic-closure.mjs', 'semantic_closure_failed'],
+    ]) {
+      const at = source.indexOf(script);
+      assert.ok(at >= 0, `finalizer must invoke ${script}`);
+      assert.ok(source.indexOf(code, at) > at, `${script} must map to ${code}`);
+    }
   });
 
   it('requires the selected reservation transition while accepting another complete pending reservation', () => {

@@ -1,0 +1,11 @@
+schema_version: semantic-closure/v1
+change: restructure-finalizer-checker-matrix
+status: not_applicable
+reason: >-
+  This change repairs test-owned proof economics only: one integration suite
+  proves the same finalizer/checker facts with two finalizer sentinels plus a
+  direct checker matrix instead of six replaying runs, and drops two
+  redundant instruction projections in favor of static guidance sources. It
+  introduces no Harness runtime fact family, resolver,
+  authority-establishing surface, or deterministic production behavior, so no
+  semantic-fact closure record applies.

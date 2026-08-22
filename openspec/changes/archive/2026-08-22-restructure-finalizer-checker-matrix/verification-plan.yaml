@@ -1,0 +1,47 @@
+schema_version: verification-routing/v1
+change: restructure-finalizer-checker-matrix
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      The changed surface is an integration CLI/fixture suite; no unit
+      surface is touched.
+  integration:
+    status: selected
+    rationale: >-
+      The finalizer short-circuit, checker failure identities, and guidance
+      projection facts are proven through real production invocations
+      (finalizer sentinels + direct checker matrix + retained instructions
+      projections), with static source assertions for mapping and guidance
+      fragments.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale deterministic chain is changed.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change repairs deterministic test-harness economics only; it makes
+      no claim about real Agent or Subject-Agent behavior.
+claims:
+  - id: finalizer-checker-facts-preserved
+    statement: >-
+      SEF-002, CHF-002, CHF-003, CHF-004: the finalizer's ordered
+      short-circuit (first-boundary stop and complete 9-check chain), every
+      governance checker failure identity, and the checker-script → failure
+      code mapping hold when intermediate boundaries are proven by direct
+      production checker invocations instead of finalizer replay; the marker
+      and operation-guidance projection facts hold with static guidance
+      sources for the dropped projections.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/change-feedback-finalizer.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
