@@ -1,6 +1,6 @@
 # Slow Test Suite Audit And Remediation
 
-> Status: active — scope discovery closed 2026-08-22; workstreams 1-6 completed & archived (dedup, event release, wave1 snapshot, finalizer, baseline-share expansion); remaining P0-P3 deferred | Measured: 2026-08-22 | Baseline commit: `046b741dc`
+> Status: active — scope discovery closed 2026-08-22; workstreams 1-6 completed & archived; WS7 part 1 done (dedup, event release, wave1 snapshot, finalizer, baseline-share expansion); remaining P0-P3 deferred | Measured: 2026-08-22 | Baseline commit: `046b741dc`
 
 ## Objective
 
@@ -549,7 +549,7 @@ cross-file sharing would merge cases — forbidden).
 - [x] **WS4 — finalizer restructure** (~16s). Archived: `2026-08-22-restructure-finalizer-checker-matrix`.
 - [x] **WS5 — snapshot-share expansion** (final-refinement + handoff prefix + rerun direction variants; ~15s deterministic). Archived: `2026-08-22-share-test-baselines-expansion`.
 - [x] **WS6 — event-release extension** (engine transaction waits; ~3s). Archived: `2026-08-22-release-engine-transaction-waits`.
-- [ ] **WS7 — gate/queue matrix P3** (check-gate-wave0/1/2-complete, readiness, hitl1/hitl2-recorded, operate-queue-validation, agent-experiment-autorun; ~40-55s).
+- [ ] **WS7 — gate/queue matrix P3** — PART 1 (wave0/wave2/readiness/hitl2 + operate-queue-validation shared empty-bundle; ~50s file-level) DONE 2026-08-22 (archived `2026-08-22-share-gate-matrix-bundle-baselines`); PART 2 (hitl1-recorded per-leaf CLI cost; agent-experiment-autorun) PENDING.
 - [ ] **WS8 — run-agent-experiment split matrix** (~10-15s).
 - [ ] **WS9 — P3 misc tail** (remaining 1-3s files, per-file; low ROI each).
 
