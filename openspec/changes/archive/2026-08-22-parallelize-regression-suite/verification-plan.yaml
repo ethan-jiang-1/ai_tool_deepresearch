@@ -1,0 +1,131 @@
+schema_version: verification-routing/v1
+change: 2026-08-22-parallelize-regression-suite
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      No in-process module/schema/helper contract is newly proved or changed;
+      the additive harness helper is exercised through the existing
+      integration suites, not by a new unit claim.
+  integration:
+    status: selected
+    rationale: >-
+      The seven CLI integration suites are the proof assets: each must still
+      pass its full scenario matrix (production CLI invocations and disposable
+      bundles) after its snapshot root moves from the shared fixed
+      tests/.test-bundles/.baseline-snapshot path to a per-file unique root.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale deterministic chain asset changes; the e2e suites
+      already pass per-run tmpdir snapshot roots and are untouched.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change repairs deterministic test-harness execution safety only; it
+      makes no claim about real Agent or Subject-Agent behavior.
+claims:
+  - id: wave0-snapshot-isolation
+    statement: >-
+      RWG-001, RWG-004: the gate-wave0-complete scenario matrix still passes
+      with a per-file unique snapshot root (token 'wave0') under default
+      parallel execution, and no fixed shared snapshot path remains for this
+      file.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave0-complete.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave2-snapshot-isolation
+    statement: >-
+      RWG-003, RWG-006, RWG-008: the gate-wave2-complete scenario matrix still
+      passes with a per-file unique snapshot root (token 'wave2') under
+      default parallel execution, with no fixed shared snapshot path.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave2-complete.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl2-snapshot-isolation
+    statement: >-
+      CDG-003: the gate-hitl2-recorded matrix still passes with a per-file
+      unique snapshot root (token 'hitl2') under default parallel execution,
+      with no fixed shared snapshot path.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-hitl2-recorded.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: readiness-snapshot-isolation
+    statement: >-
+      CDG-004: the gate-readiness-passed matrix still passes with a per-file
+      unique snapshot root (token 'readiness') under default parallel
+      execution, with no fixed shared snapshot path.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-readiness-passed.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: queue-validation-snapshot-isolation
+    statement: >-
+      QIV-001..004, AGQ-001/004: the operate-queue-validation matrix still
+      passes with per-file unique snapshot roots (token 'queue-validation')
+      under default parallel execution, with no fixed shared snapshot path.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-queue-validation.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: handoff-witnessing-snapshot-isolation
+    statement: >-
+      CHI-001, RWG-018: the handoff-witnessing lifecycle still passes with a
+      per-file unique snapshot root (token 'handoff-witnessing') under default
+      parallel execution, and the fail-preserve diagnosis behavior
+      (cleanupAfterTest(pass)) is retained unchanged.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/handoff-witnessing-lifecycle.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

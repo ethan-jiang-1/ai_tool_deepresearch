@@ -1,4 +1,5 @@
-import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { randomInt } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -101,4 +102,38 @@ export function authoritySnapshot(bundle) {
 
 export function cleanupRoot(root) {
   if (root && relative(tmpdir(), root) && root.startsWith(tmpdir())) rmSync(root, { recursive: true, force: true });
+}
+
+/**
+ * Per-(bundle, file-token) unique snapshot root. Keeps snapshot/restore
+ * semantics identical to snapshotBundle(source, root) while guaranteeing no
+ * two test files ever write to the same on-disk snapshot path in parallel.
+ */
+export function uniqueSnapshotRoot(bundle, token) {
+  return join(dirname(bundle), `.snap-${token}-${basename(bundle)}`);
+}
+
+/**
+ * Byte-clone a once-instantiated bundle template into a per-test disposable
+ * bundle, mimicking new-disposable-bundle.mjs naming (`dpt_disp_<name>_<hex>`,
+ * 1-hex-digit suffix kept as the pinned contract) and `--force` semantics
+ * (rmSync before cpSync). Optional `patchPlanBasename` rewrites the clone's
+ * rb_plan.md frontmatter and rb_profile.yaml plan_basename to the logical
+ * name, preserving basename-identity checks such as check-gate-setup-ready.
+ */
+export function cloneBundleTemplate(template, name, { targetDir, caseId = null, patchPlanBasename = false } = {}) {
+  const hexSuffix = randomInt(0, 16).toString(16);
+  const dirName = caseId ? `dpt_disp_${caseId}_${name}_${hexSuffix}` : `dpt_disp_${name}_${hexSuffix}`;
+  const dest = join(targetDir, dirName);
+  rmSync(dest, { recursive: true, force: true });
+  cpSync(template, dest, { recursive: true, errorOnExist: true });
+  if (patchPlanBasename) {
+    for (const file of [join(dest, 'rb_plan.md'), join(dest, 'rb_profile.yaml')]) {
+      if (!existsSync(file)) continue;
+      const text = readFileSync(file, 'utf8');
+      const next = text.replace(/plan_basename:\s*[^\s]+/, `plan_basename: ${name}`);
+      if (next !== text) writeFileSync(file, next);
+    }
+  }
+  return dest;
 }

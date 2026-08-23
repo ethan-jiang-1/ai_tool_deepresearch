@@ -7,7 +7,7 @@ import { join, dirname } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { setStatusWindow, witnessedHandoffEvents } from './handoff-fixtures.mjs';
 import { evaluateCompositionProceed } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/composition-handoff.mjs';
-import { restoreBundle, snapshotBundle } from '../../e2e/helpers/deterministic-chain-harness.mjs';
+import { restoreBundle, snapshotBundle, uniqueSnapshotRoot } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-readiness-passed.mjs');
@@ -200,8 +200,9 @@ describe('check-gate-readiness-passed', () => {
   let sharedBundle;
   let sharedSnapshot;
   before(() => {
-    sharedBundle = createBundle('shared');
-    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+    sharedBundle = createBundle('shared-readiness');
+    sharedSnapshot = snapshotBundle(sharedBundle, uniqueSnapshotRoot(sharedBundle, 'readiness'));
+    track(uniqueSnapshotRoot(sharedBundle, 'readiness'));
   });
   function restoredBundle() {
     restoreBundle(sharedSnapshot, sharedBundle);

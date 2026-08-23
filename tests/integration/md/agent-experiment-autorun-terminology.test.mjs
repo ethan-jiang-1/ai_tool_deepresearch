@@ -57,8 +57,13 @@ function testSources(path = 'tests') {
   }
   for (const entry of entries) {
     const child = `${path}/${entry.name}`;
-    if (entry.isDirectory()) files.push(...testSources(child));
-    else if (entry.isFile() && entry.name.endsWith('.mjs')) files.push(child);
+    if (entry.isDirectory()) {
+      // Disposable runtime output dirs (.test-tmp/.test-bundles/.test-chain-tmp)
+      // are not test sources; they are written and deleted concurrently by other
+      // suites in the parallel run and must not be scanned.
+      if (entry.name.startsWith('.test-')) continue;
+      files.push(...testSources(child));
+    } else if (entry.isFile() && entry.name.endsWith('.mjs')) files.push(child);
   }
   return files;
 }

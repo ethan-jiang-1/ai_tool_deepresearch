@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { restoreBundle, snapshotBundle } from '../../e2e/helpers/deterministic-chain-harness.mjs';
+import { restoreBundle, snapshotBundle, uniqueSnapshotRoot } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl2-recorded.mjs');
@@ -140,8 +140,9 @@ describe('check-gate-hitl2-recorded', () => {
   let sharedBundle;
   let sharedSnapshot;
   before(() => {
-    sharedBundle = createBundle('shared');
-    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+    sharedBundle = createBundle('shared-hitl2');
+    sharedSnapshot = snapshotBundle(sharedBundle, uniqueSnapshotRoot(sharedBundle, 'hitl2'));
+    track(uniqueSnapshotRoot(sharedBundle, 'hitl2'));
   });
   function restoredBundle() {
     restoreBundle(sharedSnapshot, sharedBundle);

@@ -26,10 +26,11 @@ import {
   renderSeedProjectionAppendix,
 } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
 import { canonicalWave1ReferencePath } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs';
-import { restoreBundle, snapshotBundle } from '../../e2e/helpers/deterministic-chain-harness.mjs';
+import { restoreBundle, snapshotBundle, uniqueSnapshotRoot } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 
 const REPO_ROOT = process.cwd();
 const bundles = [];
+const snapshots = [];
 const checks = [];
 const healthReports = [];
 
@@ -974,10 +975,14 @@ function cleanupAfterTest(pass) {
   const healthIssue = healthReports.some(h => h.status !== 'clean');
   if (!pass || healthIssue) {
     console.log(`Preserved bundles for diagnosis:\n${bundles.join('\n')}`);
+    console.log(`Preserved snapshots for diagnosis:\n${snapshots.join('\n')}`);
     return;
   }
   for (const bundle of bundles) {
     if (existsSync(bundle)) rmSync(bundle, { recursive: true, force: true });
+  }
+  for (const snapshot of snapshots) {
+    if (existsSync(snapshot)) rmSync(snapshot, { recursive: true, force: true });
   }
   console.log(`Cleaned ${bundles.length} disposable bundle(s).`);
 }
@@ -988,7 +993,9 @@ describe('handoff witnessing lifecycle integration', { timeout: 180000 }, () => 
     let thrown = null;
     try {
       const shared = buildSharedPrefixState();
-      const prefixSnapshot = snapshotBundle(shared.bundle, dirname(shared.bundle));
+      const prefixSnapshotRoot = uniqueSnapshotRoot(shared.bundle, 'handoff-witnessing');
+      snapshots.push(prefixSnapshotRoot);
+      const prefixSnapshot = snapshotBundle(shared.bundle, prefixSnapshotRoot);
       continueMainLifecycle(restoreBundle(prefixSnapshot, shared.bundle), shared.wave0);
       runRerunBranch(restoreBundle(prefixSnapshot, shared.bundle));
       runSupersededBranch(restoreBundle(prefixSnapshot, shared.bundle));

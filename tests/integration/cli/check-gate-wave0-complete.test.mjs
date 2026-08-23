@@ -17,7 +17,7 @@ import { evaluateSeedTopicProjectionReadiness } from '../../../DEEP_RESEARCH_HAR
 import { buildCanonicalTopicRegistryFact } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/topic-registry-fact.mjs';
 import { evaluateWave0Contract } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs';
 import { collectSubmittedWave0ContributionProjection } from '../../../DEEP_RESEARCH_HARNESS/engine/work-unit-projection.mjs';
-import { restoreBundle, snapshotBundle } from '../../e2e/helpers/deterministic-chain-harness.mjs';
+import { restoreBundle, snapshotBundle, uniqueSnapshotRoot } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs');
@@ -349,8 +349,9 @@ describe('check-gate-wave0-complete', () => {
   let sharedBundle;
   let sharedSnapshot;
   before(() => {
-    sharedBundle = createBundle('shared');
-    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+    sharedBundle = createBundle('shared-wave0');
+    sharedSnapshot = snapshotBundle(sharedBundle, uniqueSnapshotRoot(sharedBundle, 'wave0'));
+    track(uniqueSnapshotRoot(sharedBundle, 'wave0'));
   });
   function restoredBundle() {
     restoreBundle(sharedSnapshot, sharedBundle);
@@ -898,8 +899,9 @@ describe('RWG-018 Wave0 direct adapter parity', () => {
   let sharedBundle;
   let sharedSnapshot;
   before(() => {
-    sharedBundle = createBundle('shared');
-    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+    sharedBundle = createBundle('shared-wave0');
+    sharedSnapshot = snapshotBundle(sharedBundle, uniqueSnapshotRoot(sharedBundle, 'wave0'));
+    track(uniqueSnapshotRoot(sharedBundle, 'wave0'));
   });
   function restoredBundle() {
     restoreBundle(sharedSnapshot, sharedBundle);

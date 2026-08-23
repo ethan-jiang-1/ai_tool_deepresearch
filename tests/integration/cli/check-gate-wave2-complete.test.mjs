@@ -9,7 +9,7 @@ import {
   claimAndSubmitWorkUnit,
   referenceContent,
 } from '../../engine/work-unit-test-helpers.mjs';
-import { restoreBundle, snapshotBundle } from '../../e2e/helpers/deterministic-chain-harness.mjs';
+import { restoreBundle, snapshotBundle, uniqueSnapshotRoot } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs');
@@ -449,8 +449,9 @@ describe('check-gate-wave2-complete', () => {
   let sharedBundle;
   let sharedSnapshot;
   before(() => {
-    sharedBundle = createBundle('shared');
-    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+    sharedBundle = createBundle('shared-wave2');
+    sharedSnapshot = snapshotBundle(sharedBundle, uniqueSnapshotRoot(sharedBundle, 'wave2'));
+    track(uniqueSnapshotRoot(sharedBundle, 'wave2'));
   });
   function restoredBundle() {
     restoreBundle(sharedSnapshot, sharedBundle);

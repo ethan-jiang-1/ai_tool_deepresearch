@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
-import { restoreBundle, snapshotBundle } from '../../e2e/helpers/deterministic-chain-harness.mjs';
+import { restoreBundle, snapshotBundle, uniqueSnapshotRoot } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 
 const REPO_ROOT = process.cwd();
 const OPERATE_QUEUE = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs');
@@ -129,8 +129,9 @@ describe('QIV-001 enqueue topic validation', () => {
   let sharedBundle;
   let sharedSnapshot;
   before(() => {
-    sharedBundle = createBundle('shared');
-    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+    sharedBundle = createBundle('shared-queue-validation');
+    sharedSnapshot = snapshotBundle(sharedBundle, uniqueSnapshotRoot(sharedBundle, 'queue-validation'));
+    track(uniqueSnapshotRoot(sharedBundle, 'queue-validation'));
   });
   function restoredBundle() {
     restoreBundle(sharedSnapshot, sharedBundle);
@@ -284,8 +285,9 @@ describe('QIV-002 bundle_name validation', () => {
   let sharedBundle;
   let sharedSnapshot;
   before(() => {
-    sharedBundle = createBundle('shared');
-    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+    sharedBundle = createBundle('shared-queue-validation');
+    sharedSnapshot = snapshotBundle(sharedBundle, uniqueSnapshotRoot(sharedBundle, 'queue-validation'));
+    track(uniqueSnapshotRoot(sharedBundle, 'queue-validation'));
   });
   function restoredBundle() {
     restoreBundle(sharedSnapshot, sharedBundle);
@@ -321,8 +323,9 @@ describe('QIV-003 projection staleness', () => {
   let sharedBundle;
   let sharedSnapshot;
   before(() => {
-    sharedBundle = createBundle('shared');
-    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+    sharedBundle = createBundle('shared-queue-validation');
+    sharedSnapshot = snapshotBundle(sharedBundle, uniqueSnapshotRoot(sharedBundle, 'queue-validation'));
+    track(uniqueSnapshotRoot(sharedBundle, 'queue-validation'));
   });
   function restoredBundle() {
     restoreBundle(sharedSnapshot, sharedBundle);
@@ -362,8 +365,9 @@ describe('QIV-004 repair --remove-stale', () => {
   let sharedBundle;
   let sharedSnapshot;
   before(() => {
-    sharedBundle = createBundle('shared');
-    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+    sharedBundle = createBundle('shared-queue-validation');
+    sharedSnapshot = snapshotBundle(sharedBundle, uniqueSnapshotRoot(sharedBundle, 'queue-validation'));
+    track(uniqueSnapshotRoot(sharedBundle, 'queue-validation'));
   });
   function restoredBundle() {
     restoreBundle(sharedSnapshot, sharedBundle);
@@ -412,8 +416,9 @@ describe('AGQ-001/004 completion_receipt null', () => {
   let sharedBundle;
   let sharedSnapshot;
   before(() => {
-    sharedBundle = createBundle('shared');
-    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+    sharedBundle = createBundle('shared-queue-validation');
+    sharedSnapshot = snapshotBundle(sharedBundle, uniqueSnapshotRoot(sharedBundle, 'queue-validation'));
+    track(uniqueSnapshotRoot(sharedBundle, 'queue-validation'));
   });
   function restoredBundle() {
     restoreBundle(sharedSnapshot, sharedBundle);
@@ -472,8 +477,9 @@ describe('AGQ-019 generic Queue failure terminalization', () => {
   let sharedBundle;
   let sharedSnapshot;
   before(() => {
-    sharedBundle = createBundle('shared');
-    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+    sharedBundle = createBundle('shared-queue-validation');
+    sharedSnapshot = snapshotBundle(sharedBundle, uniqueSnapshotRoot(sharedBundle, 'queue-validation'));
+    track(uniqueSnapshotRoot(sharedBundle, 'queue-validation'));
   });
   function restoredBundle() {
     restoreBundle(sharedSnapshot, sharedBundle);
@@ -563,8 +569,9 @@ describe('AGQ-013 Wave1 assignment-mode admission and repair', () => {
   let sharedBundle;
   let sharedSnapshot;
   before(() => {
-    sharedBundle = createBundle('shared');
-    sharedSnapshot = snapshotBundle(sharedBundle, dirname(sharedBundle));
+    sharedBundle = createBundle('shared-queue-validation');
+    sharedSnapshot = snapshotBundle(sharedBundle, uniqueSnapshotRoot(sharedBundle, 'queue-validation'));
+    track(uniqueSnapshotRoot(sharedBundle, 'queue-validation'));
   });
   function restoredBundle() {
     restoreBundle(sharedSnapshot, sharedBundle);

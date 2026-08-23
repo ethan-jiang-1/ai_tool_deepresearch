@@ -1,0 +1,11 @@
+schema_version: semantic-closure/v1
+change: 2026-08-22-parallelize-regression-suite
+status: not_applicable
+reason: >-
+  This change repairs test-owned execution safety only: it moves 14 snapshot
+  call sites in seven CLI integration suites from the shared fixed
+  tests/.test-bundles/.baseline-snapshot path to per-file unique snapshot
+  roots, adds one read-only test helper, and verifies the sweep of remaining
+  shared write surfaces. It introduces no Harness runtime fact family,
+  resolver, authority-establishing surface, or deterministic production
+  behavior change, so no semantic-fact closure record applies.
