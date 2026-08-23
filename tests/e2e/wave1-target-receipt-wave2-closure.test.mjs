@@ -1,7 +1,7 @@
 // Deterministic e2e: Wave1 carried-target receipt → Wave2 finding binding closure.
 // Covers valid/empty/missing/stale binding, intent-drift short-circuit, layout-only
 // reuse, and same-origin-only non-coverage (RWG-020, WTS-011, CTS-008).
-import { describe, it, after } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -24,6 +24,7 @@ import {
   claimAndSubmitWorkUnit,
   referenceContent,
 } from '../engine/work-unit-test-helpers.mjs';
+import { cloneBundleTemplate } from '../e2e/helpers/deterministic-chain-harness.mjs';
 
 const REPO_ROOT = process.cwd();
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
@@ -31,6 +32,17 @@ const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
 
 function track(dir) { createdDirs.push(dir); return dir; }
+
+// One template instantiation per file; each test clones it byte-for-byte.
+let templateDir = null;
+before(() => {
+  const r = spawnSync('node', [NEW_BUNDLE, 'w1w2-template', '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+  templateDir = r.stdout.trim();
+});
+
+after(() => {
+  if (templateDir) rmSync(templateDir, { recursive: true, force: true });
+});
 function unique(prefix) { return `e2e_w1w2_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
 
 function traceEvents(bundlePath) {
@@ -44,8 +56,7 @@ function appendTrace(bundlePath, event) {
 }
 
 function createBundle(name, topics) {
-  const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-  const dir = track(r.stdout.trim());
+  const dir = track(cloneBundleTemplate(templateDir, name, { targetDir: BUNDLES_DIR }));
 
   // Status window
   const statusPath = join(dir, 'rb_status.json');

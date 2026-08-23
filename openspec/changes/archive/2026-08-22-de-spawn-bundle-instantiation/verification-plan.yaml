@@ -1,0 +1,132 @@
+schema_version: verification-routing/v1
+change: 2026-08-22-de-spawn-bundle-instantiation
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      No in-process module/schema/helper contract is newly proved; the
+      additive clone helper is exercised through the existing integration/e2e
+      suites, not by a new unit claim.
+  integration:
+    status: selected
+    rationale: >-
+      Five CLI integration suites are the proof assets: each must still pass
+      its full scenario matrix (production CLI invocations and disposable
+      bundles) after per-test instantiation spawns become template clones.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      The Wave1 carried-target receipt to Wave2 closure e2e suite keeps its
+      deterministic chain (production checkpoints unchanged) while its bundle
+      setup becomes a template clone.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change repairs deterministic test-harness setup only; it makes no
+      claim about real Agent or Subject-Agent behavior.
+claims:
+  - id: wave1-complete-template-clone
+    statement: >-
+      RWG-002, RWG-005, WAI-005: the gate-wave1-complete scenario matrix still
+      passes with one before()-built template and per-test cpSync clones
+      (33 instantiation spawns -> 1), with plan_basename/status semantics
+      unchanged.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave1-complete.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl1-recorded-template-clone
+    statement: >-
+      PRG-002, PRG-005: the gate-hitl1-recorded matrix still passes with a
+      template + clone setup (17 instantiation spawns -> 1), profile/style/
+      status semantics unchanged.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-hitl1-recorded.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: setup-ready-template-clone
+    statement: >-
+      PRG-003, PRG-006, PHS-002, PHS-005: the gate-setup-ready matrix still
+      passes with a template + clone setup (14 instantiation spawns -> 1) and
+      its bundle-logical-name == plan_basename identity check preserved via
+      patchPlanBasename.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-setup-ready.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-target-receipt-gate-clone
+    statement: >-
+      GSK-012, TRW-006, RWG-020: the Wave1 carried-target receipt gate matrix
+      still passes with a template + clone setup (9 instantiation spawns ->
+      1), projection/trace/persistence assertions unchanged.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/wave1-target-receipt-gate.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: gate-dynamic-threshold-clone
+    statement: >-
+      RES-003: the dynamic-threshold gate matrix still passes with a template
+      + clone setup (6 instantiation spawns -> 1), threshold computation
+      assertions unchanged.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/gate-dynamic-threshold.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-target-receipt-wave2-closure-clone
+    statement: >-
+      The deterministic Wave1 carried-target receipt to Wave2 finding binding
+      closure chain still passes end-to-end with a template + clone bundle
+      setup (8 instantiation spawns -> 1); production gate/inspect chain steps
+      are unchanged.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/wave1-target-receipt-wave2-closure.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

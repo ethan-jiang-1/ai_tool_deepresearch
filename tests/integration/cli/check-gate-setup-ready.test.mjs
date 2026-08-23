@@ -1,10 +1,11 @@
 // gate-setup-ready integration tests (PRG-003, PRG-006, PHS-002, PHS-005)
-import { describe, it, after } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { renderSuppliedControls } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/plan-hostfile-sections.mjs';
+import { cloneBundleTemplate } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-setup-ready.mjs');
@@ -30,6 +31,23 @@ const CURRENT_AVAILABLE_ACCESS = `research_access:
 
 function track(dir) { createdDirs.push(dir); return dir; }
 function unique(prefix) { return `rt_int_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
+
+// One template instantiation per file; each test clones it byte-for-byte and
+// patches plan_basename so the gate's bundle-logical-name == plan_basename
+// identity check keeps passing.
+let templateDir = null;
+before(() => {
+  const r = spawnSync('node', [NEW_BUNDLE, 'setup-template', '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+  templateDir = r.stdout.trim();
+});
+
+after(() => {
+  if (templateDir) rmSync(templateDir, { recursive: true, force: true });
+});
+
+function createBundle(name) {
+  return track(cloneBundleTemplate(templateDir, name, { targetDir: BUNDLES_DIR, patchPlanBasename: true }));
+}
 
 function runGate(bundlePath) {
   return spawnSync('node', [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-setup.md'], {
@@ -80,8 +98,7 @@ describe('check-gate-setup-ready', () => {
 
   it('passes with a valid bundle (HITL1 recorded, status correct, basename consistent)', () => {
     const name = unique('prod');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     // Profile must use the same plan_basename as the bundle logical name
     writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE.replace('plan_basename: test', `plan_basename: ${name}`));
     // Fill required-fill markers in plan body
@@ -96,8 +113,7 @@ describe('check-gate-setup-ready', () => {
 
   it('passes with disposable basename normalization', () => {
     const name = unique('disp');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     setupValidBundle(bundleDir);
     // The new-disposable-bundle.mjs creates dpt_disp_rt_<name>_<hex>
     // and sets plan_basename to <name> in both rb_plan.md and rb_profile.yaml
@@ -114,9 +130,7 @@ describe('check-gate-setup-ready', () => {
 
   it('uses the existing required-fill rule for the HITL1 alignment placeholder', () => {
     const name = unique('alignment');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    assert.equal(r.status, 0, r.stderr);
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE.replace('plan_basename: test', `plan_basename: ${name}`));
 
     const planPath = join(bundleDir, 'rb_plan.md');
@@ -156,8 +170,7 @@ describe('check-gate-setup-ready', () => {
 
   it('fails when a scaffold directory is missing', () => {
     const name = unique('nofinal');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     setupValidBundle(bundleDir);
     rmSync(join(bundleDir, 'final'), { recursive: true, force: true });
 
@@ -175,8 +188,7 @@ describe('check-gate-setup-ready', () => {
 
   it('fails when status has drifted', () => {
     const name = unique('drift');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     setupValidBundle(bundleDir);
 
     const statusPath = join(bundleDir, 'rb_status.json');
@@ -193,8 +205,7 @@ describe('check-gate-setup-ready', () => {
 
   it('fails on basename mismatch', () => {
     const name = unique('mismatch');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     setupValidBundle(bundleDir);
     // Write profile with a different plan_basename
     writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE.replace('plan_basename: test', 'plan_basename: totally_different'));
@@ -213,8 +224,7 @@ describe('check-gate-setup-ready', () => {
 
   it('rejects a retired access envelope through its ProfileSchema boundary', () => {
     const name = unique('legacy-access');
-    const created = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(created.stdout.trim());
+    const bundleDir = createBundle(name);
     writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE
       .replace('plan_basename: test', `plan_basename: ${name}`)
       .replace(CURRENT_AVAILABLE_ACCESS, `research_access:\n  status: available\n  probed_at: "2026-07-10T00:00:00.000Z"\n  result_url: "https://example.com/old-envelope"\n  fetch_outcome: success\n`));
@@ -230,8 +240,7 @@ describe('check-gate-setup-ready', () => {
 
   it('rejects an old mutable plan through its existing PlanSchema prerequisite', () => {
     const name = unique('old-plan');
-    const created = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(created.stdout.trim());
+    const bundleDir = createBundle(name);
     writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE.replace('plan_basename: test', `plan_basename: ${name}`));
     writeFileSync(join(bundleDir, 'rb_plan.md'), '---\nplan_basename: old-plan\nderived_topic_count: 1\ntopic_registry:\n  - id: "01"\n    slug: topic-a\n    title: Topic A\n---\n# Historical plan\n');
     const output = JSON.parse(runGate(bundleDir).stdout);
@@ -244,8 +253,7 @@ describe('check-gate-setup-ready', () => {
 
   it('fails on unparseable status', () => {
     const name = unique('badstatus');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     setupValidBundle(bundleDir);
     writeFileSync(join(bundleDir, 'rb_status.json'), 'not json {{{');
 
@@ -263,8 +271,7 @@ describe('check-gate-setup-ready', () => {
 
   it('resolves definition-owned checked target for an Agent-repairable plan body', () => {
     const name = unique('emptybody');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE.replace('plan_basename: test', `plan_basename: ${name}`));
     const planPath = join(bundleDir, 'rb_plan.md');
     const plan = readFileSync(planPath, 'utf-8');
@@ -285,8 +292,7 @@ describe('check-gate-setup-ready', () => {
 
   it('turns setup route-trace failure into one authority-integrity outcome without a second audit', () => {
     const name = unique('tracefail');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE.replace('plan_basename: test', `plan_basename: ${name}`));
     fillPlanBody(bundleDir);
     const planPath = join(bundleDir, 'rb_plan.md');
@@ -311,8 +317,7 @@ describe('check-gate-setup-ready', () => {
 
   it('appends runtime audit entry to rb_trace.jsonl', () => {
     const name = unique('trace');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     setupValidBundle(bundleDir);
 
     const traceBefore = existsSync(join(bundleDir, 'rb_trace.jsonl')) ? readFileSync(join(bundleDir, 'rb_trace.jsonl'), 'utf-8').trim().split('\n').filter(Boolean) : [];

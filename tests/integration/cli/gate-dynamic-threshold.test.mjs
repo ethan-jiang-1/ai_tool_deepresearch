@@ -1,7 +1,7 @@
 // gate-dynamic-threshold.test.mjs
 // Integration tests: dynamic threshold in wave0/wave1 gate CLI
 // @impl RES-003
-import { describe, it, after } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { applyCanonicalTopicState, renderSeedProjectionAppendix } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
 import { canonicalWave1ReferencePath } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs';
+import { cloneBundleTemplate } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 import { claimAndSubmitWorkUnit, referenceContent } from '../../engine/work-unit-test-helpers.mjs';
 import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
 
@@ -22,6 +23,17 @@ const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
 
 function track(dir) { createdDirs.push(dir); return dir; }
+
+// One template instantiation per file; each test clones it byte-for-byte.
+let templateDir = null;
+before(() => {
+  const r = spawnSync('node', [NEW_BUNDLE, 'threshold-template', '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+  templateDir = r.stdout.trim();
+});
+
+after(() => {
+  if (templateDir) rmSync(templateDir, { recursive: true, force: true });
+});
 function unique(prefix) { return `rt_dyn_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
 
 function runGate(cli, bundlePath, nodeRef) {
@@ -55,8 +67,7 @@ function syncReferenceIndex(dir) {
 
 /** Create a minimal bundle with research_style_params in rb_profile.yaml. */
 function createBundle(name, styleParams) {
-  const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-  const dir = track(r.stdout.trim());
+  const dir = track(cloneBundleTemplate(templateDir, name, { targetDir: BUNDLES_DIR }));
 
   // Write rb_profile.yaml with research_style_params
   if (styleParams) {

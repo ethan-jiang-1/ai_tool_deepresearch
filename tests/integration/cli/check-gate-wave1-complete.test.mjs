@@ -1,5 +1,5 @@
 // gate-wave1-complete integration tests (RWG-002, RWG-005, WAI-005)
-import { describe, it, after } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -10,6 +10,7 @@ import {
   availableActorDecision,
   referenceContent,
 } from '../../engine/work-unit-test-helpers.mjs';
+import { cloneBundleTemplate } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 import {
   claimWorkUnits,
   loadWorkUnitIndex,
@@ -32,6 +33,17 @@ const INSPECT_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/inspect-wave1-out
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
+
+// One template instantiation per file; each test clones it byte-for-byte.
+let templateDir = null;
+before(() => {
+  const r = spawnSync('node', [NEW_BUNDLE, 'w1-template', '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+  templateDir = r.stdout.trim();
+});
+
+after(() => {
+  if (templateDir) rmSync(templateDir, { recursive: true, force: true });
+});
 
 const PARITY_HISTORICAL_TOPIC = Object.freeze({
   topic_uid: 'tp_123e4567-e89b-42d3-a456-426614174010', id: '01', slug: 'historical-topic', title: 'Historical Topic',
@@ -306,8 +318,7 @@ __BACKFILL_PENDING_QUESTIONS__
 
 /** Create a bundle with topic_registry and wave1-ready status. */
 function createBundle(name) {
-  const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-  const dir = track(r.stdout.trim());
+  const dir = track(cloneBundleTemplate(templateDir, name, { targetDir: BUNDLES_DIR }));
 
   setStatusWindow(dir, 'wave0_complete', 'wave1_complete');
 
@@ -594,9 +605,7 @@ function writeParityReferenceIndex(dir, topics) {
 }
 
 function createParityBundle(name, topics, { rerunCount = 0 } = {}) {
-  const result = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf8', timeout: 10000 });
-  assert.equal(result.status, 0, result.stderr || result.stdout);
-  const dir = track(result.stdout.trim());
+  const dir = track(cloneBundleTemplate(templateDir, name, { targetDir: BUNDLES_DIR }));
   setStatusWindow(dir, 'wave0_complete', 'wave1_complete');
   writeParityPlan(dir, name, topics);
   writeFileSync(join(dir, 'rb_profile.yaml'), `research_style_params:

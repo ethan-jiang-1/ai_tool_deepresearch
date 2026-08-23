@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: 2026-08-22-de-spawn-bundle-instantiation
+status: not_applicable
+reason: >-
+  This change repairs test-harness setup cost only: it replaces per-test
+  bundle-instantiation subprocess spawns with one before()-built template and
+  fs.cpSync clones, preserving bundle naming shape, plan_basename semantics,
+  assertions, and verification-plan claims. It introduces no Harness runtime
+  fact family, resolver, authority-establishing surface, or deterministic
+  production behavior change, so no semantic-fact closure record applies.

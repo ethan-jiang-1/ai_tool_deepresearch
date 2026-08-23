@@ -1,11 +1,12 @@
 // Integration tests for Wave1 carried-target receipt projection, trace integrity,
 // legacy compatibility, and strict persistence failure (GSK-012, TRW-006, RWG-020).
-import { describe, it, after } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
+import { cloneBundleTemplate } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 import { applyCanonicalTopicState, renderSeedProjectionAppendix } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
 import { canonicalWave1ReferencePath } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs';
 import {
@@ -22,6 +23,17 @@ const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
 
 function track(dir) { createdDirs.push(dir); return dir; }
+
+// One template instantiation per file; each test clones it byte-for-byte.
+let templateDir = null;
+before(() => {
+  const r = spawnSync('node', [NEW_BUNDLE, 'w1rx-template', '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+  templateDir = r.stdout.trim();
+});
+
+after(() => {
+  if (templateDir) rmSync(templateDir, { recursive: true, force: true });
+});
 function unique(prefix) { return `rt_w1rx_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
 
 function runGate(bundlePath, { attempt, node = 'phases/phase-wave1.md' } = {}) {
@@ -120,8 +132,7 @@ ${renderSeedProjectionAppendix()}
 
 /** Create a bundle with one or more canonical topics. */
 function createBundle(name, { extraTopics = [] } = {}) {
-  const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-  const dir = track(r.stdout.trim());
+  const dir = track(cloneBundleTemplate(templateDir, name, { targetDir: BUNDLES_DIR }));
 
   setStatusWindow(dir, 'wave0_complete', 'wave1_complete');
   const statusPath = join(dir, 'rb_status.json');

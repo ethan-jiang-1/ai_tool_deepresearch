@@ -1,9 +1,10 @@
 // gate-hitl1-recorded integration tests (PRG-002, PRG-005)
-import { describe, it, after } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { cloneBundleTemplate } from '../../e2e/helpers/deterministic-chain-harness.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs');
@@ -14,6 +15,21 @@ const createdDirs = [];
 
 function track(dir) { createdDirs.push(dir); return dir; }
 function unique(prefix) { return `rt_int_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
+
+// One template instantiation per file; each test clones it byte-for-byte.
+let templateDir = null;
+before(() => {
+  const r = spawnSync('node', [NEW_BUNDLE, 'hitl1-template', '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+  templateDir = r.stdout.trim();
+});
+
+after(() => {
+  if (templateDir) rmSync(templateDir, { recursive: true, force: true });
+});
+
+function createBundle(name) {
+  return track(cloneBundleTemplate(templateDir, name, { targetDir: BUNDLES_DIR }));
+}
 
 function runGate(bundlePath) {
   return spawnSync('node', [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-hitl1.md'], { encoding: 'utf-8', timeout: 10000 });
@@ -104,8 +120,7 @@ describe('check-gate-hitl1-recorded', () => {
 
   it('passes with a complete profile', () => {
     const name = unique('valid');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     writeProfileYaml(bundleDir, VALID_PROFILE);
     materializeCanonicalTopic(bundleDir);
     assert.equal(applyStyle(bundleDir).topic_count, 1);
@@ -122,8 +137,7 @@ describe('check-gate-hitl1-recorded', () => {
 
   it('rejects a valid but stale style projection through the existing style writer', () => {
     const name = unique('stale-style');
-    const created = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(created.stdout.trim());
+    const bundleDir = createBundle(name);
     writeProfileYaml(bundleDir, VALID_PROFILE);
 
     applyStyle(bundleDir);
@@ -149,8 +163,7 @@ describe('check-gate-hitl1-recorded', () => {
       ['partial', `${VALID_PROFILE}research_style_params:\n  wave0_shared_ref_total: 1\n`],
     ]) {
       const name = unique(`style-${label}`);
-      const created = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-      const bundleDir = track(created.stdout.trim());
+      const bundleDir = createBundle(name);
       writeProfileYaml(bundleDir, profileYaml);
       materializeCanonicalTopic(bundleDir);
       advanceHitl1(bundleDir);
@@ -168,8 +181,7 @@ describe('check-gate-hitl1-recorded', () => {
 
   it('fails when rb_profile.yaml is missing', () => {
     const name = unique('noprofile');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     rmSync(join(bundleDir, 'rb_profile.yaml'));
     materializeCanonicalTopic(bundleDir);
     advanceHitl1(bundleDir);
@@ -187,8 +199,7 @@ describe('check-gate-hitl1-recorded', () => {
 
   it('fails on YAML parse error', () => {
     const name = unique('badyaml');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     writeProfileYaml(bundleDir, 'not: valid: yaml: [[');
     materializeCanonicalTopic(bundleDir);
     advanceHitl1(bundleDir);
@@ -206,8 +217,7 @@ describe('check-gate-hitl1-recorded', () => {
 
   it('fails when research_profile is still not_selected', () => {
     const name = unique('default');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     // Keep default profile (not_selected)
     materializeCanonicalTopic(bundleDir);
     advanceHitl1(bundleDir);
@@ -225,8 +235,7 @@ describe('check-gate-hitl1-recorded', () => {
 
   it('fails when root_must_answer_set is empty', () => {
     const name = unique('emptymust');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     writeProfileYaml(bundleDir, `plan_basename: test
 research_profile: exploratory_map
 root_must_answer_set: []
@@ -255,8 +264,7 @@ ${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
 
   it('fails when hitl1.status is not recorded', () => {
     const name = unique('nostatus');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     writeProfileYaml(bundleDir, `plan_basename: test
 research_profile: claim_verification
 root_must_answer_set:
@@ -287,8 +295,7 @@ ${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
 
   it('fails when recorded_at is missing', () => {
     const name = unique('noat');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     writeProfileYaml(bundleDir, `plan_basename: test
 research_profile: quick_factual
 root_must_answer_set:
@@ -318,8 +325,7 @@ ${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
 
   it('fails absent research_access and points to the bounded direct-sample probe', () => {
     const name = unique('legacy-access');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     writeProfileYaml(bundleDir, VALID_PROFILE.replace(CURRENT_AVAILABLE_ACCESS, ''));
     materializeCanonicalTopic(bundleDir);
     advanceHitl1(bundleDir);
@@ -339,8 +345,7 @@ ${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
 
   it('fails unprobed research_access without authorizing Setup', () => {
     const name = unique('unprobed-access');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     writeProfileYaml(bundleDir, VALID_PROFILE.replace(CURRENT_AVAILABLE_ACCESS, 'research_access:\n  status: unprobed\n'));
     materializeCanonicalTopic(bundleDir);
     advanceHitl1(bundleDir);
@@ -357,8 +362,7 @@ ${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
 
   it('admits a completed available current direct-sample observation through the same Gate path', () => {
     const name = unique('current-available');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     writeProfileYaml(bundleDir, VALID_PROFILE);
     materializeCanonicalTopic(bundleDir);
     applyStyle(bundleDir);
@@ -375,8 +379,7 @@ ${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
 
   it('admits a completed unavailable current direct-sample observation through the same Gate path', () => {
     const name = unique('current-unavailable');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     writeProfileYaml(bundleDir, VALID_PROFILE.replace(CURRENT_AVAILABLE_ACCESS, CURRENT_UNAVAILABLE_ACCESS));
     materializeCanonicalTopic(bundleDir);
     applyStyle(bundleDir);
@@ -391,8 +394,7 @@ ${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
 
   it('never produces current-observation provider or network feedback for a completed observation', () => {
     const name = unique('current-neutral');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     writeProfileYaml(bundleDir, VALID_PROFILE.replace(CURRENT_AVAILABLE_ACCESS, CURRENT_UNAVAILABLE_ACCESS));
     materializeCanonicalTopic(bundleDir);
     applyStyle(bundleDir);
@@ -412,8 +414,7 @@ ${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
 
   it('rejects a retired access envelope through the single ProfileSchema root', () => {
     const name = unique('legacy-envelope');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(r.stdout.trim());
+    const bundleDir = createBundle(name);
     writeProfileYaml(bundleDir, VALID_PROFILE.replace(CURRENT_AVAILABLE_ACCESS, `research_access:
   status: available
   probed_at: "2026-07-10T00:00:00.000Z"
@@ -439,8 +440,7 @@ ${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
 
   it('rejects an old mutable plan through the existing canonical topic-state prerequisite', () => {
     const name = unique('old-plan');
-    const created = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const bundleDir = track(created.stdout.trim());
+    const bundleDir = createBundle(name);
     writeProfileYaml(bundleDir, VALID_PROFILE);
     writeFileSync(join(bundleDir, 'rb_plan.md'), '---\nplan_basename: old-plan\nderived_topic_count: 1\ntopic_registry:\n  - id: "01"\n    slug: topic-a\n    title: Topic A\n---\n# Historical plan\n');
     advanceHitl1(bundleDir);
