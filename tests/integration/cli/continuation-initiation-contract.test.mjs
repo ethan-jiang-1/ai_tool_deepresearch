@@ -28,11 +28,13 @@ const OWNED_SUITES = [
 ];
 
 // Mirrors the canonical discovery glob: find tests/ -name '*.test.mjs'
+// -not -path '*/.test-*'
 // find does not follow symlinked directories; skip them here too
 // (tests/fixtures/DEEP_RESEARCH_HARNESS/* are symlinks into the harness).
 function discoveredTestFiles(baseDir, prefix) {
   const out = [];
   for (const entry of readdirSync(baseDir)) {
+    if (entry.startsWith('.test-')) continue; // disposable output dirs (as find)
     const full = path.join(baseDir, entry);
     const rel = prefix ? `${prefix}/${entry}` : entry;
     const st = lstatSync(full);

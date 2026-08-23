@@ -1,0 +1,11 @@
+schema_version: semantic-closure/v1
+change: 2026-08-22-regression-run-tooling
+status: not_applicable
+reason: >-
+  This change repairs regression run tooling only: it excludes disposable
+  `.test-*` output directories from canonical discovery (set unchanged),
+  adds a deterministic file-sharding script and a triage quick lane, and keeps
+  the inventory walk mirrored to the canonical find. It introduces no Harness
+  runtime fact family, resolver, authority-establishing surface, or
+  deterministic production behavior change, so no semantic-fact closure
+  record applies.

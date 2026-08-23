@@ -1,0 +1,58 @@
+schema_version: verification-routing/v1
+change: 2026-08-22-regression-run-tooling
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The shard-partition pure function gets a focused in-process unit claim.
+  integration:
+    status: selected
+    rationale: >-
+      The canonical-discovery inventory asset proves the owned suites remain
+      in canonical discovery after the disposable-dir exclusion.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale deterministic chain is touched; run-tooling changes do
+      not alter any e2e proof boundary.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      This change repairs regression run tooling only; it makes no claim about
+      real Agent or Subject-Agent behavior.
+claims:
+  - id: canonical-discovery-unaffected
+    statement: >-
+      The nine continuation-initiation owned suites remain members of the
+      canonical discovery glob (`tests/**/*.test.mjs`) after the `test` script
+      excludes `.test-*` disposable directories, and the inventory walk keeps
+      mirroring the canonical find (skipping symlinks and `.test-*` entries).
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/continuation-initiation-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: shard-partition-contract
+    statement: >-
+      shardFiles partitions a sorted file list into n disjoint shards whose
+      union is the full list, deterministically, for n>=1 and 0<=m<n;
+      out-of-range m and empty lists yield empty shards.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/test-shard-partition.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

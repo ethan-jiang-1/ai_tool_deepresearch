@@ -4,11 +4,30 @@ This directory owns all JS-led project tests: `unit`, `integration`, and `determ
 
 ## How to Run
 
-- Use `npm test` for the full project regression suite.
-- Use `node --test tests/path/to/file.test.mjs` or `node --test tests/dir` for focused checks.
+- Use `npm test` for the full project regression suite. Node's test runner
+  executes files **in parallel** by default; this parallel run is the
+  canonical full-suite mode (measured ~139s on the 8-core dev machine) and is
+  flake-free since the shared-snapshot/bundle-name races were removed
+  (2026-08-22: `parallelize-regression-suite` + `de-spawn-bundle-instantiation`
+  changes).
+- Serial mode (`npm test -- --test-concurrency=1 --test-reporter=tap`) is a
+  **measurement mode only** for per-file timing baselines, not the canonical
+  entry (~489s).
+- `npm run test:shard <n> <m>` runs the m-th (1-based) deterministic shard of
+  the discovered suites for parallel execution across n workers/CI shards
+  (wall ~= full parallel / n). See `scripts/test-shard.mjs`.
+- `npm run test:quick` runs a triage lane (schema + md text-lock suites, ~6s).
+  It is a convenience, **not** a verification substitute for `npm test`.
+- Use `node --test tests/path/to/file.test.mjs` or
+  `node --test tests/path/to/dir` for focused checks (pass file paths, not
+  bare directory arguments — `node --test <dir>` is not supported on all
+  node versions).
 - Do not use bare `node --test` from the repo root as the normal regression command. Node can discover test-looking files outside `tests/`, including archived OpenSpec change artifacts with retired fixtures.
 
-The `package.json` `test` script is the canonical full-suite entry because it passes only `tests/**/*.test.mjs` files to Node's test runner.
+The `package.json` `test` script is the canonical full-suite entry because it
+passes only `tests/**/*.test.mjs` files (excluding disposable `.test-*`
+output directories: `.test-tmp/`, `.test-bundles/`, `.test-chain-tmp/`) to
+Node's test runner.
 
 For this command-surface hardening work, `tests/engine/command-contract-docs.test.mjs` covers ACS-003/ACS-004/CLE-004, `tests/integration/cli/actual-gate-cli-exit-code-contract.test.mjs` proves actual gate CLI `0/1/2` behavior, and `tests/integration/cli/exit-code-convention.test.mjs` maintains the CLE-004 shipped-CLI exit-code inventory plus safe runtime samples.
 
