@@ -162,6 +162,36 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     assert.match(plan, /Additional comparison/);
   });
 
+  it('lets a legacy profile without rerun_count complete the C5 rerun topic-state apply', () => {
+    const bundle = createTerminalFinalBundle(root, 'legacy-no-count', {
+      topicRegistry: [{ topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: 'What matters?' }],
+    });
+    // Legacy profile shape: hitl2.rerun_count was never materialized.
+    const profilePath = join(bundle, 'rb_profile.yaml');
+    const profile = parseYaml(readFileSync(profilePath, 'utf8'));
+    delete profile.human_decision_checkpoints.hitl2.rerun_count;
+    writeFileSync(profilePath, `${stringifyYaml(profile).trimEnd()}\n`);
+
+    const inspection = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.equal(inspection.verdict, 'eligible');
+    const inputPath = join(root, 'legacy-no-count-request.json');
+    writeFileSync(inputPath, JSON.stringify(requestFromInspection(inspection)));
+    const applied = runJson([CLI, 'apply', '--bundle', bundle, '--input', inputPath]);
+    assert.equal(applied.verdict, 'committed');
+    // The committed event semantics preserve the absent key.
+    const event = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(JSON.parse).find((candidate) => candidate.event === 'post_final_reentry');
+    assert.equal(Object.hasOwn(event.committed_after_profile_semantics.human_decision_checkpoints.hitl2, 'rerun_count'), false);
+
+    runNode(['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md']);
+    runJson(['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
+    const result = applyCanonicalTopicState({
+      bundlePath: bundle,
+      input: { context: 'rerun', actions: [{ action: 'add_topic', title: 'Legacy comparison', slug_stem: 'legacy-comparison', must_answer: ['What differs?'], scope_role: 'comparison', depends_on_topic_uids: [], direction: { rerun_count: 1, action: 'add', new_search_dimensions: 'comparison', adjusted_depth: 'deeper comparison', search_guardrails: 'retain primary facts', rationale_excerpt: 'recorded rerun rationale' } }] },
+    });
+    assert.equal(result.verdict, 'committed');
+    assert.match(readFileSync(join(bundle, 'rb_plan.md'), 'utf8'), /Legacy comparison/);
+  });
+
   it('does not turn post-final reentry into old-plan migration or topic adoption authority', () => {
     const bundle = createTerminalFinalBundle(root, 'old-plan', {
       topicRegistry: [{ topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: 'What matters?' }],

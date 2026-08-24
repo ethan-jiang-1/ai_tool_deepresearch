@@ -307,10 +307,15 @@ function canonicalTopicCount(bundlePath) {
   return plan.topic_registry.length;
 }
 
-function classifyPostFinalProfile(bundlePath, current, accepted, guard) {
+export function classifyPostFinalProfile(bundlePath, current, accepted, guard) {
   if (!current || !accepted || !guard) return { ok: false, reason: 'profile lineage inputs are incomplete' };
   const acceptedCount = accepted?.human_decision_checkpoints?.hitl2?.rerun_count ?? 0;
-  const currentCount = current?.human_decision_checkpoints?.hitl2?.rerun_count;
+  const acceptedCarriesCount = Object.hasOwn(accepted?.human_decision_checkpoints?.hitl2 ?? {}, 'rerun_count');
+  // A legacy profile that never materialized rerun_count (and whose committed
+  // event semantics equally lack the key) reads the event-bound current count,
+  // matching evaluateRerunAvailability's absent-field interpretation. A keyed
+  // profile keeps the existing exact window check.
+  const currentCount = current?.human_decision_checkpoints?.hitl2?.rerun_count ?? guard.current_count;
   if (acceptedCount !== guard.current_count || ![guard.current_count, guard.next_count].includes(currentCount)) {
     return { ok: false, reason: 'rerun_count is outside the event-bound current/next delta' };
   }
@@ -330,7 +335,14 @@ function classifyPostFinalProfile(bundlePath, current, accepted, guard) {
   if (!unchangedStyle && !projectedStyle) return { ok: false, reason: 'research_style_params match neither event-bound values nor the exact current projection' };
 
   const comparable = structuredClone(current);
-  comparable.human_decision_checkpoints.hitl2.rerun_count = acceptedCount;
+  // The immutable event semantics are the comparison reference. When the event
+  // carries rerun_count (keyed lineage), write the event-bound count back so the
+  // whole-profile equality still holds. A legacy event never declared the key,
+  // so the profile's count — whether still absent (current) or written by the
+  // sanctioned phase-rerun increment (next) — must not be part of the equality:
+  // strip it so only the fields the event actually carried are compared.
+  if (acceptedCarriesCount) comparable.human_decision_checkpoints.hitl2.rerun_count = acceptedCount;
+  else delete comparable.human_decision_checkpoints.hitl2.rerun_count;
   comparable.research_style_params = acceptedStyle;
   if (JSON.stringify(comparable) !== JSON.stringify(accepted)) return { ok: false, reason: 'profile contains unrelated event-lineage drift' };
 

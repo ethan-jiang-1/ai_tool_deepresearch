@@ -1,0 +1,68 @@
+schema_version: verification-routing/v1
+change: fix-post-final-rerun-legacy-profile
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The classifier contract (classifyPostFinalProfile) is a focused
+      in-process helper contract in tests/engine/helpers; a unit test with
+      synthetic profile/event/guard objects proves the absence tolerance
+      without a full bundle chain.
+  integration:
+    status: selected
+    rationale: >-
+      The full legacy C5 chain (apply -> enter-phase -> advance-status ->
+      applyCanonicalTopicState) crosses the post-final-recovery CLI boundary and
+      the topic-state lifecycle boundary over a real temporary bundle fixture;
+      that is the integration class per verification-routing precedence rule 3.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale state chain across multiple production checkpoints is
+      being proven; the existing post-final-rerun-lineage-continuity e2e covers
+      the keyed chain and remains a regression guard, but this change's new
+      behavior is fully proven by unit + integration over a bounded bundle
+      boundary.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      No Playbook-Agent behavior is claimed; the change is a deterministic
+      Engine verdict relaxation verified by JS-led tests.
+claims:
+  - id: legacy-absent-count-classifies-current
+    statement: >-
+      classifyPostFinalProfile accepts a legacy profile whose
+      human_decision_checkpoints.hitl2.rerun_count key is absent when the
+      committed post_final_reentry event semantics also lack the key, treating
+      the count as the event-bound rerun_guard.current_count and classifying it
+      as 'current', without weakening the keyed-profile comparison.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/handoff-helpers-legacy-rerun.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: legacy-c5-chain-topic-state-commits
+    statement: >-
+      A terminal Final bundle whose profile lacks hitl2.rerun_count completes
+      the post-final recovery apply, route-bound enter-phase, status
+      synchronization, and a sanctioned rerun topic-state apply with verdict
+      committed, while keyed bundles keep the existing strict behavior.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/post-final-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

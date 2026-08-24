@@ -1,0 +1,42 @@
+schema_version: semantic-closure/v1
+change: fix-post-final-rerun-legacy-profile
+status: affected
+catalog_additions: []
+affected:
+  - family: lifecycle.gate-status-trace-handoff
+    fact: >-
+      Whether a committed post_final_reentry event plus its bound load,
+      transition, status window, and current profile form an accepted
+      exceptional handoff stage. For a legacy profile/event whose
+      human_decision_checkpoints.hitl2.rerun_count key is absent, the current
+      count is the event-bound rerun_guard.current_count (0) rather than an
+      undefined value, and the profile comparison does not require a key the
+      immutable event semantics never carried. All other stage predicates
+      (exact event-bound profile semantics, unchanged research_profile, style
+      equality or exact RES-001 projection) remain unchanged.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs
+      - DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs
+      - DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/rerun-availability.mjs
+        relation: authoritative
+        detail: >-
+          evaluateRerunAvailability already treats an absent hitl2.rerun_count
+          as currentCount 0 for fresh eligibility and next-increment
+          evaluation; this change makes the post-final stage classifier
+          interpret the same absence consistently with that existing authority.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-profile.md
+        relation: derived
+        detail: >-
+          The Agent-facing field documentation already describes rerun_count as
+          optional with schema default 0 and phase-rerun as the increment
+          owner; this change aligns the Engine stage verdict with that
+          documented contract for legacy profiles.
+    verification:
+      truth_table: tests/engine/helpers/handoff-helpers-legacy-rerun.test.mjs
+      cross_surface: tests/integration/cli/post-final-recovery.test.mjs
