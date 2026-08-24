@@ -227,6 +227,114 @@ describe('work-unit transaction v2', () => {
     }
   });
 
+  it('does not attribute a concurrent write inside another work unit directory to the transaction', () => {
+    const bundleDir = tempWorkUnitBundle('wu-tx-other-workdir-');
+    try {
+      const authorityPath = path.join(bundleDir, 'authority.json');
+      writeFileSync(authorityPath, 'before\n');
+      const otherReceipt = '_work_units/wave1/wu-w1-b000-deep-i0001/runtime-receipt.jsonl';
+      mkdirSync(path.dirname(path.join(bundleDir, otherReceipt)), { recursive: true });
+      writeFileSync(path.join(bundleDir, otherReceipt), 'line1\n');
+      const result = withWorkUnitTransaction(bundleDir, 'submit_work_unit', {
+        targetWorkIds: [WORK_ID],
+        targetQueueItemIds: ['queue-a'],
+        mutationTargets: ['authority.json'],
+      }, () => {
+        writeFileSync(authorityPath, 'after\n');
+        // Simulated concurrent actor append inside another work unit's own dir.
+        writeFileSync(path.join(bundleDir, otherReceipt), 'line1\nline2\n');
+        return { ok: true };
+      });
+      assert.equal(result.ok, true);
+      assert.equal(readFileSync(authorityPath, 'utf8'), 'after\n');
+      assert.equal(readFileSync(path.join(bundleDir, otherReceipt), 'utf8'), 'line1\nline2\n');
+      const [journal] = journals(bundleDir);
+      assert.equal(journal.status, 'committed');
+      assert.equal(existsSync(path.join(bundleDir, '_work_units', '.lock')), false);
+    } finally {
+      cleanupWorkUnitBundle(bundleDir);
+    }
+  });
+
+  it('commits a submit transaction while another work unit appends its receipt concurrently', async () => {
+    const bundleDir = tempWorkUnitBundle('wu-tx-concurrent-receipt-');
+    const readyFile = path.join(path.dirname(bundleDir), `${path.basename(bundleDir)}.receipt-ready`);
+    const releaseFile = path.join(path.dirname(bundleDir), `${path.basename(bundleDir)}.receipt-release`);
+    try {
+      const authorityPath = path.join(bundleDir, 'authority.json');
+      writeFileSync(authorityPath, 'before\n');
+      const otherReceipt = '_work_units/wave1/wu-w1-b000-deep-i0001/runtime-receipt.jsonl';
+      mkdirSync(path.dirname(path.join(bundleDir, otherReceipt)), { recursive: true });
+      writeFileSync(path.join(bundleDir, otherReceipt), 'line1\n');
+      const moduleUrl = pathToFileURL(path.resolve('DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs')).href;
+      const holderScript = `
+        import { existsSync, writeFileSync } from 'node:fs';
+        import { withWorkUnitTransaction } from ${JSON.stringify(moduleUrl)};
+        const result = withWorkUnitTransaction(${JSON.stringify(bundleDir)}, 'submit_work_unit', {
+          targetWorkIds: [${JSON.stringify(WORK_ID)}],
+          targetQueueItemIds: ['queue-a'],
+          mutationTargets: ['authority.json']
+        }, () => {
+          writeFileSync(${JSON.stringify(authorityPath)}, 'after\\n');
+          writeFileSync(${JSON.stringify(readyFile)}, 'ready\\n');
+          const buf = new Int32Array(new SharedArrayBuffer(4));
+          let elapsed = 0;
+          while (!existsSync(${JSON.stringify(releaseFile)}) && elapsed < 30000) {
+            Atomics.wait(buf, 0, 0, 50);
+            elapsed += 50;
+          }
+          return { ok: true };
+        });
+        if (!result.ok) process.exit(2);
+      `;
+      const holder = spawn(process.execPath, ['--input-type=module', '--eval', holderScript], {
+        cwd: path.resolve('.'),
+        stdio: ['ignore', 'ignore', 'pipe'],
+      });
+      const holderDone = waitForChild(holder);
+      await waitForFile(readyFile);
+      // Independent claimed actor appends its own receipt while B's submit
+      // transaction window is open.
+      writeFileSync(path.join(bundleDir, otherReceipt), 'line1\nline2\n');
+      writeFileSync(releaseFile, 'release\n');
+      await holderDone;
+      const [journal] = journals(bundleDir);
+      assert.equal(journal.status, 'committed');
+      assert.equal(journal.error, null);
+      assert.equal(readFileSync(authorityPath, 'utf8'), 'after\n');
+      assert.equal(readFileSync(path.join(bundleDir, otherReceipt), 'utf8'), 'line1\nline2\n');
+      assert.equal(existsSync(path.join(bundleDir, '_work_units', '.lock')), false);
+    } finally {
+      rmSync(readyFile, { force: true });
+      rmSync(releaseFile, { force: true });
+      cleanupWorkUnitBundle(bundleDir);
+    }
+  });
+
+  it('keeps an undeclared write inside the transaction own work-unit directory fail-closed', () => {
+    const bundleDir = tempWorkUnitBundle('wu-tx-own-dir-suspect-');
+    try {
+      const authorityPath = path.join(bundleDir, 'authority.json');
+      writeFileSync(authorityPath, 'before\n');
+      const ownStatus = `_work_units/wave0/${WORK_ID}/_status.json`;
+      assert.throws(() => withWorkUnitTransaction(bundleDir, 'submit_work_unit', {
+        targetWorkIds: [WORK_ID],
+        targetQueueItemIds: ['queue-a'],
+        mutationTargets: ['authority.json'],
+      }, () => {
+        writeFileSync(authorityPath, 'after\n');
+        mkdirSync(path.dirname(path.join(bundleDir, ownStatus)), { recursive: true });
+        writeFileSync(path.join(bundleDir, ownStatus), '{"undeclared":true}\n');
+        return { ok: true };
+      }), /undeclared targets/);
+      const [journal] = journals(bundleDir);
+      assert.equal(journal.status, 'suspect');
+      assert.equal(existsSync(path.join(bundleDir, ownStatus)), true);
+    } finally {
+      cleanupWorkUnitBundle(bundleDir);
+    }
+  });
+
   it('returns structured busy from a real contender CLI while another process owns the pair', async () => {
     const bundleDir = tempWorkUnitBundle('wu-tx-contention-');
     const readyFile = path.join(path.dirname(bundleDir), `${path.basename(bundleDir)}.holder-ready`);

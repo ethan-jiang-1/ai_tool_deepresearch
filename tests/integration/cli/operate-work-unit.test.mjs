@@ -981,6 +981,97 @@ describe('operate-work-unit inspect', () => {
     }
   });
 
+  it('submits one claimed Wave1 work unit while another claimed actor owns its receipt and result', () => {
+    const dir = tempBundle();
+    try {
+      writeCanonicalPlan(dir);
+      saveQueueWith(dir, [
+        supplementaryWave1QueueItem({ queue_item_id: 'queue-wave1-actor-a' }),
+        supplementaryWave1QueueItem({ queue_item_id: 'queue-wave1-actor-b' }),
+      ]);
+      const actorArgs = [
+        '--actor-outcome', 'available',
+        '--actor-source', 'native_probe',
+        '--actor-role-key', 'dpt-evidence-extractor',
+        '--actor-reason', 'probe_succeeded',
+        '--execution-actor', 'delegated_subagent',
+      ];
+      const claimA = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave1', ...actorArgs], { encoding: 'utf-8', timeout: 5000 });
+      assert.equal(claimA.status, 0, claimA.stderr || claimA.stdout);
+      const workIdA = JSON.parse(claimA.stdout).claimed_work_ids[0];
+      const claimB = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave1', ...actorArgs], { encoding: 'utf-8', timeout: 5000 });
+      assert.equal(claimB.status, 0, claimB.stderr || claimB.stdout);
+      const workIdB = JSON.parse(claimB.stdout).claimed_work_ids[0];
+      assert.notEqual(workIdA, workIdB);
+
+      const index = loadWorkUnitIndex(dir).work_units;
+      const receiptFor = (workId) => `${JSON.stringify({
+        event: 'work_done',
+        work_id: workId,
+        queue_item_id: index[workId].queue_item_id,
+        kind: index[workId].kind,
+        receipt_nonce: index[workId].receipt_nonce,
+        actor_contract_version: index[workId].actor_contract_version,
+        execution_actor_class: index[workId].actor_execution.execution_actor_class,
+        ts: '2026-08-24T00:00:00.000Z',
+      })}\n`;
+      const resultFor = (workId, summary) => `${JSON.stringify({
+        schema_version: 'work-unit.result.v1',
+        work_id: workId,
+        queue_item_id: index[workId].queue_item_id,
+        kind: index[workId].kind,
+        receipt_nonce: index[workId].receipt_nonce,
+        actor_contract_version: index[workId].actor_contract_version,
+        execution_actor_class: index[workId].actor_execution.execution_actor_class,
+        summary,
+        output_files: [],
+        cache_trails: [],
+      }, null, 2)}\n`;
+
+      // Actor A finishes its work (normal receipt append + result in its own
+      // directory) but remains claimed.
+      writeFileSync(path.join(dir, index[workIdA].paths.runtime_receipt_ref), receiptFor(workIdA));
+      const resultA = path.join(dir, '_tmp', `${workIdA}.result.json`);
+      mkdirSync(path.dirname(resultA), { recursive: true });
+      writeFileSync(resultA, resultFor(workIdA, 'A result'));
+
+      // Actor B finishes and formally submits while A is still claimed.
+      writeFileSync(path.join(dir, index[workIdB].paths.runtime_receipt_ref), receiptFor(workIdB));
+      const cacheTrail = `_cache/wave1/primary/${index[workIdB].queue_item_id}/supplementary-source`;
+      mkdirSync(path.join(dir, cacheTrail), { recursive: true });
+      writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
+      writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nSupplementary source capture.\n');
+      writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://example.com/supplementary"}\n');
+      const resultB = path.join(dir, '_tmp', `${workIdB}.result.json`);
+      mkdirSync(path.dirname(resultB), { recursive: true });
+      writeFileSync(resultB, JSON.stringify({
+        schema_version: 'work-unit.result.v1',
+        work_id: workIdB,
+        queue_item_id: index[workIdB].queue_item_id,
+        kind: index[workIdB].kind,
+        receipt_nonce: index[workIdB].receipt_nonce,
+        actor_contract_version: index[workIdB].actor_contract_version,
+        execution_actor_class: index[workIdB].actor_execution.execution_actor_class,
+        summary: 'B result',
+        output_files: [],
+        cache_trails: [cacheTrail],
+      }, null, 2));
+
+      const submitB = spawnSync(process.execPath, [CLI, 'submit', dir, '--work-id', workIdB, '--result', resultB], {
+        encoding: 'utf-8', timeout: 10000,
+      });
+      assert.equal(submitB.status, 0, submitB.stderr || submitB.stdout);
+      assert.equal(JSON.parse(submitB.stdout).ok, true);
+      assert.equal(readFileSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER), 'utf-8').split(/\r?\n/).filter(Boolean).length, 1);
+      assert.equal(loadWorkUnitIndex(dir).work_units[workIdA].status, 'claimed');
+
+      const inspect = spawnSync(process.execPath, [CLI, 'inspect', dir], { encoding: 'utf-8', timeout: 10000 });
+      assert.equal(inspect.status, 0, inspect.stderr || inspect.stdout);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('dry-submit failure exits 1 with structured JSON on stdout and no submit rejection', () => {
     const dir = tempBundle();
     try {

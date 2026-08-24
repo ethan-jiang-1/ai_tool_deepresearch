@@ -22,11 +22,12 @@
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
-| [BUG-239](BUG-239-wave1-submit-suspect-on-concurrent-receipt-write.md) | P2 | Wave1 | 并发 delegated receipt 写入导致另一 work-unit submit 事务误报 undeclared mutation 并进入 suspect，需 recover-transaction 后重试。 |
+| （无活跃 bug） | — | — | 全部 bug 已结案，见下方「最近关闭 (2026-08-24)」。 |
 
-> BUG-237 已随 `2026-08-24-enforce-seed-initialization-body-completeness` 结案并移入
-> [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)；BUG-238 已随
-> `2026-08-24-document-wave0-deferred-all-or-nothing` 结案并移入，均见下方
+> BUG-237 已随 `2026-08-24-enforce-seed-initialization-body-completeness`、
+> BUG-238 已随 `2026-08-24-document-wave0-deferred-all-or-nothing`、
+> BUG-239 已随 `2026-08-24-scope-work-unit-transaction-attribution` 结案并移入
+> [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)，均见下方
 > 「最近关闭 (2026-08-24)」。
 
 ## 最近关闭 (2026-08-24)
@@ -35,6 +36,7 @@
 |-----|----------|
 | BUG-237 | `2026-08-24-enforce-seed-initialization-body-completeness`：seed-topics-ready gate 对 current-marker seed 新增确定性模板占位检测（同一 `seed_initialization_structure` rule），拒绝「frontmatter enriched + body pending」半完成状态；phase task card/§3.1/§4 与 seed-topic-template 收紧显式 gap 形式；unit + gate CLI 集成 + 文档锁测试锁定；真实 bundle `dpt_rb_ai-coding-evolution` 五个 seed 初始化正文按 run contract 修复后通过新 evaluator（STM-010）。 |
 | BUG-238 | `2026-08-24-document-wave0-deferred-all-or-nothing`：贡献级 `deferred_contribution` 选择器确认是 disposition 兼容性上的 all-or-nothing（CTS-009 原子拒绝语义不变）；playbook 与 phase-wave0 写明前置条件（每个 selected identity 必须 unprojected 或已是等价 deferred entry）与混合贡献恢复路径（显式 `wave0_evidence` entries 补剩余 ordinal + 同一 inspect rerun）；collision 反馈追加恢复句；文档锁 + CLI 集成回归（CTS-011/RWP-023）。 |
+| BUG-239 | `2026-08-24-scope-work-unit-transaction-attribution`：undeclared-mutation 归属收窄到本事务 target work-unit 目录 + 根 ledger，其他 work-unit 目录归并发 actor 生命周期（receipt 追加/result/status 写入不归因、不标 suspect、不回滚）；本事务归属面内未声明写入仍 fail-closed；holder 双 worker 确定性 fixture + 真实 CLI 端到端回归（MODIFIED DEW-023）。 |
 
 ## 最近关闭 (2026-08-19)
 
@@ -191,7 +193,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 
 > BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspended_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
-**Next available bug ID: BUG-242**
+**Next available bug ID: BUG-243**
 
 ## BUG-132–137 接手地图
 

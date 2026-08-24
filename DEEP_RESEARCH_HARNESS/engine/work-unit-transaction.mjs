@@ -151,12 +151,15 @@ function restoreMutationTargets(snapshots) {
   return { ok: failures.length === 0, failures };
 }
 
-// The undeclared-mutation comparison surface is exactly the work-unit
-// authority surface: the work-unit root (excluding the global lock and the
-// current transaction's own journal) plus the root output declaration ledger.
-// Concurrent writes to other bundle paths (delegated cache, run-scoped
-// scripts, diagnostics, reference, artifacts) are owned by other processes
-// and are not attributed to this transaction.
+// The undeclared-mutation comparison snapshots the work-unit authority
+// surface: the work-unit root (excluding the global lock and the current
+// transaction's own journal) plus the root output declaration ledger.
+// Attribution of a changed file to this transaction is narrower: only the
+// transaction's own target work-unit directories and the root output
+// declaration ledger are attributed. Concurrent writes to other bundle paths
+// (delegated cache, run-scoped scripts, diagnostics, reference, artifacts) and
+// to other work units' own directories are owned by other processes/actors and
+// are not attributed to this transaction.
 function listBundleFiles(bundleDir, currentJournalRef = null) {
   const root = rootPath(bundleDir);
   const files = new Map();
@@ -190,6 +193,20 @@ function listBundleFiles(bundleDir, currentJournalRef = null) {
 function changedFiles(before, after) {
   const all = new Set([...before.keys(), ...after.keys()]);
   return [...all].filter((entry) => before.get(entry) !== after.get(entry)).sort();
+}
+
+// Attribution boundary: a changed file under another work unit's own directory
+// (_work_units/<wave>/<work-id>/...) belongs to that work unit's concurrent
+// actor lifecycle, not to this transaction. Concurrent claimed actors append
+// their own runtime receipts and write their own result/status files outside
+// any transaction; those writes must not make this transaction suspect and are
+// never rolled back by it. The transaction's own target work-unit directories
+// and the root-level authority files (for example _work_units/_index.json)
+// remain fully attributed.
+function belongsToOtherWorkUnit(relativePath, targetWorkIds) {
+  const segments = relativePath.split('/');
+  if (segments.length < 3 || segments[0] !== WORK_UNITS.ROOT) return false;
+  return !targetWorkIds.includes(segments[2]);
 }
 
 function callerFor(operation, { targetWorkIds = [], targetQueueItemIds = [] } = {}) {
@@ -576,7 +593,8 @@ export function withWorkUnitTransaction(bundleDir, operation, options, fn) {
     callbackStopped = true;
     const afterFiles = listBundleFiles(root, ref);
     const undeclared = changedFiles(beforeFiles, afterFiles)
-      .filter((entry) => !normalized.mutationTargets.includes(entry));
+      .filter((entry) => !normalized.mutationTargets.includes(entry))
+      .filter((entry) => !belongsToOtherWorkUnit(entry, normalized.targetWorkIds));
     if (undeclared.length > 0) {
       const error = new Error(`transaction ${txId} mutated undeclared targets: ${undeclared.join(', ')}`);
       error.undeclared_targets = undeclared;

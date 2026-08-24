@@ -1,0 +1,66 @@
+schema_version: verification-routing/v1
+change: 2026-08-24-scope-work-unit-transaction-attribution
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      归属谓词与 undeclared 过滤是 work-unit-transaction.mjs 的模块内契约；
+      holder-child 双 worker fixture 在真实事务 helper 的打开窗口内确定性
+      插入并发写入（现有 contention 测试同款模式），直接回调变体证明归属逻辑，
+      自身目录 fail-closed 回归同文件锁定。
+  integration:
+    status: selected
+    rationale: >-
+      真实 `operate-work-unit submit` CLI 端到端路径（claim 两个 Wave1 work
+      unit、A 的 receipt 追加、B 真实提交成功、inspect 有效）跨 production
+      CLI 与临时 bundle 边界，证明并发执行状态不再破坏提交与检查。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      不涉及跨多个 production checkpoint 或 lifecycle transition 的
+      workflow-scale 状态链；事务归属是单点模块契约，unit + integration 已覆盖。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      修复是 Engine 确定性归属逻辑，不声明任何真实 Agent 语义行为。
+claims:
+  - id: concurrent-other-work-unit-write-not-suspect
+    statement: >-
+      DEW-023: withWorkUnitTransaction commits (journal status committed, not
+      suspect) when another claimed work unit's actor writes inside its own
+      directory — appending runtime-receipt.jsonl — during the transaction
+      window of a submit for a different work id, the other work unit's
+      directory bytes remain untouched by the submit transaction, and an
+      undeclared callback write inside the transaction's own target work-unit
+      directory still fails closed to suspect.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-transaction.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: real-submit-tolerates-concurrent-actor-directory
+    statement: >-
+      DEW-023: the real operate-work-unit submit CLI for one claimed Wave1
+      work unit succeeds (committed, non-suspect) while another claimed work
+      unit's directory holds a normal actor-appended runtime receipt, and
+      operate-work-unit inspect remains valid afterwards.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

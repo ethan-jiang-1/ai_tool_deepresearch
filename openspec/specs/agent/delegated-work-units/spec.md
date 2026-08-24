@@ -2,7 +2,7 @@
 
 > req: DEW-001, DEW-002, DEW-003, DEW-004, DEW-005, DEW-006, DEW-007, DEW-008, DEW-009, DEW-010, DEW-011, DEW-012, DEW-013, DEW-014, DEW-015, DEW-016, DEW-017, DEW-018, DEW-019, DEW-020, DEW-021, DEW-022, DEW-023, DEW-024, DEW-025, DEW-026
 
-> delta-synced: strengthen-user-intent-carry-through (DEW-026)
+> delta-synced: strengthen-user-intent-carry-through (DEW-026), scope-work-unit-transaction-attribution (DEW-023)
 
 > delta-synced: add-audited-late-accept-for-timed-out-work-units (DEW-005, DEW-006, DEW-011, DEW-015)
 > delta-synced: make-delegated-work-contracts-constructible (DEW-021)
@@ -2030,14 +2030,21 @@ and its 256-bit SHA-2 before-digest when present. The manifest SHALL cover every
 the operation may write; it SHALL contain no glob, implicit recursive directory, unsafe path, or
 post-first-write target discovery. The current transaction's own lock/journal and append-only diagnostic
 trace/run-log writes are metadata/audit surfaces rather than rollback targets; they SHALL NOT establish
-operational authority or conceal an undeclared authority write. The undeclared-mutation comparison
-surface SHALL be exactly the work-unit authority surface: the work-unit root (`_work_units/`, excluding
-the global lock and the current transaction's own journal) plus the root output declaration ledger.
-Bundle writes outside that surface during the transaction window — including delegated cache,
-run-scoped script, diagnostics, reference, or artifact writes owned by other concurrent processes —
-SHALL NOT be attributed to the transaction as undeclared mutations, SHALL NOT mark the journal
-`suspect`, and SHALL NOT make the rollback proof incomplete. A callback write to an authority-surface
-path outside the declared manifest SHALL remain a fail-closed undeclared mutation. A journal may enter `started` only after its
+operational authority or conceal an undeclared authority write. The undeclared-mutation attribution
+surface SHALL be the transaction's own target work-unit directories (`_work_units/<wave>/<own-work-id>/`
+for each work-id named in the transaction's target work ids) plus the root output declaration ledger,
+within the work-unit root (`_work_units/`, excluding the global lock and the current transaction's own
+journal). Every other work-unit directory (`_work_units/<wave>/<work-id>/` for a work-id not named in
+the transaction's target work ids) is owned by that work unit's concurrent actor lifecycle; writes there
+during the transaction window — including runtime-receipt appends and result/status writes by another
+claimed actor — are not mutations made by this transaction. Bundle writes outside the transaction's
+attributed surface during the transaction window — including delegated cache, run-scoped script,
+diagnostics, reference, or artifact writes, and any write inside another work unit's directory, all
+owned by other concurrent processes — SHALL NOT be attributed to the transaction as undeclared
+mutations, SHALL NOT mark the journal `suspect`, and SHALL NOT make the rollback proof incomplete. A
+callback write to a path inside the transaction's attributed surface (its own target work-unit
+directories or the root output declaration ledger) outside the declared manifest SHALL remain a
+fail-closed undeclared mutation. A journal may enter `started` only after its
 declaration and lock-owner binding are durable.
 
 A journal's transient `started` state is an active direct fact. A v2 journal's durable post-operation
@@ -2160,10 +2167,21 @@ manual deletion advice is authorized by this requirement.
 - **AND** a later rollback SHALL remain proof-complete when every declared target is restored, independent
   of those concurrent writes
 
+#### Scenario: concurrent other-work-unit writes do not mark a transaction suspect
+
+- **WHEN** another claimed work unit's actor writes inside its own work-unit directory (for example
+  appending its `runtime-receipt.jsonl` or writing its result/status) during the transaction window of a
+  submit for a different work unit
+- **THEN** the submitting transaction SHALL commit normally and its journal SHALL NOT be marked `suspect`
+- **AND** those concurrent writes SHALL NOT appear as undeclared targets of the transaction
+- **AND** the other work unit's directory bytes SHALL remain untouched by the submit transaction and its
+  rollback
+
 #### Scenario: authority-surface undeclared writes remain fail-closed
 
-- **WHEN** a transaction callback writes a work-unit authority-surface path (work-unit state, index, queue,
-  or the root output declaration ledger) outside its declared mutation manifest
+- **WHEN** a transaction callback writes a path inside its own attributed surface (its own target
+  work-unit directory state, the work-unit index, queue, or the root output declaration ledger) outside
+  its declared mutation manifest
 - **THEN** the transaction SHALL stop and the journal SHALL be recorded `suspect` with the undeclared
   authority paths named
 - **AND** the fail-closed boundary SHALL not depend on writes to non-authority bundle paths

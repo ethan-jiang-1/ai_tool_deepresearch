@@ -1,0 +1,40 @@
+schema_version: semantic-closure/v1
+change: 2026-08-24-scope-work-unit-transaction-attribution
+status: affected
+catalog_additions: []
+affected:
+  - family: work-unit.transaction-mutation-integrity
+    fact: >-
+      Which changes inside the work-unit root are attributed to a v2 submit
+      transaction as undeclared mutations: attribution covers only the
+      transaction's own target work-unit directories
+      (_work_units/<wave>/<own-work-id>/) and the root output-declaration
+      ledger; every other work-unit directory is owned by that work unit's
+      concurrent actor lifecycle, so its writes (runtime-receipt appends,
+      result/status writes) during the transaction window are not undeclared
+      mutations of this transaction, never mark the journal suspect, and are
+      never rolled back by it — while an undeclared callback write inside the
+      transaction's own attributed surface still fails closed to suspect and
+      keeps the proof-bounded recover-transaction path.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs#withWorkUnitTransaction
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs#withWorkUnitTransaction
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs
+      - DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs#recoverWorkUnitTransaction
+        relation: derived
+        detail: >-
+          Recovery consumes the same attribution boundary when settling a
+          named journal (it passes the journal's target work ids); it does not
+          decide the detection scope.
+      - coordinate: openspec/specs/agent/delegated-work-units/spec.md
+        relation: derived
+        detail: >-
+          DEW-023 documents the attribution surface and scenarios; it presents
+          the verdict boundary without deciding runtime facts.
+    verification:
+      truth_table: tests/engine/work-unit-transaction.test.mjs
+      cross_surface: tests/integration/cli/operate-work-unit.test.mjs
