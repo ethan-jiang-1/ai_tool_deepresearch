@@ -1,6 +1,6 @@
-# BUG-237: 新 topic 用多个并发 wave0 source-intake work unit（共享同一 source.yaml）会破坏 submitted source contribution 单调投影，wave0 gate 永久阻塞
+# BUG-240: 新 topic 用多个并发 wave0 source-intake work unit（共享同一 source.yaml）会破坏 submitted source contribution 单调投影，wave0 gate 永久阻塞
 
-> 状态: 活跃 | 优先级: P1 | 严重度: P2 | 更新: 2026-08-20 | source: 真实 run 执行（dpt_rb_enterprise-ai-transformation-six-cases，rerun 3 add Walmart topic 10）
+> 状态: 已结案 | 优先级: P1 | 严重度: P2 | 更新: 2026-08-24 | 结案: 2026-08-21-guard-wave0-source-target-exclusivity（同 canonical Wave0 source target 非终态排他 + 串行 supplement 指引；fragment merge 明确 out of scope） | source: 真实 run 执行（dpt_rb_enterprise-ai-transformation-six-cases，rerun 3 add Walmart topic 10）
 
 ## Why（完整上下文）
 

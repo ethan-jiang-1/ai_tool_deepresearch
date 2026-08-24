@@ -23,6 +23,7 @@
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
 | [BUG-238](BUG-238-wave0-deferred-contribution-partial-projection-collision.md) | P2 | Wave0 | Wave0 deferred contribution 在部分显式投影后触发 `projection_deferred_contribution_collision`；Engine 行为与 accepted 原子整贡献规则一致，残余为 playbook DX 澄清，待下一 change。 |
+| [BUG-239](BUG-239-wave1-submit-suspect-on-concurrent-receipt-write.md) | P2 | Wave1 | 并发 delegated receipt 写入导致另一 work-unit submit 事务误报 undeclared mutation 并进入 suspect，需 recover-transaction 后重试。 |
 
 > BUG-237 已随 `2026-08-24-enforce-seed-initialization-body-completeness` 结案并移入
 > [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)，见下方「最近关闭 (2026-08-24)」。
@@ -188,7 +189,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 
 > BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspended_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
-**Next available bug ID: BUG-239**
+**Next available bug ID: BUG-241**
 
 ## BUG-132–137 接手地图
 
