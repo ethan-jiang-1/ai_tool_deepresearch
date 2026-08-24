@@ -340,7 +340,7 @@ for (const rule of definition.rules) {
           repairKind: 'agent_action',
           writeTo: `${seed.relativePath}#seed-initialization`,
           detail: `[${rule.id}] ${seed.relativePath}: ${structure.missing_fact}`,
-          repair: 'Edit only the bounded seed-initialization region through the current seed materialization/enrichment loop, preserve the Engine-owned appendix, then rerun this Gate.',
+          repair: 'Edit only the bounded seed-initialization region through the current seed materialization/enrichment loop: replace every template pending placeholder line with authored content or an explicitly rephrased gap stating the specific missing fact, preserve the Engine-owned appendix, then rerun this Gate.',
         }));
         break;
       }

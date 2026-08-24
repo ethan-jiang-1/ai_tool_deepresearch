@@ -192,6 +192,62 @@ describe('check-gate-seed-topics-ready', () => {
     assert.match(hint.rerun, /check-gate-seed-topics-ready/);
   });
 
+  it('rejects a current-marker seed whose initialization body still holds template pending placeholders', () => {
+    const bundlePath = createBundle('pending-body');
+    writeCanonicalPlan(bundlePath, [TOPIC]);
+    writeSeed(bundlePath, TOPIC, {
+      body: [
+        '# Topic A',
+        '',
+        renderSeedInitializationRegion(),
+        '',
+        `## ${SEED_TOPIC_INITIALIZATION.appendixHeading}`,
+        '',
+        '## 历史摘要',
+        '',
+      ].join('\n'),
+    });
+
+    const result = runGate(bundlePath);
+    const output = JSON.parse(result.stdout);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'seed_initialization_structure');
+
+    assert.equal(result.status, 1, result.stderr);
+    assert.equal(output.check.passed, false);
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'agent_action');
+    assert.match(hint.write_to, /seed-initialization/);
+    assert.match(hint.rerun, /check-gate-seed-topics-ready/);
+  });
+
+  it('passes a current-marker seed whose initialization body replaced the template placeholders', () => {
+    const bundlePath = createBundle('enriched-body');
+    writeCanonicalPlan(bundlePath, [TOPIC]);
+    let region = renderSeedInitializationRegion();
+    for (const section of SEED_TOPIC_INITIALIZATION.sections) {
+      region = region.replace(section.content, `Authored content for ${section.heading}.`);
+    }
+    writeSeed(bundlePath, TOPIC, {
+      body: [
+        '# Topic A',
+        '',
+        region,
+        '',
+        `## ${SEED_TOPIC_INITIALIZATION.appendixHeading}`,
+        '',
+        '## 历史摘要',
+        '',
+      ].join('\n'),
+    });
+
+    const result = runGate(bundlePath);
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(output.check.passed, true, JSON.stringify(output.inspect));
+    assert.equal(output.hints.some((hint) => hint.rule_id === 'seed_initialization_structure'), false);
+  });
+
   it('keeps an unmarked legacy duplicate body compatible instead of inferring a new authoring authority', () => {
     const bundlePath = createBundle('legacy-duplicate');
     writeCanonicalPlan(bundlePath, [TOPIC]);

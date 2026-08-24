@@ -77,6 +77,12 @@ evidence_route:
 *(seed-topics: 本 topic 为新建，无历史轮次)*
 ```
 
+The renderer's default `pending — ...` placeholder lines inside a rendered
+skeleton must be replaced with authored content (or rephrased as an explicit
+gap stating the specific missing fact) before `seed-topics-ready` passes; the
+gate rejects retained placeholder lines deterministically without judging
+prose quality.
+
 ## Appendix Slot Map
 
 The executable slot map beside the canonical topic-state renderer is the

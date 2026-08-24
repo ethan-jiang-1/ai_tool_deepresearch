@@ -61,7 +61,7 @@
       "check": "seed_initialization_structure",
       "scope": "per_file",
       "target": "seed_topics/<slug>.md#seed-initialization",
-      "failure_message": "A current Seed Topic has an invalid initialization boundary or a renderer-owned ghost below it. Edit only the declared initialization region and preserve the Engine-owned appendix.",
+      "failure_message": "A current Seed Topic has an invalid initialization boundary, a renderer-owned ghost below it, or a template pending placeholder line still inside its initialization region. Edit only the declared initialization region: replace every placeholder with authored content or an explicitly rephrased gap stating the specific missing fact, and preserve the Engine-owned appendix.",
       "finding": { "source": "checker" }
     }
   ]

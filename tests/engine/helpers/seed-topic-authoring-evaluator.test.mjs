@@ -1,4 +1,4 @@
-// @impl STM-001, STM-002, STM-003
+// @impl STM-001, STM-002, STM-003, STM-010
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -82,11 +82,63 @@ describe('evaluateSeedTopicAuthoring', () => {
     assert.match(result.missing_fact, /must be seed_topics\/01_topic-a\.md/);
   });
 
-  it('accepts one current initialization region before the Engine-owned appendix', () => {
+  it('rejects the rendered template skeleton until its pending placeholders are replaced', () => {
     const raw = `${seed()}# Topic A\n\n${renderSeedInitializationRegion()}\n\n## ${SEED_TOPIC_INITIALIZATION.appendixHeading}\n\n## 历史摘要\n`;
     const result = evaluateSeedInitializationStructure({ raw, relativePath: 'seed_topics/01_topic-a.md' });
 
+    assert.equal(result.passed, false);
+    assert.equal(result.reason_code, 'seed_initialization_structure');
+    assert.equal(result.write_to, 'seed_topics/01_topic-a.md#/seed-initialization');
+    assert.match(result.missing_fact, /template pending placeholder line/);
+  });
+
+  it('accepts an enriched initialization region that replaced every placeholder line', () => {
+    let region = renderSeedInitializationRegion();
+    for (const section of SEED_TOPIC_INITIALIZATION.sections) {
+      region = region.replace(section.content, `Authored content for ${section.heading}.`);
+    }
+    const raw = `${seed()}# Topic A\n\n${region}\n\n## ${SEED_TOPIC_INITIALIZATION.appendixHeading}\n\n## 历史摘要\n`;
+    const result = evaluateSeedInitializationStructure({ raw, relativePath: 'seed_topics/01_topic-a.md' });
+
     assert.deepEqual(result, { passed: true, mode: 'current', relative_path: 'seed_topics/01_topic-a.md' });
+  });
+
+  it('accepts an explicitly rephrased gap instead of the raw template placeholder', () => {
+    let region = renderSeedInitializationRegion();
+    const gapBySection = {
+      '主题定位': 'pending — 上游未提供该 Topic 的定位，Wave0 需通过 evidence intake 建立。',
+      '初始假设、缺口或张力': [
+        '**已知**：profile 未记录该 Topic 的已知事实。',
+        '**缺口**：pending — 上游未提供具体定义，Wave0 需建立该事实。',
+        '**张力**：pending — 现有主张存在矛盾，需独立验证。',
+      ].join('\n'),
+      'why now': '- pending — 当前时间窗口待上游确认。',
+      '为什么对最终交付物重要': 'pending — 该 Topic 对最终交付的贡献待 Wave0 后判定。',
+      '下游位置（可选）': '- pending — 暂未分配，待后续轮次定位。',
+    };
+    for (const section of SEED_TOPIC_INITIALIZATION.sections) {
+      region = region.replace(section.content, gapBySection[section.heading]);
+    }
+    const raw = `${seed()}# Topic A\n\n${region}\n\n## ${SEED_TOPIC_INITIALIZATION.appendixHeading}\n\n## 历史摘要\n`;
+    const result = evaluateSeedInitializationStructure({ raw, relativePath: 'seed_topics/01_topic-a.md' });
+
+    assert.deepEqual(result, { passed: true, mode: 'current', relative_path: 'seed_topics/01_topic-a.md' });
+  });
+
+  it('rejects an enriched region that still retains one template placeholder line', () => {
+    let region = renderSeedInitializationRegion();
+    const [topicPositioning] = SEED_TOPIC_INITIALIZATION.sections;
+    for (const section of SEED_TOPIC_INITIALIZATION.sections) {
+      if (section === topicPositioning) continue;
+      region = region.replace(section.content, `Authored content for ${section.heading}.`);
+    }
+    const raw = `${seed()}# Topic A\n\n${region}\n\n## ${SEED_TOPIC_INITIALIZATION.appendixHeading}\n\n## 历史摘要\n`;
+    const result = evaluateSeedInitializationStructure({ raw, relativePath: 'seed_topics/01_topic-a.md' });
+
+    assert.equal(result.passed, false);
+    assert.equal(result.reason_code, 'seed_initialization_structure');
+    assert.equal(result.write_to, 'seed_topics/01_topic-a.md#/seed-initialization');
+    assert.match(result.missing_fact, /主题定位/);
   });
 
   it('rejects a renderer-owned heading or pending marker below a current initialization boundary', () => {

@@ -1,4 +1,4 @@
-// @impl VER-001, RES-001, RES-002, REI-006, POF-001, POF-002, POF-003, RRD-002, RRD-008
+// @impl VER-001, RES-001, RES-002, REI-006, POF-001, POF-002, POF-003, RRD-002, RRD-008, STM-010
 // JS simulates labeled Agent-owned plan/profile/artifact/request/topic/count inputs.
 // Production instantiation, Gates, loads, status transitions and C5 own lifecycle authority.
 
@@ -9,6 +9,10 @@ import { join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 import { applyCanonicalTopicState, inspectCanonicalTopicState } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs';
+import {
+  renderSeedInitializationRegion,
+  SEED_TOPIC_INITIALIZATION,
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/seed-topic-authoring-evaluator.mjs';
 import { inspectPostFinalHandoffStage } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs';
 import { inspectPostFinalRecovery } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs';
 import { requestFromInspection } from '../integration/cli/post-final-recovery-fixture.mjs';
@@ -86,6 +90,19 @@ function addTopic(bundle) {
     },
   });
   assert.equal(result.verdict, 'committed');
+
+  // Simulated Seed Topics Agent enriches the rerun-added topic's bounded
+  // initialization body (STM-010: the gate rejects a current-marker seed that
+  // still holds the template pending placeholders).
+  const added = inspectCanonicalTopicState({ bundlePath: bundle }).topics.find((topic) => topic.slug.includes('additional-comparison'));
+  assert.ok(added, 'added topic is observable after commit');
+  let region = renderSeedInitializationRegion();
+  for (const section of SEED_TOPIC_INITIALIZATION.sections) {
+    region = region.replace(section.content, `Simulated authored content for ${section.heading}.`);
+  }
+  const addedSeedPath = join(bundle, `seed_topics/${added.slug}.md`);
+  const addedRaw = readFileSync(addedSeedPath, 'utf8');
+  writeFileSync(addedSeedPath, addedRaw.replace(renderSeedInitializationRegion(), region));
 }
 
 function addThenRemoveTopic(bundle) {

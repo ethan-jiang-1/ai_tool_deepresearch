@@ -1,4 +1,4 @@
-// @impl STM-001, STM-002, STM-003
+// @impl STM-001, STM-002, STM-003, STM-010
 // Pure deterministic checks over already-read declared seed bytes.
 
 import { parseMdFrontmatter } from './gate-helpers-readers.mjs';
@@ -48,6 +48,19 @@ export const SEED_TOPIC_INITIALIZATION = Object.freeze({
     }),
   ]),
 });
+
+// @impl STM-001, STM-002, STM-010
+// Trimmed lines that a freshly rendered initialization skeleton contains as
+// default content. A current-marker seed that still retains any of these lines
+// inside its seed-initialization region has an un-enriched section: the Agent
+// has not replaced the template placeholder with authored content or an
+// explicitly rephrased gap. Derived from the shared section descriptor so the
+// renderer, template parity, and this check stay on one source of truth.
+export const SEED_TOPIC_PENDING_PLACEHOLDERS = Object.freeze(
+  SEED_TOPIC_INITIALIZATION.sections
+    .flatMap((section) => section.content.split('\n'))
+    .map((line) => line.trim()),
+);
 
 function seedBody(raw) {
   const source = String(raw || '');
@@ -161,6 +174,19 @@ export function evaluateSeedInitializationStructure({ raw, relativePath }) {
       });
     }
     previousOffset = offsets[0];
+  }
+
+  const placeholderSet = new Set(SEED_TOPIC_PENDING_PLACEHOLDERS);
+  const retained = initialization.split('\n').map((line) => line.trim()).find((line) => placeholderSet.has(line));
+  if (retained !== undefined) {
+    const section = SEED_TOPIC_INITIALIZATION.sections.find((candidate) =>
+      candidate.content.split('\n').some((line) => line.trim() === retained));
+    return initializationFailure({
+      relativePath,
+      missingFact: `The initialization region retains the renderer-owned template pending placeholder line '${retained}'${section ? ` (## ${section.heading})` : ''}. Replace every placeholder with authored content or an explicitly rephrased gap stating the specific missing fact.`,
+      expected: 'no template pending placeholder line inside seed-initialization',
+      observed: { retained_placeholder: retained, section: section?.heading ?? null },
+    });
   }
 
   return { passed: true, mode: 'current', relative_path: relativePath };

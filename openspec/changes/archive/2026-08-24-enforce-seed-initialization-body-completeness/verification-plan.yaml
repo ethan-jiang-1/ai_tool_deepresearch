@@ -1,0 +1,92 @@
+schema_version: verification-routing/v1
+change: 2026-08-24-enforce-seed-initialization-body-completeness
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      占位检测是 evaluateSeedInitializationStructure 的纯函数行为：对已读入的
+      seed 字节判定区域内是否残留模板 pending 占位行、替换后是否 pass、显式 gap
+      改写是否 pass、legacy 是否兼容。focused in-process 真值表即可隔离证明，
+      不需要进程边界或 bundle 装配。
+  integration:
+    status: selected
+    rationale: >-
+      seed-topics-ready gate CLI 对临时 bundle 的 pass/fail 与 hint 形状
+      （rule_id/repair_kind/write_to/rerun）跨 production CLI 与 bundle
+      fixture 边界；phase 与 template 的「替换占位/显式 gap」要求是跨
+      Markdown 文件的 deterministic guidance contract，需要文档锁断言。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      本 change 只扩展一个既有 gate rule 的判定与反馈文案，不涉及跨多个
+      production checkpoint 或生命周期 transition 的 workflow-scale 状态链；
+      unit + integration 已覆盖 deterministic 边界，无需 full-chain 驱动。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      修复本身是 Engine 侧确定性 gate 条件，不声明任何真实 Agent 的语义行为；
+      真实 bundle 的正文 repair 是 run 自身 contract 下的运行时动作，不构成
+      framework 行为的 proof subject。
+claims:
+  - id: seed-init-placeholder-detection
+    statement: >-
+      STM-010: evaluateSeedInitializationStructure rejects a current-marker
+      seed whose initialization region retains any trimmed line byte-equal to a
+      default pending placeholder of SEED_TOPIC_INITIALIZATION.sections,
+      accepts the same seed once every placeholder line is replaced with
+      authored content or a rephrased explicit non-empty gap, keeps the
+      below-boundary ghost rejection, and leaves an unmarked legacy body
+      read-compatible without prose-quality judgment.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/seed-topic-authoring-evaluator.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: seed-topics-gate-rejects-pending-body
+    statement: >-
+      STM-010: the seed-topics-ready gate CLI fails a temporary bundle whose
+      current-marker seed retains template pending placeholder lines, emitting
+      a seed_initialization_structure hint with repair_kind agent_action,
+      write_to seed_topics/<slug>.md#seed-initialization and the same gate
+      rerun, and passes once the body is enriched; structural, binding, and
+      legacy rules are unchanged.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-seed-topics-ready.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: seed-body-completeness-guidance-doc-lock
+    statement: >-
+      STM-010: phase-seed-topics.md and the seed-topic-template.md mirror the
+      requirement that the initialization region must not retain template
+      pending placeholder lines and that explicit gaps are rephrased specific
+      missing facts, while appendix ownership and the frontmatter enrichment
+      contract remain unchanged.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/seed-topic-projection-document-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

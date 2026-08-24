@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-08-19 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-08-24 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -22,8 +22,16 @@
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
+| [BUG-238](BUG-238-wave0-deferred-contribution-partial-projection-collision.md) | P2 | Wave0 | Wave0 deferred contribution 在部分显式投影后触发 `projection_deferred_contribution_collision`；Engine 行为与 accepted 原子整贡献规则一致，残余为 playbook DX 澄清，待下一 change。 |
 
-（当前无活跃 bug。）
+> BUG-237 已随 `2026-08-24-enforce-seed-initialization-body-completeness` 结案并移入
+> [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)，见下方「最近关闭 (2026-08-24)」。
+
+## 最近关闭 (2026-08-24)
+
+| Bug | 结案依据 |
+|-----|----------|
+| BUG-237 | `2026-08-24-enforce-seed-initialization-body-completeness`：seed-topics-ready gate 对 current-marker seed 新增确定性模板占位检测（同一 `seed_initialization_structure` rule），拒绝「frontmatter enriched + body pending」半完成状态；phase task card/§3.1/§4 与 seed-topic-template 收紧显式 gap 形式；unit + gate CLI 集成 + 文档锁测试锁定；真实 bundle `dpt_rb_ai-coding-evolution` 五个 seed 初始化正文按 run contract 修复后通过新 evaluator（STM-010）。 |
 
 ## 最近关闭 (2026-08-19)
 
@@ -180,7 +188,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 
 > BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspended_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
-**Next available bug ID: BUG-237**
+**Next available bug ID: BUG-239**
 
 ## BUG-132–137 接手地图
 

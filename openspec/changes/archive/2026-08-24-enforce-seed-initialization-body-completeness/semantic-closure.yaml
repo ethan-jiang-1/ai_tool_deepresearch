@@ -1,0 +1,39 @@
+schema_version: semantic-closure/v1
+change: 2026-08-24-enforce-seed-initialization-body-completeness
+status: affected
+catalog_additions: []
+affected:
+  - family: lifecycle.gate-status-trace-handoff
+    fact: >-
+      Which deterministic body condition a current-marker seed must satisfy for
+      the seed-topics-ready gate to pass: the single seed-initialization region
+      may retain no trimmed line byte-equal to a renderer-owned template pending
+      placeholder derived from SEED_TOPIC_INITIALIZATION.sections default
+      content; every placeholder line must be replaced with Agent-authored
+      content or an explicit rephrased non-empty gap that states the specific
+      missing fact, while legacy seeds without current markers stay
+      read-compatible and no prose-quality or semantic-completeness judgment is
+      introduced.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/seed-topic-authoring-evaluator.mjs#evaluateSeedInitializationStructure
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/seed-topic-authoring-evaluator.mjs#evaluateSeedInitializationStructure
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-seed-topics-ready.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs#renderSeed
+        relation: derived
+        detail: >-
+          The canonical topic-state renderer emits the pending skeleton
+          (renderSeedInitializationRegion) for new seeds; the gate verdict
+          consumes the resulting bytes but does not alter the renderer, the
+          enrich_seed frontmatter schema, or the appendix tokens.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-seed-topics.md
+        relation: derived
+        detail: >-
+          Phase guidance instructs the Agent to replace placeholders inside the
+          bounded region and to phrase explicit gaps as specific missing facts;
+          it presents the verdict boundary without deciding it.
+    verification:
+      truth_table: tests/engine/helpers/seed-topic-authoring-evaluator.test.mjs
+      cross_surface: tests/integration/cli/check-gate-seed-topics-ready.test.mjs

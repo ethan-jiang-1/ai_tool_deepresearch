@@ -1,4 +1,4 @@
-// @impl PHS-009, URC-004, PRP-016, STM-009, DEW-026, RWP-022, WAI-012, WTS-013, CDP-007, REI-007
+// @impl PHS-009, URC-004, PRP-016, STM-009, STM-010, DEW-026, RWP-022, WAI-012, WTS-013, CDP-007, REI-007
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { readFileSync } from 'node:fs';
@@ -49,7 +49,8 @@ describe('user intent carry-through Markdown contract', () => {
   it('projects bounded current intent only at Seed and real Wave enqueue points', () => {
     assert.match(seed, /优先投影为 `search_guardrails` \/ `evidence_route`/);
     assert.match(seed, /不适用的 Topic.*不创建空或 decorative projection/);
-    assert.match(seed, /existing explicit non-empty `pending` gap/);
+    assert.match(seed, /改写后的显式 gap/);
+    assert.match(seed, /不得原样保留模板 pending 占位行/);
     assert.match(seed, /不预写未来 Wave task brief/);
 
     for (const [name, phase] of [['Wave0', wave0], ['Wave1', wave1], ['Wave2', wave2]]) {

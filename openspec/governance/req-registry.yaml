@@ -740,6 +740,7 @@ STM-006: seed-topic-materialization — Topic slug SHALL include zero-padded NN_
 STM-007: seed-topic-materialization — Canonical seed topics are exact UID-bound registry projections
 STM-008: seed-topic-materialization — Seed projections follow the committed current topic layout after atomic mutation
 STM-009: seed-topic-materialization — Seed materialization projects applicable baseline intent into existing topic-local surfaces
+STM-010: seed-topic-materialization — Seed topics ready gate SHALL reject a current-marker seed whose initialization region retains any renderer-owned template pending placeholder line; explicit gaps are rephrased specific missing facts, legacy seeds stay read-compatible
 
 # research/user-research-controls
 URC-001: user-research-controls — Optional per-run user research controls have one durable host-file snapshot and defined new/no-controls/legacy forms

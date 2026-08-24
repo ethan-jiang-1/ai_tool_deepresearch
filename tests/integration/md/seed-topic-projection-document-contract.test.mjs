@@ -94,4 +94,12 @@ describe('Seed Topic template and projection protocol boundary', () => {
     assert.match(seedPhase, /seed-initialization:end/);
     assert.match(seedPhase, /Engine-owned appendix|Engine-owned.*appendix/i);
   });
+
+  it('keeps the no-placeholder initialization body requirement visible in the template and seed phase', () => {
+    const seedPhase = read('DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-seed-topics.md');
+    assert.match(seedPhase, /不得保留模板 pending 占位行/);
+    assert.match(seedPhase, /显式 gap 须改写为具体缺失事实/);
+    assert.match(template, /before `seed-topics-ready` passes/);
+    assert.match(template, /without judging\s+prose quality/);
+  });
 });

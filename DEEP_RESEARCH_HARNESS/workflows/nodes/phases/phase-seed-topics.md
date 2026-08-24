@@ -68,12 +68,12 @@ Seed-topics 使用 Agentic Queue 驱动 topic 物化。每个 topic 一个 task�
   "queue_item_id": "seed-topic-{topic.slug}",
   "title": "Materialize seed topic: {topic.title}",
   "targets": { "controller": "main-agent" },
-  "action": "只编辑 seed_topics/{topic.slug}.md 的 <!-- seed-initialization:start --> 与 <!-- seed-initialization:end --> 之间的 Agent-owned Markdown body，并保留一个 complete enrich_seed input。该 input 只含 exact topic_uid 和 hypothesis/in_scope/out_of_scope/search_guardrails/evidence_route；当 current controls/amendments 实际影响此 Topic 时，把最小 topic-local interpretation 优先写入 search_guardrails/evidence_route，仅在必要时调整 hypothesis/in_scope，并在 initialization body 说明 research/delivery relevance。完整用户 wording 留在 rb_plan.md source coordinate；不适用时不写 decorative projection，信息不足时保留既有 explicit non-empty gap。通过 operate-topic-state apply 写入 frontmatter，再完成此 queue card。不得手写 canonical YAML、越过 end marker 编辑 appendix，或在 body 重复 must_answer、scope、evidence route。",
+  "action": "只编辑 seed_topics/{topic.slug}.md 的 <!-- seed-initialization:start --> 与 <!-- seed-initialization:end --> 之间的 Agent-owned Markdown body，并保留一个 complete enrich_seed input。该 input 只含 exact topic_uid 和 hypothesis/in_scope/out_of_scope/search_guardrails/evidence_route；当 current controls/amendments 实际影响此 Topic 时，把最小 topic-local interpretation 优先写入 search_guardrails/evidence_route，仅在必要时调整 hypothesis/in_scope，并在 initialization body 说明 research/delivery relevance。完整用户 wording 留在 rb_plan.md source coordinate；不适用时不写 decorative projection，信息不足时保留改写后的显式 gap。通过 operate-topic-state apply 写入 frontmatter，再完成此 queue card。不得手写 canonical YAML、越过 end marker 编辑 appendix，或在 body 重复 must_answer、scope、evidence route；初始化区域内不得保留模板 pending 占位行（显式 gap 须改写为具体缺失事实，如 `缺口：pending — <具体缺失事实>`，不得原样保留模板行）。",
   "producer_rule": "seed_topic_materialize",
   "lineage": {"topic_slug": "{topic.slug}", "phase": "seed-topics"},
   "priority_class": "P3_current_gate_gap",
   "required_receipts": ["file:seed_topics/{topic.slug}.md"],
-  "done_condition": "topic-state apply 已为 exact UID 写入 complete structured enrichment；seed body 只有一个 bounded seed-initialization region（主题定位/初始假设/why now/交付价值/下游位置），end marker 后保留 Engine-owned 轮次追加区占位；随后同一 queue completion 通过 shared evaluator。",
+  "done_condition": "topic-state apply 已为 exact UID 写入 complete structured enrichment；seed body 只有一个 bounded seed-initialization region（主题定位/初始假设/why now/交付价值/下游位置），区域内无模板 pending 占位行（显式 gap 已改写为具体缺失事实），end marker 后保留 Engine-owned 轮次追加区占位；随后同一 queue completion 通过 shared evaluator。",
   "verification": {"engine": ["receipt_check"], "agent": ["frontmatter_completeness", "slug_consistency", "content_has_all_sections"]},
   "writes_to": ["seed_topics/{topic.slug}.md"],
   "status_sync": ["seed_topics_materialized"],
@@ -97,7 +97,7 @@ node DEEP_RESEARCH_HARNESS/cli/operate-queue.mjs check <bundle>
 
 已加载的 `templates/seed-topic-template` 定义完整初始化 skeleton、Appendix Slot、只读回填卡和 rendered entry shape。不要在本 phase 重写该模板。Projection Packet、repair map 与 rerun direction 是 `command_playbook/operate-topic-state.md` 的操作协议。Seed Topics 只在 start/end markers 内 materialize/enrich initialization area；research-round appendix 保持预埋，后续 Wave 只能按 command playbook 通过 retained packet 和 `operate-topic-state apply` materialize 其 owned slot，绝不手改 token、heading 或 end marker 之后的 bytes。
 
-controls 或 current amendment 对单一 Topic 有实际影响时，Seed 必须将最小 topic-local operational interpretation 优先投影为 `search_guardrails` / `evidence_route`，必要时才补充 `hypothesis` / `in_scope`，并在 existing initialization body 中说明该 Topic 的 research/delivery relevance。完整 controls/revision wording 只留在 `rb_plan.md` source coordinate，不复制到 Seed；不适用的 Topic 保持正常 enrichment，不创建空或 decorative projection。若 `rb_plan.md` 和 `rb_profile.yaml` 中不足以填充初始化字段，记录 existing explicit non-empty `pending` gap，不要编造。该 projection 不改变 canonical Topic identity，不增加 frontmatter field，不预写未来 Wave task brief，也不是 permission、coverage、Gate 或 Engine verdict。
+controls 或 current amendment 对单一 Topic 有实际影响时，Seed 必须将最小 topic-local operational interpretation 优先投影为 `search_guardrails` / `evidence_route`，必要时才补充 `hypothesis` / `in_scope`，并在 existing initialization body 中说明该 Topic 的 research/delivery relevance。完整 controls/revision wording 只留在 `rb_plan.md` source coordinate，不复制到 Seed；不适用的 Topic 保持正常 enrichment，不创建空或 decorative projection。若 `rb_plan.md` 和 `rb_profile.yaml` 中不足以填充初始化字段，记录改写后的显式 gap（如 `缺口：pending — <具体缺失事实>`），不要编造，也不得原样保留模板 pending 占位行。该 projection 不改变 canonical Topic identity，不增加 frontmatter field，不预写未来 Wave task brief，也不是 permission、coverage、Gate 或 Engine verdict。
 
 ### 3.2 Queue-Driven 执行循环
 
@@ -171,6 +171,7 @@ node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-seed-topics-ready.mjs --bundle <
 - `seed_topics/` 目录非空，其中对于 `topic_registry` 中的每个 topic 存在一个 `{slug}.md` 文件（slug 已含编号前缀）
 - 每个文件的 frontmatter `slug` 与文件名 stem 一致，`title` 非空
 - `seed_topics/` 下文件 slug 集合与 `topic_registry` slug 集合双向一致（无缺失、无多余）
+- 每个 current-marker seed 的 `<!-- seed-initialization:start -->` 与 `<!-- seed-initialization:end -->` 之间不得保留模板 pending 占位行；显式 gap 须改写为具体缺失事实的表述（`seed-topics-ready` 会确定性拒绝未替换占位的 seed）
 - `rb_trace.jsonl` 中有 `seed_topics_completion` event（通过 CLI 写入）：
   ```bash
   node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle <path> --event seed_topics_completion --detail '{"topic_count":<N>}'

@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-08-17 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-08-24 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -222,9 +222,10 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-232 | 2026-08-19 | Wave0 shared-reference materialization selects by cross-topic balance (fewest projected per topic, then `topic_slug`, then lowest ordinal) instead of global lexicographic exhaustion; pure selector extracted and round-robin locked (`fix-transaction-guards-and-wave0-reference-balance`) |
 | BUG-233 | 2026-08-19 | Work-unit transaction two-orphan deadlock resolved: multi-orphan feedback converges to one deterministic recover coordinate (wrapper dependency first), recover itself runs with orphan blocking disabled (`fix-transaction-guards-and-wave0-reference-balance`) |
 | BUG-234 | 2026-08-19 | Work-unit transaction authority surface narrowed to `_work_units/**` (minus lock/current journal) + root output ledger; concurrent non-authority writes no longer mark a transaction suspect (`fix-transaction-guards-and-wave0-reference-balance`) |
+| BUG-237 | 2026-08-24 | Seed Topic 初始化正文在 Wave0 前仍为 pending（frontmatter enriched + body pending 被 seed-topics-ready 放行）；gate 新增确定性模板占位检测 + phase/template 显式 gap 形式收紧（`2026-08-24-enforce-seed-initialization-body-completeness`） |
 | BUG-236 | 2026-08-19 | Post-final second rerun unblocked: C5 events bind the primary-series inventory digest (`final_inventory_basis: primary_series`); legacy whole-tree events recover through the structural primary-series fallback (`fix-transaction-guards-and-wave0-reference-balance`) |
 
-**Next available bug ID: BUG-237**
+**Next available bug ID: BUG-238**
 
 ---
 

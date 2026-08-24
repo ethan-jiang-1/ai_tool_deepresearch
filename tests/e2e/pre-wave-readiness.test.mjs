@@ -1,4 +1,4 @@
-// @impl SCO-002, PRP-002, PRP-005, AGQ-009, STM-001
+// @impl SCO-002, PRP-002, PRP-005, AGQ-009, STM-001, STM-010
 // Simulated HITL/Agent inputs drive real production CLI and Gate boundaries only.
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,6 +6,10 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
+import {
+  renderSeedInitializationRegion,
+  SEED_TOPIC_INITIALIZATION,
+} from '../../DEEP_RESEARCH_HARNESS/engine/helpers/seed-topic-authoring-evaluator.mjs';
 
 const ROOT = process.cwd();
 const BUNDLES = join(ROOT, 'tests', '.test-bundles');
@@ -116,6 +120,16 @@ describe('pre-Wave readiness', () => {
     writeFileSync(completion, JSON.stringify({ queue_item_id: 'seed-topic-simulated', summary: 'simulated Agent seed completion' }));
     const complete = run(QUEUE, ['complete', bundle, '--result', completion]);
     assert.equal(complete.feedback.passed, true);
+
+    // Simulated Seed Topics Agent enriches the bounded initialization body
+    // (STM-010: the gate rejects a current-marker seed that still holds the
+    // template pending placeholders).
+    let region = renderSeedInitializationRegion();
+    for (const section of SEED_TOPIC_INITIALIZATION.sections) {
+      region = region.replace(section.content, `Simulated authored content for ${section.heading}.`);
+    }
+    const seedRaw = readFileSync(join(bundle, seedPath), 'utf8');
+    writeFileSync(join(bundle, seedPath), seedRaw.replace(renderSeedInitializationRegion(), region));
 
     run(ADVANCE, ['--bundle', bundle, '--to', 'setup_ready']);
     const seedGate = gate(bundle, 'seed-topics-ready', 'phases/phase-seed-topics.md');
