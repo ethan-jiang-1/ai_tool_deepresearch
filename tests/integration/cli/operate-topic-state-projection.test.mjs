@@ -496,6 +496,7 @@ describe('operate-topic-state projection packets', () => {
     const rejected = runApply(bundle, deferredContributionPacket(topic, authority));
     assert.equal(rejected.status, 1, rejected.stderr || rejected.stdout);
     assert.equal(rejected.output.reason_code, 'projection_deferred_contribution_collision');
+    assert.match(rejected.output.reason, /Defer the remaining ordinals with explicit wave0_evidence entries, then rerun the same inspect/);
     assert.equal(preparedWorkspaceCount(bundle), 0);
     assert.equal(readFileSync(seedPath, 'utf8'), before);
   });

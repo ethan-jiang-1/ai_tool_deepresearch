@@ -1329,7 +1329,7 @@ function expandWave0DeferredContribution(bundle, canonical, input, topic, seed) 
     if (existing.length > 1 || (existing.length === 1 && !isEquivalentDeferredContributionEntry(existing[0], expected))) {
       throw projectionError(
         'projection_deferred_contribution_collision',
-        `${expected.entry_id} already has a different persisted Wave0 projection disposition; contribution-scoped deferred input cannot overwrite it.`,
+        `${expected.entry_id} already has a different persisted Wave0 projection disposition; contribution-scoped deferred input cannot overwrite it. Defer the remaining ordinals with explicit wave0_evidence entries, then rerun the same inspect.`,
         { coordinate: `seed_topics/${topic.slug}.md#${expected.entry_id}` },
       );
     }

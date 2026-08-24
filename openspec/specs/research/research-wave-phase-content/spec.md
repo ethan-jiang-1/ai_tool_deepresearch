@@ -1,8 +1,8 @@
 # Research Wave Phase Content
 
-> req: RWP-001, RWP-002, RWP-003, RWP-004, RWP-005, RWP-006, RWP-007, RWP-008, RWP-009, RWP-010, RWP-011, RWP-012, RWP-013, RWP-014, RWP-015, RWP-016, RWP-017, RWP-018, RWP-019, RWP-020, RWP-021, RWP-022
+> req: RWP-001, RWP-002, RWP-003, RWP-004, RWP-005, RWP-006, RWP-007, RWP-008, RWP-009, RWP-010, RWP-011, RWP-012, RWP-013, RWP-014, RWP-015, RWP-016, RWP-017, RWP-018, RWP-019, RWP-020, RWP-021, RWP-022, RWP-023
 
-> delta-synced: strengthen-user-intent-carry-through (RWP-022)
+> delta-synced: strengthen-user-intent-carry-through (RWP-022), document-wave0-deferred-all-or-nothing (RWP-023)
 
 ## Purpose
 
@@ -1140,3 +1140,27 @@ schema.
 - **WHEN** Wave2 begins pure synthesis after two reruns
 - **THEN** it SHALL use the newest complete revision and matching current directions with current coverage/backing
 - **AND** it SHALL not treat an older revision, stale direction, or historical work as the current amendment set
+
+### Requirement: Wave0 phase guidance SHALL document the deferred-selector precondition and explicit-entry recovery
+
+Wave0 phase guidance SHALL present the contribution-wide
+`wave0_evidence.deferred_contribution` selector with its disposition-
+compatibility precondition: the form is legal only while every identity of the
+selected contribution is unprojected or already holds the same deferred
+disposition, and a different persisted projection rejects the whole packet
+atomically before any mutation. When part of a contribution is already
+explicitly projected, the guidance SHALL direct the Phase Agent to apply
+explicit `wave0_evidence` entries for each remaining authoritative ordinal and
+then rerun the same inspect, instead of using the selector for the remainder.
+
+#### Scenario: Phase guidance states the precondition
+
+- **WHEN** a Phase Agent reads the deferred disposition guidance in `phase-wave0.md`
+- **THEN** the text SHALL state the all-or-nothing disposition-compatibility condition
+- **AND** it SHALL direct a mixed contribution to explicit remaining-ordinal packets plus the same inspect rerun
+
+#### Scenario: No new writer or repair authority
+
+- **WHEN** the guidance documents the recovery
+- **THEN** it SHALL not hand-edit a seed, index, ledger, receipt, or trace
+- **AND** it SHALL not describe the selector as a subset or partial operation

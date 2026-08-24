@@ -553,6 +553,7 @@ CTS-007: canonical-topic-state — One pure resolver maps current and historical
 CTS-008: canonical-topic-state — Wave1 depth-review selection resolves one canonical topic UID and current intent binding before receipt projection
 CTS-009: canonical-topic-state — Wave0 deferred-contribution packets atomically expand exact current source identities
 CTS-010: canonical-topic-state — operate-topic-state schema projection exposes wave-dependent source-identity forms
+CTS-011: canonical-topic-state — Wave0 deferred-contribution guidance and collision feedback state the disposition-compatibility precondition and the explicit-entry recovery
 
 # research/content-delivery-experiments
 CDE-001: content-delivery-experiments — case-132 uses real HITL2 gate output for valid decisions, direct negative facts, sentinel rejection, and non-blocking diagnostic-event absence
@@ -729,6 +730,7 @@ RWP-019: research-wave-phase-content — Wave delegated execution uses one visib
 RWP-020: research-wave-phase-content — Wave2 targeted-evidence classification with round-awareness; finding-index per-finding carries created_in_rerun_count
 RWP-021: research-wave-phase-content — Wave1 declares carried material targets in the Phase-owned review and Wave2 consumes the routed receipt without reopening a mutable parent
 RWP-022: research-wave-phase-content — Wave phases carry current intent at their actual decision points
+RWP-023: research-wave-phase-content — Wave0 phase guidance documents the deferred-selector disposition-compatibility precondition and directs a mixed contribution to explicit remaining-ordinal packets
 
 # research/seed-topic-materialization
 STM-001: seed-topic-materialization — Seed topic materialization phase node (9-section body, forces topic_registry→seed_topics/ materialization, seed_topics_completion trace event)

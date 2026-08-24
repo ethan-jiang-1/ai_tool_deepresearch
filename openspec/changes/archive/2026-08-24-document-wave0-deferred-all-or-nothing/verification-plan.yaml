@@ -1,0 +1,68 @@
+schema_version: verification-routing/v1
+change: 2026-08-24-document-wave0-deferred-all-or-nothing
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      本 change 只改 guidance 文本与一条错误消息字符串，不引入新的 in-process
+      模块契约；消息文本的 observable 证明走 CLI 边界（integration），guidance
+      走跨 Markdown 文档锁（integration）。
+  integration:
+    status: selected
+    rationale: >-
+      guidance 前置条件与恢复路径是跨 Markdown 文件的 deterministic contract
+      （playbook + phase-wave0），需要文档锁断言；碰撞反馈的恢复句是 production
+      CLI 输出的一部分，需要临时 bundle 边界上的既有 collision 测试扩展。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      不涉及跨多个 production checkpoint 或 lifecycle transition 的
+      workflow-scale 状态链；writer 行为不变，无需 full-chain 驱动。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      修复本身是文档/反馈契约，不声明任何真实 Agent 语义行为；无需 real-Agent
+      proof subject。
+claims:
+  - id: deferred-all-or-nothing-guidance-doc-lock
+    statement: >-
+      CTS-011 and RWP-023: operate-topic-state.md and phase-wave0.md state that
+      the contribution-wide deferred_contribution selector is all-or-nothing
+      with respect to disposition compatibility (every selected identity
+      unprojected or already an equivalent deferred entry), and direct a mixed
+      contribution to explicit wave0_evidence entries for each remaining
+      authoritative ordinal plus the same inspect rerun, without describing the
+      selector as a subset operation or a raw-edit repair path.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/wave-producer-contract-guidance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: deferred-collision-feedback-names-recovery
+    statement: >-
+      CTS-011: after an explicit materialization of part of a submitted
+      contribution, the contribution-wide deferred selector is still rejected
+      atomically before workspace publication (seed byte-unchanged), and the
+      projection_deferred_contribution_collision feedback names the direct
+      legal recovery of explicit wave0_evidence entries for the remaining
+      ordinals plus the same inspect rerun.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-projection.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

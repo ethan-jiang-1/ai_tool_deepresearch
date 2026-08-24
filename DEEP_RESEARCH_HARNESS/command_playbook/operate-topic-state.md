@@ -117,10 +117,23 @@ This `source_identity.work_id` selects one submitted contribution; it is not a
 persisted source identity or aggregate coverage. The writer authenticates it,
 derives every currently unprojected exact `<work_id>/<ordinal>` identity, and
 writes the existing `relationship: "defers"`, `refs: ["none"]`, and
-`status: "deferred"` values atomically. Do not provide an ordinal range,
-relationship, refs, status, file path, raw Markdown, or a combined explicit
-entry in this form. Equivalent replay remains an existing writer recovery
-operation, not a second coverage claim.
+`status: "deferred"` values atomically.
+
+This contribution-wide form is **all-or-nothing with respect to disposition
+compatibility**: it is legal only while every identity of the selected
+contribution is unprojected, or already holds the same equivalent deferred
+disposition. Any selected identity that already has a different persisted
+projection (for example an explicit materialized entry) makes the whole packet
+reject atomically with `projection_deferred_contribution_collision` before any
+workspace or seed mutation; the writer never overwrites or partially converts a
+different disposition. For a mixed contribution — some ordinals explicitly
+projected, others still unprojected — do not use this form; apply explicit
+`wave0_evidence` entries for each remaining authoritative ordinal, then rerun
+the same inspect.
+
+Do not provide an ordinal range, relationship, refs, status, file path, raw
+Markdown, or a combined explicit entry in this form. Equivalent replay remains
+an existing writer recovery operation, not a second coverage claim.
 
 One update may contain multiple explicit entries. The deferred form selects one
 contribution per packet; multiple deferred contributions require sequential

@@ -251,10 +251,21 @@ single `wave0_evidence.deferred_contribution` object:
 Here `work_id` is a contribution selector, not source coverage. The existing
 topic-state writer resolves submitted authority and expands currently
 unprojected exact identities with the existing `defers` / `["none"]` /
-`deferred` form. Do not hand-enumerate an ordinal range, hand-edit a seed or
-index, or turn a deferred selector into a reference. Apply the retained packet,
-then rerun the same inspect. A true floor deficit is actionable only after this
-convergence path has no materializable submitted backing.
+`deferred` form.
+
+This contribution-wide form is **all-or-nothing with respect to disposition
+compatibility**: it is legal only while every identity of the selected
+contribution is unprojected or already holds the same deferred disposition. Any
+selected identity with a different persisted projection rejects the whole
+packet atomically before any mutation. When part of a contribution is already
+explicitly projected, do not use the selector for the remainder — apply
+explicit `wave0_evidence` entries for each remaining authoritative ordinal, then
+rerun the same inspect.
+
+Do not hand-enumerate an ordinal range, hand-edit a seed or index, or turn a
+deferred selector into a reference. Apply the retained packet, then rerun the
+same inspect. A true floor deficit is actionable only after this convergence
+path has no materializable submitted backing.
 
 ### 3.4 Seed Projection Update
 

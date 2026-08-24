@@ -224,9 +224,10 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-234 | 2026-08-19 | Work-unit transaction authority surface narrowed to `_work_units/**` (minus lock/current journal) + root output ledger; concurrent non-authority writes no longer mark a transaction suspect (`fix-transaction-guards-and-wave0-reference-balance`) |
 | BUG-236 | 2026-08-19 | Post-final second rerun unblocked: C5 events bind the primary-series inventory digest (`final_inventory_basis: primary_series`); legacy whole-tree events recover through the structural primary-series fallback (`fix-transaction-guards-and-wave0-reference-balance`) |
 | BUG-237 | 2026-08-24 | Seed Topic 初始化正文在 Wave0 前仍为 pending（frontmatter enriched + body pending 被 seed-topics-ready 放行）；gate 新增确定性模板占位检测 + phase/template 显式 gap 形式收紧（`2026-08-24-enforce-seed-initialization-body-completeness`） |
+| BUG-238 | 2026-08-24 | Wave0 deferred contribution 的 all-or-nothing 前置条件未文档化；playbook 与 phase-wave0 写明 disposition 兼容性前置条件与混合贡献的显式-entry 恢复路径，collision 反馈点名恢复（`2026-08-24-document-wave0-deferred-all-or-nothing`） |
 | BUG-240 | 2026-08-21 | 新 topic 多并发 wave0 source-intake work unit 共享同一 source.yaml 破坏 submitted source contribution 单调投影、wave0 gate 永久阻塞；由 Wave0 source-target exclusivity guard（enqueue/check/claim 同 target 非终态拒绝 + 串行 supplement 指引）结案，fragment merge 明确 out of scope（`2026-08-21-guard-wave0-source-target-exclusivity`） |
 
-**Next available bug ID: BUG-241**
+**Next available bug ID: BUG-242**
 
 ---
 

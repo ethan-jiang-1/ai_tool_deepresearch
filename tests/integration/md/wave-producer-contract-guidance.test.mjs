@@ -60,6 +60,18 @@ describe('Wave producer contract guidance', () => {
     assert.match(topicState, /does not add an inspect between sequential\s+applies/i);
   });
 
+  it('documents the all-or-nothing deferred-selector precondition and explicit-entry recovery', () => {
+    const phase = readNode('phases/phase-wave0.md');
+    const topicState = readFileSync(path.join(FRAMEWORK, 'command_playbook/operate-topic-state.md'), 'utf8');
+
+    assert.match(topicState, /all-or-nothing with respect to disposition\s+compatibility/);
+    assert.match(topicState, /projection_deferred_contribution_collision/);
+    assert.match(topicState, /apply\s+explicit\s+`wave0_evidence` entries for each remaining\s+authoritative ordinal/);
+    assert.match(topicState, /then rerun\s+the same inspect/);
+    assert.match(phase, /all-or-nothing with respect to disposition\s+compatibility/);
+    assert.match(phase, /apply\s+explicit\s+`wave0_evidence` entries for each remaining\s+authoritative ordinal/);
+  });
+
   it('places Wave1 dry-submit and existing dispositions before formal submit', () => {
     const phase = readNode('phases/phase-wave1.md');
     const decision = phase.match(/### 3\.2\.1 Returned Work Decision\n([\s\S]*?)(?=\n### 3\.2\.2 |\n## 4\.)/);

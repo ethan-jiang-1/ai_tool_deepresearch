@@ -1,0 +1,37 @@
+schema_version: semantic-closure/v1
+change: 2026-08-24-document-wave0-deferred-all-or-nothing
+status: affected
+catalog_additions: []
+affected:
+  - family: wave.submitted-reference-convergence
+    fact: >-
+      The documented contract of the contribution-wide Wave0
+      deferred_contribution selector is all-or-nothing with respect to
+      disposition compatibility: every selected identity must be unprojected or
+      already hold the same equivalent deferred disposition; any identity with a
+      different persisted projection makes the writer reject the whole packet
+      atomically with projection_deferred_contribution_collision before any
+      workspace or seed mutation, and the collision feedback names the direct
+      legal recovery of explicit wave0_evidence entries for the remaining
+      ordinals plus the same inspect rerun. The writer's rejection behavior is
+      unchanged.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs#expandWave0DeferredContribution
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs#expandWave0DeferredContribution
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/command_playbook/operate-topic-state.md
+        relation: derived
+        detail: >-
+          The command playbook documents the precondition and recovery for the
+          Phase Agent; it presents the verdict boundary without deciding it.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave0.md
+        relation: derived
+        detail: >-
+          Wave0 phase guidance carries the same precondition and recovery
+          wording at the point of use; it does not alter the writer contract.
+    verification:
+      truth_table: tests/integration/md/wave-producer-contract-guidance.test.mjs
+      cross_surface: tests/integration/cli/operate-topic-state-projection.test.mjs
