@@ -1,0 +1,3 @@
+# Ignore everything under this directory (agent-team runtime state).
+*
+!.gitignore
