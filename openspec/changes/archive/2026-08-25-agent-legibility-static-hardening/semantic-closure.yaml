@@ -1,0 +1,4 @@
+schema_version: semantic-closure/v1
+change: agent-legibility-static-hardening
+status: not_applicable
+reason: This change hardens guidance topology only (entry-file symlink single source and a change-placement navigation ladder); it changes no catalogued deterministic runtime fact family, resolver, producer, verdict consumer, or runtime verification authority.

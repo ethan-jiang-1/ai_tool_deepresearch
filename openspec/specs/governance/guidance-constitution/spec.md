@@ -186,6 +186,14 @@ the canonical owner SHALL retain the full definition or procedure. This contract
 fixed word or line limit, and it does not turn a prose-quality judgment into a deterministic
 verdict.
 
+`openspec/README.md` SHALL also route a change-placement question -- where a new behavior should
+attach -- to a single descriptive participation ladder at
+`openspec/guidance/models/where-new-behavior-goes.md`. The ladder SHALL name a preferred entry
+point and an explicit upgrade condition for each change radius (configuration / capability contract
+/ full capability seam / core loop) mapped to this repository's actual seams. It SHALL be phrased
+as a descriptive navigation convention; its normative effect SHALL remain owned by the applicable
+accepted spec or executable contract, never by the model document itself.
+
 The repository SHALL retain focused deterministic coverage for the topology facts that do not
 require semantic judgment: canonical current role paths, required role frontmatter/authority
 coordinates, current internal Markdown-link resolution, root/Harness route ordering and required
@@ -243,6 +251,14 @@ semantically sufficient.
   approved dependency set, test runner, test placement, or `_old_topics` do-not-read rule)
 - **THEN** the focused deterministic coverage SHALL fail at the diverged surface
 - **AND** the repair SHALL restore agreement across all three surfaces rather than deleting the check
+
+#### Scenario: Control map routes change placement
+
+- **WHEN** a coding agent asks where a new behavior should attach
+- **THEN** `openspec/README.md` points it to the descriptive participation ladder at
+  `openspec/guidance/models/where-new-behavior-goes.md`
+- **AND** the ladder names the preferred entry point and upgrade condition for the change radius
+  without itself granting behavior authority
 
 ### Requirement: Model documents do not present normative rules
 

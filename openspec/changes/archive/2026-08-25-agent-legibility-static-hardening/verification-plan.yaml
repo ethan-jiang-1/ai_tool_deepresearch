@@ -1,0 +1,16 @@
+schema_version: verification-routing/v1
+change: agent-legibility-static-hardening
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The change adds no isolated JavaScript behavior.
+  integration:
+    status: not_applicable
+    rationale: The change adds no new test asset; the ladder's links are covered by the existing check-guidance-pointer-targets.mjs, which already scans openspec/guidance/models/.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The change does not execute a workflow-scale deterministic runtime chain.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change makes no real Agent-behavior claim; the participation ladder is navigation, not Agent flow.
+claims: []

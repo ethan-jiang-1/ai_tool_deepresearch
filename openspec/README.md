@@ -31,6 +31,7 @@ list, a second glossary, or a cache of accepted behavior and runtime truth.
 | How should a command experiment be authored or operated? | [Command Experiments](operations/command-experiments.md) | the selected experiment/spec/host contract owns the next step |
 | How are status, trace, and logs distinguished during operation? | [Logging Conventions](operations/logging-conventions.md) | the executable or accepted logging contract owns the fact |
 | What accepted behavior may change? | [OpenSpec specification catalog](specs/README.md) | the applicable main spec and approved change are selected |
+| Where does a new behavior attach (which mechanism or layer)? | [Where New Behavior Goes](guidance/models/where-new-behavior-goes.md) | the preferred entry point and its upgrade condition are selected |
 | What is true right now for a research run? | the explicitly selected current run bundle | the runtime fact is inspected at its owner |
 
 The three constitutional design rows are deliberately ordered: semantic
