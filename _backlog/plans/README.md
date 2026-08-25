@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-21 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-25 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,7 +17,6 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `regression-suite-parallel-speedup` | 回归提速（新路径，绕开前两轮「去重/共享基线/释放等待」）：实测发现并行被 7 个 CLI 文件共用的 `.baseline-snapshot` 固定路径竞态卡死（并行 159s 但 3 文件 ~40 用例失败，单独跑全过；串行 canonical 649.9-822.5s）。方案 WS-A 并行安全化（~4-5x）→ WS-B bundle 实例化去 spawn（382 次 spawn ≈ 100-150s）→ WS-C CLI gate 矩阵瘦身（~180 场景收敛到 ~60-80，下沉 unit）→ WS-D e2e 重链。测量完成，方案待评审。 | active（测量完成，待评审后提出 OpenSpec Change） |
 | `slow-test-suite-audit-and-remediation` | 串行全套 3028/3028 用时 822.455s 的慢测审计：完整列出 43 个 >3s execution（合计 357.6s），以不并发、不可排除 active proof 的前提探索 durable serial `<300s`；先完成义务、成本、基线复用与暂缓资格的 scope discovery，之后才决定是否提出 OpenSpec Change。 | closed 2026-08-22（WS1-6 + WS7 part 1 已归档，其余因收益不大延期）→ _done/_closed_plans/ |
 | `hitl1-bounded-clarification-alignment` | 在既有 HITL1 内加入可选、有限的主动反问与对齐快照：保留“你先研究”的自主出口，不新增 checkpoint、状态机或语义 Gate。 | active（设计验证待开始） |
 | `semantic-fact-closure-openspec-governance` | 防止 Engine 同一确定性事实被多处各自解释：建立可增长的事实家族目录、每 change 的 closure record、OpenSpec apply/archive checker 闭环；CI 当前明确不在范围内。 | active（共同理解完成，ready to propose Change A） |

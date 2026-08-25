@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-08-17 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-08-25 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -92,5 +92,6 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-070 | 2026-08-19 | rerun-feedback-carry-through-design-analysis.md | Rerun 反馈 carry-through 的实战分析与机制复核；结论被 user-intent carry-through 实施计划吸收。 |
 | CLS-071 | 2026-08-19 | user-intent-carry-through-design-analysis.md | HITL1 与多轮 rerun 用户意图承接的系统设计分析；由 `strengthen-user-intent-carry-through` 落地。 |
 | CLS-072 | 2026-08-19 | user-intent-carry-through-implementation-plan.md | 最小侵入 OpenSpec 实施计划；已完成 apply、验证、归档并保留 native Agent-flow 残余风险。 |
+| CLS-073 | 2026-08-25 | regression-suite-parallel-speedup.md | 回归提速计划完成：WS-A 并行安全化（7 文件 13 处 `uniqueSnapshotRoot` + 12 处 bundle 名空间竞态修复，change `2026-08-22-parallelize-regression-suite` archive，串行 542s / 并行 165-168s 全绿）、WS-B bundle 实例化去 spawn（`cloneBundleTemplate` + 6 文件 87 处 per-test NEW_BUNDLE spawn → 每文件 1 模板，change `2026-08-22-de-spawn-bundle-instantiation` archive，串行 500s / 并行 136-139s）、WS-E 的 repo 内部分回归运行工具化（change `2026-08-22-regression-run-tooling` archive：canonical find 排除 `.test-*` disposable 目录、`test:shard`/`test:quick`、并行 139s / 串行 489s、2804/2804 全绿）。WS-C（CLI 矩阵瘦身）与 WS-D（e2e 重链）经数据驱动 ROI 重估 deferred-low-ROI（WS-B 后 gate 全族仅 69s；e2e 成本为生产 CLI spawn 本质）。 |
 
-**Next available plan ID: CLS-073**
+**Next available plan ID: CLS-074**
