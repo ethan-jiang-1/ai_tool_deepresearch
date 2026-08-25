@@ -1,0 +1,4 @@
+schema_version: semantic-closure/v1
+change: entry-chain-single-source-symlink
+status: not_applicable
+reason: This change alters entry-file physical shape (two byte-identical copies to one real file plus a symlink) and its ACR contract wording and shape guard; it changes no catalogued deterministic runtime fact family, resolver, producer, verdict consumer, or runtime verification authority.

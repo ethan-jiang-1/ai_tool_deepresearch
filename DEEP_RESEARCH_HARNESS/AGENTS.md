@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Codex 读到本文件时（在 `DEEP_RESEARCH_HARNESS/` 下执行 workflow，或被用户指向这个 Deep Research Harness 时），按下面的优先级行事。
+Coding agent 读到本文件时（在 `DEEP_RESEARCH_HARNESS/` 下执行 workflow，或被用户指向这个 Deep Research Harness 时），按下面的优先级行事。
 
 ## 共享项目上下文
 
@@ -33,4 +33,4 @@ playbook 进入具体操作。这个 pre-read 不是 Deep Research Harness resea
 
 搞不清楚流程时，回到 `README.md`。
 
-> 注：本文件与其配对行为文件保持同步（Codex 读 `AGENTS.md`、Claude Code 读 `CLAUDE.md`，正文除工具名外逐字节一致）。改路由规则时两份一起改，避免漂移。
+> 注：本文件是唯一真实入口文件；`CLAUDE.md` 是指向本文件的 symlink（Claude Code 读到的即本文件）。改路由规则只改这一份。

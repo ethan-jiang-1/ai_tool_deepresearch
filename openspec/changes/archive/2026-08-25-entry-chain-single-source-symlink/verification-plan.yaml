@@ -1,0 +1,30 @@
+schema_version: verification-routing/v1
+change: entry-chain-single-source-symlink
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The change adds no isolated JavaScript behavior outside the selected cross-surface entry-chain contract.
+  integration:
+    status: selected
+    rationale: Entry-file single-source shape and its negative-control checker are a repository cross-surface deterministic contract.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The change does not execute a workflow-scale deterministic runtime chain.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change makes no real Agent-behavior claim; it alters entry-file shape and its deterministic guard.
+claims:
+  - id: entry-file-single-source-shape
+    statement: Root and Harness entry directories hold AGENTS.md as the sole regular file and CLAUDE.md as a symlink resolving to it, and the entry-chain checker fails on a regular-file copy and passes on the symlink shape.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/check-entry-chain-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

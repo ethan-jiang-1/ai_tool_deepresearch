@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Codex notes for this repo. Keep this file short; detailed rules live in OpenSpec.
+Coding-agent notes for this repo. Keep this file short; detailed rules live in OpenSpec.
 
 > 新 Agent onboarding 基线：`openspec/guidance/models/invariants-brief.md`（不变量简报，非权威、每条可机器验证或指向唯一真相源；其余指引 lazy-load）。
 
