@@ -100,4 +100,14 @@
 
 **borrowing 侧**（`/Users/bowhead/deepseek-harness/_faq_on_digested/07_borrowing-harness-idea/`）：`answer.md`、`02-legibility-ownership.md`、`03-paved-road-and-ladder.md`、`04-executable-feedback.md`、`05-skills-as-procedural-memory.md`、`06-runtime-inspection.md`、`07-transfer-playbook.md`、`08-step-by-step-guide.md`、`09-agents-entry-chain.md`、`10-progressive-disclosure-pipeline.md`。
 
-**本仓库侧（本次实测）**：`diff CLAUDE.md AGENTS.md`（仅首行/第三行不同）→ Change A·①；`grep -rniE "where new behavior|participation ladder|归属表|参与阶梯|升级条件" openspec/ docs/ DEEP_RESEARCH_HARNESS/` 0 命中 → Change A·②（待语义复核）；`ls openspec/governance/` 16 个 `check-*.mjs` + `finalize-change-archive.mjs` + `check-all.mjs`；`ls .agents/skills .claude/skills .codex/skills` 49/44/37 → Change B；`package.json`（`npm test`/`governance:check`）；`openspec/README.md`、`openspec/specs/README.md`、`openspec/config.yaml`、`openspec/specs/verification/verification-routing/spec.md`。
+**本仓库侧（本次实测）**：`diff CLAUDE.md AGENTS.md`（仅首行/第三行不同）→ 初判为「入口链双副本 gap」，apply 前复核后判定为**非 gap**（`agent/agent-context-routing` ACR 要求两份保留 tool identity、正文 byte-identical，`tests/integration/md/agent-behavior-file-pair-sync-guard.test.mjs` 已机器强制同步；borrowing 的 symlink 方案违反 ACR 故放弃）；`grep -rniE "where new behavior|participation ladder|归属表|参与阶梯|升级条件" openspec/ docs/ DEEP_RESEARCH_HARNESS/` 0 命中 → Change A（归属表）；`ls openspec/governance/` 13 个 `check-*.mjs`（初记 16 含 finalizer/contract，实为 13 个 check- 前缀）+ `finalize-change-archive.mjs` + `check-all.mjs`；`ls .agents/skills .claude/skills .codex/skills` 44/43/29（初记 49/44/37 含子目录条目，实为 skill 目录数）→ Change B；`package.json`（`npm test`/`governance:check`）；`openspec/README.md`、`openspec/specs/README.md`、`openspec/config.yaml`、`openspec/specs/verification/verification-routing/spec.md`、`openspec/specs/agent/agent-context-routing/spec.md`。
+
+---
+
+## 7. 关闭依据（CLS-074）
+
+- **Change A `agent-legibility-static-hardening` 已归档**（`finalize-change-archive.mjs` 17/17 checks → `openspec/changes/archive/2026-08-25-agent-legibility-static-hardening/`，commit 已提交）。产出：`openspec/guidance/models/where-new-behavior-goes.md`（L0–L3 参与阶梯）+ `openspec/README.md`（Control Map 加 change-placement 路由行）+ `openspec/specs/governance/guidance-constitution/spec.md`（GCO-008 sync）。纯 guidance 导航面，无 runtime/schema/CLI/test 变化。
+- **Change B `executable-feedback-negative-control-hardening` no-change 关闭**：审计不触发——13 个 `check-*.mjs` 全部有 `tests/` 引用（每 checker 2–6 个 test file，含负例 red 断言），无 `missing-negative-control`；`.agents/.claude/.codex` 三目录是 host 特定分工（openspec-* 仅 `.agents`/`.claude` 有、`source-command-opsx-*` 仅 `.agents` 有，`.codex` 走 command 而非 skill），`.agents` vs `.claude` 的 openspec-propose 仅差 1 行命令入口名（`/openspec-apply-change` vs `/opsx:apply`），非漂移。不立项、不造假。
+- **关键反思（诚实记录）**：plan 阶段把「入口链双副本」误判为 borrowing 02/09 的漂移源，apply 前读 ACR spec + 既有 guard test 才发现「两份保留 tool identity + byte-sync guard」已是 accepted behavior 且被机器强制。symlink 方案会违反 ACR，故撤销入口链改动、把 Change A 收敛为纯「归属表」change。教训：**下诊断前先读该事实的 owner spec + 既有 executable coverage，别把「两份」直接等同于「漂移」**。
+- **三问重打分**：正确路径一档改善（「改哪里」从猜代码位置 → 查归属表）；知识外置/反馈延迟两档不变（本已就位）。三问都比基线好，且无形式造假断言。
+

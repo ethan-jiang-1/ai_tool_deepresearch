@@ -17,7 +17,6 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `agent-legibility-harness-audit-and-hardening` | 借鉴 DSH「borrowing-harness-idea」三问框架对本仓库 Agent 可读性(Development Harness)自评并关残余缺口。**共 2 个 change**：Change A `agent-legibility-static-hardening`（立即立项：入口链双副本收敛 + drift checker + Where-new-behavior-goes 归属表）；Change B `executable-feedback-negative-control-hardening`（触发式：审计 16 checker 负例 + skill 目录漂移，无缺口则 no-change 不立项）。 | active（Change A ready to propose；Change B pending audit） |
 | `slow-test-suite-audit-and-remediation` | 串行全套 3028/3028 用时 822.455s 的慢测审计：完整列出 43 个 >3s execution（合计 357.6s），以不并发、不可排除 active proof 的前提探索 durable serial `<300s`；先完成义务、成本、基线复用与暂缓资格的 scope discovery，之后才决定是否提出 OpenSpec Change。 | closed 2026-08-22（WS1-6 + WS7 part 1 已归档，其余因收益不大延期）→ _done/_closed_plans/ |
 | `hitl1-bounded-clarification-alignment` | 在既有 HITL1 内加入可选、有限的主动反问与对齐快照：保留“你先研究”的自主出口，不新增 checkpoint、状态机或语义 Gate。 | active（设计验证待开始） |
 | `semantic-fact-closure-openspec-governance` | 防止 Engine 同一确定性事实被多处各自解释：建立可增长的事实家族目录、每 change 的 closure record、OpenSpec apply/archive checker 闭环；CI 当前明确不在范围内。 | active（共同理解完成，ready to propose Change A） |
