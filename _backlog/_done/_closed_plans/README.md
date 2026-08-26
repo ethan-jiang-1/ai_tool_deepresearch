@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-08-25 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-08-27 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -95,5 +95,6 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | CLS-073 | 2026-08-25 | regression-suite-parallel-speedup.md | 回归提速计划完成：WS-A 并行安全化（7 文件 13 处 `uniqueSnapshotRoot` + 12 处 bundle 名空间竞态修复，change `2026-08-22-parallelize-regression-suite` archive，串行 542s / 并行 165-168s 全绿）、WS-B bundle 实例化去 spawn（`cloneBundleTemplate` + 6 文件 87 处 per-test NEW_BUNDLE spawn → 每文件 1 模板，change `2026-08-22-de-spawn-bundle-instantiation` archive，串行 500s / 并行 136-139s）、WS-E 的 repo 内部分回归运行工具化（change `2026-08-22-regression-run-tooling` archive：canonical find 排除 `.test-*` disposable 目录、`test:shard`/`test:quick`、并行 139s / 串行 489s、2804/2804 全绿）。WS-C（CLI 矩阵瘦身）与 WS-D（e2e 重链）经数据驱动 ROI 重估 deferred-low-ROI（WS-B 后 gate 全族仅 69s；e2e 成本为生产 CLI spawn 本质）。 |
 
 | CLS-074 | 2026-08-25 | agent-legibility-harness-audit-and-hardening.md | 借鉴 DSH「borrowing-harness-idea」三问框架自评并关残余缺口：Change A `agent-legibility-static-hardening` 归档（`where-new-behavior-goes.md` 归属表 + Control Map change-placement 路由 + GCO-008 sync，finalizer 17/17 checks）；入口链双副本初判非 gap（ACR + guard 已覆盖 byte-sync），**后经用户决策采纳 symlink 方案**，由后续 change `2026-08-25-entry-chain-single-source-symlink` 落地（ACR-002/ACR-004 改为「单一 `AGENTS.md` + `CLAUDE.md` symlink + `check-entry-chain.mjs` 形态检查」+ guard test 更新，17/17 checks，`npm test` 2826/2826）；Change B 审计不触发 no-change 关闭（13 个 `check-*.mjs` 负例覆盖充分、skill 三目录 host 特定分工非漂移）。 |
+| CLS-075 | 2026-08-27 | final-report-aux-subdir-naming-and-readme-contract.md | 补齐主报告↔辅助子目录命名关系 + final/README 引导契约，change `final-auxiliary-directory-contract`（`a11f48f4b`，finalizer 17/17 checks）已归档：ARP-005 让 canonical Final inventory 把 `final/final_v<N>/`、`final/final_<feature>_v<N>/` 识别为版本绑定 `auxiliary`（非 primary、不进 allocation/witness），孤儿版本语法目录 `orphan_auxiliary_directory` blocker，版本脱钩目录保持 `supplementary`；CDP-008 让 `phase-final.md` 固化同名辅助目录、版本自包含、历史只读与 `final/README.md` 系列索引（经非 primary persist 并带 Evidence Map）。单元 16/16、md parity 5/5、final 回归 131/131、e2e 6/6 全绿。 |
 
-**Next available plan ID: CLS-075**
+**Next available plan ID: CLS-076**
