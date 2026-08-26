@@ -306,6 +306,7 @@ export function validateSubmitRuntimeReceipt(bundleDir, record, { normalizations
   const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   if (lines.length === 0) throw new Error(`Runtime receipt has no lifecycle events: ${record.paths.runtime_receipt_ref}`);
   const events = [];
+  const schemaFailures = [];
   lines.forEach((line, index) => {
     let parsed;
     try {
@@ -381,9 +382,17 @@ export function validateSubmitRuntimeReceipt(bundleDir, record, { normalizations
 
     const eventResult = WorkUnitRuntimeReceiptEventSchema.safeParse(eventCandidate);
     if (!eventResult.success) {
-      const error = new Error(`Runtime receipt line ${index + 1} fails receipt schema: ${eventResult.error.issues.map((issue) => `${issue.path.join('/') || '/'}: ${issue.message}`).join('; ')}`);
-      error.receipt_line = index + 1;
-      throw error;
+      // BUG-243: collect every schema-failing line with the raw offending
+      // values; throw once after the scan so the Agent can repair all lines.
+      schemaFailures.push({
+        line: index + 1,
+        issues: eventResult.error.issues.map((issue) => ({
+          path: issue.path.join('/') || '/',
+          message: issue.message,
+          raw: issue.path.length > 0 ? eventCandidate[issue.path[0]] : undefined,
+        })),
+      });
+      return;
     }
     const event = eventResult.data;
     for (const field of WORK_UNIT_REQUIRED_RECEIPT_FIELDS) {
@@ -393,6 +402,22 @@ export function validateSubmitRuntimeReceipt(bundleDir, record, { normalizations
     if (event.execution_actor_class !== record.actor_execution.execution_actor_class) throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: execution_actor_class`);
     events.push(event);
   });
+  if (schemaFailures.length > 0) {
+    const datetimeIssues = schemaFailures.some((failure) => failure.issues.some((issue) => /datetime/i.test(issue.message)));
+    const detail = schemaFailures
+      .map((failure) => {
+        const issues = failure.issues
+          .map((issue) => `${issue.path}: ${issue.message}${issue.raw === undefined ? '' : `: ${JSON.stringify(issue.raw)}`}`)
+          .join('; ');
+        return `line ${failure.line}: ${issues}`;
+      })
+      .join('; ');
+    const formatHint = datetimeIssues ? ' Expected ISO 8601 UTC, e.g. YYYY-MM-DDTHH:mm:ss.sssZ.' : '';
+    const error = new Error(`Runtime receipt fails receipt schema on line(s) ${schemaFailures.map((failure) => failure.line).join(', ')}: ${detail}.${formatHint}`);
+    error.receipt_line = schemaFailures[0].line;
+    error.receipt_lines = schemaFailures.map((failure) => failure.line);
+    throw error;
+  }
   return {
     events,
     canonical_content: `${events.map((event) => JSON.stringify(event)).join('\n')}\n`,
@@ -810,9 +835,17 @@ export function validateSourceClaims(bundleDir, result, outputContract, {
       }
       const normalizedClaimUrl = normalizeUrlForSourceCache(claim.url);
       if (mapping.urls.length > 0 && !mapping.urls.includes(normalizedClaimUrl)) {
-        throw validationRepairError(`accepted source claim cache trail maps to a different URL for ${claim.url}: ${trail}`, {
+        // BUG-242: carry the leaf's actually-recorded urls so the Agent can
+        // repair the claim/url or cache trail without reading meta.json.
+        const recorded = mapping.urls.join(' | ');
+        throw validationRepairError(`accepted source claim cache trail maps to a different URL for ${claim.url}: ${trail}; cache leaf records: ${recorded}`, {
           repair_kind: 'agent_action',
           json_pointer: `/source_claims/${claimIndex}/url`,
+          details: {
+            claim_url: claim.url,
+            cache_trail: trail,
+            recorded_leaf_urls: mapping.urls,
+          },
         });
       }
     }
@@ -820,9 +853,16 @@ export function validateSourceClaims(bundleDir, result, outputContract, {
 
   for (const [urlIndex, url] of acceptedUrls.entries()) {
     if (!acceptedClaimUrls.has(url)) {
-      throw validationRepairError(`accepted_source_urls[] entry has no matching accepted source_claims[] entry: ${url}`, {
+      // BUG-242: carry the declared accepted claim urls so the Agent can
+      // identify the exact repair coordinate in one step.
+      const declared = [...acceptedClaimUrls].join(' | ');
+      throw validationRepairError(`accepted_source_urls[] entry has no matching accepted source_claims[] entry: ${url}; declared accepted source_claims urls: ${declared}`, {
         repair_kind: 'agent_action',
         json_pointer: `/accepted_source_urls/${urlIndex}`,
+        details: {
+          mismatching_url: url,
+          declared_accepted_claim_urls: [...acceptedClaimUrls],
+        },
       });
     }
   }

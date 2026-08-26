@@ -911,12 +911,15 @@ function runRerunBranch(bundle) {
 
 function runSupersededBranch(bundle) {
   const failedAfterPass = runGate(bundle, 'wave0-complete', 'phases/phase-wave0.md');
-  expectBoundary(bundle, 'supersede:newer-failed-attempt', failedAfterPass.json.check.passed, 'newer real wave0 failed attempt supersedes old pass');
+  expectBoundary(bundle, 'supersede:newer-failed-attempt', failedAfterPass.json.check.passed, 'newer real wave0 gate run at the stale node still fails');
 
-  const enter = enterPhase(bundle, 'phases/phase-wave1.md', { expectSuccess: false });
-  expectBoundary(bundle, 'supersede:enter-rejects-old-pass', enter.status === 0, 'enter-phase rejects old wave0 pass after newer failed attempt');
-  const advance = advanceStatus(bundle, 'wave0_complete', { expectSuccess: false });
-  expectBoundary(bundle, 'supersede:advance-rejects-old-pass', advance.json.status === 'ok', 'advance-status rejects old wave0 pass after newer failed attempt');
+  // BUG-244: the later failed attempt does not supersede the earlier passed
+  // pass, so the old wave0 pass still authorizes wave1 entry and its status
+  // sync — enter-phase succeeds and writes the route-bound load.
+  const enter = enterPhase(bundle, 'phases/phase-wave1.md');
+  expect(bundle, 'supersede:enter-accepts-old-pass', enter.status === 0, 'enter-phase accepts the old wave0 pass after the newer failed attempt');
+  const advance = advanceStatus(bundle, 'wave0_complete');
+  expect(bundle, 'supersede:advance-syncs-old-pass', advance.json.status === 'ok' && advance.json.next_gate === 'wave1_complete', 'advance-status syncs the old wave0 pass after the newer failed attempt');
 
   return bundle;
 }

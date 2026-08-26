@@ -20,7 +20,6 @@ import {
 } from '../engine/helpers/cli-operation-contract.mjs';
 import { continuationForLoadedNode } from '../engine/helpers/continuation-cue.mjs';
 import {
-  evaluateFinalEntryAdmission,
   validateEnterPhaseTarget,
 } from '../engine/helpers/handoff-helpers.mjs';
 import {
@@ -109,13 +108,6 @@ try {
   };
 }
 if (!actionCore.ok) failConfiguration(actionCore);
-
-const finalAdmission = evaluateFinalEntryAdmission(bundlePath, handoff);
-if (!finalAdmission.ok) {
-  fail(finalAdmission.reason, [
-    'Resolve the stated Final inventory or lineage boundary before retrying the authorized entry.',
-  ]);
-}
 
 const baseTrace = createTrace(tracePath, { consoleEcho: false });
 const trace = {

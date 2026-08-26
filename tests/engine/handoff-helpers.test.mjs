@@ -214,24 +214,27 @@ describe('handoff helpers', () => {
     assert.match(result.inspect.join('\n'), /Latest deterministic handoff targets phases\/phase-wave2\.md/);
   });
 
-  it('rejects superseded source pass', () => {
+  it('keeps a prior passed pass legal after a later failed attempt', () => {
     writeTrace([
       gateAttempt(),
       gateAttempt({ passed: false, next: null }),
       loadComplete(0),
     ]);
     const result = validateEnterPhaseTarget(dir, 'phases/phase-wave1.md');
-    assert.equal(result.ok, false);
+    assert.equal(result.ok, true);
+    assert.equal(result.handoff.sourceGate, 'wave0-complete');
+    assert.equal(result.handoff.targetNode, 'phases/phase-wave1.md');
   });
 
-  it('rejects superseded predecessor pass for gate preflight', () => {
+  it('keeps a prior passed predecessor legal for gate preflight after a later failed attempt', () => {
     writeTrace([
       gateAttempt(),
       loadComplete(0),
       gateAttempt({ passed: false, next: null }),
     ]);
     const result = checkPhaseHandoffPreflight(dir, 'phases/phase-wave1.md');
-    assert.equal(result.ok, false);
+    assert.equal(result.ok, true);
+    assert.equal(result.handoff.sourceGateEnum, 'wave0_complete');
   });
 
   it('accepts HITL2 proceed target without helper-selected branching', () => {

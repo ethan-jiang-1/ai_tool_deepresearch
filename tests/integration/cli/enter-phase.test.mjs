@@ -328,7 +328,7 @@ describe('enter-phase CLI', { concurrency: false }, () => {
     assert.equal(events.some(e => e.event === 'load_complete' && e.entry === 'phases/phase-wave1.md'), false);
   });
 
-  it('rejects superseded pass after newer failed attempt for same source gate', () => {
+  it('accepts the earlier passed pass after a newer failed attempt for the same source gate', () => {
     writeTrace([
       wave0Pass(),
       wave0Pass({
@@ -338,13 +338,11 @@ describe('enter-phase CLI', { concurrency: false }, () => {
       }),
     ]);
 
-    const out = run(['--bundle', dir, '--node', 'phases/phase-wave1.md'], true);
-    const parsed = JSON.parse(out);
-    assert.equal(parsed.status, 'error');
-    assert.doesNotMatch(out, /DPT_CONTINUATION_CUE/);
+    const out = run(['--bundle', dir, '--node', 'phases/phase-wave1.md'], false);
+    assert.match(out, /DPT_CONTINUATION_CUE/);
 
     const events = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
-    assert.equal(events.some(e => e.event === 'load_complete' && e.entry === 'phases/phase-wave1.md'), false);
+    assert.equal(events.some(e => e.event === 'load_complete' && e.entry === 'phases/phase-wave1.md'), true);
   });
 
   it('fails with JSON instead of Markdown when route-bound load trace cannot be written', () => {

@@ -589,7 +589,7 @@ describe('check-gate-readiness-passed', () => {
     assert.match(readinessOutput.inspect.join('\n'), /Latest deterministic handoff targets phases\/phase-wave2\.md, not current node phases\/phase-readiness\.md/);
   });
 
-  it('13. failed predecessor supersedes older pass, while legal degraded handoff clears preflight', () => {
+  it('13. a later failed attempt does not supersede the older pass, and legal degraded handoff clears preflight', () => {
     const failedDir = createPreflightBundle('wave2-failed-predecessor', {
       currentGate: 'wave1_complete',
       nextGate: 'wave2_complete',
@@ -614,9 +614,13 @@ describe('check-gate-readiness-passed', () => {
     });
     const failed = runSpecificGate(WAVE2_GATE_CLI, failedDir, 'phases/phase-wave2.md');
     const failedOutput = JSON.parse(failed.stdout);
+    // BUG-244: the later failed attempt does not supersede the earlier passed
+    // predecessor pass, so the witnessed wave1 -> wave2 handoff clears
+    // preflight; the gate now fails on the fixture's missing content rules
+    // rather than on a handoff witness gap.
     assert.equal(failedOutput.check.passed, false);
-    assert.equal(failedOutput.check.handoff_preflight, false);
-    assert.match(failedOutput.inspect.join('\n'), /Missing witnessed handoff into phases\/phase-wave2\.md/);
+    assert.equal(failedOutput.check.handoff_preflight, undefined);
+    assert.doesNotMatch(failedOutput.inspect.join('\n'), /Missing witnessed handoff into phases\/phase-wave2\.md/);
 
     const degradedEvents = witnessedHandoffEvents({
       sourceGate: 'wave1-complete',

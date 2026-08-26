@@ -912,6 +912,45 @@ describe('operate-work-unit inspect', () => {
     }
   });
 
+  it('surfaces raw invalid ts and affected lines through CLI dry-submit diagnostics', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
+      const workId = JSON.parse(claimStdout).claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+      const resultPath = writeValidSubmitFiles(dir, record);
+
+      // BUG-243: an invalid ts on every receipt line carries the raw value,
+      // all affected line numbers, and the expected format.
+      writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
+        event: 'work_done',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        kind: record.kind,
+        receipt_nonce: record.receipt_nonce,
+        actor_contract_version: record.actor_contract_version,
+        execution_actor_class: record.actor_execution.execution_actor_class,
+        ts: '2026-08-26T01:25:25.3NZ',
+      })}\n`);
+      const receiptInvalid = spawnSync(process.execPath, [CLI, 'dry-submit', dir, '--work-id', workId, '--result', resultPath], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(receiptInvalid.status, 1, receiptInvalid.stderr || receiptInvalid.stdout);
+      const receiptOut = JSON.parse(receiptInvalid.stdout);
+      assert.equal(receiptOut.ok, false);
+      const receiptViolation = receiptOut.violations.find((item) => item.phase === 'runtime_receipt');
+      assert.ok(receiptViolation);
+      assert.match(receiptViolation.missing_fact, /Invalid datetime/);
+      assert.match(receiptViolation.missing_fact, /"2026-08-26T01:25:25\.3NZ"/);
+      assert.match(receiptViolation.missing_fact, /Expected ISO 8601 UTC/);
+      assert.match(receiptViolation.missing_fact, /line\(s\) 1/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('dry-submits and formally submits a v3 supplementary Wave1 result with empty output_files', () => {
     const dir = tempBundle();
     try {

@@ -1,0 +1,52 @@
+schema_version: semantic-closure/v1
+change: improve-dry-submit-diagnostic-feedback
+status: affected
+catalog_additions: []
+affected:
+  - family: work-unit.source-claim-provenance
+    fact: >-
+      When dry-submit compares an accepted source claim url against its declared
+      cache trail leaf, a mismatch diagnostic carries the actual recorded leaf
+      urls (normalized url/source_url/final_url/fetched_url from the leaf
+      meta.json) so the Agent can repair without manually reading meta.json.
+      The mismatch verdict itself is unchanged.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs#validateSubmitSourceClaims
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/cache-leaf-contract.mjs#cacheLeafMapping
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs
+    overlap:
+      - coordinate: openspec/specs/agent/delegated-work-units/spec.md
+        relation: derived
+        detail: >-
+          DEW-013 documents the structured dry-submit repair contract; the
+          carried-values requirement pins how those diagnostics are populated
+          without changing the verdict.
+    verification:
+      truth_table: tests/engine/work-unit-submit.test.mjs
+      cross_surface: tests/integration/cli/operate-work-unit.test.mjs
+  - family: work-unit.attempt-identity-and-actor
+    fact: >-
+      When dry-submit validates the runtime receipt and a receipt event fails
+      its schema (e.g. an invalid ISO datetime in ts), the diagnostic carries
+      the failing field's raw value, every affected line number, and the legal
+      format expectation, instead of only the first failing line coordinate.
+      The schema verdict itself is unchanged.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs#validateSubmitRuntimeReceipt
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs
+    overlap:
+      - coordinate: openspec/specs/agent/delegated-work-units/spec.md
+        relation: derived
+        detail: >-
+          DEW-013 covers the runtime receipt among dry-submit checks; the
+          carried-values requirement pins diagnostic completeness without
+          changing validation semantics.
+    verification:
+      truth_table: tests/engine/work-unit-submit.test.mjs
+      cross_surface: tests/integration/cli/operate-work-unit.test.mjs

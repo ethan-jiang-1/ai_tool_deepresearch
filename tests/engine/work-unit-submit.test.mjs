@@ -1154,6 +1154,11 @@ describe('submitWorkUnit', () => {
       assert.equal(violation.json_pointer, '/source_claims/0/url');
       assert.equal(violation.write_to, `${path.resolve(resultPath)}#/source_claims/0/url`);
       assert.match(violation.missing_fact, /different URL/i);
+      // BUG-242: the recorded leaf urls are carried so the Agent can repair
+      // without reading meta.json.
+      assert.match(violation.missing_fact, /wave1-new-source/);
+      assert.deepEqual(violation.details?.recorded_leaf_urls, ['https://example.com/wave1-new-source']);
+      assert.equal(violation.details?.claim_url, 'https://example.com/different-source');
       assert.match(violation.rerun, /operate-work-unit\.mjs dry-submit/);
     } finally {
       cleanup(dir);
@@ -1658,6 +1663,41 @@ describe('submitWorkUnit', () => {
       } finally {
         cleanup(dir);
       }
+    }
+  });
+
+  it('carries the raw invalid ts value, all affected lines, and the expected format in receipt schema failure', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      const receiptLine = (ts) => `${JSON.stringify({
+        event: 'work_done',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        kind: record.kind,
+        receipt_nonce: record.receipt_nonce,
+        actor_contract_version: record.actor_contract_version,
+        execution_actor_class: record.actor_execution.execution_actor_class,
+        ts,
+      })}\n`;
+      // BUG-243: every line carries the non-standard millisecond suffix; the
+      // diagnostic must report all affected lines with the raw value.
+      writeFileSync(path.join(dir, record.paths.runtime_receipt_ref),
+        `${receiptLine('2026-08-26T01:25:25.3NZ')}${receiptLine('2026-08-26T01:25:26.3NZ')}`);
+
+      const rejected = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(rejected.ok, false);
+      assert.match(rejected.inspect.join('\n'), /Invalid datetime/);
+      assert.match(rejected.inspect.join('\n'), /"2026-08-26T01:25:25\.3NZ"/);
+      assert.match(rejected.inspect.join('\n'), /"2026-08-26T01:25:26\.3NZ"/);
+      assert.match(rejected.inspect.join('\n'), /line\(s\) 1, 2/);
+      assert.match(rejected.inspect.join('\n'), /Expected ISO 8601 UTC/);
+      assertNoLedger(dir);
+    } finally {
+      cleanup(dir);
     }
   });
 
@@ -2321,6 +2361,8 @@ describe('submitWorkUnit', () => {
       assert.equal(rejected.status, 'claimed');
       assert.equal(rejected.last_submit_rejection.reason_code, 'invalid_result');
       assert.match(rejected.inspect.join('\n'), /no matching accepted source_claims/);
+      // BUG-242: the mismatching url and declared accepted claim urls are carried.
+      assert.match(rejected.inspect.join('\n'), /wave1-new-source/);
       assert.throws(() => ledgerRows(dir), /ENOENT/);
     } finally {
       cleanup(dir);

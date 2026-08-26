@@ -125,6 +125,61 @@ function appendNormalDescendantToFinal(lineage) {
   writeFileSync(statusPath, `${JSON.stringify(status, null, 2)}\n`);
 }
 
+// BUG-241: two consecutive post-final rerun rounds. Round 1 ends with a legal
+// hitl2 -> phase-rerun round pass (which the old supersededBy wrongly dropped
+// when the later round's hitl2 -> phase-readiness pass appeared), then a second
+// full rerun sub-chain ends with hitl2 -> phase-readiness -> readiness -> final.
+function appendTwoRoundDescendantToFinal(lineage) {
+  const tracePath = join(lineage.bundle, 'rb_trace.jsonl');
+  const events = readFileSync(tracePath, 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
+  const suffix = [];
+  const appendHandoff = ({ gate, phase, sourceNode, targetNode, load = true }) => {
+    const sourceIndex = events.length + suffix.length;
+    suffix.push({
+      ts: `2026-03-01T00:00:${String(sourceIndex).padStart(2, '0')}.000Z`,
+      event: 'gate_attempt',
+      gate,
+      phase,
+      passed: true,
+      currentNodeRef: sourceNode,
+      next: targetNode,
+    });
+    if (load) {
+      suffix.push({
+        ts: `2026-03-01T00:00:${String(sourceIndex + 1).padStart(2, '0')}.000Z`,
+        event: 'load_complete',
+        entry: targetNode,
+        handoff_source_gate: gate,
+        handoff_source_node: sourceNode,
+        handoff_target_node: targetNode,
+        handoff_source_attempt_index: sourceIndex,
+      });
+    }
+  };
+
+  const round = (finalNext) => {
+    appendHandoff({ gate: 'rerun-ready', phase: 'rerun', sourceNode: 'phases/phase-rerun.md', targetNode: 'phases/phase-seed-topics.md' });
+    appendHandoff({ gate: 'seed-topics-ready', phase: 'seed-topics', sourceNode: 'phases/phase-seed-topics.md', targetNode: 'phases/phase-wave0.md' });
+    appendHandoff({ gate: 'wave0-complete', phase: 'wave0', sourceNode: 'phases/phase-wave0.md', targetNode: 'phases/phase-wave1.md' });
+    appendHandoff({ gate: 'wave1-complete', phase: 'wave1', sourceNode: 'phases/phase-wave1.md', targetNode: 'phases/phase-wave2.md' });
+    appendHandoff({ gate: 'wave2-complete', phase: 'wave2', sourceNode: 'phases/phase-wave2.md', targetNode: 'phases/phase-hitl2.md' });
+    appendHandoff({ gate: 'hitl2-recorded', phase: 'hitl2', sourceNode: 'phases/phase-hitl2.md', targetNode: finalNext });
+  };
+
+  round('phases/phase-rerun.md'); // round 1: hitl2 decides rerun again
+  round('phases/phase-readiness.md'); // round 2: hitl2 proceeds to readiness
+  appendHandoff({ gate: 'readiness-passed', phase: 'readiness', sourceNode: 'phases/phase-readiness.md', targetNode: 'phases/phase-final.md', load: false });
+  appendFileSync(tracePath, `${suffix.map((event) => JSON.stringify(event)).join('\n')}\n`);
+
+  const statusPath = join(lineage.bundle, 'rb_status.json');
+  const status = JSON.parse(readFileSync(statusPath, 'utf8'));
+  status.current_node = 'phases/phase-readiness.md';
+  status.current_gate = 'wave2_complete';
+  status.next_gate = 'readiness_passed';
+  status.state = 'in_progress';
+  writeFileSync(statusPath, `${JSON.stringify(status, null, 2)}\n`);
+}
+
 function enterFinal(lineage, expectFailure = false) {
   try {
     return execFileSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', lineage.bundle, '--node', 'phases/phase-final.md'], {
@@ -235,6 +290,28 @@ describe('shared post-final lineage stage and owner', () => {
     assert.deepEqual(shared.append_proof.removed_targets, ['final/final_v1.md']);
     const retired = inspectPostFinalRecovery({ bundlePath: lineage.bundle });
     assert.equal(retired.verdict, 'eligible');
+  });
+
+  it('keeps the descendant chain continuous across two consecutive post-final rerun rounds', () => {
+    const lineage = enterSynchronizedLineage('two-round-rerun');
+    appendTwoRoundDescendantToFinal(lineage);
+
+    // BUG-241: the round-1 hitl2 -> phase-rerun pass must not be superseded by
+    // the round-2 hitl2 -> phase-readiness pass; the chain stays continuous and
+    // the newer Final becomes the entry-pending owner.
+    const shared = inspectPostFinalHandoffStage(lineage.bundle);
+    assert.equal(shared.ok, true, JSON.stringify(shared));
+    assert.equal(shared.stage, 'newer_final_entry_pending');
+    assert.deepEqual(shared.owner, { kind: 'enter_phase', target_ref: 'phases/phase-final.md' });
+
+    // enter-phase phase-final reports a single non-contradictory verdict.
+    const entered = enterFinal(lineage);
+    const statusPath = join(lineage.bundle, 'rb_status.json');
+    const after = JSON.parse(readFileSync(statusPath, 'utf8'));
+    assert.equal(after.current_node, 'phases/phase-final.md');
+    const events = readFileSync(join(lineage.bundle, 'rb_trace.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
+    assert.equal(events.some((event) => event.event === 'load_complete' && event.entry === 'phases/phase-final.md'), true);
+    assert.doesNotMatch(entered, /not authorized by latest deterministic handoff/);
   });
 
   it('rejects pre-load supplementary drift and conflicting newer descendant evidence without Final entry mutation', () => {

@@ -1,0 +1,36 @@
+schema_version: semantic-closure/v1
+change: fix-post-final-rerun-lineage-supersession
+status: affected
+catalog_additions: []
+affected:
+  - family: lifecycle.gate-status-trace-handoff
+    fact: >-
+      Whether a later gate_attempt supersedes an earlier passed pass at the same
+      gate + currentNodeRef: a failed attempt (passed:false) never supersedes
+      (BUG-244), and a passed attempt only supersedes when it has the same next
+      with no intervening different-gate progress, i.e. a literal re-run of the
+      same decision at the same point (BUG-241). Cross-round multi-rerun passes
+      of the same gate (e.g. hitl2 -> rerun in round N, hitl2 -> readiness in a
+      later round) are separate lifecycle events and must all remain in the
+      continuous descendant chain built by continuousNormalDescendant. The
+      Final-entry authorization in validateEnterPhaseTarget is the single
+      non-contradictory verdict point for enter-phase phase-final (BUG-245).
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs#supersededBy
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs#supersededBy
+      - DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs
+      - DEEP_RESEARCH_HARNESS/cli/advance-status.mjs
+      - DEEP_RESEARCH_HARNESS/cli/operate-post-final-recovery.mjs
+    overlap:
+      - coordinate: openspec/specs/research/post-final-recovery/spec.md
+        relation: derived
+        detail: >-
+          POF-003 documents the one continuous descendant chain and the
+          descendant_pipeline owner; it presents the boundary without deciding
+          the runtime supersession predicate.
+    verification:
+      truth_table: tests/engine/handoff-helpers.test.mjs
+      cross_surface: tests/integration/cli/enter-phase.test.mjs

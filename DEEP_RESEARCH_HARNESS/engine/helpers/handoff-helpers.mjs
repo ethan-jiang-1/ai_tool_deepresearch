@@ -177,6 +177,17 @@ function edgeForAttempt(traceEvent, topology) {
   };
 }
 
+// A later gate_attempt supersedes an earlier passed pass at the same
+// gate + currentNodeRef only when it is a literal re-run of the same decision
+// at the same point: it is itself a passed pass, carries the same `next`, and
+// no different-gate gate_attempt occurs between the candidate and it.
+// - passed:false attempts never supersede a prior passed pass (BUG-244):
+//   a failed re-attempt must not roll back a real passed result.
+// - a passed pass with a different `next` at the same gate+node is a separate
+//   lifecycle event belonging to a different rerun round, not a supersession
+//   (BUG-241): cross-round HITL2 passes (hitl2->phase-rerun in intermediate
+//   rounds, hitl2->phase-readiness in the final round) must all remain links
+//   in the one continuous descendant chain.
 function supersededBy(events, candidate) {
   const source = candidate.event;
   for (const item of events) {
@@ -184,9 +195,18 @@ function supersededBy(events, candidate) {
     const e = item.event;
     if (e.event !== 'gate_attempt') continue;
     if (e.gate !== source.gate || e.currentNodeRef !== source.currentNodeRef) continue;
-    if (e.passed !== true || e.next !== source.next) {
-      return item;
+    if (e.passed !== true) continue;
+    if (e.next !== source.next) continue;
+    let interveningProgress = false;
+    for (const other of events) {
+      if (other.index <= candidate.index || other.index >= item.index) continue;
+      if (other.event?.event === 'gate_attempt' && other.event.gate !== source.gate) {
+        interveningProgress = true;
+        break;
+      }
     }
+    if (interveningProgress) continue;
+    return item;
   }
   return null;
 }
@@ -885,6 +905,22 @@ export function validateEnterPhaseTarget(bundlePath, targetNode) {
       advice: [`Run enter-phase with the latest check.next: node DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs --bundle ${bundlePath} --node ${latest.targetNode}`],
       latest,
     };
+  }
+
+  if (targetNode === 'phases/phase-final.md') {
+    // BUG-245: the Final inventory/lineage admission gate is folded into the
+    // same authorization verdict, so enter-phase phase-final reports exactly one
+    // non-contradictory reason when the gate fails.
+    const admission = evaluateFinalEntryAdmission(bundlePath, latest);
+    if (!admission.ok) {
+      return {
+        ok: false,
+        reason: admission.reason,
+        advice: ['Resolve the stated Final inventory or lineage boundary before retrying the authorized entry.'],
+        latest,
+        admission,
+      };
+    }
   }
 
   return { ok: true, handoff: latest };

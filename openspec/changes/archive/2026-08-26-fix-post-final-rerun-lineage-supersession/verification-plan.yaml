@@ -1,0 +1,88 @@
+schema_version: verification-routing/v1
+change: fix-post-final-rerun-lineage-supersession
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      supersession 谓词与 descendant chain 构建是 handoff-helpers.mjs 的模块内
+      确定性契约；新增 multi-round post-final rerun trace fixture 用真实 handoff
+      helper 断言 chain 连续与 latest 正确，并更新既有 passed:false 覆盖语义断言。
+  integration:
+    status: selected
+    rationale: >-
+      enter-phase phase-final 的单一裁决路径跨 production CLI 与临时 bundle
+      边界，证明 validateEnterPhaseTarget + evaluateFinalEntryAdmission 不再
+      产生自相矛盾输出。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      属于单点 module/CLI 契约（handoff supersession + entry authorization），
+      不构成跨多个 production checkpoint 的 workflow-scale 状态链。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      修复是 Engine 确定性 lineage/supersession 判定，不声明真实 Agent 语义行为。
+claims:
+  - id: multi-round-post-final-descendant-chain-continuous
+    statement: >-
+      POF-003 extension: for an accepted post-final lineage with two rerun
+      rounds (hitl2->phase-rerun ending round 1, then a full rerun sub-chain,
+      then hitl2->phase-readiness ending round 2, then readiness->final),
+      continuousNormalDescendant proves one continuous linear chain (the round-1
+      hitl2->rerun pass is NOT superseded by the later failed/different-next
+      attempt) and resolves the correct latest handoff; a later passed:false
+      attempt never supersedes a prior passed pass.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/handoff-helpers.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: final-entry-single-verdict
+    statement: >-
+      Final entry authorization: enter-phase --node phases/phase-final.md
+      reports a single non-contradictory verdict — when the latest legal
+      readiness-to-Final handoff is present but the Final admission gate
+      (lineage) fails, the CLI fails once with that admission reason and does
+      not first report the target as authorized.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/enter-phase.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: failed-attempt-no-longer-blocks-legal-progression
+    statement: >-
+      BUG-244: a later passed:false gate_attempt at the same gate+node does NOT
+      supersede a prior passed pass — validateEnterPhaseTarget accepts the prior
+      pass, enter-phase succeeds, advance-status syncs the prior pass's status
+      with its route-bound load, and the wave2 gate clears handoff preflight
+      (the old failed-attempt-supersedes expectations in handoff-helpers,
+      enter-phase, advance-status, handoff-witnessing runSupersededBranch, and
+      check-gate-readiness-passed test 13 are updated accordingly).
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/advance-status.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

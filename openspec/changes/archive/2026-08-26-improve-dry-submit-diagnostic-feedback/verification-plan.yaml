@@ -1,0 +1,78 @@
+schema_version: verification-routing/v1
+change: improve-dry-submit-diagnostic-feedback
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      cache-URL mismatch 与 runtime-receipt schema 失败诊断是 work-unit-validation.mjs
+      的模块内确定性契约；直接 fixture 断言诊断携带 recorded leaf urls / 原始非法值 /
+      全部受影响行号 / 格式预期。
+  integration:
+    status: selected
+    rationale: >-
+      operate-work-unit dry-submit CLI 端到端输出（跨 production CLI 与临时 bundle
+      边界）证明修复后的诊断字段确实出现在 Agent 可见的反馈里。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      属于单点校验诊断增强，不构成跨多个 production checkpoint 的 workflow-scale 状态链。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      修复是 Engine 确定性诊断内容，不声明真实 Agent 语义行为。
+claims:
+  - id: cache-url-mismatch-diagnostic-carries-recorded-urls
+    statement: >-
+      DEW-013: when dry-submit rejects an accepted source claim whose cache trail
+      leaf records a different url than the claim url, the diagnostic carries the
+      recorded leaf urls (normalized url/source_url/final_url/fetched_url), not
+      just the claim url and trail path.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-submit.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: receipt-schema-diagnostic-carries-raw-value-and-all-lines
+    statement: >-
+      DEW-013: when dry-submit rejects a runtime receipt whose lines carry an
+      invalid ISO datetime in ts, the diagnostic carries the raw invalid value,
+      every affected line number, and the ISO 8601 UTC expected-format hint.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-submit.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: dry-submit-cli-surfaces-enriched-diagnostics
+    statement: >-
+      DEW-013: the real operate-work-unit dry-submit CLI output for a bundle
+      with a cache-URL mismatch and a bundle with an invalid receipt ts contains
+      the enriched diagnostic values (recorded leaf urls; raw value + all
+      affected lines + format hint).
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

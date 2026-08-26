@@ -253,8 +253,7 @@ describe('advance-status CLI', { concurrency: false }, () => {
     assert.ok(result.advice.some(a => a.includes('--to wave0_complete')));
   });
 
-  it('rejects superseded source pass and does not mutate status', () => {
-    const before = readFileSync(statusPath, 'utf8');
+  it('syncs the earlier passed source gate after a later failed attempt', () => {
     writeTrace([
       gateAttempt(),
       loadComplete(0),
@@ -264,9 +263,13 @@ describe('advance-status CLI', { concurrency: false }, () => {
         next: null,
       }),
     ]);
+    writeCurrentNode('phases/phase-wave1.md');
     const result = runAdvance(dir, 'wave0_complete');
-    assert.equal(result.status, 'error');
-    assert.equal(readFileSync(statusPath, 'utf8'), before);
+    assert.equal(result.status, 'ok');
+    assert.equal(result.current_gate, 'wave0_complete');
+    assert.equal(result.next_gate, 'wave1_complete');
+    const events = readFileSync(tracePath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    assert.equal(events.some((event) => event.event === 'phase_transition'), true);
   });
 
   it('uses actual HITL2 rerun target instead of default passed target', () => {

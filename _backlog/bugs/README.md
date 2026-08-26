@@ -19,16 +19,27 @@
 > BUG-099/106 已按 2026-08-08 分诊移入 [`../_done/_suspended_bugs/`](../_done/_suspended_bugs/)（弱模型执行产物，非确定性框架缺陷）。
 > BUG-225..231 已按 2026-08-17 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
 > BUG-232/233/234/236 已按 2026-08-19 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
+> BUG-241..245 已按 2026-08-26 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
-| （无活跃 bug） | — | — | 全部 bug 已结案，见下方「最近关闭 (2026-08-24)」。 |
+| （无活跃 bug） | — | — | 全部 bug 已结案，见下方「最近关闭」。 |
 
 > BUG-237 已随 `2026-08-24-enforce-seed-initialization-body-completeness`、
 > BUG-238 已随 `2026-08-24-document-wave0-deferred-all-or-nothing`、
 > BUG-239 已随 `2026-08-24-scope-work-unit-transaction-attribution` 结案并移入
 > [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)，均见下方
 > 「最近关闭 (2026-08-24)」。
+
+## 最近关闭 (2026-08-26)
+
+| Bug | 结案依据 |
+|-----|----------|
+| BUG-241 | `2026-08-26-fix-post-final-rerun-lineage-supersession`：`supersededBy` 收窄为「同点重跑同一次决定」（passed:false 与跨轮不同 `next` 永不覆盖），`continuousNormalDescendant` 对多轮 post-final rerun 构建连续链；Final admission 并入 `validateEnterPhaseTarget` 单一裁决；六处旧语义回归翻转 + 两轮 rerun 链确定性回归（MODIFIED/ADDED research/post-final-recovery）。 |
+| BUG-244 | 同上 change：失败 attempt（passed:false）永不覆盖先前 passed pass。 |
+| BUG-245 | 同上 change：`enter-phase phase-final` 单一非自相矛盾裁决（admission 折叠进授权判定）。 |
+| BUG-242 | `2026-08-26-improve-dry-submit-diagnostic-feedback`：cache-URL mismatch 诊断携带 cache leaf 实际 urls 与差异细节；runtime-receipt schema 失败诊断携带原始非法值、全部受影响行号与 ISO 8601 格式预期（ADDED agent/delegated-work-units）。 |
+| BUG-243 | 同上 change：receipt 非法 ts 反馈给出原始值、全部行号与合法格式预期。 |
 
 ## 最近关闭 (2026-08-24)
 

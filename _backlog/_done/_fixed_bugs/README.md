@@ -227,8 +227,13 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-238 | 2026-08-24 | Wave0 deferred contribution 的 all-or-nothing 前置条件未文档化；playbook 与 phase-wave0 写明 disposition 兼容性前置条件与混合贡献的显式-entry 恢复路径，collision 反馈点名恢复（`2026-08-24-document-wave0-deferred-all-or-nothing`） |
 | BUG-239 | 2026-08-24 | 并发 delegated receipt 写入把另一 work-unit 的合法 submit 事务误报 suspect；undeclared-mutation 归属收窄到本事务 target work-unit 目录 + 根 ledger，其他 work-unit 目录归并发 actor，fail-closed 与恢复保留（`2026-08-24-scope-work-unit-transaction-attribution`） |
 | BUG-240 | 2026-08-21 | 新 topic 多并发 wave0 source-intake work unit 共享同一 source.yaml 破坏 submitted source contribution 单调投影、wave0 gate 永久阻塞；由 Wave0 source-target exclusivity guard（enqueue/check/claim 同 target 非终态拒绝 + 串行 supplement 指引）结案，fragment merge 明确 out of scope（`2026-08-21-guard-wave0-source-target-exclusivity`） |
+| BUG-241 | 2026-08-26 | post-final 多轮 rerun 时 `supersededBy` 把 rerun#2 的 `hitl2→phase-rerun` 回入 pass（trace 732，passed=true）误判为被后续 attempt（1065 失败 / 1068 不同 next）覆盖而丢弃，descendant 链在 index 743 判 discontinuous，readiness/Final 交付多路阻断；`supersededBy` 收窄为「同点重跑同一次决定」（passed:false 与跨轮不同 next 永不覆盖），multi-round 链恢复连续（`2026-08-26-fix-post-final-rerun-lineage-supersession`） |
+| BUG-242 | 2026-08-26 | work-unit dry-submit 的 cache-URL mismatch（missing_cache / invalid_result）诊断不给 cache leaf 实际 url；诊断现携带 cache leaf 记录的实际 urls 与差异细节，Agent 无需手动读 meta.json（`2026-08-26-improve-dry-submit-diagnostic-feedback`） |
+| BUG-243 | 2026-08-26 | work-unit runtime-receipt 非法 ts 诊断不给字段原始值与全部受影响行号（只指 line 1）且不说明合法格式；诊断现携带原始非法值、全部受影响行号与 ISO 8601 格式预期（`2026-08-26-improve-dry-submit-diagnostic-feedback`） |
+| BUG-244 | 2026-08-26 | `supersededBy` 把「后续失败 attempt（passed:false）」误判为对「先前 passed pass」的覆盖，合法 pass 被吞；失败 attempt 永不覆盖先前 pass（`2026-08-26-fix-post-final-rerun-lineage-supersession`） |
+| BUG-245 | 2026-08-26 | `enter-phase phase-final` 先 `validateEnterPhaseTarget` 报 ok、同一次调用 `evaluateFinalEntryAdmission` 又失败，自相矛盾；Final admission 并入授权判定，单一非自相矛盾裁决（`2026-08-26-fix-post-final-rerun-lineage-supersession`） |
 
-**Next available bug ID: BUG-243**
+**Next available bug ID: BUG-246**
 
 ---
 
