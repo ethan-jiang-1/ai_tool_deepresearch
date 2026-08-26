@@ -1,4 +1,4 @@
-// @impl HIU-003, CDP-001, CDP-002, CDP-003, CDP-004, CDP-006, CDG-002, CDG-004
+// @impl HIU-003, CDP-001, CDP-002, CDP-003, CDP-004, CDP-006, CDP-008, CDG-002, CDG-004
 
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
@@ -83,5 +83,18 @@ describe('Final report composition Markdown contract', () => {
     assert.match(final, /Only evidence-expanding work uses\s+audited C5/);
     assert.match(final, /MUST NOT treat a previous lineage's report as delivery for a newer C5/);
     assert.match(final, /MUST NOT claim that Engine feedback proves report quality, semantic\s+improvement, feedback classification, or genuine user satisfaction/);
+  });
+
+  it('keeps the auxiliary archive naming, self-containment, history, and README index discipline', () => {
+    assert.match(final, /one primary report plus one same-named\s+auxiliary detail archive/);
+    assert.match(final, /`final\/final_v<N>\.md`.*`final\/final_v<N>\/`/s);
+    assert.match(final, /prose cross-references to auxiliary detail target only its own directory/);
+    assert.match(final, /are not Evidence Map backing/);
+    assert.match(final, /Never create a version-decoupled archive\s+directory such as `chips\/` or `supplement\/`/);
+    assert.match(final, /`final\/README\.md` as the single series index and naming authority/);
+    assert.match(final, /update it through the non-primary\s+`persist-final-report` path/);
+    assert.match(final, /own bounded Evidence Map and never become primary delivery/);
+    assert.match(final, /remain byte-identical \(history\s+read-only\)/);
+    assert.match(final, /MUST NOT create a version-decoupled auxiliary directory/);
   });
 });

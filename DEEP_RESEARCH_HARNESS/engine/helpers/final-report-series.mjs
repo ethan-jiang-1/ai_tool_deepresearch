@@ -1,4 +1,4 @@
-// @impl ARP-004, RRD-008, POF-001
+// @impl ARP-004, ARP-005, RRD-008, POF-001
 // The primary Final series is derived only from safe direct-root inventory facts.
 // It deliberately has no lifecycle, content, profile, mtime, or chat dependency.
 
@@ -38,6 +38,7 @@ export const FinalReportSeriesBlockerSchema = z.object({
     'reserved_name_malformed',
     'duplicate_revision',
     'orphan_revision',
+    'orphan_auxiliary_directory',
     'non_contiguous_revisions',
     'ambiguous_legacy_base',
   ]),
@@ -55,7 +56,7 @@ const PrimaryEntrySchema = z.object({
 
 const InventoryEntrySchema = FinalReportRootEntrySchema.extend({
   target: z.string().regex(/^final\/.+$/),
-  classification: z.enum(['modern_base', 'legacy_candidate', 'revision', 'supplementary', 'invalid']),
+  classification: z.enum(['modern_base', 'legacy_candidate', 'revision', 'supplementary', 'auxiliary', 'invalid']),
   version: z.number().int().nonnegative().nullable(),
   feature: FinalReportFeatureSchema.nullable(),
 }).strict();
@@ -155,6 +156,8 @@ export class FinalReportSeriesFilesystemError extends Error {
 const MODERN_BASE_NAME = 'final.md';
 const UNLABELLED_REVISION_RE = /^final_v([1-9][0-9]*)\.md$/;
 const LABELLED_REVISION_RE = /^final_([a-z0-9]+(?:_[a-z0-9]+)*)_v([1-9][0-9]*)\.md$/;
+const UNLABELLED_AUX_DIRECTORY_RE = /^final_v([1-9][0-9]*)$/;
+const LABELLED_AUX_DIRECTORY_RE = /^final_([a-z0-9]+(?:_[a-z0-9]+)*)_v([1-9][0-9]*)$/;
 const RESERVED_MARKDOWN_RE = /^final.*\.md$/i;
 const DIRECT_NAME_RE = /[\\/\0]/;
 
@@ -188,8 +191,26 @@ function classifyName(name) {
   return { classification: markdownName(name) ? 'legacy_candidate' : 'supplementary', version: null, feature: null };
 }
 
+/**
+ * Bind a directory name to a primary revision by exact name equality: the
+ * directory name must equal a canonical revision filename with its `.md`
+ * suffix removed. Returns null for version-decoupled directory names.
+ */
+function classifyAuxiliaryDirectoryName(name) {
+  const unlabelled = name.match(UNLABELLED_AUX_DIRECTORY_RE);
+  if (unlabelled) return { version: Number(unlabelled[1]), feature: null };
+  const labelled = name.match(LABELLED_AUX_DIRECTORY_RE);
+  if (labelled) return { version: Number(labelled[2]), feature: labelled[1] };
+  return null;
+}
+
 function classifyEntry(entry, { modernBasePresent = false } = {}) {
-  if (entry.kind === 'directory') return { classification: 'supplementary', version: null, feature: null };
+  if (entry.kind === 'directory') {
+    const auxiliary = classifyAuxiliaryDirectoryName(entry.name);
+    return auxiliary
+      ? { classification: 'auxiliary', ...auxiliary }
+      : { classification: 'supplementary', version: null, feature: null };
+  }
   if (entry.kind !== 'file' || !entry.readable || isUnsafeName(entry.name)) {
     return { classification: 'invalid', version: null, feature: null };
   }
@@ -281,6 +302,17 @@ export function resolveFinalReportSeries(entries) {
   }
   if (modernBases.length === 0 && revisions.length === 0 && legacyCandidates.length > 1) {
     blockers.push(blocker('ambiguous_legacy_base', 'More than one non-reserved root-level Markdown file could be legacy version zero.', legacyCandidates.map((entry) => entry.name)));
+  }
+
+  const revisionKeys = new Set(revisions.map(({ version, feature }) => `${version}\u0000${feature ?? ''}`));
+  for (const entry of input) {
+    if (entry.kind !== 'directory') continue;
+    const auxiliary = classifyAuxiliaryDirectoryName(entry.name);
+    if (!auxiliary) continue;
+    const key = `${auxiliary.version}\u0000${auxiliary.feature ?? ''}`;
+    if (!revisionKeys.has(key)) {
+      blockers.push(blocker('orphan_auxiliary_directory', 'Auxiliary directory has no matching primary revision of the identical name.', [entry.name]));
+    }
   }
 
   const entryFacts = input.map((entry) => {

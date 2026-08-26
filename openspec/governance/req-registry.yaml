@@ -303,6 +303,7 @@ ARP-001: artifact-persistence-recovery — Content-bearing bundle files use one 
 ARP-002: artifact-persistence-recovery — Quiescent sweep finalizes or cleans valid prepared workspaces and blocks incomplete or conflicting workspaces
 ARP-003: artifact-persistence-recovery — Persistence results remain structured mechanical facts without granting artifact or lifecycle authority
 ARP-004: artifact-persistence-recovery — Final Markdown reports use submitted-backing admission before the existing crash-safe persistence commit
+ARP-005: artifact-persistence-recovery — Final auxiliary directories bind to their primary version; orphan version-grammar directories block
 
 # bundle/bundle-data-isolation
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
@@ -576,6 +577,7 @@ CDP-004: content-delivery-phase-content — Final delivery is terminal; post-fin
 CDP-005: content-delivery-phase-content — Final artifacts count as delivery evidence only after legal readiness-to-final handoff and final node entry
 CDP-006: content-delivery-phase-content — Final guidance declares bounded evidence backing and uses submitted-backing admission without changing terminal semantics
 CDP-007: content-delivery-phase-content — Final regrounds in current research intent and current-lineage composition intent
+CDP-008: content-delivery-phase-content — Final guidance binds auxiliary detail archives to their version and maintains the final/README.md series index
 
 # research/evidence-extraction
 EEX-001: evidence-extraction — isCountable reference判定（authority-selected reference 的 accepted status + parseable source URL；不重复内容/表现启发式）

@@ -111,6 +111,18 @@ contradictions, or backing obligations.
 - On `committed`, present the exact latest report. On a backing or publication
   rejection, retain staging, repair the named map row/backing or run the
   reported sweep boundary, then retry the same publisher.
+- Keep one delivered version as one primary report plus one same-named
+  auxiliary detail archive: version N is `final/final_v<N>.md` (or
+  `final/final_<feature>_v<N>.md`) plus its archive directory
+  `final/final_v<N>/` (or `final/final_<feature>_v<N>/`). Auxiliary detail
+  files live only under that version's own directory; a primary report's
+  prose cross-references to auxiliary detail target only its own directory and
+  are not Evidence Map backing. Never create a version-decoupled archive
+  directory such as `chips/` or `supplement/`.
+- Maintain `final/README.md` as the single series index and naming authority:
+  on every new committed version, update it through the non-primary
+  `persist-final-report` path. It and every auxiliary detail Markdown carry
+  their own bounded Evidence Map and never become primary delivery.
 - For clear presentation feedback about existing verified content, reground in
   the latest report and publish exactly one immutable revision. Reader, order,
   length, phrasing, sectioning, explanation depth, and evidence exposure may
@@ -178,6 +190,13 @@ for or acts on presentation feedback.
 - Every primary version is independently backed, immutable, and retains all
   earlier report bytes. The canonical inventory, not a profile counter or
   current pointer, supplies version/latest facts.
+- A version's auxiliary detail archive is the same-named directory
+  `final/final_v<N>/` (or `final/final_<feature>_v<N>/`). Older versions'
+  primary reports and auxiliary directories remain byte-identical (history
+  read-only); new detail for a new version is written only into that version's
+  files and directory.
+- `final/README.md` records the naming and independence convention and the
+  version release history, and is updated with each new committed version.
 - The terminal status remains `current_gate: readiness_passed`,
   `next_gate: none`, and `current_node: phases/phase-final.md` after delivery
   and revisions.
@@ -228,6 +247,9 @@ inventory, backing, and durable-commit facts only.
 - **MUST NOT overwrite, delete, rename, or renumber a committed primary
   report.** Use `publish-final-report`; never use generic persistence or a
   caller-chosen primary target.
+- **MUST NOT create a version-decoupled auxiliary directory (`chips/`,
+  `supplement/`, ...) for a version's archive, or point a primary report's
+  auxiliary-detail cross-references at another version's directory.**
 - **MUST NOT use chat memory, mtime, filename order, or report content to infer
   lineage, entry, version, or satisfaction.**
 - **MUST NOT treat a previous lineage's report as delivery for a newer C5

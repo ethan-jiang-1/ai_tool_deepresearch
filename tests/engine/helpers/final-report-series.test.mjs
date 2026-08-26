@@ -15,6 +15,10 @@ function file(name) {
   return { name, kind: 'file', readable: true };
 }
 
+function directory(name) {
+  return { name, kind: 'directory', readable: false };
+}
+
 function resolve(...names) {
   return resolveFinalReportSeries(names.map(file));
 }
@@ -88,6 +92,107 @@ describe('Final primary report series', () => {
     assert.equal(series.entries.find((entry) => entry.name === 'nested').classification, 'supplementary');
     assert.equal(series.latest.target, 'final/final_v1.md');
     assert.equal(allocateFinalReportTarget(series).target, 'final/final_v2.md');
+  });
+
+  it('binds an auxiliary directory to its unlabelled revision', () => {
+    const series = resolveFinalReportSeries([
+      file('final.md'),
+      file('final_v1.md'),
+      directory('final_v1'),
+    ]);
+
+    assert.equal(series.valid, true);
+    const auxiliary = series.entries.find((entry) => entry.name === 'final_v1');
+    assert.deepEqual(
+      { classification: auxiliary.classification, version: auxiliary.version, feature: auxiliary.feature },
+      { classification: 'auxiliary', version: 1, feature: null },
+    );
+    assert.ok(!series.primary_entries.some((entry) => entry.target === 'final/final_v1/'));
+    assert.equal(allocateFinalReportTarget(series).target, 'final/final_v2.md');
+  });
+
+  it('binds a labelled auxiliary directory to its labelled revision', () => {
+    const series = resolveFinalReportSeries([
+      file('final.md'),
+      file('final_v1.md'),
+      file('final_technical_deep_dive_v2.md'),
+      directory('final_technical_deep_dive_v2'),
+    ]);
+
+    assert.equal(series.valid, true);
+    const auxiliary = series.entries.find((entry) => entry.name === 'final_technical_deep_dive_v2');
+    assert.deepEqual(
+      { classification: auxiliary.classification, version: auxiliary.version, feature: auxiliary.feature },
+      { classification: 'auxiliary', version: 2, feature: 'technical_deep_dive' },
+    );
+    assert.equal(series.latest.target, 'final/final_technical_deep_dive_v2.md');
+  });
+
+  it('blocks an orphan auxiliary directory without its matching primary revision', () => {
+    const series = resolveFinalReportSeries([
+      file('final.md'),
+      file('final_v1.md'),
+      directory('final_v3'),
+    ]);
+
+    assert.equal(series.valid, false);
+    const orphan = series.blockers.find((entry) => entry.code === 'orphan_auxiliary_directory');
+    assert.ok(orphan);
+    assert.deepEqual(orphan.entries, ['final_v3']);
+    assert.equal(allocateFinalReportTarget(series).available, false);
+  });
+
+  it('does not bind a version-grammar directory to a differently-named revision', () => {
+    const series = resolveFinalReportSeries([
+      file('final.md'),
+      file('final_v1.md'),
+      file('final_technical_deep_dive_v2.md'),
+      directory('final_v2'),
+    ]);
+
+    assert.equal(series.valid, false);
+    const orphan = series.blockers.find((entry) => entry.code === 'orphan_auxiliary_directory');
+    assert.ok(orphan);
+    assert.deepEqual(orphan.entries, ['final_v2']);
+  });
+
+  it('keeps version-decoupled directories supplementary and non-blocking', () => {
+    const series = resolveFinalReportSeries([
+      file('final.md'),
+      file('final_v1.md'),
+      directory('chips'),
+      directory('topics'),
+    ]);
+
+    assert.equal(series.valid, true);
+    assert.equal(series.entries.find((entry) => entry.name === 'chips').classification, 'supplementary');
+    assert.equal(series.entries.find((entry) => entry.name === 'topics').classification, 'supplementary');
+    assert.equal(allocateFinalReportTarget(series).target, 'final/final_v2.md');
+  });
+
+  it('keeps auxiliary directory contents out of the primary-series witness digest', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dpt-final-aux-'));
+    const bundle = join(root, 'bundle');
+    const finalRoot = join(bundle, 'final');
+    try {
+      mkdirSync(join(finalRoot, 'final_v1'), { recursive: true });
+      writeFileSync(join(finalRoot, 'final.md'), '# Final base\n');
+      writeFileSync(join(finalRoot, 'final_v1.md'), '# Final revision one\n');
+      writeFileSync(join(finalRoot, 'final_v1', 'detail.md'), '# Detail\n');
+
+      const before = readFinalReportInventory(bundle);
+      assert.equal(before.primary_series.classification, 'modern');
+      assert.ok(before.entries.some((entry) => entry.path === 'final/final_v1/detail.md'));
+      assert.match(before.primary_sha256, /^[0-9a-f]{64}$/);
+
+      // An auxiliary detail update moves only the whole-tree digest.
+      writeFileSync(join(finalRoot, 'final_v1', 'detail.md'), '# Detail (updated)\n');
+      const afterAux = readFinalReportInventory(bundle);
+      assert.equal(afterAux.primary_sha256, before.primary_sha256);
+      assert.notEqual(afterAux.sha256, before.sha256);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('fails closed for unsafe direct-root entries and case-fold collisions', () => {

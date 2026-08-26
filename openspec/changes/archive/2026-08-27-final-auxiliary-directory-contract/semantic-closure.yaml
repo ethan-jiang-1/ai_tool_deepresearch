@@ -1,0 +1,90 @@
+schema_version: semantic-closure/v1
+change: final-auxiliary-directory-contract
+status: affected
+catalog_additions: []
+affected:
+  - family: final.primary-report-series
+    fact: >-
+      Safe direct-root Final files resolve to exactly one empty, modern-base, or
+      single-legacy-base primary classification plus one globally monotonic
+      contiguous revision series shared by labelled and unlabelled names. The
+      highest revision, or the base when no revision exists, is the latest
+      committed primary report; the next mechanically allocatable target is base
+      version zero only for an empty bundle-wide series and otherwise latest plus
+      one. A directory whose name equals a canonical revision filename minus
+      `.md` binds that revision as a non-primary auxiliary archive; a directory
+      whose name carries the revision grammar but has no matching primary
+      revision file is an orphan_auxiliary_directory blocker. Version-decoupled
+      directories remain supplementary and bind no version. Multiple legacy
+      candidates, orphan/gapped/duplicate revisions, orphan auxiliary
+      directories, malformed reserved names, unsafe entries, or case-fold
+      collisions establish only a blocker. Auxiliary directories never enter the
+      primary series, change latest/next_version, or join the primary-series
+      witness digest.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs
+      - DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs#finalFacts
+      - DEEP_RESEARCH_HARNESS/engine/helpers/recovery-contract.mjs#buildRecoverySummary
+      - DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs
+    overlap:
+      - coordinate: openspec/specs/bundle/artifact-persistence-recovery/spec.md
+        relation: authoritative
+        detail: >-
+          ARP-004 owns primary publication, reserved targets, immutability,
+          allocation, and crash/concurrency behavior; ARP-005 owns the
+          auxiliary-directory binding and orphan blocker. The resolver is their
+          one deterministic inventory interpretation.
+      - coordinate: openspec/specs/research/content-delivery-phase-content/spec.md
+        relation: authoritative
+        detail: >-
+          CDP-003 through CDP-006 own how Final consumes and presents the latest
+          primary report after legal entry; CDP-008 owns the Agent-facing
+          auxiliary-directory naming, self-containment, history-read-only, and
+          README index discipline without turning filenames into lifecycle or
+          semantic-quality authority.
+      - coordinate: openspec/specs/research/post-final-recovery/spec.md
+        relation: authoritative
+        detail: >-
+          POF-001 owns how C5 binds a valid Final inventory/lineage and blocks
+          ambiguous primary history; it consumes rather than independently
+          reconstructs the series. Auxiliary directories do not enter the
+          primary witness digest.
+      - coordinate: openspec/specs/engine/cli-phase-transition/spec.md
+        relation: authoritative
+        detail: >-
+          CPT-003 consumes the shared primary classification to admit only an
+          empty first Final baseline and does not infer version or creation order
+          independently.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-final.md
+        relation: derived
+        detail: >-
+          Final guidance presents the latest resolved report, keeps each
+          version's auxiliary archive in its same-named directory, maintains the
+          README index, and invokes the publisher; it does not allocate a
+          version or establish inventory truth from prose or chat.
+      - coordinate: DEEP_RESEARCH_HARNESS/COMMANDS.md
+        relation: derived
+        detail: >-
+          The command index explains the primary publication operation and
+          reserved namespace to Agents without becoming the resolver.
+      - coordinate: DEEP_RESEARCH_HARNESS/command_playbook/persist-artifact.md
+        relation: derived
+        detail: >-
+          The persistence playbook projects retained staging, primary publisher,
+          reserved-target, and sweep repair behavior without allocating or
+          resolving the report series itself.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/shared/shared-schemas.md
+        relation: derived
+        detail: >-
+          Shared schema guidance describes canonical Final delivery artifacts to
+          Agents; it does not make arbitrary final-directory presence a primary-
+          series or lifecycle verdict.
+    verification:
+      truth_table: tests/engine/helpers/final-report-series.test.mjs
+      cross_surface: tests/integration/md/final-report-composition-contract.test.mjs

@@ -1,0 +1,76 @@
+schema_version: verification-routing/v1
+change: final-auxiliary-directory-contract
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Auxiliary-directory grammar, version/feature binding, orphan blocker, and
+      non-primary allocation are focused deterministic truth-table facts over
+      direct inventory entry names and kinds.
+  integration:
+    status: selected
+    rationale: >-
+      The Agent-facing naming, self-containment, history-read-only, and README
+      index discipline is guidance parity over the production phase-final.md
+      surface, proven by static Markdown contract parity rather than runtime
+      semantics.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      The change adds no new primary allocation, lifecycle, or publication path;
+      the existing final-refinement and post-rerun e2e chains already cover
+      series continuity, and auxiliary classification is covered by the unit
+      truth table.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      No new interactive or observable Agent behavior is introduced beyond
+      deterministic guidance; the naming discipline is a static contract proven
+      by integration parity, not a real-subject observation.
+claims:
+  - id: final-auxiliary-directory-classification
+    statement: >-
+      ARP-005: the pure resolver recognizes a directory whose name equals a
+      canonical revision filename minus `.md` as an auxiliary archive bound to
+      that version and feature, leaves version-decoupled directories as
+      supplementary with no version, and blocks a version-grammar directory
+      without its matching primary revision as an orphan_auxiliary_directory
+      blocker. Auxiliary directories never enter the primary series, change
+      latest/next_version, or join the primary witness digest. The classification
+      reads only direct entry names and kinds, not mtime, directory order,
+      report prose, or chat.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/final-report-series.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: final-auxiliary-naming-guidance-parity
+    statement: >-
+      CDP-008: phase-final.md states that one version is one primary report plus
+      one same-named auxiliary archive directory, auxiliary detail stays in its
+      own version directory, primary-report prose cross-references stay in its
+      own directory and are not Evidence Map backing, committed history is
+      read-only, and final/README.md is the single series-index and naming
+      authority maintained through non-primary persist-final-report with its own
+      bounded Evidence Map. The guidance does not change the Final frontmatter or
+      make README presence an Engine fact.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/final-report-composition-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
