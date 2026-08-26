@@ -122,7 +122,17 @@ mtime, chat delivery text, or caches. A new C5 event SHALL bind that
 primary-scoped digest in the existing event field together with an explicit
 basis marker; events bound before this basis change carry no marker and remain
 legacy whole-tree bindings, where the digest is the deterministic sorted digest
-of all safe files under `final/`. Legal non-primary Final presentation updates
+of all safe files under `final/`. The canonical entry order used to compute the
+digest on a basis SHALL be one single deterministic order shared by the binding
+and by every later rehash of retained entries on that basis: the primary-series
+basis SHALL order retained primary entries by their full `final/...` path using
+`localeCompare` collation, and the whole-tree basis SHALL use the same
+deterministic byte-order scan the binding consumed. A rehash SHALL NOT use a
+different order than the binding it compares against, and a byte-identical
+retained set SHALL always reproduce the bound digest regardless of the primary
+base's file name or the presence of canonical revisions whose names collate
+oppositely to the byte scan (for example a modern base `final.md` with
+`final_vN.md` revisions). Legal non-primary Final presentation updates
 committed through the accepted persistence operation SHALL NOT constitute
 lineage drift on either basis. For a newer Final handoff after accepted C5, the
 exact zero-append digest match on the event's bound basis SHALL first be
@@ -130,11 +140,12 @@ consumed by `enter-phase` as the pre-load admission baseline. After the
 route-bound Final load and existing Readiness status synchronization, the
 evaluator SHALL compare the current inventory against the event-bound prior
 digest on the event's bound basis by removing zero or more highest canonical
-revision entries and rehashing the retained entries of that basis. Exactly one
-zero-append match means delivery pending; exactly one match after removing one
-or more highest revisions means those revisions are immutable appends and the
-newest is current-lineage delivery. For a legacy whole-tree binding whose proof
-is unavailable solely because non-primary entries drifted, the evaluator SHALL
+revision entries and rehashing the retained entries of that basis in the
+identical canonical order described above. Exactly one zero-append match means
+delivery pending; exactly one match after removing one or more highest
+revisions means those revisions are immutable appends and the newest is
+current-lineage delivery. For a legacy whole-tree binding whose proof is
+unavailable solely because non-primary entries drifted, the evaluator SHALL
 fall back to one structural primary-series proof evaluated over the same
 zero-or-more-highest-revision removal prefixes: for each prefix, the retained
 primary series SHALL remain structurally valid, and a zero-removal fallback
@@ -309,6 +320,12 @@ contract failures SHALL use blocked exit `1`.
 - **WHEN** current valid inventory uniquely preserves the retired C5 event-bound inventory on its bound basis and adds one or more highest contiguous canonical revisions
 - **THEN** the newest appended report MAY bind the newer legal Final lineage and clean reentry SHALL own ordinary Final refinement
 - **AND** a later explicit evidence-expanding request MAY become a fresh C5 candidate without rewriting the older event or reports
+
+#### Scenario: Modern primary series append proof reproduces the bound digest
+
+- **WHEN** a primary-scoped C5 event bound a modern primary series (`final.md` base plus contiguous `final_vN.md` revisions) and the current inventory's retained set is byte-identical to the bound inventory with one or more higher contiguous revisions appended
+- **THEN** the append proof SHALL rehash the retained entries in the identical canonical order used by the binding digest (the primary-series basis order described above) and report a match on the event's bound basis
+- **AND** the proof SHALL NOT report `newer_final_inventory_drift` solely because byte-order and collation order place `final.md` and `final_vN.md` differently
 
 #### Scenario: Non-primary updates during a rerun do not block the next rerun
 

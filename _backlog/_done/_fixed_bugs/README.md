@@ -232,8 +232,9 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-243 | 2026-08-26 | work-unit runtime-receipt 非法 ts 诊断不给字段原始值与全部受影响行号（只指 line 1）且不说明合法格式；诊断现携带原始非法值、全部受影响行号与 ISO 8601 格式预期（`2026-08-26-improve-dry-submit-diagnostic-feedback`） |
 | BUG-244 | 2026-08-26 | `supersededBy` 把「后续失败 attempt（passed:false）」误判为对「先前 passed pass」的覆盖，合法 pass 被吞；失败 attempt 永不覆盖先前 pass（`2026-08-26-fix-post-final-rerun-lineage-supersession`） |
 | BUG-245 | 2026-08-26 | `enter-phase phase-final` 先 `validateEnterPhaseTarget` 报 ok、同一次调用 `evaluateFinalEntryAdmission` 又失败，自相矛盾；Final admission 并入授权判定，单一非自相矛盾裁决（`2026-08-26-fix-post-final-rerun-lineage-supersession`） |
+| BUG-246 | 2026-08-27 | post-final 追加证明 `proveNewerFinalAppend` 用 plain-sort 条目顺序 digest retained，而 C5 绑定摘要用 `localeCompare` 顺序——现代 series（`final.md` + `final_vN.md`）下两者必然相反，追加证明永久 `matched:false` → 再次 C5 卡 `accepted_lineage_drift`（字节无关，真实 bundle `dpt_rb_chinese-ai-inference-chips-vs-nvidia`）；retained rehash 复用 `digestFinalReportPrimarySeriesEntries` 单一规范顺序 helper，现代 series witness→append 全链单元/integration 回归（`2026-08-27-fix-final-append-proof-primary-series-order`） |
 
-**Next available bug ID: BUG-246**
+**Next available bug ID: BUG-247**
 
 ---
 

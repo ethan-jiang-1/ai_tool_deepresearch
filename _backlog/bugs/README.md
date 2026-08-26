@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-08-24 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-08-27 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -30,6 +30,12 @@
 > BUG-239 已随 `2026-08-24-scope-work-unit-transaction-attribution` 结案并移入
 > [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)，均见下方
 > 「最近关闭 (2026-08-24)」。
+
+## 最近关闭 (2026-08-27)
+
+| Bug | 结案依据 |
+|-----|----------|
+| BUG-246 | `2026-08-27-fix-final-append-proof-primary-series-order`：`proveNewerFinalAppend` 的 primary-series basis retained digest 复用 `digestFinalReportPrimarySeriesEntries`（过滤 + `localeCompare` 排序 + digest 单一 helper），与 C5 绑定共享同一规范顺序；现代 series（`final.md` + `final_vN.md`）追加证明从永久 `matched:false` 恢复为正确匹配（MODIFIED research/post-final-recovery POF-001 + 现代 series 单元/integration 回归）。 |
 
 ## 最近关闭 (2026-08-26)
 
@@ -204,7 +210,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 
 > BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspended_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
-**Next available bug ID: BUG-243**
+**Next available bug ID: BUG-247**
 
 ## BUG-132–137 接手地图
 

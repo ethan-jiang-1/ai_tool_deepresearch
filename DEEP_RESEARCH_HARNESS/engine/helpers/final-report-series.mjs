@@ -125,6 +125,13 @@ export const FinalReportInventorySchema = z.object({
   primary_sha256: z.string().regex(/^[0-9a-f]{64}$/),
 }).strict();
 
+// NOTE: digests `entries` exactly in the order given — this function does NOT
+// sort. Callers own the canonical order: the legacy whole-tree digest relies on
+// the plain byte order produced by readSafeRecursiveInventory (both the C5
+// binding and the append proof consume that same order), while the
+// primary-series digest sorts via digestFinalReportPrimarySeriesEntries before
+// delegating here. Never feed this helper a set whose order is not the same one
+// the digest it is compared against was computed with.
 export function digestFinalReportInventoryEntries(entries) {
   return canonicalDigest(z.array(FinalReportInventoryEntrySchema).parse(entries));
 }

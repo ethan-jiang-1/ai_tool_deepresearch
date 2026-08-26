@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-export function createTerminalFinalBundle(root, name, { rerunCount = 0, topicRegistry = [] } = {}) {
+export function createTerminalFinalBundle(root, name, { rerunCount = 0, topicRegistry = [], modernBase = false } = {}) {
   const bundle = join(root, `dpt_rb_${name}`);
   mkdirSync(bundle, { recursive: true });
   writeFileSync(join(bundle, 'rb_status.json'), `${JSON.stringify({
@@ -64,7 +64,7 @@ export function createTerminalFinalBundle(root, name, { rerunCount = 0, topicReg
     { ts: '2026-01-01T00:00:01.000Z', event: 'load_complete', entry: 'phases/phase-final.md', handoff_source_gate: 'readiness-passed', handoff_source_node: 'phases/phase-readiness.md', handoff_target_node: 'phases/phase-final.md', handoff_source_attempt_index: 0 },
   ].map(JSON.stringify).join('\n') + '\n');
   for (const directory of ['final', 'seed_topics', 'reference', 'artifacts', '_logs']) mkdirSync(join(bundle, directory), { recursive: true });
-  writeFileSync(join(bundle, 'final', 'report.md'), '# Delivered Final\n');
+  writeFileSync(join(bundle, 'final', modernBase ? 'final.md' : 'report.md'), '# Delivered Final\n');
   writeFileSync(join(bundle, '_logs', 'run.log'), '');
   writeFileSync(join(bundle, 'BUNDLE_ENTRY.md'), '# Bundle Entry\n');
   writeFileSync(join(bundle, 'BUNDLE_MAP.md'), '# Bundle Map\n');

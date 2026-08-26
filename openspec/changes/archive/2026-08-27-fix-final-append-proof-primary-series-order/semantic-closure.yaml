@@ -1,0 +1,37 @@
+schema_version: semantic-closure/v1
+change: 2026-08-27-fix-final-append-proof-primary-series-order
+status: affected
+catalog_additions: []
+affected:
+  - family: final.primary-report-series
+    fact: >-
+      The canonical primary-series digest (C5 binding witness) sorts primary
+      entries by path with localeCompare before hashing
+      (digestFinalReportPrimarySeriesEntries in final-report-series.mjs). The
+      post-final immutable-append proof (proveNewerFinalAppend in
+      handoff-helpers.mjs) must rehash the retained entries of the bound basis
+      in that same canonical order; previously it hashed the plain
+      readSafeRecursiveInventory .sort() order, which reverses the order of
+      modern-series paths (final.md vs final_vN.md) and made the digest
+      mismatch deterministic regardless of byte content. This change aligns the
+      proof's retained rehash with the binding's canonical order so a
+      byte-identical retained set always matches.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs#digestFinalReportPrimarySeriesEntries
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs#digestFinalReportPrimarySeriesEntries
+      - DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs#proveNewerFinalAppend
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs#inspectNewerFinalStage
+      - DEEP_RESEARCH_HARNESS/cli/operate-post-final-recovery.mjs
+    overlap:
+      - coordinate: openspec/specs/research/post-final-recovery/spec.md
+        relation: derived
+        detail: >-
+          POF-001 documents the deterministic sorted digest witness and the
+          immutable-append proof over the event-bound basis; it states the
+          boundary without pinning the exact collation order, which is why the
+          two engine paths drifted apart.
+    verification:
+      truth_table: tests/engine/helpers/handoff-final-append-proof.test.mjs
+      cross_surface: tests/integration/cli/post-final-recovery.test.mjs

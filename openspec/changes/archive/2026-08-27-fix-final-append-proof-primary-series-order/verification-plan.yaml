@@ -1,0 +1,74 @@
+schema_version: verification-routing/v1
+change: 2026-08-27-fix-final-append-proof-primary-series-order
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      proveNewerFinalAppend 的 retained digest 规范顺序是 handoff-helpers.mjs +
+      final-report-series.mjs 的模块内确定性契约；新增现代 series（final.md base +
+      final_vN.md revisions）的 witness→append 全链真值表，锁定期望输出
+      （matched:true / removed_targets / current_target）与篡改负例。
+  integration:
+    status: selected
+    rationale: >-
+      operate-post-final-recovery inspect 的 newer-final 证明路径跨 production CLI
+      与临时 bundle 边界，证明现代 series 字节一致追加不再被误判
+      newer_final_inventory_drift / accepted_lineage_drift（复用既有
+      post-final-recovery.test.mjs 的 inspect 夹具与断言面）。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      属于单点 module/CLI 契约（digest 规范顺序一致性与 append proof），不构成跨
+      多个 production checkpoint 的 workflow-scale 状态链。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      修复是 Engine 确定性 digest/证明判定，不声明真实 Agent 语义行为。
+claims:
+  - id: modern-series-append-proof-reproduces-bound-digest
+    statement: >-
+      POF-001 extension: for a primary-scoped C5 witness over a modern primary
+      series (final.md base + contiguous final_vN.md revisions), the append
+      proof rehashes the retained entries in the identical canonical order the
+      binding digest used (filter + localeCompare sort), so a byte-identical
+      retained set with one or more higher contiguous revisions appended always
+      matches on the event's bound basis — never reporting
+      newer_final_inventory_drift solely because byte-order and collation place
+      final.md and final_vN.md differently. A modern-series retained base whose
+      content is tampered still blocks.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/handoff-final-append-proof.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: modern-series-inspect-not-blocked-after-newer-final
+    statement: >-
+      POF-001 integration: after a committed C5 event over a modern primary
+      series (final.md base), a full rerun cycle that legally updates a
+      non-primary presentation file and publishes a newer final_vN.md revision
+      drives operate-post-final-recovery inspect back to a fresh eligible
+      candidate — inspect SHALL NOT return reason_code
+      newer_final_inventory_drift / accepted_lineage_drift solely because
+      byte-order and collation place final.md and final_vN.md differently
+      (modern-series variant of the existing second-rerun test, which currently
+      only exercises the legacy report.md base).
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/post-final-recovery.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

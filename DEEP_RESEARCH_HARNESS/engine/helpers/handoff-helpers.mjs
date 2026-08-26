@@ -11,6 +11,7 @@ import { makeContractFinding, projectFindingCompatibility } from './wave-contrac
 import { readGateDefinitionSnapshot } from '../../schema/contracts/gate-definition.mjs';
 import {
   digestFinalReportInventoryEntries,
+  digestFinalReportPrimarySeriesEntries,
   readFinalReportInventory,
   resolveFinalReportSeries,
 } from './final-report-series.mjs';
@@ -488,7 +489,17 @@ export function proveNewerFinalAppend(inventory, previousFinal) {
   for (const prefix of finalRemovalPrefixes(inventory)) {
     const removed = new Set(prefix);
     const retained = basisEntries.filter((entry) => !removed.has(entry.path));
-    if (digestFinalReportInventoryEntries(retained) === witness.digest) exactMatches.push(prefix);
+    // The retained digest must use the same canonical order the binding digest
+    // was computed with. The primary-series basis binds the sorted
+    // primary-series digest (digestFinalReportPrimarySeriesEntries), so the
+    // proof rehashes through that same helper; reusing it keeps the filter +
+    // localeCompare sort + digest semantics in one place instead of copying the
+    // sort here. The whole-tree basis binds the plain readSafeRecursiveInventory
+    // byte order, so it keeps digesting the retained entries as-is.
+    const retainedDigest = witness.basis === 'primary_series'
+      ? digestFinalReportPrimarySeriesEntries(retained, inventory.primary_series)
+      : digestFinalReportInventoryEntries(retained);
+    if (retainedDigest === witness.digest) exactMatches.push(prefix);
   }
   if (exactMatches.length === 1) {
     return { matched: true, basis: witness.basis, removed_targets: exactMatches[0], current_target: currentTarget };

@@ -356,6 +356,35 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     assert.equal(newest.previous_final.final_inventory_sha256, readFinalReportInventory(bundle).primary_sha256);
   });
 
+  // BUG-246: the same second-rerun cycle over a MODERN primary series
+  // (final.md base + final_vN.md revisions). The binding digest sorts primary
+  // entries with localeCompare while the append proof used to rehash the plain
+  // readdir byte order — reversed for modern-series names — so inspect was
+  // permanently blocked at accepted_lineage_drift even when the retained bytes
+  // were exact. The legacy report.md variant above never exposed the mismatch.
+  it('keeps the second rerun a fresh candidate on a modern primary series (final.md base)', () => {
+    const bundle = createTerminalFinalBundle(root, 'modern-second-rerun', { modernBase: true });
+    const first = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.equal(first.verdict, 'eligible');
+    const firstPath = join(root, 'modern-second-rerun-request.json');
+    writeFileSync(firstPath, JSON.stringify(requestFromInspection(first)));
+    runJson([CLI, 'apply', '--bundle', bundle, '--input', firstPath]);
+
+    driveNewerFinalCycle(bundle);
+    const second = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.notEqual(second.reason_code, 'accepted_lineage_drift');
+    assert.notEqual(second.reason_code, 'newer_final_inventory_drift');
+    assert.equal(second.verdict, 'eligible', JSON.stringify(second));
+
+    const secondPath = join(root, 'modern-second-rerun-request-2.json');
+    writeFileSync(secondPath, JSON.stringify(requestFromInspection(second)));
+    runJson([CLI, 'apply', '--bundle', bundle, '--input', secondPath]);
+    const events = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+    const newest = events.filter((event) => event.event === 'post_final_reentry').at(-1);
+    assert.equal(newest.previous_final.final_inventory_basis, 'primary_series');
+    assert.equal(newest.previous_final.final_inventory_sha256, readFinalReportInventory(bundle).primary_sha256);
+  });
+
   it('recovers a legacy whole-tree binding through the structural primary-series fallback', () => {
     const bundle = createTerminalFinalBundle(root, 'legacy-binding');
     const first = inspectPostFinalRecovery({ bundlePath: bundle });

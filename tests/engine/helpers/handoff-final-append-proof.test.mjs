@@ -12,11 +12,11 @@ import { readFinalReportInventory } from '../../../DEEP_RESEARCH_HARNESS/engine/
 // primary-series digest in final_inventory_sha256 with an explicit basis
 // marker, legacy events bind the whole-tree digest on the same field.
 
-function buildBundle(root, name, { nonPrimary = false, revision = false } = {}) {
+function buildBundle(root, name, { nonPrimary = false, revision = false, modern = false } = {}) {
   const bundle = join(root, `dpt_rb_${name}`);
   const finalRoot = join(bundle, 'final');
   mkdirSync(join(finalRoot, 'topics'), { recursive: true });
-  writeFileSync(join(finalRoot, 'report.md'), '# Delivered Final\n');
+  writeFileSync(join(finalRoot, modern ? 'final.md' : 'report.md'), '# Delivered Final\n');
   if (revision) writeFileSync(join(finalRoot, 'final_v1.md'), '# Newer revision\n');
   if (nonPrimary) writeFileSync(join(finalRoot, 'topics', 'alpha.md'), '# Topic Alpha\n');
   return bundle;
@@ -155,6 +155,63 @@ describe('proveNewerFinalAppend', () => {
       assert.equal(proof.matched, true);
       assert.equal(proof.basis, 'legacy_structural_fallback');
       assert.deepEqual(proof.removed_targets, []);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  // BUG-246: the primary-series binding digest sorts retained primary entries
+  // by path with localeCompare, while readSafeRecursiveInventory yields plain
+  // byte order. For a modern series (final.md base + final_vN.md revisions)
+  // the two orders are reversed, so an un-sorted retained rehash never matched
+  // the bound digest. These cases prove the append proof rehashes through the
+  // same canonical order the binding used.
+  it('primary basis: modern series (final.md base) with one appended revision is a proven immutable append', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dpt-proof-modern-'));
+    try {
+      const bound = buildBundle(root, 'bound', { modern: true });
+      const witness = primaryWitnessFor(readFinalReportInventory(bound));
+
+      const delivered = buildBundle(root, 'delivered', { modern: true, revision: true });
+      const proof = proveNewerFinalAppend(readFinalReportInventory(delivered), witness);
+      assert.equal(proof.matched, true);
+      assert.equal(proof.basis, 'primary_series');
+      assert.deepEqual(proof.removed_targets, ['final/final_v1.md']);
+      assert.equal(proof.current_target, 'final/final_v1.md');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('primary basis: modern series with two appended revisions removes only the newest', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dpt-proof-modern-v2-'));
+    try {
+      const bound = buildBundle(root, 'bound', { modern: true, revision: true });
+      const witness = primaryWitnessFor(readFinalReportInventory(bound));
+
+      const delivered = buildBundle(root, 'delivered', { modern: true, revision: true });
+      writeFileSync(join(delivered, 'final', 'final_v2.md'), '# Rev2\n');
+      const proof = proveNewerFinalAppend(readFinalReportInventory(delivered), witness);
+      assert.equal(proof.matched, true);
+      assert.equal(proof.basis, 'primary_series');
+      assert.deepEqual(proof.removed_targets, ['final/final_v2.md']);
+      assert.equal(proof.current_target, 'final/final_v2.md');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('primary basis: modern series base tampering still blocks (sort fix does not relax byte checks)', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dpt-proof-modern-tamper-'));
+    try {
+      const bound = buildBundle(root, 'bound', { modern: true });
+      const witness = primaryWitnessFor(readFinalReportInventory(bound));
+
+      const tampered = buildBundle(root, 'tampered', { modern: true, revision: true });
+      writeFileSync(join(tampered, 'final', 'final.md'), '# Tampered Final\n');
+      const proof = proveNewerFinalAppend(readFinalReportInventory(tampered), witness);
+      assert.equal(proof.matched, false);
+      assert.equal(proof.basis, 'primary_series');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
