@@ -233,8 +233,9 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-244 | 2026-08-26 | `supersededBy` 把「后续失败 attempt（passed:false）」误判为对「先前 passed pass」的覆盖，合法 pass 被吞；失败 attempt 永不覆盖先前 pass（`2026-08-26-fix-post-final-rerun-lineage-supersession`） |
 | BUG-245 | 2026-08-26 | `enter-phase phase-final` 先 `validateEnterPhaseTarget` 报 ok、同一次调用 `evaluateFinalEntryAdmission` 又失败，自相矛盾；Final admission 并入授权判定，单一非自相矛盾裁决（`2026-08-26-fix-post-final-rerun-lineage-supersession`） |
 | BUG-246 | 2026-08-27 | post-final 追加证明 `proveNewerFinalAppend` 用 plain-sort 条目顺序 digest retained，而 C5 绑定摘要用 `localeCompare` 顺序——现代 series（`final.md` + `final_vN.md`）下两者必然相反，追加证明永久 `matched:false` → 再次 C5 卡 `accepted_lineage_drift`（字节无关，真实 bundle `dpt_rb_chinese-ai-inference-chips-vs-nvidia`）；retained rehash 复用 `digestFinalReportPrimarySeriesEntries` 单一规范顺序 helper，现代 series witness→append 全链单元/integration 回归（`2026-08-27-fix-final-append-proof-primary-series-order`） |
+| BUG-247 | 2026-08-27 | post-final 追加证明对 `primary_series` basis 无 `whole_tree` 已有的 structural fallback：C5 witness 绑定的瞬时字节态经合法越带重组后不可复原（retained digest 候选集封闭且全不中，7380 组合穷举零命中），inspect 永久 `blocked: accepted_lineage_drift`、rerun 预算不可达，数据层不可修；为两个 basis 统一 structural fallback（独立诊断 basis `primary_series_structural_fallback`），fallback 接受强制 inspect warning + `facts.retired_append_proof` 暴露，结构破坏仍 block；真实 bundle 解锁至 rerun#4 窗口（`2026-08-27-post-final-primary-series-structural-fallback`） |
 
-**Next available bug ID: BUG-247**
+**Next available bug ID: BUG-248**
 
 ---
 

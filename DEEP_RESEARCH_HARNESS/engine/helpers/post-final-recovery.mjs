@@ -347,6 +347,23 @@ function nextActionForStage(bundlePath, stage, operationId = null, owner = null)
   return { kind: 'current_owner', command: null, target_ref: 'current lifecycle owner', operation_id: operationId };
 }
 
+// A newer-Final append proof accepted through a structural fallback basis is
+// a weaker, warned proof: the bound byte-level witness was unreachable, so
+// the retained primary series was accepted structurally only. The acceptance
+// must never be silent.
+const STRUCTURAL_FALLBACK_BASES = new Set(['legacy_structural_fallback', 'primary_series_structural_fallback']);
+
+function structuralFallbackWarning(active) {
+  const basis = active?.append_proof?.basis;
+  if (!STRUCTURAL_FALLBACK_BASES.has(basis)) return null;
+  return `newer Final append proof used the structural fallback basis ${basis}: the bound byte-level witness is unreachable, the retained primary series was accepted structurally only`;
+}
+
+function withAppendProofWarning(active, baseWarnings) {
+  const warning = structuralFallbackWarning(active);
+  return warning ? [...baseWarnings, warning] : baseWarnings;
+}
+
 function inspectInternal({ bundlePath }) {
   const bundle = safeBundle(bundlePath);
   const workspaces = inspectWorkspaceRoot(bundle);
@@ -367,7 +384,7 @@ function inspectInternal({ bundlePath }) {
   if (active.ok && active.stage !== 'retired_by_newer_final') {
     const lineage = active.lineage || { event: active.handoff.event, index: active.handoff.index, eventLineSha256: active.handoff.eventLineSha256 };
     const event = lineage.event;
-    return result({ operation: 'inspect', verdict: 'unchanged', reason_code: 'already_committed', reason: 'An accepted post-final recovery lineage is already active.', operation_id: event.operation_id, stage: active.stage, warnings: workspaces.warnings, facts: { request_sha256: event.request_sha256, event_id: event.event_id, event_index: lineage.index, event_line_sha256: lineage.eventLineSha256 }, next_action: nextActionForStage(bundlePath, active.stage, event.operation_id, active.owner) });
+    return result({ operation: 'inspect', verdict: 'unchanged', reason_code: 'already_committed', reason: 'An accepted post-final recovery lineage is already active.', operation_id: event.operation_id, stage: active.stage, warnings: withAppendProofWarning(active, workspaces.warnings), facts: { request_sha256: event.request_sha256, event_id: event.event_id, event_index: lineage.index, event_line_sha256: lineage.eventLineSha256 }, next_action: nextActionForStage(bundlePath, active.stage, event.operation_id, active.owner) });
   }
   let facts;
   try { facts = finalFacts(bundle); } catch (error) {
@@ -377,8 +394,11 @@ function inspectInternal({ bundlePath }) {
   if (activeWork.length > 0) return result({ operation: 'inspect', verdict: 'blocked', reason_code: 'bundle_not_quiescent', reason: `Active queue/work-unit facts block post-final recovery: ${activeWork[0]}`, warnings: workspaces.warnings, next_action: { kind: 'repair_owner', command: null, target_ref: activeWork[0], operation_id: null } });
   if (!facts.availability.available) return result({ operation: 'inspect', verdict: 'blocked', reason_code: 'rerun_limit_exhausted', reason: `Next rerun count ${facts.guard.next_count} would fail limit < ${facts.guard.limit}.`, warnings: workspaces.warnings, facts: { rerun_guard: facts.guard }, next_action: { kind: 'new_bundle_decision', command: null, target_ref: 'start a new bundle for the requested scope', operation_id: null } });
   return result({
-    operation: 'inspect', verdict: 'eligible', reason_code: 'eligible', reason: 'Latest legal Final lineage is eligible for one audited post-final rerun request.', warnings: workspaces.warnings,
-    facts: { request_bindings: { expected_bundle_identity: facts.identity, expected_final_lineage: facts.lineage }, resolved_target: facts.routing.target_node },
+    operation: 'inspect', verdict: 'eligible', reason_code: 'eligible', reason: 'Latest legal Final lineage is eligible for one audited post-final rerun request.', warnings: withAppendProofWarning(active, workspaces.warnings),
+    facts: {
+      request_bindings: { expected_bundle_identity: facts.identity, expected_final_lineage: facts.lineage }, resolved_target: facts.routing.target_node,
+      ...(active.ok && active.stage === 'retired_by_newer_final' && active.append_proof ? { retired_append_proof: active.append_proof } : {}),
+    },
     next_action: { kind: 'prepare_request', command: null, target_ref: 'retained post-final request JSON, then apply', operation_id: null },
   });
 }

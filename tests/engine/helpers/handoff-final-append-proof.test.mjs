@@ -82,14 +82,57 @@ describe('proveNewerFinalAppend', () => {
     }
   });
 
-  it('primary basis: primary content tampering blocks without any fallback', () => {
-    const root = mkdtempSync(join(tmpdir(), 'dpt-proof-tamper-'));
+  // BUG-247: a primary-scoped witness whose bound byte state no longer
+  // exists in any retained prefix (the base bytes were rewritten after
+  // binding, mirroring an out-of-band legal reorganization of final/) can
+  // never be proven byte-level. The proof falls back to the structural
+  // primary-series check — mirroring the legacy whole-tree precedent — and
+  // reports its own diagnostic basis instead of blocking forever.
+  it('primary basis: unreachable bound bytes with a valid structure fall back structurally', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dpt-proof-primary-fallback-'));
     try {
       const bound = buildBundle(root, 'bound');
       const witness = primaryWitnessFor(readFinalReportInventory(bound));
-      const tampered = buildBundle(root, 'tampered');
-      writeFileSync(join(tampered, 'final', 'report.md'), '# Tampered Final\n');
-      const proof = proveNewerFinalAppend(readFinalReportInventory(tampered), witness);
+
+      const delivered = buildBundle(root, 'delivered', { revision: true });
+      writeFileSync(join(delivered, 'final', 'report.md'), '# Reorganized Final\n');
+      const proof = proveNewerFinalAppend(readFinalReportInventory(delivered), witness);
+      assert.equal(proof.matched, true);
+      assert.equal(proof.basis, 'primary_series_structural_fallback');
+      assert.deepEqual(proof.removed_targets, ['final/final_v1.md']);
+      assert.equal(proof.current_target, 'final/final_v1.md');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('primary basis: unreachable bound bytes with zero appended revisions is delivery pending through the fallback', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dpt-proof-primary-fallback-zero-'));
+    try {
+      const bound = buildBundle(root, 'bound');
+      const witness = primaryWitnessFor(readFinalReportInventory(bound));
+
+      const drifted = buildBundle(root, 'drifted');
+      writeFileSync(join(drifted, 'final', 'report.md'), '# Reorganized Final\n');
+      const proof = proveNewerFinalAppend(readFinalReportInventory(drifted), witness);
+      assert.equal(proof.matched, true);
+      assert.equal(proof.basis, 'primary_series_structural_fallback');
+      assert.deepEqual(proof.removed_targets, []);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('primary basis: a retained series that is no longer structurally valid blocks the fallback', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dpt-proof-primary-fallback-invalid-'));
+    try {
+      const bound = buildBundle(root, 'bound');
+      const witness = primaryWitnessFor(readFinalReportInventory(bound));
+      // Base removed while a revision remains: the retained series is an
+      // orphan revision chain and cannot be accepted structurally.
+      const broken = buildBundle(root, 'broken', { revision: true });
+      rmSync(join(broken, 'final', 'report.md'));
+      const proof = proveNewerFinalAppend(readFinalReportInventory(broken), witness);
       assert.equal(proof.matched, false);
       assert.equal(proof.basis, 'primary_series');
     } finally {
@@ -201,7 +244,13 @@ describe('proveNewerFinalAppend', () => {
     }
   });
 
-  it('primary basis: modern series base tampering still blocks (sort fix does not relax byte checks)', () => {
+  // BUG-247 boundary on a modern series: byte-level tampering that leaves
+  // the series structurally valid no longer blocks the proof alone — the
+  // exact bound-basis match still fails (the sort fix did not relax byte
+  // checks), but the structural fallback accepts the retained series with
+  // its own warned diagnostic basis. Blocking now requires a structurally
+  // broken retained series.
+  it('primary basis: modern series base tampering falls back structurally without an exact match', () => {
     const root = mkdtempSync(join(tmpdir(), 'dpt-proof-modern-tamper-'));
     try {
       const bound = buildBundle(root, 'bound', { modern: true });
@@ -210,8 +259,10 @@ describe('proveNewerFinalAppend', () => {
       const tampered = buildBundle(root, 'tampered', { modern: true, revision: true });
       writeFileSync(join(tampered, 'final', 'final.md'), '# Tampered Final\n');
       const proof = proveNewerFinalAppend(readFinalReportInventory(tampered), witness);
-      assert.equal(proof.matched, false);
-      assert.equal(proof.basis, 'primary_series');
+      assert.equal(proof.matched, true);
+      assert.equal(proof.basis, 'primary_series_structural_fallback');
+      assert.deepEqual(proof.removed_targets, ['final/final_v1.md']);
+      assert.equal(proof.current_target, 'final/final_v1.md');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

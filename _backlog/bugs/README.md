@@ -20,6 +20,7 @@
 > BUG-225..231 已按 2026-08-17 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
 > BUG-232/233/234/236 已按 2026-08-19 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
 > BUG-241..245 已按 2026-08-26 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
+> BUG-246/247 已按 2026-08-27 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
@@ -35,6 +36,7 @@
 
 | Bug | 结案依据 |
 |-----|----------|
+| BUG-247 | `2026-08-27-post-final-primary-series-structural-fallback`：`proveNewerFinalAppend` 为 `primary_series` basis 补齐 structural fallback（镜像 `whole_tree` 先例：同 removal-prefix 枚举 + retained 结构校验，独立诊断 basis `primary_series_structural_fallback`），绑定态字节不可复原（合法越带重组后）不再永久 `accepted_lineage_drift`；fallback 接受（legacy 与 primary）强制 inspect warning + `facts.retired_append_proof` 暴露，永不静默；结构破坏仍 block（MODIFIED research/post-final-recovery POF-001 + 单元/integration 回归；真实 bundle `dpt_rb_chinese-ai-inference-chips-vs-nvidia` 已解锁至 rerun#4 窗口）。 |
 | BUG-246 | `2026-08-27-fix-final-append-proof-primary-series-order`：`proveNewerFinalAppend` 的 primary-series basis retained digest 复用 `digestFinalReportPrimarySeriesEntries`（过滤 + `localeCompare` 排序 + digest 单一 helper），与 C5 绑定共享同一规范顺序；现代 series（`final.md` + `final_vN.md`）追加证明从永久 `matched:false` 恢复为正确匹配（MODIFIED research/post-final-recovery POF-001 + 现代 series 单元/integration 回归）。 |
 
 ## 最近关闭 (2026-08-26)
@@ -210,7 +212,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 
 > BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspended_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
-**Next available bug ID: BUG-247**
+**Next available bug ID: BUG-248**
 
 ## BUG-132–137 接手地图
 

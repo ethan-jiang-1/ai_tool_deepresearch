@@ -504,22 +504,27 @@ export function proveNewerFinalAppend(inventory, previousFinal) {
   if (exactMatches.length === 1) {
     return { matched: true, basis: witness.basis, removed_targets: exactMatches[0], current_target: currentTarget };
   }
-  if (exactMatches.length > 1 || witness.basis !== 'whole_tree') {
+  if (exactMatches.length > 1) {
     return { matched: false, basis: witness.basis };
   }
-  // Legacy structural fallback: the whole-tree digest is unreachable solely
-  // because non-primary entries drifted after the event was bound (the event
-  // predates the primary-series basis). The recoverable proof is structural:
-  // over the same removal prefixes, the retained primary series must remain a
-  // valid base-plus-contiguous-revisions series. Byte-level verification of
-  // retained primary entries is impossible without per-file prior hashes, so
-  // the fallback is exposed as its own diagnostic basis.
+  // Structural fallback: the bound byte state is unreachable — a legacy
+  // whole-tree binding because non-primary entries drifted after the event
+  // was bound (the event predates the primary-series basis), or a
+  // primary-scoped binding because final/ was legally reorganized out of
+  // band after binding, so retained primary entries were renamed or their
+  // bytes rewritten and no retained prefix can ever reproduce the witness.
+  // The recoverable proof is structural in both cases: over the same removal
+  // prefixes, the retained primary series must remain a valid
+  // base-plus-contiguous-revisions series. Byte-level verification of
+  // retained primary entries is impossible without per-file prior hashes,
+  // so each basis exposes the fallback as its own diagnostic and every
+  // structural acceptance is surfaced with a warning by the inspect owner.
   const structuralMatches = finalRemovalPrefixes(inventory)
     .filter((prefix) => retainedPrimarySeriesValid(inventory, prefix));
   if (structuralMatches.length === 0) return { matched: false, basis: witness.basis };
   return {
     matched: true,
-    basis: 'legacy_structural_fallback',
+    basis: witness.basis === 'primary_series' ? 'primary_series_structural_fallback' : 'legacy_structural_fallback',
     removed_targets: structuralMatches.at(-1),
     current_target: currentTarget,
   };

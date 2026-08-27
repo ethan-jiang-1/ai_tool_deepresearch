@@ -1,0 +1,41 @@
+schema_version: semantic-closure/v1
+change: 2026-08-27-post-final-primary-series-structural-fallback
+status: affected
+catalog_additions: []
+affected:
+  - family: final.primary-report-series
+    fact: >-
+      The post-final immutable-append proof (proveNewerFinalAppend in
+      handoff-helpers.mjs) evaluates the retired C5 witness on the event-bound
+      basis. For a primary-scoped binding whose exact retained-prefix digest
+      match is unreachable because the bound primary-series byte state no
+      longer exists (legally reorganized final/ rewrote or renamed retained
+      primary entries after binding), the proof falls back to the same
+      structural primary-series check used by the legacy whole-tree fallback
+      (same removal-prefix enumeration, retained series must remain a valid
+      base-plus-contiguous-revisions series) and reports the match as its own
+      diagnostic basis primary_series_structural_fallback, never as an exact
+      bound-basis match. Every structural-fallback acceptance (legacy or
+      primary) is surfaced in the inspect result as a deterministic warning,
+      and a fresh-eligibility result reached through a retired newer Final
+      exposes the accepted proof in facts.retired_append_proof.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs#proveNewerFinalAppend
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs#proveNewerFinalAppend
+      - DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs#inspectInternal
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs#inspectNewerFinalStage
+      - DEEP_RESEARCH_HARNESS/cli/operate-post-final-recovery.mjs
+    overlap:
+      - coordinate: openspec/specs/research/post-final-recovery/spec.md
+        relation: derived
+        detail: >-
+          POF-001 owns the Final-inventory lineage witness, the append proof
+          over the event-bound basis, and the legacy structural fallback; this
+          change extends the same fallback semantics to primary-scoped
+          bindings and mandates the warning/proof exposure, so the spec
+          paragraph and scenarios are the derived contract of this fact.
+    verification:
+      truth_table: tests/engine/helpers/handoff-final-append-proof.test.mjs
+      cross_surface: tests/integration/cli/post-final-recovery.test.mjs

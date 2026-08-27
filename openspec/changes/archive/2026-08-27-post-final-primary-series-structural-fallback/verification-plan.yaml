@@ -1,0 +1,75 @@
+schema_version: verification-routing/v1
+change: 2026-08-27-post-final-primary-series-structural-fallback
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      proveNewerFinalAppend 的 structural fallback 判定是 handoff-helpers.mjs 模块内确定性契约；
+      按新真值表锁定 primary basis 下「绑定态字节不可复原 + retained 结构合法 → fallback 接受」
+      正例（one-or-more-removal 与 zero-removal 两形态）与「结构破坏仍 block」负例，并确认
+      exact-match 与 legacy fallback 用例零回归。
+  integration:
+    status: selected
+    rationale: >-
+      operate-post-final-recovery inspect 的 newer-final 证明路径跨 production CLI 与临时 bundle
+      边界；BUG-247 形状（modern base 字节在 newer-final 周期中被改写、绑定态不可复原）必须驱动
+      inspect 回到 eligible 并携带 fallback 警示与 facts.retired_append_proof，随后 second apply
+      绑定当前 lineage——复用既有 post-final-recovery.test.mjs 夹具与断言面。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      属于单点 module/CLI 契约（append-proof 降级判定与 inspect 警示暴露），不构成跨多个
+      production checkpoint 的 workflow-scale 状态链。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      修复是 Engine 确定性 proof/verdict 判定，不声明真实 Agent 语义行为。
+claims:
+  - id: primary-series-unreachable-binding-falls-back-structurally
+    statement: >-
+      POF-001 extension: for a primary-scoped C5 witness whose bound
+      primary-series byte state no longer exists in any retained removal
+      prefix (bound bytes rewritten/renamed out of band after binding), the
+      append proof falls back to the structural primary-series proof over the
+      same removal prefixes: a structurally valid retained series matches with
+      basis primary_series_structural_fallback (one-or-more-removal means
+      immutable append, zero-removal means delivery pending), while a retained
+      series that no longer forms a valid contiguous series still blocks, and
+      exact bound-basis matches keep their exact basis.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/handoff-final-append-proof.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+
+  - id: bug247-bundle-inspect-eligible-with-warned-fallback
+    statement: >-
+      POF-001 integration (BUG-247 shape): after a committed C5 event over a
+      modern primary series, a newer-final cycle whose base bytes were
+      rewritten after binding (bound byte state unreachable) plus a newer
+      final_v1.md revision drives operate-post-final-recovery inspect back to
+      a fresh eligible candidate — never accepted_lineage_drift or
+      newer_final_inventory_drift — carrying one deterministic warning that
+      identifies the structural fallback basis and exposing
+      facts.retired_append_proof.basis = primary_series_structural_fallback;
+      the second apply binds the current primary-scoped digest with its basis
+      marker.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/post-final-recovery.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

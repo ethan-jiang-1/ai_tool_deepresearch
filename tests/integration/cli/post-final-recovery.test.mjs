@@ -284,7 +284,7 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
   // legally updates a non-primary presentation file and publishes a newer
   // primary revision (BUG-236). Returns nothing; the bundle ends terminal at
   // the newer Final.
-  function driveNewerFinalCycle(bundle, { legacyBinding = false } = {}) {
+  function driveNewerFinalCycle(bundle, { legacyBinding = false, rewriteBase = false } = {}) {
     const tracePath = join(bundle, 'rb_trace.jsonl');
     const eventTimeWholeTreeDigest = readFinalReportInventory(bundle).sha256;
     if (legacyBinding) {
@@ -332,6 +332,13 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     mkdirSync(join(bundle, 'final', 'topics'), { recursive: true });
     writeFileSync(join(bundle, 'final', 'topics', 'alpha.md'), '# Topic Alpha (updated)\n');
     writeFileSync(join(bundle, 'final', 'final_v1.md'), '# Newer primary revision\n');
+    if (rewriteBase) {
+      // BUG-247 shape: the base bytes are rewritten after the C5 event bound
+      // its witness (an out-of-band legal reorganization of final/), so no
+      // retained prefix can ever reproduce the bound digest again.
+      const baseName = existsSync(join(bundle, 'final', 'final.md')) ? 'final.md' : 'report.md';
+      writeFileSync(join(bundle, 'final', baseName), '# Delivered Final (reorganized)\n');
+    }
   }
 
   it('keeps the second rerun a fresh candidate after non-primary updates and a newer primary revision', () => {
@@ -397,5 +404,42 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     const second = inspectPostFinalRecovery({ bundlePath: bundle });
     assert.notEqual(second.reason_code, 'accepted_lineage_drift');
     assert.equal(second.verdict, 'eligible', JSON.stringify(second));
+    // The legacy structural fallback acceptance is never silent either.
+    assert.ok(second.warnings.some((warning) => warning.includes('legacy_structural_fallback')), JSON.stringify(second.warnings));
+    assert.equal(second.facts.retired_append_proof.basis, 'legacy_structural_fallback');
+  });
+
+  // BUG-247: the C5 witness bound a primary-series byte state that a later
+  // out-of-band legal reorganization of final/ rewrote, so no retained
+  // removal prefix can ever reproduce the bound digest (the retained digest
+  // set is closed over the surviving immutable bytes). The append proof falls
+  // back to the structural primary-series check — mirroring the legacy
+  // whole-tree precedent — inspect returns to fresh eligibility with one
+  // deterministic warning and exposes the accepted proof, and the fresh C5
+  // event binds the current lineage.
+  it('recovers a primary-series binding with unreachable bound bytes through the structural fallback', () => {
+    const bundle = createTerminalFinalBundle(root, 'unreachable-binding', { modernBase: true });
+    const first = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.equal(first.verdict, 'eligible');
+    const firstPath = join(root, 'unreachable-binding-request.json');
+    writeFileSync(firstPath, JSON.stringify(requestFromInspection(first)));
+    runJson([CLI, 'apply', '--bundle', bundle, '--input', firstPath]);
+
+    driveNewerFinalCycle(bundle, { rewriteBase: true });
+    const second = inspectPostFinalRecovery({ bundlePath: bundle });
+    assert.notEqual(second.reason_code, 'accepted_lineage_drift');
+    assert.notEqual(second.reason_code, 'newer_final_inventory_drift');
+    assert.equal(second.verdict, 'eligible', JSON.stringify(second));
+    assert.ok(second.warnings.some((warning) => warning.includes('primary_series_structural_fallback')), JSON.stringify(second.warnings));
+    assert.equal(second.facts.retired_append_proof.basis, 'primary_series_structural_fallback');
+    assert.deepEqual(second.facts.retired_append_proof.removed_targets, ['final/final_v1.md']);
+
+    const secondPath = join(root, 'unreachable-binding-request-2.json');
+    writeFileSync(secondPath, JSON.stringify(requestFromInspection(second)));
+    runJson([CLI, 'apply', '--bundle', bundle, '--input', secondPath]);
+    const events = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+    const newest = events.filter((event) => event.event === 'post_final_reentry').at(-1);
+    assert.equal(newest.previous_final.final_inventory_basis, 'primary_series');
+    assert.equal(newest.previous_final.final_inventory_sha256, readFinalReportInventory(bundle).primary_sha256);
   });
 });

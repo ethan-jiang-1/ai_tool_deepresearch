@@ -151,11 +151,24 @@ zero-or-more-highest-revision removal prefixes: for each prefix, the retained
 primary series SHALL remain structurally valid, and a zero-removal fallback
 match means delivery pending while a one-or-more-removal fallback match means
 immutable append; the fallback basis SHALL be exposed in the proof result as a
-diagnostic. No match on the bound basis, a match that requires removing a
-base/supplementary primary entry, primary-series content drift, or ambiguous
-canonical history SHALL block. This proof SHALL reuse the existing C5 event
-field and SHALL not add timestamp authority, a delivery event, profile
-counter, or current-report pointer.
+diagnostic. For a primary-scoped binding whose exact proof is unavailable
+solely because the bound primary-series byte state no longer exists in any
+retained prefix — for example after `final/` was legally reorganized out of
+band so that retained primary entries were renamed or their bytes rewritten —
+the evaluator SHALL fall back to the same structural primary-series proof over
+the same removal prefixes with the same zero-removal and one-or-more-removal
+meaning, exposed as its own diagnostic basis distinct from the exact bound
+basis and from the legacy fallback basis. Byte-level verification of retained
+primary entries is impossible without per-file prior hashes, so a structural
+fallback acceptance SHALL never be silent: whenever the stage evaluator
+accepts a newer-Final proof through a structural fallback basis, the inspect
+result SHALL carry one deterministic warning identifying that fallback basis,
+and a fresh-eligibility result reached through a retired newer Final SHALL
+expose the accepted proof. No match on the bound basis, a match that requires
+removing a base/supplementary primary entry, a retained primary series that is
+no longer structurally valid, or ambiguous canonical history SHALL block. This
+proof SHALL reuse the existing C5 event field and SHALL not add timestamp
+authority, a delivery event, profile counter, or current-report pointer.
 
 `apply` SHALL accept one retained strict JSON request containing schema version,
 closed action, non-empty reason/scope, inspect-derived logical bundle identity,
@@ -334,11 +347,24 @@ contract failures SHALL use blocked exit `1`.
 - **AND** inspect SHALL expose fresh C5 eligibility for that request instead of returning `accepted_lineage_drift`
 - **AND** the newer C5 event SHALL bind the current primary-scoped digest with its basis marker
 
+#### Scenario: Unreachable primary-series binding recovers through the structural fallback
+
+- **WHEN** a primary-scoped C5 event bound a primary-series byte state that no current retained removal prefix reproduces (the bound bytes were renamed or rewritten out of band after binding, so no retained digest can ever equal the witness), and the current primary series remains structurally valid
+- **THEN** the append proof SHALL match through the structural fallback exposed as its own diagnostic basis distinct from the exact bound basis and from the legacy fallback basis
+- **AND** inspect SHALL return fresh C5 eligibility binding the current lineage with one deterministic warning identifying the fallback basis, instead of `accepted_lineage_drift`
+- **AND** the fallback SHALL NOT be accepted when the retained primary series is no longer structurally valid
+
 #### Scenario: Primary-series tampering remains drift on both bases
 
-- **WHEN** the content of a retained primary-series entry (base or historical revision) differs from the event-bound witness on its bound basis, or removing a base/supplementary primary entry would be required to match
-- **THEN** the append proof SHALL block as inventory drift on both the primary-scoped and the legacy whole-tree basis
-- **AND** the structural fallback SHALL NOT accept a primary series whose retained entries no longer form a valid contiguous series
+> **@deprecated behavior** — The historical title is retained as an archive
+> anchor. Byte-level tampering that leaves the primary series structurally
+> valid no longer blocks the proof alone; it can only be accepted through the
+> warned structural fallback diagnostic. What still blocks on both bases is a
+> retained series that is no longer structurally valid.
+
+- **WHEN** the retained primary series no longer forms a valid contiguous series (for example an orphan revision chain after the base was removed, a duplicate revision, or a broken version sequence), or removing a base/supplementary primary entry would be required to match
+- **THEN** the append proof SHALL block as inventory drift on both the primary-scoped and the legacy whole-tree basis, with no structural fallback acceptance
+- **AND** byte-level retained-primary drift that leaves the series structurally valid SHALL be accepted only through the warned structural fallback diagnostic, never as a match on the exact bound basis
 
 ### Requirement: Post-final recovery SHALL commit profile and one event through explicit exact recovery
 
