@@ -15,6 +15,7 @@ cli/
   instantiate-run-bundle.mjs ← 创建 production run bundle
   inspect-bundle.mjs         ← 审视 bundle 状态
   operate-work-unit.mjs      ← delegated work-unit claim/submit/terminal/inspect
+  operate-queue.mjs           ← queue lifecycle: check/enqueue/claim/complete/fail/preempt/count/render/project/repair
   validate-bundle.mjs        ← Zod schema 校验 bundle
   validate-work-unit-hygiene.mjs ← 静态阻止旧 delegated authority surface 回流
   validate-workflow-package.mjs ← 校验整个 workflow package 一致性
@@ -72,6 +73,7 @@ Non-gate current-state inventory:
   ```
 
   Read structured output even on a non-zero runtime outcome. `busy` names caller operation/work coordinates separately from holder transaction/operation/target work/queue coordinates and its journal disposition; wait and rerun the exact caller operation at the same checkpoint without inferring physical actor identity, progress, or liveness. `suspect_transaction` permits `recover-transaction` only when the returned `repair_kind`, exact journal `write_to`, and transaction ID select one unlocked proof-complete v2 journal; otherwise `missing_contract` is the boundary. Exact `recover-declaration` precedes `supersede`. A successful supersession returns the predecessor work/queue coordinates, committing transaction, and one `successor_queue_item_id`; use that successor's ordinary actor-observed claim/poll/submit route and rerun the original inspect/Gate. Never manually edit ledger, index, status, queue, lock, journal, or hash authority.
+- `operate-queue.mjs` is the queue lifecycle CLI: `check/enqueue/claim/complete/fail/preempt/count/render/project/repair`. `check` exits `0` when the queue is drained or healthy and `1` when blocked or conveying admission feedback. `complete` consumes a result.json (not an enqueue task card). Other verbs exit `0` on success and `1` on repairable failure or invocation error. See `DEEP_RESEARCH_HARNESS/COMMANDS.md` for the full invocation forms.
 - `validate-work-unit-hygiene.mjs` is a static production-surface hygiene gate. It exits `1` when removed delegated authority tokens, unsupported provenance check names, or queue/index semantic regressions appear in active framework surfaces.
 - Many utility validators are binary `0/1` and do not yet share a common exit helper.
 - `log-event.mjs` always exits `0`, even when a diagnostic log or trace write cannot be completed. This exception keeps logging failure from blocking Agent flow, but it is not evidence that a load-bearing trace event was written.

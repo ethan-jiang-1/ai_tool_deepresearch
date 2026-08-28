@@ -1,0 +1,8 @@
+schema_version: semantic-closure/v1
+change: cli-readme-queue-coverage
+status: not_applicable
+reason: >-
+  This change edits only DEEP_RESEARCH_HARNESS/cli/README.md prose (CLI-surface
+  coverage for operate-queue lifecycle). It changes no Harness runtime fact
+  family, resolver, authority-establishing surface, deterministic verdict, or
+  production behavior.

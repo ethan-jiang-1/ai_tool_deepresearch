@@ -1,0 +1,40 @@
+schema_version: verification-routing/v1
+change: cli-readme-queue-coverage
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      No unit test owns cli/README.md content; the file is a documentation
+      surface only.
+  integration:
+    status: selected
+    rationale: >-
+      The existing exit-code-convention integration test reads the cli/README.md
+      exit-code surface and gives a deterministic node:test verdict.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale runtime lifecycle or temporary bundle changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change makes no claim about real Playbook-Agent or Subject-Agent
+      behavior.
+claims:
+  - id: exit-code-convention-regression
+    statement: >-
+      CLE-003: The cli/README.md exit-code inventory and Selected Public
+      Operation Parsing table remain consistent with the accepted exit-code
+      convention after adding the operate-queue entry.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/exit-code-convention.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

@@ -1,0 +1,8 @@
+schema_version: semantic-closure/v1
+change: commands-md-coverage-and-copyable-contracts
+status: not_applicable
+reason: >-
+  This change edits only DEEP_RESEARCH_HARNESS/COMMANDS.md prose (command-index
+  coverage rows, copyable contract templates, and gotcha one-liners). It
+  changes no Harness runtime fact family, resolver, authority-establishing
+  surface, deterministic verdict, or production behavior.

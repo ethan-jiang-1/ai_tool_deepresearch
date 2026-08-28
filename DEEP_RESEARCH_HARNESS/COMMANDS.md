@@ -56,6 +56,8 @@ Current inventory:
 
 Exit codes SHALL NOT encode morale, reassurance, retry strategy, progress pressure, fatigue, or autonomous-continuation reminders. Those signals belong in `advice[]`, structured diagnostics, or Agent-readable Markdown. Exit code alone must never be treated as the full contract.
 
+> 大 stdout 输出时可能抛 `errno -35`（EAGAIN），应 `> file` 重定向落盘后读取。
+
 ### Selected Operation Invocation Contract
 
 The following selected public operations share a narrow discoverability boundary. Standalone `--help` or `-h` prints usage, exits `0`, and does not read a bundle, input, workspace, trace, or status. Every non-help form below is exact: required named options occur once, and unknown, duplicate, mixed, positional, missing-value, or unusable explicit path forms return one structured code-`2` invocation/configuration root before domain work. Never copy an unvalidated argument token into a repair coordinate, `write_to`, or rerun command.
@@ -89,6 +91,7 @@ Existing run-bundle reload resolves the supplied directory to the current run bu
 | operate-work-unit.mjs | cli/operate-work-unit.mjs | delegated work-unit 生命周期（`claim`/`dry-submit`/`submit`/`late-submit`/`recover-declaration`/`recover-transaction`/`replace`/`supersede`/`fail`/`timeout`/`timeout-preflight`/`abandon`/`open-batch`/`inspect`）；成功 `claim` 输出 poll/inspect continuation cue，普通 `submit` 只接受 claimed，`replace` 处理 failed/abandoned，`supersede` 为 eligible submitted drift 建一个 fresh successor，两个 recovery operation 均保持既有 authority 边界 |
 | work-unit-actor-decision | command_playbook/work-unit-actor-decision.md | queue-front role inspect → 一次真实 native probe → 同一 claim checkpoint；normal batch、单项 Phase Agent fallback 或 no-claim |
 | provenance-forensics-guide | command_playbook/provenance-forensics-guide.md | 事后判定 delegated 证据 provenance 真伪；submitted work-unit ledger 是 gate authority |
+| operate-queue.mjs | cli/operate-queue.mjs | queue 生命周期（`check`/`enqueue`/`claim`/`complete`/`fail`/`preempt`/`count`/`render`/`project`/`repair`）；`complete` 吃 result.json（非 enqueue task card，见 Copyable Contract Templates）；queue item id 需在 active_window + terminal_history 内唯一，历史同名加 `-rN` 后缀 |
 
 Mode-absent unclaimed Wave1 demand uses only the narrow queue repair; it does not infer mode or edit claimed attempts:
 
@@ -153,6 +156,8 @@ Logical `actor_execution` plus exact `work_id` and `receipt_nonce` guides which 
 | enter-phase.mjs | cli/enter-phase.mjs | 消费 gate CLI 返回的 `check.next`，调用 workflow loader 渲染下一 node Markdown，写入 route-bound `load_complete` handoff witness 和 `rb_status.json.current_node`；默认输出 cue-first 的 source-gate sync、target action core 与 target-excluding manifest，`--full` 才附加 complete closure；不证明 target phase work completion |
 | advance-status.mjs | cli/advance-status.mjs | 在 `enter-phase` witness 存在后同步 just-passed source gate；covered handoff 使用真实 `gate_attempt.next` 和 `current_node` 输出 continuation cue；does not enter, load, or execute the next phase |
 
+> Gate CLIs 要求 `--current-node <file-ref>` 为必带参数（指向 phase Markdown node）。六大生命周期 gate 的 `check.next` 推进链：`wave0-complete` → `wave1-complete` → `wave2-complete` → `hitl1-recorded` → `hitl2-recorded` → `readiness-passed`。完整 gate 集与序由 `workflows/manifest.json` 单一真相源定义。
+
 ## Post-Final Rerun Recovery
 
 | 工具 | 文件 | 说明 |
@@ -176,9 +181,54 @@ Logical `actor_execution` plus exact `work_id` and `receipt_nonce` guides which 
 | operate-artifact-persistence.mjs | cli/operate-artifact-persistence.mjs | 对非-primary staging file 执行 generic CAS + atomic persist；安全 non-primary `final/` Markdown 目标经 `node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs persist-final-report` 先做 Evidence Map backing admission 再 commit；primary Final 只经 `node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs publish-final-report --bundle <path> --source <retained-staging> [--feature <safe_snake_case>]` 分配 immutable base/global version、检查 Evidence Map submitted backing 并 no-clobber commit；quiescent `sweep` 复用记录 binding，不重新分配。它不授予 semantic support、submit、gate、handoff、delivery、quality 或 satisfaction authority |
 | persist-artifact | command_playbook/persist-artifact.md | Agent copyable 闭环：保留 staging → non-primary `persist` 或 admitted Final `publish-final-report`；崩溃后停止并发 persist → sweep；blocked 时按 named workspace/retained staging repair，retry the named operation，rerun sweep |
 
+> `persist-final-report` 的目标父目录需预先存在，否则报 `target_parent_missing`；先 `mkdir -p` 再运行。
+
 ## Canonical Topic State
 
 | 工具 | 文件 | 说明 |
 |------|------|------|
 | operate-topic-state.mjs | cli/operate-topic-state.mjs | `inspect|apply|recover` canonical topic identity/intent/layout；只写 `rb_plan.md` 与 listed UID-bound current seeds，不改 queue/profile/status/trace/artifacts/reference/history |
 | operate-topic-state | command_playbook/operate-topic-state.md | Agent 最短闭环：inspect → drain blocker或complete-target apply → exact recover → named style follow-up → inspect/audit |
+
+> evidence-bearing 投影条目（`apply --context wave_projection`）要么指向具体 `reference/*.md` ref，要么用 defers 处置（`relationship: "defers", refs: ["none"], status: "deferred"`），否则报 `projection_entry_concrete_ref_missing`。
+
+## Copyable Contract Templates
+
+下面三套 contract 由 Engine 用 Zod `.strict()` 校验，形状不对即报错。这里给最小正例。Source of Record 仍以引擎源码为准；模板是 copyable 正例，不是第二真相源。
+
+### Queue result（operate-queue.mjs complete）
+
+`complete` 吃的不是 enqueue task card，而是 result.json：
+
+```json
+{
+  "queue_item_id": "wave2-synthesis-r6",
+  "status": "done",
+  "receipt": "file:artifacts/wave2/synthesis.md",
+  "summary": "synthesized wave2 findings",
+  "writes": ["artifacts/wave2/synthesis.md"]
+}
+```
+
+- `status` 固定 `"done"`；`receipt`/`summary`/`writes` 可省略，但多余字段会报 `unrecognized_keys`（`QueueResultSchema` 使用了 `.strict()`）。
+- `receipt` 前缀语义：`file:`（文件存在）、`json:`（文件存在且为合法 JSON）、`queue:`（队列字段值匹配）、`trace:`（trace event 存在）、`work_unit:`（由 `operate-work-unit submit` 校验，不能经 `operate-queue complete` 直接过）。
+- Source of Record：`DEEP_RESEARCH_HARNESS/engine/queue-manager-core.mjs` `QueueResultSchema`。
+
+### Projection packet（operate-topic-state apply --context wave_projection）
+
+- wave0/wave1 evidence-bearing 条目：`source_identity: { "kind": "submitted_work", "work_id": "<work_id>" }`。
+- wave2 evidence-bearing 条目：`source_identity: { "kind": "finding", "finding_id": "<W2F-xxx>" }`，且 `entry_id === finding_id`（正则 `W2F-\d{3,}`）。
+- evidence-bearing 条目必须给 concrete `reference/*.md` ref，或用 defers 处置（`relationship: "defers", refs: ["none"], status: "deferred"`），否则报 `projection_entry_concrete_ref_missing`。
+- Source of Record：`DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs` 与对应 accepted schema。
+
+### Evidence Map（publish-final-report backing admission）
+
+标准 Markdown 表，恰好一列 `finding id`、一列 `declared key finding`、一列 `submitted backing`（列名大小写不敏感）：
+
+| Finding ID | Declared Key Finding | Submitted Backing |
+| --- | --- | --- |
+| W2F-001 | ... | [reference/...](../reference/...) |
+
+- backing 必须是指向已提交 `reference/*.md` 或 `artifacts/wave1/*/evidence-summary.md` 的 markdown link（`[text](rel‑path)`），否则报 `evidence_map_backing_link_missing`。
+- 缺少或多余列会报 `evidence_map_columns_invalid`。
+- Source of Record：`DEEP_RESEARCH_HARNESS/engine/helpers/final-delivery-backing.mjs`。

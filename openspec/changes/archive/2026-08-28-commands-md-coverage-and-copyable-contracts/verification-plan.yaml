@@ -1,0 +1,94 @@
+schema_version: verification-routing/v1
+change: commands-md-coverage-and-copyable-contracts
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The command-index copyability/marker regression and the content-drift
+      guard directly read COMMANDS.md without a runtime bundle, giving
+      deterministic node:test verdicts on the edited surface.
+  integration:
+    status: selected
+    rationale: >-
+      The canonical-topic-state and artifact-persistence Markdown contract
+      tests read COMMANDS.md alongside independently owned surfaces, giving
+      deterministic integration verdicts on the edited rows.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No workflow-scale runtime lifecycle, temporary bundle, or production
+      checkpoint behavior changes.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change makes no claim about real Playbook-Agent or Subject-Agent
+      behavior and does not run a real Agent experiment.
+claims:
+  - id: command-index-copyability-marker-regression
+    statement: >-
+      ACS-003: COMMANDS.md retains its audience/HITL/Final/trigger markers and
+      its command-string copyability contract after adding the operate-queue
+      lifecycle row, inline gotchas, and the Copyable Contract Templates
+      appendix.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/command-contract-docs.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: command-index-content-drift-guard
+    statement: >-
+      RET-006: COMMANDS.md documents only real operate-queue dispatched verbs
+      and adds no dangling path reference; the content-drift guard stays green.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/check-content-drift.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: canonical-topic-state-projection-contract
+    statement: >-
+      The operate-topic-state row and the copyable projection-packet template
+      preserve the accepted canonical-topic-state contract (inspect / apply /
+      recover boundaries, concrete-ref-or-defers projection rule).
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/canonical-topic-state-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: artifact-persistence-evidence-map-contract
+    statement: >-
+      The Artifact Persistence row, the persist-final-report target-directory
+      gotcha, and the Evidence Map three-column template preserve the accepted
+      artifact-persistence and final-delivery-backing contracts.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/artifact-persistence-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
