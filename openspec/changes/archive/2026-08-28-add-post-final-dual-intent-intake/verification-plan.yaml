@@ -1,0 +1,88 @@
+schema_version: verification-routing/v1
+change: add-post-final-dual-intent-intake
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The change's observable contract is static documentation content on two
+      Agent-facing framework surfaces; deterministic proof is static doc-lock
+      assertion plus the existing command-contract regression staying green.
+      No schema, enum, resolver, CLI, or multi-phase chain behavior changes.
+  integration:
+    status: not_applicable
+    rationale: >-
+      No CLI invocation, disposable bundle, or cross-module contract changes;
+      the change edits Markdown guidance only.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No multi-phase lifecycle chain behavior changes; rerun/recovery
+      mechanics are untouched and already locked by existing coverage.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change makes no claim about real Agent research, judgment, or tool
+      behavior; navigation and intake guidance quality is observed in the next
+      real rerun cycle, not claimed here.
+claims:
+  - id: acs006-intent-routing-aid-present
+    statement: >-
+      ACS-006: DEEP_RESEARCH_HARNESS/COMMANDS.md carries a post-final
+      iteration intent routing aid that maps the evidence-expanding wording
+      family to command_playbook/post-final-recovery.md and the presentation
+      wording family to in-place Final refinement plus the persist-artifact
+      path, directs mixed or ambiguous wording to the existing Agent-owned
+      classification boundary, and declares itself navigation-only.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/post-final-intent-intake-docs.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: pof005-dig-list-intake-section-present
+    statement: >-
+      POF-005: DEEP_RESEARCH_HARNESS/command_playbook/post-final-recovery.md
+      carries an "Intake from a dig list" section that directs the Agent to
+      read the latest _diagnostics/ next-dig-list, propose one bounded scope
+      by its priority tiers, let the user correct it through the existing
+      correction step, reference selected item identifiers inside the
+      existing requested_scope/reason strings, exclude declared dead holes by
+      default, keep the list non-authority, and leave the ordinary request
+      contract unchanged when no list exists.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/post-final-intent-intake-docs.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: acs003-command-contract-regression-green
+    statement: >-
+      ACS-003: after the two documentation edits, the existing
+      command-contract documentation regression
+      (tests/engine/command-contract-docs.test.mjs) stays green — the added
+      text preserves the audience statement, helper markers, and drift-phrase
+      contract.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/command-contract-docs.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

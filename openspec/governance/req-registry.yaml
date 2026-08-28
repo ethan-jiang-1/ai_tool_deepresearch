@@ -130,6 +130,7 @@ ACS-002: agent-command-surface — Entry docs distinguish one-time human trigger
 ACS-003: agent-command-surface — Existing static documentation regression locks stable Agent-owned helper markers and known audience/HITL drift phrases without prose classification
 ACS-004: agent-command-surface — Phase-boundary terminology is discoverable and aligned with guidance terminology canon
 ACS-005: agent-command-surface — Existing bundle continuation has one Agent-owned playbook
+ACS-006: agent-command-surface — Command index maps post-final iteration intent families to their existing legal routes as navigation only
 
 # agent/agent-context-routing
 ACR-001: agent-context-routing — Root CONTEXT.md preserves canonical terminology boundaries without becoming behavior, executable, or runtime authority
@@ -605,6 +606,7 @@ POF-001: post-final-recovery — Terminal Final eligibility, retained post-final
 POF-002: post-final-recovery — Prepared profile/event transaction uses event-last exact roll-forward recovery
 POF-003: post-final-recovery — Engine-written Final-lineage-bound exceptional handoff reuses existing HITL2 rerun owners
 POF-004: post-final-recovery — Focus-bearing post-Final requests retain wording and interpretation in the existing reason
+POF-005: post-final-recovery — Playbook intake guidance structures bounded rerun scope formation from a non-authority diagnostics dig-list
 
 # research/pre-research-experiments
 PRE-001: pre-research-experiments — Current happy-path pre-research case uses real gates and native completion

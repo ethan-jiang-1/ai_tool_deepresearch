@@ -160,6 +160,15 @@ Logical `actor_execution` plus exact `work_id` and `receipt_nonce` guides which 
 | operate-post-final-recovery.mjs | cli/operate-post-final-recovery.mjs | `inspect|apply|recover`；只接受closed `post_final_rerun` retained request，event-last提交profile+one exceptional handoff，崩溃后exact roll-forward；不是gate pass、permission token或generic state mutation |
 | post-final-recovery | command_playbook/post-final-recovery.md | Agent copyable完整链：inspect → retained request → apply/exact recover → enter rerun → `advance-status --to hitl2_recorded` → `check-reentry --at hitl2_recorded` → existing C3/rerun pipeline |
 
+### Post-Final 迭代意图路由（navigation only）
+
+用户在已完成 Final 交付的 bundle 上表达迭代诉求时，先按措辞族找到既有路由再执行。示例词只是导航线索，不是分类 enum：语义边界（evidence-expanding vs presentation）仍由 Final Agent 判定，混合或含混请求先问最小澄清，不做自动选路。
+
+- **evidence-expanding 族**（示例：再挖一轮 / 继续挖 / rerun / 需要新来源、新 Topic、新证据或新研究结论）→ `command_playbook/post-final-recovery.md`（本节 `operate-post-final-recovery.mjs` 完整链；有 `_diagnostics/` next-dig-list 时按该 playbook 的 dig-list intake 成形 scope）。
+- **presentation 族**（示例：整理 / 重写 / 自包含版 / 换个读者版本 / 只改结构、篇幅、措辞、强调或证据呈现）→ `workflows/nodes/phases/phase-final.md` 就地 refinement + `command_playbook/persist-artifact.md` 发布路径；不建 C5 request。
+
+本映射是导航文本：不改变上方受众声明与责任边界，不创设第二条路由、checkpoint 或权限；映射内不复制命令行（可执行命令以各工具行与 playbook 为准）。
+
 ## Artifact Persistence
 
 | 工具 | 文件 | 说明 |

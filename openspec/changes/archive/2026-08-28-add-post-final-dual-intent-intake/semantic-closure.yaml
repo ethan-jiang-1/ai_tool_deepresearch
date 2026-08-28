@@ -1,0 +1,16 @@
+schema_version: semantic-closure/v1
+change: add-post-final-dual-intent-intake
+status: not_applicable
+reason: >-
+  Guidance-only change: it adds navigation text (post-final intent-family to
+  route mapping) to DEEP_RESEARCH_HARNESS/COMMANDS.md and intake guidance
+  (diagnostics dig-list scope formation) to
+  DEEP_RESEARCH_HARNESS/command_playbook/post-final-recovery.md. No Engine
+  fact, schema, checker, state, or verdict is introduced, changed, or
+  duplicated. The research.scope-and-rerun-intent family conclusion (current
+  scope / rerun intent) remains resolved solely by the existing
+  rb_profile.yaml HITL2 projection, the post_final_reentry event, and the
+  existing request/reason/scope contract; the new guidance only shapes how the
+  Agent drafts that existing input before apply. The cli.exit-code-convention
+  family is untouched because no CLI behavior or inventory factual claim
+  changes.

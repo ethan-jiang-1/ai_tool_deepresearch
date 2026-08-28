@@ -31,6 +31,29 @@ Read `verdict`, `reason_code`, `facts.request_bindings`, and the single `next_ac
 - `unchanged`: continue from the returned accepted stage action.
 - `blocked`: resolve only the named owner/boundary. If the rerun limit is exhausted, ask only whether to start a new bundle; after that decision execution returns to the Agent.
 
+## 1.5 Intake From A Dig List
+
+When the current run bundle's `_diagnostics/` contains an Agent-authored
+next-dig-list (a cross-round topic-intake list carried forward from a
+delivered report; non-authority diagnostic material), form the rerun scope
+from it before drafting the retained request:
+
+1. Read the latest next-dig-list. When no such list exists, skip this
+   section and keep the ordinary §2 request contract unchanged.
+2. Propose one bounded scope organized by the list's own priority tiers and
+   reference the selected item identifiers (for example `A1-A3 + AMD§1-2`).
+   Items the list itself declares as evidence-nonexistent or no-reinvestment
+   dead holes stay excluded by default unless the user explicitly reopens
+   them.
+3. The user owns the scope/risk decision. After the user corrects the
+   proposal, write the finally selected item identifiers inside the existing
+   `requested_scope` and, when the reason carries a focus, `reason` strings.
+   Add no new request field and no label parser; the two-part labelled
+   reason contract of §2 is unchanged.
+4. The list is not authority: its presence creates no rerun intent, expands
+   no permission, and changes no inspect/apply eligibility or lineage
+   validation. The Engine keeps validating only the existing request shape.
+
 ## 2. Retain Request
 
 If the accepted evidence-expanding request adds or revises a research focus,
