@@ -226,6 +226,7 @@ HIU-003: hitl-ux — HITL2 research review with one executable recommendation an
 HIU-004: hitl-ux — Chinese-first interaction convention for all user-visible HITL prompts
 HIU-005: hitl-ux — Uncertain users receive concrete must-answer proposals without hidden sentinel or parser state
 HIU-006: hitl-ux — Semantic-progress guidance for stalled HITL discussion without fixed-round counters
+HIU-007: hitl-ux — HITL2 research review surfaces declared-focus coverage
 
 # agent/local-deepseek-claude-launcher
 LDC-001: local-deepseek-claude-launcher — Repo-owned launcher and shared pure invocation plan retain one root configuration authority

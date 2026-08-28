@@ -21,6 +21,9 @@ authority: exact-text
 **仍然不足或需要谨慎的地方是**：
 {DYNAMIC: gaps_and_limitations}
 
+**本轮已声明的重点及其承接情况**：
+{DYNAMIC: declared_focus_and_coverage}
+
 **当前推荐**：{DYNAMIC: one_available_recommendation}
 
 **推荐理由与影响**：{DYNAMIC: recommendation_reason_and_effect}

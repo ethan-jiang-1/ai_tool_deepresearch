@@ -1,0 +1,30 @@
+schema_version: verification-routing/v1
+change: surface-declared-focus-at-hitl2
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: 无 Engine/schema/纯函数变更；focus_coverage 校验器不变。
+  integration:
+    status: selected
+    rationale: 静态加载 brief/hitl2.md 与 phase-hitl2.md 可证明指引确实新增了 focus-coverage 呈现组件，而不声称 Agent 会遵循 prose。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 不改 chain/transition/状态机，无 workflow 确定性契约变化。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 本 change 是可见性呈现契约，指定 HITL2 review 必须列出 focus-coverage 映射；真实 Agent 是否遵循属 HITL2 用户判断点，不声称可由本 change 证明。
+claims:
+  - id: hitl2-review-surfaces-focus-coverage
+    statement: "brief/hitl2.md 入口 Prompt 与 phase-hitl2.md §3a 明确要求 HITL2 review 列出每个已声明 focus 的当前 focus_coverage 结果（covered/partial/blocked/not declared），且不新增 Gate/field/weight/quota。"
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/iterative-interaction-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

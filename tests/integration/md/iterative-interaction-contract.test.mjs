@@ -92,10 +92,13 @@ describe('iterative research interaction contract', () => {
     const phase = read(HITL2_PHASE);
     assert.match(brief, /目前证据足够回答/);
     assert.match(brief, /不足|谨慎/);
+    assert.match(brief, /本轮已声明的重点及其承接情况|declared_focus_and_coverage/);
     assert.match(brief, /我推荐|当前推荐|建议的下一步/);
     assert.match(brief, /理由|影响/);
     assert.match(brief, /自然语言|直接说|按.*(?:建议|这个)/);
     assert.match(phase, /evaluateRerunAvailability/);
+    assert.match(phase, /focus_coverage/);
+    assert.match(phase, /not declared/);
     assert.match(phase, /includeNextIncrement:\s*true/);
     assert.match(phase, /loadGateDefinition\(['"]rerun-ready['"]\)/);
     assert.match(phase, /readBundleProfile/);

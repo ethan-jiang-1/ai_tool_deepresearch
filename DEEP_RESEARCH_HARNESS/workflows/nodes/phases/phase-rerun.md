@@ -97,7 +97,7 @@ HITL2 `user_decision: rerun` 后，Agent 用正常 HITL2 gate handoff或唯一ac
 | 用户要求改变已有 topic 的 canonical intent | `update_intent` | 保留 UID/id/slug/reference，在同一 candidate 中更新 intent 与方向 guidance |
 | 用户只要求已有 topic 改变搜索/深挖方向 | `set_rerun_direction` | 保持 canonical intent 不变，在同一 candidate 中替换 direction |
 | 用户要求新增一个之前不存在的 topic | `add_topic` | 原子提交 registry、canonical skeleton 与 direction |
-| 用户要求 remove/rename/renumber/path move | unsupported C3B | 保留现状并报告 missing capability；禁止直接多文件编辑 |
+| 用户要求 remove/rename/renumber/path move | `mutate_layout`（rename/reorder/renumber/safe-remove）+ 新 bundle（已研究 topic 剔除） | rename/reorder/renumber 走完整 `mutate_layout` target；safe-remove 仅限无依赖、无历史 topic；已研究 topic 的剔除 = 起新 bundle（不原地 retire）；path move 不支持（历史路径原位）；禁止直接多文件编辑 |
 
 **对比推断示例**：
 

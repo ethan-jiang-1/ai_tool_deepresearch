@@ -1,0 +1,58 @@
+schema_version: verification-routing/v1
+change: raise-rerun-limit-and-fix-removal-guidance
+test_classes:
+  unit:
+    status: selected
+    rationale: evaluateRerunAvailability 的形状/边界行为（malformed rule、missing parent、includeNextIncrement 显式布尔）不受数值变化影响，需回归证明单一 evaluator 语义不变。
+  integration:
+    status: selected
+    rationale: 边界值可观察行为由 production gate definition + gate CLI 决定，需读 production-parsed operator/value 证明 <33 通过、==33 与 >33 失败；phase-rerun.md 指引修正是静态 Markdown 契约，可由 MD 契约测试锁定。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 不改 chain/transition、不改 workflow 状态机；rerun gate 的链内回归（post-final-rerun-lineage-continuity）不依赖边界数值，value 变化不影响其结论。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 边界值是 Engine 强制事实，B1-a 只修 Markdown 文本使其与 accepted spec 对齐，不声称 Agent 会遵循 prose；无 Agent-flow 行为可证。
+claims:
+  - id: rerun-boundary-raised-to-32
+    statement: "gate-rerun-ready.definition.json 的 rerun_count_valid 规则使用 operator=less_than 且 value=33（最多 32 次），failure_message 描述 maximum of 32；boundary 回归读 production definition 证明 <33 通过、==33 与 >33 失败，且不复制数字到独立常量。"
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-rerun-ready.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rerun-availability-evaluator-shape-unchanged
+    statement: "evaluateRerunAvailability 继续只读 active definition 的 rule.value 为 exclusiveLimit，计算 available = evaluatedCount < exclusiveLimit，且对 malformed rule / missing parent / 非布尔 includeNextIncrement fail closed。"
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/rerun-availability.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rerun-removal-guidance-aligned
+    statement: "phase-rerun.md Stage 2 不再把 rename/reorder/renumber/safe-remove 标为 unsupported C3B，而是指向 mutate_layout 完整语义（rename/reorder/renumber 支持、safe-remove 仅限无依赖无历史 topic、已研究 topic 剔除 = 新 bundle），与 operate-topic-state.md 及 accepted spec 一致；该契约由扩展后的 MD 契约测试锁定（doesNotMatch /unsupported C3B/、match /safe-remove|新 bundle/）。"
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/topic-rewrite-fixtures-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

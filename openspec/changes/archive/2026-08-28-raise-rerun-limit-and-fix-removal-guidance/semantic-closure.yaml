@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: raise-rerun-limit-and-fix-removal-guidance
+status: not_applicable
+reason: >-
+  This change only raises the single-owner numeric boundary value inside
+  gate-rerun-ready.definition.json (11 -> 33) and corrects a stale Markdown
+  guidance row in phase-rerun.md. It introduces no new deterministic fact
+  family and changes no existing family's conclusion shape; rerun availability
+  remains interpreted solely by evaluateRerunAvailability (REI-003
+  single-evaluator invariant).

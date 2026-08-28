@@ -15,8 +15,8 @@
       "check": "rerun_count_limit",
       "target": "rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count",
       "operator": "less_than",
-      "value": 11,
-      "failure_message": "rerun_count has reached the maximum of 10 rerun cycles. The rerun path is blocked. Suggest the user accept current results or start a new Deep Research.",
+      "value": 33,
+      "failure_message": "rerun_count has reached the maximum of 32 rerun cycles. The rerun path is blocked. Suggest the user accept current results or start a new Deep Research.",
       "finding": { "source": "checker" }
     },
     {

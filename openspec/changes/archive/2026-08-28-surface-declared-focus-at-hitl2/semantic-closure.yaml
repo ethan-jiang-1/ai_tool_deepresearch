@@ -1,0 +1,9 @@
+schema_version: semantic-closure/v1
+change: surface-declared-focus-at-hitl2
+status: not_applicable
+reason: >-
+  This change only adds an HITL2 review-presentation component that surfaces
+  already-existing focus_coverage outcomes; it introduces no new deterministic
+  fact family and changes no existing family's conclusion shape. focus_coverage
+  validation and absence semantics remain owned by wave-depth-contracts and
+  wave1-intake.
