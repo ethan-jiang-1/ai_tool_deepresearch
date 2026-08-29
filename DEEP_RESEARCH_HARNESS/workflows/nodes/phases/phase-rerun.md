@@ -205,7 +205,7 @@ Gate fail 时按 structured hint 处理并保持当前 checkpoint failed。`user
 
 通用 anti-cheating 禁令见 `shared/shared-anti-cheating-rules.md`（已在 requires）；本 phase 特有条目如下（与 §3 重复的 MUST NOT 删除 artifacts / direct-edit registry/seed / 重新解析 profile / 绕过 handoff 加载 seed-topics 已并入 §3）：
 
-- **MUST NOT direct path-move historical outputs**：rename/reorder/renumber/safe-remove只使用existing C3B complete `mutate_layout` target；不得创建parallel addendum namespace
+- **MUST NOT direct path-move historical outputs**：rename/reorder/renumber/safe-remove只使用existing TopicTreeEvolution complete `mutate_layout` target；不得创建parallel addendum namespace
 - **MUST NOT 把 `post_final_reentry` 称为gate pass或permission**：它只记录accepted HITL2 rerun semantics并复用本phase现有owners
 - **MUST 读当前 rerun_count 后再递增**：若字段缺失则初始化为 1，若已有值则 +1。MUST NOT 直接覆盖为固定值
 - **MUST NOT 在无 rationale 或 rationale 为空时写 ## 本轮重跑方向**：方向 hints 必须来自用户明确的意图

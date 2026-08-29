@@ -163,7 +163,7 @@ Logical `actor_execution` plus exact `work_id` and `receipt_nonce` guides which 
 | 工具 | 文件 | 说明 |
 |------|------|------|
 | operate-post-final-recovery.mjs | cli/operate-post-final-recovery.mjs | `inspect|apply|recover`；只接受closed `post_final_rerun` retained request，event-last提交profile+one exceptional handoff，崩溃后exact roll-forward；不是gate pass、permission token或generic state mutation |
-| post-final-recovery | command_playbook/post-final-recovery.md | Agent copyable完整链：inspect → retained request → apply/exact recover → enter rerun → `advance-status --to hitl2_recorded` → `check-reentry --at hitl2_recorded` → existing C3/rerun pipeline |
+| post-final-recovery | command_playbook/post-final-recovery.md | Agent copyable完整链：inspect → retained request → apply/exact recover → enter rerun → `advance-status --to hitl2_recorded` → `check-reentry --at hitl2_recorded` → existing TopicTreeEvolution/rerun pipeline |
 
 ### Post-Final 迭代意图路由（navigation only）
 
