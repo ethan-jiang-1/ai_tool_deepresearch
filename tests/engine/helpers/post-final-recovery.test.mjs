@@ -104,7 +104,7 @@ describe('post-final recovery helper', { concurrency: false }, () => {
     assert.match(rejected.reason, /non_contiguous_revisions/);
   });
 
-  it('short-circuits C2, C3, and accepted C5 workspace owners', () => {
+  it('short-circuits ResearchConfigLock, TopicTreeEvolution, and accepted ReopenResearchPass workspace owners', () => {
     const c2 = createTerminalFinalBundle(root, 'c2');
     mkdirSync(join(c2, '_diagnostics', 'artifact-persistence', 'op'), { recursive: true });
     writeFileSync(join(c2, '_diagnostics', 'artifact-persistence', 'op', 'operation.json'), '{}');

@@ -202,7 +202,7 @@ The terminal header SHALL require this order:
 - when Final entry admitted an empty canonical primary inventory, publish and
   present the bundle base after the exact Readiness status synchronization and
   before any question or wait;
-- when a newer route-bound Final load admitted its retired C5 prior inventory and
+- when a newer route-bound Final load admitted its retired ReopenResearchPass prior inventory and
   the Readiness status window is synchronized with zero proven append, publish
   and present global `latest + 1` before any question or wait;
 - when a primary report is bound to the current lineage, present or reground in

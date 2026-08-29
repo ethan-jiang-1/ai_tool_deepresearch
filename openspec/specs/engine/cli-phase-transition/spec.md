@@ -117,7 +117,7 @@ from filename, mtime, directory order, report content, or chat.
 
 For a later Readiness-to-Final handoff descended from one accepted
 `post_final_reentry` lineage, the shared handoff evaluation SHALL return that
-unique retired C5 event as the entry witness. Before writing the new Final load,
+unique retired ReopenResearchPass event as the entry witness. Before writing the new Final load,
 the current deterministic sorted inventory of safe regular files under `final/`
 SHALL reproduce `previous_final.final_inventory_sha256` exactly. A premature
 canonical append, supplementary-file drift, unsafe entry, unreadable inventory,
@@ -130,7 +130,7 @@ separate facts.
 If an earlier route-bound legal Final load exists but the new authorized Final
 handoff cannot be bound to exactly one accepted ReopenResearchPass descendant lineage, entry
 SHALL block as unsupported lineage. It SHALL not reuse the first-entry empty rule,
-select an older C5 event by recency guess, or treat an existing report as delivery
+select an older ReopenResearchPass event by recency guess, or treat an existing report as delivery
 for the new handoff.
 
 The Final inventory admission SHALL apply only before the first bound load for
@@ -159,9 +159,9 @@ The accepted handoff vocabulary SHALL contain exactly two Engine-written classes
 - the existing latest legal passed `gate_attempt` with non-null `next`; and
 - one `post_final_reentry` event produced by the accepted post-final recovery operation, whose closed action is `post_final_rerun`, whose recorded HITL2 decision outcome is `rerun`, and whose target/window are resolved through the existing transition table and manifest helpers.
 
-Handoff selection SHALL compare structurally valid authorities from both classes in append-only trace order rather than let a C5-specific selector compete with the existing gate selector. A valid post-final event becomes the latest handoff only after its Final lineage and route resolution pass; a later valid normal gate handoff or newer valid post-final lineage supersedes it for future entry. Failed gate attempts, arbitrary events and partial lookalikes SHALL NOT become a newer handoff authority merely because they appear later.
+Handoff selection SHALL compare structurally valid authorities from both classes in append-only trace order rather than let a ReopenResearchPass-specific selector compete with the existing gate selector. A valid post-final event becomes the latest handoff only after its Final lineage and route resolution pass; a later valid normal gate handoff or newer valid post-final lineage supersedes it for future entry. Failed gate attempts, arbitrary events and partial lookalikes SHALL NOT become a newer handoff authority merely because they appear later.
 
-The exceptional event SHALL bind its request digest, operation id, previous readiness->Final handoff/load lineage, expected profile/terminal-status/final-inventory facts, transition-table resolution and derived target status window. One structural parser SHALL produce immutable event facts; closed stage predicates SHALL add the mutable checks needed by entry, status sync and completed rerun preflight. Before phase entry it SHALL be accepted only when those facts remain current, no accepted ReopenResearchPass workspace remains, re-resolving HITL2 outcome `rerun` produces the recorded target/window, the event is not superseded, `rb_profile.yaml` matches the committed recovery profile, and `rb_status.json` remains the terminal Final window. After a route-bound rerun `load_complete` exists, `advance-status` SHALL validate the immutable event and that exact load witness before writing the derived `hitl2_recorded -> rerun_ready` window. Downstream consumers SHALL then require event+load+phase_transition+current rerun window without reapplying the terminal pre-entry predicate. Arbitrary trace text, C5-local/caller-supplied target nodes, `human-directed` flags and hand-written gate attempts SHALL NOT become handoff authority.
+The exceptional event SHALL bind its request digest, operation id, previous readiness->Final handoff/load lineage, expected profile/terminal-status/final-inventory facts, transition-table resolution and derived target status window. One structural parser SHALL produce immutable event facts; closed stage predicates SHALL add the mutable checks needed by entry, status sync and completed rerun preflight. Before phase entry it SHALL be accepted only when those facts remain current, no accepted ReopenResearchPass workspace remains, re-resolving HITL2 outcome `rerun` produces the recorded target/window, the event is not superseded, `rb_profile.yaml` matches the committed recovery profile, and `rb_status.json` remains the terminal Final window. After a route-bound rerun `load_complete` exists, `advance-status` SHALL validate the immutable event and that exact load witness before writing the derived `hitl2_recorded -> rerun_ready` window. Downstream consumers SHALL then require event+load+phase_transition+current rerun window without reapplying the terminal pre-entry predicate. Arbitrary trace text, ReopenResearchPass-local/caller-supplied target nodes, `human-directed` flags and hand-written gate attempts SHALL NOT become handoff authority.
 
 Successful stdout SHALL remain Agent-readable Markdown with stable markers and
 no mixed JSON status envelope. By default, it SHALL be a bounded entry
@@ -608,7 +608,7 @@ The audit SHALL expose a closed diagnostic outcome vocabulary so downstream advi
 
 #### Scenario: Post-final event pending load is explicit
 
-- **WHEN** a valid event-last C5 commit exists under unchanged terminal Final status but `enter-phase` has not yet written its route-bound load
+- **WHEN** a valid event-last ReopenResearchPass commit exists under unchanged terminal Final status but `enter-phase` has not yet written its route-bound load
 - **THEN** the audit SHALL report `post_final_reentry_pending_load`
 - **AND** its only next action SHALL be the exact rerun `enter-phase` command
 

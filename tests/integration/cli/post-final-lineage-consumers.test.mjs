@@ -14,7 +14,7 @@ import { buildRecoverySummary } from '../../../DEEP_RESEARCH_HARNESS/engine/help
 import { createTerminalFinalBundle, requestFromInspection } from './post-final-recovery-fixture.mjs';
 
 const REPO_ROOT = resolve('.');
-const C5_CLI = resolve('DEEP_RESEARCH_HARNESS/cli/operate-post-final-recovery.mjs');
+const REOPEN_CLI = resolve('DEEP_RESEARCH_HARNESS/cli/operate-post-final-recovery.mjs');
 const STYLE_CLI = resolve('DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs');
 const roots = [];
 
@@ -67,7 +67,7 @@ function enterSynchronizedLineage(name) {
   const inspection = inspectPostFinalRecovery({ bundlePath: bundle });
   const requestPath = join(root, `${name}-request.json`);
   writeFileSync(requestPath, JSON.stringify(requestFromInspection(inspection)));
-  run([C5_CLI, 'apply', '--bundle', bundle, '--input', requestPath]);
+  run([REOPEN_CLI, 'apply', '--bundle', bundle, '--input', requestPath]);
   execFileSync(process.execPath, ['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md'], { cwd: REPO_ROOT });
   run(['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
   return { bundle, name, eventProfile: parseYaml(readFileSync(profilePath, 'utf8')), profilePath };
@@ -323,7 +323,7 @@ describe('shared post-final lineage stage and owner', () => {
     const beforeStatus = readFileSync(statusPath, 'utf8');
     const beforeTrace = readFileSync(tracePath, 'utf8');
     const blocked = JSON.parse(enterFinal(drifted, true));
-    assert.match(blocked.reason, /Final primary inventory is invalid|Final inventory drifted from the accepted (?:C5|ReopenResearchPass) prior-inventory digest/);
+    assert.match(blocked.reason, /Final primary inventory is invalid|Final inventory drifted from the accepted ReopenResearchPass prior-inventory digest/);
     assert.equal(readFileSync(statusPath, 'utf8'), beforeStatus);
     assert.equal(readFileSync(tracePath, 'utf8'), beforeTrace);
 

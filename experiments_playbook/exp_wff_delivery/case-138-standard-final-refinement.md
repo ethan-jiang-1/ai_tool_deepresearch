@@ -2,7 +2,7 @@
 schema: command-experiment/v2
 experiment: wff-delivery
 case: case-138-standard-final-refinement
-case_goal: "Observe one real Subject session deliver an empty Final, make two same-lineage presentation revisions, leave the satisfaction turn without runtime mutation, then accept one explicit evidence-expansion C5 request."
+case_goal: "Observe one real Subject session deliver an empty Final, make two same-lineage presentation revisions, leave the satisfaction turn without runtime mutation, then accept one explicit evidence-expansion ReopenResearchPass request."
 verdict_mode: all
 required_checks: [case-138-final-refinement]
 bundle_roles: [verdict]
@@ -50,7 +50,7 @@ quality, user satisfaction, or general intent-classification accuracy.
 | --- | --- |
 | Fixture boundary | Setup-only legal Final entry, one supplied finding/backing reference, empty primary inventory |
 | Subject execution | One real authenticated Subject Agent session, five supplied turns |
-| Production boundaries | `publish-final-report`, Final inventory resolver, and existing C5 inspect/apply |
+| Production boundaries | `publish-final-report`, Final inventory resolver, and existing ReopenResearchPass inspect/apply |
 | Network | Forbidden for this case |
 | Verdict source | Retained Subject prompt/transcript/result plus per-turn adapter observation and root trace |
 | Does not prove | Report improvement, generic feedback classification, genuine user satisfaction, or rerun completion |
@@ -125,7 +125,7 @@ const pass = result.status === 'completed'
 recordCheck(`${bundle}/rb_trace.jsonl`, {
   gate: 'case-138-final-refinement',
   passed: pass,
-  detail: 'retained native Subject and deterministic observer facts bind the five-turn Final/C5 procedure only',
+  detail: 'retained native Subject and deterministic observer facts bind the five-turn Final/ReopenResearchPass procedure only',
 });
 JS
   EXTRA_ARGS+=(

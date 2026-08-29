@@ -2,7 +2,7 @@
 schema: command-experiment/v2
 experiment: iterative-interaction
 case: case-717-heavy-multi-rerun-intent-carry-through
-case_goal: "Two fresh real Subject contexts carry an accepted HITL1 baseline through a normal HITL2 rerun and an evidence-expanding post-Final C5 rerun, preserving immutable revision history while only the newest cumulative intent drives current downstream work."
+case_goal: "Two fresh real Subject contexts carry an accepted HITL1 baseline through a normal HITL2 rerun and an evidence-expanding post-Final ReopenResearchPass rerun, preserving immutable revision history while only the newest cumulative intent drives current downstream work."
 verdict_mode: all
 required_checks: [case-717-two-immutable-revisions, case-717-newest-cumulative-intent, case-717-current-intent-downstream, case-717-independent-context-evidence, case-717-production-routes]
 bundle_roles: [verdict]
@@ -37,7 +37,7 @@ each, with no retry:
 1. Context 1 receives an ordinary HITL2 research amendment and completes one
    normal rerun through the next Final report.
 2. Context 2 starts without context 1 chat, reads the same bundle at Final,
-   receives one evidence-expanding C5 request that replaces one amendment and
+   receives one evidence-expanding ReopenResearchPass request that replaces one amendment and
    withdraws another, and completes the second rerun through the next Final.
 
 Each runner enforces a 12-minute timeout, so the two Subject launches have a
@@ -102,7 +102,7 @@ must be the same bundle's current Final node; no prior chat is supplied. The
 fixed user request explicitly asks for new evidence, replaces the cash-flow
 comparison amendment with staged investment thresholds, and withdraws the
 regional-comparison amendment. The Subject decides how to carry that accepted
-meaning through the existing C5 and rerun owners.
+meaning through the existing ReopenResearchPass and rerun owners.
 
 ```bash
 B=$(node DEEP_RESEARCH_HARNESS/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
@@ -143,7 +143,7 @@ fi
 
 PASS requires two complete newest-first revisions, byte-identical retained
 revision 1, replacement/withdrawal only in revision 2's cumulative current
-set, distinct Subject session identities, normal HITL2 plus C5 production
+set, distinct Subject session identities, normal HITL2 plus ReopenResearchPass production
 routes, and current-round direction/task/coverage/synthesis/Final evidence that
 uses revision 2 without reactivating the withdrawn amendment.
 

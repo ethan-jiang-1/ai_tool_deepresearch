@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { boundFinalWitness, proveNewerFinalAppend } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs';
 import { readFinalReportInventory } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs';
 
-// POF-001 append-proof truth table. The witness is bound by a C5
+// POF-001 append-proof truth table. The witness is bound by a ReopenResearchPass
 // post_final_reentry event's previous_final; primary-scoped events bind the
 // primary-series digest in final_inventory_sha256 with an explicit basis
 // marker, legacy events bind the whole-tree digest on the same field.

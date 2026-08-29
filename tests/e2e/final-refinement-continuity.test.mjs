@@ -118,7 +118,7 @@ describe('Final refinement continuity through production CLIs', { timeout: 12000
     assert.equal(readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8'), beforeTrace);
   });
 
-  it('delivers the base, refines in place, and accepts C5 only after an explicit expansion request', () => {
+  it('delivers the base, refines in place, and accepts ReopenResearchPass only after an explicit expansion request', () => {
     const bundle = restoredBundle();
     const readiness = reachEmptyFinal(bundle);
     enterAndSynchronizeFinal(bundle, readiness);
@@ -147,8 +147,8 @@ describe('Final refinement continuity through production CLIs', { timeout: 12000
     assert.equal(trace.some((event) => event.event === 'phase_transition' && event.to === 'final'), false);
     assert.equal(Object.hasOwn(status, 'satisfaction'), false);
 
-    const beforeC5 = currentFinalOwner(bundle);
-    assert.equal(beforeC5.post_final_recovery.verdict, 'eligible');
+    const beforeReopen = currentFinalOwner(bundle);
+    assert.equal(beforeReopen.post_final_recovery.verdict, 'eligible');
     const inspection = inspectPostFinalRecovery({ bundlePath: bundle });
     assert.equal(inspection.verdict, 'eligible');
     const requestPath = join(root, 'final-continuity-evidence-expansion.json');

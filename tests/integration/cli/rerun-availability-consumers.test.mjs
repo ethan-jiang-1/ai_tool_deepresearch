@@ -14,7 +14,7 @@ import { createTerminalFinalBundle } from './post-final-recovery-fixture.mjs';
 const REPO_ROOT = resolve('.');
 const DEFINITION_PATH = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-rerun-ready.definition.json');
 const GATE_PATH = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/gates/check-gate-rerun-ready.mjs');
-const C5_PATH = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs');
+const REOPEN_PATH = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/engine/helpers/post-final-recovery.mjs');
 const roots = [];
 
 afterEach(() => {
@@ -58,15 +58,15 @@ function gateBundle(name, profileYaml) {
 }
 
 describe('rerun availability consumers', () => {
-  it('formal Gate and C5 import the shared evaluator with their explicit modes', () => {
+  it('formal Gate and ReopenResearchPass import the shared evaluator with their explicit modes', () => {
     const gateSource = readFileSync(GATE_PATH, 'utf8');
-    const c5Source = readFileSync(C5_PATH, 'utf8');
+    const reopenSource = readFileSync(REOPEN_PATH, 'utf8');
     assert.match(gateSource, /evaluateRerunAvailability/);
     assert.match(gateSource, /includeNextIncrement:\s*false/);
-    assert.match(c5Source, /evaluateRerunAvailability/);
-    assert.match(c5Source, /includeNextIncrement:\s*true/);
+    assert.match(reopenSource, /evaluateRerunAvailability/);
+    assert.match(reopenSource, /includeNextIncrement:\s*true/);
     assert.doesNotMatch(gateSource, /count\s*>=\s*rule\.value/);
-    assert.doesNotMatch(c5Source, /next_count\s*>=\s*facts\.guard\.limit/);
+    assert.doesNotMatch(reopenSource, /next_count\s*>=\s*facts\.guard\.limit/);
   });
 
   it('missing and unparseable profile mask dependent rationale/count hints', () => {
@@ -79,7 +79,7 @@ describe('rerun availability consumers', () => {
     }
   });
 
-  it('C5 preserves its validated envelope and exact definition snapshot while using next-count eligibility', () => {
+  it('ReopenResearchPass preserves its validated envelope and exact definition snapshot while using next-count eligibility', () => {
     const root = mkdtempSync(join(tmpdir(), 'rerun-availability-c5-'));
     roots.push(root);
     const definitionBefore = readFileSync(DEFINITION_PATH);

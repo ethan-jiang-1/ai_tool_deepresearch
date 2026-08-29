@@ -169,5 +169,5 @@ node DEEP_RESEARCH_HARNESS/host_tools/finalize-agent-experiment.mjs --context {{
 
 Stop after native completion. The Supervisor owns heavy health, audit,
 preservation, and any cancellation, error, or budget boundary before native
-completion. Do not retry this case. A later C3 is admissible only if retained
+completion. Do not retry this case. A later TopicTreeEvolution is admissible only if retained
 actual evidence shows the specified prohibited Subject behavior.

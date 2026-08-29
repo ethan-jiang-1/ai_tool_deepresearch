@@ -130,7 +130,7 @@ helper SHALL be a separate OpenSpec change.
 
 #### Scenario: Selected invocation behavior is not generalized to utilities
 
-- **WHEN** command documentation inventories the C3 code-`2` operation
+- **WHEN** command documentation inventories the TopicTreeEvolution code-`2` operation
   surfaces
 - **THEN** it SHALL name the selected commands rather than claim that every
   framework utility already shares their parser or output helper

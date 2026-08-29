@@ -26,7 +26,7 @@ Each style file SHALL contain at minimum:
 
 One side-effect-free `computeResearchStyleParams({ styleDefinition, topicCount })` SHALL be the sole deterministic computation of the complete profile-side parameter object. It SHALL accept a parsed style definition and a non-negative integer canonical topic count, validate the definition fields needed by this requirement, compute `wave0_shared_ref_total = base + per_topic * topicCount`, validate the complete result through the existing `ResearchStyleParamsSchema`, and return only that result. It SHALL perform no file I/O, profile mutation, finding construction, routing, state or trace write.
 
-`apply-research-style.mjs` SHALL remain the sole Agent-facing writer. It SHALL load the selected JSON definition, read committed canonical `rb_plan.md#/topic_registry.length`, call `computeResearchStyleParams`, and write the returned object. The C5 ownership/stage evaluator MAY call the same computation only to decide whether current `research_style_params` are the exact existing-owner projection from the event-bound `research_profile` and current committed canonical registry. C5 SHALL NOT use the current profile to select a different style, write the projection, create a second style authority, or turn this comparison into a general style-freshness Gate.
+`apply-research-style.mjs` SHALL remain the sole Agent-facing writer. It SHALL load the selected JSON definition, read committed canonical `rb_plan.md#/topic_registry.length`, call `computeResearchStyleParams`, and write the returned object. The ReopenResearchPass ownership/stage evaluator MAY call the same computation only to decide whether current `research_style_params` are the exact existing-owner projection from the event-bound `research_profile` and current committed canonical registry. ReopenResearchPass SHALL NOT use the current profile to select a different style, write the projection, create a second style authority, or turn this comparison into a general style-freshness Gate.
 
 #### Scenario: JS reads style parameters via CLI
 - **WHEN** `apply-research-style.mjs --bundle <path> --style claim_verification` executes
@@ -43,11 +43,11 @@ One side-effect-free `computeResearchStyleParams({ styleDefinition, topicCount }
 #### Scenario: Shared style computation fails closed
 - **WHEN** the style definition is missing a required value, contains an invalid parameter, or `topicCount` is not a non-negative integer
 - **THEN** `computeResearchStyleParams` SHALL reject without returning a partial projection
-- **AND** neither its CLI nor C5 consumer SHALL guess, coerce or persist replacement values
+- **AND** neither its CLI nor ReopenResearchPass consumer SHALL guess, coerce or persist replacement values
 
-#### Scenario: C5 validates rather than rewrites style projection
+#### Scenario: ReopenResearchPass validates rather than rewrites style projection
 - **WHEN** accepted post-final rerun lineage contains the same event-bound `research_profile` and current `research_style_params` exactly equal the shared computation over the current committed canonical registry
-- **THEN** the C5 ownership/stage evaluator MAY treat that exact parameter object as an existing-owner mechanical projection
+- **THEN** the ReopenResearchPass ownership/stage evaluator MAY treat that exact parameter object as an existing-owner mechanical projection
 - **AND** it SHALL perform no profile write and SHALL reject a different style name, wrong computed value or partial parameter object
 
 ### Requirement: Profile stores research style parameters after HITL1
@@ -76,7 +76,7 @@ style-projection root with the exact existing CLI command and same-check rerun.
 This validates freshness; it does not create a second style writer, a generic
 style controller, or a new user decision.
 
-When C5 lineage validation explains rerun-time style recomputation, current
+When ReopenResearchPass lineage validation explains rerun-time style recomputation, current
 `research_profile` SHALL equal the event-bound value and all fields outside
 `research_style_params` plus the separately sanctioned event-bound
 `rerun_count` delta SHALL remain semantically equal to the event-bound
@@ -86,8 +86,8 @@ exists, its only explainable shape is the complete exact object returned from
 the event-bound style definition and current committed canonical topic count.
 At current count, an exact projection differing from event-bound params SHALL
 project the existing phase-rerun count owner. This explanation SHALL not modify
-the C5 event, prepared manifest, profile schema, stage/action vocabulary, or
-downstream rule authority, and SHALL not turn C5 into a general style writer.
+the ReopenResearchPass event, prepared manifest, profile schema, stage/action vocabulary, or
+downstream rule authority, and SHALL not turn ReopenResearchPass into a general style writer.
 
 #### Scenario: HITL1 applies parameters via CLI
 
@@ -139,12 +139,12 @@ downstream rule authority, and SHALL not turn C5 into a general style writer.
 
 #### Scenario: Unrelated profile drift remains blocked
 - **WHEN** a post-final rerun profile changes `research_profile`, any unrelated profile field, or has style params equal to neither the unchanged event-bound object nor the exact current shared computation
-- **THEN** C5 and reentry lineage validation SHALL reject the profile as unexplained drift
+- **THEN** ReopenResearchPass and reentry lineage validation SHALL reject the profile as unexplained drift
 - **AND** a correct value in some other style field SHALL NOT mask that drift
 
 #### Scenario: Exact style projection before count increment is resumable
 - **WHEN** the existing style CLI has written an exact current projection that differs from event-bound params but `rerun_count` still equals the event-bound current count
-- **THEN** C5 and reentry SHALL retain the accepted lineage and expose the existing phase-rerun count increment owner
+- **THEN** ReopenResearchPass and reentry SHALL retain the accepted lineage and expose the existing phase-rerun count increment owner
 - **AND** they SHALL NOT add a stage, write the count or require topic mutation again
 
 ### Requirement: Gate count_floor reads dynamic threshold from profile

@@ -82,7 +82,7 @@ Exit codes SHALL NOT encode morale, encouragement, progress pressure, fatigue, o
 
 ### Selected Public Operation Parsing
 
-Only the following public operations use the C3 static invocation helper. For each, standalone `--help` or `-h` exits `0` before bundle/input/domain access. Any unlisted positional, duplicate, mixed, unknown, missing-value, or unusable explicit-path form exits `2` with a structured invocation/configuration root before an evaluator, writer, trace append, status mutation, or controls render runs. This is not a claim that every utility in this directory shares that parser.
+Only the following public operations use the canonical topic-state static invocation helper. For each, standalone `--help` or `-h` exits `0` before bundle/input/domain access. Any unlisted positional, duplicate, mixed, unknown, missing-value, or unusable explicit-path form exits `2` with a structured invocation/configuration root before an evaluator, writer, trace append, status mutation, or controls render runs. This is not a claim that every utility in this directory shares that parser.
 
 | CLI | Accepted non-help grammar | Preserved owner/output boundary |
 | --- | --- | --- |

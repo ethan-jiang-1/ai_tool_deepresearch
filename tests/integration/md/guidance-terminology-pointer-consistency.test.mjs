@@ -1,5 +1,5 @@
 // guidance-terminology-pointer-consistency.test.mjs
-// Locks the C2 repair-guidance-terminology-pointer-drift canonical sentences and
+// Locks the ResearchConfigLock repair-guidance-terminology-pointer-drift canonical sentences and
 // the removal of stale wording across root/openspec guidance surfaces.
 // Static cross-file deterministic facts; no network, no Agent execution.
 
@@ -42,16 +42,16 @@ describe('framework-runtime-boundary: Gate 五面正名（F-01）', () => {
   });
 });
 
-describe('CONTEXT: Gate pointer, 五反馈面 distinction, C-series, repair_kind dual enum', () => {
+describe('CONTEXT: Gate pointer, 五反馈面 distinction, Lifecycle concepts, repair_kind dual enum', () => {
   it('points to the five-facet table and distinguishes the five feedback surfaces (F-01)', () => {
     assert.ok(context.includes('「Gate Boundary」节'), 'Gate row must point to the Gate Boundary section');
     assert.ok(context.includes('五反馈面'), 'five-feedback-surface distinction missing');
   });
 
   it('defines ResearchConfigLock/TopicTreeEvolution/ReopenResearchPass with owner pointers and induction note (F-06)', () => {
-    assert.ok(context.includes('ResearchConfigLock（研究风格锁定契约）'), 'C2 row missing');
-    assert.ok(context.includes('TopicTreeEvolution（课题大纲演进管线）'), 'C3 row missing');
-    assert.ok(context.includes('ReopenResearchPass（终态重开通行证）'), 'C5 row missing');
+    assert.ok(context.includes('ResearchConfigLock（研究风格锁定契约）'), 'ResearchConfigLock row missing');
+    assert.ok(context.includes('TopicTreeEvolution（课题大纲演进管线）'), 'TopicTreeEvolution row missing');
+    assert.ok(context.includes('ReopenResearchPass（终态重开通行证）'), 'ReopenResearchPass row missing');
     assert.ok(context.includes('按 owner spec 用法归纳'), 'induction note missing');
   });
 

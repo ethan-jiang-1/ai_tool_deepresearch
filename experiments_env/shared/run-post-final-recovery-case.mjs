@@ -64,7 +64,7 @@ try {
   run(['DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs', '--bundle', bundle, '--node', 'phases/phase-rerun.md']);
   runJson(['DEEP_RESEARCH_HARNESS/cli/advance-status.mjs', '--bundle', bundle, '--to', 'hitl2_recorded']);
   const reentry = runJson(['DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs', '--bundle', bundle, '--at', 'hitl2_recorded']);
-  if (reentry.post_final_recovery?.stage !== 'synchronized_initial_profile') throw new Error('reentry did not expose synchronized initial C5 stage');
+  if (reentry.post_final_recovery?.stage !== 'synchronized_initial_profile') throw new Error('reentry did not expose synchronized initial ReopenResearchPass stage');
 
   const topicInput = join(bundle, '_topic-input.json');
   writeFileSync(topicInput, `${JSON.stringify({ context: 'rerun', actions: [{ action: 'add_topic', title: 'Controlled Comparison', slug_stem: 'controlled-comparison', must_answer: ['What changed?'], scope_role: 'comparison', depends_on_topic_uids: [], direction: { rerun_count: 1, action: 'add', new_search_dimensions: 'Controlled comparison topic for post-final recovery rerun', adjusted_depth: 'standard', search_guardrails: 'standard', rationale_excerpt: 'Post-final recovery adding comparison topic' } }] }, null, 2)}\n`);

@@ -117,7 +117,7 @@ The topic-state input/result contract SHALL use schema version `1.1.0` for this 
 
 #### Scenario: Crash after plan replacement resumes exact seed bytes
 
-> **@deprecated** - This pre-C3B scenario name is retained for archive compatibility. Current operations publish new/current seeds before replacing the registry.
+> **@deprecated** - This pre-TopicTreeEvolution scenario name is retained for archive compatibility. Current operations publish new/current seeds before replacing the registry.
 
 - **WHEN** a current accepted operation reaches `rb_plan.md` replacement and then crashes before seed cleanup or workspace cleanup
 - **THEN** every staged current seed replacement SHALL already match its prepared bytes
@@ -192,7 +192,7 @@ The topic-state input/result contract SHALL use schema version `1.1.0` for this 
 
 #### Scenario: Post-final recovery witness authorizes existing topic operations
 
-- **WHEN** C5 has committed a valid Final-lineage-bound `post_final_reentry`, current profile still matches its event-bound after-profile, `enter-phase` has route-bound the existing rerun node to that event, existing `advance-status --to hitl2_recorded` has written the matching exceptional `phase_transition`, and the HITL2 rerun window remains current
+- **WHEN** ReopenResearchPass has committed a valid Final-lineage-bound `post_final_reentry`, current profile still matches its event-bound after-profile, `enter-phase` has route-bound the existing rerun node to that event, existing `advance-status --to hitl2_recorded` has written the matching exceptional `phase_transition`, and the HITL2 rerun window remains current
 - **THEN** topic-state apply SHALL use the same existing action/workspace contracts as a normal rerun
 - **AND** SHALL NOT create a post-final-specific topic mutation path or addendum namespace
 
@@ -652,13 +652,13 @@ mutation form into an Agent-writable path.
 - **AND** it SHALL NOT create a second CLI, workspace, filesystem migration
   service or direct multi-file Agent edit path
 
-#### Scenario: Layout mutation reports missing C3B capability
+#### Scenario: Layout mutation reports missing TopicTreeEvolution layout mutation capability
 
 - **WHEN** apply input uses an imperative remove, rename or renumber action
   instead of one complete target
 - **THEN** the command SHALL reject that shape before workspace creation and
   point to the sanctioned `inspect` -> `mutate_layout` path
-- **AND** path-move requests SHALL remain outside C3B without claiming that
+- **AND** path-move requests SHALL remain outside TopicTreeEvolution without claiming that
   bounded layout mutation itself is missing
 
 #### Scenario: Historical topic removal remains blocked
@@ -695,14 +695,14 @@ mutation form into an Agent-writable path.
 
 - **WHEN** apply is invoked after terminal Final without an accepted topic-state
   workspace and without the complete ReopenResearchPass rerun witness
-- **THEN** it SHALL reject before workspace creation and identify the exact C5
+- **THEN** it SHALL reject before workspace creation and identify the exact ReopenResearchPass
   reentry boundary
 - **AND** it SHALL NOT treat user insistence, declared context or existing
   legacy data as permission
 
 #### Scenario: Post-final reentry does not adopt topics by itself
 
-- **WHEN** C5 establishes the sanctioned rerun window for a bundle with
+- **WHEN** ReopenResearchPass establishes the sanctioned rerun window for a bundle with
   registry-external historical content
 - **THEN** topic identity SHALL remain unchanged; the current Engine SHALL not offer a
   migration, adoption, or upgrade apply
@@ -780,7 +780,7 @@ Every canonical topic SHALL retain immutable `topic_uid`, one current `id/slug`,
 
 When a valid layout target restores one UID to its own previous slug, the Engine SHALL promote that coordinate to current, remove it from `previous_layouts[]`, and append the superseded current coordinate once. A target slug present under another UID's current/history lineage SHALL remain a collision.
 
-Remove SHALL be accepted only for a UID with no queue/work-unit/ledger/artifact/reference facts and no inbound topic dependency. A topic with historical facts SHALL remain canonical and removal SHALL fail before workspace creation; C3B SHALL NOT add retired state or erase provenance.
+Remove SHALL be accepted only for a UID with no queue/work-unit/ledger/artifact/reference facts and no inbound topic dependency. A topic with historical facts SHALL remain canonical and removal SHALL fail before workspace creation; TopicTreeEvolution SHALL NOT add retired state or erase provenance.
 
 An explicitly topic-scoped historical record that cannot be uniquely resolved through structured UID/current/previous slug binding SHALL block safe remove; unknown ownership SHALL NOT be treated as evidence that history is absent.
 
@@ -808,7 +808,7 @@ An explicitly topic-scoped historical record that cannot be uniquely resolved th
 
 `operate-topic-state apply` SHALL accept one `mutate_layout` target only in the sanctioned rerun authority window. The input SHALL carry `expected_plan_sha256` from inspect and enumerate every current UID exactly once across ordered `topics[]` and `remove_topic_uids[]`; ordered topics SHALL carry explicit title and slug stem, and Engine SHALL derive continuous current ids/slugs. Layout mutation SHALL NOT mix with migrate/add/update actions.
 
-`inspect` SHALL return current complete `rb_plan.md` SHA256 and a copy-ready ordered layout baseline containing current UID, title and a losslessly derived slug stem when available. For an accepted pre-C3B coordinate that cannot be losslessly represented by the target stem grammar, inspect SHALL mark `slug_stem_required` rather than silently normalize it. This is a read-only projection, not persisted state, so the Agent can mechanically edit a complete target without reconstructing identifiers from multiple files or inventing a second registry hash rule.
+`inspect` SHALL return current complete `rb_plan.md` SHA256 and a copy-ready ordered layout baseline containing current UID, title and a losslessly derived slug stem when available. For an accepted pre-TopicTreeEvolution coordinate that cannot be losslessly represented by the target stem grammar, inspect SHALL mark `slug_stem_required` rather than silently normalize it. This is a read-only projection, not persisted state, so the Agent can mechanically edit a complete target without reconstructing identifiers from multiple files or inventing a second registry hash rule.
 
 The existing topic-state workspace SHALL remain bounded to complete `rb_plan.md` and affected current seed replacements. For layout targets its prepared manifest MAY additionally list hash-bound superseded/removed seed files for cleanup after the registry replacement; it SHALL NOT own artifact/reference/final paths, directory moves, link rewrites or generic delete operations. An accepted workspace SHALL block topic work and expose only exact `recover --operation-id`. Recovery SHALL roll forward the recorded seed/plan bytes and exact seed cleanup or block on direct drift; it SHALL NOT accept new semantics, auto-rollback, widen paths or invoke a hidden retry tree.
 

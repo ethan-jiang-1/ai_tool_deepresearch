@@ -1,5 +1,5 @@
 // harness-entry-doc-consistency.test.mjs
-// Locks the C1 harness-entry-doc-consistency canonical sentences and the
+// Locks the StateHealthCheck harness-entry-doc-consistency canonical sentences and the
 // removal of stale contradictory wording across harness Agent-facing docs.
 // @impl RUE-002 (carve-out), RUE-004 (paired files), pre-research-phase-content
 // (collision), WNC-010 (bootstrap exception).

@@ -101,7 +101,7 @@ describe('case-138 standard Final refinement source contract', () => {
     }
   });
 
-  it('binds five same-session turns and the bounded Final/C5 observations', () => {
+  it('binds five same-session turns and the bounded Final/ReopenResearchPass observations', () => {
     const config = case138SubjectConfig();
     const observer = runner.match(/function observeCase138Boundary\([\s\S]*?\n}\n\nfunction observeCase318CrashWindow/)?.[0] || '';
     const messages = config.match(/messages:\s*\[([\s\S]*?)\],\n    tools:/)?.[1] || '';

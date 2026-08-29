@@ -1,6 +1,6 @@
 // @impl VER-001, RES-001, RES-002, REI-006, POF-001, POF-002, POF-003, RRD-002, RRD-008, STM-010
 // JS simulates labeled Agent-owned plan/profile/artifact/request/topic/count inputs.
-// Production instantiation, Gates, loads, status transitions and C5 own lifecycle authority.
+// Production instantiation, Gates, loads, status transitions and ReopenResearchPass own lifecycle authority.
 
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
@@ -33,7 +33,7 @@ let root;
 let baseline;
 let snapshot;
 
-function applyC5(bundle, label) {
+function applyReopenPass(bundle, label) {
   const inspection = inspectPostFinalRecovery({ bundlePath: bundle });
   assert.equal(inspection.verdict, 'eligible');
   const inputPath = join(root, `${label}-request.json`);
@@ -221,7 +221,7 @@ after(() => cleanupRoot(root));
 describe('post-final rerun lineage continuity from a production terminal chain', { timeout: 120000 }, () => {
   it('resumes add style-before-count and reaches one later normal handoff', () => {
     const bundle = restoreBundle(snapshot, baseline);
-    applyC5(bundle, 'add');
+    applyReopenPass(bundle, 'add');
     addTopic(bundle);
     applyStyle(bundle);
     const beforeCount = inspectPostFinalRecovery({ bundlePath: bundle });
@@ -234,7 +234,7 @@ describe('post-final rerun lineage continuity from a production terminal chain',
 
   it('resumes safe-remove style-before-count and reaches one later normal handoff', () => {
     const bundle = restoreBundle(snapshot, baseline);
-    applyC5(bundle, 'remove');
+    applyReopenPass(bundle, 'remove');
     addThenRemoveTopic(bundle);
     applyStyle(bundle);
     incrementCount(bundle);
@@ -244,7 +244,7 @@ describe('post-final rerun lineage continuity from a production terminal chain',
 
   it('keeps event-bound style params on count-only compatibility even when exact current projection differs', () => {
     const bundle = restoreBundle(snapshot, baseline);
-    applyC5(bundle, 'count-only');
+    applyReopenPass(bundle, 'count-only');
     addTopic(bundle);
     const retained = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8')).research_style_params;
     incrementCount(bundle);
@@ -255,18 +255,18 @@ describe('post-final rerun lineage continuity from a production terminal chain',
     passThroughDescendant(bundle);
   });
 
-  it('retains the accepted C5 audit lineage through a newer Final handoff and appends globally', () => {
+  it('retains the accepted ReopenResearchPass audit lineage through a newer Final handoff and appends globally', () => {
     const bundle = restoreBundle(snapshot, baseline);
-    applyC5(bundle, 'new-final');
+    applyReopenPass(bundle, 'new-final');
     const acceptedEvent = readTrace(bundle).find((event) => event.event === 'post_final_reentry');
-    assert.ok(acceptedEvent, 'accepted C5 event is retained as the audit witness');
+    assert.ok(acceptedEvent, 'accepted ReopenResearchPass event is retained as the audit witness');
     const readiness = driveAcceptedRerunToNewReadiness(bundle);
     const entryPending = inspectPostFinalRecovery({ bundlePath: bundle });
     assert.equal(entryPending.stage, 'newer_final_entry_pending');
     assert.equal(entryPending.next_action.kind, 'enter_phase');
 
     // A copied test branch exercises invalid pre-load inventory without treating deletion as runtime repair.
-    // Non-primary presentation drift no longer blocks a primary-series-bound C5
+    // Non-primary presentation drift no longer blocks a primary-series-bound ReopenResearchPass
     // event (BUG-236); the fail-closed branch must drift the primary series.
     const preFinalSnapshot = join(root, 'post-final-newer-final-preload-snapshot');
     cpSync(bundle, preFinalSnapshot, { recursive: true, errorOnExist: true });

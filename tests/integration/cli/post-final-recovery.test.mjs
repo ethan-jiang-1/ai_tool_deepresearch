@@ -142,7 +142,7 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     assert.equal(transition.source_handoff_load_index, events.indexOf(load));
   });
 
-  it('allows the existing C3 owner after complete exceptional synchronization and records the full witness', () => {
+  it('allows the existing TopicTreeEvolution owner after complete exceptional synchronization and records the full witness', () => {
     const bundle = createTerminalFinalBundle(root, 'topic');
     const inspection = inspectPostFinalRecovery({ bundlePath: bundle });
     const inputPath = join(root, 'topic-request.json');
@@ -162,7 +162,7 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     assert.match(plan, /Additional comparison/);
   });
 
-  it('lets a legacy profile without rerun_count complete the C5 rerun topic-state apply', () => {
+  it('lets a legacy profile without rerun_count complete the ReopenResearchPass rerun topic-state apply', () => {
     const bundle = createTerminalFinalBundle(root, 'legacy-no-count', {
       topicRegistry: [{ topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: 'What matters?' }],
     });
@@ -214,7 +214,7 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     assert.doesNotMatch(JSON.stringify(result), /migrat|adopt|upgrade|convert/i);
   });
 
-  it('binds a prepared C3 operation to the complete original exceptional witness and recovers after lifecycle drift', () => {
+  it('binds a prepared TopicTreeEvolution operation to the complete original exceptional witness and recovers after lifecycle drift', () => {
     const bundle = createTerminalFinalBundle(root, 'topic-recover');
     const inspection = inspectPostFinalRecovery({ bundlePath: bundle });
     const inputPath = join(root, 'topic-recover-request.json');
@@ -280,7 +280,7 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     assert.equal(existsSync(join(bundle, '_diagnostics', 'post-final-recovery')), true);
   });
 
-  // Drive one full rerun cycle after a committed C5 event whose Final stage
+  // Drive one full rerun cycle after a committed ReopenResearchPass event whose Final stage
   // legally updates a non-primary presentation file and publishes a newer
   // primary revision (BUG-236). Returns nothing; the bundle ends terminal at
   // the newer Final.
@@ -333,7 +333,7 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     writeFileSync(join(bundle, 'final', 'topics', 'alpha.md'), '# Topic Alpha (updated)\n');
     writeFileSync(join(bundle, 'final', 'final_v1.md'), '# Newer primary revision\n');
     if (rewriteBase) {
-      // BUG-247 shape: the base bytes are rewritten after the C5 event bound
+      // BUG-247 shape: the base bytes are rewritten after the ReopenResearchPass event bound
       // its witness (an out-of-band legal reorganization of final/), so no
       // retained prefix can ever reproduce the bound digest again.
       const baseName = existsSync(join(bundle, 'final', 'final.md')) ? 'final.md' : 'report.md';
@@ -409,13 +409,13 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     assert.equal(second.facts.retired_append_proof.basis, 'legacy_structural_fallback');
   });
 
-  // BUG-247: the C5 witness bound a primary-series byte state that a later
+  // BUG-247: the ReopenResearchPass witness bound a primary-series byte state that a later
   // out-of-band legal reorganization of final/ rewrote, so no retained
   // removal prefix can ever reproduce the bound digest (the retained digest
   // set is closed over the surviving immutable bytes). The append proof falls
   // back to the structural primary-series check — mirroring the legacy
   // whole-tree precedent — inspect returns to fresh eligibility with one
-  // deterministic warning and exposes the accepted proof, and the fresh C5
+  // deterministic warning and exposes the accepted proof, and the fresh ReopenResearchPass
   // event binds the current lineage.
   it('recovers a primary-series binding with unreachable bound bytes through the structural fallback', () => {
     const bundle = createTerminalFinalBundle(root, 'unreachable-binding', { modernBase: true });

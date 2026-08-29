@@ -200,7 +200,7 @@ The Subject interaction SHALL have five bounded supplied turns:
    then a per-turn observer SHALL freeze the inventory/status/profile/trace
    snapshot before any later input; and
 5. a later explicit evidence-expanding request on the same Final lineage,
-   requiring selection and acceptance of the existing C5 operation without
+   requiring selection and acceptance of the existing ReopenResearchPass operation without
    publishing another primary report or completing the research rerun.
 
 The retained native transcript/result, canonical inventory, publication
@@ -212,7 +212,7 @@ passed submitted backing; current node stayed Final; HITL2 handoff/profile and
 prior bytes remained unchanged; satisfaction produced no file, Gate, status, or
 trace mutation through the frozen turn-4 snapshot; and no post-final rerun
 operation was invoked through turn 4. Turn 5 SHALL separately prove that the
-Subject selected and accepted C5 without publishing another report or completing
+Subject selected and accepted ReopenResearchPass without publishing another report or completing
 the rerun.
 
 The real-Agent case SHALL use the supported iterative Subject runner, compact

@@ -51,13 +51,13 @@ describe('recovery contract', () => {
     }
   });
 
-  it('keeps a clean Final at the Final owner instead of turning C5 availability into a default action', () => {
+  it('keeps a clean Final at the Final owner instead of turning ReopenResearchPass availability into a default action', () => {
     const summary = buildRecoverySummary({
       statusPosition: { current_node: 'phases/phase-final.md' },
       finalInventory: { valid: true, classification: 'modern_base' },
       postFinalInspection: {
         verdict: 'eligible',
-        reason: 'C5 is mechanically available only.',
+        reason: 'ReopenResearchPass is mechanically available only.',
         next_action: { kind: 'prepare_request', command: null, target_ref: 'retained request JSON' },
       },
     });
@@ -70,13 +70,13 @@ describe('recovery contract', () => {
     });
   });
 
-  it('puts an inventory blocker before active C5 and preserves exact accepted C5 owners otherwise', () => {
+  it('puts an inventory blocker before active ReopenResearchPass and preserves exact accepted ReopenResearchPass owners otherwise', () => {
     const inventoryBlocked = buildRecoverySummary({
       statusPosition: { current_node: 'phases/phase-final.md' },
       finalInventory: { valid: false, reason: 'Final primary inventory is invalid: gapped_revision' },
       postFinalInspection: {
         verdict: 'unchanged',
-        reason: 'An accepted C5 lineage is active.',
+        reason: 'An accepted ReopenResearchPass lineage is active.',
         next_action: { kind: 'enter_phase', command: 'node enter-phase', target_ref: 'phases/phase-rerun.md' },
       },
     });
@@ -84,16 +84,16 @@ describe('recovery contract', () => {
     assert.equal(inventoryBlocked.root_findings[0].recommended_action, null);
     assert.match(inventoryBlocked.root_findings[0].direct_blocker, /gapped_revision/);
 
-    const activeC5 = buildRecoverySummary({
+    const activeReopen = buildRecoverySummary({
       statusPosition: { current_node: 'phases/phase-final.md' },
       finalInventory: { valid: true, classification: 'modern_base' },
       postFinalInspection: {
         verdict: 'unchanged',
-        reason: 'An accepted C5 lineage is active.',
+        reason: 'An accepted ReopenResearchPass lineage is active.',
         next_action: { kind: 'advance_status', command: 'node advance-status', target_ref: 'readiness_passed' },
       },
     });
-    assert.equal(activeC5.root_findings[0].recommended_action.kind, 'advance_status');
-    assert.equal(activeC5.root_findings[0].recommended_action.target_ref, 'readiness_passed');
+    assert.equal(activeReopen.root_findings[0].recommended_action.kind, 'advance_status');
+    assert.equal(activeReopen.root_findings[0].recommended_action.target_ref, 'readiness_passed');
   });
 });

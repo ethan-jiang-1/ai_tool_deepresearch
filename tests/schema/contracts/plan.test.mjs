@@ -25,7 +25,7 @@ describe('PlanSchema', () => {
     assert.ok(CanonicalPlanSchema.safeParse(canonical).success);
   });
 
-  it('defaults absent C3A layout history and preserves non-normalized current coordinates', () => {
+  it('defaults absent pre-TopicTreeEvolution layout history and preserves non-normalized current coordinates', () => {
     const canonical = { plan_basename: 'test', derived_topic_count: 1, topic_registry_version: '2', topic_registry: [{ topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000', id: 'legacy-id', slug: 'topic-a', title: 'Topic A', must_answer: ['What?'], scope_role: 'primary', depends_on_topic_uids: [] }] };
     const parsed = CanonicalPlanSchema.parse(canonical);
     assert.deepEqual(parsed.topic_registry[0].previous_layouts, []);

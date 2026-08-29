@@ -166,7 +166,7 @@ const SUBJECTS = {
     system: 'You are the independent Subject Agent for case 717 round 2, distinct from both the Playbook Agent and the prior Subject context. Work only in the exact supplied bundle. Start fresh from its injected current Final production surface and direct facts, without relying on prior chat.',
     messages: ['请再补充新的可核验一手来源，然后把当前的“租赁、购买与推迟决策的现金流比较”改为“分阶段投资阈值与触发条件”，并撤回“按地区分别比较融资约束”的要求；请据此重新评估并更新报告。'],
     tools: 'Task,Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
-    boundary: 'Treat this as one evidence-expanding post-Final request, then complete exactly one accepted C5 rerun through the next legally entered Final and its current-lineage report. You own the accepted interpretation, replacement and withdrawal semantics, revision, topic projection, current task briefs, coverage, synthesis, HITL2 decision, composition handoff, and report. Use only production routes and real actor/tool evidence; do not write playbook verdict checks, native completion, health output, cleanup, or any case-717 observer file. Fail honestly if a required authenticated actor, search/fetch tool, or legal operation is unavailable.',
+    boundary: 'Treat this as one evidence-expanding post-Final request, then complete exactly one accepted ReopenResearchPass rerun through the next legally entered Final and its current-lineage report. You own the accepted interpretation, replacement and withdrawal semantics, revision, topic projection, current task briefs, coverage, synthesis, HITL2 decision, composition handoff, and report. Use only production routes and real actor/tool evidence; do not write playbook verdict checks, native completion, health output, cleanup, or any case-717 observer file. Fail honestly if a required authenticated actor, search/fetch tool, or legal operation is unavailable.',
     timeoutMs: 12 * 60 * 1000,
   },
   '712': {
@@ -245,7 +245,7 @@ const SUBJECTS = {
   '138': {
     bundlePrefix: 'dpt_disp_case-138_',
     transcript: 'case-138-subject-transcript.jsonl',
-    system: 'You are the independent Subject Agent for case 138, distinct from the Playbook Agent. Work only in the exact legally entered Final bundle supplied by the runner. Deliver first, then make presentation-only revisions on the same Final node, and use C5 only for the final explicit evidence-expansion turn.',
+    system: 'You are the independent Subject Agent for case 138, distinct from the Playbook Agent. Work only in the exact legally entered Final bundle supplied by the runner. Deliver first, then make presentation-only revisions on the same Final node, and use ReopenResearchPass only for the final explicit evidence-expansion turn.',
     messages: [
       'This is the first Final entry and there is no report yet. Read case-138-final-backing.json and the injected Final guidance. Immediately write a compact Chinese Final report with exactly one Evidence Map row using that supplied submitted backing, persist it through publish-final-report, save the complete JSON as case-138-publish-0.json, then give a direct delivery response that invites feedback. Do not create a Gate, transition, or network request.',
       '用户反馈：请只调整现有内容的结构和表达，使读者更快看到结论、证据边界和限制；不要补充新来源或改变结论。仍在同一 Final 节点，创建且只创建一个未标记的 presentation revision，通过 publish-final-report 持久化，保存完整 JSON 为 case-138-publish-1.json，然后给出直接回复。',
@@ -254,7 +254,7 @@ const SUBJECTS = {
       '用户现在明确要求加入一个新的来源并据此重新评估结论。这是证据扩展，不是 presentation feedback。不要发布任何 Final report。先运行 post-final recovery inspect，从结果中构造并保留严格 JSON 请求，随后只运行一次 apply，保存 inspect/apply 完整 JSON 为 case-138-c5-inspect.json 和 case-138-c5-apply.json。不要完成 rerun、不要进入另一个 phase、不要创建 Final transition。',
     ],
     tools: 'Bash,Edit,Glob,Grep,Read,Write',
-    boundary: 'Use exactly five supplied turns in one session, no network research, and a hard 120-second total runtime. Do not write playbook verdict checks, native completion, health output, cleanup, or arbitrary Final targets. Persist primary reports only with publish-final-report. The fourth turn must not mutate runtime facts; the fifth is the sole explicit evidence-expansion request and may only accept existing C5.',
+    boundary: 'Use exactly five supplied turns in one session, no network research, and a hard 120-second total runtime. Do not write playbook verdict checks, native completion, health output, cleanup, or arbitrary Final targets. Persist primary reports only with publish-final-report. The fourth turn must not mutate runtime facts; the fifth is the sole explicit evidence-expansion request and may only accept existing ReopenResearchPass.',
     afterTurn: observeCase138Boundary,
     timeoutMs: 120_000,
   },
@@ -623,13 +623,13 @@ function observeCase138Boundary({ bundle, completedTurns }) {
     }
     const applied = JSON.parse(readFileSync(join(bundle, 'case-138-c5-apply.json'), 'utf8'));
     if (applied.operation !== 'apply' || applied.verdict !== 'committed' || applied.stage !== 'pre_entry') {
-      throw new Error('case 138 evidence-expansion turn did not accept exactly one C5 operation');
+      throw new Error('case 138 evidence-expansion turn did not accept exactly one ReopenResearchPass operation');
     }
     const trace = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse);
     const postFinal = trace.filter((event) => event.event === 'post_final_reentry');
     const rerunGate = trace.slice(frozen.trace_line_count).some((event) => event.event === 'gate_attempt' && event.gate === 'rerun-ready');
     if (postFinal.length !== 1 || rerunGate) {
-      throw new Error('case 138 evidence-expansion turn completed rerun work or did not retain one C5 event');
+      throw new Error('case 138 evidence-expansion turn completed rerun work or did not retain one ReopenResearchPass event');
     }
     writeFileSync(join(bundle, 'case-138-subject-observation.json'), `${JSON.stringify({
       schema_version: 'case-138-subject-observation/v1',

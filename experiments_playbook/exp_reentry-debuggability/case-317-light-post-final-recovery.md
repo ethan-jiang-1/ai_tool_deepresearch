@@ -2,7 +2,7 @@
 schema: command-experiment/v2
 experiment: reentry-debuggability
 case: case-317-light-post-final-recovery
-case_goal: "验证 legal Final 经 audited C5 event-last recovery、existing entry/status/C3/rerun owners 进入正常 descendant pipeline，且无 addendum 或 generic override。"
+case_goal: "验证 legal Final 经 audited ReopenResearchPass event-last recovery、existing entry/status/TopicTreeEvolution/rerun owners 进入正常 descendant pipeline，且无 addendum 或 generic override。"
 verdict_mode: all
 required_checks: [prior-final-lineage, one-recovery-event, exact-exceptional-binding, canonical-topic, normal-descendant, repeat-stable, no-parallel-addendum, terminal-history-preserved]
 bundle_roles: [verdict]

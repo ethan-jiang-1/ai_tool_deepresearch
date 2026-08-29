@@ -133,7 +133,7 @@ describe('topic-rewrite fixture contracts', () => {
     const seedTopics = readFileSync(CURRENT_TOPIC_GUIDANCE[1], 'utf8');
     assert.match(rerun, /mutate_layout/);
     assert.match(rerun, /previous_layouts/);
-    assert.doesNotMatch(rerun, /unsupported C3B/);
+    assert.doesNotMatch(rerun, /unsupported topic mutation/);
     assert.match(rerun, /safe-remove|新 bundle/);
     assert.match(seedTopics, /UID-bound/);
   });

@@ -680,7 +680,7 @@ fabricated claim about historical creation order.
 
 #### Scenario: Premature final report is phase-boundary violation
 
-- **WHEN** a primary-looking Final file appears before the first Final load or changes the C5-bound inventory before a later Final load
+- **WHEN** a primary-looking Final file appears before the first Final load or changes the ReopenResearchPass-bound inventory before a later Final load
 - **THEN** `enter-phase` SHALL reject that new Final entry and audit SHALL report premature terminal output or inventory drift
 - **AND** the file SHALL not count as delivery evidence
 
