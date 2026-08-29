@@ -1,0 +1,46 @@
+schema_version: verification-routing/v1
+change: retire-legacy-c-series-codes-to-domain-names
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: No isolated unit contracts or schema types are modified.
+  integration:
+    status: selected
+    rationale: Integration tests verify Markdown control surfaces and terminology consistency.
+  deterministic_e2e:
+    status: selected
+    rationale: E2E test suites verify post-final rerun continuity and topic state mutation without legacy code references.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: No agent autorun playbooks are modified.
+claims:
+  - id: terminology-pointer-consistency
+    statement: >-
+      CONTEXT.md and guidance surfaces expose self-explanatory domain names without legacy C1-C5 codes while passing terminology regression locks.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/guidance-terminology-pointer-consistency.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: post-final-lineage-continuity
+    statement: >-
+      Post-final rerun lineage continuity maintains complete deterministic execution under the renamed ReopenResearchPass concepts.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/post-final-rerun-lineage-continuity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

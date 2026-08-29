@@ -66,7 +66,7 @@ handoff, permission, or research evidence. If feedback requires new sources,
 Topics, evidence,
 conclusions, or research-profile changes, the Agent SHALL classify that semantic
 boundary, retain the request, and use audited post-final rerun. If ambiguous, it
-SHALL ask the smallest clarification before choosing publication or C5. The
+SHALL ask the smallest clarification before choosing publication or ReopenResearchPass. The
 Engine SHALL not classify free-form feedback.
 
 Separate human-directed maintenance/recovery/debug collaboration SHALL remain
@@ -84,7 +84,7 @@ permission, and an existing Engine path.
 For accepted post-final rerun, the user-owned boundary is the new research
 scope/risk decision plus any non-delegable host approval. The request carries
 reason/scope and expected Final lineage but is not verified identity or a
-permission token. The Agent SHALL prepare/retain it, run C5 inspect/apply/
+permission token. The Agent SHALL prepare/retain it, run ReopenResearchPass inspect/apply/
 recover, consume legal rerun entry, synchronize status, run reentry/topic-state
 checks, and continue the existing pipeline.
 
@@ -92,11 +92,11 @@ Before recommending or accepting rerun at HITL2 or Final, the Agent SHALL
 consume the shared pure rerun-availability result for current `rerun_count` plus
 the increment owned by `phase-rerun.md`. It SHALL not raw-parse the Gate
 definition, copy numeric limits, write eligibility state, or create another
-Gate. The formal rerun-ready Gate and C5 SHALL use the same evaluator.
+Gate. The formal rerun-ready Gate and ReopenResearchPass SHALL use the same evaluator.
 
 If direct facts show supported but unavailable rerun, the Agent SHALL not
-recommend/record it, run C5 apply, create a C5 workspace, reset the count, or
-enter an impossible rerun. C5 inspect MAY expose the same read-only fact. At
+recommend/record it, run ReopenResearchPass apply, create a ReopenResearchPass workspace, reset the count, or
+enter an impossible rerun. ReopenResearchPass inspect MAY expose the same read-only fact. At
 HITL2 or current Final interaction, the Agent SHALL ask only whether to start a
 new bundle for that requested research scope. Unsupported/unreadable rule or
 profile facts SHALL be stated as that exact boundary rather than claiming a new
@@ -116,7 +116,7 @@ command tables. It SHALL say:
 - Final is terminal, publishes first, then permits bounded report refinement without becoming HITL;
 - user messages do not by themselves expand permission or override Engine facts;
 - the Agent chooses and executes `publish-final-report`; the user does not allocate versions or run it;
-- accepted evidence-expanding Final feedback uses audited C5 and returns mechanics to the Agent;
+- accepted evidence-expanding Final feedback uses audited ReopenResearchPass and returns mechanics to the Agent;
 - unsupported maintenance remains a missing capability rather than generic override;
 - non-terminal `stop: "no"` remains silent; and
 - command docs are operating surfaces for the Agent, not mid-pipeline human instructions.
@@ -165,7 +165,7 @@ maintenance.
 
 #### Scenario: Post-final rerun decision returns the complete mechanical chain
 
-- **WHEN** the Agent classifies an explicit Final request as evidence-expanding and host permission allows C5
+- **WHEN** the Agent classifies an explicit Final request as evidence-expanding and host permission allows ReopenResearchPass
 - **THEN** the Agent SHALL execute request preparation, inspect/apply/recover, entry, status sync, reentry/topic-state checks, and normal rerun
 - **AND** it SHALL not ask the user to run commands or repeat the same decision
 
@@ -184,7 +184,7 @@ maintenance.
 
 - **WHEN** shared availability proves the required next increment unavailable
 - **THEN** HITL2 or current Final interaction SHALL ask only whether to start a new bundle for that research scope
-- **AND** guidance MAY inspect but SHALL not apply C5, reset state, or ask the human to run commands
+- **AND** guidance MAY inspect but SHALL not apply ReopenResearchPass, reset state, or ask the human to run commands
 - **AND** unsupported evaluator facts SHALL remain their concrete contract boundary
 
 #### Scenario: Operator wording is not a co-runner audience

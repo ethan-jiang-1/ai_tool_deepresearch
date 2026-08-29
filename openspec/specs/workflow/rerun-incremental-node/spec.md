@@ -57,7 +57,7 @@ satisfaction of a new/revised focus.
 
 The phase SHALL prepare exactly one existing explicit topic-state apply form:
 
-1. add/refine uses `add_topic` and `update_intent` with existing C3A fields;
+1. add/refine uses `add_topic` and `update_intent` with existing TopicTreeEvolution fields;
 2. direction-only change uses existing `set_rerun_direction` for an existing
    Topic without changing canonical intent;
 3. layout mutation uses one complete `mutate_layout` target with

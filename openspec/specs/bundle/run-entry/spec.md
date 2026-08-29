@@ -150,7 +150,7 @@ satisfaction message ends the current interaction without new Engine state.
 
 For an explicitly selected existing bundle whose current node is Final, entry
 docs SHALL direct the Agent to inspect the canonical primary inventory plus
-current/retired C5 lineage binding and resume the same Final delivery/refinement
+current/retired ReopenResearchPass lineage binding and resume the same Final delivery/refinement
 owner unless the current user request explicitly expands research evidence. A
 zero-append newer Final lineage SHALL resume immediate delivery; a report already
 bound to that lineage SHALL resume latest refinement. Entry docs SHALL not infer
@@ -195,7 +195,7 @@ claim that all historical conclusions remain currently valid.
 
 #### Scenario: Post-rerun Final delivery also precedes feedback
 
-- **WHEN** entry docs describe a newer legal Final handoff whose new load admitted the retired C5 prior inventory and has no appended current-lineage report
+- **WHEN** entry docs describe a newer legal Final handoff whose new load admitted the retired ReopenResearchPass prior inventory and has no appended current-lineage report
 - **THEN** they SHALL require global `latest + 1` publication and presentation before feedback
 - **AND** they SHALL not recreate the base or present the prior lineage's latest report as current delivery
 

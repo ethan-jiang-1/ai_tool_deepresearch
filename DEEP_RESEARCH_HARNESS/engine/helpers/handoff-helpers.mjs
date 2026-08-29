@@ -438,7 +438,7 @@ function retiredPostFinalWitness(item, edge) {
   };
 }
 
-// The C5 event's Final-inventory witness, resolved on the basis the event
+// The ReopenResearchPass event's Final-inventory witness, resolved on the basis the event
 // bound. Events carrying `final_inventory_basis: 'primary_series'` bind the
 // primary-series digest in the existing `final_inventory_sha256` field; legacy
 // events without the marker are whole-tree bindings on the same field.
@@ -847,14 +847,14 @@ export function evaluateFinalEntryAdmission(bundlePath, handoff) {
   if (!postFinal.ok) {
     return {
       ok: false,
-      reason: `later Final entry requires one accepted retired C5 witness: ${postFinal.reason}`,
+      reason: `later Final entry requires one accepted retired ReopenResearchPass witness: ${postFinal.reason}`,
       inventory,
     };
   }
   if (postFinal.stage !== 'newer_final_entry_pending' || postFinal.handoff?.index !== handoff.index || !postFinal.retired_event) {
     return {
       ok: false,
-      reason: 'later Final entry is not the unique entry-pending descendant of an accepted C5 lineage',
+      reason: 'later Final entry is not the unique entry-pending descendant of an accepted ReopenResearchPass lineage',
       inventory,
     };
   }
@@ -862,7 +862,7 @@ export function evaluateFinalEntryAdmission(bundlePath, handoff) {
   if (currentBasisDigest(inventory, admissionWitness.basis) !== admissionWitness.digest) {
     return {
       ok: false,
-      reason: 'Final inventory drifted from the accepted C5 prior-inventory digest before later Final entry',
+      reason: 'Final inventory drifted from the accepted ReopenResearchPass prior-inventory digest before later Final entry',
       inventory,
       retired_event: postFinal.retired_event,
     };

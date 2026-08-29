@@ -170,7 +170,7 @@ Logical `actor_execution` plus exact `work_id` and `receipt_nonce` guides which 
 用户在已完成 Final 交付的 bundle 上表达迭代诉求时，先按措辞族找到既有路由再执行。示例词只是导航线索，不是分类 enum：语义边界（evidence-expanding vs presentation）仍由 Final Agent 判定，混合或含混请求先问最小澄清，不做自动选路。
 
 - **evidence-expanding 族**（示例：再挖一轮 / 继续挖 / rerun / 需要新来源、新 Topic、新证据或新研究结论）→ `command_playbook/post-final-recovery.md`（本节 `operate-post-final-recovery.mjs` 完整链；有 `_diagnostics/` next-dig-list 时按该 playbook 的 dig-list intake 成形 scope）。
-- **presentation 族**（示例：整理 / 重写 / 自包含版 / 换个读者版本 / 只改结构、篇幅、措辞、强调或证据呈现）→ `workflows/nodes/phases/phase-final.md` 就地 refinement + `command_playbook/persist-artifact.md` 发布路径；不建 C5 request。
+- **presentation 族**（示例：整理 / 重写 / 自包含版 / 换个读者版本 / 只改结构、篇幅、措辞、强调或证据呈现）→ `workflows/nodes/phases/phase-final.md` 就地 refinement + `command_playbook/persist-artifact.md` 发布路径；不建 ReopenResearchPass request。
 
 本映射是导航文本：不改变上方受众声明与责任边界，不创设第二条路由、checkpoint 或权限；映射内不复制命令行（可执行命令以各工具行与 playbook 为准）。
 
@@ -212,14 +212,14 @@ Logical `actor_execution` plus exact `work_id` and `receipt_nonce` guides which 
 
 - `status` 固定 `"done"`；`receipt`/`summary`/`writes` 可省略，但多余字段会报 `unrecognized_keys`（`QueueResultSchema` 使用了 `.strict()`）。
 - `receipt` 前缀语义：`file:`（文件存在）、`json:`（文件存在且为合法 JSON）、`queue:`（队列字段值匹配）、`trace:`（trace event 存在）、`work_unit:`（由 `operate-work-unit submit` 校验，不能经 `operate-queue complete` 直接过）。
-- Source of Record：`DEEP_RESEARCH_HARNESS/engine/queue-manager-core.mjs` `QueueResultSchema`。
+- Source of Record：`engine/queue-manager-core.mjs` `QueueResultSchema`。
 
 ### Projection packet（operate-topic-state apply --context wave_projection）
 
 - wave0/wave1 evidence-bearing 条目：`source_identity: { "kind": "submitted_work", "work_id": "<work_id>" }`。
 - wave2 evidence-bearing 条目：`source_identity: { "kind": "finding", "finding_id": "<W2F-xxx>" }`，且 `entry_id === finding_id`（正则 `W2F-\d{3,}`）。
 - evidence-bearing 条目必须给 concrete `reference/*.md` ref，或用 defers 处置（`relationship: "defers", refs: ["none"], status: "deferred"`），否则报 `projection_entry_concrete_ref_missing`。
-- Source of Record：`DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs` 与对应 accepted schema。
+- Source of Record：`engine/helpers/canonical-topic-state.mjs` 与对应 accepted schema。
 
 ### Evidence Map（publish-final-report backing admission）
 
@@ -231,4 +231,4 @@ Logical `actor_execution` plus exact `work_id` and `receipt_nonce` guides which 
 
 - backing 必须是指向已提交 `reference/*.md` 或 `artifacts/wave1/*/evidence-summary.md` 的 markdown link（`[text](rel‑path)`），否则报 `evidence_map_backing_link_missing`。
 - 缺少或多余列会报 `evidence_map_columns_invalid`。
-- Source of Record：`DEEP_RESEARCH_HARNESS/engine/helpers/final-delivery-backing.mjs`。
+- Source of Record：`engine/helpers/final-delivery-backing.mjs`。

@@ -73,15 +73,15 @@ describe('Final report composition Markdown contract', () => {
     assert.match(final, /admitted Final entry -> advance-status --to readiness_passed/);
     assert.match(final, /current lineage has no bound report: publish immediately/);
     assert.match(final, /First Final entry with an admitted empty inventory publishes\s+`final\/final\.md`/);
-    assert.match(final, /admitted post-C5 return with zero canonical append/);
+    assert.match(final, /admitted post-ReopenResearchPass return with zero canonical append/);
     assert.match(final, /current lineage's accepted HITL2 handoff\/receipt, all earlier lineage\s+history/);
     assert.match(final, /Preserve them; do not rewrite\s+them/);
     assert.match(final, /publish exactly one immutable revision/);
     assert.match(final, /satisfied, finish the current interaction with no report,\s+state, profile, status, Gate, trace, counter, pointer, or event write/);
     assert.match(final, /new source, Topic, evidence, research conclusion,\s+or research-profile change/);
     assert.match(final, /Presentation feedback alone remains here/);
-    assert.match(final, /Only evidence-expanding work uses\s+audited C5/);
-    assert.match(final, /MUST NOT treat a previous lineage's report as delivery for a newer C5/);
+    assert.match(final, /Only evidence-expanding work uses\s+audited ReopenResearchPass/);
+    assert.match(final, /MUST NOT treat a previous lineage's report as delivery for a newer ReopenResearchPass/);
     assert.match(final, /MUST NOT claim that Engine feedback proves report quality, semantic\s+improvement, feedback classification, or genuine user satisfaction/);
   });
 

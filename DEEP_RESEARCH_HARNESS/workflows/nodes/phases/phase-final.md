@@ -30,7 +30,7 @@ suggested_context:
   Current Intent Coverage when present, `rb_status.json`, `rb_trace.jsonl`, and
   the latest canonical primary Final report when one is already bound.
 - **Path to pass**: First Final entry with an admitted empty inventory publishes
-  `final/final.md`. An admitted post-C5 return with zero canonical append
+  `final/final.md`. An admitted post-ReopenResearchPass return with zero canonical append
   publishes the next global version. A current-lineage report is refined only
   in response to clear presentation feedback.
 - **Completion check**: A report is presented only after
@@ -54,11 +54,11 @@ admitted Final entry -> advance-status --to readiness_passed
   -> show latest report and invite feedback
   -> clear presentation request: publish one immutable next version
   -> satisfied: end this turn without a write
-  -> new evidence/research: accepted C5 request and existing rerun path
+  -> new evidence/research: accepted ReopenResearchPass request and existing rerun path
 ```
 
 The entry admission is already Engine-owned. It is either the bundle-wide empty
-primary baseline for the first Final load, or the exact C5 event-bound prior
+primary baseline for the first Final load, or the exact ReopenResearchPass event-bound prior
 full inventory for a newer Final load. Do not reinterpret a report written
 after entry as a premature file, and do not treat an old report as delivery for
 a newer lineage.
@@ -82,7 +82,7 @@ a newer lineage.
 - `rb_profile.yaml`, `rb_status.json`, and `rb_trace.jsonl` as current runtime
   facts, plus the canonical `final/` inventory and latest report when present.
 - The current user turn. It may guide presentation, but it cannot create
-  Engine authority, publication evidence, or a C5 request by itself.
+  Engine authority, publication evidence, or a ReopenResearchPass request by itself.
 
 If the current lineage's handoff, verified evidence, or Final admission facts
 are missing or drifted before first delivery, expose that upstream boundary.
@@ -135,8 +135,8 @@ contradictions, or backing obligations.
 - When the user is satisfied, finish the current interaction with no report,
   state, profile, status, Gate, trace, counter, pointer, or event write.
 - When the request needs a new source, Topic, evidence, research conclusion,
-  or research-profile change, use the existing audited post-final C5
-  inspect/apply/recover route. Only evidence-expanding work uses audited C5.
+  or research-profile change, use the existing audited post-final ReopenResearchPass
+  inspect/apply/recover route. Only evidence-expanding work uses audited ReopenResearchPass.
   Presentation feedback alone remains here.
 
 ### 3a. Composition And Revision Discipline
@@ -176,7 +176,7 @@ without rewriting the accepted HITL2 `final_report_view` or
 `composition_handoff`.
 
 The first admitted empty-bundle lineage must compose and publish before asking
-anything. A post-C5 Final lineage with an admitted zero-append prior inventory
+anything. A post-ReopenResearchPass Final lineage with an admitted zero-append prior inventory
 also composes and publishes before asking, using the next global version rather
 than recreating the base. Only a lineage already bound to a latest report waits
 for or acts on presentation feedback.
@@ -184,7 +184,7 @@ for or acts on presentation feedback.
 ## 4. Expected Artifacts
 
 - First admitted empty primary inventory: committed `final/final.md`.
-- Later revision or post-C5 first delivery: committed
+- Later revision or post-ReopenResearchPass first delivery: committed
   `final/final_v<N>.md` or `final/final_<feature>_v<N>.md`, with one global
   contiguous `N` across labels.
 - Every primary version is independently backed, immutable, and retains all
@@ -241,7 +241,7 @@ inventory, backing, and durable-commit facts only.
 
 - **MUST NOT wait for feedback before a current lineage's missing first
   delivery.**（先发布再邀请反馈的次序契约见本 phase §4 的 delivery 段；empty-bundle
-  base 与 admitted zero-append post-C5 delivery 都先发布）
+  base 与 admitted zero-append post-ReopenResearchPass delivery 都先发布）
 - **MUST NOT add a Final Gate, `next`, self-transition, satisfaction field,
   delivery trace event, revision counter, current pointer, or handoff rewrite.**
 - **MUST NOT overwrite, delete, rename, or renumber a committed primary
@@ -252,11 +252,11 @@ inventory, backing, and durable-commit facts only.
   auxiliary-detail cross-references at another version's directory.**
 - **MUST NOT use chat memory, mtime, filename order, or report content to infer
   lineage, entry, version, or satisfaction.**
-- **MUST NOT treat a previous lineage's report as delivery for a newer C5
+- **MUST NOT treat a previous lineage's report as delivery for a newer ReopenResearchPass
   return.** It needs the admitted prior inventory and a new global append.
-- **MUST NOT route presentation-only feedback through C5/HITL2 or mutate the
+- **MUST NOT route presentation-only feedback through ReopenResearchPass/HITL2 or mutate the
   accepted profile/composition handoff, controls baseline, or Decisions.** Only
-  evidence-expanding work uses audited C5 before a newer intent revision can
+  evidence-expanding work uses audited ReopenResearchPass before a newer intent revision can
   become current.
 - **MUST NOT infer delivery semantics from research controls/coverage or weaken
   research obligations from presentation intent.** Missing/stale

@@ -130,7 +130,7 @@ describe('iterative research interaction contract', () => {
     assert.match(final, /missing primary report immediately/i);
     assert.match(final, /presentation feedback/i);
     assert.match(final, /satisfied.*writes nothing/i);
-    assert.match(final, /Only evidence-expanding work uses\s+audited C5/i);
+    assert.match(final, /Only evidence-expanding work uses\s+audited ReopenResearchPass/i);
     assert.match(final, /MUST NOT wait for feedback/i);
     assert.match(header, /TERMINAL DELIVERY MODE/);
     assert.match(header, /compose, publish, and present/i);

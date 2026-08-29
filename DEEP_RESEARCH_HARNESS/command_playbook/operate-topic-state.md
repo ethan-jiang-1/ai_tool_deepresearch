@@ -221,4 +221,4 @@ apply through this command, then run the reported inspect/gate again.
 
 After a committed add or safe remove changes registry length and the result names the style follow-up, run the existing `apply-research-style.mjs` owner. Then inspect canonical topic state and run the normal gate/status audit. Historical artifact/reference/output paths remain at their recorded provenance coordinates; do not move or rewrite them to match the current slug.
 
-Safe remove is intentionally limited to dependency-free topics with no queue/work-unit/ledger/artifact/reference history. A history blocker means preserve the topic; it is not permission to invent retired state. Post-final fresh apply remains the C5 boundary.
+Safe remove is intentionally limited to dependency-free topics with no queue/work-unit/ledger/artifact/reference history. A history blocker means preserve the topic; it is not permission to invent retired state. Post-final fresh apply remains the ReopenResearchPass boundary.

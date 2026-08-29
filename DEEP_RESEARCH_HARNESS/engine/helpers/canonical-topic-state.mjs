@@ -1837,7 +1837,7 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
     recommended_action: 'Run inspect to obtain the complete mutate_layout baseline, then submit that target through the sanctioned rerun path; do not direct-edit multiple surfaces.',
   };
   const unsupported = requestedActions.find((action) => ['retire', 'delete', 'move', 'path_move', 'set_progress', 'set_status', 'override'].includes(action));
-  if (unsupported) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'layout_mutation_not_supported', reason: `${unsupported} is not supported by canonical topic-state apply`, recommended_action: 'Use the existing owner or propose the missing C5 capability; do not direct-edit multiple surfaces.' };
+  if (unsupported) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'layout_mutation_not_supported', reason: `${unsupported} is not supported by canonical topic-state apply`, recommended_action: 'Use the existing owner or propose the missing ReopenResearchPass capability; do not direct-edit multiple surfaces.' };
   const parsed = TopicApplyPlanSchema.safeParse(input);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];

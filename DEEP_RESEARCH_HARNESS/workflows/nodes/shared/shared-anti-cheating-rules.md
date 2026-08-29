@@ -61,7 +61,7 @@ Gate、state 或 transition。
 Final source 条目）。已交付报告的 clear presentation feedback 可在同一 Final
 node 产出一份 immutable next version；这不是 hidden loop、Gate 或
 self-transition，也不改 HITL2 handoff。只有需要新来源、Topic、evidence、research
-conclusion 或 research-profile 变化的反馈，才走 audited C5/HITL2 `rerun` path →
+conclusion 或 research-profile 变化的反馈，才走 audited ReopenResearchPass/HITL2 `rerun` path →
 `phase-rerun.md` → existing incremental chain。不要把普通报告打磨强行变成 rerun，
 也不要把 rerun 偷塞进 Final。
 

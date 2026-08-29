@@ -127,7 +127,7 @@ export const FinalReportInventorySchema = z.object({
 
 // NOTE: digests `entries` exactly in the order given — this function does NOT
 // sort. Callers own the canonical order: the legacy whole-tree digest relies on
-// the plain byte order produced by readSafeRecursiveInventory (both the C5
+// the plain byte order produced by readSafeRecursiveInventory (both the ReopenResearchPass
 // binding and the append proof consume that same order), while the
 // primary-series digest sorts via digestFinalReportPrimarySeriesEntries before
 // delegating here. Never feed this helper a set whose order is not the same one
@@ -502,7 +502,7 @@ export function readFinalReportSeries(bundlePath) {
 /**
  * Read the canonical primary classification and the complete safe Final
  * inventory from one filesystem snapshot boundary. The digest deliberately
- * retains the historic `{ path, sha256 }` shape used by C5 event bindings.
+ * retains the historic `{ path, sha256 }` shape used by ReopenResearchPass event bindings.
  */
 export function readFinalReportInventory(bundlePath) {
   const { bundle, finalRoot } = readFinalRoot(bundlePath);

@@ -323,7 +323,7 @@ describe('shared post-final lineage stage and owner', () => {
     const beforeStatus = readFileSync(statusPath, 'utf8');
     const beforeTrace = readFileSync(tracePath, 'utf8');
     const blocked = JSON.parse(enterFinal(drifted, true));
-    assert.match(blocked.reason, /Final primary inventory is invalid|Final inventory drifted from the accepted C5 prior-inventory digest/);
+    assert.match(blocked.reason, /Final primary inventory is invalid|Final inventory drifted from the accepted (?:C5|ReopenResearchPass) prior-inventory digest/);
     assert.equal(readFileSync(statusPath, 'utf8'), beforeStatus);
     assert.equal(readFileSync(tracePath, 'utf8'), beforeTrace);
 

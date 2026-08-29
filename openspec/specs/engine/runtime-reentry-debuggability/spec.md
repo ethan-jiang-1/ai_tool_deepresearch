@@ -97,11 +97,11 @@ The reentry reference audit SHALL reuse the existing pure reference-authority cl
 
 When a valid newer `post_final_reentry` event, its exact current after-profile, route-bound rerun load and exceptional `phase_transition` explain the immediate legal profile/current-node/status-window evolution after an older HITL2 checkpoint, the checker SHALL use the event's bound before/after profile facts plus the event/load/phase-transition/current rerun window as the current baseline for those control changes. It SHALL preserve the older checkpoint as historical context but SHALL NOT report its superseded profile/status hashes as unexplained blocker drift. Before initial topic-state authorization, a current profile that no longer matches the event-bound after-profile SHALL remain blocker drift.
 
-After sanctioned topic-state preparation, the checker SHALL consume the same C5 ownership/stage evaluation used by post-final inspection rather than maintain a count-only profile comparator. A later profile MAY remain in the same rerun lineage when `research_profile` and every unrelated field remain event-bound and either: the event-bound current count is paired with unchanged event-bound style params or the exact `computeResearchStyleParams` projection for event-bound style plus current committed canonical registry; or the event-bound next count is paired with either of those two style shapes under the same active rule digest. Current count plus an exact projection that differs from event-bound params SHALL retain `synchronized_initial_profile` and expose the existing phase-rerun count owner; an equal projection retains the idempotent topic-state/phase owner because values alone do not prove execution; next count SHALL expose the formal Gate. A style value matching neither allowed shape, changed profile name, partial parameter object or unrelated profile delta SHALL remain blocking.
+After sanctioned topic-state preparation, the checker SHALL consume the same ReopenResearchPass ownership/stage evaluation used by post-final inspection rather than maintain a count-only profile comparator. A later profile MAY remain in the same rerun lineage when `research_profile` and every unrelated field remain event-bound and either: the event-bound current count is paired with unchanged event-bound style params or the exact `computeResearchStyleParams` projection for event-bound style plus current committed canonical registry; or the event-bound next count is paired with either of those two style shapes under the same active rule digest. Current count plus an exact projection that differs from event-bound params SHALL retain `synchronized_initial_profile` and expose the existing phase-rerun count owner; an equal projection retains the idempotent topic-state/phase owner because values alone do not prove execution; next count SHALL expose the formal Gate. A style value matching neither allowed shape, changed profile name, partial parameter object or unrelated profile delta SHALL remain blocking.
 
-After rerun-ready passes, the checker SHALL suppress superseded C5 control hashes only when the C5 ownership/stage evaluator proves the exact normal descendant stage currently present: non-superseded attempt plus unchanged source window before load, matching route-bound load plus target node before status synchronization, or matching transition/resulting status/current node afterward. A later passed `gate_attempt` from the wrong source/target SHALL NOT prove descendant ownership, and an observed load/transition/status mismatch SHALL remain blocker drift rather than falling through to fresh Final eligibility or an unspecified current owner.
+After rerun-ready passes, the checker SHALL suppress superseded ReopenResearchPass control hashes only when the ReopenResearchPass ownership/stage evaluator proves the exact normal descendant stage currently present: non-superseded attempt plus unchanged source window before load, matching route-bound load plus target node before status synchronization, or matching transition/resulting status/current node afterward. A later passed `gate_attempt` from the wrong source/target SHALL NOT prove descendant ownership, and an observed load/transition/status mismatch SHALL remain blocker drift rather than falling through to fresh Final eligibility or an unspecified current owner.
 
-Immediately after legal C5 entry, `check-reentry --at hitl2_recorded` SHALL validate the incoming source-gate checkpoint. `--at phase-rerun` / `rerun_ready` SHALL continue to mean the rerun phase has passed; C5 SHALL NOT change target normalization to hide this distinction.
+Immediately after legal ReopenResearchPass entry, `check-reentry --at hitl2_recorded` SHALL validate the incoming source-gate checkpoint. `--at phase-rerun` / `rerun_ready` SHALL continue to mean the rerun phase has passed; ReopenResearchPass SHALL NOT change target normalization to hide this distinction.
 
 The CLI SHALL NOT mutate runtime files.
 
@@ -175,14 +175,14 @@ Drift severity SHALL be deterministic:
 #### Scenario: Accepted post-final mutation supersedes old control hashes
 
 - **WHEN** an older HITL2 checkpoint has prior profile/status hashes
-- **AND** a valid newer C5 event plus route-bound rerun load and exceptional phase transition explains the exact profile/current-node/status evolution
+- **AND** a valid newer ReopenResearchPass event plus route-bound rerun load and exceptional phase transition explains the exact profile/current-node/status evolution
 - **THEN** `check-reentry --at hitl2_recorded` SHALL use the accepted event/load/current window as the control baseline
 - **AND** SHALL NOT report the older profile/status hashes as unexplained blockers
 
 #### Scenario: Exact rerun style projection remains in lineage
 
 - **WHEN** sanctioned topic add or safe removal changes the committed canonical registry length and the existing style CLI writes the exact shared projection before or with rerun count advancing to the event-bound next count
-- **THEN** C5 and reentry SHALL recognize that profile as the same accepted rerun lineage
+- **THEN** ReopenResearchPass and reentry SHALL recognize that profile as the same accepted rerun lineage
 - **AND** at the event-bound current count a projection differing from event-bound params SHALL expose the existing phase-rerun count owner, while an equal projection SHALL conservatively retain the idempotent topic-state/phase owner
 - **AND** reentry SHALL NOT restore the older checkpoint hash or require a new user decision
 
@@ -195,12 +195,12 @@ Drift severity SHALL be deterministic:
 #### Scenario: Descendant pass suppresses only explained control evolution
 
 - **WHEN** the exact rerun-ready attempt passes and the source window, optional matching load, optional matching transition/status and current node agree with the normal stage reached so far
-- **THEN** reentry MAY suppress only the C5 control hashes explained by that stage and expose its existing next owner
-- **AND** a wrong-source attempt or any observed conflicting load/transition/status/current node SHALL keep the C5 lineage discontinuity as a blocker
+- **THEN** reentry MAY suppress only the ReopenResearchPass control hashes explained by that stage and expose its existing next owner
+- **AND** a wrong-source attempt or any observed conflicting load/transition/status/current node SHALL keep the ReopenResearchPass lineage discontinuity as a blocker
 
 #### Scenario: Post-final entry does not redefine phase target semantics
 
-- **WHEN** C5 has entered rerun but the rerun-ready gate has not passed
+- **WHEN** ReopenResearchPass has entered rerun but the rerun-ready gate has not passed
 - **THEN** `check-reentry --at hitl2_recorded` MAY pass when other facts are clean
 - **AND** `check-reentry --at phase-rerun` SHALL continue to require the `rerun_ready` checkpoint
 
@@ -309,7 +309,7 @@ consistency.
 
 When `current_node` is `phases/phase-final.md`, that coordinate SHALL represent a
 route-bound Final load. For loads created under the current contract, prospective
-admission required an empty first primary inventory or the exact retired C5 prior
+admission required an empty first primary inventory or the exact retired ReopenResearchPass prior
 inventory; an already-entered load predating that admission remains readable
 through explicit compatibility. The coordinate SHALL remain current after the
 first and every revised report because Final has no outgoing transition. Reentry
@@ -317,12 +317,12 @@ SHALL combine this coordinate with the current Gate window, canonical primary Fi
 inventory and accepted lineage facts: a loaded but unsynchronized Final projects
 the exact existing Readiness status-sync owner; a synchronized admitted empty
 inventory projects the bundle's first delivery; a newer legally loaded and
-synchronized Final handoff whose retired C5 prior-inventory digest matches with
+synchronized Final handoff whose retired ReopenResearchPass prior-inventory digest matches with
 zero appended canonical versions projects immediate current-lineage delivery; a
 report proven as an immutable append for that lineage projects latest-report
 refinement; an accepted publication
 workspace projects exact artifact sweep/recovery; and an already accepted,
-still-active C5 workspace or lineage projects its existing recovery owner. A
+still-active ReopenResearchPass workspace or lineage projects its existing recovery owner. A
 clean Final SHALL always project the Final owner, but SHALL distinguish delivery
 pending from refinement using direct lineage/inventory facts. Reentry SHALL not
 read or classify the current user turn or infer satisfaction, pending feedback,
@@ -386,13 +386,13 @@ runtime authority or rely on chat memory.
 Across a Final-boundary handoff and current terminal Final, owner precedence
 SHALL be:
 
-1. already accepted, still-active C5 workspace or lineage -> its exact existing
+1. already accepted, still-active ReopenResearchPass workspace or lineage -> its exact existing
    recovery owner;
 2. accepted artifact-publication/persistence workspace -> exact existing
    quiescent `sweep` or blocked-workspace repair;
 3. invalid or ambiguous canonical primary inventory -> its direct inventory
    blocker, never post-final rerun;
-4. newer legal Final handoff after retired C5 but no route-bound Final load ->
+4. newer legal Final handoff after retired ReopenResearchPass but no route-bound Final load ->
    exact existing `enter-phase` action, whose admission must reproduce the
    event-bound prior inventory before mutation;
 5. route-bound Final load before the Readiness source Gate is synchronized ->
@@ -411,18 +411,18 @@ zero-append (admitted empty inventory or a newer lineage with no appended canoni
 as immediate delivery, while a proven-append (latest committed report bound to the current lineage) SHALL
 project as latest-report refinement; the two SHALL NOT be byte-identical projections.
 This ordering SHALL follow `research/post-final-recovery` (POF-001), which owns
-accepted C5 workspace/lineage precedence over artifact-persistence ownership;
+accepted ReopenResearchPass workspace/lineage precedence over artifact-persistence ownership;
 this list mirrors that Source of Record and SHALL NOT re-decide the precedence
 or add an owner.
 
 Final refinement MAY be projected as the existing `current_owner` action kind
 targeted at `phases/phase-final.md`; it SHALL not add a recovery controller,
 infer a user request, publish a report, or claim user satisfaction. A clean
-Final SHALL not project C5 as the default root, even if side-effect-free C5
+Final SHALL not project ReopenResearchPass as the default root, even if side-effect-free ReopenResearchPass
 inspect would report that rerun is mechanically available.
 
-Once post-final rerun is accepted, the existing C5 stage/owner mapping SHALL
-remain intact: accepted C5 workspace -> exact recover; committed handoff before
+Once post-final rerun is accepted, the existing ReopenResearchPass stage/owner mapping SHALL
+remain intact: accepted ReopenResearchPass workspace -> exact recover; committed handoff before
 entry -> exact `enter-phase`; entered but unsynchronized -> exact
 `advance-status`; topic/style/count/rerun-ready descendants -> their existing
 owner; proven later normal handoff -> current lifecycle owner; exhausted rerun
@@ -444,82 +444,82 @@ postconditions SHALL continue to check the actual current source-gate window.
 #### Scenario: Eligible terminal Final exposes one recovery action
 
 > **@deprecated behavior** — The historical scenario title is retained as an
-> archive anchor. Before C5 has accepted a request, the one reachable action is
-> now the current Final owner rather than C5 preparation.
+> archive anchor. Before ReopenResearchPass has accepted a request, the one reachable action is
+> now the current Final owner rather than ReopenResearchPass preparation.
 
-- **WHEN** the latest lineage is clean terminal Final, inventory is valid, and no publication or accepted C5 workspace exists
+- **WHEN** the latest lineage is clean terminal Final, inventory is valid, and no publication or accepted ReopenResearchPass workspace exists
 - **THEN** recovery summary SHALL expose the current Final owner as reachable
 - **AND** it SHALL not emit post-final recovery preparation as the default action
 
 #### Scenario: Newer Final lineage with zero append resumes immediate delivery
 
-- **WHEN** accepted C5 descendants reach a newer legal Final handoff, exact prior-inventory admission creates its route-bound Final load, Readiness status synchronization completes, and inventory has no appended canonical version
+- **WHEN** accepted ReopenResearchPass descendants reach a newer legal Final handoff, exact prior-inventory admission creates its route-bound Final load, Readiness status synchronization completes, and inventory has no appended canonical version
 - **THEN** recovery summary SHALL expose `phases/phase-final.md` as the current owner for immediate delivery
-- **AND** it SHALL not present the prior report as current-lineage delivery or expose fresh C5 preparation
+- **AND** it SHALL not present the prior report as current-lineage delivery or expose fresh ReopenResearchPass preparation
 
-#### Scenario: Post-C5 Final entry drift keeps the exact entry owner
+#### Scenario: Post-ReopenResearchPass Final entry drift keeps the exact entry owner
 
-- **WHEN** accepted C5 descendants reach a newer legal Final handoff but current safe Final inventory differs from the retired event-bound prior digest before its Final load
+- **WHEN** accepted ReopenResearchPass descendants reach a newer legal Final handoff but current safe Final inventory differs from the retired event-bound prior digest before its Final load
 - **THEN** recovery SHALL expose the existing Final `enter-phase` boundary or its direct blocker rather than a loaded Final refinement owner
-- **AND** it SHALL not treat drifted files as current-lineage delivery or infer a fresh C5 request
+- **AND** it SHALL not treat drifted files as current-lineage delivery or infer a fresh ReopenResearchPass request
 
 #### Scenario: Loaded newer Final keeps status synchronization ahead of delivery
 
 - **WHEN** the newer route-bound Final load exists but the Readiness source Gate has not been synchronized
 - **THEN** recovery summary SHALL expose only the existing `advance-status --to readiness_passed` action for that lifecycle root
-- **AND** it SHALL not project Final publication, refinement, or fresh C5 eligibility
+- **AND** it SHALL not project Final publication, refinement, or fresh ReopenResearchPass eligibility
 
 #### Scenario: Newer Final lineage with proven append resumes refinement
 
 - **WHEN** current valid inventory uniquely preserves the retired event-bound prior inventory and appends one or more highest canonical versions
 - **THEN** recovery summary SHALL expose the latest appended report under the current Final refinement owner
-- **AND** it SHALL preserve every earlier report and C5 event as historical truth
+- **AND** it SHALL preserve every earlier report and ReopenResearchPass event as historical truth
 
 #### Scenario: Accepted post-final request exposes post-final recovery
 
-- **WHEN** an Agent-classified evidence-expanding request has established an accepted C5 workspace or lineage
+- **WHEN** an Agent-classified evidence-expanding request has established an accepted ReopenResearchPass workspace or lineage
 - **THEN** summary SHALL expose its exact post-final recovery owner action
 - **AND** it SHALL not also expose Final presentation refinement as a competing root
 
 #### Scenario: Prepared post-final operation masks downstream symptoms
 
-- **WHEN** an accepted C5 workspace exists before full event commit or after event commit with cleanup incomplete
+- **WHEN** an accepted ReopenResearchPass workspace exists before full event commit or after event commit with cleanup incomplete
 - **THEN** that workspace SHALL be the primary lifecycle root with exact recover action
 - **AND** downstream profile/topic symptoms SHALL not compete
 
-#### Scenario: Pending artifact persistence precedes C5
+#### Scenario: Pending artifact persistence precedes ReopenResearchPass
 
 > **@deprecated scenario name** — The title is retained as the historical
-> anchor. With no accepted C5 workspace, an accepted artifact-persistence
-> workspace takes precedence; an accepted C5 owner takes precedence over it
+> anchor. With no accepted ReopenResearchPass workspace, an accepted artifact-persistence
+> workspace takes precedence; an accepted ReopenResearchPass owner takes precedence over it
 > per POF-001.
 
-- **WHEN** terminal Final contains an accepted artifact-persistence workspace and no accepted C5 workspace or lineage exists
+- **WHEN** terminal Final contains an accepted artifact-persistence workspace and no accepted ReopenResearchPass workspace or lineage exists
 - **THEN** summary SHALL expose only the existing quiescent sweep/recovery action for that root
-- **AND** it SHALL not publish, refine, or offer C5 while inventory is unstable
+- **AND** it SHALL not publish, refine, or offer ReopenResearchPass while inventory is unstable
 
 #### Scenario: Ambiguous primary inventory blocks before rerun
 
 - **WHEN** terminal Final primary inventory cannot classify a unique modern or legacy base
 - **THEN** summary SHALL expose that direct blocker
-- **AND** it SHALL not choose a report, version, Final rewrite, or C5 action
+- **AND** it SHALL not choose a report, version, Final rewrite, or ReopenResearchPass action
 
 #### Scenario: Style-before-count summary uses the shared current owner
 
-- **WHEN** the shared C5 evaluator proves the existing style-before-count crash window
+- **WHEN** the shared ReopenResearchPass evaluator proves the existing style-before-count crash window
 - **THEN** summary SHALL retain the existing phase-rerun count-increment owner
 - **AND** it SHALL not return to Final refinement
 
 #### Scenario: Equal projection keeps the idempotent phase owner
 
-- **WHEN** C5 style values cannot prove style execution because current and event-bound projections are equal
+- **WHEN** ReopenResearchPass style values cannot prove style execution because current and event-bound projections are equal
 - **THEN** summary SHALL preserve the shared topic-state/phase owner
 - **AND** it SHALL not infer another owner
 
 #### Scenario: Exhausted rerun limit does not expose an impossible path
 
 - **WHEN** the active rule makes the requested rerun unavailable
-- **THEN** summary SHALL omit C5 apply and expose only the existing new-bundle decision boundary
+- **THEN** summary SHALL omit ReopenResearchPass apply and expose only the existing new-bundle decision boundary
 
 #### Scenario: Existing reentry output remains compatible
 
@@ -564,8 +564,8 @@ apply/recover, persist progress or create identity.
 
 A plan that fails the current canonical plan contract SHALL produce the shared
 canonical-topic-state blocker without reentry mutation, migration, adoption,
-upgrade, conversion, or a C5 route for making the historical plan current. Its
-historical bytes remain human-readable outside the current Engine. C5 continues
+upgrade, conversion, or a ReopenResearchPass route for making the historical plan current. Its
+historical bytes remain human-readable outside the current Engine. ReopenResearchPass continues
 to govern canonical post-final topic repair only: before its valid complete
 handoff, reentry SHALL not present fresh canonical topic-state apply; after its
 route-bound rerun witness, it MAY expose only the existing canonical
@@ -582,30 +582,30 @@ make fresh apply reachable outside an accepted rerun witness.
 - **WHEN** identity/materialization/direct facts are consistent and no accepted workspace remains
 - **THEN** integration SHALL add no blocker and mutate no bundle file
 
-#### Scenario: Post-final legacy incident points to C5 first
+#### Scenario: Post-final legacy incident points to ReopenResearchPass first
 - **WHEN** reentry inspects terminal Final with a schema-valid canonical topic state that needs post-final repair and no accepted post-final or topic-state workspace
-- **THEN** it SHALL expose the exact C5 eligibility/apply action or direct C5 blocker
-- **AND** it SHALL not use that C5 action to make a historical mutable plan current
+- **THEN** it SHALL expose the exact ReopenResearchPass eligibility/apply action or direct ReopenResearchPass blocker
+- **AND** it SHALL not use that ReopenResearchPass action to make a historical mutable plan current
 
-#### Scenario: Post-final legacy incident points to missing C5
-- **WHEN** reentry inspects terminal Final with a schema-valid canonical topic state but the post-final recovery evaluator cannot establish an eligible or accepted C5 path
-- **THEN** it SHALL report the direct missing/blocked C5 boundary
+#### Scenario: Post-final legacy incident points to missing ReopenResearchPass
+- **WHEN** reentry inspects terminal Final with a schema-valid canonical topic state but the post-final recovery evaluator cannot establish an eligible or accepted ReopenResearchPass path
+- **THEN** it SHALL report the direct missing/blocked ReopenResearchPass boundary
 - **AND** it SHALL not recommend historical-plan migration, adoption, upgrade, or conversion
 
 #### Scenario: Historical mutable plan stops at the current topic-state boundary
 - **WHEN** reentry reads an `rb_plan.md` that fails the current canonical plan contract
 - **THEN** it SHALL return the shared canonical-topic-state blocker without changing bundle bytes
-- **AND** it SHALL not advertise migration, adoption, upgrade, conversion, or C5 as a route to make that plan current
+- **AND** it SHALL not advertise migration, adoption, upgrade, conversion, or ReopenResearchPass as a route to make that plan current
 
 #### Scenario: Post-final accepted workspace exposes exact recovery only
-- **WHEN** terminal lifecycle state contains an accepted prepared post-final recovery or topic-state workspace, including a C5 workspace whose event is committed but cleanup is incomplete
+- **WHEN** terminal lifecycle state contains an accepted prepared post-final recovery or topic-state workspace, including a ReopenResearchPass workspace whose event is committed but cleanup is incomplete
 - **THEN** reentry SHALL expose the exact owning recover operation id
 - **AND** SHALL NOT expose fresh apply or new semantic input
 
 #### Scenario: Route-bound post-final rerun exposes existing topic repair
 - **WHEN** a valid post-final recovery event and exact after-profile have been consumed by completed route-bound `enter-phase`, the exact bound exceptional `phase_transition` exists, and current node/status are the existing rerun window
-- **THEN** reentry MAY expose existing canonical `operate-topic-state` add/update/direction/layout actions subject to C3 checks
-- **AND** SHALL NOT create a C5-specific topic mutation action or a historical-plan migration route
+- **THEN** reentry MAY expose existing canonical `operate-topic-state` add/update/direction/layout actions subject to TopicTreeEvolution checks
+- **AND** SHALL NOT create a ReopenResearchPass-specific topic mutation action or a historical-plan migration route
 
 #### Scenario: Legal current-node update preserves recovery lineage
 
@@ -623,25 +623,25 @@ make fresh apply reachable outside an accepted rerun witness.
 
 Reentry diagnostics SHALL consume topic-state layout inspection and the shared resolver without mutation. An accepted layout workspace SHALL be one primary blocker with exact recover action and SHALL short-circuit derived registry/seed drift. Without a workspace, one UID's current/previous layout collision or unresolved structured legacy binding SHALL be grouped into one root with at most one nearest repair action. Historical artifact/reference paths that resolve through previous layout SHALL not be reported as mutation drift.
 
-Post-final fresh layout requests SHALL consult the accepted C5 path. Before a valid route-bound recovery→rerun witness exists, reentry SHALL expose the C5 action/boundary rather than presenting `mutate_layout` as reachable. After that witness exists, the existing C3B layout action MAY be presented under the normal rerun authorization and quiescence rules.
+Post-final fresh layout requests SHALL consult the accepted ReopenResearchPass path. Before a valid route-bound recovery→rerun witness exists, reentry SHALL expose the ReopenResearchPass action/boundary rather than presenting `mutate_layout` as reachable. After that witness exists, the existing TopicTreeEvolution layout action MAY be presented under the normal rerun authorization and quiescence rules.
 
 #### Scenario: Partial layout commit has one recovery action
 - **WHEN** reentry sees an accepted operation after new seed replacement and before registry replacement or old-seed cleanup
 - **THEN** it SHALL return only the exact topic-state recover command as primary action
 
-#### Scenario: Terminal Final requires C5 before layout mutation
+#### Scenario: Terminal Final requires ReopenResearchPass before layout mutation
 - **WHEN** a terminal bundle has no accepted recovery workspace/event and a human requests rename or renumber
-- **THEN** reentry SHALL expose the exact C5 eligibility/apply action or direct C5 blocker
+- **THEN** reentry SHALL expose the exact ReopenResearchPass eligibility/apply action or direct ReopenResearchPass blocker
 - **AND** SHALL NOT treat the request source as direct topic mutation permission
 
 #### Scenario: Terminal final does not gain mutation authority
 
-- **WHEN** a terminal bundle has no accepted C5 event plus route-bound rerun load and a human requests rename or renumber
-- **THEN** reentry SHALL require the C5 path or report its direct blocker
+- **WHEN** a terminal bundle has no accepted ReopenResearchPass event plus route-bound rerun load and a human requests rename or renumber
+- **THEN** reentry SHALL require the ReopenResearchPass path or report its direct blocker
 - **AND** SHALL NOT treat terminal position or request source as topic mutation permission
 
-#### Scenario: Post-final rerun reuses C3B layout owner
-- **WHEN** C5 recovery has been route-bound into the existing rerun node and layout mutation is otherwise eligible
+#### Scenario: Post-final rerun reuses TopicTreeEvolution layout owner
+- **WHEN** ReopenResearchPass recovery has been route-bound into the existing rerun node and layout mutation is otherwise eligible
 - **THEN** reentry SHALL recommend the existing topic-state `mutate_layout` path
 - **AND** SHALL NOT introduce a post-final layout mover, history rewrite or second workspace
 

@@ -133,7 +133,7 @@ The Engine validates the route-bound HITL2 witness plus count/action/required fi
    - 没有 `style_projection` 的 no-length-change commit 不启动 style CLI，也不读取 profile 来决定是否启动。`profile_unavailable` 不是 direct-edit profile 的理由；保留给既有 profile prerequisite/Gate feedback。
    - 若此前一个合法 handoff 未完成，`rerun-ready` 的单一 `style_projection_freshness` root 会返回同一个 writer 与同一 Gate rerun；不得以无条件 style apply 绕开它。
 
-   对 C5 的 accepted event-bound style/count 行为保持不变：在 count increment 前已经写出的 exact current projection 是可恢复的既有形状，不增加新的 stage、writer 或 event mutation。
+   对 ReopenResearchPass 的 accepted event-bound style/count 行为保持不变：在 count increment 前已经写出的 exact current projection 是可恢复的既有形状，不增加新的 stage、writer 或 event mutation。
 
 2. **递增 rerun_count**：
    - 当前值为 N，递增到 target_rerun_count（即 N+1）。

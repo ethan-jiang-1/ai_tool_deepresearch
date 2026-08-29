@@ -43,19 +43,19 @@ prepared-operation revalidation SHALL pass the production-parsed definition and
 full ProfileSchema-parsed profile to REI-003 with `includeNextIncrement: true`.
 A supported unavailable result SHALL block before workspace creation and expose
 only the new-bundle decision. Unsupported rule/profile facts SHALL block with
-their concrete boundary and SHALL not claim a new bundle repairs them. C5 SHALL
+their concrete boundary and SHALL not claim a new bundle repairs them. ReopenResearchPass SHALL
 not reset, decrement, or bypass `rerun_count`.
 
 An accepted artifact-persistence/publication workspace SHALL take precedence
 with the existing quiescent sweep action. An accepted topic-state workspace
 SHALL take precedence with its exact recover action. Invalid or ambiguous
-canonical primary Final inventory SHALL block before C5 acceptance. Canonical
+canonical primary Final inventory SHALL block before ReopenResearchPass acceptance. Canonical
 topic drift repairable only after sanctioned rerun MAY remain carried context,
 but ambiguous control lineage, unstable Final persistence, active work, or
 exhausted rerun count SHALL block.
 
-External inspect/apply SHALL always treat an accepted C5 workspace as recovery-
-owned. The C5 ownership/stage evaluator MAY receive internal manifest-bound
+External inspect/apply SHALL always treat an accepted ReopenResearchPass workspace as recovery-
+owned. The ReopenResearchPass ownership/stage evaluator MAY receive internal manifest-bound
 context only from commit/recover; it SHALL identify exactly the current
 operation and prepared-manifest digest, treat only that workspace as the
 operation being completed, and still block a second accepted workspace or
@@ -63,19 +63,19 @@ unrelated drift. No caller flag or request field SHALL expose this exception.
 
 Three deterministic responsibilities SHALL remain distinct: REI-003 interprets
 only rerun availability; RES-001 computes only the full research-style
-projection; and the C5 evaluator resolves workspaces, accepted lineage, and
+projection; and the ReopenResearchPass evaluator resolves workspaces, accepted lineage, and
 current owner while consuming those pure facts. None SHALL become a generic
 recovery controller, presentation-intent classifier, or report-quality judge.
 
-The C5 evaluator SHALL resolve accepted ownership and replay before fresh
-eligibility in this order: accepted C5 workspace; accepted artifact/topic-state
-owner workspace; newest accepted active C5 lineage and current stage; then a
+The ReopenResearchPass evaluator SHALL resolve accepted ownership and replay before fresh
+eligibility in this order: accepted ReopenResearchPass workspace; accepted artifact/topic-state
+owner workspace; newest accepted active ReopenResearchPass lineage and current stage; then a
 fresh Agent-selected `post_final_rerun` request against the latest Final lineage.
-A clean Final without an accepted C5 workspace or lineage SHALL remain outside
-C5 recovery ownership and project the Final delivery/refinement owner through
+A clean Final without an accepted ReopenResearchPass workspace or lineage SHALL remain outside
+ReopenResearchPass recovery ownership and project the Final delivery/refinement owner through
 reentry, even when side-effect-free inspect reports mechanical eligibility.
 
-A committed C5 lineage SHALL remain recognizable after legal rerun entry,
+A committed ReopenResearchPass lineage SHALL remain recognizable after legal rerun entry,
 status synchronization, topic preparation, style recomputation, event-bound
 count increment, and later normal descendant handoffs. At the event-bound count,
 exact event-bound style params keep the existing topic-state/phase owner. When
@@ -90,14 +90,14 @@ fields remain event-bound; unrelated or unsupported drift SHALL block. The
 rerun-ready Gate retains the formal current-count check with
 `includeNextIncrement: false`.
 
-After rerun-ready passes, C5 SHALL use existing normal Gate/load/transition/
+After rerun-ready passes, ReopenResearchPass SHALL use existing normal Gate/load/transition/
 status authority to prove one continuous descendant chain and project only the
 nearest existing owner. A passed attempt, load, transition, status, or current
 node that conflicts with that exact chain SHALL block and SHALL not fall through
 to fresh eligibility. A newer legal Readiness-to-Final handoff SHALL retire the
-older C5 lineage from current recovery ownership and project the exact normal
+older ReopenResearchPass lineage from current recovery ownership and project the exact normal
 Final-entry owner, but the handoff alone SHALL NOT establish Final entry, a new
-report delivery, or a fresh C5 candidate. The retired C5 event's prior Final
+report delivery, or a fresh ReopenResearchPass candidate. The retired ReopenResearchPass event's prior Final
 inventory digest SHALL remain the audit witness for that boundary, evaluated on
 the basis the event bound. Before the new route-bound Final load, `enter-phase`
 SHALL require the current safe Final inventory to reproduce that digest exactly
@@ -109,7 +109,7 @@ Only in the synchronized terminal Final window does zero appended canonical
 inventory mean Final owns immediate current-lineage publication. Only after one
 or more highest canonical versions are proven as immutable appends over that
 prior inventory MAY the newest report count as delivery for the newer lineage;
-only then MAY another explicit evidence-expanding request become a fresh C5
+only then MAY another explicit evidence-expanding request become a fresh ReopenResearchPass
 candidate.
 
 The Final inventory lineage witness SHALL be a deterministic sorted digest over
@@ -118,7 +118,7 @@ revisions), computed from one safe snapshot that still scans every bundle-
 relative regular file under `final/`: symlinks, unreadable entries, path
 escape, unsupported types, or ambiguous primary classification SHALL block
 rather than be skipped. It SHALL not infer identity or recency from directory
-mtime, chat delivery text, or caches. A new C5 event SHALL bind that
+mtime, chat delivery text, or caches. A new ReopenResearchPass event SHALL bind that
 primary-scoped digest in the existing event field together with an explicit
 basis marker; events bound before this basis change carry no marker and remain
 legacy whole-tree bindings, where the digest is the deterministic sorted digest
@@ -134,7 +134,7 @@ base's file name or the presence of canonical revisions whose names collate
 oppositely to the byte scan (for example a modern base `final.md` with
 `final_vN.md` revisions). Legal non-primary Final presentation updates
 committed through the accepted persistence operation SHALL NOT constitute
-lineage drift on either basis. For a newer Final handoff after accepted C5, the
+lineage drift on either basis. For a newer Final handoff after accepted ReopenResearchPass, the
 exact zero-append digest match on the event's bound basis SHALL first be
 consumed by `enter-phase` as the pre-load admission baseline. After the
 route-bound Final load and existing Readiness status synchronization, the
@@ -167,14 +167,14 @@ and a fresh-eligibility result reached through a retired newer Final SHALL
 expose the accepted proof. No match on the bound basis, a match that requires
 removing a base/supplementary primary entry, a retained primary series that is
 no longer structurally valid, or ambiguous canonical history SHALL block. This
-proof SHALL reuse the existing C5 event field and SHALL not add timestamp
+proof SHALL reuse the existing ReopenResearchPass event field and SHALL not add timestamp
 authority, a delivery event, profile counter, or current-report pointer.
 
 `apply` SHALL accept one retained strict JSON request containing schema version,
 closed action, non-empty reason/scope, inspect-derived logical bundle identity,
 and expected Final lineage/inventory bindings. The identity tuple SHALL reuse
 current status bundle, matching plan/profile basename, and normalized selected-
-directory interpretation. C5 SHALL not add UUID identity, caller-selected
+directory interpretation. ReopenResearchPass SHALL not add UUID identity, caller-selected
 node/gate/status/event/file lists, `human-directed`, force, override, or identity
 token fields. Request prose supplies semantic/audit input and optimistic
 concurrency only; it does not prove identity or expand host permission.
@@ -207,7 +207,7 @@ contract failures SHALL use blocked exit `1`.
 
 > **@deprecated behavior** — The historical title is retained as an archive
 > anchor. Clean terminal mechanics are necessary but no longer sufficient;
-> current explicit evidence-expanding intent is also required for C5 ownership.
+> current explicit evidence-expanding intent is also required for ReopenResearchPass ownership.
 
 - **WHEN** the latest lineage is legal terminal Final with a valid primary report bound to that lineage, no active owner workspace/work, a supported available next increment, and a retained request for new evidence or research scope
 - **THEN** inspect SHALL report `eligible` and return exact request/apply preparation bindings
@@ -215,13 +215,13 @@ contract failures SHALL use blocked exit `1`.
 #### Scenario: Presentation-only feedback remains in Final
 
 - **WHEN** current feedback asks only to change reader, view, structure, length, wording, emphasis, appendix, or explanation of existing verified evidence
-- **THEN** the Final Agent SHALL not construct or submit a C5 apply request
+- **THEN** the Final Agent SHALL not construct or submit a ReopenResearchPass apply request
 - **AND** the nearest owner SHALL be `phases/phase-final.md`
 
 #### Scenario: Mechanical eligibility does not invent rerun intent
 
 - **WHEN** a clean terminal Final mechanically could rerun but no current retained evidence-expanding request exists
-- **THEN** inspect MAY report availability facts without making C5 the reentry owner
+- **THEN** inspect MAY report availability facts without making ReopenResearchPass the reentry owner
 - **AND** the Engine SHALL not infer a request from Final inventory or chat history
 
 #### Scenario: Next rerun would exhaust the existing gate rule
@@ -239,17 +239,17 @@ contract failures SHALL use blocked exit `1`.
 #### Scenario: Pending artifact persistence keeps its owner
 
 - **WHEN** an accepted artifact-persistence/publication workspace exists
-- **THEN** C5 SHALL report only the existing quiescent sweep action
-- **AND** it SHALL not hash unstable inventory or create a C5 workspace
+- **THEN** ReopenResearchPass SHALL report only the existing quiescent sweep action
+- **AND** it SHALL not hash unstable inventory or create a ReopenResearchPass workspace
 
 #### Scenario: Accepted topic-state recovery keeps its owner
 
 - **WHEN** an accepted topic-state workspace exists after lifecycle drift into Final
-- **THEN** C5 SHALL report only its exact recover action and create no competing workspace
+- **THEN** ReopenResearchPass SHALL report only its exact recover action and create no competing workspace
 
-#### Scenario: Multiple accepted C5 workspaces are ambiguous
+#### Scenario: Multiple accepted ReopenResearchPass workspaces are ambiguous
 
-- **WHEN** more than one valid-looking C5 prepared workspace exists
+- **WHEN** more than one valid-looking ReopenResearchPass prepared workspace exists
 - **THEN** inspect/apply SHALL block without selecting or creating an operation
 
 #### Scenario: Request fields do not create permission
@@ -270,7 +270,7 @@ contract failures SHALL use blocked exit `1`.
 
 #### Scenario: Inspect recognizes an accepted nonterminal recovery lineage
 
-- **WHEN** committed C5 has legally entered rerun or later accepted descendant stages
+- **WHEN** committed ReopenResearchPass has legally entered rerun or later accepted descendant stages
 - **THEN** inspect SHALL return unchanged with the one current owner without requiring terminal Final or testing another future increment
 
 #### Scenario: Exact style recomputation remains accepted lineage
@@ -281,62 +281,62 @@ contract failures SHALL use blocked exit `1`.
 #### Scenario: Style-before-count crash returns to the existing count owner
 
 - **WHEN** exact distinct style projection committed but event-bound count has not incremented
-- **THEN** inspect SHALL return the phase-rerun count owner without another C5 stage or user decision
+- **THEN** inspect SHALL return the phase-rerun count owner without another ReopenResearchPass stage or user decision
 
 #### Scenario: Wrong style or unrelated profile change blocks
 
 - **WHEN** research profile or style/current profile facts differ outside accepted event-bound or exact projection forms
-- **THEN** C5 SHALL block without rewriting profile, selecting style, or continuing
+- **THEN** ReopenResearchPass SHALL block without rewriting profile, selecting style, or continuing
 
 #### Scenario: Rerun-ready pass projects only its next proven normal owner
 
 - **WHEN** exact accepted rerun-ready attempt passes but its normal handoff is only partly consumed
-- **THEN** C5 SHALL project only the next proven enter/status/current owner stage
+- **THEN** ReopenResearchPass SHALL project only the next proven enter/status/current owner stage
 - **AND** it SHALL not jump ahead
 
 #### Scenario: Conflicting descendant evidence blocks
 
 - **WHEN** a later attempt/load/transition/status/current-node fact conflicts with the accepted chain
-- **THEN** C5 SHALL block on the earliest continuity failure and not fall through to Final or fresh eligibility
+- **THEN** ReopenResearchPass SHALL block on the earliest continuity failure and not fall through to Final or fresh eligibility
 
 #### Scenario: Different request cannot stack on one Final lineage
 
-- **WHEN** an accepted C5 event owns the latest Final lineage and a different request arrives before a newer legal Final handoff retires that owner
+- **WHEN** an accepted ReopenResearchPass event owns the latest Final lineage and a different request arrives before a newer legal Final handoff retires that owner
 - **THEN** apply SHALL block without a second event or profile rewrite
 
 #### Scenario: Newer Final handoff with unchanged inventory returns to delivery
 
-- **WHEN** accepted C5 descendants reach a newer legal Final handoff, `enter-phase` admits the exact event-bound prior inventory on its bound basis, Readiness status synchronization completes, and inventory still has zero appended canonical revisions
-- **THEN** C5 SHALL remain retired as current owner and Final SHALL own immediate publication of global `latest + 1`
-- **AND** inspect/apply SHALL not expose a fresh C5 request against the undelivered newer lineage
+- **WHEN** accepted ReopenResearchPass descendants reach a newer legal Final handoff, `enter-phase` admits the exact event-bound prior inventory on its bound basis, Readiness status synchronization completes, and inventory still has zero appended canonical revisions
+- **THEN** ReopenResearchPass SHALL remain retired as current owner and Final SHALL own immediate publication of global `latest + 1`
+- **AND** inspect/apply SHALL not expose a fresh ReopenResearchPass request against the undelivered newer lineage
 
 #### Scenario: Loaded newer Final preserves the existing status-sync owner
 
 - **WHEN** exact prior-inventory admission has written the newer route-bound Final load but the Readiness source Gate is not yet synchronized
 - **THEN** the nearest owner SHALL remain the existing `advance-status --to readiness_passed` action
-- **AND** Final publication, refinement, and fresh C5 eligibility SHALL remain unavailable
+- **AND** Final publication, refinement, and fresh ReopenResearchPass eligibility SHALL remain unavailable
 
-#### Scenario: Pre-load inventory drift blocks the post-C5 Final return
+#### Scenario: Pre-load inventory drift blocks the post-ReopenResearchPass Final return
 
-- **WHEN** accepted C5 descendants reach a newer legal Final handoff but the current safe Final inventory no longer reproduces the retired event-bound prior digest on its bound basis before the new Final load
+- **WHEN** accepted ReopenResearchPass descendants reach a newer legal Final handoff but the current safe Final inventory no longer reproduces the retired event-bound prior digest on its bound basis before the new Final load
 - **THEN** `enter-phase` SHALL reject without `load_complete` or `current_node` mutation
-- **AND** C5/reentry SHALL not reinterpret the drift as a delivered report or expose a fresh C5 request
+- **AND** ReopenResearchPass/reentry SHALL not reinterpret the drift as a delivered report or expose a fresh ReopenResearchPass request
 
 #### Scenario: Non-primary presentation drift does not block a primary-scoped load
 
-- **WHEN** a primary-scoped C5 event's rerun has legally updated non-primary Final presentation files (for example `final/topics/*.md` through the accepted persistence operation) before the newer Final load
+- **WHEN** a primary-scoped ReopenResearchPass event's rerun has legally updated non-primary Final presentation files (for example `final/topics/*.md` through the accepted persistence operation) before the newer Final load
 - **THEN** `enter-phase` admission SHALL still reproduce the event-bound primary-series digest
 - **AND** those non-primary updates SHALL NOT be reported as Final inventory drift
 
 #### Scenario: Immutable append establishes the newer delivery lineage
 
-- **WHEN** current valid inventory uniquely preserves the retired C5 event-bound inventory on its bound basis and adds one or more highest contiguous canonical revisions
+- **WHEN** current valid inventory uniquely preserves the retired ReopenResearchPass event-bound inventory on its bound basis and adds one or more highest contiguous canonical revisions
 - **THEN** the newest appended report MAY bind the newer legal Final lineage and clean reentry SHALL own ordinary Final refinement
-- **AND** a later explicit evidence-expanding request MAY become a fresh C5 candidate without rewriting the older event or reports
+- **AND** a later explicit evidence-expanding request MAY become a fresh ReopenResearchPass candidate without rewriting the older event or reports
 
 #### Scenario: Modern primary series append proof reproduces the bound digest
 
-- **WHEN** a primary-scoped C5 event bound a modern primary series (`final.md` base plus contiguous `final_vN.md` revisions) and the current inventory's retained set is byte-identical to the bound inventory with one or more higher contiguous revisions appended
+- **WHEN** a primary-scoped ReopenResearchPass event bound a modern primary series (`final.md` base plus contiguous `final_vN.md` revisions) and the current inventory's retained set is byte-identical to the bound inventory with one or more higher contiguous revisions appended
 - **THEN** the append proof SHALL rehash the retained entries in the identical canonical order used by the binding digest (the primary-series basis order described above) and report a match on the event's bound basis
 - **AND** the proof SHALL NOT report `newer_final_inventory_drift` solely because byte-order and collation order place `final.md` and `final_vN.md` differently
 
@@ -344,14 +344,14 @@ contract failures SHALL use blocked exit `1`.
 
 - **WHEN** a rerun's Final stage legally updates non-primary Final presentation files and publishes a newer primary revision, and a later explicit evidence-expanding request arrives
 - **THEN** the append proof SHALL succeed on the event's bound basis (using the structural primary-series fallback for a legacy whole-tree binding when only non-primary entries drifted, with the fallback exposed as a diagnostic)
-- **AND** inspect SHALL expose fresh C5 eligibility for that request instead of returning `accepted_lineage_drift`
-- **AND** the newer C5 event SHALL bind the current primary-scoped digest with its basis marker
+- **AND** inspect SHALL expose fresh ReopenResearchPass eligibility for that request instead of returning `accepted_lineage_drift`
+- **AND** the newer ReopenResearchPass event SHALL bind the current primary-scoped digest with its basis marker
 
 #### Scenario: Unreachable primary-series binding recovers through the structural fallback
 
-- **WHEN** a primary-scoped C5 event bound a primary-series byte state that no current retained removal prefix reproduces (the bound bytes were renamed or rewritten out of band after binding, so no retained digest can ever equal the witness), and the current primary series remains structurally valid
+- **WHEN** a primary-scoped ReopenResearchPass event bound a primary-series byte state that no current retained removal prefix reproduces (the bound bytes were renamed or rewritten out of band after binding, so no retained digest can ever equal the witness), and the current primary series remains structurally valid
 - **THEN** the append proof SHALL match through the structural fallback exposed as its own diagnostic basis distinct from the exact bound basis and from the legacy fallback basis
-- **AND** inspect SHALL return fresh C5 eligibility binding the current lineage with one deterministic warning identifying the fallback basis, instead of `accepted_lineage_drift`
+- **AND** inspect SHALL return fresh ReopenResearchPass eligibility binding the current lineage with one deterministic warning identifying the fallback basis, instead of `accepted_lineage_drift`
 - **AND** the fallback SHALL NOT be accepted when the retained primary series is no longer structurally valid
 
 #### Scenario: Primary-series tampering remains drift on both bases
@@ -374,23 +374,23 @@ An accepted operation SHALL use `_diagnostics/post-final-recovery/<operation-id>
 
 Durable prepared publication SHALL be the acceptance boundary. Before it, failure SHALL leave authority bytes unchanged and SHALL not advertise recoverability. After it, `recover` SHALL use only manifest-bound expected-old/staged-new bytes and exact event identity; it SHALL not accept new semantics or widen the file set.
 
-A real non-symlink operation directory without a valid durably published `prepared` manifest SHALL be unaccepted diagnostic residue, not a recoverable operation and not a second workspace owner. Inspect MAY warn about it, but a fresh apply SHALL use a new operation id without reading, promoting or deleting that residue. A symlink, non-directory entry or path-unsafe residue under the C5 root SHALL block root integrity. Optional residue cleanup remains explicit diagnostic maintenance and SHALL NOT be folded into `recover` for an unaccepted operation.
+A real non-symlink operation directory without a valid durably published `prepared` manifest SHALL be unaccepted diagnostic residue, not a recoverable operation and not a second workspace owner. Inspect MAY warn about it, but a fresh apply SHALL use a new operation id without reading, promoting or deleting that residue. A symlink, non-directory entry or path-unsafe residue under the ReopenResearchPass root SHALL block root integrity. Optional residue cleanup remains explicit diagnostic maintenance and SHALL NOT be folded into `recover` for an unaccepted operation.
 
 Commit SHALL roll forward in this order:
 
 1. replace the HITL2 profile projection with `status: recorded`, `user_decision: rerun`, and `rationale` equal to one deterministic serialization of the accepted reason plus requested scope, while preserving all other profile fields and existing `rerun_count`; the operation timestamp remains in the recovery event because the current HITL2 profile schema has no `recorded_at` field;
 2. revalidate that status remains the exact terminal Final bytes accepted by the manifest;
-3. validate the prepared pre-entry profile/terminal-state facts from the C5 ownership/stage evaluator;
+3. validate the prepared pre-entry profile/terminal-state facts from the ReopenResearchPass ownership/stage evaluator;
 4. append the exact event last through one durable idempotent primitive in the existing trace writer owner;
 5. fsync and clean the workspace.
 
-The manifest SHALL bind original trace prefix byte length, SHA256 and parsed line count before event append, but SHALL NOT copy the whole trace or predeclare a fixed final event index. Append/recover SHALL require the first recorded byte length to hash identically. If only well-formed lines were appended after that prefix, the C5 ownership/stage evaluator SHALL recheck that Final lineage, profile/status/final inventory, bundle identity and accepted handoff authority remain the originally proven facts; an authority-neutral suffix SHALL not strand recovery, and the event may append at the current tail with its actual parsed index. Prefix mutation/truncation, malformed suffix, a later accepted handoff/recovery authority or any relevant fact drift SHALL block. Exact event append SHALL be idempotent by event/operation identity and exact line SHA: identical existing event means committed; conflicting identity/hash means blocked.
+The manifest SHALL bind original trace prefix byte length, SHA256 and parsed line count before event append, but SHALL NOT copy the whole trace or predeclare a fixed final event index. Append/recover SHALL require the first recorded byte length to hash identically. If only well-formed lines were appended after that prefix, the ReopenResearchPass ownership/stage evaluator SHALL recheck that Final lineage, profile/status/final inventory, bundle identity and accepted handoff authority remain the originally proven facts; an authority-neutral suffix SHALL not strand recovery, and the event may append at the current tail with its actual parsed index. Prefix mutation/truncation, malformed suffix, a later accepted handoff/recovery authority or any relevant fact drift SHALL block. Exact event append SHALL be idempotent by event/operation identity and exact line SHA: identical existing event means committed; conflicting identity/hash means blocked.
 
 Recovery SHALL be roll-forward only. It MAY complete expected-old profile bytes to staged-new, append the missing exact event, or clean an already committed workspace. Profile or terminal-status drift SHALL block without restoring old state, deleting history or guessing rollback. Status synchronization after the event SHALL remain owned by existing `enter-phase` plus `advance-status`, not recover.
 
 Reason and requested scope SHALL remain separate normalized fields in the append-only recovery event, but SHALL NOT add new `rb_profile.yaml` schema fields. Both strings SHALL normalize CRLF to LF, trim outer whitespace and reject NUL. The profile rationale SHALL be exactly `Post-final rerun reason:\n<reason>\n\nRequested scope:\n<requested_scope>`. Apply/recover SHALL share this serializer so exact recovery never reconstructs it from free-form prose.
 
-Any accepted C5 workspace SHALL remain the sole nearest recovery owner until exact cleanup succeeds, including when the event was appended before a cleanup crash. `enter-phase`, `advance-status` and fresh apply SHALL reject while that workspace exists and point only to exact `recover`; the durable event becomes consumable handoff authority after workspace cleanup.
+Any accepted ReopenResearchPass workspace SHALL remain the sole nearest recovery owner until exact cleanup succeeds, including when the event was appended before a cleanup crash. `enter-phase`, `advance-status` and fresh apply SHALL reject while that workspace exists and point only to exact `recover`; the durable event becomes consumable handoff authority after workspace cleanup.
 
 #### Scenario: Crash before prepared publication is unaccepted
 
@@ -437,17 +437,17 @@ Any accepted C5 workspace SHALL remain the sole nearest recovery owner until exa
 
 ### Requirement: Post-final recovery SHALL create one lineage-bound rerun authority without widening lifecycle authority
 
-The Engine-written `post_final_reentry` event SHALL include top-level `bundle` equal to the accepted status bundle and bind a stable event id, logical bundle identity tuple, operation/request digests, previous readiness->Final gate/load indexes, previous and committed-after profile semantic fields/hashes, previous status hash, final inventory digest, decision checkpoint `hitl2`, decision outcome `rerun`, transition-table digest/resolution, derived source status window, active rerun-limit rule id/definition digest and inspected `current_count|next_count|limit`, execution actor surface and timestamp. The C5 adapter SHALL derive those three count facts from the supported REI-003 fresh-eligibility result while preserving their existing field names and schema. The prepared manifest SHALL separately bind SHA256 of the exact staged UTF-8 JSON object-line bytes excluding the terminal LF; the event SHALL NOT contain a self-referential digest field. Downstream load/transition bindings SHALL carry event id plus that exact event-line SHA256. The target SHALL be resolved by the existing `transitions.chain.json` HITL2 `rerun` branch and manifest/status-window helpers; C5 SHALL NOT hardcode a second action->node/window table or add a Final outgoing edge. It SHALL not claim a verified personal identity, globally unique bundle identity or a gate attempt that did not occur.
+The Engine-written `post_final_reentry` event SHALL include top-level `bundle` equal to the accepted status bundle and bind a stable event id, logical bundle identity tuple, operation/request digests, previous readiness->Final gate/load indexes, previous and committed-after profile semantic fields/hashes, previous status hash, final inventory digest, decision checkpoint `hitl2`, decision outcome `rerun`, transition-table digest/resolution, derived source status window, active rerun-limit rule id/definition digest and inspected `current_count|next_count|limit`, execution actor surface and timestamp. The ReopenResearchPass adapter SHALL derive those three count facts from the supported REI-003 fresh-eligibility result while preserving their existing field names and schema. The prepared manifest SHALL separately bind SHA256 of the exact staged UTF-8 JSON object-line bytes excluding the terminal LF; the event SHALL NOT contain a self-referential digest field. Downstream load/transition bindings SHALL carry event id plus that exact event-line SHA256. The target SHALL be resolved by the existing `transitions.chain.json` HITL2 `rerun` branch and manifest/status-window helpers; ReopenResearchPass SHALL NOT hardcode a second action->node/window table or add a Final outgoing edge. It SHALL not claim a verified personal identity, globally unique bundle identity or a gate attempt that did not occur.
 
-The recorded transition-table digest SHALL remain acceptance-time audit context rather than a perpetual whole-file lock. Before event append and while consuming the exceptional handoff, the C5 ownership/stage evaluator SHALL re-resolve the relevant HITL2 `rerun` target and target status-window tuple and require them to equal the recorded resolution. An unrelated transition/manifest edit that preserves that semantic tuple MAY remain valid; changed or unresolvable target/window semantics SHALL block. The active rerun-limit rule SHALL remain bound by exact rule id/digest/current/next/limit until the sanctioned count increment because that rule directly determines whether this accepted rerun can pass.
+The recorded transition-table digest SHALL remain acceptance-time audit context rather than a perpetual whole-file lock. Before event append and while consuming the exceptional handoff, the ReopenResearchPass ownership/stage evaluator SHALL re-resolve the relevant HITL2 `rerun` target and target status-window tuple and require them to equal the recorded resolution. An unrelated transition/manifest edit that preserves that semantic tuple MAY remain valid; changed or unresolvable target/window semantics SHALL block. The active rerun-limit rule SHALL remain bound by exact rule id/digest/current/next/limit until the sanctioned count increment because that rule directly determines whether this accepted rerun can pass.
 
 One pure structural parser SHALL validate the event's immutable schema, deterministic event/operation/request identity, Final lineage references and current transition/manifest resolution, and compute the exact event-line SHA256 fact without requiring one mutable lifecycle stage. Existing handoff, phase-status, reentry and topic-state owners SHALL consume that same parsed fact object through closed stage predicates: `pre_entry`, `loaded_pending_status`, `synchronized_initial_profile`, or `synchronized_count_incremented`. Later load/transition predicates SHALL compare their recorded hash to that computed fact. A later-stage consumer SHALL NOT rerun a pre-entry terminal-status predicate or maintain a second event interpretation.
 
-The stage predicates SHALL be mutually exclusive and deterministic. `pre_entry` requires the exact event-bound profile plus terminal Final node/window; an event-bound load left by a failed current-node write still maps to the same enter-phase retry. `loaded_pending_status` requires a route-bound load plus rerun current node and covers either the still-terminal gate window or the exact derived rerun window with the bound transition still missing; a conflicting transition blocks. `synchronized_initial_profile` requires load, bound transition, rerun current node, derived rerun window, the event-bound current count and either the exact event-bound style params or the complete exact RES-001 projection from unchanged event-bound `research_profile` plus current canonical registry. For the event-bound current count, a current profile whose `human_decision_checkpoints.hitl2.rerun_count` key is absent SHALL be interpreted as the event-recorded `rerun_guard.current_count` (the REI-003 inspected current count), matching how fresh eligibility and the rerun-limit rule read an absent field, and SHALL NOT be treated as an undefined value that fails the count window. When the event's committed-after profile semantics do not carry `rerun_count` (a legacy profile shape preserved by an exact C5 commit), the stage comparison SHALL NOT require that key in the current profile beyond the event-bound count interpretation, and SHALL NOT fabricate the key in the immutable event semantics; the profile comparison SHALL verify only the fields the event semantics actually carry plus the sanctioned count and style projections. Its nearest owner SHALL be existing topic-state/phase inspection for exact event-bound params, including when the computed projection is equal and therefore provides no progress witness, and the existing phase-rerun count increment only when the exact projected params differ from event-bound params. `synchronized_count_incremented` permits the event-bound count delta from recorded `current_count` to recorded `next_count` under the same active rule digest, with either unchanged event-bound style parameters or that complete exact projection. Neither stage SHALL permit a style value matching neither allowed shape or any other profile delta, and the incremented stage SHALL NOT call next-increment availability again. After a valid rerun-ready gate consumes that synchronized lineage with its current-count evaluation, existing `descendant_pipeline` SHALL carry the nearest owner derived from each valid normal handoff stage: enter-phase before load, status synchronization after load, then current lifecycle owner after matching transition/status; later normal handoffs repeat this interpretation. It SHALL reuse normal authority rather than inventing a sixth C5 stage or falling back to fresh Final eligibility.
+The stage predicates SHALL be mutually exclusive and deterministic. `pre_entry` requires the exact event-bound profile plus terminal Final node/window; an event-bound load left by a failed current-node write still maps to the same enter-phase retry. `loaded_pending_status` requires a route-bound load plus rerun current node and covers either the still-terminal gate window or the exact derived rerun window with the bound transition still missing; a conflicting transition blocks. `synchronized_initial_profile` requires load, bound transition, rerun current node, derived rerun window, the event-bound current count and either the exact event-bound style params or the complete exact RES-001 projection from unchanged event-bound `research_profile` plus current canonical registry. For the event-bound current count, a current profile whose `human_decision_checkpoints.hitl2.rerun_count` key is absent SHALL be interpreted as the event-recorded `rerun_guard.current_count` (the REI-003 inspected current count), matching how fresh eligibility and the rerun-limit rule read an absent field, and SHALL NOT be treated as an undefined value that fails the count window. When the event's committed-after profile semantics do not carry `rerun_count` (a legacy profile shape preserved by an exact ReopenResearchPass commit), the stage comparison SHALL NOT require that key in the current profile beyond the event-bound count interpretation, and SHALL NOT fabricate the key in the immutable event semantics; the profile comparison SHALL verify only the fields the event semantics actually carry plus the sanctioned count and style projections. Its nearest owner SHALL be existing topic-state/phase inspection for exact event-bound params, including when the computed projection is equal and therefore provides no progress witness, and the existing phase-rerun count increment only when the exact projected params differ from event-bound params. `synchronized_count_incremented` permits the event-bound count delta from recorded `current_count` to recorded `next_count` under the same active rule digest, with either unchanged event-bound style parameters or that complete exact projection. Neither stage SHALL permit a style value matching neither allowed shape or any other profile delta, and the incremented stage SHALL NOT call next-increment availability again. After a valid rerun-ready gate consumes that synchronized lineage with its current-count evaluation, existing `descendant_pipeline` SHALL carry the nearest owner derived from each valid normal handoff stage: enter-phase before load, status synchronization after load, then current lifecycle owner after matching transition/status; later normal handoffs repeat this interpretation. It SHALL reuse normal authority rather than inventing a sixth ReopenResearchPass stage or falling back to fresh Final eligibility.
 
 Before route-bound phase entry, event validation SHALL require the exact committed profile, unchanged terminal Final gate window/current node and current Final lineage. After `enter-phase` writes a load witness bound to that event, `advance-status --to hitl2_recorded` SHALL consume the event+load through the existing status owner and derive `next_gate: rerun_ready`. Immediate reentry and initial topic-state authorization, before rerun phase-owned profile mutation begins, SHALL require the immutable event, the event-bound exact after-profile semantics/hash, that load witness, the resulting `phase_transition`, `current_node: phases/phase-rerun.md`, and the current `hitl2_recorded -> rerun_ready` window. After that initial authorization, existing rerun ownership MAY, in its existing order, commit canonical topic changes, run the existing style CLI to replace `research_style_params` with the exact RES-001 projection while preserving event-bound `research_profile`, and change `rerun_count` from the event-bound `current_count` to `next_count`. A crash after the style write but before the count write SHALL resume at that existing count owner rather than repeat topic mutation or become drift. The event remains historical entry lineage rather than freezing those sanctioned mechanical projections forever; any style value matching neither allowed shape or any other profile delta remains unexplained drift.
 
-The event SHALL authorize only the existing rerun phase and existing C3 mutation/gate pipeline. It SHALL NOT authorize arbitrary repair, state-seed, status/file patch, Final history rewrite, topic adoption by itself, or a second post-final success path. A second post-final rerun SHALL require a newer legal Final delivery lineage and a new operation.
+The event SHALL authorize only the existing rerun phase and existing TopicTreeEvolution mutation/gate pipeline. It SHALL NOT authorize arbitrary repair, state-seed, status/file patch, Final history rewrite, topic adoption by itself, or a second post-final success path. A second post-final rerun SHALL require a newer legal Final delivery lineage and a new operation.
 
 #### Scenario: Legacy profile without rerun_count forms the synchronized initial stage
 
@@ -488,24 +488,24 @@ The event SHALL authorize only the existing rerun phase and existing C3 mutation
 #### Scenario: Bound increment and exact style projection defer to the formal Gate
 
 - **WHEN** accepted lineage reaches `synchronized_count_incremented` with exactly the event-recorded count delta, optional exact RES-001 projection for current canonical registry length, and unchanged definition binding
-- **THEN** C5 SHALL return the existing rerun-ready Gate as the one next action
+- **THEN** ReopenResearchPass SHALL return the existing rerun-ready Gate as the one next action
 - **AND** SHALL NOT evaluate another future increment or block a count that the formal current-count Gate still accepts
 
 #### Scenario: Exact projection before bound increment resumes the count step
 
 - **WHEN** accepted lineage has the event-recorded current count and the complete exact RES-001 projection after sanctioned topic preparation, and that projection differs from event-bound params
-- **THEN** C5 SHALL retain `synchronized_initial_profile` and project only the existing phase-rerun count increment
+- **THEN** ReopenResearchPass SHALL retain `synchronized_initial_profile` and project only the existing phase-rerun count increment
 - **AND** SHALL NOT create a new stage, repeat topic mutation or run the count write itself
 
 #### Scenario: Descendant stage advances with the normal consumed handoff
 
-- **WHEN** rerun-ready passes for the accepted C5 lineage and the existing normal handoff is progressively consumed
-- **THEN** C5 SHALL return `descendant_pipeline` with enter-phase, then status synchronization, then current lifecycle owner according to the exact facts already present
+- **WHEN** rerun-ready passes for the accepted ReopenResearchPass lineage and the existing normal handoff is progressively consumed
+- **THEN** ReopenResearchPass SHALL return `descendant_pipeline` with enter-phase, then status synchronization, then current lifecycle owner according to the exact facts already present
 - **AND** a conflicting bound load/transition or drift of current status SHALL make that projection block rather than remain unchanged
 
 #### Scenario: Final remains absent from normal transition sources
 
-- **WHEN** C5 resolves a post-final rerun target
+- **WHEN** ReopenResearchPass resolves a post-final rerun target
 - **THEN** it SHALL query the existing HITL2 rerun branch rather than adding `phases/phase-final.md` to `transitions.chain.json`
 - **AND** Final SHALL remain terminal with no normal outgoing route
 
@@ -523,20 +523,20 @@ The event SHALL authorize only the existing rerun phase and existing C3 mutation
 
 #### Scenario: Recovery event does not impersonate a gate pass
 
-- **WHEN** C5 publishes the new handoff authority
+- **WHEN** ReopenResearchPass publishes the new handoff authority
 - **THEN** trace SHALL contain `post_final_reentry`, not a synthetic `gate_attempt`
 - **AND** existing gate history SHALL remain unchanged
 
 #### Scenario: Reentry alone does not adopt historical addendum topics
 
 - **WHEN** the historical bundle contains registry-external addendum content
-- **THEN** C5 SHALL only establish the rerun window
+- **THEN** ReopenResearchPass SHALL only establish the rerun window
 - **AND** that content SHALL not gain canonical identity through migration, adoption, upgrade, or another current Engine action
 
 #### Scenario: Unsupported maintenance remains unavailable
 
 - **WHEN** the request asks for repair-in-place, generic state movement, developer state-seed or history rewrite
-- **THEN** C5 SHALL reject the action as unsupported
+- **THEN** ReopenResearchPass SHALL reject the action as unsupported
 - **AND** `human-directed` prose SHALL NOT widen the closed action authority
 
 ### Requirement: Focus-bearing post-Final requests SHALL retain wording and interpretation in the existing reason
@@ -575,7 +575,7 @@ focus SHALL retain the existing ordinary non-empty reason contract.
 
 - **WHEN** the user corrects the Agent's proposed interpretation in the current Final conversation
 - **THEN** the retained reason SHALL contain the accepted corrected interpretation
-- **AND** an earlier unaccepted draft SHALL NOT become a Decisions revision or C5 event
+- **AND** an earlier unaccepted draft SHALL NOT become a Decisions revision or ReopenResearchPass event
 
 #### Scenario: Ordinary rerun reason remains compatible
 

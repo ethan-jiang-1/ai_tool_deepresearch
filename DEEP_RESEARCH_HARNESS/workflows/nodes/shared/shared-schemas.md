@@ -210,12 +210,12 @@ Bare runtime paths in this node are current run bundle-root relative. If the cur
 
 - **`final/`**：Final 是 `gate: null` 的 terminal lifecycle 目录，而非固定 view。
   在 admitted entry 和 Readiness status synchronization 后，空 primary inventory
-  先由 `publish-final-report` 写 `final/final.md`；admitted post-C5 zero-append
+  先由 `publish-final-report` 写 `final/final.md`；admitted post-ReopenResearchPass zero-append
   lineage 先追加 next global version。每份 primary report 独立通过 submitted
   Evidence Map backing、不可覆盖且保留历史。
 - 交付后，presentation-only feedback 留在 `phase-final.md` 并追加一个版本；
   satisfied turn 不写 runtime fact。只有 evidence/research expansion 走 existing
-  audited C5/HITL2 rerun。`final/` inventory 是版本/latest source of record，不增
+  audited ReopenResearchPass/HITL2 rerun。`final/` inventory 是版本/latest source of record，不增
   profile counter/current pointer，也不让文件存在绕过 legal Final entry。
 
 ### Work-Unit Role Spec Nodes

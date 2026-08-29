@@ -1,0 +1,4 @@
+schema_version: semantic-closure/v1
+change: retire-legacy-c-series-codes-to-domain-names
+status: not_applicable
+reason: This change unifies domain terminology and eliminates historical milestone codes (C1-C5) across guidance, specs, harness control surfaces, diagnostics, and test assertions without adding or altering deterministic semantic fact families.

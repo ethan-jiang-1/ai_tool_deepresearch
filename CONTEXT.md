@@ -57,11 +57,34 @@ runtime record. There is deliberately no `DEEP_RESEARCH_HARNESS/CONTEXT.md`.
 | **`hints[]` / `repair_kind`（gate/phase 反馈面）** | phase §7 反馈主面的 closed-enum 载体：`hints[]` 带一个直接 repair/owner 边界；`repair_kind` ∈ {`agent_action` / `engine_operation` / `user_decision` / `external_action` / `missing_contract`}；反馈形状以所属 accepted spec / model 为准，此处只做术语对齐 |
 | **`attempt_disposition` / `repair_kind`（work-unit 反馈面）** | 五个工作单元反馈面（submit 拒绝 / late-submit 拒绝 / transaction 阻塞 / dry-submit / inspect）统一发出 `attempt_disposition` + `next`；此面 `repair_kind` 是另一套枚举（如 `wait` / `recover-transaction` / `supersede` / `missing_contract` 等），完整词汇与 CLI 动词映射以 `DEEP_RESEARCH_HARNESS/engine/work-unit-repair-vocabulary.mjs` 导出 + `DEEP_RESEARCH_HARNESS/RUN.md` 决策表 + `tests/engine/work-unit-recovery-decision-table.test.mjs` 为准。与 gate/phase 面的 `repair_kind` 同名不同枚举 |
 | **`repair_directive`（file-observability 面）** | 由 `DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs` 发射：`materialize_canonical_surface` / `reconcile_topic_identity` / `repair_topic_reference` / `classify_namespace` / `current_entry_contract` / `exact_topic_state_recover`；owner 为该文件。与 gate/phase 面、work-unit 面的 `repair_kind` 显式区分（字段名不同），使用时以各自 owner surface 为准 |
-| **C2（checkpoint 代号）** | HITL1/rerun 的 freshness checkpoint，授权 `research_style_params` 写入；owner `openspec/specs/research/research-styles/spec.md` |
-| **C3（pipeline 代号）** | post-final rerun 阶段既有的 mutation/gate pipeline（canonical topic mutation、style CLI、rerun_count 推进）；owner `openspec/specs/research/post-final-recovery/spec.md` |
-| **C5（event/lineage 代号）** | Final 之后 evidence-expanding reentry 的 accepted event/lineage，post-final recovery 所有权与资格判定的依据；owner `openspec/specs/research/post-final-recovery/spec.md` + `openspec/specs/research/content-delivery-phase-content/spec.md` |
+| **ResearchConfigLock（研究风格锁定契约）** | HITL1/rerun 的 freshness checkpoint，授权 `research_style_params` 写入；owner `openspec/specs/research/research-styles/spec.md` |
+| **TopicTreeEvolution（课题大纲演进管线）** | post-final rerun 阶段既有的 mutation/gate pipeline（canonical topic mutation、style CLI、rerun_count 推进）；owner `openspec/specs/research/post-final-recovery/spec.md` |
+| **ReopenResearchPass（终态重开通行证）** | Final 之后 evidence-expanding reentry 的 accepted event/lineage，post-final recovery 所有权与资格判定的依据；owner `openspec/specs/research/post-final-recovery/spec.md` + `openspec/specs/research/content-delivery-phase-content/spec.md` |
+| **StateHealthCheck（状态健康巡检）** | 系统崩溃与文件观测自愈基础；owner `DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs` |
+| **WorkerFallback（智能体降级容灾）** | 委托子 Agent 遇到 API 限流/不可用时的主 Agent 接盘机制；owner `openspec/specs/agent/delegated-work-units/spec.md` |
 
-> C2/C3/C5 全仓库无单一展开定义，上表为按 owner spec 用法归纳的 compact distinction；具体判定以 owner spec 为准。
+> 全仓库核心机制与代号定义按 owner spec 用法归纳，具体判定以 owner spec 为准。
+
+### 术语罗塞塔石碑：反馈面与枚举速查 (Rosetta Stone: Feedback Surfaces & Enums)
+
+| 反馈面 (Surface) | 载体字段 (Field) | 闭合枚举 (Closed Enum) | 权威源 (Source of Record) | 语义归属与核心用途 |
+|---|---|---|---|---|
+| **Gate / Phase 反馈面** | `hints[].repair_kind` | `agent_action`, `engine_operation`, `user_decision`, `external_action`, `missing_contract` | `openspec/specs/engine/check-inspect-feedback/spec.md` | 高维责任主体划分（归 Agent、Engine 还是 User 处置） |
+| **Work-Unit 恢复反馈面** | `next.repair_kind` | `wait`, `recover-transaction`, `recover-declaration`, `supersede`, `missing_contract` 等 | `DEEP_RESEARCH_HARNESS/engine/work-unit-repair-vocabulary.mjs` | 工作单元具体恢复动作（前 4 项直接映射 CLI 动词） |
+| **File-Observability 面** | `repair_directive` | `materialize_canonical_surface`, `reconcile_topic_identity`, `repair_topic_reference` 等 | `DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs` | 文件观测与规范主题自愈指令（字段名不同，物理隔离） |
+
+### 核心检查点与生命周期命名速查 (Rosetta Stone: Checkpoint & Lifecycle Concepts)
+
+| 领域概念 / 契约 | 类别 (Category) | 触发/生效阶段 | 核心语义与授权契约 | 权威所有者规范 (Owner Spec) |
+|---|---|---|---|---|
+| **HITL1** | Checkpoint / Interactive | Instantiation 与 Setup 之间 | 初始立项对齐：Agent 提供推荐，用户确认方向、profile 与探测结果 | `openspec/specs/research/pre-research-phase-content/spec.md`<br>`openspec/specs/agent/hitl-ux/spec.md` |
+| **HITL2** | Checkpoint / Interactive | Wave2 与 Readiness 之间 | 阶段产出审阅：Agent 总结研究全貌，用户决定交付或合法重跑 | `openspec/specs/research/research-wave-phase-content/spec.md` |
+| **Final** | Terminal Delivery | 最终交付阶段 | 终态报告交付：交付后在 Final 原地接受呈现反馈并追加版本；不是第三个 Checkpoint | `openspec/specs/research/content-delivery-phase-content/spec.md` |
+| **ResearchConfigLock** | Freshness Checkpoint | HITL1 与 Rerun 阶段 | 授权将用户确认的 `research_style_params` 写入 Bundle 配置 | `openspec/specs/research/research-styles/spec.md` |
+| **TopicTreeEvolution** | Mutation Pipeline | Post-Final Rerun 阶段 | Post-Final 重跑时的变更/门控管线（包含规范化主题突变、Style CLI 调优与 `rerun_count` 推进） | `openspec/specs/research/post-final-recovery/spec.md` |
+| **ReopenResearchPass** | Lineage / Reentry Event | Final 交付之后 | 证据扩张型重入的准入血统凭证，用于在 Final 之后合法重开新一轮研究 | `openspec/specs/research/post-final-recovery/spec.md`<br>`openspec/specs/research/content-delivery-phase-content/spec.md` |
+| **StateHealthCheck** | Recovery Observability | 异常/崩溃恢复阶段 | 系统异常时扫描文件树与规范化主题一致性，指导自愈 | `DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs` |
+| **WorkerFallback** | Actor Availability | 委托子任务执行阶段 | 子 Agent 遇到 402/超时等不可用情况时，主 Agent 自行接盘完成 | `openspec/specs/agent/delegated-work-units/spec.md` |
 
 ## Execution Distinctions
 

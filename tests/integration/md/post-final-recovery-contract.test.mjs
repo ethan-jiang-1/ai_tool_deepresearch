@@ -24,7 +24,7 @@ describe('post-final recovery Agent-facing contract', () => {
     ]) assert.match(playbook, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     assert.match(finalPhase, /remains the current node[\s>]+while a delivered report is discussed and refined/);
     assert.match(finalPhase, /clear presentation request: publish one immutable next version/);
-    assert.match(finalPhase, /new evidence\/research: accepted C5 request and existing rerun path/);
+    assert.match(finalPhase, /new evidence\/research: accepted ReopenResearchPass request and existing rerun path/);
     assert.match(playbook, /evidence-expanding\s+user\s+decision/);
     assert.doesNotMatch(finalPhase, /Final node 自身不处理修改、不重问同一决定/);
     assert.match(rerunPhase, /post_final_reentry.*不代表post-Final HITL2 gate曾运行/);

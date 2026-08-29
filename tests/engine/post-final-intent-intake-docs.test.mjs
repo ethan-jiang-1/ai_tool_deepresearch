@@ -55,8 +55,8 @@ describe('post-final iteration intent routing aid (ACS-006)', () => {
       'the family routes to the persist-artifact publication path',
     );
     assert.ok(
-      bullet.includes('不建 C5 request'),
-      'presentation wording must not create a C5 request',
+      bullet.includes('不建 ReopenResearchPass request'),
+      'presentation wording must not create a ReopenResearchPass request',
     );
   });
 

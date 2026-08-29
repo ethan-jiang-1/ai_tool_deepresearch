@@ -92,10 +92,10 @@ describe('Final node delivery placement', () => {
     assert.equal(fm.stop, 'yes');
     assert.equal(Object.hasOwn(fm, 'next'), false);
     assert.match(md, /admitted empty inventory publishes\s+`final\/final\.md`/);
-    assert.match(md, /admitted post-C5 return with zero canonical append/);
+    assert.match(md, /admitted post-ReopenResearchPass return with zero canonical append/);
     assert.match(md, /satisfied turn writes nothing/);
     assert.match(md, /Presentation feedback alone remains here/);
-    assert.match(md, /Only evidence-expanding work uses\s+audited C5/);
+    assert.match(md, /Only evidence-expanding work uses\s+audited ReopenResearchPass/);
   });
 });
 

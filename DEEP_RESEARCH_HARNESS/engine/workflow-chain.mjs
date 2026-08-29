@@ -103,7 +103,7 @@ Readiness status synchronization before Final work.
 - An entry-admitted post-rerun prior inventory with zero canonical append: compose, publish, and present the next global version before any question or wait
 - A report already bound to the current Final lineage: reground in the latest version and handle one clear presentation refinement at a time
 - After each committed report, invite concise natural-language feedback and remain on Final; satisfaction ends the current turn with no write
-- Only feedback requiring new evidence/research uses the accepted audited C5 rerun path
+- Only feedback requiring new evidence/research uses the accepted audited ReopenResearchPass rerun path
 
 **Boundaries:**
 - Keep Readiness terminal status: \`current_gate: readiness_passed\` / \`next_gate: none\`; Final has no Gate, transition, status advance, satisfaction state, or delivery trace event

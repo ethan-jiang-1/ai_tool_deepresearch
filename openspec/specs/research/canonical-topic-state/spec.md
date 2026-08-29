@@ -79,7 +79,7 @@ For layout mutation, `affected_topic_uids` SHALL mean only removed UIDs and reta
 
 Before workspace creation, `apply` SHALL authorize mutation from existing lifecycle facts rather than a caller-declared context flag. HITL1 apply SHALL require `rb_status.json#/current_node: phases/phase-hitl1.md` with the existing `current_gate: hitl1_recorded` / `next_gate: setup_ready` pre-gate window. Normal rerun apply SHALL require `current_node: phases/phase-rerun.md`, the latest valid non-superseded route-bound HITL2 gate-to-rerun load witness, and the incoming `current_gate: hitl2_recorded` / `next_gate: rerun_ready` window. Seed enrichment apply SHALL require `current_node: phases/phase-seed-topics.md`, the latest valid non-superseded route-bound setup-to-seed-topics or rerun-to-seed-topics load witness, and respectively the incoming `setup_ready -> seed_topics_ready` or `rerun_ready -> seed_topics_ready` status window.
 
-Post-final rerun apply SHALL be authorized only after the accepted C5 operation has committed a valid non-superseded `post_final_reentry` event, current HITL2 profile semantics/hash still equal the event-bound after-profile, `enter-phase` has written a route-bound rerun `load_complete` referencing that exact recovery event, existing `advance-status --to hitl2_recorded` has written the matching exceptional `phase_transition`, `current_node` is `phases/phase-rerun.md`, and the incoming `hitl2_recorded -> rerun_ready` status window remains intact. A caller-declared `human-directed`, rerun, seed-topics or recovery context SHALL NOT substitute for any required witness class, the accepted profile, or the existing status-sync step.
+Post-final rerun apply SHALL be authorized only after the accepted ReopenResearchPass operation has committed a valid non-superseded `post_final_reentry` event, current HITL2 profile semantics/hash still equal the event-bound after-profile, `enter-phase` has written a route-bound rerun `load_complete` referencing that exact recovery event, existing `advance-status --to hitl2_recorded` has written the matching exceptional `phase_transition`, `current_node` is `phases/phase-rerun.md`, and the incoming `hitl2_recorded -> rerun_ready` status window remains intact. A caller-declared `human-directed`, rerun, seed-topics or recovery context SHALL NOT substitute for any required witness class, the accepted profile, or the existing status-sync step.
 
 `set_rerun_direction` and `mutate_layout` SHALL be authorized only in a sanctioned normal or post-final rerun context. `enrich_seed` SHALL be authorized only after one accepted setup/rerun source route has entered Seed Topics. Other post-final, stale/missing-witness and arbitrary maintenance invocation SHALL reject without workspace or authority mutation. Only a current `seed_topic_materialize` queue completion and a final `seed-topics-ready` Gate that each establish that same legal Seed Topics window MAY project `enrich_seed` as an executable `engine_operation`; their bounded parse-repair feedback is likewise legal only in that window. Generic topic-state inspect SHALL remain read-only, report a direct mismatch with `repair_kind: missing_contract` that identifies its no-write inspection boundary and the current lifecycle owner (plus an absent authoring window when applicable), and SHALL NOT mint either an `enrich_seed` or raw-YAML repair route.
 
@@ -404,10 +404,10 @@ existing `apply-research-style.mjs` owner, selected profile, committed topic
 count, exact legal command, and same readiness checkpoint. The handoff is
 direct feedback, not a profile write, new lifecycle state, or substitute for
 the style freshness verdict. No length change SHALL report a refresh
-obligation. C5 SHALL widen only the accepted rerun witness class consumed by
+obligation. ReopenResearchPass SHALL widen only the accepted rerun witness class consumed by
 topic-state authorization; the post-final recovery helper owns profile/reentry
 event mutation and `enter-phase`/`advance-status` retain node/status ownership;
-topic-state SHALL continue to own only plan/current seeds. Historical addendum content SHALL remain outside canonical topic authority after successful C5 reentry. It SHALL NOT be adopted, migrated, upgraded, or inferred from files by the current Engine.
+topic-state SHALL continue to own only plan/current seeds. Historical addendum content SHALL remain outside canonical topic authority after successful ReopenResearchPass reentry. It SHALL NOT be adopted, migrated, upgraded, or inferred from files by the current Engine.
 
 `operate-topic-state` SHALL expose a read-only `schema --context <context>`
 operation derived from the same accepted Zod input contracts used by `apply`.
@@ -678,10 +678,10 @@ mutation form into an Agent-writable path.
   topic/status/trace state
 - **AND** `human-directed` SHALL NOT create permission or handoff authority
 
-#### Scenario: Post-final apply requires committed C5 reentry
+#### Scenario: Post-final apply requires committed ReopenResearchPass reentry
 
 - **WHEN** topic-state apply is invoked after terminal Final without an
-  accepted C5 event plus route-bound rerun load witness
+  accepted ReopenResearchPass event plus route-bound rerun load witness
 - **THEN** it SHALL reject before workspace creation and identify the exact
   post-final recovery boundary
 - **AND** it SHALL NOT treat user insistence, declared context or existing
@@ -689,12 +689,12 @@ mutation form into an Agent-writable path.
 
 #### Scenario: Post-final apply remains unavailable
 
-> **@deprecated** - The pre-C5 wording is retained for archive compatibility.
+> **@deprecated** - The pre-ReopenResearchPass wording is retained for archive compatibility.
 > Fresh topic apply remains unavailable from terminal Final alone; only a
-> committed C5 event plus route-bound rerun load opens the existing C3 window.
+> committed ReopenResearchPass event plus route-bound rerun load opens the existing TopicTreeEvolution window.
 
 - **WHEN** apply is invoked after terminal Final without an accepted topic-state
-  workspace and without the complete C5 rerun witness
+  workspace and without the complete ReopenResearchPass rerun witness
 - **THEN** it SHALL reject before workspace creation and identify the exact C5
   reentry boundary
 - **AND** it SHALL NOT treat user insistence, declared context or existing
@@ -836,7 +836,7 @@ Before prepared publication, a new current seed target path SHALL be absent unle
 
 #### Scenario: Post-final request remains unavailable
 - **WHEN** a caller submits `mutate_layout` outside the route-bound sanctioned rerun window
-- **THEN** apply SHALL reject before workspace creation and identify the missing C5 authority boundary
+- **THEN** apply SHALL reject before workspace creation and identify the missing ReopenResearchPass authority boundary
 - **AND** caller context or `human-directed` wording SHALL NOT grant permission
 
 ### Requirement: Historical bindings SHALL resolve through one pure layout resolver

@@ -48,10 +48,10 @@ describe('CONTEXT: Gate pointer, 五反馈面 distinction, C-series, repair_kind
     assert.ok(context.includes('五反馈面'), 'five-feedback-surface distinction missing');
   });
 
-  it('defines C2/C3/C5 with owner pointers and induction note (F-06)', () => {
-    assert.ok(context.includes('C2（checkpoint 代号）'), 'C2 row missing');
-    assert.ok(context.includes('C3（pipeline 代号）'), 'C3 row missing');
-    assert.ok(context.includes('C5（event/lineage 代号）'), 'C5 row missing');
+  it('defines ResearchConfigLock/TopicTreeEvolution/ReopenResearchPass with owner pointers and induction note (F-06)', () => {
+    assert.ok(context.includes('ResearchConfigLock（研究风格锁定契约）'), 'C2 row missing');
+    assert.ok(context.includes('TopicTreeEvolution（课题大纲演进管线）'), 'C3 row missing');
+    assert.ok(context.includes('ReopenResearchPass（终态重开通行证）'), 'C5 row missing');
     assert.ok(context.includes('按 owner spec 用法归纳'), 'induction note missing');
   });
 

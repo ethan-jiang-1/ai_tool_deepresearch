@@ -17,12 +17,23 @@ const SKILL_ROOTS = ['.agents/skills', '.claude/skills'];
 
 function walk(dir) {
   const out = [];
-  for (const name of readdirSync(dir)) {
+  if (!existsSync(dir)) return out;
+  let names;
+  try {
+    names = readdirSync(dir);
+  } catch {
+    return out;
+  }
+  for (const name of names) {
     const p = join(dir, name);
-    if (statSync(p).isDirectory()) {
-      out.push(...walk(p));
-    } else if (name === 'SKILL.md') {
-      out.push(p);
+    try {
+      if (statSync(p).isDirectory()) {
+        out.push(...walk(p));
+      } else if (name === 'SKILL.md') {
+        out.push(p);
+      }
+    } catch {
+      // Inaccessible path or unresolvable symlink
     }
   }
   return out;

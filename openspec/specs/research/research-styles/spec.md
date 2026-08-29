@@ -130,8 +130,8 @@ downstream rule authority, and SHALL not turn C5 into a general style writer.
 
 #### Scenario: Legacy profile fallback remains bounded
 
-- **WHEN** a pre-C2 bundle lacks `research_style_params` outside a
-  C2-authorized HITL1/rerun freshness checkpoint
+- **WHEN** a pre-ResearchConfigLock bundle lacks `research_style_params` outside a
+  ResearchConfigLock-authorized HITL1/rerun freshness checkpoint
 - **THEN** existing `count_floor` fallback behavior SHALL remain
   readable-compatible
 - **AND** this compatibility SHALL not make a current HITL1/rerun readiness

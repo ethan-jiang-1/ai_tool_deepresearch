@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-08-29
+skip_specs: true
+skip_specs_reason: This change refactors and standardizes repository-wide terminology, eliminating cryptic milestone codes (C1-C5) in favor of intuitive, domain-explicit concepts across guidance, specs, harness control surfaces, engine diagnostics, and test assertions without altering accepted product capability behavior.

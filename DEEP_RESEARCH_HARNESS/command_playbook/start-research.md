@@ -72,7 +72,7 @@ research_profile: <profile>
 5. Gate fail → 读 `inspect` / `advice` → repair → rerun same gate
 6. 回到步骤 1，直到 `phase-final`（terminal，无 gate）
 
-Execution handoff：`hitl1` 和 `hitl2` 是仅有的 interactive in-run checkpoints，Agent 各自先给一个可修正推荐并承接用户决定。其余非终端 `stop: no` phase 由 Agent 静默自主推进，不主动提问、确认、汇报或等待 acknowledgement；用户主动的 current turn 可得到事实回答，但不改变 lifecycle/permission/route/mutation authority 或既有 next action。Final 是 terminal lifecycle delivery，deliver-first、接受 presentation feedback，但不是第三个 checkpoint：entry 后先完成 Readiness status sync；admitted empty bundle 发布 base，admitted post-C5 zero-append return 发布 next global version；已有 current-lineage report 才留在 Final 等待/处理 presentation refinement。满意不写 state；仅新增证据/研究才走 accepted C5 recovery。
+Execution handoff：`hitl1` 和 `hitl2` 是仅有的 interactive in-run checkpoints，Agent 各自先给一个可修正推荐并承接用户决定。其余非终端 `stop: no` phase 由 Agent 静默自主推进，不主动提问、确认、汇报或等待 acknowledgement；用户主动的 current turn 可得到事实回答，但不改变 lifecycle/permission/route/mutation authority 或既有 next action。Final 是 terminal lifecycle delivery，deliver-first、接受 presentation feedback，但不是第三个 checkpoint：entry 后先完成 Readiness status sync；admitted empty bundle 发布 base，admitted post-ReopenResearchPass zero-append return 发布 next global version；已有 current-lineage report 才留在 Final 等待/处理 presentation refinement。满意不写 state；仅新增证据/研究才走 accepted ReopenResearchPass recovery。
 
 ## 如果已有 Current Run Bundle
 

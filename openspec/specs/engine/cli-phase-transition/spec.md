@@ -128,7 +128,7 @@ at Final entry; publication after entry and later immutable-prefix proof remain
 separate facts.
 
 If an earlier route-bound legal Final load exists but the new authorized Final
-handoff cannot be bound to exactly one accepted C5 descendant lineage, entry
+handoff cannot be bound to exactly one accepted ReopenResearchPass descendant lineage, entry
 SHALL block as unsupported lineage. It SHALL not reuse the first-entry empty rule,
 select an older C5 event by recency guess, or treat an existing report as delivery
 for the new handoff.
@@ -161,7 +161,7 @@ The accepted handoff vocabulary SHALL contain exactly two Engine-written classes
 
 Handoff selection SHALL compare structurally valid authorities from both classes in append-only trace order rather than let a C5-specific selector compete with the existing gate selector. A valid post-final event becomes the latest handoff only after its Final lineage and route resolution pass; a later valid normal gate handoff or newer valid post-final lineage supersedes it for future entry. Failed gate attempts, arbitrary events and partial lookalikes SHALL NOT become a newer handoff authority merely because they appear later.
 
-The exceptional event SHALL bind its request digest, operation id, previous readiness->Final handoff/load lineage, expected profile/terminal-status/final-inventory facts, transition-table resolution and derived target status window. One structural parser SHALL produce immutable event facts; closed stage predicates SHALL add the mutable checks needed by entry, status sync and completed rerun preflight. Before phase entry it SHALL be accepted only when those facts remain current, no accepted C5 workspace remains, re-resolving HITL2 outcome `rerun` produces the recorded target/window, the event is not superseded, `rb_profile.yaml` matches the committed recovery profile, and `rb_status.json` remains the terminal Final window. After a route-bound rerun `load_complete` exists, `advance-status` SHALL validate the immutable event and that exact load witness before writing the derived `hitl2_recorded -> rerun_ready` window. Downstream consumers SHALL then require event+load+phase_transition+current rerun window without reapplying the terminal pre-entry predicate. Arbitrary trace text, C5-local/caller-supplied target nodes, `human-directed` flags and hand-written gate attempts SHALL NOT become handoff authority.
+The exceptional event SHALL bind its request digest, operation id, previous readiness->Final handoff/load lineage, expected profile/terminal-status/final-inventory facts, transition-table resolution and derived target status window. One structural parser SHALL produce immutable event facts; closed stage predicates SHALL add the mutable checks needed by entry, status sync and completed rerun preflight. Before phase entry it SHALL be accepted only when those facts remain current, no accepted ReopenResearchPass workspace remains, re-resolving HITL2 outcome `rerun` produces the recorded target/window, the event is not superseded, `rb_profile.yaml` matches the committed recovery profile, and `rb_status.json` remains the terminal Final window. After a route-bound rerun `load_complete` exists, `advance-status` SHALL validate the immutable event and that exact load witness before writing the derived `hitl2_recorded -> rerun_ready` window. Downstream consumers SHALL then require event+load+phase_transition+current rerun window without reapplying the terminal pre-entry predicate. Arbitrary trace text, C5-local/caller-supplied target nodes, `human-directed` flags and hand-written gate attempts SHALL NOT become handoff authority.
 
 Successful stdout SHALL remain Agent-readable Markdown with stable markers and
 no mixed JSON status envelope. By default, it SHALL be a bounded entry
@@ -219,7 +219,7 @@ closure.
 
 #### Scenario: Post-final return requires the event-bound prior inventory
 
-- **WHEN** accepted C5 descendants reach a newer legal Readiness-to-Final handoff with no route-bound Final load for that handoff
+- **WHEN** accepted ReopenResearchPass descendants reach a newer legal Readiness-to-Final handoff with no route-bound Final load for that handoff
 - **THEN** `enter-phase` SHALL require current safe sorted Final inventory to reproduce the unique retired event's `previous_final.final_inventory_sha256` exactly
 - **AND** any premature append, supplementary drift, unsafe inventory, missing witness, or conflicting lineage SHALL reject before `load_complete` or `current_node` mutation
 
@@ -229,9 +229,9 @@ closure.
 - **THEN** the new inventory admission SHALL not retroactively reject that established entry or fabricate a historical baseline
 - **AND** existing compatibility, audit, and partial-entry recovery contracts SHALL remain responsible for subsequent interpretation
 
-#### Scenario: Later Final handoff without accepted C5 provenance is rejected
+#### Scenario: Later Final handoff without accepted ReopenResearchPass provenance is rejected
 
-- **WHEN** an earlier legal Final load exists and a different authorized Final handoff has no unique accepted C5 descendant provenance
+- **WHEN** an earlier legal Final load exists and a different authorized Final handoff has no unique accepted ReopenResearchPass descendant provenance
 - **THEN** `enter-phase` SHALL reject before workflow dependency loading, `load_complete`, or `current_node` mutation
 - **AND** it SHALL not reuse first-entry admission or choose an older event by timestamp, filename, or append order
 
@@ -256,7 +256,7 @@ closure.
 
 #### Scenario: Accepted workspace must be cleaned before entry
 
-- **WHEN** the exact recovery event exists but its accepted C5 workspace still remains after cleanup interruption
+- **WHEN** the exact recovery event exists but its accepted ReopenResearchPass workspace still remains after cleanup interruption
 - **THEN** enter-phase SHALL reject without another load or current-node mutation
 - **AND** its only advice SHALL be the exact post-final recovery command for that operation
 
@@ -342,7 +342,7 @@ closure.
 
 Source-gate `advance-status` SHALL treat a trace-durable degraded gate pass as a legal deterministic handoff witness only when all normal source-gate, target-node, and route-bound `load_complete` checks pass.
 
-The accepted post-final exception SHALL allow `advance-status --to hitl2_recorded` without a synthetic HITL2 gate attempt only when no accepted C5 workspace remains, a valid `post_final_reentry` event records HITL2 outcome `rerun`, its target/window re-resolve through the existing transition table/manifest, and a later route-bound rerun `load_complete` references that exact event while `current_node` equals the rerun target. The CLI SHALL preserve this exceptional source kind in `phase_transition` diagnostics. No other source gate, action or target SHALL use this exception.
+The accepted post-final exception SHALL allow `advance-status --to hitl2_recorded` without a synthetic HITL2 gate attempt only when no accepted ReopenResearchPass workspace remains, a valid `post_final_reentry` event records HITL2 outcome `rerun`, its target/window re-resolve through the existing transition table/manifest, and a later route-bound rerun `load_complete` references that exact event while `current_node` equals the rerun target. The CLI SHALL preserve this exceptional source kind in `phase_transition` diagnostics. No other source gate, action or target SHALL use this exception.
 
 The exceptional `phase_transition` SHALL add `source_handoff_kind: post_final_reentry`, `source_handoff_event_id`, `source_handoff_event_index`, `source_handoff_event_sha256`, `source_handoff_operation_id`, and `source_handoff_load_index`. These exact fields SHALL let audit/reentry distinguish the matching transition from an unrelated or hand-written lookalike without changing the existing normal success fields.
 
@@ -350,7 +350,7 @@ Exceptional status-sync retry SHALL be idempotent only when status is already th
 
 Successful status synchronization after a degraded or accepted exceptional handoff SHALL establish the normal source-gate status window for the target lifecycle phase. It SHALL preserve degraded/recovery context in diagnostics or trace and SHALL NOT reinterpret either handoff as a gate attempt that did not occur.
 
-`--to <gate>` SHALL normally name the just-passed source gate being synchronized into `rb_status.json`. For the accepted C5 path, `--to hitl2_recorded` SHALL name the existing HITL2 decision checkpoint semantics recorded by the recovery event; it SHALL NOT claim that `check-gate-hitl2-recorded.mjs` ran post-Final. It SHALL NOT name the next phase's gate.
+`--to <gate>` SHALL normally name the just-passed source gate being synchronized into `rb_status.json`. For the accepted ReopenResearchPass path, `--to hitl2_recorded` SHALL name the existing HITL2 decision checkpoint semantics recorded by the recovery event; it SHALL NOT claim that `check-gate-hitl2-recorded.mjs` ran post-Final. It SHALL NOT name the next phase's gate.
 
 Before writing `current_gate`, `next_gate`, or `phase_transition`, the CLI SHALL read `rb_trace.jsonl`, `manifest.json`, and `transitions.chain.json` and verify one accepted witness class:
 
@@ -384,7 +384,7 @@ Successful status synchronization SHALL establish a source-gate status window fo
 - `rb_status.json#/current_gate` to the accepted source gate/checkpoint enum;
 - `rb_status.json#/next_gate` to the target node's gate enum, or `"none"` when the target node is terminal Final.
 
-Downstream lifecycle gates SHALL NOT require `current_gate` to already equal their own gate enum before they pass. For a non-entry lifecycle node, the active status window before its gate pass is `current_gate == <legal predecessor source gate enum>` and `next_gate == <this node's gate enum>`, derived from `manifest.json` and `transitions.chain.json`. The accepted C5 event reuses the existing HITL2→rerun window and SHALL NOT add a new gate/window enum.
+Downstream lifecycle gates SHALL NOT require `current_gate` to already equal their own gate enum before they pass. For a non-entry lifecycle node, the active status window before its gate pass is `current_gate == <legal predecessor source gate enum>` and `next_gate == <this node's gate enum>`, derived from `manifest.json` and `transitions.chain.json`. The accepted ReopenResearchPass event reuses the existing HITL2→rerun window and SHALL NOT add a new gate/window enum.
 
 The bootstrap compatibility exception for setup remains narrow and unchanged.
 

@@ -352,7 +352,7 @@ parallel Final type or series.
 When an accepted post-final rerun later completes a newer legal Readiness-to-
 Final handoff, the existing bundle-wide primary series SHALL remain in place.
 Before the new Final load, `enter-phase` SHALL have admitted the exact full safe
-Final inventory bound by the retired C5 event's prior digest. The existing
+Final inventory bound by the retired ReopenResearchPass event's prior digest. The existing
 Readiness source-gate status synchronization SHALL then complete before Final
 work. That baseline and terminal status distinguish the old delivery from the
 new one. If synchronized current inventory still matches that prior digest with
@@ -448,7 +448,7 @@ trace event or a satisfaction event.
 
 #### Scenario: Later Final lineage appends before requesting feedback
 
-- **WHEN** an accepted C5 lineage reaches a newer legal Final handoff, `enter-phase` admits the exact event-bound prior inventory, Readiness status synchronization completes, and inventory still has no appended canonical version
+- **WHEN** an accepted ReopenResearchPass lineage reaches a newer legal Final handoff, `enter-phase` admits the exact event-bound prior inventory, Readiness status synchronization completes, and inventory still has no appended canonical version
 - **THEN** the Agent SHALL compose from the newer verified lineage and publish global `latest + 1` before requesting feedback
 - **AND** it SHALL not recreate `final/final.md` or present the prior lineage's latest report as the new delivery
 
@@ -628,7 +628,7 @@ lifecycle legally reached `phase-final.md`: Readiness passed with `check.next`
 targeting Final, `enter-phase` admitted the required pre-publication inventory
 baseline and wrote its route-bound `load_complete`, and status synchronization
 reflects the Readiness source Gate. The first legal Final load SHALL have admitted
-an empty primary series; a post-C5 return load SHALL have admitted an exact match
+an empty primary series; a post-ReopenResearchPass return load SHALL have admitted an exact match
 to the retired event's full prior Final inventory digest. Presentation revisions
 committed while that same lineage remains current SHALL inherit it without a new
 Gate or load.
@@ -637,7 +637,7 @@ Gate or load.
 admitted and synchronized legal Final lineage with empty primary inventory. Revisions and every first
 report for a later legal Final lineage SHALL use `final/final_v<N>.md` or
 `final/final_<feature>_v<N>.md`, where `N` is the globally monotonic Engine-
-allocated revision number. For a later lineage produced by accepted C5, delivery
+allocated revision number. For a later lineage produced by accepted ReopenResearchPass, delivery
 evidence SHALL require a unique immutable-prefix proof against that event's
 prior Final inventory digest: zero appended canonical versions means delivery is
 still pending; one or more appended highest versions bind the newest version to
@@ -647,7 +647,7 @@ Markdown under `final/` SHALL not become canonical primary delivery merely
 because it exists.
 
 For a new Final handoff, a primary-looking file created before legal Final entry,
-or any post-C5 inventory drift before its new load, SHALL cause `enter-phase` to
+or any post-ReopenResearchPass inventory drift before its new load, SHALL cause `enter-phase` to
 reject before entry mutation. Files outside the canonical publication path or in
 an invalid/ambiguous series SHALL remain diagnostic or supplementary artifacts;
 they SHALL not bypass readiness, prove a committed version, or authorize user-
@@ -668,7 +668,7 @@ fabricated claim about historical creation order.
 
 #### Scenario: Newer Final handoff alone is not a new delivery
 
-- **WHEN** accepted C5 descendants reach a newer legal Final handoff, exact prior-inventory admission and Readiness status synchronization succeed, but canonical inventory has no append beyond the C5 event-bound prior digest
+- **WHEN** accepted ReopenResearchPass descendants reach a newer legal Final handoff, exact prior-inventory admission and Readiness status synchronization succeed, but canonical inventory has no append beyond the ReopenResearchPass event-bound prior digest
 - **THEN** the newer lineage SHALL remain at immediate Final delivery pending
 - **AND** the prior latest report SHALL remain historical delivery evidence for its prior lineage, not current delivery evidence for the newer lineage
 

@@ -4,7 +4,7 @@ Agent-facing narrow recovery path for an explicit evidence-expanding user
 decision to rerun after legal Final delivery. Presentation-only feedback about
 reader, structure, length, wording, emphasis, or existing verified evidence
 stays in `phases/phase-final.md`: prepare retained staging and publish the next
-immutable primary version there. Do not create or apply a C5 request for that
+immutable primary version there. Do not create or apply a ReopenResearchPass request for that
 feedback.
 
 ## Boundary
@@ -113,4 +113,4 @@ node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs inspect --bundle <bundle>
 
 Then follow `phase-rerun.md`: existing topic-state apply/recover, rerun-count increment, rerun-ready gate, `enter-phase <check.next>`, and `advance-status --to rerun_ready`.
 
-`check-reentry --at phase-rerun` means `rerun_ready` has already passed. Immediately after C5 entry/status sync, the correct incoming checkpoint is `hitl2_recorded`. `--at` accepts a gate enum (e.g. `hitl2_recorded`) or a phase ref (e.g. `phase-rerun`); see the check-reentry contract for the exact semantics.
+`check-reentry --at phase-rerun` means `rerun_ready` has already passed. Immediately after ReopenResearchPass entry/status sync, the correct incoming checkpoint is `hitl2_recorded`. `--at` accepts a gate enum (e.g. `hitl2_recorded`) or a phase ref (e.g. `phase-rerun`); see the check-reentry contract for the exact semantics.
