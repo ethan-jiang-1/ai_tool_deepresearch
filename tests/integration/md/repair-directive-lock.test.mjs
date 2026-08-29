@@ -42,14 +42,14 @@ describe('repair-directive and CONTEXT locks (FIO-008, F-03, F-23)', () => {
   it('CONTEXT.md disambiguates the three repair vocabularies', () => {
     const context = read('CONTEXT.md');
     assert.ok(context.includes('`repair_directive`（file-observability 面）'), 'repair_directive glossary row missing');
-    assert.ok(context.includes('`repair_kind`（gate/phase 反馈面）'), 'gate/phase repair_kind row missing');
-    assert.ok(context.includes('`repair_kind`（work-unit 反馈面）'), 'work-unit repair_kind row missing');
+    assert.ok(context.includes('`resolution_owner`（gate/phase 門禁面）') || context.includes('`resolution_owner`（gate/phase 门禁面）'), 'gate/phase resolution_owner row missing');
+    assert.ok(context.includes('`recovery_action`（work-unit 恢复面）') || context.includes('`recovery_action`（work-unit 復面）'), 'work-unit recovery_action row missing');
     assert.ok(context.includes('work-unit-repair-vocabulary.mjs'), 'vocabulary pointer missing');
     assert.ok(context.includes('ResearchConfigLock（研究风格锁定契约）') && context.includes('ReopenResearchPass（终态重开通行证）'), 'Lifecycle concept rows missing');
   });
 
   it('work-unit and gate/phase repair_kind enumerations are unchanged', () => {
     const vocab = read('DEEP_RESEARCH_HARNESS/engine/work-unit-repair-vocabulary.mjs');
-    assert.ok(vocab.includes("wait: 'wait'") && vocab.includes("supersede: 'supersede'"), 'work-unit enum changed');
+    assert.ok((vocab.includes("wait: 'wait'") || vocab.includes('wait: "wait"')) && (vocab.includes("supersede: 'supersede'") || vocab.includes('supersede: "supersede"')), 'work-unit enum changed');
   });
 });

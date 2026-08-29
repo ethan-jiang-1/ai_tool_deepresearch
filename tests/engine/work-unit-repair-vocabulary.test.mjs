@@ -5,12 +5,20 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  WORK_UNIT_RECOVERY_ACTION,
+  WORK_UNIT_RECOVERY_ACTIONS,
+  RECOVERY_ACTION_CLI_VERB,
   WORK_UNIT_REPAIR_KIND,
   WORK_UNIT_REPAIR_KINDS,
   REPAIR_KIND_CLI_VERB,
 } from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-repair-vocabulary.mjs';
 
-describe('work-unit repair vocabulary export', () => {
+describe('work-unit recovery vocabulary export', () => {
+  it('exports WORK_UNIT_RECOVERY_ACTIONS and WORK_UNIT_RECOVERY_ACTION', () => {
+    assert.equal(WORK_UNIT_RECOVERY_ACTIONS.length, 10);
+    assert.deepEqual(WORK_UNIT_RECOVERY_ACTIONS, WORK_UNIT_REPAIR_KINDS);
+    assert.deepEqual(RECOVERY_ACTION_CLI_VERB, REPAIR_KIND_CLI_VERB);
+  });
   it('names exactly the ten attempt-owned recovery kinds', () => {
     assert.equal(WORK_UNIT_REPAIR_KINDS.length, 10);
     assert.deepEqual(

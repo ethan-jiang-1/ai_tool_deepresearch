@@ -203,7 +203,7 @@ recovery result (including `recoverWorkUnitTransaction`) SHALL NOT be a dead end
 `next`/rerun coordinate for the checkpoint that produced the feedback, so the caller never has to
 reconstruct the original command.
 
-For attempt-owned work-unit recovery feedback (the five surfaces above), `repair_kind` values that name a
+For attempt-owned work-unit recovery feedback (the five surfaces above), `recovery_action` (and `repair_kind`) values that name a
 work-unit recovery operation SHALL use the CLI-verb spelling (`recover-transaction`, `recover-declaration`,
 `supersede`, `wait`, `missing_contract`) or carry the exact command string; a feedback result SHALL NOT
 emit an underscore-spelled `repair_kind` that no CLI verb matches. Agent-facing work-unit recovery guidance
@@ -219,7 +219,7 @@ relation object) and SHALL name the successor's ordinary actor-observed location
 have to reconstruct the next claim/submit path from nested fields. The mapping from disposition
 root to `repair_kind` to CLI verb SHALL be stated in one test-locked decision table in `RUN.md`'s recovery
 section, with one row per attempt-owned recovery `repair_kind` the engine can emit. A deterministic
-regression SHALL assert that every such emitted `repair_kind` has a table row and a matching CLI verb (or
+regression SHALL assert that every such emitted `recovery_action` has a table row and a matching CLI verb (or
 exact command string), and SHALL additionally scan the full Agent-facing work-unit recovery guidance
 surface for underscore-spelled recovery `repair_kind` values, failing when one appears.
 

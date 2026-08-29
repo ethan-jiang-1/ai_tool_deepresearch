@@ -1,0 +1,46 @@
+schema_version: verification-routing/v1
+change: disambiguate-feedback-repair-surfaces
+test_classes:
+  unit:
+    status: selected
+    rationale: Unit tests verify work-unit recovery vocabulary exports and decision table consistency.
+  integration:
+    status: selected
+    rationale: Integration tests verify Markdown guidance consistency and field naming across control surfaces.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: Lifecycle state machine behavior and bundle outputs remain behaviorally equivalent.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: No real agent playbooks are modified.
+claims:
+  - id: work-unit-vocabulary-export
+    statement: >-
+      The work-unit repair vocabulary exports WORK_UNIT_RECOVERY_ACTIONS and maps every disposition to a valid CLI verb.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-repair-vocabulary.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: guidance-field-consistency
+    statement: >-
+      CONTEXT.md and guidance surfaces expose distinct resolution_owner, recovery_action, and repair_directive fields without collision.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/guidance-terminology-pointer-consistency.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

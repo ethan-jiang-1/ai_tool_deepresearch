@@ -12,6 +12,8 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  WORK_UNIT_RECOVERY_ACTIONS,
+  RECOVERY_ACTION_CLI_VERB,
   WORK_UNIT_REPAIR_KINDS,
   REPAIR_KIND_CLI_VERB,
 } from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-repair-vocabulary.mjs';
@@ -33,9 +35,9 @@ const EMISSION_MODULES = [
 describe('work-unit recovery decision table lock', () => {
   it('RUN.md contains one decision-table row per exported repair kind', () => {
     const run = read('DEEP_RESEARCH_HARNESS/RUN.md');
-    assert.match(run, /decision table below is the single disposition → `repair_kind` → CLI verb → rerun map/i);
+    assert.match(run, /decision table below is the single disposition → `recovery_action` → CLI verb → rerun map/i);
     for (const kind of WORK_UNIT_REPAIR_KINDS) {
-      assert.ok(run.includes(`| \`${kind}\` |`), `RUN.md decision table missing repair_kind row: ${kind}`);
+      assert.ok(run.includes(`| \`${kind}\` |`), `RUN.md decision table missing recovery_action row: ${kind}`);
     }
   });
 

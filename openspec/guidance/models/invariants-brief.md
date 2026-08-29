@@ -20,7 +20,7 @@
    → 真相源：`openspec/specs/agent/delegated-work-units/spec.md` + `DEEP_RESEARCH_HARNESS/RUN.md`。
 6. **恢复边界**：work-unit 恢复遵守"同一 checkpoint 重跑"或"显式 terminalize + 新路径"；绝不手改 ledger / index / status / queue / lock / journal / hash。
    → 真相源：`DEEP_RESEARCH_HARNESS/RUN.md`（work-unit recovery 段）。
-7. **反馈第一动作读 closed enum**：`hints[]` / continuation cue / `check.next` 带"一个下一步"，不猜字段名；repair 后重跑同一 checkpoint。recovery 反馈面现状：五个工作单元反馈面（submit 拒绝 / late-submit 拒绝 / transaction 阻塞 / dry-submit / inspect）统一发出 `attempt_disposition` + `next` 形状；`repair_kind` 为 CLI 动词拼写（`recover-transaction` / `recover-declaration` / `supersede` / `wait` / `missing_contract`）；恢复结果（含 `recover-transaction` / `recover-declaration`）携带 `next` 重跑坐标，不是死胡同；disposition → `repair_kind` → CLI 动词的映射由 `RUN.md` 决策表 + 锁定测试固化。
+7. **反馈第一动作读 closed enum**：门禁面 `hints[].resolution_owner` 标明责任主体（Agent/Engine/User）；工作单元面发出 `attempt_disposition` + `next.recovery_action` 为 CLI 动词拼写（`recover-transaction` / `recover-declaration` / `supersede` / `wait` / `missing_contract`）；恢复结果携带 `next` 重跑坐标，不是死胡同；disposition → `recovery_action` → CLI 动词的映射由 `RUN.md` 决策表 + 锁定测试固化。
    → 真相源：`DEEP_RESEARCH_HARNESS/engine/work-unit-attempt-disposition.mjs`、`DEEP_RESEARCH_HARNESS/RUN.md`（决策表）、`tests/engine/work-unit-recovery-decision-table.test.mjs`。
 8. **交互点只有 HITL1/HITL2**：Final 是 terminal lifecycle delivery，deliver-first、接受 presentation feedback，但不是第三个 checkpoint。
    → 真相源：`openspec/specs/bundle/run-entry/spec.md` requirement「Entry trigger hands control to Agent-run Harness execution」（registry: RUE-005）。

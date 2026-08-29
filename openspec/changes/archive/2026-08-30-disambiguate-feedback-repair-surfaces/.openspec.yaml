@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-08-30
+skip_specs: true
+skip_specs_reason: This change eliminates cross-surface naming collisions by differentiating Gate hint governance responsibility (hints[].resolution_owner) and Work-Unit recovery CLI actions (next.recovery_action) without altering accepted product capability requirements.

@@ -10,7 +10,7 @@ import {
   resolveWorkUnitSupersessionLineage,
 } from './work-unit-supersession.mjs';
 import { classifyCompleteCurrentWorkUnitProfile } from './work-unit-current-profile.mjs';
-import { WORK_UNIT_REPAIR_KIND } from './work-unit-repair-vocabulary.mjs';
+import { WORK_UNIT_RECOVERY_ACTION, WORK_UNIT_REPAIR_KIND } from './work-unit-repair-vocabulary.mjs';
 import { CLI_OPERATE_WORK_UNIT } from './work-unit-constants.mjs';
 
 // attempt-disposition rerun builder: the dry-submit command (predictive,
@@ -49,7 +49,7 @@ export function projectWorkUnitAttemptDisposition(bundleDir, record, {
         missing_fact: missingFact,
       },
       next: {
-        repair_kind: WORK_UNIT_REPAIR_KIND.missingContract,
+        recovery_action: WORK_UNIT_RECOVERY_ACTION.missingContract,
         missing_fact: missingFact,
         write_to: null,
         rerun: rerun || submitRerun(bundleDir, record),
@@ -120,28 +120,28 @@ export function projectWorkUnitAttemptDisposition(bundleDir, record, {
   let next;
   if (transaction.disposition !== 'none') {
     next = {
-      repair_kind: transaction.repair_kind,
+      recovery_action: transaction.recovery_action || transaction.repair_kind,
       missing_fact: transaction.missing_fact,
       write_to: transaction.write_to,
       rerun: transaction.rerun,
     };
   } else if (record.status === 'claimed' && logicalActorClass === 'delegated_subagent') {
     next = {
-      repair_kind: WORK_UNIT_REPAIR_KIND.waitForDelegatedCandidate,
+      recovery_action: WORK_UNIT_RECOVERY_ACTION.waitForDelegatedCandidate,
       missing_fact: 'The selected delegated actor route owns candidate authoring for this exact attempt.',
       write_to: null,
       rerun: rerun || submitRerun(bundleDir, record),
     };
   } else if (record.status === 'claimed') {
     next = {
-      repair_kind: WORK_UNIT_REPAIR_KIND.authorExactFallbackAttempt,
+      recovery_action: WORK_UNIT_RECOVERY_ACTION.authorExactFallbackAttempt,
       missing_fact: 'The Phase Agent fallback route may author only this exact attempt binding.',
       write_to: identity.result_path,
       rerun: rerun || submitRerun(bundleDir, record),
     };
   } else if (coverage.disposition === 'current') {
     next = {
-      repair_kind: WORK_UNIT_REPAIR_KIND.semanticBoundary,
+      recovery_action: WORK_UNIT_RECOVERY_ACTION.semanticBoundary,
       missing_fact: 'The submitted attempt remains current; richer late content alone does not authorize deterministic replacement.',
       write_to: null,
       rerun: rerun || submitRerun(bundleDir, record),
@@ -169,18 +169,24 @@ export function projectWorkUnitAttemptDisposition(bundleDir, record, {
     };
   } else if (submittedRecovery?.eligible) {
     next = {
-      repair_kind: WORK_UNIT_REPAIR_KIND.supersede,
+      recovery_action: WORK_UNIT_RECOVERY_ACTION.supersede,
       missing_fact: `Submitted attempt ${record.work_id} has supersession-eligible ${submittedRecovery.root_code}.`,
       write_to: null,
       rerun: submittedRecovery.rerun,
     };
   } else {
     next = {
-      repair_kind: submittedRecovery?.repair_kind || WORK_UNIT_REPAIR_KIND.missingContract,
+      recovery_action: submittedRecovery?.recovery_action || submittedRecovery?.repair_kind || WORK_UNIT_RECOVERY_ACTION.missingContract,
       missing_fact: submittedRecovery?.missing_fact || coverage.missing_fact || `No direct recovery action is established for ${record.status}.`,
       write_to: submittedRecovery?.write_to || null,
       rerun: submittedRecovery?.rerun || rerun || submitRerun(bundleDir, record),
     };
+  }
+
+  if (next) {
+    const action = next.recovery_action || next.repair_kind;
+    next.recovery_action = action;
+    next.repair_kind = action;
   }
 
   return { identity, transaction, coverage, next };

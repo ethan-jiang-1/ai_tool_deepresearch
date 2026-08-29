@@ -1,0 +1,4 @@
+schema_version: semantic-closure/v1
+change: disambiguate-feedback-repair-surfaces
+status: not_applicable
+reason: This change disambiguates multi-surface feedback keys (hints[].resolution_owner vs next.recovery_action) across engine helpers, specs, guidance, and tests without adding or altering deterministic semantic fact families.

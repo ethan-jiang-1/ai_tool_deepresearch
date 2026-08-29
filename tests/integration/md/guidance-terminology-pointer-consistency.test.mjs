@@ -55,10 +55,10 @@ describe('CONTEXT: Gate pointer, 五反馈面 distinction, Lifecycle concepts, r
     assert.ok(context.includes('按 owner spec 用法归纳'), 'induction note missing');
   });
 
-  it('splits repair_kind into the two closed enums (F-03 term row)', () => {
-    assert.ok(context.includes('gate/phase 反馈面'), 'phase feedback surface row missing');
-    assert.ok(context.includes('work-unit 反馈面'), 'work-unit feedback surface row missing');
-    assert.ok(context.includes('同名不同枚举'), 'same-name-different-enum distinction missing');
+  it('distinguishes resolution_owner, recovery_action, and repair_directive (F-03 term row)', () => {
+    assert.ok(context.includes('resolution_owner'), 'resolution_owner term missing');
+    assert.ok(context.includes('recovery_action'), 'recovery_action term missing');
+    assert.ok(context.includes('repair_directive'), 'repair_directive term missing');
   });
 });
 
