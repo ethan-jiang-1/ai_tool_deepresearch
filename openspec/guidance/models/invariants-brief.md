@@ -24,7 +24,7 @@
    → 真相源：`DEEP_RESEARCH_HARNESS/engine/work-unit-attempt-disposition.mjs`、`DEEP_RESEARCH_HARNESS/RUN.md`（决策表）、`tests/engine/work-unit-recovery-decision-table.test.mjs`。
 8. **交互点只有 HITL1/HITL2**：Final 是 terminal lifecycle delivery，deliver-first、接受 presentation feedback，但不是第三个 checkpoint。
    → 真相源：`openspec/specs/bundle/run-entry/spec.md` requirement「Entry trigger hands control to Agent-run Harness execution」（registry: RUE-005）。
-9. **入口选择单一源**：完整规则只在 `DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md` 的 "Entry Selection (canonical)" 节；显式 existing bundle candidate 先过同根 `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md` pair，缺一即 `unsupported_current_entry_contract` 并停止；无 explicit candidate 才读 `RUN.md`；扫描/裸文件名/不可达不选择 run。
+9. **入口选择单一源**：完整规则只在 `DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md` 的 "Entry Selection (canonical)" 节；其余面只留指针（点名该节与 `unsupported_current_entry_contract`）。
    → 真相源：`DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md#Entry Selection (canonical)`。
 10. **测试四类与放置**：`unit` / `integration` / `deterministic_e2e` 在 `tests/`，`agent_flow_e2e` 在 `experiments_playbook/`；JS 测试只在 `tests/`，框架目录不放测试。
     → 真相源：`openspec/specs/verification/verification-routing/spec.md`。

@@ -246,16 +246,34 @@ candidate is supplied, selected new-research routing SHALL use `RUN.md` before
 later workflow instructions or research work.
 
 The complete entry-selection rule — including both the verified-pair branch and
-the no-candidate `RUN.md` branch — SHALL have exactly one canonical statement in
-`DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md`. Repo-root
-`AGENTS.md` and `CLAUDE.md`, Harness `AGENTS.md` and `CLAUDE.md`, and relevant
-Harness entry/command guidance (README, RUN, COMMANDS, start-research) SHALL
-carry a short pointer to that canonical statement instead of restating the
-complete rule. Pointers SHALL name the playbook and the unsupported-current-
-entry-contract boundary without reproducing the selection procedure. A pointer
-SHALL NOT weaken, reorder, or paraphrase the canonical rule's outcomes. This
-single-source arrangement SHALL NOT add a lifecycle checkpoint, host trigger,
-permission, mutation, or rerun authority.
+the no-candidate `RUN.md` branch — SHALL have exactly one canonical statement
+under the heading `Entry Selection (canonical)` in
+`DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md`. That section
+SHALL state both branches, the unsupported-current-entry-contract stop, the
+scan/bare/unreachable non-selection, the current-run-bundle-root resolution,
+and the pre-entry research-surface prohibition.
+
+Repo-root `AGENTS.md` and `CLAUDE.md`, Harness `AGENTS.md` and `CLAUDE.md`, and
+relevant Harness entry/command guidance (README, RUN, COMMANDS, start-research)
+SHALL carry a short pointer to that canonical statement instead of restating
+the complete rule. A pointer SHALL name the playbook path, the heading
+`Entry Selection (canonical)`, and the `unsupported_current_entry_contract`
+boundary. A pointer SHALL NOT reproduce the selection procedure: same-root
+pair preflight steps, the no-candidate `RUN.md` branch essay, scan/bare/
+unreachable non-selection as a restated tree, or the pre-entry research-surface
+prohibition as part of that tree. Naming which file to open next (the
+canonical section versus `RUN.md`) is not restating the complete rule. A
+pointer SHALL NOT weaken, reorder, or paraphrase the canonical rule's
+outcomes. This single-source arrangement SHALL NOT add a lifecycle checkpoint,
+host trigger, permission, mutation, or rerun authority.
+
+Documentation regressions that protect this requirement SHALL lock the
+complete rule only on that canonical section. They SHALL fail when a
+pointer or routing block reproduces the selection procedure. They SHALL
+scope that failure to the named pointer or routing block, not to later
+operational pair-verification or directory-map sentences on the same file.
+They SHALL NOT treat presence of procedure tokens on every pointer surface
+as the safety proof. They SHALL NOT claim that an Agent followed the pointer.
 
 #### Scenario: Explicit existing bundle prevents a second bundle and pre-entry research
 
@@ -297,9 +315,25 @@ permission, mutation, or rerun authority.
 - **WHEN** an Agent reads a root or Harness routing surface before selecting an
   entry
 - **THEN** the surface SHALL point to
-  `DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md` as the one
-  canonical statement of the complete selection rule
+  `DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md` heading
+  `Entry Selection (canonical)` as the one canonical statement of the complete
+  selection rule
+- **AND** it SHALL name `unsupported_current_entry_contract`
 - **AND** it SHALL NOT reproduce the full selection procedure or rephrase its
   branches
 - **AND** the canonical playbook SHALL state both the verified-pair branch and
   the no-candidate `RUN.md` branch
+
+#### Scenario: Documentation regressions lock the canonical section not pointer restatement
+
+- **WHEN** a documentation regression inspects entry-selection safety
+- **THEN** it SHALL assert the complete rule on
+  `command_playbook/continue-run-bundle.md` `Entry Selection (canonical)`
+- **AND** it SHALL assert that listed pointer surfaces name the playbook,
+  that heading, and `unsupported_current_entry_contract`
+- **AND** it SHALL fail when a named pointer or routing block reproduces the
+  selection procedure
+- **AND** it SHALL NOT treat a later operational pair-verification or
+  directory-map sentence on the same file as restatement
+- **AND** it SHALL NOT require those procedure tokens on every pointer surface
+  as the pass condition

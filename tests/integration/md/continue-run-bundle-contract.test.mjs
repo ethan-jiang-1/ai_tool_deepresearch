@@ -13,21 +13,41 @@ const README = 'DEEP_RESEARCH_HARNESS/README.md';
 const COMMANDS = 'DEEP_RESEARCH_HARNESS/COMMANDS.md';
 const PLAYBOOK = 'DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md';
 
+function markdownSection(text, heading, path) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = text.match(new RegExp(`## ${escaped}\\r?\\n\\r?\\n([\\s\\S]*?)(?=\\n## |$)`));
+  assert.ok(match, `${path} must keep ## ${heading}`);
+  return match[1];
+}
+
+function assertPointerBlock(block, label) {
+  assert.match(block, /continue-run-bundle\.md/, `${label} must name the playbook`);
+  assert.match(block, /Entry Selection \(canonical\)/, `${label} must name the canonical heading`);
+  assert.match(block, /unsupported_current_entry_contract/, `${label} must name the stop`);
+  assert.doesNotMatch(block, /same-root `BUNDLE_ENTRY\.md` \+ `BUNDLE_MAP\.md` preflight/i, `${label} must not restate pair preflight`);
+  assert.doesNotMatch(block, /With no supplied existing candidate/i, `${label} must not restate the no-candidate essay`);
+  assert.doesNotMatch(block, /discovered, bare, or unreachable file does not select a run/i, `${label} must not restate non-selection`);
+  assert.doesNotMatch(block, /preflight 失败[，,]?不等于「没有 explicit candidate」/, `${label} must not restate the fallback essay`);
+  assert.doesNotMatch(block, /禁止因此 fallback 读 `RUN\.md`/, `${label} must not restate RUN fallback`);
+}
+
 describe('existing run-bundle continuation contract', () => {
   it('routes only an explicit reachable current-pair bundle before the new-run default', () => {
-    const surfaces = [ROOT_AGENTS, ROOT_CLAUDE, FRAMEWORK_AGENTS, FRAMEWORK_CLAUDE]
-      .map(read)
-      .join('\n');
+    const rootRouting = [ROOT_AGENTS, ROOT_CLAUDE].map((path) =>
+      markdownSection(read(path), 'Deep Research Routing', path),
+    );
+    assert.equal(rootRouting[0], rootRouting[1], 'root routing blocks must stay synchronized');
+    assertPointerBlock(rootRouting[0], 'root Deep Research Routing');
 
-    assert.match(surfaces, /BUNDLE_ENTRY\.md/);
-    assert.match(surfaces, /BUNDLE_MAP\.md/);
-    assert.match(surfaces, /unsupported_current_entry_contract/);
-    assert.match(surfaces, /continue-run-bundle\.md/);
-    assert.match(surfaces, /explicit|明确|显式/i);
-    assert.match(surfaces, /reachable|可达/i);
-    assert.match(surfaces, /RUN\.md/);
-    assert.match(surfaces, /start-research\.md/);
-    assert.match(surfaces, /scan|扫描|bare filename|仅.*文件名/i);
+    const harnessPointers = [FRAMEWORK_AGENTS, FRAMEWORK_CLAUDE].map((path) => {
+      const brief = markdownSection(read(path), '0. Execution Brief', path);
+      const row = brief.match(/\| 研究 \/ 续跑 \/ 报告 \|[^|\n]+\|/);
+      const pointerPara = brief.match(/入口选择的完整规则只有一处 canonical 表述：[^\n]+/);
+      assert.ok(row && pointerPara, `${path} must keep the research pointer`);
+      return `${row[0]}\n${pointerPara[0]}`;
+    });
+    assert.equal(harnessPointers[0], harnessPointers[1], 'harness research pointers must stay synchronized');
+    assertPointerBlock(harnessPointers[0], 'Harness research pointer');
   });
 
   it('preflights the current pair, then bridges it to COMMANDS.md without lifecycle branching', () => {

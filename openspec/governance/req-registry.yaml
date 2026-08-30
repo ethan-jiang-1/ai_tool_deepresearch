@@ -134,9 +134,9 @@ ACS-006: agent-command-surface — Command index maps post-final iteration inten
 
 # agent/agent-context-routing
 ACR-001: agent-context-routing — Root CONTEXT.md preserves canonical terminology boundaries without becoming behavior, executable, or runtime authority
-ACR-002: agent-context-routing — Root and framework Agent entry routes open with Execution Brief; Charter-then-context only when the next action depends on ownership vocabulary
+ACR-002: agent-context-routing — Root and framework Agent entry routes open with Execution Brief; Deep Research Routing is a pointer only; Charter-then-context only when the next action depends on ownership vocabulary
 ACR-003: agent-context-routing — Root ADR records Markdown-driven Agent Flow and Engine-gated deterministic checkpoints without redefining behavior
-ACR-004: agent-context-routing — Static documentation regression preserves Execution Brief routing, source boundaries, and ADR deferral
+ACR-004: agent-context-routing — Static documentation regression preserves Execution Brief routing and locks entry-selection completeness on the canonical section, not pointer restatement
 
 # agent/agent-output-declaration
 AGO-001: agent-output-declaration — Work-unit result output_files declaration with role and source_url rules
@@ -373,7 +373,7 @@ RUE-002: run-entry — RUN.md Section 0 immediately follows the title and instru
 RUE-003: run-entry — Project changelog records version history and known limitations [DEPRECATED]
 RUE-004: run-entry — Agent behavior files stay synchronized on the research shortcut override
 RUE-005: run-entry — RUN.md frames drag/paste trigger as one-time handoff into Agent-run framework execution
-RUE-006: run-entry — Explicit existing bundle card routes before the new-run default
+RUE-006: run-entry — Explicit existing bundle routes before the new-run default; regressions lock the canonical section, not pointer restatement
 
 # engine/check-inspect-feedback
 CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop

@@ -1,0 +1,169 @@
+schema_version: verification-routing/v1
+change: prove-entry-selection-at-canonical-source
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      No isolated in-process JavaScript contract is added; the change rewrites
+      Agent-facing entry pointers and the documentation regressions that lock
+      canonical completeness versus pointer non-restatement.
+  integration:
+    status: selected
+    rationale: >-
+      RUE-006 proof shape, ACR Routing-as-pointer, and the three retargeted
+      entry-selection contracts are cross-file deterministic Markdown
+      contracts under tests/integration/.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No Gate, queue, work-unit, or lifecycle chain is executed.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change does not claim real Agent behavior; ACR-004 forbids inferring
+      that an Agent actually followed the pointer.
+claims:
+  - id: canonical-entry-selection-complete
+    statement: >-
+      RUE-006: continue-run-bundle.md Entry Selection (canonical) still states
+      both branches, the unsupported-current-entry-contract stop, scan/bare
+      non-selection, current-run-bundle-root resolution, and the pre-entry
+      research-surface prohibition.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/continue-run-bundle-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: pointer-surfaces-do-not-restate
+    statement: >-
+      RUE-006: dpt-research-entry-routing-contract locks pointer triad
+      (playbook path, Entry Selection (canonical),
+      unsupported_current_entry_contract) on named pointer/routing blocks
+      and fails when those blocks reproduce the selection procedure, without
+      scanning later operational pair or directory-map sentences; RUN.md
+      section 0 shortcut prohibition remains.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/dpt-research-entry-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: harness-entry-route-pointer-not-tokens
+    statement: >-
+      RUE-006/ACR-004: deep-research-harness-entry-contract no longer requires
+      BUNDLE_ENTRY.md, BUNDLE_MAP.md, and current run bundle root on every
+      route file; it requires the pointer triad and rejects procedure
+      restatement, while the playbook itself keeps pair and scan locks.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/deep-research-harness-entry-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: execution-brief-and-routing-pointer
+    statement: >-
+      ACR-002/ACR-004: root AGENTS.md still opens with Execution Brief naming
+      three branches; Deep Research Routing is a pointer only; Harness Brief
+      still names research versus changing Harness behavior; symlink,
+      CONTEXT, and ADR assertions remain.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-context-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: guidance-topology-and-terminology-unchanged
+    statement: >-
+      GCO-008 topology synchronized blocks (root Execution Brief; Harness
+      共享项目上下文) remain green after Deep Research Routing is reduced to
+      a pointer.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/project-guidance-topology-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: root-runtime-coordinate-preserved
+    statement: >-
+      Root AGENTS.md Hard Rules still name current run bundle root, bare-path
+      resolution under that root, and the canonical _old_topics archive
+      sentence after Deep Research Routing is reduced to a pointer.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/guidance-terminology-pointer-consistency.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: harness-entry-doc-consistency-preserved
+    statement: >-
+      RUE-002/ACR-004: harness-entry-doc-consistency still finds the
+      intent-trigger and non-research carve-out sentences after README
+      trigger-rule restatement is removed, and no longer requires the
+      preflight-failure essay on Harness AGENTS/CLAUDE.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/harness-entry-doc-consistency.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: doc-governance-anti-fallback-on-canonical
+    statement: >-
+      ACR-004: doc-governance-drift-locks F-04 locks the no-candidate versus
+      incomplete-candidate distinction on Entry Selection (canonical) and
+      fails when RUN.md or README pointer surfaces restate the Chinese
+      anti-fallback clause.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/doc-governance-drift-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

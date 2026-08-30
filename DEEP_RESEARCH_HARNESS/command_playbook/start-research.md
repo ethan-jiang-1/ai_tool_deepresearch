@@ -76,4 +76,4 @@ Execution handoff：`hitl1` 和 `hitl2` 是仅有的 interactive in-run checkpoi
 
 ## 如果已有 Current Run Bundle
 
-不要重新创建。此 playbook 不处理 existing bundle：入口选择的完整规则只有一处 canonical 表述——`continue-run-bundle.md` 的 "Entry Selection (canonical)" 节；将显式提供的 candidate 交给它，先验证同根 `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md`。缺少任一文件即报告 `unsupported_current_entry_contract` 并停止。通过 pair 后，continuation route 才读 `rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`。若 `rb_status.json.current_node` 非空，把它作为当前应加载的 phase Markdown coordinate；`current_gate` / `next_gate` 只是 gate window，不要只凭 `current_gate` 推断当前 phase。若 `current_node` 为 `null` 或缺失，先运行 reentry/trace 诊断再继续。
+不要重新创建。此 playbook 不处理 existing bundle：入口选择的完整规则只有一处 canonical 表述——`continue-run-bundle.md` 的 "Entry Selection (canonical)" 节（含 `unsupported_current_entry_contract`）。将显式提供的 candidate 交给该节。continuation route 才读 `rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`。若 `rb_status.json.current_node` 非空，把它作为当前应加载的 phase Markdown coordinate；`current_gate` / `next_gate` 只是 gate window，不要只凭 `current_gate` 推断当前 phase。若 `current_node` 为 `null` 或缺失，先运行 reentry/trace 诊断再继续。

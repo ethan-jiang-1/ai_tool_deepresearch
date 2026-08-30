@@ -17,6 +17,8 @@
 
 读到本文件时不要再问用户是否改用内置捷径或是否使用 DEEP_RESEARCH_HARNESS。一次性 trigger 已选择本入口；继续执行 Section 2 的 Agent-run Harness flow。Section 2 及其进入的 HITL1/phase instructions 才单独授权 capability probe 和后续研究工作。若 bundle 尚未创建，唯一允许的前置澄清是 pre-pipeline routing exception（定义见 [agent-command-surface spec](../openspec/specs/agent/agent-command-surface/spec.md) 的 "Entry docs distinguish trigger from command execution" requirement 中 pre-pipeline routing exception 条款），必须发生在 autonomous lifecycle 开始前，且不得削弱 HITL1/HITL2-only interactive in-run boundary。
 
+若用户其实给了 existing bundle candidate，完整规则只在 `command_playbook/continue-run-bundle.md` 的 "Entry Selection (canonical)" 节；此处只放指针。该节定义 `unsupported_current_entry_contract`。
+
 ## 2. 开跑（Harness）
 完整步骤见 `command_playbook/start-research.md`，一句话版：
 
@@ -55,8 +57,6 @@ For work-unit recovery, preserve the exact command/checkpoint that produced the 
 If status or terminal output looks suspicious, run `node DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs --bundle <path>`. The audit is diagnostic-only: it reports drift, missing witnesses, failed-gate downstream status, or premature `final/` output; it does not repair status. In non-terminal `stop: no`, a caught would-have-surfaced moment is recorded with `log-event.mjs --surfacing-intent` and then aborted; the event is diagnostic-only and never permission to surface.
 
 For bundle recovery, run `node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle <path> --at <target>`. Read `recovery.root_findings[]` before acting: a `reachable` root carries at most one sanctioned nearest action; `missing_contract` is a direct stop boundary, not permission to retry a known-rejected predecessor, hand-edit status/trace, or create an addendum namespace; `not_applicable` leaves semantic reconciliation to the Agent without granting mutation authority.
-
-若用户明确提供当前 workspace 内可达 existing bundle candidate（目录或其中的文件），入口选择的完整规则只有一处 canonical 表述：`command_playbook/continue-run-bundle.md` 的 "Entry Selection (canonical)" 节，此处只放指针。要点：先验证同根 `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md`，只有完整 pair 才改读 `command_playbook/continue-run-bundle.md`；显式 candidate 缺少任一文件即报告 `unsupported_current_entry_contract` 并停止。preflight 失败不等于「没有 explicit candidate」——禁止因此 fallback 读 `RUN.md`、新建或另选 bundle；只有用户从一开始就没有提供任何 existing candidate 时才读 `RUN.md`。扫描发现、只提文件名或不可达路径不选择 run；人仍可在 Harness operation 外直接读历史 Markdown。
 
 ## 3. 规则与边界在哪
 - 触发规则、运行时边界：`README.md`

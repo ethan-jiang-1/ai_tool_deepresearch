@@ -8,11 +8,11 @@
 
 | 这一轮是 | 打开 | 完成 | 此刻不要 |
 |---|---|---|---|
-| 研究 / 续跑 / 报告 | 给了可达 existing bundle candidate（目录或其中的文件）→ 先检查同根 `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md`。齐了再读 `command_playbook/continue-run-bundle.md` 的 "Entry Selection (canonical)"。缺一：报告 `unsupported_current_entry_contract`，停。这是 preflight 失败，不等于「没有 explicit candidate」——禁止因此 fallback 读 `RUN.md`、新建或另选 bundle。没给 candidate → 读 `RUN.md`。扫描发现、只提文件名或不可达路径都不选择 run。 | selected entry 已在上下文 | entry 前不调用 `research`、`deep-research` 或等价 one-shot shortcut，不对该 request 直接 WebSearch/WebFetch，也不手工收集或综合 evidence |
+| 研究 / 续跑 / 报告 | 给了可达 existing bundle candidate（目录或其中的文件）→ 打开 `command_playbook/continue-run-bundle.md` 的 **Entry Selection (canonical)**（含 `unsupported_current_entry_contract`）。没给 → 打开 `RUN.md`。 | selected entry 已在上下文 | entry 前不调用 `research`、`deep-research` 或等价 one-shot shortcut，不对该 request 直接 WebSearch/WebFetch，也不手工收集或综合 evidence |
 | 改本目录行为 | 回到仓库根，走根 `AGENTS.md` Execution Brief 的「改行为」行 | 根 Brief 那一行完成 | 把本目录当代码库逛完再改 |
 
-入口选择的完整规则只有一处 canonical 表述：`command_playbook/continue-run-bundle.md` 的 "Entry Selection (canonical)" 节；本文件只放指针。显式 candidate 通过后，其目录解析为本次操作的 canonical absolute current run bundle root。
-`start-research.md` 只是 RUN.md 后的下游 new-run playbook。没有上述明确 existing map 时，先读 `RUN.md`，再由其 Section 2 进入 `command_playbook/start-research.md`。
+入口选择的完整规则只有一处 canonical 表述：`command_playbook/continue-run-bundle.md` 的 "Entry Selection (canonical)" 节；本文件只放指针。
+`start-research.md` 只是 RUN.md 后的下游 new-run playbook。新研究先读 `RUN.md`，再由其 Section 2 进入 `command_playbook/start-research.md`。
 此限制只覆盖 entry 前；`RUN.md` 进入的 HITL1 probe 与后续 phase 已授权的 research 仍按其原有 contract 执行。仓库 guidance 不能保证宿主不会预先匹配 skill 或注入工具。
 触发按意图，不按关键词：用户即使只贴了 `DEEP_RESEARCH_HARNESS` 的路径、没说"研究"二字，只要意图是研究，就走上面入口。人仍可在 Harness operational contract 外直接阅读历史 Markdown。
 

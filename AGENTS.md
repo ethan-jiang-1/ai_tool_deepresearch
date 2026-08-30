@@ -17,7 +17,7 @@ Coding-agent notes for this repo. Keep this file short; detailed rules live in O
 
 ## Deep Research Routing
 
-For selected Deep Research Harness research, entry selection has exactly one canonical statement: the "Entry Selection (canonical)" section of `DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md`; this block is a pointer, not a restatement. In brief: an explicitly supplied reachable existing bundle candidate (a directory or a file within it) with continuation or inspection intent first passes the same-root `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md` preflight, then follows that playbook. A candidate missing either file is `unsupported_current_entry_contract`: stop without reading it as an operational entry. With no supplied existing candidate, research, deep-research, investigation, or report intent with `DEEP_RESEARCH_HARNESS/` selected uses `DEEP_RESEARCH_HARNESS/RUN.md`. A discovered, bare, or unreachable file does not select a run. Before the selected entry is read, do not invoke `research`, `deep-research`, or an equivalent one-shot shortcut, perform request-specific WebSearch/WebFetch, or collect/synthesize evidence manually. The selected entry and its later phase instructions authorize subsequent legal research work. Direct human reading of historical Markdown remains outside this operational contract. A verified bundle candidate directory resolves to the operation's canonical absolute current run bundle root; bare runtime paths always resolve under that root.
+For selected Deep Research Harness research, entry selection has exactly one canonical statement: the "Entry Selection (canonical)" section of `DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md`. This block is a pointer, not a restatement. The stop named `unsupported_current_entry_contract` is defined only in that section.
 
 ## Repository Reading Scope
 
@@ -47,6 +47,7 @@ Do not list, scan, or read these paths as task context unless the user explicitl
 
 - Do not read `_old_topics` archives (under `_backlog/_done/`, including `_original_*` subdirectories) unless explicitly asked.
 - **Run-scoped helper scripts（work-unit executor / 生成器 / 恢复脚本）必须写入 current run bundle root 的 `_scripts/`**，禁止写入 repo 根（如 `.wu*-*.mjs`、`.gen-*.mjs`）或 `DEEP_RESEARCH_HARNESS/`。`_scripts/` 是 non-authority 运行时区域，随 bundle 归档。
+- A verified selected bundle directory is the current run bundle root; bare runtime paths always resolve under that root.
 - Use Node.js >=20, pure JavaScript ESM (`.mjs`). No TypeScript. **Absolutely no Python.** Not for scripts, not for one-liners, not for prototyping — use Node.js for everything.
 - Do not add dependencies. Approved npm deps only: `zod`, `yaml`; otherwise use Node built-ins.
 - Use `node:test` + `node:assert` for JS-led tests.

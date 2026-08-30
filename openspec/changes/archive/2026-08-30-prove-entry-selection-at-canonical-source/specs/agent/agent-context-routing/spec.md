@@ -1,99 +1,6 @@
-# Agent Context Routing
+> req: ACR-002, ACR-004
 
-> req: ACR-001, ACR-002, ACR-003, ACR-004
-
-## Purpose
-
-Give every substantive repository task a short vocabulary-alignment entry route
-that preserves the Deep Research Tool's agentic architecture without turning a
-glossary or ADR into a competing behavior or runtime authority.
-
-## Requirements
-
-### Requirement: Project glossary preserves canonical terminology boundaries
-
-The repository SHALL provide one root `CONTEXT.md` as the shared glossary for substantive project
-work. It SHALL distinguish the Deep Research Tool project, the reusable Deep Research Harness, the
-canonical `DEEP_RESEARCH_HARNESS/` directory, a run bundle, a research run, a current run bundle,
-a current run bundle root, the LLM Agent, Markdown control surface, Engine, runtime truth, and
-deterministic/evidence boundaries needed to avoid treating the Harness as a traditional JavaScript
-workflow controller.
-
-`CONTEXT.md` SHALL state that it is a vocabulary-alignment surface and SHALL defer behavior,
-executable contracts, and current runtime facts to their existing Sources of Record. Its terminology
-SHALL remain aligned with the guidance terminology canon rather than establishing independent
-definitions, and it SHALL directly identify that canon for its readers.
-
-The glossary SHALL contain direct Markdown links to `openspec/README.md`,
-`openspec/guidance/models/agentic-execution-model.md`, and
-`openspec/constitution/project-charter.md` as its terminology and authority sources. It SHALL direct
-readers to the execution-model canon for the complete Phase Agent, Sub-agent, Queue demand item,
-Work unit, and Submit vocabulary rather than copying it in full. Its compressed definitions SHALL
-preserve that a research run is a run bundle's lifecycle; a current run bundle is explicitly scoped
-to one operation; its root is the resolved runtime coordinate; and a Gate verdict does not itself
-select the next Chain phase or grant authority, capability, permission, liveness, or evidence.
-
-`CONTEXT.md` SHALL link
-`docs/adr/0001-keep-agent-flow-markdown-driven-and-engine-gated.md` and
-`docs/adr/0002-name-the-reusable-surface-deep-research-harness.md` as optional architecture
-rationale. Those links SHALL not make either ADR a mandatory pre-task read, behavior authority, or
-replacement for the Charter.
-
-`CONTEXT.md` SHALL include the current phase feedback vocabulary `hints[]` and `repair_kind` as
-named feedback surfaces that carry the bounded next step, SHALL define the three runtime
-coordinates `repo_command_root` / `framework_root` / `current_run_bundle_root` with their compact
-distinctions, and SHALL point its `Gate` row to the five-surface Gate explanation in
-`openspec/guidance/models/framework-runtime-boundary.md` rather than compressing Gate to a single
-gloss line. These entries SHALL remain compressed definitions that defer behavior and machine facts
-to their Sources of Record; they SHALL NOT copy the complete feedback or Gate contract into the
-glossary.
-
-#### Scenario: Agent establishes the correct control model from the glossary
-
-- **WHEN** a Coding Agent reads root `CONTEXT.md` for a substantive task
-- **THEN** it can distinguish LLM judgment, Markdown Agent Flow, Engine deterministic checkpoints,
-  Harness assets, and current-run-bundle runtime truth
-- **AND** it SHALL NOT treat the glossary as a Gate verdict, executable contract, or current run
-  state
-
-#### Scenario: Glossary preserves critical similarly named distinctions
-
-- **WHEN** a Coding Agent needs to reason about Harness/runtimes or phase advancement
-- **THEN** root `CONTEXT.md` SHALL distinguish Harness from run bundle, research run from current
-  run bundle, current run bundle root from repository root, Gate definition from Gate verdict, and
-  phase handoff from work completion
-- **AND** it SHALL direct the Agent to the existing authority when the glossary alone cannot answer
-  the needed behavior or runtime question
-- **AND** it SHALL identify the canonical model and Charter rather than presenting its wording as an
-  independent definition source
-
-#### Scenario: Glossary preserves authority-sensitive execution distinctions
-
-- **WHEN** a Coding Agent uses root `CONTEXT.md` to orient before task-specific execution work
-- **THEN** it SHALL distinguish a current run bundle from reusable Harness assets for both
-  production runs and disposable experiments
-- **AND** it SHALL identify the current run bundle root as an explicit operation coordinate rather
-  than the newest bundle, a global session value, or a lifecycle-status claim
-- **AND** it SHALL distinguish a Gate verdict from Chain/transition selection
-- **AND** it SHALL not infer authority, capability, permission, liveness, or evidence merely from a
-  named Source of Record
-- **AND** it SHALL route complete execution-model terminology to its canonical model rather than
-  reproducing a competing full glossary
-
-#### Scenario: Glossary exposes the current feedback vocabulary
-
-- **WHEN** a Coding Agent reads root `CONTEXT.md` after receiving phase feedback
-- **THEN** the glossary SHALL name `hints[]` and `repair_kind` as the feedback surfaces that carry
-  the bounded next step
-- **AND** it SHALL defer the complete feedback contract to its owning accepted spec or model rather
-  than restating the field shapes
-
-#### Scenario: Glossary routes Gate to the five-surface explanation
-
-- **WHEN** a Coding Agent needs the exact meaning of Gate beyond a one-line gloss
-- **THEN** the `Gate` row in `CONTEXT.md` SHALL point to the five-surface Gate table in
-  `openspec/guidance/models/framework-runtime-boundary.md`
-- **AND** the glossary SHALL NOT present a competing single-surface Gate definition
+## MODIFIED Requirements
 
 ### Requirement: Agent-facing entry routes require the project glossary
 
@@ -242,31 +149,6 @@ reusable Harness source coordinate.
 - **THEN** the deterministic shape check SHALL fail
 - **AND** the repair SHALL restore the symlink to the owning `AGENTS.md`
 
-### Requirement: Root architecture decision record explains the control split
-
-The repository SHALL maintain a root `docs/adr/` decision record. Its first
-record SHALL explain the durable decision that semantic research and
-multi-stage Agent Flow remain LLM/Markdown-driven while the Engine owns
-deterministic checkpoints and feedback.
-
-The ADR SHALL record this as an architectural trade-off against a JavaScript
-workflow-controller design. It SHALL contain a concise `## Status` section
-whose value is `Accepted`, plus concise `## Context`, `## Decision`, and
-`## Consequences` sections, and explicitly defer current behavior to accepted
-OpenSpec contracts. It SHALL not redefine current runtime behavior, override
-accepted OpenSpec contracts, or become an instruction source that replaces the
-Charter or entry routes. Root `CONTEXT.md` SHALL make the record discoverable
-as an optional architecture rationale.
-
-#### Scenario: Maintainer can recover the reason for the split
-
-- **WHEN** a maintainer considers moving research orchestration or semantic
-  judgment into JavaScript
-- **THEN** the root ADR SHALL explain why that is outside the selected
-  architecture
-- **AND** it SHALL identify the Engine as the deterministic trust root rather
-  than the Agent Flow controller
-
 ### Requirement: Context routing remains regression-protected
 
 The project SHALL have a focused deterministic JS-led `integration` regression
@@ -282,10 +164,10 @@ Routing` remains after the Brief as a pointer only; that `docs/adr/` stays
 on-demand; that Harness `## 共享项目上下文` keeps the non-entry boundary and
 does not require Charter-then-context before research; that Harness README
 does not place a mandatory Charter-then-context route before `> **最快触发**`
-or `## 触发规则（最高优先）`; that the glossary retains its three canonical source links,
-non-authority and current-run-bundle distinction markers, and discoverable
-links to ADRs 0001, 0002, and 0003; that those three ADRs retain their
-`Accepted` status and respective decision boundaries; that
+or `## 触发规则（最高优先）`; that the glossary retains its three canonical
+source links, non-authority and current-run-bundle distinction markers, and
+discoverable links to ADRs 0001, 0002, and 0003; that those three ADRs retain
+their `Accepted` status and respective decision boundaries; that
 `DEEP_RESEARCH_HARNESS/CONTEXT.md` is absent; and that the repository root has
 no alternate filesystem entry resolving to the canonical Harness assets.
 

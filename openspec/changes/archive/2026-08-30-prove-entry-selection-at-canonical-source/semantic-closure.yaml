@@ -1,0 +1,9 @@
+schema_version: semantic-closure/v1
+change: prove-entry-selection-at-canonical-source
+status: not_applicable
+reason: >-
+  本 change 只改入口选择规则的文档证明形状（canonical 全文 vs 指针非复述）与
+  RUE-006 / ACR-002 / ACR-004 的静态回归义务，不改变任何 cataloged
+  semantic fact family 覆盖的确定性事实：不改 Engine、CLI、gate、schema、
+  Submit、handoff 或 Final-admission 行为，也不引入新的运行时 resolver
+  或 verdict consumer。

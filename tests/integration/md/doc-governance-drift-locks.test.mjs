@@ -47,12 +47,29 @@ describe('doc-governance drift locks', () => {
     );
   });
 
-  it('F-04: RUN.md and harness README carry the anti-fallback clause', () => {
+  it('F-04: anti-fallback distinction lives on the canonical entry-selection section', () => {
+    const playbook = read('DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md');
+    const canonical = playbook.match(
+      /## Entry Selection \(canonical\)\r?\n\r?\n([\s\S]*?)(?=\n## |$)/,
+    );
+    assert.ok(canonical, 'Entry Selection (canonical) must exist');
+    assert.match(canonical[1], /unsupported_current_entry_contract/);
+    assert.match(canonical[1], /With no supplied existing candidate[\s\S]*DEEP_RESEARCH_HARNESS\/RUN\.md/);
+    assert.match(canonical[1], /falling back to `RUN\.md`/);
+
     const run = read('DEEP_RESEARCH_HARNESS/RUN.md');
     const readme = read('DEEP_RESEARCH_HARNESS/README.md');
     const clause = 'preflight 失败不等于「没有 explicit candidate」——禁止因此 fallback 读 `RUN.md`、新建或另选 bundle；只有用户从一开始就没有提供任何 existing candidate 时才读 `RUN.md`';
-    assert.ok(run.includes(clause), 'RUN.md anti-fallback clause missing');
-    assert.ok(readme.includes(clause), 'harness README anti-fallback clause missing');
+    const runPointer = run.match(
+      /## 1\. Entry Selection Is Already Done\r?\n\r?\n([\s\S]*?)(?=\n## |$)/,
+    );
+    const readmePointer = readme.match(
+      /\*\*本 Harness 就是项目的 Deep Research Harness。\*\*[^\n]+/,
+    );
+    assert.ok(runPointer, 'RUN.md Entry Selection pointer block missing');
+    assert.ok(readmePointer, 'README selection-pointer paragraph missing');
+    assert.ok(!runPointer[1].includes(clause), 'RUN.md pointer must not restate the anti-fallback clause');
+    assert.ok(!readmePointer[0].includes(clause), 'README pointer must not restate the anti-fallback clause');
   });
 
   it('F-05: orphan playbook plan-hostfile-sections.md is retired', () => {

@@ -28,7 +28,7 @@ research；跑研究不必先读它们，也不改变随后 `continue-run-bundle
 - 用户说"研究/调研/deep research/research report/帮我查…/…是什么"等研究意图；
 - 任何"我要就某个话题得到一份有来源、可核查的研究报告"的需求。
 
-**本 Harness 就是项目的 Deep Research Harness。** 入口选择的完整规则只有一处 canonical 表述：`command_playbook/continue-run-bundle.md` 的 "Entry Selection (canonical)" 节；本文件只放指针。要点：已选择研究时，用户明确提供当前 workspace 内可达 existing bundle candidate（目录或其中的文件）并要求继续/检查，先验证同根 `BUNDLE_ENTRY.md` 与 `BUNDLE_MAP.md`；只有完整 pair 才走 `command_playbook/continue-run-bundle.md`，并将该目录解析为本次操作的 canonical absolute current run bundle root。显式 candidate 缺少任一文件即以 `unsupported_current_entry_contract` 停止。preflight 失败不等于「没有 explicit candidate」——禁止因此 fallback 读 `RUN.md`、新建或另选 bundle；只有用户从一开始就没有提供任何 existing candidate 时才读 `RUN.md`。扫描发现、只提文件名或不可达路径不选择 run；人仍可在 Harness operational contract 外直接阅读历史 Markdown。
+**本 Harness 就是项目的 Deep Research Harness。** 入口选择的完整规则只有一处 canonical 表述：`command_playbook/continue-run-bundle.md` 的 "Entry Selection (canonical)" 节；本文件只放指针。该节定义 `unsupported_current_entry_contract`。人仍可在 Harness operational contract 外直接阅读历史 Markdown。
 
 在 selected entry 读完前，**不要**调用 `research`、`deep-research` 或等价 one-shot shortcut，不对该 request 直接 WebSearch/WebFetch，也不手工收集或综合 evidence。`RUN.md` 的 Section 2 随后进入 `command_playbook/start-research.md` 创建新 run 并加载第一个 phase node；HITL1 probe 和后续 phase research 仍由各自进入后的既有 contract 授权。本 guidance 不保证宿主不会预先匹配 skill 或注入工具。
 

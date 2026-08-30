@@ -125,13 +125,13 @@ describe('start-research playbook alignment', () => {
 });
 
 describe('Harness AGENTS/CLAUDE entry bullet disambiguation', () => {
-  it('states preflight failure is not "no explicit candidate" in both files', () => {
+  it('does not restate the preflight-failure essay on Harness behavior files', () => {
     const sent = '这是 preflight 失败，不等于「没有 explicit candidate」';
     for (const [name, text] of [['AGENTS.md', harnessAgents], ['CLAUDE.md', harnessClaude]]) {
-      assert.ok(text.includes(sent), `${name} must carry the disambiguation sentence`);
+      assert.ok(!text.includes(sent), `${name} must not restate the preflight-failure essay`);
       assert.ok(
-        text.includes('禁止因此 fallback 读 `RUN.md`'),
-        `${name} must forbid RUN.md fallback after preflight failure`,
+        !text.includes('禁止因此 fallback 读 `RUN.md`'),
+        `${name} must not restate the RUN.md fallback essay`,
       );
     }
   });

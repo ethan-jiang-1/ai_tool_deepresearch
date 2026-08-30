@@ -61,6 +61,39 @@ function uniqueName(label) {
   return `harness-entry-${label}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function markdownSection(text, heading, path) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = text.match(new RegExp(`## ${escaped}\\r?\\n\\r?\\n([\\s\\S]*?)(?=\\n## |$)`));
+  assert.ok(match, `${path} must keep ## ${heading}`);
+  return match[1];
+}
+
+function pointerBlockForRoute(relativePath, text) {
+  if (relativePath === 'AGENTS.md' || relativePath === 'CLAUDE.md') {
+    return markdownSection(text, 'Deep Research Routing', relativePath);
+  }
+  if (
+    relativePath === 'DEEP_RESEARCH_HARNESS/AGENTS.md'
+    || relativePath === 'DEEP_RESEARCH_HARNESS/CLAUDE.md'
+  ) {
+    const brief = markdownSection(text, '0. Execution Brief', relativePath);
+    const row = brief.match(/\| 研究 \/ 续跑 \/ 报告 \|[^|\n]+\|/);
+    const pointerPara = brief.match(/入口选择的完整规则只有一处 canonical 表述：[^\n]+/);
+    assert.ok(row && pointerPara, `${relativePath} must keep the research pointer`);
+    return `${row[0]}\n${pointerPara[0]}`;
+  }
+  if (relativePath === 'DEEP_RESEARCH_HARNESS/README.md') {
+    const trigger = markdownSection(text, '触发规则（最高优先）', relativePath);
+    const match = trigger.match(/\*\*本 Harness 就是项目的 Deep Research Harness。\*\*[^\n]+/);
+    assert.ok(match, `${relativePath} must keep the selection-pointer paragraph`);
+    return match[0];
+  }
+  if (relativePath === 'DEEP_RESEARCH_HARNESS/RUN.md') {
+    return markdownSection(text, '1. Entry Selection Is Already Done', relativePath);
+  }
+  assert.fail(`no pointer extractor for ${relativePath}`);
+}
+
 describe('Deep Research Harness entry contract', () => {
   after(() => {
     for (const root of roots) rmSync(root, { recursive: true, force: true });
@@ -95,10 +128,20 @@ describe('Deep Research Harness entry contract', () => {
     ];
     for (const relativePath of routeFiles) {
       const text = readFileSync(join(REPO_ROOT, relativePath), 'utf8');
-      assert.match(text, /BUNDLE_ENTRY\.md/, `${relativePath} must name the current entry card`);
-      assert.match(text, /BUNDLE_MAP\.md/, `${relativePath} must name the current map`);
-      assert.match(text, /unsupported_current_entry_contract/, `${relativePath} must name incomplete-candidate rejection`);
-      assert.match(text, /current run bundle root/i, `${relativePath} must name the explicit runtime coordinate`);
+      const block = pointerBlockForRoute(relativePath, text);
+      assert.match(block, /continue-run-bundle\.md/, `${relativePath} pointer must name the playbook`);
+      assert.match(block, /Entry Selection \(canonical\)/, `${relativePath} pointer must name the canonical heading`);
+      assert.match(block, /unsupported_current_entry_contract/, `${relativePath} pointer must name the stop`);
+      assert.doesNotMatch(
+        block,
+        /same-root `BUNDLE_ENTRY\.md` \+ `BUNDLE_MAP\.md` preflight/i,
+        `${relativePath} pointer must not restate pair preflight`,
+      );
+      assert.doesNotMatch(
+        block,
+        /preflight 失败[，,]?不等于「没有 explicit candidate」/,
+        `${relativePath} pointer must not restate the fallback essay`,
+      );
     }
 
     const continuation = readFileSync(join(HARNESS_ROOT, 'command_playbook', 'continue-run-bundle.md'), 'utf8');

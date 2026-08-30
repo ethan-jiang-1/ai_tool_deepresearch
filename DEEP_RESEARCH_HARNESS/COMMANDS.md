@@ -80,9 +80,9 @@ This selected contract does not normalize unrelated utilities. Their documented 
 | run（drag-trigger） | RUN.md | 把本文件拖进对话即触发框架的前门入口 |
 | instantiate-run-bundle | command_playbook/instantiate-run-bundle.md | 生产新的 Runtime Bundle |
 | start-research | command_playbook/start-research.md | `RUN.md` 选定新研究 entry 后的下游 playbook：创建 bundle → 写问题 → 加载第一个 phase |
-| continue-run-bundle | command_playbook/continue-run-bundle.md | 入口选择与 existing bundle reload 的完整规则只在该 playbook 的 "Entry Selection (canonical)" 节；显式 candidate 先过同根 `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md` pair，缺任一文件即 `unsupported_current_entry_contract` |
+| continue-run-bundle | command_playbook/continue-run-bundle.md | 入口选择的完整规则只在该 playbook 的 "Entry Selection (canonical)" 节；本行是指针。该节定义 `unsupported_current_entry_contract` |
 
-Existing run-bundle reload resolves the supplied directory to the current run bundle root, verifies the same-root `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md` pair before reading either file, then resolves the Harness coordinate and delegates to `COMMANDS.md` for all operations. A supplied incomplete candidate is `unsupported_current_entry_contract` and stops. The complete entry-selection rule is stated only in `command_playbook/continue-run-bundle.md` ("Entry Selection (canonical)"); this entry is a pointer.
+Existing-bundle continuation reads that canonical section, then reloads the selected bundle and delegates to `COMMANDS.md` for all operations. The complete entry-selection rule is stated only in `command_playbook/continue-run-bundle.md` heading `Entry Selection (canonical)`; this entry is a pointer and names `unsupported_current_entry_contract`.
 
 ## Subagent 环境
 | 命令 | 文件 | 说明 |
