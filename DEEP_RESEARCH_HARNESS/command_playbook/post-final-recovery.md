@@ -34,25 +34,17 @@ Read `verdict`, `reason_code`, `facts.request_bindings`, and the single `next_ac
 ## 1.5 Intake From A Dig List
 
 When the current run bundle's `_diagnostics/` contains an Agent-authored
-next-dig-list (a cross-round topic-intake list carried forward from a
-delivered report; non-authority diagnostic material), form the rerun scope
-from it before drafting the retained request:
-
-1. Read the latest next-dig-list. When no such list exists, skip this
-   section and keep the ordinary §2 request contract unchanged.
-2. Propose one bounded scope organized by the list's own priority tiers and
-   reference the selected item identifiers (for example `A1-A3 + AMD§1-2`).
-   Items the list itself declares as evidence-nonexistent or no-reinvestment
-   dead holes stay excluded by default unless the user explicitly reopens
-   them.
-3. The user owns the scope/risk decision. After the user corrects the
-   proposal, write the finally selected item identifiers inside the existing
-   `requested_scope` and, when the reason carries a focus, `reason` strings.
-   Add no new request field and no label parser; the two-part labelled
-   reason contract of §2 is unchanged.
-4. The list is not authority: its presence creates no rerun intent, expands
-   no permission, and changes no inspect/apply eligibility or lineage
-   validation. The Engine keeps validating only the existing request shape.
+next-dig-list, form the rerun scope from it before drafting the retained
+request. The normative intake rules — reading the latest list, the
+tier-structured bounded scope proposal, declared dead-hole exclusion, the
+user-owned correction step, and the non-authority boundary — are owned by
+`openspec/specs/research/post-final-recovery/spec.md` requirement "Post-final
+rerun intake guidance structures scope formation from a diagnostics dig-list".
+This playbook keeps only the operating sequence: read the latest next-dig-list
+(skip this section when absent) → propose one bounded scope organized by the
+list's priority tiers, referencing selected item identifiers → let the user
+correct the proposal → record the finally selected identifiers in
+`requested_scope` and, when the reason carries a focus, `reason` per §2.
 
 ## 2. Retain Request
 
@@ -113,4 +105,9 @@ node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs inspect --bundle <bundle>
 
 Then follow `phase-rerun.md`: existing topic-state apply/recover, rerun-count increment, rerun-ready gate, `enter-phase <check.next>`, and `advance-status --to rerun_ready`.
 
-`check-reentry --at phase-rerun` means `rerun_ready` has already passed. Immediately after ReopenResearchPass entry/status sync, the correct incoming checkpoint is `hitl2_recorded`. `--at` accepts a gate enum (e.g. `hitl2_recorded`) or a phase ref (e.g. `phase-rerun`); see the check-reentry contract for the exact semantics.
+`--at` accepts a gate enum (e.g. `hitl2_recorded`) or a phase ref (e.g.
+`phase-rerun`); see the check-reentry contract for the exact mechanics. The
+post-final entry-target semantics — why `hitl2_recorded` is the correct
+incoming checkpoint right after entry/status sync, and how to read the phase
+ref — are owned by `openspec/specs/research/post-final-recovery/spec.md`
+(POF-006).

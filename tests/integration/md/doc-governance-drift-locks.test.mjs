@@ -113,4 +113,26 @@ describe('doc-governance drift locks', () => {
     );
     assert.ok(text.includes('openspec/changes/archive/'), 'archive pointer missing from statement');
   });
+
+  it('C2 (align-post-final-recovery-surfaces): POF-006 owns entry-target semantics and the playbook is a pointer', () => {
+    const spec = read('openspec/specs/research/post-final-recovery/spec.md');
+    assert.ok(
+      spec.includes('### Requirement: Post-final rerun entry diagnostics SHALL target the derived incoming checkpoint'),
+      'POF-006 requirement missing from main spec',
+    );
+    assert.ok(
+      spec.includes('> req: POF-001, POF-002, POF-003, POF-004, POF-005, POF-006'),
+      'spec header must list POF-006',
+    );
+    const playbook = read('DEEP_RESEARCH_HARNESS/command_playbook/post-final-recovery.md');
+    assert.ok(playbook.includes('POF-006'), 'playbook must point at POF-006');
+    assert.ok(
+      !playbook.includes('means `rerun_ready` has already passed'),
+      'entry-target semantic rule must live in the spec, not the playbook',
+    );
+    assert.ok(
+      !playbook.includes('creates no rerun intent'),
+      'dig-list non-authority rule must live in the spec, not the playbook',
+    );
+  });
 });

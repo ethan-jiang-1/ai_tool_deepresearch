@@ -72,6 +72,7 @@ describe('post-final iteration intent routing aid (ACS-006)', () => {
 
 describe('post-final recovery dig-list intake section (POF-005)', () => {
   const playbook = read('DEEP_RESEARCH_HARNESS/command_playbook/post-final-recovery.md');
+  const spec = read('openspec/specs/research/post-final-recovery/spec.md');
 
   it('carries the Intake From A Dig List section before Retain Request', () => {
     const intakeIdx = playbook.indexOf('## 1.5 Intake From A Dig List');
@@ -83,34 +84,37 @@ describe('post-final recovery dig-list intake section (POF-005)', () => {
     );
   });
 
-  it('directs tier-structured scope proposals with item identifiers in existing fields', () => {
+  it('points at the spec owner while keeping the operating sequence', () => {
     const idx = playbook.indexOf('## 1.5 Intake From A Dig List');
     const section = playbook.slice(idx, playbook.indexOf('## 2. Retain Request', idx));
-    assert.ok(section.includes('priority tiers'), 'scope proposals follow the list tiers');
+    assert.ok(
+      section.includes('openspec/specs/research/post-final-recovery/spec.md'),
+      'the playbook must point at the normative owner spec',
+    );
+    assert.ok(section.includes('priority tiers'), 'the operating sequence keeps the tier-structured proposal');
     assert.ok(
       section.includes('`requested_scope`') && section.includes('`reason`'),
       'selected item identifiers land in the existing requested_scope/reason strings',
     );
-    assert.ok(
-      section.includes('no new request field and no label parser'),
-      'the intake adds no schema field and no label parser',
-    );
-    assert.ok(
-      section.includes('the user corrects'),
-      'the user owns the scope/risk decision through the existing correction step',
-    );
+    assert.ok(section.includes('let the user\ncorrect the proposal'), 'the user owns the scope/risk decision');
   });
 
-  it('excludes declared dead holes by default and keeps the list non-authority', () => {
-    const idx = playbook.indexOf('## 1.5 Intake From A Dig List');
-    const section = playbook.slice(idx, playbook.indexOf('## 2. Retain Request', idx));
+  it('keeps the normative intake rules in the spec, not restated in the playbook', () => {
     assert.ok(
-      section.includes('dead holes stay excluded by default'),
-      'declared dead holes stay excluded unless the user reopens them',
+      spec.includes('Post-final rerun intake guidance structures scope formation from a diagnostics dig-list'),
+      'the spec requirement must own the normative intake rules',
     );
     assert.ok(
-      section.includes('The list is not authority'),
-      'the dig-list stays a non-authority input',
+      spec.includes('no new request field and no label parser') || spec.includes('add request schema fields, label parsing'),
+      'the no-schema-field/no-label-parser rule must live in the spec',
+    );
+    assert.ok(
+      spec.includes('evidence-nonexistent or no-reinvestment dead holes'),
+      'declared dead holes stay excluded unless the user reopens them (spec)',
+    );
+    assert.ok(
+      !playbook.includes('The list is not authority'),
+      'the dig-list non-authority paragraph must live in the spec, not the playbook',
     );
   });
 
@@ -118,8 +122,12 @@ describe('post-final recovery dig-list intake section (POF-005)', () => {
     const idx = playbook.indexOf('## 1.5 Intake From A Dig List');
     const section = playbook.slice(idx, playbook.indexOf('## 2. Retain Request', idx));
     assert.ok(
-      section.includes('skip this') && section.includes('ordinary §2 request contract unchanged'),
-      'the intake step is skipped and the ordinary request contract governs when no next-dig-list exists',
+      section.includes('skip this section when absent'),
+      'the intake step is skipped when no next-dig-list exists',
+    );
+    assert.ok(
+      spec.includes('ordinary non-empty reason and requested-scope contract SHALL govern unchanged'),
+      'the ordinary request contract governs when no next-dig-list exists (spec)',
     );
   });
 });

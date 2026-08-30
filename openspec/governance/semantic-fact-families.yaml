@@ -67,3 +67,8 @@ families:
     bounded_question: >-
       Where do run-scoped helper scripts durably live for the current run
       bundle, and what authority status does that location carry?
+  - id: lifecycle.reentry-checkpoint-targeting
+    bounded_question: >-
+      For a post-final rerun entry, which checkpoint target SHALL the reentry
+      diagnostic (`check-reentry --at`) use, and what does each accepted target
+      form (gate enum vs phase ref) mean for the current chain?

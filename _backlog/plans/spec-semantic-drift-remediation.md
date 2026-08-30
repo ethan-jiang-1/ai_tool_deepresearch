@@ -1,6 +1,6 @@
 # Spec 语义漂移修复（spec-semantic-drift-remediation）
 
-> 状态: active（C1 已归档 2026-08-30，commit 7f5c164d2，finalizer 18/18 checks；C2/C3 ready to propose）
+> 状态: active（C1、C2 均已归档 2026-08-30，finalizer 各 18/18 checks；C3 ready to propose）
 > 创建: 2026-08-30 | 来源: 项目可读性深挖会话（3 个并行只读考古 + captain 交叉抽查，全部指控经行号级验证）
 > 定位: `_backlog` 上游分析与决策记录，不是运行时真相；落地一律走 OpenSpec change 生命周期。
 
@@ -90,6 +90,8 @@ change 优于 1 个大的）。也不进一步拆分：C1 内各项同文件同�
 - **风险**: 中。playbook 指针化会触碰多个 doc-lock；孤本规则"搬家"须逐条核对代码是否
   已实现（dig-list intake 若是纯 Agent-flow 规则，spec 化时须如实标注为 agent-facing
   contract 而非 engine-enforced，不得虚构可执行性）。
+
+> **C2 已归档（2026-08-30）**：`openspec/changes/archive/2026-08-30-align-post-final-recovery-surfaces`。范围修正：dig-list intake 经核实 spec 已有 requirement（L622-657，POF-005），非孤本；ReopenResearchPass 命名无变体——B1 实际只回灌 check-reentry 入口语义（ADDED POF-006）。A2 按"改 CLI"方向落地：运行时契约失败收敛为 blocked/exit 1（exit 2 严格保留给 invocation/envelope 构造失败）。finalizer 18/18、npm test 2868/2868。另：发现并修复两处 list-doc-locks 盲点实例（动态构造路径/跨面锁），盲点根治登记为后续工作。
 
 ### C3 `extend-derived-gate-audit-coverage`（tooling，Modify 既有 capability）
 

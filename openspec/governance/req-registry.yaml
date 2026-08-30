@@ -612,6 +612,7 @@ POF-002: post-final-recovery — Prepared profile/event transaction uses event-l
 POF-003: post-final-recovery — Engine-written Final-lineage-bound exceptional handoff reuses existing HITL2 rerun owners
 POF-004: post-final-recovery — Focus-bearing post-Final requests retain wording and interpretation in the existing reason
 POF-005: post-final-recovery — Playbook intake guidance structures bounded rerun scope formation from a non-authority diagnostics dig-list
+POF-006: post-final-recovery — Post-final rerun entry diagnostics target the derived incoming checkpoint
 
 # research/pre-research-experiments
 PRE-001: pre-research-experiments — Current happy-path pre-research case uses real gates and native completion

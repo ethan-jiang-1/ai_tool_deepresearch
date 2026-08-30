@@ -1,0 +1,75 @@
+schema_version: verification-routing/v1
+change: 2026-08-30-align-post-final-recovery-surfaces
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      本 change 的确定性断言按仓库目录归属分别为 integration 类（真实 CLI
+      spawn 的 exit-code 行为、integration/md 的治理文本锁），无 unit 类资产。
+  integration:
+    status: selected
+    rationale: >-
+      A2 的 exit-code 行为是跨进程事实：spawn 真实 CLI、fixture bundle 的
+      rb_status.json 注入非法 JSON、断言退出码与 stdout verdict 形状；
+      POF-006/playbook 的文本锁位于 integration/md 治理锁文件。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      无 lifecycle/gate/recovery 行为变化：verdict 集合、eligibility、lineage
+      证明全部不变，不驱动端到端 bundle 链。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称任何真实 Agent 行为变化。
+claims:
+  - id: post-final-runtime-failure-exits-blocked-one
+    statement: >-
+      A2：operate-post-final-recovery 在 bundle 运行时契约失败（fixture 的
+      rb_status.json 为非法 JSON）时以 exit `1` 退出，stdout 为 closed
+      blocked verdict（`verdict: 'blocked'`、`reason_code: 'operation_failed'`）；
+      无参数调用仍 exit `2`。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/post-final-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: exit-code-inventory-unchanged-for-invocation-class
+    statement: >-
+      A2 不改变 invocation 类出口：operate-post-final-recovery 的无参数调用
+      仍 exit `2`；exit-code 契约 inventory 锁在变更后保持通过。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/exit-code-convention.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: pof006-spec-text-and-playbook-pointer-lock
+    statement: >-
+      B1'：main spec 含 POF-006 requirement（reentry 入口诊断目标语义 + 双
+      scenario）；playbook §1.5/§4 不再复述规范性规则（dig-list 规则指向既有
+      spec requirement；入口目标语义指向 POF-006）。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/doc-governance-drift-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

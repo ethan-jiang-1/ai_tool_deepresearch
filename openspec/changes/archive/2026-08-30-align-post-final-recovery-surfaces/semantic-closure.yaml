@@ -1,0 +1,60 @@
+schema_version: semantic-closure/v1
+change: 2026-08-30-align-post-final-recovery-surfaces
+status: affected
+catalog_additions:
+  - id: lifecycle.reentry-checkpoint-targeting
+    bounded_question: >-
+      For a post-final rerun entry, which checkpoint target SHALL the reentry
+      diagnostic (`check-reentry --at`) use, and what does each accepted target
+      form (gate enum vs phase ref) mean for the current chain?
+affected:
+  - family: cli.exit-code-convention
+    fact: >-
+      For operate-post-final-recovery, invalid invocation and request-envelope
+      construction failures exit `2` with a structured error; every other
+      failure — including selected-bundle runtime contract failures surfaced as
+      exceptions — exits `1` with a closed blocked verdict
+      (`verdict: 'blocked'`, `reason_code: 'operation_failed'`).
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/cli/operate-post-final-recovery.mjs
+    established_by:
+      - openspec/specs/research/post-final-recovery/spec.md
+    consumers:
+      - tests/integration/cli/exit-code-convention.test.mjs
+      - tests/integration/cli/post-final-recovery.test.mjs
+    overlap:
+      - coordinate: openspec/specs/research/post-final-recovery/spec.md
+        relation: derived
+        detail: >-
+          The spec's exit-code paragraph (exit `2` only for invalid
+          invocation/envelope construction) is the normative source this change
+          aligns the CLI to; the spec text itself is unchanged by this change.
+    verification:
+      truth_table: tests/integration/cli/post-final-recovery.test.mjs
+      cross_surface: tests/integration/cli/exit-code-convention.test.mjs
+  - family: lifecycle.reentry-checkpoint-targeting
+    fact: >-
+      For a post-final rerun entry, `check-reentry --at` accepts a gate enum
+      (for example `hitl2_recorded`) or a phase ref (for example
+      `phases/phase-rerun.md`); a phase ref reads as that phase's readiness
+      already established; immediately after ReopenResearchPass entry plus
+      `advance-status --to hitl2_recorded` the correct diagnostic target is
+      `hitl2_recorded`, not `rerun_ready`.
+    authority:
+      resolver: openspec/specs/research/post-final-recovery/spec.md
+    established_by:
+      - openspec/specs/research/post-final-recovery/spec.md
+    consumers:
+      - DEEP_RESEARCH_HARNESS/command_playbook/post-final-recovery.md
+      - DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs
+        relation: derived
+        detail: >-
+          check-reentry owns the mechanical acceptance/resolution of `--at`
+          forms for every lifecycle checkpoint; POF-006 adds only the
+          post-final-specific target-selection fact and changes no
+          check-reentry code.
+    verification:
+      truth_table: tests/integration/md/doc-governance-drift-locks.test.mjs
+      cross_surface: tests/integration/cli/post-final-recovery.test.mjs

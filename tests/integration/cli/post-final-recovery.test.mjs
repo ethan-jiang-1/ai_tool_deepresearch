@@ -51,6 +51,29 @@ describe('post-final recovery CLI and lifecycle integration', { concurrency: fal
     assert.equal(JSON.parse(invalid.stdout).error, 'invalid_invocation');
   });
 
+  it('reports runtime contract failures as blocked exit 1 while keeping invocation and envelope failures at exit 2', () => {
+    const missing = spawnSync('node', [CLI, 'inspect', '--bundle', join(root, 'does-not-exist')], { cwd: REPO_ROOT, encoding: 'utf8' });
+    assert.equal(missing.status, 1, `expected exit 1, got ${missing.status}: ${missing.stderr || missing.stdout}`);
+    const verdict = JSON.parse(missing.stdout);
+    assert.equal(verdict.verdict, 'blocked');
+    assert.equal(verdict.reason_code, 'operation_failed');
+    assert.match(verdict.reason, /bundle not found/);
+    assert.ok(!('error' in verdict), 'runtime failure must not use the invocation-error shape');
+
+    const bundle = createTerminalFinalBundle(root, 'exit-classes');
+    const malformedInput = join(root, 'malformed.json');
+    writeFileSync(malformedInput, '{ not json');
+    const malformed = spawnSync('node', [CLI, 'apply', '--bundle', bundle, '--input', malformedInput], { cwd: REPO_ROOT, encoding: 'utf8' });
+    assert.equal(malformed.status, 2);
+    assert.equal(JSON.parse(malformed.stdout).error, 'invalid_invocation');
+
+    const badShape = join(root, 'bad-shape.json');
+    writeFileSync(badShape, JSON.stringify({ nope: true }));
+    const shape = spawnSync('node', [CLI, 'apply', '--bundle', bundle, '--input', badShape], { cwd: REPO_ROOT, encoding: 'utf8' });
+    assert.equal(shape.status, 2);
+    assert.equal(JSON.parse(shape.stdout).error, 'invalid_configuration');
+  });
+
   it('preserves a labelled multiline focus reason and separate scope through exact recovery', () => {
     const bundle = createTerminalFinalBundle(root, 'focus-recovery');
     const inspection = inspectPostFinalRecovery({ bundlePath: bundle });
