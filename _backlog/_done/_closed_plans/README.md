@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-08-28 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-08-30（含补登记对账节） | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -100,5 +100,36 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 
 | CLS-077 | 2026-08-28 | rerun-limit-raise-and-scope-pruning.md | Rerun 上限 10→32 + 剔除 pivot（新 bundle）+ 差异化投入收口（自然语言 emphasis + HITL2 可见性 HIU-007）；两个 OpenSpec change 全闭环归档（2026-08-28-raise-rerun-limit-and-fix-removal-guidance、2026-08-28-surface-declared-focus-at-hitl2，各 17/17 finalizer，全量 2851/2851）。 |
 | CLS-078 | 2026-08-28 | commands-md-cli-surface-coverage-and-copyable-contracts.md | 真实 r6 run 实操复盘：COMMANDS.md 缺 `operate-queue` 生命周期与 `complete` 的 result schema；缺三套 copyable 模板（queue result / wave0-2 投影包 / Evidence Map 三列头）+ 五条 gotcha（`concrete_ref_missing`、`-rN` 唯一后缀、大输出 EAGAIN、gate `--current-node`、persist 父目录）。七项均纯文档补全、零引擎改动。落地：change `2026-08-28-commands-md-coverage-and-copyable-contracts`（COMMANDS.md +50 行）+ 平行修复 `2026-08-28-cli-readme-queue-coverage`（cli/README.md +2 行，operate-queue 生命周期/exit-code 语义），均 finalizer 归档、确定性回归全绿。 |
+
+---
+
+## 补登记对账（2026-08-30）
+
+以下 23 个条目在 2026-08 下旬已物理迁入本目录，但未按流程登记（无 CLS 编号、无行）。
+本节为对账记录，不虚构编号与关闭依据；完整考证（含 CLS 分配）如需要另立工作。
+配套说明：`topic-research-emphasis/`、`gate-schema-capability-audit/` 等为 plan 目录；`*.primary-sources.md`、`machine-checks-catalog.md`、`midrun-reading-burden-audit.md`、`slow-test-suite-audit-and-remediation-research/` 为已登记 plan 的附件或参考资料。
+
+| File/Dir | 备注 |
+|---|---|
+| bug-200-204-gate-and-queue-remediation.md | 未登记迁入 |
+| cleanup-effect-verification.md | 未登记迁入 |
+| current-contract-signal-cleanup/ + .md | 未登记迁入 |
+| experiment-progressive-run-strategy/ + .md | 未登记迁入 |
+| gate-schema-capability-audit/ + .md | 未登记迁入 |
+| gate-schema-progressive-gate-schema-queue-remediation.md | 未登记迁入 |
+| hitl1-bounded-clarification-alignment.md | 未登记迁入 |
+| isolate-hitl1-capability-probe.md | 未登记迁入 |
+| iterative-final-delivery-versioned-output.md | 未登记迁入 |
+| machine-checks-catalog.md | 参考资料（随 midrun plan 迁入） |
+| midrun-reading-burden-audit.md | 参考资料（随 midrun plan 迁入） |
+| semantic-fact-closure-design-assessment-2026-08-09.md | semantic-fact-closure 系列文档 |
+| semantic-fact-closure-openspec-governance.md | semantic-fact-closure 系列文档 |
+| semantic-fact-closure-progressive-rollout-plan-2026-08-09.md | semantic-fact-closure 系列文档 |
+| seven-topic-seven-subagent-concurrency-investigation.md | 未登记迁入 |
+| slow-test-suite-audit-and-remediation-research/ | 附件目录 |
+| slow-test-suite-audit-and-remediation.md | 未登记迁入 |
+| topic-research-emphasis/ | 未登记迁入（plan 目录） |
+| two-level-specs-categorization.primary-sources.md | 附件（CLS-050） |
+| two-level-specs-categorization.md | 未登记迁入 |
 
 **Next available plan ID: CLS-079**

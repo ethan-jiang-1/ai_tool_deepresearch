@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-30 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-30（活跃列表已对账：8 个滞后行移除，条目实际均已在 _closed_plans，见其补登记节） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -18,15 +18,6 @@
 | Plan | 简述 | 状态 |
 |------|------|------|
 | `spec-semantic-drift-remediation` | 治理机器锁不住的语义漂移集中修复：DEW/AGQ req 索引失准、`deadline_at` 双口径、post-final 四表面孤本规则与 exit-code 裂缝、gate 人肉同步面。以 3 个有界 OpenSpec change 落地（C1 doc-only → C2 post-final 对齐 → C3 派生式 gate audit 扩展）；批三结构重构与元治理显式排除。 | active（C1 已归档 2026-08-30；C2/C3 ready to propose） |
-| `slow-test-suite-audit-and-remediation` | 串行全套 3028/3028 用时 822.455s 的慢测审计：完整列出 43 个 >3s execution（合计 357.6s），以不并发、不可排除 active proof 的前提探索 durable serial `<300s`；先完成义务、成本、基线复用与暂缓资格的 scope discovery，之后才决定是否提出 OpenSpec Change。 | closed 2026-08-22（WS1-6 + WS7 part 1 已归档，其余因收益不大延期）→ _done/_closed_plans/ |
-| `hitl1-bounded-clarification-alignment` | 在既有 HITL1 内加入可选、有限的主动反问与对齐快照：保留“你先研究”的自主出口，不新增 checkpoint、状态机或语义 Gate。 | active（设计验证待开始） |
-| `semantic-fact-closure-openspec-governance` | 防止 Engine 同一确定性事实被多处各自解释：建立可增长的事实家族目录、每 change 的 closure record、OpenSpec apply/archive checker 闭环；CI 当前明确不在范围内。 | active（共同理解完成，ready to propose Change A） |
-| `seven-topic-seven-subagent-concurrency-investigation` | delegated concurrency control：当前无结构化 cap owner；下一步以 single ceiling（候选 12）使批量 claim 按当前独立可执行 demand、余量和上限计算。 | active（调查完成，ready to propose） |
-| `topic-research-emphasis/` | 研究主题共同基线之上的差异化追加投入：P1 已归档，确认既有 carrier 与 rerun guidance；`progressive/` 将 P2 的可追溯覆盖和后续读者投影拆成独立 OpenSpec slice。 | active（P2 ready to propose） |
-| `gate-schema-progressive-gate-schema-queue-remediation` | 长程执行总线：两个有界 OpenSpec change 已归档为 `v0.75` / `v0.76`；后续保留 audit observation 和严格的第三-change 触发条件。 | active（Phase 3 observation pending） |
-| `bug-200-204-gate-and-queue-remediation` | BUG-200--204 的收敛分诊：关闭 current-head 已覆盖的 BUG-200；以两个 OpenSpec change 分别修 Gate/recovery contract 与递归 queue repair；不将 gate audit 拆为独立生命周期，也不让无 submitted evidence 的 topic 伪造完成。 | ready for OpenSpec proposals |
-| `gate-schema-capability-audit` | 全面 Gate quality audit（重开 2026-08-07）：per-gate gap map 与语义质量审计未完成；BUG-201/202/204 的确定性闭环已由 `bug-200-204-gate-and-queue-remediation` change 1 收敛，其余内容质量 concerns 仍待审计。 | active（审计未闭环） |
-| `iterative-final-delivery-versioned-output` | Final 交付可迭代打磨（与用户反复敲打、就地重写，不新增 checkpoint）+ 版本化 Final 输出命名（`final.md` → `final-v1.md`、`final-v2.md` …）。触发自 `enterprise-safe-ai-harness-v2` 技术深入版交付。 | active（设计验证待开始） |
 
 ### 参照资料（非 plan，供后续 change 引用）
 

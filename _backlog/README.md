@@ -1,6 +1,6 @@
 # _backlog — 项目待办与决策记录
 
-> 最后更新: 2026-08-11 | 本目录追踪项目的工作项、设计决策、依赖分析。
+> 最后更新: 2026-08-30（相关外部文件表路径已对齐现行坐标） | 本目录追踪项目的工作项、设计决策、依赖分析。
 > 活跃工作走 OpenSpec（`openspec/changes/`）；本目录是 **上游分析与决策记录**，不是运行时真相。
 >
 > **本文件是 `_backlog` 的规矩手册。** 搬迁流程在下面定死，今后大家都遵循这里头定的规矩。
@@ -109,10 +109,10 @@ git mv plans/<name>.md _done/_closed_plans/<name>.md
 
 | 路径 | 角色 |
 |------|------|
-| `guidelines/project-charter.md` | 项目最高原则（Agent/Engine/Markdown 分工） |
+| `openspec/constitution/project-charter.md` | 项目最高原则（Agent/Engine/Markdown 分工） |
 | `openspec/specs/` | 已接受 spec（运行时真相层，与 _backlog 各自簿记） |
 | `openspec/changes/` | 活跃 change |
-| `DPT_FRAMEWORK/engine/` | engine 模块 |
-| `DPT_FRAMEWORK/workflows/` | 10-phase lifecycle + 19 node MD |
+| `DEEP_RESEARCH_HARNESS/engine/` | engine 模块 |
+| `DEEP_RESEARCH_HARNESS/workflows/` | canonical workflow package + phase/shared/brief/template nodes |
 | `tests/` | 回归测试（engine/CLI/integration/schema） |
 | `experiments_playbook/exp_*/` | Agent-driven E2E 实验 |
