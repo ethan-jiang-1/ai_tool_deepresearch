@@ -132,4 +132,6 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 | two-level-specs-categorization.primary-sources.md | 附件（CLS-050） |
 | two-level-specs-categorization.md | 未登记迁入 |
 
-**Next available plan ID: CLS-079**
+| CLS-079 | 2026-08-31 | spec-semantic-drift-remediation.md | 治理机器锁不住的语义漂移集中修复：三个有界 OpenSpec change 全部归档（C1 req 身份完整化 7f5c164d2、C2 post-final 面收敛 a6c92ffa4、C3 派生 gate 审计扩展），finalizer 均 18/18；修正深挖报告误判两处（dig-list 非孤本、deadline_at 非冲突）；发现 list-doc-locks 动态路径盲点两例并按 closeout 规则修锁 |
+
+**Next available plan ID: CLS-080**

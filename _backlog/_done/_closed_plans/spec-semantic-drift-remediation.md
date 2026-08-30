@@ -1,6 +1,6 @@
 # Spec 语义漂移修复（spec-semantic-drift-remediation）
 
-> 状态: active（C1、C2 均已归档 2026-08-30，finalizer 各 18/18 checks；C3 ready to propose）
+> 状态: completed（C1/C2/C3 全部归档；C1=7f5c164d2、C2=a6c92ffa4、C3 见 CLS-079 行；三个 finalizer 均 18/18 checks）
 > 创建: 2026-08-30 | 来源: 项目可读性深挖会话（3 个并行只读考古 + captain 交叉抽查，全部指控经行号级验证）
 > 定位: `_backlog` 上游分析与决策记录，不是运行时真相；落地一律走 OpenSpec change 生命周期。
 
@@ -151,3 +151,10 @@ C1 先行的原因是零代码、最快见效、并为 C2/C3 的 propose 积累 
 - `_backlog/README.md` "相关外部文件"表仍引用 `DPT_FRAMEWORK/engine/`、
   `DPT_FRAMEWORK/workflows/`、`guidelines/project-charter.md` 三个不存在/已迁移路径
   （CLS-049 改名后未同步）。
+
+## Closure（2026-08-31）
+
+- C1 `2026-08-30-repair-delegated-queue-spec-drift`：DEW/AGQ req 身份完整化（+4 ID）、重复 scenario 合并声明、drain 判据分工注记。finalizer 18/18。
+- C2 `2026-08-30-align-post-final-recovery-surfaces`：A2 运行时失败收敛 blocked/exit 1；POF-006 回灌 + playbook 指针化。finalizer 18/18。
+- C3 `2026-08-31-extend-derived-gate-audit-coverage`：skip_specs 纯工具 change——rule.check 派生分发覆盖审计（33 值全过、注入自防）+ 降级策略单一真相源（3 wrapper 去重）。finalizer 18/18。
+- 遗留登记：list-doc-locks 盲点根治（两处实例暴露）；reference-target descriptor 迁移（批三暂缓项）；plans 全量 CLS 考证（补登记节）。

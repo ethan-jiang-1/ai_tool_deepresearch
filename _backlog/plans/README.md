@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-30（活跃列表已对账：8 个滞后行移除，条目实际均已在 _closed_plans，见其补登记节） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-30（活跃列表已清空：spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079），8 个滞后行已对账至 _closed_plans 补登记节） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,7 +17,6 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `spec-semantic-drift-remediation` | 治理机器锁不住的语义漂移集中修复：DEW/AGQ req 索引失准、`deadline_at` 双口径、post-final 四表面孤本规则与 exit-code 裂缝、gate 人肉同步面。以 3 个有界 OpenSpec change 落地（C1 doc-only → C2 post-final 对齐 → C3 派生式 gate audit 扩展）；批三结构重构与元治理显式排除。 | active（C1、C2 已归档 2026-08-30；C3 ready to propose） |
 
 ### 参照资料（非 plan，供后续 change 引用）
 
