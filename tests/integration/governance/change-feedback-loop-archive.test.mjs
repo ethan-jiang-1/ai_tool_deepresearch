@@ -41,6 +41,7 @@ const FINALIZER_CHECKS = [
   'phase_node_structure',
   'spec_req_ids',
   'guidance_requirement_ids',
+  'regression_suite',
   'native_archive',
 ];
 
@@ -285,6 +286,15 @@ function createCompleteChange() {
     '',
   ].join('\n'));
   write(root, 'experiments_playbook/exp_fixture/case-001-light-archive.md', '# Fixture only\n');
+  // The finalizer's regression-suite prerequisite runs the fixture root's
+  // canonical `npm test`; give it a minimal always-green suite.
+  write(root, 'package.json', `${JSON.stringify({
+    name: 'native-archive-fixture',
+    private: true,
+    type: 'module',
+    scripts: { test: 'node --test tests/smoke.test.mjs' },
+  }, null, 2)}\n`);
+  write(root, 'tests/smoke.test.mjs', "import { it } from 'node:test';\nit('smoke', () => {});\n");
 
   return {
     root,
@@ -302,10 +312,15 @@ after(() => {
 describe('change feedback loop native archive', () => {
   it('uses the production finalizer to archive a synchronized isolated change', () => {
     const fixture = createCompleteChange();
+    // Strip NODE_TEST_CONTEXT so the nested fixture suite actually runs
+    // instead of being skipped as a recursive node:test invocation.
+    const env = { ...process.env };
+    delete env.NODE_TEST_CONTEXT;
     const result = spawnSync(process.execPath, [fixture.finalizer, '--change', CHANGE], {
       cwd: fixture.root,
       encoding: 'utf8',
-      timeout: 30000,
+      timeout: 60000,
+      env,
     });
 
     assert.equal(result.status, 0, `${result.stderr}\n${result.stdout}`);

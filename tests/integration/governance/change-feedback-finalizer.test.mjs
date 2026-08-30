@@ -88,6 +88,12 @@ function copyGovernanceScripts(root) {
     'verification-routing-contract.mjs',
     'check-semantic-closure.mjs',
     'semantic-fact-closure-contract.mjs',
+    'check-content-drift.mjs',
+    'check-guidance-pointer-targets.mjs',
+    'check-surface-inventory.mjs',
+    'check-phase-node-structure.mjs',
+    'check-spec-req-ids.mjs',
+    'check-guidance-requirement-ids.mjs',
   ]) {
     const target = join(root, 'openspec/governance', script);
     mkdirSync(dirname(target), { recursive: true });
@@ -232,11 +238,162 @@ function writeRoutingAndClosureFixture(root, { catalog = true } = {}) {
   }
 }
 
+// A complete fixture change that passes every structural governance check, so
+// the finalizer's ordered chain reaches the canonical regression-suite
+// prerequisite. The fixture root carries its own minimal npm suite whose
+// outcome the sentinels control.
+function createCompleteChangeFixture({ suite = 'green' } = {}) {
+  const root = mkdtempSync(join(tmpdir(), 'change-feedback-suite-'));
+  created.push(root);
+  run('openspec', ['init', root, '--tools', 'none', '--no-animation']);
+  symlinkSync(join(ROOT, 'node_modules'), join(root, 'node_modules'), 'dir');
+  symlinkSync(join(ROOT, 'DEEP_RESEARCH_HARNESS'), join(root, 'DEEP_RESEARCH_HARNESS'), 'dir');
+  copyGovernanceScripts(root);
+  mkdirSync(join(root, 'experiments_env/prototype-subagent'), { recursive: true });
+  for (const pointer of [
+    'tests/engine/work-unit-recovery-decision-table.test.mjs',
+    'openspec/constitution/project-charter.md',
+    'CONTEXT.md',
+    'openspec/guidance/models/agentic-execution-model.md',
+  ]) {
+    write(root, pointer, pointer.endsWith('.md') ? '# placeholder\n' : '// placeholder\n');
+  }
+  write(root, 'openspec/config.yaml', [
+    'schema: spec-driven',
+    'operations:',
+    '  apply:',
+    '    guidance:',
+    '      - "change-feedback-loop/apply: review first"',
+    '  archive:',
+    '    guidance:',
+    '      - "change-feedback-loop/archive: close out first"',
+  ].join('\n'));
+  run('openspec', ['new', 'change', 'demo-change', '--json'], { cwd: root });
+  write(root, 'openspec/governance/req-registry.yaml', [
+    'prefixes:',
+    '  ABC: governance/demo-capability',
+    '',
+    'ABC-001: demo-capability - fixture requirement',
+    '',
+  ].join('\n'));
+  write(root, 'openspec/specs/governance/demo-capability/spec.md', [
+    '# demo-capability',
+    '',
+    '> req: ABC-001',
+    '',
+    '## Purpose',
+    '',
+    'Define the synchronized fixture capability.',
+    '',
+    '## Requirements',
+    '',
+    '### Requirement: Demo governance boundary',
+    '',
+    'The fixture SHALL reach the regression-suite boundary.',
+    '',
+  ].join('\n'));
+  write(root, 'openspec/specs/README.md', [
+    '# Capability Catalog',
+    '',
+    'Main specs remain the behavior authority.',
+    '',
+    '| Capability path | Purpose | Keywords | Boundaries / neighbors | Related entries | Agent/Markdown owns | Engine/Node owns |',
+    '| --- | --- | --- | --- | --- | --- | --- |',
+    '| governance/demo-capability | Fixture governance capability. | fixture | Finalizer fixture only. | none | Select semantic work. | Validate deterministic structure. |',
+    '',
+  ].join('\n'));
+  write(root, 'openspec/changes/demo-change/proposal.md', [
+    '## Why',
+    '',
+    'Exercise the regression-suite prerequisite through the production finalizer CLI.',
+    '',
+    '## What Changes',
+    '',
+    '- Temporary fixture only.',
+    '',
+    '## Capability Discovery',
+    '',
+    '| Candidate path | Evidence read | Decision | Reason |',
+    '| --- | --- | --- | --- |',
+    '| `governance/demo-capability` | Fixture main spec | Modify | The fixture changes this capability. |',
+    '',
+    '## Capabilities',
+    '',
+    '### Modified Capabilities',
+    '',
+    '- governance/demo-capability.',
+    '',
+    '## Impact',
+    '',
+    '- Temporary fixture only.',
+    '',
+  ].join('\n'));
+  write(root, 'openspec/changes/demo-change/design.md', [
+    '## Context',
+    '',
+    'The fixture reaches the regression-suite prerequisite after structural checks.',
+    '',
+    '## Goals / Non-Goals',
+    '',
+    '### Goals',
+    '',
+    '- Exercise the suite boundary.',
+    '',
+    '### Non-Goals',
+    '',
+    '- None beyond the fixture.',
+    '',
+  ].join('\n'));
+  write(root, 'openspec/changes/demo-change/specs/governance/demo-capability/spec.md', [
+    '> req: ABC-001',
+    '',
+    '## MODIFIED Requirements',
+    '',
+    '### Requirement: Demo governance boundary',
+    '',
+    'The fixture SHALL reach the regression-suite boundary.',
+    '',
+    '#### Scenario: finalizer evaluates the suite',
+    '',
+    '- **WHEN** prerequisite task markers are complete',
+    '- **THEN** the suite exit status decides the boundary',
+    '',
+  ].join('\n'));
+  write(root, 'openspec/changes/demo-change/tasks.md', [
+    '- [x] 0.1 Plan review (openspec-feedback:plan-review).',
+    '- [x] 1.1 Prepare governance fixture.',
+    '- [x] 2.1 Closeout review (openspec-feedback:closeout-review).',
+    '',
+  ].join('\n'));
+  writeRoutingAndClosureFixture(root, { catalog: true });
+  write(root, 'package.json', `${JSON.stringify({
+    name: 'finalizer-suite-fixture',
+    private: true,
+    type: 'module',
+    scripts: { test: 'node --test tests/smoke.test.mjs' },
+  }, null, 2)}\n`);
+  write(root, 'tests/smoke.test.mjs', suite === 'red'
+    ? "import { it } from 'node:test';\nimport assert from 'node:assert/strict';\nit('intentional failure', () => { assert.equal(1, 2); });\n"
+    : "import { it } from 'node:test';\nit('smoke', () => {});\n");
+  return root;
+}
+
+// Spawning the finalizer (or npm) from inside a node:test process inherits
+// NODE_TEST_CONTEXT, which makes any nested `node --test` skip its files and
+// exit 0. The suite sentinels must run the fixture suite for real, so strip
+// that variable from the finalizer process environment.
+function finalizerEnv() {
+  const env = { ...process.env };
+  delete env.NODE_TEST_CONTEXT;
+  return env;
+}
+
 function runFinalizer(root) {
   const result = spawnSync(process.execPath, [FINALIZER, '--change', 'demo-change'], {
     cwd: root,
     encoding: 'utf8',
-    timeout: 30000,
+    timeout: 60000,
+    env: finalizerEnv(),
   });
   assert.equal(result.status, 1, result.stderr);
   return JSON.parse(result.stdout);
@@ -562,5 +719,45 @@ describe('change feedback finalizer integration', () => {
     assert.match(source, /requirement-reservation\/apply:/);
     assert.match(source, /node openspec\/governance\/check-project-reqs\.mjs --mode plan/);
     assert.match(source, /non-zero[\s\S]{0,120}stops apply|stops apply[\s\S]{0,120}non-zero/i);
+  });
+
+  // @impl CHF-004 (close-verification-landing-loop): the canonical regression
+  // suite exit status is the last mechanical prerequisite before native
+  // archive. These sentinels exercise the production CLI against an isolated
+  // root whose own minimal suite is deliberately green or red.
+  it('blocks finalization on a red canonical regression suite in an isolated root', () => {
+    const root = createCompleteChangeFixture({ suite: 'red' });
+
+    const blocked = runFinalizer(root);
+    assert.equal(blocked.outcome, 'blocked');
+    assert.equal(blocked.root.code, 'regression_suite_failed');
+    assert.equal(blocked.root.owner, 'npm test (package.json scripts)');
+    assert.deepEqual(blocked.root.repair, { command: 'npm test' });
+    assert.deepEqual(blocked.checks.map((check) => check.id).slice(-3), [
+      'phase_node_structure',
+      'spec_req_ids',
+      'guidance_requirement_ids',
+    ]);
+    assert.equal(blocked.checks.some((check) => check.id === 'regression_suite'), false);
+  });
+
+  it('passes the regression-suite prerequisite and archives when the isolated suite is green', () => {
+    const root = createCompleteChangeFixture({ suite: 'green' });
+
+    const result = spawnSync(process.execPath, [FINALIZER, '--change', 'demo-change'], {
+      cwd: root,
+      encoding: 'utf8',
+      timeout: 60000,
+      env: finalizerEnv(),
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.outcome, 'archived');
+    assert.match(output.archive.archived_as, /demo-change$/);
+    const checkIds = output.checks.map((check) => check.id);
+    assert.equal(checkIds.indexOf('regression_suite'), checkIds.length - 2);
+    assert.equal(checkIds.at(-1), 'native_archive');
+    assert.equal(output.checks.find((check) => check.id === 'regression_suite').status, 'passed');
   });
 });

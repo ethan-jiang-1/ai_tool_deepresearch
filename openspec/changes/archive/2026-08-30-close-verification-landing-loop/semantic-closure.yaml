@@ -1,0 +1,13 @@
+schema_version: semantic-closure/v1
+change: close-verification-landing-loop
+status: not_applicable
+reason: >-
+  本 change 只修改治理层机械事实：finalizer 的归档机械前置清单增加一个
+  canonical 套件退出码检查，rebaseline 两个静态文档锁，新增一个只读
+  查询脚本。不改任何 cataloged semantic fact family 的 resolver、
+  establishing surface 或 verdict consumer——全部已编目 family 覆盖的是
+  研究运行时事实（queue、work-unit、wave、final 交付、bundle entry、CLI
+  exit-code、persistence、run-scoped script location），本 change 不触碰
+  这些运行时行为。治理工具自身的机械前置不在 family vocabulary 内，也
+  不为本 change 新增 family：该事实的真相源就是 accepted CHF-004 spec 与
+  finalizer 可执行契约，无第二 resolver 需要闭环。

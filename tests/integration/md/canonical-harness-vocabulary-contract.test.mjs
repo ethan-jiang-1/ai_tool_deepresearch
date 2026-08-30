@@ -44,6 +44,14 @@ const localEntryDirective = (contents) => contents
   .replaceAll('Codex', 'HOST')
   .replaceAll('Claude Code', 'HOST');
 
+const hasExecutionBriefHeading = (contents) => /^## 0\. Execution Brief$/m.test(contents);
+const hasHarnessIdentityClaim = (contents) => /本 Harness 就是项目的 Deep Research Harness/.test(contents);
+const hasEntrySelectionPointerTriad = (contents) => [
+  /continue-run-bundle\.md/,
+  /Entry Selection \(canonical\)/,
+  /unsupported_current_entry_contract/,
+].every((re) => re.test(contents));
+
 describe('canonical Deep Research Harness vocabulary', () => {
   it('keeps paired Harness-local entry guidance equivalent', () => {
     assert.equal(
@@ -52,10 +60,30 @@ describe('canonical Deep Research Harness vocabulary', () => {
     );
 
     for (const contents of [harnessDocs.agents, harnessDocs.claude]) {
-      assert.match(contents, /这个 Deep Research Harness/);
-      assert.match(contents, /Deep Research Harness work/);
-      assert.match(contents, /触发这个 Harness/);
+      assert.ok(
+        hasExecutionBriefHeading(contents),
+        'Harness-local entry file must open with the ## 0. Execution Brief control surface',
+      );
+      assert.ok(
+        hasHarnessIdentityClaim(contents),
+        'Harness-local entry file must state the canonical Harness identity claim',
+      );
+      assert.ok(
+        hasEntrySelectionPointerTriad(contents),
+        'Harness-local entry file must carry the entry-selection pointer triad (playbook path, canonical section, stop name)',
+      );
     }
+
+    // Negative proof: retired exact phrases alone do not satisfy the substance
+    // matchers, so the lock keeps its teeth if the substance is lost again.
+    const legacyWordingSample = [
+      '# HOST.md',
+      '## ⚡ 第一优先：这是一个 Deep Research Harness，不是代码库',
+      '**触发这个 Harness，不要把它当代码探索请求。**',
+    ].join('\n');
+    assert.equal(hasExecutionBriefHeading(legacyWordingSample), false);
+    assert.equal(hasHarnessIdentityClaim(legacyWordingSample), false);
+    assert.equal(hasEntrySelectionPointerTriad(legacyWordingSample), false);
 
     assert.match(specs.runEntry, /Harness-local\s+directive language/);
     assert.match(specs.runEntry, /Entry trigger hands control to Agent-run Harness execution/);

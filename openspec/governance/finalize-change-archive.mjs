@@ -52,6 +52,7 @@ const RootCodeSchema = z.enum([
   'phase_node_structure_failed',
   'spec_req_ids_failed',
   'guidance_requirement_ids_failed',
+  'regression_suite_failed',
   'native_archive_failed',
   'native_archive_invalid',
   'post_archive_mismatch',
@@ -87,6 +88,7 @@ const CheckSchema = z.object({
     'phase_node_structure',
     'spec_req_ids',
     'guidance_requirement_ids',
+    'regression_suite',
     'native_archive',
   ]),
   status: z.literal('passed'),
@@ -443,6 +445,26 @@ export async function finalizeChangeArchive({
       }
       addCheck(checks, code.replace('_failed', ''));
     }
+
+    // @impl CHF-004 (close-verification-landing-loop): the canonical regression
+    // suite exit status is the last, most expensive mechanical prerequisite
+    // before native archive. Exactly one invocation of the planning root's
+    // canonical `npm test` script; no test selection, filtering, internal
+    // re-invocation, or alternate command. A flaky failure has no special
+    // path: rerun the same finalizer command after the direct `npm test`
+    // rerun confirms the state.
+    const regressionSuite = await runStep(runCommand, 'npm', ['test'], planningRoot);
+    if (regressionSuite.status !== 0) {
+      return makeBlocked(
+        selectedChange,
+        checks,
+        'regression_suite_failed',
+        summarizeProcess(regressionSuite),
+        'npm test (package.json scripts)',
+        { repair: { command: 'npm test' } },
+      );
+    }
+    addCheck(checks, 'regression_suite');
 
     const nativeArchive = await runStep(runCommand, 'openspec', ['archive', selectedChange, '--json', '--skip-specs'], planningRoot);
     if (nativeArchive.status !== 0) {

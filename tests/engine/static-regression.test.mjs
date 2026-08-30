@@ -332,15 +332,37 @@ describe('Layer 9 regression: gate-pass / no-idle contract polish', () => {
   });
 });
 
+const hasResearchSuppressionSurface = (text) =>
+  /`research`\s*\/\s*`deep-research`/.test(text)
+  && /(WebFetch|WebSearch|手工综合)/.test(text)
+  && /(不要|不得|禁止|不调用|SHALL NOT invoke|do not invoke)/.test(text);
+
 describe('Repo-root Deep Research routing regression (RUE-004)', () => {
   for (const relPath of ['CLAUDE.md', 'AGENTS.md']) {
     it(`${relPath} suppresses built-in research shortcuts for DEEP_RESEARCH_HARNESS runs`, () => {
       const text = readRepo(relPath);
       assert.ok(text.includes('DEEP_RESEARCH_HARNESS/'), `${relPath} must name DEEP_RESEARCH_HARNESS`);
       assert.ok(text.includes('DEEP_RESEARCH_HARNESS/RUN.md'), `${relPath} must route to DEEP_RESEARCH_HARNESS/RUN.md`);
-      assert.match(text, /deep-research/i, `${relPath} must mention deep-research shortcut suppression`);
-      assert.match(text, /research shortcut|one-shot research shortcut|equivalent one-shot/i, `${relPath} must mention equivalent shortcut suppression`);
-      assert.match(text, /do not invoke|SHALL NOT invoke|不要调用/i, `${relPath} must forbid invoking the shortcut`);
+      assert.ok(
+        hasResearchSuppressionSurface(text),
+        `${relPath} must enumerate the research/deep-research suppression surface with a forbidding context`,
+      );
     });
   }
+
+  it('suppression matcher keeps its teeth on substance-missing samples', () => {
+    // Retired English shortcut phrases without the current enumeration do not
+    // satisfy the substance matcher.
+    const legacyEnglishSample = [
+      '# AGENTS.md',
+      'Do not invoke a research shortcut or an equivalent one-shot research shortcut.',
+    ].join('\n');
+    assert.equal(hasResearchSuppressionSurface(legacyEnglishSample), false);
+    // Enumeration tokens without a forbidding context do not satisfy it either.
+    const enumerationWithoutForbidSample = [
+      '# AGENTS.md',
+      'Tools include `research` / `deep-research`, WebFetch, and manual synthesis.',
+    ].join('\n');
+    assert.equal(hasResearchSuppressionSurface(enumerationWithoutForbidSample), false);
+  });
 });

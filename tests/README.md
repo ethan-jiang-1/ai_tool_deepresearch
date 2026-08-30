@@ -23,6 +23,10 @@ This directory owns all JS-led project tests: `unit`, `integration`, and `determ
   bare directory arguments — `node --test <dir>` is not supported on all
   node versions).
 - Do not use bare `node --test` from the repo root as the normal regression command. Node can discover test-looking files outside `tests/`, including archived OpenSpec change artifacts with retired fixtures.
+- Before rewording a governed document (entry docs, `COMMANDS.md`, specs), run
+  `node scripts/list-doc-locks.mjs <repo-relative-doc-path>` to see which tests
+  reference it; update those locks in the same change instead of discovering
+  them as red at the archive gate.
 
 The `package.json` `test` script is the canonical full-suite entry because it
 passes only `tests/**/*.test.mjs` files (excluding disposable `.test-*`

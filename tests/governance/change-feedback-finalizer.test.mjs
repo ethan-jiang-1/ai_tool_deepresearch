@@ -1,5 +1,6 @@
-// @impl CHF-001, CHF-003
+// @impl CHF-001, CHF-003, CHF-004
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import {
   FEEDBACK_MARKERS,
@@ -7,6 +8,8 @@ import {
   finalizeChangeArchive,
   parseFeedbackTasks,
 } from '../../openspec/governance/finalize-change-archive.mjs';
+
+const FINALIZER_PATH = new URL('../../openspec/governance/finalize-change-archive.mjs', import.meta.url);
 
 const ROOT = '/tmp/change-feedback-finalizer';
 const CHANGE = 'demo-change';
@@ -100,6 +103,9 @@ function runner({ failAt, nativeOutput, statusOutput } = {}) {
         if (command === process.execPath && args[0].endsWith(script)) {
           return failAt === key ? { status: 1, stdout: '', stderr: `${key} failure` } : { status: 0, stdout: 'clean', stderr: '' };
         }
+      }
+      if (command === 'npm' && args[0] === 'test') {
+        return failAt === 'npm-test' ? { status: 1, stdout: '', stderr: 'suite failure' } : { status: 0, stdout: 'ok', stderr: '' };
       }
       if (command === 'openspec' && args[0] === 'archive') {
         return {
@@ -384,7 +390,7 @@ describe('change feedback archive finalizer', () => {
     assert.equal(result.outcome, 'archived');
     assert.equal(result.archive.path, ARCHIVE_PATH);
     assert.equal(result.archive.specs_updated, false);
-    assert.deepEqual(result.checks.map((check) => check.id).slice(-9), [
+    assert.deepEqual(result.checks.map((check) => check.id).slice(-10), [
       'verification_routing',
       'semantic_closure',
       'content_drift',
@@ -393,10 +399,55 @@ describe('change feedback archive finalizer', () => {
       'phase_node_structure',
       'spec_req_ids',
       'guidance_requirement_ids',
+      'regression_suite',
       'native_archive',
     ]);
     assert.equal(commands.calls.at(-1).args.join(' '), `archive ${CHANGE} --json --skip-specs`);
     assert.equal(FinalizationResultSchema.safeParse(result).success, true);
+  });
+
+  it('blocks on a red canonical regression suite after every structural check', async () => {
+    const commands = runner({ failAt: 'npm-test' });
+    const result = await finalizeChangeArchive({
+      change: CHANGE,
+      projectRoot: ROOT,
+      runCommand: commands.run,
+      fsApi: fakeFs(completeTasks()),
+    });
+
+    assert.equal(result.outcome, 'blocked');
+    assert.equal(result.root.code, 'regression_suite_failed');
+    assert.equal(result.root.owner, 'npm test (package.json scripts)');
+    assert.deepEqual(result.root.repair, { command: 'npm test' });
+    assert.equal(result.checks.map((check) => check.id).at(-1), 'guidance_requirement_ids');
+    assert.equal(result.checks.some((check) => check.id === 'regression_suite'), false);
+    const npmCalls = commands.calls.filter((call) => call.command === 'npm');
+    assert.equal(npmCalls.length, 1);
+    assert.deepEqual(npmCalls[0].args, ['test']);
+    assert.equal(commands.calls.some((call) => call.command === 'openspec' && call.args[0] === 'archive'), false);
+    assert.equal(FinalizationResultSchema.safeParse(result).success, true);
+  });
+
+  it('invokes exactly the canonical suite once with no selection or retry logic', async () => {
+    const source = readFileSync(FINALIZER_PATH, 'utf8');
+    const canonicalInvocations = source.match(/'npm',\s*\['test'\]/g) ?? [];
+    assert.equal(canonicalInvocations.length, 1, 'finalizer must call npm test exactly once');
+    const npmMentions = source.match(/'npm'/g) ?? [];
+    assert.equal(npmMentions.length, 1, 'finalizer must mention the npm command exactly once');
+    for (const forbidden of [/retry/i, /--test-name-pattern/, /testNamePattern/, /testOnly/, /OPENSPEC_REGRESSION/]) {
+      assert.doesNotMatch(source, forbidden, `finalizer must not contain suite selection/retry logic: ${forbidden}`);
+    }
+
+    const commands = runner();
+    await finalizeChangeArchive({
+      change: CHANGE,
+      projectRoot: ROOT,
+      runCommand: commands.run,
+      fsApi: fakeFs(completeTasks(), { activeExists: false, archiveExists: true, archiveDirectory: true }),
+    });
+    const npmCalls = commands.calls.filter((call) => call.command === 'npm');
+    assert.equal(npmCalls.length, 1);
+    assert.deepEqual(npmCalls[0].args, ['test']);
   });
 
   it('rejects malformed finalizer results instead of accepting partial feedback', () => {

@@ -1,0 +1,134 @@
+schema_version: verification-routing/v1
+change: close-verification-landing-loop
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The finalizer's new regression-suite prerequisite and the lock-query pure
+      core are focused in-process contracts exercised with injected runners or
+      controlled file sets; static source locks prove the invocation shape.
+  integration:
+    status: selected
+    rationale: >-
+      The production finalizer CLI boundary and the two rebaselined doc-lock
+      suites are cross-file deterministic contracts over real files.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No Gate, queue, work-unit, or research-lifecycle chain is executed; the
+      finalizer chain is covered at its own CLI boundary.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change claims no real Agent behavior; suite green is an exit-status
+      fact, not Agent-followed-guidance proof.
+claims:
+  - id: finalizer-regression-suite-verdict
+    statement: >-
+      CHF-004: with every structural check passing, a failing canonical suite
+      step blocks finalization as regression_suite_failed after the full
+      structural check sequence, and a passing suite step proceeds to the
+      native archive transition.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/change-feedback-finalizer.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: finalizer-canonical-invocation-shape
+    statement: >-
+      CHF-004: the finalizer invokes the planning root's canonical npm test
+      script exactly once with argument list ["test"] and contains no retry,
+      test-selection, filtering, or alternate-command logic for the suite fact.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/change-feedback-finalizer.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: finalizer-cli-regression-boundary
+    statement: >-
+      CHF-004: the production finalizer CLI blocks with regression_suite_failed
+      in an isolated root whose suite is red (structural checks still
+      short-circuiting earlier), and when that root's minimal suite is green
+      the regression_suite check passes and the run advances beyond it toward
+      native archive without blocking at the suite boundary.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/change-feedback-finalizer.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: harness-vocabulary-lock-rebaselined
+    statement: >-
+      RUE-004: canonical-harness-vocabulary-contract asserts the current
+      Execution Brief substance (brief heading, Harness identity sentence,
+      entry-selection pointer triad without procedural restatement) instead of
+      retired exact phrases, and its assertion mode can fail when the substance
+      is absent from a controlled sample.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/canonical-harness-vocabulary-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: root-routing-lock-rebaselined
+    statement: >-
+      RUE-004: static-regression asserts repo-root AGENTS.md/CLAUDE.md route to
+      DEEP_RESEARCH_HARNESS/RUN.md and enumerate the research/deep-research
+      suppression surface at the current Execution Brief wording, without
+      requiring retired English shortcut phrases, and the assertion mode can
+      fail when the suppression substance is absent from a controlled sample.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/static-regression.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: doc-locks-query-core
+    statement: >-
+      The list-doc-locks pure core maps a target document path to the test
+      files that reference it with adjacent assertion excerpts, and reports no
+      references for an unreferenced path.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/list-doc-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

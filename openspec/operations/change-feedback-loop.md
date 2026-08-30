@@ -91,7 +91,11 @@ semantic review.
 
 Complete `openspec-feedback:closeout-review` only when the current scoped review has no open
 finding and all ordinary repair work is complete. After every task is complete, use the governed
-finalizer as the sole supported final transition.
+finalizer as the sole supported final transition. The finalizer's mechanical prerequisites include
+the canonical regression suite: `npm test` must exit `0` in the planning root before native
+archive. A `regression_suite_failed` root is repaired by fixing the suite (or the stale lock it
+exposed — check `node scripts/list-doc-locks.mjs <doc-path>`) and rerunning the same finalizer
+command; an intermittent failure is confirmed by the direct `npm test` rerun first.
 
 ## Findings And Boundaries
 
