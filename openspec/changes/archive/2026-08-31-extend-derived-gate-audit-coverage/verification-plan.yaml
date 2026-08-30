@@ -1,0 +1,73 @@
+schema_version: verification-routing/v1
+change: 2026-08-31-extend-derived-gate-audit-coverage
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      派生分发覆盖、注入自防、降级去重断言全部落在 tests/schema/ 的
+      gate-rule-audit.test.mjs（in-process 源码反射 + definition 解析断言），
+      属 unit 类。
+  integration:
+    status: not_applicable
+    rationale: >-
+      本 change 无 tests/integration/ 资产：wrapper 行为级证明由
+      tests/e2e/wave-gate-degradation-policy.test.mjs 承载。
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      降级策略共享化必须证明真实 gate 链上的降级触发行为不变，由既有
+      wave-gate-degradation-policy 端到端确定性链回归证明。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称任何真实 Agent 行为变化。
+claims:
+  - id: dispatch-coverage-derived-audit
+    statement: >-
+      派生审计断言全部活跃 definition 的 rule.check 值都命中
+      wave-contract-evaluators.mjs 源码反射出的已实现集合；注入未知 check
+      名时审计变红（非恒真）。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/gate-rule-audit.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: degradation-policy-single-source
+    statement: >-
+      3 个 wave wrapper 引用共享 gate-degradation-policy 模块，源码不再含
+      节点清单数组与 `< 3` 阈值字面量；共享模块恰好定义一次常量。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/gate-rule-audit.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: degradation-behavior-unchanged
+    statement: >-
+      降级 eligibility 评估路径在迁移后与既有端到端确定性链测试预期完全
+      一致；wrapper 的 import 正确性由派生审计的源码断言与全量套件覆盖。
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/wave-gate-degradation-policy.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

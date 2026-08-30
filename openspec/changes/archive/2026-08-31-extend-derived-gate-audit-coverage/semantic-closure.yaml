@@ -1,0 +1,14 @@
+schema_version: semantic-closure/v1
+change: 2026-08-31-extend-derived-gate-audit-coverage
+status: not_applicable
+reason: >-
+  本 change 零 requirement 变更、零运行时行为变更。降级策略共享化是同值同
+  行为的重构：WAVE_FATIGUE_PHASE_NODES 与 FATIGUE_ATTEMPT_THRESHOLD 的字面量
+  从 3 个 wrapper 迁入单一模块，求值结果与降级判定完全不变，不改变任何
+  cataloged family（lifecycle.gate-status-trace-handoff、
+  wave.submitted-reference-convergence 等）的 resolver、establishing surface
+  或 verdict consumer；分发覆盖审计是测试层防护的新增，实现既有
+  research-wave-gate-implementation requirement 已声明的 "static gate audit
+  SHALL fail" scenario，不建立新的确定性运行时事实——静态审计自身的存在与
+  有效性由 node:test 直接证明，无第二 resolver 需要闭环。GSK-011 相关事实
+  （共享 parser、派生姿态、退役目录）全部维持现状。

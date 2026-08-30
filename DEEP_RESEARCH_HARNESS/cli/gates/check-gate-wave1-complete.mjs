@@ -16,6 +16,7 @@ import {
   tryLoadGateDefinition,
   writeGateAttempt,
 } from '../../engine/helpers/gate-helpers.mjs';
+import { WAVE_FATIGUE_PHASE_NODES, FATIGUE_ATTEMPT_THRESHOLD } from '../../engine/helpers/gate-degradation-policy.mjs';
 import { evaluateWave1Contract } from '../../engine/helpers/wave-contract-evaluators.mjs';
 import { evaluateWaveDegradationEligibility } from '../../engine/helpers/wave-degradation-eligibility.mjs';
 import { projectWaveGatePublicVerdict } from '../../engine/helpers/wave-gate-verdict.mjs';
@@ -124,9 +125,9 @@ function engineVisibleAttemptCount() {
 }
 
 function maybeDegradedHandoff() {
-  if (failedRuleIds.size === 0 || !['phases/phase-wave0.md', 'phases/phase-wave1.md', 'phases/phase-wave2.md'].includes(args.currentNode)) return null;
+  if (failedRuleIds.size === 0 || !WAVE_FATIGUE_PHASE_NODES.includes(args.currentNode)) return null;
   const effectiveAttemptCount = Math.max(args.attempt ?? 0, engineVisibleAttemptCount());
-  if (effectiveAttemptCount < 3) return null;
+  if (effectiveAttemptCount < FATIGUE_ATTEMPT_THRESHOLD) return null;
   const eligibility = evaluateWaveDegradationEligibility({ definition, ruleEvaluation });
   if (!eligibility.eligible) {
     const ineligible = eligibility.ineligible_rule_ids;

@@ -125,4 +125,71 @@ describe('derived active Gate audit', () => {
     ];
     for (const name of retiredNames) assert.equal(source.includes(name), false);
   });
+
+  // ---- 2026-08-31-extend-derived-gate-audit-coverage ----
+  // 分工：本审计是静态前置防线（发现式派生，无永久目录，符合 GSK-011 姿态）；
+  // wave-contract-evaluators 对未知 check 的 configuration_integrity 运行时
+  // fail-closed 仍是精确裁决的第二道防线。
+
+  function implementationCorpus() {
+    return walk(FRAMEWORK_ROOT)
+      .filter((file) => file.endsWith('.mjs'))
+      .map((file) => readFileSync(file, 'utf8'));
+  }
+
+  it('derives check-name presence: every active definition check appears in the implementation corpus', () => {
+    const corpus = implementationCorpus();
+    const checks = new Set(
+      activeDefinitions().flatMap(({ definition }) => definition.rules.map((rule) => rule.check)),
+    );
+    assert.ok(checks.size > 0);
+    const missing = [...checks].filter(
+      (name) => !corpus.some((source) => source.includes(`'${name}'`) || source.includes(`"${name}"`)),
+    );
+    assert.deepEqual(missing, [], `checks with no implementation-corpus presence: ${missing.join(', ')}`);
+  });
+
+  it('dispatch-presence derivation is not vacuous (sentinel and known names)', () => {
+    const corpus = implementationCorpus();
+    const known = 'count_floor';
+    const sentinel = 'definitely_not_a_gate_check_sentinel';
+    assert.ok(corpus.some((source) => source.includes(`'${known}'`)), 'known check must be present in corpus');
+    assert.ok(
+      !corpus.some((source) => source.includes(`'${sentinel}'`)),
+      'sentinel must be absent so the presence check can fail',
+    );
+  });
+
+  it('keeps wave fatigue degradation policy single-sourced across wave wrappers', () => {
+    const policyPath = join(FRAMEWORK_ROOT, 'engine', 'helpers', 'gate-degradation-policy.mjs');
+    const policy = readFileSync(policyPath, 'utf8');
+    assert.match(policy, /export const WAVE_FATIGUE_PHASE_NODES/);
+    assert.match(policy, /export const FATIGUE_ATTEMPT_THRESHOLD = 3/);
+    assert.equal(
+      policy.match(/FATIGUE_ATTEMPT_THRESHOLD = 3/g)?.length,
+      1,
+      'threshold must be defined exactly once',
+    );
+
+    for (const wave of ['wave0', 'wave1', 'wave2']) {
+      const cli = activeGateClis().find(({ gateKey }) => gateKey === `${wave}-complete`);
+      const source = readFileSync(cli.path, 'utf8');
+      assert.ok(
+        source.includes('gate-degradation-policy.mjs'),
+        `${cli.name} must import the shared degradation policy`,
+      );
+      assert.ok(
+        !source.includes("DEGRADATION_FATIGUE_THRESHOLD"),
+        `${cli.name} must not reference the retired local threshold name`,
+      );
+      assert.ok(
+        !source.includes("['phases/phase-wave0.md', 'phases/phase-wave1.md', 'phases/phase-wave2.md']"),
+        `${cli.name} must not keep a local node-list copy`,
+      );
+      assert.ok(
+        source.includes('WAVE_FATIGUE_PHASE_NODES') && source.includes('FATIGUE_ATTEMPT_THRESHOLD'),
+        `${cli.name} must consume both shared constants`,
+      );
+    }
+  });
 });
