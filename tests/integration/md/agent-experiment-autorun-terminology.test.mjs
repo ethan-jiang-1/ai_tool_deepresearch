@@ -127,10 +127,48 @@ describe('Agent Experiment Autorun terminology knowledge surfaces', () => {
 
   it('follows every active delta spec before archive and matching main specs after archive', () => {
     for (const [capability, sentinel] of Object.entries(SPEC_SENTINELS)) {
-      const paths = capabilitySpecPaths(capability);
-      for (const path of paths) {
-        assert.match(read(path), new RegExp(sentinel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${capability} must retain its terminology anchor`);
+      const deltas = activeDeltaSpecPaths(capability);
+      if (deltas.length === 0) {
+        assert.match(
+          read(`openspec/specs/${capability}/spec.md`),
+          new RegExp(sentinel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+          `${capability} must retain its terminology anchor`,
+        );
+        continue;
       }
+      // Post-archive retention semantics: requirement blocks that an active delta
+      // replaces must carry the sentinel inside that delta; every untouched
+      // main-spec block keeps its own anchor. The union therefore proves the
+      // anchor survives archive sync without forcing unrelated deltas to repeat
+      // experiment vocabulary.
+      const main = read(`openspec/specs/${capability}/spec.md`);
+      const deltaText = deltas.map(read).join('\n');
+      const replaced = new Set(
+        deltaText
+          .split('\n')
+          .filter((line) => line.startsWith('### Requirement: '))
+          .map((line) => line.slice('### Requirement: '.length).trim()),
+      );
+      const segments = [];
+      let current = { heading: null, lines: [] };
+      for (const line of main.split('\n')) {
+        if (line.startsWith('### Requirement: ')) {
+          segments.push(current);
+          current = { heading: line.slice('### Requirement: '.length).trim(), lines: [line] };
+        } else {
+          current.lines.push(line);
+        }
+      }
+      segments.push(current);
+      const retained = segments
+        .filter((segment) => segment.heading === null || !replaced.has(segment.heading))
+        .map((segment) => segment.lines.join('\n'))
+        .join('\n');
+      assert.match(
+        `${retained}\n${deltaText}`,
+        new RegExp(sentinel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+        `${capability} must retain its terminology anchor across active deltas and untouched main blocks`,
+      );
     }
 
     const archivedPaths = capabilitySpecPaths('agent/agent-testing', []);

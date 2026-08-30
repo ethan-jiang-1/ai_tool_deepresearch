@@ -1,0 +1,77 @@
+schema_version: verification-routing/v1
+change: 2026-08-30-repair-delegated-queue-spec-drift
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      本 change 的全部可证明事实都是 in-process 确定性文本/registry 断言：
+      被删 scenario 不再出现且保留 scenario 仍在、drain scope note 锚点存在、
+      头部 req 索引计数与正文 requirement 计数一致、registry 含 4 个新 ID。
+      均由 node:test 断言锁定，无跨进程行为。
+  integration:
+    status: not_applicable
+    rationale: >-
+      无 CLI、无跨文件工作流执行面变化；governance checker（content-drift、
+      spec-req-ids、project-reqs）由 `npm run governance:check` 作为既有
+      治理面直接覆盖，不构成本 change 新增的 integration 断言对象。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      零 lifecycle/gate/recovery 行为变化，不驱动端到端 bundle 链。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称任何真实 Agent 行为变化；纯 accepted spec 文本身份层修复。
+claims:
+  - id: dew009-duplicate-scenario-merged
+    statement: >-
+      DEW-009：scenario "Claimed task contains absolute runtime paths" 标题
+      保留为 delta-sync key，正文改为合并声明（retention 注记 + 行为唯一归属
+      "Claimed task contains one canonical absolute runtime root"），不再包含
+      独立的 absolute-path SHALL（原 WHEN/THEN/AND 三行不得在正文中重复）。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/delegated-queue-spec-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: agq-drain-scope-note-pinned
+    statement: >-
+      AGQ-028："Phase drain includes queue demand and in-flight attempts"
+      requirement 携带判据分工 scope note，同时锚定 deadline_at、
+      lease_anchor_at + idle_timeout_ms 与 DEW-014 requirement 标题。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/delegated-queue-spec-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: req-identity-index-complete
+    statement: >-
+      DEW/AGQ 头部 `> req:` ID 集合分别为 29 / 28 且与正文 requirement 计数
+      一致；req-registry.yaml 含 DEW-027..029 与 AGQ-028；
+      check-project-reqs --mode archive PASS（0 unregistered / 0 orphan）。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/delegated-queue-spec-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

@@ -1,6 +1,6 @@
 # Delegated Work Units
 
-> req: DEW-001, DEW-002, DEW-003, DEW-004, DEW-005, DEW-006, DEW-007, DEW-008, DEW-009, DEW-010, DEW-011, DEW-012, DEW-013, DEW-014, DEW-015, DEW-016, DEW-017, DEW-018, DEW-019, DEW-020, DEW-021, DEW-022, DEW-023, DEW-024, DEW-025, DEW-026
+> req: DEW-001, DEW-002, DEW-003, DEW-004, DEW-005, DEW-006, DEW-007, DEW-008, DEW-009, DEW-010, DEW-011, DEW-012, DEW-013, DEW-014, DEW-015, DEW-016, DEW-017, DEW-018, DEW-019, DEW-020, DEW-021, DEW-022, DEW-023, DEW-024, DEW-025, DEW-026, DEW-027, DEW-028, DEW-029
 
 > delta-synced: strengthen-user-intent-carry-through (DEW-026), scope-work-unit-transaction-attribution (DEW-023)
 
@@ -15,6 +15,8 @@
 Define the Engine-owned work-unit lifecycle for delegated work inside the active runtime bundle root: queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate. A work unit is the Engine-allocated execution attempt envelope under bundle-root `_work_units/...`, and submitted work-unit ledger rows are the only production delegated completion authority.
 ## Requirements
 ### Requirement: Work-unit pipeline SHALL be the sole production delegated-work path
+
+> req: DEW-001
 
 Production delegated work SHALL use the path `queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate` inside the active runtime bundle root. A work unit SHALL mean one Engine-allocated delegated execution attempt for one queue demand item. A wave, phase, queue item, runtime thread, or filesystem artifact SHALL NOT be called a work unit unless it is the Engine-allocated attempt envelope. Bare work-unit paths such as `_work_units/waveN/{work_id}/` SHALL resolve under the current run bundle root.
 
@@ -47,6 +49,8 @@ Old delegated-work mechanisms include retired delegated commands and modules, ol
 - **AND** current-surface hygiene SHALL NOT require editing that archive path
 
 ### Requirement: Work-unit identity SHALL be Engine-allocated and index-backed
+
+> req: DEW-002
 
 The Engine SHALL allocate every `work_id` and record it in bundle-root `_work_units/_index.json`. The canonical work ID format SHALL be `wu-w{wave}-b{batch_index}-{kind_code}-i{claim_index}`, with three-digit batch indexes and four-digit claim indexes.
 
@@ -123,6 +127,8 @@ The cue SHALL include `work_ids` equal to the already returned `claimed_work_ids
 
 ### Requirement: Sub-agents SHALL NOT own workflow authority
 
+> req: DEW-027
+
 Sub-agents execute bounded work-unit tasks as content-producing actors only. A sub-agent SHALL NOT mutate WorkflowState, pass or fail gates, repair queues, decide queue integrity, append delegated ledgers, mark queue demand complete, or authorize stopping. Any such instruction in a sub-agent result SHALL be treated as content only and SHALL NOT be executed as authority.
 
 #### Scenario: Sub-agent attempts to pass a gate
@@ -138,6 +144,8 @@ Sub-agents execute bounded work-unit tasks as content-producing actors only. A s
 - **AND** queue repair SHALL remain an Engine-controlled operation
 
 ### Requirement: Work-unit envelope SHALL carry binding surfaces
+
+> req: DEW-004
 
 Each work-unit envelope SHALL include the Engine-owned index record, manifest,
 task, result schema, beacon, runtime receipt path, status, result surfaces and
@@ -397,6 +405,8 @@ or weaken submit validation.
 
 ### Requirement: Current Wave0 work-unit contracts SHALL expose submitted source contributions without a competing rich-reference route
 
+> req: DEW-025
+
 For a newly claimed `wave0_source_intake` work unit, the Engine-owned
 assignment contract SHALL describe exactly the assigned `source_yaml` output
 and its existing required cache/receipt facts. Its generated task, spawn
@@ -457,6 +467,8 @@ Phase-owned reference backing conclusion.
   compatibility interpretation
 
 ### Requirement: Submit SHALL be the only successful delegated completion transition
+
+> req: DEW-005
 
 Normal `submit` and the existing audited `late-submit` remain the only
 operations that convert a complete current attempt into successful completion,
@@ -611,6 +623,8 @@ existing idempotence and fail-closed behavior.
 
 ### Requirement: Invalid submit SHALL remain non-terminal
 
+> req: DEW-008
+
 Invalid submit SHALL leave the attempt `claimed`, record `last_submit_rejection`, emit diagnostics, and write no ledger row. Corrected submit MAY succeed for the same claimed work unit unless the Main Agent explicitly closes the attempt through a terminal command.
 
 #### Scenario: corrected submit can reuse claimed attempt
@@ -620,6 +634,8 @@ Invalid submit SHALL leave the attempt `claimed`, record `last_submit_rejection`
 - **THEN** a later submit MAY succeed for that work unit
 
 ### Requirement: Terminal attempt transitions SHALL fail closed
+
+> req: DEW-006
 
 `fail`, `timeout`, and `abandon` SHALL close the current work-unit attempt without queue completion or ledger coverage. Retry or replacement SHALL allocate a new `work_id` only through the existing role-bound `claim` operation.
 
@@ -682,6 +698,8 @@ node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs replace <bundle> --work-id 
 - **AND** the earlier parent SHALL not create another successor
 
 ### Requirement: Audited late-submit SHALL recover eligible timed-out work units
+
+> req: DEW-015
 
 The existing audited late-submit operation SHALL remain available only to a
 complete current timed-out attempt that satisfies its existing nonce, queue,
@@ -774,6 +792,8 @@ facts. It SHALL not become current by current-default inference.
 
 ### Requirement: Gates SHALL read submitted work-unit ledger coverage
 
+> req: DEW-007
+
 Delegated gate coverage SHALL come only from Engine-written work-unit rows in bundle-root `rb_output_declarations.jsonl`. Bundle-root `_work_units/_index.json`, manifest, result, receipt, beacon, cache, and output files SHALL be cross-check surfaces, not independent pass coverage.
 
 Current specs, docs, tests, and playbooks SHALL NOT present retired delegated files, old result references, retired commit/merge events, or old delegated queue completion as alternate gate coverage.
@@ -791,6 +811,8 @@ Current specs, docs, tests, and playbooks SHALL NOT present retired delegated fi
 - **AND** it SHALL NOT describe that artifact as a production success path
 
 ### Requirement: Work-unit tasks SHALL expose bundle-root absolute paths and write-before-return verification
+
+> req: DEW-009
 
 Generated work-unit task Markdown and any Agent-facing claim/spawn output SHALL include the current run bundle root normalized by the Engine as one canonical absolute `bundle_dir`, the exact work-unit identity fields, bundle-relative canonical refs, and absolute paths for files the sub-agent must read or write. The immutable Engine-owned `_beacon.json`, generated task, spawn/claim output, and generated work-unit CLI examples SHALL agree on that same absolute root. `bundle_dir` SHALL NOT be repo-relative, current-working-directory-relative, or only the bundle basename.
 
@@ -858,10 +880,14 @@ Canonical role/shared guidance SHALL describe capabilities and rich authoring be
 
 #### Scenario: Claimed task contains absolute runtime paths
 
-- **WHEN** `operate-work-unit claim` creates a work unit for current run bundle `/repo/dpt_rb_aidlc-investigation`
-- **THEN** the generated task SHALL include `bundle_dir: /repo/dpt_rb_aidlc-investigation`
-- **AND** it SHALL include absolute paths for `_beacon.json`, `result.json`, `runtime-receipt.jsonl`, declared output files, and required cache leaf directories
-- **AND** bundle-relative paths SHALL remain clearly labeled as refs relative to `bundle_dir`
+> The historical scenario name is retained only as the OpenSpec delta-sync key.
+> The absolute-runtime-root behavior it described is now owned solely by the
+> scenario "Claimed task contains one canonical absolute runtime root"; this
+> scenario no longer states an independent requirement.
+
+- **WHEN** `operate-work-unit claim` generates task, beacon, spawn/claim output, or CLI examples naming runtime paths for a current run bundle
+- **THEN** the SHALL-level behavior is governed by the scenario "Claimed task contains one canonical absolute runtime root"
+- **AND** this scenario SHALL NOT be read as a second, independent absolute-path requirement
 
 #### Scenario: task projects exact required output bindings
 
@@ -923,9 +949,9 @@ Canonical role/shared guidance SHALL describe capabilities and rich authoring be
 - **WHEN** generated Markdown or result-schema guidance drifts from the reconstructed manifest/beacon contract
 - **THEN** claim parity tests or submit contract checks SHALL fail
 - **AND** runtime acceptance SHALL not use the projection to outvote the Engine-resolved contract
-
-
 ### Requirement: Submitted result and ledger hashes SHALL detect post-submit drift before gate pass
+
+> req: DEW-010
 
 Submitted result and ledger hashes SHALL remain fail-closed binding authority.
 Normal and late submit SHALL create one Engine submission timestamp inside the
@@ -1005,6 +1031,8 @@ alternate recovery path.
 
 ### Requirement: Successful work-unit submit SHALL verify durable queue postconditions
 
+> req: DEW-011
+
 Before normal or late submit reports success, its durable postcondition SHALL prove the submitted index/status binding, shared submission timestamp, terminal queue history, bundle ledger row, and any required late-accept context agree. These writes SHALL participate in the existing submit transaction and rollback/suspect-state handling. This adds no new completion authority: the bundle ledger remains the only delegated coverage source.
 
 #### Scenario: Submit success includes durable reconstruction facts
@@ -1039,6 +1067,8 @@ Before normal or late submit reports success, its durable postcondition SHALL pr
 - **AND** it SHALL NOT print a successful submit result
 
 ### Requirement: Work-unit submit SHALL canonicalize only bounded LLM-shaped submit drift before strict validation
+
+> req: DEW-012
 
 `operate-work-unit submit` SHALL run a narrow canonicalization step before strict result, receipt, output, cache, nonce, queue, hash, and ledger validation. Canonicalization SHALL be limited to predictable LLM-shaped drift that can be safely tied back to the claimed work-unit record. It SHALL NOT create new authority, bypass work-unit identity, accept path escapes, or relax downstream ledger/gate coverage.
 
@@ -1162,6 +1192,8 @@ This requirement SHALL NOT remove the existing ability to submit a candidate `re
 - **AND** the Engine SHALL persist the canonical accepted result to the assigned work-unit `result_ref`
 
 ### Requirement: Work-unit dry-submit SHALL preflight submit validation without side effects
+
+> req: DEW-013
 
 The work-unit CLI SHALL provide a dry-submit preflight for claimed work units. Dry-submit SHALL read a candidate result and evaluate the same deterministic submit contract used by formal `operate-work-unit submit` wherever possible, including work-unit identity, queue binding, manifest/index consistency, result schema, runtime receipt, nonce, output files, source claims, cache trails, and kind output contract constraints.
 
@@ -1398,6 +1430,8 @@ Generated actor guidance SHALL expose the exact direct contract and require the 
 - **AND** it SHALL not direct the Phase Agent to author the missing research content under the returned actor provenance
 ### Requirement: Timeout terminalization SHALL be guarded by progress-aware preflight
 
+> req: DEW-014
+
 The work-unit CLI SHALL provide a timeout preflight for claimed work units. Timeout preflight SHALL determine whether it is safe to terminalize a claimed work-unit attempt as `timed_out` by evaluating Engine-observed progress, candidate result state, dry-submit-equivalent diagnostics, queue binding, and effective idle lease state.
 
 Timeout preflight SHALL accept an explicit current run bundle path, `work_id`, and optional candidate `result` path. When no candidate result path is supplied, preflight SHALL inspect the assigned result path from the work-unit record. When a candidate result path is supplied, preflight SHALL evaluate it under submit/dry-submit-equivalent candidate path rules. A supplied candidate result path outside the assigned work-unit directory SHALL be a validation input only: its mtime SHALL NOT extend the work-unit idle lease by itself, though dry-submit-equivalent validation MAY still recommend `submit` or `repair`. It SHALL fail closed for missing or invalid work-unit index records, non-claimed attempts, missing manifests, missing queue in-flight binding, or binding drift. It SHALL return structured JSON for both timeout-eligible and timeout-ineligible cases. The output SHALL include the checked `work_id`, `queue_item_id`, current status, `timeout_eligible`, `check`, `recommended_action`, nullable `candidate_projection`, progress summary, `initial_deadline_at`, `lease_anchor_at`, `idle_timeout_ms`, `effective_timeout_at`, `inspect[]`, and repair-oriented `advice[]`.
@@ -1599,6 +1633,8 @@ from a long array of unrelated diagnostics.
 
 ### Requirement: Work-unit claim SHALL evaluate one explicit actor observation before allocation
 
+> req: DEW-016
+
 When eligible delegated demand exists, every new work-unit claim SHALL build a read-only candidate plan before mutation and SHALL receive an explicit decision-point actor observation bound to that plan's delegated `role_key`. The observation SHALL contain `outcome: available|unavailable|unknown`, `source: native_probe|not_observed`, the exact role key, and a normalized reason code. The role key itself is the actor surface identifier; this contract SHALL NOT add a second arbitrary actor-surface string or an undefined host-report authority. A normal delegated candidate plan SHALL contain only the contiguous eligible queue-front prefix, up to the requested count, whose delegated role key and kind actor policy are valid. A fallback candidate plan SHALL contain only the single eligible queue-front item because fallback effective count is one. Claim SHALL evaluate the plan and observation before allocating a work ID, opening or incrementing a batch, moving queue demand into delegated in-flight state, or creating a work-unit directory.
 
 The accepted source/outcome/reason combinations SHALL be closed:
@@ -1690,6 +1726,8 @@ state.
 
 ### Requirement: Phase Agent fallback SHALL remain inside the work-unit transaction
 
+> req: DEW-017
+
 `phase_agent_fallback` SHALL be an accepted work-unit execution actor class only when the same claim receives a matching normalized `unavailable` delegated actor observation and the single queue-front candidate kind explicitly permits fallback. The fallback effective claim count SHALL be exactly one even when a larger count is requested, because one Phase Agent actor cannot execute a delegated parallel batch. The fallback SHALL receive the same Engine-allocated work ID, manifest, task, beacon, result schema, receipt nonce, assigned output/cache paths, timeout contract, dry-submit validation, formal submit transaction, and ledger coverage as a normal delegated subagent attempt.
 
 The queue demand SHALL keep its existing intended target `targets.delegates.to: sub-agent` and role key; fallback SHALL NOT rewrite the queue task into a main-agent task. The work-unit attempt SHALL record the actual execution actor class and `fallback_from: delegated_subagent`, so inspect and ledger can distinguish intended delegated demand from the accepted actual fallback actor.
@@ -1749,6 +1787,8 @@ Fallback SHALL begin before the bounded evidence work it claims. It SHALL NOT be
 - **AND** no submitted ledger row SHALL be created without new real execution inside the claimed envelope
 
 ### Requirement: Work-unit provenance SHALL bind execution actor class
+
+> req: DEW-018
 
 New claims SHALL use the existing explicit actor sub-contract
 `actor_contract_version: "work-unit.actor.v1"`. The transaction-bound index
@@ -1826,6 +1866,8 @@ value, or an inferred real actor class.
 
 ### Requirement: Work-unit provenance SHALL inherit UID-bound queue identity without duplicate fields
 
+> req: DEW-019
+
 When topic-scoped demand is claimed, the existing immutable `manifest.queue_item` snapshot SHALL preserve canonical payload UID and the current slug observed at enqueue. Submit/provenance readers SHALL resolve topic identity from that snapshot and the ledger's existing `work_unit_ref`; WorkUnitResultSchema and WorkUnitLedgerRecordSchema SHALL NOT gain duplicate topic fields. Historical slug-only queue snapshots MAY resolve through unique registry layout history. Layout mutation SHALL never edit receipt, actor, result, work-unit or ledger facts.
 
 #### Scenario: Claim snapshot carries existing queue binding
@@ -1840,6 +1882,8 @@ When topic-scoped demand is claimed, the existing immutable `manifest.queue_item
 
 ### Requirement: Existing task brief may expose a read-only user-controls coordinate
 
+> req: DEW-020
+
 When user research controls are present, Phase guidance SHALL permit the Phase Agent to add one instruction to its existing queue-item `task_brief` before claim, directing the actor to read `rb_plan.md## Constraints > User Research Controls` through the work unit's existing beacon-rooted bundle coordinate. The Engine SHALL carry that already-authored `task_brief` unchanged through the existing manifest/task rendering path; it SHALL NOT infer, generate, parse, or copy user controls itself. The instruction SHALL be bundle-relative and read-only, and SHALL only guide source selection, evidence treatment, analysis, and presentation.
 
 The instruction SHALL NOT add queue, manifest, result, receipt, allocation, lifecycle, assignment, or write authority; controls SHALL NOT be copied into work-unit machine fields. When controls are absent, generated task briefs SHALL retain their existing behavior without an empty control payload or added read obligation.
@@ -1850,6 +1894,8 @@ The instruction SHALL NOT add queue, manifest, result, receipt, allocation, life
 - **AND** the work-unit manifest/result/receipt schemas and submit authority remain unchanged
 
 ### Requirement: Delegated work contract entry SHALL be constructible from one generated projection
+
+> req: DEW-021
 
 For eligible delegated demand, the Engine SHALL expose the same closed contract lineage at each Agent decision point without creating a second acceptance authority.
 
@@ -1930,6 +1976,8 @@ cache-trail mapping, role proof, or recovery path.
 
 ### Requirement: Work-unit attempts SHALL expose logical execution guidance from existing attempt bindings
 
+> req: DEW-022
+
 Each current-version claimed work unit SHALL expose a derived attempt-ownership projection from the
 Engine-written `actor_execution` and the existing `work_id` + `receipt_nonce` binding across its index
 record, manifest, beacon, task, result starter, candidate/receipt actor discriminators, and runtime receipt
@@ -1980,6 +2028,8 @@ guidance for the current Agent Flow; it is not evidence of who physically wrote 
   edit
 
 ### Requirement: Submit SHALL expose a bounded integrity preflight and transaction disposition
+
+> req: DEW-023
 
 Normal submit and dry-submit SHALL evaluate one shared, read-only submit-owned integrity preflight before
 candidate acceptance. It SHALL check only direct facts owned by submit: current index/ledger binding,
@@ -2228,6 +2278,8 @@ manual deletion advice is authorized by this requirement.
 
 ### Requirement: Submitted correction SHALL use audited supersession and one fresh successor
 
+> req: DEW-024
+
 For a complete current submitted predecessor, submitted correction SHALL retain
 the existing immutable `work-unit.supersession.v1` relation, one fresh
 successor, exact direct-parent lineage, transaction binding, and rule that only
@@ -2363,6 +2415,8 @@ historical acceptance.
 
 ### Requirement: Affected delegated work SHALL receive current intent through the existing task brief
 
+> req: DEW-026
+
 Before claim, the Phase Agent that creates an intent-affected delegated demand
 SHALL author the existing queue-owned `task_brief` with a bounded task-local
 objective and the read-only coordinates needed to derive it. The brief SHALL
@@ -2400,6 +2454,8 @@ the existing task-brief behavior remains unchanged.
 
 ### Requirement: Dry-submit cache-URL mismatch diagnostics SHALL carry the recorded leaf urls
 
+> req: DEW-028
+
 When dry-submit rejects an accepted source claim because its cache trail leaf records different urls than the claim url (`accepted source claim cache trail maps to a different URL`), or rejects an `accepted_source_urls[]` entry with no matching claim, the diagnostic SHALL carry, in addition to the claim-side url and the cache trail path, the actual normalized urls recorded in the leaf `meta.json` (the `url`/`source_url`/`final_url`/`fetched_url` values through the existing cache-leaf normalization) so the Agent can repair in one step without reading `meta.json`. The verdict and rejection semantics SHALL NOT change.
 
 #### Scenario: Cache trail leaf records a url that differs from the claim url
@@ -2415,6 +2471,8 @@ When dry-submit rejects an accepted source claim because its cache trail leaf re
 - **AND** the diagnostic SHALL include the mismatching url and the accepted claim urls already declared, so the Agent can identify the exact repair coordinate
 
 ### Requirement: Dry-submit runtime-receipt schema diagnostics SHALL carry the raw value, all affected lines, and the expected format
+
+> req: DEW-029
 
 When dry-submit rejects a runtime receipt because a receipt event fails its schema (e.g. an invalid ISO datetime in `ts`), the diagnostic SHALL include (a) the failing field's raw string value (e.g. `Invalid datetime: "2026-08-26T01:25:25.3NZ"`), (b) every affected line number rather than only the first failing line, and (c) the legal format expectation (e.g. ISO 8601 UTC like `2026-08-26T01:25:25.300Z`), so the Agent can repair all offending lines in one step. The schema verdict and rejection semantics SHALL NOT change.
 

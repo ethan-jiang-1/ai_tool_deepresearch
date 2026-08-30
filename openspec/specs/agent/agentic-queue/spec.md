@@ -1,6 +1,6 @@
 # Agentic Queue
 
-> req: AGQ-001, AGQ-002, AGQ-003, AGQ-004, AGQ-005, AGQ-006, AGQ-007, AGQ-008, AGQ-009, AGQ-010, AGQ-011, AGQ-012, AGQ-013, AGQ-014, AGQ-015, AGQ-016, AGQ-017, AGQ-018, AGQ-019, AGQ-020, AGQ-021, AGQ-022, AGQ-023, AGQ-024, AGQ-025, AGQ-026, AGQ-027
+> req: AGQ-001, AGQ-002, AGQ-003, AGQ-004, AGQ-005, AGQ-006, AGQ-007, AGQ-008, AGQ-009, AGQ-010, AGQ-011, AGQ-012, AGQ-013, AGQ-014, AGQ-015, AGQ-016, AGQ-017, AGQ-018, AGQ-019, AGQ-020, AGQ-021, AGQ-022, AGQ-023, AGQ-024, AGQ-025, AGQ-026, AGQ-027, AGQ-028
 
 > delta-synced: add-audited-late-accept-for-timed-out-work-units (AGQ-018, AGQ-019)
 > delta-synced: make-work-unit-attempt-recovery-explicit (AGQ-026)
@@ -723,6 +723,17 @@ Explicit audited `operate-work-unit late-submit` is the only terminal recovery c
 - **AND** `operate-queue complete` SHALL remain invalid for delegated work
 
 ### Requirement: Phase drain includes queue demand and in-flight attempts
+
+> Scope note (criterion partition): the drain classification in this
+> requirement is a queue-freshness fact keyed on `deadline_at` (Source of
+> Record: the drain expired filter in
+> `DEEP_RESEARCH_HARNESS/engine/queue-manager-lifecycle.mjs`). It is a
+> different deterministic fact from work-unit timeout *eligibility*, which is
+> decided by the effective idle lease (`lease_anchor_at + idle_timeout_ms`)
+> and owned by the `agent/delegated-work-units` requirement "Timeout
+> terminalization SHALL be guarded by progress-aware preflight". The two
+> criteria govern two different operations and SHALL NOT be read as one
+> shared expiration semantics or substituted for each other.
 
 The Agentic Queue system SHALL report a phase as drained only when the phase has no unclaimed queue demand and no non-terminal or expired delegated in-flight attempt.
 

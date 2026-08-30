@@ -1,0 +1,15 @@
+schema_version: semantic-closure/v1
+change: 2026-08-30-repair-delegated-queue-spec-drift
+status: not_applicable
+reason: >-
+  本 change 零 engine/CLI 改动，不改变任何 cataloged semantic fact family 的
+  resolver、establishing surface 结论内容或 verdict consumer。涉及的三类修改均
+  为 spec 文本身份层：requirement ID 登记（DEW-027..029、AGQ-028）与头部/内联
+  req 索引补全不改变 queue.demand-lifecycle、work-unit.attempt-identity-and-actor、
+  work-unit.submission-ledger-and-supersession 等 family 的 bounded question 或
+  结论；AGQ drain requirement 新增的 scope note 只显式声明既有的判据分工事实
+  （drain 分类读 deadline_at 属 queue-manager-lifecycle，timeout 资格属
+  effective idle lease 属 timeout-preflight），engine 两处实现均已在现状中成立，
+  无新 fact、无 resolver 变更；DEW-009 重复 scenario 改写为合并声明后，该
+  requirement 的可观察行为集合不变。该事实的真相源仍是
+  既有 accepted spec 与 executable contract，无需新增 family 或 closure 条目。

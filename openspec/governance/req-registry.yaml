@@ -187,6 +187,7 @@ AGQ-024: agentic-queue — Actor preflight no-claim preserves queue demand and l
 AGQ-025: agentic-queue — New topic-scoped queue demand binds canonical topic UID and current slug
 AGQ-026: agentic-queue — Submitted predecessors with immutable supersession relations create a fresh queue successor without reactivation
 AGQ-027: agentic-queue — operate-queue check reports a distinct drained conclusion when the queue is fully drained
+AGQ-028: agentic-queue — Phase drain includes queue demand and in-flight attempts
 
 # agent/cmd-subagent-environment
 CSE-001: cmd-subagent-environment — Command playbook for project-level real subagent setup
@@ -217,6 +218,9 @@ DEW-022: delegated-work-units — Work-unit attempts expose logical execution gu
 DEW-023: delegated-work-units — Submit exposes a bounded integrity preflight and transaction disposition
 DEW-024: delegated-work-units — Submitted correction uses audited supersession and one fresh successor
 DEW-025: delegated-work-units — Current Wave0 work-unit contracts expose submitted source contributions without a competing rich-reference route
+DEW-027: delegated-work-units — Sub-agents do not own workflow authority
+DEW-028: delegated-work-units — Dry-submit cache-URL mismatch diagnostics carry the recorded leaf urls
+DEW-029: delegated-work-units — Dry-submit runtime-receipt schema diagnostics carry the raw value, all affected lines, and the expected format
 DEW-026: delegated-work-units — Affected delegated work receives current intent through the existing task brief
 
 # agent/hitl-ux
