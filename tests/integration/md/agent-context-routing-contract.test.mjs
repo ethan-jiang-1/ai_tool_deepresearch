@@ -54,29 +54,37 @@ function assertNonEntryBoundary(text, path) {
 }
 
 describe('agent context routing contract', () => {
-  it('keeps root behavior entries synchronized and ordered before research routing', () => {
-    const preReadBlocks = ROOT_BEHAVIOR_FILES.map((path) => {
+  it('keeps root Execution Brief as the first action and routing after it', () => {
+    const briefBlocks = ROOT_BEHAVIOR_FILES.map((path) => {
       const text = read(path);
-      const preRead = section(text, 'Before Anything Else', path);
+      const brief = section(text, '0. Execution Brief', path);
 
-      assertOrdered(preRead, path, ['openspec/constitution/project-charter.md', 'CONTEXT.md']);
-      assertOrdered(text, path, ['## Before Anything Else', 'CONTEXT.md', '## Deep Research Routing']);
-      assert.match(preRead, /normal instruction-discovery\s+behavior/);
-      assert.match(preRead, /task-specific authoritative sources/);
+      assert.doesNotMatch(text, /^## Before Anything Else$/m);
+      assertOrdered(brief, path, ['openspec/constitution/project-charter.md', 'CONTEXT.md']);
+      assertOrdered(text, path, ['## 0. Execution Brief', 'CONTEXT.md', '## Deep Research Routing']);
+      assert.match(brief, /研究\s*\/\s*续跑\s*\/\s*报告/);
+      assert.match(brief, /改行为/);
+      assert.match(brief, /tasks\.md/);
+      assert.match(brief, /CLI `next`/);
+      assert.match(brief, /该文件已在上下文/);
+      assert.match(brief, /change 已在，或 spec 已打开/);
+      assert.match(brief, /执行了那一个下一步/);
       assert.match(text, /docs\/adr\//);
-      return preRead;
+      return brief;
     });
 
-    assert.equal(preReadBlocks[0], preReadBlocks[1], 'root pre-read blocks must stay synchronized');
+    assert.equal(briefBlocks[0], briefBlocks[1], 'root Execution Brief blocks must stay synchronized');
   });
 
-  it('keeps the root README route before scoped directory selection', () => {
+  it('keeps the root README route pointing at the Execution Brief', () => {
     const path = 'README.md';
     const text = read(path);
     const startHere = section(text, 'Start Here', path);
 
     assertOrdered(text, path, [
       '## Start Here',
+      'AGENTS.md',
+      '0. Execution Brief',
       'openspec/constitution/project-charter.md',
       'CONTEXT.md',
       'Start from the repository root',
@@ -84,36 +92,43 @@ describe('agent context routing contract', () => {
     ]);
     assert.match(startHere, /docs\/adr\//);
     assert.match(startHere, /Do not pre-read every root document or recursively scan directories/);
+    assert.match(startHere, /不要先 Charter-then-context/);
     assert.match(text, /\| `docs\/adr\/` \|/);
   });
 
-  it('keeps Harness behavior entries synchronized and outside Harness entry selection', () => {
-    const preReadBlocks = FRAMEWORK_BEHAVIOR_FILES.map((path) => {
+  it('keeps Harness Execution Brief and shared-context coordinates outside research entry', () => {
+    const sharedBlocks = FRAMEWORK_BEHAVIOR_FILES.map((path) => {
       const text = read(path);
-      const preRead = section(text, '共享项目上下文', path);
-      const afterPreRead = text.slice(text.indexOf('## ⚡ 第一优先'));
+      const brief = section(text, '0. Execution Brief', path);
+      const shared = section(text, '共享项目上下文', path);
 
+      assert.doesNotMatch(text, /## ⚡ 第一优先/);
+      assert.match(brief, /研究\s*\/\s*续跑\s*\/\s*报告/);
+      assert.match(brief, /改本目录行为/);
+      assert.match(brief, /selected entry 已在上下文/);
+      assert.match(brief, /根 `AGENTS\.md` Execution Brief 的「改行为」行/);
       assertOrdered(text, path, [
+        '## 0. Execution Brief',
         '## 共享项目上下文',
         '../openspec/constitution/project-charter.md',
         '../CONTEXT.md',
-        '## ⚡ 第一优先',
         '## Must Read',
       ]);
-      assert.match(preRead, /全项目唯一的术语对齐 glossary/);
-      assert.match(preRead, /`README\.md`、`COMMANDS\.md` 和 selected\s+playbook/);
-      assertNonEntryBoundary(preRead, path);
-      assert.match(afterPreRead, /`README\.md`/);
-      assert.match(afterPreRead, /`COMMANDS\.md`/);
-      assert.match(afterPreRead, /command_playbook\/start-research\.md/);
-      assert.match(afterPreRead, /command_playbook\/continue-run-bundle\.md/);
-      return preRead;
+      assert.match(shared, /全项目唯一的术语对齐 glossary/);
+      assert.match(shared, /`README\.md`、`COMMANDS\.md` 和 selected\s+playbook/);
+      assert.match(shared, /跑研究不必先读/);
+      assertNonEntryBoundary(shared, path);
+      assert.match(text, /`README\.md`/);
+      assert.match(text, /`COMMANDS\.md`/);
+      assert.match(text, /command_playbook\/start-research\.md/);
+      assert.match(text, /command_playbook\/continue-run-bundle\.md/);
+      return shared;
     });
 
-    assert.equal(preReadBlocks[0], preReadBlocks[1], 'framework shared-project blocks must stay synchronized');
+    assert.equal(sharedBlocks[0], sharedBlocks[1], 'framework shared-project blocks must stay synchronized');
   });
 
-  it('places the framework README pre-read before every trigger surface', () => {
+  it('keeps the framework README parent-project block non-entry without a mandatory pre-read', () => {
     const path = 'DEEP_RESEARCH_HARNESS/README.md';
     const text = read(path);
     const preRead = section(text, '共享项目上下文', path);
@@ -128,6 +143,8 @@ describe('agent context routing contract', () => {
     ]);
     assert.match(preRead, /全项目唯一的术语对齐\s+glossary/);
     assert.match(preRead, /`COMMANDS\.md` 和 selected playbook/);
+    assert.match(preRead, /跑研究不必先读/);
+    assert.doesNotMatch(preRead, /开始 Deep Research Harness work 前，先读/);
     assertNonEntryBoundary(preRead, path);
   });
 

@@ -134,9 +134,9 @@ ACS-006: agent-command-surface — Command index maps post-final iteration inten
 
 # agent/agent-context-routing
 ACR-001: agent-context-routing — Root CONTEXT.md preserves canonical terminology boundaries without becoming behavior, executable, or runtime authority
-ACR-002: agent-context-routing — Root and framework Agent entry routes require Charter-then-context and preserve existing operating surfaces
+ACR-002: agent-context-routing — Root and framework Agent entry routes open with Execution Brief; Charter-then-context only when the next action depends on ownership vocabulary
 ACR-003: agent-context-routing — Root ADR records Markdown-driven Agent Flow and Engine-gated deterministic checkpoints without redefining behavior
-ACR-004: agent-context-routing — Static documentation regression preserves context routing, source boundaries, and ADR deferral
+ACR-004: agent-context-routing — Static documentation regression preserves Execution Brief routing, source boundaries, and ADR deferral
 
 # agent/agent-output-declaration
 AGO-001: agent-output-declaration — Work-unit result output_files declaration with role and source_url rules

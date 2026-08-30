@@ -1,0 +1,133 @@
+schema_version: verification-routing/v1
+change: reshape-agent-entry-as-execution-brief
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      No isolated in-process JavaScript contract is added; the change rewrites
+      Agent-facing Markdown routes and the documentation regressions that lock
+      them.
+  integration:
+    status: selected
+    rationale: >-
+      ACR process, GCO synchronized-block location, and preserved entry-safety
+      phrases are cross-file deterministic Markdown contracts under
+      tests/integration/md/ plus the existing harness entry-route integration
+      test.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No Gate, queue, work-unit, or lifecycle chain is executed.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The change does not claim real Agent behavior; ACR-004 forbids inferring
+      that an Agent actually followed the Brief.
+claims:
+  - id: execution-brief-context-routing
+    statement: >-
+      ACR-002/ACR-004: root AGENTS.md opens with Execution Brief naming three
+      branches; Harness AGENTS.md opens with Execution Brief naming research
+      versus changing Harness behavior; both have checkable completions; root
+      has no Before Anything Else; Charter-then-context is required only on
+      the ownership branch; Harness shared-context stays non-entry; README
+      routes match; symlink, CONTEXT, and ADR assertions remain.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/agent-context-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: guidance-topology-synchronized-blocks
+    statement: >-
+      GCO-008: project-guidance-topology-contract locks the new synchronized
+      blocks (root Execution Brief; Harness 共享项目上下文) instead of Before
+      Anything Else, and still fails when the paired files drift or Charter
+      appears after CONTEXT where both coordinates are named.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/project-guidance-topology-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: research-entry-safety-phrases-preserved
+    statement: >-
+      RUE-006: dpt-research-entry-routing-contract still finds the locked
+      English root Deep Research Routing phrases and the locked Harness
+      research-branch phrases after the Brief rewrite.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/dpt-research-entry-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: continue-run-bundle-pointer-phrases-preserved
+    statement: >-
+      ACS-005/RUE-006: continue-run-bundle-contract still finds BUNDLE_ENTRY,
+      BUNDLE_MAP, unsupported_current_entry_contract, explicit/reachable, RUN.md,
+      start-research.md, and scan/bare-filename tokens across the four behavior
+      files.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/continue-run-bundle-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: root-runtime-coordinate-and-archive-wording
+    statement: >-
+      Root AGENTS.md still names current run bundle root, bare-path resolution
+      under that root, and the canonical _old_topics archive sentence required
+      by guidance-terminology-pointer-consistency.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/guidance-terminology-pointer-consistency.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: harness-entry-route-files-keep-pair-tokens
+    statement: >-
+      RUE-006/ACR-002: every file in the harness entry-route set still names
+      BUNDLE_ENTRY.md, BUNDLE_MAP.md, unsupported_current_entry_contract, and
+      current run bundle root.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/deep-research-harness-entry-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

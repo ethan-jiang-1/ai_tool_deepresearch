@@ -14,8 +14,8 @@ Before triggering `DEEP_RESEARCH_HARNESS/RUN.md`, complete the human preflight i
 
 ## Start Here
 
-- **⚠️ This is an agent engineering project, not a traditional program.** For every substantive task, read `openspec/constitution/project-charter.md` first, especially when direction or layer ownership is unclear.
-- Then read [`CONTEXT.md`](CONTEXT.md) to align terminology and ownership boundaries. It is a non-authoritative glossary; normal instruction discovery and task-specific authoritative sources still apply.
+- Agent 过程：打开 [`AGENTS.md`](AGENTS.md) 的 `## 0. Execution Brief`，按本轮用户话只走一行。
+- 下一步取决于所有权 / 架构词汇时（改行为 / 新契约 / 动框架，或术语打架）：先读 `openspec/constitution/project-charter.md`，再读 [`CONTEXT.md`](CONTEXT.md)。`CONTEXT.md` 是 non-authoritative glossary；normal instruction-discovery behavior 与 task-specific authoritative sources 仍决定工作。跑研究或执行已有 phase / `tasks.md` / CLI `next` 时，不要先 Charter-then-context。
 - For a durable architecture rationale, consult [`docs/adr/`](docs/adr/) on demand. It is not another mandatory pre-task read.
 - Start from the repository root and choose the top-level surface relevant to the task. Do not pre-read every root document or recursively scan directories; use the Coding Agent's normal instruction-discovery behavior and the task context.
 - 语言约定（全仓库控制面）：精确 token/命令/枚举/文件坐标用英文，推理与边界说明用中文，同一控制面内不混用两套主语言。新写的推理正文用中文；已有英文控制面逐步归一，不强行一次全改。

@@ -2,26 +2,18 @@
 
 Coding-agent notes for this repo. Keep this file short; detailed rules live in OpenSpec.
 
-> 新 Agent onboarding 基线：`openspec/guidance/models/invariants-brief.md`（不变量简报，非权威、每条可机器验证或指向唯一真相源；其余指引 lazy-load）。
+## 0. Execution Brief
 
-## Project
+拿到用户这一轮话，只走一行。打开写出的那个文件；打开了，这步就完成。
 
-Deep Research Tool rewrite: an agentic framework for evidence-backed, multi-wave, gated research reports.
+| 这一轮是 | 打开 | 完成 | 此刻不要 |
+|---|---|---|---|
+| 研究 / 续跑 / 报告 | 用户给了可达 bundle（目录或其中的文件）→ `DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md` 的 **Entry Selection (canonical)**。没给 → `DEEP_RESEARCH_HARNESS/RUN.md` | 该文件已在上下文 | 搜、`research` / `deep-research`、WebFetch、手工综合 evidence |
+| 改行为 / 新契约 / 动框架 | `openspec/constitution/project-charter.md`，再打开该能力的 owner spec | change 已在，或 spec 已打开 | apply 前改 `DEEP_RESEARCH_HARNESS/` |
+| 已有 phase / `tasks.md` / CLI `next` | 反馈指名的那一页 | 执行了那一个下一步 | 回头重读章程 |
 
-Core split: the LLM Agent searches, reads, writes evidence, and synthesizes. The JavaScript Engine enforces schemas, gates, state transitions, receipts, and checks.
-
-## Before Anything Else
-
-**This is not a traditional program.** Read `openspec/constitution/project-charter.md` — it explains the project's nature, principles, and why mock/make-believe testing has no place here.
-
-Use the OpenSpec guidance topology when the right direction, layer boundary, or experiment path is unclear. Start with `openspec/constitution/project-charter.md`.
-
-For every substantive repository task, after the required Project Charter read,
-read root `CONTEXT.md` to align terminology and ownership boundaries.
-`CONTEXT.md` is a non-authoritative glossary: normal instruction-discovery
-behavior and task-specific authoritative sources still decide the relevant work.
-Read `docs/adr/` only when a task needs a durable architecture rationale; it is
-on-demand, not another mandatory pre-task read.
+术语打架：打开根 `CONTEXT.md` 对应行，不要通读。下一步取决于所有权 / 架构词汇时，先 Charter 再 `CONTEXT.md`。
+不变量按需：`openspec/guidance/models/invariants-brief.md`（非权威、每条可机器验证或指向唯一真相源；其余指引 lazy-load）。
 
 ## Deep Research Routing
 

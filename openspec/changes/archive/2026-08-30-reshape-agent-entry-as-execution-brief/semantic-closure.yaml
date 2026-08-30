@@ -1,0 +1,8 @@
+schema_version: semantic-closure/v1
+change: reshape-agent-entry-as-execution-brief
+status: not_applicable
+reason: >-
+  本 change 只改 Agent-facing 入口散文与 ACR-002/004 的预读过程，不改变任何
+  cataloged semantic fact family 覆盖的确定性事实：不改 Engine、CLI、gate、
+  schema、Submit、handoff 或 Final-admission 行为，也不引入新的运行时
+  resolver 或 verdict consumer。

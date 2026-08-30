@@ -130,7 +130,7 @@ describe('project guidance topology contract', () => {
   });
 
   it('keeps paired entry pre-reads synchronized and Charter before Context', () => {
-    const rootBlocks = ['AGENTS.md', 'CLAUDE.md'].map((path) => section(path, 'Before Anything Else'));
+    const rootBlocks = ['AGENTS.md', 'CLAUDE.md'].map((path) => section(path, '0. Execution Brief'));
     assert.equal(rootBlocks[0], rootBlocks[1], 'root adapter pre-read block drift: repair AGENTS.md and CLAUDE.md together');
     for (const source of rootBlocks) assertOrdered(source, 'root adapter pre-read', [CHARTER, 'CONTEXT.md']);
 
