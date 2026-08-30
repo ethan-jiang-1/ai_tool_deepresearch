@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-28 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-30 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,6 +17,7 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
+| `spec-semantic-drift-remediation` | 治理机器锁不住的语义漂移集中修复：DEW/AGQ req 索引失准、`deadline_at` 双口径、post-final 四表面孤本规则与 exit-code 裂缝、gate 人肉同步面。以 3 个有界 OpenSpec change 落地（C1 doc-only → C2 post-final 对齐 → C3 派生式 gate audit 扩展）；批三结构重构与元治理显式排除。 | active（C1 已归档 2026-08-30；C2/C3 ready to propose） |
 | `slow-test-suite-audit-and-remediation` | 串行全套 3028/3028 用时 822.455s 的慢测审计：完整列出 43 个 >3s execution（合计 357.6s），以不并发、不可排除 active proof 的前提探索 durable serial `<300s`；先完成义务、成本、基线复用与暂缓资格的 scope discovery，之后才决定是否提出 OpenSpec Change。 | closed 2026-08-22（WS1-6 + WS7 part 1 已归档，其余因收益不大延期）→ _done/_closed_plans/ |
 | `hitl1-bounded-clarification-alignment` | 在既有 HITL1 内加入可选、有限的主动反问与对齐快照：保留“你先研究”的自主出口，不新增 checkpoint、状态机或语义 Gate。 | active（设计验证待开始） |
 | `semantic-fact-closure-openspec-governance` | 防止 Engine 同一确定性事实被多处各自解释：建立可增长的事实家族目录、每 change 的 closure record、OpenSpec apply/archive checker 闭环；CI 当前明确不在范围内。 | active（共同理解完成，ready to propose Change A） |
