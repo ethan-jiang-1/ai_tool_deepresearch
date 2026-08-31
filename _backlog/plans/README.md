@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-31（`dsh-harness-idea-transfer-roadmap` 判定有误，已删除；其吸收的处置决策回到 `control-surface-drift-density-and-module-boundaries`，该文件恢复为活跃 plan。此前活跃列表曾清空：spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079）） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-31（`control-surface-drift-density-and-module-boundaries` 已完成关闭。此前活跃列表曾清空：spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079）） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,7 +17,7 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `control-surface-drift-density-and-module-boundaries` | 五 finding 按处置表执行：C1 gate 链序 pointer 化 + 防再发 guard（1 个 change）、C2 散文墙结构化（1 个 change，C1 guard 合入后执行）、C3 measure-first 测量报告（非 change）后每刀独立 change（候选 3 刀）、C4 直接 housekeeping（无 change）、C5 accepted 不动。执行顺序 C4 → C1 → C2 → C3。 | active |
+| *（当前无活跃 plan）* | | |
 
 ### 参照资料（非 plan，供后续 change 引用）
 
@@ -25,6 +25,12 @@
 - `machine-checks-catalog.md` 与 `midrun-reading-burden-audit.md` 已随 `midrun-burden-reduction-and-residual-drift` plan 归档至 `../_done/_closed_plans/`，C3 触发时取用。
 
 ---
+
+## 最近关闭 (2026-08-31)
+
+| Plan | 关闭依据 |
+|------|----------|
+| `control-surface-drift-density-and-module-boundaries` | C1 `pointerize-gate-chain-prose-add-guard`（gate chain prose pointer 化 + 防再发 guard）、C2 `restructure-control-surface-prose-walls`（七段散文墙表格化/原子化 + owner 指针）、C4 直接 housekeeping、C3 测量报告→ `extract-topic-schema-projection`（canonical-topic-state 抽 topic-schema-projection）；C5 accepted 不动。全量 npm test 各 change 2877/2874/2874 pass 0 fail，finalizer 19/19 全绿。 |
 
 ## 最近关闭 (2026-08-17)
 

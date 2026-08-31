@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-08-30（含补登记对账节） | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-08-31（含补登记对账节） | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -134,4 +134,6 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 
 | CLS-079 | 2026-08-31 | spec-semantic-drift-remediation.md | 治理机器锁不住的语义漂移集中修复：三个有界 OpenSpec change 全部归档（C1 req 身份完整化 7f5c164d2、C2 post-final 面收敛 a6c92ffa4、C3 派生 gate 审计扩展），finalizer 均 18/18；修正深挖报告误判两处（dig-list 非孤本、deadline_at 非冲突）；发现 list-doc-locks 动态路径盲点两例并按 closeout 规则修锁 |
 
-**Next available plan ID: CLS-080**
+| CLS-080 | 2026-08-31 | control-surface-drift-density-and-module-boundaries.md | 五 finding 全部处置：C1 gate 链序 pointer 化 + 防再发 guard（`pointerize-gate-chain-prose-add-guard`）、C2 控制面散文墙结构化（`restructure-control-surface-prose-walls`）、C3 测量报告→`extract-topic-schema-projection`、C4 直接 housekeeping、C5 accepted 不动。全量 npm test 各 change 2877/2874/2874 pass 0 fail，finalizer 19/19 全绿。 |
+
+**Next available plan ID: CLS-081**
