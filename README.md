@@ -42,7 +42,7 @@ Do not list, scan, or read these paths as task context unless the user explicitl
 - `.env/`
 - `_backlog/`
 - `_temp/`
-- `.exp-bundles/`, including lowercase `dpt_rb_*/` run-bundle directories
+- `.exp-bundles/`, and any lowercase `dpt_rb_*/` or `dpt_disp_*/` run-bundle directory anywhere in the repository (run bundles are runtime state, not task context)
 
 ## Test Layering
 

@@ -1,0 +1,62 @@
+schema_version: verification-routing/v1
+change: align-reading-scope-and-doc-locks-preflight
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      无 unit-scope 资产：两处落点是 guidance 措辞与 YAML 指令行，其锁面
+      （knowledge-surfaces、change-feedback-finalizer）均为真实树集成断言。
+  integration:
+    status: selected
+    rationale: >-
+      三处编辑落在 knowledge-surfaces 锁清单成员（AGENTS.md/README.md/
+      config.yaml）与 change-feedback-finalizer 的 guidance 断言面上，
+      需真实树断言仍绿证明纯增量兼容。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      无 lifecycle/gate/recovery 行为变化：不驱动任何 bundle 链，无
+      workflow-scale 链路可声明。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称任何真实 Agent 行为变化；两处落点均为给 Agent 的操作指引文本，
+      不是 Agent Flow 交付物。
+claims:
+  - id: reading-scope-wording-surface-locks-green
+    statement: >-
+      AGENTS.md 与 README.md 的 Do-Not-Read 行改写后，knowledge-surfaces
+      断言保持绿：两文件仍指向 verification-routing 且四个 canonical 测试
+      分类词在场；改写为原行原位替换，不触碰指针行与硬规则行
+      （AGENTS/CLAUDE 硬规则行一致性断言不受影响）。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/verification-routing-knowledge-surfaces.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: apply-guidance-addition-finalizer-locks-green
+    statement: >-
+      config.yaml operations.apply.guidance 追加 doc-locks preflight 行后，
+      change-feedback-finalizer 套件保持绿：既有按前缀查找与 includes 片段
+      断言（change-feedback-loop/apply、requirement-reservation/apply、
+      semantic-fact-closure/apply）兼容新增行；openspec CLI 仍能解析
+      config.yaml 并在 instructions apply 中返回全部既有条目。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/change-feedback-finalizer.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

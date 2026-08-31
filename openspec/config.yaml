@@ -85,6 +85,12 @@ operations:
         semantic-closure check stops Apply at the reported repair coordinate and the same rerun
         command; it has no missing-command fallback. Passing structure does not prove semantic
         completeness or grant archive permission.
+      - >-
+        doc-locks-preflight/apply: 若本 change 修改任何 governed document
+        （entry docs、COMMANDS.md、specs 等），在首次 target edit 前运行
+        node scripts/list-doc-locks.mjs <repo-relative-doc-path> 盘点受影响
+        锁，受影响断言在同一 change 内更新。本 guidance 不是审查完成或归档
+        许可。
   archive:
     guidance:
       - >-

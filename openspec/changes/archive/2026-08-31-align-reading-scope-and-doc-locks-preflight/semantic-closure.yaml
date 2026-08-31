@@ -1,0 +1,12 @@
+schema_version: semantic-closure/v1
+change: align-reading-scope-and-doc-locks-preflight
+status: not_applicable
+reason: >-
+  本 change 全部产出为 agent-facing guidance 措辞改写（根 AGENTS.md/README.md 的
+  Do-Not-Read 行）与 lifecycle 指令行追加（openspec/config.yaml operations.apply.guidance
+  一条 doc-locks preflight 行）。semantic-fact-families.yaml 的 22 个 deterministic fact
+  family（research/work-unit/wave/final/bundle/cli/artifact/lifecycle 各族）没有一个的
+  结论面被触碰：其中 bundle.current-entry-contract 关心的是 selected bundle root 能否
+  进入 current Harness operation，与本 change 的仓库阅读范围措辞分属不同问题；不新增/
+  修改/移除任何 accepted requirement 的 observable behavior，不改变任何 Engine/CLI
+  裁决输出，不引入新的具名 state/projection/status/concept/command。
