@@ -17,7 +17,7 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| *（当前无活跃 plan）* | | |
+| `drift-resync-locks-hygiene-and-work-unit-deepening` | 两轮 coding-agent 评审 + 八份并行只读深挖（约 50 个机检点，46 匹配）：确认系统性漂移未发生、迭代残渣真实可定位。四 change 序列——C1 `repair-residual-spec-drift`（14 项 spec 侧残渣 re-sync，doc-only）、C2 `lock-closed-vocabularies-and-clear-residue`（disposition 五值锁 + `check-spec-enum-restatements.mjs` 新 checker + 死代码清除 + `preflight_candidate_projection` 补齐 + `actor_guidance` 改名）、C3 `hygiene-pointer-rewrite-and-tableization`（D 类指针化 + 三处巨型场景块表格化 + registry 账本手术）、C4 `deepen-work-unit-submit-seams`（T1 S1-S12 不变量测试先行 → 四缝切分 submit.mjs 2447→~1030 行 + transaction 三层拆分，外部接口零变化）。已裁定 6 个决策点，5 个 open questions 留 propose 期。**§9 追踪机制已启用**：Baseline 快照（2026-08-31，13 项机器指标 + 12 探针 + 30 项漂移台账）已钉死；每 change archive 后复测，关闭时出终局 Δ 统计。 | 计划就绪，待 C1 `/opsx:propose` |
 
 ### 参照资料（非 plan，供后续 change 引用）
 
