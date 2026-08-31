@@ -1,0 +1,81 @@
+schema_version: verification-routing/v1
+change: harden-test-lane-signal-hygiene
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      test:clean 的静态契约（script 存在、find 目标限定 tests 子树与 .test*
+      前缀、-prune -exec rm -rf 形态、.gitignore tests/**/.test* 口径锚点）
+      是确定性契约，由 tests/engine/ 下 node:test 锁定，防 package.json 与
+      .gitignore 两处口径漂移（design Risks 第 3 条的机械守卫）。
+  integration:
+    status: selected
+    rationale: >-
+      triage 文档落在 knowledge-surfaces 锁清单成员文件上，需真实树断言
+      仍绿；check-all.test.mjs 是 production governance owned-surface 的
+      spawn 集成测试，其修改需孤立复跑证明 RET-007 断言语义与三用例覆盖
+      完整保留。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      无 lifecycle/gate/recovery 行为变化：不驱动任何 bundle 链，无
+      workflow-scale 链路可声明。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称任何真实 Agent 行为变化；triage 规则是给 Agent 的操作指引文档，
+      不是 Agent Flow 交付物。
+claims:
+  - id: triage-rule-doc-surface-locks-green
+    statement: >-
+      tests/README.md 新增「满载失败 triage」小节后，knowledge-surfaces
+      指针断言（该文件必须指向 verification-routing）与既有 doc-lock 契约
+      全部保持绿；小节为纯增量，不改写任何既有行。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/verification-routing-knowledge-surfaces.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: check-all-deflake-assertions-preserved
+    statement: >-
+      check-all.test.mjs 按 design D2 修改后孤立运行 2/2 pass：合并后的
+      聚合+read-only 用例（遍历全部 check-*.mjs 输出行、不含自身、
+      changes-tree 快照比对，同一次 spawn 双重证明）、--change 转发
+      （fixture 建删）全部保留原语义；spawn 次数 3 → 2，spawnSync
+      timeout 提高至 300000，RET-007 锁定行为零弱化。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/check-all.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: test-clean-script-contract-locked
+    statement: >-
+      package.json 的 test:clean script 满足静态契约：目标限定 tests 子树、
+      仅匹配 .test* 前缀目录、采用 -prune -exec rm -rf 形态，且 .gitignore
+      含 tests/**/.test* 口径锚点行——两处口径由测试机械绑定。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/test-clean-script-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

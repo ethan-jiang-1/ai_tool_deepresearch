@@ -17,16 +17,18 @@ function run(args) {
   return spawnSync(process.execPath, [join(GOVERNANCE, 'check-all.mjs'), ...args], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
-    timeout: 120000,
+    timeout: 300000,
   });
 }
 
 describe('check-all aggregation entry (RET-007)', () => {
-  it('aggregates every current check-*.mjs except itself', () => {
+  it('aggregates every current check-*.mjs except itself, read-only over openspec/changes', () => {
     const scripts = readdirSync(GOVERNANCE)
       .filter((n) => n.startsWith('check-') && n.endsWith('.mjs') && n !== 'check-all.mjs')
       .sort();
+    const before = snapshot(join(REPO_ROOT, 'openspec', 'changes'));
     const result = run([]);
+    const after = snapshot(join(REPO_ROOT, 'openspec', 'changes'));
     assert.equal(result.status, 0, `expected exit 0, got ${result.status}\n${result.stdout}\n${result.stderr}`);
     for (const script of scripts) {
       assert.ok(
@@ -35,6 +37,7 @@ describe('check-all aggregation entry (RET-007)', () => {
       );
     }
     assert.ok(!result.stdout.includes('check-all.mjs'), 'aggregation entry must not run itself');
+    assert.deepEqual(before, after, 'openspec/changes tree changed during check-all run');
   });
 
   it('forwards --change to the change-requiring checks', () => {
@@ -97,14 +100,6 @@ describe('check-all aggregation entry (RET-007)', () => {
       false,
       'disposable fixture change must be removed after the check',
     );
-  });
-
-  it('is strictly read-only: no archive transition side effects', () => {
-    const before = snapshot(join(REPO_ROOT, 'openspec', 'changes'));
-    const result = run([]);
-    const after = snapshot(join(REPO_ROOT, 'openspec', 'changes'));
-    assert.equal(result.status, 0);
-    assert.deepEqual(before, after, 'openspec/changes tree changed during check-all run');
   });
 });
 

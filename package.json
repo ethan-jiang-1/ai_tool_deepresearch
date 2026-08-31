@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "find tests/ -name '*.test.mjs' -not -path '*/.test-*' -print0 | xargs -0 node --test",
+    "test:clean": "find tests -type d -name '.test*' -prune -exec rm -rf {} +",
     "test:shard": "node scripts/test-shard.mjs",
     "test:quick": "find tests/schema tests/integration/md -name '*.test.mjs' -print0 | xargs -0 node --test",
     "governance:check": "node openspec/governance/check-all.mjs"

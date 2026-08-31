@@ -18,6 +18,7 @@ This directory owns all JS-led project tests: `unit`, `integration`, and `determ
   (wall ~= full parallel / n). See `scripts/test-shard.mjs`.
 - `npm run test:quick` runs a triage lane (schema + md text-lock suites, ~6s).
   It is a convenience, **not** a verification substitute for `npm test`.
+- `npm run test:clean` 删除 `tests/` 下 `.test*` 前缀的一次性产物目录（口径以 `.gitignore` 的 `tests/**/.test*` 段为唯一参照；不触碰 `tests/fixtures/` 与任何版本库文件）。
 - Use `node --test tests/path/to/file.test.mjs` or
   `node --test tests/path/to/dir` for focused checks (pass file paths, not
   bare directory arguments — `node --test <dir>` is not supported on all
@@ -34,6 +35,12 @@ output directories: `.test-tmp/`, `.test-bundles/`, `.test-chain-tmp/`) to
 Node's test runner.
 
 For this command-surface hardening work, `tests/engine/command-contract-docs.test.mjs` covers ACS-003/ACS-004/CLE-004, `tests/integration/cli/actual-gate-cli-exit-code-contract.test.mjs` proves actual gate CLI `0/1/2` behavior, and `tests/integration/cli/exit-code-convention.test.mjs` maintains the CLE-004 shipped-CLI exit-code inventory plus safe runtime samples.
+
+## Full-Suite Failure Triage
+
+- 现象：subprocess 密集的套件（如 `tests/integration/governance/check-all.test.mjs` 的 check-all 聚合——单次聚合要启动全部 governance checker）在满载并行下可能超过其内部 spawn timeout 而级联报红。2026-08-31 实测：受压环境一次全量运行 16 fail / 4 cancelled，干净复跑 1 fail，失败文件孤立复跑全绿。
+- 操作：对每个失败文件孤立复跑定性：`node --test tests/path/to/file.test.mjs`。
+- 定性：孤立通过 = 资源竞争伪影，不是回归——不要据此修改被锁定的行为或"修"不坏的代码；孤立仍红 = 真回归信号，按正常修复路径处理。
 
 ## Directory Map
 
