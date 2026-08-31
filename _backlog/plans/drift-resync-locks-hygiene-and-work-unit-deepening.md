@@ -1,7 +1,7 @@
 # Spec-Code 漂移重同步、词汇锁与卫生序列 + Work-Unit 深水区加深（drift-resync-locks-hygiene-and-work-unit-deepening）
 
 > 状态: **active** | 创建: 2026-08-31 | 来源: 两轮 Coding-Agent 视角评审 + 八份并行只读深挖（3 份漂移审计 + engine 切缝地图 + DEW 全量 29 条扫描 + 四决策点调查 + 形状 B 结构分析），全部发现带 file:line 双侧证据
-> **追踪**: §9 — Baseline 快照已钉死（2026-08-31）；每个 change archive 后用 `_backlog/plans/drift-resync-metrics-snapshot.mjs` 复测；计划关闭时出终局 Δ 统计表并按 §9.4 裁定"显著改善"标准。
+> **追踪**: §10 — Baseline 快照已钉死（2026-08-31）；每个 change archive 后用 `_backlog/plans/drift-resync-metrics-snapshot.mjs` 复测；计划关闭时出终局 Δ 统计表并按 §10.4 裁定"显著改善"标准。
 > 定位: `_backlog` 上游分析与决策记录，不是运行时真相；落地一律走 OpenSpec change 生命周期（`/opsx:propose` → `/opsx:explore` → `/opsx:apply` → `/opsx:archive`）。
 > 前车之鉴: 本计划是 `spec-semantic-drift-remediation`（CLS-079，2026-08-31 关闭）的**后续残留 + 新证实**批次；其 C1/C2/C3 已归档项（req 索引、重复 scenario、drain 判据注记、post-final exit-code、rule.check 派生审计、降级配置去重）**不在本计划范围**。其两条姿态约束直接约束本计划：① GSK-011（派生证据、不建永久静态目录）；② "元层面治理（新专有名词/enum 值硬门槛）——下一次词表消歧类 change 出现时再立项"，本计划即为该次。
 
@@ -203,17 +203,29 @@ semantic-closure 预期：`not_applicable` 或 `affected`（按触碰 family 定
 
 ---
 
-## 9. 追踪与快照（Tracking）
+## 9. 执行协议（每个 change 的推进节奏，硬性）
+
+对 C1–C4 中**任何一个** change，一律走完整节奏、中途不停顿等确认：
+
+1. `/opsx:propose` 立项（spec delta + design + tasks + verification plan）。§7 的 open questions **必须在本步/explore 期解决**——这是唯一的合法停靠点，进 apply 前不允许遗留未决决策。
+2. **propose 之后立即跟上 `/polish-openspec-change`**，按其循环打磨（≥2 passes：全变更一致性 + 风险主导复核），所有 readiness 由证据挣得而非口头声称；期间同批修掉所有机器可解缺陷，未决的产品决策回抛用户。
+3. 达到 **`ready for apply`**（`openspec validate --strict` 绿、`git diff --check` 干净、applyRequires 全齐、最后一轮 polish 零新发现）后，**不停下**——直接继续 `/opsx:apply` 按 tasks 执行、`/opsx:archive` 走 governed 收口（`finalize-change-archive.mjs` 为唯一归档转场），一杆到底。
+4. 该 change archive 后立即跑 `_backlog/plans/drift-resync-metrics-snapshot.mjs` 追加快照（Post-Cn），再进入下一个 change 的 propose。
+5. 例外（合法停下点）：① §7 open questions 需要用户裁决；② apply 期出现 spec 未预见的语义冲突（回 explore，不允许 chat-only 规则）；③ 验证失败且根因在 change 之外（外部 blocker，如实报告）。
+
+---
+
+## 10. 追踪与快照（Tracking）
 
 **目的**：回答"change 堆来堆去，spec 是越来越复杂，还是真的在改善"。所有指标机器口径、可重复测量；每个 change archive 后测一次，计划关闭时出终局 Δ 统计表。
 
-### 9.1 测量方法
+### 10.1 测量方法
 
 - 工具：`_backlog/plans/drift-resync-metrics-snapshot.mjs`（纯 Node 内置、只读、无依赖、非 authority 面；随 plan 存放）。
 - 运行：`node _backlog/plans/drift-resync-metrics-snapshot.mjs`，输出粘贴为本节新快照（标题注明日期与触发点：`Baseline` / `Post-C1` / `Post-C2` / `Post-C3` / `Post-C4` / `Final`）。
 - 判读规则：① 同一脚本同一口径，行数波动 ±1% 以内视为持平；② **质量指标优先于体积指标**——行数不降不一定是坏消息（重写/对齐常常等长），漂移台账、词汇锁广度、死代码、场景墙才是"复杂度利息"的直接度量；③ 任何探针从 PRESENT/OPEN 翻转必须能在对应 change 的 archive diff 里指认。
 
-### 9.2 Baseline 快照（2026-08-31，计划启动时）
+### 10.2 Baseline 快照（2026-08-31，计划启动时）
 
 #### 度量快照（机器口径，重复运行可比）
 
@@ -290,7 +302,7 @@ semantic-closure 预期：`not_applicable` 或 `affected`（按触碰 family 定
 | C4: snapshot / late-retry / declaration-recovery 模块提取 | NOT-YET ×3 |
 | C4: transaction-primitives/projection 已分层 | NOT-YET |
 
-### 9.3 漂移台账（人工口径，与 §2 发现一一对应）
+### 10.3 漂移台账（人工口径，与 §2 发现一一对应）
 
 | 组 | 项数 | 明细 | Baseline 状态 | 归属 |
 |---|---|---|---|---|
@@ -300,7 +312,7 @@ semantic-closure 预期：`not_applicable` 或 `affected`（按触碰 family 定
 | D 类跨 spec 复述 | 10 | D1–D10 | 全部 Open（D2 已实际漂移、D9 示例串已分叉） | C3 |
 | 观察项/遗留 | 4 | CHI-004 决策表占位符、list-doc-locks 盲点、reference-target 迁移、CLI exit-code 无代码锁 | Open（非阻塞登记） | 独立 pending / 缓期 |
 
-### 9.4 终局统计表（计划关闭时填写，格式固定）
+### 10.4 终局统计表（计划关闭时填写，格式固定）
 
 | 指标 | Baseline | Final | Δ | 判读 |
 |---|---|---|---|---|
@@ -310,7 +322,7 @@ semantic-closure 预期：`not_applicable` 或 `affected`（按触碰 family 定
 | 词汇锁广度（z.enum / 冻结数组） | 59 / 57 | — | — | 目标 +2（disposition、candidate 提升）且 checker 上线 |
 | 治理 check 数 | 16 | — | — | 目标 17（+`check-spec-enum-restatements`，全树 0 FAIL 0 误报） |
 | 场景墙数（≥20 scen） | 12 | — | — | 目标 ≤9（三处表格化各消一墙） |
-| Top-10 spec 合计行数 | 11433 | — | — | 预期下降（指针化）；不降不判失败（见 9.1 判读②） |
+| Top-10 spec 合计行数 | 11433 | — | — | 预期下降（指针化）；不降不判失败（见 10.1 判读②） |
 | spec 总行数 | 30958 | — | — | 同上 |
 | 最大 engine 文件 | 2448 | — | — | 目标 ≤1030（T6 后 ≤550；注：canonical-topic-state.mjs 1880 将成为新最大值，范围外如实报告） |
 | work-unit-* 模块数 | 22 | — | — | 预期 +4~5（文件数上升是刻意的：max-size 下降、层内无环） |
