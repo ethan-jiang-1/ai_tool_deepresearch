@@ -136,4 +136,6 @@ Closure boundary for CLS-007..010: this change did not implement runtime exit-he
 
 | CLS-080 | 2026-08-31 | control-surface-drift-density-and-module-boundaries.md | 五 finding 全部处置：C1 gate 链序 pointer 化 + 防再发 guard（`pointerize-gate-chain-prose-add-guard`）、C2 控制面散文墙结构化（`restructure-control-surface-prose-walls`）、C3 测量报告→`extract-topic-schema-projection`、C4 直接 housekeeping、C5 accepted 不动。全量 npm test 各 change 2877/2874/2874 pass 0 fail，finalizer 19/19 全绿。 |
 
-**Next available plan ID: CLS-081**
+| CLS-081 | 2026-08-31 | test-signal-and-guidance-wording-hygiene.md | 两个有界 OpenSpec change 全部归档：C1 `2026-08-31-harden-test-lane-signal-hygiene`（tests/README 满载失败 triage 三要素规则、check-all aggregation it 合并 3→2 + timeout 300s（RET-007 断言零弱化）、`npm run test:clean` + 静态口径契约锁）；C2 `2026-08-31-align-reading-scope-and-doc-locks-preflight`（根 AGENTS/README Do-Not-Read 对齐任意位置小写 run-bundle 目录语义、config apply-guidance 追加 `doc-locks-preflight/apply` 行）。全量 npm test 2882/2882 pass 0 fail，finalizer 均 19/19 全绿。来源：coding-agent 全仓可读性评估会话用户确认摩擦点 #6/#5b/#5a/#4-便宜变体；#3 engine 提取与 #4 checker 版为明确非目标。 |
+
+**Next available plan ID: CLS-082**

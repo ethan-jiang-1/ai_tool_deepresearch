@@ -1,6 +1,6 @@
 # Plan: test-signal-and-guidance-wording-hygiene
 
-> 状态: active | 创建: 2026-08-31
+> 状态: closed（CLS-081，2026-08-31 两个 change 均归档） | 创建: 2026-08-31
 >
 > 需求来源: 2026-08-31 coding-agent 全仓可读性评估会话（用户确认的摩擦点分级）。C1 对应摩擦点 #6（测试信号负载敏感）+ #5b（测试产物噪音）；C2 对应 #5a（Do-Not-Read 措辞张力）+ #4 的便宜变体（doc-locks preflight 工具化）。盘点结论（用户确认）：**只做两个 change，不合一个大 change，也不拆成五个**。
 
@@ -17,7 +17,9 @@
 
 ---
 
-## C1: test-lane signal hygiene（OpenSpec change 1）
+## C1: test-lane signal hygiene（OpenSpec change 1）—— ✅ 已完成（2026-08-31 归档）
+
+> 交付：`2026-08-31-harden-test-lane-signal-hygiene`（finalizer 19/19 全绿）。落地：tests/README「Full-Suite Failure Triage」三要素小节；check-all.test.mjs it 合并（3→2，spawn 3→2，timeout 300s，RET-007 断言零弱化）；`npm run test:clean` + `tests/engine/test-clean-script-contract.test.mjs` 口径契约锁。全量 2882/2882 pass 0 fail。
 
 主题：让全量测试信号在受限/满载环境下可信且便宜。全部落 `tests/` + `package.json`，无 accepted behavior 变更。
 
@@ -43,7 +45,9 @@
 
 ---
 
-## C2: agent-facing guidance wording（OpenSpec change 2）
+## C2: agent-facing guidance wording（OpenSpec change 2）—— ✅ 已完成（2026-08-31 归档）
+
+> 交付：`2026-08-31-align-reading-scope-and-doc-locks-preflight`（finalizer 19/19 全绿）。落地：根 `AGENTS.md`/`README.md` Do-Not-Read 行改为 `.exp-bundles/` + 任意位置小写 run-bundle 目录（"run bundles are runtime state, not task context"，豁免条款原文保留）；`config.yaml` `operations.apply.guidance` 追加 `doc-locks-preflight/apply` 行。全量 2882/2882 pass 0 fail。polish 期修正一处措辞辨析（弃 "never task context" 以避免与 intro 豁免字面冲突）。
 
 主题：对齐 agent-facing 指令面措辞。共同点：均为 guidance 措辞、均碰 doc-locked 文件、均无行为契约变更。
 

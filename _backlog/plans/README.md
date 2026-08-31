@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-31（新增 `test-signal-and-guidance-wording-hygiene`。`control-surface-drift-density-and-module-boundaries` 已完成关闭。此前活跃列表曾清空：spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079）） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-31（`test-signal-and-guidance-wording-hygiene` 完成关闭（CLS-081）。此前：`control-surface-drift-density-and-module-boundaries` 已完成关闭；spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079）） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,7 +17,7 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `test-signal-and-guidance-wording-hygiene` | C1 test-lane signal hygiene（tests/README triage 规则 + check-all aggregation deflake + `test:clean`）；C2 agent-facing guidance wording（Do-Not-Read 措辞对齐 + config apply-guidance 加 `list-doc-locks` preflight 行）。各一个 OpenSpec change；#3 engine 提取与 #4 checker 版为明确非目标。 | C1/C2 待 propose |
+| *（当前无活跃 plan）* | | |
 
 ### 参照资料（非 plan，供后续 change 引用）
 
@@ -25,6 +25,12 @@
 - `machine-checks-catalog.md` 与 `midrun-reading-burden-audit.md` 已随 `midrun-burden-reduction-and-residual-drift` plan 归档至 `../_done/_closed_plans/`，C3 触发时取用。
 
 ---
+
+## 最近关闭 (2026-08-31)
+
+| Plan | 关闭依据 |
+|------|----------|
+| `test-signal-and-guidance-wording-hygiene` | CLS-081：两个有界 OpenSpec change 全部归档——C1 `2026-08-31-harden-test-lane-signal-hygiene`（tests/README triage 规则 + check-all aggregation deflake + `test:clean` 口径契约锁）、C2 `2026-08-31-align-reading-scope-and-doc-locks-preflight`（Do-Not-Read 任意位置 run-bundle 语义对齐 + `doc-locks-preflight/apply` guidance 行）。全量 npm test 2882/2882 pass 0 fail，finalizer 均 19/19 全绿。 |
 
 ## 最近关闭 (2026-08-31)
 
