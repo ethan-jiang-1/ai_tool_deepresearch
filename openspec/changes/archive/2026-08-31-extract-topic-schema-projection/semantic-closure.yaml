@@ -1,0 +1,8 @@
+schema_version: semantic-closure/v1
+change: extract-topic-schema-projection
+status: not_applicable
+reason: >-
+  本 change 只移动 canonical-topic-state.mjs 中的 10 个纯函数导出到新文件
+  topic-schema-projection.mjs，通过 re-export 保持 importer 接口不变，不改
+  任何行为或运行时事实。不消费、不建立、不改变任何 cataloged deterministic
+  semantic fact family，也无 verdict consumer 关系。

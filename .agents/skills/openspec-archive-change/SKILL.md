@@ -7,11 +7,8 @@ compatibility: Requires openspec CLI.
 metadata:
   author: openspec
   version: "1.0"
-  generatedBy: "1.9.0"
+  generatedBy: "1.11.0"
 ---
-
-> 分工：仓库另有 `source-command-opsx-archive`（`/opsx:archive`）薄封装变体，二者指向同一
-> OpenSpec lifecycle；以本文件为完整工作流，不合并、不互相覆盖。
 
 Archive a completed change in the experimental workflow.
 

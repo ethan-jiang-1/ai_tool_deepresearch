@@ -85,14 +85,42 @@
 - `engine/helpers/canonical-topic-state.mjs`：2093 行、85 函数、9 个框架内 importer（gates ×3：`check-gate-seed-topics-ready/-hitl1-recorded/-rerun-ready`、`cli/operate-topic-state`、`cli/check-reentry`、`cli/operate-queue`、`engine/queue-manager-lifecycle`、`engine/helpers/queue-demand-admission`、`engine/helpers/return-map`）+ 大量测试 importer。2026-08-31 复核修正：原记 10+ 并误列 `handoff-helpers`/`post-final-recovery`（二者不 import 本模块），漏计 `helpers/return-map`。内部混着三类职责：schema-introspection/示例生成（`topicSchema*` 簇约 300+ 行）、projection slot 渲染、四操作（inspect/schema/apply/recover）逻辑。
 - 有利条件：work-unit 家族已有成熟拆分先例（`-core/-lifecycle/-supersession/-validation/-inspect/-timeout-preflight/-submit-integrity/-attempt-disposition`），抽取模式不需发明。
 
-### 方案
+### 测量报告（2026-08-31 函数级聚类分析）
 
-1. **测量步（无行为改动）**：对两文件做函数级聚类（调用关系 + 共享常量 + `@impl` 标签分组），产出边界建议报告，放本 plan 附录或 `openspec/changes/<change>/design.md`。
-2. **抽取步（每项一个有界 change）**：候选边界（按测量步确认后定）：
-   - `work-unit-submit.mjs` → `work-unit-submit-durability.mjs`（snapshot/restore/postcondition 簇）与 `work-unit-declaration-recovery.mjs`（declaration recovery 簇）；submit 主路径留在原文件。
-   - `canonical-topic-state.mjs` → `topic-schema-projection.mjs`（`topicSchema*` introspection/示例簇，纯函数、叶子依赖，最安全首刀）。
-3. **零 importer 变更纪律**：原模块 re-export 被抽取的 public API，现有 importer（`work-unit-submit` 3 个、`canonical-topic-state` 9 个）与测试的 import path 不动；`@impl` 注释随函数迁移。
-4. **建议阈值**：抽取后单文件 < 800 行；行为不变以「测试零改动（或仅 import path 无关化）+ 全量 `npm test` 0 fail」证明，不新增行为测试。
+#### work-unit-submit.mjs — 不推荐拆分，推荐内部重排
+
+6 个导出函数 + 约 30 个内部辅助函数/常量。天然子域：
+
+| 子域 | 行范围 | 导出函数 | 依赖关系 |
+|---|---|---|---|
+| Submit 主路径 | 1786–2078（292 行） | `drySubmitWorkUnit`、`submitWorkUnit` | 依赖 snapshot/rollback 辅助、`buildLedgerRow` |
+| Late-submit 恢复 | 1829–2447（含内部函数 ~400 行） | `lateSubmitWorkUnit` | 与 submit 主路径共享 `buildLedgerRow`、`verifySubmit*`、snapshot 辅助 |
+| Declaration recovery | 2079–2196（117 行） | `recoverWorkUnitDeclaration`、`inspectWorkUnitDeclarationRecovery` | 依赖 `buildLedgerRow`、`formalSubmitRerun` |
+| Snapshot/rollback 持久化 | 93–189（96 行，内部函数） | 无导出 | 被 submit/late-submit/recovery 三方共享 |
+| 常量和工具 | 79–80 + 490–927（~440 行，含 `reasonCodeForSubmit`） | `reasonCodeForSubmit` | 被所有子域引用 |
+
+**结论**：late-submit、declaration recovery、snapshot 辅助三者共享太多底层函数（`buildLedgerRow`、`verifySubmitDurablePostcondition`、`formalSubmitRerun`、`captureFileSnapshot`/`restoreFileSnapshot`），强行拆分会造成跨文件重复。建议**不做文件拆分**，做内部函数重排：用注释块 `// === Submit main path ===` / `// === Late-submit ===` / `// === Declaration recovery ===` / `// === Snapshot/rollback ===` 分组，import 图不变。
+
+#### canonical-topic-state.mjs — 推荐 1 刀拆分
+
+15 个导出函数，天然三类：
+
+| 职责簇 | 行范围 | 行数 | 导出函数 | 叶子依赖？ |
+|---|---|---|---|---|
+| **Projection slot 渲染** | 165–729 | ~564 | `projectionSlotForId`、`projectionSlotsForWave`、`projectionSlotHeadingMatches`、`locateSeedProjectionSlots`、`renderSeedProjectionCard`、`renderSeedProjectionSlot`、`renderSeedProjectionAppendix`、`splitSeedProjectionCard`（L1064–1496） | 纯函数，不依赖四操作区 |
+| **Schema-introspection/示例生成** | 730–1063 | ~333 | `describeTopicApplyPlanSchema`、`projectTopicApplyValidationErrors` | 只依赖 zod + yaml，不依赖四操作区 |
+| **四操作 (inspect/apply/recover)** | 1497–2093 | ~596 | `inspectSeedTopicsAuthoringAuthorization`、`evaluateCanonicalSeedBindings`、`inspectCanonicalTopicState`、`applyCanonicalTopicState`、`recoverCanonicalTopicState` | 依赖 projection 簇的 slot 定义 |
+
+**推荐**：第一刀 `topic-schema-projection.mjs`，把 projection 渲染（8 个函数，含 `splitSeedProjectionCard`） + schema 自省（2 个函数）抽到新文件，合计约 900 行。原文件从 2093 行降至 ~1200 行，新文件约 900 行。四操作区留在原文件，通过 re-export 引用被抽取的 projection 函数（零 importer 变更）。
+
+### 更新方案
+
+1. **测量步**（已完成，本报告即测量步产出）。
+2. **抽取步**（每项一个有界 change）：
+   - work-unit-submit.mjs：**不做文件拆分**，做内部函数重排——注释块分组 + 代码顺序优化（打开新 issue 标记为 `housekeeping:refactor`，不等同于 OpenSpec change，可在后续触碰该表面时顺手做）。
+   - canonical-topic-state.mjs → `topic-schema-projection.mjs`（projection 渲染 + schema 自省两簇，约 900 行，纯函数、叶子依赖、最安全首刀）。
+3. **零 importer 变更纪律**：原模块 re-export 被抽取的 public API，现有 9 个 importer 与测试的 import path 不动；`@impl` 注释随函数迁移。
+4. **建议阈值**：抽取后原文件 ~1200 行（未能达到 800 行，但这是诚实测量结果——四操作区本身有 ~600 行，且与 projection 的边界清晰，两次抽取会导致 importer 变更链复杂化）。
 
 ### 验收
 
@@ -137,5 +165,5 @@
 - [x] C4：`tests/suspended/` 移除 + `.gitignore` 去重（2026-08-31）
 - [x] C1：change propose → apply → archive（含 guard 红样本验证）（✓ 2026-08-31 `2026-08-31-pointerize-gate-chain-prose-add-guard`，finalizer 19/19 全绿）
 - [x] C2：change propose → apply → archive（八段结构化 + 行数预算验收）（✓ 2026-08-31 `2026-08-31-restructure-control-surface-prose-walls`，finalizer 19/19 全绿；行差 +39 按设计披露口径呈报，token 全保留 46/46）
-- [ ] C3：测量报告 → 每刀独立 change → archive
+- [x] C3：测量报告 → 每刀独立 change → archive（✓ 2026-08-31 `2026-08-31-extract-topic-schema-projection`，finalizer 19/19 全绿；work-unit-submit 经测量不拆，canonical-topic-state 2093→1880 行，新文件 topic-schema-projection.mjs ~470 行）
 - [ ] 全部完成后按流程关闭本 plan
