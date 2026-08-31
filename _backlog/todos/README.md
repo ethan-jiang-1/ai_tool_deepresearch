@@ -29,6 +29,7 @@
 | 2 | `todo-final-output-eval.md` | **低–中（需重述）** | 交付前 read-only diagnostic → HITL2 recommendation | 后续消费统一的问题闭环；不得 auto-rerun 或绕过 HITL2 |
 | 3 | `todo-hooks-deferral.md` | **延后 / parked** | workflow boundary hooks | 仅在现有 Gate/inspect/reentry 有真实直接缺口时重启 |
 | 4 | `todo-context-reground.md` | **parked** | head re-ground | recovery 已 DONE；仅在现有 reload 不足的真实 case 下重启 |
+| 5 | `todo-code-impl-ids-hidden-dir-skip.md` | **低** | RET-011 checker 跳过隐藏目录（`tests/.test-tmp` 残留噪音） | 归档 `2026-08-31-add-code-impl-registry-guard` 后观察所得；最小工具修正，无需 delta |
 
 ### 本轮已移出活跃
 

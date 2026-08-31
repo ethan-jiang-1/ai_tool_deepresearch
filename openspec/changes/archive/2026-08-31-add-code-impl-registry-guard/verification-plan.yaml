@@ -1,0 +1,130 @@
+schema_version: verification-routing/v1
+change: 2026-08-31-add-code-impl-registry-guard
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      checker 的 red/green fixture 裁决（unregistered token 失败并点名
+      file+token、BUG- 排除、deprecated 可解析、registry 缺失 fail-closed）、
+      真实树 green 基线、聚合入口发现断言，均为确定性契约，由
+      tests/governance/ 下 node:test 锁定（镜像 gate-chain-prose-guard
+      先例的类归属）。fixture 契约与真实树基线分属两个测试文件，使每个
+      asset path 的 route identity（execution_profile）保持一致。
+  integration:
+    status: not_applicable
+    rationale: >-
+      无 production CLI/subprocess owned-surface 边界变化：checker 是
+      governance 治理面工具，其测试经 tmpdir fixture + spawn 断言进程退出码
+      与 stderr/stdout 形状，不触碰任何框架 owned surface。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      无 lifecycle/gate/recovery 行为变化：不驱动任何 bundle 链，无
+      workflow-scale 链路可声明。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称任何真实 Agent 行为变化；Agent 修复语义（改 tag 或注册 ID）是
+      既有 lifecycle 路径，非本 change 交付物。
+claims:
+  - id: code-impl-guard-real-tree-clean
+    statement: >-
+      对当前真实仓库树运行 check-code-impl-ids.mjs 退出码 0，输出含扫描
+      文件/行/token 统计；这同时证明 propose 期测量基线（唯一未解析 token
+      为 BUG-018 且被命名空间排除）在 apply 后仍成立。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/code-impl-ids-guard.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: code-impl-guard-unregistered-token-fails-naming-file-and-token
+    statement: >-
+      fixture 根下某 .mjs 的 @impl 行引用 registry 中不存在的 ID 时，checker
+      退出码 1，stderr 逐条含 repo 相对路径、该 token 与二选一修复方向
+      （register via lifecycle or correct the @impl tag）。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/code-impl-ids-fixture-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: code-impl-guard-bug-namespace-ignored
+    statement: >-
+      @impl 行同时携带已注册 ID 与 BUG-<digits> token 时，checker 退出码 0，
+      仅校验 requirement-ID token（镜像 check-project-reqs.mjs BUG_ID_RE
+      既有排除）。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/code-impl-ids-fixture-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: code-impl-guard-deprecated-remains-resolvable
+    statement: >-
+      registry 中标记 [DEPRECATED] 的 ID 被历史 @impl 标注引用时，checker
+      退出码 0（可解析但不授予 live authority，镜像 RET-010 deprecated
+      posture）。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/code-impl-ids-fixture-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: code-impl-guard-registry-missing-fails-closed
+    statement: >-
+      fixture 根缺失 openspec/governance/req-registry.yaml 时，checker 退出
+      码 1 并输出 registry-not-found 消息，不做 vacuous pass（镜像
+      check-project-reqs.mjs fail-closed 先例）。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/code-impl-ids-fixture-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: code-impl-guard-aggregate-entry-discovers-check
+    statement: >-
+      spawn 聚合治理健康入口 check-all.mjs，其输出含 check-code-impl-ids 的
+      PASS 行，证明 check-*.mjs 命名约定自动发现接线成立。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/code-impl-ids-guard.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

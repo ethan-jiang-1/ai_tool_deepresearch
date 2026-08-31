@@ -1,0 +1,14 @@
+schema_version: semantic-closure/v1
+change: 2026-08-31-add-code-impl-registry-guard
+status: not_applicable
+reason: >-
+  本 change 新增的 RET-011 是 governance/requirement-traceability capability
+  内部的覆盖扩展：与既有 RET-010（guidance prose 面 ID 解析覆盖）同构，把同一
+  requirement-identity 检查事实延伸到代码 @impl 标注面。它不触碰任何 cataloged
+  semantic fact family 的 resolver、establishing surface 或 verdict consumer
+  （22 个 family 均为 research/queue/work-unit/wave/lifecycle/final/bundle/cli
+  运行时事实，requirement-identity 检查面从未入 family catalog——RET-010 自身
+  交付时也未建立 family）。checker 是 registry（既有唯一 Source of Record）的
+  派生校验器，不建立新的确定性运行时事实；其存在与有效性由 node:test fixture
+  契约直接证明，无第二 resolver 需要闭环。GSK-011 相关事实（派生姿态、不建
+  永久目录）全部维持现状。

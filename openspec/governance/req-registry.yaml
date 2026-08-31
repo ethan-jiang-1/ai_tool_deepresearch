@@ -536,6 +536,7 @@ RET-007: requirement-traceability — Aggregated read-only governance health ent
 RET-008: requirement-traceability — Capability catalog declares current-accepted scope
 RET-009: requirement-traceability — Main spec files carry a level-one title
 RET-010: requirement-traceability — Requirement IDs in guidance prose resolve against the registry
+RET-011: requirement-traceability — Requirement IDs in code implementation tags resolve against the registry
 
 # governance/semantic-fact-closure
 SEF-001: semantic-fact-closure — Semantic fact catalog provides a bounded shared vocabulary

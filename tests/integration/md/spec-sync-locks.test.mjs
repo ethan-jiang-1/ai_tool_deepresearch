@@ -38,13 +38,14 @@ describe('spec sync locks', () => {
     assert.ok(!text.includes('1. `node openspec/governance/check-project-reqs.mjs --mode archive'), 'hand-copied list still present');
   });
 
-  it('RET-007~010 and GCO-009 requirements exist in main specs', () => {
+  it('RET-007~011 and GCO-009 requirements exist in main specs', () => {
     const ret = read('openspec/specs/governance/requirement-traceability/spec.md');
     for (const title of [
       '### Requirement: Aggregated read-only governance health entry',
       '### Requirement: Capability catalog declares current-accepted scope',
       '### Requirement: Main spec files carry a level-one title',
       '### Requirement: Requirement IDs in guidance prose resolve against the registry',
+      '### Requirement: Requirement IDs in code implementation tags resolve against the registry',
     ]) {
       assert.ok(ret.includes(title), `${title} missing from requirement-traceability main spec`);
     }
