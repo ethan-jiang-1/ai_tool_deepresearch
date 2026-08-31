@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-31（`control-surface-drift-density-and-module-boundaries` 已完成关闭。此前活跃列表曾清空：spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079）） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-31（新增 `test-signal-and-guidance-wording-hygiene`。`control-surface-drift-density-and-module-boundaries` 已完成关闭。此前活跃列表曾清空：spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079）） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,7 +17,7 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| *（当前无活跃 plan）* | | |
+| `test-signal-and-guidance-wording-hygiene` | C1 test-lane signal hygiene（tests/README triage 规则 + check-all aggregation deflake + `test:clean`）；C2 agent-facing guidance wording（Do-Not-Read 措辞对齐 + config apply-guidance 加 `list-doc-locks` preflight 行）。各一个 OpenSpec change；#3 engine 提取与 #4 checker 版为明确非目标。 | C1/C2 待 propose |
 
 ### 参照资料（非 plan，供后续 change 引用）
 
